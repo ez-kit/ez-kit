@@ -2,11 +2,12 @@ import { act, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { renderWithComponents } from '../test-utils'
+import { renderWithComponents, TEST_FEATURES } from '../test-utils'
 import { useDataGrid } from '../use-data-grid'
 
 import { DataGrid } from './data-grid'
 
+import type { GridFeatures } from '../types'
 import type { UseDataGridConfig } from '../use-data-grid'
 
 type User = { id: number; name: string; age: number }
@@ -19,7 +20,7 @@ const USERS: User[] = [
 const COLUMNS = [
 	{ accessorKey: 'name', header: 'Name' },
 	{ accessorKey: 'age', header: 'Age' },
-] as UseDataGridConfig<User>['columns']
+] as UseDataGridConfig<GridFeatures, User>['columns']
 
 // ── scroll-container driver ─────────────────────────────────────────────────
 // Auto detection measures the scroll container, so these drive real scroll events against
@@ -74,8 +75,21 @@ afterEach(() => {
 	vi.unstubAllGlobals()
 })
 
-function InfiniteGrid(props: { config: UseDataGridConfig<User> }) {
-	const table = useDataGrid<User>(props.config)
+/**
+ * `features` is supplied here rather than per case: v9 registers nothing by default, so a config
+ * without it builds a table with no `columnSizingFeature`, no `infiniteFeature` and no state
+ * slices — every case in this file then dies in the header's size vars before reaching its own
+ * assertion.
+ *
+ * The set is {@link TEST_FEATURES} **minus `paginatedRowModel`**, which is the one place a
+ * per-file set is the right answer rather than a drift: every grid here runs
+ * `pagination.mode: 'infinite'`, infinite mode shows every accumulated row, and registering the
+ * paginated row model beside it is the misconfiguration core warns about in development.
+ */
+const { paginatedRowModel: _paginatedRowModel, ...INFINITE_FEATURES } = TEST_FEATURES
+
+function InfiniteGrid(props: { config: Omit<UseDataGridConfig<GridFeatures, User>, 'features'> }) {
+	const table = useDataGrid<GridFeatures, User>({ features: INFINITE_FEATURES, ...props.config })
 	return <DataGrid table={table} />
 }
 

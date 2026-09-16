@@ -3,7 +3,7 @@
 import { DataGrid } from 'shared/DataGrid'
 
 import { orderColumns } from './data'
-import { DataGridOptions } from './DataGridOptions'
+import { DataGridOptions, features } from './DataGridOptions'
 import { useOrdersState } from './use-orders-state'
 
 // Same grid as the one-handler example, with every shared option hoisted into
@@ -15,6 +15,7 @@ function OrdersGrid() {
 
 	return (
 		<DataGrid
+			features={features}
 			data={orders.rows}
 			columns={orderColumns}
 			pagination={{ rowCount: orders.rowCount }}

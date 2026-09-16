@@ -1,4 +1,4 @@
-import { Fragment } from 'react'
+import { Fragment, useRef } from 'react'
 
 import { useGridComponents } from '../components-context'
 
@@ -15,9 +15,13 @@ import { usePinnedRowOffsets } from './use-pinned-row-offsets'
 import { VirtualBody } from './virtual-body'
 import { useVirtualContext } from './virtual-context'
 
+import type { ErasedRow, GridFeatures } from '../types'
 import type { ExpandedRowProps } from '../use-data-grid'
+import type { DataGridRowProps } from './row'
 import type { Row, Table } from '@tanstack/table-core'
 import type { ComponentType, ReactNode } from 'react'
+
+const IS_DEV = process.env.NODE_ENV !== 'production'
 
 /**
  * What a `<DataGrid.Body>` render function receives.
@@ -27,27 +31,73 @@ import type { ComponentType, ReactNode } from 'react'
  * It cannot be inferred, because a compound child reads the table from context rather than from
  * a prop; this is the explicit-argument shape `useDataGridTable<Order>()` already uses.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type DataGridBodyRenderArgs<TRow extends object = any> = {
-	table: Table<TRow>
+export type DataGridBodyRenderArgs<TRow extends object = ErasedRow> = {
+	table: Table<GridFeatures, TRow>
 	/** The rows of the current row model, already sorted / filtered / paginated. */
-	rows: Row<TRow>[]
+	rows: Row<GridFeatures, TRow>[]
+	/**
+	 * Everything the built-in body would have rendered inside the kit's `Tbody`, in order:
+	 * {@link creatingRow}, {@link pinnedTopRows}, {@link centerRows}, {@link pinnedBottomRows},
+	 * {@link loadMoreFooter}, {@link refetchOverlay}.
+	 *
+	 * Render it and add beside it, or take the parts one at a time. Composing a body used to
+	 * mean giving up all six at once.
+	 */
+	content: ReactNode
+	/** The draft row the `creating` feature mounts above the data, or `null` when it has none. */
+	creatingRow: ReactNode
+	/**
+	 * The rows pinned to the top, each with its expanded panel and its pin offset measured.
+	 * `null` when row pinning is off.
+	 */
+	pinnedTopRows: ReactNode
+	/** The unpinned rows, each with its expanded panel — the whole row model when pinning is off. */
+	centerRows: ReactNode
+	/** The rows pinned to the bottom, measured like {@link pinnedTopRows}. */
+	pinnedBottomRows: ReactNode
+	/** The infinite-scroll footer: the sentinel that fetches, or the trigger that asks to. */
+	loadMoreFooter: ReactNode
+	/** The overlay covering the rows while a background refetch is in flight, or `null`. */
+	refetchOverlay: ReactNode
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type DataGridBodyProps<TRow extends object = any> = {
+/**
+ * The body's parts without the three the caller does not build: `table` and `rows` are handed
+ * in, and `content` is the parts composed — so naming it here would be circular.
+ */
+type BodyParts<TRow extends object> = Omit<DataGridBodyRenderArgs<TRow>, 'table' | 'rows' | 'content'>
+
+export type DataGridBodyProps<TRow extends object = ErasedRow> = {
 	/**
 	 * Custom body content, rendered inside the kit's `<Tbody>`.
 	 *
-	 * Omit it for the built-in body — pinned rows, the creating row, expanded panels, the
-	 * loading / empty / no-results fallbacks, the infinite-scroll footer and the refetch
-	 * overlay. Supplying `children` opts out of **all** of that in exchange for full control;
-	 * compose the rows yourself from `<DataGrid.Row>` (or anything else).
+	 * Omit it for the built-in body. The render-function form hands back everything that body
+	 * would have rendered *inside* the `Tbody` — `content`, or its six parts one at a time
+	 * ({@link DataGridBodyRenderArgs}) — so adding to the body no longer costs you the pinned
+	 * rows, the creating row, the expanded panels, the infinite footer and the refetch overlay.
 	 *
-	 * @example
+	 * Four branches are checked **first**, because each replaces the whole `<tbody>` rather than
+	 * filling one and so cannot be handed over as content: the **virtualized** body, and the
+	 * **loading**, **empty** and **no-results** fallbacks. A custom body therefore does not
+	 * render while one of those is showing, and does not switch it off.
+	 *
+	 * To own the body in one of those states, turn that state off where it is configured —
+	 * `fallbacks={{ loading: false }}` — and read the state inside `children` with
+	 * `useDataGridState`. Virtualization is the exception: it positions rows itself, so it owns
+	 * the body outright, and `children` on a virtualized grid are ignored with a development
+	 * warning.
+	 *
+	 * @example — replace the rows
 	 * ```tsx
 	 * <DataGrid.Body>
 	 *   {({ rows }) => rows.map((row) => <DataGrid.Row key={row.id} row={row} />)}
+	 * </DataGrid.Body>
+	 * ```
+	 *
+	 * @example — keep the built-in body and add to it
+	 * ```tsx
+	 * <DataGrid.Body>
+	 *   {({ content }) => <>{content}<tr data-slot='tr'><td colSpan={99}>Σ</td></tr></>}
 	 * </DataGrid.Body>
 	 * ```
 	 */
@@ -68,9 +118,12 @@ export type DataGridBodyProps<TRow extends object = any> = {
  * structural stylesheet shipped with this package applies the actual
  * `position: sticky` + offset.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function Body<TRow extends object = any>({ children }: DataGridBodyProps<TRow> = {}) {
+
+export function Body<TRow extends object = ErasedRow>({ children }: DataGridBodyProps<TRow> = {}) {
 	const { rowVirtualizer } = useVirtualContext()
+	// Fired at most once per mounted body: the conflict it reports is a property of the grid's
+	// configuration, not of a render, so repeating it every frame would be noise.
+	const warnedVirtualRef = useRef(false)
 	const table = useDataGridTable<TRow>()
 	const { Tbody } = useGridComponents().core
 
@@ -78,9 +131,16 @@ export function Body<TRow extends object = any>({ children }: DataGridBodyProps<
 	// re-renders only when one of these slices actually changes. Editing,
 	// columnVisibility, columnSizing, columnPinning, rowSelection updates do
 	// NOT touch any of these → no Body re-render.
-	const isPending = useDataGridState((s) => s.loading.isPending)
-	const isFetching = useDataGridState((s) => s.loading.isFetching)
-	const isCreatingOpen = useDataGridState((s) => s.creating.isOpen)
+	// Optional-chained, not chained for tidiness: these three read state slices that do not exist
+	// unless `loadingFeature` / `creatingFeature` are registered, and they run before any branch
+	// — so a read-only grid with no loading states needed both features just to mount. See
+	// `feature-optionality.test.tsx`.
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const isPending = useDataGridState((s) => s.loading?.isPending ?? false)
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const isFetching = useDataGridState((s) => s.loading?.isFetching ?? false)
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const isCreatingOpen = useDataGridState((s) => s.creating?.isOpen ?? false)
 	// Slices that affect getRowModel() / getTopRows() / getBottomRows() output:
 	useDataGridState((s) => s.sorting)
 	useDataGridState((s) => s.columnFilters)
@@ -104,32 +164,143 @@ export function Body<TRow extends object = any>({ children }: DataGridBodyProps<
 		bottomRows.map((row) => row.id),
 	)
 
-	// Custom body: the consumer owns the whole `<tbody>`. Checked before every built-in
-	// branch (virtualization, fallbacks, pinned rows) — those all compose rows, which is
-	// precisely the job being taken over.
-	if (children !== undefined) {
-		return (
-			<Tbody data-slot='tbody'>
-				{typeof children === 'function' ? children({ table, rows: table.getRowModel().rows }) : children}
-			</Tbody>
-		)
-	}
-
-	if (rowVirtualizer) return <VirtualBody />
-
-	const fallbacks = table.grid.fallbacks
-	const expandedComponent = table.grid.expanding.component as ComponentType<ExpandedRowProps<object>> | undefined
-
-	if (isPending && fallbacks.loading.enabled) {
-		return <LoadingBody />
-	}
-
+	// Read by the fallback branch as well as by the parts, and needing no hook, so it is computed
+	// once here rather than twice further down.
 	const creatingConfig = table.options.creating
 	const creatingMode = creatingConfig?.mode ?? 'row'
 	const showCreatingRow =
 		creatingConfig !== undefined && (creatingMode === 'pin-row' || (creatingMode === 'row' && isCreatingOpen))
 
-	const centerRows = hasPinning ? table.getCenterRows() : table.getRowModel().rows
+	/**
+	 * The six pieces the built-in body puts inside its `Tbody`.
+	 *
+	 * A function, not values computed up front, because building them costs one React element
+	 * per row of the model — the work virtualization exists to avoid, and pure waste for the
+	 * documented `{({ rows }) => rows.map(…)}` body that discards all six. The built-in
+	 * virtualized branch never reaches it; a *custom* body does, virtualized or not, which is
+	 * why {@link buildArgs} puts it behind getters rather than calling it eagerly.
+	 *
+	 * Every caller sits past every hook above, so calling it conditionally is safe.
+	 */
+	function buildParts(): BodyParts<TRow> {
+		const expandedComponent = table.grid.expanding.component as ComponentType<ExpandedRowProps<object>> | undefined
+		const centerModelRows = hasPinning ? table.getCenterRows() : table.getRowModel().rows
+		const showRefetchOverlay = isFetching && !isPending && table.getRowModel().rows.length > 0
+
+		/** One row plus the expanded panel that belongs under it — the unit every group repeats. */
+		const renderRow = (row: Row<GridFeatures, TRow>, extra?: Partial<DataGridRowProps<TRow>>) => (
+			<Fragment key={row.id}>
+				<DataGridRow
+					row={row}
+					{...extra}
+				/>
+				{expandedComponent && row.getIsExpanded() && <ExpandedRow row={row} />}
+			</Fragment>
+		)
+
+		return {
+			creatingRow: showCreatingRow ? <CreatingRow /> : null,
+			pinnedTopRows: topRows.map((row, index) => renderRow(row, { 'data-pinned': 'top', ref: registerTopRow(index) })),
+			centerRows: centerModelRows.map((row) => renderRow(row)),
+			pinnedBottomRows: bottomRows.map((row, index) =>
+				renderRow(row, { 'data-pinned': 'bottom', ref: registerBottomRow(index) }),
+			),
+			loadMoreFooter: <LoadMoreFooter />,
+			refetchOverlay: showRefetchOverlay ? (
+				<RefetchOverlayHost columnCount={table.getVisibleLeafColumns().length} />
+			) : null,
+		}
+	}
+
+	/** The parts in the order the built-in body renders them. */
+	const composeParts = (parts: BodyParts<TRow>): ReactNode => (
+		<>
+			{parts.creatingRow}
+			{parts.pinnedTopRows}
+			{parts.centerRows}
+			{parts.pinnedBottomRows}
+			{parts.loadMoreFooter}
+			{parts.refetchOverlay}
+		</>
+	)
+
+	/**
+	 * The render arguments, with every part behind a getter over one memoised {@link buildParts}.
+	 *
+	 * So a body that reads nothing but `rows` pays nothing, and one that reads any part pays for
+	 * the single pass that produces all six. Note the caller must not be handed a spread of the
+	 * parts — a spread evaluates every getter, which is the eagerness this exists to avoid.
+	 */
+	function buildArgs(): DataGridBodyRenderArgs<TRow> {
+		let parts: BodyParts<TRow> | undefined
+		const resolve = (): BodyParts<TRow> => (parts ??= buildParts())
+		return {
+			table,
+			get rows() {
+				return table.getRowModel().rows
+			},
+			get content() {
+				return composeParts(resolve())
+			},
+			get creatingRow() {
+				return resolve().creatingRow
+			},
+			get pinnedTopRows() {
+				return resolve().pinnedTopRows
+			},
+			get centerRows() {
+				return resolve().centerRows
+			},
+			get pinnedBottomRows() {
+				return resolve().pinnedBottomRows
+			},
+			get loadMoreFooter() {
+				return resolve().loadMoreFooter
+			},
+			get refetchOverlay() {
+				return resolve().refetchOverlay
+			},
+		}
+	}
+
+	/*
+	 * The four whole-`<tbody>` branches run **before** a custom body, not after.
+	 *
+	 * Each of them *is* a `<tbody>` rather than something that goes inside one, so none can be
+	 * handed to `children` as content — nesting a second one is invalid markup. Checking
+	 * `children` first, as this used to, therefore meant that supplying one silently switched
+	 * off the loading skeleton, both empty states and row virtualization. That was survivable
+	 * while a custom body was a rare, deliberate act; it stopped being survivable once
+	 * `content` made "keep the built-in body and add a row to it" the recommended shape, where
+	 * giving up four unrelated behaviours is nobody's intent.
+	 *
+	 * A grid that genuinely wants its own body in one of those states says so with the switch
+	 * that already exists — `fallbacks: { loading: false }` — and then reaches `children` with
+	 * the state to read off `useDataGridState`. So this order removes no capability; it moves
+	 * the opt-out from implicit to written down.
+	 *
+	 * Virtualization is the one that cannot be expressed either way: it positions rows itself,
+	 * so it has to own the body, and a custom one is dropped rather than merged. That is the
+	 * only silent loss left here, which is why it is the only one that warns.
+	 */
+	if (rowVirtualizer) {
+		if (IS_DEV && children !== undefined && !warnedVirtualRef.current) {
+			warnedVirtualRef.current = true
+			console.error(
+				'<DataGrid.Body> was given children on a virtualized grid. Row virtualization renders and ' +
+					'positions the rows itself, so it owns the body and the children are ignored. Drop the ' +
+					'virtualization option for this grid, or compose further down at <DataGrid.Row>.',
+			)
+		}
+		return <VirtualBody />
+	}
+
+	const fallbacks = table.grid.fallbacks
+
+	if (isPending && fallbacks.loading.enabled) {
+		return <LoadingBody />
+	}
+
 	const allRows = table.getRowModel().rows
 	const rawDataLength = (table.options.data as unknown[]).length
 
@@ -142,40 +313,12 @@ export function Body<TRow extends object = any>({ children }: DataGridBodyProps<
 		}
 	}
 
-	const columnCount = table.getVisibleLeafColumns().length
-	const showRefetchOverlay = isFetching && !isPending && allRows.length > 0
+	// Custom body: the consumer owns what goes inside the `<tbody>`, and is handed everything
+	// the built-in one would have put there.
+	if (children !== undefined) {
+		if (typeof children !== 'function') return <Tbody data-slot='tbody'>{children}</Tbody>
+		return <Tbody data-slot='tbody'>{children(buildArgs())}</Tbody>
+	}
 
-	return (
-		<Tbody data-slot='tbody'>
-			{showCreatingRow && <CreatingRow />}
-			{topRows.map((row, index) => (
-				<Fragment key={row.id}>
-					<DataGridRow
-						row={row}
-						data-pinned='top'
-						ref={registerTopRow(index)}
-					/>
-					{expandedComponent && row.getIsExpanded() && <ExpandedRow row={row} />}
-				</Fragment>
-			))}
-			{centerRows.map((row) => (
-				<Fragment key={row.id}>
-					<DataGridRow row={row} />
-					{expandedComponent && row.getIsExpanded() && <ExpandedRow row={row} />}
-				</Fragment>
-			))}
-			{bottomRows.map((row, index) => (
-				<Fragment key={row.id}>
-					<DataGridRow
-						row={row}
-						data-pinned='bottom'
-						ref={registerBottomRow(index)}
-					/>
-					{expandedComponent && row.getIsExpanded() && <ExpandedRow row={row} />}
-				</Fragment>
-			))}
-			<LoadMoreFooter />
-			{showRefetchOverlay && <RefetchOverlayHost columnCount={columnCount} />}
-		</Tbody>
-	)
+	return <Tbody data-slot='tbody'>{composeParts(buildParts())}</Tbody>
 }

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { getColumnSizeVars } from './column-size-vars'
 
-import type { DataTable } from '@ez-kit/data-grid-core'
+import type { DataTable, GridFeatures } from '../types'
 
 function makeHeader(id: string, headerSize: number, colSize: number) {
 	return {
@@ -11,11 +11,11 @@ function makeHeader(id: string, headerSize: number, colSize: number) {
 	}
 }
 
-function mockTable(headers: ReturnType<typeof makeHeader>[]): DataTable<object> {
+function mockTable(headers: ReturnType<typeof makeHeader>[]): DataTable<GridFeatures, object> {
 	return {
 		getFlatHeaders: () => headers,
 		getVisibleLeafColumns: () => headers.map((header) => header.column),
-	} as unknown as DataTable<object>
+	} as unknown as DataTable<GridFeatures, object>
 }
 
 describe('getColumnSizeVars', () => {

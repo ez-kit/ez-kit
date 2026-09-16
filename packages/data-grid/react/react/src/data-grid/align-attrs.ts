@@ -1,5 +1,4 @@
-import type { ColumnAlign, ColumnAlignDef } from '@ez-kit/data-grid-core'
-import type { ColumnMeta } from '@tanstack/table-core'
+import type { FormColumnMeta, ColumnAlign, ColumnAlignDef } from '@ez-kit/data-grid-core'
 
 /** Which part of a column an alignment applies to. Mirrors the keys of `ColumnAlignDef`. */
 type AlignPart = keyof ColumnAlignDef
@@ -11,10 +10,7 @@ type AlignPart = keyof ColumnAlignDef
  * it into `text-align` / `justify-content`, so a kit inherits alignment without writing any CSS,
  * and this package stays free of visual styling.
  */
-export function getAlignAttrs(
-	meta: ColumnMeta<unknown, unknown> | undefined,
-	part: AlignPart,
-): { 'data-align'?: ColumnAlign } {
+export function getAlignAttrs(meta: FormColumnMeta | undefined, part: AlignPart): { 'data-align'?: ColumnAlign } {
 	const align = meta?.align?.[part]
 	return align === undefined ? {} : { 'data-align': align }
 }

@@ -16,10 +16,27 @@ versioned copy of `@heroui/react` in your tree would create a second set of cont
 since the kit's stylesheet `@import`s `@heroui/styles`, a second copy of HeroUI's entire CSS.
 pnpm and npm resolve peers for you; add them explicitly if your package manager does not.
 
-Everything else arrives with the kit. It depends on `@ez-kit/data-grid-react` and
-`@ez-kit/data-grid-core` and re-exports their whole surface — every hook, type and constant is
-importable from `@ez-kit/data-grid-heroui` itself. Adding those two to your own `package.json`
-buys nothing and lets their versions drift out of step with the kit's.
+Everything else arrives with the kit. It depends on `@ez-kit/data-grid-react` and re-exports its
+whole surface — every hook, type and constant is importable from `@ez-kit/data-grid-heroui` itself.
+Adding that one to your own `package.json` buys nothing and lets its version drift out of step with
+the kit's.
+
+**`@ez-kit/data-grid-core` is the exception: install it too.** Every grid takes a
+[`features`](/docs/data-grid/feature-set) set, and `tableFeatures` and the feature exports live on
+`@ez-kit/data-grid-core/features`:
+
+```bash
+pnpm add @ez-kit/data-grid-core
+```
+
+Pin it to the same version as the kit.
+
+That entry point is deliberately not re-exported through the kit. It is a separate entry point so
+that it tree-shakes — a composed set costs under a kilobyte, where reaching the all-in set costs
+forty-six — and re-exporting it through the kit's main entry would anchor the whole feature graph
+into every consumer's bundle, whether or not they compose a set. So it stays where it is, and you
+import it directly. In practice that is one import in one file: the set is composed once per
+application and every grid takes it from your own module.
 
 ## 2. Import the stylesheet
 

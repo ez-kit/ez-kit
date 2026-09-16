@@ -23,6 +23,7 @@ export const exampleModules: Record<string, () => Promise<Record<string, Compone
 	'components/column-pinning.tsx': () => import('./components/column-pinning'),
 	'components/pinning/both-axes.tsx': () => import('./components/pinning/both-axes'),
 	'components/pinning/initial-rows.tsx': () => import('./components/pinning/initial-rows'),
+	'components/pinning/rtl-columns.tsx': () => import('./components/pinning/rtl-columns'),
 	'components/pinning/static-column.tsx': () => import('./components/pinning/static-column'),
 	'components/column-visibility.tsx': () => import('./components/column-visibility'),
 	'components/columns/combined.tsx': () => import('./components/columns/combined'),

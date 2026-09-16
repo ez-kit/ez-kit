@@ -1,8 +1,34 @@
 'use client'
 
+import {
+	columnFacetingFeature,
+	columnFilteringFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	columnVisibilityFeature,
+	createFacetedRowModel,
+	createFacetedUniqueValues,
+	createFilteredRowModel,
+	filterFns,
+	tableFeatures,
+} from '@ez-kit/data-grid-core/features'
 import { createColumns } from '@ez-kit/data-grid-react'
 
 import { DataGrid } from 'shared/DataGrid'
+
+const features = tableFeatures({
+	// Structural: the grid shell reads column widths, visibility and pin groups to lay out
+	// the column grid. Everything below is this example's own.
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	columnFacetingFeature,
+	columnFilteringFeature,
+	filterFns,
+	facetedRowModel: createFacetedRowModel(),
+	facetedUniqueValues: createFacetedUniqueValues(),
+	filteredRowModel: createFilteredRowModel(),
+})
 
 type Order = {
 	id: number
@@ -70,6 +96,7 @@ const COLUMNS = createColumns<Order>([
 export function FilterPanelExample() {
 	return (
 		<DataGrid
+			features={features}
 			data={DATA}
 			columns={COLUMNS}
 			filtering={{ variant: 'panel', faceted: true }}

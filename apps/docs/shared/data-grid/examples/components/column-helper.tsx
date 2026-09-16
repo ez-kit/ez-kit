@@ -1,9 +1,29 @@
 'use client'
 
+import {
+	columnPinningFeature,
+	columnSizingFeature,
+	columnVisibilityFeature,
+	createSortedRowModel,
+	rowSortingFeature,
+	sortFns,
+	tableFeatures,
+} from '@ez-kit/data-grid-core/features'
 import { createColumnHelper } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 
 import { CustomDataGrid } from 'shared/data-grid/CustomGrid'
+
+const features = tableFeatures({
+	// Structural: the grid shell reads column widths, visibility and pin groups to lay out
+	// the column grid. Everything below is this example's own.
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	rowSortingFeature,
+	sortFns,
+	sortedRowModel: createSortedRowModel(),
+})
 
 // ── data ─────────────────────────────────────────────────────────────────────
 
@@ -40,6 +60,7 @@ export function ColumnHelperBaseExample() {
 
 	return (
 		<CustomDataGrid
+			features={features}
 			data={data}
 			columns={baseColumns}
 			sorting
@@ -80,6 +101,7 @@ export function ColumnHelperCustomViewExample() {
 
 	return (
 		<CustomDataGrid
+			features={features}
 			data={data}
 			columns={customViewColumns}
 			sorting

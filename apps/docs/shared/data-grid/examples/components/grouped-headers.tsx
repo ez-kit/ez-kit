@@ -1,5 +1,17 @@
 'use client'
 
+import {
+	columnFilteringFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	columnVisibilityFeature,
+	createFilteredRowModel,
+	createSortedRowModel,
+	filterFns,
+	rowSortingFeature,
+	sortFns,
+	tableFeatures,
+} from '@ez-kit/data-grid-core/features'
 import { createColumns } from '@ez-kit/data-grid-react'
 
 import { DataGrid } from 'shared/DataGrid'
@@ -7,6 +19,20 @@ import { DataGrid } from 'shared/DataGrid'
 import { EMPLOYEE_DATA } from './_data'
 
 import type { Employee } from './_data'
+
+const features = tableFeatures({
+	// Structural: the grid shell reads column widths, visibility and pin groups to lay out
+	// the column grid. Everything below is this example's own.
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	rowSortingFeature,
+	columnFilteringFeature,
+	filterFns,
+	sortFns,
+	filteredRowModel: createFilteredRowModel(),
+	sortedRowModel: createSortedRowModel(),
+})
 
 /**
  * Two header rows: a group row whose cells span their children, and the leaf row that carries
@@ -35,6 +61,7 @@ const groupedColumns = createColumns<Employee>([
 export function GroupedHeadersExample() {
 	return (
 		<DataGrid
+			features={features}
 			data={EMPLOYEE_DATA}
 			columns={groupedColumns}
 			sorting

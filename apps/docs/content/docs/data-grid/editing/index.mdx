@@ -13,6 +13,7 @@ pipeline.
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	editing={{
@@ -47,6 +48,7 @@ The row you picked turns into inputs in place, and the actions cell swaps Edit f
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	editing={{ mode: 'row', onSave }}
@@ -62,6 +64,7 @@ for you — nothing to place by hand.
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	editing={{ mode: 'modal', onSave }}
@@ -84,6 +87,7 @@ actions column does not appear at all.
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	editing={{ mode: 'cell', onSave }}

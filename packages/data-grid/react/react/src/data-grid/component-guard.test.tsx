@@ -2,7 +2,7 @@ import { createColumns } from '@ez-kit/data-grid-core'
 import { render } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
-import { testComponents } from '../test-utils'
+import { TEST_FEATURES, testComponents } from '../test-utils'
 
 import { DataGrid } from './data-grid'
 
@@ -21,6 +21,7 @@ describe('ComponentGuard (dev-time completeness)', () => {
 		expect(() =>
 			render(
 				<DataGrid
+					features={TEST_FEATURES}
 					data={ROWS}
 					columns={COLUMNS}
 					components={withoutTable}
@@ -35,6 +36,7 @@ describe('ComponentGuard (dev-time completeness)', () => {
 		expect(() =>
 			render(
 				<DataGrid
+					features={TEST_FEATURES}
 					data={ROWS}
 					columns={COLUMNS}
 					components={testComponents}

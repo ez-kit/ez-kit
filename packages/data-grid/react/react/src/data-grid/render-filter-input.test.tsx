@@ -4,9 +4,10 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { createDataGrid } from '../create-data-grid'
 import { prepareDataGridTable } from '../prepare-table'
-import { testComponents } from '../test-utils'
+import { TEST_FEATURES, testComponents } from '../test-utils'
 
-import type { DataTable, StructuredFilterValue } from '@ez-kit/data-grid-core'
+import type { DataTable, GridFeatures } from '../types'
+import type { StructuredFilterValue } from '@ez-kit/data-grid-core'
 
 type Row = {
 	id: number
@@ -42,8 +43,16 @@ const { DataGrid, GridComponentsProvider } = createDataGrid({
 	components: testComponents,
 })
 
-function setup(config?: Partial<Parameters<typeof createTable<Row>>[0]>): DataTable<Row> {
-	const table = prepareDataGridTable(createTable<Row>({ data: DATA, columns: COLUMNS, filtering: true, ...config }))
+function setup(config?: Partial<Parameters<typeof createTable<GridFeatures, Row>>[0]>): DataTable<GridFeatures, Row> {
+	const table = prepareDataGridTable(
+		createTable<GridFeatures, Row>({
+			features: TEST_FEATURES,
+			data: DATA,
+			columns: COLUMNS,
+			filtering: true,
+			...config,
+		}),
+	)
 	render(
 		<GridComponentsProvider>
 			<DataGrid table={table} />
@@ -124,9 +133,14 @@ const DATE_COLUMNS_WITH_PRESETS = createColumns<DateRow>([
 	},
 ])
 
-function setupDate(): DataTable<DateRow> {
+function setupDate(): DataTable<GridFeatures, DateRow> {
 	const table = prepareDataGridTable(
-		createTable<DateRow>({ data: DATE_DATA, columns: DATE_COLUMNS_WITH_PRESETS, filtering: true }),
+		createTable<GridFeatures, DateRow>({
+			features: TEST_FEATURES,
+			data: DATE_DATA,
+			columns: DATE_COLUMNS_WITH_PRESETS,
+			filtering: true,
+		}),
 	)
 	render(
 		<GridComponentsProvider>
@@ -204,7 +218,9 @@ function setupNumber(betweenOperator: { slider?: boolean; min?: number; max?: nu
 			filtering: { operators: { items: ['between'], betweenOperator }, defaultOperator: 'between' },
 		},
 	])
-	const table = prepareDataGridTable(createTable<NumberRow>({ data: NUMBER_DATA, columns, filtering: true }))
+	const table = prepareDataGridTable(
+		createTable<GridFeatures, NumberRow>({ features: TEST_FEATURES, data: NUMBER_DATA, columns, filtering: true }),
+	)
 	render(
 		<GridComponentsProvider>
 			<DataGrid table={table} />

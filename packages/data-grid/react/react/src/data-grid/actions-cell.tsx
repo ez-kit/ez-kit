@@ -15,21 +15,15 @@ import { splitRowActionItems } from './build-action-items'
 import { buildRowOrderItems } from './build-row-order-items'
 import { useDataGridTable, useDataGridState } from './table-context'
 
+import type { DataTable, ErasedRow, GridFeatures } from '../types'
 import type { RowActionGroups } from './build-action-items'
 import type { GridMenuItem, GridMenuSection } from '../menu'
-import type {
-	DataTable,
-	RowActionItem,
-	RowActionsContext,
-	RowPinningConfig,
-	GridMessages,
-} from '@ez-kit/data-grid-core'
-import type { Row, Table } from '@tanstack/table-core'
+import type { RowActionItem, RowActionsContext, RowPinningConfig, GridMessages } from '@ez-kit/data-grid-core'
+import type { Row } from '@tanstack/table-core'
 import type { ReactElement } from 'react'
 
 type ActionsCellProps = {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	row: Row<any>
+	row: Row<GridFeatures, ErasedRow>
 }
 
 const ICONS: Record<RowActionId, GridMenuIcon> = {
@@ -55,9 +49,8 @@ const EMPTY_GROUPS: RowActionGroups = { inline: [], menu: [], inlineWidths: [] }
 /** One warning per grid, however many rows render it. Keyed by the message. */
 const warned = new Set<string>()
 
-type CellFitInput = {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	table: DataTable<any>
+type CellFitInput<TRow extends object> = {
+	table: DataTable<GridFeatures, TRow>
 	hasEditing: boolean
 	hasDeleting: boolean
 	inlineWidths: number[]
@@ -72,7 +65,13 @@ type CellFitInput = {
  * to account for — this turns "the last button is clipped" into the number to put in
  * `rowActions.column.width`.
  */
-function warnIfCellOverflows({ table, hasEditing, hasDeleting, inlineWidths, hasOverflow }: CellFitInput): void {
+function warnIfCellOverflows<TRow extends object>({
+	table,
+	hasEditing,
+	hasDeleting,
+	inlineWidths,
+	hasOverflow,
+}: CellFitInput<TRow>): void {
 	if (inlineWidths.length === 0) return
 	const builtIns = [
 		...(hasEditing ? [ACTION_BUTTON_SIZE] : []),
@@ -96,9 +95,8 @@ function warnIfCellOverflows({ table, hasEditing, hasDeleting, inlineWidths, has
  * Builds the pin entries for a row: the two pin directions the config allows,
  * plus `Unpin` once the row is pinned.
  */
-function buildPinItems(
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	row: Row<any>,
+function buildPinItems<TRow extends object>(
+	row: Row<GridFeatures, TRow>,
 	config: RowPinningConfig,
 	messages: GridMessages['rowActions'],
 ): GridMenuItem[] {
@@ -187,10 +185,21 @@ export function ActionsCell({ row }: ActionsCellProps) {
 	const messages = table.grid.messages.rowActions
 
 	// Stable booleans — non-target rows stay `false` across any editing change.
-	const isEditing = useDataGridState((s) => s.editing.rowId === row.id)
-	const isPending = useDataGridState((s) => s.editing.rowId === row.id && s.editing.commitStatus !== CommitStatus.Idle)
+	//
+	// Optional-chained: this column mounts whenever `editing`, `deleting`, row `pinning` **or**
+	// `rowActions.actions` is configured, not only `editing` — so a delete-only grid reached these
+	// two reads with no `editing` slice on the state and threw before the table mounted. The
+	// `Boolean(table.options.editing)` three lines below is what the intent always was; only these
+	// missed it. Same for `rowPinning`, which is subscribed here for any of the four reasons.
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const isEditing = useDataGridState((s) => s.editing?.rowId === row.id)
+	// The second read needs no `?.` of its own: `&&` short-circuits on the first when the slice is
+	// absent, so it is only reached once `s.editing` is known to be there.
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const isPending = useDataGridState((s) => s.editing?.rowId === row.id && s.editing.commitStatus !== CommitStatus.Idle)
 	// Row pinning is derived state; subscribe so the menu re-derives on pin/unpin.
-	useDataGridState((s) => s.rowPinning)
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	useDataGridState((s) => s.rowPinning ?? null)
 
 	const editingMode = table.options.editing?.mode ?? EditingMode.Row
 	// Cell mode owns no affordance in this column: its edit is opened by double-clicking the
@@ -198,7 +207,11 @@ export function ActionsCell({ row }: ActionsCellProps) {
 	// `editing.start(rowId)` — the row flow — and open no input at all.
 	const hasEditing = Boolean(table.options.editing) && editingMode !== EditingMode.Cell
 	const hasDeleting = Boolean(table.options.deleting)
-	const pinConfig = table.options.pinning
+	// `table.grid`, not `table.options`: row pinning config, `rowActions` and `virtualization`
+	// left the TanStack options bag for the grid bag when v9 removed `TableOptionsResolved`
+	// (core's `GridOptions`). Reading them off `options` now yields `undefined` — which is how
+	// the whole pin section of this cell disappeared.
+	const pinConfig = table.grid.pinning.rowConfig
 
 	// Mid-edit: save / cancel only. Row mode alone — a modal carries its own buttons, and a cell
 	// edit commits itself, so neither should swap this column out from under the user.
@@ -218,13 +231,36 @@ export function ActionsCell({ row }: ActionsCellProps) {
 
 	const pinItems = pinConfig ? buildPinItems(row, pinConfig, messages) : []
 	const orderItems = table.grid.ordering.row ? buildRowOrderItems(row, table, messages) : []
-	const buildActions = table.options.rowActions?.actions
+	const buildActions = table.grid.rowActions.actions
 	// The augmented option is `RowActionsConfig<object, unknown>` — the row type and the node
 	// type are both erased at the `table.options` boundary — so the row/table this cell holds
 	// are narrowed at the call, and the returned items are re-bound to this layer's node type.
 	// `buildActionItems` still checks each icon at runtime; see its `toMenuIcon`.
-	const actionsCtx: RowActionsContext = { row: row as Row<object>, table: table as Table<object> }
-	const placement = table.options.rowActions?.placement ?? RowActionsPlacement.Inline
+	//
+	// Two casts, one per member, and neither is about the feature arity — do not re-arity this.
+	// `RowActionsContext` fixes `TRow` at `object`, which `exactOptionalPropertyTypes` refuses to
+	// take from the `any`-rowed pair this cell holds; and since Task 14 this package's `DataTable`
+	// carries `grid: ResolvedGridOptions`, so it is no longer core's `Table` at **any**
+	// instantiation. pr1-outcomes §2.7 expected core typing `RowActionsContext.table` as the widest
+	// instantiation to make this assign on its own; that held for the feature parameter and was
+	// overtaken by the `grid` split.
+	//
+	// Per member rather than one `as RowActionsContext` over the whole literal — **do not
+	// "simplify" it back**. A single `as` over an object literal only asks for comparability, so a
+	// **required** member added to `RowActionsContext` later would leave this literal legal and
+	// that member silently missing at runtime. (An *optional* one is missed either way — that is
+	// what optional means, and no annotation recovers it.) Annotating the binding keeps the
+	// excess-property and missing-property checks: a new required member fails here as `TS2741`,
+	// where the assertion form would only fail if the two types stopped overlapping. Each cast
+	// goes through the
+	// context's own member type, which is why neither one names an arity.
+	// Erased on both sides: `table.grid.rowActions.actions` was stored row-erased, so the
+	// context handed to it is too. See `ErasedRow`.
+	const actionsCtx: RowActionsContext<ErasedRow> = {
+		row: row,
+		table: table,
+	}
+	const placement = table.grid.rowActions.placement
 	const {
 		inline: inlineItems,
 		menu: customItems,

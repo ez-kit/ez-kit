@@ -1,5 +1,6 @@
 'use client'
 
+import { allDataGridFeatures } from '@ez-kit/data-grid-core/features/all'
 import { createDataGrid } from '@ez-kit/data-grid-react'
 
 import { cellTypes } from './blocks/cell-types'
@@ -19,7 +20,7 @@ import { sortingComponents } from './blocks/sorting/sorting-components'
 import { visibilityComponents } from './blocks/visibility/visibility-components'
 
 import type { KitCellTypes } from './blocks/cell-types'
-import type { DataGridBundle, FullGridComponents } from '@ez-kit/data-grid-react'
+import type { DataGridBundle, FullGridComponents, GridFeatures } from '@ez-kit/data-grid-react'
 
 const components = {
 	core: coreComponents,
@@ -68,9 +69,52 @@ const allComponents: FullGridComponents = components
 // without this the bundled `.d.ts` re-prints the whole bundle into every signature that mentions
 // it. Naming the bundle's type keeps `KitCellTypes` — which is itself declared rather than read
 // off the runtime object, see `blocks/cell-types.ts` — a name in the emitted signatures.
-const bundle: DataGridBundle<KitCellTypes> = createDataGrid<KitCellTypes>({
+/**
+ * The kit's prebuilt grid, and the set it runs on.
+ *
+ * `features` is required everywhere else — a grid pays for what it registers, and the headless
+ * `createDataGrid` still demands a set. This one export is the exception, because here the set
+ * buys almost nothing: the fourteen component groups above already read the features' APIs, so
+ * they drag the implementations in whatever set a call site names. Measured against this kit
+ * (esbuild, minified, gzipped, React external): this prebuilt with a sorting-only set is 54.6 kB
+ * against 58.5 kB with every feature — 3.9 kB for eight imports. The same grid composed through
+ * `createDataGrid` with four component groups is 44.6 kB, which is where the saving
+ * actually lives, and that path keeps `features` required.
+ *
+ * So naming it here makes the export's cost match its name: importing `DataGrid` from the kit
+ * root has always meant "everything", and now it means everything on both axes. A set named at a
+ * call site still **replaces** this one, which narrows behaviour — it does not give the bytes
+ * back, since this module is what pulled them in.
+ *
+ * Load-bearing: this import belongs in *this* module and nowhere above it. `createDataGrid`
+ * reaches a consumer through `index.ts`'s star re-export of `@ez-kit/data-grid-react`, so the
+ * two stay separable and a composed grid never sees `features/all` — which is a top-level
+ * `tableFeatures({ ...stockFeatures })` call whose spread no bundler can drop.
+ * `apps/docs/test/tree-shaking.test.ts` pins that separation.
+ */
+/**
+ * The type the bound bundle is parameterised by — the **widest** instantiation, not
+ * `typeof allDataGridFeatures`.
+ *
+ * Two things have to be true at once. Every one of the four annotations below must carry a feature
+ * type or the binding is erased: `DataGridBundle`'s second parameter defaults to `undefined`, so
+ * `createDataGrid<KitCellTypes>` alone hands back a bundle that still demands `features` at every
+ * call site, silently undoing this file. And the type it carries must stay `GridFeatures`, because
+ * it reaches everything downstream — a consumer's `ColumnDef<GridFeatures, Row>`, every
+ * `UseDataGridConfig` they name, the table instance they pass around. Parameterising by the
+ * concrete set makes each of those a different type than the one the docs and both kits' own
+ * helpers are written against, and they stop being assignable.
+ *
+ * The runtime set is still the all-in one; what is widened is only what the types promise about
+ * it. That matches the rest of the package, where `GridFeatures` is deliberately the widest
+ * instantiation so `TFeatures` never reaches the component contract.
+ */
+type KitFeatures = GridFeatures
+
+const bundle: DataGridBundle<KitCellTypes, KitFeatures> = createDataGrid<KitCellTypes, KitFeatures>({
 	components,
 	cellTypes,
+	features: allDataGridFeatures,
 })
 
 const { DataGrid, GridComponentsProvider, useDataGrid } = bundle
@@ -80,9 +124,9 @@ const { DataGrid, GridComponentsProvider, useDataGrid } = bundle
 // `DataGridBundle<KitCellTypes & TExtra>` degenerates to an error type at the call site — the
 // consumer then gets an unchecked `createColumns` off the extended bundle. Indexing the bundle's
 // type keeps `KitCellTypes` a name in the three signatures that carry a `CellDef` union.
-const createColumns: DataGridBundle<KitCellTypes>['createColumns'] = bundle.createColumns
-const createColumnHelper: DataGridBundle<KitCellTypes>['createColumnHelper'] = bundle.createColumnHelper
-const extendDataGrid: DataGridBundle<KitCellTypes>['extendDataGrid'] = bundle.extendDataGrid
+const createColumns: DataGridBundle<KitCellTypes, KitFeatures>['createColumns'] = bundle.createColumns
+const createColumnHelper: DataGridBundle<KitCellTypes, KitFeatures>['createColumnHelper'] = bundle.createColumnHelper
+const extendDataGrid: DataGridBundle<KitCellTypes, KitFeatures>['extendDataGrid'] = bundle.extendDataGrid
 
 // `cellTypes` / `KitCellTypes` are re-exported here (not just consumed internally by
 // `createDataGrid` above) because this file is the registry consumer's actual entry point —

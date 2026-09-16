@@ -1,13 +1,15 @@
+import { readForeignSlice, readOwnSlice } from '../../feature-state'
+
 import { applyRowOrder } from './apply-row-order'
 
-import type { Row, Table } from '@tanstack/table-core'
+import type { AnyTable } from '../../feature-state'
 
 /**
  * Which way along the row order a move goes.
  *
  * Physical, not logical — unlike {@link ColumnMoveDirection}, whose `start` / `end` name
  * positions along the axis that flips under RTL. Up is up in every writing direction, so this
- * sits with `pinning`'s `left` / `right` rather than with `align`'s `start` / `end`.
+ * sits with row pinning's `top` / `bottom` rather than with `align`'s `start` / `end`.
  */
 export const RowMoveDirection = {
 	Up: 'up',
@@ -34,6 +36,46 @@ export type RowMove = {
 }
 
 /**
+ * Everything a move reads off a row, named structurally.
+ *
+ * A row's members come from `Row_FeatureMap` keyed by the table's feature set, and `TFeatures` is
+ * unresolved in a helper generic over it — the same reason `ordering.ts` names its columns
+ * structurally. Stating the shape here also records the one member that is genuinely conditional:
+ * `getIsPinned` exists only where `rowPinningFeature` is registered, and a grid with no row
+ * pinning has no bands for a move to cross.
+ */
+type OrderableRow = {
+	id: string
+	depth: number
+	parentId?: string | undefined
+	getIsPinned?: () => unknown
+}
+
+/** The band a row sits in, or `false` where the table registers no row pinning. */
+const pinnedBand = (row: OrderableRow): unknown => row.getIsPinned?.() ?? false
+
+/**
+ * The table surface these helpers need: the two atom bags {@link AnyTable} names, plus the
+ * rendered row model.
+ *
+ * Structural rather than `Table<TFeatures, TData>`, and it stays that way now that the v8
+ * `declare module` blocks are gone and `Table` resolves at v9's arity. The reason changed rather
+ * than disappearing, and both replacements were tried:
+ *
+ * - **Generic over `TFeatures`**, as a feature hook is: a column's members come from
+ *   `Column_FeatureMap` keyed by the set, so with `TFeatures` unresolved `getIsPinned` is a
+ *   `TS2339` — the same wall that made `../../feature-state` necessary for atoms.
+ * - **`Table<TableFeatures, RowData>`**, the all-in instantiation: it compiles here but asserts
+ *   that every feature's API is present, which makes the `?.` fallbacks below dead code for a
+ *   fact that is genuinely conditional — and no narrow table is assignable to it, so every
+ *   caller becomes a `TS2379`.
+ *
+ * So the honest shape is the one that names exactly what is read, with the conditional members
+ * optional. See {@link OrderableColumn} / {@link OrderableRow}, which say the same thing per member.
+ */
+export type RowOrderingTable = AnyTable & { getRowModel: () => { rows: OrderableRow[] } }
+
+/**
  * The neighbour a move would swap with, or `undefined` when there is none.
  *
  * The universe is the **rendered** row model, so a page edge and a collapsed subtree are both
@@ -54,7 +96,7 @@ export type RowMove = {
  * sibling below them is still the sibling below: stopping at the first child would mean an
  * expanded row could never move at all, which is the opposite of moving among siblings.
  */
-function findNeighbour<TRow>(rows: Row<TRow>[], index: number, direction: RowMoveDirection): Row<TRow> | undefined {
+function findNeighbour(rows: OrderableRow[], index: number, direction: RowMoveDirection): OrderableRow | undefined {
 	const row = rows[index]
 	if (!row) return undefined
 
@@ -70,7 +112,7 @@ function findNeighbour<TRow>(rows: Row<TRow>[], index: number, direction: RowMov
 	}
 
 	if (!candidate) return undefined
-	if (candidate.getIsPinned() !== row.getIsPinned()) return undefined
+	if (pinnedBand(candidate) !== pinnedBand(row)) return undefined
 	if (candidate.parentId !== row.parentId) return undefined
 	return candidate
 }
@@ -78,7 +120,7 @@ function findNeighbour<TRow>(rows: Row<TRow>[], index: number, direction: RowMov
 /**
  * Whether `rowId` can move one step in `direction` — what a menu entry's disabled state reads.
  */
-export function canMoveRow<TRow>(table: Table<TRow>, rowId: string, direction: RowMoveDirection): boolean {
+export function canMoveRow(table: RowOrderingTable, rowId: string, direction: RowMoveDirection): boolean {
 	return moveRow(table, rowId, direction) !== undefined
 }
 
@@ -94,15 +136,21 @@ export function canMoveRow<TRow>(table: Table<TRow>, rowId: string, direction: R
  * Describes the move and performs none of it — the controlled path hands the descriptor to
  * `ordering.row.onChange`, the uncontrolled path feeds it to {@link applyRowMove}.
  */
-export function moveRow<TRow>(table: Table<TRow>, rowId: string, direction: RowMoveDirection): RowMove | undefined {
-	const state = table.getState()
-	if (state.sorting.length > 0) return undefined
+export function moveRow(table: RowOrderingTable, rowId: string, direction: RowMoveDirection): RowMove | undefined {
+	// Two slices, read one at a time rather than off a whole-state snapshot. `sorting` is
+	// **foreign** — `rowSortingFeature` is optional, and a grid without it simply never sorts, so
+	// an absent slice reads as "no sort applied". `rowOrder` is `rowOrderingFeature`'s **own**
+	// slice, and this helper is that feature's: calling it on a table that never registered the
+	// feature is a composition mistake, and the named throw says so rather than letting an empty
+	// order compute every move from the original positions.
+	if ((readForeignSlice(table, 'sorting') ?? []).length > 0) return undefined
+	const rowOrder = readOwnSlice(table, 'rowOrder')
 
 	// Projected through `rowOrder` rather than read straight off the row model. An adapter
 	// rendering an uncontrolled order feeds `applyRowOrder`'s result back as `data`, which makes
 	// this projection a no-op — but a grid that has not done so yet would otherwise compute
 	// every move from the original positions, so a second step would undo the first.
-	const rows = applyRowOrder(table.getRowModel().rows, state.rowOrder, (row) => row.id)
+	const rows = applyRowOrder(table.getRowModel().rows, rowOrder, (row) => row.id)
 	const index = rows.findIndex((row) => row.id === rowId)
 	if (index === -1) return undefined
 

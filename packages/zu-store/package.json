@@ -156,7 +156,7 @@
 	"devDependencies": {
 		"@types/react": "^19.2.14",
 		"@types/react-dom": "^19.2.3",
-		"next": "16.2.4",
+		"next": "16.3.5",
 		"react": "^19.2.4",
 		"react-dom": "^19.2.4",
 		"react-router": "^7.9.0",

@@ -88,6 +88,7 @@ but the grid.
 const [tableState, setTableState] = useState<Partial<TableState>>(INITIAL_STATE)
 
 <DataGrid
+	features={features}
 	data={rows}
 	columns={orderColumns}
 	pagination={{ manual: true, rowCount }}
@@ -200,6 +201,7 @@ what a write actually does:
 ```tsx
 <DataGridOptions>
 	<DataGrid
+		features={features}
 		data={rows}
 		columns={orderColumns}
 		pagination={{ rowCount }}
@@ -274,6 +276,7 @@ search box applies the whole draft, not just the field you are in.
 
 ```tsx
 <DataGrid
+	features={features}
 	data={rows}
 	columns={orderColumns}
 	draft
@@ -349,6 +352,7 @@ Same server, read as a feed instead:
 
 ```tsx
 <DataGrid
+	features={features}
 	data={rows}
 	columns={orderColumns}
 	layout={{ stickyHeader: true }}

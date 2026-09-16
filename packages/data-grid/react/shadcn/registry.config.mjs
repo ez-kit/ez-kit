@@ -14,6 +14,8 @@ const homepage = process.env.VERCEL_PROJECT_PRODUCTION_URL
 	: JSON.parse(readFileSync(siteConfigPath, 'utf8')).siteUrl
 const reactPkgDir = fileURLToPath(new URL('../react', import.meta.url))
 const reactPkgVersion = JSON.parse(readFileSync(`${reactPkgDir}/package.json`, 'utf8')).version
+const corePkgDir = fileURLToPath(new URL('../../core', import.meta.url))
+const corePkgVersion = JSON.parse(readFileSync(`${corePkgDir}/package.json`, 'utf8')).version
 
 const outPath = generateRegistryManifest({
 	pkgDir,
@@ -25,9 +27,14 @@ const outPath = generateRegistryManifest({
 	homepage,
 	// Only packages the copied files import directly (verify with:
 	// grep -rho "from '[a-z][a-z0-9@/-]*'" src/{blocks,hooks,lib} src/data-grid.tsx | sort -u).
-	// @ez-kit/data-grid-core is a transitive dep of @ez-kit/data-grid-react (declared in its own
-	// package.json) — npm resolves it automatically, listing it here would just be redundant
-	// clutter in the consumer's package.json. @tanstack/react-table isn't imported at all (data-grid-react
+	// @ez-kit/data-grid-core is imported by a copied file: `data-grid.tsx` names
+	// `allDataGridFeatures` from @ez-kit/data-grid-core/features/all, so the grid registers every
+	// feature the moment it lands and the consumer writes no `features` to render one. Narrowing
+	// that set — replacing the import with their own `tableFeatures({ … })` — is an edit to a file
+	// they now own, and the helpers for it live on core too. It was listed here even before that
+	// import existed, because relying on it being transitive through @ez-kit/data-grid-react was
+	// only ever true for hoisting package managers and false under pnpm's strict layout.
+	// @tanstack/react-table isn't imported at all (data-grid-react
 	// depends on @tanstack/table-core + @tanstack/react-virtual instead), so it's correctly absent too.
 	//
 	// @ez-kit/data-grid-react is pinned to this repo's *current* published version, not a bare
@@ -37,6 +44,7 @@ const outPath = generateRegistryManifest({
 	// doesn't fully solve drift between releases, only stops it from being silently unpinned.
 	dependencies: [
 		`@ez-kit/data-grid-react@^${reactPkgVersion}`,
+		`@ez-kit/data-grid-core@^${corePkgVersion}`,
 		'date-fns',
 		'react-day-picker',
 		'clsx',

@@ -26,6 +26,7 @@ opening anything. It is also the variant that costs header height — see
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	filtering
@@ -45,6 +46,7 @@ filtered without saying what to.
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	filtering={{ variant: 'popover' }}
@@ -67,6 +69,7 @@ sortable.
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	filtering={{ variant: 'panel' }}
@@ -81,6 +84,7 @@ faceted-toolbar layout, without composing anything:
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	globalFiltering
@@ -108,6 +112,7 @@ layout, so mount the rest of the grid too:
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	filtering={{ variant: 'panel' }}

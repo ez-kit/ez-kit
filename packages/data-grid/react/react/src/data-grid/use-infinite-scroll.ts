@@ -50,9 +50,21 @@ function readConfig(table: { grid: ResolvedGridOptions }): NormalizedInfiniteCon
 export function useInfiniteScroll(): InfiniteController {
 	const table = useDataGridTable()
 
+	// `table` is a legitimate dependency for the two callbacks below because `useDataGrid` returns
+	// one stable object per table. That is load-bearing rather than incidental: `loadMore` is the
+	// dependency of the sentinel effect in `load-more-footer.tsx` and of the index-based one in
+	// `virtual-body.tsx`, and **both call it** when the threshold is met — so an identity that
+	// moved per render would turn "load when the last row nears the end" into "re-check on every
+	// render of the grid", and would re-attach a scroll listener and a `ResizeObserver` each time.
 	const config = readConfig(table)
-	const isFetchingNextPage = useDataGridState((s) => s.infinite.isFetchingNextPage)
-	const errorState = useDataGridState((s) => s.infinite.error)
+	// `<LoadMoreFooter />` mounts unconditionally inside `<Tbody>`, and `VirtualBody` reaches this
+	// hook by a second route, so these two run on **every** grid — including one that configures
+	// no infinite scroll at all. Optional-chained so `infiniteFeature` is not required to render
+	// a plain table. See `feature-optionality.test.tsx`.
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const isFetchingNextPage = useDataGridState((s) => s.infinite?.isFetchingNextPage ?? false)
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const errorState = useDataGridState((s) => s.infinite?.error ?? null)
 
 	const loadMore = useCallback(
 		(direction: LoadMoreDirection = 'forward') => {
@@ -62,7 +74,7 @@ export function useInfiniteScroll(): InfiniteController {
 			if (!cfg?.onLoadMore) return
 
 			// Guard: nothing more to load in this direction, or a fetch is already in flight.
-			const infinite = table.getSnapshot().infinite
+			const infinite = table.store.state.infinite
 			const canLoad =
 				direction === LoadMoreDirection.Forward
 					? cfg.hasNextPage && !infinite.isFetchingNextPage
@@ -95,7 +107,7 @@ export function useInfiniteScroll(): InfiniteController {
 	const retry = useCallback(() => {
 		// Read the failed direction imperatively so retry doesn't depend on the
 		// error snapshot closure (which loadMore clears as soon as it runs).
-		const direction = table.getSnapshot().infinite.error?.direction ?? LoadMoreDirection.Forward
+		const direction = table.store.state.infinite.error?.direction ?? LoadMoreDirection.Forward
 		loadMore(direction)
 	}, [table, loadMore])
 

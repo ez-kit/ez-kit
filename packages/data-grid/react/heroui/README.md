@@ -5,12 +5,12 @@
 ## Install
 
 ```bash
-pnpm add @ez-kit/data-grid-heroui @heroui/react @heroui/styles
+pnpm add @ez-kit/data-grid-heroui @ez-kit/data-grid-core @heroui/react @heroui/styles
 ```
 
 `@heroui/react` and `@heroui/styles` (v3) are **peer dependencies**, alongside `react` and `react-dom`: HeroUI is built on React Aria, whose components talk to each other through React context, and this kit's stylesheet `@import`s `@heroui/styles` — a second copy of either in your tree means a second set of contexts and a second copy of HeroUI's CSS.
 
-Nothing else to add. The kit re-exports the whole adapter surface, so you never need `@ez-kit/data-grid-react` or `@ez-kit/data-grid-core` as a second dependency — not even to name a type.
+The kit re-exports the whole adapter surface, so you never need `@ez-kit/data-grid-react` as a second dependency — not even to name a type. The one thing it does not re-export is the **feature set**, which is why `@ez-kit/data-grid-core` is on the install line. The `DataGrid` below does not ask you for one — it binds the all-in set — but the moment you compose your own bundle to trim it, your code imports the feature helpers by name. The kit declares core as a dependency too, but a transitive dependency is not importable under pnpm's strict layout — naming it is what makes the import resolve. See [Feature composition](#feature-composition) below.
 
 ## Usage
 
@@ -46,6 +46,29 @@ Own the instance only when you need it (to read state, or to share one grid acro
 ```
 
 Pick one mode for the lifetime of a given grid — switching between them remounts it and resets its state.
+
+### Feature composition
+
+A table has only the features it was handed, and `@ez-kit/data-grid-core/features` is the one import path for them — the feature _values_ are deliberately not re-exported from the kit or from `@ez-kit/data-grid-react`. That is the one thing the kit cannot hand you, and why core is on the install line above. Everything else still comes from the kit.
+
+The `DataGrid` exported above is the **prebuilt** grid, and it binds the all-in set, which is why the examples name no `features`. That is the one export where composing a set buys nothing: the prebuilt grid carries all fourteen component groups, those components read the features' APIs, and so they drag the implementations in whatever set a call site names. A `features` prop there still narrows what the grid _does_ — an unregistered feature has no state slice and no API — and gives none of the bytes back.
+
+Trimming is what `createDataGrid` is for: compose the component groups, cell types and features a grid actually uses into your own bundle, once, and import `DataGrid` from there instead. Measured against this kit with esbuild (minified, gzipped, React and HeroUI external): a four-group composition is **41.1 kB** against **55.7 kB** for the prebuilt grid, and the prebuilt grid with a sorting-only set is 51.7 kB — the 4 kB that made `features` not worth asking for there.
+
+```tsx
+// src/lib/data-grid.ts
+export const { DataGrid, useDataGrid, createColumns } = createDataGrid({
+	components: { core: coreComponents, sorting: sortingComponents, fallbacks: fallbacksComponents },
+	cellTypes: { text: textCellType },
+	features,
+})
+```
+
+Registering a feature does not switch it on: `features` decides what exists, the config (`sorting: false`, `editing: { mode: 'row' }`) decides whether this grid uses it. Configuring a feature you did not register is a silent no-op, reported only by a development-mode warning.
+
+`columnVisibilityFeature`, `columnPinningFeature` and `columnSizingFeature` are **structural**, so open every set with them: the shell lays out a column grid, and it needs visibility, pin groups and widths to lay one out with. Omitting any of the three is a render-time `TypeError` — not a limitation waiting to be lifted, but the consequence of asking for a grid while withholding what a grid is made of. Everything else is genuinely optional: leave out `rowSortingFeature` or `editingFeature` and you get a grid that does not sort or edit. `feature-optionality.test.tsx` renders a grid missing each optional feature and asserts these three still throw, so that boundary is executable rather than asserted.
+
+Composing a set governs **behaviour** — an unregistered feature contributes no state slice, no API and no work at runtime — **and it governs your bundle**. Measured against the built entry: `tableFeatures` alone costs 994 bytes, `rowSortingFeature` 998, a sorting-only set 1 035, and `editingFeature` 17 163, which is what a feature with a real implementation behind it weighs. The all-in set lives on its own subpath, `@ez-kit/data-grid-core/features/all`, precisely so that reaching it is a choice: while it sat on the main entry, each of those imports cost ~46 kB, because a top-level `tableFeatures({ …stockFeatures, … })` call is not something a bundler can drop.
 
 Full documentation: [ez-kit-docs.vercel.app/docs/data-grid](https://ez-kit-docs.vercel.app/docs/data-grid).
 

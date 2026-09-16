@@ -2,9 +2,12 @@ import { createColumns, createTable } from '@ez-kit/data-grid-core'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
-import { testComponents } from '../test-utils'
+import { TEST_FEATURES, testComponents } from '../test-utils'
 
 import { DataGrid } from './data-grid'
+
+import type { GridFeatures } from '../types'
+import type { DataGridCellProps } from './cell'
 
 type User = { id: number; name: string; auditedBy: string }
 
@@ -17,6 +20,7 @@ const COLUMNS = createColumns<User>([
 const renderCellMode = (onSave: (args: { rowId: string; values: Partial<User> }) => void = () => {}) =>
 	render(
 		<DataGrid
+			features={TEST_FEATURES}
 			data={USERS}
 			columns={COLUMNS}
 			components={testComponents}
@@ -53,7 +57,8 @@ describe('editing.mode: cell — column editing: false', () => {
 	})
 
 	it('ignores a programmatic startCell on a column that opted out', () => {
-		const table = createTable<User>({
+		const table = createTable<GridFeatures, User>({
+			features: TEST_FEATURES,
 			data: USERS,
 			columns: COLUMNS,
 			editing: { mode: 'cell', onSave: async () => {} },
@@ -184,5 +189,75 @@ describe('editing.mode: cell — leaving the cell', () => {
 
 		expect(onSave).not.toHaveBeenCalled()
 		expect(screen.getByDisplayValue('Alice')).toBeTruthy()
+	})
+})
+
+/**
+ * A cell whose content the caller supplied as a **static** node cannot show an editor, because
+ * there is nowhere for one to go. It must therefore stay out of the edit path entirely — not
+ * merely render the caller's node in place of the editor, which is what forwarding `children`
+ * into every branch would otherwise do: the cell would take `data-editing-cell`, install the
+ * document-level Enter / Escape / pointer listeners that commit a cell edit, focus nothing, and
+ * commit on the way out, all while looking unchanged.
+ *
+ * The render-function form is the opposite case and stays in: it receives the editor as
+ * `content` and decides where to put it.
+ */
+describe('editing.mode: cell — a hand-composed cell', () => {
+	const renderComposed = (children: DataGridCellProps['children']) =>
+		render(
+			<DataGrid
+				features={TEST_FEATURES}
+				data={USERS}
+				columns={COLUMNS}
+				components={testComponents}
+				editing={{ mode: 'cell', onSave: () => {} }}
+			>
+				<DataGrid.Table>
+					<DataGrid.Body>
+						{({ rows }) =>
+							rows.map((row) => (
+								<DataGrid.Row
+									key={row.id}
+									row={row}
+								>
+									{({ cells }) =>
+										cells.map((cell) => (
+											<DataGrid.Cell
+												key={cell.id}
+												cell={cell}
+												row={row}
+											>
+												{children}
+											</DataGrid.Cell>
+										))
+									}
+								</DataGrid.Row>
+							))
+						}
+					</DataGrid.Body>
+				</DataGrid.Table>
+			</DataGrid>,
+		)
+
+	it('stays out of the edit path when its content is static', () => {
+		const { container } = renderComposed(<span>fixed</span>)
+
+		// Every cell renders the same static node; double-click all of them, so the assertion
+		// below covers the editable column and the opted-out one alike.
+		for (const cell of screen.getAllByText('fixed')) fireEvent.doubleClick(cell)
+
+		expect(container.querySelector('[data-editing-cell]')).toBeNull()
+	})
+
+	it('still opens, and hands the editor over as content, when it can place one', () => {
+		const { container } = renderComposed(({ content }) => <div data-testid='slot'>{content}</div>)
+
+		fireEvent.doubleClick(screen.getByText('Alice'))
+
+		// Scoped to the opened cell: every cell wraps its content in a slot, so an unscoped
+		// query would match all of them.
+		expect(container.querySelector('[data-editing-cell]')).not.toBeNull()
+		expect(container.querySelector('[data-editing-cell] [data-testid="slot"] input')).not.toBeNull()
 	})
 })

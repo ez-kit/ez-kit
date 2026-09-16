@@ -4,7 +4,7 @@ import { useSyncExternalStore } from 'react'
 
 import { useDataGridTable } from './data-grid/table-context'
 
-import type { RowData } from '@tanstack/table-core'
+import type { TableReactivityBindings } from '@tanstack/table-core/reactivity'
 
 /**
  * Application- and kit-supplied values carried alongside a grid, for components that need to
@@ -49,7 +49,7 @@ export interface GridContext {}
 /** The value every grid starts from, and the one a grid that never sets `context` keeps. */
 export const EMPTY_GRID_CONTEXT: GridContext = {}
 
-/** Cancels a subscription made with {@link GridContextStore.subscribe}. */
+/** Cancels a subscription made with {@link GridContextAtom.subscribe}. */
 type Unsubscribe = () => void
 
 /**
@@ -60,63 +60,97 @@ type Unsubscribe = () => void
  * whole point is that components re-render when it changes. Holding it in both places would
  * put one copy where nothing wakes it, which is the failure `ResolvedGridOptions` replaced.
  *
- * A local store rather than `@ez-kit/data-grid-core`'s: that one is internal to core, and this
- * needs twenty lines, not a new name in core's public API.
+ * Deliberately not `Atom<GridContext>` itself, for two reasons. First, naming `@tanstack/store`'s
+ * `Atom` in an exported type would write an `import('@tanstack/store')` into this package's
+ * `.d.ts` for a package it does not depend on directly — the same `TS2742` `DraftAtoms` avoids in
+ * `@ez-kit/data-grid-core` (see that type's docblock). Second, the two bindings below need
+ * different underlying primitives (a plain readonly atom under the render-phase binding, a
+ * genuinely writable one under the vanilla one — see {@link createGridContextAtom}), and this is
+ * the one shape both can satisfy.
  */
-export type GridContextStore = {
-	getState: () => GridContext
+export type GridContextAtom = {
+	get: () => GridContext
+	subscribe: (onChange: (value: GridContext) => void) => Unsubscribe
 	/**
-	 * Replaces the value. Pass `{ silent: true }` for a write made during a render pass — the
-	 * new value is readable immediately, but subscribers are woken later, by {@link notify},
-	 * rather than mid-render.
+	 * Replaces the value. Safe to call during render: under a binding with a `commit` hook
+	 * (`useTable`'s render-phase reactivity) the write lands invisibly and subscribers wake at
+	 * the table's own next commit, already called unconditionally from `useTable`'s layout effect
+	 * for the whole table — nothing here schedules a second one. Under a binding with no `commit`
+	 * (the vanilla one `prepareDataGridTable` sees) it notifies synchronously, which is correct
+	 * there: that path has no render to protect and no commit step to wait for.
 	 */
-	setState: (next: GridContext, options?: { silent?: boolean }) => void
-	/** Wakes every subscriber with the current value. Pairs with a `silent` write. */
-	notify: () => void
-	subscribe: (listener: () => void) => Unsubscribe
+	write: (next: GridContext) => void
 }
 
-/** Builds the per-grid context store. Called once per table by `prepareDataGridTable`. */
-export function createGridContextStore(initial: GridContext = EMPTY_GRID_CONTEXT): GridContextStore {
-	let state = initial
-	const listeners = new Set<() => void>()
+/**
+ * Builds the per-grid context atom, from the **same reactivity binding the table itself uses**
+ * (`table._reactivity`) — so this is one store instance per table, not a second one, and no new
+ * dependency: `@tanstack/table-core/reactivity` is a subpath of a package this one already
+ * depends on, and neither binding requires naming `@tanstack/react-store` here (Task 17 Step 1
+ * records why that dependency is not taken directly).
+ *
+ * The two bindings need genuinely different treatment, verified against the actual
+ * `@tanstack/table-core@9.2.4` implementations rather than assumed from their docs:
+ *
+ * - **Render-phase** (`reactivity.commit` present — `useDataGrid` running on `useTable`):
+ *   `createWritableAtom(initial).set(next)` still notifies synchronously, because a subscriber
+ *   reading another *reactive atom* (`.get()` on one) is a real tracked dependency and the
+ *   render-phase binding's `commit` gate only defers atoms whose resolver reads a **plain**,
+ *   non-reactive value — exactly `options.state` in `constructTable`'s own controlled-slice
+ *   atoms. So the write here targets a plain closure variable, read by
+ *   `reactivity.createReadonlyAtom(() => value)`: `.get()` always re-evaluates and returns the
+ *   fresh value immediately (safe to read the same render that wrote it), while `.subscribe()`
+ *   only fires after the table's own `commit()` — called unconditionally, every render, from
+ *   `useTable`'s layout effect via `table_publishExternalState`, whether or not the grid uses
+ *   controlled state. No second layout effect is needed here to get that timing.
+ * - **Vanilla** (`reactivity.commit` absent — `prepareDataGridTable`'s bare `constructTable`
+ *   table): the plain-closure-variable trick above does not apply — that binding's
+ *   `createReadonlyAtom` has no dependency to invalidate on and never re-evaluates after its
+ *   first read, so a written-but-unread closure variable would look permanently stale. A real
+ *   `createWritableAtom` is used instead, whose synchronous notify is correct there: this path
+ *   is a headless table or one driven by hand, with no render to protect.
+ *
+ * Called once per table, by `prepareDataGridTable` and by `useDataGrid`.
+ */
+export function createGridContextAtom(
+	reactivity: TableReactivityBindings,
+	initial: GridContext = EMPTY_GRID_CONTEXT,
+): GridContextAtom {
+	const toUnsubscribe =
+		(subscription: { unsubscribe: () => void }): Unsubscribe =>
+		() => {
+			subscription.unsubscribe()
+		}
 
-	const notify = (): void => {
-		listeners.forEach((listener) => {
-			listener()
-		})
+	if (reactivity.commit) {
+		let value = initial
+		const atom = reactivity.createReadonlyAtom(() => value, { debugName: 'gridContext' })
+		return {
+			get: atom.get,
+			subscribe: (onChange) => toUnsubscribe(atom.subscribe(onChange)),
+			write: (next) => {
+				value = next
+			},
+		}
 	}
 
+	const atom = reactivity.createWritableAtom(initial, { debugName: 'gridContext' })
 	return {
-		getState: () => state,
-		setState: (next, options) => {
-			state = next
-			if (!options?.silent) notify()
-		},
-		notify,
-		subscribe: (listener) => {
-			listeners.add(listener)
-			return () => {
-				listeners.delete(listener)
-			}
+		get: atom.get,
+		subscribe: (onChange) => toUnsubscribe(atom.subscribe(onChange)),
+		write: (next) => {
+			atom.set(next)
 		},
 	}
 }
 
-declare module '@tanstack/table-core' {
-	// The row type is erased here, exactly as it is on `grid`: the context is a fact about the
-	// grid's surroundings, never a row-bound value.
-	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions, @typescript-eslint/no-unused-vars
-	interface Table<TData extends RowData> {
-		/**
-		 * The grid's {@link GridContext}, behind a subscription. Seeded by `prepareDataGridTable`
-		 * so it is **always** a store — no reader guards the property — and written by
-		 * `useDataGrid` whenever the merged `context` option changes. Read it with
-		 * {@link useGridContext}.
-		 */
-		gridContext: GridContextStore
-	}
-}
+// `gridContext` used to be declared onto TanStack's `Table` from here, through a
+// `declare module '@tanstack/table-core'` block. In v9 `Table` is a **type alias**, not an
+// interface, so that block never merged: it declared a second, one-parameter `Table` inside the
+// module's scope and every `Table<TFeatures, TData>` in this package resolved against that
+// shadow instead of against v9's real type. It now lives on this package's own `DataTable` alias
+// (`./types`), where it is an ordinary member typed as `GridContextAtom` — this file only
+// declares the property's type; `createGridContextAtom` above is where the value comes from.
 
 /**
  * Whether two context values agree, compared one level deep.
@@ -137,19 +171,17 @@ function isSameContext(a: GridContext, b: GridContext): boolean {
 }
 
 /**
- * Pushes the merged `context` into the store, and reports whether subscribers still need waking.
+ * Pushes the merged `context` into the atom, during render, only when it actually changed.
  *
- * The write happens during render so the very pass that resolves a new context reads it, and is
- * therefore `silent`: notifying here would run a subscribed child's `useSyncExternalStore`
- * callback while the grid is still rendering. The caller flushes with `store.notify()` from a
- * layout effect — the same two-step `useDataGrid` already uses for controlled state.
- *
- * @returns `true` when a write landed and a notify is owed.
+ * Still guarded by {@link isSameContext} with the atom in place: `mergeGridOptionLayers` rebuilds
+ * the merged config every render, so an unconditional write would hand the render-phase atom's
+ * `get()` a fresh-but-equal object every time — defeating its own `Object.is` snapshot compare
+ * (see {@link createGridContextAtom}) and waking every whole-object reader on every render of the
+ * grid, exactly the failure this guard always existed to prevent.
  */
-export function syncGridContext(store: GridContextStore, next: GridContext): boolean {
-	if (isSameContext(store.getState(), next)) return false
-	store.setState(next, { silent: true })
-	return true
+export function syncGridContext(atom: GridContextAtom, next: GridContext): void {
+	if (isSameContext(atom.get(), next)) return
+	atom.write(next)
 }
 
 export function useGridContext(): GridContext
@@ -176,7 +208,7 @@ export function useGridContext<TSelected>(selector: (context: GridContext) => TS
  *   const canEdit = useGridContext((c) => c.permissions.canEdit)
  */
 export function useGridContext<TSelected>(selector?: (context: GridContext) => TSelected): GridContext | TSelected {
-	const store = useDataGridTable().gridContext
-	const read = (): GridContext | TSelected => (selector ? selector(store.getState()) : store.getState())
-	return useSyncExternalStore(store.subscribe, read, read)
+	const atom = useDataGridTable().gridContext
+	const read = (): GridContext | TSelected => (selector ? selector(atom.get()) : atom.get())
+	return useSyncExternalStore(atom.subscribe, read, read)
 }

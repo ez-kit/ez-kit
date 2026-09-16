@@ -1,11 +1,13 @@
 import { ColumnFormMode, resolveColumnFormConfig } from '../../column/resolve-form-config'
 import { DEFAULT_VALIDATE_DEBOUNCE_MS } from '../../defaults'
+import { assignTableInstanceData, readOwnSlice, writeOwnSlice } from '../../feature-state'
 import { CommitStatus, isValidationError, ValidateOn, zodSafeParseToResult } from '../validation'
 
-import type { ResolvedColumnFormConfig } from '../../column/resolve-form-config'
+import type { FormColumnMeta, ResolvedColumnFormConfig } from '../../column/resolve-form-config'
+import type { AnyTable } from '../../feature-state'
 import type { FeatureToggle } from '../../utils/feature-flag'
 import type { ValidateConfig, ValidateContext, ValidationErrors, ValidationResult } from '../validation'
-import type { InitialTableState, RowData, Table, TableFeature, TableState } from '@tanstack/table-core'
+import type { RowData, Table, TableFeature, TableFeatures } from '@tanstack/table-core'
 
 /**
  * Context passed to {@link CreatingConfig.onSave}.
@@ -32,7 +34,17 @@ export type CreatingSaveContext<TData> = {
  * @typeParam TRow - row data type
  */
 export type CreateDefaultValueContext<TRow> = {
-	table: Table<TRow>
+	// `TRow & object` rather than `TRow`: v9's `RowData` is `Record<string, any> | Array<any>`,
+	// and `TRow` is unconstrained here because `ColumnCreatingConfig` defaults it to `unknown`.
+	// The intersection adds nothing for any real row type — rows are objects — and is what keeps
+	// this public type naming `Table` rather than degrading to a structural stand-in.
+	//
+	// `TableFeatures` — the base, where every feature key is optional — is the widest
+	// instantiation, so `ExtractFeatureMapTypes` contributes every feature's table API and a
+	// callback written against this context keeps reaching what it reached under v8. The same
+	// choice `RowActionsContext` makes, for the same reason: this type is not generic over a
+	// feature set and the callback is handed a table whose set it never named.
+	table: Table<TableFeatures, TRow & object>
 	/** Id of the column whose default is being resolved. */
 	columnId: string
 }
@@ -40,12 +52,13 @@ export type CreateDefaultValueContext<TRow> = {
 /**
  * Context passed to the function form of {@link CreatingConfig.defaultValues}.
  *
- * Minimal for the same reason as {@link CreateDefaultValueContext} — see its doc comment.
+ * Minimal for the same reason as {@link CreateDefaultValueContext} — see its doc comment,
+ * including the note on `TRow & object` and on the `TableFeatures` instantiation.
  *
  * @typeParam TRow - row data type
  */
 export type CreateDefaultValuesContext<TRow> = {
-	table: Table<TRow>
+	table: Table<TableFeatures, TRow & object>
 }
 
 const DEFAULT_VALIDATE_ON: ValidateOn = ValidateOn.Submit
@@ -125,30 +138,122 @@ export type CreatingApi<TData = unknown> = {
 	getState: () => CreatingState
 }
 
+/**
+ * The single in-flight `AbortController` for a table, held in a box rather than directly.
+ *
+ * `initTableInstanceData` installs the member once; every swap after that mutates
+ * `box.controller`, so nothing ever reassigns the property that was installed. That is what lets
+ * `resetTableInstanceData` clear the controller without needing the whole `Table_FeatureMap` entry
+ * back in hand, and what keeps `table.creating`'s closure and the reset hook looking at one box.
+ */
+// `| undefined` explicitly: under `exactOptionalPropertyTypes` a bare `controller?:` could not be
+// cleared by assignment, and clearing it is what `cancel` and `resetTableInstanceData` both do.
+export type CreatingAbortBox = { controller?: AbortController | undefined }
+
 declare module '@tanstack/table-core' {
+	// Declaration merging needs interfaces; these are the shapes upstream declares as such.
 	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
-	interface TableState {
-		creating: CreatingState
+	interface Plugins {
+		creatingFeature: TableFeature
 	}
 
 	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
-	interface TableOptionsResolved<TData extends RowData> {
-		creating?: CreatingConfig<TData>
+	interface TableState_FeatureMap {
+		creatingFeature: { creating: CreatingState }
 	}
 
+	// `TableState_FeatureMap` feeds `TableState<TFeatures>` only; `TableState_All` is what feature
+	// internals — and `SliceKey` in `../../feature-state` — read through. A feature that augments
+	// only the first cannot name its own slice at `readOwnSlice(table, 'creating')`.
 	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
-	interface Table<TData extends RowData> {
-		creating: CreatingApi<TData>
+	interface TableState_All {
+		creating?: CreatingState
+	}
+
+	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions, @typescript-eslint/no-unused-vars
+	interface TableOptions_FeatureMap<TFeatures extends TableFeatures, TData extends RowData> {
+		creatingFeature: { creating?: CreatingConfig<TData> }
+	}
+
+	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions, @typescript-eslint/no-unused-vars
+	interface Table_FeatureMap<TFeatures extends TableFeatures, TData extends RowData> {
+		creatingFeature: {
+			/** The whole create flow — open, mutate, validate, commit, cancel. */
+			creating: CreatingApi<TData>
+			/** Internal. The in-flight validate / save controller. See {@link CreatingAbortBox}. */
+			_creatingAbort: CreatingAbortBox
+		}
 	}
 }
 
-const INITIAL_STATE: CreatingState = {
+/**
+ * The closed, empty form — what `getInitialState` seeds and what `cancel` and a successful
+ * `commit` write back.
+ *
+ * **Frozen, and frozen at both levels.** Those writes are `{ ...INITIAL_STATE }`, a shallow copy,
+ * so the `values` and `errors` the slice ends up holding are *this object's* — by reference, where
+ * v8 wrote a fresh `{}` at each site. Nothing mutates them today, so this closes a latent aliasing
+ * hazard rather than a live bug; it is worth closing because this constant is the shape the
+ * remaining feature ports copy from. A shallow `Object.freeze` would not have done it: the hazard
+ * is the nested objects, not the outer one, so both are frozen and the seed is a true constant.
+ */
+const INITIAL_STATE: CreatingState = Object.freeze({
 	isOpen: false,
-	values: {},
-	errors: {},
+	values: Object.freeze({}),
+	errors: Object.freeze({}),
 	formError: null,
 	commitStatus: CommitStatus.Idle,
+})
+
+/**
+ * The column shape this feature reads.
+ *
+ * Structural for the reason `EditingColumn` in `../editing/editing.ts` spells out: a `Column`'s
+ * members are resolved from the table's feature set, which a feature cannot see its own table's.
+ * The second reason that used to be given here — that `ColumnMeta` was still at v8 arity in
+ * `../../column/resolve-form-config` — is gone: that file names `ColumnMeta<TableFeatures, object>`
+ * now, as {@link FormColumnMeta}, which is what `resolveColumnForm` below casts to.
+ */
+type CreatingColumnMeta = {
+	creating?: false | { defaultValue?: unknown } | undefined
+	isSystemColumn?: boolean | undefined
 }
+
+type CreatingColumn = { id: string; columnDef: { meta?: CreatingColumnMeta | undefined } }
+
+/**
+ * A table, as this feature's free functions see it.
+ *
+ * Every helper below takes it as its first argument rather than closing over one — the shape
+ * `editing` established, and what lets `initTableInstanceData` hand the table in rather than have
+ * the API object capture it from a `createTable` closure that no longer exists in v9.
+ */
+type CreatingTable = AnyTable & {
+	getAllColumns: () => CreatingColumn[]
+}
+
+/**
+ * The feature's own option, read off a table whose `TFeatures` is unresolved.
+ *
+ * `table.options` is `TableOptions<TFeatures, TData>`, assembled from `TableOptions_FeatureMap`
+ * by feature key, so a key this feature merged in is not provable inside the feature itself.
+ * Upstream's custom-feature skill reads its own option the same way. This survived the removal of
+ * the v8 `declare module` blocks unchanged, as it was expected to: it is a property of feature
+ * code, not of the shadowing those blocks did.
+ */
+const creatingOption = (table: { readonly options: object }): CreatingConfig<RowData> | undefined =>
+	(table.options as { creating?: CreatingConfig<RowData> }).creating
+
+/**
+ * The table's abort box, read off a table whose `TFeatures` is unresolved.
+ *
+ * Same reason as {@link creatingOption}: `Table_FeatureMap` contributes `_creatingAbort` only when
+ * `creatingFeature` is provably in `TFeatures`, which it is not from inside the feature. The
+ * **write** side needs no cast — `assignTableInstanceData` checks the member names against the
+ * declaration above.
+ */
+const abortBox = (table: AnyTable): CreatingAbortBox =>
+	(table as unknown as { _creatingAbort: CreatingAbortBox })._creatingAbort
 
 function isAbortError(e: unknown): boolean {
 	return typeof e === 'object' && e !== null && (e as { name?: string }).name === 'AbortError'
@@ -173,318 +278,356 @@ function abortableSleep(ms: number, signal: AbortSignal): Promise<void> {
 	})
 }
 
-export const CreatingFeature: TableFeature<RowData> = {
-	getInitialState: (state?: InitialTableState) =>
-		({
-			...state,
-			creating: { ...INITIAL_STATE },
-		}) as Partial<TableState>,
+/** The current slice. `creating` is this feature's own, so the read is not optional. */
+function readCreating(table: AnyTable): CreatingState {
+	return readOwnSlice(table, 'creating')
+}
 
-	createTable: (table: Table<RowData>) => {
-		// Single AbortController per table instance.
-		// Aborted on: new commit, new validate, new validateField, cancel, start.
-		let controller: AbortController | undefined
+/**
+ * Merge a patch into the slice.
+ *
+ * `writeOwnSlice`, not `table.setState`: the write now touches one slice instead of rebuilding
+ * the whole `TableState`, so a subscriber to another slice is no longer woken by a keystroke in a
+ * form field. Every write this feature makes is to `creating` alone — no operation writes two
+ * slices, so nothing here needs `batch`.
+ */
+function writeCreating(table: AnyTable, patch: Partial<CreatingState>): void {
+	writeOwnSlice(table, 'creating', (prev) => ({ ...prev, ...patch }))
+}
 
-		const getConfig = (): CreatingConfig<RowData> | undefined => table.options.creating
-		const getState = (): CreatingState => table.getState().creating
+function columnMeta(table: CreatingTable, columnId: string): CreatingColumnMeta | undefined {
+	return table.getAllColumns().find((c) => c.id === columnId)?.columnDef.meta
+}
 
-		const writeState = (patch: Partial<CreatingState>): void => {
-			table.setState((prev) => ({
-				...prev,
-				creating: { ...prev.creating, ...patch },
-			}))
+/**
+ * The column's create-form settings, falling back **per field** to its edit-form ones —
+ * the same rule the React layer applies to `component` and `description`, through the
+ * same helper, so a column that states how one form should behave does not have to
+ * restate it for the other.
+ */
+function resolveColumnForm(table: CreatingTable, columnId: string): ResolvedColumnFormConfig | undefined {
+	// `columnMeta` reads a meta off a table this function is not generic over, and `ColumnMeta`
+	// is invariant in both its `TFeatures` and its `TData` (`in out` on each), so no instantiation
+	// it could return is assignable to any other. The cast is to the one name the helper declares
+	// for that, and it is the same cast the React layer makes at its own call site.
+	const meta = columnMeta(table, columnId) as FormColumnMeta | undefined
+	const resolved = resolveColumnFormConfig(meta, ColumnFormMode.Creating)
+	return resolved === false ? undefined : resolved
+}
+
+function resolveValidateOn(table: CreatingTable, columnId: string): ValidateOn {
+	const fromColumn = resolveColumnForm(table, columnId)?.validateOn
+	if (fromColumn) return fromColumn
+	return creatingOption(table)?.validateOn ?? DEFAULT_VALIDATE_ON
+}
+
+function resolveDebounceMs(table: CreatingTable, columnId: string): number {
+	const fromColumn = resolveColumnForm(table, columnId)?.debounce
+	if (fromColumn !== undefined) return fromColumn
+	return creatingOption(table)?.debounce ?? DEFAULT_VALIDATE_DEBOUNCE_MS
+}
+
+async function runValidate(
+	table: CreatingTable,
+	values: Record<string, unknown>,
+	ctx: ValidateContext,
+): Promise<ValidationResult> {
+	const config = creatingOption(table)
+	if (!config?.validate) return null
+	if (typeof config.validate === 'function') {
+		return await config.validate(values, ctx)
+	}
+	return zodSafeParseToResult(config.validate.schema, values)
+}
+
+/** Abort whatever is in flight and install a fresh controller in the box. */
+function resetController(table: AnyTable): AbortController {
+	const box = abortBox(table)
+	box.controller?.abort()
+	const c = new AbortController()
+	box.controller = c
+	return c
+}
+
+async function validateAndApplyField(table: CreatingTable, columnId: string, signal: AbortSignal): Promise<void> {
+	if (signal.aborted) return
+	const config = creatingOption(table)
+	if (!config?.validate) return
+
+	writeCreating(table, { commitStatus: CommitStatus.Validating })
+	const values = readCreating(table).values
+	let result: ValidationResult
+	try {
+		result = await runValidate(table, values, { signal, cell: { columnId } })
+	} catch (e) {
+		if (isAbortError(e)) return
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+		if (signal.aborted) return
+		writeCreating(table, { commitStatus: CommitStatus.Idle })
+		throw e
+	}
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+	if (signal.aborted) return
+
+	writeOwnSlice(table, 'creating', (prev) => {
+		// Drop previous error for this column, then re-apply if present in result.
+		const { [columnId]: _removed, ...rest } = prev.errors
+		const fieldErrs = result?.errors?.[columnId]
+		const nextErrors = fieldErrs && fieldErrs.length > 0 ? { ...rest, [columnId]: fieldErrs } : rest
+		return { ...prev, errors: nextErrors, commitStatus: CommitStatus.Idle }
+	})
+}
+
+function scheduleChangeValidation(table: CreatingTable, columnId: string): void {
+	const c = resetController(table)
+	const ms = resolveDebounceMs(table, columnId)
+	void (async () => {
+		try {
+			await abortableSleep(ms, c.signal)
+			if (c.signal.aborted) return
+			await validateAndApplyField(table, columnId, c.signal)
+		} catch (e) {
+			if (isAbortError(e)) return
+			throw e
 		}
+	})()
+}
 
-		const resolveColumnMeta = (columnId: string) => {
-			const col = table.getAllColumns().find((c) => c.id === columnId)
-			return col?.columnDef.meta
-		}
+/**
+ * Builds the seed for `state.creating.values`: column-level `creating.defaultValue`
+ * first (in final column order, system columns skipped), then the table-level
+ * `creating.defaultValues` shallow-merged over them so the table level wins per key.
+ *
+ * Runs on every start() — the resolved values are a snapshot of the table as it is
+ * when the form opens, not of how it was constructed.
+ */
+function resolveDefaultValues(table: CreatingTable): Record<string, unknown> {
+	// The two context types name `Table`, which this feature can no longer name at v9 arity from
+	// inside a hook; the table is restated as the context's own field type at the one point it is
+	// handed to a consumer's callback, so the public shape stays the thing being satisfied.
+	const asContextTable = table as unknown as CreateDefaultValueContext<RowData>['table']
 
-		/**
-		 * The column's create-form settings, falling back **per field** to its edit-form ones —
-		 * the same rule the React layer applies to `component` and `description`, through the
-		 * same helper, so a column that states how one form should behave does not have to
-		 * restate it for the other.
-		 */
-		const resolveColumnForm = (columnId: string): ResolvedColumnFormConfig | undefined => {
-			const resolved = resolveColumnFormConfig(resolveColumnMeta(columnId), ColumnFormMode.Creating)
-			return resolved === false ? undefined : resolved
-		}
+	const fromColumns: Record<string, unknown> = {}
+	for (const col of table.getAllColumns()) {
+		const meta = col.columnDef.meta
+		if (!col.id || meta?.isSystemColumn) continue
+		const creating = meta?.creating
+		// A column without a default contributes no key at all — not a key set to undefined.
+		if (!creating || creating.defaultValue === undefined) continue
+		const defaultValue: unknown = creating.defaultValue
+		fromColumns[col.id] =
+			typeof defaultValue === 'function'
+				? (defaultValue as (ctx: CreateDefaultValueContext<RowData>) => unknown)({
+						table: asContextTable,
+						columnId: col.id,
+					})
+				: defaultValue
+	}
 
-		const resolveValidateOn = (columnId: string): ValidateOn => {
-			const fromColumn = resolveColumnForm(columnId)?.validateOn
-			if (fromColumn) return fromColumn
-			return getConfig()?.validateOn ?? DEFAULT_VALIDATE_ON
-		}
+	const fromTable = creatingOption(table)?.defaultValues
+	if (fromTable === undefined) return fromColumns
+	// CreatingConfig is instantiated with RowData (= any) inside the feature, so the
+	// resolved patch widens to `any` here — narrow it back before merging.
+	const resolved = (typeof fromTable === 'function' ? fromTable({ table: asContextTable }) : fromTable) as Record<
+		string,
+		unknown
+	>
+	return { ...fromColumns, ...resolved }
+}
 
-		const resolveDebounceMs = (columnId: string): number => {
-			const fromColumn = resolveColumnForm(columnId)?.debounce
-			if (fromColumn !== undefined) return fromColumn
-			return getConfig()?.debounce ?? DEFAULT_VALIDATE_DEBOUNCE_MS
-		}
-
-		const runValidate = async (values: Record<string, unknown>, ctx: ValidateContext): Promise<ValidationResult> => {
-			const config = getConfig()
-			if (!config?.validate) return null
-			if (typeof config.validate === 'function') {
-				return await config.validate(values, ctx)
-			}
-			return zodSafeParseToResult(config.validate.schema, values)
-		}
-
-		const resetController = (): AbortController => {
-			controller?.abort()
-			const c = new AbortController()
-			controller = c
-			return c
-		}
-
-		const validateAndApplyField = async (columnId: string, signal: AbortSignal): Promise<void> => {
-			if (signal.aborted) return
-			const config = getConfig()
-			if (!config?.validate) return
-
-			writeState({ commitStatus: CommitStatus.Validating })
-			const values = getState().values
-			let result: ValidationResult
-			try {
-				result = await runValidate(values, { signal, cell: { columnId } })
-			} catch (e) {
-				if (isAbortError(e)) return
-				// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-				if (signal.aborted) return
-				writeState({ commitStatus: CommitStatus.Idle })
-				throw e
-			}
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-			if (signal.aborted) return
-
-			table.setState((prev) => {
-				// Drop previous error for this column, then re-apply if present in result.
-				const { [columnId]: _removed, ...rest } = prev.creating.errors
-				const fieldErrs = result?.errors?.[columnId]
-				const nextErrors = fieldErrs && fieldErrs.length > 0 ? { ...rest, [columnId]: fieldErrs } : rest
-				return {
-					...prev,
-					creating: { ...prev.creating, errors: nextErrors, commitStatus: CommitStatus.Idle },
-				}
+/** The one table member this feature installs — a namespace object, not a method. */
+function createCreatingApi(table: CreatingTable): CreatingApi<RowData> {
+	return {
+		start: () => {
+			resetController(table)
+			writeCreating(table, {
+				isOpen: true,
+				values: resolveDefaultValues(table),
+				errors: {},
+				formError: null,
+				commitStatus: CommitStatus.Idle,
 			})
-		}
+		},
 
-		const scheduleChangeValidation = (columnId: string): void => {
-			const c = resetController()
-			const ms = resolveDebounceMs(columnId)
-			void (async () => {
-				try {
-					await abortableSleep(ms, c.signal)
-					if (c.signal.aborted) return
-					await validateAndApplyField(columnId, c.signal)
-				} catch (e) {
-					if (isAbortError(e)) return
-					throw e
-				}
-			})()
-		}
+		cancel: () => {
+			const box = abortBox(table)
+			box.controller?.abort()
+			box.controller = undefined
+			// Values reset to empty, not to the defaults: the form is closed at this point
+			// and the next start() re-applies them.
+			writeCreating(table, { ...INITIAL_STATE })
+		},
 
-		/**
-		 * Builds the seed for `state.creating.values`: column-level `creating.defaultValue`
-		 * first (in final column order, system columns skipped), then the table-level
-		 * `creating.defaultValues` shallow-merged over them so the table level wins per key.
-		 *
-		 * Runs on every start() — the resolved values are a snapshot of the table as it is
-		 * when the form opens, not of how it was constructed.
-		 */
-		const resolveDefaultValues = (): Record<string, unknown> => {
-			const fromColumns: Record<string, unknown> = {}
-			for (const col of table.getAllColumns()) {
-				const meta = col.columnDef.meta
-				if (!col.id || meta?.isSystemColumn) continue
-				const creating = meta?.creating
-				// A column without a default contributes no key at all — not a key set to undefined.
-				if (!creating || creating.defaultValue === undefined) continue
-				const defaultValue: unknown = creating.defaultValue
-				fromColumns[col.id] =
-					typeof defaultValue === 'function'
-						? (defaultValue as (ctx: CreateDefaultValueContext<RowData>) => unknown)({
-								table,
-								columnId: col.id,
-							})
-						: defaultValue
-			}
+		commit: async () => {
+			const config = creatingOption(table)
+			if (!config) return
+			if (readCreating(table).commitStatus !== CommitStatus.Idle) return // UI invariant — second click is no-op
 
-			const fromTable = getConfig()?.defaultValues
-			if (fromTable === undefined) return fromColumns
-			// CreatingConfig is instantiated with RowData (= any) inside the feature, so the
-			// resolved patch widens to `any` here — narrow it back before merging.
-			const resolved = (typeof fromTable === 'function' ? fromTable({ table }) : fromTable) as Record<string, unknown>
-			return { ...fromColumns, ...resolved }
-		}
+			const c = resetController(table)
 
-		const api: CreatingApi = {
-			start: () => {
-				resetController()
-				writeState({
-					isOpen: true,
-					values: resolveDefaultValues(),
-					errors: {},
-					formError: null,
-					commitStatus: CommitStatus.Idle,
-				})
-			},
+			writeCreating(table, {
+				errors: {},
+				formError: null,
+				commitStatus: CommitStatus.Validating,
+			})
 
-			cancel: () => {
-				controller?.abort()
-				controller = undefined
-				// Values reset to empty, not to the defaults: the form is closed at this point
-				// and the next start() re-applies them.
-				writeState({
-					isOpen: false,
-					values: {},
-					errors: {},
-					formError: null,
-					commitStatus: CommitStatus.Idle,
-				})
-			},
+			const values = readCreating(table).values
 
-			commit: async () => {
-				const config = getConfig()
-				if (!config) return
-				if (getState().commitStatus !== CommitStatus.Idle) return // UI invariant — second click is no-op
-
-				const c = resetController()
-
-				writeState({
-					errors: {},
-					formError: null,
-					commitStatus: CommitStatus.Validating,
-				})
-
-				const values = getState().values
-
-				// ── validate phase ───────────────────────────────────────────
-				if (config.validate) {
-					let result: ValidationResult
-					try {
-						result = await runValidate(values, { signal: c.signal })
-					} catch (e) {
-						if (c.signal.aborted) return
-						writeState({ commitStatus: CommitStatus.Idle })
-						throw e
-					}
-					if (c.signal.aborted) return
-					if (result !== null) {
-						writeState({
-							errors: result.errors ?? {},
-							formError: result.formError ?? null,
-							commitStatus: CommitStatus.Idle,
-						})
-						return
-					}
-				}
-
-				// ── save phase ───────────────────────────────────────────────
-				writeState({ commitStatus: CommitStatus.Saving })
-				try {
-					await config.onSave({ values, signal: c.signal })
-					if (c.signal.aborted) return
-					// Reset to closed/empty state on success
-					writeState({
-						isOpen: false,
-						values: {},
-						errors: {},
-						formError: null,
-						commitStatus: CommitStatus.Idle,
-					})
-				} catch (e) {
-					if (c.signal.aborted) return
-					if (isValidationError(e)) {
-						writeState({
-							errors: e.errors,
-							formError: e.formError ?? null,
-							commitStatus: CommitStatus.Idle,
-						})
-						return
-					}
-					writeState({
-						formError: GENERIC_FORM_ERROR,
-						commitStatus: CommitStatus.Idle,
-					})
-					throw e
-				}
-			},
-
-			setValue: (key, value) => {
-				table.setState((prev) => {
-					const { [key]: _removed, ...remainingErrors } = prev.creating.errors
-					return {
-						...prev,
-						creating: {
-							...prev.creating,
-							values: { ...prev.creating.values, [key]: value },
-							errors: remainingErrors,
-							// formError intentionally untouched
-						},
-					}
-				})
-				if (resolveValidateOn(key) === ValidateOn.Change && getConfig()?.validate) {
-					scheduleChangeValidation(key)
-				}
-			},
-
-			setValues: (patch) => {
-				table.setState((prev) => ({
-					...prev,
-					creating: {
-						...prev.creating,
-						values: { ...prev.creating.values, ...(patch as Record<string, unknown>) },
-					},
-				}))
-			},
-
-			setErrors: (errors) => {
-				writeState({ errors: errors ?? {} })
-			},
-
-			setFormError: (msg) => {
-				writeState({ formError: msg })
-			},
-
-			validate: async () => {
-				const config = getConfig()
-				if (!config?.validate) return null
-				const c = resetController()
-				const values = getState().values
-				writeState({ commitStatus: CommitStatus.Validating })
+			// ── validate phase ───────────────────────────────────────────
+			if (config.validate) {
 				let result: ValidationResult
 				try {
-					result = await runValidate(values, { signal: c.signal })
+					result = await runValidate(table, values, { signal: c.signal })
 				} catch (e) {
-					if (c.signal.aborted) return null
-					writeState({ commitStatus: CommitStatus.Idle })
+					if (c.signal.aborted) return
+					writeCreating(table, { commitStatus: CommitStatus.Idle })
 					throw e
 				}
-				if (c.signal.aborted) return null
-				writeState({
-					errors: result?.errors ?? {},
-					formError: result?.formError ?? null,
+				if (c.signal.aborted) return
+				if (result !== null) {
+					writeCreating(table, {
+						errors: result.errors ?? {},
+						formError: result.formError ?? null,
+						commitStatus: CommitStatus.Idle,
+					})
+					return
+				}
+			}
+
+			// ── save phase ───────────────────────────────────────────────
+			writeCreating(table, { commitStatus: CommitStatus.Saving })
+			try {
+				await config.onSave({ values, signal: c.signal })
+				if (c.signal.aborted) return
+				// Reset to closed/empty state on success
+				writeCreating(table, { ...INITIAL_STATE })
+			} catch (e) {
+				if (c.signal.aborted) return
+				if (isValidationError(e)) {
+					writeCreating(table, {
+						errors: e.errors,
+						formError: e.formError ?? null,
+						commitStatus: CommitStatus.Idle,
+					})
+					return
+				}
+				writeCreating(table, {
+					formError: GENERIC_FORM_ERROR,
 					commitStatus: CommitStatus.Idle,
 				})
-				return result
-			},
+				throw e
+			}
+		},
 
-			validateField: async (columnId) => {
-				const c = resetController()
-				try {
-					await validateAndApplyField(columnId, c.signal)
-				} catch (e) {
-					if (isAbortError(e)) return
-					throw e
+		setValue: (key, value) => {
+			writeOwnSlice(table, 'creating', (prev) => {
+				const { [key]: _removed, ...remainingErrors } = prev.errors
+				return {
+					...prev,
+					values: { ...prev.values, [key]: value },
+					errors: remainingErrors,
+					// formError intentionally untouched
 				}
-			},
+			})
+			if (resolveValidateOn(table, key) === ValidateOn.Change && creatingOption(table)?.validate) {
+				scheduleChangeValidation(table, key)
+			}
+		},
 
-			getState,
-		}
+		setValues: (patch) => {
+			writeOwnSlice(table, 'creating', (prev) => ({
+				...prev,
+				values: { ...prev.values, ...(patch as Record<string, unknown>) },
+			}))
+		},
 
-		table.creating = api
+		setErrors: (errors) => {
+			writeCreating(table, { errors: errors ?? {} })
+		},
+
+		setFormError: (msg) => {
+			writeCreating(table, { formError: msg })
+		},
+
+		validate: async () => {
+			const config = creatingOption(table)
+			if (!config?.validate) return null
+			const c = resetController(table)
+			const values = readCreating(table).values
+			writeCreating(table, { commitStatus: CommitStatus.Validating })
+			let result: ValidationResult
+			try {
+				result = await runValidate(table, values, { signal: c.signal })
+			} catch (e) {
+				if (c.signal.aborted) return null
+				writeCreating(table, { commitStatus: CommitStatus.Idle })
+				throw e
+			}
+			if (c.signal.aborted) return null
+			writeCreating(table, {
+				errors: result?.errors ?? {},
+				formError: result?.formError ?? null,
+				commitStatus: CommitStatus.Idle,
+			})
+			return result
+		},
+
+		validateField: async (columnId) => {
+			const c = resetController(table)
+			try {
+				await validateAndApplyField(table, columnId, c.signal)
+			} catch (e) {
+				if (isAbortError(e)) return
+				throw e
+			}
+		},
+
+		getState: () => readCreating(table),
+	}
+}
+
+/**
+ * The create form, as a v9 table feature.
+ *
+ * Owns the `creating` slice — transient per-open-form state, never seeded from `initialState` —
+ * and installs one namespace object, `table.creating`.
+ *
+ * `creating` goes in through `initTableInstanceData` rather than `constructTableAPIs`: it is a
+ * namespace **object**, and `assignTableAPIs` installs one function per key, so it cannot express
+ * `table.creating.commit`. `_creatingAbort` belongs there for the other reason the hook exists —
+ * it is mutable per-table data.
+ *
+ * Unlike `editing`, this feature installs nothing on the row prototype: nothing about a create
+ * form is per-row, so there is no `assignRowPrototype` here.
+ */
+export const creatingFeature: TableFeature = {
+	// `creating` last, not `initialState` last as most features spread it: this slice is transient
+	// per-open-form state and is hard-reset at construction, the same rule `editing` follows.
+	getInitialState: (initialState) => ({
+		...initialState,
+		creating: { ...INITIAL_STATE },
+	}),
+
+	initTableInstanceData: (table) => {
+		// Not a hand-written cast: `assignTableInstanceData` checks both member names against the
+		// `Table_FeatureMap` entry above, so a misspelled one cannot install silently.
+		assignTableInstanceData('creatingFeature', table, {
+			creating: createCreatingApi(table),
+			_creatingAbort: {},
+		})
+	},
+
+	// Runs after `table.reset()` has restored internally owned atoms, so this does **only** the
+	// part state restoration cannot: tearing down the in-flight controller, so a late `onSave`
+	// resolution writes nothing. Closing the open form is already done by then — `table_reset`
+	// writes every key of `table.initialState` back through `baseAtoms` in one batch, and this
+	// feature's `getInitialState` put `creating: INITIAL_STATE` in that snapshot. Do not clear the
+	// slice here as well: it would write an atom the reset pass already wrote, outside its batch.
+	//
+	// Behaviour v8 did not have — the controller lived in a closure with no reset hook to reach it.
+	resetTableInstanceData: (table) => {
+		const box = abortBox(table)
+		box.controller?.abort()
+		box.controller = undefined
 	},
 }

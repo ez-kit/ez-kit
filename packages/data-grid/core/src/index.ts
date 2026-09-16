@@ -1,6 +1,35 @@
 // Core factory
 export { createTable } from './create-table'
 
+/**
+ * The other half of the hybrid packaging (design D3): `createTable` builds a table for the vanilla
+ * path, and `createTableOptions` resolves a {@link TableConfig} into the v9 options that describe
+ * it **without constructing anything** — so a framework adapter can hand those options to its own
+ * constructor. `useDataGrid` passing them to `useTable` is the consumer this exists for, and the
+ * reason a React table is not built by calling `createTable` from inside a hook.
+ *
+ * It returns `{ options, deferred, grid, bindStateHandlers }`. `options` goes to the constructor;
+ * `grid` is the non-TanStack bag the caller assigns to `table.grid`; `bindStateHandlers(table)`
+ * yields the `on<Slice>Change` handlers, which cannot be part of `options` because each writes
+ * through the table's own atoms and the table does not exist while its options are being built.
+ *
+ * Kept internal by Task 1 "until PR 1 adds the public export when the React package starts using
+ * it", and then exported by no task — it fell between that task and the one that closed PR 1, and
+ * PR 2 cannot start without it.
+ */
+export { createTableOptions } from './create-table/create-table-options'
+
+/**
+ * `GridOptions` is exported because {@link DataTable.grid} is already typed with it, so it is
+ * **reachable but was not nameable**: a consumer could write `const g = table.grid` and get the
+ * type, and could not write the annotation for it. That is true of any consumer, not only of the
+ * React package, which is why this does not wait on PR 2 establishing a need.
+ *
+ * `StateHandlerTable` is the structural table `bindStateHandlers`' handlers are bound to; it is
+ * named here for the same reason — it sits in that function's public signature.
+ */
+export type { GridOptions, StateHandlerTable } from './create-table/create-table-options'
+
 // Default option values (single source; referenced by the React adapter + UI kits)
 export {
 	DEFAULT_PAGE_SIZE,
@@ -20,7 +49,7 @@ export { createColumnHelper } from './column/create-column-helper'
 // The one place the "a column's `creating` falls back to its `editing`" rule is written, so the
 // headless feature and the React form layer cannot drift on it.
 export { ColumnFormMode, resolveColumnFormConfig } from './column/resolve-form-config'
-export type { ResolvedColumnFormConfig } from './column/resolve-form-config'
+export type { FormColumnMeta, ResolvedColumnFormConfig } from './column/resolve-form-config'
 export {
 	BASE_CELL_TYPE_IDS,
 	BadgeVariant,
@@ -103,7 +132,11 @@ export type {
 	SystemColumnDef,
 } from './column/types'
 
-export type { TableState } from '@tanstack/table-core'
+// The registered feature set's type, which every public type here is generic over. The feature
+// *values* are deliberately not re-exported from this entry — they live on
+// `@ez-kit/data-grid-core/features`, which is what keeps a feature out of a bundle that never
+// registers it.
+export type { TableFeatures, TableState } from '@tanstack/table-core'
 
 export type {
 	BetweenOperatorConfig,
@@ -172,8 +205,23 @@ export type {
 	CreatingSaveContext,
 	CreatingState,
 } from './features/creating'
-export { DraftAxis } from './features/deferred-apply'
-export type { AppliedState, DraftApi, DraftConfig, PendingCount, QueryDraft } from './features/deferred-apply'
+/**
+ * `createAppliedEmitter` is exported for the same reason `createTableOptions` is: the React
+ * adapter constructs its table through `useTable`, so everything `createTable` does *after*
+ * `constructTable` has to be redone in the hook — and two of those jobs, minting the draft atoms
+ * and projecting `config.onStateChange` through the applied snapshot, are these two functions.
+ * Without the second one the hook would either re-implement the projection (a second answer to
+ * "what is the consumer allowed to see") or drop deferral from `onStateChange` in React only.
+ */
+export { createAppliedEmitter, createDraftAtoms, DraftAxis } from './features/deferred-apply'
+export type {
+	AppliedState,
+	DraftApi,
+	DraftAtoms,
+	DraftConfig,
+	PendingCount,
+	QueryDraft,
+} from './features/deferred-apply'
 export type {
 	BulkConfirmationConfig,
 	BulkDeletingApi,
@@ -187,9 +235,10 @@ export type {
 } from './features/deleting'
 export { EditingMode } from './features/editing'
 export type { EditingApi, EditingConfig, EditingSaveContext, EditingState } from './features/editing'
-// Sourced from the feature modules (not `./types`) so their
-// `declare module '@tanstack/table-core'` augmentations (state.infinite /
-// setInfiniteStatus, state.loading) survive into the bundled `.d.ts`.
+// Sourced from the feature modules (not `./types`) so each state type is re-exported from the
+// module that declares the slice it names. The declaration merging those modules perform is
+// per-feature — `Plugins`, `TableState_FeatureMap`, `TableState_All` — and reaches a consumer
+// through `@ez-kit/data-grid-core/features`, which is where the features themselves are exported.
 export type { InfiniteState } from './features/infinite'
 export type { LoadingState } from './features/loading'
 

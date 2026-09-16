@@ -17,6 +17,7 @@ Enable `manual: true` on each feature you want to delegate. The grid will update
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	pagination={{
@@ -82,6 +83,7 @@ const q = useQuery({
 
 return (
 	<DataGrid
+		features={features}
 		data={q.data?.rows ?? []}
 		columns={columns}
 		state={{
@@ -145,6 +147,7 @@ async function doFetch() {
 
 return (
 	<DataGrid
+		features={features}
 		data={rows}
 		columns={columns}
 		state={{

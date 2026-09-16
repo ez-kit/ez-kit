@@ -12,6 +12,7 @@ Every option on this page is listed in the [API reference](/docs/data-grid/pinni
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	pinning={{ row: { top: true, bottom: true } }}
@@ -41,6 +42,7 @@ pinning={{ row: { top: true } }} // "Pin to top" only
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	pinning={{ row: { top: true, bottom: true } }}

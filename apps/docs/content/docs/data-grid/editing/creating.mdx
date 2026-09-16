@@ -29,6 +29,7 @@ column to sit in, since the row is always there.
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	creating={{
@@ -57,20 +58,27 @@ const columns = createColumns<Order>([
 	{
 		accessorKey: 'position',
 		header: 'Position',
-		creating: { defaultValue: ({ table }) => table.getRowCount() + 1 },
+		creating: { defaultValue: ({ table }) => table.getRowModel().rows.length + 1 },
 	},
 ])
 ```
+
+<Callout type='warn'>
+	`table` here is the real table, so what it offers depends on the features the grid registered. `getRowCount()` belongs
+	to `rowPaginationFeature`, `getSortedRowModel()` to `rowSortingFeature`, and so on — call one the set omits and the
+	default resolver throws a `TypeError` when the form opens. `getRowModel()` is core and is always there.
+</Callout>
 
 Or at table level, for values that span columns:
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	creating={{
 		mode: 'modal',
-		defaultValues: ({ table }) => ({ createdAt: new Date(), page: table.getState().pagination.pageIndex }),
+		defaultValues: ({ table }) => ({ createdAt: new Date(), page: table.store.state.pagination.pageIndex }),
 		onSave: ({ values }) => api.create(values),
 	}}
 />

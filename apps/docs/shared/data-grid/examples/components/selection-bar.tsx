@@ -1,10 +1,38 @@
 'use client'
 
+import {
+	columnPinningFeature,
+	columnSizingFeature,
+	columnVisibilityFeature,
+	createPaginatedRowModel,
+	createSortedRowModel,
+	deletingFeature,
+	rowPaginationFeature,
+	rowSelectionFeature,
+	rowSortingFeature,
+	sortFns,
+	tableFeatures,
+} from '@ez-kit/data-grid-core/features'
 import { useState } from 'react'
 
 import { DataGrid } from 'shared/DataGrid'
 
 import { columns, INITIAL_DATA } from './_data'
+
+const features = tableFeatures({
+	// Structural: the grid shell reads column widths, visibility and pin groups to lay out
+	// the column grid. Everything below is this example's own.
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	rowSortingFeature,
+	deletingFeature,
+	rowPaginationFeature,
+	rowSelectionFeature,
+	sortFns,
+	paginatedRowModel: createPaginatedRowModel(),
+	sortedRowModel: createSortedRowModel(),
+})
 
 export function SelectionBarExample() {
 	const [data, setData] = useState(INITIAL_DATA)
@@ -27,6 +55,7 @@ export function SelectionBarExample() {
 	return (
 		<div>
 			<DataGrid
+				features={features}
 				data={data}
 				columns={columns}
 				sorting

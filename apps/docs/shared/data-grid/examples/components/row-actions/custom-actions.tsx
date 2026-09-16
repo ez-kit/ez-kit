@@ -1,5 +1,14 @@
 'use client'
 
+import {
+	columnPinningFeature,
+	columnSizingFeature,
+	columnVisibilityFeature,
+	deletingFeature,
+	editingFeature,
+	rowPinningFeature,
+	tableFeatures,
+} from '@ez-kit/data-grid-core/features'
 import { Copy, Send } from 'lucide-react'
 import { useState } from 'react'
 
@@ -8,6 +17,17 @@ import { DataGrid } from 'shared/DataGrid'
 import { columns, makeUsers } from '../_data'
 
 import type { User } from '../_data'
+
+const features = tableFeatures({
+	// Structural: the grid shell reads column widths, visibility and pin groups to lay out
+	// the column grid. Everything below is this example's own.
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	deletingFeature,
+	editingFeature,
+	rowPinningFeature,
+})
 
 /**
  * A custom "Duplicate" action alongside the built-in edit / delete.
@@ -30,6 +50,7 @@ export function RowActionsCustomExample() {
 
 	return (
 		<DataGrid
+			features={features}
 			data={data}
 			columns={columns}
 			editing={{ mode: 'modal', onSave: () => Promise.resolve() }}
@@ -80,6 +101,7 @@ export function RowActionsInlineCustomExample() {
 
 	return (
 		<DataGrid
+			features={features}
 			data={data}
 			columns={columns}
 			editing={{ mode: 'modal', onSave: () => Promise.resolve() }}

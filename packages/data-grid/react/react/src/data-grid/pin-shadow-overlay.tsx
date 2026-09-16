@@ -1,18 +1,25 @@
+import { GridDirection } from '@ez-kit/data-grid-core'
 import { useRef, useState } from 'react'
 
 import { useSafeLayoutEffect } from '../utils/use-safe-layout-effect'
 
 import { useDataGridTable, useDataGridState } from './table-context'
 
-const LEFT_PINNED_CELL = "[data-slot='th'][data-pinned='left']"
-const RIGHT_PINNED_CELL = "[data-slot='th'][data-pinned='right']"
+const START_PINNED_CELL = "[data-slot='th'][data-pinned='start']"
+const END_PINNED_CELL = "[data-slot='th'][data-pinned='end']"
 
+/**
+ * Distances from the overlay's own inline-start / inline-end edge — logical, not physical:
+ * under RTL the start-pinned block sits against the right of the viewport, and these two
+ * numbers are unchanged by that. They are applied as `inset-inline-start` / `inset-inline-end`,
+ * which the browser resolves per direction.
+ */
 type PinnedEdges = {
-	left: number | null
-	right: number | null
+	start: number | null
+	end: number | null
 }
 
-const NO_EDGES: PinnedEdges = { left: null, right: null }
+const NO_EDGES: PinnedEdges = { start: null, end: null }
 
 /**
  * Measures where the pinned blocks actually END in the DOM, relative to the overlay.
@@ -27,19 +34,32 @@ const NO_EDGES: PinnedEdges = { left: null, right: null }
  *
  * Returns `null` per side when there is nothing to measure (no pinned cell, or a zero-size
  * layout as in jsdom) so the caller can fall back to the model offsets.
+ *
+ * `getBoundingClientRect` is in viewport coordinates, which are physical, while the offsets
+ * this returns are logical — so the direction has to be applied here, once, rather than left
+ * for the CSS to sort out. Under RTL the inline-start edge of the overlay is its `right`, and
+ * the start-pinned block ends at its `left`.
  */
-function measurePinnedEdges(overlay: HTMLElement): PinnedEdges {
+function measurePinnedEdges(overlay: HTMLElement, isRtl: boolean): PinnedEdges {
 	const box = overlay.getBoundingClientRect()
 	if (box.width === 0) return NO_EDGES
 
 	const scope = overlay.parentElement ?? overlay
-	const leftCells = scope.querySelectorAll<HTMLElement>(LEFT_PINNED_CELL)
-	const lastLeft = leftCells[leftCells.length - 1]
-	const firstRight = scope.querySelector<HTMLElement>(RIGHT_PINNED_CELL)
+	// DOM order is always [...start, ...centre, ...end], whatever the direction, so the last
+	// start-pinned header is the innermost one on that side in both.
+	const startCells = scope.querySelectorAll<HTMLElement>(START_PINNED_CELL)
+	const lastStart = startCells[startCells.length - 1]
+	const firstEnd = scope.querySelector<HTMLElement>(END_PINNED_CELL)
 
+	if (isRtl) {
+		return {
+			start: lastStart ? box.right - lastStart.getBoundingClientRect().left : null,
+			end: firstEnd ? firstEnd.getBoundingClientRect().right - box.left : null,
+		}
+	}
 	return {
-		left: lastLeft ? lastLeft.getBoundingClientRect().right - box.left : null,
-		right: firstRight ? box.right - firstRight.getBoundingClientRect().left : null,
+		start: lastStart ? lastStart.getBoundingClientRect().right - box.left : null,
+		end: firstEnd ? box.right - firstEnd.getBoundingClientRect().left : null,
 	}
 }
 
@@ -50,13 +70,15 @@ function measurePinnedEdges(overlay: HTMLElement): PinnedEdges {
  * wrapper (`inset: 0`) — it is a non-collapsing layer, never sized to the gap
  * between the pinned blocks.
  *
- * Each shadow div uses `data-pin-shadow="left" | "right"` and carries its OWN
- * pixel offset as an inline style: the left shadow sits at the right edge of the
- * left-pinned block, the right shadow at the left edge of the right-pinned block.
+ * Each shadow div uses `data-pin-shadow="start" | "end"` and carries its OWN
+ * pixel offset as an inline style — `inset-inline-start` / `inset-inline-end`, so
+ * the pair flips with the writing direction rather than needing a second rule. The
+ * start shadow sits at the inner edge of the start-pinned block, the end shadow at
+ * the inner edge of the end-pinned block.
  * Those offsets are **measured from the DOM** (see `measurePinnedEdges`), with the
  * summed model widths as the pre-measurement fallback. Positioning each shadow
- * independently (rather than sizing one shared overlay to `[leftSize … width −
- * rightSize]`) is what keeps both shadows visible when the combined pinned width
+ * independently (rather than sizing one shared overlay to `[startSize … width −
+ * endSize]`) is what keeps both shadows visible when the combined pinned width
  * approaches the viewport — otherwise the shared box would collapse to zero width
  * and `overflow: hidden` would clip both shadows.
  *
@@ -65,10 +87,10 @@ function measurePinnedEdges(overlay: HTMLElement): PinnedEdges {
  * (`position`, `top`/`bottom`, `inset`) lives in the shared structural stylesheet
  * (`@ez-kit/data-grid-react/styles.css`).
  *
- * CSS vars `--dg-pin-left-shadow` / `--dg-pin-right-shadow` (0 or 1) on the
+ * CSS vars `--dg-pin-start-shadow` / `--dg-pin-end-shadow` (0 or 1) on the
  * table wrapper drive the shadow opacity.
  *
- * Subscribes only to the layout slices it actually reflects — left/right column
+ * Subscribes only to the layout slices it actually reflects — start/end column
  * sets (from `columnPinning` + `columnVisibility`) and their widths
  * (`columnSizing`). Editing / sorting / pagination etc. don't touch these.
  */
@@ -82,11 +104,12 @@ export function PinShadowOverlay() {
 	const overlayRef = useRef<HTMLDivElement>(null)
 	const [edges, setEdges] = useState<PinnedEdges>(NO_EDGES)
 
-	const leftCols = table.getLeftLeafColumns()
-	const rightCols = table.getRightLeafColumns()
+	const startCols = table.getStartLeafColumns()
+	const endCols = table.getEndLeafColumns()
 
-	const leftSize = leftCols.reduce((acc, col) => acc + col.getSize(), 0)
-	const rightSize = rightCols.reduce((acc, col) => acc + col.getSize(), 0)
+	const startSize = startCols.reduce((acc, col) => acc + col.getSize(), 0)
+	const endSize = endCols.reduce((acc, col) => acc + col.getSize(), 0)
+	const isRtl = table.grid.direction === GridDirection.Rtl
 
 	// Re-measure on every layout change that can move a pinned edge: pin/unpin and column
 	// resize come in through the model sizes below; container resizes (and the kit's own
@@ -96,8 +119,8 @@ export function PinShadowOverlay() {
 		if (!overlay) return
 
 		const sync = () => {
-			const next = measurePinnedEdges(overlay)
-			setEdges((prev) => (prev.left === next.left && prev.right === next.right ? prev : next))
+			const next = measurePinnedEdges(overlay, isRtl)
+			setEdges((prev) => (prev.start === next.start && prev.end === next.end ? prev : next))
 		}
 
 		sync()
@@ -108,9 +131,9 @@ export function PinShadowOverlay() {
 		return () => {
 			observer.disconnect()
 		}
-	}, [leftSize, rightSize, leftCols.length, rightCols.length])
+	}, [startSize, endSize, startCols.length, endCols.length, isRtl])
 
-	if (leftCols.length === 0 && rightCols.length === 0) return null
+	if (startCols.length === 0 && endCols.length === 0) return null
 
 	return (
 		<div
@@ -118,16 +141,16 @@ export function PinShadowOverlay() {
 			aria-hidden
 			data-slot='pin-shadow-overlay'
 		>
-			{leftCols.length > 0 && (
+			{startCols.length > 0 && (
 				<div
-					data-pin-shadow='left'
-					style={{ left: edges.left ?? leftSize }}
+					data-pin-shadow='start'
+					style={{ insetInlineStart: edges.start ?? startSize }}
 				/>
 			)}
-			{rightCols.length > 0 && (
+			{endCols.length > 0 && (
 				<div
-					data-pin-shadow='right'
-					style={{ right: edges.right ?? rightSize }}
+					data-pin-shadow='end'
+					style={{ insetInlineEnd: edges.end ?? endSize }}
 				/>
 			)}
 		</div>

@@ -2,7 +2,7 @@ import { createColumns } from '@ez-kit/data-grid-core'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { testComponents } from '../test-utils'
+import { TEST_FEATURES, testComponents } from '../test-utils'
 
 import { DataGrid } from './data-grid'
 
@@ -36,6 +36,7 @@ describe('column-level filtering.debounce', () => {
 		])
 		const result = render(
 			<DataGrid
+				features={TEST_FEATURES}
 				data={ROWS}
 				columns={columns}
 				components={testComponents}

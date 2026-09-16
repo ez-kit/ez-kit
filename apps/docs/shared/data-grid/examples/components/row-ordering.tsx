@@ -1,5 +1,16 @@
 'use client'
 
+import {
+	columnPinningFeature,
+	columnSizingFeature,
+	columnVisibilityFeature,
+	createExpandedRowModel,
+	createPaginatedRowModel,
+	rowExpandingFeature,
+	rowOrderingFeature,
+	rowPaginationFeature,
+	tableFeatures,
+} from '@ez-kit/data-grid-core/features'
 import { createColumns } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 
@@ -9,6 +20,19 @@ import { EMPLOYEE_DATA } from './_data'
 
 import type { Employee } from './_data'
 import type { RowMove } from '@ez-kit/data-grid-react'
+
+const features = tableFeatures({
+	// Structural: the grid shell reads column widths, visibility and pin groups to lay out
+	// the column grid. Everything below is this example's own.
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	rowExpandingFeature,
+	rowOrderingFeature,
+	rowPaginationFeature,
+	expandedRowModel: createExpandedRowModel(),
+	paginatedRowModel: createPaginatedRowModel(),
+})
 
 const columns = createColumns<Employee>([
 	{ accessorKey: 'name', header: 'Name' },
@@ -25,6 +49,7 @@ const columns = createColumns<Employee>([
 export function RowOrderingExample() {
 	return (
 		<DataGrid
+			features={features}
 			data={EMPLOYEE_DATA}
 			columns={columns}
 			getRowId={(row) => String(row.id)}
@@ -56,6 +81,7 @@ export function RowOrderingControlledExample() {
 
 	return (
 		<DataGrid
+			features={features}
 			data={rows}
 			columns={columns}
 			getRowId={(row) => String(row.id)}
@@ -113,6 +139,7 @@ const teamColumns = createColumns<Team>([
 export function RowOrderingPaginatedExample() {
 	return (
 		<DataGrid
+			features={features}
 			data={EMPLOYEE_DATA}
 			columns={columns}
 			getRowId={(row) => String(row.id)}
@@ -133,6 +160,7 @@ export function RowOrderingPaginatedExample() {
 export function RowOrderingTreeExample() {
 	return (
 		<DataGrid
+			features={features}
 			data={TEAM_DATA}
 			columns={teamColumns}
 			getRowId={(row) => String(row.id)}

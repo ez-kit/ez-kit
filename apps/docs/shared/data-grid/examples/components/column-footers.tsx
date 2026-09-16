@@ -1,5 +1,14 @@
 'use client'
 
+import {
+	columnFilteringFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	columnVisibilityFeature,
+	createFilteredRowModel,
+	filterFns,
+	tableFeatures,
+} from '@ez-kit/data-grid-core/features'
 import { createColumns } from '@ez-kit/data-grid-react'
 import { useMemo } from 'react'
 
@@ -8,6 +17,17 @@ import { DataGrid } from 'shared/DataGrid'
 import { makeUsers, PRODUCT_DATA } from './_data'
 
 import type { Product, User } from './_data'
+
+const features = tableFeatures({
+	// Structural: the grid shell reads column widths, visibility and pin groups to lay out
+	// the column grid. Everything below is this example's own.
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	columnFilteringFeature,
+	filterFns,
+	filteredRowModel: createFilteredRowModel(),
+})
 
 const productColumnsWithTotals = createColumns<Product>([
 	{ accessorKey: 'name', header: 'Product', footer: 'Total' },
@@ -26,6 +46,7 @@ const productColumnsWithTotals = createColumns<Product>([
 export function ColumnFootersExample() {
 	return (
 		<DataGrid
+			features={features}
 			data={PRODUCT_DATA}
 			columns={productColumnsWithTotals}
 			filtering
@@ -54,6 +75,7 @@ export function StickyFooterExample() {
 
 	return (
 		<DataGrid
+			features={features}
 			data={data}
 			columns={userColumnsWithTotals}
 			layout={{ stickyHeader: true, stickyFooter: true, maxHeight: '20rem' }}

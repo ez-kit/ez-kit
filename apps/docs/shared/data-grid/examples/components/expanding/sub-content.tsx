@@ -1,8 +1,26 @@
 'use client'
 
+import {
+	columnPinningFeature,
+	columnSizingFeature,
+	columnVisibilityFeature,
+	createExpandedRowModel,
+	rowExpandingFeature,
+	tableFeatures,
+} from '@ez-kit/data-grid-core/features'
 import { createColumns } from '@ez-kit/data-grid-react'
 
 import { DataGrid } from 'shared/DataGrid'
+
+const features = tableFeatures({
+	// Structural: the grid shell reads column widths, visibility and pin groups to lay out
+	// the column grid. Everything below is this example's own.
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	rowExpandingFeature,
+	expandedRowModel: createExpandedRowModel(),
+})
 
 type Employee = {
 	id: number
@@ -77,6 +95,7 @@ const columns = createColumns<Employee>([
 export function ExpandingSubContentExample() {
 	return (
 		<DataGrid
+			features={features}
 			data={EMPLOYEES}
 			columns={columns}
 			expanding={{

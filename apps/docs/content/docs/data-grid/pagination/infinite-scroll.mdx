@@ -7,6 +7,11 @@ Infinite scroll loads more rows as the user approaches the bottom. It is a **mod
 pagination** (`pagination.mode: 'infinite'`), mutually exclusive with the classic page
 footer.
 
+Register `infiniteFeature` beside `rowPaginationFeature`, and — unlike every other pagination
+grid — **without** `paginatedRowModel`: infinite mode shows every accumulated row, so the model
+would slice them back to one page. `createTable` warns in development if you register it anyway.
+See [Feature set](/docs/data-grid/feature-set).
+
 The grid is **event-only**: it owns edge detection and request status, _you_ own the data.
 When an edge is reached the grid calls `onLoadMore`; you fetch the page and append the rows
 to your own state, and you declare `hasNextPage` from the API response.
@@ -23,6 +28,7 @@ const [cursor, setCursor] = useState(0)
 const [hasNextPage, setHasNextPage] = useState(true)
 
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	pagination={{
@@ -58,6 +64,7 @@ last rendered index, so only visible rows mount while pages keep loading.
 
 ```tsx
 useDataGrid({
+	features,
 	data,
 	columns,
 	virtualization: { row: true },
@@ -103,14 +110,14 @@ while a fetch is in flight.
 
 ## API
 
-| Option                   | Type                                            | Description                                                                     |
-| ------------------------ | ----------------------------------------------- | ------------------------------------------------------------------------------- |
-| `pagination.mode`        | `'pages' \| 'infinite'`                         | `'infinite'` enables infinite scroll. Default `'pages'`.                        |
-| `pagination.hasNextPage` | `boolean`                                       | Controlled flag: are more rows available forward?                               |
-| `pagination.onLoadMore`  | `(ctx: { direction }) => Promise<void> \| void` | Called at the edge / on "Load more". Fetch + append.                            |
-| `pagination.trigger`     | `'auto' \| 'manual'`                            | `'auto'` (default) loads on scroll; `'manual'` shows a button.                  |
-| `pagination.threshold`   | `{ rows?: number } \| { px?: number }`          | How close to the edge triggers a load. Defaults: `{ rows: 5 }` / `{ px: 200 }`. |
-| `table.appendData(rows)` | method                                          | Immutable append helper for non-React-state consumers.                          |
+| Option                   | Type                                            | Description                                                                                                                                               |
+| ------------------------ | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pagination.mode`        | `'pages' \| 'infinite'`                         | `'infinite'` enables infinite scroll. Default `'pages'`.                                                                                                  |
+| `pagination.hasNextPage` | `boolean`                                       | Controlled flag: are more rows available forward?                                                                                                         |
+| `pagination.onLoadMore`  | `(ctx: { direction }) => Promise<void> \| void` | Called at the edge / on "Load more". Fetch + append.                                                                                                      |
+| `pagination.trigger`     | `'auto' \| 'manual'`                            | `'auto'` (default) loads on scroll; `'manual'` shows a button.                                                                                            |
+| `pagination.threshold`   | `{ rows?: number } \| { px?: number }`          | How close to the edge triggers a load. Defaults: `{ rows: 5 }` / `{ px: 200 }`.                                                                           |
+| `table.appendData(rows)` | method                                          | Immutable append helper for non-React-state consumers. Installed by `infiniteFeature` — a grid whose `features` omits it does not have the method at all. |
 
 > **Note:** Backward / upward loading (prepend) is reserved in the API
 > (`direction: 'backward'`, `hasPreviousPage`) but not implemented yet — v1 loads forward only.

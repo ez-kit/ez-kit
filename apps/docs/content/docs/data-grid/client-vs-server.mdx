@@ -17,6 +17,7 @@ memory; nothing else is wired.
 
 ```tsx
 <DataGrid
+	features={features}
 	data={users} // every row, already loaded
 	columns={columns}
 	sorting
@@ -38,6 +39,7 @@ far it goes.
 
 ```tsx
 <DataGrid
+	features={features}
 	data={page.rows} // one page, fetched for the current state
 	columns={columns}
 	sorting={{ manual: true, onChange: (sorting) => fetchPage({ sorting }) }}
@@ -73,6 +75,7 @@ common shape: the server pages and searches, because that is where the rows live
 
 ```tsx
 <DataGrid
+	features={features}
 	data={page.rows}
 	columns={columns}
 	sorting // client-side, over the fetched page

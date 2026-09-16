@@ -1,6 +1,6 @@
 {
 	"name": "@ez-kit/data-grid-heroui",
-	"version": "0.7.0",
+	"version": "0.8.0",
 	"description": "HeroUI flavour of @ez-kit/data-grid.",
 	"license": "MIT",
 	"repository": {
@@ -158,8 +158,9 @@
 	"size-limit": [
 		{
 			"path": "dist/index.js",
-			"limit": "16 KB",
+			"limit": "16.6 KB",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
 				"lucide-react"
@@ -169,6 +170,7 @@
 			"path": "dist/cell-types/index.js",
 			"limit": "3 KB",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
 				"lucide-react"
@@ -176,8 +178,9 @@
 		},
 		{
 			"path": "dist/cell-types/text.js",
-			"limit": "500 B",
+			"limit": "480 B",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
 				"lucide-react"
@@ -187,6 +190,7 @@
 			"path": "dist/cell-types/number.js",
 			"limit": "800 B",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
 				"lucide-react"
@@ -194,8 +198,9 @@
 		},
 		{
 			"path": "dist/cell-types/boolean.js",
-			"limit": "900 B",
+			"limit": "850 B",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
 				"lucide-react"
@@ -203,8 +208,9 @@
 		},
 		{
 			"path": "dist/cell-types/date.js",
-			"limit": "1 KB",
+			"limit": "950 B",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
 				"lucide-react"
@@ -214,6 +220,7 @@
 			"path": "dist/cell-types/select.js",
 			"limit": "800 B",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
 				"lucide-react"
@@ -221,8 +228,9 @@
 		},
 		{
 			"path": "dist/cell-types/badge.js",
-			"limit": "1 KB",
+			"limit": "940 B",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
 				"lucide-react"
@@ -230,8 +238,9 @@
 		},
 		{
 			"path": "dist/cell-types/image.js",
-			"limit": "600 B",
+			"limit": "580 B",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
 				"lucide-react"
@@ -239,8 +248,9 @@
 		},
 		{
 			"path": "dist/cell-types/link.js",
-			"limit": "700 B",
+			"limit": "640 B",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
 				"lucide-react"
@@ -248,8 +258,9 @@
 		},
 		{
 			"path": "dist/cell-types/progress.js",
-			"limit": "700 B",
+			"limit": "670 B",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
 				"lucide-react"
@@ -259,6 +270,7 @@
 			"path": "dist/core/index.js",
 			"limit": "3.3 KB",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
 				"lucide-react"
@@ -266,8 +278,9 @@
 		},
 		{
 			"path": "dist/pagination/index.js",
-			"limit": "1.1 KB",
+			"limit": "1.05 KB",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
 				"lucide-react"
@@ -277,6 +290,7 @@
 			"path": "dist/sorting/index.js",
 			"limit": "1.3 KB",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
 				"lucide-react"
@@ -286,6 +300,7 @@
 			"path": "dist/filtering/index.js",
 			"limit": "3.5 KB",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
 				"lucide-react"
@@ -293,8 +308,9 @@
 		},
 		{
 			"path": "dist/editing/index.js",
-			"limit": "600 B",
+			"limit": "560 B",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
 				"lucide-react"
@@ -302,8 +318,9 @@
 		},
 		{
 			"path": "dist/deleting/index.js",
-			"limit": "600 B",
+			"limit": "510 B",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
 				"lucide-react"
@@ -313,6 +330,7 @@
 			"path": "dist/selection/index.js",
 			"limit": "4.2 KB",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
 				"lucide-react"
@@ -322,6 +340,7 @@
 			"path": "dist/draft/index.js",
 			"limit": "4.1 KB",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
 				"lucide-react"
@@ -331,6 +350,7 @@
 			"path": "dist/row-actions/index.js",
 			"limit": "1.2 KB",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
 				"lucide-react"
@@ -338,8 +358,9 @@
 		},
 		{
 			"path": "dist/resizing/index.js",
-			"limit": "500 B",
+			"limit": "440 B",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
 				"lucide-react"
@@ -349,6 +370,7 @@
 			"path": "dist/visibility/index.js",
 			"limit": "1.05 kB",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
 				"lucide-react"
@@ -358,6 +380,7 @@
 			"path": "dist/fallbacks/index.js",
 			"limit": "1.2 KB",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
 				"lucide-react"
@@ -365,8 +388,9 @@
 		},
 		{
 			"path": "dist/infinite/index.js",
-			"limit": "700 B",
+			"limit": "630 B",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
 				"lucide-react"
@@ -374,8 +398,9 @@
 		},
 		{
 			"path": "dist/expanding/index.js",
-			"limit": "500 B",
+			"limit": "420 B",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
 				"lucide-react"
@@ -383,6 +408,7 @@
 		}
 	],
 	"dependencies": {
+		"@ez-kit/data-grid-core": "workspace:^",
 		"@ez-kit/data-grid-react": "workspace:^",
 		"@internationalized/date": "^3.5.0",
 		"lucide-react": "^0.577.0"

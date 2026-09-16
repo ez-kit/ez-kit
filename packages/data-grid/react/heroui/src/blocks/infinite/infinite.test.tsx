@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { DataGrid, useDataGrid } from '../../index'
 
-import type { UseDataGridConfig } from '@ez-kit/data-grid-react'
+import type { GridFeatures, UseDataGridConfig } from '@ez-kit/data-grid-react'
 
 type User = { id: number; name: string }
 
@@ -12,10 +12,13 @@ const USERS: User[] = [
 	{ id: 2, name: 'Grace' },
 ]
 
-const COLUMNS = [{ accessorKey: 'name', header: 'Name' }] as UseDataGridConfig<User>['columns']
+const COLUMNS = [{ accessorKey: 'name', header: 'Name' }] as UseDataGridConfig<GridFeatures, User>['columns']
 
-function InfiniteGrid(props: { config: UseDataGridConfig<User> }) {
-	const instance = useDataGrid<User>(props.config)
+/** No case names a set: the kit's `useDataGrid` is bound to the all-in one, which is what these drive. */
+type InfiniteCase = Omit<UseDataGridConfig<GridFeatures, User>, 'features'>
+
+function InfiniteGrid(props: { config: InfiniteCase }) {
+	const instance = useDataGrid<User>({ ...props.config })
 	return <DataGrid table={instance} />
 }
 

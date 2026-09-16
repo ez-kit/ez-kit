@@ -10,6 +10,7 @@ import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
 import { GridMenuVariant } from '../menu'
 import { ColumnSortDirection, FilteringVariant, SortDirection } from '../types'
+import { filtersRows } from '../utils/filters-rows'
 import { isInteractiveTarget } from '../utils/interactive-target'
 import { getCommonPinStyles } from '../utils/pin-styles'
 
@@ -19,7 +20,8 @@ import { flexRender } from './flex-render'
 import { renderFilterInput } from './render-filter-input'
 import { useDataGridTable } from './table-context'
 
-import type { DataTable } from '@ez-kit/data-grid-core'
+import type { ErasedRow, DataTable, GridFeatures } from '../types'
+import type { FormColumnMeta } from '@ez-kit/data-grid-core'
 import type { Column, Header } from '@tanstack/table-core'
 import type { KeyboardEvent, MouseEvent, ReactNode } from 'react'
 
@@ -35,10 +37,9 @@ import type { KeyboardEvent, MouseEvent, ReactNode } from 'react'
  * `<DataGrid.HeaderCell<Order>>` — and the render arguments are typed. See
  * {@link DataGridBodyRenderArgs} for why it is explicit rather than inferred.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type DataGridHeaderCellRenderArgs<TRow extends object = any> = {
-	header: Header<TRow, unknown>
-	column: Column<TRow>
+export type DataGridHeaderCellRenderArgs<TRow extends object = ErasedRow> = {
+	header: Header<GridFeatures, TRow>
+	column: Column<GridFeatures, TRow>
 	canSort: boolean
 	sortDirection: ColumnSortDirection
 	/** The column's own `header` content, with no sorting behaviour attached. */
@@ -53,9 +54,8 @@ export type DataGridHeaderCellRenderArgs<TRow extends object = any> = {
 	resizer: ReactNode
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type DataGridHeaderCellProps<TRow extends object = any> = {
-	header: Header<TRow, unknown>
+export type DataGridHeaderCellProps<TRow extends object = ErasedRow> = {
+	header: Header<GridFeatures, TRow>
 	/**
 	 * Custom content for this one header cell, rendered inside the kit's `Th` — so the cell keeps
 	 * its pinning offset, its `data-*` attributes, its `headerClassName` and its resize handle.
@@ -75,11 +75,16 @@ export type DataGridHeaderCellProps<TRow extends object = any> = {
  * global "something is dirty" check — so a column whose own sort is unchanged stays unmarked
  * even while a sibling column's sort (or an unrelated filter) is pending.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function computeDraftSortIndex(table: DataTable<any>, columnId: string): number {
+function computeDraftSortIndex<TRow extends object>(table: DataTable<GridFeatures, TRow>, columnId: string): number {
 	if (table.options.draft !== true) return -1
 	const draftSorting = table.draft.get().sorting
-	const appliedSorting = table.getState().applied.sorting
+	// A snapshot read, not a subscription — the v8 line read `applied.sorting` off the whole snapshot
+	// and this is the same read against v9's store. `<DataGrid.Header>` owns the subscriptions
+	// these cells re-render through, and `applied` is not among them: what actually drives this
+	// marker is `state.sorting`, which the header does subscribe to and which moves on every
+	// draft edit. Making this a subscription would add one subscriber per column and is a
+	// render-behaviour change, so it is deliberately not done here.
+	const appliedSorting = table.store.state.applied.sorting
 	const draftIndex = draftSorting.findIndex((s) => s.id === columnId)
 	if (draftIndex < 0) return -1
 	const draftEntry = draftSorting[draftIndex]
@@ -97,8 +102,11 @@ function computeDraftSortIndex(table: DataTable<any>, columnId: string): number 
  * Rendering it requires the surrounding `<DataGrid.Header>`, which owns the state subscriptions
  * these cells read through.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function DataGridHeaderCell<TRow extends object = any>({ header, children }: DataGridHeaderCellProps<TRow>) {
+
+export function DataGridHeaderCell<TRow extends object = ErasedRow>({
+	header,
+	children,
+}: DataGridHeaderCellProps<TRow>) {
 	const table = useDataGridTable<TRow>()
 	const gridComponents = useGridComponents()
 	const { Th, Input, Checkbox, Menu } = gridComponents.core
@@ -107,15 +115,30 @@ export function DataGridHeaderCell<TRow extends object = any>({ header, children
 	const { OperatorSelect, BetweenInput, FilterPopover, MultiSelectFilter, ClearFilterButton } = gridComponents.filtering
 	const cellTypes = useCellTypes()
 
-	const meta = header.column.columnDef.meta
-	const canSort = header.column.getCanSort()
-	const rawSortDir = header.column.getIsSorted()
+	// `ColumnMeta` is declared `in out` in both its `TFeatures` and its `TData` upstream, so no
+	// concrete instantiation is assignable to any other and this cast is forced by the variance
+	// annotation rather than chosen. `FormColumnMeta` is the one name core declares for it, and
+	// this is the same cast core's own `creating.ts` makes at its boundary.
+	const meta = header.column.columnDef.meta as FormColumnMeta | undefined
+	// Optional-called, not called: every read on this line runs for **every header cell of every
+	// grid**, and the method only exists once its feature is registered. Design D1's claim is that
+	// a feature you did not register costs nothing, so a grid with no sorting must render a header
+	// rather than throw. See `feature-optionality.test.tsx`, which builds a grid without each one.
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const canSort = header.column.getCanSort?.() ?? false
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const rawSortDir = header.column.getIsSorted?.() ?? false
 	const pinVars = getCommonPinStyles(header.column)
 	const pinned = header.column.getIsPinned()
 	// One check, not two: `createTable` now emits `enableColumnResizing: false` when the feature
 	// is off, so `getCanResize()` accounts for the table-level gate as well as the column's own
 	// `resizing: false`. Anything composing its own header can rely on the same single call.
-	const canResize = header.column.getCanResize()
+	//
+	// Optional-called for the same reason as the two above. This is also what makes
+	// `getResizeHandler()` and `getIsResizing()` below safe without guards of their own: both sit
+	// inside the `canResize ? … : null` subtree, which a grid without the feature never enters.
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const canResize = header.column.getCanResize?.() ?? false
 
 	// Selection column: a select-all checkbox, and none of the rest.
 	if (header.column.id === SELECTION_COLUMN_ID) {
@@ -198,7 +221,11 @@ export function DataGridHeaderCell<TRow extends object = any>({ header, children
 				// Option+Arrow moves by word inside a text field — never steal it from a filter
 				// input or any other control living in the header.
 				if (isInteractiveTarget(e)) return
-				const towardsStart = (e.key === 'ArrowLeft') !== (table.options.columnResizeDirection === GridDirection.Rtl)
+				// The grid's own direction, never `table.options.columnResizeDirection`: that option
+				// is declared on `TableOptions_ColumnResizing` and core writes it only inside its
+				// resizing branch, so on the default grid — ordering on, resizing off — it is
+				// `undefined` and both shortcuts moved the column the wrong way under RTL.
+				const towardsStart = (e.key === 'ArrowLeft') !== (table.grid.direction === GridDirection.Rtl)
 				const direction = towardsStart ? ColumnMoveDirection.Start : ColumnMoveDirection.End
 				if (!canMoveColumn(table, header.column.id, direction)) return
 				e.preventDefault()
@@ -219,7 +246,7 @@ export function DataGridHeaderCell<TRow extends object = any>({ header, children
 
 	const filteringVariant = table.grid.filtering.variant
 	const canFilter =
-		Boolean(table.options.getFilteredRowModel) &&
+		filtersRows(table) &&
 		meta?.filtering !== false &&
 		!meta?.isSystemColumn &&
 		header.column.getCanFilter() &&

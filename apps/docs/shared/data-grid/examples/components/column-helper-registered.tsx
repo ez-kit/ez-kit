@@ -1,11 +1,33 @@
 'use client'
 
+import {
+	columnPinningFeature,
+	columnSizingFeature,
+	columnVisibilityFeature,
+	createSortedRowModel,
+	editingFeature,
+	rowSortingFeature,
+	sortFns,
+	tableFeatures,
+} from '@ez-kit/data-grid-core/features'
 import { createColumnHelper, defineCellType, baseCellTypes } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 
 import { DataGrid } from 'shared/DataGrid'
 
 import type { FieldState } from '@ez-kit/data-grid-react'
+
+const features = tableFeatures({
+	// Structural: the grid shell reads column widths, visibility and pin groups to lay out
+	// the column grid. Everything below is this example's own.
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	rowSortingFeature,
+	editingFeature,
+	sortFns,
+	sortedRowModel: createSortedRowModel(),
+})
 
 // ── data ─────────────────────────────────────────────────────────────────────
 
@@ -111,6 +133,7 @@ export function ColumnHelperRegisteredExample() {
 
 	return (
 		<DataGrid
+			features={features}
 			data={data}
 			// Editing is on so the registry's `edit` renderer is reachable: click Edit on a
 			// row and the Rating cell becomes the star input.

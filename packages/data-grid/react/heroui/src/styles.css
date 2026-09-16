@@ -162,19 +162,31 @@
 
 /* The strip is 16px wide and the shadow is drawn against the edge that hugs the pinned
  * block: spread −6 against a 10px offset leaves ~4px of solid shade there, blurred out
- * over the remaining width. Anything narrower reads as nothing on a white surface. */
-[data-pin-shadow='left'] {
+ * over the remaining width. Anything narrower reads as nothing on a white surface.
+ *
+ * `box-shadow` has no logical form, so the offset's sign is the one thing here that has to
+ * be restated under RTL: the strip itself is placed by `inset-inline-start` /
+ * `inset-inline-end`, but which physical side of it hugs the pinned block flips. */
+[data-pin-shadow='start'] {
 	width: 16px;
 	box-shadow: inset 10px 0 8px -6px var(--dg-pin-shadow-color);
-	opacity: var(--dg-pin-left-shadow, 0);
+	opacity: var(--dg-pin-start-shadow, 0);
 	transition: opacity 150ms;
 }
 
-[data-pin-shadow='right'] {
+[data-pin-shadow='end'] {
 	width: 16px;
 	box-shadow: inset -10px 0 8px -6px var(--dg-pin-shadow-color);
-	opacity: var(--dg-pin-right-shadow, 0);
+	opacity: var(--dg-pin-end-shadow, 0);
 	transition: opacity 150ms;
+}
+
+[dir='rtl'] [data-pin-shadow='start'] {
+	box-shadow: inset -10px 0 8px -6px var(--dg-pin-shadow-color);
+}
+
+[dir='rtl'] [data-pin-shadow='end'] {
+	box-shadow: inset 10px 0 8px -6px var(--dg-pin-shadow-color);
 }
 
 [data-slot='tr'][data-pinned] {
@@ -215,8 +227,8 @@
  * layout those elements size themselves from their content, so the rendered
  * column widths diverge from the table model — a long cell value stretches its
  * column well past its declared `size`. Everything positional is computed from
- * the model: the sticky pin offsets (`--dg-pin-left` / `--dg-pin-right`, from
- * `column.getStart('left')` / `getAfter('right')`) and the pin-shadow overlay
+ * the model: the sticky pin offsets (`--dg-pin-start` / `--dg-pin-end`, from
+ * `column.getStart('start')` / `getAfter('end')`) and the pin-shadow overlay
  * offsets (`Σ col.getSize()`, `pin-shadow-overlay.tsx`). When model and DOM
  * disagree, pinned columns stick at the wrong offset — leaving a gap between
  * neighbouring pinned columns that the scrolling content shows through — and

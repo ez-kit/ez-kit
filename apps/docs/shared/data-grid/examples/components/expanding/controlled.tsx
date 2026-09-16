@@ -1,11 +1,29 @@
 'use client'
 
+import {
+	columnPinningFeature,
+	columnSizingFeature,
+	columnVisibilityFeature,
+	createExpandedRowModel,
+	rowExpandingFeature,
+	tableFeatures,
+} from '@ez-kit/data-grid-core/features'
 import { createColumns } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 
 import { DataGrid } from 'shared/DataGrid'
 
-import type { TableState } from '@ez-kit/data-grid-react'
+import type { GridFeatures, TableState } from '@ez-kit/data-grid-react'
+
+const features = tableFeatures({
+	// Structural: the grid shell reads column widths, visibility and pin groups to lay out
+	// the column grid. Everything below is this example's own.
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	rowExpandingFeature,
+	expandedRowModel: createExpandedRowModel(),
+})
 
 type Employee = {
 	id: number
@@ -53,7 +71,7 @@ const columns = createColumns<Employee>([
 ])
 
 export function ExpandingControlledExample() {
-	const [tableState, setTableState] = useState<Partial<TableState>>({ expanded: {} })
+	const [tableState, setTableState] = useState<Partial<TableState<GridFeatures>>>({ expanded: {} })
 	const expanded = (tableState.expanded ?? {}) as Record<string, boolean>
 	// The grid keys a row by its `id` field when the data has one, falling back to the index —
 	// so these are `'1'`…`'4'`, not `'0'`…`'3'`. Building them from the index instead left the
@@ -87,6 +105,7 @@ export function ExpandingControlledExample() {
 				</button>
 			</div>
 			<DataGrid
+				features={features}
 				data={EMPLOYEES}
 				columns={columns}
 				state={tableState}

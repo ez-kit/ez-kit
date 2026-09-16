@@ -1,4 +1,5 @@
-import { describe, expect, expectTypeOf, it } from 'vitest'
+import { tableFeatures } from '@tanstack/table-core'
+import { afterEach, describe, expect, expectTypeOf, it, vi } from 'vitest'
 
 import { createTable } from '../../create-table'
 
@@ -25,23 +26,37 @@ describe('createColumns', () => {
 		const pairs: Pair[] = [{ a: 1, b: 2 }]
 		const sum = (row: Pair) => row.a + row.b
 
+		/** Column identity is core; none of these cases needs a feature registered. */
+		const NONE = tableFeatures({})
+
+		// v9 gates the *message* on `NODE_ENV === 'development'` and throws a bare `new Error()`
+		// otherwise; v8 gated it on `!== 'production'`, which vitest's own `NODE_ENV=test`
+		// satisfied. Two of the cases below are about **which** diagnostic a developer is shown —
+		// "an accessorFn" versus "a non-string header" — so they ask for the environment that
+		// produces one, rather than settling for "it threw something".
+		afterEach(() => {
+			vi.unstubAllEnvs()
+		})
+
 		it('is not demanded by createTable, which builds columns lazily', () => {
-			expect(() => createTable<Pair>({ data: pairs, columns: [{ accessorFn: sum }] })).not.toThrow()
+			expect(() => createTable({ features: NONE, data: pairs, columns: [{ accessorFn: sum }] })).not.toThrow()
 		})
 
 		it('throws on first column access when there is no id and no string header', () => {
-			const table = createTable<Pair>({ data: pairs, columns: [{ accessorFn: sum }] })
-			expect(() => table.getAllColumns()).toThrow(/Columns require an id when using an accessorFn/)
+			vi.stubEnv('NODE_ENV', 'development')
+			const table = createTable({ features: NONE, data: pairs, columns: [{ accessorFn: sum }] })
+			expect(() => table.getAllColumns()).toThrow(/require an id when using an accessorFn/)
 		})
 
 		it('is silently taken from a string header when one is present', () => {
-			const table = createTable<Pair>({ data: pairs, columns: [{ accessorFn: sum, header: 'Sum' }] })
+			const table = createTable({ features: NONE, data: pairs, columns: [{ accessorFn: sum, header: 'Sum' }] })
 			expect(table.getAllColumns().map((column) => column.id)).toEqual(['Sum'])
 		})
 
 		it('is not taken from a render-function header', () => {
-			const table = createTable<Pair>({ data: pairs, columns: [{ accessorFn: sum, header: () => 'Sum' }] })
-			expect(() => table.getAllColumns()).toThrow(/Columns require an id when using an accessorFn/)
+			vi.stubEnv('NODE_ENV', 'development')
+			const table = createTable({ features: NONE, data: pairs, columns: [{ accessorFn: sum, header: () => 'Sum' }] })
+			expect(() => table.getAllColumns()).toThrow(/require an id when using an accessorFn/)
 		})
 	})
 

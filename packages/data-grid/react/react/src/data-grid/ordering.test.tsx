@@ -1,16 +1,16 @@
-import { createColumns, defaultMessages } from '@ez-kit/data-grid-core'
+import { createColumns, defaultMessages, GridDirection } from '@ez-kit/data-grid-core'
 import { act, fireEvent, render, renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { GridComponentsProvider } from '../components-context'
 import { isGridMenuItemSlot } from '../menu'
-import { testComponents } from '../test-utils'
+import { TEST_FEATURES, testComponents } from '../test-utils'
 import { useDataGrid } from '../use-data-grid'
 
 import { buildColumnMenuSections } from './column-menu-sections'
 import { DataGrid } from './data-grid'
 
-import type { DataTable } from '@ez-kit/data-grid-core'
+import type { DataTable, GridFeatures } from '../types'
 
 type User = { id: number; name: string; email: string; age: number }
 
@@ -22,13 +22,15 @@ const COLUMNS = createColumns<User>([
 	{ accessorKey: 'age', header: 'Age' },
 ])
 
-function gridWith(ordering: boolean): DataTable<User> {
-	const { result } = renderHook(() => useDataGrid<User>({ data: DATA, columns: COLUMNS, ordering }))
+function gridWith(ordering: boolean): DataTable<GridFeatures, User> {
+	const { result } = renderHook(() =>
+		useDataGrid<GridFeatures, User>({ features: TEST_FEATURES, data: DATA, columns: COLUMNS, ordering }),
+	)
 	return result.current
 }
 
 /** The menu's reordering section, built exactly as the header cell builds it. */
-function orderSection(table: DataTable<User>, columnId: string) {
+function orderSection(table: DataTable<GridFeatures, User>, columnId: string) {
 	const header = table.getHeaderGroups()[0]?.headers.find((h) => h.column.id === columnId)
 	if (!header) throw new Error(`no header for ${columnId}`)
 	const sections = buildColumnMenuSections(
@@ -59,7 +61,12 @@ describe('column ordering — the menu pair', () => {
 	it('moves the column one step and reports the full order', () => {
 		const onChange = vi.fn()
 		const { result } = renderHook(() =>
-			useDataGrid<User>({ data: DATA, columns: COLUMNS, ordering: { column: { onChange } } }),
+			useDataGrid<GridFeatures, User>({
+				features: TEST_FEATURES,
+				data: DATA,
+				columns: COLUMNS,
+				ordering: { column: { onChange } },
+			}),
 		)
 
 		const move = orderSection(result.current, 'age')?.items.find((item) => item.id === 'move-start')
@@ -76,11 +83,17 @@ describe('column ordering — the menu pair', () => {
 
 describe('column ordering — Alt+Arrow on the header', () => {
 	/** The whole grid, so the assertion covers the repaint and not just the state. */
-	function renderGrid(ordering: boolean) {
-		const captured: { table?: DataTable<User> } = {}
+	function renderGrid(ordering: boolean, direction?: GridDirection) {
+		const captured: { table?: DataTable<GridFeatures, User> } = {}
 
 		function Grid() {
-			const table = useDataGrid<User>({ data: DATA, columns: COLUMNS, ordering })
+			const table = useDataGrid<GridFeatures, User>({
+				features: TEST_FEATURES,
+				data: DATA,
+				columns: COLUMNS,
+				ordering,
+				...(direction !== undefined ? { direction } : {}),
+			})
 			captured.table = table
 			return <DataGrid table={table} />
 		}
@@ -113,7 +126,7 @@ describe('column ordering — Alt+Arrow on the header', () => {
 
 		fireEvent.keyDown(th('email'), { key: 'ArrowRight' })
 
-		expect(captured.table?.getState().columnOrder).toEqual([])
+		expect(captured.table?.store.state.columnOrder).toEqual([])
 	})
 
 	it('does nothing when the feature is off', () => {
@@ -121,7 +134,35 @@ describe('column ordering — Alt+Arrow on the header', () => {
 
 		fireEvent.keyDown(th('email'), { key: 'ArrowLeft', altKey: true })
 
-		expect(captured.table?.getState().columnOrder).toEqual([])
+		expect(captured.table?.store.state.columnOrder).toEqual([])
 		expect(th('email').getAttribute('data-movable')).toBeNull()
+	})
+
+	/**
+	 * The RTL half of the shortcut, on the grid shape that exposed the defect: ordering on,
+	 * resizing **off** — the default. The handler used to take its direction from
+	 * `table.options.columnResizeDirection`, which v9 declares on `TableOptions_ColumnResizing`
+	 * and core therefore writes only inside its resizing branch. With resizing off that read is
+	 * `undefined`, the comparison against `GridDirection.Rtl` is false whatever the grid's real
+	 * direction, and **both** shortcuts move the column the wrong way, silently.
+	 *
+	 * Under RTL, `ArrowLeft` points at the *end* of the order — the arrow points where it points
+	 * on screen either way — so Alt+ArrowLeft on the middle column must move it towards the end,
+	 * and Alt+ArrowRight towards the start.
+	 */
+	it('follows the grid direction, not a resizing option, when the grid is RTL', () => {
+		const { headerOrder, th } = renderGrid(true, GridDirection.Rtl)
+
+		fireEvent.keyDown(th('email'), { key: 'ArrowRight', altKey: true })
+
+		expect(headerOrder()).toEqual(['email', 'name', 'age'])
+	})
+
+	it('moves towards the end on Alt+ArrowLeft under RTL', () => {
+		const { headerOrder, th } = renderGrid(true, GridDirection.Rtl)
+
+		fireEvent.keyDown(th('email'), { key: 'ArrowLeft', altKey: true })
+
+		expect(headerOrder()).toEqual(['name', 'age', 'email'])
 	})
 })

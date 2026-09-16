@@ -93,6 +93,15 @@ test.describe('the selection bar', () => {
 
 	test('stays down until something is selected', async ({ page }) => {
 		await expect(page.locator(BAR_OPEN)).toHaveCount(0)
+
+		// …and comes back down when the selection goes. The round trip is what makes the first
+		// assertion mean anything: `[data-state="open"]` matching nothing is also what a renamed
+		// slot, a dropped `data-state` and a bar that never mounts all look like.
+		await toggle(rowCheckboxes(page).first())
+		await expect(page.locator(BAR_OPEN)).toHaveCount(1)
+
+		await toggle(rowCheckboxes(page).first())
+		await expect(page.locator(BAR_OPEN)).toHaveCount(0)
 	})
 
 	test('reports how many rows are selected', async ({ page }) => {

@@ -3,7 +3,8 @@
 import { DataGrid as AdapterDataGrid } from '@ez-kit/data-grid-react'
 import { createContext, lazy, Suspense, useContext } from 'react'
 
-import type { DataGridProps } from '@ez-kit/data-grid-react'
+import type { TableFeatures } from '@ez-kit/data-grid-core/features'
+import type { BoundDataGridProps, DataGridProps } from '@ez-kit/data-grid-react'
 
 export { useDataGrid } from '@ez-kit/data-grid-react'
 
@@ -20,10 +21,15 @@ export const DataGridTypeProvider = ({ type, children }: { type: 'heroui' | 'sha
 	return <DataGridTypeContext.Provider value={{ type }}>{children}</DataGridTypeContext.Provider>
 }
 
-function DataGridBase<T extends object>(props: DataGridProps<T>) {
+// `BoundDataGridProps`, not `DataGridProps`: both kits' `DataGrid` binds the all-in feature set,
+// so `features` is optional here too — an example names a set only when it means to narrow below
+// the bound one, which is what the per-feature pages do.
+function DataGridBase<TFeatures extends TableFeatures, TRow extends object>(
+	props: BoundDataGridProps<TFeatures, TRow>,
+) {
 	const { type } = useDataGridType()
 	const Component = type === 'heroui' ? HeroUiDataGrid : ShadcnDataGrid
-	const componentProps = props as unknown as DataGridProps<object>
+	const componentProps = props as unknown as DataGridProps<TableFeatures, object>
 
 	return (
 		<Suspense fallback={<div>Loading...</div>}>
