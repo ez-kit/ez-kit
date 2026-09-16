@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 import { createTable } from '../create-table'
 
+import { allDataGridFeatures } from './all'
 import * as features from './entry'
 
 const STOCK = [
@@ -114,14 +115,18 @@ describe('@ez-kit/data-grid-core/features', () => {
 	})
 })
 
+// `allDataGridFeatures` ships on its own subpath (`./all`) so that importing anything from the
+// features entry does not drag every feature along with it — see `all.ts`. Its cases stay in this
+// file anyway: what they assert is that the set registers the very objects the entry re-exports,
+// so the two modules have to be read against each other or the assertion says nothing.
 describe('allDataGridFeatures', () => {
 	it('registers every stock feature and all seven of the grid own ones', () => {
-		for (const name of [...STOCK, ...CUSTOM]) expect(features.allDataGridFeatures[name], name).toBe(features[name])
+		for (const name of [...STOCK, ...CUSTOM]) expect(allDataGridFeatures[name], name).toBe(features[name])
 	})
 
 	it('registers the row models the stock features need, which are not in stockFeatures', () => {
 		for (const slot of ROW_MODEL_SLOTS) {
-			expect(typeof features.allDataGridFeatures[slot], slot).toBe('function')
+			expect(typeof allDataGridFeatures[slot], slot).toBe('function')
 		}
 	})
 
@@ -137,9 +142,9 @@ describe('allDataGridFeatures', () => {
 		// assertion that does not trip it — and the deprecation is precisely what the case is
 		// about, so suppressing it here is the accurate thing rather than a dodge.
 		/* eslint-disable @typescript-eslint/no-deprecated */
-		expect(features.allDataGridFeatures.filterFns).toBe(features.filterFns)
-		expect(features.allDataGridFeatures.sortFns).toBe(features.sortFns)
-		expect(features.allDataGridFeatures.aggregationFns).toBe(features.aggregationFns)
+		expect(allDataGridFeatures.filterFns).toBe(features.filterFns)
+		expect(allDataGridFeatures.sortFns).toBe(features.sortFns)
+		expect(allDataGridFeatures.aggregationFns).toBe(features.aggregationFns)
 		/* eslint-enable @typescript-eslint/no-deprecated */
 	})
 
@@ -147,7 +152,7 @@ describe('allDataGridFeatures', () => {
 		// Not `toBeUndefined`: `useTable` spreads `reactReactivity()` *before* the caller's set, so
 		// the key being present at all — even as `undefined` — is what would win and break React
 		// rendering. `tableFeatures` returns the object it was given, so this reads the real set.
-		expect(Object.keys(features.allDataGridFeatures)).not.toContain('coreReactivityFeature')
+		expect(Object.keys(allDataGridFeatures)).not.toContain('coreReactivityFeature')
 	})
 })
 
@@ -163,7 +168,7 @@ describe('allDataGridFeatures — what each named-function registry actually buy
 
 	it('filters at all — without `filterFns` every row survives a column filter', () => {
 		const table = createTable({
-			features: features.allDataGridFeatures,
+			features: allDataGridFeatures,
 			data: ITEMS,
 			columns: [{ accessorKey: 'name' }],
 			filtering: true,
@@ -176,7 +181,7 @@ describe('allDataGridFeatures — what each named-function registry actually buy
 
 	it('searches at all — without `filterFns` `globalFilterFn: includesString` resolves to nothing', () => {
 		const table = createTable({
-			features: features.allDataGridFeatures,
+			features: allDataGridFeatures,
 			data: ITEMS,
 			columns: [{ accessorKey: 'name' }],
 			globalFiltering: true,
@@ -189,7 +194,7 @@ describe('allDataGridFeatures — what each named-function registry actually buy
 
 	it('honours a named comparator — without `sortFns` the name falls back to a different sort', () => {
 		const table = createTable({
-			features: features.allDataGridFeatures,
+			features: allDataGridFeatures,
 			data: ITEMS,
 			columns: [{ accessorKey: 'name', sorting: { fn: 'alphanumeric' } }],
 			sorting: true,
@@ -214,7 +219,7 @@ describe('allDataGridFeatures — what each named-function registry actually buy
 	// that have no key for them.
 	it('aggregates a grouped column — without `aggregationFns` the group value is undefined', () => {
 		const table = constructTable({
-			features: { coreReactivityFeature: storeReactivityBindings(), ...features.allDataGridFeatures },
+			features: { coreReactivityFeature: storeReactivityBindings(), ...allDataGridFeatures },
 			data: ITEMS,
 			columns: [{ accessorKey: 'group' }, { accessorKey: 'amount', aggregationFn: 'sum' }],
 			initialState: { grouping: ['group'] },
