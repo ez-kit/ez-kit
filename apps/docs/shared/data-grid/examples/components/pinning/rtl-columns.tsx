@@ -2,13 +2,9 @@
 
 import {
 	columnPinningFeature,
-	columnResizingFeature,
 	columnSizingFeature,
 	columnVisibilityFeature,
 	createSortedRowModel,
-	creatingFeature,
-	infiniteFeature,
-	loadingFeature,
 	rowSortingFeature,
 	tableFeatures,
 } from '@ez-kit/data-grid-core/features'
@@ -20,16 +16,12 @@ import { DataGrid } from 'shared/DataGrid'
 import { PRODUCT_DATA, type Product } from '../_data'
 
 const features = tableFeatures({
-	// The base set the React adapter requires on every grid — see
-	// /docs/data-grid/feature-set#the-base-set-every-grid-needs.
+	// Structural: the grid shell reads column widths, visibility and pin groups to lay out
+	// the column grid. Everything below is this example's own.
 	columnVisibilityFeature,
 	columnPinningFeature,
 	columnSizingFeature,
-	columnResizingFeature,
 	rowSortingFeature,
-	loadingFeature,
-	creatingFeature,
-	infiniteFeature,
 	sortedRowModel: createSortedRowModel(),
 })
 
