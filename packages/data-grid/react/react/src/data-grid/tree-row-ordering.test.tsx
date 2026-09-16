@@ -19,9 +19,14 @@
  *
  * **The DOM case is the one with teeth.** The model case passes with the suppression removed as
  * well: nothing recomputes the core row model until `ids()` asks for it, so the reset is
- * scheduled *by* the very read being asserted and lands after it. Only a rendered grid
- * recomputes on its own and then repaints from the reset state — which is why the browser saw
- * this and a hook-only test could not.
+ * scheduled *by* the very read being asserted and lands after it — an assertion that causes the
+ * thing it is asserting about. Only a rendered grid recomputes on its own and then repaints from
+ * the reset state, which is why the browser saw this and a hook-only test could not.
+ *
+ * So: **do not drop the `await act` from either case, and do not collapse the two into the model
+ * one.** Both edits read as tidying and both restore a test that passes whatever the source does.
+ * If you are about to make one, delete the suppression in `use-data-grid.ts` first and check this
+ * file still fails.
  *
  * `findNeighbour` is what makes this non-trivial: rows deeper than the mover are stepped over
  * rather than treated as a boundary, so an expanded parent reaches the sibling *below its own
