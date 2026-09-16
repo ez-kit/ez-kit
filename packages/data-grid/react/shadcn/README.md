@@ -18,7 +18,11 @@ Import from where the CLI placed the file — by default `@/components/data-grid
 
 ```tsx
 import { DataGrid, createColumns, useDataGrid } from '@/components/data-grid/data-grid'
+import { createSortedRowModel, rowSortingFeature, tableFeatures } from '@ez-kit/data-grid-core/features'
 import '@/components/data-grid/styles.css'
+
+// A table has only the features you register. Compose the set once and share it.
+const features = tableFeatures({ rowSortingFeature, sortedRowModel: createSortedRowModel() })
 
 type User = { name: string; role: string }
 
@@ -28,7 +32,7 @@ const columns = createColumns<User>([
 ])
 
 export function Example({ users }: { users: User[] }) {
-	const table = useDataGrid({ data: users, columns, sorting: true })
+	const table = useDataGrid({ features, data: users, columns, sorting: true })
 	return <DataGrid table={table} />
 }
 ```
@@ -39,6 +43,7 @@ Own the instance only when you need it (to read state, or to share one grid acro
 
 ```tsx
 <DataGrid
+	features={features}
 	data={users}
 	columns={columns}
 	sorting
@@ -46,6 +51,12 @@ Own the instance only when you need it (to read state, or to share one grid acro
 ```
 
 Pick one mode for the lifetime of a given grid — switching between them remounts it and resets its state.
+
+### Feature composition
+
+`features` is required, and `@ez-kit/data-grid-core/features` is the one import path for it — the feature _values_ are deliberately not re-exported from the copied files or from `@ez-kit/data-grid-react`, because re-exporting a feature is what would put it in every consumer's bundle. `shadcn add` does **not** add `@ez-kit/data-grid-core` to your `package.json` today, so install it yourself to compose a set.
+
+Registering a feature does not switch it on: `features` decides what exists, the config (`sorting: false`, `editing: { mode: 'row' }`) decides whether this grid uses it. Configuring a feature you did not register is a silent no-op, reported only by a development-mode warning.
 
 ### Extending cell types
 

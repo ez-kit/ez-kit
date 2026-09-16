@@ -21,6 +21,24 @@ pnpm add @ez-kit/data-grid-core @tanstack/table-core
 
 ```ts
 import { createTable, createColumns } from '@ez-kit/data-grid-core'
+import {
+	columnFilteringFeature,
+	createFilteredRowModel,
+	createSortedRowModel,
+	filterFns,
+	rowSortingFeature,
+	tableFeatures,
+} from '@ez-kit/data-grid-core/features'
+
+// Compose once per application. A table has only the features you register — everything else,
+// stock or ours, stays out of your bundle.
+const features = tableFeatures({
+	rowSortingFeature,
+	sortedRowModel: createSortedRowModel(),
+	columnFilteringFeature,
+	filteredRowModel: createFilteredRowModel(),
+	filterFns,
+})
 
 const columns = createColumns([
 	{ accessorKey: 'name', header: 'Name' },
@@ -28,6 +46,7 @@ const columns = createColumns([
 ])
 
 const table = createTable({
+	features,
 	data: [{ name: 'Ada Lovelace', role: 'Engineer' }],
 	columns,
 	sorting: true,
@@ -35,7 +54,13 @@ const table = createTable({
 })
 ```
 
-The returned `table` is a TanStack Table instance extended with the data-grid features. Read `table.getRowModel()`, drive state via `table.setState(...)`, and render it with your own UI or one of the flavour packages above.
+`features` is required and has no default: the only default possible is the all-in set, which would be what everyone who never thought about it shipped. `allDataGridFeatures` is that set, exported for prototypes and documentation examples and documented as defeating the point.
+
+**Registering a feature does not switch it on, and configuring one does not register it.** `features` decides what code exists; the config (`sorting: true`, `sorting: false`, `editing: { mode: 'row' }`) decides whether this table uses it — so one shared grid definition works at a dozen call sites with half of it off. Configuring a feature you did not register is **not** a compile error: it is a no-op, and the only thing that reports it is a development-mode warning naming the missing feature.
+
+The returned `table` is a TanStack Table v9 instance extended with the data-grid features. Read rows with `table.getRowModel()`. State lives in atoms: `table.store` is the whole-state observable (`table.store.state` for the current snapshot, `table.store.subscribe(fn)` to follow it), `table.atoms.<slice>.get()` reads one slice, and `table.initialState` is the state as of construction. Writes go through the APIs a registered feature installs — `table.setSorting(...)`, `table.setColumnFilters(...)`, and the grid's own `table.editing` / `table.creating` / `table.draft` namespaces. `table.getState()` and `table.setState()` **do not exist**: they were v8's, and v9 replaced them with the atoms above rather than renaming them.
+
+To mirror state into your own store, pass `onStateChange` — it receives the resolved next state.
 
 ## License
 
