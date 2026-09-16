@@ -11,9 +11,10 @@ import { stripComments } from '../e2e-slots/slot-literals'
  * property `var()` resolves — so comparing the literals compares the relationship itself. This
  * is the only thing that can: the writer's argument is a `string`, invisible to TypeScript, and
  * every reader carries a fallback (`var(--dg-pin-start-shadow, 0)`), so a name that stops
- * matching produces a silently inert style rather than an error. `--dg-pin-left-shadow` was the
- * cleanest instance in the repo — two writers, four readers across two kits, no type, no unit
- * test asserting opacity, and no e2e case addressing `data-pin-shadow` at all.
+ * matching produces a silently inert style rather than an error. The pin-shadow opacity pair was
+ * the cleanest instance in the repo when it was renamed off its old physical spelling — two
+ * writers, four readers across two kits, no type, no unit test asserting opacity, and no e2e
+ * case addressing `data-pin-shadow` at all.
  *
  * Comments are stripped first: a docblock explaining which variable a kit reads is not reading
  * it.
