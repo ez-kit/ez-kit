@@ -1,3 +1,4 @@
+import { allDataGridFeatures } from '@ez-kit/data-grid-core/features/all'
 import { prepareDataGridTable, createTable, createColumns } from '@ez-kit/data-grid-react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
@@ -24,6 +25,7 @@ import {
 } from './index'
 
 import type { ColumnDef, ColumnHelper, DataGridProps, SortingState } from './index'
+import type { GridFeatures } from '@ez-kit/data-grid-react'
 
 type User = {
 	id: number
@@ -68,7 +70,11 @@ describe('@ez-kit/data-grid-heroui', () => {
 		const columns: ColumnDef<User, KitCellTypes>[] = kitDefineColumns<User>([{ accessorKey: 'name', header: 'Name' }])
 		const helper: ColumnHelper<User, KitCellTypes> = createColumnHelper<User>()
 		const sorting: SortingState = [{ id: 'name', desc: false }]
-		const props: DataGridProps<User> = { data: [{ id: 1, name: 'Ada' }], columns }
+		const props: DataGridProps<GridFeatures, User> = {
+			features: allDataGridFeatures,
+			data: [{ id: 1, name: 'Ada' }],
+			columns,
+		}
 
 		expect(columns).toHaveLength(1)
 		expect(helper).toBeDefined()
@@ -77,7 +83,8 @@ describe('@ez-kit/data-grid-heroui', () => {
 	})
 
 	it('renders a simple DataGrid', () => {
-		const table = createTable<User>({
+		const table = createTable<GridFeatures, User>({
+			features: allDataGridFeatures,
 			data: [{ id: 1, name: 'Ada' }],
 			columns: createColumns<User>([{ accessorKey: 'name', header: 'Name' }]),
 		})
@@ -90,7 +97,8 @@ describe('@ez-kit/data-grid-heroui', () => {
 	})
 
 	it('selects rows through the grid checkbox', () => {
-		const table = createTable<User>({
+		const table = createTable<GridFeatures, User>({
+			features: allDataGridFeatures,
 			data: [{ id: 1, name: 'Ada' }],
 			columns: createColumns<User>([{ accessorKey: 'name', header: 'Name' }]),
 			selection: true,

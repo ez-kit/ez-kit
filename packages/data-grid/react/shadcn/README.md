@@ -10,7 +10,7 @@ This is **not** an npm package — it's distributed as a [shadcn registry](https
 npx shadcn@latest add https://ez-kit-docs.vercel.app/r/data-grid.json
 ```
 
-This copies `components/data-grid/**` into your project (cells, toolbar, filtering, pagination, editing blocks, plus the shadcn UI primitives they use) and adds `@ez-kit/data-grid-react` and its other runtime dependencies to your `package.json`. To pull in later updates, re-run the same command or use `npx shadcn add https://ez-kit-docs.vercel.app/r/data-grid.json --diff` to see what changed upstream first.
+This copies `components/data-grid/**` into your project (cells, toolbar, filtering, pagination, editing blocks, plus the shadcn UI primitives they use) and adds `@ez-kit/data-grid-react`, `@ez-kit/data-grid-core` and the other runtime dependencies to your `package.json`. Core is there for your own code rather than for the copied files, none of which import it: `features` is a required option, so you write `tableFeatures({ … })` yourself and the helpers live on core. To pull in later updates, re-run the same command or use `npx shadcn add https://ez-kit-docs.vercel.app/r/data-grid.json --diff` to see what changed upstream first.
 
 ## Usage
 
