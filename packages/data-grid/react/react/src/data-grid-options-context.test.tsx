@@ -20,7 +20,7 @@ const USERS: User[] = [
 const COLUMNS = createColumns<User>([{ accessorKey: 'name' }])
 
 describe('mergeGridOptionLayers', () => {
-	const config: UseDataGridConfig<GridFeatures, User> = { data: USERS, columns: COLUMNS }
+	const config: UseDataGridConfig<GridFeatures, User> = { features: TEST_FEATURES, data: USERS, columns: COLUMNS }
 
 	it('applies provider defaults when table omits them', () => {
 		const merged = mergeGridOptionLayers<GridFeatures, User>(undefined, { sorting: true }, config)

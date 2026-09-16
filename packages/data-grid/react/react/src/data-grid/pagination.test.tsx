@@ -26,7 +26,7 @@ const COLUMNS = createColumns<User>([{ accessorKey: 'name' }])
  * known-empty gate both have to hold.
  */
 function renderPagination(
-	config: Omit<UseDataGridConfig<GridFeatures, User>, 'data' | 'columns'>,
+	config: PaginationCase,
 	data: User[] = USERS,
 ): { props: PaginationProps | null; table: DataTable<GridFeatures, User> } {
 	let captured: PaginationProps | null = null
@@ -52,11 +52,22 @@ function renderPagination(
 }
 
 /**
+ * What one pagination case actually varies.
+ *
+ * `data`, `columns` and `features` are the harness's, not a caller's: every case below drives the
+ * same `TEST_FEATURES` table and differs only in its pagination config. `features` in particular
+ * has to be omitted rather than merely defaulted — it became a required member of
+ * `UseDataGridConfig` in v9, so leaving it in would make every call site restate it, and a
+ * caller's spread would overwrite the set the harness registers rather than adding to it.
+ */
+type PaginationCase = Omit<UseDataGridConfig<GridFeatures, User>, 'data' | 'columns' | 'features'>
+
+/**
  * {@link renderPagination} for the cases that require the footer to render — it fails loudly
  * rather than handing back a `null` the caller would have to narrow.
  */
 function captureProps(
-	config: Omit<UseDataGridConfig<GridFeatures, User>, 'data' | 'columns'>,
+	config: PaginationCase,
 	data: User[] = USERS,
 ): { props: PaginationProps; table: DataTable<GridFeatures, User> } {
 	const { props, table } = renderPagination(config, data)

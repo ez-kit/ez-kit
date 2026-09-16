@@ -267,8 +267,11 @@ describe('useDataGrid — overrides beat the named defaults', () => {
 
 	it('factory defaults win over the floor', () => {
 		const factory: DataGridDefaultOptions<GridFeatures, User> = { pagination: { pageSize: OVERRIDE_PAGE_SIZE } }
+		// Explicit type arguments: inference from the first argument alone pins `TFeatures` to the
+		// literal type of `TEST_FEATURES` rather than to `GridFeatures`, and `factory` — declared
+		// as `DataGridDefaultOptions<GridFeatures, User>` — then does not fit the narrower slot.
 		const { result } = renderHook(() =>
-			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS }, factory),
+			useDataGrid<GridFeatures, User>({ features: TEST_FEATURES, data: USERS, columns: COLUMNS }, factory),
 		)
 		expect(result.current.store.state.pagination.pageSize).toBe(OVERRIDE_PAGE_SIZE)
 	})
@@ -277,7 +280,7 @@ describe('useDataGrid — overrides beat the named defaults', () => {
 		const merged = mergeGridOptionLayers<GridFeatures, User>(
 			{ pagination: { pageSize: 5 } },
 			{ pagination: { pageSize: 15 } },
-			{ data: USERS, columns: COLUMNS, pagination: { pageSize: OVERRIDE_PAGE_SIZE } },
+			{ features: TEST_FEATURES, data: USERS, columns: COLUMNS, pagination: { pageSize: OVERRIDE_PAGE_SIZE } },
 		)
 		expect(merged.pagination).toEqual({ pageSize: OVERRIDE_PAGE_SIZE })
 	})

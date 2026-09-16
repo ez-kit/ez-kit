@@ -112,7 +112,7 @@ type _Assertions = [
 	ColumnSortingConfig,
 	CreatingMode,
 	EditingMode,
-	ExpandingConfig<{ id: string }>,
+	ExpandingConfig<GridFeatures, { id: string }>,
 	ExpandingMode,
 	FilteringConfig,
 	InfiniteState,
@@ -123,7 +123,7 @@ type _Assertions = [
 	PaginationConfig,
 	RowActionsConfig,
 	RowActionsPlacement,
-	SelectionConfig<{ id: string }>,
+	SelectionConfig<GridFeatures, { id: string }>,
 	SortingConfig,
 	typeof ACTIONS_COLUMN_ID,
 ]

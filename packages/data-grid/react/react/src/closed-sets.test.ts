@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
+import { TEST_FEATURES } from './test-utils'
+
 import {
 	BetweenInputType,
 	GridDirection,
@@ -33,6 +35,7 @@ type Row = { id: string; name: string }
 describe('closed sets keep the bare-string form valid for consumers', () => {
 	it('accepts bare strings for every consumer-facing option', () => {
 		const config: UseDataGridConfig<GridFeatures, Row> = {
+			features: TEST_FEATURES,
 			data: [],
 			columns: [
 				{
@@ -75,6 +78,7 @@ describe('closed sets keep the bare-string form valid for consumers', () => {
 
 	it('accepts the named member wherever the bare string is accepted', () => {
 		const config: UseDataGridConfig<GridFeatures, Row> = {
+			features: TEST_FEATURES,
 			data: [],
 			columns: [],
 			resizing: { mode: ColumnResizeMode.OnEnd },
