@@ -246,8 +246,9 @@ const table = useDataGrid({ features: readOnlyFeatures, data, columns })
 ```
 
 Two things to know. TypeScript has no partial type-argument inference, so
-`createDataGrid<MyCellTypes>({ … })` pins the cell types and silently drops the feature binding —
-pass no type arguments, or pass both. And bind the set **only** in your own project: a UI kit's
+`createDataGrid<MyCellTypes>({ … })` pins the cell types and drops the feature binding — the
+compiler then rejects `features` outright rather than losing it quietly, so pass no type arguments,
+or pass both. And bind the set **only** in your own project: a UI kit's
 `createDataGrid` call is compiled once and published to everyone, so a set bound there would ship
 the whole feature graph to every consumer, which is the thing composing a set exists to prevent.
 

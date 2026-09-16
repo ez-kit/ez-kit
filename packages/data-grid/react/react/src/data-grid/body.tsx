@@ -155,20 +155,26 @@ export function Body<TRow extends object = ErasedRow>({ children }: DataGridBody
 		bottomRows.map((row) => row.id),
 	)
 
+	// Read by the fallback branch as well as by the parts, and needing no hook, so it is computed
+	// once here rather than twice further down.
+	const creatingConfig = table.options.creating
+	const creatingMode = creatingConfig?.mode ?? 'row'
+	const showCreatingRow =
+		creatingConfig !== undefined && (creatingMode === 'pin-row' || (creatingMode === 'row' && isCreatingOpen))
+
 	/**
-	 * The six pieces the built-in body puts inside its `Tbody`, built on demand.
+	 * The six pieces the built-in body puts inside its `Tbody`.
 	 *
-	 * A function rather than values computed up front: the virtualized branch below returns a
-	 * body of its own, and building a row element per row of the model is exactly the work
-	 * virtualization exists to avoid. Both callers sit past every hook above, so calling it
-	 * conditionally is safe.
+	 * A function, not values computed up front, because building them costs one React element
+	 * per row of the model — the work virtualization exists to avoid, and pure waste for the
+	 * documented `{({ rows }) => rows.map(…)}` body that discards all six. The built-in
+	 * virtualized branch never reaches it; a *custom* body does, virtualized or not, which is
+	 * why {@link buildArgs} puts it behind getters rather than calling it eagerly.
+	 *
+	 * Every caller sits past every hook above, so calling it conditionally is safe.
 	 */
 	function buildParts(): BodyParts<TRow> {
 		const expandedComponent = table.grid.expanding.component as ComponentType<ExpandedRowProps<object>> | undefined
-		const creatingConfig = table.options.creating
-		const creatingMode = creatingConfig?.mode ?? 'row'
-		const showCreatingRow =
-			creatingConfig !== undefined && (creatingMode === 'pin-row' || (creatingMode === 'row' && isCreatingOpen))
 		const centerModelRows = hasPinning ? table.getCenterRows() : table.getRowModel().rows
 		const showRefetchOverlay = isFetching && !isPending && table.getRowModel().rows.length > 0
 
@@ -209,18 +215,52 @@ export function Body<TRow extends object = ErasedRow>({ children }: DataGridBody
 		</>
 	)
 
+	/**
+	 * The render arguments, with every part behind a getter over one memoised {@link buildParts}.
+	 *
+	 * So a body that reads nothing but `rows` pays nothing, and one that reads any part pays for
+	 * the single pass that produces all six. Note the caller must not be handed a spread of the
+	 * parts — a spread evaluates every getter, which is the eagerness this exists to avoid.
+	 */
+	function buildArgs(): DataGridBodyRenderArgs<TRow> {
+		let parts: BodyParts<TRow> | undefined
+		const resolve = (): BodyParts<TRow> => (parts ??= buildParts())
+		return {
+			table,
+			get rows() {
+				return table.getRowModel().rows
+			},
+			get content() {
+				return composeParts(resolve())
+			},
+			get creatingRow() {
+				return resolve().creatingRow
+			},
+			get pinnedTopRows() {
+				return resolve().pinnedTopRows
+			},
+			get centerRows() {
+				return resolve().centerRows
+			},
+			get pinnedBottomRows() {
+				return resolve().pinnedBottomRows
+			},
+			get loadMoreFooter() {
+				return resolve().loadMoreFooter
+			},
+			get refetchOverlay() {
+				return resolve().refetchOverlay
+			},
+		}
+	}
+
 	// Custom body: the consumer owns the whole `<tbody>`. Checked before every built-in
 	// branch (virtualization, fallbacks), because those replace the body rather than fill it
 	// — see the note on `children`. The parts are handed over, so owning the `<tbody>` no
 	// longer means giving up what goes in it.
 	if (children !== undefined) {
 		if (typeof children !== 'function') return <Tbody data-slot='tbody'>{children}</Tbody>
-		const parts = buildParts()
-		return (
-			<Tbody data-slot='tbody'>
-				{children({ ...parts, table, rows: table.getRowModel().rows, content: composeParts(parts) })}
-			</Tbody>
-		)
+		return <Tbody data-slot='tbody'>{children(buildArgs())}</Tbody>
 	}
 
 	if (rowVirtualizer) return <VirtualBody />
@@ -233,10 +273,6 @@ export function Body<TRow extends object = ErasedRow>({ children }: DataGridBody
 
 	const allRows = table.getRowModel().rows
 	const rawDataLength = (table.options.data as unknown[]).length
-	const creatingConfig = table.options.creating
-	const creatingMode = creatingConfig?.mode ?? 'row'
-	const showCreatingRow =
-		creatingConfig !== undefined && (creatingMode === 'pin-row' || (creatingMode === 'row' && isCreatingOpen))
 
 	if (!showCreatingRow && allRows.length === 0) {
 		if (rawDataLength === 0 && fallbacks.empty.enabled) {

@@ -67,6 +67,31 @@ export type DataGridRowProps<TRow extends object = ErasedRow> = {
 }
 
 /**
+ * The row's default cells, and the caller's `children` laid over them — the row-level twin of
+ * `renderCellContent`.
+ *
+ * A static `children` returns before the cells are built, because it provably cannot place them.
+ * A render function does not: it may, so the default is built and handed over, which costs an
+ * array of React elements and no DOM if it turns out to drop them.
+ */
+function renderRowContent<TRow extends object>(
+	children: DataGridRowProps<TRow>['children'],
+	row: Row<GridFeatures, TRow>,
+	cells: DataGridRowRenderArgs<TRow>['cells'],
+): ReactNode {
+	if (children !== undefined && typeof children !== 'function') return children
+	const content = cells.map((cell) => (
+		<DataGridCell
+			key={cell.id}
+			cell={cell}
+			row={row}
+		/>
+	))
+	if (children === undefined) return content
+	return children({ row, cells, content })
+}
+
+/**
  * Renders a single table body row with all its cells.
  *
  * Emits structural data attributes:
@@ -81,31 +106,6 @@ export type DataGridRowProps<TRow extends object = ErasedRow> = {
  * Consumer props from `rowProps` are applied first, so those structural attributes always win;
  * `className` is the exception and is merged rather than overwritten.
  */
-/**
- * The row's default cells, and the caller's `children` laid over them — the row-level twin of
- * `renderCellContent`.
- *
- * The default is built even when `children` is a function, because that function may place it:
- * these are React elements, not rendered output, so building the ones a caller then drops costs
- * an array of objects and no DOM.
- */
-function renderRowContent<TRow extends object>(
-	children: DataGridRowProps<TRow>['children'],
-	row: Row<GridFeatures, TRow>,
-	cells: DataGridRowRenderArgs<TRow>['cells'],
-): ReactNode {
-	const content = cells.map((cell) => (
-		<DataGridCell
-			key={cell.id}
-			cell={cell}
-			row={row}
-		/>
-	))
-	if (children === undefined) return content
-	if (typeof children !== 'function') return children
-	return children({ row, cells, content })
-}
-
 // `forwardRef`, not a `ref` prop: React 19 passes `ref` through props, React 18 strips it before
 // the component sees it, and this package supports both. The generic is restored by the cast
 // below — `forwardRef` erases type parameters, and `<DataGrid.Row<Order>>` has to keep working.

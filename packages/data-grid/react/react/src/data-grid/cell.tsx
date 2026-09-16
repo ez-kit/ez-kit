@@ -115,7 +115,8 @@ const FOCUSABLE_SELECTOR = 'input, select, textarea, button, [contenteditable="t
  * Renders a single table body cell.
  *
  * Dispatches to:
- * - {@link SystemCell} — for selection / expand / actions / row-pin system columns
+ * - {@link SystemCell} — for the three system columns: selection, expand, actions
+ *   (row pinning has no column of its own — its menu lives in the actions one)
  * - {@link BodyDataCell} — for regular data columns (with narrow editing subscription)
  *
  * Emits `data-slot="td"` plus `data-pinned="start" | "end"` for pinned columns;
@@ -320,7 +321,24 @@ function BodyDataCell<TRow extends object>({ cell, row, children }: DataGridCell
 
 	const isColumnEditable = meta?.editing !== false
 
-	if (isEditing && isColumnEditable) {
+	/*
+	 * A **static** `children` is a full opt-out of editing, where a render function is not.
+	 *
+	 * The two forms differ in one way that matters here: a function receives the editor as
+	 * `content` and decides where to put it, while a node cannot receive anything. Letting a
+	 * static node into the edit path renders it *instead of* the editor, and the cell then wears
+	 * `data-editing-cell`, installs the document-level Enter / Escape / pointer listeners that
+	 * commit a cell edit, finds nothing to focus, and commits when the pointer lands elsewhere —
+	 * all while looking exactly as before. `editing: false` on the column already expresses the
+	 * same opt-out; this is the per-cell spelling of it.
+	 *
+	 * It is checked here rather than in `DataGridCell` because it is a statement about the
+	 * editing path alone: a static node on a *system* column still renders, and so does one on a
+	 * column with no editing configured, which is the overwhelmingly common case.
+	 */
+	const isStaticContent = children !== undefined && typeof children !== 'function'
+
+	if (isEditing && isColumnEditable && !isStaticContent) {
 		return (
 			<EditingCell
 				cell={cell}
@@ -338,7 +356,7 @@ function BodyDataCell<TRow extends object>({ cell, row, children }: DataGridCell
 	// `editing: false` opts a column out at every mode, cell mode included: it used to be
 	// bypassed here, so a read-only column still became an input on double-click.
 	const handleDoubleClick =
-		editMode === EditingMode.Cell && isColumnEditable
+		editMode === EditingMode.Cell && isColumnEditable && !isStaticContent
 			? () => {
 					table.editing.startCell(row.id, columnId)
 				}
@@ -521,11 +539,18 @@ function getCellChrome<TRow extends object>(cell: Cell<GridFeatures, TRow>): Cel
 	const pinVars = getCommonPinStyles(cell.column)
 	const pinned = cell.column.getIsPinned()
 	const pinnedAttrs: CellChrome['pinnedAttrs'] = pinned ? { 'data-pinned': pinned } : {}
-	const cellClassName = resolveCellClassName(cell.column.columnDef.meta?.cellClassName, {
-		row: cell.row.original,
-		value: cell.getValue<unknown>(),
-		rowIndex: cell.row.index,
-	})
+	// Guarded rather than delegated to `resolveCellClassName`: this runs for every cell of every
+	// grid on every render, and the argument object below reads `getValue()`, which most columns
+	// — every system column among them — have no reason to call here at all.
+	const cellClassNameOption = cell.column.columnDef.meta?.cellClassName
+	const cellClassName =
+		cellClassNameOption === undefined
+			? undefined
+			: resolveCellClassName(cellClassNameOption, {
+					row: cell.row.original,
+					value: cell.getValue<unknown>(),
+					rowIndex: cell.row.index,
+				})
 	return {
 		pinVars,
 		pinned,

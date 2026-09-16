@@ -114,9 +114,11 @@ function joinLayoutClassNames(
  * options that are not plain `deepMerge`: classes accumulate because a layer cannot restate what it
  * did not write, `features` replaces because naming a set *is* the restatement.
  *
- * Nothing in the repo puts `features` in a defaults layer today, so with only one layer naming it
- * the reference passes through untouched either way — which is why this is fixed now, while the
- * case that springs it does not exist, rather than when it first bites.
+ * This was written while nothing in the repo put `features` in a defaults layer, so with only one
+ * layer naming it the reference passed through untouched either way. `createDataGrid({ features })`
+ * now does exactly that, and `create-data-grid.test.tsx` covers the replacement it depends on — so
+ * the line below is load-bearing rather than pre-emptive, and removing it would silently widen
+ * every grid that narrows beneath a bound bundle.
  */
 function mergeOptionLayers(base: OptionsRecord, over: OptionsRecord): OptionsRecord {
 	const merged = deepMerge(base, over)

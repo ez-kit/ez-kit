@@ -17,6 +17,12 @@ cells; a body's receives `content` plus the six parts it composes (`creatingRow`
 `centerRows`, `pinnedBottomRows`, `loadMoreFooter`, `refetchOverlay`). Wrapping the default no
 longer means reimplementing it.
 
+One behaviour follows from this and is worth stating: a cell whose `children` are a **static** node
+now opts out of cell-editing entirely — no double-click-to-edit, no editor. It could not show one
+anyway, and letting it into the edit path made it take the edit state invisibly. The
+render-function form is unaffected: it receives the editor as `content` and decides where to put
+it.
+
 Fixes `cellClassName` while there: it was resolved in two of the four places a `<td>` is rendered,
 so a column's class never reached a system column and vanished from a cell for as long as it stayed
 open for editing.

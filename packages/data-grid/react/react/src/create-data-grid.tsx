@@ -16,7 +16,6 @@ import type { ColumnDef, ColumnHelper } from './react-columns'
 import type { DataTable, GridFeatures } from './types'
 import type { UseDataGridConfig } from './use-data-grid'
 import type { TableFeatures } from '@tanstack/table-core'
-import type { ReactElement } from 'react'
 
 /** The ids a registry actually holds, as a string union — what the runtime helper is built from. */
 type KitCellTypeId<TCellTypes extends CellTypeRegistry> = Extract<keyof TCellTypes, string>
@@ -55,8 +54,10 @@ export type CreateDataGridOptions<
 	 *
 	 * Note TypeScript has no partial type-argument inference: writing
 	 * `createDataGrid<MyCellTypes>({ … })` pins `TCellTypes` and leaves `TFeatures` at its
-	 * `undefined` default, so the binding is silently lost. Pass no type arguments and let both
-	 * infer, or name both.
+	 * `undefined` default, which collapses this field to `features?: undefined` and **rejects**
+	 * the set — `TS2322`, not a silent loss. Pass no type arguments and let both infer, or name
+	 * both. The same goes for annotating the result `DataGridBundle<TCellTypes>`: the binding is
+	 * dropped by the annotation and the compiler says so at the first call site.
 	 */
 	features?: TFeatures
 	/**
@@ -112,7 +113,7 @@ export type BoundDataGrid<TFeatures extends TableFeatures> = (<
 	TConfigFeatures extends TableFeatures = TFeatures,
 >(
 	props: BoundDataGridProps<TConfigFeatures, TRow>,
-) => ReactElement | null) &
+) => ReturnType<typeof DataGrid>) &
 	DataGridStatics
 
 /**
@@ -259,13 +260,18 @@ export function createDataGrid<
 	/*
 	 * The two feature-carrying members are asserted rather than inferred, because their declared
 	 * types are *conditional* on `TFeatures` and TypeScript cannot check an assignment against an
-	 * unresolved conditional — `TFeatures` is still a type parameter here. Neither assertion hides
-	 * a shape difference: the relaxed types differ from the unbound ones only in that `features`
-	 * is optional, and the runtime is the same function and the same component in both cases,
-	 * since binding happens through the defaults layer rather than by swapping implementations.
+	 * unresolved conditional — `TFeatures` is still a type parameter here.
+	 *
+	 * Both are plain `as`, deliberately: an `as unknown as` here would compile whatever the
+	 * relaxed types happened to say, and it did hide something real — `BoundDataGrid` was
+	 * declared `=> ReactElement | null` against `DataGridRoot`'s inferred `=> Element`, which
+	 * made `DataGridBundle<C, F>` unassignable to `DataGridBundle<C>` for a reason nobody
+	 * intended. Naming `ReturnType<typeof DataGrid>` on the signature is what keeps the two in
+	 * step; the single hop then checks, and the relaxed types differ from the unbound ones only
+	 * in that `features` is optional.
 	 */
 	return {
-		DataGrid: BoundDataGrid as unknown as DataGridBundle<TCellTypes, TFeatures>['DataGrid'],
+		DataGrid: BoundDataGrid as DataGridBundle<TCellTypes, TFeatures>['DataGrid'],
 		useDataGrid: useDataGridWithDefaults as DataGridBundle<TCellTypes, TFeatures>['useDataGrid'],
 		useDataGridState,
 		GridComponentsProvider,
