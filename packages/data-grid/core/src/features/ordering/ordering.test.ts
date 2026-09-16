@@ -1,3 +1,10 @@
+import {
+	columnOrderingFeature,
+	columnPinningFeature,
+	columnVisibilityFeature,
+	rowSelectionFeature,
+	tableFeatures,
+} from '@tanstack/table-core'
 import { describe, expect, it } from 'vitest'
 
 import { createColumns } from '../../column/create-columns'
@@ -11,8 +18,27 @@ type Row = { id: number; name: string; email: string; age: number }
 
 const DATA: Row[] = [{ id: 1, name: 'Alice', email: 'alice@example.com', age: 30 }]
 
+/**
+ * Everything a column move can read: the order it writes, plus the pin band and the visibility
+ * flag its neighbour rules consult. `rowSelectionFeature` is here for the one case that asks
+ * whether a system column may move. Which of them a given case actually exercises is decided by
+ * the config literal, not by the registration.
+ */
+const ORDERING = tableFeatures({
+	columnOrderingFeature,
+	columnPinningFeature,
+	columnVisibilityFeature,
+	rowSelectionFeature,
+})
+
 function makeTable(columns: ColumnDef<Row>[], config: Record<string, unknown> = {}) {
-	return createTable<Row>({ data: DATA, columns: createColumns<Row>(columns), ordering: true, ...config })
+	return createTable({
+		features: ORDERING,
+		data: DATA,
+		columns: createColumns<Row>(columns),
+		ordering: true,
+		...config,
+	})
 }
 
 const FLAT: ColumnDef<Row>[] = [
@@ -87,12 +113,12 @@ describe('moveColumn', () => {
 	})
 
 	it('keeps a move inside its pin band', () => {
-		// `email` is pinned left; `name` is not. A step that crossed the band would read as a
+		// `email` is pinned at the start; `name` is not. A step that crossed the band would read as a
 		// pin, not a reorder.
 		const table = makeTable(
 			[
 				{ accessorKey: 'name', header: 'Name' },
-				{ accessorKey: 'email', header: 'Email', pinning: 'left' },
+				{ accessorKey: 'email', header: 'Email', pinning: 'start' },
 				{ accessorKey: 'age', header: 'Age' },
 			],
 			{ pinning: true },
@@ -119,6 +145,25 @@ describe('moveColumn', () => {
 		expect(moveColumn(table, 'email', ColumnMoveDirection.Start)).toEqual(['email', 'name', 'age'])
 		expect(canMoveColumn(table, 'email', ColumnMoveDirection.End)).toBe(false)
 		expect(canMoveColumn(table, 'age', ColumnMoveDirection.Start)).toBe(false)
+	})
+
+	it('moves columns in a grid that registers neither pinning nor visibility', () => {
+		// `getIsPinned` and `getIsVisible` come from `columnPinningFeature` and
+		// `columnVisibilityFeature`, so a grid without them has no such members. One band and
+		// nothing hidden is what the move rules fall back to, rather than crashing on the read.
+		const table = createTable({
+			features: tableFeatures({ columnOrderingFeature }),
+			data: DATA,
+			columns: createColumns<Row>(FLAT),
+			ordering: true,
+		})
+
+		expect(moveColumn(table, 'email', ColumnMoveDirection.Start)).toEqual(['email', 'name', 'age'])
+		// Both directions of a middle column: each one reaches the band read and the visibility
+		// read for two columns and compares them. `name` at the start would answer `false`
+		// whether or not the features were registered, so it would prove nothing here.
+		expect(canMoveColumn(table, 'email', ColumnMoveDirection.Start)).toBe(true)
+		expect(canMoveColumn(table, 'email', ColumnMoveDirection.End)).toBe(true)
 	})
 
 	it('never moves a system column', () => {
@@ -155,7 +200,7 @@ describe('ColumnMoveScope.All', () => {
 		const table = makeTable(
 			[
 				{ accessorKey: 'name', header: 'Name' },
-				{ accessorKey: 'email', header: 'Email', pinning: 'left', visibility: { initialHidden: true } },
+				{ accessorKey: 'email', header: 'Email', pinning: 'start', visibility: { initialHidden: true } },
 				{ accessorKey: 'age', header: 'Age', ordering: false },
 			],
 			{ pinning: true, visibility: true },

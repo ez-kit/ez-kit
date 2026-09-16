@@ -41,15 +41,15 @@
 		{
 			"name": "index",
 			"path": "dist/index.js",
-			"limit": "14 KB",
+			"limit": "12.5 KB",
 			"ignore": [
 				"@tanstack/table-core"
 			]
 		},
 		{
-			"name": "features (provisional limit — re-measured against the first green build in task 13)",
+			"name": "features",
 			"path": "dist/features/index.js",
-			"limit": "6 KB",
+			"limit": "5.5 KB",
 			"ignore": [
 				"@tanstack/table-core"
 			]

@@ -1,16 +1,15 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-type-arguments */
 import type { ColumnDef, SortingFn, SystemColumnDef } from './column/types'
+import type { GridOptions } from './create-table/create-table-options'
 import type { CreatingConfig } from './features/creating'
-import type { DraftConfig } from './features/deferred-apply'
+import type { AppliedState, DraftConfig } from './features/deferred-apply'
 import type { DeletingConfig } from './features/deleting'
 import type { EditingConfig } from './features/editing'
 import type { TableOperatorsConfig } from './features/operators'
 import type { RowMove } from './features/ordering'
 import type { RowActionsConfig } from './features/row-actions'
-import type { SetStateOptions } from './store/store'
 import type { FeatureToggle } from './utils/feature-flag'
 import type {
-	Column,
 	ColumnFiltersState,
 	ColumnOrderState,
 	ColumnPinningState,
@@ -23,12 +22,9 @@ import type {
 	RowSelectionState,
 	Row,
 	RowData,
-	RowModel,
 	Table as TanStackTable,
 	TableFeatures,
-	TableOptions,
 	TableState,
-	Updater,
 } from '@tanstack/table-core'
 
 export type { SortingFn } from './column/types'
@@ -369,8 +365,8 @@ export type InfiniteState = {
 
 /**
  * Loading-status slice, held in `state.loading`. **User-owned / fully controlled** —
- * the consumer feeds every field through the controlled `table.state.loading` prop
- * (mirrored one-way by `syncControlledState`). The grid **never writes** this slice;
+ * the consumer feeds every field through the controlled `options.state.loading`, which v9
+ * mirrors into the atoms itself. The grid **never writes** this slice;
  * there is no single-writer setter and no grid-owned derived alias. Typically fed
  * straight from a data library's query status (React Query / SWR) or local `useState`.
  *
@@ -770,6 +766,22 @@ export type InitialTableState<TFeatures extends TableFeatures> = Omit<
 	 * nobody asked for.
 	 */
 	pagination?: Partial<PaginationState>
+	/**
+	 * A restored draft — the pending query the user had composed when the page was last left.
+	 *
+	 * **Seed-only, and not a state slice.** The live `sorting` / `columnFilters` / `globalFilter`
+	 * carry a pending draft while the table is running and `applied` carries what was last
+	 * emitted; this key is only the name those two are seeded from at construction, and
+	 * `draftFeature.getInitialState` strips it before the table mints atoms. Seeding it makes a
+	 * grid come back dirty; omitting it starts the live axes at the applied seed.
+	 *
+	 * This lives on **our** config rather than being declaration-merged into TanStack's
+	 * `InitialTableState`, as it was under v8 — v9 has no such interface to merge into, and it was
+	 * always our key rather than theirs.
+	 *
+	 * Ignored unless `draftFeature` is registered and {@link TableConfig.draft} is on.
+	 */
+	draft?: Partial<AppliedState>
 }
 
 export type TableConfig<TFeatures extends TableFeatures, TRow extends object> = {
@@ -957,75 +969,32 @@ export type TableConfig<TFeatures extends TableFeatures, TRow extends object> = 
 }
 
 /**
- * Extended TanStack table instance returned by createTable().
- * Adds subscribe/getSnapshot for useSyncExternalStore, setData/appendData, and
- * the infinite-scroll status setters (see {@link InfiniteState}).
+ * The table instance `createTable` returns: a real v9 `Table`, plus the two things that are ours.
+ *
+ * State lives in the table's atoms — `table.store.subscribe(fn)` observes the whole state,
+ * `table.store.state` is the current snapshot, `table.atoms.<slice>.get()` is one slice, and
+ * `table.initialState` is the state as of construction.
  *
  * An intersection rather than an `interface … extends`: v9's `Table<TFeatures, TData>` resolves
  * the registered feature set through a mapped type, so its members are not statically known and
  * an interface cannot extend it.
  */
-// `TanStackTable` reads as `any` here for as long as the seven feature modules still carry v8's
-// `declare module '@tanstack/table-core' { interface Table<TData> … }`, which redeclares the name
-// this file imports with v8's arity. The disable goes with those blocks: ESLint reports an unused
-// directive as a warning and every lint script runs `--max-warnings=0`, so whichever task ports
-// the last of them is forced to delete this line.
-// eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
+// The v8 `declare module` blocks that made `TanStackTable` read as `any` here are all gone, so
+// this alias now resolves to the real v9 `Table` and the disable that stood here has been deleted
+// with the last of them.
+//
+// The three structural table aliases under `features/ordering/` — `ColumnOrderingTable`,
+// `RowOrderingTable`, `CoreRowModelTable` — were revisited at the same time and **stay
+// structural**. Their old reason (the shadowing) is gone; a different one replaced it, which
+// `features/ordering/row-ordering.ts` records with the two experiments behind it: inside feature
+// code `TFeatures` is unresolved, so a real `Table<TFeatures, TData>` carries none of the members
+// they read, and the all-in instantiation that does carry them asserts every feature is present
+// and accepts no narrow table.
 export type DataTable<TFeatures extends TableFeatures, TRow extends RowData> = TanStackTable<TFeatures, TRow> & {
-	options: TableOptions<TFeatures, TRow>
-	getState: () => TableState<TFeatures>
-	getRowModel: () => RowModel<TFeatures, TRow>
-	getAllColumns: () => Column<TFeatures, TRow, unknown>[]
-	getColumn: (columnId: string) => Column<TFeatures, TRow, unknown> | undefined
-	getRow: (id: string, searchAll?: boolean) => Row<TFeatures, TRow>
-	initialState: TableState<TFeatures>
-	setOptions: (newOptions: Updater<TableOptions<TFeatures, TRow>>) => void
-	setState: (updater: Updater<TableState<TFeatures>>) => void
-	/** Subscribe to all state changes. Returns an unsubscribe function. */
-	subscribe: (listener: () => void) => () => void
-	/** Returns a stable snapshot of current state for useSyncExternalStore. */
-	getSnapshot: () => TableState<TFeatures>
-	/**
-	 * The snapshot as of construction, frozen.
-	 *
-	 * Sibling of {@link DataTable.getSnapshot}, and framework-neutral despite its one known
-	 * caller: React's `useSyncExternalStore` needs a server snapshot that never moves, and
-	 * "the state this table started with" is a fact about the table, not about React.
-	 */
-	getInitialSnapshot: () => TableState<TFeatures>
 	/** Reactively replace the data array. */
 	setData: (data: TRow[]) => void
-	/**
-	 * Reactively append rows after the current data (immutable — builds a new array,
-	 * leaves the previous one untouched). Primary helper for forward infinite scroll.
-	 */
-	appendData: (rows: TRow[]) => void
-	/**
-	 * Reactively prepend rows before the current data (immutable). Exists for the
-	 * **reserved** v2 backward/prepend direction; usable now, but the grid performs no
-	 * scroll-anchoring in v1, so the scroll position is not compensated.
-	 */
-	prependData: (rows: TRow[]) => void
-	/**
-	 * Push a partial controlled-state slice into both TanStack's `options.state`
-	 * and the external snapshot store, **without** firing `onStateChange`.
-	 *
-	 * Use this when the caller is the source of truth (`state` prop on the
-	 * React `useDataGrid` hook). Calling `setState` instead would loop back
-	 * through `config.onStateChange` and risk an infinite update when the
-	 * consumer mirrors that callback into React state.
-	 *
-	 * Pass `{ silent: true }` when syncing from inside a React render pass: the
-	 * write still lands (so the very render that syncs reads the new values), but
-	 * subscribers are not woken mid-render — pair it with
-	 * {@link DataTable.notifyStateSubscribers} from a layout effect.
-	 */
-	syncControlledState: (partial: Partial<TableState<TFeatures>>, options?: SetStateOptions) => void
-	/**
-	 * Call every state subscriber with the current snapshot. Exists to flush a
-	 * {@link DataTable.syncControlledState} write made with `{ silent: true }`.
-	 */
-	notifyStateSubscribers: () => void
+	/** The non-TanStack config the React layer reads. Set once at construction. */
+	grid: GridOptions<TRow>
 }
 
 /** Public alias. */

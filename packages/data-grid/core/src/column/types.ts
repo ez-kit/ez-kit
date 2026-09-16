@@ -32,6 +32,27 @@ export type TanStackColumnDef<
 }
 
 /**
+ * A column definition **this package builds**, before any table exists to type it against.
+ *
+ * Pinned to the whole {@link TableFeatures} rather than generic over one table's set, and that
+ * is the point rather than a shortcut. `mapColumns` and the system-column builder run ahead of
+ * construction and write feature-gated options unconditionally — `size`, `minSize`, `maxSize`,
+ * `enableSorting`, `enableColumnFilter`, `filterFn` — but in v9 a def's shape *depends* on the
+ * set: `ColumnDef<TFeatures, …>` resolves its feature options through `ExtractFeatureMapTypes`,
+ * so inside a function still generic over `TFeatures` that resolution is deferred and the def
+ * has no statically known keys at all. Threading `TFeatures` here would therefore buy no
+ * checking — every write would need a cast — while pinning to the full set keeps each option
+ * checked against the feature that owns it.
+ *
+ * What it costs: the checker will not object to `enableGrouping` on a def bound for a table with
+ * no grouping feature. That was the situation in v8 as well, and such a key is read by nobody.
+ *
+ * Distinct from {@link TanStackColumnDef}, which is the faithful mirror of v9's own type and is
+ * what a *constructed* table's columns are.
+ */
+export type MappedColumnDef<TRow extends RowData, TValue = unknown> = TanStackColumnDef<TableFeatures, TRow, TValue>
+
+/**
  * The cell types this package implements. A closed set — the escape hatch for
  * project-specific types is {@link CellType}'s tail, not this.
  *
@@ -657,12 +678,14 @@ export type ColumnCreatingConfig<TRow = unknown, TValue = unknown, TNode = unkno
 }
 
 /**
- * Which edge a column is pinned to. Physical, not logical: unlike `align`, a pinned column
- * sticks to a viewport edge, and that edge does not flip with the text direction.
+ * Which edge a column is pinned to. **Logical**, like `align`: `'start'` is the left edge in
+ * LTR and the right edge in RTL. v9 removed the physical `'left'` / `'right'` everywhere, so
+ * the AGENTS.md entry that recorded pinning as physical is rewritten rather than defended —
+ * design §D2 and §5. Row pinning stays `top` / `bottom`: a vertical axis does not flip.
  */
 export const ColumnPinSide = {
-	Left: 'left',
-	Right: 'right',
+	Start: 'start',
+	End: 'end',
 } as const
 
 export type ColumnPinSide = (typeof ColumnPinSide)[keyof typeof ColumnPinSide]
@@ -922,7 +945,7 @@ export type ColumnDefCommon<
 	 * sorting / filtering / editing / visibility / resizing switches all belong on the leaves,
 	 * which is where the affordances render.
 	 *
-	 * Pin the **leaves**, not the group: pinning splits columns into left / centre / right, and a
+	 * Pin the **leaves**, not the group: pinning splits columns into start / centre / end, and a
 	 * group whose leaves land in different bands is drawn once per band.
 	 *
 	 * **Kit support:** the shadcn kit renders groups; the heroui kit drops the group row and
@@ -942,11 +965,11 @@ export type ColumnDefCommon<
 
 	/**
 	 * Column pinning.
-	 * - `'left'` / `'right'` — always pinned to that side (static), no menu section
+	 * - `'start'` / `'end'` — always pinned to that side (static), no menu section
 	 * - `false` — pinning disabled, no pin section in column menu
-	 * - `{ initialSide: 'left' }` — starts pinned left, user can change via menu (which requires
-	 *   the table-level `pinning` feature — see {@link ColumnPinningDef.initialSide})
-	 * - `{ side: 'left' }` — the long form of the scalar
+	 * - `{ initialSide: 'start' }` — starts pinned at the start edge, user can change via menu
+	 *   (which requires the table-level `pinning` feature — see {@link ColumnPinningDef.initialSide})
+	 * - `{ side: 'start' }` — the long form of the scalar
 	 *
 	 * The scalar and the object are the same shape `align` and `width` use: the common case is
 	 * one word, the object exists for the case the scalar cannot express.
@@ -1033,8 +1056,7 @@ export type ColumnDefCommon<
 	 *
 	 * `'start'` / `'end'` rather than `'left'` / `'right'`: this axis flips with the text
 	 * direction, and the grid already treats RTL as first-class (the root `direction` option). Column
-	 * *pinning* keeps `'left'` / `'right'` — a pinned column sticks to a viewport edge, which
-	 * does not flip.
+	 * *pinning* is spelled the same way and for the same reason — see {@link ColumnPinSide}.
 	 *
 	 * The React layer emits this as `data-align` on the cell; the shared structural stylesheet
 	 * turns it into alignment. A kit needs to do nothing.
@@ -1160,7 +1182,7 @@ export type SystemColumnType = (typeof SystemColumnType)[keyof typeof SystemColu
  *
  * The three columns previously took no configuration at all: their header was hard-wired to
  * render nothing, their width was a constant, and their pinning was decided for them —
- * selection pinned left, actions pinned right, and expand, alone among the three, not pinned,
+ * selection pinned at the start, actions at the end, and expand, alone among the three, not pinned,
  * so a horizontally scrolled grid kept the checkbox in view and let the chevron slide away.
  * Labelling the actions column, widening it, or unpinning it on a narrow grid had no route
  * through the public API.
@@ -1183,11 +1205,11 @@ export type SystemColumnDef<TFeatures extends TableFeatures, TRow extends object
 	 */
 	width?: number | ColumnWidthDef
 	/**
-	 * Which viewport edge the column sticks to, or `false` for none. Defaults: `'left'` for
-	 * selection and expand, `'right'` for actions.
+	 * Which edge the column sticks to, or `false` for none. Defaults: `'start'` for
+	 * selection and expand, `'end'` for actions.
 	 *
-	 * Physical, like a normal column's `pinning` and for the same reason — a pinned column
-	 * sticks to a viewport edge, and that edge does not flip with the text direction.
+	 * Logical, like a normal column's `pinning` and for the same reason — see
+	 * {@link ColumnPinSide}.
 	 */
 	pinning?: false | ColumnPinSide | ColumnPinningDef
 	/** Horizontal alignment of the column's contents. Logical, like a normal column's `align`. */

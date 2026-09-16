@@ -1,7 +1,16 @@
+import {
+	createExpandedRowModel,
+	createSortedRowModel,
+	rowExpandingFeature,
+	rowPinningFeature,
+	rowSortingFeature,
+	tableFeatures,
+} from '@tanstack/table-core'
 import { describe, expect, it } from 'vitest'
 
 import { createColumns } from '../../column/create-columns'
 import { createTable } from '../../create-table'
+import { rowOrderingFeature } from '../entry'
 
 import { applyRowMove, canMoveRow, moveRow, RowMoveDirection } from './row-ordering'
 
@@ -13,8 +22,29 @@ const DATA: Row[] = [
 	{ id: 'c', name: 'C' },
 ]
 
+/**
+ * Every feature a move reads: `rowOrderingFeature` owns the `rowOrder` slice these helpers
+ * project through, `rowSortingFeature` owns the `sorting` slice that disables a move, and
+ * `rowPinningFeature` supplies the band boundary. Which of them a case exercises is decided by
+ * the config literal.
+ */
+const ROW_ORDERING = tableFeatures({
+	rowOrderingFeature,
+	rowSortingFeature,
+	rowPinningFeature,
+	sortedRowModel: createSortedRowModel(),
+})
+
+/** The same, plus what tree data needs to render its sub-rows. */
+const ROW_ORDERING_TREE = tableFeatures({
+	rowOrderingFeature,
+	rowExpandingFeature,
+	expandedRowModel: createExpandedRowModel(),
+})
+
 function makeTable(config: Record<string, unknown> = {}, data: Row[] = DATA) {
-	return createTable<Row>({
+	return createTable({
+		features: ROW_ORDERING,
 		data,
 		columns: createColumns<Row>([{ accessorKey: 'name', header: 'Name' }]),
 		getRowId: (row) => row.id,
@@ -79,7 +109,8 @@ describe('canMoveRow in a tree', () => {
 	]
 
 	function makeTreeTable() {
-		const table = createTable<Node>({
+		const table = createTable({
+			features: ROW_ORDERING_TREE,
 			data: TREE,
 			columns: createColumns<Node>([{ accessorKey: 'name', header: 'Name' }]),
 			getRowId: (row) => row.id,
@@ -132,6 +163,38 @@ describe('moveRow', () => {
 
 	it('returns undefined at an end', () => {
 		expect(moveRow(makeTable(), 'a', RowMoveDirection.Up)).toBeUndefined()
+	})
+
+	it('moves rows in a grid that registers neither sorting nor row pinning', () => {
+		// `sorting` is a foreign slice and `getIsPinned` a foreign member: a grid with neither
+		// feature never sorts and has one band, which is what the move rules fall back to rather
+		// than throwing on the read.
+		const table = createTable({
+			features: tableFeatures({ rowOrderingFeature }),
+			data: DATA,
+			columns: createColumns<Row>([{ accessorKey: 'name', header: 'Name' }]),
+			getRowId: (row) => row.id,
+		})
+
+		expect(moveRow(table, 'b', RowMoveDirection.Down)).toEqual({
+			rowId: 'b',
+			targetRowId: 'c',
+			direction: RowMoveDirection.Down,
+		})
+	})
+
+	it('names the missing feature when the table never registered row ordering', () => {
+		// `rowOrder` is `rowOrderingFeature`'s own slice. Reading it off a table that does not
+		// have the feature is a composition mistake, and the accessor says so by name rather
+		// than letting an empty order compute every move from the original positions.
+		const table = createTable({
+			features: tableFeatures({}),
+			data: DATA,
+			columns: createColumns<Row>([{ accessorKey: 'name', header: 'Name' }]),
+			getRowId: (row) => row.id,
+		})
+
+		expect(() => moveRow(table, 'b', RowMoveDirection.Down)).toThrow(/state slice "rowOrder" is missing/)
 	})
 })
 

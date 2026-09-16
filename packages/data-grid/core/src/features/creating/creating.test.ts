@@ -1,3 +1,4 @@
+import { rowExpandingFeature, rowPaginationFeature, rowSelectionFeature, tableFeatures } from '@tanstack/table-core'
 import { describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
 
@@ -5,6 +6,9 @@ import { createColumns } from '../../column/create-columns'
 import { createTable } from '../../create-table'
 import { ValidationError } from '../validation'
 
+import { creatingFeature } from './creating'
+
+import type { CreatingState } from './creating'
 import type { ValidateContext } from '../validation'
 
 type Row = {
@@ -18,9 +22,146 @@ const COLUMNS = createColumns<Row>([{ accessorKey: 'name' }, { accessorKey: 'ema
 
 const noop = (): void => {}
 
-describe('CreatingFeature — basic flow', () => {
+const CREATING = tableFeatures({ creatingFeature })
+
+/**
+ * The slice the table currently holds. From a test the feature set is resolved, so this reads the
+ * atom directly — `../../feature-state` is for feature code, where it is not.
+ */
+const creatingOf = (table: { atoms: { creating: { get: () => CreatingState } } }): CreatingState =>
+	table.atoms.creating.get()
+
+describe('creatingFeature — feature composition', () => {
+	it('contributes neither the slice nor table.creating without the feature', () => {
+		// D1, demonstrated: omit the feature and the grid has neither of its two surfaces. This is
+		// the cheapest guard against the migration's signature defect — a member that silently
+		// stops being installed.
+		//
+		// Each read is a `@ts-expect-error`, which is the type half of the same claim: with the
+		// feature out of the set these members do not *exist* on the table, and the directive fails
+		// the build the day one of them starts existing unconditionally again.
+		const table = createTable({ features: tableFeatures({}), data: DATA, columns: COLUMNS })
+
+		// @ts-expect-error — the `creating` atom belongs to `creatingFeature`
+		expect(table.atoms.creating).toBeUndefined()
+		// @ts-expect-error — so does `table.creating`
+		expect(table.creating).toBeUndefined()
+		// @ts-expect-error — and the abort box behind it
+		expect(table._creatingAbort).toBeUndefined()
+	})
+
+	it('installs both declared table members, and getState reads the real atom', () => {
+		// `table.creating` and `_creatingAbort` go in through `initTableInstanceData`, because
+		// `assignTableAPIs` installs one *function* per key and `creating` is a namespace object.
+		const table = createTable({
+			features: CREATING,
+			data: DATA,
+			columns: COLUMNS,
+			creating: { onSave: () => Promise.resolve() },
+		})
+
+		expect(typeof table.creating.commit).toBe('function')
+		expect(table._creatingAbort).toEqual({})
+
+		// `getState()` is not a private mirror: it resolves to the same slice the atom holds, so
+		// every assertion written through the public method below is an assertion about state.
+		table.creating.start()
+		expect(table.creating.getState()).toBe(creatingOf(table))
+		expect(creatingOf(table).isOpen).toBe(true)
+	})
+
+	it('the empty-form constant is shared by reference across tables, and frozen', () => {
+		// `cancel` and a successful `commit` write `{ ...INITIAL_STATE }` — a *shallow* copy — so
+		// the `values` and `errors` a closed form holds are the constant's own objects, where v8
+		// wrote a fresh `{}` at each site. The first assertion is that aliasing, demonstrated
+		// rather than asserted in a comment: two independent tables end up holding **one** object.
+		// The rest is what makes that safe.
+		// Read through the typed `creatingOf` rather than `getState()`: identical values (the
+		// composition case above pins that with `toBe`), and it names the slice type at the read
+		// site. It was originally written this way to dodge `no-unsafe-*` on a table that resolved
+		// to `any`; that reason is spent — `DataTable` resolves — and the helper is kept on its
+		// own merit.
+		const open = () => {
+			const t = createTable({
+				features: CREATING,
+				data: DATA,
+				columns: COLUMNS,
+				creating: { onSave: () => Promise.resolve() },
+			})
+			t.creating.start()
+			t.creating.setValue('name', 'typed')
+			t.creating.cancel()
+			return t
+		}
+
+		const a = open()
+		const b = open()
+
+		expect(creatingOf(a).values).toBe(creatingOf(b).values)
+		expect(Object.isFrozen(creatingOf(a).values)).toBe(true)
+		expect(Object.isFrozen(creatingOf(a).errors)).toBe(true)
+
+		// The slice object itself is a fresh copy at every write, so it is deliberately NOT frozen
+		// — only the nested objects that travel by reference are.
+		expect(Object.isFrozen(creatingOf(a))).toBe(false)
+
+		// And the shared objects still behave as empty state for both tables: a write through the
+		// public API replaces them rather than mutating them.
+		a.creating.start()
+		a.creating.setValue('name', 'again')
+		expect(creatingOf(a).values).toEqual({ name: 'again' })
+		expect(creatingOf(b).values).toEqual({})
+	})
+
+	it('table.reset() closes the form through state, and the hook aborts the in-flight save', () => {
+		// Both halves of the reset contract, driven through the real `table.reset()` rather than
+		// by calling the hook directly — so the **ordering** is pinned by the test rather than
+		// asserted in a comment. `table_reset` writes every key of `table.initialState` back
+		// through `baseAtoms` in one batch, and only then loops the features' reset hooks:
+		//
+		//   1. the state pass restores `creating` to INITIAL_STATE — the open form closes, and
+		//      this feature writes no code for that beyond seeding `getInitialState`;
+		//   2. `resetTableInstanceData` does the part state restoration cannot — tears down the
+		//      in-flight AbortController, so a late `onSave` resolution writes nothing.
+		//
+		// v8 had neither: the controller lived in a closure no reset hook could reach.
+		let observedAbort = false
+		const onSave = vi.fn(
+			(ctx: { values: Partial<Row>; signal: AbortSignal }) =>
+				new Promise<void>((resolve) => {
+					ctx.signal.addEventListener('abort', () => {
+						observedAbort = true
+						resolve()
+					})
+				}),
+		)
+		const table = createTable({ features: CREATING, data: DATA, columns: COLUMNS, creating: { onSave } })
+		table.creating.start()
+		table.creating.setValue('name', 'Bob')
+		expect(creatingOf(table).isOpen).toBe(true)
+		const p = table.creating.commit()
+
+		return Promise.resolve()
+			.then(() => Promise.resolve())
+			.then(() => {
+				table.reset()
+
+				// 1 — state: the form is closed, by the reset pass, not by this feature.
+				expect(creatingOf(table).isOpen).toBe(false)
+				expect(creatingOf(table).values).toEqual({})
+
+				// 2 — instance data: only the hook could have done this.
+				expect(observedAbort).toBe(true)
+				expect(table._creatingAbort.controller).toBeUndefined()
+				return p
+			})
+	})
+})
+
+describe('creatingFeature — basic flow', () => {
 	it('initial state', () => {
 		const table = createTable({
+			features: CREATING,
 			data: DATA,
 			columns: COLUMNS,
 			creating: { onSave: () => Promise.resolve() },
@@ -35,6 +176,7 @@ describe('CreatingFeature — basic flow', () => {
 
 	it('start() opens the form', () => {
 		const table = createTable({
+			features: CREATING,
 			data: DATA,
 			columns: COLUMNS,
 			creating: { onSave: () => Promise.resolve() },
@@ -45,6 +187,7 @@ describe('CreatingFeature — basic flow', () => {
 
 	it('cancel() resets state', () => {
 		const table = createTable({
+			features: CREATING,
 			data: DATA,
 			columns: COLUMNS,
 			creating: { onSave: () => Promise.resolve() },
@@ -61,6 +204,7 @@ describe('CreatingFeature — basic flow', () => {
 
 	it('setValue updates values immutably and clears that field error', () => {
 		const table = createTable({
+			features: CREATING,
 			data: DATA,
 			columns: COLUMNS,
 			creating: { onSave: () => Promise.resolve() },
@@ -80,6 +224,7 @@ describe('CreatingFeature — basic flow', () => {
 
 	it('setValue does NOT clear formError', () => {
 		const table = createTable({
+			features: CREATING,
 			data: DATA,
 			columns: COLUMNS,
 			creating: { onSave: () => Promise.resolve() },
@@ -91,17 +236,18 @@ describe('CreatingFeature — basic flow', () => {
 	})
 
 	it('commit() resolves without error when no validate and no creating config absent', async () => {
-		const table = createTable({ data: DATA, columns: COLUMNS })
+		const table = createTable({ features: CREATING, data: DATA, columns: COLUMNS })
 		await expect(table.creating.commit()).resolves.toBeUndefined()
 	})
 })
 
-describe('CreatingFeature — commit pipeline', () => {
+describe('creatingFeature — commit pipeline', () => {
 	it('commit() success: cycles status idle→validating→saving→idle and resets state', async () => {
 		const onSave = vi.fn().mockResolvedValue(undefined)
 		const statuses: string[] = []
 
 		const table = createTable({
+			features: CREATING,
 			data: DATA,
 			columns: COLUMNS,
 			creating: { onSave },
@@ -133,6 +279,7 @@ describe('CreatingFeature — commit pipeline', () => {
 		const onSave = vi.fn().mockResolvedValue(undefined)
 
 		const table = createTable({
+			features: CREATING,
 			data: DATA,
 			columns: COLUMNS,
 			creating: { validate, onSave },
@@ -152,6 +299,7 @@ describe('CreatingFeature — commit pipeline', () => {
 		const onSave = vi.fn().mockResolvedValue(undefined)
 
 		const table = createTable({
+			features: CREATING,
 			data: DATA,
 			columns: COLUMNS,
 			creating: { validate, onSave },
@@ -168,6 +316,7 @@ describe('CreatingFeature — commit pipeline', () => {
 		const onSave = vi.fn().mockResolvedValue(undefined)
 
 		const table = createTable({
+			features: CREATING,
 			data: DATA,
 			columns: COLUMNS,
 			creating: { validate, onSave },
@@ -189,6 +338,7 @@ describe('CreatingFeature — commit pipeline', () => {
 			),
 		)
 		const table = createTable({
+			features: CREATING,
 			data: DATA,
 			columns: COLUMNS,
 			creating: { onSave },
@@ -207,6 +357,7 @@ describe('CreatingFeature — commit pipeline', () => {
 		const boom = new Error('network down')
 		const onSave = vi.fn(() => Promise.reject(boom))
 		const table = createTable({
+			features: CREATING,
 			data: DATA,
 			columns: COLUMNS,
 			creating: { onSave },
@@ -228,6 +379,7 @@ describe('CreatingFeature — commit pipeline', () => {
 				}),
 		)
 		const table = createTable({
+			features: CREATING,
 			data: DATA,
 			columns: COLUMNS,
 			creating: { onSave },
@@ -256,6 +408,7 @@ describe('CreatingFeature — commit pipeline', () => {
 				}),
 		)
 		const table = createTable({
+			features: CREATING,
 			data: DATA,
 			columns: COLUMNS,
 			creating: { onSave },
@@ -272,11 +425,12 @@ describe('CreatingFeature — commit pipeline', () => {
 	})
 })
 
-describe('CreatingFeature — validate config variants', () => {
+describe('creatingFeature — validate config variants', () => {
 	it('schema-shorthand works the same as function form', async () => {
 		const schema = z.object({ email: z.email() })
 
 		const table = createTable({
+			features: CREATING,
 			data: DATA,
 			columns: COLUMNS,
 			creating: {
@@ -297,7 +451,8 @@ describe('CreatingFeature — validate config variants', () => {
 		})
 
 		type PwRow = { id: number; password: string }
-		const table = createTable<PwRow>({
+		const table = createTable<typeof CREATING, PwRow>({
+			features: CREATING,
 			data: [{ id: 1, password: '' }],
 			columns: createColumns<PwRow>([{ accessorKey: 'password' }]),
 			creating: { validate: { schema }, onSave: () => Promise.resolve() },
@@ -314,6 +469,7 @@ describe('CreatingFeature — validate config variants', () => {
 	it('validate() returns ValidationResult and applies state', async () => {
 		const validate = vi.fn().mockReturnValue({ errors: { name: ['required'] } })
 		const table = createTable({
+			features: CREATING,
 			data: DATA,
 			columns: COLUMNS,
 			creating: { validate, onSave: () => Promise.resolve() },
@@ -325,12 +481,13 @@ describe('CreatingFeature — validate config variants', () => {
 	})
 })
 
-describe('CreatingFeature — per-column validateOn', () => {
+describe('creatingFeature — per-column validateOn', () => {
 	it("column validateOn = 'change' triggers field-level validate after debounce", async () => {
 		const validate = vi.fn((values: Partial<Row>, _ctx: ValidateContext) =>
 			values.email === 'taken@x.co' ? { errors: { email: ['taken'] } } : null,
 		)
 		const table = createTable({
+			features: CREATING,
 			data: DATA,
 			columns: createColumns<Row>([
 				{ accessorKey: 'name' },
@@ -357,6 +514,7 @@ describe('CreatingFeature — per-column validateOn', () => {
 			errors: { name: ['name-err'], email: ['email-err'] },
 		})
 		const table = createTable({
+			features: CREATING,
 			data: DATA,
 			columns: COLUMNS,
 			creating: { validate, onSave: () => Promise.resolve() },
@@ -375,6 +533,7 @@ describe('CreatingFeature — per-column validateOn', () => {
 	it("column validateOn = 'blur' does NOT auto-trigger on setValue", async () => {
 		const validate = vi.fn().mockReturnValue(null)
 		const table = createTable({
+			features: CREATING,
 			data: DATA,
 			columns: createColumns<Row>([
 				{ accessorKey: 'name' },
@@ -390,7 +549,7 @@ describe('CreatingFeature — per-column validateOn', () => {
 	})
 })
 
-describe('CreatingFeature — abort propagation', () => {
+describe('creatingFeature — abort propagation', () => {
 	it('cancel() during async validate aborts the signal seen by validate', async () => {
 		let seenSignal: AbortSignal | undefined
 		const validate = vi.fn(
@@ -403,6 +562,7 @@ describe('CreatingFeature — abort propagation', () => {
 				}),
 		)
 		const table = createTable({
+			features: CREATING,
 			data: DATA,
 			columns: COLUMNS,
 			creating: { validate, onSave: () => Promise.resolve() },
@@ -417,7 +577,7 @@ describe('CreatingFeature — abort propagation', () => {
 
 	it('keeps form open and onSave() unsupported empty path call still works', async () => {
 		// sanity — confirm noop side path
-		const table = createTable({ data: DATA, columns: COLUMNS })
+		const table = createTable({ features: CREATING, data: DATA, columns: COLUMNS })
 		table.creating.start()
 		table.creating.setValue('name', 'X')
 		await table.creating.commit()
@@ -427,9 +587,10 @@ describe('CreatingFeature — abort propagation', () => {
 	})
 })
 
-describe('CreatingFeature — default values', () => {
+describe('creatingFeature — default values', () => {
 	it('applies a column-level defaultValue on start()', () => {
 		const table = createTable({
+			features: CREATING,
 			data: DATA,
 			columns: createColumns<Row>([
 				{ accessorKey: 'name', creating: { defaultValue: 'Anonymous' } },
@@ -443,6 +604,7 @@ describe('CreatingFeature — default values', () => {
 
 	it('columns without a defaultValue contribute no key', () => {
 		const table = createTable({
+			features: CREATING,
 			data: DATA,
 			columns: createColumns<Row>([
 				{ accessorKey: 'name', creating: { defaultValue: 'Anonymous' } },
@@ -456,6 +618,7 @@ describe('CreatingFeature — default values', () => {
 
 	it('table-level defaultValues override column-level per key', () => {
 		const table = createTable({
+			features: CREATING,
 			data: DATA,
 			columns: createColumns<Row>([
 				{ accessorKey: 'name', creating: { defaultValue: 'Anonymous' } },
@@ -470,6 +633,7 @@ describe('CreatingFeature — default values', () => {
 	it('column-level function form receives { table, columnId } and its return lands in values', () => {
 		const defaultValue = vi.fn((ctx: { table: unknown; columnId: string }) => `row-${ctx.columnId}`)
 		const table = createTable({
+			features: CREATING,
 			data: DATA,
 			columns: createColumns<Row>([{ accessorKey: 'name', creating: { defaultValue } }, { accessorKey: 'email' }]),
 			creating: { onSave: () => Promise.resolve() },
@@ -482,11 +646,23 @@ describe('CreatingFeature — default values', () => {
 	})
 
 	it('table-level function form receives { table } and sees live table state', () => {
+		// `rowPaginationFeature` beside `creatingFeature`, and it is load-bearing: under v9
+		// `getRowCount` is installed by that feature, not by the core, so the documented
+		// `defaultValue: ({ table }) => table.getRowCount() + 1`
+		// (`apps/docs/content/docs/data-grid/editing/creating.mdx:60`) throws on a table whose
+		// feature set omits pagination. v8 had it unconditionally.
 		const table = createTable({
+			features: tableFeatures({ creatingFeature, rowPaginationFeature }),
 			data: DATA,
 			columns: COLUMNS,
 			creating: {
-				defaultValues: (ctx) => ({ name: `Row ${String(ctx.table.getRowCount() + 1)}` }),
+				// `ctx.table` names the real `Table<TableFeatures, TRow & object>` now, so the cast
+				// that stood here is gone and `getRowCount()` is a checked call — which is the
+				// point of this case: the method exists only where `rowPaginationFeature` is
+				// registered, and the all-in instantiation this context carries is what says so.
+				defaultValues: (ctx) => ({
+					name: `Row ${String(ctx.table.getRowCount() + 1)}`,
+				}),
 				onSave: () => Promise.resolve(),
 			},
 		})
@@ -497,6 +673,7 @@ describe('CreatingFeature — default values', () => {
 	it('re-applies defaults on a second start() after cancel()', () => {
 		let calls = 0
 		const table = createTable({
+			features: CREATING,
 			data: DATA,
 			columns: createColumns<Row>([
 				{
@@ -521,19 +698,38 @@ describe('CreatingFeature — default values', () => {
 	})
 
 	it('system columns never contribute a key', () => {
+		// The selection and expanding features are in the set on purpose: without them
+		// `createTable` warns that the two options have no effect and adds **no system columns at
+		// all**, so the case would assert the absence of columns that were never built. The
+		// explicit "the grid has some" assertion below is what makes the second one a statement
+		// about system columns rather than about an empty set.
+		//
+		// Note this still does not make the `isSystemColumn` skip in `resolveDefaultValues` the
+		// only thing keeping the case green — a system column also carries no `meta.creating`, so
+		// the "no default value" branch would exclude it anyway. Deleting the skip leaves the case
+		// passing; I checked. It is defence in depth, and this case characterises the documented
+		// behaviour rather than one branch of the implementation.
 		const table = createTable({
+			features: tableFeatures({ creatingFeature, rowSelectionFeature, rowExpandingFeature }),
 			data: DATA,
 			columns: createColumns<Row>([{ accessorKey: 'name', creating: { defaultValue: 'Anonymous' } }]),
 			selection: true,
 			expanding: true,
 			creating: { onSave: () => Promise.resolve() },
 		})
+
+		// No annotation and no cast: `getAllColumns()` yields real columns whose `meta` is this
+		// package's own declaration merge, so `isSystemColumn` is a checked read.
+		const systemColumns = table.getAllColumns().filter((c) => c.columnDef.meta?.isSystemColumn === true)
+		expect(systemColumns.length).toBeGreaterThan(0)
+
 		table.creating.start()
 		expect(Object.keys(table.creating.getState().values)).toEqual(['name'])
 	})
 
 	it('errors, formError and commitStatus still reset on start()', () => {
 		const table = createTable({
+			features: CREATING,
 			data: DATA,
 			columns: createColumns<Row>([{ accessorKey: 'name', creating: { defaultValue: 'Anonymous' } }]),
 			creating: { onSave: () => Promise.resolve() },

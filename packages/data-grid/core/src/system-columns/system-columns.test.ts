@@ -10,14 +10,14 @@ import {
 	SELECTION_COLUMN_ID,
 } from './system-columns'
 
-import type { TanStackColumnDef } from '../column/types'
+import type { MappedColumnDef } from '../column/types'
 
 type Row = {
 	id: number
 	name: string
 }
 
-const USER_COL: TanStackColumnDef<Row> = { id: 'name', header: 'Name', meta: {} }
+const USER_COL: MappedColumnDef<Row> = { id: 'name', header: 'Name', meta: {} }
 
 describe('buildColumnList', () => {
 	it('returns only user columns when no system columns needed', () => {
@@ -80,7 +80,7 @@ describe('buildColumnList', () => {
 		expect(cols[cols.length - 1]?.id).toBe(ACTIONS_COLUMN_ID)
 	})
 
-	it('actions column has pinning: { side: "right" } in meta', () => {
+	it('actions column has pinning: { side: "end" } in meta', () => {
 		const cols = buildColumnList([USER_COL], {
 			selection: false,
 			expanding: false,
@@ -92,7 +92,7 @@ describe('buildColumnList', () => {
 			customRowActions: false,
 		})
 		const actions = cols.find((c) => c.id === ACTIONS_COLUMN_ID)
-		expect(actions?.meta?.pinning).toEqual({ side: 'right' })
+		expect(actions?.meta?.pinning).toEqual({ side: 'end' })
 	})
 
 	it('appends __actions__ when only row pinning is enabled', () => {
@@ -208,31 +208,31 @@ describe('buildColumnList', () => {
 
 describe('extractPinningState', () => {
 	it('extracts columns with static pin position', () => {
-		const cols: TanStackColumnDef<Row>[] = [
-			{ id: 'a', meta: { pinning: { side: 'left' } } },
-			{ id: 'b', meta: { pinning: { side: 'right' } } },
+		const cols: MappedColumnDef<Row>[] = [
+			{ id: 'a', meta: { pinning: { side: 'start' } } },
+			{ id: 'b', meta: { pinning: { side: 'end' } } },
 			{ id: 'c', meta: {} },
 		]
-		const { left, right } = extractPinningState(cols)
-		expect(left).toContain('a')
-		expect(right).toContain('b')
-		expect(left).not.toContain('c')
+		const { start, end } = extractPinningState(cols)
+		expect(start).toContain('a')
+		expect(end).toContain('b')
+		expect(start).not.toContain('c')
 	})
 
 	it('extracts columns with initialSide position', () => {
-		const cols: TanStackColumnDef<Row>[] = [
-			{ id: 'd', meta: { pinning: { initialSide: 'left' } } },
-			{ id: 'e', meta: { pinning: { initialSide: 'right' } } },
+		const cols: MappedColumnDef<Row>[] = [
+			{ id: 'd', meta: { pinning: { initialSide: 'start' } } },
+			{ id: 'e', meta: { pinning: { initialSide: 'end' } } },
 		]
-		const { left, right } = extractPinningState(cols)
-		expect(left).toContain('d')
-		expect(right).toContain('e')
+		const { start, end } = extractPinningState(cols)
+		expect(start).toContain('d')
+		expect(end).toContain('e')
 	})
 
 	it('skips columns with meta.pinning: false', () => {
-		const cols: TanStackColumnDef<Row>[] = [{ id: 'f', meta: { pinning: false } }]
-		const { left, right } = extractPinningState(cols)
-		expect(left).not.toContain('f')
-		expect(right).not.toContain('f')
+		const cols: MappedColumnDef<Row>[] = [{ id: 'f', meta: { pinning: false } }]
+		const { start, end } = extractPinningState(cols)
+		expect(start).not.toContain('f')
+		expect(end).not.toContain('f')
 	})
 })

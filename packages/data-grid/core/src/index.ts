@@ -20,7 +20,7 @@ export { createColumnHelper } from './column/create-column-helper'
 // The one place the "a column's `creating` falls back to its `editing`" rule is written, so the
 // headless feature and the React form layer cannot drift on it.
 export { ColumnFormMode, resolveColumnFormConfig } from './column/resolve-form-config'
-export type { ResolvedColumnFormConfig } from './column/resolve-form-config'
+export type { FormColumnMeta, ResolvedColumnFormConfig } from './column/resolve-form-config'
 export {
 	BASE_CELL_TYPE_IDS,
 	BadgeVariant,
@@ -176,8 +176,15 @@ export type {
 	CreatingSaveContext,
 	CreatingState,
 } from './features/creating'
-export { DraftAxis } from './features/deferred-apply'
-export type { AppliedState, DraftApi, DraftConfig, PendingCount, QueryDraft } from './features/deferred-apply'
+export { createDraftAtoms, DraftAxis } from './features/deferred-apply'
+export type {
+	AppliedState,
+	DraftApi,
+	DraftAtoms,
+	DraftConfig,
+	PendingCount,
+	QueryDraft,
+} from './features/deferred-apply'
 export type {
 	BulkConfirmationConfig,
 	BulkDeletingApi,
@@ -191,9 +198,10 @@ export type {
 } from './features/deleting'
 export { EditingMode } from './features/editing'
 export type { EditingApi, EditingConfig, EditingSaveContext, EditingState } from './features/editing'
-// Sourced from the feature modules (not `./types`) so their
-// `declare module '@tanstack/table-core'` augmentations (state.infinite /
-// setInfiniteStatus, state.loading) survive into the bundled `.d.ts`.
+// Sourced from the feature modules (not `./types`) so each state type is re-exported from the
+// module that declares the slice it names. The declaration merging those modules perform is
+// per-feature — `Plugins`, `TableState_FeatureMap`, `TableState_All` — and reaches a consumer
+// through `@ez-kit/data-grid-core/features`, which is where the features themselves are exported.
 export type { InfiniteState } from './features/infinite'
 export type { LoadingState } from './features/loading'
 

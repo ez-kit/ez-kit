@@ -1,13 +1,58 @@
-// TanStack's `Table`, not our `DataTable`: these read `getAllLeafColumns()` and nothing else, and
-// the menu builder is handed the plain table off `header.getContext()`.
-import type { Column, ColumnOrderState, Table } from '@tanstack/table-core'
+import type { ColumnOrderState } from '@tanstack/table-core'
+
+/**
+ * Everything a column move reads off a column, named structurally.
+ *
+ * A column's members come from `Column_FeatureMap` keyed by the table's feature set, so they are
+ * not provable for a helper that accepts any table — and the two reads below are genuinely
+ * conditional: `getIsPinned` exists only where `columnPinningFeature` is registered and
+ * `getIsVisible` only where `columnVisibilityFeature` is. A grid with neither has one band and
+ * nothing hidden, which is what the fallbacks say.
+ */
+type OrderableColumn = {
+	id: string
+	parent?: { id: string } | undefined
+	// `ordering?: false` exactly as `ColumnMeta` declares it — the resolved form of
+	// `column.ordering` only ever records the lock, never the default.
+	columnDef: { meta?: { isSystemColumn?: boolean; ordering?: false } | undefined }
+	getIsPinned?: () => unknown
+	getIsVisible?: () => boolean
+}
+
+/**
+ * The table surface these helpers need — TanStack's table, not our `DataTable`: they read
+ * `getAllLeafColumns()` and nothing else, and the menu builder is handed the plain table off
+ * `header.getContext()`.
+ *
+ * Structural rather than `Table<TFeatures, TData>`, and it stays that way now that the v8
+ * `declare module` blocks are gone and `Table` resolves at v9's arity. The reason changed rather
+ * than disappearing, and both replacements were tried:
+ *
+ * - **Generic over `TFeatures`**, as a feature hook is: a column's members come from
+ *   `Column_FeatureMap` keyed by the set, so with `TFeatures` unresolved `getIsPinned` is a
+ *   `TS2339` — the same wall that made `../../feature-state` necessary for atoms.
+ * - **`Table<TableFeatures, RowData>`**, the all-in instantiation: it compiles here but asserts
+ *   that every feature's API is present, which makes the `?.` fallbacks below dead code for a
+ *   fact that is genuinely conditional — and no narrow table is assignable to it, so every
+ *   caller becomes a `TS2379`.
+ *
+ * So the honest shape is the one that names exactly what is read, with the conditional members
+ * optional. See {@link OrderableColumn} / {@link OrderableRow}, which say the same thing per member.
+ */
+type ColumnOrderingTable = { getAllLeafColumns: () => OrderableColumn[] }
+
+/** The band a column sits in, or `false` where the table registers no column pinning. */
+const pinnedBand = (column: OrderableColumn): unknown => column.getIsPinned?.() ?? false
+
+/** Whether a column is on screen — everything is, where the table registers no visibility. */
+const isVisible = (column: OrderableColumn): boolean => column.getIsVisible?.() ?? true
 
 /**
  * Which way along the column order a move goes.
  *
  * Logical, not physical — `Start` means "toward the beginning of the order", which under RTL is
- * visually to the right. The same reason `align` is `start` / `end` while `pinning` is
- * `left` / `right`: the order flips with the writing direction, a pinned edge does not.
+ * visually to the right. The same reason `align` and `pinning` are both `start` / `end`: all
+ * three axes flip with the writing direction.
  */
 export const ColumnMoveDirection = {
 	Start: 'start',
@@ -39,7 +84,7 @@ export type ColumnMoveScope = (typeof ColumnMoveScope)[keyof typeof ColumnMoveSc
  * Two locks, both per column: a system column (selection / expand / row actions) has a fixed
  * place in the layout, and `ordering: false` on a column def says the author fixed it there.
  */
-function isMovable(column: Column<never>): boolean {
+function isMovable(column: OrderableColumn): boolean {
 	const meta = column.columnDef.meta
 	return meta?.isSystemColumn !== true && meta?.ordering !== false
 }
@@ -61,39 +106,39 @@ function isMovable(column: Column<never>): boolean {
  * Both ends are also checked for {@link isMovable}: a locked column is not a landing spot.
  */
 function findNeighbour(
-	columns: Column<never>[],
+	columns: OrderableColumn[],
 	index: number,
 	direction: ColumnMoveDirection,
 	scope: ColumnMoveScope,
-): Column<never> | undefined {
+): OrderableColumn | undefined {
 	const column = columns[index]
 	if (!column) return undefined
 
 	const step = direction === ColumnMoveDirection.Start ? -1 : 1
 	const parentId = column.parent?.id
-	const pinned = column.getIsPinned()
+	const pinned = pinnedBand(column)
 
 	for (let i = index + step; i >= 0 && i < columns.length; i += step) {
 		const candidate = columns[i]
 		if (!candidate) continue
 		// A different band or a different parent ends the search rather than skipping past it:
 		// what lies beyond is not a neighbour of this column at all.
-		if (candidate.getIsPinned() !== pinned) return undefined
+		if (pinnedBand(candidate) !== pinned) return undefined
 		if (candidate.parent?.id !== parentId) return undefined
-		if (scope === ColumnMoveScope.Visible && !candidate.getIsVisible()) continue
+		if (scope === ColumnMoveScope.Visible && !isVisible(candidate)) continue
 		return isMovable(candidate) ? candidate : undefined
 	}
 	return undefined
 }
 
 /** Whether `columnId` can move one step in `direction` — what a menu entry's disabled state reads. */
-export function canMoveColumn<TRow extends object>(
-	table: Table<TRow>,
+export function canMoveColumn(
+	table: ColumnOrderingTable,
 	columnId: string,
 	direction: ColumnMoveDirection,
 	scope: ColumnMoveScope = ColumnMoveScope.Visible,
 ): boolean {
-	const columns = table.getAllLeafColumns() as unknown as Column<never>[]
+	const columns = table.getAllLeafColumns()
 	const index = columns.findIndex((column) => column.id === columnId)
 	const column = columns[index]
 	if (!column || !isMovable(column)) return false
@@ -108,13 +153,13 @@ export function canMoveColumn<TRow extends object>(
  * first, then the rest as declared", so writing only the columns that moved would silently
  * reorder every column that did not.
  */
-export function moveColumn<TRow extends object>(
-	table: Table<TRow>,
+export function moveColumn(
+	table: ColumnOrderingTable,
 	columnId: string,
 	direction: ColumnMoveDirection,
 	scope: ColumnMoveScope = ColumnMoveScope.Visible,
 ): ColumnOrderState {
-	const columns = table.getAllLeafColumns() as unknown as Column<never>[]
+	const columns = table.getAllLeafColumns()
 	const order = columns.map((column) => column.id)
 	const index = columns.findIndex((column) => column.id === columnId)
 	const column = columns[index]
