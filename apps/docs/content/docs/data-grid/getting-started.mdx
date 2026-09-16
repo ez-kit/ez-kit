@@ -85,10 +85,13 @@ export const { DataGrid, useDataGrid, createColumns } = createDataGrid({
 		fallbacks: fallbacksComponents,
 	},
 	cellTypes: { text: textCellType, number: numberCellType },
+	features,
 })
 ```
 
 Everything downstream is identical — `import { DataGrid, createColumns } from '@/lib/data-grid'` and carry on. Both flavors expose the same subpaths; swap `heroui` for `shadcn`.
+
+Note the `features` at the bottom. Naming it here states the set once for every grid this bundle builds, so the call sites stop writing it and still get it back in their types — see [Binding the set to your factory](/docs/data-grid/feature-set#binding-the-set-to-your-factory). It is the one thing shape A cannot do, because a kit's factory call is compiled once and published to everyone.
 
 ### What B saves
 
@@ -120,6 +123,7 @@ import { allComponents, cellTypes, createDataGrid } from '@ez-kit/data-grid-hero
 export const { DataGrid, useDataGrid, createColumns } = createDataGrid({
 	components: allComponents,
 	cellTypes,
+	features,
 })
 ```
 

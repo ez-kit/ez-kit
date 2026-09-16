@@ -495,6 +495,11 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		optionTables: [],
 		nonOptionTables: [
 			{
+				heading: 'Keep the built-in body and add to it',
+				reason:
+					'Names the parts `<DataGrid.Body>` hands its children (`creatingRow`, `centerRows`, `loadMoreFooter`, …) — properties of a callback argument, the same shape as the header-cell table below, not options anyone sets.',
+			},
+			{
 				heading: 'Header rows and cells: keep the chrome, change the markup',
 				reason:
 					'Names the render args `<DataGrid.HeaderCell>` hands its children (`label`, `sortTrigger`, `menu`, `filter`, …), not config keys — they are properties of a callback argument, not options anyone sets.',

@@ -98,11 +98,79 @@ by hand.
 </DataGrid.Body>
 ```
 
+### Keep the built-in body and add to it
+
+Returning `rows.map(...)` replaces the body's contents. When you only wanted to _add_ something,
+take `content` instead — everything the built-in body would have rendered inside the `<tbody>`,
+already composed:
+
+```tsx
+<DataGrid.Body>
+	{({ content }) => (
+		<>
+			{content}
+			<tr data-slot='tr'>
+				<td colSpan={columns.length}>Σ {total}</td>
+			</tr>
+		</>
+	)}
+</DataGrid.Body>
+```
+
+`content` is the six parts below, in this order. Take them individually when you need to reorder
+or drop one:
+
+| Part               | What it is                                                           |
+| ------------------ | -------------------------------------------------------------------- |
+| `creatingRow`      | The draft row `creating` mounts above the data, or `null`.           |
+| `pinnedTopRows`    | Rows pinned to the top, each with its expanded panel and pin offset. |
+| `centerRows`       | The unpinned rows, each with its expanded panel.                     |
+| `pinnedBottomRows` | Rows pinned to the bottom, measured like the top ones.               |
+| `loadMoreFooter`   | The infinite-scroll sentinel or trigger.                             |
+| `refetchOverlay`   | The overlay shown during a background refetch, or `null`.            |
+
 <Callout type='warn'>
-	A custom body opts out of **everything** the built-in body does: pinned rows, the creating row, expanded sub-content,
-	the loading / empty / no-results fallbacks, the infinite-scroll footer and the refetch overlay. That is the trade —
-	full control in exchange for re-implementing what you still want. Omit `children` unless you need it.
+	Four branches stay out of reach, because each replaces the whole `<tbody>` rather than filling one: the
+	**virtualized** body, and the **loading**, **empty** and **no-results** fallbacks. `children` is checked before all
+	four, so a custom body renders instead of them — including while the grid is loading or has nothing to show. A grid
+	that wants both gates its own `children` on `useDataGridState`, or keeps the built-in body and customises further
+	down at `<DataGrid.Row>`.
 </Callout>
+
+## Rows and cells: wrap the default instead of rebuilding it
+
+`<DataGrid.Row>` and `<DataGrid.Cell>` hand back the same thing under the same name. A row's
+`content` is its default cells; a cell's is whatever that cell would have rendered — its cell-type
+view, the inline editor while it is open, or the selection checkbox and expand chevron on a system
+column. Every lookup `cell.component`, `cell.type` and `editing.component` feed is already applied.
+
+```tsx
+<DataGrid.Row row={row}>
+	{({ content }) => (
+		<>
+			<td data-slot='td'>
+				<DragHandle />
+			</td>
+			{content}
+		</>
+	)}
+</DataGrid.Row>
+```
+
+```tsx
+<DataGrid.Cell
+	cell={cell}
+	row={row}
+>
+	{({ content, value }) => <Tooltip title={String(value)}>{content}</Tooltip>}
+</DataGrid.Cell>
+```
+
+Both keep their shell either way — the row keeps its `data-*` attributes and `rowProps`, the cell
+keeps its pinning offset, alignment and `cellClassName`.
+
+A column-wide change belongs on the column instead (`cell.component`), which also feeds the create
+and edit forms; these slots are for one row or one cell in a hand-composed table.
 
 ### Typing the render arguments
 

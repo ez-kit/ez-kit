@@ -206,6 +206,51 @@ defaults layer can supply it once for every grid beneath it:
 a decision about what exists, and a merge cannot express "and not that one" — so a grid that
 deliberately narrows below an app-wide set gets the narrow set, not the union.
 
+### Binding the set to your factory
+
+A provider supplies the set at runtime, but every call still has to name one, because `features` is
+required on the config type. Write shape B — the `createDataGrid` file in your own project — and
+you can state it once for good:
+
+```tsx title="src/lib/data-grid.ts"
+import { createDataGrid } from '@ez-kit/data-grid-heroui'
+import { allComponents, cellTypes } from '@ez-kit/data-grid-heroui'
+
+export const features = tableFeatures({
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	rowSortingFeature,
+	sortedRowModel: createSortedRowModel(),
+})
+
+export const { DataGrid, useDataGrid, createColumns } = createDataGrid({
+	components: allComponents,
+	cellTypes,
+	features,
+})
+```
+
+Grids built from that bundle stop naming a set, and still get one back in their types:
+
+```tsx
+const table = useDataGrid({ data, columns, sorting: true })
+//    ^? DataTable<typeof features, Order>
+```
+
+Naming a set at a call site anyway still works, and still **replaces** rather than merges — that is
+how one grid runs narrower than the bundle it came from:
+
+```tsx
+const table = useDataGrid({ features: readOnlyFeatures, data, columns })
+```
+
+Two things to know. TypeScript has no partial type-argument inference, so
+`createDataGrid<MyCellTypes>({ … })` pins the cell types and silently drops the feature binding —
+pass no type arguments, or pass both. And bind the set **only** in your own project: a UI kit's
+`createDataGrid` call is compiled once and published to everyone, so a set bound there would ship
+the whole feature graph to every consumer, which is the thing composing a set exists to prevent.
+
 ## See also
 
 - [Getting started](/docs/data-grid/getting-started) — the two shapes a project imports the grid in
