@@ -1,10 +1,54 @@
 'use client'
 
+import {
+	columnFacetingFeature,
+	columnFilteringFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	columnVisibilityFeature,
+	createFacetedRowModel,
+	createFacetedUniqueValues,
+	createFilteredRowModel,
+	createPaginatedRowModel,
+	createSortedRowModel,
+	deletingFeature,
+	editingFeature,
+	filterFns,
+	globalFilteringFeature,
+	rowPaginationFeature,
+	rowSelectionFeature,
+	rowSortingFeature,
+	sortFns,
+	tableFeatures,
+} from '@ez-kit/data-grid-core/features'
 import { createColumns, useDataGridState, useDataGridTable } from '@ez-kit/data-grid-react'
 import { ArrowDown, ArrowRight, ArrowUp, CircleCheck, CircleDashed, CircleHelp, Timer } from 'lucide-react'
 import { useMemo } from 'react'
 
 import { DataGrid } from 'shared/DataGrid'
+
+const features = tableFeatures({
+	// Structural: the grid shell reads column widths, visibility and pin groups to lay out
+	// the column grid. Everything below is this example's own.
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	rowSortingFeature,
+	columnFacetingFeature,
+	columnFilteringFeature,
+	deletingFeature,
+	editingFeature,
+	filterFns,
+	globalFilteringFeature,
+	rowPaginationFeature,
+	rowSelectionFeature,
+	sortFns,
+	facetedRowModel: createFacetedRowModel(),
+	facetedUniqueValues: createFacetedUniqueValues(),
+	filteredRowModel: createFilteredRowModel(),
+	paginatedRowModel: createPaginatedRowModel(),
+	sortedRowModel: createSortedRowModel(),
+})
 
 type Task = {
 	id: string
@@ -149,14 +193,14 @@ const columns = createColumns<Task>([
 		width: 120,
 		align: 'end',
 		cell: { type: 'number' },
-		filtering: { operators: { items: ['between'] } },
+		filtering: { operators: { items: ['between'] }, defaultOperator: 'between' },
 	},
 	{
 		accessorKey: 'createdAt',
 		header: 'Created At',
 		width: 180,
 		cell: { type: 'date', config: { format: { dateStyle: 'long' } } },
-		filtering: { operators: { items: ['between'] } },
+		filtering: { operators: { items: ['between'] }, defaultOperator: 'between' },
 	},
 ])
 
@@ -180,6 +224,7 @@ export function ExampleTaskBoardExample() {
 	const data = useMemo(() => makeTasks(160), [])
 	return (
 		<DataGrid
+			features={features}
 			data={data}
 			columns={columns}
 			selection
@@ -194,7 +239,11 @@ export function ExampleTaskBoardExample() {
 					// Demo grid: the edit modal closes, the row is not persisted anywhere.
 				},
 			}}
-			deleting
+			deleting={{
+				onDelete: () => {
+					// Demo grid: the confirm dialog closes, the row is not removed anywhere.
+				},
+			}}
 			pagination={{
 				pageSize: 10,
 				links: false,

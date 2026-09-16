@@ -1,5 +1,12 @@
 'use client'
 
+import {
+	columnPinningFeature,
+	columnSizingFeature,
+	columnVisibilityFeature,
+	creatingFeature,
+	tableFeatures,
+} from '@ez-kit/data-grid-core/features'
 import { ValidationError } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 import { z } from 'zod'
@@ -7,6 +14,15 @@ import { z } from 'zod'
 import { DataGrid } from 'shared/DataGrid'
 
 import { columns, INITIAL_DATA, type User } from '../_data'
+
+const features = tableFeatures({
+	// Structural: the grid shell reads column widths, visibility and pin groups to lay out
+	// the column grid. Everything below is this example's own.
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	creatingFeature,
+})
 
 const userSchema = z.object({
 	name: z.string().min(2, 'must be at least 2 chars'),
@@ -34,7 +50,8 @@ export function CreatingValidationExample() {
 				/>
 				Simulate server-side rejection
 			</label>
-			<DataGrid<User>
+			<DataGrid<typeof features, User>
+				features={features}
 				data={data}
 				columns={columns}
 				creating={{

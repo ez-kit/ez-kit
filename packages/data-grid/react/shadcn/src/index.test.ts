@@ -1,3 +1,4 @@
+import { allDataGridFeatures } from '@ez-kit/data-grid-core/features/all'
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -27,6 +28,7 @@ import type {
 	SortingState,
 	TableState,
 } from './index'
+import type { GridFeatures } from '@ez-kit/data-grid-react'
 
 type User = {
 	id: number
@@ -120,13 +122,17 @@ describe('@ez-kit/data-grid-shadcn', () => {
 		/* eslint-enable @typescript-eslint/no-unnecessary-type-arguments */
 		const sorting: SortingState = [{ id: 'name', desc: false }]
 		const columnFilters: ColumnFiltersState = [{ id: 'name', value: 'Ada' }]
-		const state: Partial<TableState> = { sorting, columnFilters }
+		const state: Partial<TableState<GridFeatures>> = { sorting, columnFilters }
 		const preset: DateRangePreset = {
 			id: 'today',
 			label: 'Today',
 			getRange: () => ({ from: '2026-05-14', to: '2026-05-14' }),
 		}
-		const props: DataGridProps<User> = { data: [{ id: 1, name: 'Ada' }], columns }
+		const props: DataGridProps<GridFeatures, User> = {
+			features: allDataGridFeatures,
+			data: [{ id: 1, name: 'Ada' }],
+			columns,
+		}
 
 		expect(columns).toHaveLength(1)
 		expect(helper).toBeDefined()

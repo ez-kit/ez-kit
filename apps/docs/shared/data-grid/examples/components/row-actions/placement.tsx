@@ -1,5 +1,14 @@
 'use client'
 
+import {
+	columnPinningFeature,
+	columnSizingFeature,
+	columnVisibilityFeature,
+	deletingFeature,
+	editingFeature,
+	rowPinningFeature,
+	tableFeatures,
+} from '@ez-kit/data-grid-core/features'
 import { useState } from 'react'
 
 import { DataGrid } from 'shared/DataGrid'
@@ -7,6 +16,17 @@ import { DataGrid } from 'shared/DataGrid'
 import { columns, makeUsers } from '../_data'
 
 import type { RowActionsPlacement } from '@ez-kit/data-grid-react'
+
+const features = tableFeatures({
+	// Structural: the grid shell reads column widths, visibility and pin groups to lay out
+	// the column grid. Everything below is this example's own.
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	deletingFeature,
+	editingFeature,
+	rowPinningFeature,
+})
 
 /**
  * The same grid under both `rowActions.placement` values, so the two examples below differ by
@@ -20,6 +40,7 @@ function PlacementGrid({ placement }: { placement: RowActionsPlacement }) {
 
 	return (
 		<DataGrid
+			features={features}
 			data={data}
 			columns={columns}
 			editing={{ mode: 'modal', onSave: () => Promise.resolve() }}

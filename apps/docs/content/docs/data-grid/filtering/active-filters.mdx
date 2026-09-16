@@ -22,6 +22,7 @@ and the Clear-all button mounts into the toolbar once at least one filter is set
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	filtering={{ variant: 'popover', chips: true, toolbar: true }}
@@ -45,6 +46,7 @@ with no other feature asking for the toolbar, the toolbar row itself does not re
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	filtering={{ variant: 'popover', chips: true }}
@@ -65,6 +67,7 @@ the layout calls for them. Children replace the default layout, so mount the res
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	filtering={{ variant: 'popover' }}

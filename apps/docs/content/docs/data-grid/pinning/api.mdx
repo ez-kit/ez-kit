@@ -26,11 +26,11 @@ there is no single callback for both.
 
 ## Column def
 
-| Option                | Type                                             | Description                                                                                         |
-| --------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
-| `pinning`             | `false \| 'left' \| 'right' \| ColumnPinningDef` | Per-column. The scalar is the common case; `false` removes the pin section from this column's menu. |
-| `pinning.side`        | `'left' \| 'right'`                              | The long form of the scalar — a **static** pin, enforced on every write path, with no pin control.  |
-| `pinning.initialSide` | `'left' \| 'right'`                              | A **seed**: the column starts pinned and the user may unpin or re-pin it from the ⋮ menu.           |
+| Option                | Type                                            | Description                                                                                         |
+| --------------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `pinning`             | `false \| 'start' \| 'end' \| ColumnPinningDef` | Per-column. The scalar is the common case; `false` removes the pin section from this column's menu. |
+| `pinning.side`        | `'start' \| 'end'`                              | The long form of the scalar — a **static** pin, enforced on every write path, with no pin control.  |
+| `pinning.initialSide` | `'start' \| 'end'`                              | A **seed**: the column starts pinned and the user may unpin or re-pin it from the ⋮ menu.           |
 
 A static pin is an invariant, not a seed — see
 [Seeds and invariants](/docs/data-grid/pinning/columns#seeds-and-invariants).
@@ -39,9 +39,9 @@ A static pin is an invariant, not a seed — see
 
 | Option                       | Type                                    | Description                                                                                                          |
 | ---------------------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `initialState.columnPinning` | `{ left?: string[], right?: string[] }` | Uncontrolled seed for pinned columns at mount. **Merges** with the pins derived from the column defs.                |
+| `initialState.columnPinning` | `{ start?: string[], end?: string[] }`  | Uncontrolled seed for pinned columns at mount. **Merges** with the pins derived from the column defs.                |
 | `initialState.rowPinning`    | `{ top?: string[], bottom?: string[] }` | Uncontrolled seed for pinned rows at mount, keyed by the id `getRowId` returns.                                      |
-| `state.columnPinning`        | `{ left?: string[], right?: string[] }` | Controlled pinning state — pass alongside `onStateChange`. See [Controlled State](/docs/data-grid/state/controlled). |
+| `state.columnPinning`        | `{ start?: string[], end?: string[] }`  | Controlled pinning state — pass alongside `onStateChange`. See [Controlled State](/docs/data-grid/state/controlled). |
 | `state.rowPinning`           | `{ top?: string[], bottom?: string[] }` | Controlled row pinning — same contract.                                                                              |
 
 The full precedence between a static pin, a seed, `initialState` and `state` is in the

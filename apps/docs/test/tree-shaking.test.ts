@@ -3,7 +3,7 @@ import { resolve } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
-import { entryPointsPulledBy } from './tree-shaking/bundle'
+import { bundledCodeOf, entryPointsPulledBy } from './tree-shaking/bundle'
 
 /**
  * Guards what a consumer's bundler actually pulls in when it imports one thing from a package.
@@ -176,6 +176,108 @@ const PACKAGES: readonly Package[] = [
 		],
 	},
 ]
+
+/**
+ * The feature set, which is what the TanStack Table v9 migration was for.
+ *
+ * Under v8 the grid registered its features through the internal `_features` option and every
+ * feature was reachable from every table, so this could not be asked at all. Under v9 a table is
+ * assembled from the set the consumer names, and the promise is that a grid built without
+ * `editingFeature` does not carry the editing code. That is the *whole* bundle argument for the
+ * migration, so it gets a case rather than a paragraph.
+ *
+ * The question is asked with {@link bundledCodeOf} rather than {@link entryPointsPulledBy}: every
+ * feature lives behind the one `@ez-kit/data-grid-core/features` entry point, so "which entry
+ * points came along" cannot tell the two sets apart. `row_getIsEditing` is the row-API key
+ * `editingFeature` installs and nothing else in the package names it, so its presence in the
+ * output is the editing implementation surviving the shake.
+ */
+const FEATURES_ENTRY = subpathEntryOf('data-grid/core', 'features/index.js')
+/** The row-API key `editingFeature` installs — present in a bundle exactly when its code is. */
+const EDITING_MARKER = 'row_getIsEditing'
+/** A set that registers sorting and nothing else. */
+const SORTING_ONLY = ['tableFeatures', 'rowSortingFeature', 'createSortedRowModel']
+
+describe('@ez-kit/data-grid-core/features', () => {
+	// The control: without it an absence below would also be satisfied by a build that resolved
+	// nothing. Naming `editingFeature` must bring the editing implementation with it.
+	it('reaches the editing implementation when the set registers it', async () => {
+		const code = await bundledCodeOf(FEATURES_ENTRY, [...SORTING_ONLY, 'editingFeature'])
+
+		expect(code).toContain(EDITING_MARKER)
+	})
+
+	/**
+	 * The promise, stated directly.
+	 *
+	 * It did not hold when this case was written. `allDataGridFeatures` was declared on the features
+	 * entry itself as a top-level `tableFeatures({ ...stockFeatures, …, editingFeature, … })` call
+	 * whose argument object spreads, and an object spread may run getters — so esbuild kept the whole
+	 * expression and every feature named in it, whatever the importer asked for. Measured then:
+	 * `tableFeatures` alone bundled 46 360 bytes and `allDataGridFeatures` 46 365, against 49 696 for
+	 * the whole surface. Whichever single name you imported, you got ~93% of everything, which
+	 * cancelled the migration's headline benefit.
+	 *
+	 * A `/* @__PURE__ *\/` annotation did not fix it — it moved the bundle to 46 504, the cost of the
+	 * comments. Moving the declaration to `@ez-kit/data-grid-core/features/all` did. Measured after:
+	 *
+	 * | imported                        | bytes  |
+	 * | ------------------------------- | -----: |
+	 * | `tableFeatures`                 |    994 |
+	 * | `rowSortingFeature`             |    998 |
+	 * | the sorting-only set below      |  1 035 |
+	 * | that set plus `editingFeature`  | 17 219 |
+	 * | whole `/features` surface       | 48 086 |
+	 *
+	 * The `editingFeature` row is the honest one to read beside the others: 17 kB is what a feature
+	 * with a real implementation costs, and the point is that you pay it when you register it and
+	 * not before.
+	 */
+	it('does not reach the editing implementation when the set omits it', async () => {
+		const code = await bundledCodeOf(FEATURES_ENTRY, SORTING_ONLY)
+
+		expect(code).not.toContain(EDITING_MARKER)
+	})
+
+	it('costs meaningfully less than the whole surface', async () => {
+		const [narrow, everything] = await Promise.all([
+			bundledCodeOf(FEATURES_ENTRY, SORTING_ONLY),
+			bundledCodeOf(FEATURES_ENTRY),
+		])
+
+		expect(narrow.length).toBeLessThan(everything.length / 2)
+	})
+})
+
+/**
+ * The kit root, where the prebuilt `DataGrid` binds `allDataGridFeatures` and `createDataGrid`
+ * must not.
+ *
+ * Binding the set is what makes the prebuilt honest — it already pulls all fourteen component
+ * groups, which read the features' APIs and drag their implementations in whatever set a call
+ * site names, so demanding `features` there bought 3.9 kB gzipped out of 58.5. Composing a grid
+ * through `createDataGrid` is the path where the set still decides what ships (44.6 kB against
+ * 58.5 for the shadcn kit), and both names live behind the same package root: `DataGrid` in
+ * `./data-grid`, `createDataGrid` through `index.ts`'s star re-export of the adapter.
+ *
+ * So the binding is one import away from cancelling the thing it is measured against. Move it up
+ * into a module the star re-export reaches — or let a future `index.ts` name `allDataGridFeatures`
+ * for any reason — and every composed grid silently carries every feature. Asked with
+ * {@link bundledCodeOf} rather than {@link entryPointsPulledBy} because `features/all.js` and
+ * `features/index.js` fold onto the same entry point name, which cannot tell them apart.
+ */
+describe('@ez-kit/data-grid-heroui', () => {
+	const KIT_ENTRY = entryOf('data-grid/react/heroui')
+
+	// The control: the prebuilt grid is the all-in one, and that is deliberate.
+	it('reaches every feature through the prebuilt DataGrid', async () => {
+		expect(await bundledCodeOf(KIT_ENTRY, ['DataGrid'])).toContain(EDITING_MARKER)
+	})
+
+	it('does not reach them through createDataGrid', async () => {
+		expect(await bundledCodeOf(KIT_ENTRY, ['createDataGrid'])).not.toContain(EDITING_MARKER)
+	})
+})
 
 describe.each(PACKAGES)('$name', ({ entry, shakeable, cases }) => {
 	it.each(cases)('importing $imports pulls in $pulls', async ({ imports, pulls }) => {

@@ -3,10 +3,11 @@ import { screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
 import { prepareDataGridTable } from '../prepare-table'
-import { renderWithComponents } from '../test-utils'
+import { TEST_FEATURES, renderWithComponents } from '../test-utils'
 
 import { DataGrid } from './data-grid'
 
+import type { GridFeatures } from '../types'
 import type { LoadingState } from '@ez-kit/data-grid-core'
 
 type Row = { id: number; name: string }
@@ -29,7 +30,8 @@ const COLUMNS = createColumns<Row>([
  */
 function makeInstance(overrides?: { loading?: Partial<LoadingState>; data?: Row[] }) {
 	const { loading = {}, data = DATA } = overrides ?? {}
-	const table = createTable<Row>({
+	const table = createTable<GridFeatures, Row>({
+		features: TEST_FEATURES,
 		data,
 		columns: COLUMNS,
 		initialState: {

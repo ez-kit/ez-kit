@@ -1,9 +1,33 @@
 'use client'
 
+import {
+	columnFilteringFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	columnVisibilityFeature,
+	createFilteredRowModel,
+	creatingFeature,
+	editingFeature,
+	filterFns,
+	tableFeatures,
+} from '@ez-kit/data-grid-core/features'
 import { createColumns } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 
 import { DataGrid } from 'shared/DataGrid'
+
+const features = tableFeatures({
+	// Structural: the grid shell reads column widths, visibility and pin groups to lay out
+	// the column grid. Everything below is this example's own.
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	creatingFeature,
+	columnFilteringFeature,
+	editingFeature,
+	filterFns,
+	filteredRowModel: createFilteredRowModel(),
+})
 
 type Milestone = {
 	id: number
@@ -50,6 +74,7 @@ const baseColumns = createColumns<Milestone>([
 export function DateCellViewExample() {
 	return (
 		<DataGrid
+			features={features}
 			data={INITIAL_DATA}
 			columns={baseColumns}
 			filtering
@@ -61,6 +86,7 @@ export function DateCellEditExample() {
 	const [rows, setRows] = useState<Milestone[]>(INITIAL_DATA)
 	return (
 		<DataGrid
+			features={features}
 			data={rows}
 			columns={baseColumns}
 			filtering
@@ -78,6 +104,7 @@ export function DateCellCreateExample() {
 	const [rows, setRows] = useState<Milestone[]>(INITIAL_DATA)
 	return (
 		<DataGrid
+			features={features}
 			data={rows}
 			columns={baseColumns}
 			creating={{

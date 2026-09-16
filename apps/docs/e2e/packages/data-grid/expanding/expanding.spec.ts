@@ -180,7 +180,12 @@ test.describe("expanding.mode: 'tree'", () => {
 		await expandButton(grid.rows().first()).click()
 		await expandButton(grid.rows().nth(1)).click()
 
-		// Row 2 is `Alice Johnson`, an engineer with nobody under her.
+		// Row 2 is `Alice Johnson`, an engineer with nobody under her — asserted, not assumed:
+		// `toHaveCount(0)` against a row that is not there is the same green as a leaf with no
+		// chevron, and both expansions above could have revealed something else entirely.
+		await expect(grid.rows().nth(2)).toHaveAttribute('data-depth', '2')
+		expect(await grid.columnText('name')).toContain('Alice Johnson')
+
 		await expect(expandButton(grid.rows().nth(2))).toHaveCount(0)
 		await expect(collapseButton(grid.rows().nth(2))).toHaveCount(0)
 	})

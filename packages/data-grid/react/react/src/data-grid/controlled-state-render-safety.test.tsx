@@ -4,11 +4,12 @@ import { useState } from 'react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 
 import { GridComponentsProvider } from '../components-context'
-import { testComponents } from '../test-utils'
+import { TEST_FEATURES, testComponents } from '../test-utils'
 import { useDataGrid } from '../use-data-grid'
 
 import { DataGrid } from './data-grid'
 
+import type { GridFeatures } from '../types'
 import type { PaginationState } from '@tanstack/table-core'
 import type { ReactElement } from 'react'
 
@@ -36,14 +37,15 @@ const REACT_RENDER_PHASE_WARNING = 'Cannot update a component'
  * `pagination.onChange` by mirroring the new page into its own React state.
  */
 function ControlledGrid({ pagination }: { pagination: PaginationState }): ReactElement {
-	const table = useDataGrid<Row>({
+	const table = useDataGrid<GridFeatures, Row>({
+		features: TEST_FEATURES,
 		data: DATA,
 		columns: COLUMNS,
 		pagination: { items: [5, 10] },
 		globalFiltering: true,
 		state: { pagination },
 	})
-	return <DataGrid<Row> table={table} />
+	return <DataGrid<GridFeatures, Row> table={table} />
 }
 
 function Harness(): ReactElement {

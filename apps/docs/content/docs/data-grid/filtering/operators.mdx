@@ -23,10 +23,10 @@ const columns = createColumns<Employee>([
 
 ```tsx
 // every filterable column gets the operators its cell type declares
-<DataGrid data={data} columns={columns} filtering={{ operators: true }} />
+<DataGrid features={features} data={data} columns={columns} filtering={{ operators: true }} />
 
 // no column gets one, whatever the columns say
-<DataGrid data={data} columns={columns} filtering={{ operators: false }} />
+<DataGrid features={features} data={data} columns={columns} filtering={{ operators: false }} />
 ```
 
 A column overrides the table in both directions — `filtering: { operators: false }` opts one
@@ -114,6 +114,7 @@ column addresses by id:
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	filtering={{ operators: { items: [{ id: 'fuzzy', label: 'Fuzzy match', filterFn: fuzzyMatch }] } }}

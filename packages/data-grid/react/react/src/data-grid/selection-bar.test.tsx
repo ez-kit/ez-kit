@@ -5,14 +5,14 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { GridComponentsProvider } from '../components-context'
 import { prepareDataGridTable } from '../prepare-table'
-import { testComponents } from '../test-utils'
+import { TEST_FEATURES, testComponents } from '../test-utils'
 import { ActionBarVariant } from '../types'
 
 import { SelectionBar } from './selection-bar'
-import { TableContext } from './table-context'
+import { TableProvider } from './table-context'
 
 import type { ResolvedGridOptions } from '../resolved-options'
-import type { DataTable } from '@ez-kit/data-grid-core'
+import type { DataTable, GridFeatures } from '../types'
 import type { ReactNode } from 'react'
 
 type User = {
@@ -26,19 +26,19 @@ const USERS: User[] = [
 ]
 const COLUMNS = createColumns<User>([{ accessorKey: 'name', header: 'Name' }])
 
-function makeTable(config?: Partial<Parameters<typeof createTable<User>>[0]>) {
-	const table = createTable<User>({ data: USERS, columns: COLUMNS, ...config })
+function makeTable(config?: Partial<Parameters<typeof createTable<GridFeatures, User>>[0]>) {
+	const table = createTable<GridFeatures, User>({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, ...config })
 	return prepareDataGridTable(table)
 }
 
-function setSelectionBarKey(table: DataTable<User>, value: ResolvedGridOptions['selection']['bar']) {
+function setSelectionBarKey(table: DataTable<GridFeatures, User>, value: ResolvedGridOptions['selection']['bar']) {
 	table.grid.selection.bar = value
 }
 
-function Wrapper({ table, children }: { table: DataTable<User>; children: ReactNode }) {
+function Wrapper({ table, children }: { table: DataTable<GridFeatures, User>; children: ReactNode }) {
 	return (
 		<GridComponentsProvider components={testComponents}>
-			<TableContext.Provider value={table}>{children}</TableContext.Provider>
+			<TableProvider table={table}>{children}</TableProvider>
 		</GridComponentsProvider>
 	)
 }

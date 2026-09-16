@@ -65,10 +65,17 @@ export type GridMessages = {
 		clearSort: string
 		/** Heading of the pinning section. */
 		pin: string
-		/** Pin to the leading edge. */
-		pinLeft: string
-		/** Pin to the trailing edge. */
-		pinRight: string
+		/**
+		 * Pin to the start edge.
+		 *
+		 * The key is logical, like `moveStart` below and for the same reason — the edge flips
+		 * under RTL, so "start" is what the action means whichever way the page runs. The
+		 * English default is the LTR wording a reader expects; an RTL locale writes its own
+		 * words for the same key.
+		 */
+		pinStart: string
+		/** Pin to the end edge. Logical, like `pinStart`. */
+		pinEnd: string
 		/** Unpin the column. */
 		unpin: string
 		/** Hide the column. */

@@ -3,11 +3,12 @@ import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 
-import { renderWithComponents } from '../test-utils'
+import { TEST_FEATURES, renderWithComponents } from '../test-utils'
 import { useDataGrid } from '../use-data-grid'
 
 import { DataGrid } from './data-grid'
 
+import type { GridFeatures } from '../types'
 import type { UseDataGridConfig } from '../use-data-grid'
 import type { RowActionsConfig } from '@ez-kit/data-grid-core'
 
@@ -30,12 +31,12 @@ const COLUMNS = createColumns<Row>([{ accessorKey: 'name' }])
 const EDIT_DELETE = {
 	editing: { mode: 'row', onSave: () => Promise.resolve() },
 	deleting: { onDelete: () => {} },
-} satisfies Partial<UseDataGridConfig<Row>>
+} satisfies Partial<UseDataGridConfig<GridFeatures, Row>>
 
-function renderGrid(config: Partial<UseDataGridConfig<Row>>) {
+function renderGrid(config: Partial<UseDataGridConfig<GridFeatures, Row>>) {
 	function Harness() {
-		const table = useDataGrid<Row>({ data: DATA, columns: COLUMNS, ...config })
-		return <DataGrid<Row> table={table} />
+		const table = useDataGrid<GridFeatures, Row>({ features: TEST_FEATURES, data: DATA, columns: COLUMNS, ...config })
+		return <DataGrid<GridFeatures, Row> table={table} />
 	}
 	return renderWithComponents(<Harness />)
 }
@@ -245,5 +246,49 @@ describe('<ActionsCell> — custom actions', () => {
 		renderGrid({ ...EDIT_DELETE, rowActions: { actions: () => [] } })
 
 		expect(actionLabels()).toEqual(['Edit', 'Delete'])
+	})
+})
+
+/**
+ * The scalar form of a **write** feature.
+ *
+ * Every other feature reads `true` as "on with defaults". A write has no default the grid could
+ * run in place of the handler it was not given, so `deleting: true` names a feature that can do
+ * nothing — `enabledByHandler` resolves it away, and before this it did so in silence: the author
+ * got no Delete affordance, no error and no diagnostic, while `deleting: { onDelete }` two lines
+ * away worked. See `enabledByHandler`'s "Why the bare `true` warns".
+ */
+describe('<ActionsCell> — a write feature written as a bare `true`', () => {
+	it('warns that `deleting: true` resolves away, naming the handler it wants', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+		renderGrid({ deleting: true })
+
+		expect(warn).toHaveBeenCalledTimes(1)
+		expect(String(warn.mock.calls[0]?.[0])).toContain('`deleting: true`')
+		expect(String(warn.mock.calls[0]?.[0])).toContain('onDelete')
+		warn.mockRestore()
+	})
+
+	it('renders no Delete affordance for it, rather than a dead one', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+		renderGrid({ deleting: true })
+
+		expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull()
+		expect(document.querySelector(`[data-system-column='actions']`)).toBeNull()
+		warn.mockRestore()
+	})
+
+	it('leaves the object form alone — it renders Delete, silently, and the click reaches `onDelete`', async () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+		const onDelete = vi.fn()
+
+		renderGrid({ deleting: { onDelete, confirmation: false } })
+
+		expect(warn).not.toHaveBeenCalled()
+		await userEvent.click(screen.getByRole('button', { name: 'Delete' }))
+		expect(onDelete).toHaveBeenCalledTimes(1)
+		warn.mockRestore()
 	})
 })

@@ -62,6 +62,32 @@ function entryPointOf(file: string): string {
  * imports bundles the whole surface, which is what the narrow cases are read against.
  */
 export async function entryPointsPulledBy(entry: string, imports?: readonly string[]): Promise<string[]> {
+	const { metafile } = await bundleOf(entry, imports)
+
+	const output = Object.values(metafile.outputs)[0]
+	const modules = Object.keys(output?.inputs ?? {}).filter((module) => !module.startsWith('<'))
+
+	// Metafile paths are relative to esbuild's working directory, not to the repo.
+	return [...new Set(modules.map((module) => entryPointOf(resolve(process.cwd(), module))))].sort()
+}
+
+/**
+ * The bundled source text of `imports` from a package's built entry.
+ *
+ * {@link entryPointsPulledBy} answers "which entry points came along", which is the right
+ * granularity between packages and the wrong one **inside** one. Every feature this package ships
+ * lives behind the single `@ez-kit/data-grid-core/features` entry point, so that question cannot
+ * tell a set with `editingFeature` from one without it — both reach the same entry. This one can:
+ * an implementation either survived into the bundle or it did not, and its size says how much of
+ * it did.
+ */
+export async function bundledCodeOf(entry: string, imports?: readonly string[]): Promise<string> {
+	const { text } = await bundleOf(entry, imports)
+
+	return text
+}
+
+async function bundleOf(entry: string, imports: readonly string[] | undefined) {
 	const specifier = JSON.stringify(entry)
 	const contents = imports
 		? `import { ${imports.join(', ')} } from ${specifier}\nexport default [${imports.join(', ')}]\n`
@@ -78,9 +104,5 @@ export async function entryPointsPulledBy(entry: string, imports?: readonly stri
 		logLevel: 'silent',
 	})
 
-	const output = Object.values(result.metafile.outputs)[0]
-	const modules = Object.keys(output?.inputs ?? {}).filter((module) => !module.startsWith('<'))
-
-	// Metafile paths are relative to esbuild's working directory, not to the repo.
-	return [...new Set(modules.map((module) => entryPointOf(resolve(process.cwd(), module))))].sort()
+	return { metafile: result.metafile, text: result.outputFiles[0]?.text ?? '' }
 }

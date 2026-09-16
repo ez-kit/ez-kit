@@ -5,9 +5,10 @@ import { describe, expect, it } from 'vitest'
 import { GridComponentsProvider } from './components-context'
 import { DataGrid } from './data-grid/data-grid'
 import { DataGridOptionsProvider } from './data-grid-options-context'
-import { testComponents } from './test-utils'
+import { TEST_FEATURES, testComponents } from './test-utils'
 import { useDataGrid } from './use-data-grid'
 
+import type { GridFeatures } from './types'
 import type { PartialGridMessages } from '@ez-kit/data-grid-core'
 import type { ReactNode } from 'react'
 
@@ -22,7 +23,8 @@ const COLUMNS = createColumns<User>([{ accessorKey: 'name', header: 'Name' }])
 
 function renderGrid(messages: PartialGridMessages | undefined, wrapper?: (children: ReactNode) => ReactNode) {
 	function Grid() {
-		const table = useDataGrid<User>({
+		const table = useDataGrid<GridFeatures, User>({
+			features: TEST_FEATURES,
 			data: USERS,
 			columns: COLUMNS,
 			selection: true,
@@ -78,7 +80,8 @@ describe('messages', () => {
 
 	it('resolves onto `table.grid.messages` complete, never partial', () => {
 		const { result } = renderHook(() =>
-			useDataGrid<User>({
+			useDataGrid<GridFeatures, User>({
+				features: TEST_FEATURES,
 				data: USERS,
 				columns: COLUMNS,
 				messages: { pagination: { rowsPerPage: 'Строк на странице' } },

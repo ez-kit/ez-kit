@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { createDataGrid } from '../create-data-grid'
 import { DataGridOptionsProvider } from '../data-grid-options-context'
-import { renderGrid, testComponents, TEST_COLUMNS, TEST_ROWS, renderWithComponents } from '../test-utils'
+import { renderGrid, testComponents, TEST_COLUMNS, TEST_FEATURES, TEST_ROWS, renderWithComponents } from '../test-utils'
 
 const WRAPPER = "[data-slot='table-wrapper']"
 const SCROLL = "[data-slot='table-scroll']"
@@ -64,6 +64,7 @@ describe('layout.classNames', () => {
 
 		const { container } = renderWithComponents(
 			<Bound
+				features={TEST_FEATURES}
 				data={TEST_ROWS}
 				columns={TEST_COLUMNS}
 				layout={{ classNames: { wrapper: 'app-frame' } }}
@@ -91,6 +92,7 @@ describe('layout.classNames', () => {
 			<DataGridOptionsProvider defaults={{ layout: { classNames: { wrapper: 'app-frame' } } }}>
 				<DataGridOptionsProvider defaults={{ layout: { classNames: { wrapper: 'section-frame' } } }}>
 					<Bound
+						features={TEST_FEATURES}
 						data={TEST_ROWS}
 						columns={TEST_COLUMNS}
 						layout={{ classNames: { wrapper: 'grid-frame' } }}

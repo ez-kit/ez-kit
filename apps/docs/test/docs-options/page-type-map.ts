@@ -2,6 +2,8 @@ import { NO_HEADING } from './mdx-tables'
 import {
 	FORM_API_TYPE_ARGS,
 	FORM_VALUE_TYPE_ARGS,
+	FEATURES_ROW_TYPE_ARGS,
+	FEATURES_TYPE_ARGS,
 	ROW_TYPE_ARGS,
 	STATE_SEED_TYPE_ARGS,
 	STATE_TYPE_ARGS,
@@ -94,6 +96,7 @@ export const DocPage = {
 	EditingValidation: 'content/docs/data-grid/editing/validation.mdx',
 	Fallbacks: 'content/docs/data-grid/fallbacks.mdx',
 	LayoutFooter: 'content/docs/data-grid/layout/footer.mdx',
+	FeatureSet: 'content/docs/data-grid/feature-set.mdx',
 	Features: 'content/docs/data-grid/features.mdx',
 	GettingStarted: 'content/docs/data-grid/getting-started.mdx',
 	Index: 'content/docs/data-grid/index.mdx',
@@ -221,9 +224,9 @@ export type DocPage = (typeof DocPage)[keyof typeof DocPage]
  */
 export const GRID_TYPE = {
 	/** Root config object passed to `useDataGrid()`. */
-	UseDataGridConfig: { module: TypeModule.React, name: 'UseDataGridConfig', typeArgs: ROW_TYPE_ARGS },
+	UseDataGridConfig: { module: TypeModule.React, name: 'UseDataGridConfig', typeArgs: FEATURES_ROW_TYPE_ARGS },
 	ColumnDef: { module: TypeModule.Core, name: 'ColumnDef', typeArgs: ROW_TYPE_ARGS },
-	TableState: { module: TypeModule.Core, name: 'TableState' },
+	TableState: { module: TypeModule.Core, name: 'TableState', typeArgs: FEATURES_TYPE_ARGS },
 	SortingConfig: { module: TypeModule.Core, name: 'SortingConfig' },
 	ReactSortingConfig: { module: TypeModule.React, name: 'ReactSortingConfig' },
 	MultiSortConfig: { module: TypeModule.Core, name: 'MultiSortConfig' },
@@ -241,7 +244,11 @@ export const GRID_TYPE = {
 	BadgeCellConfig: { module: TypeModule.Core, name: 'BadgeCellConfig' },
 	ReactFilteringConfig: { module: TypeModule.React, name: 'ReactFilteringConfig' },
 	ReactPaginationConfig: { module: TypeModule.React, name: 'ReactPaginationConfig' },
-	ReactGlobalFilteringConfig: { module: TypeModule.React, name: 'ReactGlobalFilteringConfig' },
+	ReactGlobalFilteringConfig: {
+		module: TypeModule.React,
+		name: 'ReactGlobalFilteringConfig',
+		typeArgs: FEATURES_TYPE_ARGS,
+	},
 	FilterChipsConfig: { module: TypeModule.React, name: 'FilterChipsConfig' },
 	FilteringToolbarConfig: { module: TypeModule.React, name: 'FilteringToolbarConfig' },
 	VirtualizationConfig: { module: TypeModule.Core, name: 'VirtualizationConfig' },
@@ -249,7 +256,7 @@ export const GRID_TYPE = {
 	ActionItemDef: { module: TypeModule.Core, name: 'ActionItemDef' },
 	ActionItemSlot: { module: TypeModule.Core, name: 'ActionItemSlot' },
 	RowActionItem: { module: TypeModule.Core, name: 'RowActionItem' },
-	SystemColumnDef: { module: TypeModule.Core, name: 'SystemColumnDef' },
+	SystemColumnDef: { module: TypeModule.Core, name: 'SystemColumnDef', typeArgs: FEATURES_ROW_TYPE_ARGS },
 	EditingConfig: { module: TypeModule.Core, name: 'EditingConfig', typeArgs: ROW_TYPE_ARGS },
 	CreatingConfig: { module: TypeModule.Core, name: 'CreatingConfig', typeArgs: ROW_TYPE_ARGS },
 	LoadingState: { module: TypeModule.Core, name: 'LoadingState' },
@@ -488,6 +495,11 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		optionTables: [],
 		nonOptionTables: [
 			{
+				heading: 'Keep the built-in body and add to it',
+				reason:
+					'Names the parts `<DataGrid.Body>` hands its children (`creatingRow`, `centerRows`, `loadMoreFooter`, …) — properties of a callback argument, the same shape as the header-cell table below, not options anyone sets.',
+			},
+			{
 				heading: 'Header rows and cells: keep the chrome, change the markup',
 				reason:
 					'Names the render args `<DataGrid.HeaderCell>` hands its children (`label`, `sortTrigger`, `menu`, `filter`, …), not config keys — they are properties of a callback argument, not options anyone sets.',
@@ -529,6 +541,17 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			{ heading: 'Mounting', roots: [GRID_TYPE.LayoutConfig], expectedCount: 2 },
 		],
 		nonOptionTables: [],
+	},
+	{
+		page: DocPage.FeatureSet,
+		optionTables: [{ heading: NO_HEADING, roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 1 }],
+		nonOptionTables: [
+			{
+				heading: 'What each option needs',
+				reason:
+					'Maps a config key to the `features` members it needs. The first column is a config key, but the row documents the registration — the key itself is checked where that option is documented.',
+			},
+		],
 	},
 	{
 		page: DocPage.Features,

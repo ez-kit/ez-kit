@@ -1,3 +1,4 @@
+import type { GridFeatures } from '../types'
 import type { AppliedState, TableState } from '@ez-kit/data-grid-core'
 
 /**
@@ -17,6 +18,12 @@ export const DRAFT_STATE_KEY = 'draft'
 /**
  * Top-level state this feature can persist. Closed set — modeled as a const tuple + derived
  * union so the same keys are referenced everywhere, never re-spelled as bare string literals.
+ *
+ * Re-verified against v9's slice names. The one that moved is sizing, and this list means the
+ * half that did **not**: `columnSizing` (`columnSizingFeature`) is still the resolved widths map,
+ * the thing a deep link restores; v8's transient drag slice `columnSizingInfo` is what became
+ * `columnResizing` (`columnResizingFeature`), and it was never on this list — it is mid-drag
+ * state, meaningless to persist. Every other key kept its v8 spelling.
  */
 export const PERSISTABLE_STATE_KEYS = [
 	'sorting',
@@ -31,7 +38,7 @@ export const PERSISTABLE_STATE_KEYS = [
 	'expanded',
 	'columnSizing',
 	DRAFT_STATE_KEY,
-] as const satisfies readonly (keyof TableState | typeof DRAFT_STATE_KEY)[]
+] as const satisfies readonly (keyof TableState<GridFeatures> | typeof DRAFT_STATE_KEY)[]
 
 export type PersistableStateKey = (typeof PERSISTABLE_STATE_KEYS)[number]
 
@@ -61,8 +68,16 @@ export const DEFAULT_STATE_KEYS = [
  * JSON-safe subset of the grid's state produced by {@link extractState} and {@link parseState},
  * and accepted verbatim by `initialState`. `draft` carries the three deferred axes, which is
  * what `initialState.draft` takes.
+ *
+ * Pinned to {@link GridFeatures} rather than generic over the caller's set, and that is forced
+ * rather than chosen: {@link PersistableSliceKey} is a closed list of slice names, and
+ * `Pick<TableState<TFeatures>, PersistableSliceKey>` on an *unresolved* `TFeatures` fails with
+ * `TS2344: Type 'string' does not satisfy the constraint 'keyof TableState<TFeatures>'` —
+ * verified by probe. The widest instantiation is the one that declares all twenty slices, so it
+ * is the only one this closed list can be picked from. The functions that produce and consume
+ * this type ({@link extractState}, {@link useExtractedState}) stay generic over the table.
  */
-export type DataGridState = Partial<Pick<TableState, PersistableSliceKey>> & {
+export type DataGridState = Partial<Pick<TableState<GridFeatures>, PersistableSliceKey>> & {
 	draft?: Partial<AppliedState>
 }
 

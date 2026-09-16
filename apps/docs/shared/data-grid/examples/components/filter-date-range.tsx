@@ -1,10 +1,30 @@
 'use client'
 
+import {
+	columnFilteringFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	columnVisibilityFeature,
+	createFilteredRowModel,
+	filterFns,
+	tableFeatures,
+} from '@ez-kit/data-grid-core/features'
 import { createColumns } from '@ez-kit/data-grid-react'
 
 import { DataGrid } from 'shared/DataGrid'
 
 import type { DateRangePreset } from '@ez-kit/data-grid-react'
+
+const features = tableFeatures({
+	// Structural: the grid shell reads column widths, visibility and pin groups to lay out
+	// the column grid. Everything below is this example's own.
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	columnFilteringFeature,
+	filterFns,
+	filteredRowModel: createFilteredRowModel(),
+})
 
 type Release = {
 	id: number
@@ -70,6 +90,7 @@ const customPresetsColumns = createColumns<Release>([
 export function FilterDateRangeBuiltInExample() {
 	return (
 		<DataGrid
+			features={features}
 			data={DATA}
 			columns={presetsBuiltInColumns}
 			filtering
@@ -80,6 +101,7 @@ export function FilterDateRangeBuiltInExample() {
 export function FilterDateRangeCustomExample() {
 	return (
 		<DataGrid
+			features={features}
 			data={DATA}
 			columns={customPresetsColumns}
 			filtering

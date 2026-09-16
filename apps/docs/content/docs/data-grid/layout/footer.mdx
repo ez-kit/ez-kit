@@ -56,10 +56,10 @@ declaring `align` or `pinning` is. Set it explicitly for the two cases the colum
 
 ```tsx
 // A grid opting out of a footer its shared columns declare under DataGridOptionsProvider.
-<DataGrid data={data} columns={columns} layout={{ footer: false }} />
+<DataGrid features={features} data={data} columns={columns} layout={{ footer: false }} />
 
 // A footer whose content comes from <DataGrid.Footer> children, with no column footers at all.
-<DataGrid data={data} columns={columns} layout={{ footer: true }} />
+<DataGrid features={features} data={data} columns={columns} layout={{ footer: true }} />
 ```
 
 ## Sticky footer
@@ -68,6 +68,7 @@ declaring `align` or `pinning` is. Set it explicitly for the two cases the colum
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	layout={{ stickyHeader: true, stickyFooter: true, maxHeight: '20rem' }}

@@ -3,10 +3,12 @@ import { fireEvent } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { prepareDataGridTable } from '../prepare-table'
-import { renderWithComponents } from '../test-utils'
+import { TEST_FEATURES, renderWithComponents } from '../test-utils'
 import { ActionBarVariant } from '../types'
 
 import { DataGrid } from './data-grid'
+
+import type { GridFeatures } from '../types'
 
 type User = { id: number; name: string; amount: number }
 
@@ -21,7 +23,9 @@ const COLUMNS = createColumns<User>([
 ])
 
 function makeInstance() {
-	return prepareDataGridTable(createTable<User>({ data: USERS, columns: COLUMNS }))
+	return prepareDataGridTable(
+		createTable<GridFeatures, User>({ features: TEST_FEATURES, data: USERS, columns: COLUMNS }),
+	)
 }
 
 /**
@@ -137,8 +141,20 @@ describe('<DataGrid.Header> children', () => {
 describe('compound render-prop slots', () => {
 	it('<DataGrid.Pagination> hands over the settled page model', () => {
 		const table = prepareDataGridTable(
-			createTable<User>({ data: USERS, columns: COLUMNS, pagination: { pageSize: 1 } }),
+			createTable<GridFeatures, User>({
+				features: TEST_FEATURES,
+				data: USERS,
+				columns: COLUMNS,
+				pagination: { pageSize: 1 },
+			}),
 		)
+		// `prepareDataGridTable` seeds the all-features-off resolved options, so a raw core table
+		// has `pagination.enabled: false` whatever its config says — the same reason the selection
+		// case below writes `grid.selection.bar` by hand. Under v8 this flag did not exist and the
+		// footer probed `table.options.getPaginationRowModel`, which core attached; in v9 the
+		// paginated row model is a feature slot and says nothing about whether this grid was
+		// configured to paginate, so the decision moved to the resolved options.
+		table.grid.pagination.enabled = true
 		const { container } = renderWithComponents(
 			<DataGrid table={table}>
 				<DataGrid.Pagination>
@@ -153,20 +169,24 @@ describe('compound render-prop slots', () => {
 	})
 
 	it('<DataGrid.Pagination> stays hidden in the states that hide the built-in footer', () => {
-		const table = prepareDataGridTable(createTable<User>({ data: USERS, columns: COLUMNS }))
+		const table = prepareDataGridTable(
+			createTable<GridFeatures, User>({ features: TEST_FEATURES, data: USERS, columns: COLUMNS }),
+		)
 		const { container } = renderWithComponents(
 			<DataGrid table={table}>
 				<DataGrid.Pagination>{() => <p>never</p>}</DataGrid.Pagination>
 			</DataGrid>,
 		)
-		// No pagination row model → no footer, and therefore no children either.
+		// Page-based pagination off in the resolved options → no footer, and therefore no
+		// children either. (It was "no pagination row model" while that was the probe.)
 		expect(container.querySelector('p')).toBeNull()
 	})
 
 	it('<DataGrid.SelectionBar> hands over a confirmation-aware onDelete', () => {
 		const onDelete = vi.fn()
 		const table = prepareDataGridTable(
-			createTable<User>({
+			createTable<GridFeatures, User>({
+				features: TEST_FEATURES,
 				data: USERS,
 				columns: COLUMNS,
 				selection: true,
@@ -174,7 +194,8 @@ describe('compound render-prop slots', () => {
 			}),
 		)
 		table.grid.selection.bar = { variant: ActionBarVariant.Floating }
-		table.setState((prev) => ({ ...prev, rowSelection: { '1': true } }))
+		// v9 has no `table.setState`; the per-slice setters are what remains.
+		table.setRowSelection({ '1': true })
 
 		const { container } = renderWithComponents(
 			<DataGrid table={table}>
@@ -201,12 +222,15 @@ describe('compound render-prop slots', () => {
 		// the handler — the ConfirmDialog runs it on confirm.
 		if (button) fireEvent.click(button)
 		expect(onDelete).not.toHaveBeenCalled()
-		expect(table.getState().deleting.pendingBulk).toBe(true)
+		expect(table.store.state.deleting.pendingBulk).toBe(true)
 	})
 
 	it('<DataGrid.SortMenuTrigger> excludes already-used columns from each entry', () => {
-		const table = prepareDataGridTable(createTable<User>({ data: USERS, columns: COLUMNS, sorting: true }))
-		table.setState((prev) => ({ ...prev, sorting: [{ id: 'name', desc: false }] }))
+		const table = prepareDataGridTable(
+			createTable<GridFeatures, User>({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, sorting: true }),
+		)
+		// v9 has no `table.setState`; the per-slice setters are what remains.
+		table.setSorting([{ id: 'name', desc: false }])
 
 		const { container } = renderWithComponents(
 			<DataGrid table={table}>
@@ -224,7 +248,9 @@ describe('compound render-prop slots', () => {
 	})
 
 	it('<DataGrid.VisibilityTrigger> hands over the toggleable columns', () => {
-		const table = prepareDataGridTable(createTable<User>({ data: USERS, columns: COLUMNS, visibility: true }))
+		const table = prepareDataGridTable(
+			createTable<GridFeatures, User>({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, visibility: true }),
+		)
 		const { container } = renderWithComponents(
 			<DataGrid table={table}>
 				<DataGrid.VisibilityTrigger>
@@ -236,7 +262,9 @@ describe('compound render-prop slots', () => {
 	})
 
 	it('<DataGrid.FilterPanel> hands over a ready-made input per column', () => {
-		const table = prepareDataGridTable(createTable<User>({ data: USERS, columns: COLUMNS, filtering: true }))
+		const table = prepareDataGridTable(
+			createTable<GridFeatures, User>({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, filtering: true }),
+		)
 		const { container } = renderWithComponents(
 			<DataGrid table={table}>
 				<DataGrid.FilterPanel>

@@ -1,7 +1,7 @@
 import { createColumns } from '@ez-kit/data-grid-core'
 import { describe, expect, it } from 'vitest'
 
-import { renderWithComponents } from '../test-utils'
+import { TEST_FEATURES, renderWithComponents } from '../test-utils'
 
 import { DataGrid } from './data-grid'
 
@@ -31,6 +31,7 @@ describe('rowProps and column class names', () => {
 	it('applies rowProps per row without losing structural attributes', () => {
 		const { container } = renderWithComponents(
 			<DataGrid
+				features={TEST_FEATURES}
 				data={DATA}
 				columns={COLUMNS}
 				rowProps={(row) =>
@@ -52,6 +53,7 @@ describe('rowProps and column class names', () => {
 	it('rowProps cannot overwrite the structural data attributes', () => {
 		const { container } = renderWithComponents(
 			<DataGrid
+				features={TEST_FEATURES}
 				data={DATA}
 				columns={COLUMNS}
 				rowProps={() => ({ 'data-slot': 'hijacked' }) as Record<string, string>}
@@ -66,6 +68,7 @@ describe('rowProps and column class names', () => {
 	it('applies headerClassName to the column header cell', () => {
 		const { container } = renderWithComponents(
 			<DataGrid
+				features={TEST_FEATURES}
 				data={DATA}
 				columns={COLUMNS}
 			/>,
@@ -77,6 +80,7 @@ describe('rowProps and column class names', () => {
 	it('resolves cellClassName per cell from the value', () => {
 		const { container } = renderWithComponents(
 			<DataGrid
+				features={TEST_FEATURES}
 				data={DATA}
 				columns={COLUMNS}
 			/>,

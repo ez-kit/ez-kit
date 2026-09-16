@@ -13,6 +13,7 @@ import { PinShadowOverlay } from './pin-shadow-overlay'
 import { useDataGridTable, useDataGridState } from './table-context'
 import { VirtualProvider } from './virtual-context'
 
+import type { ErasedRow, GridFeatures } from '../types'
 import type { NormalizedVirtualizationConfig } from '../use-data-grid'
 import type { HeaderGroup, Row, Table as TanStackTable } from '@tanstack/table-core'
 import type { CSSProperties, ReactNode } from 'react'
@@ -22,11 +23,15 @@ const SCROLLPORT_ATTR = 'data-scrollport'
 const SCROLLPORT_AXES = 'x y'
 
 function updateScrollShadows(scrollEl: HTMLElement, wrapperEl: HTMLElement): void {
-	const scrolledLeft = scrollEl.scrollLeft > 0
+	// `scrollLeft` is signed under RTL (0 at the inline-start edge, negative towards the end),
+	// so the two booleans are "scrolled away from the inline-start edge" and "not yet at the
+	// inline-end one" in both directions once the sign is taken off.
+	const offset = Math.abs(scrollEl.scrollLeft)
 	const maxScroll = scrollEl.scrollWidth - scrollEl.clientWidth
-	const scrolledRight = maxScroll > 1 && scrollEl.scrollLeft < maxScroll - 1
-	wrapperEl.style.setProperty('--dg-pin-left-shadow', scrolledLeft ? '1' : '0')
-	wrapperEl.style.setProperty('--dg-pin-right-shadow', scrolledRight ? '1' : '0')
+	const scrolledFromStart = offset > 0
+	const scrolledFromEnd = maxScroll > 1 && offset < maxScroll - 1
+	wrapperEl.style.setProperty('--dg-pin-start-shadow', scrolledFromStart ? '1' : '0')
+	wrapperEl.style.setProperty('--dg-pin-end-shadow', scrolledFromEnd ? '1' : '0')
 }
 
 function useScrollShadows(
@@ -66,17 +71,15 @@ function resolveEstimateSize(
  * `<DataGrid.Table<Order>>` — and the render arguments are typed. See
  * {@link DataGridBodyRenderArgs} for why it is explicit rather than inferred.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type DataGridTableRenderArgs<TRow extends object = any> = {
-	table: TanStackTable<TRow>
+export type DataGridTableRenderArgs<TRow extends object = ErasedRow> = {
+	table: TanStackTable<GridFeatures, TRow>
 	/** Header groups of the current column model — one entry per header row. */
-	headerGroups: HeaderGroup<TRow>[]
+	headerGroups: HeaderGroup<GridFeatures, TRow>[]
 	/** The rows of the current row model, already sorted / filtered / paginated. */
-	rows: Row<TRow>[]
+	rows: Row<GridFeatures, TRow>[]
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type DataGridTableProps<TRow extends object = any> = {
+export type DataGridTableProps<TRow extends object = ErasedRow> = {
 	/**
 	 * Custom table content, rendered inside the kit's `<Table>` element and inside the
 	 * scroll / pin-shadow wrapper, so sticky headers, pinning and virtualization plumbing
@@ -107,11 +110,11 @@ export type DataGridTableProps<TRow extends object = any> = {
  * CSS custom properties (column widths, grid-template-columns).
  *
  * Pin shadows: a single absolutely-positioned overlay div sits outside the
- * scroll container. CSS vars `--dg-pin-left-shadow` / `--dg-pin-right-shadow`
+ * scroll container. CSS vars `--dg-pin-start-shadow` / `--dg-pin-end-shadow`
  * on the wrapper drive their opacity.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function DataGridTable<TRow extends object = any>({ children }: DataGridTableProps<TRow> = {}) {
+
+export function DataGridTable<TRow extends object = ErasedRow>({ children }: DataGridTableProps<TRow> = {}) {
 	// The shell's two boxes are optional slots: a kit that registers neither gets these plain
 	// divs, which is what both kits in this repo used until HeroUI needed its own scrollport.
 	// A registered one must spread what it receives and land `ref` on the right element — see
@@ -123,7 +126,7 @@ export function DataGridTable<TRow extends object = any>({ children }: DataGridT
 	// the table layout or row composition change. Editing / rowSelection /
 	// per-row state changes do NOT touch any of these.
 	useDataGridState((s) => s.columnSizing)
-	useDataGridState((s) => s.columnSizingInfo)
+	useDataGridState((s) => s.columnResizing)
 	useDataGridState((s) => s.columnVisibility)
 	useDataGridState((s) => s.columnPinning)
 	// `--grid-template-columns` is built from the visual leaf order, which a reorder changes.

@@ -9,6 +9,9 @@ import { flexRender } from './flex-render'
 import type { CellTypeRegistry } from '../cell-types-context'
 import type { GridMenuProps } from '../menu'
 import type {
+	DataTable,
+	ErasedRow,
+	GridFeatures,
 	BetweenInputProps,
 	ClearFilterButtonProps,
 	InputProps,
@@ -16,10 +19,10 @@ import type {
 	OperatorSelectProps,
 } from '../types'
 import type {
+	FormColumnMeta,
 	InputComponentProps,
 	BadgeItem,
 	BetweenValue,
-	DataTable,
 	DatePreset,
 	FieldState,
 	FilterItem,
@@ -27,13 +30,12 @@ import type {
 	StructuredFilterValue,
 	GridMessages,
 } from '@ez-kit/data-grid-core'
-import type { Column, ColumnMeta, Header } from '@tanstack/table-core'
+import type { Column, Header } from '@tanstack/table-core'
 import type { ComponentType, ReactNode } from 'react'
 
-export type RenderFilterInputArgs = {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	header: Header<any, unknown>
-	meta: ColumnMeta<unknown, unknown> | undefined
+export type RenderFilterInputArgs<TRow extends object = ErasedRow> = {
+	header: Header<GridFeatures, TRow>
+	meta: FormColumnMeta | undefined
 	Input: ComponentType<InputProps>
 	cellTypes: CellTypeRegistry
 	OperatorSelect: ComponentType<OperatorSelectProps>
@@ -62,8 +64,7 @@ export type RenderFilterInputArgs = {
 	 * fallback text inputs under `draft`. Optional so existing callers/tests that
 	 * construct a minimal `header` stub need not also fabricate a table.
 	 */
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	table?: DataTable<any>
+	table?: DataTable<GridFeatures, TRow>
 }
 
 /**
@@ -77,10 +78,9 @@ export type RenderFilterInputArgs = {
  * Counts from `getFacetedUniqueValues()` are always merged onto whichever option set
  * is returned when faceted is enabled.
  */
-function resolveFilterItems(
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	column: Column<any>,
-	meta: ColumnMeta<unknown, unknown> | undefined,
+function resolveFilterItems<TRow extends object>(
+	column: Column<GridFeatures, TRow>,
+	meta: FormColumnMeta | undefined,
 ): FilterItem[] {
 	const filteringMeta = meta?.filtering === false ? undefined : meta?.filtering
 	const facetedEnabled = filteringMeta?.faceted === true
@@ -142,7 +142,7 @@ function localizePresetLabel(preset: DatePreset, messages: GridMessages): string
  * 2. Plain path — when there are no operators, uses `column.filtering.component`,
  *    then the cell-type registry, then a plain text Input.
  */
-export function renderFilterInput({
+export function renderFilterInput<TRow extends object>({
 	header,
 	meta,
 	Input,
@@ -155,7 +155,7 @@ export function renderFilterInput({
 	debounce: tableDebounce,
 	messages,
 	table,
-}: RenderFilterInputArgs): ReactNode {
+}: RenderFilterInputArgs<TRow>): ReactNode {
 	const filteringMeta = meta?.filtering === false ? undefined : meta?.filtering
 	// Core settled *which* operators the column offers; the dictionary says what they are
 	// called. Applied here, where they reach the control, so the exported operator lists stay

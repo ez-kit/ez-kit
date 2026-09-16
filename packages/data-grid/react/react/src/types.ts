@@ -1,7 +1,10 @@
+import type { GridContextAtom } from './grid-context'
 import type { GridMenuItem, GridMenuProps } from './menu'
+import type { ResolvedGridOptions } from './resolved-options'
 import type {
 	BetweenInputType,
 	BetweenValue,
+	DataTable as CoreDataTable,
 	DatePreset,
 	DateRangePreset,
 	DateValuePreset,
@@ -11,7 +14,7 @@ import type {
 	FilterItem,
 	PendingCount,
 } from '@ez-kit/data-grid-core'
-import type { Row } from '@tanstack/table-core'
+import type { Row, TableFeatures } from '@tanstack/table-core'
 import type {
 	ButtonHTMLAttributes,
 	ComponentType,
@@ -26,6 +29,129 @@ import type {
 	TouchEventHandler,
 } from 'react'
 
+/**
+ * The feature set every component below `<DataGrid>` is typed against.
+ *
+ * Components receive the table through `useDataGridTable()`, which is a React context and
+ * therefore not generic — so they cannot carry the caller's `TFeatures`. They pin to
+ * `TableFeatures`, the widest instantiation, which is also the *fullest*: `TableFeatures`
+ * declares every feature key optionally, so `TableState<TableFeatures>` resolves to all
+ * 21 slices, each at its own type rather than `… | undefined` (verified by probe —
+ * `keyof` it yields the 21, and `['sorting']` yields `SortingState`).
+ *
+ * **The cost, stated rather than engineered around:** a component read is not gated on the
+ * feature being registered. `sort-menu-trigger.tsx` type-checks `state.sorting` against a
+ * grid built without `rowSortingFeature` and finds `undefined` at runtime. This is the same
+ * accepted cost as the runtime-only config guards one layer down (see
+ * `TableConfig`'s docblock in core), and it is what keeps the package's 95 non-test files
+ * non-generic.
+ * The catch for it is core's development-mode `REQUIRED_FEATURE` warning and nothing else.
+ */
+export type GridFeatures = TableFeatures
+
+/*
+ * FEATURE GUARDS — why the render path is full of `?.` on things the types say are always there.
+ *
+ * {@link GridFeatures} pins components to `TableFeatures`, the widest instantiation, which is also
+ * the *fullest*: it declares every feature key, so `TableState<TableFeatures>` resolves to all 21
+ * slices and `Column<TableFeatures, …>` carries every feature's methods. At **runtime** none of
+ * that is true — a slice is absent, and a method undefined, unless the consumer registered the
+ * feature that contributes it.
+ *
+ * That gap is the documented cost of the pinning, and it is why `typescript-eslint`'s
+ * `no-unnecessary-condition` fires on every guard on the default render path: the rule is reading
+ * the widest instantiation and concluding the check cannot fail. It can, and did — a grid with no
+ * sorting threw on `getCanSort`, a read-only grid threw on `state.creating.isOpen`, and a grid with
+ * no infinite scroll threw on `state.infinite.isFetchingNextPage`, because `<LoadMoreFooter />`
+ * mounts unconditionally.
+ *
+ * Each such guard therefore carries a scoped disable citing this note. They are not decoration and
+ * they are not suppressing a real finding: `feature-optionality.test.tsx` builds a grid without
+ * each optional feature and renders it, so deleting any one of them turns a lint error into a test
+ * failure rather than into silence.
+ *
+ * The three features that stay mandatory — `columnVisibilityFeature`, `columnPinningFeature`,
+ * `columnSizingFeature` — are structural rather than guarded: the shell lays out a column grid and
+ * needs widths and pin groups to do it. That test asserts they still throw, so the boundary between
+ * "structural" and "defect" is executable rather than asserted.
+ *
+ * **Considered and rejected: a `RuntimeGridState` type** — `TableState<GridFeatures>` with the
+ * feature slices marked optional — which would make every `?.` provably necessary and remove the
+ * disables entirely. It was turned down because it is a *second spelling of one concept*: the repo
+ * would carry `TableState<GridFeatures>` for what the types say and `RuntimeGridState` for what is
+ * actually there, and every reader would have to know which applies where. That is the defect the
+ * option audits in AGENTS.md keep removing, and it is worse than a cited disable that a test
+ * already holds honest.
+ *
+ * Reopen it if the disable count grows materially, or if a guard is ever added **without** a
+ * covering case in `feature-optionality.test.tsx`. Either would break the property that makes the
+ * disables acceptable — that deleting a guard fails a test rather than going quiet — and at that
+ * point the type is the better answer.
+ */
+
+/**
+ * The row type every component below `<DataGrid>` is typed against — the **erased** one.
+ *
+ * Same boundary as {@link GridFeatures}, for the same reason, and the two should be read as one
+ * decision: components receive the table through `useDataGridTable()`, which is a React context
+ * and therefore not generic, so they cannot carry the caller's `TRow` any more than they can
+ * carry its `TFeatures`.
+ *
+ * Unlike `TFeatures` there is no "widest instantiation" to pin to, because v9's row types are
+ * **invariant** in `TRow`: `Row<F, TRow>` holds `original: TRow` covariantly and reaches
+ * `column.accessorFn: (row: TRow) => unknown` contravariantly. Verified by probe — `Row<F, User>`
+ * is assignable to `Row<F, any>`, `Row<F, object>` and `Row<F, RowData>` alike, which is to say
+ * to none of them; `any` in particular stopped erasing when v8 became v9, because it only erases
+ * at the top level and not inside a generic instantiation. So the row type is not widened here,
+ * it is *erased*, and crossing into the erased world is a cast rather than an assignment.
+ *
+ * `never` rather than `object` or `any` because that is already this package's spelling for the
+ * same idea — `RowPropsResolver<never>`, `GridOptions<never>`, `ExpandedRowProps<never>` — and one
+ * concept deserves one spelling.
+ *
+ * **The cost, stated rather than engineered around:** a component read is not checked against the
+ * caller's row type. A component that reaches `row.original` gets `never` and must say what it
+ * expects. The crossings are named and counted in `pr3-outcomes.md`; if a cast for this appears
+ * anywhere other than at one of them, the boundary has been put in the wrong place.
+ */
+export type ErasedRow = never
+
+/**
+ * The table the React layer renders: core's `DataTable` with `grid` **replaced** by the
+ * resolved React options, plus the grid context.
+ *
+ * `Omit` rather than an intersection, deliberately. An intersection of two objects that
+ * both declare `grid` produces a type whose `grid` is the *intersection of the two bags* —
+ * legal, silently satisfied by either half, and impossible for a reader to tell apart. That
+ * is the §2.1 seam written into the type system instead of out of it. The four members core
+ * resolved are not lost by the `Omit`: they are folded into {@link ResolvedGridOptions} under
+ * its own names, and `defaultResolvedGridOptions(table.grid)` is what carries them across.
+ *
+ * `TFeatures` is threaded rather than pinned because this alias is `useDataGrid`'s return type
+ * and therefore part of the public surface.
+ */
+export type DataTable<TFeatures extends TableFeatures, TRow extends object> = Omit<
+	CoreDataTable<TFeatures, TRow>,
+	'grid'
+> & {
+	/**
+	 * The React layer's resolved grid options. Seeded by `prepareDataGridTable`, rewritten once
+	 * per render by `useDataGrid`, read by every compound component and available to a UI kit
+	 * via `useGridOptions()`.
+	 */
+	grid: ResolvedGridOptions
+	/**
+	 * The grid's `GridContext`, behind a subscription. Seeded by `prepareDataGridTable` so it is
+	 * **always** an atom — no reader guards the property — and written by `useDataGrid` whenever
+	 * the merged `context` option changes. Read it with `useGridContext()`.
+	 *
+	 * Parked here by Task 14 only so that it stops being declared through a
+	 * `declare module '@tanstack/table-core'` block, which cannot merge onto v9's `Table` type
+	 * alias.
+	 */
+	gridContext: GridContextAtom
+}
+
 /** Which affordances the row-actions cell offers, and therefore which props it carries. */
 export const ActionsCellState = {
 	/** A settled row: edit / delete. */
@@ -38,10 +164,9 @@ export const ActionsCellState = {
 
 export type ActionsCellState = (typeof ActionsCellState)[keyof typeof ActionsCellState]
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type ActionsCellIdleProps<TRow extends object = any> = {
+type ActionsCellIdleProps<TRow extends object = ErasedRow> = {
 	state: typeof ActionsCellState.Idle
-	row: Row<TRow>
+	row: Row<GridFeatures, TRow>
 	hasEditing: boolean
 	hasDeleting: boolean
 	onEdit: () => void
@@ -57,10 +182,9 @@ type ActionsCellIdleProps<TRow extends object = any> = {
 	actions: GridMenuItem[]
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type ActionsCellEditingProps<TRow extends object = any> = {
+type ActionsCellEditingProps<TRow extends object = ErasedRow> = {
 	state: typeof ActionsCellState.Editing
-	row: Row<TRow>
+	row: Row<GridFeatures, TRow>
 	onSave: () => Promise<void>
 	onCancel: () => void
 	/** True while the commit is in flight (`commitStatus !== 'idle'`). */
@@ -90,8 +214,7 @@ type ActionsCellCreatingProps = {
  * writes `ActionsCellProps<Invoice>` and gets a typed `row.original`; omitting it keeps the
  * unchecked default, and `any` stays mutually assignable so the registry accepts both.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type ActionsCellProps<TRow extends object = any> =
+export type ActionsCellProps<TRow extends object = ErasedRow> =
 	| ActionsCellIdleProps<TRow>
 	| ActionsCellEditingProps<TRow>
 	| ActionsCellCreatingProps
@@ -479,7 +602,7 @@ export type FilterChipProps = {
 	kind: FilterChipKind
 	/**
 	 * True when this filter is part of the not-yet-applied draft under `draft` — i.e.
-	 * it differs from (or is absent from) `table.getState().applied`. Kits render this as
+	 * it differs from (or is absent from) `table.store.state.applied`. Kits render this as
 	 * `data-draft-filter=""` on the chip's root element.
 	 */
 	isDraft: boolean
@@ -732,8 +855,7 @@ export type SelectionBarProps = {
 	open: boolean
 	/** Number of currently selected rows. */
 	count: number
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	selectedRows: Row<any>[]
+	selectedRows: Row<GridFeatures, ErasedRow>[]
 	/**
 	 * Render mode the consumer requested.
 	 * - `'floating'` (default) — sticky/positioned bar, may overlay content.

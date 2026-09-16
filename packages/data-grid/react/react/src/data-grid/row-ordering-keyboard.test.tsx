@@ -3,11 +3,12 @@ import { fireEvent, render } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
 import { GridComponentsProvider } from '../components-context'
-import { testComponents } from '../test-utils'
+import { TEST_FEATURES, testComponents } from '../test-utils'
 import { useDataGrid } from '../use-data-grid'
 
 import { DataGrid } from './data-grid'
 
+import type { GridFeatures } from '../types'
 import type { UseDataGridConfig } from '../use-data-grid'
 
 type User = { id: string; name: string }
@@ -20,11 +21,12 @@ const DATA: User[] = [
 
 const COLUMNS = createColumns<User>([{ accessorKey: 'name', header: 'Name' }])
 
-type GridExtras = Pick<UseDataGridConfig<User>, 'ordering' | 'selection'>
+type GridExtras = Pick<UseDataGridConfig<GridFeatures, User>, 'ordering' | 'selection'>
 
 function renderGrid(extras: GridExtras) {
 	function Grid() {
-		const table = useDataGrid<User>({
+		const table = useDataGrid<GridFeatures, User>({
+			features: TEST_FEATURES,
 			data: DATA,
 			columns: COLUMNS,
 			getRowId: (row: User) => row.id,

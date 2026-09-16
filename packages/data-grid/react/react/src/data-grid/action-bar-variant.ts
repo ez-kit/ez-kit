@@ -1,6 +1,6 @@
 import { DEFAULT_ACTION_BAR_VARIANT, type ActionBarVariant } from '../use-data-grid'
 
-import type { Table } from '@tanstack/table-core'
+import type { DataTable, GridFeatures } from '../types'
 
 /**
  * Resolve the render mode of the shared action bar from `selection.bar`.
@@ -11,10 +11,7 @@ import type { Table } from '@tanstack/table-core'
  * which is a bug waiting to happen. Hence {@link ActionBarVariant} rather than a
  * selection-specific name: one type for the one bar both sections render into.
  */
-export function resolveActionBarVariant(
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	table: Table<any>,
-): ActionBarVariant {
+export function resolveActionBarVariant<TRow extends object>(table: DataTable<GridFeatures, TRow>): ActionBarVariant {
 	// Already settled by `useDataGrid`. The fallback covers the grid that renders the draft
 	// section of the bar with no row selection at all, where there is no `selection.bar` to
 	// have carried a mode.

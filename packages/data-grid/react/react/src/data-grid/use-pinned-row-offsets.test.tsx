@@ -4,13 +4,13 @@ import { useEffect, useState } from 'react'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
 import { GridComponentsProvider } from '../components-context'
-import { testComponents } from '../test-utils'
+import { TEST_FEATURES, testComponents } from '../test-utils'
 import { useDataGrid } from '../use-data-grid'
 
 import { DataGrid } from './data-grid'
 
 import type { GridComponents } from '../contract'
-import type { TbodyProps } from '../types'
+import type { GridFeatures, TbodyProps } from '../types'
 import type { ReactElement } from 'react'
 
 /** Every row reports this height, so expected offsets are exact multiples of it. */
@@ -54,7 +54,7 @@ const DATA: Row[] = [
 ]
 const COLUMNS = createColumns<Row>([{ accessorKey: 'name' }])
 
-type Instance = ReturnType<typeof useDataGrid<Row>>
+type Instance = ReturnType<typeof useDataGrid<GridFeatures, Row>>
 
 /**
  * Renders one commit behind, so a row's `<tr>` — and therefore its ref — lands *after* the layout
@@ -90,11 +90,16 @@ function makeCountingComponents(counters: Counters, deferRows: boolean): Require
 
 function makeHarness(ref: { table: Instance | null }) {
 	return function Harness(): ReactElement {
-		const table = useDataGrid<Row>({ data: DATA, columns: COLUMNS, pinning: { row: { top: true, bottom: true } } })
+		const table = useDataGrid<GridFeatures, Row>({
+			features: TEST_FEATURES,
+			data: DATA,
+			columns: COLUMNS,
+			pinning: { row: { top: true, bottom: true } },
+		})
 		useEffect(() => {
 			ref.table = table
 		}, [table])
-		return <DataGrid<Row> table={table} />
+		return <DataGrid<GridFeatures, Row> table={table} />
 	}
 }
 

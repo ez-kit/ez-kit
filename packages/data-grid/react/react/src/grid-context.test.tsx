@@ -8,9 +8,10 @@ import { DataGrid } from './data-grid/data-grid'
 import { DataGridOptionsProvider } from './data-grid-options-context'
 import { useGridContext } from './grid-context'
 import { prepareDataGridTable } from './prepare-table'
-import { renderWithComponents, TEST_COLUMNS, TEST_ROWS, testComponents } from './test-utils'
+import { TEST_FEATURES, renderWithComponents, TEST_COLUMNS, TEST_ROWS, testComponents } from './test-utils'
 import { useDataGrid } from './use-data-grid'
 
+import type { GridFeatures } from './types'
 import type { UseDataGridConfig } from './use-data-grid'
 import type { ReactElement, ReactNode } from 'react'
 
@@ -29,10 +30,18 @@ declare module './grid-context' {
 type TestRow = (typeof TEST_ROWS)[number]
 
 /** Renders a grid with `children` inside it, so a probe can read the context from where a kit would. */
-function renderGridWith(config: Partial<UseDataGridConfig<TestRow>>, children: ReactNode): ReturnType<typeof render> {
+function renderGridWith(
+	config: Partial<UseDataGridConfig<GridFeatures, TestRow>>,
+	children: ReactNode,
+): ReturnType<typeof render> {
 	function Harness(): ReactElement {
-		const table = useDataGrid<TestRow>({ data: TEST_ROWS, columns: TEST_COLUMNS, ...config })
-		return <DataGrid<TestRow> table={table}>{children}</DataGrid>
+		const table = useDataGrid<GridFeatures, TestRow>({
+			features: TEST_FEATURES,
+			data: TEST_ROWS,
+			columns: TEST_COLUMNS,
+			...config,
+		})
+		return <DataGrid<GridFeatures, TestRow> table={table}>{children}</DataGrid>
 	}
 	return renderWithComponents(<Harness />)
 }
@@ -58,10 +67,14 @@ describe('useGridContext — the default', () => {
 		// The reason `prepareDataGridTable` seeds the store: a headless table, or one driven
 		// through the compound components by hand, must not crash the first reader.
 		const table = prepareDataGridTable(
-			createTable({ data: TEST_ROWS, columns: createColumns<TestRow>([{ accessorKey: 'name' }]) }),
+			createTable({
+				features: TEST_FEATURES,
+				data: TEST_ROWS,
+				columns: createColumns<TestRow>([{ accessorKey: 'name' }]),
+			}),
 		)
 
-		expect(table.gridContext.getState()).toEqual({})
+		expect(table.gridContext.get()).toEqual({})
 	})
 })
 
@@ -73,13 +86,14 @@ describe('useGridContext — option layers', () => {
 		})
 
 		function Harness(): ReactElement {
-			const table = kit.useDataGrid<TestRow>({
+			const table = kit.useDataGrid<GridFeatures, TestRow>({
+				features: TEST_FEATURES,
 				data: TEST_ROWS,
 				columns: TEST_COLUMNS,
 				context: { permissions: { canEdit: true } },
 			})
 			return (
-				<kit.DataGrid<TestRow> table={table}>
+				<kit.DataGrid<GridFeatures, TestRow> table={table}>
 					<WholeContextProbe />
 				</kit.DataGrid>
 			)
@@ -103,13 +117,14 @@ describe('useGridContext — option layers', () => {
 
 	it('replaces a named key rather than accumulating it', () => {
 		function Harness(): ReactElement {
-			const table = useDataGrid<TestRow>({
+			const table = useDataGrid<GridFeatures, TestRow>({
+				features: TEST_FEATURES,
 				data: TEST_ROWS,
 				columns: TEST_COLUMNS,
 				context: { permissions: { canEdit: false } },
 			})
 			return (
-				<DataGrid<TestRow> table={table}>
+				<DataGrid<GridFeatures, TestRow> table={table}>
 					<WholeContextProbe />
 				</DataGrid>
 			)
@@ -126,7 +141,8 @@ describe('useGridContext — option layers', () => {
 
 	it('never reaches the headless table — `context` is a React-layer option', () => {
 		function Harness(): ReactElement {
-			const table = useDataGrid<TestRow>({
+			const table = useDataGrid<GridFeatures, TestRow>({
+				features: TEST_FEATURES,
 				data: TEST_ROWS,
 				columns: TEST_COLUMNS,
 				context: { tenant: 'acme' },
@@ -164,7 +180,8 @@ describe('useGridContext — reactivity', () => {
 		function Harness(): ReactElement {
 			const [tenant, setTenant] = useState('acme')
 			const [permissions, setPermissions] = useState(DENIED)
-			const table = useDataGrid<TestRow>({
+			const table = useDataGrid<GridFeatures, TestRow>({
+				features: TEST_FEATURES,
 				data: TEST_ROWS,
 				columns: TEST_COLUMNS,
 				context: { tenant, permissions },
@@ -187,7 +204,7 @@ describe('useGridContext — reactivity', () => {
 					>
 						grant
 					</button>
-					<DataGrid<TestRow> table={table}>{probe}</DataGrid>
+					<DataGrid<GridFeatures, TestRow> table={table}>{probe}</DataGrid>
 				</>
 			)
 		}

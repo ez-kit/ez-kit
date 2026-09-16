@@ -5,12 +5,12 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { GridComponentsProvider } from '../components-context'
 import { prepareDataGridTable } from '../prepare-table'
-import { renderWithComponents } from '../test-utils'
+import { TEST_FEATURES, renderWithComponents } from '../test-utils'
 import { ActionBarVariant, PageSizerPlacement } from '../types'
 
 import { DataGrid } from './data-grid'
 
-import type { ResizerProps } from '../types'
+import type { DataTable, GridFeatures, ResizerProps } from '../types'
 import type { DeletingConfig } from '@ez-kit/data-grid-core'
 
 type User = {
@@ -28,8 +28,8 @@ const COLUMNS = createColumns<User>([
 	{ accessorKey: 'age', header: 'Age' },
 ])
 
-function makeTable(config?: Partial<Parameters<typeof createTable<User>>[0]>) {
-	const table = createTable<User>({ data: USERS, columns: COLUMNS, ...config })
+function makeTable(config?: Partial<Parameters<typeof createTable<GridFeatures, User>>[0]>) {
+	const table = createTable<GridFeatures, User>({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, ...config })
 	return prepareDataGridTable(table)
 }
 
@@ -210,7 +210,9 @@ describe('<DataGrid>', () => {
 			},
 			{ accessorKey: 'age', header: 'Age' },
 		])
-		const table = prepareDataGridTable(createTable<User>({ data: USERS, columns: cols }))
+		const table = prepareDataGridTable(
+			createTable<GridFeatures, User>({ features: TEST_FEATURES, data: USERS, columns: cols }),
+		)
 		renderWithComponents(<DataGrid table={table} />)
 		expect(screen.getAllByTestId('custom-cell')).toHaveLength(USERS.length)
 	})
@@ -225,7 +227,9 @@ describe('<DataGrid>', () => {
 			{ id: 1, active: true },
 			{ id: 2, active: false },
 		]
-		const table = prepareDataGridTable(createTable<BoolRow>({ data: boolData, columns: boolCols }))
+		const table = prepareDataGridTable(
+			createTable<GridFeatures, BoolRow>({ features: TEST_FEATURES, data: boolData, columns: boolCols }),
+		)
 		renderWithComponents(
 			<DataGrid
 				table={table}
@@ -242,7 +246,9 @@ describe('<DataGrid>', () => {
 		const cols = createColumns<User, { money: Record<never, never> }>([
 			{ accessorKey: 'age', header: 'Age', cell: { type: 'money' } },
 		])
-		const table = prepareDataGridTable(createTable<User>({ data: USERS, columns: cols }))
+		const table = prepareDataGridTable(
+			createTable<GridFeatures, User>({ features: TEST_FEATURES, data: USERS, columns: cols }),
+		)
 		renderWithComponents(
 			<DataGrid
 				table={table}
@@ -308,7 +314,9 @@ describe('<DataGrid>', () => {
 				{ accessorKey: 'name', header: 'Name', resizing: false },
 				{ accessorKey: 'age', header: 'Age' },
 			])
-			const table = prepareDataGridTable(createTable<User>({ data: USERS, columns: cols, resizing: true }))
+			const table = prepareDataGridTable(
+				createTable<GridFeatures, User>({ features: TEST_FEATURES, data: USERS, columns: cols, resizing: true }),
+			)
 			renderWithComponents(<DataGrid table={table} />)
 			// only 'age' column should have a resizer (name has resizing: false)
 			expect(document.querySelectorAll('[data-slot="column-resizer"]')).toHaveLength(1)
@@ -414,7 +422,8 @@ describe('<DataGrid>', () => {
 			{ accessorKey: 'age', header: 'Age' },
 		])
 		const table = prepareDataGridTable(
-			createTable<User>({
+			createTable<GridFeatures, User>({
+				features: TEST_FEATURES,
 				data: USERS,
 				columns: cols,
 				creating: { mode: 'row', onSave: () => Promise.resolve() },
@@ -491,7 +500,7 @@ describe('<DataGrid> bulk delete confirmation', () => {
 
 		await user.click(bulkDeleteButton())
 		expect(onDelete).not.toHaveBeenCalled()
-		expect(table.getState().deleting.pendingBulk).toBe(true)
+		expect(table.store.state.deleting.pendingBulk).toBe(true)
 		// Count-aware default description for the two selected rows.
 		expect(screen.getByText(/delete 2 rows/i)).toBeInTheDocument()
 	})
@@ -511,7 +520,7 @@ describe('<DataGrid> bulk delete confirmation', () => {
 		const args = onDelete.mock.calls.at(0)?.at(0)
 		expect((args as { rows: unknown[] }).rows).toHaveLength(1)
 		expect((args as { rowIds: string[] }).rowIds).toEqual(['1'])
-		expect(table.getState().deleting.pendingBulk).toBe(false)
+		expect(table.store.state.deleting.pendingBulk).toBe(false)
 		expect(document.querySelector('dialog')).toBeNull()
 	})
 
@@ -526,7 +535,7 @@ describe('<DataGrid> bulk delete confirmation', () => {
 		await user.click(within(getDialog()).getByRole('button', { name: /cancel/i }))
 
 		expect(onDelete).not.toHaveBeenCalled()
-		expect(table.getState().deleting.pendingBulk).toBe(false)
+		expect(table.store.state.deleting.pendingBulk).toBe(false)
 		expect(document.querySelector('dialog')).toBeNull()
 	})
 
@@ -558,6 +567,7 @@ describe('<DataGrid> uncontrolled (no useDataGrid)', () => {
 	it('renders rows from data/columns props directly', () => {
 		renderWithComponents(
 			<DataGrid
+				features={TEST_FEATURES}
 				data={USERS}
 				columns={COLUMNS}
 			/>,
@@ -568,6 +578,7 @@ describe('<DataGrid> uncontrolled (no useDataGrid)', () => {
 	it('renders cell values without an explicit table', () => {
 		renderWithComponents(
 			<DataGrid
+				features={TEST_FEATURES}
 				data={USERS}
 				columns={COLUMNS}
 			/>,
@@ -579,6 +590,7 @@ describe('<DataGrid> uncontrolled (no useDataGrid)', () => {
 	it('honors feature config passed inline (selection)', () => {
 		renderWithComponents(
 			<DataGrid
+				features={TEST_FEATURES}
 				data={USERS}
 				columns={COLUMNS}
 				selection
@@ -591,6 +603,7 @@ describe('<DataGrid> uncontrolled (no useDataGrid)', () => {
 	it('supports the compound API without a table prop', () => {
 		renderWithComponents(
 			<DataGrid
+				features={TEST_FEATURES}
 				data={USERS}
 				columns={COLUMNS}
 			>
@@ -609,6 +622,7 @@ describe('<DataGrid> uncontrolled (no useDataGrid)', () => {
 			expect(warn).not.toHaveBeenCalled()
 			rerender(
 				<DataGrid
+					features={TEST_FEATURES}
 					data={USERS}
 					columns={COLUMNS}
 				/>,
@@ -624,7 +638,14 @@ describe('<DataGrid> unprepared table', () => {
 	it('names the problem instead of crashing on a missing resolved-options object', () => {
 		// `prepareDataGridTable` is what seeds `table.grid`; skipping it used to be impossible
 		// because the prop demanded a wrapper type only `useDataGrid` could build.
-		const raw = createTable<User>({ data: USERS, columns: COLUMNS })
+		// The assertion form is the point of the test: an unprepared table is precisely what the
+		// prop's type now rejects, and the runtime guard is what has to catch a consumer who gets
+		// past it — through a cast of their own, or from untyped JavaScript.
+		const raw = createTable<GridFeatures, User>({
+			features: TEST_FEATURES,
+			data: USERS,
+			columns: COLUMNS,
+		}) as unknown as DataTable<GridFeatures, User>
 		const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
 
 		expect(() => renderWithComponents(<DataGrid table={raw} />)).toThrow(/has not been prepared/)

@@ -59,7 +59,9 @@ export function DraftBar({ children }: DataGridDraftBarProps = {}) {
 	const table = useDataGridTable()
 	// Deliberately broad: `draft.isDirty()` spans sorting, column filters,
 	// global search and `applied`, and the bar also reads `rowSelection`.
-	useDataGridState((s) => s)
+	// The broad subscription is also the read: v8's whole-snapshot `getState()` is gone and this snapshot
+	// is the same object the selector already returned.
+	const state = useDataGridState((s) => s)
 	const { DraftBar: DraftBarComponent } = useGridComponents().draft
 
 	if (table.options.draft !== true) return null
@@ -69,7 +71,7 @@ export function DraftBar({ children }: DataGridDraftBarProps = {}) {
 
 	const args: DataGridDraftBarRenderArgs = {
 		pending: table.draft.getPendingCount(),
-		selectedCount: Object.keys(table.getState().rowSelection).length,
+		selectedCount: Object.keys(state.rowSelection).length,
 		variant: resolveActionBarVariant(table),
 		onApply: () => {
 			table.draft.apply()

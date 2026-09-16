@@ -3,6 +3,7 @@ import { renderHook } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
 import { extractState, parseState, useDataGrid } from '../index'
+import { TEST_FEATURES } from '../test-utils'
 
 type Row = { id: number; name: string }
 const columns = createColumns<Row>([{ accessorKey: 'name' }])
@@ -12,6 +13,7 @@ describe('state persistence round-trip', () => {
 	it('extractState output survives JSON + parseState and re-seeds a grid via initialState', () => {
 		const { result: source } = renderHook(() =>
 			useDataGrid({
+				features: TEST_FEATURES,
 				data,
 				columns,
 				sorting: true,
@@ -24,8 +26,10 @@ describe('state persistence round-trip', () => {
 		const wire = JSON.parse(JSON.stringify(extractState(source.current))) as unknown
 		const restored = parseState(wire)
 
-		const { result: seeded } = renderHook(() => useDataGrid({ data, columns, sorting: true, initialState: restored }))
-		expect(seeded.current.getState().sorting).toEqual([{ id: 'name', desc: true }])
-		expect(seeded.current.getState().pagination).toEqual({ pageIndex: 3, pageSize: 50 })
+		const { result: seeded } = renderHook(() =>
+			useDataGrid({ features: TEST_FEATURES, data, columns, sorting: true, initialState: restored }),
+		)
+		expect(seeded.current.store.state.sorting).toEqual([{ id: 'name', desc: true }])
+		expect(seeded.current.store.state.pagination).toEqual({ pageIndex: 3, pageSize: 50 })
 	})
 })

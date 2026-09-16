@@ -22,7 +22,8 @@ export type DataGridGlobalFilterInputProps = {
  */
 export function GlobalFilterInput({ placeholder: placeholderProp }: DataGridGlobalFilterInputProps = {}) {
 	const table = useDataGridTable()
-	useDataGridState((s) => s.globalFilter as unknown)
+	// The subscription is the read — see `active-filters-bar.tsx` for the note.
+	const globalFilter = useDataGridState((s) => s.globalFilter as unknown)
 	const { GlobalFilterInput: Component } = useGridComponents().filtering
 
 	const cfg = table.grid.globalFiltering
@@ -30,7 +31,7 @@ export function GlobalFilterInput({ placeholder: placeholderProp }: DataGridGlob
 	const debounce = cfg?.debounce ?? DATA_GRID_DEFAULTS.filtering.debounce
 	const placeholder = placeholderProp ?? cfg?.placeholder ?? table.grid.messages.globalFiltering.placeholder
 
-	const committed = String(table.getState().globalFilter ?? '')
+	const committed = String(globalFilter ?? '')
 	const [draft, setDraft] = useState(committed)
 	const debouncedDraft = useDebouncedValue(draft, debounce)
 

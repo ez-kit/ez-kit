@@ -64,45 +64,50 @@
 	"size-limit": [
 		{
 			"path": "dist/index.js",
-			"limit": "27 KB",
+			"limit": "28 KB",
 			"ignore": [
 				"@ez-kit/data-grid-core",
+				"@tanstack/react-table",
 				"@tanstack/react-virtual",
 				"@tanstack/table-core"
 			]
 		},
 		{
 			"path": "dist/state/index.js",
-			"limit": "1 KB",
+			"limit": "940 B",
 			"ignore": [
 				"@ez-kit/data-grid-core",
+				"@tanstack/react-table",
 				"@tanstack/react-virtual",
 				"@tanstack/table-core"
 			]
 		},
 		{
 			"path": "dist/cell-types/index.js",
-			"limit": "1.5 KB",
+			"limit": "840 B",
 			"ignore": [
 				"@ez-kit/data-grid-core",
+				"@tanstack/react-table",
 				"@tanstack/react-virtual",
 				"@tanstack/table-core"
 			]
 		},
 		{
 			"path": "dist/contract.js",
-			"limit": "1 KB",
+			"limit": "610 B",
 			"ignore": [
 				"@ez-kit/data-grid-core",
+				"@tanstack/react-table",
 				"@tanstack/react-virtual",
 				"@tanstack/table-core"
 			]
 		},
 		{
 			"path": "dist/menu.js",
-			"limit": "1 KB",
+			"limit": "260 B",
 			"ignore": [
 				"@ez-kit/data-grid-core",
+				"@tanstack/react-table",
 				"@tanstack/react-virtual",
 				"@tanstack/table-core"
 			]
@@ -110,8 +115,9 @@
 	],
 	"dependencies": {
 		"@ez-kit/data-grid-core": "workspace:^",
+		"@tanstack/react-table": "^9.2.4",
 		"@tanstack/react-virtual": "^3.13.23",
-		"@tanstack/table-core": "^8.21.3"
+		"@tanstack/table-core": "^9.2.4"
 	},
 	"devDependencies": {
 		"@ez-kit/react18-env": "workspace:*",

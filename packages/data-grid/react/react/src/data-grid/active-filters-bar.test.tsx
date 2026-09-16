@@ -5,13 +5,13 @@ import { describe, expect, it } from 'vitest'
 
 import { GridComponentsProvider } from '../components-context'
 import { prepareDataGridTable } from '../prepare-table'
-import { testComponents } from '../test-utils'
+import { TEST_FEATURES, testComponents } from '../test-utils'
 
 import { ActiveFiltersBar } from './active-filters-bar'
-import { TableContext } from './table-context'
+import { TableProvider } from './table-context'
 
+import type { DataTable, GridFeatures } from '../types'
 import type { NormalizedFilterChipsConfig } from '../use-data-grid'
-import type { DataTable } from '@ez-kit/data-grid-core'
 import type { ReactNode } from 'react'
 
 type User = {
@@ -30,8 +30,9 @@ const COLUMNS = createColumns<User>([
 	{ accessorKey: 'age', header: 'Age', cell: { type: 'number' }, filtering: { operators: true } },
 ])
 
-function makeTable(config?: Partial<Parameters<typeof createTable<User>>[0]>) {
-	const table = createTable<User>({
+function makeTable(config?: Partial<Parameters<typeof createTable<GridFeatures, User>>[0]>) {
+	const table = createTable<GridFeatures, User>({
+		features: TEST_FEATURES,
 		data: USERS,
 		columns: COLUMNS,
 		filtering: true,
@@ -41,14 +42,14 @@ function makeTable(config?: Partial<Parameters<typeof createTable<User>>[0]>) {
 	return prepareDataGridTable(table)
 }
 
-function setChipsCfg(table: DataTable<User>, value: NormalizedFilterChipsConfig | undefined) {
+function setChipsCfg(table: DataTable<GridFeatures, User>, value: NormalizedFilterChipsConfig | undefined) {
 	table.grid.filtering.chips = value
 }
 
-function Wrapper({ table, children }: { table: DataTable<User>; children: ReactNode }) {
+function Wrapper({ table, children }: { table: DataTable<GridFeatures, User>; children: ReactNode }) {
 	return (
 		<GridComponentsProvider components={testComponents}>
-			<TableContext.Provider value={table}>{children}</TableContext.Provider>
+			<TableProvider table={table}>{children}</TableProvider>
 		</GridComponentsProvider>
 	)
 }
@@ -107,7 +108,7 @@ describe('<ActiveFiltersBar>', () => {
 			</Wrapper>,
 		)
 		await user.click(screen.getByRole('button', { name: /remove name filter/i }))
-		expect(table.getState().columnFilters).toEqual([{ id: 'age', value: { operator: 'equals', value: 30 } }])
+		expect(table.store.state.columnFilters).toEqual([{ id: 'age', value: { operator: 'equals', value: 30 } }])
 	})
 
 	it('clicking remove on the global chip clears state.globalFilter', async () => {
@@ -121,7 +122,7 @@ describe('<ActiveFiltersBar>', () => {
 			</Wrapper>,
 		)
 		await user.click(screen.getByRole('button', { name: /remove search filter/i }))
-		expect(table.getState().globalFilter).toBeUndefined()
+		expect(table.store.state.globalFilter).toBeUndefined()
 	})
 
 	it('formats StructuredFilterValue with operator label and value', () => {

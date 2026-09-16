@@ -4,7 +4,7 @@ import { buildOperatorRegistry } from '../../features/operators'
 
 import { mapColumns } from './map-columns'
 
-import type { ColumnDef, ColumnFilteringMeta, TanStackColumnDef } from '../types'
+import type { ColumnDef, ColumnFilteringMeta, MappedColumnDef } from '../types'
 
 type Row = {
 	id: number
@@ -13,7 +13,7 @@ type Row = {
 }
 
 /** `meta.filtering` narrowed past its `false` arm — the shape every assertion below wants. */
-function filteringMeta(def: TanStackColumnDef<Row> | undefined): ColumnFilteringMeta | undefined {
+function filteringMeta(def: MappedColumnDef<Row> | undefined): ColumnFilteringMeta | undefined {
 	const filtering = def?.meta?.filtering
 	return filtering === false ? undefined : filtering
 }
@@ -38,15 +38,15 @@ describe('mapColumns', () => {
 		expect(result[0]?.sortDescFirst).toBe(true)
 	})
 
-	it('sorting: { fn: "datetime" } → sortingFn passed through as a built-in name', () => {
+	it('sorting: { fn: "datetime" } → sortFn passed through as a built-in name', () => {
 		const result = mapColumns<Row>([{ accessorKey: 'name', sorting: { fn: 'datetime' } }])
-		expect(result[0]?.sortingFn).toBe('datetime')
+		expect(result[0]?.sortFn).toBe('datetime')
 	})
 
-	it('sorting: { fn: <inline> } → sortingFn passed through as a function', () => {
+	it('sorting: { fn: <inline> } → sortFn passed through as a function', () => {
 		const fn = (_a: unknown, _b: unknown) => 0
 		const result = mapColumns<Row>([{ accessorKey: 'name', sorting: { fn } }])
-		expect(result[0]?.sortingFn).toBe(fn)
+		expect(result[0]?.sortFn).toBe(fn)
 	})
 
 	it("sorting: { undefined: 'last' } → sortUndefined: 'last'", () => {
@@ -84,19 +84,19 @@ describe('mapColumns', () => {
 		expect(result[0]?.enableHiding).toBeUndefined()
 	})
 
-	it('pinning: { side: left } goes into meta.pinning', () => {
-		const result = mapColumns<Row>([{ accessorKey: 'name', pinning: { side: 'left' } }])
-		expect(result[0]?.meta?.pinning).toEqual({ side: 'left' })
+	it('pinning: { side: start } goes into meta.pinning', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', pinning: { side: 'start' } }])
+		expect(result[0]?.meta?.pinning).toEqual({ side: 'start' })
 	})
 
 	it('the scalar pinning form normalizes to a static side', () => {
-		const result = mapColumns<Row>([{ accessorKey: 'name', pinning: 'left' }])
-		expect(result[0]?.meta?.pinning).toEqual({ side: 'left' })
+		const result = mapColumns<Row>([{ accessorKey: 'name', pinning: 'start' }])
+		expect(result[0]?.meta?.pinning).toEqual({ side: 'start' })
 	})
 
-	it('pinning: { initialSide: right } goes into meta.pinning', () => {
-		const result = mapColumns<Row>([{ accessorKey: 'name', pinning: { initialSide: 'right' } }])
-		expect(result[0]?.meta?.pinning).toEqual({ initialSide: 'right' })
+	it('pinning: { initialSide: end } goes into meta.pinning', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', pinning: { initialSide: 'end' } }])
+		expect(result[0]?.meta?.pinning).toEqual({ initialSide: 'end' })
 	})
 
 	it('pinning: false goes into meta.pinning as false', () => {
@@ -328,7 +328,7 @@ describe('mapColumns — table-level operators switch', () => {
 			tableOperators: true,
 		})
 		expect(filteringMeta(result[0])?.operators).toBeUndefined()
-		expect(filteringMeta(result[0]?.columns?.[0] as TanStackColumnDef<Row>)?.operators).toBeDefined()
+		expect(filteringMeta(result[0]?.columns?.[0] as MappedColumnDef<Row>)?.operators).toBeDefined()
 	})
 
 	it('tableOperators: false wins over a column that asks for operators', () => {

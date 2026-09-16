@@ -30,6 +30,17 @@ export type { ColumnDef, CellDef, ColumnHelper } from './react-columns'
 
 // React hook
 export { useDataGrid } from './use-data-grid'
+/**
+ * `useDataGrid`'s return type — **this package's** `DataTable`, not core's.
+ *
+ * An explicit re-export shadows the same name from the `export * from '@ez-kit/data-grid-core'`
+ * above, exactly as `ColumnDef` / `createColumns` / `createColumnHelper` already do, and that is
+ * the point: the two are no longer the same type. Task 14 gave the React table
+ * `grid: ResolvedGridOptions` in place of core's `grid: GridOptions`, so a consumer who wrote
+ * `DataTable<Features, Invoice>` against this entry point and got core's would be holding a type
+ * that describes `table.grid` wrongly and does not declare `table.gridContext` at all.
+ */
+export type { DataTable } from './types'
 export type {
 	UseDataGridConfig,
 	ReactVisibilityConfig,
@@ -76,11 +87,11 @@ export type {
 export { DATA_GRID_DEFAULTS, DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
 
 // Grid context — what the application and the kit decided, carried alongside the grid.
-// The interface ships empty and is extended by declaration merging; the store type is exported
+// The interface ships empty and is extended by declaration merging; the atom type is exported
 // because `table.gridContext` names it, so a consumer reaching the table has to be able to
 // name it too.
 export { useGridContext } from './grid-context'
-export type { GridContext, GridContextStore } from './grid-context'
+export type { GridContext, GridContextAtom } from './grid-context'
 
 // Resolved options — what the grid decided, readable by any compound child or UI kit
 export { useGridOptions } from './use-grid-options'
@@ -131,7 +142,13 @@ export type { DataGridState, DataGridStateOptions, PersistableStateKey } from '.
 
 // Factory
 export { createDataGrid } from './create-data-grid'
-export type { CreateDataGridOptions, DataGridBundle } from './create-data-grid'
+export type {
+	BoundDataGrid,
+	BoundDataGridProps,
+	BoundUseDataGridConfig,
+	CreateDataGridOptions,
+	DataGridBundle,
+} from './create-data-grid'
 
 // UI-kit contract (tiers + full-support marker + feature map)
 export { GridFeature, FEATURE_COMPONENTS, COMPONENT_FEATURE } from './contract'
@@ -156,7 +173,13 @@ export type {
 
 // Compound component
 export { DataGrid } from './data-grid/data-grid'
-export type { DataGridProps, DataGridControlledProps, DataGridUncontrolledProps } from './data-grid/data-grid'
+export type {
+	DataGridProps,
+	DataGridControlledProps,
+	DataGridSharedProps,
+	DataGridStatics,
+	DataGridUncontrolledProps,
+} from './data-grid/data-grid'
 export type { DataGridTableProps, DataGridTableRenderArgs } from './data-grid/table'
 export type { DataGridBodyProps, DataGridBodyRenderArgs } from './data-grid/body'
 export type { DataGridHeaderProps, DataGridHeaderRenderArgs } from './data-grid/header'
@@ -228,6 +251,11 @@ export { getVisualLeafColumns } from './utils/visual-column-order'
 
 // UI-kit component contracts
 export type {
+	/**
+	 * The feature set every component below `<DataGrid>` is typed against — a UI kit writing a
+	 * component that receives a table names this, not a set of its own.
+	 */
+	GridFeatures,
 	ActionsCellProps,
 	FormShellProps,
 	BetweenInputProps,
@@ -307,9 +335,13 @@ export type {
 	ColumnOrderState,
 	ColumnPinningState,
 	ColumnSizingState,
+	// v9's spelling of v8's `VisibilityState`, and the one `visibility.onChange` is typed with
+	// since core moved (`core/src/types.ts`). The old name is not re-exported as an alias: it
+	// would be this package's own invention rather than a name TanStack still has, and the
+	// migration is one word at the consumer's import.
+	ColumnVisibilityState,
 	ExpandedState,
 	PaginationState,
 	RowPinningState,
 	RowSelectionState,
-	VisibilityState,
 } from '@tanstack/table-core'

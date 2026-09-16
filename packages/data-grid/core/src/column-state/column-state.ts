@@ -1,5 +1,5 @@
-import type { TanStackColumnDef } from '../column/types'
-import type { ColumnPinningState, TableState } from '@tanstack/table-core'
+import type { MappedColumnDef } from '../column/types'
+import type { ColumnPinningState, TableFeatures, TableState } from '@tanstack/table-core'
 
 /**
  * Column-derived rules that **no** state input may violate — not `config.initialState`,
@@ -10,21 +10,21 @@ import type { ColumnPinningState, TableState } from '@tanstack/table-core'
  * entirely, so a state that unpins or hides them can never be recovered by the user.
  */
 export type ColumnInvariants = {
-	/** Column ids that must always appear in `columnPinning.left`. */
-	readonly forcedLeft: readonly string[]
-	/** Column ids that must always appear in `columnPinning.right`. */
-	readonly forcedRight: readonly string[]
+	/** Column ids that must always appear in `columnPinning.start`. */
+	readonly forcedStart: readonly string[]
+	/** Column ids that must always appear in `columnPinning.end`. */
+	readonly forcedEnd: readonly string[]
 	/** Column ids that must never be `false` in `columnVisibility`. */
 	readonly alwaysVisible: readonly string[]
 }
 
 /** Seed pins derived from column defs — `side` (static) and `initialSide` (dynamic). */
 export type PinningSeed = {
-	readonly left: readonly string[]
-	readonly right: readonly string[]
+	readonly start: readonly string[]
+	readonly end: readonly string[]
 }
 
-function getColumnId<TRow extends object>(col: TanStackColumnDef<TRow>): string | undefined {
+function getColumnId<TRow extends object>(col: MappedColumnDef<TRow>): string | undefined {
 	return col.id ?? (col as { accessorKey?: string }).accessorKey
 }
 
@@ -32,15 +32,15 @@ function getColumnId<TRow extends object>(col: TanStackColumnDef<TRow>): string 
  * Derives the invariants from the final column list (system columns included).
  *
  * - system columns → always visible, pinned where their meta says so
- * - `pinning: 'left'` / `pinning: { side }` → static pin, always kept
+ * - `pinning: 'start'` / `pinning: { side }` → static pin, always kept
  * - `visibility: false` → hiding disabled, the column can never be hidden
  *
  * `initialSide` is deliberately **not** an invariant: it is only a seed (see
  * {@link mergePinningSeed}) and the user may move or unpin such a column.
  */
-export function buildColumnInvariants<TRow extends object>(columns: TanStackColumnDef<TRow>[]): ColumnInvariants {
-	const forcedLeft: string[] = []
-	const forcedRight: string[] = []
+export function buildColumnInvariants<TRow extends object>(columns: MappedColumnDef<TRow>[]): ColumnInvariants {
+	const forcedStart: string[] = []
+	const forcedEnd: string[] = []
 	const alwaysVisible: string[] = []
 
 	for (const col of columns) {
@@ -49,37 +49,37 @@ export function buildColumnInvariants<TRow extends object>(columns: TanStackColu
 		const meta = col.meta
 		if (meta?.isSystemColumn === true || meta?.visibility === false) alwaysVisible.push(colId)
 		const pin = meta?.pinning === false ? undefined : meta?.pinning?.side
-		if (pin === 'left') forcedLeft.push(colId)
-		else if (pin === 'right') forcedRight.push(colId)
+		if (pin === 'start') forcedStart.push(colId)
+		else if (pin === 'end') forcedEnd.push(colId)
 	}
 
-	return { forcedLeft, forcedRight, alwaysVisible }
+	return { forcedStart, forcedEnd, alwaysVisible }
 }
 
 /**
  * Merges the column-derived pinning seed with a consumer-provided `initialState.columnPinning`.
  *
  * A seeded column the consumer mentions in **either** array is left to the consumer; one it does
- * not mention at all keeps its seed. Unmentioned left seeds go in front and unmentioned right
- * seeds go last so `__selection__` stays leftmost and `__actions__` rightmost.
+ * not mention at all keeps its seed. Unmentioned start seeds go in front and unmentioned end
+ * seeds go last so `__selection__` stays outermost at the start edge and `__actions__` at the end.
  */
-export function mergePinningSeed(seed: PinningSeed, user: ColumnPinningState | undefined): ColumnPinningState {
-	if (user === undefined) return { left: [...seed.left], right: [...seed.right] }
+export function mergePinningSeed(seed: PinningSeed, user: Partial<ColumnPinningState> | undefined): ColumnPinningState {
+	if (user === undefined) return { start: [...seed.start], end: [...seed.end] }
 
-	const userLeft = user.left ?? []
-	const userRight = user.right ?? []
-	const mentioned = new Set([...userLeft, ...userRight])
+	const userStart = user.start ?? []
+	const userEnd = user.end ?? []
+	const mentioned = new Set([...userStart, ...userEnd])
 
 	return {
-		left: [...seed.left.filter((id) => !mentioned.has(id)), ...userLeft],
-		right: [...userRight, ...seed.right.filter((id) => !mentioned.has(id))],
+		start: [...seed.start.filter((id) => !mentioned.has(id)), ...userStart],
+		end: [...userEnd, ...seed.end.filter((id) => !mentioned.has(id))],
 	}
 }
 
 /**
  * Returns `current` unchanged when it already contains every `forcedHere` id and none of the
  * `forcedOther` ones; otherwise returns a corrected copy. Missing ids are prepended for the
- * left side and appended for the right so forced system columns stay on the outside.
+ * start side and appended for the end so forced system columns stay on the outside.
  */
 function enforcePinnedSide(
 	current: string[] | undefined,
@@ -103,22 +103,22 @@ function enforcePinnedSide(
  * React adapter compare slice references to decide whether to fire callbacks or re-sync, so a
  * gratuitous clone would cause spurious updates.
  */
-export function enforceColumnInvariants<TState extends Partial<TableState>>(
+export function enforceColumnInvariants<TState extends Partial<TableState<TableFeatures>>>(
 	state: TState,
 	invariants: ColumnInvariants,
 ): TState {
 	// A state that carries no `columnPinning` at all is left alone: for a partial controlled
 	// sync, inventing the slice would overwrite the pins already held in the store.
 	const pinning = state.columnPinning
-	const left =
+	const start =
 		pinning === undefined
 			? undefined
-			: enforcePinnedSide(pinning.left, invariants.forcedLeft, invariants.forcedRight, true)
-	const right =
+			: enforcePinnedSide(pinning.start, invariants.forcedStart, invariants.forcedEnd, true)
+	const end =
 		pinning === undefined
 			? undefined
-			: enforcePinnedSide(pinning.right, invariants.forcedRight, invariants.forcedLeft, false)
-	const pinningChanged = pinning !== undefined && (left !== pinning.left || right !== pinning.right)
+			: enforcePinnedSide(pinning.end, invariants.forcedEnd, invariants.forcedStart, false)
+	const pinningChanged = pinning !== undefined && (start !== pinning.start || end !== pinning.end)
 
 	const visibility = state.columnVisibility
 	const hiddenIds = visibility === undefined ? [] : invariants.alwaysVisible.filter((id) => visibility[id] === false)
@@ -128,9 +128,13 @@ export function enforceColumnInvariants<TState extends Partial<TableState>>(
 	const next: TState = { ...state }
 
 	if (pinningChanged) {
-		const nextPinning: ColumnPinningState = {}
-		if (left !== undefined) nextPinning.left = left
-		if (right !== undefined) nextPinning.right = right
+		// v9's `ColumnPinningState` requires both arrays, so a side that is absent on the way in
+		// comes out as `[]` rather than staying a missing key. The types say that cannot happen
+		// — `pinningChanged` implies `pinning !== undefined`, and both arrays are required on it
+		// — but this takes `Partial<TableState>` and callers cast, so a hand-written
+		// `columnPinning` carrying only one array does reach here and has the other reset.
+		// That is the right answer for v9: a state missing an array is not a valid one.
+		const nextPinning: ColumnPinningState = { start: start ?? [], end: end ?? [] }
 		next.columnPinning = nextPinning
 	}
 

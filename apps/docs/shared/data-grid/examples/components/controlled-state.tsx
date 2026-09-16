@@ -1,14 +1,38 @@
 'use client'
 
+import {
+	columnPinningFeature,
+	columnSizingFeature,
+	columnVisibilityFeature,
+	createPaginatedRowModel,
+	createSortedRowModel,
+	rowPaginationFeature,
+	rowSortingFeature,
+	sortFns,
+	tableFeatures,
+} from '@ez-kit/data-grid-core/features'
 import { useState } from 'react'
 
 import { DataGrid, useDataGrid } from 'shared/DataGrid'
 
 import { columns, INITIAL_DATA } from './_data'
 
-import type { TableState } from '@ez-kit/data-grid-react'
+import type { GridFeatures, TableState } from '@ez-kit/data-grid-react'
 
-type ControlledState = Pick<TableState, 'sorting' | 'pagination'>
+const features = tableFeatures({
+	// Structural: the grid shell reads column widths, visibility and pin groups to lay out
+	// the column grid. Everything below is this example's own.
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	rowSortingFeature,
+	rowPaginationFeature,
+	sortFns,
+	paginatedRowModel: createPaginatedRowModel(),
+	sortedRowModel: createSortedRowModel(),
+})
+
+type ControlledState = Pick<TableState<GridFeatures>, 'sorting' | 'pagination'>
 
 export function ControlledStateExample() {
 	const [tableState, setTableState] = useState<Partial<ControlledState>>({
@@ -17,6 +41,7 @@ export function ControlledStateExample() {
 	})
 
 	const table = useDataGrid({
+		features,
 		data: INITIAL_DATA,
 		columns,
 		sorting: true,

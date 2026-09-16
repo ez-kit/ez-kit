@@ -2,7 +2,7 @@ import { fireEvent } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { createColumns } from '../react-columns'
-import { renderWithComponents } from '../test-utils'
+import { TEST_FEATURES, renderWithComponents } from '../test-utils'
 
 import { DataGrid } from './data-grid'
 
@@ -18,6 +18,7 @@ describe('DataGrid.HeaderRow / DataGrid.HeaderCell', () => {
 	it('a custom cell for one column leaves the others on the default', () => {
 		const { container, getByText } = renderWithComponents(
 			<DataGrid
+				features={TEST_FEATURES}
 				data={DATA}
 				columns={COLUMNS}
 				sorting
@@ -69,6 +70,7 @@ describe('DataGrid.HeaderRow / DataGrid.HeaderCell', () => {
 	it('hands the default parts to a render function so they can be reused', () => {
 		const { container } = renderWithComponents(
 			<DataGrid
+				features={TEST_FEATURES}
 				data={DATA}
 				columns={COLUMNS}
 				sorting
@@ -134,6 +136,7 @@ describe('sort affordance vs. interactive header content', () => {
 
 		const { getByTestId } = renderWithComponents(
 			<DataGrid
+				features={TEST_FEATURES}
 				data={DATA}
 				columns={columns}
 				sorting={{ onChange: onSortChange }}
@@ -149,6 +152,7 @@ describe('sort affordance vs. interactive header content', () => {
 		const onSortChange = vi.fn()
 		const { getByText } = renderWithComponents(
 			<DataGrid
+				features={TEST_FEATURES}
 				data={DATA}
 				columns={COLUMNS}
 				sorting={{ onChange: onSortChange }}

@@ -3,12 +3,13 @@ title: Pinning
 description: Keep columns and rows in view while the rest of the grid scrolls — one feature, two axes.
 ---
 
-Pinning holds part of the grid still while the rest scrolls past it. Columns pin to the **left or
-right** edge and survive horizontal scroll; rows pin to the **top or bottom** and survive vertical
+Pinning holds part of the grid still while the rest scrolls past it. Columns pin to the **start or
+end** edge and survive horizontal scroll; rows pin to the **top or bottom** and survive vertical
 scroll. Both axes live under one `pinning` option, so a grid that wants both asks once:
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	pinning={{ column: true, row: { top: true, bottom: true } }}
@@ -16,7 +17,7 @@ scroll. Both axes live under one `pinning` option, so a grid that wants both ask
 />
 ```
 
-Scroll the grid below in either direction: **Name** stays against the left edge, and a row pinned
+Scroll the grid below in either direction: **Name** stays against the start edge, and a row pinned
 from its ⋮ menu stays against the top or bottom.
 
 <DataGridDocsExample exampleId='pinning-both' />
@@ -38,11 +39,25 @@ The table option opens the **UI** that lets a user pin: for columns that is the 
 column's ⋮ menu, for rows a pin control in the row-actions column. The starting pins come from
 somewhere else — the column defs, or `initialState`.
 
-## Which edge, and why it is physical
+## Which edge, and why columns are logical
 
-`left` / `right` and `top` / `bottom` are **physical** directions, not logical ones: a pinned column
-sticks to a viewport edge, and that edge does not flip when the grid runs right-to-left. Column
-`align`, which does flip, is the logical counterpart — see [Columns](/docs/data-grid/columns).
+Column pinning is **logical**: `start` and `end` mean the inline-start and inline-end edge, so they
+follow the writing direction — in a left-to-right grid `start` is the left edge, and in a
+right-to-left one it is the right edge. A column pinned `start` holds the position the reader's eye
+starts from, whichever way the grid runs, which is what a pinned id or name column is for. Column
+`align` is logical for the same reason — see [Columns](/docs/data-grid/columns).
+
+Row pinning stays **physical**: `top` and `bottom` are `top` and `bottom` in every direction,
+because the block axis does not flip with the writing direction.
+
+<Callout type='warn'>
+	This reversed in v9. Column pinning used to be `left` / `right`, described on this page as
+	deliberately physical. TanStack Table v9 removed the physical vocabulary from the engine, and the
+	grid follows it: `'left'` and `'right'` are gone from `pinning`, `pinning.side`,
+	`pinning.initialSide` and `state.columnPinning`, which is now `{ start, end }`. An unrecognised
+	key in `columnPinning` does not throw — it merges to "nothing pinned" — so a `{ right: [...] }`
+	copied from the old docs fails silently.
+</Callout>
 
 ## Seeds vs. invariants
 
@@ -50,14 +65,14 @@ A pin can be a starting value the user may undo, or a fixture they may not:
 
 ```tsx
 const columns = createColumns<Row>([
-	{ accessorKey: 'id', header: 'ID', pinning: 'left' }, // invariant — no pin control at all
-	{ accessorKey: 'name', header: 'Name', pinning: { initialSide: 'left' } }, // seed — user may unpin
+	{ accessorKey: 'id', header: 'ID', pinning: 'start' }, // invariant — no pin control at all
+	{ accessorKey: 'name', header: 'Name', pinning: { initialSide: 'start' } }, // seed — user may unpin
 ])
 ```
 
 The scalar form (or `pinning: { side }`) is enforced on every write path, so no `initialState`,
-controlled `state` or `table.setState` can move it. `initialSide` is only a seed. The full
-precedence is in the [State model](/docs/data-grid/state).
+controlled `state` or `table.setColumnPinning(…)` can move it. `initialSide` is only a seed. The
+full precedence is in the [State model](/docs/data-grid/state).
 
 ## See also
 
