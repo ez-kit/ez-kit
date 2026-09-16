@@ -273,9 +273,12 @@ green.
 
 ## 9. What is inherited
 
-**Not run, and labelled as such:**
+**Not run, or run against a tree that has since moved — labelled as such:**
 
-- **`@smoke` was never run** (recon G1). It is the only check that opens the ~89 data-grid examples no spec drives, it is excluded from every CI invocation (`--grep-invert @smoke` in `ci.yml:110` and two `package.json` scripts), and PR 4 rewrote all 111 examples. A missing `registry.ts` entry throws **only at page render** — lint, typecheck and build all pass. Whoever runs it must check the **count of tests run**, not the exit code: Playwright exits 0 on an empty selection and nothing sets a fail-on-empty.
+- **`@smoke` was run once and has not been re-run since** (recon G1). PR 4 ran it against the tree at `f07a5656` and got **298/298, exit 0, zero console errors, zero failure directories, both kits**. That result is real, and it is also **stale: eleven commits have landed on top of `f07a5656`** — `d279a5dc`, `86b5a546`, `2b916909`, `8825d1ac`, `dbc0b876`, `87304c0a`, `eaaa3098`, `dccc1d78`, `302cd0f9`, `3af550e1` and this document's own. Several changed example feature sets, and three changed the react package itself; the run predates even the chips fix. So neither "never run" nor a bare "298/298" is the honest statement — the honest one is that a passing smoke result exists for a tree eleven commits behind HEAD. This is the same distinction §0 and §2 draw about the full run straddling `d279a5dc`, applied to a result this PR did not produce.
+
+  Why it still matters: `@smoke` is the only check that opens the ~89 data-grid examples no spec drives, and it is excluded from every CI invocation (`--grep-invert @smoke` in `ci.yml:110` and two `package.json` scripts). A missing `registry.ts` entry throws **only at page render** — lint, typecheck and build all pass. Whoever re-runs it must check the **count of tests run**, not the exit code: Playwright exits 0 on an empty selection and nothing sets a fail-on-empty.
+
 - **No full-suite gate exists** (§0).
 - **Only the `shadcn` project was used for the mutation proofs.** The repairs are kit-agnostic by construction, but that is an argument, not a measurement.
 
