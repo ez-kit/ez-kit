@@ -360,6 +360,14 @@
 		"exportName": "ColumnPinningStaticExample"
 	},
 	{
+		"id": "column-pinning-rtl",
+		"label": "RTL Pin",
+		"group": "columns",
+		"groupLabel": "Columns",
+		"sourceFile": "components/pinning/rtl-columns.tsx",
+		"exportName": "ColumnPinningRtlExample"
+	},
+	{
 		"id": "pinning-both",
 		"label": "Both Axes",
 		"group": "pinning",
