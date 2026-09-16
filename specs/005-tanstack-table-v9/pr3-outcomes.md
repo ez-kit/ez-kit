@@ -237,6 +237,20 @@ Every guard was added only after watching its case fail, and each turned exactly
 `getResizeHandler()` and `getIsResizing()` needed no guards: both sit inside the
 `canResize ? … : null` subtree, which a grid without the feature never enters.
 
+### `RuntimeGridState` — considered and rejected
+
+A `TableState<GridFeatures>` variant with the feature slices marked optional would make every `?.`
+provably necessary and remove all 14 disables. Rejected: it is a **second spelling of one concept**
+— the repo would carry `TableState<GridFeatures>` for what the types say and `RuntimeGridState` for
+what is actually there, and a reader would have to know which applies where. That is the defect the
+option audits keep removing, and it is worse than a cited disable that a test holds honest. The gap
+it would paper over is already documented as the accepted cost of pinning the component layer, so
+the FEATURE GUARDS note extends an existing record rather than starting a second one.
+
+**Reopen it** if the disable count grows materially, or if a guard is ever added without a covering
+case — either breaks the property that makes the disables acceptable, which is that deleting a
+guard fails a test rather than going quiet.
+
 ### The guards trip `no-unnecessary-condition`, and that is the pinning's cost showing
 
 The rule reads `TableFeatures` — the widest and therefore _fullest_ instantiation, where every

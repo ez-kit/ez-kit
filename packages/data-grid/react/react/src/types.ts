@@ -74,6 +74,19 @@ export type GridFeatures = TableFeatures
  * `columnSizingFeature` — are structural rather than guarded: the shell lays out a column grid and
  * needs widths and pin groups to do it. That test asserts they still throw, so the boundary between
  * "structural" and "defect" is executable rather than asserted.
+ *
+ * **Considered and rejected: a `RuntimeGridState` type** — `TableState<GridFeatures>` with the
+ * feature slices marked optional — which would make every `?.` provably necessary and remove the
+ * disables entirely. It was turned down because it is a *second spelling of one concept*: the repo
+ * would carry `TableState<GridFeatures>` for what the types say and `RuntimeGridState` for what is
+ * actually there, and every reader would have to know which applies where. That is the defect the
+ * option audits in AGENTS.md keep removing, and it is worse than a cited disable that a test
+ * already holds honest.
+ *
+ * Reopen it if the disable count grows materially, or if a guard is ever added **without** a
+ * covering case in `feature-optionality.test.tsx`. Either would break the property that makes the
+ * disables acceptable — that deleting a guard fails a test rather than going quiet — and at that
+ * point the type is the better answer.
  */
 
 /**
