@@ -70,7 +70,7 @@ array element. The render-prop shape is what makes the per-entry component set r
 ```ts
 type ArrayScope<TItem> = {
 	items: readonly ArrayItemScope<TItem>[]
-	add: (value?: TItem) => void // defaults to newItem
+	add: () => void // appends newItem; see the note below on why it takes nothing
 	insert: (index: number, value?: TItem) => void
 	remove: (index: number) => void
 	move: (from: number, to: number) => void
@@ -99,6 +99,27 @@ members are sugar over the indexed ones, documented as such.
 
 _Rejected — `swap`, `replace`, `clear`._ `swap` is `move`; `replace` is a write to the field at a
 path, which the author already has; `clear` had no caller. YAGNI.
+
+_Revised during implementation — `add` takes nothing._ It was first specified as
+`add: (value?: TItem) => void`, and that shape is unsafe in a way nothing in the types announces.
+`add` would then be the only scope member with zero mandatory parameters, so it is the only one an
+author can write as `onClick={add}` — and whether that compiles depends on whether `TItem` happens
+to be structurally satisfied by a React `MouseEvent`. For `{ firstName: string }` it is a type
+error, which is why the hole is easy to miss; for `{ type: string }` — an entry with a "kind"
+field, which is an ordinary thing to model — it compiles clean and appends the synthetic event as
+an array entry. The same defect bit the package internally: wiring the kit's `onAdd: add` passed
+the click event in as the new entry and broke a pre-existing test, and was patched at that one call
+site with a wrapper the public surface has no equivalent of.
+
+A runtime guard was rejected: recognising a synthetic event means sniffing `nativeEvent` or
+`_reactName`, a heuristic that can false-positive on a legitimate item, and AGENTS.md already
+records this repo's position against probing a value instead of fixing the contract.
+
+So the overload goes. `add: () => void` is arity-safe by construction — a handler may pass whatever
+it likes and it is ignored. Nothing is lost: appending a specific value is
+`insert(items.length, value)`, the two were one operation spelled twice, and collapsing those is
+what the paragraph above already does to `swap`. At the time of the decision **no caller anywhere**
+— plan, tests or docs examples — passed a value to `add`.
 
 _Rejected — exposing only the raw TanStack field._ It cannot carry `newItem`, cannot carry
 `canAdd`, and above all cannot carry **entry identity**: TanStack indexes, and `specs/005`
