@@ -17,6 +17,7 @@ import { useVirtualContext } from './virtual-context'
 
 import type { ErasedRow, GridFeatures } from '../types'
 import type { ExpandedRowProps } from '../use-data-grid'
+import type { DataGridRowProps } from './row'
 import type { Row, Table } from '@tanstack/table-core'
 import type { ComponentType, ReactNode } from 'react'
 
@@ -32,21 +33,65 @@ export type DataGridBodyRenderArgs<TRow extends object = ErasedRow> = {
 	table: Table<GridFeatures, TRow>
 	/** The rows of the current row model, already sorted / filtered / paginated. */
 	rows: Row<GridFeatures, TRow>[]
+	/**
+	 * Everything the built-in body would have rendered inside the kit's `Tbody`, in order:
+	 * {@link creatingRow}, {@link pinnedTopRows}, {@link centerRows}, {@link pinnedBottomRows},
+	 * {@link loadMoreFooter}, {@link refetchOverlay}.
+	 *
+	 * Render it and add beside it, or take the parts one at a time. Composing a body used to
+	 * mean giving up all six at once.
+	 */
+	content: ReactNode
+	/** The draft row the `creating` feature mounts above the data, or `null` when it has none. */
+	creatingRow: ReactNode
+	/**
+	 * The rows pinned to the top, each with its expanded panel and its pin offset measured.
+	 * `null` when row pinning is off.
+	 */
+	pinnedTopRows: ReactNode
+	/** The unpinned rows, each with its expanded panel — the whole row model when pinning is off. */
+	centerRows: ReactNode
+	/** The rows pinned to the bottom, measured like {@link pinnedTopRows}. */
+	pinnedBottomRows: ReactNode
+	/** The infinite-scroll footer: the sentinel that fetches, or the trigger that asks to. */
+	loadMoreFooter: ReactNode
+	/** The overlay covering the rows while a background refetch is in flight, or `null`. */
+	refetchOverlay: ReactNode
 }
+
+/**
+ * The body's parts without the three the caller does not build: `table` and `rows` are handed
+ * in, and `content` is the parts composed — so naming it here would be circular.
+ */
+type BodyParts<TRow extends object> = Omit<DataGridBodyRenderArgs<TRow>, 'table' | 'rows' | 'content'>
 
 export type DataGridBodyProps<TRow extends object = ErasedRow> = {
 	/**
 	 * Custom body content, rendered inside the kit's `<Tbody>`.
 	 *
-	 * Omit it for the built-in body — pinned rows, the creating row, expanded panels, the
-	 * loading / empty / no-results fallbacks, the infinite-scroll footer and the refetch
-	 * overlay. Supplying `children` opts out of **all** of that in exchange for full control;
-	 * compose the rows yourself from `<DataGrid.Row>` (or anything else).
+	 * Omit it for the built-in body. The render-function form hands back everything that body
+	 * would have rendered *inside* the `Tbody` — `content`, or its six parts one at a time
+	 * ({@link DataGridBodyRenderArgs}) — so adding to the body no longer costs you the pinned
+	 * rows, the creating row, the expanded panels, the infinite footer and the refetch overlay.
 	 *
-	 * @example
+	 * Four branches stay out of reach, because each replaces the whole `<tbody>` rather than
+	 * filling one: the **virtualized** body, and the **loading**, **empty** and **no-results**
+	 * fallbacks. `children` is checked before all four, so a custom body renders instead of
+	 * them — including while the grid is loading or has nothing to show. A grid that wants both
+	 * gates its own `children` on `useDataGridState`, or keeps the built-in body and customises
+	 * further down at `<DataGrid.Row>`.
+	 *
+	 * @example — replace the rows
 	 * ```tsx
 	 * <DataGrid.Body>
 	 *   {({ rows }) => rows.map((row) => <DataGrid.Row key={row.id} row={row} />)}
+	 * </DataGrid.Body>
+	 * ```
+	 *
+	 * @example — keep the built-in body and add to it
+	 * ```tsx
+	 * <DataGrid.Body>
+	 *   {({ content }) => <>{content}<tr data-slot='tr'><td colSpan={99}>Σ</td></tr></>}
 	 * </DataGrid.Body>
 	 * ```
 	 */
@@ -110,13 +155,70 @@ export function Body<TRow extends object = ErasedRow>({ children }: DataGridBody
 		bottomRows.map((row) => row.id),
 	)
 
+	/**
+	 * The six pieces the built-in body puts inside its `Tbody`, built on demand.
+	 *
+	 * A function rather than values computed up front: the virtualized branch below returns a
+	 * body of its own, and building a row element per row of the model is exactly the work
+	 * virtualization exists to avoid. Both callers sit past every hook above, so calling it
+	 * conditionally is safe.
+	 */
+	function buildParts(): BodyParts<TRow> {
+		const expandedComponent = table.grid.expanding.component as ComponentType<ExpandedRowProps<object>> | undefined
+		const creatingConfig = table.options.creating
+		const creatingMode = creatingConfig?.mode ?? 'row'
+		const showCreatingRow =
+			creatingConfig !== undefined && (creatingMode === 'pin-row' || (creatingMode === 'row' && isCreatingOpen))
+		const centerModelRows = hasPinning ? table.getCenterRows() : table.getRowModel().rows
+		const showRefetchOverlay = isFetching && !isPending && table.getRowModel().rows.length > 0
+
+		/** One row plus the expanded panel that belongs under it — the unit every group repeats. */
+		const renderRow = (row: Row<GridFeatures, TRow>, extra?: Partial<DataGridRowProps<TRow>>) => (
+			<Fragment key={row.id}>
+				<DataGridRow
+					row={row}
+					{...extra}
+				/>
+				{expandedComponent && row.getIsExpanded() && <ExpandedRow row={row} />}
+			</Fragment>
+		)
+
+		return {
+			creatingRow: showCreatingRow ? <CreatingRow /> : null,
+			pinnedTopRows: topRows.map((row, index) => renderRow(row, { 'data-pinned': 'top', ref: registerTopRow(index) })),
+			centerRows: centerModelRows.map((row) => renderRow(row)),
+			pinnedBottomRows: bottomRows.map((row, index) =>
+				renderRow(row, { 'data-pinned': 'bottom', ref: registerBottomRow(index) }),
+			),
+			loadMoreFooter: <LoadMoreFooter />,
+			refetchOverlay: showRefetchOverlay ? (
+				<RefetchOverlayHost columnCount={table.getVisibleLeafColumns().length} />
+			) : null,
+		}
+	}
+
+	/** The parts in the order the built-in body renders them. */
+	const composeParts = (parts: BodyParts<TRow>): ReactNode => (
+		<>
+			{parts.creatingRow}
+			{parts.pinnedTopRows}
+			{parts.centerRows}
+			{parts.pinnedBottomRows}
+			{parts.loadMoreFooter}
+			{parts.refetchOverlay}
+		</>
+	)
+
 	// Custom body: the consumer owns the whole `<tbody>`. Checked before every built-in
-	// branch (virtualization, fallbacks, pinned rows) — those all compose rows, which is
-	// precisely the job being taken over.
+	// branch (virtualization, fallbacks), because those replace the body rather than fill it
+	// — see the note on `children`. The parts are handed over, so owning the `<tbody>` no
+	// longer means giving up what goes in it.
 	if (children !== undefined) {
+		if (typeof children !== 'function') return <Tbody data-slot='tbody'>{children}</Tbody>
+		const parts = buildParts()
 		return (
 			<Tbody data-slot='tbody'>
-				{typeof children === 'function' ? children({ table, rows: table.getRowModel().rows }) : children}
+				{children({ ...parts, table, rows: table.getRowModel().rows, content: composeParts(parts) })}
 			</Tbody>
 		)
 	}
@@ -124,20 +226,17 @@ export function Body<TRow extends object = ErasedRow>({ children }: DataGridBody
 	if (rowVirtualizer) return <VirtualBody />
 
 	const fallbacks = table.grid.fallbacks
-	const expandedComponent = table.grid.expanding.component as ComponentType<ExpandedRowProps<object>> | undefined
 
 	if (isPending && fallbacks.loading.enabled) {
 		return <LoadingBody />
 	}
 
+	const allRows = table.getRowModel().rows
+	const rawDataLength = (table.options.data as unknown[]).length
 	const creatingConfig = table.options.creating
 	const creatingMode = creatingConfig?.mode ?? 'row'
 	const showCreatingRow =
 		creatingConfig !== undefined && (creatingMode === 'pin-row' || (creatingMode === 'row' && isCreatingOpen))
-
-	const centerRows = hasPinning ? table.getCenterRows() : table.getRowModel().rows
-	const allRows = table.getRowModel().rows
-	const rawDataLength = (table.options.data as unknown[]).length
 
 	if (!showCreatingRow && allRows.length === 0) {
 		if (rawDataLength === 0 && fallbacks.empty.enabled) {
@@ -148,40 +247,5 @@ export function Body<TRow extends object = ErasedRow>({ children }: DataGridBody
 		}
 	}
 
-	const columnCount = table.getVisibleLeafColumns().length
-	const showRefetchOverlay = isFetching && !isPending && allRows.length > 0
-
-	return (
-		<Tbody data-slot='tbody'>
-			{showCreatingRow && <CreatingRow />}
-			{topRows.map((row, index) => (
-				<Fragment key={row.id}>
-					<DataGridRow
-						row={row}
-						data-pinned='top'
-						ref={registerTopRow(index)}
-					/>
-					{expandedComponent && row.getIsExpanded() && <ExpandedRow row={row} />}
-				</Fragment>
-			))}
-			{centerRows.map((row) => (
-				<Fragment key={row.id}>
-					<DataGridRow row={row} />
-					{expandedComponent && row.getIsExpanded() && <ExpandedRow row={row} />}
-				</Fragment>
-			))}
-			{bottomRows.map((row, index) => (
-				<Fragment key={row.id}>
-					<DataGridRow
-						row={row}
-						data-pinned='bottom'
-						ref={registerBottomRow(index)}
-					/>
-					{expandedComponent && row.getIsExpanded() && <ExpandedRow row={row} />}
-				</Fragment>
-			))}
-			<LoadMoreFooter />
-			{showRefetchOverlay && <RefetchOverlayHost columnCount={columnCount} />}
-		</Tbody>
-	)
+	return <Tbody data-slot='tbody'>{composeParts(buildParts())}</Tbody>
 }

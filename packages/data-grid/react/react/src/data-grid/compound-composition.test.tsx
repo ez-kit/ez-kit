@@ -238,3 +238,71 @@ describe('sorting.toolbar — the UI flag that moved out of core', () => {
 		expect(screen.getByRole('toolbar')).toBeInTheDocument()
 	})
 })
+
+/**
+ * Owning the `<tbody>` used to mean giving up everything the built-in body puts in it. The parts
+ * are handed back now, so a custom body adds rather than replaces.
+ */
+describe('DataGrid.Body — content', () => {
+	const rowCount = (container: HTMLElement) => container.querySelectorAll('[data-slot="tr"][data-row-id]').length
+
+	it('composes to the same rows the built-in body renders', () => {
+		const builtIn = renderComposed(
+			<DataGrid.Table>
+				<DataGrid.Body />
+			</DataGrid.Table>,
+		)
+		const expected = rowCount(builtIn.container)
+		expect(expected).toBeGreaterThan(0)
+		builtIn.unmount()
+
+		const composed = renderComposed(
+			<DataGrid.Table>
+				<DataGrid.Body>{({ content }) => content}</DataGrid.Body>
+			</DataGrid.Table>,
+		)
+		expect(rowCount(composed.container)).toBe(expected)
+	})
+
+	it('keeps the rows while the body adds to them', () => {
+		const { container } = renderComposed(
+			<DataGrid.Table>
+				<DataGrid.Body>
+					{({ content }) => (
+						<>
+							{content}
+							<tr
+								data-slot='tr'
+								data-testid='summary'
+							>
+								<td>Σ</td>
+							</tr>
+						</>
+					)}
+				</DataGrid.Body>
+			</DataGrid.Table>,
+		)
+
+		expect(rowCount(container)).toBe(TEST_ROWS.length)
+		expect(screen.getByTestId('summary')).toBeInTheDocument()
+	})
+
+	it('hands the parts over one at a time', () => {
+		const { container } = renderComposed(
+			<DataGrid.Table>
+				<DataGrid.Body>
+					{({ creatingRow, centerRows, pinnedTopRows, pinnedBottomRows }) => {
+						// Nothing is creating and nothing is pinned, so those three are empty and the
+						// centre carries the whole model.
+						expect(creatingRow).toBeNull()
+						expect(pinnedTopRows).toHaveLength(0)
+						expect(pinnedBottomRows).toHaveLength(0)
+						return centerRows
+					}}
+				</DataGrid.Body>
+			</DataGrid.Table>,
+		)
+
+		expect(rowCount(container)).toBe(TEST_ROWS.length)
+	})
+})
