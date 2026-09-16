@@ -85,7 +85,7 @@ const FOCUSABLE_SELECTOR = 'input, select, textarea, button, [contenteditable="t
  * - {@link SystemCell} — for selection / expand / actions / row-pin system columns
  * - {@link BodyDataCell} — for regular data columns (with narrow editing subscription)
  *
- * Emits `data-slot="td"` plus `data-pinned="left" | "right"` for pinned columns;
+ * Emits `data-slot="td"` plus `data-pinned="start" | "end"` for pinned columns;
  * pin offsets are written as CSS custom properties via {@link getCommonPinStyles}.
  * The structural stylesheet shipped with this package applies the actual
  * `position: sticky` + offsets.

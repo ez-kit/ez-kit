@@ -42,7 +42,7 @@ export type DataGridFooterCellProps<TRow extends object = any> = {
 /**
  * One `<td>` of the table footer.
  *
- * Emits `data-slot="td"`, plus `data-pinned="left" | "right"` for a pinned column and
+ * Emits `data-slot="td"`, plus `data-pinned="start" | "end"` for a pinned column and
  * `data-align` from the column's `align.footer` — the same chrome the default `<tfoot>` applies,
  * which is the whole point of having this component rather than a hand-written `<td>`.
  */

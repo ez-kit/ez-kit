@@ -7,7 +7,7 @@ export const crudColumns = createColumns<Employee>([
 		accessorKey: 'name',
 		header: 'Name',
 		visibility: false,
-		pinning: { initialSide: 'left' },
+		pinning: { initialSide: 'start' },
 		filtering: { operators: true },
 	},
 	{

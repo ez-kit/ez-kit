@@ -8,12 +8,12 @@ import { DataGrid } from 'shared/DataGrid'
 import { PRODUCT_DATA, type Product } from './_data'
 
 const colPinColumns = createColumns<Product>([
-	{ accessorKey: 'name', header: 'Name', width: 250, pinning: { initialSide: 'left' } },
+	{ accessorKey: 'name', header: 'Name', width: 250, pinning: { initialSide: 'start' } },
 	{
 		accessorKey: 'status',
 		header: 'Status',
 		width: 120,
-		pinning: { initialSide: 'left' },
+		pinning: { initialSide: 'start' },
 		cell: {
 			type: 'badge',
 			config: {
@@ -32,13 +32,13 @@ const colPinColumns = createColumns<Product>([
 		width: 80,
 		cell: { type: 'image', config: { width: 40, height: 40, alt: 'Product' } },
 	},
-	{ accessorKey: 'website', header: 'Website', width: 140, cell: { type: 'link' }, pinning: { initialSide: 'right' } },
+	{ accessorKey: 'website', header: 'Website', width: 140, cell: { type: 'link' }, pinning: { initialSide: 'end' } },
 	{
 		accessorKey: 'stock',
 		header: 'Stock %',
 		width: 180,
 		cell: { type: 'progress', config: { max: 100 } },
-		pinning: { initialSide: 'right' },
+		pinning: { initialSide: 'end' },
 	},
 ])
 

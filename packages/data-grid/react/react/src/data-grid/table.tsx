@@ -23,11 +23,15 @@ const SCROLLPORT_ATTR = 'data-scrollport'
 const SCROLLPORT_AXES = 'x y'
 
 function updateScrollShadows(scrollEl: HTMLElement, wrapperEl: HTMLElement): void {
-	const scrolledLeft = scrollEl.scrollLeft > 0
+	// `scrollLeft` is signed under RTL (0 at the inline-start edge, negative towards the end),
+	// so the two booleans are "scrolled away from the inline-start edge" and "not yet at the
+	// inline-end one" in both directions once the sign is taken off.
+	const offset = Math.abs(scrollEl.scrollLeft)
 	const maxScroll = scrollEl.scrollWidth - scrollEl.clientWidth
-	const scrolledRight = maxScroll > 1 && scrollEl.scrollLeft < maxScroll - 1
-	wrapperEl.style.setProperty('--dg-pin-left-shadow', scrolledLeft ? '1' : '0')
-	wrapperEl.style.setProperty('--dg-pin-right-shadow', scrolledRight ? '1' : '0')
+	const scrolledFromStart = offset > 0
+	const scrolledFromEnd = maxScroll > 1 && offset < maxScroll - 1
+	wrapperEl.style.setProperty('--dg-pin-start-shadow', scrolledFromStart ? '1' : '0')
+	wrapperEl.style.setProperty('--dg-pin-end-shadow', scrolledFromEnd ? '1' : '0')
 }
 
 function useScrollShadows(
@@ -108,7 +112,7 @@ export type DataGridTableProps<TRow extends object = any> = {
  * CSS custom properties (column widths, grid-template-columns).
  *
  * Pin shadows: a single absolutely-positioned overlay div sits outside the
- * scroll container. CSS vars `--dg-pin-left-shadow` / `--dg-pin-right-shadow`
+ * scroll container. CSS vars `--dg-pin-start-shadow` / `--dg-pin-end-shadow`
  * on the wrapper drive their opacity.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

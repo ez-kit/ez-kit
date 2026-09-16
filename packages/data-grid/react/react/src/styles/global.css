@@ -83,13 +83,16 @@ table[data-slot='table'] {
 [data-slot='td'][data-pinned] {
 	@apply sticky z-[1];
 }
-[data-slot='th'][data-pinned='left'],
-[data-slot='td'][data-pinned='left'] {
-	left: var(--dg-pin-left);
+/* Logical, not physical: a pinned column sticks to the inline-start or inline-end edge, and
+   which physical edge that is flips under RTL. Row pinning below stays `top` / `bottom` — a
+   vertical axis has no logical names. */
+[data-slot='th'][data-pinned='start'],
+[data-slot='td'][data-pinned='start'] {
+	inset-inline-start: var(--dg-pin-start);
 }
-[data-slot='th'][data-pinned='right'],
-[data-slot='td'][data-pinned='right'] {
-	right: var(--dg-pin-right);
+[data-slot='th'][data-pinned='end'],
+[data-slot='td'][data-pinned='end'] {
+	inset-inline-end: var(--dg-pin-end);
 }
 
 /* ── resizable th — resizer is absolutely positioned inside ──────────── */
@@ -200,10 +203,10 @@ table[data-slot='table'] {
 
 /* ── pin-shadow overlay ───────────────────────────────────────────────── */
 
-/* Full-size, non-collapsing layer. Each shadow is positioned independently via
-   its own inline `left`/`right` offset (set in pin-shadow-overlay.tsx), so the
-   two shadows never share — and never collapse — a single sized box even when
-   the combined pinned-column width approaches the viewport. */
+/* Full-size, non-collapsing layer. Each shadow is positioned independently via its own
+   inline `inset-inline-start` / `inset-inline-end` offset (set in pin-shadow-overlay.tsx),
+   so the two shadows never share — and never collapse — a single sized box even when the
+   combined pinned-column width approaches the viewport. */
 [data-slot='pin-shadow-overlay'] {
 	@apply absolute inset-0 pointer-events-none overflow-hidden;
 }

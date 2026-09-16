@@ -8,7 +8,7 @@ import { DataGrid } from 'shared/DataGrid'
 import { PRODUCT_DATA, type Product } from '../_data'
 
 const staticPinColumns = createColumns<Product>([
-	{ accessorKey: 'name', header: 'Name', width: 220, pinning: 'left' },
+	{ accessorKey: 'name', header: 'Name', width: 220, pinning: 'start' },
 	{ accessorKey: 'category', header: 'Category', width: 220 },
 	{ accessorKey: 'status', header: 'Status', width: 200 },
 	{ accessorKey: 'website', header: 'Website', width: 220, cell: { type: 'link' } },

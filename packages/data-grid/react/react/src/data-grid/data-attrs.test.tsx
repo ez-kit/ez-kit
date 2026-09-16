@@ -87,7 +87,7 @@ describe('headless data-* contract', () => {
 
 	it('pinned columns emit data-pinned on th', () => {
 		const COLS_PINNED = createColumns<User>([
-			{ accessorKey: 'name', header: 'Name', pinning: { side: 'left' } },
+			{ accessorKey: 'name', header: 'Name', pinning: { side: 'start' } },
 			{ accessorKey: 'age', header: 'Age' },
 		])
 		const table = createTable<GridFeatures, User>({
@@ -97,12 +97,12 @@ describe('headless data-* contract', () => {
 			pinning: { column: true },
 		})
 		const { container } = renderWithComponents(<DataGrid table={prepareDataGridTable(table)} />)
-		expect(container.querySelector("[data-slot='th'][data-pinned='left']")).not.toBeNull()
+		expect(container.querySelector("[data-slot='th'][data-pinned='start']")).not.toBeNull()
 	})
 
 	it('renders pin-shadow overlays via data-pin-shadow when columns are pinned', () => {
 		const COLS_PINNED = createColumns<User>([
-			{ accessorKey: 'name', header: 'Name', pinning: { side: 'left' } },
+			{ accessorKey: 'name', header: 'Name', pinning: { side: 'start' } },
 			{ accessorKey: 'age', header: 'Age' },
 		])
 		const table = createTable<GridFeatures, User>({
@@ -112,20 +112,20 @@ describe('headless data-* contract', () => {
 			pinning: { column: true },
 		})
 		const { container } = renderWithComponents(<DataGrid table={prepareDataGridTable(table)} />)
-		expect(container.querySelector("[data-pin-shadow='left']")).not.toBeNull()
+		expect(container.querySelector("[data-pin-shadow='start']")).not.toBeNull()
 		expect(container.querySelector("[data-slot='pin-shadow-overlay']")).not.toBeNull()
 	})
 
 	// Regression (#42): with >1 pinned column per side the pixel offset must live on
-	// each shadow div independently (left = Σ left widths, right = Σ right widths) — NOT
-	// as `left`/`right` on a shared overlay box. The shared box was sized to the gap
+	// each shadow div independently (start = Σ start widths, end = Σ end widths) — NOT
+	// as an inset on a shared overlay box. The shared box was sized to the gap
 	// between the pinned blocks and `overflow: hidden`, so once the combined pinned width
 	// reached the viewport it collapsed to zero width and clipped BOTH shadows.
 	it('positions each pin shadow independently by the summed width of that side (>1 pinned column)', () => {
 		const COLS_MULTI = createColumns<User>([
-			{ accessorKey: 'name', header: 'Name', width: 180, pinning: { side: 'left' } },
-			{ accessorKey: 'age', header: 'Age', width: 120, pinning: { side: 'left' } },
-			{ accessorKey: 'id', header: 'Id', width: 90, pinning: { side: 'right' } },
+			{ accessorKey: 'name', header: 'Name', width: 180, pinning: { side: 'start' } },
+			{ accessorKey: 'age', header: 'Age', width: 120, pinning: { side: 'start' } },
+			{ accessorKey: 'id', header: 'Id', width: 90, pinning: { side: 'end' } },
 		])
 		const table = createTable<GridFeatures, User>({
 			features: TEST_FEATURES,
@@ -136,16 +136,40 @@ describe('headless data-* contract', () => {
 		const { container } = renderWithComponents(<DataGrid table={prepareDataGridTable(table)} />)
 
 		const overlay = container.querySelector<HTMLElement>("[data-slot='pin-shadow-overlay']")
-		const left = container.querySelector<HTMLElement>("[data-pin-shadow='left']")
-		const right = container.querySelector<HTMLElement>("[data-pin-shadow='right']")
+		const start = container.querySelector<HTMLElement>("[data-pin-shadow='start']")
+		const end = container.querySelector<HTMLElement>("[data-pin-shadow='end']")
 
 		// The offset is carried by each shadow div, summed across that side's pinned columns
-		// (left = 180 + 120 = 300; right = 90)…
-		expect(left?.style.left).toBe('300px')
-		expect(right?.style.right).toBe('90px')
+		// (start = 180 + 120 = 300; end = 90) — and logical, so it survives RTL.
+		expect(start?.style.insetInlineStart).toBe('300px')
+		expect(end?.style.insetInlineEnd).toBe('90px')
 		// …and NOT by the overlay, which must stay a full-size, non-collapsing layer.
-		expect(overlay?.style.left).toBe('')
-		expect(overlay?.style.right).toBe('')
+		expect(overlay?.style.insetInlineStart).toBe('')
+		expect(overlay?.style.insetInlineEnd).toBe('')
+	})
+
+	// The two opacity variables are the one half of the pin-shadow contract that fails OPEN:
+	// they are written with `style.setProperty` — a string TypeScript never sees — and read by
+	// each kit's stylesheet through `var(--dg-pin-…-shadow, 0)`. Miss a name on either side and
+	// the shadow is permanently invisible, with nothing red. This asserts the writer's half;
+	// `apps/docs/test/css-custom-properties.test.ts` asserts both halves still spell the same names.
+	it('writes the pin-shadow opacity variables onto the table wrapper', () => {
+		const COLS_PINNED = createColumns<User>([
+			{ accessorKey: 'name', header: 'Name', pinning: { side: 'start' } },
+			{ accessorKey: 'age', header: 'Age' },
+		])
+		const table = createTable<GridFeatures, User>({
+			features: TEST_FEATURES,
+			data: USERS,
+			columns: COLS_PINNED,
+			pinning: { column: true },
+		})
+		const { container } = renderWithComponents(<DataGrid table={prepareDataGridTable(table)} />)
+
+		const wrapper = container.querySelector<HTMLElement>("[data-slot='table-wrapper']")
+		// jsdom lays nothing out, so both read '0' — the value is not the point, the name is.
+		expect(wrapper?.style.getPropertyValue('--dg-pin-start-shadow')).toBe('0')
+		expect(wrapper?.style.getPropertyValue('--dg-pin-end-shadow')).toBe('0')
 	})
 
 	// Regression: the summed model widths are only the pre-measurement fallback. Whenever the
@@ -155,9 +179,9 @@ describe('headless data-* contract', () => {
 	// measured edge of the pinned block must win.
 	it('positions each pin shadow at the measured DOM edge of its pinned block', () => {
 		const COLS_MULTI = createColumns<User>([
-			{ accessorKey: 'name', header: 'Name', width: 180, pinning: { side: 'left' } },
-			{ accessorKey: 'age', header: 'Age', width: 120, pinning: { side: 'left' } },
-			{ accessorKey: 'id', header: 'Id', width: 90, pinning: { side: 'right' } },
+			{ accessorKey: 'name', header: 'Name', width: 180, pinning: { side: 'start' } },
+			{ accessorKey: 'age', header: 'Age', width: 120, pinning: { side: 'start' } },
+			{ accessorKey: 'id', header: 'Id', width: 90, pinning: { side: 'end' } },
 		])
 		const table = createTable<GridFeatures, User>({
 			features: TEST_FEATURES,
@@ -173,8 +197,8 @@ describe('headless data-* contract', () => {
 			configurable: true,
 			value: function rect(this: Element): DOMRect {
 				if (this.matches("[data-slot='pin-shadow-overlay']")) return { left: 0, right: 800, width: 800 } as DOMRect
-				if (this.matches("[data-slot='th'][data-pinned='left']")) return { right: 304 } as DOMRect
-				if (this.matches("[data-slot='th'][data-pinned='right']")) return { left: 706 } as DOMRect
+				if (this.matches("[data-slot='th'][data-pinned='start']")) return { right: 304 } as DOMRect
+				if (this.matches("[data-slot='th'][data-pinned='end']")) return { left: 706 } as DOMRect
 				// Everything else keeps jsdom's own answer, which is a zero rect.
 				return { left: 0, right: 0, width: 0 } as DOMRect
 			},
@@ -182,8 +206,8 @@ describe('headless data-* contract', () => {
 
 		try {
 			const { container } = renderWithComponents(<DataGrid table={prepareDataGridTable(table)} />)
-			expect(container.querySelector<HTMLElement>("[data-pin-shadow='left']")?.style.left).toBe('304px')
-			expect(container.querySelector<HTMLElement>("[data-pin-shadow='right']")?.style.right).toBe('94px')
+			expect(container.querySelector<HTMLElement>("[data-pin-shadow='start']")?.style.insetInlineStart).toBe('304px')
+			expect(container.querySelector<HTMLElement>("[data-pin-shadow='end']")?.style.insetInlineEnd).toBe('94px')
 		} finally {
 			if (original) Object.defineProperty(Element.prototype, 'getBoundingClientRect', original)
 		}

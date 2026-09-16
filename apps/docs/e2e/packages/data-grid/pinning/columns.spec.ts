@@ -1,8 +1,8 @@
 import { boxOf, expect, test } from '../../../fixtures'
 
 /**
- * Column pinning on the `column-pinning-static` example: `name` is pinned left by the column
- * def, the remaining four columns are 220px each, so the table overflows its container and
+ * Column pinning on the `column-pinning-static` example: `name` is pinned to the inline-start
+ * edge by the column def, the remaining four columns are 220px each, so the table overflows its container and
  * there is something to scroll.
  *
  * The point of the feature is not the attribute but the behaviour it drives — a pinned column
@@ -27,10 +27,10 @@ test.beforeEach(async ({ grid }) => {
 })
 
 test('a pinned column marks its header and its body cells', async ({ grid, page }) => {
-	await expect(grid.header(PINNED)).toHaveAttribute('data-pinned', 'left')
+	await expect(grid.header(PINNED)).toHaveAttribute('data-pinned', 'start')
 	await expect(grid.header(FREE)).not.toHaveAttribute('data-pinned', /.*/u)
 
-	const pinnedCells = page.locator('[data-slot="tbody"] [data-slot="td"][data-pinned="left"]')
+	const pinnedCells = page.locator('[data-slot="tbody"] [data-slot="td"][data-pinned="start"]')
 	await expect(pinnedCells).toHaveCount(await grid.rows().count())
 })
 
