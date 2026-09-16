@@ -10,12 +10,13 @@ Every interactive surface (sort, filter, pagination, selection, visibility, pinn
 <DataGridDocsExample exampleId='controlled-state' />
 
 ```ts
-const [tableState, setTableState] = useState<Partial<TableState>>({
+const [tableState, setTableState] = useState<Partial<TableState<GridFeatures>>>({
 	sorting: [{ id: 'name', desc: false }],
 	pagination: { pageIndex: 0, pageSize: 3 },
 })
 
 const table = useDataGrid({
+	features,
 	data,
 	columns,
 	sorting: true,

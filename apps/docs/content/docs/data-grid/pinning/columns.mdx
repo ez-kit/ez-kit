@@ -20,6 +20,7 @@ const columns = createColumns<Row>([
 ])
 
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	pinning={{ column: true }}
@@ -34,7 +35,8 @@ then scroll sideways:
 ## Seeds and invariants
 
 A column the user is not meant to move takes the **scalar** form. It is an invariant, not a seed:
-the column keeps its pin no matter what `initialState`, controlled `state` or `table.setState` says,
+the column keeps its pin no matter what `initialState`, controlled `state` or
+`table.setColumnPinning(…)` says,
 and its ⋮ menu has no pin section at all — a state that unpinned it could never be undone by the
 user.
 

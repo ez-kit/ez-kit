@@ -22,6 +22,11 @@ Below is the same grid running in both flavors. Use the toggle to flip between t
 
 The example renders against the real published package surface — what you copy is what you ship.
 
+Note the `features` set at the top of it. Every grid declares the features it runs on, and the
+declaration is required: a feature the set does not name has no state, no API and no bytes.
+[Feature set](/docs/data-grid/feature-set) is the whole story; the short version is that you build
+one set per application with `tableFeatures()` and hand it to every grid.
+
 ## 2a. Controlled vs. uncontrolled
 
 `DataGrid` works two ways. Pass a `table` instance you built with `useDataGrid` (**controlled**), or skip the hook and hand the same config to `DataGrid` directly (**uncontrolled**).
@@ -29,18 +34,23 @@ The example renders against the real published package surface — what you copy
 ```tsx
 // Controlled — own the instance (needed to read state via useDataGridState,
 // or to share one instance across several components)
-const table = useDataGrid({ data, columns, sorting: true })
+const table = useDataGrid({ features, data, columns, sorting: true })
 return <DataGrid table={table} />
 
 // Uncontrolled — no hook; DataGrid runs useDataGrid for you
 return (
 	<DataGrid
+		features={features}
 		data={data}
 		columns={columns}
 		sorting
 	/>
 )
 ```
+
+`features` is whichever set you built — see [Feature set](/docs/data-grid/feature-set), and note
+that it belongs to the grid's **config**, so in controlled mode it goes to `useDataGrid`, not to
+`DataGrid`.
 
 <DataGridDocsExample exampleId='base-inline' />
 
@@ -84,7 +94,9 @@ Everything downstream is identical — `import { DataGrid, createColumns } from 
 
 A grid built the second way never reaches the code it did not name. Measured with esbuild against the shadcn flavor (minified, gzipped, React external), the four-group composition above is **115 kB** against **152 kB** for shape A — 24%. What stays out: the date picker and `react-day-picker`, the filter panel and its popovers, both write forms, the confirm dialog, the selection and draft bars, the row-actions cell, the resizer, the visibility menu, and the seven cell types the grid does not use.
 
-That is the whole saving, and it does not grow with your data or your column count — it is a fixed amount of code that either ships or does not.
+That is the whole saving on this axis, and it does not grow with your data or your column count — it is a fixed amount of code that either ships or does not.
+
+There is a **second** axis, and it is independent of this one: `features` decides which of the grid's behaviours are compiled in at all, where `components` decides which UI is. A grid can name `allComponents` and still leave out `editingFeature`, or compose four component groups and register every feature. Trim both — see [Feature set](/docs/data-grid/feature-set).
 
 ### Which to pick
 
@@ -117,6 +129,7 @@ This is the same bundle as shape A — naming `allComponents` reaches every grou
 
 Once you have a grid rendering, branch out into the per-capability pages:
 
+- [Feature set](/docs/data-grid/feature-set) — the `features` option, and what each config key needs
 - [Client vs server](/docs/data-grid/client-vs-server) — which side sorts, filters and paginates
 - [Columns](/docs/data-grid/columns) — accessors, the column helper, cell types, visibility, resizing
 - [Sorting](/docs/data-grid/sorting) — initial sort, multi-sort, custom sort fns

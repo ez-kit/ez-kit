@@ -13,13 +13,13 @@ Written on the column def, next to the thing they seed. Applied once, at mount (
 
 ```tsx
 const columns = createColumns<Row>([
-	{ accessorKey: 'id', header: 'ID', pinning: { initialSide: 'left' } },
+	{ accessorKey: 'id', header: 'ID', pinning: { initialSide: 'start' } },
 	{ accessorKey: 'notes', header: 'Notes', visibility: { initialHidden: true } },
 	{ accessorKey: 'status', header: 'Status', creating: { defaultValue: 'draft' } },
 ])
 ```
 
-The grid opens with `id` pinned left, `notes` hidden and the create form pre-filled — and the user is
+The grid opens with `id` pinned to the start edge, `notes` hidden and the create form pre-filled — and the user is
 free to change all three.
 
 ## 2. Feature config
@@ -28,6 +28,7 @@ The same idea for values that are not per-column. Written on the grid.
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	pagination={{ pageSize: 25 }}
@@ -38,10 +39,11 @@ The same idea for values that are not per-column. Written on the grid.
 ## 3. `initialState`
 
 A partial `TableState` applied once, at mount, on top of everything above. Uncontrolled: the user —
-or `table.setState` — is free to change it afterwards. This is what you restore a deep link into.
+or a setter such as `table.setColumnPinning(…)` — is free to change it afterwards. This is what you restore a deep link into.
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	sorting
@@ -62,6 +64,7 @@ grid will appear frozen — you are now the only one who can move it.
 const [sorting, setSorting] = useState<SortingState>([])
 
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	sorting={{ onChange: setSorting }}
@@ -93,18 +96,19 @@ mention is yours.
 
 ```tsx
 const columns = createColumns<Row>([
-	{ accessorKey: 'id', header: 'ID', pinning: { initialSide: 'left' } },
+	{ accessorKey: 'id', header: 'ID', pinning: { initialSide: 'start' } },
 	{ accessorKey: 'name', header: 'Name' },
 	{ accessorKey: 'notes', header: 'Notes', visibility: { initialHidden: true } },
 ])
 
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	pinning={{ column: true }}
-	// `id` is not mentioned, so it keeps its `initialSide: 'left'`.
-	// `name` is added on the right. `notes` stays hidden.
-	initialState={{ columnPinning: { right: ['name'] } }}
+	// `id` is not mentioned, so it keeps its `initialSide: 'start'`.
+	// `name` is added at the end edge. `notes` stays hidden.
+	initialState={{ columnPinning: { end: ['name'] } }}
 />
 ```
 
@@ -113,8 +117,8 @@ you — its seed is dropped and it sits exactly where you put it. Leaving it out
 "not mentioned" case, which keeps the seed. There is therefore no way to start a seeded column
 unpinned from `initialState`; remove the `initialSide` from the column def instead.
 
-Unmentioned left seeds are placed in front of your left ids and unmentioned right seeds after your
-right ids, so a pinned selection column stays leftmost and a pinned actions column stays rightmost.
+Unmentioned `start` seeds are placed in front of your `start` ids and unmentioned `end` seeds after
+your `end` ids, so a pinned selection column stays first and a pinned actions column stays last.
 
 Every other `initialState` slice replaces the whole slice — `sorting`, `pagination`,
 `rowSelection`, `expanded`, `columnSizing`, `rowPinning`, `globalFilter`, `columnFilters`,
@@ -127,10 +131,10 @@ Page size can be set from two places, and they are not merged:
 
 ```tsx
 // A — feature config
-<DataGrid data={data} columns={columns} pagination={{ pageSize: 25 }} />
+<DataGrid features={features} data={data} columns={columns} pagination={{ pageSize: 25 }} />
 
 // B — initial state
-<DataGrid data={data} columns={columns} pagination initialState={{ pagination: { pageIndex: 0, pageSize: 25 } }} />
+<DataGrid features={features} data={data} columns={columns} pagination initialState={{ pagination: { pageIndex: 0, pageSize: 25 } }} />
 ```
 
 Both are legal. Use one or the other. `initialState.pagination` replaces the whole pagination
@@ -143,13 +147,13 @@ page from the URL, where you are writing the whole slice anyway.
 ## Invariants no state can break
 
 Some column-level settings are enforced on **every** write path — `initialState`, controlled
-`state`, and `table.setState` alike. A state that violates one is corrected before it reaches the
+`state`, and the per-slice setters (`table.setColumnPinning(…)`, `table.setColumnVisibility(…)`, …) alike. A state that violates one is corrected before it reaches the
 table:
 
 - **System columns** (`__selection__`, `__expand__`, `__actions__`) are always visible, and keep the
   pins they were built with.
 - **`visibility: false`** columns are always visible — hiding is disabled for them.
-- **`pinning: 'left'` / `pinning: { side }`** columns keep that pin.
+- **`pinning: 'start'` / `pinning: { side }`** columns keep that pin.
 
 This is not defensiveness for its own sake: the column menu deliberately hides the pin section for
 statically pinned columns and skips system columns entirely, so a state that unpinned or hid one

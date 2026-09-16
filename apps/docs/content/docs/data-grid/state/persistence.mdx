@@ -22,13 +22,13 @@ reactive hook; **you own the actual read/write** — that keeps your URL and rou
 
 ```tsx
 const decoded = JSON.parse(localStorage.getItem('grid') ?? 'null')
-const table = useDataGrid({ data, columns, initialState: parseState(decoded) })
+const table = useDataGrid({ features, data, columns, initialState: parseState(decoded) })
 ```
 
 ## Save on change
 
 ```tsx
-const table = useDataGrid({ data, columns, sorting: true, filtering: true })
+const table = useDataGrid({ features, data, columns, sorting: true, filtering: true })
 const state = useExtractedState(table, { keys: ['sorting', 'columnFilters', 'pagination'] })
 
 useEffect(() => {

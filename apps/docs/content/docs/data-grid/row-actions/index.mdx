@@ -3,7 +3,7 @@ title: Row Actions
 description: The per-row actions column that holds edit, delete, the row-pin menu and your own actions — inline buttons or a single overflow menu.
 ---
 
-Edit, delete and row pinning all act on a single row, so they share one column at the right edge of
+Edit, delete and row pinning all act on a single row, so they share one column at the end edge of
 the grid. The column is injected automatically as soon as any of them is enabled — you never declare
 it yourself.
 
@@ -23,6 +23,7 @@ The default. Each action is its own icon button, side by side:
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	editing={{ mode: 'modal', onSave }}
@@ -46,6 +47,7 @@ single trigger, which is what a wide grid usually wants:
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	editing={{ mode: 'modal', onSave }}
@@ -67,6 +69,7 @@ is called per row, so a row's entries can depend on the row itself:
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	editing={{ mode: 'modal', onSave }}

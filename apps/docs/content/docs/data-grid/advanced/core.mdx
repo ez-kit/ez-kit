@@ -15,12 +15,15 @@ description: The headless engine — what @ez-kit/data-grid-core exposes, what i
 
 ## Public surface (overview)
 
-| Export                       | What it is                                                                                                                                                                                                                            |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `createTable<TRow>(options)` | Build a headless table from data + columns + state. Returns a fully wired model.                                                                                                                                                      |
-| Column types                 | `ColumnDef`, `CellDef`, `ColumnRenderer`, `SortingFn`, and the per-cell-type configs (`NumberCellConfig`, `LinkCellConfig`, …).                                                                                                       |
-| Filter / sort built-ins      | Reusable predicate functions for `includesString`, `equals`, `inNumberRange`, `between`, etc.                                                                                                                                         |
-| State types                  | `SortingState`, `SortingStateEntry`, `TableState` (aliased `TableSnapshot`). The TanStack slice types (`RowSelectionState`, `ExpandedState`, …) are **not** re-exported here — reach them from `@ez-kit/data-grid-react`, which does. |
+| Export                                 | What it is                                                                                                                                                                                                                                       |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `createTableOptions(config)`           | Resolve a grid config into TanStack Table options. Pure — no table is built, no state is minted. This is what the React adapter calls before handing the result to `useTable`.                                                                   |
+| `createTable<TFeatures, TRow>(config)` | `constructTable(createTableOptions(config))` — a wired headless table, for non-React consumers. Takes a `features` set like every other entry point.                                                                                             |
+| Column types                           | `ColumnDef`, `CellDef`, `ColumnRenderer`, `SortingFn`, and the per-cell-type configs (`NumberCellConfig`, `LinkCellConfig`, …).                                                                                                                  |
+| Filter / sort built-ins                | Reusable predicate functions for `includesString`, `equals`, `inNumberRange`, `between`, etc.                                                                                                                                                    |
+| State types                            | `SortingState`, `SortingStateEntry`, `TableState<TFeatures>` (aliased `TableSnapshot`). The TanStack slice types (`RowSelectionState`, `ExpandedState`, …) are **not** re-exported here — reach them from `@ez-kit/data-grid-react`, which does. |
+| `@ez-kit/data-grid-core/features`      | A second entry point holding `tableFeatures`, every stock and custom feature, the row-model factories and the three named-function registries. See [Feature set](/docs/data-grid/feature-set).                                                   |
+| `@ez-kit/data-grid-core/features/all`  | `allDataGridFeatures`, the all-in set, on a path of its own so that reaching it is a choice — see [Feature set](/docs/data-grid/feature-set#alldatagridfeatures).                                                                                |
 
 ## Rules
 
@@ -28,8 +31,26 @@ description: The headless engine — what @ez-kit/data-grid-core exposes, what i
 - All updates return new objects (constitution: Additional Constraints — Immutability).
 - Public API is exported exclusively from `src/index.ts`.
 
+## Reading and writing state
+
+The table's state lives in a TanStack Store. Read the whole of it with `table.store.state`, and
+subscribe with `table.store.subscribe(…)`:
+
+```ts
+const table = createTable({ features, data, columns, sorting: true })
+
+table.store.state.sorting // [{ id: 'name', desc: false }]
+table.setSorting([{ id: 'name', desc: true }])
+```
+
+There is no `table.getState()` and no `table.setState()` — writes go through the per-slice setter
+for the slice they touch (`setSorting`, `setColumnPinning`, `setColumnVisibility`,
+`setRowSelection`, …). Each of those is installed by its own feature, so a setter for a feature the
+set omits does not exist.
+
 ## See also
 
+- [Feature set](/docs/data-grid/feature-set) — what `features` must contain
 - [Architecture](/docs/data-grid/architecture)
 - [React adapter](/docs/data-grid/advanced/react)
 

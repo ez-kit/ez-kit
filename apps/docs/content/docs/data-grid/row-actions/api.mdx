@@ -48,13 +48,14 @@ column uses.
 | ----------------- | ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | `header`          | `string \| (ctx) => ReactNode`                                | Header content. Omitted, the column keeps its built-in header — the select-all checkbox for selection, nothing for expand and actions. |
 | `width`           | `number \| { default?, min?, max? }`                          | Width in pixels. Defaults: `44` for selection and expand, a derived width for actions.                                                 |
-| `pinning`         | `false \| 'left' \| 'right' \| { side?, initialSide? }`       | Which viewport edge it sticks to. Defaults: `'left'` for selection and expand, `'right'` for actions.                                  |
+| `pinning`         | `false \| 'start' \| 'end' \| { side?, initialSide? }`        | Which viewport edge it sticks to. Defaults: `'start'` for selection and expand, `'end'` for actions.                                   |
 | `align`           | `'start' \| 'center' \| 'end' \| { header?, cell?, footer? }` | Horizontal alignment. Logical, like a normal column's `align`.                                                                         |
 | `headerClassName` | `string`                                                      | Class applied to the header cell.                                                                                                      |
 | `cellClassName`   | `string`                                                      | Class applied to the body cells.                                                                                                       |
 
 ```tsx
 <DataGrid
+	features={features}
 	data={rows}
 	columns={columns}
 	deleting={{ onDelete }}

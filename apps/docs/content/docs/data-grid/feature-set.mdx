@@ -1,0 +1,213 @@
+---
+title: Feature Set
+description: Every grid declares the features it runs on. What `features` is, how it differs from config, and how to compose a set that ships only the code you use.
+---
+
+Every grid takes a `features` option, and it is **required**:
+
+```tsx
+import {
+	columnPinningFeature,
+	columnSizingFeature,
+	columnVisibilityFeature,
+	createSortedRowModel,
+	rowSortingFeature,
+	tableFeatures,
+} from '@ez-kit/data-grid-core/features'
+
+const features = tableFeatures({
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	rowSortingFeature,
+	sortedRowModel: createSortedRowModel(),
+})
+
+<DataGrid
+	features={features}
+	data={data}
+	columns={columns}
+	sorting
+/>
+```
+
+| Option     | Type            | Description                                                                                                                                |
+| ---------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `features` | `TableFeatures` | The features this grid is assembled from, built once with `tableFeatures()`. **Required**, and deliberately without a default — see below. |
+
+A feature the set does not name contributes nothing: no state slice, no table methods, no row
+methods — and no bytes. That is the point. The grid is assembled from the features you register
+rather than shipped whole, so a read-only report with three columns and pagination does not carry
+the editing forms, the filter panel or the date picker it will never render.
+
+`tableFeatures()` hands back the object you gave it, so build the set **once per application** at
+module scope and share it. It is not per-render state and nothing about it changes at runtime.
+
+## Registering is not enabling
+
+`features` and the feature config are two different axes, and both survive:
+
+- **`features`** is what is **registered** — a compile-time decision that determines what is in
+  your bundle and which APIs exist at all.
+- **`sorting`, `filtering`, `editing`, …** are whether a feature is **on** — a runtime decision,
+  per grid.
+
+So this is correct, not a contradiction:
+
+```tsx
+// One shared grid for the whole app, with a wide set…
+const features = tableFeatures({ ...base, rowSortingFeature, sortedRowModel: createSortedRowModel(), editingFeature })
+
+// …and half of it switched off at a given use site.
+<AppDataGrid sorting={false} editing={{ mode: 'row', onSave }} />
+<AppDataGrid sorting={{ multi: { max: 3 } }} editing={false} />
+```
+
+Folding "enabled" into the static set would break exactly that shape. Writing `sorting` at all,
+however, now requires `rowSortingFeature` to be registered — where it used to be a silent no-op,
+`createTable` warns in development.
+
+## The three every grid needs
+
+Start every set with these:
+
+```tsx
+const features = tableFeatures({
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	// …then what this grid actually uses.
+})
+```
+
+They are structural rather than optional. The grid lays its rows out on a CSS column grid, so
+before it can render anything it has to know every column's width, whether the column is visible,
+and which pin group it belongs to. `getColumnSizeVars` and `getGridTemplateColumns` read
+`header.getSize()`, `column.getSize()`, `column.getIsPinned()` and `table.getVisibleLeafColumns()`
+on every render, and `getVisualLeafColumns` orders each row's cells with
+`getStartVisibleLeafColumns()` / `getCenterVisibleLeafColumns()` / `getEndVisibleLeafColumns()`.
+Leave one of the three out and the grid throws on first paint.
+
+**Everything else is genuinely optional.** A grid that registers only these three renders: no
+sorting, no filtering, no pagination, no editing, no row actions, and nothing missing. That is the
+composition model working — registering a feature is how you get it, and not registering it is how
+you do not pay for it.
+
+You do not have to turn the corresponding options on, either. `visibility`, `pinning` and
+`resizing` all stay off unless you ask for them; these three features are what the **layout** needs,
+not what the features of the same name do.
+
+## What each option needs
+
+Register the row model beside the feature that consumes it. The feature gives a grid the API; the
+row model is what actually sorts, filters or slices the rows.
+
+| You write                                | Register                                                                                                          |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `sorting`                                | `rowSortingFeature` + `sortedRowModel: createSortedRowModel()`                                                    |
+| `filtering`                              | `columnFilteringFeature` + `filteredRowModel: createFilteredRowModel()` + `filterFns`                             |
+| `globalFiltering`                        | `globalFilteringFeature` + `filteredRowModel` + `filterFns`                                                       |
+| `filtering.faceted`                      | `columnFacetingFeature` + `facetedRowModel` + `facetedUniqueValues`                                               |
+| `pagination`                             | `rowPaginationFeature` + `paginatedRowModel: createPaginatedRowModel()`                                           |
+| `pagination.mode: 'infinite'`            | `rowPaginationFeature`, and **no** `paginatedRowModel` (see below) — `infiniteFeature` is already in the base set |
+| `selection`                              | `rowSelectionFeature`                                                                                             |
+| `visibility`                             | `columnVisibilityFeature` (already in the base three)                                                             |
+| `pinning.column`                         | `columnPinningFeature` (already in the base three)                                                                |
+| `pinning.row`                            | `rowPinningFeature`                                                                                               |
+| `expanding`                              | `rowExpandingFeature` + `expandedRowModel: createExpandedRowModel()`                                              |
+| `resizing`                               | `columnResizingFeature`                                                                                           |
+| `ordering` (columns)                     | `columnOrderingFeature`                                                                                           |
+| `ordering.row`                           | `rowOrderingFeature`                                                                                              |
+| `editing`                                | `editingFeature`                                                                                                  |
+| `creating`                               | `creatingFeature`                                                                                                 |
+| `deleting`                               | `deletingFeature`                                                                                                 |
+| `draft`                                  | `draftFeature`                                                                                                    |
+| `state.loading` / `initialState.loading` | `loadingFeature`                                                                                                  |
+
+`virtualization`, `toolbar`, `messages`, `direction` and `layout` hold no table state and are not
+features — they are config, and always available.
+
+Infinite scroll is the one case where a feature's row model is wrong: `pagination.mode: 'infinite'`
+shows every accumulated row, so registering `paginatedRowModel` would slice them back to one page.
+Register `rowPaginationFeature` without it; `createTable` warns if you do not.
+
+## The failures that are silent
+
+Most omissions produce a development warning from `createTable`. Three do not, and each looks like
+a bug in the grid rather than a missing registration:
+
+- **No row model.** Each stage falls back to the previous one when its model is absent, so a set
+  with `rowSortingFeature` but no `sortedRowModel` renders a grid whose sort headers respond and
+  whose rows never move.
+- **No `filterFns`.** A column with no operators carries the filter-function _name_ `'auto'`, and
+  `globalFilterFn` defaults to the name `'includesString'`. An unregistered name resolves to no
+  comparator, the filtered row model keeps every row, and the grid looks like a filter that matches
+  everything. (`createTable` does warn about this one.)
+- **No `sortFns` / `aggregationFns`.** A column's `sorting: { fn: 'alphanumeric' }` silently sorts
+  by something else — `['item10', 'item2']` instead of `['item2', 'item10']` — and a grouped
+  column's `aggregationFn: 'sum'` aggregates to `undefined`.
+
+`filterFns`, `sortFns` and `aggregationFns` are registries of named functions, not features. Add
+one to the set whenever a column or an option refers to a function **by name** rather than passing
+it inline.
+
+## `allDataGridFeatures`
+
+There is an all-in set, for prototypes and for pasting into a scratch file. It lives on an import
+path of its own:
+
+```tsx
+import { allDataGridFeatures } from '@ez-kit/data-grid-core/features/all'
+;<DataGrid
+	features={allDataGridFeatures}
+	data={data}
+	columns={columns}
+/>
+```
+
+It registers every feature this package ships, stock and custom, plus every row model and all three
+function registries — so it always works, and it **defeats the entire point**. Nothing tree-shakes,
+and every registered feature mints its state slice and its APIs whether or not the config enables
+it. Do not ship it.
+
+The separate subpath is not tidiness. `allDataGridFeatures` is a top-level
+`tableFeatures({ ...stockFeatures, … })` call whose argument object spreads, and an object spread
+may run getters, so a bundler keeps the whole expression and every feature named in it. While the
+declaration sat beside the rest of the payload, importing _anything_ from
+`@ez-kit/data-grid-core/features` dragged all of it in — `tableFeatures` alone measured 46 360
+bytes. On its own path that same import is **994 bytes**, and a sorting-only set 1 035. The all-in
+set still costs what it costs; it is now a cost you opt into by writing the import, rather than a
+toll every composed set pays.
+
+For scale, from the same measurement: adding `editingFeature` to that sorting-only set takes it from
+1 035 bytes to 17 219, and the whole `/features` surface is 48 086. A feature with a real
+implementation is not free — the point is that you pay for it when you register it and not before.
+
+Every example on this site composes its own narrow set instead, for the same reason: what you copy
+out of a docs page is what ends up in your bundle.
+
+## Where the set lives
+
+The set is an ordinary value, so it goes wherever the rest of your grid configuration goes. A
+defaults layer can supply it once for every grid beneath it:
+
+```tsx
+<DataGridOptionsProvider<typeof features, Row> defaults={{ features, pagination: { pageSize: 25 } }}>
+	<OrdersGrid />
+	<InvoicesGrid />
+</DataGridOptionsProvider>
+```
+
+`features` is the one option that **replaces** rather than merges across layers. Composing a set is
+a decision about what exists, and a merge cannot express "and not that one" — so a grid that
+deliberately narrows below an app-wide set gets the narrow set, not the union.
+
+## See also
+
+- [Getting started](/docs/data-grid/getting-started) — the two shapes a project imports the grid in
+- [Architecture](/docs/data-grid/architecture) — where `features` sits in the three layers
+- [Advanced: Core](/docs/data-grid/advanced/core) — building a table without React
+
+## Source
+
+- `@ez-kit/data-grid-core` — [`packages/data-grid/core/src/features/entry.ts`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/core/src/features/entry.ts)

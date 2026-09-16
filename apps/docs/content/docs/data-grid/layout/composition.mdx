@@ -11,6 +11,7 @@ and you get the built-in behaviour, supply something and you take over exactly t
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 />
@@ -20,6 +21,7 @@ is equivalent to writing the tree out:
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 >
@@ -265,6 +267,7 @@ const columns = createColumns<Row>([
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 >
@@ -327,6 +330,7 @@ replaces one slot and leaves the rest of the kit intact:
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	components={{ sorting: { SortMenu: MySortMenu } }}

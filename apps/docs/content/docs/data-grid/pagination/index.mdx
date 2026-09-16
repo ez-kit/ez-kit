@@ -13,6 +13,7 @@ The "full" example below demonstrates pagination alongside sort and filter:
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	initialState={{
@@ -36,10 +37,10 @@ The starting page size can come from either `pagination.pageSize` or
 
 ```tsx
 // A — feature config
-<DataGrid data={data} columns={columns} pagination={{ pageSize: 25 }} />
+<DataGrid features={features} data={data} columns={columns} pagination={{ pageSize: 25 }} />
 
 // B — initial state
-<DataGrid data={data} columns={columns} pagination initialState={{ pagination: { pageSize: 25 } }} />
+<DataGrid features={features} data={data} columns={columns} pagination initialState={{ pagination: { pageSize: 25 } }} />
 ```
 
 `initialState.pagination` seeds the slice **per key**: whichever key you leave out keeps its
@@ -58,6 +59,7 @@ selector renders in the toolbar; omit it and the page size stays fixed at whatev
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	pagination={{ pageSize: 10, items: [10, 25, 50, 100] }}
@@ -85,6 +87,7 @@ control per page.
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	pagination={{ pageSize: 10, links: true }}
@@ -183,6 +186,7 @@ layout most shadcn-style tables use.
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	pagination={{ pageSize: 10, links: false, edges: true, label: 'page', pageSizer: 'footer' }}
@@ -200,6 +204,7 @@ for the full pattern, including loading state.
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	pagination={{

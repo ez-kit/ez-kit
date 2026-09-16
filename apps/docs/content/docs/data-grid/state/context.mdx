@@ -12,6 +12,7 @@ object back. The grid never looks at what is in there.
 
 ```tsx
 const table = useDataGrid({
+	features,
 	data: users,
 	columns,
 	context: { permissions },
@@ -77,7 +78,7 @@ createDataGrid({ components, defaults: { context: { shadcn: { density: 'comforta
 <DataGridOptionsProvider defaults={{ context: { currentUser } }}>
 
 // on one grid
-useDataGrid({ data, columns, context: { permissions } })
+useDataGrid({ features, data, columns, context: { permissions } })
 ```
 
 That grid sees all three. Naming a key **replaces** it rather than adding to it: `permissions` at
