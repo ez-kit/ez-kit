@@ -142,7 +142,13 @@ export type { DataGridState, DataGridStateOptions, PersistableStateKey } from '.
 
 // Factory
 export { createDataGrid } from './create-data-grid'
-export type { CreateDataGridOptions, DataGridBundle } from './create-data-grid'
+export type {
+	BoundDataGrid,
+	BoundDataGridProps,
+	BoundUseDataGridConfig,
+	CreateDataGridOptions,
+	DataGridBundle,
+} from './create-data-grid'
 
 // UI-kit contract (tiers + full-support marker + feature map)
 export { GridFeature, FEATURE_COMPONENTS, COMPONENT_FEATURE } from './contract'
@@ -167,7 +173,13 @@ export type {
 
 // Compound component
 export { DataGrid } from './data-grid/data-grid'
-export type { DataGridProps, DataGridControlledProps, DataGridUncontrolledProps } from './data-grid/data-grid'
+export type {
+	DataGridProps,
+	DataGridControlledProps,
+	DataGridSharedProps,
+	DataGridStatics,
+	DataGridUncontrolledProps,
+} from './data-grid/data-grid'
 export type { DataGridTableProps, DataGridTableRenderArgs } from './data-grid/table'
 export type { DataGridBodyProps, DataGridBodyRenderArgs } from './data-grid/body'
 export type { DataGridHeaderProps, DataGridHeaderRenderArgs } from './data-grid/header'

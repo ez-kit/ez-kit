@@ -54,7 +54,11 @@ import type { ReactNode } from 'react'
 
 const IS_DEV = process.env.NODE_ENV !== 'production'
 
-type DataGridSharedProps = {
+/**
+ * The props both modes carry. Exported because `createDataGrid` rebuilds the uncontrolled half
+ * around them when the factory binds a feature set — see `BoundDataGridProps`.
+ */
+export type DataGridSharedProps = {
 	/** Local component overrides — merged with global GridComponentsProvider. */
 	components?: GridComponents
 	children?: ReactNode
@@ -452,7 +456,14 @@ function DataGridRoot<TFeatures extends TableFeatures, TRow extends object>(prop
 
 // ── Attach sub-components as static properties ────────────────────────────
 
-type DataGridType = typeof DataGridRoot & {
+/**
+ * The compound namespace hung off `DataGrid`.
+ *
+ * Named and exported so a *bound* grid — one `createDataGrid` rebuilt around a factory-level
+ * feature set — can wear the identical namespace beside its own call signature, instead of
+ * restating twenty-eight members that would then drift.
+ */
+export type DataGridStatics = {
 	Toolbar: typeof Toolbar
 	Table: typeof DataGridTable
 	Footer: typeof Footer
@@ -482,6 +493,8 @@ type DataGridType = typeof DataGridRoot & {
 	EmptyStateRow: typeof EmptyStateRow
 	NoResultsRow: typeof NoResultsRow
 }
+
+type DataGridType = typeof DataGridRoot & DataGridStatics
 
 export const DataGrid = DataGridRoot as DataGridType
 DataGrid.Toolbar = Toolbar
