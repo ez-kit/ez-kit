@@ -6,13 +6,15 @@ its territory was `AGENTS.md`, the packages' `README.md` files, `.changeset/` an
 
 **Commits** (branch `integration/tanstack-v9`, still local — nothing pushed, no PR opened):
 
-| SHA        | Subject                                                                          |
-| ---------- | -------------------------------------------------------------------------------- |
-| `e6c8ca51` | `docs(agents): record the v9 feature model and make the pinning rule logical`    |
-| `94e480aa` | `docs(data-grid): correct the v8-era API claims in the package READMEs`          |
-| `32ded1bc` | `chore(changeset): describe the TanStack Table v9 migration's consumer breaks`   |
-| `36858126` | `docs(data-grid): stop claiming a bundle win the entry point does not deliver`   |
-| `aec96a03` | `docs(data-grid): restore the bundle claim now that the entry point delivers it` |
+| SHA        | Subject                                                                           |
+| ---------- | --------------------------------------------------------------------------------- |
+| `e6c8ca51` | `docs(agents): record the v9 feature model and make the pinning rule logical`     |
+| `94e480aa` | `docs(data-grid): correct the v8-era API claims in the package READMEs`           |
+| `32ded1bc` | `chore(changeset): describe the TanStack Table v9 migration's consumer breaks`    |
+| `36858126` | `docs(data-grid): stop claiming a bundle win the entry point does not deliver`    |
+| `aec96a03` | `docs(data-grid): restore the bundle claim now that the entry point delivers it`  |
+| `20086530` | `docs: record why @__PURE__ was not the fix, and that size-limit cannot see this` |
+| `18715a60` | `chore(data-grid-react,data-grid-heroui): re-measure the size budgets on v9`      |
 
 `.github/workflows/ci.yml` is **untouched** — see §5, where design §6's premise turns out to be
 false. The `size-limit` budgets are **deliberately left alone** — see §4.
@@ -323,30 +325,60 @@ which is what v9 actually offers.
 
 ---
 
-## 4. Size budgets — deliberately left, with one measurement
+## 4. Size budgets — measured and set
 
-**PR 4 has not landed.** At the time of writing the worktree carries ~100 uncommitted modified
-files under `apps/docs/shared/**`, and `pnpm --filter @ez-kit/data-grid-react typecheck` still
-fails on the generic-variance family (`3c259be1` records the split, 55 remaining). `build`'s `dts`
-half fails with it, so **`@ez-kit/data-grid-react` produces no `dist`, and `size-limit` has nothing
-to measure** — for it or for `@ez-kit/data-grid-heroui`, which builds against it. Writing a figure
-there would be writing a number nobody has measured.
+Unblocked once `@ez-kit/data-grid-react` built DTS with `tsc --noEmit` clean. Done in `18715a60`.
 
-What was measured: **`@ez-kit/data-grid-core` is green and within budget**, unchanged from PR 1's
-re-measurement — `index` 10.65 kB against 12.5 kB, `features` 4.66 kB against 5.5 kB, i.e. ~17% and
-~18% headroom against AGENTS.md's ~15% rule. Nothing to restate.
+**Method, because this branch has had to retract a stale figure twice.** `dist` deleted for all
+three packages, then `pnpm turbo run build --filter=@ez-kit/data-grid-heroui...`, then
+`pnpm --filter <pkg> size`. `git rev-parse HEAD` read `c76a23bf` before the rebuild and `c76a23bf`
+after the last measurement, so nothing moved underneath it while two other agents were committing
+into this tree.
 
-**Still open, and inherited rather than done:** `pr2-outcomes.md` §1.4 asked PR 3 or PR 6 to drop
-`@tanstack/react-store` from `@ez-kit/data-grid-react`'s five `size-limit` `ignore` lists — it is
-not a dependency and nothing imports it (grep finds the name only inside docblocks in
-`grid-context.tsx` and core). PR 6 left it: the edit is provably inert only if it can be measured
-either side, and the package does not build. It changes no number today and should go with the
-budget re-measurement, under the ledger's rule that whichever task first _imports_ `@tanstack/store`
-re-adds it with its `ignore` entries.
+**Nothing was over budget** in either package. The migration blew nothing.
 
-**Whoever closes the react typecheck owns the budget pass** for `@ez-kit/data-grid-react` and
-`@ez-kit/data-grid-heroui`: re-measure, set to roughly measurement + 15%, and drop the dead ignore
-in the same commit.
+**`@ez-kit/data-grid-react`: no budget changed.** `dist/index.js` is the entry the migration
+actually moved — it gained `useTable` and lost the binding layer — and it measures **24.57 kB
+against 28 KB, 14.0% headroom**. PR 2 set that limit from 24.51 kB _after_ the same change, so the
+move is already counted and has been stable to 60 bytes since; restating it would be churn. The
+other four entries reproduce PR 2's figures to the byte (816 B, 729 B, 526 B, 226 B) at 15.0-16.0%.
+
+**`@ez-kit/data-grid-heroui`: 14 of 25 entries restated**, and the cause is not v9 — its budgets
+predate the split into per-feature entries, so most carried headroom set against a different shape
+of the package. Applying PR 2's rule (restate at **≥20%** or **<12%**, leave the rest) gives one
+raise and thirteen tightenings:
+
+| entry                         | measured |    old |     new |   was |   now |
+| ----------------------------- | -------: | -----: | ------: | ----: | ----: |
+| `dist/index.js`               | 14.42 kB |  16 KB | 16.6 KB | 11.0% | 15.1% |
+| `dist/cell-types/text.js`     |    410 B |  500 B |   480 B | 22.0% | 17.1% |
+| `dist/cell-types/boolean.js`  |    737 B |  900 B |   850 B | 22.1% | 15.3% |
+| `dist/cell-types/date.js`     |    820 B |   1 KB |   950 B | 22.0% | 15.9% |
+| `dist/cell-types/badge.js`    |    814 B |   1 KB |   940 B | 22.9% | 15.5% |
+| `dist/cell-types/image.js`    |    498 B |  600 B |   580 B | 20.5% | 16.5% |
+| `dist/cell-types/link.js`     |    552 B |  700 B |   640 B | 26.8% | 15.9% |
+| `dist/cell-types/progress.js` |    574 B |  700 B |   670 B | 22.0% | 16.7% |
+| `dist/pagination/index.js`    |    905 B | 1.1 KB | 1.05 KB | 21.5% | 16.0% |
+| `dist/editing/index.js`       |    482 B |  600 B |   560 B | 24.5% | 16.2% |
+| `dist/deleting/index.js`      |    438 B |  600 B |   510 B | 37.0% | 16.4% |
+| `dist/resizing/index.js`      |    382 B |  500 B |   440 B | 30.9% | 15.2% |
+| `dist/infinite/index.js`      |    544 B |  700 B |   630 B | 28.7% | 15.8% |
+| `dist/expanding/index.js`     |    360 B |  500 B |   420 B | 38.9% | 16.7% |
+
+`index.js` at 11.0% was the one entry with too little room left to catch a regression. At the other
+end, `expanding` at 38.9% and `deleting` at 37.0% would not have failed the check on a size that
+nearly doubled. The remaining eleven entries were already inside the band and were left alone.
+
+**The dead `@tanstack/react-store` ignore is gone** from all five `@ez-kit/data-grid-react` entries,
+closing `pr2-outcomes.md` §1.4. It is not a dependency and nothing imports it — the name occurs only
+inside docblocks. PR 6 left it the first time because it could not be verified either side while the
+package did not build. It can now, and **every entry measures byte-for-byte identically with it
+removed** — that is the proof it was inert, rather than the argument that it should be. Every
+remaining `ignore` list in both packages is exactly the package's own runtime dependencies,
+confirmed rather than rewritten.
+
+For reference, `@ez-kit/data-grid-core` on the same rebuild: `index` 10.65/12.5 kB, `features`
+4.5/5.5 kB, `features/all` 4.54/5.5 kB — unchanged, and left alone.
 
 ---
 
@@ -375,8 +407,8 @@ the browser suite **off** on this branch, which is the opposite of what §6 want
 
 ## 6. What PR 6 could not do
 
-1. **The budgets for `@ez-kit/data-grid-react` and `@ez-kit/data-grid-heroui`** — §4. Blocked on the
-   react package's typecheck/build, which is PR 4's and PR 5's residue and belongs to nobody yet.
+1. ~~**The budgets for `@ez-kit/data-grid-react` and `@ez-kit/data-grid-heroui`**~~ — **done**, once
+   the react package built DTS clean. See §4.
 2. **The shadcn install gap** — §2.3. `registry.config.mjs` does not carry
    `@ez-kit/data-grid-core`, so a `shadcn add` consumer cannot import the features entry. Outside
    PR 6's territory; documented in the README and named here.
