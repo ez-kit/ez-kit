@@ -52,7 +52,10 @@ export function buildColumnMenuSections<TRow extends object>(
 	messages: GridMessages['columnMenu'],
 ): GridMenuSection[] {
 	const column = header.column
-	const sortDir = column.getIsSorted()
+	// Optional-called: `header-cell.tsx` builds the menu for every header cell, so this runs on a
+	// grid with no sorting registered. See `feature-optionality.test.tsx`.
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const sortDir = column.getIsSorted?.() ?? false
 	const isPinned = column.getIsPinned()
 
 	const sorting: GridMenuSection = { id: SORTING_SECTION, label: messages.sorting, items: [] }

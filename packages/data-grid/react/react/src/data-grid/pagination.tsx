@@ -74,7 +74,10 @@ export function Pagination({ children }: DataGridPaginationProps = {}) {
 
 	// The subscription is the read — see `active-filters-bar.tsx` for the note.
 	const { pageIndex, pageSize } = useDataGridState((s) => s.pagination)
-	const isPending = useDataGridState((s) => s.loading.isPending)
+	// Optional-chained: `Pagination` mounts on any grid whose footer renders, before anything
+	// establishes that `loadingFeature` is registered. See `feature-optionality.test.tsx`.
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const isPending = useDataGridState((s) => s.loading?.isPending ?? false)
 	// Row-model affecting slices (pageCount is derived from rowModel.length).
 	useDataGridState((s) => s.sorting)
 	useDataGridState((s) => s.columnFilters)

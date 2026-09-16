@@ -279,9 +279,14 @@ function BodyDataCell<TRow extends object>({ cell, row }: DataGridCellProps<TRow
 	// feature sets the same `editing.rowId` whichever mode raised it — so a row-mode test here
 	// used to open the row *behind* the dialog as well, leaving two live editors bound to one
 	// set of values. shadcn hid it (Radix `aria-hidden`s the background), heroui did not.
+	// Optional-chained: this selector runs for **every body cell of every grid**, before anything
+	// establishes that editing is configured, so a read-only grid needed `editingFeature`
+	// registered just to render a cell. Nothing below it is reached when the slice is absent —
+	// `isEditing` is `false`, so the editing branch never opens. See `feature-optionality.test.tsx`.
 	const isEditing = useDataGridState((s) => {
 		if (editMode === EditingMode.Modal) return false
-		return editMode === EditingMode.Cell ? s.editing.cellId === cellId : s.editing.rowId === row.id
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+		return editMode === EditingMode.Cell ? s.editing?.cellId === cellId : s.editing?.rowId === row.id
 	})
 
 	const isColumnEditable = meta?.editing !== false

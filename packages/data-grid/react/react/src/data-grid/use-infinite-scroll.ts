@@ -57,8 +57,14 @@ export function useInfiniteScroll(): InfiniteController {
 	// moved per render would turn "load when the last row nears the end" into "re-check on every
 	// render of the grid", and would re-attach a scroll listener and a `ResizeObserver` each time.
 	const config = readConfig(table)
-	const isFetchingNextPage = useDataGridState((s) => s.infinite.isFetchingNextPage)
-	const errorState = useDataGridState((s) => s.infinite.error)
+	// `<LoadMoreFooter />` mounts unconditionally inside `<Tbody>`, and `VirtualBody` reaches this
+	// hook by a second route, so these two run on **every** grid — including one that configures
+	// no infinite scroll at all. Optional-chained so `infiniteFeature` is not required to render
+	// a plain table. See `feature-optionality.test.tsx`.
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const isFetchingNextPage = useDataGridState((s) => s.infinite?.isFetchingNextPage ?? false)
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const errorState = useDataGridState((s) => s.infinite?.error ?? null)
 
 	const loadMore = useCallback(
 		(direction: LoadMoreDirection = 'forward') => {

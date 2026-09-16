@@ -92,7 +92,12 @@ function DataGridRowImpl<TRow extends object = ErasedRow>(
 	// literal *after* spreading incoming props, so a kit built on RAC (heroui) always erases a
 	// value passed from here — RAC's selection manager is idle, since the grid's selection lives
 	// in TanStack. `data-row-*` is this layer's own namespace and nothing overwrites it.
-	const isSelected = useDataGridState(() => row.getIsSelected())
+	// Optional-called: this runs for every row of every grid, and the method only exists once
+	// `rowSelectionFeature` is registered — so a grid with selection off could not render a row.
+	// The system-column read in `cell.tsx` is genuinely conditional and needs no guard; this one
+	// is not, which is why a sweep that looked at the selection path missed it.
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const isSelected = useDataGridState(() => row.getIsSelected?.() ?? false)
 
 	const canMove = table.grid.ordering.row
 	/**

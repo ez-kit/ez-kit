@@ -154,8 +154,13 @@ function ConfirmDialogRenderer() {
 	const { ConfirmDialog } = useGridComponents().deleting
 	// Narrow: re-render only when a pending delete target changes. Other
 	// state mutations (editing, sorting, etc.) leave these stable.
-	const pendingId = useDataGridState((s) => s.deleting.pendingRowId)
-	const pendingBulk = useDataGridState((s) => s.deleting.pendingBulk)
+	// Optional-chained because these two hooks run **before** the `hasConfirmDialog` gate below —
+	// a hook cannot sit after an early return — so they execute on every grid, including one with
+	// no deleting feature registered. See `feature-optionality.test.tsx`.
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const pendingId = useDataGridState((s) => s.deleting?.pendingRowId ?? null)
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const pendingBulk = useDataGridState((s) => s.deleting?.pendingBulk ?? false)
 	// Confirming clears the pending target, which closes the dialog, which fires the kit's
 	// close handler — the same `onCancel` a dismissal uses. Without this flag that close would
 	// abort the delete request the confirm just started.

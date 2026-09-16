@@ -120,14 +120,25 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 	// annotation rather than chosen. `FormColumnMeta` is the one name core declares for it, and
 	// this is the same cast core's own `creating.ts` makes at its boundary.
 	const meta = header.column.columnDef.meta as FormColumnMeta | undefined
-	const canSort = header.column.getCanSort()
-	const rawSortDir = header.column.getIsSorted()
+	// Optional-called, not called: every read on this line runs for **every header cell of every
+	// grid**, and the method only exists once its feature is registered. Design D1's claim is that
+	// a feature you did not register costs nothing, so a grid with no sorting must render a header
+	// rather than throw. See `feature-optionality.test.tsx`, which builds a grid without each one.
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const canSort = header.column.getCanSort?.() ?? false
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const rawSortDir = header.column.getIsSorted?.() ?? false
 	const pinVars = getCommonPinStyles(header.column)
 	const pinned = header.column.getIsPinned()
 	// One check, not two: `createTable` now emits `enableColumnResizing: false` when the feature
 	// is off, so `getCanResize()` accounts for the table-level gate as well as the column's own
 	// `resizing: false`. Anything composing its own header can rely on the same single call.
-	const canResize = header.column.getCanResize()
+	//
+	// Optional-called for the same reason as the two above. This is also what makes
+	// `getResizeHandler()` and `getIsResizing()` below safe without guards of their own: both sit
+	// inside the `canResize ? … : null` subtree, which a grid without the feature never enters.
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const canResize = header.column.getCanResize?.() ?? false
 
 	// Selection column: a select-all checkbox, and none of the rest.
 	if (header.column.id === SELECTION_COLUMN_ID) {

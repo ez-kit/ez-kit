@@ -77,9 +77,16 @@ export function Body<TRow extends object = ErasedRow>({ children }: DataGridBody
 	// re-renders only when one of these slices actually changes. Editing,
 	// columnVisibility, columnSizing, columnPinning, rowSelection updates do
 	// NOT touch any of these → no Body re-render.
-	const isPending = useDataGridState((s) => s.loading.isPending)
-	const isFetching = useDataGridState((s) => s.loading.isFetching)
-	const isCreatingOpen = useDataGridState((s) => s.creating.isOpen)
+	// Optional-chained, not chained for tidiness: these three read state slices that do not exist
+	// unless `loadingFeature` / `creatingFeature` are registered, and they run before any branch
+	// — so a read-only grid with no loading states needed both features just to mount. See
+	// `feature-optionality.test.tsx`.
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const isPending = useDataGridState((s) => s.loading?.isPending ?? false)
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const isFetching = useDataGridState((s) => s.loading?.isFetching ?? false)
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const isCreatingOpen = useDataGridState((s) => s.creating?.isOpen ?? false)
 	// Slices that affect getRowModel() / getTopRows() / getBottomRows() output:
 	useDataGridState((s) => s.sorting)
 	useDataGridState((s) => s.columnFilters)

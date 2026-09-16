@@ -49,6 +49,33 @@ import type {
  */
 export type GridFeatures = TableFeatures
 
+/*
+ * FEATURE GUARDS — why the render path is full of `?.` on things the types say are always there.
+ *
+ * {@link GridFeatures} pins components to `TableFeatures`, the widest instantiation, which is also
+ * the *fullest*: it declares every feature key, so `TableState<TableFeatures>` resolves to all 21
+ * slices and `Column<TableFeatures, …>` carries every feature's methods. At **runtime** none of
+ * that is true — a slice is absent, and a method undefined, unless the consumer registered the
+ * feature that contributes it.
+ *
+ * That gap is the documented cost of the pinning, and it is why `typescript-eslint`'s
+ * `no-unnecessary-condition` fires on every guard on the default render path: the rule is reading
+ * the widest instantiation and concluding the check cannot fail. It can, and did — a grid with no
+ * sorting threw on `getCanSort`, a read-only grid threw on `state.creating.isOpen`, and a grid with
+ * no infinite scroll threw on `state.infinite.isFetchingNextPage`, because `<LoadMoreFooter />`
+ * mounts unconditionally.
+ *
+ * Each such guard therefore carries a scoped disable citing this note. They are not decoration and
+ * they are not suppressing a real finding: `feature-optionality.test.tsx` builds a grid without
+ * each optional feature and renders it, so deleting any one of them turns a lint error into a test
+ * failure rather than into silence.
+ *
+ * The three features that stay mandatory — `columnVisibilityFeature`, `columnPinningFeature`,
+ * `columnSizingFeature` — are structural rather than guarded: the shell lays out a column grid and
+ * needs widths and pin groups to do it. That test asserts they still throw, so the boundary between
+ * "structural" and "defect" is executable rather than asserted.
+ */
+
 /**
  * The row type every component below `<DataGrid>` is typed against — the **erased** one.
  *
