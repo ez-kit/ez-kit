@@ -18,19 +18,18 @@ No changeset was written (PR 6 writes one for the whole migration). AGENTS.md is
 
 ---
 
-## 0. The gates, as measured after `97b5036e`
+## 0. The gates, as measured after `55a27803`
 
 Run individually with `pnpm --filter <pkg> <gate>`. **Nothing red below is column pinning.**
-`@ez-kit/data-grid-react` passes all five — typecheck, lint, test, build and size — for the first
-time since the migration started; its typecheck went 99 -> 0. `size` needs core built first, since
-the count is measured against `dist`.
+All three data-grid React packages pass every gate they have, for the first time since the
+migration started; `@ez-kit/data-grid-react`'s typecheck went 99 -> 0 and its suite from 726 to 738. `size` needs core built first, since the count is measured against `dist`.
 
-| Package                    | typecheck                | lint                | test                                       | build     |
-| -------------------------- | ------------------------ | ------------------- | ------------------------------------------ | --------- |
-| `@ez-kit/data-grid-react`  | **green** (was 99)       | **green**           | **726/726** (was 721/4)                    | **green** |
-| `@ez-kit/data-grid-shadcn` | **1 error** (was 3)      | 1 error (cascade)   | **40/40**                                  | **green** |
-| `@ez-kit/data-grid-heroui` | **2 errors** (unchanged) | 16 errors (cascade) | 45/50                                      | **green** |
-| `@ez-kit/docs`             | 150 errors (PR 4's)      | —                   | vitest green on the pinning-relevant files | —         |
+| Package                    | typecheck           | lint      | test                                       | build     |
+| -------------------------- | ------------------- | --------- | ------------------------------------------ | --------- |
+| `@ez-kit/data-grid-react`  | **green** (was 99)  | **green** | **726/726** (was 721/4)                    | **green** |
+| `@ez-kit/data-grid-shadcn` | **green** (was 3)   | **green** | **green**                                  | **green** |
+| `@ez-kit/data-grid-heroui` | **green** (was 2)   | **green** | **green** (was 45/50)                      | **green** |
+| `@ez-kit/docs`             | 150 errors (PR 4's) | —         | vitest green on the pinning-relevant files | —         |
 
 `pnpm --filter @ez-kit/docs registry:build` **succeeds**, and the payload it writes carries
 `PinStart` / `PinEnd` and `--dg-pin-start-shadow` / `--dg-pin-end-shadow` and none of the old names.
@@ -196,10 +195,77 @@ following from them. Every one is `createTable<User>` / `DataGridProps<User>` /
 `UseDataGridConfig<User>` / `TableState` missing the `TFeatures` parameter and the `features`
 option. **The kits' source is green — all four kit `build`s pass and shadcn's 40 unit tests pass.**
 
-The decision is whether `@ez-kit/data-grid-react` re-exports the feature helpers (making the kits'
-dependency surface self-sufficient) or whether each kit takes a direct dependency on core. That is
-PR 5's or PR 6's, and it should be settled before the kits' tests are edited, because the answer
-determines what those tests import.
+**Settled by Ruling O — see §0.6.** Each kit takes a direct dependency on core; react does not
+re-export the helpers. The kits' tests were then brought onto the v9 arity and both kits are green.
+
+---
+
+## 0.5 Ruling N — a feature you do not register now costs nothing
+
+Design D1's central claim was false in the React adapter, and this is the commit that makes it
+true: `c79d6aa8`. Reads on the **default** render path — before any branch established the feature
+was configured — were plain property accesses into a state slice, or calls to a method, that exist
+only once a particular feature is registered.
+
+**Eight features became optional** that were not: `columnResizingFeature`, `rowSortingFeature`,
+`loadingFeature`, `creatingFeature`, `infiniteFeature`, `rowSelectionFeature`, `editingFeature`,
+`deletingFeature`. **Three remain mandatory and are structural**, not defects — the shell lays out
+a column grid, so it needs `columnVisibilityFeature`, `columnPinningFeature` and
+`columnSizingFeature` to lay it out with.
+
+### Three of the eight were found by running, not by reading
+
+The list this work started from had five, assembled by reading call sites — twice, and both times
+short. Running the cases found three more:
+
+| Feature               | Why a reader missed it                                                                                                                                                                                                                                         |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `rowSelectionFeature` | `row.tsx` calls `getIsSelected()` for **every row**. The sweep examined the selection _column_, found that path properly conditional, and stopped there.                                                                                                       |
+| `editingFeature`      | `cell.tsx`'s `isEditing` selector runs for every body cell before anything establishes that editing is configured.                                                                                                                                             |
+| `deletingFeature`     | `ConfirmDialogRenderer`'s two `useDataGridState` hooks necessarily run before its own early-return gate, because a hook cannot sit after a return. **Self-inflicted**: moving that gate inside the component in `97b5036e` is what made the feature mandatory. |
+
+That is the lesson worth carrying: a list of unconditional reads cannot be assembled by reading,
+because the question is not "what does this file do" but "which components mount on a plain grid".
+`use-infinite-scroll.ts` reads like infinite-scroll code because it _is_; nothing in it says
+`<LoadMoreFooter />` mounts unconditionally inside `<Tbody>`.
+
+### `feature-optionality.test.tsx` is the evidence and the guard
+
+It builds a grid **without each optional feature** and renders it, and asserts the three structural
+ones still throw — so the line between "structural" and "defect" is executable rather than argued.
+Every guard was added only after watching its case fail, and each turned exactly that case green.
+`getResizeHandler()` and `getIsResizing()` needed no guards: both sit inside the
+`canResize ? … : null` subtree, which a grid without the feature never enters.
+
+### The guards trip `no-unnecessary-condition`, and that is the pinning's cost showing
+
+The rule reads `TableFeatures` — the widest and therefore _fullest_ instantiation, where every
+slice and method is declared present — and concludes the check cannot fail. It can, and did. The
+gap was already documented as the cost of pinning the component layer; it now has a **FEATURE
+GUARDS** note in `types.ts` that each scoped disable cites. The disables hide nothing: delete a
+guard and the test fails rather than going quiet.
+
+## 0.6 Ruling O — the kits declare core directly
+
+`55a27803`. Since v9 `features` is a **required** option, so every consumer of every kit writes
+`tableFeatures({ … })` in their own code — and the helpers live on core. Both kits depended on
+`@ez-kit/data-grid-react` and nothing else from this repo, and that package re-exports neither
+helper, so there was no import a consumer could write. Their own tests could not be brought onto
+the v9 arity for the same reason, which is how it surfaced.
+
+React does **not** re-export the helpers: two import paths for one concept is the defect AGENTS.md's
+option audits keep removing. Design §1's "one import path" argued against making
+`@tanstack/table-core` a consumer peer dependency — never for hiding core behind react.
+
+`registry.config.mjs` lists core too, closing a defect already on the books. Its old comment
+reasoned that core is transitive through react and listing it would be "redundant clutter" — true
+for hoisting package managers, false under pnpm's strict layout, and now false in spirit as well:
+a transitive dependency resolves, but the consumer must _name_ the import, and naming a package you
+did not declare is exactly what a strict layout refuses. Core is the one entry on that list that no
+copied file imports, and the comment now says so.
+
+Both READMEs follow. HeroUI's install line gains core, because `pnpm add @ez-kit/data-grid-heroui`
+alone leaves the import unresolvable under pnpm even with the kit declaring it.
 
 ---
 
