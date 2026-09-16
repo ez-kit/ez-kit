@@ -244,6 +244,45 @@ localization example overrides `pinLeft` / `pinRight` by name. It is a message o
 exactly the consumer-facing break §3.1 says belongs in PR 3's changeset text — and the repo's own
 example is the first consumer of it.
 
+### 2.1a Reconciliation with `pr3-recon.md` §2 — where the two lists differ, and which wins
+
+`specs/005-tanstack-table-v9/pr3-recon.md` was written **while PR 2 was still uncommitted** (its own
+header says so: `HEAD` was `cf14f78f`, 106 files modified, this document did not exist). Its §2 is
+that pass's own derivation of the residue, and it says plainly that `tsc` was **not run** —
+"derived, not measured". It was accurate on everything it could see. But the tree moved under it, so
+where the two disagree **the measured list above wins**, and PR 3 should read §2.1 rather than
+`pr3-recon.md` §2 for the react package's error counts.
+
+The differences, so nobody has to find them by being surprised:
+
+| Claim in `pr3-recon.md` §2 / §1a                                               | Measured on `f8fa600c`                                                                                                                                                           |
+| ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `utils/pin-styles.ts` — **4 errors**, lines 22, 23, 25, 26                     | **0.** PR 2 brought that file forward; see the "already brought forward" note above. Its §1a count of "8 references, 2 files" is now **4 references, 1 file**.                   |
+| `column-menu-sections.ts` — 8 errors at 117, 120, 121, 123, 127, 130, 131, 133 | **8, the same eight**, but at **139, 142, 143, 145, 149, 152, 153, 155** — shifted +22 by the suppression comment PR 2 added. Its `GridMenuIcon` import lines 16,17 are unmoved. |
+| `data-attrs.test.tsx` — 8 errors at 90, 105, 126, 127, 128, 158, 159, 160      | **Agrees exactly.** No change.                                                                                                                                                   |
+| (absent)                                                                       | **`feature-on-change.test.tsx:139`** — `TS2353`, `{ left: … }` against `Updater<ColumnPinningState>`. A ninth react-package pinning error that §2 does not list.                 |
+| `shadcn/src/blocks/icons.tsx:41,42`, `heroui:37,38` — 2 errors each            | **Neither confirmed nor contradicted.** Those are other packages; PR 2's gates ran under `--filter @ez-kit/data-grid-react` only.                                                |
+
+Two further notes on reading the two documents together:
+
+- **The test line numbers are not in conflict.** `pr3-recon.md` §2 cites `:88`, `:103`, `:124`,
+  `:156` — the `it(` lines. §2.1 above cites `:100`, `:115`, `:144`, `:185` — the lines the
+  assertions actually fail on. Same four tests.
+- **`pr3-recon.md` §3 says its Task 2 "makes the react package go green". Measurement says it does
+  not.** Clearing `pin-styles.ts`, `column-menu-sections.ts` and the four `data-attrs` cases removes
+  **17 of the package's 99** typecheck errors. The other 82 are §2.2's class and survive the whole
+  rename. This is the single most consequential difference between the two documents, because it is
+  the difference between PR 3 having a criterion it can meet and one it cannot.
+
+Everything in `pr3-recon.md` that PR 2 did **not** measure stands unchallenged and is more detailed
+than anything here — the CSS and selector inventories (§1e-§1i), the registry blast radius (§4), the
+e2e surface (§5) and the traps (§8). Its §9 is right that pr1-outcomes §3.1's "three dead name sets"
+undercounts: `ColumnPinningState`'s `{ left, right }` and `ColumnActionId.PinLeft` / `.PinRight` are
+a fourth and fifth surface, and the table above inherits §3.1's three-row shape only because that is
+what it is refreshing. Trap T6 in particular — `data-attrs.test.tsx`'s `getBoundingClientRect` stub
+is keyed on the `data-pinned` **value** at lines 176-177, so a rename that misses it leaves both
+geometry tests silently matching nothing — is not recorded anywhere else and should be believed.
+
 ### 2.2 The other 82 typecheck errors — one class, and it is NOT pinning
 
 This is the part Ruling K does not cover, and it should not be mistaken for the carve-out. PR 2's
@@ -403,7 +442,12 @@ warn the same way, or make `hasDeleting` agree with `deletingCfg`.
   `f8fa600c`'s tree by running the gate. Two of the inherited numbers were wrong by the time they
   were checked: `typecheck` was 112, not the 108 a report implied, and the "~10 of the 14 lint
   errors are pinning" estimate was really 8.
-- **`specs/005-tanstack-table-v9/pr3-recon.md` is untracked.** It is a 690-line static
-  reconnaissance of the pinning carve-out written by another pass, and it was deliberately left out
-  of both of PR 2's commits — it is not PR 2's content and PR 2 did not review it. Its own header
-  says it should be reconciled against this document. Someone should commit it before it is lost.
+- **`specs/005-tanstack-table-v9/pr3-recon.md` is tracked, as `91f23b38`.** It is a static
+  reconnaissance of the pinning carve-out, written by another pass while PR 2 was still uncommitted,
+  and it is PR 3's inventory rather than PR 2's content — which is why PR 2's own two commits left
+  it alone, and why the PR 3 pass committed it itself. Its header asks to be reconciled against this
+  document; §2.1a is that reconciliation.
+- **From here on, this worktree is shared.** The PR 3 implementer is editing source in it. Anything
+  written against `specs/005-tanstack-table-v9/` must be staged **by explicit path** — never
+  `git add -A`, `git add .` or `git commit -a`, which would sweep another PR's half-finished work
+  into a docs commit and corrupt both.
