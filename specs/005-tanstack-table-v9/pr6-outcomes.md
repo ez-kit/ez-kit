@@ -6,12 +6,13 @@ its territory was `AGENTS.md`, the packages' `README.md` files, `.changeset/` an
 
 **Commits** (branch `integration/tanstack-v9`, still local — nothing pushed, no PR opened):
 
-| SHA        | Subject                                                                        |
-| ---------- | ------------------------------------------------------------------------------ |
-| `e6c8ca51` | `docs(agents): record the v9 feature model and make the pinning rule logical`  |
-| `94e480aa` | `docs(data-grid): correct the v8-era API claims in the package READMEs`        |
-| `32ded1bc` | `chore(changeset): describe the TanStack Table v9 migration's consumer breaks` |
-| `36858126` | `docs(data-grid): stop claiming a bundle win the entry point does not deliver` |
+| SHA        | Subject                                                                          |
+| ---------- | -------------------------------------------------------------------------------- |
+| `e6c8ca51` | `docs(agents): record the v9 feature model and make the pinning rule logical`    |
+| `94e480aa` | `docs(data-grid): correct the v8-era API claims in the package READMEs`          |
+| `32ded1bc` | `chore(changeset): describe the TanStack Table v9 migration's consumer breaks`   |
+| `36858126` | `docs(data-grid): stop claiming a bundle win the entry point does not deliver`   |
+| `aec96a03` | `docs(data-grid): restore the bundle claim now that the entry point delivers it` |
 
 `.github/workflows/ci.yml` is **untouched** — see §5, where design §6's premise turns out to be
 false. The `size-limit` budgets are **deliberately left alone** — see §4.
@@ -243,10 +244,34 @@ falsified by a test in the same commit. Both now separate the two halves explici
 same, plus the instruction not to "clean up" the failing cases and not to write a bundle claim
 anywhere until they flip.
 
-**Still to do when core's fix lands:** re-measure, flip the two `it.fails` cases, and rewrite that
-paragraph in `.changeset/tanstack-table-v9.md` — it is written to be replaced. If the fix moves
-`allDataGridFeatures` to its own subpath, that is a **breaking import-path change** and needs its
-own line in the changeset; the team lead is routing the consumer list.
+**Resolved — the fix landed as `e686845f`, and the claim was restored in the same five places.**
+`allDataGridFeatures` moved to its own subpath, `@ez-kit/data-grid-core/features/all`. The cause
+was sharper than "a call a bundler cannot prove pure": an **object spread may run getters**, so
+esbuild retained the whole `tableFeatures({ ...stockFeatures, … })` expression and every operand
+with it. Re-measured against the built entry, unminified, workspace-only resolution:
+
+| imported            | before |      after |
+| ------------------- | -----: | ---------: |
+| `tableFeatures`     | 46 360 |    **994** |
+| `rowSortingFeature` | 46 363 |    **998** |
+| sorting-only set    | 46 402 |  **1 035** |
+| `editingFeature`    | 46 360 | **17 163** |
+
+`editingFeature` at 17 163 is quoted beside the others deliberately: it is a feature with a real
+implementation behind it, and a note that cited only the four-figure rows would be selecting for
+the flattering ones.
+
+The restored wording keeps the two halves distinct, because both are now true and they are
+different guarantees: composition governs **behaviour** (no state slice, no API, no work) **and**
+the bundle. The move is itself a **breaking import-path change** and has its own paragraph in
+`.changeset/tanstack-table-v9.md` — `tableFeatures` and every individual feature stayed where they
+were; only that one name moved.
+
+AGENTS.md's entry was rewritten rather than deleted: the placement is load-bearing, so it now says
+**do not move `allDataGridFeatures` back onto the main entry**, with both the old and new numbers as
+the reason. Its earlier instruction — "do not write a bundle-size claim until the `it.fails` cases
+flip" — is gone with the block it described. Flipping those cases in
+`apps/docs/test/tree-shaking.test.ts` is PR 4's, and the team lead is routing it.
 
 **The mandatory base three.** PR 4 also found that the React adapter has an undocumented mandatory
 feature set: `columnVisibilityFeature`, `columnPinningFeature` and `columnSizingFeature`. Confirmed
