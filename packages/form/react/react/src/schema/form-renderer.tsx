@@ -1,4 +1,11 @@
-import { buildValidator, isFieldNode, setValueAtPath, stripHiddenValues, walkNodes } from '@ez-kit/form-core'
+import {
+	buildValidator,
+	isArrayNode,
+	isFieldNode,
+	setValueAtPath,
+	stripHiddenValues,
+	walkNodes,
+} from '@ez-kit/form-core'
 
 import { SchemaTranslate } from '../options/source-context'
 
@@ -190,11 +197,22 @@ export function isRendererControlled<TValues>(props: {
  * would leave the input empty, discard the author's default, and ship a phantom dotted key in
  * the submitted payload that `stripHiddenValues` would then treat as a top-level name of its
  * own. `setValueAtPath` is the exact inverse of the `getValueAtPath` conditions read through.
+ *
+ * Inside an `array` that stops holding: an entry's fields are named **relative to the entry**,
+ * and how many entries there will be is a property of the data, not of the schema. Writing
+ * their names here would seed the form root with a phantom `firstName` beside the real
+ * `people[0].firstName`. An array seeds the empty list instead, and an entry's own defaults are
+ * assembled from the same subtree when one is actually added.
  */
 export function schemaDefaultValues<TValues>(schema: AnyFormSchema<TValues>): Record<string, unknown> {
 	// Rebound rather than mutated — `setValueAtPath` returns a new object each time.
 	let defaults: Record<string, unknown> = {}
-	walkNodes(schema, (node) => {
+	walkNodes(schema, (node, ancestors) => {
+		if (ancestors.some((ancestor) => isArrayNode(ancestor))) return
+		if (isArrayNode(node)) {
+			defaults = setValueAtPath(defaults, node.name, [])
+			return
+		}
 		if (isFieldNode(node) && node.defaultValue !== undefined) {
 			defaults = setValueAtPath(defaults, node.name, node.defaultValue)
 		}
@@ -325,7 +343,9 @@ export function renderSchemaFields<TValues>(
 	fields: CustomFieldRegistry | undefined,
 	blocks: BlockRegistry | undefined,
 ): ReactNode {
-	const context = { translate, fields, blocks }
+	// `itemPath` starts undefined: the schema root sits in no array entry, and each array node
+	// replaces it for the subtree of every entry it renders.
+	const context = { translate, fields, blocks, itemPath: undefined }
 
 	// `SchemaTranslate` is the one thing the renderer publishes through context rather than
 	// through `RenderNode`'s props: an option source's labels are `LocalizedText` too, and the

@@ -2,7 +2,7 @@ import { isDateRangeValue, isIsoDate } from './date-value'
 import { FORM_FIELD_TYPES, FormFieldType } from './field-types'
 import { collectRuleFields } from './rules'
 import { GRID_MAX, GRID_MIN, RESERVED_NODE_TYPES } from './schema'
-import { hasChildren, isFieldNode, walkNodes } from './walk'
+import { hasChildren, isArrayNode, isFieldNode, walkNodes } from './walk'
 
 import type { Condition } from './rules'
 import type { AnyFormSchema, FieldValidate, FormNode } from './schema'
@@ -158,6 +158,21 @@ function assertKnownFieldType(type: string, path: string, options: ParseOptions)
 	}
 }
 
+/**
+ * Names are unique **within the scope that owns them**, not across the document.
+ *
+ * Every array item opens a new scope: its fields are named relative to the item, so
+ * `people[].firstName` and `staff[].firstName` are two different fields that happen to share a
+ * spelling, and either may also coexist with a root-level `firstName`. The scope is identified
+ * by the chain of enclosing arrays; an array's own name belongs to its parent's scope.
+ */
+function scopeKey(ancestors: readonly FormNode<unknown, string>[]): string {
+	return ancestors
+		.filter((ancestor) => isArrayNode(ancestor))
+		.map((ancestor) => ancestor.name)
+		.join('.')
+}
+
 function assertUniqueName(rawName: unknown, path: string, seenNames: Set<string>): void {
 	if (typeof rawName !== 'string' || rawName.length === 0) {
 		throw new FormSchemaError('Field node is missing a "name"', path)
@@ -170,8 +185,14 @@ function assertUniqueName(rawName: unknown, path: string, seenNames: Set<string>
 
 function assertKnownRule(validate: FieldValidate | undefined, path: string, options: ParseOptions): void {
 	if (validate?.rule === undefined) return
-	if (!options.rules?.includes(validate.rule)) {
-		throw new FormSchemaError(`Unknown validation rule "${validate.rule}"`, path)
+	const names = Array.isArray(validate.rule) ? validate.rule : [validate.rule]
+	for (const name of names) {
+		if (typeof name !== 'string' || name.length === 0) {
+			throw new FormSchemaError('Validation rule name must be a non-empty string', path)
+		}
+		if (!options.rules?.includes(name)) {
+			throw new FormSchemaError(`Unknown validation rule "${name}"`, path)
+		}
 	}
 }
 
@@ -632,6 +653,16 @@ function validateNode(
 		assertMultiValueDefault(node, path)
 		assertKnownRule(node.validate, path, options)
 		assertValidateMessages(node.validate, path, options)
+	} else if (isArrayNode(node)) {
+		// An array names a value and carries constraints like a field, but its `type` is reserved
+		// and its children are a scope of their own — so it takes the value-side checks and none
+		// of the field-kind ones.
+		assertUniqueName(node.name, path, seenNames)
+		assertKnownRule(node.validate, path, options)
+		assertValidateMessages(node.validate, path, options)
+		assertLocalizedText(node.item?.label, path, options)
+		assertLocalizedText(node.add?.label, path, options)
+		assertLocalizedText(node.remove?.label, path, options)
 	} else if (node.type === 'block') {
 		assertKnownBlock(node.component, path, options)
 	} else if (node.type === 'section' || node.type === 'step') {
@@ -674,11 +705,18 @@ export function parseFormSchema<TValues>(input: unknown, options: ParseOptions =
 
 	const schema = input as unknown as AnyFormSchema<TValues>
 	const untypedSchema = schema as unknown as AnyFormSchema<unknown>
-	const seenNames = new Set<string>()
+	const seenNamesByScope = new Map<string, Set<string>>()
 	walkNodes(schema, (node, ancestors) => {
 		const untypedNode = node as unknown as FormNode<unknown, string>
 		const untypedAncestors = ancestors as unknown as FormNode<unknown, string>[]
 		const path = computeNodePath(untypedSchema, untypedNode, untypedAncestors)
+
+		const key = scopeKey(untypedAncestors)
+		let seenNames = seenNamesByScope.get(key)
+		if (seenNames === undefined) {
+			seenNames = new Set<string>()
+			seenNamesByScope.set(key, seenNames)
+		}
 		validateNode(untypedNode, path, options, seenNames)
 	})
 

@@ -5,10 +5,10 @@ import type { OptionsSource } from './options-source'
 import type { Condition } from './rules'
 import type { LocalizedSelectOption } from './select-option'
 import type { TextInputType } from './text-input-type'
-import type { DeepKeys, DeepKeysOfType } from '@tanstack/form-core'
+import type { DeepKeys, DeepKeysOfType, DeepValue } from '@tanstack/form-core'
 
 /** Container `type` values, plus the two value-less leaves. Never usable as registry keys. */
-export const RESERVED_NODE_TYPES = ['section', 'step', 'submit', 'block'] as const
+export const RESERVED_NODE_TYPES = ['section', 'step', 'submit', 'block', 'array'] as const
 
 /**
  * The supported range for `SectionNode.columns` and any node's `colSpan` — part of the v1
@@ -51,7 +51,13 @@ export type FieldValidate = {
 	minLength?: number
 	maxLength?: number
 	format?: 'email' | 'url' | 'tel'
-	rule?: string
+	/**
+	 * Named rules to run, resolved from `buildValidator`'s `rules` option. A list because one
+	 * value can owe several independent checks — a list of contacts that must be non-empty *and*
+	 * must hold exactly one primary — and folding those into a single registered rule would make
+	 * the two unreusable separately. The scalar form is the common case and means one rule.
+	 */
+	rule?: string | string[]
 	messages?: Partial<Record<string, LocalizedText>>
 }
 
@@ -262,6 +268,102 @@ export type StepNode<TValues, TCustom extends string = never> = CommonProps<TVal
 	children: FormNode<TValues, TCustom>[]
 }
 
+/** Every path in `TValues` whose value is an array — the only paths an `array` node may name. */
+type ArrayKeys<TValues> = DeepKeysOfType<TValues, readonly unknown[]>
+
+/**
+ * The element type of the array at `N`.
+ *
+ * `NonNullable` is load-bearing: for an optional `people?: Person[]` the value type is
+ * `Person[] | undefined`, which fails the `readonly (infer U)[]` branch and would collapse the
+ * whole item subtree to `never` — every field inside it rejected, with no hint why.
+ */
+type ItemOf<TValues, N> = NonNullable<DeepValue<TValues, N>> extends readonly (infer U)[] ? U : never
+
+/**
+ * The `array` node's shape, with the name and the children left open.
+ *
+ * Written once and instantiated twice: {@link ArrayNodeFor} pins both to the author's value
+ * type, and {@link AnyArrayNode} erases both for the runtime, which cannot know an item type.
+ */
+type ArrayNodeBody<TValues, TName, TChildren> = CommonProps<TValues> & {
+	type: 'array'
+	name: TName
+	/**
+	 * The item's fields, named **relative to the item** — `'firstName'`, not
+	 * `'people[0].firstName'`. The index is not knowable when the schema is written, so the
+	 * renderer joins the prefix on. This is the one place the "a node's `name` is a full
+	 * path from the root" rule does not hold, and the type is what confines it: these
+	 * children are typed over the item, so a root-level name is a compile error here and a
+	 * relative one is a compile error everywhere else.
+	 */
+	children: TChildren
+	/**
+	 * Offer the user a way to reorder items. The gesture is the kit's business.
+	 *
+	 * Scalar-or-object: `true` is the plain form, and the object form only adds captions for the
+	 * two controls — so a document that wants the default wording says `reorderable: true` and
+	 * nothing else.
+	 */
+	reorderable?: boolean | { up?: { label?: LocalizedText }; down?: { label?: LocalizedText } }
+	/**
+	 * Constraints on the list itself rather than on a field of it. `minLength` / `maxLength`
+	 * count items, and a named `rule` receives the whole array — which is what makes a
+	 * cross-item check (no two people sharing an email) expressible.
+	 */
+	validate?: FieldValidate
+	/**
+	 * Caption for one item, e.g. a card heading. In its `{ key, params }` form the item's
+	 * zero-based position is merged in under `index`, so a translation may place it
+	 * (`'Person {{index}}'`).
+	 */
+	item?: { label?: LocalizedText }
+	/** Caption for the control that appends an item. */
+	add?: { label?: LocalizedText }
+	/** Caption for the control that removes one. */
+	remove?: { label?: LocalizedText }
+}
+
+/**
+ * One `array` member per array path in `TValues`, so `name` and the item's `children` stay
+ * **correlated**: an array of `Person` can only be given fields that exist on `Person`.
+ *
+ * The indirection through `N` is what makes that work. A conditional type distributes over a
+ * union only when the checked type is a *naked type parameter*, so `ArrayKeys<TValues> extends
+ * infer N ? … : never` would produce one member for the whole union instead of one per path.
+ * Passing the union in as `N` and checking `N extends unknown` is the spelling that distributes.
+ *
+ * This is the same correlation problem `SelectMember` solves by enumeration (one member per
+ * option scalar); enumeration is not available here because an item type is unbounded.
+ */
+type ArrayNodeFor<TValues, N extends ArrayKeys<TValues>, TCustom extends string> = N extends unknown
+	? ArrayNodeBody<TValues, N, FormNode<ItemOf<TValues, N>, TCustom>[]>
+	: never
+
+/**
+ * An `array` node with its value type erased — what traversal, validation and the renderer see.
+ *
+ * `ArrayNode<unknown>` is **not** usable for this: `ArrayKeys<unknown>` is empty, so the
+ * distribution has nothing to distribute over and the whole type collapses to `never`.
+ */
+export type AnyArrayNode = ArrayNodeBody<unknown, string, FormNode<unknown, string>[]>
+
+/**
+ * A repeatable group of fields, bound to an array in the form values.
+ *
+ * Grouped captions, flat `children`: the three labels are three spellings of one concern, while
+ * `children` is what makes this structurally the same kind of node as `section` and `step`, so
+ * traversal needs no special case for it.
+ *
+ * The `unknown` arm is what keeps this usable at runtime. `ArrayKeys<unknown>` is empty, so the
+ * distribution would have nothing to distribute over and the type would collapse to `never` —
+ * quietly removing the array member from `FormNode<unknown, string>`, the shape every traversal
+ * and the renderer actually work with. TanStack's own `DeepKeys` opens with the same guard.
+ */
+export type ArrayNode<TValues, TCustom extends string = never> = unknown extends TValues
+	? AnyArrayNode
+	: ArrayNodeFor<TValues, ArrayKeys<TValues>, TCustom>
+
 export type SubmitNode<TValues> = CommonProps<TValues> & { type: 'submit'; disabled?: boolean }
 
 export type BlockNode<TValues> = CommonProps<TValues> & {
@@ -290,6 +392,7 @@ export type CustomFieldNode<TValues, TCustom extends string = never> = FieldComm
 
 export type FormNode<TValues, TCustom extends string = never> =
 	| FieldNode<TValues>
+	| ArrayNode<TValues, TCustom>
 	| SectionNode<TValues, TCustom>
 	| StepNode<TValues, TCustom>
 	| SubmitNode<TValues>
@@ -316,4 +419,24 @@ export type AnyFormSchema<TValues> = FormSchema<TValues, string>
  */
 export function defineFormSchema<TValues, TCustom extends string = never>() {
 	return <const S extends FormSchema<TValues, TCustom>>(schema: S): S => schema
+}
+
+/**
+ * The `children` of an `array` node, authored against the item type instead of inline.
+ *
+ * Curried for the same reason `defineFormSchema` is, and useful for two things:
+ *
+ * 1. **Reuse.** One `personFields` block drops into `staff` and `guests`, and into a different
+ *    form's `people`, because the names inside it are item-relative and carry no trace of where
+ *    the block sits.
+ * 2. **An explicit type anchor**, if a schema ever grows deep enough to strain inference.
+ *    Nothing observed so far does — 20 levels of nesting and 120 arrays typecheck flat — so this
+ *    is insurance rather than a current need.
+ *
+ * It is **array-item-only** by construction: the block's names are relative to an item, so a
+ * `section` of the form proper rejects it. Mounting a shared field set at a nested non-array
+ * path is a different feature and does not exist.
+ */
+export function defineFormItem<TItem, TCustom extends string = never>() {
+	return <const C extends FormNode<TItem, TCustom>[]>(children: C): C => children
 }

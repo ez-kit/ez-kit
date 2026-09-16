@@ -2,6 +2,7 @@
 
 import { createForm } from '@ez-kit/form-react'
 
+import { ArrayField, ArrayItem } from '@form-shadcn/blocks/array'
 import { DateField, DateRangeField } from '@form-shadcn/blocks/date'
 import {
 	CheckboxField,
@@ -40,6 +41,8 @@ const components = {
 	CheckboxGroupField,
 	DateField,
 	DateRangeField,
+	ArrayField,
+	ArrayItem,
 	Button,
 	Form: FormElement,
 	Section,

@@ -227,6 +227,84 @@ export type SliderFieldRenderProps = FieldRenderProps & {
 	step: number | undefined
 }
 
+// ── arrays ───────────────────────────────────────────────────────────────────
+
+/**
+ * The chrome around **one** entry of a repeatable group.
+ *
+ * A separate slot from {@link ArrayFieldRenderProps} for the same reason `GridItem` is separate
+ * from `Section`: the container draws the list, the item draws one row of it — and only the item
+ * can place its own remove control, since it is the only component that knows where the row ends.
+ *
+ * The item's fields arrive as `children`, already bound to this entry's paths. A kit renders
+ * them; it never needs to know the index they resolved to.
+ */
+export type ArrayItemRenderProps = {
+	/** The zero-based position, spread onto the kit's root so CSS and tests can address a row. */
+	'data-index': number
+	index: number
+	/**
+	 * Caption for this entry, already resolved — a card heading, typically. Empty when the author
+	 * gave none, which is the common case for a compact row.
+	 */
+	label: ReactNode
+	/** Caption for the remove control, already resolved. */
+	removeLabel: ReactNode
+	/**
+	 * Captions for the two reorder controls, already resolved. Present whether or not the move
+	 * is currently possible, so the disabled control still has an accessible name.
+	 */
+	moveUpLabel: ReactNode
+	moveDownLabel: ReactNode
+	/**
+	 * The list is disabled. Passed down to the entry because a disabled array must not offer a
+	 * live remove or move control on every row — the fields inside may be disabled by the kit's
+	 * own `fieldset`, but these controls are the entry's chrome and belong to this slot.
+	 */
+	disabled: boolean | undefined
+	onRemove: () => void
+	/**
+	 * Move this entry one place earlier or later. `undefined` when reordering is off **or** when
+	 * the move is impossible — the first entry has no `onMoveUp` — so a kit disables or omits the
+	 * control by asking one question rather than correlating a flag with an index and a length.
+	 */
+	onMoveUp: (() => void) | undefined
+	onMoveDown: (() => void) | undefined
+	children: ReactNode
+}
+
+/**
+ * A repeatable group of fields.
+ *
+ * `errors` are the **list's own** — a `minLength`, or a cross-item rule that blamed the list
+ * rather than an entry. Errors belonging to a field inside an entry reach that field through its
+ * own slot and never appear here, which is why the two are not merged: a kit that showed both in
+ * one place would repeat every item's message at the top of the list.
+ */
+export type ArrayFieldRenderProps = {
+	'data-field': string
+	/** Always `'array'`, for symmetry with every other field's `data-field-type`. */
+	'data-field-type': string
+	name: string
+	label: ReactNode
+	description: ReactNode
+	errors: string[]
+	invalid: boolean
+	disabled: boolean | undefined
+	required: boolean | undefined
+	/** The entries, each already wrapped in the kit's own `ArrayItem`. */
+	children: ReactNode
+	/** Caption for the control that appends an entry, already resolved. */
+	addLabel: ReactNode
+	onAdd: () => void
+	/**
+	 * Whether appending is possible right now — `false` once a `maxLength` bound is reached. A
+	 * plain boolean rather than an absent `onAdd`, because a kit should be able to render the
+	 * control disabled rather than have it vanish under the user's cursor.
+	 */
+	canAdd: boolean
+}
+
 // ── layout ───────────────────────────────────────────────────────────────────
 
 export type SectionRenderProps = {
@@ -302,6 +380,8 @@ export type FormComponents = {
 	CheckboxGroupField: (props: CheckboxGroupFieldRenderProps) => ReactNode
 	DateField: (props: DateFieldRenderProps) => ReactNode
 	DateRangeField: (props: DateRangeFieldRenderProps) => ReactNode
+	ArrayField: (props: ArrayFieldRenderProps) => ReactNode
+	ArrayItem: (props: ArrayItemRenderProps) => ReactNode
 	Button: (props: ButtonProps) => ReactNode
 	Form: (props: FormElementProps) => ReactNode
 	Section: (props: SectionRenderProps) => ReactNode

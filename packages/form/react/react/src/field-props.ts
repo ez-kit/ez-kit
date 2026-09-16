@@ -203,6 +203,68 @@ export type SliderFieldProps<TFormData> = BaseFieldProps<TFormData, number> & {
 	step?: number
 }
 
+/**
+ * What one entry of a repeatable group hands the author.
+ *
+ * It **is** the form's own field set, retyped over the item: inside an entry `name` addresses
+ * the item's paths, so `<item.TextField name='firstName' />` is checked against the item type
+ * and a root-level name is a compile error there. No path is composed at the call site — the
+ * prefix is joined on at render.
+ */
+export type ArrayItemScope<TItem> = FormFieldComponents<TItem> & {
+	/**
+	 * A stable id for this entry, for React's `key`. **Never the index**: removing an entry from
+	 * the middle renumbers everything after it, and a keyed-by-index list would then reuse the
+	 * wrong component instance — carrying an open calendar or a half-typed search query onto its
+	 * neighbour while the submitted values still look correct.
+	 */
+	key: string
+	index: number
+	/** This entry's chrome — heading, remove control, reorder controls. Wrap the entry's fields. */
+	Item: (props: { children: ReactNode }) => ReactNode
+}
+
+export type ArrayFieldScope<TItem> = {
+	items: readonly ArrayItemScope<TItem>[]
+	add: () => void
+	/**
+	 * `false` once `validate.maxLength` is reached; kits render their add control disabled rather
+	 * than hide it. The same option is both bounds — the one that fails with a message, and the
+	 * one that stops the control offering.
+	 */
+	canAdd: boolean
+}
+
+/**
+ * A repeatable group of fields — the JSX spelling of an `array` node.
+ *
+ * `newItem` is required here and has no counterpart in a schema document: a document declares
+ * each field's `defaultValue`, so the renderer can build a fresh entry from the subtree, while a
+ * render prop declares nothing the package can read.
+ */
+export type ArrayFieldProps<TFormData, TItem> = {
+	name: DeepKeysOfType<TFormData, readonly TItem[]>
+	label?: ReactNode
+	description?: ReactNode
+	disabled?: boolean
+	required?: boolean
+	validate?: FieldValidateProps
+	/**
+	 * Offer move-up / move-down on every entry. The gesture itself is the kit's business.
+	 *
+	 * The object form only adds captions for the two controls; `true` **is** the plain form and
+	 * means the same thing with the kit's defaults, so nothing has to be written twice.
+	 */
+	reorderable?: boolean | { up?: { label?: ReactNode }; down?: { label?: ReactNode } }
+	/** The value a newly appended entry starts from. */
+	newItem: TItem
+	addLabel?: ReactNode
+	removeLabel?: ReactNode
+	/** Caption for one entry, given its zero-based position. */
+	itemLabel?: (index: number) => ReactNode
+	children: (scope: ArrayFieldScope<TItem>) => ReactNode
+}
+
 export type SubmitButtonProps = {
 	children: ReactNode
 	/** Forced-disabled regardless of form state; the form's own state can only add to this. */
@@ -230,6 +292,12 @@ export type FormFieldComponents<TFormData> = {
 	CheckboxGroupField: (props: CheckboxGroupFieldProps<TFormData>) => ReactNode
 	DateField: (props: DateFieldProps<TFormData>) => ReactNode
 	DateRangeField: (props: DateRangeFieldProps<TFormData>) => ReactNode
+	/**
+	 * Generic per call, not per form: the item type is inferred from `name`, which is what lets
+	 * one member cover every array in `TFormData` — and what makes a nested array inside an
+	 * entry work with no extra machinery.
+	 */
+	ArrayField: <TItem>(props: ArrayFieldProps<TFormData, TItem>) => ReactNode
 	SubmitButton: (props: SubmitButtonProps) => ReactNode
 	Section: (props: SectionProps) => ReactNode
 	GridItem: (props: GridItemProps) => ReactNode

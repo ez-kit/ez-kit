@@ -22,6 +22,8 @@ export type {
 	SimpleOptionSource,
 } from './options/source-types'
 export type {
+	ArrayFieldRenderProps,
+	ArrayItemRenderProps,
 	ButtonProps,
 	CheckboxFieldRenderProps,
 	CheckboxGroupFieldRenderProps,
@@ -44,6 +46,9 @@ export type {
 	WizardStep,
 } from './contract'
 export type {
+	ArrayFieldProps,
+	ArrayFieldScope,
+	ArrayItemScope,
 	BaseFieldProps,
 	CheckboxFieldProps,
 	CheckboxGroupFieldProps,

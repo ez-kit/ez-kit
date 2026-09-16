@@ -21,6 +21,9 @@ export {
 } from '@ez-kit/form-react'
 export type {
 	AnyFormProps,
+	ArrayFieldProps,
+	ArrayFieldScope,
+	ArrayItemScope,
 	BaseFieldProps,
 	BlockRegistry,
 	BoundForm,
@@ -74,6 +77,7 @@ export type {
 // tell a reader to copy has to resolve from the kit itself.
 export {
 	buildValidator,
+	defineFormItem,
 	defineFormSchema,
 	FormSchemaError,
 	isFieldNode,
@@ -85,6 +89,7 @@ export {
 } from '@ez-kit/form-core'
 export type {
 	AnyFormSchema,
+	ArrayNode,
 	BlockNode,
 	Condition,
 	CustomFieldNode,

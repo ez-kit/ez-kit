@@ -44,8 +44,16 @@ export function useConditionValue<TValues>(
 	form: ConditionSubscribableForm<TValues>,
 	condition: Condition<TValues> | undefined,
 	fallback: boolean,
+	/**
+	 * The array entry this node sits in, which a `./`-prefixed rule resolves against. Omitted
+	 * outside an array, where such a rule is an error rather than a read of the form root.
+	 */
+	itemPath?: string,
 ): boolean {
-	const evaluate = useMemo(() => (condition === undefined ? undefined : compileCondition(condition)), [condition])
+	const evaluate = useMemo(
+		() => (condition === undefined ? undefined : compileCondition(condition, itemPath)),
+		[condition, itemPath],
+	)
 
 	const selector = useCallback(
 		(state: { values: TValues }): boolean => (evaluate === undefined ? fallback : evaluate(state.values)),
