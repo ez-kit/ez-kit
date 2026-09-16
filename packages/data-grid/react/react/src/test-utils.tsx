@@ -1,5 +1,6 @@
 import { createColumns } from '@ez-kit/data-grid-core'
-import { allDataGridFeatures, tableFeatures } from '@ez-kit/data-grid-core/features'
+import { tableFeatures } from '@ez-kit/data-grid-core/features'
+import { allDataGridFeatures } from '@ez-kit/data-grid-core/features/all'
 import { render } from '@testing-library/react'
 import { forwardRef, Fragment, useEffect, useState } from 'react'
 
