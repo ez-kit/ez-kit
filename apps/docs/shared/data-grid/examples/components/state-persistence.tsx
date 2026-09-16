@@ -10,6 +10,7 @@ import {
 	createSortedRowModel,
 	filterFns,
 	rowSortingFeature,
+	sortFns,
 	tableFeatures,
 } from '@ez-kit/data-grid-core/features'
 import { createColumns, extractState, parseState, useExtractedState } from '@ez-kit/data-grid-react'
@@ -30,6 +31,7 @@ const features = tableFeatures({
 	// feature is registered — so persisting column order means registering the feature, even
 	// though this grid never writes an `ordering` option.
 	columnOrderingFeature,
+	sortFns,
 	filteredRowModel: createFilteredRowModel(),
 	sortedRowModel: createSortedRowModel(),
 })

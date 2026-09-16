@@ -22,6 +22,7 @@ import {
 	rowPinningFeature,
 	rowSelectionFeature,
 	rowSortingFeature,
+	sortFns,
 	tableFeatures,
 } from '@ez-kit/data-grid-core/features'
 import { DataGridOptionsProvider } from '@ez-kit/data-grid-react'
@@ -58,6 +59,7 @@ export const features = tableFeatures({
 	rowPinningFeature,
 	rowSelectionFeature,
 	loadingFeature,
+	sortFns,
 	facetedRowModel: createFacetedRowModel(),
 	facetedUniqueValues: createFacetedUniqueValues(),
 	filteredRowModel: createFilteredRowModel(),

@@ -10,6 +10,7 @@ import {
 	rowPaginationFeature,
 	rowPinningFeature,
 	rowSortingFeature,
+	sortFns,
 	tableFeatures,
 } from '@ez-kit/data-grid-core/features'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -30,6 +31,7 @@ const features = tableFeatures({
 	infiniteFeature,
 	rowPaginationFeature,
 	rowPinningFeature,
+	sortFns,
 	sortedRowModel: createSortedRowModel(),
 })
 

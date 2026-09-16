@@ -22,6 +22,7 @@ import {
 	rowPinningFeature,
 	rowSelectionFeature,
 	rowSortingFeature,
+	sortFns,
 	tableFeatures,
 } from '@ez-kit/data-grid-core/features'
 
@@ -49,6 +50,7 @@ const features = tableFeatures({
 	rowPaginationFeature,
 	rowPinningFeature,
 	rowSelectionFeature,
+	sortFns,
 	facetedRowModel: createFacetedRowModel(),
 	facetedUniqueValues: createFacetedUniqueValues(),
 	filteredRowModel: createFilteredRowModel(),

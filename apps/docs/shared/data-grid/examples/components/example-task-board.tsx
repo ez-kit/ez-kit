@@ -18,6 +18,7 @@ import {
 	rowPaginationFeature,
 	rowSelectionFeature,
 	rowSortingFeature,
+	sortFns,
 	tableFeatures,
 } from '@ez-kit/data-grid-core/features'
 import { createColumns, useDataGridState, useDataGridTable } from '@ez-kit/data-grid-react'
@@ -41,6 +42,7 @@ const features = tableFeatures({
 	globalFilteringFeature,
 	rowPaginationFeature,
 	rowSelectionFeature,
+	sortFns,
 	facetedRowModel: createFacetedRowModel(),
 	facetedUniqueValues: createFacetedUniqueValues(),
 	filteredRowModel: createFilteredRowModel(),

@@ -25,14 +25,27 @@ export const BASE_FEATURES = ['columnVisibilityFeature', 'columnPinningFeature',
 /**
  * Config key → the feature-set members a grid writing that key needs.
  *
- * A superset of core's `REQUIRED_FEATURE`, because that catalogue is one config key to one
- * *feature* and the silent half of this is the **row models**: each stage falls back to the
- * previous one when its model is absent, so `rowSortingFeature` without `sortedRowModel` renders a
- * grid whose sort headers respond and whose rows never move. Nothing warns. Same for `filterFns`,
- * the registry a named filter function resolves through — without it every row matches.
+ * A superset of core's `REQUIRED_FEATURE`, which is one config key to one *feature*. Two other
+ * kinds of member hide behind the same config key, and both fail silently:
+ *
+ * - **Row models.** Each stage falls back to the previous one when its model is absent, so
+ *   `rowSortingFeature` without `sortedRowModel` renders a grid whose sort headers respond and
+ *   whose rows never move. (The typecheck does catch the mirror image — a row model without its
+ *   feature is a branded type error naming the feature.)
+ * - **The three named-function registries**, `sortFns` / `filterFns` / `aggregationFns`. v9
+ *   resolves a comparator the column named *by string*, and an unregistered name resolves to
+ *   nothing — so the stage runs and does the wrong thing rather than failing.
+ *
+ * `sortFns` is required by **any** grid that sorts, not only one naming `sorting: { fn: … }`: a
+ * plain accessor column's auto-resolved comparator is a name too. Measured — the same table sorted
+ * descending puts `User 9999` on top without the registry and `User 10001` with it. It shipped
+ * silently because below about ten rows lexicographic and alphanumeric agree, so every small
+ * example's spec passed; it took a 10 000-row virtualization example to make it visible.
+ * `filterFns` has the same shape and core does warn about that one; `aggregationFns` it does not
+ * (`features/entry.ts:56` says so outright).
  */
 export const REQUIRED_BY_OPTION: Readonly<Record<string, readonly string[]>> = {
-	sorting: ['rowSortingFeature', 'sortedRowModel'],
+	sorting: ['rowSortingFeature', 'sortedRowModel', 'sortFns'],
 	filtering: ['columnFilteringFeature', 'filteredRowModel', 'filterFns'],
 	globalFiltering: ['globalFilteringFeature', 'filteredRowModel', 'filterFns'],
 	pagination: ['rowPaginationFeature'],

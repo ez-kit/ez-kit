@@ -104,7 +104,7 @@ row model is what actually sorts, filters or slices the rows.
 
 | You write                                | Register                                                                                                          |
 | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `sorting`                                | `rowSortingFeature` + `sortedRowModel: createSortedRowModel()`                                                    |
+| `sorting`                                | `rowSortingFeature` + `sortedRowModel: createSortedRowModel()` + `sortFns`                                        |
 | `filtering`                              | `columnFilteringFeature` + `filteredRowModel: createFilteredRowModel()` + `filterFns`                             |
 | `globalFiltering`                        | `globalFilteringFeature` + `filteredRowModel` + `filterFns`                                                       |
 | `filtering.faceted`                      | `columnFacetingFeature` + `facetedRowModel` + `facetedUniqueValues`                                               |
@@ -143,9 +143,13 @@ a bug in the grid rather than a missing registration:
   `globalFilterFn` defaults to the name `'includesString'`. An unregistered name resolves to no
   comparator, the filtered row model keeps every row, and the grid looks like a filter that matches
   everything. (`createTable` does warn about this one.)
-- **No `sortFns` / `aggregationFns`.** A column's `sorting: { fn: 'alphanumeric' }` silently sorts
-  by something else — `['item10', 'item2']` instead of `['item2', 'item10']` — and a grouped
-  column's `aggregationFn: 'sum'` aggregates to `undefined`.
+- **No `sortFns` / `aggregationFns`.** Wider than it looks: `sortFns` is needed by **any** grid
+  that sorts, not only one that writes `sorting: { fn: 'alphanumeric' }`. A plain accessor
+  column's comparator is resolved by _name_ too, so without the registry the column falls back to
+  a lexicographic compare — the same 10 000-row table puts `User 9999` on top where `User 10001`
+  belongs. It hides easily, because below about ten rows lexicographic and alphanumeric agree, so
+  a small example looks right. A grouped column's `aggregationFn: 'sum'` likewise aggregates to
+  `undefined`.
 
 `filterFns`, `sortFns` and `aggregationFns` are registries of named functions, not features. Add
 one to the set whenever a column or an option refers to a function **by name** rather than passing

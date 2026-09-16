@@ -7,6 +7,7 @@ import {
 	columnVisibilityFeature,
 	createSortedRowModel,
 	rowSortingFeature,
+	sortFns,
 	tableFeatures,
 } from '@ez-kit/data-grid-core/features'
 import { useState } from 'react'
@@ -23,6 +24,7 @@ const features = tableFeatures({
 	columnSizingFeature,
 	columnResizingFeature,
 	rowSortingFeature,
+	sortFns,
 	sortedRowModel: createSortedRowModel(),
 })
 

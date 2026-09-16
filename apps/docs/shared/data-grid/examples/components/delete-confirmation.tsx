@@ -10,6 +10,7 @@ import {
 	rowPaginationFeature,
 	rowSelectionFeature,
 	rowSortingFeature,
+	sortFns,
 	tableFeatures,
 } from '@ez-kit/data-grid-core/features'
 import { createColumns } from '@ez-kit/data-grid-react'
@@ -29,6 +30,7 @@ const features = tableFeatures({
 	deletingFeature,
 	rowPaginationFeature,
 	rowSelectionFeature,
+	sortFns,
 	paginatedRowModel: createPaginatedRowModel(),
 	sortedRowModel: createSortedRowModel(),
 })

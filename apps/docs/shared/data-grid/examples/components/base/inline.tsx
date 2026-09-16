@@ -8,6 +8,7 @@ import {
 	createSortedRowModel,
 	rowPaginationFeature,
 	rowSortingFeature,
+	sortFns,
 	tableFeatures,
 } from '@ez-kit/data-grid-core/features'
 import { useMemo } from 'react'
@@ -24,6 +25,7 @@ const features = tableFeatures({
 	columnSizingFeature,
 	rowSortingFeature,
 	rowPaginationFeature,
+	sortFns,
 	paginatedRowModel: createPaginatedRowModel(),
 	sortedRowModel: createSortedRowModel(),
 })

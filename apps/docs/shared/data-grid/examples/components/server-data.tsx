@@ -13,6 +13,7 @@ import {
 	loadingFeature,
 	rowPaginationFeature,
 	rowSortingFeature,
+	sortFns,
 	tableFeatures,
 } from '@ez-kit/data-grid-core/features'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -35,6 +36,7 @@ const features = tableFeatures({
 	filterFns,
 	globalFilteringFeature,
 	rowPaginationFeature,
+	sortFns,
 	filteredRowModel: createFilteredRowModel(),
 	paginatedRowModel: createPaginatedRowModel(),
 	sortedRowModel: createSortedRowModel(),

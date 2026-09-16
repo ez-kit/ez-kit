@@ -7,6 +7,7 @@ import {
 	createSortedRowModel,
 	editingFeature,
 	rowSortingFeature,
+	sortFns,
 	tableFeatures,
 } from '@ez-kit/data-grid-core/features'
 import { createColumnHelper, defineCellType, baseCellTypes } from '@ez-kit/data-grid-react'
@@ -24,6 +25,7 @@ const features = tableFeatures({
 	columnSizingFeature,
 	rowSortingFeature,
 	editingFeature,
+	sortFns,
 	sortedRowModel: createSortedRowModel(),
 })
 

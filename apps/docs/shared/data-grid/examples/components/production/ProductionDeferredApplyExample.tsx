@@ -19,6 +19,7 @@ import {
 	rowPaginationFeature,
 	rowSelectionFeature,
 	rowSortingFeature,
+	sortFns,
 	tableFeatures,
 } from '@ez-kit/data-grid-core/features'
 
@@ -43,6 +44,7 @@ const features = tableFeatures({
 	globalFilteringFeature,
 	rowPaginationFeature,
 	rowSelectionFeature,
+	sortFns,
 	facetedRowModel: createFacetedRowModel(),
 	facetedUniqueValues: createFacetedUniqueValues(),
 	filteredRowModel: createFilteredRowModel(),
