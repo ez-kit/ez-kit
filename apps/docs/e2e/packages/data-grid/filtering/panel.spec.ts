@@ -86,10 +86,18 @@ test.describe('where the panel goes', () => {
 		await grid.open(ABOVE)
 
 		// Containment is the claim for `toolbar`, so its absence is the claim here — an `above`
-		// panel that happened to render inside the toolbar would pass a bare y-measurement. The
-		// toolbar is asserted to exist first: a compound selector whose *left* half stopped
-		// matching is empty for a reason that has nothing to do with where the panel went.
-		await expect(page.locator('[data-slot="toolbar"]')).toHaveCount(1)
+		// panel that happened to render inside the toolbar would pass a bare y-measurement.
+		//
+		// This one assertion cannot be given a positive control, and the reason is worth writing
+		// down rather than rediscovering: the `filter-panel` example mounts **no toolbar at all**
+		// (measured — `[data-slot="toolbar"]` resolves to 0 elements here), so the compound
+		// selector is empty no matter what the panel does, and nothing about it can fail. An
+		// earlier pass "hardened" it by asserting the toolbar exists first, which is simply false
+		// for this example and turned a vacuous pass into a red test.
+		//
+		// What carries the weight instead: the `boxOf` reads below, which throw rather than
+		// coordinate-zero when the panel does not render, and the sibling `panel: 'toolbar'` test,
+		// which asserts the same containment *positively* on a grid that does have a toolbar.
 		await expect(page.locator(`[data-slot="toolbar"] ${PANEL}`)).toHaveCount(0)
 
 		const panel = await boxOf(page.locator(PANEL))

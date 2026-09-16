@@ -59,9 +59,15 @@ test.describe('where the selector goes', () => {
 	test("`pageSizer: 'footer'` puts it on the page-control row", async ({ grid, page }) => {
 		await grid.open(FOOTER)
 
-		// The toolbar exists and the sizer is simply not in it — without this, a renamed `toolbar`
-		// slot empties the compound selector and reads as the option having moved the control.
-		await expect(page.locator('[data-slot="toolbar"]')).toHaveCount(1)
+		// No positive control is possible for this line: the `pagination-page-sizer-footer`
+		// example mounts **no toolbar at all** (measured — `[data-slot="toolbar"]` resolves to 0
+		// elements here), so the compound selector is empty whatever the sizer does. An earlier
+		// pass added `toHaveCount(1)` on the toolbar as a control; that premise is false for this
+		// example, and the "hardening" only turned a vacuous pass into a red test.
+		//
+		// The two positives below are what make the placement claim mean anything — the sizer and
+		// the pagination row are each asserted present, and the `boxOf` reads that follow throw on
+		// an element that renders no box.
 		await expect(page.locator(`[data-slot="toolbar"] ${SIZER}`)).toHaveCount(0)
 		await expect(page.locator(`${FOOTER_ROW} ${SIZER}`)).toHaveCount(1)
 		await expect(page.locator(`${FOOTER_ROW} ${PAGINATION}`)).toHaveCount(1)
