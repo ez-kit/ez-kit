@@ -18,11 +18,24 @@ Import from where the CLI placed the file — by default `@/components/data-grid
 
 ```tsx
 import { DataGrid, createColumns, useDataGrid } from '@/components/data-grid/data-grid'
-import { createSortedRowModel, rowSortingFeature, tableFeatures } from '@ez-kit/data-grid-core/features'
+import {
+	columnPinningFeature,
+	columnSizingFeature,
+	columnVisibilityFeature,
+	createSortedRowModel,
+	rowSortingFeature,
+	tableFeatures,
+} from '@ez-kit/data-grid-core/features'
 import '@/components/data-grid/styles.css'
 
-// A table has only the features you register. Compose the set once and share it.
-const features = tableFeatures({ rowSortingFeature, sortedRowModel: createSortedRowModel() })
+// A table has only the features you register. The first three are mandatory — see below.
+const features = tableFeatures({
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	rowSortingFeature,
+	sortedRowModel: createSortedRowModel(),
+})
 
 type User = { name: string; role: string }
 
@@ -54,9 +67,13 @@ Pick one mode for the lifetime of a given grid — switching between them remoun
 
 ### Feature composition
 
-`features` is required, and `@ez-kit/data-grid-core/features` is the one import path for it — the feature _values_ are deliberately not re-exported from the copied files or from `@ez-kit/data-grid-react`, because re-exporting a feature is what would put it in every consumer's bundle. `shadcn add` does **not** add `@ez-kit/data-grid-core` to your `package.json` today, so install it yourself to compose a set.
+`features` is required, and `@ez-kit/data-grid-core/features` is the one import path for it — the feature _values_ are deliberately not re-exported from the copied files or from `@ez-kit/data-grid-react`. `shadcn add` does **not** add `@ez-kit/data-grid-core` to your `package.json` today, so install it yourself to compose a set.
 
 Registering a feature does not switch it on: `features` decides what exists, the config (`sorting: false`, `editing: { mode: 'row' }`) decides whether this grid uses it. Configuring a feature you did not register is a silent no-op, reported only by a development-mode warning.
+
+`columnVisibilityFeature`, `columnPinningFeature` and `columnSizingFeature` are **mandatory**, whatever else you register: the adapter calls into all three on every render (`header.getSize()`, `column.getIsPinned()`, `table.getVisibleLeafColumns()` and the visual column-order helpers), so leaving one out is a render-time `TypeError` rather than a disabled feature. Open every set with those three.
+
+Composing a set governs **behaviour** — an unregistered feature contributes no state slice, no API and no work at runtime. It does **not** yet make your bundle smaller: importing any single name from `@ez-kit/data-grid-core/features` currently pulls ~93% of that entry, because `allDataGridFeatures` is a top-level `tableFeatures({ … })` call a bundler cannot prove pure. A fix in core is in progress.
 
 ### Extending cell types
 

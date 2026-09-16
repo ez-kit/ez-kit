@@ -12,9 +12,23 @@ This is a breaking release across the whole grid. It is `minor` because the pack
 ## `features` is required
 
 ```ts
-import { createSortedRowModel, rowSortingFeature, tableFeatures } from '@ez-kit/data-grid-core/features'
+import {
+	columnPinningFeature,
+	columnSizingFeature,
+	columnVisibilityFeature,
+	createSortedRowModel,
+	rowSortingFeature,
+	tableFeatures,
+} from '@ez-kit/data-grid-core/features'
 
-const features = tableFeatures({ rowSortingFeature, sortedRowModel: createSortedRowModel() })
+// The first three are mandatory — see below. Add what this grid actually does after them.
+const features = tableFeatures({
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	rowSortingFeature,
+	sortedRowModel: createSortedRowModel(),
+})
 
 const table = useDataGrid({ features, data, columns, sorting: true })
 ```
@@ -24,8 +38,25 @@ TanStack features, the row-model factories, the `filterFns` / `sortFns` / `aggre
 registries and the grid's own seven features, which are now real v9 plugins under upstream's naming
 register (`editingFeature`, `creatingFeature`, `deletingFeature`, `draftFeature`, `loadingFeature`,
 `infiniteFeature`, `rowOrderingFeature`). `@tanstack/table-core` stays our dependency rather than
-becoming your peer. `allDataGridFeatures` is the all-in set, for prototypes and examples, and it is
-documented as defeating the point.
+becoming your peer. `allDataGridFeatures` is the all-in set, for prototypes and examples.
+
+**Three features are mandatory today, whatever else you register:** `columnVisibilityFeature`,
+`columnPinningFeature` and `columnSizingFeature`. The React adapter calls into all three on every
+render — `header.getSize()`, `column.getIsPinned()`, `table.getVisibleLeafColumns()` and the visual
+column-order helpers — so leaving any of them out is a **render-time `TypeError`**, not a silent
+no-op, and the development-mode warning below says nothing about it. Open every set with those
+three.
+
+**What composing a set does not buy you yet: a smaller bundle.** It fully governs _behaviour_ — an
+unregistered feature contributes no state slice, no API and no work at runtime — but the intended
+bundle consequence does not currently materialise. Importing any single name from
+`@ez-kit/data-grid-core/features` pulls ~93% of the entry: measured against the built entry,
+`tableFeatures` alone costs 46 360 bytes, `allDataGridFeatures` 46 365, and the whole surface
+49 696. The cause is that `allDataGridFeatures` is a top-level `tableFeatures({ … })` call, which a
+bundler cannot prove pure, so it retains every operand. A fix in core is in progress; until it
+lands, register what you use for correctness and clarity rather than for size.
+`apps/docs/test/tree-shaking.test.ts` carries the measurement as a deliberately failing case, so it
+cannot rot.
 
 `features` has **no default**, deliberately: the only possible default is the all-in set, which is
 what everyone who never thought about it would then ship. A `defaults` layer — `createDataGrid`'s

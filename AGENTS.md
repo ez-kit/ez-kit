@@ -31,6 +31,27 @@ thought about it would then ship, and the point of composing a set is that a tab
 it registers. `allDataGridFeatures` exists for prototypes and doc examples and is documented as
 defeating that.
 
+**Two things about that set are true today and easy to mis-read as bugs or as working.** First,
+**`columnVisibilityFeature`, `columnPinningFeature` and `columnSizingFeature` are mandatory for the
+React adapter**, whatever else a grid registers: `utils/column-size-vars.ts` calls `header.getSize()`,
+`column.getIsPinned()` and `table.getVisibleLeafColumns()`, and `utils/visual-column-order.ts` calls
+`table.getStartVisibleLeafColumns()` and its siblings — unconditionally, on every render. Omitting
+one is a **render-time `TypeError`**, not a disabled feature, and core's `REQUIRED_FEATURE` guard
+says nothing about it because the need is not expressed by any config key. Every docs example opens
+its set with those three. The real fix is a core guard or an exported `baseGridFeatures`, and it is
+an open follow-up rather than a settled decision.
+
+Second, **the bundle half of composition does not work yet.** The behaviour half does — an
+unregistered feature contributes no state slice, no API and no work. But `entry.ts` declares
+`allDataGridFeatures` as a top-level `tableFeatures({ … })` call, which a bundler cannot prove pure,
+so it retains every operand: importing **any** single name from `@ez-kit/data-grid-core/features`
+pulls ~93% of the entry (`tableFeatures` alone 46 360 bytes, the whole surface 49 696, measured
+against the built entry). It is the same defect the store packages had with a bare
+`createStoreCache()`, one package over, and here it cancels the thing the migration is for.
+`apps/docs/test/tree-shaking.test.ts` carries it as two `it.fails` cases **on purpose**, so that the
+day core is fixed those lines start failing and have to be flipped — do not "clean up" a failing
+case here, and do not write a bundle-size claim into a changeset or a README until they flip.
+
 **Registering a feature does not switch it on, and configuring one does not register it.** The two
 are orthogonal axes. `features` is compile time — what is in the bundle and which APIs exist at
 all. The config (`sorting: false`, `editing: { mode: 'row' }`) is runtime — whether this instance

@@ -30,8 +30,8 @@ import {
 	tableFeatures,
 } from '@ez-kit/data-grid-core/features'
 
-// Compose once per application. A table has only the features you register — everything else,
-// stock or ours, stays out of your bundle.
+// Compose once per application. A table has only the features you register: everything else
+// contributes no state, no API and no work at runtime.
 const features = tableFeatures({
 	rowSortingFeature,
 	sortedRowModel: createSortedRowModel(),
@@ -54,7 +54,11 @@ const table = createTable({
 })
 ```
 
-`features` is required and has no default: the only default possible is the all-in set, which would be what everyone who never thought about it shipped. `allDataGridFeatures` is that set, exported for prototypes and documentation examples and documented as defeating the point.
+`features` is required and has no default: the only default possible is the all-in set, which would be what everyone who never thought about it shipped. `allDataGridFeatures` is that set, exported for prototypes and documentation examples.
+
+Composing a set governs **behaviour** — an unregistered feature contributes no state slice, no API and no work at runtime. It does **not** yet make your bundle smaller: importing any single name from `@ez-kit/data-grid-core/features` currently pulls ~93% of that entry, because `allDataGridFeatures` is a top-level `tableFeatures({ … })` call a bundler cannot prove pure and therefore cannot drop. A fix is in progress; the measurement lives in `apps/docs/test/tree-shaking.test.ts` as a deliberately failing case.
+
+If you are feeding these options to the React adapter, note that `columnVisibilityFeature`, `columnPinningFeature` and `columnSizingFeature` are **mandatory** there — it calls into all three on every render, so omitting one is a render-time `TypeError` rather than a disabled feature.
 
 **Registering a feature does not switch it on, and configuring one does not register it.** `features` decides what code exists; the config (`sorting: true`, `sorting: false`, `editing: { mode: 'row' }`) decides whether this table uses it — so one shared grid definition works at a dozen call sites with half of it off. Configuring a feature you did not register is **not** a compile error: it is a no-op, and the only thing that reports it is a development-mode warning naming the missing feature.
 
