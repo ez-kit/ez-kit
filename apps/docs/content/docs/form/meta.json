@@ -12,6 +12,7 @@
 		"fields",
 		"select",
 		"layout",
+		"arrays",
 		"validation",
 		"submission",
 		"reactivity",

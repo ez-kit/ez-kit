@@ -1,0 +1,234 @@
+---
+title: Arrays
+description: Repeatable groups of fields — add, remove and reorder entries, in JSX and in a document.
+---
+
+Some forms hold a list of the same thing: the people on a booking, the line items of an invoice, the phone numbers of a contact. `ArrayField` is that list. It binds to an array in the form values, renders one group of fields per entry, and hands you the controls to append, remove and reorder them.
+
+Unlike [layout](/docs/form/layout), this is **not** cosmetic: an array owns a path, carries its own validation, and rewrites what its children's names mean.
+
+## In TSX
+
+<KitExample exampleId='form-arrays' />
+
+## The same list as a document
+
+<KitExample exampleId='form-arrays-schema' />
+
+## Two rules that decide whether it works
+
+Everything else on this page is detail. These two are the ones that bite.
+
+### Key by `item.key`, never by the index
+
+```tsx
+items.map((item) => <item.Item key={item.key}>…</item.Item>)
+```
+
+`item.key` is a stable id minted when the entry is created and carried with it across every add, remove and move. The index is not: removing the middle entry of three renumbers the third from `2` to `1`, and React — which reconciles by `(type, key)` — then hands the third entry's component instance the second entry's data.
+
+The reason this is worth a section of its own is that **the submitted values still look correct**. What moves is the state React keeps _inside_ the controls: an open calendar, a half-typed search query, the caret, a scroll position. A submit-level test passes; a user watching their own screen sees a date picker open on the wrong row.
+
+### Names inside an entry are relative to the entry
+
+```tsx
+<item.TextField
+	name='email'
+	label='Email'
+/>
+```
+
+That `email` resolves to `members[1].email` — the prefix is joined on at render, from the entry the component is being drawn in. Nothing at the call site composes a path, and nothing needs to know the index.
+
+The type follows the same rule: inside the entry, `name` is checked against the **item** type, so `<item.TextField name='teamName' />` is a compile error even though `teamName` is a real field of the form. The reverse holds outside — a bare `email` is not a path of the form.
+
+## `form.ArrayField`
+
+The component takes the array's `name`, a `newItem` to append, and a render prop:
+
+```tsx
+<form.ArrayField
+	name='members'
+	label='Members'
+	newItem={{ name: '', email: '', role: 'viewer' }}
+>
+	{({ items }) =>
+		items.map((item) => (
+			<item.Item key={item.key}>
+				<item.TextField
+					name='name'
+					label='Name'
+				/>
+			</item.Item>
+		))
+	}
+</form.ArrayField>
+```
+
+`newItem` is required here and has no counterpart in a document. A document declares each field's `defaultValue`, so the renderer can build a fresh entry by reading the item's subtree; a render prop declares nothing the package can read, so you state the starting value yourself. Give it every key of the item — a missing one is an uncontrolled input on the new row.
+
+| Prop          | Type                           | Notes                                                                                                               |
+| ------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| `name`        | array path                     | **Required.** Narrowed to the paths of `TFormData` whose value is an array; the item type follows it.               |
+| `newItem`     | `TItem`                        | **Required.** The value a newly appended entry starts from.                                                         |
+| `children`    | `(scope) => ReactNode`         | **Required.** The render prop — see [the scope](#the-render-prop) below.                                            |
+| `label`       | `ReactNode`                    | Caption for the list itself.                                                                                        |
+| `description` | `ReactNode`                    | Sub-caption under it.                                                                                               |
+| `disabled`    | `boolean`                      | Disables the list and everything in it.                                                                             |
+| `required`    | `boolean`                      | Visual only, exactly as on a flat field.                                                                            |
+| `validate`    | `FieldValidateProps`           | Constraints on the **list**, not on its fields — see [below](#validating-the-list). `maxLength` also bounds adding. |
+| `reorderable` | `boolean \| { up, down }`      | Offer move-up / move-down on every entry. The object form only adds captions.                                       |
+| `addLabel`    | `ReactNode`                    | Caption for the add control. Defaults to `Add`.                                                                     |
+| `removeLabel` | `ReactNode`                    | Caption for each entry's remove control. Defaults to `Remove`.                                                      |
+| `itemLabel`   | `(index: number) => ReactNode` | Caption for one entry, given its zero-based position.                                                               |
+
+`validate.maxLength` is both bounds at once: it is the constraint that fails with a message, and it is the point at which the add control stops offering — `canAdd` goes `false` and the kit renders the control disabled rather than letting it vanish from under the cursor. One option, one meaning, the same on both paths.
+
+### The render prop
+
+The render prop receives the live list and the controls for it:
+
+| Key      | Type                        | Notes                                                                                 |
+| -------- | --------------------------- | ------------------------------------------------------------------------------------- |
+| `items`  | `readonly ArrayItemScope[]` | One entry of the list, in order. Map over it.                                         |
+| `add`    | `() => void`                | Append an entry built from `newItem`. The kit's own add control calls the same thing. |
+| `canAdd` | `boolean`                   | `false` once `validate.maxLength` is reached — for an add affordance of your own.     |
+
+### One entry
+
+Each member of `items` **is** the form's field set retyped over the item, plus three keys of its own:
+
+| Key     | Type                                 | Notes                                                                                              |
+| ------- | ------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| `key`   | `string`                             | The entry's stable id. This is what `key` takes — see [above](#key-by-itemkey-never-by-the-index). |
+| `index` | `number`                             | Its zero-based position. Fine for display; never for `key`.                                        |
+| `Item`  | `(props: { children }) => ReactNode` | The entry's chrome — heading, remove control, reorder controls. Wrap the entry's fields.           |
+
+Everything else on the object is `item.TextField`, `item.SelectField`, `item.ArrayField` and the rest, each addressing this entry's paths. `item.ArrayField` is why nesting needs no extra machinery: a list inside an entry is the same component, one prefix deeper.
+
+## Validating the list
+
+`validate` on an array constrains the **list**, and its messages surface on the list rather than on any one field. The vocabulary is the same [`FieldValidate`](/docs/form/schema#validation) every field uses; three keys mean something here:
+
+| Key         | Type                 | Notes                                                                        |
+| ----------- | -------------------- | ---------------------------------------------------------------------------- |
+| `minLength` | `number`             | Counts **entries**, not characters. `minLength: 1` is "at least one".        |
+| `maxLength` | `number`             | Likewise, and also what stops the add control offering.                      |
+| `rule`      | `string \| string[]` | Names registered rules — document only, and the seam for cross-entry checks. |
+
+A field _inside_ an entry validates itself as usual, with its own `validate` block; those messages belong to that field and never appear on the list. The two are kept apart deliberately — a kit that merged them would repeat every entry's message at the top of the list.
+
+### Cross-item rules
+
+A named rule attached to an array receives the **whole array** as its value, which is what makes "no two people share an email" expressible at all. It answers one of three ways: `true`, a single message for the list, or a list of issues that name their own place:
+
+```ts
+const uniqueEmails: NamedRule = (value) => {
+	const issues = findDuplicates(value).map((index) => ({
+		path: `[${index}].email`,
+		message: 'Already used',
+	}))
+	return issues.length > 0 ? issues : true
+}
+```
+
+```tsx
+<FormRenderer
+	schema={schema}
+	rules={{ 'unique-emails': uniqueEmails }}
+/>
+```
+
+An issue's `path` is relative to the node the rule sits on, so `[1].email` is the second entry's email box. Both index spellings work — `1.email` addresses the same place.
+
+`rule` is a document-only key: it names an entry in a registry because JSON cannot carry code, and JSX can. On the JSX side, write the check as a TanStack validator on the form instead — [Validation](/docs/form/validation#per-field-validators) covers why there is no registry on that side.
+
+## The `array` node
+
+A document says `array`, names the field set under `children`, and groups the three captions:
+
+```ts
+{
+	type: 'array',
+	name: 'attendees',
+	label: 'Attendees',
+	reorderable: true,
+	validate: { minLength: 1, maxLength: 4, rule: 'unique-emails' },
+	item: { label: 'Attendee' },
+	add: { label: 'Add attendee' },
+	remove: { label: 'Remove' },
+	children: [
+		{ type: FormFieldType.Text, name: 'name', label: 'Name', defaultValue: '' },
+	],
+}
+```
+
+There is no `newItem`: a fresh entry is built from the `defaultValue`s of the children, so a child with none contributes no key at all to the new entry.
+
+| Property      | Type                      | Notes                                                                            |
+| ------------- | ------------------------- | -------------------------------------------------------------------------------- |
+| `type`        | `'array'`                 | **Required.**                                                                    |
+| `name`        | array path                | **Required.** Absolute, even inside a step — nesting never rewrites it.          |
+| `children`    | `FormNode[]`              | **Required.** The item's fields, named **relative to the item**.                 |
+| `label`       | `LocalizedText`           | A plain string, or a map of locale → string.                                     |
+| `description` | `LocalizedText`           |                                                                                  |
+| `validate`    | `FieldValidate`           | Constraints on the list — `minLength`, `maxLength`, `rule`.                      |
+| `reorderable` | `boolean \| { up, down }` | Offer the move controls; the object form captions them.                          |
+| `item`        | `{ label }`               | Caption for one entry. `{{index}}` is merged in for a `{ key, params }` message. |
+| `add`         | `{ label }`               | Caption for the control that appends an entry.                                   |
+| `remove`      | `{ label }`               | Caption for the control that removes one.                                        |
+
+Array nodes carry the [common node properties](/docs/form/schema#common-node-properties) too, so `when` hides a whole list at once.
+
+### Conditions inside an entry
+
+A `when` on a child of an array is evaluated against **that entry**, using the `./` prefix:
+
+```ts
+{ type: FormFieldType.Text, name: 'company', when: { field: './kind', eq: 'company' } }
+```
+
+`./kind` is this entry's `kind`. An absolute `field` still reaches the form root from inside an entry, so both are available and the spelling says which you meant. There is no `../`: one form of relativity, one meaning.
+
+Hiding works per entry, not per list — the third attendee can have its company box while the others do not. And a value hidden by a condition is stripped from the submitted payload the same way a top-level one is.
+
+### Reusing an entry's field set
+
+`defineFormItem` authors a `children` block against the item type instead of inline, so one block serves several arrays:
+
+```ts
+const attendeeFields = defineFormItem<Attendee>()([
+	{ type: FormFieldType.Text, name: 'name', label: 'Name', defaultValue: '' },
+	{ type: FormFieldType.Text, name: 'email', label: 'Email', defaultValue: '' },
+])
+
+const schema = defineFormSchema<Booking>()({
+	version: 1,
+	children: [
+		{ type: 'array', name: 'attendees', children: attendeeFields },
+		{ type: 'array', name: 'waitlist', children: attendeeFields },
+	],
+})
+```
+
+It is curried for the same reason `defineFormSchema` is — TypeScript has no partial generic inference — and it is **array-item-only** by construction. The names in the block are item-relative, so dropping it into a `section` is a compile error, not a runtime surprise. Mounting a shared field set at a nested non-array path (`address.city`) is a different feature and does not exist.
+
+## Styling hooks
+
+Both kits stamp the same attributes on an entry, so app CSS can reach a row without forking a kit:
+
+| Attribute                             | Element                                  |
+| ------------------------------------- | ---------------------------------------- |
+| `data-field-type='array'`             | The list's root, beside `data-field`.    |
+| `data-slot='form-array-item'`         | One entry. Carries `data-index` as well. |
+| `data-slot='form-array-item-label'`   | The entry's caption.                     |
+| `data-slot='form-array-item-fields'`  | The entry's fields.                      |
+| `data-slot='form-array-item-actions'` | The entry's remove and reorder controls. |
+
+The list's own container differs between the kits: the shadcn kit publishes `form-array`, `form-array-items` and `form-array-add`, while the HeroUI kit renders a real `<fieldset>` through HeroUI's `Fieldset` and leaves the library's own slots in place. Address the list through `data-field` / `data-field-type` rather than a slot if the rule must hold for both.
+
+## What an array is not
+
+- **Not a layout.** Unlike a `Section`, it changes what a child's `name` means, and it owns a path in the values.
+- **Not drag-and-drop.** `reorderable` exposes move-up / move-down; the gesture is the kit's business, and neither kit ships a drag handle.
+- **Not virtualized.** A list of a few dozen entries is the shape this is built for. Every entry is rendered, and three levels of nesting at a hundred entries each is a million fields.

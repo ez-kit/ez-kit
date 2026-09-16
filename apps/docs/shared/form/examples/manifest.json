@@ -294,5 +294,21 @@
 		"groupLabel": "Form",
 		"sourceFile": "components/wizard.tsx",
 		"exportName": "WizardExample"
+	},
+	{
+		"id": "form-arrays",
+		"label": "Arrays",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/arrays.tsx",
+		"exportName": "ArraysExample"
+	},
+	{
+		"id": "form-arrays-schema",
+		"label": "Arrays: document",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/arrays-schema.tsx",
+		"exportName": "ArraysSchemaExample"
 	}
 ]

@@ -126,6 +126,7 @@ export const DocPage = {
 	FilteringOperators: 'content/docs/data-grid/filtering/operators.mdx',
 	FilteringActiveFilters: 'content/docs/data-grid/filtering/active-filters.mdx',
 	FilteringVariants: 'content/docs/data-grid/filtering/variants.mdx',
+	FormArrays: 'content/docs/form/arrays.mdx',
 	FormCustomKit: 'content/docs/form/custom-kit.mdx',
 	FormFields: 'content/docs/form/fields.mdx',
 	FormLayout: 'content/docs/form/layout.mdx',
@@ -308,6 +309,17 @@ export const FORM_TYPE = {
 		name: 'FormRendererUncontrolledProps',
 		typeArgs: FORM_API_TYPE_ARGS,
 	},
+	/** The JSX array trio: the component's props, the render prop's scope, and one entry of it. */
+	ArrayFieldProps: { module: TypeModule.FormReact, name: 'ArrayFieldProps', typeArgs: FORM_VALUE_TYPE_ARGS },
+	ArrayFieldScope: { module: TypeModule.FormReact, name: 'ArrayFieldScope', typeArgs: '<string>' },
+	ArrayItemScope: { module: TypeModule.FormReact, name: 'ArrayItemScope', typeArgs: '<string>' },
+	/**
+	 * The `array` node with its value type erased. `ArrayNode<DocsProbeRow>` is not usable:
+	 * the probe row holds no array path, so the distribution has nothing to distribute over
+	 * and the type collapses to `never`. `AnyArrayNode` is the shape traversal and the
+	 * renderer actually see, and it carries the same keys.
+	 */
+	AnyArrayNode: { module: TypeModule.FormCore, name: 'AnyArrayNode' },
 	/** The instance `useForm` returns: TanStack's own API plus the flat field components. */
 	KitFormApi: { module: TypeModule.FormReact, name: 'KitFormApi', typeArgs: FORM_API_TYPE_ARGS },
 } as const satisfies Record<string, TypeRef>
@@ -1077,6 +1089,22 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{ page: DocPage.FormBasicConcepts, optionTables: [], nonOptionTables: [] },
 	{ page: DocPage.FormComposition, optionTables: [], nonOptionTables: [] },
 	{ page: DocPage.FormExamples, optionTables: [], nonOptionTables: [] },
+	{
+		page: DocPage.FormArrays,
+		optionTables: [
+			{ heading: '`form.ArrayField`', roots: [FORM_TYPE.ArrayFieldProps], expectedCount: 12 },
+			{ heading: 'The render prop', roots: [FORM_TYPE.ArrayFieldScope], expectedCount: 3 },
+			{ heading: 'One entry', roots: [FORM_TYPE.ArrayItemScope], expectedCount: 3 },
+			{ heading: 'Validating the list', roots: [FORM_TYPE.FieldValidate], expectedCount: 3 },
+			{ heading: 'The `array` node', roots: [FORM_TYPE.AnyArrayNode], expectedCount: 10 },
+		],
+		nonOptionTables: [
+			{
+				heading: 'Styling hooks',
+				reason: 'Documents the `data-*` attributes the kits emit onto the DOM, not props of any type.',
+			},
+		],
+	},
 	{ page: DocPage.FormGettingStarted, optionTables: [], nonOptionTables: [] },
 	{ page: DocPage.FormInstallationHeroui, optionTables: [], nonOptionTables: [] },
 	{ page: DocPage.FormInstallationShadcn, optionTables: [], nonOptionTables: [] },
