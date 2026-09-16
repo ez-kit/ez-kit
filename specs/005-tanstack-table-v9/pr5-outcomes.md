@@ -1,260 +1,301 @@
 # PR 5 outcomes — the browser suite on v9
 
 **Date:** 2026-09-16
-**Branch:** `integration/tanstack-v9`, worktree `/Users/sergejolcev/orca/workspaces/ez-kit/data-grid-bump`
-**Tree at start:** `f5e03efe` (`docs: record what PR 3 delivered and the residue PRs 4-6 inherit`).
-**Scope worked:** `apps/docs/e2e/**` only. Nothing outside it was edited — no `ci.yml`, no
-`packages/**`, no `apps/docs/shared/**`, no `apps/docs/content/**`, no changeset.
+**Branch:** `integration/tanstack-v9` (local, unpushed), worktree `/Users/sergejolcev/orca/workspaces/ez-kit/data-grid-bump`
+**Scope worked:** `apps/docs/e2e/**` only. No `ci.yml`, no `packages/**`, no `apps/docs/shared/**`,
+no `apps/docs/content/**`, no changeset.
+**Commits:** `5236a546` (ten absence-assertion repairs), `3af550e1` (two of those ten corrected),
+and this document.
 
 ---
 
-## 0. The headline, stated plainly
+## 0. Read this before any number below
 
-**The browser suite did not run. Not one Playwright case executed against v9 in this PR.** Every
-claim below is either a static reading of source or the result of a Vitest run; none of it is a
-statement about a browser. See §5 for the exact blockage and the evidence for it.
+**There is no full-suite result for this branch, and there will not be one.** One full run was
+executed (§2); it is _not_ a gate and must not be quoted as one, because the tree changed underneath
+it while it ran. Every result after that is a **selective** run against a named commit. Anyone
+looking for "the suite is green on v9" will not find it here, by decision rather than omission.
 
-What PR 5 therefore delivers is the half of its scope that never needed a browser: the
-absence-assertion audit and its repairs (§1), the controlled × deferred finding (§2), the
-`e2e-slots` decision (§3), the `ci.yml` decision (§4), and a list of what the next agent inherits
-(§6).
+**No CI has ever run against this branch.** It is unpushed with no PR. Every figure in this document
+is a local measurement on one machine.
 
----
-
-## 1. The absence-assertion audit
-
-### 1a. How the candidate set was derived
-
-`pr5-recon.md` §3c F2 listed ~15 assertions by hand. That list was **re-derived rather than
-trusted**, because a hand-written list of fail-open assertions is itself a thing that can be
-incomplete, and three of its rows turned out to be already sound.
-
-Method: a script (`scratchpad/audit.mjs`) split every spec under `apps/docs/e2e/packages/` into
-`test(` blocks and flagged any block **all** of whose assertions are negative — `toHaveCount(0)`,
-`not.to*`, `toEqual([])`, `toBe(0)`, `toHaveLength(0)`. That is the precise defect shape: not "a
-negative exists", but "the test's entire subject is an absence, so nothing in it can fail when the
-page is broken". The repo has **99** negative assertions across 19 spec files; **9** tests are
-all-negative.
-
-One correction worth recording: the first run of the script missed `expect.poll(...)` (its
-positive-assertion regex was `expect\(`), which over-reported by two. The counts below are from the
-corrected run.
-
-### 1b. Verdict per case
-
-Rows marked **sound** were left alone, as instructed — the audit does not rewrite tests that are
-fine. Rows marked **repaired** got a positive control and **no change of subject**.
-
-| `file:line` (at `f5e03efe`)                                 | Subject                                                  | Verdict                                                                                                                                                |
-| ----------------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `contract/row-slot.spec.ts:125`                             | the whole-body slot sweep, ×11 examples                  | **repaired** — see 1c                                                                                                                                  |
-| `pagination/paging.spec.ts:125`                             | `links: false` renders no numbers/ellipsis/edge jumps    | **repaired**                                                                                                                                           |
-| `layout/sticky.spec.ts:81`                                  | without `layout`, neither end is sticky                  | **repaired**                                                                                                                                           |
-| `editing/editing.spec.ts:141`                               | cell mode offers no save/cancel pair                     | **repaired**                                                                                                                                           |
-| `expanding/expanding.spec.ts:179`                           | a leaf offers no chevron                                 | **repaired**                                                                                                                                           |
-| `filtering/chips.spec.ts:81`                                | the strip stays unmounted while nothing is filtered      | **repaired**                                                                                                                                           |
-| `selection/selection.spec.ts:94`                            | the selection bar stays down until something is selected | **repaired**                                                                                                                                           |
-| `filtering/panel.spec.ts:90`                                | an `above` panel is not inside the toolbar               | **repaired** (compound-selector hardening)                                                                                                             |
-| `pagination/page-sizer.spec.ts:62`                          | a `footer` sizer is not inside the toolbar               | **repaired** (same)                                                                                                                                    |
-| `columns/resizing.spec.ts:68,69`                            | `active` has no resize handle                            | **repaired** (same)                                                                                                                                    |
-| `expanding/expanding.spec.ts:219`                           | "and closes them again"                                  | **sound** — opens with `not.toHaveCount(0)` on the panel, which is the live-selector proof                                                             |
-| `fallbacks/fallbacks.spec.ts:34`                            | skeleton rows, no data rows                              | **sound** — opens with `not.toHaveCount(0)` on `LOADING_ROW`, same pattern                                                                             |
-| `columns/ordering.spec.ts:112,113`                          | a locked column gets no move entries                     | **sound** — `:115` asserts `Asc` is present, and says why: "The menu did open — this is not a missing trigger"                                         |
-| `columns/visibility.spec.ts:68`                             | `visibility: false` is not offered a toggle              | **sound** — `:65,:66` assert two other toggles through the same locator                                                                                |
-| `columns/visibility.spec.ts:124`                            | that column is offered no `Hide`                         | **sound** — `:126` carries the same explicit "the menu did open" control                                                                               |
-| `row-actions/row-actions.spec.ts:46,54,61,93,94,95,140,147` | eight absences across five tests                         | **sound** — every one sits beside a `toHaveCount(1)` resolved through the _same_ `cell` locator in the same test                                       |
-| `pinning/columns.spec.ts:31`                                | the free column carries no `data-pinned`                 | **sound as of PR 3** — `:30` now asserts `data-pinned='start'` positively on the pinned column in the same test. Recon F1 described the pre-PR-3 state |
-
-So the recon's "~15 with no paired positive" resolves to **10 repaired, and the rest already
-sound**. Three of its named rows (`ordering:112,113`, `visibility:68`, `visibility:124`) already
-carried the exact "the menu did open" control it was asking for, with a comment saying so.
-
-### 1c. The one finding the recon did not have
-
-**`contract/row-slot.spec.ts` was the weakest assertion in the suite, and it is the one that
-advertises itself as the strongest.** Its docblock says the same defect "has now been found three
-times" and that "the next one should fail here". Its assertion was `expect(offenders.length).toBe(0)`
-over a sweep that begins `document.querySelectorAll('[data-slot="tbody"]')`. A renamed `tbody` slot,
-an example that stopped rendering rows, or an `open` step that drove the grid into the wrong state
-all yield **zero rows visited, zero offenders, and eleven green cases** — across the eleven examples
-that are the suite's only coverage of pinned rows, the creating draft row, the loading skeleton, the
-empty state, virtualized rows and the load-more row.
-
-Repaired by returning the **denominator** alongside the result (`{ offenders, swept }`) and asserting
-`swept > 0` before believing the empty offender list. This is the `fixtures.ts:130` `boxOf` principle
-— refuse to measure nothing — applied to a sweep rather than to a box.
-
-### 1d. What the repairs are, in one line each
-
-- `row-slot.spec.ts` — `bodySlotOffenders` → `sweepBodySlots`, returning `swept`; `expect(swept).toBeGreaterThan(0)` added ahead of the offender assertion.
-- `paging.spec.ts` — the `links: false` test now first asserts `[data-slot="pagination"]` count 1 and that `Next` / `Previous` resolve, so the three absences are absences within a footer that exists.
-- `sticky.spec.ts` — `expect(positions).toHaveLength(2)` before `not.toContain('sticky')`; `evaluateAll` over a selector matching nothing returns `[]`, which contains no `'sticky'` either.
-- `editing.spec.ts` — the cell-mode test asserts the editor actually opened (`toHaveValue(ALICE)`) before asserting no save/cancel/edit controls exist.
-- `expanding.spec.ts` — the leaf test asserts row 2 is at `data-depth="2"` and is Alice Johnson before asserting she has no chevron.
-- `chips.spec.ts` — after asserting the strip is unmounted, the test filters a column and asserts the strip appears: the selector is proved live.
-- `selection.spec.ts` — the bar test now does the round trip (down → select → up → deselect → down), proving `[data-state="open"]` is a state the element really takes.
-- `panel.spec.ts`, `page-sizer.spec.ts`, `resizing.spec.ts` — three compound-selector hardenings: assert the _left_ half (`[data-slot="toolbar"]`, the `active` header) resolves, so an empty compound selector cannot read as "the thing moved".
-
-No test's subject changed and no test was deleted.
-
-### 1e. Mutation proof
-
-**What was proved, and how.** `apps/docs/test/e2e-slots.test.ts` is the one check over this PR's
-diff that runs without a browser, so it is the one whose falsifiability could be demonstrated rather
-than asserted:
-
-- Baseline, with all ten repairs in place: `pnpm exec vitest run test/e2e-slots.test.ts` → **5 passed**.
-- Mutation: `[data-slot="thead"]` → `[data-slot="thead-bogus"]` in `layout/sticky.spec.ts` (one of the repaired files), re-run → **1 failed | 4 passed**, failing on the "spec addresses a slot no package authors" assertion.
-- Restored; `git diff --stat` confirms `sticky.spec.ts` carries only the intended `3 insertions`.
-
-Also run: `pnpm exec tsc --noEmit -p apps/docs/tsconfig.json`, filtered to `e2e/` and `test/` →
-**zero errors**. (The unfiltered run has many errors, all under `shared/` — PR 4's in-flight tree.)
-
-**What was NOT proved, and this is the important half.** The ten repaired assertions are
-_themselves_ untested. Each was written to fail when its positive control is removed, but that
-mutation requires a browser, and no browser ran. The repairs are therefore **reviewed, typechecked
-and slot-checked, but not executed**. Per the brief's own standard — "every case you write or repair
-must be falsified by mutation, and your report must show the mutation and its result" — these ten do
-not meet it yet. They are the first thing to run when §5's blockage clears.
+**Where a run produced nothing, this document says so** rather than recording a pass or a failure.
 
 ---
 
-## 2. The controlled × deferred behaviour change (recon G2)
+## 1. What the suite is, and what one run costs
 
-**Finding: no example in the repository can exercise it, and I did not author one — the examples
-tree is PR 4's territory.** Re-verified against the tree at `f5e03efe`:
+| Measurement                           | Figure                                             | How obtained                                                              |
+| ------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------- |
+| Full suite                            | **518 tests, 16.1 min**                            | the §2 run, `workers: 1`, `fullyParallel: false`                          |
+| Single spec, one kit, **warm** server | **~14 s**                                          | `chips.spec.ts --project=shadcn` → 7 passed in 11.5 s                     |
+| Single spec, one kit, **cold** server | **minutes**                                        | 3 specs × 2 kits cost 10.2 min, dominated by `next dev` route compilation |
+| Rebuild of the docs app's deps        | **46 s** uncontended, **>10 min** under contention | `turbo run build --filter=@ez-kit/docs^...`                               |
 
-- `grep -l "draft" apps/docs/shared/data-grid/examples/components/` returns **exactly one file**: `production/ProductionDeferredApplyExample.tsx`. Its own docblock says "Nothing is fed back down through `state` on the three deferred axes — the draft is grid-owned." So: deferred, not controlled.
-- `controlled-state.tsx` drives `sorting` / `pagination` from the page's `useState` and carries no `draft`. So: controlled, not deferred.
-- The manifest has one `deferred` id (`production-deferred-apply`, `manifest.json:779`) and no spec drives it.
-
-**What would be needed** (for whoever owns it — PR 4, or a follow-up):
-
-1. An example under `apps/docs/shared/data-grid/examples/components/` carrying **both** `draft` and a `sorting` (or `pagination`) value written from the parent's own state, with a control outside the grid that writes it and a readout that renders what the parent believes the state to be — the `controlled-state.tsx` shape, plus `draft`.
-2. Its `manifest.json` entry (`id` → `sourceFile` + `exportName`) **and** a `registry.ts` entry if it is a new source file. A missing registry entry throws only at page render; lint, typecheck and build all pass.
-3. A reference from some `.mdx`, or `node apps/docs/scripts/verify-manifest-coverage.mjs` fails. (Note that script is wired into nothing — it is not in `apps/docs/package.json`, not in `ci.yml`, not in any turbo task. It must be run by hand or the criterion is met by nothing.)
-4. Then a spec asserting the v9 behaviour **positively**: the parent writes a sort, the readout shows the parent holding it, and the **grid still shows the old order** until `apply()` — at which point the grid follows. Stated that way it fails on v8 (where the write landed immediately) rather than passing vacuously.
-
-Until 1-3 exist there is nothing for a spec to open, so PR 5 adds no case here. **This remains the
-single highest-value uncovered behaviour change in the migration** and PR 6's changeset still needs
-it named in its own sentence.
+Retries are **off** locally — `playwright.config.ts:44` is `retries: process.env.CI ? 1 : 0` and `CI`
+was unset. No result below can have passed on a second attempt, and no `flaky` line appears in any
+log. That is the strongest available answer to "did `exit 0` hide something": nothing could hide.
 
 ---
 
-## 3. `e2e-slots.test.ts` — not extended, and why
+## 2. The one full run, and why it is not a gate
 
-**Decision: leave it exactly as it is.** Not a deferral — a decision, recorded so the next audit
-reads this instead of re-proposing the regex.
+`518/518` executed. **20 failed, 498 passed, 16.1 min.** Playwright's own exit was `1`, captured
+explicitly rather than inferred from the wrapper.
 
-The check matches `/data-slot=["']([a-z0-9-]+)["']/` (`test/e2e-slots/slot-literals.ts:16`) —
-attribute **name** `data-slot`, capturing the slot name, never a value, never another attribute. So
-it gave and gives zero cover over `data-pinned`, which is the one DOM contract this migration moved.
+It is not a gate because **`d279a5dc` landed at 18:25:42, inside the run** (18:11 → 18:28). shadcn's
+chips specs executed before it, heroui's after, and `next dev` hot-reloaded the package in between —
+which is the entire explanation for an otherwise baffling kit asymmetry. A run that straddles a tree
+change measures two trees.
 
-Extending it to attribute values was rejected on three grounds:
+All 20, resolved:
 
-1. **Three of the four attributes whose values the migration moves are not literals on the authored side.** `data-pinned` is `getIsPinned()`'s return value passed through five writers; the string `'start'` lives in **core**, and even there it is spelled `ColumnPinSide.Start`, a const-object member rather than a string at the site that matters. `data-align` has the same shape. A name-and-value scanner over the React packages would find `data-pinned='start'` **nowhere**, mark every spec usage unknown, and fail — so the only way to make it pass is an allowlist, i.e. a check reporting green about something it did not verify. That is precisely the defect class this migration is about, reintroduced inside the tool meant to detect it.
-2. **It would catch two lines**, both already fixed by PR 3, and both of which a single suite run catches far more cheaply and with a real failure message.
-3. **AGENTS.md says so directly**: "A new slot assembled at runtime rather than written as a literal is invisible here; a spec that must address one is the case to reconsider this check, not to widen the regex."
-
-The honest version of the guarantee is different work — resolve a `data-pinned` value a spec
-addresses against `ColumnPinSide`'s **members** through `ts.TypeChecker`, the way
-`docs-option-names.test.ts` resolves option names. That is a defensible project. It is not a regex
-widening and it is not this PR.
-
-The test **was** exercised: it passes on the repaired tree and it was mutation-checked (§1e). Its
-existing guard assertions (>50 usages, >20 distinct slots, >100 authored) are the same
-denominator principle §1c applies to `row-slot.spec.ts`.
+| Count | Cases                                                                       | Resolution                                                       |
+| ----- | --------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| 4     | `docs/embed-isolation.spec.ts` (all 4)                                      | **Cold start.** Re-measured warm: **5 passed**. §4               |
+| 6     | `filtering/chips.spec.ts` ×6, shadcn only                                   | **Stale.** Fixed by `d279a5dc` mid-run. Re-run: **7 passed**. §3 |
+| 2     | `filtering/panel.spec.ts:85`, `pagination/page-sizer.spec.ts:59`, both kits | **My own error.** §5                                             |
+| 2     | `ordering/rows.spec.ts:143`, both kits                                      | Real defect, fixed later by `dbc0b876`                           |
+| 2     | `state/persistence.spec.ts:50`, both kits                                   | Real defect, fixed later by `86b5a546`                           |
+| 4     | `virtualization.spec.ts:139` ×2 + `:113` ×2                                 | `:139` real, fixed by `8825d1ac`; `:113` cold start              |
 
 ---
 
-## 4. `ci.yml` — nothing added, nothing to remove
+## 3. The defect the audit caught in the act
 
-**Zero diff in `.github/`.** Confirmed against the live file:
+This is the clearest evidence in the PR that the §6 exercise was worth doing, so it is recorded
+before the audit itself.
 
-- `ci.yml:7` — `on: pull_request: branches: [develop, main, 'integration/**']`. A PR into `integration/tanstack-v9` already triggers the workflow. Adding the branch would be a no-op.
-- `ci.yml:78` — the `e2e` job's gate is `if: github.base_ref != 'main' && github.head_ref != 'changeset-release/develop'`. For a PR into `integration/tanstack-v9` both terms hold, so the full three-leg matrix already runs.
-
-**Design §6's premise is false and acting on it is harmful.** It states the browser suite runs only
-on PRs into `develop` and asks for a temporary trigger. Because the `e2e` gate is an **AND** of its
-terms, any addition there can only ever turn e2e **off** on some set of PRs. The safe outcome and
-the harmful one differ by one `&&`.
-
-**Consequence for PR 6:** design §7 row 6's "remove the temporary e2e trigger" is **struck** — there
-is nothing to remove, because nothing was added.
-
-**On whether `e2e gate` is a required check on `integration/**`:** unknown, and not knowable from
-this repository. Branch protection is configured per branch in GitHub's settings, and this repo's
-rules are documented only for `develop`and`main`. Stating it either way would be a guess. What
-*is* certain from `ci.yml:123-144`is that the gate's own logic is branch-name-independent: fixed
-name,`needs: e2e`, `if: always()`, passes on `success`or`skipped` and nothing else.
-
----
-
-## 5. Why the suite could not run — the evidence
-
-Blocked, and **further upstream than the brief described**. The brief said no docs example renders
-(a v9 feature-registration problem, PR 4's). That is true, but it is not the first wall:
+`filtering/chips.spec.ts:81` — "stays unmounted while nothing is filtered" — was an absence-only
+test. The repair in `5236a546` added a positive: filter a column, assert the strip appears. On the
+first execution it went red, **alongside the two pre-existing positive cases beside it**, with the
+browser throwing:
 
 ```
-$ pnpm turbo run build --filter=@ez-kit/docs^...
- Tasks:    10 successful, 11 total
-Failed:    @ez-kit/data-grid-react#build
-
-$ pnpm --filter @ez-kit/data-grid-react build
-src/data-grid/data-grid.tsx(104,25): error TS2344: Type 'unknown' does not satisfy the constraint 'RowData'.
-src/data-grid/data-grid.tsx(111,28): error TS2379: Argument of type 'Row<TableFeatures, unknown>' is not
-  assignable to parameter of type 'PublicRow<unknown>' with 'exactOptionalPropertyTypes: true'.
-src/data-grid/data-grid.tsx(142,2):  error TS2322: Type 'BulkConfirmationConfig<any>' is not assignable to
-  type 'BulkConfirmationConfig | undefined'.
-  … 5 more, all in data-grid.tsx
-DTS Build error
+Uncaught TypeError: Cannot read properties of undefined (reading 'columnFilters')
+    at ActiveFiltersBar (packages/data-grid/react/react/src/data-grid/active-filters-bar.tsx:118:33)
 ```
 
-**`@ez-kit/data-grid-react` does not build** — eight type errors in `src/data-grid/data-grid.tsx`,
-all of the same family (the v9 `TableFeatures` generic not threading through `Row` / `Table` /
-`PublicRow`). That is `packages/data-grid/**`, PR 3's territory, mid-flight.
+The cause: `active-filters-bar.tsx:88` reads `s.applied`, which is **`draftFeature`'s** slice. In v9
+a slice exists only if its feature is registered, and `filter-chips-auto` correctly does not register
+`draftFeature` because it does not use `draft`. Lines `:127` and `:140` guard the _uses_ with
+`isDrafting` — but `:118` dereferences `applied` **before** either guard runs. Fixed as `d279a5dc`
+("never a missing feature, only a missing `?.`").
 
-Everything downstream follows: the docs app cannot build (`pnpm docs:dev` and `docs:build` both run
-`build:deps` first), so the dev server cannot serve working examples, so `playwright test` would
-fail every case in `beforeEach` at `fixtures.ts:79`. There was no point starting a server, and I did
-not start one.
+Two things worth keeping from this:
 
-Independently, `pnpm exec tsc --noEmit` over `apps/docs` reports many errors under `shared/` —
-including `controlled-state.tsx:19` importing a `GridFeatures` that `@ez-kit/data-grid-react` no
-longer exports — confirming PR 4's tree is also mid-flight.
-
-**No CI has ever run against this branch.** `origin/integration/tanstack-v9` does not exist and no
-PR is open. Every figure in this migration, including every one in this document, is a local
-measurement. Nothing here has been verified by CI.
+- **The old version of that test would have gone green while the feature it describes was crashing.** That is the exact failure mode the audit exists to close, demonstrated on a live defect rather than argued from first principles.
+- **Nothing warned.** The log line immediately before the TypeError is the test name; core emitted no diagnostic. This is not "a warning nobody listened to" — it is an unguarded read with no diagnostic at all.
 
 ---
 
-## 6. What is inherited
+## 4. The absence-assertion audit
 
-**For whoever runs the suite first (the blocking item):**
+### 4a. How the set was derived
 
-1. **Run the three projects and triage.** `pnpm --filter @ez-kit/docs build`, then `playwright test --project=<docs|shadcn|heroui> --grep-invert @smoke`. Pin `PW_PORT` — the port is hashed per worktree and `reuseExistingServer` is true locally, so an unpinned run can silently measure a different branch's server.
-2. **Mutation-check the ten repairs of §1.** They are the deliverable of this PR and they are unexecuted. For each, remove the positive control and confirm the test goes red. If one stays green, the repair is decorative and should be redone.
-3. **`pnpm --filter @ez-kit/docs test:e2e:smoke`, both kits, once.** It is the only check that opens the ~89 data-grid examples no spec drives, it is excluded from every CI run, and PR 4 is rewriting all 111. Check the **count of tests run**, not the exit code: Playwright exits 0 on an empty selection and nothing in `playwright.config.ts` sets a fail-on-empty.
+`pr5-recon.md` §3c F2 listed ~15 by hand. That list was **re-derived rather than trusted** — a
+hand-written list of fail-open assertions is itself a thing that can be incomplete, and three of its
+rows turned out already sound.
 
-**For PR 6's changeset:**
+A script split every spec under `apps/docs/e2e/packages/` into `test(` blocks and flagged any block
+**all** of whose assertions are negative. That is the precise defect shape: not "a negative exists",
+but "the test's whole subject is an absence, so nothing in it can fail when the page is broken". The
+repo has **99** negative assertions across 19 files; **9** tests were all-negative.
 
-- The controlled × deferred behaviour change (§2) still needs its own sentence, and still has no coverage.
-- Design §7 row 6 ("remove the temporary e2e trigger") is struck; §4 has the reason, which PR 6 should record so the next reader does not re-add it.
+(The script's first version missed `expect.poll(...)` and over-reported by two. Corrected before use.)
 
-**A defect found in passing, outside my territory (PR 4's, or a follow-up):**
+### 4b. Verdict per case
+
+Ten repaired, the rest already sound. Three of the recon's named rows (`ordering:112,113`,
+`visibility:68`, `visibility:124`) already carried the exact "the menu did open" control it asked for,
+with a comment saying so.
+
+The single most valuable finding: **`contract/row-slot.spec.ts` was the weakest assertion in the
+suite and is the one that advertises itself as the strongest.** Its docblock says the same defect
+"has now been found three times" and "the next one should fail here". Its assertion was
+`expect(offenders.length).toBe(0)` over a sweep beginning
+`document.querySelectorAll('[data-slot="tbody"]')` — so a renamed `tbody` slot, an example that
+stopped rendering rows, or an `open` step that missed its state all yield zero rows visited, zero
+offenders, and **eleven green cases**, across the suite's only coverage of pinned rows, the creating
+draft row, the loading skeleton, the empty state, virtualized rows and the load-more row. Repaired by
+returning the **denominator** (`{ offenders, swept }`) and asserting `swept > 0` first — the
+`fixtures.ts:130` `boxOf` principle (refuse to measure nothing) applied to a sweep.
+
+### 4c. Mutation proofs — the standard this PR set itself
+
+Each repair was mutated twice: with the control present (must go **RED**) and with the control
+removed (must go **GREEN**). The second half is the load-bearing one — it demonstrates the
+_pre-repair_ test failing open under the same breakage, which is the claim being made.
+
+All runs: `--project=shadcn`, warm server, at `eaaa3098`.
+
+| #   | Repair                                  | Mutation applied                        | + control | − control |
+| --- | --------------------------------------- | --------------------------------------- | --------- | --------- |
+| 1   | `row-slot` sweep denominator            | `[data-slot="tbody"]` → `tbody-X`       | **RED**   | **GREEN** |
+| 2   | `sticky` both ends resolved             | both end selectors → `-X`               | **RED**   | **GREEN** |
+| 3   | `chips` strip selector is live          | `active-filters-bar` → `-X`             | **RED**   | **GREEN** |
+| 4   | `selection` bar round trip              | `data-state="open"` → `open-X`          | **RED**   | **GREEN** |
+| 5   | `paging` footer exists                  | `pagination` + `pagination-item` → `-X` | **RED**   | **GREEN** |
+| 6   | `editing` the editor really opened      | drop the `dblclick`                     | **RED**   | **GREEN** |
+| 7   | `expanding` the leaf is really the leaf | `nth(2)` → `nth(99)`                    | **RED**   | **GREEN** |
+| 8   | `resizing` the opted-out column exists  | `header('active')` → `active-X`         | **RED**   | **GREEN** |
+
+**8 of 8 mutable repairs proved, both directions.** The other two of the ten are the corrections in
+§5; after correction they are annotations rather than assertions, so they have no control to mutate
+and are excluded from this table rather than counted as passes.
+
+Two mutations had to be redone. The first attempts at #6 and #7 broke something the _original_ test
+also depended on, so "− control" failed too and the mutation isolated nothing. Replacing them with
+genuine fail-open simulations (never open the edit; address a row that is not there) produced the
+clean result above. A mutation that fails both ways proves nothing, and recording the first attempt
+as a proof would have been the same defect this PR is about.
+
+After every mutation the tree was restored and verified: `git status` shows only the intended
+changes and `find -name "*.bak"` returns 0.
+
+---
+
+## 5. Two of the twenty failures were mine
+
+Stated plainly because the record is worth more than the appearance.
+
+`5236a546` hardened three compound-selector negatives by asserting the left half resolves. Right for
+`resizing`; **wrong for `filtering/panel.spec.ts` and `pagination/page-sizer.spec.ts`**, which failed
+on both kits with:
+
+```
+Locator: locator('[data-slot="toolbar"]')   Expected: 1   Received: 0
+```
+
+`filter-panel` and `pagination-page-sizer-footer` **mount no toolbar at all.** I asserted a premise
+without checking it, turning a vacuous pass into a red test.
+
+Corrected in `3af550e1`, and the correct treatment is **not** a different assertion. On a grid with
+no toolbar the compound selector is empty whatever the panel or sizer does, so that negative is
+structurally vacuous and cannot be paired at all. Both are restored with the measurement and the
+reason recorded in place, naming what does carry the claim: the sibling test that asserts the same
+containment positively on a grid that _has_ a toolbar, and the `boxOf` reads that throw rather than
+coordinate-zero. Verified warm, both kits: **20 passed**.
+
+The lesson generalises: this is a verdict my static audit got wrong and **only execution could have
+caught** — the same lesson as §3, pointed at my own work.
+
+---
+
+## 6. Selective results at `eaaa3098`
+
+One dev server, warm, all 14 needed routes pre-warmed to HTTP 200.
+
+| Run                                                                  | Result        | Time    |
+| -------------------------------------------------------------------- | ------------- | ------- |
+| `chips.spec.ts` — shadcn                                             | **7 passed**  | 14 s    |
+| `panel` + `page-sizer` — both kits                                   | **20 passed** | 1.2 min |
+| `embed-isolation.spec.ts` — docs, warm                               | **5 passed**  | 16 s    |
+| `virtualization` + `ordering/rows` + `state/persistence` — both kits | **60 passed** | 1.1 min |
+
+That last run covers every defect the full run surfaced: `virtualization:113`, `virtualization:139`,
+`ordering/rows:143` and `persistence:50` are all green on both kits.
+
+### The RTL pinning spec
+
+`pinning/rtl-columns.spec.ts` (PR 3, `45e9748e`) **executed for the first time in the migration's
+history and passed all 6 executions** — 3 cases × 2 kits, `[209-211]` shadcn and `[464-466]` heroui.
+
+What it would have caught: case `:42` asserts `start.x > end.x` and that the end-pinned column's
+trailing edge sits left of the start-pinned one. Both are stated as **relations between the two
+pinned columns**, not absolute coordinates, so they fail on an LTR layout rather than being satisfied
+by one. Any implementation that kept `left:` / `right:`, or resolved the logical sides physically,
+fails there and only there. Design §5 makes this coverage mandatory precisely because the work
+changes RTL behaviour by design; before this run, that semantic change was covered by nothing.
+
+---
+
+## 7. Runs that produced no result
+
+Neither a pass nor a failure. Recorded so "no result" does not read as a mystery later.
+
+- **Two `state/persistence.spec.ts` attempts: zero tests executed.** Both died on `Error: Timed out waiting 300000ms from config.webServer`. Playwright could not get a server up inside 5 minutes because `pnpm dev` runs `build:deps` first and the machine was building for several agents at once.
+- **One `ordering` + `persistence` + `virtualization` attempt: zero tests executed.** Playwright's `reuseExistingServer` probe timed out against a busy warm server, so it started its own `pnpm dev`, whose `build:deps` step rebuilt `dist` **underneath the running server** before dying on `EADDRINUSE`. The surviving server then returned 500 on every route, `GET /` included. Killed and re-run.
+
+**The operational rule this yields:** keep exactly one dev server, warm it before running, and never
+let a second Playwright invocation spawn its own. A targeted run is ~14 s against a warm reused
+server and minutes against a cold one — and a collision costs an entire run. The 300 s `webServer`
+timeout is not generous when `build:deps` is contended.
+
+A related hazard: a `pnpm dev` that outlives Playwright's timeout **keeps going** and eventually
+binds the port. One such orphan was found serving a 20-minute-old `dist`, which would have silently
+produced results for a tree three commits behind. Check the age and provenance of a server before
+reusing it.
+
+---
+
+## 8. Decisions
+
+### `ci.yml` — nothing added, nothing to remove
+
+**Zero diff in `.github/`.**
+
+- `ci.yml:7` — `on: pull_request: branches: [develop, main, 'integration/**']`. A PR into `integration/tanstack-v9` already triggers the workflow.
+- `ci.yml:78` — the `e2e` gate is `if: github.base_ref != 'main' && github.head_ref != 'changeset-release/develop'`. Both terms hold for such a PR, so the full matrix already runs.
+
+**Design §6's premise is false and acting on it is harmful.** It says the browser suite runs only on
+PRs into `develop` and asks for a temporary trigger. Because the gate is an **AND**, any addition
+there can only ever turn e2e **off**. The safe outcome and the harmful one differ by one `&&`.
+**Design §7 row 6's "remove the temporary e2e trigger" is struck** — nothing was added.
+
+Whether `e2e gate` is a _required_ check on `integration/**` is **unknown and not knowable from this
+repository**: branch protection lives in GitHub's settings and this repo's rules are documented only
+for `develop` and `main`. Stating it either way would be a guess. What is certain from
+`ci.yml:123-144` is that the gate's logic is branch-name-independent: fixed name, `needs: e2e`,
+`if: always()`, passes on `success` or `skipped` and nothing else.
+
+### `e2e-slots.test.ts` — not extended
+
+**Decision, not a deferral.** The check matches `/data-slot=["']([a-z0-9-]+)["']/` — attribute _name_
+`data-slot`, capturing the slot name, never a value, never another attribute. It gave and gives zero
+cover over `data-pinned`, the one DOM contract this migration moved.
+
+Rejected on three grounds:
+
+1. **Three of the four attributes whose values the migration moves are not literals on the authored side.** `data-pinned` is `getIsPinned()`'s return value passed through five writers; the string `'start'` lives in core, spelled `ColumnPinSide.Start` — a const-object member, not a string at the site that matters. A name-and-value scanner would find it **nowhere**, mark every spec usage unknown, and fail. The only way to make it pass is an allowlist: a check reporting green about something it did not verify. That is this migration's own defect class, reintroduced inside the tool meant to detect it.
+2. It would catch two lines, both already owned and fixed by PR 3, which one suite run catches far more cheaply and with a real message.
+3. AGENTS.md says so directly: "A new slot assembled at runtime rather than written as a literal is invisible here; a spec that must address one is the case to reconsider this check, not to widen the regex."
+
+The honest version of the guarantee is different work — resolve a `data-pinned` value a spec addresses
+against `ColumnPinSide`'s members through `ts.TypeChecker`, as `docs-option-names.test.ts` resolves
+option names. Defensible, and not a regex widening.
+
+The test **was** exercised: it passes on the repaired tree, and it was mutation-checked — renaming
+`[data-slot="thead"]` → `thead-bogus` in a repaired spec turns it red (1 failed / 4 passed), restored
+green.
+
+---
+
+## 9. What is inherited
+
+**Not run, and labelled as such:**
+
+- **`@smoke` was never run** (recon G1). It is the only check that opens the ~89 data-grid examples no spec drives, it is excluded from every CI invocation (`--grep-invert @smoke` in `ci.yml:110` and two `package.json` scripts), and PR 4 rewrote all 111 examples. A missing `registry.ts` entry throws **only at page render** — lint, typecheck and build all pass. Whoever runs it must check the **count of tests run**, not the exit code: Playwright exits 0 on an empty selection and nothing sets a fail-on-empty.
+- **No full-suite gate exists** (§0).
+- **Only the `shadcn` project was used for the mutation proofs.** The repairs are kit-agnostic by construction, but that is an argument, not a measurement.
+
+**Still uncovered:**
+
+- **The controlled × deferred behaviour change** (recon G2) — the migration's one real public behaviour change, and covered by nothing. Re-verified at the time: exactly one example in the tree contains `draft` (`ProductionDeferredApplyExample`), whose own docblock says nothing is fed back through `state` on the deferred axes; `controlled-state.tsx` is controlled but carries no `draft`. No example can exercise the combination, so no spec was written — authoring one is `apps/docs/shared/**`, another PR's territory. What it needs: an example carrying both `draft` and a parent-owned `sorting`, its `manifest.json` entry **and** a `registry.ts` entry, a reference from some `.mdx`, and a spec asserting the v9 behaviour **positively** (the parent's write does not land until `apply()`) so that it fails on v8 rather than passing vacuously. **PR 6's changeset still needs this named in its own sentence.**
+- **The pin-shadow opacity case** (recon G5) — the only possible coverage for the `--dg-pin-{start,end}-shadow` rename, and itself trap-shaped: `getComputedStyle` reads `0` for a missing element and a broken one alike, so it is worth nothing without a mutation showing one kit red while the other stays green. Not written.
+- **The column-menu pin entries** (recon G4) — no spec names the pin entries in either language. The Russian half is the only check for a silently-accepted stale message key, and it needs the `localization` example to enable pinning first.
+
+**A defect found in passing, outside this PR's territory:**
 `apps/docs/shared/data-grid/examples/components/example-task-board.tsx:238` writes bare `deleting`
-— i.e. `deleting: true`. Per pr2-outcomes §1.3 that renders **nothing**: no actions column entry, no
-delete button, no diagnostic; after PR 2 it warns in development instead. So a docs example
-advertises a delete affordance it does not have. No spec catches it: `editing/deleting.spec.ts`
-drives `delete-confirmation` (object form), and the one spec that opens `example-task-board`
-(`filtering/panel.spec.ts:17`) only measures the filter panel. The fix is in the example, not in a
-spec. Checked and clear: `e2e/docs/embed-isolation.spec.ts` makes no console assertions, so the new
-development warning breaks nothing.
+(i.e. `deleting: true`). Per pr2-outcomes §1.3 that renders **nothing** — no actions column entry, no
+delete button, no diagnostic — and after PR 2 it warns in development instead. A docs example
+advertises a delete affordance it does not have, and no spec catches it: `editing/deleting.spec.ts`
+drives `delete-confirmation` (object form), and the one spec that opens `example-task-board` only
+measures the filter panel. The fix belongs in the example. Checked and clear:
+`e2e/docs/embed-isolation.spec.ts` makes no console assertions, so the development warning breaks
+nothing.
 
-**Gaps deliberately left open, with reasons:**
-
-- **The pin-shadow opacity case (recon G5/T4) was not written.** It is the only possible coverage for the `--dg-pin-{start,end}-shadow` rename, and it is also trap-shaped: `getComputedStyle` reads `0` for a missing element and for a broken one alike, so the case is worth nothing without a mutation run proving one kit goes red while the other stays green. With no browser, that mutation cannot be performed — and a case written but never falsified is exactly the fail-open artifact this PR exists to remove. Writing it unverified would have been worse than leaving the gap visible. **This is the highest-value item still outstanding.**
-- **The column-menu pin entries (recon G4/T7) were not covered.** Same reason: the Russian-label half of that case _is_ the check for PR 3's silent message-key revert, and an unverified assertion about a translation is not a check. It also needs the `localization` example to enable pinning, which is outside my territory.
-- **The RTL extensions to `columns/ordering.spec.ts` and `columns/alignment.spec.ts` (recon G6/T6) were not added.** PR 3's `pinning/rtl-columns.spec.ts` now gives them an example to reuse, and the ordering one would cover PR 2 §1.2's real RTL reordering fix. Its stated criterion is that it fails against the pre-fix `header-cell.tsx` — again, a browser check.
-- Recon G6 (`deleting: true`) is addressed above as a found defect rather than a coverage gap.
+**`verify-manifest-coverage.mjs` is documented as a gate and wired to nothing** — not in
+`apps/docs/package.json`, not in `ci.yml`, not in any turbo task, despite
+`specs/001-data-grid-docs/tasks.md:195` being ticked. It must be run by hand or any criterion citing
+it is satisfied by nothing.
