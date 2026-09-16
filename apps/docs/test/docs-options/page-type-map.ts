@@ -313,6 +313,10 @@ export const FORM_TYPE = {
 	ArrayFieldProps: { module: TypeModule.FormReact, name: 'ArrayFieldProps', typeArgs: FORM_VALUE_TYPE_ARGS },
 	ArrayFieldScope: { module: TypeModule.FormReact, name: 'ArrayFieldScope', typeArgs: '<string>' },
 	ArrayItemScope: { module: TypeModule.FormReact, name: 'ArrayItemScope', typeArgs: '<string>' },
+	/** The headless primitive's own trio: `form.Array`'s props, its scope, and `item.Item`'s own props. */
+	ArrayProps: { module: TypeModule.FormReact, name: 'ArrayProps', typeArgs: FORM_VALUE_TYPE_ARGS },
+	ArrayScope: { module: TypeModule.FormReact, name: 'ArrayScope', typeArgs: '<string>' },
+	ArrayItemProps: { module: TypeModule.FormReact, name: 'ArrayItemProps' },
 	/**
 	 * The `array` node with its value type erased. `ArrayNode<DocsProbeRow>` is not usable:
 	 * the probe row holds no array path, so the distribution has nothing to distribute over
@@ -1095,6 +1099,10 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			{ heading: '`form.ArrayField`', roots: [FORM_TYPE.ArrayFieldProps], expectedCount: 12 },
 			{ heading: 'The render prop', roots: [FORM_TYPE.ArrayFieldScope], expectedCount: 3 },
 			{ heading: 'One entry', roots: [FORM_TYPE.ArrayItemScope], expectedCount: 3 },
+			{ heading: '`form.Array`', roots: [FORM_TYPE.ArrayProps], expectedCount: 6 },
+			{ heading: 'The scope', roots: [FORM_TYPE.ArrayScope], expectedCount: 12 },
+			{ heading: 'One entry, from the primitive', roots: [FORM_TYPE.ArrayItemScope], expectedCount: 8 },
+			{ heading: "`item.Item`'s own props", roots: [FORM_TYPE.ArrayItemProps], expectedCount: 4 },
 			{ heading: 'Validating the list', roots: [FORM_TYPE.FieldValidate], expectedCount: 3 },
 			{ heading: 'The `array` node', roots: [FORM_TYPE.AnyArrayNode], expectedCount: 10 },
 		],

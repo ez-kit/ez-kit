@@ -106,6 +106,105 @@ Each member of `items` **is** the form's field set retyped over the item, plus t
 
 Everything else on the object is `item.TextField`, `item.SelectField`, `item.ArrayField` and the rest, each addressing this entry's paths. `item.ArrayField` is why nesting needs no extra machinery: a list inside an entry is the same component, one prefix deeper.
 
+## Custom layout
+
+`form.ArrayField` owns its frame: the add control is drawn by the component, and remove / reorder
+live inside `item.Item`. Reach for `form.Array` when that frame does not fit — an add control in a
+section heading rather than beside the list, a row that is a `<table>` row rather than a card, a
+duplicate-below control built on `insert`.
+
+`form.Array` renders **nothing** but `children(scope)`. Everything on screen — the add control, the
+rows, the list's own errors — is drawn by the author:
+
+<KitExample exampleId='form-arrays-custom' />
+
+The add control in the section heading and the duplicate control on each row are both built from
+scope members `form.ArrayField` never exposes: `add` for the first, `insert(item.index + 1, value)`
+for the second. Neither is reachable through the composed component.
+
+**The primitive renders no errors.** `form.ArrayField` shows the list's `validate` failures on its
+own frame; `form.Array` has no frame, so nothing shows them unless the render prop reads `errors`
+itself, the way the example above does with `{invalid && <p role='alert'>{errors.join(', ')}</p>}`.
+Skip that and a `minLength` failure still blocks submit — it just does so with nothing on screen to
+explain why.
+
+### `form.Array`
+
+| Prop       | Type                   | Notes                                                                                                       |
+| ---------- | ---------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `name`     | array path             | **Required.** Narrowed to the paths of `TFormData` whose value is an array; the item type follows it.       |
+| `newItem`  | `TItem`                | **Required.** The value a newly appended entry starts from — same rule as `form.ArrayField`'s.              |
+| `children` | `(scope) => ReactNode` | **Required.** The render prop — see [the scope](#the-scope) below.                                          |
+| `disabled` | `boolean`              | Reaches the scope as data; there is no frame of the primitive's own to disable.                             |
+| `required` | `boolean`              | Reaches the scope as data — see [the scope](#the-scope).                                                    |
+| `validate` | `FieldValidateProps`   | Constraints on the list, exactly as on `form.ArrayField` — see [Validating the list](#validating-the-list). |
+
+### The scope
+
+The render prop receives every mutation the array supports, not only `add` and `canAdd`:
+
+| Key        | Type                        | Notes                                                                                                                            |
+| ---------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `items`    | `readonly ArrayItemScope[]` | One entry of the list, in order. Map over it.                                                                                    |
+| `add`      | `() => void`                | Append an entry built from `newItem`. Takes nothing — see the note below.                                                        |
+| `insert`   | `(index, value?) => void`   | Insert at a position, optionally with a value other than `newItem`. Appending a specific value is `insert(items.length, value)`. |
+| `remove`   | `(index: number) => void`   | Remove the entry at a position — the indexed twin of `item.remove`.                                                              |
+| `move`     | `(from, to) => void`        | Move an entry between positions. What a drag-and-drop implementation is built on.                                                |
+| `canAdd`   | `boolean`                   | `false` once `validate.maxLength` is reached.                                                                                    |
+| `errors`   | `string[]`                  | The list's own errors, formatted the same way a flat field's are. Nothing renders these for you — see above.                     |
+| `invalid`  | `boolean`                   | Whether the list currently fails its own `validate`.                                                                             |
+| `disabled` | `boolean`                   | The `disabled` prop, normalised: always a plain `boolean`, never `undefined`.                                                    |
+| `required` | `boolean`                   | The `required` prop, normalised the same way.                                                                                    |
+| `Button`   | `FormComponents['Button']`  | The kit's generic button, for a control drawn outside `item.Item` — the add and duplicate controls above use it.                 |
+| `field`    | `BoundFieldApi`             | The array field's own bound field, for a `Subscribe`-style read the scope does not cover.                                        |
+
+`add` is deliberately arity-zero: `insert` / `remove` / `move` all take a mandatory index first, so
+none of them can be handed a click event by mistake. `add` would be the one exception — the single
+member an author could write as `onClick={add}` verbatim — and whether that compiled would turn on
+whether the item type happened to be structurally satisfied by a `MouseEvent`. Writing
+`onClick={() => { add() }}`, as the example above does, sidesteps the question entirely.
+
+### One entry, from the primitive
+
+`item.Item` — the kit's native row, heading and remove/reorder chrome included — is available from
+the bare primitive too, not only from `form.ArrayField`. The example above ignores it and draws a
+table row instead, but nothing stops mixing the two: bring your own outer layout and still use
+`item.Item` for the row.
+
+Each member of `items` carries more than `form.ArrayField`'s composed scope surfaces, because there
+is no `item.Item` chrome upstream to hide `remove` and `move` inside:
+
+| Key        | Type                                   | Notes                                                                                                                               |
+| ---------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `key`      | `string`                               | The entry's stable id — see [above](#key-by-itemkey-never-by-the-index).                                                            |
+| `index`    | `number`                               | Its zero-based position. Fine for display; never for `key`.                                                                         |
+| `isFirst`  | `boolean`                              | Whether this is the first entry — for disabling a move-up control without correlating index and length.                             |
+| `isLast`   | `boolean`                              | The same for the last entry.                                                                                                        |
+| `remove`   | `() => void`                           | Remove this entry.                                                                                                                  |
+| `moveUp`   | `() => void`                           | Move this entry one position up. Always callable, unlike the kit's rendered arrows — a no-op at either end rather than `undefined`. |
+| `moveDown` | `() => void`                           | The same, downward.                                                                                                                 |
+| `Item`     | `(props: ArrayItemProps) => ReactNode` | The kit's native row — see [below](#itemitems-own-props).                                                                           |
+
+Everything else on the object is `item.TextField`, `item.NumberField` and the rest, each addressing
+this entry's paths, exactly as under `form.ArrayField`.
+
+### `item.Item`'s own props
+
+Inside `form.ArrayField`, a row's caption and reorder captions usually come from the array's own
+`itemLabel` / `removeLabel` / `reorderable`. There is no outer component holding those for a bare
+`form.Array`, so `Item` takes its own:
+
+| Prop          | Type                                                | Notes                                                                                                                          |
+| ------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `children`    | `ReactNode`                                         | **Required.** The entry's fields.                                                                                              |
+| `label`       | `ReactNode`                                         | Caption for the row. No package default — a row given none from `Item` renders no heading.                                     |
+| `removeLabel` | `ReactNode`                                         | Caption for the remove control. Falls back to the package default, `Remove`.                                                   |
+| `reorderable` | `boolean \| { up?: { label? }, down?: { label? } }` | Offer the kit's move controls on this row. Off by default. Once on, the reorder captions fall back to `Move up` / `Move down`. |
+
+`label`'s fallback is the one to watch: `removeLabel` and the reorder captions always land on
+something visible, but a row with no `label` prop — and no `itemLabel` to inherit, since there is
+no `form.ArrayField` here — renders with no heading at all.
+
 ## Validating the list
 
 `validate` on an array constrains the **list**, and its messages surface on the list rather than on any one field. The vocabulary is the same [`FieldValidate`](/docs/form/schema#validation) every field uses; three keys mean something here:
