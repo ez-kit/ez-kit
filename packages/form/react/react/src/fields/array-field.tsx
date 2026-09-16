@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useRef } from 'react'
 import { fieldValidators } from '../field-validate'
 
 import type { BindableForm, BoundFieldApi } from '../bindable-form'
-import type { FormComponents } from '../contract'
+import type { ArrayFieldRenderProps, FormComponents } from '../contract'
 import type { ArrayFieldProps, ArrayItemScope, FormFieldComponents } from '../field-props'
 import type { FieldValidateProps } from '../field-validate'
 import type { ReactNode } from 'react'
@@ -129,10 +129,9 @@ export function createArrayField<TFormData>(
 				validators={fieldValidators(name, validate)}
 			>
 				{(field) => (
-					<ArrayFieldBody
+					<ArrayBody
 						field={field}
 						fieldName={name}
-						KitArrayField={KitArrayField}
 						KitArrayItem={KitArrayItem}
 						scoped={scoped}
 						label={label}
@@ -145,10 +144,13 @@ export function createArrayField<TFormData>(
 						removeLabel={removeLabel}
 						itemLabel={itemLabel}
 						validate={validate}
-					>
-						{/* The body works on the erased item type; only the consumer-facing props keep it. */}
-						{children as unknown as ArrayFieldBodyProps['children']}
-					</ArrayFieldBody>
+						render={(scope, frame) => (
+							<KitArrayField {...frame}>
+								{/* The body works on the erased item type; only the consumer-facing props keep it. */}
+								{(children as unknown as (s: typeof scope) => ReactNode)(scope)}
+							</KitArrayField>
+						)}
+					/>
 				)}
 			</form.AppField>
 		)
@@ -174,10 +176,12 @@ type ItemData = {
 	onMoveDown: (() => void) | undefined
 }
 
-type ArrayFieldBodyProps = {
+/** The frame `ArrayField` renders around the entries — everything but the entries themselves. */
+type ArrayFrameProps = Omit<ArrayFieldRenderProps, 'children'>
+
+type ArrayBodyProps = {
 	field: BoundFieldApi
 	fieldName: string
-	KitArrayField: FormComponents['ArrayField']
 	KitArrayItem: FormComponents['ArrayItem']
 	scoped: FormFieldComponents<unknown>
 	label: ReactNode
@@ -195,13 +199,15 @@ type ArrayFieldBodyProps = {
 	 * the user produce a state whose only feedback is an error message.
 	 */
 	validate: FieldValidateProps | undefined
-	children: (scope: { items: readonly ArrayItemScope<unknown>[]; add: () => void; canAdd: boolean }) => ReactNode
+	render: (
+		scope: { items: readonly ArrayItemScope<unknown>[]; add: () => void; canAdd: boolean },
+		frame: ArrayFrameProps,
+	) => ReactNode
 }
 
-function ArrayFieldBody({
+function ArrayBody({
 	field,
 	fieldName,
-	KitArrayField,
 	KitArrayItem,
 	scoped,
 	label,
@@ -214,8 +220,8 @@ function ArrayFieldBody({
 	removeLabel,
 	itemLabel,
 	validate,
-	children,
-}: ArrayFieldBodyProps): ReactNode {
+	render,
+}: ArrayBodyProps): ReactNode {
 	const list = Array.isArray(field.state.value) ? (field.state.value as readonly unknown[]) : []
 	const keys = useItemKeys(list.length)
 
@@ -331,22 +337,20 @@ function ArrayFieldBody({
 	const { maxLength } = validate ?? {}
 	const canAdd = maxLength === undefined || list.length < maxLength
 
-	return (
-		<KitArrayField
-			data-field={field.name}
-			data-field-type={ARRAY_FIELD_TYPE}
-			name={field.name}
-			label={label}
-			description={description}
-			errors={errors}
-			invalid={errors.length > 0}
-			disabled={disabled}
-			required={required}
-			addLabel={addLabel ?? DEFAULT_ADD_LABEL}
-			onAdd={add}
-			canAdd={canAdd}
-		>
-			{children({ items, add, canAdd })}
-		</KitArrayField>
-	)
+	const frame: ArrayFrameProps = {
+		'data-field': field.name,
+		'data-field-type': ARRAY_FIELD_TYPE,
+		name: field.name,
+		label,
+		description,
+		errors,
+		invalid: errors.length > 0,
+		disabled,
+		required,
+		addLabel: addLabel ?? DEFAULT_ADD_LABEL,
+		onAdd: add,
+		canAdd,
+	}
+
+	return render({ items, add, canAdd }, frame)
 }
