@@ -1,0 +1,107 @@
+---
+title: Grid context
+description: Carry application and kit values alongside a grid — the current user, a permission set, a tenant id — and read them from any component the grid renders.
+---
+
+A component the grid renders for you — a cell view, a custom toolbar control, a row-action menu —
+sometimes needs to know something the grid has no opinion about. Whether the current user may edit.
+Which tenant the page belongs to. What density the kit was told to use.
+
+`context` is where that goes. You put an object on the grid; every component inside it reads the
+object back. The grid never looks at what is in there.
+
+```tsx
+const table = useDataGrid({
+	data: users,
+	columns,
+	context: { permissions },
+})
+```
+
+```tsx
+import { useGridContext } from '@ez-kit/data-grid-react'
+
+function DeleteAction() {
+	const canDelete = useGridContext((context) => context.permissions.canDelete)
+	if (!canDelete) return null
+	return <button type='button'>Delete</button>
+}
+```
+
+## Type it once
+
+`GridContext` ships **empty**. Declare its members once, anywhere in your app, and every call site
+and every reader is typed from that declaration — there is no generic to thread through:
+
+```ts
+declare module '@ez-kit/data-grid-react' {
+	interface GridContext {
+		currentUser: { id: string; role: 'admin' | 'viewer' }
+		permissions: { canEdit: boolean; canDelete: boolean }
+	}
+}
+```
+
+Until something extends it, `context` accepts `{}` and `useGridContext()` returns `{}`.
+
+## Reading it
+
+`useGridContext` has two forms, and which one you use decides what re-renders.
+
+| Form                                  | Returns          | Re-renders when                 |
+| ------------------------------------- | ---------------- | ------------------------------- |
+| `useGridContext()`                    | the whole object | any part of the context changes |
+| `useGridContext((c) => c.some.value)` | that value       | **that value** changes          |
+
+Prefer the selector form in anything the grid renders per row or per cell — a permission flag read
+that way re-renders one cell when the flag flips, and stays quiet for every other change.
+
+The selector must return a referentially stable value while the context has not changed. Field
+access and primitive computations qualify; building a fresh object or array on every call
+(`(c) => ({ ...c.permissions })`) does not, and will re-render without end — wrap such a value in
+`useMemo` around the hook instead. This is the same contract as
+[`useDataGridState`](/docs/data-grid/state/controlled).
+
+Like every other context-bound hook, `useGridContext` throws outside `<DataGrid>`.
+
+## It merges like every other option
+
+`context` travels the [three option layers](/docs/data-grid/state/defaults) unchanged — kit factory
+under provider under instance, deep-merged, nearest to the grid wins:
+
+```tsx
+// in the kit
+createDataGrid({ components, defaults: { context: { shadcn: { density: 'comfortable' } } } })
+
+// in the app, over a subtree
+<DataGridOptionsProvider defaults={{ context: { currentUser } }}>
+
+// on one grid
+useDataGrid({ data, columns, context: { permissions } })
+```
+
+That grid sees all three. Naming a key **replaces** it rather than adding to it: `permissions` at
+the call site means those permissions, not a union with a provider's.
+
+## Who owns which key
+
+The interface is one namespace shared by your application and the UI kit you render through, and
+nothing in the types keeps them apart. The convention is that **a kit writes only under its own
+key** — `context.shadcn`, `context.heroui` — and leaves everything else to the application. Follow
+it and a kit shipping a new setting cannot collide with a name you already use.
+
+## When not to use it
+
+`context` is not table state. It is never serialized, never part of `onStateChange`, and never
+restored from a URL — a value that belongs in a deep link belongs in
+[state](/docs/data-grid/state/persistence) instead.
+
+It is also not a replacement for props. A value one component needs, and whose parent can hand it
+over directly, should be a prop. `context` earns its place when the reader is a component the
+**grid** renders, where there is no parent of yours in between.
+
+## Options
+
+| Option    | Type          | Default | Description                                                                          |
+| --------- | ------------- | ------- | ------------------------------------------------------------------------------------ |
+| `context` | `GridContext` | `{}`    | Application and kit values carried alongside the grid, read with `useGridContext()`. |

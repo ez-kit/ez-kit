@@ -1,12 +1,13 @@
 'use client'
 
-import { useGridMessages } from '@ez-kit/data-grid-react'
+import { baseCellTypes } from '@ez-kit/data-grid-react/cell-types'
+import { useGridMessages } from '@ez-kit/data-grid-react/kit'
 
 import { Field, FieldDescription, FieldError, FieldLabel } from '@grid-shadcn/components/ui/field'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@grid-shadcn/components/ui/select'
 import { Switch } from '@grid-shadcn/components/ui/switch'
 
-import type { CellViewProps, FieldState } from '@ez-kit/data-grid-react'
+import type { BooleanCellConfig, CellTypeDefinition, CellViewProps, FieldState } from '@ez-kit/data-grid-react'
 
 const ALL_SENTINEL = '__all__'
 const TRUE_KEY = 'true'
@@ -78,4 +79,19 @@ function BooleanFilterInput({ id, value, onChange, onBlur, label, description, e
 	)
 }
 
-export { BooleanCellInput, BooleanCellView, BooleanFilterInput }
+/**
+ * This kit's `boolean` registry entry — importable on its own, so a consumer can register only the
+ * cell types it uses. `blocks/cell-types.ts` composes the default registry from these.
+ *
+ * Annotated rather than inferred, and restating the phantom `__config` the spread carries: see
+ * the note on `KitCellTypes` in `../cell-types.ts` for what an inferred type does to the
+ * bundled declarations.
+ */
+const booleanCellType: CellTypeDefinition<BooleanCellConfig> & { __config?: BooleanCellConfig } = {
+	...baseCellTypes.boolean,
+	view: BooleanCellView,
+	editing: BooleanCellInput,
+	filtering: BooleanFilterInput,
+}
+
+export { BooleanCellInput, booleanCellType, BooleanCellView, BooleanFilterInput }

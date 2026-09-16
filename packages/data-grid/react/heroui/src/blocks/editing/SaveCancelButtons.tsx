@@ -1,6 +1,6 @@
 'use client'
 
-import { useGridMessages } from '@ez-kit/data-grid-react'
+import { useGridMessages } from '@ez-kit/data-grid-react/kit'
 import { Button } from '@heroui/react'
 import { Check, Loader2, X } from 'lucide-react'
 

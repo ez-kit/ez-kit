@@ -1,6 +1,6 @@
 'use client'
 
-import { buildPageWindow, PAGE_GAP, useGridMessages } from '@ez-kit/data-grid-react'
+import { buildPageWindow, PAGE_GAP, useGridMessages } from '@ez-kit/data-grid-react/kit'
 import { Pagination as HeroPagination } from '@heroui/react'
 import { ChevronsLeft, ChevronsRight } from 'lucide-react'
 

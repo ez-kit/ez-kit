@@ -824,6 +824,14 @@
 		"exportName": "ColumnOrderingExample"
 	},
 	{
+		"id": "column-panel-ordering",
+		"label": "Column panel ordering",
+		"group": "columns",
+		"groupLabel": "Columns",
+		"sourceFile": "components/column-ordering.tsx",
+		"exportName": "ColumnPanelOrderingExample"
+	},
+	{
 		"id": "row-ordering",
 		"label": "Row ordering",
 		"group": "rows",

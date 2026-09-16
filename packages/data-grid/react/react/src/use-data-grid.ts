@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react'
 
 import { mergeGridOptionLayers, useDataGridOptions, useGridFactoryDefaults } from './data-grid-options-context'
 import { DATA_GRID_DEFAULTS, DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
+import { EMPTY_GRID_CONTEXT, syncGridContext } from './grid-context'
 import { prepareDataGridTable } from './prepare-table'
 import { ActionBarVariant, FilteringVariant } from './types'
 import { useOrderedData } from './use-ordered-data'
@@ -11,6 +12,7 @@ import { useSafeLayoutEffect } from './utils/use-safe-layout-effect'
 import type { CellTypeRegistry } from './cell-types-context'
 import type { PaginationLabelModel } from './data-grid/pagination-label'
 import type { DataGridDefaultOptions } from './data-grid-options-context'
+import type { GridContext } from './grid-context'
 import type { ResolvedGridOptions } from './resolved-options'
 import type {
 	FilterChipsPosition,
@@ -759,6 +761,31 @@ export type UseDataGridConfig<TRow extends object> = {
 	 */
 	state?: Partial<TableState>
 	/**
+	 * Application and kit values carried alongside the grid, for components that need to agree
+	 * with their surroundings rather than receive everything as a prop — the current user, a
+	 * permission set, a tenant id, a kit's own settings.
+	 *
+	 * The grid never interprets what is in here. It merges it through the three option layers
+	 * like any other option and publishes it; {@link useGridContext} reads it, with a selector
+	 * form so a cell renderer re-renders only for the slice it asked for.
+	 *
+	 * Typed by declaration merging on {@link GridContext} — empty until a consumer extends it.
+	 *
+	 * @example
+	 * ```tsx
+	 * // once, anywhere in the app
+	 * declare module '@ez-kit/data-grid-react' {
+	 *   interface GridContext {
+	 *     permissions: { canEdit: boolean }
+	 *   }
+	 * }
+	 *
+	 * useDataGrid({ data, columns, context: { permissions } })
+	 * // and in a kit component: const canEdit = useGridContext((c) => c.permissions.canEdit)
+	 * ```
+	 */
+	context?: GridContext
+	/**
 	 * Per-row DOM props — see {@link RowPropsResolver}.
 	 *
 	 * @example
@@ -908,6 +935,7 @@ export function useDataGrid<TRow extends object>(
 		messages: messageOverrides,
 		ordering: rawOrdering,
 		rowProps,
+		context,
 		...restConfig
 	} = config
 
@@ -1185,6 +1213,26 @@ export function useDataGrid<TRow extends object>(
 		table.notifyStateSubscribers()
 	})
 
+	// ── publish the grid context ─────────────────────────────────────────────
+	// Same two-step as the controlled-state sync directly above, and for the same reason: the
+	// write has to land during render so this pass reads the new value, but waking a subscribed
+	// child's `useSyncExternalStore` callback mid-render is React's "Cannot update a component
+	// while rendering a different component". `syncGridContext` writes silently and reports
+	// whether a notify is owed; the layout effect flushes it before paint.
+	//
+	// It is compared rather than written blindly because `mergeGridOptionLayers` rebuilds the
+	// merged config on every render — an unconditional write would wake every reader of the
+	// whole-object form on every render of the grid.
+	const pendingContextNotifyRef = useRef(false)
+	if (syncGridContext(table.gridContext, context ?? EMPTY_GRID_CONTEXT)) {
+		pendingContextNotifyRef.current = true
+	}
+	useSafeLayoutEffect(() => {
+		if (!pendingContextNotifyRef.current) return
+		pendingContextNotifyRef.current = false
+		table.gridContext.notify()
+	})
+
 	// Re-sync feature configs every render so callbacks (e.g. creating.onSave)
 	// see the latest captured props/state instead of the closure from first mount.
 	// The three keys are dropped before being re-added so a grid that stops supplying a
@@ -1215,6 +1263,10 @@ export function useDataGrid<TRow extends object>(
 	// The row axis turns on only by being named — a bare `true` stays columns-only, so an
 	// upgrade cannot hand an existing grid an affordance nobody asked for.
 	const rowOrderingEnabled = isFeatureEnabled(orderingCfg?.row)
+	// Read off the column axis's own config, and only while that axis is on: a grid that turned
+	// column reordering off cannot be left offering it from the Columns toggle.
+	const columnOrderingCfg = featureConfig(orderingCfg?.column)
+	const orderingInVisibilityMenu = columnOrderingEnabled && columnOrderingCfg?.visibilityMenu === true
 
 	table.grid = {
 		cellTypes,
@@ -1231,7 +1283,7 @@ export function useDataGrid<TRow extends object>(
 			...(layout?.classNames !== undefined ? { classNames: layout.classNames } : {}),
 		},
 		pinning: { column: colPinEnabled, row: rowPinEnabled },
-		ordering: { column: columnOrderingEnabled, row: rowOrderingEnabled },
+		ordering: { column: columnOrderingEnabled, row: rowOrderingEnabled, visibilityMenu: orderingInVisibilityMenu },
 		visibility: normalizedVisibility,
 		sorting: normalizedSorting,
 		filtering: {

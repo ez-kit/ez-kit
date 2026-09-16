@@ -1,45 +1,32 @@
-import { baseCellTypes } from '@ez-kit/data-grid-react'
-
-import { BadgeCellInput, BadgeCellView } from './cell-types/BadgeCell'
-import { BooleanCellInput, BooleanCellView, BooleanFilterInput } from './cell-types/BooleanCell'
-import { DateCellInput, DateCellView } from './cell-types/DateCell'
-import { ImageCellInput, ImageCellView } from './cell-types/ImageCell'
-import { LinkCellInput, LinkCellView } from './cell-types/LinkCell'
-import { NumberCellInput } from './cell-types/NumberCell'
-import { ProgressCellInput, ProgressCellView } from './cell-types/ProgressCell'
-import { SelectCellInput, SelectCellView } from './cell-types/SelectCell'
-import { TextCellInput } from './cell-types/TextCell'
+import { badgeCellType } from './cell-types/BadgeCell'
+import { booleanCellType } from './cell-types/BooleanCell'
+import { dateCellType } from './cell-types/DateCell'
+import { imageCellType } from './cell-types/ImageCell'
+import { linkCellType } from './cell-types/LinkCell'
+import { numberCellType } from './cell-types/NumberCell'
+import { progressCellType } from './cell-types/ProgressCell'
+import { selectCellType } from './cell-types/SelectCell'
+import { textCellType } from './cell-types/TextCell'
 
 import type { BaseCellTypes, CellTypeContractOf, CellTypeRegistry } from '@ez-kit/data-grid-react'
 
+/**
+ * This kit's cell-type registry — the nine ids `createDataGrid` mounts by default.
+ *
+ * Composed from the per-type entries rather than written out here: each cell file exports its own
+ * `<id>CellType`, so a consumer can register just the types it uses without the other eight (and
+ * everything they import) coming along. What this object resolves to is unchanged by that.
+ */
 export const cellTypes = {
-	text: {
-		...baseCellTypes.text,
-		editing: TextCellInput,
-		filtering: TextCellInput,
-	},
-	number: {
-		...baseCellTypes.number,
-		editing: NumberCellInput,
-		filtering: NumberCellInput,
-	},
-	boolean: {
-		...baseCellTypes.boolean,
-		view: BooleanCellView,
-		editing: BooleanCellInput,
-		filtering: BooleanFilterInput,
-	},
-	date: {
-		...baseCellTypes.date,
-		view: DateCellView,
-		editing: DateCellInput,
-		filtering: DateCellInput,
-	},
-	select: { ...baseCellTypes.select, view: SelectCellView, editing: SelectCellInput, filtering: SelectCellInput },
-	badge: { ...baseCellTypes.badge, view: BadgeCellView, editing: BadgeCellInput, filtering: BadgeCellInput },
-	image: { ...baseCellTypes.image, view: ImageCellView, editing: ImageCellInput },
-	link: { ...baseCellTypes.link, view: LinkCellView, editing: LinkCellInput },
-	progress: { ...baseCellTypes.progress, view: ProgressCellView, editing: ProgressCellInput },
+	text: textCellType,
+	number: numberCellType,
+	boolean: booleanCellType,
+	date: dateCellType,
+	select: selectCellType,
+	badge: badgeCellType,
+	image: imageCellType,
+	link: linkCellType,
+	progress: progressCellType,
 } satisfies CellTypeRegistry
 
 /**

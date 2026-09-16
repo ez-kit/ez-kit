@@ -1,6 +1,6 @@
 'use client'
 
-import { BetweenBranch, useBetweenValue, useGridMessages } from '@ez-kit/data-grid-react'
+import { BetweenBranch, useBetweenValue, useGridMessages } from '@ez-kit/data-grid-react/kit'
 import { format, isValid, parseISO } from 'date-fns'
 import { useState } from 'react'
 

@@ -1,9 +1,10 @@
 'use client'
 
+import { baseCellTypes } from '@ez-kit/data-grid-react/cell-types'
 import { Calendar, DateField, DatePicker, Description, FieldError, Label } from '@heroui/react'
 import { parseDate } from '@internationalized/date'
 
-import type { CellViewProps, DateCellConfig, FieldState } from '@ez-kit/data-grid-react'
+import type { CellTypeDefinition, CellViewProps, DateCellConfig, FieldState } from '@ez-kit/data-grid-react'
 import type { CalendarDate } from '@internationalized/date'
 
 function toCalendarDate(value: unknown): CalendarDate | null {
@@ -95,4 +96,19 @@ function DateCellInput({
 	)
 }
 
-export { DateCellInput, DateCellView }
+/**
+ * This kit's `date` registry entry — importable on its own, so a consumer can register only the
+ * cell types it uses. `blocks/cell-types.ts` composes the default registry from these.
+ *
+ * Annotated rather than inferred, and restating the phantom `__config` the spread carries: see
+ * the note on `KitCellTypes` in `../cell-types.ts` for what an inferred type does to the
+ * bundled declarations.
+ */
+const dateCellType: CellTypeDefinition<DateCellConfig> & { __config?: DateCellConfig } = {
+	...baseCellTypes.date,
+	view: DateCellView,
+	editing: DateCellInput,
+	filtering: DateCellInput,
+}
+
+export { DateCellInput, dateCellType, DateCellView }

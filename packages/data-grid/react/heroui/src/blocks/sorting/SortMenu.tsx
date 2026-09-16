@@ -1,6 +1,6 @@
 'use client'
 
-import { SortDirection, useGridMessages } from '@ez-kit/data-grid-react'
+import { SortDirection, useGridMessages } from '@ez-kit/data-grid-react/kit'
 import { Button, ListBox, Popover, Select } from '@heroui/react'
 import { ArrowUpDown, Plus, Trash2 } from 'lucide-react'
 

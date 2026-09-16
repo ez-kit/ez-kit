@@ -11,7 +11,7 @@ import { createStoreCache } from '../store-cache'
 
 import { StoreProvider } from './index'
 
-import type { RenderScopedAdapter } from '../persist'
+import type { AmbientAdapter, RenderScopedAdapter } from '../persist'
 import type { UrlDriver } from '../persist/url'
 
 /**
@@ -183,5 +183,38 @@ describe('StoreProvider — single writer for one source', () => {
 		})
 		// One engine for `url` → the two coalesced mutations produce a single navigation, not two races.
 		expect(commitSpy).toHaveBeenCalledTimes(1)
+	})
+
+	it('forwards onPersistError to the persist layer when an async source rejects', async () => {
+		const boom = new Error('GET /me/preferences failed')
+		const onPersistError = vi.fn()
+		const adapter: AmbientAdapter = {
+			source: 'remote',
+			port: {
+				get: () => Promise.reject(boom),
+				set: () => Promise.resolve(),
+			},
+		}
+		const store = createContextStore<{ q: string }>(() =>
+			pipe(
+				proxy({ q: '' }),
+				withPersist({
+					fields: (field) => [field((state) => state.q, { source: 'remote', key: 'q', parser: paramString() })],
+				}),
+			),
+		)
+
+		render(
+			<StoreProvider
+				persist={[adapter]}
+				onPersistError={onPersistError}
+			>
+				<store.Provider />
+			</StoreProvider>,
+		)
+
+		await waitFor(() => {
+			expect(onPersistError).toHaveBeenCalledWith(boom, { source: 'remote' })
+		})
 	})
 })

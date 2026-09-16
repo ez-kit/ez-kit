@@ -1,4 +1,4 @@
-import { GridMenuIcon, isGridMenuIcon } from '@ez-kit/data-grid-react'
+import { isGridMenuIcon, GridMenuIcon } from '@ez-kit/data-grid-react/kit'
 import {
 	ArrowDown,
 	ArrowLeft,

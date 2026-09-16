@@ -119,3 +119,26 @@ jobs:
           name: playwright-report-${{ matrix.project }}
           path: apps/docs/playwright-report
           retention-days: 7
+
+  e2e-gate:
+    # The required check on `develop` — `e2e` itself cannot be one.
+    #
+    # When the matrix job is skipped by the `if:` above, GitHub reports a single check named
+    # `e2e (${{ matrix.project }})`, unexpanded, because the matrix never expanded (see the
+    # version PR #232). Requiring `e2e (shadcn)` and its siblings would therefore leave three
+    # checks that are never reported — permanently pending — on exactly the two PRs that are
+    # meant to skip the suite. This job's name never varies, and it reads the matrix's aggregate
+    # result instead.
+    name: e2e gate
+    needs: e2e
+    # `needs` alone would skip this job whenever `e2e` fails or is skipped, and a skipped
+    # required check passes — which is the failure mode this exists to close.
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require the browser suite
+        # `skipped` is a pass: the release and version PRs do not run the suite on purpose.
+        # Anything else — a failing kit, a cancelled run — fails the merge gate.
+        run: |
+          echo "e2e: ${{ needs.e2e.result }}"
+          [ "${{ needs.e2e.result }}" = 'success' ] || [ "${{ needs.e2e.result }}" = 'skipped' ]

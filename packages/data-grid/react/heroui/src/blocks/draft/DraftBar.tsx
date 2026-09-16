@@ -1,6 +1,6 @@
 'use client'
 
-import { ActionBarVariant, useGridMessages } from '@ez-kit/data-grid-react'
+import { ActionBarVariant, useGridMessages } from '@ez-kit/data-grid-react/kit'
 import { Button } from '@heroui/react'
 import { Check, RotateCcw } from 'lucide-react'
 

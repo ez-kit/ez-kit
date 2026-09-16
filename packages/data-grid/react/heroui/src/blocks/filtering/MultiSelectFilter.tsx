@@ -1,6 +1,6 @@
 'use client'
 
-import { buildMultiSelectLabel } from '@ez-kit/data-grid-react'
+import { buildMultiSelectLabel } from '@ez-kit/data-grid-react/kit'
 import { ListBox, Select } from '@heroui/react'
 
 import type { MultiSelectFilterProps } from '@ez-kit/data-grid-react'

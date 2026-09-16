@@ -1,12 +1,7 @@
 'use client'
 
-import {
-	DataGrid,
-	getVisualLeafColumns,
-	useDataGridState,
-	useDataGridTable,
-	useGridMessages,
-} from '@ez-kit/data-grid-react'
+import { DataGrid } from '@ez-kit/data-grid-react'
+import { getVisualLeafColumns, useDataGridState, useDataGridTable, useGridMessages } from '@ez-kit/data-grid-react/kit'
 import { Table as HeroTable, cn } from '@heroui/react'
 import { Children, createContext, forwardRef, Fragment, isValidElement, useContext, useState } from 'react'
 import { createPortal } from 'react-dom'

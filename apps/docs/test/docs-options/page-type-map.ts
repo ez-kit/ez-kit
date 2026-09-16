@@ -85,6 +85,7 @@ export const DocPage = {
 	ColumnsCustomCellTypes: 'content/docs/data-grid/columns/custom-cell-types.mdx',
 	LayoutComposition: 'content/docs/data-grid/layout/composition.mdx',
 	StateDefaults: 'content/docs/data-grid/state/defaults.mdx',
+	StateContext: 'content/docs/data-grid/state/context.mdx',
 	EditingCreating: 'content/docs/data-grid/editing/creating.mdx',
 	EditingCrudClient: 'content/docs/data-grid/editing/crud-client.mdx',
 	EditingCrudServer: 'content/docs/data-grid/editing/crud-server.mdx',
@@ -592,6 +593,16 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		nonOptionTables: [],
 	},
 	{
+		page: DocPage.StateContext,
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 1 }],
+		nonOptionTables: [
+			{
+				heading: 'Reading it',
+				reason: "Compares the hook's two call forms — the rows are call signatures, not keys of any config.",
+			},
+		],
+	},
+	{
 		page: DocPage.StateDefaults,
 		optionTables: [
 			// The keys a defaults layer deliberately cannot carry — real `UseDataGridConfig` keys,
@@ -666,7 +677,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.ColumnsOrdering,
 		optionTables: [
-			{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 1 },
+			{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 2 },
 			{ heading: 'Column options', roots: [GRID_TYPE.ColumnDef], expectedCount: 1 },
 		],
 		nonOptionTables: [],

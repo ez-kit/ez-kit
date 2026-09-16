@@ -1,6 +1,6 @@
 'use client'
 
-import { buildMultiSelectLabel, useGridMessages } from '@ez-kit/data-grid-react'
+import { buildMultiSelectLabel, useGridMessages } from '@ez-kit/data-grid-react/kit'
 import { useMemo, useState } from 'react'
 
 import { Button } from '@grid-shadcn/components/ui/button'
