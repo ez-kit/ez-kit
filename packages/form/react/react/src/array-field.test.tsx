@@ -16,6 +16,13 @@ function first<T>(items: readonly T[]): T {
 	return head
 }
 
+/** Last match, or a failure that names the problem — indexing off the end is possibly-undefined. */
+function last<T>(items: readonly T[]): T {
+	const tail = items[items.length - 1]
+	if (tail === undefined) throw new Error('expected at least one match')
+	return tail
+}
+
 const { Form } = createForm({ components: testComponents })
 
 const NEW_PERSON: Person = { firstName: '' }
@@ -275,5 +282,164 @@ describe('form.ArrayField', () => {
 		expect(screen.getByRole('button', { name: 'down 0' })).toHaveTextContent('Ниже')
 		expect(screen.getByRole('button', { name: 'up 1' })).toHaveTextContent('Выше')
 		expect(screen.getByRole('button', { name: 'up 0' })).toBeDisabled()
+	})
+})
+
+describe('the array scope', () => {
+	it('inserts an entry at a position without disturbing the others', async () => {
+		const user = userEvent.setup()
+		const onSubmit = vi.fn()
+		render(
+			<Form
+				defaultValues={{ title: '', people: [{ firstName: 'Ada' }, { firstName: 'Grace' }] }}
+				onSubmit={({ value }) => {
+					onSubmit(value)
+				}}
+			>
+				{(form) => (
+					<>
+						<form.ArrayField
+							name='people'
+							newItem={NEW_PERSON}
+						>
+							{({ items, insert }) => (
+								<>
+									{items.map((item) => (
+										<item.Item key={item.key}>
+											<item.TextField
+												name='firstName'
+												label='Name'
+											/>
+										</item.Item>
+									))}
+									<button
+										type='button'
+										onClick={() => {
+											insert(1, { firstName: 'Katherine' })
+										}}
+									>
+										insert
+									</button>
+								</>
+							)}
+						</form.ArrayField>
+						<form.SubmitButton>Save</form.SubmitButton>
+					</>
+				)}
+			</Form>,
+		)
+
+		await user.click(screen.getByRole('button', { name: 'insert' }))
+		await user.click(screen.getByRole('button', { name: 'Save' }))
+
+		await waitFor(() => {
+			expect(onSubmit).toHaveBeenCalledWith({
+				title: '',
+				people: [{ firstName: 'Ada' }, { firstName: 'Katherine' }, { firstName: 'Grace' }],
+			})
+		})
+	})
+
+	it('keeps each entry mounted across an insert in the middle', async () => {
+		// Control-local state is the only witness — a remount is invisible in the submitted
+		// values. An uncontrolled sibling input survives a re-render and dies on a remount, so
+		// its text is the assertion.
+		const user = userEvent.setup()
+		render(
+			<Form
+				defaultValues={{ title: '', people: [{ firstName: 'Ada' }, { firstName: 'Grace' }] }}
+				onSubmit={() => {}}
+			>
+				{(form) => (
+					<form.ArrayField
+						name='people'
+						newItem={NEW_PERSON}
+					>
+						{({ items, insert }) => (
+							<>
+								{items.map((item) => (
+									<item.Item key={item.key}>
+										<item.TextField
+											name='firstName'
+											label={`Name ${String(item.index)}`}
+										/>
+										<input
+											aria-label={`scratch ${item.key}`}
+											defaultValue=''
+										/>
+									</item.Item>
+								))}
+								<button
+									type='button'
+									onClick={() => {
+										insert(1, { firstName: 'Katherine' })
+									}}
+								>
+									insert
+								</button>
+							</>
+						)}
+					</form.ArrayField>
+				)}
+			</Form>,
+		)
+
+		const scratches = screen.getAllByLabelText(/^scratch /)
+		const lastScratch = last(scratches)
+		await user.type(lastScratch, 'survives')
+		await user.click(screen.getByRole('button', { name: 'insert' }))
+
+		const after = screen.getAllByLabelText(/^scratch /)
+		expect(after).toHaveLength(3)
+		expect(after[after.length - 1]).toHaveValue('survives')
+	})
+
+	it('reports isFirst and isLast against the current order', async () => {
+		const user = userEvent.setup()
+		render(
+			<Form
+				defaultValues={{ title: '', people: [{ firstName: 'Ada' }, { firstName: 'Grace' }] }}
+				onSubmit={() => {}}
+			>
+				{(form) => (
+					<form.ArrayField
+						name='people'
+						newItem={NEW_PERSON}
+					>
+						{({ items, move }) => (
+							<>
+								{items.map((item) => (
+									<div key={item.key}>
+										<span>{`${String(item.index)}:${String(item.isFirst)}:${String(item.isLast)}`}</span>
+										<item.TextField
+											name='firstName'
+											label={`Name ${String(item.index)}`}
+										/>
+									</div>
+								))}
+								<button
+									type='button'
+									onClick={() => {
+										move(0, 1)
+									}}
+								>
+									swap
+								</button>
+							</>
+						)}
+					</form.ArrayField>
+				)}
+			</Form>,
+		)
+
+		expect(screen.getByText('0:true:false')).toBeInTheDocument()
+		expect(screen.getByText('1:false:true')).toBeInTheDocument()
+
+		await user.click(screen.getByRole('button', { name: 'swap' }))
+
+		// The flags describe positions, so they read the same after a swap — what must have
+		// changed is which entry sits at each position.
+		expect(screen.getByLabelText('Name 0')).toHaveValue('Grace')
+		expect(screen.getByLabelText('Name 1')).toHaveValue('Ada')
 	})
 })

@@ -1,3 +1,5 @@
+import type { BoundFieldApi } from './bindable-form'
+import type { FormComponents } from './contract'
 import type { FieldValidateProps } from './field-validate'
 import type { DateRangeValue, DeepKeysOfType, LocalizedText, SelectOption, TextInputType } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
@@ -220,20 +222,45 @@ export type ArrayItemScope<TItem> = FormFieldComponents<TItem> & {
 	 */
 	key: string
 	index: number
+	/** Whether this entry is currently first / last — the flags a disable-at-the-ends control needs. */
+	isFirst: boolean
+	isLast: boolean
+	/** Remove this entry. */
+	remove: () => void
+	/**
+	 * Move this entry one position up / down. Always callable, unlike the kit's rendered arrows,
+	 * which stay governed by `reorderable` — a no-op at either end rather than `undefined` keeps
+	 * this scope's shape constant, so an author can wire a control with no null check.
+	 */
+	moveUp: () => void
+	moveDown: () => void
 	/** This entry's chrome — heading, remove control, reorder controls. Wrap the entry's fields. */
 	Item: (props: { children: ReactNode }) => ReactNode
 }
 
-export type ArrayFieldScope<TItem> = {
+export type ArrayScope<TItem> = {
 	items: readonly ArrayItemScope<TItem>[]
-	add: () => void
+	add: (value?: TItem) => void
+	insert: (index: number, value?: TItem) => void
+	remove: (index: number) => void
+	move: (from: number, to: number) => void
 	/**
 	 * `false` once `validate.maxLength` is reached; kits render their add control disabled rather
 	 * than hide it. The same option is both bounds — the one that fails with a message, and the
 	 * one that stops the control offering.
 	 */
 	canAdd: boolean
+	/** The list's own errors — `validate.maxLength`, say — formatted the same way a flat field's are. */
+	errors: string[]
+	invalid: boolean
+	/** The kit's generic button, for a control an author draws themselves outside `Item`. */
+	Button: FormComponents['Button']
+	/** The array field's own bound field — for a `Subscribe`-style read the scope does not cover. */
+	field: BoundFieldApi
 }
+
+/** One scope serves both `form.ArrayField` and the headless `form.Array`. */
+export type ArrayFieldScope<TItem> = ArrayScope<TItem>
 
 /**
  * A repeatable group of fields — the JSX spelling of an `array` node.
