@@ -24,6 +24,7 @@ import type { DataGridDefaultOptions } from './data-grid-options-context'
 import type { GridContext, GridContextAtom } from './grid-context'
 import type { ResolvedGridOptions } from './resolved-options'
 import type {
+	ErasedRow,
 	DataTable,
 	FilterChipsPosition,
 	FilterPanelPlacement,
@@ -174,8 +175,7 @@ export type ReactSelectionConfig<TFeatures extends TableFeatures, TRow extends o
  * mutually assignable — a config written against a concrete row type has to land here and be
  * callable back out.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type NormalizedSelectionBarConfig<TRow extends object = any> = {
+export type NormalizedSelectionBarConfig<TRow extends object = ErasedRow> = {
 	/** Render mode of the shared action bar, defaulted. Never undefined. */
 	variant: ActionBarVariant
 	/** Clear notification, from `selection.bar.onClear`. */

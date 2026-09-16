@@ -7,7 +7,7 @@ import { TEST_FEATURES, renderWithComponents } from '../test-utils'
 import { useDataGrid } from '../use-data-grid'
 
 import { Pagination } from './pagination'
-import { TableContext } from './table-context'
+import { TableProvider } from './table-context'
 
 import type { DataTable, GridFeatures, PaginationProps } from '../types'
 import type { UseDataGridConfig } from '../use-data-grid'
@@ -41,11 +41,11 @@ function renderPagination(
 	const table = result.current
 
 	renderWithComponents(
-		<TableContext.Provider value={table}>
+		<TableProvider table={table}>
 			<GridComponentsProvider components={{ pagination: { Pagination: Spy } }}>
 				<Pagination />
 			</GridComponentsProvider>
-		</TableContext.Provider>,
+		</TableProvider>,
 	)
 
 	return { props: captured, table: table }

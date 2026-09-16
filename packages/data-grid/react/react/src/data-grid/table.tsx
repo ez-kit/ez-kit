@@ -13,7 +13,7 @@ import { PinShadowOverlay } from './pin-shadow-overlay'
 import { useDataGridTable, useDataGridState } from './table-context'
 import { VirtualProvider } from './virtual-context'
 
-import type { GridFeatures } from '../types'
+import type { ErasedRow, GridFeatures } from '../types'
 import type { NormalizedVirtualizationConfig } from '../use-data-grid'
 import type { HeaderGroup, Row, Table as TanStackTable } from '@tanstack/table-core'
 import type { CSSProperties, ReactNode } from 'react'
@@ -71,8 +71,7 @@ function resolveEstimateSize(
  * `<DataGrid.Table<Order>>` — and the render arguments are typed. See
  * {@link DataGridBodyRenderArgs} for why it is explicit rather than inferred.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type DataGridTableRenderArgs<TRow extends object = any> = {
+export type DataGridTableRenderArgs<TRow extends object = ErasedRow> = {
 	table: TanStackTable<GridFeatures, TRow>
 	/** Header groups of the current column model — one entry per header row. */
 	headerGroups: HeaderGroup<GridFeatures, TRow>[]
@@ -80,8 +79,7 @@ export type DataGridTableRenderArgs<TRow extends object = any> = {
 	rows: Row<GridFeatures, TRow>[]
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type DataGridTableProps<TRow extends object = any> = {
+export type DataGridTableProps<TRow extends object = ErasedRow> = {
 	/**
 	 * Custom table content, rendered inside the kit's `<Table>` element and inside the
 	 * scroll / pin-shadow wrapper, so sticky headers, pinning and virtualization plumbing
@@ -115,8 +113,8 @@ export type DataGridTableProps<TRow extends object = any> = {
  * scroll container. CSS vars `--dg-pin-start-shadow` / `--dg-pin-end-shadow`
  * on the wrapper drive their opacity.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function DataGridTable<TRow extends object = any>({ children }: DataGridTableProps<TRow> = {}) {
+
+export function DataGridTable<TRow extends object = ErasedRow>({ children }: DataGridTableProps<TRow> = {}) {
 	// The shell's two boxes are optional slots: a kit that registers neither gets these plain
 	// divs, which is what both kits in this repo used until HeroUI needed its own scrollport.
 	// A registered one must spread what it receives and land `ref` on the right element — see

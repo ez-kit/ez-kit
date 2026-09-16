@@ -8,9 +8,8 @@ import type { ExpandedRowProps } from '../use-data-grid'
 import type { Row } from '@tanstack/table-core'
 import type { ComponentType } from 'react'
 
-type ExpandedRowComponentProps = {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	row: Row<GridFeatures, any>
+type ExpandedRowComponentProps<TRow extends object> = {
+	row: Row<GridFeatures, TRow>
 }
 
 type ExpandConfig = {
@@ -21,7 +20,7 @@ type ExpandConfig = {
  * Renders a full-width row below an expanded row for the sub-content variant.
  * Reads `expandedComponent` from the grid's resolved options (`table.grid.expanding`).
  */
-export function ExpandedRow({ row }: ExpandedRowComponentProps) {
+export function ExpandedRow<TRow extends object>({ row }: ExpandedRowComponentProps<TRow>) {
 	const table = useDataGridTable()
 	useDataGridState((s) => s.columnVisibility)
 	const { Tr, Td } = useGridComponents().core

@@ -8,7 +8,7 @@ import { prepareDataGridTable } from '../prepare-table'
 import { TEST_FEATURES, testComponents } from '../test-utils'
 
 import { ActiveFiltersBar } from './active-filters-bar'
-import { TableContext } from './table-context'
+import { TableProvider } from './table-context'
 
 import type { DataTable, GridFeatures } from '../types'
 import type { NormalizedFilterChipsConfig } from '../use-data-grid'
@@ -49,7 +49,7 @@ function setChipsCfg(table: DataTable<GridFeatures, User>, value: NormalizedFilt
 function Wrapper({ table, children }: { table: DataTable<GridFeatures, User>; children: ReactNode }) {
 	return (
 		<GridComponentsProvider components={testComponents}>
-			<TableContext.Provider value={table}>{children}</TableContext.Provider>
+			<TableProvider table={table}>{children}</TableProvider>
 		</GridComponentsProvider>
 	)
 }

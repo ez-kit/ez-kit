@@ -18,8 +18,7 @@ import type { CSSProperties } from 'react'
  * scrollport along with the content, leaving behind only the pin shadow (which sits on
  * the wrapper and is never clamped).
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function getColumnSizeVars(table: DataTable<GridFeatures, any>): CSSProperties {
+export function getColumnSizeVars<TRow extends object>(table: DataTable<GridFeatures, TRow>): CSSProperties {
 	const headers = table.getFlatHeaders()
 	const vars: Record<string, string> = {}
 
@@ -44,8 +43,7 @@ export function getColumnSizeVars(table: DataTable<GridFeatures, any>): CSSPrope
  * The tracks follow {@link getVisualLeafColumns} — left, centre, right — because that
  * is the order the cells that occupy them are rendered in.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function getGridTemplateColumns(table: DataTable<GridFeatures, any>): string {
+export function getGridTemplateColumns<TRow extends object>(table: DataTable<GridFeatures, TRow>): string {
 	const isResizing = Boolean(table.options.enableColumnResizing)
 	return getVisualLeafColumns(table)
 		.map((col) => {

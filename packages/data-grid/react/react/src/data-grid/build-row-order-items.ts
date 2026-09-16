@@ -20,11 +20,9 @@ import type { Row, Table } from '@tanstack/table-core'
  * from a table in this module: this is the one place these entries are named, so a hardcoded
  * label here would be untranslatable in both kits at once.
  */
-export function buildRowOrderItems(
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	row: Row<GridFeatures, any>,
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	table: Table<GridFeatures, any>,
+export function buildRowOrderItems<TRow extends object>(
+	row: Row<GridFeatures, TRow>,
+	table: Table<GridFeatures, TRow>,
 	messages: GridMessages['rowActions'],
 ): GridMenuItem[] {
 	return [

@@ -46,9 +46,8 @@ export type ColumnMenuCapabilities = {
  * from a table in this module: this is the one place the entries are named, so a hardcoded
  * table here would be untranslatable in both kits at once.
  */
-export function buildColumnMenuSections(
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	header: Header<GridFeatures, any>,
+export function buildColumnMenuSections<TRow extends object>(
+	header: Header<GridFeatures, TRow>,
 	{ canSort, canPin, canHide, canMove }: ColumnMenuCapabilities,
 	messages: GridMessages['columnMenu'],
 ): GridMenuSection[] {

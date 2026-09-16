@@ -18,7 +18,7 @@ import { flexRender } from './flex-render'
 import { useDataGridTable, useDataGridState } from './table-context'
 
 import type { CellTypeRegistry, CellViewProps } from '../cell-types-context'
-import type { GridFeatures } from '../types'
+import type { ErasedRow, GridFeatures } from '../types'
 import type { FormColumnMeta, ColumnAlign, ColumnPinSide, FieldState } from '@ez-kit/data-grid-core'
 import type { Cell, Row } from '@tanstack/table-core'
 import type { ComponentType, CSSProperties, ReactNode } from 'react'
@@ -30,16 +30,14 @@ import type { ComponentType, CSSProperties, ReactNode } from 'react'
  * `<DataGrid.Cell<Order>>` — and the render arguments are typed: `row.original` is an `Order`.
  * See {@link DataGridBodyRenderArgs} for why it is explicit rather than inferred.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type DataGridCellRenderArgs<TRow extends object = any> = {
+export type DataGridCellRenderArgs<TRow extends object = ErasedRow> = {
 	cell: Cell<GridFeatures, TRow>
 	row: Row<GridFeatures, TRow>
 	/** The cell's value, already resolved through the column's accessor. */
 	value: unknown
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type DataGridCellProps<TRow extends object = any> = {
+export type DataGridCellProps<TRow extends object = ErasedRow> = {
 	cell: Cell<GridFeatures, TRow>
 	row: Row<GridFeatures, TRow>
 	/**
@@ -90,8 +88,8 @@ const FOCUSABLE_SELECTOR = 'input, select, textarea, button, [contenteditable="t
  * The structural stylesheet shipped with this package applies the actual
  * `position: sticky` + offsets.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function DataGridCell<TRow extends object = any>({ cell, row, children }: DataGridCellProps<TRow>) {
+
+export function DataGridCell<TRow extends object = ErasedRow>({ cell, row, children }: DataGridCellProps<TRow>) {
 	const meta = cell.column.columnDef.meta
 	if (children !== undefined) {
 		return (
@@ -124,12 +122,12 @@ export function DataGridCell<TRow extends object = any>({ cell, row, children }:
  * `data-pinned` and the column's `cellClassName` — so a replaced cell still lines up with its
  * neighbours and its pinned column still sticks.
  */
-function CustomCell({ cell, row, children }: DataGridCellProps) {
+function CustomCell<TRow extends object>({ cell, row, children }: DataGridCellProps<TRow>) {
 	const { Td } = useGridComponents().core
 	const meta = cell.column.columnDef.meta
 	const chrome = getCellChrome(cell)
 	const cellClassName = resolveCellClassName(meta?.cellClassName, {
-		row: row.original as unknown,
+		row: row.original,
 		value: cell.getValue<unknown>(),
 		rowIndex: row.index,
 	})
@@ -150,7 +148,7 @@ function CustomCell({ cell, row, children }: DataGridCellProps) {
 
 // ── system columns ──────────────────────────────────────────────────────────
 
-function SystemCell({ cell, row }: DataGridCellProps) {
+function SystemCell<TRow extends object>({ cell, row }: DataGridCellProps<TRow>) {
 	const columnId = cell.column.id
 	const chrome = getCellChrome(cell)
 	const { Td } = useGridComponents().core
@@ -188,13 +186,12 @@ function SystemCell({ cell, row }: DataGridCellProps) {
 	return null
 }
 
-type SystemSubProps = {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	row: Row<GridFeatures, any>
+type SystemSubProps<TRow extends object> = {
+	row: Row<GridFeatures, TRow>
 	chrome: CellChrome
 }
 
-function SelectionCell({ row, chrome }: SystemSubProps) {
+function SelectionCell<TRow extends object>({ row, chrome }: SystemSubProps<TRow>) {
 	const { Td, Checkbox } = useGridComponents().core
 	const { messages } = useDataGridTable().grid
 	// Subscribe broadly to rowSelection so row.getIsSelected() / getIsSomeSelected()
@@ -223,7 +220,7 @@ function SelectionCell({ row, chrome }: SystemSubProps) {
 	)
 }
 
-function ExpandCell({ row, chrome }: SystemSubProps) {
+function ExpandCell<TRow extends object>({ row, chrome }: SystemSubProps<TRow>) {
 	const gridComponents = useGridComponents()
 	const { Td } = gridComponents.core
 	const { Chevron } = gridComponents.expanding
@@ -255,7 +252,7 @@ function ExpandCell({ row, chrome }: SystemSubProps) {
 
 // ── data columns ────────────────────────────────────────────────────────────
 
-function BodyDataCell({ cell, row }: DataGridCellProps) {
+function BodyDataCell<TRow extends object>({ cell, row }: DataGridCellProps<TRow>) {
 	const table = useDataGridTable()
 	const { Td } = useGridComponents().core
 	const cellTypes = useCellTypes()
@@ -304,7 +301,7 @@ function BodyDataCell({ cell, row }: DataGridCellProps) {
 
 	const viewComp = resolveViewComponent(meta, cellTypes)
 	const cellClassName = resolveCellClassName(meta?.cellClassName, {
-		row: cell.row.original as unknown,
+		row: cell.row.original,
 		value: cell.getValue<unknown>(),
 		rowIndex: cell.row.index,
 	})
@@ -333,9 +330,8 @@ function BodyDataCell({ cell, row }: DataGridCellProps) {
 	)
 }
 
-type EditingCellProps = {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	cell: Cell<GridFeatures, any>
+type EditingCellProps<TRow extends object> = {
+	cell: Cell<GridFeatures, TRow>
 	editMode: EditingMode
 	cellId: string
 	chrome: CellChrome
@@ -354,7 +350,7 @@ type EditingCellProps = {
  * As a result, `setValue` on a different column does not re-render this cell:
  * only the one whose `values[columnId]` key actually changed re-renders.
  */
-function EditingCell({ cell, editMode, cellId, chrome }: EditingCellProps) {
+function EditingCell<TRow extends object>({ cell, editMode, cellId, chrome }: EditingCellProps<TRow>) {
 	const table = useDataGridTable()
 	const { Td, Input } = useGridComponents().core
 	const cellTypes = useCellTypes()
@@ -471,7 +467,7 @@ function EditingCell({ cell, editMode, cellId, chrome }: EditingCellProps) {
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 
-function getCellChrome(cell: Cell<GridFeatures, unknown>): CellChrome {
+function getCellChrome<TRow extends object>(cell: Cell<GridFeatures, TRow>): CellChrome {
 	const pinVars = getCommonPinStyles(cell.column)
 	const pinned = cell.column.getIsPinned()
 	const pinnedAttrs: CellChrome['pinnedAttrs'] = pinned ? { 'data-pinned': pinned } : {}

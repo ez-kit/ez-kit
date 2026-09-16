@@ -9,7 +9,7 @@ import { TEST_FEATURES, testComponents } from '../test-utils'
 import { ActionBarVariant } from '../types'
 
 import { SelectionBar } from './selection-bar'
-import { TableContext } from './table-context'
+import { TableProvider } from './table-context'
 
 import type { ResolvedGridOptions } from '../resolved-options'
 import type { DataTable, GridFeatures } from '../types'
@@ -38,7 +38,7 @@ function setSelectionBarKey(table: DataTable<GridFeatures, User>, value: Resolve
 function Wrapper({ table, children }: { table: DataTable<GridFeatures, User>; children: ReactNode }) {
 	return (
 		<GridComponentsProvider components={testComponents}>
-			<TableContext.Provider value={table}>{children}</TableContext.Provider>
+			<TableProvider table={table}>{children}</TableProvider>
 		</GridComponentsProvider>
 	)
 }

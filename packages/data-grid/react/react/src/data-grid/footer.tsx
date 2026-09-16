@@ -3,7 +3,7 @@ import { useGridComponents } from '../components-context'
 import { DataGridFooterRow } from './footer-row'
 import { useDataGridTable, useDataGridState } from './table-context'
 
-import type { DataTable, GridFeatures } from '../types'
+import type { ErasedRow, DataTable, GridFeatures } from '../types'
 import type { HeaderGroup } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
@@ -14,14 +14,12 @@ import type { ReactNode } from 'react'
  * `<DataGrid.Footer<Order>>` — and the render arguments are typed. See
  * {@link DataGridBodyRenderArgs} for why it is explicit rather than inferred.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type DataGridFooterRenderArgs<TRow extends object = any> = {
+export type DataGridFooterRenderArgs<TRow extends object = ErasedRow> = {
 	table: DataTable<GridFeatures, TRow>
 	footerGroups: HeaderGroup<GridFeatures, TRow>[]
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type DataGridFooterProps<TRow extends object = any> = {
+export type DataGridFooterProps<TRow extends object = ErasedRow> = {
 	/**
 	 * Stick the footer to the bottom of the scroll container for this footer only.
 	 *
@@ -73,8 +71,8 @@ export type DataGridFooterProps<TRow extends object = any> = {
  * </DataGrid.Table>
  * ```
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function Footer<TRow extends object = any>({ sticky, children }: DataGridFooterProps<TRow> = {}) {
+
+export function Footer<TRow extends object = ErasedRow>({ sticky, children }: DataGridFooterProps<TRow> = {}) {
 	const table = useDataGridTable<TRow>()
 	const isSticky = sticky ?? table.grid.layout.stickyFooter
 	const { Tfoot } = useGridComponents().core

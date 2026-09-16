@@ -63,8 +63,7 @@ function sameFilterValue(a: unknown, b: unknown): boolean {
 	return JSON.stringify(a ?? null) === JSON.stringify(b ?? null)
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function columnLabel(column: Column<GridFeatures, any>): string {
+function columnLabel<TRow extends object>(column: Column<GridFeatures, TRow>): string {
 	const header = column.columnDef.header
 	if (typeof header === 'string') return header
 	return column.id

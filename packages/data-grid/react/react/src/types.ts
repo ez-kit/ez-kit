@@ -50,6 +50,33 @@ import type {
 export type GridFeatures = TableFeatures
 
 /**
+ * The row type every component below `<DataGrid>` is typed against — the **erased** one.
+ *
+ * Same boundary as {@link GridFeatures}, for the same reason, and the two should be read as one
+ * decision: components receive the table through `useDataGridTable()`, which is a React context
+ * and therefore not generic, so they cannot carry the caller's `TRow` any more than they can
+ * carry its `TFeatures`.
+ *
+ * Unlike `TFeatures` there is no "widest instantiation" to pin to, because v9's row types are
+ * **invariant** in `TRow`: `Row<F, TRow>` holds `original: TRow` covariantly and reaches
+ * `column.accessorFn: (row: TRow) => unknown` contravariantly. Verified by probe — `Row<F, User>`
+ * is assignable to `Row<F, any>`, `Row<F, object>` and `Row<F, RowData>` alike, which is to say
+ * to none of them; `any` in particular stopped erasing when v8 became v9, because it only erases
+ * at the top level and not inside a generic instantiation. So the row type is not widened here,
+ * it is *erased*, and crossing into the erased world is a cast rather than an assignment.
+ *
+ * `never` rather than `object` or `any` because that is already this package's spelling for the
+ * same idea — `RowPropsResolver<never>`, `GridOptions<never>`, `ExpandedRowProps<never>` — and one
+ * concept deserves one spelling.
+ *
+ * **The cost, stated rather than engineered around:** a component read is not checked against the
+ * caller's row type. A component that reaches `row.original` gets `never` and must say what it
+ * expects. The crossings are named and counted in `pr3-outcomes.md`; if a cast for this appears
+ * anywhere other than at one of them, the boundary has been put in the wrong place.
+ */
+export type ErasedRow = never
+
+/**
  * The table the React layer renders: core's `DataTable` with `grid` **replaced** by the
  * resolved React options, plus the grid context.
  *
@@ -97,8 +124,7 @@ export const ActionsCellState = {
 
 export type ActionsCellState = (typeof ActionsCellState)[keyof typeof ActionsCellState]
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type ActionsCellIdleProps<TRow extends object = any> = {
+type ActionsCellIdleProps<TRow extends object = ErasedRow> = {
 	state: typeof ActionsCellState.Idle
 	row: Row<GridFeatures, TRow>
 	hasEditing: boolean
@@ -116,8 +142,7 @@ type ActionsCellIdleProps<TRow extends object = any> = {
 	actions: GridMenuItem[]
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type ActionsCellEditingProps<TRow extends object = any> = {
+type ActionsCellEditingProps<TRow extends object = ErasedRow> = {
 	state: typeof ActionsCellState.Editing
 	row: Row<GridFeatures, TRow>
 	onSave: () => Promise<void>
@@ -149,8 +174,7 @@ type ActionsCellCreatingProps = {
  * writes `ActionsCellProps<Invoice>` and gets a typed `row.original`; omitting it keeps the
  * unchecked default, and `any` stays mutually assignable so the registry accepts both.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type ActionsCellProps<TRow extends object = any> =
+export type ActionsCellProps<TRow extends object = ErasedRow> =
 	| ActionsCellIdleProps<TRow>
 	| ActionsCellEditingProps<TRow>
 	| ActionsCellCreatingProps

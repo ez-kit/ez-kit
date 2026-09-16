@@ -15,7 +15,7 @@ import { splitRowActionItems } from './build-action-items'
 import { buildRowOrderItems } from './build-row-order-items'
 import { useDataGridTable, useDataGridState } from './table-context'
 
-import type { DataTable, GridFeatures } from '../types'
+import type { DataTable, ErasedRow, GridFeatures } from '../types'
 import type { RowActionGroups } from './build-action-items'
 import type { GridMenuItem, GridMenuSection } from '../menu'
 import type { RowActionItem, RowActionsContext, RowPinningConfig, GridMessages } from '@ez-kit/data-grid-core'
@@ -23,8 +23,7 @@ import type { Row } from '@tanstack/table-core'
 import type { ReactElement } from 'react'
 
 type ActionsCellProps = {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	row: Row<GridFeatures, any>
+	row: Row<GridFeatures, ErasedRow>
 }
 
 const ICONS: Record<RowActionId, GridMenuIcon> = {
@@ -50,9 +49,8 @@ const EMPTY_GROUPS: RowActionGroups = { inline: [], menu: [], inlineWidths: [] }
 /** One warning per grid, however many rows render it. Keyed by the message. */
 const warned = new Set<string>()
 
-type CellFitInput = {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	table: DataTable<GridFeatures, any>
+type CellFitInput<TRow extends object> = {
+	table: DataTable<GridFeatures, TRow>
 	hasEditing: boolean
 	hasDeleting: boolean
 	inlineWidths: number[]
@@ -67,7 +65,13 @@ type CellFitInput = {
  * to account for — this turns "the last button is clipped" into the number to put in
  * `rowActions.column.width`.
  */
-function warnIfCellOverflows({ table, hasEditing, hasDeleting, inlineWidths, hasOverflow }: CellFitInput): void {
+function warnIfCellOverflows<TRow extends object>({
+	table,
+	hasEditing,
+	hasDeleting,
+	inlineWidths,
+	hasOverflow,
+}: CellFitInput<TRow>): void {
 	if (inlineWidths.length === 0) return
 	const builtIns = [
 		...(hasEditing ? [ACTION_BUTTON_SIZE] : []),
@@ -91,9 +95,8 @@ function warnIfCellOverflows({ table, hasEditing, hasDeleting, inlineWidths, has
  * Builds the pin entries for a row: the two pin directions the config allows,
  * plus `Unpin` once the row is pinned.
  */
-function buildPinItems(
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	row: Row<GridFeatures, any>,
+function buildPinItems<TRow extends object>(
+	row: Row<GridFeatures, TRow>,
 	config: RowPinningConfig,
 	messages: GridMessages['rowActions'],
 ): GridMenuItem[] {

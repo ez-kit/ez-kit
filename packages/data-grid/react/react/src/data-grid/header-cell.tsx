@@ -20,7 +20,7 @@ import { flexRender } from './flex-render'
 import { renderFilterInput } from './render-filter-input'
 import { useDataGridTable } from './table-context'
 
-import type { DataTable, GridFeatures } from '../types'
+import type { ErasedRow, DataTable, GridFeatures } from '../types'
 import type { FormColumnMeta } from '@ez-kit/data-grid-core'
 import type { Column, Header } from '@tanstack/table-core'
 import type { KeyboardEvent, MouseEvent, ReactNode } from 'react'
@@ -37,8 +37,7 @@ import type { KeyboardEvent, MouseEvent, ReactNode } from 'react'
  * `<DataGrid.HeaderCell<Order>>` — and the render arguments are typed. See
  * {@link DataGridBodyRenderArgs} for why it is explicit rather than inferred.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type DataGridHeaderCellRenderArgs<TRow extends object = any> = {
+export type DataGridHeaderCellRenderArgs<TRow extends object = ErasedRow> = {
 	header: Header<GridFeatures, TRow>
 	column: Column<GridFeatures, TRow>
 	canSort: boolean
@@ -55,8 +54,7 @@ export type DataGridHeaderCellRenderArgs<TRow extends object = any> = {
 	resizer: ReactNode
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type DataGridHeaderCellProps<TRow extends object = any> = {
+export type DataGridHeaderCellProps<TRow extends object = ErasedRow> = {
 	header: Header<GridFeatures, TRow>
 	/**
 	 * Custom content for this one header cell, rendered inside the kit's `Th` — so the cell keeps
@@ -77,8 +75,7 @@ export type DataGridHeaderCellProps<TRow extends object = any> = {
  * global "something is dirty" check — so a column whose own sort is unchanged stays unmarked
  * even while a sibling column's sort (or an unrelated filter) is pending.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function computeDraftSortIndex(table: DataTable<GridFeatures, any>, columnId: string): number {
+function computeDraftSortIndex<TRow extends object>(table: DataTable<GridFeatures, TRow>, columnId: string): number {
 	if (table.options.draft !== true) return -1
 	const draftSorting = table.draft.get().sorting
 	// A snapshot read, not a subscription — the v8 line read `applied.sorting` off the whole snapshot
@@ -105,8 +102,11 @@ function computeDraftSortIndex(table: DataTable<GridFeatures, any>, columnId: st
  * Rendering it requires the surrounding `<DataGrid.Header>`, which owns the state subscriptions
  * these cells read through.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function DataGridHeaderCell<TRow extends object = any>({ header, children }: DataGridHeaderCellProps<TRow>) {
+
+export function DataGridHeaderCell<TRow extends object = ErasedRow>({
+	header,
+	children,
+}: DataGridHeaderCellProps<TRow>) {
 	const table = useDataGridTable<TRow>()
 	const gridComponents = useGridComponents()
 	const { Th, Input, Checkbox, Menu } = gridComponents.core

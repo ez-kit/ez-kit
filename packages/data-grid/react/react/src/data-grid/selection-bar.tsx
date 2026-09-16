@@ -17,11 +17,9 @@ import type { ReactNode } from 'react'
  * callback. Shared with the bulk `ConfirmDialog` renderer so the prompt describes the exact
  * set the handler will receive.
  */
-export function buildSelectionBarArgs(
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	table: Table<GridFeatures, any>,
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-): SelectionBarCallbackArgs<any> {
+export function buildSelectionBarArgs<TRow extends object>(
+	table: Table<GridFeatures, TRow>,
+): SelectionBarCallbackArgs<TRow> {
 	return {
 		table,
 		clearSelection: () => {

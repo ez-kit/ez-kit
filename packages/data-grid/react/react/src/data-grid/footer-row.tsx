@@ -2,7 +2,7 @@ import { useGridComponents } from '../components-context'
 
 import { DataGridFooterCell } from './footer-cell'
 
-import type { GridFeatures } from '../types'
+import type { ErasedRow, GridFeatures } from '../types'
 import type { Header, HeaderGroup } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
@@ -13,15 +13,13 @@ import type { ReactNode } from 'react'
  * `<DataGrid.FooterRow<Order>>` — and the render arguments are typed. See
  * {@link DataGridBodyRenderArgs} for why it is explicit rather than inferred.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type DataGridFooterRowRenderArgs<TRow extends object = any> = {
+export type DataGridFooterRowRenderArgs<TRow extends object = ErasedRow> = {
 	footerGroup: HeaderGroup<GridFeatures, TRow>
 	/** The group's cells, in column order — already reflecting visibility and pinning. */
 	headers: Header<GridFeatures, TRow>[]
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type DataGridFooterRowProps<TRow extends object = any> = {
+export type DataGridFooterRowProps<TRow extends object = ErasedRow> = {
 	/**
 	 * The footer group this row renders, from `table.getFooterGroups()`.
 	 *
@@ -50,8 +48,11 @@ export type DataGridFooterRowProps<TRow extends object = any> = {
 }
 
 /** One `<tr>` of the table footer. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function DataGridFooterRow<TRow extends object = any>({ footerGroup, children }: DataGridFooterRowProps<TRow>) {
+
+export function DataGridFooterRow<TRow extends object = ErasedRow>({
+	footerGroup,
+	children,
+}: DataGridFooterRowProps<TRow>) {
 	const { Tr } = useGridComponents().core
 	const headers = footerGroup.headers
 

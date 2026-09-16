@@ -7,7 +7,7 @@ import { filtersRows } from '../utils/filters-rows'
 import { renderFilterInput } from './render-filter-input'
 import { useDataGridState, useDataGridTable } from './table-context'
 
-import type { GridFeatures } from '../types'
+import type { ErasedRow, GridFeatures } from '../types'
 import type {
 	FormColumnMeta,
 	BadgeItem,
@@ -109,9 +109,8 @@ function formatFilterValue(
  * Pair with `filtering.variant: 'panel'` so the header skips inline filter rendering.
  */
 /** One filterable column, as the panel resolved it. */
-export type DataGridFilterPanelColumn = {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	column: Column<GridFeatures, any>
+export type DataGridFilterPanelColumn<TRow extends object = ErasedRow> = {
+	column: Column<GridFeatures, TRow>
 	/** The column's string header, falling back to its id. */
 	label: string
 	/** Human-readable current value, or the "Any" placeholder when unset. */

@@ -3,7 +3,7 @@ import { useGridComponents } from '../components-context'
 import { getAlignAttrs } from './align-attrs'
 import { flexRender } from './flex-render'
 
-import type { GridFeatures } from '../types'
+import type { ErasedRow, GridFeatures } from '../types'
 import type { FormColumnMeta } from '@ez-kit/data-grid-core'
 import type { Header } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
@@ -15,15 +15,13 @@ import type { ReactNode } from 'react'
  * `<DataGrid.FooterCell<Order>>` — and the render arguments are typed. See
  * {@link DataGridBodyRenderArgs} for why it is explicit rather than inferred.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type DataGridFooterCellRenderArgs<TRow extends object = any> = {
+export type DataGridFooterCellRenderArgs<TRow extends object = ErasedRow> = {
 	header: Header<GridFeatures, TRow>
 	/** The column's own `footer` content, already rendered. `null` for a placeholder cell. */
 	content: ReactNode
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type DataGridFooterCellProps<TRow extends object = any> = {
+export type DataGridFooterCellProps<TRow extends object = ErasedRow> = {
 	/**
 	 * The footer group entry this cell renders. Footer cells come from `table.getFooterGroups()`,
 	 * the same `Header` objects the header rows use — hence the prop name.
@@ -46,8 +44,11 @@ export type DataGridFooterCellProps<TRow extends object = any> = {
  * `data-align` from the column's `align.footer` — the same chrome the default `<tfoot>` applies,
  * which is the whole point of having this component rather than a hand-written `<td>`.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function DataGridFooterCell<TRow extends object = any>({ header, children }: DataGridFooterCellProps<TRow>) {
+
+export function DataGridFooterCell<TRow extends object = ErasedRow>({
+	header,
+	children,
+}: DataGridFooterCellProps<TRow>) {
 	const { Td } = useGridComponents().core
 	const pinned = header.column.getIsPinned()
 	// `ColumnMeta` is declared `in out` in both its `TFeatures` and its `TData` upstream, so no

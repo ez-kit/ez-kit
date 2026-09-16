@@ -7,7 +7,7 @@ import { prepareDataGridTable } from '../prepare-table'
 import { TEST_FEATURES, testComponents } from '../test-utils'
 
 import { FilterPanel } from './filter-panel'
-import { TableContext } from './table-context'
+import { TableProvider } from './table-context'
 
 import type { DataTable, GridFeatures } from '../types'
 import type { ReactNode } from 'react'
@@ -57,7 +57,7 @@ function makeTable(config?: Partial<Parameters<typeof createTable<GridFeatures, 
 function Wrapper({ table, children }: { table: DataTable<GridFeatures, Row>; children: ReactNode }) {
 	return (
 		<GridComponentsProvider components={testComponents}>
-			<TableContext.Provider value={table}>{children}</TableContext.Provider>
+			<TableProvider table={table}>{children}</TableProvider>
 		</GridComponentsProvider>
 	)
 }

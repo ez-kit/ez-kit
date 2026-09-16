@@ -8,7 +8,7 @@ import { isTextEntryTarget } from '../utils/interactive-target'
 import { DataGridCell } from './cell'
 import { useDataGridState, useDataGridTable } from './table-context'
 
-import type { GridFeatures } from '../types'
+import type { ErasedRow, GridFeatures } from '../types'
 import type { PinSide } from './use-pinned-row-offsets'
 import type { RowPropsResolver } from '../use-data-grid'
 import type { Row } from '@tanstack/table-core'
@@ -21,15 +21,13 @@ import type { CSSProperties, KeyboardEvent, ReactElement, ReactNode, Ref } from 
  * `<DataGrid.Row<Order>>` — and the render arguments are typed: `row.original` is an `Order`.
  * See {@link DataGridBodyRenderArgs} for why it is explicit rather than inferred.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type DataGridRowRenderArgs<TRow extends object = any> = {
+export type DataGridRowRenderArgs<TRow extends object = ErasedRow> = {
 	row: Row<GridFeatures, TRow>
 	/** The row's visible cells, in column order — already filtered by column visibility and pinning. */
 	cells: ReturnType<Row<GridFeatures, TRow>['getVisibleCells']>
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type DataGridRowProps<TRow extends object = any> = {
+export type DataGridRowProps<TRow extends object = ErasedRow> = {
 	row: Row<GridFeatures, TRow>
 	style?: CSSProperties
 	/** Forwarded to the kit's `Tr`; pinned rows are measured through it (see `usePinnedRowOffsets`). */
@@ -71,8 +69,8 @@ export type DataGridRowProps<TRow extends object = any> = {
 // `forwardRef`, not a `ref` prop: React 19 passes `ref` through props, React 18 strips it before
 // the component sees it, and this package supports both. The generic is restored by the cast
 // below — `forwardRef` erases type parameters, and `<DataGrid.Row<Order>>` has to keep working.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function DataGridRowImpl<TRow extends object = any>(
+
+function DataGridRowImpl<TRow extends object = ErasedRow>(
 	{ row, style, 'data-pinned': dataPinned, 'data-virtual': dataVirtual, children }: Omit<DataGridRowProps<TRow>, 'ref'>,
 	ref: Ref<HTMLTableRowElement>,
 ) {
@@ -163,6 +161,6 @@ function DataGridRowImpl<TRow extends object = any>(
  * signature it was written with. `DataGridRowProps` keeps `ref` in props — that is how a React 19
  * consumer reads it, and a React 18 one passes `ref` the same way at the call site.
  */
-export const DataGridRow = forwardRef(DataGridRowImpl) as <TRow extends object = any>( // eslint-disable-line @typescript-eslint/no-explicit-any
+export const DataGridRow = forwardRef(DataGridRowImpl) as <TRow extends object = ErasedRow>(
 	props: DataGridRowProps<TRow>,
 ) => ReactElement | null

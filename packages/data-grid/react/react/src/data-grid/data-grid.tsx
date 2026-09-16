@@ -35,13 +35,13 @@ import { DataGridRow } from './row'
 import { SelectionBar, buildSelectionBarArgs } from './selection-bar'
 import { SortMenuTrigger } from './sort-menu-trigger'
 import { DataGridTable } from './table'
-import { TableContext, useDataGridTable, useDataGridState } from './table-context'
+import { TableProvider, useDataGridTable, useDataGridState } from './table-context'
 import { Toolbar } from './toolbar'
 import { VisibilityTrigger } from './visibility-trigger'
 
 import type { CellTypeRegistry } from '../cell-types-context'
 import type { GridComponents } from '../contract'
-import type { DataTable, GridFeatures } from '../types'
+import type { DataTable, ErasedRow, GridFeatures } from '../types'
 import type {
 	BulkConfirmationConfig,
 	ConfirmationConfig,
@@ -99,9 +99,9 @@ export type DataGridProps<TFeatures extends TableFeatures, TRow extends object> 
 	| DataGridControlledProps<TFeatures, TRow>
 	| DataGridUncontrolledProps<TFeatures, TRow>
 
-function resolveConfirmationText(
-	options: ConfirmationConfig,
-	row: Row<GridFeatures, unknown> | undefined,
+function resolveConfirmationText<TRow extends object>(
+	options: ConfirmationConfig<TRow>,
+	row: Row<GridFeatures, TRow> | undefined,
 	messages: GridMessages['deleting'],
 ): { title: string; description: string } {
 	const title = options.title ?? messages.title
@@ -119,9 +119,9 @@ function resolveConfirmationText(
  * Bulk confirmation text. The `description` function is handed the whole selection rather than
  * one row — see {@link BulkConfirmationConfig} — and falls back to count-aware default copy.
  */
-function resolveBulkConfirmationText(
-	options: BulkConfirmationConfig,
-	rows: Row<GridFeatures, unknown>[],
+function resolveBulkConfirmationText<TRow extends object>(
+	options: BulkConfirmationConfig<TRow>,
+	rows: Row<GridFeatures, TRow>[],
 	messages: GridMessages['deleting'],
 ): { title: string; description: string } {
 	const title = options.title ?? messages.bulkTitle
@@ -132,8 +132,10 @@ function resolveBulkConfirmationText(
 }
 
 /** The bulk-delete prompt's config, or `undefined` when bulk delete asks for no prompt. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function bulkConfirmationOptions(table: Table<any, any>): BulkConfirmationConfig | undefined {
+
+function bulkConfirmationOptions<TRow extends object>(
+	table: Table<GridFeatures, TRow>,
+): BulkConfirmationConfig<TRow> | undefined {
 	const confirmation = featureConfig(table.options.deleting?.bulk)?.confirmation
 	// `featureConfig` yields `undefined` for the bare `true`, which here means "prompt, with the
 	// default copy" — so the on/off decision reads `isFeatureEnabled` and only the copy comes
@@ -143,8 +145,7 @@ function bulkConfirmationOptions(table: Table<any, any>): BulkConfirmationConfig
 }
 
 /** Whether either the per-row or the bulk confirmation dialog is configured. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function hasConfirmDialog(table: Table<any, any>): boolean {
+function hasConfirmDialog<TRow extends object>(table: Table<GridFeatures, TRow>): boolean {
 	return isFeatureEnabled(table.options.deleting?.confirmation) || bulkConfirmationOptions(table) !== undefined
 }
 
@@ -188,7 +189,7 @@ function ConfirmDialogRenderer() {
 
 	const confirmation = table.options.deleting?.confirmation
 	if (!isFeatureEnabled(confirmation)) return null
-	const options: ConfirmationConfig = featureConfig(confirmation) ?? {}
+	const options: ConfirmationConfig<ErasedRow> = featureConfig(confirmation) ?? {}
 	const pendingRow = pendingId !== null ? table.getRowModel().rows.find((r) => r.id === pendingId) : undefined
 	const { title, description } =
 		pendingId !== null
@@ -339,13 +340,13 @@ function DataGridControlled<TFeatures extends TableFeatures, TRow extends object
 		<GridFactoryDefaultsProvider defaults={undefined}>
 			<CellTypesProvider cellTypes={resolvedCellTypes}>
 				<GridComponentsProvider {...(components !== undefined ? { components } : {})}>
-					<TableContext.Provider value={table}>
+					<TableProvider table={table}>
 						{IS_DEV && <ComponentGuard />}
 						{children ?? <DefaultLayout />}
 						{writeOptions.creating?.mode === CreatingMode.Modal && <CreatingModal />}
 						{writeOptions.editing?.mode === EditingMode.Modal && <EditingModal />}
 						{hasConfirmDialog(table) && <ConfirmDialogRenderer />}
-					</TableContext.Provider>
+					</TableProvider>
 				</GridComponentsProvider>
 			</CellTypesProvider>
 		</GridFactoryDefaultsProvider>
