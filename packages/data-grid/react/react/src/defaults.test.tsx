@@ -4,22 +4,26 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { DataGridOptionsProvider, mergeGridOptionLayers } from './data-grid-options-context'
 import { DATA_GRID_DEFAULTS, DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
+import { TEST_FEATURES } from './test-utils'
 import { PaginationLabel } from './types'
 import { useDataGrid } from './use-data-grid'
 
 import type { DataGridDefaultOptions } from './data-grid-options-context'
+import type { GridFeatures } from './types'
 import type * as DataGridCore from '@ez-kit/data-grid-core'
 import type { ReactNode } from 'react'
 
 type DataGridCoreModule = typeof DataGridCore
 
-// Spy on `createTable` while keeping the real implementation — the strip of React-only
-// pagination fields is only observable at that call site.
-const createTableSpy = vi.hoisted(() => vi.fn())
+// Spy on `createTableOptions` while keeping the real implementation — the strip of React-only
+// pagination fields is only observable at that call site. It was `createTable` until v9: the hook
+// now builds the options and hands them to `useTable` itself, so a spy on `createTable` records
+// nothing and every assertion through it reads `undefined` — passing whatever the hook does.
+const createTableOptionsSpy = vi.hoisted(() => vi.fn())
 vi.mock('@ez-kit/data-grid-core', async (importOriginal) => {
 	const actual = await importOriginal<DataGridCoreModule>()
-	createTableSpy.mockImplementation(actual.createTable)
-	return { ...actual, createTable: createTableSpy }
+	createTableOptionsSpy.mockImplementation(actual.createTableOptions)
+	return { ...actual, createTableOptions: createTableOptionsSpy }
 })
 
 type User = { id: number; name: string }
@@ -31,7 +35,7 @@ const USERS: User[] = [
 const COLUMNS = createColumns<User>([{ accessorKey: 'name' }])
 
 beforeEach(() => {
-	createTableSpy.mockClear()
+	createTableOptionsSpy.mockClear()
 })
 
 // ── Named-default values (single source) ──────────────────────────────────────
@@ -77,12 +81,16 @@ describe('DATA_GRID_DEFAULTS — named default values', () => {
 // Each enabled-without-options feature must land exactly on DATA_GRID_DEFAULTS.
 describe('useDataGrid — effective defaults resolve to named defaults', () => {
 	it('pagination: true → pageSize is the named default', () => {
-		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, pagination: true }))
-		expect(result.current.getState().pagination.pageSize).toBe(DATA_GRID_DEFAULTS.pagination.pageSize)
+		const { result } = renderHook(() =>
+			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, pagination: true }),
+		)
+		expect(result.current.store.state.pagination.pageSize).toBe(DATA_GRID_DEFAULTS.pagination.pageSize)
 	})
 
 	it('pagination without footer options → resolves to the named defaults', () => {
-		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, pagination: true }))
+		const { result } = renderHook(() =>
+			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, pagination: true }),
+		)
 		expect(result.current.grid.pagination.links).toBe(DATA_GRID_DEFAULTS.pagination.links)
 		expect(result.current.grid.pagination.edges).toBe(DATA_GRID_DEFAULTS.pagination.edges)
 		expect(result.current.grid.pagination.label).toBe(DATA_GRID_DEFAULTS.pagination.label)
@@ -90,7 +98,12 @@ describe('useDataGrid — effective defaults resolve to named defaults', () => {
 
 	it('pagination.links / edges → stored on the table for Pagination to read', () => {
 		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { links: false, edges: true } }),
+			useDataGrid({
+				features: TEST_FEATURES,
+				data: USERS,
+				columns: COLUMNS,
+				pagination: { links: false, edges: true },
+			}),
 		)
 		expect(result.current.grid.pagination.links).toBe(false)
 		expect(result.current.grid.pagination.edges).toBe(true)
@@ -100,40 +113,44 @@ describe('useDataGrid — effective defaults resolve to named defaults', () => {
 	// sugar. A plain literal must compile and behave identically; typing the option as an enum
 	// would reject this call.
 	it('pagination.label as a plain string → accepted, same as the named member', () => {
-		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, pagination: { label: 'page' } }))
+		const { result } = renderHook(() =>
+			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, pagination: { label: 'page' } }),
+		)
 		expect(result.current.grid.pagination.label).toBe(PaginationLabel.Page)
 	})
 
-	// Asserting on `table.options` / `getState().pagination` would be unfalsifiable: core only
+	// Asserting on `table.options` / `table.store.state.pagination` would be unfalsifiable: core only
 	// *reads* fields off `config.pagination` and rebuilds state from pageIndex/pageSize, so an
 	// unstripped `links` would be inert there and the test would pass regardless. The
 	// invariant worth guarding is what `createTable` is actually handed — so spy on that.
-	it('the footer options are display-only → never reach the config handed to createTable', () => {
+	it('the footer options are display-only → never reach the config handed to createTableOptions', () => {
 		renderHook(() =>
 			useDataGrid({
+				features: TEST_FEATURES,
 				data: USERS,
 				columns: COLUMNS,
 				pagination: { links: false, edges: true, label: 'page', pageSize: 10 },
 			}),
 		)
 
-		const config = createTableSpy.mock.calls[0]?.[0] as { pagination?: object } | undefined
+		const config = createTableOptionsSpy.mock.calls[0]?.[0] as { pagination?: object } | undefined
 		expect(config?.pagination).toBeDefined()
 		expect(config?.pagination).not.toHaveProperty('links')
 		expect(config?.pagination).not.toHaveProperty('edges')
 		expect(config?.pagination).not.toHaveProperty('label')
 	})
 
-	it('pagination.pageSizer / items are React-only → never reach createTable', () => {
+	it('pagination.pageSizer / items are React-only → never reach createTableOptions', () => {
 		renderHook(() =>
 			useDataGrid({
+				features: TEST_FEATURES,
 				data: USERS,
 				columns: COLUMNS,
 				pagination: { pageSizer: true, items: [5, 10], pageSize: 10 },
 			}),
 		)
 
-		const config = createTableSpy.mock.calls[0]?.[0] as { pagination?: object } | undefined
+		const config = createTableOptionsSpy.mock.calls[0]?.[0] as { pagination?: object } | undefined
 		expect(config?.pagination).toBeDefined()
 		expect(config?.pagination).not.toHaveProperty('pageSizer')
 		expect(config?.pagination).not.toHaveProperty('items')
@@ -142,7 +159,9 @@ describe('useDataGrid — effective defaults resolve to named defaults', () => {
 	})
 
 	it('globalFiltering: true → placeholder/debounce are the named defaults', () => {
-		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, globalFiltering: true }))
+		const { result } = renderHook(() =>
+			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, globalFiltering: true }),
+		)
 		const cfg = result.current.grid.globalFiltering
 		expect(cfg?.placeholder).toBe(defaultMessages.globalFiltering.placeholder)
 		expect(cfg?.debounce).toBe(DATA_GRID_DEFAULTS.filtering.debounce)
@@ -150,7 +169,13 @@ describe('useDataGrid — effective defaults resolve to named defaults', () => {
 
 	it('globalFiltering inherits an explicit filtering.debounce', () => {
 		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, filtering: { debounce: 500 }, globalFiltering: true }),
+			useDataGrid({
+				features: TEST_FEATURES,
+				data: USERS,
+				columns: COLUMNS,
+				filtering: { debounce: 500 },
+				globalFiltering: true,
+			}),
 		)
 		const cfg = result.current.grid.globalFiltering
 		expect(cfg?.debounce).toBe(500)
@@ -159,6 +184,7 @@ describe('useDataGrid — effective defaults resolve to named defaults', () => {
 	it('globalFiltering.debounce overrides the shared filtering.debounce', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({
+				features: TEST_FEATURES,
 				data: USERS,
 				columns: COLUMNS,
 				filtering: { debounce: 500 },
@@ -170,32 +196,38 @@ describe('useDataGrid — effective defaults resolve to named defaults', () => {
 	})
 
 	it('filtering: true → variant is the named default', () => {
-		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: true }))
+		const { result } = renderHook(() =>
+			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, filtering: true }),
+		)
 		expect(result.current.grid.filtering.variant).toBe(DATA_GRID_DEFAULTS.filtering.variant)
 		expect(result.current.grid.filtering.variant).toBe('inline')
 	})
 
 	it('filtering config without an explicit variant → variant is the named default', () => {
-		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: { debounce: 500 } }))
+		const { result } = renderHook(() =>
+			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, filtering: { debounce: 500 } }),
+		)
 		expect(result.current.grid.filtering.variant).toBe(DATA_GRID_DEFAULTS.filtering.variant)
 	})
 
 	it('an explicit filtering.variant wins over the default', () => {
 		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, filtering: { variant: 'popover' } }),
+			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, filtering: { variant: 'popover' } }),
 		)
 		expect(result.current.grid.filtering.variant).toBe('popover')
 	})
 
 	it('filtering.chips: true → position is the named default', () => {
-		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: { chips: true } }))
+		const { result } = renderHook(() =>
+			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, filtering: { chips: true } }),
+		)
 		const cfg = result.current.grid.filtering.chips
 		expect(cfg?.position).toBe(DATA_GRID_DEFAULTS.filtering.chips.position)
 	})
 
 	it('pagination infinite → trigger/threshold are the named defaults', () => {
 		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { mode: 'infinite' } }),
+			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, pagination: { mode: 'infinite' } }),
 		)
 		const cfg = result.current.grid.pagination.infinite
 		expect(cfg?.trigger).toBe(DATA_GRID_DEFAULTS.pagination.trigger)
@@ -209,31 +241,40 @@ describe('useDataGrid — overrides beat the named defaults', () => {
 
 	it('table config wins', () => {
 		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { pageSize: OVERRIDE_PAGE_SIZE } }),
+			useDataGrid({
+				features: TEST_FEATURES,
+				data: USERS,
+				columns: COLUMNS,
+				pagination: { pageSize: OVERRIDE_PAGE_SIZE },
+			}),
 		)
-		expect(result.current.getState().pagination.pageSize).toBe(OVERRIDE_PAGE_SIZE)
+		expect(result.current.store.state.pagination.pageSize).toBe(OVERRIDE_PAGE_SIZE)
 	})
 
 	it('provider defaults win over the floor', () => {
 		function Wrapper({ children }: { children: ReactNode }) {
 			return (
-				<DataGridOptionsProvider<User> defaults={{ pagination: { pageSize: OVERRIDE_PAGE_SIZE } }}>
+				<DataGridOptionsProvider<GridFeatures, User> defaults={{ pagination: { pageSize: OVERRIDE_PAGE_SIZE } }}>
 					{children}
 				</DataGridOptionsProvider>
 			)
 		}
-		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS }), { wrapper: Wrapper })
-		expect(result.current.getState().pagination.pageSize).toBe(OVERRIDE_PAGE_SIZE)
+		const { result } = renderHook(() => useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS }), {
+			wrapper: Wrapper,
+		})
+		expect(result.current.store.state.pagination.pageSize).toBe(OVERRIDE_PAGE_SIZE)
 	})
 
 	it('factory defaults win over the floor', () => {
-		const factory: DataGridDefaultOptions<User> = { pagination: { pageSize: OVERRIDE_PAGE_SIZE } }
-		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS }, factory))
-		expect(result.current.getState().pagination.pageSize).toBe(OVERRIDE_PAGE_SIZE)
+		const factory: DataGridDefaultOptions<GridFeatures, User> = { pagination: { pageSize: OVERRIDE_PAGE_SIZE } }
+		const { result } = renderHook(() =>
+			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS }, factory),
+		)
+		expect(result.current.store.state.pagination.pageSize).toBe(OVERRIDE_PAGE_SIZE)
 	})
 
 	it('precedence: table beats provider beats factory', () => {
-		const merged = mergeGridOptionLayers<User>(
+		const merged = mergeGridOptionLayers<GridFeatures, User>(
 			{ pagination: { pageSize: 5 } },
 			{ pagination: { pageSize: 15 } },
 			{ data: USERS, columns: COLUMNS, pagination: { pageSize: OVERRIDE_PAGE_SIZE } },
@@ -245,7 +286,12 @@ describe('useDataGrid — overrides beat the named defaults', () => {
 describe('grid.ordering — the two axes resolve independently', () => {
 	const gridOrdering = (ordering: DataGridCore.OrderingConfig | boolean | undefined) => {
 		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, ...(ordering === undefined ? {} : { ordering }) }),
+			useDataGrid({
+				features: TEST_FEATURES,
+				data: USERS,
+				columns: COLUMNS,
+				...(ordering === undefined ? {} : { ordering }),
+			}),
 		)
 		return result.current.grid.ordering
 	}

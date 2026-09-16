@@ -10,6 +10,7 @@ import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
 import { GridMenuVariant } from '../menu'
 import { ColumnSortDirection, FilteringVariant, SortDirection } from '../types'
+import { filtersRows } from '../utils/filters-rows'
 import { isInteractiveTarget } from '../utils/interactive-target'
 import { getCommonPinStyles } from '../utils/pin-styles'
 
@@ -19,7 +20,8 @@ import { flexRender } from './flex-render'
 import { renderFilterInput } from './render-filter-input'
 import { useDataGridTable } from './table-context'
 
-import type { DataTable } from '@ez-kit/data-grid-core'
+import type { DataTable, GridFeatures } from '../types'
+import type { FormColumnMeta } from '@ez-kit/data-grid-core'
 import type { Column, Header } from '@tanstack/table-core'
 import type { KeyboardEvent, MouseEvent, ReactNode } from 'react'
 
@@ -37,8 +39,8 @@ import type { KeyboardEvent, MouseEvent, ReactNode } from 'react'
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type DataGridHeaderCellRenderArgs<TRow extends object = any> = {
-	header: Header<TRow, unknown>
-	column: Column<TRow>
+	header: Header<GridFeatures, TRow>
+	column: Column<GridFeatures, TRow>
 	canSort: boolean
 	sortDirection: ColumnSortDirection
 	/** The column's own `header` content, with no sorting behaviour attached. */
@@ -55,7 +57,7 @@ export type DataGridHeaderCellRenderArgs<TRow extends object = any> = {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type DataGridHeaderCellProps<TRow extends object = any> = {
-	header: Header<TRow, unknown>
+	header: Header<GridFeatures, TRow>
 	/**
 	 * Custom content for this one header cell, rendered inside the kit's `Th` — so the cell keeps
 	 * its pinning offset, its `data-*` attributes, its `headerClassName` and its resize handle.
@@ -76,10 +78,16 @@ export type DataGridHeaderCellProps<TRow extends object = any> = {
  * even while a sibling column's sort (or an unrelated filter) is pending.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function computeDraftSortIndex(table: DataTable<any>, columnId: string): number {
+function computeDraftSortIndex(table: DataTable<GridFeatures, any>, columnId: string): number {
 	if (table.options.draft !== true) return -1
 	const draftSorting = table.draft.get().sorting
-	const appliedSorting = table.getState().applied.sorting
+	// A snapshot read, not a subscription — the v8 line read `applied.sorting` off the whole snapshot
+	// and this is the same read against v9's store. `<DataGrid.Header>` owns the subscriptions
+	// these cells re-render through, and `applied` is not among them: what actually drives this
+	// marker is `state.sorting`, which the header does subscribe to and which moves on every
+	// draft edit. Making this a subscription would add one subscriber per column and is a
+	// render-behaviour change, so it is deliberately not done here.
+	const appliedSorting = table.store.state.applied.sorting
 	const draftIndex = draftSorting.findIndex((s) => s.id === columnId)
 	if (draftIndex < 0) return -1
 	const draftEntry = draftSorting[draftIndex]
@@ -107,7 +115,11 @@ export function DataGridHeaderCell<TRow extends object = any>({ header, children
 	const { OperatorSelect, BetweenInput, FilterPopover, MultiSelectFilter, ClearFilterButton } = gridComponents.filtering
 	const cellTypes = useCellTypes()
 
-	const meta = header.column.columnDef.meta
+	// `ColumnMeta` is declared `in out` in both its `TFeatures` and its `TData` upstream, so no
+	// concrete instantiation is assignable to any other and this cast is forced by the variance
+	// annotation rather than chosen. `FormColumnMeta` is the one name core declares for it, and
+	// this is the same cast core's own `creating.ts` makes at its boundary.
+	const meta = header.column.columnDef.meta as FormColumnMeta | undefined
 	const canSort = header.column.getCanSort()
 	const rawSortDir = header.column.getIsSorted()
 	const pinVars = getCommonPinStyles(header.column)
@@ -198,7 +210,11 @@ export function DataGridHeaderCell<TRow extends object = any>({ header, children
 				// Option+Arrow moves by word inside a text field — never steal it from a filter
 				// input or any other control living in the header.
 				if (isInteractiveTarget(e)) return
-				const towardsStart = (e.key === 'ArrowLeft') !== (table.options.columnResizeDirection === GridDirection.Rtl)
+				// The grid's own direction, never `table.options.columnResizeDirection`: that option
+				// is declared on `TableOptions_ColumnResizing` and core writes it only inside its
+				// resizing branch, so on the default grid — ordering on, resizing off — it is
+				// `undefined` and both shortcuts moved the column the wrong way under RTL.
+				const towardsStart = (e.key === 'ArrowLeft') !== (table.grid.direction === GridDirection.Rtl)
 				const direction = towardsStart ? ColumnMoveDirection.Start : ColumnMoveDirection.End
 				if (!canMoveColumn(table, header.column.id, direction)) return
 				e.preventDefault()
@@ -219,7 +235,7 @@ export function DataGridHeaderCell<TRow extends object = any>({ header, children
 
 	const filteringVariant = table.grid.filtering.variant
 	const canFilter =
-		Boolean(table.options.getFilteredRowModel) &&
+		filtersRows(table) &&
 		meta?.filtering !== false &&
 		!meta?.isSystemColumn &&
 		header.column.getCanFilter() &&

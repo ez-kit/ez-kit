@@ -13,6 +13,7 @@ import { PinShadowOverlay } from './pin-shadow-overlay'
 import { useDataGridTable, useDataGridState } from './table-context'
 import { VirtualProvider } from './virtual-context'
 
+import type { GridFeatures } from '../types'
 import type { NormalizedVirtualizationConfig } from '../use-data-grid'
 import type { HeaderGroup, Row, Table as TanStackTable } from '@tanstack/table-core'
 import type { CSSProperties, ReactNode } from 'react'
@@ -68,11 +69,11 @@ function resolveEstimateSize(
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type DataGridTableRenderArgs<TRow extends object = any> = {
-	table: TanStackTable<TRow>
+	table: TanStackTable<GridFeatures, TRow>
 	/** Header groups of the current column model — one entry per header row. */
-	headerGroups: HeaderGroup<TRow>[]
+	headerGroups: HeaderGroup<GridFeatures, TRow>[]
 	/** The rows of the current row model, already sorted / filtered / paginated. */
-	rows: Row<TRow>[]
+	rows: Row<GridFeatures, TRow>[]
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -123,7 +124,7 @@ export function DataGridTable<TRow extends object = any>({ children }: DataGridT
 	// the table layout or row composition change. Editing / rowSelection /
 	// per-row state changes do NOT touch any of these.
 	useDataGridState((s) => s.columnSizing)
-	useDataGridState((s) => s.columnSizingInfo)
+	useDataGridState((s) => s.columnResizing)
 	useDataGridState((s) => s.columnVisibility)
 	useDataGridState((s) => s.columnPinning)
 	// `--grid-template-columns` is built from the visual leaf order, which a reorder changes.

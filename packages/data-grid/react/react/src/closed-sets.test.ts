@@ -20,6 +20,7 @@ import {
 } from './index'
 
 import type { UseDataGridConfig } from './index'
+import type { GridFeatures } from './types'
 
 type Row = { id: string; name: string }
 
@@ -31,7 +32,7 @@ type Row = { id: string; name: string }
  */
 describe('closed sets keep the bare-string form valid for consumers', () => {
 	it('accepts bare strings for every consumer-facing option', () => {
-		const config: UseDataGridConfig<Row> = {
+		const config: UseDataGridConfig<GridFeatures, Row> = {
 			data: [],
 			columns: [
 				{
@@ -73,7 +74,7 @@ describe('closed sets keep the bare-string form valid for consumers', () => {
 	})
 
 	it('accepts the named member wherever the bare string is accepted', () => {
-		const config: UseDataGridConfig<Row> = {
+		const config: UseDataGridConfig<GridFeatures, Row> = {
 			data: [],
 			columns: [],
 			resizing: { mode: ColumnResizeMode.OnEnd },

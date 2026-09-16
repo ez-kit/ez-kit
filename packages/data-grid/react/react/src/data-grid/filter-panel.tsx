@@ -2,12 +2,21 @@ import { localizeOperators } from '@ez-kit/data-grid-core'
 
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
+import { filtersRows } from '../utils/filters-rows'
 
 import { renderFilterInput } from './render-filter-input'
 import { useDataGridState, useDataGridTable } from './table-context'
 
-import type { BadgeItem, BetweenValue, GridMessages, SelectItem, StructuredFilterValue } from '@ez-kit/data-grid-core'
-import type { Column, ColumnMeta, Header } from '@tanstack/table-core'
+import type { GridFeatures } from '../types'
+import type {
+	FormColumnMeta,
+	BadgeItem,
+	BetweenValue,
+	GridMessages,
+	SelectItem,
+	StructuredFilterValue,
+} from '@ez-kit/data-grid-core'
+import type { Column, Header } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
 const MAX_INLINE_VALUES = 2
@@ -22,7 +31,7 @@ function formatBetweenValue(value: BetweenValue, anyLabel: string): { display: s
 	return { display: `≤ ${String(to)}`, hasValue: true }
 }
 
-function resolveOptionLabel(rawValue: string, meta: ColumnMeta<unknown, unknown> | undefined): string {
+function resolveOptionLabel(rawValue: string, meta: FormColumnMeta | undefined): string {
 	const filteringMeta = meta?.filtering === false ? undefined : meta?.filtering
 	const explicit = filteringMeta?.items
 	if (explicit) {
@@ -39,7 +48,7 @@ function resolveOptionLabel(rawValue: string, meta: ColumnMeta<unknown, unknown>
 
 function formatMultiValue(
 	values: unknown[],
-	meta: ColumnMeta<unknown, unknown> | undefined,
+	meta: FormColumnMeta | undefined,
 	anyLabel: string,
 ): { display: string; hasValue: boolean } {
 	if (values.length === 0) return { display: anyLabel, hasValue: false }
@@ -51,7 +60,7 @@ function formatMultiValue(
 
 function formatFilterValue(
 	filterValue: unknown,
-	meta: ColumnMeta<unknown, unknown> | undefined,
+	meta: FormColumnMeta | undefined,
 	anyLabel: string,
 	operatorMessages: GridMessages['operators'],
 ): { display: string; hasValue: boolean } {
@@ -102,7 +111,7 @@ function formatFilterValue(
 /** One filterable column, as the panel resolved it. */
 export type DataGridFilterPanelColumn = {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	column: Column<any>
+	column: Column<GridFeatures, any>
 	/** The column's string header, falling back to its id. */
 	label: string
 	/** Human-readable current value, or the "Any" placeholder when unset. */
@@ -168,8 +177,7 @@ export function useFilterPanelColumns(): DataGridFilterPanelRenderArgs | undefin
 	const cellTypes = useCellTypes()
 	const filteringDebounce = table.grid.filtering.debounce
 
-	const hasFiltering = Boolean(table.options.getFilteredRowModel)
-	if (!hasFiltering) return undefined
+	if (!filtersRows(table)) return undefined
 
 	const filterableColumns = table.getAllLeafColumns().filter((column) => {
 		const meta = column.columnDef.meta
@@ -195,7 +203,7 @@ export function useFilterPanelColumns(): DataGridFilterPanelRenderArgs | undefin
 		)
 
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const headerLike = { id: column.id, column } as unknown as Header<any, unknown>
+		const headerLike = { id: column.id, column } as unknown as Header<GridFeatures, any>
 
 		const input = renderFilterInput({
 			header: headerLike,

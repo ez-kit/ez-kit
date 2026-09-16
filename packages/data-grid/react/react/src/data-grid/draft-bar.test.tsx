@@ -73,7 +73,7 @@ describe('DraftBar', () => {
 
 		await userEvent.click(await screen.findByRole('button', { name: /reset/i }))
 
-		expect(table.getState().sorting).toEqual([])
+		expect(table.store.state.sorting).toEqual([])
 	})
 
 	it('applies the whole draft when Enter is pressed in a filter input', async () => {
@@ -88,7 +88,7 @@ describe('DraftBar', () => {
 		await userEvent.type(input, 'An{Enter}')
 
 		expect(table.draft.isDirty()).toBe(false)
-		expect(table.getState().applied.sorting).toEqual([{ id: 'age', desc: true }])
+		expect(table.store.state.applied.sorting).toEqual([{ id: 'age', desc: true }])
 	})
 
 	it('applies the whole draft when Enter is pressed in the global search input', async () => {
@@ -103,7 +103,7 @@ describe('DraftBar', () => {
 		await userEvent.type(search, 'An{Enter}')
 
 		expect(table.draft.isDirty()).toBe(false)
-		expect(table.getState().applied.sorting).toEqual([{ id: 'age', desc: true }])
+		expect(table.store.state.applied.sorting).toEqual([{ id: 'age', desc: true }])
 	})
 
 	it('does nothing on Enter in a filter input when draft is off', async () => {

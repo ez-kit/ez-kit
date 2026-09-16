@@ -3,6 +3,7 @@ import { GridMenuIcon, RowMoveDirection } from '@ez-kit/data-grid-core'
 import { RowActionId } from '../types'
 
 import type { GridMenuItem } from '../menu'
+import type { GridFeatures } from '../types'
 import type { GridMessages } from '@ez-kit/data-grid-core'
 import type { Row, Table } from '@tanstack/table-core'
 
@@ -21,9 +22,9 @@ import type { Row, Table } from '@tanstack/table-core'
  */
 export function buildRowOrderItems(
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	row: Row<any>,
+	row: Row<GridFeatures, any>,
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	table: Table<any>,
+	table: Table<GridFeatures, any>,
 	messages: GridMessages['rowActions'],
 ): GridMenuItem[] {
 	return [

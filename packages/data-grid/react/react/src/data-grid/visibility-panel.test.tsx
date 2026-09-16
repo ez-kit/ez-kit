@@ -3,12 +3,12 @@ import { act, render } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
 import { GridComponentsProvider } from '../components-context'
-import { testComponents } from '../test-utils'
+import { TEST_FEATURES, testComponents } from '../test-utils'
 import { useDataGrid } from '../use-data-grid'
 
 import { DataGrid } from './data-grid'
 
-import type { VisibilityColumnItem } from '../types'
+import type { GridFeatures, VisibilityColumnItem } from '../types'
 import type { UseDataGridConfig } from '../use-data-grid'
 
 type User = { id: number; name: string; email: string; age: number }
@@ -25,11 +25,17 @@ const COLUMNS = createColumns<User>([
  * Renders the trigger's render-prop form, which is the contract itself: whatever a kit's
  * `VisibilityMenu` is handed is exactly what lands here.
  */
-function renderPanel(options: Partial<UseDataGridConfig<User>> = {}) {
+function renderPanel(options: Partial<UseDataGridConfig<GridFeatures, User>> = {}) {
 	let items: VisibilityColumnItem[] = []
 
 	function Grid() {
-		const table = useDataGrid<User>({ data: DATA, columns: COLUMNS, visibility: true, ...options })
+		const table = useDataGrid<GridFeatures, User>({
+			features: TEST_FEATURES,
+			data: DATA,
+			columns: COLUMNS,
+			visibility: true,
+			...options,
+		})
 		return (
 			<DataGrid table={table}>
 				<DataGrid.VisibilityTrigger>

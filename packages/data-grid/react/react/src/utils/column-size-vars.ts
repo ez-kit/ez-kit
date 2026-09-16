@@ -1,6 +1,6 @@
 import { getVisualLeafColumns } from './visual-column-order'
 
-import type { DataTable } from '@ez-kit/data-grid-core'
+import type { DataTable, GridFeatures } from '../types'
 import type { CSSProperties } from 'react'
 
 /**
@@ -19,7 +19,7 @@ import type { CSSProperties } from 'react'
  * the wrapper and is never clamped).
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function getColumnSizeVars(table: DataTable<any>): CSSProperties {
+export function getColumnSizeVars(table: DataTable<GridFeatures, any>): CSSProperties {
 	const headers = table.getFlatHeaders()
 	const vars: Record<string, string> = {}
 
@@ -45,7 +45,7 @@ export function getColumnSizeVars(table: DataTable<any>): CSSProperties {
  * is the order the cells that occupy them are rendered in.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function getGridTemplateColumns(table: DataTable<any>): string {
+export function getGridTemplateColumns(table: DataTable<GridFeatures, any>): string {
 	const isResizing = Boolean(table.options.enableColumnResizing)
 	return getVisualLeafColumns(table)
 		.map((col) => {

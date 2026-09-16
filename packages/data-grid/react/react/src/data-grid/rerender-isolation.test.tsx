@@ -4,13 +4,21 @@ import { useState } from 'react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 
 import { GridComponentsProvider } from '../components-context'
-import { testComponents } from '../test-utils'
+import { TEST_FEATURES, testComponents } from '../test-utils'
 import { useDataGrid } from '../use-data-grid'
 
 import { DataGrid } from './data-grid'
 
 import type { GridComponents } from '../contract'
-import type { PageSizerProps, PaginationProps, TbodyProps, TdProps, TheadProps, ToolbarProps } from '../types'
+import type {
+	GridFeatures,
+	PageSizerProps,
+	PaginationProps,
+	TbodyProps,
+	TdProps,
+	TheadProps,
+	ToolbarProps,
+} from '../types'
 import type { ReactElement } from 'react'
 
 // JSDOM lacks ResizeObserver; the table layout effect needs one.
@@ -98,22 +106,23 @@ function makeCountingComponents(counters: Counters): Required<GridComponents> {
 	}
 }
 
-type Instance = ReturnType<typeof useDataGrid<Row>>
+type Instance = ReturnType<typeof useDataGrid<GridFeatures, Row>>
 
-function renderGrid(config?: Partial<Parameters<typeof useDataGrid<Row>>[0]>) {
+function renderGrid(config?: Partial<Parameters<typeof useDataGrid<GridFeatures, Row>>[0]>) {
 	const counters: Counters = { tbody: 0, td: 0, thead: 0, toolbar: 0, pagination: 0, pageSizer: 0 }
 	const components = makeCountingComponents(counters)
 	const ref: { table: Instance | null } = { table: null }
 
 	function Harness(): ReactElement {
-		const t = useDataGrid<Row>({
+		const t = useDataGrid<GridFeatures, Row>({
+			features: TEST_FEATURES,
 			data: DATA,
 			columns: COLUMNS,
 			editing: { onSave: () => Promise.resolve() },
 			...config,
 		})
 		ref.table = t
-		return <DataGrid<Row> table={t} />
+		return <DataGrid<GridFeatures, Row> table={t} />
 	}
 
 	render(
@@ -254,12 +263,13 @@ describe('rerender isolation', () => {
 		function Harness(): ReactElement {
 			const [rows, setRows] = useState<Row[]>(DATA)
 			updateData = setRows
-			const t = useDataGrid<Row>({
+			const t = useDataGrid<GridFeatures, Row>({
+				features: TEST_FEATURES,
 				data: rows,
 				columns: COLUMNS,
 				editing: { onSave: () => Promise.resolve() },
 			})
-			return <DataGrid<Row> table={t} />
+			return <DataGrid<GridFeatures, Row> table={t} />
 		}
 		render(
 			<GridComponentsProvider components={testComponents}>

@@ -1,7 +1,7 @@
 import { createColumns } from '@ez-kit/data-grid-core'
 import { describe, expect, it } from 'vitest'
 
-import { renderWithComponents } from '../test-utils'
+import { TEST_FEATURES, renderWithComponents } from '../test-utils'
 
 import { DataGrid } from './data-grid'
 
@@ -22,6 +22,7 @@ describe('DataGrid.Row / DataGrid.Cell slots', () => {
 	it('Row children replace the cells while keeping the row shell', () => {
 		const { container } = renderWithComponents(
 			<DataGrid
+				features={TEST_FEATURES}
 				data={DATA}
 				columns={COLUMNS}
 			>
@@ -62,6 +63,7 @@ describe('DataGrid.Row / DataGrid.Cell slots', () => {
 	it('Cell children get the resolved value and keep the cell shell', () => {
 		const { container } = renderWithComponents(
 			<DataGrid
+				features={TEST_FEATURES}
 				data={DATA}
 				columns={COLUMNS}
 			>

@@ -12,8 +12,9 @@ import type { CellTypeRegistry } from './cell-types-context'
 import type { GridComponents } from './contract'
 import type { DataGridDefaultOptions } from './data-grid-options-context'
 import type { ColumnDef, ColumnHelper } from './react-columns'
+import type { DataTable, GridFeatures } from './types'
 import type { UseDataGridConfig } from './use-data-grid'
-import type { DataTable } from '@ez-kit/data-grid-core'
+import type { TableFeatures } from '@tanstack/table-core'
 
 /** The ids a registry actually holds, as a string union — what the runtime helper is built from. */
 type KitCellTypeId<TCellTypes extends CellTypeRegistry> = Extract<keyof TCellTypes, string>
@@ -33,7 +34,7 @@ export type CreateDataGridOptions<TCellTypes extends CellTypeRegistry> = {
 	 * opinionated defaults (e.g. `{ sorting: true, visibility: true }`) so consumers
 	 * need not repeat them at every `useDataGrid` call site.
 	 */
-	defaults?: DataGridDefaultOptions<object>
+	defaults?: DataGridDefaultOptions<GridFeatures, object>
 }
 
 /**
@@ -126,8 +127,10 @@ export function createDataGrid<TCellTypes extends CellTypeRegistry = CellTypeReg
 	// A defaults-less bundle passes `undefined`, which lets the hook fall back to an ambient
 	// factory layer — reachable only from inside another bound grid, and the shared core closes
 	// that layer off before any child renders, so the fallback never picks up a foreign kit's.
-	function useDataGridWithDefaults<TRow extends object>(config: UseDataGridConfig<TRow>): DataTable<TRow> {
-		return useDataGrid<TRow>(config, defaults as DataGridDefaultOptions<TRow> | undefined)
+	function useDataGridWithDefaults<TFeatures extends TableFeatures, TRow extends object>(
+		config: UseDataGridConfig<TFeatures, TRow>,
+	): DataTable<TFeatures, TRow> {
+		return useDataGrid<TFeatures, TRow>(config, defaults as DataGridDefaultOptions<TFeatures, TRow> | undefined)
 	}
 
 	function boundExtendDataGrid<TExtra extends CellTypeRegistry>(

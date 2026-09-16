@@ -15,6 +15,7 @@ import { usePinnedRowOffsets } from './use-pinned-row-offsets'
 import { VirtualBody } from './virtual-body'
 import { useVirtualContext } from './virtual-context'
 
+import type { GridFeatures } from '../types'
 import type { ExpandedRowProps } from '../use-data-grid'
 import type { Row, Table } from '@tanstack/table-core'
 import type { ComponentType, ReactNode } from 'react'
@@ -29,9 +30,9 @@ import type { ComponentType, ReactNode } from 'react'
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type DataGridBodyRenderArgs<TRow extends object = any> = {
-	table: Table<TRow>
+	table: Table<GridFeatures, TRow>
 	/** The rows of the current row model, already sorted / filtered / paginated. */
-	rows: Row<TRow>[]
+	rows: Row<GridFeatures, TRow>[]
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

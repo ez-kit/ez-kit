@@ -1,4 +1,5 @@
 import { createColumns } from '@ez-kit/data-grid-core'
+import { allDataGridFeatures, tableFeatures } from '@ez-kit/data-grid-core/features'
 import { render } from '@testing-library/react'
 import { forwardRef, Fragment, useEffect, useState } from 'react'
 
@@ -11,6 +12,8 @@ import { useDataGrid } from './use-data-grid'
 import type { FullGridComponents } from './contract'
 import type { GridMenuProps } from './menu'
 import type {
+	DataTable,
+	GridFeatures,
 	ActionsCellProps,
 	BetweenInputProps,
 	ButtonProps,
@@ -47,7 +50,6 @@ import type {
 	ToolbarProps,
 } from './types'
 import type { UseDataGridConfig } from './use-data-grid'
-import type { DataTable } from '@ez-kit/data-grid-core'
 import type { RenderOptions } from '@testing-library/react'
 import type { ReactElement, ReactNode } from 'react'
 
@@ -882,28 +884,54 @@ export const TEST_COLUMNS = createColumns<TestRow>([
 	{ accessorKey: 'age', header: 'Age' },
 ])
 
+/**
+ * The feature set every fixture grid is built with.
+ *
+ * `allDataGridFeatures` — the one place where the all-in set is the right answer. A fixture that
+ * composed its own would be testing its own composition rather than the behaviour under test, and
+ * a feature left out of it fails silently (§2.4): the state slice, the table members and the row
+ * methods simply do not exist. Register everything here, and let a case that cares about omission
+ * say so explicitly with {@link NARROW_TEST_FEATURES}.
+ */
+export const TEST_FEATURES = allDataGridFeatures
+
+/**
+ * A set with **nothing** registered — `tableFeatures({})`.
+ *
+ * The counterpart of {@link TEST_FEATURES}, and what the feature-omission cases are written
+ * against: a grid built on this has no `state.sorting`, no `table.editing`, no `row.getIsEditing`.
+ * Exported beside the all-in set so the two are read together and neither can drift into a
+ * per-file literal.
+ */
+export const NARROW_TEST_FEATURES = tableFeatures({})
+
 export type RenderGridResult = ReturnType<typeof render> & {
 	/** The live table — drive state from a test with `table.setSorting(…)` etc. */
-	table: DataTable<TestRow>
+	table: DataTable<GridFeatures, TestRow>
 }
 
 /**
  * Render a full `<DataGrid>` over {@link TEST_ROWS} with the test component kit, and
  * hand the test the live `DataTable` back so it can drive state directly.
  */
-export function renderGrid(config: Partial<UseDataGridConfig<TestRow>> = {}): RenderGridResult {
+export function renderGrid(config: Partial<UseDataGridConfig<GridFeatures, TestRow>> = {}): RenderGridResult {
 	// Wrapper object, not a bare `let`: reassigning an outer variable during render is
 	// a side effect the react-hooks lint rule rejects.
-	const ref: { table: ReturnType<typeof useDataGrid<TestRow>> | null } = { table: null }
+	const ref: { table: DataTable<GridFeatures, TestRow> | null } = { table: null }
 
 	function Harness(): ReactElement {
-		const table = useDataGrid<TestRow>({ data: TEST_ROWS, columns: TEST_COLUMNS, ...config })
+		const table = useDataGrid<GridFeatures, TestRow>({
+			features: TEST_FEATURES,
+			data: TEST_ROWS,
+			columns: TEST_COLUMNS,
+			...config,
+		})
 		// Handed out in an effect, not during render: writing to an outer object mid-render
 		// is a side effect. Effects flush inside `render`'s `act`, so the caller sees it.
 		useEffect(() => {
 			ref.table = table
 		}, [table])
-		return <DataGrid<TestRow> table={table} />
+		return <DataGrid<GridFeatures, TestRow> table={table} />
 	}
 
 	const result = renderWithComponents(<Harness />)

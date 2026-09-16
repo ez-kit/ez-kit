@@ -2,9 +2,11 @@ import { createColumns, createTable } from '@ez-kit/data-grid-core'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
-import { testComponents } from '../test-utils'
+import { TEST_FEATURES, testComponents } from '../test-utils'
 
 import { DataGrid } from './data-grid'
+
+import type { GridFeatures } from '../types'
 
 type User = { id: number; name: string; auditedBy: string }
 
@@ -17,6 +19,7 @@ const COLUMNS = createColumns<User>([
 const renderCellMode = (onSave: (args: { rowId: string; values: Partial<User> }) => void = () => {}) =>
 	render(
 		<DataGrid
+			features={TEST_FEATURES}
 			data={USERS}
 			columns={COLUMNS}
 			components={testComponents}
@@ -53,7 +56,8 @@ describe('editing.mode: cell — column editing: false', () => {
 	})
 
 	it('ignores a programmatic startCell on a column that opted out', () => {
-		const table = createTable<User>({
+		const table = createTable<GridFeatures, User>({
+			features: TEST_FEATURES,
 			data: USERS,
 			columns: COLUMNS,
 			editing: { mode: 'cell', onSave: async () => {} },

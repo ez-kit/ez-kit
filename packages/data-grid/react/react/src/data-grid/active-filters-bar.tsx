@@ -6,6 +6,7 @@ import { FilterChipKind } from '../types'
 
 import { useDataGridState, useDataGridTable } from './table-context'
 
+import type { GridFeatures } from '../types'
 import type { FilterChipsPosition } from '../use-data-grid'
 import type { FilterOperatorDef } from '@ez-kit/data-grid-core'
 import type { Column } from '@tanstack/table-core'
@@ -63,7 +64,7 @@ function sameFilterValue(a: unknown, b: unknown): boolean {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function columnLabel(column: Column<any>): string {
+function columnLabel(column: Column<GridFeatures, any>): string {
 	const header = column.columnDef.header
 	if (typeof header === 'string') return header
 	return column.id
@@ -80,18 +81,18 @@ function columnLabel(column: Column<any>): string {
  */
 export function ActiveFiltersBar({ position: positionProp }: DataGridActiveFiltersBarProps = {}) {
 	const table = useDataGridTable()
-	useDataGridState((s) => s.columnFilters)
-	useDataGridState((s) => s.globalFilter as unknown)
-	useDataGridState((s) => s.applied)
+	// The subscriptions *are* the reads: v8's whole-snapshot `getState()` is gone, and the value each
+	// hook already returns is the same slice the body wants. Keeping the subscription and
+	// re-reading a snapshot beside it was two spellings of one value even under v8.
+	const columnFilters = useDataGridState((s) => s.columnFilters)
+	const globalFilter = useDataGridState((s) => s.globalFilter as unknown)
+	const applied = useDataGridState((s) => s.applied)
 	const { FilterChip } = useGridComponents().filtering
 
 	const cfg = table.grid.filtering.chips
 
 	const position: FilterChipsPosition = positionProp ?? cfg?.position ?? DATA_GRID_DEFAULTS.filtering.chips.position
-	const columnFilters = table.getState().columnFilters
-	const globalFilter = table.getState().globalFilter as unknown
 	const isDrafting = table.options.draft === true
-	const applied = table.getState().applied
 
 	type ChipDescriptor = {
 		key: string

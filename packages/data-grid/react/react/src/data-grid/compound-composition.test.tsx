@@ -1,11 +1,12 @@
 import { screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
-import { renderWithComponents, TEST_COLUMNS, TEST_ROWS } from '../test-utils'
+import { TEST_FEATURES, renderWithComponents, TEST_COLUMNS, TEST_ROWS } from '../test-utils'
 import { useDataGrid } from '../use-data-grid'
 
 import { DataGrid } from './data-grid'
 
+import type { GridFeatures } from '../types'
 import type { UseDataGridConfig } from '../use-data-grid'
 import type { ReactElement, ReactNode } from 'react'
 
@@ -15,10 +16,15 @@ type TestRow = (typeof TEST_ROWS)[number]
  * Render a grid whose compound tree the test supplies, rather than the default
  * `<DataGrid table={…} />` shorthand `renderGrid` uses.
  */
-function renderComposed(children: ReactNode, config: Partial<UseDataGridConfig<TestRow>> = {}) {
+function renderComposed(children: ReactNode, config: Partial<UseDataGridConfig<GridFeatures, TestRow>> = {}) {
 	function Harness(): ReactElement {
-		const table = useDataGrid<TestRow>({ data: TEST_ROWS, columns: TEST_COLUMNS, ...config })
-		return <DataGrid<TestRow> table={table}>{children}</DataGrid>
+		const table = useDataGrid<GridFeatures, TestRow>({
+			features: TEST_FEATURES,
+			data: TEST_ROWS,
+			columns: TEST_COLUMNS,
+			...config,
+		})
+		return <DataGrid<GridFeatures, TestRow> table={table}>{children}</DataGrid>
 	}
 	return renderWithComponents(<Harness />)
 }
@@ -195,11 +201,16 @@ describe('sorting.toolbar — the UI flag that moved out of core', () => {
 	// and `visibility.toolbar`, and still drives the same auto-mount.
 	const markerComponents = { sorting: { SortMenu: () => <span>sort builder</span> } }
 
-	function renderWithSortMenu(config: Partial<UseDataGridConfig<TestRow>>) {
+	function renderWithSortMenu(config: Partial<UseDataGridConfig<GridFeatures, TestRow>>) {
 		function Harness(): ReactElement {
-			const table = useDataGrid<TestRow>({ data: TEST_ROWS, columns: TEST_COLUMNS, ...config })
+			const table = useDataGrid<GridFeatures, TestRow>({
+				features: TEST_FEATURES,
+				data: TEST_ROWS,
+				columns: TEST_COLUMNS,
+				...config,
+			})
 			return (
-				<DataGrid<TestRow>
+				<DataGrid<GridFeatures, TestRow>
 					table={table}
 					components={markerComponents}
 				>

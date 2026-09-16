@@ -1,4 +1,4 @@
-import { defaultMessages } from '@ez-kit/data-grid-core'
+import { defaultMessages, GridDirection, RowActionsPlacement } from '@ez-kit/data-grid-core'
 
 import { DATA_GRID_DEFAULTS } from './defaults'
 
@@ -21,8 +21,7 @@ import type {
 	NormalizedVirtualizationConfig,
 	RowPropsResolver,
 } from './use-data-grid'
-import type { GridMessages } from '@ez-kit/data-grid-core'
-import type { RowData } from '@tanstack/table-core'
+import type { GridMessages, GridOptions, RowPinningConfig } from '@ez-kit/data-grid-core'
 import type { ComponentType, ReactNode } from 'react'
 
 /**
@@ -72,12 +71,6 @@ export type ResolvedGridOptions = {
 		classNames?: LayoutClassNames | undefined
 	}
 	/**
-	 * Pinning, resolved per axis — the two halves of the `pinning` option under the two names
-	 * the option gives them. It was a single flat `columnPinning: boolean`, which spelled
-	 * `pinning.column` a third way and left `pinning.row` unreadable from here at all, so a kit
-	 * that wanted to know whether row pinning was on had to go back to `table.options`.
-	 */
-	/**
 	 * Reordering, resolved per axis — the same shape as `pinning` beside it, and for the same
 	 * reason: the axes are independent features.
 	 */
@@ -98,12 +91,47 @@ export type ResolvedGridOptions = {
 		 */
 		visibilityMenu: boolean
 	}
+	/**
+	 * Pinning, resolved per axis — the two halves of the `pinning` option under the two names
+	 * the option gives them. It was a single flat `columnPinning: boolean`, which spelled
+	 * `pinning.column` a third way and left `pinning.row` unreadable from here at all, so a kit
+	 * that wanted to know whether row pinning was on had to go back to `table.options`.
+	 *
+	 * (This docblock sat above `ordering` rather than here, behind a second one — of two adjacent
+	 * block comments only the nearer attaches, so it documented nothing. Moved with the `rowConfig`
+	 * member below.)
+	 */
 	pinning: {
 		/** The column menu offers its pin section. */
 		column: boolean
 		/** Rows can be pinned to the top and/or bottom. */
 		row: boolean
+		/**
+		 * The **normalized row-pinning config** core resolved — which edges accept a pin, and on
+		 * what terms. `undefined` when row pinning is off.
+		 *
+		 * This is core's `GridOptions.rowPinning`, folded in here rather than carried at top
+		 * level under its own name: `rowPinning` beside `pinning.row` would read as two
+		 * spellings of one thing when they are a flag and its settings. It is nested under the
+		 * axis it configures, and it is deliberately **not** merged into `row` — that one stays
+		 * the boolean every component switches on.
+		 */
+		rowConfig?: RowPinningConfig | undefined
 	}
+	/**
+	 * Layout of the actions cell, and the per-row entries an application contributes — core's
+	 * `GridOptions.rowActions`, carried across under its own name because nothing on this object
+	 * competed for it.
+	 *
+	 * Row-erased, like `rowProps` and `expanding.component` beside it: every reader of
+	 * `table.grid` is a component with no `TRow` of its own.
+	 */
+	rowActions: GridOptions<never>['rowActions']
+	/**
+	 * The grid's text direction, declared once at the root — core's `GridOptions.direction`,
+	 * carried across under its own name for the same reason as `rowActions`.
+	 */
+	direction: GridDirection
 	/** Column hiding. `undefined` when the feature is off. */
 	visibility?: NormalizedFeatureToolbarConfig | undefined
 	/** Sorting UI config. `undefined` when sorting is off. */
@@ -132,6 +160,20 @@ export type ResolvedGridOptions = {
 	/** Global search UI config. `undefined` when global search is off. */
 	globalFiltering?: NormalizedGlobalFilteringConfig | undefined
 	pagination: {
+		/**
+		 * **Page-based** pagination is on: `pagination` is enabled and its mode is not
+		 * `'infinite'`, so the grid slices rows into pages and the footer has something to drive.
+		 *
+		 * The one flag in this object that answers "is the feature on" rather than "how does it
+		 * look", and it is here because nothing else can answer it. Under v8 the question was
+		 * asked of `table.options.getPaginationRowModel`, which core attached under exactly this
+		 * condition; in v9 the paginated row model is a slot the **consumer** puts in `features`,
+		 * so that option is never written and its registration says nothing about whether this
+		 * grid was configured to paginate. Reading `items !== undefined` would work — it is
+		 * resolved from the same predicate — but that would give one value two meanings, which is
+		 * the defect this package's option audits keep removing.
+		 */
+		enabled: boolean
 		/** Page-number links beside prev/next. Resolved. */
 		links: boolean
 		/** Jump-to-first / jump-to-last buttons. Resolved. */
@@ -205,21 +247,18 @@ export type ResolvedGridOptions = {
 	 * through the same "omitted means on" helper.
 	 */
 	fallbacks: NormalizedFallbacksConfig
-	/** Row virtualization config. `undefined` when virtualization is off. */
+	/**
+	 * Row virtualization config, **normalized**. `undefined` when virtualization is off.
+	 *
+	 * This name is the one collision between core's `GridOptions` and this object where both
+	 * sides held the same option, and **react's wins outright**: core passes the option through
+	 * unresolved (`boolean | VirtualizationConfig`), every one of this package's seven readers
+	 * wants the normalized shape, and `true` versus `{ row: {…} }` are both truthy — so a merged
+	 * bag carrying both would hand a reader the other shape with nothing to notice it by. Core's
+	 * unresolved value is therefore **dropped rather than renamed**: it is the same option one
+	 * step earlier, and keeping it would put a second answer beside the first.
+	 */
 	virtualization?: NormalizedVirtualizationConfig | undefined
-}
-
-declare module '@tanstack/table-core' {
-	// The row type is erased here, exactly as it is on the cell-type registry: these are
-	// structural UI settings, never row-bound values.
-	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions, @typescript-eslint/no-unused-vars
-	interface Table<TData extends RowData> {
-		/**
-		 * The React layer's resolved grid options. Written once per render by `useDataGrid`,
-		 * read by every compound component and available to a UI kit via `useGridOptions()`.
-		 */
-		grid: ResolvedGridOptions
-	}
 }
 
 /**
@@ -230,19 +269,33 @@ declare module '@tanstack/table-core' {
  * needs to guard the property itself. That matters for a table built straight from
  * `createTable` — a headless test, or a consumer driving the compound components by hand —
  * which would otherwise crash the first component that read a nested field.
+ *
+ * @param core The bag `createTable` already wrote to `table.grid` ({@link GridOptions}), whose
+ *   four members are folded in rather than overwritten. Omit it only for a table that never went
+ *   through our `createTable`.
  */
-export function defaultResolvedGridOptions(): ResolvedGridOptions {
+export function defaultResolvedGridOptions(core?: GridOptions<never>): ResolvedGridOptions {
 	return {
 		cellTypes: undefined,
 		messages: defaultMessages,
+		// Core's four, folded in under this object's names. It **merges onto** what `createTable`
+		// wrote rather than replacing it: the caller passes `table.grid`, and the defaults below
+		// cover a table that was not built by our `createTable` at all (a hand-rolled TanStack
+		// table driven through the compound components, or a test double).
+		rowActions: core?.rowActions ?? { placement: RowActionsPlacement.Inline },
+		direction: core?.direction ?? GridDirection.Ltr,
 		layout: { stickyHeader: false, footer: false, stickyFooter: false },
 		ordering: { column: false, row: false, visibilityMenu: false },
-		pinning: { column: false, row: false },
+		// `column` / `row` stay off — this is the all-features-off shape — while `rowConfig`
+		// carries core's normalized settings across when it resolved any. `exactOptionalPropertyTypes`
+		// is why it is spread rather than assigned `undefined`.
+		pinning: { column: false, row: false, ...(core?.rowPinning !== undefined ? { rowConfig: core.rowPinning } : {}) },
 		filtering: {
 			variant: DATA_GRID_DEFAULTS.filtering.variant,
 			debounce: DATA_GRID_DEFAULTS.filtering.debounce,
 		},
 		pagination: {
+			enabled: false,
 			links: DATA_GRID_DEFAULTS.pagination.links,
 			edges: DATA_GRID_DEFAULTS.pagination.edges,
 			label: DATA_GRID_DEFAULTS.pagination.label,

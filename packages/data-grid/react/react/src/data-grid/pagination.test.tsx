@@ -3,15 +3,14 @@ import { renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { GridComponentsProvider } from '../components-context'
-import { renderWithComponents } from '../test-utils'
+import { TEST_FEATURES, renderWithComponents } from '../test-utils'
 import { useDataGrid } from '../use-data-grid'
 
 import { Pagination } from './pagination'
 import { TableContext } from './table-context'
 
-import type { PaginationProps } from '../types'
+import type { DataTable, GridFeatures, PaginationProps } from '../types'
 import type { UseDataGridConfig } from '../use-data-grid'
-import type { DataTable } from '@ez-kit/data-grid-core'
 import type { ReactNode } from 'react'
 
 type User = { id: number; name: string }
@@ -27,16 +26,18 @@ const COLUMNS = createColumns<User>([{ accessorKey: 'name' }])
  * known-empty gate both have to hold.
  */
 function renderPagination(
-	config: Omit<UseDataGridConfig<User>, 'data' | 'columns'>,
+	config: Omit<UseDataGridConfig<GridFeatures, User>, 'data' | 'columns'>,
 	data: User[] = USERS,
-): { props: PaginationProps | null; table: DataTable<User> } {
+): { props: PaginationProps | null; table: DataTable<GridFeatures, User> } {
 	let captured: PaginationProps | null = null
 	const Spy = (props: PaginationProps): ReactNode => {
 		captured = props
 		return null
 	}
 
-	const { result } = renderHook(() => useDataGrid<User>({ data, columns: COLUMNS, ...config }))
+	const { result } = renderHook(() =>
+		useDataGrid<GridFeatures, User>({ features: TEST_FEATURES, data, columns: COLUMNS, ...config }),
+	)
 	const table = result.current
 
 	renderWithComponents(
@@ -55,9 +56,9 @@ function renderPagination(
  * rather than handing back a `null` the caller would have to narrow.
  */
 function captureProps(
-	config: Omit<UseDataGridConfig<User>, 'data' | 'columns'>,
+	config: Omit<UseDataGridConfig<GridFeatures, User>, 'data' | 'columns'>,
 	data: User[] = USERS,
-): { props: PaginationProps; table: DataTable<User> } {
+): { props: PaginationProps; table: DataTable<GridFeatures, User> } {
 	const { props, table } = renderPagination(config, data)
 	if (!props) throw new Error('Pagination did not render')
 	return { props, table }

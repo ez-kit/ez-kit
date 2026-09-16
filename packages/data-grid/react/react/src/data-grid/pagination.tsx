@@ -72,7 +72,8 @@ export function Pagination({ children }: DataGridPaginationProps = {}) {
 	const table = useDataGridTable()
 	const { Pagination: PaginationComponent } = useGridComponents().pagination
 
-	useDataGridState((s) => s.pagination)
+	// The subscription is the read — see `active-filters-bar.tsx` for the note.
+	const { pageIndex, pageSize } = useDataGridState((s) => s.pagination)
 	const isPending = useDataGridState((s) => s.loading.isPending)
 	// Row-model affecting slices (pageCount is derived from rowModel.length).
 	useDataGridState((s) => s.sorting)
@@ -83,9 +84,13 @@ export function Pagination({ children }: DataGridPaginationProps = {}) {
 	// Hide only during the initial-load skeleton path (`isPending`); a background
 	// refetch (`isFetching`) keeps the footer mounted (the overlay dims rows instead).
 	if (isPending) return null
-	if (!table.options.getPaginationRowModel) return null
+	// Page-based pagination is on. Under v8 this probed `table.options.getPaginationRowModel`,
+	// which core attached exactly when `pagination` was enabled and the mode was not infinite.
+	// v9 makes the paginated row model a **feature slot** the consumer registers, so core writes
+	// no such option and the probe read `undefined` on every grid — the footer never rendered.
+	// The resolved flag is the same decision, taken where it is actually made.
+	if (!table.grid.pagination.enabled) return null
 
-	const { pageIndex, pageSize } = table.getState().pagination
 	// Normalize both totals here so no UI kit ever sees an "unknown" sentinel.
 	//
 	// `getPageCount()` returns `options.pageCount` verbatim when set, and core sets it to

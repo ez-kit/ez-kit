@@ -2,6 +2,7 @@ import { useGridComponents } from '../components-context'
 
 import { DataGridFooterCell } from './footer-cell'
 
+import type { GridFeatures } from '../types'
 import type { Header, HeaderGroup } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
@@ -14,9 +15,9 @@ import type { ReactNode } from 'react'
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type DataGridFooterRowRenderArgs<TRow extends object = any> = {
-	footerGroup: HeaderGroup<TRow>
+	footerGroup: HeaderGroup<GridFeatures, TRow>
 	/** The group's cells, in column order — already reflecting visibility and pinning. */
-	headers: Header<TRow, unknown>[]
+	headers: Header<GridFeatures, TRow>[]
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -27,7 +28,7 @@ export type DataGridFooterRowProps<TRow extends object = any> = {
 	 * Named `footerGroup` for the thing it is, the way `<DataGrid.HeaderRow>` takes a
 	 * `headerGroup` — TanStack builds both from the same `HeaderGroup` shape.
 	 */
-	footerGroup: HeaderGroup<TRow>
+	footerGroup: HeaderGroup<GridFeatures, TRow>
 	/**
 	 * Custom cells for this footer row, rendered inside the kit's `Tr`.
 	 *

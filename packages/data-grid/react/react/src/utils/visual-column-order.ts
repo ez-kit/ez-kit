@@ -1,4 +1,4 @@
-import type { DataTable } from '@ez-kit/data-grid-core'
+import type { DataTable, GridFeatures } from '../types'
 import type { Column } from '@tanstack/table-core'
 
 /**
@@ -20,10 +20,15 @@ import type { Column } from '@tanstack/table-core'
  * the widths on screen — two right-pinned columns end up overlapping or gapped by
  * exactly the difference between their declared sizes.
  */
-export function getVisualLeafColumns<TRow extends object>(table: DataTable<TRow>): Column<TRow>[] {
+export function getVisualLeafColumns<TRow extends object>(
+	table: DataTable<GridFeatures, TRow>,
+): Column<GridFeatures, TRow>[] {
+	// `getStart…` / `getEnd…` are v9's names for v8's `getLeft…` / `getRight…`. The values are
+	// the same two pin groups; upstream renamed the getters, not the `'left'` / `'right'`
+	// pinning positions, which this package still writes (AGENTS.md: column pinning is physical).
 	return [
-		...table.getLeftVisibleLeafColumns(),
+		...table.getStartVisibleLeafColumns(),
 		...table.getCenterVisibleLeafColumns(),
-		...table.getRightVisibleLeafColumns(),
+		...table.getEndVisibleLeafColumns(),
 	]
 }

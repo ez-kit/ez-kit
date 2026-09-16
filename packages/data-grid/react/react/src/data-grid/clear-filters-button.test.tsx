@@ -5,13 +5,13 @@ import { describe, expect, it } from 'vitest'
 
 import { GridComponentsProvider } from '../components-context'
 import { prepareDataGridTable } from '../prepare-table'
-import { testComponents } from '../test-utils'
+import { TEST_FEATURES, testComponents } from '../test-utils'
 
 import { ClearFiltersButton } from './clear-filters-button'
 import { TableContext } from './table-context'
 
+import type { DataTable, GridFeatures } from '../types'
 import type { NormalizedFilteringToolbarConfig } from '../use-data-grid'
-import type { DataTable } from '@ez-kit/data-grid-core'
 import type { ReactNode } from 'react'
 
 type User = { id: number; name: string }
@@ -24,15 +24,21 @@ const USERS: User[] = [
 const COLUMNS = createColumns<User>([{ accessorKey: 'name', header: 'Name' }])
 
 function makeTable() {
-	const table = createTable<User>({ data: USERS, columns: COLUMNS, filtering: true, globalFiltering: true })
+	const table = createTable<GridFeatures, User>({
+		features: TEST_FEATURES,
+		data: USERS,
+		columns: COLUMNS,
+		filtering: true,
+		globalFiltering: true,
+	})
 	return prepareDataGridTable(table)
 }
 
-function setClearCfg(table: DataTable<User>, value: NormalizedFilteringToolbarConfig | undefined) {
+function setClearCfg(table: DataTable<GridFeatures, User>, value: NormalizedFilteringToolbarConfig | undefined) {
 	table.grid.filtering.toolbar = value
 }
 
-function Wrapper({ table, children }: { table: DataTable<User>; children: ReactNode }) {
+function Wrapper({ table, children }: { table: DataTable<GridFeatures, User>; children: ReactNode }) {
 	return (
 		<GridComponentsProvider components={testComponents}>
 			<TableContext.Provider value={table}>{children}</TableContext.Provider>
@@ -111,8 +117,8 @@ describe('<ClearFiltersButton>', () => {
 			</Wrapper>,
 		)
 		await user.click(screen.getByRole('button', { name: /clear filters/i }))
-		expect(table.getState().columnFilters).toEqual([])
-		expect(table.getState().globalFilter).toBeUndefined()
+		expect(table.store.state.columnFilters).toEqual([])
+		expect(table.store.state.globalFilter).toBeUndefined()
 	})
 
 	it('renders custom children when provided', () => {

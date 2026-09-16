@@ -2,12 +2,14 @@ import { createColumns, createTable, defaultMessages } from '@ez-kit/data-grid-c
 import { describe, expect, it } from 'vitest'
 
 import { isGridMenuItemSlot } from '../menu'
+import { TEST_FEATURES } from '../test-utils'
 import { RowActionId } from '../types'
 
 import { buildRowOrderItems } from './build-row-order-items'
 
 import type { GridMenuItemDef } from '../menu'
-import type { DataTable, OrderingConfig } from '@ez-kit/data-grid-core'
+import type { DataTable, GridFeatures } from '../types'
+import type { OrderingConfig } from '@ez-kit/data-grid-core'
 
 type User = { id: string; name: string }
 
@@ -19,12 +21,18 @@ const DATA: User[] = [
 
 const COLUMNS = createColumns<User>([{ accessorKey: 'name', header: 'Name' }])
 
-function makeTable(ordering: OrderingConfig = { row: true }): DataTable<User> {
-	return createTable<User>({ data: DATA, columns: COLUMNS, getRowId: (row) => row.id, ordering })
+function makeTable(ordering: OrderingConfig = { row: true }): DataTable<GridFeatures, User> {
+	return createTable<GridFeatures, User>({
+		features: TEST_FEATURES,
+		data: DATA,
+		columns: COLUMNS,
+		getRowId: (row) => row.id,
+		ordering,
+	})
 }
 
 /** The entries for one row, narrowed to the half that carries a label and a disabled state. */
-function items(table: DataTable<User>, rowId: string): GridMenuItemDef[] {
+function items(table: DataTable<GridFeatures, User>, rowId: string): GridMenuItemDef[] {
 	return buildRowOrderItems(table.getRow(rowId), table, defaultMessages.rowActions).map((item) => {
 		if (isGridMenuItemSlot(item)) throw new Error('the grid builds described entries, never slots')
 		return item
@@ -53,7 +61,8 @@ describe('buildRowOrderItems', () => {
 	})
 
 	it('disables both while a sort is applied', () => {
-		const table = createTable<User>({
+		const table = createTable<GridFeatures, User>({
+			features: TEST_FEATURES,
 			data: DATA,
 			columns: COLUMNS,
 			getRowId: (row) => row.id,
@@ -70,6 +79,6 @@ describe('buildRowOrderItems', () => {
 
 		items(table, 'a')[1]?.onAction()
 
-		expect(table.getState().rowOrder).toEqual(['b', 'a', 'c'])
+		expect(table.store.state.rowOrder).toEqual(['b', 'a', 'c'])
 	})
 })

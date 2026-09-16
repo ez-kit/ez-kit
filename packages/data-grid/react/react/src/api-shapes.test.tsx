@@ -2,8 +2,10 @@ import { createColumns } from '@ez-kit/data-grid-core'
 import { renderHook } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
+import { TEST_FEATURES } from './test-utils'
 import { useDataGrid } from './use-data-grid'
 
+import type { GridFeatures } from './types'
 import type { UseDataGridConfig } from './use-data-grid'
 import type { FieldState, InputComponentProps, SelectCellConfig } from '@ez-kit/data-grid-core'
 
@@ -64,7 +66,12 @@ describe('column input slots accept a component annotated with its cell config',
 describe('enabled: false on a nested config', () => {
 	it('suppresses the selection bar while selection stays on', () => {
 		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, selection: { bar: { enabled: false, variant: 'inline' } } }),
+			useDataGrid({
+				features: TEST_FEATURES,
+				data: USERS,
+				columns: COLUMNS,
+				selection: { bar: { enabled: false, variant: 'inline' } },
+			}),
 		)
 
 		expect(result.current.options.enableRowSelection).toBe(true)
@@ -74,6 +81,7 @@ describe('enabled: false on a nested config', () => {
 	it('suppresses the filter-chips strip while filtering stays on', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({
+				features: TEST_FEATURES,
 				data: USERS,
 				columns: COLUMNS,
 				filtering: { chips: { enabled: false, position: 'below' } },
@@ -86,6 +94,7 @@ describe('enabled: false on a nested config', () => {
 	it('suppresses row pinning while column pinning stays on', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({
+				features: TEST_FEATURES,
 				data: USERS,
 				columns: COLUMNS,
 				pinning: { column: true, row: { enabled: false, top: true } },
@@ -98,7 +107,12 @@ describe('enabled: false on a nested config', () => {
 
 	it('suppresses the no-results fallback', () => {
 		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, fallbacks: { noResults: { enabled: false } } }),
+			useDataGrid({
+				features: TEST_FEATURES,
+				data: USERS,
+				columns: COLUMNS,
+				fallbacks: { noResults: { enabled: false } },
+			}),
 		)
 
 		expect(result.current.grid.fallbacks.noResults).toEqual({ enabled: false })
@@ -111,13 +125,16 @@ describe('enabled: false on a nested config', () => {
  */
 describe('filtering.chips scalar form', () => {
 	it("reads `chips: 'below'` as the position", () => {
-		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: { chips: 'below' } }))
+		const { result } = renderHook(() =>
+			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, filtering: { chips: 'below' } }),
+		)
 
 		expect(result.current.grid.filtering.chips).toEqual({ position: 'below' })
 	})
 
 	it('still accepts the object form', () => {
-		const config: UseDataGridConfig<User> = {
+		const config: UseDataGridConfig<GridFeatures, User> = {
+			features: TEST_FEATURES,
 			data: USERS,
 			columns: COLUMNS,
 			filtering: { chips: { position: 'above' } },
@@ -130,12 +147,36 @@ describe('filtering.chips scalar form', () => {
 
 /**
  * `direction` is a fact about the whole grid, so it is a root option rather than a resize
- * setting — and it reaches the resize delta whether or not resizing is enabled.
+ * setting — and it is readable whether or not resizing is enabled.
+ *
+ * **Rewritten for v9.** This case used to assert `options.columnResizeDirection === 'rtl'` on a
+ * grid with resizing off, under the heading "reaches the resize delta with resizing off", and its
+ * doc comment stated that as the contract. That contract is gone: v9 declares
+ * `columnResizeDirection` on `TableOptions_ColumnResizing`, so it does not exist without
+ * `columnResizingFeature` and core writes it only inside its resizing branch — correctly, because
+ * writing it unconditionally is the `sortFns` defect. The invariant the case was really defending
+ * — one grid-wide direction, readable with resizing off — survives, and `table.grid.direction`
+ * is where it now lives. The reader that took the old contract literally was
+ * `header-cell.tsx`'s Alt+Arrow handler; see `ordering.test.tsx`'s two RTL cases.
  */
 describe('root direction', () => {
-	it('reaches the resize delta with resizing off', () => {
-		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, direction: 'rtl' }))
+	it('is readable with resizing off', () => {
+		const { result } = renderHook(() =>
+			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, direction: 'rtl' }),
+		)
 
+		expect(result.current.grid.direction).toBe('rtl')
+		// The v9 half of the same fact: the resizing option is absent, not `'rtl'`, because the
+		// feature that declares it is not configured on.
+		expect(result.current.options.columnResizeDirection).toBeUndefined()
+	})
+
+	it('reaches the resize delta once resizing is on', () => {
+		const { result } = renderHook(() =>
+			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, direction: 'rtl', resizing: true }),
+		)
+
+		expect(result.current.grid.direction).toBe('rtl')
 		expect(result.current.options.columnResizeDirection).toBe('rtl')
 	})
 })

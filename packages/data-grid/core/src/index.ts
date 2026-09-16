@@ -205,7 +205,15 @@ export type {
 	CreatingSaveContext,
 	CreatingState,
 } from './features/creating'
-export { createDraftAtoms, DraftAxis } from './features/deferred-apply'
+/**
+ * `createAppliedEmitter` is exported for the same reason `createTableOptions` is: the React
+ * adapter constructs its table through `useTable`, so everything `createTable` does *after*
+ * `constructTable` has to be redone in the hook — and two of those jobs, minting the draft atoms
+ * and projecting `config.onStateChange` through the applied snapshot, are these two functions.
+ * Without the second one the hook would either re-implement the projection (a second answer to
+ * "what is the consumer allowed to see") or drop deferral from `onStateChange` in React only.
+ */
+export { createAppliedEmitter, createDraftAtoms, DraftAxis } from './features/deferred-apply'
 export type {
 	AppliedState,
 	DraftApi,

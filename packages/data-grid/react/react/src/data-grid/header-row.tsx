@@ -2,6 +2,7 @@ import { useGridComponents } from '../components-context'
 
 import { DataGridHeaderCell } from './header-cell'
 
+import type { GridFeatures } from '../types'
 import type { Header, HeaderGroup } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
@@ -14,14 +15,14 @@ import type { ReactNode } from 'react'
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type DataGridHeaderRowRenderArgs<TRow extends object = any> = {
-	headerGroup: HeaderGroup<TRow>
+	headerGroup: HeaderGroup<GridFeatures, TRow>
 	/** The group's headers, in column order — already reflecting visibility and pinning. */
-	headers: Header<TRow, unknown>[]
+	headers: Header<GridFeatures, TRow>[]
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type DataGridHeaderRowProps<TRow extends object = any> = {
-	headerGroup: HeaderGroup<TRow>
+	headerGroup: HeaderGroup<GridFeatures, TRow>
 	/**
 	 * Custom cells for this header row, rendered inside the kit's `Tr`.
 	 *

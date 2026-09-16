@@ -2,7 +2,7 @@ import { createColumns } from '@ez-kit/data-grid-core'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
-import { testComponents } from '../test-utils'
+import { TEST_FEATURES, testComponents } from '../test-utils'
 
 import { DataGrid } from './data-grid'
 
@@ -22,6 +22,7 @@ function draftInput(): Element {
 function renderGrid(creating: CreatingConfig<Row>, extra?: { deleting?: boolean }) {
 	render(
 		<DataGrid
+			features={TEST_FEATURES}
 			data={ROWS}
 			columns={COLUMNS}
 			components={testComponents}

@@ -2519,32 +2519,897 @@ changeset naming `@ez-kit/data-grid-shadcn` would fail the `version` job after t
 
 ---
 
+## PR 2 — orientation
+
+This section is the planning pass for design §7 row 2, written against the tree at `cf14f78f`
+rather than against the design. It assumes [`pr1-outcomes.md`](./pr1-outcomes.md) §2 — the 29
+inherited items — and does not repeat it. What follows is what this pass **measured or falsified
+itself**, plus the decisions that were open when PR 1 closed.
+
+### The baseline, re-measured
+
+`pnpm --filter @ez-kit/data-grid-react typecheck` is **380 errors**, confirming §2.9 exactly. They
+sit in ~60 files; the heaviest are `data-grid/data-grid.test.tsx` (36), `data-grid/header-cell.tsx`
+(31), `data-grid/selection-bar.test.tsx` (21), `use-data-grid.ts` (19),
+`data-grid/data-attrs.test.tsx` (17), `use-data-grid.test.tsx` (15),
+`data-grid/sort-menu-trigger.tsx` (15). Most of that is cascade: 100 TS2314 + 42 TS2558 + 74 TS7006
+are one arity change seen from three angles, and the file counts will collapse together rather than
+one at a time. **No task below uses "errors are down to N" as its only criterion**, for that reason.
+
+The package's `package.json` already carries `@tanstack/react-table@^9.2.4` and already names
+`@tanstack/react-store` / `@tanstack/react-table` in every `size-limit` `ignore` list — that landed
+in `802116f9`, part of the install. Design §4's dependency item is therefore **done**, and what
+remains of it is only re-measuring the five budgets after the first green build (Task 21).
+`@tanstack/react-store` is not a direct dependency and does not need to become one: it arrives
+through `@tanstack/react-table`, which is where every name we use from it is re-exported.
+
+### Two findings this pass adds to the inherited 29
+
+**F1 — the react package redeclares `Table` at v8 arity, twice, and in v9 that cannot merge.**
+`resolved-options.ts:212-221` and `grid-context.tsx:106-118` each open
+`declare module '@tanstack/table-core'` and write `interface Table<TData extends RowData> { … }` —
+the v8 augmentation idiom, carrying `grid: ResolvedGridOptions` and `gridContext: GridContextStore`
+respectively. In v9 `Table` is a **type alias**, not an interface
+(`dist/types/Table.d.ts:56`: `type Table<TFeatures, TData> = Table_Core<…> & ExtractFeatureMapTypes<…>`),
+and a type alias cannot be declaration-merged. The two blocks therefore do not extend v9's `Table`;
+they declare a **different, one-parameter `Table`** inside the module's scope, and every
+`Table<TFeatures, TData>` written anywhere in the package then resolves against _that_.
+
+Falsified directly: a throwaway `src/__probe.ts` writing `Table<TableFeatures, { a: number }>` — the
+correct v9 arity — fails with
+
+```text
+error TS2314: Generic type 'Table<TData>' requires 1 type argument(s).
+```
+
+So a share of the 380 is not v8 code at all: it is correct v9 code being measured against a v8
+shadow this package is itself declaring. This is why Task 14 comes first — until those two blocks
+are gone, no other task can trust a `Table`-shaped diagnostic it reads.
+
+It also sharpens §2.1. There are not two `grid` declarations in the tree but **three**: core's
+`DataTable.grid: GridOptions<TRow>` (`core/src/types.ts:1013`), react's global
+`Table.grid: ResolvedGridOptions`, and the runtime write at `prepare-table.ts:25`. The global one is
+the one that has to go regardless of how the collision is settled, because its host type cannot
+merge.
+
+**F2 — `TableState<TableFeatures>` is the full state, non-optional, and that settles how react
+types its components.** The open question underneath §2.5 was what happens to a component that
+receives a table from context and cannot be generic over a feature set. Probed:
+
+```ts
+type WidestState = TableState<TableFeatures>
+declare const k: keyof WidestState
+const _kk: 0 = k
+//    ^ TS2322: Type '"cellSelection" | "columnFilters" | "grouping" | "columnOrder"
+//      | "columnPinning" | "columnResizing" | "columnSizing" | "columnVisibility"
+//      | "globalFilter" | "expanded" | "pagination" | … 9 more … | "loading"'
+declare const s: WidestState['sorting']
+const _ss: 0 = s
+//    ^ TS2322: Type 'SortingState' is not assignable to type '0'.
+```
+
+Twenty-one slices — every stock one **and** every grid-own one, `loading` included — and each resolves
+to its own slice type rather than `… | undefined`. `TableFeatures` is an all-optional interface, so
+`ExtractFeatureMapTypes` keys it by every declared member and the widest instantiation is the
+_fullest_, not the emptiest. A component pinned to `TableFeatures` therefore reads
+`state.sorting`, `state.loading` and `table.editing` with no guard and no cast, which is exactly the
+ergonomics the package's 95 non-test files need and exactly the instantiation core already chose for
+`RowActionsContext.table` (§2.5).
+
+The cost is real and is stated rather than engineered around: a component read is **not** gated on
+the feature being registered. A grid built without `rowSortingFeature` still type-checks a
+`state.sorting` read in `sort-menu-trigger.tsx` and finds `undefined` at runtime. That is the same
+accepted cost as §1.1(d) one level down, it is the only thing that keeps the component layer
+non-generic, and Task 15 records it at the alias.
+
+### Decision A — `useDataGrid` adopts `useTable`. Confirmed, on evidence, not on the design's word
+
+Design D3 and §4 say the react package calls `useTable`; `plan.md`'s planning boundary left it open
+for this pass to settle against the tree. It is settled **for** `useTable`, and the deciding
+evidence is not the design but `@tanstack/react-table@9.2.4/dist/reactivity.js`:
+
+```js
+function reactReactivity() {
+	return renderPhaseReactivity({ createAtom, batch })
+}
+```
+
+`useTable` injects that preset; core's `createTable` injects `storeReactivityBindings()`, the
+vanilla one. The difference is the whole of what this PR is deleting. The render-phase preset
+supplies readonly-atom facades that are readable **during** render plus a `commit` hook, and
+`useTable` drives it with
+
+```js
+const renderSnapshot = rootSource.get()
+const state = useSelector(rootSource, selector, { compare: shallow })
+useIsomorphicLayoutEffect(() => {
+	rootSource.markCommitted(renderSnapshot)
+	table_publishExternalState(coreTable, controlledState ?? null, shallow)
+})
+```
+
+Read against `use-data-grid.ts:1180-1215`, those three lines are our `silent` write, our
+`pendingNotifyRef`, and our layout effect that wakes bailed-out subscribers — upstream's supported
+version of the hack design §3 lists for deletion. `table_publishExternalState(…, controlledState, …)`
+is `syncControlledState` with the same job and the same "skips the consumer callback" property. The
+vanilla binding would work in React only by keeping our hack, because writing state during render
+under it notifies subscribers mid-render, which is the React error the hack exists to avoid.
+
+So the branch that deletes the binding layer is the branch that adopts `useTable`, and they are the
+same branch. Two consequences the tasks below have to carry, both read from the installed source:
+
+- **Everything `createTable` does after `constructTable` has to be redone in the hook.** That is
+  five jobs (`create-table.ts:38-133`): mint the draft atoms once per instance, merge
+  `bindStateHandlers(table)` into options, subscribe `config.onStateChange`, assign `grid`, assign
+  `setData`. `useTable` constructs inside `useState(() => …)`, so none of them can be passed in.
+  Task 16 owns all five, and its criterion names each.
+- **`useTable` returns a fresh object every render** (`useMemo(() => ({ ...table, options:
+tableOptions, state }), …)`, §2.8). Anything assigned to the instance after construction is
+  picked up by later spreads because the spread source is the stable `useState` instance — but
+  anything assigned to the _returned_ object is not, and `table` identity no longer holds across
+  renders, which matters for every `useEffect`/`useMemo` dependency list in the package that names
+  it. Task 16 states the rule and Task 16's tests pin it.
+
+Note also that the returned object's `options` is the **raw** `tableOptions` argument, not the
+resolved options bag. A reader of `table.options.<something a default filled in>` gets `undefined`
+through the hook where it got a value through `createTable`. This is the §2.6 defect shape
+(`table.options.columnResizeDirection`) arriving by a second route, and Task 19's sweep covers it.
+
+### Decision B — react threads `TFeatures` on its public surface and pins its components
+
+Per design D1, `TFeatures` reaches react but stops before the component contract. F2 makes the
+stopping point cheap. Concretely: the hook, the config, the selector and the state projection are
+generic over `TFeatures`; everything reached through `useDataGridTable()` pins to one exported
+alias. Task 15 fixes the exact list and the alias's name; it is not enumerated here because the
+enumeration is that task's deliverable, not its premise.
+
+### Decision C — PR 2's criterion is `--filter @ez-kit/data-grid-react`, not full `verify`
+
+Design §7 row 2 says "`verify` goes green here for the first time". It cannot, and the reason is
+already on the record: §3.1 lists `GridMenuIcon.PinLeft` / `.PinRight` at
+`shadcn/src/blocks/icons.tsx:41,42` and `heroui/src/blocks/icons.tsx:37,38`, and those names were
+deleted from core by Task 4. Both kits therefore fail to type-check until PR 3 renames them, whatever
+PR 2 does. `apps/docs` is PR 4 for the same reason.
+
+This is the same shape of tension design §7 already showed once, and it is resolved the same way:
+the row's _content_ is delivered here and its _criterion_ moves to the PR that can meet it. PR 2's
+criterion is the four gates plus `size` on `--filter @ez-kit/data-grid-react`; **full `verify` goes
+green in PR 4**, once the kits (PR 3) and the docs (PR 4) have landed. Recorded here so PR 6's
+changeset and the final PR description do not inherit a claim the branch never made.
+
+### Commit regime, decided before it is needed
+
+The pre-commit hook runs `eslint --max-warnings=0` over staged files, and the react package is
+type-aware-lint red from Task 14 until Task 21 — so no intermediate commit of react source can pass
+the hook. This is the situation PR 1 met at Task 2 and solved at the end, and the same regime is
+adopted deliberately rather than discovered: **PR 2 lands as one commit, written in Task 21**, with
+a per-task directory snapshot of `packages/data-grid/react/react/src` standing in for a per-task
+commit. §6 of `pr1-outcomes.md` records that those snapshots were the real backup twice; they are
+kept for the same reason.
+
+No task below contains `git push` or `gh pr create`. The branch stays local; pushing it and opening
+any PR is the human's call.
+
+### Files (PR 2)
+
+| File                                                      | Task                                                          |
+| --------------------------------------------------------- | ------------------------------------------------------------- |
+| `src/resolved-options.ts`                                 | 14 (the `declare module` block, and core's four members)      |
+| `src/prepare-table.ts`                                    | 14 (the clobber), 18 (`gridContext`)                          |
+| `src/grid-context.tsx`                                    | 14 (the `declare module` block), 18 (the store → atom)        |
+| `src/types.ts`, `src/contract.ts`, `src/index.ts`         | 15                                                            |
+| `src/test-utils.tsx`                                      | 15 (the fixture's feature set)                                |
+| `src/use-data-grid.ts`                                    | 15 (signature), 16 (body), 19 (the `getState()` site at 1418) |
+| `src/use-data-grid-selector.ts`                           | 17                                                            |
+| `src/state/**`                                            | 17                                                            |
+| `src/data-grid/**`, `src/utils/**`                        | 19                                                            |
+| `src/data-grid/actions-cell.tsx`, `build-action-items.ts` | 20                                                            |
+
+---
+
+### Task 14: Delete the two `declare module '@tanstack/table-core'` blocks, and settle who owns `table.grid`
+
+The name clash of §2.1 and the merge failure of F1 are the same two blocks, so they are one task.
+This task comes first because every later task reads `Table`-shaped diagnostics, and until these
+blocks are gone those diagnostics are measured against a v8 `Table` this package is itself
+declaring.
+
+**Branch:** `integration/tanstack-v9`. No commit (see the commit regime above); snapshot at the end.
+
+**Files:**
+
+- Modify: `packages/data-grid/react/react/src/resolved-options.ts`
+- Modify: `packages/data-grid/react/react/src/grid-context.tsx`
+- Modify: `packages/data-grid/react/react/src/prepare-table.ts`
+- Modify: `packages/data-grid/react/react/src/types.ts` (the react-local `DataTable` alias)
+- Modify: `packages/data-grid/react/react/src/prepare-table.test.ts`
+- Create: `packages/data-grid/react/react/src/resolved-options.test.ts` (if absent; else modify)
+
+**Steps:**
+
+- [ ] **1. Read the three declarations before changing any of them.** Core's
+      `GridOptions<TRow>` at `core/src/create-table/create-table-options.ts:314-330` (four members:
+      `rowActions`, `rowPinning`, `virtualization`, `direction`); react's `ResolvedGridOptions` at
+      `resolved-options.ts:47-210` (fifteen members, of which `defaultResolvedGridOptions()` at
+      `:234` seeds eleven); and `DataTable.grid: GridOptions<TRow>` at `core/src/types.ts:1013`.
+      Record the two overlapping names and their two shapes in the task report **before** writing
+      the merged type, because the report is what a reviewer checks the merge against.
+- [ ] **2. Delete `declare module '@tanstack/table-core' { interface Table<TData> { grid } }`** at
+      `resolved-options.ts:212-221`. Its host is a type alias in v9 and it never merged.
+- [ ] **3. Delete the matching block at `grid-context.tsx:106-118`** (`gridContext`). Same reason.
+      `gridContext`'s eventual home is Task 18's; here it only has to stop being declared this way,
+      so park it on the react-local `DataTable` alias from Step 4 with a comment naming Task 18.
+- [ ] **4. Give react its own `DataTable`.** React cannot reuse core's, because core's carries
+      core's four-member `grid` and react's readers want fifteen. Declare, in `src/types.ts`:
+
+      ```ts
+      /**
+       * The table the React layer renders: core's `DataTable` with `grid` **replaced** by the
+       * resolved React options, plus the grid context.
+       *
+       * `Omit` rather than an intersection, deliberately. An intersection of two objects that
+       * both declare `grid` produces a type whose `grid` is the *intersection of the two bags* —
+       * legal, silently satisfied by either half, and impossible for a reader to tell apart. That
+       * is the §2.1 seam written into the type system instead of out of it.
+       */
+      export type DataTable<TFeatures extends TableFeatures, TRow extends object> =
+        Omit<CoreDataTable<TFeatures, TRow>, 'grid'> & {
+          grid: ResolvedGridOptions
+          gridContext: GridContextStore
+        }
+      ```
+
+      `TFeatures` is threaded here rather than pinned because this alias is the hook's return type
+      and part of the public surface (Decision B). Task 15 settles the rest of the spine; this task
+      introduces exactly this one alias and leaves its callers red.
+
+- [ ] **5. Fold core's four members into `ResolvedGridOptions` so the two shapes cannot alias.**
+      `direction` and `rowActions` have no counterpart and move across under their own names.
+      The two that collide do **not**: - **`virtualization`.** Core passes it through unresolved (`boolean | VirtualizationConfig`);
+      react's is `NormalizedVirtualizationConfig | undefined`. React's normalized form is the one
+      seven readers want (`data-grid/table.tsx:142`, `feature-enabled.test.tsx:56`, and five in
+      `use-data-grid.test.tsx:454-480`), so **react's keeps the name** and core's unresolved value
+      is not carried at all — it is the same option before normalization, and storing both would
+      put a second answer next to the first. Record in the report that core's is dropped rather
+      than renamed, and why. - **`rowPinning`.** Core's is the normalized row-pin config; react's `pinning` is
+      `{ column: boolean; row: boolean }`, a different thing. Both are wanted, so core's lands as
+      `pinning.rowConfig` — nested under the axis it belongs to, not beside it at top level where
+      `rowPinning` and `pinning.row` would read as two spellings of one thing.
+- [ ] **6. Fix `prepare-table.ts:25`.** It writes `table.grid = defaultResolvedGridOptions()` over a
+      table core has already seeded, clobbering core's four members — a type error now that
+      `DataTable.grid` is typed, and a silent runtime loss before that. It must **merge onto** what
+      core wrote rather than replace it. Extend `defaultResolvedGridOptions()` to take core's bag:
+      `defaultResolvedGridOptions(table.grid)`, spreading the four across and defaulting each when
+      the table was not built by our `createTable`.
+- [ ] **7. Make `useDataGrid`'s wholesale overwrite safe the same way.** `use-data-grid.ts:1268`
+      assigns `table.grid = { … }` fresh each render, which drops the four again. It is not this
+      task's job to rewrite the hook — Task 16 does that — but it **is** this task's job that the
+      four members survive, so add them to that literal now, sourced from the table rather than
+      re-derived. Leave a comment naming Task 16 as the task that will re-home the literal.
+- [ ] **8. Write the test that would have caught the clobber.** Two cases, each falsified by
+      reverting the fix it covers: - a table from `createTable` passed through `prepareDataGridTable` still reports core's
+      `direction` and `rowActions.placement` (falsify: restore the wholesale assignment at
+      `prepare-table.ts:25` → this case fails and no other does); - `grid.virtualization` is the **normalized** shape after a render — assert on a field only
+      the normalized form has, never on truthiness, because `true` and `{ row: {…} }` are both
+      truthy and a truthiness assertion is precisely the one that cannot tell the §2.1 shapes
+      apart.
+- [ ] **9. Snapshot** `src/` to `.superpowers/sdd/plan/snapshots/task-14/`.
+
+**Criterion:** `tsc --noEmit` reports **zero** errors in `resolved-options.ts`, `grid-context.tsx`
+and `prepare-table.ts`, and no error anywhere in the package reads
+`Generic type 'Table<TData>' requires 1 type argument(s)` (grep the output for that exact string —
+it is the F1 signature and its disappearance is what says the shadow is gone). The package total
+will still be in the hundreds; that is expected and is not this task's criterion.
+
+**Do not** attempt to run the test suite here — it does not build until Task 15 gives the fixture a
+feature set. The two cases written in Step 8 are run for the first time in Task 15 and must be
+listed in this task's report as owed.
+
+---
+
+### Task 15: The react type spine — `TFeatures` on the public surface, one pinned alias below it
+
+The 100 TS2314 + 42 TS2558 + 74 TS7006 are one change seen three ways. This task makes it, and
+gives `test-utils.tsx` a feature set so the suite can run again from Task 16 on.
+
+**Branch:** `integration/tanstack-v9`.
+
+**Files:**
+
+- Modify: `packages/data-grid/react/react/src/types.ts`
+- Modify: `packages/data-grid/react/react/src/use-data-grid.ts` (**declarations only** — the body is Task 16's)
+- Modify: `packages/data-grid/react/react/src/contract.ts`
+- Modify: `packages/data-grid/react/react/src/index.ts`
+- Modify: `packages/data-grid/react/react/src/create-data-grid.tsx`
+- Modify: `packages/data-grid/react/react/src/data-grid-options-context.tsx`
+- Modify: `packages/data-grid/react/react/src/state/state-keys.ts`
+- Modify: `packages/data-grid/react/react/src/test-utils.tsx`
+- Modify: every file whose only failure is arity (the sweep in Step 5)
+
+**Steps:**
+
+- [ ] **1. Name the pinned alias and write F2's cost at it.** In `src/types.ts`:
+
+      ```ts
+      /**
+       * The feature set every component below `<DataGrid>` is typed against.
+       *
+       * Components receive the table through `useDataGridTable()`, which is a React context and
+       * therefore not generic — so they cannot carry the caller's `TFeatures`. They pin to
+       * `TableFeatures`, the widest instantiation, which is also the *fullest*: `TableFeatures`
+       * declares every feature key optionally, so `TableState<TableFeatures>` resolves to all
+       * twenty-one slices, each at its own type rather than `… | undefined` (verified by probe
+       * through the TypeScript API, and `['sorting']` yields `SortingState`).
+       *
+       * **The cost, stated rather than engineered around:** a component read is not gated on the
+       * feature being registered. `sort-menu-trigger.tsx` type-checks `state.sorting` against a
+       * grid built without `rowSortingFeature` and finds `undefined` at runtime. This is the same
+       * accepted cost as the runtime-only config guards one layer down (see
+       * `TableConfig`'s docblock in core), and it is what keeps the package's 95 non-test files
+       * non-generic.
+       * The catch for it is core's development-mode `REQUIRED_FEATURE` warning and nothing else.
+       */
+      export type GridFeatures = TableFeatures
+      ```
+
+- [ ] **2. Thread `TFeatures` through the public surface, and only there.** The generic set is the
+      hook and what a caller writes or receives: `UseDataGridConfig`, `useDataGrid`, `DataTable`
+      (Task 14's alias), `createDataGrid`, `DataGridOptionsProvider`'s value type,
+      `useDataGridSelector`, `useExtractedState`, `extractState`, `DataGridState`. Everything else
+      — every `src/data-grid/**` component, `utils/**`, `menu.ts`, `resolved-options.ts` — pins to
+      `GridFeatures`. Produce the **exact list** in the report, marked generic or pinned, one line
+      each: that list is the deliverable a reviewer checks, and design D1's "~7" is an estimate
+      this task replaces with a count.
+- [ ] **3. Add `features` to `UseDataGridConfig`.** Core declares `features: TFeatures` **required,
+      with no default, deliberately** (`core/src/types.ts:789-817` — the default could only be the
+      all-in set, which every consumer who never thought about it would then ship). React inherits
+      that: `features` is required on `UseDataGridConfig` and passes straight through. Do **not**
+      default it to `allDataGridFeatures`, and do not accept it from a defaults layer only —
+      `mergeGridOptionLayers` may supply it, but the type requires it at the boundary the caller
+      writes.
+- [ ] **4. Give `test-utils.tsx` a feature set.** `renderDataGrid` / the `useDataGrid` call at
+      `test-utils.tsx:897-900` is the fixture 73 test files reach the grid through. It gets
+      `allDataGridFeatures` — the fixture is the one place where the all-in set is right, because a
+      test that composes its own would be testing its own composition. Export a narrow set beside
+      it (`tableFeatures({})` plus whatever a case needs) so the feature-omission cases §2.4
+      describes can be written against the same helper. **Both must be exported**, because Task 19
+      needs the narrow one.
+- [ ] **5. Sweep the arity cascade.** With Steps 1-4 in place, most remaining TS2314 / TS2558 /
+      TS2707 / TS7006 are a missing type argument at a use site. Fix them mechanically, and keep a
+      list of every site where the fix was **not** mechanical — those are the ones §2.5 and §2.7
+      predicted, and they belong in the report by `file:line`, not folded into a count.
+- [ ] **6. `actions-cell.tsx:226` — remove the two casts, do not re-arity them.** Per §2.7,
+      `{ row: row as Row<object>, table: table as Table<object> }` exists only to erase `TRow` at
+      the `table.options` boundary, and core now types `RowActionsContext.table` as the widest
+      instantiation. Delete both casts and let the assignment type-check on its own. If it does not,
+      that is a real finding about `RowActionsContext` and goes in the report — it is **not** a cue
+      to write `as Row<TableFeatures, object>`.
+- [ ] **7. `resolveColumnFormConfig` must cast to `FormColumnMeta`.** Per §2.5, upstream declares
+      both `ColumnMeta` parameters `in out`, so no concrete instantiation is assignable to another
+      and the cast is forced by the variance annotation, not chosen. Use `FormColumnMeta`
+      (exported from core) and say at the site that it is forced, with the same wording core's own
+      `creating.ts` boundary uses.
+- [ ] **8. Snapshot** to `.superpowers/sdd/plan/snapshots/task-15/`.
+
+**Criterion:** `tsc --noEmit` reports zero TS2314, zero TS2558 and zero TS2707 across the package
+(`grep -cE "error TS(2314|2558|2707)"` → `0`), and the report carries the generic/pinned list from
+Step 2 and the non-mechanical list from Step 5. The suite still does not run — `use-data-grid.ts`'s
+body is v8 until Task 16 — and the two tests Task 14 owed are still owed.
+
+---
+
+### Task 16: `useDataGrid` on `useTable`
+
+The hook. Decision A settled that it adopts `useTable`; this task does it, and with it deletes the
+binding layer design §3 lists.
+
+**Branch:** `integration/tanstack-v9`.
+
+**Files:**
+
+- Modify: `packages/data-grid/react/react/src/use-data-grid.ts`
+- Modify: `packages/data-grid/react/react/src/prepare-table.ts`
+- Modify: `packages/data-grid/react/react/src/use-data-grid.test.tsx`
+- Create: `packages/data-grid/react/react/src/use-data-grid-lifecycle.test.tsx`
+
+**Interfaces:** none new. `useDataGrid`'s signature is Task 15's; this task changes only its body.
+
+**Steps:**
+
+- [ ] **1. Read `create-table.ts` end to end first, and list its five post-construction jobs.**
+      Mint draft atoms (`:59-70`); merge `bindStateHandlers(table)` into options (`:78`); subscribe
+      `config.onStateChange` (`:105-133`); assign `grid`; assign `setData`. `useTable` constructs
+      inside `useState(() => …)`, so **not one of the five can be passed in as an option** — each
+      has to be redone in the hook, and each is a §2.6-shaped defect if it is missed: the value
+      stops being reached and nothing fails. The report must account for all five by name.
+- [ ] **2. Build the options with `createTableOptions`, not `createTable`.** `import
+{ createTableOptions } from '@ez-kit/data-grid-core'` — public since `c449d02b` (§2.2). It
+      returns `{ options, grid, bindStateHandlers }`. Call it in the render body: `useTable` calls
+      `table_setOptions` during every render, so the options object must be cheap to build but need
+      not be referentially stable (§2.8 / api-notes §5).
+- [ ] **3. Mint the draft atoms once, outside the render path.** `useState(() => …)` or a ref —
+      **not** inside `createTableOptions`. §4.2 is explicit: `useTable` replaces `atoms` wholesale
+      each render, so a resolver-built set would reset the draft on every keystroke. Reuse core's
+      `createDraftAtoms` and gate it on the same two conditions `create-table.ts:71-74` uses
+      (`'draftFeature' in features` **and** `isFeatureEnabled(config.draft)`), because a set built
+      without the feature registered is three atoms nobody reads.
+- [ ] **4. Install `bindStateHandlers` once, after construction.** They close over the table, so
+      they cannot be in the options `useTable` constructs from. Install them in the same
+      `useState` initializer that first sees the table, or in a layout effect that runs before any
+      write can happen — and then verify they **survive**: `useTable` calls
+      `table_setOptions(coreTable, prev => ({ ...prev, ...tableOptions }))` on every render, so they
+      survive only because `tableOptions` does not carry those keys. Write a test that fires an
+      `on<Slice>Change` **after** a re-render, not only on the first one. A handler that works on
+      mount and is overwritten on render two is exactly this migration's signature defect.
+- [ ] **5. Subscribe `config.onStateChange` once, with the draft projection.** Port
+      `create-table.ts:105-133` verbatim in behaviour: plain `table.store.subscribe` when there are
+      no draft atoms, and `createAppliedEmitter` when there are. Subscribe only when the callback
+      exists. Use a ref for the callback so a changed prop is picked up without resubscribing — the
+      hook already has `onStateChangeRef` (`:1157-1159`) and it keeps its job.
+- [ ] **6. Assign `setData` and `gridContext` to the constructed instance, `grid` per render.**
+      The rule, from §2.8: `useTable` returns `useMemo(() => ({ ...table, … }))` over the stable
+      `useState` instance, so anything assigned **to that instance** is picked up by every later
+      spread, and anything assigned to the returned object is not. `setData` and `gridContext` are
+      per-instance and go on the instance. `grid` is rebuilt per render and must be assigned where
+      this render's readers see it. State which of the two each assignment is, at the site.
+- [ ] **7. Pass the selector that opts the parent out.** `useTable(options, () => null)` per design
+      §4: `useDataGrid` deliberately does not subscribe to state today (`:1319` says so), and
+      subscriptions are narrow and live in leaves. Keep that. Note the consequence in a comment:
+      `table.state` is `null` on our tables, so nothing may read it — the reactive read is
+      `table.Subscribe` or `useDataGridSelector`, and the snapshot read is `table.store.state`.
+- [ ] **8. Delete the binding layer.** The render-time silent write, `pendingNotifyRef` and the
+      layout effect at `:1180-1215`; the `syncControlledState` call at `:1204`; the
+      `notifyStateSubscribers` call at `:1213`. `table_publishExternalState` in `useTable`'s own
+      layout effect does this job now (Decision A), and controlled state reaches it as
+      `options.state` — which `createTableOptions` already writes. **Verify it lands** rather than
+      assuming: a controlled-state test that changes `state.sorting` on a re-render and asserts the
+      grid re-sorts is the check, and it must fail if `options.state` is dropped from the options
+      object.
+- [ ] **9. Honour §4.4 while doing it.** A controlled write to a deferred axis no longer lands —
+      forced by v9's atom precedence, `options.atoms[key]` beats `options.state[key]` unconditionally.
+      The core-side test states this positively. React needs the mirror case at the hook level:
+      `state.sorting` passed to a grid with `draft` on is ignored **and** the draft is intact. Do
+      not add a dirtiness check to restore the v8 behaviour; that is the `DRAFT_AXES` guard design
+      §2 deleted.
+- [ ] **10. Audit every `useEffect` / `useMemo` / `useCallback` in the package whose dependency
+      list names `table`.** Identity no longer holds across renders (§2.8), so a list naming
+      `table` now fires every render. For each: either the effect is idempotent and the churn is
+      acceptable, or the dependency narrows to something stable (`table.store`, an atom, an id).
+      List every site and the judgement in the report — a silent re-subscribe loop is the failure
+      mode, and it does not show up as a test failure, only as work.
+- [ ] **11. `features` must REPLACE across option layers, never accumulate.** Found by Task 15 and
+      handed here because this task owns the merge. `mergeGridOptionLayers` runs every option
+      through `utils/deep-merge.ts`, which treats any `{}`-literal as mergeable — and
+      `tableFeatures({})` returns exactly that. So if a defaults layer and the instance config both
+      name `features`, the instance's set does **not** replace the layer's, it merges **onto** it,
+      and a grid that deliberately narrows below a kit-wide set silently runs on the union. That is
+      the whole point of composing a set, defeated, with no error anywhere.
+
+      Nothing in the repo puts `features` in a defaults layer today, so when one layer names it the
+      reference passes through untouched and nothing is currently broken — which is exactly why this
+      has to be fixed now rather than when it first bites. Make `features` a named exception in the
+      merge, in the **opposite** direction from `layout.classNames` (AGENTS.md's one accumulating
+      option): replace, never accumulate. Cover it with a case that supplies `features` at two
+      layers and asserts the instance's set wins **by key set**, not by reference — a reference
+      comparison would pass whatever the merge did, which is the flaw an earlier PR-1 test had to be
+      discarded for.
+
+- [ ] **12. Snapshot** to `.superpowers/sdd/plan/snapshots/task-16/`.
+
+**Criterion:** `pnpm --filter @ez-kit/data-grid-react test` **runs** (it has not since Task 2),
+`use-data-grid.test.tsx` plus the new lifecycle file pass. `resolved-options.test.ts`'s three
+virtualization cases are **expected to still fail here** and are Task 17's: they throw
+`TypeError: table.getSnapshot is not a function` at `use-data-grid-selector.ts:34`, reached
+unconditionally through `useDataGrid → useOrderedData → useDataGridSelector`, so deleting the
+binding layer inside this hook does not reach them. Confirm they fail on **that** error and not
+another — a different error there means this task broke something Task 17 was going to fix. Other files may still fail — Tasks 17-20
+own them — and the report lists which, by file, so an escapee later is attributable. `git grep -n
+'syncControlledState\|notifyStateSubscribers\|pendingNotifyRef'` over the react package returns
+nothing but past-tense comments.
+
+---
+
+### Task 17: The state layer onto `table.store`
+
+Three `useSyncExternalStore` call sites reach the grid, and all three read methods PR 1 deleted.
+This is the collapse design §4 predicts: `use-data-grid-selector`, `use-extracted-state` and
+`extract-state` are doing by hand what `table.Subscribe` and `table.atoms` do.
+
+**Branch:** `integration/tanstack-v9`.
+
+**Files:**
+
+- Modify: `packages/data-grid/react/react/src/use-data-grid-selector.ts`
+- Modify: `packages/data-grid/react/react/src/state/use-extracted-state.ts`
+- Modify: `packages/data-grid/react/react/src/state/extract-state.ts`
+- Modify: `packages/data-grid/react/react/src/state/state-keys.ts`
+- Modify: `packages/data-grid/react/react/src/prepare-table.test.ts`
+- Modify: the matching `.test.ts(x)` beside each
+
+**Steps:**
+
+- [ ] **1. `useDataGridSelector` keeps `useSyncExternalStore` and reads `table.store`.**
+      `table.subscribe` / `getSnapshot` / `getInitialSnapshot` are gone. Two mechanical facts, both
+      verified against the installed packages rather than assumed, fix the shape of the replacement:
+
+      - **`@tanstack/react-table` does NOT re-export `useSelector` or `shallow`.** Its index
+        exports exactly `FlexRender, Subscribe, createTableHook, createTableHookContexts,
+        flexRender, useTable` plus `export * from "@tanstack/table-core"`. Reaching `useSelector`
+        means a **direct** dependency on `@tanstack/react-store`, and §2.10 is the standing warning
+        against exactly that move: `@tanstack/react-form` pins `react-store@0.11.0` while
+        `react-table` resolves `0.11.1`, and PR 1 proved twice that adding a store package
+        deterministically re-points the tree. Do not add it.
+      - **`ReadonlyStore.subscribe` returns a `Subscription` (`{ unsubscribe }`), not an unsubscribe
+        function** (`@tanstack/store@0.11.1/dist/store.d.ts:20`). `useSyncExternalStore` wants
+        `() => void`, so the subscribe argument is a small adapter, memoized on `table`:
+
+        ```ts
+        const subscribe = useCallback(
+        	(onStoreChange: () => void) => {
+        		const sub = table.store.subscribe(onStoreChange)
+        		return () => {
+        			sub.unsubscribe()
+        		}
+        	},
+        	[table],
+        )
+        ```
+
+      This keeps the hook's current semantics **exactly**: the selector's referential-stability
+      contract is the caller's, as the docblock already says, and no `shallow` compare is
+      introduced. Switching to `useSelector` with `shallow` would quietly change the re-render
+      behaviour of every selector in the package — an unrequested behaviour change inside a PR
+      already carrying several. Design §4's "`@tanstack/react-store` enters the react package" is
+      satisfied transitively through `react-table`, which is why it is already in all five
+      `size-limit` `ignore` lists.
+
+- [ ] **2. The server snapshot goes, and the docblock's contract stays.** Pass `table.store.state`
+      through the **same** getter for both the client and the server argument — which is what
+      upstream's own `useSelector` does (api-notes §4, read from `react-store/dist/useSelector.js`:
+      one `getSnapshot` handed to `useSyncExternalStoreWithSelector` twice), and why §1.1(c) deleted
+      `getInitialSnapshot` rather than wrapping it. v9 has no server-snapshot concept at all, and
+      `table.initialState` is the value to pass if one is ever wanted. But
+      `getInitialSnapshot` rather than wrapping it. But `useDataGridSelector`'s docblock states a
+      **referential-stability contract** on the selector, and that contract is still real: keep it,
+      and re-verify the sentence about TanStack keeping stable per-field references, because it was
+      written about v8's `TableState` and the atoms are what hold it now.
+- [ ] **3. `useExtractedState` keeps its memo, for a reason that did not change.** `pickState`
+      allocates a fresh object per call, so it cannot be returned raw from a selector any more than
+      from `getSnapshot` — `useSyncExternalStore` would see a new object each time and loop, and
+      the `keys`-list cache is what makes the identity stable. Keep the cache; change only where
+      the state comes from.
+- [ ] **4. `extract-state.ts:64` — `table.getState()` becomes `table.store.state`.** This is the
+      non-reactive, framework-agnostic path (it takes a core `Table`, so it works outside React),
+      and `table.store.state` is the whole current snapshot (api-notes §4).
+- [ ] **5. Re-derive the `draft` projection against the real slice set.** `pickDraft`
+      (`extract-state.ts:44-58`) reads `applied` through
+      `(state as unknown as Record<string, unknown>).applied` with a comment saying the key is
+      declared non-optional but only written by the draft feature. In v9 that is no longer a lie
+      worth casting around: `applied` exists on the state **iff** `draftFeature` is registered, and
+      `TableState<GridFeatures>` declares it (F2). Replace the cast with a plain read and a presence
+      check, and keep the behaviour — `undefined` when there is no `applied`, `undefined` when
+      nothing differs from it. Check both directions: that something still reads it, and that
+      nothing else was reading the cast's widened shape.
+- [ ] **6. `state-keys.ts` — re-verify `PERSISTABLE_STATE_KEYS` against v9's slice names.** It is
+      `satisfies readonly (keyof TableState | typeof DRAFT_STATE_KEY)[]`, so a renamed slice is a
+      compile error and the compiler will say so — but `columnSizing` survived while
+      `columnSizingInfo` became `columnResizing` (design §5), so confirm by reading which of the two
+      this list meant. A persistable-keys list that silently loses a slice is a deep link that
+      silently stops restoring it.
+- [ ] **7. `prepare-table.test.ts` asserts three methods PR 1 deleted — remove them, do not repair
+      them.** Lines 56-58 assert `table.subscribe`, `table.getSnapshot` and `table.getInitialSnapshot`
+      are functions, and 62-70 is a whole test for `getInitialSnapshot`'s frozen-snapshot behaviour
+      — eight of that file's fourteen errors. Per §1.1(c) the guarantee they test now lives on
+      `table.initialState`, which v9 resolves once at construction and never reassigns, so there is
+      nothing left for them to assert about this package. Delete them and record in the file that
+      the guarantee moved and where. If the frozen-snapshot property is still worth a case, write
+      it against `table.initialState` instead — but do not keep a test named for a method that no
+      longer exists.
+
+      This step exists because the file was owned by no task: Task 14 modifies it and no later task
+      named it, so its stale assertions would have been fixed anonymously by Task 19's
+      whole-suite criterion, or not at all. It is assigned here because this task owns the deleted
+      `getSnapshot` / `getInitialSnapshot` theme (§2.3).
+
+- [ ] **8. Snapshot** to `.superpowers/sdd/plan/snapshots/task-17/`.
+
+**Criterion:** `prepare-table.test.ts`, `use-data-grid-selector.test.tsx`, `state/extract-state.test.ts` and the extracted-
+state tests pass. `git grep -n 'getSnapshot\|getInitialSnapshot' packages/data-grid/react` returns
+only `apps/`-style false positives — and note the one real false positive is not in this package:
+`apps/docs/hooks/use-mobile.ts:14,23` is React's own `useSyncExternalStore` over a media query
+(§2.3), no action, do not "fix" it.
+
+**Task 14's two owed tests are discharged here.** `prepare-table.test.ts`'s "merges onto the grid
+options core already seeded rather than replacing them" already passes; `resolved-options.test.ts`'s
+three virtualization cases must pass **by the end of this task**, because this task removes the last
+thing stopping them — `use-data-grid-selector.ts`'s call to the deleted `table.getSnapshot()`. They
+were written in Task 14 against a tree where they could not go green, and a test written in one task
+and runnable only in a later one belongs to that later task's criterion or it belongs to nobody.
+Note the blocker was misattributed twice before landing here (first to Task 15's fixture, then to
+Task 16's binding layer); the mechanism above was read off an actual stack trace, not inferred.
+
+---
+
+### Task 18: `gridContext` becomes an atom — the second store goes
+
+Design §4: after this work no hand-written store remains in the repository.
+
+**Branch:** `integration/tanstack-v9`.
+
+**Files:**
+
+- Modify: `packages/data-grid/react/react/src/grid-context.tsx`
+- Modify: `packages/data-grid/react/react/src/prepare-table.ts`
+- Modify: `packages/data-grid/react/react/src/use-data-grid.ts` (the sync block)
+- Modify: `packages/data-grid/react/react/src/grid-context.test.tsx`
+
+**Steps:**
+
+- [ ] **1. Replace `createGridContextStore` with a writable atom.** The atom comes from the same
+      binding the table uses, so no new dependency and one store instance
+      (`storeReactivityBindings().createWritableAtom` is how core mints the draft atoms — §4.2 —
+      and `reactReactivity` passes `createAtom` from `@tanstack/react-store`). Read it with
+      `useSyncExternalStore` over the atom's own `subscribe` / `get`, the same way and for the same
+      reasons Task 17 reads `table.store` — including the `Subscription` adapter, since `Atom`
+      extends `Subscribable` and its `subscribe` returns `{ unsubscribe }` too. Do **not** add a
+      direct `@tanstack/react-store` dependency (Task 17 Step 1 records why).
+- [ ] **2. The `silent` / `notify` protocol goes with it.** `grid-context.tsx:64-96` reimplements
+      the same render-phase hack `use-data-grid.ts` had, for the same reason, and the
+      render-phase reactivity binding is the supported answer to it (Decision A). Delete
+      `setState(next, { silent })` and `notify()`, and delete the paired `pendingContextNotifyRef` +
+      layout effect at `use-data-grid.ts:1216-1244`.
+- [ ] **3. Keep `isSameContext` and the comparison it guards.** `mergeGridOptionLayers` rebuilds the
+      merged config every render, so an unconditional write would wake every whole-object reader on
+      every render (`grid-context.tsx:150`). An atom does not change that; the compare is still
+      load-bearing.
+- [ ] **4. Keep `GridContext` declaration-merged where it is.** The `interface GridContext {}`
+      merge target is **ours**, in `@ez-kit/data-grid-react` — nothing to do with the
+      `@tanstack/table-core` blocks Task 14 deleted, and consumers' `declare module
+'@ez-kit/data-grid-react'` augmentations must keep working. `grid-context.test.tsx:19` merges
+      it and is the guard; leave both.
+- [ ] **5. Prove no hand-written store remains.** `git grep -rn 'listeners\s*=\s*new Set\|getState:\s*()\s*=>\|subscribe:\s*(listener'`
+      across `packages/` returns nothing outside tests. Record the command and its output in the
+      report — design's definition of done names this, so it is checked rather than asserted.
+- [ ] **6. Snapshot** to `.superpowers/sdd/plan/snapshots/task-18/`.
+
+**Criterion:** `grid-context.test.tsx` passes, including the consumer-augmentation case, and Step 5's
+grep is clean.
+
+---
+
+### Task 19: The leaf sweep — the remaining `getState()` sites and the two named defects
+
+Fourteen real `table.getState()` reads in source and forty across twelve test files, plus the two
+defects §2.6 and the non-reactive infinite-scroll reads.
+
+**Branch:** `integration/tanstack-v9`.
+
+**Files:** every file listed in Step 1's inventory, plus
+`packages/data-grid/react/react/src/data-grid/header-cell.tsx`,
+`packages/data-grid/react/react/src/data-grid/use-infinite-scroll.ts`,
+`packages/data-grid/react/react/src/api-shapes.test.tsx`.
+
+**Steps:**
+
+- [ ] **1. Inventory first, and separate the two `getState`s.** `git grep -n 'getState()'` over the
+      package returns twenty source lines, and **six of them must not be touched**:
+      `table.creating.getState()` (`creating-row.tsx:43`, `creating-modal.tsx:19`,
+      `auto-form.tsx:43`), `table.editing.getState()` (`editing-modal.tsx:19`, `auto-form.tsx:43`),
+      and `store.getState()` inside `grid-context.tsx`, which is Task 18's. Those are our own
+      feature-namespace APIs and they survive. A sweep that rewrites them is the inverse of this
+      migration's signature defect — a working call broken by a rename that did not apply to it —
+      and it is the likeliest way to lose this task. Write the keep-list into the report **before**
+      editing anything.
+- [ ] **2. Rewrite the fourteen real ones.** `table.getState().<slice>` becomes
+      `table.store.state.<slice>` for a snapshot read, or `table.atoms.<slice>.get()` for a single
+      slice — and where the component wants to _re-render_ on the change, `useDataGridSelector`.
+      Decide per site which of the three it is; several of these are currently snapshot reads inside
+      components that re-render for another reason, and turning one into a subscription changes
+      render behaviour. Note the choice per site in the report.
+      Per `plan.md`'s carry-forward: in the React adapter `TFeatures` is resolved, so
+      `table.atoms.<slice>.get()` type-checks here directly — core's `feature-state/` accessor is
+      for feature hooks and **must not** be imported by the react package.
+- [ ] **3. `header-cell.tsx:201` — the reordering handler reads a resizing option as direction.**
+      Per §2.6, `table.options.columnResizeDirection` is declared on
+      `TableOptions_ColumnResizing` and does not exist without `columnResizingFeature`, so the
+      default grid (ordering on, resizing off) gets `undefined` and **both** Alt+Arrow shortcuts
+      move columns the wrong way under RTL, silently. Correct to:
+
+      ```ts
+      const towardsStart = (e.key === 'ArrowLeft') !== (grid.direction === GridDirection.Rtl)
+      ```
+
+      `grid.direction` is core's member, folded into `ResolvedGridOptions` by Task 14 Step 5 —
+      which is why this task comes after it. Cover it: a grid with `direction: 'rtl'`, ordering on
+      and resizing **off**, asserting Alt+ArrowLeft moves the column towards the start. The test
+      must fail against the current line; say so in the report.
+
+- [ ] **4. `api-shapes.test.tsx:135-137` must be rewritten or deleted, with the reason in the
+      file.** Per §2.6 its doc comment states the old contract ("reaches the resize delta with
+      resizing off") as a fact, and that contract is gone. Whichever is chosen, the file carries the
+      reason — a deleted test with no note is indistinguishable from an escapee.
+- [ ] **5. `use-infinite-scroll.ts:65,98` are non-reactive reads** of `.infinite` inside callbacks.
+      They become `table.atoms.infinite.get()` — a snapshot at call time, which is what they want.
+      Confirm `infiniteFeature` is registered wherever this hook runs, because without it the atom
+      does not exist and the read throws rather than returning `undefined` (§2.4).
+- [ ] **6. Register the seven grid-own features, and prove omission is caught.** §2.4: v9 registers
+      nothing by default, and omitting `editingFeature`, `creatingFeature`, `deletingFeature`,
+      `draftFeature`, `loadingFeature`, `infiniteFeature` or `rowOrderingFeature` makes
+      `state.editing`, `table.editing`, `row.getIsEditing`, `s.loading`, `s.infinite` and `rowOrder`
+      silently `undefined`. React does not _register_ them — the consumer composes the set
+      (design D1) — so what this step owes is the **check**: assert that core's development warning
+      fires through the react hook for at least one feature, using the narrow feature set
+      Task 15 Step 4 exported. Do the same for the three named-function registries: `filterFns`,
+      `sortFns` and `aggregationFns` are `@deprecated` upstream but load-bearing, and a set without
+      `filterFns` silently filters nothing.
+- [ ] **7. Audit prototype-bound methods, the class the type checker cannot see.** Design §2's
+      named risk: row / cell / column / header methods live on shared per-table prototypes, so
+      destructuring, spreading, `Object.keys` and `JSON.stringify` no longer reveal or preserve
+      them. Design §7 records that a sweep before PR 0 found **none** in the tree and that the only
+      `...cell` match spreads a plain column-def config. Re-run that sweep over the react package
+      now that the hook has changed, and record the command and the result — a clean sweep recorded
+      is evidence; a clean sweep assumed is nothing. Table-instance methods are own properties and
+      are unaffected; `editing.getIsEditing` is ours and is the one to look at hardest.
+- [ ] **8. Snapshot** to `.superpowers/sdd/plan/snapshots/task-19/`.
+
+**Criterion:** the whole react suite passes except any case Task 20 owns, and
+`git grep -n 'table\.getState()' packages/data-grid/react` returns nothing. The report carries the
+Step 1 keep-list, the Step 2 per-site choices and the Step 7 sweep output.
+
+---
+
+### Task 20: `deleting: true` renders a Delete button that does nothing
+
+A pre-existing defect surfaced while porting the feature (§2.4), unrelated to v9 but found by it.
+Its own task because it is a behaviour fix, not a migration edit, and it needs its own regression
+test and its own line in the changeset.
+
+**Branch:** `integration/tanstack-v9`.
+
+**Files:**
+
+- Modify: whichever of `packages/data-grid/react/react/src/data-grid/build-action-items.ts` /
+  `actions-cell.tsx` the diagnosis lands on
+- Modify / create: the matching test
+
+**Steps:**
+
+- [ ] **1. Reproduce before diagnosing.** A grid with `deleting: true` (the scalar form, no
+      `onDelete`), render the row actions, click Delete, assert what happens today. The report
+      carries the observed behaviour before any fix.
+- [ ] **2. Decide what `deleting: true` should mean, against the settled vocabulary.** The scalar
+      form is "on with defaults" everywhere in this API (AGENTS.md's scalar-or-object rule), and
+      `enabledByHandler(config.deleting, 'onDelete')` at `use-data-grid.ts:922` says the feature is
+      considered enabled by the presence of its handler. Those two rules are in tension for the bare
+      `true`, and the fix is whichever resolves it **without** changing what `deleting: { onDelete }`
+      does. If the honest answer is that a bare `true` should warn rather than render a dead
+      control, that is a legitimate outcome — say so and implement it.
+- [ ] **3. Fix, and pin it with a test that fails against the current code.** State in the report
+      that it fails and paste the failure.
+- [ ] **4. Snapshot** to `.superpowers/sdd/plan/snapshots/task-20/`.
+
+**Criterion:** the new test passes and fails when the fix is reverted. Full react suite green.
+
+---
+
+### Task 21: Close PR 2 — four gates, the budgets, and the single commit
+
+**Branch:** `integration/tanstack-v9`.
+
+**Files:**
+
+- Modify: `packages/data-grid/react/react/package.json` (the five `size-limit` budgets only)
+- Modify: `specs/005-tanstack-table-v9/plan.md` (tick the boxes)
+
+**Steps:**
+
+- [ ] **1. Run the four gates independently of any task's report**, in this order, and paste each
+      output into the report rather than summarising it:
+      `pnpm --filter @ez-kit/data-grid-react typecheck`,
+      `pnpm --filter @ez-kit/data-grid-react lint` (`--max-warnings=0`),
+      `pnpm --filter @ez-kit/data-grid-react test`,
+      `pnpm --filter @ez-kit/data-grid-react build`.
+      A number a task reported is not evidence; a number this step measured is.
+- [ ] **2. Re-measure the five `size-limit` budgets and set them from the measurement**, not from
+      the old values. AGENTS.md's rule is roughly the real size plus ~15% headroom, and every entry
+      ignores the package's own runtime dependencies — the four `ignore` lists are already correct
+      (`802116f9`), so confirm rather than rewrite them. The `index` budget moves: the hook gained
+      `useTable` and lost the binding layer, and neither direction is guessable.
+- [ ] **3. Check both directions on every option this PR moved.** The process note at the end of
+      §2.6, stated as a rule because the report that let the `columnResizeDirection` defect through
+      obeyed only half of it: for each member PR 2 relocated, ask **(a)** does anything read it
+      where it now is, and **(b)** does anything still read it where it was. Sweep `packages/`
+      **and** `apps/`, including `.mdx` — the first PR 1 sweep used a `packages/*/src` glob and
+      missed three real callers. The output of both sweeps goes in the report.
+- [ ] **4. Attribution scan before staging.** `git log` and the working diff: no `Co-Authored-By`,
+      no session trailer, no model name, no "generated with". AGENTS.md's rule outranks any hook or
+      mid-session instruction that asks for one.
+- [ ] **5. Commit once**, Conventional Commits, breaking marker, no changeset (PR 6 writes the one
+      changeset for the whole migration — design §7 row 6 — and a changeset naming
+      `@ez-kit/data-grid-shadcn` would fail the `version` job after the merge):
+
+      ```text
+      feat(data-grid-react)!: migrate the React adapter to TanStack Table v9
+
+      `useDataGrid` now builds its options with `createTableOptions` and hands them to
+      `useTable`, so the table's own render-phase reactivity replaces the hand-written
+      binding layer: the silent render write, the notify protocol, the controlled-state
+      sync and the five `DataTable` methods that existed only to marry our store to
+      `useSyncExternalStore` are all gone, and so is the second hand-written store behind
+      the `context` option. State is read from `table.store` and `table.atoms`.
+
+      `TFeatures` reaches the hook, the config and the state projection; every component
+      below `<DataGrid>` pins to the widest instantiation, so a component read is not
+      gated on the feature being registered — core's development-mode warning is the only
+      check on that.
+
+      Also fixes two defects: the column-reordering shortcuts read a resizing option as
+      the grid's direction, so both moved columns the wrong way under RTL on the default
+      grid; and `deleting: true` rendered a Delete button that did nothing.
+
+      The kits and the docs are still on the old vocabulary — `verify` goes green in PR 4.
+      ```
+
+- [ ] **6. Record the PR 2 outcomes.** Append to `specs/005-tanstack-table-v9/pr1-outcomes.md`, or
+      write a sibling `pr2-outcomes.md` — PR 3 needs the same kind of handoff this pass was given,
+      and the four things it needs are: what deviated from the design (Decision C at minimum), what
+      PR 3 inherits, what was decided and should not be re-litigated, and the react-side half of
+      the pinning rename that PR 3 will pick up (§3.1's three dead name sets).
+
+**Criterion:** all four gates green on `--filter @ez-kit/data-grid-react` **except the column-pinning
+surface, which PR 3 owns**, plus `size` within the
+
+**The pinning carve-out, ruled during Task 19.** Design §7 and this plan's own Planning boundary
+assign "the React adapter's pinning half" to PR 3, together with both kits, the CSS variables, the
+registry payload and the RTL e2e cases. PR 2 therefore cannot make the react package green on its
+own: `data-attrs.test.tsx`'s four column-pinning cases, ~10 of the residual lint errors, and the
+typecheck errors in `pin-styles.ts` and `column-menu-sections.ts` all need the `left` / `right` →
+`start` / `end` rename. Pulling that rename forward into PR 2 was considered and rejected — it
+changes a DOM contract (`data-pinned`, `data-pin-shadow`, `--dg-pin-*`) that both kits' stylesheets,
+the shadcn registry payload and the e2e specs target, none of which PR 2 is allowed to touch, so it
+would leave the kits broken in a _new_ way on top of the way they are already broken.
+
+This is the same tension Decision C records one level up, and it resolves the same way: the row's
+content is delivered here and its criterion moves to the PR that can meet it. **The react package
+goes green in PR 3**, and full `verify` in PR 4. Task 21 records the exact residue — file, test
+names, error counts — so PR 3 inherits a list rather than a search, and so a _different_ failure
+appearing later is not mistaken for this one.
+
+re-measured budgets; working tree clean; `pnpm-lock.yaml` unmodified (§2.10 — the branch's only lock
+diff is the v9 install in `43ac83c9`, and it stays that way); attribution scan returns zero.
+
+## Full `verify` is **not** the criterion and is expected red — see Decision C.
+
 ## Planning boundary
 
-This pass stops at the end of PR 1. The next pass covers **PR 2 (React)**, and it waits on two
-things Task 13 produces rather than predicts:
+This document now covers **PR 0 (Task 1), PR 1 (Tasks 2-13) and PR 2 (Tasks 14-21)**. PR 1's two
+open questions were both settled by the PR 2 pass, against the tree rather than the design, and
+their answers are recorded in the "PR 2 — orientation" section above rather than here:
 
-1. **The real shape of `createTableOptions`' return value and of `DataTable`.** PR 2's central
-   question — whether `useDataGrid` adopts `useTable` wholesale or keeps its own
-   `useSyncExternalStore` — turns on how much of `use-data-grid.ts` still has a job once
-   `table.Subscribe` and `table.atoms` exist. Tasks 6 and 12 make that concrete: the answer is
-   readable from the code, and guessing it now would produce signatures for a hook nobody has
-   run. Both branches are already unblocked from core's side — decision 5 records that neither
-   needs an API core does not ship.
-2. **Which prototype-bound reads the React package actually performs.** Task 9's characterization
-   test fixes the rule; PR 2's audit applies it to ~13.6k lines. That audit is cheap once
-   `editingFeature` exists and expensive to do against a feature that is still v8-shaped.
+1. **Whether `useDataGrid` adopts `useTable`.** It does — Decision A. The deciding evidence is
+   `reactReactivity()` being `renderPhaseReactivity({ createAtom, batch })` where core's
+   `createTable` injects the vanilla `storeReactivityBindings()`: the render-phase preset is
+   upstream's supported version of the silent-write / notify hack design §3 lists for deletion, so
+   the branch that deletes the binding layer and the branch that adopts `useTable` are one branch.
+2. **Which prototype-bound reads the React package performs.** Task 19 Step 7 re-runs the sweep
+   design §7 already ran once (it found none) and records the command and its output, because a
+   clean sweep recorded is evidence and a clean sweep assumed is nothing.
 
-Two carry-forwards for that pass: the react package has **17** `getState()` call sites, not the
-20 design §3 records; and Task 7's accessor is for feature hooks only — in the React adapter
-`TFeatures` is resolved, so `table.atoms.<slice>.get()` compiles there and is what PR 2 should
-write.
+Two carry-forwards from that pass, both re-measured: the react package has **14** real
+`table.getState()` source sites — not the 17 recorded here earlier, and not design §3's 20 —
+because six further `getState()` matches are `table.creating.getState()` /
+`table.editing.getState()` / the context store's own, which are not the deleted API and must not be
+swept (Task 19 Step 1). And Task 7's accessor is for feature hooks only: in the React adapter
+`TFeatures` is resolved, so `table.atoms.<slice>.get()` compiles there and is what PR 2 writes —
+`feature-state/` must not be imported by the react package.
 
 Beyond PR 2, design §7 rows 3, 4, 5 and 6 are planned in later passes, each after the one before
 it has landed — for the same reason this pass waited for Task 2: the plan is worth more when it
 is written against a tree than against a document. **Row 3 is now smaller than the design states**
-— Task 4 took the core-side renames, so PR 3 is the React adapter, both kits, the CSS variables,
-the registry payload and the RTL e2e cases.
+— Task 4 took the core-side renames, so PR 3 is the React adapter's pinning half, both kits, the
+CSS variables, the registry payload and the RTL e2e cases. **Row 2's criterion moved**: full
+`verify` cannot go green in PR 2 while both kits still name `GridMenuIcon.PinLeft` / `.PinRight`,
+so it goes green in PR 4 (Decision C).
 
 The branch stays local throughout. Pushing `integration/tanstack-v9` and opening any PR against
 it is the human's call, and no task above contains a step that does either.

@@ -3,13 +3,14 @@ import { useGridComponents } from '../components-context'
 import { flexRender } from './flex-render'
 import { useDataGridState, useDataGridTable } from './table-context'
 
+import type { GridFeatures } from '../types'
 import type { ExpandedRowProps } from '../use-data-grid'
 import type { Row } from '@tanstack/table-core'
 import type { ComponentType } from 'react'
 
 type ExpandedRowComponentProps = {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	row: Row<any>
+	row: Row<GridFeatures, any>
 }
 
 type ExpandConfig = {

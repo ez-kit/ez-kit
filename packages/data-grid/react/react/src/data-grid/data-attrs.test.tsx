@@ -2,11 +2,12 @@ import { createTable, createColumns } from '@ez-kit/data-grid-core'
 import { describe, expect, it } from 'vitest'
 
 import { prepareDataGridTable } from '../prepare-table'
-import { renderWithComponents } from '../test-utils'
+import { TEST_FEATURES, renderWithComponents } from '../test-utils'
 
 import { DataGrid } from './data-grid'
 
 import type { ResolvedGridOptions } from '../resolved-options'
+import type { GridFeatures } from '../types'
 
 type User = { id: number; name: string; age: number }
 
@@ -20,7 +21,7 @@ const COLUMNS = createColumns<User>([
 ])
 
 function makeTable() {
-	return createTable<User>({ data: USERS, columns: COLUMNS })
+	return createTable<GridFeatures, User>({ features: TEST_FEATURES, data: USERS, columns: COLUMNS })
 }
 
 /**
@@ -70,7 +71,12 @@ describe('headless data-* contract', () => {
 	})
 
 	it('sortable headers emit data-sortable + data-sort-direction', () => {
-		const table = createTable<User>({ data: USERS, columns: COLUMNS, sorting: true })
+		const table = createTable<GridFeatures, User>({
+			features: TEST_FEATURES,
+			data: USERS,
+			columns: COLUMNS,
+			sorting: true,
+		})
 		const { container } = renderWithComponents(<DataGrid table={prepareDataGridTable(table)} />)
 		const triggers = container.querySelectorAll("[data-slot='sort-trigger'][data-sortable='true']")
 		expect(triggers.length).toBeGreaterThan(0)
@@ -84,7 +90,12 @@ describe('headless data-* contract', () => {
 			{ accessorKey: 'name', header: 'Name', pinning: { side: 'left' } },
 			{ accessorKey: 'age', header: 'Age' },
 		])
-		const table = createTable<User>({ data: USERS, columns: COLS_PINNED, pinning: { column: true } })
+		const table = createTable<GridFeatures, User>({
+			features: TEST_FEATURES,
+			data: USERS,
+			columns: COLS_PINNED,
+			pinning: { column: true },
+		})
 		const { container } = renderWithComponents(<DataGrid table={prepareDataGridTable(table)} />)
 		expect(container.querySelector("[data-slot='th'][data-pinned='left']")).not.toBeNull()
 	})
@@ -94,7 +105,12 @@ describe('headless data-* contract', () => {
 			{ accessorKey: 'name', header: 'Name', pinning: { side: 'left' } },
 			{ accessorKey: 'age', header: 'Age' },
 		])
-		const table = createTable<User>({ data: USERS, columns: COLS_PINNED, pinning: { column: true } })
+		const table = createTable<GridFeatures, User>({
+			features: TEST_FEATURES,
+			data: USERS,
+			columns: COLS_PINNED,
+			pinning: { column: true },
+		})
 		const { container } = renderWithComponents(<DataGrid table={prepareDataGridTable(table)} />)
 		expect(container.querySelector("[data-pin-shadow='left']")).not.toBeNull()
 		expect(container.querySelector("[data-slot='pin-shadow-overlay']")).not.toBeNull()
@@ -111,7 +127,12 @@ describe('headless data-* contract', () => {
 			{ accessorKey: 'age', header: 'Age', width: 120, pinning: { side: 'left' } },
 			{ accessorKey: 'id', header: 'Id', width: 90, pinning: { side: 'right' } },
 		])
-		const table = createTable<User>({ data: USERS, columns: COLS_MULTI, pinning: { column: true } })
+		const table = createTable<GridFeatures, User>({
+			features: TEST_FEATURES,
+			data: USERS,
+			columns: COLS_MULTI,
+			pinning: { column: true },
+		})
 		const { container } = renderWithComponents(<DataGrid table={prepareDataGridTable(table)} />)
 
 		const overlay = container.querySelector<HTMLElement>("[data-slot='pin-shadow-overlay']")
@@ -138,7 +159,12 @@ describe('headless data-* contract', () => {
 			{ accessorKey: 'age', header: 'Age', width: 120, pinning: { side: 'left' } },
 			{ accessorKey: 'id', header: 'Id', width: 90, pinning: { side: 'right' } },
 		])
-		const table = createTable<User>({ data: USERS, columns: COLS_MULTI, pinning: { column: true } })
+		const table = createTable<GridFeatures, User>({
+			features: TEST_FEATURES,
+			data: USERS,
+			columns: COLS_MULTI,
+			pinning: { column: true },
+		})
 
 		// jsdom reports every rect as zero, so stand in a layout where the DOM edges sit 4px
 		// past the model ones — the exact drift HeroUI's inset scroll container produces.
@@ -170,7 +196,7 @@ describe('column alignment data attributes', () => {
 			{ accessorKey: 'name', header: 'Name' },
 			{ accessorKey: 'age', header: 'Age', align: 'end' },
 		])
-		const table = createTable<User>({ data: USERS, columns })
+		const table = createTable<GridFeatures, User>({ features: TEST_FEATURES, data: USERS, columns })
 		const { container } = renderWithComponents(<DataGrid table={prepareDataGridTable(table)} />)
 
 		const headers = container.querySelectorAll("[data-slot='th']")
@@ -187,7 +213,7 @@ describe('column alignment data attributes', () => {
 			{ accessorKey: 'name', header: 'Name' },
 			{ accessorKey: 'age', header: 'Age', align: { cell: 'end', header: 'center' } },
 		])
-		const table = createTable<User>({ data: USERS, columns })
+		const table = createTable<GridFeatures, User>({ features: TEST_FEATURES, data: USERS, columns })
 		const { container } = renderWithComponents(<DataGrid table={prepareDataGridTable(table)} />)
 
 		expect(container.querySelectorAll("[data-slot='th']")[1]?.getAttribute('data-align')).toBe('center')
@@ -199,7 +225,7 @@ describe('column alignment data attributes', () => {
 			{ accessorKey: 'name', header: 'Name' },
 			{ accessorKey: 'age', header: 'Age', align: { cell: 'end' } },
 		])
-		const table = createTable<User>({ data: USERS, columns })
+		const table = createTable<GridFeatures, User>({ features: TEST_FEATURES, data: USERS, columns })
 		const { container } = renderWithComponents(<DataGrid table={prepareDataGridTable(table)} />)
 
 		expect(container.querySelectorAll("[data-slot='th']")[1]?.getAttribute('data-align')).toBeNull()

@@ -8,6 +8,7 @@ import { buildActionItems } from './build-action-items'
 import { useDataGridState, useDataGridTable } from './table-context'
 
 import type { GridMenuItem } from '../menu'
+import type { GridFeatures } from '../types'
 import type { Table } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
@@ -18,7 +19,7 @@ import type { ReactNode } from 'react'
  */
 export function buildSelectionBarArgs(
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	table: Table<any>,
+	table: Table<GridFeatures, any>,
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): SelectionBarCallbackArgs<any> {
 	return {

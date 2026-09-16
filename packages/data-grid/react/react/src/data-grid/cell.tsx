@@ -18,8 +18,9 @@ import { flexRender } from './flex-render'
 import { useDataGridTable, useDataGridState } from './table-context'
 
 import type { CellTypeRegistry, CellViewProps } from '../cell-types-context'
-import type { ColumnAlign, ColumnPinSide, FieldState } from '@ez-kit/data-grid-core'
-import type { ColumnMeta, Cell, Row } from '@tanstack/table-core'
+import type { GridFeatures } from '../types'
+import type { FormColumnMeta, ColumnAlign, ColumnPinSide, FieldState } from '@ez-kit/data-grid-core'
+import type { Cell, Row } from '@tanstack/table-core'
 import type { ComponentType, CSSProperties, ReactNode } from 'react'
 
 /**
@@ -31,16 +32,16 @@ import type { ComponentType, CSSProperties, ReactNode } from 'react'
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type DataGridCellRenderArgs<TRow extends object = any> = {
-	cell: Cell<TRow, unknown>
-	row: Row<TRow>
+	cell: Cell<GridFeatures, TRow>
+	row: Row<GridFeatures, TRow>
 	/** The cell's value, already resolved through the column's accessor. */
 	value: unknown
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type DataGridCellProps<TRow extends object = any> = {
-	cell: Cell<TRow, unknown>
-	row: Row<TRow>
+	cell: Cell<GridFeatures, TRow>
+	row: Row<GridFeatures, TRow>
 	/**
 	 * Custom content for this one cell, rendered inside the kit's `Td` — so the cell keeps its
 	 * pinning offset, its `data-*` attributes and its `cellClassName`.
@@ -189,7 +190,7 @@ function SystemCell({ cell, row }: DataGridCellProps) {
 
 type SystemSubProps = {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	row: Row<any>
+	row: Row<GridFeatures, any>
 	chrome: CellChrome
 }
 
@@ -334,7 +335,7 @@ function BodyDataCell({ cell, row }: DataGridCellProps) {
 
 type EditingCellProps = {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	cell: Cell<any, unknown>
+	cell: Cell<GridFeatures, any>
 	editMode: EditingMode
 	cellId: string
 	chrome: CellChrome
@@ -470,15 +471,20 @@ function EditingCell({ cell, editMode, cellId, chrome }: EditingCellProps) {
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 
-function getCellChrome(cell: Cell<unknown, unknown>): CellChrome {
+function getCellChrome(cell: Cell<GridFeatures, unknown>): CellChrome {
 	const pinVars = getCommonPinStyles(cell.column)
 	const pinned = cell.column.getIsPinned()
 	const pinnedAttrs: CellChrome['pinnedAttrs'] = pinned ? { 'data-pinned': pinned } : {}
-	return { pinVars, pinned, pinnedAttrs, alignAttrs: getAlignAttrs(cell.column.columnDef.meta, 'cell') }
+	return {
+		pinVars,
+		pinned,
+		pinnedAttrs,
+		alignAttrs: getAlignAttrs(cell.column.columnDef.meta as FormColumnMeta | undefined, 'cell'),
+	}
 }
 
 function resolveEditComponent(
-	meta: ColumnMeta<unknown, unknown> | undefined,
+	meta: FormColumnMeta | undefined,
 	registry: CellTypeRegistry,
 ): ComponentType<FieldState> | undefined {
 	// 1. column-level editing.component
@@ -508,7 +514,7 @@ function resolveEditComponent(
  * register them via `CellTypesProvider` or `createDataGrid({ cellTypes })`.
  */
 function resolveViewComponent(
-	meta: ColumnMeta<unknown, unknown> | undefined,
+	meta: FormColumnMeta | undefined,
 	registry: CellTypeRegistry,
 ): ComponentType<CellViewProps> | undefined {
 	// Returned as-is, never wrapped: `flexRender` mounts by component identity, so a wrapper

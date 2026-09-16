@@ -5,7 +5,7 @@ import { useGridComponents } from '../components-context'
 import { DataGridHeaderRow } from './header-row'
 import { useDataGridTable, useDataGridState } from './table-context'
 
-import type { DataTable } from '@ez-kit/data-grid-core'
+import type { DataTable, GridFeatures } from '../types'
 import type { HeaderGroup } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
@@ -57,8 +57,8 @@ export type DataGridHeaderProps<TRow extends object = any> = {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type DataGridHeaderRenderArgs<TRow extends object = any> = {
-	table: DataTable<TRow>
-	headerGroups: HeaderGroup<TRow>[]
+	table: DataTable<GridFeatures, TRow>
+	headerGroups: HeaderGroup<GridFeatures, TRow>[]
 }
 
 /**
@@ -126,7 +126,7 @@ export function Header<TRow extends object = any>({ sticky, children }: DataGrid
 	useDataGridState((s) => s.columnOrder)
 	useDataGridState((s) => s.columnPinning)
 	useDataGridState((s) => s.columnSizing)
-	useDataGridState((s) => s.columnSizingInfo)
+	useDataGridState((s) => s.columnResizing)
 	useDataGridState((s) => s.rowSelection)
 
 	const { Thead } = useGridComponents().core

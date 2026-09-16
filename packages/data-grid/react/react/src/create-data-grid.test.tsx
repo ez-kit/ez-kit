@@ -5,7 +5,9 @@ import { describe, expect, it } from 'vitest'
 import { createDataGrid } from './create-data-grid'
 import { DataGrid } from './data-grid/data-grid'
 import { DataGridOptionsProvider } from './data-grid-options-context'
-import { testComponents } from './test-utils'
+import { TEST_FEATURES, testComponents } from './test-utils'
+
+import type { GridFeatures } from './types'
 
 type Row = { id: number; name: string }
 const ROWS: Row[] = [
@@ -27,6 +29,7 @@ describe('createDataGrid', () => {
 		// TRow is inferred from `data`/`columns` — no explicit type argument.
 		render(
 			<BoundDataGrid
+				features={TEST_FEATURES}
 				data={ROWS}
 				columns={ROW_COLUMNS}
 			/>,
@@ -77,6 +80,7 @@ describe('extendDataGrid (folded into createDataGrid)', () => {
 		const { DataGrid: Extended } = extendDataGrid({})
 		render(
 			<Extended
+				features={TEST_FEATURES}
 				data={ROWS}
 				columns={ROW_COLUMNS}
 			/>,
@@ -101,7 +105,7 @@ describe('createDataGrid({ defaults })', () => {
 	it('applies to the controlled form', () => {
 		const { DataGrid: Bound, useDataGrid } = createDataGrid(KIT)
 		function Grid() {
-			const table = useDataGrid<Row>({ data: ROWS, columns: ROW_COLUMNS })
+			const table = useDataGrid<GridFeatures, Row>({ features: TEST_FEATURES, data: ROWS, columns: ROW_COLUMNS })
 			return <Bound table={table} />
 		}
 		render(<Grid />)
@@ -112,6 +116,7 @@ describe('createDataGrid({ defaults })', () => {
 		const { DataGrid: Bound } = createDataGrid(KIT)
 		render(
 			<Bound
+				features={TEST_FEATURES}
 				data={ROWS}
 				columns={ROW_COLUMNS}
 			/>,
@@ -123,6 +128,7 @@ describe('createDataGrid({ defaults })', () => {
 		const { DataGrid: Bound } = createDataGrid(KIT)
 		render(
 			<Bound
+				features={TEST_FEATURES}
 				data={ROWS}
 				columns={ROW_COLUMNS}
 				messages={{ selection: { selectRow: 'Отметить строку' } }}
@@ -140,6 +146,7 @@ describe('createDataGrid({ defaults })', () => {
 				defaults={{ messages: { selection: { selectRow: 'Провайдер', selectAll: 'Провайдер: все' } } }}
 			>
 				<Bound
+					features={TEST_FEATURES}
 					data={ROWS}
 					columns={ROW_COLUMNS}
 					messages={{ selection: { selectRow: 'Грид' } }}
@@ -160,6 +167,7 @@ describe('createDataGrid({ defaults })', () => {
 		})
 		render(
 			<Bound
+				features={TEST_FEATURES}
 				data={ROWS}
 				columns={ROW_COLUMNS}
 			/>,
@@ -173,10 +181,12 @@ describe('createDataGrid({ defaults })', () => {
 		const { DataGrid: Bound } = createDataGrid(KIT)
 		render(
 			<Bound
+				features={TEST_FEATURES}
 				data={ROWS}
 				columns={ROW_COLUMNS}
 			>
 				<DataGrid
+					features={TEST_FEATURES}
 					data={ROWS}
 					columns={ROW_COLUMNS}
 					selection
@@ -194,11 +204,17 @@ describe('createDataGrid({ defaults })', () => {
 		const { DataGrid: Bound } = createDataGrid(KIT)
 		const { DataGrid: Plain, useDataGrid } = createDataGrid({ components: testComponents })
 		function Inner() {
-			const table = useDataGrid<Row>({ data: ROWS, columns: ROW_COLUMNS, selection: true })
+			const table = useDataGrid<GridFeatures, Row>({
+				features: TEST_FEATURES,
+				data: ROWS,
+				columns: ROW_COLUMNS,
+				selection: true,
+			})
 			return <Plain table={table} />
 		}
 		render(
 			<Bound
+				features={TEST_FEATURES}
 				data={ROWS}
 				columns={ROW_COLUMNS}
 			>
@@ -213,6 +229,7 @@ describe('createDataGrid({ defaults })', () => {
 		const { DataGrid: Bound } = createDataGrid({ components: testComponents })
 		render(
 			<Bound
+				features={TEST_FEATURES}
 				data={ROWS}
 				columns={ROW_COLUMNS}
 				selection
@@ -227,6 +244,7 @@ describe('createDataGrid({ defaults })', () => {
 
 		const inline = render(
 			<Extended
+				features={TEST_FEATURES}
 				data={ROWS}
 				columns={ROW_COLUMNS}
 			/>,
@@ -235,7 +253,7 @@ describe('createDataGrid({ defaults })', () => {
 		inline.unmount()
 
 		function Grid() {
-			const table = useDataGrid<Row>({ data: ROWS, columns: ROW_COLUMNS })
+			const table = useDataGrid<GridFeatures, Row>({ features: TEST_FEATURES, data: ROWS, columns: ROW_COLUMNS })
 			return <Extended table={table} />
 		}
 		render(<Grid />)

@@ -5,14 +5,16 @@ import { renderToString } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 
 import { prepareDataGridTable } from './prepare-table'
+import { TEST_FEATURES } from './test-utils'
 import { useDataGridSelector } from './use-data-grid-selector'
 
-import type { DataTable } from '@ez-kit/data-grid-core'
+import type { DataTable, GridFeatures } from './types'
 
 type Row = { id: string; name: string; age: number }
 
-function makeTable(initial: Row[] = [{ id: '1', name: 'a', age: 20 }]): DataTable<Row> {
-	const table = createTable<Row>({
+function makeTable(initial: Row[] = [{ id: '1', name: 'a', age: 20 }]): DataTable<GridFeatures, Row> {
+	const table = createTable<GridFeatures, Row>({
+		features: TEST_FEATURES,
 		data: initial,
 		columns: [
 			{ accessorKey: 'name', header: 'Name' },
@@ -41,7 +43,7 @@ describe('useDataGridSelector', () => {
 		const baseline = renderCount
 
 		act(() => {
-			table.setState((prev) => ({ ...prev, sorting: [{ id: 'name', desc: false }] }))
+			table.setSorting([{ id: 'name', desc: false }])
 		})
 
 		expect(renderCount).toBeGreaterThan(baseline)
@@ -58,7 +60,7 @@ describe('useDataGridSelector', () => {
 		const baseline = renderCount
 
 		act(() => {
-			table.setState((prev) => ({ ...prev, globalFilter: 'whatever' }))
+			table.setGlobalFilter('whatever')
 		})
 
 		expect(renderCount).toBe(baseline)
@@ -80,7 +82,7 @@ describe('useDataGridSelector', () => {
 		const filterBaseline = filterRenders
 
 		act(() => {
-			table.setState((prev) => ({ ...prev, sorting: [{ id: 'name', desc: true }] }))
+			table.setSorting([{ id: 'name', desc: true }])
 		})
 
 		expect(sortingRenders).toBeGreaterThan(sortingBaseline)
@@ -100,14 +102,14 @@ describe('useDataGridSelector', () => {
 		expect(result.current).toEqual([])
 
 		act(() => {
-			table.setState((prev) => ({ ...prev, sorting: [{ id: 'age', desc: false }] }))
+			table.setSorting([{ id: 'age', desc: false }])
 		})
 
 		expect(result.current).toEqual([{ id: 'age', desc: false }])
 		expect(renderCount).toBeGreaterThan(0)
 	})
 
-	it('renders deterministically via getServerSnapshot in SSR', () => {
+	it('renders on the server, reading the same getter the client does', () => {
 		const table = makeTable()
 
 		function ServerView() {
@@ -119,19 +121,24 @@ describe('useDataGridSelector', () => {
 		expect(html).toContain('[]')
 	})
 
-	it('mutating the table BEFORE mount does not corrupt the SSR snapshot', () => {
+	it('the server read is the live state, and the frozen one is table.initialState', () => {
 		const table = makeTable()
-		table.setState((prev) => ({ ...prev, sorting: [{ id: 'name', desc: false }] }))
+		table.setSorting([{ id: 'name', desc: false }])
 
 		function ServerView() {
 			const sorting = useDataGridSelector(table, (s) => s.sorting)
 			return <span>{JSON.stringify(sorting)}</span>
 		}
 
-		// getServerSnapshot returns the initial-frozen state, so SSR sees an empty
-		// sort even after the table was mutated.
-		const html = renderToString(<ServerView />)
-		expect(html).toContain('[]')
+		// v8's `getInitialSnapshot` was this hook's `getServerSnapshot`, and a table mutated
+		// before mount still rendered `[]` on the server. v9 deleted it, and this hook now hands
+		// `table.store.state` to both arguments — as upstream's own `useSelector` does — so the
+		// server sees what the client sees.
+		// `renderToString` escapes the quotes of the JSON text node.
+		expect(renderToString(<ServerView />)).toContain('&quot;name&quot;')
+		// The frozen value did not disappear; it moved. `initialState` is resolved once at
+		// construction and never reassigned, so it is what to pass if a frozen read is wanted.
+		expect(table.initialState.sorting).toEqual([])
 	})
 
 	it('latest selector wins when selector identity changes across renders', () => {
@@ -145,7 +152,7 @@ describe('useDataGridSelector', () => {
 		expect(getByTestId('value').textContent).toBe('0')
 
 		act(() => {
-			table.setState((prev) => ({ ...prev, sorting: [{ id: 'name', desc: false }] }))
+			table.setSorting([{ id: 'name', desc: false }])
 		})
 		expect(getByTestId('value').textContent).toBe('1')
 
@@ -155,7 +162,7 @@ describe('useDataGridSelector', () => {
 
 	it('component re-render alone does not trigger an extra subscribe', () => {
 		const table = makeTable()
-		const subscribeSpy = vi.spyOn(table, 'subscribe')
+		const subscribeSpy = vi.spyOn(table.store, 'subscribe')
 
 		const Probe = () => {
 			useRef(0).current++ // ensure a hook before our hook

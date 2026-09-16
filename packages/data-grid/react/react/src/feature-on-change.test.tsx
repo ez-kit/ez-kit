@@ -2,9 +2,10 @@ import { createColumns } from '@ez-kit/data-grid-core'
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
+import { TEST_FEATURES } from './test-utils'
 import { useDataGrid } from './use-data-grid'
 
-import type { DataTable } from '@ez-kit/data-grid-core'
+import type { DataTable, GridFeatures } from './types'
 
 type User = { id: number; name: string; email: string }
 
@@ -25,8 +26,10 @@ const COLUMNS = createColumns<User>([{ accessorKey: 'name' }, { accessorKey: 'em
  * a future split that goes back to picking by name fails immediately instead of silently.
  */
 describe('every feature onChange survives useDataGrid', () => {
-	function grid(config: Partial<Parameters<typeof useDataGrid<User>>[0]>): DataTable<User> {
-		const { result } = renderHook(() => useDataGrid<User>({ data: USERS, columns: COLUMNS, ...config }))
+	function grid(config: Partial<Parameters<typeof useDataGrid<GridFeatures, User>>[0]>): DataTable<GridFeatures, User> {
+		const { result } = renderHook(() =>
+			useDataGrid<GridFeatures, User>({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, ...config }),
+		)
 		return result.current
 	}
 

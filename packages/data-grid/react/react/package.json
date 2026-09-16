@@ -64,7 +64,7 @@
 	"size-limit": [
 		{
 			"path": "dist/index.js",
-			"limit": "27 KB",
+			"limit": "28 KB",
 			"ignore": [
 				"@ez-kit/data-grid-core",
 				"@tanstack/react-store",
@@ -75,7 +75,7 @@
 		},
 		{
 			"path": "dist/state/index.js",
-			"limit": "1 KB",
+			"limit": "940 B",
 			"ignore": [
 				"@ez-kit/data-grid-core",
 				"@tanstack/react-store",
@@ -86,7 +86,7 @@
 		},
 		{
 			"path": "dist/cell-types/index.js",
-			"limit": "1.5 KB",
+			"limit": "840 B",
 			"ignore": [
 				"@ez-kit/data-grid-core",
 				"@tanstack/react-store",
@@ -97,7 +97,7 @@
 		},
 		{
 			"path": "dist/contract.js",
-			"limit": "1 KB",
+			"limit": "610 B",
 			"ignore": [
 				"@ez-kit/data-grid-core",
 				"@tanstack/react-store",
@@ -108,7 +108,7 @@
 		},
 		{
 			"path": "dist/menu.js",
-			"limit": "1 KB",
+			"limit": "260 B",
 			"ignore": [
 				"@ez-kit/data-grid-core",
 				"@tanstack/react-store",

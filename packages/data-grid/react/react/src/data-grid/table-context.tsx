@@ -2,10 +2,11 @@ import { createContext, useContext } from 'react'
 
 import { useDataGridSelector } from '../use-data-grid-selector'
 
-import type { DataTable, TableState } from '@ez-kit/data-grid-core'
+import type { DataTable, GridFeatures } from '../types'
+import type { TableState } from '@tanstack/table-core'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const TableContext = createContext<DataTable<any> | null>(null)
+const TableContext = createContext<DataTable<any, any> | null>(null)
 
 export { TableContext }
 
@@ -29,12 +30,12 @@ export { TableContext }
  * const colSpan = table.getVisibleLeafColumns().length
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function useDataGridTable<TRow extends object = any>(): DataTable<TRow> {
+export function useDataGridTable<TRow extends object = any>(): DataTable<GridFeatures, TRow> {
 	const table = useContext(TableContext)
 	if (!table) {
 		throw new Error('This component must be rendered inside <DataGrid>.')
 	}
-	return table as DataTable<TRow>
+	return table as DataTable<GridFeatures, TRow>
 }
 
 /**
@@ -53,6 +54,6 @@ export function useDataGridTable<TRow extends object = any>(): DataTable<TRow> {
  * @example Deliberately broad — the snapshot itself is stable until something changes
  *   useDataGridState((s) => s)
  */
-export function useDataGridState<TSelected>(selector: (state: TableState) => TSelected): TSelected {
+export function useDataGridState<TSelected>(selector: (state: TableState<GridFeatures>) => TSelected): TSelected {
 	return useDataGridSelector(useDataGridTable(), selector)
 }

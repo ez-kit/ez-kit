@@ -2,7 +2,7 @@ import { createColumns } from '@ez-kit/data-grid-core'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
-import { testComponents } from '../test-utils'
+import { TEST_FEATURES, testComponents } from '../test-utils'
 
 import { DataGrid } from './data-grid'
 
@@ -38,6 +38,7 @@ function CreatingInput(props: FieldState<unknown, string>) {
 function openCreateForm(columns: ReturnType<typeof createColumns<Row>>) {
 	render(
 		<DataGrid
+			features={TEST_FEATURES}
 			data={ROWS}
 			columns={columns}
 			components={testComponents}

@@ -9,6 +9,8 @@ import { flexRender } from './flex-render'
 import type { CellTypeRegistry } from '../cell-types-context'
 import type { GridMenuProps } from '../menu'
 import type {
+	DataTable,
+	GridFeatures,
 	BetweenInputProps,
 	ClearFilterButtonProps,
 	InputProps,
@@ -16,10 +18,10 @@ import type {
 	OperatorSelectProps,
 } from '../types'
 import type {
+	FormColumnMeta,
 	InputComponentProps,
 	BadgeItem,
 	BetweenValue,
-	DataTable,
 	DatePreset,
 	FieldState,
 	FilterItem,
@@ -27,13 +29,13 @@ import type {
 	StructuredFilterValue,
 	GridMessages,
 } from '@ez-kit/data-grid-core'
-import type { Column, ColumnMeta, Header } from '@tanstack/table-core'
+import type { Column, Header } from '@tanstack/table-core'
 import type { ComponentType, ReactNode } from 'react'
 
 export type RenderFilterInputArgs = {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	header: Header<any, unknown>
-	meta: ColumnMeta<unknown, unknown> | undefined
+	header: Header<GridFeatures, any>
+	meta: FormColumnMeta | undefined
 	Input: ComponentType<InputProps>
 	cellTypes: CellTypeRegistry
 	OperatorSelect: ComponentType<OperatorSelectProps>
@@ -63,7 +65,7 @@ export type RenderFilterInputArgs = {
 	 * construct a minimal `header` stub need not also fabricate a table.
 	 */
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	table?: DataTable<any>
+	table?: DataTable<GridFeatures, any>
 }
 
 /**
@@ -79,8 +81,8 @@ export type RenderFilterInputArgs = {
  */
 function resolveFilterItems(
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	column: Column<any>,
-	meta: ColumnMeta<unknown, unknown> | undefined,
+	column: Column<GridFeatures, any>,
+	meta: FormColumnMeta | undefined,
 ): FilterItem[] {
 	const filteringMeta = meta?.filtering === false ? undefined : meta?.filtering
 	const facetedEnabled = filteringMeta?.faceted === true

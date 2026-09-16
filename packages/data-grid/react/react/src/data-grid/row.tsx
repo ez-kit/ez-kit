@@ -8,6 +8,7 @@ import { isTextEntryTarget } from '../utils/interactive-target'
 import { DataGridCell } from './cell'
 import { useDataGridState, useDataGridTable } from './table-context'
 
+import type { GridFeatures } from '../types'
 import type { PinSide } from './use-pinned-row-offsets'
 import type { RowPropsResolver } from '../use-data-grid'
 import type { Row } from '@tanstack/table-core'
@@ -22,14 +23,14 @@ import type { CSSProperties, KeyboardEvent, ReactElement, ReactNode, Ref } from 
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type DataGridRowRenderArgs<TRow extends object = any> = {
-	row: Row<TRow>
+	row: Row<GridFeatures, TRow>
 	/** The row's visible cells, in column order — already filtered by column visibility and pinning. */
-	cells: ReturnType<Row<TRow>['getVisibleCells']>
+	cells: ReturnType<Row<GridFeatures, TRow>['getVisibleCells']>
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type DataGridRowProps<TRow extends object = any> = {
-	row: Row<TRow>
+	row: Row<GridFeatures, TRow>
 	style?: CSSProperties
 	/** Forwarded to the kit's `Tr`; pinned rows are measured through it (see `usePinnedRowOffsets`). */
 	ref?: Ref<HTMLTableRowElement>

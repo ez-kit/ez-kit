@@ -82,8 +82,8 @@ export function PinShadowOverlay() {
 	const overlayRef = useRef<HTMLDivElement>(null)
 	const [edges, setEdges] = useState<PinnedEdges>(NO_EDGES)
 
-	const leftCols = table.getLeftLeafColumns()
-	const rightCols = table.getRightLeafColumns()
+	const leftCols = table.getStartLeafColumns()
+	const rightCols = table.getEndLeafColumns()
 
 	const leftSize = leftCols.reduce((acc, col) => acc + col.getSize(), 0)
 	const rightSize = rightCols.reduce((acc, col) => acc + col.getSize(), 0)

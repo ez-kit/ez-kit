@@ -3,7 +3,7 @@ import { useGridComponents } from '../components-context'
 import { DataGridFooterRow } from './footer-row'
 import { useDataGridTable, useDataGridState } from './table-context'
 
-import type { DataTable } from '@ez-kit/data-grid-core'
+import type { DataTable, GridFeatures } from '../types'
 import type { HeaderGroup } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
@@ -16,8 +16,8 @@ import type { ReactNode } from 'react'
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type DataGridFooterRenderArgs<TRow extends object = any> = {
-	table: DataTable<TRow>
-	footerGroups: HeaderGroup<TRow>[]
+	table: DataTable<GridFeatures, TRow>
+	footerGroups: HeaderGroup<GridFeatures, TRow>[]
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -1,7 +1,10 @@
+import type { GridContextAtom } from './grid-context'
 import type { GridMenuItem, GridMenuProps } from './menu'
+import type { ResolvedGridOptions } from './resolved-options'
 import type {
 	BetweenInputType,
 	BetweenValue,
+	DataTable as CoreDataTable,
 	DatePreset,
 	DateRangePreset,
 	DateValuePreset,
@@ -11,7 +14,7 @@ import type {
 	FilterItem,
 	PendingCount,
 } from '@ez-kit/data-grid-core'
-import type { Row } from '@tanstack/table-core'
+import type { Row, TableFeatures } from '@tanstack/table-core'
 import type {
 	ButtonHTMLAttributes,
 	ComponentType,
@@ -25,6 +28,62 @@ import type {
 	ThHTMLAttributes,
 	TouchEventHandler,
 } from 'react'
+
+/**
+ * The feature set every component below `<DataGrid>` is typed against.
+ *
+ * Components receive the table through `useDataGridTable()`, which is a React context and
+ * therefore not generic — so they cannot carry the caller's `TFeatures`. They pin to
+ * `TableFeatures`, the widest instantiation, which is also the *fullest*: `TableFeatures`
+ * declares every feature key optionally, so `TableState<TableFeatures>` resolves to all
+ * 21 slices, each at its own type rather than `… | undefined` (verified by probe —
+ * `keyof` it yields the 21, and `['sorting']` yields `SortingState`).
+ *
+ * **The cost, stated rather than engineered around:** a component read is not gated on the
+ * feature being registered. `sort-menu-trigger.tsx` type-checks `state.sorting` against a
+ * grid built without `rowSortingFeature` and finds `undefined` at runtime. This is the same
+ * accepted cost as the runtime-only config guards one layer down (see
+ * `TableConfig`'s docblock in core), and it is what keeps the package's 95 non-test files
+ * non-generic.
+ * The catch for it is core's development-mode `REQUIRED_FEATURE` warning and nothing else.
+ */
+export type GridFeatures = TableFeatures
+
+/**
+ * The table the React layer renders: core's `DataTable` with `grid` **replaced** by the
+ * resolved React options, plus the grid context.
+ *
+ * `Omit` rather than an intersection, deliberately. An intersection of two objects that
+ * both declare `grid` produces a type whose `grid` is the *intersection of the two bags* —
+ * legal, silently satisfied by either half, and impossible for a reader to tell apart. That
+ * is the §2.1 seam written into the type system instead of out of it. The four members core
+ * resolved are not lost by the `Omit`: they are folded into {@link ResolvedGridOptions} under
+ * its own names, and `defaultResolvedGridOptions(table.grid)` is what carries them across.
+ *
+ * `TFeatures` is threaded rather than pinned because this alias is `useDataGrid`'s return type
+ * and therefore part of the public surface.
+ */
+export type DataTable<TFeatures extends TableFeatures, TRow extends object> = Omit<
+	CoreDataTable<TFeatures, TRow>,
+	'grid'
+> & {
+	/**
+	 * The React layer's resolved grid options. Seeded by `prepareDataGridTable`, rewritten once
+	 * per render by `useDataGrid`, read by every compound component and available to a UI kit
+	 * via `useGridOptions()`.
+	 */
+	grid: ResolvedGridOptions
+	/**
+	 * The grid's `GridContext`, behind a subscription. Seeded by `prepareDataGridTable` so it is
+	 * **always** an atom — no reader guards the property — and written by `useDataGrid` whenever
+	 * the merged `context` option changes. Read it with `useGridContext()`.
+	 *
+	 * Parked here by Task 14 only so that it stops being declared through a
+	 * `declare module '@tanstack/table-core'` block, which cannot merge onto v9's `Table` type
+	 * alias.
+	 */
+	gridContext: GridContextAtom
+}
 
 /** Which affordances the row-actions cell offers, and therefore which props it carries. */
 export const ActionsCellState = {
@@ -41,7 +100,7 @@ export type ActionsCellState = (typeof ActionsCellState)[keyof typeof ActionsCel
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ActionsCellIdleProps<TRow extends object = any> = {
 	state: typeof ActionsCellState.Idle
-	row: Row<TRow>
+	row: Row<GridFeatures, TRow>
 	hasEditing: boolean
 	hasDeleting: boolean
 	onEdit: () => void
@@ -60,7 +119,7 @@ type ActionsCellIdleProps<TRow extends object = any> = {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ActionsCellEditingProps<TRow extends object = any> = {
 	state: typeof ActionsCellState.Editing
-	row: Row<TRow>
+	row: Row<GridFeatures, TRow>
 	onSave: () => Promise<void>
 	onCancel: () => void
 	/** True while the commit is in flight (`commitStatus !== 'idle'`). */
@@ -479,7 +538,7 @@ export type FilterChipProps = {
 	kind: FilterChipKind
 	/**
 	 * True when this filter is part of the not-yet-applied draft under `draft` — i.e.
-	 * it differs from (or is absent from) `table.getState().applied`. Kits render this as
+	 * it differs from (or is absent from) `table.store.state.applied`. Kits render this as
 	 * `data-draft-filter=""` on the chip's root element.
 	 */
 	isDraft: boolean
@@ -733,7 +792,7 @@ export type SelectionBarProps = {
 	/** Number of currently selected rows. */
 	count: number
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	selectedRows: Row<any>[]
+	selectedRows: Row<GridFeatures, any>[]
 	/**
 	 * Render mode the consumer requested.
 	 * - `'floating'` (default) — sticky/positioned bar, may overlay content.

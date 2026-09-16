@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { getGridTemplateColumns } from './column-size-vars'
 import { getVisualLeafColumns } from './visual-column-order'
 
-import type { DataTable } from '@ez-kit/data-grid-core'
+import type { DataTable, GridFeatures } from '../types'
 
 type MockColumn = { id: string; size: number; isSystem?: boolean }
 
@@ -18,7 +18,7 @@ type MockPinning = { left?: string[]; right?: string[] }
  * cells and headers render in. Pin a column that is not at the declaration
  * order's matching end and the two disagree.
  */
-function mockTable(columns: MockColumn[], pinning: MockPinning = {}): DataTable<object> {
+function mockTable(columns: MockColumn[], pinning: MockPinning = {}): DataTable<GridFeatures, object> {
 	const left = pinning.left ?? []
 	const right = pinning.right ?? []
 	const toColumn = (col: MockColumn) => ({
@@ -35,11 +35,11 @@ function mockTable(columns: MockColumn[], pinning: MockPinning = {}): DataTable<
 	return {
 		options: {},
 		getVisibleLeafColumns: () => columns.map(toColumn),
-		getLeftVisibleLeafColumns: () => group(left),
-		getRightVisibleLeafColumns: () => group(right),
+		getStartVisibleLeafColumns: () => group(left),
+		getEndVisibleLeafColumns: () => group(right),
 		getCenterVisibleLeafColumns: () =>
 			columns.filter((col) => !left.includes(col.id) && !right.includes(col.id)).map(toColumn),
-	} as unknown as DataTable<object>
+	} as unknown as DataTable<GridFeatures, object>
 }
 
 /**
