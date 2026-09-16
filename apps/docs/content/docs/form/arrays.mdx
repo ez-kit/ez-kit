@@ -120,10 +120,12 @@ rows, the list's own errors — is drawn by the author:
 
 The add control in the section heading and the duplicate control on each row are both built
 directly from the scope — `add` for the first, `insert(item.index + 1, value)` for the second.
-`form.ArrayField` hands out the same scope, `add` and `insert` included; what it does not hand out
-is a seam to place a second add control in the heading or wire a duplicate button next to a row —
-its frame already drew the one add control it draws, and there is no gap in it for another. `form.Array`
-draws no frame at all, so the scope is the only thing on offer and those controls can go anywhere.
+`form.ArrayField` hands out the same scope, `add` and `insert` included, and its own `children`
+region is real space — a duplicate button beside each row can be written there today. What it will
+not give up is the frame around that region: the legend and description are drawn from `label` /
+`description` and take no control of yours, its add control sits where the kit puts it and cannot
+be suppressed, and a row that uses `item.Item` is that card. `form.Array` draws none of it, so the
+scope is the only thing on offer and every control it builds can go anywhere.
 
 **The primitive renders no errors.** `form.ArrayField` shows the list's `validate` failures on its
 own frame; `form.Array` has no frame, so nothing shows them unless the render prop reads `errors`

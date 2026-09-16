@@ -17,10 +17,12 @@ const DEFAULTS: Order = {
 /**
  * The same data as `form-arrays`, composed by hand.
  *
- * `form.Array` renders nothing at all, so the add control can sit in the section heading and the
- * row can be a table row — neither is reachable through `form.ArrayField`, which owns its frame
- * and draws its own add control. Note `errors` is rendered here explicitly: nothing renders it
- * for a bare `form.Array`, and a `minLength` failure would otherwise block submit silently.
+ * `form.Array` renders nothing at all, so the add control can sit in the section heading — a
+ * placement `form.ArrayField`'s own frame never offers, since it draws its own add control and
+ * gives up no say over where it goes. The row being a `<table>` row rather than a card is a
+ * different kind of freedom: `item.Item` is available here too, this example just chose not to
+ * use it. Note `errors` is rendered here explicitly: nothing renders it for a bare `form.Array`,
+ * and a `minLength` failure would otherwise block submit silently.
  */
 export function ArraysCustomExample() {
 	const [saved, setSaved] = useState<Order | null>(null)
