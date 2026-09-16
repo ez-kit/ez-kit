@@ -11,9 +11,14 @@
  * 46 360 to 46 504 bytes, i.e. it cost the bytes of the comments and saved nothing.
  *
  * With the declaration on this subpath instead, importing `tableFeatures` from the features entry
- * bundles 1 742 bytes rather than 46 360, and a sorting-only set 1 784 rather than 46 402. The
- * all-in set still costs what it costs — that is inherent, and design §1 says so — but it is now
- * a choice a consumer makes by writing this import path, instead of a toll every composed set pays.
+ * bundles 994 bytes rather than 46 360, and a sorting-only set (`tableFeatures`,
+ * `rowSortingFeature`, `createSortedRowModel`) 1 035 rather than 46 402. The whole `./features`
+ * surface is 48 086, down from 49 696 — the difference being this set leaving it.
+ *
+ * Reaching `allDataGridFeatures` through this path costs 45 288. That number does not improve and
+ * is not meant to: an all-in set registers everything by definition, and design §1 calls it an
+ * accepted cost. What changed is who pays it — a consumer who writes this import, rather than
+ * every consumer who imported anything at all from `./features`.
  */
 
 import {
