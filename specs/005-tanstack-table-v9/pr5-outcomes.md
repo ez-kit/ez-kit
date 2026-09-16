@@ -11,10 +11,15 @@ and this document.
 
 ## 0. Read this before any number below
 
-**There is no full-suite result for this branch, and there will not be one.** One full run was
-executed (§2); it is _not_ a gate and must not be quoted as one, because the tree changed underneath
-it while it ran. Every result after that is a **selective** run against a named commit. Anyone
-looking for "the suite is green on v9" will not find it here, by decision rather than omission.
+**Superseded on 2026-09-16 by §10 — read that first.** The full suite has since been run to
+completion against a stationary tree: **518/518 passed at `5c1a85f4`**, and `@smoke` **298/298 at
+`c22e4c60`**. Everything §0 through §9 says about "no full-suite result" describes the state before
+that run and is kept as the record of it, not as the current answer.
+
+What follows was written when that was still true: **there is no full-suite result for this branch.**
+One full run was executed (§2); it is _not_ a gate and must not be quoted as one, because the tree
+changed underneath it while it ran. Every result after that is a **selective** run against a named
+commit.
 
 **No CI has ever run against this branch.** It is unpushed with no PR. Every figure in this document
 is a local measurement on one machine.
@@ -273,7 +278,8 @@ green.
 
 ## 9. What is inherited
 
-**Not run, or run against a tree that has since moved — labelled as such:**
+**Not run, or run against a tree that has since moved — labelled as such. Both bullets below
+were closed by §10; they are kept because the reasoning in them is what §10 had to satisfy.**
 
 - **`@smoke` was run once and has not been re-run since** (recon G1). PR 4 ran it against the tree at `f07a5656` and got **298/298, exit 0, zero console errors, zero failure directories, both kits**. That result is real, and it is also **stale: eleven commits have landed on top of `f07a5656`** — `d279a5dc`, `86b5a546`, `2b916909`, `8825d1ac`, `dbc0b876`, `87304c0a`, `eaaa3098`, `dccc1d78`, `302cd0f9`, `3af550e1` and this document's own. Several changed example feature sets, and three changed the react package itself; the run predates even the chips fix. So neither "never run" nor a bare "298/298" is the honest statement — the honest one is that a passing smoke result exists for a tree eleven commits behind HEAD. This is the same distinction §0 and §2 draw about the full run straddling `d279a5dc`, applied to a result this PR did not produce.
 
@@ -302,3 +308,138 @@ nothing.
 `apps/docs/package.json`, not in `ci.yml`, not in any turbo task, despite
 `specs/001-data-grid-docs/tasks.md:195` being ticked. It must be run by hand or any criterion citing
 it is satisfied by nothing.
+
+---
+
+## 10. The full suite and `@smoke`, run to completion on a stationary tree
+
+**Date:** 2026-09-16, same machine, same worktree. This section closes the two §9 bullets and the
+`controlled × deferred` gap beneath them.
+
+### 10a. The full suite — 518/518
+
+|             |                                                                                    |
+| ----------- | ---------------------------------------------------------------------------------- |
+| Commit      | **`5c1a85f4`** (`docs: correct the smoke-run line`), the tip when the run started  |
+| Command     | `PW_PORT=3664 pnpm exec playwright test --grep-invert @smoke --reporter=line,json` |
+| Result      | **518 passed, 0 failed, 0 flaky, 0 skipped. Exit 0.**                              |
+| Wall clock  | **10.0 min** (`workers: 1`, `fullyParallel: false`)                                |
+| Per project | `docs` 8, `shadcn` 255, `heroui` 255 — 32 spec files                               |
+
+**Read from the JSON report, not from the exit code.** `stats` is
+`{"expected":518,"skipped":0,"unexpected":0,"flaky":0}` and every one of the 518 `tests[].results`
+entries is `passed`. That is the check §9 demands of a `@smoke` run, applied here too: an exit code
+alone cannot distinguish a green suite from an empty selection.
+
+`retries` is `process.env.CI ? 1 : 0` and `CI` was unset, so nothing passed on a second attempt —
+the same guarantee §1 records.
+
+**The tree did not move under it, and that is verifiable rather than asserted.** §2's run is
+disqualified because `d279a5dc` landed mid-run; this one has the mirror-image property. One commit
+did land while it ran — `c22e4c60`, the test of §10c — and it adds vitest cases to
+`packages/data-grid/react/react/src/use-data-grid.test.tsx`, a file the docs app does not import and
+`tsup` does not bundle. The server was serving `packages/data-grid/react/react/dist/index.js`, built
+at **20:12:23**, before the run started and before that commit; it was never rebuilt. So the browser
+saw exactly `5c1a85f4`'s artefacts from first test to last.
+
+**Why 10.0 min against §2's 16.1.** The stand was prepared the way §7's operational rule says:
+**one** dev server, started once, then **every route the suite touches warmed to HTTP 200 before
+Playwright was invoked** — the two docs page groups plus all 55 example slugs referenced from the
+specs, across both kits. §2 paid `next dev`'s per-route compilation inside the measurement; this run
+did not, which is also why the four `embed-isolation` cases and `virtualization:113` — §2's
+cold-start failures — are simply green here.
+
+**Failure classification: there is nothing to classify.** Every one of §2's twenty failures is
+accounted for in this run rather than by argument: the six `chips` cases (fixed by `d279a5dc`), the
+two of §5 that were the author's own error, `ordering/rows:143`, `persistence:50`,
+`virtualization:139`, and the five cold-start cases all executed and passed.
+
+### 10b. `@smoke` — 298/298, re-run against HEAD
+
+§9's bullet is closed. The stale result stood at `f07a5656`, eleven commits behind.
+
+|                     |                                                                    |
+| ------------------- | ------------------------------------------------------------------ |
+| Commit              | **`c22e4c60`**, HEAD at the time of the run                        |
+| Command             | `PW_PORT=3664 pnpm exec playwright test --grep @smoke --workers=4` |
+| Result              | **298 passed, 0 failed, 0 flaky, 0 skipped. Exit 0.** 2.7 min      |
+| Per project         | `shadcn` 149, `heroui` 149                                         |
+| Failure directories | `apps/docs/test-results` — **0 entries**                           |
+
+**The count is the number that matters**, per §9: Playwright exits 0 on an empty selection, so 298
+executed tests — the same 298 the `f07a5656` run measured — is what says the selection did not
+silently shrink. Read from the JSON report's `stats`, not inferred.
+
+"Zero console errors" is not a separate observation here: `smoke.spec.ts` collects `pageerror` and
+`console.error` per page and asserts the array is empty inside each test, so 298 passes **is** that
+claim, for every example and both kits.
+
+### 10c. `controlled × deferred` — the §9 gap, closed in the React package
+
+§9 asks for an e2e spec and says no example can carry one. That is still true of the examples, and
+the behaviour is nonetheless now asserted — one level down, where it can be stated exactly.
+`c22e4c60` adds two cases to `use-data-grid.test.tsx`
+(`useDataGrid — controlled state under deferred apply`).
+
+The subject is the `onStateChange` subscriber, which carries two filters whose **order** is the
+thing nothing stated:
+
+```ts
+const projected = projectApplied === undefined ? next : projectApplied(next)
+if (isControlledEcho(previous, next, controlledStateRef.current)) return
+if (projected === undefined) return
+```
+
+What each case asserts:
+
+1. **`does not report the controlled prop back to the consumer while deferring`** — on a grid with
+   `draft: true` and a parent-owned `columnVisibility`, the consumer's own write moves the store (the
+   controlled publish is an ordinary write now that `syncControlledState` is gone) and must **not**
+   come back through `onStateChange`. Without the skip, a consumer mirroring the callback into React
+   state loops. This is the v8 skip, restated in the deferred configuration.
+2. **`keeps the applied-emitter baseline current across a suppressed echo`** — the ordering claim, and
+   the one that was covered by nothing. `projectApplied` is stateful: it compares against its own last
+   projection, so it has to be fed **every** store value including the ones the echo filter is about
+   to swallow. The case drives exactly that: the consumer hides a column (suppressed as an echo), then
+   the grid itself moves that slice back to the value the emitter last saw beforehand. With the
+   projection fed unconditionally the comparison is against the consumer's value and the change is
+   emitted; with the two checks written the obvious way round the baseline is stale, the comparison
+   reports `unchanged`, and a change the grid made on its own initiative **never reaches the consumer
+   at all**.
+
+**Mutation proofs**, to the standard §4c set — each mutation must hit exactly the case that claims it:
+
+| #   | Mutation applied to `use-data-grid.ts`                                  | Case 1  | Case 2  |
+| --- | ----------------------------------------------------------------------- | ------- | ------- |
+| 1   | swap the two checks (`isControlledEcho` first, `projectApplied` second) | GREEN   | **RED** |
+| 2   | `isControlledEcho` → `return false`                                     | **RED** | GREEN   |
+
+Mutation 1 was additionally run against the **whole** React package: **1 failed, 745 passed**. The
+one failure is case 2. That is the measurement behind "covered by nothing" — not an assertion that
+the gap existed, but the demonstration that 745 other tests are blind to it. (Mutation 2 also reds
+two pre-existing cases, `notifies the consumer but does not loop when it ignores the clamp` and
+`does not invoke onStateChange when state prop is the source of the change`, which is expected: the
+echo skip was already covered **undeferred**. Its deferred half was not.)
+
+The pre-existing `useDataGrid — draft with a mirrored controlled state prop` case stays green under
+both mutations, which is correct and worth recording: its claim is structural — the deferred axes are
+owned by `options.atoms`, so a controlled write to one does not land — and has nothing to do with
+either filter.
+
+After each mutation the source was restored from a copy and `git status` checked: only the intended
+test file differs, and `find -name "*.bak"` returns 0.
+
+**What is still not covered**, so this does not read as more than it is: the combination is asserted
+in jsdom against the React adapter, not in a browser against a real kit, and §9's account of why
+stands — no example carries both `draft` and a parent-owned axis, and authoring one is
+`apps/docs/shared/**`. The two items beside it in §9 — the pin-shadow opacity case (G5) and the
+column-menu pin entries (G4) — are untouched and remain uncovered.
+
+### 10d. What §10 does not change
+
+Still true, and not affected by any of the above:
+
+- **No CI has ever run against this branch.** It is unpushed with no PR; every figure here remains a
+  local measurement on one machine.
+- **Whether `e2e gate` is a required check on `integration/**` is unknown\*\* (§8).
+- The mutation proofs of §4c were run on `shadcn` only; §10c's are jsdom, so kit-independent.
