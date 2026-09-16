@@ -13,7 +13,7 @@ import {
 	rowSortingFeature,
 	tableFeatures,
 } from '@ez-kit/data-grid-core/features'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { renderGrid } from './test-utils'
 
@@ -115,4 +115,33 @@ describe('the structural base is structural', () => {
 			expect(() => renderGrid({ features: withoutFeature(name) })).toThrow()
 		})
 	}
+})
+
+describe('the row-actions column does not require the editing feature', () => {
+	// `ActionsCell` mounts whenever the row-actions column exists — which is whenever `editing`,
+	// `deleting`, row `pinning` or `rowActions.actions` is configured, not only `editing`. Its two
+	// `s.editing.…` reads therefore ran on a delete-only grid and threw before the table mounted.
+	//
+	// This case is what the `withoutFeature` cases above structurally cannot reach: they render a
+	// grid with no row-actions column at all, so nothing mounts `ActionsCell`. Configuring
+	// `deleting` is what puts it on the page.
+	it('renders a delete-only grid built without editingFeature', () => {
+		expect(() =>
+			renderGrid({
+				features: withoutFeature('editingFeature'),
+				deleting: { onDelete: vi.fn() },
+			}),
+		).not.toThrow()
+	})
+
+	// The control: with `editingFeature` registered the same grid still renders, so the guards did
+	// not trade a throw for a silently missing affordance.
+	it('renders the same grid with editingFeature registered', () => {
+		expect(() =>
+			renderGrid({
+				features: tableFeatures({ ...BASE, sortedRowModel: createSortedRowModel() }) as unknown as GridFeatures,
+				deleting: { onDelete: vi.fn() },
+			}),
+		).not.toThrow()
+	})
 })

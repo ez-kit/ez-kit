@@ -185,10 +185,21 @@ export function ActionsCell({ row }: ActionsCellProps) {
 	const messages = table.grid.messages.rowActions
 
 	// Stable booleans — non-target rows stay `false` across any editing change.
-	const isEditing = useDataGridState((s) => s.editing.rowId === row.id)
-	const isPending = useDataGridState((s) => s.editing.rowId === row.id && s.editing.commitStatus !== CommitStatus.Idle)
+	//
+	// Optional-chained: this column mounts whenever `editing`, `deleting`, row `pinning` **or**
+	// `rowActions.actions` is configured, not only `editing` — so a delete-only grid reached these
+	// two reads with no `editing` slice on the state and threw before the table mounted. The
+	// `Boolean(table.options.editing)` three lines below is what the intent always was; only these
+	// missed it. Same for `rowPinning`, which is subscribed here for any of the four reasons.
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const isEditing = useDataGridState((s) => s.editing?.rowId === row.id)
+	// The second read needs no `?.` of its own: `&&` short-circuits on the first when the slice is
+	// absent, so it is only reached once `s.editing` is known to be there.
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const isPending = useDataGridState((s) => s.editing?.rowId === row.id && s.editing.commitStatus !== CommitStatus.Idle)
 	// Row pinning is derived state; subscribe so the menu re-derives on pin/unpin.
-	useDataGridState((s) => s.rowPinning)
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	useDataGridState((s) => s.rowPinning ?? null)
 
 	const editingMode = table.options.editing?.mode ?? EditingMode.Row
 	// Cell mode owns no affordance in this column: its edit is opened by double-clicking the
