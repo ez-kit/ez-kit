@@ -86,6 +86,32 @@ across a table-core patch that adds a feature" property the spread buys.
 design §1 already says reaching the all-in set should be a deliberate choice, and an import path is
 how a deliberate choice is spelled. It cannot be defeated by a bundler that ignores annotations.
 
+### Option 3, raised after the fact: make it a function on the existing entry
+
+Added once the install gap below was reported, because it is the only candidate that fixes the
+defect **without** a new subpath: `export function allDataGridFeatures() { return tableFeatures({ … }) }`,
+left on `…/features`. An unused function declaration is dropped along with everything only it
+references, so it shakes. Measured on a throwaway build of exactly that shape:
+
+| candidate                              | `tableFeatures` alone | new subpath? |
+| -------------------------------------- | --------------------: | ------------ |
+| baseline                               |                46 360 | —            |
+| option 1, `@__PURE__`                  |                46 376 | no           |
+| **option 3, function on `…/features`** |             **1 419** | **no**       |
+| **option 2, subpath (landed)**         |               **994** | yes          |
+
+So option 3 is a real fix, and the honest ledger is between it and option 2, not between option 2
+and the annotation. It was still not taken, for one reason that outweighs the 425 bytes and the
+subpath: **it converts a loud break into a silent one.** The set stops being a value and becomes a
+call, so the natural spelling is `features={allDataGridFeatures()}` in render — a fresh set object
+every render, with a new identity, handed to `useTable`. An import path that moved fails at build
+time and names the fix; a set that is re-created each render does not fail at all. Option 2's break
+is `TS2305` on one line. Secondarily, a call is not more _deliberate_ than an import, so option 3
+serves design §1 less well, and PR 4 has already landed `…/features/all` in the docs and flipped the
+tree-shaking cases against it.
+
+If the balance is judged differently, option 3 is the alternative to reopen — not option 1.
+
 Shape of the change:
 
 - `src/features/all.ts` — new; holds the declaration and its docblock, importing the features from
@@ -101,6 +127,33 @@ Shape of the change:
   re-exports, so the two modules have to be read against each other. The `coreReactivityFeature`
   assertion — on `Object.keys`, because `useTable` spreads its own binding first and a set carrying
   that key would win — is unchanged and still passing.
+
+## The shadcn install gap, and why it does not move the decision
+
+Reported alongside the dispatch: `packages/data-grid/react/shadcn/registry.config.mjs:38-47` does
+not list `@ez-kit/data-grid-core` among the registry item's dependencies, so a consumer who runs
+`npx shadcn add` may not be able to import `@ez-kit/data-grid-core/features` — and a new subpath
+would then be a _second_ unresolvable path.
+
+Two corrections, both from the files:
+
+1. **`@ez-kit/data-grid-core` is a real `dependencies` entry of `@ez-kit/data-grid-react`**
+   (`packages/data-grid/react/react/package.json`), and `registry.config.mjs:28-31` says the
+   omission is deliberate for that reason. So the package is _installed_; what is missing is the
+   consumer's own declaration of it. Under npm or yarn the hoisted layout resolves it anyway; under
+   pnpm's strict layout it does not. That is a real fragility, and it is worth fixing — but it is a
+   narrower defect than "cannot resolve at all".
+2. **The gap is package-level, not subpath-level, so option 2 adds nothing to it.**
+   `…/features` and `…/features/all` are resolved by the same step: Node finds
+   `@ez-kit/data-grid-core`, then reads its `exports` map, which serves both keys and which this
+   same major extends. There is no arrangement in which `…/features` resolves for a consumer and
+   `…/features/all` does not. A consumer who cannot reach one cannot reach the other, and the fix
+   for both is the same single line in the registry config.
+
+So the install gap is a genuine defect that needs fixing regardless — it is the kit's, not core's —
+but its cost does not attach to the subpath move. The real cost on option 2's side is the
+import-path break, which is loud, lands in a major that is already breaking, and is one line per
+consumer.
 
 ## Consumers of `allDataGridFeatures`
 
