@@ -219,7 +219,7 @@ array test passes unedited."
 ```ts
 export type ArrayScope<TItem> = {
 	items: readonly ArrayItemScope<TItem>[]
-	add: (value?: TItem) => void
+	add: () => void
 	insert: (index: number, value?: TItem) => void
 	remove: (index: number) => void
 	move: (from: number, to: number) => void
@@ -435,9 +435,9 @@ Add `onInsert` to the hook's return type and to its returned object.
 In `ArrayBody`, beside `add` / `remove` / `move`:
 
 ```tsx
-const add = (value?: unknown): void => {
+const add = (): void => {
 	keys.onAdd()
-	write([...list, value === undefined ? newItem : value])
+	write([...list, newItem])
 }
 
 const insert = (index: number, value?: unknown): void => {
