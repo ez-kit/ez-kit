@@ -534,3 +534,148 @@ commit after that point was made with `git commit -F - -- <explicit paths>`, whi
 temporary index from the named paths' working-tree content and leaves the rest of the index alone —
 `lint-staged` then sees only those paths, which is the behaviour you want anyway. Worth knowing if
 a later PR shares a worktree.
+
+---
+
+# PR 3, continued — the two items left open
+
+Picked up after the previous session ended mid-task. Two commits:
+
+| SHA        | What                                                                          |
+| ---------- | ----------------------------------------------------------------------------- |
+| `dbc0b876` | `fix(data-grid-react)`: stop a row move resetting the state it did not change |
+| `87304c0a` | `feat(data-grid-core)`: warn when a sorting grid omits the `sortFns` slot     |
+
+## 6. Task 1 — reproduced, and the unit test was passing for the wrong reason
+
+**Reproduced, on both kits, and fixed.** The cause is not the expanded row model and not the row
+order. It is TanStack's `autoResetExpanded`, fired by the grid's own reorder.
+
+### The chain
+
+1. `createCoreRowModel`'s memo is keyed on `memoDeps: () => [table.options.data]`.
+2. Uncontrolled row ordering rewrites `data` on every move — `useOrderedData` projects the array
+   through the `rowOrder` slice and `setOptions` writes the new identity.
+3. The memo recomputes, and its `onAfterUpdate` runs `table_autoResetExpanded`,
+   `table_autoResetPageIndex`, `table_autoResetSorting` and `table_autoResetCellSelection`.
+4. `table_autoResetExpanded` is gated on `autoResetAll ?? autoResetExpanded ?? !manualExpanding`
+   — **on by default** — and calls `table._reactivity.schedule(() => table_resetExpanded(table))`.
+5. The expanded slice clears, row `1` collapses, and its children stop rendering: `["2","1"]`.
+
+Observed directly in the browser rather than inferred: after the move, row `1`'s toggle reads
+`aria-label="Expand row"` again — the row is collapsed, not merely unrendered.
+
+### Why it did not reproduce in jsdom — the more valuable finding
+
+**`tree-row-ordering.test.tsx` was passing for the wrong reason.** `_reactivity.schedule` is
+`queueMicrotask` (`store-reactivity-bindings.js:30`). The test asserted synchronously after a
+synchronous `act(...)`, so the microtask had not drained: it was reading the state **between the
+move and the reset**, where nothing is wrong yet. Adding one `await act(async () => { await
+Promise.resolve() })` before the assertion made the DOM case fail with the browser's exact
+`['2','1']`, against unmodified source. The defect was never browser-only.
+
+Two further notes on that test, now in its docblock:
+
+- **Only the DOM case has teeth.** The `renderHook` case passes with the fix removed as well:
+  nothing recomputes the core row model until `ids()` asks for it, so the reset is scheduled _by_
+  the very read being asserted and lands after it. Only a rendered grid recomputes on its own and
+  then repaints from the reset state.
+- Both cases are now `async` and drain the queue explicitly.
+
+### The fix
+
+`use-data-grid.ts` already suppressed `autoResetPageIndex` for exactly this reason — "a row move
+rewrites `data` without the dataset having changed at all" — and the comment even spelled out the
+general problem while handling one instance of it. `autoResetExpanded` and
+`autoResetCellSelection` now join it, suppressed on precisely the render that projects a move and
+left to their defaults whenever the `data` prop itself changed.
+
+`autoResetSorting` is the one sibling that needs nothing: upstream defaults it to `false`
+(`autoResetAll ?? autoResetSorting ?? false`), unlike the other three.
+
+### Evidence
+
+- `ordering/rows.spec.ts` — **26/26 on both kits** (was 2 failed / 24 passed).
+- `expanding/`, `pagination/`, `selection/` — **110/110 on both kits**, i.e. no grid that wanted a
+  reset lost one.
+- `@ez-kit/data-grid-react` — 744/744, typecheck and lint clean.
+- The characterisation test fails without the fix and passes with it.
+
+**A trap worth recording:** the browser suite runs against each package's **`dist`**, not `src`. A
+first re-run after the fix still failed on both kits; `pnpm turbo run build
+--filter=@ez-kit/data-grid-react` was the whole difference. A green unit test and a red spec on the
+same change means a stale build before it means anything else.
+
+## 7. Task 2 — the `sortFns` guard, and why there is no `aggregationFns` one
+
+`SORT_FNS_SLOT` now sits beside `FILTER_FNS_SLOT` in `create-table-options.ts`, with the guard
+directly below the `filterFns` one. `entry.ts`'s "the other two it cannot see" is corrected.
+
+### The condition is wider than "a column named a comparator"
+
+PR 4's measurement held, and the reason is in `column_getSortFn`: an inline `sortFn` is taken
+as-is and **everything else** resolves through `table._rowModelFns.sortFns` — `'auto'` included,
+which is what a column with no `sorting.fn` carries, and which `column_getAutoSortFn` turns into
+another name (`alphanumeric` / `datetime` / `text`) looked up in the same slot. So the condition
+is "sorting is on and some sortable column did not supply a function", not "some column named a
+sort function". Missing, every column falls back to `sortFn_basic` — a plain string compare.
+
+Two configurations are excluded, each a real false positive avoided:
+
+- **Names `sorting.fns` answers.** That registry is merged into the feature set further down, so
+  such a name resolves whether or not the consumer registered `sortFns`. A table whose every
+  column names one of its own comparators is correct and is not warned at.
+- **`manual: true`.** The server sorts, the sorted row model passes its input through, and
+  `column_getSortFn` is never reached — a manual-sorting table resolves no comparator at all.
+
+Also excluded: group columns (never sorted) and leaves with `sorting: false`.
+
+### No `aggregationFns` sibling — checked, not assumed
+
+`TableConfig` has **no `grouping` option** and `ColumnDef` **no `aggregationFn`**.
+`columnGroupingFeature` and `rowAggregationFeature` arrive with the all-in set and are reachable
+only through upstream's `constructTable` — which is exactly how `features/entry.test.ts` has to
+exercise the slot. Nothing a consumer writes can ask for an aggregation, so a guard here would
+have no condition to test. Recorded in both the `SORT_FNS_SLOT` docblock and `entry.ts`, with the
+shape its guard would take if grouping ever gains a config key.
+
+### Probed, not read
+
+- **Built artifact, `NODE_ENV=development`:** a set without `sortFns` → 1 warning; the same set
+  with `sortFns` → 0. Run against `dist`, independent of vitest.
+- **Seven new unit cases** in `create-table-options.test.ts`: plain accessor column, named
+  comparator, inline comparator, `sorting.fns` answering every name, every column opted out,
+  manual sorting, registry present.
+- **All 112 docs examples swept in a headless browser** for `[data-grid]` console output:
+  **zero `sortFns` warnings**, confirming no false positive across the corrected set (`8825d1ac`).
+
+### Two fixtures that were the defect in miniature
+
+`SORTING` in `create-table.test.ts` and `features` in `create-table-options.test.ts` both
+registered `rowSortingFeature` without `sortFns` — so the core suites were themselves sorting
+lexicographically. Both now register it, mirroring the `filterFns` comment already there.
+
+One test changed meaning rather than fixture: a config with neither `rowSortingFeature` nor
+`sortFns` now emits **two** warnings. That is correct — two independent gaps, and neither implies
+the other; a set carrying `rowSortingFeature` without `sortFns` is the commoner mistake.
+
+### Core's five gates, re-measured after the commit
+
+`build` ok · `typecheck` clean · `lint` clean (`--max-warnings=0`) · `test` 668/668 ·
+`size` 10.84/12.5 kB, 4.50/5.5 kB, 4.54/5.5 kB. The guard is `IS_DEV`-gated and stripped from
+production builds, so the budgets did not move.
+
+## 8. Six pre-existing docs warnings, for PR 4
+
+The 112-example sweep surfaced warnings from **other** guards, none from this work, all in
+`apps/docs/shared/**` — PR 4's territory, so left untouched:
+
+| Example                      | Warning                                                                                       |
+| ---------------------------- | --------------------------------------------------------------------------------------------- |
+| `crud-client`, `crud-server` | column `department`: `filtering.defaultOperator: "in"` is not one of its operators            |
+| `example-task-board`         | columns `estHours`, `createdAt`: `defaultOperator: "equals"` against `between`-only operators |
+| `production-deferred-apply`  | column `reference` seeds `pinning.initialSide` with table-level pinning off                   |
+| `production-feed`            | column `invoice` seeds `visibility.initialHidden` with table-level visibility off             |
+
+The first four are "the filter would match every row" — the same silent class this PR's guards
+exist for, and worth a look.
