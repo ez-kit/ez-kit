@@ -158,7 +158,7 @@
 	"size-limit": [
 		{
 			"path": "dist/index.js",
-			"limit": "16 KB",
+			"limit": "16.6 KB",
 			"ignore": [
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
@@ -176,7 +176,7 @@
 		},
 		{
 			"path": "dist/cell-types/text.js",
-			"limit": "500 B",
+			"limit": "480 B",
 			"ignore": [
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
@@ -194,7 +194,7 @@
 		},
 		{
 			"path": "dist/cell-types/boolean.js",
-			"limit": "900 B",
+			"limit": "850 B",
 			"ignore": [
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
@@ -203,7 +203,7 @@
 		},
 		{
 			"path": "dist/cell-types/date.js",
-			"limit": "1 KB",
+			"limit": "950 B",
 			"ignore": [
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
@@ -221,7 +221,7 @@
 		},
 		{
 			"path": "dist/cell-types/badge.js",
-			"limit": "1 KB",
+			"limit": "940 B",
 			"ignore": [
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
@@ -230,7 +230,7 @@
 		},
 		{
 			"path": "dist/cell-types/image.js",
-			"limit": "600 B",
+			"limit": "580 B",
 			"ignore": [
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
@@ -239,7 +239,7 @@
 		},
 		{
 			"path": "dist/cell-types/link.js",
-			"limit": "700 B",
+			"limit": "640 B",
 			"ignore": [
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
@@ -248,7 +248,7 @@
 		},
 		{
 			"path": "dist/cell-types/progress.js",
-			"limit": "700 B",
+			"limit": "670 B",
 			"ignore": [
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
@@ -266,7 +266,7 @@
 		},
 		{
 			"path": "dist/pagination/index.js",
-			"limit": "1.1 KB",
+			"limit": "1.05 KB",
 			"ignore": [
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
@@ -293,7 +293,7 @@
 		},
 		{
 			"path": "dist/editing/index.js",
-			"limit": "600 B",
+			"limit": "560 B",
 			"ignore": [
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
@@ -302,7 +302,7 @@
 		},
 		{
 			"path": "dist/deleting/index.js",
-			"limit": "600 B",
+			"limit": "510 B",
 			"ignore": [
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
@@ -338,7 +338,7 @@
 		},
 		{
 			"path": "dist/resizing/index.js",
-			"limit": "500 B",
+			"limit": "440 B",
 			"ignore": [
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
@@ -365,7 +365,7 @@
 		},
 		{
 			"path": "dist/infinite/index.js",
-			"limit": "700 B",
+			"limit": "630 B",
 			"ignore": [
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
@@ -374,7 +374,7 @@
 		},
 		{
 			"path": "dist/expanding/index.js",
-			"limit": "500 B",
+			"limit": "420 B",
 			"ignore": [
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",

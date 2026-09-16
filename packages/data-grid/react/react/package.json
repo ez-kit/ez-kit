@@ -67,7 +67,6 @@
 			"limit": "28 KB",
 			"ignore": [
 				"@ez-kit/data-grid-core",
-				"@tanstack/react-store",
 				"@tanstack/react-table",
 				"@tanstack/react-virtual",
 				"@tanstack/table-core"
@@ -78,7 +77,6 @@
 			"limit": "940 B",
 			"ignore": [
 				"@ez-kit/data-grid-core",
-				"@tanstack/react-store",
 				"@tanstack/react-table",
 				"@tanstack/react-virtual",
 				"@tanstack/table-core"
@@ -89,7 +87,6 @@
 			"limit": "840 B",
 			"ignore": [
 				"@ez-kit/data-grid-core",
-				"@tanstack/react-store",
 				"@tanstack/react-table",
 				"@tanstack/react-virtual",
 				"@tanstack/table-core"
@@ -100,7 +97,6 @@
 			"limit": "610 B",
 			"ignore": [
 				"@ez-kit/data-grid-core",
-				"@tanstack/react-store",
 				"@tanstack/react-table",
 				"@tanstack/react-virtual",
 				"@tanstack/table-core"
@@ -111,7 +107,6 @@
 			"limit": "260 B",
 			"ignore": [
 				"@ez-kit/data-grid-core",
-				"@tanstack/react-store",
 				"@tanstack/react-table",
 				"@tanstack/react-virtual",
 				"@tanstack/table-core"
