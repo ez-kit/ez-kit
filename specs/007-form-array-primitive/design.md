@@ -80,7 +80,7 @@ type ArrayScope<TItem> = {
 	disabled: boolean // the `disabled` prop, normalised — see the note below
 	required: boolean // the `required` prop, normalised
 	Button: FormComponents['Button']
-	field: AnyFieldApi
+	field: BoundFieldApi // narrowed from AnyFieldApi — see the note below
 }
 
 type ArrayItemScope<TItem> = FormFieldComponents<TItem> & {
@@ -122,6 +122,25 @@ it likes and it is ignored. Nothing is lost: appending a specific value is
 `insert(items.length, value)`, the two were one operation spelled twice, and collapsing those is
 what the paragraph above already does to `swap`. At the time of the decision **no caller anywhere**
 — plan, tests or docs examples — passed a value to `add`.
+
+_Revised during implementation — `field` is `BoundFieldApi`, not `AnyFieldApi`._ The scope member
+was specified above as `AnyFieldApi`, and the prose beside it called the raw field "the escape
+hatch", naming `pushValue` / `removeValue` / `moveValue` as what it reaches. What shipped is
+`BoundFieldApi` — `name`, `state` (the list as one value, plus `errors` / `isTouched`),
+`handleChange`, `handleBlur` — so none of those three helpers is reachable through it.
+
+The reason is written into the type itself (`bindable-form.ts`): `AnyFieldApi` erases the field's
+value type to `any`. Putting it on a public scope member exports that `any` into every consumer's
+render path, which is exactly what the narrowing exists to prevent — and it would do so to serve an
+escape hatch this decision's own subject already covers. `insert` / `remove` / `move` are the
+indexed vocabulary; they are also the versions that keep an entry's minted `key` attached to the
+entry, which the raw index-based helpers would not. So the escape hatch was the weaker of the two
+things the decision asked for, and the vocabulary is the one that survived.
+
+Nothing measured has been lost: no caller in the package, the tests, the kits or the docs reaches
+for a TanStack array helper through `field`. If a consumer turns up with a case the indexed
+vocabulary genuinely cannot express, widening this member is a 1.0 decision — and it should be a
+`FieldApi<TItem[]>`-shaped widening rather than a return to `any`.
 
 _Rejected — exposing only the raw TanStack field._ It cannot carry `newItem`, cannot carry
 `canAdd`, and above all cannot carry **entry identity**: TanStack indexes, and `specs/005`

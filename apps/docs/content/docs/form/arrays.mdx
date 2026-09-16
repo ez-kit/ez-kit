@@ -69,7 +69,7 @@ The component takes the array's `name`, a `newItem` to append, and a render prop
 
 | Prop          | Type                           | Notes                                                                                                               |
 | ------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
-| `name`        | array path                     | **Required.** Narrowed to the paths of `TFormData` whose value is an array; the item type follows it.               |
+| `name`        | array path                     | **Required.** Restricted to the paths of `TFormData` whose value is an array. It does _not_ carry the item type.    |
 | `newItem`     | `TItem`                        | **Required.** The value a newly appended entry starts from.                                                         |
 | `children`    | `(scope) => ReactNode`         | **Required.** The render prop — see [the scope](#the-render-prop) below.                                            |
 | `label`       | `ReactNode`                    | Caption for the list itself.                                                                                        |
@@ -84,6 +84,30 @@ The component takes the array's `name`, a `newItem` to append, and a render prop
 
 `validate.maxLength` is both bounds at once: it is the constraint that fails with a message, and it is the point at which the add control stops offering — `canAdd` goes `false` and the kit renders the control disabled rather than letting it vanish from under the cursor. One option, one meaning, the same on both paths.
 
+**The item type comes from `newItem`, not from `name`.** `name` is typed through `DeepKeysOfType`, a conditional type — and a conditional type is not an inference position. It can reject a path whose value is not an array, but it cannot tell TypeScript what an entry looks like; `TItem` is inferred from `newItem`, and from what `children` do with the scope. That stays invisible until a key of the item is itself an array, because an inline empty array gives the inference nothing to work from:
+
+```tsx
+// `members` infers as never[] — and the error lands on `name`:
+// Type 'string' is not assignable to type 'never'.
+<form.ArrayField
+	name='lines'
+	newItem={{ name: '', members: [] }}
+>
+```
+
+The message names the array's path rather than the empty array that caused it, which is why it is worth knowing about in advance. Annotate `newItem` with the item type and there is nothing left to guess:
+
+```tsx
+const NEW_LINE: Line = { name: '', members: [] }
+
+<form.ArrayField
+	name='lines'
+	newItem={NEW_LINE}
+>
+```
+
+Both examples on this page are written that way. The same holds for `form.Array`, which infers its item type from the same prop.
+
 ### The render prop
 
 The render prop receives the live list and the controls for it:
@@ -96,13 +120,15 @@ The render prop receives the live list and the controls for it:
 
 ### One entry
 
-Each member of `items` **is** the form's field set retyped over the item, plus three keys of its own:
+Each member of `items` **is** the form's field set retyped over the item, plus eight keys of its own. Three of them are what a `form.ArrayField` layout uses; the other five — `isFirst`, `isLast`, `remove`, `moveUp`, `moveDown` — are already spent here on the remove and reorder controls `item.Item` draws for you, so they are documented [with the primitive](#one-entry-from-the-primitive) instead:
 
-| Key     | Type                                 | Notes                                                                                              |
-| ------- | ------------------------------------ | -------------------------------------------------------------------------------------------------- |
-| `key`   | `string`                             | The entry's stable id. This is what `key` takes — see [above](#key-by-itemkey-never-by-the-index). |
-| `index` | `number`                             | Its zero-based position. Fine for display; never for `key`.                                        |
-| `Item`  | `(props: { children }) => ReactNode` | The entry's chrome — heading, remove control, reorder controls. Wrap the entry's fields.           |
+| Key     | Type                                   | Notes                                                                                              |
+| ------- | -------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `key`   | `string`                               | The entry's stable id. This is what `key` takes — see [above](#key-by-itemkey-never-by-the-index). |
+| `index` | `number`                               | Its zero-based position. Fine for display; never for `key`.                                        |
+| `Item`  | `(props: ArrayItemProps) => ReactNode` | The entry's chrome — heading, remove control, reorder controls. Wrap the entry's fields.           |
+
+Inside `form.ArrayField` the only prop `Item` needs is `children`; the rest of `ArrayItemProps` exists for the primitive, where there is no array-level `itemLabel` / `removeLabel` / `reorderable` to inherit — see [`item.Item`'s own props](#itemitems-own-props).
 
 Everything else on the object is `item.TextField`, `item.SelectField`, `item.ArrayField` and the rest, each addressing this entry's paths. `item.ArrayField` is why nesting needs no extra machinery: a list inside an entry is the same component, one prefix deeper.
 
@@ -137,7 +163,7 @@ explain why.
 
 | Prop       | Type                   | Notes                                                                                                                                                   |
 | ---------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`     | array path             | **Required.** Narrowed to the paths of `TFormData` whose value is an array; the item type follows it.                                                   |
+| `name`     | array path             | **Required.** Restricted to the paths of `TFormData` whose value is an array — the item type comes from `newItem`, [as above](#formarrayfield).         |
 | `newItem`  | `TItem`                | **Required.** The value a newly appended entry starts from — same rule as `form.ArrayField`'s.                                                          |
 | `children` | `(scope) => ReactNode` | **Required.** The render prop — see [the scope](#the-scope) below.                                                                                      |
 | `disabled` | `boolean`              | Reaches the scope as data — there is no frame of the primitive's own to disable, though it still reaches `item.Item`'s chrome on any row that uses one. |
@@ -166,7 +192,15 @@ worth documenting:
 | `disabled` | `boolean`                   | The `disabled` prop, normalised: always a plain `boolean`, never `undefined`.                                                    |
 | `required` | `boolean`                   | The `required` prop, normalised the same way.                                                                                    |
 | `Button`   | `FormComponents['Button']`  | The kit's generic button, for a control drawn outside `item.Item` — the add and duplicate controls above use it.                 |
-| `field`    | `BoundFieldApi`             | The array field's own bound field, for a `Subscribe`-style read the scope does not cover.                                        |
+| `field`    | `BoundFieldApi`             | The array field itself — see the note below.                                                                                     |
+
+`field` is **not** the raw TanStack field API. It is `BoundFieldApi`, the narrowed shape the rest of
+this package binds against: `name`, `state` — the whole list as one value, plus its `errors` and
+`isTouched` — and `handleChange` / `handleBlur`. That is enough to read the list as a whole (`errors`
+and `invalid` above are computed from exactly this) or to write it wholesale, and it is not an escape
+hatch onto TanStack's own array helpers: `pushValue`, `removeValue` and `moveValue` are not on it.
+`insert` / `remove` / `move` are how this scope spells those, and they are the ones that keep each
+entry's `key` attached to the entry — the raw helpers index, and would not.
 
 `add` is deliberately arity-zero: `insert` / `remove` / `move` all take a mandatory index first, so
 none of them can be handed a click event by mistake. `add` would be the one exception — the single
