@@ -1,6 +1,6 @@
 import { expect, test } from '../../../fixtures'
 
-import type { Page } from '@playwright/test'
+import type { Locator, Page } from '@playwright/test'
 
 /**
  * `form.Array`, the headless primitive, driven through a hand-drawn `<table>` (`form-arrays-custom`).
@@ -13,7 +13,11 @@ import type { Page } from '@playwright/test'
  *
  * Entries are counted and reached instead by `data-field`, the one thing every field carries
  * regardless of who drew the row: `[data-field^="lines["][data-field$=".sku"]` is exactly one
- * element per entry, since each entry has exactly one `sku` field.
+ * element per entry, since each entry has exactly one `sku` field. That assumption breaks for a
+ * nested `lines[i].meta.sku` (two matches per entry, the suffix matcher cannot tell them apart)
+ * and for an entry whose `sku` field failed to render (silently not counted as a row) — neither
+ * happens in this example, so the locator is left as the entry count rather than reached for
+ * `form-array-item`, which this example's rows do not carry (see above).
  */
 const EXAMPLE = 'form-arrays-custom'
 
@@ -26,6 +30,22 @@ const lineRows = (page: Page) => page.locator('[data-field^="lines["][data-field
 const duplicateButton = (page: Page, index: number) => page.getByRole('button', { name: `Duplicate ${String(index)}` })
 const removeButton = (page: Page, index: number) => page.getByRole('button', { name: `Remove ${String(index)}` })
 const upButton = (page: Page, index: number) => page.getByRole('button', { name: `Up ${String(index)}` })
+
+/**
+ * The caret, read and written directly — see `arrays.spec.ts`'s own copy of this pair for why:
+ * `selectionStart` belongs to the DOM node, not to React, and survives the node being re-pointed
+ * at another entry's value, which is exactly what makes it a witness for whether the node
+ * travelled with its entry rather than being reused for whichever entry now renders at its slot.
+ */
+async function caretTo(input: Locator, offset: number): Promise<void> {
+	await input.evaluate((element, at) => {
+		;(element as HTMLInputElement).setSelectionRange(at, at)
+	}, offset)
+}
+
+async function caretOf(input: Locator): Promise<number | null> {
+	return input.evaluate((element) => (element as HTMLInputElement).selectionStart)
+}
 
 test.describe('an array composed by hand', () => {
 	test.beforeEach(async ({ form }) => {
@@ -51,22 +71,33 @@ test.describe('an array composed by hand', () => {
 	})
 
 	/**
-	 * The identity probe. `insert` at a middle index must not renumber the entries around it: the
-	 * survivor that was at index 1 has to keep its own value at its new index, not the value that
-	 * sits at the same index today. An implementation that inserted by shifting values across
-	 * fixed slots — rather than splicing a fresh entry into the list — would show `EZ-200` at
-	 * index 1 here instead of a blank entry, which is exactly what the two assertions below rule
-	 * out before the payload is even checked.
+	 * The ordering probe, plus a real identity witness.
+	 *
+	 * `insert` at a middle index must not renumber the entries around it: the survivor that was
+	 * at index 1 has to keep its own value at its new index, not the value that sits at the same
+	 * index today. An implementation that inserted by shifting values across fixed slots — rather
+	 * than splicing a fresh entry into the list — would show `EZ-200` at index 1 here instead of a
+	 * blank entry, which the value and payload assertions below rule out. Those assertions alone
+	 * do *not* prove entry identity, though: every value here re-renders from form state by path,
+	 * so a `<tr>` keyed by `item.index` instead of `item.key` — the mistake this example exists to
+	 * get right — would still show the correct value at the correct path after React reuses the
+	 * wrong DOM node for it. `arrays.spec.ts` spends a caret witness on exactly this gap for
+	 * `ArrayField`'s own row; the hand-drawn `<tr>` here is the one surface nothing else exercises.
+	 * The caret belongs to the DOM node, not to the controlled value, so it survives an insert only
+	 * if the node that already held `EZ-200` travels with its entry down to index 2, rather than
+	 * being reused in place for the freshly inserted entry at index 1.
 	 */
 	test('inserts a fresh entry directly below the one asked for', async ({ form, page }) => {
 		await page.getByRole('button', { name: ADD }).click()
 		await form.input('lines[1].sku').fill('EZ-200')
+		await caretTo(form.input('lines[1].sku'), 2)
 
 		await duplicateButton(page, 1).click()
 		await expect(lineRows(page)).toHaveCount(3)
 
 		await expect(form.input('lines[1].sku')).toHaveValue('')
 		await expect(form.input('lines[2].sku')).toHaveValue('EZ-200')
+		expect(await caretOf(form.input('lines[2].sku'))).toBe(2)
 
 		await page.getByRole('button', { name: SAVE }).click()
 		expect(await form.submitted()).toEqual({
