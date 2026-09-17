@@ -43,30 +43,18 @@ export { useDataGrid } from './use-data-grid'
 export type { DataTable } from './types'
 export type {
 	UseDataGridConfig,
-	ReactVisibilityConfig,
 	EmptyFallbackConfig,
 	ExpandedRowProps,
 	FallbacksConfig,
-	FilterChipsConfig,
-	FilteringToolbarConfig,
-	FilterPanelConfig,
 	LoadingFallbackConfig,
 	NoResultsFallbackConfig,
-	GlobalFilterToolbarConfig,
-	PageSizerConfig,
 	// The resolved shapes `ResolvedGridOptions` is built from. That type is public and a UI kit
 	// reads it through `useGridOptions()`, so the names of its members have to be nameable too —
-	// they were not, and a kit lifting `grid.filtering.chips` into a helper had no type to write.
+	// they were not, and a kit lifting `grid.globalFiltering` into a helper had no type to write.
 	NormalizedFallbackConfig,
 	NormalizedFallbacksConfig,
-	NormalizedFeatureToolbarConfig,
-	NormalizedFilterChipsConfig,
-	NormalizedFilteringToolbarConfig,
-	NormalizedFilterPanelConfig,
 	NormalizedGlobalFilteringConfig,
-	NormalizedGlobalFilterToolbarConfig,
 	NormalizedInfiniteConfig,
-	NormalizedPageSizerConfig,
 	NormalizedSelectionBarConfig,
 	NormalizedVirtualizationConfig,
 	ReactExpandingConfig,
@@ -75,7 +63,6 @@ export type {
 	ReactPaginationConfig,
 	ReactRowActionsConfig,
 	ReactSelectionConfig,
-	ReactSortingConfig,
 	RowPropsResolver,
 	LayoutClassNames,
 	LayoutConfig,
@@ -226,6 +213,11 @@ export { DraftBar } from './data-grid/draft-bar'
 export { ActiveFiltersBar } from './data-grid/active-filters-bar'
 export { ClearFiltersButton } from './data-grid/clear-filters-button'
 
+// Layout presets for `core.Layout` — what a UI kit binds so its prebuilt `<DataGrid>` renders
+// a full shell, and what an application starts from when composing its own. Pure composition;
+// see `./layouts` for why there are four of them.
+export { BottomBarLayout, DefaultLayout, GridShell, PopoverFiltersLayout, SearchFiltersActionsLayout } from './layouts'
+
 // DI context
 export { GridComponentsProvider, useGridComponents } from './components-context'
 export type { GridComponentsProviderProps } from './components-context'
@@ -301,6 +293,7 @@ export type {
 	ThProps,
 	TheadProps,
 	TableProps,
+	LayoutProps,
 	RootProps,
 	TableScrollProps,
 	TableWrapperProps,
@@ -314,11 +307,7 @@ export type {
 export {
 	FilterChipKind,
 	FilterChipsPosition,
-	FilteringVariant,
-	FilterPanelPlacement,
-	GlobalFilterPlacement,
 	LoadMoreTrigger,
-	PageSizerPlacement,
 	PaginationLabel,
 	RowActionId,
 	ActionsCellState,

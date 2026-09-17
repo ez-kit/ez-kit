@@ -14,7 +14,7 @@ import type { NormalizedInfiniteConfig } from '../use-data-grid'
  * virtualizer index) and the loader UI.
  *
  * Ownership split: `hasNextPage` is a user-owned pagination option read reactively from
- * the config (INFINITE_KEY); `isFetching` / `error` are grid-owned state read from the
+ * the config (`grid.pagination.infinite`); `isFetching` / `error` are grid-owned state read from the
  * store. The duplicate / no-next-page guard lives here (not in core), since core state
  * no longer knows `hasNextPage`.
  */

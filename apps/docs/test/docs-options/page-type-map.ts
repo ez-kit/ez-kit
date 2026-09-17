@@ -218,9 +218,15 @@ export type DocPage = (typeof DocPage)[keyof typeof DocPage]
  * `@ez-kit/data-grid-core`; `@ez-kit/data-grid-react` re-exports *differently
  * named* React variants (`ReactPaginationConfig`, `ReactFilteringConfig`, …)
  * that carry extra React-only slots. Where a docs table documents a slot that
- * only exists in React (`filtering.chips`, `globalFiltering.toolbar`), the
- * React variant is the correct governing type — it is what
- * `UseDataGridConfig[key]` actually resolves to.
+ * only exists in React (`filtering.debounce`, `pagination.links`), the React
+ * variant is the correct governing type — it is what `UseDataGridConfig[key]`
+ * actually resolves to.
+ *
+ * `sorting` and `visibility` used to need one too. Their only React-only field
+ * was the `toolbar` auto-mount flag, and when layout moved from config to JSX
+ * that flag went, taking `ReactSortingConfig` / `ReactVisibilityConfig` with
+ * it — so core's `SortingConfig` / `VisibilityConfig` are now the whole
+ * option.
  */
 export const GRID_TYPE = {
 	/** Root config object passed to `useDataGrid()`. */
@@ -228,7 +234,6 @@ export const GRID_TYPE = {
 	ColumnDef: { module: TypeModule.Core, name: 'ColumnDef', typeArgs: ROW_TYPE_ARGS },
 	TableState: { module: TypeModule.Core, name: 'TableState', typeArgs: FEATURES_TYPE_ARGS },
 	SortingConfig: { module: TypeModule.Core, name: 'SortingConfig' },
-	ReactSortingConfig: { module: TypeModule.React, name: 'ReactSortingConfig' },
 	MultiSortConfig: { module: TypeModule.Core, name: 'MultiSortConfig' },
 	ColumnSortingConfig: { module: TypeModule.Core, name: 'ColumnSortingConfig' },
 	ColumnFilteringConfig: { module: TypeModule.Core, name: 'ColumnFilteringConfig' },
@@ -249,8 +254,6 @@ export const GRID_TYPE = {
 		name: 'ReactGlobalFilteringConfig',
 		typeArgs: FEATURES_TYPE_ARGS,
 	},
-	FilterChipsConfig: { module: TypeModule.React, name: 'FilterChipsConfig' },
-	FilteringToolbarConfig: { module: TypeModule.React, name: 'FilteringToolbarConfig' },
 	VirtualizationConfig: { module: TypeModule.Core, name: 'VirtualizationConfig' },
 	SelectionBarConfig: { module: TypeModule.React, name: 'SelectionBarConfig', typeArgs: ROW_TYPE_ARGS },
 	ActionItemDef: { module: TypeModule.Core, name: 'ActionItemDef' },
@@ -495,6 +498,11 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		optionTables: [],
 		nonOptionTables: [
 			{
+				heading: 'Layout presets',
+				reason:
+					'Maps each exported preset component to what it renders and to the option it replaced. The first column is export names from `@ez-kit/data-grid-react`, not keys of any config.',
+			},
+			{
 				heading: 'Keep the built-in body and add to it',
 				reason:
 					'Names the parts `<DataGrid.Body>` hands its children (`creatingRow`, `centerRows`, `loadMoreFooter`, …) — properties of a callback argument, the same shape as the header-cell table below, not options anyone sets.',
@@ -631,7 +639,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			// The keys a defaults layer deliberately cannot carry — real `UseDataGridConfig` keys,
 			// which is exactly what makes the row meaningful.
 			{ heading: 'What can be defaulted', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 4 },
-			{ heading: 'Built-in default values', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 41 },
+			{ heading: 'Built-in default values', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 36 },
 		],
 		nonOptionTables: [{ heading: 'When to use which', reason: 'Maps a situation to an API, naming no keys.' }],
 	},
@@ -669,7 +677,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			// Each table is headed by the feature it configures and lists that config's own keys,
 			// so the governing type is the feature config, not the root.
 			{ heading: '`pagination`', roots: [GRID_TYPE.ReactPaginationConfig], expectedCount: 3 },
-			{ heading: '`sorting`', roots: [GRID_TYPE.ReactSortingConfig], expectedCount: 2 },
+			{ heading: '`sorting`', roots: [GRID_TYPE.SortingConfig], expectedCount: 2 },
 			{ heading: '`filtering`', roots: [GRID_TYPE.ReactFilteringConfig], expectedCount: 2 },
 			{ heading: '`globalFiltering`', roots: [GRID_TYPE.ReactGlobalFilteringConfig], expectedCount: 1 },
 			{ heading: '`state.loading`', roots: [GRID_TYPE.LoadingState], expectedCount: 4 },
@@ -751,7 +759,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		page: DocPage.ColumnsVisibility,
 		// The `enableHiding` row is gone — it was the raw TanStack pass-through that
 		// duplicated `visibility`, and `ColumnDef` no longer accepts it.
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.ColumnDef, GRID_TYPE.UseDataGridConfig], expectedCount: 6 }],
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.ColumnDef, GRID_TYPE.UseDataGridConfig], expectedCount: 5 }],
 		nonOptionTables: [],
 	},
 	{
@@ -835,7 +843,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 	{
 		page: DocPage.FilteringGlobal,
-		optionTables: [{ heading: '`globalFiltering`', roots: [GRID_TYPE.ReactGlobalFilteringConfig], expectedCount: 7 }],
+		optionTables: [{ heading: '`globalFiltering`', roots: [GRID_TYPE.ReactGlobalFilteringConfig], expectedCount: 6 }],
 		nonOptionTables: [
 			{
 				heading: 'Per-column `globalFiltering`',
@@ -847,7 +855,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.FilteringIndex,
 		optionTables: [
-			{ heading: '`filtering`', roots: [GRID_TYPE.ReactFilteringConfig], expectedCount: 9 },
+			{ heading: '`filtering`', roots: [GRID_TYPE.ReactFilteringConfig], expectedCount: 6 },
 			{ heading: 'Per-column `filtering`', roots: [GRID_TYPE.ColumnFilteringConfig], expectedCount: 6 },
 		],
 		nonOptionTables: [],
@@ -881,24 +889,38 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		],
 	},
 	{
+		// The page has no option table at all any more: it documented `filtering.variant`, and
+		// where a filter control renders is now what the JSX says rather than what an option
+		// names. The one table left maps an arrangement to the composition that produces it.
 		page: DocPage.FilteringVariants,
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.ReactFilteringConfig], expectedCount: 3 }],
+		optionTables: [],
 		nonOptionTables: [
 			{
 				heading: NO_HEADING,
 				reason:
-					"First column holds `variant` *values* ('inline', 'popover', 'panel'), one row each, not keys of a config object.",
+					'First column names where the control lives and the second the JSX that puts it there — arrangements and component names, not keys of any config.',
 			},
 		],
 	},
 	{
+		// Both surfaces are mounted by writing the component, so what is documented is the two
+		// components' props rather than any `filtering` key. `alwaysShow` moved from
+		// `filtering.toolbar` to `<DataGrid.ClearFiltersButton>`; `position` from
+		// `filtering.chips` to `<DataGrid.ActiveFiltersBar>`.
 		page: DocPage.FilteringActiveFilters,
-		optionTables: [
-			{ heading: '`filtering`', roots: [GRID_TYPE.ReactFilteringConfig], expectedCount: 2 },
-			{ heading: '`FilterChipsConfig`', roots: [GRID_TYPE.FilterChipsConfig], expectedCount: 1 },
-			{ heading: '`FilteringToolbarConfig`', roots: [GRID_TYPE.FilteringToolbarConfig], expectedCount: 1 },
+		optionTables: [],
+		nonOptionTables: [
+			{
+				heading: '`<DataGrid.ActiveFiltersBar />`',
+				reason:
+					'Props of a compound component, not keys of a config object — the governing type is `DataGridActiveFiltersBarProps`, which no option path reaches.',
+			},
+			{
+				heading: '`<DataGrid.ClearFiltersButton />`',
+				reason:
+					'Props of a compound component, not keys of a config object — the governing type is `DataGridClearFiltersButtonProps`, which no option path reaches.',
+			},
 		],
-		nonOptionTables: [],
 	},
 	{
 		page: DocPage.FormCustomKit,
@@ -1002,7 +1024,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 	{
 		page: DocPage.PaginationIndex,
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 15 }],
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 14 }],
 		nonOptionTables: [
 			{
 				heading: 'Label',
@@ -1095,7 +1117,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.Sorting,
 		optionTables: [
-			{ heading: '`sorting`', roots: [GRID_TYPE.ReactSortingConfig], expectedCount: 8 },
+			{ heading: '`sorting`', roots: [GRID_TYPE.SortingConfig], expectedCount: 7 },
 			{ heading: '`MultiSortConfig`', roots: [GRID_TYPE.MultiSortConfig], expectedCount: 3 },
 			{ heading: 'Per-column `sorting`', roots: [GRID_TYPE.ColumnSortingConfig], expectedCount: 5 },
 		],

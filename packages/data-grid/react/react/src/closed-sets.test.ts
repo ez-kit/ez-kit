@@ -10,7 +10,6 @@ import {
 	CommitStatus,
 	FilterChipKind,
 	FilterChipsPosition,
-	FilteringVariant,
 	ColumnSortDirection,
 	LoadMoreDirection,
 	LoadMoreTrigger,
@@ -21,7 +20,7 @@ import {
 	ValidateOn,
 } from './index'
 
-import type { UseDataGridConfig } from './index'
+import type { DataGridActiveFiltersBarProps, UseDataGridConfig } from './index'
 import type { GridFeatures } from './types'
 
 type Row = { id: string; name: string }
@@ -48,7 +47,6 @@ describe('closed sets keep the bare-string form valid for consumers', () => {
 			sorting: { multi: { event: 'ctrl' } },
 			direction: 'rtl',
 			resizing: { mode: 'onEnd' },
-			filtering: { variant: 'popover', chips: { position: 'below' } },
 			pagination: { mode: 'infinite', trigger: 'manual' },
 			expanding: { mode: 'tree' },
 			editing: { validateOn: 'change', onSave: () => undefined },
@@ -71,7 +69,6 @@ describe('closed sets keep the bare-string form valid for consumers', () => {
 		expect(SortDirection.Asc).toBe('asc')
 		expect(ColumnSortDirection.None).toBe('none')
 		expect(FilterChipKind.Global).toBe('global')
-		expect(FilteringVariant.Popover).toBe('popover')
 		expect(FilterChipsPosition.Below).toBe('below')
 		expect(BetweenInputType.Date).toBe('date')
 	})
@@ -82,10 +79,20 @@ describe('closed sets keep the bare-string form valid for consumers', () => {
 			data: [],
 			columns: [],
 			resizing: { mode: ColumnResizeMode.OnEnd },
-			filtering: { variant: FilteringVariant.Popover },
 			pagination: { mode: PaginationMode.Infinite, trigger: LoadMoreTrigger.Manual },
 		}
 
 		expect(config.columns).toEqual([])
+	})
+
+	// `FilterChipsPosition` is the one closed set that no longer names an option: the
+	// `filtering.chips` config it belonged to is gone, and it types a **component prop** now.
+	// Checked here all the same — the property under test is about the set's shape, not about
+	// where it is written.
+	it('keeps both forms valid on a component prop', () => {
+		const bare: DataGridActiveFiltersBarProps = { position: 'below' }
+		const named: DataGridActiveFiltersBarProps = { position: FilterChipsPosition.Below }
+
+		expect(bare).toEqual(named)
 	})
 })

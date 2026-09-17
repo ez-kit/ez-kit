@@ -29,6 +29,7 @@ import {
 import { DataGrid } from 'shared/DataGrid'
 
 import { orderColumns } from './data'
+import { ProductionLayout } from './ProductionLayout'
 import { useOrders } from './use-orders'
 
 const features = tableFeatures({
@@ -79,7 +80,6 @@ export function ProductionExample() {
 			sorting={{
 				manual: true,
 				multi: { max: 3, event: 'ctrl' },
-				toolbar: true,
 				onChange: (next) => {
 					orders.setSorting(next)
 					orders.resetToFirstPage()
@@ -87,11 +87,8 @@ export function ProductionExample() {
 			}}
 			filtering={{
 				manual: true,
-				variant: 'popover',
 				faceted: true,
 				debounce: 300,
-				chips: { position: 'above' },
-				toolbar: true,
 				onChange: (next) => {
 					orders.setColumnFilters(next)
 					orders.resetToFirstPage()
@@ -136,6 +133,8 @@ export function ProductionExample() {
 				globalFilter: orders.globalFilter,
 				loading: orders.loading,
 			}}
-		/>
+		>
+			<ProductionLayout />
+		</DataGrid>
 	)
 }

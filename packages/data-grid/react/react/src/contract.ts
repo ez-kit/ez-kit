@@ -112,8 +112,8 @@ export const FEATURE_COMPONENTS = {
 /**
  * Components a feature **accepts but does not require**, beside the ones {@link FEATURE_COMPONENTS}
  * makes mandatory. A key belongs here only when the package has a correct answer without it — the
- * shell's two boxes fall back to a plain `div` — so registering one is an upgrade rather than an
- * obligation.
+ * shell's two boxes fall back to a plain `div`, and `Layout` falls back to the table alone — so
+ * registering one is an upgrade rather than an obligation.
  *
  * They are kept out of {@link FEATURE_COMPONENTS} deliberately: `ComponentsFor` is what
  * {@link FullGridComponents} makes required, so a key added there is a compile error in every
@@ -121,7 +121,7 @@ export const FEATURE_COMPONENTS = {
  * additive — an existing kit keeps compiling and keeps its current rendering.
  */
 export const FEATURE_OPTIONAL_COMPONENTS = {
-	[GridFeature.Core]: ['Root', 'TableWrapper', 'TableScroll'] as const,
+	[GridFeature.Core]: ['Root', 'TableWrapper', 'TableScroll', 'Layout'] as const,
 	[GridFeature.Pagination]: [] as const,
 	[GridFeature.Sorting]: [] as const,
 	[GridFeature.Filtering]: [] as const,

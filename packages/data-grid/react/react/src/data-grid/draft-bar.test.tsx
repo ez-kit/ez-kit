@@ -4,6 +4,8 @@ import { describe, expect, it } from 'vitest'
 
 import { renderGrid } from '../test-utils'
 
+import { DataGrid } from './data-grid'
+
 describe('DraftBar', () => {
 	it('is closed when nothing is pending', () => {
 		renderGrid({ draft: true, sorting: { manual: true } })
@@ -167,11 +169,14 @@ describe('deferred-apply DOM marks', () => {
 	})
 
 	it('marks an unapplied column filter chip with data-draft-filter', async () => {
-		const { table } = renderGrid({
-			draft: true,
-			sorting: { manual: true },
-			filtering: { manual: true, chips: true },
-		})
+		const { table } = renderGrid(
+			{ draft: true, sorting: { manual: true }, filtering: { manual: true } },
+			// `filtering: { chips: true }` used to mount the strip; a layout writes it now.
+			<>
+				<DataGrid.ActiveFiltersBar />
+				<DataGrid.Table />
+			</>,
+		)
 
 		table.getColumn('name')?.setFilterValue('ali')
 
@@ -180,11 +185,14 @@ describe('deferred-apply DOM marks', () => {
 	})
 
 	it('drops data-draft-filter once the filter draft is applied', async () => {
-		const { table } = renderGrid({
-			draft: true,
-			sorting: { manual: true },
-			filtering: { manual: true, chips: true },
-		})
+		const { table } = renderGrid(
+			{ draft: true, sorting: { manual: true }, filtering: { manual: true } },
+			// `filtering: { chips: true }` used to mount the strip; a layout writes it now.
+			<>
+				<DataGrid.ActiveFiltersBar />
+				<DataGrid.Table />
+			</>,
+		)
 
 		table.getColumn('name')?.setFilterValue('ali')
 		table.draft.apply()

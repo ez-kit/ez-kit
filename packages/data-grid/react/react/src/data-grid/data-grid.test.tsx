@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { GridComponentsProvider } from '../components-context'
 import { prepareDataGridTable } from '../prepare-table'
 import { TEST_FEATURES, renderWithComponents } from '../test-utils'
-import { ActionBarVariant, PageSizerPlacement } from '../types'
+import { ActionBarVariant } from '../types'
 
 import { DataGrid } from './data-grid'
 
@@ -268,29 +268,17 @@ describe('<DataGrid>', () => {
 		expect(screen.queryByRole('combobox')).toBeNull()
 	})
 
-	it('renders a hand-placed PageSizer even when the toolbar is told not to mount one', () => {
-		// `pageSizer` governs auto-mounting only — it must not erase the size list the
-		// hand-placed control reads.
-		// `makeTable` builds a bare core table, so the resolved options are set directly here:
-		// sizes present, auto-mount off — exactly what `pagination: { pageSizer: false }` resolves to.
+	it('renders a hand-placed PageSizer with the pagination.items values', () => {
+		// The size list is data and is resolved whenever page-based pagination is on; where the
+		// control goes is the layout's to say, so this one is placed by hand.
 		const table = makeTable({ pagination: { pageSize: 5 } })
 		table.grid.pagination.items = [5, 10, 25]
-		delete table.grid.pagination.pageSizer
 		renderWithComponents(
 			<DataGrid table={table}>
 				<DataGrid.PageSizer />
 			</DataGrid>,
 		)
-		expect(screen.getByRole('combobox')).toHaveValue('5')
-	})
-
-	it('renders PageSizer select with the pagination.items values', () => {
-		const table = makeTable({ pagination: { pageSize: 5 } })
-		table.grid.pagination.items = [5, 10, 25]
-		table.grid.pagination.pageSizer = { placement: PageSizerPlacement.Toolbar }
-		renderWithComponents(<DataGrid table={table} />)
 		const select = screen.getByRole('combobox')
-		expect(select).toBeInTheDocument()
 		expect(select).toHaveValue('5')
 		expect(screen.getByRole('option', { name: '10' })).toBeInTheDocument()
 		expect(screen.getByRole('option', { name: '25' })).toBeInTheDocument()

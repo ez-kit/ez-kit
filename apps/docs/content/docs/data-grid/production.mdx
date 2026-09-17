@@ -15,7 +15,7 @@ Use it to see how the features behave together, and copy the wiring rather than 
 Things worth trying in the live preview above:
 
 - Sort by two columns — hold <kbd>Ctrl</kbd> (<kbd>⌘</kbd> on macOS) while clicking a second header.
-- Open the filter panel, filter **Status** by several values at once, then watch the chips above the table.
+- Open a column's filter popover, filter **Status** by several values at once, then watch the chips above the table.
 - Change the page size, then page forward — the row count in the footer comes from the server, not from the loaded rows.
 - Edit or delete a row: the grid dims under a refetch overlay while the write and the follow-up query are in flight.
 - Drag the border of a column header to resize it — the width follows the cursor while you drag
@@ -23,15 +23,15 @@ Things worth trying in the live preview above:
 
 ## What is turned on
 
-| Area      | Enabled here                                                                                       |
-| --------- | -------------------------------------------------------------------------------------------------- |
-| Query     | Server-side pagination, sorting (multi, max 3) and filtering, plus global search — all `manual`    |
-| Filtering | Panel variant, faceted multi-value, operator filters (text / number / date / in), chips, clear-all |
-| Columns   | Pinning (`Order` starts pinned), visibility toggle (`Invoice` starts hidden), live resizing        |
-| Rows      | Selection with a bulk-delete bar, row pinning top and bottom, sticky header                        |
-| Cells     | Badge, select, number, progress, date, boolean and link renderers                                  |
-| Mutations | Create and edit in a modal, delete with a confirmation dialog, bulk delete from the selection bar  |
-| Loading   | Skeleton on first load, refetch overlay on every load after it, error state                        |
+| Area      | Enabled here                                                                                         |
+| --------- | ---------------------------------------------------------------------------------------------------- |
+| Query     | Server-side pagination, sorting (multi, max 3) and filtering, plus global search — all `manual`      |
+| Filtering | Header popovers, faceted multi-value, operator filters (text / number / date / in), chips, clear-all |
+| Columns   | Pinning (`Order` starts pinned), visibility toggle (`Invoice` starts hidden), live resizing          |
+| Rows      | Selection with a bulk-delete bar, row pinning top and bottom, sticky header                          |
+| Cells     | Badge, select, number, progress, date, boolean and link renderers                                    |
+| Mutations | Create and edit in a modal, delete with a confirmation dialog, bulk delete from the selection bar    |
+| Loading   | Skeleton on first load, refetch overlay on every load after it, error state                          |
 
 ## How the server side is wired
 
@@ -165,15 +165,8 @@ export function DataGridOptions({ children }: { children: ReactNode }) {
 		<DataGridOptionsProvider<Order>
 			defaults={{
 				pagination: { manual: true, items: [10, 25, 50], siblings: 1 },
-				sorting: { manual: true, multi: { max: 3, event: 'ctrl' }, toolbar: true },
-				filtering: {
-					manual: true,
-					variant: 'popover',
-					faceted: true,
-					debounce: 300,
-					chips: { position: 'above' },
-					toolbar: true,
-				},
+				sorting: { manual: true, multi: { max: 3, event: 'ctrl' } },
+				filtering: { manual: true, faceted: true, debounce: 300 },
 				globalFiltering: { placeholder: 'Search orders…', debounce: 300 },
 				layout: { stickyHeader: true },
 				pinning: { column: true, row: { top: true, bottom: true } },
@@ -189,11 +182,81 @@ export function DataGridOptions({ children }: { children: ReactNode }) {
 				},
 			}}
 		>
-			{children}
+			<GridComponentsProvider components={COMPONENTS}>{children}</GridComponentsProvider>
 		</DataGridOptionsProvider>
 	)
 }
 ```
+
+### The layout travels the same way
+
+The console's **arrangement** — search leading, clear-all and the create, sort and visibility
+triggers trailing, a chips strip above the table, each column's filter behind a header popover, the
+page sizer in the bottom bar — is not in `defaults`, and deliberately not: it is a component, not an
+option. It rides the components registry instead, which is the same slot each UI kit uses to bind
+its own default layout:
+
+```tsx
+// Out of the render: the provider keys its merge on this object's identity.
+const COMPONENTS = { core: { Layout: OrdersLayout } }
+
+function OrdersLayout() {
+	return (
+		<GridShell>
+			<DataGrid.Toolbar
+				start={<DataGrid.GlobalFilterInput />}
+				end={
+					<>
+						<DataGrid.ClearFiltersButton />
+						<DataGrid.CreateTrigger />
+						<DataGrid.SortMenuTrigger />
+						<DataGrid.VisibilityTrigger />
+					</>
+				}
+			/>
+			<DataGrid.ActiveFiltersBar />
+			<DataGrid.Table>
+				<DataGrid.Header>
+					{({ headerGroups }) =>
+						headerGroups.map((headerGroup) => (
+							<DataGrid.HeaderRow
+								key={headerGroup.id}
+								headerGroup={headerGroup}
+							>
+								{({ headers }) =>
+									headers.map((header) => (
+										<DataGrid.HeaderCell
+											key={header.id}
+											header={header}
+										>
+											{({ sortTrigger, filterPopover, menu }) => (
+												<div data-slot='header-main'>
+													{sortTrigger}
+													{filterPopover}
+													{menu}
+												</div>
+											)}
+										</DataGrid.HeaderCell>
+									))
+								}
+							</DataGrid.HeaderRow>
+						))
+					}
+				</DataGrid.Header>
+				<DataGrid.Body />
+			</DataGrid.Table>
+			<DataGrid.BottomBar />
+		</GridShell>
+	)
+}
+```
+
+That used to be five options restated on every grid — `sorting: { toolbar: true }`,
+`visibility: true`, `filtering: { variant: 'popover', chips: { position: 'above' }, toolbar: true }`
+— none of which described the table. Every grid beneath the provider now renders this with no
+children of its own, and a grid that writes `children` still overrides it, because the body resolves
+as `children ?? core.Layout ?? <DataGrid.Table/>`. See
+[Composition](/docs/data-grid/layout/composition).
 
 What is left at the call site is what only this grid can know — its rows, its columns, its state, and
 what a write actually does:

@@ -304,6 +304,14 @@
 		"exportName": "FilterPanelExample"
 	},
 	{
+		"id": "filter-panel-and-header",
+		"label": "Panel and header together",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/filter-panel.tsx",
+		"exportName": "FilterPanelAndHeaderExample"
+	},
+	{
 		"id": "selection-bar",
 		"label": "Floating",
 		"group": "selection",
@@ -704,6 +712,14 @@
 		"groupLabel": "Pagination",
 		"sourceFile": "components/pagination-footer.tsx",
 		"exportName": "PaginationPageSizerFooterExample"
+	},
+	{
+		"id": "pagination-page-sizer-toolbar",
+		"label": "Page sizer in the toolbar",
+		"group": "pagination",
+		"groupLabel": "Pagination",
+		"sourceFile": "components/pagination-footer.tsx",
+		"exportName": "PaginationPageSizerToolbarExample"
 	},
 	{
 		"id": "infinite-scroll-auto",

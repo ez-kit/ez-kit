@@ -100,7 +100,7 @@ export function ExampleTeamMembersExample() {
 			sorting
 			visibility
 			globalFiltering={{ placeholder: 'Search…' }}
-			filtering={{ variant: 'panel', faceted: true }}
+			filtering={{ faceted: true }}
 			rowActions={{ placement: 'menu' }}
 			creating={{
 				mode: 'modal',
@@ -132,7 +132,7 @@ export function ExampleTeamMembersExample() {
 					},
 				},
 			}}
-			pagination={{ pageSize: 5, items: [5, 10, 20], label: 'range', pageSizer: false }}
+			pagination={{ pageSize: 5, items: [5, 10, 20], label: 'range' }}
 			// The panel look is stated here rather than left to the kit: each kit frames its table
 			// differently — shadcn on the scrollport, HeroUI on the `table-root` between the
 			// shell's two boxes — and inside a frame the two have to agree. Both are stylesheet
@@ -148,7 +148,8 @@ export function ExampleTeamMembersExample() {
 			{/* Children replace the default layout, so the card is composed explicitly: the kit's
 			    toolbar as the header bar — with children, so these four controls come in this order
 			    rather than the auto-mounted one — the table, and the bottom bar, which with no
-			    children of its own is the page controls. They need no wrapper: the root is the card. */}
+			    children of its own would be the page controls. They need no wrapper: the root is the
+			    card. */}
 			<DataGrid.Toolbar className={FRAME_BAR}>
 				<span style={FRAME_TITLE_STYLE}>Team members</span>
 				<DataGrid.GlobalFilterInput />
@@ -156,8 +157,43 @@ export function ExampleTeamMembersExample() {
 				<DataGrid.VisibilityTrigger />
 				<DataGrid.CreateTrigger>Add new</DataGrid.CreateTrigger>
 			</DataGrid.Toolbar>
-			<DataGrid.Table />
-			<DataGrid.BottomBar style={FRAME_FOOTER_STYLE} />
+			<DataGrid.Table>
+				<DataGrid.Header>
+					{({ headerGroups }) =>
+						headerGroups.map((headerGroup) => (
+							<DataGrid.HeaderRow
+								key={headerGroup.id}
+								headerGroup={headerGroup}
+							>
+								{({ headers }) =>
+									headers.map((header) => (
+										<DataGrid.HeaderCell
+											key={header.id}
+											header={header}
+										>
+											{/* No `filter`: this card filters through the one status control in its
+											    header bar, so the column headers stay a single line. Not rendering it
+											    is what `filtering: { variant: 'panel' }` used to say. */}
+											{({ sortTrigger, menu }) => (
+												<div data-slot='header-main'>
+													{sortTrigger}
+													{menu}
+												</div>
+											)}
+										</DataGrid.HeaderCell>
+									))
+								}
+							</DataGrid.HeaderRow>
+						))
+					}
+				</DataGrid.Header>
+				<DataGrid.Body />
+			</DataGrid.Table>
+			{/* Explicit children: the bar's default contents are the size selector *and* the page
+			    controls, and this card wants only the latter. */}
+			<DataGrid.BottomBar style={FRAME_FOOTER_STYLE}>
+				<DataGrid.Pagination />
+			</DataGrid.BottomBar>
 			<DataGrid.SelectionBar />
 		</DataGrid>
 	)

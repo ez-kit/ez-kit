@@ -95,10 +95,9 @@ describe('DataGridOptionsProvider', () => {
 				wrapper: makeWrapper({ sorting: true, visibility: true }),
 			},
 		)
-		// Both arrive resolved, not as the raw `boolean | Config` the provider was handed:
-		// `sorting: true` does not auto-mount its toolbar control, `visibility: true` does.
-		expect(result.current.grid.sorting).toEqual({ toolbar: false })
-		expect(result.current.grid.visibility).toEqual({ toolbar: true })
+		// Both arrive resolved, not as the raw `boolean | Config` the provider was handed.
+		expect(result.current.grid.sorting).toBe(true)
+		expect(result.current.grid.visibility).toBe(true)
 	})
 
 	it('lets an table override provider defaults inside useDataGrid', () => {
@@ -121,7 +120,7 @@ describe('useDataGrid without a provider', () => {
 		const { result } = renderHook(() =>
 			useDataGrid<GridFeatures, User>({ features: TEST_FEATURES, data: USERS, columns: COLUMNS }),
 		)
-		expect(result.current.grid.sorting).toBeUndefined()
+		expect(result.current.grid.sorting).toBe(false)
 		expect(result.current.getRowModel().rows).toHaveLength(2)
 	})
 
@@ -129,7 +128,7 @@ describe('useDataGrid without a provider', () => {
 		const { result } = renderHook(() =>
 			useDataGrid<GridFeatures, User>({ features: TEST_FEATURES, data: USERS, columns: COLUMNS }, { sorting: true }),
 		)
-		expect(result.current.grid.sorting).toEqual({ toolbar: false })
+		expect(result.current.grid.sorting).toBe(true)
 	})
 })
 

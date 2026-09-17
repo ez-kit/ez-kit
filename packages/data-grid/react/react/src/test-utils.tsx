@@ -6,6 +6,7 @@ import { forwardRef, Fragment, useEffect, useState } from 'react'
 
 import { GridComponentsProvider } from './components-context'
 import { DataGrid } from './data-grid/data-grid'
+import { DefaultLayout } from './layouts'
 import { isGridMenuItemSlot } from './menu'
 import { ActionsCellState } from './types'
 import { useDataGrid } from './use-data-grid'
@@ -792,6 +793,12 @@ export const testComponents: FullGridComponents = {
 		Toolbar: TestToolbar,
 		Menu: TestMenu,
 		NumberInput: TestNumberInput,
+		// The one optional slot this double registers, and it stands in for what each UI kit
+		// does in its own `data-grid.tsx`: without a `core.Layout` a childless `<DataGrid>`
+		// renders the table and nothing else, so every case about a toolbar, a pagination row or
+		// an action bar would be testing a grid that has none. `data-grid.test.tsx` covers the
+		// unregistered case with a provider of its own.
+		Layout: DefaultLayout,
 	},
 	pagination: {
 		Pagination: TestPagination,
@@ -917,8 +924,16 @@ export type RenderGridResult = ReturnType<typeof render> & {
 /**
  * Render a full `<DataGrid>` over {@link TEST_ROWS} with the test component kit, and
  * hand the test the live `DataTable` back so it can drive state directly.
+ *
+ * With no `children` the grid renders the registered `core.Layout` — {@link DefaultLayout}, the
+ * preset each kit binds. Pass `children` for a case about a control that no preset mounts (the
+ * chips strip, a hand-placed page sizer): composition is the only way to put one on the page
+ * now that the `filtering.chips` / `pagination.pageSizer` options are gone.
  */
-export function renderGrid(config: Partial<UseDataGridConfig<GridFeatures, TestRow>> = {}): RenderGridResult {
+export function renderGrid(
+	config: Partial<UseDataGridConfig<GridFeatures, TestRow>> = {},
+	children?: ReactNode,
+): RenderGridResult {
 	// Wrapper object, not a bare `let`: reassigning an outer variable during render is
 	// a side effect the react-hooks lint rule rejects.
 	const ref: { table: DataTable<GridFeatures, TestRow> | null } = { table: null }
@@ -935,7 +950,7 @@ export function renderGrid(config: Partial<UseDataGridConfig<GridFeatures, TestR
 		useEffect(() => {
 			ref.table = table
 		}, [table])
-		return <DataGrid<GridFeatures, TestRow> table={table} />
+		return <DataGrid<GridFeatures, TestRow> table={table}>{children}</DataGrid>
 	}
 
 	const result = renderWithComponents(<Harness />)

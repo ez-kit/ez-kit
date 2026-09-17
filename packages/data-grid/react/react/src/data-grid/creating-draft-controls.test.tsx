@@ -29,7 +29,7 @@ function renderGrid(creating: CreatingConfig<Row>, extra?: { deleting?: boolean 
 			creating={creating}
 			{...(extra?.deleting === true ? { deleting: { onDelete: () => undefined } } : {})}
 		>
-			<DataGrid.Toolbar />
+			<DataGrid.Toolbar end={<DataGrid.CreateTrigger />} />
 			<DataGrid.Table />
 		</DataGrid>,
 	)

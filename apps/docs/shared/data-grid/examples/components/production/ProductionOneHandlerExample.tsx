@@ -29,6 +29,7 @@ import {
 import { DataGrid } from 'shared/DataGrid'
 
 import { orderColumns } from './data'
+import { ProductionLayout } from './ProductionLayout'
 import { useOrdersState } from './use-orders-state'
 
 const features = tableFeatures({
@@ -72,14 +73,11 @@ export function ProductionOneHandlerExample() {
 				items: [10, 25, 50],
 				siblings: 1,
 			}}
-			sorting={{ manual: true, multi: { max: 3, event: 'ctrl' }, toolbar: true }}
+			sorting={{ manual: true, multi: { max: 3, event: 'ctrl' } }}
 			filtering={{
 				manual: true,
-				variant: 'popover',
 				faceted: true,
 				debounce: 300,
-				chips: { position: 'above' },
-				toolbar: true,
 			}}
 			globalFiltering={{ placeholder: 'Search orders…', debounce: 300 }}
 			layout={{ stickyHeader: true }}
@@ -108,6 +106,8 @@ export function ProductionOneHandlerExample() {
 			selection
 			state={{ ...orders.tableState, loading: orders.loading }}
 			onStateChange={orders.onStateChange}
-		/>
+		>
+			<ProductionLayout />
+		</DataGrid>
 	)
 }

@@ -1,23 +1,67 @@
 ---
 title: Composition
-description: Escape hatches for laying out the grid yourself — Table and Body children, Toolbar slots, and per-instance component overrides.
+description: How a grid's layout is decided — children, the core.Layout slot, the four presets — and the compound members every layout is built from.
 ---
 
-`<DataGrid />` with no children renders the full default layout. Every piece of that layout is
-also a compound member you can place yourself, and each one degrades gracefully: supply nothing
-and you get the built-in behaviour, supply something and you take over exactly that piece.
+**Config states behaviour. JSX states composition.** An option answers "what does this grid do";
+where a control goes and whether it is mounted is what the tree says. Eight options that answered
+the second question with the first's vocabulary — `filtering.chips` / `.panel` / `.toolbar` /
+`.variant`, `globalFiltering.toolbar`, `pagination.pageSizer`, `sorting.toolbar`,
+`visibility.toolbar` — are gone, and this page is where their arrangements live now.
 
-## The default layout
+Every piece of a layout is a compound member you can place yourself, and each one degrades
+gracefully: supply nothing and you get the built-in behaviour, supply something and you take over
+exactly that piece.
+
+## How the grid decides what to render
+
+The body of a grid resolves in three steps:
+
+```
+children  ??  components.core.Layout  ??  <DataGrid.Table/>
+```
+
+- **`children`** win. A call site that wrote its own tree meant it.
+- Otherwise a registered **`core.Layout`** renders.
+- Otherwise the floor: a table and nothing else.
+
+`core.Layout` is an _optional_ component slot — the tier beside the required ones, where
+`core.TableWrapper` and `core.TableScroll` already live. A key belongs there only when the package
+has a correct answer without it, and here that answer is the bare table. So
+`@ez-kit/data-grid-react` ships no rich default at all: `<DataGrid data columns features />`
+straight off the adapter renders a table.
+
+**Each UI kit binds the rich default.** `@ez-kit/data-grid-shadcn` and `@ez-kit/data-grid-heroui`
+register `DefaultLayout` as their `core.Layout`, so a `<DataGrid />` from a kit keeps rendering
+toolbar, table and pagination with no children, exactly as before. A grid composed through
+`createDataGrid` inherits nothing and pays for what it names.
+
+Because it is the components registry rather than a prop, both forms come for free:
 
 ```tsx
+// app-wide, or for one subtree
+const components = { core: { Layout: OrdersLayout } }
+
+;<GridComponentsProvider components={components}>{children}</GridComponentsProvider>
+```
+
+```tsx
+// one grid
 <DataGrid
 	features={features}
 	data={data}
 	columns={columns}
+	components={components}
 />
 ```
 
-is equivalent to writing the tree out:
+<Callout type='info'>
+	Define the object outside the render (or memoize it). The provider keys its merge on the object's identity, so a fresh
+	literal every render re-renders every component that reads the registry.
+</Callout>
+
+A layout is an ordinary component reading the table from context, so it may be written inline as
+`children` instead, which is what the examples on this site do:
 
 ```tsx
 <DataGrid
@@ -25,40 +69,143 @@ is equivalent to writing the tree out:
 	data={data}
 	columns={columns}
 >
-	<DataGrid.Toolbar />
+	<BottomBarLayout />
+</DataGrid>
+```
+
+Nested grids inherit `components`, and therefore inherit `Layout` with it — `components` describes
+a subtree by design. There is no recursion risk: a layout renders `DataGrid.Table`, never
+`DataGrid`.
+
+## Layout presets
+
+`@ez-kit/data-grid-react` exports four, as pure composition with no styling of their own, so one
+set serves both kits. Each gates its controls on the feature being registered and enabled, so a
+narrow grid renders a narrow toolbar rather than throwing.
+
+| Preset                       | What it renders                                                                     | Was                                   |
+| ---------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------- |
+| `DefaultLayout`              | Toolbar, table, pagination. What both kits bind to `core.Layout`.                   | the default                           |
+| `BottomBarLayout`            | The same, with `<DataGrid.BottomBar />` in place of `<DataGrid.Pagination />`.      | `pagination: { pageSizer: 'footer' }` |
+| `SearchFiltersActionsLayout` | Search leading, filter panel beside it, controls trailing; chips strip; bottom bar. | five options at once — see below      |
+| `PopoverFiltersLayout`       | `DefaultLayout` with each column's filter behind a header popover.                  | `filtering: { variant: 'popover' }`   |
+
+`GridShell` is exported alongside them — the wrapper that places the draft and selection bars
+either side of the grid according to `selection.bar.variant`. Start a layout of your own with it
+rather than re-deriving that ordering.
+
+`SearchFiltersActionsLayout` is the arrangement that used to read:
+
+```tsx
+// before — five options describing an order the JSX shows at a glance
+<DataGrid
+	globalFiltering={{ toolbar: 'start' }}
+	filtering={{ panel: 'toolbar', toolbar: true }}
+	visibility={{ toolbar: true }}
+	sorting={{ toolbar: true }}
+	pagination={{ pageSizer: 'footer' }}
+/>
+```
+
+```tsx
+// after
+<DataGrid
+	features={features}
+	data={data}
+	columns={columns}
+	globalFiltering
+	filtering
+	sorting
+	visibility
+>
+	<SearchFiltersActionsLayout />
+</DataGrid>
+```
+
+Note what that preset can do which no enum value could: the panel **adds** to the header's own
+filter controls rather than replacing them, because the header cell still renders each column's
+control. See [Where filters live](/docs/data-grid/filtering/variants#both-at-once).
+
+## Writing a layout
+
+A layout is a component that mounts compound members. Nothing more:
+
+```tsx
+import { GridShell } from '@ez-kit/data-grid-react'
+
+function OrdersLayout() {
+	return (
+		<GridShell>
+			<DataGrid.Toolbar
+				start={<DataGrid.GlobalFilterInput />}
+				end={
+					<>
+						<DataGrid.ClearFiltersButton />
+						<DataGrid.CreateTrigger />
+						<DataGrid.SortMenuTrigger />
+						<DataGrid.VisibilityTrigger />
+					</>
+				}
+			/>
+			<DataGrid.ActiveFiltersBar />
+			<DataGrid.Table />
+			<DataGrid.BottomBar />
+		</GridShell>
+	)
+}
+```
+
+Each control reads the table from context and renders nothing when it has nothing to show, so a
+layout mounts them unconditionally — with one caveat worth knowing: a control whose **feature was
+never registered** has no API to read and throws on render. Gate on the resolved bag
+(`useDataGridTable().grid.sorting`) when one layout serves grids with different feature sets, which
+is exactly what the shipped presets do.
+
+## The full tree, written out
+
+What `DefaultLayout` amounts to, for a grid with every feature on:
+
+```tsx
+<DataGrid
+	features={features}
+	data={data}
+	columns={columns}
+>
+	<DataGrid.Toolbar
+		start={<DataGrid.GlobalFilterInput />}
+		end={
+			<>
+				<DataGrid.ClearFiltersButton />
+				<DataGrid.CreateTrigger />
+				<DataGrid.SortMenuTrigger />
+				<DataGrid.VisibilityTrigger />
+			</>
+		}
+	/>
 	<DataGrid.Table />
 	<DataGrid.Pagination />
 </DataGrid>
 ```
 
-With [`pagination.pageSizer: 'footer'`](/docs/data-grid/pagination#where-the-page-size-selector-goes)
-the last line is `<DataGrid.BottomBar />` instead, because the size control then shares a row with
-the page controls.
+## Toolbar: a container and nothing else
 
-## Toolbar: add without replacing
+`<DataGrid.Toolbar>` mounts no control of its own and reads no grid config. What goes in it is
+what a layout writes. With nothing to show — no `children`, neither slot — it renders nothing
+rather than an empty bar, so a layout can mount it unconditionally.
 
-The toolbar auto-mounts the controls the enabled features ask for — global search, Clear
-filters, the create trigger, the multi-sort builder, column visibility, the page sizer.
-
-`start` and `end` **append** to those, which is what "the default toolbar plus one button of
-mine" needs:
+`start` and `end` are the two ends of the row. They are logical, not physical, so they swap sides
+under RTL:
 
 ```tsx
-<DataGrid.Toolbar end={<ExportButton />} />
+<DataGrid.Toolbar
+	start={<DataGrid.GlobalFilterInput />}
+	end={<ExportButton />}
+/>
 ```
 
-`children` **replaces** the whole bar — the kit's `start` / `end` slots go unused and nothing
-auto-mounts:
-
-```tsx
-<DataGrid.Toolbar>
-	<MyEntirelyCustomBar />
-</DataGrid.Toolbar>
-```
-
-`children` is also the answer to **order**: the auto-mounted controls come in a fixed one (search,
-Clear filters, create, sort builder, column visibility), and each of them is a compound member that
-reads the table from context, so writing them yourself puts them in the order you write:
+`children` fills the bar as one run of controls instead of two groups, and is the answer to
+**order** — each control is a compound member reading the table from context, so they come in the
+order you write:
 
 ```tsx
 <DataGrid.Toolbar>
@@ -84,8 +231,8 @@ give the bar an `mb-2` meant for a toolbar standing free above the table:
 `<DataGrid.BottomBar>` is the region below the table, the counterpart of the toolbar above it. It
 is a container rather than a pagination control: what it holds is what it is given.
 
-Given no children it is the page controls — the size selector and the pagination — which is the
-case the default layout mounts it for:
+Given no children it is the page controls — the size selector and the pagination — which is what
+`BottomBarLayout` mounts it for:
 
 ```tsx
 <DataGrid.Table />
@@ -290,7 +437,10 @@ visibility and pinning:
 ```
 
 `<DataGrid.HeaderCell>` hands you the assembled pieces of one `<th>` separately, so you can
-rearrange them without rebuilding any of them:
+rearrange them without rebuilding any of them — and, by leaving one out, drop it. Not rendering
+`filter` is what takes a column's filter out of the header; rendering `filterPopover` instead puts
+it behind an icon. Those two decisions replaced the `filtering.variant` enum — see
+[Where filters live](/docs/data-grid/filtering/variants).
 
 ```tsx
 <DataGrid.HeaderCell header={header}>
@@ -311,6 +461,7 @@ rearrange them without rebuilding any of them:
 | `sortTrigger`              | `label` plus the sort indicator, wrapped in the clickable sort affordance.        |
 | `menu`                     | The column overflow menu (sort / pin / hide), or `null` when it has no sections.  |
 | `filter`                   | The column's filter control, or `null` when the column is not filterable.         |
+| `filterPopover`            | The same control behind the kit's popover trigger. Render this **or** `filter`.   |
 | `resizer`                  | The resize handle, or `null` when the column cannot be resized.                   |
 | `canSort`, `sortDirection` | The column's sort capability and current direction (`'asc' \| 'desc' \| 'none'`). |
 | `header`, `column`         | The underlying TanStack objects, for anything the above does not cover.           |
@@ -336,8 +487,9 @@ offsets and `cellClassName`, and lets you replace only what goes inside.
 
 ## Fallbacks, modals and bars
 
-The remaining slots are auto-mounted by their feature and take `children` for the same reason —
-replace the content, keep the placement and the conditions under which it appears.
+The remaining slots are mounted by their feature rather than by a layout — a modal, a fallback row
+and the two action bars have no position a layout could give them — and take `children` for the same
+reason as everything above: replace the content, keep the conditions under which it appears.
 
 | Slot                                                   | Renders when                         | `children` receives                                             |
 | ------------------------------------------------------ | ------------------------------------ | --------------------------------------------------------------- |

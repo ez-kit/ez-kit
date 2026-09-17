@@ -24,6 +24,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { DataGrid } from 'shared/DataGrid'
 
 import { crudColumns } from './columns'
+import { CrudLayout } from './CrudLayout'
 import { api, resetServer, setShouldFailWrites } from './fake-api'
 
 import type { Employee } from './use-employee-store'
@@ -168,7 +169,7 @@ export function CrudServerExample() {
 				data={rows}
 				columns={crudColumns}
 				sorting
-				filtering={{ variant: 'popover' }}
+				filtering
 				pagination={{ pageSize: 10, items: [5, 10, 20, 50] }}
 				visibility
 				pinning={{ column: true }}
@@ -240,7 +241,9 @@ export function CrudServerExample() {
 						},
 					},
 				}}
-			/>
+			>
+				<CrudLayout />
+			</DataGrid>
 		</div>
 	)
 }

@@ -9,7 +9,7 @@ import {
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
 import { GridMenuVariant } from '../menu'
-import { ColumnSortDirection, FilteringVariant, SortDirection } from '../types'
+import { ColumnSortDirection, SortDirection } from '../types'
 import { filtersRows } from '../utils/filters-rows'
 import { isInteractiveTarget } from '../utils/interactive-target'
 import { getCommonPinStyles } from '../utils/pin-styles'
@@ -48,8 +48,25 @@ export type DataGridHeaderCellRenderArgs<TRow extends object = ErasedRow> = {
 	sortTrigger: ReactNode
 	/** The column overflow menu (sort / pin / hide), or `null` when it has no sections. */
 	menu: ReactNode
-	/** The column's filter control, or `null` when this column is not filterable. */
+	/**
+	 * The column's filter control, ready to render inline in the cell. `null` when this column
+	 * is not filterable.
+	 *
+	 * Rendering it — or not — is what puts a filter in the header, which is what the removed
+	 * `filtering.variant: 'panel'` used to say. Rendering it **and** mounting
+	 * `<DataGrid.FilterPanel/>` gives both at once: two controls bound to one `columnFilters`
+	 * entry, which no value of that enum could express.
+	 */
 	filter: ReactNode
+	/**
+	 * The same control behind the kit's `FilterPopover` trigger — an icon in the header that
+	 * opens the input. `null` when this column is not filterable.
+	 *
+	 * The replacement for `filtering.variant: 'popover'`. Render this instead of
+	 * {@link DataGridHeaderCellRenderArgs.filter}, never both: they are one control in two
+	 * presentations, and the pair would field the same filter value twice.
+	 */
+	filterPopover: ReactNode
 	/** The resize handle, or `null` when the column cannot be resized. */
 	resizer: ReactNode
 }
@@ -60,9 +77,10 @@ export type DataGridHeaderCellProps<TRow extends object = ErasedRow> = {
 	 * Custom content for this one header cell, rendered inside the kit's `Th` — so the cell keeps
 	 * its pinning offset, its `data-*` attributes, its `headerClassName` and its resize handle.
 	 *
-	 * Omit it for the built-in header: sort affordance, column menu, and the inline or popover
-	 * filter control. The render-function form hands back those same parts
-	 * ({@link DataGridHeaderCellRenderArgs}) so a custom cell can reuse the ones it still wants.
+	 * Omit it for the built-in header: sort affordance, column menu, and the column's filter
+	 * control inline under the label. The render-function form hands back those same parts
+	 * ({@link DataGridHeaderCellRenderArgs}) so a custom cell can reuse the ones it still wants
+	 * — and `filterPopover` beside `filter`, for the popover presentation.
 	 */
 	children?: ReactNode | ((args: DataGridHeaderCellRenderArgs<TRow>) => ReactNode)
 }
@@ -244,13 +262,12 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 		table.grid.messages.columnMenu,
 	)
 
-	const filteringVariant = table.grid.filtering.variant
+	// Genuinely filterable — nothing here asks *where* the control goes. The expression carried
+	// a `variant !== 'panel'` term, which forced `filter` to `null` for every caller whenever one
+	// grid-wide option said the panel owned the controls; a render function then had no filter to
+	// place even when it wanted one in the header.
 	const canFilter =
-		filtersRows(table) &&
-		meta?.filtering !== false &&
-		!meta?.isSystemColumn &&
-		header.column.getCanFilter() &&
-		filteringVariant !== FilteringVariant.Panel
+		filtersRows(table) && meta?.filtering !== false && !meta?.isSystemColumn && header.column.getCanFilter()
 	const filterContent = canFilter
 		? renderFilterInput({
 				header,
@@ -313,18 +330,19 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 		/>
 	) : null
 
+	const filterPopover = canFilter ? (
+		<FilterPopover hasActiveFilter={Boolean(header.column.getFilterValue())}>{filterContent}</FilterPopover>
+	) : null
+
+	// The built-in cell renders the control inline. The popover presentation is one render
+	// function away — see `PopoverFiltersLayout` — and is no longer a grid-wide option.
 	const defaultContent = (
 		<>
 			<div data-slot='header-main'>
 				{sortTrigger}
-				{filteringVariant === FilteringVariant.Popover && canFilter && (
-					<FilterPopover hasActiveFilter={Boolean(header.column.getFilterValue())}>{filterContent}</FilterPopover>
-				)}
 				{menu}
 			</div>
-			{filteringVariant !== FilteringVariant.Popover && canFilter && (
-				<div data-slot='header-extras'>{filterContent}</div>
-			)}
+			{canFilter && <div data-slot='header-extras'>{filterContent}</div>}
 		</>
 	)
 
@@ -341,6 +359,7 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 						sortTrigger,
 						menu,
 						filter: filterContent,
+						filterPopover,
 						resizer,
 					})
 				: children

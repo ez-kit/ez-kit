@@ -273,6 +273,24 @@ export type TableWrapperProps = HTMLAttributes<HTMLDivElement> & RefAttributes<H
  */
 export type TableScrollProps = HTMLAttributes<HTMLDivElement> & RefAttributes<HTMLDivElement>
 
+/**
+ * The grid's body: everything between `core.Root` and the modals, composed from the members of
+ * the `DataGrid` namespace.
+ *
+ * Optional, and the fallback is the point. A kit that registers nothing gets
+ * `<DataGrid.Table/>` and nothing else — the one arrangement this package can be right about
+ * without guessing, now that where a control sits is stated in JSX rather than in the config.
+ * A kit that wants the familiar toolbar / table / pagination shell registers a layout for it,
+ * which is what both kits in this repo do; an application restates it once on the provider.
+ *
+ * Precedence is `children ?? core.Layout ?? <DataGrid.Table/>`: passing children to `<DataGrid>`
+ * beats a registered layout, because a grid composed by hand has already said what it wants.
+ *
+ * It takes no props. A layout reads whatever it needs from the table through
+ * `useDataGridTable()`, the same way every other member of the namespace does.
+ */
+export type LayoutProps = Record<never, never>
+
 export type TableProps = HTMLAttributes<HTMLTableElement>
 /**
  * The thead adapter must forward `ref` to the rendered element: the shared layer measures the
@@ -736,27 +754,19 @@ export type RefetchOverlayProps = {
  * - a "Retry" affordance when `error` is non-null (calls `onRetry`)
  */
 /**
- * How a column's filter control is presented.
+ * Which side of the table `<DataGrid.ActiveFiltersBar>` reports itself on.
  *
- * Named members for internal reference; the option is typed as the plain string union, so
- * `variant: 'popover'` is equally valid and needs no import.
- */
-export const FilteringVariant = {
-	/** The control sits in the header cell, under the column label. The default. */
-	Inline: 'inline',
-	/** The control opens from a per-column popover trigger in the header. */
-	Popover: 'popover',
-	/** Every column's control is collected into one filter panel. */
-	Panel: 'panel',
-} as const
-
-export type FilteringVariant = (typeof FilteringVariant)[keyof typeof FilteringVariant]
-
-/**
- * Where the auto-mounted active-filter chips strip renders relative to the table.
+ * A **component prop**, not a config option: a layout says where the strip goes by where it
+ * writes `<DataGrid.ActiveFiltersBar/>`, and this only tells the stylesheet which way the
+ * margin points — something document order cannot express, since both kits style on
+ * `[data-slot='active-filters-bar'][data-chip-position='…']`. The `filtering.chips` option that
+ * used to resolve it is gone; the strip is composed, like every other control.
  *
- * Named members for internal reference; the option is typed as the plain string union, so
- * `position: 'below'` is equally valid and needs no import.
+ * `position`, not `placement`: the values name a spot on one axis, not which container holds
+ * the control.
+ *
+ * Named members for internal reference; the prop is typed as the plain string union, so
+ * `position='below'` is equally valid and needs no import.
  */
 export const FilterChipsPosition = {
 	/** Between the toolbar and the table. The default. */
@@ -766,64 +776,6 @@ export const FilterChipsPosition = {
 } as const
 
 export type FilterChipsPosition = (typeof FilterChipsPosition)[keyof typeof FilterChipsPosition]
-
-/**
- * Which region the auto-mounted page-size selector renders in.
- *
- * A *region*, which is why it is `placement` and not the `position` that
- * {@link FilterChipsPosition} uses: that option names a spot on one axis (above or below the
- * table), this one names which of two containers holds the control.
- *
- * Named members for internal reference; the option is typed as the plain string union, so
- * `pageSizer: 'footer'` is equally valid and needs no import.
- */
-export const PageSizerPlacement = {
-	/** Leading slot of the toolbar, above the table. The default. */
-	Toolbar: 'toolbar',
-	/** The pagination row under the table, before the pagination controls. */
-	Footer: 'footer',
-} as const
-
-export type PageSizerPlacement = (typeof PageSizerPlacement)[keyof typeof PageSizerPlacement]
-
-/**
- * Which region holds the auto-mounted filter panel under
- * {@link FilteringVariant.Panel}.
- *
- * `placement`, like {@link PageSizerPlacement} and for the same reason: the values name a
- * container, not a spot on an axis the way `filtering.chips`' `position` does.
- */
-export const FilterPanelPlacement = {
-	/** Its own strip between the toolbar and the table. The default. */
-	Above: 'above',
-	/** The leading slot of the toolbar, beside the other toolbar controls. */
-	Toolbar: 'toolbar',
-} as const
-
-export type FilterPanelPlacement = (typeof FilterPanelPlacement)[keyof typeof FilterPanelPlacement]
-
-/**
- * Which end of the toolbar holds the auto-mounted global-search input.
- *
- * `placement`, like {@link PageSizerPlacement} and {@link FilterPanelPlacement}: the values name
- * a container — the toolbar's two slots — not a spot on an axis the way `filtering.chips`'
- * `position` does. The search box still has exactly one home; this says which end of it.
- *
- * Logical (`start` / `end`), not `left` / `right`, because the toolbar is a flex row and its two
- * slots swap sides under RTL — the same vocabulary, for the same reason, as `Toolbar.start` /
- * `Toolbar.end` themselves and as a column's `align`.
- *
- * Named members for internal reference; the option is typed as the plain string union, so
- * `toolbar: 'start'` is equally valid and needs no import.
- */
-export const GlobalFilterPlacement = {
-	/** Leading slot, before the filter panel's chips. */
-	Start: 'start',
-	/** Trailing slot, beside the sort and visibility triggers. The default. */
-	End: 'end',
-} as const
-
-export type GlobalFilterPlacement = (typeof GlobalFilterPlacement)[keyof typeof GlobalFilterPlacement]
 
 /**
  * What makes an infinite-scroll grid load the next page.
@@ -994,6 +946,8 @@ export type GridComponentRegistry = {
 	TableWrapper?: ComponentType<TableWrapperProps>
 	/** Optional — see {@link TableScrollProps}. Falls back to a plain `div`. */
 	TableScroll?: ComponentType<TableScrollProps>
+	/** Optional — see {@link LayoutProps}. Falls back to `<DataGrid.Table/>` alone. */
+	Layout?: ComponentType<LayoutProps>
 	Table?: ComponentType<TableProps>
 	Thead?: ComponentType<TheadProps>
 	Tbody?: ComponentType<TbodyProps>

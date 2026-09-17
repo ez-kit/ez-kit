@@ -25,7 +25,9 @@ import {
 	sortFns,
 	tableFeatures,
 } from '@ez-kit/data-grid-core/features'
-import { DataGridOptionsProvider } from '@ez-kit/data-grid-react'
+import { DataGridOptionsProvider, GridComponentsProvider } from '@ez-kit/data-grid-react'
+
+import { ProductionLayout } from './ProductionLayout'
 
 import type { Order } from './data'
 import type { ReactNode } from 'react'
@@ -81,7 +83,18 @@ export const features = tableFeatures({
  * delete are described here but not switched on: a grid gets the feature only
  * by supplying `onSave` / `onDelete`, so a read-only grid under this provider
  * stays read-only without opting out of anything.
+ *
+ * The **layout** is the one look-and-feel decision that does not go in `defaults`, and
+ * deliberately so: it is a component, not an option, so it rides the components registry
+ * instead — `GridComponentsProvider` below binds `core.Layout` for the whole subtree, exactly
+ * as each UI kit binds its own default. Every grid beneath renders the console's arrangement
+ * with no children of its own, and a grid that writes `children` still overrides it, because
+ * the body resolves as `children ?? core.Layout ?? <DataGrid.Table/>`.
  */
+// Defined out of the render: the provider keys its merge on this object's identity, so a fresh
+// literal each render would re-render every component that reads the registry.
+const COMPONENTS = { core: { Layout: ProductionLayout } }
+
 export function DataGridOptions({ children }: { children: ReactNode }) {
 	return (
 		<DataGridOptionsProvider<typeof features, Order>
@@ -95,14 +108,11 @@ export function DataGridOptions({ children }: { children: ReactNode }) {
 					items: [10, 25, 50],
 					siblings: 1,
 				},
-				sorting: { manual: true, multi: { max: 3, event: 'ctrl' }, toolbar: true },
+				sorting: { manual: true, multi: { max: 3, event: 'ctrl' } },
 				filtering: {
 					manual: true,
-					variant: 'popover',
 					faceted: true,
 					debounce: 300,
-					chips: { position: 'above' },
-					toolbar: true,
 				},
 				globalFiltering: { placeholder: 'Search orders…', debounce: 300 },
 				layout: { stickyHeader: true },
@@ -119,7 +129,7 @@ export function DataGridOptions({ children }: { children: ReactNode }) {
 				},
 			}}
 		>
-			{children}
+			<GridComponentsProvider components={COMPONENTS}>{children}</GridComponentsProvider>
 		</DataGridOptionsProvider>
 	)
 }

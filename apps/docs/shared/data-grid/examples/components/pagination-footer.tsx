@@ -8,7 +8,7 @@ import {
 	rowPaginationFeature,
 	tableFeatures,
 } from '@ez-kit/data-grid-core/features'
-import { createColumns } from '@ez-kit/data-grid-react'
+import { BottomBarLayout, createColumns } from '@ez-kit/data-grid-react'
 import { useMemo } from 'react'
 
 import { DataGrid } from 'shared/DataGrid'
@@ -79,7 +79,40 @@ export function PaginationPageSizerFooterExample() {
 			features={features}
 			data={data}
 			columns={columns}
-			pagination={{ pageSize: PAGE_SIZE, links: false, edges: true, label: 'page', pageSizer: 'footer' }}
-		/>
+			pagination={{ pageSize: PAGE_SIZE, links: false, edges: true, label: 'page' }}
+		>
+			{/*
+			 * `BottomBarLayout` is `DefaultLayout` with `<DataGrid.BottomBar/>` in place of
+			 * `<DataGrid.Pagination/>` — what `pagination: { pageSizer: 'footer' }` used to ask
+			 * for. The bottom bar lays its contents out as a row with two ends, which is what a
+			 * size selector and the page controls sharing one line needs; the pagination on its
+			 * own is a full-width centred bar with nowhere to put a second control.
+			 */}
+			<BottomBarLayout />
+		</DataGrid>
+	)
+}
+
+/**
+ * The same selector in the toolbar instead — the other place it usually goes, and what
+ * `pagination: { pageSizer: 'toolbar' }` used to ask for.
+ *
+ * Nothing but where it is written decides that. `<DataGrid.PageSizer />` reads
+ * `pagination.items` wherever it is mounted, so the leading slot of the toolbar takes it as
+ * readily as the bottom bar does.
+ */
+export function PaginationPageSizerToolbarExample() {
+	const data = useMemo(() => makeUsers(WINDOWED_ROW_TOTAL), [])
+	return (
+		<DataGrid
+			features={features}
+			data={data}
+			columns={columns}
+			pagination={{ pageSize: PAGE_SIZE, items: [10, 25, 50, 100] }}
+		>
+			<DataGrid.Toolbar start={<DataGrid.PageSizer />} />
+			<DataGrid.Table />
+			<DataGrid.Pagination />
+		</DataGrid>
 	)
 }

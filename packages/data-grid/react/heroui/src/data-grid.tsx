@@ -1,7 +1,7 @@
 'use client'
 
 import { allDataGridFeatures } from '@ez-kit/data-grid-core/features/all'
-import { createDataGrid } from '@ez-kit/data-grid-react'
+import { createDataGrid, DefaultLayout } from '@ez-kit/data-grid-react'
 
 import { cellTypes } from './blocks/cell-types'
 import { coreComponents } from './blocks/core/core-components'
@@ -22,8 +22,23 @@ import { visibilityComponents } from './blocks/visibility/visibility-components'
 import type { KitCellTypes } from './blocks/cell-types'
 import type { DataGridBundle, FullGridComponents, GridFeatures } from '@ez-kit/data-grid-react'
 
+/**
+ * The prebuilt grid's layout, bound here and **only** here.
+ *
+ * `core.Layout` is what `<DataGrid>` renders when it is given no children, so binding
+ * `DefaultLayout` is what keeps `<DataGrid data columns features />` rendering the familiar
+ * toolbar / table / pagination shell now that no config option places a control. Without it the
+ * shared layer's answer is a table and nothing else, which is the only arrangement it can be
+ * right about once composition is stated in JSX.
+ *
+ * It is spread onto `coreComponents` here rather than added to that module for the same reason
+ * `allDataGridFeatures` is bound in this file rather than in `index.ts`: `blocks/core/core-components`
+ * is a build entry point for a grid composed through `createDataGrid`, and a layout registered
+ * there would reach every such grid silently — handing back the rich default to exactly the
+ * caller who composed a set to avoid it.
+ */
 const components = {
-	core: coreComponents,
+	core: { ...coreComponents, Layout: DefaultLayout },
 	pagination: paginationComponents,
 	sorting: sortingComponents,
 	filtering: filteringComponents,

@@ -57,8 +57,20 @@ export function SortToolbarExample() {
 				{ accessorKey: 'salary', header: 'Salary', cell: { type: 'number' } },
 				{ accessorKey: 'startDate', header: 'Start Date', cell: { type: 'date' } },
 			]}
-			// Enables Sort button in the toolbar — opens a popover to manage multi-sort
-			sorting={{ toolbar: true }}
-		/>
+			sorting
+		>
+			{/*
+			 * The multi-sort builder, placed explicitly. It used to be `sorting: { toolbar: true }`
+			 * — an option whose only job was to tell the default toolbar to mount this one
+			 * component, which is what writing the component says instead.
+			 *
+			 * Naming `children` at all means composing the rest of the grid too, so the table is
+			 * written out below — this grid registers no pagination, so there is nothing else. A
+			 * grid that wants the standard shell with this control already in it reaches for
+			 * `DefaultLayout`, which mounts it whenever sorting is on.
+			 */}
+			<DataGrid.Toolbar end={<DataGrid.SortMenuTrigger />} />
+			<DataGrid.Table />
+		</DataGrid>
 	)
 }

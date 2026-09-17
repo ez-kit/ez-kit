@@ -21,10 +21,9 @@ export type DataGridBottomBarProps = {
 /**
  * The strip below the table — the grid's own bottom region, opposite {@link Toolbar}.
  *
- * It is a container, not a pagination control: what it holds is whatever it is given. The
- * default layout mounts it with the page controls when `pagination.pageSizer` resolves to
- * `'footer'`, which is the case it exists for (the two then share one line), and a grid
- * composed from children may mount it with anything.
+ * It is a container, not a pagination control: what it holds is whatever it is given. The case
+ * it exists for is a page sizer sharing one line with the page controls — `BottomBarLayout` is
+ * that arrangement — and a grid composing its own layout may mount it with anything.
  *
  * Not `Footer`: that name is the `<tfoot>` counterpart of `<DataGrid.Header>`, built from each
  * column's `footer`. This element is a region of the grid's shell, outside the table.

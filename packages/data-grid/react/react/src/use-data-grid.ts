@@ -14,7 +14,7 @@ import { useEffect, useRef, useState } from 'react'
 import { mergeGridOptionLayers, useDataGridOptions, useGridFactoryDefaults } from './data-grid-options-context'
 import { DATA_GRID_DEFAULTS, DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
 import { createGridContextAtom, EMPTY_GRID_CONTEXT, syncGridContext } from './grid-context'
-import { ActionBarVariant, FilteringVariant } from './types'
+import { ActionBarVariant } from './types'
 import { useOrderedData } from './use-ordered-data'
 import { useSafeLayoutEffect } from './utils/use-safe-layout-effect'
 
@@ -23,23 +23,11 @@ import type { PaginationLabelModel } from './data-grid/pagination-label'
 import type { DataGridDefaultOptions } from './data-grid-options-context'
 import type { GridContext, GridContextAtom } from './grid-context'
 import type { ResolvedGridOptions } from './resolved-options'
-import type {
-	ErasedRow,
-	DataTable,
-	FilterChipsPosition,
-	FilterPanelPlacement,
-	GlobalFilterPlacement,
-	GridFeatures,
-	LoadMoreThreshold,
-	LoadMoreTrigger,
-	PageSizerPlacement,
-	PaginationLabel,
-} from './types'
+import type { ErasedRow, DataTable, GridFeatures, LoadMoreThreshold, LoadMoreTrigger, PaginationLabel } from './types'
 import type {
 	ActionItem,
 	DraftAtoms,
 	GridOptions,
-	VisibilityConfig,
 	ExpandingConfig,
 	FeatureToggle,
 	FilteringConfig,
@@ -51,7 +39,6 @@ import type {
 	RowActionsConfig,
 	RowVirtualizationConfig,
 	SelectionConfig,
-	SortingConfig,
 	TableConfig,
 	VirtualizationConfig,
 } from '@ez-kit/data-grid-core'
@@ -62,9 +49,9 @@ import type { ComponentType, HTMLAttributes, ReactElement, ReactNode } from 'rea
 export { DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
 
 // The closed sets live in `./types` next to the other ones; re-exported here because this is
-// where the options that carry them are declared — `SelectionBarConfig`,
-// `ReactPaginationConfig`, `ReactFilteringConfig`.
-export { FilterChipsPosition, FilteringVariant, LoadMoreTrigger, ActionBarVariant } from './types'
+// where the options that carry them are declared — `SelectionBarConfig` and
+// `ReactPaginationConfig`.
+export { LoadMoreTrigger, ActionBarVariant } from './types'
 
 export type ExpandedRowProps<TRow extends object> = {
 	row: Row<GridFeatures, TRow>
@@ -157,8 +144,7 @@ export type ReactSelectionConfig<TFeatures extends TableFeatures, TRow extends o
 	 * - `false` — bar never shown
 	 * - `undefined` | `true` — bar shown when ≥1 row is selected
 	 * - `'inline'` / `'floating'` — the scalar: the render mode, which is the whole of what
-	 *   this option usually has to say. Same shape as `filtering.chips`, and as a column's
-	 *   `align`, `width` and `pinning`.
+	 *   this option usually has to say. Same shape as a column's `align`, `width` and `pinning`.
 	 * - {@link SelectionBarConfig} — the object, for when the mode is not all you are setting.
 	 *
 	 * Presentational only. The bar's Delete button is not configured here — bulk deletion is
@@ -298,49 +284,18 @@ export type ReactPaginationConfig = PaginationConfig & {
 	 * `PageSizerProps.items` this very option feeds. It was `pageSizeOptions`, which made one
 	 * value change its name on the way from the config to the kit.
 	 *
-	 * Pure data: supplying it no longer *implies* the control, it only says which sizes the
-	 * control offers. Whether the PageSizer mounts is {@link ReactPaginationConfig.toolbar}
-	 * — which defaults to "yes when this list is set", so the common case still needs one
-	 * field. Changing the selection calls `table.setPageSize`, so it flows through
-	 * {@link PaginationConfig.onChange} like any other pagination change.
+	 * **Pure data: this permits page sizes, it does not mount a control.** Writing it alone puts
+	 * no selector on the page — `<DataGrid.PageSizer />` is what does that, wherever a layout
+	 * writes it, and `<DataGrid.BottomBar />` carries one beside the page controls. Note the
+	 * built-in `DefaultLayout` mounts **neither**, so a grid that only sets `items` shows no
+	 * selector; see that preset's docblock for why the old `pagination.pageSizer` default could
+	 * not be carried over.
+	 *
+	 * The list is resolved whenever page-based pagination is on, so a sizer placed anywhere
+	 * always has sizes to offer. Changing the selection calls `table.setPageSize`, so it flows
+	 * through {@link PaginationConfig.onChange} like any other pagination change.
 	 */
 	items?: number[]
-	/**
-	 * Page-based mode only. Auto-mount the PageSizer control, and say where.
-	 *
-	 * - omitted — mounted iff {@link ReactPaginationConfig.items} is set, in the toolbar
-	 * - `true` — mounted in the toolbar, falling back to
-	 *   {@link DATA_GRID_DEFAULTS.pagination.items} when no list is given
-	 * - `'toolbar'` / `'footer'` — mounted there; the scalar **is** the placement
-	 * - {@link PageSizerConfig} — the same, spelled out
-	 * - `false` — never auto-mounted; `<DataGrid.PageSizer />` still works if placed by hand,
-	 *   because this option governs mounting only and never erases
-	 *   {@link ReactPaginationConfig.items}
-	 *
-	 * Named for the control it mounts rather than for a container, unlike `sorting.toolbar`,
-	 * `globalFiltering.toolbar`, `filtering.toolbar` and `visibility.toolbar`. Those controls
-	 * can live in one place, so `toolbar` states both the mounting and the destination; this
-	 * one has two homes, and `toolbar: true, placement: 'footer'` would be a config
-	 * contradicting itself. That `globalFiltering.toolbar` also takes a placement is not a
-	 * counter-example: its values name the two ends of the one container it mounts into, not a
-	 * second container.
-	 */
-	pageSizer?: boolean | PageSizerPlacement | PageSizerConfig
-}
-
-/**
- * The object form of {@link ReactPaginationConfig.pageSizer}. Scalar-or-object, like the
- * column options and like `filtering.chips`: the scalar is the placement, the object exists
- * for when there is more to say.
- */
-export type PageSizerConfig = FeatureToggle & {
-	/** Which region holds the control. Default: {@link PageSizerPlacement.Toolbar}. */
-	placement?: PageSizerPlacement
-}
-
-/** Normalized shape stored on the table instance for `Toolbar` / the default layout to read. */
-export type NormalizedPageSizerConfig = {
-	placement: PageSizerPlacement
 }
 
 /**
@@ -369,44 +324,6 @@ function normalizeInfinite(
 		hasPreviousPage: cfg.hasPreviousPage ?? false,
 		...(cfg.onLoadMore !== undefined ? { onLoadMore: cfg.onLoadMore } : {}),
 	}
-}
-
-/**
- * The headless {@link VisibilityConfig} plus this layer's `toolbar` auto-mount flag —
- * the same `React*` shape every other feature uses, so `onChange` is reachable from a grid
- * that only ever imports the adapter.
- */
-export type ReactVisibilityConfig = VisibilityConfig & {
-	/**
-	 * Auto-mount the column-visibility toggle into `Toolbar.end`. Default: **on**, in both
-	 * forms — `visibility: true` and `visibility: { onChange }` mount the same control, and
-	 * `toolbar: false` is how a grid places `<DataGrid.VisibilityTrigger />` itself.
-	 *
-	 * The object form used to default to *off*, so adding an `onChange` to a working
-	 * `visibility: true` silently removed the only control the feature has. The rule across the
-	 * config is now: **a feature's object form defaults its `toolbar` exactly the way its bare
-	 * `true` does.** What that default *is* still differs by feature, and deliberately —
-	 * `visibility` and `globalFiltering` default on because the auto-mounted control is the
-	 * feature's only UI, while `sorting` (the multi-sort builder) and `filtering` (Clear-all)
-	 * default off because the header already carries their affordances, and `pagination`
-	 * (the PageSizer) defaults to "yes when `items` is set".
-	 */
-	toolbar?: boolean
-}
-
-/**
- * The resolved auto-mount decision for a feature whose only UI option is `toolbar` — today
- * `sorting` and `visibility`.
- *
- * They used to reach `table.grid` as the **raw** `boolean | Config` union, alone among the
- * resolved options, so every reader — the built-in `Toolbar` and any UI kit calling
- * `useGridOptions()` — had to re-derive `cfg === true || (typeof cfg === 'object' &&
- * Boolean(cfg.toolbar))` for itself. {@link ResolvedGridOptions} exists precisely so nobody
- * has to.
- */
-export type NormalizedFeatureToolbarConfig = {
-	/** The toolbar auto-mounts this feature's control. */
-	toolbar: boolean
 }
 
 export type LoadingFallbackConfig = FeatureToggle & {
@@ -480,22 +397,7 @@ function normalizeFallback(
 	return { enabled, ...(component !== undefined ? { component } : {}) }
 }
 
-export type FilterChipsConfig = FeatureToggle & {
-	/**
-	 * Where to render the auto-mounted chips strip relative to the table.
-	 * Default: {@link FilterChipsPosition.Above}.
-	 */
-	position?: FilterChipsPosition
-}
-
-export type FilteringToolbarConfig = FeatureToggle & {
-	/** When true the Clear-all button is rendered (disabled) even with no active filters. Default: false. */
-	alwaysShow?: boolean
-}
-
 export type ReactFilteringConfig = {
-	/** Display variant for column filter controls. Default: {@link FilteringVariant.Inline}. */
-	variant?: FilteringVariant
 	/**
 	 * Commit debounce in milliseconds for text filter inputs. Default: 250.
 	 *
@@ -507,143 +409,31 @@ export type ReactFilteringConfig = {
 	 * always commit instantly and are unaffected by this option.
 	 */
 	debounce?: number
-	/**
-	 * Auto-mount a strip of removable chips for active filters.
-	 * - `false` / omitted — no auto-mount. `<DataGrid.ActiveFiltersBar />` still works manually.
-	 * - `true` — auto-mount at {@link FilterChipsPosition.Above}.
-	 * - `'above'` / `'below'` — the scalar: auto-mount at that position, which is the whole of
-	 *   what this option has to say. Same shape as a column's `align`, `width` and `pinning`.
-	 * - {@link FilterChipsConfig} — the object, for when the position is not all you are setting.
-	 */
-	chips?: boolean | FilterChipsPosition | FilterChipsConfig
-	/**
-	 * {@link FilteringVariant.Panel} only. Where the auto-mounted panel renders.
-	 *
-	 * - omitted — its own strip between the toolbar and the table
-	 * - `'toolbar'` — the toolbar's leading slot, so the column filters sit beside the
-	 *   search box
-	 * - {@link FilterPanelConfig} — the same, spelled out
-	 *
-	 * The scalar **is** the placement, as with `chips`. It says nothing about *whether* the
-	 * panel mounts: `variant: 'panel'` took the controls out of the header, so the panel is
-	 * the grid's only filter UI and always mounts.
-	 */
-	panel?: FilterPanelPlacement | FilterPanelConfig
-	/**
-	 * Auto-mount filtering's toolbar control — the Clear-all button — into `Toolbar.end`
-	 * after `GlobalFilterInput`. Hidden when no filter is active unless `alwaysShow: true`.
-	 *
-	 * - `false` / omitted — no auto-mount. `<DataGrid.ClearFiltersButton />` still works manually.
-	 * - `true` — auto-mount with default behaviour.
-	 * - {@link FilteringToolbarConfig} — fine-grained.
-	 *
-	 * `chips` is deliberately **not** folded in here: the chips strip renders above or below
-	 * the table, not in the toolbar, so `toolbar` would be the wrong word for it.
-	 */
-	toolbar?: boolean | FilteringToolbarConfig
 } & FilteringConfig
-
-/** Normalized shape stored on the table instance for `DataGrid` root to read. */
-export type NormalizedFilterChipsConfig = {
-	position: FilterChipsPosition
-}
-
-/**
- * The object form of {@link ReactFilteringConfig.panel}. Scalar-or-object, like `chips` and
- * like the column options: the scalar is the placement, the object exists for when there is
- * more to say.
- */
-export type FilterPanelConfig = FeatureToggle & {
-	/** Which region holds the panel. Default: {@link FilterPanelPlacement.Above}. */
-	placement?: FilterPanelPlacement
-}
-
-/** Normalized shape stored on the table instance. `undefined` unless the variant is `panel`. */
-export type NormalizedFilterPanelConfig = {
-	placement: FilterPanelPlacement
-}
-
-/** Normalized shape stored on the table instance for `Toolbar` / `ClearFiltersButton` to read. */
-export type NormalizedFilteringToolbarConfig = {
-	alwaysShow: boolean
-}
 
 /**
  * React-layer config for global search.
  *
- * Adds UI-facing fields (`placeholder`, `debounce`, `toolbar`) on top of the
- * headless {@link GlobalFilteringConfig}.
+ * Adds UI-facing fields (`placeholder`, `debounce`) on top of the headless
+ * {@link GlobalFilteringConfig}.
  */
 export type ReactGlobalFilteringConfig<TFeatures extends TableFeatures> = {
 	/** Placeholder for the search input. Default: 'Search…'. */
 	placeholder?: string
 	/**
-	 * Commit debounce in milliseconds for the auto-mounted search input.
+	 * Commit debounce in milliseconds for `<DataGrid.GlobalFilterInput/>`.
 	 * Defaults to the shared {@link ReactFilteringConfig.debounce} (250) — set this only when
 	 * the search box should be timed differently from the column filters.
 	 * `0` disables debouncing.
 	 */
 	debounce?: number
-	/**
-	 * Auto-mount the search input in the toolbar, and say which end of it.
-	 *
-	 * - `true` / omitted — mounted in `Toolbar.end`
-	 * - `'start'` / `'end'` — mounted there; the scalar **is** the placement
-	 * - {@link GlobalFilterToolbarConfig} — the same, spelled out
-	 * - `false` — no auto-mount; place `<DataGrid.GlobalFilterInput />` yourself
-	 *
-	 * Still named `toolbar` rather than for the control, unlike `pagination.pageSizer`: the
-	 * search box has one home, and this says where inside it — not which of two containers
-	 * holds it. `toolbar: 'start'` beside the panel variant's chips is the layout every issue
-	 * tracker uses, with search first and the filters following it.
-	 */
-	toolbar?: boolean | GlobalFilterPlacement | GlobalFilterToolbarConfig
 } & GlobalFilteringConfig<TFeatures>
-
-/**
- * The object form of {@link ReactGlobalFilteringConfig.toolbar}. Scalar-or-object, like
- * `pagination.pageSizer` and `filtering.panel`: the scalar is the placement, the object exists
- * for the day the slot grows a second field.
- */
-export type GlobalFilterToolbarConfig = FeatureToggle & {
-	/** Which end of the toolbar holds the input. Default: `'end'`. */
-	placement?: GlobalFilterPlacement
-}
 
 /** Normalized shape stored on the table instance for child components to read. */
 export type NormalizedGlobalFilteringConfig = {
 	placeholder: string
 	debounce: number
-	/**
-	 * The auto-mounted search input and the end of the toolbar that holds it. `undefined` when
-	 * the grid mounts no input of its own — which is why this is the resolved object and not
-	 * the `boolean` it used to be: a caller reading `toolbar` now learns both facts, the way it
-	 * already does from `pagination.pageSizer` and `filtering.toolbar`.
-	 */
-	toolbar?: NormalizedGlobalFilterToolbarConfig | undefined
 }
-
-/** Resolved {@link GlobalFilterToolbarConfig}. */
-export type NormalizedGlobalFilterToolbarConfig = {
-	placement: GlobalFilterPlacement
-}
-
-/**
- * React-layer config for sorting.
- *
- * Adds the UI-facing `toolbar` flag on top of the headless {@link SortingConfig}. The flag
- * lives here and not in core for the same reason `globalFiltering.toolbar` and
- * `visibility.toolbar` do: core renders nothing, so an option core must document as
- * "ignored by core" belongs to the layer that actually reads it.
- */
-export type ReactSortingConfig = {
-	/**
-	 * Auto-mount the multi-sort builder button in the Toolbar. Default: false.
-	 * - `false` / omitted — no auto-mount. `<DataGrid.SortMenuTrigger />` still works manually.
-	 * - `true` — auto-mount into `Toolbar.end`.
-	 */
-	toolbar?: boolean
-} & SortingConfig
 
 /**
  * Classes for the grid shell's own two boxes — the only elements the React layer renders
@@ -776,19 +566,23 @@ export type UseDataGridConfig<TFeatures extends TableFeatures, TRow extends obje
 	fallbacks?: FallbacksConfig
 	/**
 	 * Enable filtering.
-	 * - `true` — inline filter inputs below each column header
-	 * - `{ variant: FilteringVariant.Popover }` — filter icon in header; click opens a popover with the filter input
-	 * - `{ variant: FilteringVariant.Panel }` — the controls leave the header for one auto-mounted
-	 *   `<DataGrid.FilterPanel />` above the table
-	 * - `{ variant: FilteringVariant.Inline, ...opts }` — same as `true` with extra FilteringConfig options
+	 * - `true` — the built-in header cell renders each filterable column's control under its label
+	 * - {@link ReactFilteringConfig} — the same, with extra `FilteringConfig` options
+	 *
+	 * Where the controls appear is composition, not config: a `<DataGrid.HeaderCell>` render
+	 * function chooses `filter` or `filterPopover` (or neither), and `<DataGrid.FilterPanel/>`
+	 * collects them all into one strip wherever a layout puts it. The three used to be one
+	 * `variant` enum, which could not express a header control *and* a panel at once.
 	 */
 	filtering?: boolean | ReactFilteringConfig
 	/**
 	 * Enable cross-column global search.
-	 * - `true` — auto-mounts a search input in `Toolbar.end` with defaults
-	 *   (`placeholder: 'Search…'`, the shared `filtering.debounce`, `includesString` match)
+	 * - `true` — defaults (`placeholder: 'Search…'`, the shared `filtering.debounce`,
+	 *   `includesString` match)
 	 * - {@link ReactGlobalFilteringConfig} — fine-grained control over placeholder,
-	 *   debounce, filter function, registry, and auto-mount
+	 *   debounce, filter function and registry
+	 *
+	 * The search box itself is `<DataGrid.GlobalFilterInput/>`, placed by a layout.
 	 */
 	globalFiltering?: boolean | ReactGlobalFilteringConfig<TFeatures>
 	/** Custom cell type renderers. Merged with types passed directly to `DataGrid`. */
@@ -801,12 +595,6 @@ export type UseDataGridConfig<TFeatures extends TableFeatures, TRow extends obje
 	 *   React-only `bar` (selection info bar). The bar renders only when selection is enabled.
 	 */
 	selection?: boolean | ReactSelectionConfig<TFeatures, TRow>
-	/**
-	 * Column visibility UI config.
-	 * - `true` — enables column visibility (toolbar button shown)
-	 * - `{ toolbar: true }` — shows toggle button in toolbar
-	 */
-	visibility?: boolean | ReactVisibilityConfig
 	/**
 	 * Reordering, grouped per axis like `pinning`.
 	 * - `true` — columns only, and it keeps meaning exactly that
@@ -896,11 +684,6 @@ export type UseDataGridConfig<TFeatures extends TableFeatures, TRow extends obje
 	 * the headless {@link PaginationConfig}.
 	 */
 	pagination?: boolean | ReactPaginationConfig
-	/**
-	 * Sorting config. The React layer adds the `toolbar` auto-mount flag on top of the
-	 * headless {@link SortingConfig}.
-	 */
-	sorting?: boolean | ReactSortingConfig
 	/** Expanding config. See {@link ReactExpandingConfig}. */
 	expanding?: boolean | ReactExpandingConfig<TFeatures, TRow>
 	/**
@@ -910,7 +693,10 @@ export type UseDataGridConfig<TFeatures extends TableFeatures, TRow extends obje
 	rowActions?: boolean | ReactRowActionsConfig<TRow>
 } & Omit<
 	TableConfig<TFeatures, TRow>,
-	'filtering' | 'globalFiltering' | 'expanding' | 'visibility' | 'pagination' | 'rowActions' | 'selection' | 'sorting'
+	// `visibility` and `sorting` are **not** in this list: they carried a React-only `toolbar`
+	// flag until the controls became composition, and now core's declaration is the whole
+	// option. Restating them here would be a second spelling of one type.
+	'filtering' | 'globalFiltering' | 'expanding' | 'pagination' | 'rowActions' | 'selection'
 >
 
 /** Whether the package is running in a development build — gates the dev-only warnings below. */
@@ -1143,7 +929,6 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 					siblings: _siblings,
 					boundaries: _boundaries,
 					items: _items,
-					pageSizer: _pageSizer,
 					label: _label,
 					...rest
 				}) => rest)(rawPagination)
@@ -1153,33 +938,15 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 	// Page-based only: the selector drives `pageSize`, which infinite mode does not page by.
 	const paginationCfg = featureConfig(rawPagination)
 
-	// Which sizes the control offers. Resolved whenever page-based pagination is on, and
-	// deliberately independent of whether the toolbar auto-mounts it: `toolbar: false` means
-	// "do not mount it for me", not "there are no sizes" — a hand-placed
-	// `<DataGrid.PageSizer />` still needs the list.
+	// Which sizes the control offers. Resolved whenever page-based pagination is on, whether or
+	// not this grid's layout places a `<DataGrid.PageSizer />` — the list is data, and a sizer
+	// mounted anywhere reads it.
 	// `featureConfig` yields `undefined` for the bare `pagination: true`, so the on/off decision
 	// reads `isFeatureEnabled` and only the *settings* come from `paginationCfg`.
 	const isPagedPagination = isFeatureEnabled(rawPagination) && paginationCfg?.mode !== PaginationMode.Infinite
 	const paginationItems: number[] | undefined = isPagedPagination
 		? (paginationCfg?.items ?? [...DATA_GRID_DEFAULTS.pagination.items])
 		: undefined
-
-	// Whether the grid mounts the PageSizer itself, and where. Defaults to "yes when a list was
-	// supplied", in the toolbar — so the one-field case is unchanged.
-	const normalizedPageSizer: NormalizedPageSizerConfig | undefined = (() => {
-		if (!isPagedPagination) return undefined
-		const pageSizer = paginationCfg?.pageSizer
-		const defaultPlacement = DATA_GRID_DEFAULTS.pagination.pageSizer.placement
-		if (pageSizer === undefined) {
-			return paginationCfg?.items !== undefined ? { placement: defaultPlacement } : undefined
-		}
-		if (pageSizer === false) return undefined
-		if (pageSizer === true) return { placement: defaultPlacement }
-		if (typeof pageSizer === 'string') return { placement: pageSizer }
-		const config = featureConfig(pageSizer)
-		if (config === undefined) return undefined
-		return { placement: config.placement ?? defaultPlacement }
-	})()
 
 	// The footer's three display axes, each resolved once here so no UI kit ever has to fall
 	// back for itself. `label` keeps `false` distinct from an absent option: the first says
@@ -1213,98 +980,34 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 						...(coreGetRowCanExpand !== undefined ? { getRowCanExpand: coreGetRowCanExpand } : {}),
 					}
 
-	// Split `visibility` the way `selection` and `globalFiltering` are split: the React-only
-	// `toolbar` is stripped for core and resolved separately for the UI. Collapsing the whole
-	// option to `isFeatureEnabled(visibility)` — which is what this used to pass — threw away
-	// `visibility.onChange`, so a grid that asked to be told when a column was hidden never was.
-	const coreVisibility: boolean | VisibilityConfig | undefined =
-		typeof visibility === 'object' ? (({ toolbar: _toolbar, ...rest }) => rest)(visibility) : visibility
-	// Both forms mount the control; `toolbar: false` is the opt-out. The object form used to
-	// default the other way, so `visibility: { onChange }` quietly shipped a grid whose columns
-	// could not be hidden from anywhere but a column menu — see {@link ReactVisibilityConfig}.
-	const normalizedVisibility: NormalizedFeatureToolbarConfig | undefined = isFeatureEnabled(visibility)
-		? { toolbar: typeof visibility === 'object' ? visibility.toolbar !== false : true }
-		: undefined
-
-	const normalizedSorting: NormalizedFeatureToolbarConfig | undefined = isFeatureEnabled(config.sorting)
-		? { toolbar: typeof config.sorting === 'object' && Boolean(config.sorting.toolbar) }
-		: undefined
+	// "This feature is on, so its control has something to drive." Derived, never authored:
+	// whether the control is *mounted* is now the layout's business, and the two questions were
+	// one `toolbar` flag until the controls became composition.
+	const visibilityEnabled = isFeatureEnabled(visibility)
+	const sortingEnabled = isFeatureEnabled(config.sorting)
 
 	const filteringCfg = featureConfig(rawFiltering)
 
-	const filteringVariant: FilteringVariant = filteringCfg?.variant ?? DATA_GRID_DEFAULTS.filtering.variant
-
 	const filteringDebounce: number = filteringCfg?.debounce ?? DEFAULT_FILTER_DEBOUNCE_MS
 
-	const normalizedChips: NormalizedFilterChipsConfig | undefined = (() => {
-		const chips = filteringCfg?.chips
-		if (chips === undefined || chips === false) return undefined
-		if (chips === true) return { position: DATA_GRID_DEFAULTS.filtering.chips.position }
-		// The scalar: a position and nothing else, which is all this option has ever had to say.
-		if (typeof chips === 'string') return { position: chips }
-		const config = featureConfig(chips)
-		if (!config) return undefined
-		return { position: config.position ?? DATA_GRID_DEFAULTS.filtering.chips.position }
-	})()
-
-	// Where the panel goes. Resolved only under the `panel` variant — under `inline` or
-	// `popover` the controls are in the header and there is no panel to place.
-	const normalizedFilterPanel: NormalizedFilterPanelConfig | undefined = (() => {
-		if (filteringVariant !== FilteringVariant.Panel) return undefined
-		const panel = filteringCfg?.panel
-		const defaultPlacement = DATA_GRID_DEFAULTS.filtering.panel.placement
-		if (panel === undefined) return { placement: defaultPlacement }
-		// The scalar: a placement and nothing else.
-		if (typeof panel === 'string') return { placement: panel }
-		const config = featureConfig(panel)
-		if (!config) return { placement: defaultPlacement }
-		return { placement: config.placement ?? defaultPlacement }
-	})()
-
-	const normalizedFilteringToolbar: NormalizedFilteringToolbarConfig | undefined = (() => {
-		const toolbar = filteringCfg?.toolbar
-		if (toolbar === undefined || toolbar === false) return undefined
-		if (toolbar === true) return { alwaysShow: DATA_GRID_DEFAULTS.filtering.toolbar.alwaysShow }
-		const config = featureConfig(toolbar)
-		if (!config) return undefined
-		return { alwaysShow: config.alwaysShow ?? DATA_GRID_DEFAULTS.filtering.toolbar.alwaysShow }
-	})()
-
+	// Only `debounce` is this layer's now; everything else on `filtering` is core's.
 	const coreFiltering: boolean | FilteringConfig | undefined =
-		typeof rawFiltering === 'object'
-			? (({ variant: _v, chips: _c, panel: _p, toolbar: _t, debounce: _d, ...rest }) => rest)(rawFiltering)
-			: rawFiltering
+		typeof rawFiltering === 'object' ? (({ debounce: _d, ...rest }) => rest)(rawFiltering) : rawFiltering
 
 	// Split `globalFiltering` into:
 	// - core part (fn, fns) — passed through to createTable
-	// - UI part (placeholder, debounce, toolbar) — stored on the table instance
-	//   via GLOBAL_FILTERING_KEY so Toolbar / GlobalFilterInput can read it
+	// - UI part (placeholder, debounce) — carried on `grid.globalFiltering` so
+	//   `GlobalFilterInput` can read it. Its presence is also what a layout gates the input on.
 	const normalizedGlobalFiltering: NormalizedGlobalFilteringConfig | undefined = (() => {
 		if (!isFeatureEnabled(rawGlobalFiltering)) return undefined
-		const defaultPlacement = DATA_GRID_DEFAULTS.globalFiltering.toolbar.placement
-		const resolveToolbar = (
-			toolbar: boolean | GlobalFilterPlacement | GlobalFilterToolbarConfig | undefined,
-		): NormalizedGlobalFilterToolbarConfig | undefined => {
-			if (toolbar === undefined || toolbar === true) return { placement: defaultPlacement }
-			if (toolbar === false) return undefined
-			if (typeof toolbar === 'string') return { placement: toolbar }
-			const config = featureConfig(toolbar)
-			if (config === undefined) return undefined
-			return { placement: config.placement ?? defaultPlacement }
-		}
 		if (typeof rawGlobalFiltering !== 'object') {
-			return {
-				placeholder: messages.globalFiltering.placeholder,
-				debounce: filteringDebounce,
-				toolbar: { placement: defaultPlacement },
-			}
+			return { placeholder: messages.globalFiltering.placeholder, debounce: filteringDebounce }
 		}
 		return {
 			placeholder: rawGlobalFiltering.placeholder ?? messages.globalFiltering.placeholder,
 			// Falls back to the shared column-filter debounce, not to a second default of its
 			// own: one gesture, one timing, unless this box explicitly asks for another.
 			debounce: rawGlobalFiltering.debounce ?? filteringDebounce,
-			toolbar: resolveToolbar(rawGlobalFiltering.toolbar),
 		}
 	})()
 
@@ -1315,7 +1018,7 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 		// picking known core fields by name: an allowlist silently drops whatever it
 		// has not heard of — which is how `onChange` used to never reach the core and
 		// server-side global search never fired.
-		const { placeholder: _placeholder, debounce: _debounce, toolbar: _toolbar, ...coreFields } = rawGlobalFiltering
+		const { placeholder: _placeholder, debounce: _debounce, ...coreFields } = rawGlobalFiltering
 		return Object.keys(coreFields).length > 0 ? coreFields : true
 	})()
 
@@ -1391,7 +1094,7 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 			expanding: coreExpanding,
 			pagination: corePagination,
 			selection: coreSelection,
-			visibility: coreVisibility,
+			visibility,
 			// Destructured out of `restConfig` above (the React layer resolves `grid.ordering`
 			// from it), so it has to be handed back: core owns the `onChange` funnel.
 			...(rawOrdering !== undefined ? { ordering: rawOrdering } : {}),
@@ -1625,15 +1328,9 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 			...(erasedCoreGrid.rowPinning !== undefined ? { rowConfig: erasedCoreGrid.rowPinning } : {}),
 		},
 		ordering: { column: columnOrderingEnabled, row: rowOrderingEnabled, visibilityMenu: orderingInVisibilityMenu },
-		visibility: normalizedVisibility,
-		sorting: normalizedSorting,
-		filtering: {
-			variant: filteringVariant,
-			debounce: filteringDebounce,
-			chips: normalizedChips,
-			panel: normalizedFilterPanel,
-			toolbar: normalizedFilteringToolbar,
-		},
+		visibility: visibilityEnabled,
+		sorting: sortingEnabled,
+		filtering: { debounce: filteringDebounce },
 		globalFiltering: normalizedGlobalFiltering,
 		pagination: {
 			enabled: isPagedPagination,
@@ -1643,7 +1340,6 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 			siblings: paginationWindow.siblings,
 			boundaries: paginationWindow.boundaries,
 			...(paginationItems !== undefined ? { items: paginationItems } : {}),
-			pageSizer: normalizedPageSizer,
 			infinite: normalizedInfinite,
 		},
 		// A crossing into the erased world, and the same one `rowProps` makes above: the
@@ -1785,7 +1481,7 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 	// The loading status (`isPending`/`isFetching`/`isError`/`error`) is user-owned
 	// controlled state fed through the `state.loading` slice; it is handled by the
 	// generic controlled-state publish above and the grid never writes it. hasNextPage is a
-	// pagination option read reactively from INFINITE_KEY by useInfiniteScroll. Neither
+	// pagination option read reactively from `grid.pagination.infinite` by useInfiniteScroll. Neither
 	// needs a bespoke projection here.
 
 	// ── the table this hook hands out ────────────────────────────────────────

@@ -189,15 +189,78 @@ and move on.
 - **`ColumnMeta` fields carry the name of the column option they hold.** `pinning`, `align`,
   `cell`, `filtering`, `editing`, `creating`, `visibility`. A resolved value never gets a third
   spelling (it was `cellType` / `config` / `cellView` for the three halves of `cell`).
-- **`placement` names a region; `position` names a spot on an axis.** `filtering.chips.position`
-  is `'above'` / `'below'` — where the strip sits relative to the table. `filtering.panel.placement`
-  and `pagination.pageSizer.placement` are `'toolbar'` / `'footer'` / `'above'` — which container
-  holds the control. Both take the scalar-or-object form, and the scalar **is** the value.
-- **A control with two homes is named for itself, not for a container.** `sorting.toolbar`,
-  `visibility.toolbar`, `globalFiltering.toolbar` and `filtering.toolbar` keep the one word for
-  "auto-mount my control into the toolbar" because those controls can live nowhere else.
-  `pagination.pageSizer` replaced `pagination.toolbar` when the page sizer gained a footer
-  placement: `toolbar: true, placement: 'footer'` is a config contradicting itself.
+- **The config states behaviour; JSX states composition. There are no placement options, and
+  adding one back is the regression.** Where a control sits, and whether it is mounted at all,
+  is said by rendering it: `<DataGrid.Toolbar end={<DataGrid.VisibilityTrigger />} />`. Eight
+  options used to say it instead — `filtering.chips` / `.panel` / `.toolbar` / `.variant`,
+  `globalFiltering.toolbar`, `pagination.pageSizer`, `sorting.toolbar`, `visibility.toolbar`.
+  All eight are gone.
+
+  Their enums are a separate question, decided by one test: **an enum survives iff something
+  other than the removed config still needs it.** A layout states position by _where_ it renders
+  a component, but CSS cannot read a JSX position — so wherever a kit's stylesheet selects on a
+  `data-*` value, that value stays settable as a component prop and its closed set stays
+  exported, with the prop's default a constant in the component's own module rather than a read
+  of `DATA_GRID_DEFAULTS`. `FilterChipsPosition` survives on exactly that ground:
+  `<DataGrid.ActiveFiltersBar position>` stamps `data-chip-position`, and both kits style the
+  strip's margin off it. Do not inline a surviving set as a literal union — the closed-set rule
+  (const object plus union) still applies.
+
+  Run that check by **enumerating every attribute-value selector in both kits' `src`** (css, tsx
+  and ts, so `blocks/` is covered) and comparing, never by grepping for the enum's values. Two
+  live selectors share literals with removed enums and a value-grep flags both:
+  `[data-pin-shadow='start'|'end']` is column pinning (`ColumnPinSide`, surviving) and
+  `[data-pinned='top'|'bottom']` is row pinning. Neither was ever fed by
+  `GlobalFilterPlacement`. The three deleted placement enums reached the DOM nowhere at all —
+  the components wrote only `data-slot` constants and read the enums purely as mount booleans,
+  which is the class this whole change removes.
+
+- **When removing an option, grep for the behaviour it produced, not only for its name.** The
+  stale text that survives a rename sweep is the text that describes an old default without
+  naming the option: `pagination/index.mdx` carried a whole "Page size selector" section saying
+  "set `items` and a selector renders in the toolbar" — true until this change, and invisible to
+  a grep for `pageSizer`. Two more docs pages and four package docblocks had the same shape,
+  including `create-trigger.tsx` justifying itself with "it sits directly above the draft row",
+  an adjacency that was a fact while the toolbar auto-mounted the trigger and is a layout's
+  choice now. Do a second sweep for the claims, not the identifiers.
+- **`DefaultLayout` mounts no page sizer, and that is the one behaviour this change did not
+  preserve.** The old default mounted one in the toolbar when the author **wrote**
+  `pagination.items` — a read of the authored config (`paginationCfg?.items !== undefined`).
+  `ResolvedGridOptions.items` falls back to a default list under any paged pagination, so a
+  preset gating on it would mount a selector on **every** paginated grid: louder than the old
+  default, not a restoration. Restoring it exactly needs a resolved "the author named a list"
+  flag, which is a mount decision back in the config — the thing being removed. So the sizer is
+  a composition choice: `<DataGrid.Toolbar start={<DataGrid.PageSizer />} />`, or
+  `BottomBarLayout` for the sizer beside the page controls. A preset test asserts the split, so
+  a later "helpful" addition to `DefaultLayout` fails rather than going quiet.
+
+  They were never statements about the grid: they were arguments to the default `<Toolbar>` and
+  the default layout that had leaked into the table's config, and the controls proved it —
+  `VisibilityTrigger`, `SortMenuTrigger` and `GlobalFilterInput` read none of them, then or now.
+  What made it worth a breaking change is the rate of growth, not the count: every new
+  arrangement cost a new enum value or a new option, and the last one added
+  (`globalFiltering.toolbar.placement`, `1744b71c`) bought a bar that is one line of JSX.
+
+  **This was not a bundle-size fix and must not be argued as one.** The flags cost zero bytes —
+  `Toolbar` imported its controls statically, and a runtime `&&` inside JSX is not something a
+  bundler removes. See the `./index` note below for what the bytes actually turned on.
+
+- **`filtering.variant` is gone because it was one enum on two axes.** `'panel'` answered
+  "is there a filter in the header at all" and `'inline'` / `'popover'` answered "what does it
+  look like", which is why filters in the header **and** in a panel was inexpressible — there
+  was no value for it. Both axes are now `<DataGrid.HeaderCell>`'s render function, which hands
+  back `filter` and `filterPopover` beside `label` / `sortTrigger` / `menu` / `resizer`: not
+  rendering `filter` is what takes it out of the header. Rendering it while
+  `<DataGrid.FilterPanel />` is also mounted gives both, and the two write one `columnFilters`
+  value.
+
+  Do not "simplify" this into a runtime registration where the panel announces itself and the
+  header reacts. `HeaderCell` is the panel's **sibling**, not its descendant, so that needs an
+  effect and a second pass: filters render in the header on the first frame and vanish on the
+  second, behaviour starts depending on whether the layout put the panel before or after
+  `<DataGrid.Table />`, and SSR output stops matching the client. The composition has none of
+  that, which is why it won.
+
 - **The three system columns are configured like columns.** `selection.column`,
   `expanding.column` and `rowActions.column` take `SystemColumnDef` — `header`, `width`,
   `pinning`, `align`, `headerClassName`, `cellClassName`, in the column vocabulary and with the
@@ -235,6 +298,25 @@ and move on.
   rendering. A key belongs in that tier only when the package has a correct answer without it —
   here, a plain `div`. This is the pattern for any post-1.0 slot with a sane default; it does not
   reopen the `core` primitives question, which is about slots that have none.
+
+  **`core.Layout` is the third member, and it is what replaced the removed placement options.**
+  The grid's body resolves as `children ?? core.Layout ?? <DataGrid.Table />`, so the bare
+  `@ez-kit/data-grid-react` has no rich default and, deliberately, no import of one: a grid with
+  neither children nor a registered layout is a table and nothing else, which is the only
+  arrangement this package can be right about once composition is stated in JSX. The familiar
+  toolbar / table / pagination shell is a **kit** decision — each kit binds `DefaultLayout` from
+  `@ez-kit/data-grid-react`'s `layouts/`, exactly as its prebuilt `DataGrid` binds
+  `allDataGridFeatures`, and with the same caveat: the binding lives in the kit's
+  `data-grid.tsx`, never in `index.ts`, or every grid composed through `createDataGrid` inherits
+  it silently. So quick start is unchanged and `createDataGrid` still pays only for what it names.
+
+  The presets (`DefaultLayout`, `BottomBarLayout`, `SearchFiltersActionsLayout`,
+  `PopoverFiltersLayout`) and `GridShell` — the inline-versus-floating ordering of `DraftBar` and
+  `SelectionBar` that all four share, and that a hand-written layout should wrap itself in rather
+  than reimplement — live in the shared react package because they are pure composition with
+  no authored class — the no-styles rule is untouched, and one set serves both kits. Adding more,
+  in a kit or in an application, is the intended way to get a new arrangement; adding an option is
+  not.
   The contract is: **spread every prop you receive** (`data-slot` above all — the structural
   stylesheet targets the slot, not the element), and **land `ref` on the element that actually
   scrolls**. That `ref` _is_ the declaration: it is what the pin shadows read, what infinite
@@ -248,6 +330,7 @@ and move on.
   tree. HeroUI's is below its `.table-root`, which is why the kit hoists `Table.Root` +
   `Table.ScrollContainer` into `TableScroll` and its `Table` slot renders `Table.Content` — so
   `data-slot='table'` lands on the real `<table>` and the root takes `data-slot='table-root'`.
+
 - **`layout.classNames` is a nested bag, and its keys accumulate.** Every other class option is
   a flat `<thing>ClassName` string (`headerClassName`, `cellClassName`, `footerClassName`), so
   `layout.wrapperClassName` / `layout.scrollClassName` was considered and rejected: those two are
@@ -597,6 +680,22 @@ it sits under, which is the specifier a reader would have to write to import it.
 against a whole-surface `import *`, without which a bundle that resolved nothing would satisfy
 every case. To add one, name the export and run the test — the failure prints the set to record,
 and a name the entry does not export fails the bundle outright.
+
+**Known and unfixed: `@ez-kit/data-grid-react`'s `./index` does not tree-shake at all.** Measured
+on the built `dist` with esbuild (`--bundle --minify`, React external), importing one const object
+(`{ useDataGridTable }`) cost 155 352 bytes, `{ DataGrid }` 155 352 and `{ DefaultLayout }`
+156 097, against 168 982 for a whole-surface `import *` — i.e. any partial import of that entry
+pays for ~93% of it. The cause is the compound namespace's own assembly: 29 impure top-level
+property assignments (`DataGrid.Toolbar = Toolbar;` …) at the end of `data-grid/data-grid.tsx`,
+which a bundler cannot drop, and which therefore anchor all 29 components and everything they
+reach. Same defect class as the `tableFeatures({ …spread })` and bare `createStoreCache()` cases
+above, and the same non-fix applies — `/* @__PURE__ */` does nothing for it.
+
+The fix is a separate change and has not been made: components become named exports and `DataGrid.X`
+becomes sugar on its own subpath, mirroring `features/all`. Until then, note the trap: **composing
+a grid out of `DataGrid.X` members saves nothing**, because a consumer who writes three still pays
+for 29. `core.Layout` and the `layouts/` presets are what make that fix able to pay off — they are
+not the fix, and neither is the removal of the placement options.
 
 **Live preview vs. source panel** — these come from two different places, which is why an example can render correctly while its source reads wrong (or vice versa). The live preview is an **iframe** of the real `(embed)/examples/<kit>/<slug>` route, so it always executes the actual component. The source panel is **text**: it is read from the file on disk and never executed. Examples render client-only via `next/dynamic` with `ssr: false`, so both kits share one path rather than letting shadcn SSR and heroui silently fall back. The reason originally given for that — a dynamic `require` in the heroui bundle that RSC could not run on the server — is **no longer true** and was corrected on 2026-09-11: `@heroui/react@3.0.3` contains no `require(` at all, and a page rendering the heroui grid through the normal server path prerenders at build time (`next build` marks it `○`, and the emitted HTML carries the full `<table>` and every row). Note `'use client'` was never the mechanism either way: a client component is still prerendered on the server, so the directive cannot skip an SSR a component could not survive. What remains is a choice about the docs — one code path for both kits — not a limitation of the heroui kit, and dropping `ssr: false` is now a live option rather than a blocked one.
 

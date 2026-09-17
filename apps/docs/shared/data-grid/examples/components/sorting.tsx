@@ -114,7 +114,6 @@ export function SortingExample() {
 				onChange: (sort) => {
 					if (typeof window !== 'undefined') console.info('[sorting]', sort)
 				},
-				toolbar: true,
 			}}
 		/>
 	)

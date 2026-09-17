@@ -44,7 +44,7 @@ function openCreateForm(columns: ReturnType<typeof createColumns<Row>>) {
 			components={testComponents}
 			creating={{ mode: 'row', onSave: () => undefined }}
 		>
-			<DataGrid.Toolbar />
+			<DataGrid.Toolbar end={<DataGrid.CreateTrigger />} />
 			<DataGrid.Table />
 		</DataGrid>,
 	)

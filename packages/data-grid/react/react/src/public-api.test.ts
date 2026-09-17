@@ -30,7 +30,7 @@ import type {
 	PaginationConfig,
 	RowActionsConfig,
 	RowActionsPlacement,
-	ReactSortingConfig,
+	ReactFilteringConfig,
 	SelectionConfig,
 	SortingConfig,
 } from './index'
@@ -61,12 +61,15 @@ describe('public API surface', () => {
 	})
 
 	it('keeps the React-layer config types alongside their headless originals', () => {
-		// `sorting.toolbar` is a UI flag, so it lives on ReactSortingConfig, not SortingConfig.
-		// Both names must be reachable — one to configure a grid, one to build on headlessly.
+		// `filtering.debounce` is a UI field, so it lives on ReactFilteringConfig, not
+		// FilteringConfig. Both names must be reachable — one to configure a grid, one to build on
+		// headlessly. `sorting` and `visibility` are no longer among them: their one React-only
+		// field was the `toolbar` auto-mount flag, so `ReactSortingConfig` /
+		// `ReactVisibilityConfig` went with it and core's types are the whole option.
 		const sorting: SortingConfig = { manual: true }
-		const reactSorting: ReactSortingConfig = { manual: true, toolbar: true }
+		const reactFiltering: ReactFilteringConfig = { manual: true, debounce: 100 }
 		expect(sorting.manual).toBe(true)
-		expect(reactSorting.toolbar).toBe(true)
+		expect(reactFiltering.debounce).toBe(100)
 	})
 
 	it('type-only imports resolve (compile-time assertion)', () => {

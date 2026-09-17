@@ -4,10 +4,8 @@ import { useRef } from 'react'
 import { CellTypesProvider, mergeCellTypes } from '../cell-types-context'
 import { GridComponentsProvider, useGridComponents } from '../components-context'
 import { GridFactoryDefaultsProvider } from '../data-grid-options-context'
-import { FilterChipsPosition, FilterPanelPlacement, PageSizerPlacement } from '../types'
-import { ActionBarVariant, useDataGrid, type UseDataGridConfig } from '../use-data-grid'
+import { useDataGrid, type UseDataGridConfig } from '../use-data-grid'
 
-import { resolveActionBarVariant } from './action-bar-variant'
 import { ActiveFiltersBar } from './active-filters-bar'
 import { Body } from './body'
 import { BottomBar } from './bottom-bar'
@@ -259,67 +257,36 @@ function GridRoot({ children }: { children: ReactNode }) {
 	)
 }
 
-function DefaultLayout() {
-	// Reads only config refs, no state — so we use the table
-	// without subscribing. Avoids cascading re-renders to Body / Table on
-	// state mutations the layout doesn't actually depend on.
-	const table = useDataGridTable()
-	const variant = resolveActionBarVariant(table)
-
-	const chipsConfig = table.grid.filtering.chips
-	const chipsAbove = chipsConfig?.position === FilterChipsPosition.Above ? <ActiveFiltersBar /> : null
-	const chipsBelow = chipsConfig?.position === FilterChipsPosition.Below ? <ActiveFiltersBar /> : null
-
-	// The panel variant moves every column's filter control out of the header, so unless the
-	// panel is mounted the grid has no filter UI at all. It is auto-mounted for the same reason
-	// the chips strip and the Clear-all button are: the option that asks for it is the same one
-	// that took the controls out of the header. `<FilterPanel />` renders nothing when the grid
-	// has no filtered row model or no filterable column, so this costs nothing when it applies
-	// to a grid that does not filter.
-	// The toolbar placement mounts the panel itself, in its leading slot.
-	const filterPanel = table.grid.filtering.panel?.placement === FilterPanelPlacement.Above ? <FilterPanel /> : null
-
-	// `pageSizer: 'footer'` puts the size control next to the pagination controls instead of in
-	// the toolbar. The two then share one row, which is what `<BottomBar />` is for — and why the
-	// bar is mounted only in that case: on its own the pagination is a full-width centred bar, and
-	// the slot's CSS lays the bar's contents out as a row with two ends.
-	const bottomBar =
-		table.grid.pagination.pageSizer?.placement === PageSizerPlacement.Footer ? <BottomBar /> : <Pagination />
-
-	if (variant === ActionBarVariant.Inline) {
-		return (
-			<>
-				<DraftBar />
-				<SelectionBar />
-				<Toolbar />
-				{filterPanel}
-				{chipsAbove}
-				<DataGridTable />
-				{chipsBelow}
-				{bottomBar}
-			</>
-		)
-	}
-
-	return (
-		<>
-			<Toolbar />
-			{filterPanel}
-			{chipsAbove}
-			<DataGridTable />
-			{chipsBelow}
-			{bottomBar}
-			<DraftBar />
-			<SelectionBar />
-		</>
-	)
-}
-
 /**
  * Shared core that mounts the provider tree around a ready table. Both the
  * controlled and uncontrolled paths funnel through here, so every compound
  * child (`DataGrid.Table`, etc.) sees the same `TableContext`.
  */
+/**
+ * What a grid renders between its modals: `children ?? core.Layout ?? <DataGrid.Table/>`.
+ *
+ * `children` wins, because a call site that wrote its own composition means it. Otherwise a
+ * registered `core.Layout` renders — the tier beside `FEATURE_COMPONENTS`, reached through the
+ * ordinary components DI, so the app-wide form (`DataGridOptionsProvider`,
+ * `createDataGrid({ components })`) and the per-instance one both come for free, and a nested
+ * grid inherits it with the rest of `components`. With neither, the grid is a table and nothing
+ * else.
+ *
+ * That last fallback is the point of the slot: this package ships **no** rich default and does
+ * not import one. The presets in `../layouts` are what a kit binds to `core.Layout` in its own
+ * `data-grid.tsx`, the way each already binds `allDataGridFeatures` — so a kit's `<DataGrid>`
+ * still renders toolbar, table and pagination with no children, while a grid composed through
+ * `createDataGrid` carries only what it names.
+ *
+ * No recursion risk: a layout renders `DataGrid.Table`, never `DataGrid`.
+ */
+function GridBody({ children }: { children: ReactNode }) {
+	const { Layout } = useGridComponents().core
+	if (children !== undefined) return <>{children}</>
+	if (Layout) return <Layout />
+	return <DataGridTable />
+}
+
 function DataGridControlled<TFeatures extends TableFeatures, TRow extends object>({
 	table,
 	components,
@@ -379,7 +346,7 @@ function DataGridControlled<TFeatures extends TableFeatures, TRow extends object
 					<TableProvider table={table}>
 						{IS_DEV && <ComponentGuard />}
 						<GridRoot>
-							{children ?? <DefaultLayout />}
+							<GridBody>{children}</GridBody>
 							{writeOptions.creating?.mode === CreatingMode.Modal && <CreatingModal />}
 							{writeOptions.editing?.mode === EditingMode.Modal && <EditingModal />}
 							<ConfirmDialogRenderer />

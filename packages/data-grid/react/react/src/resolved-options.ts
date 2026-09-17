@@ -7,16 +7,10 @@ import type { PaginationLabelModel } from './data-grid/pagination-label'
 import type { PaginationLabel } from './types'
 import type {
 	ExpandedRowProps,
-	FilteringVariant,
 	LayoutClassNames,
 	NormalizedFallbacksConfig,
-	NormalizedFeatureToolbarConfig,
-	NormalizedFilterChipsConfig,
-	NormalizedFilteringToolbarConfig,
-	NormalizedFilterPanelConfig,
 	NormalizedGlobalFilteringConfig,
 	NormalizedInfiniteConfig,
-	NormalizedPageSizerConfig,
 	NormalizedSelectionBarConfig,
 	NormalizedVirtualizationConfig,
 	RowPropsResolver,
@@ -35,8 +29,8 @@ import type { ComponentType, ReactNode } from 'react'
  * component that quietly fell back to its default.
  *
  * It is also **public**. A UI kit could previously only see the props the grid chose to hand
- * its components; anything the grid had resolved — the filter variant, the debounce, whether a
- * control auto-mounts — lived behind keys the package did not export. Read it with
+ * its components; anything the grid had resolved — the filter debounce, the page sizes, which
+ * features are on — lived behind keys the package did not export. Read it with
  * {@link useGridOptions}.
  *
  * Optional members are typed `?: T | undefined` rather than plain `?: T` so the hook can build
@@ -132,32 +126,31 @@ export type ResolvedGridOptions = {
 	 * carried across under its own name for the same reason as `rowActions`.
 	 */
 	direction: GridDirection
-	/** Column hiding. `undefined` when the feature is off. */
-	visibility?: NormalizedFeatureToolbarConfig | undefined
-	/** Sorting UI config. `undefined` when sorting is off. */
-	sorting?: NormalizedFeatureToolbarConfig | undefined
+	/**
+	 * Column hiding is on, so `<DataGrid.VisibilityTrigger/>` has something to drive.
+	 *
+	 * A plain `boolean`, and **derived** — `isFeatureEnabled(visibility)`, never authored. It
+	 * was a `{ toolbar }` object, which answered two questions at once: whether the feature is
+	 * on, and whether the built-in toolbar mounts its control. The second is a layout's to
+	 * answer now, by writing the component or not.
+	 */
+	visibility: boolean
+	/**
+	 * Sorting is on, so `<DataGrid.SortMenuTrigger/>` has something to drive. Derived, like
+	 * {@link ResolvedGridOptions.visibility} and for the same reason.
+	 */
+	sorting: boolean
 	filtering: {
-		/**
-		 * Display variant for the per-column filter controls. Always resolved, for the same
-		 * reason as `debounce` below: a UI kit switching on it must never hit a no-op branch.
-		 */
-		variant: FilteringVariant
 		/**
 		 * Commit debounce for text filter inputs. Always resolved, because the global search
 		 * box falls back to it even when column filtering is off.
 		 */
 		debounce: number
-		/** Active-filter chips strip. `undefined` when not auto-mounted. */
-		chips?: NormalizedFilterChipsConfig | undefined
-		/**
-		 * The auto-mounted filter panel and the region that holds it. `undefined` unless
-		 * {@link FilteringVariant.Panel} — the other variants keep the controls in the header.
-		 */
-		panel?: NormalizedFilterPanelConfig | undefined
-		/** Filtering's toolbar control (the Clear-all button). `undefined` when not auto-mounted. */
-		toolbar?: NormalizedFilteringToolbarConfig | undefined
 	}
-	/** Global search UI config. `undefined` when global search is off. */
+	/**
+	 * Global search UI config — what the input shows and how fast it commits. `undefined` when
+	 * global search is off, which is also how a layout gates `<DataGrid.GlobalFilterInput/>`.
+	 */
 	globalFiltering?: NormalizedGlobalFilteringConfig | undefined
 	pagination: {
 		/**
@@ -183,8 +176,7 @@ export type ResolvedGridOptions = {
 		 *
 		 * Flat, under the option's own name — it is `pagination.siblings` on the config and
 		 * `DATA_GRID_DEFAULTS.pagination.siblings` in the defaults table. It was nested under a
-		 * `window` key that exists nowhere else, which gave one value a third spelling, the same
-		 * way `pagination.pageSizer` gave one to `toolbar`.
+		 * `window` key that exists nowhere else, which gave one value a third spelling.
 		 */
 		siblings: number
 		/** `links`: pages kept at each end of the strip. Resolved. */
@@ -197,21 +189,10 @@ export type ResolvedGridOptions = {
 		 */
 		label: PaginationLabel | false | ((ctx: PaginationLabelModel) => ReactNode)
 		/**
-		 * Sizes the PageSizer offers. Present whenever page-based pagination is on, whether or
-		 * not the toolbar auto-mounts the control — a hand-placed `<DataGrid.PageSizer />`
-		 * reads it too.
+		 * Sizes the PageSizer offers. Present whenever page-based pagination is on, wherever
+		 * a layout puts the control — a `<DataGrid.PageSizer />` placed by hand reads it too.
 		 */
 		items?: number[] | undefined
-		/**
-		 * The auto-mounted PageSizer and the region that holds it. `undefined` when the grid
-		 * mounts no PageSizer. Governs mounting only, never the list above.
-		 *
-		 * Named for the control, not for a container, because it has two homes — the toolbar
-		 * and the pagination row. The features whose control has exactly one home keep the
-		 * `toolbar` flag ({@link NormalizedFeatureToolbarConfig}, `globalFiltering.toolbar`,
-		 * `filtering.toolbar`).
-		 */
-		pageSizer?: NormalizedPageSizerConfig | undefined
 		/**
 		 * Infinite-scroll detection config. `undefined` unless `pagination.mode` is
 		 * `'infinite'`.
@@ -290,10 +271,9 @@ export function defaultResolvedGridOptions(core?: GridOptions<never>): ResolvedG
 		// carries core's normalized settings across when it resolved any. `exactOptionalPropertyTypes`
 		// is why it is spread rather than assigned `undefined`.
 		pinning: { column: false, row: false, ...(core?.rowPinning !== undefined ? { rowConfig: core.rowPinning } : {}) },
-		filtering: {
-			variant: DATA_GRID_DEFAULTS.filtering.variant,
-			debounce: DATA_GRID_DEFAULTS.filtering.debounce,
-		},
+		visibility: false,
+		sorting: false,
+		filtering: { debounce: DATA_GRID_DEFAULTS.filtering.debounce },
 		pagination: {
 			enabled: false,
 			links: DATA_GRID_DEFAULTS.pagination.links,

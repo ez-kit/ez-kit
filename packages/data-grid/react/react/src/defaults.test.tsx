@@ -55,19 +55,16 @@ describe('DATA_GRID_DEFAULTS — named default values', () => {
 
 	it('global search input defaults', () => {
 		// The placeholder is a *string*, so it lives in the dictionary, not here — that is the
-		// only place a consumer can replace it.
+		// only place a consumer can replace it. Nothing else about the search box has a default
+		// value: it shares the column-filter debounce, and where it mounts is a layout's to say,
+		// so the whole `globalFiltering` group left this table with `globalFiltering.toolbar`.
 		expect(defaultMessages.globalFiltering.placeholder).toBe('Search…')
-		expect(DATA_GRID_DEFAULTS.globalFiltering).not.toHaveProperty('placeholder')
-		// No debounce of its own — the search box shares the column-filter timing.
-		expect(DATA_GRID_DEFAULTS.globalFiltering).not.toHaveProperty('debounce')
+		expect(DATA_GRID_DEFAULTS).not.toHaveProperty('globalFiltering')
 	})
 
 	it('column filtering defaults', () => {
-		expect(DATA_GRID_DEFAULTS.filtering.variant).toBe('inline')
 		expect(DATA_GRID_DEFAULTS.filtering.debounce).toBe(DEFAULT_FILTER_DEBOUNCE_MS)
 		expect(DEFAULT_FILTER_DEBOUNCE_MS).toBe(250)
-		expect(DATA_GRID_DEFAULTS.filtering.chips.position).toBe('above')
-		expect(DATA_GRID_DEFAULTS.filtering.toolbar.alwaysShow).toBe(false)
 	})
 
 	it('infinite-scroll detection defaults', () => {
@@ -140,19 +137,18 @@ describe('useDataGrid — effective defaults resolve to named defaults', () => {
 		expect(config?.pagination).not.toHaveProperty('label')
 	})
 
-	it('pagination.pageSizer / items are React-only → never reach createTableOptions', () => {
+	it('pagination.items is React-only → never reaches createTableOptions', () => {
 		renderHook(() =>
 			useDataGrid({
 				features: TEST_FEATURES,
 				data: USERS,
 				columns: COLUMNS,
-				pagination: { pageSizer: true, items: [5, 10], pageSize: 10 },
+				pagination: { items: [5, 10], pageSize: 10 },
 			}),
 		)
 
 		const config = createTableOptionsSpy.mock.calls[0]?.[0] as { pagination?: object } | undefined
 		expect(config?.pagination).toBeDefined()
-		expect(config?.pagination).not.toHaveProperty('pageSizer')
 		expect(config?.pagination).not.toHaveProperty('items')
 		// Sanity: the spy sees a real config, so the assertion above can actually fail.
 		expect(config?.pagination).toHaveProperty('pageSize', 10)
@@ -195,34 +191,11 @@ describe('useDataGrid — effective defaults resolve to named defaults', () => {
 		expect(cfg?.debounce).toBe(0)
 	})
 
-	it('filtering: true → variant is the named default', () => {
+	it('filtering: true → the debounce is the named default', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, filtering: true }),
 		)
-		expect(result.current.grid.filtering.variant).toBe(DATA_GRID_DEFAULTS.filtering.variant)
-		expect(result.current.grid.filtering.variant).toBe('inline')
-	})
-
-	it('filtering config without an explicit variant → variant is the named default', () => {
-		const { result } = renderHook(() =>
-			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, filtering: { debounce: 500 } }),
-		)
-		expect(result.current.grid.filtering.variant).toBe(DATA_GRID_DEFAULTS.filtering.variant)
-	})
-
-	it('an explicit filtering.variant wins over the default', () => {
-		const { result } = renderHook(() =>
-			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, filtering: { variant: 'popover' } }),
-		)
-		expect(result.current.grid.filtering.variant).toBe('popover')
-	})
-
-	it('filtering.chips: true → position is the named default', () => {
-		const { result } = renderHook(() =>
-			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, filtering: { chips: true } }),
-		)
-		const cfg = result.current.grid.filtering.chips
-		expect(cfg?.position).toBe(DATA_GRID_DEFAULTS.filtering.chips.position)
+		expect(result.current.grid.filtering.debounce).toBe(DATA_GRID_DEFAULTS.filtering.debounce)
 	})
 
 	it('pagination infinite → trigger/threshold are the named defaults', () => {

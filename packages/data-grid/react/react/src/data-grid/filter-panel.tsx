@@ -106,7 +106,10 @@ function formatFilterValue(
  * Each chip shows `{column header}: {value or "Any"}`. Clicking the chip opens a kit-provided
  * popover whose body is the regular column filter input (same `renderFilterInput` as the header).
  *
- * Pair with `filtering.variant: 'panel'` so the header skips inline filter rendering.
+ * Mounted wherever a layout puts it. For the panel to be the grid's *only* filter UI, expand
+ * the table down to `<DataGrid.HeaderCell>` and render everything but its `filter` — which is
+ * what `filtering.variant: 'panel'` used to do for the whole grid at once. Left beside the
+ * built-in header cell, the two are simply two controls on one `columnFilters` entry.
  */
 /** One filterable column, as the panel resolved it. */
 export type DataGridFilterPanelColumn<TRow extends object = ErasedRow> = {

@@ -227,28 +227,32 @@ describe('DataGrid.Header — sticky flag', () => {
 	})
 })
 
-describe('DataGrid.Toolbar — slots', () => {
-	it('appends `right` after the auto-mounted controls instead of replacing them', () => {
-		renderComposed(<DataGrid.Toolbar end={<button type='button'>Export</button>} />, {
-			visibility: { toolbar: true },
-		})
-		const toolbar = screen.getByRole('toolbar')
-		// The auto-mounted column-visibility trigger ("Columns") survives alongside the slot.
-		expect(within(toolbar).getByText('Export')).toBeInTheDocument()
-		expect(within(toolbar).getByText('Columns')).toBeInTheDocument()
-	})
-
-	it('appends `left` after the auto-mounted PageSizer', () => {
-		renderComposed(<DataGrid.Toolbar start={<span>Total: 3</span>} />, {
-			pagination: { items: [5, 10] },
-		})
+describe('DataGrid.Toolbar — a container and nothing else', () => {
+	// The bar auto-mounted seven controls, each gated by an option whose only job was to tell
+	// this component what to render. It now renders exactly what it is handed: what goes in a
+	// toolbar is what a layout writes into its slots.
+	it('renders what the slots are given and nothing besides', () => {
+		renderComposed(
+			<DataGrid.Toolbar
+				start={<span>Total: 3</span>}
+				end={<button type='button'>Export</button>}
+			/>,
+			// Every feature whose control the bar used to mount for itself is on here.
+			{ visibility: true, sorting: true, globalFiltering: true, pagination: { items: [5, 10] } },
+		)
 		const toolbar = screen.getByRole('toolbar')
 		expect(within(toolbar).getByText('Total: 3')).toBeInTheDocument()
-		// The auto-mounted PageSizer (a <select> in the test kit) survives alongside the slot.
-		expect(within(toolbar).getByRole('combobox')).toBeInTheDocument()
+		expect(within(toolbar).getByText('Export')).toBeInTheDocument()
+		expect(within(toolbar).queryByText('Columns')).not.toBeInTheDocument()
+		expect(within(toolbar).queryByRole('combobox')).not.toBeInTheDocument()
 	})
 
-	it('renders a slot-only toolbar even when no feature auto-mounts anything', () => {
+	it('renders nothing at all when it is handed nothing', () => {
+		renderComposed(<DataGrid.Toolbar />, { visibility: true, sorting: true, globalFiltering: true })
+		expect(screen.queryByRole('toolbar')).not.toBeInTheDocument()
+	})
+
+	it('renders a slot-only toolbar on a grid with no features at all', () => {
 		renderComposed(<DataGrid.Toolbar end={<button type='button'>Only mine</button>} />)
 		expect(within(screen.getByRole('toolbar')).getByText('Only mine')).toBeInTheDocument()
 	})
@@ -269,20 +273,18 @@ describe('DataGrid.Toolbar — slots', () => {
 		expect(screen.getByRole('toolbar')).toHaveClass('mine')
 	})
 
-	it('children still replace the whole bar', () => {
-		renderComposed(<DataGrid.Toolbar>{<span>everything mine</span>}</DataGrid.Toolbar>, {
-			visibility: { toolbar: true },
-		})
+	it('renders children between the two slots', () => {
+		renderComposed(<DataGrid.Toolbar>{<span>everything mine</span>}</DataGrid.Toolbar>, { visibility: true })
 		const toolbar = screen.getByRole('toolbar')
 		expect(within(toolbar).getByText('everything mine')).toBeInTheDocument()
 		expect(within(toolbar).queryByText('Columns')).not.toBeInTheDocument()
 	})
 })
 
-describe('sorting.toolbar — the UI flag that moved out of core', () => {
-	// `sorting.toolbar` used to sit on the headless `SortingConfig` with a doc comment saying
-	// "ignored by core". It now lives on `ReactSortingConfig`, next to `globalFiltering.toolbar`
-	// and `visibility.toolbar`, and still drives the same auto-mount.
+describe('the sort builder is mounted by composition', () => {
+	// `sorting.toolbar` — the flag that decided whether the built-in bar mounted this control —
+	// is gone along with the auto-mounting. Writing `<DataGrid.SortMenuTrigger/>` is what mounts
+	// it, and registering `sorting` is what gives it something to drive.
 	const markerComponents = { sorting: { SortMenu: () => <span>sort builder</span> } }
 
 	function renderWithSortMenu(config: Partial<UseDataGridConfig<GridFeatures, TestRow>>) {
@@ -298,27 +300,22 @@ describe('sorting.toolbar — the UI flag that moved out of core', () => {
 					table={table}
 					components={markerComponents}
 				>
-					<DataGrid.Toolbar />
+					<DataGrid.Toolbar end={<DataGrid.SortMenuTrigger />} />
 				</DataGrid>
 			)
 		}
 		return renderWithComponents(<Harness />)
 	}
 
-	it('auto-mounts the sort builder when sorting.toolbar is true', () => {
-		renderWithSortMenu({ sorting: { toolbar: true } })
-		expect(screen.getByText('sort builder')).toBeInTheDocument()
-	})
-
-	it('does not auto-mount it for plain `sorting: true`', () => {
+	it('mounts the sort builder where the layout put it', () => {
 		renderWithSortMenu({ sorting: true })
-		expect(screen.queryByText('sort builder')).not.toBeInTheDocument()
+		expect(screen.getByText('sort builder')).toBeInTheDocument()
 	})
 
 	it('a per-table `components` override reaches the injected slot', () => {
 		// The same test proves `<DataGrid components>` merges over the provider registry
 		// rather than replacing it — the rest of the kit still renders.
-		renderWithSortMenu({ sorting: { toolbar: true } })
+		renderWithSortMenu({ sorting: true })
 		expect(screen.getByRole('toolbar')).toBeInTheDocument()
 	})
 })

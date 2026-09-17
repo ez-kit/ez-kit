@@ -22,6 +22,7 @@ import {
 import { DataGrid } from 'shared/DataGrid'
 
 import { crudColumns } from './columns'
+import { CrudLayout } from './CrudLayout'
 import { useEmployeeStore } from './use-employee-store'
 
 const features = tableFeatures({
@@ -53,7 +54,7 @@ export function CrudClientExample() {
 			data={data}
 			columns={crudColumns}
 			sorting
-			filtering={{ variant: 'popover' }}
+			filtering
 			pagination={{ pageSize: 10, items: [5, 10, 20, 50] }}
 			visibility
 			pinning={{ column: true }}
@@ -88,6 +89,8 @@ export function CrudClientExample() {
 					},
 				},
 			}}
-		/>
+		>
+			<CrudLayout />
+		</DataGrid>
 	)
 }

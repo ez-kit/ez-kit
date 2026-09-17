@@ -78,20 +78,27 @@ describe('DataGrid.BottomBar', () => {
 	})
 })
 
-describe('DataGrid.BottomBar — the default layout', () => {
-	it("mounts the bar when pageSizer resolves to 'footer'", () => {
-		const { container } = renderDefaultLayout({ pagination: { pageSizer: 'footer', items: [5, 10] } })
+// Which layout mounts the bar is `layouts/presets.test.tsx`' business now — `pageSizer: 'footer'`
+// is gone, and `<BottomBarLayout/>` is what asks for a sizer beside the page controls. What is
+// left here is the bar itself: placed by hand, it carries both controls in one row.
+describe('DataGrid.BottomBar — placed by hand', () => {
+	it('carries the page sizer and the pagination in one row', () => {
+		const { container } = renderComposed(
+			<>
+				<DataGrid.Table />
+				<DataGrid.BottomBar />
+			</>,
+			{ pagination: { items: [5, 10] } },
+		)
 		const bar = container.querySelector(BOTTOM_BAR)
 		expect(bar).not.toBeNull()
 		expect(bar?.querySelector(SIZER)).not.toBeNull()
 		expect(bar?.textContent).toContain(PAGINATION_LAST_PAGE)
 	})
 
-	it('leaves the pagination unwrapped when the sizer sits in the toolbar', () => {
-		const { container } = renderDefaultLayout({ pagination: { pageSizer: true, items: [5, 10] } })
+	it('leaves the pagination unwrapped when a layout mounts it on its own', () => {
+		const { container } = renderDefaultLayout({ pagination: { items: [5, 10] } })
 		expect(container.querySelector(BOTTOM_BAR)).toBeNull()
-		// The sizer and the pagination both render — just not inside a bar of their own.
-		expect(container.querySelector(SIZER)).not.toBeNull()
 		expect(container.textContent).toContain(PAGINATION_LAST_PAGE)
 	})
 })
