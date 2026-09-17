@@ -1,7 +1,7 @@
 import { CreatingMode } from '@ez-kit/data-grid-core'
 
 import { useGridComponents } from '../components-context'
-import { FilterPanelPlacement, PageSizerPlacement } from '../types'
+import { FilterPanelPlacement, GlobalFilterPlacement, PageSizerPlacement } from '../types'
 
 import { ClearFiltersButton } from './clear-filters-button'
 import { CreateTrigger } from './create-trigger'
@@ -75,7 +75,9 @@ export function Toolbar({ children, start: extraStart, end: extraEnd, className 
 
 	const hasPageSizerToolbar = grid.pagination.pageSizer?.placement === PageSizerPlacement.Toolbar
 	const hasFilterPanelToolbar = grid.filtering.panel?.placement === FilterPanelPlacement.Toolbar
-	const hasGlobalFilterToolbar = Boolean(grid.globalFiltering?.toolbar)
+	const globalFilterPlacement = grid.globalFiltering?.toolbar?.placement
+	const hasGlobalFilterStart = globalFilterPlacement === GlobalFilterPlacement.Start
+	const hasGlobalFilterEnd = globalFilterPlacement === GlobalFilterPlacement.End
 	const hasClearButtonToolbar = grid.filtering.toolbar !== undefined
 
 	if (children) {
@@ -89,13 +91,16 @@ export function Toolbar({ children, start: extraStart, end: extraEnd, className 
 		)
 	}
 
-	const hasAutoStart = hasPageSizerToolbar || hasFilterPanelToolbar
+	const hasAutoStart = hasGlobalFilterStart || hasPageSizerToolbar || hasFilterPanelToolbar
 	const hasAutoEnd =
-		hasGlobalFilterToolbar || hasClearButtonToolbar || hasCreating || hasSortingToolbar || hasVisibilityToolbar
+		hasGlobalFilterEnd || hasClearButtonToolbar || hasCreating || hasSortingToolbar || hasVisibilityToolbar
 
 	const start =
 		hasAutoStart || extraStart !== undefined ? (
 			<>
+				{/* Before the panel's chips: the search box is what a reader looks for first, and
+				    `toolbar: 'start'` is written to get exactly that order. */}
+				{hasGlobalFilterStart && <GlobalFilterInput />}
 				{hasPageSizerToolbar && <PageSizer />}
 				{hasFilterPanelToolbar && <FilterPanel />}
 				{extraStart}
@@ -105,7 +110,7 @@ export function Toolbar({ children, start: extraStart, end: extraEnd, className 
 	const end =
 		hasAutoEnd || extraEnd !== undefined ? (
 			<>
-				{hasGlobalFilterToolbar && <GlobalFilterInput />}
+				{hasGlobalFilterEnd && <GlobalFilterInput />}
 				{hasClearButtonToolbar && <ClearFiltersButton />}
 				{hasCreating && <CreateTrigger />}
 				{hasSortingToolbar && <SortMenuTrigger />}

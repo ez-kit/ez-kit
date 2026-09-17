@@ -803,6 +803,29 @@ export const FilterPanelPlacement = {
 export type FilterPanelPlacement = (typeof FilterPanelPlacement)[keyof typeof FilterPanelPlacement]
 
 /**
+ * Which end of the toolbar holds the auto-mounted global-search input.
+ *
+ * `placement`, like {@link PageSizerPlacement} and {@link FilterPanelPlacement}: the values name
+ * a container — the toolbar's two slots — not a spot on an axis the way `filtering.chips`'
+ * `position` does. The search box still has exactly one home; this says which end of it.
+ *
+ * Logical (`start` / `end`), not `left` / `right`, because the toolbar is a flex row and its two
+ * slots swap sides under RTL — the same vocabulary, for the same reason, as `Toolbar.start` /
+ * `Toolbar.end` themselves and as a column's `align`.
+ *
+ * Named members for internal reference; the option is typed as the plain string union, so
+ * `toolbar: 'start'` is equally valid and needs no import.
+ */
+export const GlobalFilterPlacement = {
+	/** Leading slot, before the filter panel's chips. */
+	Start: 'start',
+	/** Trailing slot, beside the sort and visibility triggers. The default. */
+	End: 'end',
+} as const
+
+export type GlobalFilterPlacement = (typeof GlobalFilterPlacement)[keyof typeof GlobalFilterPlacement]
+
+/**
  * What makes an infinite-scroll grid load the next page.
  *
  * Named members for internal reference; the option is typed as the plain string union, so

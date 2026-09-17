@@ -776,12 +776,12 @@ describe('useDataGrid — globalFiltering normalization', () => {
 		expect(getNormalizedGlobalFiltering(result.current)).toBeUndefined()
 	})
 
-	it('globalFiltering: true → defaults (placeholder, debounce: 250, toolbar: true)', () => {
+	it("globalFiltering: true → defaults (placeholder, debounce: 250, toolbar at 'end')", () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, globalFiltering: true }),
 		)
 		const cfg = getNormalizedGlobalFiltering(result.current)
-		expect(cfg).toEqual({ placeholder: 'Search…', debounce: 250, toolbar: true })
+		expect(cfg).toEqual({ placeholder: 'Search…', debounce: 250, toolbar: { placement: 'end' } })
 	})
 
 	it('globalFiltering: { placeholder, debounce, toolbar: false } — overrides merge into defaults', () => {
@@ -794,7 +794,38 @@ describe('useDataGrid — globalFiltering normalization', () => {
 			}),
 		)
 		const cfg = getNormalizedGlobalFiltering(result.current)
-		expect(cfg).toEqual({ placeholder: 'Find users', debounce: 0, toolbar: false })
+		expect(cfg).toEqual({ placeholder: 'Find users', debounce: 0, toolbar: undefined })
+	})
+
+	it("globalFiltering: { toolbar: 'start' } — the scalar is the placement", () => {
+		const { result } = renderHook(() =>
+			useDataGrid({
+				features: TEST_FEATURES,
+				data: USERS,
+				columns: COLUMNS,
+				globalFiltering: { toolbar: 'start' },
+			}),
+		)
+		expect(getNormalizedGlobalFiltering(result.current)?.toolbar).toEqual({ placement: 'start' })
+	})
+
+	it('globalFiltering: { toolbar: { placement } } — the object form spells the same thing out', () => {
+		const { result } = renderHook(() =>
+			useDataGrid({
+				features: TEST_FEATURES,
+				data: USERS,
+				columns: COLUMNS,
+				globalFiltering: { toolbar: { placement: 'start' } },
+			}),
+		)
+		expect(getNormalizedGlobalFiltering(result.current)?.toolbar).toEqual({ placement: 'start' })
+	})
+
+	it('globalFiltering: { toolbar: {} } — an object with no placement takes the default end', () => {
+		const { result } = renderHook(() =>
+			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, globalFiltering: { toolbar: {} } }),
+		)
+		expect(getNormalizedGlobalFiltering(result.current)?.toolbar).toEqual({ placement: 'end' })
 	})
 
 	// In v9 the filtered row model is a **feature slot** (`options.features.filteredRowModel`),

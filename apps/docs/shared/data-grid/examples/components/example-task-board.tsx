@@ -230,7 +230,9 @@ export function ExampleTaskBoardExample() {
 			selection
 			sorting={{ toolbar: true }}
 			visibility
-			globalFiltering={{ placeholder: 'Search titles…' }}
+			// `toolbar: 'start'` puts the search box at the leading end, before the panel's chips —
+			// the order every issue tracker uses. Omitted, it sits beside Sort and Columns.
+			globalFiltering={{ placeholder: 'Search titles…', toolbar: 'start' }}
 			filtering={{ variant: 'panel', panel: 'toolbar', faceted: true }}
 			rowActions={{ placement: 'menu' }}
 			editing={{

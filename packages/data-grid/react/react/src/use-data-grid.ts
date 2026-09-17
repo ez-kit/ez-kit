@@ -28,6 +28,7 @@ import type {
 	DataTable,
 	FilterChipsPosition,
 	FilterPanelPlacement,
+	GlobalFilterPlacement,
 	GridFeatures,
 	LoadMoreThreshold,
 	LoadMoreTrigger,
@@ -320,7 +321,9 @@ export type ReactPaginationConfig = PaginationConfig & {
 	 * `globalFiltering.toolbar`, `filtering.toolbar` and `visibility.toolbar`. Those controls
 	 * can live in one place, so `toolbar` states both the mounting and the destination; this
 	 * one has two homes, and `toolbar: true, placement: 'footer'` would be a config
-	 * contradicting itself.
+	 * contradicting itself. That `globalFiltering.toolbar` also takes a placement is not a
+	 * counter-example: its values name the two ends of the one container it mounts into, not a
+	 * second container.
 	 */
 	pageSizer?: boolean | PageSizerPlacement | PageSizerConfig
 }
@@ -582,18 +585,47 @@ export type ReactGlobalFilteringConfig<TFeatures extends TableFeatures> = {
 	 */
 	debounce?: number
 	/**
-	 * Auto-mount control for the search input in the Toolbar.
-	 * - `true` / omitted — input is auto-mounted in `Toolbar.end`
+	 * Auto-mount the search input in the toolbar, and say which end of it.
+	 *
+	 * - `true` / omitted — mounted in `Toolbar.end`
+	 * - `'start'` / `'end'` — mounted there; the scalar **is** the placement
+	 * - {@link GlobalFilterToolbarConfig} — the same, spelled out
 	 * - `false` — no auto-mount; place `<DataGrid.GlobalFilterInput />` yourself
+	 *
+	 * Still named `toolbar` rather than for the control, unlike `pagination.pageSizer`: the
+	 * search box has one home, and this says where inside it — not which of two containers
+	 * holds it. `toolbar: 'start'` beside the panel variant's chips is the layout every issue
+	 * tracker uses, with search first and the filters following it.
 	 */
-	toolbar?: boolean
+	toolbar?: boolean | GlobalFilterPlacement | GlobalFilterToolbarConfig
 } & GlobalFilteringConfig<TFeatures>
+
+/**
+ * The object form of {@link ReactGlobalFilteringConfig.toolbar}. Scalar-or-object, like
+ * `pagination.pageSizer` and `filtering.panel`: the scalar is the placement, the object exists
+ * for the day the slot grows a second field.
+ */
+export type GlobalFilterToolbarConfig = FeatureToggle & {
+	/** Which end of the toolbar holds the input. Default: `'end'`. */
+	placement?: GlobalFilterPlacement
+}
 
 /** Normalized shape stored on the table instance for child components to read. */
 export type NormalizedGlobalFilteringConfig = {
 	placeholder: string
 	debounce: number
-	toolbar: boolean
+	/**
+	 * The auto-mounted search input and the end of the toolbar that holds it. `undefined` when
+	 * the grid mounts no input of its own — which is why this is the resolved object and not
+	 * the `boolean` it used to be: a caller reading `toolbar` now learns both facts, the way it
+	 * already does from `pagination.pageSizer` and `filtering.toolbar`.
+	 */
+	toolbar?: NormalizedGlobalFilterToolbarConfig | undefined
+}
+
+/** Resolved {@link GlobalFilterToolbarConfig}. */
+export type NormalizedGlobalFilterToolbarConfig = {
+	placement: GlobalFilterPlacement
 }
 
 /**
@@ -1249,11 +1281,22 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 	//   via GLOBAL_FILTERING_KEY so Toolbar / GlobalFilterInput can read it
 	const normalizedGlobalFiltering: NormalizedGlobalFilteringConfig | undefined = (() => {
 		if (!isFeatureEnabled(rawGlobalFiltering)) return undefined
+		const defaultPlacement = DATA_GRID_DEFAULTS.globalFiltering.toolbar.placement
+		const resolveToolbar = (
+			toolbar: boolean | GlobalFilterPlacement | GlobalFilterToolbarConfig | undefined,
+		): NormalizedGlobalFilterToolbarConfig | undefined => {
+			if (toolbar === undefined || toolbar === true) return { placement: defaultPlacement }
+			if (toolbar === false) return undefined
+			if (typeof toolbar === 'string') return { placement: toolbar }
+			const config = featureConfig(toolbar)
+			if (config === undefined) return undefined
+			return { placement: config.placement ?? defaultPlacement }
+		}
 		if (typeof rawGlobalFiltering !== 'object') {
 			return {
 				placeholder: messages.globalFiltering.placeholder,
 				debounce: filteringDebounce,
-				toolbar: true,
+				toolbar: { placement: defaultPlacement },
 			}
 		}
 		return {
@@ -1261,7 +1304,7 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 			// Falls back to the shared column-filter debounce, not to a second default of its
 			// own: one gesture, one timing, unless this box explicitly asks for another.
 			debounce: rawGlobalFiltering.debounce ?? filteringDebounce,
-			toolbar: rawGlobalFiltering.toolbar !== false,
+			toolbar: resolveToolbar(rawGlobalFiltering.toolbar),
 		}
 	})()
 

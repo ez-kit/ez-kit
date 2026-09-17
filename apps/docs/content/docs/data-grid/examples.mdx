@@ -9,7 +9,8 @@ surface — and, where something is deliberately not an option, why it is writte
 
 ## Task board
 
-The layout every issue tracker converges on: a search box and faceted filters in the toolbar,
+The layout every issue tracker converges on: a search box and, following it, faceted filters in the
+toolbar,
 sortable columns, badge and icon-labelled cells, an overflow menu per row, and a footer carrying
 the selection count, the page size and the page controls.
 
@@ -19,7 +20,7 @@ the selection count, the page size and the page controls.
 
 | Surface                                    | Option                                                                            |
 | ------------------------------------------ | --------------------------------------------------------------------------------- |
-| Search box                                 | `globalFiltering: { placeholder }`                                                |
+| Search box, before the filters             | `globalFiltering: { placeholder, toolbar: 'start' }`                              |
 | Column filters in the toolbar              | `filtering: { variant: 'panel', panel: 'toolbar', faceted: true }`                |
 | Which columns get a filter                 | `filtering: false` on the columns that should not (Task and Title here)           |
 | Sort menu with its active-sort count       | `sorting: { toolbar: true }`                                                      |

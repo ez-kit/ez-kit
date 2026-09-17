@@ -52,6 +52,7 @@ export type {
 	FilterPanelConfig,
 	LoadingFallbackConfig,
 	NoResultsFallbackConfig,
+	GlobalFilterToolbarConfig,
 	PageSizerConfig,
 	// The resolved shapes `ResolvedGridOptions` is built from. That type is public and a UI kit
 	// reads it through `useGridOptions()`, so the names of its members have to be nameable too —
@@ -63,6 +64,7 @@ export type {
 	NormalizedFilteringToolbarConfig,
 	NormalizedFilterPanelConfig,
 	NormalizedGlobalFilteringConfig,
+	NormalizedGlobalFilterToolbarConfig,
 	NormalizedInfiniteConfig,
 	NormalizedPageSizerConfig,
 	NormalizedSelectionBarConfig,
@@ -314,6 +316,7 @@ export {
 	FilterChipsPosition,
 	FilteringVariant,
 	FilterPanelPlacement,
+	GlobalFilterPlacement,
 	LoadMoreTrigger,
 	PageSizerPlacement,
 	PaginationLabel,

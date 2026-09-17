@@ -21,6 +21,7 @@ import {
 	FilterChipsPosition,
 	FilteringVariant,
 	FilterPanelPlacement,
+	GlobalFilterPlacement,
 	LoadMoreTrigger,
 	PageSizerPlacement,
 	PaginationLabel,
@@ -97,7 +98,10 @@ export const DATA_GRID_DEFAULTS = {
 	 */
 	globalFiltering: {
 		/** Auto-mounted in the toolbar as soon as global search is enabled. */
-		toolbar: true,
+		toolbar: {
+			/** Beside the sort and visibility triggers; `'start'` puts it before the filters. */
+			placement: GlobalFilterPlacement.End,
+		},
 	},
 	/** Column filtering controls. */
 	filtering: {
