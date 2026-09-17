@@ -528,6 +528,10 @@ disable itself at the ends."
 - Consumes: `ArrayBody`, `ArrayScope` from Tasks 1–2.
 - Produces:
 
+> **Superseded** — this signature is generic over the item; see `design.md`, Decision 1's
+> "Revised during implementation" note for what actually shipped: `ArrayProps<TFormData, TName
+extends ArrayKeys<TFormData>>`, with the item read from `name` via `ArrayItemOf`.
+
 ```ts
 export type ArrayProps<TFormData, TItem> = {
 	name: DeepKeysOfType<TFormData, readonly TItem[]>
@@ -671,6 +675,10 @@ record and does the rest itself.
 So `createArray` builds nothing. It mirrors `createArrayField`'s call, passing the same
 `fieldComponents` and supplying `null` / `undefined` for every presentational prop the primitive
 does not have:
+
+> **Superseded** — `ArrayProps<TFormData, TItem>` below is the pre-revision signature; see the
+> pointer above Task 3's `ArrayProps` and `design.md`, Decision 1's "Revised during implementation"
+> note. `ArrayPrimitive` is generic over `TName extends ArrayKeys<TFormData>` in what shipped.
 
 ```tsx
 export function createArray<TFormData>(

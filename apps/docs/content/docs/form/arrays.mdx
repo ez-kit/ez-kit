@@ -106,6 +106,10 @@ const NEW_LINE: Line = { name: '', members: [] }
 
 A `newItem` that does not match the item reports on `newItem`, naming the item type and the key at fault — `Object literal may only specify known properties, and 'nmae' does not exist in type 'Line'` for a typo, `Property 'members' is missing in type '{ name: string; }' but required in type 'Line'` for an omitted key. The same holds for `form.Array`, which reads its item type from `name` the same way.
 
+A wrong `name` reports on `name` itself — that is the primary, correct diagnostic. When `newItem` is otherwise well-formed, TypeScript can also emit a second, misleading error against it: with `name` rejected, the prop falls back to its constraint (every array path in `TFormData`), so `newItem` is then checked against the union of every one of those item types and can fail against an item the rejected `name` never pointed at — for example `Object literal may only specify known properties, and 'members' does not exist in type 'Member'` when `name` meant `lines` but was misspelled and `newItem` was written for `Line`. Fixing `name` clears that second error along with the first; only the `name` diagnostic needs acting on.
+
+`ArrayKeys<TFormData>` and `ArrayItemOf<TFormData, TName>` — the two rules above — are exported from `@ez-kit/form-core` for a kit or app that needs to spell the same constraint itself.
+
 ### The render prop
 
 The render prop receives the live list and the controls for it:

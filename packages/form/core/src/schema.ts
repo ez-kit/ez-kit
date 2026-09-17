@@ -285,7 +285,8 @@ export type ArrayKeys<TValues> = DeepKeysOfType<TValues, readonly unknown[]>
  * `Person[] | undefined`, which fails the `readonly (infer U)[]` branch and would collapse the
  * whole item subtree to `never` — every field inside it rejected, with no hint why.
  */
-export type ArrayItemOf<TValues, N> = NonNullable<DeepValue<TValues, N>> extends readonly (infer U)[] ? U : never
+export type ArrayItemOf<TValues, N extends ArrayKeys<TValues>> =
+	NonNullable<DeepValue<TValues, N>> extends readonly (infer U)[] ? U : never
 
 /**
  * The `array` node's shape, with the name and the children left open.

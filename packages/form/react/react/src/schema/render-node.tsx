@@ -206,6 +206,24 @@ function itemLabelAt(label: LocalizedText | undefined, index: number, translate:
 }
 
 /**
+ * The single array path of a stand-in value type, used only to spell {@link ErasedArrayField}.
+ */
+type ErasedArrayValues = { items: unknown[] }
+
+/**
+ * `form.ArrayField` with its item type erased.
+ *
+ * The JSX component derives the item type from `name` — right for an author writing a literal
+ * path, unavailable here: a schema node's `name` is a plain `string` (relative to whatever entry
+ * it sits in) and its fresh item is assembled from the node's children at runtime. Pinning the
+ * stand-in's one array path gives the rest of the props their real shapes (`newItem: unknown`, a
+ * scope over `unknown`) while `name` widens back to `string`.
+ */
+type ErasedArrayField = (
+	props: Omit<ArrayFieldProps<ErasedArrayValues, 'items'>, 'name'> & { name: string },
+) => ReactNode
+
+/**
  * Turn one field or section node into the already-bound kit component for its kind.
  *
  * A **component**, not a plain function, on purpose: it calls `useConditionValue` twice
@@ -237,24 +255,6 @@ function itemLabelAt(label: LocalizedText | undefined, index: number, translate:
  * a built-in one does, not a hand-rolled subset of it. A block gets none of that: it has no
  * `name` and holds no value, so it renders from `props` alone.
  */
-/**
- * The single array path of a stand-in value type, used only to spell {@link ErasedArrayField}.
- */
-type ErasedArrayValues = { items: unknown[] }
-
-/**
- * `form.ArrayField` with its item type erased.
- *
- * The JSX component derives the item type from `name` — right for an author writing a literal
- * path, unavailable here: a schema node's `name` is a plain `string` (relative to whatever entry
- * it sits in) and its fresh item is assembled from the node's children at runtime. Pinning the
- * stand-in's one array path gives the rest of the props their real shapes (`newItem: unknown`, a
- * scope over `unknown`) while `name` widens back to `string`.
- */
-type ErasedArrayField = (
-	props: Omit<ArrayFieldProps<ErasedArrayValues, 'items'>, 'name'> & { name: string },
-) => ReactNode
-
 export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeArgs<TValues>): ReactNode {
 	// `form` carries far more than `FormFieldComponents` at runtime — the real bound instance
 	// — so this narrows it to just the store shape `useConditionValue` needs, the same
