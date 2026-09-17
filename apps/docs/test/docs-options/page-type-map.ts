@@ -1,6 +1,7 @@
 import { NO_HEADING } from './mdx-tables'
 import {
 	FORM_API_TYPE_ARGS,
+	FORM_ARRAY_TYPE_ARGS,
 	FORM_VALUE_TYPE_ARGS,
 	ROW_TYPE_ARGS,
 	STATE_SEED_TYPE_ARGS,
@@ -310,11 +311,11 @@ export const FORM_TYPE = {
 		typeArgs: FORM_API_TYPE_ARGS,
 	},
 	/** The JSX array trio: the component's props, the render prop's scope, and one entry of it. */
-	ArrayFieldProps: { module: TypeModule.FormReact, name: 'ArrayFieldProps', typeArgs: FORM_VALUE_TYPE_ARGS },
+	ArrayFieldProps: { module: TypeModule.FormReact, name: 'ArrayFieldProps', typeArgs: FORM_ARRAY_TYPE_ARGS },
 	ArrayFieldScope: { module: TypeModule.FormReact, name: 'ArrayFieldScope', typeArgs: '<string>' },
 	ArrayItemScope: { module: TypeModule.FormReact, name: 'ArrayItemScope', typeArgs: '<string>' },
 	/** The headless primitive's own trio: `form.Array`'s props, its scope, and `item.Item`'s own props. */
-	ArrayProps: { module: TypeModule.FormReact, name: 'ArrayProps', typeArgs: FORM_VALUE_TYPE_ARGS },
+	ArrayProps: { module: TypeModule.FormReact, name: 'ArrayProps', typeArgs: FORM_ARRAY_TYPE_ARGS },
 	ArrayScope: { module: TypeModule.FormReact, name: 'ArrayScope', typeArgs: '<string>' },
 	ArrayItemProps: { module: TypeModule.FormReact, name: 'ArrayItemProps' },
 	/**

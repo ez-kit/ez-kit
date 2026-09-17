@@ -65,6 +65,36 @@ _Rejected — a `useArrayField` hook as the primitive._ `specs/005` prototype P1
 that hands back an item scope freezes its API on first render, and a stale scope writes a phantom
 array element. The render-prop shape is what makes the per-entry component set rebuildable.
 
+_Revised during implementation — the item type is read from `name`, not inferred from `newItem`._
+Both prop types were first written generic over the item, with
+`name: DeepKeysOfType<TFormData, readonly TItem[]>` and `newItem: TItem`. `DeepKeysOfType` is a
+conditional type, so `name` is a **non-inference position**: `TItem` could only come from `newItem`
+and from `children`. An inline `newItem={{ name: '', members: [] }}` therefore inferred the nested
+`members` as `never[]`, and the resulting mismatch was reported against **`name`**, reading
+`Type 'string' is not assignable to type 'never'` — an error naming a correct prop, about a type
+the author never wrote. Annotating the const (`const NEW_LINE: Line = …`) cleared it, which is why
+every example in the repo and every test compiled and nothing caught it.
+
+What shipped inverts the direction, the shape `react-hook-form` uses: both types are generic over
+`TName extends ArrayKeys<TFormData>`, with `name: TName`, `newItem: ArrayItemOf<TFormData, TName>`
+and the scope over the same item. `name` is now the single inference site and everything else is
+resolved from the value at that path. `ArrayKeys` and `ArrayItemOf` are exported from
+`@ez-kit/form-core` rather than rewritten here: the schema side already owned exactly these two
+helpers for `ArrayNode` — including the load-bearing `NonNullable` that keeps an optional
+`people?: Person[]` from collapsing its whole item subtree to `never` — and two copies of that rule
+would drift.
+
+Three consequences. A wrong `newItem` now reports on **`newItem`**, naming the item type and the
+key at fault. A `newItem` missing a key of the item is now a compile error rather than a silent
+uncontrolled input on the new row — it used to infer a narrower `TItem` and pass. And the schema
+renderer, whose node carries a plain `string` name and an item assembled at runtime, can no longer
+spell the component's props; it casts once to an item-erased signature (`ErasedArrayField` in
+`schema/render-node.tsx`), which is what the old `<unknown, unknown>` instantiation was doing
+implicitly. The one rough edge: when `name` itself is rejected, `TName` falls back to its
+constraint — the union of every array path in the form data — so `newItem` is then checked against
+the union of those item types and may report a second error. The error on `name` is the primary
+one and is correct.
+
 ### 2. The mutation vocabulary is indexed, and the raw field is the escape hatch
 
 ```ts

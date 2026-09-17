@@ -5,8 +5,16 @@ import { fieldValidators } from '../field-validate'
 
 import type { BindableForm, BoundFieldApi } from '../bindable-form'
 import type { ArrayFieldRenderProps, FormComponents } from '../contract'
-import type { ArrayFieldProps, ArrayItemProps, ArrayProps, ArrayScope, FormFieldComponents } from '../field-props'
+import type {
+	ArrayFieldProps,
+	ArrayItemProps,
+	ArrayProps,
+	ArrayReorderable,
+	ArrayScope,
+	FormFieldComponents,
+} from '../field-props'
 import type { FieldValidateProps } from '../field-validate'
+import type { ArrayKeys } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
 
 const ARRAY_FIELD_TYPE = 'array'
@@ -120,7 +128,7 @@ export function createArrayField<TFormData>(
 	// than the form's. The runtime scoping happens per key inside `ArrayBody`.
 	const unscoped = fieldComponents as unknown as FormFieldComponents<unknown>
 
-	return function ArrayField<TItem>({
+	return function ArrayField<TName extends ArrayKeys<TFormData>>({
 		name,
 		label,
 		description,
@@ -133,7 +141,7 @@ export function createArrayField<TFormData>(
 		removeLabel,
 		itemLabel,
 		children,
-	}: ArrayFieldProps<TFormData, TItem>): ReactNode {
+	}: ArrayFieldProps<TFormData, TName>): ReactNode {
 		return (
 			<form.AppField
 				name={name}
@@ -185,14 +193,14 @@ export function createArray<TFormData>(
 ): FormFieldComponents<TFormData>['Array'] {
 	const unscoped = fieldComponents as unknown as FormFieldComponents<unknown>
 
-	return function ArrayPrimitive<TItem>({
+	return function ArrayPrimitive<TName extends ArrayKeys<TFormData>>({
 		name,
 		disabled,
 		required,
 		validate,
 		newItem,
 		children,
-	}: ArrayProps<TFormData, TItem>): ReactNode {
+	}: ArrayProps<TFormData, TName>): ReactNode {
 		return (
 			<form.AppField
 				name={name}
@@ -237,7 +245,7 @@ type ItemData = {
 	moveDownLabel: ReactNode
 	disabled: boolean | undefined
 	/** The array-level `reorderable` setting — `Item`'s own fallback when no prop overrides it. */
-	reorderable: ArrayFieldProps<unknown, unknown>['reorderable']
+	reorderable: ArrayReorderable | undefined
 	onRemove: () => void
 	/**
 	 * Stored unconditionally — `undefined` only where the move is actually impossible (the
@@ -260,7 +268,7 @@ type ArrayBodyProps = {
 	description: ReactNode
 	disabled: boolean | undefined
 	required: boolean | undefined
-	reorderable: ArrayFieldProps<unknown, unknown>['reorderable']
+	reorderable: ArrayReorderable | undefined
 	newItem: unknown
 	addLabel: ReactNode
 	removeLabel: ReactNode

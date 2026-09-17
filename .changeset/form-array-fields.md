@@ -94,6 +94,17 @@ CSS or a test keying on the submit marker to reach a scope button needs to switc
 This matters beyond this repo for shadcn: those files ship as the registry payload `npx shadcn add`
 copies into a project, so a consumer who already ran it has the old spelling in their own tree.
 
+**The item type is read from `name`.** `ArrayProps` and `ArrayFieldProps` are generic over the
+array path (`<TFormData, TName extends ArrayKeys<TFormData>>`) rather than over the item, so `name`
+is the inference site and `newItem`, `children` and the scope are resolved from the value at that
+path. An inline `newItem` therefore needs no annotation even when a key of the item is itself an
+array, and a `newItem` that does not match reports on **`newItem`**, naming the item type and the
+key at fault. A `newItem` missing a key of the item is now a compile error rather than an
+uncontrolled input on the new row. `@ez-kit/form-core` exports `ArrayKeys` and `ArrayItemOf`, the
+two helpers the schema side already used, so a kit or app can spell the same thing. Type-level
+only — no runtime change — but code that wrote the type arguments explicitly
+(`ArrayProps<Values, Person>`) becomes `ArrayProps<Values, 'people'>`.
+
 **Breaking for a kit outside this repo.** `FormComponents` gains two required slots,
 `ArrayField` and `ArrayItem`, so a kit that wrote `satisfies FormComponents` must implement
 them. The shadcn and HeroUI kits already do. `form.Array` adds no further slot — it reuses the

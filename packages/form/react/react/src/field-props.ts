@@ -1,7 +1,15 @@
 import type { BoundFieldApi } from './bindable-form'
 import type { FormComponents } from './contract'
 import type { FieldValidateProps } from './field-validate'
-import type { DateRangeValue, DeepKeysOfType, LocalizedText, SelectOption, TextInputType } from '@ez-kit/form-core'
+import type {
+	ArrayItemOf,
+	ArrayKeys,
+	DateRangeValue,
+	DeepKeysOfType,
+	LocalizedText,
+	SelectOption,
+	TextInputType,
+} from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
 
 /**
@@ -255,8 +263,18 @@ export type ArrayItemProps = {
 	label?: ReactNode
 	removeLabel?: ReactNode
 	/** Offer the kit's move controls on this row. Off by default, as on `ArrayField`. */
-	reorderable?: boolean | { up?: { label?: ReactNode }; down?: { label?: ReactNode } }
+	reorderable?: ArrayReorderable
 }
+
+/**
+ * Offer move-up / move-down controls, with optional captions.
+ *
+ * Named rather than written inline at its three sites because the internals need to spell it
+ * without an array to hang it off: `ArrayFieldProps` is generic over a *name in the form data*,
+ * so `ArrayFieldProps<unknown, …>['reorderable']` — which is how the resolver used to reach it —
+ * has no inhabited second argument to give (`ArrayKeys<unknown>` is empty).
+ */
+export type ArrayReorderable = boolean | { up?: { label?: ReactNode }; down?: { label?: ReactNode } }
 
 export type ArrayScope<TItem> = {
 	items: readonly ArrayItemScope<TItem>[]
@@ -308,8 +326,8 @@ export type ArrayFieldScope<TItem> = ArrayScope<TItem>
  * each field's `defaultValue`, so the renderer can build a fresh entry from the subtree, while a
  * render prop declares nothing the package can read.
  */
-export type ArrayFieldProps<TFormData, TItem> = {
-	name: DeepKeysOfType<TFormData, readonly TItem[]>
+export type ArrayFieldProps<TFormData, TName extends ArrayKeys<TFormData>> = {
+	name: TName
 	label?: ReactNode
 	description?: ReactNode
 	disabled?: boolean
@@ -321,14 +339,14 @@ export type ArrayFieldProps<TFormData, TItem> = {
 	 * The object form only adds captions for the two controls; `true` **is** the plain form and
 	 * means the same thing with the kit's defaults, so nothing has to be written twice.
 	 */
-	reorderable?: boolean | { up?: { label?: ReactNode }; down?: { label?: ReactNode } }
+	reorderable?: ArrayReorderable
 	/** The value a newly appended entry starts from. */
-	newItem: TItem
+	newItem: ArrayItemOf<TFormData, TName>
 	addLabel?: ReactNode
 	removeLabel?: ReactNode
 	/** Caption for one entry, given its zero-based position. */
 	itemLabel?: (index: number) => ReactNode
-	children: (scope: ArrayFieldScope<TItem>) => ReactNode
+	children: (scope: ArrayFieldScope<ArrayItemOf<TFormData, TName>>) => ReactNode
 }
 
 /**
@@ -339,14 +357,14 @@ export type ArrayFieldProps<TFormData, TItem> = {
  * surrounding layout are the author's. Use it when the kit's own chrome does not fit — a remove
  * control in a card heading, entries laid out as table rows, and so on.
  */
-export type ArrayProps<TFormData, TItem> = {
-	name: DeepKeysOfType<TFormData, readonly TItem[]>
+export type ArrayProps<TFormData, TName extends ArrayKeys<TFormData>> = {
+	name: TName
 	disabled?: boolean
 	required?: boolean
 	validate?: FieldValidateProps
 	/** The value a newly appended entry starts from. */
-	newItem: TItem
-	children: (scope: ArrayScope<TItem>) => ReactNode
+	newItem: ArrayItemOf<TFormData, TName>
+	children: (scope: ArrayScope<ArrayItemOf<TFormData, TName>>) => ReactNode
 }
 
 export type SubmitButtonProps = {
@@ -381,11 +399,11 @@ export type FormFieldComponents<TFormData> = {
 	 * one member cover every array in `TFormData` — and what makes a nested array inside an
 	 * entry work with no extra machinery.
 	 */
-	ArrayField: <TItem>(props: ArrayFieldProps<TFormData, TItem>) => ReactNode
+	ArrayField: <TName extends ArrayKeys<TFormData>>(props: ArrayFieldProps<TFormData, TName>) => ReactNode
 	/**
 	 * Generic per call, for the same reason `ArrayField` is — see its doc comment.
 	 */
-	Array: <TItem>(props: ArrayProps<TFormData, TItem>) => ReactNode
+	Array: <TName extends ArrayKeys<TFormData>>(props: ArrayProps<TFormData, TName>) => ReactNode
 	SubmitButton: (props: SubmitButtonProps) => ReactNode
 	Section: (props: SectionProps) => ReactNode
 	GridItem: (props: GridItemProps) => ReactNode

@@ -55,9 +55,20 @@ const PROBE_ALIAS_PREFIX = 'DocsOptionProbe'
 const PROBE_ROW_TYPE_NAME = 'DocsProbeRow'
 /** Zustand handle over the probe row — what the `zu-store` cache and store types are generic over. */
 const PROBE_STORE_TYPE_NAME = 'DocsProbeStore'
+/**
+ * Form data with one array path, for the JSX array prop types.
+ *
+ * {@link PROBE_ROW_TYPE_NAME} has none, and `ArrayProps` / `ArrayFieldProps` are generic over a
+ * *name* constrained to the array paths of the form data — so instantiating them over the plain
+ * probe row would violate the constraint.
+ */
+const PROBE_ARRAY_ROW_TYPE_NAME = 'DocsProbeArrayRow'
+/** The one array path of {@link PROBE_ARRAY_ROW_TYPE_NAME}. */
+const PROBE_ARRAY_NAME = 'items'
 const PROBE_ROW_DECLARATION = [
 	`type ${PROBE_ROW_TYPE_NAME} = { id: string }`,
 	`type ${PROBE_STORE_TYPE_NAME} = StoreApi<${PROBE_ROW_TYPE_NAME}>`,
+	`type ${PROBE_ARRAY_ROW_TYPE_NAME} = { ${PROBE_ARRAY_NAME}: ${PROBE_ROW_TYPE_NAME}[] }`,
 ].join('\n')
 /** Import the probe file always carries, so store-generic types can be instantiated. */
 const PROBE_PRELUDE = "import type { StoreApi } from 'zustand/vanilla'"
@@ -69,6 +80,12 @@ export const ROW_TYPE_ARGS = `<${PROBE_ROW_TYPE_NAME}>`
  * set, so any concrete scalar answers the same question — `string` is the arbitrary pick.
  */
 export const FORM_VALUE_TYPE_ARGS = `<${PROBE_ROW_TYPE_NAME}, string>`
+/**
+ * Type-argument list for `ArrayProps` / `ArrayFieldProps`, which are `<TFormData, TName>` rather
+ * than `<TFormData, TValue>`: the second argument is an **array path in the first**, and the item
+ * type is read from it. Hence the dedicated form data — see {@link PROBE_ARRAY_ROW_TYPE_NAME}.
+ */
+export const FORM_ARRAY_TYPE_ARGS = `<${PROBE_ARRAY_ROW_TYPE_NAME}, '${PROBE_ARRAY_NAME}'>`
 /**
  * Type-argument list for the form types that mirror TanStack's twelve-parameter validator
  * list verbatim (`KitFormApi`, `FormRendererUncontrolledProps`). Every validator slot is

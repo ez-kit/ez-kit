@@ -268,8 +268,15 @@ export type StepNode<TValues, TCustom extends string = never> = CommonProps<TVal
 	children: FormNode<TValues, TCustom>[]
 }
 
-/** Every path in `TValues` whose value is an array — the only paths an `array` node may name. */
-type ArrayKeys<TValues> = DeepKeysOfType<TValues, readonly unknown[]>
+/**
+ * Every path in `TValues` whose value is an array — the only paths an `array` node may name,
+ * and the only paths `form.ArrayField` / `form.Array` accept as `name`.
+ *
+ * Exported because the JSX side needs the *same* rule: both entry points name an array by its
+ * path and derive the item type from it, so writing the constraint twice would let the two
+ * drift on exactly the subtlety {@link ArrayItemOf} documents below.
+ */
+export type ArrayKeys<TValues> = DeepKeysOfType<TValues, readonly unknown[]>
 
 /**
  * The element type of the array at `N`.
@@ -278,7 +285,7 @@ type ArrayKeys<TValues> = DeepKeysOfType<TValues, readonly unknown[]>
  * `Person[] | undefined`, which fails the `readonly (infer U)[]` branch and would collapse the
  * whole item subtree to `never` — every field inside it rejected, with no hint why.
  */
-type ItemOf<TValues, N> = NonNullable<DeepValue<TValues, N>> extends readonly (infer U)[] ? U : never
+export type ArrayItemOf<TValues, N> = NonNullable<DeepValue<TValues, N>> extends readonly (infer U)[] ? U : never
 
 /**
  * The `array` node's shape, with the name and the children left open.
@@ -337,7 +344,7 @@ type ArrayNodeBody<TValues, TName, TChildren> = CommonProps<TValues> & {
  * option scalar); enumeration is not available here because an item type is unbounded.
  */
 type ArrayNodeFor<TValues, N extends ArrayKeys<TValues>, TCustom extends string> = N extends unknown
-	? ArrayNodeBody<TValues, N, FormNode<ItemOf<TValues, N>, TCustom>[]>
+	? ArrayNodeBody<TValues, N, FormNode<ArrayItemOf<TValues, N>, TCustom>[]>
 	: never
 
 /**

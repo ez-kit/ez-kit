@@ -17,7 +17,7 @@ import { useConditionValue } from './use-condition'
 import type { ConditionSubscribableForm } from './use-condition'
 import type { BindableForm, FieldValue } from '../bindable-form'
 import type { FormComponents } from '../contract'
-import type { ArrayFieldProps, FormFieldComponents } from '../field-props'
+import type { ArrayFieldProps, ArrayReorderable, FormFieldComponents } from '../field-props'
 import type { BlockRegistry, CustomFieldRegistry } from './registries'
 import type {
 	AnyArrayNode,
@@ -190,7 +190,7 @@ function defaultItemValue(children: readonly FormNode<unknown, string>[]): unkno
 function resolveReorderable(
 	value: NonNullable<AnyArrayNode['reorderable']>,
 	translate: Translate | undefined,
-): NonNullable<ArrayFieldProps<unknown, unknown>['reorderable']> {
+): ArrayReorderable {
 	if (typeof value === 'boolean') return value
 	return {
 		...(value.up !== undefined && { up: { label: resolveText(value.up.label, translate) } }),
@@ -237,6 +237,24 @@ function itemLabelAt(label: LocalizedText | undefined, index: number, translate:
  * a built-in one does, not a hand-rolled subset of it. A block gets none of that: it has no
  * `name` and holds no value, so it renders from `props` alone.
  */
+/**
+ * The single array path of a stand-in value type, used only to spell {@link ErasedArrayField}.
+ */
+type ErasedArrayValues = { items: unknown[] }
+
+/**
+ * `form.ArrayField` with its item type erased.
+ *
+ * The JSX component derives the item type from `name` — right for an author writing a literal
+ * path, unavailable here: a schema node's `name` is a plain `string` (relative to whatever entry
+ * it sits in) and its fresh item is assembled from the node's children at runtime. Pinning the
+ * stand-in's one array path gives the rest of the props their real shapes (`newItem: unknown`, a
+ * scope over `unknown`) while `name` widens back to `string`.
+ */
+type ErasedArrayField = (
+	props: Omit<ArrayFieldProps<ErasedArrayValues, 'items'>, 'name'> & { name: string },
+) => ReactNode
+
 export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeArgs<TValues>): ReactNode {
 	// `form` carries far more than `FormFieldComponents` at runtime — the real bound instance
 	// — so this narrows it to just the store shape `useConditionValue` needs, the same
@@ -448,11 +466,12 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 			// is rebuilt here the same way the runtime rebuilds it — this is what a nested array's
 			// entries resolve against.
 			const arrayPath = context.itemPath === undefined ? node.name : `${context.itemPath}.${node.name}`
+			// The item type is a property of the *node*, which the switch cannot express as a type
+			// parameter — the correlation is enforced where the schema is authored, and recovered at
+			// runtime by the path the field resolves to. See {@link ErasedArrayField}.
+			const ArrayField = form.ArrayField as ErasedArrayField
 			return (
-				<form.ArrayField
-					// The item type is a property of the *node*, which the switch cannot express as a
-					// type parameter — the correlation is enforced where the schema is authored, and
-					// recovered at runtime by the path the field resolves to.
+				<ArrayField
 					name={node.name}
 					label={label}
 					description={description}
@@ -490,7 +509,7 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 							</item.Item>
 						))
 					}
-				</form.ArrayField>
+				</ArrayField>
 			)
 		}
 		case 'section': {

@@ -65,37 +65,35 @@ The component takes the array's `name`, a `newItem` to append, and a render prop
 </form.ArrayField>
 ```
 
-`newItem` is required here and has no counterpart in a document. A document declares each field's `defaultValue`, so the renderer can build a fresh entry by reading the item's subtree; a render prop declares nothing the package can read, so you state the starting value yourself. Give it every key of the item — a missing one is an uncontrolled input on the new row.
+`newItem` is required here and has no counterpart in a document. A document declares each field's `defaultValue`, so the renderer can build a fresh entry by reading the item's subtree; a render prop declares nothing the package can read, so you state the starting value yourself. It must carry every key of the item — a missing one would be an uncontrolled input on the new row, so the type requires the whole item rather than a partial.
 
-| Prop          | Type                           | Notes                                                                                                               |
-| ------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
-| `name`        | array path                     | **Required.** Restricted to the paths of `TFormData` whose value is an array. It does _not_ carry the item type.    |
-| `newItem`     | `TItem`                        | **Required.** The value a newly appended entry starts from.                                                         |
-| `children`    | `(scope) => ReactNode`         | **Required.** The render prop — see [the scope](#the-render-prop) below.                                            |
-| `label`       | `ReactNode`                    | Caption for the list itself.                                                                                        |
-| `description` | `ReactNode`                    | Sub-caption under it.                                                                                               |
-| `disabled`    | `boolean`                      | Disables the list and everything in it.                                                                             |
-| `required`    | `boolean`                      | Visual only, exactly as on a flat field.                                                                            |
-| `validate`    | `FieldValidateProps`           | Constraints on the **list**, not on its fields — see [below](#validating-the-list). `maxLength` also bounds adding. |
-| `reorderable` | `boolean \| { up, down }`      | Offer move-up / move-down on every entry. The object form only adds captions.                                       |
-| `addLabel`    | `ReactNode`                    | Caption for the add control. Defaults to `Add`.                                                                     |
-| `removeLabel` | `ReactNode`                    | Caption for each entry's remove control. Defaults to `Remove`.                                                      |
-| `itemLabel`   | `(index: number) => ReactNode` | Caption for one entry, given its zero-based position.                                                               |
+| Prop          | Type                           | Notes                                                                                                                  |
+| ------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| `name`        | array path                     | **Required.** Restricted to the paths of `TFormData` whose value is an array, and the prop the item type is read from. |
+| `newItem`     | the item type at `name`        | **Required.** The value a newly appended entry starts from.                                                            |
+| `children`    | `(scope) => ReactNode`         | **Required.** The render prop — see [the scope](#the-render-prop) below.                                               |
+| `label`       | `ReactNode`                    | Caption for the list itself.                                                                                           |
+| `description` | `ReactNode`                    | Sub-caption under it.                                                                                                  |
+| `disabled`    | `boolean`                      | Disables the list and everything in it.                                                                                |
+| `required`    | `boolean`                      | Visual only, exactly as on a flat field.                                                                               |
+| `validate`    | `FieldValidateProps`           | Constraints on the **list**, not on its fields — see [below](#validating-the-list). `maxLength` also bounds adding.    |
+| `reorderable` | `boolean \| { up, down }`      | Offer move-up / move-down on every entry. The object form only adds captions.                                          |
+| `addLabel`    | `ReactNode`                    | Caption for the add control. Defaults to `Add`.                                                                        |
+| `removeLabel` | `ReactNode`                    | Caption for each entry's remove control. Defaults to `Remove`.                                                         |
+| `itemLabel`   | `(index: number) => ReactNode` | Caption for one entry, given its zero-based position.                                                                  |
 
 `validate.maxLength` is both bounds at once: it is the constraint that fails with a message, and it is the point at which the add control stops offering — `canAdd` goes `false` and the kit renders the control disabled rather than letting it vanish from under the cursor. One option, one meaning, the same on both paths.
 
-**The item type comes from `newItem`, not from `name`.** `name` is typed through `DeepKeysOfType`, a conditional type — and a conditional type is not an inference position. It can reject a path whose value is not an array, but it cannot tell TypeScript what an entry looks like; `TItem` is inferred from `newItem`, and from what `children` do with the scope. That stays invisible until a key of the item is itself an array, because an inline empty array gives the inference nothing to work from:
+**The item type comes from `name`.** `name` is the one prop TypeScript infers from: it pins the array path, and `newItem`, `children` and the whole scope are then resolved from the value at that path. So an inline `newItem` needs no annotation, even when a key of the item is itself an array — the empty array is checked against the item type rather than being asked to produce it:
 
 ```tsx
-// `members` infers as never[] — and the error lands on `name`:
-// Type 'string' is not assignable to type 'never'.
 <form.ArrayField
 	name='lines'
 	newItem={{ name: '', members: [] }}
 >
 ```
 
-The message names the array's path rather than the empty array that caused it, which is why it is worth knowing about in advance. Annotate `newItem` with the item type and there is nothing left to guess:
+Annotating a shared const still works and is worth it when several arrays start from the same value, but it is no longer load-bearing:
 
 ```tsx
 const NEW_LINE: Line = { name: '', members: [] }
@@ -106,7 +104,7 @@ const NEW_LINE: Line = { name: '', members: [] }
 >
 ```
 
-Both examples on this page are written that way. The same holds for `form.Array`, which infers its item type from the same prop.
+A `newItem` that does not match the item reports on `newItem`, naming the item type and the key at fault — `Object literal may only specify known properties, and 'nmae' does not exist in type 'Line'` for a typo, `Property 'members' is missing in type '{ name: string; }' but required in type 'Line'` for an omitted key. The same holds for `form.Array`, which reads its item type from `name` the same way.
 
 ### The render prop
 
@@ -161,14 +159,14 @@ explain why.
 
 ### `form.Array`
 
-| Prop       | Type                   | Notes                                                                                                                                                   |
-| ---------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`     | array path             | **Required.** Restricted to the paths of `TFormData` whose value is an array — the item type comes from `newItem`, [as above](#formarrayfield).         |
-| `newItem`  | `TItem`                | **Required.** The value a newly appended entry starts from — same rule as `form.ArrayField`'s.                                                          |
-| `children` | `(scope) => ReactNode` | **Required.** The render prop — see [the scope](#the-scope) below.                                                                                      |
-| `disabled` | `boolean`              | Reaches the scope as data — there is no frame of the primitive's own to disable, though it still reaches `item.Item`'s chrome on any row that uses one. |
-| `required` | `boolean`              | Reaches the scope as data — see [the scope](#the-scope).                                                                                                |
-| `validate` | `FieldValidateProps`   | Constraints on the list, exactly as on `form.ArrayField` — see [Validating the list](#validating-the-list).                                             |
+| Prop       | Type                    | Notes                                                                                                                                                   |
+| ---------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`     | array path              | **Required.** Restricted to the paths of `TFormData` whose value is an array, and the prop the item type comes from, [as above](#formarrayfield).       |
+| `newItem`  | the item type at `name` | **Required.** The value a newly appended entry starts from — same rule as `form.ArrayField`'s.                                                          |
+| `children` | `(scope) => ReactNode`  | **Required.** The render prop — see [the scope](#the-scope) below.                                                                                      |
+| `disabled` | `boolean`               | Reaches the scope as data — there is no frame of the primitive's own to disable, though it still reaches `item.Item`'s chrome on any row that uses one. |
+| `required` | `boolean`               | Reaches the scope as data — see [the scope](#the-scope).                                                                                                |
+| `validate` | `FieldValidateProps`    | Constraints on the list, exactly as on `form.ArrayField` — see [Validating the list](#validating-the-list).                                             |
 
 ### The scope
 

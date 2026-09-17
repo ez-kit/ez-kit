@@ -20,6 +20,8 @@ export type { ParseOptions } from './parse'
 export type {
 	AnyArrayNode,
 	AnyFormSchema,
+	ArrayItemOf,
+	ArrayKeys,
 	ArrayNode,
 	BlockNode,
 	CustomFieldNode,
