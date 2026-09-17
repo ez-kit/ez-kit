@@ -632,6 +632,12 @@ export type ReactSortingConfig = {
  * beat `border` runs its own value through `cn()` / `twMerge` first.
  */
 export type LayoutClassNames = {
+	/**
+	 * The grid's root box — the element that holds toolbar, table, pagination row and the bars.
+	 * Where a card's frame belongs, and where a `flex` / `grid` display goes when the grid's own
+	 * pieces are to be laid out rather than stacked.
+	 */
+	root?: string
 	/** The outer box, outside the scrollport — where a border, radius or shadow belongs. */
 	wrapper?: string
 	/** The scrollport itself — where a scrollbar or an inner edge treatment belongs. */

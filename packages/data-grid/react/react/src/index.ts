@@ -204,6 +204,7 @@ export type {
 } from './data-grid/filter-panel'
 export type { DataGridColumnFilterProps } from './data-grid/column-filter'
 export type { DataGridPageSizerProps, DataGridPageSizerRenderArgs } from './data-grid/page-sizer'
+export type { DataGridBottomBarProps } from './data-grid/bottom-bar'
 export type { DataGridDraftBarProps, DataGridDraftBarRenderArgs } from './data-grid/draft-bar'
 export type { DataGridFormModalProps, DataGridFormModalRenderArgs } from './data-grid/form-modal'
 export type { DataGridCreatingModalProps } from './data-grid/creating-modal'
@@ -298,6 +299,7 @@ export type {
 	ThProps,
 	TheadProps,
 	TableProps,
+	RootProps,
 	TableScrollProps,
 	TableWrapperProps,
 	ToolbarProps,

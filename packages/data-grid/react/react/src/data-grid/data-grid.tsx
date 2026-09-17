@@ -10,6 +10,7 @@ import { ActionBarVariant, useDataGrid, type UseDataGridConfig } from '../use-da
 import { resolveActionBarVariant } from './action-bar-variant'
 import { ActiveFiltersBar } from './active-filters-bar'
 import { Body } from './body'
+import { BottomBar } from './bottom-bar'
 import { DataGridCell } from './cell'
 import { ClearFiltersButton } from './clear-filters-button'
 import { ColumnFilter } from './column-filter'
@@ -230,6 +231,34 @@ function ConfirmDialogRenderer() {
 	)
 }
 
+/**
+ * The grid's one root element, around everything a grid renders.
+ *
+ * Without it the grid is a list of siblings in its parent's flow, so a parent that lays its own
+ * children out — `display: flex`, `grid`, a `gap` — lays out the toolbar, the table and the
+ * pagination row separately instead of the grid as a whole.
+ *
+ * A plain `div` unless a kit registers `core.Root`, and styled only by what it is given:
+ * `layout.classNames.root`, joined across the option layers like the shell's other two boxes.
+ * It is read here rather than in `DataGridControlled` because that component is the one
+ * *providing* the components context, and cannot consume it.
+ */
+function GridRoot({ children }: { children: ReactNode }) {
+	// `core.Root` is the slot; `GridRoot` is this component around it, named for what it renders
+	// rather than for the slot so the two do not collide in one scope.
+	const { Root = 'div' } = useGridComponents().core
+	const table = useDataGridTable()
+
+	return (
+		<Root
+			data-slot='grid-root'
+			className={table.grid.layout.classNames?.root}
+		>
+			{children}
+		</Root>
+	)
+}
+
 function DefaultLayout() {
 	// Reads only config refs, no state — so we use the table
 	// without subscribing. Avoids cascading re-renders to Body / Table on
@@ -251,18 +280,11 @@ function DefaultLayout() {
 	const filterPanel = table.grid.filtering.panel?.placement === FilterPanelPlacement.Above ? <FilterPanel /> : null
 
 	// `pageSizer: 'footer'` puts the size control next to the pagination controls instead of in
-	// the toolbar. The two then share one row, which is the only reason this wrapper exists: the
-	// element carries a `data-slot` for the kits' CSS to lay out and no styling of its own, per
-	// the no-styles-in-this-package rule.
-	const paginationRow =
-		table.grid.pagination.pageSizer?.placement === PageSizerPlacement.Footer ? (
-			<div data-slot='pagination-row'>
-				<PageSizer />
-				<Pagination />
-			</div>
-		) : (
-			<Pagination />
-		)
+	// the toolbar. The two then share one row, which is what `<BottomBar />` is for — and why the
+	// bar is mounted only in that case: on its own the pagination is a full-width centred bar, and
+	// the slot's CSS lays the bar's contents out as a row with two ends.
+	const bottomBar =
+		table.grid.pagination.pageSizer?.placement === PageSizerPlacement.Footer ? <BottomBar /> : <Pagination />
 
 	if (variant === ActionBarVariant.Inline) {
 		return (
@@ -274,7 +296,7 @@ function DefaultLayout() {
 				{chipsAbove}
 				<DataGridTable />
 				{chipsBelow}
-				{paginationRow}
+				{bottomBar}
 			</>
 		)
 	}
@@ -286,7 +308,7 @@ function DefaultLayout() {
 			{chipsAbove}
 			<DataGridTable />
 			{chipsBelow}
-			{paginationRow}
+			{bottomBar}
 			<DraftBar />
 			<SelectionBar />
 		</>
@@ -356,10 +378,12 @@ function DataGridControlled<TFeatures extends TableFeatures, TRow extends object
 				<GridComponentsProvider {...(components !== undefined ? { components } : {})}>
 					<TableProvider table={table}>
 						{IS_DEV && <ComponentGuard />}
-						{children ?? <DefaultLayout />}
-						{writeOptions.creating?.mode === CreatingMode.Modal && <CreatingModal />}
-						{writeOptions.editing?.mode === EditingMode.Modal && <EditingModal />}
-						<ConfirmDialogRenderer />
+						<GridRoot>
+							{children ?? <DefaultLayout />}
+							{writeOptions.creating?.mode === CreatingMode.Modal && <CreatingModal />}
+							{writeOptions.editing?.mode === EditingMode.Modal && <EditingModal />}
+							<ConfirmDialogRenderer />
+						</GridRoot>
 					</TableProvider>
 				</GridComponentsProvider>
 			</CellTypesProvider>
@@ -477,6 +501,7 @@ export type DataGridStatics = {
 	Cell: typeof DataGridCell
 	Pagination: typeof Pagination
 	PageSizer: typeof PageSizer
+	BottomBar: typeof BottomBar
 	ColumnFilter: typeof ColumnFilter
 	SelectionBar: typeof SelectionBar
 	DraftBar: typeof DraftBar
@@ -510,6 +535,7 @@ DataGrid.Row = DataGridRow
 DataGrid.Cell = DataGridCell
 DataGrid.Pagination = Pagination
 DataGrid.PageSizer = PageSizer
+DataGrid.BottomBar = BottomBar
 DataGrid.ColumnFilter = ColumnFilter
 DataGrid.SelectionBar = SelectionBar
 DataGrid.DraftBar = DraftBar

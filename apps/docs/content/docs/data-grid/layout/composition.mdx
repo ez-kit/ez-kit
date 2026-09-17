@@ -31,6 +31,10 @@ is equivalent to writing the tree out:
 </DataGrid>
 ```
 
+With [`pagination.pageSizer: 'footer'`](/docs/data-grid/pagination#where-the-page-size-selector-goes)
+the last line is `<DataGrid.BottomBar />` instead, because the size control then shares a row with
+the page controls.
+
 ## Toolbar: add without replacing
 
 The toolbar auto-mounts the controls the enabled features ask for — global search, Clear
@@ -51,6 +55,61 @@ auto-mounts:
 	<MyEntirelyCustomBar />
 </DataGrid.Toolbar>
 ```
+
+`children` is also the answer to **order**: the auto-mounted controls come in a fixed one (search,
+Clear filters, create, sort builder, column visibility), and each of them is a compound member that
+reads the table from context, so writing them yourself puts them in the order you write:
+
+```tsx
+<DataGrid.Toolbar>
+	<span>Team members</span>
+	<DataGrid.GlobalFilterInput />
+	<DataGrid.ColumnFilter columnId='status' />
+	<DataGrid.VisibilityTrigger />
+	<DataGrid.CreateTrigger>Add new</DataGrid.CreateTrigger>
+</DataGrid.Toolbar>
+```
+
+`className` classes the bar itself, with `children` or without. The kit **merges** it with its own
+(`cn`, i.e. tailwind-merge), so a utility that collides with one of the kit's replaces it rather
+than fighting it — which is what re-using the toolbar as a card's header bar needs, since both kits
+give the bar an `mb-2` meant for a toolbar standing free above the table:
+
+```tsx
+<DataGrid.Toolbar className='mb-0 px-3 py-2.5'>{/* … */}</DataGrid.Toolbar>
+```
+
+## The bottom bar
+
+`<DataGrid.BottomBar>` is the region below the table, the counterpart of the toolbar above it. It
+is a container rather than a pagination control: what it holds is what it is given.
+
+Given no children it is the page controls — the size selector and the pagination — which is the
+case the default layout mounts it for:
+
+```tsx
+<DataGrid.Table />
+<DataGrid.BottomBar />
+```
+
+Given children it holds those instead, laid out as one row with two ends:
+
+```tsx
+<DataGrid.BottomBar>
+	<span>{selectedCount} selected</span>
+	<div style={{ display: 'flex', gap: '0.5rem' }}>
+		<DataGrid.PageSizer />
+		<DataGrid.Pagination />
+	</div>
+</DataGrid.BottomBar>
+```
+
+It takes `className` and `style`, both handed to the element as-is — a bar used as a card's own
+footer usually wants the top margin off, since the kits keep one to separate a free-standing bar
+from the table above it.
+
+Not to be confused with `<DataGrid.Footer>`, which is the `<tfoot>` summary row built from each
+column's `footer` — that one is part of the table, this one is part of the shell around it.
 
 ## Table: reorder, wrap, extend
 

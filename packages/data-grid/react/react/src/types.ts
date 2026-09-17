@@ -222,6 +222,26 @@ export type ActionsCellProps<TRow extends object = ErasedRow> =
 // ── primitive component props ─────────────────────────────────────────────
 
 /**
+ * The grid's root box — the one element that holds the whole grid: toolbar, filter panel, chips,
+ * table, pagination row and the action bars.
+ *
+ * It exists because the grid is otherwise a **list of siblings** in its parent's flow, so a parent
+ * that lays its children out — `display: flex`, `grid`, a `gap` — would lay out the grid's pieces
+ * instead of the grid. With a root they are one item again.
+ *
+ * Optional: a kit that registers nothing gets a plain `div`, and a registered one **must spread
+ * every prop it receives** — `data-slot='grid-root'` above all, since that is what stylesheets
+ * target. It carries no styling of its own: whatever look the box has comes from the kit or from
+ * `layout.classNames.root`.
+ *
+ * The slot is named `Root` while the attribute reads `grid-root`, the one place the two differ.
+ * A component key is read as `core.Root`, where the grid is already the subject; an attribute is
+ * read in a stylesheet and in a page's DOM beside `table-wrapper` and `toolbar`, where a bare
+ * `root` would name nothing in particular.
+ */
+export type RootProps = HTMLAttributes<HTMLDivElement>
+
+/**
  * The grid shell's outer box — the positioning context the pin-shadow overlay is drawn against,
  * the element the shadow custom properties are written to, and the one `Header` finds with
  * `closest("[data-slot='table-wrapper']")`.
@@ -314,6 +334,13 @@ export type ToolbarProps = {
 	start?: ReactNode
 	/** Trailing slot — rendered last in the reading direction. */
 	end?: ReactNode
+	/**
+	 * The caller's class for the bar itself, passed straight through — this package authors none.
+	 * A kit **merges** it with its own (`cn(…)`), so a utility can replace one the kit set: the bar
+	 * ships a bottom margin for a toolbar standing free above the table, and a toolbar used as a
+	 * card's header bar needs that margin gone and a padding of its own.
+	 */
+	className?: string | undefined
 }
 
 /**
@@ -938,6 +965,8 @@ export type ChevronProps = {
  */
 export type GridComponentRegistry = {
 	// layout
+	/** Optional — see {@link RootProps}. Falls back to a plain `div`. */
+	Root?: ComponentType<RootProps>
 	/** Optional — see {@link TableWrapperProps}. Falls back to a plain `div`. */
 	TableWrapper?: ComponentType<TableWrapperProps>
 	/** Optional — see {@link TableScrollProps}. Falls back to a plain `div`. */

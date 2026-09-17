@@ -51,6 +51,7 @@ export const exampleModules: Record<string, () => Promise<Record<string, Compone
 	'components/expanding/tree.tsx': () => import('./components/expanding/tree'),
 	'components/fallbacks.tsx': () => import('./components/fallbacks'),
 	'components/example-task-board.tsx': () => import('./components/example-task-board'),
+	'components/example-team-members.tsx': () => import('./components/example-team-members'),
 	'components/filter-chips.tsx': () => import('./components/filter-chips'),
 	'components/filter-date-range.tsx': () => import('./components/filter-date-range'),
 	'components/filter-multi-value.tsx': () => import('./components/filter-multi-value'),

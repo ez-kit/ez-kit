@@ -24,7 +24,7 @@ const FOOTER = 'pagination-page-sizer-footer'
 const SIZER = '[data-slot="page-sizer"]'
 const PAGINATION = '[data-slot="pagination"]'
 /** The row the footer placement builds so the sizer and the page controls share one line. */
-const FOOTER_ROW = '[data-slot="pagination-row"]'
+const BOTTOM_BAR = '[data-slot="bottom-bar"]'
 
 /**
  * The selector's trigger. Both kits build the control out of their own `Select`, and both
@@ -48,7 +48,7 @@ test.describe('where the selector goes', () => {
 
 		await expect(page.locator(`[data-slot="toolbar"] ${SIZER}`)).toHaveCount(1)
 		// The footer keeps its own layout: no shared row is built, so nothing moved down there.
-		await expect(page.locator(FOOTER_ROW)).toHaveCount(0)
+		await expect(page.locator(BOTTOM_BAR)).toHaveCount(0)
 
 		const sizer = await boxOf(page.locator(SIZER))
 		const table = await boxOf(page.locator('table'))
@@ -69,8 +69,8 @@ test.describe('where the selector goes', () => {
 		// the pagination row are each asserted present, and the `boxOf` reads that follow throw on
 		// an element that renders no box.
 		await expect(page.locator(`[data-slot="toolbar"] ${SIZER}`)).toHaveCount(0)
-		await expect(page.locator(`${FOOTER_ROW} ${SIZER}`)).toHaveCount(1)
-		await expect(page.locator(`${FOOTER_ROW} ${PAGINATION}`)).toHaveCount(1)
+		await expect(page.locator(`${BOTTOM_BAR} ${SIZER}`)).toHaveCount(1)
+		await expect(page.locator(`${BOTTOM_BAR} ${PAGINATION}`)).toHaveCount(1)
 
 		const sizer = await boxOf(page.locator(SIZER))
 		const pagination = await boxOf(page.locator(PAGINATION))

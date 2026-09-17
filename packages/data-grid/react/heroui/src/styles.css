@@ -507,13 +507,14 @@ tr[data-depth='5'] [data-system-column='expand'] + td {
 	color: var(--muted);
 }
 
-/* ---- Footer page sizer ----
- * `pagination: { pageSizer: 'footer' }` puts the size control in the pagination row instead of
- * the toolbar, so the two share one line: sizer to the leading edge, pagination controls to the
- * trailing one. The shared React package ships the `data-slot` and no styling, so the row's
- * layout has to live here. The nested pagination's own top margin would double the gap. */
+/* ---- Bottom bar ----
+ * `<DataGrid.BottomBar>` is the grid's bottom region, opposite the toolbar: a row with two ends,
+ * whatever it is given to hold. The default layout mounts it for `pagination: { pageSizer:
+ * 'footer' }`, which puts the size control beside the pagination controls instead of in the
+ * toolbar — sizer to the leading edge, page controls to the trailing one. The shared React
+ * package ships the `data-slot` and no styling, so the layout has to live here. */
 
-[data-slot='pagination-row'] {
+[data-slot='bottom-bar'] {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -522,11 +523,13 @@ tr[data-depth='5'] [data-system-column='expand'] + td {
 	margin-top: 0.75rem;
 }
 
-/* Both kits' pagination roots are full-width centred bars of their own (`mx-auto w-full
- * justify-center`); inside this row they are one of two items, so the width and the centring
- * have to come back off or the controls wrap onto their own line. */
+/* The pagination root is a bar of its own — HeroUI's own centring defaults, plus this kit's `mt-3`;
+ * inside this bar it is one item of several, so the width, the centring and that margin have to
+ * come back off or the controls wrap onto their own line. The rule keys on the child,
+ * not on the bar, so a bottom bar holding something else is untouched by it — and the nested
+ * pagination's own top margin, which would double the gap, goes with it. */
 
-[data-slot='pagination-row'] [data-slot='pagination'] {
+[data-slot='bottom-bar'] [data-slot='pagination'] {
 	width: auto;
 	margin: 0;
 	justify-content: flex-end;

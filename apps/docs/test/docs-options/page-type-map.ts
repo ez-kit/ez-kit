@@ -577,8 +577,8 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		page: DocPage.LayoutIndex,
 		// The table opens the page, above any `##` heading, and names full paths from the
 		// grid config (`layout.maxHeight`, `layout.stickyHeader`, `layout.stickyFooter`, and the
-		// two keys of `layout.classNames`).
-		optionTables: [{ heading: NO_HEADING, roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 5 }],
+		// three keys of `layout.classNames`).
+		optionTables: [{ heading: NO_HEADING, roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 6 }],
 		nonOptionTables: [],
 	},
 	{
@@ -723,6 +723,11 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 				heading: 'Where each surface comes from',
 				reason:
 					'Maps a rendered surface to the option that produces it — whole config expressions, not keys of one type.',
+			},
+			{
+				heading: 'What the frame is made of',
+				reason:
+					'The same mapping for the framed example — rendered surfaces against whole config expressions, not keys of one type.',
 			},
 		],
 	},

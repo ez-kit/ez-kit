@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { COMPONENT_FEATURE, FEATURE_COMPONENTS, FEATURE_OPTIONAL_COMPONENTS, GridFeature } from './contract'
 
 describe('COMPONENT_FEATURE', () => {
-	it('maps every injectable component key to a feature (40 required + 2 optional)', () => {
-		expect(Object.keys(COMPONENT_FEATURE)).toHaveLength(42)
+	it('maps every injectable component key to a feature (40 required + 3 optional)', () => {
+		expect(Object.keys(COMPONENT_FEATURE)).toHaveLength(43)
 	})
 
 	it('groups the always-rendered structural primitives under core', () => {
@@ -34,7 +34,7 @@ describe('COMPONENT_FEATURE', () => {
 		for (const key of Object.values(FEATURE_OPTIONAL_COMPONENTS).flat() as string[]) {
 			expect(required.has(key), `${key} is listed as both required and optional`).toBe(false)
 		}
-		expect(FEATURE_OPTIONAL_COMPONENTS[GridFeature.Core]).toEqual(['TableWrapper', 'TableScroll'])
+		expect(FEATURE_OPTIONAL_COMPONENTS[GridFeature.Core]).toEqual(['Root', 'TableWrapper', 'TableScroll'])
 	})
 
 	it('assigns feature-specific components to their feature', () => {

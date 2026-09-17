@@ -19,7 +19,7 @@ export default function EmbedLayout({ children }: { children: ReactNode }) {
 			</head>
 			<body>
 				<FrameBridge />
-				{children}
+				<div className='embed-root'>{children}</div>
 			</body>
 		</html>
 	)

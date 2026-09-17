@@ -5,6 +5,7 @@ import { Checkbox } from './Checkbox'
 import { Input } from './Input'
 import { Menu } from './Menu'
 import { Modal } from './Modal'
+import { Root } from './Root'
 import { Table, TableScroll, Tbody, Td, Tfoot, Th, Thead, Tr } from './table-adapters'
 import { Toolbar } from './Toolbar'
 
@@ -21,6 +22,7 @@ import type { FullGridComponents } from '@ez-kit/data-grid-react'
 // *optional*-tier slot (`FEATURE_OPTIONAL_COMPONENTS`), which the required-only tier type does not
 // admit, so the tier type alone would reject the very component this kit registers.
 export const coreComponents: FullGridComponents['core'] = {
+	Root,
 	Table,
 	TableScroll,
 	Thead,

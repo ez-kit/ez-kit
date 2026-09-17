@@ -254,9 +254,12 @@ function TestColumnVisibilityMenu({ columns }: VisibilityMenuProps) {
 		</div>
 	)
 }
-function TestToolbar({ children, start, end }: ToolbarProps) {
+function TestToolbar({ children, start, end, className }: ToolbarProps) {
 	return (
-		<div role='toolbar'>
+		<div
+			role='toolbar'
+			className={className}
+		>
 			{start}
 			{children}
 			{end}

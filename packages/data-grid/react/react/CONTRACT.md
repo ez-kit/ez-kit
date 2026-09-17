@@ -261,7 +261,7 @@ filter-panel-chip-value  active-filters-bar        clear-filter-button
 between-presets          auto-form                 auto-form-field
 creating-save            creating-cancel           row-action
 selection-bar            selection-bar-action      count
-draft-bar                draft-bar-selected-chip   pagination-row
+draft-bar                draft-bar-selected-chip   bottom-bar
 loading-body-cell        empty-state-cell          no-results-cell
 refetch-overlay          refetch-overlay-inner     load-more-row
 load-more-button         load-more-spinner         load-more-error

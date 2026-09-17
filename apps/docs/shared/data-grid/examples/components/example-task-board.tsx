@@ -255,16 +255,16 @@ export function ExampleTaskBoardExample() {
 		>
 			<DataGrid.Toolbar />
 			<DataGrid.Table />
-			{/* The kits style `pagination-row` for exactly this: a page-control row that also
-			    carries something else. Reusing it keeps the footer on one line without
-			    re-deriving the pagination bar's own layout. */}
-			<div data-slot='pagination-row'>
+			{/* `<DataGrid.BottomBar>` is the grid's bottom region — a row with two ends, holding
+			    whatever it is given. With children it takes this count instead of the page
+			    controls alone, and the kits' layout for it comes along unchanged. */}
+			<DataGrid.BottomBar>
 				<SelectionCount />
 				<div style={FOOTER_END_STYLE}>
 					<DataGrid.PageSizer />
 					<DataGrid.Pagination />
 				</div>
-			</div>
+			</DataGrid.BottomBar>
 		</DataGrid>
 	)
 }

@@ -37,16 +37,13 @@
      member on that object whose value contradicts its key, two lines from `MoveStart: 'move-start'`.
 
   If you style the grid yourself — or you ran `npx shadcn add` and copied the kit into your project —
-  three more:
-  6. **`data-pinned` and `data-pin-shadow` carry `start` / `end`** on a column. (On a row,
-     `data-pinned` is still `top` / `bottom`.)
-  7. **`--dg-pin-left` / `--dg-pin-right` are `--dg-pin-start` / `--dg-pin-end`, and
-     `--dg-pin-{left,right}-shadow` are `--dg-pin-{start,end}-shadow`.** A copied `styles.css` keeps
-     your old rules against the new variable names, and your own overrides stop applying — with no
-     error, because a CSS custom property that no longer matches just falls back.
-  8. **Pinned cells are positioned with `inset-inline-start` / `inset-inline-end`**, not `left` /
-     `right`, so an override written against the physical properties no longer wins the way you
-     expect.
+  three more: 6. **`data-pinned` and `data-pin-shadow` carry `start` / `end`** on a column. (On a row,
+  `data-pinned` is still `top` / `bottom`.) 7. **`--dg-pin-left` / `--dg-pin-right` are `--dg-pin-start` / `--dg-pin-end`, and
+  `--dg-pin-{left,right}-shadow` are `--dg-pin-{start,end}-shadow`.** A copied `styles.css` keeps
+  your old rules against the new variable names, and your own overrides stop applying — with no
+  error, because a CSS custom property that no longer matches just falls back. 8. **Pinned cells are positioned with `inset-inline-start` / `inset-inline-end`**, not `left` /
+  `right`, so an override written against the physical properties no longer wins the way you
+  expect.
 
   Under the hood the measurement went logical with the names, which is what makes RTL actually work
   rather than merely read correctly: the pin-shadow offsets are measured from the overlay's own

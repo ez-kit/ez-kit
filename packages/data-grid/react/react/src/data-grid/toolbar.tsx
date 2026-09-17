@@ -39,6 +39,12 @@ export type DataGridToolbarProps = {
 	 * (global search, Clear filters, create trigger, sort builder, column visibility).
 	 */
 	end?: ReactNode
+	/**
+	 * Class for the toolbar element, handed to the kit as-is. The kit merges it with its own, so a
+	 * utility that collides with one of the kit's wins — which is what a toolbar re-used as the
+	 * header bar of a framed grid needs (no bottom margin, a padding of its own).
+	 */
+	className?: string | undefined
 }
 
 /**
@@ -53,7 +59,7 @@ export type DataGridToolbarProps = {
  *
  * `start` / `end` append to those. `children` replaces them.
  */
-export function Toolbar({ children, start: extraStart, end: extraEnd }: DataGridToolbarProps = {}) {
+export function Toolbar({ children, start: extraStart, end: extraEnd, className }: DataGridToolbarProps = {}) {
 	const { Toolbar: ToolbarComponent } = useGridComponents().core
 	// Toolbar reads only symbol-keyed UI configs and `table.options.*` (refs,
 	// not state). No state subscription — editing / sorting / filtering
@@ -73,7 +79,14 @@ export function Toolbar({ children, start: extraStart, end: extraEnd }: DataGrid
 	const hasClearButtonToolbar = grid.filtering.toolbar !== undefined
 
 	if (children) {
-		return <ToolbarComponent data-slot='toolbar'>{children}</ToolbarComponent>
+		return (
+			<ToolbarComponent
+				data-slot='toolbar'
+				className={className}
+			>
+				{children}
+			</ToolbarComponent>
+		)
 	}
 
 	const hasAutoStart = hasPageSizerToolbar || hasFilterPanelToolbar
@@ -106,6 +119,7 @@ export function Toolbar({ children, start: extraStart, end: extraEnd }: DataGrid
 	return (
 		<ToolbarComponent
 			data-slot='toolbar'
+			className={className}
 			start={start}
 			end={end}
 		/>

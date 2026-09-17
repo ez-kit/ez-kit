@@ -253,6 +253,22 @@ describe('DataGrid.Toolbar — slots', () => {
 		expect(within(screen.getByRole('toolbar')).getByText('Only mine')).toBeInTheDocument()
 	})
 
+	it("hands the caller's className to the kit, with and without children", () => {
+		// The react package authors no class; it passes one through so a kit can merge it — which is
+		// what a toolbar re-used as a card's header bar needs (the kits ship `mb-2` on the bar).
+		const { unmount } = renderComposed(
+			<DataGrid.Toolbar
+				className='mine'
+				end={<span>slot</span>}
+			/>,
+		)
+		expect(screen.getByRole('toolbar')).toHaveClass('mine')
+		unmount()
+
+		renderComposed(<DataGrid.Toolbar className='mine'>{<span>everything mine</span>}</DataGrid.Toolbar>)
+		expect(screen.getByRole('toolbar')).toHaveClass('mine')
+	})
+
 	it('children still replace the whole bar', () => {
 		renderComposed(<DataGrid.Toolbar>{<span>everything mine</span>}</DataGrid.Toolbar>, {
 			visibility: { toolbar: true },

@@ -121,7 +121,7 @@ export const FEATURE_COMPONENTS = {
  * additive — an existing kit keeps compiling and keeps its current rendering.
  */
 export const FEATURE_OPTIONAL_COMPONENTS = {
-	[GridFeature.Core]: ['TableWrapper', 'TableScroll'] as const,
+	[GridFeature.Core]: ['Root', 'TableWrapper', 'TableScroll'] as const,
 	[GridFeature.Pagination]: [] as const,
 	[GridFeature.Sorting]: [] as const,
 	[GridFeature.Filtering]: [] as const,
