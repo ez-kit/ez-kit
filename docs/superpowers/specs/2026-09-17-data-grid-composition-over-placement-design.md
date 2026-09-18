@@ -246,3 +246,12 @@ the split so a later addition fails rather than going quiet.
 The 158 kB non-shaking `./index` entry. Its fix — components as named exports, `DataGrid.X`
 sugar on its own subpath, mirroring `features/all` — is the next spec, and is what turns §2
 and §4 into actual bytes saved.
+
+> **Resolved 2026-09-18, and not the way this section predicted.** The subpath migration was
+> measured against a `/* @__PURE__ */ Object.assign` on the namespace and landed on the identical
+> byte count, so the annotation shipped and the migration — a major, plus 1 616 call sites — did
+> not. `{ useDataGridTable }` went 155 370 → 27 901. It also did **not** turn §2 and §4 into bytes
+> saved: `{ DataGrid }` is unchanged at 155 313, and a grid composed out of `DataGrid.X` members
+> still pays for all 29. Narrower still — the defect was **esbuild's**, and Rollup and Turbopack
+> were probed and had never been affected. See the `./index` paragraph in AGENTS.md for the
+> measurements and for the three alternatives that were rejected.

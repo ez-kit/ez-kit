@@ -488,33 +488,71 @@ export type DataGridStatics = {
 
 type DataGridType = typeof DataGridRoot & DataGridStatics
 
-export const DataGrid = DataGridRoot as DataGridType
-DataGrid.Toolbar = Toolbar
-DataGrid.Table = DataGridTable
-DataGrid.Footer = Footer
-DataGrid.FooterRow = DataGridFooterRow
-DataGrid.FooterCell = DataGridFooterCell
-DataGrid.Header = Header
-DataGrid.HeaderRow = DataGridHeaderRow
-DataGrid.HeaderCell = DataGridHeaderCell
-DataGrid.Body = Body
-DataGrid.Row = DataGridRow
-DataGrid.Cell = DataGridCell
-DataGrid.Pagination = Pagination
-DataGrid.PageSizer = PageSizer
-DataGrid.BottomBar = BottomBar
-DataGrid.ColumnFilter = ColumnFilter
-DataGrid.SelectionBar = SelectionBar
-DataGrid.DraftBar = DraftBar
-DataGrid.CreateTrigger = CreateTrigger
-DataGrid.VisibilityTrigger = VisibilityTrigger
-DataGrid.SortMenuTrigger = SortMenuTrigger
-DataGrid.GlobalFilterInput = GlobalFilterInput
-DataGrid.ActiveFiltersBar = ActiveFiltersBar
-DataGrid.ClearFiltersButton = ClearFiltersButton
-DataGrid.FilterPanel = FilterPanel
-DataGrid.CreatingModal = CreatingModal
-DataGrid.EditingModal = EditingModal
-DataGrid.LoadingBody = LoadingBody
-DataGrid.EmptyStateRow = EmptyStateRow
-DataGrid.NoResultsRow = NoResultsRow
+/**
+ * The compound `DataGrid`: the root's call signature with {@link DataGridStatics} hung off it.
+ *
+ * **One annotated `Object.assign` with a flat object literal, deliberately — do not spread into
+ * it, and do not go back to `DataGrid.Toolbar = Toolbar` assignments.** The shape is what lets a
+ * bundler drop the whole namespace when a consumer imports something else from this package's
+ * root, and all three halves of it are load-bearing.
+ *
+ * It was 29 top-level `DataGrid.X = …` statements, and **esbuild** cannot drop a top-level
+ * assignment: it kept every one, and each one anchored its component and everything that
+ * component reached. So any partial import of `./index` paid for ~92% of the surface — measured
+ * on the built `dist` (`--bundle --minify`, React external), `{ useDataGridTable }` cost 155 370
+ * bytes against 168 998 for the whole surface. As one annotated call it costs 27 901.
+ * `{ DataGrid }` is unchanged at 155 313, which is correct and is the point: this name *is*
+ * everything, and what got cheaper is the import that never asked for it.
+ * `apps/docs/test/tree-shaking.test.ts` holds that, so a regression fails there.
+ *
+ * **Read "a bundler" as esbuild, and only esbuild — the other two were probed and neither was
+ * ever affected.** Rollup 4.60 dropped the namespace on the assignment form already (31 633 bytes
+ * for the hook against 160 213 for `DataGrid`, unminified, core external), and so did Turbopack
+ * through a real `next build` of a one-page app (573 824 bytes of client chunks for the hook
+ * against 702 874 for `DataGrid`, with `FilterPanel`'s slot literal absent and present). Both
+ * measure identically after this change. Webpack was not probed — Next 16 no longer ships a
+ * runnable terser plugin and the package is not otherwise installed here. So this fix is worth
+ * its 127 kB to a consumer bundling with esbuild and worth nothing to one on Rollup, Vite's
+ * production build or Next; it cannot cost any of them anything, which is why it shipped anyway.
+ *
+ * The annotation works here and does **not** work for `allDataGridFeatures` one package over —
+ * the two are opposite sides of one line, which AGENTS.md states with the probe behind it:
+ * esbuild drops an annotated call whose argument is a plain object and keeps the identical call
+ * when the object **spreads**, because a spread may run getters. Hence the flat literal. Adding a
+ * `...someGroup` to it silently restores the defect and costs the comment bytes on top.
+ *
+ * A getter namespace (`Object.defineProperties(DataGrid, { Toolbar: { get: () => Toolbar } … })`)
+ * was measured as the cheaper-looking alternative and is worse than doing nothing: 156 021 bytes.
+ * A top-level call that names the component anchors it whatever form the call takes.
+ */
+export const DataGrid: DataGridType = /* @__PURE__ */ Object.assign(DataGridRoot, {
+	Toolbar,
+	Table: DataGridTable,
+	Footer,
+	FooterRow: DataGridFooterRow,
+	FooterCell: DataGridFooterCell,
+	Header,
+	HeaderRow: DataGridHeaderRow,
+	HeaderCell: DataGridHeaderCell,
+	Body,
+	Row: DataGridRow,
+	Cell: DataGridCell,
+	Pagination,
+	PageSizer,
+	BottomBar,
+	ColumnFilter,
+	SelectionBar,
+	DraftBar,
+	CreateTrigger,
+	VisibilityTrigger,
+	SortMenuTrigger,
+	GlobalFilterInput,
+	ActiveFiltersBar,
+	ClearFiltersButton,
+	FilterPanel,
+	CreatingModal,
+	EditingModal,
+	LoadingBody,
+	EmptyStateRow,
+	NoResultsRow,
+})
