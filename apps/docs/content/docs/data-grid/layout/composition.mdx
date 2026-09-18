@@ -496,9 +496,10 @@ offsets and `cellClassName`, and lets you replace only what goes inside.
 
 ## Fallbacks, modals and bars
 
-The remaining slots are mounted by their feature rather than by a layout — a modal, a fallback row
-and the two action bars have no position a layout could give them — and take `children` for the same
-reason as everything above: replace the content, keep the conditions under which it appears.
+The remaining slots take `children` for the same reason as everything above: replace the content,
+keep the conditions under which it appears. A modal and a fallback row are mounted by their feature
+rather than by a layout — neither has a position a layout could give it. `<DataGrid.ActionBar>` does:
+a layout writes it where it wants it, and the four presets all write it last.
 
 | Slot                                                   | Renders when                             | `children` receives                                             |
 | ------------------------------------------------------ | ---------------------------------------- | --------------------------------------------------------------- |

@@ -55,9 +55,9 @@ const components = {
  * the most.
  *
  * Naming it pulls all fourteen groups into the bundle: the filter panel, both write forms, the
- * confirm dialog, the resizer, the visibility menu. That is the
- * right trade when a grid uses most of them, and the wrong one when it uses four. Composing the
- * groups a grid actually renders is what the per-feature subpaths are for — see
+ * confirm dialog, the action bar, the resizer, the visibility menu. That is the right trade when
+ * a grid uses most of them, and the wrong one when it uses four. Composing the groups a grid
+ * actually renders is what the per-feature subpaths are for — see
  * `@ez-kit/data-grid-<kit>/core`, `/sorting`, `/pagination` and the rest.
  *
  * It is annotated rather than exported as the inferred literal: the declaration emitter re-prints
