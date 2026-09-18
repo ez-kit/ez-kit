@@ -345,7 +345,11 @@ export function ActionBar({ open, variant, selection, draft }: ActionBarProps) {
 					inline={isInline}
 				/>
 			)}
-			{selection && draft && <BarSeparator inline={isInline} />}
+			{/* The floating bar is `w-fit`, so the two sections sit shoulder to shoulder and need a
+			    rule between them. The inline strip is full width and pushes them to its two ends
+			    (`justify-between`), where a rule would strand itself in the gap rather than divide
+			    anything — the distance already does the dividing. */}
+			{!isInline && selection && draft && <BarSeparator inline={isInline} />}
 			{draft && (
 				<DraftSection
 					draft={draft}

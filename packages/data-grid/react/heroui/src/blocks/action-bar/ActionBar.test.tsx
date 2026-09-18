@@ -104,6 +104,14 @@ describe('ActionBar (heroui)', () => {
 		expect(container.querySelector('[data-slot="action-bar-draft"]')).not.toBeNull()
 	})
 
+	it('divides the inline strip by position rather than by a stranded rule', () => {
+		// The strip is full width and pushes the two sections to its ends, so a section divider
+		// would sit in the gap dividing nothing. The floating bar, which is `w-fit`, keeps it.
+		const { container } = render(<ActionBar {...makeProps({ variant: 'inline', selection: makeSelection() })} />)
+
+		expect(container.querySelectorAll('[data-slot="action-bar-separator"]')).toHaveLength(0)
+	})
+
 	it('renders nothing when closed', () => {
 		render(<ActionBar {...makeProps({ open: false })} />)
 
