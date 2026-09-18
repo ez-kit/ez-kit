@@ -1,9 +1,16 @@
 ---
-title: Selection Bar
-description: Floating or inline action bar that appears when rows are selected — bulk delete, export, custom actions.
+title: Action Bar
+description: The grid's one floating or inline bar, with a live section per concern — the selection and its bulk actions, and the pending draft.
 ---
 
-When at least one row is selected, render an action bar that operates on the selection set.
+When at least one row is selected, `<DataGrid.ActionBar />` shows a bar that operates on the
+selection set.
+
+It is **one** component with a section per concern — the selection, and the pending
+[draft](/docs/data-grid/state/deferred-apply) — so `children` receives `{ open, variant, selection,
+draft }` and each section is absent when it has nothing to show. It replaced a
+`SelectionBar` / `DraftBar` pair, which could both mount at the same sticky position because the
+gate hiding one of them did not re-run on a draft edit.
 
 ## Floating
 
@@ -12,16 +19,22 @@ A bar floats at the bottom of the table while a selection is active:
 <DataGridDocsExample exampleId='selection-bar' />
 
 ```tsx
-<DataGrid.SelectionBar>
-	{({ count, onDelete, onClear }) => (
-		<>
-			<span>{count} selected</span>
-			{onDelete && <button onClick={onDelete}>Delete</button>}
-			<button onClick={onClear}>Cancel</button>
-		</>
-	)}
-</DataGrid.SelectionBar>
+<DataGrid.ActionBar>
+	{({ selection }) =>
+		selection && (
+			<>
+				<span>{selection.count} selected</span>
+				{selection.onDelete && <button onClick={selection.onDelete}>Delete</button>}
+				<button onClick={selection.onClear}>Cancel</button>
+			</>
+		)
+	}
+</DataGrid.ActionBar>
 ```
+
+`selection` is `undefined` when selection is off, `bar: false`, or no selection feature is
+registered — so guard on it rather than assuming it is there. `open` is passed through rather than
+gating, so a custom bar can animate its own enter and exit instead of unmounting.
 
 `onDelete` already encodes the confirmation protocol: with a prompt configured it stages the
 delete and opens the dialog, without one it deletes immediately. Reaching for your own handler
@@ -29,7 +42,8 @@ instead silently skips the prompt.
 
 ## Inline
 
-The same content can be rendered inline above the table — no portal, no z-index gymnastics:
+The same content can be rendered as a normal block in the document flow — no portal, no z-index
+gymnastics:
 
 <DataGridDocsExample exampleId='selection-bar-inline' />
 
@@ -38,6 +52,12 @@ selection: {
 	bar: { variant: 'inline' },
 }
 ```
+
+`variant` says what the bar **looks like** — an in-flow strip against an overlay — not where it
+goes. Where it goes is where the layout writes it, and every shipped preset writes it **last**, so
+an `inline` bar on a preset sits _below_ the table, as in the example above. To put it above, write
+a layout of your own with `<DataGrid.ActionBar />` first — see
+[Composition](/docs/data-grid/layout/composition#layout-presets).
 
 ## Custom actions
 
@@ -87,13 +107,16 @@ both kits. See [Drawing an entry yourself](/docs/data-grid/row-actions#drawing-a
 ## Slots
 
 Content that is not an action — a bulk-target select, a counter — goes in the `start` / `end` slots
-of `<DataGrid.SelectionBar>`, rendered around the kit's own controls. Same split as
+of `<DataGrid.ActionBar>`, rendered around the kit's own controls. Same split as
 [`<DataGrid.Toolbar>`](/docs/data-grid/layout/composition): the config carries data, the compound component
 carries markup, and `children` still replaces the bar wholesale.
 
 ```tsx
-<DataGrid.SelectionBar end={<WarehousePicker />} />
+<DataGrid.ActionBar end={<WarehousePicker />} />
 ```
+
+Note the two slots feed the **selection section**, not the bar's two ends: that is what they are
+for — content about the selection — and the draft section has a fixed shape.
 
 ## The Delete button
 
@@ -138,4 +161,4 @@ for nothing but the render mode, or an object with the keys below. It renders on
 
 ## Source
 
-- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/selection-bar.tsx`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/selection-bar.tsx)
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/action-bar.tsx`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/action-bar.tsx)

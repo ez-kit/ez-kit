@@ -59,7 +59,7 @@ selection={{
 ```
 
 To gate the clear itself — a confirmation before a long selection is discarded — draw the bar
-yourself with [`<DataGrid.SelectionBar>`](/docs/data-grid/selection/selection-bar).
+yourself with [`<DataGrid.ActionBar>`](/docs/data-grid/selection/selection-bar).
 
 ## A custom button in the bar
 
@@ -94,7 +94,7 @@ An entry's `onAction` takes no arguments — the callback that built it already 
 `selectedRows`, `table` and `clearSelection`. Prefer the described form while it fits: it is what
 keeps an entry matching the built-in Delete beside it in every kit. More on the bar itself,
 including the inline variant and the `start` / `end` slots, on
-[Selection bar](/docs/data-grid/selection/selection-bar).
+[Action bar](/docs/data-grid/selection/selection-bar).
 
 ## Unpinning the checkbox column
 
@@ -125,9 +125,9 @@ It takes the whole column vocabulary, not just the pin — `width`, `align`, `he
 
 ## See also
 
-- [Selection bar](/docs/data-grid/selection/selection-bar) — floating + inline bulk-action UIs
+- [Action bar](/docs/data-grid/selection/selection-bar) — floating + inline bulk-action UIs
 - [Delete confirmation](/docs/data-grid/editing/deleting) — destructive row-delete pattern
 
 ## Source
 
-- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/selection-bar.tsx`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/selection-bar.tsx)
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/action-bar.tsx`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/action-bar.tsx)

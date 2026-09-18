@@ -194,7 +194,7 @@ export function ExampleTeamMembersExample() {
 			<DataGrid.BottomBar style={FRAME_FOOTER_STYLE}>
 				<DataGrid.Pagination />
 			</DataGrid.BottomBar>
-			<DataGrid.SelectionBar />
+			<DataGrid.ActionBar />
 		</DataGrid>
 	)
 }

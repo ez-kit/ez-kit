@@ -316,11 +316,11 @@ and move on.
   in a kit or in an application, is the intended way to get a new arrangement; adding an option is
   not.
 
-  **A layout places `DraftBar` and `SelectionBar` itself, and `selection.bar.variant` does not.**
-  A `GridShell` wrapper briefly did — it read the variant and put the two bars above the grid for
+  **A layout places `ActionBar` itself, and `selection.bar.variant` does not.**
+  A `GridShell` wrapper briefly did — it read the variant and put the bar above the grid for
   `inline`, below it for `floating`, and all four presets wrapped themselves in it. That is a
   config value deciding where an element renders, i.e. the ninth placement option, arrived at by
-  accident while removing the other eight; it never shipped. All four presets now write the bars
+  accident while removing the other eight; it never shipped. All four presets now write the bar
   **last**, which is right for the default `floating`: shadcn positions that bar out of a
   zero-height sticky anchor that has to follow the rows it overlays, heroui portals its own to a
   fixed overlay where tree position changes nothing, and in both kits coming last keeps it out of
@@ -328,10 +328,39 @@ and move on.
   like_ — an in-flow strip against an overlay, stamped `data-variant` and branched on by both
   kits — so it is a behaviour option and stays in the config. **The accepted cost is that
   `selection: { bar: 'inline' }` on a preset renders that in-flow strip below the table**; an
-  `inline` grid writes a layout of its own with the two bars first, and `presets.test.tsx` covers
-  both halves so the split is pinned rather than implied. Moving the variant onto the two
-  components as a prop was considered and not taken — it is the more consistent answer by the
+  `inline` grid writes a layout of its own with the bar first, and `presets.test.tsx` covers
+  both halves so the split is pinned rather than implied. Moving the variant onto the
+  component as a prop was considered and not taken — it is the more consistent answer by the
   surviving-enum rule above, and it was judged not worth the config break here.
+
+- **There is exactly one action bar, with a live section per concern — do not split it again.**
+  `<DataGrid.ActionBar />` / `core.ActionBar` owns the chrome for both the current selection and
+  the pending draft. It replaced a `DataGrid.SelectionBar` / `DataGrid.DraftBar` pair, each of
+  which drew a whole bar — its own sticky anchor, surface and shadow — and which were kept apart
+  by a `return null` inside the selection one. That gate read `rowSelection` and nothing else, so
+  a draft edit (a sort, a column filter, a search term) never re-ran it and both bars mounted at
+  the same sticky position, overlapping. **A narrower subscription is not the fix and was
+  rejected as one:** two pieces of chrome pretending to be one bar can only agree while every
+  gate hiding one of them re-runs in lockstep with the other, so the bar subscribes broadly
+  (`useDataGridState((s) => s)`) and there is no second component to fall out of step with. That
+  breadth is deliberate — the bar is one small subtree, and it is what the fix consists of.
+
+  **Both sections are live at once, and the old mutual exclusion is retired rather than
+  pending.** The selection used to stand down during a draft on the grounds that applying a query
+  can drop the selected rows, leaving bulk actions on a stale set. The hazard is real and is
+  already handled one level down: the selection is valid against the **applied** query — which is
+  what the user is looking at — and `table.draft.apply()` clears the row selection in the same
+  state change. So bulk Delete stays enabled beside a dirty draft, and the count is interactive.
+  `DraftBarProps.selectedCount` and the `draft-bar-selected-chip` slot went with that decision;
+  the count is rendered once, by the section that owns it.
+
+  `GridFeature.Selection` and `GridFeature.Draft` are gone with their only member each —
+  `ActionBar` is in `GridFeature.Core`, because a grid with `draft` and no `rowSelectionFeature`
+  still renders the bar and must not depend on a kit advertising selection support. It is
+  **required**, not a member of `FEATURE_OPTIONAL_COMPONENTS`: unlike `TableWrapper` /
+  `TableScroll` / `Layout`, the package has no correct fallback for it.
+  `apps/docs/e2e/packages/data-grid/selection/action-bar.spec.ts` is the guard — it is the only
+  spec that drives selection and a draft in one grid, which is the state either defect needs.
   The contract is: **spread every prop you receive** (`data-slot` above all — the structural
   stylesheet targets the slot, not the element), and **land `ref` on the element that actually
   scrolls**. That `ref` _is_ the declaration: it is what the pin shadows read, what infinite

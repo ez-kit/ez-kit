@@ -19,10 +19,10 @@ import { DataGrid } from 'shared/DataGrid'
  * component, and each grid names it instead of restating it: either as `children`, or through
  * `components={{ core: { Layout: ProductionLayout } }}` for a whole subtree.
  *
- * The two action bars come last, which is where the default `floating` variant belongs: it
- * overlays the rows, and document order keeps it out of the tab order until there is something
- * to act on. A grid that asks for `selection: { bar: 'inline' }` writes them first instead —
- * nothing places them for you.
+ * The action bar comes last, which is where the default `floating` variant belongs: it overlays
+ * the rows, and document order keeps it out of the tab order until there is something to act on.
+ * A grid that asks for `selection: { bar: 'inline' }` writes it first instead — nothing places
+ * it for you.
  *
  * One control is **gated**, and the rest are not, for a reason worth knowing before writing a
  * layout of your own: a control reads its feature's API, and a grid that never registered that
@@ -88,8 +88,7 @@ export function ProductionLayout() {
 			</DataGrid.Table>
 			{/* The page-size selector shares the bottom bar with the page controls. */}
 			<DataGrid.BottomBar />
-			<DataGrid.DraftBar />
-			<DataGrid.SelectionBar />
+			<DataGrid.ActionBar />
 		</>
 	)
 }

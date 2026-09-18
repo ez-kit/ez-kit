@@ -63,8 +63,9 @@ export function CrudLayout() {
 				<DataGrid.Body />
 			</DataGrid.Table>
 			<DataGrid.BottomBar />
-			<DataGrid.DraftBar />
-			<DataGrid.SelectionBar />
+			{/* Last, as in every shipped preset: the bar overlays the rows it acts on, and coming
+			    last keeps it out of the tab order until there is something to act on. */}
+			<DataGrid.ActionBar />
 		</>
 	)
 }

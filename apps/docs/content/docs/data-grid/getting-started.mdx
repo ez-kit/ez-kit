@@ -118,7 +118,7 @@ Three things are stated in that file, and each of them is a decision the prebuil
 
 ### What your own bundle saves
 
-A grid built this way never reaches the code it did not name. Measured with esbuild against the shadcn flavor (minified, gzipped, React external), the four-group composition above is **44.6 kB** against **58.5 kB** for the prebuilt grid — 24%. What stays out: the date picker and `react-day-picker`, the filter panel and its popovers, both write forms, the confirm dialog, the selection and draft bars, the row-actions cell, the resizer, the visibility menu, the seven cell types the grid does not use, and the implementations behind every feature it did not register.
+A grid built this way never reaches the code it did not name. Measured with esbuild against the shadcn flavor (minified, gzipped, React external), the four-group composition above is **44.6 kB** against **58.5 kB** for the prebuilt grid — 24%. What stays out: the date picker and `react-day-picker`, the filter panel and its popovers, both write forms, the confirm dialog, the action bar, the row-actions cell, the resizer, the visibility menu, the seven cell types the grid does not use, and the implementations behind every feature it did not register.
 
 That is the whole saving, and it does not grow with your data or your column count — it is a fixed amount of code that either ships or does not.
 

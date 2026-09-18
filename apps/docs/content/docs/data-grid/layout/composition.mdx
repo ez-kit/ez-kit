@@ -90,12 +90,18 @@ narrow grid renders a narrow toolbar rather than throwing.
 | `SearchFiltersActionsLayout` | Search leading, filter panel beside it, controls trailing; chips strip; bottom bar. | five options at once — see below      |
 | `PopoverFiltersLayout`       | `DefaultLayout` with each column's filter behind a header popover.                  | `filtering: { variant: 'popover' }`   |
 
-All four render `<DataGrid.DraftBar />` and `<DataGrid.SelectionBar />` **last**, which is where
-the default `floating` bar belongs: it overlays the rows, and coming last in document order keeps
-it out of the tab order until there is something to act on. If you set `selection.bar` to
-`inline`, the bar is a strip in the flow and belongs above the table — write your own layout with
-the two bars first. Nothing places them for you; a layout renders them where it writes them, like
-every other member.
+All four render `<DataGrid.ActionBar />` **last**, which is where the default `floating` bar
+belongs: it overlays the rows, and coming last in document order keeps it out of the tab order
+until there is something to act on.
+
+That is one bar with a section per concern — the current selection, and the pending draft. It
+replaced a `SelectionBar` / `DraftBar` pair that each drew a whole bar and were kept apart by a
+gate that did not re-run on a draft edit, so both could mount at the same sticky position.
+
+Nothing places it for you; a layout renders it where it writes it, like every other member. The
+consequence to know: `selection: { bar: 'inline' }` on one of these presets puts that in-flow strip
+**below** the table, because the preset writes the bar last either way. An `inline` grid writes a
+layout of its own with `<DataGrid.ActionBar />` first.
 
 `SearchFiltersActionsLayout` is the arrangement that used to read:
 
@@ -151,8 +157,7 @@ function OrdersLayout() {
 			<DataGrid.ActiveFiltersBar />
 			<DataGrid.Table />
 			<DataGrid.BottomBar />
-			<DataGrid.DraftBar />
-			<DataGrid.SelectionBar />
+			<DataGrid.ActionBar />
 		</>
 	)
 }
@@ -187,8 +192,7 @@ What `DefaultLayout` amounts to, for a grid with every feature on:
 	/>
 	<DataGrid.Table />
 	<DataGrid.Pagination />
-	<DataGrid.DraftBar />
-	<DataGrid.SelectionBar />
+	<DataGrid.ActionBar />
 </DataGrid>
 ```
 
@@ -496,14 +500,14 @@ The remaining slots are mounted by their feature rather than by a layout — a m
 and the two action bars have no position a layout could give them — and take `children` for the same
 reason as everything above: replace the content, keep the conditions under which it appears.
 
-| Slot                                                   | Renders when                         | `children` receives                                             |
-| ------------------------------------------------------ | ------------------------------------ | --------------------------------------------------------------- |
-| `<DataGrid.LoadingBody>`                               | `loading.isPending`                  | `{ columnCount }`                                               |
-| `<DataGrid.EmptyStateRow>`                             | the data array is empty              | `{ columnCount }`                                               |
-| `<DataGrid.NoResultsRow>`                              | filters match nothing                | `{ columnCount }`                                               |
-| `<DataGrid.CreatingModal>` / `<DataGrid.EditingModal>` | `mode: 'modal'` and the form is open | `{ open, form, title, formError, isPending, onSave, onCancel }` |
-| `<DataGrid.DraftBar>`                                  | `draft` is on and the draft is dirty | `{ pending, selectedCount, variant, onApply, onReset }`         |
-| `<DataGrid.PageSizer>`                                 | page-based pagination is on          | `{ pageSize, items, onPageSizeChange }`                         |
+| Slot                                                   | Renders when                             | `children` receives                                             |
+| ------------------------------------------------------ | ---------------------------------------- | --------------------------------------------------------------- |
+| `<DataGrid.LoadingBody>`                               | `loading.isPending`                      | `{ columnCount }`                                               |
+| `<DataGrid.EmptyStateRow>`                             | the data array is empty                  | `{ columnCount }`                                               |
+| `<DataGrid.NoResultsRow>`                              | filters match nothing                    | `{ columnCount }`                                               |
+| `<DataGrid.CreatingModal>` / `<DataGrid.EditingModal>` | `mode: 'modal'` and the form is open     | `{ open, form, title, formError, isPending, onSave, onCancel }` |
+| `<DataGrid.ActionBar>`                                 | a row is selected, or the draft is dirty | `{ open, variant, selection, draft }`                           |
+| `<DataGrid.PageSizer>`                                 | page-based pagination is on              | `{ pageSize, items, onPageSizeChange }`                         |
 
 The three row-level fallbacks render their `children` **inside** the kit's
 `<Tbody><Tr><Td colSpan>` scaffold, so the table markup stays valid and you supply only the

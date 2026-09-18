@@ -30,7 +30,7 @@ Things worth trying in the live preview above:
 | Columns   | Pinning (`Order` starts pinned), visibility toggle (`Invoice` starts hidden), live resizing          |
 | Rows      | Selection with a bulk-delete bar, row pinning top and bottom, sticky header                          |
 | Cells     | Badge, select, number, progress, date, boolean and link renderers                                    |
-| Mutations | Create and edit in a modal, delete with a confirmation dialog, bulk delete from the selection bar    |
+| Mutations | Create and edit in a modal, delete with a confirmation dialog, bulk delete from the action bar       |
 | Loading   | Skeleton on first load, refetch overlay on every load after it, error state                          |
 
 ## How the server side is wired
@@ -246,8 +246,7 @@ function OrdersLayout() {
 				<DataGrid.Body />
 			</DataGrid.Table>
 			<DataGrid.BottomBar />
-			<DataGrid.DraftBar />
-			<DataGrid.SelectionBar />
+			<DataGrid.ActionBar />
 		</>
 	)
 }
