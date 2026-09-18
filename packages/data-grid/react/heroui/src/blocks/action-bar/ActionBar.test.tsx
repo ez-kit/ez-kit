@@ -25,6 +25,19 @@ function makeSelection(overrides: Partial<ActionBarSelectionSection> = {}): Acti
 	}
 }
 
+/**
+ * The separators that divide the two **sections**, i.e. the ones that belong to no section. The
+ * selection section draws rules of its own (before its controls, and before the ×), so a bare
+ * count over the whole bar cannot tell the two apart.
+ */
+function betweenSectionRules(container: HTMLElement): Element[] {
+	return Array.from(container.querySelectorAll('[data-slot="action-bar-separator"]')).filter(
+		(node) =>
+			node.closest('[data-slot="action-bar-selection"]') === null &&
+			node.closest('[data-slot="action-bar-draft"]') === null,
+	)
+}
+
 function makeProps(overrides: Partial<ActionBarProps> = {}): ActionBarProps {
 	return {
 		open: true,
@@ -54,11 +67,20 @@ describe('ActionBar (heroui)', () => {
 		expect(bar.querySelectorAll('[data-slot="action-bar-separator"]').length).toBeGreaterThanOrEqual(1)
 	})
 
-	it('omits the selection section when nothing is selected', () => {
-		const { container } = render(<ActionBar {...makeProps()} />)
+	it('omits the selection section when nothing is selected beside a pending draft', () => {
+		const { container } = render(<ActionBar {...makeProps({ selection: makeSelection({ count: 0 }) })} />)
 
 		expect(container.querySelector('[data-slot="action-bar-selection"]')).toBeNull()
-		expect(screen.queryByText(/selected/i)).toBeNull()
+		expect(container.querySelector('[data-slot="action-bar-draft"]')).not.toBeNull()
+	})
+
+	it('keeps a zero count when there is no draft to stand beside it', () => {
+		// The count is the chrome the floating bar animates out with, so on its own it stays.
+		const props = makeProps({ selection: makeSelection({ count: 0 }) })
+		delete props.draft
+		const { container } = render(<ActionBar {...props} />)
+
+		expect(container.querySelector('[data-slot="action-bar-selection"]')).not.toBeNull()
 	})
 
 	it('omits the draft section when the draft is clean', () => {
@@ -105,11 +127,80 @@ describe('ActionBar (heroui)', () => {
 	})
 
 	it('divides the inline strip by position rather than by a stranded rule', () => {
-		// The strip is full width and pushes the two sections to its ends, so a section divider
-		// would sit in the gap dividing nothing. The floating bar, which is `w-fit`, keeps it.
-		const { container } = render(<ActionBar {...makeProps({ variant: 'inline', selection: makeSelection() })} />)
+		// The strip is full width and pushes the two sections to its ends, so a rule *between*
+		// them would sit in the gap dividing nothing. The floating bar, which is `w-fit`, keeps
+		// it. The selection section is given actions so that it draws rules of its own — the
+		// claim is about the rule between the sections, not about there being no rules at all.
+		const selection = makeSelection({ onDelete: vi.fn() })
 
-		expect(container.querySelectorAll('[data-slot="action-bar-separator"]')).toHaveLength(0)
+		const inline = render(<ActionBar {...makeProps({ variant: 'inline', selection })} />)
+		expect(inline.container.querySelectorAll('[data-slot="action-bar-separator"]').length).toBeGreaterThan(0)
+		expect(betweenSectionRules(inline.container)).toHaveLength(0)
+		inline.unmount()
+
+		const floating = render(<ActionBar {...makeProps({ selection })} />)
+		expect(betweenSectionRules(floating.container)).toHaveLength(1)
+	})
+
+	it('divides the count from the close button whether or not there are actions', () => {
+		const bare = render(<ActionBar {...makeProps({ selection: makeSelection() })} />)
+		const bareSection = bare.container.querySelector('[data-slot="action-bar-selection"]')
+		expect(bareSection?.querySelectorAll('[data-slot="action-bar-separator"]')).toHaveLength(1)
+		bare.unmount()
+
+		const withActions = render(<ActionBar {...makeProps({ selection: makeSelection({ onDelete: vi.fn() }) })} />)
+		const section = withActions.container.querySelector('[data-slot="action-bar-selection"]')
+		expect(section?.querySelectorAll('[data-slot="action-bar-separator"]')).toHaveLength(2)
+	})
+
+	it('names the draft section rather than the whole toolbar', () => {
+		render(<ActionBar {...makeProps({ selection: makeSelection() })} />)
+
+		const bar = screen.getByTestId('action-bar')
+		expect(bar).not.toHaveAttribute('aria-label')
+
+		// `role='group'` is what makes the name reach assistive technology at all.
+		const draft = bar.querySelector('[data-slot="action-bar-draft"]')
+		expect(draft).toHaveAttribute('role', 'group')
+		expect(draft).toHaveAttribute('aria-label', 'Pending changes')
+	})
+
+	it('discards the draft on Escape when the selection is empty', () => {
+		// The bar branches on what there is to clear, not on which sections it was handed: a
+		// `selection` section exists because `selection.bar` is configured, at any count.
+		const onClear = vi.fn()
+		const onReset = vi.fn()
+		render(
+			<ActionBar
+				{...makeProps({
+					selection: makeSelection({ count: 0, onClear }),
+					draft: makeDraft({ onReset }),
+				})}
+			/>,
+		)
+
+		fireEvent.keyDown(document, { key: 'Escape' })
+
+		expect(onClear).not.toHaveBeenCalled()
+		expect(onReset).toHaveBeenCalledTimes(1)
+	})
+
+	it('clears the selection on Escape when rows are picked, leaving the draft standing', () => {
+		const onClear = vi.fn()
+		const onReset = vi.fn()
+		render(
+			<ActionBar
+				{...makeProps({
+					selection: makeSelection({ onClear }),
+					draft: makeDraft({ onReset }),
+				})}
+			/>,
+		)
+
+		fireEvent.keyDown(document, { key: 'Escape' })
+
+		expect(onClear).toHaveBeenCalledTimes(1)
+		expect(onReset).not.toHaveBeenCalled()
 	})
 
 	it('renders nothing when closed', () => {

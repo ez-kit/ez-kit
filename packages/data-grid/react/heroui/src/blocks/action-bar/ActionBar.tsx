@@ -197,6 +197,8 @@ function SelectionSection({ selection, inline }: { selection: ActionBarSelection
 			{onDelete && renderDelete(onDelete)}
 			{actionButtons}
 			{end}
+			{/* Always present: it divides the count (and any actions) from the close button. */}
+			<BarSeparator inline={inline} />
 			<Button
 				size='sm'
 				variant='ghost'
@@ -222,7 +224,10 @@ function DraftSection({ draft, inline }: { draft: ActionBarDraftSection; inline:
 	const parts = pendingParts(draft.pending, messages.draft)
 
 	return (
+		// `role='group'`: `aria-label` on a bare `div` is not exposed, so the name the draft
+		// section carries has to sit on an element that has a role to name.
 		<div
+			role='group'
 			data-slot='action-bar-draft'
 			aria-label={messages.draft.pending}
 			className='flex flex-row items-center gap-2'
@@ -314,11 +319,17 @@ export function ActionBar({ open, variant, selection, draft }: ActionBarProps) {
 	const isInline = variant === ActionBarVariant.Inline
 	const pending = draft?.pending
 
-	// Escape (and the primitive's own close path) clears the selection when there is one, and
-	// otherwise discards the draft. Deliberately not both: dismissing a selection must not throw
-	// away unapplied query work, so with both sections up the bar stays — with its draft half.
+	// Escape (and the primitive's own close path) clears the selection when there is one to
+	// clear, and otherwise discards the draft. Deliberately not both: dismissing a selection
+	// must not throw away unapplied query work, so with both sections up the bar stays — with
+	// its draft half.
+	//
+	// The test is `count > 0`, not `selection !== undefined`: the section is built from
+	// `selection.bar` being configured, which says nothing about whether any row is picked. On
+	// the presence test, Escape over an empty selection beside a dirty draft ran
+	// `resetRowSelection()` on nothing and left the draft standing.
 	const onClose = () => {
-		if (selection !== undefined) {
+		if (selection !== undefined && selection.count > 0) {
 			selection.onClear()
 			return
 		}
@@ -337,9 +348,14 @@ export function ActionBar({ open, variant, selection, draft }: ActionBarProps) {
 			: {}),
 	}
 
+	// While the bar closes there is, by definition, nothing to act on — but the chrome stays so
+	// the floating variant can animate out with its last count. Beside a pending draft a zero
+	// count is not that case: it would put an empty chip and a Delete button next to the draft.
+	const showSelection = selection !== undefined && (selection.count > 0 || draft === undefined)
+
 	const sections = (
 		<>
-			{selection && (
+			{showSelection && (
 				<SelectionSection
 					selection={selection}
 					inline={isInline}
@@ -349,7 +365,7 @@ export function ActionBar({ open, variant, selection, draft }: ActionBarProps) {
 			    rule between them. The inline strip is full width and pushes them to its two ends
 			    (`justify-between`), where a rule would strand itself in the gap rather than divide
 			    anything — the distance already does the dividing. */}
-			{!isInline && selection && draft && <BarSeparator inline={isInline} />}
+			{!isInline && showSelection && draft && <BarSeparator inline={isInline} />}
 			{draft && (
 				<DraftSection
 					draft={draft}

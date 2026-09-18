@@ -164,8 +164,13 @@ function DraftSection({ draft }: { draft: ActionBarDraftSection }) {
 	const parts = pendingParts(draft.pending, messages.draft)
 
 	return (
+		// `role='group'`: the draft's accessible name belongs to this section rather than to the
+		// whole toolbar — a bar with a live selection section beside it is not "pending changes" —
+		// and `aria-label` is only exposed on an element that has a role to name.
 		<div
+			role='group'
 			data-slot='action-bar-draft'
+			aria-label={messages.draft.pending}
 			className='flex flex-row items-center gap-2'
 		>
 			<div className='flex items-center gap-1.5 pr-1 pl-1 text-sm'>
@@ -234,8 +239,6 @@ function DraftSection({ draft }: { draft: ActionBarDraftSection }) {
  * surface, not a particular primitive.
  */
 export function ActionBar({ open, variant, selection, draft }: ActionBarProps) {
-	const messages = useGridMessages()
-
 	// While the bar closes there is, by definition, nothing to act on — but the chrome stays so
 	// the floating variant can animate out with its last count. Beside a pending draft a zero
 	// count is not that case: it would put an empty chip and a Delete button next to the draft.
@@ -254,7 +257,6 @@ export function ActionBar({ open, variant, selection, draft }: ActionBarProps) {
 	const barAttributes = {
 		role: 'toolbar' as const,
 		'aria-orientation': 'horizontal' as const,
-		...(showDraft ? { 'aria-label': messages.draft.pending } : {}),
 		'data-slot': 'action-bar',
 		'data-testid': 'action-bar',
 		'data-selected-count': String(selection?.count ?? 0),

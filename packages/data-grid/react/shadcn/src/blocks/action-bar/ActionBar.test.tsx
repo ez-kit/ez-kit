@@ -34,6 +34,19 @@ type ActionBarPropsOverrides = Partial<Pick<ActionBarProps, 'open' | 'variant'>>
 	draft?: ActionBarDraftSection | undefined
 }
 
+/**
+ * The separators that divide the two **sections**, i.e. the ones that belong to no section. The
+ * selection section draws rules of its own (before its controls, and before the ×), so a bare
+ * count over the whole bar cannot tell the two apart.
+ */
+function betweenSectionRules(container: HTMLElement): Element[] {
+	return Array.from(container.querySelectorAll('[data-slot="action-bar-separator"]')).filter(
+		(node) =>
+			node.closest('[data-slot="action-bar-selection"]') === null &&
+			node.closest('[data-slot="action-bar-draft"]') === null,
+	)
+}
+
 function makeProps(overrides: ActionBarPropsOverrides = {}): ActionBarProps {
 	const selection = 'selection' in overrides ? overrides.selection : makeSelection()
 	const draft = 'draft' in overrides ? overrides.draft : makeDraft()
@@ -48,12 +61,38 @@ function makeProps(overrides: ActionBarPropsOverrides = {}): ActionBarProps {
 
 describe('ActionBar (shadcn)', () => {
 	it('renders both sections on one surface, divided by a separator', () => {
-		render(<ActionBar {...makeProps()} />)
+		const { container } = render(<ActionBar {...makeProps()} />)
 
 		const bar = screen.getByTestId('action-bar')
 		expect(bar.querySelectorAll('[data-slot="action-bar-selection"]')).toHaveLength(1)
 		expect(bar.querySelectorAll('[data-slot="action-bar-draft"]')).toHaveLength(1)
-		expect(bar.querySelectorAll('[data-slot="action-bar-separator"]').length).toBeGreaterThan(0)
+		// The rule *between* the two, not the ones the selection section draws inside itself.
+		expect(betweenSectionRules(container)).toHaveLength(1)
+	})
+
+	it('divides the count from the close button whether or not there are actions', () => {
+		const bare = render(<ActionBar {...makeProps({ draft: undefined })} />)
+		const bareSection = bare.container.querySelector('[data-slot="action-bar-selection"]')
+		expect(bareSection?.querySelectorAll('[data-slot="action-bar-separator"]')).toHaveLength(1)
+		bare.unmount()
+
+		const withActions = render(
+			<ActionBar {...makeProps({ draft: undefined, selection: makeSelection({ onDelete: vi.fn() }) })} />,
+		)
+		const section = withActions.container.querySelector('[data-slot="action-bar-selection"]')
+		expect(section?.querySelectorAll('[data-slot="action-bar-separator"]')).toHaveLength(2)
+	})
+
+	it('names the draft section rather than the whole toolbar', () => {
+		render(<ActionBar {...makeProps()} />)
+
+		const bar = screen.getByTestId('action-bar')
+		expect(bar).not.toHaveAttribute('aria-label')
+
+		// `role='group'` is what makes the name reach assistive technology at all.
+		const draft = bar.querySelector('[data-slot="action-bar-draft"]')
+		expect(draft).toHaveAttribute('role', 'group')
+		expect(draft).toHaveAttribute('aria-label', 'Pending changes')
 	})
 
 	it('renders the pending counts and both draft actions', () => {
