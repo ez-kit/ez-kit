@@ -19,7 +19,7 @@ It is not, however, in good shape: it still writes `--heroui-*` v2 tokens (see "
 
 ## Layering
 
-`createDataGrid(components)` in `src/data-grid.tsx` is wired to `src/blocks/*` adapters. `src/blocks/selection/SelectionBar.tsx` wraps the `action-bar` primitive — the one consumer of `components/ui/`.
+`createDataGrid(components)` in `src/data-grid.tsx` is wired to `src/blocks/*` adapters. `src/blocks/action-bar/ActionBar.tsx` wraps the `action-bar` primitive — the one consumer of `components/ui/`. It is the grid's single action bar, with a live selection section and a live draft section; it replaced the separate `blocks/selection/SelectionBar.tsx` and `blocks/draft/DraftBar.tsx`, which each drew a whole bar and could mount on top of each other.
 
 Add new components to `src/blocks/`. Do **not** extend `src/components/ui/` — keeping it at one file keeps the misleading path from spreading.
 

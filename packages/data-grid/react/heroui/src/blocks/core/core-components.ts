@@ -1,3 +1,4 @@
+import { ActionBar } from '../action-bar/ActionBar'
 import { NumberInput } from '../editing/NumberInput'
 
 import { Button } from './Button'
@@ -23,6 +24,7 @@ import type { FullGridComponents } from '@ez-kit/data-grid-react'
 // admit, so the tier type alone would reject the very component this kit registers.
 export const coreComponents: FullGridComponents['core'] = {
 	Root,
+	ActionBar,
 	Table,
 	TableScroll,
 	Thead,
