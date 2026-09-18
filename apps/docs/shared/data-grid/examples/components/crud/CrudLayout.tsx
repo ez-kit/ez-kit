@@ -1,7 +1,5 @@
 'use client'
 
-import { GridShell } from '@ez-kit/data-grid-react'
-
 import { DataGrid } from 'shared/DataGrid'
 
 /**
@@ -17,10 +15,13 @@ import { DataGrid } from 'shared/DataGrid'
  *   control offers, never *whether* there is a control — mounting is a layout's decision, and
  *   `DefaultLayout` makes it the other way. Here it shares the bottom bar with the page
  *   controls, which is what `<DataGrid.BottomBar/>` with no children of its own is.
+ *
+ * The two action bars come last, where the default `floating` variant belongs — nothing places
+ * them for you, so an `inline` bar would be written first instead.
  */
 export function CrudLayout() {
 	return (
-		<GridShell>
+		<>
 			<DataGrid.Toolbar
 				end={
 					<>
@@ -62,6 +63,8 @@ export function CrudLayout() {
 				<DataGrid.Body />
 			</DataGrid.Table>
 			<DataGrid.BottomBar />
-		</GridShell>
+			<DataGrid.DraftBar />
+			<DataGrid.SelectionBar />
+		</>
 	)
 }

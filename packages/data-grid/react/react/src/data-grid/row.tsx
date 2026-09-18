@@ -3,7 +3,7 @@ import { forwardRef } from 'react'
 
 import { useGridComponents } from '../components-context'
 import { joinClassNames } from '../utils/class-names'
-import { isTextEntryTarget } from '../utils/interactive-target'
+import { isTextEntryTarget } from '../utils/text-entry-target'
 
 import { DataGridCell } from './cell'
 import { useDataGridState, useDataGridTable } from './table-context'
@@ -161,7 +161,7 @@ function DataGridRowImpl<TRow extends object = ErasedRow>(
 				if (!e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return
 				// Only a control that owns `Alt+Arrow` keeps it — a text field moving by word, a
 				// native select opening. A checkbox or a button does not, and a row has nothing
-				// else to focus, so the header's broader guard would refuse every event here.
+				// else to focus, so a predicate counting those would refuse every event here.
 				if (isTextEntryTarget(e)) return
 				const direction = e.key === 'ArrowUp' ? RowMoveDirection.Up : RowMoveDirection.Down
 				if (!table.ordering.canMoveRow(row.id, direction)) return

@@ -113,42 +113,40 @@ describe('DataGrid.HeaderRow / DataGrid.HeaderCell', () => {
 	})
 })
 
-describe('sort affordance vs. interactive header content', () => {
-	// `column.header` renders inside the sort affordance, because clicking a column's name to
-	// sort it is how every table works. That used to make a button placed there fire the sort
-	// too — the click bubbled straight into the handler.
-	it('a button inside column.header does not also sort', () => {
-		const onClick = vi.fn()
-		const onSortChange = vi.fn()
+describe('the sort affordance', () => {
+	/**
+	 * It is a real `<button>`, which is what lets the click handler be
+	 * `getToggleSortingHandler()` and nothing else.
+	 *
+	 * It used to be a `role='button'` div with a hand-written `Enter`/`Space` handler, plus a
+	 * predicate dropping any click that started on an interactive descendant — a guard for a
+	 * control a consumer put in `column.header`. That guard could not tell such a control from
+	 * the kit's own sort arrow, so shadcn's arrow (a `Button` in looks only) swallowed every
+	 * click aimed at it — and it sits at the header's centre, where a pointer lands. Both are
+	 * gone: nothing interactive may live inside the affordance, so there is nothing to ask.
+	 */
+	it('is a <button> on a sortable column and a plain element on one that does not sort', () => {
 		const columns = createColumns<User>([
-			{
-				accessorKey: 'name',
-				header: () => (
-					<button
-						data-testid='hdr-btn'
-						onClick={onClick}
-					>
-						pick
-					</button>
-				),
-			},
+			{ accessorKey: 'name', header: 'Name' },
+			{ accessorKey: 'age', header: 'Age', sorting: false },
 		])
 
-		const { getByTestId } = renderWithComponents(
+		const { container } = renderWithComponents(
 			<DataGrid
 				features={TEST_FEATURES}
 				data={DATA}
 				columns={columns}
-				sorting={{ onChange: onSortChange }}
+				sorting
 			/>,
 		)
 
-		fireEvent.click(getByTestId('hdr-btn'))
-		expect(onClick).toHaveBeenCalledTimes(1)
-		expect(onSortChange).not.toHaveBeenCalled()
+		const [sortable, fixed] = Array.from(container.querySelectorAll('[data-slot="sort-trigger"]'))
+		expect(sortable?.tagName).toBe('BUTTON')
+		expect(sortable).toHaveAttribute('type', 'button')
+		expect(fixed?.tagName).not.toBe('BUTTON')
 	})
 
-	it('clicking the column name still sorts', () => {
+	it('clicking the column name sorts', () => {
 		const onSortChange = vi.fn()
 		const { getByText } = renderWithComponents(
 			<DataGrid
@@ -160,6 +158,54 @@ describe('sort affordance vs. interactive header content', () => {
 		)
 
 		fireEvent.click(getByText('Name'))
+		expect(onSortChange).toHaveBeenCalledWith([{ id: 'name', desc: false }])
+	})
+
+	/**
+	 * `Enter` and `Space` are handled on the button rather than left to its native activation,
+	 * because HeroUI's `Th` is React Aria's, and React Aria's grid keyboard manager cancels the
+	 * bubbling keydown — a cancelled keydown activates nothing. Handling it at the target, where
+	 * the event still arrives intact, is what keeps the chord working in both kits.
+	 *
+	 * The assertion is `toHaveBeenCalledTimes(1)`, not just "was called": in a kit that does
+	 * **not** cancel, the browser would synthesise an activation click on top of this handler,
+	 * and `preventDefault` is what stops the column sorting twice per keypress.
+	 */
+	it.each(['Enter', ' '])('%s on the affordance sorts exactly once', (key) => {
+		const onSortChange = vi.fn()
+		const { container } = renderWithComponents(
+			<DataGrid
+				features={TEST_FEATURES}
+				data={DATA}
+				columns={COLUMNS}
+				sorting={{ onChange: onSortChange }}
+			/>,
+		)
+
+		const trigger = container.querySelector('[data-slot="sort-trigger"]')
+		if (!trigger) throw new Error('expected a sort affordance')
+		fireEvent.keyDown(trigger, { key })
+
+		expect(onSortChange).toHaveBeenCalledTimes(1)
+		expect(onSortChange).toHaveBeenCalledWith([{ id: 'name', desc: false }])
+	})
+
+	// The regression the guard caused: the arrow is inside the affordance, so a click on it is a
+	// click on the button. The kits render it as a decorative element for exactly this reason.
+	it('clicking the sort indicator sorts', () => {
+		const onSortChange = vi.fn()
+		const { container } = renderWithComponents(
+			<DataGrid
+				features={TEST_FEATURES}
+				data={DATA}
+				columns={COLUMNS}
+				sorting={{ onChange: onSortChange }}
+			/>,
+		)
+
+		const indicator = container.querySelector('[data-slot="sort-trigger"] [data-testid="sort-indicator"]')
+		if (!indicator) throw new Error('expected the test kit to render a sort indicator')
+		fireEvent.click(indicator)
 		expect(onSortChange).toHaveBeenCalledWith([{ id: 'name', desc: false }])
 	})
 })

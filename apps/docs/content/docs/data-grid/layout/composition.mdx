@@ -90,9 +90,12 @@ narrow grid renders a narrow toolbar rather than throwing.
 | `SearchFiltersActionsLayout` | Search leading, filter panel beside it, controls trailing; chips strip; bottom bar. | five options at once — see below      |
 | `PopoverFiltersLayout`       | `DefaultLayout` with each column's filter behind a header popover.                  | `filtering: { variant: 'popover' }`   |
 
-`GridShell` is exported alongside them — the wrapper that places the draft and selection bars
-either side of the grid according to `selection.bar.variant`. Start a layout of your own with it
-rather than re-deriving that ordering.
+All four render `<DataGrid.DraftBar />` and `<DataGrid.SelectionBar />` **last**, which is where
+the default `floating` bar belongs: it overlays the rows, and coming last in document order keeps
+it out of the tab order until there is something to act on. If you set `selection.bar` to
+`inline`, the bar is a strip in the flow and belongs above the table — write your own layout with
+the two bars first. Nothing places them for you; a layout renders them where it writes them, like
+every other member.
 
 `SearchFiltersActionsLayout` is the arrangement that used to read:
 
@@ -131,11 +134,9 @@ control. See [Where filters live](/docs/data-grid/filtering/variants#both-at-onc
 A layout is a component that mounts compound members. Nothing more:
 
 ```tsx
-import { GridShell } from '@ez-kit/data-grid-react'
-
 function OrdersLayout() {
 	return (
-		<GridShell>
+		<>
 			<DataGrid.Toolbar
 				start={<DataGrid.GlobalFilterInput />}
 				end={
@@ -150,7 +151,9 @@ function OrdersLayout() {
 			<DataGrid.ActiveFiltersBar />
 			<DataGrid.Table />
 			<DataGrid.BottomBar />
-		</GridShell>
+			<DataGrid.DraftBar />
+			<DataGrid.SelectionBar />
+		</>
 	)
 }
 ```
@@ -184,6 +187,8 @@ What `DefaultLayout` amounts to, for a grid with every feature on:
 	/>
 	<DataGrid.Table />
 	<DataGrid.Pagination />
+	<DataGrid.DraftBar />
+	<DataGrid.SelectionBar />
 </DataGrid>
 ```
 
@@ -455,16 +460,16 @@ it behind an icon. Those two decisions replaced the `filtering.variant` enum —
 </DataGrid.HeaderCell>
 ```
 
-| Render arg                 | What it is                                                                        |
-| -------------------------- | --------------------------------------------------------------------------------- |
-| `label`                    | The column's own `header` content, with no sorting behaviour attached.            |
-| `sortTrigger`              | `label` plus the sort indicator, wrapped in the clickable sort affordance.        |
-| `menu`                     | The column overflow menu (sort / pin / hide), or `null` when it has no sections.  |
-| `filter`                   | The column's filter control, or `null` when the column is not filterable.         |
-| `filterPopover`            | The same control behind the kit's popover trigger. Render this **or** `filter`.   |
-| `resizer`                  | The resize handle, or `null` when the column cannot be resized.                   |
-| `canSort`, `sortDirection` | The column's sort capability and current direction (`'asc' \| 'desc' \| 'none'`). |
-| `header`, `column`         | The underlying TanStack objects, for anything the above does not cover.           |
+| Render arg                 | What it is                                                                                       |
+| -------------------------- | ------------------------------------------------------------------------------------------------ |
+| `label`                    | The column's own `header` content, with no sorting behaviour attached.                           |
+| `sortTrigger`              | `label` plus the sort indicator, in a `<button>` — or a plain box when the column does not sort. |
+| `menu`                     | The column overflow menu (sort / pin / hide), or `null` when it has no sections.                 |
+| `filter`                   | The column's filter control, or `null` when the column is not filterable.                        |
+| `filterPopover`            | The same control behind the kit's popover trigger. Render this **or** `filter`.                  |
+| `resizer`                  | The resize handle, or `null` when the column cannot be resized.                                  |
+| `canSort`, `sortDirection` | The column's sort capability and current direction (`'asc' \| 'desc' \| 'none'`).                |
+| `header`, `column`         | The underlying TanStack objects, for anything the above does not cover.                          |
 
 `<DataGrid.Cell>` is the body-side equivalent: it keeps the `<td>`, its alignment, pinning
 offsets and `cellClassName`, and lets you replace only what goes inside.
@@ -540,6 +545,24 @@ createColumns<Row>([
 		),
 	},
 ])
+```
+
+**Keep that content non-interactive.** On a sortable column the header renders inside the sort
+affordance, which is a `<button>` — so a button or a link placed there is a nested one: invalid
+HTML, and the parser takes the header apart. An icon, a badge or a tooltip is fine.
+
+A header that genuinely needs a control composes the cell and puts it beside the affordance
+rather than inside it — `label` and `sortTrigger` are separate render args for exactly this:
+
+```tsx
+<DataGrid.HeaderCell header={header}>
+	{({ sortTrigger }) => (
+		<div data-slot='header-main'>
+			{sortTrigger}
+			<HelpButton />
+		</div>
+	)}
+</DataGrid.HeaderCell>
 ```
 
 ## Column footers

@@ -376,31 +376,37 @@ describe('<DataGrid>', () => {
 			return { selectionBar, toolbar }
 		}
 
-		it('renders inline SelectionBar above the Toolbar in DOM order', () => {
+		function renderWithVariant(variant: ActionBarVariant) {
 			// Toolbar renders null without content — enable `creating` to give it the "+ Add" trigger.
-			const table = makeTable({ selection: true, creating: { onSave: () => Promise.resolve() } })
-			table.grid.selection.bar = { variant: ActionBarVariant.Inline }
-			table.setRowSelection({ '1': true })
-			renderWithComponents(<DataGrid table={table} />)
-
-			const { selectionBar, toolbar } = getBarAndToolbar()
-			expect(selectionBar.compareDocumentPosition(toolbar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-		})
-
-		it('renders floating SelectionBar after Table/Pagination by default', () => {
 			const table = makeTable({
 				selection: true,
 				creating: { onSave: () => Promise.resolve() },
 				pagination: true,
 			})
-			table.grid.selection.bar = { variant: ActionBarVariant.Floating }
+			table.grid.selection.bar = { variant }
 			table.setRowSelection({ '1': true })
 			renderWithComponents(<DataGrid table={table} />)
+			return getBarAndToolbar()
+		}
 
-			const { selectionBar, toolbar } = getBarAndToolbar()
-			// floating: toolbar precedes selectionBar
-			expect(toolbar.compareDocumentPosition(selectionBar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-		})
+		/**
+		 * Where the bar renders is the layout's decision, not `selection.bar.variant`'s — so the
+		 * bound preset puts it after the toolbar under **both** variants. It used to branch, through
+		 * a `GridShell` wrapper that read the variant and placed the two bars for you; that was the
+		 * last placement option left standing, and it is gone.
+		 *
+		 * The variant still decides what the kit *renders* (an in-flow strip against an overlay),
+		 * which is why `inline` wants the bars written first — the arrangement `presets.test.tsx`
+		 * covers, since it takes a layout of its own.
+		 */
+		it.each([ActionBarVariant.Inline, ActionBarVariant.Floating])(
+			'renders the %s SelectionBar after the Toolbar, as the bound layout writes it',
+			(variant) => {
+				const { selectionBar, toolbar } = renderWithVariant(variant)
+
+				expect(toolbar.compareDocumentPosition(selectionBar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+			},
+		)
 	})
 
 	it('registry creating falls back to edit component when creating not provided', () => {

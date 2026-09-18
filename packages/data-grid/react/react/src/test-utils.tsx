@@ -50,6 +50,7 @@ import type {
 	TableProps,
 	TrProps,
 	ToolbarProps,
+	SortIndicatorProps,
 } from './types'
 import type { UseDataGridConfig } from './use-data-grid'
 import type { RenderOptions } from '@testing-library/react'
@@ -805,7 +806,10 @@ export const testComponents: FullGridComponents = {
 		PageSizer: TestPageSizer,
 	},
 	sorting: {
-		SortIndicator: () => null,
+		// Renders an element rather than `null` so a test can click the arrow itself — the case
+		// that was broken while the affordance filtered clicks by their target. Empty, so it
+		// stays invisible to every `getByText` in the suite.
+		SortIndicator: ({ canSort }: SortIndicatorProps) => (canSort ? <span data-testid='sort-indicator' /> : null),
 		SortMenu: () => null,
 	},
 	filtering: {

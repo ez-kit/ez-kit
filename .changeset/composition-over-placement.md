@@ -54,10 +54,14 @@ controls), `SearchFiltersActionsLayout` (search leading, filters, actions traili
 `<DataGrid data columns features />` from a kit is unchanged. A grid composed through
 `createDataGrid` registers its own.
 
-`GridShell` is exported alongside them: it is the piece the four presets share — the inline versus
-floating ordering of `<DataGrid.DraftBar>` and `<DataGrid.SelectionBar>` around the rest, which
-`selection.bar.variant` decides. Wrap your own layout in it rather than reimplementing that
-ordering, which is the one part of a layout that is not obvious from reading the JSX.
+**The two action bars are placed by the layout that renders them, and by nothing else.** All four
+presets write `<DataGrid.DraftBar />` and `<DataGrid.SelectionBar />` last, which is where the
+default `floating` bar belongs — it overlays the rows, and document order keeps it out of the tab
+order until there is something to act on. `selection.bar.variant` still says what the bar _looks
+like_, an in-flow strip against an overlay, and no longer says where it goes: a grid that sets
+`inline` writes its own layout with the two bars above `<DataGrid.Table />`. That last bit is the
+one arrangement the presets no longer cover for you, and it is the point — a config value deciding
+an element's position is the thing this release removes, and the bars were the last of them.
 
 **One behaviour is not preserved.** `DefaultLayout` mounts no page sizer. The old default mounted one
 when the author _wrote_ `pagination.items`, and the resolved `items` falls back to a default list

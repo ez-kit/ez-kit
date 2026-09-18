@@ -1,9 +1,10 @@
 import { ActiveFiltersBar } from '../data-grid/active-filters-bar'
 import { BottomBar } from '../data-grid/bottom-bar'
+import { DraftBar } from '../data-grid/draft-bar'
+import { SelectionBar } from '../data-grid/selection-bar'
 import { DataGridTable } from '../data-grid/table'
 import { Toolbar } from '../data-grid/toolbar'
 
-import { GridShell } from './default-layout'
 import { useToolbarEnd, useToolbarStart } from './toolbar-controls'
 
 /**
@@ -35,7 +36,7 @@ export function SearchFiltersActionsLayout() {
 	const end = useToolbarEnd()
 
 	return (
-		<GridShell>
+		<>
 			<Toolbar
 				start={start}
 				end={end}
@@ -43,6 +44,8 @@ export function SearchFiltersActionsLayout() {
 			<ActiveFiltersBar />
 			<DataGridTable />
 			<BottomBar />
-		</GridShell>
+			<DraftBar />
+			<SelectionBar />
+		</>
 	)
 }

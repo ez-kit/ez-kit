@@ -11,8 +11,8 @@ import { useGridComponents } from '../components-context'
 import { GridMenuVariant } from '../menu'
 import { ColumnSortDirection, SortDirection } from '../types'
 import { filtersRows } from '../utils/filters-rows'
-import { isInteractiveTarget } from '../utils/interactive-target'
 import { getCommonPinStyles } from '../utils/pin-styles'
+import { isTextEntryTarget } from '../utils/text-entry-target'
 
 import { getAlignAttrs } from './align-attrs'
 import { buildColumnMenuSections } from './column-menu-sections'
@@ -23,7 +23,7 @@ import { useDataGridTable } from './table-context'
 import type { ErasedRow, DataTable, GridFeatures } from '../types'
 import type { FormColumnMeta } from '@ez-kit/data-grid-core'
 import type { Column, Header } from '@tanstack/table-core'
-import type { KeyboardEvent, MouseEvent, ReactNode } from 'react'
+import type { KeyboardEvent, ReactNode } from 'react'
 
 /**
  * What a `<DataGrid.HeaderCell>` render function receives.
@@ -194,19 +194,34 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 		)
 	}
 
-	const rawSortHandler = canSort ? header.column.getToggleSortingHandler() : undefined
-	const sortHandler = rawSortHandler
-		? (e: MouseEvent) => {
-				if (isInteractiveTarget(e)) return
-				rawSortHandler(e)
-			}
-		: undefined
-	const onSortKeyDown = rawSortHandler
+	// A real `<button>` below, so a click means sort and there is nothing to ask about its
+	// target. That replaced a `role='button'` div plus a predicate dropping any click that
+	// started on an interactive descendant — a guard for controls a consumer put in
+	// `column.header`, which could not tell one from the kit's own sort arrow, and so made the
+	// arrow (sitting at the header's centre, where a pointer lands) dead.
+	const sortHandler = canSort ? header.column.getToggleSortingHandler() : undefined
+
+	/**
+	 * `Enter` / `Space`, which a `<button>` ought to give us for free — and does, in the shadcn
+	 * kit. **HeroUI cancels it.** Its `Th` comes from React Aria's table, whose grid keyboard
+	 * manager calls `preventDefault()` on the bubbling keydown, and a cancelled keydown performs
+	 * no activation, so the button never sees a click. Probed rather than assumed: a listener on
+	 * the button reads `defaultPrevented === false` and one on `document` reads `true` for the
+	 * same event, i.e. the cancel happens above us on the way up.
+	 *
+	 * So the chord is handled here, at the target, where it still arrives intact. `preventDefault`
+	 * is what keeps this to **one** sort where the default action does survive: it suppresses the
+	 * activation click the browser would synthesise afterwards.
+	 *
+	 * Deliberately nothing but the two keys — no question about where the event started. That
+	 * predicate is what this change removed, and it is not needed: nothing interactive may live
+	 * inside the affordance.
+	 */
+	const onSortKeyDown = sortHandler
 		? (e: KeyboardEvent) => {
 				if (e.key !== 'Enter' && e.key !== ' ') return
-				if (isInteractiveTarget(e)) return
 				e.preventDefault()
-				rawSortHandler(e)
+				sortHandler(e)
 			}
 		: undefined
 
@@ -236,9 +251,10 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 	const onHeaderKeyDown = canMove
 		? (e: KeyboardEvent) => {
 				if (!e.altKey || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return
-				// Option+Arrow moves by word inside a text field — never steal it from a filter
-				// input or any other control living in the header.
-				if (isInteractiveTarget(e)) return
+				// Option+Arrow moves by word inside a text field, and opens a native select —
+				// never steal it from the filter input living in this `<th>`. Only a control that
+				// owns the chord keeps it; a button or a checkbox does not.
+				if (isTextEntryTarget(e)) return
 				// The grid's own direction, never `table.options.columnResizeDirection`: that option
 				// is declared on `TableOptions_ColumnResizing` and core writes it only inside its
 				// resizing branch, so on the default grid — ordering on, resizing off — it is
@@ -293,20 +309,43 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 	const headerSlot = meta?.systemHeader ?? header.column.columnDef.header
 	const label = header.isPlaceholder ? null : flexRender(headerSlot, header.getContext())
 
-	const sortTrigger = (
-		<div
+	const sortIndicator = (
+		<SortIndicator
+			sortDirection={sortDirection}
+			canSort={canSort}
+		/>
+	)
+
+	/**
+	 * The column's name and its sort arrow, as one affordance.
+	 *
+	 * A real `<button>` when the column sorts, and a plain `<div>` when it does not — the same
+	 * split the old `role={canSort ? 'button' : undefined}` made, now in the element rather than
+	 * in an attribute. Everything clickable being a button is what lets the handler be
+	 * `getToggleSortingHandler()` and nothing else: there is no longer anything to ask about the
+	 * click's target, because nothing interactive may live in here.
+	 *
+	 * **So `column.header` content must not be interactive.** It renders inside this button, and
+	 * a nested `<button>` is invalid HTML — the parser closes the outer one and the header comes
+	 * apart. An icon, a badge or a tooltip is fine; a button or a link is not, and a header that
+	 * needs one composes `<DataGrid.HeaderCell>` and places `label` outside `sortTrigger`.
+	 */
+	const sortTrigger = canSort ? (
+		<button
+			type='button'
 			data-slot='sort-trigger'
-			{...(canSort ? { 'data-sortable': 'true', 'data-sort-direction': sortDirection } : {})}
-			role={canSort ? 'button' : undefined}
-			tabIndex={canSort ? 0 : undefined}
+			data-sortable='true'
+			data-sort-direction={sortDirection}
 			onClick={sortHandler}
 			onKeyDown={onSortKeyDown}
 		>
 			{label}
-			<SortIndicator
-				sortDirection={sortDirection}
-				canSort={canSort}
-			/>
+			{sortIndicator}
+		</button>
+	) : (
+		<div data-slot='sort-trigger'>
+			{label}
+			{sortIndicator}
 		</div>
 	)
 

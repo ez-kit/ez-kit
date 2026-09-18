@@ -331,3 +331,63 @@ describe('the built-in header cell', () => {
 		expect(container.querySelector(HEADER_FILTER)).toBeNull()
 	})
 })
+
+/**
+ * The two action bars, which every preset renders **last** and which no config places any more.
+ *
+ * A `GridShell` wrapper used to read `selection.bar.variant` and put them above the grid for
+ * `inline` and below it for `floating`. It was the last placement option in the package — a
+ * config value deciding where an element renders — so it went the way of the other eight, and
+ * a layout that wants them somewhere else writes them somewhere else.
+ */
+describe('the action bars', () => {
+	const SELECTION_BAR = "[data-slot='selection-bar']"
+
+	function renderSelected(Layout: ComponentType) {
+		return renderLayout(Layout, {
+			selection: true,
+			// Toolbar renders null without content — `creating` gives it the "+ Add" trigger, so
+			// there is a toolbar to be after.
+			creating: { onSave: () => Promise.resolve() },
+			initialState: { rowSelection: { '1': true } },
+		})
+	}
+
+	it.each([
+		['DefaultLayout', DefaultLayout],
+		['BottomBarLayout', BottomBarLayout],
+		['SearchFiltersActionsLayout', SearchFiltersActionsLayout],
+		['PopoverFiltersLayout', PopoverFiltersLayout],
+	])('%s renders the selection bar after the table', (_name, Layout) => {
+		const { container } = renderSelected(Layout)
+
+		const table = requireElement(container, 'table')
+		const bar = requireElement(container, SELECTION_BAR)
+		expect(table.compareDocumentPosition(bar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+	})
+
+	/**
+	 * The recipe `DefaultLayout`'s docblock gives for `selection: { bar: 'inline' }`, whose bar is
+	 * a block in the flow rather than an overlay and so belongs above the table. That it takes a
+	 * layout of one's own is the accepted cost of removing the wrapper: the presets are written
+	 * for the default `floating`, and they say so.
+	 */
+	it('puts them above the table when a layout writes them first', () => {
+		function InlineBarsLayout() {
+			return (
+				<>
+					<DataGrid.DraftBar />
+					<DataGrid.SelectionBar />
+					<DataGrid.Toolbar />
+					<DataGrid.Table />
+				</>
+			)
+		}
+
+		const { container } = renderSelected(InlineBarsLayout)
+
+		const table = requireElement(container, 'table')
+		const bar = requireElement(container, SELECTION_BAR)
+		expect(bar.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+	})
+})

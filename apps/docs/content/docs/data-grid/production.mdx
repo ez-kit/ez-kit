@@ -202,7 +202,7 @@ const COMPONENTS = { core: { Layout: OrdersLayout } }
 
 function OrdersLayout() {
 	return (
-		<GridShell>
+		<>
 			<DataGrid.Toolbar
 				start={<DataGrid.GlobalFilterInput />}
 				end={
@@ -246,7 +246,9 @@ function OrdersLayout() {
 				<DataGrid.Body />
 			</DataGrid.Table>
 			<DataGrid.BottomBar />
-		</GridShell>
+			<DataGrid.DraftBar />
+			<DataGrid.SelectionBar />
+		</>
 	)
 }
 ```

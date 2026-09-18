@@ -1,12 +1,13 @@
 import { Body } from '../data-grid/body'
+import { DraftBar } from '../data-grid/draft-bar'
 import { Header } from '../data-grid/header'
 import { DataGridHeaderCell } from '../data-grid/header-cell'
 import { DataGridHeaderRow } from '../data-grid/header-row'
 import { Pagination } from '../data-grid/pagination'
+import { SelectionBar } from '../data-grid/selection-bar'
 import { DataGridTable } from '../data-grid/table'
 import { Toolbar } from '../data-grid/toolbar'
 
-import { GridShell } from './default-layout'
 import { useToolbarEnd, useToolbarStart } from './toolbar-controls'
 
 /**
@@ -26,7 +27,7 @@ export function PopoverFiltersLayout() {
 	const end = useToolbarEnd()
 
 	return (
-		<GridShell>
+		<>
 			<Toolbar
 				start={start}
 				end={end}
@@ -62,6 +63,8 @@ export function PopoverFiltersLayout() {
 				<Body />
 			</DataGridTable>
 			<Pagination />
-		</GridShell>
+			<DraftBar />
+			<SelectionBar />
+		</>
 	)
 }

@@ -1,46 +1,10 @@
-import { resolveActionBarVariant } from '../data-grid/action-bar-variant'
 import { DraftBar } from '../data-grid/draft-bar'
 import { Pagination } from '../data-grid/pagination'
 import { SelectionBar } from '../data-grid/selection-bar'
 import { DataGridTable } from '../data-grid/table'
-import { useDataGridTable } from '../data-grid/table-context'
 import { Toolbar } from '../data-grid/toolbar'
-import { ActionBarVariant } from '../types'
 
 import { useToolbarEnd, useToolbarStart } from './toolbar-controls'
-
-import type { ReactNode } from 'react'
-
-/**
- * The shell the two action bars wrap, shared by every preset in this directory.
- *
- * `inline` puts them above the grid, in the flow; `floating` overlays them, so they go last and
- * document order keeps them out of the tab order until there is something to act on. That
- * ordering is unchanged from the layout this replaced — only what fills the toolbar is new.
- */
-export function GridShell({ children }: { children: ReactNode }) {
-	// Reads only config refs, no state, so it does not subscribe: a layout re-rendering on every
-	// state mutation would cascade into Body and Table, which depend on none of it.
-	const variant = resolveActionBarVariant(useDataGridTable())
-
-	if (variant === ActionBarVariant.Inline) {
-		return (
-			<>
-				<DraftBar />
-				<SelectionBar />
-				{children}
-			</>
-		)
-	}
-
-	return (
-		<>
-			{children}
-			<DraftBar />
-			<SelectionBar />
-		</>
-	)
-}
 
 /**
  * Toolbar, table, pagination — the everyday grid, and the preset each UI kit binds to
@@ -53,6 +17,33 @@ export function GridShell({ children }: { children: ReactNode }) {
  * described is these five lines of JSX. Each control is still gated on its feature being on —
  * see `useToolbarStart` / `useToolbarEnd`, which is where that lives so all four presets gate
  * identically.
+ *
+ * **The two action bars go last, and where they go is now a layout's decision like any other.**
+ * That position is right for `floating`, which is the default: shadcn's floating bar is
+ * positioned out of a zero-height *sticky* anchor, which has to sit after the rows it overlays
+ * to overlay them, and while heroui portals its own to a fixed overlay — where tree position
+ * changes nothing visually — document order still keeps both out of the tab order until there
+ * is something to act on. It is wrong for `selection: { bar: 'inline' }`, whose bar is a block
+ * in the flow and belongs above the table — so a grid that asks for `inline` writes its own
+ * layout and puts the two bars first:
+ *
+ * ```tsx
+ * function InlineBarsLayout() {
+ *   return (
+ *     <>
+ *       <DataGrid.DraftBar />
+ *       <DataGrid.SelectionBar />
+ *       <DataGrid.Toolbar />
+ *       <DataGrid.Table />
+ *       <DataGrid.Pagination />
+ *     </>
+ *   )
+ * }
+ * ```
+ *
+ * A `GridShell` wrapper used to branch on the variant and place them for you. It was the last
+ * placement option left standing — a config value deciding where an element renders — and it is
+ * gone for the same reason the other eight are: composition is stated in JSX.
  *
  * **It mounts no page sizer, and no active-filters strip.** Both are a deliberate gap rather
  * than an oversight, and the sizer is the one that will surprise you: `pagination.pageSizer`
@@ -78,13 +69,15 @@ export function DefaultLayout() {
 	const end = useToolbarEnd()
 
 	return (
-		<GridShell>
+		<>
 			<Toolbar
 				start={start}
 				end={end}
 			/>
 			<DataGridTable />
 			<Pagination />
-		</GridShell>
+			<DraftBar />
+			<SelectionBar />
+		</>
 	)
 }

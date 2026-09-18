@@ -11,7 +11,7 @@
  * lines of JSX, and an arrangement none of the enums could name (filters in the header *and*
  * in a panel) costs the same.
  */
-export { DefaultLayout, GridShell } from './default-layout'
+export { DefaultLayout } from './default-layout'
 export { BottomBarLayout } from './bottom-bar-layout'
 export { SearchFiltersActionsLayout } from './search-filters-actions-layout'
 export { PopoverFiltersLayout } from './popover-filters-layout'

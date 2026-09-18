@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { isInteractiveTarget, isTextEntryTarget } from './interactive-target'
+import { isTextEntryTarget } from './text-entry-target'
 
 import type { KeyboardEvent } from 'react'
 
@@ -30,20 +30,9 @@ describe('isTextEntryTarget', () => {
 	})
 })
 
-describe('isInteractiveTarget', () => {
-	it('is the broader of the two — a button counts here and not there', () => {
-		// This is the whole reason the row needs its own predicate: in a row, focus is always on
-		// a control this one rejects.
-		const button = eventOn('<button></button>')
-
-		expect(isInteractiveTarget(button)).toBe(true)
-		expect(isTextEntryTarget(button)).toBe(false)
-	})
-
-	it('ignores the element the handler itself sits on', () => {
-		const host = document.createElement('button')
-		const event = { target: host, currentTarget: host } as unknown as KeyboardEvent
-
-		expect(isInteractiveTarget(event)).toBe(false)
-	})
-})
+/**
+ * There is no companion predicate any more. `isInteractiveTarget` — "did this event start on
+ * anything interactive" — guarded the header's sort affordance while that was a `role='button'`
+ * div wrapping arbitrary content; the affordance is a real `<button>` now, so a click on it
+ * means sort and there is nothing left to ask.
+ */

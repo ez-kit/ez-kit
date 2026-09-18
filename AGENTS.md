@@ -311,12 +311,27 @@ and move on.
   it silently. So quick start is unchanged and `createDataGrid` still pays only for what it names.
 
   The presets (`DefaultLayout`, `BottomBarLayout`, `SearchFiltersActionsLayout`,
-  `PopoverFiltersLayout`) and `GridShell` — the inline-versus-floating ordering of `DraftBar` and
-  `SelectionBar` that all four share, and that a hand-written layout should wrap itself in rather
-  than reimplement — live in the shared react package because they are pure composition with
+  `PopoverFiltersLayout`) live in the shared react package because they are pure composition with
   no authored class — the no-styles rule is untouched, and one set serves both kits. Adding more,
   in a kit or in an application, is the intended way to get a new arrangement; adding an option is
   not.
+
+  **A layout places `DraftBar` and `SelectionBar` itself, and `selection.bar.variant` does not.**
+  A `GridShell` wrapper briefly did — it read the variant and put the two bars above the grid for
+  `inline`, below it for `floating`, and all four presets wrapped themselves in it. That is a
+  config value deciding where an element renders, i.e. the ninth placement option, arrived at by
+  accident while removing the other eight; it never shipped. All four presets now write the bars
+  **last**, which is right for the default `floating`: shadcn positions that bar out of a
+  zero-height sticky anchor that has to follow the rows it overlays, heroui portals its own to a
+  fixed overlay where tree position changes nothing, and in both kits coming last keeps it out of
+  the tab order until there is something to act on. The variant survives as what the bar _looks
+  like_ — an in-flow strip against an overlay, stamped `data-variant` and branched on by both
+  kits — so it is a behaviour option and stays in the config. **The accepted cost is that
+  `selection: { bar: 'inline' }` on a preset renders that in-flow strip below the table**; an
+  `inline` grid writes a layout of its own with the two bars first, and `presets.test.tsx` covers
+  both halves so the split is pinned rather than implied. Moving the variant onto the two
+  components as a prop was considered and not taken — it is the more consistent answer by the
+  surviving-enum rule above, and it was judged not worth the config break here.
   The contract is: **spread every prop you receive** (`data-slot` above all — the structural
   stylesheet targets the slot, not the element), and **land `ref` on the element that actually
   scrolls**. That `ref` _is_ the declaration: it is what the pin shadows read, what infinite
