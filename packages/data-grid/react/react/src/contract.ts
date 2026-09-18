@@ -29,9 +29,6 @@ export const GridFeature = {
 	Editing: 'editing',
 	/** Row deletion: the confirmation dialog. */
 	Deleting: 'deleting',
-	Selection: 'selection',
-	/** Pending-draft section of the shared action bar (`draft`). */
-	Draft: 'draft',
 	/**
 	 * Per-row actions column: edit / delete buttons (the row-pin menu uses `core.Menu`).
 	 *
@@ -80,6 +77,12 @@ export const FEATURE_COMPONENTS = {
 		// what any grid dialog needs, and a feature that wants one is meant to reach for this
 		// rather than register a shell of its own.
 		'Modal',
+		// One bar, two sections — selection and pending draft. `core`, not a feature group: a
+		// grid with `draft` and no row-selection feature still renders it, and must not depend
+		// on a kit advertising selection support. It is required rather than optional because
+		// the package has no correct fallback for a bar, unlike `TableWrapper` / `TableScroll`
+		// / `Layout`, which fall back to a plain `div` and to the table.
+		'ActionBar',
 	] as const,
 	[GridFeature.Pagination]: ['Pagination', 'PageSizer'] as const,
 	[GridFeature.Sorting]: ['SortIndicator', 'SortMenu'] as const,
@@ -99,8 +102,6 @@ export const FEATURE_COMPONENTS = {
 	// duplicated into a `creating` one. The dialog it renders into is `core.Modal`.
 	[GridFeature.Editing]: ['FormShell'] as const,
 	[GridFeature.Deleting]: ['ConfirmDialog'] as const,
-	[GridFeature.Selection]: ['SelectionBar'] as const,
-	[GridFeature.Draft]: ['DraftBar'] as const,
 	[GridFeature.RowActions]: ['ActionsCell'] as const,
 	[GridFeature.Resizing]: ['Resizer'] as const,
 	[GridFeature.Visibility]: ['VisibilityMenu'] as const,
@@ -127,8 +128,6 @@ export const FEATURE_OPTIONAL_COMPONENTS = {
 	[GridFeature.Filtering]: [] as const,
 	[GridFeature.Editing]: [] as const,
 	[GridFeature.Deleting]: [] as const,
-	[GridFeature.Selection]: [] as const,
-	[GridFeature.Draft]: [] as const,
 	[GridFeature.RowActions]: [] as const,
 	[GridFeature.Resizing]: [] as const,
 	[GridFeature.Visibility]: [] as const,
@@ -156,8 +155,6 @@ export type GridSortingComponents = ComponentsFor<typeof GridFeature.Sorting>
 export type GridFilteringComponents = ComponentsFor<typeof GridFeature.Filtering>
 export type GridEditingComponents = ComponentsFor<typeof GridFeature.Editing>
 export type GridDeletingComponents = ComponentsFor<typeof GridFeature.Deleting>
-export type GridSelectionComponents = ComponentsFor<typeof GridFeature.Selection>
-export type GridDraftComponents = ComponentsFor<typeof GridFeature.Draft>
 export type GridRowActionsComponents = ComponentsFor<typeof GridFeature.RowActions>
 export type GridResizingComponents = ComponentsFor<typeof GridFeature.Resizing>
 export type GridVisibilityComponents = ComponentsFor<typeof GridFeature.Visibility>

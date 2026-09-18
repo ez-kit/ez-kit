@@ -150,8 +150,6 @@ export type {
 	GridFilteringComponents,
 	GridEditingComponents,
 	GridDeletingComponents,
-	GridSelectionComponents,
-	GridDraftComponents,
 	GridRowActionsComponents,
 	GridResizingComponents,
 	GridVisibilityComponents,
@@ -180,7 +178,6 @@ export type { DataGridFooterCellProps, DataGridFooterCellRenderArgs } from './da
 export type { DataGridRowProps, DataGridRowRenderArgs } from './data-grid/row'
 export type { DataGridCellProps, DataGridCellRenderArgs } from './data-grid/cell'
 export type { DataGridPaginationProps, DataGridPaginationRenderArgs } from './data-grid/pagination'
-export type { DataGridSelectionBarProps, DataGridSelectionBarRenderArgs } from './data-grid/selection-bar'
 export type { DataGridSortMenuTriggerProps, DataGridSortMenuTriggerRenderArgs } from './data-grid/sort-menu-trigger'
 export type {
 	DataGridVisibilityTriggerProps,
@@ -194,7 +191,7 @@ export type {
 export type { DataGridColumnFilterProps } from './data-grid/column-filter'
 export type { DataGridPageSizerProps, DataGridPageSizerRenderArgs } from './data-grid/page-sizer'
 export type { DataGridBottomBarProps } from './data-grid/bottom-bar'
-export type { DataGridDraftBarProps, DataGridDraftBarRenderArgs } from './data-grid/draft-bar'
+export type { DataGridActionBarProps, DataGridActionBarRenderArgs } from './data-grid/action-bar'
 export type { DataGridFormModalProps, DataGridFormModalRenderArgs } from './data-grid/form-modal'
 export type { DataGridCreatingModalProps } from './data-grid/creating-modal'
 export type { DataGridEditingModalProps } from './data-grid/editing-modal'
@@ -207,9 +204,8 @@ export type { DataGridClearFiltersButtonProps } from './data-grid/clear-filters-
 export type { DataGridCreateTriggerProps } from './data-grid/create-trigger'
 export type { DataGridGlobalFilterInputProps } from './data-grid/global-filter-input'
 
-// Sub-components (also available as DataGrid.SelectionBar)
-export { SelectionBar } from './data-grid/selection-bar'
-export { DraftBar } from './data-grid/draft-bar'
+// Sub-components (also available as DataGrid.ActionBar)
+export { ActionBar } from './data-grid/action-bar'
 export { ActiveFiltersBar } from './data-grid/active-filters-bar'
 export { ClearFiltersButton } from './data-grid/clear-filters-button'
 
@@ -259,7 +255,9 @@ export type {
 	VisibilityMenuProps,
 	ClearFilterButtonProps,
 	ConfirmDialogProps,
-	DraftBarProps,
+	ActionBarProps,
+	ActionBarSelectionSection,
+	ActionBarDraftSection,
 	EmptyStateProps,
 	FilterChipProps,
 	FilterPanelChipProps,
@@ -275,7 +273,6 @@ export type {
 	RefetchOverlayProps,
 	OperatorSelectProps,
 	ResizerProps,
-	SelectionBarProps,
 	SortColumnOption,
 	SortMenuItem,
 	SortMenuProps,

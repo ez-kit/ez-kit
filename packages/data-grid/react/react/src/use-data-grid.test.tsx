@@ -642,7 +642,7 @@ describe('useDataGrid — selection.bar', () => {
 		)
 		// The object `selection` (with only a React-only `bar`) still enables core row selection…
 		expect(result.current.options.enableRowSelection).toBe(true)
-		// …and the bar config is lifted onto the table for SelectionBar to read.
+		// …and the bar config is lifted onto the table for the ActionBar to read.
 		const key = result.current.grid.selection.bar
 		expect(key).toEqual({ variant: 'inline' })
 	})

@@ -1,6 +1,5 @@
-import { DraftBar } from '../data-grid/draft-bar'
+import { ActionBar } from '../data-grid/action-bar'
 import { Pagination } from '../data-grid/pagination'
-import { SelectionBar } from '../data-grid/selection-bar'
 import { DataGridTable } from '../data-grid/table'
 import { Toolbar } from '../data-grid/toolbar'
 
@@ -18,21 +17,20 @@ import { useToolbarEnd, useToolbarStart } from './toolbar-controls'
  * see `useToolbarStart` / `useToolbarEnd`, which is where that lives so all four presets gate
  * identically.
  *
- * **The two action bars go last, and where they go is now a layout's decision like any other.**
+ * **The action bar goes last, and where it goes is now a layout's decision like any other.**
  * That position is right for `floating`, which is the default: shadcn's floating bar is
  * positioned out of a zero-height *sticky* anchor, which has to sit after the rows it overlays
  * to overlay them, and while heroui portals its own to a fixed overlay — where tree position
- * changes nothing visually — document order still keeps both out of the tab order until there
+ * changes nothing visually — document order still keeps it out of the tab order until there
  * is something to act on. It is wrong for `selection: { bar: 'inline' }`, whose bar is a block
  * in the flow and belongs above the table — so a grid that asks for `inline` writes its own
- * layout and puts the two bars first:
+ * layout and puts the bar first:
  *
  * ```tsx
- * function InlineBarsLayout() {
+ * function InlineBarLayout() {
  *   return (
  *     <>
- *       <DataGrid.DraftBar />
- *       <DataGrid.SelectionBar />
+ *       <DataGrid.ActionBar />
  *       <DataGrid.Toolbar />
  *       <DataGrid.Table />
  *       <DataGrid.Pagination />
@@ -76,8 +74,7 @@ export function DefaultLayout() {
 			/>
 			<DataGridTable />
 			<Pagination />
-			<DraftBar />
-			<SelectionBar />
+			<ActionBar />
 		</>
 	)
 }

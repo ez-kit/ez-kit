@@ -103,7 +103,8 @@ export type SelectionBarConfig<TRow extends object = object> = FeatureToggle & {
 	 * for this over `selection.onChange`: that one fires after, with nothing left to report.
 	 *
 	 * To gate the clear itself — a confirmation before a large selection is discarded — draw
-	 * the bar yourself with `<DataGrid.SelectionBar>`; its render args carry `count`,
+	 * the bar yourself with `<DataGrid.ActionBar>`; its render args carry the selection
+	 * section's `count`,
 	 * `onClear` and the rest.
 	 */
 	onClear?: (args: SelectionBarCallbackArgs<TRow>) => void
@@ -120,7 +121,7 @@ export type SelectionBarConfig<TRow extends object = object> = FeatureToggle & {
 	 * `selectedRows`, `table` and `clearSelection`.
 	 *
 	 * Arbitrary markup that is not an action — a bulk-target select, a counter — goes in the
-	 * `start` / `end` slots of `<DataGrid.SelectionBar>`, the way `<DataGrid.Toolbar>` takes
+	 * `start` / `end` slots of `<DataGrid.ActionBar>`, the way `<DataGrid.Toolbar>` takes
 	 * its own: config carries data, the compound component carries markup.
 	 *
 	 * Return `[]` for a selection that offers nothing.
@@ -886,7 +887,7 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 	const messages = resolveMessages(messageOverrides)
 
 	// Split `selection` into the headless core part (`onChange` / `multi`) passed to
-	// createTable and the React-only `bar` stored on the instance for SelectionBar to read.
+	// createTable and the React-only `bar` stored on the instance for the ActionBar to read.
 	// `bar` is stripped so the core `selection` config never carries React-specific fields.
 	const selectionBar: boolean | ActionBarVariant | SelectionBarConfig<TRow> | undefined =
 		featureConfig(rawSelection)?.bar
@@ -1517,8 +1518,8 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 	// by every `setOptions`. Under `useTable` it is the **raw argument** — `useTable.js:68-72`
 	// overrides `options` in the object it returns with the `tableOptions` it was handed — and that
 	// is what the line above copies onto the view. About twenty sites in this package read
-	// `table.options.*` (`data-grid/body.tsx`, `toolbar.tsx`, `cell.tsx`, `selection-bar.tsx`,
-	// `creating-row.tsx`, `pagination.tsx`, `filter-panel.tsx`, `draft-bar.tsx`,
+	// `table.options.*` (`data-grid/body.tsx`, `toolbar.tsx`, `cell.tsx`, `action-bar.tsx`,
+	// `creating-row.tsx`, `pagination.tsx`, `filter-panel.tsx`,
 	// `render-filter-input.tsx`, …), so this is a package-wide contract change and not a detail.
 	//
 	// **What makes it safe** is the key-set diff above: the options object this hook hands

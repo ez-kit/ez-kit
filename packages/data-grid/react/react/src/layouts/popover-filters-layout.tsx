@@ -1,10 +1,9 @@
+import { ActionBar } from '../data-grid/action-bar'
 import { Body } from '../data-grid/body'
-import { DraftBar } from '../data-grid/draft-bar'
 import { Header } from '../data-grid/header'
 import { DataGridHeaderCell } from '../data-grid/header-cell'
 import { DataGridHeaderRow } from '../data-grid/header-row'
 import { Pagination } from '../data-grid/pagination'
-import { SelectionBar } from '../data-grid/selection-bar'
 import { DataGridTable } from '../data-grid/table'
 import { Toolbar } from '../data-grid/toolbar'
 
@@ -63,8 +62,7 @@ export function PopoverFiltersLayout() {
 				<Body />
 			</DataGridTable>
 			<Pagination />
-			<DraftBar />
-			<SelectionBar />
+			<ActionBar />
 		</>
 	)
 }

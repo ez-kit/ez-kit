@@ -1,6 +1,5 @@
+import { ActionBar } from '../data-grid/action-bar'
 import { BottomBar } from '../data-grid/bottom-bar'
-import { DraftBar } from '../data-grid/draft-bar'
-import { SelectionBar } from '../data-grid/selection-bar'
 import { DataGridTable } from '../data-grid/table'
 import { Toolbar } from '../data-grid/toolbar'
 
@@ -26,8 +25,7 @@ export function BottomBarLayout() {
 			/>
 			<DataGridTable />
 			<BottomBar />
-			<DraftBar />
-			<SelectionBar />
+			<ActionBar />
 		</>
 	)
 }

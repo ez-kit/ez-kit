@@ -6,78 +6,13 @@ import { renderGrid } from '../test-utils'
 
 import { DataGrid } from './data-grid'
 
-describe('DraftBar', () => {
-	it('is closed when nothing is pending', () => {
-		renderGrid({ draft: true, sorting: { manual: true } })
-
-		expect(screen.queryByTestId('draft-bar')).toBeNull()
-	})
-
-	it('opens with the pending counts once a sort is drafted', async () => {
-		const { table } = renderGrid({ draft: true, sorting: { manual: true } })
-
-		table.setSorting([{ id: 'age', desc: true }])
-
-		expect(await screen.findByTestId('draft-bar')).toBeInTheDocument()
-		expect(screen.getByTestId('draft-bar')).toHaveAttribute('data-pending-sorting', '1')
-	})
-
-	it('takes over the bar from the selection section while pending', async () => {
-		const { table } = renderGrid({ draft: true, sorting: { manual: true }, selection: true })
-		table.setRowSelection({ '1': true })
-
-		table.setSorting([{ id: 'age', desc: true }])
-
-		const bar = await screen.findByTestId('draft-bar')
-		expect(bar).toHaveAttribute('data-selected-count', '1')
-		expect(screen.queryByTestId('selection-bar')).toBeNull()
-	})
-
-	it('renders the same variant the selection bar is configured with', async () => {
-		const { table } = renderGrid({
-			draft: true,
-			sorting: { manual: true },
-			selection: { bar: { variant: 'inline' } },
-		})
-		table.setRowSelection({ '1': true })
-
-		// The selection bar owns the bar first — read the variant it actually rendered with.
-		const selectionBar = await screen.findByTestId('selection-bar')
-		expect(selectionBar).toHaveAttribute('data-variant', 'inline')
-
-		table.setSorting([{ id: 'age', desc: true }])
-
-		// The draft section takes over the same bar; it must not change shape doing so.
-		const draftBar = await screen.findByTestId('draft-bar')
-		expect(draftBar).toHaveAttribute('data-variant', 'inline')
-	})
-
-	it('falls back to the floating variant when the panel config omits one', async () => {
-		const { table } = renderGrid({ draft: true, sorting: { manual: true }, selection: true })
-
-		table.setSorting([{ id: 'age', desc: true }])
-
-		expect(await screen.findByTestId('draft-bar')).toHaveAttribute('data-variant', 'floating')
-	})
-
-	it('applies the draft when Apply is pressed', async () => {
-		const { table } = renderGrid({ draft: true, sorting: { manual: true } })
-		table.setSorting([{ id: 'age', desc: true }])
-
-		await userEvent.click(await screen.findByRole('button', { name: /apply/i }))
-
-		expect(table.draft.isDirty()).toBe(false)
-	})
-
-	it('restores the applied query when Reset is pressed', async () => {
-		const { table } = renderGrid({ draft: true, sorting: { manual: true } })
-		table.setSorting([{ id: 'age', desc: true }])
-
-		await userEvent.click(await screen.findByRole('button', { name: /reset/i }))
-
-		expect(table.store.state.sorting).toEqual([])
-	})
-
+/**
+ * Draft behaviour that is not the action bar's: the keyboard shortcut that commits a whole
+ * draft, and the DOM marks a pending draft leaves on the controls it came from. They moved
+ * here when `draft-bar.tsx` became a section of `action-bar.tsx` — the bar's own cases live
+ * in `action-bar.test.tsx`.
+ */
+describe('applying a draft from a filter input', () => {
 	it('applies the whole draft when Enter is pressed in a filter input', async () => {
 		const { table } = renderGrid({
 			draft: true,

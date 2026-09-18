@@ -852,28 +852,58 @@ export const ActionBarVariant = {
  */
 export type ActionBarVariant = (typeof ActionBarVariant)[keyof typeof ActionBarVariant]
 
-export type SelectionBarProps = {
-	/** False when 0 rows selected — component should hide/animate out. */
+/**
+ * The one action bar, with a section per live concern.
+ *
+ * Both sections are live at once and divided by a separator — selection on the start side,
+ * draft on the end side, so `Apply` (the bar's only primary) lands at the far end. The two
+ * used to be independent components, each drawing a whole bar and kept apart by a gate that
+ * only re-ran on a selection change; a draft edit changes no selection, so they overlapped.
+ * One component with one surface is what removes that class of defect.
+ */
+export type ActionBarProps = {
+	/**
+	 * False when neither section has anything to show — the kit may animate out.
+	 *
+	 * Independent of the sections being present: shadcn's floating bar animates out rather
+	 * than unmounting and needs the last count to render while it does, so a `selection`
+	 * section with `count: 0` is normal while the bar is closing.
+	 */
 	open: boolean
+	/**
+	 * Render mode the consumer requested, resolved from `selection.bar.variant` — one value
+	 * for the one bar.
+	 * - `'floating'` (default) — sticky/positioned bar, may overlay content.
+	 * - `'inline'` — rendered in normal document flow.
+	 */
+	variant: ActionBarVariant
+	/** Absent when selection is off, `bar: false`, or the grid registered no selection feature. */
+	selection?: ActionBarSelectionSection
+	/** Absent when `draft` is off or the draft is clean. */
+	draft?: ActionBarDraftSection
+}
+
+/**
+ * The selection half of the bar: what is selected and what can be done to it.
+ *
+ * Live while a draft is pending. The selection is valid against the **applied** query — the
+ * one the user is looking at — and the set only goes stale after Apply, which
+ * `table.draft.apply()` already handles by clearing the selection in the same state change.
+ */
+export type ActionBarSelectionSection = {
 	/** Number of currently selected rows. */
 	count: number
 	selectedRows: Row<GridFeatures, ErasedRow>[]
-	/**
-	 * Render mode the consumer requested.
-	 * - `'floating'` (default) — sticky/positioned bar, may overlay content.
-	 * - `'inline'` — rendered in normal document flow (between Toolbar and Table).
-	 */
-	variant: ActionBarVariant
-	/**
-	 * Pre-bound delete handler. Only present when `onDelete` was configured.
-	 * When absent — Delete button must NOT be rendered.
-	 */
-	onDelete?: () => void
 	/**
 	 * Pre-bound clear handler.
 	 * If user did not provide `onClear`, this calls `table.resetRowSelection()`.
 	 */
 	onClear: () => void
+	/**
+	 * Confirmation-aware bulk delete. Absent when `deleting.bulk` is off, and the Delete
+	 * control must then not be rendered.
+	 */
+	onDelete?: () => void
 	/**
 	 * Custom action entries from `selection.bar.actions`, already resolved against the current
 	 * selection and namespaced. Rendered as buttons beside the built-in Delete, with the same
@@ -885,40 +915,26 @@ export type SelectionBarProps = {
 	 */
 	actions?: GridMenuItem[]
 	/**
-	 * Markup from the `start` / `end` slots of `<DataGrid.SelectionBar>`, rendered as-is at
-	 * either end of the bar's controls. This is the escape hatch for content that is not an
-	 * action — a bulk-target select, a counter — which `actions` deliberately cannot express.
+	 * Markup from the `start` / `end` slots of `<DataGrid.ActionBar>`, rendered as-is around
+	 * this section's controls. This is the escape hatch for content that is not an action — a
+	 * bulk-target select, a counter — which `actions` deliberately cannot express.
+	 *
+	 * They feed the selection section rather than the bar's two ends: their documented purpose
+	 * is content about the selection, and the draft section has a fixed shape.
 	 */
 	start?: ReactNode
-	/** See {@link SelectionBarProps.start}. */
+	/** See {@link ActionBarSelectionSection.start}. */
 	end?: ReactNode
 }
 
-/**
- * Pending-draft section of the shared action bar (`draft`).
- *
- * While a draft is pending this section owns the bar and the selection section
- * stands down — see `<DraftBar>`. `selectedCount` is therefore rendered as a
- * **non-interactive** context chip, never as a handle for bulk actions.
- */
-export type DraftBarProps = {
-	/** False when nothing is pending — component should hide/animate out. */
-	open: boolean
+/** The pending-draft half of the bar: what is unapplied, and the two ways out of it. */
+export type ActionBarDraftSection = {
 	/**
 	 * How much is pending on each deferred axis, keyed by {@link DraftAxis}. The core
 	 * {@link PendingCount} verbatim, rather than a hand-written twin that spelled the same three
 	 * axes `sorting` / `filters` / `search`.
 	 */
 	pending: PendingCount
-	/** Rendered as a non-interactive context chip when rows are selected. */
-	selectedCount: number
-	/**
-	 * Render mode the consumer requested — always the same value `SelectionBarProps.variant`
-	 * receives, because the two sections share one bar.
-	 * - `'floating'` (default) — sticky/positioned bar, may overlay content.
-	 * - `'inline'` — rendered in normal document flow (between Toolbar and Table).
-	 */
-	variant: ActionBarVariant
 	/** Apply the pending draft — emits one state change for the whole query. */
 	onApply: () => void
 	/** Discard the pending draft and restore the applied query. */
@@ -977,8 +993,7 @@ export type GridComponentRegistry = {
 	FilterPanelChip?: ComponentType<FilterPanelChipProps>
 	FilterChip?: ComponentType<FilterChipProps>
 	ClearFilterButton?: ComponentType<ClearFilterButtonProps>
-	SelectionBar?: ComponentType<SelectionBarProps>
-	DraftBar?: ComponentType<DraftBarProps>
+	ActionBar?: ComponentType<ActionBarProps>
 	ConfirmDialog?: ComponentType<ConfirmDialogProps>
 	OperatorSelect?: ComponentType<OperatorSelectProps>
 	BetweenInput?: ComponentType<BetweenInputProps>

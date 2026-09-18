@@ -363,17 +363,17 @@ describe('<DataGrid>', () => {
 		})
 	})
 
-	describe('selection bar layout', () => {
-		// Both <Toolbar> and <SelectionBar> share role="toolbar"; SelectionBar additionally
-		// carries data-slot="selection-bar", so we compare DOM order between the SelectionBar
-		// (by data-slot) and the *other* role="toolbar" element (the real Toolbar).
-		function getBarAndToolbar(): { selectionBar: HTMLElement; toolbar: HTMLElement } {
-			const selectionBar = document.querySelector('[data-slot="selection-bar"]')
-			if (!(selectionBar instanceof HTMLElement)) throw new Error('expected [data-slot="selection-bar"]')
+	describe('action bar layout', () => {
+		// Both <Toolbar> and <ActionBar> share role="toolbar"; the bar additionally carries
+		// data-slot="action-bar", so we compare DOM order between the bar (by data-slot) and
+		// the *other* role="toolbar" element (the real Toolbar).
+		function getBarAndToolbar(): { actionBar: HTMLElement; toolbar: HTMLElement } {
+			const actionBar = document.querySelector('[data-slot="action-bar"]')
+			if (!(actionBar instanceof HTMLElement)) throw new Error('expected [data-slot="action-bar"]')
 			const toolbars = Array.from(document.querySelectorAll('[role="toolbar"]'))
-			const toolbar = toolbars.find((el) => el.getAttribute('data-slot') !== 'selection-bar')
-			if (!(toolbar instanceof HTMLElement)) throw new Error('expected the non-selection-bar [role="toolbar"]')
-			return { selectionBar, toolbar }
+			const toolbar = toolbars.find((el) => el.getAttribute('data-slot') !== 'action-bar')
+			if (!(toolbar instanceof HTMLElement)) throw new Error('expected the non-action-bar [role="toolbar"]')
+			return { actionBar, toolbar }
 		}
 
 		function renderWithVariant(variant: ActionBarVariant) {
@@ -392,19 +392,19 @@ describe('<DataGrid>', () => {
 		/**
 		 * Where the bar renders is the layout's decision, not `selection.bar.variant`'s — so the
 		 * bound preset puts it after the toolbar under **both** variants. It used to branch, through
-		 * a `GridShell` wrapper that read the variant and placed the two bars for you; that was the
+		 * a `GridShell` wrapper that read the variant and placed the bars for you; that was the
 		 * last placement option left standing, and it is gone.
 		 *
 		 * The variant still decides what the kit *renders* (an in-flow strip against an overlay),
-		 * which is why `inline` wants the bars written first — the arrangement `presets.test.tsx`
+		 * which is why `inline` wants the bar written first — the arrangement `presets.test.tsx`
 		 * covers, since it takes a layout of its own.
 		 */
 		it.each([ActionBarVariant.Inline, ActionBarVariant.Floating])(
-			'renders the %s SelectionBar after the Toolbar, as the bound layout writes it',
+			'renders the %s ActionBar after the Toolbar, as the bound layout writes it',
 			(variant) => {
-				const { selectionBar, toolbar } = renderWithVariant(variant)
+				const { actionBar, toolbar } = renderWithVariant(variant)
 
-				expect(toolbar.compareDocumentPosition(selectionBar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+				expect(toolbar.compareDocumentPosition(actionBar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 			},
 		)
 	})

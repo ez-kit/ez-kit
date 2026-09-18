@@ -55,7 +55,7 @@ export function pickState(
  * (probed: `applied.sorting !== state.sorting` with both `[]`). Together they reported a pending
  * draft for every grid whose feature set includes `draftFeature`. `table.draft.isDirty()` is the
  * answer core already owns — it compares by value and returns `false` when deferral is off — and
- * is what `<DraftBar>` and `<SelectionBar>` in this package already ask.
+ * is what `<ActionBar>` in this package already asks.
  */
 function pickDraft(state: TableState<GridFeatures>): Partial<AppliedState> {
 	return { sorting: state.sorting, columnFilters: state.columnFilters, globalFilter: state.globalFilter }

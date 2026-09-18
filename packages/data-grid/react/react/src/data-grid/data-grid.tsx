@@ -6,6 +6,7 @@ import { GridComponentsProvider, useGridComponents } from '../components-context
 import { GridFactoryDefaultsProvider } from '../data-grid-options-context'
 import { useDataGrid, type UseDataGridConfig } from '../use-data-grid'
 
+import { ActionBar, buildSelectionBarArgs } from './action-bar'
 import { ActiveFiltersBar } from './active-filters-bar'
 import { Body } from './body'
 import { BottomBar } from './bottom-bar'
@@ -15,7 +16,6 @@ import { ColumnFilter } from './column-filter'
 import { ComponentGuard } from './component-guard'
 import { CreateTrigger } from './create-trigger'
 import { CreatingModal } from './creating-modal'
-import { DraftBar } from './draft-bar'
 import { EditingModal } from './editing-modal'
 import { EmptyStateRow } from './empty-state-row'
 import { FilterPanel } from './filter-panel'
@@ -31,7 +31,6 @@ import { NoResultsRow } from './no-results-row'
 import { PageSizer } from './page-sizer'
 import { Pagination } from './pagination'
 import { DataGridRow } from './row'
-import { SelectionBar, buildSelectionBarArgs } from './selection-bar'
 import { SortMenuTrigger } from './sort-menu-trigger'
 import { DataGridTable } from './table'
 import { TableProvider, useDataGridTable, useDataGridState } from './table-context'
@@ -470,8 +469,7 @@ export type DataGridStatics = {
 	PageSizer: typeof PageSizer
 	BottomBar: typeof BottomBar
 	ColumnFilter: typeof ColumnFilter
-	SelectionBar: typeof SelectionBar
-	DraftBar: typeof DraftBar
+	ActionBar: typeof ActionBar
 	CreateTrigger: typeof CreateTrigger
 	VisibilityTrigger: typeof VisibilityTrigger
 	SortMenuTrigger: typeof SortMenuTrigger
@@ -541,8 +539,7 @@ export const DataGrid: DataGridType = /* @__PURE__ */ Object.assign(DataGridRoot
 	PageSizer,
 	BottomBar,
 	ColumnFilter,
-	SelectionBar,
-	DraftBar,
+	ActionBar,
 	CreateTrigger,
 	VisibilityTrigger,
 	SortMenuTrigger,
