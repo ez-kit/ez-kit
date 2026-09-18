@@ -2,6 +2,7 @@ import { Button } from '@grid-shadcn/components/ui/button'
 import { Input } from '@grid-shadcn/components/ui/input'
 import { Table, TableBody, TableHeader, TableRow } from '@grid-shadcn/components/ui/table'
 
+import { ActionBar } from '../action-bar/ActionBar'
 import { NumberInput } from '../editing/NumberInput'
 
 import { Checkbox } from './Checkbox'
@@ -41,4 +42,7 @@ export const coreComponents: FullGridComponents['core'] = {
 	Menu,
 	NumberInput,
 	Modal,
+	// `core`, not a `selection` or `draft` group: a grid with `draft` and no row-selection
+	// feature still renders the bar, so it must not depend on a kit advertising selection.
+	ActionBar,
 }

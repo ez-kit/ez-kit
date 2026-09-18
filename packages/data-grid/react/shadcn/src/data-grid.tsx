@@ -6,7 +6,6 @@ import { createDataGrid, DefaultLayout } from '@ez-kit/data-grid-react'
 import { cellTypes } from './blocks/cell-types'
 import { coreComponents } from './blocks/core/core-components'
 import { deletingComponents } from './blocks/deleting/deleting-components'
-import { draftComponents } from './blocks/draft/draft-components'
 import { editingComponents } from './blocks/editing/editing-components'
 import { expandingComponents } from './blocks/expanding/expanding-components'
 import { fallbacksComponents } from './blocks/fallbacks/fallbacks-components'
@@ -15,7 +14,6 @@ import { infiniteComponents } from './blocks/infinite/infinite-components'
 import { paginationComponents } from './blocks/pagination/pagination-components'
 import { resizingComponents } from './blocks/resizing/resizing-components'
 import { rowActionsComponents } from './blocks/row-actions/row-actions-components'
-import { selectionComponents } from './blocks/selection/selection-components'
 import { sortingComponents } from './blocks/sorting/sorting-components'
 import { visibilityComponents } from './blocks/visibility/visibility-components'
 
@@ -44,8 +42,6 @@ const components = {
 	filtering: filteringComponents,
 	editing: editingComponents,
 	deleting: deletingComponents,
-	selection: selectionComponents,
-	draft: draftComponents,
 	rowActions: rowActionsComponents,
 	resizing: resizingComponents,
 	visibility: visibilityComponents,
@@ -59,7 +55,7 @@ const components = {
  * the most.
  *
  * Naming it pulls all fourteen groups into the bundle: the filter panel, both write forms, the
- * confirm dialog, the selection and draft bars, the resizer, the visibility menu. That is the
+ * confirm dialog, the resizer, the visibility menu. That is the
  * right trade when a grid uses most of them, and the wrong one when it uses four. Composing the
  * groups a grid actually renders is what the per-feature subpaths are for — see
  * `@ez-kit/data-grid-<kit>/core`, `/sorting`, `/pagination` and the rest.
