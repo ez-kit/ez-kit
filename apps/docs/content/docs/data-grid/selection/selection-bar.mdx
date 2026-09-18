@@ -1,10 +1,11 @@
 ---
-title: Action Bar
+title: Selection Bar
 description: The grid's one floating or inline bar, with a live section per concern — the selection and its bulk actions, and the pending draft.
 ---
 
-When at least one row is selected, `<DataGrid.ActionBar />` shows a bar that operates on the
-selection set.
+`<DataGrid.ActionBar />` raises a bar as soon as there is something to act on: a row is selected,
+or the draft is dirty. Either alone is enough — a grid with `draft` and no selection feature still
+gets the bar.
 
 It is **one** component with a section per concern — the selection, and the pending
 [draft](/docs/data-grid/state/deferred-apply) — so `children` receives `{ open, variant, selection,
