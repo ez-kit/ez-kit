@@ -189,7 +189,10 @@ function SelectionSection({ selection, inline }: { selection: ActionBarSelection
 				/*
 				 * The slot goes on a wrapper rather than on the `Chip`, because `Chip` spreads the
 				 * caller's props and *then* writes its own `data-slot='chip'` over them — the grid's
-				 * name never reaches the DOM. The shadcn kit stamps the slot on its count element
+				 * name never reaches the DOM. Note `Chip.Label` spreads props *after* its own
+				 * `data-slot`, so it would keep the name; the asymmetry is upstream's and is not
+				 * something to rely on, which is why this wrapper exists rather than being
+				 * "simplified" into a slot on either element. The shadcn kit stamps it on its count
 				 * directly, and a selector has to find the number in both kits: `e2e-slots.test.ts`
 				 * only asks whether *some* package authors a slot, so a spec addressing this one
 				 * would pass against shadcn and match nothing here.
