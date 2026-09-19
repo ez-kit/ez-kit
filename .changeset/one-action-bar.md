@@ -51,3 +51,10 @@ heroui kit's `./selection` and `./draft` subpath exports are removed for the sam
 
 Unchanged: `selection.bar` and everything under it, including `variant` — the config key never
 moved, and it still says what the bar _looks_ like while the layout says where it goes.
+
+The shadcn registry item served from this site loses one file: `components/ui/action-bar.tsx`, a
+primitive nothing in that kit ever imported — not the old `SelectionBar`, not the `ActionBar` that
+replaced it. Nothing breaks by its absence, and a project that already ran `npx shadcn add` keeps
+its copy; re-running the command simply stops copying 644 lines of dead code, and stops declaring
+the `action-bar-group` / `action-bar-item` slots that kit never renders. The HeroUI kit keeps its
+own counterpart, which its bar genuinely uses.
