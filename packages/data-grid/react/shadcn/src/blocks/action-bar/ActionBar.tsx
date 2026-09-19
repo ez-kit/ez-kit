@@ -229,14 +229,21 @@ function DraftSection({ draft }: { draft: ActionBarDraftSection }) {
  * valid against the **applied** query, and `table.draft.apply()` clears it in the same state
  * change that could make it stale.
  *
- * **Not built on `components/ui/action-bar.tsx`, deliberately.** That primitive's root portals
- * into `document.body`, positions itself `fixed` against the viewport and returns `null` while
- * closed. All three fight this bar's requirements: `inline` is an in-flow strip (no portal, no
- * fixed positioning), `floating` overlays the grid's own last rows out of a zero-height sticky
- * anchor rather than the viewport, and `open: false` has to keep rendering so the floating bar
- * can animate out — which is the whole reason `open` is a prop independent of the sections. The
- * design permits this fallback explicitly: what it requires is the section split and the single
- * surface, not a particular primitive.
+ * **Hand-rolled from `Button` and plain elements, and it has to be.** Three of this bar's
+ * requirements rule out the portal-and-overlay shape an action-bar primitive normally takes:
+ * `inline` is an in-flow strip, so no portal; `floating` overlays the grid's own last rows out
+ * of a zero-height sticky anchor rather than the viewport, so no `fixed`; and `open: false` has
+ * to keep rendering so the floating variant can animate out with its last count, so no
+ * `return null` while closed — which is the whole reason `open` is a prop independent of the
+ * sections. The design requires the section split and the single surface, not a particular
+ * primitive.
+ *
+ * The kit did carry such a primitive, `components/ui/action-bar.tsx` — portal, `fixed`,
+ * `return null` — written but never wired up by either this bar or the `SelectionBar` before
+ * it. It was deleted rather than left as a decoy: it shipped in the registry payload, so every
+ * `npx shadcn add` copied it, and it authored `action-bar-group` / `action-bar-item`, slots
+ * this kit never puts in the DOM. HeroUI keeps its own copy because HeroUI's bar does portal to
+ * a fixed overlay; the divergence is real, not an oversight.
  */
 export function ActionBar({ open, variant, selection, draft }: ActionBarProps) {
 	// While the bar closes there is, by definition, nothing to act on — but the chrome stays so
