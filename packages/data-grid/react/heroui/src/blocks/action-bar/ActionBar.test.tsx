@@ -262,6 +262,21 @@ describe('ActionBar (heroui)', () => {
 		fireEvent.click(action)
 		expect(onAction).toHaveBeenCalledTimes(1)
 	})
+
+	/*
+	 * Read from the rendered DOM, not from the props passed: `Chip` spreads the caller's props and
+	 * then writes its own `data-slot='chip'` over them, so passing the slot to it looks right in
+	 * the source and is gone by the time a selector runs. And `e2e-slots.test.ts` cannot catch
+	 * that — it only asks whether *some* package authors a slot, so the shadcn kit alone would
+	 * satisfy it while a spec silently matched nothing in this one.
+	 */
+	it.each(['floating', 'inline'] as const)('names the selection count in the %s variant', (variant) => {
+		const { container } = render(<ActionBar {...makeProps({ variant, selection: makeSelection({ count: 3 }) })} />)
+
+		const count = container.querySelector('[data-slot="action-bar-selection-count"]')
+		expect(count).not.toBeNull()
+		expect(count).toHaveTextContent('3')
+	})
 })
 
 describe('FilterChip draft mark (heroui)', () => {

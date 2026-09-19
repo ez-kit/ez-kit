@@ -179,18 +179,27 @@ function SelectionSection({ selection, inline }: { selection: ActionBarSelection
 		>
 			{inline ? (
 				<span
+					data-slot='action-bar-selection-count'
 					aria-label={messages.selection.count({ count })}
 					className='font-medium tabular-nums'
 				>
 					{count}
 				</span>
 			) : (
-				<Chip
+				/*
+				 * The slot goes on a wrapper rather than on the `Chip`, because `Chip` spreads the
+				 * caller's props and *then* writes its own `data-slot='chip'` over them — the grid's
+				 * name never reaches the DOM. The shadcn kit stamps the slot on its count element
+				 * directly, and a selector has to find the number in both kits: `e2e-slots.test.ts`
+				 * only asks whether *some* package authors a slot, so a spec addressing this one
+				 * would pass against shadcn and match nothing here.
+				 */
+				<span
+					data-slot='action-bar-selection-count'
 					aria-label={messages.selection.count({ count })}
-					className='tabular-nums'
 				>
-					{count}
-				</Chip>
+					<Chip className='tabular-nums'>{count}</Chip>
+				</span>
 			)}
 			{hasActions && <BarSeparator inline={inline} />}
 			{start}

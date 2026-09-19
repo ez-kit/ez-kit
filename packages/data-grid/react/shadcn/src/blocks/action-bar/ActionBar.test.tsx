@@ -246,6 +246,19 @@ describe('ActionBar (shadcn)', () => {
 		fireEvent.click(close!)
 		expect(onClear).toHaveBeenCalledTimes(1)
 	})
+
+	/*
+	 * The heroui kit has the same assertion. Both are needed because `e2e-slots.test.ts` only asks
+	 * whether *some* package authors a slot, so one kit stamping it lets a spec pass while matching
+	 * nothing in the other.
+	 */
+	it.each(['floating', 'inline'] as const)('names the selection count in the %s variant', (variant) => {
+		const { container } = render(<ActionBar {...makeProps({ variant, selection: makeSelection({ count: 3 }) })} />)
+
+		const count = container.querySelector('[data-slot="action-bar-selection-count"]')
+		expect(count).not.toBeNull()
+		expect(count).toHaveTextContent('3')
+	})
 })
 
 describe('FilterChip draft mark (shadcn)', () => {
