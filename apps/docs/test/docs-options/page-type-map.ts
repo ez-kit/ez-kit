@@ -155,7 +155,7 @@ export const DocPage = {
 	RowActionsIndex: 'content/docs/data-grid/row-actions/index.mdx',
 	PinningRows: 'content/docs/data-grid/pinning/rows.mdx',
 	SelectionIndex: 'content/docs/data-grid/selection/index.mdx',
-	SelectionSelectionBar: 'content/docs/data-grid/selection/selection-bar.mdx',
+	SelectionActionBar: 'content/docs/data-grid/selection/action-bar.mdx',
 	Sorting: 'content/docs/data-grid/sorting.mdx',
 	StateIndex: 'content/docs/data-grid/state/index.mdx',
 	Virtualization: 'content/docs/data-grid/virtualization.mdx',
@@ -1084,7 +1084,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		nonOptionTables: [],
 	},
 	{
-		page: DocPage.SelectionSelectionBar,
+		page: DocPage.SelectionActionBar,
 		// The table's rows are bare keys of `selection.bar`, so the governing type is the
 		// panel config itself rather than the grid root.
 		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.SelectionBarConfig], expectedCount: 3 }],

@@ -201,7 +201,7 @@ export const FEATURE_MATRIX: readonly FeatureRow[] = [
 		feature: 'Action bar / bulk actions',
 		description: 'Contextual action bar that appears when rows are selected for bulk operations.',
 		status: FeatureStatus.Done,
-		doc: 'selection/selection-bar',
+		doc: 'selection/action-bar',
 	},
 	{
 		category: 'Rows & Selection',
