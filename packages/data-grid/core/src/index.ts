@@ -69,7 +69,13 @@ export { GridMenuIcon, isGridMenuIcon } from './menu-icon'
 
 // Every user-facing string, and the English dictionary that is their default
 export { defaultMessages, resolveMessages } from './messages'
-export type { CountContext, FilterPlaceholderContext, GridMessages, PartialGridMessages } from './messages'
+export type {
+	CountContext,
+	DraftSummaryContext,
+	FilterPlaceholderContext,
+	GridMessages,
+	PartialGridMessages,
+} from './messages'
 
 // System column IDs
 export { ACTIONS_COLUMN_ID, EXPAND_COLUMN_ID, SELECTION_COLUMN_ID } from './system-columns'
