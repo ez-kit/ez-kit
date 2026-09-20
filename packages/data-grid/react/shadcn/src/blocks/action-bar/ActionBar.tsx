@@ -1,7 +1,7 @@
 'use client'
 
-import { ActionBarVariant, isGridMenuItemSlot, useGridMessages } from '@ez-kit/data-grid-react/kit'
-import { Check, RotateCcw, X } from 'lucide-react'
+import { ActionBarVariant, isGridMenuItemSlot, useGridComponents, useGridMessages } from '@ez-kit/data-grid-react/kit'
+import { ArrowDownUp, Check, Filter, RotateCcw, Search, X } from 'lucide-react'
 import { Fragment } from 'react'
 
 import { Button } from '@grid-shadcn/components/ui/button'
@@ -19,7 +19,19 @@ import type {
 } from '@ez-kit/data-grid-react'
 import type { ReactNode } from 'react'
 
-type PendingPart = { axis: string; label: string }
+/**
+ * One pending axis, in both forms the bar needs: the glyph and number it shows, and the worded
+ * segment it puts in the section's accessible name and its tooltip.
+ */
+type PendingPart = {
+	axis: string
+	/** The long form — `2 sorts`, from the dictionary. */
+	label: string
+	/** The short form's glyph. This kit's own choice, like every other icon it draws. */
+	icon: ReactNode
+	/** The short form's number, absent where there is nothing to count. */
+	count?: number
+}
 
 /** The thin rule between two groups of controls. Vertical in a horizontal bar. */
 function Separator() {
@@ -84,13 +96,28 @@ function pendingParts(pending: ActionBarDraftSection['pending'], messages: GridM
 
 	// The wording — including the plural rule, which is the language's and not the grid's —
 	// comes from the dictionary entry for each axis.
-	if (pending.sorting > 0) parts.push({ axis: 'sorting', label: messages.sorts({ count: pending.sorting }) })
+	if (pending.sorting > 0) {
+		parts.push({
+			axis: 'sorting',
+			label: messages.sorts({ count: pending.sorting }),
+			icon: <ArrowDownUp className='size-3' />,
+			count: pending.sorting,
+		})
+	}
 	if (pending.columnFilters > 0) {
-		parts.push({ axis: 'columnFilters', label: messages.filters({ count: pending.columnFilters }) })
+		parts.push({
+			axis: 'columnFilters',
+			label: messages.filters({ count: pending.columnFilters }),
+			icon: <Filter className='size-3' />,
+			count: pending.columnFilters,
+		})
 	}
 
-	// Only ever 0 or 1 — a single value, so it lists as a bare word rather than "1 search".
-	if (pending.globalFilter > 0) parts.push({ axis: 'globalFilter', label: messages.search })
+	// Only ever 0 or 1, so the short form is the glyph alone and the long form a bare word
+	// rather than "1 search" — a count here would say nothing the glyph does not.
+	if (pending.globalFilter > 0) {
+		parts.push({ axis: 'globalFilter', label: messages.search, icon: <Search className='size-3' /> })
+	}
 
 	return parts
 }
@@ -161,7 +188,45 @@ function SelectionSection({ selection }: { selection: ActionBarSelectionSection 
 /** What is unapplied and the two ways out of it — the end side of the bar. */
 function DraftSection({ draft }: { draft: ActionBarDraftSection }) {
 	const messages = useGridMessages()
+	// `FullGridComponents` types every group as present, but the context's default registry is
+	// an empty object wearing that type — so a bar rendered outside a provider (this kit's own
+	// unit tests, most obviously) would destructure `undefined` and crash on a decoration.
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- see above
+	const Tooltip = useGridComponents().core?.Tooltip
 	const parts = pendingParts(draft.pending, messages.draft)
+
+	// The long form, and the only place the axes are named in words. `pending` covers the case
+	// the bar cannot enumerate: `draft.isDirty()` is what mounts this section, and a dirty draft
+	// with every pending count at zero would otherwise be labelled with an empty list.
+	const summary =
+		parts.length > 0
+			? messages.draft.summary({ label: messages.draft.label, parts: parts.map((part) => part.label) })
+			: messages.draft.pending
+
+	// The short form: the label, then a glyph and a number per axis. It shares the bar with the
+	// selection section, so it says as little as fits and hands the rest to `summary` — which is
+	// both this element's tooltip and the section's accessible name, so a reader who cannot
+	// hover is not the one paying for the brevity.
+	const shortForm = (
+		<div className='flex items-center gap-1.5 pr-1 pl-1 text-sm'>
+			<span className='font-medium text-[0.6875rem] text-muted-foreground uppercase tracking-wider'>
+				{messages.draft.label}
+			</span>
+
+			{parts.map((part) => (
+				<span
+					key={part.axis}
+					data-slot='action-bar-draft-part'
+					data-axis={part.axis}
+					aria-hidden='true'
+					className='flex items-center gap-0.5 rounded-sm border border-dashed px-1 py-0.5 text-muted-foreground text-xs tabular-nums'
+				>
+					{part.icon}
+					{part.count}
+				</span>
+			))}
+		</div>
+	)
 
 	return (
 		// `role='group'`: the draft's accessible name belongs to this section rather than to the
@@ -170,25 +235,12 @@ function DraftSection({ draft }: { draft: ActionBarDraftSection }) {
 		<div
 			role='group'
 			data-slot='action-bar-draft'
-			aria-label={messages.draft.pending}
+			aria-label={summary}
 			className='flex flex-row items-center gap-2'
 		>
-			<div className='flex items-center gap-1.5 pr-1 pl-1 text-sm'>
-				<span className='font-medium text-[0.6875rem] text-muted-foreground uppercase tracking-wider'>
-					{messages.draft.label}
-				</span>
-
-				{parts.map((part) => (
-					<span
-						key={part.axis}
-						data-slot='action-bar-draft-part'
-						data-axis={part.axis}
-						className='rounded-sm border border-dashed px-1.5 py-0.5 text-muted-foreground text-xs tabular-nums'
-					>
-						{part.label}
-					</span>
-				))}
-			</div>
+			{/* Optional slot: a kit that registers no tooltip shows the short form alone, and the
+			    summary is still on the section above. */}
+			{Tooltip ? <Tooltip content={summary}>{shortForm}</Tooltip> : shortForm}
 
 			<Button
 				variant='ghost'
@@ -219,8 +271,12 @@ function DraftSection({ draft }: { draft: ActionBarDraftSection }) {
  * section per concern:
  *
  * ```
- * [2] ┃ [Delete] [actions] [×]  ┃  DRAFT [2 sorts] [1 filter]  [Reset] [✓ Apply]
+ * [2] ┃ [Delete] [actions] [×]  ┃  UNAPPLIED [⇅2] [▽1]  [Reset] [✓ Apply]
  * ```
+ *
+ * The draft's axes are a glyph and a number each because the two sections share one bar; the
+ * words are in the section's `aria-label` and in the tooltip over them, which is the same
+ * string.
  *
  * Selection on the start side, draft on the end side, so `Apply` — the bar's only primary —
  * lands at the far end. This replaces two components (`SelectionBar` and `DraftBar`) that each

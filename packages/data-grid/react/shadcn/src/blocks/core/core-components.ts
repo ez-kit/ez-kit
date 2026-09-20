@@ -13,6 +13,7 @@ import { Td } from './Td'
 import { Tfoot } from './Tfoot'
 import { Th } from './Th'
 import { Toolbar } from './Toolbar'
+import { Tooltip } from './Tooltip'
 
 import type { FullGridComponents } from '@ez-kit/data-grid-react'
 
@@ -42,6 +43,7 @@ export const coreComponents: FullGridComponents['core'] = {
 	Menu,
 	NumberInput,
 	Modal,
+	Tooltip,
 	// `core`, not a `selection` or `draft` group: a grid with `draft` and no row-selection
 	// feature still renders the bar, so it must not depend on a kit advertising selection.
 	ActionBar,

@@ -9,6 +9,7 @@ import { Modal } from './Modal'
 import { Root } from './Root'
 import { Table, TableScroll, Tbody, Td, Tfoot, Th, Thead, Tr } from './table-adapters'
 import { Toolbar } from './Toolbar'
+import { Tooltip } from './Tooltip'
 
 import type { FullGridComponents } from '@ez-kit/data-grid-react'
 
@@ -40,4 +41,5 @@ export const coreComponents: FullGridComponents['core'] = {
 	Menu,
 	NumberInput,
 	Modal,
+	Tooltip,
 }

@@ -1,3 +1,4 @@
+import { GridComponentsProvider } from '@ez-kit/data-grid-react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -5,7 +6,12 @@ import { FilterChip } from '../filtering/FilterChip'
 
 import { ActionBar } from './ActionBar'
 
-import type { ActionBarDraftSection, ActionBarProps, ActionBarSelectionSection } from '@ez-kit/data-grid-react'
+import type {
+	ActionBarDraftSection,
+	ActionBarProps,
+	ActionBarSelectionSection,
+	TooltipProps,
+} from '@ez-kit/data-grid-react'
 
 function makeDraft(overrides: Partial<ActionBarDraftSection> = {}): ActionBarDraftSection {
 	return {
@@ -92,7 +98,54 @@ describe('ActionBar (shadcn)', () => {
 		// `role='group'` is what makes the name reach assistive technology at all.
 		const draft = bar.querySelector('[data-slot="action-bar-draft"]')
 		expect(draft).toHaveAttribute('role', 'group')
-		expect(draft).toHaveAttribute('aria-label', 'Pending changes')
+		// The long form: the short one on screen is a glyph and a number per axis, so the words
+		// have to be somewhere, and the name is where a screen reader looks for them.
+		expect(draft).toHaveAttribute('aria-label', 'Unapplied: 1 sort, 2 filters')
+	})
+
+	it('shows a count per pending axis and hides it from the name it duplicates', () => {
+		render(
+			<ActionBar
+				{...makeProps({ draft: makeDraft({ pending: { sorting: 2, columnFilters: 1, globalFilter: 1 } }) })}
+			/>,
+		)
+
+		const parts = Array.from(screen.getByTestId('action-bar').querySelectorAll('[data-slot="action-bar-draft-part"]'))
+
+		expect(parts.map((part) => part.getAttribute('data-axis'))).toEqual(['sorting', 'columnFilters', 'globalFilter'])
+		// A number per counted axis, and none on search — it is only ever 0 or 1, so the glyph
+		// says everything a `1` would.
+		expect(parts.map((part) => part.textContent)).toEqual(['2', '1', ''])
+		// The pills are a shorthand for the section's own name, so reading both would be a stutter.
+		for (const part of parts) expect(part).toHaveAttribute('aria-hidden', 'true')
+	})
+
+	it('hands the same long form to a registered tooltip', () => {
+		// A stub rather than the kit's own tooltip: what is under test is that the slot is read
+		// and given the summary, not that a hover overlay opens in jsdom.
+		const Tooltip = ({ content, children }: TooltipProps) => (
+			<div>
+				{children}
+				<span data-testid='tooltip-content'>{content}</span>
+			</div>
+		)
+
+		render(
+			<GridComponentsProvider components={{ core: { Tooltip } }}>
+				<ActionBar {...makeProps()} />
+			</GridComponentsProvider>,
+		)
+
+		expect(screen.getByTestId('tooltip-content')).toHaveTextContent('Unapplied: 1 sort, 2 filters')
+	})
+
+	it('renders the short form unchanged when no tooltip is registered', () => {
+		// The optional tier's obligation: what is lost is the hint, never the pills or the name.
+		render(<ActionBar {...makeProps()} />)
+
+		const draft = screen.getByTestId('action-bar').querySelector('[data-slot="action-bar-draft"]')
+		expect(draft?.querySelectorAll('[data-slot="action-bar-draft-part"]')).toHaveLength(2)
+		expect(draft).toHaveAttribute('aria-label', 'Unapplied: 1 sort, 2 filters')
 	})
 
 	it('renders the pending counts and both draft actions', () => {
