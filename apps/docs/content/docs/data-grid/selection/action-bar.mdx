@@ -60,6 +60,35 @@ an `inline` bar on a preset sits _below_ the table, as in the example above. To 
 a layout of your own with `<DataGrid.ActionBar />` first — see
 [Composition](/docs/data-grid/layout/composition#layout-presets).
 
+## The draft section
+
+The draft half shows a label and then, per pending axis, a glyph and a number — `Unapplied ⇅2 ▽1`.
+An axis with nothing pending is not drawn, and search carries no number because it is only ever
+there or not. It is short because the two sections share one bar.
+
+The words live in one string, `messages.draft.summary`, which is both the section's `aria-label`
+and the text of the tooltip over the counts — so nothing is only available on hover:
+
+```txt
+Unapplied: 2 sorts, 1 filter, search
+```
+
+It is built from the per-axis segments (`draft.sorts`, `draft.filters`, `draft.search`), so
+overriding one of those carries into the long form too, and the separators are the dictionary's
+rather than the grid's:
+
+```ts
+messages: {
+	draft: {
+		sorts: ({ count }) => `${count} сорт.`,
+		summary: ({ label, parts }) => `${label} — ${parts.join('; ')}`,
+	},
+}
+```
+
+The tooltip is drawn by the kit's `core.Tooltip`, an optional component slot: a kit that registers
+none renders the counts unchanged and the name still says everything.
+
 ## Custom actions
 
 `selection.bar.actions` builds the entries the bar offers for the selection. It is **data**, not

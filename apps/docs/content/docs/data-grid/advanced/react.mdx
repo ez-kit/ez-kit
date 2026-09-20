@@ -95,6 +95,21 @@ The HeroUI flavor does exactly this, which is why its `Table` slot renders only 
 The slot works when your scroller sits at or above the shell's box in your own tree; if it sits
 below your table element, hoist the enclosing markup into the slot as that kit does.
 
+### The tooltip
+
+`core.Tooltip` is an optional slot of the same tier — two props, `content` and `children`, and
+nothing else. The grid reaches for it where a short readout has a longer form worth showing on
+hover; the action bar's pending counts are the first.
+
+Whatever you put around `children` must be **layout-neutral**: the grid hands the slot elements
+that already sit in a flex row, so a box of your own between them and their parent must add no
+sizing. The shadcn flavor uses its trigger's `asChild` form and adds no element at all; the HeroUI
+one wraps, because that primitive draws a focusable box so the hint is reachable by keyboard —
+either is fine as long as the row does not move.
+
+Register nothing and the grid renders what the tooltip would have wrapped — the meaning is always
+on the element itself, as its accessible name, so what is lost is the hint alone.
+
 ## Rules
 
 - This package MUST NOT import any UI kit (constitution Principle I).
