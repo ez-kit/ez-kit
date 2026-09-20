@@ -89,7 +89,13 @@ export type { ResolvedGridOptions } from './resolved-options'
 
 // The dictionary, re-exported from core so a UI kit reading `useGridOptions().messages` can
 // name its type without depending on core directly.
-export type { CountContext, FilterPlaceholderContext, GridMessages, PartialGridMessages } from '@ez-kit/data-grid-core'
+export type {
+	CountContext,
+	DraftSummaryContext,
+	FilterPlaceholderContext,
+	GridMessages,
+	PartialGridMessages,
+} from '@ez-kit/data-grid-core'
 
 // Grid overflow menu — one model for the column header menu and the row actions menu
 export { GridMenuIcon, GridMenuVariant, isGridMenuItemSlot, toMenuSections } from './menu'
@@ -295,6 +301,7 @@ export type {
 	TableScrollProps,
 	TableWrapperProps,
 	ToolbarProps,
+	TooltipProps,
 	TrProps,
 } from './types'
 

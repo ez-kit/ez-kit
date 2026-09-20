@@ -122,7 +122,10 @@ export const FEATURE_COMPONENTS = {
  * additive — an existing kit keeps compiling and keeps its current rendering.
  */
 export const FEATURE_OPTIONAL_COMPONENTS = {
-	[GridFeature.Core]: ['Root', 'TableWrapper', 'TableScroll', 'Layout'] as const,
+	// `Tooltip` sits here rather than beside `Modal` in the required set: a hint over something
+	// already on screen has a correct answer without a kit — render what it would have wrapped —
+	// so requiring it would be a compile error in every external kit for a decoration.
+	[GridFeature.Core]: ['Root', 'TableWrapper', 'TableScroll', 'Layout', 'Tooltip'] as const,
 	[GridFeature.Pagination]: [] as const,
 	[GridFeature.Sorting]: [] as const,
 	[GridFeature.Filtering]: [] as const,

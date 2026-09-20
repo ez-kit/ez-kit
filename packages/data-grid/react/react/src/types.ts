@@ -332,6 +332,28 @@ export type NumberInputProps = {
 	onBlur?: () => void
 }
 
+/**
+ * A hover hint over something already on screen. Optional-tier: a kit that registers none
+ * renders `children` unchanged, so what is lost is the decoration, never the meaning — whatever
+ * a tooltip explains is also on the element it wraps, as its accessible name.
+ *
+ * Two props and no more. `placement`, `delay` and their siblings are the kit's business and
+ * would each need a closed set of their own; a generic grows under a second real consumer, not
+ * ahead of the first.
+ */
+export type TooltipProps = {
+	/** What the hint says. */
+	content: ReactNode
+	/**
+	 * What it hangs off. Whatever a kit puts around this has to be **layout-neutral**: the slot
+	 * is handed elements that already sit in a flex row, so a box between them and their parent
+	 * must not introduce sizing of its own. A trigger with an `asChild` form (shadcn's) adds no
+	 * element at all; one that wraps (HeroUI's, which draws a focusable box so the hint is
+	 * keyboard-reachable) has to leave the row alone.
+	 */
+	children: ReactNode
+}
+
 export type ModalProps = {
 	open: boolean
 	onClose: () => void
@@ -977,6 +999,8 @@ export type GridComponentRegistry = {
 	Checkbox?: ComponentType<CheckboxProps>
 	NumberInput?: ComponentType<NumberInputProps>
 	Modal?: ComponentType<ModalProps>
+	/** Optional — see {@link TooltipProps}. Falls back to rendering `children` alone. */
+	Tooltip?: ComponentType<TooltipProps>
 	// composite
 	Toolbar?: ComponentType<ToolbarProps>
 	GlobalFilterInput?: ComponentType<GlobalFilterInputProps>
