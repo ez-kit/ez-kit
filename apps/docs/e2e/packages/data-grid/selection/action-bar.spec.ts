@@ -101,3 +101,70 @@ test.describe('a selection and a pending draft at once', () => {
 		await expect(page.locator(BAR)).toHaveAttribute('data-selected-count', '0')
 	})
 })
+
+/**
+ * The draft section's two forms.
+ *
+ * On screen it is a glyph and a number per axis, because it shares one bar with the selection.
+ * The words are in `messages.draft.summary`, used twice — the section's `aria-label`, and the
+ * tooltip over the counts — so the short form never has to carry them.
+ *
+ * The tooltip half lives here rather than in a kit's unit tests on purpose: both kits portal the
+ * overlay and open it on a pointer transition through react-aria / Radix timers, neither of which
+ * jsdom drives faithfully. What a unit test *can* prove — that the slot is read and handed the
+ * summary, and that the trigger adds no tab stop — it already does, in both kits.
+ */
+test.describe('the draft section', () => {
+	test.beforeEach(async ({ grid }) => {
+		await grid.open(EXAMPLE)
+	})
+
+	test('says in its name what the counts say in glyphs', async ({ grid, page }) => {
+		await expect(grid.rows().first()).toBeVisible()
+		await grid.sortTrigger(SORT_COLUMN).click()
+
+		const draft = page.locator(BAR).locator(DRAFT_SECTION)
+		await expect(draft).toHaveAttribute('aria-label', 'Unapplied: 1 sort')
+
+		// One pill, carrying the count and no words. `globalFilter` is absent rather than zero.
+		const parts = draft.locator('[data-slot="action-bar-draft-part"]')
+		await expect(parts).toHaveCount(1)
+		await expect(parts).toHaveAttribute('data-axis', 'sorting')
+		await expect(parts).toHaveText('1')
+	})
+
+	test('opens a tooltip carrying the same long form', async ({ grid, page }) => {
+		await expect(grid.rows().first()).toBeVisible()
+		await grid.sortTrigger(SORT_COLUMN).click()
+
+		const draft = page.locator(BAR).locator(DRAFT_SECTION)
+		await expect(draft).toHaveAttribute('aria-label', 'Unapplied: 1 sort')
+
+		// `role='tooltip'` rather than a slot: the two kits name the overlay differently
+		// (`data-slot='tooltip-content'` in shadcn, a bare `.tooltip` in heroui), and the role is
+		// what both owe. Asserting a kit's own slot here passes on one kit and matches nothing on
+		// the other, which is the failure mode `e2e-slots.test.ts` cannot catch for an overlay.
+		const tooltip = page.getByRole('tooltip')
+		await expect(tooltip).toHaveCount(0)
+
+		// Park the pointer away first: both kits open on a pointer *transition*, so hovering a
+		// spot the mouse already occupies fires nothing and looks exactly like a broken tooltip.
+		await page.mouse.move(0, 0)
+		await draft.locator('[data-slot="action-bar-draft-part"]').first().hover()
+
+		await expect(tooltip).toHaveText('Unapplied: 1 sort')
+	})
+
+	test('adds no tab stop between the counts and Reset', async ({ grid, page }) => {
+		await expect(grid.rows().first()).toBeVisible()
+		await grid.sortTrigger(SORT_COLUMN).click()
+
+		const draft = page.locator(BAR).locator(DRAFT_SECTION)
+		await expect(draft).toHaveCount(1)
+
+		// The counts are a readout. HeroUI's tooltip trigger is focusable by default, so without
+		// the kit's override this finds `Unapplied 1` standing in the tab order ahead of Reset.
+		const focusable = draft.locator('a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])')
+		await expect(focusable).toHaveText([/Reset/, /Apply/])
+	})
+})

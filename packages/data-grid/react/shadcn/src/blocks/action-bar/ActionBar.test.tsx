@@ -2,6 +2,7 @@ import { GridComponentsProvider } from '@ez-kit/data-grid-react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
+import { Tooltip } from '../core/Tooltip'
 import { FilterChip } from '../filtering/FilterChip'
 
 import { ActionBar } from './ActionBar'
@@ -137,6 +138,28 @@ describe('ActionBar (shadcn)', () => {
 		)
 
 		expect(screen.getByTestId('tooltip-content')).toHaveTextContent('Unapplied: 1 sort, 2 filters')
+	})
+
+	it("adds no tab stop for the kit's own tooltip", () => {
+		// The draft section is a readout, so a hint over it must not put a stop in the tab order:
+		// Tab through the bar should reach Reset, never the counts. HeroUI's `Tooltip.Trigger`
+		// wraps its child in a focusable `div` (`useFocusable` supplies `tabIndex={0}`), which the
+		// kit overrides to `-1`; Radix's `asChild` trigger adds no element at all. Same guarantee,
+		// asserted the same way in both kits, and it fails in heroui without that override.
+		const { container } = render(
+			<GridComponentsProvider components={{ core: { Tooltip } }}>
+				<ActionBar {...makeProps()} />
+			</GridComponentsProvider>,
+		)
+
+		const draft = container.querySelector('[data-slot="action-bar-draft"]')
+		if (draft === null) throw new Error('the draft section did not render')
+
+		const focusable = Array.from(
+			draft.querySelectorAll('a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])'),
+		)
+
+		expect(focusable.map((el) => el.textContent.trim())).toEqual(['Reset', 'Apply'])
 	})
 
 	it('renders the short form unchanged when no tooltip is registered', () => {
