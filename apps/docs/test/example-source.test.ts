@@ -12,6 +12,7 @@ describe('readExampleFiles', () => {
 		expect(files.map((file) => file.name)).toEqual([
 			'ProductionExample.tsx',
 			'data.ts',
+			'features.ts',
 			'ProductionLayout.tsx',
 			'use-orders.ts',
 			'server.ts',

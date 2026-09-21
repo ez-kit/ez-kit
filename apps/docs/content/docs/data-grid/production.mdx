@@ -10,6 +10,12 @@ answers with one page plus a total, and mutations go back over the same wire.
 
 Use it to see how the features behave together, and copy the wiring rather than the feature list.
 
+The sets themselves — `consoleFeatures` here, `deferredApplyFeatures` and `feedFeatures` further
+down — live in one `features.ts` beside the examples, and the source panel below carries it as a
+tab. Each is written out member by member rather than reaching for
+[`allDataGridFeatures`](/docs/data-grid/feature-set#alldatagridfeatures), for the reason that page
+gives: what you copy off a docs page is what lands in your bundle.
+
 <DataGridDocsExample exampleId='production-orders' />
 
 Things worth trying in the live preview above:
@@ -88,7 +94,7 @@ but the grid.
 const [tableState, setTableState] = useState<Partial<TableState>>(INITIAL_STATE)
 
 <DataGrid
-	features={features}
+	features={consoleFeatures}
 	data={rows}
 	columns={orderColumns}
 	pagination={{ manual: true, rowCount }}
@@ -265,7 +271,7 @@ what a write actually does:
 ```tsx
 <DataGridOptions>
 	<DataGrid
-		features={features}
+		features={consoleFeatures}
 		data={rows}
 		columns={orderColumns}
 		pagination={{ rowCount }}
@@ -340,7 +346,7 @@ search box applies the whole draft, not just the field you are in.
 
 ```tsx
 <DataGrid
-	features={features}
+	features={deferredApplyFeatures}
 	data={rows}
 	columns={orderColumns}
 	draft
@@ -416,7 +422,7 @@ Same server, read as a feed instead:
 
 ```tsx
 <DataGrid
-	features={features}
+	features={feedFeatures}
 	data={rows}
 	columns={orderColumns}
 	layout={{ stickyHeader: true }}

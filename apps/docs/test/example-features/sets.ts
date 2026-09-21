@@ -106,8 +106,14 @@ export type ExampleSet = {
 }
 
 const EXAMPLES_DIR = 'shared/data-grid/examples/components'
-/** `const features = tableFeatures({ … })`, which is the convention every example follows. */
-const SET_PATTERN = /const features = tableFeatures\(\{([\s\S]*?)\n\}\)/
+/** A JS identifier, so an import clause fragment like `type Order` never reaches a `RegExp`. */
+const BINDING_PATTERN = /^[A-Za-z_$][\w$]*$/
+/** `const <name> = tableFeatures({ … })`, declared in this file or in the sibling it imports from. */
+function setPatternFor(binding: string): RegExp {
+	return new RegExp(String.raw`const ${binding} = tableFeatures\(\{([\s\S]*?)\n\}\)`)
+}
+/** `const features = tableFeatures({ … })`, which is the convention an example that composes its own follows. */
+const SET_PATTERN = setPatternFor('features')
 /** A member of the set literal: one top-level line inside it, `name,` or `slot: factory(),`. */
 const MEMBER_PATTERN = /^\t([A-Za-z]\w*)/gm
 /** `<DataGrid …` / `<CustomDataGrid …`, but not `<DataGrid.Toolbar>`. */
@@ -164,22 +170,46 @@ function writesOption(source: string, key: string): boolean {
 /**
  * The set a file gets from a sibling instead of composing one.
  *
- * A grid under a `DataGridOptionsProvider` shares the provider's set rather than restating a
- * narrower one — `features` **replaces** across option layers rather than merging, so a grid that
- * writes its own gets *its* set, and one narrower than the provider's options would leave those
- * options configured but unregistered. That is a real defect the browser suite caught in
- * `ProductionProviderExample`, so this checker follows the import rather than exempting the file:
- * the borrowed set is checked against the borrowing file's own config, which is the question that
- * matters.
+ * Two shapes reach this, and both are the same question. A grid under a `DataGridOptionsProvider`
+ * shares the provider's set rather than restating a narrower one — `features` **replaces** across
+ * option layers rather than merging, so a grid that writes its own gets *its* set, and one
+ * narrower than the provider's options would leave those options configured but unregistered.
+ * That is a real defect the browser suite caught in `ProductionProviderExample`. The `production/`
+ * examples then moved their sets wholesale into `production/features.ts`, because a 40-line set in
+ * front of a 200-line example is the first thing a reader sees and the least interesting.
+ *
+ * So this follows the import rather than exempting the file: the borrowed set is checked against
+ * the borrowing file's own config, which is the question that matters. The imported **binding** is
+ * what it looks for, not the name `features` — `production/features.ts` declares three sets side
+ * by side (`consoleFeatures`, `deferredApplyFeatures`, `feedFeatures`) and a grid must be matched
+ * against the one it actually names.
+ *
+ * A file that imported two sets — from one sibling or from two — would have no way to say which
+ * one its grid passes, and the import order that would decide it is alphabetical by specifier.
+ * So that case throws with the file's path rather than picking one: nothing does it today, and if
+ * something starts to, the checker should say so instead of silently matching the wrong set.
  */
 function borrowedSet(path: string, source: string): string {
-	const from = /import \{[^}]*\bfeatures\b[^}]*\} from '(\.[^']+)'/.exec(source)?.[1]
-	if (from === undefined) return ''
-	const sibling = join(dirname(path), `${from}.tsx`)
-	const target = existsSync(sibling) ? sibling : join(dirname(path), `${from}.ts`)
-	if (!existsSync(target)) return ''
+	const found: string[] = []
 
-	return SET_PATTERN.exec(withoutComments(readFileSync(target, 'utf8')))?.[1] ?? ''
+	for (const [, names, from] of source.matchAll(/import \{([^}]*)\} from '(\.[^']+)'/g)) {
+		const sibling = join(dirname(path), `${from ?? ''}.tsx`)
+		const target = existsSync(sibling) ? sibling : join(dirname(path), `${from ?? ''}.ts`)
+		if (!existsSync(target)) continue
+		const contents = withoutComments(readFileSync(target, 'utf8'))
+
+		for (const binding of (names ?? '').split(',')) {
+			const name = (binding.split(' as ').pop() ?? '').trim()
+			if (!BINDING_PATTERN.test(name)) continue
+			const literal = setPatternFor(name).exec(contents)?.[1]
+			if (literal !== undefined) found.push(literal)
+		}
+	}
+
+	if (found.length > 1)
+		throw new Error(`${path} imports more than one feature set; this checker cannot tell which its grid uses`)
+
+	return found[0] ?? ''
 }
 
 export function collectExampleSets(docsRoot: string): ExampleSet[] {

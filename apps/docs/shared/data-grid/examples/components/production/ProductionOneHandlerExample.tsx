@@ -1,70 +1,18 @@
 'use client'
 
-import {
-	columnFacetingFeature,
-	columnFilteringFeature,
-	columnPinningFeature,
-	columnResizingFeature,
-	columnSizingFeature,
-	columnVisibilityFeature,
-	createFacetedRowModel,
-	createFacetedUniqueValues,
-	createFilteredRowModel,
-	createPaginatedRowModel,
-	createSortedRowModel,
-	creatingFeature,
-	deletingFeature,
-	editingFeature,
-	filterFns,
-	globalFilteringFeature,
-	loadingFeature,
-	rowPaginationFeature,
-	rowPinningFeature,
-	rowSelectionFeature,
-	rowSortingFeature,
-	sortFns,
-	tableFeatures,
-} from '@ez-kit/data-grid-core/features'
-
 import { DataGrid } from 'shared/DataGrid'
 
 import { orderColumns } from './data'
+import { consoleFeatures } from './features'
 import { ProductionLayout } from './ProductionLayout'
 import { useOrdersState } from './use-orders-state'
-
-const features = tableFeatures({
-	// Structural: the grid shell reads column widths, visibility and pin groups to lay out
-	// the column grid. Everything below is this example's own.
-	columnVisibilityFeature,
-	columnPinningFeature,
-	columnSizingFeature,
-	columnResizingFeature,
-	rowSortingFeature,
-	loadingFeature,
-	creatingFeature,
-	columnFacetingFeature,
-	columnFilteringFeature,
-	deletingFeature,
-	editingFeature,
-	filterFns,
-	globalFilteringFeature,
-	rowPaginationFeature,
-	rowPinningFeature,
-	rowSelectionFeature,
-	sortFns,
-	facetedRowModel: createFacetedRowModel(),
-	facetedUniqueValues: createFacetedUniqueValues(),
-	filteredRowModel: createFilteredRowModel(),
-	paginatedRowModel: createPaginatedRowModel(),
-	sortedRowModel: createSortedRowModel(),
-})
 
 export function ProductionOneHandlerExample() {
 	const orders = useOrdersState()
 
 	return (
 		<DataGrid
-			features={features}
+			features={consoleFeatures}
 			data={orders.rows}
 			columns={orderColumns}
 			pagination={{
