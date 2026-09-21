@@ -14,12 +14,15 @@ const nextConfig = {
 	 * in the URL, so these are the paths as served, and redirects are checked before the
 	 * filesystem, before `proxy.ts` and before the rewrite below.
 	 *
-	 * The `.mdx` source is here for the same slug because it is a published URL too. Note it
-	 * currently redirects one 404 to another: the `.mdx` suffix does not resolve for **any**
-	 * page, because `/docs/[[...slug]]` matches `<slug>.mdx` as a slug and answers 404 before
-	 * the rewrite below — an `afterFiles` rewrite — is ever reached. That is a pre-existing
-	 * defect of the suffix route, not of this rename; the entry is what makes this page right
-	 * the moment the suffix route is fixed. `/llms.mdx/docs/<slug>` serves the markdown today.
+	 * The `.mdx` source is here for the same slug because it is a published URL too, and it now
+	 * resolves: the suffix route was broken for **every** page until `proxy.ts` stopped appending
+	 * `/content.md` to a destination no route serves — see the note there.
+	 *
+	 * The rewrite below is **not** what makes it work and never was. It sits in `afterFiles`, and
+	 * `/docs/[[...slug]]` matches `<slug>.mdx` as a slug, so routing is already finished by the
+	 * time an `afterFiles` rewrite would be consulted. Middleware decides this, before routing.
+	 * It is kept because its destination is correct and it costs nothing, so it stands as the
+	 * answer for any request that reaches routing without having passed through middleware.
 	 */
 	async redirects() {
 		return [
