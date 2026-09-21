@@ -175,10 +175,10 @@ export function ExampleTeamMembersExample() {
 											    header bar, so the column headers stay a single line. Not rendering it
 											    is what `filtering: { variant: 'panel' }` used to say. */}
 											{({ sortTrigger, menu }) => (
-												<div data-slot='header-main'>
+												<DataGrid.HeaderMain>
 													{sortTrigger}
 													{menu}
-												</div>
+												</DataGrid.HeaderMain>
 											)}
 										</DataGrid.HeaderCell>
 									))

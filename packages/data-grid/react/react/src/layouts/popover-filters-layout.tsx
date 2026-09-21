@@ -3,6 +3,7 @@ import { Body } from '../data-grid/body'
 import { Header } from '../data-grid/header'
 import { DataGridHeaderCell } from '../data-grid/header-cell'
 import { DataGridHeaderRow } from '../data-grid/header-row'
+import { HeaderMain } from '../data-grid/header-slots'
 import { Pagination } from '../data-grid/pagination'
 import { DataGridTable } from '../data-grid/table'
 import { Toolbar } from '../data-grid/toolbar'
@@ -46,11 +47,11 @@ export function PopoverFiltersLayout() {
 											header={header}
 										>
 											{({ sortTrigger, filterPopover, menu }) => (
-												<div data-slot='header-main'>
+												<HeaderMain>
 													{sortTrigger}
 													{filterPopover}
 													{menu}
-												</div>
+												</HeaderMain>
 											)}
 										</DataGridHeaderCell>
 									))

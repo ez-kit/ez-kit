@@ -125,10 +125,10 @@ export function FilterPanelExample() {
 											header={header}
 										>
 											{({ sortTrigger, menu }) => (
-												<div data-slot='header-main'>
+												<DataGrid.HeaderMain>
 													{sortTrigger}
 													{menu}
-												</div>
+												</DataGrid.HeaderMain>
 											)}
 										</DataGrid.HeaderCell>
 									))

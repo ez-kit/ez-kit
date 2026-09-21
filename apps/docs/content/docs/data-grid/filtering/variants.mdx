@@ -83,11 +83,11 @@ Spelled out, the preset is:
 								header={header}
 							>
 								{({ sortTrigger, filterPopover, menu }) => (
-									<div data-slot='header-main'>
+									<DataGrid.HeaderMain>
 										{sortTrigger}
 										{filterPopover}
 										{menu}
-									</div>
+									</DataGrid.HeaderMain>
 								)}
 							</DataGrid.HeaderCell>
 						))
@@ -142,10 +142,10 @@ Two independent things make this arrangement, and separating them is the point o
 									header={header}
 								>
 									{({ sortTrigger, menu }) => (
-										<div data-slot='header-main'>
+										<DataGrid.HeaderMain>
 											{sortTrigger}
 											{menu}
-										</div>
+										</DataGrid.HeaderMain>
 									)}
 								</DataGrid.HeaderCell>
 							))

@@ -296,10 +296,10 @@ export function ExampleTaskBoardExample() {
 											 * panel — two decisions the enum could only make together.
 											 */}
 											{({ sortTrigger, menu }) => (
-												<div data-slot='header-main'>
+												<DataGrid.HeaderMain>
 													{sortTrigger}
 													{menu}
-												</div>
+												</DataGrid.HeaderMain>
 											)}
 										</DataGrid.HeaderCell>
 									))

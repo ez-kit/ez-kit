@@ -125,7 +125,20 @@ export const FEATURE_OPTIONAL_COMPONENTS = {
 	// `Tooltip` sits here rather than beside `Modal` in the required set: a hint over something
 	// already on screen has a correct answer without a kit — render what it would have wrapped —
 	// so requiring it would be a compile error in every external kit for a decoration.
-	[GridFeature.Core]: ['Root', 'TableWrapper', 'TableScroll', 'Layout', 'Tooltip'] as const,
+	[GridFeature.Core]: [
+		'Root',
+		'TableWrapper',
+		'TableScroll',
+		'Layout',
+		'Tooltip',
+		// The header cell's two boxes, for the same reason as the shell's: a plain `div` is
+		// correct, and neither kit here registers one — shadcn styles `header-main` from the
+		// structural stylesheet and heroui styles `header-extras` from its own. They are
+		// registrable so that composing a header cell never means hand-writing the element
+		// those stylesheets aim at.
+		'HeaderMain',
+		'HeaderExtras',
+	] as const,
 	[GridFeature.Pagination]: [] as const,
 	[GridFeature.Sorting]: [] as const,
 	[GridFeature.Filtering]: [] as const,

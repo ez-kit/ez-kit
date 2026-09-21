@@ -68,11 +68,11 @@ function PopoverFilterTable() {
 										header={header}
 									>
 										{({ sortTrigger, filterPopover, menu }) => (
-											<div data-slot='header-main'>
+											<DataGrid.HeaderMain>
 												{sortTrigger}
 												{filterPopover}
 												{menu}
-											</div>
+											</DataGrid.HeaderMain>
 										)}
 									</DataGrid.HeaderCell>
 								))

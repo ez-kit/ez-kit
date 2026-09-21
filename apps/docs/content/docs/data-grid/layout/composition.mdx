@@ -562,10 +562,10 @@ rather than inside it — `label` and `sortTrigger` are separate render args for
 ```tsx
 <DataGrid.HeaderCell header={header}>
 	{({ sortTrigger }) => (
-		<div data-slot='header-main'>
+		<DataGrid.HeaderMain>
 			{sortTrigger}
 			<HelpButton />
-		</div>
+		</DataGrid.HeaderMain>
 	)}
 </DataGrid.HeaderCell>
 ```

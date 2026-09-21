@@ -274,6 +274,27 @@ export type TableWrapperProps = HTMLAttributes<HTMLDivElement> & RefAttributes<H
 export type TableScrollProps = HTMLAttributes<HTMLDivElement> & RefAttributes<HTMLDivElement>
 
 /**
+ * The header cell's first row — the box holding the label or sort affordance, and the column
+ * menu beside it. Stamped `data-slot='header-main'`; the structural stylesheet lays it out as a
+ * flex row and both kits style off that slot.
+ *
+ * Optional, and a plain `div` is the whole of what this package needs, which is why neither kit
+ * in this repo registers one. It exists so that composing a header cell — swapping `filter` for
+ * `filterPopover`, dropping the filter entirely — never requires hand-writing the host element
+ * the stylesheet is aiming at. A kit that does register one **must spread every prop it
+ * receives**, `data-slot` above all.
+ *
+ * No `ref`, unlike {@link TableWrapperProps} / {@link TableScrollProps}: nothing measures this box.
+ */
+export type HeaderMainProps = HTMLAttributes<HTMLDivElement>
+/**
+ * The header cell's second row — the filter control under the label, when the column has one.
+ * Stamped `data-slot='header-extras'`, with the same contract and the same rationale as
+ * {@link HeaderMainProps}.
+ */
+export type HeaderExtrasProps = HTMLAttributes<HTMLDivElement>
+
+/**
  * The grid's body: everything between `core.Root` and the modals, composed from the members of
  * the `DataGrid` namespace.
  *
@@ -986,6 +1007,10 @@ export type GridComponentRegistry = {
 	TableScroll?: ComponentType<TableScrollProps>
 	/** Optional — see {@link LayoutProps}. Falls back to `<DataGrid.Table/>` alone. */
 	Layout?: ComponentType<LayoutProps>
+	/** Optional — see {@link HeaderMainProps}. Falls back to a plain `div`. */
+	HeaderMain?: ComponentType<HeaderMainProps>
+	/** Optional — see {@link HeaderExtrasProps}. Falls back to a plain `div`. */
+	HeaderExtras?: ComponentType<HeaderExtrasProps>
 	Table?: ComponentType<TableProps>
 	Thead?: ComponentType<TheadProps>
 	Tbody?: ComponentType<TbodyProps>

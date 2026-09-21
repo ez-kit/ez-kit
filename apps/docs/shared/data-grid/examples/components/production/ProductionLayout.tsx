@@ -71,11 +71,11 @@ export function ProductionLayout() {
 											 * this many columns the inline form would cost the header its height.
 											 */}
 											{({ sortTrigger, filterPopover, menu }) => (
-												<div data-slot='header-main'>
+												<DataGrid.HeaderMain>
 													{sortTrigger}
 													{filterPopover}
 													{menu}
-												</div>
+												</DataGrid.HeaderMain>
 											)}
 										</DataGrid.HeaderCell>
 									))

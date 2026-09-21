@@ -300,6 +300,8 @@ export type {
 	RootProps,
 	TableScrollProps,
 	TableWrapperProps,
+	HeaderMainProps,
+	HeaderExtrasProps,
 	ToolbarProps,
 	TooltipProps,
 	TrProps,

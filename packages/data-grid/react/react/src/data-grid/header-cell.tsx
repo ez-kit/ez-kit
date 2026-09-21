@@ -17,6 +17,7 @@ import { isTextEntryTarget } from '../utils/text-entry-target'
 import { getAlignAttrs } from './align-attrs'
 import { buildColumnMenuSections } from './column-menu-sections'
 import { flexRender } from './flex-render'
+import { HeaderExtras, HeaderMain } from './header-slots'
 import { renderFilterInput } from './render-filter-input'
 import { useDataGridTable } from './table-context'
 
@@ -377,11 +378,11 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 	// function away — see `PopoverFiltersLayout` — and is no longer a grid-wide option.
 	const defaultContent = (
 		<>
-			<div data-slot='header-main'>
+			<HeaderMain>
 				{sortTrigger}
 				{menu}
-			</div>
-			{canFilter && <div data-slot='header-extras'>{filterContent}</div>}
+			</HeaderMain>
+			{canFilter && <HeaderExtras>{filterContent}</HeaderExtras>}
 		</>
 	)
 

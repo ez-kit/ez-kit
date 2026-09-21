@@ -136,6 +136,26 @@ exported — read them for the exact shape.
 | `ActionBar`   | `ActionBarProps`   | One bar, a `selection` and a `draft` section, both live.            |
 | `Modal`       | `ModalProps`       | Generic dialog shell. Any feature needing a dialog uses this.       |
 
+### `core` — accepted, never required
+
+`FEATURE_OPTIONAL_COMPONENTS` is the second tier: the package has a correct answer for each of
+these without a kit, so registering one is an upgrade rather than an obligation, and a kit that
+wrote `satisfies FullGridComponents` keeps compiling when a key is added here.
+
+| Component      | Props               | Without it                                                        |
+| -------------- | ------------------- | ----------------------------------------------------------------- |
+| `Root`         | `RootProps`         | A plain `div`.                                                    |
+| `TableWrapper` | `TableWrapperProps` | A plain `div`. Register one only to move the positioning context. |
+| `TableScroll`  | `TableScrollProps`  | A plain `div`. `ref` declares the real scrollport.                |
+| `Layout`       | `LayoutProps`       | `<DataGrid.Table/>` alone — no toolbar, no pagination.            |
+| `Tooltip`      | `TooltipProps`      | The children alone, unwrapped.                                    |
+| `HeaderMain`   | `HeaderMainProps`   | A plain `div`. Emits `data-slot="header-main"`.                   |
+| `HeaderExtras` | `HeaderExtrasProps` | A plain `div`. Emits `data-slot="header-extras"`.                 |
+
+Neither kit in this repo registers `HeaderMain` or `HeaderExtras`: both style those boxes off the
+slot. They are registrable — and mounted as `<DataGrid.HeaderMain>` / `<DataGrid.HeaderExtras>` —
+so that composing a header cell never means hand-writing the element the stylesheet aims at.
+
 ### `pagination`
 
 | Component    | Props             |

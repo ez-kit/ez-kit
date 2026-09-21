@@ -26,6 +26,7 @@ import { GlobalFilterInput } from './global-filter-input'
 import { Header } from './header'
 import { DataGridHeaderCell } from './header-cell'
 import { DataGridHeaderRow } from './header-row'
+import { HeaderExtras, HeaderMain } from './header-slots'
 import { LoadingBody } from './loading-body'
 import { NoResultsRow } from './no-results-row'
 import { PageSizer } from './page-sizer'
@@ -451,7 +452,7 @@ function DataGridRoot<TFeatures extends TableFeatures, TRow extends object>(prop
  *
  * Named and exported so a *bound* grid — one `createDataGrid` rebuilt around a factory-level
  * feature set — can wear the identical namespace beside its own call signature, instead of
- * restating twenty-eight members that would then drift.
+ * restating thirty members that would then drift.
  */
 export type DataGridStatics = {
 	Toolbar: typeof Toolbar
@@ -462,6 +463,8 @@ export type DataGridStatics = {
 	Header: typeof Header
 	HeaderRow: typeof DataGridHeaderRow
 	HeaderCell: typeof DataGridHeaderCell
+	HeaderMain: typeof HeaderMain
+	HeaderExtras: typeof HeaderExtras
 	Body: typeof Body
 	Row: typeof DataGridRow
 	Cell: typeof DataGridCell
@@ -532,6 +535,8 @@ export const DataGrid: DataGridType = /* @__PURE__ */ Object.assign(DataGridRoot
 	Header,
 	HeaderRow: DataGridHeaderRow,
 	HeaderCell: DataGridHeaderCell,
+	HeaderMain,
+	HeaderExtras,
 	Body,
 	Row: DataGridRow,
 	Cell: DataGridCell,
