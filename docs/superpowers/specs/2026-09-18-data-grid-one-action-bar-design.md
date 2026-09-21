@@ -1,7 +1,8 @@
 # One action bar, two live sections
 
 **Date:** 2026-09-18
-**Status:** approved, pending implementation plan
+**Status:** implemented. Four of this document's claims did not survive contact with the work —
+see **Corrections** at the end before trusting anything here.
 
 ## The problem
 
@@ -281,3 +282,42 @@ major on `@ez-kit/data-grid-react`.
   (AGENTS.md); this change does not reopen it.
 - Where a layout puts the bar. It stays a layout decision, written last in all four presets.
 - Any new config option. The two sections are composed, not configured.
+
+## Corrections
+
+Written after the work landed. The design above is the record of what was decided on 2026-09-18;
+these four claims were wrong, and the code is what happened instead.
+
+**1. "Both kits already have the primitive" — true of the file, false of the conclusion.**
+The section headed _Both kits already have the primitive_ argues that shadcn's bar should be built
+on `components/ui/action-bar.tsx`. It cannot be: that primitive portals its root into
+`document.body`, positions itself `fixed` against the viewport, and returns `null` while closed,
+and all three contradict this bar's requirements — `inline` is an in-flow strip, `floating`
+overlays the grid's own last rows out of a zero-height sticky anchor, and a closing floating bar
+must keep rendering to animate out. shadcn's bar is hand-rolled; the unused primitive was
+**deleted** (`246a4ffb`), because it shipped in the registry payload to every `npx shadcn add`
+while authoring `action-bar-group` / `action-bar-item`, slots that kit never renders. HeroUI keeps
+its own copy — its bar does portal to a fixed overlay. The kits differ here on purpose.
+
+**2. It shipped as `minor`, not `major`.** The packages are `0.x`, where a caret range does not
+cross the minor (`^0.8.0` is `>=0.8.0 <0.9.0`), so the minor **is** the breaking bump and the
+removals reach nobody under an existing range. The repo's own precedent agrees —
+`composition-over-placement.md` removed eight public options as a `minor`. A `major` here would
+mean `1.0.0`, which AGENTS.md gates behind settling the `core` primitive set; that is not a
+decision this change gets to make.
+
+**3. `page-type-map.ts` needed no change.** It is listed under _Blast radius_ as a risk. The entry
+it carries resolves `SelectionBarConfig`, which is a **config** type, and the config was
+deliberately untouched — `selection.bar` never moved. The page was later renamed anyway
+(`fb27edfb`), which is what eventually touched that file.
+
+**4. The registry payload is not committed.** _Blast radius_ implies regenerating and committing
+`apps/docs/public/r/data-grid.json`. That path is gitignored; it exists in production only because
+`apps/docs`' build chains `registry:build` before `next build`. There is nothing to commit, and a
+stale payload cannot be shipped this way.
+
+One thing the design did not anticipate at all: merging the two bars halved the horizontal space
+the draft section has, because it now shares one bar with the selection. That is what made the
+long-form wording ("Unapplied 2 sorts 1 filter search") untenable and produced the follow-up —
+a glyph and a count per axis, with the words moved into `messages.draft.summary`, which is both
+the section's accessible name and its tooltip. See `.changeset/draft-section-short-form.md`.
