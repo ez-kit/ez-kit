@@ -1,113 +1,59 @@
-import { CreatingMode } from '@ez-kit/data-grid-core'
-
 import { useGridComponents } from '../components-context'
-import { FilterPanelPlacement, PageSizerPlacement } from '../types'
-
-import { ClearFiltersButton } from './clear-filters-button'
-import { CreateTrigger } from './create-trigger'
-import { FilterPanel } from './filter-panel'
-import { GlobalFilterInput } from './global-filter-input'
-import { PageSizer } from './page-sizer'
-import { SortMenuTrigger } from './sort-menu-trigger'
-import { useDataGridTable } from './table-context'
-import { VisibilityTrigger } from './visibility-trigger'
 
 import type { ReactNode } from 'react'
 
 export type DataGridToolbarProps = {
 	/**
-	 * Replaces the toolbar contents wholesale — the kit's `start` / `end` slots are not
-	 * used, so the whole bar is yours. Cannot be combined with `start` / `end`.
+	 * The toolbar's contents, rendered between the two slots. Use this when the bar is one run
+	 * of controls rather than two groups at opposite ends.
 	 */
 	children?: ReactNode
 	/**
-	 * Extra content for the toolbar's leading slot, **appended after** the auto-mounted
-	 * controls (the PageSizer).
-	 *
-	 * This is the additive escape hatch: `children` replaces everything, `start` / `end`
-	 * keep the auto-mounted defaults and add to them, which is what "the default toolbar
-	 * plus one button of mine" needs.
+	 * Content for the toolbar's leading slot.
 	 *
 	 * `start` / `end`, not `left` / `right`: the toolbar is a flex row, so its two slots swap
 	 * sides under RTL. Same logical vocabulary, for the same reason, as a column's `align`.
-	 * Column *pinning* keeps `left` / `right` — a pinned column sticks to a viewport edge,
-	 * which does not flip.
+	 * Row pinning keeps `top` / `bottom` — a vertical axis has no logical names.
 	 */
 	start?: ReactNode
-	/**
-	 * Extra content for the toolbar's trailing slot, appended after the auto-mounted controls
-	 * (global search, Clear filters, create trigger, sort builder, column visibility).
-	 */
+	/** Content for the toolbar's trailing slot. */
 	end?: ReactNode
+	/**
+	 * Class for the toolbar element, handed to the kit as-is. The kit merges it with its own, so a
+	 * utility that collides with one of the kit's wins — which is what a toolbar re-used as the
+	 * header bar of a framed grid needs (no bottom margin, a padding of its own).
+	 */
+	className?: string | undefined
 }
 
 /**
- * Toolbar area above the table.
+ * The bar above the table — a **container and nothing else**.
  *
- * With no props it renders the auto-mounted defaults:
- * - PageSizer in the leading slot when `pagination.pageSizer` resolves to that placement (which it does by
- *   default as soon as `pagination.items` is set)
- * - the filter panel's chips in the leading slot when `filtering.panel` places them there
- * - global search / Clear filters / "+ Add" / sort builder / column visibility in the trailing
- *   slot, each gated by its own feature flag
+ * It mounts no control of its own and reads no grid config. What goes in it is whatever a
+ * layout writes: `<DataGrid.Toolbar start={<DataGrid.GlobalFilterInput/>} end={…}/>`. It used
+ * to auto-mount seven controls, each gated by an option (`sorting.toolbar`,
+ * `visibility.toolbar`, `filtering.toolbar`, `globalFiltering.toolbar`, `pagination.pageSizer`,
+ * `filtering.panel`) whose only job was to tell this one component what to render — options
+ * that described a layout rather than the grid, and that taxed every new arrangement with a new
+ * enum value. The arrangements they bought are now what the JSX says at a glance; see the
+ * presets in `../layouts`.
  *
- * `start` / `end` append to those. `children` replaces them.
+ * With nothing to show — no `children` and neither slot — it renders nothing rather than an
+ * empty bar, so a layout can mount it unconditionally.
  */
-export function Toolbar({ children, start: extraStart, end: extraEnd }: DataGridToolbarProps = {}) {
+export function Toolbar({ children, start, end, className }: DataGridToolbarProps = {}) {
 	const { Toolbar: ToolbarComponent } = useGridComponents().core
-	// Toolbar reads only symbol-keyed UI configs and `table.options.*` (refs,
-	// not state). No state subscription — editing / sorting / filtering
-	// mutations do NOT re-render this component (sub-controls manage their
-	// own narrow subscriptions).
-	const table = useDataGridTable()
-	const hasCreating = Boolean(table.options.creating) && table.options.creating?.mode !== CreatingMode.PinRow
 
-	const grid = table.grid
-
-	const hasVisibilityToolbar = Boolean(grid.visibility?.toolbar)
-	const hasSortingToolbar = Boolean(grid.sorting?.toolbar)
-
-	const hasPageSizerToolbar = grid.pagination.pageSizer?.placement === PageSizerPlacement.Toolbar
-	const hasFilterPanelToolbar = grid.filtering.panel?.placement === FilterPanelPlacement.Toolbar
-	const hasGlobalFilterToolbar = Boolean(grid.globalFiltering?.toolbar)
-	const hasClearButtonToolbar = grid.filtering.toolbar !== undefined
-
-	if (children) {
-		return <ToolbarComponent data-slot='toolbar'>{children}</ToolbarComponent>
-	}
-
-	const hasAutoStart = hasPageSizerToolbar || hasFilterPanelToolbar
-	const hasAutoEnd =
-		hasGlobalFilterToolbar || hasClearButtonToolbar || hasCreating || hasSortingToolbar || hasVisibilityToolbar
-
-	const start =
-		hasAutoStart || extraStart !== undefined ? (
-			<>
-				{hasPageSizerToolbar && <PageSizer />}
-				{hasFilterPanelToolbar && <FilterPanel />}
-				{extraStart}
-			</>
-		) : null
-
-	const end =
-		hasAutoEnd || extraEnd !== undefined ? (
-			<>
-				{hasGlobalFilterToolbar && <GlobalFilterInput />}
-				{hasClearButtonToolbar && <ClearFiltersButton />}
-				{hasCreating && <CreateTrigger />}
-				{hasSortingToolbar && <SortMenuTrigger />}
-				{hasVisibilityToolbar && <VisibilityTrigger />}
-				{extraEnd}
-			</>
-		) : null
-
-	if (!start && !end) return null
+	if (children === undefined && start === undefined && end === undefined) return null
 
 	return (
 		<ToolbarComponent
 			data-slot='toolbar'
-			start={start}
-			end={end}
-		/>
+			className={className}
+			{...(start !== undefined ? { start } : {})}
+			{...(end !== undefined ? { end } : {})}
+		>
+			{children}
+		</ToolbarComponent>
 	)
 }

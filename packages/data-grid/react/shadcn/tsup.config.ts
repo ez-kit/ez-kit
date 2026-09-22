@@ -38,8 +38,6 @@ export default defineConfig({
 		'filtering/index': 'src/blocks/filtering/filtering-components.ts',
 		'editing/index': 'src/blocks/editing/editing-components.ts',
 		'deleting/index': 'src/blocks/deleting/deleting-components.ts',
-		'selection/index': 'src/blocks/selection/selection-components.ts',
-		'draft/index': 'src/blocks/draft/draft-components.ts',
 		'row-actions/index': 'src/blocks/row-actions/row-actions-components.ts',
 		'resizing/index': 'src/blocks/resizing/resizing-components.ts',
 		'visibility/index': 'src/blocks/visibility/visibility-components.ts',

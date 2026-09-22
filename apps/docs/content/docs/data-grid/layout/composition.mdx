@@ -1,23 +1,67 @@
 ---
 title: Composition
-description: Escape hatches for laying out the grid yourself — Table and Body children, Toolbar slots, and per-instance component overrides.
+description: How a grid's layout is decided — children, the core.Layout slot, the four presets — and the compound members every layout is built from.
 ---
 
-`<DataGrid />` with no children renders the full default layout. Every piece of that layout is
-also a compound member you can place yourself, and each one degrades gracefully: supply nothing
-and you get the built-in behaviour, supply something and you take over exactly that piece.
+**Config states behaviour. JSX states composition.** An option answers "what does this grid do";
+where a control goes and whether it is mounted is what the tree says. Eight options that answered
+the second question with the first's vocabulary — `filtering.chips` / `.panel` / `.toolbar` /
+`.variant`, `globalFiltering.toolbar`, `pagination.pageSizer`, `sorting.toolbar`,
+`visibility.toolbar` — are gone, and this page is where their arrangements live now.
 
-## The default layout
+Every piece of a layout is a compound member you can place yourself, and each one degrades
+gracefully: supply nothing and you get the built-in behaviour, supply something and you take over
+exactly that piece.
+
+## How the grid decides what to render
+
+The body of a grid resolves in three steps:
+
+```
+children  ??  components.core.Layout  ??  <DataGrid.Table/>
+```
+
+- **`children`** win. A call site that wrote its own tree meant it.
+- Otherwise a registered **`core.Layout`** renders.
+- Otherwise the floor: a table and nothing else.
+
+`core.Layout` is an _optional_ component slot — the tier beside the required ones, where
+`core.TableWrapper` and `core.TableScroll` already live. A key belongs there only when the package
+has a correct answer without it, and here that answer is the bare table. So
+`@ez-kit/data-grid-react` ships no rich default at all: `<DataGrid data columns features />`
+straight off the adapter renders a table.
+
+**Each UI kit binds the rich default.** `@ez-kit/data-grid-shadcn` and `@ez-kit/data-grid-heroui`
+register `DefaultLayout` as their `core.Layout`, so a `<DataGrid />` from a kit keeps rendering
+toolbar, table and pagination with no children, exactly as before. A grid composed through
+`createDataGrid` inherits nothing and pays for what it names.
+
+Because it is the components registry rather than a prop, both forms come for free:
 
 ```tsx
+// app-wide, or for one subtree
+const components = { core: { Layout: InvoicesLayout } }
+
+;<GridComponentsProvider components={components}>{children}</GridComponentsProvider>
+```
+
+```tsx
+// one grid
 <DataGrid
 	features={features}
 	data={data}
 	columns={columns}
+	components={components}
 />
 ```
 
-is equivalent to writing the tree out:
+<Callout type='info'>
+	Define the object outside the render (or memoize it). The provider keys its merge on the object's identity, so a fresh
+	literal every render re-renders every component that reads the registry.
+</Callout>
+
+A layout is an ordinary component reading the table from context, so it may be written inline as
+`children` instead, which is what the examples on this site do:
 
 ```tsx
 <DataGrid
@@ -25,32 +69,199 @@ is equivalent to writing the tree out:
 	data={data}
 	columns={columns}
 >
-	<DataGrid.Toolbar />
-	<DataGrid.Table />
-	<DataGrid.Pagination />
+	<BottomBarLayout />
 </DataGrid>
 ```
 
-## Toolbar: add without replacing
+Nested grids inherit `components`, and therefore inherit `Layout` with it — `components` describes
+a subtree by design. There is no recursion risk: a layout renders `DataGrid.Table`, never
+`DataGrid`.
 
-The toolbar auto-mounts the controls the enabled features ask for — global search, Clear
-filters, the create trigger, the multi-sort builder, column visibility, the page sizer.
+## Layout presets
 
-`start` and `end` **append** to those, which is what "the default toolbar plus one button of
-mine" needs:
+`@ez-kit/data-grid-react` exports four — `DefaultLayout`, `BottomBarLayout`,
+`FilterPanelLayout`, `PopoverFiltersLayout` — as pure composition with no styling of
+their own, so one set serves both kits. Each gates its controls on the feature being registered
+and enabled, so a narrow grid renders a narrow toolbar rather than throwing.
+[**Presets**](/docs/data-grid/layout/presets) has a live preview of each, on one grid, and which
+to reach for.
+
+All four render `<DataGrid.ActionBar />` **last**, which is where the default `floating` bar
+belongs: it overlays the rows, and coming last in document order keeps it out of the tab order
+until there is something to act on.
+
+That is one bar with a section per concern — the current selection, and the pending draft. It
+replaced a `SelectionBar` / `DraftBar` pair that each drew a whole bar and were kept apart by a
+gate that did not re-run on a draft edit, so both could mount at the same sticky position.
+
+Nothing places it for you; a layout renders it where it writes it, like every other member. The
+consequence to know: `selection: { bar: 'inline' }` on one of these presets puts that in-flow strip
+**below** the table, because the preset writes the bar last either way. An `inline` grid writes a
+layout of its own with `<DataGrid.ActionBar />` first.
+
+`FilterPanelLayout` is the arrangement that used to read:
 
 ```tsx
-<DataGrid.Toolbar end={<ExportButton />} />
+// before — five options describing an order the JSX shows at a glance
+<DataGrid
+	globalFiltering={{ toolbar: 'start' }}
+	filtering={{ panel: 'toolbar', toolbar: true }}
+	visibility={{ toolbar: true }}
+	sorting={{ toolbar: true }}
+	pagination={{ pageSizer: 'footer' }}
+/>
 ```
 
-`children` **replaces** the whole bar — the kit's `start` / `end` slots go unused and nothing
-auto-mounts:
+```tsx
+// after
+<DataGrid
+	features={features}
+	data={data}
+	columns={columns}
+	globalFiltering
+	filtering
+	sorting
+	visibility
+>
+	<FilterPanelLayout />
+</DataGrid>
+```
+
+Note what that preset can do which no enum value could: the panel **adds** to the header's own
+filter controls rather than replacing them, because the header cell still renders each column's
+control. See [Where filters live](/docs/data-grid/filtering/variants#both-at-once).
+
+## Writing a layout
+
+A layout is a component that mounts compound members. Nothing more:
+
+```tsx
+function InvoicesLayout() {
+	return (
+		<>
+			<DataGrid.Toolbar
+				start={<DataGrid.GlobalFilterInput />}
+				end={
+					<>
+						<DataGrid.ClearFiltersButton />
+						<DataGrid.CreateTrigger />
+						<DataGrid.SortMenuTrigger />
+						<DataGrid.VisibilityTrigger />
+					</>
+				}
+			/>
+			<DataGrid.ActiveFiltersBar />
+			<DataGrid.Table />
+			<DataGrid.BottomBar />
+			<DataGrid.ActionBar />
+		</>
+	)
+}
+```
+
+Each control reads the table from context and renders nothing when it has nothing to show, so a
+layout mounts them unconditionally — with one caveat worth knowing: a control whose **feature was
+never registered** has no API to read and throws on render. Gate on the resolved bag
+(`useDataGridTable().grid.sorting`) when one layout serves grids with different feature sets, which
+is exactly what the shipped presets do.
+
+## The full tree, written out
+
+What `DefaultLayout` amounts to, for a grid with every feature on:
+
+```tsx
+<DataGrid
+	features={features}
+	data={data}
+	columns={columns}
+>
+	<DataGrid.Toolbar
+		start={<DataGrid.GlobalFilterInput />}
+		end={
+			<>
+				<DataGrid.ClearFiltersButton />
+				<DataGrid.CreateTrigger />
+				<DataGrid.SortMenuTrigger />
+				<DataGrid.VisibilityTrigger />
+			</>
+		}
+	/>
+	<DataGrid.Table />
+	<DataGrid.Pagination />
+	<DataGrid.ActionBar />
+</DataGrid>
+```
+
+## Toolbar: a container and nothing else
+
+`<DataGrid.Toolbar>` mounts no control of its own and reads no grid config. What goes in it is
+what a layout writes. With nothing to show — no `children`, neither slot — it renders nothing
+rather than an empty bar, so a layout can mount it unconditionally.
+
+`start` and `end` are the two ends of the row. They are logical, not physical, so they swap sides
+under RTL:
+
+```tsx
+<DataGrid.Toolbar
+	start={<DataGrid.GlobalFilterInput />}
+	end={<ExportButton />}
+/>
+```
+
+`children` fills the bar as one run of controls instead of two groups, and is the answer to
+**order** — each control is a compound member reading the table from context, so they come in the
+order you write:
 
 ```tsx
 <DataGrid.Toolbar>
-	<MyEntirelyCustomBar />
+	<span>Team members</span>
+	<DataGrid.GlobalFilterInput />
+	<DataGrid.ColumnFilter columnId='status' />
+	<DataGrid.VisibilityTrigger />
+	<DataGrid.CreateTrigger>Add new</DataGrid.CreateTrigger>
 </DataGrid.Toolbar>
 ```
+
+`className` classes the bar itself, with `children` or without. The kit **merges** it with its own
+(`cn`, i.e. tailwind-merge), so a utility that collides with one of the kit's replaces it rather
+than fighting it — which is what re-using the toolbar as a card's header bar needs, since both kits
+give the bar an `mb-2` meant for a toolbar standing free above the table:
+
+```tsx
+<DataGrid.Toolbar className='mb-0 px-3 py-2.5'>{/* … */}</DataGrid.Toolbar>
+```
+
+## The bottom bar
+
+`<DataGrid.BottomBar>` is the region below the table, the counterpart of the toolbar above it. It
+is a container rather than a pagination control: what it holds is what it is given.
+
+Given no children it is the page controls — the size selector and the pagination — which is what
+`BottomBarLayout` mounts it for:
+
+```tsx
+<DataGrid.Table />
+<DataGrid.BottomBar />
+```
+
+Given children it holds those instead, laid out as one row with two ends:
+
+```tsx
+<DataGrid.BottomBar>
+	<span>{selectedCount} selected</span>
+	<div style={{ display: 'flex', gap: '0.5rem' }}>
+		<DataGrid.PageSizer />
+		<DataGrid.Pagination />
+	</div>
+</DataGrid.BottomBar>
+```
+
+It takes `className` and `style`, both handed to the element as-is — a bar used as a card's own
+footer usually wants the top margin off, since the kits keep one to separate a free-standing bar
+from the table above it.
+
+Not to be confused with `<DataGrid.Footer>`, which is the `<tfoot>` summary row built from each
+column's `footer` — that one is part of the table, this one is part of the shell around it.
 
 ## Table: reorder, wrap, extend
 
@@ -231,7 +442,10 @@ visibility and pinning:
 ```
 
 `<DataGrid.HeaderCell>` hands you the assembled pieces of one `<th>` separately, so you can
-rearrange them without rebuilding any of them:
+rearrange them without rebuilding any of them — and, by leaving one out, drop it. Not rendering
+`filter` is what takes a column's filter out of the header; rendering `filterPopover` instead puts
+it behind an icon. Those two decisions replaced the `filtering.variant` enum — see
+[Where filters live](/docs/data-grid/filtering/variants).
 
 ```tsx
 <DataGrid.HeaderCell header={header}>
@@ -246,15 +460,70 @@ rearrange them without rebuilding any of them:
 </DataGrid.HeaderCell>
 ```
 
-| Render arg                 | What it is                                                                        |
-| -------------------------- | --------------------------------------------------------------------------------- |
-| `label`                    | The column's own `header` content, with no sorting behaviour attached.            |
-| `sortTrigger`              | `label` plus the sort indicator, wrapped in the clickable sort affordance.        |
-| `menu`                     | The column overflow menu (sort / pin / hide), or `null` when it has no sections.  |
-| `filter`                   | The column's filter control, or `null` when the column is not filterable.         |
-| `resizer`                  | The resize handle, or `null` when the column cannot be resized.                   |
-| `canSort`, `sortDirection` | The column's sort capability and current direction (`'asc' \| 'desc' \| 'none'`). |
-| `header`, `column`         | The underlying TanStack objects, for anything the above does not cover.           |
+| Render arg                 | What it is                                                                                       |
+| -------------------------- | ------------------------------------------------------------------------------------------------ |
+| `label`                    | The column's own `header` content, with no sorting behaviour attached.                           |
+| `sortTrigger`              | `label` plus the sort indicator, in a `<button>` — or a plain box when the column does not sort. |
+| `menu`                     | The column overflow menu (sort / pin / hide), or `null` when it has no sections.                 |
+| `filter`                   | The column's filter control, or `null` when the column is not filterable.                        |
+| `filterPopover`            | The same control behind the kit's popover trigger. Render this **or** `filter`.                  |
+| `resizer`                  | The resize handle, or `null` when the column cannot be resized.                                  |
+| `canSort`, `sortDirection` | The column's sort capability and current direction (`'asc' \| 'desc' \| 'none'`).                |
+| `header`, `column`         | The underlying TanStack objects, for anything the above does not cover.                          |
+
+### The same, as a component
+
+A render function can only be written **at the call site**, because its parts arrive as arguments.
+That is fine for one line, and it is why a layout that customises the header ends up carrying the
+whole table tree: the body of the cell cannot move out.
+
+Every node that takes a render function also publishes the same object to a hook, so the body can be
+a component instead — one that takes no props at all:
+
+```tsx
+import { useDataGridHeaderCell } from '@ez-kit/data-grid-react'
+
+function OrdersHeaderCell() {
+	const { sortTrigger, filterPopover, menu } = useDataGridHeaderCell()
+
+	return (
+		<DataGrid.HeaderMain>
+			{sortTrigger}
+			{filterPopover}
+			{menu}
+		</DataGrid.HeaderMain>
+	)
+}
+```
+
+```tsx
+<DataGrid.HeaderCell header={header}>
+	<OrdersHeaderCell />
+</DataGrid.HeaderCell>
+```
+
+The two forms are not alternatives with different capabilities — they are the same object, reached
+two ways. The component builds it once, passes it to a render function and publishes it to the hook,
+so neither form can grow a part the other lacks.
+
+| Hook                      | Available inside        | Returns                                                                     |
+| ------------------------- | ----------------------- | --------------------------------------------------------------------------- |
+| `useDataGridHeaderCell()` | `<DataGrid.HeaderCell>` | The table above: `sortTrigger`, `menu`, `filter`, `filterPopover`, …        |
+| `useDataGridRow()`        | `<DataGrid.Row>`        | `row`, `cells`, and `content` — the row's default cells.                    |
+| `useDataGridCell()`       | `<DataGrid.Cell>`       | `cell`, `row`, `value`, and `content` — what this cell would have rendered. |
+
+Each one throws outside its component, naming the one to render inside, so a misplaced call fails
+where it is written rather than rendering something empty.
+
+Reach for the hook when the body is worth a name or a file of its own, and for the render function
+when it is a line or two, or when it needs something from the surrounding `.map()` anyway. Both
+still need that map — the hook answers _which node am I in_, not _how many are there_.
+
+<Callout type="info">
+	These hooks carry the node, not the grid's state: they do not subscribe to anything.
+	`<DataGrid.Header>` owns the header's subscriptions and re-renders its cells together. For state,
+	pair them with `useDataGridState` — see [Reading grid state](/docs/data-grid/state).
+</Callout>
 
 `<DataGrid.Cell>` is the body-side equivalent: it keeps the `<td>`, its alignment, pinning
 offsets and `cellClassName`, and lets you replace only what goes inside.
@@ -277,17 +546,19 @@ offsets and `cellClassName`, and lets you replace only what goes inside.
 
 ## Fallbacks, modals and bars
 
-The remaining slots are auto-mounted by their feature and take `children` for the same reason —
-replace the content, keep the placement and the conditions under which it appears.
+The remaining slots take `children` for the same reason as everything above: replace the content,
+keep the conditions under which it appears. A modal and a fallback row are mounted by their feature
+rather than by a layout — neither has a position a layout could give it. `<DataGrid.ActionBar>` does:
+a layout writes it where it wants it, and the four presets all write it last.
 
-| Slot                                                   | Renders when                         | `children` receives                                             |
-| ------------------------------------------------------ | ------------------------------------ | --------------------------------------------------------------- |
-| `<DataGrid.LoadingBody>`                               | `loading.isPending`                  | `{ columnCount }`                                               |
-| `<DataGrid.EmptyStateRow>`                             | the data array is empty              | `{ columnCount }`                                               |
-| `<DataGrid.NoResultsRow>`                              | filters match nothing                | `{ columnCount }`                                               |
-| `<DataGrid.CreatingModal>` / `<DataGrid.EditingModal>` | `mode: 'modal'` and the form is open | `{ open, form, title, formError, isPending, onSave, onCancel }` |
-| `<DataGrid.DraftBar>`                                  | `draft` is on and the draft is dirty | `{ pending, selectedCount, variant, onApply, onReset }`         |
-| `<DataGrid.PageSizer>`                                 | page-based pagination is on          | `{ pageSize, items, onPageSizeChange }`                         |
+| Slot                                                   | Renders when                             | `children` receives                                             |
+| ------------------------------------------------------ | ---------------------------------------- | --------------------------------------------------------------- |
+| `<DataGrid.LoadingBody>`                               | `loading.isPending`                      | `{ columnCount }`                                               |
+| `<DataGrid.EmptyStateRow>`                             | the data array is empty                  | `{ columnCount }`                                               |
+| `<DataGrid.NoResultsRow>`                              | filters match nothing                    | `{ columnCount }`                                               |
+| `<DataGrid.CreatingModal>` / `<DataGrid.EditingModal>` | `mode: 'modal'` and the form is open     | `{ open, form, title, formError, isPending, onSave, onCancel }` |
+| `<DataGrid.ActionBar>`                                 | a row is selected, or the draft is dirty | `{ open, variant, selection, draft }`                           |
+| `<DataGrid.PageSizer>`                                 | page-based pagination is on              | `{ pageSize, items, onPageSizeChange }`                         |
 
 The three row-level fallbacks render their `children` **inside** the kit's
 `<Tbody><Tr><Td colSpan>` scaffold, so the table markup stays valid and you supply only the
@@ -329,6 +600,24 @@ createColumns<Row>([
 		),
 	},
 ])
+```
+
+**Keep that content non-interactive.** On a sortable column the header renders inside the sort
+affordance, which is a `<button>` — so a button or a link placed there is a nested one: invalid
+HTML, and the parser takes the header apart. An icon, a badge or a tooltip is fine.
+
+A header that genuinely needs a control composes the cell and puts it beside the affordance
+rather than inside it — `label` and `sortTrigger` are separate render args for exactly this:
+
+```tsx
+<DataGrid.HeaderCell header={header}>
+	{({ sortTrigger }) => (
+		<DataGrid.HeaderMain>
+			{sortTrigger}
+			<HelpButton />
+		</DataGrid.HeaderMain>
+	)}
+</DataGrid.HeaderCell>
 ```
 
 ## Column footers

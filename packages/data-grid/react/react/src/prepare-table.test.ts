@@ -42,7 +42,7 @@ describe('prepareDataGridTable', () => {
 		expect(table.grid).toBeDefined()
 		// All features off: this is a table that never went through `useDataGrid`.
 		expect(table.grid.pinning.column).toBe(false)
-		expect(table.grid.pagination.pageSizer).toBeUndefined()
+		expect(table.grid.pagination.items).toBeUndefined()
 	})
 
 	it('merges onto the grid options core already seeded rather than replacing them', () => {

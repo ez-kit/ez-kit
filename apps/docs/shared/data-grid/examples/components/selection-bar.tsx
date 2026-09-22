@@ -42,7 +42,7 @@ export function SelectionBarExample() {
 		setLog((prev) => [`${new Date().toLocaleTimeString()} — ${msg}`, ...prev].slice(0, 5))
 	}
 
-	// One action, two places: the row's overflow menu and the selection bar take the same entry
+	// One action, two places: the row's overflow menu and the action bar take the same entry
 	// shape, so it is written once here and each kit draws it with its own chrome.
 	const exportAction = (names: string[]) => ({
 		id: 'export',

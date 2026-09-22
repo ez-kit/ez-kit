@@ -265,7 +265,10 @@ export type GridMessages = {
 	draft: {
 		/** How the bar names the pending state. */
 		label: string
-		/** Accessible name of the pending-changes control. */
+		/**
+		 * Generic accessible name for the pending-changes section, used when there is nothing to
+		 * enumerate — {@link GridMessages.draft.summary} names the axes whenever any are pending.
+		 */
 		pending: string
 		/** Commits the pending query. */
 		apply: string
@@ -280,6 +283,17 @@ export type GridMessages = {
 		filters: (ctx: CountContext) => string
 		/** The pending-search segment. Never counted — there is only ever one search. */
 		search: string
+		/**
+		 * The long form: one phrase naming everything that is pending, for the bar's accessible
+		 * name and its tooltip. The bar itself shows a glyph and a number per axis, which is
+		 * short enough to sit beside a live selection but says nothing on its own.
+		 *
+		 * A function, and given the segments rather than the counts, for the same reason
+		 * {@link GridMessages.draft.sorts} is one: the separators are the language's — a locale
+		 * that does not join a list with `, ` has nowhere else to say so — and building the
+		 * phrase from the segments means an override of `sorts` alone reaches the long form too.
+		 */
+		summary: (ctx: DraftSummaryContext) => string
 	}
 	/** Values and pickers a cell type renders, in any of its slots. */
 	cells: {
@@ -356,6 +370,17 @@ export type GridMessages = {
 export type CountContext = {
 	/** How many of the thing there are. Always ≥ 1 — a zero segment is not rendered. */
 	count: number
+}
+
+/** What {@link GridMessages.draft.summary} is given. */
+export type DraftSummaryContext = {
+	/** The bar's own short label — `draft.label`, passed through so an override of it carries. */
+	label: string
+	/**
+	 * The pending axes, already worded by `sorts` / `filters` / `search`, in the order a user
+	 * reads their query. Never empty: no axis pending means no draft section to name.
+	 */
+	parts: string[]
 }
 
 /** What {@link GridMessages.filtering.placeholder} is given. */

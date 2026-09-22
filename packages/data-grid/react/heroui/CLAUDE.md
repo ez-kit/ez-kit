@@ -4,7 +4,7 @@
 
 `packages/data-grid/react/shadcn/CLAUDE.md` declares `src/components/ui/**` immutable. That rule is **shadcn-specific**: it is justified by _provenance_ ("vendored shadcn UI primitives … upstream-owned"), not by the path. Nothing in this package is vendored, so nothing here inherits it.
 
-`src/components/ui/action-bar.tsx` is **hand-written and freely editable.** It is a manual port of the shadcn file with radix / `cn` / `asChild` stripped out. The evidence:
+`src/components/ui/action-bar.tsx` is **hand-written and freely editable.** It began as a manual port of a file the shadcn kit then carried, with radix / `cn` / `asChild` stripped out — that counterpart has since been **deleted**, because the shadcn bar never imported it (see the root `AGENTS.md`), so there is nothing left to compare this file against and nothing to keep it in step with. This one stays because HeroUI's bar genuinely uses it. The evidence that it is ours to edit:
 
 - HeroUI does not publish an ActionBar — there is no such component in the v3 set.
 - It imports `Button as HeroButton` from `@heroui/react` plus kit-local helpers (`../../hooks/use-as-ref`, `../../lib/compose-refs`) — no upstream primitive to sync against.
@@ -19,7 +19,7 @@ It is not, however, in good shape: it still writes `--heroui-*` v2 tokens (see "
 
 ## Layering
 
-`createDataGrid(components)` in `src/data-grid.tsx` is wired to `src/blocks/*` adapters. `src/blocks/selection/SelectionBar.tsx` wraps the `action-bar` primitive — the one consumer of `components/ui/`.
+`createDataGrid(components)` in `src/data-grid.tsx` is wired to `src/blocks/*` adapters. `src/blocks/action-bar/ActionBar.tsx` wraps the `action-bar` primitive — the one consumer of `components/ui/`. It is the grid's single action bar, with a live selection section and a live draft section; it replaced the separate `blocks/selection/SelectionBar.tsx` and `blocks/draft/DraftBar.tsx`, which each drew a whole bar and could mount on top of each other.
 
 Add new components to `src/blocks/`. Do **not** extend `src/components/ui/` — keeping it at one file keeps the misleading path from spreading.
 

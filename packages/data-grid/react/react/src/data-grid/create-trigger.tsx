@@ -13,12 +13,16 @@ export type DataGridCreateTriggerProps = {
  * Button that opens the create form. `children` is its label; omit it for the default `+ Add`.
  *
  * While an inline draft row (`creating.mode: 'row'`) is open in a grid with **no** actions column,
- * this button is replaced by that row's Save / Cancel pair. Those two normally live in the actions cell, but a grid whose
- * only row-level feature is `creating` has no such column and gets none: mounting one on open
- * would take its fixed width off the `1fr` tracks and jump every column, on each open and again
- * on each close. The toolbar is already on screen, so swapping this button's contents reflows
- * nothing — and it sits directly above the draft row. `Enter` and `Escape` do the same from the
- * row itself (see `creating-row.tsx`).
+ * this button is replaced by that row's Save / Cancel pair. Those two normally live in the actions
+ * cell, but a grid whose only row-level feature is `creating` has no such column and gets none:
+ * mounting one on open would take its fixed width off the `1fr` tracks and jump every column, on
+ * each open and again on each close. This button is already on screen, so swapping its contents
+ * reflows nothing. `Enter` and `Escape` do the same from the row itself (see `creating-row.tsx`).
+ *
+ * That argument assumed the trigger sat in a toolbar directly above the draft row, which was
+ * true while `<Toolbar>` auto-mounted it. It is placed by a layout now and may sit anywhere, so
+ * the swap is still reflow-free wherever it lands — but a layout that puts it far from the rows
+ * is choosing a longer trip between the affordance and what it opens.
  */
 export function CreateTrigger({ children }: DataGridCreateTriggerProps = {}) {
 	const table = useDataGridTable()

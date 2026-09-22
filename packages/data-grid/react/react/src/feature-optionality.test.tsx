@@ -18,8 +18,8 @@ import {
 } from '@ez-kit/data-grid-core/features'
 import { describe, expect, it, vi } from 'vitest'
 
+import { DataGrid } from './data-grid/data-grid'
 import { renderGrid } from './test-utils'
-import { FilterChipsPosition } from './types'
 
 import type { GridFeatures } from './types'
 
@@ -169,14 +169,18 @@ describe('the active-filters chips strip does not require the draft feature', ()
 	}
 
 	function renderChips(features: GridFeatures) {
-		return renderGrid({
-			features,
-			// `chips.position` is what mounts the strip — `filtering: true` alone does not — and an
-			// active filter is what gives it a chip to render. Both are needed or this case renders
-			// a grid with no strip on it and proves nothing.
-			filtering: { chips: { position: FilterChipsPosition.Above } },
-			initialState: { columnFilters: [{ id: 'name', value: 'Al' }] },
-		})
+		return renderGrid(
+			{
+				filtering: true,
+				features,
+				// An active filter is what gives the strip a chip to render, without which this case
+				// renders a grid with no strip on it and proves nothing.
+				initialState: { columnFilters: [{ id: 'name', value: 'Al' }] },
+			},
+			// Composed, not configured: `filtering: { chips: … }` used to mount the strip, and
+			// writing the component is what mounts it now.
+			<DataGrid.ActiveFiltersBar />,
+		)
 	}
 
 	it('renders a filtered grid built without draftFeature', () => {

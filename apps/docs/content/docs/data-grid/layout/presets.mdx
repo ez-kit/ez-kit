@@ -1,0 +1,167 @@
+---
+title: Presets
+description: The four ready-made layouts @ez-kit/data-grid-react ships — what each renders, how they differ, and when to write your own instead.
+---
+
+`@ez-kit/data-grid-react` ships four layouts. Each is an ordinary component taking no props, so a
+grid names one as `children`:
+
+```tsx
+import { BottomBarLayout } from '@ez-kit/data-grid-react'
+;<DataGrid
+	features={features}
+	data={data}
+	columns={columns}
+>
+	<BottomBarLayout />
+</DataGrid>
+```
+
+or a kit — or an app — binds one for a whole subtree through the `core.Layout` slot. Both kits in
+this repo bind `DefaultLayout`, which is why `<DataGrid data columns features />` renders a toolbar
+and a pagination row with no children at all. See
+[Composition](/docs/data-grid/layout/composition) for how that resolution works, and for writing a
+layout of your own.
+
+## The four
+
+| Preset                 | What it renders                                                                    | Was                                   |
+| ---------------------- | ---------------------------------------------------------------------------------- | ------------------------------------- |
+| `DefaultLayout`        | Toolbar, table, pagination. What both kits bind to `core.Layout`.                  | the default                           |
+| `BottomBarLayout`      | The same, with `<DataGrid.BottomBar />` in place of `<DataGrid.Pagination />`.     | `pagination: { pageSizer: 'footer' }` |
+| `FilterPanelLayout`    | `BottomBarLayout` plus the filter panel in the toolbar and a chips strip under it. | five options at once                  |
+| `PopoverFiltersLayout` | `DefaultLayout` with each column's filter behind a header popover.                 | `filtering: { variant: 'popover' }`   |
+
+They are pure composition with no authored class name, so one set serves both UI kits — and each
+gates its controls on the feature being registered and enabled, so a narrow grid renders a narrow
+toolbar rather than throwing.
+
+All four previews below run the **same** grid — same data, same columns, same feature set, same
+options. What differs is the preset.
+
+## `DefaultLayout`
+
+Toolbar, table, pagination, action bar. This is the everyday grid, and the one both kits bind.
+
+<DataGridDocsExample exampleId='layout-default' />
+
+```tsx
+<DataGrid
+	features={features}
+	data={data}
+	columns={columns}
+>
+	<DefaultLayout />
+</DataGrid>
+```
+
+Two things it deliberately does **not** mount: a page-size selector, and the active-filters strip.
+Ask for either where you want it — `<DataGrid.Toolbar start={<DataGrid.PageSizer />} />`,
+`<DataGrid.ActiveFiltersBar />` — or take the preset below that carries one.
+
+## `BottomBarLayout`
+
+The same, with `<DataGrid.BottomBar />` in place of `<DataGrid.Pagination />`.
+
+<DataGridDocsExample exampleId='layout-bottom-bar' />
+
+```tsx
+<BottomBarLayout />
+```
+
+That one swap is the whole difference, and it is what the page sizer needs: the pagination on its
+own is a full-width centred bar with nowhere to put a second control, while the bottom bar lays its
+contents out as a row with two ends. Give the grid `pagination.items` and the selector has a list
+to offer.
+
+## `FilterPanelLayout`
+
+`BottomBarLayout` with `<DataGrid.FilterPanel />` in the toolbar beside the search box, and the
+active-filters strip under it — the arrangement every issue tracker uses. The strip is empty until
+something is filtered, so it costs no vertical space on a fresh grid.
+
+<DataGridDocsExample exampleId='layout-filter-panel' />
+
+```tsx
+<DataGrid
+	features={features}
+	data={data}
+	columns={columns}
+	globalFiltering
+	filtering
+	sorting
+	visibility
+>
+	<FilterPanelLayout />
+</DataGrid>
+```
+
+The panel is the whole of the name because it is the whole of the difference: the search box and
+the trailing controls are in every preset's toolbar, `DefaultLayout` included. This one adds the
+panel, the strip, and the bottom bar.
+
+Note what it does that no removed option could express: the panel **adds** to each column's own
+header filter rather than replacing it, because the built-in header cell still renders one. Both
+write to a single `columnFilters` slice — two inputs bound to one value. To make the panel the only
+filter UI, expand the table down to `<DataGrid.HeaderCell>` and render everything but `filter`; see
+[Where filters live](/docs/data-grid/filtering/variants#both-at-once).
+
+## `PopoverFiltersLayout`
+
+`DefaultLayout` with each column's filter behind a popover trigger in its header.
+
+<DataGridDocsExample exampleId='layout-popover-filters' />
+
+```tsx
+<PopoverFiltersLayout />
+```
+
+The preset exists because choosing the popover costs an expansion down to
+`<DataGrid.HeaderCell>` — four levels of JSX instead of one enum value. It writes that expansion
+once: every level below `<DataGrid.Table>` renders its own default except the header cell, which
+swaps `filter` for `filterPopover`. Never both — they are one control in two presentations, and
+the pair would field the same filter value twice.
+
+## Choosing one
+
+- **Nothing special** → `DefaultLayout`, i.e. no children at all.
+- **Rows per page matters to the user** → `BottomBarLayout`.
+- **Filtering is the point of the screen** → `FilterPanelLayout`.
+- **Many columns, filters that should stay out of the way** → `PopoverFiltersLayout`.
+- **Anything else** → write one. A layout is a component mounting compound members and nothing
+  more, which is the whole reason the placement options are gone. See
+  [Writing a layout](/docs/data-grid/layout/composition#writing-a-layout).
+
+## The action bar
+
+All four render `<DataGrid.ActionBar />` **last**, which is where the default `floating` bar
+belongs: it overlays the rows, and coming last in document order keeps it out of the tab order
+until there is something to act on.
+
+Nothing places it for you — a layout renders it where it writes it, like every other member. The
+consequence to know: `selection: { bar: 'inline' }` on one of these presets puts that in-flow strip
+**below** the table. A grid that wants `inline` writes a layout of its own with the bar first:
+
+```tsx
+function InlineBarLayout() {
+	return (
+		<>
+			<DataGrid.ActionBar />
+			<DataGrid.Toolbar />
+			<DataGrid.Table />
+			<DataGrid.Pagination />
+		</>
+	)
+}
+```
+
+## See also
+
+- [Composition](/docs/data-grid/layout/composition) — how `children ?? core.Layout ?? <Table/>`
+  resolves, and every compound member a layout is built from
+- [Layout](/docs/data-grid/layout) — the table's own shape: bounded height, sticky header, class names
+- [Where filters live](/docs/data-grid/filtering/variants) — header, panel, popover, or several at once
+
+## Source
+
+- [`packages/data-grid/react/react/src/layouts/`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/react/react/src/layouts/)

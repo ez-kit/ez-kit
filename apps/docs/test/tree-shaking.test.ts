@@ -279,6 +279,69 @@ describe('@ez-kit/data-grid-heroui', () => {
 	})
 })
 
+/**
+ * The adapter's root, where the compound `DataGrid` must not anchor its 29 components.
+ *
+ * Asked with {@link bundledCodeOf} rather than {@link entryPointsPulledBy} because this defect is
+ * invisible to entry-point sets: `useDataGridTable` and `DataGrid` both reach
+ * `@ez-kit/data-grid-core` and `@ez-kit/data-grid-react` and nothing else, before the fix and
+ * after it. What differs is how much of the second one comes along, which is a question about the
+ * bundle's text.
+ *
+ * It did not hold when this case was written. The namespace was assembled by 29 top-level
+ * `DataGrid.Toolbar = Toolbar` statements, which esbuild cannot drop, so each one anchored its
+ * component and everything that component reached. Measured then on the built `dist` with esbuild
+ * (`--bundle --minify`, React external): `{ useDataGridTable }` 155 370 bytes, `{ DataGrid }`
+ * 155 370, `{ DefaultLayout }` 156 115, against 168 998 for the whole surface — any partial import
+ * paid for ~92% of the package. One `/* @__PURE__ *\/`-annotated `Object.assign` with a flat
+ * object literal fixed it. Measured after:
+ *
+ * | imported              |   bytes |
+ * | --------------------- | ------: |
+ * | `useDataGridTable`    |  27 901 |
+ * | `DefaultLayout`       |  83 759 |
+ * | `DataGrid`            | 155 313 |
+ * | whole surface         | 168 942 |
+ *
+ * The `DataGrid` row is the honest one to read beside the others: it did not get cheaper and must
+ * not, because that name is the whole compound namespace. What got cheaper is every import that
+ * never asked for it. See `packages/data-grid/react/react/src/data-grid/data-grid.tsx` for why the
+ * literal must stay flat, and why a getter namespace measured worse than doing nothing.
+ *
+ * Note this case, like every other one in this file, is an **esbuild** guarantee — that is what
+ * {@link bundledCodeOf} bundles with. Rollup and Turbopack were probed on this defect and neither
+ * was ever affected by it; esbuild's purity analysis is the strictest of the three, which makes it
+ * a reasonable proxy and not a proof for whatever bundler a consumer runs. AGENTS.md carries those
+ * measurements.
+ *
+ * `data-slot='filter-panel'` is written by `FilterPanel` and by nothing else in the package, so
+ * its presence in the output is a compound member surviving the shake.
+ */
+describe('@ez-kit/data-grid-react', () => {
+	const ADAPTER_ENTRY = entryOf('data-grid/react/react')
+	/** The slot `FilterPanel` stamps — present in a bundle exactly when that component is. */
+	const FILTER_PANEL_MARKER = 'filter-panel'
+
+	// The control: without it an absence below would also be satisfied by a build that resolved
+	// nothing. The compound namespace must still carry its members.
+	it('reaches a compound member through DataGrid', async () => {
+		expect(await bundledCodeOf(ADAPTER_ENTRY, ['DataGrid'])).toContain(FILTER_PANEL_MARKER)
+	})
+
+	it('does not reach one through a hook', async () => {
+		expect(await bundledCodeOf(ADAPTER_ENTRY, ['useDataGridTable'])).not.toContain(FILTER_PANEL_MARKER)
+	})
+
+	it('costs meaningfully less than the whole surface', async () => {
+		const [narrow, everything] = await Promise.all([
+			bundledCodeOf(ADAPTER_ENTRY, ['useDataGridTable']),
+			bundledCodeOf(ADAPTER_ENTRY),
+		])
+
+		expect(narrow.length).toBeLessThan(everything.length / 2)
+	})
+})
+
 describe.each(PACKAGES)('$name', ({ entry, shakeable, cases }) => {
 	it.each(cases)('importing $imports pulls in $pulls', async ({ imports, pulls }) => {
 		expect(await entryPointsPulledBy(entry, imports)).toEqual([...pulls].sort())

@@ -29,7 +29,7 @@ Every kit owes exactly three things:
    ```
 
    The group keys are the feature names, spelled exactly as the options are — `core`,
-   `pagination`, `sorting`, `filtering`, `editing`, `deleting`, `selection`, `draft`,
+   `pagination`, `sorting`, `filtering`, `editing`, `deleting`,
    `rowActions`, `resizing`, `visibility`, `fallbacks`, `infinite`, `expanding`. A partial kit
    may omit whole groups or individual members (type it `satisfies GridComponents`); overrides
    are merged group-by-group.
@@ -99,7 +99,7 @@ per feature, mirroring `FEATURE_COMPONENTS` so the file tree reads like the cont
 
 ```
 src/blocks/
-  core/  pagination/  sorting/  filtering/  editing/  selection/  draft/
+  core/  pagination/  sorting/  filtering/  editing/  action-bar/
   row-actions/  resizing/  visibility/  fallbacks/  infinite/  expanding/  cell-types/
 ```
 
@@ -133,7 +133,28 @@ exported — read them for the exact shape.
 | `Toolbar`     | `ToolbarProps`     | Chrome around search/actions. `start` / `end` / `children`.         |
 | `Menu`        | `GridMenuProps`    | The one overflow menu: `sections` of icon/label entries, `variant`. |
 | `NumberInput` | `NumberInputProps` | A primitive, beside `Input` — the number filter reaches for it too. |
+| `ActionBar`   | `ActionBarProps`   | One bar, a `selection` and a `draft` section, both live.            |
 | `Modal`       | `ModalProps`       | Generic dialog shell. Any feature needing a dialog uses this.       |
+
+### `core` — accepted, never required
+
+`FEATURE_OPTIONAL_COMPONENTS` is the second tier: the package has a correct answer for each of
+these without a kit, so registering one is an upgrade rather than an obligation, and a kit that
+wrote `satisfies FullGridComponents` keeps compiling when a key is added here.
+
+| Component      | Props               | Without it                                                        |
+| -------------- | ------------------- | ----------------------------------------------------------------- |
+| `Root`         | `RootProps`         | A plain `div`.                                                    |
+| `TableWrapper` | `TableWrapperProps` | A plain `div`. Register one only to move the positioning context. |
+| `TableScroll`  | `TableScrollProps`  | A plain `div`. `ref` declares the real scrollport.                |
+| `Layout`       | `LayoutProps`       | `<DataGrid.Table/>` alone — no toolbar, no pagination.            |
+| `Tooltip`      | `TooltipProps`      | The children alone, unwrapped.                                    |
+| `HeaderMain`   | `HeaderMainProps`   | A plain `div`. Emits `data-slot="header-main"`.                   |
+| `HeaderExtras` | `HeaderExtrasProps` | A plain `div`. Emits `data-slot="header-extras"`.                 |
+
+Neither kit in this repo registers `HeaderMain` or `HeaderExtras`: both style those boxes off the
+slot. They are registrable — and mounted as `<DataGrid.HeaderMain>` / `<DataGrid.HeaderExtras>` —
+so that composing a header cell never means hand-writing the element the stylesheet aims at.
 
 ### `pagination`
 
@@ -177,18 +198,6 @@ the dialog it renders into is `core.Modal`.
 | Component       | Props                                      |
 | --------------- | ------------------------------------------ |
 | `ConfirmDialog` | `ConfirmDialogProps` (delete confirmation) |
-
-### `selection`
-
-| Component      | Props                                       |
-| -------------- | ------------------------------------------- |
-| `SelectionBar` | `SelectionBarProps` (`floating` / `inline`) |
-
-### `draft`
-
-| Component  | Props           |
-| ---------- | --------------- |
-| `DraftBar` | `DraftBarProps` |
 
 ### `rowActions`
 
@@ -260,8 +269,10 @@ filter-panel             filter-panel-chrome       filter-panel-chip
 filter-panel-chip-value  active-filters-bar        clear-filter-button
 between-presets          auto-form                 auto-form-field
 creating-save            creating-cancel           row-action
-selection-bar            selection-bar-action      count
-draft-bar                draft-bar-selected-chip   pagination-row
+action-bar               action-bar-selection      action-bar-draft
+action-bar-draft-part    action-bar-action         action-bar-close
+action-bar-reset         action-bar-apply          count
+bottom-bar
 loading-body-cell        empty-state-cell          no-results-cell
 refetch-overlay          refetch-overlay-inner     load-more-row
 load-more-button         load-more-spinner         load-more-error
@@ -285,6 +296,6 @@ Register them via createDataGrid({ components }) or a local <DataGrid components
 
 The guard is conservative — it asserts only the always-rendered structural primitives
 plus components gated by a config that is definitively present (delete confirmation,
-modal creating/editing, selection bar) — so it never fires a false positive. It is
+modal creating/editing, the action bar) — so it never fires a false positive. It is
 stripped from production builds. For full compile-time coverage, use
 `satisfies FullGridComponents`.

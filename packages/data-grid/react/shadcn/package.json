@@ -103,16 +103,6 @@
 			"import": "./dist/deleting/index.js",
 			"default": "./dist/deleting/index.js"
 		},
-		"./selection": {
-			"types": "./dist/selection/index.d.ts",
-			"import": "./dist/selection/index.js",
-			"default": "./dist/selection/index.js"
-		},
-		"./draft": {
-			"types": "./dist/draft/index.d.ts",
-			"import": "./dist/draft/index.js",
-			"default": "./dist/draft/index.js"
-		},
 		"./row-actions": {
 			"types": "./dist/row-actions/index.d.ts",
 			"import": "./dist/row-actions/index.js",
@@ -346,7 +336,7 @@
 		},
 		{
 			"path": "dist/core/index.js",
-			"limit": "4.9 KB",
+			"limit": "6.2 KB",
 			"ignore": [
 				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
@@ -432,40 +422,6 @@
 		{
 			"path": "dist/deleting/index.js",
 			"limit": "2.5 KB",
-			"ignore": [
-				"@ez-kit/data-grid-core",
-				"@ez-kit/data-grid-react",
-				"class-variance-authority",
-				"clsx",
-				"date-fns",
-				"lucide-react",
-				"radix-ui",
-				"react-day-picker",
-				"shadcn",
-				"tailwind-merge",
-				"tailwindcss"
-			]
-		},
-		{
-			"path": "dist/selection/index.js",
-			"limit": "2.7 KB",
-			"ignore": [
-				"@ez-kit/data-grid-core",
-				"@ez-kit/data-grid-react",
-				"class-variance-authority",
-				"clsx",
-				"date-fns",
-				"lucide-react",
-				"radix-ui",
-				"react-day-picker",
-				"shadcn",
-				"tailwind-merge",
-				"tailwindcss"
-			]
-		},
-		{
-			"path": "dist/draft/index.js",
-			"limit": "2.4 KB",
 			"ignore": [
 				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",

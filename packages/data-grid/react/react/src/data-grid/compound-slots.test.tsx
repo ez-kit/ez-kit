@@ -182,7 +182,7 @@ describe('compound render-prop slots', () => {
 		expect(container.querySelector('p')).toBeNull()
 	})
 
-	it('<DataGrid.SelectionBar> hands over a confirmation-aware onDelete', () => {
+	it('<DataGrid.ActionBar> hands over a confirmation-aware onDelete', () => {
 		const onDelete = vi.fn()
 		const table = prepareDataGridTable(
 			createTable<GridFeatures, User>({
@@ -199,18 +199,18 @@ describe('compound render-prop slots', () => {
 
 		const { container } = renderWithComponents(
 			<DataGrid table={table}>
-				<DataGrid.SelectionBar>
-					{({ count, open, onDelete: del }) => (
+				<DataGrid.ActionBar>
+					{({ open, selection }) => (
 						<button
 							type='button'
-							data-count={count}
+							data-count={selection?.count}
 							data-open={String(open)}
-							onClick={del}
+							onClick={selection?.onDelete}
 						>
 							delete
 						</button>
 					)}
-				</DataGrid.SelectionBar>
+				</DataGrid.ActionBar>
 			</DataGrid>,
 		)
 		const button = container.querySelector('button')

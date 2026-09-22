@@ -52,6 +52,9 @@ const SELECTION_AND_EXPANDING_SIZED = tableFeatures({
 /** `columnPinningFeature` owns the `columnPinning` slice a system column's pin is recorded in. */
 const COLUMN_PINNING = tableFeatures({ columnPinningFeature, deletingFeature })
 
+/** The same slice, for the grids whose system column is the selection one. */
+const SELECTION_PINNING = tableFeatures({ rowSelectionFeature, columnPinningFeature })
+
 /**
  * The three auto-injected columns took no configuration at all: their header rendered
  * nothing, their width was a constant, and their pinning was decided for them — with the
@@ -125,6 +128,21 @@ describe('SystemColumnDef', () => {
 
 		expect(table.getColumn(ACTIONS_COLUMN_ID)?.columnDef.meta?.pinning).toBe(false)
 		expect(table.store.state.columnPinning.end).not.toContain(ACTIONS_COLUMN_ID)
+	})
+
+	it('unpins the checkbox column on request, leaving it an ordinary first column', () => {
+		const table = createTable({
+			features: SELECTION_PINNING,
+			data: DATA,
+			columns: COLUMNS,
+			selection: { column: { pinning: false } },
+		})
+
+		expect(table.getColumn(SELECTION_COLUMN_ID)?.columnDef.meta?.pinning).toBe(false)
+		expect(table.store.state.columnPinning.start).not.toContain(SELECTION_COLUMN_ID)
+		// Unpinning moves nothing: the column is injected first either way, so what changes is
+		// whether it sticks to the start edge under horizontal scroll.
+		expect(table.getAllLeafColumns().map((column) => column.id)).toEqual([SELECTION_COLUMN_ID, 'name'])
 	})
 
 	it('normalizes the scalar align form the way a normal column does', () => {

@@ -1,6 +1,6 @@
 {
 	"name": "@ez-kit/data-grid-heroui",
-	"version": "0.8.0",
+	"version": "0.9.0",
 	"description": "HeroUI flavour of @ez-kit/data-grid.",
 	"license": "MIT",
 	"repository": {
@@ -101,16 +101,6 @@
 			"types": "./dist/deleting/index.d.ts",
 			"import": "./dist/deleting/index.js",
 			"default": "./dist/deleting/index.js"
-		},
-		"./selection": {
-			"types": "./dist/selection/index.d.ts",
-			"import": "./dist/selection/index.js",
-			"default": "./dist/selection/index.js"
-		},
-		"./draft": {
-			"types": "./dist/draft/index.d.ts",
-			"import": "./dist/draft/index.js",
-			"default": "./dist/draft/index.js"
 		},
 		"./row-actions": {
 			"types": "./dist/row-actions/index.d.ts",
@@ -268,7 +258,7 @@
 		},
 		{
 			"path": "dist/core/index.js",
-			"limit": "3.3 KB",
+			"limit": "7.2 KB",
 			"ignore": [
 				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
@@ -319,26 +309,6 @@
 		{
 			"path": "dist/deleting/index.js",
 			"limit": "510 B",
-			"ignore": [
-				"@ez-kit/data-grid-core",
-				"@ez-kit/data-grid-react",
-				"@internationalized/date",
-				"lucide-react"
-			]
-		},
-		{
-			"path": "dist/selection/index.js",
-			"limit": "4.2 KB",
-			"ignore": [
-				"@ez-kit/data-grid-core",
-				"@ez-kit/data-grid-react",
-				"@internationalized/date",
-				"lucide-react"
-			]
-		},
-		{
-			"path": "dist/draft/index.js",
-			"limit": "4.1 KB",
 			"ignore": [
 				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",

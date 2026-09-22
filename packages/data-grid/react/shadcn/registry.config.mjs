@@ -58,9 +58,11 @@ const outPath = generateRegistryManifest({
 		blocks: 'registry:component',
 		hooks: 'registry:hook',
 		lib: 'registry:lib',
-		// Shipped as our own files, not `registryDependencies`: several of these are hand-written
-		// (e.g. action-bar.tsx) rather than unmodified upstream shadcn primitives, so there is no
-		// matching item in the official registry to reference.
+		// Shipped as our own files, not `registryDependencies`: several of these carry this kit's
+		// own modifications rather than being unmodified upstream shadcn primitives — `table.tsx`
+		// most of all, which bakes in the grid-layout support the rest of the kit assumes. A
+		// consumer resolving those from the official registry would get stock behaviour and lose
+		// it silently, so there is no matching item to reference.
 		components: 'registry:ui',
 	},
 	fileTypeOverrides: {

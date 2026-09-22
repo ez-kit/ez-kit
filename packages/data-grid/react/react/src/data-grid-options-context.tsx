@@ -86,9 +86,11 @@ function joinLayoutClassNames(
 	over: LayoutClassNames | undefined,
 ): LayoutClassNames | undefined {
 	if (base === undefined || over === undefined) return over ?? base
+	const root = joinClassNames(base.root, over.root)
 	const wrapper = joinClassNames(base.wrapper, over.wrapper)
 	const scroll = joinClassNames(base.scroll, over.scroll)
 	return {
+		...(root !== undefined ? { root } : {}),
 		...(wrapper !== undefined ? { wrapper } : {}),
 		...(scroll !== undefined ? { scroll } : {}),
 	}

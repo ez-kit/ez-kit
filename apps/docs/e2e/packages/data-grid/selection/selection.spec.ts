@@ -21,9 +21,12 @@ const TOTAL_ROWS = 12
 /**
  * One name in both kits, and `data-state` for whether it is up: shadcn keeps the bar mounted
  * and fades it out, HeroUI unmounts it, so presence is not the question — `open` is.
+ *
+ * `action-bar`, not `selection-bar`: the two bars became one component with a section per
+ * concern, so the element is the bar and the selection is a section of it.
  */
-const BAR = '[data-slot="selection-bar"]'
-const BAR_OPEN = '[data-slot="selection-bar"][data-state="open"]'
+const BAR = '[data-slot="action-bar"]'
+const BAR_OPEN = '[data-slot="action-bar"][data-state="open"]'
 
 function rowCheckboxes(page: Page): Locator {
 	return page.locator('[data-slot="tbody"]').getByRole('checkbox')
@@ -86,7 +89,9 @@ test.describe('a grid with selection on', () => {
 	})
 })
 
-test.describe('the selection bar', () => {
+// This example registers no `draft`, so the bar it raises carries the selection section alone.
+// Both sections up at once is `action-bar.spec.ts`.
+test.describe('the action bar, on a selection alone', () => {
 	test.beforeEach(async ({ grid }) => {
 		await grid.open(WITH_BAR)
 	})

@@ -1,69 +1,18 @@
 'use client'
 
-import {
-	columnFacetingFeature,
-	columnFilteringFeature,
-	columnPinningFeature,
-	columnResizingFeature,
-	columnSizingFeature,
-	columnVisibilityFeature,
-	createFacetedRowModel,
-	createFacetedUniqueValues,
-	createFilteredRowModel,
-	createPaginatedRowModel,
-	createSortedRowModel,
-	creatingFeature,
-	deletingFeature,
-	editingFeature,
-	filterFns,
-	globalFilteringFeature,
-	loadingFeature,
-	rowPaginationFeature,
-	rowPinningFeature,
-	rowSelectionFeature,
-	rowSortingFeature,
-	sortFns,
-	tableFeatures,
-} from '@ez-kit/data-grid-core/features'
-
 import { DataGrid } from 'shared/DataGrid'
 
 import { orderColumns } from './data'
+import { consoleFeatures } from './features'
+import { OrdersLayout } from './OrdersLayout'
 import { useOrders } from './use-orders'
-
-const features = tableFeatures({
-	// Structural: the grid shell reads column widths, visibility and pin groups to lay out
-	// the column grid. Everything below is this example's own.
-	columnVisibilityFeature,
-	columnPinningFeature,
-	columnSizingFeature,
-	columnResizingFeature,
-	rowSortingFeature,
-	loadingFeature,
-	creatingFeature,
-	columnFacetingFeature,
-	columnFilteringFeature,
-	deletingFeature,
-	editingFeature,
-	filterFns,
-	globalFilteringFeature,
-	rowPaginationFeature,
-	rowPinningFeature,
-	rowSelectionFeature,
-	sortFns,
-	facetedRowModel: createFacetedRowModel(),
-	facetedUniqueValues: createFacetedUniqueValues(),
-	filteredRowModel: createFilteredRowModel(),
-	paginatedRowModel: createPaginatedRowModel(),
-	sortedRowModel: createSortedRowModel(),
-})
 
 export function ProductionExample() {
 	const orders = useOrders()
 
 	return (
 		<DataGrid
-			features={features}
+			features={consoleFeatures}
 			data={orders.rows}
 			columns={orderColumns}
 			pagination={{
@@ -79,7 +28,6 @@ export function ProductionExample() {
 			sorting={{
 				manual: true,
 				multi: { max: 3, event: 'ctrl' },
-				toolbar: true,
 				onChange: (next) => {
 					orders.setSorting(next)
 					orders.resetToFirstPage()
@@ -87,11 +35,8 @@ export function ProductionExample() {
 			}}
 			filtering={{
 				manual: true,
-				variant: 'popover',
 				faceted: true,
 				debounce: 300,
-				chips: { position: 'above' },
-				toolbar: true,
 				onChange: (next) => {
 					orders.setColumnFilters(next)
 					orders.resetToFirstPage()
@@ -136,6 +81,8 @@ export function ProductionExample() {
 				globalFilter: orders.globalFilter,
 				loading: orders.loading,
 			}}
-		/>
+		>
+			<OrdersLayout />
+		</DataGrid>
 	)
 }

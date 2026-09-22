@@ -134,6 +134,7 @@ export const defaultMessages: GridMessages = {
 		sorts: ({ count }) => `${String(count)} ${count === 1 ? 'sort' : 'sorts'}`,
 		filters: ({ count }) => `${String(count)} ${count === 1 ? 'filter' : 'filters'}`,
 		search: 'search',
+		summary: ({ label, parts }) => `${label}: ${parts.join(', ')}`,
 	},
 	cells: {
 		all: 'All',

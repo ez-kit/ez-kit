@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { GridComponentsProvider } from '../components-context'
 import { prepareDataGridTable } from '../prepare-table'
 import { TEST_FEATURES, renderWithComponents } from '../test-utils'
-import { ActionBarVariant, PageSizerPlacement } from '../types'
+import { ActionBarVariant } from '../types'
 
 import { DataGrid } from './data-grid'
 
@@ -268,29 +268,17 @@ describe('<DataGrid>', () => {
 		expect(screen.queryByRole('combobox')).toBeNull()
 	})
 
-	it('renders a hand-placed PageSizer even when the toolbar is told not to mount one', () => {
-		// `pageSizer` governs auto-mounting only — it must not erase the size list the
-		// hand-placed control reads.
-		// `makeTable` builds a bare core table, so the resolved options are set directly here:
-		// sizes present, auto-mount off — exactly what `pagination: { pageSizer: false }` resolves to.
+	it('renders a hand-placed PageSizer with the pagination.items values', () => {
+		// The size list is data and is resolved whenever page-based pagination is on; where the
+		// control goes is the layout's to say, so this one is placed by hand.
 		const table = makeTable({ pagination: { pageSize: 5 } })
 		table.grid.pagination.items = [5, 10, 25]
-		delete table.grid.pagination.pageSizer
 		renderWithComponents(
 			<DataGrid table={table}>
 				<DataGrid.PageSizer />
 			</DataGrid>,
 		)
-		expect(screen.getByRole('combobox')).toHaveValue('5')
-	})
-
-	it('renders PageSizer select with the pagination.items values', () => {
-		const table = makeTable({ pagination: { pageSize: 5 } })
-		table.grid.pagination.items = [5, 10, 25]
-		table.grid.pagination.pageSizer = { placement: PageSizerPlacement.Toolbar }
-		renderWithComponents(<DataGrid table={table} />)
 		const select = screen.getByRole('combobox')
-		expect(select).toBeInTheDocument()
 		expect(select).toHaveValue('5')
 		expect(screen.getByRole('option', { name: '10' })).toBeInTheDocument()
 		expect(screen.getByRole('option', { name: '25' })).toBeInTheDocument()
@@ -375,44 +363,50 @@ describe('<DataGrid>', () => {
 		})
 	})
 
-	describe('selection bar layout', () => {
-		// Both <Toolbar> and <SelectionBar> share role="toolbar"; SelectionBar additionally
-		// carries data-slot="selection-bar", so we compare DOM order between the SelectionBar
-		// (by data-slot) and the *other* role="toolbar" element (the real Toolbar).
-		function getBarAndToolbar(): { selectionBar: HTMLElement; toolbar: HTMLElement } {
-			const selectionBar = document.querySelector('[data-slot="selection-bar"]')
-			if (!(selectionBar instanceof HTMLElement)) throw new Error('expected [data-slot="selection-bar"]')
+	describe('action bar layout', () => {
+		// Both <Toolbar> and <ActionBar> share role="toolbar"; the bar additionally carries
+		// data-slot="action-bar", so we compare DOM order between the bar (by data-slot) and
+		// the *other* role="toolbar" element (the real Toolbar).
+		function getBarAndToolbar(): { actionBar: HTMLElement; toolbar: HTMLElement } {
+			const actionBar = document.querySelector('[data-slot="action-bar"]')
+			if (!(actionBar instanceof HTMLElement)) throw new Error('expected [data-slot="action-bar"]')
 			const toolbars = Array.from(document.querySelectorAll('[role="toolbar"]'))
-			const toolbar = toolbars.find((el) => el.getAttribute('data-slot') !== 'selection-bar')
-			if (!(toolbar instanceof HTMLElement)) throw new Error('expected the non-selection-bar [role="toolbar"]')
-			return { selectionBar, toolbar }
+			const toolbar = toolbars.find((el) => el.getAttribute('data-slot') !== 'action-bar')
+			if (!(toolbar instanceof HTMLElement)) throw new Error('expected the non-action-bar [role="toolbar"]')
+			return { actionBar, toolbar }
 		}
 
-		it('renders inline SelectionBar above the Toolbar in DOM order', () => {
+		function renderWithVariant(variant: ActionBarVariant) {
 			// Toolbar renders null without content — enable `creating` to give it the "+ Add" trigger.
-			const table = makeTable({ selection: true, creating: { onSave: () => Promise.resolve() } })
-			table.grid.selection.bar = { variant: ActionBarVariant.Inline }
-			table.setRowSelection({ '1': true })
-			renderWithComponents(<DataGrid table={table} />)
-
-			const { selectionBar, toolbar } = getBarAndToolbar()
-			expect(selectionBar.compareDocumentPosition(toolbar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-		})
-
-		it('renders floating SelectionBar after Table/Pagination by default', () => {
 			const table = makeTable({
 				selection: true,
 				creating: { onSave: () => Promise.resolve() },
 				pagination: true,
 			})
-			table.grid.selection.bar = { variant: ActionBarVariant.Floating }
+			table.grid.selection.bar = { variant }
 			table.setRowSelection({ '1': true })
 			renderWithComponents(<DataGrid table={table} />)
+			return getBarAndToolbar()
+		}
 
-			const { selectionBar, toolbar } = getBarAndToolbar()
-			// floating: toolbar precedes selectionBar
-			expect(toolbar.compareDocumentPosition(selectionBar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-		})
+		/**
+		 * Where the bar renders is the layout's decision, not `selection.bar.variant`'s — so the
+		 * bound preset puts it after the toolbar under **both** variants. It used to branch, through
+		 * a `GridShell` wrapper that read the variant and placed the bars for you; that was the
+		 * last placement option left standing, and it is gone.
+		 *
+		 * The variant still decides what the kit *renders* (an in-flow strip against an overlay),
+		 * which is why `inline` wants the bar written first — the arrangement `presets.test.tsx`
+		 * covers, since it takes a layout of its own.
+		 */
+		it.each([ActionBarVariant.Inline, ActionBarVariant.Floating])(
+			'renders the %s ActionBar after the Toolbar, as the bound layout writes it',
+			(variant) => {
+				const { actionBar, toolbar } = renderWithVariant(variant)
+
+				expect(toolbar.compareDocumentPosition(actionBar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+			},
+		)
 	})
 
 	it('registry creating falls back to edit component when creating not provided', () => {

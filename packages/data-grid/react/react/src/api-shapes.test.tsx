@@ -5,8 +5,6 @@ import { describe, expect, it } from 'vitest'
 import { TEST_FEATURES } from './test-utils'
 import { useDataGrid } from './use-data-grid'
 
-import type { GridFeatures } from './types'
-import type { UseDataGridConfig } from './use-data-grid'
 import type { FieldState, InputComponentProps, SelectCellConfig } from '@ez-kit/data-grid-core'
 
 type User = { id: number; name: string; status: string }
@@ -78,19 +76,6 @@ describe('enabled: false on a nested config', () => {
 		expect(result.current.grid.selection.bar).toBeUndefined()
 	})
 
-	it('suppresses the filter-chips strip while filtering stays on', () => {
-		const { result } = renderHook(() =>
-			useDataGrid({
-				features: TEST_FEATURES,
-				data: USERS,
-				columns: COLUMNS,
-				filtering: { chips: { enabled: false, position: 'below' } },
-			}),
-		)
-
-		expect(result.current.grid.filtering.chips).toBeUndefined()
-	})
-
 	it('suppresses row pinning while column pinning stays on', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({
@@ -116,32 +101,6 @@ describe('enabled: false on a nested config', () => {
 		)
 
 		expect(result.current.grid.fallbacks.noResults).toEqual({ enabled: false })
-	})
-})
-
-/**
- * `chips` takes the same scalar-or-object shape as a column's `align`, `width` and `pinning`:
- * the position is the whole of what the common case has to say.
- */
-describe('filtering.chips scalar form', () => {
-	it("reads `chips: 'below'` as the position", () => {
-		const { result } = renderHook(() =>
-			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, filtering: { chips: 'below' } }),
-		)
-
-		expect(result.current.grid.filtering.chips).toEqual({ position: 'below' })
-	})
-
-	it('still accepts the object form', () => {
-		const config: UseDataGridConfig<GridFeatures, User> = {
-			features: TEST_FEATURES,
-			data: USERS,
-			columns: COLUMNS,
-			filtering: { chips: { position: 'above' } },
-		}
-		const { result } = renderHook(() => useDataGrid(config))
-
-		expect(result.current.grid.filtering.chips).toEqual({ position: 'above' })
 	})
 })
 

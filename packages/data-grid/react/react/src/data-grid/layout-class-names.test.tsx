@@ -4,6 +4,7 @@ import { createDataGrid } from '../create-data-grid'
 import { DataGridOptionsProvider } from '../data-grid-options-context'
 import { renderGrid, testComponents, TEST_COLUMNS, TEST_FEATURES, TEST_ROWS, renderWithComponents } from '../test-utils'
 
+const ROOT = "[data-slot='grid-root']"
 const WRAPPER = "[data-slot='table-wrapper']"
 const SCROLL = "[data-slot='table-scroll']"
 
@@ -13,6 +14,41 @@ const SCROLL = "[data-slot='table-scroll']"
  * *outside* the scrollport, which is where a border has to live to not scroll with the content.
  */
 describe('layout.classNames', () => {
+	it('classes the grid root', () => {
+		const { container } = renderGrid({ layout: { classNames: { root: 'card' } } })
+
+		expect(container.querySelector(ROOT)).toHaveClass('card')
+	})
+
+	// The root is what makes the grid one item in its parent's layout instead of a run of
+	// siblings, so it is always rendered — a class is an addition to it, never what creates it.
+	it('renders the root with or without a class, around the whole grid', () => {
+		const { container } = renderGrid()
+		const root = container.querySelector(ROOT)
+
+		expect(root).not.toBeNull()
+		expect(root?.className).toBe('')
+		expect(root?.querySelector(WRAPPER)).not.toBeNull()
+	})
+
+	it('accumulates on the root the way it does on the other two boxes', () => {
+		const { DataGrid: Bound } = createDataGrid({
+			components: testComponents,
+			defaults: { layout: { classNames: { root: 'kit-card' } } },
+		})
+
+		const { container } = renderWithComponents(
+			<Bound
+				features={TEST_FEATURES}
+				data={TEST_ROWS}
+				columns={TEST_COLUMNS}
+				layout={{ classNames: { root: 'app-card' } }}
+			/>,
+		)
+
+		expect(container.querySelector(ROOT)?.className).toBe('kit-card app-card')
+	})
+
 	it('classes both shell boxes', () => {
 		const { container } = renderGrid({ layout: { classNames: { wrapper: 'kit-frame', scroll: 'kit-port' } } })
 

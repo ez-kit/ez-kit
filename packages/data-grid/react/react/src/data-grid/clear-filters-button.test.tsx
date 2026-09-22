@@ -11,7 +11,6 @@ import { ClearFiltersButton } from './clear-filters-button'
 import { TableProvider } from './table-context'
 
 import type { DataTable, GridFeatures } from '../types'
-import type { NormalizedFilteringToolbarConfig } from '../use-data-grid'
 import type { ReactNode } from 'react'
 
 type User = { id: number; name: string }
@@ -32,10 +31,6 @@ function makeTable() {
 		globalFiltering: true,
 	})
 	return prepareDataGridTable(table)
-}
-
-function setClearCfg(table: DataTable<GridFeatures, User>, value: NormalizedFilteringToolbarConfig | undefined) {
-	table.grid.filtering.toolbar = value
 }
 
 function Wrapper({ table, children }: { table: DataTable<GridFeatures, User>; children: ReactNode }) {
@@ -91,18 +86,6 @@ describe('<ClearFiltersButton>', () => {
 		)
 		const button = screen.getByRole('button', { name: /clear filters/i })
 		expect(button).toBeDisabled()
-	})
-
-	it('alwaysShow via FILTERING_TOOLBAR_KEY config renders a disabled button when no filter', () => {
-		const table = makeTable()
-		setClearCfg(table, { alwaysShow: true })
-
-		render(
-			<Wrapper table={table}>
-				<ClearFiltersButton />
-			</Wrapper>,
-		)
-		expect(screen.getByRole('button', { name: /clear filters/i })).toBeDisabled()
 	})
 
 	it('click clears column filters and global filter', async () => {

@@ -29,9 +29,6 @@ export const GridFeature = {
 	Editing: 'editing',
 	/** Row deletion: the confirmation dialog. */
 	Deleting: 'deleting',
-	Selection: 'selection',
-	/** Pending-draft section of the shared action bar (`draft`). */
-	Draft: 'draft',
 	/**
 	 * Per-row actions column: edit / delete buttons (the row-pin menu uses `core.Menu`).
 	 *
@@ -80,6 +77,12 @@ export const FEATURE_COMPONENTS = {
 		// what any grid dialog needs, and a feature that wants one is meant to reach for this
 		// rather than register a shell of its own.
 		'Modal',
+		// One bar, two sections — selection and pending draft. `core`, not a feature group: a
+		// grid with `draft` and no row-selection feature still renders it, and must not depend
+		// on a kit advertising selection support. It is required rather than optional because
+		// the package has no correct fallback for a bar, unlike `TableWrapper` / `TableScroll`
+		// / `Layout`, which fall back to a plain `div` and to the table.
+		'ActionBar',
 	] as const,
 	[GridFeature.Pagination]: ['Pagination', 'PageSizer'] as const,
 	[GridFeature.Sorting]: ['SortIndicator', 'SortMenu'] as const,
@@ -99,8 +102,6 @@ export const FEATURE_COMPONENTS = {
 	// duplicated into a `creating` one. The dialog it renders into is `core.Modal`.
 	[GridFeature.Editing]: ['FormShell'] as const,
 	[GridFeature.Deleting]: ['ConfirmDialog'] as const,
-	[GridFeature.Selection]: ['SelectionBar'] as const,
-	[GridFeature.Draft]: ['DraftBar'] as const,
 	[GridFeature.RowActions]: ['ActionsCell'] as const,
 	[GridFeature.Resizing]: ['Resizer'] as const,
 	[GridFeature.Visibility]: ['VisibilityMenu'] as const,
@@ -112,8 +113,8 @@ export const FEATURE_COMPONENTS = {
 /**
  * Components a feature **accepts but does not require**, beside the ones {@link FEATURE_COMPONENTS}
  * makes mandatory. A key belongs here only when the package has a correct answer without it — the
- * shell's two boxes fall back to a plain `div` — so registering one is an upgrade rather than an
- * obligation.
+ * shell's two boxes fall back to a plain `div`, and `Layout` falls back to the table alone — so
+ * registering one is an upgrade rather than an obligation.
  *
  * They are kept out of {@link FEATURE_COMPONENTS} deliberately: `ComponentsFor` is what
  * {@link FullGridComponents} makes required, so a key added there is a compile error in every
@@ -121,14 +122,28 @@ export const FEATURE_COMPONENTS = {
  * additive — an existing kit keeps compiling and keeps its current rendering.
  */
 export const FEATURE_OPTIONAL_COMPONENTS = {
-	[GridFeature.Core]: ['TableWrapper', 'TableScroll'] as const,
+	// `Tooltip` sits here rather than beside `Modal` in the required set: a hint over something
+	// already on screen has a correct answer without a kit — render what it would have wrapped —
+	// so requiring it would be a compile error in every external kit for a decoration.
+	[GridFeature.Core]: [
+		'Root',
+		'TableWrapper',
+		'TableScroll',
+		'Layout',
+		'Tooltip',
+		// The header cell's two boxes, for the same reason as the shell's: a plain `div` is
+		// correct, and neither kit here registers one — shadcn styles `header-main` from the
+		// structural stylesheet and heroui styles `header-extras` from its own. They are
+		// registrable so that composing a header cell never means hand-writing the element
+		// those stylesheets aim at.
+		'HeaderMain',
+		'HeaderExtras',
+	] as const,
 	[GridFeature.Pagination]: [] as const,
 	[GridFeature.Sorting]: [] as const,
 	[GridFeature.Filtering]: [] as const,
 	[GridFeature.Editing]: [] as const,
 	[GridFeature.Deleting]: [] as const,
-	[GridFeature.Selection]: [] as const,
-	[GridFeature.Draft]: [] as const,
 	[GridFeature.RowActions]: [] as const,
 	[GridFeature.Resizing]: [] as const,
 	[GridFeature.Visibility]: [] as const,
@@ -156,8 +171,6 @@ export type GridSortingComponents = ComponentsFor<typeof GridFeature.Sorting>
 export type GridFilteringComponents = ComponentsFor<typeof GridFeature.Filtering>
 export type GridEditingComponents = ComponentsFor<typeof GridFeature.Editing>
 export type GridDeletingComponents = ComponentsFor<typeof GridFeature.Deleting>
-export type GridSelectionComponents = ComponentsFor<typeof GridFeature.Selection>
-export type GridDraftComponents = ComponentsFor<typeof GridFeature.Draft>
 export type GridRowActionsComponents = ComponentsFor<typeof GridFeature.RowActions>
 export type GridResizingComponents = ComponentsFor<typeof GridFeature.Resizing>
 export type GridVisibilityComponents = ComponentsFor<typeof GridFeature.Visibility>
