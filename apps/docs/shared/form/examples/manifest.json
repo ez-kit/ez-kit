@@ -318,5 +318,13 @@
 		"groupLabel": "Form",
 		"sourceFile": "components/arrays-custom.tsx",
 		"exportName": "ArraysCustomExample"
+	},
+	{
+		"id": "form-arrays-dnd",
+		"label": "Arrays: drag and drop",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/arrays-dnd.tsx",
+		"exportName": "ArraysDndExample"
 	}
 ]

@@ -193,6 +193,32 @@ Inside `form.ArrayField`, a row's caption and reorder captions usually come from
 something visible, but a row with no `label` prop — and no `itemLabel` to inherit, since there is
 no `form.ArrayField` here — renders with no heading at all.
 
+## Drag and drop
+
+Dragging a row to reorder it is only possible on the primitive. `ArrayItemProps` takes `children`,
+`label`, `removeLabel` and `reorderable` — nothing else — so `item.Item` has no `ref` to attach a
+sortable hook to and spreads no props onto the element it renders. `form.Array` gives up that
+frame entirely, so the row is whatever element the author draws, and a `ref` from
+[`@dnd-kit/react`](https://next.dndkit.com)'s `useSortable` lands on it directly:
+
+<KitExample exampleId='form-arrays-dnd' />
+
+`move(from, to)` — the same scope method [`item.moveUp` / `item.moveDown`](#one-entry-from-the-primitive)
+already call — is what a drag maps onto: `useSortable`'s `index` reports where a row started and
+where it landed, and `onDragEnd` hands that pair straight to `move`. `@dnd-kit/react` reorders the
+DOM optimistically while the drag is in progress and commits to form state once, on drop, so there
+is no per-frame `move` call to make.
+
+`item.key` doubles as the sortable id. It is minted once per entry and carried across every add,
+remove and move — [the same stability `item.key` gives React reconciliation](#key-by-itemkey-never-by-the-index)
+is what lets `useSortable` track one row through a drag rather than losing it to a reused index.
+
+`DragDropProvider` includes a keyboard sensor by default, so the same rows are reorderable without
+a mouse: focus a row, then use the arrow keys.
+
+For explicit up/down controls instead of a drag gesture, see the [custom-layout
+example](#custom-layout) above, built on `item.moveUp` / `item.moveDown`.
+
 ## Validating the list
 
 `validate` on an array constrains the **list**, and its messages surface on the list rather than on any one field. The vocabulary is the same [`FieldValidate`](/docs/form/schema#validation) every field uses; `minLength`, `maxLength` and `rule` are the three keys that mean something here — see the [API reference](/docs/form/arrays/api#validating-the-list) for each.
