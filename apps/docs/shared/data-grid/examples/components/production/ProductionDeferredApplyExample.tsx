@@ -4,7 +4,7 @@ import { DataGrid } from 'shared/DataGrid'
 
 import { orderColumns } from './data'
 import { deferredApplyFeatures } from './features'
-import { ProductionLayout } from './ProductionLayout'
+import { OrdersLayout } from './OrdersLayout'
 import { useOrdersState } from './use-orders-state'
 
 /**
@@ -53,7 +53,7 @@ export function ProductionDeferredApplyExample() {
 			state={{ loading: orders.loading }}
 			onStateChange={orders.onStateChange}
 		>
-			<ProductionLayout />
+			<OrdersLayout />
 		</DataGrid>
 	)
 }

@@ -86,6 +86,7 @@ export const DocPage = {
 	ColumnsCellTypes: 'content/docs/data-grid/columns/cell-types.mdx',
 	ColumnsCustomCellTypes: 'content/docs/data-grid/columns/custom-cell-types.mdx',
 	LayoutComposition: 'content/docs/data-grid/layout/composition.mdx',
+	LayoutPresets: 'content/docs/data-grid/layout/presets.mdx',
 	StateDefaults: 'content/docs/data-grid/state/defaults.mdx',
 	StateContext: 'content/docs/data-grid/state/context.mdx',
 	EditingCreating: 'content/docs/data-grid/editing/creating.mdx',
@@ -498,11 +499,6 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		optionTables: [],
 		nonOptionTables: [
 			{
-				heading: 'Layout presets',
-				reason:
-					'Maps each exported preset component to what it renders and to the option it replaced. The first column is export names from `@ez-kit/data-grid-react`, not keys of any config.',
-			},
-			{
 				heading: 'Keep the built-in body and add to it',
 				reason:
 					'Names the parts `<DataGrid.Body>` hands its children (`creatingRow`, `centerRows`, `loadMoreFooter`, …) — properties of a callback argument, the same shape as the header-cell table below, not options anyone sets.',
@@ -516,6 +512,17 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 				heading: 'Fallbacks, modals and bars',
 				reason:
 					'Maps compound slots to the condition that mounts them and the render args they pass. The left column is JSX element names, not option keys.',
+			},
+		],
+	},
+	{
+		page: DocPage.LayoutPresets,
+		optionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'The four',
+				reason:
+					'Maps each exported preset component to what it renders and to the option it replaced. The first column is export names from `@ez-kit/data-grid-react`, not keys of any config.',
 			},
 		],
 	},

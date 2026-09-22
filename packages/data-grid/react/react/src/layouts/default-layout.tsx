@@ -60,7 +60,7 @@ import { useToolbarEnd, useToolbarStart } from './toolbar-controls'
  *
  * or reach for {@link BottomBarLayout}, which puts the sizer beside the page controls. The
  * chips strip is the same story: write `<DataGrid.ActiveFiltersBar />`, or use
- * {@link SearchFiltersActionsLayout}, which carries one.
+ * {@link FilterPanelLayout}, which carries one.
  */
 export function DefaultLayout() {
 	const start = useToolbarStart()

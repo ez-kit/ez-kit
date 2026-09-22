@@ -218,7 +218,7 @@ export { ClearFiltersButton } from './data-grid/clear-filters-button'
 // Layout presets for `core.Layout` — what a UI kit binds so its prebuilt `<DataGrid>` renders
 // a full shell, and what an application starts from when composing its own. Pure composition;
 // see `./layouts` for why there are four of them.
-export { BottomBarLayout, DefaultLayout, PopoverFiltersLayout, SearchFiltersActionsLayout } from './layouts'
+export { BottomBarLayout, DefaultLayout, FilterPanelLayout, PopoverFiltersLayout } from './layouts'
 
 // DI context
 export { GridComponentsProvider, useGridComponents } from './components-context'

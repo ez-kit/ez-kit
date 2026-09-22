@@ -49,7 +49,7 @@ keeps compiling.
 
 Four presets ship from `@ez-kit/data-grid-react`, as pure composition with no authored class:
 `DefaultLayout` (toolbar / table / pagination), `BottomBarLayout` (page sizer beside the page
-controls), `SearchFiltersActionsLayout` (search leading, filters, actions trailing) and
+controls), `FilterPanelLayout` (the filter panel in the toolbar, a chips strip, page sizer below) and
 `PopoverFiltersLayout`. **Both kits bind `DefaultLayout` in their prebuilt `DataGrid`**, so
 `<DataGrid data columns features />` from a kit is unchanged. A grid composed through
 `createDataGrid` registers its own.

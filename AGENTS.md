@@ -312,7 +312,7 @@ and move on.
   `data-grid.tsx`, never in `index.ts`, or every grid composed through `createDataGrid` inherits
   it silently. So quick start is unchanged and `createDataGrid` still pays only for what it names.
 
-  The presets (`DefaultLayout`, `BottomBarLayout`, `SearchFiltersActionsLayout`,
+  The presets (`DefaultLayout`, `BottomBarLayout`, `FilterPanelLayout`,
   `PopoverFiltersLayout`) live in the shared react package because they are pure composition with
   no authored class — the no-styles rule is untouched, and one set serves both kits. Adding more,
   in a kit or in an application, is the intended way to get a new arrangement; adding an option is
@@ -384,6 +384,29 @@ and move on.
   `TableScroll` / `Layout`, the package has no correct fallback for it.
   `apps/docs/e2e/packages/data-grid/selection/action-bar.spec.ts` is the guard — it is the only
   spec that drives selection and a draft in one grid, which is the state either defect needs.
+
+- **A layout is named for the API member that distinguishes it, or for the screen it belongs to —
+  never for a tier.** `BottomBarLayout` mounts `<DataGrid.BottomBar/>`, `PopoverFiltersLayout`
+  renders `filterPopover`, `FilterPanelLayout` puts `<DataGrid.FilterPanel/>` in the toolbar; the
+  docs' own example layouts are `OrdersLayout` and `CrudLayout`, after the screens they lay out.
+  `DefaultLayout` is the exception that proves the rule: it names a fact about binding — the one
+  both kits register as `core.Layout` — not a quality.
+
+  Two names were fixed by this and both failure modes are worth recognising. `ProductionLayout`
+  was a **tier** word: every preset is usable in production, so the name claimed a hierarchy that
+  does not exist, and the page it was named after (`production.mdx`) already called the component
+  `OrdersLayout` in its own prose. So do not reach for `Production`, `Advanced`, `Basic`,
+  `Simple` or `Pro`. `SearchFiltersActionsLayout` was an **enumeration that did not
+  distinguish**: `useToolbarStart` / `useToolbarEnd` put the same search box and the same trailing
+  controls in all four presets, so two of the three things it listed were true of `DefaultLayout`
+  too, while the filter panel — the only real difference — went unnamed. Before naming a layout
+  after what it contains, diff it against `DefaultLayout` and name what the diff turns up.
+
+  Neither rename cost anything: both layouts were unreleased, `ProductionLayout` lives only in
+  `apps/docs`, and the presets' changeset (`composition-over-placement.md`) was still pending, so
+  it was edited in place rather than a second changeset written. That is luck about timing, not a
+  reason to defer the next one — a preset name reaches `npx shadcn add` payloads and 1 600
+  occurrences of docs the moment it ships.
 
 - **`layout.classNames` is a nested bag, and its keys accumulate.** Every other class option is
   a flat `<thing>ClassName` string (`headerClassName`, `cellClassName`, `footerClassName`), so

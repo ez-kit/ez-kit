@@ -902,5 +902,37 @@
 		"groupLabel": "Columns",
 		"sourceFile": "components/grouped-headers.tsx",
 		"exportName": "GroupedHeadersExample"
+	},
+	{
+		"id": "layout-default",
+		"label": "Default",
+		"group": "layout",
+		"groupLabel": "Layout",
+		"sourceFile": "components/layout-presets.tsx",
+		"exportName": "LayoutDefaultExample"
+	},
+	{
+		"id": "layout-bottom-bar",
+		"label": "Bottom bar",
+		"group": "layout",
+		"groupLabel": "Layout",
+		"sourceFile": "components/layout-presets.tsx",
+		"exportName": "LayoutBottomBarExample"
+	},
+	{
+		"id": "layout-filter-panel",
+		"label": "Filter panel",
+		"group": "layout",
+		"groupLabel": "Layout",
+		"sourceFile": "components/layout-presets.tsx",
+		"exportName": "LayoutFilterPanelExample"
+	},
+	{
+		"id": "layout-popover-filters",
+		"label": "Popover filters",
+		"group": "layout",
+		"groupLabel": "Layout",
+		"sourceFile": "components/layout-presets.tsx",
+		"exportName": "LayoutPopoverFiltersExample"
 	}
 ]

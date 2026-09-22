@@ -40,7 +40,7 @@ Because it is the components registry rather than a prop, both forms come for fr
 
 ```tsx
 // app-wide, or for one subtree
-const components = { core: { Layout: OrdersLayout } }
+const components = { core: { Layout: InvoicesLayout } }
 
 ;<GridComponentsProvider components={components}>{children}</GridComponentsProvider>
 ```
@@ -79,16 +79,12 @@ a subtree by design. There is no recursion risk: a layout renders `DataGrid.Tabl
 
 ## Layout presets
 
-`@ez-kit/data-grid-react` exports four, as pure composition with no styling of their own, so one
-set serves both kits. Each gates its controls on the feature being registered and enabled, so a
-narrow grid renders a narrow toolbar rather than throwing.
-
-| Preset                       | What it renders                                                                     | Was                                   |
-| ---------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------- |
-| `DefaultLayout`              | Toolbar, table, pagination. What both kits bind to `core.Layout`.                   | the default                           |
-| `BottomBarLayout`            | The same, with `<DataGrid.BottomBar />` in place of `<DataGrid.Pagination />`.      | `pagination: { pageSizer: 'footer' }` |
-| `SearchFiltersActionsLayout` | Search leading, filter panel beside it, controls trailing; chips strip; bottom bar. | five options at once — see below      |
-| `PopoverFiltersLayout`       | `DefaultLayout` with each column's filter behind a header popover.                  | `filtering: { variant: 'popover' }`   |
+`@ez-kit/data-grid-react` exports four — `DefaultLayout`, `BottomBarLayout`,
+`FilterPanelLayout`, `PopoverFiltersLayout` — as pure composition with no styling of
+their own, so one set serves both kits. Each gates its controls on the feature being registered
+and enabled, so a narrow grid renders a narrow toolbar rather than throwing.
+[**Presets**](/docs/data-grid/layout/presets) has a live preview of each, on one grid, and which
+to reach for.
 
 All four render `<DataGrid.ActionBar />` **last**, which is where the default `floating` bar
 belongs: it overlays the rows, and coming last in document order keeps it out of the tab order
@@ -103,7 +99,7 @@ consequence to know: `selection: { bar: 'inline' }` on one of these presets puts
 **below** the table, because the preset writes the bar last either way. An `inline` grid writes a
 layout of its own with `<DataGrid.ActionBar />` first.
 
-`SearchFiltersActionsLayout` is the arrangement that used to read:
+`FilterPanelLayout` is the arrangement that used to read:
 
 ```tsx
 // before — five options describing an order the JSX shows at a glance
@@ -127,7 +123,7 @@ layout of its own with `<DataGrid.ActionBar />` first.
 	sorting
 	visibility
 >
-	<SearchFiltersActionsLayout />
+	<FilterPanelLayout />
 </DataGrid>
 ```
 
@@ -140,7 +136,7 @@ control. See [Where filters live](/docs/data-grid/filtering/variants#both-at-onc
 A layout is a component that mounts compound members. Nothing more:
 
 ```tsx
-function OrdersLayout() {
+function InvoicesLayout() {
 	return (
 		<>
 			<DataGrid.Toolbar

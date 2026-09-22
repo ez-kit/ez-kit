@@ -4,7 +4,7 @@ import { DataGrid } from 'shared/DataGrid'
 
 import { orderColumns } from './data'
 import { consoleFeatures } from './features'
-import { ProductionLayout } from './ProductionLayout'
+import { OrdersLayout } from './OrdersLayout'
 import { useOrdersState } from './use-orders-state'
 
 export function ProductionOneHandlerExample() {
@@ -55,7 +55,7 @@ export function ProductionOneHandlerExample() {
 			state={{ ...orders.tableState, loading: orders.loading }}
 			onStateChange={orders.onStateChange}
 		>
-			<ProductionLayout />
+			<OrdersLayout />
 		</DataGrid>
 	)
 }

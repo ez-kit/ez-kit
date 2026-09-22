@@ -257,7 +257,7 @@ export function ExampleTaskBoardExample() {
 			 * issue tracker uses, and the one that used to cost five options at once
 			 * (`globalFiltering: { toolbar: 'start' }`, `filtering: { panel: 'toolbar' }`,
 			 * `sorting: { toolbar: true }`, `visibility: { toolbar: true }`, `filtering.toolbar`).
-			 * It is this JSX now. `SearchFiltersActionsLayout` from `@ez-kit/data-grid-react` is
+			 * It is this JSX now. `FilterPanelLayout` from `@ez-kit/data-grid-react` is
 			 * the same arrangement as a named preset, for a grid that wants it wholesale.
 			 */}
 			<DataGrid.Toolbar

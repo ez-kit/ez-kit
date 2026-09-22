@@ -10,8 +10,8 @@ import { useDataGrid } from '../use-data-grid'
 
 import { BottomBarLayout } from './bottom-bar-layout'
 import { DefaultLayout } from './default-layout'
+import { FilterPanelLayout } from './filter-panel-layout'
 import { PopoverFiltersLayout } from './popover-filters-layout'
-import { SearchFiltersActionsLayout } from './search-filters-actions-layout'
 
 import type { GridComponents } from '../contract'
 import type { GridFeatures } from '../types'
@@ -250,10 +250,10 @@ describe('BottomBarLayout', () => {
 	})
 })
 
-describe('SearchFiltersActionsLayout', () => {
+describe('FilterPanelLayout', () => {
 	// What the five-option tablecn arrangement asked for, in one name.
 	it('leads with search, then the filter panel, and trails the actions', () => {
-		const { container } = renderLayout(SearchFiltersActionsLayout, {
+		const { container } = renderLayout(FilterPanelLayout, {
 			columns: FILTERABLE,
 			filtering: true,
 			globalFiltering: { placeholder: PLACEHOLDER },
@@ -278,7 +278,7 @@ describe('SearchFiltersActionsLayout', () => {
 	 * bound to one value.
 	 */
 	it('keeps the header filters beside the panel, both on one filter value', async () => {
-		const { container } = renderLayout(SearchFiltersActionsLayout, { columns: FILTERABLE, filtering: true })
+		const { container } = renderLayout(FilterPanelLayout, { columns: FILTERABLE, filtering: true })
 
 		const headerFilter = requireElement(container, `${HEADER_FILTER} input`)
 		expect(container.querySelector(FILTER_PANEL)).not.toBeNull()
@@ -357,7 +357,7 @@ describe('the action bar', () => {
 	it.each([
 		['DefaultLayout', DefaultLayout],
 		['BottomBarLayout', BottomBarLayout],
-		['SearchFiltersActionsLayout', SearchFiltersActionsLayout],
+		['FilterPanelLayout', FilterPanelLayout],
 		['PopoverFiltersLayout', PopoverFiltersLayout],
 	])('%s renders one action bar, after the table', (_name, Layout) => {
 		const { container } = renderSelected(Layout)

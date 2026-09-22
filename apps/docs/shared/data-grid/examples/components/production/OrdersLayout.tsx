@@ -5,7 +5,7 @@ import { useDataGridTable } from '@ez-kit/data-grid-react'
 import { DataGrid } from 'shared/DataGrid'
 
 /**
- * The orders console's own layout, shared by every example in this directory.
+ * The orders screen's own layout, shared by every example in this directory.
  *
  * It is what the five removed layout options used to spell out on each grid:
  *
@@ -17,7 +17,7 @@ import { DataGrid } from 'shared/DataGrid'
  *
  * None of that described the table — it described this tree. So it lives here once, as a
  * component, and each grid names it instead of restating it: either as `children`, or through
- * `components={{ core: { Layout: ProductionLayout } }}` for a whole subtree.
+ * `components={{ core: { Layout: OrdersLayout } }}` for a whole subtree.
  *
  * The action bar comes last, which is where the default `floating` variant belongs: it overlays
  * the rows, and document order keeps it out of the tab order until there is something to act on.
@@ -31,7 +31,7 @@ import { DataGrid } from 'shared/DataGrid'
  * `CreateTrigger` needs the check. The shipped presets do the same thing for all five of their
  * controls (`useToolbarControls`), because they serve every grid rather than four known ones.
  */
-export function ProductionLayout() {
+export function OrdersLayout() {
 	// Config refs only, no state read — a layout that re-rendered on every keystroke would
 	// cascade into the table below it.
 	const canCreate = Boolean(useDataGridTable().options.creating)

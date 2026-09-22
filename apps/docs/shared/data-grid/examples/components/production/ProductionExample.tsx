@@ -4,7 +4,7 @@ import { DataGrid } from 'shared/DataGrid'
 
 import { orderColumns } from './data'
 import { consoleFeatures } from './features'
-import { ProductionLayout } from './ProductionLayout'
+import { OrdersLayout } from './OrdersLayout'
 import { useOrders } from './use-orders'
 
 export function ProductionExample() {
@@ -82,7 +82,7 @@ export function ProductionExample() {
 				loading: orders.loading,
 			}}
 		>
-			<ProductionLayout />
+			<OrdersLayout />
 		</DataGrid>
 	)
 }

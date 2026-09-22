@@ -13,7 +13,7 @@ describe('readExampleFiles', () => {
 			'ProductionExample.tsx',
 			'data.ts',
 			'features.ts',
-			'ProductionLayout.tsx',
+			'OrdersLayout.tsx',
 			'use-orders.ts',
 			'server.ts',
 		])

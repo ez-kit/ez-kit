@@ -7,8 +7,17 @@ import { Toolbar } from '../data-grid/toolbar'
 import { useToolbarEnd, useToolbarStart } from './toolbar-controls'
 
 /**
- * Search leading, the filter panel beside it, the actions trailing — the arrangement every
- * issue tracker uses, and the one that used to cost five options at once:
+ * {@link BottomBarLayout} with `<DataGrid.FilterPanel/>` in the toolbar beside the search box,
+ * and the active-filters strip under it — the arrangement every issue tracker uses.
+ *
+ * **The panel is the whole of the name because it is the whole of the difference.** Search and
+ * the trailing controls are not distinguishing: `useToolbarStart` / `useToolbarEnd` put the same
+ * ones in every preset here, including {@link DefaultLayout}. This one passes
+ * `{ filterPanel: true }` and mounts two more members; that is all it is. The preset was called
+ * `SearchFiltersActionsLayout` for a while, which promised a difference in two of the three
+ * things it enumerated and stayed silent about the one that was real.
+ *
+ * It used to cost five options at once:
  *
  * ```tsx
  * <DataGrid
@@ -30,7 +39,7 @@ import { useToolbarEnd, useToolbarStart } from './toolbar-controls'
  * layout that wants the panel to be the only filter UI expands the table down to
  * `<DataGrid.HeaderCell>` and renders everything but `filter`.
  */
-export function SearchFiltersActionsLayout() {
+export function FilterPanelLayout() {
 	const start = useToolbarStart({ filterPanel: true })
 	const end = useToolbarEnd()
 

@@ -65,6 +65,7 @@ export const exampleModules: Record<string, () => Promise<Record<string, Compone
 	'components/filter-panel.tsx': () => import('./components/filter-panel'),
 	'components/filter-popover.tsx': () => import('./components/filter-popover'),
 	'components/global-filtering.tsx': () => import('./components/global-filtering'),
+	'components/layout-presets.tsx': () => import('./components/layout-presets'),
 	'components/infinite-scroll/auto.tsx': () => import('./components/infinite-scroll/auto'),
 	'components/infinite-scroll/manual.tsx': () => import('./components/infinite-scroll/manual'),
 	'components/infinite-scroll/reset-on-query.tsx': () => import('./components/infinite-scroll/reset-on-query'),

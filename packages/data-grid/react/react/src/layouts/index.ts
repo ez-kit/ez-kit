@@ -13,5 +13,5 @@
  */
 export { DefaultLayout } from './default-layout'
 export { BottomBarLayout } from './bottom-bar-layout'
-export { SearchFiltersActionsLayout } from './search-filters-actions-layout'
+export { FilterPanelLayout } from './filter-panel-layout'
 export { PopoverFiltersLayout } from './popover-filters-layout'

@@ -3,7 +3,7 @@
 import { DataGridOptionsProvider, GridComponentsProvider } from '@ez-kit/data-grid-react'
 
 import { consoleFeatures } from './features'
-import { ProductionLayout } from './ProductionLayout'
+import { OrdersLayout } from './OrdersLayout'
 
 import type { Order } from './data'
 import type { ReactNode } from 'react'
@@ -32,7 +32,7 @@ import type { ReactNode } from 'react'
  */
 // Defined out of the render: the provider keys its merge on this object's identity, so a fresh
 // literal each render would re-render every component that reads the registry.
-const COMPONENTS = { core: { Layout: ProductionLayout } }
+const COMPONENTS = { core: { Layout: OrdersLayout } }
 
 export function DataGridOptions({ children }: { children: ReactNode }) {
 	return (
