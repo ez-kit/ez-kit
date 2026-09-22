@@ -125,6 +125,7 @@ export type { InfiniteController } from './data-grid/use-infinite-scroll'
 // Selector hook + store primitives
 export { useDataGridSelector } from './use-data-grid-selector'
 export { useDataGridState, useDataGridTable } from './data-grid/table-context'
+export { useDataGridCell, useDataGridHeaderCell, useDataGridRow } from './data-grid/composition-context'
 export { prepareDataGridTable } from './prepare-table'
 export { shallow } from './utils/shallow-equal'
 

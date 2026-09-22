@@ -4,6 +4,8 @@ import { useDataGridTable } from '@ez-kit/data-grid-react'
 
 import { DataGrid } from 'shared/DataGrid'
 
+import { OrdersHeaderCell } from './OrdersHeaderCell'
+
 /**
  * The orders screen's own layout, shared by every example in this directory.
  *
@@ -66,17 +68,11 @@ export function OrdersLayout() {
 											header={header}
 										>
 											{/*
-											 * `filterPopover` rather than `filter` — the same control behind the kit's
-											 * trigger, which is all `filtering: { variant: 'popover' }` ever meant. With
-											 * this many columns the inline form would cost the header its height.
+											 * A component, not a render function — see `OrdersHeaderCell`, which reads
+											 * the same parts through `useDataGridHeaderCell()`. Either form works; this
+											 * one keeps the layout about layout.
 											 */}
-											{({ sortTrigger, filterPopover, menu }) => (
-												<DataGrid.HeaderMain>
-													{sortTrigger}
-													{filterPopover}
-													{menu}
-												</DataGrid.HeaderMain>
-											)}
+											<OrdersHeaderCell />
 										</DataGrid.HeaderCell>
 									))
 								}

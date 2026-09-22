@@ -16,6 +16,7 @@ import { isTextEntryTarget } from '../utils/text-entry-target'
 
 import { getAlignAttrs } from './align-attrs'
 import { buildColumnMenuSections } from './column-menu-sections'
+import { HeaderCellProvider } from './composition-context'
 import { flexRender } from './flex-render'
 import { HeaderExtras, HeaderMain } from './header-slots'
 import { renderFilterInput } from './render-filter-input'
@@ -386,23 +387,26 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 		</>
 	)
 
-	const content =
-		children === undefined
-			? defaultContent
-			: typeof children === 'function'
-				? children({
-						header,
-						column: header.column,
-						canSort,
-						sortDirection,
-						label,
-						sortTrigger,
-						menu,
-						filter: filterContent,
-						filterPopover,
-						resizer,
-					})
-				: children
+	/**
+	 * Built unconditionally, then both **published** through {@link HeaderCellProvider} and passed
+	 * to a render function — so the two ways of composing a header cell read the same object and
+	 * cannot drift apart. It costs nothing the default path did not already pay: every member is
+	 * computed above, because the default cell renders them.
+	 */
+	const args: DataGridHeaderCellRenderArgs<TRow> = {
+		header,
+		column: header.column,
+		canSort,
+		sortDirection,
+		label,
+		sortTrigger,
+		menu,
+		filter: filterContent,
+		filterPopover,
+		resizer,
+	}
+
+	const content = children === undefined ? defaultContent : typeof children === 'function' ? children(args) : children
 
 	return (
 		<Th
@@ -419,8 +423,10 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 			{...(canResize ? { 'data-resizable': 'true' } : {})}
 			{...draftSortAttrs}
 		>
-			{content}
-			{resizer}
+			<HeaderCellProvider value={args}>
+				{content}
+				{resizer}
+			</HeaderCellProvider>
 		</Th>
 	)
 }

@@ -15,6 +15,9 @@ describe('readExampleFiles', () => {
 			'features.ts',
 			'OrdersLayout.tsx',
 			'use-orders.ts',
+			// The layout's header cell, reached through `OrdersLayout` — it is a component rather
+			// than a render function, so the source panel lists it as a file of its own.
+			'OrdersHeaderCell.tsx',
 			'server.ts',
 		])
 	})

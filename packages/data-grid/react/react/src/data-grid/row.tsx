@@ -6,6 +6,7 @@ import { joinClassNames } from '../utils/class-names'
 import { isTextEntryTarget } from '../utils/text-entry-target'
 
 import { DataGridCell } from './cell'
+import { RowProvider } from './composition-context'
 import { useDataGridState, useDataGridTable } from './table-context'
 
 import type { ErasedRow, GridFeatures } from '../types'
@@ -79,16 +80,35 @@ function renderRowContent<TRow extends object>(
 	row: Row<GridFeatures, TRow>,
 	cells: DataGridRowRenderArgs<TRow>['cells'],
 ): ReactNode {
-	if (children !== undefined && typeof children !== 'function') return children
-	const content = cells.map((cell) => (
-		<DataGridCell
-			key={cell.id}
-			cell={cell}
-			row={row}
-		/>
-	))
-	if (children === undefined) return content
-	return children({ row, cells, content })
+	/**
+	 * `content` behind a cached getter, which is what preserves the skip above now that a static
+	 * child *can* reach it — through `useDataGridRow()`. The work went from "never done for a
+	 * static child" to "done if that child asks", and a render function pays exactly what it did
+	 * before. The cache is per call, so a body reading `content` twice builds one array.
+	 */
+	let built: ReactNode
+	let isBuilt = false
+	const args: DataGridRowRenderArgs<TRow> = {
+		row,
+		cells,
+		get content() {
+			if (!isBuilt) {
+				built = cells.map((cell) => (
+					<DataGridCell
+						key={cell.id}
+						cell={cell}
+						row={row}
+					/>
+				))
+				isBuilt = true
+			}
+			return built
+		},
+	}
+
+	const content = children === undefined ? args.content : typeof children === 'function' ? children(args) : children
+
+	return <RowProvider value={args}>{content}</RowProvider>
 }
 
 /**

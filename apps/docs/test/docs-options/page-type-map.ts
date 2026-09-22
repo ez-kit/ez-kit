@@ -509,6 +509,11 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 					'Names the render args `<DataGrid.HeaderCell>` hands its children (`label`, `sortTrigger`, `menu`, `filter`, …), not config keys — they are properties of a callback argument, not options anyone sets.',
 			},
 			{
+				heading: 'The same, as a component',
+				reason:
+					'Maps the three composition hooks to the component each one must be called inside. The left column is hook names — exported functions, not options anyone sets.',
+			},
+			{
 				heading: 'Fallbacks, modals and bars',
 				reason:
 					'Maps compound slots to the condition that mounts them and the render args they pass. The left column is JSX element names, not option keys.',

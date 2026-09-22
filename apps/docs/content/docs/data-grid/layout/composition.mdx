@@ -471,6 +471,60 @@ it behind an icon. Those two decisions replaced the `filtering.variant` enum —
 | `canSort`, `sortDirection` | The column's sort capability and current direction (`'asc' \| 'desc' \| 'none'`).                |
 | `header`, `column`         | The underlying TanStack objects, for anything the above does not cover.                          |
 
+### The same, as a component
+
+A render function can only be written **at the call site**, because its parts arrive as arguments.
+That is fine for one line, and it is why a layout that customises the header ends up carrying the
+whole table tree: the body of the cell cannot move out.
+
+Every node that takes a render function also publishes the same object to a hook, so the body can be
+a component instead — one that takes no props at all:
+
+```tsx
+import { useDataGridHeaderCell } from '@ez-kit/data-grid-react'
+
+function OrdersHeaderCell() {
+	const { sortTrigger, filterPopover, menu } = useDataGridHeaderCell()
+
+	return (
+		<DataGrid.HeaderMain>
+			{sortTrigger}
+			{filterPopover}
+			{menu}
+		</DataGrid.HeaderMain>
+	)
+}
+```
+
+```tsx
+<DataGrid.HeaderCell header={header}>
+	<OrdersHeaderCell />
+</DataGrid.HeaderCell>
+```
+
+The two forms are not alternatives with different capabilities — they are the same object, reached
+two ways. The component builds it once, passes it to a render function and publishes it to the hook,
+so neither form can grow a part the other lacks.
+
+| Hook                      | Available inside        | Returns                                                                     |
+| ------------------------- | ----------------------- | --------------------------------------------------------------------------- |
+| `useDataGridHeaderCell()` | `<DataGrid.HeaderCell>` | The table above: `sortTrigger`, `menu`, `filter`, `filterPopover`, …        |
+| `useDataGridRow()`        | `<DataGrid.Row>`        | `row`, `cells`, and `content` — the row's default cells.                    |
+| `useDataGridCell()`       | `<DataGrid.Cell>`       | `cell`, `row`, `value`, and `content` — what this cell would have rendered. |
+
+Each one throws outside its component, naming the one to render inside, so a misplaced call fails
+where it is written rather than rendering something empty.
+
+Reach for the hook when the body is worth a name or a file of its own, and for the render function
+when it is a line or two, or when it needs something from the surrounding `.map()` anyway. Both
+still need that map — the hook answers _which node am I in_, not _how many are there_.
+
+<Callout type="info">
+	These hooks carry the node, not the grid's state: they do not subscribe to anything.
+	`<DataGrid.Header>` owns the header's subscriptions and re-renders its cells together. For state,
+	pair them with `useDataGridState` — see [Reading grid state](/docs/data-grid/state).
+</Callout>
+
 `<DataGrid.Cell>` is the body-side equivalent: it keeps the `<td>`, its alignment, pinning
 offsets and `cellClassName`, and lets you replace only what goes inside.
 
