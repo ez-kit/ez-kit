@@ -30,16 +30,34 @@ type LineItem = ArrayItemScope<Line>
  * `form.ArrayField`. `item.key` doubles as the sortable `id`: it is minted once and carried across
  * every add, remove and move, which is exactly the identity `useSortable` needs to track a row
  * through a drag.
+ *
+ * `ref` goes on the row so the whole `<tr>` is what reorders; `handleRef` goes on a dedicated
+ * grip button in the leading cell so only that button is grabbable. Without it the row's only
+ * visible surface is its two inputs, each with its own cursor and its own idea of what a
+ * pointer-down means — the grab affordance would sit on padding the user cannot see, and dragging
+ * from a text input fights text selection. A real `<button>` also keeps `role="button"` and
+ * `tabindex` off the `<tr>` itself, which would otherwise sit in front of two editable fields.
  */
 function Row({ item }: { item: LineItem }) {
-	const { ref, isDragging } = useSortable({ id: item.key, index: item.index })
+	const { ref, handleRef, isDragging } = useSortable({ id: item.key, index: item.index })
 
 	return (
 		<tr
 			ref={ref}
 			data-dragging={isDragging || undefined}
-			className='cursor-grab data-[dragging]:cursor-grabbing data-[dragging]:opacity-50'
+			className='data-[dragging]:opacity-50'
 		>
+			<td>
+				<button
+					ref={handleRef}
+					type='button'
+					aria-label={`Reorder SKU ${String(item.index + 1)}`}
+					data-dragging={isDragging || undefined}
+					className='flex h-8 w-8 cursor-grab items-center justify-center rounded-sm text-muted-foreground hover:bg-muted data-[dragging]:cursor-grabbing'
+				>
+					⠿
+				</button>
+			</td>
 			<td>
 				<item.TextField
 					name='sku'
@@ -63,11 +81,11 @@ function Row({ item }: { item: LineItem }) {
  * landed, and `move` is handed exactly that pair. `@dnd-kit/react` optimistically reorders the DOM
  * during the drag and writes form state once, on drop, in `onDragEnd` — there is no per-frame
  * `move` call to make. The `KeyboardSensor` `DragDropProvider` includes by default means the same
- * rows are reorderable from the keyboard with no extra wiring: focus a row's cell, then use the
- * arrow keys.
+ * rows are reorderable from the keyboard with no extra wiring: focus a row's drag handle, press
+ * Space to pick it up, the arrow keys to move it, and Space again to drop it.
  *
- * For explicit up/down controls instead of a gesture, see the
- * [custom-layout example](#custom-layout), built on `item.moveUp` / `item.moveDown`.
+ * For an explicit up control instead of a gesture, see the custom-layout example above, built on
+ * `item.moveUp`.
  */
 export function ArraysDndExample() {
 	const [saved, setSaved] = useState<Order | null>(null)

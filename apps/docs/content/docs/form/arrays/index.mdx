@@ -198,26 +198,37 @@ no `form.ArrayField` here — renders with no heading at all.
 Dragging a row to reorder it is only possible on the primitive. `ArrayItemProps` takes `children`,
 `label`, `removeLabel` and `reorderable` — nothing else — so `item.Item` has no `ref` to attach a
 sortable hook to and spreads no props onto the element it renders. `form.Array` gives up that
-frame entirely, so the row is whatever element the author draws, and a `ref` from
-[`@dnd-kit/react`](https://next.dndkit.com)'s `useSortable` lands on it directly:
+frame entirely, so the row is whatever element the author draws, and the two refs
+[`@dnd-kit/react`](https://next.dndkit.com)'s `useSortable` returns land on two different
+elements: `ref` on the row itself, and `handleRef` on a dedicated drag handle inside it.
 
 <KitExample exampleId='form-arrays-dnd' />
 
-`move(from, to)` — the same scope method [`item.moveUp` / `item.moveDown`](#one-entry-from-the-primitive)
-already call — is what a drag maps onto: `useSortable`'s `index` reports where a row started and
-where it landed, and `onDragEnd` hands that pair straight to `move`. `@dnd-kit/react` reorders the
-DOM optimistically while the drag is in progress and commits to form state once, on drop, so there
-is no per-frame `move` call to make.
+A dedicated handle is not optional here. The row's only visible surface is its two inputs, each
+with its own cursor and its own idea of what a pointer-down means — pressing inside a text field
+correctly does not start a drag, since dnd-kit defers to the native input to preserve caret
+placement and text selection. A `ref` on the row alone leaves nothing reliably grabbable, and
+stamping `role="button"` and a click handler onto a `<tr>` that contains editable fields is also
+an ARIA defect independent of that: a button's contents are presentational, which is not true of
+this row. `handleRef` on a real `<button>` grip fixes both at once — an actually grabbable
+surface, and the activator role landing on something that is actually a button.
+
+`move(from, to)` — the same scope method `item.moveUp` / `item.moveDown` already call, documented
+[with the primitive](#one-entry-from-the-primitive) — is what a drag maps onto: `useSortable`'s
+`index` reports where a row started and where it landed, and `onDragEnd` hands that pair straight
+to `move`. `@dnd-kit/react` reorders the DOM optimistically while the drag is in progress and
+commits to form state once, on drop, so there is no per-frame `move` call to make.
 
 `item.key` doubles as the sortable id. It is minted once per entry and carried across every add,
 remove and move — [the same stability `item.key` gives React reconciliation](#key-by-itemkey-never-by-the-index)
 is what lets `useSortable` track one row through a drag rather than losing it to a reused index.
 
 `DragDropProvider` includes a keyboard sensor by default, so the same rows are reorderable without
-a mouse: focus a row, then use the arrow keys.
+a mouse: focus a row's drag handle, press Space to pick it up, the arrow keys to move it, and
+Space again to drop it.
 
-For explicit up/down controls instead of a drag gesture, see the [custom-layout
-example](#custom-layout) above, built on `item.moveUp` / `item.moveDown`.
+For an explicit up control instead of a drag gesture, see the custom-layout example above, built
+on `item.moveUp`.
 
 ## Validating the list
 
