@@ -1,5 +1,320 @@
 # @ez-kit/data-grid-react
 
+## 0.9.0
+
+### Minor Changes
+
+- c35206c: **`<DataGrid.BottomBar>`, and `data-slot='pagination-row'` renamed to `'bottom-bar'`.**
+
+  The strip below the table is now a compound member, the counterpart of `<DataGrid.Toolbar>` on the
+  other side of the table. Given no children it renders the page controls — the size selector and the
+  pagination — which is the arrangement `BottomBarLayout` mounts it for. Given children it holds those
+  instead, laid out as one row with two ends. It takes `className` and `style`, handed to the element
+  as-is.
+
+  It is named for the region, not for the pagination that usually fills it: a grid composing its own
+  layout may put a selection count, a summary or an export button down there, and the kits' rule for
+  un-centring the pagination keys on the child rather than on the bar, so a bar holding something else
+  is untouched by it.
+
+  Not `Footer`: that name is the `<tfoot>` counterpart of `<DataGrid.Header>`, built from each
+  column's `footer`. This element is a region of the grid's shell, outside the table.
+
+  **Breaking:** hand-written markup carrying `data-slot='pagination-row'` loses the kits' layout for
+  it. Use `<DataGrid.BottomBar>` (or rename the attribute to `bottom-bar`).
+
+- ce829bb: Add `useDataGridHeaderCell()`, `useDataGridRow()` and `useDataGridCell()` — the three composition
+  nodes, readable from a hook as well as from a render function.
+
+  A render function can only be written at the `<DataGrid.HeaderCell>` / `<DataGrid.Row>` /
+  `<DataGrid.Cell>` call site, because its parts arrive as arguments, so a layout that customised one
+  header cell had to carry the whole table tree inline. The same object is now published to a hook,
+  so the body can be a component that takes no props.
+
+  Nothing changes for existing code: each component builds the object once and both passes and
+  publishes it, so the two forms cannot drift apart. `content` on the row and `value` on the cell are
+  resolved on first read, which keeps the row's existing skip — a static child that never asks for the
+  default cells still does not build them.
+
+- cd20119: **Breaking: the grid's layout moves from config to JSX. Eight placement options are removed, and
+  `core.Layout` replaces the default layout.**
+
+  Where a control sits — and whether it is mounted at all — is now said by rendering it. These eight
+  options said it instead, and are gone:
+
+  | removed                   | write this instead                                                        |
+  | ------------------------- | ------------------------------------------------------------------------- |
+  | `filtering.chips`         | `<DataGrid.ActiveFiltersBar />` where you want the strip                  |
+  | `filtering.panel`         | `<DataGrid.FilterPanel />` where you want the panel                       |
+  | `filtering.toolbar`       | `<DataGrid.ClearFiltersButton alwaysShow />` — `alwaysShow` is now a prop |
+  | `filtering.variant`       | see below                                                                 |
+  | `globalFiltering.toolbar` | `<DataGrid.Toolbar start={<DataGrid.GlobalFilterInput />} />`             |
+  | `pagination.pageSizer`    | `<DataGrid.PageSizer />` where you want it, or `<DataGrid.BottomBar />`   |
+  | `sorting.toolbar`         | `<DataGrid.SortMenuTrigger />`                                            |
+  | `visibility.toolbar`      | `<DataGrid.VisibilityTrigger />`                                          |
+
+  Gone with them: `FilteringVariant`, `FilterPanelPlacement`, `GlobalFilterPlacement`,
+  `PageSizerPlacement`, the object forms `FilterChipsConfig` / `FilteringToolbarConfig` /
+  `FilterPanelConfig` / `GlobalFilterToolbarConfig` / `PageSizerConfig`, the wrappers
+  `ReactSortingConfig` / `ReactVisibilityConfig` (their only field was `toolbar`, so `sorting` and
+  `visibility` now resolve through core's own config), and six `Normalized*` shapes.
+  `FilterChipsPosition` **stays** — it is now the closed set for `<DataGrid.ActiveFiltersBar position>`,
+  which both kits style off `data-chip-position`.
+
+  They were never statements about the grid: they were arguments to the default toolbar and layout
+  that had leaked into the table's config, and the controls proved it — `VisibilityTrigger`,
+  `SortMenuTrigger` and `GlobalFilterInput` never read one. What made it worth a break is the rate of
+  growth: every new arrangement cost a new enum value, and the arrangement the last one bought is a
+  line of JSX. `<DataGrid.Toolbar>` is now a pure container that reads no config.
+
+  **`filtering.variant` dissolves into `<DataGrid.HeaderCell>`.** It was one enum on two axes —
+  `'panel'` answered "is there a filter in the header", `'inline'` / `'popover'` answered "what does it
+  look like" — which is why filters in the header **and** in a panel was inexpressible. The render
+  function now hands back `filterPopover` beside `filter`: not rendering `filter` takes it out of the
+  header, rendering `filterPopover` gives the popover, and rendering `filter` while
+  `<DataGrid.FilterPanel />` is mounted gives both, driving one `columnFilters` value.
+
+  **`core.Layout` is a new optional component slot.** The grid's body resolves as
+  `children ?? core.Layout ?? <DataGrid.Table />`, so register a layout once on the provider and every
+  grid below it gets that shell; pass `children` to override one grid. It sits in the optional tier
+  beside `TableWrapper` / `TableScroll`, so an external kit that wrote `satisfies FullGridComponents`
+  keeps compiling.
+
+  Four presets ship from `@ez-kit/data-grid-react`, as pure composition with no authored class:
+  `DefaultLayout` (toolbar / table / pagination), `BottomBarLayout` (page sizer beside the page
+  controls), `FilterPanelLayout` (the filter panel in the toolbar, a chips strip, page sizer below) and
+  `PopoverFiltersLayout`. **Both kits bind `DefaultLayout` in their prebuilt `DataGrid`**, so
+  `<DataGrid data columns features />` from a kit is unchanged. A grid composed through
+  `createDataGrid` registers its own.
+
+  **The two action bars are placed by the layout that renders them, and by nothing else.** All four
+  presets write `<DataGrid.DraftBar />` and `<DataGrid.SelectionBar />` last, which is where the
+  default `floating` bar belongs — it overlays the rows, and document order keeps it out of the tab
+  order until there is something to act on. `selection.bar.variant` still says what the bar _looks
+  like_, an in-flow strip against an overlay, and no longer says where it goes: a grid that sets
+  `inline` writes its own layout with the two bars above `<DataGrid.Table />`. That last bit is the
+  one arrangement the presets no longer cover for you, and it is the point — a config value deciding
+  an element's position is the thing this release removes, and the bars were the last of them.
+
+  **One behaviour is not preserved.** `DefaultLayout` mounts no page sizer. The old default mounted one
+  when the author _wrote_ `pagination.items`, and the resolved `items` falls back to a default list
+  under any paged pagination — so a preset gating on it would mount a selector on every paginated grid
+  rather than restoring the old rule. Write `<DataGrid.Toolbar start={<DataGrid.PageSizer />} />`, or
+  use `BottomBarLayout`. `pagination.items` now documents that it permits page sizes and mounts
+  nothing.
+
+  This is not a bundle-size change. The removed flags cost zero bytes — the toolbar imported its
+  controls unconditionally — and `@ez-kit/data-grid-react`'s main entry does not tree-shake today
+  regardless, because the compound namespace is assembled with 29 impure top-level assignments. That
+  is a separate fix; `core.Layout` and the presets are what will let it pay off.
+
+- 7386f53: **The action bar's draft section reads as a glyph and a number per axis, and says the rest in
+  words once.**
+
+  It used to write `Unapplied` and then a worded pill per pending axis — `2 sorts`, `1 filter`,
+  `search`. Two defects. Two of the three segments are counted phrases and the third is a bare
+  word, so a pending search alone read `Unapplied search`, which parses as one noun phrase rather
+  than as a list; with all three it was `Unapplied 2 sorts 1 filter search`, a chain with no
+  conjunction. And since the selection and the draft became sections of one bar, that section has
+  half the width it used to.
+
+  The counts are now `Unapplied ⇅2 ▽1 ⌕` — each kit picks its own glyphs, an empty axis is still
+  not drawn, and search carries no number because it is only ever there or not, which is what
+  removes the grammar problem rather than papering over it. The words move into one string used
+  twice: the section's `aria-label`, and the tooltip over the counts. The screen-reader name is
+  strictly better than before, where it was the generic `Pending changes`.
+
+  New dictionary entry, `messages.draft.summary`. It is handed the segments the existing
+  `draft.sorts` / `draft.filters` / `draft.search` entries produced, plus `draft.label`, and joins
+  them — so an override of one segment carries into the long form, and the separators are the
+  language's rather than hardcoded:
+
+  ```ts
+  messages: {
+  	draft: {
+  		summary: ({ label, parts }) => `${label}: ${parts.join(', ')}`, // the default
+  	},
+  }
+  ```
+
+  Adding it is additive for a partial dictionary: messages resolve by a per-group merge, so an
+  override that names some of `draft` keeps the defaults for the rest. `draft.pending` stays as the
+  name for the case the bar cannot enumerate. A consumer who built a **complete** `GridMessages`
+  object rather than a partial one must add the key.
+
+  **New optional component slot, `core.Tooltip`** — `FEATURE_OPTIONAL_COMPONENTS`, beside `Root`,
+  `TableWrapper`, `TableScroll` and `Layout`, so it is additive: a kit written `satisfies
+FullGridComponents` keeps compiling and keeps its current rendering. A kit that registers none
+  gets the counts rendered unchanged — the meaning is on the element as its accessible name either
+  way, so what is lost is the hint, not the information. Its contract is two props, `content` and
+  `children`, and it must adopt its child rather than wrap it: the grid hands it elements sitting
+  in a flex row. Both kits register one.
+
+- c35206c: The grid now renders a root element around everything it draws — toolbar, filter panel, chips,
+  table, bottom bar and the action bars — stamped `data-slot='grid-root'`.
+
+  Until now a grid was a run of siblings in its parent's flow, so a parent that lays its own children
+  out (`display: flex`, `grid`, a `gap`) laid out the grid's pieces instead of the grid. **This adds
+  one `div` to every grid's DOM**, which changes nothing for a block parent and is the fix for every
+  other one.
+
+  It comes with the two ways to reach it. `layout.classNames.root` classes it, joining across the
+  option layers like `wrapper` and `scroll` — which is where a card's frame around the bars belongs,
+  since it is the only box that encloses them. `core.Root` replaces the element, in the optional
+  tier beside `TableWrapper` / `TableScroll`, so a kit that registers nothing keeps the plain `div`.
+
+- d2bac42: **`<DataGrid.HeaderMain>` and `<DataGrid.HeaderExtras>`, so composing a header cell no longer means
+  hand-writing a `div`.**
+
+  `HeaderCell`'s render function replaces the cell's content entirely — there is no "default plus my
+  change" form, and none is planned, because a partial one is the runtime registration the
+  composition model exists to avoid. The consequence was that a header wanting one thing changed —
+  the filter in a popover rather than inline, or no filter at all — had to restate the wrapper the
+  default renders, as `<div data-slot='header-main'>`. Every layout preset, example and docs snippet
+  that composed a header carried that literal: eleven of them, against one module that owns the slot.
+  A rename would have gone red in two stylesheets and stayed silent at all eleven.
+
+  Both components render the slot with a plain `div`, spread the props they are given, and write
+  `data-slot` last so a caller cannot overwrite it. `HeaderCell`'s own default content is built from
+  them, so each literal now lives in exactly one place.
+
+  They are also injectable. `HeaderMain` / `HeaderExtras` join `core` in the **optional** component
+  tier beside `TableWrapper`, `TableScroll`, `Layout` and `Tooltip` — a kit may supply either and
+  needs neither, because the package has a correct answer without one. That tier is `Partial` inside
+  `FullGridComponents`, so a kit that wrote `satisfies FullGridComponents` keeps compiling and keeps
+  its current rendering; nothing here is breaking. Neither shipped kit binds them: shadcn styles
+  `header-main` through the structural stylesheet and heroui styles `header-extras` through its own,
+  which is exactly the case the optional tier is for.
+
+  `HeaderMainProps` and `HeaderExtrasProps` are exported beside `TableWrapperProps`.
+
+- 755b7d4: **Breaking: the selection bar and the draft bar become one `<DataGrid.ActionBar />` with a live
+  section per concern.**
+
+  `DataGrid.SelectionBar` and `DataGrid.DraftBar` are removed. One slot replaces both:
+
+  ```diff
+  -<DataGrid.DraftBar />
+  -<DataGrid.SelectionBar />
+  +<DataGrid.ActionBar />
+  ```
+
+  They were documented as one bar with two contents and implemented as two components that each
+  drew a whole bar — its own sticky anchor, surface and shadow — kept apart by a `return null`
+  inside the selection one. That gate read `rowSelection` and nothing else, so a draft edit (a
+  sort, a column filter, a search term) never re-ran it: with rows selected, staging a sort
+  mounted **both** bars at the same sticky position, overlapping. A narrower subscription is not
+  the fix — two pieces of chrome pretending to be one bar can only agree while every gate hiding
+  one of them re-runs in lockstep with the other.
+
+  **Both sections are now live at once.** The selection used to stand down during a draft, on the
+  grounds that applying a query can drop the selected rows and leave a bulk action on a stale set.
+  That hazard is already handled a level down: the selection is valid against the _applied_ query,
+  which is what the user is looking at, and `table.draft.apply()` clears the row selection in the
+  same state change. So the bulk Delete stays enabled beside a pending draft and the count is
+  interactive, where it was a dead chip.
+
+  Renaming, for a custom bar:
+
+  | removed                                | write this instead                                                |
+  | -------------------------------------- | ----------------------------------------------------------------- |
+  | `<DataGrid.SelectionBar>{({ count })}` | `<DataGrid.ActionBar>{({ selection })}` → `selection.count`       |
+  | `<DataGrid.DraftBar>{({ pending })}`   | `<DataGrid.ActionBar>{({ draft })}` → `draft.pending`             |
+  | `SelectionBarProps` / `DraftBarProps`  | `ActionBarProps`                                                  |
+  | `DraftBarProps.selectedCount`          | `selection.count` — one count, owned by the section that shows it |
+
+  The render function receives `{ open, variant, selection, draft }`. **Both sections are optional
+  — guard on them**: `selection` is absent when selection is off, `bar: false`, or no selection
+  feature is registered; `draft` is absent when `draft` is off or the draft is clean. `open` stays
+  independent of either, so a bar that animates out still renders while it does.
+
+  For a UI kit, the component contract changes shape: `core.ActionBar` is required, and
+  `GridFeature.Selection` / `GridFeature.Draft` are gone — neither feature owns a kit component any
+  more, so the tier types `GridSelectionComponents` and `GridDraftComponents` go with them. A kit
+  written `satisfies FullGridComponents` gets a compile error rather than a runtime crash. The
+  heroui kit's `./selection` and `./draft` subpath exports are removed for the same reason.
+
+  Unchanged: `selection.bar` and everything under it, including `variant` — the config key never
+  moved, and it still says what the bar _looks_ like while the layout says where it goes.
+
+  The shadcn registry item served from this site loses one file: `components/ui/action-bar.tsx`, a
+  primitive nothing in that kit ever imported — not the old `SelectionBar`, not the `ActionBar` that
+  replaced it. Nothing breaks by its absence, and a project that already ran `npx shadcn add` keeps
+  its copy; re-running the command simply stops copying 644 lines of dead code, and stops declaring
+  the `action-bar-group` / `action-bar-item` slots that kit never renders. The HeroUI kit keeps its
+  own counterpart, which its bar genuinely uses.
+
+- da30181: The header's sort affordance is a real `<button>`, and the shadcn kit's sort arrow is clickable
+  again.
+
+  `[data-slot='sort-trigger']` was a `role='button'` div with a hand-written `Enter` / `Space`
+  handler and a predicate that dropped any click originating on an interactive descendant. The
+  predicate existed so that a control a consumer put in `column.header` would not fire the sort as
+  well — but it could not tell such a control from the kit's **own** sort arrow, which shadcn
+  rendered as a `Button` (`tabIndex={-1}`, no handler: a button in looks only). So every click on
+  the arrow was discarded, and the arrow sits at the header's centre, which is where a pointer
+  lands. HeroUI, whose indicator was always a bare icon, was never affected.
+
+  The predicate is gone. The affordance is a `<button type='button'>` when the column sorts and a
+  plain box when it does not, the click handler is `getToggleSortingHandler()` and nothing else, and
+  shadcn's `SortIndicator` is a `<span>`. The structural stylesheet resets the UA's button styling on
+  the slot, so both kits' headers look unchanged.
+
+  `Enter` and `Space` are still handled explicitly, and that is not an oversight: HeroUI's `Th` is
+  React Aria's, and React Aria's grid keyboard manager calls `preventDefault()` on the bubbling
+  keydown — a cancelled keydown activates nothing, so a native button would never see the click.
+  The handler runs at the target, where the event still arrives intact, and calls `preventDefault`
+  itself so that a kit which does **not** cancel does not sort twice per keypress. What it no longer
+  does is ask where the event started.
+
+  **Interactive content in `column.header` is no longer supported.** It renders inside the button,
+  and a nested `<button>` is invalid HTML. A header that needs a control composes
+  `<DataGrid.HeaderCell>` and places it beside `sortTrigger` rather than inside it — see
+  [Column headers](https://ez-kit-docs.vercel.app/docs/data-grid/layout/composition#column-headers).
+
+  `Alt+Arrow` column and row reordering are untouched: those are keyboard chords on the `<th>` /
+  `<tr>`, not clicks on a control, so they still ask whether focus sits in a text field that owns
+  the chord — the narrow predicate that remains.
+
+- c35206c: `<DataGrid.Toolbar>` accepts a `className`, with or without `children`, and the kits merge it into
+  the bar's own class with `cn` — so a utility that collides with one of theirs replaces it. This is
+  what lets a toolbar be re-used as the header bar of a framed grid: both kits give the bar an `mb-2`
+  meant for a toolbar standing free above the table, and `mb-0` now removes it.
+
+### Patch Changes
+
+- e047016: **A partial import of the package root no longer pulls the whole compound namespace when you
+  bundle with esbuild.**
+
+  The 29 components hung off `DataGrid` were attached by top-level `DataGrid.Toolbar = Toolbar`
+  assignments, which esbuild cannot drop — so each one anchored its component and everything that
+  component reached, and any import from `@ez-kit/data-grid-react` paid for ~92% of the package.
+  They are now one `/* @__PURE__ */`-annotated `Object.assign`, which esbuild drops when nothing
+  uses the namespace.
+
+  **If you bundle with Rollup, Vite or Next, this changes nothing for you** — both Rollup 4 and
+  Turbopack were measured and already dropped the namespace on the old form, byte for byte the same
+  as on the new one. Webpack was not measured. The change cannot make any bundler do worse.
+
+  Measured on the built output with esbuild (`--bundle --minify`, React external):
+
+  | imported           |  before |   after |
+  | ------------------ | ------: | ------: |
+  | `useDataGridTable` | 155 370 |  27 901 |
+  | `DefaultLayout`    | 156 115 |  83 759 |
+  | `DataGrid`         | 155 370 | 155 313 |
+  | whole surface      | 168 998 | 168 942 |
+
+  No API change: `DataGrid.Toolbar`, `DataGrid.Table` and the rest are exactly as before. Read the
+  `DataGrid` row as the honest one — that name _is_ the whole namespace, so it costs what everything
+  costs, and what got cheaper is every import that never asked for it. A grid composed out of
+  `DataGrid.X` members is unchanged for the same reason: writing one reaches the value that carries
+  all 29. Composing through `createDataGrid` and the kits' per-group subpaths is still the path where
+  what you name decides what ships.
+
+- Updated dependencies [7386f53]
+  - @ez-kit/data-grid-core@0.8.0
+
 ## 0.8.0
 
 ### Minor Changes
