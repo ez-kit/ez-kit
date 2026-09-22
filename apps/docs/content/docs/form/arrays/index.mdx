@@ -300,3 +300,10 @@ The list's own container differs between the kits: the shadcn kit publishes `for
 - **Not a layout.** Unlike a `Section`, it changes what a child's `name` means, and it owns a path in the values.
 - **Not drag-and-drop.** `reorderable` exposes move-up / move-down; the gesture is the kit's business, and neither kit ships a drag handle.
 - **Not virtualized.** A list of a few dozen entries is the shape this is built for. Every entry is rendered, and three levels of nesting at a hundred entries each is a million fields.
+
+## See also
+
+- [API reference](/docs/form/arrays/api)
+- [Config-driven forms](/docs/form/schema) — the `array` node lives here too
+- [Validation](/docs/form/validation) — per-field validators, for the JSX side of cross-item rules
+- [Layout](/docs/form/layout) — cosmetic grouping, not a path of its own

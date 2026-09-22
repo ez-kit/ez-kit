@@ -52,20 +52,20 @@ The full surface of the feature. What each one is for, and when to reach for it,
 
 ## The scope
 
-| Key        | Type                        | Notes                                                                                                                            |
-| ---------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `items`    | `readonly ArrayItemScope[]` | One entry of the list, in order. Map over it.                                                                                    |
-| `add`      | `() => void`                | Append an entry built from `newItem`. Takes nothing — see the note below.                                                        |
-| `insert`   | `(index, value?) => void`   | Insert at a position, optionally with a value other than `newItem`. Appending a specific value is `insert(items.length, value)`. |
-| `remove`   | `(index: number) => void`   | Remove the entry at a position — the indexed twin of `item.remove`.                                                              |
-| `move`     | `(from, to) => void`        | Move an entry between positions. What a drag-and-drop implementation is built on.                                                |
-| `canAdd`   | `boolean`                   | `false` once `validate.maxLength` is reached.                                                                                    |
-| `errors`   | `string[]`                  | The list's own errors, formatted the same way a flat field's are. Nothing renders these for you — see above.                     |
-| `invalid`  | `boolean`                   | Whether the list currently fails its own `validate`.                                                                             |
-| `disabled` | `boolean`                   | The `disabled` prop, normalised: always a plain `boolean`, never `undefined`.                                                    |
-| `required` | `boolean`                   | The `required` prop, normalised the same way.                                                                                    |
-| `Button`   | `FormComponents['Button']`  | The kit's generic button, for a control drawn outside `item.Item` — the add and duplicate controls above use it.                 |
-| `field`    | `BoundFieldApi`             | The array field itself — see the note below.                                                                                     |
+| Key        | Type                        | Notes                                                                                                                                           |
+| ---------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `items`    | `readonly ArrayItemScope[]` | One entry of the list, in order. Map over it.                                                                                                   |
+| `add`      | `() => void`                | Append an entry built from `newItem`. Takes nothing — see [the note](/docs/form/arrays#the-scope).                                              |
+| `insert`   | `(index, value?) => void`   | Insert at a position, optionally with a value other than `newItem`. Appending a specific value is `insert(items.length, value)`.                |
+| `remove`   | `(index: number) => void`   | Remove the entry at a position — the indexed twin of `item.remove`.                                                                             |
+| `move`     | `(from, to) => void`        | Move an entry between positions. What a drag-and-drop implementation is built on.                                                               |
+| `canAdd`   | `boolean`                   | `false` once `validate.maxLength` is reached.                                                                                                   |
+| `errors`   | `string[]`                  | The list's own errors, formatted the same way a flat field's are. Nothing renders these for you — see [above](/docs/form/arrays#custom-layout). |
+| `invalid`  | `boolean`                   | Whether the list currently fails its own `validate`.                                                                                            |
+| `disabled` | `boolean`                   | The `disabled` prop, normalised: always a plain `boolean`, never `undefined`.                                                                   |
+| `required` | `boolean`                   | The `required` prop, normalised the same way.                                                                                                   |
+| `Button`   | `FormComponents['Button']`  | The kit's generic button, for a control drawn outside `item.Item` — the [add and duplicate controls](/docs/form/arrays#custom-layout) use it.   |
+| `field`    | `BoundFieldApi`             | The array field itself — see [the note](/docs/form/arrays#the-scope).                                                                           |
 
 ## One entry, from the primitive
 
