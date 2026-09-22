@@ -468,6 +468,12 @@ and move on.
   Feature PRs into `develop` are unaffected — squash those freely; this rule is about `main` only.
 - Issues close on merge into `develop`, not on release. GitHub itself only honours `Closes #N` when a PR merges into the **default** branch (`main`), so every PR into `develop` would otherwise leave its issue open — and strand its project-board card in **In review**, since the board moves items to Done on the _issue closed_ event. `.github/workflows/close-linked-issues.yml` restores the expected behaviour: on merge into `develop` or `integration/**` it parses closing keywords from the PR body **and its commit messages**, then closes those issues. It authenticates with the `CHANGESETS_TOKEN` PAT because the repo keeps `default_workflow_permissions: read`, which caps `GITHUB_TOKEN` below the required `issues: write`. That PAT therefore needs **`Issues: Read and write`** on top of the permissions the version-PR bot uses — if it is rotated or reissued without it, the job fails with `403 Resource not accessible by personal access token` and issues silently pile up open.
 - Git hooks (husky): pre-commit runs `lint-staged` (Prettier + ESLint on staged files only), commit-msg enforces Conventional Commits via commitlint, pre-push runs `pnpm ci:fast`.
+- **Everything written on GitHub is in English.** Issue titles and bodies, PR titles and
+  descriptions, review comments and commit messages — whatever the language the work was discussed
+  in. The repository's own prose is English throughout (this file, every docblock, every page under
+  `apps/docs/content`), so an issue in another language reads as a different project's, and a reader
+  arriving from a `Closes #N` in a changelog lands somewhere they cannot follow. A few older issues
+  are in Russian; they predate this rule and are not the convention to copy.
 - **No agent attribution anywhere in git history or on GitHub.** Commit messages, PR titles and PR
   descriptions never mention Claude, Claude Code, an agent, a session, or a model — no
   `Co-Authored-By:` line, no `Claude-Session:` trailer, no session URL, no "generated with" note. A
