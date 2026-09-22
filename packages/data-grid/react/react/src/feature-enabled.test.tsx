@@ -4,7 +4,6 @@ import { describe, expect, it } from 'vitest'
 
 import { DATA_GRID_DEFAULTS } from './defaults'
 import { TEST_FEATURES } from './test-utils'
-import { FilterPanelPlacement, PageSizerPlacement } from './types'
 import { useDataGrid } from './use-data-grid'
 
 type User = { id: number; name: string }
@@ -24,22 +23,10 @@ describe('useDataGrid — enabled: false suppresses the React-side config', () =
 				features: TEST_FEATURES,
 				data: USERS,
 				columns: COLUMNS,
-				globalFiltering: { enabled: false, toolbar: true },
+				globalFiltering: { enabled: false },
 			}),
 		)
 		expect(result.current.grid.globalFiltering).toBeUndefined()
-	})
-
-	it('does not publish the filter-chips config', () => {
-		const { result } = renderHook(() =>
-			useDataGrid({
-				features: TEST_FEATURES,
-				data: USERS,
-				columns: COLUMNS,
-				filtering: { enabled: false, chips: true },
-			}),
-		)
-		expect(result.current.grid.filtering.chips).toBeUndefined()
 	})
 
 	it('does not publish the selection panel config', () => {
@@ -73,29 +60,31 @@ describe('useDataGrid — enabled: false suppresses the React-side config', () =
 		expect(result.current.grid.virtualization).toBeUndefined()
 	})
 
-	it('keeps column hiding off in core and mounts no toolbar trigger', () => {
+	it('keeps column hiding off in core and reports the feature as off', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({
 				features: TEST_FEATURES,
 				data: USERS,
 				columns: COLUMNS,
-				visibility: { enabled: false, toolbar: true },
+				visibility: { enabled: false },
 			}),
 		)
 		expect(result.current.options.enableHiding).toBe(false)
-		expect(result.current.grid.visibility).toBeUndefined()
+		// The flag a layout gates `<DataGrid.VisibilityTrigger/>` on — a derived boolean since the
+		// `{ toolbar }` object it replaced answered two questions at once.
+		expect(result.current.grid.visibility).toBe(false)
 	})
 
-	it('does not publish the sorting toolbar config', () => {
+	it('reports sorting as off', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({
 				features: TEST_FEATURES,
 				data: USERS,
 				columns: COLUMNS,
-				sorting: { enabled: false, toolbar: true },
+				sorting: { enabled: false },
 			}),
 		)
-		expect(result.current.grid.sorting).toBeUndefined()
+		expect(result.current.grid.sorting).toBe(false)
 	})
 
 	it('resolves a write feature away when its config says enabled: false', () => {
@@ -112,132 +101,41 @@ describe('useDataGrid — enabled: false suppresses the React-side config', () =
 
 	it('leaves a config object without `enabled` fully enabled', () => {
 		const { result } = renderHook(() =>
-			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, globalFiltering: { toolbar: true } }),
+			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, globalFiltering: { placeholder: 'Go' } }),
 		)
 		expect(result.current.grid.globalFiltering).toBeDefined()
 	})
 })
 
 /**
- * `toolbar` is the one word for "auto-mount my control", on every feature that has one.
- * Pagination is the case that used to be implicit: the presence of `items` was
- * itself the switch, so options-without-control and control-with-default-options were both
- * unexpressible.
+ * `pagination.items` is data: it says which sizes a `<DataGrid.PageSizer/>` offers, not whether
+ * one is mounted. That second question used to be `pagination.pageSizer`, and it is a layout's
+ * now — which is why this describe lost every case about a placement.
  */
-describe('useDataGrid — pagination.pageSizer', () => {
-	it('mounts the PageSizer when a size list is supplied, with no extra flag', () => {
+describe('useDataGrid — pagination.items', () => {
+	it('keeps an explicit size list', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, pagination: { items: [5, 10] } }),
 		)
-		expect(result.current.grid.pagination.pageSizer).toEqual({ placement: PageSizerPlacement.Toolbar })
 		expect(result.current.grid.pagination.items).toEqual([5, 10])
 	})
 
-	it('mounts nothing when pagination carries no size list', () => {
-		const { result } = renderHook(() =>
-			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, pagination: true }),
-		)
-		expect(result.current.grid.pagination.pageSizer).toBeUndefined()
-	})
-
-	it('resolves the default size list even when the control is not auto-mounted', () => {
-		// The list is data, not a mount switch: `<DataGrid.PageSizer />` placed by hand needs it.
+	it('resolves the default size list for a bare `pagination: true`', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, pagination: true }),
 		)
 		expect(result.current.grid.pagination.items).toEqual([...DATA_GRID_DEFAULTS.pagination.items])
 	})
 
-	it('pageSizer: true falls back to the named default size list', () => {
-		const { result } = renderHook(() =>
-			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, pagination: { pageSizer: true } }),
-		)
-		expect(result.current.grid.pagination.pageSizer).toEqual({ placement: PageSizerPlacement.Toolbar })
-		expect(result.current.grid.pagination.items).toEqual([...DATA_GRID_DEFAULTS.pagination.items])
-	})
-
-	it('takes the scalar as the placement', () => {
-		const { result } = renderHook(() =>
-			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, pagination: { pageSizer: 'footer' } }),
-		)
-		expect(result.current.grid.pagination.pageSizer).toEqual({ placement: PageSizerPlacement.Footer })
-	})
-
-	it('reads the placement off the object form', () => {
+	it('resolves no size list in infinite mode, which does not page by size', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({
 				features: TEST_FEATURES,
 				data: USERS,
 				columns: COLUMNS,
-				pagination: { pageSizer: { placement: 'footer' } },
+				pagination: { mode: 'infinite', hasNextPage: true },
 			}),
 		)
-		expect(result.current.grid.pagination.pageSizer).toEqual({ placement: PageSizerPlacement.Footer })
-	})
-
-	it('pageSizer: false keeps the size list as data without mounting the control', () => {
-		const { result } = renderHook(() =>
-			useDataGrid({
-				features: TEST_FEATURES,
-				data: USERS,
-				columns: COLUMNS,
-				pagination: { pageSizer: false, items: [5, 10] },
-			}),
-		)
-		expect(result.current.grid.pagination.pageSizer).toBeUndefined()
-		expect(result.current.grid.pagination.items).toEqual([5, 10])
-	})
-
-	it('never mounts the PageSizer in infinite mode', () => {
-		const { result } = renderHook(() =>
-			useDataGrid({
-				features: TEST_FEATURES,
-				data: USERS,
-				columns: COLUMNS,
-				pagination: { mode: 'infinite', pageSizer: true },
-			}),
-		)
-		expect(result.current.grid.pagination.pageSizer).toBeUndefined()
 		expect(result.current.grid.pagination.items).toBeUndefined()
-	})
-})
-
-describe('useDataGrid — filtering.panel', () => {
-	it('resolves a placement only under the panel variant', () => {
-		const { result } = renderHook(() =>
-			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, filtering: true }),
-		)
-		expect(result.current.grid.filtering.panel).toBeUndefined()
-	})
-
-	it('defaults the panel to its own strip above the table', () => {
-		const { result } = renderHook(() =>
-			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, filtering: { variant: 'panel' } }),
-		)
-		expect(result.current.grid.filtering.panel).toEqual({ placement: FilterPanelPlacement.Above })
-	})
-
-	it('takes the scalar as the placement', () => {
-		const { result } = renderHook(() =>
-			useDataGrid({
-				features: TEST_FEATURES,
-				data: USERS,
-				columns: COLUMNS,
-				filtering: { variant: 'panel', panel: 'toolbar' },
-			}),
-		)
-		expect(result.current.grid.filtering.panel).toEqual({ placement: FilterPanelPlacement.Toolbar })
-	})
-
-	it('reads the placement off the object form', () => {
-		const { result } = renderHook(() =>
-			useDataGrid({
-				features: TEST_FEATURES,
-				data: USERS,
-				columns: COLUMNS,
-				filtering: { variant: 'panel', panel: { placement: 'toolbar' } },
-			}),
-		)
-		expect(result.current.grid.filtering.panel).toEqual({ placement: FilterPanelPlacement.Toolbar })
 	})
 })

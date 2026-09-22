@@ -3,18 +3,21 @@ import { boxOf, expect, test } from '../../../fixtures'
 import type { Locator, Page } from '@playwright/test'
 
 /**
- * The `variant: 'panel'` filter panel — one chip per filterable column, and the two regions
- * that can hold the strip of them.
+ * The filter panel — one chip per filterable column, and the two regions that can hold the
+ * strip of them.
  *
- * The panel is the whole filter UI under this variant: the headers gave their controls up for
- * it. So "the panel is where it should be" is not a cosmetic claim, and the tests below
- * measure it against the region that is supposed to contain it rather than reading
- * `placement` back off an attribute.
+ * In both examples the panel is the whole filter UI: their header cells render everything but
+ * `filter`, so the headers gave their controls up for it. That used to be one enum value,
+ * `filtering: { variant: 'panel' }`, which bundled *mounting the panel* with *stripping the
+ * headers*; they are two lines of JSX now, and the panel's region is a third — where
+ * `<DataGrid.FilterPanel />` is written. So "the panel is where it should be" is not a cosmetic
+ * claim, and the tests below measure it against the region that is supposed to contain it
+ * rather than reading a `placement` back off an attribute.
  */
 
-/** 8 orders, no pagination; panel in its own strip above the table (the default). */
+/** 8 orders, no pagination; the panel written above `<DataGrid.Table />`, in its own strip. */
 const ABOVE = 'filter-panel'
-/** The full task board — `panel: 'toolbar'`, so the column filters sit beside the search box. */
+/** The full task board — the panel written into `Toolbar.start`, beside the search box. */
 const IN_TOOLBAR = 'example-task-board'
 
 const PANEL = '[data-slot="filter-panel"]'
@@ -96,8 +99,8 @@ test.describe('where the panel goes', () => {
 		// for this example and turned a vacuous pass into a red test.
 		//
 		// What carries the weight instead: the `boxOf` reads below, which throw rather than
-		// coordinate-zero when the panel does not render, and the sibling `panel: 'toolbar'` test,
-		// which asserts the same containment *positively* on a grid that does have a toolbar.
+		// coordinate-zero when the panel does not render, and the sibling toolbar test, which
+		// asserts the same containment *positively* on a grid that does have a toolbar.
 		await expect(page.locator(`[data-slot="toolbar"] ${PANEL}`)).toHaveCount(0)
 
 		const panel = await boxOf(page.locator(PANEL))
@@ -106,7 +109,7 @@ test.describe('where the panel goes', () => {
 		expect(panel.y + panel.height).toBeLessThanOrEqual(table.y)
 	})
 
-	test("`panel: 'toolbar'` moves it into the toolbar's leading slot", async ({ grid, page }) => {
+	test("writing it into `Toolbar.start` puts it in the toolbar's leading slot", async ({ grid, page }) => {
 		await grid.open(IN_TOOLBAR)
 
 		await expect(page.locator(`[data-slot="toolbar"] ${PANEL}`)).toHaveCount(1)
@@ -119,6 +122,9 @@ test.describe('where the panel goes', () => {
 
 		expect(panel.y).toBeGreaterThanOrEqual(toolbar.y)
 		expect(panel.y + panel.height).toBeLessThanOrEqual(toolbar.y + toolbar.height)
-		expect(panel.x + panel.width).toBeLessThanOrEqual(search.x)
+		// Search first, then the panel — the order the slot's JSX writes them in
+		// (`start={<><GlobalFilterInput/><FilterPanel/></>}`), which is now the only thing that
+		// decides it. It took two options to ask for before.
+		expect(search.x + search.width).toBeLessThanOrEqual(panel.x)
 	})
 })

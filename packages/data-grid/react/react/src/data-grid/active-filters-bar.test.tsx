@@ -11,7 +11,6 @@ import { ActiveFiltersBar } from './active-filters-bar'
 import { TableProvider } from './table-context'
 
 import type { DataTable, GridFeatures } from '../types'
-import type { NormalizedFilterChipsConfig } from '../use-data-grid'
 import type { ReactNode } from 'react'
 
 type User = {
@@ -40,10 +39,6 @@ function makeTable(config?: Partial<Parameters<typeof createTable<GridFeatures, 
 		...config,
 	})
 	return prepareDataGridTable(table)
-}
-
-function setChipsCfg(table: DataTable<GridFeatures, User>, value: NormalizedFilterChipsConfig | undefined) {
-	table.grid.filtering.chips = value
 }
 
 function Wrapper({ table, children }: { table: DataTable<GridFeatures, User>; children: ReactNode }) {
@@ -164,9 +159,24 @@ describe('<ActiveFiltersBar>', () => {
 		expect(screen.getByText('Is empty')).toBeInTheDocument()
 	})
 
-	it('emits data-chip-position from FILTER_CHIPS_KEY', () => {
+	// The attribute is what both kits' stylesheets rule on, and it is the strip's only remaining
+	// tie to the removed `filtering.chips` option: the prop replaced it outright.
+	it('emits data-chip-position from the position prop', () => {
 		const table = makeTable()
-		setChipsCfg(table, { position: 'below' })
+		table.setGlobalFilter('al')
+
+		const { container } = render(
+			<Wrapper table={table}>
+				<ActiveFiltersBar position='below' />
+			</Wrapper>,
+		)
+		const bar = container.querySelector('[data-slot="active-filters-bar"]')
+		expect(bar).not.toBeNull()
+		expect(bar?.getAttribute('data-chip-position')).toBe('below')
+	})
+
+	it("defaults the position to 'above' when the prop names none", () => {
+		const table = makeTable()
 		table.setGlobalFilter('al')
 
 		const { container } = render(
@@ -174,8 +184,8 @@ describe('<ActiveFiltersBar>', () => {
 				<ActiveFiltersBar />
 			</Wrapper>,
 		)
-		const bar = container.querySelector('[data-slot="active-filters-bar"]')
-		expect(bar).not.toBeNull()
-		expect(bar?.getAttribute('data-chip-position')).toBe('below')
+		expect(container.querySelector('[data-slot="active-filters-bar"]')?.getAttribute('data-chip-position')).toBe(
+			'above',
+		)
 	})
 })

@@ -45,7 +45,9 @@ export function ComponentGuard(): null {
 	if (isFeatureEnabled(table.options.deleting?.confirmation)) required.add('ConfirmDialog')
 	if (table.options.creating?.mode === 'modal' || table.options.editing?.mode === 'modal') required.add('FormShell')
 
-	if (table.grid.selection.bar !== undefined) required.add('SelectionBar')
+	// Either feature is enough: the one bar is what both the selection and a pending draft
+	// render into, so a grid with `draft` and no selection still needs it registered.
+	if (table.grid.selection.bar !== undefined || table.options.draft === true) required.add('ActionBar')
 
 	const missing = [...required].filter((key) => {
 		// Resolve the component through its feature group; a partial kit may omit the

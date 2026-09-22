@@ -1,19 +1,36 @@
 import { localizeOperators } from '@ez-kit/data-grid-core'
 
 import { useGridComponents } from '../components-context'
-import { DATA_GRID_DEFAULTS } from '../defaults'
-import { FilterChipKind } from '../types'
+import { FilterChipKind, FilterChipsPosition } from '../types'
 
 import { useDataGridState, useDataGridTable } from './table-context'
 
 import type { GridFeatures } from '../types'
-import type { FilterChipsPosition } from '../use-data-grid'
 import type { FilterOperatorDef } from '@ez-kit/data-grid-core'
 import type { Column } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
+/**
+ * Where the strip sits when the prop names nothing — the common case, a strip between the
+ * toolbar and the table.
+ *
+ * This component's own constant, deliberately not an entry in `DATA_GRID_DEFAULTS`: that table
+ * is keyed by the **option path** it defaults, and `filtering.chips` is not an option any more.
+ * Reading it from there would leave the component depending on the grid's config for a value
+ * that is now purely its own.
+ */
+const DEFAULT_CHIPS_POSITION = FilterChipsPosition.Above
+
 export type DataGridActiveFiltersBarProps = {
-	/** Override the position data attribute. Defaults to the auto-mount config or `'above'`. */
+	/**
+	 * Which side of the table the strip reports itself on, as `data-chip-position`. Default:
+	 * `'above'`.
+	 *
+	 * Document order already says where the strip *is* — a layout writes it above or below
+	 * `<DataGrid.Table/>`. This says which way the margin points, which is the one thing a
+	 * stylesheet cannot read off the position: both kits rule on
+	 * `[data-slot='active-filters-bar'][data-chip-position='…']`.
+	 */
 	position?: FilterChipsPosition
 }
 
@@ -72,11 +89,8 @@ function columnLabel<TRow extends object>(column: Column<GridFeatures, TRow>): s
 /**
  * Compound member: strip with removable chips for every active filter.
  *
- * Auto-mounted by `<DataGrid>` when `filtering.chips` is truthy. Can also be
- * placed manually in custom layouts via `<DataGrid.ActiveFiltersBar />`.
- *
- * Renders nothing when no filter is active. Reads chips position from
- * {@link FILTER_CHIPS_KEY} unless overridden via the `position` prop.
+ * Placed by a layout — above or below `<DataGrid.Table/>`, which is what the `filtering.chips`
+ * option used to decide. Renders nothing when no filter is active.
  */
 export function ActiveFiltersBar({ position: positionProp }: DataGridActiveFiltersBarProps = {}) {
 	const table = useDataGridTable()
@@ -88,9 +102,7 @@ export function ActiveFiltersBar({ position: positionProp }: DataGridActiveFilte
 	const applied = useDataGridState((s) => s.applied)
 	const { FilterChip } = useGridComponents().filtering
 
-	const cfg = table.grid.filtering.chips
-
-	const position: FilterChipsPosition = positionProp ?? cfg?.position ?? DATA_GRID_DEFAULTS.filtering.chips.position
+	const position: FilterChipsPosition = positionProp ?? DEFAULT_CHIPS_POSITION
 	const isDrafting = table.options.draft === true
 
 	type ChipDescriptor = {

@@ -222,6 +222,26 @@ export type ActionsCellProps<TRow extends object = ErasedRow> =
 // ── primitive component props ─────────────────────────────────────────────
 
 /**
+ * The grid's root box — the one element that holds the whole grid: toolbar, filter panel, chips,
+ * table, pagination row and the action bars.
+ *
+ * It exists because the grid is otherwise a **list of siblings** in its parent's flow, so a parent
+ * that lays its children out — `display: flex`, `grid`, a `gap` — would lay out the grid's pieces
+ * instead of the grid. With a root they are one item again.
+ *
+ * Optional: a kit that registers nothing gets a plain `div`, and a registered one **must spread
+ * every prop it receives** — `data-slot='grid-root'` above all, since that is what stylesheets
+ * target. It carries no styling of its own: whatever look the box has comes from the kit or from
+ * `layout.classNames.root`.
+ *
+ * The slot is named `Root` while the attribute reads `grid-root`, the one place the two differ.
+ * A component key is read as `core.Root`, where the grid is already the subject; an attribute is
+ * read in a stylesheet and in a page's DOM beside `table-wrapper` and `toolbar`, where a bare
+ * `root` would name nothing in particular.
+ */
+export type RootProps = HTMLAttributes<HTMLDivElement>
+
+/**
  * The grid shell's outer box — the positioning context the pin-shadow overlay is drawn against,
  * the element the shadow custom properties are written to, and the one `Header` finds with
  * `closest("[data-slot='table-wrapper']")`.
@@ -252,6 +272,45 @@ export type TableWrapperProps = HTMLAttributes<HTMLDivElement> & RefAttributes<H
  * })
  */
 export type TableScrollProps = HTMLAttributes<HTMLDivElement> & RefAttributes<HTMLDivElement>
+
+/**
+ * The header cell's first row — the box holding the label or sort affordance, and the column
+ * menu beside it. Stamped `data-slot='header-main'`; the structural stylesheet lays it out as a
+ * flex row and both kits style off that slot.
+ *
+ * Optional, and a plain `div` is the whole of what this package needs, which is why neither kit
+ * in this repo registers one. It exists so that composing a header cell — swapping `filter` for
+ * `filterPopover`, dropping the filter entirely — never requires hand-writing the host element
+ * the stylesheet is aiming at. A kit that does register one **must spread every prop it
+ * receives**, `data-slot` above all.
+ *
+ * No `ref`, unlike {@link TableWrapperProps} / {@link TableScrollProps}: nothing measures this box.
+ */
+export type HeaderMainProps = HTMLAttributes<HTMLDivElement>
+/**
+ * The header cell's second row — the filter control under the label, when the column has one.
+ * Stamped `data-slot='header-extras'`, with the same contract and the same rationale as
+ * {@link HeaderMainProps}.
+ */
+export type HeaderExtrasProps = HTMLAttributes<HTMLDivElement>
+
+/**
+ * The grid's body: everything between `core.Root` and the modals, composed from the members of
+ * the `DataGrid` namespace.
+ *
+ * Optional, and the fallback is the point. A kit that registers nothing gets
+ * `<DataGrid.Table/>` and nothing else — the one arrangement this package can be right about
+ * without guessing, now that where a control sits is stated in JSX rather than in the config.
+ * A kit that wants the familiar toolbar / table / pagination shell registers a layout for it,
+ * which is what both kits in this repo do; an application restates it once on the provider.
+ *
+ * Precedence is `children ?? core.Layout ?? <DataGrid.Table/>`: passing children to `<DataGrid>`
+ * beats a registered layout, because a grid composed by hand has already said what it wants.
+ *
+ * It takes no props. A layout reads whatever it needs from the table through
+ * `useDataGridTable()`, the same way every other member of the namespace does.
+ */
+export type LayoutProps = Record<never, never>
 
 export type TableProps = HTMLAttributes<HTMLTableElement>
 /**
@@ -294,6 +353,28 @@ export type NumberInputProps = {
 	onBlur?: () => void
 }
 
+/**
+ * A hover hint over something already on screen. Optional-tier: a kit that registers none
+ * renders `children` unchanged, so what is lost is the decoration, never the meaning — whatever
+ * a tooltip explains is also on the element it wraps, as its accessible name.
+ *
+ * Two props and no more. `placement`, `delay` and their siblings are the kit's business and
+ * would each need a closed set of their own; a generic grows under a second real consumer, not
+ * ahead of the first.
+ */
+export type TooltipProps = {
+	/** What the hint says. */
+	content: ReactNode
+	/**
+	 * What it hangs off. Whatever a kit puts around this has to be **layout-neutral**: the slot
+	 * is handed elements that already sit in a flex row, so a box between them and their parent
+	 * must not introduce sizing of its own. A trigger with an `asChild` form (shadcn's) adds no
+	 * element at all; one that wraps (HeroUI's, which draws a focusable box so the hint is
+	 * keyboard-reachable) has to leave the row alone.
+	 */
+	children: ReactNode
+}
+
 export type ModalProps = {
 	open: boolean
 	onClose: () => void
@@ -314,6 +395,13 @@ export type ToolbarProps = {
 	start?: ReactNode
 	/** Trailing slot — rendered last in the reading direction. */
 	end?: ReactNode
+	/**
+	 * The caller's class for the bar itself, passed straight through — this package authors none.
+	 * A kit **merges** it with its own (`cn(…)`), so a utility can replace one the kit set: the bar
+	 * ships a bottom margin for a toolbar standing free above the table, and a toolbar used as a
+	 * card's header bar needs that margin gone and a padding of its own.
+	 */
+	className?: string | undefined
 }
 
 /**
@@ -709,27 +797,19 @@ export type RefetchOverlayProps = {
  * - a "Retry" affordance when `error` is non-null (calls `onRetry`)
  */
 /**
- * How a column's filter control is presented.
+ * Which side of the table `<DataGrid.ActiveFiltersBar>` reports itself on.
  *
- * Named members for internal reference; the option is typed as the plain string union, so
- * `variant: 'popover'` is equally valid and needs no import.
- */
-export const FilteringVariant = {
-	/** The control sits in the header cell, under the column label. The default. */
-	Inline: 'inline',
-	/** The control opens from a per-column popover trigger in the header. */
-	Popover: 'popover',
-	/** Every column's control is collected into one filter panel. */
-	Panel: 'panel',
-} as const
-
-export type FilteringVariant = (typeof FilteringVariant)[keyof typeof FilteringVariant]
-
-/**
- * Where the auto-mounted active-filter chips strip renders relative to the table.
+ * A **component prop**, not a config option: a layout says where the strip goes by where it
+ * writes `<DataGrid.ActiveFiltersBar/>`, and this only tells the stylesheet which way the
+ * margin points — something document order cannot express, since both kits style on
+ * `[data-slot='active-filters-bar'][data-chip-position='…']`. The `filtering.chips` option that
+ * used to resolve it is gone; the strip is composed, like every other control.
  *
- * Named members for internal reference; the option is typed as the plain string union, so
- * `position: 'below'` is equally valid and needs no import.
+ * `position`, not `placement`: the values name a spot on one axis, not which container holds
+ * the control.
+ *
+ * Named members for internal reference; the prop is typed as the plain string union, so
+ * `position='below'` is equally valid and needs no import.
  */
 export const FilterChipsPosition = {
 	/** Between the toolbar and the table. The default. */
@@ -739,41 +819,6 @@ export const FilterChipsPosition = {
 } as const
 
 export type FilterChipsPosition = (typeof FilterChipsPosition)[keyof typeof FilterChipsPosition]
-
-/**
- * Which region the auto-mounted page-size selector renders in.
- *
- * A *region*, which is why it is `placement` and not the `position` that
- * {@link FilterChipsPosition} uses: that option names a spot on one axis (above or below the
- * table), this one names which of two containers holds the control.
- *
- * Named members for internal reference; the option is typed as the plain string union, so
- * `pageSizer: 'footer'` is equally valid and needs no import.
- */
-export const PageSizerPlacement = {
-	/** Leading slot of the toolbar, above the table. The default. */
-	Toolbar: 'toolbar',
-	/** The pagination row under the table, before the pagination controls. */
-	Footer: 'footer',
-} as const
-
-export type PageSizerPlacement = (typeof PageSizerPlacement)[keyof typeof PageSizerPlacement]
-
-/**
- * Which region holds the auto-mounted filter panel under
- * {@link FilteringVariant.Panel}.
- *
- * `placement`, like {@link PageSizerPlacement} and for the same reason: the values name a
- * container, not a spot on an axis the way `filtering.chips`' `position` does.
- */
-export const FilterPanelPlacement = {
-	/** Its own strip between the toolbar and the table. The default. */
-	Above: 'above',
-	/** The leading slot of the toolbar, beside the other toolbar controls. */
-	Toolbar: 'toolbar',
-} as const
-
-export type FilterPanelPlacement = (typeof FilterPanelPlacement)[keyof typeof FilterPanelPlacement]
 
 /**
  * What makes an infinite-scroll grid load the next page.
@@ -850,28 +895,58 @@ export const ActionBarVariant = {
  */
 export type ActionBarVariant = (typeof ActionBarVariant)[keyof typeof ActionBarVariant]
 
-export type SelectionBarProps = {
-	/** False when 0 rows selected — component should hide/animate out. */
+/**
+ * The one action bar, with a section per live concern.
+ *
+ * Both sections are live at once and divided by a separator — selection on the start side,
+ * draft on the end side, so `Apply` (the bar's only primary) lands at the far end. The two
+ * used to be independent components, each drawing a whole bar and kept apart by a gate that
+ * only re-ran on a selection change; a draft edit changes no selection, so they overlapped.
+ * One component with one surface is what removes that class of defect.
+ */
+export type ActionBarProps = {
+	/**
+	 * False when neither section has anything to show — the kit may animate out.
+	 *
+	 * Independent of the sections being present: shadcn's floating bar animates out rather
+	 * than unmounting and needs the last count to render while it does, so a `selection`
+	 * section with `count: 0` is normal while the bar is closing.
+	 */
 	open: boolean
+	/**
+	 * Render mode the consumer requested, resolved from `selection.bar.variant` — one value
+	 * for the one bar.
+	 * - `'floating'` (default) — sticky/positioned bar, may overlay content.
+	 * - `'inline'` — rendered in normal document flow.
+	 */
+	variant: ActionBarVariant
+	/** Absent when selection is off, `bar: false`, or the grid registered no selection feature. */
+	selection?: ActionBarSelectionSection
+	/** Absent when `draft` is off or the draft is clean. */
+	draft?: ActionBarDraftSection
+}
+
+/**
+ * The selection half of the bar: what is selected and what can be done to it.
+ *
+ * Live while a draft is pending. The selection is valid against the **applied** query — the
+ * one the user is looking at — and the set only goes stale after Apply, which
+ * `table.draft.apply()` already handles by clearing the selection in the same state change.
+ */
+export type ActionBarSelectionSection = {
 	/** Number of currently selected rows. */
 	count: number
 	selectedRows: Row<GridFeatures, ErasedRow>[]
-	/**
-	 * Render mode the consumer requested.
-	 * - `'floating'` (default) — sticky/positioned bar, may overlay content.
-	 * - `'inline'` — rendered in normal document flow (between Toolbar and Table).
-	 */
-	variant: ActionBarVariant
-	/**
-	 * Pre-bound delete handler. Only present when `onDelete` was configured.
-	 * When absent — Delete button must NOT be rendered.
-	 */
-	onDelete?: () => void
 	/**
 	 * Pre-bound clear handler.
 	 * If user did not provide `onClear`, this calls `table.resetRowSelection()`.
 	 */
 	onClear: () => void
+	/**
+	 * Confirmation-aware bulk delete. Absent when `deleting.bulk` is off, and the Delete
+	 * control must then not be rendered.
+	 */
+	onDelete?: () => void
 	/**
 	 * Custom action entries from `selection.bar.actions`, already resolved against the current
 	 * selection and namespaced. Rendered as buttons beside the built-in Delete, with the same
@@ -883,40 +958,26 @@ export type SelectionBarProps = {
 	 */
 	actions?: GridMenuItem[]
 	/**
-	 * Markup from the `start` / `end` slots of `<DataGrid.SelectionBar>`, rendered as-is at
-	 * either end of the bar's controls. This is the escape hatch for content that is not an
-	 * action — a bulk-target select, a counter — which `actions` deliberately cannot express.
+	 * Markup from the `start` / `end` slots of `<DataGrid.ActionBar>`, rendered as-is around
+	 * this section's controls. This is the escape hatch for content that is not an action — a
+	 * bulk-target select, a counter — which `actions` deliberately cannot express.
+	 *
+	 * They feed the selection section rather than the bar's two ends: their documented purpose
+	 * is content about the selection, and the draft section has a fixed shape.
 	 */
 	start?: ReactNode
-	/** See {@link SelectionBarProps.start}. */
+	/** See {@link ActionBarSelectionSection.start}. */
 	end?: ReactNode
 }
 
-/**
- * Pending-draft section of the shared action bar (`draft`).
- *
- * While a draft is pending this section owns the bar and the selection section
- * stands down — see `<DraftBar>`. `selectedCount` is therefore rendered as a
- * **non-interactive** context chip, never as a handle for bulk actions.
- */
-export type DraftBarProps = {
-	/** False when nothing is pending — component should hide/animate out. */
-	open: boolean
+/** The pending-draft half of the bar: what is unapplied, and the two ways out of it. */
+export type ActionBarDraftSection = {
 	/**
 	 * How much is pending on each deferred axis, keyed by {@link DraftAxis}. The core
 	 * {@link PendingCount} verbatim, rather than a hand-written twin that spelled the same three
 	 * axes `sorting` / `filters` / `search`.
 	 */
 	pending: PendingCount
-	/** Rendered as a non-interactive context chip when rows are selected. */
-	selectedCount: number
-	/**
-	 * Render mode the consumer requested — always the same value `SelectionBarProps.variant`
-	 * receives, because the two sections share one bar.
-	 * - `'floating'` (default) — sticky/positioned bar, may overlay content.
-	 * - `'inline'` — rendered in normal document flow (between Toolbar and Table).
-	 */
-	variant: ActionBarVariant
 	/** Apply the pending draft — emits one state change for the whole query. */
 	onApply: () => void
 	/** Discard the pending draft and restore the applied query. */
@@ -938,10 +999,18 @@ export type ChevronProps = {
  */
 export type GridComponentRegistry = {
 	// layout
+	/** Optional — see {@link RootProps}. Falls back to a plain `div`. */
+	Root?: ComponentType<RootProps>
 	/** Optional — see {@link TableWrapperProps}. Falls back to a plain `div`. */
 	TableWrapper?: ComponentType<TableWrapperProps>
 	/** Optional — see {@link TableScrollProps}. Falls back to a plain `div`. */
 	TableScroll?: ComponentType<TableScrollProps>
+	/** Optional — see {@link LayoutProps}. Falls back to `<DataGrid.Table/>` alone. */
+	Layout?: ComponentType<LayoutProps>
+	/** Optional — see {@link HeaderMainProps}. Falls back to a plain `div`. */
+	HeaderMain?: ComponentType<HeaderMainProps>
+	/** Optional — see {@link HeaderExtrasProps}. Falls back to a plain `div`. */
+	HeaderExtras?: ComponentType<HeaderExtrasProps>
 	Table?: ComponentType<TableProps>
 	Thead?: ComponentType<TheadProps>
 	Tbody?: ComponentType<TbodyProps>
@@ -955,6 +1024,8 @@ export type GridComponentRegistry = {
 	Checkbox?: ComponentType<CheckboxProps>
 	NumberInput?: ComponentType<NumberInputProps>
 	Modal?: ComponentType<ModalProps>
+	/** Optional — see {@link TooltipProps}. Falls back to rendering `children` alone. */
+	Tooltip?: ComponentType<TooltipProps>
 	// composite
 	Toolbar?: ComponentType<ToolbarProps>
 	GlobalFilterInput?: ComponentType<GlobalFilterInputProps>
@@ -971,8 +1042,7 @@ export type GridComponentRegistry = {
 	FilterPanelChip?: ComponentType<FilterPanelChipProps>
 	FilterChip?: ComponentType<FilterChipProps>
 	ClearFilterButton?: ComponentType<ClearFilterButtonProps>
-	SelectionBar?: ComponentType<SelectionBarProps>
-	DraftBar?: ComponentType<DraftBarProps>
+	ActionBar?: ComponentType<ActionBarProps>
 	ConfirmDialog?: ComponentType<ConfirmDialogProps>
 	OperatorSelect?: ComponentType<OperatorSelectProps>
 	BetweenInput?: ComponentType<BetweenInputProps>

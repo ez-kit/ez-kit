@@ -9,7 +9,17 @@ describe('readExampleFiles', () => {
 	it('lists the entry file and every file it imports relatively', async () => {
 		const files = await readExampleFiles('production-orders')
 
-		expect(files.map((file) => file.name)).toEqual(['ProductionExample.tsx', 'data.ts', 'use-orders.ts', 'server.ts'])
+		expect(files.map((file) => file.name)).toEqual([
+			'ProductionExample.tsx',
+			'data.ts',
+			'features.ts',
+			'OrdersLayout.tsx',
+			'use-orders.ts',
+			// The layout's header cell, reached through `OrdersLayout` — it is a component rather
+			// than a render function, so the source panel lists it as a file of its own.
+			'OrdersHeaderCell.tsx',
+			'server.ts',
+		])
 	})
 
 	it('reports each dependency by its path under the example root', async () => {

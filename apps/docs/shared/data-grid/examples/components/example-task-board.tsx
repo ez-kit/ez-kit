@@ -228,10 +228,10 @@ export function ExampleTaskBoardExample() {
 			data={data}
 			columns={columns}
 			selection
-			sorting={{ toolbar: true }}
+			sorting
 			visibility
 			globalFiltering={{ placeholder: 'Search titles…' }}
-			filtering={{ variant: 'panel', panel: 'toolbar', faceted: true }}
+			filtering={{ faceted: true }}
 			rowActions={{ placement: 'menu' }}
 			editing={{
 				mode: 'modal',
@@ -250,21 +250,76 @@ export function ExampleTaskBoardExample() {
 				edges: true,
 				label: 'page',
 				items: [10, 20, 30, 50],
-				pageSizer: false,
 			}}
 		>
-			<DataGrid.Toolbar />
-			<DataGrid.Table />
-			{/* The kits style `pagination-row` for exactly this: a page-control row that also
-			    carries something else. Reusing it keeps the footer on one line without
-			    re-deriving the pagination bar's own layout. */}
-			<div data-slot='pagination-row'>
+			{/*
+			 * Search leading, the filter panel beside it, the controls trailing — the order every
+			 * issue tracker uses, and the one that used to cost five options at once
+			 * (`globalFiltering: { toolbar: 'start' }`, `filtering: { panel: 'toolbar' }`,
+			 * `sorting: { toolbar: true }`, `visibility: { toolbar: true }`, `filtering.toolbar`).
+			 * It is this JSX now. `FilterPanelLayout` from `@ez-kit/data-grid-react` is
+			 * the same arrangement as a named preset, for a grid that wants it wholesale.
+			 */}
+			<DataGrid.Toolbar
+				start={
+					<>
+						<DataGrid.GlobalFilterInput />
+						<DataGrid.FilterPanel />
+					</>
+				}
+				end={
+					<>
+						<DataGrid.ClearFiltersButton />
+						<DataGrid.SortMenuTrigger />
+						<DataGrid.VisibilityTrigger />
+					</>
+				}
+			/>
+			<DataGrid.Table>
+				<DataGrid.Header>
+					{({ headerGroups }) =>
+						headerGroups.map((headerGroup) => (
+							<DataGrid.HeaderRow
+								key={headerGroup.id}
+								headerGroup={headerGroup}
+							>
+								{({ headers }) =>
+									headers.map((header) => (
+										<DataGrid.HeaderCell
+											key={header.id}
+											header={header}
+										>
+											{/*
+											 * No `filter`: the panel above is the whole filter UI here, so the headers
+											 * give their controls up for height and stay sortable. That used to be
+											 * `filtering: { variant: 'panel' }`, which bundled it with *mounting* the
+											 * panel — two decisions the enum could only make together.
+											 */}
+											{({ sortTrigger, menu }) => (
+												<DataGrid.HeaderMain>
+													{sortTrigger}
+													{menu}
+												</DataGrid.HeaderMain>
+											)}
+										</DataGrid.HeaderCell>
+									))
+								}
+							</DataGrid.HeaderRow>
+						))
+					}
+				</DataGrid.Header>
+				<DataGrid.Body />
+			</DataGrid.Table>
+			{/* `<DataGrid.BottomBar>` is the grid's bottom region — a row with two ends, holding
+			    whatever it is given. With children it takes this count instead of the page
+			    controls alone, and the kits' layout for it comes along unchanged. */}
+			<DataGrid.BottomBar>
 				<SelectionCount />
 				<div style={FOOTER_END_STYLE}>
 					<DataGrid.PageSizer />
 					<DataGrid.Pagination />
 				</div>
-			</div>
+			</DataGrid.BottomBar>
 		</DataGrid>
 	)
 }

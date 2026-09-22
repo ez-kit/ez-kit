@@ -15,7 +15,9 @@ The shared React package (`data-grid/react/react`) must contain **zero visual st
 
 Note this is **not** a claim that these files are currently byte-identical to upstream shadcn — they aren't: `table.tsx` already carries grid-layout modifications (`display: 'block'`, `data-[pinned]:bg-muted/40`) baked directly into the vendored file rather than a `blocks/` wrapper, predating this rule's current wording. Treat `components/ui/**` as this package's own deliberate fork of shadcn's primitives, not a live sync target — the rule is about not casually hand-editing it going forward, not about it matching upstream today.
 
-This rule is **shadcn-specific** — it follows from those files being vendored, not from the `components/ui/` path. `src/components/ui/action-bar.tsx` in **both** the shadcn and heroui kits is hand-written (built on `radix-ui` primitives directly, not adapted from an upstream shadcn/heroui component) and freely editable — there is no upstream registry entry for `action-bar` under either kit to stay faithful to; see `packages/data-grid/react/heroui/CLAUDE.md`.
+This rule is **shadcn-specific** — it follows from those files being vendored, not from the `components/ui/` path. The heroui kit's `src/components/ui/action-bar.tsx` is hand-written (built on `radix-ui` primitives directly, not adapted from an upstream shadcn/heroui component) and freely editable — there is no upstream registry entry for `action-bar` to stay faithful to; see `packages/data-grid/react/heroui/CLAUDE.md`.
+
+The shadcn kit had a counterpart of that file and no longer does: it was written but never wired up — neither the old `SelectionBar` nor the `ActionBar` that replaced it ever imported it — so it shipped in the registry payload to every `npx shadcn add` while authoring two slots, `action-bar-group` and `action-bar-item`, that this kit never puts in the DOM. shadcn's bar is hand-rolled in `blocks/action-bar/ActionBar.tsx` because an action-bar primitive's usual shape (portal to `body`, `fixed` to the viewport, `return null` while closed) contradicts all three of the bar's requirements; that docblock has the detail. **The two kits legitimately differ here** — HeroUI's bar does portal to a fixed overlay, so HeroUI keeps its copy. Do not "restore symmetry" by re-adding one to shadcn.
 
 These files (`components/ui/**`, `blocks/**`, `hooks/**`, `lib/**`, `data-grid.tsx`, `styles.css`) are also the **shadcn registry payload**: `pnpm --filter @ez-kit/docs registry:build` compiles them into `apps/docs/public/r/data-grid.json`, which `npx shadcn add` copies verbatim into a consumer's project (see `packages/data-grid/react/shadcn/registry.config.mjs`). That is exactly why they ship as this package's own registry files rather than as `registryDependencies` pointing at the official shadcn registry — a consumer resolving `table` from upstream would get stock behavior, silently missing the grid-layout support the rest of the kit assumes. A casual edit to `components/ui/**` now propagates to every consumer that runs `shadcn add`, so changes here should be as deliberate as changes to the public API.
 
@@ -189,15 +191,78 @@ and move on.
 - **`ColumnMeta` fields carry the name of the column option they hold.** `pinning`, `align`,
   `cell`, `filtering`, `editing`, `creating`, `visibility`. A resolved value never gets a third
   spelling (it was `cellType` / `config` / `cellView` for the three halves of `cell`).
-- **`placement` names a region; `position` names a spot on an axis.** `filtering.chips.position`
-  is `'above'` / `'below'` — where the strip sits relative to the table. `filtering.panel.placement`
-  and `pagination.pageSizer.placement` are `'toolbar'` / `'footer'` / `'above'` — which container
-  holds the control. Both take the scalar-or-object form, and the scalar **is** the value.
-- **A control with two homes is named for itself, not for a container.** `sorting.toolbar`,
-  `visibility.toolbar`, `globalFiltering.toolbar` and `filtering.toolbar` keep the one word for
-  "auto-mount my control into the toolbar" because those controls can live nowhere else.
-  `pagination.pageSizer` replaced `pagination.toolbar` when the page sizer gained a footer
-  placement: `toolbar: true, placement: 'footer'` is a config contradicting itself.
+- **The config states behaviour; JSX states composition. There are no placement options, and
+  adding one back is the regression.** Where a control sits, and whether it is mounted at all,
+  is said by rendering it: `<DataGrid.Toolbar end={<DataGrid.VisibilityTrigger />} />`. Eight
+  options used to say it instead — `filtering.chips` / `.panel` / `.toolbar` / `.variant`,
+  `globalFiltering.toolbar`, `pagination.pageSizer`, `sorting.toolbar`, `visibility.toolbar`.
+  All eight are gone.
+
+  Their enums are a separate question, decided by one test: **an enum survives iff something
+  other than the removed config still needs it.** A layout states position by _where_ it renders
+  a component, but CSS cannot read a JSX position — so wherever a kit's stylesheet selects on a
+  `data-*` value, that value stays settable as a component prop and its closed set stays
+  exported, with the prop's default a constant in the component's own module rather than a read
+  of `DATA_GRID_DEFAULTS`. `FilterChipsPosition` survives on exactly that ground:
+  `<DataGrid.ActiveFiltersBar position>` stamps `data-chip-position`, and both kits style the
+  strip's margin off it. Do not inline a surviving set as a literal union — the closed-set rule
+  (const object plus union) still applies.
+
+  Run that check by **enumerating every attribute-value selector in both kits' `src`** (css, tsx
+  and ts, so `blocks/` is covered) and comparing, never by grepping for the enum's values. Two
+  live selectors share literals with removed enums and a value-grep flags both:
+  `[data-pin-shadow='start'|'end']` is column pinning (`ColumnPinSide`, surviving) and
+  `[data-pinned='top'|'bottom']` is row pinning. Neither was ever fed by
+  `GlobalFilterPlacement`. The three deleted placement enums reached the DOM nowhere at all —
+  the components wrote only `data-slot` constants and read the enums purely as mount booleans,
+  which is the class this whole change removes.
+
+- **When removing an option, grep for the behaviour it produced, not only for its name.** The
+  stale text that survives a rename sweep is the text that describes an old default without
+  naming the option: `pagination/index.mdx` carried a whole "Page size selector" section saying
+  "set `items` and a selector renders in the toolbar" — true until this change, and invisible to
+  a grep for `pageSizer`. Two more docs pages and four package docblocks had the same shape,
+  including `create-trigger.tsx` justifying itself with "it sits directly above the draft row",
+  an adjacency that was a fact while the toolbar auto-mounted the trigger and is a layout's
+  choice now. Do a second sweep for the claims, not the identifiers.
+- **`DefaultLayout` mounts no page sizer, and that is the one behaviour this change did not
+  preserve.** The old default mounted one in the toolbar when the author **wrote**
+  `pagination.items` — a read of the authored config (`paginationCfg?.items !== undefined`).
+  `ResolvedGridOptions.items` falls back to a default list under any paged pagination, so a
+  preset gating on it would mount a selector on **every** paginated grid: louder than the old
+  default, not a restoration. Restoring it exactly needs a resolved "the author named a list"
+  flag, which is a mount decision back in the config — the thing being removed. So the sizer is
+  a composition choice: `<DataGrid.Toolbar start={<DataGrid.PageSizer />} />`, or
+  `BottomBarLayout` for the sizer beside the page controls. A preset test asserts the split, so
+  a later "helpful" addition to `DefaultLayout` fails rather than going quiet.
+
+  They were never statements about the grid: they were arguments to the default `<Toolbar>` and
+  the default layout that had leaked into the table's config, and the controls proved it —
+  `VisibilityTrigger`, `SortMenuTrigger` and `GlobalFilterInput` read none of them, then or now.
+  What made it worth a breaking change is the rate of growth, not the count: every new
+  arrangement cost a new enum value or a new option, and the last one added
+  (`globalFiltering.toolbar.placement`, `1744b71c`) bought a bar that is one line of JSX.
+
+  **This was not a bundle-size fix and must not be argued as one.** The flags cost zero bytes —
+  `Toolbar` imported its controls statically, and a runtime `&&` inside JSX is not something a
+  bundler removes. See the `./index` note below for what the bytes actually turned on.
+
+- **`filtering.variant` is gone because it was one enum on two axes.** `'panel'` answered
+  "is there a filter in the header at all" and `'inline'` / `'popover'` answered "what does it
+  look like", which is why filters in the header **and** in a panel was inexpressible — there
+  was no value for it. Both axes are now `<DataGrid.HeaderCell>`'s render function, which hands
+  back `filter` and `filterPopover` beside `label` / `sortTrigger` / `menu` / `resizer`: not
+  rendering `filter` is what takes it out of the header. Rendering it while
+  `<DataGrid.FilterPanel />` is also mounted gives both, and the two write one `columnFilters`
+  value.
+
+  Do not "simplify" this into a runtime registration where the panel announces itself and the
+  header reacts. `HeaderCell` is the panel's **sibling**, not its descendant, so that needs an
+  effect and a second pass: filters render in the header on the first frame and vanish on the
+  second, behaviour starts depending on whether the layout put the panel before or after
+  `<DataGrid.Table />`, and SSR output stops matching the client. The composition has none of
+  that, which is why it won.
+
 - **The three system columns are configured like columns.** `selection.column`,
   `expanding.column` and `rowActions.column` take `SystemColumnDef` — `header`, `width`,
   `pinning`, `align`, `headerClassName`, `cellClassName`, in the column vocabulary and with the
@@ -235,6 +300,41 @@ and move on.
   rendering. A key belongs in that tier only when the package has a correct answer without it —
   here, a plain `div`. This is the pattern for any post-1.0 slot with a sane default; it does not
   reopen the `core` primitives question, which is about slots that have none.
+
+  **`core.Layout` is the third member, and it is what replaced the removed placement options.**
+  The grid's body resolves as `children ?? core.Layout ?? <DataGrid.Table />`, so the bare
+  `@ez-kit/data-grid-react` has no rich default and, deliberately, no import of one: a grid with
+  neither children nor a registered layout is a table and nothing else, which is the only
+  arrangement this package can be right about once composition is stated in JSX. The familiar
+  toolbar / table / pagination shell is a **kit** decision — each kit binds `DefaultLayout` from
+  `@ez-kit/data-grid-react`'s `layouts/`, exactly as its prebuilt `DataGrid` binds
+  `allDataGridFeatures`, and with the same caveat: the binding lives in the kit's
+  `data-grid.tsx`, never in `index.ts`, or every grid composed through `createDataGrid` inherits
+  it silently. So quick start is unchanged and `createDataGrid` still pays only for what it names.
+
+  The presets (`DefaultLayout`, `BottomBarLayout`, `FilterPanelLayout`,
+  `PopoverFiltersLayout`) live in the shared react package because they are pure composition with
+  no authored class — the no-styles rule is untouched, and one set serves both kits. Adding more,
+  in a kit or in an application, is the intended way to get a new arrangement; adding an option is
+  not.
+
+  **A layout places `ActionBar` itself, and `selection.bar.variant` does not.**
+  A `GridShell` wrapper briefly did — it read the variant and put the bar above the grid for
+  `inline`, below it for `floating`, and all four presets wrapped themselves in it. That is a
+  config value deciding where an element renders, i.e. the ninth placement option, arrived at by
+  accident while removing the other eight; it never shipped. All four presets now write the bar
+  **last**, which is right for the default `floating`: shadcn positions that bar out of a
+  zero-height sticky anchor that has to follow the rows it overlays, heroui portals its own to a
+  fixed overlay where tree position changes nothing, and in both kits coming last keeps it out of
+  the tab order until there is something to act on. The variant survives as what the bar _looks
+  like_ — an in-flow strip against an overlay, stamped `data-variant` and branched on by both
+  kits — so it is a behaviour option and stays in the config. **The accepted cost is that
+  `selection: { bar: 'inline' }` on a preset renders that in-flow strip below the table**; an
+  `inline` grid writes a layout of its own with the bar first, and `presets.test.tsx` covers
+  both halves so the split is pinned rather than implied. Moving the variant onto the
+  component as a prop was considered and not taken — it is the more consistent answer by the
+  surviving-enum rule above, and it was judged not worth the config break here.
+
   The contract is: **spread every prop you receive** (`data-slot` above all — the structural
   stylesheet targets the slot, not the element), and **land `ref` on the element that actually
   scrolls**. That `ref` _is_ the declaration: it is what the pin shadows read, what infinite
@@ -248,6 +348,66 @@ and move on.
   tree. HeroUI's is below its `.table-root`, which is why the kit hoists `Table.Root` +
   `Table.ScrollContainer` into `TableScroll` and its `Table` slot renders `Table.Content` — so
   `data-slot='table'` lands on the real `<table>` and the root takes `data-slot='table-root'`.
+
+- **There is exactly one action bar, with a live section per concern — do not split it again.**
+  `<DataGrid.ActionBar />` / `core.ActionBar` owns the chrome for both the current selection and
+  the pending draft. It replaced a `DataGrid.SelectionBar` / `DataGrid.DraftBar` pair, each of
+  which drew a whole bar — its own sticky anchor, surface and shadow — and which were kept apart
+  by a `return null` inside the selection one. That gate read `rowSelection` and nothing else, so
+  a draft edit (a sort, a column filter, a search term) never re-ran it and both bars mounted at
+  the same sticky position, overlapping. **The fix is the single component, not the subscription
+  width:** two pieces of chrome pretending to be one bar can only agree while every gate hiding
+  one of them re-runs in lockstep with the other, and one component has no second gate to fall
+  out of step with. The bar nonetheless subscribes broadly (`useDataGridState((s) => s)`), which
+  is a simplification riding along rather than the thing that makes it correct — it reads five
+  slices (`rowSelection`, plus `sorting` / `columnFilters` / `globalFilter` / `applied` behind
+  `draft.isDirty()`), and five narrow calls would be just as correct. What is impossible is
+  **one** narrow selector: a selector that stitches those slices into an object returns a fresh
+  object every time, which is the infinite-loop case the store contract forbids. The cost is
+  real and accepted: a grid with selection alone used to re-render the bar on `rowSelection`
+  and now re-renders it on every keystroke in a filter, every sort and every page change. One
+  small subtree, bounded, not a defect.
+
+  **Both sections are live at once, and the old mutual exclusion is retired rather than
+  pending.** The selection used to stand down during a draft on the grounds that applying a query
+  can drop the selected rows, leaving bulk actions on a stale set. The hazard is real and is
+  already handled one level down: the selection is valid against the **applied** query — which is
+  what the user is looking at — and `table.draft.apply()` clears the row selection in the same
+  state change. So bulk Delete stays enabled beside a dirty draft, and the count is interactive.
+  `DraftBarProps.selectedCount` and the `draft-bar-selected-chip` slot went with that decision;
+  the count is rendered once, by the section that owns it.
+
+  `GridFeature.Selection` and `GridFeature.Draft` are gone with their only member each —
+  `ActionBar` is in `GridFeature.Core`, because a grid with `draft` and no `rowSelectionFeature`
+  still renders the bar and must not depend on a kit advertising selection support. It is
+  **required**, not a member of `FEATURE_OPTIONAL_COMPONENTS`: unlike `TableWrapper` /
+  `TableScroll` / `Layout`, the package has no correct fallback for it.
+  `apps/docs/e2e/packages/data-grid/selection/action-bar.spec.ts` is the guard — it is the only
+  spec that drives selection and a draft in one grid, which is the state either defect needs.
+
+- **A layout is named for the API member that distinguishes it, or for the screen it belongs to —
+  never for a tier.** `BottomBarLayout` mounts `<DataGrid.BottomBar/>`, `PopoverFiltersLayout`
+  renders `filterPopover`, `FilterPanelLayout` puts `<DataGrid.FilterPanel/>` in the toolbar; the
+  docs' own example layouts are `OrdersLayout` and `CrudLayout`, after the screens they lay out.
+  `DefaultLayout` is the exception that proves the rule: it names a fact about binding — the one
+  both kits register as `core.Layout` — not a quality.
+
+  Two names were fixed by this and both failure modes are worth recognising. `ProductionLayout`
+  was a **tier** word: every preset is usable in production, so the name claimed a hierarchy that
+  does not exist, and the page it was named after (`production.mdx`) already called the component
+  `OrdersLayout` in its own prose. So do not reach for `Production`, `Advanced`, `Basic`,
+  `Simple` or `Pro`. `SearchFiltersActionsLayout` was an **enumeration that did not
+  distinguish**: `useToolbarStart` / `useToolbarEnd` put the same search box and the same trailing
+  controls in all four presets, so two of the three things it listed were true of `DefaultLayout`
+  too, while the filter panel — the only real difference — went unnamed. Before naming a layout
+  after what it contains, diff it against `DefaultLayout` and name what the diff turns up.
+
+  Neither rename cost anything: both layouts were unreleased, `ProductionLayout` lives only in
+  `apps/docs`, and the presets' changeset (`composition-over-placement.md`) was still pending, so
+  it was edited in place rather than a second changeset written. That is luck about timing, not a
+  reason to defer the next one — a preset name reaches `npx shadcn add` payloads and 1 600
+  occurrences of docs the moment it ships.
+
 - **`layout.classNames` is a nested bag, and its keys accumulate.** Every other class option is
   a flat `<thing>ClassName` string (`headerClassName`, `cellClassName`, `footerClassName`), so
   `layout.wrapperClassName` / `layout.scrollClassName` was considered and rejected: those two are
@@ -308,6 +468,12 @@ and move on.
   Feature PRs into `develop` are unaffected — squash those freely; this rule is about `main` only.
 - Issues close on merge into `develop`, not on release. GitHub itself only honours `Closes #N` when a PR merges into the **default** branch (`main`), so every PR into `develop` would otherwise leave its issue open — and strand its project-board card in **In review**, since the board moves items to Done on the _issue closed_ event. `.github/workflows/close-linked-issues.yml` restores the expected behaviour: on merge into `develop` or `integration/**` it parses closing keywords from the PR body **and its commit messages**, then closes those issues. It authenticates with the `CHANGESETS_TOKEN` PAT because the repo keeps `default_workflow_permissions: read`, which caps `GITHUB_TOKEN` below the required `issues: write`. That PAT therefore needs **`Issues: Read and write`** on top of the permissions the version-PR bot uses — if it is rotated or reissued without it, the job fails with `403 Resource not accessible by personal access token` and issues silently pile up open.
 - Git hooks (husky): pre-commit runs `lint-staged` (Prettier + ESLint on staged files only), commit-msg enforces Conventional Commits via commitlint, pre-push runs `pnpm ci:fast`.
+- **Everything written on GitHub is in English.** Issue titles and bodies, PR titles and
+  descriptions, review comments and commit messages — whatever the language the work was discussed
+  in. The repository's own prose is English throughout (this file, every docblock, every page under
+  `apps/docs/content`), so an issue in another language reads as a different project's, and a reader
+  arriving from a `Closes #N` in a changelog lands somewhere they cannot follow. A few older issues
+  are in Russian; they predate this rule and are not the convention to copy.
 - **No agent attribution anywhere in git history or on GitHub.** Commit messages, PR titles and PR
   descriptions never mention Claude, Claude Code, an agent, a session, or a model — no
   `Co-Authored-By:` line, no `Claude-Session:` trailer, no session URL, no "generated with" note. A
@@ -597,6 +763,78 @@ it sits under, which is the specifier a reader would have to write to import it.
 against a whole-surface `import *`, without which a bundle that resolved nothing would satisfy
 every case. To add one, name the export and run the test — the failure prints the set to record,
 and a name the entry does not export fails the bundle outright.
+
+**`@ez-kit/data-grid-react`'s `./index` used not to tree-shake at all, and the fix is one
+annotated call — do not undo its shape.** Measured on the built `dist` with esbuild
+(`--bundle --minify`, React external), importing one const object (`{ useDataGridTable }`) cost
+155 370 bytes, `{ DataGrid }` 155 370 and `{ DefaultLayout }` 156 115, against 168 998 for a
+whole-surface `import *` — i.e. any partial import of that entry paid for ~92% of it. The cause
+was the compound namespace's own assembly: 29 impure top-level property assignments
+(`DataGrid.Toolbar = Toolbar;` …) at the end of `data-grid/data-grid.tsx`, which esbuild cannot
+drop, and which therefore anchored all 29 components and everything they reached. Same defect
+class as the `tableFeatures({ …spread })` and bare `createStoreCache()` cases above.
+
+It is now one `/* @__PURE__ */ Object.assign(DataGridRoot, { Toolbar, Table: DataGridTable, … })`
+with a **flat** object literal. Measured after: `{ useDataGridTable }` 27 901, `{ DefaultLayout }`
+83 759, `{ DataGrid }` 155 313, whole surface 168 942.
+
+**This was an esbuild defect and nobody else's — probed, not assumed, and the scope matters when
+quoting the numbers.** Rollup 4.60 already dropped the namespace on the assignment form (31 633
+bytes for `{ useDataGridTable }` against 160 213 for `{ DataGrid }`, unminified, core external),
+and so did Turbopack, measured through a real `next build` of a one-page app importing one name
+(573 824 bytes of client chunks against 702 874, with `FilterPanel`'s `data-slot` literal absent
+and present). Both are byte-identical after the change. Webpack was **not** probed: Next 16 no
+longer ships a runnable terser plugin and webpack is not otherwise installed in this repo, so
+that one is open.
+
+Two consequences. The fix is worth its 127 kB to a consumer bundling with esbuild — a library
+wrapping this package with `tsup`, most obviously — and worth nothing to one on Rollup, Vite's
+production build or Next; it also cannot cost any of them anything, which is why it shipped
+anyway rather than being argued about. And **every tree-shaking guarantee in this repo is an
+esbuild guarantee**, because `apps/docs/test/tree-shaking/bundle.ts` bundles with esbuild: a case
+passing there says a partial import is clean under esbuild's purity analysis, which is the
+strictest of the three and therefore a reasonable proxy, but it is a proxy and not a proof for
+the bundler a given consumer runs.
+
+**This is not a contradiction of the `/* @__PURE__ */` note above — it is the other side of the
+same line, and that note states which side each case falls on.** The probe recorded there found
+that esbuild drops an annotated call whose argument is a plain object and keeps the identical call
+when the object **spreads**, because a spread may run getters. `tableFeatures({ …stockFeatures })`
+spreads; this literal does not. So: never add a `...someGroup` to it, and never go back to
+assignments — either silently restores the defect, and the annotation then costs only its comment
+bytes. `apps/docs/test/tree-shaking.test.ts` fails on both, by asking whether `FilterPanel`'s
+`data-slot` literal survives a bundle of `{ useDataGridTable }`; entry-point sets cannot see this
+class of defect, because both imports reach the same two entry points before and after.
+
+**Read the `{ DataGrid }` row honestly: it did not get cheaper and must not.** That name is the
+whole compound namespace, so it costs what everything costs. What got cheaper is every import that
+never asked for it. In particular **this changed nothing for a grid composed out of `DataGrid.X`
+members** — a consumer who writes three still pays for 29, because writing one reaches the const
+that carries all of them.
+
+Three alternatives were measured and **rejected**; re-proposing one needs a new measurement, not a
+new argument.
+
+- **Named component exports plus `DataGrid.X` as sugar on its own subpath**, mirroring
+  `features/all`. This was the prescribed fix here until it was measured against the annotation:
+  it lands on the **same** 27 901 bytes, to the byte, while costing a major and 1 616 occurrences
+  of `DataGrid.X` across 130 files of docs, examples and shadcn registry payload.
+- **A getter namespace** (`Object.defineProperties(DataGrid, { Toolbar: { get: () => Toolbar } … })`)
+  — 156 021 bytes, i.e. **worse than doing nothing**. A top-level call that names the component
+  anchors it whatever form the call takes.
+- **Making `createDataGrid` render the bare root** instead of the compound, so a bound grid stops
+  dragging the namespace. This is the only one that reaches composed grids, and it is worth 3.6 kB
+  gzipped out of 42.3 (136 502 → 124 069 raw, on `createDataGrid` with four shadcn component
+  groups and a sorting-only feature set). It costs `<DataGrid.Toolbar>` on every kit-bound grid,
+  because `Object.assign(BoundDataGrid, DataGrid)` in `create-data-grid.tsx` is what puts the
+  namespace there — and that wholesale copy exists precisely because a hand-written list had
+  silently fallen five members behind. Bad trade; not taken.
+
+So **`createDataGrid` and both kit roots still carry everything**, and that is left standing rather
+than pending. A kit root is "everything" by construction — its `data-grid.tsx` calls
+`createDataGrid({ components: allComponents, features: allDataGridFeatures })` at the top level —
+and a consumer who wants less already has the composed path: `@ez-kit/data-grid-shadcn/core`,
+`/sorting`, … plus `createDataGrid`, which is the 124 069-byte case above.
 
 **Live preview vs. source panel** — these come from two different places, which is why an example can render correctly while its source reads wrong (or vice versa). The live preview is an **iframe** of the real `(embed)/examples/<kit>/<slug>` route, so it always executes the actual component. The source panel is **text**: it is read from the file on disk and never executed. Examples render client-only via `next/dynamic` with `ssr: false`, so both kits share one path rather than letting shadcn SSR and heroui silently fall back. The reason originally given for that — a dynamic `require` in the heroui bundle that RSC could not run on the server — is **no longer true** and was corrected on 2026-09-11: `@heroui/react@3.0.3` contains no `require(` at all, and a page rendering the heroui grid through the normal server path prerenders at build time (`next build` marks it `○`, and the emitted HTML carries the full `<table>` and every row). Note `'use client'` was never the mechanism either way: a client component is still prerendered on the server, so the directive cannot skip an SSR a component could not survive. What remains is a choice about the docs — one code path for both kits — not a limitation of the heroui kit, and dropping `ssr: false` is now a live option rather than a blocked one.
 

@@ -9,7 +9,8 @@ surface — and, where something is deliberately not an option, why it is writte
 
 ## Task board
 
-The layout every issue tracker converges on: a search box and faceted filters in the toolbar,
+The layout every issue tracker converges on: a search box and, following it, faceted filters in the
+toolbar,
 sortable columns, badge and icon-labelled cells, an overflow menu per row, and a footer carrying
 the selection count, the page size and the page controls.
 
@@ -17,21 +18,21 @@ the selection count, the page size and the page controls.
 
 ### Where each surface comes from
 
-| Surface                                    | Option                                                                            |
-| ------------------------------------------ | --------------------------------------------------------------------------------- |
-| Search box                                 | `globalFiltering: { placeholder }`                                                |
-| Column filters in the toolbar              | `filtering: { variant: 'panel', panel: 'toolbar', faceted: true }`                |
-| Which columns get a filter                 | `filtering: false` on the columns that should not (Task and Title here)           |
-| Sort menu with its active-sort count       | `sorting: { toolbar: true }`                                                      |
-| Column visibility menu                     | `visibility`                                                                      |
-| Select-all checkbox and per-row checkboxes | `selection`                                                                       |
-| Status badge with its glyph                | `cell: { type: 'badge', config: { items } }` — each item carries `icon`           |
-| Priority with its glyph                    | `cell: { type: 'select', config: { items } }`                                     |
-| Right-aligned hours                        | `cell: { type: 'number' }` + `align: 'end'`                                       |
-| "September 3, 2026"                        | `cell: { type: 'date', config: { format: { dateStyle: 'long' } } }`               |
-| `…` menu at the end of each row            | `rowActions: { placement: 'menu' }` (plus `editing` / `deleting` for its entries) |
-| "Page 1 of 16"                             | `pagination: { label: 'page' }`                                                   |
-| Rows-per-page control                      | `<DataGrid.PageSizer />`, placed by hand — see below                              |
+| Surface                                    | Option                                                                                         |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| Search box, before the filters             | `globalFiltering: { placeholder }` + `<DataGrid.GlobalFilterInput />` first in `Toolbar.start` |
+| Column filters in the toolbar              | `filtering: { faceted: true }` + `<DataGrid.FilterPanel />` in `Toolbar.start`                 |
+| Which columns get a filter                 | `filtering: false` on the columns that should not (Task and Title here)                        |
+| Sort menu with its active-sort count       | `sorting` + `<DataGrid.SortMenuTrigger />`                                                     |
+| Column visibility menu                     | `visibility` + `<DataGrid.VisibilityTrigger />`                                                |
+| Select-all checkbox and per-row checkboxes | `selection`                                                                                    |
+| Status badge with its glyph                | `cell: { type: 'badge', config: { items } }` — each item carries `icon`                        |
+| Priority with its glyph                    | `cell: { type: 'select', config: { items } }`                                                  |
+| Right-aligned hours                        | `cell: { type: 'number' }` + `align: 'end'`                                                    |
+| "September 3, 2026"                        | `cell: { type: 'date', config: { format: { dateStyle: 'long' } } }`                            |
+| `…` menu at the end of each row            | `rowActions: { placement: 'menu' }` (plus `editing` / `deleting` for its entries)              |
+| "Page 1 of 16"                             | `pagination: { label: 'page' }`                                                                |
+| Rows-per-page control                      | `<DataGrid.PageSizer />`, placed by hand — see below                                           |
 
 ### What is written by hand, and why
 
@@ -57,30 +58,146 @@ function SelectionCount() {
 }
 ```
 
-It is not [`<DataGrid.SelectionBar />`](/docs/data-grid/selection/bar): that bar appears only once
-something is selected and carries bulk actions, while this line is always visible and carries a
-count.
+It is not [`<DataGrid.ActionBar />`](/docs/data-grid/selection/action-bar): that bar appears only
+once something is selected — or a draft is dirty — and carries bulk actions, while this line is
+always visible and carries a count.
 
-Both live inside the grid's own children, which replace the default layout — so the footer row is
-composed explicitly:
+Both live inside the grid's own children, which replace the default layout — so the bar below the
+table is composed explicitly. [`<DataGrid.BottomBar>`](/docs/data-grid/layout/composition#the-bottom-bar)
+is that region, and given children it holds them instead of the page controls it holds by default:
 
 ```tsx
 <DataGrid /* … */>
 	<DataGrid.Toolbar />
 	<DataGrid.Table />
-	<div className='footer-row'>
+	<DataGrid.BottomBar>
 		<SelectionCount />
-		<div>
+		<div style={{ display: 'flex', gap: '0.5rem' }}>
 			<DataGrid.PageSizer />
 			<DataGrid.Pagination />
 		</div>
-	</div>
+	</DataGrid.BottomBar>
 </DataGrid>
 ```
 
-A grid that needs no selection count can skip the children entirely and let
-[`pagination.pageSizer: 'footer'`](/docs/data-grid/pagination#where-the-page-size-selector-goes)
-put the size control in the footer for it.
+A grid that needs no selection count can skip the children entirely and name the
+[`BottomBarLayout`](/docs/data-grid/layout/composition#layout-presets) preset instead — the bar with
+no children of its own is the size control and the page controls, one at each end.
+
+## Team members
+
+The same grid as a **framed panel**: one bordered card holding its own title, the controls a toolbar
+would otherwise carry above the table, and the page controls in a footer. This is the shape an admin
+screen reaches for when the table is a section of a page rather than the page itself — and it is
+fully wired: **Add new**, **Edit** and **Delete** all write to the component's own state.
+
+<DataGridDocsExample exampleId='example-team-members' />
+
+### What the frame is made of
+
+Children replace the default layout, so the card is composed explicitly — a header row, the table,
+a footer row:
+
+```tsx
+<DataGrid
+	/* … */
+	layout={{ classNames: { root: 'rounded-xl border border-current/15 bg-current/5' } }}
+>
+	<DataGrid.Toolbar className='mb-0 flex-wrap px-3 py-2.5'>
+		{/* `margin-inline-end: auto` on the title is what sends the rest to the other end. */}
+		<span className='frame-title'>Team members</span>
+		<DataGrid.GlobalFilterInput />
+		<DataGrid.ColumnFilter columnId='status' />
+		<DataGrid.VisibilityTrigger />
+		<DataGrid.CreateTrigger>Add new</DataGrid.CreateTrigger>
+	</DataGrid.Toolbar>
+	<DataGrid.Table />
+	<DataGrid.BottomBar style={{ marginTop: 0, padding: '0.375rem 0.5rem' }} />
+	<DataGrid.ActionBar />
+</DataGrid>
+```
+
+The card is not a wrapper this example writes: it is the grid's own root element, classed through
+[`layout.classNames.root`](/docs/data-grid/layout#the-three-boxes). Every piece below it — the bar,
+the table, the footer — is a compound member, so the whole card is a class and four lines of JSX.
+
+The header bar **is** the kit's toolbar, given `children` rather than its two slots — so these four
+controls come in the order they are written. Each is a compound member that reads the table from
+context, so it works wherever it is placed: `<DataGrid.ColumnFilter columnId='status' />` is the
+filter panel's chip for one column, mounted beside the search box rather than in a panel with the
+rest.
+
+The bottom bar needs the mirror image of that reset — `marginTop: 0` — for the same reason: the kits
+keep a gap above it to separate a free-standing bar from the table, and inside a card the bar is the
+footer and sits flush against the panel.
+
+Two utilities are what make a free-standing toolbar a card's header: `mb-0` drops the gap the bar
+keeps above the table — the kit merges [`className`](/docs/data-grid/layout/composition#toolbar-add-without-replacing)
+with its own, so this replaces `mb-2` rather than fighting it — and the padding is the bar's own.
+
+[`<DataGrid.BottomBar />`](/docs/data-grid/layout/composition#the-bottom-bar) is the grid's bottom
+region — the counterpart of the toolbar, on the other side of the table. Given no children it is the
+page controls, which is what the `BottomBarLayout` preset mounts it with; given children it holds
+those instead, and both kits' stylesheets lay its contents out on one line either way.
+
+| Surface                               | Option                                                                            |
+| ------------------------------------- | --------------------------------------------------------------------------------- |
+| Avatar, name and email in one cell    | `cell: { component }` on the `name` column                                        |
+| Flag beside the country               | `cell: { type: 'select', config: { items } }` — the emoji is in the `label`       |
+| "Mar 2023"                            | `cell: { type: 'date', config: { format: { month: 'short', year: 'numeric' } } }` |
+| Status pill                           | `cell: { type: 'badge', config: { items } }`                                      |
+| `Status: Any` chip in the header      | `<DataGrid.ColumnFilter columnId='status' />` in the header bar                   |
+| Search box                            | `globalFiltering: { placeholder }`                                                |
+| **Add new**                           | `creating: { mode: 'modal', onSave }` — the label is the trigger's children       |
+| **Edit** / **Delete** in the row menu | `rowActions: { placement: 'menu' }` + `editing` / `deleting`                      |
+| Confirmation before a row goes        | `deleting: { confirmation: { title, description } }`                              |
+| Bulk delete from the action bar       | `deleting: { bulk }` with `selection`                                             |
+| "1–5 of 11"                           | `pagination: { label: 'range' }`                                                  |
+| Email column, off by default          | `visibility: { initialHidden: true }` — still in the create and edit forms        |
+
+### The panel, and the two bars around it
+
+The card is three boxes, and the table is the middle one — a panel with its own border and a radius
+on **all four** corners, lying on a tinted card:
+
+- the **root** carries the tint, end to end, and its own radius,
+- the **table** paints an opaque surface over it, which is what makes it read as a panel rather than
+  as part of the frame,
+- the **header** and **footer** add no colour of their own — they are the tint left showing above and
+  below the panel.
+
+The tint belongs to the root rather than to the two bars because the panel's corners are rounded
+while a bar's inner edge is straight: anything the bars leave uncoloured shows at those four notches,
+as a nick of page against the tint. A tinted box behind the whole frame has nothing to leave.
+
+Nothing is clipped to the card by `overflow: hidden`, because the panel deliberately overhangs:
+
+```tsx
+<DataGrid
+	/* … */
+	layout={{
+		classNames: {
+			// HeroUI states its table's frame on the `table-root` between the shell's two boxes —
+			// a tinted, rounded, padded surface, which here would be a card inside a card.
+			wrapper:
+				'[&_[data-slot=table-root]]:bg-transparent! [&_[data-slot=table-root]]:rounded-none! [&_[data-slot=table-root]]:p-0!',
+			// Both kits then take the panel look from one place: a border a pixel wider than the
+			// frame on each side, so the two lines coincide instead of stacking, over a surface
+			// of its own — without it the frame's tint would come through the table.
+			scroll: 'border! border-current/15! rounded-[calc(0.75rem-1px)]! -mx-px! bg-background!',
+		},
+	}}
+/>
+```
+
+[`layout.classNames`](/docs/data-grid/layout#framing-the-shell) is the option for exactly this —
+classing **one** grid rather than every grid. The two boxes it names are the wrapper and the
+scrollport; anything a kit renders between them, like HeroUI's `table-root`, is reachable as a
+descendant of the wrapper, and a kit with no such element ignores the class.
+
+The `!` is what the kits' stylesheets cost. Classes accumulate here rather than replace, and nothing
+de-conflicts them — the kit's rules arrive from an unlayered `@import`, which beats a Tailwind
+utility whatever its specificity, so a utility that has to win says so.
 
 ## See also
 

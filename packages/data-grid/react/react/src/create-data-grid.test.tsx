@@ -39,9 +39,9 @@ describe('createDataGrid', () => {
 	})
 
 	// Regression: the factory used to copy the compound members by hand and had fallen five
-	// behind (SelectionBar, DraftBar, SortMenuTrigger, GlobalFilterInput, VisibilityTrigger).
+	// behind (ActionBar, BottomBar, SortMenuTrigger, GlobalFilterInput, VisibilityTrigger).
 	// The `as typeof DataGrid` cast typed them as present, so a kit consumer writing
-	// `<DataGrid.SelectionBar />` got `undefined` at runtime and no compile error.
+	// `<DataGrid.ActionBar />` got `undefined` at runtime and no compile error.
 	// Enumerating `DataGrid` itself means a newly added member cannot be forgotten.
 	it('bound DataGrid carries every compound sub-component the unbound one has', () => {
 		const { DataGrid: BoundDataGrid } = createDataGrid({ components: {} })

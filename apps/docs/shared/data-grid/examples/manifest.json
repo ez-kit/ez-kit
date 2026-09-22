@@ -304,6 +304,14 @@
 		"exportName": "FilterPanelExample"
 	},
 	{
+		"id": "filter-panel-and-header",
+		"label": "Panel and header together",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/filter-panel.tsx",
+		"exportName": "FilterPanelAndHeaderExample"
+	},
+	{
 		"id": "selection-bar",
 		"label": "Floating",
 		"group": "selection",
@@ -706,6 +714,14 @@
 		"exportName": "PaginationPageSizerFooterExample"
 	},
 	{
+		"id": "pagination-page-sizer-toolbar",
+		"label": "Page sizer in the toolbar",
+		"group": "pagination",
+		"groupLabel": "Pagination",
+		"sourceFile": "components/pagination-footer.tsx",
+		"exportName": "PaginationPageSizerToolbarExample"
+	},
+	{
 		"id": "infinite-scroll-auto",
 		"label": "Auto",
 		"group": "infinite-scroll",
@@ -816,6 +832,14 @@
 		"exportName": "ExampleTaskBoardExample"
 	},
 	{
+		"id": "example-team-members",
+		"label": "Team members",
+		"group": "examples",
+		"groupLabel": "Examples",
+		"sourceFile": "components/example-team-members.tsx",
+		"exportName": "ExampleTeamMembersExample"
+	},
+	{
 		"id": "localization",
 		"label": "Localization",
 		"group": "localization",
@@ -878,5 +902,37 @@
 		"groupLabel": "Columns",
 		"sourceFile": "components/grouped-headers.tsx",
 		"exportName": "GroupedHeadersExample"
+	},
+	{
+		"id": "layout-default",
+		"label": "Default",
+		"group": "layout",
+		"groupLabel": "Layout",
+		"sourceFile": "components/layout-presets.tsx",
+		"exportName": "LayoutDefaultExample"
+	},
+	{
+		"id": "layout-bottom-bar",
+		"label": "Bottom bar",
+		"group": "layout",
+		"groupLabel": "Layout",
+		"sourceFile": "components/layout-presets.tsx",
+		"exportName": "LayoutBottomBarExample"
+	},
+	{
+		"id": "layout-filter-panel",
+		"label": "Filter panel",
+		"group": "layout",
+		"groupLabel": "Layout",
+		"sourceFile": "components/layout-presets.tsx",
+		"exportName": "LayoutFilterPanelExample"
+	},
+	{
+		"id": "layout-popover-filters",
+		"label": "Popover filters",
+		"group": "layout",
+		"groupLabel": "Layout",
+		"sourceFile": "components/layout-presets.tsx",
+		"exportName": "LayoutPopoverFiltersExample"
 	}
 ]

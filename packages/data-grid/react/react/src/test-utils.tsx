@@ -6,6 +6,7 @@ import { forwardRef, Fragment, useEffect, useState } from 'react'
 
 import { GridComponentsProvider } from './components-context'
 import { DataGrid } from './data-grid/data-grid'
+import { DefaultLayout } from './layouts'
 import { isGridMenuItemSlot } from './menu'
 import { ActionsCellState } from './types'
 import { useDataGrid } from './use-data-grid'
@@ -22,7 +23,7 @@ import type {
 	VisibilityMenuProps,
 	ConfirmDialogProps,
 	ClearFilterButtonProps,
-	DraftBarProps,
+	ActionBarProps,
 	EmptyStateProps,
 	FilterChipProps,
 	FilterPanelChipProps,
@@ -40,7 +41,6 @@ import type {
 	PaginationProps,
 	RefetchOverlayProps,
 	ResizerProps,
-	SelectionBarProps,
 	TbodyProps,
 	TfootProps,
 	TdProps,
@@ -49,6 +49,7 @@ import type {
 	TableProps,
 	TrProps,
 	ToolbarProps,
+	SortIndicatorProps,
 } from './types'
 import type { UseDataGridConfig } from './use-data-grid'
 import type { RenderOptions } from '@testing-library/react'
@@ -254,9 +255,12 @@ function TestColumnVisibilityMenu({ columns }: VisibilityMenuProps) {
 		</div>
 	)
 }
-function TestToolbar({ children, start, end }: ToolbarProps) {
+function TestToolbar({ children, start, end, className }: ToolbarProps) {
 	return (
-		<div role='toolbar'>
+		<div
+			role='toolbar'
+			className={className}
+		>
 			{start}
 			{children}
 			{end}
@@ -628,83 +632,103 @@ function TestConfirmDialog({ open, title, description, onConfirm, onCancel }: Co
 		</dialog>
 	)
 }
-function TestSelectionBar({ open, count, variant, onDelete, onClear, actions, start, end }: SelectionBarProps) {
+/**
+ * Unstyled stand-in for the kits' `ActionBar`. Renders exactly the DOM contract the shadcn /
+ * heroui components must reproduce: **one** root carrying the variant, the open state, the
+ * selected count and one `data-pending-*` per deferred axis, with a section element per live
+ * concern inside it.
+ *
+ * One root is the point. The two sections used to be two components, each drawing a whole bar,
+ * and a double that kept them apart could not have caught them overlapping.
+ */
+function TestActionBar({ open, variant, selection, draft }: ActionBarProps) {
+	const pending = draft?.pending
+	// This double unmounts when closed, so the one state it ever renders is `open`. A kit that
+	// animates out keeps the element and writes `closed` — the attribute belongs on this root
+	// either way, which is what the contract pins.
 	if (!open) return null
 	return (
 		<div
 			role='toolbar'
-			data-slot='selection-bar'
-			data-testid='selection-bar'
+			data-slot='action-bar'
+			data-testid='action-bar'
 			data-variant={variant}
+			data-state='open'
+			data-selected-count={String(selection?.count ?? 0)}
+			{...(pending
+				? {
+						'data-pending-sorting': String(pending.sorting),
+						'data-pending-column-filters': String(pending.columnFilters),
+						'data-pending-global-filter': String(pending.globalFilter),
+					}
+				: {})}
 			style={{ display: 'flex', gap: 8, padding: '6px 12px', border: '1px solid #ccc' }}
 		>
-			<span>{count} selected</span>
-			{onDelete && (
-				<button
-					type='button'
-					onClick={onDelete}
-				>
-					Delete
-				</button>
-			)}
-			{start}
-			{actions?.map((item) =>
-				isGridMenuItemSlot(item) ? (
-					<span key={item.id}>{item.component}</span>
-				) : (
+			{selection && selection.count > 0 && (
+				<div data-slot='action-bar-selection'>
+					<span>{selection.count} selected</span>
+					{selection.onDelete && (
+						<button
+							type='button'
+							onClick={selection.onDelete}
+						>
+							Delete
+						</button>
+					)}
+					{selection.start}
+					{selection.actions?.map((item) =>
+						isGridMenuItemSlot(item) ? (
+							<span key={item.id}>{item.component}</span>
+						) : (
+							<button
+								key={item.id}
+								type='button'
+								data-slot='action-bar-action'
+								data-destructive={item.destructive === true ? '' : undefined}
+								disabled={item.disabled === true}
+								onClick={item.onAction}
+							>
+								{item.label}
+							</button>
+						),
+					)}
+					{selection.end}
 					<button
-						key={item.id}
 						type='button'
-						data-slot='selection-bar-action'
-						data-destructive={item.destructive === true ? '' : undefined}
-						disabled={item.disabled === true}
-						onClick={item.onAction}
+						data-slot='action-bar-close'
+						onClick={selection.onClear}
 					>
-						{item.label}
+						Cancel
 					</button>
-				),
+				</div>
 			)}
-			{end}
-			<button
-				type='button'
-				onClick={onClear}
-			>
-				Cancel
-			</button>
-		</div>
-	)
-}
-/**
- * Unstyled stand-in for the kits' `DraftBar`. Renders exactly the DOM contract the
- * shadcn / heroui components must reproduce: the `draft-bar` test id, one `data-pending-*`
- * attribute per deferred axis, the `data-selected-count` context chip, and Apply / Reset.
- */
-function TestDraftBar({ open, pending, selectedCount, variant, onApply, onReset }: DraftBarProps) {
-	if (!open) return null
-	return (
-		<div
-			role='toolbar'
-			data-slot='draft-bar'
-			data-testid='draft-bar'
-			data-variant={variant}
-			data-pending-sorting={String(pending.sorting)}
-			data-pending-column-filters={String(pending.columnFilters)}
-			data-pending-global-filter={String(pending.globalFilter)}
-			data-selected-count={String(selectedCount)}
-		>
-			{selectedCount > 0 && <span data-slot='draft-bar-selected-chip'>{selectedCount} selected</span>}
-			<button
-				type='button'
-				onClick={onApply}
-			>
-				Apply
-			</button>
-			<button
-				type='button'
-				onClick={onReset}
-			>
-				Reset
-			</button>
+			{draft && (
+				<div data-slot='action-bar-draft'>
+					{Object.entries(draft.pending).map(([axis, count]) => (
+						<span
+							key={axis}
+							data-slot='action-bar-draft-part'
+							data-axis={axis}
+						>
+							{count}
+						</span>
+					))}
+					<button
+						type='button'
+						data-slot='action-bar-apply'
+						onClick={draft.onApply}
+					>
+						Apply
+					</button>
+					<button
+						type='button'
+						data-slot='action-bar-reset'
+						onClick={draft.onReset}
+					>
+						Reset
+					</button>
+				</div>
+			)}
 		</div>
 	)
 }
@@ -789,13 +813,23 @@ export const testComponents: FullGridComponents = {
 		Toolbar: TestToolbar,
 		Menu: TestMenu,
 		NumberInput: TestNumberInput,
+		// The one optional slot this double registers, and it stands in for what each UI kit
+		// does in its own `data-grid.tsx`: without a `core.Layout` a childless `<DataGrid>`
+		// renders the table and nothing else, so every case about a toolbar, a pagination row or
+		// an action bar would be testing a grid that has none. `data-grid.test.tsx` covers the
+		// unregistered case with a provider of its own.
+		Layout: DefaultLayout,
+		ActionBar: TestActionBar,
 	},
 	pagination: {
 		Pagination: TestPagination,
 		PageSizer: TestPageSizer,
 	},
 	sorting: {
-		SortIndicator: () => null,
+		// Renders an element rather than `null` so a test can click the arrow itself — the case
+		// that was broken while the affordance filtered clicks by their target. Empty, so it
+		// stays invisible to every `getByText` in the suite.
+		SortIndicator: ({ canSort }: SortIndicatorProps) => (canSort ? <span data-testid='sort-indicator' /> : null),
 		SortMenu: () => null,
 	},
 	filtering: {
@@ -825,12 +859,6 @@ export const testComponents: FullGridComponents = {
 	},
 	deleting: {
 		ConfirmDialog: TestConfirmDialog,
-	},
-	selection: {
-		SelectionBar: TestSelectionBar,
-	},
-	draft: {
-		DraftBar: TestDraftBar,
 	},
 	rowActions: {
 		ActionsCell: TestActionsCell,
@@ -914,8 +942,16 @@ export type RenderGridResult = ReturnType<typeof render> & {
 /**
  * Render a full `<DataGrid>` over {@link TEST_ROWS} with the test component kit, and
  * hand the test the live `DataTable` back so it can drive state directly.
+ *
+ * With no `children` the grid renders the registered `core.Layout` — {@link DefaultLayout}, the
+ * preset each kit binds. Pass `children` for a case about a control that no preset mounts (the
+ * chips strip, a hand-placed page sizer): composition is the only way to put one on the page
+ * now that the `filtering.chips` / `pagination.pageSizer` options are gone.
  */
-export function renderGrid(config: Partial<UseDataGridConfig<GridFeatures, TestRow>> = {}): RenderGridResult {
+export function renderGrid(
+	config: Partial<UseDataGridConfig<GridFeatures, TestRow>> = {},
+	children?: ReactNode,
+): RenderGridResult {
 	// Wrapper object, not a bare `let`: reassigning an outer variable during render is
 	// a side effect the react-hooks lint rule rejects.
 	const ref: { table: DataTable<GridFeatures, TestRow> | null } = { table: null }
@@ -932,7 +968,7 @@ export function renderGrid(config: Partial<UseDataGridConfig<GridFeatures, TestR
 		useEffect(() => {
 			ref.table = table
 		}, [table])
-		return <DataGrid<GridFeatures, TestRow> table={table} />
+		return <DataGrid<GridFeatures, TestRow> table={table}>{children}</DataGrid>
 	}
 
 	const result = renderWithComponents(<Harness />)

@@ -14,6 +14,7 @@ import { getCommonPinStyles } from '../utils/pin-styles'
 
 import { ActionsCell } from './actions-cell'
 import { getAlignAttrs } from './align-attrs'
+import { CellProvider } from './composition-context'
 import { flexRender } from './flex-render'
 import { useDataGridTable, useDataGridState } from './table-context'
 
@@ -573,9 +574,23 @@ function renderCellContent<TRow extends object>(
 	row: Row<GridFeatures, TRow>,
 	content: ReactNode,
 ): ReactNode {
-	if (children === undefined) return content
-	if (typeof children !== 'function') return children
-	return children({ cell, row, value: cell.getValue<unknown>(), content })
+	/**
+	 * `value` behind a getter so the default path keeps not calling the accessor, and every
+	 * branch that renders a `Td` publishes the node without restating it — this one function is
+	 * the only place a body cell's content is resolved, so it is also the only place the context
+	 * has to be provided.
+	 */
+	const args: DataGridCellRenderArgs<TRow> = {
+		cell,
+		row,
+		get value() {
+			return cell.getValue<unknown>()
+		},
+		content,
+	}
+	const resolved = children === undefined ? content : typeof children !== 'function' ? children : children(args)
+
+	return <CellProvider value={args}>{resolved}</CellProvider>
 }
 
 function resolveEditComponent<TRow extends object>(

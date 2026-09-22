@@ -17,9 +17,14 @@ pattern to follow.
 
 This rule applies to humans and to AI assistants — no exceptions.
 
-Exception: `action-bar.tsx` is hand-written (built on `radix-ui` primitives directly), not adapted
-from an upstream shadcn component — there is no official `action-bar` registry item to stay
-faithful to. It is freely editable, despite living under `components/ui/`.
+This directory carried one exception, `action-bar.tsx` — hand-written rather than adapted from an
+upstream shadcn component, and so freely editable despite the path. It has been **deleted**: it was
+written and never wired up, so it shipped in the registry payload to every `npx shadcn add` while
+authoring two slots this kit never renders. The bar it was meant for is hand-rolled in
+`blocks/action-bar/ActionBar.tsx`, which explains there why an action-bar primitive's usual shape
+cannot serve it. The rule above therefore applies to everything now under `components/ui/`, with no
+exception — and do not re-add one here to "match" the heroui kit, which keeps its own copy because
+its bar genuinely uses it.
 
 ## Registry distribution
 

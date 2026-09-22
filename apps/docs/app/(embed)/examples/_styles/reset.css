@@ -5,6 +5,17 @@ body {
 }
 
 body {
-	padding: 16px;
 	font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+/*
+ * The example gutter lives on a wrapper, never on <body>. Radix's modal scroll
+ * lock (react-remove-scroll, used by Select/Dialog) writes
+ * `body[data-scroll-locked] { padding-left/top/right: <body margin> }` — with a
+ * zero body margin that hard-resets any padding the page set, so opening the
+ * filter's operator Select shifted the whole example 16px up and left, and
+ * shrank body.scrollHeight enough to resize the iframe with it.
+ */
+.embed-root {
+	padding: 16px;
 }

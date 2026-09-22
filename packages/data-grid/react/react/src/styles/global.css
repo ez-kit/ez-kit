@@ -155,8 +155,13 @@ table[data-slot='table'] {
 [data-slot='header-main'] {
 	@apply flex items-center;
 }
+/* The sortable variant is a real `<button>`, so this undoes the UA's own button styling —
+ * centred text, a border, a background and a font of its own would each fight the header the
+ * kit styles. Structural rather than decorative: it hands the element back to the kit's `<th>`
+ * rules instead of picking any look for it. */
 [data-slot='sort-trigger'] {
-	@apply flex items-center flex-1;
+	@apply flex flex-1 items-center border-0 bg-transparent p-0 text-start font-[inherit] text-[inherit];
+	appearance: none;
 }
 [data-slot='sort-trigger'][data-sortable='true'] {
 	@apply cursor-pointer;

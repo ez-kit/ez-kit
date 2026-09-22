@@ -1,12 +1,11 @@
 'use client'
 
 import { allDataGridFeatures } from '@ez-kit/data-grid-core/features/all'
-import { createDataGrid } from '@ez-kit/data-grid-react'
+import { createDataGrid, DefaultLayout } from '@ez-kit/data-grid-react'
 
 import { cellTypes } from './blocks/cell-types'
 import { coreComponents } from './blocks/core/core-components'
 import { deletingComponents } from './blocks/deleting/deleting-components'
-import { draftComponents } from './blocks/draft/draft-components'
 import { editingComponents } from './blocks/editing/editing-components'
 import { expandingComponents } from './blocks/expanding/expanding-components'
 import { fallbacksComponents } from './blocks/fallbacks/fallbacks-components'
@@ -15,22 +14,34 @@ import { infiniteComponents } from './blocks/infinite/infinite-components'
 import { paginationComponents } from './blocks/pagination/pagination-components'
 import { resizingComponents } from './blocks/resizing/resizing-components'
 import { rowActionsComponents } from './blocks/row-actions/row-actions-components'
-import { selectionComponents } from './blocks/selection/selection-components'
 import { sortingComponents } from './blocks/sorting/sorting-components'
 import { visibilityComponents } from './blocks/visibility/visibility-components'
 
 import type { KitCellTypes } from './blocks/cell-types'
 import type { DataGridBundle, FullGridComponents, GridFeatures } from '@ez-kit/data-grid-react'
 
+/**
+ * The prebuilt grid's layout, bound here and **only** here.
+ *
+ * `core.Layout` is what `<DataGrid>` renders when it is given no children, so binding
+ * `DefaultLayout` is what keeps `<DataGrid data columns features />` rendering the familiar
+ * toolbar / table / pagination shell now that no config option places a control. Without it the
+ * shared layer's answer is a table and nothing else, which is the only arrangement it can be
+ * right about once composition is stated in JSX.
+ *
+ * It is spread onto `coreComponents` here rather than added to that module for the same reason
+ * `allDataGridFeatures` is bound in this file rather than in `index.ts`: `blocks/core/core-components`
+ * is a build entry point for a grid composed through `createDataGrid`, and a layout registered
+ * there would reach every such grid silently — handing back the rich default to exactly the
+ * caller who composed a set to avoid it.
+ */
 const components = {
-	core: coreComponents,
+	core: { ...coreComponents, Layout: DefaultLayout },
 	pagination: paginationComponents,
 	sorting: sortingComponents,
 	filtering: filteringComponents,
 	editing: editingComponents,
 	deleting: deletingComponents,
-	selection: selectionComponents,
-	draft: draftComponents,
 	rowActions: rowActionsComponents,
 	resizing: resizingComponents,
 	visibility: visibilityComponents,
@@ -44,9 +55,9 @@ const components = {
  * the most.
  *
  * Naming it pulls all fourteen groups into the bundle: the filter panel, both write forms, the
- * confirm dialog, the selection and draft bars, the resizer, the visibility menu. That is the
- * right trade when a grid uses most of them, and the wrong one when it uses four. Composing the
- * groups a grid actually renders is what the per-feature subpaths are for — see
+ * confirm dialog, the action bar, the resizer, the visibility menu. That is the right trade when
+ * a grid uses most of them, and the wrong one when it uses four. Composing the groups a grid
+ * actually renders is what the per-feature subpaths are for — see
  * `@ez-kit/data-grid-<kit>/core`, `/sorting`, `/pagination` and the rest.
  *
  * It is annotated rather than exported as the inferred literal: the declaration emitter re-prints

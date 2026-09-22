@@ -10,11 +10,7 @@ import { PaginationLabel } from './types'
 import { useDataGrid } from './use-data-grid'
 
 import type { DataTable, GridFeatures } from './types'
-import type {
-	NormalizedFilteringToolbarConfig,
-	NormalizedFilterChipsConfig,
-	NormalizedGlobalFilteringConfig,
-} from './use-data-grid'
+import type { NormalizedGlobalFilteringConfig } from './use-data-grid'
 import type { TableState } from '@ez-kit/data-grid-core'
 
 type User = {
@@ -530,13 +526,12 @@ describe('useDataGrid — pagination.items', () => {
 	})
 
 	it('falls back to the default list when page-based pagination carries no explicit one', () => {
-		// The list is data the hand-placed `<DataGrid.PageSizer />` reads; whether the grid
-		// mounts the control is `pagination.pageSizer`, resolved separately.
+		// The list is data a `<DataGrid.PageSizer />` reads wherever a layout put it; the config
+		// says nothing about whether one is mounted.
 		const { result } = renderHook(() =>
 			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, pagination: { pageSize: 5 } }),
 		)
 		expect(result.current.grid.pagination.items).toEqual([...DATA_GRID_DEFAULTS.pagination.items])
-		expect(result.current.grid.pagination.pageSizer).toBeUndefined()
 	})
 
 	it('stores the explicit options in page-based mode', () => {
@@ -647,28 +642,9 @@ describe('useDataGrid — selection.bar', () => {
 		)
 		// The object `selection` (with only a React-only `bar`) still enables core row selection…
 		expect(result.current.options.enableRowSelection).toBe(true)
-		// …and the bar config is lifted onto the table for SelectionBar to read.
+		// …and the bar config is lifted onto the table for the ActionBar to read.
 		const key = result.current.grid.selection.bar
 		expect(key).toEqual({ variant: 'inline' })
-	})
-
-	it('FILTERING_VARIANT_KEY accepts "panel" and writes it through to the table', () => {
-		const { result } = renderHook(() =>
-			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, filtering: { variant: 'panel' } }),
-		)
-		const key = result.current.grid.filtering.variant
-		expect(key).toBe('panel')
-	})
-
-	it('FILTERING_VARIANT_KEY accepts "inline" and "popover" as before', () => {
-		const inline = renderHook(() =>
-			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, filtering: { variant: 'inline' } }),
-		)
-		const popover = renderHook(() =>
-			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, filtering: { variant: 'popover' } }),
-		)
-		expect(inline.result.current.grid.filtering.variant).toBe('inline')
-		expect(popover.result.current.grid.filtering.variant).toBe('popover')
 	})
 })
 
@@ -776,25 +752,25 @@ describe('useDataGrid — globalFiltering normalization', () => {
 		expect(getNormalizedGlobalFiltering(result.current)).toBeUndefined()
 	})
 
-	it('globalFiltering: true → defaults (placeholder, debounce: 250, toolbar: true)', () => {
+	it("globalFiltering: true → defaults (placeholder, debounce: 250, toolbar at 'end')", () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, globalFiltering: true }),
 		)
 		const cfg = getNormalizedGlobalFiltering(result.current)
-		expect(cfg).toEqual({ placeholder: 'Search…', debounce: 250, toolbar: true })
+		expect(cfg).toEqual({ placeholder: 'Search…', debounce: 250 })
 	})
 
-	it('globalFiltering: { placeholder, debounce, toolbar: false } — overrides merge into defaults', () => {
+	it('globalFiltering: { placeholder, debounce } — overrides merge into defaults', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({
 				features: TEST_FEATURES,
 				data: USERS,
 				columns: COLUMNS,
-				globalFiltering: { placeholder: 'Find users', debounce: 0, toolbar: false },
+				globalFiltering: { placeholder: 'Find users', debounce: 0 },
 			}),
 		)
 		const cfg = getNormalizedGlobalFiltering(result.current)
-		expect(cfg).toEqual({ placeholder: 'Find users', debounce: 0, toolbar: false })
+		expect(cfg).toEqual({ placeholder: 'Find users', debounce: 0 })
 	})
 
 	// In v9 the filtered row model is a **feature slot** (`options.features.filteredRowModel`),
@@ -845,7 +821,7 @@ describe('useDataGrid — globalFiltering normalization', () => {
 				features: TEST_FEATURES,
 				data: USERS,
 				columns: COLUMNS,
-				globalFiltering: { placeholder: 'Find users', debounce: 0, toolbar: false, onChange },
+				globalFiltering: { placeholder: 'Find users', debounce: 0, onChange },
 			}),
 		)
 		act(() => {
@@ -872,87 +848,10 @@ describe('useDataGrid — globalFiltering normalization', () => {
 	})
 })
 
-// ── filtering.chips normalization ─────────────────────────────────────────────
-
-function getChipsConfig(table: GridBag): NormalizedFilterChipsConfig | undefined {
-	return table.grid.filtering.chips
-}
-
-describe('useDataGrid — filtering.chips normalization', () => {
-	it('omitted → FILTER_CHIPS_KEY is undefined', () => {
-		const { result } = renderHook(() =>
-			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, filtering: true }),
-		)
-		expect(getChipsConfig(result.current)).toBeUndefined()
-	})
-
-	it('chips: true → defaults to position "above"', () => {
-		const { result } = renderHook(() =>
-			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, filtering: { chips: true } }),
-		)
-		expect(getChipsConfig(result.current)).toEqual({ position: 'above' })
-	})
-
-	it('chips: { position: "below" } → preserved', () => {
-		const { result } = renderHook(() =>
-			useDataGrid({
-				features: TEST_FEATURES,
-				data: USERS,
-				columns: COLUMNS,
-				filtering: { chips: { position: 'below' } },
-			}),
-		)
-		expect(getChipsConfig(result.current)).toEqual({ position: 'below' })
-	})
-
-	it('chips: false → FILTER_CHIPS_KEY is undefined', () => {
-		const { result } = renderHook(() =>
-			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, filtering: { chips: false } }),
-		)
-		expect(getChipsConfig(result.current)).toBeUndefined()
-	})
-})
-
-// ── filtering.toolbar (Clear-all button) normalization ────────────────────────
-
-function getFilteringToolbarConfig(table: GridBag): NormalizedFilteringToolbarConfig | undefined {
-	return table.grid.filtering.toolbar
-}
-
-describe('useDataGrid — filtering.toolbar normalization', () => {
-	it('omitted → FILTERING_TOOLBAR_KEY is undefined', () => {
-		const { result } = renderHook(() =>
-			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, filtering: true }),
-		)
-		expect(getFilteringToolbarConfig(result.current)).toBeUndefined()
-	})
-
-	it('toolbar: true → alwaysShow defaults to false', () => {
-		const { result } = renderHook(() =>
-			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, filtering: { toolbar: true } }),
-		)
-		expect(getFilteringToolbarConfig(result.current)).toEqual({ alwaysShow: false })
-	})
-
-	it('toolbar: { alwaysShow: true } → preserved', () => {
-		const { result } = renderHook(() =>
-			useDataGrid({
-				features: TEST_FEATURES,
-				data: USERS,
-				columns: COLUMNS,
-				filtering: { toolbar: { alwaysShow: true } },
-			}),
-		)
-		expect(getFilteringToolbarConfig(result.current)).toEqual({ alwaysShow: true })
-	})
-
-	it('toolbar: false → FILTERING_TOOLBAR_KEY is undefined', () => {
-		const { result } = renderHook(() =>
-			useDataGrid({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, filtering: { toolbar: false } }),
-		)
-		expect(getFilteringToolbarConfig(result.current)).toBeUndefined()
-	})
-})
+// The `filtering.chips` and `filtering.toolbar` normalization suites lived here. Both options are
+// gone: the chips strip and the Clear-all button are mounted by a layout writing the component,
+// and `alwaysShow` is a prop of the button. `layouts/presets.test.tsx` and
+// `data-grid/clear-filters-button.test.tsx` carry what they were asserting.
 
 // ── draft — controlled `state` prop mirrored the same way a real consumer writes it ──
 //

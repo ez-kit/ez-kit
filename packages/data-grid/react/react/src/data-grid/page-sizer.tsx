@@ -37,8 +37,8 @@ export type DataGridPageSizerProps = {
 }
 
 /**
- * Page size selector. Renders whenever page-based pagination is enabled — auto-mounted into
- * the toolbar by `pagination.toolbar`, and equally placeable by hand under `toolbar: false`.
+ * Page size selector. Renders whenever page-based pagination is enabled, wherever a layout
+ * puts it — the toolbar, or a `<DataGrid.BottomBar/>` beside the page controls.
  *
  * Subscribes only to `state.pagination` — other state mutations leave it stable.
  */

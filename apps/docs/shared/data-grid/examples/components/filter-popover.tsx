@@ -12,7 +12,7 @@ import {
 	sortFns,
 	tableFeatures,
 } from '@ez-kit/data-grid-core/features'
-import { createColumns } from '@ez-kit/data-grid-react'
+import { createColumns, PopoverFiltersLayout } from '@ez-kit/data-grid-react'
 
 import { DataGrid } from 'shared/DataGrid'
 
@@ -92,9 +92,11 @@ export function FilterPopoverBasicExample() {
 			features={features}
 			data={DATA}
 			columns={basicColumns}
-			filtering={{ variant: 'popover' }}
+			filtering
 			sorting
-		/>
+		>
+			<PopoverFiltersLayout />
+		</DataGrid>
 	)
 }
 
@@ -104,8 +106,10 @@ export function FilterPopoverOperatorsExample() {
 			features={features}
 			data={DATA}
 			columns={withOperatorsColumns}
-			filtering={{ variant: 'popover' }}
+			filtering
 			sorting
-		/>
+		>
+			<PopoverFiltersLayout />
+		</DataGrid>
 	)
 }

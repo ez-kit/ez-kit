@@ -43,28 +43,18 @@ export { useDataGrid } from './use-data-grid'
 export type { DataTable } from './types'
 export type {
 	UseDataGridConfig,
-	ReactVisibilityConfig,
 	EmptyFallbackConfig,
 	ExpandedRowProps,
 	FallbacksConfig,
-	FilterChipsConfig,
-	FilteringToolbarConfig,
-	FilterPanelConfig,
 	LoadingFallbackConfig,
 	NoResultsFallbackConfig,
-	PageSizerConfig,
 	// The resolved shapes `ResolvedGridOptions` is built from. That type is public and a UI kit
 	// reads it through `useGridOptions()`, so the names of its members have to be nameable too —
-	// they were not, and a kit lifting `grid.filtering.chips` into a helper had no type to write.
+	// they were not, and a kit lifting `grid.globalFiltering` into a helper had no type to write.
 	NormalizedFallbackConfig,
 	NormalizedFallbacksConfig,
-	NormalizedFeatureToolbarConfig,
-	NormalizedFilterChipsConfig,
-	NormalizedFilteringToolbarConfig,
-	NormalizedFilterPanelConfig,
 	NormalizedGlobalFilteringConfig,
 	NormalizedInfiniteConfig,
-	NormalizedPageSizerConfig,
 	NormalizedSelectionBarConfig,
 	NormalizedVirtualizationConfig,
 	ReactExpandingConfig,
@@ -73,7 +63,6 @@ export type {
 	ReactPaginationConfig,
 	ReactRowActionsConfig,
 	ReactSelectionConfig,
-	ReactSortingConfig,
 	RowPropsResolver,
 	LayoutClassNames,
 	LayoutConfig,
@@ -100,7 +89,13 @@ export type { ResolvedGridOptions } from './resolved-options'
 
 // The dictionary, re-exported from core so a UI kit reading `useGridOptions().messages` can
 // name its type without depending on core directly.
-export type { CountContext, FilterPlaceholderContext, GridMessages, PartialGridMessages } from '@ez-kit/data-grid-core'
+export type {
+	CountContext,
+	DraftSummaryContext,
+	FilterPlaceholderContext,
+	GridMessages,
+	PartialGridMessages,
+} from '@ez-kit/data-grid-core'
 
 // Grid overflow menu — one model for the column header menu and the row actions menu
 export { GridMenuIcon, GridMenuVariant, isGridMenuItemSlot, toMenuSections } from './menu'
@@ -130,6 +125,7 @@ export type { InfiniteController } from './data-grid/use-infinite-scroll'
 // Selector hook + store primitives
 export { useDataGridSelector } from './use-data-grid-selector'
 export { useDataGridState, useDataGridTable } from './data-grid/table-context'
+export { useDataGridCell, useDataGridHeaderCell, useDataGridRow } from './data-grid/composition-context'
 export { prepareDataGridTable } from './prepare-table'
 export { shallow } from './utils/shallow-equal'
 
@@ -161,8 +157,6 @@ export type {
 	GridFilteringComponents,
 	GridEditingComponents,
 	GridDeletingComponents,
-	GridSelectionComponents,
-	GridDraftComponents,
 	GridRowActionsComponents,
 	GridResizingComponents,
 	GridVisibilityComponents,
@@ -191,7 +185,6 @@ export type { DataGridFooterCellProps, DataGridFooterCellRenderArgs } from './da
 export type { DataGridRowProps, DataGridRowRenderArgs } from './data-grid/row'
 export type { DataGridCellProps, DataGridCellRenderArgs } from './data-grid/cell'
 export type { DataGridPaginationProps, DataGridPaginationRenderArgs } from './data-grid/pagination'
-export type { DataGridSelectionBarProps, DataGridSelectionBarRenderArgs } from './data-grid/selection-bar'
 export type { DataGridSortMenuTriggerProps, DataGridSortMenuTriggerRenderArgs } from './data-grid/sort-menu-trigger'
 export type {
 	DataGridVisibilityTriggerProps,
@@ -204,7 +197,8 @@ export type {
 } from './data-grid/filter-panel'
 export type { DataGridColumnFilterProps } from './data-grid/column-filter'
 export type { DataGridPageSizerProps, DataGridPageSizerRenderArgs } from './data-grid/page-sizer'
-export type { DataGridDraftBarProps, DataGridDraftBarRenderArgs } from './data-grid/draft-bar'
+export type { DataGridBottomBarProps } from './data-grid/bottom-bar'
+export type { DataGridActionBarProps, DataGridActionBarRenderArgs } from './data-grid/action-bar'
 export type { DataGridFormModalProps, DataGridFormModalRenderArgs } from './data-grid/form-modal'
 export type { DataGridCreatingModalProps } from './data-grid/creating-modal'
 export type { DataGridEditingModalProps } from './data-grid/editing-modal'
@@ -217,11 +211,15 @@ export type { DataGridClearFiltersButtonProps } from './data-grid/clear-filters-
 export type { DataGridCreateTriggerProps } from './data-grid/create-trigger'
 export type { DataGridGlobalFilterInputProps } from './data-grid/global-filter-input'
 
-// Sub-components (also available as DataGrid.SelectionBar)
-export { SelectionBar } from './data-grid/selection-bar'
-export { DraftBar } from './data-grid/draft-bar'
+// Sub-components (also available as DataGrid.ActionBar)
+export { ActionBar } from './data-grid/action-bar'
 export { ActiveFiltersBar } from './data-grid/active-filters-bar'
 export { ClearFiltersButton } from './data-grid/clear-filters-button'
+
+// Layout presets for `core.Layout` — what a UI kit binds so its prebuilt `<DataGrid>` renders
+// a full shell, and what an application starts from when composing its own. Pure composition;
+// see `./layouts` for why there are four of them.
+export { BottomBarLayout, DefaultLayout, FilterPanelLayout, PopoverFiltersLayout } from './layouts'
 
 // DI context
 export { GridComponentsProvider, useGridComponents } from './components-context'
@@ -264,7 +262,9 @@ export type {
 	VisibilityMenuProps,
 	ClearFilterButtonProps,
 	ConfirmDialogProps,
-	DraftBarProps,
+	ActionBarProps,
+	ActionBarSelectionSection,
+	ActionBarDraftSection,
 	EmptyStateProps,
 	FilterChipProps,
 	FilterPanelChipProps,
@@ -280,7 +280,6 @@ export type {
 	RefetchOverlayProps,
 	OperatorSelectProps,
 	ResizerProps,
-	SelectionBarProps,
 	SortColumnOption,
 	SortMenuItem,
 	SortMenuProps,
@@ -298,9 +297,14 @@ export type {
 	ThProps,
 	TheadProps,
 	TableProps,
+	LayoutProps,
+	RootProps,
 	TableScrollProps,
 	TableWrapperProps,
+	HeaderMainProps,
+	HeaderExtrasProps,
 	ToolbarProps,
+	TooltipProps,
 	TrProps,
 } from './types'
 
@@ -310,10 +314,7 @@ export type {
 export {
 	FilterChipKind,
 	FilterChipsPosition,
-	FilteringVariant,
-	FilterPanelPlacement,
 	LoadMoreTrigger,
-	PageSizerPlacement,
 	PaginationLabel,
 	RowActionId,
 	ActionsCellState,

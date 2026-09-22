@@ -1,56 +1,11 @@
 'use client'
 
-import {
-	columnFacetingFeature,
-	columnFilteringFeature,
-	columnPinningFeature,
-	columnSizingFeature,
-	columnVisibilityFeature,
-	createFacetedRowModel,
-	createFacetedUniqueValues,
-	createFilteredRowModel,
-	createPaginatedRowModel,
-	createSortedRowModel,
-	deletingFeature,
-	draftFeature,
-	filterFns,
-	globalFilteringFeature,
-	loadingFeature,
-	rowPaginationFeature,
-	rowSelectionFeature,
-	rowSortingFeature,
-	sortFns,
-	tableFeatures,
-} from '@ez-kit/data-grid-core/features'
-
 import { DataGrid } from 'shared/DataGrid'
 
 import { orderColumns } from './data'
+import { deferredApplyFeatures } from './features'
+import { OrdersLayout } from './OrdersLayout'
 import { useOrdersState } from './use-orders-state'
-
-const features = tableFeatures({
-	// Structural: the grid shell reads column widths, visibility and pin groups to lay out
-	// the column grid. Everything below is this example's own.
-	columnVisibilityFeature,
-	columnPinningFeature,
-	columnSizingFeature,
-	rowSortingFeature,
-	loadingFeature,
-	columnFacetingFeature,
-	columnFilteringFeature,
-	deletingFeature,
-	draftFeature,
-	filterFns,
-	globalFilteringFeature,
-	rowPaginationFeature,
-	rowSelectionFeature,
-	sortFns,
-	facetedRowModel: createFacetedRowModel(),
-	facetedUniqueValues: createFacetedUniqueValues(),
-	filteredRowModel: createFilteredRowModel(),
-	paginatedRowModel: createPaginatedRowModel(),
-	sortedRowModel: createSortedRowModel(),
-})
 
 /**
  * The same orders console, with the query composed before it is sent.
@@ -64,7 +19,7 @@ export function ProductionDeferredApplyExample() {
 
 	return (
 		<DataGrid
-			features={features}
+			features={deferredApplyFeatures}
 			data={orders.rows}
 			columns={orderColumns}
 			draft
@@ -74,13 +29,10 @@ export function ProductionDeferredApplyExample() {
 				items: [10, 25, 50],
 				siblings: 1,
 			}}
-			sorting={{ manual: true, multi: { max: 3, event: 'ctrl' }, toolbar: true }}
+			sorting={{ manual: true, multi: { max: 3, event: 'ctrl' } }}
 			filtering={{
 				manual: true,
-				variant: 'popover',
 				faceted: true,
-				chips: { position: 'above' },
-				toolbar: true,
 			}}
 			globalFiltering={{ placeholder: 'Search orders…' }}
 			layout={{ stickyHeader: true }}
@@ -100,6 +52,8 @@ export function ProductionDeferredApplyExample() {
 			selection
 			state={{ loading: orders.loading }}
 			onStateChange={orders.onStateChange}
-		/>
+		>
+			<OrdersLayout />
+		</DataGrid>
 	)
 }
