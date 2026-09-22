@@ -127,7 +127,8 @@ export const DocPage = {
 	FilteringOperators: 'content/docs/data-grid/filtering/operators.mdx',
 	FilteringActiveFilters: 'content/docs/data-grid/filtering/active-filters.mdx',
 	FilteringVariants: 'content/docs/data-grid/filtering/variants.mdx',
-	FormArrays: 'content/docs/form/arrays.mdx',
+	FormArrays: 'content/docs/form/arrays/index.mdx',
+	FormArraysApi: 'content/docs/form/arrays/api.mdx',
 	FormCustomKit: 'content/docs/form/custom-kit.mdx',
 	FormFields: 'content/docs/form/fields.mdx',
 	FormLayout: 'content/docs/form/layout.mdx',
@@ -1095,7 +1096,21 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{ page: DocPage.FormComposition, optionTables: [], nonOptionTables: [] },
 	{ page: DocPage.FormExamples, optionTables: [], nonOptionTables: [] },
 	{
+		// The narrative half of the split: prose and live examples, every table moved to
+		// `arrays/api.mdx` below. Mapped with an empty optionTables so the page stays inside
+		// `everyPageIsMapped` rather than silently unchecked. `Styling hooks` is the one table
+		// that stays here — it documents DOM attributes, not a type's props.
 		page: DocPage.FormArrays,
+		optionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'Styling hooks',
+				reason: 'Documents the `data-*` attributes the kits emit onto the DOM, not props of any type.',
+			},
+		],
+	},
+	{
+		page: DocPage.FormArraysApi,
 		optionTables: [
 			{ heading: '`form.ArrayField`', roots: [FORM_TYPE.ArrayFieldProps], expectedCount: 12 },
 			{ heading: 'The render prop', roots: [FORM_TYPE.ArrayFieldScope], expectedCount: 3 },
@@ -1107,12 +1122,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			{ heading: 'Validating the list', roots: [FORM_TYPE.FieldValidate], expectedCount: 3 },
 			{ heading: 'The `array` node', roots: [FORM_TYPE.AnyArrayNode], expectedCount: 10 },
 		],
-		nonOptionTables: [
-			{
-				heading: 'Styling hooks',
-				reason: 'Documents the `data-*` attributes the kits emit onto the DOM, not props of any type.',
-			},
-		],
+		nonOptionTables: [],
 	},
 	{ page: DocPage.FormGettingStarted, optionTables: [], nonOptionTables: [] },
 	{ page: DocPage.FormInstallationHeroui, optionTables: [], nonOptionTables: [] },

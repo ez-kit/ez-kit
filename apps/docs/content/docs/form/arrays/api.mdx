@@ -1,0 +1,118 @@
+---
+title: Arrays API
+description: Every prop, scope member and schema property the array components accept — form.ArrayField, form.Array, item.Item and the array schema node.
+---
+
+The full surface of the feature. What each one is for, and when to reach for it, is on
+[Arrays](/docs/form/arrays).
+
+## `form.ArrayField`
+
+| Prop          | Type                           | Notes                                                                                                                  |
+| ------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| `name`        | array path                     | **Required.** Restricted to the paths of `TFormData` whose value is an array, and the prop the item type is read from. |
+| `newItem`     | the item type at `name`        | **Required.** The value a newly appended entry starts from.                                                            |
+| `children`    | `(scope) => ReactNode`         | **Required.** The render prop — see [the scope](#the-render-prop) below.                                               |
+| `label`       | `ReactNode`                    | Caption for the list itself.                                                                                           |
+| `description` | `ReactNode`                    | Sub-caption under it.                                                                                                  |
+| `disabled`    | `boolean`                      | Disables the list and everything in it.                                                                                |
+| `required`    | `boolean`                      | Visual only, exactly as on a flat field.                                                                               |
+| `validate`    | `FieldValidateProps`           | Constraints on the **list**, not on its fields — see [below](#validating-the-list). `maxLength` also bounds adding.    |
+| `reorderable` | `boolean \| { up, down }`      | Offer move-up / move-down on every entry. The object form only adds captions.                                          |
+| `addLabel`    | `ReactNode`                    | Caption for the add control. Defaults to `Add`.                                                                        |
+| `removeLabel` | `ReactNode`                    | Caption for each entry's remove control. Defaults to `Remove`.                                                         |
+| `itemLabel`   | `(index: number) => ReactNode` | Caption for one entry, given its zero-based position.                                                                  |
+
+## The render prop
+
+| Key      | Type                        | Notes                                                                                 |
+| -------- | --------------------------- | ------------------------------------------------------------------------------------- |
+| `items`  | `readonly ArrayItemScope[]` | One entry of the list, in order. Map over it.                                         |
+| `add`    | `() => void`                | Append an entry built from `newItem`. The kit's own add control calls the same thing. |
+| `canAdd` | `boolean`                   | `false` once `validate.maxLength` is reached — for an add affordance of your own.     |
+
+## One entry
+
+| Key     | Type                                   | Notes                                                                                                               |
+| ------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `key`   | `string`                               | The entry's stable id. This is what `key` takes — see [above](/docs/form/arrays#key-by-itemkey-never-by-the-index). |
+| `index` | `number`                               | Its zero-based position. Fine for display; never for `key`.                                                         |
+| `Item`  | `(props: ArrayItemProps) => ReactNode` | The entry's chrome — heading, remove control, reorder controls. Wrap the entry's fields.                            |
+
+## `form.Array`
+
+| Prop       | Type                    | Notes                                                                                                                                                   |
+| ---------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`     | array path              | **Required.** Restricted to the paths of `TFormData` whose value is an array, and the prop the item type comes from, [as above](#formarrayfield).       |
+| `newItem`  | the item type at `name` | **Required.** The value a newly appended entry starts from — same rule as `form.ArrayField`'s.                                                          |
+| `children` | `(scope) => ReactNode`  | **Required.** The render prop — see [the scope](#the-scope) below.                                                                                      |
+| `disabled` | `boolean`               | Reaches the scope as data — there is no frame of the primitive's own to disable, though it still reaches `item.Item`'s chrome on any row that uses one. |
+| `required` | `boolean`               | Reaches the scope as data — see [the scope](#the-scope).                                                                                                |
+| `validate` | `FieldValidateProps`    | Constraints on the list, exactly as on `form.ArrayField` — see [Validating the list](#validating-the-list).                                             |
+
+## The scope
+
+| Key        | Type                        | Notes                                                                                                                            |
+| ---------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `items`    | `readonly ArrayItemScope[]` | One entry of the list, in order. Map over it.                                                                                    |
+| `add`      | `() => void`                | Append an entry built from `newItem`. Takes nothing — see the note below.                                                        |
+| `insert`   | `(index, value?) => void`   | Insert at a position, optionally with a value other than `newItem`. Appending a specific value is `insert(items.length, value)`. |
+| `remove`   | `(index: number) => void`   | Remove the entry at a position — the indexed twin of `item.remove`.                                                              |
+| `move`     | `(from, to) => void`        | Move an entry between positions. What a drag-and-drop implementation is built on.                                                |
+| `canAdd`   | `boolean`                   | `false` once `validate.maxLength` is reached.                                                                                    |
+| `errors`   | `string[]`                  | The list's own errors, formatted the same way a flat field's are. Nothing renders these for you — see above.                     |
+| `invalid`  | `boolean`                   | Whether the list currently fails its own `validate`.                                                                             |
+| `disabled` | `boolean`                   | The `disabled` prop, normalised: always a plain `boolean`, never `undefined`.                                                    |
+| `required` | `boolean`                   | The `required` prop, normalised the same way.                                                                                    |
+| `Button`   | `FormComponents['Button']`  | The kit's generic button, for a control drawn outside `item.Item` — the add and duplicate controls above use it.                 |
+| `field`    | `BoundFieldApi`             | The array field itself — see the note below.                                                                                     |
+
+## One entry, from the primitive
+
+| Key        | Type                                   | Notes                                                                                                                               |
+| ---------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `key`      | `string`                               | The entry's stable id — see [above](/docs/form/arrays#key-by-itemkey-never-by-the-index).                                           |
+| `index`    | `number`                               | Its zero-based position. Fine for display; never for `key`.                                                                         |
+| `isFirst`  | `boolean`                              | Whether this is the first entry — for disabling a move-up control without correlating index and length.                             |
+| `isLast`   | `boolean`                              | The same for the last entry.                                                                                                        |
+| `remove`   | `() => void`                           | Remove this entry.                                                                                                                  |
+| `moveUp`   | `() => void`                           | Move this entry one position up. Always callable, unlike the kit's rendered arrows — a no-op at either end rather than `undefined`. |
+| `moveDown` | `() => void`                           | The same, downward.                                                                                                                 |
+| `Item`     | `(props: ArrayItemProps) => ReactNode` | The kit's native row — see [below](#itemitems-own-props).                                                                           |
+
+## `item.Item`'s own props
+
+| Prop          | Type                                                | Notes                                                                                                                             |
+| ------------- | --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `children`    | `ReactNode`                                         | **Required.** The entry's fields.                                                                                                 |
+| `label`       | `ReactNode`                                         | Caption for the row. No package default — a row given none from `Item` renders no heading.                                        |
+| `removeLabel` | `ReactNode`                                         | Caption for the remove control. Falls back to the array's own `removeLabel` if it set one, then to the package default, `Remove`. |
+| `reorderable` | `boolean \| { up?: { label? }, down?: { label? } }` | Offer the kit's move controls on this row. Off by default. Once on, the reorder captions fall back to `Move up` / `Move down`.    |
+
+## Validating the list
+
+| Key         | Type                 | Notes                                                                        |
+| ----------- | -------------------- | ---------------------------------------------------------------------------- |
+| `minLength` | `number`             | Counts **entries**, not characters. `minLength: 1` is "at least one".        |
+| `maxLength` | `number`             | Likewise, and also what stops the add control offering.                      |
+| `rule`      | `string \| string[]` | Names registered rules — document only, and the seam for cross-entry checks. |
+
+## The `array` node
+
+| Property      | Type                      | Notes                                                                            |
+| ------------- | ------------------------- | -------------------------------------------------------------------------------- |
+| `type`        | `'array'`                 | **Required.**                                                                    |
+| `name`        | array path                | **Required.** Absolute, even inside a step — nesting never rewrites it.          |
+| `children`    | `FormNode[]`              | **Required.** The item's fields, named **relative to the item**.                 |
+| `label`       | `LocalizedText`           | A plain string, or a map of locale → string.                                     |
+| `description` | `LocalizedText`           |                                                                                  |
+| `validate`    | `FieldValidate`           | Constraints on the list — `minLength`, `maxLength`, `rule`.                      |
+| `reorderable` | `boolean \| { up, down }` | Offer the move controls; the object form captions them.                          |
+| `item`        | `{ label }`               | Caption for one entry. `{{index}}` is merged in for a `{ key, params }` message. |
+| `add`         | `{ label }`               | Caption for the control that appends an entry.                                   |
+| `remove`      | `{ label }`               | Caption for the control that removes one.                                        |
+
+## See also
+
+- [Arrays](/docs/form/arrays)
+- [Schema](/docs/form/schema)
