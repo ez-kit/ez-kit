@@ -4,7 +4,6 @@ export {
 	DataGrid,
 	GridComponentsProvider,
 	useDataGrid,
-	extendDataGrid,
 	createColumns,
 	createColumnHelper,
 	// Every group this kit registers, for a grid that uses most of them. Composing only the

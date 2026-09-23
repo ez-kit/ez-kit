@@ -7,9 +7,9 @@
  * Its own build entry, and the reason is measured. Nearly every block in both kits imports
  * `useGridMessages` from the package root, a few also `PAGE_GAP`, `ActionBarVariant` or
  * `isGridMenuItemSlot`. The root is one pre-bundled file that a bundler shakes nothing out of,
- * so each of those one-line imports anchored all ~187 kB of it: a kit's `textCellType` alone
- * bundled to 200 kB before this entry existed, which made splitting the kits into per-feature
- * entries buy almost nothing.
+ * so each of those one-line imports anchored the whole of it: before this entry existed, a kit's
+ * `textCellType` bundled to roughly the size of the entire adapter, which made splitting the kits
+ * into per-feature entries buy almost nothing.
  *
  * The hooks here are deliberately the context-reading ones a block can call on its own. Nothing
  * that builds or owns a grid belongs here — that is the root's job, and pulling it in would put
@@ -25,8 +25,8 @@ export { useDataGridState, useDataGridTable } from './data-grid/table-context'
 
 // Menu model — the kits' `Menu` and every block that contributes an item read these.
 // `isGridMenuIcon` sits here beside `GridMenuIcon` on purpose: both kits' `icons.tsx` imports the
-// pair, and leaving one of them off would have kept that file importing from the root, which is
-// the whole ~187 kB. A binding missing from this entry is not a smaller cost, it is the full one.
+// pair, and leaving one of them off would have kept that file importing from the root, i.e. the
+// whole adapter. A binding missing from this entry is not a smaller cost, it is the full one.
 export { GridMenuIcon, GridMenuVariant, isGridMenuIcon, isGridMenuItemSlot, toMenuSections } from './menu'
 
 // Closed sets a block names when it renders a variant, a state or a direction. Each is an inert

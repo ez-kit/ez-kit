@@ -4,12 +4,11 @@ import { defineConfig } from 'tsup'
  * Multiple entries, not one.
  *
  * A single-entry build emits one pre-bundled `dist/index.js`, and a consumer's bundler does not
- * shake an export out of it. Measured on `@ez-kit/data-grid-react` before this change: importing
- * the `PAGE_GAP` constant cost 54 857 bytes gzipped against 54 873 for the whole `DataGrid`, 16
- * bytes apart. Three plausible causes were measured and ruled out — the 28 `DataGrid.X = …`
- * compound assignments (273 bytes), the `export *` star (2.5 kB), the top-level `createContext`
- * calls (nothing). Giving a module its own entry is what worked: the same import then cost 53
- * bytes.
+ * shake an export out of it. Measured on `@ez-kit/data-grid-react` before this change, importing
+ * the `PAGE_GAP` constant cost the same as importing the whole `DataGrid`, to within a few bytes.
+ * Three plausible causes were measured and ruled out — the 28 `DataGrid.X = …` compound
+ * assignments, the `export *` star and the top-level `createContext` calls. Giving a module its
+ * own entry is what worked.
  *
  * So each feature group and each cell type is reachable on its own here, and a consumer that
  * composes a reduced set through `createDataGrid` stops paying for the rest. `.` still exports the

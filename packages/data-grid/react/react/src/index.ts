@@ -167,6 +167,68 @@ export type {
 
 // Compound component
 export { DataGrid } from './data-grid/data-grid'
+
+/**
+ * The same components, one by one — `DataGrid.X` is an alias for these, not the only door to them.
+ *
+ * The compound is assembled by a single annotated `Object.assign` over a flat literal, so a
+ * bundler keeps every member the moment anything names `DataGrid`: that is what the namespace
+ * *is*, and it is priced accordingly. Naming a component instead keeps that component, and a grid
+ * composed out of the ones it renders is a fraction of the compound. Adding this block cost the
+ * whole surface only these `export` lines.
+ *
+ * Read the saving as the components' share, not the grid's: {@link DataGridRoot} renders
+ * `children ?? core.Layout ?? <DataGridTable/>`, so any grid reaches the table chain through the
+ * root whichever door it used, and the shared floor (context, `useDataGridTable`) is paid once
+ * either way. `apps/docs/test/tree-shaking.test.ts` is where this is measured.
+ *
+ * This is **not** the alternative AGENTS.md records as rejected. That one *moved* `DataGrid.X`
+ * onto a subpath, costing a major and every existing call site for the same bytes. Here the
+ * compound stays exactly where it is and the names are added beside it, so nothing written
+ * against this package changes.
+ *
+ * The names carry the `DataGrid` prefix while the compound's keys stay short, which is the shape
+ * `@heroui/react` settled on for its own table (`TableBody` beside `Table.Body`) and for the same
+ * reason: `Body`, `Row`, `Cell` and `Header` are too general to sit in a package root next to
+ * `createColumns` and `createDataGrid`. It also finishes a split this package already had —
+ * `DataGridRow` and `DataGridCell` were prefixed, `Body` and `Header` were not, and every
+ * `DataGrid*Props` type was.
+ *
+ * {@link DataGridRoot} is the bare root, without the statics: rendering `<DataGrid>` to host
+ * named children would pull the namespace back in and hand back the saving. Its type is the plain
+ * component, so `DataGridRoot.Footer` does not type-check even though the two are one object at
+ * runtime.
+ */
+export { DataGridRoot } from './data-grid/data-grid'
+export { Toolbar as DataGridToolbar } from './data-grid/toolbar'
+export { DataGridTable } from './data-grid/table'
+export { Header as DataGridHeader } from './data-grid/header'
+export { DataGridHeaderRow } from './data-grid/header-row'
+export { DataGridHeaderCell } from './data-grid/header-cell'
+export { HeaderMain as DataGridHeaderMain, HeaderExtras as DataGridHeaderExtras } from './data-grid/header-slots'
+export { Body as DataGridBody } from './data-grid/body'
+export { DataGridRow } from './data-grid/row'
+export { DataGridCell } from './data-grid/cell'
+export { Footer as DataGridFooter } from './data-grid/footer'
+export { DataGridFooterRow } from './data-grid/footer-row'
+export { DataGridFooterCell } from './data-grid/footer-cell'
+export { Pagination as DataGridPagination } from './data-grid/pagination'
+export { PageSizer as DataGridPageSizer } from './data-grid/page-sizer'
+export { BottomBar as DataGridBottomBar } from './data-grid/bottom-bar'
+export { ColumnFilter as DataGridColumnFilter } from './data-grid/column-filter'
+export { ActionBar as DataGridActionBar } from './data-grid/action-bar'
+export { CreateTrigger as DataGridCreateTrigger } from './data-grid/create-trigger'
+export { VisibilityTrigger as DataGridVisibilityTrigger } from './data-grid/visibility-trigger'
+export { SortMenuTrigger as DataGridSortMenuTrigger } from './data-grid/sort-menu-trigger'
+export { GlobalFilterInput as DataGridGlobalFilterInput } from './data-grid/global-filter-input'
+export { ActiveFiltersBar as DataGridActiveFiltersBar } from './data-grid/active-filters-bar'
+export { ClearFiltersButton as DataGridClearFiltersButton } from './data-grid/clear-filters-button'
+export { FilterPanel as DataGridFilterPanel } from './data-grid/filter-panel'
+export { CreatingModal as DataGridCreatingModal } from './data-grid/creating-modal'
+export { EditingModal as DataGridEditingModal } from './data-grid/editing-modal'
+export { LoadingBody as DataGridLoadingBody } from './data-grid/loading-body'
+export { EmptyStateRow as DataGridEmptyStateRow } from './data-grid/empty-state-row'
+export { NoResultsRow as DataGridNoResultsRow } from './data-grid/no-results-row'
 export type {
 	DataGridProps,
 	DataGridControlledProps,

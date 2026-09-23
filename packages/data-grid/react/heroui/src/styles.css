@@ -113,10 +113,11 @@
 	height: auto;
 }
 
-/* HeroUI has no footer slot of its own — the adapter renders a plain `<tfoot>` — so the kit
- * gives it the table's own footer treatment here: the header's surface, a separating rule and
- * the weight a totals row wants. The background is what makes the sticky variant work at all;
- * without it the rows scroll through the footer. */
+/* HeroUI has no footer slot of its own — `Table.Footer` there is a container *outside* the table,
+ * for pagination — so the adapter renders React Aria's `TableFooter` and the kit gives it the
+ * table's own footer treatment here: the header's surface, a separating rule and the weight a
+ * totals row wants. The background is what makes the sticky variant work at all; without it the
+ * rows scroll through the footer. */
 [data-slot='tfoot'] {
 	background: var(--surface-secondary);
 	border-top: 1px solid var(--separator);

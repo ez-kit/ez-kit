@@ -6,8 +6,8 @@
  * Its own build entry (`@ez-kit/data-grid-react/state`), not only a folder: reaching these four
  * through the root entry costs the whole package. The root is one pre-bundled file, and a
  * bundler does not shake an export out of it — importing `extractState` from `.` measured the
- * same as importing `DataGrid` (~54 kB gzipped, 16 bytes apart). A separate entry is what makes
- * the difference, so this barrel exists to be one.
+ * same as importing `DataGrid`. A separate entry is what makes the difference, so this barrel
+ * exists to be one.
  *
  * Everything here stays exported from the root as well, so the subpath is an option rather than
  * a migration.

@@ -154,9 +154,99 @@ describe('editingFeature — feature composition', () => {
 
 				// 2 — instance data: only the hook could have done this.
 				expect(observedAbort).toBe(true)
-				expect(table._editingAbort.controller).toBeUndefined()
+				expect(table._editingAbort.form).toBeUndefined()
+				expect(table._editingAbort.field).toBeUndefined()
 				return p
 			})
+	})
+})
+
+/**
+ * A field event must not cancel a form operation.
+ *
+ * Clicking Save with the caret still in an editor fires a blur, and that blur runs
+ * `validateField`. While field work and form work shared one `AbortController`, the blur aborted
+ * the commit: `onSave` resolved into `if (signal.aborted) return`, so nothing was written and the
+ * row stayed in its editor for ever — no saved value, and no rejection either. Whether it happened
+ * at all came down to which of the click and the blur reached the box first, so it changed with
+ * the UI kit's focus behaviour and looked like a kit bug (HeroUI 3.2 against 3.0). It was not.
+ */
+describe('editingFeature — a field event during a save', () => {
+	const rowOf = (table: { getRowModel: () => { rows: { id: string }[] } }): string => {
+		const row = table.getRowModel().rows[0]
+		if (!row) throw new Error('expected row')
+		return row.id
+	}
+
+	it('does not cancel an in-flight commit', async () => {
+		let release = (): void => undefined
+		const onSave = vi.fn(
+			() =>
+				new Promise<void>((resolve) => {
+					release = resolve
+				}),
+		)
+		const table = createTable({ features: EDITING, data: DATA, columns: COLUMNS, editing: { onSave } })
+
+		table.editing.start(rowOf(table))
+		table.editing.setValue('name', 'Ada')
+		const committed = table.editing.commit()
+
+		// The blur the Save click causes, arriving while `onSave` is still pending.
+		await table.editing.validateField('name')
+
+		release()
+		await committed
+
+		expect(onSave).toHaveBeenCalledTimes(1)
+		// The form closed, which is what `commit` does on success and what the abort swallowed.
+		expect(editingOf(table).rowId).toBe(null)
+	})
+
+	it('leaves commitStatus alone, so the save button stays pressable', async () => {
+		const table = createTable({
+			features: EDITING,
+			data: DATA,
+			columns: COLUMNS,
+			editing: { validate: { schema: z.object({ name: z.string().min(1) }) }, onSave: noopSave },
+		})
+
+		table.editing.start(rowOf(table))
+		const validated = table.editing.validateField('name')
+
+		// Mid-flight: a kit binds the save button's disabled state to this, and disabling a button
+		// between pointerdown and pointerup is how React Aria loses the press.
+		expect(editingOf(table).commitStatus).toBe('idle')
+
+		await validated
+		expect(editingOf(table).commitStatus).toBe('idle')
+	})
+
+	it('does not reopen the save button by writing Idle over Saving', async () => {
+		let release = (): void => undefined
+		const table = createTable({
+			features: EDITING,
+			data: DATA,
+			columns: COLUMNS,
+			editing: {
+				// A real schema: without one `validateField` returns before it writes anything, and
+				// this case would pass on the defect it exists to catch.
+				validate: { schema: z.object({ name: z.string().min(1) }) },
+				onSave: () =>
+					new Promise<void>((resolve) => {
+						release = resolve
+					}),
+			},
+		})
+
+		table.editing.start(rowOf(table))
+		const committed = table.editing.commit()
+		await table.editing.validateField('name')
+
+		expect(editingOf(table).commitStatus).toBe('saving')
+
+		release()
+		await committed
 	})
 })
 

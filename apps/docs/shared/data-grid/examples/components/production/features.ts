@@ -33,8 +33,8 @@ import {
  * Every one of them is written out member by member, and none of them is
  * `allDataGridFeatures` — deliberately, and for the reason
  * [Feature set](/docs/data-grid/feature-set#alldatagridfeatures) gives: what a reader copies off a
- * docs page is what lands in their bundle, and the all-in set is 45 288 bytes against 1 035 for a
- * sorting-only one. This page is the closest the docs come to "everything at once", which makes it
+ * docs page is what lands in their bundle, and the all-in set costs orders of magnitude more than
+ * a sorting-only one. This page is the closest the docs come to "everything at once", which makes it
  * the most tempting place to reach for the shortcut and the worst place to demonstrate it.
  *
  * What moving them here changes is only where they are read, and nothing about what a reader can

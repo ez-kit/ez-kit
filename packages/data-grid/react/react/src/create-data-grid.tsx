@@ -1,6 +1,6 @@
 'use client'
 
-import { CellTypesProvider, mergeCellTypes } from './cell-types-context'
+import { CellTypesProvider } from './cell-types-context'
 import { GridComponentsProvider } from './components-context'
 import { DataGrid } from './data-grid/data-grid'
 import { useDataGridState } from './data-grid/table-context'
@@ -118,9 +118,7 @@ export type BoundDataGrid<TFeatures extends TableFeatures> = (<
 
 /**
  * The bundle returned by {@link createDataGrid}: the bound compound `DataGrid`, the
- * hooks, the components provider, cell-type-aware column helpers, and `extendDataGrid`
- * — a re-invocation of the factory that reuses the same `components` while merging in
- * extra cell types (return typed to the merged key union).
+ * hooks, the components provider, and cell-type-aware column helpers.
  *
  * `TFeatures` is `undefined` unless the factory was given a `features` set. That is the whole
  * difference between the two bundles: with a set bound, `DataGrid` and `useDataGrid` stop
@@ -142,9 +140,6 @@ export type DataGridBundle<
 	GridComponentsProvider: typeof GridComponentsProvider
 	createColumns: <TRow extends object>(defs: ColumnDef<TRow, TCellTypes>[]) => ColumnDef<TRow, TCellTypes>[]
 	createColumnHelper: <TRow extends object>() => ColumnHelper<TRow, TCellTypes>
-	extendDataGrid: <TExtra extends CellTypeRegistry>(
-		extraCellTypes: TExtra,
-	) => DataGridBundle<TCellTypes & TExtra, TFeatures>
 }
 
 /**
@@ -159,8 +154,13 @@ export type DataGridBundle<
  *
  * @example
  * // With custom cell types
- * export const { DataGrid, useDataGrid, createColumns } = extendDataGrid({
- *   rating: defineCellType<{ max: number }>()({ view: RatingCellView, editing: RatingCellInput }),
+ * export const { DataGrid, useDataGrid, createColumns } = createDataGrid({
+ *   components: allComponents,
+ *   features: allDataGridFeatures,
+ *   cellTypes: {
+ *     ...cellTypes,
+ *     rating: defineCellType<{ max: number }>()({ view: RatingCellView, editing: RatingCellInput }),
+ *   },
  * })
  */
 export function createDataGrid<
@@ -245,18 +245,6 @@ export function createDataGrid<
 		)
 	}
 
-	function boundExtendDataGrid<TExtra extends CellTypeRegistry>(
-		extraCellTypes: TExtra,
-	): DataGridBundle<TCellTypes & TExtra, TFeatures> {
-		const mergedCellTypes = mergeCellTypes(cellTypes ?? {}, extraCellTypes) as TCellTypes & TExtra
-		return createDataGrid<TCellTypes & TExtra, TFeatures>({
-			components,
-			cellTypes: mergedCellTypes,
-			...(features !== undefined ? { features } : {}),
-			...(defaults !== undefined ? { defaults } : {}),
-		})
-	}
-
 	/*
 	 * The two feature-carrying members are asserted rather than inferred, because their declared
 	 * types are *conditional* on `TFeatures` and TypeScript cannot check an assignment against an
@@ -277,6 +265,5 @@ export function createDataGrid<
 		GridComponentsProvider,
 		createColumns: boundDefineColumns,
 		createColumnHelper: boundCreateColumnHelper,
-		extendDataGrid: boundExtendDataGrid,
 	}
 }
