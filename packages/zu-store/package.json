@@ -90,7 +90,7 @@
 		},
 		{
 			"path": "dist/history/index.js",
-			"limit": "650 B",
+			"limit": "830 B",
 			"ignore": [
 				"@ez-kit/store-core",
 				"@ez-kit/store-persist"

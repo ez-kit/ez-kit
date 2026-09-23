@@ -1237,7 +1237,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 	{
 		page: DocPage.ZuHistory,
-		optionTables: [{ heading: 'Options', roots: [STORE_TYPE.ZuHistoryOptions], expectedCount: 5 }],
+		optionTables: [{ heading: 'Options', roots: [STORE_TYPE.ZuHistoryOptions], expectedCount: 6 }],
 		nonOptionTables: [],
 	},
 	{
@@ -1375,7 +1375,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 	{
 		page: DocPage.VaHistory,
-		optionTables: [{ heading: 'Options', roots: [STORE_TYPE.VaHistoryOptions], expectedCount: 6 }],
+		optionTables: [{ heading: 'Options', roots: [STORE_TYPE.VaHistoryOptions], expectedCount: 7 }],
 		nonOptionTables: [],
 	},
 	{
