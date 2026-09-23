@@ -102,7 +102,7 @@ function StarRatingInput({ value, onChange }: FieldState) {
 // for display, `edit` for the editing input. This one is registered on the grid
 // itself via the `cellTypes` prop below, so everything the example needs is in
 // this file. An app registers the same shape once for the whole grid module
-// instead — see `extendDataGrid()` on the docs page.
+// instead — see the `createDataGrid({ cellTypes })` bundle on the docs page.
 // `defineCellType` is what records the config this type accepts. It takes none, so a column
 // of type 'rating' rejects `config` outright.
 const RATING_CELL_TYPES = {

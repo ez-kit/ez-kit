@@ -51,35 +51,21 @@ describe('createDataGrid', () => {
 			expect(BoundDataGrid[member], `DataGrid.${member} missing from the bound bundle`).toBe(DataGrid[member])
 		}
 	})
-
-	it('extendDataGrid carries the compound namespace too', () => {
-		const { extendDataGrid } = createDataGrid({ components: {} })
-		const { DataGrid: Extended } = extendDataGrid({ rating: { view: () => null } })
-		for (const member of Object.keys(DataGrid) as (keyof typeof DataGrid)[]) {
-			expect(Extended[member], `DataGrid.${member} missing from the extended bundle`).toBe(DataGrid[member])
-		}
-	})
 })
 
-describe('extendDataGrid (folded into createDataGrid)', () => {
-	it('is returned from the factory and yields a complete bundle', () => {
-		const base = createDataGrid({ components: testComponents })
-		expect(base.extendDataGrid).toBeTypeOf('function')
+// Registering extra cell types is a `cellTypes` argument and nothing else. A bundle used to
+// grow them after the fact through `extendDataGrid`, which re-invoked this factory with the
+// same components — sugar for the one call below, and removed as such.
+describe('createDataGrid({ cellTypes })', () => {
+	it('yields a complete bundle that renders with the given components', () => {
+		const bundle = createDataGrid({ components: testComponents, cellTypes: { rating: { view: () => null } } })
+		expect(bundle.DataGrid).toBeTypeOf('function')
+		expect(bundle.useDataGrid).toBeTypeOf('function')
+		expect(bundle.GridComponentsProvider).toBeTypeOf('function')
+		expect(bundle.createColumns).toBeTypeOf('function')
 
-		const extended = base.extendDataGrid({ rating: { view: () => null } })
-		expect(extended.DataGrid).toBeTypeOf('function')
-		expect(extended.useDataGrid).toBeTypeOf('function')
-		expect(extended.GridComponentsProvider).toBeTypeOf('function')
-		expect(extended.createColumns).toBeTypeOf('function')
-		// The extended bundle can itself be extended again.
-		expect(extended.extendDataGrid).toBeTypeOf('function')
-	})
-
-	it('extended bundle renders with the original components', () => {
-		const { extendDataGrid } = createDataGrid({ components: testComponents })
-		const { DataGrid: Extended } = extendDataGrid({})
 		render(
-			<Extended
+			<bundle.DataGrid
 				features={TEST_FEATURES}
 				data={ROWS}
 				columns={ROW_COLUMNS}
@@ -237,28 +223,6 @@ describe('createDataGrid({ defaults })', () => {
 		)
 		expect(screen.getAllByLabelText(defaultMessages.selection.selectRow).length).toBe(ROWS.length)
 	})
-
-	it('extendDataGrid keeps the defaults in both forms', () => {
-		const { extendDataGrid } = createDataGrid(KIT)
-		const { DataGrid: Extended, useDataGrid } = extendDataGrid({ rating: { view: () => null } })
-
-		const inline = render(
-			<Extended
-				features={TEST_FEATURES}
-				data={ROWS}
-				columns={ROW_COLUMNS}
-			/>,
-		)
-		expect(screen.getAllByLabelText(SELECT_ROW).length).toBe(ROWS.length)
-		inline.unmount()
-
-		function Grid() {
-			const table = useDataGrid<GridFeatures, Row>({ features: TEST_FEATURES, data: ROWS, columns: ROW_COLUMNS })
-			return <Extended table={table} />
-		}
-		render(<Grid />)
-		expect(screen.getAllByLabelText(SELECT_ROW).length).toBe(ROWS.length)
-	})
 })
 
 describe('createDataGrid({ features })', () => {
@@ -302,18 +266,6 @@ describe('createDataGrid({ features })', () => {
 				/>,
 			),
 		).toThrow()
-	})
-
-	it('extendDataGrid carries the bound set into the extended bundle', () => {
-		const { extendDataGrid } = createDataGrid({ components: testComponents, features: TEST_FEATURES })
-		const { DataGrid: Extended } = extendDataGrid({ rating: { view: () => null } })
-		render(
-			<Extended
-				data={ROWS}
-				columns={ROW_COLUMNS}
-			/>,
-		)
-		expect(screen.getByText('Alice')).toBeInTheDocument()
 	})
 
 	// The unbound bundle is unchanged: `features` stays required, which is what core declares and

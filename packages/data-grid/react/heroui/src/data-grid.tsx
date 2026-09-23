@@ -67,15 +67,6 @@ const components = {
  */
 const allComponents: FullGridComponents = components
 
-/**
- * `extendDataGrid` re-invokes the factory with the same HeroUI components while
- * merging in additional custom cell types (return typed to the merged keys).
- *
- * @example
- * const { DataGrid, createColumns } = extendDataGrid({
- *   rating: { view: RatingCellView, edit: RatingCellInput },
- * })
- */
 // Annotated, not inferred. The declaration emitter prints an *inferred* type structurally, so
 // without this the bundled `.d.ts` re-prints the whole bundle into every signature that mentions
 // it. Naming the bundle's type keeps `KitCellTypes` — which is itself declared rather than read
@@ -131,20 +122,11 @@ const bundle: DataGridBundle<KitCellTypes, KitFeatures> = createDataGrid<KitCell
 const { DataGrid, GridComponentsProvider, useDataGrid } = bundle
 
 // Annotated one by one rather than destructured: a destructured binding is re-inferred by the
-// declaration emitter, which re-prints the signature instead of naming it, and a re-printed
-// `DataGridBundle<KitCellTypes & TExtra>` degenerates to an error type at the call site — the
-// consumer then gets an unchecked `createColumns` off the extended bundle. Indexing the bundle's
-// type keeps `KitCellTypes` a name in the three signatures that carry a `CellDef` union.
+// declaration emitter, which re-prints the signature structurally instead of naming it, and a
+// re-printed bundle type degenerates to an error type at the call site — the consumer then gets
+// an unchecked `createColumns`. Indexing the bundle's type keeps `KitCellTypes` a name in both
+// signatures that carry a `CellDef` union.
 const createColumns: DataGridBundle<KitCellTypes, KitFeatures>['createColumns'] = bundle.createColumns
 const createColumnHelper: DataGridBundle<KitCellTypes, KitFeatures>['createColumnHelper'] = bundle.createColumnHelper
-const extendDataGrid: DataGridBundle<KitCellTypes, KitFeatures>['extendDataGrid'] = bundle.extendDataGrid
 
-export {
-	DataGrid,
-	GridComponentsProvider,
-	useDataGrid,
-	extendDataGrid,
-	createColumns,
-	createColumnHelper,
-	allComponents,
-}
+export { DataGrid, GridComponentsProvider, useDataGrid, createColumns, createColumnHelper, allComponents }

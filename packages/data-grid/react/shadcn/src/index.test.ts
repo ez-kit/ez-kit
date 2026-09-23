@@ -8,7 +8,6 @@ import {
 	DataGrid,
 	DataGridOptionsProvider,
 	createColumns,
-	extendDataGrid,
 	extractState,
 	GridComponentsProvider,
 	parseState,
@@ -40,7 +39,6 @@ describe('@ez-kit/data-grid-shadcn', () => {
 		expect(DataGrid).toBeTypeOf('function')
 		expect(useDataGrid).toBeTypeOf('function')
 		expect(GridComponentsProvider).toBeTypeOf('function')
-		expect(extendDataGrid).toBeTypeOf('function')
 		expect(cellTypes.badge).toBeDefined()
 		expect(cellTypes.select).toBeDefined()
 	})
