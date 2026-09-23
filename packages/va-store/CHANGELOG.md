@@ -1,5 +1,16 @@
 # @ez-kit/va-store
 
+## 1.2.0
+
+### Minor Changes
+
+- 1945534: Add `clearFutures()` to the history API. It empties the redo stack and keeps every undo step, for a write that must not be its own undo step (and so runs under `skip`) but still makes the old redo branch unreachable — which `skip` alone left in place, so a later `redo` could restore a state from a branch the user had already left. Call it before the skipped write.
+
+### Patch Changes
+
+- Updated dependencies [1945534]
+  - @ez-kit/store-core@1.2.0
+
 ## 1.1.0
 
 ### Minor Changes
