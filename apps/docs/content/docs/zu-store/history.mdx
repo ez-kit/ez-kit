@@ -40,20 +40,22 @@ store.history.getState().undo()
 ## Signature
 
 ```ts
-function withHistory<T>(
+// TSlice is inferred from `partialize` only — pin it by annotating that function's return type.
+function withHistory<T, Mps, Mcs, TSlice = T>(
 	initializer: StateCreator<T, [...Mps, ['ez-kit/history', unknown]], Mcs>,
-	options?: HistoryOptions<T>,
-): StateCreator<T, Mps, [['ez-kit/history', unknown], ...Mcs]>
+	options?: HistoryOptions<T, TSlice>,
+): StateCreator<T, Mps, [['ez-kit/history', TSlice], ...Mcs]>
 
-type HistoryOptions<T> = {
+// Every stack-facing option is typed over TSlice: the `partialize` slice, or the whole state without one.
+type HistoryOptions<T, TSlice = T> = {
 	/** Maximum number of past states to keep. Defaults to 100. */
 	limit?: number
 	/** Start history recording paused. Defaults to false. */
 	defaultPaused?: boolean
 	/** Pre-populate the pasts stack. Trimmed from the front to `limit`. */
-	defaultPasts?: T[]
+	defaultPasts?: TSlice[]
 	/** Pre-populate the futures stack. Trimmed from the front to `limit`. */
-	defaultFutures?: T[]
+	defaultFutures?: TSlice[]
 	/**
 	 * Return false to skip recording this write — the state still updates,
 	 * only the history entry is suppressed.
@@ -61,7 +63,12 @@ type HistoryOptions<T> = {
 	 * `action` is the optional third positional arg of `set(partial, replace, action)`,
 	 * the same convention used by Zustand's `devtools` middleware.
 	 */
-	shouldRecord?: (prev: T, next: T, action?: string | { type: string }) => boolean
+	shouldRecord?: (prev: TSlice, next: TSlice, action?: string | { type: string }) => boolean
+	/**
+	 * The part of the state history tracks. Steps hold this slice, undo / redo / goto merge it
+	 * back, and a write that leaves it shallow-equal is not recorded.
+	 */
+	partialize?: (state: T) => TSlice & object
 }
 
 type StoreHistory<T> = {
@@ -79,7 +86,7 @@ type StoreHistory<T> = {
 }
 ```
 
-The store returned by `createStore<T>()(withHistory(initializer))` is a full `StoreApi<T>` plus a `history: StoreApi<StoreHistory<T>>` property.
+The store returned by `createStore<T>()(withHistory(initializer))` is a full `StoreApi<T>` plus a `history: StoreApi<StoreHistory<T>>` property — `StoreHistory<TSlice>` when [`partialize`](#partialize) is given.
 
 ## Reading history
 
@@ -208,15 +215,16 @@ The button renders the same markup whatever the stacks hold, so subscribing to t
 
 `withHistory(initializer, options?)` takes the shared history options, bound to this package's `HistoryActionTag` meta — the same set `@ez-kit/va-store` documents, minus its Valtio-only `sync`:
 
-| Option           | Type                                                     | Default | Description                                                                          |
-| ---------------- | -------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------ |
-| `limit`          | `number`                                                 | `100`   | Max entries kept per stack. Over the limit, the **oldest** entry is dropped.         |
-| `defaultPaused`  | `boolean`                                                | `false` | Start with recording paused — `resume()` flips it on.                                |
-| `defaultPasts`   | `T[]`                                                    | `[]`    | Seed the undo stack. Trimmed to `limit` like any other write.                        |
-| `defaultFutures` | `T[]`                                                    | `[]`    | Seed the redo stack. Trimmed to `limit` like any other write.                        |
-| `shouldRecord`   | `(prev: T, next: T, meta?: HistoryActionTag) => boolean` | —       | Veto a write: return `false` to skip recording it. `meta` is the write's action tag. |
+| Option           | Type                                                               | Default         | Description                                                                          |
+| ---------------- | ------------------------------------------------------------------ | --------------- | ------------------------------------------------------------------------------------ |
+| `limit`          | `number`                                                           | `100`           | Max entries kept per stack. Over the limit, the **oldest** entry is dropped.         |
+| `defaultPaused`  | `boolean`                                                          | `false`         | Start with recording paused — `resume()` flips it on.                                |
+| `defaultPasts`   | `TSlice[]`                                                         | `[]`            | Seed the undo stack. Trimmed to `limit` like any other write.                        |
+| `defaultFutures` | `TSlice[]`                                                         | `[]`            | Seed the redo stack. Trimmed to `limit` like any other write.                        |
+| `shouldRecord`   | `(prev: TSlice, next: TSlice, meta?: HistoryActionTag) => boolean` | —               | Veto a write: return `false` to skip recording it. `meta` is the write's action tag. |
+| `partialize`     | `(state: T) => TSlice`                                             | the whole state | The part of the state history tracks. A step holds this slice and restores only it.  |
 
-Each is covered in turn below.
+`TSlice` is what `partialize` returns, and the whole state `T` when it is omitted — so without `partialize`, every type above reads exactly as it always did. Each option is covered in turn below.
 
 ### `limit`
 
@@ -250,6 +258,46 @@ withHistory(
 	},
 )
 ```
+
+### `partialize`
+
+`shouldRecord` and `partialize` answer different questions, and the first instinct — reaching for `shouldRecord` — is the wrong one when a store mixes data with UI state:
+
+- **`shouldRecord`** decides _which writes_ become history entries.
+- **`partialize`** decides _which part of the state_ is history at all.
+
+A step always holds whatever the stack snapshots, and `undo` writes that snapshot back. Without `partialize` that is the whole state, so `shouldRecord` can keep a selection change out of the stack but cannot keep `undo` from rolling the selection back: the step restored was taken before the user selected anything.
+
+```ts
+type EditorState = {
+	// history
+	nodes: Node[]
+	edges: Edge[]
+	// not history
+	selectedNodeIds: string[]
+	lastError: Error | null
+	addNode: (node: Node) => void
+}
+
+const store = createStore<EditorState>()(
+	withHistory(initializer, {
+		limit: 50,
+		partialize: (state) => ({ nodes: state.nodes, edges: state.edges }),
+	}),
+)
+```
+
+With `partialize`:
+
+- **A step is the slice.** `pasts` and `futures` hold `{ nodes, edges }`, not the whole state — so each step also costs only what it tracks. `defaultPasts`, `defaultFutures` and `shouldRecord` take slices too, and the types say so.
+- **Restoring merges.** `undo` / `redo` / `goto` write the slice back with `set(slice)` rather than replacing the state, so `selectedNodeIds`, `lastError` and the actions stay exactly as they are.
+- **Unchanged slices are not recorded.** A write that leaves the slice shallow-equal to what it was — selecting a node, setting an error — adds no step and does not clear the redo stack. Without this every UI write would push a copy of the same graph, and one `undo` would take several presses to see. It is not optional: a step that changes nothing in the tracked state is never what anyone wants. `shouldRecord` still runs, after it, on the slices.
+
+Only `partialize` decides the slice. Without it, a seed or `shouldRecord` typed over part of the state is a type error rather than a silent narrowing — `undo` would replace the whole state with that part. The slice is an object of top-level state keys, because restoring merges it back key by key.
+
+The merge is shallow, like Zustand's own `set`. A nested slice (`{ graph: { nodes, edges } }`) restores the whole `graph` subtree, which is what a slice means — but it replaces `graph` wholesale, so do not partialize a key the store also writes UI fields into. The equality check is shallow too: return fields as they are in the state (`state.nodes`), never a derived copy (`[...state.nodes]`) and never a wrapper built on the fly (`{ graph: { nodes: state.nodes } }`), or every write compares unequal and records.
+
+`useTimeline`'s `current` is shaped like a step, so with `partialize` it is the slice, and `steps[index] === current` still holds.
 
 ### `defaultPaused`
 

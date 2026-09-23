@@ -153,3 +153,47 @@ describe('useTimeline', () => {
 		expect(timelineRenders).toBeGreaterThan(timelineInitial)
 	})
 })
+
+describe('useTimeline — with partialize', () => {
+	type Editor = { title: string; cursor: number }
+	type Slice = { title: string }
+
+	const makeEditor = () =>
+		createStore<Editor>()(
+			withHistory(() => ({ title: 'a', cursor: 0 }), {
+				partialize: (s): Slice => ({ title: s.title }),
+			}),
+		)
+
+	it('shapes `current` like a step: the slice, not the whole state', () => {
+		const store = makeEditor()
+		let timeline!: ReturnType<typeof useTimeline<Editor, Slice>>
+		function Probe(): null {
+			timeline = useTimeline(store)
+			return null
+		}
+
+		render(<Probe />)
+		act(() => {
+			store.setState({ title: 'b' })
+		})
+
+		expect(timeline.current).toEqual({ title: 'b' })
+		expect(timeline.steps).toEqual([{ title: 'a' }, { title: 'b' }])
+		expect(timeline.index).toBe(1)
+	})
+
+	it('keeps `current` stable across a render that changed nothing', () => {
+		const store = makeEditor()
+		const seen: Slice[] = []
+		function Probe(): null {
+			seen.push(useTimeline(store).current)
+			return null
+		}
+
+		const { rerender } = render(<Probe />)
+		rerender(<Probe />)
+
+		expect(seen[1]).toBe(seen[0])
+	})
+})

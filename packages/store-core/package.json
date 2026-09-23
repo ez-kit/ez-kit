@@ -71,7 +71,7 @@
 		},
 		{
 			"path": "dist/history/index.js",
-			"limit": "520 B"
+			"limit": "690 B"
 		}
 	],
 	"devDependencies": {
