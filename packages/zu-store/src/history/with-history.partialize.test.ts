@@ -267,6 +267,23 @@ describe('withHistory — partialize: pause and skip', () => {
 
 		expect(store.history.getState().pasts).toEqual([])
 	})
+
+	it('clearFutures beside a skipped slice write stops redo from reviving an undone branch', () => {
+		const store = makeEditor()
+		store.getState().addNode('a')
+		store.history.getState().undo()
+
+		// A graph write that must not be its own undo step, but that the undone `a` no longer follows.
+		store.history.getState().clearFutures()
+		store.history.getState().skip(() => {
+			store.getState().addNode('b')
+		})
+		store.history.getState().redo()
+
+		expect(store.getState().nodes).toEqual(['b'])
+		expect(store.history.getState().pasts).toEqual([])
+		expect(store.history.getState().futures).toEqual([])
+	})
 })
 
 describe('withHistory — partialize: composition', () => {

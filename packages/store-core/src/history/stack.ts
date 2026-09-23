@@ -120,6 +120,19 @@ export function createHistoryStack<T, TMeta = unknown>(
 			publish()
 		},
 
+		/**
+		 * Drop the redo branch and keep every undo step — what `record` does to `futures`, without the
+		 * step. It is for a write that must not be undoable on its own (so it goes through `skip`) but
+		 * still makes the old redo branch unreachable, which `skip` alone leaves in place. Deliberately
+		 * not gated on `isPaused`: its whole use is beside a paused write. Call it BEFORE that write,
+		 * so no subscriber ever sees the new state next to a redo branch that no longer applies to it.
+		 */
+		clearFutures() {
+			if (futures.length === 0) return
+			futures = []
+			publish()
+		},
+
 		pause() {
 			setPaused(true)
 		},
