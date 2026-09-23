@@ -319,7 +319,7 @@ describe('createDataGrid({ features })', () => {
 	// The unbound bundle is unchanged: `features` stays required, which is what core declares and
 	// what a grid composed from the per-feature subpaths still writes. Both kits' prebuilt
 	// `DataGrid` binds `allDataGridFeatures` instead — that export already carries every component
-	// group, so the set saved 3.9 kB there and cost an import block at every call site.
+	// group, so the set saved little there and cost an import block at every call site.
 	it('leaves the unbound bundle demanding a set', () => {
 		const { DataGrid: Unbound } = createDataGrid({ components: testComponents })
 		render(

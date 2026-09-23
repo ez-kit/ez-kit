@@ -501,22 +501,19 @@ type DataGridType = typeof DataGridRoot & DataGridStatics
  *
  * It was 29 top-level `DataGrid.X = …` statements, and **esbuild** cannot drop a top-level
  * assignment: it kept every one, and each one anchored its component and everything that
- * component reached. So any partial import of `./index` paid for ~92% of the surface — measured
- * on the built `dist` (`--bundle --minify`, React external), `{ useDataGridTable }` cost 155 370
- * bytes against 168 998 for the whole surface. As one annotated call it costs 27 901.
- * `{ DataGrid }` is unchanged at 155 313, which is correct and is the point: this name *is*
- * everything, and what got cheaper is the import that never asked for it.
- * `apps/docs/test/tree-shaking.test.ts` holds that, so a regression fails there.
+ * component reached. So any partial import of `./index` paid for nearly the whole surface. As one
+ * annotated call, a hook import costs a fraction of it, while `{ DataGrid }` is unchanged — which
+ * is correct and is the point: this name *is* everything, and what got cheaper is the import that
+ * never asked for it. `apps/docs/test/tree-shaking.test.ts` holds that, so a regression fails
+ * there rather than in prose that goes stale.
  *
  * **Read "a bundler" as esbuild, and only esbuild — the other two were probed and neither was
- * ever affected.** Rollup 4.60 dropped the namespace on the assignment form already (31 633 bytes
- * for the hook against 160 213 for `DataGrid`, unminified, core external), and so did Turbopack
- * through a real `next build` of a one-page app (573 824 bytes of client chunks for the hook
- * against 702 874 for `DataGrid`, with `FilterPanel`'s slot literal absent and present). Both
- * measure identically after this change. Webpack was not probed — Next 16 no longer ships a
- * runnable terser plugin and the package is not otherwise installed here. So this fix is worth
- * its 127 kB to a consumer bundling with esbuild and worth nothing to one on Rollup, Vite's
- * production build or Next; it cannot cost any of them anything, which is why it shipped anyway.
+ * ever affected.** Rollup dropped the namespace on the assignment form already, and so did
+ * Turbopack through a real `next build` of a one-page app. Both measure identically after this
+ * change. Webpack was not probed — Next 16 no longer ships a runnable terser plugin and the
+ * package is not otherwise installed here. So this fix is worth real bytes to a consumer bundling
+ * with esbuild and nothing to one on Rollup, Vite's production build or Next; it cannot cost any
+ * of them anything, which is why it shipped anyway.
  *
  * The annotation works here and does **not** work for `allDataGridFeatures` one package over —
  * the two are opposite sides of one line, which AGENTS.md states with the probe behind it:
@@ -525,8 +522,8 @@ type DataGridType = typeof DataGridRoot & DataGridStatics
  * `...someGroup` to it silently restores the defect and costs the comment bytes on top.
  *
  * A getter namespace (`Object.defineProperties(DataGrid, { Toolbar: { get: () => Toolbar } … })`)
- * was measured as the cheaper-looking alternative and is worse than doing nothing: 156 021 bytes.
- * A top-level call that names the component anchors it whatever form the call takes.
+ * was measured as the cheaper-looking alternative and came out worse than doing nothing. A
+ * top-level call that names the component anchors it whatever form the call takes.
  */
 export const DataGrid: DataGridType = /* @__PURE__ */ Object.assign(DataGridRoot, {
 	Toolbar,

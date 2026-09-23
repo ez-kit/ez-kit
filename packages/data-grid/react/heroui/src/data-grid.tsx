@@ -86,11 +86,11 @@ const allComponents: FullGridComponents = components
  * `features` is required everywhere else — a grid pays for what it registers, and the headless
  * `createDataGrid` still demands a set. This one export is the exception, because here the set
  * buys almost nothing: the fourteen component groups above already read the features' APIs, so
- * they drag the implementations in whatever set a call site names. Measured against this kit
- * (esbuild, minified, gzipped, React and HeroUI external): this prebuilt with a sorting-only set
- * is 51.7 kB against 55.7 kB with every feature — 4 kB for eight imports. The same grid composed
- * through `createDataGrid` with four component groups is 41.1 kB, which is where the saving
- * actually lives, and that path keeps `features` required.
+ * they drag the implementations in whatever set a call site names. Measured against this kit, the
+ * difference between this prebuilt on a sorting-only set and on every feature is a few kB — for
+ * eight imports at every call site. The same grid composed through `createDataGrid` with four
+ * component groups is substantially smaller than either, which is where the saving actually lives,
+ * and that path keeps `features` required.
  *
  * So naming it here makes the export's cost match its name: importing `DataGrid` from the kit
  * root has always meant "everything", and now it means everything on both axes. A set named at a

@@ -37,39 +37,38 @@ documented as defeating exactly that.
 placement is load-bearing — do not move it back onto the main entry.** It is a top-level
 `tableFeatures({ …stockFeatures, … })` call, and an object spread may run getters, so a bundler
 cannot drop the expression and retains every operand with it. While it sat on `./features`,
-importing **any** single name from that entry pulled ~93% of it — `tableFeatures` alone cost 46 360
-bytes against 49 696 for the whole surface — which cancelled the thing the migration is for. It was
-the same defect the store packages had with a bare `createStoreCache()`, one package over. Split
-out, the same imports cost 994 bytes for `tableFeatures`, 998 for `rowSortingFeature`, 1 035 for a
-sorting-only set, and 17 163 for `editingFeature`, which is what a feature with a real
-implementation behind it weighs. The all-in set still costs what it costs — 45 288 through its own
-path — but that is now a choice a consumer makes by writing the import, which is what design §1
-always said it should be. `apps/docs/test/tree-shaking.test.ts` holds the measurement, so a
-regression fails there rather than in someone's bundle.
+importing **any** single name from that entry pulled nearly all of it, which cancelled the thing
+the migration is for. It was the same defect the store packages had with a bare
+`createStoreCache()`, one package over. Split out, a single feature or a sorting-only set costs a
+rounding error, while a set that registers `editingFeature` costs what a feature with a real
+implementation behind it weighs. The all-in set still costs what it costs, but that is now a choice
+a consumer makes by writing the import, which is what design §1 always said it should be.
+`apps/docs/test/tree-shaking.test.ts` holds the measurement, so a regression fails there rather
+than in someone's bundle — and the figures live in that test rather than here, because a byte
+count written into prose is stale by the next release.
 
 Two things were established while fixing it, both by measurement, and neither should be re-argued.
-**`/* @__PURE__ */` is not a weaker fix here — it is not a fix.** Annotating the call moved the
-bundle from 46 360 to 46 376 bytes, and annotating it plus every `create*RowModel()` inside it to
-46 504: both cost the comment bytes and saved nothing. A one-module probe showed why — esbuild
-drops an annotated call with a plain object argument and keeps the identical call when the object
-**spreads**, because a spread may run getters. So the annotation is the right tool for a bare
-`createStoreCache()` and the wrong one for this. **And `size-limit` cannot see this class of defect
-at all**: it read the `features` entry at 4.5 kB before the fix and 4.5 kB after, because it
-measures an entry point whole rather than what a partial import drags along. The byte table is the
-guarantee here, not the budget — which is exactly why `tree-shaking.test.ts` exists beside
-`size-limit` rather than being folded into it.
+**`/* @__PURE__ */` is not a weaker fix here — it is not a fix.** Annotating the call, with or
+without every `create*RowModel()` inside it, cost the comment bytes and saved nothing. A one-module
+probe showed why — esbuild drops an annotated call with a plain object argument and keeps the
+identical call when the object **spreads**, because a spread may run getters. So the annotation is
+the right tool for a bare `createStoreCache()` and the wrong one for this. **And `size-limit`
+cannot see this class of defect at all**: it read the `features` entry at the same size before the
+fix and after, because it measures an entry point whole rather than what a partial import drags
+along. The test is the guarantee here, not the budget — which is exactly why
+`tree-shaking.test.ts` exists beside `size-limit` rather than being folded into it.
 
 **The kits' prebuilt `DataGrid` binds `allDataGridFeatures`, and that is not the rejected default.**
 `features` stays required on `@ez-kit/data-grid-react` and on any bundle built without a set. What
 changed is the one export that already means "everything": `DataGrid` from a kit root ships all
 fourteen component groups, and those components read the features' APIs, so they drag the
-implementations in whatever set a call site names. Measured with esbuild (minified, gzipped, React
-and the kit's own peer external), shadcn / heroui: the prebuilt grid with a sorting-only set is
-54.6 / 51.7 kB against 58.5 / 55.7 kB with every feature — **3.9 kB for eight imports at every call
-site** — while the same grid composed through `createDataGrid` with four component groups is
-44.6 / 41.1 kB. So the set earns its keep where a grid is composed and nowhere else, and demanding
-it on the prebuilt bought a rounding error at the cost of every quick start. The 45 288-byte figure
-above is the all-in set imported **alone**; it is not what the set adds on top of `allComponents`.
+implementations in whatever set a call site names. Measured in both kits, the prebuilt grid on a
+sorting-only set differs from the same grid with every feature by a few kB — **for eight imports at
+every call site** — while the same grid composed through `createDataGrid` with four component
+groups is substantially smaller than either. So the set earns its keep where a grid is composed and
+nowhere else, and demanding it on the prebuilt bought a rounding error at the cost of every quick
+start. Note the all-in set's own cost is what it weighs imported **alone**; it is not what the set
+adds on top of `allComponents`.
 
 Three things hold this together and none of them are optional. The binding lives in each kit's
 `data-grid.tsx` and must stay there: `createDataGrid` reaches a consumer through `index.ts`'s star
@@ -767,7 +766,7 @@ per case, and asserts the **complete** set of `@ez-kit/*` entry points the named
 top-level call or property read a bundler cannot prove pure anchors everything behind it, and
 nothing in the build says so. Both store packages did exactly that — their default cache was a bare
 `createStoreCache()` plus a destructure — so importing only `createContextStore` carried the whole
-`store-core/cache` graph, ~2 KB gzipped, for a cache the app never mounted. `size-limit` could not
+`store-core/cache` graph for a cache the app never mounted. `size-limit` could not
 see it: it measures each entry point whole, not what a partial import pulls along.
 
 Each case records the full set rather than a forbidden list, so anything _newly_ reached fails —
@@ -779,29 +778,29 @@ every case. To add one, name the export and run the test — the failure prints 
 and a name the entry does not export fails the bundle outright.
 
 **`@ez-kit/data-grid-react`'s `./index` used not to tree-shake at all, and the fix is one
-annotated call — do not undo its shape.** Measured on the built `dist` with esbuild
-(`--bundle --minify`, React external), importing one const object (`{ useDataGridTable }`) cost
-155 370 bytes, `{ DataGrid }` 155 370 and `{ DefaultLayout }` 156 115, against 168 998 for a
-whole-surface `import *` — i.e. any partial import of that entry paid for ~92% of it. The cause
-was the compound namespace's own assembly: 29 impure top-level property assignments
+annotated call — do not undo its shape.** Measured on the built `dist` with esbuild, importing one
+const object (`{ useDataGridTable }`) cost as much as `{ DataGrid }` and nearly as much as a
+whole-surface `import *` — i.e. any partial import of that entry paid for almost all of it. The
+cause was the compound namespace's own assembly: 29 impure top-level property assignments
 (`DataGrid.Toolbar = Toolbar;` …) at the end of `data-grid/data-grid.tsx`, which esbuild cannot
 drop, and which therefore anchored all 29 components and everything they reached. Same defect
 class as the `tableFeatures({ …spread })` and bare `createStoreCache()` cases above.
 
 It is now one `/* @__PURE__ */ Object.assign(DataGridRoot, { Toolbar, Table: DataGridTable, … })`
-with a **flat** object literal. Measured after: `{ useDataGridTable }` 27 901, `{ DefaultLayout }`
-83 759, `{ DataGrid }` 155 313, whole surface 168 942.
+with a **flat** object literal. Measured after, a hook or a layout import costs a fraction of the
+surface while `{ DataGrid }` is unchanged. The figures live in
+`apps/docs/test/tree-shaking.test.ts`, not here: a byte count in prose is stale by the next
+release, and the test is what fails when it moves.
 
-**This was an esbuild defect and nobody else's — probed, not assumed, and the scope matters when
-quoting the numbers.** Rollup 4.60 already dropped the namespace on the assignment form (31 633
-bytes for `{ useDataGridTable }` against 160 213 for `{ DataGrid }`, unminified, core external),
-and so did Turbopack, measured through a real `next build` of a one-page app importing one name
-(573 824 bytes of client chunks against 702 874, with `FilterPanel`'s `data-slot` literal absent
-and present). Both are byte-identical after the change. Webpack was **not** probed: Next 16 no
+**This was an esbuild defect and nobody else's — probed, not assumed, and the scope matters.**
+Rollup already dropped the namespace on the assignment form, and so did Turbopack, measured
+through a real `next build` of a one-page app importing one name (with `FilterPanel`'s `data-slot`
+literal absent and present). Both are byte-identical after the change. Webpack was **not** probed:
+Next 16 no
 longer ships a runnable terser plugin and webpack is not otherwise installed in this repo, so
 that one is open.
 
-Two consequences. The fix is worth its 127 kB to a consumer bundling with esbuild — a library
+Two consequences. The fix is worth real bytes to a consumer bundling with esbuild — a library
 wrapping this package with `tsup`, most obviously — and worth nothing to one on Rollup, Vite's
 production build or Next; it also cannot cost any of them anything, which is why it shipped
 anyway rather than being argued about. And **every tree-shaking guarantee in this repo is an
@@ -831,17 +830,17 @@ new argument.
 
 - **Named component exports plus `DataGrid.X` as sugar on its own subpath**, mirroring
   `features/all`. This was the prescribed fix here until it was measured against the annotation:
-  it lands on the **same** 27 901 bytes, to the byte, while costing a major and 1 616 occurrences
-  of `DataGrid.X` across 130 files of docs, examples and shadcn registry payload. What made it
+  it lands on the **same** bundle, to the byte, while costing a major and every existing
+  `DataGrid.X` across docs, examples and shadcn registry payload. What made it
   expensive is the word **subpath**: the compound _moving_. Adding the names **beside** it is a
   different change, it is not rejected, and it now ships — see below.
 - **A getter namespace** (`Object.defineProperties(DataGrid, { Toolbar: { get: () => Toolbar } … })`)
-  — 156 021 bytes, i.e. **worse than doing nothing**. A top-level call that names the component
-  anchors it whatever form the call takes.
+  — measured **worse than doing nothing**. A top-level call that names the component anchors it
+  whatever form the call takes.
 - **Making `createDataGrid` render the bare root** instead of the compound, so a bound grid stops
-  dragging the namespace. This is the only one that reaches composed grids, and it is worth 3.6 kB
-  gzipped out of 42.3 (136 502 → 124 069 raw, on `createDataGrid` with four shadcn component
-  groups and a sorting-only feature set). It costs `<DataGrid.Toolbar>` on every kit-bound grid,
+  dragging the namespace. This is the only one that reaches composed grids, and it is worth a few
+  per cent of a composed grid (measured on `createDataGrid` with four shadcn component groups and a
+  sorting-only feature set). It costs `<DataGrid.Toolbar>` on every kit-bound grid,
   because `Object.assign(BoundDataGrid, DataGrid)` in `create-data-grid.tsx` is what puts the
   namespace there — and that wholesale copy exists precisely because a hand-written list had
   silently fallen five members behind. Bad trade; not taken.
@@ -849,12 +848,16 @@ new argument.
 **Every compound member is also exported by name, and that is additive rather than the rejected
 alternative above.** `DataGrid.X` stays exactly where it is; `DataGridToolbar`, `DataGridTable`,
 `DataGridFooter`, … are the same values under the names the `DataGrid*Props` types already used,
-and `DataGridRoot` is the compound-free root. Measured on the built `dist` with esbuild (minified,
-gzipped, React external): `DataGrid` costs 34 272 bytes whatever a call site renders, a grid
-composed from ten named components — table, body, row, cell, the header trio, toolbar, pagination,
-footer — costs 19 265, and the whole surface moved 39 041 → 39 125, which is the `export` lines
-themselves. About 9 500 of either figure is the shared floor, so the components go from ~25 kB to
-~10 kB. **The prefix is deliberate and the compound's keys stay short** — `Body`, `Row`, `Cell`,
+and `DataGridRoot` is the compound-free root. Measured on the built `dist` with esbuild, `DataGrid`
+costs the whole namespace whatever a call site renders, while a grid composed from the ten
+components it renders — table, body, row, cell, the header trio, toolbar, pagination, footer —
+costs a fraction of that; adding the block cost the whole surface only the `export` lines
+themselves. **Read that saving as the components' share, not the whole grid's**: `DataGridRoot`
+renders `children ?? core.Layout ?? <DataGridTable/>`, so every grid reaches the table chain
+through the root whichever door it used, and the shared floor (context, `useDataGridTable`) is paid
+once either way — the gap between a composed grid and the compound is therefore much smaller than
+the gap between the components alone. **The prefix is deliberate and the compound's keys stay
+short** — `Body`, `Row`, `Cell`,
 `Header` are too general for a package root that also exports `createColumns` and `createDataGrid`,
 which is the same conclusion `@heroui/react` reached for its own table (`TableBody` beside
 `Table.Body`). Note their `Object.assign` carries no `/* @__PURE__ */`, so their named exports buy
@@ -864,10 +867,11 @@ prefixed, `Body` and `Header` were not.
 
 The heroui kit is where this was found. Its `table-adapters.tsx` used to split `<DataGrid.Footer>`
 out of HeroUI's React Aria collection with `child.type === DataGrid.Footer`, and that one key read
-anchored all 29 components into the kit's `./core` entry: 40 658 gzipped bytes, against 16 139 once
-the check named `DataGridFooter` instead. Every other reference to the adapter in either kit is an
-`import type`, which is erased, so that was the only one. The split itself is gone now — see the
-footer note below — which took the entry to 10 522, but the rule it proved stands and
+anchored all 29 components into the kit's `./core` entry, which cost that entry several times its
+own weight until the check named `DataGridFooter` instead. Every other reference to the adapter in
+either kit is an `import type`, which is erased, so that was the only one. The split itself is gone
+now — see the footer note below — which made the entry smaller again, but the rule it proved stands
+and
 `apps/docs/test/tree-shaking.test.ts` pins it, along with the named exports and `DataGridRoot`
 staying clear of the compound.
 
@@ -886,7 +890,7 @@ So **`createDataGrid` and both kit roots still carry everything**, and that is l
 than pending. A kit root is "everything" by construction — its `data-grid.tsx` calls
 `createDataGrid({ components: allComponents, features: allDataGridFeatures })` at the top level —
 and a consumer who wants less already has the composed path: `@ez-kit/data-grid-shadcn/core`,
-`/sorting`, … plus `createDataGrid`, which is the 124 069-byte case above.
+`/sorting`, … plus `createDataGrid`, which is the composed case above.
 
 **Live preview vs. source panel** — these come from two different places, which is why an example can render correctly while its source reads wrong (or vice versa). The live preview is an **iframe** of the real `(embed)/examples/<kit>/<slug>` route, so it always executes the actual component. The source panel is **text**: it is read from the file on disk and never executed. Examples render client-only via `next/dynamic` with `ssr: false`, so both kits share one path rather than letting shadcn SSR and heroui silently fall back. The reason originally given for that — a dynamic `require` in the heroui bundle that RSC could not run on the server — is **no longer true** and was corrected on 2026-09-11: `@heroui/react@3.0.3` contains no `require(` at all, and a page rendering the heroui grid through the normal server path prerenders at build time (`next build` marks it `○`, and the emitted HTML carries the full `<table>` and every row). Note `'use client'` was never the mechanism either way: a client component is still prerendered on the server, so the directive cannot skip an SSR a component could not survive. What remains is a choice about the docs — one code path for both kits — not a limitation of the heroui kit, and dropping `ssr: false` is now a live option rather than a blocked one.
 

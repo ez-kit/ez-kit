@@ -17,9 +17,9 @@ const defaultCache = /* @__PURE__ */ createStoreCache()
  * `defaultCache`. A bundler treats a top-level property read as a possible side effect (the
  * property could be a getter), so the plain form — `export const { Provider: CacheProvider, ... } =
  * defaultCache` — keeps all five reads, which keep `defaultCache`, which keeps `createStoreCache`
- * and the whole `store-core/cache` graph: ~2 KB gzipped anchored into every bundle that imports
- * anything from this package's root, `createContextStore` included. Deferring the read into a
- * function body lets an unused member drop with the cache behind it.
+ * and the whole `store-core/cache` graph, anchored into every bundle that imports anything from
+ * this package's root, `createContextStore` included. Deferring the read into a function body
+ * lets an unused member drop with the cache behind it.
  */
 export const CacheProvider = /* @__PURE__ */ (() => defaultCache.Provider)()
 export const CacheScope = /* @__PURE__ */ (() => defaultCache.Scope)()

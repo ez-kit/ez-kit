@@ -173,17 +173,19 @@ export { DataGrid } from './data-grid/data-grid'
  *
  * The compound is assembled by a single annotated `Object.assign` over a flat literal, so a
  * bundler keeps every member the moment anything names `DataGrid`: that is what the namespace
- * *is*, and it is priced accordingly. Measured on the built `dist` with esbuild (minified,
- * gzipped, React external): `DataGrid` costs 34 272 bytes whatever a call site renders, while a
- * grid composed out of ten named components — table, body, row, cell, the header trio, toolbar,
- * pagination, footer — costs 19 265. About 9 500 of either is the shared floor (context,
- * `useDataGridTable`), so the components themselves go from ~25 kB to ~10 kB. Adding the block
- * cost 84 bytes on the whole surface, which is these `export` lines.
+ * *is*, and it is priced accordingly. Naming a component instead keeps that component, and a grid
+ * composed out of the ones it renders is a fraction of the compound. Adding this block cost the
+ * whole surface only these `export` lines.
+ *
+ * Read the saving as the components' share, not the grid's: {@link DataGridRoot} renders
+ * `children ?? core.Layout ?? <DataGridTable/>`, so any grid reaches the table chain through the
+ * root whichever door it used, and the shared floor (context, `useDataGridTable`) is paid once
+ * either way. `apps/docs/test/tree-shaking.test.ts` is where this is measured.
  *
  * This is **not** the alternative AGENTS.md records as rejected. That one *moved* `DataGrid.X`
- * onto a subpath, costing a major and 1 616 call sites for the same bytes. Here the compound
- * stays exactly where it is and the names are added beside it, so nothing written against this
- * package changes.
+ * onto a subpath, costing a major and every existing call site for the same bytes. Here the
+ * compound stays exactly where it is and the names are added beside it, so nothing written
+ * against this package changes.
  *
  * The names carry the `DataGrid` prefix while the compound's keys stay short, which is the shape
  * `@heroui/react` settled on for its own table (`TableBody` beside `Table.Body`) and for the same

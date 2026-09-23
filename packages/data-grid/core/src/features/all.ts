@@ -6,19 +6,21 @@
  * {@link allDataGridFeatures} is a top-level `tableFeatures({ ...stockFeatures, … })` call whose
  * argument object **spreads**, and an object spread may run getters, so esbuild keeps the whole
  * expression — and therefore every feature and every row model named in it — no matter what the
- * importer asked for. A `/* @__PURE__ *\/` annotation does not change that: measured against the
- * built entry, annotating the call (and each `create*RowModel()` inside it) moved the bundle from
- * 46 360 to 46 504 bytes, i.e. it cost the bytes of the comments and saved nothing.
+ * importer asked for. A `/* @__PURE__ *\/` annotation does not change that: annotating the call,
+ * and each `create*RowModel()` inside it, was measured to cost the bytes of the comments and save
+ * nothing.
  *
- * With the declaration on this subpath instead, importing `tableFeatures` from the features entry
- * bundles 994 bytes rather than 46 360, and a sorting-only set (`tableFeatures`,
- * `rowSortingFeature`, `createSortedRowModel`) 1 035 rather than 46 402. The whole `./features`
- * surface is 48 086, down from 49 696 — the difference being this set leaving it.
+ * While it sat on `./features`, importing **any** single name from that entry therefore pulled
+ * nearly all of it. With the declaration on this subpath instead, a single feature or a
+ * sorting-only set costs a rounding error, and the features entry shrank by this set leaving it.
  *
- * Reaching `allDataGridFeatures` through this path costs 45 288. That number does not improve and
- * is not meant to: an all-in set registers everything by definition, and design §1 calls it an
- * accepted cost. What changed is who pays it — a consumer who writes this import, rather than
- * every consumer who imported anything at all from `./features`.
+ * Reaching `allDataGridFeatures` through this path still costs what an all-in set costs, and that
+ * does not improve and is not meant to: it registers everything by definition, and design §1 calls
+ * it an accepted cost. What changed is who pays it — a consumer who writes this import, rather
+ * than every consumer who imported anything at all from `./features`.
+ *
+ * `apps/docs/test/tree-shaking.test.ts` is where this is measured; figures live there rather than
+ * in prose, which goes stale.
  */
 
 import {
