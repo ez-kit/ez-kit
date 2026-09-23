@@ -35,8 +35,8 @@
 		"@ez-kit/twc": "workspace:*",
 		"@ez-kit/va-store": "workspace:*",
 		"@ez-kit/zu-store": "workspace:*",
-		"@heroui/react": "^3.0.3",
-		"@heroui/styles": "^3.0.3",
+		"@heroui/react": "^3.2.6",
+		"@heroui/styles": "^3.2.6",
 		"@react-three/fiber": "^9.6.1",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
@@ -71,7 +71,10 @@
 		"zustand": "^5.0.12"
 	},
 	"devDependencies": {
+		"@internationalized/date": "^3.12.4",
 		"@playwright/test": "^1.59.1",
+		"@react-aria/ssr": "^3.10.1",
+		"@react-aria/utils": "^3.34.1",
 		"@tailwindcss/postcss": "^4.1.18",
 		"@types/mdx": "^2.0.13",
 		"@types/node": "^25.6.0",
@@ -80,6 +83,8 @@
 		"@types/react-dom": "^19.2.3",
 		"@types/three": "^0.184.0",
 		"esbuild": "^0.28.2",
+		"react-aria": "^3.52.1",
+		"react-aria-components": "^1.21.1",
 		"tailwindcss": "^4.1.18",
 		"typescript": "^5.9.3"
 	}

@@ -380,21 +380,27 @@
 	"dependencies": {
 		"@ez-kit/data-grid-core": "workspace:^",
 		"@ez-kit/data-grid-react": "workspace:^",
-		"@internationalized/date": "^3.5.0",
+		"@internationalized/date": "^3.12.4",
 		"lucide-react": "^0.577.0"
 	},
 	"devDependencies": {
-		"@heroui/react": "^3.0.3",
-		"@heroui/styles": "^3.0.3",
+		"@heroui/react": "^3.2.6",
+		"@heroui/styles": "^3.2.6",
+		"@internationalized/date": "^3.12.4",
+		"@react-aria/ssr": "^3.10.1",
+		"@react-aria/utils": "^3.34.1",
 		"@types/react": "^19.2.14",
 		"@types/react-dom": "^19.2.3",
 		"react": "^19.2.4",
+		"react-aria": "^3.52.1",
+		"react-aria-components": "^1.21.1",
 		"react-dom": "^19.2.4"
 	},
 	"peerDependencies": {
-		"@heroui/react": "^3.0.0",
-		"@heroui/styles": "^3.0.0",
+		"@heroui/react": "^3.2.0",
+		"@heroui/styles": "^3.2.0",
 		"react": ">=19.0.0",
+		"react-aria-components": "^1.21.1",
 		"react-dom": ">=19.0.0"
 	}
 }
