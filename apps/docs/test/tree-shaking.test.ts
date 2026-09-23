@@ -277,6 +277,29 @@ describe('@ez-kit/data-grid-heroui', () => {
 	it('does not reach them through createDataGrid', async () => {
 		expect(await bundledCodeOf(KIT_ENTRY, ['createDataGrid'])).not.toContain(EDITING_MARKER)
 	})
+
+	/**
+	 * The kit's own blocks must not name the adapter's compound namespace.
+	 *
+	 * One line did: `table-adapters.tsx` split `<DataGrid.Footer>` out of the table's children
+	 * with `child.type === DataGrid.Footer`, and reading one key off the compound keeps all 29
+	 * components. It cost this entry 40 658 gzipped bytes against 16 139 once the check named
+	 * `DataGridFooter` directly, and 10 522 once React Aria's own `TableFooter` removed the need
+	 * to split anything at all. Every other reference to the adapter in either kit is an
+	 * `import type`, which is erased — that was the only one, and the shadcn kit never had it.
+	 * The case stays because the rule is about the namespace, not about that one call site.
+	 *
+	 * Asked with {@link bundledCodeOf}: `./core` legitimately reaches `@ez-kit/data-grid-react`,
+	 * so entry-point sets cannot see the difference. `data-slot='filter-panel'` is written by the
+	 * adapter's `FilterPanel` and by nothing in this group, so its presence is the compound
+	 * surviving the shake. Note the marker is only unambiguous *here* — the kits' own
+	 * `./filtering` group authors that same literal.
+	 */
+	it('does not reach the compound namespace through a component group', async () => {
+		const core = subpathEntryOf('data-grid/react/heroui', 'core/index.js')
+
+		expect(await bundledCodeOf(core, ['coreComponents'])).not.toContain('filter-panel')
+	})
 })
 
 /**

@@ -844,6 +844,17 @@ new argument.
   namespace there — and that wholesale copy exists precisely because a hand-written list had
   silently fallen five members behind. Bad trade; not taken.
 
+**The heroui kit renders the footer as a collection section, not through a portal.** React Aria's
+`TableFooter` arrived in react-aria-components 1.18 and HeroUI made that package a peer (`^1.21.1`)
+in 3.2.3, so `Tfoot` is now `RacTableFooter` imported from `react-aria-components` directly —
+HeroUI does not re-export it, because their own `Table.Footer` is a `<div>` _outside_ the table for
+pagination. Before 1.18 a `<tfoot>` was not a node the collection recognised and was silently
+dropped, so the kit lifted the footer out of the children before the collection saw them, portalled
+it back into the real `<table>`, and flipped `Tr` / `Td` into a plain-DOM mode through a context
+while it rendered. Four parts, all removed together. The footer's cells are now ordinary collection
+cells, which is also why they became focusable. `react-aria-components` is a peer of the kit from
+here on; the shadcn kit is untouched, its table is plain DOM.
+
 So **`createDataGrid` and both kit roots still carry everything**, and that is left standing rather
 than pending. A kit root is "everything" by construction — its `data-grid.tsx` calls
 `createDataGrid({ components: allComponents, features: allDataGridFeatures })` at the top level —

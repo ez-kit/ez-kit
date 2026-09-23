@@ -96,6 +96,29 @@ describe('@ez-kit/data-grid-heroui', () => {
 		expect(screen.getByText('Ada')).toBeInTheDocument()
 	})
 
+	/**
+	 * The column footer, which this kit renders through HeroUI's React Aria collection.
+	 *
+	 * Worth a case of its own because the footer is the one section the collection did not
+	 * understand until react-aria-components 1.18: a `<tfoot>` was silently dropped, so every
+	 * column `footer` here rendered nothing while the grid looked fine.
+	 */
+	it('renders a column footer inside the table', () => {
+		render(
+			<DataGrid
+				features={allDataGridFeatures}
+				data={[{ id: 1, name: 'Ada' }]}
+				columns={createColumns<User>([{ accessorKey: 'name', header: 'Name', footer: 'Total' }])}
+			/>,
+		)
+
+		const cell = screen.getByText('Total')
+
+		expect(cell).toBeInTheDocument()
+		expect(cell.closest('tfoot')).not.toBeNull()
+		expect(cell.closest('table')).toBe(screen.getByRole('grid', { name: 'Data grid' }))
+	})
+
 	it('selects rows through the grid checkbox', () => {
 		const table = createTable<GridFeatures, User>({
 			features: allDataGridFeatures,
