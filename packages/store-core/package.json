@@ -1,6 +1,6 @@
 {
 	"name": "@ez-kit/store-core",
-	"version": "1.0.0",
+	"version": "1.1.0",
 	"description": "Shared foundation for the @ez-kit store packages: store ids, service registry, plugin contract and the manager-agnostic instance cache.",
 	"keywords": [
 		"react",
@@ -71,7 +71,7 @@
 		},
 		{
 			"path": "dist/history/index.js",
-			"limit": "520 B"
+			"limit": "690 B"
 		}
 	],
 	"devDependencies": {
