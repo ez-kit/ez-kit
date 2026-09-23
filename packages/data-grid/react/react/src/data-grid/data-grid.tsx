@@ -398,7 +398,9 @@ function DataGridUncontrolled<TFeatures extends TableFeatures, TRow extends obje
  *   <DataGrid.Pagination />
  * </DataGrid>
  */
-function DataGridRoot<TFeatures extends TableFeatures, TRow extends object>(props: DataGridProps<TFeatures, TRow>) {
+export function DataGridRoot<TFeatures extends TableFeatures, TRow extends object>(
+	props: DataGridProps<TFeatures, TRow>,
+) {
 	const isControlled = props.table != null
 
 	// Dev-only: flipping a mounted grid between controlled and uncontrolled

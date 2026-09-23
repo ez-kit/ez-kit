@@ -832,7 +832,9 @@ new argument.
 - **Named component exports plus `DataGrid.X` as sugar on its own subpath**, mirroring
   `features/all`. This was the prescribed fix here until it was measured against the annotation:
   it lands on the **same** 27 901 bytes, to the byte, while costing a major and 1 616 occurrences
-  of `DataGrid.X` across 130 files of docs, examples and shadcn registry payload.
+  of `DataGrid.X` across 130 files of docs, examples and shadcn registry payload. What made it
+  expensive is the word **subpath**: the compound _moving_. Adding the names **beside** it is a
+  different change, it is not rejected, and it now ships — see below.
 - **A getter namespace** (`Object.defineProperties(DataGrid, { Toolbar: { get: () => Toolbar } … })`)
   — 156 021 bytes, i.e. **worse than doing nothing**. A top-level call that names the component
   anchors it whatever form the call takes.
@@ -843,6 +845,31 @@ new argument.
   because `Object.assign(BoundDataGrid, DataGrid)` in `create-data-grid.tsx` is what puts the
   namespace there — and that wholesale copy exists precisely because a hand-written list had
   silently fallen five members behind. Bad trade; not taken.
+
+**Every compound member is also exported by name, and that is additive rather than the rejected
+alternative above.** `DataGrid.X` stays exactly where it is; `DataGridToolbar`, `DataGridTable`,
+`DataGridFooter`, … are the same values under the names the `DataGrid*Props` types already used,
+and `DataGridRoot` is the compound-free root. Measured on the built `dist` with esbuild (minified,
+gzipped, React external): `DataGrid` costs 34 272 bytes whatever a call site renders, a grid
+composed from ten named components — table, body, row, cell, the header trio, toolbar, pagination,
+footer — costs 19 265, and the whole surface moved 39 041 → 39 125, which is the `export` lines
+themselves. About 9 500 of either figure is the shared floor, so the components go from ~25 kB to
+~10 kB. **The prefix is deliberate and the compound's keys stay short** — `Body`, `Row`, `Cell`,
+`Header` are too general for a package root that also exports `createColumns` and `createDataGrid`,
+which is the same conclusion `@heroui/react` reached for its own table (`TableBody` beside
+`Table.Body`). Note their `Object.assign` carries no `/* @__PURE__ */`, so their named exports buy
+types and ergonomics but no bytes; ours buys bytes because the annotation and the flat literal are
+already there. This also settles a split the package had — `DataGridRow` and `DataGridCell` were
+prefixed, `Body` and `Header` were not.
+
+The heroui kit is where this was found. Its `table-adapters.tsx` used to split `<DataGrid.Footer>`
+out of HeroUI's React Aria collection with `child.type === DataGrid.Footer`, and that one key read
+anchored all 29 components into the kit's `./core` entry: 40 658 gzipped bytes, against 16 139 once
+the check named `DataGridFooter` instead. Every other reference to the adapter in either kit is an
+`import type`, which is erased, so that was the only one. The split itself is gone now — see the
+footer note below — which took the entry to 10 522, but the rule it proved stands and
+`apps/docs/test/tree-shaking.test.ts` pins it, along with the named exports and `DataGridRoot`
+staying clear of the compound.
 
 **The heroui kit renders the footer as a collection section, not through a portal.** React Aria's
 `TableFooter` arrived in react-aria-components 1.18 and HeroUI made that package a peer (`^1.21.1`)

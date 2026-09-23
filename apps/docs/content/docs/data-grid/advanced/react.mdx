@@ -17,6 +17,45 @@ The React adapter sits between [core](/docs/data-grid/advanced/core) and the UI-
 | `CellTypeDefinition` (type), `CellTypesProvider`, `useCellTypes` | The typed contract and context custom cell-type registries are built on. Registration itself (`extendDataGrid()`) is a UI-kit export, not part of this package (see [Custom Cell Types](/docs/data-grid/columns/custom-cell-types)).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | `createDataGrid({ components, cellTypes, defaults })`            | **Inject a UI-kit's components**, optional cell types, and optional kit-level [default options](/docs/data-grid/state/defaults). Returns a bundle — `DataGrid`, `useDataGrid`, `createColumns`, `createColumnHelper`, `extendDataGrid`, … — bound to them. Flavor packages call it exactly once at module scope.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `DataGrid.*`                                                     | The compound render slots — `Toolbar`, `Table`, `Footer`, `FooterRow`, `FooterCell`, `Header`, `HeaderRow`, `HeaderCell`, `Body`, `Row`, `Cell`, `Pagination`, `PageSizer`, `ColumnFilter`, `ActionBar`, `CreateTrigger`, `VisibilityTrigger`, `SortMenuTrigger`, `GlobalFilterInput`, `ActiveFiltersBar`, `ClearFiltersButton`, `FilterPanel`, `CreatingModal`, `EditingModal`, `LoadingBody`, `EmptyStateRow`, `NoResultsRow`. Every one takes `children` — a node, or a render function receiving that slot's model — and exports a `DataGrid<Name>Props` type. Beside them sit `BottomBar`, and `HeaderMain` / `HeaderExtras`, the header cell's two boxes: plain hosts stamped with their `data-slot`, so a composed header never hand-writes the element the kit's CSS selects on. Their props are `HeaderMainProps` / `HeaderExtrasProps` — `div` attributes, passed straight through. |
+| `DataGridRoot`, `DataGridToolbar`, `DataGridTable`, …            | The same components, exported one by one under the names their `DataGrid<Name>Props` types already use. `DataGrid.Toolbar` and `DataGridToolbar` are the same value; the named form is what lets a bundler drop the ones you do not render (see below). `DataGridRoot` is the root **without** the statics.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+
+### Naming a component instead of the namespace
+
+`DataGrid` is one object carrying all 29 components, so a bundler that sees the name keeps every
+one of them — that is what a namespace is. Importing the components you actually render lets it
+keep only those:
+
+```tsx
+import {
+	DataGridRoot,
+	DataGridTable,
+	DataGridHeader,
+	DataGridHeaderRow,
+	DataGridHeaderCell,
+	DataGridBody,
+	DataGridRow,
+	DataGridCell,
+} from '@ez-kit/data-grid-react'
+;<DataGridRoot {...config}>
+	<DataGridTable>
+		<DataGridHeader>
+			<DataGridHeaderRow>{(header) => <DataGridHeaderCell header={header} />}</DataGridHeaderRow>
+		</DataGridHeader>
+		<DataGridBody>
+			{(row) => <DataGridRow row={row}>{(cell) => <DataGridCell cell={cell} />}</DataGridRow>}
+		</DataGridBody>
+	</DataGridTable>
+</DataGridRoot>
+```
+
+Measured with esbuild, minified and gzipped with React external: `DataGrid` costs 34 272 bytes
+whatever a page renders, and a grid composed from ten named components costs 19 265. About 9 500
+of either is the shared floor every grid pays, so the components themselves go from ~25 kB to
+~10 kB.
+
+Use `DataGridRoot`, not `DataGrid`, as the host — naming the compound anywhere in the tree brings
+the other components back. `DataGrid.X` stays supported and is still the shorter thing to write
+when a page renders most of the grid anyway.
 
 ## Build your own UI flavor
 

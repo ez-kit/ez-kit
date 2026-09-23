@@ -355,6 +355,22 @@ describe('@ez-kit/data-grid-react', () => {
 		expect(await bundledCodeOf(ADAPTER_ENTRY, ['useDataGridTable'])).not.toContain(FILTER_PANEL_MARKER)
 	})
 
+	/**
+	 * Every compound member is also exported by name, and naming one must not bring the rest.
+	 *
+	 * That is the whole point of the named exports: `DataGrid` costs 34 272 gzipped bytes whatever
+	 * a call site renders, while a grid composed from ten named components costs 19 265. If a
+	 * named import reached `FilterPanel`, the compound would be back and the saving with it.
+	 */
+	it('does not reach one through a named component export', async () => {
+		expect(await bundledCodeOf(ADAPTER_ENTRY, ['DataGridFooter'])).not.toContain(FILTER_PANEL_MARKER)
+	})
+
+	/** And the bare root must stay bare — `<DataGrid>` as a host would hand the saving back. */
+	it('does not reach one through DataGridRoot', async () => {
+		expect(await bundledCodeOf(ADAPTER_ENTRY, ['DataGridRoot'])).not.toContain(FILTER_PANEL_MARKER)
+	})
+
 	it('costs meaningfully less than the whole surface', async () => {
 		const [narrow, everything] = await Promise.all([
 			bundledCodeOf(ADAPTER_ENTRY, ['useDataGridTable']),
