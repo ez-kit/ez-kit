@@ -93,13 +93,50 @@ With `partialize`, a step is the slice (`defaultPasts`, `defaultFutures` and `sh
 ## `useHistory(store)`
 
 ```tsx
-const { undo, redo, goto, clear, pause, resume, skip, isPaused, pasts, futures, limit, canUndo, canRedo } =
-	useHistory(store)
+const {
+	undo,
+	redo,
+	goto,
+	clear,
+	clearFutures,
+	pause,
+	resume,
+	skip,
+	isPaused,
+	pasts,
+	futures,
+	limit,
+	canUndo,
+	canRedo,
+} = useHistory(store)
 ```
 
-Subscribes through `useSnapshot(history.state)`, so `pasts`, `futures`, `limit` and `isPaused` re-render the caller when they change; `canUndo` / `canRedo` are derived (`pasts.length > 0` / `futures.length > 0`). The methods (`undo`, `redo`, `goto`, `clear`, `pause`, `resume`, `skip`) are stable references from `store.history` — call them from event handlers without re-subscribing.
+Subscribes through `useSnapshot(history.state)`, so `pasts`, `futures`, `limit` and `isPaused` re-render the caller when they change; `canUndo` / `canRedo` are derived (`pasts.length > 0` / `futures.length > 0`). The methods (`undo`, `redo`, `goto`, `clear`, `clearFutures`, `pause`, `resume`, `skip`) are stable references from `store.history` — call them from event handlers without re-subscribing.
 
 `goto(index)` jumps to an absolute position on the linear timeline `[...pasts, current, ...futures]` (`index === pasts.length` is a no-op — you're already there); out-of-range indices clamp rather than throw. `skip(fn)` runs `fn` with recording paused for its duration, re-entrant, and restores the prior pause state on exit.
+
+## A write that is not a step, but ends the redo branch
+
+Any new edit makes the redo branch unreachable: redoing a step from before it would jump the state into a timeline the user has already left. A recorded write enforces that on its own — it empties `futures` as it pushes its step. A skipped write does not, because `skip(fn)` touches neither stack. When a write must not be its own undo step (it folds into the step before it, or it is an automatic follow-up such as a layout pass) but does change what redo would land on, empty `futures` yourself with `clearFutures()`:
+
+```ts
+function removeNodeInPlace(state: EditorState, id: string) {
+	state.history.clearFutures()
+	state.history.skip(() => {
+		state.graph = removeNode(state.graph, id)
+	})
+}
+```
+
+Call it **before** the write, so a synchronous subscriber (`subscribe(state, cb, true)`) or code later in the same tick never sees the new state beside a redo step that no longer applies to it. A `useSnapshot` consumer sees both changes in one batch whichever order you pick, so the rule costs nothing there. Like every history method, `clearFutures()` first flushes a still-pending write, which is recorded as a step before the redo stack is emptied. It is not affected by `pause()` or `skip()`, and does nothing — no notification — when `futures` is already empty.
+
+The three stack operations answer three different questions:
+
+| Call             | `pasts`   | `futures` | Use it when                                                        |
+| ---------------- | --------- | --------- | ------------------------------------------------------------------ |
+| `skip(fn)`       | unchanged | unchanged | the write has nothing to do with history — a cursor, a selection   |
+| `clearFutures()` | unchanged | emptied   | the write is not an undo step, but the old redo branch is now void |
+| `clear()`        | emptied   | emptied   | there is no history any more — a different document was loaded     |
 
 ## `useTimeline(store)`
 

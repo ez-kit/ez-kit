@@ -319,6 +319,51 @@ describe('withHistory — clear', () => {
 	})
 })
 
+describe('withHistory — clearFutures', () => {
+	it('empties futures in the sub-store, keeps pasts, and leaves the state alone', () => {
+		const store = makePaintStore()
+		store.setState({ color: 'blue' })
+		store.setState({ color: 'green' })
+		store.history.getState().undo()
+
+		store.history.getState().clearFutures()
+
+		expect(store.history.getState().futures).toEqual([])
+		expect(store.history.getState().pasts).toEqual([{ color: 'red', size: 10 }])
+		expect(store.getState().color).toBe('blue')
+	})
+
+	it('with skip, writes the state without a step and closes the redo branch', () => {
+		const store = makePaintStore()
+		store.setState({ color: 'blue' })
+		store.history.getState().undo()
+
+		store.history.getState().clearFutures()
+		store.history.getState().skip(() => {
+			store.setState({ size: 20 })
+		})
+
+		expect(store.getState()).toMatchObject({ color: 'red', size: 20 })
+		expect(store.history.getState().pasts).toEqual([])
+		expect(store.history.getState().futures).toEqual([])
+	})
+
+	it('called before the skipped write, a subscriber to that write never sees a stale redo branch', () => {
+		const store = makePaintStore()
+		store.setState({ color: 'blue' })
+		store.history.getState().undo()
+		const seen: number[] = []
+		store.subscribe(() => seen.push(store.history.getState().futures.length))
+
+		store.history.getState().clearFutures()
+		store.history.getState().skip(() => {
+			store.setState({ size: 20 })
+		})
+
+		expect(seen).toEqual([0])
+	})
+})
+
 describe('withHistory — pause / resume', () => {
 	it('pause stops recording subsequent writes', () => {
 		const store = makePaintStore()

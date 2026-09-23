@@ -3,7 +3,7 @@ title: withHistory
 description: A real Zustand middleware that adds undo / redo / goto to any store. Records actions automatically, composes with persist and subscribeWithSelector, filters writes by action tag.
 ---
 
-`withHistory` is a real Zustand `StateCreator` middleware. It wraps an initializer (not a store), so it sees every write — including those issued from inside actions via the inner `set`. It exposes a separate `history` sub-store on the resulting `StoreApi<T>`, with `undo`, `redo`, `goto`, `clear`, `pause`, `resume`, and `skip`.
+`withHistory` is a real Zustand `StateCreator` middleware. It wraps an initializer (not a store), so it sees every write — including those issued from inside actions via the inner `set`. It exposes a separate `history` sub-store on the resulting `StoreApi<T>`, with `undo`, `redo`, `goto`, `clear`, `clearFutures`, `pause`, `resume`, and `skip`.
 
 Because it follows the canonical middleware shape and registers a `StoreMutators` entry under `'ez-kit/history'`, it composes cleanly with `persist`, `devtools`, `subscribeWithSelector`, and `immer`.
 
@@ -80,6 +80,7 @@ type StoreHistory<T> = {
 	redo: () => void
 	goto: (index: number) => void
 	clear: () => void
+	clearFutures: () => void
 	pause: () => void
 	resume: () => void
 	skip: (fn: () => void) => void
@@ -95,8 +96,22 @@ There are four idiomatic patterns. **Pick the one that matches what your code is
 ### `useHistory(store)` — the whole control surface
 
 ```tsx
-const { undo, redo, goto, clear, pause, resume, skip, isPaused, pasts, futures, limit, canUndo, canRedo } =
-	useHistory(store)
+const {
+	undo,
+	redo,
+	goto,
+	clear,
+	clearFutures,
+	pause,
+	resume,
+	skip,
+	isPaused,
+	pasts,
+	futures,
+	limit,
+	canUndo,
+	canRedo,
+} = useHistory(store)
 ```
 
 One subscription to the `history` sub-store, flattened into one object, with `canUndo` / `canRedo` derived (`pasts.length > 0` / `futures.length > 0`). The methods are stable references — call them from event handlers without re-subscribing.
@@ -339,6 +354,33 @@ withHistory((set, _get, api) => ({
 	moveCursor: (pos: number) => api.history.getState().skip(() => set({ cursorPos: pos })),
 }))
 ```
+
+## A write that is not a step, but ends the redo branch
+
+Any new edit makes the redo branch unreachable: redoing a step from before it would jump the state into a timeline the user has already left. A recorded write enforces that on its own — it empties `futures` as it pushes its step. A skipped write does not, because it touches neither stack. When a write must not be its own undo step (it folds into the step before it, or it is an automatic follow-up such as a layout pass) but does change what redo would land on, empty `futures` yourself with `clearFutures()`:
+
+```ts
+withHistory((set, _get, api) => ({
+	graph: emptyGraph,
+	removeNodeInPlace: (id: string) => {
+		const history = api.history.getState()
+		history.clearFutures()
+		history.skip(() => {
+			set((s) => ({ graph: removeNode(s.graph, id) }))
+		})
+	},
+}))
+```
+
+Call it **before** the write. The other way round, a subscriber reacting to the write sees the new state beside a redo step that no longer applies to it, and `canRedo` is briefly `true` for a branch that is already gone. `clearFutures()` is not affected by `pause()` or `skip()`, and does nothing — no notification — when `futures` is already empty.
+
+The three stack operations answer three different questions:
+
+| Call             | `pasts`   | `futures` | Use it when                                                        |
+| ---------------- | --------- | --------- | ------------------------------------------------------------------ |
+| `skip(fn)`       | unchanged | unchanged | the write has nothing to do with history — a cursor, a selection   |
+| `clearFutures()` | unchanged | emptied   | the write is not an undo step, but the old redo branch is now void |
+| `clear()`        | emptied   | emptied   | there is no history any more — a different document was loaded     |
 
 ## `goto(index)`
 

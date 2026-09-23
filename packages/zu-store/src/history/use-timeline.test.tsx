@@ -50,6 +50,11 @@ describe('useHistory', () => {
 		})
 		expect(history.canUndo).toBe(false)
 		expect(history.canRedo).toBe(true)
+
+		act(() => {
+			history.clearFutures()
+		})
+		expect(history.canRedo).toBe(false)
 	})
 })
 

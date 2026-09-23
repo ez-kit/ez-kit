@@ -1238,7 +1238,12 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.ZuHistory,
 		optionTables: [{ heading: 'Options', roots: [STORE_TYPE.ZuHistoryOptions], expectedCount: 6 }],
-		nonOptionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'A write that is not a step, but ends the redo branch',
+				reason: 'Compares three history methods by their effect on the stacks, naming no config keys.',
+			},
+		],
 	},
 	{
 		page: DocPage.ZuIndex,
@@ -1376,7 +1381,12 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.VaHistory,
 		optionTables: [{ heading: 'Options', roots: [STORE_TYPE.VaHistoryOptions], expectedCount: 7 }],
-		nonOptionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'A write that is not a step, but ends the redo branch',
+				reason: 'Compares three history methods by their effect on the stacks, naming no config keys.',
+			},
+		],
 	},
 	{
 		page: DocPage.VaIndex,

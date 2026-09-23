@@ -39,6 +39,7 @@ export type HistoryApi<T, TMeta = unknown> = {
 	redo: () => void
 	goto: (index: number) => void
 	clear: () => void
+	clearFutures: () => void
 	pause: () => void
 	resume: () => void
 	skip: (fn: () => void) => void
