@@ -70,6 +70,9 @@ const withHistoryImpl: WithHistoryImpl =
 			clear: () => {
 				historyApi.clear()
 			},
+			clearFutures: () => {
+				historyApi.clearFutures()
+			},
 			pause: () => {
 				historyApi.pause()
 			},
