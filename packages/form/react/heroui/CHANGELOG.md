@@ -1,5 +1,243 @@
 # @ez-kit/form-heroui
 
+## 0.5.0
+
+### Minor Changes
+
+- c4ac267: Repeatable field groups, through both authoring paths.
+
+  JSX scopes the components to the entry rather than composing a path, so a field inside one is
+  written `<item.TextField name='firstName' />` and checked against the item's type:
+
+  ```tsx
+  <form.ArrayField
+  	name='people'
+  	newItem={{ firstName: '' }}
+  >
+  	{({ items }) =>
+  		items.map((item) => (
+  			<item.Item key={item.key}>
+  				<item.TextField
+  					name='firstName'
+  					label='Name'
+  				/>
+  			</item.Item>
+  		))
+  	}
+  </form.ArrayField>
+  ```
+
+  A document says the same thing with an `array` node whose `children` are the entry's fields,
+  named relative to the entry. Nested arrays work on both paths. `defineFormItem` authors an
+  entry's field set separately, for reuse across forms and across arrays.
+
+  Conditions inside an entry use the `./` prefix that `FieldRef` had reserved — `{ field: './kind',
+eq: 'vip' }` means _this_ entry's `kind`, while an absolute ref still reaches the form root.
+
+  Validation treats the list as a value of its own: `minLength` / `maxLength` count entries, and a
+  named `rule` receives the whole array, so a cross-item check ("no two people share an email") is
+  expressible. Such a rule may answer with `{ path, message }` issues that name the offending
+  entry instead of blaming the list.
+
+  `form.Array` is the headless counterpart of `form.ArrayField`: same engine, same scope handed to
+  `children`, but it draws no frame, no label and no add control of its own — it renders exactly
+  what the render prop returns. Reach for it when the kit's own chrome doesn't fit the layout (rows
+  in a table, a remove control folded into a card heading, and so on):
+
+  ```tsx
+  <form.Array
+  	name='people'
+  	newItem={{ firstName: '' }}
+  >
+  	{({ items, add, Button }) => (
+  		<>
+  			{items.map((item, index) => (
+  				<item.Item
+  					key={item.key}
+  					label={`Person ${index + 1}`}
+  				>
+  					<item.TextField
+  						name='firstName'
+  						label='Name'
+  					/>
+  				</item.Item>
+  			))}
+  			<Button onClick={add}>Add person</Button>
+  		</>
+  	)}
+  </form.Array>
+  ```
+
+  `item.Item` works the same way inside the primitive — there's just no array-level `itemLabel` /
+  `removeLabel` / `reorderable` to fall back to, so `Item` takes its own `label`, `removeLabel` and
+  `reorderable` directly. The scope's `disabled` and `required` mirror the props given to `Array` (or
+  `ArrayField`) as plain data, since a bare primitive has no frame of its own to render them on;
+  likewise `errors` and `invalid` carry the list's own validation failures, but **nothing renders
+  them for you** — a `minLength` failure still blocks submit even when the render prop doesn't read
+  `errors`. https://ez-kit-docs.vercel.app/docs/form/arrays calls this out at length.
+
+  **`ButtonProps` gained an optional `onClick`.** The kit's generic button used to be only the
+  submit button, which fires through the surrounding `<form>`'s submit event and takes no handler —
+  now the scope's `Button` (used above for `add`) needs to be clickable too. This is additive at the
+  type level and adds no `FormComponents` key, but it is a real behavioural gap for a kit outside
+  this repo: **implement `Button` without honouring `onClick` and it silently becomes a dead
+  control**, something the type system cannot catch. The shadcn and HeroUI kits already wire it
+  through.
+
+  **The submit marker moved off the non-submit buttons.** Both kits stamped every `Button` as the
+  form's submit — `data-slot='form-submit'` in shadcn, `data-form-submit` in HeroUI — which was
+  accurate while the only `Button` was the submit button. Now that the array scope hands the same
+  component out for add, remove, duplicate and reorder controls, the marker is stamped only when the
+  button's `type` is `'submit'`; anything else gets `data-slot='form-button'` / `data-form-button`.
+  CSS or a test keying on the submit marker to reach a scope button needs to switch to the new one.
+  This matters beyond this repo for shadcn: those files ship as the registry payload `npx shadcn add`
+  copies into a project, so a consumer who already ran it has the old spelling in their own tree.
+
+  **The item type is read from `name`.** `ArrayProps` and `ArrayFieldProps` are generic over the
+  array path (`<TFormData, TName extends ArrayKeys<TFormData>>`) rather than over the item, so `name`
+  is the inference site and `newItem`, `children` and the scope are resolved from the value at that
+  path. An inline `newItem` therefore needs no annotation even when a key of the item is itself an
+  array, and a `newItem` that does not match reports on **`newItem`**, naming the item type and the
+  key at fault. A `newItem` missing a key of the item is now a compile error rather than an
+  uncontrolled input on the new row. `@ez-kit/form-core` exports `ArrayKeys` and `ArrayItemOf`, the
+  two helpers the schema side already used, so a kit or app can spell the same thing. Type-level
+  only — no runtime change — but code that wrote the type arguments explicitly
+  (`ArrayProps<Values, Person>`) becomes `ArrayProps<Values, 'people'>`.
+
+  **Breaking for a kit outside this repo.** `FormComponents` gains two required slots,
+  `ArrayField` and `ArrayItem`, so a kit that wrote `satisfies FormComponents` must implement
+  them. The shadcn and HeroUI kits already do. `form.Array` adds no further slot — it reuses the
+  same two.
+
+  Two behavioural fixes come with it, both from the same root cause — the traversal that decides
+  what a schema owns now follows paths instead of top-level keys:
+  - `stripHiddenValues` now strips a hidden field addressed by a dotted path (`company.inn`) out
+    of its parent object. It previously left it in place, and the value reached `onSubmit`.
+  - `minLength` / `maxLength` now apply to an **empty** list. A `minLength: 1` used to pass on
+    `[]`, which is the one case the option exists for; the same fix makes it work on an empty
+    multi-select.
+
+- 03df900: The field set is no longer closed: an app registers its own field kinds and gets them typed.
+
+  `createForm` takes two bags instead of one — `components` for the form's chrome, `fields` for the
+  field kinds — and `fields` is an **open registry**. A kit spreads its own twelve and an app adds to
+  them:
+
+  ```tsx
+  // app/form.ts — once per project
+  import { createForm, defineFieldType, formComponents, formFieldSlots } from '@ez-kit/form-shadcn'
+
+  const RatingField = defineFieldType<{ max: number }, number>()(({ value, onChange, props }) => (
+  	<Stars
+  		value={value}
+  		max={props.max}
+  		onChange={onChange}
+  	/>
+  ))
+
+  export const { useForm, Form, FormRenderer, withForm } = createForm({
+  	components: formComponents,
+  	fields: { ...formFieldSlots, RatingField },
+  })
+  ```
+
+  `form.RatingField` is then a real field on the instance: `name` is narrowed to the paths that hold
+  its value type, `max` is required and checked, and it receives exactly what a built-in receives —
+  `id`, `data-field`, normalised `errors`, `invalid`, `onBlur`, `disabled`, plus `value` / `onChange`
+  and the author's own props. It works inside `form.ArrayField`, scoped to the entry, and inside a
+  `withForm` block, with nothing extra written at either call site.
+
+  **The registry key is the component name; the document type id is derived from it** — strip a
+  trailing `Field`, lowercase. So `RatingField` answers to `{ type: 'rating' }` in a schema document,
+  through the same component, with the same props. The derivation runs in that direction because the
+  other one is lossy: `radiogroup` cannot yield `RadioGroupField`.
+
+  Registration is checked once, when `createForm` runs, not per render. A key whose derived id
+  collides with a reserved node type (`section`, `step`, `submit`, `block`, `array`), two keys
+  deriving one id, and a key that would collide with the form's own components (`SubmitButton`,
+  `Section`, `GridItem`, `ArrayField`, `Array`) each throw by name.
+
+  ## Breaking — and shipping as a minor, deliberately
+
+  These packages are still `0.x`, where the convention is that a breaking change lands as a **minor**
+  rather than a major. That is what this release is: the surface below is genuinely incompatible with
+  `0.3`, and it moves the minor digit so the break can be tried, used and corrected before anything
+  is promised. The major is the promise, and it comes later, once this API has been lived with.
+
+  **`FormComponents` split, and every kit must be updated.** It keeps the seven chrome slots —
+  `Form`, `Button`, `Section`, `GridItem`, `Wizard`, `ArrayField`, `ArrayItem` — and the twelve field
+  kinds moved to the new `FormFieldSlots`. Split your single object in two, write
+  `satisfies FormComponents` on the first and `satisfies FormFieldSlots` on the second, and call
+  `createForm({ components, fields })`. No component's props changed: this is a move, not a rewrite.
+  `satisfies` does excess-property checking, so an unsplit nineteen-key literal fails to compile with
+  "Object literal may only specify known properties" rather than silently half-working.
+
+  Export both objects, and each field individually — that is what lets a consumer of your kit extend
+  the set without forking it. Keep exporting your ready-made bundle too: an app with no custom fields
+  should never have to call the factory.
+
+  **`fields` is required.** `createForm({ components })` no longer compiles. The guard that fills a
+  missing slot with a warn-once placeholder still ships, but it is for JavaScript consumers and
+  partially-written kits — a TypeScript kit gets a compile error instead of twelve blank fields.
+
+  **`FormRenderer`'s `fields` prop is gone.** Custom field kinds are registered at the factory, which
+  is now the single registration site, so a per-form registry would have been a second spelling of the
+  same thing keyed differently (`RatingField` there, `rating` here). `blocks` is unchanged — a block
+  carries no binding and no field kind.
+
+  **`FormBundle` is now generic** over the registry, defaulted, so the bare spelling keeps working.
+  `FormFieldComponents`, `KitFormApi`, `BoundForm`, `RendererForm` and the array scope types likewise
+  gained a trailing defaulted parameter; every existing one-argument spelling compiles unchanged and
+  keeps meaning "the kit's twelve".
+
+  ## Also in this release
+  - `parseFormSchema` now **accepts a `./`-prefixed field reference inside an array item**, where it
+    is the only way to name a sibling field of the same entry — the entry's index is not knowable when
+    a document is authored. It still rejects one outside an array, where there is no item to resolve
+    against. Previously it rejected every `./`, so a document that worked inline threw when the same
+    payload arrived as JSON.
+  - `ButtonProps`, `FieldRenderProps` and every per-kind `*RenderProps` are unchanged.
+
+- 0dc4733: A schema now carries its own value type, so `FormRenderer`'s `onSubmit` no longer needs
+  `defaultValues` to type `value`.
+
+  ```tsx
+  const schema = defineFormSchema<Order>()({
+  	version: 1,
+  	children: [{ type: FormFieldType.Text, name: 'email' }],
+  })
+
+  // before: `value` was `unknown` here — only `defaultValues` could pin it
+  // after:  `value` is `Order`
+  <FormRenderer schema={schema} onSubmit={({ value }) => save(value)} />
+  ```
+
+  `TValues` appeared in a node only inside `DeepKeysOfType<TValues, …>`, a conditional type no
+  inference can run backwards through: from `name: 'email'` TypeScript cannot ask which object
+  produces that union, so it fell back to `unknown`. `defaultValues` was the only ordinary-position
+  occurrence anywhere nearby, which made it the sole inference site — and a backend-delivered
+  document, the case where the schema is the only thing that knows the shape, is exactly the case
+  with no `defaultValues` to state it with.
+
+  `FormSchema` gained an optional, type-only `__values` marker and `defineFormSchema` re-attaches it
+  on the way out. It is never written and never read at runtime: `defineFormSchema` still returns its
+  argument by identity, so the property exists in the type and in no object, and nothing new is
+  serialised back to a backend. The same trick as `defineFieldType`'s `__props` / `__value`.
+  `parseFormSchema<Order>(json)` carries the type the same way.
+
+  Nothing is required of you: a hand-built or unannotated schema stays assignable and behaves exactly
+  as before. The one way this can surface is as a **new** type error where `defaultValues` and the
+  schema disagreed — previously `unknown` masked the mismatch, and it is now reported at the call
+  site.
+
+### Patch Changes
+
+- Updated dependencies [c4ac267]
+- Updated dependencies [03df900]
+- Updated dependencies [0dc4733]
+  - @ez-kit/form-core@0.4.0
+  - @ez-kit/form-react@0.4.0
+
 ## 0.4.0
 
 ### Minor Changes
