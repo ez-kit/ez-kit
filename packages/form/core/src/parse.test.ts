@@ -41,11 +41,64 @@ test('rejects a rule key with no registered implementation', () => {
 	).toThrow(/unknown validation rule "inn"/i)
 })
 
-test('rejects a relative field reference in v1', () => {
+test('rejects a relative field reference outside an array item', () => {
 	expect(() =>
 		parseFormSchema({
 			version: 1,
 			children: [{ type: 'text', name: 'a', when: { field: './b', eq: 1 } }],
+		}),
+	).toThrow(/relative/i)
+})
+
+test('accepts a relative field reference inside an array item', () => {
+	expect(() =>
+		parseFormSchema({
+			version: 1,
+			children: [
+				{
+					type: 'array',
+					name: 'people',
+					children: [
+						{ type: 'text', name: 'kind' },
+						{ type: 'text', name: 'company', when: { field: './kind', eq: 'company' } },
+					],
+				},
+			],
+		}),
+	).not.toThrow()
+})
+
+test('accepts a relative reference inside a nested array, where the nearest item is the scope', () => {
+	expect(() =>
+		parseFormSchema({
+			version: 1,
+			children: [
+				{
+					type: 'array',
+					name: 'people',
+					children: [
+						{
+							type: 'array',
+							name: 'addresses',
+							children: [
+								{ type: 'text', name: 'kind' },
+								{ type: 'text', name: 'city', when: { field: './kind', eq: 'home' } },
+							],
+						},
+					],
+				},
+			],
+		}),
+	).not.toThrow()
+})
+
+test("an array's own condition is read in its parent's scope, not in its items'", () => {
+	expect(() =>
+		parseFormSchema({
+			version: 1,
+			children: [
+				{ type: 'array', name: 'people', children: [{ type: 'text', name: 'a' }], when: { field: './b', eq: 1 } },
+			],
 		}),
 	).toThrow(/relative/i)
 })
