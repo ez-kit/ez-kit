@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { createForm } from './create-form'
 import { FormOptionSources } from './options/source-context'
-import { testComponents } from './test-kit'
+import { testComponents, testFields } from './test-kit'
 
 import type { OptionSourceRegistry, SearchableOptionSource } from './options/source-types'
 import type { OptionValue, SelectOption } from '@ez-kit/form-core'
@@ -36,7 +36,7 @@ function searchCities(query: string): readonly SelectOption<OptionValue>[] {
 	return CITIES.filter((city) => city.label.toLowerCase().startsWith(query.toLowerCase()))
 }
 
-const { useForm, Form } = createForm({ components: testComponents })
+const { useForm, Form } = createForm({ components: testComponents, fields: testFields })
 
 function withSources(sources: OptionSourceRegistry, children: ReactNode): ReactNode {
 	return <FormOptionSources value={sources}>{children}</FormOptionSources>

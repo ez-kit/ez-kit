@@ -4,7 +4,7 @@ import { memo, useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { createForm } from './create-form'
-import { testComponents } from './test-kit'
+import { testComponents, testFields } from './test-kit'
 
 import type { ReactNode } from 'react'
 
@@ -25,7 +25,7 @@ function last<T>(items: readonly T[]): T {
 	return tail
 }
 
-const { Form } = createForm({ components: testComponents })
+const { Form } = createForm({ components: testComponents, fields: testFields })
 
 const NEW_PERSON: Person = { firstName: '' }
 

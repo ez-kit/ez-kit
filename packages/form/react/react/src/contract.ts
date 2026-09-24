@@ -2,7 +2,7 @@ import type { DateRangeValue, SelectOption, TextInputType } from '@ez-kit/form-c
 import type { ComponentPropsWithoutRef, ReactNode } from 'react'
 
 /**
- * The UI-kit contract.
+ * The UI-kit contract, in **two bags**.
  *
  * This package renders **no visuals of its own** and — deliberately — no DOM structure
  * either. It binds TanStack Form state, normalises errors, and hands one flat props object
@@ -16,10 +16,25 @@ import type { ComponentPropsWithoutRef, ReactNode } from 'react'
  * siblings in a grid — and both now express their natural anatomy without fighting a
  * one-size layout.
  *
- * Both `@ez-kit/form-shadcn` and `@ez-kit/form-heroui` implement this identical interface,
- * which is what lets one example render under either kit. Register a kit with
- * `satisfies FormComponents` so a forgotten field is a compile error rather than a runtime
- * crash.
+ * The two bags differ in whether they are **closed**:
+ *
+ * - {@link FormComponents} is the form's **chrome** — the array frame and entry, the button,
+ *   the `<form>` element, the section grid and the wizard. Seven slots, a closed set: nothing
+ *   an app registers belongs here, because none of it is a field kind.
+ * - {@link FormFieldSlots} is the twelve **field kinds**. It is the shape a kit's
+ *   `formFieldSlots` export is written against (`satisfies FormFieldSlots`), so a forgotten
+ *   built-in is a compile error there — but `createForm({ fields })` accepts *additional*
+ *   keys, which is how an app adds `RatingField` to the instance and `{ type: 'rating' }` to
+ *   a schema document.
+ *
+ * Both `@ez-kit/form-shadcn` and `@ez-kit/form-heroui` implement these identical interfaces,
+ * which is what lets one example render under either kit:
+ *
+ * ```ts
+ * export const formComponents = { ArrayField, ArrayItem, … } satisfies FormComponents
+ * export const formFieldSlots = { TextField, NumberField, … } satisfies FormFieldSlots
+ * createForm({ components: formComponents, fields: formFieldSlots })
+ * ```
  */
 
 /**
@@ -371,10 +386,22 @@ export type FormElementProps = ComponentPropsWithoutRef<'form'>
 // ── the contract itself ──────────────────────────────────────────────────────
 
 /**
- * Every component a kit must supply — one per field kind, plus the two form-level pieces.
- * There is no partial tier in v1 because every field is part of the base set.
+ * The twelve built-in field kinds a kit supplies.
+ *
+ * Written against with `satisfies FormFieldSlots` so a forgotten built-in is a compile error
+ * in the kit. It is **not** what `createForm({ fields })` accepts — that takes any
+ * {@link FormFieldRegistry}, the kit's twelve spread beside whatever the app registers —
+ * which is the one asymmetry with {@link FormComponents}: the chrome is closed, the field
+ * set is open.
+ *
+ * The key names are load-bearing twice over. Each one routes to that field's own binder
+ * (replacing `TextField` here swaps the kit's input while keeping the `asText` coercion and
+ * the rest of the text binding), and each one **derives its document id** by dropping a
+ * trailing `Field` and lowercasing the rest — `RadioGroupField` → `radiogroup`. The
+ * derivation runs this way round because the reverse is lossy: nothing recovers
+ * `RadioGroupField` from `radiogroup`.
  */
-export type FormComponents = {
+export type FormFieldSlots = {
 	TextField: (props: TextFieldRenderProps) => ReactNode
 	NumberField: (props: NumberFieldRenderProps) => ReactNode
 	TextareaField: (props: TextareaFieldRenderProps) => ReactNode
@@ -387,6 +414,18 @@ export type FormComponents = {
 	CheckboxGroupField: (props: CheckboxGroupFieldRenderProps) => ReactNode
 	DateField: (props: DateFieldRenderProps) => ReactNode
 	DateRangeField: (props: DateRangeFieldRenderProps) => ReactNode
+}
+
+/**
+ * The form's chrome — every component a kit must supply that is **not** a field kind.
+ *
+ * A closed set of seven, all required: the array frame and its entry, the generic button,
+ * the `<form>` element, the section grid, its cell and the wizard. The field kinds live in
+ * {@link FormFieldSlots}; `ArrayField` / `ArrayItem` are here rather than there because they
+ * are consumed as chrome by one binder (`createArrayField`), not registered as a per-kind
+ * binder of their own.
+ */
+export type FormComponents = {
 	ArrayField: (props: ArrayFieldRenderProps) => ReactNode
 	ArrayItem: (props: ArrayItemRenderProps) => ReactNode
 	Button: (props: ButtonProps) => ReactNode

@@ -15,8 +15,9 @@ import { renderChildren } from './render-children'
 import type { BlockRegistry, CustomFieldRegistry } from './registries'
 import type { LayoutComponents } from './render-node'
 import type { SubmittableForm } from '../bindable-form'
-import type { FormElementProps } from '../contract'
+import type { FormElementProps, FormFieldSlots } from '../contract'
 import type { FormFieldComponents } from '../field-props'
+import type { FormFieldRegistry } from '../field-registry'
 import type {
 	AnyFormSchema,
 	FormAsyncValidateOrFn,
@@ -50,15 +51,13 @@ export type SharedRendererProps<TValues> = {
 	/** Resolves a `LocalizedText` translation key. Required only if the schema uses one. */
 	translate?: Translate
 	/**
-	 * Custom field kinds referenced from the schema by `type` (spec §4.7, §8) — a field with
-	 * a `name`, bound to a value, that receives the same binding a built-in field gets.
-	 * `FormRenderer` throws if a key here collides with a reserved node type (see
-	 * `assertNoReservedFieldKeyCollision`).
-	 */
-	fields?: CustomFieldRegistry
-	/**
 	 * Block components referenced from the schema by `component` (spec §4.7, §8) — markup
 	 * with no `name` and no value binding, rendered from its own `props` only.
+	 *
+	 * The only registry still passed per form. Custom **fields** are registered once, on
+	 * `createForm({ fields })`, and reach a document through the id their component name
+	 * derives; a `block` carries no binding and no field kind, so nothing about it was in
+	 * question when the per-form `fields` prop went.
 	 */
 	blocks?: BlockRegistry
 	/**
@@ -76,8 +75,16 @@ export type SharedRendererProps<TValues> = {
  * `SubmittableForm`) and one bound component per field kind (from `FormFieldComponents`).
  * Narrower than the full `KitFormApi` on purpose — mirrors why `FormControlledProps` types
  * its `form` as `SubmittableForm` rather than the whole TanStack surface.
+ *
+ * `TFields` is **defaulted**, and carrying it is what keeps the two halves of the registry
+ * agreeing: a factory that registered `RatingField` makes `form.RatingField` reachable from
+ * JSX, and a document's `{ type: 'rating' }` resolves against the same registration. Left at
+ * the default, a controlled `FormRenderer` would accept an instance from a factory that never
+ * registered the custom field its schema names — the failure would then surface at render
+ * time, as `Unknown node type "rating"`, rather than at the call site.
  */
-export type RendererForm<TValues> = SubmittableForm & FormFieldComponents<TValues>
+export type RendererForm<TValues, TFields extends FormFieldRegistry = FormFieldSlots> = SubmittableForm &
+	FormFieldComponents<TValues, TFields>
 
 /**
  * Controlled mode: the caller owns the instance and passes it in.
@@ -108,9 +115,9 @@ export type RendererForm<TValues> = SubmittableForm & FormFieldComponents<TValue
  * render (a per-render `formApi.update(opts)`), so any wrap `FormRenderer` applied would just
  * lose that race back to your unwrapped `onSubmit`.
  */
-export type FormRendererControlledProps<TValues> = FormElementRest &
+export type FormRendererControlledProps<TValues, TFields extends FormFieldRegistry = FormFieldSlots> = FormElementRest &
 	SharedRendererProps<TValues> & {
-		form: RendererForm<TValues>
+		form: RendererForm<TValues, TFields>
 	}
 
 /**
@@ -156,10 +163,18 @@ export type FormRendererUncontrolledProps<
 		keepHiddenValues?: boolean
 	}
 
-/** The widest shape that covers both modes — what sits behind `FormRenderer`'s overloads. */
-export type AnyFormRendererProps = FormElementRest &
+/**
+ * The widest shape that covers both modes — what sits behind `FormRenderer`'s overloads.
+ *
+ * `TFields` is carried rather than defaulted away at the call site: `FormRenderer`'s
+ * implementation signature is written against this type, and an overload declaring
+ * `form: RendererForm<TValues, TFields>` is only compatible with an implementation that
+ * admits the same registry. The factory passes its own `TFields` in, so the loose shape is
+ * loose about the *mode* and about `TValues`, and about nothing else.
+ */
+export type AnyFormRendererProps<TFields extends FormFieldRegistry = FormFieldSlots> = FormElementRest &
 	SharedRendererProps<unknown> & {
-		form?: RendererForm<unknown>
+		form?: RendererForm<unknown, TFields>
 	}
 
 /** The uncontrolled shape at its least specific, once the overloads have validated the caller. */
@@ -179,9 +194,9 @@ export type FormRendererUncontrolledImplProps = FormRendererUncontrolledProps<
 >
 
 /** Which mode the caller picked — `form` is the discriminant, exactly as for `Form`. */
-export function isRendererControlled<TValues>(props: {
+export function isRendererControlled<TValues, TFields extends FormFieldRegistry = FormFieldSlots>(props: {
 	form?: unknown
-}): props is FormRendererControlledProps<TValues> {
+}): props is FormRendererControlledProps<TValues, TFields> {
 	return props.form !== undefined
 }
 
@@ -331,16 +346,23 @@ export function isWizardSchema<TValues>(schema: AnyFormSchema<TValues>): boolean
  * `undefined`. `fields` and `blocks` resolve `type: '<custom>'` and `type: 'block'` nodes
  * respectively (spec §4.7, §8).
  *
+ * `fields` is **required** while `blocks` is optional, and the asymmetry is not arbitrary: it is
+ * the factory's own registry, keyed by the document id each component name derives
+ * (`deriveFieldTypeIds`), so `createForm` always has one to pass — there is no per-form `fields`
+ * prop any more. `blocks` is still something a caller may simply not have. Do not make `fields`
+ * optional to match: a call site that passes `{}` instead compiles, and turns every custom field
+ * in every document into `Unknown node type`.
+ *
  * A document whose top level is `step` nodes is a wizard and goes to `FormWizard` instead,
  * which renders one step at a time through the kit's `Wizard` (spec §4.5, §10). A `step` found
  * anywhere else still throws via `renderChildren`, exactly as a genuinely unknown `type` does.
  */
-export function renderSchemaFields<TValues>(
+export function renderSchemaFields<TValues, TFields extends FormFieldRegistry = FormFieldSlots>(
 	schema: AnyFormSchema<TValues>,
-	form: FormFieldComponents<TValues>,
+	form: FormFieldComponents<TValues, TFields>,
 	layout: LayoutComponents,
 	translate: Translate | undefined,
-	fields: CustomFieldRegistry | undefined,
+	fields: CustomFieldRegistry,
 	blocks: BlockRegistry | undefined,
 ): ReactNode {
 	// `itemPath` starts undefined: the schema root sits in no array entry, and each array node

@@ -38,7 +38,7 @@
 		{
 			"name": "everything (JSX API + config layer)",
 			"path": "dist/index.js",
-			"limit": "9 KB",
+			"limit": "10 KB",
 			"ignore": [
 				"@ez-kit/form-core"
 			]

@@ -5,14 +5,14 @@ import { fieldRenderProps } from '../field-render-props'
 import { fieldValidators } from '../field-validate'
 
 import type { BindableForm } from '../bindable-form'
-import type { FormComponents } from '../contract'
+import type { FormFieldSlots } from '../contract'
 import type { DateRangeFieldProps } from '../field-props'
 import type { ReactNode } from 'react'
 
 /** Build the `DateRangeField` component bound to one form instance. */
 export function createDateRangeField<TFormData>(
 	form: BindableForm,
-	KitDateRangeField: FormComponents['DateRangeField'],
+	KitDateRangeField: FormFieldSlots['DateRangeField'],
 ): (props: DateRangeFieldProps<TFormData>) => ReactNode {
 	return function DateRangeField({
 		name,

@@ -1,5 +1,6 @@
 import type { BoundFieldApi } from './bindable-form'
-import type { FormComponents } from './contract'
+import type { FormComponents, FormFieldSlots } from './contract'
+import type { FormFieldRegistry } from './field-registry'
 import type { FieldValidateProps } from './field-validate'
 import type {
 	ArrayItemOf,
@@ -221,7 +222,10 @@ export type SliderFieldProps<TFormData> = BaseFieldProps<TFormData, number> & {
  * and a root-level name is a compile error there. No path is composed at the call site — the
  * prefix is joined on at render.
  */
-export type ArrayItemScope<TItem> = FormFieldComponents<TItem> & {
+export type ArrayItemScope<TItem, TFields extends FormFieldRegistry = FormFieldSlots> = FormFieldComponents<
+	TItem,
+	TFields
+> & {
 	/**
 	 * A stable id for this entry, for React's `key`. **Never the index**: removing an entry from
 	 * the middle renumbers everything after it, and a keyed-by-index list would then reuse the
@@ -276,8 +280,8 @@ export type ArrayItemProps = {
  */
 export type ArrayReorderable = boolean | { up?: { label?: ReactNode }; down?: { label?: ReactNode } }
 
-export type ArrayScope<TItem> = {
-	items: readonly ArrayItemScope<TItem>[]
+export type ArrayScope<TItem, TFields extends FormFieldRegistry = FormFieldSlots> = {
+	items: readonly ArrayItemScope<TItem, TFields>[]
 	/**
 	 * Append a fresh entry, built from the field's own `newItem`. Deliberately no parameter: an
 	 * `insert`/`remove`/`move` all take a mandatory index first, so a synthetic click event can
@@ -317,7 +321,7 @@ export type ArrayScope<TItem> = {
 }
 
 /** One scope serves both `form.ArrayField` and the headless `form.Array`. */
-export type ArrayFieldScope<TItem> = ArrayScope<TItem>
+export type ArrayFieldScope<TItem, TFields extends FormFieldRegistry = FormFieldSlots> = ArrayScope<TItem, TFields>
 
 /**
  * A repeatable group of fields — the JSX spelling of an `array` node.
@@ -326,7 +330,11 @@ export type ArrayFieldScope<TItem> = ArrayScope<TItem>
  * each field's `defaultValue`, so the renderer can build a fresh entry from the subtree, while a
  * render prop declares nothing the package can read.
  */
-export type ArrayFieldProps<TFormData, TName extends ArrayKeys<TFormData>> = {
+export type ArrayFieldProps<
+	TFormData,
+	TName extends ArrayKeys<TFormData>,
+	TFields extends FormFieldRegistry = FormFieldSlots,
+> = {
 	name: TName
 	label?: ReactNode
 	description?: ReactNode
@@ -346,7 +354,7 @@ export type ArrayFieldProps<TFormData, TName extends ArrayKeys<TFormData>> = {
 	removeLabel?: ReactNode
 	/** Caption for one entry, given its zero-based position. */
 	itemLabel?: (index: number) => ReactNode
-	children: (scope: ArrayFieldScope<ArrayItemOf<TFormData, TName>>) => ReactNode
+	children: (scope: ArrayFieldScope<ArrayItemOf<TFormData, TName>, TFields>) => ReactNode
 }
 
 /**
@@ -357,14 +365,18 @@ export type ArrayFieldProps<TFormData, TName extends ArrayKeys<TFormData>> = {
  * surrounding layout are the author's. Use it when the kit's own chrome does not fit — a remove
  * control in a card heading, entries laid out as table rows, and so on.
  */
-export type ArrayProps<TFormData, TName extends ArrayKeys<TFormData>> = {
+export type ArrayProps<
+	TFormData,
+	TName extends ArrayKeys<TFormData>,
+	TFields extends FormFieldRegistry = FormFieldSlots,
+> = {
 	name: TName
 	disabled?: boolean
 	required?: boolean
 	validate?: FieldValidateProps
 	/** The value a newly appended entry starts from. */
 	newItem: ArrayItemOf<TFormData, TName>
-	children: (scope: ArrayScope<ArrayItemOf<TFormData, TName>>) => ReactNode
+	children: (scope: ArrayScope<ArrayItemOf<TFormData, TName>, TFields>) => ReactNode
 }
 
 export type SubmitButtonProps = {
@@ -381,7 +393,7 @@ export type SubmitButtonProps = {
  * The `<form>` element is not among them: it lives in the standalone `<Form>` component,
  * which is the single place that renders it in either mode.
  */
-export type FormFieldComponents<TFormData> = {
+export type BuiltInFormFieldComponents<TFormData, TFields extends FormFieldRegistry = FormFieldSlots> = {
 	TextField: (props: TextFieldProps<TFormData>) => ReactNode
 	NumberField: (props: NumberFieldProps<TFormData>) => ReactNode
 	TextareaField: (props: TextareaFieldProps<TFormData>) => ReactNode
@@ -399,15 +411,57 @@ export type FormFieldComponents<TFormData> = {
 	 * one member cover every array in `TFormData` — and what makes a nested array inside an
 	 * entry work with no extra machinery.
 	 */
-	ArrayField: <TName extends ArrayKeys<TFormData>>(props: ArrayFieldProps<TFormData, TName>) => ReactNode
+	ArrayField: <TName extends ArrayKeys<TFormData>>(props: ArrayFieldProps<TFormData, TName, TFields>) => ReactNode
 	/**
 	 * Generic per call, for the same reason `ArrayField` is — see its doc comment.
 	 */
-	Array: <TName extends ArrayKeys<TFormData>>(props: ArrayProps<TFormData, TName>) => ReactNode
+	Array: <TName extends ArrayKeys<TFormData>>(props: ArrayProps<TFormData, TName, TFields>) => ReactNode
 	SubmitButton: (props: SubmitButtonProps) => ReactNode
 	Section: (props: SectionProps) => ReactNode
 	GridItem: (props: GridItemProps) => ReactNode
 }
+
+/**
+ * Reads the phantom `__props` that `defineFieldType` attaches. An entry registered without
+ * it — a bare component the author wrote by hand — falls to an untyped bag rather than to a
+ * compile error: graceful degradation is the point, since the registry is open.
+ */
+export type PropsOf<TDefinition> = TDefinition extends { __props?: infer TProps }
+	? unknown extends TProps
+		? Record<string, unknown>
+		: TProps
+	: Record<string, unknown>
+
+/** The same for `__value`, which is what narrows the field's `name`. */
+export type ValueOf<TDefinition> = TDefinition extends { __value?: infer TValue } ? TValue : unknown
+
+/**
+ * What a custom field's JSX call site writes: the binding props every field takes, plus the
+ * author's own, **flat**. They arrive at the component nested under `props` — the generic
+ * binder does the split — so a document and a JSX call produce the identical object.
+ */
+export type CustomFieldProps<TFormData, TValue, TProps> = BaseFieldProps<TFormData, TValue> & TProps
+
+/** One bound component per custom registry entry, each typed from its own two phantoms. */
+export type CustomFieldComponentsOf<TFormData, TFields> = {
+	[TKey in keyof TFields]: (
+		props: CustomFieldProps<TFormData, ValueOf<TFields[TKey]>, PropsOf<TFields[TKey]>>,
+	) => ReactNode
+}
+
+/**
+ * The flat components attached to the form instance by `createForm` — the twelve built-ins
+ * and the layout pieces, plus one per field kind the app registered.
+ *
+ * `TFields` is **defaulted**, and the default is load-bearing: every internal spelling of
+ * `FormFieldComponents<T>` with one argument keeps compiling and keeps meaning exactly what
+ * it meant before the registry existed.
+ */
+export type FormFieldComponents<
+	TFormData,
+	TFields extends FormFieldRegistry = FormFieldSlots,
+> = BuiltInFormFieldComponents<TFormData, TFields> &
+	CustomFieldComponentsOf<TFormData, Omit<TFields, keyof FormFieldSlots>>
 
 /**
  * A headed group of fields on a column grid — the JSX spelling of a `section` node.

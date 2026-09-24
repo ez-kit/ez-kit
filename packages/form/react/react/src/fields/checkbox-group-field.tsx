@@ -7,14 +7,14 @@ import { fromKitValues, toKitOptions } from '../option-values'
 import { CLEARED_LIST, FieldOptions } from '../options/field-options'
 
 import type { BindableForm } from '../bindable-form'
-import type { FormComponents } from '../contract'
+import type { FormFieldSlots } from '../contract'
 import type { CheckboxGroupFieldProps } from '../field-props'
 import type { ReactNode } from 'react'
 
 /** Build the `CheckboxGroupField` component bound to one form instance. */
 export function createCheckboxGroupField<TFormData>(
 	form: BindableForm,
-	KitCheckboxGroupField: FormComponents['CheckboxGroupField'],
+	KitCheckboxGroupField: FormFieldSlots['CheckboxGroupField'],
 ): (props: CheckboxGroupFieldProps<TFormData>) => ReactNode {
 	return function CheckboxGroupField(props: CheckboxGroupFieldProps<TFormData>): ReactNode {
 		const { name, label, description, disabled, required, validate } = props

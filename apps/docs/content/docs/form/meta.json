@@ -20,6 +20,7 @@
 		"schema",
 		"native-api",
 		"custom-kit",
+		"custom-fields",
 		"ai"
 	]
 }

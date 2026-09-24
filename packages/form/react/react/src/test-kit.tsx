@@ -4,6 +4,7 @@ import type {
 	DateRangeFieldRenderProps,
 	FieldRenderProps,
 	FormComponents,
+	FormFieldSlots,
 	GridItemRenderProps,
 	SectionRenderProps,
 	WizardRenderProps,
@@ -330,9 +331,12 @@ const TestArrayItem: FormComponents['ArrayItem'] = ({
 	</div>
 )
 
-export const testComponents: FormComponents = {
-	ArrayField: TestArrayField,
-	ArrayItem: TestArrayItem,
+/**
+ * The twelve field kinds. Split from `testComponents` when the contract did: a kit's field
+ * set is open and reaches `createForm` as `fields`, its chrome is closed and reaches it as
+ * `components`.
+ */
+export const testFields: FormFieldSlots = {
 	TextField: ({ value, onChange, type, placeholder, id, name, onBlur, disabled, required, ...field }) => (
 		<Shell
 			id={id}
@@ -744,6 +748,12 @@ export const testComponents: FormComponents = {
 	// Two native inputs rather than a calendar: this kit exists so the adapter's own tests
 	// never depend on a real picker.
 	DateRangeField: (props) => <TestDateRangeField {...props} />,
+}
+
+/** The chrome half — the seven slots that are not field kinds. */
+export const testComponents: FormComponents = {
+	ArrayField: TestArrayField,
+	ArrayItem: TestArrayItem,
 	Button: ({ type, disabled, onClick, children }) => (
 		<button
 			data-testkit='button'
