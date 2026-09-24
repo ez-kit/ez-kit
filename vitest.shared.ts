@@ -8,6 +8,44 @@ export const vitestSharedConfig: ViteUserConfig = {
 		include: ['src/**/*.{test,spec}.{ts,tsx}', 'test/**/*.{test,spec}.{ts,tsx}'],
 		setupFiles: [fileURLToPath(new URL('./vitest.setup.ts', import.meta.url))],
 		environment: 'jsdom',
+		/**
+		 * Cap the worker pool rather than letting vitest size it to the machine.
+		 *
+		 * Turbo runs several packages' suites at once, and each vitest instance would otherwise
+		 * open a pool the width of the whole machine — on an 8-core laptop that is up to ten
+		 * packages times ~7 threads, roughly nine times more threads than cores. Nothing fails
+		 * outright; tests that wait on a deadline (`waitFor`, and anything else measured against
+		 * vitest's 5 s default) simply stop getting scheduled in time, and the suite goes
+		 * intermittently red in whichever package lost the race. Four such failures were traced
+		 * to this during the field-registry work, each in a different package, each passing on
+		 * its own.
+		 *
+		 * This is the *second* half of a cap that already existed: `turbo.json` sets
+		 * `"concurrency": "50%"`, with the measurements behind it in a comment there. That limits
+		 * how many packages run at once; this limits how wide each one's pool opens, which turbo
+		 * cannot see. Between them the total stays near the core count, and the timeout below
+		 * covers what neither can — another process on the machine that turbo knows nothing about.
+		 */
+		poolOptions: {
+			threads: {
+				maxThreads: 4,
+			},
+		},
+		/**
+		 * Three times vitest's 5 s default, because 5 s is not a statement about these tests — it
+		 * is a statement about how quickly the machine happens to schedule them.
+		 *
+		 * The capped pool above cut the oversubscription that caused this, but did not remove it:
+		 * a measured failure sat at 5466 ms against the 5000 ms limit, and passed on its own
+		 * moments later. Every failure of this kind in this repo has had the same signature —
+		 * a timeout, never a failed assertion, in whichever package lost the race.
+		 *
+		 * What this costs: a test that genuinely hangs now takes 15 s to say so instead of 5. What
+		 * it does not cost is the ability to notice something getting slower — vitest prints each
+		 * file's duration, and a suite drifting toward the limit shows up there long before it
+		 * fails. Raise this again only with a measurement, and say what it was.
+		 */
+		testTimeout: 15_000,
 		coverage: {
 			reporter: ['text', 'html'],
 			/**
