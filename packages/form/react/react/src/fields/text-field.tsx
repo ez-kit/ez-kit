@@ -5,14 +5,14 @@ import { fieldRenderProps } from '../field-render-props'
 import { fieldValidators } from '../field-validate'
 
 import type { BindableForm } from '../bindable-form'
-import type { FormComponents } from '../contract'
+import type { FormFieldSlots } from '../contract'
 import type { TextFieldProps } from '../field-props'
 import type { ReactNode } from 'react'
 
 /** Build the `TextField` component bound to one form instance. */
 export function createTextField<TFormData>(
 	form: BindableForm,
-	KitTextField: FormComponents['TextField'],
+	KitTextField: FormFieldSlots['TextField'],
 ): (props: TextFieldProps<TFormData>) => ReactNode {
 	return function TextField({
 		name,

@@ -109,14 +109,14 @@ describe('optionsFrom', () => {
 	})
 
 	describe('dependsOn', () => {
-		it('rejects a relative field reference, exactly as a condition does', () => {
+		it('rejects a relative field reference outside an array item, exactly as a condition does', () => {
 			const node = selectNode({
 				optionsFrom: { source: 'cities', dependsOn: { country: './country' } },
 			})
 
 			const error = parseFailure(node)
 
-			expect(error.message).toContain('Relative field reference "./country" is reserved for array items')
+			expect(error.message).toContain('Relative field reference "./country" is only valid inside an array item')
 			expect(error.path).toBe(NODE_PATH)
 		})
 

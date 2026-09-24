@@ -1,7 +1,10 @@
 export { createForm } from './create-form'
+export { defineFieldType } from './field-registry'
 export { FormOptionSources } from './options/source-context'
 
 export type { CreateFormOptions, FormBundle } from './create-form'
+export type { FieldTypeDefinition, FormFieldRegistry } from './field-registry'
+export type { BoundFieldApi } from './bindable-form'
 export type { KitFormBlock, KitWithFormProps } from './composition'
 export type { FieldValidateProps } from './field-validate'
 export type { BoundForm, KitFormApi } from './kit-form'
@@ -22,6 +25,8 @@ export type {
 	SimpleOptionSource,
 } from './options/source-types'
 export type {
+	ArrayFieldRenderProps,
+	ArrayItemRenderProps,
 	ButtonProps,
 	CheckboxFieldRenderProps,
 	CheckboxGroupFieldRenderProps,
@@ -30,6 +35,7 @@ export type {
 	FieldRenderProps,
 	FormComponents,
 	FormElementProps,
+	FormFieldSlots,
 	GridItemRenderProps,
 	MultiSelectFieldRenderProps,
 	NumberFieldRenderProps,
@@ -44,6 +50,12 @@ export type {
 	WizardStep,
 } from './contract'
 export type {
+	ArrayFieldProps,
+	ArrayFieldScope,
+	ArrayItemProps,
+	ArrayItemScope,
+	ArrayProps,
+	ArrayScope,
 	BaseFieldProps,
 	CheckboxFieldProps,
 	CheckboxGroupFieldProps,

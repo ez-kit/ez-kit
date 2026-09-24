@@ -1,5 +1,6 @@
 import type { SubmittableForm } from './bindable-form'
-import type { FormElementProps } from './contract'
+import type { FormElementProps, FormFieldSlots } from './contract'
+import type { FormFieldRegistry } from './field-registry'
 import type { KitFormApi } from './kit-form'
 import type { FormAsyncValidateOrFn, FormOptions, FormValidateOrFn } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
@@ -46,6 +47,8 @@ export type FormUncontrolledProps<
 	TOnDynamicAsync extends undefined | FormAsyncValidateOrFn<TFormData>,
 	TOnServer extends undefined | FormAsyncValidateOrFn<TFormData>,
 	TSubmitMeta,
+	/** The registry `createForm` was given, so a field the app added is typed on `form`. */
+	TFields extends FormFieldRegistry = FormFieldSlots,
 > = FormElementRest &
 	FormOptions<
 		TFormData,
@@ -76,7 +79,8 @@ export type FormUncontrolledProps<
 				TOnDynamic,
 				TOnDynamicAsync,
 				TOnServer,
-				TSubmitMeta
+				TSubmitMeta,
+				TFields
 			>,
 		) => ReactNode
 	}
@@ -98,7 +102,7 @@ export type AnyFormProps = FormElementRest & {
  * The uncontrolled shape at its least specific — what the implementation hands to the
  * inner component once the overloads have already validated the caller's props.
  */
-export type FormUncontrolledImplProps = FormUncontrolledProps<
+export type FormUncontrolledImplProps<TFields extends FormFieldRegistry = FormFieldSlots> = FormUncontrolledProps<
 	unknown,
 	undefined,
 	undefined,
@@ -110,7 +114,8 @@ export type FormUncontrolledImplProps = FormUncontrolledProps<
 	undefined,
 	undefined,
 	undefined,
-	never
+	never,
+	TFields
 >
 
 /**
@@ -142,6 +147,7 @@ export type FormProps<
 	TOnDynamicAsync extends undefined | FormAsyncValidateOrFn<TFormData>,
 	TOnServer extends undefined | FormAsyncValidateOrFn<TFormData>,
 	TSubmitMeta,
+	TFields extends FormFieldRegistry = FormFieldSlots,
 > =
 	| FormControlledProps
 	| FormUncontrolledProps<
@@ -156,5 +162,6 @@ export type FormProps<
 			TOnDynamic,
 			TOnDynamicAsync,
 			TOnServer,
-			TSubmitMeta
+			TSubmitMeta,
+			TFields
 	  >

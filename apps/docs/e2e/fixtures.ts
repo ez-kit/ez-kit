@@ -4,7 +4,7 @@ import type { Kit } from './kits'
 import type { Locator, Page } from '@playwright/test'
 
 /**
- * Fixtures for the kit-agnostic grid specs.
+ * Fixtures for the kit-agnostic specs — `grid` for the data grid, `form` for the form.
  *
  * A spec never names a kit: it asks for `grid`, and the Playwright project it runs under
  * decides which kit that is. What makes this possible is that `@ez-kit/data-grid-react`
@@ -44,8 +44,41 @@ export type GridFixture = {
 	scrollBy: (delta: { x?: number; y?: number }) => Promise<void>
 }
 
+/**
+ * The form counterpart of {@link GridFixture}, and kit-agnostic for the same reason:
+ * `@ez-kit/form-react` stamps `data-field` (the field's **full path**, `members[1].email` and
+ * all) and `data-field-type` on every field it renders, and both kits spread them onto the
+ * element that wraps the control. An array's entries are the one place a kit authors a slot of
+ * its own — `form-array-item` — and both kits write that literal, so a spec addressing it is
+ * addressing the contract rather than a kit.
+ *
+ * The controls are reached by ARIA role and by the caption the example gave them, exactly as
+ * `editing.spec.ts` reaches the grid's: the kits disagree about what an icon button *is*
+ * (shadcn puts the caption in `aria-label`, HeroUI in an `sr-only` span beside the glyph) and
+ * agree only on the accessible name — which is the thing a screen reader needs too.
+ */
+export type FormFixture = {
+	/** Opens an example's standalone embed page and waits for the form to render. */
+	open: (exampleId: string) => Promise<void>
+	/** Every entry of an array field, in render order. */
+	items: (arrayName: string) => Locator
+	/** One entry of an array field, by position. */
+	item: (arrayName: string, index: number) => Locator
+	/** The wrapper a field renders under, addressed by its full path. */
+	field: (path: string) => Locator
+	/** The text box of the field at that path. */
+	input: (path: string) => Locator
+	/**
+	 * The values the example last submitted, parsed from the `<pre>` it prints.
+	 *
+	 * The payload is the assertion that matters for an array: what a control *shows* can be
+	 * right while the path it writes to is wrong, and the reverse — see the remove case.
+	 */
+	submitted: () => Promise<unknown>
+}
+
 type WorkerOptions = { kit: Kit }
-type TestFixtures = { grid: GridFixture }
+type TestFixtures = { grid: GridFixture; form: FormFixture }
 
 /**
  * `data-row-id` is part of the react layer's row contract (`row.tsx`), so requiring it here
@@ -144,12 +177,42 @@ export async function toggle(checkbox: Locator): Promise<void> {
 	await checkbox.locator('xpath=ancestor-or-self::label[1]').or(checkbox).first().click()
 }
 
+/** An array entry's chrome, the one slot both form kits author for themselves. */
+const ARRAY_ITEM = '[data-slot="form-array-item"]'
+
+function createForm(page: Page, kit: Kit): FormFixture {
+	const field = (path: string) => page.locator(`[data-field="${path}"]`)
+
+	return {
+		open: async (exampleId) => {
+			await page.goto(`/examples/${kit}/${exampleId}?theme=light`)
+			// Not `<form>`: the example renders client-only, so the element exists before the
+			// fields do. A field is what a spec goes on to address.
+			await expect(page.locator('[data-field]').first()).toBeVisible()
+		},
+		// Scoped to the named array: a document may hold two of them (`attendees` and
+		// `waitlist`), and an unscoped entry locator would interleave both lists.
+		items: (arrayName) => field(arrayName).locator(ARRAY_ITEM),
+		item: (arrayName, index) => field(arrayName).locator(ARRAY_ITEM).nth(index),
+		field,
+		input: (path) => field(path).getByRole('textbox'),
+		submitted: async () => {
+			const printed = page.locator('pre')
+			await expect(printed, 'the example printed no payload — did the submit go through?').toBeVisible()
+			return JSON.parse((await printed.textContent()) ?? '') as unknown
+		},
+	}
+}
+
 export const test = base.extend<TestFixtures, WorkerOptions>({
 	// Supplied by the project (see playwright.config.ts); the default keeps a bare
 	// `playwright test path/to.spec.ts` runnable without naming a project.
 	kit: ['shadcn', { option: true, scope: 'worker' }],
 	grid: async ({ page, kit }, use) => {
 		await use(createGrid(page, kit))
+	},
+	form: async ({ page, kit }, use) => {
+		await use(createForm(page, kit))
 	},
 })
 

@@ -7,14 +7,14 @@ import { fromKitValues, toKitOptions } from '../option-values'
 import { CLEARED_LIST, FieldOptions } from '../options/field-options'
 
 import type { BindableForm } from '../bindable-form'
-import type { FormComponents } from '../contract'
+import type { FormFieldSlots } from '../contract'
 import type { MultiSelectFieldProps } from '../field-props'
 import type { ReactNode } from 'react'
 
 /** Build the `MultiSelectField` component bound to one form instance. */
 export function createMultiSelectField<TFormData>(
 	form: BindableForm,
-	KitMultiSelectField: FormComponents['MultiSelectField'],
+	KitMultiSelectField: FormFieldSlots['MultiSelectField'],
 ): (props: MultiSelectFieldProps<TFormData>) => ReactNode {
 	return function MultiSelectField(props: MultiSelectFieldProps<TFormData>): ReactNode {
 		const { name, label, description, disabled, required, validate, placeholder, searchable, creatable, createLabel } =

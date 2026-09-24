@@ -1,3 +1,5 @@
+import type { FormFieldSlots } from './contract'
+import type { FormFieldRegistry } from './field-registry'
 import type { KitFormApi } from './kit-form'
 import type { FormAsyncValidateOrFn, FormOptions, FormValidateOrFn } from '@ez-kit/form-core'
 import type { FunctionComponent, PropsWithChildren } from 'react'
@@ -29,6 +31,17 @@ export type KitFormBlock<
 	TOnServer extends undefined | FormAsyncValidateOrFn<TFormData>,
 	TSubmitMeta,
 	TRenderProps extends object,
+	/**
+	 * Bound by the factory, never by the consumer: `withForm` is declared inside
+	 * `createForm<TFields>`, so the app's registry is already in lexical scope there and the
+	 * call site writes nothing. Defaulted so every existing twelve-argument spelling of this
+	 * type keeps compiling and keeps meaning "the kit's twelve".
+	 *
+	 * Without it a block sees `FormFieldSlots` while the instance it is handed carries the
+	 * app's fields too, and `<form.RatingField />` inside a block is a compile error against a
+	 * form that demonstrably has one.
+	 */
+	TFields extends FormFieldRegistry = FormFieldSlots,
 > = FunctionComponent<
 	PropsWithChildren<
 		NoInfer<TRenderProps> & {
@@ -44,7 +57,8 @@ export type KitFormBlock<
 				TOnDynamic,
 				TOnDynamicAsync,
 				TOnServer,
-				TSubmitMeta
+				TSubmitMeta,
+				TFields
 			>
 		}
 	>
@@ -69,6 +83,8 @@ export type KitWithFormProps<
 	TOnServer extends undefined | FormAsyncValidateOrFn<TFormData>,
 	TSubmitMeta,
 	TRenderProps extends object,
+	/** Bound by the factory — see {@link KitFormBlock}'s own `TFields`. */
+	TFields extends FormFieldRegistry = FormFieldSlots,
 > = FormOptions<
 	TFormData,
 	TOnMount,
@@ -97,6 +113,7 @@ export type KitWithFormProps<
 		TOnDynamicAsync,
 		TOnServer,
 		TSubmitMeta,
-		TRenderProps
+		TRenderProps,
+		TFields
 	>
 }

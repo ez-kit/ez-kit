@@ -7,14 +7,14 @@ import { fromKitValue, toKitOptions } from '../option-values'
 import { CLEARED_VALUE, FieldOptions } from '../options/field-options'
 
 import type { BindableForm } from '../bindable-form'
-import type { FormComponents } from '../contract'
+import type { FormFieldSlots } from '../contract'
 import type { SelectFieldProps } from '../field-props'
 import type { ReactNode } from 'react'
 
 /** Build the `SelectField` component bound to one form instance. */
 export function createSelectField<TFormData>(
 	form: BindableForm,
-	KitSelectField: FormComponents['SelectField'],
+	KitSelectField: FormFieldSlots['SelectField'],
 ): (props: SelectFieldProps<TFormData>) => ReactNode {
 	return function SelectField(props: SelectFieldProps<TFormData>): ReactNode {
 		const { name, label, description, disabled, required, validate, placeholder, searchable, creatable, createLabel } =

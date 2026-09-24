@@ -1,4 +1,6 @@
+import type { FormFieldSlots } from './contract'
 import type { FormFieldComponents } from './field-props'
+import type { FormFieldRegistry } from './field-registry'
 import type { FormAsyncValidateOrFn, FormValidateOrFn } from '@ez-kit/form-core'
 import type { AppFieldExtendedReactFormApi } from '@tanstack/react-form'
 
@@ -15,8 +17,16 @@ export const NO_INJECTED_COMPONENTS = {} as const
 
 export type NoInjectedComponents = typeof NO_INJECTED_COMPONENTS
 
-/** A form instance carrying both the native TanStack API and the flat field components. */
-export type BoundForm<TForm, TFormData> = TForm & FormFieldComponents<TFormData>
+/**
+ * A form instance carrying both the native TanStack API and the flat field components.
+ *
+ * `TFields` is the registry `createForm` was given, so a field the app registered is on the
+ * instance under its own key, typed from the phantoms `defineFieldType` wrote. It is
+ * **defaulted**, which is what keeps every one-and-two-argument spelling of this type
+ * compiling unchanged.
+ */
+export type BoundForm<TForm, TFormData, TFields extends FormFieldRegistry = FormFieldSlots> = TForm &
+	FormFieldComponents<TFormData, TFields>
 
 /**
  * What `useForm` hands back, spelled out as a nameable type.
@@ -39,6 +49,7 @@ export type KitFormApi<
 	TOnDynamicAsync extends undefined | FormAsyncValidateOrFn<TFormData>,
 	TOnServer extends undefined | FormAsyncValidateOrFn<TFormData>,
 	TSubmitMeta,
+	TFields extends FormFieldRegistry = FormFieldSlots,
 > = BoundForm<
 	AppFieldExtendedReactFormApi<
 		TFormData,
@@ -56,5 +67,6 @@ export type KitFormApi<
 		NoInjectedComponents,
 		NoInjectedComponents
 	>,
-	TFormData
+	TFormData,
+	TFields
 >

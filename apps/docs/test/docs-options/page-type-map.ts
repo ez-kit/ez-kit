@@ -1,6 +1,7 @@
 import { NO_HEADING } from './mdx-tables'
 import {
 	FORM_API_TYPE_ARGS,
+	FORM_ARRAY_TYPE_ARGS,
 	FORM_VALUE_TYPE_ARGS,
 	FEATURES_ROW_TYPE_ARGS,
 	FEATURES_TYPE_ARGS,
@@ -130,6 +131,9 @@ export const DocPage = {
 	FilteringOperators: 'content/docs/data-grid/filtering/operators.mdx',
 	FilteringActiveFilters: 'content/docs/data-grid/filtering/active-filters.mdx',
 	FilteringVariants: 'content/docs/data-grid/filtering/variants.mdx',
+	FormArrays: 'content/docs/form/arrays/index.mdx',
+	FormArraysApi: 'content/docs/form/arrays/api.mdx',
+	FormCustomFields: 'content/docs/form/custom-fields.mdx',
 	FormCustomKit: 'content/docs/form/custom-kit.mdx',
 	FormFields: 'content/docs/form/fields.mdx',
 	FormLayout: 'content/docs/form/layout.mdx',
@@ -305,10 +309,25 @@ export const FORM_TYPE = {
 	/** The `section` node — `CommonProps` (so `colSpan`) plus the grid's own keys. */
 	SectionNode: { module: TypeModule.FormCore, name: 'SectionNode', typeArgs: ROW_TYPE_ARGS },
 	DateFieldProps: { module: TypeModule.FormReact, name: 'DateFieldProps', typeArgs: ROW_TYPE_ARGS },
-	/** What a kit's field component receives — the base half of the `FormComponents` contract. */
+	/** What a kit's field component receives — the base half of the field-slot contract. */
 	FieldRenderProps: { module: TypeModule.FormReact, name: 'FieldRenderProps' },
-	/** The kit contract itself; its keys are the component slots a kit must supply. */
+	/**
+	 * The chrome half of the kit contract: the seven slots that are not field kinds —
+	 * `Form`, `Button`, `Section`, `GridItem`, `Wizard` and the two array slots.
+	 */
 	FormComponents: { module: TypeModule.FormReact, name: 'FormComponents' },
+	/**
+	 * The field half: the twelve field kinds a kit supplies as `createForm({ fields })`.
+	 * Separate from {@link FORM_TYPE.FormComponents} because the two are separate options —
+	 * and because this one is an open registry, so a kit or an app may add keys to it.
+	 */
+	FormFieldSlots: { module: TypeModule.FormReact, name: 'FormFieldSlots' },
+	/**
+	 * What a *custom* field's component receives: everything `FieldRenderProps` carries plus
+	 * the three the registry adds — `value`, `onChange` and the nested `props` bag. Both type
+	 * parameters default, so it instantiates bare.
+	 */
+	CustomFieldRenderProps: { module: TypeModule.FormReact, name: 'CustomFieldRenderProps' },
 	FormRendererControlledProps: {
 		module: TypeModule.FormReact,
 		name: 'FormRendererControlledProps',
@@ -319,6 +338,21 @@ export const FORM_TYPE = {
 		name: 'FormRendererUncontrolledProps',
 		typeArgs: FORM_API_TYPE_ARGS,
 	},
+	/** The JSX array trio: the component's props, the render prop's scope, and one entry of it. */
+	ArrayFieldProps: { module: TypeModule.FormReact, name: 'ArrayFieldProps', typeArgs: FORM_ARRAY_TYPE_ARGS },
+	ArrayFieldScope: { module: TypeModule.FormReact, name: 'ArrayFieldScope', typeArgs: '<string>' },
+	ArrayItemScope: { module: TypeModule.FormReact, name: 'ArrayItemScope', typeArgs: '<string>' },
+	/** The headless primitive's own trio: `form.Array`'s props, its scope, and `item.Item`'s own props. */
+	ArrayProps: { module: TypeModule.FormReact, name: 'ArrayProps', typeArgs: FORM_ARRAY_TYPE_ARGS },
+	ArrayScope: { module: TypeModule.FormReact, name: 'ArrayScope', typeArgs: '<string>' },
+	ArrayItemProps: { module: TypeModule.FormReact, name: 'ArrayItemProps' },
+	/**
+	 * The `array` node with its value type erased. `ArrayNode<DocsProbeRow>` is not usable:
+	 * the probe row holds no array path, so the distribution has nothing to distribute over
+	 * and the type collapses to `never`. `AnyArrayNode` is the shape traversal and the
+	 * renderer actually see, and it carries the same keys.
+	 */
+	AnyArrayNode: { module: TypeModule.FormCore, name: 'AnyArrayNode' },
 	/** The instance `useForm` returns: TanStack's own API plus the flat field components. */
 	KitFormApi: { module: TypeModule.FormReact, name: 'KitFormApi', typeArgs: FORM_API_TYPE_ARGS },
 } as const satisfies Record<string, TypeRef>
@@ -935,13 +969,22 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		],
 	},
 	{
+		page: DocPage.FormCustomFields,
+		optionTables: [
+			// The three props the registry adds on top of `FieldRenderProps`; the eleven it
+			// shares are documented once, on the kit-contract page, and linked from here.
+			{ heading: 'What the component receives', roots: [FORM_TYPE.CustomFieldRenderProps], expectedCount: 3 },
+		],
+		nonOptionTables: [],
+	},
+	{
 		page: DocPage.FormCustomKit,
 		optionTables: [
 			// The base-props table sits under "Fields"; the per-kind table under the
 			// "#### Per-kind props" subheading added for exactly this reason — a
 			// heading addresses at most one table.
 			{ heading: 'Fields', roots: [FORM_TYPE.FieldRenderProps], expectedCount: 11 },
-			{ heading: 'Per-kind props', roots: [FORM_TYPE.FormComponents], expectedCount: 12 },
+			{ heading: 'Per-kind props', roots: [FORM_TYPE.FormFieldSlots], expectedCount: 12 },
 			{ heading: 'Form level', roots: [FORM_TYPE.FormComponents], expectedCount: 2 },
 			{ heading: 'Layout and wizard', roots: [FORM_TYPE.FormComponents], expectedCount: 3 },
 		],
@@ -1003,10 +1046,13 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			// each row with the mode it belongs to: `form` exists only on the
 			// controlled props, `keepHiddenValues` and the `useForm` options only on
 			// the uncontrolled ones.
+			//
+			// Nine, not ten: the per-form `fields` registry was removed in favour of
+			// `createForm({ fields })`, the single registration site. `blocks` stays.
 			{
 				heading: 'Renderer props',
 				roots: [FORM_TYPE.FormRendererControlledProps, FORM_TYPE.FormRendererUncontrolledProps],
-				expectedCount: 10,
+				expectedCount: 9,
 			},
 		],
 		nonOptionTables: [
@@ -1139,6 +1185,35 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{ page: DocPage.FormBasicConcepts, optionTables: [], nonOptionTables: [] },
 	{ page: DocPage.FormComposition, optionTables: [], nonOptionTables: [] },
 	{ page: DocPage.FormExamples, optionTables: [], nonOptionTables: [] },
+	{
+		// The narrative half of the split: prose and live examples, every table moved to
+		// `arrays/api.mdx` below. Mapped with an empty optionTables so the page stays inside
+		// `everyPageIsMapped` rather than silently unchecked. `Styling hooks` is the one table
+		// that stays here — it documents DOM attributes, not a type's props.
+		page: DocPage.FormArrays,
+		optionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'Styling hooks',
+				reason: 'Documents the `data-*` attributes the kits emit onto the DOM, not props of any type.',
+			},
+		],
+	},
+	{
+		page: DocPage.FormArraysApi,
+		optionTables: [
+			{ heading: '`form.ArrayField`', roots: [FORM_TYPE.ArrayFieldProps], expectedCount: 12 },
+			{ heading: 'The render prop', roots: [FORM_TYPE.ArrayFieldScope], expectedCount: 3 },
+			{ heading: 'One entry', roots: [FORM_TYPE.ArrayItemScope], expectedCount: 3 },
+			{ heading: '`form.Array`', roots: [FORM_TYPE.ArrayProps], expectedCount: 6 },
+			{ heading: 'The scope', roots: [FORM_TYPE.ArrayScope], expectedCount: 12 },
+			{ heading: 'One entry, from the primitive', roots: [FORM_TYPE.ArrayItemScope], expectedCount: 8 },
+			{ heading: "`item.Item`'s own props", roots: [FORM_TYPE.ArrayItemProps], expectedCount: 4 },
+			{ heading: 'Validating the list', roots: [FORM_TYPE.FieldValidate], expectedCount: 3 },
+			{ heading: 'The `array` node', roots: [FORM_TYPE.AnyArrayNode], expectedCount: 10 },
+		],
+		nonOptionTables: [],
+	},
 	{ page: DocPage.FormGettingStarted, optionTables: [], nonOptionTables: [] },
 	{ page: DocPage.FormInstallationHeroui, optionTables: [], nonOptionTables: [] },
 	{ page: DocPage.FormInstallationShadcn, optionTables: [], nonOptionTables: [] },

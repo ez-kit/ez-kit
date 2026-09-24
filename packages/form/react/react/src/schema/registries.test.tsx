@@ -4,12 +4,10 @@ import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
 
 import { createForm } from '../create-form'
-import { testComponents } from '../test-kit'
+import { testComponents, testFields } from '../test-kit'
 
 import type { CustomFieldRenderProps } from './registries'
 import type { FormSchema } from '@ez-kit/form-core'
-
-const { FormRenderer } = createForm({ components: testComponents })
 
 type RatingValues = { score: number }
 
@@ -19,7 +17,7 @@ type RatingValues = { score: number }
 // value type — the same reason `form.AppField`'s `onChange` narrows with a runtime cast in
 // `RenderNode` rather than a compile-time one. A concrete `TValue` is for a component used
 // standalone, outside a registry.
-const Rating = ({ id, label, value, onChange, props, invalid }: CustomFieldRenderProps) => (
+const RatingField = ({ id, label, value, onChange, props, invalid }: CustomFieldRenderProps) => (
 	<div
 		data-testid='rating'
 		data-invalid={invalid}
@@ -36,6 +34,14 @@ const Rating = ({ id, label, value, onChange, props, invalid }: CustomFieldRende
 	</div>
 )
 
+/**
+ * Registered on the **factory**, which is the only registration site there is — `FormRenderer`
+ * has no `fields` prop. `RatingField` derives the document id `rating` by dropping the trailing
+ * `Field`, so every `{ type: 'rating' }` node below resolves against this one registration, and
+ * the same component is reachable from JSX as `form.RatingField`.
+ */
+const { FormRenderer } = createForm({ components: testComponents, fields: { ...testFields, RatingField } })
+
 test('a custom field receives the full binding, not just its own props', async () => {
 	const user = userEvent.setup()
 
@@ -47,7 +53,6 @@ test('a custom field receives the full binding, not just its own props', async (
 	render(
 		<FormRenderer
 			schema={schema}
-			fields={{ rating: Rating }}
 			defaultValues={{ score: 0 }}
 			onSubmit={() => {}}
 		/>,
@@ -75,7 +80,6 @@ test('a custom field receives `invalid`, distinct from its own `props`', () => {
 	const { container } = render(
 		<FormRenderer
 			schema={schema}
-			fields={{ rating: Rating }}
 			defaultValues={{ score: 0 }}
 			onSubmit={() => {}}
 		/>,
@@ -119,15 +123,19 @@ test('a block renders without binding to any value', () => {
 })
 
 test('an unknown node type throws with the type named', () => {
+	// A bundle whose factory registered nothing beyond the kit's twelve — `rating` is
+	// neither a built-in kind nor registered, and there is no per-form prop left that could
+	// have supplied it after the fact.
+	const { FormRenderer: BareRenderer } = createForm({ components: testComponents, fields: testFields })
+
 	const schema = {
 		version: 1,
 		children: [{ type: 'rating', name: 'score', label: 'Score' }],
 	} as FormSchema<RatingValues, 'rating'>
 
-	// No `fields` registry passed — `rating` is neither a built-in kind nor registered.
 	expect(() =>
 		render(
-			<FormRenderer
+			<BareRenderer
 				schema={schema}
 				defaultValues={{ score: 0 }}
 				onSubmit={() => {}}
@@ -136,15 +144,18 @@ test('an unknown node type throws with the type named', () => {
 	).toThrow(/rating/)
 })
 
-test('registering a reserved key throws', () => {
+test('registering a reserved block key throws', () => {
 	const emptySchema: FormSchema<RatingValues> = { version: 1, children: [] }
-	const Custom = (_props: CustomFieldRenderProps) => null
+	const Custom = (_props: { props: Record<string, unknown> }) => null
 
+	// `blocks` is the one registry still passed per form, so it is the one
+	// `assertNoReservedFieldKeyCollision` still guards. The field registry's equivalent
+	// rejection moved to `createForm` — see `custom-field.test.tsx`.
 	expect(() =>
 		render(
 			<FormRenderer
 				schema={emptySchema}
-				fields={{ section: Custom }}
+				blocks={{ section: Custom }}
 				defaultValues={{ score: 0 }}
 				onSubmit={() => {}}
 			/>,
