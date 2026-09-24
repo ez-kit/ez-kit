@@ -1,5 +1,17 @@
 # @ez-kit/docs
 
+## 0.1.4
+
+### Patch Changes
+
+- Updated dependencies [c4ac267]
+- Updated dependencies [03df900]
+- Updated dependencies [0dc4733]
+  - @ez-kit/form-core@0.4.0
+  - @ez-kit/form-react@0.4.0
+  - @ez-kit/form-shadcn@0.4.0
+  - @ez-kit/form-heroui@0.5.0
+
 ## 0.1.3
 
 ### Patch Changes
