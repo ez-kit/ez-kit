@@ -45,9 +45,9 @@ function Row({ item }: { item: LineItem }) {
 		<tr
 			ref={ref}
 			data-dragging={isDragging || undefined}
-			className='data-[dragging]:opacity-50'
+			className='data-[dragging]:opacity-50 [&>td]:pt-2'
 		>
-			<td>
+			<td className='pr-2 align-bottom'>
 				<button
 					ref={handleRef}
 					type='button'
@@ -58,7 +58,7 @@ function Row({ item }: { item: LineItem }) {
 					⠿
 				</button>
 			</td>
-			<td>
+			<td className='pr-2'>
 				<item.TextField
 					name='sku'
 					label={`SKU ${String(item.index + 1)}`}

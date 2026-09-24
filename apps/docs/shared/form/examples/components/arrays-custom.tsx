@@ -66,7 +66,11 @@ export function ArraysCustomExample() {
 									 * presenting tabular data — no `<th>` header names a column of data, so none is
 									 * claimed. Each cell stays a cell: the actions column wraps its buttons in an
 									 * inner `<div>` instead of putting `flex` on the `<td>` itself, which would take
-									 * the cell out of table layout.
+									 * the cell out of table layout. That cell is `align-bottom` because the field
+									 * cells beside it are a label stacked over a control: a middle-aligned button
+									 * centres against the pair and so floats above the inputs it acts on. The gaps
+									 * are cell padding rather than `border-spacing`, which would also inset the
+									 * table's outer edges and pull the rows out of line with the field above.
 									 */}
 									<table
 										role='presentation'
@@ -74,20 +78,23 @@ export function ArraysCustomExample() {
 									>
 										<tbody>
 											{items.map((item) => (
-												<tr key={item.key}>
-													<td>
+												<tr
+													key={item.key}
+													className='[&>td]:pt-2'
+												>
+													<td className='pr-2'>
 														<item.TextField
 															name='sku'
 															label={`SKU ${String(item.index + 1)}`}
 														/>
 													</td>
-													<td>
+													<td className='pr-2'>
 														<item.NumberField
 															name='qty'
 															label={`Qty ${String(item.index + 1)}`}
 														/>
 													</td>
-													<td>
+													<td className='align-bottom'>
 														<div className='flex gap-1'>
 															<Button
 																onClick={() => {
