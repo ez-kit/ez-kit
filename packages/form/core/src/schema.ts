@@ -410,6 +410,24 @@ export type FormNode<TValues, TCustom extends string = never> =
 export type FormSchema<TValues, TCustom extends string = never> = {
 	version: 1
 	children: FormNode<TValues, TCustom>[]
+	/**
+	 * Type-only marker, never written and never read at runtime — the one position from which
+	 * `TValues` can be **inferred back out of a schema value**.
+	 *
+	 * Without it `TValues` appears in a node only inside `DeepKeysOfType<TValues, …>`
+	 * (`FieldNode`), a conditional type: given `name: 'email'` TypeScript cannot run the
+	 * computation backwards to ask which object produces that union, so inference from a
+	 * schema literal falls back to `unknown`. That is what made `FormRenderer`'s `onSubmit`
+	 * hand back an `unknown` `value` unless `defaultValues` — the only ordinary-position
+	 * occurrence anywhere nearby — pinned the type at the call site.
+	 *
+	 * Optional on purpose: a schema built by hand or parsed from JSON carries no such key and
+	 * must stay assignable. It costs nothing at runtime — `defineFormSchema` returns its
+	 * argument by identity, so the property exists in the type and in no object.
+	 *
+	 * The same trick as `defineFieldType`'s `__props` / `__value`, for the same reason.
+	 */
+	readonly __values?: TValues
 }
 
 /**
@@ -424,9 +442,14 @@ export type AnyFormSchema<TValues> = FormSchema<TValues, string>
  * Curried on purpose: TypeScript has no partial generic inference, so `TValues` (and the
  * optional `TCustom` set of custom field-type keys) are given explicitly while the schema
  * literal is still inferred — which is what makes `name` checkable per field kind.
+ *
+ * The return type re-attaches `TValues` through the `__values` marker. Returning the bare `S`
+ * would keep every `name` checked and still lose the value type on the way out: `S` is the
+ * literal's own type, in which `TValues` survives nowhere inference can reach it. Consumers
+ * that declare `schema: AnyFormSchema<TValues>` — `FormRenderer` above all — read it here.
  */
 export function defineFormSchema<TValues, TCustom extends string = never>() {
-	return <const S extends FormSchema<TValues, TCustom>>(schema: S): S => schema
+	return <const S extends FormSchema<TValues, TCustom>>(schema: S): S & { readonly __values?: TValues } => schema
 }
 
 /**

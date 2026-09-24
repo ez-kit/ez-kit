@@ -68,7 +68,7 @@ A `section` adds `title`, `description`, `columns` (an integer **1–4**, defaul
 
 Fields may carry their own `defaultValue`. When you pass no `defaultValues` to the renderer, it builds them from the schema — which is the only way a backend-delivered field can start out as anything but `undefined`. A `defaultValues` you pass yourself always wins.
 
-`defaultValues` is also the inference site for the form's value type, exactly as in the JSX API: pass it and `onSubmit`'s `value` is typed; leave it out and it arrives as `unknown`.
+The **schema** carries the form's value type, so `onSubmit`'s `value` is typed whether or not you pass `defaultValues` — which matters most for a backend-delivered document, the case that has no `defaultValues` to state it with. A schema built by `defineFormSchema<Values>()` or by `parseFormSchema<Values>()` says `Values`; one assembled as a bare object literal says nothing, and `value` arrives as `unknown` until you annotate it. Passing `defaultValues` as well is still checked against the same type.
 
 ## TypeScript and JSON are the same document
 
