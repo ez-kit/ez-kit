@@ -928,7 +928,8 @@ export type TableConfig<TFeatures extends TableFeatures, TRow extends object> = 
 	 *
 	 * Named for the thing it produces, like every other feature: the API it turns on is
 	 * `table.draft`, the state it seeds is `initialState.draft`, the bar that reports it is
-	 * `<DataGrid.DraftBar />`, and the axes are `DraftAxis`. It was `deferredApply`,
+	 * `<DataGrid.ActionBar />` — one bar with a section per concern, selection beside the
+	 * pending draft — and the axes are `DraftAxis`. It was `deferredApply`,
 	 * which left one feature answering to two words depending on where you touched it.
 	 *
 	 * The object form exists for the same reason every other feature has one — `enabled: false`

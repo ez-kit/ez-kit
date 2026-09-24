@@ -20,7 +20,9 @@ import type { Page } from '@playwright/test'
  *   stylesheet, it needs a design decision rather than a fix, and it cannot be judged in a
  *   rule-scoped run of the shared contract.
  * - The state semantics (`aria-sort`, `aria-selected`, `aria-rowcount`, live regions) and the
- *   focus model. Neither is an axe rule, and neither is fixed yet — see #227's layers B and C.
+ *   focus model — #227's layers B and C. Both are shipped now, and neither is an axe rule:
+ *   axe checks that an attribute is allowed, never that it is there. They have files of their
+ *   own — `state-semantics.spec.ts` and `keyboard-navigation.spec.ts`.
  */
 
 /** The rules this file is the guard for. Each one was a real violation before the fix. */

@@ -2,8 +2,10 @@
 
 import { getVisualLeafColumns, useDataGridState, useDataGridTable, useGridMessages } from '@ez-kit/data-grid-react/kit'
 import { Table as HeroTable, cn } from '@heroui/react'
-import { Children, createContext, forwardRef, useContext } from 'react'
+import { Children, createContext, forwardRef, useContext, useRef } from 'react'
 import { TableFooter as RacTableFooter } from 'react-aria-components'
+
+import { asAriaStateCarrier, useAriaStateMirror } from './aria-state'
 
 import type {
 	TableProps,
@@ -55,12 +57,16 @@ export function TableScroll({ children, ...props }: TableScrollProps) {
  */
 export function Table({ children, ...props }: TableProps) {
 	const messages = useGridMessages()
-	const heroProps = props as unknown as ComponentProps<typeof HeroTable.Content>
+	const heroProps = asAriaStateCarrier(props) as unknown as ComponentProps<typeof HeroTable.Content>
+	const ref = useRef<HTMLTableElement>(null)
+	// One mirror for the whole grid, mounted on the element whose ref does land.
+	useAriaStateMirror(ref)
 
 	return (
 		<HeroTable.Content
 			aria-label={messages.grid.label}
 			{...heroProps}
+			ref={ref}
 		>
 			{children}
 		</HeroTable.Content>
@@ -151,7 +157,6 @@ export function Tfoot(props: TfootProps) {
 // `forwardRef` for the same reason as {@link Thead}: pinned rows are measured through this ref.
 export const Tr = forwardRef<HTMLTableRowElement, TrProps>(function Tr({ children, ...props }, ref) {
 	const { inHeader } = useContext(HeaderContext)
-
 	// Header rows render as a fragment: React Aria's `Column`s are the row, and a `<tr>` around
 	// them would be a node the collection did not put there. Footer rows need no branch — they are
 	// `Row`s of the footer section, the same collection node a body row is.
@@ -161,7 +166,7 @@ export const Tr = forwardRef<HTMLTableRowElement, TrProps>(function Tr({ childre
 	const maybeRowId = propsWithData.id ?? propsWithData['data-row-id']
 	const rowId =
 		typeof maybeRowId === 'symbol' ? undefined : typeof maybeRowId === 'bigint' ? String(maybeRowId) : maybeRowId
-	const heroProps = propsWithData as unknown as ComponentProps<typeof HeroTable.Row>
+	const heroProps = asAriaStateCarrier(propsWithData) as unknown as ComponentProps<typeof HeroTable.Row>
 
 	// `data-row-id` is passed through, not consumed: React Aria needs the value as its
 	// collection `id` (it surfaces as `data-key`), but the attribute itself is part of the
@@ -182,7 +187,7 @@ export function Th({ pinned, className, ...props }: ThProps) {
 	const { rowHeaderId } = useContext(HeaderContext)
 	const propsWithData = props as ThProps & { 'data-column-id'?: string }
 	const columnId = propsWithData['data-column-id']
-	const baseHeroProps = props as unknown as ComponentProps<typeof HeroTable.Column>
+	const baseHeroProps = asAriaStateCarrier(props) as unknown as ComponentProps<typeof HeroTable.Column>
 	const isRowHeader = rowHeaderId !== undefined && columnId !== undefined && columnId === rowHeaderId
 	const mergedClassName = cn(className, pinned ? 'bg-surface-secondary' : undefined) ?? ''
 

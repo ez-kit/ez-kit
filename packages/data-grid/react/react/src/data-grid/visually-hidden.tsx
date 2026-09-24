@@ -16,6 +16,26 @@ export function VisuallyHidden({ children }: { children: ReactNode }) {
 }
 
 /**
+ * The same clipped text, announced when it changes — a polite live region.
+ *
+ * Separate from {@link VisuallyHidden} rather than a `role` prop on it, because the two are
+ * different things to a screen reader: one is text that happens to be invisible, the other is a
+ * standing promise that anything replacing its content will be read out. A caller should have to
+ * mean it.
+ */
+export function VisuallyHiddenStatus({ children }: { children: ReactNode }) {
+	return (
+		<span
+			data-slot='sr-only'
+			role='status'
+			aria-live='polite'
+		>
+			{children}
+		</span>
+	)
+}
+
+/**
  * The accessible name of a form control the grid renders **inline** — a column filter, a cell in
  * the draft creating row, a cell being edited in place.
  *

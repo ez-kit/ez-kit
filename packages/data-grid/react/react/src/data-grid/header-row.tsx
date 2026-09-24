@@ -1,5 +1,6 @@
 import { useGridComponents } from '../components-context'
 
+import { useAriaHeaderRowIndexAttrs } from './aria-row-index'
 import { DataGridHeaderCell } from './header-cell'
 import { useRowNavigationProps } from './keyboard-navigation'
 
@@ -51,11 +52,15 @@ export function DataGridHeaderRow<TRow extends object = ErasedRow>({
 	const { Tr } = useGridComponents().core
 	const headers = headerGroup.headers
 	const navigationProps = useRowNavigationProps()
+	// `depth` is the group's 0-based position from the top of the header, which is exactly the
+	// order ARIA counts the rows in — no need to ask the table for the list and index into it.
+	const ariaRowIndexAttrs = useAriaHeaderRowIndexAttrs(headerGroup.depth)
 
 	return (
 		<Tr
 			data-slot='tr'
 			{...navigationProps}
+			{...ariaRowIndexAttrs}
 		>
 			{children === undefined
 				? headers.map((header) => (

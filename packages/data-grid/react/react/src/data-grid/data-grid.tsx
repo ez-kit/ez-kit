@@ -3,6 +3,7 @@ import { useRef } from 'react'
 
 import { CellTypesProvider, mergeCellTypes } from '../cell-types-context'
 import { GridComponentsProvider, useGridComponents } from '../components-context'
+import { guardComponents } from '../components-guard'
 import { GridFactoryDefaultsProvider } from '../data-grid-options-context'
 import { useDataGrid, type UseDataGridConfig } from '../use-data-grid'
 
@@ -32,6 +33,7 @@ import { NoResultsRow } from './no-results-row'
 import { PageSizer } from './page-sizer'
 import { Pagination } from './pagination'
 import { DataGridRow } from './row'
+import { RowCountStatus } from './row-count-status'
 import { SortMenuTrigger } from './sort-menu-trigger'
 import { DataGridTable } from './table'
 import { TableProvider, useDataGridTable, useDataGridState } from './table-context'
@@ -342,10 +344,14 @@ function DataGridControlled<TFeatures extends TableFeatures, TRow extends object
 		// silently inherit the outer kit's defaults instead of standing on its own.
 		<GridFactoryDefaultsProvider defaults={undefined}>
 			<CellTypesProvider cellTypes={resolvedCellTypes}>
-				<GridComponentsProvider {...(components !== undefined ? { components } : {})}>
+				<GridComponentsProvider
+					{...(components !== undefined ? { components } : {})}
+					{...(IS_DEV ? { guard: guardComponents } : {})}
+				>
 					<TableProvider table={table}>
 						{IS_DEV && <ComponentGuard />}
 						<GridRoot>
+							<RowCountStatus />
 							<GridBody>{children}</GridBody>
 							{writeOptions.creating?.mode === CreatingMode.Modal && <CreatingModal />}
 							{writeOptions.editing?.mode === EditingMode.Modal && <EditingModal />}

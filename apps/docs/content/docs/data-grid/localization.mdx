@@ -127,6 +127,18 @@ function MyPageSizerLabel() {
 Outside a `<DataGrid>` it returns `defaultMessages` rather than throwing, so a component of yours
 still renders in a story or a test.
 
+## Strings nobody sees
+
+Some keys are never rendered visibly, and translating them is the whole point of their existing:
+
+- `grid.label` names the table element.
+- `grid.rowCount` is the grid's **live region** — the sentence a screen reader hears when a filter
+  or a search term changes how many rows match. It is announced, never shown.
+- `selection.columnHeader`, `expanding.columnHeader` and `rowActions.columnHeader` name the three
+  system columns, whose `<th>` holds a control or nothing at all.
+
+A dictionary that leaves them in English leaves a screen-reader user in English.
+
 ## What the dictionary does not cover
 
 A UI kit's own internals keep their own strings: HeroUI's icons, for instance, carry English

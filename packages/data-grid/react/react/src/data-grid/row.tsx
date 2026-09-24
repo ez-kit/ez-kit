@@ -5,6 +5,8 @@ import { useGridComponents } from '../components-context'
 import { joinClassNames } from '../utils/class-names'
 import { isTextEntryTarget } from '../utils/text-entry-target'
 
+import { useAriaRowIndexAttrs } from './aria-row-index'
+import { ariaExpandedAttrs } from './aria-state'
 import { DataGridCell } from './cell'
 import { RowProvider } from './composition-context'
 import { useRowNavigationProps } from './keyboard-navigation'
@@ -160,6 +162,32 @@ function DataGridRowImpl<TRow extends object = ErasedRow>(
 	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
 	const isSelected = useDataGridState(() => row.getIsSelected?.() ?? false)
 
+	/**
+	 * `aria-selected` rides on the same state, and is written only for a row that *can* be
+	 * selected: on a grid with no selection the attribute would announce every row as
+	 * selectable and none as chosen. `enableRowSelection` is `hasSelection` in core, so the
+	 * optional call answers both questions at once — feature registered, and selection
+	 * configured.
+	 */
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const canSelect = row.getCanSelect?.() ?? false
+	const ariaRowIndexAttrs = useAriaRowIndexAttrs(row)
+
+	/**
+	 * `aria-expanded`, for a tree row, a sub-content row, or any other row the table reports as
+	 * expandable.
+	 *
+	 * Subscribed rather than read once: `getIsExpanded` answers from the `expanded` slice, and a
+	 * row that is opened from anywhere other than its own chevron — a controlled `expanded` prop,
+	 * an "expand all" control, a restored state snapshot — re-renders only because of this read.
+	 * Both calls are optional: `rowExpandingFeature` is not structural, and this line runs for
+	 * every row of every grid.
+	 */
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const canExpand = row.getCanExpand?.() ?? false
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const isExpanded = useDataGridState(() => row.getIsExpanded?.() ?? false)
+
 	const canMove = table.grid.ordering.row
 	/**
 	 * `Alt+ArrowUp` / `Alt+ArrowDown` move the row one step.
@@ -202,6 +230,9 @@ function DataGridRowImpl<TRow extends object = ErasedRow>(
 			data-slot='tr'
 			data-row-id={row.id}
 			data-row-selected={isSelected ? 'true' : undefined}
+			{...(canSelect ? { 'aria-selected': isSelected } : {})}
+			{...ariaRowIndexAttrs}
+			{...ariaExpandedAttrs(canExpand, isExpanded)}
 			data-depth={row.depth > 0 ? row.depth : undefined}
 			style={consumerStyle !== undefined || style !== undefined ? { ...consumerStyle, ...style } : undefined}
 			className={joinClassNames(consumerClassName)}

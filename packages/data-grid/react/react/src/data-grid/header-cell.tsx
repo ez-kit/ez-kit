@@ -16,6 +16,7 @@ import { getCommonPinStyles } from '../utils/pin-styles'
 import { isTextEntryTarget } from '../utils/text-entry-target'
 
 import { getAlignAttrs } from './align-attrs'
+import { ariaSortAttrs } from './aria-state'
 import { buildColumnMenuSections } from './column-menu-sections'
 import { HeaderCellProvider } from './composition-context'
 import { flexRender } from './flex-render'
@@ -451,6 +452,7 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 			{...(pinned ? { 'data-pinned': pinned } : {})}
 			{...getAlignAttrs(meta, 'header')}
 			{...(canResize ? { 'data-resizable': 'true' } : {})}
+			{...ariaSortAttrs(canSort, sortDirection)}
 			{...draftSortAttrs}
 		>
 			<HeaderCellProvider value={args}>

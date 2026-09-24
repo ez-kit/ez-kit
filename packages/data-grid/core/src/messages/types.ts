@@ -25,6 +25,11 @@ export type GridMessages = {
 	grid: {
 		/** Accessible name of the table element. */
 		label: string
+		/**
+		 * How the grid's live region reports the size of the current result set, announced when
+		 * a filter or a search term changes it. Never rendered visibly.
+		 */
+		rowCount: (ctx: CountContext) => string
 	}
 	/** Row selection: the checkboxes and the selection bar. */
 	selection: {

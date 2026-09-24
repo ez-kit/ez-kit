@@ -15,6 +15,7 @@ import type { GridMessages } from './types'
 export const defaultMessages: GridMessages = {
 	grid: {
 		label: 'Data grid',
+		rowCount: ({ count }) => `${String(count)} rows`,
 	},
 	selection: {
 		delete: 'Delete',

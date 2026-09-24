@@ -109,6 +109,7 @@ export const DocPage = {
 	LayoutIndex: 'content/docs/data-grid/layout/index.mdx',
 	Theming: 'content/docs/data-grid/theming.mdx',
 	Localization: 'content/docs/data-grid/localization.mdx',
+	Accessibility: 'content/docs/data-grid/accessibility.mdx',
 	ExamplesIndex: 'content/docs/data-grid/examples.mdx',
 	ColumnsColumnHelper: 'content/docs/data-grid/columns/column-helper.mdx',
 	ColumnsGroupedHeaders: 'content/docs/data-grid/columns/grouped-headers.mdx',
@@ -734,6 +735,17 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		page: DocPage.Localization,
 		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 1 }],
 		nonOptionTables: [],
+	},
+	{
+		page: DocPage.Accessibility,
+		optionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'State semantics',
+				reason:
+					'Documents the ARIA attributes the grid writes onto the DOM — attribute names, not keys of any config type.',
+			},
+		],
 	},
 	{
 		page: DocPage.ExamplesIndex,

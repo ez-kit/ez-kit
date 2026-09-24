@@ -5,6 +5,8 @@ import { useGridComponents } from '../components-context'
 import { DATA_GRID_DEFAULTS } from '../defaults'
 import { getColumnSizeVars, getGridTemplateColumns } from '../utils/column-size-vars'
 
+import { AriaRowIndexProvider } from './aria-row-index'
+import { hasPartialRowSet, resolveAriaRowCount } from './aria-state'
 import { Body } from './body'
 import { Footer } from './footer'
 import { Header } from './header'
@@ -247,6 +249,25 @@ export function DataGridTable<TRow extends object = ErasedRow>({ children }: Dat
 	 * `RefAttributes`, so the `<table>` itself cannot be held — the wrapper can, and every query
 	 * the model makes is scoped to it anyway.
 	 */
+	/**
+	 * The grid's state as the accessibility tree reads it — see `aria-state.ts` for why all of
+	 * it is written here rather than in each kit.
+	 *
+	 * `aria-busy` costs this component a subscription it did not have, so a refetch now
+	 * re-renders the table element (and with it `Header` / `Body` / `Footer`) twice per request.
+	 * That is the price of announcing "busy" at all: the attribute belongs on the table, and
+	 * nothing below it can put it there.
+	 */
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const isBusy = useDataGridState((s) => (s.loading?.isPending ?? false) || (s.loading?.isFetching ?? false))
+	const partialRowSet = hasPartialRowSet(table)
+	// Only a grid that owns its own `role="grid"` writes this: on a `role="table"` element
+	// `aria-multiselectable` is not an allowed attribute, and the kits that bring their own focus
+	// manager bring their own role with it. See `keyboard-navigation/context.tsx`.
+	const ownsGridRole = useKeyboardNavigationEnabled()
+	const isMultiSelectable =
+		ownsGridRole && table.options.enableRowSelection === true && table.options.enableMultiRowSelection !== false
+
 	const navigationProps = useGridKeyboardNavigation({
 		enabled: useKeyboardNavigationEnabled(),
 		rootRef: wrapperRef,
@@ -255,34 +276,45 @@ export function DataGridTable<TRow extends object = ErasedRow>({ children }: Dat
 	})
 
 	const tableEl = (
-		<Table
-			data-slot='table'
-			{...navigationProps}
-			// `grid.label` is documented as "accessible name of the table element", so
-			// it is written here rather than left to each kit: the heroui adapter sets the same
-			// string on React Aria's grid (and keeps doing so), while shadcn renders the bare
-			// `<table>`, which had no name at all until this line.
-			aria-label={table.grid.messages.grid.label}
-			{...(isVirtualized ? { 'data-virtualized': 'true' } : {})}
-			style={
-				{
-					...sizeVars,
-					'--grid-template-columns': gridTemplateColumns,
-				} as CSSProperties
-			}
+		<AriaRowIndexProvider
+			table={table}
+			enabled={partialRowSet}
 		>
-			{children === undefined ? (
-				<>
-					<Header />
-					<Body />
-					{hasFooter ? <Footer /> : null}
-				</>
-			) : typeof children === 'function' ? (
-				children({ table, headerGroups: table.getHeaderGroups(), rows: table.getRowModel().rows })
-			) : (
-				children
-			)}
-		</Table>
+			<Table
+				data-slot='table'
+				{...navigationProps}
+				// `grid.label` is documented as "accessible name of the table element", so
+				// it is written here rather than left to each kit: the heroui adapter sets the same
+				// string on React Aria's grid (and keeps doing so), while shadcn renders the bare
+				// `<table>`, which had no name at all until this line.
+				aria-label={table.grid.messages.grid.label}
+				{...(isBusy ? { 'aria-busy': true } : {})}
+				{...(isMultiSelectable ? { 'aria-multiselectable': true } : {})}
+				// Written only when the DOM holds less than the whole row set, which is the case
+				// `aria-rowcount` exists for: a paginated, virtualized or infinite grid otherwise
+				// reads to a screen reader as a table of exactly the rows it can see.
+				{...(partialRowSet ? { 'aria-rowcount': resolveAriaRowCount(table) } : {})}
+				{...(isVirtualized ? { 'data-virtualized': 'true' } : {})}
+				style={
+					{
+						...sizeVars,
+						'--grid-template-columns': gridTemplateColumns,
+					} as CSSProperties
+				}
+			>
+				{children === undefined ? (
+					<>
+						<Header />
+						<Body />
+						{hasFooter ? <Footer /> : null}
+					</>
+				) : typeof children === 'function' ? (
+					children({ table, headerGroups: table.getHeaderGroups(), rows: table.getRowModel().rows })
+				) : (
+					children
+				)}
+			</Table>
+		</AriaRowIndexProvider>
 	)
 
 	if (isVirtualized) {
