@@ -73,9 +73,12 @@ Finally `pnpm run ci` at the root, which is what the PR is gated on:
 - The two in-flight items above.
 - `specs/006-form-render-scale/notes.md` — the fan-out question, deliberately out of scope here.
   Nothing is decided in it; it exists so the discussion starts from evidence.
-- `FormRenderer` cannot infer `TValues` from `schema` alone, so `onSubmit`'s `value` arrives as
-  `unknown` unless `defaultValues` pins it. Pre-existing, unrelated to arrays, not addressed here.
-  Worth a line on the schema docs page if someone picks it up.
+- ~~`FormRenderer` cannot infer `TValues` from `schema` alone, so `onSubmit`'s `value` arrives as
+  `unknown` unless `defaultValues` pins it.~~ **Fixed 2026-09-24**, on this branch. `FormSchema`
+  carries an optional type-only `__values` marker that `defineFormSchema` re-attaches, which gives
+  `TValues` the one ordinary position inference can read it from — it appears nowhere else but
+  inside `DeepKeysOfType<TValues, …>`, a conditional type no inference runs backwards through.
+  `schema.mdx` got the line this entry asked for. See `.changeset/form-schema-value-inference.md`.
 
 ## Do not re-litigate
 
