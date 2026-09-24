@@ -38,6 +38,14 @@ export type GridMessages = {
 		clear: string
 		/** How the selection bar reports how many rows are selected. */
 		count: (ctx: CountContext) => string
+		/**
+		 * Accessible name of the selection column's header cell.
+		 *
+		 * Rendered visually hidden, and only when the cell would otherwise be empty — under
+		 * `selection.multi: false` there is no select-all checkbox to name it, and a `<th>` with
+		 * no accessible name is what axe reports as `empty-table-header`.
+		 */
+		columnHeader: string
 	}
 	/** Row expansion. */
 	expanding: {
@@ -45,6 +53,13 @@ export type GridMessages = {
 		expand: string
 		/** Accessible name of an expanded row's toggle. */
 		collapse: string
+		/**
+		 * Accessible name of the expand column's header cell, rendered visually hidden.
+		 *
+		 * The column carries chevrons and no heading, so the `<th>` has no text of its own —
+		 * see {@link GridMessages.selection.columnHeader}.
+		 */
+		columnHeader: string
 	}
 	/** Column resizing. */
 	resizing: {
@@ -95,6 +110,13 @@ export type GridMessages = {
 	}
 	/** Built-in row actions. Custom actions carry their own `label`. */
 	rowActions: {
+		/**
+		 * Accessible name of the row-actions column's header cell, rendered visually hidden.
+		 *
+		 * Distinct from {@link GridMessages.rowActions.menu}, which names one row's trigger:
+		 * this names the column. See {@link GridMessages.selection.columnHeader}.
+		 */
+		columnHeader: string
 		/** Accessible name of the row's action menu. */
 		menu: string
 		/** Accessible name of the menu when it holds only the pinning entries. */

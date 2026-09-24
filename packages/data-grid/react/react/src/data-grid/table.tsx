@@ -9,6 +9,7 @@ import { Body } from './body'
 import { Footer } from './footer'
 import { Header } from './header'
 import { InfiniteProvider } from './infinite-context'
+import { useGridKeyboardNavigation, useKeyboardNavigationEnabled } from './keyboard-navigation'
 import { PinShadowOverlay } from './pin-shadow-overlay'
 import { useDataGridTable, useDataGridState } from './table-context'
 import { VirtualProvider } from './virtual-context'
@@ -241,9 +242,22 @@ export function DataGridTable<TRow extends object = ErasedRow>({ children }: Dat
 		if (scrollEl) scrollEl.scrollTop = 0
 	}, [querySignature, infiniteEnabled, getScrollElement, table])
 
+	/**
+	 * The focus model, wired here because this is where the refs are: `TableProps` carries no
+	 * `RefAttributes`, so the `<table>` itself cannot be held — the wrapper can, and every query
+	 * the model makes is scoped to it anyway.
+	 */
+	const navigationProps = useGridKeyboardNavigation({
+		enabled: useKeyboardNavigationEnabled(),
+		rootRef: wrapperRef,
+		scrollRef: scrollElementRef,
+		direction: table.grid.direction,
+	})
+
 	const tableEl = (
 		<Table
 			data-slot='table'
+			{...navigationProps}
 			// `grid.label` is documented as "accessible name of the table element", so
 			// it is written here rather than left to each kit: the heroui adapter sets the same
 			// string on React Aria's grid (and keeps doing so), while shadcn renders the bare

@@ -71,6 +71,7 @@
 		"zustand": "^5.0.12"
 	},
 	"devDependencies": {
+		"@axe-core/playwright": "^4.13.0",
 		"@internationalized/date": "^3.12.4",
 		"@playwright/test": "^1.59.1",
 		"@react-aria/ssr": "^3.10.1",

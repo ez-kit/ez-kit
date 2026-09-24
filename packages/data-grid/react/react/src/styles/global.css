@@ -218,3 +218,18 @@ table[data-slot='table'] {
 [data-pin-shadow] {
 	@apply absolute top-0 bottom-0 pointer-events-none;
 }
+
+/* ── accessible-name carriers ─────────────────────────────────────────── */
+
+/* Text that exists for the accessibility tree only: the header of a system column (which
+ * carries chevrons or checkboxes and no heading of its own) and the name of a column filter
+ * control. Both are `<th>`/control content the sighted user reads from context and a screen
+ * reader has no other route to, which is why the name is real text rather than an `aria-label`:
+ * the kits' controls are the kits' own components and only some of them forward one.
+ *
+ * Structural, not visual — clip and position, the same class of rule as the sticky offsets
+ * above. `sr-only` is Tailwind's own utility, so the clip rectangle stays one definition for
+ * the whole app rather than a second spelling of it here. */
+[data-slot='sr-only'] {
+	@apply sr-only;
+}

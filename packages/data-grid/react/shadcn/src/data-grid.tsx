@@ -117,6 +117,15 @@ const bundle: DataGridBundle<KitCellTypes, KitFeatures> = createDataGrid<KitCell
 	components,
 	cellTypes,
 	features: allDataGridFeatures,
+	/**
+	 * This kit renders plain DOM and brings no focus manager, so it takes the package's.
+	 *
+	 * The heroui kit deliberately does **not** set this: its table is React Aria's, which has a
+	 * roving focus manager already, and a second one would fight it for the arrow keys. That is
+	 * also why this is a property of the bundle rather than an option of the grid — see
+	 * `CreateDataGridOptions.keyboardNavigation`.
+	 */
+	keyboardNavigation: true,
 })
 
 const { DataGrid, GridComponentsProvider, useDataGrid } = bundle

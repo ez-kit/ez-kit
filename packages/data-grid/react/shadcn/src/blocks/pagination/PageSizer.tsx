@@ -20,7 +20,11 @@ export function PageSizer({ pageSize, items, onPageSizeChange }: PageSizerProps)
 					onPageSizeChange(Number(v))
 				}}
 			>
-				<SelectTrigger>
+				{/* The `<span>` beside the trigger is text, not a `<label>`, so it names nothing:
+				    the trigger's own content is the current page size and axe reports
+				    `button-name`. Named from the same key the visible text uses — the heroui
+				    kit's Select carries the identical `aria-label`. */}
+				<SelectTrigger aria-label={messages.pagination.rowsPerPage}>
 					<SelectValue />
 				</SelectTrigger>
 				<SelectContent>

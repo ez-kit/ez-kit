@@ -4,6 +4,7 @@ import {
 	GridDirection,
 	moveColumn,
 	SELECTION_COLUMN_ID,
+	SystemColumnType,
 } from '@ez-kit/data-grid-core'
 
 import { useCellTypes } from '../cell-types-context'
@@ -19,8 +20,10 @@ import { buildColumnMenuSections } from './column-menu-sections'
 import { HeaderCellProvider } from './composition-context'
 import { flexRender } from './flex-render'
 import { HeaderExtras, HeaderMain } from './header-slots'
+import { useCellNavigationProps } from './keyboard-navigation'
 import { renderFilterInput } from './render-filter-input'
 import { useDataGridTable } from './table-context'
+import { VisuallyHidden } from './visually-hidden'
 
 import type { ErasedRow, DataTable, GridFeatures } from '../types'
 import type { FormColumnMeta } from '@ez-kit/data-grid-core'
@@ -134,6 +137,7 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 	const { SortIndicator } = gridComponents.sorting
 	const { OperatorSelect, BetweenInput, FilterPopover, MultiSelectFilter, ClearFilterButton } = gridComponents.filtering
 	const cellTypes = useCellTypes()
+	const navigationProps = useCellNavigationProps('columnheader')
 
 	// `ColumnMeta` is declared `in out` in both its `TFeatures` and its `TData` upstream, so no
 	// concrete instantiation is assignable to any other and this cast is forced by the variance
@@ -169,6 +173,7 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 		const canSelectAll = table.options.enableMultiRowSelection !== false
 		return (
 			<Th
+				{...navigationProps}
 				data-slot='th'
 				data-slot-selection-th='true'
 				data-column-id={header.column.id}
@@ -182,6 +187,9 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 				    only thing worth putting there instead, and what a grid with
 				    `selection.multi: false` (which renders no checkbox anyway) wants. */}
 				{meta?.systemHeader !== undefined && flexRender(meta.systemHeader, header.getContext())}
+				{meta?.systemHeader === undefined && !canSelectAll && (
+					<VisuallyHidden>{table.grid.messages.selection.columnHeader}</VisuallyHidden>
+				)}
 				{meta?.systemHeader === undefined && canSelectAll && (
 					<Checkbox
 						value={isAllSelected}
@@ -309,7 +317,28 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 	// which the grid keeps for itself (the selection column renders a select-all checkbox
 	// there). Falling back to `columnDef.header` keeps every ordinary column unchanged.
 	const headerSlot = meta?.systemHeader ?? header.column.columnDef.header
-	const label = header.isPlaceholder ? null : flexRender(headerSlot, header.getContext())
+	const rendered = header.isPlaceholder ? null : flexRender(headerSlot, header.getContext())
+	/**
+	 * The expand and row-actions columns carry chevrons and menus, and `buildSystemColumn` gives
+	 * them `header: () => null` — so without this the `<th>` has no accessible name at all, which
+	 * is axe's `empty-table-header`, reported in both kits.
+	 *
+	 * Keyed on `systemHeader` being unwritten rather than on the rendered output being empty: the
+	 * built-in `() => null` goes through `flexRender`, which hands back an element that renders
+	 * nothing rather than `null`, so there is nothing to test the output against. `systemHeader`
+	 * is the consumer's `expanding.column.header` / `rowActions.column.header`, and a consumer who
+	 * wrote one replaces this — the same rule, and the same expression, as the select-all branch
+	 * above.
+	 */
+	const systemColumnName =
+		meta?.systemHeader !== undefined
+			? undefined
+			: meta?.systemColumnType === SystemColumnType.Expand
+				? table.grid.messages.expanding.columnHeader
+				: meta?.systemColumnType === SystemColumnType.Actions
+					? table.grid.messages.rowActions.columnHeader
+					: undefined
+	const label = systemColumnName === undefined ? rendered : <VisuallyHidden>{systemColumnName}</VisuallyHidden>
 
 	const sortIndicator = (
 		<SortIndicator
@@ -410,6 +439,7 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 
 	return (
 		<Th
+			{...navigationProps}
 			data-slot='th'
 			data-column-id={header.column.id}
 			colSpan={header.colSpan}

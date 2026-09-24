@@ -7,6 +7,7 @@ import { isTextEntryTarget } from '../utils/text-entry-target'
 
 import { DataGridCell } from './cell'
 import { RowProvider } from './composition-context'
+import { useRowNavigationProps } from './keyboard-navigation'
 import { useDataGridState, useDataGridTable } from './table-context'
 
 import type { ErasedRow, GridFeatures } from '../types'
@@ -189,12 +190,14 @@ function DataGridRowImpl<TRow extends object = ErasedRow>(
 				table.ordering.moveRow(row.id, direction)
 			}
 		: undefined
+	const navigationProps = useRowNavigationProps()
 	const { className: consumerClassName, style: consumerStyle, ...consumerProps } = resolveRowProps?.(row) ?? {}
 	const cells = row.getVisibleCells()
 
 	return (
 		<Tr
 			{...consumerProps}
+			{...navigationProps}
 			ref={ref}
 			data-slot='tr'
 			data-row-id={row.id}

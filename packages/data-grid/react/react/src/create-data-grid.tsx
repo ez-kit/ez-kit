@@ -3,6 +3,7 @@
 import { CellTypesProvider } from './cell-types-context'
 import { GridComponentsProvider } from './components-context'
 import { DataGrid } from './data-grid/data-grid'
+import { KeyboardNavigationProvider } from './data-grid/keyboard-navigation'
 import { useDataGridState } from './data-grid/table-context'
 import { GridFactoryDefaultsProvider } from './data-grid-options-context'
 import { createColumnHelper } from './react-columns'
@@ -60,6 +61,27 @@ export type CreateDataGridOptions<
 	 * dropped by the annotation and the compiler says so at the first call site.
 	 */
 	features?: TFeatures
+	/**
+	 * Whether this kit wants the package's own keyboard focus model — one tab stop for the whole
+	 * grid, arrows between cells, `Enter` into a cell's controls and `Escape` back out, with the
+	 * `grid` / `row` / `gridcell` roles that go with it.
+	 *
+	 * **A statement by the kit, not an option of the grid, and that distinction is the whole
+	 * design.** A kit built on React Aria (heroui) already has a roving focus manager; a second
+	 * one would fight it for the arrow keys. Were this a field of the grid config instead,
+	 * `keyboard: false` would change nothing at all in that kit — an option that type-checks
+	 * clean and silently does nothing, which is the defect class `REQUIRED_FEATURE` already
+	 * warns about for unregistered features. So it sits here, beside `components` and
+	 * `features`, where it reads as what it is: what this bundle brings.
+	 *
+	 * Default `false`, so a bundle that says nothing renders exactly the DOM it did before.
+	 *
+	 * Note it is a property of the **bundle**, so a consumer composing their own with
+	 * `createDataGrid` decides for themselves — which is also the escape hatch for an
+	 * application that needs the model off. A per-grid switch can be added later without a
+	 * break, once there is a consumer asking for one.
+	 */
+	keyboardNavigation?: boolean
 	/**
 	 * Kit-level default grid options baked into the bundle. Merged as the **base** layer
 	 * under an app-level `DataGridOptionsProvider` and the per-call config
@@ -171,6 +193,7 @@ export function createDataGrid<
 	cellTypes,
 	features,
 	defaults,
+	keyboardNavigation = false,
 }: CreateDataGridOptions<TCellTypes, TFeatures>): DataGridBundle<TCellTypes, TFeatures> {
 	/*
 	 * `features` is folded into the defaults layer rather than carried separately: the layer
@@ -186,24 +209,26 @@ export function createDataGrid<
 	type BoundProps = Parameters<typeof DataGrid>[0]
 	function BoundDataGrid(props: BoundProps) {
 		return (
-			<GridComponentsProvider components={components}>
-				{/*
-				 * The uncontrolled form runs `useDataGrid` inside `<DataGrid>`, out of reach of the
-				 * bound hook below, so the factory layer is published here as well. It is a context of
-				 * its own rather than a `DataGridOptionsProvider`: this provider sits *inside* whatever
-				 * the consumer put around the grid, and an app-level `DataGridOptionsProvider` must
-				 * outrank the kit's defaults, not the other way round.
-				 */}
-				<GridFactoryDefaultsProvider defaults={factoryDefaults}>
-					{cellTypes != null ? (
-						<CellTypesProvider cellTypes={cellTypes}>
+			<KeyboardNavigationProvider enabled={keyboardNavigation}>
+				<GridComponentsProvider components={components}>
+					{/*
+					 * The uncontrolled form runs `useDataGrid` inside `<DataGrid>`, out of reach of the
+					 * bound hook below, so the factory layer is published here as well. It is a context of
+					 * its own rather than a `DataGridOptionsProvider`: this provider sits *inside* whatever
+					 * the consumer put around the grid, and an app-level `DataGridOptionsProvider` must
+					 * outrank the kit's defaults, not the other way round.
+					 */}
+					<GridFactoryDefaultsProvider defaults={factoryDefaults}>
+						{cellTypes != null ? (
+							<CellTypesProvider cellTypes={cellTypes}>
+								<DataGrid {...props} />
+							</CellTypesProvider>
+						) : (
 							<DataGrid {...props} />
-						</CellTypesProvider>
-					) : (
-						<DataGrid {...props} />
-					)}
-				</GridFactoryDefaultsProvider>
-			</GridComponentsProvider>
+						)}
+					</GridFactoryDefaultsProvider>
+				</GridComponentsProvider>
+			</KeyboardNavigationProvider>
 		)
 	}
 	// Copy the whole compound namespace rather than listing members by hand. The hand-written

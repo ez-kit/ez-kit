@@ -22,10 +22,12 @@ export const defaultMessages: GridMessages = {
 		selectAll: 'Select all rows',
 		clear: 'Clear selection',
 		count: ({ count }) => `${String(count)} selected`,
+		columnHeader: 'Row selection',
 	},
 	expanding: {
 		expand: 'Expand row',
 		collapse: 'Collapse row',
+		columnHeader: 'Row expansion',
 	},
 	resizing: {
 		resize: 'Resize column',
@@ -46,6 +48,7 @@ export const defaultMessages: GridMessages = {
 		moveEnd: 'Move right',
 	},
 	rowActions: {
+		columnHeader: 'Row actions',
 		menu: 'Row actions',
 		pinning: 'Row pinning',
 		edit: 'Edit',

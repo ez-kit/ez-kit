@@ -1,12 +1,40 @@
 'use client'
 
 import { useGridMessages } from '@ez-kit/data-grid-react/kit'
-import { Button, Checkbox, Dropdown, Label, Popover } from '@heroui/react'
+import { Button, buttonVariants, Checkbox, Dropdown, Label, Popover } from '@heroui/react'
 import { ArrowDown, ArrowUp, Columns2 } from 'lucide-react'
 
 import type { GridMessages, VisibilityMenuProps, VisibilityColumnItem } from '@ez-kit/data-grid-react'
 import type { Selection } from '@heroui/react'
 
+/**
+ * The panel's trigger content — icon and label, and **not** a `<Button>`.
+ *
+ * `Popover.Trigger` renders its own `div[role="button"]` around whatever it is given (it wraps
+ * the child in react-aria's `Pressable`), so a `<Button>` inside it is a button inside a button:
+ * axe reports `nested-interactive`, serious, on every grid that mounts this control. HeroUI's own
+ * "interactive content" example puts plain markup in the trigger for exactly this reason.
+ *
+ * The button's looks come from `buttonVariants`, which is HeroUI's documented way to put a
+ * component's styles on an element that is not that component — so this stays the kit's own
+ * button styling rather than a hand-rolled copy of it, and follows the recipe when it changes.
+ */
+function TriggerContent({ label }: { label: string }) {
+	return (
+		<>
+			<Columns2 size={16} />
+			{label}
+		</>
+	)
+}
+
+/**
+ * The same trigger as a real `<Button>`, for the `Dropdown` form below.
+ *
+ * `Dropdown` follows react-aria's menu-trigger pattern and takes the button itself rather than
+ * wrapping it, so here the `<Button>` is right — the nesting above is a `Popover.Trigger`
+ * property, not a rule about triggers.
+ */
 function Trigger({ label }: { label: string }) {
 	return (
 		<Button
@@ -14,8 +42,7 @@ function Trigger({ label }: { label: string }) {
 			size='sm'
 			variant='outline'
 		>
-			<Columns2 size={16} />
-			{label}
+			<TriggerContent label={label} />
 		</Button>
 	)
 }
@@ -35,8 +62,11 @@ function Trigger({ label }: { label: string }) {
 function ColumnPanel({ columns, messages }: { columns: VisibilityColumnItem[]; messages: GridMessages }) {
 	return (
 		<Popover>
-			<Popover.Trigger>
-				<Trigger label={messages.visibility.trigger} />
+			<Popover.Trigger
+				data-slot='column-visibility-trigger'
+				className={buttonVariants({ size: 'sm', variant: 'outline' })}
+			>
+				<TriggerContent label={messages.visibility.trigger} />
 			</Popover.Trigger>
 			<Popover.Content>
 				<Popover.Dialog

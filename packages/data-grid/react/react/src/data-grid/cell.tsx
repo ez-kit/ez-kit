@@ -16,7 +16,9 @@ import { ActionsCell } from './actions-cell'
 import { getAlignAttrs } from './align-attrs'
 import { CellProvider } from './composition-context'
 import { flexRender } from './flex-render'
+import { useCellNavigationProps } from './keyboard-navigation'
 import { useDataGridTable, useDataGridState } from './table-context'
+import { columnNameOf, VisuallyHiddenLabel } from './visually-hidden'
 
 import type { CellTypeRegistry, CellViewProps } from '../cell-types-context'
 import type { ErasedRow, GridFeatures } from '../types'
@@ -80,6 +82,15 @@ export type DataGridCellProps<TRow extends object = ErasedRow> = {
 
 /** The chrome a body cell wears regardless of what it renders: pin offsets, alignment, class. */
 type CellChrome = {
+	/**
+	 * The grid role and the roving tab stop, when the kit asked for the package's focus model.
+	 * Empty otherwise, so a kit that manages focus itself renders the DOM it always did.
+	 *
+	 * Part of the chrome for the same reason `classNameAttr` is: five branches render a `<Td>`
+	 * and every one of them needs it, and the two that resolved their own class are exactly the
+	 * bug that note records.
+	 */
+	navigation: { role?: string; tabIndex?: number }
 	pinVars: CSSProperties
 	pinned: false | ColumnPinSide
 	pinnedAttrs: { 'data-pinned'?: ColumnPinSide }
@@ -158,7 +169,7 @@ export function DataGridCell<TRow extends object = ErasedRow>({ cell, row, child
 
 function SystemCell<TRow extends object>({ cell, row, children }: DataGridCellProps<TRow>) {
 	const columnId = cell.column.id
-	const chrome = getCellChrome(cell)
+	const chrome = useCellChrome(cell)
 	const { Td } = useGridComponents().core
 
 	if (columnId === SELECTION_COLUMN_ID) {
@@ -186,6 +197,7 @@ function SystemCell<TRow extends object>({ cell, row, children }: DataGridCellPr
 	if (columnId === ACTIONS_COLUMN_ID) {
 		return (
 			<Td
+				{...chrome.navigation}
 				data-slot='td'
 				style={chrome.pinVars}
 				pinned={chrome.pinned}
@@ -229,6 +241,7 @@ function SelectionCell<TRow extends object>({ cell, row, chrome, children }: Sys
 	const isIndeterminate = typeof row.getIsSomeSelected === 'function' ? row.getIsSomeSelected() : undefined
 	return (
 		<Td
+			{...chrome.navigation}
 			data-slot='td'
 			style={chrome.pinVars}
 			pinned={chrome.pinned}
@@ -263,6 +276,7 @@ function ExpandCell<TRow extends object>({ cell, row, chrome, children }: System
 	const isExpanded = row.getIsExpanded()
 	return (
 		<Td
+			{...chrome.navigation}
 			data-slot='td'
 			style={chrome.pinVars}
 			pinned={chrome.pinned}
@@ -297,7 +311,7 @@ function BodyDataCell<TRow extends object>({ cell, row, children }: DataGridCell
 	const cellTypes = useCellTypes()
 	const columnId = cell.column.id
 	const meta = cell.column.columnDef.meta
-	const chrome = getCellChrome(cell)
+	const chrome = useCellChrome(cell)
 
 	const editMode: EditingMode = table.options.editing?.mode ?? EditingMode.Row
 	const cellId = `${row.id}_${columnId}`
@@ -367,6 +381,7 @@ function BodyDataCell<TRow extends object>({ cell, row, children }: DataGridCell
 
 	return (
 		<Td
+			{...chrome.navigation}
 			data-slot='td'
 			style={chrome.pinVars}
 			pinned={chrome.pinned}
@@ -490,6 +505,9 @@ function EditingCell<TRow extends object>({ cell, row, editMode, cellId, chrome,
 		}
 	}, [isCellEdit, table])
 
+	/** The column's header text — this control's accessible name while the cell is being edited. */
+	const fieldName = columnNameOf(cell.column.columnDef.header, columnId)
+
 	const fieldState: FieldState = {
 		id: cellId,
 		value,
@@ -505,6 +523,7 @@ function EditingCell<TRow extends object>({ cell, row, editMode, cellId, chrome,
 
 	return (
 		<Td
+			{...chrome.navigation}
 			data-slot='td'
 			style={chrome.pinVars}
 			pinned={chrome.pinned}
@@ -519,10 +538,17 @@ function EditingCell<TRow extends object>({ cell, row, editMode, cellId, chrome,
 				cell,
 				row,
 				editComp ? (
-					flexRender(editComp, fieldState)
+					<>
+						{/* An edited cell shows the control and no label — the column header above it is
+						    the label, and a screen reader cannot follow that. Same defect, and same fix,
+						    as the creating row and the column filters. */}
+						<VisuallyHiddenLabel htmlFor={fieldState.id}>{fieldName}</VisuallyHiddenLabel>
+						{flexRender(editComp, fieldState)}
+					</>
 				) : (
 					<Input
 						value={(value ?? '') as string | number | readonly string[]}
+						aria-label={fieldName}
 						onChange={(e) => {
 							table.editing.setValue(columnId, e.target.value)
 						}}
@@ -536,7 +562,17 @@ function EditingCell<TRow extends object>({ cell, row, editMode, cellId, chrome,
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 
-function getCellChrome<TRow extends object>(cell: Cell<GridFeatures, TRow>): CellChrome {
+/**
+ * {@link getCellChrome} plus the focus model's own props, which come from context and so cannot
+ * be read by a pure function. The two call sites that build chrome use this; the three that
+ * receive it as a prop are unchanged.
+ */
+function useCellChrome<TRow extends object>(cell: Cell<GridFeatures, TRow>): CellChrome {
+	const navigation = useCellNavigationProps('gridcell')
+	return { ...getCellChrome(cell), navigation }
+}
+
+function getCellChrome<TRow extends object>(cell: Cell<GridFeatures, TRow>): Omit<CellChrome, 'navigation'> {
 	const pinVars = getCommonPinStyles(cell.column)
 	const pinned = cell.column.getIsPinned()
 	const pinnedAttrs: CellChrome['pinnedAttrs'] = pinned ? { 'data-pinned': pinned } : {}

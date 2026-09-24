@@ -951,6 +951,12 @@ export type RenderGridResult = ReturnType<typeof render> & {
 export function renderGrid(
 	config: Partial<UseDataGridConfig<GridFeatures, TestRow>> = {},
 	children?: ReactNode,
+	/**
+	 * Wraps the grid in whatever a case needs above it — a provider a *bundle* would normally
+	 * mount, which no config can turn on. `createDataGrid`'s `keyboardNavigation` is the first
+	 * such switch, and the focus-model cases render through this.
+	 */
+	wrap?: (grid: ReactNode) => ReactNode,
 ): RenderGridResult {
 	// Wrapper object, not a bare `let`: reassigning an outer variable during render is
 	// a side effect the react-hooks lint rule rejects.
@@ -968,7 +974,8 @@ export function renderGrid(
 		useEffect(() => {
 			ref.table = table
 		}, [table])
-		return <DataGrid<GridFeatures, TestRow> table={table}>{children}</DataGrid>
+		const grid = <DataGrid<GridFeatures, TestRow> table={table}>{children}</DataGrid>
+		return <>{wrap ? wrap(grid) : grid}</>
 	}
 
 	const result = renderWithComponents(<Harness />)

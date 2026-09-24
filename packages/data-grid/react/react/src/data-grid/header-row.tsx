@@ -1,6 +1,7 @@
 import { useGridComponents } from '../components-context'
 
 import { DataGridHeaderCell } from './header-cell'
+import { useRowNavigationProps } from './keyboard-navigation'
 
 import type { ErasedRow, GridFeatures } from '../types'
 import type { Header, HeaderGroup } from '@tanstack/table-core'
@@ -49,9 +50,13 @@ export function DataGridHeaderRow<TRow extends object = ErasedRow>({
 }: DataGridHeaderRowProps<TRow>) {
 	const { Tr } = useGridComponents().core
 	const headers = headerGroup.headers
+	const navigationProps = useRowNavigationProps()
 
 	return (
-		<Tr data-slot='tr'>
+		<Tr
+			data-slot='tr'
+			{...navigationProps}
+		>
 			{children === undefined
 				? headers.map((header) => (
 						<DataGridHeaderCell
