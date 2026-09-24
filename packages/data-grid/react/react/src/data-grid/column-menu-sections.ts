@@ -4,6 +4,7 @@ import { GridMenuIcon, toMenuSections } from '../menu'
 import { SortDirection } from '../types'
 
 import type { GridMenuSection } from '../menu'
+import type { GridFeatures } from '../types'
 import type { GridMessages } from '@ez-kit/data-grid-core'
 import type { Header } from '@tanstack/table-core'
 
@@ -12,8 +13,8 @@ export const ColumnActionId = {
 	SortAsc: 'sort-asc',
 	SortDesc: 'sort-desc',
 	ClearSort: 'clear-sort',
-	PinLeft: 'pin-left',
-	PinRight: 'pin-right',
+	PinStart: 'pin-start',
+	PinEnd: 'pin-end',
 	Unpin: 'unpin',
 	Hide: 'hide',
 	MoveStart: 'move-start',
@@ -45,14 +46,16 @@ export type ColumnMenuCapabilities = {
  * from a table in this module: this is the one place the entries are named, so a hardcoded
  * table here would be untranslatable in both kits at once.
  */
-export function buildColumnMenuSections(
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	header: Header<any, unknown>,
+export function buildColumnMenuSections<TRow extends object>(
+	header: Header<GridFeatures, TRow>,
 	{ canSort, canPin, canHide, canMove }: ColumnMenuCapabilities,
 	messages: GridMessages['columnMenu'],
 ): GridMenuSection[] {
 	const column = header.column
-	const sortDir = column.getIsSorted()
+	// Optional-called: `header-cell.tsx` builds the menu for every header cell, so this runs on a
+	// grid with no sorting registered. See `feature-optionality.test.tsx`.
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const sortDir = column.getIsSorted?.() ?? false
 	const isPinned = column.getIsPinned()
 
 	const sorting: GridMenuSection = { id: SORTING_SECTION, label: messages.sorting, items: [] }
@@ -112,24 +115,30 @@ export function buildColumnMenuSections(
 	}
 
 	const pin: GridMenuSection = { id: PIN_SECTION, label: messages.pin, items: [] }
+	/*
+	 * The side vocabulary is logical (`start` / `end`), not physical: a pinned column sticks to
+	 * the inline-start or inline-end edge, and which physical edge that is flips under RTL. The
+	 * English default labels stay "Pin Left" / "Pin Right" — same convention as
+	 * `moveStart: 'Move left'`: the key names the axis, the wording names what an LTR reader sees.
+	 */
 	if (canPin) {
-		if (isPinned !== ColumnPinSide.Left) {
+		if (isPinned !== ColumnPinSide.Start) {
 			pin.items.push({
-				id: ColumnActionId.PinLeft,
-				label: messages.pinLeft,
-				icon: GridMenuIcon.PinLeft,
+				id: ColumnActionId.PinStart,
+				label: messages.pinStart,
+				icon: GridMenuIcon.PinStart,
 				onAction: () => {
-					column.pin(ColumnPinSide.Left)
+					column.pin(ColumnPinSide.Start)
 				},
 			})
 		}
-		if (isPinned !== ColumnPinSide.Right) {
+		if (isPinned !== ColumnPinSide.End) {
 			pin.items.push({
-				id: ColumnActionId.PinRight,
-				label: messages.pinRight,
-				icon: GridMenuIcon.PinRight,
+				id: ColumnActionId.PinEnd,
+				label: messages.pinEnd,
+				icon: GridMenuIcon.PinEnd,
 				onAction: () => {
-					column.pin(ColumnPinSide.Right)
+					column.pin(ColumnPinSide.End)
 				},
 			})
 		}

@@ -123,6 +123,14 @@ test.describe('prev / next', () => {
 	})
 
 	test('`links: false` leaves prev/next alone — no numbers, no edge jumps', async ({ page }) => {
+		// The footer really rendered, and `pageNumbers` / `control` really resolve against it.
+		// Without this the three absences below pass on a footer that is not there at all, on a
+		// renamed `pagination-item` slot, and on a grid that never paginated — which is the same
+		// green as the option working.
+		await expect(page.locator('[data-slot="pagination"]')).toHaveCount(1)
+		await expect(control(page, 'Next')).toHaveCount(1)
+		await expect(control(page, 'Previous')).toHaveCount(1)
+
 		expect(await pageNumbers(page)).toEqual([])
 		await expect(page.locator('[data-slot="pagination-ellipsis"]')).toHaveCount(0)
 		await expect(control(page, 'Go to first page')).toHaveCount(0)

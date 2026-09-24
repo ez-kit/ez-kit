@@ -1,8 +1,34 @@
 'use client'
 
+import {
+	columnFacetingFeature,
+	columnFilteringFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	columnVisibilityFeature,
+	createFacetedRowModel,
+	createFacetedUniqueValues,
+	createFilteredRowModel,
+	filterFns,
+	tableFeatures,
+} from '@ez-kit/data-grid-core/features'
 import { createColumns } from '@ez-kit/data-grid-react'
 
 import { DataGrid } from 'shared/DataGrid'
+
+const features = tableFeatures({
+	// Structural: the grid shell reads column widths, visibility and pin groups to lay out
+	// the column grid. Everything below is this example's own.
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	columnFacetingFeature,
+	columnFilteringFeature,
+	filterFns,
+	facetedRowModel: createFacetedRowModel(),
+	facetedUniqueValues: createFacetedUniqueValues(),
+	filteredRowModel: createFilteredRowModel(),
+})
 
 type Order = {
 	id: number
@@ -70,9 +96,73 @@ const COLUMNS = createColumns<Order>([
 export function FilterPanelExample() {
 	return (
 		<DataGrid
+			features={features}
 			data={DATA}
 			columns={COLUMNS}
-			filtering={{ variant: 'panel', faceted: true }}
-		/>
+			filtering={{ faceted: true }}
+		>
+			{/*
+			 * The panel as the *only* filter UI — what `filtering: { variant: 'panel' }` used to
+			 * say. Two independent things, which is exactly why that one enum could not express
+			 * the pair: mounting `<DataGrid.FilterPanel/>` puts the controls in a panel, and the
+			 * header cell below declining to render `filter` is what takes them out of the
+			 * headers. Render `filter` as well and the grid has both, each writing to the one
+			 * `columnFilters` slice.
+			 */}
+			<DataGrid.FilterPanel />
+			<DataGrid.Table>
+				<DataGrid.Header>
+					{({ headerGroups }) =>
+						headerGroups.map((headerGroup) => (
+							<DataGrid.HeaderRow
+								key={headerGroup.id}
+								headerGroup={headerGroup}
+							>
+								{({ headers }) =>
+									headers.map((header) => (
+										<DataGrid.HeaderCell
+											key={header.id}
+											header={header}
+										>
+											{({ sortTrigger, menu }) => (
+												<DataGrid.HeaderMain>
+													{sortTrigger}
+													{menu}
+												</DataGrid.HeaderMain>
+											)}
+										</DataGrid.HeaderCell>
+									))
+								}
+							</DataGrid.HeaderRow>
+						))
+					}
+				</DataGrid.Header>
+				<DataGrid.Body />
+			</DataGrid.Table>
+		</DataGrid>
+	)
+}
+
+/**
+ * Filters in the header **and** in a panel — the arrangement no value of the removed
+ * `filtering.variant` could express, because that one enum decided two things at once: whether
+ * the panel is mounted, and whether the headers keep their controls.
+ *
+ * They are separate decisions now, so this is the default header cell (which renders `filter`)
+ * plus a mounted `<DataGrid.FilterPanel/>`. Both write to the one `columnFilters` slice, so the
+ * two controls for a column are two inputs bound to one value: type in either and the other
+ * follows.
+ */
+export function FilterPanelAndHeaderExample() {
+	return (
+		<DataGrid
+			features={features}
+			data={DATA}
+			columns={COLUMNS}
+			filtering={{ faceted: true }}
+		>
+			<DataGrid.FilterPanel />
+			<DataGrid.Table />
+		</DataGrid>
 	)
 }

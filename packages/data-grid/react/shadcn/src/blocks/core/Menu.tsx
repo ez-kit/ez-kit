@@ -1,6 +1,6 @@
 'use client'
 
-import { GridMenuVariant, isGridMenuItemSlot } from '@ez-kit/data-grid-react'
+import { GridMenuVariant, isGridMenuItemSlot } from '@ez-kit/data-grid-react/kit'
 import { EllipsisVertical, MoreHorizontal } from 'lucide-react'
 
 import { Button } from '@grid-shadcn/components/ui/button'

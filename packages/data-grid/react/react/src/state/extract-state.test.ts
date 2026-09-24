@@ -1,7 +1,11 @@
 import { createTable, createColumns } from '@ez-kit/data-grid-core'
 import { describe, expect, it } from 'vitest'
 
+import { TEST_FEATURES } from '../test-utils'
+
 import { extractState } from './extract-state'
+
+import type { GridFeatures } from '../types'
 
 type Row = { id: number; name: string }
 const columns = createColumns<Row>([{ accessorKey: 'name' }])
@@ -11,7 +15,8 @@ const data: Row[] = [
 ]
 
 function makeTable() {
-	return createTable<Row>({
+	return createTable<GridFeatures, Row>({
+		features: TEST_FEATURES,
 		data,
 		columns,
 		sorting: true,
@@ -55,7 +60,13 @@ describe('extractState', () => {
  */
 describe('extractState — draft', () => {
 	function makeDeferredTable() {
-		return createTable<Row>({ data, columns, sorting: { manual: true }, draft: true })
+		return createTable<GridFeatures, Row>({
+			features: TEST_FEATURES,
+			data,
+			columns,
+			sorting: { manual: true },
+			draft: true,
+		})
 	}
 
 	it('reports nothing while the draft is clean', () => {
@@ -71,7 +82,7 @@ describe('extractState — draft', () => {
 	})
 
 	it('reports nothing when the grid does not defer at all', () => {
-		const table = createTable<Row>({ data, columns, sorting: true })
+		const table = createTable<GridFeatures, Row>({ features: TEST_FEATURES, data, columns, sorting: true })
 		expect(extractState(table, { keys: ['draft'] })).toEqual({})
 	})
 })

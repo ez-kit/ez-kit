@@ -3,6 +3,8 @@
 import { DataGrid } from 'shared/DataGrid'
 
 import { orderColumns } from './data'
+import { consoleFeatures } from './features'
+import { OrdersLayout } from './OrdersLayout'
 import { useOrdersState } from './use-orders-state'
 
 export function ProductionOneHandlerExample() {
@@ -10,6 +12,7 @@ export function ProductionOneHandlerExample() {
 
 	return (
 		<DataGrid
+			features={consoleFeatures}
 			data={orders.rows}
 			columns={orderColumns}
 			pagination={{
@@ -18,14 +21,11 @@ export function ProductionOneHandlerExample() {
 				items: [10, 25, 50],
 				siblings: 1,
 			}}
-			sorting={{ manual: true, multi: { max: 3, event: 'ctrl' }, toolbar: true }}
+			sorting={{ manual: true, multi: { max: 3, event: 'ctrl' } }}
 			filtering={{
 				manual: true,
-				variant: 'popover',
 				faceted: true,
 				debounce: 300,
-				chips: { position: 'above' },
-				toolbar: true,
 			}}
 			globalFiltering={{ placeholder: 'Search orders…', debounce: 300 }}
 			layout={{ stickyHeader: true }}
@@ -54,6 +54,8 @@ export function ProductionOneHandlerExample() {
 			selection
 			state={{ ...orders.tableState, loading: orders.loading }}
 			onStateChange={orders.onStateChange}
-		/>
+		>
+			<OrdersLayout />
+		</DataGrid>
 	)
 }

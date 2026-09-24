@@ -1,161 +1,64 @@
-import { fireEvent } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { render } from '@testing-library/react'
+import { describe, expect, it } from 'vitest'
 
-import { createColumns } from '../react-columns'
+import { GridComponentsProvider } from '../components-context'
 import { renderWithComponents } from '../test-utils'
 
-import { DataGrid } from './data-grid'
+import { HeaderExtras, HeaderMain } from './header-slots'
 
-type User = { id: number; name: string; age: number }
+import type { GridComponents } from '../contract'
+import type { HeaderMainProps } from '../types'
+import type { ReactElement } from 'react'
 
-const DATA: User[] = [{ id: 1, name: 'Ada', age: 36 }]
-const COLUMNS = createColumns<User>([
-	{ accessorKey: 'name', header: 'Name', headerClassName: 'th-name' },
-	{ accessorKey: 'age', header: 'Age' },
-])
+describe('header slot components', () => {
+	// `renderWithComponents` supplies the test kit, which registers neither slot — the realistic
+	// case, since neither kit in this repo does either.
+	it('renders a plain div when no kit registers one', () => {
+		const { container } = renderWithComponents(<HeaderMain>label</HeaderMain>)
 
-describe('DataGrid.HeaderRow / DataGrid.HeaderCell', () => {
-	it('a custom cell for one column leaves the others on the default', () => {
-		const { container, getByText } = renderWithComponents(
-			<DataGrid
-				data={DATA}
-				columns={COLUMNS}
-				sorting
-			>
-				<DataGrid.Table>
-					<DataGrid.Header>
-						{({ headerGroups }) =>
-							headerGroups.map((group) => (
-								<DataGrid.HeaderRow
-									key={group.id}
-									headerGroup={group}
-								>
-									{({ headers }) =>
-										headers.map((header) =>
-											header.column.id === 'age' ? (
-												<DataGrid.HeaderCell
-													key={header.id}
-													header={header}
-												>
-													custom age
-												</DataGrid.HeaderCell>
-											) : (
-												<DataGrid.HeaderCell
-													key={header.id}
-													header={header}
-												/>
-											),
-										)
-									}
-								</DataGrid.HeaderRow>
-							))
-						}
-					</DataGrid.Header>
-					<DataGrid.Body />
-				</DataGrid.Table>
-			</DataGrid>,
-		)
-
-		expect(getByText('custom age')).toBeDefined()
-		// The untouched column keeps its default cell — sort affordance and class included.
-		const nameTh = container.querySelector('[data-column-id="name"]')
-		expect(nameTh?.className).toContain('th-name')
-		expect(nameTh?.querySelector('[data-slot="sort-trigger"]')).not.toBeNull()
-		// The custom cell keeps its `<th>` shell.
-		const ageTh = container.querySelector('[data-column-id="age"]')
-		expect(ageTh?.getAttribute('data-slot')).toBe('th')
+		const main = container.querySelector("[data-slot='header-main']")
+		expect(main?.tagName).toBe('DIV')
+		expect(main?.textContent).toBe('label')
+		expect(container.querySelector("[data-slot='header-extras']")).toBeNull()
 	})
 
-	it('hands the default parts to a render function so they can be reused', () => {
-		const { container } = renderWithComponents(
-			<DataGrid
-				data={DATA}
-				columns={COLUMNS}
-				sorting
-			>
-				<DataGrid.Table>
-					<DataGrid.Header>
-						{({ headerGroups }) =>
-							headerGroups.map((group) => (
-								<DataGrid.HeaderRow
-									key={group.id}
-									headerGroup={group}
-								>
-									{({ headers }) =>
-										headers.map((header) => (
-											<DataGrid.HeaderCell
-												key={header.id}
-												header={header}
-											>
-												{({ label, sortTrigger, canSort }) => (
-													<div data-testid={`hdr-${header.column.id}`}>
-														<span data-testid='raw-label'>{label}</span>
-														{canSort ? sortTrigger : null}
-													</div>
-												)}
-											</DataGrid.HeaderCell>
-										))
-									}
-								</DataGrid.HeaderRow>
-							))
-						}
-					</DataGrid.Header>
-					<DataGrid.Body />
-				</DataGrid.Table>
-			</DataGrid>,
-		)
-
-		// `label` is the bare content, `sortTrigger` the wired affordance — both available.
-		expect(container.querySelectorAll('[data-testid="raw-label"]')).toHaveLength(2)
-		expect(container.querySelectorAll('[data-slot="sort-trigger"]')).toHaveLength(2)
-	})
-})
-
-describe('sort affordance vs. interactive header content', () => {
-	// `column.header` renders inside the sort affordance, because clicking a column's name to
-	// sort it is how every table works. That used to make a button placed there fire the sort
-	// too — the click bubbled straight into the handler.
-	it('a button inside column.header does not also sort', () => {
-		const onClick = vi.fn()
-		const onSortChange = vi.fn()
-		const columns = createColumns<User>([
-			{
-				accessorKey: 'name',
-				header: () => (
-					<button
-						data-testid='hdr-btn'
-						onClick={onClick}
-					>
-						pick
-					</button>
-				),
+	it('renders the registered component instead, for each slot', () => {
+		const components: GridComponents = {
+			core: {
+				HeaderMain: (props) => <section {...props} />,
+				HeaderExtras: (props) => <aside {...props} />,
 			},
-		])
-
-		const { getByTestId } = renderWithComponents(
-			<DataGrid
-				data={DATA}
-				columns={columns}
-				sorting={{ onChange: onSortChange }}
-			/>,
+		}
+		const { container } = render(
+			<GridComponentsProvider components={components}>
+				<HeaderMain>label</HeaderMain>
+				<HeaderExtras>filter</HeaderExtras>
+			</GridComponentsProvider>,
 		)
 
-		fireEvent.click(getByTestId('hdr-btn'))
-		expect(onClick).toHaveBeenCalledTimes(1)
-		expect(onSortChange).not.toHaveBeenCalled()
+		expect(container.querySelector("[data-slot='header-main']")?.tagName).toBe('SECTION')
+		expect(container.querySelector("[data-slot='header-extras']")?.tagName).toBe('ASIDE')
 	})
 
-	it('clicking the column name still sorts', () => {
-		const onSortChange = vi.fn()
-		const { getByText } = renderWithComponents(
-			<DataGrid
-				data={DATA}
-				columns={COLUMNS}
-				sorting={{ onChange: onSortChange }}
-			/>,
-		)
+	it('passes a given className through without authoring one', () => {
+		const { container } = renderWithComponents(<HeaderMain className='from-the-caller' />)
 
-		fireEvent.click(getByText('Name'))
-		expect(onSortChange).toHaveBeenCalledWith([{ id: 'name', desc: false }])
+		expect(container.querySelector("[data-slot='header-main']")?.className).toBe('from-the-caller')
+	})
+
+	/**
+	 * `data-slot` is written after the spread precisely so this cannot happen: both kits' CSS
+	 * and the structural stylesheet select on the slot, and a caller silently renaming it would
+	 * cost the header its layout with nothing to show for it.
+	 */
+	it('does not let a caller displace the slot the stylesheet selects on', () => {
+		// The prop is not in `HeaderMainProps`, so a call site has to work at it — which is what
+		// makes the runtime behaviour worth pinning rather than leaving to the types.
+		const hijacked = { 'data-slot': 'something-else' } as unknown as HeaderMainProps
+		const element: ReactElement = <HeaderMain {...hijacked} />
+		const { container } = renderWithComponents(element)
+
+		expect(container.querySelector("[data-slot='something-else']")).toBeNull()
+		expect(container.querySelector("[data-slot='header-main']")).not.toBeNull()
 	})
 })

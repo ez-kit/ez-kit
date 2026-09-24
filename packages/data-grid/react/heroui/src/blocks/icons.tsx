@@ -1,4 +1,4 @@
-import { GridMenuIcon, isGridMenuIcon } from '@ez-kit/data-grid-react'
+import { isGridMenuIcon, GridMenuIcon } from '@ez-kit/data-grid-react/kit'
 import {
 	ArrowDown,
 	ArrowDownToLine,
@@ -34,8 +34,8 @@ export const GRID_MENU_ICONS: Record<GridMenuIcon, ReactNode> = {
 	[GridMenuIcon.Delete]: <Trash2 size={MENU_ICON_SIZE} />,
 	[GridMenuIcon.PinTop]: <ArrowUpToLine size={MENU_ICON_SIZE} />,
 	[GridMenuIcon.PinBottom]: <ArrowDownToLine size={MENU_ICON_SIZE} />,
-	[GridMenuIcon.PinLeft]: <ArrowLeft size={MENU_ICON_SIZE} />,
-	[GridMenuIcon.PinRight]: <ArrowRight size={MENU_ICON_SIZE} />,
+	[GridMenuIcon.PinStart]: <ArrowLeft size={MENU_ICON_SIZE} />,
+	[GridMenuIcon.PinEnd]: <ArrowRight size={MENU_ICON_SIZE} />,
 	[GridMenuIcon.Unpin]: <PinOff size={MENU_ICON_SIZE} />,
 	[GridMenuIcon.SortAsc]: <ArrowUp size={MENU_ICON_SIZE} />,
 	[GridMenuIcon.SortDesc]: <ArrowDown size={MENU_ICON_SIZE} />,

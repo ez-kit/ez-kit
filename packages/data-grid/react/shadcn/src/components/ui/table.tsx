@@ -87,7 +87,7 @@ function TableHead({
 	pinned,
 	style,
 	...props
-}: React.ComponentProps<'th'> & { pinned?: 'left' | 'right' | false }) {
+}: React.ComponentProps<'th'> & { pinned?: 'start' | 'end' | false }) {
 	return (
 		<th
 			data-slot='table-head'
@@ -106,7 +106,7 @@ function TableCell({
 	pinned,
 	style,
 	...props
-}: React.ComponentProps<'td'> & { pinned?: 'left' | 'right' | false }) {
+}: React.ComponentProps<'td'> & { pinned?: 'start' | 'end' | false }) {
 	return (
 		<td
 			data-slot='table-cell'

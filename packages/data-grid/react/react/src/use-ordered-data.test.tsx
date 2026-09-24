@@ -4,10 +4,11 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { GridComponentsProvider } from './components-context'
 import { DataGrid } from './data-grid/data-grid'
-import { testComponents } from './test-utils'
+import { TEST_FEATURES, testComponents } from './test-utils'
 import { useDataGrid } from './use-data-grid'
 
-import type { OrderingConfig, DataTable } from '@ez-kit/data-grid-core'
+import type { DataTable, GridFeatures } from './types'
+import type { OrderingConfig } from '@ez-kit/data-grid-core'
 
 type User = { id: string; name: string }
 
@@ -21,10 +22,16 @@ const COLUMNS = createColumns<User>([{ accessorKey: 'name', header: 'Name' }])
 
 /** The whole grid, so an assertion covers the repaint and not just the state. */
 function renderGrid(ordering: OrderingConfig, data: User[] = DATA) {
-	const captured: { table?: DataTable<User> } = {}
+	const captured: { table?: DataTable<GridFeatures, User> } = {}
 
 	function Grid({ rows }: { rows: User[] }) {
-		const table = useDataGrid<User>({ data: rows, columns: COLUMNS, getRowId: (row) => row.id, ordering })
+		const table = useDataGrid<GridFeatures, User>({
+			features: TEST_FEATURES,
+			data: rows,
+			columns: COLUMNS,
+			getRowId: (row) => row.id,
+			ordering,
+		})
 		captured.table = table
 		return <DataGrid table={table} />
 	}
@@ -38,7 +45,7 @@ function renderGrid(ordering: OrderingConfig, data: User[] = DATA) {
 	const renderedIds = (): (string | null)[] =>
 		[...view.container.querySelectorAll('tbody [data-row-id]')].map((tr) => tr.getAttribute('data-row-id'))
 
-	const table = (): DataTable<User> => {
+	const table = (): DataTable<GridFeatures, User> => {
 		if (!captured.table) throw new Error('grid did not render')
 		return captured.table
 	}

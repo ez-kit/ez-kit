@@ -1,3 +1,4 @@
+import { columnFilteringFeature, createFilteredRowModel, filterFns, tableFeatures } from '@tanstack/table-core'
 import { describe, expect, it, vi } from 'vitest'
 
 import { createTable } from '../../create-table'
@@ -60,6 +61,21 @@ describe('FilterOperator — one vocabulary across cell types', () => {
 
 type Row = { id: string; total: number; active: boolean; done: number }
 
+/**
+ * What an operator-aware column filter needs registered.
+ *
+ * `columnFilteringFeature` is what puts `setFilterValue` on a column and the `columnFilters`
+ * slice on the table; `filteredRowModel` is the stage that actually drops rows; and `filterFns`
+ * is the registry v9 resolves a *named* filter function through — the `'auto'` a mapped column
+ * carries when it resolved no operators. Without the first the cases below could only assert
+ * against a column API that does not exist, which is what they were doing.
+ */
+const FILTERING = tableFeatures({
+	columnFilteringFeature,
+	filteredRowModel: createFilteredRowModel(),
+	filterFns,
+})
+
 const DATA: Row[] = [
 	{ id: '1', total: 10, active: true, done: 10 },
 	{ id: '2', total: 20, active: false, done: 90 },
@@ -67,7 +83,8 @@ const DATA: Row[] = [
 
 describe('operator-aware filtering actually filters', () => {
 	it('`equals` on a number column compares numbers', () => {
-		const table = createTable<Row>({
+		const table = createTable({
+			features: FILTERING,
 			data: DATA,
 			columns: [{ accessorKey: 'total', cell: 'number', filtering: { operators: true } }],
 			filtering: true,
@@ -79,7 +96,8 @@ describe('operator-aware filtering actually filters', () => {
 	})
 
 	it('`greaterThan` on a progress column compares numbers — the type had no operators at all', () => {
-		const table = createTable<Row>({
+		const table = createTable({
+			features: FILTERING,
 			data: DATA,
 			columns: [{ accessorKey: 'done', cell: 'progress', filtering: { operators: true } }],
 			filtering: true,
@@ -93,7 +111,8 @@ describe('operator-aware filtering actually filters', () => {
 	})
 
 	it('`equals` on a boolean column compares booleans', () => {
-		const table = createTable<Row>({
+		const table = createTable({
+			features: FILTERING,
 			data: DATA,
 			columns: [{ accessorKey: 'active', cell: 'boolean', filtering: { operators: true } }],
 			filtering: true,
@@ -109,7 +128,8 @@ describe('development warnings for operator ids that resolve to nothing', () => 
 	it('warns when `defaultOperator` names an operator the column does not offer', () => {
 		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
 
-		createTable<Row>({
+		createTable({
+			features: FILTERING,
 			data: DATA,
 			columns: [
 				{
@@ -129,7 +149,8 @@ describe('development warnings for operator ids that resolve to nothing', () => 
 	it('warns when an operator id in `items` resolves to nothing', () => {
 		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
 
-		createTable<Row>({
+		createTable({
+			features: FILTERING,
 			data: DATA,
 			columns: [{ accessorKey: 'total', cell: 'number', filtering: { operators: { items: ['nonesuch'] } } }],
 			filtering: true,

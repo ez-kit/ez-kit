@@ -4,12 +4,12 @@ import { describe, expect, it } from 'vitest'
 
 import { GridComponentsProvider } from '../components-context'
 import { prepareDataGridTable } from '../prepare-table'
-import { testComponents } from '../test-utils'
+import { TEST_FEATURES, testComponents } from '../test-utils'
 
 import { ColumnFilter } from './column-filter'
-import { TableContext } from './table-context'
+import { TableProvider } from './table-context'
 
-import type { DataTable } from '@ez-kit/data-grid-core'
+import type { DataTable, GridFeatures } from '../types'
 import type { ReactNode } from 'react'
 
 type Row = {
@@ -40,14 +40,22 @@ const COLUMNS = createColumns<Row>([
 	},
 ])
 
-function makeTable(config?: Partial<Parameters<typeof createTable<Row>>[0]>) {
-	return prepareDataGridTable(createTable<Row>({ data: DATA, columns: COLUMNS, filtering: true, ...config }))
+function makeTable(config?: Partial<Parameters<typeof createTable<GridFeatures, Row>>[0]>) {
+	return prepareDataGridTable(
+		createTable<GridFeatures, Row>({
+			features: TEST_FEATURES,
+			data: DATA,
+			columns: COLUMNS,
+			filtering: true,
+			...config,
+		}),
+	)
 }
 
-function Wrapper({ table, children }: { table: DataTable<Row>; children: ReactNode }) {
+function Wrapper({ table, children }: { table: DataTable<GridFeatures, Row>; children: ReactNode }) {
 	return (
 		<GridComponentsProvider components={testComponents}>
-			<TableContext.Provider value={table}>{children}</TableContext.Provider>
+			<TableProvider table={table}>{children}</TableProvider>
 		</GridComponentsProvider>
 	)
 }

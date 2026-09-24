@@ -1,5 +1,5 @@
 import type { ColumnCreatingConfig, ColumnEditingConfig } from './types'
-import type { ColumnMeta } from '@tanstack/table-core'
+import type { ColumnMeta, TableFeatures } from '@tanstack/table-core'
 
 /**
  * Which of the two write forms a column's field is being resolved for.
@@ -36,8 +36,20 @@ export type ResolvedColumnFormConfig = ColumnCreatingConfig & ColumnEditingConfi
  * Returns `false` when the column opts out of this form entirely, and `undefined` when it
  * configures nothing.
  */
+/**
+ * The meta shape this helper reads, at the widest instantiation v9 allows.
+ *
+ * `ColumnMeta` is declared `in out` on both `TFeatures` and `TData`, so it is **invariant** in
+ * each: no concrete `ColumnMeta<TFeatures, TRow>` is assignable to any other instantiation, and
+ * there is no signature here that a caller holding a real column's meta could satisfy without a
+ * cast. Naming the widest one and letting callers cast to it is therefore the honest shape, and
+ * it costs nothing — the two fields read below (`editing`, `creating`) are ours, declared by this
+ * package's own merge, and neither varies with the feature set or the row type.
+ */
+export type FormColumnMeta = ColumnMeta<TableFeatures, object>
+
 export function resolveColumnFormConfig(
-	meta: ColumnMeta<unknown, unknown> | undefined,
+	meta: FormColumnMeta | undefined,
 	mode: ColumnFormMode,
 ): false | ResolvedColumnFormConfig | undefined {
 	const editing = meta?.editing

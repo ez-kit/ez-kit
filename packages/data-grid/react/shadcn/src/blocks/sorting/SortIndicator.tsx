@@ -1,7 +1,5 @@
-import { ColumnSortDirection } from '@ez-kit/data-grid-react'
+import { ColumnSortDirection } from '@ez-kit/data-grid-react/kit'
 import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react'
-
-import { Button } from '@grid-shadcn/components/ui/button'
 
 import type { SortIndicatorProps } from '@ez-kit/data-grid-react'
 
@@ -24,14 +22,11 @@ export function SortIndicator({ sortDirection, canSort }: SortIndicatorProps) {
 				aria-hidden
 			/>
 		)
-	return (
-		<Button
-			variant='ghost'
-			size='icon'
-			className='ml-1 h-5 w-5 shrink-0'
-			tabIndex={-1}
-		>
-			{icon}
-		</Button>
-	)
+	// A `<span>`, not the kit's `Button`: the indicator renders **inside** the sort affordance,
+	// which is a real `<button>`, and a nested one is invalid HTML — the parser closes the outer
+	// one and the header comes apart. It was a `Button` with `tabIndex={-1}` and no handler of
+	// its own, i.e. a button in looks only, and that cost it every click: the affordance dropped
+	// events starting on an interactive descendant, so the arrow — which sits at the header's
+	// centre — did nothing. HeroUI's indicator was a bare icon all along.
+	return <span className='ml-1 inline-flex h-5 w-5 shrink-0 items-center justify-center'>{icon}</span>
 }

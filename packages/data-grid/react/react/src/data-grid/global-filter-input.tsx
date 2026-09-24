@@ -14,15 +14,18 @@ export type DataGridGlobalFilterInputProps = {
 /**
  * Headless wrapper around `GridComponents.GlobalFilterInput`.
  *
- * Reads the normalized {@link NormalizedGlobalFilteringConfig} stored on the
- * table instance via the {@link GLOBAL_FILTERING_KEY} symbol, holds a local
- * draft of the input value, debounces commits to `table.setGlobalFilter`, and
- * syncs back when external code mutates `state.globalFilter` (e.g. programmatic
- * reset, controlled mode).
+ * Reads the normalized {@link NormalizedGlobalFilteringConfig} from
+ * `table.grid.globalFiltering`, holds a local draft of the input value, debounces commits to
+ * `table.setGlobalFilter`, and syncs back when external code mutates `state.globalFilter`
+ * (e.g. programmatic reset, controlled mode).
+ *
+ * Placed by a layout — `Toolbar.start` in every preset that carries one. It reads no option
+ * saying where it goes: rendering it is what puts it there.
  */
 export function GlobalFilterInput({ placeholder: placeholderProp }: DataGridGlobalFilterInputProps = {}) {
 	const table = useDataGridTable()
-	useDataGridState((s) => s.globalFilter as unknown)
+	// The subscription is the read — see `active-filters-bar.tsx` for the note.
+	const globalFilter = useDataGridState((s) => s.globalFilter as unknown)
 	const { GlobalFilterInput: Component } = useGridComponents().filtering
 
 	const cfg = table.grid.globalFiltering
@@ -30,7 +33,7 @@ export function GlobalFilterInput({ placeholder: placeholderProp }: DataGridGlob
 	const debounce = cfg?.debounce ?? DATA_GRID_DEFAULTS.filtering.debounce
 	const placeholder = placeholderProp ?? cfg?.placeholder ?? table.grid.messages.globalFiltering.placeholder
 
-	const committed = String(table.getState().globalFilter ?? '')
+	const committed = String(globalFilter ?? '')
 	const [draft, setDraft] = useState(committed)
 	const debouncedDraft = useDebouncedValue(draft, debounce)
 

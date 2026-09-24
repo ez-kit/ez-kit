@@ -37,8 +37,8 @@ export const defaultMessages: GridMessages = {
 		sortDesc: 'Desc',
 		clearSort: 'Clear sort',
 		pin: 'Pin',
-		pinLeft: 'Pin Left',
-		pinRight: 'Pin Right',
+		pinStart: 'Pin Left',
+		pinEnd: 'Pin Right',
 		unpin: 'Unpin',
 		hide: 'Hide',
 		order: 'Order',
@@ -134,6 +134,7 @@ export const defaultMessages: GridMessages = {
 		sorts: ({ count }) => `${String(count)} ${count === 1 ? 'sort' : 'sorts'}`,
 		filters: ({ count }) => `${String(count)} ${count === 1 ? 'filter' : 'filters'}`,
 		search: 'search',
+		summary: ({ label, parts }) => `${label}: ${parts.join(', ')}`,
 	},
 	cells: {
 		all: 'All',

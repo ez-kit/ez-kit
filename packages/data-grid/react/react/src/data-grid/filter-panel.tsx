@@ -2,12 +2,21 @@ import { localizeOperators } from '@ez-kit/data-grid-core'
 
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
+import { filtersRows } from '../utils/filters-rows'
 
 import { renderFilterInput } from './render-filter-input'
 import { useDataGridState, useDataGridTable } from './table-context'
 
-import type { BadgeItem, BetweenValue, GridMessages, SelectItem, StructuredFilterValue } from '@ez-kit/data-grid-core'
-import type { Column, ColumnMeta, Header } from '@tanstack/table-core'
+import type { ErasedRow, GridFeatures } from '../types'
+import type {
+	FormColumnMeta,
+	BadgeItem,
+	BetweenValue,
+	GridMessages,
+	SelectItem,
+	StructuredFilterValue,
+} from '@ez-kit/data-grid-core'
+import type { Column, Header } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
 const MAX_INLINE_VALUES = 2
@@ -22,7 +31,7 @@ function formatBetweenValue(value: BetweenValue, anyLabel: string): { display: s
 	return { display: `≤ ${String(to)}`, hasValue: true }
 }
 
-function resolveOptionLabel(rawValue: string, meta: ColumnMeta<unknown, unknown> | undefined): string {
+function resolveOptionLabel(rawValue: string, meta: FormColumnMeta | undefined): string {
 	const filteringMeta = meta?.filtering === false ? undefined : meta?.filtering
 	const explicit = filteringMeta?.items
 	if (explicit) {
@@ -39,7 +48,7 @@ function resolveOptionLabel(rawValue: string, meta: ColumnMeta<unknown, unknown>
 
 function formatMultiValue(
 	values: unknown[],
-	meta: ColumnMeta<unknown, unknown> | undefined,
+	meta: FormColumnMeta | undefined,
 	anyLabel: string,
 ): { display: string; hasValue: boolean } {
 	if (values.length === 0) return { display: anyLabel, hasValue: false }
@@ -51,7 +60,7 @@ function formatMultiValue(
 
 function formatFilterValue(
 	filterValue: unknown,
-	meta: ColumnMeta<unknown, unknown> | undefined,
+	meta: FormColumnMeta | undefined,
 	anyLabel: string,
 	operatorMessages: GridMessages['operators'],
 ): { display: string; hasValue: boolean } {
@@ -97,12 +106,14 @@ function formatFilterValue(
  * Each chip shows `{column header}: {value or "Any"}`. Clicking the chip opens a kit-provided
  * popover whose body is the regular column filter input (same `renderFilterInput` as the header).
  *
- * Pair with `filtering.variant: 'panel'` so the header skips inline filter rendering.
+ * Mounted wherever a layout puts it. For the panel to be the grid's *only* filter UI, expand
+ * the table down to `<DataGrid.HeaderCell>` and render everything but its `filter` — which is
+ * what `filtering.variant: 'panel'` used to do for the whole grid at once. Left beside the
+ * built-in header cell, the two are simply two controls on one `columnFilters` entry.
  */
 /** One filterable column, as the panel resolved it. */
-export type DataGridFilterPanelColumn = {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	column: Column<any>
+export type DataGridFilterPanelColumn<TRow extends object = ErasedRow> = {
+	column: Column<GridFeatures, TRow>
 	/** The column's string header, falling back to its id. */
 	label: string
 	/** Human-readable current value, or the "Any" placeholder when unset. */
@@ -168,11 +179,13 @@ export function useFilterPanelColumns(): DataGridFilterPanelRenderArgs | undefin
 	const cellTypes = useCellTypes()
 	const filteringDebounce = table.grid.filtering.debounce
 
-	const hasFiltering = Boolean(table.options.getFilteredRowModel)
-	if (!hasFiltering) return undefined
+	if (!filtersRows(table)) return undefined
 
 	const filterableColumns = table.getAllLeafColumns().filter((column) => {
-		const meta = column.columnDef.meta
+		// `ColumnMeta` is declared `in out` upstream, so no concrete instantiation is assignable to
+		// any other and this cast is forced by the variance annotation rather than chosen. Same
+		// cast, same name, same reason as `header-cell.tsx` and core's own `creating.ts`.
+		const meta = column.columnDef.meta as FormColumnMeta | undefined
 		if (meta?.isSystemColumn) return false
 		if (meta?.filtering === false) return false
 		return column.getCanFilter()
@@ -183,7 +196,8 @@ export function useFilterPanelColumns(): DataGridFilterPanelRenderArgs | undefin
 	const hasActiveFilter = filterableColumns.some((c) => c.getFilterValue() !== undefined)
 
 	const resolvedColumns: DataGridFilterPanelColumn[] = filterableColumns.map((column) => {
-		const meta = column.columnDef.meta
+		// Same cast, same reason as the one in the filter above.
+		const meta = column.columnDef.meta as FormColumnMeta | undefined
 		const headerDef = column.columnDef.header
 		const label = typeof headerDef === 'string' ? headerDef : column.id
 		const filterValue = column.getFilterValue()
@@ -194,8 +208,7 @@ export function useFilterPanelColumns(): DataGridFilterPanelRenderArgs | undefin
 			table.grid.messages.operators,
 		)
 
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const headerLike = { id: column.id, column } as unknown as Header<any, unknown>
+		const headerLike = { id: column.id, column } as unknown as Header<GridFeatures, ErasedRow>
 
 		const input = renderFilterInput({
 			header: headerLike,

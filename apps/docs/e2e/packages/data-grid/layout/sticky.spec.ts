@@ -85,5 +85,8 @@ test('without the layout options neither end is sticky', async ({ grid, page }) 
 	const positions = await page
 		.locator('[data-slot="thead"], [data-slot="tfoot"]')
 		.evaluateAll((ends) => ends.map((end) => getComputedStyle(end).position))
+	// Both ends were found: `evaluateAll` over a selector that matches nothing returns `[]`, and
+	// an empty list contains no 'sticky' either — the same pass as a grid that correctly is not.
+	expect(positions, 'the head and foot of the table did not resolve').toHaveLength(2)
 	expect(positions).not.toContain('sticky')
 })

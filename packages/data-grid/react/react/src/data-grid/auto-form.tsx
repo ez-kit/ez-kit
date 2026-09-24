@@ -7,8 +7,7 @@ import { flexRender } from './flex-render'
 import { useDataGridState, useDataGridTable } from './table-context'
 
 import type { CellTypeRegistry } from '../cell-types-context'
-import type { FieldState, ResolvedColumnFormConfig } from '@ez-kit/data-grid-core'
-import type { ColumnMeta } from '@tanstack/table-core'
+import type { FormColumnMeta, FieldState, ResolvedColumnFormConfig } from '@ez-kit/data-grid-core'
 import type { ComponentType, ReactNode } from 'react'
 
 type AutoFormProps = {
@@ -67,7 +66,11 @@ export function AutoForm({ mode }: AutoFormProps): ReactNode {
 		// between them otherwise separates one field from the next).
 		<div data-slot='auto-form'>
 			{table.getAllColumns().map((col) => {
-				const meta = col.columnDef.meta
+				// `ColumnMeta` is declared `in out` in both its `TFeatures` and its `TData` upstream, so no
+				// concrete instantiation is assignable to any other and this cast is forced by the variance
+				// annotation rather than chosen. `FormColumnMeta` is the one name core declares for it, and
+				// this is the same cast core's own `creating.ts` makes at its boundary.
+				const meta = col.columnDef.meta as FormColumnMeta | undefined
 				if (meta?.isSystemColumn) return null
 
 				// `component`, `description`, `validateOn` and `debounce` in one resolution, with the
@@ -197,7 +200,7 @@ function resolveColumnComponent(colDef: ColConfig): ComponentType<FieldState> | 
 }
 
 function resolveRegistryComponent(
-	meta: ColumnMeta<unknown, unknown>,
+	meta: FormColumnMeta,
 	mode: ColumnFormMode,
 	cellTypes: CellTypeRegistry,
 ): ComponentType<FieldState> | undefined {

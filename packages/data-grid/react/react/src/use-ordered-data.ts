@@ -1,11 +1,19 @@
 'use client'
 
 import { applyRowOrder } from '@ez-kit/data-grid-core'
-import { useMemo } from 'react'
+import { useCallback, useMemo, useSyncExternalStore } from 'react'
 
-import { useDataGridSelector } from './use-data-grid-selector'
+import type { DataTable } from './types'
+import type { TableFeatures } from '@tanstack/table-core'
 
-import type { DataTable } from '@ez-kit/data-grid-core'
+/**
+ * The stable value read for a grid with no `rowOrderingFeature` registered.
+ *
+ * Without the feature there is no `rowOrder` slice at all (v9 registers nothing by default), and
+ * `useSyncExternalStore` requires a getter that returns the same reference while nothing has
+ * changed — a fresh `[]` per call would loop.
+ */
+const NO_ROW_ORDER: string[] = []
 
 /**
  * `data` as the grid should render it under an uncontrolled row order.
@@ -22,8 +30,34 @@ import type { DataTable } from '@ez-kit/data-grid-core'
  * practice: the slice is a stable `[]` until the first move, so `useSyncExternalStore` bails
  * out and a grid that never reorders re-renders exactly as often as before.
  */
-export function useOrderedData<TRow extends object>(table: DataTable<TRow>, data: TRow[]): TRow[] {
-	const rowOrder = useDataGridSelector(table, (state) => state.rowOrder)
+export function useOrderedData<TFeatures extends TableFeatures, TRow extends object>(
+	table: DataTable<TFeatures, TRow>,
+	data: TRow[],
+): TRow[] {
+	// Read straight off `table.store` rather than through `useDataGridSelector`: this hook runs
+	// inside `useDataGrid`, before the table is handed to anything, and the context-bound selector
+	// is the layer above it. `table.store` is built once at construction and never replaced, so
+	// both callbacks are stable for the table's life.
+	const store = table.store
+	const subscribe = useCallback(
+		(onStoreChange: () => void) => {
+			// TanStack Store hands back a `Subscription`, React wants a plain teardown.
+			const subscription = store.subscribe(() => {
+				onStoreChange()
+			})
+			return () => {
+				subscription.unsubscribe()
+			}
+		},
+		[store],
+	)
+	// `TFeatures` is a parameter here, so `rowOrder` — which exists only with
+	// `rowOrderingFeature` — is not nameable on `TableState<TFeatures>`.
+	const readRowOrder = useCallback(
+		(): string[] => (store.state as { rowOrder?: string[] }).rowOrder ?? NO_ROW_ORDER,
+		[store],
+	)
+	const rowOrder = useSyncExternalStore(subscribe, readRowOrder, readRowOrder)
 	// The **resolved** identity function, not `config.getRowId`: a grid that supplies none still
 	// has row ids, because `createTable` falls back to `row.id` before the index. Reading the
 	// consumer's option here instead would leave every such grid unordered while the state slice

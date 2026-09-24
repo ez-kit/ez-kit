@@ -3,8 +3,10 @@ import { createContext, useContext, useMemo } from 'react'
 import { joinClassNames } from './utils/class-names'
 import { deepMerge } from './utils/deep-merge'
 
+import type { GridFeatures } from './types'
 import type { LayoutClassNames, UseDataGridConfig } from './use-data-grid'
 import type { CreatingConfig, DeletingConfig, EditingConfig } from '@ez-kit/data-grid-core'
+import type { TableFeatures } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
 /**
@@ -24,10 +26,20 @@ import type { ReactNode } from 'react'
  * that actually gets the feature. A grid left without a handler resolves the feature away
  * rather than rendering a trigger that would throw on commit — see `useDataGrid`.
  */
-export type DataGridDefaultOptions<TRow extends object> = Omit<
-	UseDataGridConfig<TRow>,
-	'data' | 'columns' | 'state' | 'onStateChange' | 'creating' | 'editing' | 'deleting'
+export type DataGridDefaultOptions<TFeatures extends TableFeatures, TRow extends object> = Omit<
+	UseDataGridConfig<TFeatures, TRow>,
+	'data' | 'columns' | 'state' | 'onStateChange' | 'creating' | 'editing' | 'deleting' | 'features'
 > & {
+	/**
+	 * The feature set, optional here alone.
+	 *
+	 * `features` is required on {@link UseDataGridConfig} because that is the boundary the caller
+	 * writes — core gives it no default on purpose. A defaults layer is not that boundary: a kit
+	 * or an app may state the set once for every grid below it, and most state nothing at all, so
+	 * requiring it here would make an empty `defaults` object illegal. Whatever a layer does
+	 * supply is merged like any other option, and the instance config still has to name a set.
+	 */
+	features?: TFeatures
 	/**
 	 * How create looks. The grid that supplies `onSave` decides whether it exists at all.
 	 *
@@ -43,7 +55,7 @@ export type DataGridDefaultOptions<TRow extends object> = Omit<
 }
 
 /** Alias used at the context boundary where the row type is erased (mirrors the cell-type registry). */
-type AnyDefaultOptions = DataGridDefaultOptions<object>
+type AnyDefaultOptions = DataGridDefaultOptions<GridFeatures, object>
 
 /**
  * `TConfig` with `TKey` made optional — relaxes the callbacks that are required on an
@@ -74,21 +86,45 @@ function joinLayoutClassNames(
 	over: LayoutClassNames | undefined,
 ): LayoutClassNames | undefined {
 	if (base === undefined || over === undefined) return over ?? base
+	const root = joinClassNames(base.root, over.root)
 	const wrapper = joinClassNames(base.wrapper, over.wrapper)
 	const scroll = joinClassNames(base.scroll, over.scroll)
 	return {
+		...(root !== undefined ? { root } : {}),
 		...(wrapper !== undefined ? { wrapper } : {}),
 		...(scroll !== undefined ? { scroll } : {}),
 	}
 }
 
 /**
- * Lays `over` on top of `base`: {@link deepMerge} for every option, then the class join on the
- * one that accumulates. Used wherever two option layers meet, so the two orderings a consumer
- * can build — nested providers, and factory / provider / instance — behave the same.
+ * Lays `over` on top of `base`: {@link deepMerge} for every option, then the two exceptions —
+ * the class join on the one option that accumulates, and the wholesale replacement of the one
+ * that must never accumulate. Used wherever two option layers meet, so the two orderings a
+ * consumer can build — nested providers, and factory / provider / instance — behave the same.
+ *
+ * ## Why `features` replaces
+ *
+ * `tableFeatures({ … })` returns the caller's own `{}`-literal, which is exactly what
+ * {@link deepMerge}'s `isMergeableObject` accepts — so without this line a grid that deliberately
+ * narrows below a kit-wide set would silently run on the **union** of the two. Composing a set is
+ * a decision about what exists: v9 registers nothing by default, and a feature's absence is as
+ * deliberate as its presence (it is what makes `state.sorting`, `table.editing` and
+ * `row.getIsEditing` not exist). A merge cannot express "and not that one", and there is no error
+ * anywhere when it swallows the attempt.
+ *
+ * It is therefore the mirror image of `layout.classNames` directly above, and the two are the only
+ * options that are not plain `deepMerge`: classes accumulate because a layer cannot restate what it
+ * did not write, `features` replaces because naming a set *is* the restatement.
+ *
+ * This was written while nothing in the repo put `features` in a defaults layer, so with only one
+ * layer naming it the reference passed through untouched either way. `createDataGrid({ features })`
+ * now does exactly that, and `create-data-grid.test.tsx` covers the replacement it depends on — so
+ * the line below is load-bearing rather than pre-emptive, and removing it would silently widen
+ * every grid that narrows beneath a bound bundle.
  */
 function mergeOptionLayers(base: OptionsRecord, over: OptionsRecord): OptionsRecord {
 	const merged = deepMerge(base, over)
+	if (over.features !== undefined) merged.features = over.features
 	const classNames = joinLayoutClassNames(
 		(base.layout as LayoutRecord | undefined)?.classNames,
 		(over.layout as LayoutRecord | undefined)?.classNames,
@@ -105,9 +141,9 @@ const EMPTY_OPTIONS: AnyDefaultOptions = {}
  */
 const DataGridOptionsContext = createContext<AnyDefaultOptions>(EMPTY_OPTIONS)
 
-export type DataGridOptionsProviderProps<TRow extends object> = {
+export type DataGridOptionsProviderProps<TFeatures extends TableFeatures, TRow extends object> = {
 	/** Default grid options merged under every descendant `useDataGrid` call. */
-	defaults: DataGridDefaultOptions<TRow>
+	defaults: DataGridDefaultOptions<TFeatures, TRow>
 	children: ReactNode
 }
 
@@ -119,10 +155,10 @@ export type DataGridOptionsProviderProps<TRow extends object> = {
  * resolve together. Providers nest: a child provider's defaults are deep-merged on top of the
  * parent's, letting a subtree refine app-wide defaults without repeating them.
  */
-export function DataGridOptionsProvider<TRow extends object>({
+export function DataGridOptionsProvider<TFeatures extends TableFeatures, TRow extends object>({
 	defaults,
 	children,
-}: DataGridOptionsProviderProps<TRow>) {
+}: DataGridOptionsProviderProps<TFeatures, TRow>) {
 	const parent = useContext(DataGridOptionsContext)
 	const merged = useMemo(
 		() => mergeOptionLayers(parent as OptionsRecord, defaults as OptionsRecord) as AnyDefaultOptions,
@@ -136,8 +172,11 @@ export function DataGridOptionsProvider<TRow extends object>({
  * The context stores options with the row type erased (`object`); the double cast re-applies the
  * caller's `TRow` — safe because defaults are structural feature config, not row-bound values.
  */
-export function useDataGridOptions<TRow extends object>(): DataGridDefaultOptions<TRow> {
-	return useContext(DataGridOptionsContext) as unknown as DataGridDefaultOptions<TRow>
+export function useDataGridOptions<TFeatures extends TableFeatures, TRow extends object>(): DataGridDefaultOptions<
+	TFeatures,
+	TRow
+> {
+	return useContext(DataGridOptionsContext) as unknown as DataGridDefaultOptions<TFeatures, TRow>
 }
 
 /**
@@ -146,15 +185,15 @@ export function useDataGridOptions<TRow extends object>(): DataGridDefaultOption
  * Deep and immutable — nested feature settings combine; instance values win on conflict.
  * The exception is `layout.classNames`, which accumulates: see {@link joinLayoutClassNames}.
  */
-export function mergeGridOptionLayers<TRow extends object>(
-	factoryDefaults: DataGridDefaultOptions<TRow> | undefined,
-	providerDefaults: DataGridDefaultOptions<TRow>,
-	config: UseDataGridConfig<TRow>,
-): UseDataGridConfig<TRow> {
+export function mergeGridOptionLayers<TFeatures extends TableFeatures, TRow extends object>(
+	factoryDefaults: DataGridDefaultOptions<TFeatures, TRow> | undefined,
+	providerDefaults: DataGridDefaultOptions<TFeatures, TRow>,
+	config: UseDataGridConfig<TFeatures, TRow>,
+): UseDataGridConfig<TFeatures, TRow> {
 	const base = factoryDefaults
 		? (mergeOptionLayers(factoryDefaults, providerDefaults) as typeof providerDefaults)
 		: providerDefaults
-	return mergeOptionLayers(base, config) as UseDataGridConfig<TRow>
+	return mergeOptionLayers(base, config) as UseDataGridConfig<TFeatures, TRow>
 }
 
 /**
@@ -189,6 +228,8 @@ export function GridFactoryDefaultsProvider({ defaults, children }: GridFactoryD
  * Reads the factory option layer published by a bound `<DataGrid>`. Row type erased at the
  * context boundary and re-applied by the caller, exactly as in {@link useDataGridOptions}.
  */
-export function useGridFactoryDefaults<TRow extends object>(): DataGridDefaultOptions<TRow> | undefined {
-	return useContext(GridFactoryDefaultsContext) as DataGridDefaultOptions<TRow> | undefined
+export function useGridFactoryDefaults<TFeatures extends TableFeatures, TRow extends object>():
+	| DataGridDefaultOptions<TFeatures, TRow>
+	| undefined {
+	return useContext(GridFactoryDefaultsContext) as DataGridDefaultOptions<TFeatures, TRow> | undefined
 }

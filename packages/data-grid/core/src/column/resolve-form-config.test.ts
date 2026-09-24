@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest'
 
 import { ColumnFormMode, resolveColumnFormConfig } from './resolve-form-config'
 
-import type { ColumnMeta } from '@tanstack/table-core'
+import type { FormColumnMeta } from './resolve-form-config'
 
 const Editing = () => null
 const Creating = () => null
 
-function meta(fields: Partial<ColumnMeta<unknown, unknown>>): ColumnMeta<unknown, unknown> {
+function meta(fields: Partial<FormColumnMeta>): FormColumnMeta {
 	return fields
 }
 

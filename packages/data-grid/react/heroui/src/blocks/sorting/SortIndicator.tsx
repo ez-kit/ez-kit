@@ -1,6 +1,6 @@
 'use client'
 
-import { ColumnSortDirection } from '@ez-kit/data-grid-react'
+import { ColumnSortDirection } from '@ez-kit/data-grid-react/kit'
 import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react'
 
 import type { SortIndicatorProps } from '@ez-kit/data-grid-react'

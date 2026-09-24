@@ -33,7 +33,7 @@ function Toolbar() {
 }
 ```
 
-`withHistory(options)` builds an enhancer; applying it mutates the proxy it's given and returns it — same identity, widened by `{ history: StoreHistory<T> }`. Nothing is attached until the enhancer runs, so a named enhancer can seed several stores. `store.history` is enumerable and `ref()`-wrapped (so `snapshot(store).history` is the same live object, not a deep-cloned copy), and its `toJSON()` returns `undefined`, so it never leaks into `JSON.stringify(store)`.
+`withHistory(options)` builds an enhancer; applying it mutates the proxy it's given and returns it — same identity, widened by `{ history: StoreHistory<T> }` (`StoreHistory<TSlice>` with [`partialize`](#partialize)). Nothing is attached until the enhancer runs, so a named enhancer can seed several stores. `store.history` is enumerable and `ref()`-wrapped (so `snapshot(store).history` is the same live object, not a deep-cloned copy), and its `toJSON()` returns `undefined`, so it never leaks into `JSON.stringify(store)`.
 
 A photo-adjustment panel is the shape this is really for — every write is a step, `undo` walks them
 back, and the strip along the bottom is the timeline `goto(index)` addresses:
@@ -51,39 +51,92 @@ entries. The example passes a `shouldRecord` that vetoes a repeat write to the s
 ## Options
 
 ```ts
-type HistoryOptions<T extends object> = {
+// TSlice is what `partialize` returns — the whole state T when it is omitted.
+type HistoryOptions<T extends object, TSlice extends object = T> = {
 	limit?: number
 	defaultPaused?: boolean
-	defaultPasts?: T[]
-	defaultFutures?: T[]
-	shouldRecord?: (prev: T, next: T, meta?: readonly HistoryOp[]) => boolean
+	defaultPasts?: TSlice[]
+	defaultFutures?: TSlice[]
+	shouldRecord?: (prev: TSlice, next: TSlice, meta?: readonly HistoryOp[]) => boolean
+	partialize?: (state: T) => TSlice
 	sync?: boolean
 }
 
 pipe(proxy({ count: 0 }), withHistory(options))
 ```
 
-| Option           | Type                                                         | Default | Description                                                                          |
-| ---------------- | ------------------------------------------------------------ | ------- | ------------------------------------------------------------------------------------ |
-| `limit`          | `number`                                                     | `100`   | Max entries kept per stack. Over the limit, the **oldest** entry is dropped.         |
-| `defaultPaused`  | `boolean`                                                    | `false` | Start with recording paused — `resume()` (or a change to this option) flips it on.   |
-| `defaultPasts`   | `T[]`                                                        | `[]`    | Seed the undo stack. Trimmed to `limit` like any other write.                        |
-| `defaultFutures` | `T[]`                                                        | `[]`    | Seed the redo stack. Trimmed to `limit` like any other write.                        |
-| `shouldRecord`   | `(prev: T, next: T, meta?: readonly HistoryOp[]) => boolean` | —       | Veto a write: return `false` to skip recording it. `meta` is the batch's Valtio ops. |
-| `sync`           | `boolean`                                                    | `false` | Record one entry **per operation** instead of one per microtask batch.               |
+| Option           | Type                                                                   | Default         | Description                                                                          |
+| ---------------- | ---------------------------------------------------------------------- | --------------- | ------------------------------------------------------------------------------------ |
+| `limit`          | `number`                                                               | `100`           | Max entries kept per stack. Over the limit, the **oldest** entry is dropped.         |
+| `defaultPaused`  | `boolean`                                                              | `false`         | Start with recording paused — `resume()` (or a change to this option) flips it on.   |
+| `defaultPasts`   | `TSlice[]`                                                             | `[]`            | Seed the undo stack. Trimmed to `limit` like any other write.                        |
+| `defaultFutures` | `TSlice[]`                                                             | `[]`            | Seed the redo stack. Trimmed to `limit` like any other write.                        |
+| `shouldRecord`   | `(prev: TSlice, next: TSlice, meta?: readonly HistoryOp[]) => boolean` | —               | Veto a write: return `false` to skip recording it. `meta` is the batch's Valtio ops. |
+| `partialize`     | `(state: T) => TSlice`                                                 | the whole state | The part of the state history tracks. A step holds this slice and restores only it.  |
+| `sync`           | `boolean`                                                              | `false`         | Record one entry **per operation** instead of one per microtask batch.               |
 
 `shouldRecord`'s `meta` is `readonly HistoryOp[]` — the exact shape Valtio's `subscribe` reports (`['set', path, value, previousValue]` or `['delete', path, previousValue]`), one array per recorded batch (or per op, with `sync: true`). This requires `unstable_enableOp(true)`, which `withHistory` turns on globally the first time it's called — see [the process-wide flag](#the-process-wide-op-flag) below.
+
+### `partialize`
+
+`shouldRecord` decides _which writes_ become history entries; `partialize` decides _which part of the state_ is history at all. Without it a step is the whole state, so `shouldRecord` can keep a selection change out of the stack but cannot stop `undo` from rolling the selection back to what it was when the step was taken.
+
+```ts
+const editor = pipe(
+	proxy({ nodes: [], edges: [], selectedIds: [], lastError: null }),
+	withHistory({ partialize: (state) => ({ nodes: state.nodes, edges: state.edges }) }),
+)
+```
+
+With `partialize`, a step is the slice (`defaultPasts`, `defaultFutures` and `shouldRecord` take slices too), `undo` / `redo` / `goto` assign it onto the proxy instead of replacing the state — so every field outside it stays as it is — and a batch that leaves the slice shallow-equal records nothing and leaves the redo stack alone. That last rule is not optional: a step that changes nothing in the tracked state would only cost the user an `undo` press. Valtio keeps an untouched subtree at the same snapshot reference, so the shallow check sees exactly which fields moved; return fields as they are (`state.nodes`), not copies of them or wrappers built on the fly (`{ graph: { nodes: state.nodes } }`). Only `partialize` decides the slice: without it, a seed typed over part of the state is a type error, since `undo` would replace the whole state with it. `useTimeline`'s `current` is the slice as well.
 
 ## `useHistory(store)`
 
 ```tsx
-const { undo, redo, goto, clear, pause, resume, skip, isPaused, pasts, futures, limit, canUndo, canRedo } =
-	useHistory(store)
+const {
+	undo,
+	redo,
+	goto,
+	clear,
+	clearFutures,
+	pause,
+	resume,
+	skip,
+	isPaused,
+	pasts,
+	futures,
+	limit,
+	canUndo,
+	canRedo,
+} = useHistory(store)
 ```
 
-Subscribes through `useSnapshot(history.state)`, so `pasts`, `futures`, `limit` and `isPaused` re-render the caller when they change; `canUndo` / `canRedo` are derived (`pasts.length > 0` / `futures.length > 0`). The methods (`undo`, `redo`, `goto`, `clear`, `pause`, `resume`, `skip`) are stable references from `store.history` — call them from event handlers without re-subscribing.
+Subscribes through `useSnapshot(history.state)`, so `pasts`, `futures`, `limit` and `isPaused` re-render the caller when they change; `canUndo` / `canRedo` are derived (`pasts.length > 0` / `futures.length > 0`). The methods (`undo`, `redo`, `goto`, `clear`, `clearFutures`, `pause`, `resume`, `skip`) are stable references from `store.history` — call them from event handlers without re-subscribing.
 
 `goto(index)` jumps to an absolute position on the linear timeline `[...pasts, current, ...futures]` (`index === pasts.length` is a no-op — you're already there); out-of-range indices clamp rather than throw. `skip(fn)` runs `fn` with recording paused for its duration, re-entrant, and restores the prior pause state on exit.
+
+## A write that is not a step, but ends the redo branch
+
+Any new edit makes the redo branch unreachable: redoing a step from before it would jump the state into a timeline the user has already left. A recorded write enforces that on its own — it empties `futures` as it pushes its step. A skipped write does not, because `skip(fn)` touches neither stack. When a write must not be its own undo step (it folds into the step before it, or it is an automatic follow-up such as a layout pass) but does change what redo would land on, empty `futures` yourself with `clearFutures()`:
+
+```ts
+function removeNodeInPlace(state: EditorState, id: string) {
+	state.history.clearFutures()
+	state.history.skip(() => {
+		state.graph = removeNode(state.graph, id)
+	})
+}
+```
+
+Call it **before** the write, so a synchronous subscriber (`subscribe(state, cb, true)`) or code later in the same tick never sees the new state beside a redo step that no longer applies to it. A `useSnapshot` consumer sees both changes in one batch whichever order you pick, so the rule costs nothing there. Like every history method, `clearFutures()` first flushes a still-pending write, which is recorded as a step before the redo stack is emptied. It is not affected by `pause()` or `skip()`, and does nothing — no notification — when `futures` is already empty.
+
+The three stack operations answer three different questions:
+
+| Call             | `pasts`   | `futures` | Use it when                                                        |
+| ---------------- | --------- | --------- | ------------------------------------------------------------------ |
+| `skip(fn)`       | unchanged | unchanged | the write has nothing to do with history — a cursor, a selection   |
+| `clearFutures()` | unchanged | emptied   | the write is not an undo step, but the old redo branch is now void |
+| `clear()`        | emptied   | emptied   | there is no history any more — a different document was loaded     |
 
 ## `useTimeline(store)`
 

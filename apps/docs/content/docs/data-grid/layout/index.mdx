@@ -8,6 +8,7 @@ once its body starts scrolling.
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	layout={{ maxHeight: '32rem', stickyHeader: true, stickyFooter: true }}
@@ -19,12 +20,40 @@ once its body starts scrolling.
 | `layout.maxHeight`          | `string \| number` | Bounds the scroll container. Omitted, the structural stylesheet's `400px` applies (`600px` when virtualization is on). |
 | `layout.stickyHeader`       | `boolean`          | Keeps the header row at the top of the scroll container.                                                               |
 | `layout.stickyFooter`       | `boolean`          | The same at the bottom edge, for a totals row — see [Footer](/docs/data-grid/layout/footer).                           |
+| `layout.classNames.root`    | `string`           | Class for the grid's root element — the box around toolbar, table, pagination row and the bars.                        |
 | `layout.classNames.wrapper` | `string`           | Class for the outer box, outside the scrollport — where a border, radius or shadow belongs.                            |
 | `layout.classNames.scroll`  | `string`           | Class for the scrollport itself.                                                                                       |
 
+## The three boxes
+
+This package renders three elements of its own: the grid's **root**, and the shell's **wrapper** and
+**scrollport** around the table. Everything else — the table element, header, rows, cells, and every
+control — comes from the kit and sits inside one of them.
+
+The **root** wraps the whole grid: toolbar, filter panel, chips, table, pagination row, action bars.
+It is what makes a grid one item in its parent's layout — without it the grid's pieces are siblings
+in the parent's flow, so a parent with `display: flex`, `grid` or a `gap` lays out the pieces rather
+than the grid. It is also where a card's frame belongs, since it is the only box that encloses the
+bars as well as the table:
+
+```tsx
+<DataGrid
+	features={features}
+	data={data}
+	columns={columns}
+	layout={{ classNames: { root: 'rounded-xl border p-2' } }}
+/>
+```
+
+A kit can replace the element itself through the `core.Root` component slot — optional, like
+`TableWrapper` and `TableScroll`, so a kit that registers nothing gets a plain `div`. Both kits in
+this repo register one, for a single reason: their version runs the class through `cn`
+(tailwind-merge), so an app's `rounded-none` beats a kit default's `rounded-xl` instead of both
+landing on the element.
+
 ## Framing the shell
 
-The grid shell is the one part of the table this package renders itself: an outer wrapper, and the
+The grid shell is the part of the table around the table element itself: an outer wrapper, and the
 scrollport inside it. Everything the table renders below that — the table element, header, rows,
 cells — comes from the kit and sits _inside_ the scrollport.
 
@@ -45,6 +74,7 @@ and a grid adds to it where it needs to:
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	layout={{ classNames: { wrapper: 'shadow-lg' } }}
@@ -59,7 +89,8 @@ beat the kit's `border`, run your own value through `cn()` / `twMerge` before pa
 Class only: positioning, overflow and the height custom properties stay in the structural
 stylesheet, and the look stays with the kit.
 
-Which box to use: the **wrapper** is the outer one — a shadow the scrollport would clip, or a frame
+Which box to use: the **root** holds the whole grid, so a card's frame around the toolbar and the
+pagination row goes there. The **wrapper** is the outer box of the table's shell — a shadow the scrollport would clip, or a frame
 that has to enclose the pin-shadow overlay, belongs there. The **scroll** box is the scroller
 itself; a border or radius on it is stable, because a scroll container's own border does not move
 with its content.
@@ -72,6 +103,7 @@ For tall tables, keep the header row pinned to the top of the scroll container w
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	layout={{ stickyHeader: true, maxHeight: '32rem' }}

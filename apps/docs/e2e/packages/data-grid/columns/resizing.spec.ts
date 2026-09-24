@@ -64,7 +64,9 @@ test.describe('a grid with resizable columns', () => {
 		await expect(page.locator('[data-slot="column-resizer"]')).toHaveCount(RESIZABLE_COLUMNS)
 
 		await expect(grid.header('name')).toHaveAttribute('data-resizable', 'true')
-		// `resizing: false` on this one — no handle, and it does not claim to have one.
+		// `resizing: false` on this one — no handle, and it does not claim to have one. It is
+		// still a column: `toHaveCount(0)` inside a header that stopped rendering says nothing.
+		await expect(grid.header('active')).toHaveCount(1)
 		await expect(grid.header('active')).not.toHaveAttribute('data-resizable', 'true')
 		await expect(resizerIn(grid.header('active'))).toHaveCount(0)
 	})

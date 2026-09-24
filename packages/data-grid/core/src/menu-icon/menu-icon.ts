@@ -20,8 +20,10 @@ export const GridMenuIcon = {
 	Delete: 'delete',
 	PinTop: 'pin-top',
 	PinBottom: 'pin-bottom',
-	PinLeft: 'pin-left',
-	PinRight: 'pin-right',
+	/** Pin a column to the start edge. Logical, like `align` — the edge flips under RTL. */
+	PinStart: 'pin-start',
+	/** Pin a column to the end edge. */
+	PinEnd: 'pin-end',
 	Unpin: 'unpin',
 	SortAsc: 'sort-asc',
 	SortDesc: 'sort-desc',
@@ -31,7 +33,7 @@ export const GridMenuIcon = {
 	MoveStart: 'move-start',
 	/** Move a column one step toward the end of the order. */
 	MoveEnd: 'move-end',
-	/** Move a row one step up. Physical, like `pinning` — the vertical axis does not flip. */
+	/** Move a row one step up. Physical, like row pinning — the vertical axis does not flip. */
 	MoveUp: 'move-up',
 	/** Move a row one step down. */
 	MoveDown: 'move-down',

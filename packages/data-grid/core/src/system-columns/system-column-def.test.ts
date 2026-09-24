@@ -1,6 +1,15 @@
+import {
+	columnPinningFeature,
+	columnSizingFeature,
+	createExpandedRowModel,
+	rowExpandingFeature,
+	rowSelectionFeature,
+	tableFeatures,
+} from '@tanstack/table-core'
 import { describe, expect, it } from 'vitest'
 
 import { createTable } from '../create-table'
+import { deletingFeature } from '../features/deleting'
 
 import { ACTIONS_COLUMN_ID, EXPAND_COLUMN_ID, SELECTION_COLUMN_ID } from './system-columns'
 
@@ -12,6 +21,41 @@ const COLUMNS = [{ accessorKey: 'name' as const }]
 const noop = (): void => undefined
 
 /**
+ * `deletingFeature` alone. Every case in this file configures `deleting` — it is what mounts the
+ * `__actions__` column they are about — so the feature belongs in the set: a `deleting` config
+ * without it is the misconfiguration `createTable` warns on, and this file used to emit that
+ * warning on most of its runs.
+ */
+const DELETING = tableFeatures({ deletingFeature })
+
+const SELECTION = tableFeatures({ rowSelectionFeature })
+
+const SELECTION_AND_EXPANDING = tableFeatures({
+	rowSelectionFeature,
+	rowExpandingFeature,
+	expandedRowModel: createExpandedRowModel(),
+	deletingFeature,
+})
+
+/**
+ * The same pair plus `columnSizingFeature`. A system column's `width` resolves onto `size` /
+ * `minSize` / `maxSize`, which are options of that feature — without it registered the keys are
+ * neither read by the table nor nameable on its column defs.
+ */
+const SELECTION_AND_EXPANDING_SIZED = tableFeatures({
+	rowSelectionFeature,
+	rowExpandingFeature,
+	expandedRowModel: createExpandedRowModel(),
+	columnSizingFeature,
+})
+
+/** `columnPinningFeature` owns the `columnPinning` slice a system column's pin is recorded in. */
+const COLUMN_PINNING = tableFeatures({ columnPinningFeature, deletingFeature })
+
+/** The same slice, for the grids whose system column is the selection one. */
+const SELECTION_PINNING = tableFeatures({ rowSelectionFeature, columnPinningFeature })
+
+/**
  * The three auto-injected columns took no configuration at all: their header rendered
  * nothing, their width was a constant, and their pinning was decided for them — with the
  * expand column, alone among the three, pinned nowhere. `selection.column`,
@@ -20,7 +64,8 @@ const noop = (): void => undefined
  */
 describe('system column defaults', () => {
 	it('pins all three system columns, expand included', () => {
-		const table = createTable<Row>({
+		const table = createTable({
+			features: SELECTION_AND_EXPANDING,
 			data: DATA,
 			columns: COLUMNS,
 			selection: true,
@@ -33,17 +78,18 @@ describe('system column defaults', () => {
 			return pinning !== false && pinning !== undefined ? pinning.side : undefined
 		}
 
-		expect(sideOf(SELECTION_COLUMN_ID)).toBe('left')
+		expect(sideOf(SELECTION_COLUMN_ID)).toBe('start')
 		// Was pinned nowhere, so a horizontally scrolled grid kept the checkbox and lost the
 		// chevron of the very same row.
-		expect(sideOf(EXPAND_COLUMN_ID)).toBe('left')
-		expect(sideOf(ACTIONS_COLUMN_ID)).toBe('right')
+		expect(sideOf(EXPAND_COLUMN_ID)).toBe('start')
+		expect(sideOf(ACTIONS_COLUMN_ID)).toBe('end')
 	})
 })
 
 describe('SystemColumnDef', () => {
 	it('labels the actions column, which had no route to a header at all', () => {
-		const table = createTable<Row>({
+		const table = createTable({
+			features: DELETING,
 			data: DATA,
 			columns: COLUMNS,
 			deleting: { onDelete: noop },
@@ -54,7 +100,8 @@ describe('SystemColumnDef', () => {
 	})
 
 	it('takes the scalar and object width forms a normal column takes', () => {
-		const table = createTable<Row>({
+		const table = createTable({
+			features: SELECTION_AND_EXPANDING_SIZED,
 			data: DATA,
 			columns: COLUMNS,
 			selection: { column: { width: 60 } },
@@ -71,7 +118,8 @@ describe('SystemColumnDef', () => {
 	})
 
 	it('unpins the actions column on request — the narrow-grid case', () => {
-		const table = createTable<Row>({
+		const table = createTable({
+			features: COLUMN_PINNING,
 			data: DATA,
 			columns: COLUMNS,
 			deleting: { onDelete: noop },
@@ -79,11 +127,27 @@ describe('SystemColumnDef', () => {
 		})
 
 		expect(table.getColumn(ACTIONS_COLUMN_ID)?.columnDef.meta?.pinning).toBe(false)
-		expect(table.getState().columnPinning.right ?? []).not.toContain(ACTIONS_COLUMN_ID)
+		expect(table.store.state.columnPinning.end).not.toContain(ACTIONS_COLUMN_ID)
+	})
+
+	it('unpins the checkbox column on request, leaving it an ordinary first column', () => {
+		const table = createTable({
+			features: SELECTION_PINNING,
+			data: DATA,
+			columns: COLUMNS,
+			selection: { column: { pinning: false } },
+		})
+
+		expect(table.getColumn(SELECTION_COLUMN_ID)?.columnDef.meta?.pinning).toBe(false)
+		expect(table.store.state.columnPinning.start).not.toContain(SELECTION_COLUMN_ID)
+		// Unpinning moves nothing: the column is injected first either way, so what changes is
+		// whether it sticks to the start edge under horizontal scroll.
+		expect(table.getAllLeafColumns().map((column) => column.id)).toEqual([SELECTION_COLUMN_ID, 'name'])
 	})
 
 	it('normalizes the scalar align form the way a normal column does', () => {
-		const table = createTable<Row>({
+		const table = createTable({
+			features: DELETING,
 			data: DATA,
 			columns: COLUMNS,
 			deleting: { onDelete: noop },
@@ -98,7 +162,8 @@ describe('SystemColumnDef', () => {
 	})
 
 	it('carries the class names through, under the column option names', () => {
-		const table = createTable<Row>({
+		const table = createTable({
+			features: SELECTION,
 			data: DATA,
 			columns: COLUMNS,
 			selection: { column: { headerClassName: 'th-pick', cellClassName: 'td-pick' } },

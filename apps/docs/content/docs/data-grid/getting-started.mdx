@@ -22,6 +22,12 @@ Below is the same grid running in both flavors. Use the toggle to flip between t
 
 The example renders against the real published package surface — what you copy is what you ship.
 
+Note what the example does **not** write: a feature set. `DataGrid` imported from a kit root is the
+**prebuilt** grid — every feature's components, all nine cell types, and every feature already
+registered. That is the right way to see a grid working, and it is not the shape a project keeps;
+[section 3](#3-decide-how-you-build-the-grid) is that choice, and
+[Feature set](/docs/data-grid/feature-set) is what a feature set is and when you state your own.
+
 ## 2a. Controlled vs. uncontrolled
 
 `DataGrid` works two ways. Pass a `table` instance you built with `useDataGrid` (**controlled**), or skip the hook and hand the same config to `DataGrid` directly (**uncontrolled**).
@@ -42,14 +48,116 @@ return (
 )
 ```
 
+Neither form names a feature set, because both grids here carry one — the prebuilt `DataGrid` binds
+the all-in set, and a bundle you build with `createDataGrid({ features })` binds yours. When you do
+name one, it belongs to the grid's **config**, so in controlled mode it goes to `useDataGrid`, not
+to `DataGrid`.
+
 <DataGridDocsExample exampleId='base-inline' />
 
 Pick one mode for the lifetime of a given grid — switching between them remounts the grid and resets its state.
 
-## 3. Next steps
+## 3. Decide how you build the grid
+
+The import above is the zero-config path: `DataGrid` arrives with every feature's components, all nine cell types **and** every feature registered. It is the fastest way to see a grid, and for a throwaway page it is also the right place to stop — but it is not free, and it is not the shape a project keeps. There are two, and the recommended one is the one you write yourself.
+
+### The two shapes
+
+**Recommended — your own bundle**, a file you write once and import everywhere:
+
+```tsx title="src/lib/data-grid.ts"
+import {
+	columnPinningFeature,
+	columnSizingFeature,
+	columnVisibilityFeature,
+	createPaginatedRowModel,
+	createSortedRowModel,
+	rowPaginationFeature,
+	rowSortingFeature,
+	tableFeatures,
+} from '@ez-kit/data-grid-core/features'
+import { createDataGrid } from '@ez-kit/data-grid-heroui'
+import { coreComponents } from '@ez-kit/data-grid-heroui/core'
+import { fallbacksComponents } from '@ez-kit/data-grid-heroui/fallbacks'
+import { paginationComponents } from '@ez-kit/data-grid-heroui/pagination'
+import { sortingComponents } from '@ez-kit/data-grid-heroui/sorting'
+import { numberCellType } from '@ez-kit/data-grid-heroui/cell-types/number'
+import { textCellType } from '@ez-kit/data-grid-heroui/cell-types/text'
+
+export const features = tableFeatures({
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	rowSortingFeature,
+	sortedRowModel: createSortedRowModel(),
+	rowPaginationFeature,
+	paginatedRowModel: createPaginatedRowModel(),
+})
+
+export const { DataGrid, useDataGrid, createColumns } = createDataGrid({
+	components: {
+		core: coreComponents,
+		pagination: paginationComponents,
+		sorting: sortingComponents,
+		fallbacks: fallbacksComponents,
+	},
+	cellTypes: { text: textCellType, number: numberCellType },
+	features,
+})
+```
+
+**Quick start — the prebuilt grid**, everything already wired:
+
+```tsx
+import { DataGrid, useDataGrid, createColumns } from '@ez-kit/data-grid-heroui'
+```
+
+Everything downstream is identical — `import { DataGrid, createColumns } from '@/lib/data-grid'` and carry on. Both flavors expose the same subpaths; swap `heroui` for `shadcn`.
+
+Three things are stated in that file, and each of them is a decision the prebuilt grid made for you: which **component groups** ship, which **cell types** are registered, and which **features** the grid runs on. The set at the top is stated once for every grid this bundle builds, so the call sites stop writing it and still get it back in their types — see [Binding the set to your factory](/docs/data-grid/feature-set#binding-the-set-to-your-factory).
+
+### What your own bundle saves
+
+A grid built this way never reaches the code it did not name. Measured with esbuild against the shadcn flavor (minified, gzipped, React external), the four-group composition above is **44.6 kB** against **58.5 kB** for the prebuilt grid — 24%. What stays out: the date picker and `react-day-picker`, the filter panel and its popovers, both write forms, the confirm dialog, the action bar, the row-actions cell, the resizer, the visibility menu, the seven cell types the grid does not use, and the implementations behind every feature it did not register.
+
+That is the whole saving, and it does not grow with your data or your column count — it is a fixed amount of code that either ships or does not.
+
+The two axes behind that number are independent: `components` decides which UI is compiled in, `features` decides which of the grid's behaviours are. You can name `allComponents` and still leave out `editingFeature`, or compose four component groups and register everything. Trim both — see [Feature set](/docs/data-grid/feature-set).
+
+What you cannot do is trim the second axis on the **prebuilt** grid. It binds the all-in set, and that is not a default waiting to be overridden: its fourteen component groups read the features' APIs, so they drag the implementations in whatever set a call site names. Passing `features` there still narrows what the grid _does_ — the state slices and APIs it creates — and gives none of the bytes back. Measured the same way, the prebuilt grid with a sorting-only set is 54.6 kB against 58.5 kB with everything: 3.9 kB, for eight imports at every call site. That is why it stopped asking.
+
+### Which to pick
+
+**Write your own bundle for anything you keep.** It is the only shape where either axis can be trimmed, it is where cell types are registered, and it is seven lines. A project that starts with `import { DataGrid } from '@ez-kit/data-grid-heroui'` has nowhere to add a custom cell type later without first introducing this file and rewiring every import that came from the kit root. Adding one then reads:
+
+```tsx
+cellTypes: { text: textCellType, number: numberCellType, rating: ratingCellType },
+```
+
+**Reach for the prebuilt grid when the grid is temporary, or when it genuinely uses most of what it ships.** A prototype, a docs example, an internal admin table with filtering, inline editing, row selection and bulk actions — that last one is already reaching for ten of the fourteen groups, and composing them by hand buys little. The cost is a ceiling rather than a leak: it is the same 58.5 kB whatever the grid ends up doing.
+
+### Every group at once
+
+When you want your own file but every feature's components, name the aggregates rather than listing fourteen imports:
+
+```tsx title="src/lib/data-grid.ts"
+import { allDataGridFeatures } from '@ez-kit/data-grid-core/features/all'
+import { allComponents, cellTypes, createDataGrid } from '@ez-kit/data-grid-heroui'
+
+export const { DataGrid, useDataGrid, createColumns } = createDataGrid({
+	components: allComponents,
+	cellTypes,
+	features: allDataGridFeatures,
+})
+```
+
+This is the same bundle as the prebuilt grid — the three aggregates are exactly what it binds. It buys the file, not the saving. Use it when you want one place to register a custom cell type and have no interest in trimming anything else; drop a group, a cell type or a feature from those three the day you do.
+
+## 4. Next steps
 
 Once you have a grid rendering, branch out into the per-capability pages:
 
+- [Feature set](/docs/data-grid/feature-set) — the `features` option, and what each config key needs
 - [Client vs server](/docs/data-grid/client-vs-server) — which side sorts, filters and paginates
 - [Columns](/docs/data-grid/columns) — accessors, the column helper, cell types, visibility, resizing
 - [Sorting](/docs/data-grid/sorting) — initial sort, multi-sort, custom sort fns

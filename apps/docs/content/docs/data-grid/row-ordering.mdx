@@ -10,6 +10,7 @@ option [column reordering](/docs/data-grid/columns/ordering) uses, grouped the w
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	getRowId={(row) => row.id}
@@ -56,6 +57,7 @@ server-driven pagination, where the grid holds one page and cannot speak for the
 
 ```tsx
 <DataGrid
+	features={features}
 	data={rows}
 	columns={columns}
 	getRowId={(row) => row.id}

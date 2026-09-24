@@ -18,8 +18,7 @@ import { useDataGridState, useDataGridTable } from './table-context'
 
 import type { CellTypeRegistry } from '../cell-types-context'
 import type { InputProps } from '../types'
-import type { FieldState } from '@ez-kit/data-grid-core'
-import type { ColumnMeta } from '@tanstack/table-core'
+import type { FormColumnMeta, FieldState } from '@ez-kit/data-grid-core'
 import type { ChangeEvent, ComponentType, ReactNode } from 'react'
 
 /** Marks the draft row, so a keydown anywhere inside it can be told from one outside. */
@@ -78,7 +77,11 @@ export function CreatingRow() {
 			{...{ [CREATING_ROW_ATTR]: '' }}
 		>
 			{getVisualLeafColumns(table).map((col) => {
-				const meta = col.columnDef.meta
+				// `ColumnMeta` is declared `in out` in both its `TFeatures` and its `TData` upstream, so no
+				// concrete instantiation is assignable to any other and this cast is forced by the variance
+				// annotation rather than chosen. `FormColumnMeta` is the one name core declares for it, and
+				// this is the same cast core's own `creating.ts` makes at its boundary.
+				const meta = col.columnDef.meta as FormColumnMeta | undefined
 				const pinVars = getCommonPinStyles(col)
 				const pinned = col.getIsPinned()
 				const pinnedAttrs = pinned ? { 'data-pinned': pinned } : {}
@@ -191,7 +194,7 @@ export function CreatingRow() {
 // ── helpers ───────────────────────────────────────────────────────────────
 
 type CreatingInputArgs = {
-	meta: ColumnMeta<unknown, unknown> | undefined
+	meta: FormColumnMeta | undefined
 	field: FieldState
 	cellTypes: CellTypeRegistry
 	Input: ComponentType<InputProps>

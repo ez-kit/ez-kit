@@ -1,5 +1,21 @@
 'use client'
 
+import {
+	columnFilteringFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	columnVisibilityFeature,
+	createFilteredRowModel,
+	createPaginatedRowModel,
+	createSortedRowModel,
+	filterFns,
+	globalFilteringFeature,
+	loadingFeature,
+	rowPaginationFeature,
+	rowSortingFeature,
+	sortFns,
+	tableFeatures,
+} from '@ez-kit/data-grid-core/features'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { DataGrid } from 'shared/DataGrid'
@@ -7,6 +23,24 @@ import { DataGrid } from 'shared/DataGrid'
 import { makeUsers, columns, type User } from './_data'
 
 import type { ColumnFiltersState, SortingState } from '@ez-kit/data-grid-react'
+
+const features = tableFeatures({
+	// Structural: the grid shell reads column widths, visibility and pin groups to lay out
+	// the column grid. Everything below is this example's own.
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	rowSortingFeature,
+	loadingFeature,
+	columnFilteringFeature,
+	filterFns,
+	globalFilteringFeature,
+	rowPaginationFeature,
+	sortFns,
+	filteredRowModel: createFilteredRowModel(),
+	paginatedRowModel: createPaginatedRowModel(),
+	sortedRowModel: createSortedRowModel(),
+})
 
 // ---------------------------------------------------------------------------
 // Simulated server dataset + mock fetch
@@ -147,6 +181,7 @@ export function ServerDataExample() {
 
 	return (
 		<DataGrid
+			features={features}
 			data={rows}
 			columns={columns}
 			pagination={{

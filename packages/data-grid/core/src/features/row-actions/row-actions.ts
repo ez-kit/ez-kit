@@ -1,8 +1,7 @@
 import type { ActionItemDef, ActionItemSlot } from '../../action-item'
 import type { SystemColumnDef } from '../../column/types'
-import type { RowPinningConfig } from '../../types'
 import type { FeatureToggle } from '../../utils/feature-flag'
-import type { Row, RowData, Table } from '@tanstack/table-core'
+import type { Row, Table, TableFeatures } from '@tanstack/table-core'
 
 /**
  * Which container holds a row action: the cell itself, or the overflow menu.
@@ -70,18 +69,32 @@ export type RowActionItem<TNode = never> =
 			width?: number
 	  })
 
-/** What {@link RowActionsConfig.actions} is handed when a row builds its entries. */
+/**
+ * What {@link RowActionsConfig.actions} is handed when a row builds its entries.
+ *
+ * `Row<TableFeatures, TRow>` is the v9 arity. It was `Row<TRow>`, which compiled only because
+ * `features/editing/editing.ts` carried a v8 `declare module … { interface Row<TData> }` that
+ * redeclared the imported name at one type argument; that block is gone, so the real `Row` is
+ * visible again. `TableFeatures` — the base, where every feature key is optional — is the widest
+ * instantiation, so `ExtractFeatureMapTypes` contributes every row feature's API and the type
+ * stays as permissive as v8's was. It is also the instantiation `assignTableInstanceData` uses.
+ *
+ * `table` is at the same arity and for the same reason. It was `Table<TRow>`, which compiled only
+ * while `creating.ts`, `deferred-apply.ts` and `deleting.ts` each declared `interface Table<TData>`;
+ * with the last of those gone it became the `TS2314` this comment predicted, and it is now spelled
+ * at v9's arity like `row` above.
+ */
 export type RowActionsContext<TRow extends object = object> = {
-	row: Row<TRow>
-	table: Table<TRow>
+	row: Row<TableFeatures, TRow>
+	table: Table<TableFeatures, TRow>
 }
 
 /**
  * Per-row actions config.
  *
- * `TRow` carries a default so a reference that names no argument still compiles — the
- * `TableOptionsResolved` augmentation below is one such reference, and reads `actions` back
- * only to invoke it.
+ * `TRow` carries a default so a reference that names no argument still compiles — `GridOptions`
+ * in `create-table/create-table-options.ts` is one such reference, and reads `actions` back only
+ * to invoke it.
  *
  * Two node parameters, not one, because the config renders two unrelated things.
  * {@link ActionItemDef.icon} needs an element (React: `<Copy />`), while
@@ -125,7 +138,7 @@ export type RowActionsConfig<TRow extends object = object, TIcon = never, TNode 
 	 * built-ins and one overflow trigger, and a grid that promotes entries to inline buttons
 	 * states its own width here.
 	 */
-	column?: SystemColumnDef<TRow, TNode>
+	column?: SystemColumnDef<TableFeatures, TRow, TNode>
 }
 
 /** Rendered width of one icon button in the actions cell. */
@@ -198,14 +211,4 @@ export function getActionsColumnSize({
 	// which can be wider than the resting state (e.g. delete-only grids).
 	const buttons = Math.max(actionCount, editing || creating ? INLINE_FORM_BUTTONS : 0)
 	return getActionsCellWidth(new Array<number>(buttons).fill(ACTION_BUTTON_SIZE))
-}
-
-declare module '@tanstack/table-core' {
-	// `TData` is unused here but must match the declaration being merged into.
-	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions, @typescript-eslint/no-unused-vars
-	interface TableOptionsResolved<TData extends RowData> {
-		rowActions?: RowActionsConfig<object, unknown>
-		/** Normalized row-pinning config — `undefined` when row pinning is off. */
-		pinning?: RowPinningConfig | false
-	}
 }

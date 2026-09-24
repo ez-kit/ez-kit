@@ -18,12 +18,12 @@ there, with a live example beside it.
 ## Entry shape
 
 One entry of `rowActions.actions` — and of
-[`selection.bar.actions`](/docs/data-grid/selection/selection-bar#custom-actions), which takes the
+[`selection.bar.actions`](/docs/data-grid/selection/action-bar#custom-actions), which takes the
 same shape bar the last two rows. An entry either describes itself with the fields above
 `component`, or hands over its markup through `component` and carries nothing else but `id`.
 
 `placement` and `width` are the row's own: a cell has two containers to choose between, while every
-entry in the selection bar is already a button.
+entry in the action bar is already a button.
 
 | Field         | Type                 | Description                                                                                                                                                                               |
 | ------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -48,13 +48,14 @@ column uses.
 | ----------------- | ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | `header`          | `string \| (ctx) => ReactNode`                                | Header content. Omitted, the column keeps its built-in header — the select-all checkbox for selection, nothing for expand and actions. |
 | `width`           | `number \| { default?, min?, max? }`                          | Width in pixels. Defaults: `44` for selection and expand, a derived width for actions.                                                 |
-| `pinning`         | `false \| 'left' \| 'right' \| { side?, initialSide? }`       | Which viewport edge it sticks to. Defaults: `'left'` for selection and expand, `'right'` for actions.                                  |
+| `pinning`         | `false \| 'start' \| 'end' \| { side?, initialSide? }`        | Which viewport edge it sticks to. Defaults: `'start'` for selection and expand, `'end'` for actions.                                   |
 | `align`           | `'start' \| 'center' \| 'end' \| { header?, cell?, footer? }` | Horizontal alignment. Logical, like a normal column's `align`.                                                                         |
 | `headerClassName` | `string`                                                      | Class applied to the header cell.                                                                                                      |
 | `cellClassName`   | `string`                                                      | Class applied to the body cells.                                                                                                       |
 
 ```tsx
 <DataGrid
+	features={features}
 	data={rows}
 	columns={columns}
 	deleting={{ onDelete }}

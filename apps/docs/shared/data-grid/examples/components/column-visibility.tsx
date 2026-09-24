@@ -1,6 +1,27 @@
 'use client'
 
+import {
+	columnPinningFeature,
+	columnSizingFeature,
+	columnVisibilityFeature,
+	createSortedRowModel,
+	rowSortingFeature,
+	sortFns,
+	tableFeatures,
+} from '@ez-kit/data-grid-core/features'
+
 import { DataGrid } from 'shared/DataGrid'
+
+const features = tableFeatures({
+	// Structural: the grid shell reads column widths, visibility and pin groups to lay out
+	// the column grid. Everything below is this example's own.
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	rowSortingFeature,
+	sortFns,
+	sortedRowModel: createSortedRowModel(),
+})
 
 type Employee = {
 	id: number
@@ -72,6 +93,7 @@ const DATA: Employee[] = [
 export function ColumnVisibilityExample() {
 	return (
 		<DataGrid
+			features={features}
 			data={DATA}
 			columns={[
 				{

@@ -1,6 +1,6 @@
 'use client'
 
-import { LoadMoreTrigger, useGridMessages } from '@ez-kit/data-grid-react'
+import { LoadMoreTrigger, useGridMessages } from '@ez-kit/data-grid-react/kit'
 import { AlertCircle } from 'lucide-react'
 
 import { Button } from '@grid-shadcn/components/ui/button'

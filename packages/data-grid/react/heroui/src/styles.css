@@ -162,19 +162,31 @@
 
 /* The strip is 16px wide and the shadow is drawn against the edge that hugs the pinned
  * block: spread −6 against a 10px offset leaves ~4px of solid shade there, blurred out
- * over the remaining width. Anything narrower reads as nothing on a white surface. */
-[data-pin-shadow='left'] {
+ * over the remaining width. Anything narrower reads as nothing on a white surface.
+ *
+ * `box-shadow` has no logical form, so the offset's sign is the one thing here that has to
+ * be restated under RTL: the strip itself is placed by `inset-inline-start` /
+ * `inset-inline-end`, but which physical side of it hugs the pinned block flips. */
+[data-pin-shadow='start'] {
 	width: 16px;
 	box-shadow: inset 10px 0 8px -6px var(--dg-pin-shadow-color);
-	opacity: var(--dg-pin-left-shadow, 0);
+	opacity: var(--dg-pin-start-shadow, 0);
 	transition: opacity 150ms;
 }
 
-[data-pin-shadow='right'] {
+[data-pin-shadow='end'] {
 	width: 16px;
 	box-shadow: inset -10px 0 8px -6px var(--dg-pin-shadow-color);
-	opacity: var(--dg-pin-right-shadow, 0);
+	opacity: var(--dg-pin-end-shadow, 0);
 	transition: opacity 150ms;
+}
+
+[dir='rtl'] [data-pin-shadow='start'] {
+	box-shadow: inset -10px 0 8px -6px var(--dg-pin-shadow-color);
+}
+
+[dir='rtl'] [data-pin-shadow='end'] {
+	box-shadow: inset 10px 0 8px -6px var(--dg-pin-shadow-color);
 }
 
 [data-slot='tr'][data-pinned] {
@@ -215,8 +227,8 @@
  * layout those elements size themselves from their content, so the rendered
  * column widths diverge from the table model — a long cell value stretches its
  * column well past its declared `size`. Everything positional is computed from
- * the model: the sticky pin offsets (`--dg-pin-left` / `--dg-pin-right`, from
- * `column.getStart('left')` / `getAfter('right')`) and the pin-shadow overlay
+ * the model: the sticky pin offsets (`--dg-pin-start` / `--dg-pin-end`, from
+ * `column.getStart('start')` / `getAfter('end')`) and the pin-shadow overlay
  * offsets (`Σ col.getSize()`, `pin-shadow-overlay.tsx`). When model and DOM
  * disagree, pinned columns stick at the wrong offset — leaving a gap between
  * neighbouring pinned columns that the scrolling content shows through — and
@@ -433,28 +445,16 @@ tr[data-depth='5'] [data-system-column='expand'] + td {
 
 /* ---- Deferred apply: the "not yet real" treatment ----
  * Three surfaces carry it — a drafted sort on a header cell, a drafted filter chip, and the
- * pending pills inside the draft bar — and they read as one idea: outlined instead of filled,
- * `var(--muted)` instead of foreground. HeroUI v3 has no `default-500` step, so muted text goes
- * through `var(--muted)` here rather than a `text-default-*` utility that compiles to nothing
+ * pending pills inside the bar's draft section — and they read as one idea: outlined instead of
+ * filled, `var(--muted)` instead of foreground. HeroUI v3 has no `default-500` step, so muted text
+ * goes through `var(--muted)` here rather than a `text-default-*` utility that compiles to nothing
  * (same reason as the `.dg-*` block above). Both themes come from the token set, so there is no
  * `.dark` twin to keep in sync.
  *
- * The draft bar is the selection bar's `ActionBar` primitive with its `data-slot` overridden, so
- * it opts back into the same entrance animation explicitly. */
+ * There is no separate draft-bar animation rule any more: the draft is a *section* of the one
+ * `[data-slot='action-bar']` root, which the entrance animations above already cover. */
 
-[data-slot='draft-bar'][data-side='bottom'] {
-	animation: ez-action-bar-slide-from-bottom 250ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-[data-slot='draft-bar'][data-side='top'] {
-	animation: ez-action-bar-slide-from-top 250ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-@media (prefers-reduced-motion: reduce) {
-	[data-slot='draft-bar'] {
-		animation: none !important;
-	}
-}
-
-.dg-draft-bar-label {
+.dg-draft-label {
 	color: var(--muted);
 }
 
@@ -495,13 +495,14 @@ tr[data-depth='5'] [data-system-column='expand'] + td {
 	color: var(--muted);
 }
 
-/* ---- Footer page sizer ----
- * `pagination: { pageSizer: 'footer' }` puts the size control in the pagination row instead of
- * the toolbar, so the two share one line: sizer to the leading edge, pagination controls to the
- * trailing one. The shared React package ships the `data-slot` and no styling, so the row's
- * layout has to live here. The nested pagination's own top margin would double the gap. */
+/* ---- Bottom bar ----
+ * `<DataGrid.BottomBar>` is the grid's bottom region, opposite the toolbar: a row with two ends,
+ * whatever it is given to hold. The default layout mounts it for `pagination: { pageSizer:
+ * 'footer' }`, which puts the size control beside the pagination controls instead of in the
+ * toolbar — sizer to the leading edge, page controls to the trailing one. The shared React
+ * package ships the `data-slot` and no styling, so the layout has to live here. */
 
-[data-slot='pagination-row'] {
+[data-slot='bottom-bar'] {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -510,11 +511,13 @@ tr[data-depth='5'] [data-system-column='expand'] + td {
 	margin-top: 0.75rem;
 }
 
-/* Both kits' pagination roots are full-width centred bars of their own (`mx-auto w-full
- * justify-center`); inside this row they are one of two items, so the width and the centring
- * have to come back off or the controls wrap onto their own line. */
+/* The pagination root is a bar of its own — HeroUI's own centring defaults, plus this kit's `mt-3`;
+ * inside this bar it is one item of several, so the width, the centring and that margin have to
+ * come back off or the controls wrap onto their own line. The rule keys on the child,
+ * not on the bar, so a bottom bar holding something else is untouched by it — and the nested
+ * pagination's own top margin, which would double the gap, goes with it. */
 
-[data-slot='pagination-row'] [data-slot='pagination'] {
+[data-slot='bottom-bar'] [data-slot='pagination'] {
 	width: auto;
 	margin: 0;
 	justify-content: flex-end;

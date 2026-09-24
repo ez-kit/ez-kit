@@ -10,7 +10,7 @@ import type { ColumnAlign, ColumnAlignDef, ColumnPinningDef, ColumnPinSide, Colu
 
 /**
  * Collapses the scalar pinning form onto the object one, so every reader downstream sees a
- * single shape. `pinning: 'left'` is the long `{ side: 'left' }` — a static pin — not a seed.
+ * single shape. `pinning: 'start'` is the long `{ side: 'start' }` — a static pin — not a seed.
  */
 export function normalizeColumnPinning(
 	pinning: false | ColumnPinSide | ColumnPinningDef | undefined,

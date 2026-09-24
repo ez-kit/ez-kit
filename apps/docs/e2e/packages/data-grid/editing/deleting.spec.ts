@@ -94,7 +94,7 @@ test.describe('deleting a selection', () => {
 		await toggle(rowCheckboxes(page).first())
 		await toggle(rowCheckboxes(page).nth(1))
 
-		await deleteButton(page.locator('[data-slot="selection-bar"]')).click()
+		await deleteButton(page.locator('[data-slot="action-bar"]')).click()
 
 		const dialog = confirmation(page)
 		// `bulk.confirmation.description` is a function of the selected rows.
@@ -109,7 +109,7 @@ test.describe('deleting a selection', () => {
 
 	test('cancelling keeps every selected row', async ({ grid, page }) => {
 		await toggle(rowCheckboxes(page).first())
-		await deleteButton(page.locator('[data-slot="selection-bar"]')).click()
+		await deleteButton(page.locator('[data-slot="action-bar"]')).click()
 		await cancelButton(confirmation(page)).click()
 
 		await expect(grid.rows()).toHaveCount(INITIAL_ROWS)

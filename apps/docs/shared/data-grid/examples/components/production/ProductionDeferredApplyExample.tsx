@@ -3,6 +3,8 @@
 import { DataGrid } from 'shared/DataGrid'
 
 import { orderColumns } from './data'
+import { deferredApplyFeatures } from './features'
+import { OrdersLayout } from './OrdersLayout'
 import { useOrdersState } from './use-orders-state'
 
 /**
@@ -17,6 +19,7 @@ export function ProductionDeferredApplyExample() {
 
 	return (
 		<DataGrid
+			features={deferredApplyFeatures}
 			data={orders.rows}
 			columns={orderColumns}
 			draft
@@ -26,16 +29,14 @@ export function ProductionDeferredApplyExample() {
 				items: [10, 25, 50],
 				siblings: 1,
 			}}
-			sorting={{ manual: true, multi: { max: 3, event: 'ctrl' }, toolbar: true }}
+			sorting={{ manual: true, multi: { max: 3, event: 'ctrl' } }}
 			filtering={{
 				manual: true,
-				variant: 'popover',
 				faceted: true,
-				chips: { position: 'above' },
-				toolbar: true,
 			}}
 			globalFiltering={{ placeholder: 'Search orders…' }}
 			layout={{ stickyHeader: true }}
+			pinning={{ column: true }}
 			visibility
 			deleting={{
 				onDelete: ({ row }) => orders.remove([row.original.id]),
@@ -51,6 +52,8 @@ export function ProductionDeferredApplyExample() {
 			selection
 			state={{ loading: orders.loading }}
 			onStateChange={orders.onStateChange}
-		/>
+		>
+			<OrdersLayout />
+		</DataGrid>
 	)
 }

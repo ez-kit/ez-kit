@@ -11,6 +11,7 @@ For grids with thousands of rows, render only the rows currently in view. Memory
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data} // 10_000+ rows
 	columns={columns}
 	virtualization={{ row: { estimateSize: 44, overscan: 10 } }}

@@ -156,6 +156,106 @@ describe('createHistoryStack', () => {
 		expect(h.snapshots.at(-1)?.futures).toEqual([])
 	})
 
+	it('clearFutures empties the redo stack and leaves pasts and the state alone', () => {
+		const h = harness()
+		const history = createHistoryStack(h.adapter, {})
+		history.record({ count: 0 }, { count: 1 })
+		h.current = { count: 1 }
+		history.record({ count: 1 }, { count: 2 })
+		h.current = { count: 2 }
+		history.undo()
+
+		history.clearFutures()
+
+		expect(h.current).toEqual({ count: 1 })
+		expect(h.snapshots.at(-1)?.pasts).toEqual([{ count: 0 }])
+		expect(h.snapshots.at(-1)?.futures).toEqual([])
+	})
+
+	it('redo is a no-op after clearFutures', () => {
+		const h = harness()
+		const history = createHistoryStack(h.adapter, {})
+		history.record({ count: 0 }, { count: 1 })
+		h.current = { count: 1 }
+		history.undo()
+		history.clearFutures()
+		const before = h.snapshots.length
+
+		history.redo()
+
+		expect(h.current).toEqual({ count: 0 })
+		expect(h.snapshots).toHaveLength(before)
+	})
+
+	it('clearFutures does not publish when the redo stack is already empty', () => {
+		const h = harness()
+		const history = createHistoryStack(h.adapter, {})
+		history.record({ count: 0 }, { count: 1 })
+		const before = h.snapshots.length
+
+		history.clearFutures()
+
+		expect(h.snapshots).toHaveLength(before)
+	})
+
+	it('clearFutures then skip writes without a step and closes the redo branch', () => {
+		const h = harness()
+		const history = createHistoryStack(h.adapter, {})
+		history.record({ count: 0 }, { count: 1 })
+		h.current = { count: 1 }
+		history.undo()
+
+		history.clearFutures()
+		history.skip(() => {
+			h.adapter.write({ count: 5 })
+		})
+
+		expect(h.current).toEqual({ count: 5 })
+		expect(h.snapshots.at(-1)?.pasts).toEqual([])
+		expect(h.snapshots.at(-1)?.futures).toEqual([])
+	})
+
+	it('clearFutures is not gated on pause — it empties futures while paused and inside skip', () => {
+		const h = harness()
+		const history = createHistoryStack(h.adapter, {})
+		history.record({ count: 0 }, { count: 1 })
+		h.current = { count: 1 }
+		history.record({ count: 1 }, { count: 2 })
+		h.current = { count: 2 }
+		history.undo()
+		history.undo()
+
+		history.pause()
+		history.redo()
+		history.clearFutures()
+		expect(h.snapshots.at(-1)?.futures).toEqual([])
+		history.resume()
+
+		history.undo()
+		history.skip(() => {
+			history.clearFutures()
+		})
+		expect(h.snapshots.at(-1)?.futures).toEqual([])
+		expect(h.snapshots.at(-1)?.pasts).toEqual([])
+	})
+
+	it('undo after clearFutures still works and puts the current state into futures', () => {
+		const h = harness()
+		const history = createHistoryStack(h.adapter, {})
+		history.record({ count: 0 }, { count: 1 })
+		h.current = { count: 1 }
+		history.record({ count: 1 }, { count: 2 })
+		h.current = { count: 2 }
+		history.undo()
+		history.clearFutures()
+
+		history.undo()
+
+		expect(h.current).toEqual({ count: 0 })
+		expect(h.snapshots.at(-1)?.pasts).toEqual([])
+		expect(h.snapshots.at(-1)?.futures).toEqual([{ count: 1 }])
+	})
+
 	it('goto does not trim an already-over-limit seed — it only reorders, never deletes', () => {
 		// limit 2, seeded independently at the cap on both sides (defaultPasts and defaultFutures
 		// are each trimmed to `limit` on their own, so their SUM can start above `limit` — a real

@@ -1,5 +1,532 @@
 # @ez-kit/data-grid-heroui
 
+## 0.9.0
+
+### Minor Changes
+
+- c35206c: **`<DataGrid.BottomBar>`, and `data-slot='pagination-row'` renamed to `'bottom-bar'`.**
+
+  The strip below the table is now a compound member, the counterpart of `<DataGrid.Toolbar>` on the
+  other side of the table. Given no children it renders the page controls — the size selector and the
+  pagination — which is the arrangement `BottomBarLayout` mounts it for. Given children it holds those
+  instead, laid out as one row with two ends. It takes `className` and `style`, handed to the element
+  as-is.
+
+  It is named for the region, not for the pagination that usually fills it: a grid composing its own
+  layout may put a selection count, a summary or an export button down there, and the kits' rule for
+  un-centring the pagination keys on the child rather than on the bar, so a bar holding something else
+  is untouched by it.
+
+  Not `Footer`: that name is the `<tfoot>` counterpart of `<DataGrid.Header>`, built from each
+  column's `footer`. This element is a region of the grid's shell, outside the table.
+
+  **Breaking:** hand-written markup carrying `data-slot='pagination-row'` loses the kits' layout for
+  it. Use `<DataGrid.BottomBar>` (or rename the attribute to `bottom-bar`).
+
+- cd20119: **Breaking: the grid's layout moves from config to JSX. Eight placement options are removed, and
+  `core.Layout` replaces the default layout.**
+
+  Where a control sits — and whether it is mounted at all — is now said by rendering it. These eight
+  options said it instead, and are gone:
+
+  | removed                   | write this instead                                                        |
+  | ------------------------- | ------------------------------------------------------------------------- |
+  | `filtering.chips`         | `<DataGrid.ActiveFiltersBar />` where you want the strip                  |
+  | `filtering.panel`         | `<DataGrid.FilterPanel />` where you want the panel                       |
+  | `filtering.toolbar`       | `<DataGrid.ClearFiltersButton alwaysShow />` — `alwaysShow` is now a prop |
+  | `filtering.variant`       | see below                                                                 |
+  | `globalFiltering.toolbar` | `<DataGrid.Toolbar start={<DataGrid.GlobalFilterInput />} />`             |
+  | `pagination.pageSizer`    | `<DataGrid.PageSizer />` where you want it, or `<DataGrid.BottomBar />`   |
+  | `sorting.toolbar`         | `<DataGrid.SortMenuTrigger />`                                            |
+  | `visibility.toolbar`      | `<DataGrid.VisibilityTrigger />`                                          |
+
+  Gone with them: `FilteringVariant`, `FilterPanelPlacement`, `GlobalFilterPlacement`,
+  `PageSizerPlacement`, the object forms `FilterChipsConfig` / `FilteringToolbarConfig` /
+  `FilterPanelConfig` / `GlobalFilterToolbarConfig` / `PageSizerConfig`, the wrappers
+  `ReactSortingConfig` / `ReactVisibilityConfig` (their only field was `toolbar`, so `sorting` and
+  `visibility` now resolve through core's own config), and six `Normalized*` shapes.
+  `FilterChipsPosition` **stays** — it is now the closed set for `<DataGrid.ActiveFiltersBar position>`,
+  which both kits style off `data-chip-position`.
+
+  They were never statements about the grid: they were arguments to the default toolbar and layout
+  that had leaked into the table's config, and the controls proved it — `VisibilityTrigger`,
+  `SortMenuTrigger` and `GlobalFilterInput` never read one. What made it worth a break is the rate of
+  growth: every new arrangement cost a new enum value, and the arrangement the last one bought is a
+  line of JSX. `<DataGrid.Toolbar>` is now a pure container that reads no config.
+
+  **`filtering.variant` dissolves into `<DataGrid.HeaderCell>`.** It was one enum on two axes —
+  `'panel'` answered "is there a filter in the header", `'inline'` / `'popover'` answered "what does it
+  look like" — which is why filters in the header **and** in a panel was inexpressible. The render
+  function now hands back `filterPopover` beside `filter`: not rendering `filter` takes it out of the
+  header, rendering `filterPopover` gives the popover, and rendering `filter` while
+  `<DataGrid.FilterPanel />` is mounted gives both, driving one `columnFilters` value.
+
+  **`core.Layout` is a new optional component slot.** The grid's body resolves as
+  `children ?? core.Layout ?? <DataGrid.Table />`, so register a layout once on the provider and every
+  grid below it gets that shell; pass `children` to override one grid. It sits in the optional tier
+  beside `TableWrapper` / `TableScroll`, so an external kit that wrote `satisfies FullGridComponents`
+  keeps compiling.
+
+  Four presets ship from `@ez-kit/data-grid-react`, as pure composition with no authored class:
+  `DefaultLayout` (toolbar / table / pagination), `BottomBarLayout` (page sizer beside the page
+  controls), `FilterPanelLayout` (the filter panel in the toolbar, a chips strip, page sizer below) and
+  `PopoverFiltersLayout`. **Both kits bind `DefaultLayout` in their prebuilt `DataGrid`**, so
+  `<DataGrid data columns features />` from a kit is unchanged. A grid composed through
+  `createDataGrid` registers its own.
+
+  **The two action bars are placed by the layout that renders them, and by nothing else.** All four
+  presets write `<DataGrid.DraftBar />` and `<DataGrid.SelectionBar />` last, which is where the
+  default `floating` bar belongs — it overlays the rows, and document order keeps it out of the tab
+  order until there is something to act on. `selection.bar.variant` still says what the bar _looks
+  like_, an in-flow strip against an overlay, and no longer says where it goes: a grid that sets
+  `inline` writes its own layout with the two bars above `<DataGrid.Table />`. That last bit is the
+  one arrangement the presets no longer cover for you, and it is the point — a config value deciding
+  an element's position is the thing this release removes, and the bars were the last of them.
+
+  **One behaviour is not preserved.** `DefaultLayout` mounts no page sizer. The old default mounted one
+  when the author _wrote_ `pagination.items`, and the resolved `items` falls back to a default list
+  under any paged pagination — so a preset gating on it would mount a selector on every paginated grid
+  rather than restoring the old rule. Write `<DataGrid.Toolbar start={<DataGrid.PageSizer />} />`, or
+  use `BottomBarLayout`. `pagination.items` now documents that it permits page sizes and mounts
+  nothing.
+
+  This is not a bundle-size change. The removed flags cost zero bytes — the toolbar imported its
+  controls unconditionally — and `@ez-kit/data-grid-react`'s main entry does not tree-shake today
+  regardless, because the compound namespace is assembled with 29 impure top-level assignments. That
+  is a separate fix; `core.Layout` and the presets are what will let it pay off.
+
+- 7386f53: **The action bar's draft section reads as a glyph and a number per axis, and says the rest in
+  words once.**
+
+  It used to write `Unapplied` and then a worded pill per pending axis — `2 sorts`, `1 filter`,
+  `search`. Two defects. Two of the three segments are counted phrases and the third is a bare
+  word, so a pending search alone read `Unapplied search`, which parses as one noun phrase rather
+  than as a list; with all three it was `Unapplied 2 sorts 1 filter search`, a chain with no
+  conjunction. And since the selection and the draft became sections of one bar, that section has
+  half the width it used to.
+
+  The counts are now `Unapplied ⇅2 ▽1 ⌕` — each kit picks its own glyphs, an empty axis is still
+  not drawn, and search carries no number because it is only ever there or not, which is what
+  removes the grammar problem rather than papering over it. The words move into one string used
+  twice: the section's `aria-label`, and the tooltip over the counts. The screen-reader name is
+  strictly better than before, where it was the generic `Pending changes`.
+
+  New dictionary entry, `messages.draft.summary`. It is handed the segments the existing
+  `draft.sorts` / `draft.filters` / `draft.search` entries produced, plus `draft.label`, and joins
+  them — so an override of one segment carries into the long form, and the separators are the
+  language's rather than hardcoded:
+
+  ```ts
+  messages: {
+  	draft: {
+  		summary: ({ label, parts }) => `${label}: ${parts.join(', ')}`, // the default
+  	},
+  }
+  ```
+
+  Adding it is additive for a partial dictionary: messages resolve by a per-group merge, so an
+  override that names some of `draft` keeps the defaults for the rest. `draft.pending` stays as the
+  name for the case the bar cannot enumerate. A consumer who built a **complete** `GridMessages`
+  object rather than a partial one must add the key.
+
+  **New optional component slot, `core.Tooltip`** — `FEATURE_OPTIONAL_COMPONENTS`, beside `Root`,
+  `TableWrapper`, `TableScroll` and `Layout`, so it is additive: a kit written `satisfies
+FullGridComponents` keeps compiling and keeps its current rendering. A kit that registers none
+  gets the counts rendered unchanged — the meaning is on the element as its accessible name either
+  way, so what is lost is the hint, not the information. Its contract is two props, `content` and
+  `children`, and it must adopt its child rather than wrap it: the grid hands it elements sitting
+  in a flex row. Both kits register one.
+
+- c35206c: The grid now renders a root element around everything it draws — toolbar, filter panel, chips,
+  table, bottom bar and the action bars — stamped `data-slot='grid-root'`.
+
+  Until now a grid was a run of siblings in its parent's flow, so a parent that lays its own children
+  out (`display: flex`, `grid`, a `gap`) laid out the grid's pieces instead of the grid. **This adds
+  one `div` to every grid's DOM**, which changes nothing for a block parent and is the fix for every
+  other one.
+
+  It comes with the two ways to reach it. `layout.classNames.root` classes it, joining across the
+  option layers like `wrapper` and `scroll` — which is where a card's frame around the bars belongs,
+  since it is the only box that encloses them. `core.Root` replaces the element, in the optional
+  tier beside `TableWrapper` / `TableScroll`, so a kit that registers nothing keeps the plain `div`.
+
+- 755b7d4: **Breaking: the selection bar and the draft bar become one `<DataGrid.ActionBar />` with a live
+  section per concern.**
+
+  `DataGrid.SelectionBar` and `DataGrid.DraftBar` are removed. One slot replaces both:
+
+  ```diff
+  -<DataGrid.DraftBar />
+  -<DataGrid.SelectionBar />
+  +<DataGrid.ActionBar />
+  ```
+
+  They were documented as one bar with two contents and implemented as two components that each
+  drew a whole bar — its own sticky anchor, surface and shadow — kept apart by a `return null`
+  inside the selection one. That gate read `rowSelection` and nothing else, so a draft edit (a
+  sort, a column filter, a search term) never re-ran it: with rows selected, staging a sort
+  mounted **both** bars at the same sticky position, overlapping. A narrower subscription is not
+  the fix — two pieces of chrome pretending to be one bar can only agree while every gate hiding
+  one of them re-runs in lockstep with the other.
+
+  **Both sections are now live at once.** The selection used to stand down during a draft, on the
+  grounds that applying a query can drop the selected rows and leave a bulk action on a stale set.
+  That hazard is already handled a level down: the selection is valid against the _applied_ query,
+  which is what the user is looking at, and `table.draft.apply()` clears the row selection in the
+  same state change. So the bulk Delete stays enabled beside a pending draft and the count is
+  interactive, where it was a dead chip.
+
+  Renaming, for a custom bar:
+
+  | removed                                | write this instead                                                |
+  | -------------------------------------- | ----------------------------------------------------------------- |
+  | `<DataGrid.SelectionBar>{({ count })}` | `<DataGrid.ActionBar>{({ selection })}` → `selection.count`       |
+  | `<DataGrid.DraftBar>{({ pending })}`   | `<DataGrid.ActionBar>{({ draft })}` → `draft.pending`             |
+  | `SelectionBarProps` / `DraftBarProps`  | `ActionBarProps`                                                  |
+  | `DraftBarProps.selectedCount`          | `selection.count` — one count, owned by the section that shows it |
+
+  The render function receives `{ open, variant, selection, draft }`. **Both sections are optional
+  — guard on them**: `selection` is absent when selection is off, `bar: false`, or no selection
+  feature is registered; `draft` is absent when `draft` is off or the draft is clean. `open` stays
+  independent of either, so a bar that animates out still renders while it does.
+
+  For a UI kit, the component contract changes shape: `core.ActionBar` is required, and
+  `GridFeature.Selection` / `GridFeature.Draft` are gone — neither feature owns a kit component any
+  more, so the tier types `GridSelectionComponents` and `GridDraftComponents` go with them. A kit
+  written `satisfies FullGridComponents` gets a compile error rather than a runtime crash. The
+  heroui kit's `./selection` and `./draft` subpath exports are removed for the same reason.
+
+  Unchanged: `selection.bar` and everything under it, including `variant` — the config key never
+  moved, and it still says what the bar _looks_ like while the layout says where it goes.
+
+  The shadcn registry item served from this site loses one file: `components/ui/action-bar.tsx`, a
+  primitive nothing in that kit ever imported — not the old `SelectionBar`, not the `ActionBar` that
+  replaced it. Nothing breaks by its absence, and a project that already ran `npx shadcn add` keeps
+  its copy; re-running the command simply stops copying 644 lines of dead code, and stops declaring
+  the `action-bar-group` / `action-bar-item` slots that kit never renders. The HeroUI kit keeps its
+  own counterpart, which its bar genuinely uses.
+
+- c35206c: `<DataGrid.Toolbar>` accepts a `className`, with or without `children`, and the kits merge it into
+  the bar's own class with `cn` — so a utility that collides with one of theirs replaces it. This is
+  what lets a toolbar be re-used as the header bar of a framed grid: both kits give the bar an `mb-2`
+  meant for a toolbar standing free above the table, and `mb-0` now removes it.
+
+### Patch Changes
+
+- f3647db: **The action bar's selection count carries `data-slot='action-bar-selection-count'` in this kit
+  too.**
+
+  The shadcn kit stamped it on the count element; heroui rendered the number as an unnamed `span`
+  (inline) or `Chip` (floating), so a selector written against the slot addressed nothing here. The
+  slot sits on a wrapper rather than on the `Chip` itself, because `Chip` spreads the caller's props
+  and then writes its own `data-slot='chip'` over them.
+
+  This is the class of defect `apps/docs/test/e2e-slots.test.ts` cannot see: it fails only when _no_
+  package authors a slot, so one kit stamping it lets a spec pass while matching nothing in the
+  other. Both kits now assert the rendered attribute in their own unit tests.
+
+- Updated dependencies [c35206c]
+- Updated dependencies [ce829bb]
+- Updated dependencies [cd20119]
+- Updated dependencies [e047016]
+- Updated dependencies [7386f53]
+- Updated dependencies [c35206c]
+- Updated dependencies [d2bac42]
+- Updated dependencies [755b7d4]
+- Updated dependencies [da30181]
+- Updated dependencies [c35206c]
+  - @ez-kit/data-grid-react@0.9.0
+  - @ez-kit/data-grid-core@0.8.0
+
+## 0.8.0
+
+### Minor Changes
+
+- c5dcdc5: Column pinning speaks `start` / `end` instead of `left` / `right`, everywhere.
+
+  TanStack Table v9 removed physical `left` / `right` from `Column.getStart` / `getAfter` / `pin()`
+  entirely, so this is not a preference: a pinned column is now named by the edge it sticks to in the
+  reading direction, and it flips under RTL the way `align` and `Toolbar.start` / `Toolbar.end`
+  already do. **Row pinning is unchanged and stays `top` / `bottom`** — a vertical axis has no
+  logical names and nothing about it flips.
+
+  It is one idea and **eight separate things to change in your code**. Each is listed because the
+  first five fail differently from the last three, and two of them fail silently.
+  1. **The column option value.** `pinning: 'left'`, `pinning: { side: 'left' }`,
+     `pinning: { initialSide: 'right' }` are `'start'` / `'end'`, and `ColumnPinSide.Left` / `.Right`
+     are `.Start` / `.End`. This is the one most consumers hit, because it is in the column
+     definitions.
+  2. **`initialState.columnPinning` and `state.columnPinning` are `{ start, end }`**, upstream's
+     shape, not `{ left, right }`. **This one fails silently**: a stale key is accepted and ignored,
+     so `initialState={{ columnPinning: { right: ['name'] } }}` merges to "nothing pinned" rather
+     than throwing.
+  3. **`GridMenuIcon.PinLeft` / `.PinRight` are `.PinStart` / `.PinEnd`.** These are required keys of
+     the icon map, so supplying your own is a compile error rather than a silent one — the only part
+     of this rename that cannot fail open.
+  4. **`messages.columnMenu.pinLeft` / `.pinRight` are `.pinStart` / `.pinEnd`.** A translation
+     override keyed on the old name reverts to English; whether your compiler catches it depends on
+     how exactly your `messages` object is typed, so treat it as silent. The English defaults are
+     deliberately unchanged — they still read "Pin Left" / "Pin Right", because the key names the
+     axis and the wording names what an LTR reader sees, exactly as `moveStart` reads "Move left".
+  5. **`ColumnActionId.PinLeft` / `.PinRight` are `.PinStart` / `.PinEnd`, and so are the ids they
+     carry** — `'pin-left'` / `'pin-right'` are now `'pin-start'` / `'pin-end'`. Those values reach
+     the DOM as menu-item ids, so a menu customisation or a test selector keyed on one stops
+     matching. Renamed rather than left alone because `PinStart: 'pin-left'` would have been the only
+     member on that object whose value contradicts its key, two lines from `MoveStart: 'move-start'`.
+
+  If you style the grid yourself — or you ran `npx shadcn add` and copied the kit into your project —
+  three more: 6. **`data-pinned` and `data-pin-shadow` carry `start` / `end`** on a column. (On a row,
+  `data-pinned` is still `top` / `bottom`.) 7. **`--dg-pin-left` / `--dg-pin-right` are `--dg-pin-start` / `--dg-pin-end`, and
+  `--dg-pin-{left,right}-shadow` are `--dg-pin-{start,end}-shadow`.** A copied `styles.css` keeps
+  your old rules against the new variable names, and your own overrides stop applying — with no
+  error, because a CSS custom property that no longer matches just falls back. 8. **Pinned cells are positioned with `inset-inline-start` / `inset-inline-end`**, not `left` /
+  `right`, so an override written against the physical properties no longer wins the way you
+  expect.
+
+  Under the hood the measurement went logical with the names, which is what makes RTL actually work
+  rather than merely read correctly: the pin-shadow offsets are measured from the overlay's own
+  inline edges and applied as inline insets, and the scroll-shadow booleans are computed from
+  `Math.abs(scrollLeft)`, because `scrollLeft` is signed under RTL. `box-shadow` has no logical form,
+  so each kit restates the offset's sign under `[dir='rtl']`.
+
+  Note that the grid's `direction: 'rtl'` option tells the grid which way it is laid out; it does not
+  lay the page out. Set `dir='rtl'` on a wrapping element as well, as you would for any RTL content.
+
+- c5dcdc5: The prebuilt `DataGrid` binds the all-in feature set, so it no longer asks for `features`
+
+  `import { DataGrid } from '@ez-kit/data-grid-heroui'` already carries all fourteen component
+  groups, and those components read the features' APIs — so they drag the implementations in
+  whatever set a call site names. Measured against this kit, the prebuilt grid with a sorting-only
+  set was 51.7 kB gzipped against 55.7 kB with every feature: 3.9 kB, for an eight-line import block
+  at every call site. It now registers everything and `features` is optional there.
+
+  Nothing is removed: passing `features` still **replaces** the bound set, which narrows what the
+  grid does — state slices and APIs — without giving those bytes back. `features` also stays
+  required on `@ez-kit/data-grid-react` and on any bundle you build with `createDataGrid` without
+  one, which is the path where composing a set still decides what ships: four component groups plus
+  a narrow set measures 41.1 kB against the prebuilt grid's 55.7 kB, and the docs now recommend that
+  shape for anything beyond a prototype. The shadcn registry's `data-grid.tsx` binds the set the
+  same way.
+
+- c5dcdc5: The data-grid moves to TanStack Table v9, and **you now compose the feature set**.
+
+  This is a breaking release across the whole grid. It is `minor` because the packages are `0.x`;
+  `major` is reserved for the deliberate 1.0 cut and is not what this is.
+
+  ## `features` is required
+
+  ```ts
+  import {
+  	columnPinningFeature,
+  	columnSizingFeature,
+  	columnVisibilityFeature,
+  	createSortedRowModel,
+  	rowSortingFeature,
+  	tableFeatures,
+  } from '@ez-kit/data-grid-core/features'
+
+  // The first three are mandatory — see below. Add what this grid actually does after them.
+  const features = tableFeatures({
+  	columnVisibilityFeature,
+  	columnPinningFeature,
+  	columnSizingFeature,
+  	rowSortingFeature,
+  	sortedRowModel: createSortedRowModel(),
+  })
+
+  const table = useDataGrid({ features, data, columns, sorting: true })
+  ```
+
+  `@ez-kit/data-grid-core/features` is a new entry point and the single import path for the stock
+  TanStack features, the row-model factories, the `filterFns` / `sortFns` / `aggregationFns`
+  registries and the grid's own seven features, which are now real v9 plugins under upstream's naming
+  register (`editingFeature`, `creatingFeature`, `deletingFeature`, `draftFeature`, `loadingFeature`,
+  `infiniteFeature`, `rowOrderingFeature`). `@tanstack/table-core` stays our dependency rather than
+  becoming your peer. `allDataGridFeatures` is the all-in set, for prototypes and examples, and it
+  lives on **`@ez-kit/data-grid-core/features/all`** — see below.
+
+  **Three features are structural, whatever else you register:** `columnVisibilityFeature`,
+  `columnPinningFeature` and `columnSizingFeature`. The shell lays out a column grid, so it needs
+  visibility, pin groups and widths to lay one out with; omitting any of them is a **render-time
+  `TypeError`**, not a silent no-op, and the development-mode warning below says nothing about it.
+  Open every set with those three. Every other feature is genuinely optional — leave out
+  `rowSortingFeature` and you get a grid that does not sort.
+
+  **Composing a set governs two things: behaviour, and your bundle.** An unregistered feature
+  contributes no state slice, no API and no work at runtime — and it is not in what you ship.
+  Measured against the built entry, unminified: importing `tableFeatures` alone costs **994** bytes,
+  `rowSortingFeature` **998**, a sorting-only set **1 035**, and `editingFeature` **17 163**, which is
+  what a feature with a real implementation behind it weighs. A grid pays for what it registers.
+
+  **`allDataGridFeatures` moved to `@ez-kit/data-grid-core/features/all`.** A breaking import-path
+  change, and the reason the numbers above are what they are: as a top-level
+  `tableFeatures({ …stockFeatures, … })` call on the main entry it was not something a bundler could
+  drop — an object spread may run getters — so it retained every operand and each of those imports
+  cost ~46 kB instead. On its own subpath, reaching the all-in set is a choice. `tableFeatures` and
+  every individual feature stay exactly where they were; only this one name moved.
+
+  `features` has **no default**, deliberately: the only possible default is the all-in set, which is
+  what everyone who never thought about it would then ship. A `defaults` layer — `createDataGrid`'s
+  `defaults`, or a `DataGridOptionsProvider` — may state a set for everything below it, where it is
+  optional; the instance config still names one.
+
+  **Registering a feature does not switch it on, and configuring one does not register it.**
+  `features` is compile time (what exists), the config is runtime (whether this grid uses it), so a
+  wide shared grid definition still works at a dozen call sites with half of it off. `sorting: false`
+  beside a registered `rowSortingFeature` is correct and intended.
+
+  **Configuring a feature you did not register is _not_ a compile error.** It type-checks clean and
+  produces a grid with no state slice, no API and no behaviour for that option — a silent no-op. The
+  only thing that reports it is a development-mode warning naming the missing feature. An earlier
+  plan for this release promised a compile-time gate here; it is **not delivered**, and that is
+  stated rather than quietly dropped, because the gate costs the named `TS2561` diagnostic the
+  warning catalogue is built around. It is a separate piece of work.
+
+  ## The table's state API
+
+  `table.getState()` and `table.setState(...)` are **gone**, along with `subscribe`, `getSnapshot`,
+  `getInitialSnapshot`, `notifyStateSubscribers` and `syncControlledState`. The hand-written store
+  behind them is gone with them. State lives in v9's atoms:
+  - `table.store.state` — the current whole state; `table.store.subscribe(fn)` to follow it;
+  - `table.atoms.<slice>.get()` — one slice;
+  - `table.initialState` — the state as of construction, resolved once and never reassigned;
+  - the setters a registered feature installs (`table.setSorting(...)`, …) for writes.
+
+  `onStateChange` is unchanged and is still how you mirror state into your own store.
+
+  `columnSizingInfo` — v8's transient mid-drag slice — is `columnResizing` in `TableState`, so a
+  `state` / `initialState` / `onStateChange` reader keyed on the old name no longer matches. The
+  persisted slice you would deep-link is still `columnSizing`.
+
+  ## Renamed and re-shaped exports
+  - **`VisibilityState` is `ColumnVisibilityState`** on `@ez-kit/data-grid-react`'s entry point.
+    v9's own name for the type. No alias is re-exported for the old one — that would be our
+    invention rather than a name TanStack still has. One word at your import.
+  - **`ReactSelectionConfig` and `ReactExpandingConfig` gained a leading `TFeatures` type
+    parameter**, following `SelectionConfig` / `ExpandingConfig`. A break for anyone who named
+    either. `ReactRowActionsConfig` is unaffected.
+  - **`DataTable` from `@ez-kit/data-grid-react` is the React table**, not core's: its `grid` is
+    `ResolvedGridOptions` and it declares `gridContext`. The explicit re-export shadows the core
+    name, so an annotation written against this entry point now describes the table you actually
+    hold.
+  - **`ResolvedGridOptions` gained `pagination.enabled`, plus `rowActions`, `direction` and
+    `pinning.rowConfig`** — the members that left the TanStack options bag when v9 removed
+    `TableOptionsResolved`. Reading any of those off `table.options` now yields `undefined`,
+    silently; read them from the resolved grid options instead.
+
+  ## New on `@ez-kit/data-grid-core`'s public entry
+
+  `createTableOptions(config)` resolves a config into v9 options **without constructing anything**,
+  so a framework adapter can hand them to its own constructor — this is what `useDataGrid` does, and
+  why a React table is not built by calling `createTable` inside a hook. `createAppliedEmitter` and
+  `createDraftAtoms` come with it: an adapter using `useTable` has to redo what `createTable` does
+  after construction, and projecting `onStateChange` through the applied snapshot is one of those
+  jobs — without it an adapter would either re-implement the projection or drop deferral from
+  `onStateChange` in React only. `GridOptions`, `StateHandlerTable`, `FormColumnMeta` and
+  `TableFeatures` are exported as the types those signatures name.
+
+  ## Behaviour changes
+  - **A controlled write to a deferred axis no longer lands.** With `draft` on, passing
+    `state.sorting` (or `columnFilters`, or `globalFilter`) used to overwrite the draft while it was
+    clean. It no longer does, clean or dirty. This is forced by v9's atom precedence — an externally
+    owned atom beats `options.state` outright — and it is what stops a controlled consumer mirroring
+    the last applied query back over what the user is composing.
+  - **`deleting: true` now says what it does.** Written as a bare `true` with no `onDelete`, it did
+    nothing at all: no actions column, no button, no error. A write feature has no defaults — the
+    grid cannot invent a deletion — so the handler still decides whether the feature is on, but a
+    development-mode warning now names the option and the handler it wants. Generic over `creating`,
+    `editing` and `deleting`; every other handler-less spelling stays silent on purpose, because an
+    object in a defaults layer is a description of how a write should look, not a request for one.
+  - **Column reordering by keyboard works under RTL.** The header cell resolved the grid's direction
+    from `columnResizeDirection`, an option only written when resizing is on, so on a default grid
+    both shortcuts moved columns the wrong way. It reads the grid's own `direction` now. Pre-existing
+    under v8, found by the port.
+  - **A plain TanStack table in the same project is no longer polluted.** The grid declared its state
+    slices by augmenting `TableState` globally, so any `@tanstack/table-core` table in your codebase
+    had `state.editing` declared and lying. Each feature now declares itself under its own key, and
+    the declarations reach you only through `@ez-kit/data-grid-core/features`.
+
+  `@tanstack/table-core` is `^9.2.4`, and `@ez-kit/data-grid-react` now depends on
+  `@tanstack/react-table` for `useTable`.
+
+### Patch Changes
+
+- Updated dependencies [c5dcdc5]
+- Updated dependencies [c5dcdc5]
+- Updated dependencies [c5dcdc5]
+  - @ez-kit/data-grid-core@0.7.0
+  - @ez-kit/data-grid-react@0.8.0
+
+## 0.7.0
+
+### Minor Changes
+
+- fa3470d: data-grid: offer column reordering from the Columns toggle
+
+  `ordering: { column: { visibilityMenu: true } }` turns the toolbar's Columns toggle into a column
+  panel: each row keeps its visibility checkbox and gains the same two one-step moves the header
+  menu offers. Opt-in and off by default — that control is a visibility control in every grid
+  written so far.
+
+  Turning it on widens the list to **every** non-system column, so that it reads as the column order
+  itself. A column locked with `visibility: false` is listed with its checkbox disabled; it can still
+  be moved, and nothing is offered that could hide it. A step in the panel lands on the row next to
+  it, hidden rows included, rather than passing over hidden columns the way the header's step does:
+  both are the same rule — a step moves a column past what the user can see — read from two
+  surfaces.
+
+  `canMoveColumn` and `moveColumn` take that as a new optional `ColumnMoveScope` argument, defaulting
+  to `'visible'`, so existing callers are unchanged. `VisibilityColumnItem` gains `canHide` and an
+  optional `ordering` pair, and `messages.visibility` gains `moveStart` / `moveEnd`.
+
+- f5f9ca8: Build the data-grid packages as multiple entry points, so a consumer stops paying for features it
+  does not use.
+
+  Every package shipped as a single `tsup src/index.ts` bundle, and a consumer's bundler shakes
+  nothing out of one pre-bundled file. Measured with esbuild (minified, gzipped, peers external):
+  importing the `PAGE_GAP` constant from `@ez-kit/data-grid-react` cost 54 857 bytes, against 54 873
+  for the whole `DataGrid` — 16 bytes apart. Three plausible causes were measured and ruled out: the
+  28 `DataGrid.X = …` compound assignments (273 bytes), the `export * from '@ez-kit/data-grid-core'`
+  star (2.5 kB), and the top-level `createContext` calls (nothing). Giving a module its own entry is
+  what worked.
+
+  `@ez-kit/data-grid-react` gains `./state`, `./cell-types`, `./contract`, `./kit` and `./menu`;
+  `@ez-kit/data-grid-heroui` gains one entry per feature group — `./core`, `./filtering`,
+  `./pagination`, `./sorting`, `./editing`, `./deleting`, `./selection`, `./draft`, `./row-actions`,
+  `./resizing`, `./visibility`, `./fallbacks`, `./infinite`, `./expanding` — plus `./cell-types` and
+  one entry per cell type under it (`./cell-types/text`, `./cell-types/date`, …). Each feature group
+  exports a `<group>Components` const annotated with its tier type from `./contract`, so a kit's set
+  can be composed through `createDataGrid` with groups left out.
+
+  The per-type entries are there because the barrel alone did not help: imported from it,
+  `textCellType` and `dateCellType` cost 79 863 and 79 860 bytes gzipped in the shadcn kit — three
+  bytes apart, one indivisible unit. Through their own entries, in heroui, text is 25 356 and date
+  94 710, the difference being the date picker that a grid without a date column no longer ships.
+
+  `./kit` is the one that made the kit split pay off. Nearly every block in both kits imported
+  `useGridMessages` from the package root, which anchored all ~187 kB of it into any bundle reaching
+  that block — a kit's `textCellType` alone bundled to ~200 kB. Those blocks now import the runtime
+  primitives they call from `./kit` (~3.7 kB) and their types from the root, where type imports are
+  erased and cost nothing.
+
+  Each kit also exports `allComponents` — every group in one object, for a grid that wants the
+  factory without the trimming. It is the aggregate equivalent of the existing `cellTypes` barrel,
+  and like TanStack's own `stockFeatures` it is documented as the convenient option rather than the
+  cheap one: naming it reaches every group.
+
+  Nothing is removed or renamed. `.` still exports the whole surface, `DataGrid` still arrives with
+  every component and every cell type registered, and an existing import keeps resolving to the same
+  value with the same type — the subpaths are an option, not a migration.
+  `apps/docs/test/tree-shaking.test.ts` now records, per entry, the complete set of entry points it
+  may reach, so a regression fails there rather than in someone's bundle.
+
+### Patch Changes
+
+- Updated dependencies [fa3470d]
+- Updated dependencies [f5f9ca8]
+- Updated dependencies [4f772fe]
+  - @ez-kit/data-grid-react@0.7.0
+
 ## 0.6.0
 
 ### Minor Changes

@@ -17,7 +17,7 @@ import type {
 	ColumnDef,
 	ColumnEditingConfig,
 	ColumnFilteringMeta,
-	TanStackColumnDef,
+	MappedColumnDef,
 } from '../types'
 
 const IS_DEV = process.env.NODE_ENV !== 'production'
@@ -79,7 +79,7 @@ function resolveDatePresets(
  * - cell.type → meta.cell.type
  * - cell.component → TanStack cell renderer + meta.cell.view
  * - sorting: false → enableSorting: false
- * - sorting: object → sortDescFirst / sortingFn / sortUndefined / invertSorting / enableMultiSort
+ * - sorting: object → sortDescFirst / sortFn / sortUndefined / invertSorting / enableMultiSort
  * - header string preserved as-is (TanStack accepts string | function)
  * - filtering.operators → resolves operator list, attaches filterFn dispatcher
  */
@@ -98,7 +98,7 @@ export function mapColumns<TRow extends object>(
 	defs: ColumnDef<TRow, AnyCellTypes>[],
 	registry?: OperatorRegistry,
 	options?: MapColumnsOptions,
-): TanStackColumnDef<TRow>[] {
+): MappedColumnDef<TRow>[] {
 	return defs.map((def) => mapColumn(def, registry, options))
 }
 
@@ -106,7 +106,7 @@ function mapColumn<TRow extends object>(
 	def: ColumnDef<TRow, AnyCellTypes>,
 	registry?: OperatorRegistry,
 	options?: MapColumnsOptions,
-): TanStackColumnDef<TRow> {
+): MappedColumnDef<TRow> {
 	const {
 		pinning,
 		visibility,
@@ -135,7 +135,7 @@ function mapColumn<TRow extends object>(
 	// here so nothing downstream has to know there are two spellings.
 	const cellDef = typeof cell === 'string' ? { type: cell } : cell
 
-	const meta: TanStackColumnDef<TRow>['meta'] = {}
+	const meta: MappedColumnDef<TRow>['meta'] = {}
 
 	setIfDefined(meta, 'pinning', normalizeColumnPinning(pinning))
 	setIfDefined(meta, 'align', normalizeColumnAlign(align))
@@ -184,7 +184,7 @@ function mapColumn<TRow extends object>(
 		result.enableSorting = false
 	} else if (sorting !== undefined) {
 		setIfDefined(result, 'sortDescFirst', sorting.descFirst)
-		setIfDefined(result, 'sortingFn', sorting.fn)
+		setIfDefined(result, 'sortFn', sorting.fn)
 		setIfDefined(result, 'sortUndefined', sorting.undefined)
 		setIfDefined(result, 'invertSorting', sorting.invert)
 		if (sorting.multi === false) result.enableMultiSort = false
@@ -330,5 +330,5 @@ function mapColumn<TRow extends object>(
 		result.columns = mapColumns(columns, registry, options)
 	}
 
-	return result as TanStackColumnDef<TRow>
+	return result as MappedColumnDef<TRow>
 }

@@ -94,7 +94,7 @@ export const orderColumns = createColumns<Order>([
 		accessorKey: 'reference',
 		header: 'Order',
 		width: { default: 170, min: 140 },
-		pinning: { initialSide: 'left' },
+		pinning: { initialSide: 'start' },
 		filtering: { operators: true },
 		editing: false,
 	},

@@ -5,12 +5,12 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { GridComponentsProvider } from '../components-context'
 import { prepareDataGridTable } from '../prepare-table'
-import { renderWithComponents } from '../test-utils'
-import { ActionBarVariant, PageSizerPlacement } from '../types'
+import { TEST_FEATURES, renderWithComponents } from '../test-utils'
+import { ActionBarVariant } from '../types'
 
 import { DataGrid } from './data-grid'
 
-import type { ResizerProps } from '../types'
+import type { DataTable, GridFeatures, ResizerProps } from '../types'
 import type { DeletingConfig } from '@ez-kit/data-grid-core'
 
 type User = {
@@ -28,8 +28,8 @@ const COLUMNS = createColumns<User>([
 	{ accessorKey: 'age', header: 'Age' },
 ])
 
-function makeTable(config?: Partial<Parameters<typeof createTable<User>>[0]>) {
-	const table = createTable<User>({ data: USERS, columns: COLUMNS, ...config })
+function makeTable(config?: Partial<Parameters<typeof createTable<GridFeatures, User>>[0]>) {
+	const table = createTable<GridFeatures, User>({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, ...config })
 	return prepareDataGridTable(table)
 }
 
@@ -210,7 +210,9 @@ describe('<DataGrid>', () => {
 			},
 			{ accessorKey: 'age', header: 'Age' },
 		])
-		const table = prepareDataGridTable(createTable<User>({ data: USERS, columns: cols }))
+		const table = prepareDataGridTable(
+			createTable<GridFeatures, User>({ features: TEST_FEATURES, data: USERS, columns: cols }),
+		)
 		renderWithComponents(<DataGrid table={table} />)
 		expect(screen.getAllByTestId('custom-cell')).toHaveLength(USERS.length)
 	})
@@ -225,7 +227,9 @@ describe('<DataGrid>', () => {
 			{ id: 1, active: true },
 			{ id: 2, active: false },
 		]
-		const table = prepareDataGridTable(createTable<BoolRow>({ data: boolData, columns: boolCols }))
+		const table = prepareDataGridTable(
+			createTable<GridFeatures, BoolRow>({ features: TEST_FEATURES, data: boolData, columns: boolCols }),
+		)
 		renderWithComponents(
 			<DataGrid
 				table={table}
@@ -242,7 +246,9 @@ describe('<DataGrid>', () => {
 		const cols = createColumns<User, { money: Record<never, never> }>([
 			{ accessorKey: 'age', header: 'Age', cell: { type: 'money' } },
 		])
-		const table = prepareDataGridTable(createTable<User>({ data: USERS, columns: cols }))
+		const table = prepareDataGridTable(
+			createTable<GridFeatures, User>({ features: TEST_FEATURES, data: USERS, columns: cols }),
+		)
 		renderWithComponents(
 			<DataGrid
 				table={table}
@@ -262,29 +268,17 @@ describe('<DataGrid>', () => {
 		expect(screen.queryByRole('combobox')).toBeNull()
 	})
 
-	it('renders a hand-placed PageSizer even when the toolbar is told not to mount one', () => {
-		// `pageSizer` governs auto-mounting only — it must not erase the size list the
-		// hand-placed control reads.
-		// `makeTable` builds a bare core table, so the resolved options are set directly here:
-		// sizes present, auto-mount off — exactly what `pagination: { pageSizer: false }` resolves to.
+	it('renders a hand-placed PageSizer with the pagination.items values', () => {
+		// The size list is data and is resolved whenever page-based pagination is on; where the
+		// control goes is the layout's to say, so this one is placed by hand.
 		const table = makeTable({ pagination: { pageSize: 5 } })
 		table.grid.pagination.items = [5, 10, 25]
-		delete table.grid.pagination.pageSizer
 		renderWithComponents(
 			<DataGrid table={table}>
 				<DataGrid.PageSizer />
 			</DataGrid>,
 		)
-		expect(screen.getByRole('combobox')).toHaveValue('5')
-	})
-
-	it('renders PageSizer select with the pagination.items values', () => {
-		const table = makeTable({ pagination: { pageSize: 5 } })
-		table.grid.pagination.items = [5, 10, 25]
-		table.grid.pagination.pageSizer = { placement: PageSizerPlacement.Toolbar }
-		renderWithComponents(<DataGrid table={table} />)
 		const select = screen.getByRole('combobox')
-		expect(select).toBeInTheDocument()
 		expect(select).toHaveValue('5')
 		expect(screen.getByRole('option', { name: '10' })).toBeInTheDocument()
 		expect(screen.getByRole('option', { name: '25' })).toBeInTheDocument()
@@ -308,7 +302,9 @@ describe('<DataGrid>', () => {
 				{ accessorKey: 'name', header: 'Name', resizing: false },
 				{ accessorKey: 'age', header: 'Age' },
 			])
-			const table = prepareDataGridTable(createTable<User>({ data: USERS, columns: cols, resizing: true }))
+			const table = prepareDataGridTable(
+				createTable<GridFeatures, User>({ features: TEST_FEATURES, data: USERS, columns: cols, resizing: true }),
+			)
 			renderWithComponents(<DataGrid table={table} />)
 			// only 'age' column should have a resizer (name has resizing: false)
 			expect(document.querySelectorAll('[data-slot="column-resizer"]')).toHaveLength(1)
@@ -367,44 +363,50 @@ describe('<DataGrid>', () => {
 		})
 	})
 
-	describe('selection bar layout', () => {
-		// Both <Toolbar> and <SelectionBar> share role="toolbar"; SelectionBar additionally
-		// carries data-slot="selection-bar", so we compare DOM order between the SelectionBar
-		// (by data-slot) and the *other* role="toolbar" element (the real Toolbar).
-		function getBarAndToolbar(): { selectionBar: HTMLElement; toolbar: HTMLElement } {
-			const selectionBar = document.querySelector('[data-slot="selection-bar"]')
-			if (!(selectionBar instanceof HTMLElement)) throw new Error('expected [data-slot="selection-bar"]')
+	describe('action bar layout', () => {
+		// Both <Toolbar> and <ActionBar> share role="toolbar"; the bar additionally carries
+		// data-slot="action-bar", so we compare DOM order between the bar (by data-slot) and
+		// the *other* role="toolbar" element (the real Toolbar).
+		function getBarAndToolbar(): { actionBar: HTMLElement; toolbar: HTMLElement } {
+			const actionBar = document.querySelector('[data-slot="action-bar"]')
+			if (!(actionBar instanceof HTMLElement)) throw new Error('expected [data-slot="action-bar"]')
 			const toolbars = Array.from(document.querySelectorAll('[role="toolbar"]'))
-			const toolbar = toolbars.find((el) => el.getAttribute('data-slot') !== 'selection-bar')
-			if (!(toolbar instanceof HTMLElement)) throw new Error('expected the non-selection-bar [role="toolbar"]')
-			return { selectionBar, toolbar }
+			const toolbar = toolbars.find((el) => el.getAttribute('data-slot') !== 'action-bar')
+			if (!(toolbar instanceof HTMLElement)) throw new Error('expected the non-action-bar [role="toolbar"]')
+			return { actionBar, toolbar }
 		}
 
-		it('renders inline SelectionBar above the Toolbar in DOM order', () => {
+		function renderWithVariant(variant: ActionBarVariant) {
 			// Toolbar renders null without content — enable `creating` to give it the "+ Add" trigger.
-			const table = makeTable({ selection: true, creating: { onSave: () => Promise.resolve() } })
-			table.grid.selection.bar = { variant: ActionBarVariant.Inline }
-			table.setRowSelection({ '1': true })
-			renderWithComponents(<DataGrid table={table} />)
-
-			const { selectionBar, toolbar } = getBarAndToolbar()
-			expect(selectionBar.compareDocumentPosition(toolbar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-		})
-
-		it('renders floating SelectionBar after Table/Pagination by default', () => {
 			const table = makeTable({
 				selection: true,
 				creating: { onSave: () => Promise.resolve() },
 				pagination: true,
 			})
-			table.grid.selection.bar = { variant: ActionBarVariant.Floating }
+			table.grid.selection.bar = { variant }
 			table.setRowSelection({ '1': true })
 			renderWithComponents(<DataGrid table={table} />)
+			return getBarAndToolbar()
+		}
 
-			const { selectionBar, toolbar } = getBarAndToolbar()
-			// floating: toolbar precedes selectionBar
-			expect(toolbar.compareDocumentPosition(selectionBar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-		})
+		/**
+		 * Where the bar renders is the layout's decision, not `selection.bar.variant`'s — so the
+		 * bound preset puts it after the toolbar under **both** variants. It used to branch, through
+		 * a `GridShell` wrapper that read the variant and placed the bars for you; that was the
+		 * last placement option left standing, and it is gone.
+		 *
+		 * The variant still decides what the kit *renders* (an in-flow strip against an overlay),
+		 * which is why `inline` wants the bar written first — the arrangement `presets.test.tsx`
+		 * covers, since it takes a layout of its own.
+		 */
+		it.each([ActionBarVariant.Inline, ActionBarVariant.Floating])(
+			'renders the %s ActionBar after the Toolbar, as the bound layout writes it',
+			(variant) => {
+				const { actionBar, toolbar } = renderWithVariant(variant)
+
+				expect(toolbar.compareDocumentPosition(actionBar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+			},
+		)
 	})
 
 	it('registry creating falls back to edit component when creating not provided', () => {
@@ -414,7 +416,8 @@ describe('<DataGrid>', () => {
 			{ accessorKey: 'age', header: 'Age' },
 		])
 		const table = prepareDataGridTable(
-			createTable<User>({
+			createTable<GridFeatures, User>({
+				features: TEST_FEATURES,
 				data: USERS,
 				columns: cols,
 				creating: { mode: 'row', onSave: () => Promise.resolve() },
@@ -491,7 +494,7 @@ describe('<DataGrid> bulk delete confirmation', () => {
 
 		await user.click(bulkDeleteButton())
 		expect(onDelete).not.toHaveBeenCalled()
-		expect(table.getState().deleting.pendingBulk).toBe(true)
+		expect(table.store.state.deleting.pendingBulk).toBe(true)
 		// Count-aware default description for the two selected rows.
 		expect(screen.getByText(/delete 2 rows/i)).toBeInTheDocument()
 	})
@@ -511,7 +514,7 @@ describe('<DataGrid> bulk delete confirmation', () => {
 		const args = onDelete.mock.calls.at(0)?.at(0)
 		expect((args as { rows: unknown[] }).rows).toHaveLength(1)
 		expect((args as { rowIds: string[] }).rowIds).toEqual(['1'])
-		expect(table.getState().deleting.pendingBulk).toBe(false)
+		expect(table.store.state.deleting.pendingBulk).toBe(false)
 		expect(document.querySelector('dialog')).toBeNull()
 	})
 
@@ -526,7 +529,7 @@ describe('<DataGrid> bulk delete confirmation', () => {
 		await user.click(within(getDialog()).getByRole('button', { name: /cancel/i }))
 
 		expect(onDelete).not.toHaveBeenCalled()
-		expect(table.getState().deleting.pendingBulk).toBe(false)
+		expect(table.store.state.deleting.pendingBulk).toBe(false)
 		expect(document.querySelector('dialog')).toBeNull()
 	})
 
@@ -558,6 +561,7 @@ describe('<DataGrid> uncontrolled (no useDataGrid)', () => {
 	it('renders rows from data/columns props directly', () => {
 		renderWithComponents(
 			<DataGrid
+				features={TEST_FEATURES}
 				data={USERS}
 				columns={COLUMNS}
 			/>,
@@ -568,6 +572,7 @@ describe('<DataGrid> uncontrolled (no useDataGrid)', () => {
 	it('renders cell values without an explicit table', () => {
 		renderWithComponents(
 			<DataGrid
+				features={TEST_FEATURES}
 				data={USERS}
 				columns={COLUMNS}
 			/>,
@@ -579,6 +584,7 @@ describe('<DataGrid> uncontrolled (no useDataGrid)', () => {
 	it('honors feature config passed inline (selection)', () => {
 		renderWithComponents(
 			<DataGrid
+				features={TEST_FEATURES}
 				data={USERS}
 				columns={COLUMNS}
 				selection
@@ -591,6 +597,7 @@ describe('<DataGrid> uncontrolled (no useDataGrid)', () => {
 	it('supports the compound API without a table prop', () => {
 		renderWithComponents(
 			<DataGrid
+				features={TEST_FEATURES}
 				data={USERS}
 				columns={COLUMNS}
 			>
@@ -609,6 +616,7 @@ describe('<DataGrid> uncontrolled (no useDataGrid)', () => {
 			expect(warn).not.toHaveBeenCalled()
 			rerender(
 				<DataGrid
+					features={TEST_FEATURES}
 					data={USERS}
 					columns={COLUMNS}
 				/>,
@@ -624,7 +632,14 @@ describe('<DataGrid> unprepared table', () => {
 	it('names the problem instead of crashing on a missing resolved-options object', () => {
 		// `prepareDataGridTable` is what seeds `table.grid`; skipping it used to be impossible
 		// because the prop demanded a wrapper type only `useDataGrid` could build.
-		const raw = createTable<User>({ data: USERS, columns: COLUMNS })
+		// The assertion form is the point of the test: an unprepared table is precisely what the
+		// prop's type now rejects, and the runtime guard is what has to catch a consumer who gets
+		// past it — through a cast of their own, or from untyped JavaScript.
+		const raw = createTable<GridFeatures, User>({
+			features: TEST_FEATURES,
+			data: USERS,
+			columns: COLUMNS,
+		}) as unknown as DataTable<GridFeatures, User>
 		const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
 
 		expect(() => renderWithComponents(<DataGrid table={raw} />)).toThrow(/has not been prepared/)

@@ -1,13 +1,54 @@
 'use client'
 
+import {
+	columnFilteringFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	columnVisibilityFeature,
+	createFilteredRowModel,
+	createPaginatedRowModel,
+	createSortedRowModel,
+	creatingFeature,
+	deletingFeature,
+	editingFeature,
+	filterFns,
+	loadingFeature,
+	rowPaginationFeature,
+	rowSelectionFeature,
+	rowSortingFeature,
+	sortFns,
+	tableFeatures,
+} from '@ez-kit/data-grid-core/features'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { DataGrid } from 'shared/DataGrid'
 
 import { crudColumns } from './columns'
+import { CrudLayout } from './CrudLayout'
 import { api, resetServer, setShouldFailWrites } from './fake-api'
 
 import type { Employee } from './use-employee-store'
+
+const features = tableFeatures({
+	// Structural: the grid shell reads column widths, visibility and pin groups to lay out
+	// the column grid. Everything below is this example's own.
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	rowSortingFeature,
+	loadingFeature,
+	creatingFeature,
+	columnFilteringFeature,
+	deletingFeature,
+	editingFeature,
+	filterFns,
+	rowPaginationFeature,
+	rowSelectionFeature,
+	sortFns,
+	filteredRowModel: createFilteredRowModel(),
+	paginatedRowModel: createPaginatedRowModel(),
+	sortedRowModel: createSortedRowModel(),
+})
 
 /** Placeholder id for the row that is on screen before the server has handed out a real one. */
 let nextTempId = -1
@@ -124,10 +165,11 @@ export function CrudServerExample() {
 			</div>
 
 			<DataGrid
+				features={features}
 				data={rows}
 				columns={crudColumns}
 				sorting
-				filtering={{ variant: 'popover' }}
+				filtering
 				pagination={{ pageSize: 10, items: [5, 10, 20, 50] }}
 				visibility
 				pinning={{ column: true }}
@@ -199,7 +241,9 @@ export function CrudServerExample() {
 						},
 					},
 				}}
-			/>
+			>
+				<CrudLayout />
+			</DataGrid>
 		</div>
 	)
 }

@@ -31,6 +31,7 @@ Pass `state.loading` (see [Controlled State](/docs/data-grid/state/controlled)) 
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	state={{
@@ -54,6 +55,7 @@ What you can configure is each slot, via `fallbacks`. Pass `false` to disable on
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	fallbacks={{

@@ -1,5 +1,21 @@
 'use client'
 
+import {
+	columnFilteringFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	columnVisibilityFeature,
+	createFilteredRowModel,
+	createPaginatedRowModel,
+	createSortedRowModel,
+	filterFns,
+	globalFilteringFeature,
+	rowPaginationFeature,
+	rowSelectionFeature,
+	rowSortingFeature,
+	sortFns,
+	tableFeatures,
+} from '@ez-kit/data-grid-core/features'
 import { createColumns } from '@ez-kit/data-grid-react'
 import { useMemo } from 'react'
 
@@ -9,6 +25,24 @@ import { makeUsers } from './_data'
 
 import type { User } from './_data'
 import type { PartialGridMessages } from '@ez-kit/data-grid-react'
+
+const features = tableFeatures({
+	// Structural: the grid shell reads column widths, visibility and pin groups to lay out
+	// the column grid. Everything below is this example's own.
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	rowSortingFeature,
+	columnFilteringFeature,
+	filterFns,
+	globalFilteringFeature,
+	rowPaginationFeature,
+	rowSelectionFeature,
+	sortFns,
+	filteredRowModel: createFilteredRowModel(),
+	paginatedRowModel: createPaginatedRowModel(),
+	sortedRowModel: createSortedRowModel(),
+})
 
 const columns = createColumns<User>([
 	{ accessorKey: 'name', header: 'Имя', filtering: { operators: true } },
@@ -51,8 +85,8 @@ const ru: PartialGridMessages = {
 		sortDesc: 'По убыванию',
 		clearSort: 'Сбросить сортировку',
 		pin: 'Закрепление',
-		pinLeft: 'Закрепить слева',
-		pinRight: 'Закрепить справа',
+		pinStart: 'Закрепить слева',
+		pinEnd: 'Закрепить справа',
 		unpin: 'Открепить',
 		hide: 'Скрыть',
 	},
@@ -102,6 +136,7 @@ export function LocalizationExample() {
 
 	return (
 		<DataGrid
+			features={features}
 			data={data}
 			columns={columns}
 			messages={ru}

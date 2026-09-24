@@ -1,6 +1,6 @@
 ---
 title: Column Pinning
-description: Pin columns to the left or right of the grid so they stay visible while the rest of the table scrolls horizontally.
+description: Pin columns to the start or end edge of the grid so they stay visible while the rest of the table scrolls horizontally.
 ---
 
 Pinned columns stick to the table edge during horizontal scroll. Useful for keeping an id, a name,
@@ -15,31 +15,33 @@ pinned say so themselves:
 
 ```tsx
 const columns = createColumns<Row>([
-	{ accessorKey: 'id', header: 'ID', pinning: { initialSide: 'left' } },
-	{ accessorKey: 'actions', header: 'Actions', pinning: { initialSide: 'right' } },
+	{ accessorKey: 'id', header: 'ID', pinning: { initialSide: 'start' } },
+	{ accessorKey: 'actions', header: 'Actions', pinning: { initialSide: 'end' } },
 ])
 
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	pinning={{ column: true }}
 />
 ```
 
-Two columns start pinned left and two right — unpin any of them from its ⋮ menu, then scroll
-sideways:
+Two columns start pinned to the start edge and two to the end — unpin any of them from its ⋮ menu,
+then scroll sideways:
 
 <DataGridDocsExample exampleId='column-pinning' />
 
 ## Seeds and invariants
 
 A column the user is not meant to move takes the **scalar** form. It is an invariant, not a seed:
-the column keeps its pin no matter what `initialState`, controlled `state` or `table.setState` says,
+the column keeps its pin no matter what `initialState`, controlled `state` or
+`table.setColumnPinning(…)` says,
 and its ⋮ menu has no pin section at all — a state that unpinned it could never be undone by the
 user.
 
 ```tsx
-{ accessorKey: 'name', header: 'Name', pinning: 'left' }
+{ accessorKey: 'name', header: 'Name', pinning: 'start' }
 ```
 
 **Name** below is statically pinned; open its menu and there is nothing to unpin with, while the
@@ -49,12 +51,24 @@ other columns still offer the section:
 
 The same holds for the system columns (`__selection__`, `__expand__`, `__actions__`).
 
-`initialState.columnPinning` **merges** with the pins derived from the column defs rather than
-replacing them. A column you list in either array is yours; a column you leave out of both keeps its
-`initialSide`, and unmentioned seeds are placed outside your ids so a pinned selection column stays
-leftmost and a pinned actions column stays rightmost.
+`initialState.columnPinning` (`{ start, end }`) **merges** with the pins derived from the column
+defs rather than replacing them. A column you list in either array is yours; a column you leave out
+of both keeps its `initialSide`, and unmentioned seeds are placed outside your ids so a pinned
+selection column stays at the start edge and a pinned actions column stays at the end.
 
 See [State model](/docs/data-grid/state) for the full precedence.
+
+## Right-to-left
+
+`start` and `end` are **logical**: they name the inline-start and inline-end edge, not the left and
+right one. Under `direction: 'rtl'` a `start`-pinned column therefore sticks to the **right** of the
+viewport and an `end`-pinned one to the left, and the offsets follow — the structural stylesheet
+applies them as `inset-inline-start` / `inset-inline-end`.
+
+Row pinning is unaffected: it is a vertical axis, and `top` / `bottom` mean the same thing in every
+writing direction.
+
+<DataGridDocsExample exampleId='column-pinning-rtl' />
 
 ## How the kits render it
 

@@ -2,12 +2,13 @@ import { createColumns } from '@ez-kit/data-grid-core'
 import { act, screen } from '@testing-library/react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 
-import { renderWithComponents } from '../test-utils'
+import { TEST_FEATURES, renderWithComponents } from '../test-utils'
 import { useDataGrid } from '../use-data-grid'
 
 import { DataGrid } from './data-grid'
 
 import type { CellTypeDefinition } from '../cell-types-context'
+import type { GridFeatures } from '../types'
 import type { FieldState } from '@ez-kit/data-grid-core'
 import type { ReactNode } from 'react'
 
@@ -55,16 +56,17 @@ describe('<DataGridCell> — FieldState propagation', () => {
 		const seen: FieldState[] = []
 		const cellTypes = makeSpyCellTypes(seen)
 
-		const tableRef: { table: ReturnType<typeof useDataGrid<Row>> | null } = { table: null }
+		const tableRef: { table: ReturnType<typeof useDataGrid<GridFeatures, Row>> | null } = { table: null }
 		function Harness() {
-			const t = useDataGrid<Row>({
+			const t = useDataGrid<GridFeatures, Row>({
+				features: TEST_FEATURES,
 				data: DATA,
 				columns: COLUMNS,
 				creating: { onSave: () => Promise.resolve() },
 			})
 			tableRef.table = t
 			return (
-				<DataGrid<Row>
+				<DataGrid<GridFeatures, Row>
 					table={t}
 					cellTypes={cellTypes}
 				/>
@@ -79,7 +81,7 @@ describe('<DataGridCell> — FieldState propagation', () => {
 			table.creating.setErrors({ name: ['too short', 'forbidden chars'] })
 		})
 		view.rerender(
-			<DataGrid<Row>
+			<DataGrid<GridFeatures, Row>
 				table={table}
 				cellTypes={cellTypes}
 			/>,
@@ -100,16 +102,17 @@ describe('<DataGridCell> — FieldState propagation', () => {
 		const seen: FieldState[] = []
 		const cellTypes = makeSpyCellTypes(seen)
 
-		const tableRef: { table: ReturnType<typeof useDataGrid<Row>> | null } = { table: null }
+		const tableRef: { table: ReturnType<typeof useDataGrid<GridFeatures, Row>> | null } = { table: null }
 		function Harness() {
-			const t = useDataGrid<Row>({
+			const t = useDataGrid<GridFeatures, Row>({
+				features: TEST_FEATURES,
 				data: DATA,
 				columns: COLUMNS,
 				creating: { validate, onSave: () => Promise.resolve() },
 			})
 			tableRef.table = t
 			return (
-				<DataGrid<Row>
+				<DataGrid<GridFeatures, Row>
 					table={t}
 					cellTypes={cellTypes}
 				/>
@@ -123,7 +126,7 @@ describe('<DataGridCell> — FieldState propagation', () => {
 			table.creating.start()
 		})
 		view.rerender(
-			<DataGrid<Row>
+			<DataGrid<GridFeatures, Row>
 				table={table}
 				cellTypes={cellTypes}
 			/>,

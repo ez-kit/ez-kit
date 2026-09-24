@@ -1,18 +1,36 @@
 import { localizeOperators } from '@ez-kit/data-grid-core'
 
 import { useGridComponents } from '../components-context'
-import { DATA_GRID_DEFAULTS } from '../defaults'
-import { FilterChipKind } from '../types'
+import { FilterChipKind, FilterChipsPosition } from '../types'
 
 import { useDataGridState, useDataGridTable } from './table-context'
 
-import type { FilterChipsPosition } from '../use-data-grid'
+import type { GridFeatures } from '../types'
 import type { FilterOperatorDef } from '@ez-kit/data-grid-core'
 import type { Column } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
+/**
+ * Where the strip sits when the prop names nothing — the common case, a strip between the
+ * toolbar and the table.
+ *
+ * This component's own constant, deliberately not an entry in `DATA_GRID_DEFAULTS`: that table
+ * is keyed by the **option path** it defaults, and `filtering.chips` is not an option any more.
+ * Reading it from there would leave the component depending on the grid's config for a value
+ * that is now purely its own.
+ */
+const DEFAULT_CHIPS_POSITION = FilterChipsPosition.Above
+
 export type DataGridActiveFiltersBarProps = {
-	/** Override the position data attribute. Defaults to the auto-mount config or `'above'`. */
+	/**
+	 * Which side of the table the strip reports itself on, as `data-chip-position`. Default:
+	 * `'above'`.
+	 *
+	 * Document order already says where the strip *is* — a layout writes it above or below
+	 * `<DataGrid.Table/>`. This says which way the margin points, which is the one thing a
+	 * stylesheet cannot read off the position: both kits rule on
+	 * `[data-slot='active-filters-bar'][data-chip-position='…']`.
+	 */
 	position?: FilterChipsPosition
 }
 
@@ -62,8 +80,7 @@ function sameFilterValue(a: unknown, b: unknown): boolean {
 	return JSON.stringify(a ?? null) === JSON.stringify(b ?? null)
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function columnLabel(column: Column<any>): string {
+function columnLabel<TRow extends object>(column: Column<GridFeatures, TRow>): string {
 	const header = column.columnDef.header
 	if (typeof header === 'string') return header
 	return column.id
@@ -72,26 +89,21 @@ function columnLabel(column: Column<any>): string {
 /**
  * Compound member: strip with removable chips for every active filter.
  *
- * Auto-mounted by `<DataGrid>` when `filtering.chips` is truthy. Can also be
- * placed manually in custom layouts via `<DataGrid.ActiveFiltersBar />`.
- *
- * Renders nothing when no filter is active. Reads chips position from
- * {@link FILTER_CHIPS_KEY} unless overridden via the `position` prop.
+ * Placed by a layout — above or below `<DataGrid.Table/>`, which is what the `filtering.chips`
+ * option used to decide. Renders nothing when no filter is active.
  */
 export function ActiveFiltersBar({ position: positionProp }: DataGridActiveFiltersBarProps = {}) {
 	const table = useDataGridTable()
-	useDataGridState((s) => s.columnFilters)
-	useDataGridState((s) => s.globalFilter as unknown)
-	useDataGridState((s) => s.applied)
+	// The subscriptions *are* the reads: v8's whole-snapshot `getState()` is gone, and the value each
+	// hook already returns is the same slice the body wants. Keeping the subscription and
+	// re-reading a snapshot beside it was two spellings of one value even under v8.
+	const columnFilters = useDataGridState((s) => s.columnFilters)
+	const globalFilter = useDataGridState((s) => s.globalFilter as unknown)
+	const applied = useDataGridState((s) => s.applied)
 	const { FilterChip } = useGridComponents().filtering
 
-	const cfg = table.grid.filtering.chips
-
-	const position: FilterChipsPosition = positionProp ?? cfg?.position ?? DATA_GRID_DEFAULTS.filtering.chips.position
-	const columnFilters = table.getState().columnFilters
-	const globalFilter = table.getState().globalFilter as unknown
+	const position: FilterChipsPosition = positionProp ?? DEFAULT_CHIPS_POSITION
 	const isDrafting = table.options.draft === true
-	const applied = table.getState().applied
 
 	type ChipDescriptor = {
 		key: string
@@ -115,7 +127,12 @@ export function ActiveFiltersBar({ position: positionProp }: DataGridActiveFilte
 			: undefined
 		const display = renderValueDisplay(cf.value, operators)
 		if (display == null || display === '') continue
-		const appliedFilter = applied.columnFilters.find((a) => a.id === cf.id)
+		// Optional-chained. `s.applied` is `draftFeature`'s slice, and the two *uses* below are
+		// guarded by `isDrafting` — but this dereference runs before either, so a chips strip on a
+		// grid without `draft` threw here rather than reaching the guard that was meant to cover it.
+		// Under v8 the slice existed regardless; under v9 it is absent.
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+		const appliedFilter = applied?.columnFilters.find((a) => a.id === cf.id)
 		chips.push({
 			key: `column:${cf.id}`,
 			label: columnLabel(column),
@@ -137,7 +154,8 @@ export function ActiveFiltersBar({ position: positionProp }: DataGridActiveFilte
 				table.setGlobalFilter(undefined)
 			},
 			kind: FilterChipKind.Global,
-			isDraft: isDrafting && !sameFilterValue(applied.globalFilter, globalFilter),
+			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+			isDraft: isDrafting && !sameFilterValue(applied?.globalFilter, globalFilter),
 		})
 	}
 

@@ -19,6 +19,7 @@ Width updates only after release — no re-renders during drag.
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	resizing={{ mode: 'onChange' }} // or 'onEnd'

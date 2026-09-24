@@ -2,9 +2,10 @@ import { createColumns } from '@ez-kit/data-grid-core'
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
+import { TEST_FEATURES } from './test-utils'
 import { useDataGrid } from './use-data-grid'
 
-import type { DataTable } from '@ez-kit/data-grid-core'
+import type { DataTable, GridFeatures } from './types'
 
 type User = { id: number; name: string; email: string }
 
@@ -25,8 +26,10 @@ const COLUMNS = createColumns<User>([{ accessorKey: 'name' }, { accessorKey: 'em
  * a future split that goes back to picking by name fails immediately instead of silently.
  */
 describe('every feature onChange survives useDataGrid', () => {
-	function grid(config: Partial<Parameters<typeof useDataGrid<User>>[0]>): DataTable<User> {
-		const { result } = renderHook(() => useDataGrid<User>({ data: USERS, columns: COLUMNS, ...config }))
+	function grid(config: Partial<Parameters<typeof useDataGrid<GridFeatures, User>>[0]>): DataTable<GridFeatures, User> {
+		const { result } = renderHook(() =>
+			useDataGrid<GridFeatures, User>({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, ...config }),
+		)
 		return result.current
 	}
 
@@ -39,22 +42,13 @@ describe('every feature onChange survives useDataGrid', () => {
 		expect(onChange).toHaveBeenCalledWith({ email: false })
 	})
 
-	it('visibility.onChange survives alongside the React-only toolbar flag', () => {
-		const onChange = vi.fn()
-		const table = grid({ visibility: { toolbar: true, onChange } })
-		act(() => {
-			table.setColumnVisibility({ email: false })
-		})
-		expect(onChange).toHaveBeenCalled()
-		expect(table.grid.visibility).toEqual({ toolbar: true })
-	})
-
-	it('mounts the visibility toolbar control for the object form too, as the bare `true` does', () => {
-		// The object form used to default `toolbar` off, so adding an `onChange` to a working
-		// `visibility: true` silently removed the only control the feature has.
-		expect(grid({ visibility: { onChange: vi.fn() } }).grid.visibility).toEqual({ toolbar: true })
-		expect(grid({ visibility: true }).grid.visibility).toEqual({ toolbar: true })
-		expect(grid({ visibility: { toolbar: false } }).grid.visibility).toEqual({ toolbar: false })
+	it('reports the feature as on for both forms, so a layout gates its trigger the same way', () => {
+		// `visibility` used to resolve to `{ toolbar }`, whose object form defaulted the other way
+		// — so adding an `onChange` to a working `visibility: true` silently removed the only
+		// control the feature has. It is one derived boolean now: the feature is on, and where its
+		// trigger goes is the layout's to say.
+		expect(grid({ visibility: { onChange: vi.fn() } }).grid.visibility).toBe(true)
+		expect(grid({ visibility: true }).grid.visibility).toBe(true)
 	})
 
 	it('ordering.column.onChange fires when a column moves', () => {
@@ -133,7 +127,7 @@ describe('every feature onChange survives useDataGrid', () => {
 		const onChange = vi.fn()
 		const table = grid({ pinning: { column: { onChange } } })
 		act(() => {
-			table.setColumnPinning({ left: ['name'], right: [] })
+			table.setColumnPinning({ start: ['name'], end: [] })
 		})
 		expect(onChange).toHaveBeenCalled()
 	})

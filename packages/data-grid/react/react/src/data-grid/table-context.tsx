@@ -2,12 +2,40 @@ import { createContext, useContext } from 'react'
 
 import { useDataGridSelector } from '../use-data-grid-selector'
 
-import type { DataTable, TableState } from '@ez-kit/data-grid-core'
+import type { DataTable, ErasedRow, GridFeatures } from '../types'
+import type { TableFeatures, TableState } from '@tanstack/table-core'
+import type { ReactNode } from 'react'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const TableContext = createContext<DataTable<any> | null>(null)
+/**
+ * The live table, row-erased. See {@link ErasedRow} for why it cannot carry the caller's `TRow`
+ * and why `never` is the spelling.
+ */
+type ErasedTable = DataTable<GridFeatures, ErasedRow>
+
+const TableContext = createContext<ErasedTable | null>(null)
 
 export { TableContext }
+
+/**
+ * **The crossing into the erased world**, and the only place a table's row type is discarded.
+ *
+ * Everything below `<DataGrid>` reads the table from a React context, which takes no type
+ * parameter, so the caller's `TRow` stops here — see {@link ErasedRow}. v9's row types are
+ * invariant in `TRow`, so this is a cast and not an assignment; putting it behind a component
+ * means it is written once rather than at all eight provider sites, and that a reader looking
+ * for "where does the row type go" finds one answer.
+ *
+ * {@link useDataGridTable} is the mirror: it casts back out to the row type its caller names.
+ */
+export function TableProvider<TFeatures extends TableFeatures, TRow extends object>({
+	table,
+	children,
+}: {
+	table: DataTable<TFeatures, TRow>
+	children: ReactNode
+}) {
+	return <TableContext.Provider value={table as unknown as ErasedTable}>{children}</TableContext.Provider>
+}
 
 /**
  * The live `DataTable` from context. **Does not subscribe**: reading the table is not the same
@@ -28,13 +56,15 @@ export { TableContext }
  * useDataGridState((s) => s.columnVisibility) // re-render when columns appear/disappear
  * const colSpan = table.getVisibleLeafColumns().length
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function useDataGridTable<TRow extends object = any>(): DataTable<TRow> {
+export function useDataGridTable<TRow extends object = ErasedRow>(): DataTable<GridFeatures, TRow> {
 	const table = useContext(TableContext)
 	if (!table) {
 		throw new Error('This component must be rendered inside <DataGrid>.')
 	}
-	return table as DataTable<TRow>
+	// The mirror of {@link TableProvider}'s cast, and the reason `as unknown as` is needed on both
+	// sides: v9's row types are invariant in `TRow`, so the erased type and the caller's do not
+	// overlap in either direction. See {@link ErasedRow}.
+	return table as unknown as DataTable<GridFeatures, TRow>
 }
 
 /**
@@ -53,6 +83,6 @@ export function useDataGridTable<TRow extends object = any>(): DataTable<TRow> {
  * @example Deliberately broad — the snapshot itself is stable until something changes
  *   useDataGridState((s) => s)
  */
-export function useDataGridState<TSelected>(selector: (state: TableState) => TSelected): TSelected {
+export function useDataGridState<TSelected>(selector: (state: TableState<GridFeatures>) => TSelected): TSelected {
 	return useDataGridSelector(useDataGridTable(), selector)
 }

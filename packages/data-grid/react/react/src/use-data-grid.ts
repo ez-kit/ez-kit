@@ -1,34 +1,33 @@
-import { createTable, featureConfig, isFeatureEnabled, PaginationMode, resolveMessages } from '@ez-kit/data-grid-core'
-import { useEffect, useRef } from 'react'
+import {
+	createAppliedEmitter,
+	createDraftAtoms,
+	createTableOptions,
+	featureConfig,
+	isFeatureEnabled,
+	PaginationMode,
+	resolveMessages,
+} from '@ez-kit/data-grid-core'
+import { useTable } from '@tanstack/react-table'
+import { table_publishExternalState } from '@tanstack/table-core/static-functions'
+import { useEffect, useRef, useState } from 'react'
 
 import { mergeGridOptionLayers, useDataGridOptions, useGridFactoryDefaults } from './data-grid-options-context'
 import { DATA_GRID_DEFAULTS, DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
-import { EMPTY_GRID_CONTEXT, syncGridContext } from './grid-context'
-import { prepareDataGridTable } from './prepare-table'
-import { ActionBarVariant, FilteringVariant } from './types'
+import { createGridContextAtom, EMPTY_GRID_CONTEXT, syncGridContext } from './grid-context'
+import { ActionBarVariant } from './types'
 import { useOrderedData } from './use-ordered-data'
 import { useSafeLayoutEffect } from './utils/use-safe-layout-effect'
 
 import type { CellTypeRegistry } from './cell-types-context'
 import type { PaginationLabelModel } from './data-grid/pagination-label'
 import type { DataGridDefaultOptions } from './data-grid-options-context'
-import type { GridContext } from './grid-context'
+import type { GridContext, GridContextAtom } from './grid-context'
 import type { ResolvedGridOptions } from './resolved-options'
-import type {
-	FilterChipsPosition,
-	FilterPanelPlacement,
-	LoadMoreThreshold,
-	LoadMoreTrigger,
-	PageSizerPlacement,
-	PaginationLabel,
-} from './types'
+import type { ErasedRow, DataTable, GridFeatures, LoadMoreThreshold, LoadMoreTrigger, PaginationLabel } from './types'
 import type {
 	ActionItem,
-	VisibilityConfig,
-	CreatingConfig,
-	DataTable,
-	DeletingConfig,
-	EditingConfig,
+	DraftAtoms,
+	GridOptions,
 	ExpandingConfig,
 	FeatureToggle,
 	FilteringConfig,
@@ -40,24 +39,23 @@ import type {
 	RowActionsConfig,
 	RowVirtualizationConfig,
 	SelectionConfig,
-	SortingConfig,
 	TableConfig,
 	VirtualizationConfig,
 } from '@ez-kit/data-grid-core'
-import type { Row, Table, TableState } from '@tanstack/table-core'
+import type { ExternalAtoms, Row, Table, TableFeatures, TableOptions, TableState } from '@tanstack/table-core'
 import type { ComponentType, HTMLAttributes, ReactElement, ReactNode } from 'react'
 
 // Re-exported from the shared defaults module so the public API surface is unchanged.
 export { DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
 
 // The closed sets live in `./types` next to the other ones; re-exported here because this is
-// where the options that carry them are declared — `SelectionBarConfig`,
-// `ReactPaginationConfig`, `ReactFilteringConfig`.
-export { FilterChipsPosition, FilteringVariant, LoadMoreTrigger, ActionBarVariant } from './types'
+// where the options that carry them are declared — `SelectionBarConfig` and
+// `ReactPaginationConfig`.
+export { LoadMoreTrigger, ActionBarVariant } from './types'
 
 export type ExpandedRowProps<TRow extends object> = {
-	row: Row<TRow>
-	table: Table<TRow>
+	row: Row<GridFeatures, TRow>
+	table: Table<GridFeatures, TRow>
 }
 
 /**
@@ -65,7 +63,8 @@ export type ExpandedRowProps<TRow extends object> = {
  * the detail panel is a component, not an opaque value. Nothing else is restated, so a field
  * added to the core config is available here the same day.
  */
-export type ReactExpandingConfig<TRow extends object> = ExpandingConfig<
+export type ReactExpandingConfig<TFeatures extends TableFeatures, TRow extends object> = ExpandingConfig<
+	TFeatures,
 	TRow,
 	ComponentType<ExpandedRowProps<TRow>>,
 	ReactNode
@@ -79,10 +78,10 @@ export type ReactExpandingConfig<TRow extends object> = ExpandingConfig<
  */
 export type ReactRowActionsConfig<TRow extends object = object> = RowActionsConfig<TRow, ReactElement, ReactNode>
 
-export type SelectionBarCallbackArgs<TRow extends object = object> = {
-	table: Table<TRow>
+export type SelectionBarCallbackArgs<TRow extends object = ErasedRow> = {
+	table: Table<GridFeatures, TRow>
 	clearSelection: () => void
-	selectedRows: Row<TRow>[]
+	selectedRows: Row<GridFeatures, TRow>[]
 }
 
 /** Render mode used when a bar config omits `variant`. Internal. */
@@ -104,7 +103,8 @@ export type SelectionBarConfig<TRow extends object = object> = FeatureToggle & {
 	 * for this over `selection.onChange`: that one fires after, with nothing left to report.
 	 *
 	 * To gate the clear itself — a confirmation before a large selection is discarded — draw
-	 * the bar yourself with `<DataGrid.SelectionBar>`; its render args carry `count`,
+	 * the bar yourself with `<DataGrid.ActionBar>`; its render args carry the selection
+	 * section's `count`,
 	 * `onClear` and the rest.
 	 */
 	onClear?: (args: SelectionBarCallbackArgs<TRow>) => void
@@ -121,7 +121,7 @@ export type SelectionBarConfig<TRow extends object = object> = FeatureToggle & {
 	 * `selectedRows`, `table` and `clearSelection`.
 	 *
 	 * Arbitrary markup that is not an action — a bulk-target select, a counter — goes in the
-	 * `start` / `end` slots of `<DataGrid.SelectionBar>`, the way `<DataGrid.Toolbar>` takes
+	 * `start` / `end` slots of `<DataGrid.ActionBar>`, the way `<DataGrid.Toolbar>` takes
 	 * its own: config carries data, the compound component carries markup.
 	 *
 	 * Return `[]` for a selection that offers nothing.
@@ -135,14 +135,17 @@ export type SelectionBarConfig<TRow extends object = object> = FeatureToggle & {
  * React icons, so it lives only in this layer and is never passed down to the core `selection`
  * config.
  */
-export type ReactSelectionConfig<TRow extends object = object> = SelectionConfig<TRow, ReactNode> & {
+export type ReactSelectionConfig<TFeatures extends TableFeatures, TRow extends object = object> = SelectionConfig<
+	TFeatures,
+	TRow,
+	ReactNode
+> & {
 	/**
 	 * Selection info bar config.
 	 * - `false` — bar never shown
 	 * - `undefined` | `true` — bar shown when ≥1 row is selected
 	 * - `'inline'` / `'floating'` — the scalar: the render mode, which is the whole of what
-	 *   this option usually has to say. Same shape as `filtering.chips`, and as a column's
-	 *   `align`, `width` and `pinning`.
+	 *   this option usually has to say. Same shape as a column's `align`, `width` and `pinning`.
 	 * - {@link SelectionBarConfig} — the object, for when the mode is not all you are setting.
 	 *
 	 * Presentational only. The bar's Delete button is not configured here — bulk deletion is
@@ -160,8 +163,7 @@ export type ReactSelectionConfig<TRow extends object = object> = SelectionConfig
  * mutually assignable — a config written against a concrete row type has to land here and be
  * callable back out.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type NormalizedSelectionBarConfig<TRow extends object = any> = {
+export type NormalizedSelectionBarConfig<TRow extends object = ErasedRow> = {
 	/** Render mode of the shared action bar, defaulted. Never undefined. */
 	variant: ActionBarVariant
 	/** Clear notification, from `selection.bar.onClear`. */
@@ -283,47 +285,18 @@ export type ReactPaginationConfig = PaginationConfig & {
 	 * `PageSizerProps.items` this very option feeds. It was `pageSizeOptions`, which made one
 	 * value change its name on the way from the config to the kit.
 	 *
-	 * Pure data: supplying it no longer *implies* the control, it only says which sizes the
-	 * control offers. Whether the PageSizer mounts is {@link ReactPaginationConfig.toolbar}
-	 * — which defaults to "yes when this list is set", so the common case still needs one
-	 * field. Changing the selection calls `table.setPageSize`, so it flows through
-	 * {@link PaginationConfig.onChange} like any other pagination change.
+	 * **Pure data: this permits page sizes, it does not mount a control.** Writing it alone puts
+	 * no selector on the page — `<DataGrid.PageSizer />` is what does that, wherever a layout
+	 * writes it, and `<DataGrid.BottomBar />` carries one beside the page controls. Note the
+	 * built-in `DefaultLayout` mounts **neither**, so a grid that only sets `items` shows no
+	 * selector; see that preset's docblock for why the old `pagination.pageSizer` default could
+	 * not be carried over.
+	 *
+	 * The list is resolved whenever page-based pagination is on, so a sizer placed anywhere
+	 * always has sizes to offer. Changing the selection calls `table.setPageSize`, so it flows
+	 * through {@link PaginationConfig.onChange} like any other pagination change.
 	 */
 	items?: number[]
-	/**
-	 * Page-based mode only. Auto-mount the PageSizer control, and say where.
-	 *
-	 * - omitted — mounted iff {@link ReactPaginationConfig.items} is set, in the toolbar
-	 * - `true` — mounted in the toolbar, falling back to
-	 *   {@link DATA_GRID_DEFAULTS.pagination.items} when no list is given
-	 * - `'toolbar'` / `'footer'` — mounted there; the scalar **is** the placement
-	 * - {@link PageSizerConfig} — the same, spelled out
-	 * - `false` — never auto-mounted; `<DataGrid.PageSizer />` still works if placed by hand,
-	 *   because this option governs mounting only and never erases
-	 *   {@link ReactPaginationConfig.items}
-	 *
-	 * Named for the control it mounts rather than for a container, unlike `sorting.toolbar`,
-	 * `globalFiltering.toolbar`, `filtering.toolbar` and `visibility.toolbar`. Those controls
-	 * can live in one place, so `toolbar` states both the mounting and the destination; this
-	 * one has two homes, and `toolbar: true, placement: 'footer'` would be a config
-	 * contradicting itself.
-	 */
-	pageSizer?: boolean | PageSizerPlacement | PageSizerConfig
-}
-
-/**
- * The object form of {@link ReactPaginationConfig.pageSizer}. Scalar-or-object, like the
- * column options and like `filtering.chips`: the scalar is the placement, the object exists
- * for when there is more to say.
- */
-export type PageSizerConfig = FeatureToggle & {
-	/** Which region holds the control. Default: {@link PageSizerPlacement.Toolbar}. */
-	placement?: PageSizerPlacement
-}
-
-/** Normalized shape stored on the table instance for `Toolbar` / the default layout to read. */
-export type NormalizedPageSizerConfig = {
-	placement: PageSizerPlacement
 }
 
 /**
@@ -352,44 +325,6 @@ function normalizeInfinite(
 		hasPreviousPage: cfg.hasPreviousPage ?? false,
 		...(cfg.onLoadMore !== undefined ? { onLoadMore: cfg.onLoadMore } : {}),
 	}
-}
-
-/**
- * The headless {@link VisibilityConfig} plus this layer's `toolbar` auto-mount flag —
- * the same `React*` shape every other feature uses, so `onChange` is reachable from a grid
- * that only ever imports the adapter.
- */
-export type ReactVisibilityConfig = VisibilityConfig & {
-	/**
-	 * Auto-mount the column-visibility toggle into `Toolbar.end`. Default: **on**, in both
-	 * forms — `visibility: true` and `visibility: { onChange }` mount the same control, and
-	 * `toolbar: false` is how a grid places `<DataGrid.VisibilityTrigger />` itself.
-	 *
-	 * The object form used to default to *off*, so adding an `onChange` to a working
-	 * `visibility: true` silently removed the only control the feature has. The rule across the
-	 * config is now: **a feature's object form defaults its `toolbar` exactly the way its bare
-	 * `true` does.** What that default *is* still differs by feature, and deliberately —
-	 * `visibility` and `globalFiltering` default on because the auto-mounted control is the
-	 * feature's only UI, while `sorting` (the multi-sort builder) and `filtering` (Clear-all)
-	 * default off because the header already carries their affordances, and `pagination`
-	 * (the PageSizer) defaults to "yes when `items` is set".
-	 */
-	toolbar?: boolean
-}
-
-/**
- * The resolved auto-mount decision for a feature whose only UI option is `toolbar` — today
- * `sorting` and `visibility`.
- *
- * They used to reach `table.grid` as the **raw** `boolean | Config` union, alone among the
- * resolved options, so every reader — the built-in `Toolbar` and any UI kit calling
- * `useGridOptions()` — had to re-derive `cfg === true || (typeof cfg === 'object' &&
- * Boolean(cfg.toolbar))` for itself. {@link ResolvedGridOptions} exists precisely so nobody
- * has to.
- */
-export type NormalizedFeatureToolbarConfig = {
-	/** The toolbar auto-mounts this feature's control. */
-	toolbar: boolean
 }
 
 export type LoadingFallbackConfig = FeatureToggle & {
@@ -463,22 +398,7 @@ function normalizeFallback(
 	return { enabled, ...(component !== undefined ? { component } : {}) }
 }
 
-export type FilterChipsConfig = FeatureToggle & {
-	/**
-	 * Where to render the auto-mounted chips strip relative to the table.
-	 * Default: {@link FilterChipsPosition.Above}.
-	 */
-	position?: FilterChipsPosition
-}
-
-export type FilteringToolbarConfig = FeatureToggle & {
-	/** When true the Clear-all button is rendered (disabled) even with no active filters. Default: false. */
-	alwaysShow?: boolean
-}
-
 export type ReactFilteringConfig = {
-	/** Display variant for column filter controls. Default: {@link FilteringVariant.Inline}. */
-	variant?: FilteringVariant
 	/**
 	 * Commit debounce in milliseconds for text filter inputs. Default: 250.
 	 *
@@ -490,114 +410,31 @@ export type ReactFilteringConfig = {
 	 * always commit instantly and are unaffected by this option.
 	 */
 	debounce?: number
-	/**
-	 * Auto-mount a strip of removable chips for active filters.
-	 * - `false` / omitted — no auto-mount. `<DataGrid.ActiveFiltersBar />` still works manually.
-	 * - `true` — auto-mount at {@link FilterChipsPosition.Above}.
-	 * - `'above'` / `'below'` — the scalar: auto-mount at that position, which is the whole of
-	 *   what this option has to say. Same shape as a column's `align`, `width` and `pinning`.
-	 * - {@link FilterChipsConfig} — the object, for when the position is not all you are setting.
-	 */
-	chips?: boolean | FilterChipsPosition | FilterChipsConfig
-	/**
-	 * {@link FilteringVariant.Panel} only. Where the auto-mounted panel renders.
-	 *
-	 * - omitted — its own strip between the toolbar and the table
-	 * - `'toolbar'` — the toolbar's leading slot, so the column filters sit beside the
-	 *   search box
-	 * - {@link FilterPanelConfig} — the same, spelled out
-	 *
-	 * The scalar **is** the placement, as with `chips`. It says nothing about *whether* the
-	 * panel mounts: `variant: 'panel'` took the controls out of the header, so the panel is
-	 * the grid's only filter UI and always mounts.
-	 */
-	panel?: FilterPanelPlacement | FilterPanelConfig
-	/**
-	 * Auto-mount filtering's toolbar control — the Clear-all button — into `Toolbar.end`
-	 * after `GlobalFilterInput`. Hidden when no filter is active unless `alwaysShow: true`.
-	 *
-	 * - `false` / omitted — no auto-mount. `<DataGrid.ClearFiltersButton />` still works manually.
-	 * - `true` — auto-mount with default behaviour.
-	 * - {@link FilteringToolbarConfig} — fine-grained.
-	 *
-	 * `chips` is deliberately **not** folded in here: the chips strip renders above or below
-	 * the table, not in the toolbar, so `toolbar` would be the wrong word for it.
-	 */
-	toolbar?: boolean | FilteringToolbarConfig
 } & FilteringConfig
-
-/** Normalized shape stored on the table instance for `DataGrid` root to read. */
-export type NormalizedFilterChipsConfig = {
-	position: FilterChipsPosition
-}
-
-/**
- * The object form of {@link ReactFilteringConfig.panel}. Scalar-or-object, like `chips` and
- * like the column options: the scalar is the placement, the object exists for when there is
- * more to say.
- */
-export type FilterPanelConfig = FeatureToggle & {
-	/** Which region holds the panel. Default: {@link FilterPanelPlacement.Above}. */
-	placement?: FilterPanelPlacement
-}
-
-/** Normalized shape stored on the table instance. `undefined` unless the variant is `panel`. */
-export type NormalizedFilterPanelConfig = {
-	placement: FilterPanelPlacement
-}
-
-/** Normalized shape stored on the table instance for `Toolbar` / `ClearFiltersButton` to read. */
-export type NormalizedFilteringToolbarConfig = {
-	alwaysShow: boolean
-}
 
 /**
  * React-layer config for global search.
  *
- * Adds UI-facing fields (`placeholder`, `debounce`, `toolbar`) on top of the
- * headless {@link GlobalFilteringConfig}.
+ * Adds UI-facing fields (`placeholder`, `debounce`) on top of the headless
+ * {@link GlobalFilteringConfig}.
  */
-export type ReactGlobalFilteringConfig = {
+export type ReactGlobalFilteringConfig<TFeatures extends TableFeatures> = {
 	/** Placeholder for the search input. Default: 'Search…'. */
 	placeholder?: string
 	/**
-	 * Commit debounce in milliseconds for the auto-mounted search input.
+	 * Commit debounce in milliseconds for `<DataGrid.GlobalFilterInput/>`.
 	 * Defaults to the shared {@link ReactFilteringConfig.debounce} (250) — set this only when
 	 * the search box should be timed differently from the column filters.
 	 * `0` disables debouncing.
 	 */
 	debounce?: number
-	/**
-	 * Auto-mount control for the search input in the Toolbar.
-	 * - `true` / omitted — input is auto-mounted in `Toolbar.end`
-	 * - `false` — no auto-mount; place `<DataGrid.GlobalFilterInput />` yourself
-	 */
-	toolbar?: boolean
-} & GlobalFilteringConfig
+} & GlobalFilteringConfig<TFeatures>
 
 /** Normalized shape stored on the table instance for child components to read. */
 export type NormalizedGlobalFilteringConfig = {
 	placeholder: string
 	debounce: number
-	toolbar: boolean
 }
-
-/**
- * React-layer config for sorting.
- *
- * Adds the UI-facing `toolbar` flag on top of the headless {@link SortingConfig}. The flag
- * lives here and not in core for the same reason `globalFiltering.toolbar` and
- * `visibility.toolbar` do: core renders nothing, so an option core must document as
- * "ignored by core" belongs to the layer that actually reads it.
- */
-export type ReactSortingConfig = {
-	/**
-	 * Auto-mount the multi-sort builder button in the Toolbar. Default: false.
-	 * - `false` / omitted — no auto-mount. `<DataGrid.SortMenuTrigger />` still works manually.
-	 * - `true` — auto-mount into `Toolbar.end`.
-	 */
-	toolbar?: boolean
-} & SortingConfig
 
 /**
  * Classes for the grid shell's own two boxes — the only elements the React layer renders
@@ -618,6 +455,12 @@ export type ReactSortingConfig = {
  * beat `border` runs its own value through `cn()` / `twMerge` first.
  */
 export type LayoutClassNames = {
+	/**
+	 * The grid's root box — the element that holds toolbar, table, pagination row and the bars.
+	 * Where a card's frame belongs, and where a `flex` / `grid` display goes when the grid's own
+	 * pieces are to be laid out rather than stacked.
+	 */
+	root?: string
 	/** The outer box, outside the scrollport — where a border, radius or shadow belongs. */
 	wrapper?: string
 	/** The scrollport itself — where a scrollbar or an inner edge treatment belongs. */
@@ -698,9 +541,24 @@ export type LayoutConfig = {
  *
  * Called during render, once per visible row: keep it cheap and free of side effects.
  */
-export type RowPropsResolver<TRow extends object> = (row: Row<TRow>) => HTMLAttributes<HTMLTableRowElement> | undefined
+export type RowPropsResolver<TRow extends object> = (
+	row: Row<GridFeatures, TRow>,
+) => HTMLAttributes<HTMLTableRowElement> | undefined
 
-export type UseDataGridConfig<TRow extends object> = {
+/**
+ * What a call site writes. Generic over `TFeatures` because the caller composes the feature
+ * set and `useDataGrid`'s return type carries it back out; everything reached through
+ * `useDataGridTable()` pins to {@link GridFeatures} instead.
+ *
+ * **`features` is required, and reaches this type through the `Omit<TableConfig…>` below
+ * rather than being restated.** Core declares it required with no default, deliberately — the
+ * only default it could have is the all-in set, which is what every consumer who never thought
+ * about it would then ship (see `TableConfig`'s own docblock). React inherits that rule as-is:
+ * a defaults layer ({@link DataGridDefaultOptions}) *may* supply the set, and
+ * `mergeGridOptionLayers` will merge it in, but the type still demands it at the boundary the
+ * caller writes.
+ */
+export type UseDataGridConfig<TFeatures extends TableFeatures, TRow extends object> = {
 	/**
 	 * Fallback states shown when the grid has no visible rows.
 	 * All three states are enabled by default when the corresponding DI component is registered.
@@ -709,21 +567,25 @@ export type UseDataGridConfig<TRow extends object> = {
 	fallbacks?: FallbacksConfig
 	/**
 	 * Enable filtering.
-	 * - `true` — inline filter inputs below each column header
-	 * - `{ variant: FilteringVariant.Popover }` — filter icon in header; click opens a popover with the filter input
-	 * - `{ variant: FilteringVariant.Panel }` — the controls leave the header for one auto-mounted
-	 *   `<DataGrid.FilterPanel />` above the table
-	 * - `{ variant: FilteringVariant.Inline, ...opts }` — same as `true` with extra FilteringConfig options
+	 * - `true` — the built-in header cell renders each filterable column's control under its label
+	 * - {@link ReactFilteringConfig} — the same, with extra `FilteringConfig` options
+	 *
+	 * Where the controls appear is composition, not config: a `<DataGrid.HeaderCell>` render
+	 * function chooses `filter` or `filterPopover` (or neither), and `<DataGrid.FilterPanel/>`
+	 * collects them all into one strip wherever a layout puts it. The three used to be one
+	 * `variant` enum, which could not express a header control *and* a panel at once.
 	 */
 	filtering?: boolean | ReactFilteringConfig
 	/**
 	 * Enable cross-column global search.
-	 * - `true` — auto-mounts a search input in `Toolbar.end` with defaults
-	 *   (`placeholder: 'Search…'`, the shared `filtering.debounce`, `includesString` match)
+	 * - `true` — defaults (`placeholder: 'Search…'`, the shared `filtering.debounce`,
+	 *   `includesString` match)
 	 * - {@link ReactGlobalFilteringConfig} — fine-grained control over placeholder,
-	 *   debounce, filter function, registry, and auto-mount
+	 *   debounce, filter function and registry
+	 *
+	 * The search box itself is `<DataGrid.GlobalFilterInput/>`, placed by a layout.
 	 */
-	globalFiltering?: boolean | ReactGlobalFilteringConfig
+	globalFiltering?: boolean | ReactGlobalFilteringConfig<TFeatures>
 	/** Custom cell type renderers. Merged with types passed directly to `DataGrid`. */
 	cellTypes?: CellTypeRegistry
 	/**
@@ -733,13 +595,7 @@ export type UseDataGridConfig<TRow extends object> = {
 	 * - {@link ReactSelectionConfig} — headless options (`onChange`, `multi`) plus the
 	 *   React-only `bar` (selection info bar). The bar renders only when selection is enabled.
 	 */
-	selection?: boolean | ReactSelectionConfig<TRow>
-	/**
-	 * Column visibility UI config.
-	 * - `true` — enables column visibility (toolbar button shown)
-	 * - `{ toolbar: true }` — shows toggle button in toolbar
-	 */
-	visibility?: boolean | ReactVisibilityConfig
+	selection?: boolean | ReactSelectionConfig<TFeatures, TRow>
 	/**
 	 * Reordering, grouped per axis like `pinning`.
 	 * - `true` — columns only, and it keeps meaning exactly that
@@ -759,7 +615,7 @@ export type UseDataGridConfig<TRow extends object> = {
 	 * (e.g. only sorting) while leaving the rest internally managed.
 	 * Must be used together with `onStateChange` to reflect state updates back.
 	 */
-	state?: Partial<TableState>
+	state?: Partial<TableState<TFeatures>>
 	/**
 	 * Application and kit values carried alongside the grid, for components that need to agree
 	 * with their surroundings rather than receive everything as a prop — the current user, a
@@ -829,22 +685,35 @@ export type UseDataGridConfig<TRow extends object> = {
 	 * the headless {@link PaginationConfig}.
 	 */
 	pagination?: boolean | ReactPaginationConfig
-	/**
-	 * Sorting config. The React layer adds the `toolbar` auto-mount flag on top of the
-	 * headless {@link SortingConfig}.
-	 */
-	sorting?: boolean | ReactSortingConfig
 	/** Expanding config. See {@link ReactExpandingConfig}. */
-	expanding?: boolean | ReactExpandingConfig<TRow>
+	expanding?: boolean | ReactExpandingConfig<TFeatures, TRow>
 	/**
 	 * Per-row actions column. See {@link ReactRowActionsConfig} — the headless config with a
 	 * custom action's `icon` widened to accept a React element.
 	 */
 	rowActions?: boolean | ReactRowActionsConfig<TRow>
 } & Omit<
-	TableConfig<TRow>,
-	'filtering' | 'globalFiltering' | 'expanding' | 'visibility' | 'pagination' | 'rowActions' | 'selection' | 'sorting'
+	TableConfig<TFeatures, TRow>,
+	// `visibility` and `sorting` are **not** in this list: they carried a React-only `toolbar`
+	// flag until the controls became composition, and now core's declaration is the whole
+	// option. Restating them here would be a second spelling of one type.
+	'filtering' | 'globalFiltering' | 'expanding' | 'pagination' | 'rowActions' | 'selection'
 >
+
+/** Whether the package is running in a development build — gates the dev-only warnings below. */
+const IS_DEV = process.env.NODE_ENV !== 'production'
+
+/**
+ * Dev warnings fire from a hook that re-runs on every render, so each message is said once.
+ * Keyed by the message itself — two grids with the same defect say the same thing.
+ */
+const warnedOptions = new Set<string>()
+
+function warnOnce(message: string): void {
+	if (warnedOptions.has(message)) return
+	warnedOptions.add(message)
+	console.warn(message)
+}
 
 /**
  * A write feature is enabled by its handler, not by its presence in the merged options.
@@ -853,41 +722,112 @@ export type UseDataGridConfig<TRow extends object> = {
  * ({@link DataGridOptionsProvider} or the kit factory) that has no handler to give — it only
  * knows how a write should *look*. A grid that supplies no `onSave` / `onDelete` therefore
  * resolves the feature away instead of rendering a trigger whose commit would call `undefined`.
+ *
+ * ## Why the bare `true` warns
+ *
+ * Two of this API's rules meet here and only one can win. The scalar-or-object rule says `true`
+ * is "on with defaults"; this function says a write feature is on only once its handler is
+ * present. For a write there **is** no default: the grid cannot invent a deletion or a save, so
+ * "on with defaults" names a feature that can do nothing. The handler rule therefore wins — and
+ * the resolution that would otherwise happen in silence is announced instead, because a bare
+ * `true` is the one spelling that says nothing but "on" and so cannot be a defaults layer
+ * describing a look. Every other handler-less spelling stays silent on purpose: an object such
+ * as `deleting: { confirmation: … }` in a provider is exactly the app-wide description the
+ * paragraph above exists for, and it reaches grids that never meant to delete anything.
+ *
+ * `deepMerge` keeps a lower layer's config object under an upper layer's `true`
+ * (`utils/deep-merge.ts`), so the merged option is `true` only when **no** layer wrote more
+ * than "on" — which is what makes this check precise rather than merely cheap.
+ *
+ * What `deleting: { onDelete }` does is unchanged: it resolves to itself, as before.
  */
 function enabledByHandler<TConfig extends FeatureToggle>(
 	option: boolean | TConfig | undefined,
+	feature: string,
 	handler: keyof TConfig,
 ): TConfig | undefined {
 	const config = featureConfig(option)
-	if (config === undefined) return undefined
+	if (config === undefined) {
+		if (IS_DEV && option === true) {
+			warnOnce(
+				`[data-grid] \`${feature}: true\` turns the feature on but supplies no ` +
+					`\`${String(handler)}\`, and a write has no default the grid could run instead — so ` +
+					`${feature} resolves away and its affordance is not rendered. Write ` +
+					`\`${feature}: { ${String(handler)} }\` (the handler may come from any option layer).`,
+			)
+		}
+		return undefined
+	}
 	return typeof config[handler] === 'function' ? config : undefined
 }
 
 /**
- * Builds the write-feature slice of the table options, omitting every feature that resolved
- * to `undefined` — the keys are optional under `exactOptionalPropertyTypes`, so they must be
- * absent rather than set to `undefined`.
+ * The selector `useDataGrid` hands `useTable`.
+ *
+ * A module constant rather than an inline arrow because `useTable` feeds it to `useSelector`,
+ * which re-subscribes when the selector's identity moves — and this one never needs to.
+ *
+ * It returns `null` deliberately: `useDataGrid` does not subscribe to table state (it never did),
+ * and under v9 subscriptions stay narrow and live in the leaves. The consequence is a contract:
+ * **`table.state` is `null` on our tables and nothing may read it.** The reactive read is
+ * `table.Subscribe` / `useDataGridState`; the snapshot read is `table.store.state`.
  */
-function writeFeatureOptions<TRow extends object>(
-	creating: CreatingConfig<TRow> | undefined,
-	editing: EditingConfig<TRow> | undefined,
-	deleting: DeletingConfig<TRow> | undefined,
-) {
-	return {
-		...(creating !== undefined ? { creating } : {}),
-		...(editing !== undefined ? { editing } : {}),
-		...(deleting !== undefined ? { deleting } : {}),
+const SUBSCRIBE_TO_NOTHING = (): null => null
+
+/**
+ * Writes the controlled `state` prop into the table's base atoms.
+ *
+ * Retyped rather than cast at each call: the static function is generic over a feature set, and
+ * `TFeatures` is a parameter wherever this is called, so no concrete table is provably assignable
+ * to its parameter. Everything it touches — `_reactivity`, `baseAtoms`, `initialState` — is a
+ * reference `useTable`'s per-render spread shares with the instance it came from, so handing it a
+ * render's object is the same call as handing it the instance.
+ */
+const publishControlledState = table_publishExternalState as unknown as (table: unknown, state: unknown) => void
+
+/**
+ * Whether a state change was the controlled `state` prop's own value coming back.
+ *
+ * **Do not delete this as redundant.** The skip it performs used to live inside the state funnel
+ * that called `onStateChange`: `syncControlledState` wrote the prop into the store and did not fire
+ * the callback, on purpose. Both are gone, and `config.onStateChange` is now an ordinary
+ * `table.store` subscriber — so the controlled publish moves the store like any other write and the
+ * filter has to move to **this** side of the subscription. There is nowhere else left to put it.
+ *
+ * `config.onStateChange` means "the table's state moved", and a slice the consumer just handed
+ * the grid did not move on the grid's initiative — telling them about it loops any consumer that
+ * mirrors the callback into React state, which is the ordinary controlled shape.
+ *
+ * Returns `true` when nothing changed at all, and when **every** changed slice is present in
+ * `controlled` holding exactly the value the store now reports. One slice the consumer does not
+ * own, or owns at a different value, makes the whole change the grid's and it is emitted.
+ */
+function isControlledEcho(
+	prev: Record<string, unknown>,
+	next: Record<string, unknown>,
+	controlled: Record<string, unknown> | undefined,
+): boolean {
+	for (const key of new Set([...Object.keys(prev), ...Object.keys(next)])) {
+		if (prev[key] === next[key]) continue
+		if (controlled === undefined || !(key in controlled) || controlled[key] !== next[key]) return false
 	}
+	return true
 }
 
 /**
- * React hook that constructs the grid's `DataTable` once and returns it on every render. The
- * reference is stable — the table is created exactly once.
+ * React hook that constructs the grid's `DataTable` once and returns it on every render.
+ *
+ * **The reference is stable, and its contents are current.** There are three objects in play and
+ * only the last is this hook's: the table instance `useTable` builds once inside its own
+ * `useState`; the fresh `useMemo(() => ({ ...table, options, state }))` it returns on **every**
+ * render; and the view this hook keeps in a ref and refreshes from that one. The view is what a
+ * caller gets, what `<DataGrid>` publishes as `TableContext`, and what a dependency list naming
+ * `table` may safely hold — see the note at the `return`.
  *
  * The table **is** the return value; there is no wrapper around it. Everything imperative is a
  * method on it (`table.setPageIndex`, `table.creating.start()`, `table.setData`), the resolved
- * React options live on `table.grid`, and `table.subscribe` / `getSnapshot` /
- * `getInitialSnapshot` are what `useDataGridSelector` reads.
+ * React options live on `table.grid`, and `table.store` is the state channel —
+ * `table.store.state` for a snapshot, `table.store.subscribe` / `table.Subscribe` to observe it.
  *
  * `useDataGrid` itself does NOT subscribe to state changes. Components that
  * need to re-render on table state updates should call `useDataGridState`
@@ -908,18 +848,18 @@ function writeFeatureOptions<TRow extends object>(
  * const instance = useDataGrid({ data: users, columns, sorting: true })
  * return <DataGrid table={instance} />
  */
-export function useDataGrid<TRow extends object>(
-	instanceConfig: UseDataGridConfig<TRow>,
-	factoryDefaults?: DataGridDefaultOptions<TRow>,
-): DataTable<TRow> {
-	const providerDefaults = useDataGridOptions<TRow>()
+export function useDataGrid<TFeatures extends TableFeatures, TRow extends object>(
+	instanceConfig: UseDataGridConfig<TFeatures, TRow>,
+	factoryDefaults?: DataGridDefaultOptions<TFeatures, TRow>,
+): DataTable<TFeatures, TRow> {
+	const providerDefaults = useDataGridOptions<TFeatures, TRow>()
 	// The uncontrolled `<DataGrid data columns />` runs this hook itself, so the kit factory has
 	// no argument to bind its defaults to — the bound `DataGrid` publishes them as context instead.
-	const contextFactoryDefaults = useGridFactoryDefaults<TRow>()
+	const contextFactoryDefaults = useGridFactoryDefaults<TFeatures, TRow>()
 	const config = mergeGridOptionLayers(factoryDefaults ?? contextFactoryDefaults, providerDefaults, instanceConfig)
-	const creating = enabledByHandler(config.creating, 'onSave')
-	const editing = enabledByHandler(config.editing, 'onSave')
-	const deleting = enabledByHandler(config.deleting, 'onDelete')
+	const creating = enabledByHandler(config.creating, 'creating', 'onSave')
+	const editing = enabledByHandler(config.editing, 'editing', 'onSave')
+	const deleting = enabledByHandler(config.deleting, 'deleting', 'onDelete')
 	const {
 		cellTypes,
 		selection: rawSelection,
@@ -947,7 +887,7 @@ export function useDataGrid<TRow extends object>(
 	const messages = resolveMessages(messageOverrides)
 
 	// Split `selection` into the headless core part (`onChange` / `multi`) passed to
-	// createTable and the React-only `bar` stored on the instance for SelectionBar to read.
+	// createTable and the React-only `bar` stored on the instance for the ActionBar to read.
 	// `bar` is stripped so the core `selection` config never carries React-specific fields.
 	const selectionBar: boolean | ActionBarVariant | SelectionBarConfig<TRow> | undefined =
 		featureConfig(rawSelection)?.bar
@@ -974,7 +914,7 @@ export function useDataGrid<TRow extends object>(
 	// Typed at the React binding, not the core default: `selection.column.header` returns a
 	// `ReactNode` here, and `SelectionConfig` with its node parameter left to default would
 	// reject it.
-	const coreSelection: boolean | SelectionConfig<TRow, ReactNode> | undefined =
+	const coreSelection: boolean | SelectionConfig<TFeatures, TRow, ReactNode> | undefined =
 		typeof rawSelection === 'object' ? (({ bar: _bar, ...rest }) => rest)(rawSelection) : rawSelection
 
 	// Split pagination into the headless core part (strip React-only detection tuning and the
@@ -990,7 +930,6 @@ export function useDataGrid<TRow extends object>(
 					siblings: _siblings,
 					boundaries: _boundaries,
 					items: _items,
-					pageSizer: _pageSizer,
 					label: _label,
 					...rest
 				}) => rest)(rawPagination)
@@ -1000,33 +939,15 @@ export function useDataGrid<TRow extends object>(
 	// Page-based only: the selector drives `pageSize`, which infinite mode does not page by.
 	const paginationCfg = featureConfig(rawPagination)
 
-	// Which sizes the control offers. Resolved whenever page-based pagination is on, and
-	// deliberately independent of whether the toolbar auto-mounts it: `toolbar: false` means
-	// "do not mount it for me", not "there are no sizes" — a hand-placed
-	// `<DataGrid.PageSizer />` still needs the list.
+	// Which sizes the control offers. Resolved whenever page-based pagination is on, whether or
+	// not this grid's layout places a `<DataGrid.PageSizer />` — the list is data, and a sizer
+	// mounted anywhere reads it.
 	// `featureConfig` yields `undefined` for the bare `pagination: true`, so the on/off decision
 	// reads `isFeatureEnabled` and only the *settings* come from `paginationCfg`.
 	const isPagedPagination = isFeatureEnabled(rawPagination) && paginationCfg?.mode !== PaginationMode.Infinite
 	const paginationItems: number[] | undefined = isPagedPagination
 		? (paginationCfg?.items ?? [...DATA_GRID_DEFAULTS.pagination.items])
 		: undefined
-
-	// Whether the grid mounts the PageSizer itself, and where. Defaults to "yes when a list was
-	// supplied", in the toolbar — so the one-field case is unchanged.
-	const normalizedPageSizer: NormalizedPageSizerConfig | undefined = (() => {
-		if (!isPagedPagination) return undefined
-		const pageSizer = paginationCfg?.pageSizer
-		const defaultPlacement = DATA_GRID_DEFAULTS.pagination.pageSizer.placement
-		if (pageSizer === undefined) {
-			return paginationCfg?.items !== undefined ? { placement: defaultPlacement } : undefined
-		}
-		if (pageSizer === false) return undefined
-		if (pageSizer === true) return { placement: defaultPlacement }
-		if (typeof pageSizer === 'string') return { placement: pageSizer }
-		const config = featureConfig(pageSizer)
-		if (config === undefined) return undefined
-		return { placement: config.placement ?? defaultPlacement }
-	})()
 
 	// The footer's three display axes, each resolved once here so no UI kit ever has to fall
 	// back for itself. `label` keeps `false` distinct from an absent option: the first says
@@ -1050,7 +971,7 @@ export function useDataGrid<TRow extends object>(
 	const reactExpandingCfg = featureConfig(rawExpanding)
 	const coreGetRowCanExpand =
 		reactExpandingCfg?.getRowCanExpand ?? (reactExpandingCfg?.component !== undefined ? () => true : undefined)
-	const coreExpanding: boolean | ExpandingConfig<TRow> | undefined =
+	const coreExpanding: boolean | ExpandingConfig<TFeatures, TRow> | undefined =
 		rawExpanding === undefined
 			? undefined
 			: typeof rawExpanding === 'boolean'
@@ -1060,189 +981,293 @@ export function useDataGrid<TRow extends object>(
 						...(coreGetRowCanExpand !== undefined ? { getRowCanExpand: coreGetRowCanExpand } : {}),
 					}
 
-	// Split `visibility` the way `selection` and `globalFiltering` are split: the React-only
-	// `toolbar` is stripped for core and resolved separately for the UI. Collapsing the whole
-	// option to `isFeatureEnabled(visibility)` — which is what this used to pass — threw away
-	// `visibility.onChange`, so a grid that asked to be told when a column was hidden never was.
-	const coreVisibility: boolean | VisibilityConfig | undefined =
-		typeof visibility === 'object' ? (({ toolbar: _toolbar, ...rest }) => rest)(visibility) : visibility
-	// Both forms mount the control; `toolbar: false` is the opt-out. The object form used to
-	// default the other way, so `visibility: { onChange }` quietly shipped a grid whose columns
-	// could not be hidden from anywhere but a column menu — see {@link ReactVisibilityConfig}.
-	const normalizedVisibility: NormalizedFeatureToolbarConfig | undefined = isFeatureEnabled(visibility)
-		? { toolbar: typeof visibility === 'object' ? visibility.toolbar !== false : true }
-		: undefined
-
-	const normalizedSorting: NormalizedFeatureToolbarConfig | undefined = isFeatureEnabled(config.sorting)
-		? { toolbar: typeof config.sorting === 'object' && Boolean(config.sorting.toolbar) }
-		: undefined
+	// "This feature is on, so its control has something to drive." Derived, never authored:
+	// whether the control is *mounted* is now the layout's business, and the two questions were
+	// one `toolbar` flag until the controls became composition.
+	const visibilityEnabled = isFeatureEnabled(visibility)
+	const sortingEnabled = isFeatureEnabled(config.sorting)
 
 	const filteringCfg = featureConfig(rawFiltering)
 
-	const filteringVariant: FilteringVariant = filteringCfg?.variant ?? DATA_GRID_DEFAULTS.filtering.variant
-
 	const filteringDebounce: number = filteringCfg?.debounce ?? DEFAULT_FILTER_DEBOUNCE_MS
 
-	const normalizedChips: NormalizedFilterChipsConfig | undefined = (() => {
-		const chips = filteringCfg?.chips
-		if (chips === undefined || chips === false) return undefined
-		if (chips === true) return { position: DATA_GRID_DEFAULTS.filtering.chips.position }
-		// The scalar: a position and nothing else, which is all this option has ever had to say.
-		if (typeof chips === 'string') return { position: chips }
-		const config = featureConfig(chips)
-		if (!config) return undefined
-		return { position: config.position ?? DATA_GRID_DEFAULTS.filtering.chips.position }
-	})()
-
-	// Where the panel goes. Resolved only under the `panel` variant — under `inline` or
-	// `popover` the controls are in the header and there is no panel to place.
-	const normalizedFilterPanel: NormalizedFilterPanelConfig | undefined = (() => {
-		if (filteringVariant !== FilteringVariant.Panel) return undefined
-		const panel = filteringCfg?.panel
-		const defaultPlacement = DATA_GRID_DEFAULTS.filtering.panel.placement
-		if (panel === undefined) return { placement: defaultPlacement }
-		// The scalar: a placement and nothing else.
-		if (typeof panel === 'string') return { placement: panel }
-		const config = featureConfig(panel)
-		if (!config) return { placement: defaultPlacement }
-		return { placement: config.placement ?? defaultPlacement }
-	})()
-
-	const normalizedFilteringToolbar: NormalizedFilteringToolbarConfig | undefined = (() => {
-		const toolbar = filteringCfg?.toolbar
-		if (toolbar === undefined || toolbar === false) return undefined
-		if (toolbar === true) return { alwaysShow: DATA_GRID_DEFAULTS.filtering.toolbar.alwaysShow }
-		const config = featureConfig(toolbar)
-		if (!config) return undefined
-		return { alwaysShow: config.alwaysShow ?? DATA_GRID_DEFAULTS.filtering.toolbar.alwaysShow }
-	})()
-
+	// Only `debounce` is this layer's now; everything else on `filtering` is core's.
 	const coreFiltering: boolean | FilteringConfig | undefined =
-		typeof rawFiltering === 'object'
-			? (({ variant: _v, chips: _c, panel: _p, toolbar: _t, debounce: _d, ...rest }) => rest)(rawFiltering)
-			: rawFiltering
+		typeof rawFiltering === 'object' ? (({ debounce: _d, ...rest }) => rest)(rawFiltering) : rawFiltering
 
 	// Split `globalFiltering` into:
 	// - core part (fn, fns) — passed through to createTable
-	// - UI part (placeholder, debounce, toolbar) — stored on the table instance
-	//   via GLOBAL_FILTERING_KEY so Toolbar / GlobalFilterInput can read it
+	// - UI part (placeholder, debounce) — carried on `grid.globalFiltering` so
+	//   `GlobalFilterInput` can read it. Its presence is also what a layout gates the input on.
 	const normalizedGlobalFiltering: NormalizedGlobalFilteringConfig | undefined = (() => {
 		if (!isFeatureEnabled(rawGlobalFiltering)) return undefined
 		if (typeof rawGlobalFiltering !== 'object') {
-			return {
-				placeholder: messages.globalFiltering.placeholder,
-				debounce: filteringDebounce,
-				toolbar: true,
-			}
+			return { placeholder: messages.globalFiltering.placeholder, debounce: filteringDebounce }
 		}
 		return {
 			placeholder: rawGlobalFiltering.placeholder ?? messages.globalFiltering.placeholder,
 			// Falls back to the shared column-filter debounce, not to a second default of its
 			// own: one gesture, one timing, unless this box explicitly asks for another.
 			debounce: rawGlobalFiltering.debounce ?? filteringDebounce,
-			toolbar: rawGlobalFiltering.toolbar !== false,
 		}
 	})()
 
-	const coreGlobalFiltering: boolean | GlobalFilteringConfig | undefined = (() => {
+	const coreGlobalFiltering: boolean | GlobalFilteringConfig<TFeatures> | undefined = (() => {
 		if (rawGlobalFiltering === undefined || rawGlobalFiltering === false) return rawGlobalFiltering
 		if (rawGlobalFiltering === true) return true
 		// Strip the React-only UI fields and pass the rest through, rather than
 		// picking known core fields by name: an allowlist silently drops whatever it
 		// has not heard of — which is how `onChange` used to never reach the core and
 		// server-side global search never fired.
-		const { placeholder: _placeholder, debounce: _debounce, toolbar: _toolbar, ...coreFields } = rawGlobalFiltering
+		const { placeholder: _placeholder, debounce: _debounce, ...coreFields } = rawGlobalFiltering
 		return Object.keys(coreFields).length > 0 ? coreFields : true
 	})()
 
-	// Stable ref so the table closure always calls the latest onStateChange without re-creating the table
+	// Stable refs so the store subscription and the publish effect always see the latest props
+	// without having to be torn down and rebuilt when one of them changes identity.
 	const onStateChangeRef = useRef(onStateChange)
 	onStateChangeRef.current = onStateChange
+	const controlledStateRef = useRef(state)
+	controlledStateRef.current = state
 
-	const tableRef = useRef<DataTable<TRow> | null>(null)
-	tableRef.current ??= prepareDataGridTable(
-		createTable({
+	// ── the data the table is built on ────────────────────────────────────────
+	// `useTable` re-applies its options argument on **every** render
+	// (`table_setOptions(coreTable, prev => ({ ...prev, ...tableOptions }))`), so `data` can no
+	// longer be written once through `setOptions` and left alone: whatever the options bag carries
+	// wins each pass, and a projection written after the fact would be undone on the next render.
+	// These three refs are what the bag carries.
+	//
+	// - `dataProp` — the last `config.data` seen, so a genuinely new dataset is distinguishable
+	//   from a re-render.
+	// - `base` — the unprojected array the table is built on: the prop, or whatever `setData` last
+	//   supplied. `useOrderedData` projects *this*, never the already-projected value, or every
+	//   render would produce a fresh permutation of a permutation.
+	// - `projected` — that array seen through the uncontrolled row order, i.e. the value actually
+	//   handed to the table.
+	const dataPropRef = useRef(config.data)
+	const baseDataRef = useRef(config.data)
+	const projectedDataRef = useRef(config.data)
+	const isNewDataProp = config.data !== dataPropRef.current
+	if (isNewDataProp) {
+		dataPropRef.current = config.data
+		baseDataRef.current = config.data
+		projectedDataRef.current = config.data
+	}
+
+	// ── job 1 of `createTable`'s five: mint the draft atoms, once per instance ──
+	// Minted **outside** the resolver, in a `useState` initializer, because the atoms are the
+	// draft: building them inside `createTableOptions` would hand the table a fresh set on every
+	// render and reset what the user is composing on every keystroke.
+	//
+	// Both halves of the condition are core's (`create-table.ts:71-74`): the feature must be
+	// registered — without it there is no `applied` slice and the atoms are three objects nobody
+	// reads — and deferral must be on, since `draft: { enabled: false }` from a defaults layer is
+	// off. `features` is widened before the `in` for the reason core spells out: the operator
+	// throws on a non-object right-hand side, and a config that arrived past the type system is
+	// exactly the one with no `features` at all.
+	const [draftAtoms] = useState<DraftAtoms | undefined>(() => {
+		const registeredFeatures = (config.features as Record<string, unknown> | undefined) ?? {}
+		return 'draftFeature' in registeredFeatures && isFeatureEnabled(config.draft)
+			? createDraftAtoms(config.initialState)
+			: undefined
+	})
+
+	// The options, built in the render body. `useTable` calls `table_setOptions` on every render,
+	// so this object must be cheap to build but need **not** be referentially stable.
+	const {
+		options: resolvedOptions,
+		grid: coreGrid,
+		bindStateHandlers,
+	} = createTableOptions(
+		{
 			...restConfig,
-			...writeFeatureOptions(creating, editing, deleting),
+			// The three write features are enabled by their **handler**, not by their presence in
+			// the merged config (see `enabledByHandler`), and `restConfig` still carries whatever
+			// the option layers merged. So each key is restated here — as `undefined` when no
+			// handler resolved — rather than added only when one did. Under `useTable` this is the
+			// only chance to drop one: the options object is the table's whole statement of its
+			// options on every render, so a key left alone is a key that keeps its old value.
+			creating,
+			editing,
+			deleting,
 			filtering: coreFiltering,
 			globalFiltering: coreGlobalFiltering,
 			expanding: coreExpanding,
 			pagination: corePagination,
 			selection: coreSelection,
-			visibility: coreVisibility,
+			visibility,
 			// Destructured out of `restConfig` above (the React layer resolves `grid.ordering`
 			// from it), so it has to be handed back: core owns the `onChange` funnel.
 			...(rawOrdering !== undefined ? { ordering: rawOrdering } : {}),
-			onStateChange: (nextState) => onStateChangeRef.current?.(nextState),
-		} as TableConfig<TRow>),
+		} as TableConfig<TFeatures, TRow>,
+		// The cast is the generic boundary, not a widening — the same one `createTable` makes:
+		// `ExternalAtoms<TFeatures>` is keyed by a feature set unresolved here, so no concrete
+		// atom set is provably assignable to it.
+		draftAtoms !== undefined ? { atoms: draftAtoms as unknown as ExternalAtoms<TFeatures> } : {},
 	)
-	const table = tableRef.current
 
-	// Sync controlled state on every render — external state portions override internal state.
-	//
-	// We must push the update into BOTH TanStack's `options.state` AND the external
-	// snapshot store the React layer subscribes to (`useDataGridState`), otherwise
-	// components like Body never see the change. `syncControlledState` does both in
-	// one shot and skips `onStateChange` — the prop is the source of truth, so firing
-	// the callback would loop back through a consumer that mirrors it into React state.
-	//
-	// Skip the call when every supplied slice is referentially equal to the current
-	// snapshot — avoids redundant `store.setState` notifications on every render.
-	//
-	// The write is `silent`: it must happen during render so this very render reads
-	// the controlled values, but notifying here would run a subscribed child's
-	// `useSyncExternalStore` callback while this component is still rendering —
-	// React's "Cannot update a component while rendering a different component".
-	// Children re-render in this same pass and read the fresh snapshot themselves;
-	// the layout effect below wakes any subscriber that bailed out of the pass
-	// (a memoized subtree, a portal), before the browser paints.
-	const pendingNotifyRef = useRef(false)
-	if (state !== undefined) {
-		const snapshot = table.getSnapshot()
-		const hasChanges = (Object.keys(state) as (keyof TableState)[]).some((key) => snapshot[key] !== state[key])
-		if (hasChanges) {
-			table.syncControlledState(state, { silent: true })
-			pendingNotifyRef.current = true
-		}
+	// A key the resolver **stops** writing must still be written, as `undefined`. `useTable`
+	// merges `{ ...prev, ...tableOptions }`, so an omitted key keeps the value the previous render
+	// left behind — a grid that stops supplying `creating.onSave`, or turns `pagination.manual`
+	// off, would otherwise keep running on the config the last render set. Derived from the
+	// previous render's own key set rather than from a hand-written list of the resolver's
+	// conditional spreads, because such a list drifts from core silently and this cannot.
+	const previousOptionKeysRef = useRef<string[]>([])
+	const tableOptions: Record<string, unknown> = { ...resolvedOptions, data: projectedDataRef.current }
+	for (const key of previousOptionKeysRef.current) {
+		if (!(key in tableOptions)) tableOptions[key] = undefined
 	}
+	previousOptionKeysRef.current = Object.keys(resolvedOptions)
+
+	const table = useTable<TFeatures, TRow, null>(
+		tableOptions as unknown as TableOptions<TFeatures, TRow>,
+		SUBSCRIBE_TO_NOTHING,
+	) as unknown as DataTable<TFeatures, TRow>
+
+	// The object this hook hands out is created here and filled in at the end of the body; the
+	// long-form reason is at the `return`. In short: it is one object per **table**, refreshed
+	// each render, because `<DataGrid>` publishes it as `TableContext` and a context value whose
+	// identity moves every render re-renders every consumer — including subtrees React would
+	// otherwise bail out of. It is declared this early only so the effects below can name it.
+	//
+	// `useState` rather than a ref, for a checker's benefit rather than a runtime one: a
+	// `ref.current ??= …` is an assignment expression, and `react-hooks/exhaustive-deps` cannot
+	// tell that it yields the same value every render, so it warns that naming `view` in a
+	// dependency list makes that list change each pass. A `useState` initializer says "once" in a
+	// form the rule already understands, and the setter is deliberately dropped: nothing ever
+	// replaces this object.
+	const [view] = useState<DataTable<TFeatures, TRow>>(() => ({}) as DataTable<TFeatures, TRow>)
+
+	// ── jobs 2 and 3: bind the state handlers, and subscribe `config.onStateChange` ──
+	// Both are done exactly once, in the render that first sees the table, because both close over
+	// it and so cannot be passed to the `constructTable` call `useTable` makes inside its own
+	// `useState`.
+	//
+	// The handlers **survive** every later render for a checkable reason rather than by luck:
+	// `useTable` re-applies `{ ...prev, ...tableOptions }`, and `tableOptions` — everything
+	// `createTableOptions` returns — carries no `on<Slice>Change` key at all, so the merge cannot
+	// overwrite what is bound here. `use-data-grid-lifecycle.test.tsx` fires an `on<Slice>Change`
+	// *after* a re-render, which is the case a mount-only test would miss.
+	//
+	// The guard is set **last**, after the work it guards. Setting it first would mean a throw
+	// anywhere in this block — from `bindStateHandlers`, or from the first controlled publish —
+	// left the flag raised and the wiring permanently absent: no `on<Slice>Change` handler and no
+	// `onStateChange` subscriber, on a grid that otherwise renders. That is this migration's
+	// signature defect wearing a different hat, so the flag records that the block *finished*
+	// rather than that it started.
+	const instanceWiringRef = useRef(false)
+	if (!instanceWiringRef.current) {
+		// The updater is retyped rather than cast per-property: `TableOptions` is a mapped type
+		// over an unresolved `TFeatures`, so a spread of it is not assignable back to itself.
+		const setOptions = table.setOptions as unknown as (updater: (prev: Record<string, unknown>) => unknown) => void
+		setOptions((prev) => ({ ...prev, ...bindStateHandlers(table) }))
+
+		// The controlled `state` prop's **first** landing, during render rather than at commit.
+		// The write notifies, and notifying mid-render is React's "Cannot update a component while
+		// rendering a different component" — but only once there is something to notify, and on
+		// this render there is not: the table was constructed three lines ago and nothing has
+		// subscribed to it yet. Doing it here is what stops a controlled grid rendering its
+		// uncontrolled defaults for one whole pass, which is visible to any component that reads
+		// `table.store.state` in render without also subscribing. Every later publish waits for
+		// the commit; see the effect below.
+		//
+		// Ordered before the subscription deliberately, so the seed is not reported to the
+		// consumer as a change and the emitter's baseline is the state they already hold.
+		if (controlledStateRef.current !== undefined) publishControlledState(table, controlledStateRef.current)
+
+		// `config.onStateChange` — the consumer's whole-state callback. One subscription, read
+		// through `onStateChangeRef` so a changed prop is picked up without resubscribing.
+		//
+		// Subscribed unconditionally, unlike `createTable`, which skips it when the config
+		// supplied no callback: here the callback is a prop and may arrive on any later render,
+		// so there is no render at which "this grid never asked for it" is known.
+		//
+		// Under `draft` the emission is projected through the applied snapshot, so a draft edit —
+		// which moves a live axis the projection replaces — compares equal and stays silent.
+		// Gated on the atoms rather than on the feature, for core's reason: `draftFeature` with
+		// `draft` off seeds `applied` once and never moves it.
+		// Keyed off `lastState` so the emitter is built over the same erased shape the comparison
+		// below uses — `TableState<TFeatures>` has no index signature while `TFeatures` is a
+		// parameter, and neither this projection nor the echo filter names a slice.
+		let lastState = table.store.state as Record<string, unknown>
+		const projectApplied = draftAtoms === undefined ? undefined : createAppliedEmitter(lastState)
+		table.store.subscribe(() => {
+			const next = table.store.state as Record<string, unknown>
+			const previous = lastState
+			lastState = next
+			// Called for its bookkeeping even when the emission is suppressed below: the emitter
+			// compares against its own last projection, so skipping a call would leave it stale.
+			const projected = projectApplied === undefined ? next : projectApplied(next)
+			if (isControlledEcho(previous, next, controlledStateRef.current)) return
+			if (projected === undefined) return
+			onStateChangeRef.current?.(projected as TableState<TFeatures>)
+		})
+
+		instanceWiringRef.current = true
+	}
+
+	// ── the controlled `state` prop ──────────────────────────────────────────
+	// Published into the table's base atoms after commit, never into `options.state`.
+	//
+	// That looks like the long way round and is not. `constructTable` resolves a slice as
+	// `options.atoms[key] > options.state[key] > baseAtoms[key]` and **returns the controlled
+	// value unconditionally** once `options.state` owns the key — so a slice named there can
+	// never be moved by the grid: `table.setPageIndex(…)` writes the base atom, the derived atom
+	// keeps reporting the prop, the store never moves, and `config.onStateChange` never fires.
+	// That is the whole of controlled mode (`state` + `onStateChange`) silently doing nothing.
+	// Publishing instead keeps v8's contract: the prop is synced down, a user gesture moves the
+	// state and reaches the consumer, and the echo filter on the subscription above stops the
+	// consumer's own value being reported back to them.
+	//
+	// After the first render (which seeds it during render, above) every publish waits for the
+	// commit, because by then a subscribed child's `useSyncExternalStore` callback is live and
+	// waking it mid-render is React's "Cannot update a component while rendering a different
+	// component". It lands before paint, which is why `useTable` publishes its own controlled
+	// state from a layout effect too.
 	useSafeLayoutEffect(() => {
-		if (!pendingNotifyRef.current) return
-		pendingNotifyRef.current = false
-		// Cannot loop: notifying does not mutate state, so the next render finds
-		// every controlled slice equal and syncs nothing.
-		table.notifyStateSubscribers()
+		if (controlledStateRef.current === undefined) return
+		publishControlledState(table, controlledStateRef.current)
 	})
 
 	// ── publish the grid context ─────────────────────────────────────────────
-	// Same two-step as the controlled-state sync directly above, and for the same reason: the
-	// write has to land during render so this pass reads the new value, but waking a subscribed
-	// child's `useSyncExternalStore` callback mid-render is React's "Cannot update a component
-	// while rendering a different component". `syncGridContext` writes silently and reports
-	// whether a notify is owed; the layout effect flushes it before paint.
+	// The write happens during render so the very pass that resolves a new context reads it, and
+	// needs no layout effect of its own: `createGridContextAtom` builds this atom from `table`'s
+	// own render-phase reactivity binding, whose `commit` is already called unconditionally, every
+	// render, from `useTable`'s own internal layout effect — the same `table_publishExternalState`
+	// used above for controlled state, called there by `useTable` itself, not by this hook.
+	// Subscribers wake there, not here; see `createGridContextAtom`'s docblock for why writing
+	// during render is safe with this binding.
 	//
-	// It is compared rather than written blindly because `mergeGridOptionLayers` rebuilds the
-	// merged config on every render — an unconditional write would wake every reader of the
-	// whole-object form on every render of the grid.
-	const pendingContextNotifyRef = useRef(false)
-	if (syncGridContext(table.gridContext, context ?? EMPTY_GRID_CONTEXT)) {
-		pendingContextNotifyRef.current = true
+	// `syncGridContext` still compares before writing — `mergeGridOptionLayers` rebuilds the
+	// merged config on every render, and an unconditional write would defeat the atom's own
+	// snapshot compare and wake every reader of the whole-object form on every render of the grid.
+	//
+	// The atom itself is built once (the `??=`) and re-hung on every render's table, because
+	// `useTable` returns a fresh object each pass and a member assigned to a previous one does not
+	// travel: what the spread copies is the instance, and a caller has no handle on that.
+	const gridContextAtomRef = useRef<GridContextAtom | null>(null)
+	gridContextAtomRef.current ??= createGridContextAtom(table._reactivity)
+	const gridContext = gridContextAtomRef.current
+	syncGridContext(gridContext, context ?? EMPTY_GRID_CONTEXT)
+
+	// ── job 4 of five: `setData` ─────────────────────────────────────────────
+	// Built once — `table.setOptions` is installed on the instance at construction and is the same
+	// function reference for the instance's whole life, so the closure cannot go stale — and
+	// re-hung on each render's table for the reason above.
+	//
+	// It writes the two data refs as well as the options, because the options bag carries
+	// `projectedDataRef.current`: without that, the next render would re-apply the prop and
+	// silently undo the call.
+	const setDataRef = useRef<((data: TRow[]) => void) | null>(null)
+	setDataRef.current ??= (data: TRow[]): void => {
+		baseDataRef.current = data
+		projectedDataRef.current = data
+		const setOptions = table.setOptions as unknown as (updater: (prev: Record<string, unknown>) => unknown) => void
+		setOptions((prev) => ({ ...prev, data }))
 	}
-	useSafeLayoutEffect(() => {
-		if (!pendingContextNotifyRef.current) return
-		pendingContextNotifyRef.current = false
-		table.gridContext.notify()
-	})
+	const setData = setDataRef.current
 
-	// Re-sync feature configs every render so callbacks (e.g. creating.onSave)
-	// see the latest captured props/state instead of the closure from first mount.
-	// The three keys are dropped before being re-added so a grid that stops supplying a
-	// handler clears the feature instead of keeping the config the previous render set.
-	table.setOptions((prev) => {
-		const { creating: _creating, editing: _editing, deleting: _deleting, ...rest } = prev
-		return { ...rest, ...writeFeatureOptions(creating, editing, deleting) }
-	})
-
-	// ── publish the resolved options ─────────────────────────────────────────
+	// ── job 5 of five: publish the resolved options ──────────────────────────
 	// One typed object on the table instance, reassigned every render so every reader sees
 	// the freshest closures (notably `infinite.onLoadMore`). This replaced eighteen private
 	// `Symbol()` keys, each written and read through an untyped double cast.
@@ -1254,6 +1279,11 @@ export function useDataGrid<TRow extends object>(
 	const rowPinEnabled = config.pinning === true || isFeatureEnabled(pinningCfg?.row)
 	const virtualizationConfig = normalizeVirtualization(config.virtualization)
 	const expandingCfg = featureConfig(rawExpanding)
+
+	// Row-erased, the same erasure `rowProps` and `expanding.component` already take on this
+	// object: `rowActions.actions` is the only `TRow`-bound member of core's bag, and every reader
+	// of `table.grid` is a component with no `TRow` of its own.
+	const erasedCoreGrid = coreGrid as unknown as GridOptions<never>
 
 	// Only the axes that were named: `ordering: true` means columns, and keeps meaning columns
 	// (see `OrderingConfig`), so a grid written against it cannot silently gain row reordering
@@ -1268,9 +1298,19 @@ export function useDataGrid<TRow extends object>(
 	const columnOrderingCfg = featureConfig(orderingCfg?.column)
 	const orderingInVisibilityMenu = columnOrderingEnabled && columnOrderingCfg?.visibilityMenu === true
 
-	table.grid = {
+	// Rebuilt per render, and handed out on this render's table below. It cannot be written to the
+	// instance instead: `useTable` has already spread it by the time the hook body runs, so a
+	// member set on the instance now would first appear on the *next* render's object.
+	const grid: ResolvedGridOptions = {
 		cellTypes,
 		messages,
+		// Core's three, read straight off the bag `createTableOptions` returned rather than off the
+		// previous `table.grid`. Reading them back was only ever necessary because `createTable`
+		// wrote them onto the table before this layer overwrote it wholesale; with the resolver
+		// called here, the values are in hand and the read-back — which was not idempotent, since
+		// `rowPinning` is `pinning.rowConfig` by the time it lands — is gone.
+		rowActions: erasedCoreGrid.rowActions,
+		direction: erasedCoreGrid.direction,
 		...(rowProps !== undefined ? { rowProps: rowProps as unknown as RowPropsResolver<never> } : {}),
 		layout: {
 			stickyHeader: layout?.stickyHeader ?? false,
@@ -1282,29 +1322,31 @@ export function useDataGrid<TRow extends object>(
 			...(layout?.maxHeight !== undefined ? { maxHeight: layout.maxHeight } : {}),
 			...(layout?.classNames !== undefined ? { classNames: layout.classNames } : {}),
 		},
-		pinning: { column: colPinEnabled, row: rowPinEnabled },
-		ordering: { column: columnOrderingEnabled, row: rowOrderingEnabled, visibilityMenu: orderingInVisibilityMenu },
-		visibility: normalizedVisibility,
-		sorting: normalizedSorting,
-		filtering: {
-			variant: filteringVariant,
-			debounce: filteringDebounce,
-			chips: normalizedChips,
-			panel: normalizedFilterPanel,
-			toolbar: normalizedFilteringToolbar,
+		pinning: {
+			column: colPinEnabled,
+			row: rowPinEnabled,
+			// Core resolved this one, under its own name (`rowPinning`); see the note above.
+			...(erasedCoreGrid.rowPinning !== undefined ? { rowConfig: erasedCoreGrid.rowPinning } : {}),
 		},
+		ordering: { column: columnOrderingEnabled, row: rowOrderingEnabled, visibilityMenu: orderingInVisibilityMenu },
+		visibility: visibilityEnabled,
+		sorting: sortingEnabled,
+		filtering: { debounce: filteringDebounce },
 		globalFiltering: normalizedGlobalFiltering,
 		pagination: {
+			enabled: isPagedPagination,
 			links: paginationControls.links,
 			edges: paginationControls.edges,
 			label: paginationLabel,
 			siblings: paginationWindow.siblings,
 			boundaries: paginationWindow.boundaries,
 			...(paginationItems !== undefined ? { items: paginationItems } : {}),
-			pageSizer: normalizedPageSizer,
 			infinite: normalizedInfinite,
 		},
-		selection: { bar: normalizedSelectionBar },
+		// A crossing into the erased world, and the same one `rowProps` makes above: the
+		// consumer's callbacks are typed in their row, `ResolvedGridOptions` is row-erased,
+		// and v9's row types are invariant so the two do not overlap. See `ErasedRow`.
+		selection: { bar: normalizedSelectionBar as unknown as ResolvedGridOptions['selection']['bar'] },
 		expanding: {
 			component: expandingCfg?.component as ResolvedGridOptions['expanding']['component'],
 		},
@@ -1316,69 +1358,73 @@ export function useDataGrid<TRow extends object>(
 		virtualization: virtualizationConfig,
 	}
 
-	// NOTE: useDataGrid no longer calls useSyncExternalStore. Components that
-	// need to re-render on state changes subscribe themselves via
-	// `useDataGridState`, which always names the slice it depends on.
+	// NOTE: useDataGrid subscribes to no table state of its own — `SUBSCRIBE_TO_NOTHING` is what
+	// it hands `useTable`. Components that need to re-render on state changes subscribe
+	// themselves via `useDataGridState`, which always names the slice it depends on.
 
-	// Sync data synchronously during render — symmetrically with the other
-	// option-sync blocks above. Doing this in `useEffect` would update
-	// `options.data` AFTER child components (Body / Cell) had already
-	// rendered with the previous data, leaving the UI one step behind until
-	// another unrelated state change forced a re-render.
+	// ── the uncontrolled row order ───────────────────────────────────────────
+	// `data` projected through the row-order slice — see `useOrderedData`. The projection needs
+	// the table (it reads the slice and the *resolved* `getRowId`), and the table needs `data`, so
+	// the two cannot be resolved in one pass: this render's options bag carried the previous
+	// projection and the write below corrects it in the same render, before any child reads a row
+	// model. Doing it in an effect instead would leave Body and Cell a step behind.
 	//
-	// What reaches the table is `data` projected through the uncontrolled row order — see
-	// `useOrderedData`. That slice is an empty array until someone moves a row, and the
-	// projection returns the same reference for it, so an ordinary grid syncs exactly what it
-	// always did.
-	const orderedData = useOrderedData(table, config.data)
-	const dataRef = useRef(orderedData)
-	const dataSourceRef = useRef(config.data)
-	if (orderedData !== dataRef.current) {
+	// Nothing is written on an ordinary grid: the slice is a stable `[]` until the first move and
+	// the projection returns `data` itself, so `orderedData` is already what the bag carried.
+	const orderedData = useOrderedData(table, baseDataRef.current)
+	if (orderedData !== projectedDataRef.current) {
 		// A row move rewrites `data` without the dataset having changed at all, and TanStack's
-		// `autoResetPageIndex` cannot tell the two apart: it fires on any new `data` identity, so
-		// moving a row on page three would drop the user back on page one. Suppressed for exactly
-		// that render, and left to its default (`!manualPagination`) whenever the `data` prop
-		// itself is what changed — a genuinely new dataset should still reset the page.
-		const isReorderOnly = config.data === dataSourceRef.current
-		dataRef.current = orderedData
-		dataSourceRef.current = config.data
-		table.setOptions((prev) => {
-			const { autoResetPageIndex: _default, ...rest } = prev
-			return isReorderOnly ? { ...rest, data: orderedData, autoResetPageIndex: false } : { ...rest, data: orderedData }
+		// auto-resets cannot tell the two apart: `createCoreRowModel`'s memo is keyed on
+		// `options.data`, and its `onAfterUpdate` fires `table_autoResetPageIndex`,
+		// `table_autoResetExpanded`, `table_autoResetSorting` and `table_autoResetCellSelection`
+		// on any new identity. Two of those default to on and undo work the user just did:
+		//
+		// - `autoResetPageIndex` (`!manualPagination`) — moving a row on page three would drop
+		//   the user back on page one.
+		// - `autoResetExpanded` (`!manualExpanding`) — moving an expanded parent would collapse
+		//   it, so its children stop rendering the moment it lands. That is exactly what
+		//   `ordering/rows.spec.ts` "an expanded parent steps over its own children" caught:
+		//   `["2","1"]` where `["2","1","11","12"]` was expected.
+		//
+		// `autoResetSorting` defaults to `false` upstream and needs nothing;
+		// `autoResetCellSelection` defaults to `true` and is suppressed for the same reason as
+		// the other two.
+		//
+		// All three are suppressed for exactly this render and left to their defaults whenever
+		// the `data` prop itself is what changed — a genuinely new dataset should still reset.
+		//
+		// Note `table_autoResetExpanded` and `table_autoResetCellSelection` reach
+		// `_reactivity.schedule`, i.e. `queueMicrotask`, so the reset lands *after* the render
+		// that moved the row. A synchronous assertion straight after the move therefore reads
+		// the pre-reset state and sees nothing wrong — see `tree-row-ordering.test.tsx`.
+		projectedDataRef.current = orderedData
+		const setOptions = table.setOptions as unknown as (updater: (prev: Record<string, unknown>) => unknown) => void
+		setOptions((prev) => {
+			const {
+				autoResetPageIndex: _pageIndex,
+				autoResetExpanded: _expanded,
+				autoResetCellSelection: _cellSelection,
+				...rest
+			} = prev
+			return isNewDataProp
+				? { ...rest, data: orderedData }
+				: {
+						...rest,
+						data: orderedData,
+						autoResetPageIndex: false,
+						autoResetExpanded: false,
+						autoResetCellSelection: false,
+					}
 		})
 	}
 
-	// Re-sync the manual-pagination server-data descriptors (`rowCount` / `pageCount`)
-	// on every render, mirroring the create-time logic in `createTable`. These are
-	// options, not state, so the `state` sync block above never touches them — yet a
-	// server total is inherently reactive (e.g. it starts at 0, then reflects the
-	// filtered total after each fetch). Without this projection the grid would freeze
-	// `pageCount` / "X of N" at the value present on first mount. Prefer `rowCount`
-	// (let TanStack derive `pageCount`); otherwise fall back to `pageCount ?? -1`.
+	// The manual-pagination server-data descriptors (`rowCount` / `pageCount`) need no projection
+	// of their own any more. They are resolved from `pagination` by `createTableOptions`, which
+	// runs in the render body, so a server total that starts at 0 and grows reaches the table on
+	// the render it changes — and when `manual` goes away the key-set diff above writes them back
+	// to `undefined` rather than leaving the last render's totals in place.
 	const manualPagination = typeof corePagination === 'object' && corePagination.manual === true
 	const nextRowCount = manualPagination ? corePagination.rowCount : undefined
-	const nextPageCount = manualPagination
-		? nextRowCount !== undefined
-			? undefined
-			: (corePagination.pageCount ?? -1)
-		: undefined
-	const paginationDescriptorRef = useRef({ rowCount: nextRowCount, pageCount: nextPageCount })
-	if (
-		paginationDescriptorRef.current.rowCount !== nextRowCount ||
-		paginationDescriptorRef.current.pageCount !== nextPageCount
-	) {
-		paginationDescriptorRef.current = { rowCount: nextRowCount, pageCount: nextPageCount }
-		table.setOptions((prev) => {
-			// Assign only the defined descriptor and drop the other (both are optional
-			// options) — `exactOptionalPropertyTypes` forbids assigning `undefined`.
-			const next = { ...prev }
-			if (nextRowCount !== undefined) next.rowCount = nextRowCount
-			else delete next.rowCount
-			if (nextPageCount !== undefined) next.pageCount = nextPageCount
-			else delete next.pageCount
-			return next
-		})
-	}
 
 	// Clamp `pageIndex` to the last valid page when a manual-pagination `rowCount` shrinks
 	// under the user (e.g. a server filter narrows 500 rows to 5 while they sit on page 3).
@@ -1388,9 +1434,9 @@ export function useDataGrid<TRow extends object>(
 	// whole `data` under manual mode — still renders all 5 rows: the label contradicts the screen.
 	//
 	// Deliberately an effect rather than a render-body write like the sync blocks above:
-	// `setPageIndex` routes through `onStateChange`, i.e. the **consumer's** callback. Those
-	// blocks never reach the consumer — `setOptions` fires no callback and `syncControlledState`
-	// skips `onStateChange` on purpose (see the comment above it). Writing here during render
+	// `setPageIndex` moves real state and so reaches `config.onStateChange`, i.e. the
+	// **consumer's** callback. The render-body blocks never do — `setOptions` fires no callback,
+	// and the controlled publish is filtered by `isControlledEcho`. Writing here during render
 	// would therefore setState a parent mid-render ("Cannot update a component while rendering a
 	// different component"), so the notification waits for commit. The cost is one frame of the
 	// pre-clamp label — which is exactly the honest "0–0 of 5" the footer already shows today,
@@ -1409,23 +1455,85 @@ export function useDataGrid<TRow extends object>(
 	// instead of looping. Note this deliberately ignores a `pageSize` change at an unchanged
 	// total — `table.setPageSize` already rebases `pageIndex` itself, so only a consumer driving
 	// `pageSize` from its own state could sit out of range, which is outside this fix's scope.
+	//
+	// The dependency list may name the table because the table this hook returns is stable — see
+	// the note at the `return`. It matters here more than it looks: `prevRowCountRef` is advanced
+	// on **every** run, so an effect that re-ran for a reason other than the total moving would
+	// consume the shrink comparison and the clamp would not happen.
 	const prevRowCountRef = useRef<number | undefined>(undefined)
 	useEffect(() => {
 		const prevRowCount = prevRowCountRef.current
 		prevRowCountRef.current = nextRowCount
 		if (nextRowCount === undefined || prevRowCount === undefined) return
 		if (nextRowCount >= prevRowCount) return
-		const { pageIndex, pageSize } = table.getState().pagination
+		// `TFeatures` is a parameter here, so nothing gated on a registered feature is nameable on
+		// it — `setPageIndex` and `state.pagination` both are. Read through the widest
+		// instantiation, which is the *fullest* one (every declared slice resolves to its own
+		// type), exactly as the component layer does. A grid built without `rowPaginationFeature`
+		// has no `pagination` slice and this whole branch is unreachable: `pagination.manual`
+		// cannot be set on a grid that never registered it without the dev guard firing.
+		const paginated = view as unknown as DataTable<GridFeatures, TRow>
+		const { pageIndex, pageSize } = paginated.store.state.pagination
 		// An empty or otherwise degenerate total collapses to the single first page.
 		const lastPageIndex = nextRowCount <= 0 || pageSize <= 0 ? 0 : Math.ceil(nextRowCount / pageSize) - 1
-		if (pageIndex > lastPageIndex) table.setPageIndex(lastPageIndex)
-	}, [table, nextRowCount])
+		if (pageIndex > lastPageIndex) paginated.setPageIndex(lastPageIndex)
+	}, [view, nextRowCount])
 
 	// The loading status (`isPending`/`isFetching`/`isError`/`error`) is user-owned
 	// controlled state fed through the `state.loading` slice; it is handled by the
-	// generic `state` sync block above and the grid never writes it. hasNextPage is a
-	// pagination option read reactively from INFINITE_KEY by useInfiniteScroll. Neither
+	// generic controlled-state publish above and the grid never writes it. hasNextPage is a
+	// pagination option read reactively from `grid.pagination.infinite` by useInfiniteScroll. Neither
 	// needs a bespoke projection here.
 
-	return table
+	// ── the table this hook hands out ────────────────────────────────────────
+	// **One object per table, refreshed each render** — not one object per render.
+	//
+	// `useTable` returns a fresh object every render, and `<DataGrid>` puts whatever this hook
+	// returns into `TableContext` (`data-grid/data-grid.tsx`). A context value whose identity moves
+	// every render re-renders every consumer of that context — including a subtree React would
+	// otherwise have bailed out of, because a context change reaches a bailed-out element. That
+	// defeats the whole arrangement this package is built on: the root hook subscribes to nothing
+	// and subscriptions are narrow and live in the leaves. Two tests encode the invariant —
+	// `grid-context.test.tsx`'s "leaves that same reader alone when an unrelated key changes",
+	// which creates its probe element once precisely so React bails, and
+	// `rerender-isolation.test.tsx`.
+	//
+	// So the identity is kept still here, rather than by narrowing what `TableContext` carries:
+	// the churn has one local cause, and this is where it is.
+	//
+	// It is **our** view that is stable, not TanStack's object and not the instance. Nothing is
+	// written to either: `useTable`'s return is a `useMemo` result, and writing to a hook's output
+	// is what `react-hooks/immutability` exists to stop; the instance is not reachable from a
+	// caller at all, and the spread that produced `table` has already happened by the time this
+	// hook body runs, so a member set on it now would first surface one render late.
+	//
+	// Refreshed with `Object.assign` from this render's object rather than by naming the members
+	// that move. `options` and `state` are the two `useTable`'s `useMemo` rebuilds, but everything
+	// else in it is `{ ...instance }` and the instance does gain properties after construction —
+	// `_rowPrototype` is created lazily by the first `constructRow`. Copying the lot is the same
+	// work `useTable` already does on every render, so naming members would buy nothing and could
+	// go stale.
+	// ── `table.options` changed meaning, and this is the note that says so ───
+	// Under v8 it was the table's **resolved** options: whatever `createTable` merged, kept current
+	// by every `setOptions`. Under `useTable` it is the **raw argument** — `useTable.js:68-72`
+	// overrides `options` in the object it returns with the `tableOptions` it was handed — and that
+	// is what the line above copies onto the view. About twenty sites in this package read
+	// `table.options.*` (`data-grid/body.tsx`, `toolbar.tsx`, `cell.tsx`, `action-bar.tsx`,
+	// `creating-row.tsx`, `pagination.tsx`, `filter-panel.tsx`,
+	// `render-filter-input.tsx`, …), so this is a package-wide contract change and not a detail.
+	//
+	// **What makes it safe** is the key-set diff above: the options object this hook hands
+	// `useTable` is a *complete* statement of the table's options on every render, including the
+	// keys the resolver stopped writing. So a reader of `table.options.<anything the config
+	// decides>` sees this render's answer, which is what it saw under v8.
+	//
+	// **What is invisible in it** is anything written only through `setOptions` and never restated
+	// in that object. Today that is exactly two things: the `on<Slice>Change` handlers
+	// `bindStateHandlers` binds once — deliberately absent, since their absence from the argument is
+	// what stops the per-render merge overwriting them — and the `autoResetPageIndex: false` the
+	// row-order write sets. Neither is read by anything in this package. A third would be a defect,
+	// so **an option this package needs to read back must be written into the options object, not
+	// through `setOptions`.**
+	Object.assign(view, table, { grid, gridContext, setData })
+	return view
 }

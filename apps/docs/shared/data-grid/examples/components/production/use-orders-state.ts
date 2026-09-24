@@ -5,18 +5,18 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createOrder, deleteOrders, queryOrders, updateOrder, type OrdersQuery } from './server'
 
 import type { Order } from './data'
-import type { TableState } from '@ez-kit/data-grid-react'
+import type { GridFeatures, TableState } from '@ez-kit/data-grid-react'
 
 const DEFAULT_PAGE_SIZE = 10
 
-const INITIAL_STATE: Partial<TableState> = {
+const INITIAL_STATE: Partial<TableState<GridFeatures>> = {
 	pagination: { pageIndex: 0, pageSize: DEFAULT_PAGE_SIZE },
 	sorting: [],
 	columnFilters: [],
 	globalFilter: '',
 }
 
-function toQuery(state: Partial<TableState>): OrdersQuery {
+function toQuery(state: Partial<TableState<GridFeatures>>): OrdersQuery {
 	return {
 		pageIndex: state.pagination?.pageIndex ?? 0,
 		pageSize: state.pagination?.pageSize ?? DEFAULT_PAGE_SIZE,
@@ -32,7 +32,7 @@ function toQuery(state: Partial<TableState>): OrdersQuery {
  * Mutations write, then refetch the current query.
  */
 export function useOrdersState() {
-	const [tableState, setTableState] = useState<Partial<TableState>>(INITIAL_STATE)
+	const [tableState, setTableState] = useState<Partial<TableState<GridFeatures>>>(INITIAL_STATE)
 
 	const [rows, setRows] = useState<Order[]>([])
 	const [rowCount, setRowCount] = useState(0)
@@ -87,7 +87,7 @@ export function useOrdersState() {
 		void refetch()
 	}, [refetch, query])
 
-	const onStateChange = useCallback((next: TableState) => {
+	const onStateChange = useCallback((next: Partial<TableState<GridFeatures>>) => {
 		setTableState((prev) => {
 			const invalidatesPage =
 				next.sorting !== prev.sorting ||
@@ -96,7 +96,7 @@ export function useOrdersState() {
 
 			if (!invalidatesPage) return next
 
-			return { ...next, pagination: { pageIndex: 0, pageSize: next.pagination.pageSize } }
+			return { ...next, pagination: { pageIndex: 0, pageSize: next.pagination?.pageSize ?? DEFAULT_PAGE_SIZE } }
 		})
 	}, [])
 

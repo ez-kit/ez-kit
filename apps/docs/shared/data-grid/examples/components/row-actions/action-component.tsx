@@ -1,5 +1,13 @@
 'use client'
 
+import {
+	columnPinningFeature,
+	columnSizingFeature,
+	columnVisibilityFeature,
+	deletingFeature,
+	editingFeature,
+	tableFeatures,
+} from '@ez-kit/data-grid-core/features'
 import { Archive } from 'lucide-react'
 import { useState } from 'react'
 
@@ -8,6 +16,16 @@ import { DataGrid } from 'shared/DataGrid'
 import { columns, makeUsers } from '../_data'
 
 import type { User } from '../_data'
+
+const features = tableFeatures({
+	// Structural: the grid shell reads column widths, visibility and pin groups to lay out
+	// the column grid. Everything below is this example's own.
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	deletingFeature,
+	editingFeature,
+})
 
 /**
  * An entry that draws itself: a seat counter, with its own two buttons.
@@ -83,6 +101,7 @@ export function RowActionsComponentExample() {
 	return (
 		<div>
 			<DataGrid
+				features={features}
 				data={data}
 				columns={columns}
 				editing={{ mode: 'modal', onSave: () => Promise.resolve() }}

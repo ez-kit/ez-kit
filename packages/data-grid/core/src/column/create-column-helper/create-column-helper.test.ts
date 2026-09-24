@@ -58,12 +58,12 @@ describe('createColumnHelper', () => {
 				accessorKey: 'name',
 				header: 'Name',
 				sorting: false,
-				pinning: { side: 'left' },
+				pinning: { side: 'start' },
 				width: { default: 200, min: 50, max: 500 },
 				resizing: false,
 			})
 			expect(col.sorting).toBe(false)
-			expect(col.pinning).toEqual({ side: 'left' })
+			expect(col.pinning).toEqual({ side: 'start' })
 			expect(col.width).toEqual({ default: 200, min: 50, max: 500 })
 			expect(col.resizing).toBe(false)
 		})

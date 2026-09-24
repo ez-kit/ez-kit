@@ -1,5 +1,65 @@
 # @ez-kit/store-core
 
+## 1.2.0
+
+### Minor Changes
+
+- 1945534: Add `clearFutures()` to the history API. It empties the redo stack and keeps every undo step, for a write that must not be its own undo step (and so runs under `skip`) but still makes the old redo branch unreachable — which `skip` alone left in place, so a later `redo` could restore a state from a branch the user had already left. Call it before the skipped write.
+
+## 1.1.0
+
+### Minor Changes
+
+- 8805e0b: Add `partialize` to `withHistory`: the part of the state that history tracks.
+
+  `shouldRecord` decides which writes become history entries, but every step still snapshots, and
+  `undo` restores, the whole state. So a store that mixes data with UI state (a selection, an error
+  flag, a pending dialog) had that UI state rolled back by every `undo`. With
+  `partialize: (state) => ({ nodes: state.nodes, edges: state.edges })`:
+  - a step holds only the slice, so it also costs memory only for what it tracks;
+  - `undo` / `redo` / `goto` merge the slice back (`set(slice)` in zu-store, assigned onto the proxy
+    in va-store) instead of replacing the state, so fields outside it stay as they are;
+  - a write that leaves the slice shallow-equal records no step and keeps the redo stack.
+
+  `defaultPasts`, `defaultFutures` and `shouldRecord` are typed over the slice, and so are
+  `store.history`, `useHistory` and `useTimeline` (whose `current` is now the slice). Without
+  `partialize`, behaviour and types are unchanged: the new `TSlice` type parameter defaults to the
+  full state.
+
+  `@ez-kit/store-core/history` exports the shared `PartializeOption` type and the `isSameSlice` check
+  both bindings use.
+
+## 1.0.0
+
+### Major Changes
+
+- ec55356: 1.0 — the store packages' public API comes under semver.
+
+  This release is the promise, not a rewrite: nothing in it changes behaviour on its own. What ships is
+  the surface `@ez-kit/zu-store` 0.8, `@ez-kit/va-store` 0.4, `@ez-kit/store-core` 0.5 and
+  `@ez-kit/store-persist` 0.2 already shipped. What ends is the 0.x convention of landing a breaking
+  change as a minor. From here a break in any of the four is a major there, and a break in the shared
+  foundation that surfaces through a binding is a major in that binding too.
+
+  The four version **independently** from here. They reach 1.0 together because they are one surface cut
+  into a foundation, an engine and two bindings — but a feature in `@ez-kit/zu-store` does not move
+  `@ez-kit/va-store`, and an engine fix does not move a binding it did not change. Never read two matching
+  version numbers as a compatibility statement: the binding's own dependency range on `@ez-kit/store-core`
+  and `@ez-kit/store-persist` is what says which versions pair.
+
+  Covered: the binding root and its `history`, `persist`, `persist/storage`, `persist/url`,
+  `persist/url/next`, `persist/url/react-router`, `persist/validators/zod` and `persist/testing`
+  subpaths, plus `@ez-kit/store-core` and `@ez-kit/store-persist` themselves. Writing a **custom source
+  adapter** is covered — it is a `SourcePort`, and every type it needs is on the `persist` entry.
+
+  Not covered: `@ez-kit/store-persist/internals`, the engine's assembly primitives — binding a new state
+  manager to this engine is not a supported extension point yet; anything reached through a deep file
+  path; and the exact wording of error and warning messages, whose `[zu-store]` / `[va-store]` /
+  `[store-core]` / `[store-persist]` prefix is stable so they can be filtered on the tag.
+
+  The full statement, including the supported React / Zustand / Valtio / Node ranges, is on the Stability
+  page: https://ez-kit-docs.vercel.app/docs
+
 ## 0.5.0
 
 ### Minor Changes

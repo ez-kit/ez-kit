@@ -15,6 +15,7 @@ Expanding has no dedicated `expanding.onChange` — pass `expanded` through the 
 const [tableState, setTableState] = useState<Partial<TableState>>({ expanded: {} })
 
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	expanding={{

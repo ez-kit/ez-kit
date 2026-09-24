@@ -1,6 +1,6 @@
 'use client'
 
-import { useGridMessages } from '@ez-kit/data-grid-react'
+import { useGridMessages } from '@ez-kit/data-grid-react/kit'
 import { ListBox, Select } from '@heroui/react'
 
 import type { OperatorSelectProps } from '@ez-kit/data-grid-react'

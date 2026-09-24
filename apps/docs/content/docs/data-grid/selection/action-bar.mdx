@@ -1,0 +1,194 @@
+---
+title: Action Bar
+description: The grid's one floating or inline bar, with a live section per concern — the selection and its bulk actions, and the pending draft.
+---
+
+`<DataGrid.ActionBar />` raises a bar as soon as there is something to act on: a row is selected,
+or the draft is dirty. Either alone is enough — a grid with `draft` and no selection feature still
+gets the bar.
+
+It is **one** component with a section per concern — the selection, and the pending
+[draft](/docs/data-grid/state/deferred-apply) — so `children` receives `{ open, variant, selection,
+draft }` and each section is absent when it has nothing to show. It replaced a
+`SelectionBar` / `DraftBar` pair, which could both mount at the same sticky position because the
+gate hiding one of them did not re-run on a draft edit.
+
+## Floating
+
+A bar floats at the bottom of the table while a selection is active:
+
+<DataGridDocsExample exampleId='selection-bar' />
+
+```tsx
+<DataGrid.ActionBar>
+	{({ selection }) =>
+		selection && (
+			<>
+				<span>{selection.count} selected</span>
+				{selection.onDelete && <button onClick={selection.onDelete}>Delete</button>}
+				<button onClick={selection.onClear}>Cancel</button>
+			</>
+		)
+	}
+</DataGrid.ActionBar>
+```
+
+`selection` is `undefined` when selection is off, `bar: false`, or no selection feature is
+registered — so guard on it rather than assuming it is there. `open` is passed through rather than
+gating, so a custom bar can animate its own enter and exit instead of unmounting.
+
+`onDelete` already encodes the confirmation protocol: with a prompt configured it stages the
+delete and opens the dialog, without one it deletes immediately. Reaching for your own handler
+instead silently skips the prompt.
+
+## Inline
+
+The same content can be rendered as a normal block in the document flow — no portal, no z-index
+gymnastics:
+
+<DataGridDocsExample exampleId='selection-bar-inline' />
+
+```tsx
+selection: {
+	bar: { variant: 'inline' },
+}
+```
+
+`variant` says what the bar **looks like** — an in-flow strip against an overlay — not where it
+goes. Where it goes is where the layout writes it, and every shipped preset writes it **last**, so
+an `inline` bar on a preset sits _below_ the table, as in the example above. To put it above, write
+a layout of your own with `<DataGrid.ActionBar />` first — see
+[Composition](/docs/data-grid/layout/composition#layout-presets).
+
+## The draft section
+
+The draft half shows a label and then, per pending axis, a glyph and a number — `Unapplied ⇅2 ▽1`.
+An axis with nothing pending is not drawn, and search carries no number because it is only ever
+there or not. It is short because the two sections share one bar.
+
+The words live in one string, `messages.draft.summary`, which is both the section's `aria-label`
+and the text of the tooltip over the counts — so nothing is only available on hover:
+
+```txt
+Unapplied: 2 sorts, 1 filter, search
+```
+
+It is built from the per-axis segments (`draft.sorts`, `draft.filters`, `draft.search`), so
+overriding one of those carries into the long form too, and the separators are the dictionary's
+rather than the grid's:
+
+```ts
+messages: {
+	draft: {
+		sorts: ({ count }) => `${count} сорт.`,
+		summary: ({ label, parts }) => `${label} — ${parts.join('; ')}`,
+	},
+}
+```
+
+The tooltip is drawn by the kit's `core.Tooltip`, an optional component slot: a kit that registers
+none renders the counts unchanged and the name still says everything.
+
+## Custom actions
+
+`selection.bar.actions` builds the entries the bar offers for the selection. It is **data**, not
+markup — the same `ActionItem` shape [`rowActions.actions`](/docs/data-grid/row-actions/api#entry-shape) takes — so the
+kit draws each entry with the chrome its own Delete button has: your own icon element, the kit's
+danger colour for `destructive`, its disabled state for `disabled`.
+
+<DataGridDocsExample exampleId='selection-custom-action' />
+
+```tsx
+// One action, offered in both places, written once.
+const exportAction = (rows: Row<Product>[]) => ({
+	id: 'export',
+	label: 'Export',
+	icon: <Download />,
+	onAction: () => exportRows(rows),
+})
+
+rowActions: { actions: ({ row }) => [exportAction([row])] },
+selection: {
+	bar: { actions: ({ selectedRows }) => [exportAction(selectedRows)] },
+}
+```
+
+An entry's `onAction` takes no arguments: the callback that built it already closes over
+`selectedRows`, `table` and `clearSelection`. Return `[]` for a selection that offers nothing.
+
+An entry that this shape cannot express hands over its markup instead — `{ id, component }`, and
+the kit draws nothing around it:
+
+```tsx
+selection={{
+	bar: {
+		actions: ({ selectedRows }) => [
+			{ id: 'assign', component: <BulkAssign rows={selectedRows} /> },
+		],
+	},
+}}
+```
+
+The example above offers one entry of each kind: Export is described, the assignee picker is not.
+In the bar `component` stands exactly where the entry's button would have been. Prefer the
+described form while it fits: it is what keeps an entry matching the built-in Delete beside it in
+both kits. See [Drawing an entry yourself](/docs/data-grid/row-actions#drawing-an-entry-yourself).
+
+## Slots
+
+Content that is not an action — a bulk-target select, a counter — goes in the `start` / `end` slots
+of `<DataGrid.ActionBar>`, rendered around the kit's own controls. Same split as
+[`<DataGrid.Toolbar>`](/docs/data-grid/layout/composition): the config carries data, the compound component
+carries markup, and `children` still replaces the bar wholesale.
+
+```tsx
+<DataGrid.ActionBar end={<WarehousePicker />} />
+```
+
+Note the two slots feed the **selection section**, not the bar's two ends: that is what they are
+for — content about the selection — and the draft section has a fixed shape.
+
+## The Delete button
+
+The bar's Delete button is **not** configured here. Bulk delete is the `deleting` feature
+operating on more than one row, so its handler and its prompt live next to the per-row ones — see
+[Delete confirmation](/docs/data-grid/editing/deleting). The bar renders the button
+whenever `deleting.bulk` resolves to on.
+
+```tsx
+deleting: {
+	onDelete: ({ row }) => remove(row.original.id),
+	// One word: with no handler of its own, bulk delete loops `onDelete` over the selection.
+	bulk: true,
+}
+```
+
+```tsx
+deleting: {
+	onDelete: ({ row }) => remove(row.original.id),
+	bulk: {
+		// One call for the whole set — what a "delete these ids" endpoint wants.
+		onDelete: ({ rowIds }) => api.removeMany(rowIds),
+		confirmation: { title: 'Delete selected products?' },
+	},
+}
+```
+
+The deleted ids leave the selection once the handler resolves, so the bar never counts rows that
+no longer exist.
+
+## Options
+
+The bar is configured under `selection.bar` — `true` for the default bar, `'inline'` / `'floating'`
+for nothing but the render mode, or an object with the keys below. It renders only while
+`selection` is enabled. Everything here is presentational.
+
+| `selection.bar` key | Type                                                | Description                                                                               |
+| ------------------- | --------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `variant`           | `'floating' \| 'inline'`                            | Default `'floating'`.                                                                     |
+| `onClear`           | `({ table, selectedRows, clearSelection }) => void` | Notified after the bar clears the selection; `selectedRows` is the set it held.           |
+| `actions`           | `(args) => ActionItem[]`                            | Custom entries rendered between Delete and Cancel. See [Custom actions](#custom-actions). |
+
+## Source
+
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/action-bar.tsx`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/action-bar.tsx)

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { DataGrid } from 'shared/DataGrid'
 
 import { orderColumns, type Order } from './data'
+import { feedFeatures } from './features'
 import { queryOrders } from './server'
 
 const PAGE_SIZE = 25
@@ -60,11 +61,13 @@ export function ProductionFeedExample() {
 
 	return (
 		<DataGrid
+			features={feedFeatures}
 			data={rows}
 			columns={orderColumns}
 			state={state}
 			layout={{ stickyHeader: true }}
 			pinning={{ column: true }}
+			visibility
 			virtualization={{ row: { estimateSize: ESTIMATED_ROW_HEIGHT_PX, overscan: 10 } }}
 			pagination={{ mode: 'infinite', hasNextPage, onLoadMore, threshold: { rows: 8 } }}
 		/>

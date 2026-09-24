@@ -65,15 +65,37 @@ const PROBE_STORE_TYPE_NAME = 'DocsProbeStore'
 const PROBE_ARRAY_ROW_TYPE_NAME = 'DocsProbeArrayRow'
 /** The one array path of {@link PROBE_ARRAY_ROW_TYPE_NAME}. */
 const PROBE_ARRAY_NAME = 'items'
+/**
+ * The feature set the data-grid types are instantiated against.
+ *
+ * `TableFeatures` is the **widest** instantiation and also the fullest: it declares every feature
+ * key optionally, so `TableState<TableFeatures>` resolves to every slice and a config type
+ * parameterised by it exposes every key. That is what these checks want — the question is which
+ * option names are legal at all, not which ones a particular grid registered. It is the same
+ * instantiation the React package pins its own non-generic components to (`GridFeatures`).
+ */
+const PROBE_FEATURES_TYPE_NAME = 'DocsProbeFeatures'
 const PROBE_ROW_DECLARATION = [
 	`type ${PROBE_ROW_TYPE_NAME} = { id: string }`,
 	`type ${PROBE_STORE_TYPE_NAME} = StoreApi<${PROBE_ROW_TYPE_NAME}>`,
 	`type ${PROBE_ARRAY_ROW_TYPE_NAME} = { ${PROBE_ARRAY_NAME}: ${PROBE_ROW_TYPE_NAME}[] }`,
+	`type ${PROBE_FEATURES_TYPE_NAME} = TableFeatures`,
 ].join('\n')
-/** Import the probe file always carries, so store-generic types can be instantiated. */
-const PROBE_PRELUDE = "import type { StoreApi } from 'zustand/vanilla'"
-/** Type-argument list for row-generic config types, e.g. `UseDataGridConfig<TRow>`. */
+/** Imports the probe file always carries, so store- and feature-generic types can be instantiated. */
+const PROBE_PRELUDE = [
+	"import type { StoreApi } from 'zustand/vanilla'",
+	"import type { TableFeatures } from '@ez-kit/data-grid-core/features'",
+].join('\n')
+/** Type-argument list for row-generic config types, e.g. `ColumnDef<TRow>`. */
 export const ROW_TYPE_ARGS = `<${PROBE_ROW_TYPE_NAME}>`
+/**
+ * Type-argument list for the data-grid types that gained a `TFeatures` parameter in TanStack
+ * Table v9 — `UseDataGridConfig<TFeatures, TRow>`, `TableConfig<TFeatures, TRow>`,
+ * `SystemColumnDef<TFeatures, TRow>`. `ColumnDef` deliberately did **not** gain one.
+ */
+export const FEATURES_ROW_TYPE_ARGS = `<${PROBE_FEATURES_TYPE_NAME}, ${PROBE_ROW_TYPE_NAME}>`
+/** Type-argument list for the data-grid types generic over the feature set alone, e.g. `ReactGlobalFilteringConfig<TFeatures>`. */
+export const FEATURES_TYPE_ARGS = `<${PROBE_FEATURES_TYPE_NAME}>`
 /**
  * Type-argument list for the form packages' `<TFormData, TValue>` prop types, e.g.
  * `BaseFieldProps<TFormData, TValue>`. The value type only narrows `name`, never the key

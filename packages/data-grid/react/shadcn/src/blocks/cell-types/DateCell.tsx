@@ -1,6 +1,7 @@
 'use client'
 
-import { useGridMessages } from '@ez-kit/data-grid-react'
+import { baseCellTypes } from '@ez-kit/data-grid-react/cell-types'
+import { useGridMessages } from '@ez-kit/data-grid-react/kit'
 import { format, isValid, parseISO } from 'date-fns'
 
 import { Button } from '@grid-shadcn/components/ui/button'
@@ -8,7 +9,7 @@ import { Calendar } from '@grid-shadcn/components/ui/calendar'
 import { Field, FieldDescription, FieldError, FieldLabel } from '@grid-shadcn/components/ui/field'
 import { Popover, PopoverContent, PopoverTrigger } from '@grid-shadcn/components/ui/popover'
 
-import type { CellViewProps, DateCellConfig, FieldState } from '@ez-kit/data-grid-react'
+import type { CellTypeDefinition, CellViewProps, DateCellConfig, FieldState } from '@ez-kit/data-grid-react'
 import type { Matcher } from 'react-day-picker'
 
 const ISO_DATE_FORMAT = 'yyyy-MM-dd'
@@ -89,4 +90,19 @@ function DateCellInput({
 	)
 }
 
-export { DateCellInput, DateCellView }
+/**
+ * This kit's `date` registry entry — importable on its own, so a consumer can register only the
+ * cell types it uses. `blocks/cell-types.ts` composes the default registry from these.
+ *
+ * Annotated rather than inferred, and restating the phantom `__config` the spread carries: see
+ * the note on `KitCellTypes` in `../cell-types.ts` for what an inferred type does to the
+ * bundled declarations.
+ */
+const dateCellType: CellTypeDefinition<DateCellConfig> & { __config?: DateCellConfig } = {
+	...baseCellTypes.date,
+	view: DateCellView,
+	editing: DateCellInput,
+	filtering: DateCellInput,
+}
+
+export { DateCellInput, dateCellType, DateCellView }

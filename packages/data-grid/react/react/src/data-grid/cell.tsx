@@ -14,11 +14,13 @@ import { getCommonPinStyles } from '../utils/pin-styles'
 
 import { ActionsCell } from './actions-cell'
 import { getAlignAttrs } from './align-attrs'
+import { CellProvider } from './composition-context'
 import { flexRender } from './flex-render'
 import { useDataGridTable, useDataGridState } from './table-context'
 
 import type { CellTypeRegistry, CellViewProps } from '../cell-types-context'
-import type { ColumnAlign, ColumnPinSide, FieldState } from '@ez-kit/data-grid-core'
+import type { ErasedRow, GridFeatures } from '../types'
+import type { FormColumnMeta, ColumnAlign, ColumnPinSide, FieldState } from '@ez-kit/data-grid-core'
 import type { ColumnMeta, Cell, Row } from '@tanstack/table-core'
 import type { ComponentType, CSSProperties, ReactNode } from 'react'
 
@@ -29,37 +31,70 @@ import type { ComponentType, CSSProperties, ReactNode } from 'react'
  * `<DataGrid.Cell<Order>>` — and the render arguments are typed: `row.original` is an `Order`.
  * See {@link DataGridBodyRenderArgs} for why it is explicit rather than inferred.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type DataGridCellRenderArgs<TRow extends object = any> = {
-	cell: Cell<TRow, unknown>
-	row: Row<TRow>
+export type DataGridCellRenderArgs<TRow extends object = ErasedRow> = {
+	cell: Cell<GridFeatures, TRow>
+	row: Row<GridFeatures, TRow>
 	/** The cell's value, already resolved through the column's accessor. */
 	value: unknown
+	/**
+	 * What this cell would have rendered on its own — so a custom cell can wrap the default
+	 * instead of reimplementing it.
+	 *
+	 * Resolved for the cell's **current** state, not just its view renderer: the inline editor
+	 * while this cell is being edited, the selection checkbox or expand chevron on a system
+	 * column, the cell type's `view` otherwise, and TanStack's own `columnDef.cell` when the
+	 * column registered no type at all. Every lookup `cell.component` / `cell.type` /
+	 * `editing.component` feeds is already applied.
+	 *
+	 * This mirrors {@link DataGridHeaderCellRenderArgs}, which has handed back `label`,
+	 * `sortTrigger`, `menu`, `filter` and `resizer` since the header cell gained a render
+	 * function. A body cell has one part rather than five, so it is one field.
+	 */
+	content: ReactNode
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type DataGridCellProps<TRow extends object = any> = {
-	cell: Cell<TRow, unknown>
-	row: Row<TRow>
+export type DataGridCellProps<TRow extends object = ErasedRow> = {
+	cell: Cell<GridFeatures, TRow>
+	row: Row<GridFeatures, TRow>
 	/**
 	 * Custom content for this one cell, rendered inside the kit's `Td` — so the cell keeps its
 	 * pinning offset, its `data-*` attributes and its `cellClassName`.
 	 *
 	 * Omit it for the built-in content: the cell-type renderer, the inline editor, the system
-	 * column controls. Supply it to replace just the content of one cell.
+	 * column controls. Supply it to replace just the content of one cell — or, in the
+	 * render-function form, to **wrap** it: `content` in {@link DataGridCellRenderArgs} is
+	 * whatever this cell would have rendered, already resolved for its current state.
 	 *
 	 * A column-wide override belongs on the column instead (`cell.component`), which also feeds
 	 * the create and edit forms; this is for a single cell in a hand-composed row.
+	 *
+	 * @example — wrap the default rather than replace it
+	 * ```tsx
+	 * <DataGrid.Cell cell={cell} row={row}>
+	 *   {({ content, value }) => <Tooltip title={String(value)}>{content}</Tooltip>}
+	 * </DataGrid.Cell>
+	 * ```
 	 */
 	children?: ReactNode | ((args: DataGridCellRenderArgs<TRow>) => ReactNode)
 }
 
-/** The chrome a body cell wears regardless of what it renders: pin offsets and alignment. */
+/** The chrome a body cell wears regardless of what it renders: pin offsets, alignment, class. */
 type CellChrome = {
 	pinVars: CSSProperties
 	pinned: false | ColumnPinSide
 	pinnedAttrs: { 'data-pinned'?: ColumnPinSide }
 	alignAttrs: { 'data-align'?: ColumnAlign }
+	/**
+	 * The column's resolved `cellClassName`, as a spreadable attribute.
+	 *
+	 * Part of the chrome rather than computed per branch because it is a property of the
+	 * *column*, like the pin offset beside it. It used to be resolved in two of the four places
+	 * a `Td` is rendered — the view cell and the since-removed custom-content cell — so a system
+	 * column's `cellClassName` (a documented field of `SystemColumnDef`) reached the DOM only
+	 * when the consumer happened to supply custom cell content, and an edited cell dropped the
+	 * column's class for as long as it stayed open.
+	 */
+	classNameAttr: { className?: string }
 }
 
 const EMPTY_ERRORS: readonly string[] = Object.freeze([])
@@ -81,75 +116,47 @@ const FOCUSABLE_SELECTOR = 'input, select, textarea, button, [contenteditable="t
  * Renders a single table body cell.
  *
  * Dispatches to:
- * - {@link SystemCell} — for selection / expand / actions / row-pin system columns
+ * - {@link SystemCell} — for the three system columns: selection, expand, actions
+ *   (row pinning has no column of its own — its menu lives in the actions one)
  * - {@link BodyDataCell} — for regular data columns (with narrow editing subscription)
  *
- * Emits `data-slot="td"` plus `data-pinned="left" | "right"` for pinned columns;
+ * Emits `data-slot="td"` plus `data-pinned="start" | "end"` for pinned columns;
  * pin offsets are written as CSS custom properties via {@link getCommonPinStyles}.
  * The structural stylesheet shipped with this package applies the actual
  * `position: sticky` + offsets.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function DataGridCell<TRow extends object = any>({ cell, row, children }: DataGridCellProps<TRow>) {
+
+export function DataGridCell<TRow extends object = ErasedRow>({ cell, row, children }: DataGridCellProps<TRow>) {
 	const meta = cell.column.columnDef.meta
-	if (children !== undefined) {
-		return (
-			<CustomCell
-				cell={cell}
-				row={row}
-			>
-				{children}
-			</CustomCell>
-		)
-	}
+	// `children` is forwarded rather than diverted to a branch of its own. A cell's content is
+	// decided by which branch renders it — system control, inline editor, view renderer — and
+	// only that branch knows both what the default content is and which attributes its `Td`
+	// must wear (`data-error` and `data-editing-cell` on an open editor, `data-system-column`
+	// on a system one). Intercepting here, as this used to, meant a custom cell silently lost
+	// those attributes and could not reach the default content at all.
 	if (meta?.isSystemColumn) {
 		return (
 			<SystemCell
 				cell={cell}
 				row={row}
-			/>
+			>
+				{children}
+			</SystemCell>
 		)
 	}
 	return (
 		<BodyDataCell
 			cell={cell}
 			row={row}
-		/>
-	)
-}
-
-/**
- * A cell whose content the caller supplied. Keeps the `Td` shell — pinning vars, `data-slot`,
- * `data-pinned` and the column's `cellClassName` — so a replaced cell still lines up with its
- * neighbours and its pinned column still sticks.
- */
-function CustomCell({ cell, row, children }: DataGridCellProps) {
-	const { Td } = useGridComponents().core
-	const meta = cell.column.columnDef.meta
-	const chrome = getCellChrome(cell)
-	const cellClassName = resolveCellClassName(meta?.cellClassName, {
-		row: row.original as unknown,
-		value: cell.getValue<unknown>(),
-		rowIndex: row.index,
-	})
-
-	return (
-		<Td
-			data-slot='td'
-			style={chrome.pinVars}
-			pinned={chrome.pinned}
-			{...chrome.pinnedAttrs}
-			{...chrome.alignAttrs}
-			{...(cellClassName !== undefined ? { className: cellClassName } : {})}
 		>
-			{typeof children === 'function' ? children({ cell, row, value: cell.getValue<unknown>() }) : children}
-		</Td>
+			{children}
+		</BodyDataCell>
 	)
 }
 
 // ── system columns ──────────────────────────────────────────────────────────
 
-function SystemCell({ cell, row }: DataGridCellProps) {
+function SystemCell<TRow extends object>({ cell, row, children }: DataGridCellProps<TRow>) {
 	const columnId = cell.column.id
 	const chrome = getCellChrome(cell)
 	const { Td } = useGridComponents().core
@@ -157,17 +164,23 @@ function SystemCell({ cell, row }: DataGridCellProps) {
 	if (columnId === SELECTION_COLUMN_ID) {
 		return (
 			<SelectionCell
+				cell={cell}
 				row={row}
 				chrome={chrome}
-			/>
+			>
+				{children}
+			</SelectionCell>
 		)
 	}
 	if (columnId === EXPAND_COLUMN_ID) {
 		return (
 			<ExpandCell
+				cell={cell}
 				row={row}
 				chrome={chrome}
-			/>
+			>
+				{children}
+			</ExpandCell>
 		)
 	}
 	if (columnId === ACTIONS_COLUMN_ID) {
@@ -178,22 +191,34 @@ function SystemCell({ cell, row }: DataGridCellProps) {
 				pinned={chrome.pinned}
 				{...chrome.pinnedAttrs}
 				{...chrome.alignAttrs}
+				{...chrome.classNameAttr}
 				data-system-column='actions'
 			>
-				<ActionsCell row={row} />
+				{renderCellContent(
+					children,
+					cell,
+					row,
+					/*
+					 * A crossing into the erased world. `ActionsCell` lives entirely below the boundary
+					 * — it reads the table from context and renders the kit's `rowActions` component,
+					 * both of which are row-erased (see `ErasedRow`) — so its row prop is erased too,
+					 * and v9's invariance makes handing it a `Row<F, TRow>` a cast rather than an
+					 * assignment. Erasing here costs one assertion; typing `ActionsCell` at `TRow`
+					 * instead moved the same crossing onto its four kit-contract render sites.
+					 */
+					<ActionsCell row={row as unknown as Row<GridFeatures, ErasedRow>} />,
+				)}
 			</Td>
 		)
 	}
 	return null
 }
 
-type SystemSubProps = {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	row: Row<any>
+type SystemSubProps<TRow extends object> = DataGridCellProps<TRow> & {
 	chrome: CellChrome
 }
 
-function SelectionCell({ row, chrome }: SystemSubProps) {
+function SelectionCell<TRow extends object>({ cell, row, chrome, children }: SystemSubProps<TRow>) {
 	const { Td, Checkbox } = useGridComponents().core
 	const { messages } = useDataGridTable().grid
 	// Subscribe broadly to rowSelection so row.getIsSelected() / getIsSomeSelected()
@@ -209,20 +234,26 @@ function SelectionCell({ row, chrome }: SystemSubProps) {
 			pinned={chrome.pinned}
 			{...chrome.pinnedAttrs}
 			{...chrome.alignAttrs}
+			{...chrome.classNameAttr}
 		>
-			<Checkbox
-				value={isSelected}
-				{...(isIndeterminate !== undefined ? { indeterminate: isIndeterminate } : {})}
-				onChange={() => {
-					row.toggleSelected()
-				}}
-				aria-label={messages.selection.selectRow}
-			/>
+			{renderCellContent(
+				children,
+				cell,
+				row,
+				<Checkbox
+					value={isSelected}
+					{...(isIndeterminate !== undefined ? { indeterminate: isIndeterminate } : {})}
+					onChange={() => {
+						row.toggleSelected()
+					}}
+					aria-label={messages.selection.selectRow}
+				/>,
+			)}
 		</Td>
 	)
 }
 
-function ExpandCell({ row, chrome }: SystemSubProps) {
+function ExpandCell<TRow extends object>({ cell, row, chrome, children }: SystemSubProps<TRow>) {
 	const gridComponents = useGridComponents()
 	const { Td } = gridComponents.core
 	const { Chevron } = gridComponents.expanding
@@ -237,24 +268,30 @@ function ExpandCell({ row, chrome }: SystemSubProps) {
 			pinned={chrome.pinned}
 			{...chrome.pinnedAttrs}
 			{...chrome.alignAttrs}
+			{...chrome.classNameAttr}
 			data-system-column='expand'
 			data-depth={row.depth}
 		>
-			{canExpand ? (
-				<Chevron
-					expanded={isExpanded}
-					onClick={() => {
-						row.toggleExpanded()
-					}}
-				/>
-			) : null}
+			{renderCellContent(
+				children,
+				cell,
+				row,
+				canExpand ? (
+					<Chevron
+						expanded={isExpanded}
+						onClick={() => {
+							row.toggleExpanded()
+						}}
+					/>
+				) : null,
+			)}
 		</Td>
 	)
 }
 
 // ── data columns ────────────────────────────────────────────────────────────
 
-function BodyDataCell({ cell, row }: DataGridCellProps) {
+function BodyDataCell<TRow extends object>({ cell, row, children }: DataGridCellProps<TRow>) {
 	const table = useDataGridTable()
 	const { Td } = useGridComponents().core
 	const cellTypes = useCellTypes()
@@ -273,21 +310,46 @@ function BodyDataCell({ cell, row }: DataGridCellProps) {
 	// feature sets the same `editing.rowId` whichever mode raised it — so a row-mode test here
 	// used to open the row *behind* the dialog as well, leaving two live editors bound to one
 	// set of values. shadcn hid it (Radix `aria-hidden`s the background), heroui did not.
+	// Optional-chained: this selector runs for **every body cell of every grid**, before anything
+	// establishes that editing is configured, so a read-only grid needed `editingFeature`
+	// registered just to render a cell. Nothing below it is reached when the slice is absent —
+	// `isEditing` is `false`, so the editing branch never opens. See `feature-optionality.test.tsx`.
 	const isEditing = useDataGridState((s) => {
 		if (editMode === EditingMode.Modal) return false
-		return editMode === EditingMode.Cell ? s.editing.cellId === cellId : s.editing.rowId === row.id
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+		return editMode === EditingMode.Cell ? s.editing?.cellId === cellId : s.editing?.rowId === row.id
 	})
 
 	const isColumnEditable = meta?.editing !== false
 
-	if (isEditing && isColumnEditable) {
+	/*
+	 * A **static** `children` is a full opt-out of editing, where a render function is not.
+	 *
+	 * The two forms differ in one way that matters here: a function receives the editor as
+	 * `content` and decides where to put it, while a node cannot receive anything. Letting a
+	 * static node into the edit path renders it *instead of* the editor, and the cell then wears
+	 * `data-editing-cell`, installs the document-level Enter / Escape / pointer listeners that
+	 * commit a cell edit, finds nothing to focus, and commits when the pointer lands elsewhere —
+	 * all while looking exactly as before. `editing: false` on the column already expresses the
+	 * same opt-out; this is the per-cell spelling of it.
+	 *
+	 * It is checked here rather than in `DataGridCell` because it is a statement about the
+	 * editing path alone: a static node on a *system* column still renders, and so does one on a
+	 * column with no editing configured, which is the overwhelmingly common case.
+	 */
+	const isStaticContent = children !== undefined && typeof children !== 'function'
+
+	if (isEditing && isColumnEditable && !isStaticContent) {
 		return (
 			<EditingCell
 				cell={cell}
+				row={row}
 				editMode={editMode}
 				cellId={cellId}
 				chrome={chrome}
-			/>
+			>
+				{children}
+			</EditingCell>
 		)
 	}
 
@@ -295,18 +357,13 @@ function BodyDataCell({ cell, row }: DataGridCellProps) {
 	// `editing: false` opts a column out at every mode, cell mode included: it used to be
 	// bypassed here, so a read-only column still became an input on double-click.
 	const handleDoubleClick =
-		editMode === EditingMode.Cell && isColumnEditable
+		editMode === EditingMode.Cell && isColumnEditable && !isStaticContent
 			? () => {
 					table.editing.startCell(row.id, columnId)
 				}
 			: undefined
 
 	const viewComp = resolveViewComponent(meta, cellTypes)
-	const cellClassName = resolveCellClassName(meta?.cellClassName, {
-		row: cell.row.original as unknown,
-		value: cell.getValue<unknown>(),
-		rowIndex: cell.row.index,
-	})
 
 	return (
 		<Td
@@ -315,26 +372,29 @@ function BodyDataCell({ cell, row }: DataGridCellProps) {
 			pinned={chrome.pinned}
 			{...chrome.pinnedAttrs}
 			{...chrome.alignAttrs}
-			{...(cellClassName !== undefined ? { className: cellClassName } : {})}
+			{...chrome.classNameAttr}
 			onDoubleClick={handleDoubleClick}
 		>
-			{viewComp
-				? flexRender(viewComp, {
-						// `cell` is row-type-erased here, so `getValue()` and `row.original` are both
-						// `any`. The view contract says `unknown` — narrow once, at the boundary.
-						value: cell.getValue<unknown>(),
-						row: cell.row.original as unknown,
-						rowIndex: cell.row.index,
-						...(meta?.cell?.config !== undefined ? { config: meta.cell.config } : {}),
-					})
-				: flexRender(cell.column.columnDef.cell, cell.getContext())}
+			{renderCellContent(
+				children,
+				cell,
+				row,
+				viewComp
+					? flexRender(viewComp, {
+							// `cell` is row-type-erased here, so `getValue()` and `row.original` are both
+							// `any`. The view contract says `unknown` — narrow once, at the boundary.
+							value: cell.getValue<unknown>(),
+							row: cell.row.original as unknown,
+							rowIndex: cell.row.index,
+							...(meta?.cell?.config !== undefined ? { config: meta.cell.config } : {}),
+						})
+					: flexRender(cell.column.columnDef.cell, cell.getContext()),
+			)}
 		</Td>
 	)
 }
 
-type EditingCellProps = {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	cell: Cell<any, unknown>
+type EditingCellProps<TRow extends object> = DataGridCellProps<TRow> & {
 	editMode: EditingMode
 	cellId: string
 	chrome: CellChrome
@@ -353,7 +413,7 @@ type EditingCellProps = {
  * As a result, `setValue` on a different column does not re-render this cell:
  * only the one whose `values[columnId]` key actually changed re-renders.
  */
-function EditingCell({ cell, editMode, cellId, chrome }: EditingCellProps) {
+function EditingCell<TRow extends object>({ cell, row, editMode, cellId, chrome, children }: EditingCellProps<TRow>) {
 	const table = useDataGridTable()
 	const { Td, Input } = useGridComponents().core
 	const cellTypes = useCellTypes()
@@ -450,19 +510,25 @@ function EditingCell({ cell, editMode, cellId, chrome }: EditingCellProps) {
 			pinned={chrome.pinned}
 			{...chrome.pinnedAttrs}
 			{...chrome.alignAttrs}
+			{...chrome.classNameAttr}
 			{...(fieldError ? { 'data-error': true } : {})}
 			{...(isCellEdit ? { [EDITING_CELL_ATTR]: '' } : {})}
 		>
-			{editComp ? (
-				flexRender(editComp, fieldState)
-			) : (
-				<Input
-					value={(value ?? '') as string | number | readonly string[]}
-					onChange={(e) => {
-						table.editing.setValue(columnId, e.target.value)
-					}}
-					onBlur={fieldState.onBlur}
-				/>
+			{renderCellContent(
+				children,
+				cell,
+				row,
+				editComp ? (
+					flexRender(editComp, fieldState)
+				) : (
+					<Input
+						value={(value ?? '') as string | number | readonly string[]}
+						onChange={(e) => {
+							table.editing.setValue(columnId, e.target.value)
+						}}
+						onBlur={fieldState.onBlur}
+					/>
+				),
 			)}
 		</Td>
 	)
@@ -470,15 +536,65 @@ function EditingCell({ cell, editMode, cellId, chrome }: EditingCellProps) {
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 
-function getCellChrome(cell: Cell<unknown, unknown>): CellChrome {
+function getCellChrome<TRow extends object>(cell: Cell<GridFeatures, TRow>): CellChrome {
 	const pinVars = getCommonPinStyles(cell.column)
 	const pinned = cell.column.getIsPinned()
 	const pinnedAttrs: CellChrome['pinnedAttrs'] = pinned ? { 'data-pinned': pinned } : {}
-	return { pinVars, pinned, pinnedAttrs, alignAttrs: getAlignAttrs(cell.column.columnDef.meta, 'cell') }
+	// Guarded rather than delegated to `resolveCellClassName`: this runs for every cell of every
+	// grid on every render, and the argument object below reads `getValue()`, which most columns
+	// — every system column among them — have no reason to call here at all.
+	const cellClassNameOption = cell.column.columnDef.meta?.cellClassName
+	const cellClassName =
+		cellClassNameOption === undefined
+			? undefined
+			: resolveCellClassName(cellClassNameOption, {
+					row: cell.row.original,
+					value: cell.getValue<unknown>(),
+					rowIndex: cell.row.index,
+				})
+	return {
+		pinVars,
+		pinned,
+		pinnedAttrs,
+		alignAttrs: getAlignAttrs(cell.column.columnDef.meta as FormColumnMeta | undefined, 'cell'),
+		classNameAttr: cellClassName !== undefined ? { className: cellClassName } : {},
+	}
 }
 
-function resolveEditComponent(
-	meta: ColumnMeta<unknown, unknown> | undefined,
+/**
+ * Lays the caller's `children` over what the branch resolved, or hands the resolved content
+ * straight through when there are none.
+ *
+ * One helper for all four branches: which of them is rendering decides what `content` *is*, and
+ * nothing about how a caller replaces or wraps it.
+ */
+function renderCellContent<TRow extends object>(
+	children: DataGridCellProps<TRow>['children'],
+	cell: Cell<GridFeatures, TRow>,
+	row: Row<GridFeatures, TRow>,
+	content: ReactNode,
+): ReactNode {
+	/**
+	 * `value` behind a getter so the default path keeps not calling the accessor, and every
+	 * branch that renders a `Td` publishes the node without restating it — this one function is
+	 * the only place a body cell's content is resolved, so it is also the only place the context
+	 * has to be provided.
+	 */
+	const args: DataGridCellRenderArgs<TRow> = {
+		cell,
+		row,
+		get value() {
+			return cell.getValue<unknown>()
+		},
+		content,
+	}
+	const resolved = children === undefined ? content : typeof children !== 'function' ? children : children(args)
+
+	return <CellProvider value={args}>{resolved}</CellProvider>
+}
+
+function resolveEditComponent<TRow extends object>(
+	meta: ColumnMeta<GridFeatures, TRow> | undefined,
 	registry: CellTypeRegistry,
 ): ComponentType<FieldState> | undefined {
 	// 1. column-level editing.component
@@ -507,8 +623,8 @@ function resolveEditComponent(
  * The headless package ships **no** built-in cell types. Consumers/UI kits
  * register them via `CellTypesProvider` or `createDataGrid({ cellTypes })`.
  */
-function resolveViewComponent(
-	meta: ColumnMeta<unknown, unknown> | undefined,
+function resolveViewComponent<TRow extends object>(
+	meta: ColumnMeta<GridFeatures, TRow> | undefined,
 	registry: CellTypeRegistry,
 ): ComponentType<CellViewProps> | undefined {
 	// Returned as-is, never wrapped: `flexRender` mounts by component identity, so a wrapper

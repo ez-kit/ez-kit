@@ -9,9 +9,9 @@ import type { ResolvedGridOptions } from './resolved-options'
  * the split between headless and UI fields.
  *
  * Use it from a custom compound child or a UI-kit component that needs to agree with the grid
- * rather than guess: which filter variant is in play, what debounce the inputs use, whether a
- * control is already auto-mounted. Before this existed, that information sat behind private
- * `Symbol()` keys and a kit could only re-derive it from its own constants.
+ * rather than guess: what debounce the inputs use, which page sizes the sizer offers, which
+ * features are on. Before this existed, that information sat behind private `Symbol()` keys and
+ * a kit could only re-derive it from its own constants.
  *
  * Reads a ref, not state — it never triggers a re-render on its own. Subscribe to table state
  * with `useDataGridState` when you need that.

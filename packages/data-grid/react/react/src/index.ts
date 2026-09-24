@@ -30,30 +30,31 @@ export type { ColumnDef, CellDef, ColumnHelper } from './react-columns'
 
 // React hook
 export { useDataGrid } from './use-data-grid'
+/**
+ * `useDataGrid`'s return type — **this package's** `DataTable`, not core's.
+ *
+ * An explicit re-export shadows the same name from the `export * from '@ez-kit/data-grid-core'`
+ * above, exactly as `ColumnDef` / `createColumns` / `createColumnHelper` already do, and that is
+ * the point: the two are no longer the same type. Task 14 gave the React table
+ * `grid: ResolvedGridOptions` in place of core's `grid: GridOptions`, so a consumer who wrote
+ * `DataTable<Features, Invoice>` against this entry point and got core's would be holding a type
+ * that describes `table.grid` wrongly and does not declare `table.gridContext` at all.
+ */
+export type { DataTable } from './types'
 export type {
 	UseDataGridConfig,
-	ReactVisibilityConfig,
 	EmptyFallbackConfig,
 	ExpandedRowProps,
 	FallbacksConfig,
-	FilterChipsConfig,
-	FilteringToolbarConfig,
-	FilterPanelConfig,
 	LoadingFallbackConfig,
 	NoResultsFallbackConfig,
-	PageSizerConfig,
 	// The resolved shapes `ResolvedGridOptions` is built from. That type is public and a UI kit
 	// reads it through `useGridOptions()`, so the names of its members have to be nameable too —
-	// they were not, and a kit lifting `grid.filtering.chips` into a helper had no type to write.
+	// they were not, and a kit lifting `grid.globalFiltering` into a helper had no type to write.
 	NormalizedFallbackConfig,
 	NormalizedFallbacksConfig,
-	NormalizedFeatureToolbarConfig,
-	NormalizedFilterChipsConfig,
-	NormalizedFilteringToolbarConfig,
-	NormalizedFilterPanelConfig,
 	NormalizedGlobalFilteringConfig,
 	NormalizedInfiniteConfig,
-	NormalizedPageSizerConfig,
 	NormalizedSelectionBarConfig,
 	NormalizedVirtualizationConfig,
 	ReactExpandingConfig,
@@ -62,7 +63,6 @@ export type {
 	ReactPaginationConfig,
 	ReactRowActionsConfig,
 	ReactSelectionConfig,
-	ReactSortingConfig,
 	RowPropsResolver,
 	LayoutClassNames,
 	LayoutConfig,
@@ -76,11 +76,11 @@ export type {
 export { DATA_GRID_DEFAULTS, DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
 
 // Grid context — what the application and the kit decided, carried alongside the grid.
-// The interface ships empty and is extended by declaration merging; the store type is exported
+// The interface ships empty and is extended by declaration merging; the atom type is exported
 // because `table.gridContext` names it, so a consumer reaching the table has to be able to
 // name it too.
 export { useGridContext } from './grid-context'
-export type { GridContext, GridContextStore } from './grid-context'
+export type { GridContext, GridContextAtom } from './grid-context'
 
 // Resolved options — what the grid decided, readable by any compound child or UI kit
 export { useGridOptions } from './use-grid-options'
@@ -89,7 +89,13 @@ export type { ResolvedGridOptions } from './resolved-options'
 
 // The dictionary, re-exported from core so a UI kit reading `useGridOptions().messages` can
 // name its type without depending on core directly.
-export type { CountContext, FilterPlaceholderContext, GridMessages, PartialGridMessages } from '@ez-kit/data-grid-core'
+export type {
+	CountContext,
+	DraftSummaryContext,
+	FilterPlaceholderContext,
+	GridMessages,
+	PartialGridMessages,
+} from '@ez-kit/data-grid-core'
 
 // Grid overflow menu — one model for the column header menu and the row actions menu
 export { GridMenuIcon, GridMenuVariant, isGridMenuItemSlot, toMenuSections } from './menu'
@@ -119,6 +125,7 @@ export type { InfiniteController } from './data-grid/use-infinite-scroll'
 // Selector hook + store primitives
 export { useDataGridSelector } from './use-data-grid-selector'
 export { useDataGridState, useDataGridTable } from './data-grid/table-context'
+export { useDataGridCell, useDataGridHeaderCell, useDataGridRow } from './data-grid/composition-context'
 export { prepareDataGridTable } from './prepare-table'
 export { shallow } from './utils/shallow-equal'
 
@@ -131,7 +138,13 @@ export type { DataGridState, DataGridStateOptions, PersistableStateKey } from '.
 
 // Factory
 export { createDataGrid } from './create-data-grid'
-export type { CreateDataGridOptions, DataGridBundle } from './create-data-grid'
+export type {
+	BoundDataGrid,
+	BoundDataGridProps,
+	BoundUseDataGridConfig,
+	CreateDataGridOptions,
+	DataGridBundle,
+} from './create-data-grid'
 
 // UI-kit contract (tiers + full-support marker + feature map)
 export { GridFeature, FEATURE_COMPONENTS, COMPONENT_FEATURE } from './contract'
@@ -144,8 +157,6 @@ export type {
 	GridFilteringComponents,
 	GridEditingComponents,
 	GridDeletingComponents,
-	GridSelectionComponents,
-	GridDraftComponents,
 	GridRowActionsComponents,
 	GridResizingComponents,
 	GridVisibilityComponents,
@@ -156,7 +167,13 @@ export type {
 
 // Compound component
 export { DataGrid } from './data-grid/data-grid'
-export type { DataGridProps, DataGridControlledProps, DataGridUncontrolledProps } from './data-grid/data-grid'
+export type {
+	DataGridProps,
+	DataGridControlledProps,
+	DataGridSharedProps,
+	DataGridStatics,
+	DataGridUncontrolledProps,
+} from './data-grid/data-grid'
 export type { DataGridTableProps, DataGridTableRenderArgs } from './data-grid/table'
 export type { DataGridBodyProps, DataGridBodyRenderArgs } from './data-grid/body'
 export type { DataGridHeaderProps, DataGridHeaderRenderArgs } from './data-grid/header'
@@ -168,7 +185,6 @@ export type { DataGridFooterCellProps, DataGridFooterCellRenderArgs } from './da
 export type { DataGridRowProps, DataGridRowRenderArgs } from './data-grid/row'
 export type { DataGridCellProps, DataGridCellRenderArgs } from './data-grid/cell'
 export type { DataGridPaginationProps, DataGridPaginationRenderArgs } from './data-grid/pagination'
-export type { DataGridSelectionBarProps, DataGridSelectionBarRenderArgs } from './data-grid/selection-bar'
 export type { DataGridSortMenuTriggerProps, DataGridSortMenuTriggerRenderArgs } from './data-grid/sort-menu-trigger'
 export type {
 	DataGridVisibilityTriggerProps,
@@ -181,7 +197,8 @@ export type {
 } from './data-grid/filter-panel'
 export type { DataGridColumnFilterProps } from './data-grid/column-filter'
 export type { DataGridPageSizerProps, DataGridPageSizerRenderArgs } from './data-grid/page-sizer'
-export type { DataGridDraftBarProps, DataGridDraftBarRenderArgs } from './data-grid/draft-bar'
+export type { DataGridBottomBarProps } from './data-grid/bottom-bar'
+export type { DataGridActionBarProps, DataGridActionBarRenderArgs } from './data-grid/action-bar'
 export type { DataGridFormModalProps, DataGridFormModalRenderArgs } from './data-grid/form-modal'
 export type { DataGridCreatingModalProps } from './data-grid/creating-modal'
 export type { DataGridEditingModalProps } from './data-grid/editing-modal'
@@ -194,11 +211,15 @@ export type { DataGridClearFiltersButtonProps } from './data-grid/clear-filters-
 export type { DataGridCreateTriggerProps } from './data-grid/create-trigger'
 export type { DataGridGlobalFilterInputProps } from './data-grid/global-filter-input'
 
-// Sub-components (also available as DataGrid.SelectionBar)
-export { SelectionBar } from './data-grid/selection-bar'
-export { DraftBar } from './data-grid/draft-bar'
+// Sub-components (also available as DataGrid.ActionBar)
+export { ActionBar } from './data-grid/action-bar'
 export { ActiveFiltersBar } from './data-grid/active-filters-bar'
 export { ClearFiltersButton } from './data-grid/clear-filters-button'
+
+// Layout presets for `core.Layout` — what a UI kit binds so its prebuilt `<DataGrid>` renders
+// a full shell, and what an application starts from when composing its own. Pure composition;
+// see `./layouts` for why there are four of them.
+export { BottomBarLayout, DefaultLayout, FilterPanelLayout, PopoverFiltersLayout } from './layouts'
 
 // DI context
 export { GridComponentsProvider, useGridComponents } from './components-context'
@@ -228,6 +249,11 @@ export { getVisualLeafColumns } from './utils/visual-column-order'
 
 // UI-kit component contracts
 export type {
+	/**
+	 * The feature set every component below `<DataGrid>` is typed against — a UI kit writing a
+	 * component that receives a table names this, not a set of its own.
+	 */
+	GridFeatures,
 	ActionsCellProps,
 	FormShellProps,
 	BetweenInputProps,
@@ -236,7 +262,9 @@ export type {
 	VisibilityMenuProps,
 	ClearFilterButtonProps,
 	ConfirmDialogProps,
-	DraftBarProps,
+	ActionBarProps,
+	ActionBarSelectionSection,
+	ActionBarDraftSection,
 	EmptyStateProps,
 	FilterChipProps,
 	FilterPanelChipProps,
@@ -252,7 +280,6 @@ export type {
 	RefetchOverlayProps,
 	OperatorSelectProps,
 	ResizerProps,
-	SelectionBarProps,
 	SortColumnOption,
 	SortMenuItem,
 	SortMenuProps,
@@ -270,9 +297,14 @@ export type {
 	ThProps,
 	TheadProps,
 	TableProps,
+	LayoutProps,
+	RootProps,
 	TableScrollProps,
 	TableWrapperProps,
+	HeaderMainProps,
+	HeaderExtrasProps,
 	ToolbarProps,
+	TooltipProps,
 	TrProps,
 } from './types'
 
@@ -282,10 +314,7 @@ export type {
 export {
 	FilterChipKind,
 	FilterChipsPosition,
-	FilteringVariant,
-	FilterPanelPlacement,
 	LoadMoreTrigger,
-	PageSizerPlacement,
 	PaginationLabel,
 	RowActionId,
 	ActionsCellState,
@@ -307,9 +336,13 @@ export type {
 	ColumnOrderState,
 	ColumnPinningState,
 	ColumnSizingState,
+	// v9's spelling of v8's `VisibilityState`, and the one `visibility.onChange` is typed with
+	// since core moved (`core/src/types.ts`). The old name is not re-exported as an alias: it
+	// would be this package's own invention rather than a name TanStack still has, and the
+	// migration is one word at the consumer's import.
+	ColumnVisibilityState,
 	ExpandedState,
 	PaginationState,
 	RowPinningState,
 	RowSelectionState,
-	VisibilityState,
 } from '@tanstack/table-core'

@@ -10,6 +10,7 @@ is: this page is `ordering.column`, and [`ordering.row`](/docs/data-grid/row-ord
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	ordering
@@ -40,6 +41,7 @@ the visibility are two separate pieces of state rather than one list of visible 
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	visibility
@@ -81,6 +83,7 @@ writing direction, so up and down are what the arrows honestly point at. Their w
 
 ```tsx
 <DataGrid
+	features={features}
 	data={data}
 	columns={columns}
 	ordering={{ column: { onChange: (columnOrder) => save(columnOrder) } }}

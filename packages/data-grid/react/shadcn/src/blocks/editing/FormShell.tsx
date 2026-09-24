@@ -1,6 +1,6 @@
 'use client'
 
-import { useGridMessages } from '@ez-kit/data-grid-react'
+import { useGridMessages } from '@ez-kit/data-grid-react/kit'
 import { Loader2 } from 'lucide-react'
 
 import { Button } from '@grid-shadcn/components/ui/button'

@@ -8,8 +8,12 @@ export type DataGridClearFiltersButtonProps = {
 	/** Optional custom content. When omitted the kit renders its default (icon-only). */
 	children?: ReactNode
 	/**
-	 * Override the default hidden-when-empty behaviour. If omitted, falls back
-	 * to the value normalized from `filtering.toolbar` on the table config.
+	 * Keep the button visible, disabled, while no filter is active. Default: `false` — with
+	 * nothing to clear it renders nothing at all, so a toolbar does not carry a dead control.
+	 *
+	 * A prop rather than the `filtering.toolbar.alwaysShow` option it replaced: whether the
+	 * button is mounted is now the layout's decision, and this is behaviour of the one button
+	 * the layout mounted, not of the grid.
 	 */
 	alwaysShow?: boolean
 	/** Accessibility label. Defaults to "Clear filters" when omitted. */
@@ -19,32 +23,25 @@ export type DataGridClearFiltersButtonProps = {
 /**
  * Compound member: button that clears every active column filter AND the global filter.
  *
- * Hidden by default when no filter is active. Pass `alwaysShow={true}` (or set
- * `filtering: { toolbar: { alwaysShow: true } }` on the table config) to keep
- * it visible in a disabled state.
- *
- * Auto-mounted by `<Toolbar>` into `Toolbar.end` after `<GlobalFilterInput>`
- * when `filtering.toolbar` is truthy. Can also be placed manually via
- * `<DataGrid.ClearFiltersButton />`.
+ * Renders nothing while no filter is active, unless `alwaysShow`. Place it wherever a layout
+ * wants it — usually `Toolbar.end`, after the search box.
  *
  * The visual is owned by the UI kit via the `ClearFilterButton` DI slot; the
  * default rendering is icon-only.
  */
 export function ClearFiltersButton({
 	children,
-	alwaysShow: alwaysShowProp,
+	alwaysShow = false,
 	'aria-label': ariaLabel,
 }: DataGridClearFiltersButtonProps = {}) {
 	const table = useDataGridTable()
-	useDataGridState((s) => s.columnFilters)
-	useDataGridState((s) => s.globalFilter as unknown)
+	// The subscription is the read — see `active-filters-bar.tsx` for the note.
+	const columnFilters = useDataGridState((s) => s.columnFilters)
+	const globalFilter = useDataGridState((s) => s.globalFilter as unknown)
 	const { ClearFilterButton: Component } = useGridComponents().filtering
 
-	const cfg = table.grid.filtering.toolbar
-
-	const alwaysShow = alwaysShowProp ?? cfg?.alwaysShow ?? false
-	const hasColumnFilters = table.getState().columnFilters.length > 0
-	const hasGlobalFilter = Boolean(table.getState().globalFilter)
+	const hasColumnFilters = columnFilters.length > 0
+	const hasGlobalFilter = Boolean(globalFilter)
 	const hasAnyFilter = hasColumnFilters || hasGlobalFilter
 
 	if (!hasAnyFilter && !alwaysShow) return null

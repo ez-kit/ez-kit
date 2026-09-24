@@ -3,11 +3,13 @@ import { forwardRef } from 'react'
 
 import { useGridComponents } from '../components-context'
 import { joinClassNames } from '../utils/class-names'
-import { isTextEntryTarget } from '../utils/interactive-target'
+import { isTextEntryTarget } from '../utils/text-entry-target'
 
 import { DataGridCell } from './cell'
+import { RowProvider } from './composition-context'
 import { useDataGridState, useDataGridTable } from './table-context'
 
+import type { ErasedRow, GridFeatures } from '../types'
 import type { PinSide } from './use-pinned-row-offsets'
 import type { RowPropsResolver } from '../use-data-grid'
 import type { Row } from '@tanstack/table-core'
@@ -20,16 +22,22 @@ import type { CSSProperties, KeyboardEvent, ReactElement, ReactNode, Ref } from 
  * `<DataGrid.Row<Order>>` — and the render arguments are typed: `row.original` is an `Order`.
  * See {@link DataGridBodyRenderArgs} for why it is explicit rather than inferred.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type DataGridRowRenderArgs<TRow extends object = any> = {
-	row: Row<TRow>
+export type DataGridRowRenderArgs<TRow extends object = ErasedRow> = {
+	row: Row<GridFeatures, TRow>
 	/** The row's visible cells, in column order — already filtered by column visibility and pinning. */
-	cells: ReturnType<Row<TRow>['getVisibleCells']>
+	cells: ReturnType<Row<GridFeatures, TRow>['getVisibleCells']>
+	/**
+	 * The row's default cells — one `<DataGrid.Cell>` per entry of `cells`, keyed.
+	 *
+	 * So a custom row can add to the row rather than rebuild it: prepend a drag handle, append a
+	 * spacer, wrap the lot. Mapping `cells` yourself stays the way to change what a *particular*
+	 * cell renders; this is for the rows that only wanted something beside the defaults.
+	 */
+	content: ReactNode
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type DataGridRowProps<TRow extends object = any> = {
-	row: Row<TRow>
+export type DataGridRowProps<TRow extends object = ErasedRow> = {
+	row: Row<GridFeatures, TRow>
 	style?: CSSProperties
 	/** Forwarded to the kit's `Tr`; pinned rows are measured through it (see `usePinnedRowOffsets`). */
 	ref?: Ref<HTMLTableRowElement>
@@ -48,8 +56,59 @@ export type DataGridRowProps<TRow extends object = any> = {
 	 *   {({ cells }) => cells.map((cell) => <DataGrid.Cell key={cell.id} cell={cell} row={row} />)}
 	 * </DataGrid.Row>
 	 * ```
+	 *
+	 * @example — keep the default cells and add to them
+	 * ```tsx
+	 * <DataGrid.Row row={row}>
+	 *   {({ content }) => <>{content}<td data-slot='td' /></>}
+	 * </DataGrid.Row>
+	 * ```
 	 */
 	children?: ReactNode | ((args: DataGridRowRenderArgs<TRow>) => ReactNode)
+}
+
+/**
+ * The row's default cells, and the caller's `children` laid over them — the row-level twin of
+ * `renderCellContent`.
+ *
+ * A static `children` returns before the cells are built, because it provably cannot place them.
+ * A render function does not: it may, so the default is built and handed over, which costs an
+ * array of React elements and no DOM if it turns out to drop them.
+ */
+function renderRowContent<TRow extends object>(
+	children: DataGridRowProps<TRow>['children'],
+	row: Row<GridFeatures, TRow>,
+	cells: DataGridRowRenderArgs<TRow>['cells'],
+): ReactNode {
+	/**
+	 * `content` behind a cached getter, which is what preserves the skip above now that a static
+	 * child *can* reach it — through `useDataGridRow()`. The work went from "never done for a
+	 * static child" to "done if that child asks", and a render function pays exactly what it did
+	 * before. The cache is per call, so a body reading `content` twice builds one array.
+	 */
+	let built: ReactNode
+	let isBuilt = false
+	const args: DataGridRowRenderArgs<TRow> = {
+		row,
+		cells,
+		get content() {
+			if (!isBuilt) {
+				built = cells.map((cell) => (
+					<DataGridCell
+						key={cell.id}
+						cell={cell}
+						row={row}
+					/>
+				))
+				isBuilt = true
+			}
+			return built
+		},
+	}
+
+	const content = children === undefined ? args.content : typeof children === 'function' ? children(args) : children
+
+	return <RowProvider value={args}>{content}</RowProvider>
 }
 
 /**
@@ -70,17 +129,18 @@ export type DataGridRowProps<TRow extends object = any> = {
 // `forwardRef`, not a `ref` prop: React 19 passes `ref` through props, React 18 strips it before
 // the component sees it, and this package supports both. The generic is restored by the cast
 // below — `forwardRef` erases type parameters, and `<DataGrid.Row<Order>>` has to keep working.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function DataGridRowImpl<TRow extends object = any>(
+
+function DataGridRowImpl<TRow extends object = ErasedRow>(
 	{ row, style, 'data-pinned': dataPinned, 'data-virtual': dataVirtual, children }: Omit<DataGridRowProps<TRow>, 'ref'>,
 	ref: Ref<HTMLTableRowElement>,
 ) {
 	const { Tr } = useGridComponents().core
 	const table = useDataGridTable<TRow>()
-	// `table.grid` is row-erased, so the stored resolver is typed `Row<never>`; the row we hold
-	// is the very one it was written against.
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const resolveRowProps = table.grid.rowProps as RowPropsResolver<any> | undefined
+	// A crossing back out of the erased world, and the mirror of the one `useDataGrid` makes
+	// when it stores this resolver. `table.grid` is row-erased (see `ErasedRow`), so the stored
+	// resolver is typed against `never`; the row we hold here is the very one the consumer wrote
+	// it against, so re-instantiating it at `TRow` restores the type it had before erasure.
+	const resolveRowProps = table.grid.rowProps as RowPropsResolver<TRow> | undefined
 	// Selection state is derived, not read: a parent row counts as selected through its
 	// children, which only TanStack knows. The selector therefore ignores its argument and
 	// re-derives on every store change — it returns a boolean, so `useSyncExternalStore` bails
@@ -92,7 +152,12 @@ function DataGridRowImpl<TRow extends object = any>(
 	// literal *after* spreading incoming props, so a kit built on RAC (heroui) always erases a
 	// value passed from here — RAC's selection manager is idle, since the grid's selection lives
 	// in TanStack. `data-row-*` is this layer's own namespace and nothing overwrites it.
-	const isSelected = useDataGridState(() => row.getIsSelected())
+	// Optional-called: this runs for every row of every grid, and the method only exists once
+	// `rowSelectionFeature` is registered — so a grid with selection off could not render a row.
+	// The system-column read in `cell.tsx` is genuinely conditional and needs no guard; this one
+	// is not, which is why a sweep that looked at the selection path missed it.
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const isSelected = useDataGridState(() => row.getIsSelected?.() ?? false)
 
 	const canMove = table.grid.ordering.row
 	/**
@@ -116,7 +181,7 @@ function DataGridRowImpl<TRow extends object = any>(
 				if (!e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return
 				// Only a control that owns `Alt+Arrow` keeps it — a text field moving by word, a
 				// native select opening. A checkbox or a button does not, and a row has nothing
-				// else to focus, so the header's broader guard would refuse every event here.
+				// else to focus, so a predicate counting those would refuse every event here.
 				if (isTextEntryTarget(e)) return
 				const direction = e.key === 'ArrowUp' ? RowMoveDirection.Up : RowMoveDirection.Down
 				if (!table.ordering.canMoveRow(row.id, direction)) return
@@ -142,17 +207,7 @@ function DataGridRowImpl<TRow extends object = any>(
 			{...(onRowKeyDown ? { onKeyDown: onRowKeyDown } : {})}
 			{...(canMove ? { 'data-movable': 'true' } : {})}
 		>
-			{children === undefined
-				? cells.map((cell) => (
-						<DataGridCell
-							key={cell.id}
-							cell={cell}
-							row={row}
-						/>
-					))
-				: typeof children === 'function'
-					? children({ row, cells })
-					: children}
+			{renderRowContent(children, row, cells)}
 		</Tr>
 	)
 }
@@ -162,6 +217,6 @@ function DataGridRowImpl<TRow extends object = any>(
  * signature it was written with. `DataGridRowProps` keeps `ref` in props — that is how a React 19
  * consumer reads it, and a React 18 one passes `ref` the same way at the call site.
  */
-export const DataGridRow = forwardRef(DataGridRowImpl) as <TRow extends object = any>( // eslint-disable-line @typescript-eslint/no-explicit-any
+export const DataGridRow = forwardRef(DataGridRowImpl) as <TRow extends object = ErasedRow>(
 	props: DataGridRowProps<TRow>,
 ) => ReactElement | null

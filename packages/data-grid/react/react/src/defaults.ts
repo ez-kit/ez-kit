@@ -16,15 +16,7 @@ import {
 } from '@ez-kit/data-grid-core'
 
 import { DEFAULT_PAGE_BOUNDARIES, DEFAULT_PAGE_SIBLINGS } from './data-grid/page-window'
-import {
-	ActionBarVariant,
-	FilterChipsPosition,
-	FilteringVariant,
-	FilterPanelPlacement,
-	LoadMoreTrigger,
-	PageSizerPlacement,
-	PaginationLabel,
-} from './types'
+import { ActionBarVariant, LoadMoreTrigger, PaginationLabel } from './types'
 
 /**
  * Default commit debounce (ms) for **every** text filter input — the per-column ones and the
@@ -67,8 +59,6 @@ export const DATA_GRID_DEFAULTS = {
 		pageSize: DEFAULT_PAGE_SIZE,
 		/** Offered by the PageSizer when it is mounted and no list is supplied. */
 		items: [10, 20, 50, 100],
-		/** Where the auto-mounted PageSizer goes when the config names no region. */
-		pageSizer: { placement: PageSizerPlacement.Toolbar },
 		/** What pagination does. */
 		mode: PaginationMode.Pages,
 		/** Page-number links beside prev/next. */
@@ -90,23 +80,9 @@ export const DATA_GRID_DEFAULTS = {
 			px: 200,
 		},
 	},
-	/**
-	 * Cross-column global search input. Debounce falls back to `filtering.debounce`, and the
-	 * placeholder to `messages.globalFiltering.placeholder` — a default string belongs in the
-	 * dictionary, which is the only place a consumer can replace it.
-	 */
-	globalFiltering: {
-		/** Auto-mounted in the toolbar as soon as global search is enabled. */
-		toolbar: true,
-	},
 	/** Column filtering controls. */
 	filtering: {
-		variant: FilteringVariant.Inline,
 		debounce: DEFAULT_FILTER_DEBOUNCE_MS,
-		chips: { position: FilterChipsPosition.Above },
-		/** Where the `panel` variant's panel goes when the config names no region. */
-		panel: { placement: FilterPanelPlacement.Above },
-		toolbar: { alwaysShow: false },
 		/** Faceted row models are opt-in — they cost a row model per column. */
 		faceted: false,
 	},

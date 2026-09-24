@@ -10,7 +10,7 @@ import type { ReactNode } from 'react'
 /**
  * Renders the SortMenu DI component populated with the current multi-sort state.
  * - Reads all sortable, non-system columns
- * - Maps current `table.getState().sorting` to SortMenuItem[] with per-row available columns (deduped)
+ * - Maps the current `sorting` slice to SortMenuItem[] with per-row available columns (deduped)
  * - Wires Add Sort, Reset Sorting, change column/direction, and remove handlers
  */
 /**
@@ -54,7 +54,8 @@ export type DataGridSortMenuTriggerProps = {
 
 export function SortMenuTrigger({ children }: DataGridSortMenuTriggerProps = {}) {
 	const table = useDataGridTable()
-	useDataGridState((s) => s.sorting)
+	// The subscription is the read — see `active-filters-bar.tsx` for the note.
+	const sorting = useDataGridState((s) => s.sorting)
 	const { SortMenu } = useGridComponents().sorting
 
 	const sortableColumns: SortColumnOption[] = table
@@ -64,8 +65,6 @@ export function SortMenuTrigger({ children }: DataGridSortMenuTriggerProps = {})
 			id: col.id,
 			label: typeof col.columnDef.header === 'string' ? col.columnDef.header : col.id,
 		}))
-
-	const sorting = table.getState().sorting
 
 	const items: SortMenuItem[] = sorting.map((entry, index) => {
 		const usedElsewhere = new Set(sorting.filter((_, i) => i !== index).map((s) => s.id))

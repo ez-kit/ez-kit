@@ -2,7 +2,7 @@ import { createColumns } from '@ez-kit/data-grid-core'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
-import { testComponents } from '../test-utils'
+import { TEST_FEATURES, testComponents } from '../test-utils'
 
 import { DataGrid } from './data-grid'
 
@@ -14,6 +14,7 @@ const COLUMNS = createColumns<User>([{ accessorKey: 'name', header: 'Name' }])
 const renderModalMode = () =>
 	render(
 		<DataGrid
+			features={TEST_FEATURES}
 			data={USERS}
 			columns={COLUMNS}
 			components={testComponents}

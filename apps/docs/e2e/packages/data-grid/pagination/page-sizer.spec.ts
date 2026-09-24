@@ -3,28 +3,26 @@ import { boxOf, expect, test } from '../../../fixtures'
 import type { Locator, Page } from '@playwright/test'
 
 /**
- * The page-size selector: the two regions that can hold it, and what picking a size does.
+ * The page-size selector: the two regions that usually hold it, and what picking a size does.
  *
- * `pageSizer` is a `placement`, like `filtering.panel` — it names a container, so each case
- * asserts containment *and* measures the result, because a control parented in the right place
- * but laid out somewhere else is the failure this is worth catching.
+ * There is no longer any option that places it — `pagination.pageSizer` is gone, and a layout
+ * says where the control goes by writing `<DataGrid.PageSizer />` there. So each case asserts
+ * containment *and* measures the result, because a control parented in the right place but laid
+ * out somewhere else is the failure this is worth catching.
+ *
+ * Note that neither region is a default: `DefaultLayout`, what both UI kits bind to
+ * `core.Layout`, mounts no selector at all. Both examples below place one deliberately.
  */
 
-/**
- * 1000 users, 10 per page, sizes 10/25/50/100 — the selector in its default region.
- *
- * Its `pagination.items` is what mounts the selector at all: the control appears when there is
- * a list of sizes to offer (or when `pageSizer` asks for it outright), not merely because the
- * grid paginates. The other pagination examples set neither, so they have no selector to place.
- */
-const TOOLBAR = 'base-full'
-/** 50 users, 10 per page — `pageSizer: 'footer'`, taking the default list of sizes. */
+/** 1000 users, 10 per page, sizes 10/25/50/100 — `<DataGrid.PageSizer />` in `Toolbar.start`. */
+const TOOLBAR = 'pagination-page-sizer-toolbar'
+/** 50 users, 10 per page — the `BottomBarLayout` preset, taking the default list of sizes. */
 const FOOTER = 'pagination-page-sizer-footer'
 
 const SIZER = '[data-slot="page-sizer"]'
 const PAGINATION = '[data-slot="pagination"]'
 /** The row the footer placement builds so the sizer and the page controls share one line. */
-const FOOTER_ROW = '[data-slot="pagination-row"]'
+const BOTTOM_BAR = '[data-slot="bottom-bar"]'
 
 /**
  * The selector's trigger. Both kits build the control out of their own `Select`, and both
@@ -43,12 +41,13 @@ async function chooseSize(page: Page, size: number): Promise<void> {
 }
 
 test.describe('where the selector goes', () => {
-	test('the toolbar, by default', async ({ grid, page }) => {
+	test('the toolbar, when the layout writes it there', async ({ grid, page }) => {
 		await grid.open(TOOLBAR)
 
 		await expect(page.locator(`[data-slot="toolbar"] ${SIZER}`)).toHaveCount(1)
-		// The footer keeps its own layout: no shared row is built, so nothing moved down there.
-		await expect(page.locator(FOOTER_ROW)).toHaveCount(0)
+		// This layout mounts `<DataGrid.Pagination />` rather than the bottom bar, so no shared
+		// row is built and nothing moved down there.
+		await expect(page.locator(BOTTOM_BAR)).toHaveCount(0)
 
 		const sizer = await boxOf(page.locator(SIZER))
 		const table = await boxOf(page.locator('table'))
@@ -56,12 +55,22 @@ test.describe('where the selector goes', () => {
 		expect(sizer.y + sizer.height).toBeLessThanOrEqual(table.y)
 	})
 
-	test("`pageSizer: 'footer'` puts it on the page-control row", async ({ grid, page }) => {
+	test('`BottomBarLayout` puts it on the page-control row', async ({ grid, page }) => {
 		await grid.open(FOOTER)
 
+		// No positive control is possible for this line: the `pagination-page-sizer-footer`
+		// example mounts **no toolbar at all** (measured — `[data-slot="toolbar"]` resolves to 0
+		// elements here, because the preset's toolbar has neither slot filled and renders
+		// nothing), so the compound selector is empty whatever the sizer does. An earlier pass
+		// added `toHaveCount(1)` on the toolbar as a control; that premise is false for this
+		// example, and the "hardening" only turned a vacuous pass into a red test.
+		//
+		// The two positives below are what make the placement claim mean anything — the sizer and
+		// the pagination row are each asserted present, and the `boxOf` reads that follow throw on
+		// an element that renders no box.
 		await expect(page.locator(`[data-slot="toolbar"] ${SIZER}`)).toHaveCount(0)
-		await expect(page.locator(`${FOOTER_ROW} ${SIZER}`)).toHaveCount(1)
-		await expect(page.locator(`${FOOTER_ROW} ${PAGINATION}`)).toHaveCount(1)
+		await expect(page.locator(`${BOTTOM_BAR} ${SIZER}`)).toHaveCount(1)
+		await expect(page.locator(`${BOTTOM_BAR} ${PAGINATION}`)).toHaveCount(1)
 
 		const sizer = await boxOf(page.locator(SIZER))
 		const pagination = await boxOf(page.locator(PAGINATION))

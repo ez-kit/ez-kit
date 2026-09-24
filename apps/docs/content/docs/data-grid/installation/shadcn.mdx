@@ -19,6 +19,18 @@ This requires an existing shadcn project (`npx shadcn init` if you don't have on
 UI primitives they build on — into your project, and adds `@ez-kit/data-grid-react` plus the
 kit's other runtime dependencies to your `package.json`.
 
+Then add `@ez-kit/data-grid-core`:
+
+```bash
+pnpm add @ez-kit/data-grid-core
+```
+
+Every grid takes a [`features`](/docs/data-grid/feature-set) set, and `tableFeatures` and the
+feature exports live on `@ez-kit/data-grid-core/features`. That entry point is deliberately not
+re-exported through the React adapter — it is separate so that it tree-shakes, and re-exporting it
+would anchor the whole feature graph into every consumer's bundle. Pin it to the same version as
+the `@ez-kit/data-grid-react` the CLI added.
+
 To pick up a later update, re-run the same command, or check what changed first with:
 
 ```bash

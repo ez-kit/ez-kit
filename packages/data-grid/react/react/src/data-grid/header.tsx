@@ -5,12 +5,11 @@ import { useGridComponents } from '../components-context'
 import { DataGridHeaderRow } from './header-row'
 import { useDataGridTable, useDataGridState } from './table-context'
 
-import type { DataTable } from '@ez-kit/data-grid-core'
+import type { ErasedRow, DataTable, GridFeatures } from '../types'
 import type { HeaderGroup } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type DataGridHeaderProps<TRow extends object = any> = {
+export type DataGridHeaderProps<TRow extends object = ErasedRow> = {
 	/**
 	 * Adds `data-sticky="true"` to the thead for structural CSS targeting.
 	 *
@@ -55,10 +54,9 @@ export type DataGridHeaderProps<TRow extends object = any> = {
  * `<DataGrid.Header<Order>>` — and the render arguments are typed. See
  * {@link DataGridBodyRenderArgs} for why it is explicit rather than inferred.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type DataGridHeaderRenderArgs<TRow extends object = any> = {
-	table: DataTable<TRow>
-	headerGroups: HeaderGroup<TRow>[]
+export type DataGridHeaderRenderArgs<TRow extends object = ErasedRow> = {
+	table: DataTable<GridFeatures, TRow>
+	headerGroups: HeaderGroup<GridFeatures, TRow>[]
 }
 
 /**
@@ -109,8 +107,8 @@ function useHeaderHeightVar(enabled: boolean): (node: HTMLTableSectionElement | 
  * Pin offsets are written as CSS variables via {@link getCommonPinStyles}; the
  * structural CSS reads them on `[data-pinned]` elements.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function Header<TRow extends object = any>({ sticky, children }: DataGridHeaderProps<TRow> = {}) {
+
+export function Header<TRow extends object = ErasedRow>({ sticky, children }: DataGridHeaderProps<TRow> = {}) {
 	const table = useDataGridTable<TRow>()
 	const isSticky = sticky ?? table.grid.layout.stickyHeader
 	const theadRef = useHeaderHeightVar(isSticky)
@@ -126,7 +124,7 @@ export function Header<TRow extends object = any>({ sticky, children }: DataGrid
 	useDataGridState((s) => s.columnOrder)
 	useDataGridState((s) => s.columnPinning)
 	useDataGridState((s) => s.columnSizing)
-	useDataGridState((s) => s.columnSizingInfo)
+	useDataGridState((s) => s.columnResizing)
 	useDataGridState((s) => s.rowSelection)
 
 	const { Thead } = useGridComponents().core

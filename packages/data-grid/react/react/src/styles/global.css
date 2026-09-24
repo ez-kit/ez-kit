@@ -83,13 +83,16 @@ table[data-slot='table'] {
 [data-slot='td'][data-pinned] {
 	@apply sticky z-[1];
 }
-[data-slot='th'][data-pinned='left'],
-[data-slot='td'][data-pinned='left'] {
-	left: var(--dg-pin-left);
+/* Logical, not physical: a pinned column sticks to the inline-start or inline-end edge, and
+   which physical edge that is flips under RTL. Row pinning below stays `top` / `bottom` — a
+   vertical axis has no logical names. */
+[data-slot='th'][data-pinned='start'],
+[data-slot='td'][data-pinned='start'] {
+	inset-inline-start: var(--dg-pin-start);
 }
-[data-slot='th'][data-pinned='right'],
-[data-slot='td'][data-pinned='right'] {
-	right: var(--dg-pin-right);
+[data-slot='th'][data-pinned='end'],
+[data-slot='td'][data-pinned='end'] {
+	inset-inline-end: var(--dg-pin-end);
 }
 
 /* ── resizable th — resizer is absolutely positioned inside ──────────── */
@@ -152,8 +155,13 @@ table[data-slot='table'] {
 [data-slot='header-main'] {
 	@apply flex items-center;
 }
+/* The sortable variant is a real `<button>`, so this undoes the UA's own button styling —
+ * centred text, a border, a background and a font of its own would each fight the header the
+ * kit styles. Structural rather than decorative: it hands the element back to the kit's `<th>`
+ * rules instead of picking any look for it. */
 [data-slot='sort-trigger'] {
-	@apply flex items-center flex-1;
+	@apply flex flex-1 items-center border-0 bg-transparent p-0 text-start font-[inherit] text-[inherit];
+	appearance: none;
 }
 [data-slot='sort-trigger'][data-sortable='true'] {
 	@apply cursor-pointer;
@@ -200,10 +208,10 @@ table[data-slot='table'] {
 
 /* ── pin-shadow overlay ───────────────────────────────────────────────── */
 
-/* Full-size, non-collapsing layer. Each shadow is positioned independently via
-   its own inline `left`/`right` offset (set in pin-shadow-overlay.tsx), so the
-   two shadows never share — and never collapse — a single sized box even when
-   the combined pinned-column width approaches the viewport. */
+/* Full-size, non-collapsing layer. Each shadow is positioned independently via its own
+   inline `inset-inline-start` / `inset-inline-end` offset (set in pin-shadow-overlay.tsx),
+   so the two shadows never share — and never collapse — a single sized box even when the
+   combined pinned-column width approaches the viewport. */
 [data-slot='pin-shadow-overlay'] {
 	@apply absolute inset-0 pointer-events-none overflow-hidden;
 }

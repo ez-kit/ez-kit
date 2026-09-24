@@ -6,15 +6,20 @@ import type { Locator, Page } from '@playwright/test'
  * The active-filters strip: what it lists, what removing a chip does, and which side of the
  * table it lands on.
  *
- * Both examples run the **popover** variant, where the strip earns its space — the controls
- * hide behind a header icon, so the chips are the only readable account of what is filtered.
- * That also makes the strip the only way to tell the two positions apart on screen, which is
- * what the layout tests below measure.
+ * Both examples put each column's filter **behind a header popover**, which is where the strip
+ * earns its space — the controls hide behind an icon, so the chips are the only readable
+ * account of what is filtered. That also makes the strip the only way to tell the two positions
+ * apart on screen, which is what the layout tests below measure.
+ *
+ * Neither example configures any of this: the strip is mounted by writing
+ * `<DataGrid.ActiveFiltersBar />`, and which side of the table it lands on is where that line
+ * sits relative to `<DataGrid.Table />`. The `position` prop only stamps `data-chip-position`
+ * for the kit's stylesheet; it moves nothing.
  */
 
-/** 50 users, 10 per page; chips above, Clear-all in the toolbar, global search on. */
+/** 50 users, 10 per page; the strip written above the table, Clear-all in the toolbar, global search on. */
 const ABOVE = 'filter-chips-auto'
-/** The same grid with `chips: 'below'`. */
+/** The same grid with the strip written after `<DataGrid.Table />` and `position='below'`. */
 const BELOW = 'filter-chips-below'
 
 /** `User 42` is one row out of the fifty — a filter either applied or it did not. */
@@ -78,8 +83,15 @@ test.describe('the chips strip', () => {
 		await grid.open(ABOVE)
 	})
 
-	test('stays unmounted while nothing is filtered', async ({ page }) => {
+	test('stays unmounted while nothing is filtered', async ({ grid, page }) => {
 		await expect(page.locator(STRIP)).toHaveCount(0)
+
+		// …and the selector that said so is live. On its own the assertion above passes on a
+		// renamed `active-filters-bar` slot and on a grid whose filtering never mounted, which is
+		// indistinguishable from `chips: 'auto'` doing its job. Filtering here forces the strip to
+		// appear, so the absence is an absence of a thing that can be present.
+		await filterColumn(page, grid.header('name'), NEEDLE)
+		await expect(page.locator(STRIP)).toHaveCount(1)
 	})
 
 	test('a column filter narrows the rows and raises a chip naming it', async ({ grid, page }) => {
@@ -143,7 +155,7 @@ test.describe('the strip position', () => {
 		expect(strip.y + strip.height).toBeLessThanOrEqual(table.y)
 	})
 
-	test("`chips: 'below'` puts it under the table", async ({ grid, page }) => {
+	test('the strip written after the table renders under it', async ({ grid, page }) => {
 		await grid.open(BELOW)
 		await filterColumn(page, grid.header('name'), NEEDLE)
 

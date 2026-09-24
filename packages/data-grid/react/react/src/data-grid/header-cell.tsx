@@ -9,19 +9,23 @@ import {
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
 import { GridMenuVariant } from '../menu'
-import { ColumnSortDirection, FilteringVariant, SortDirection } from '../types'
-import { isInteractiveTarget } from '../utils/interactive-target'
+import { ColumnSortDirection, SortDirection } from '../types'
+import { filtersRows } from '../utils/filters-rows'
 import { getCommonPinStyles } from '../utils/pin-styles'
+import { isTextEntryTarget } from '../utils/text-entry-target'
 
 import { getAlignAttrs } from './align-attrs'
 import { buildColumnMenuSections } from './column-menu-sections'
+import { HeaderCellProvider } from './composition-context'
 import { flexRender } from './flex-render'
+import { HeaderExtras, HeaderMain } from './header-slots'
 import { renderFilterInput } from './render-filter-input'
 import { useDataGridTable } from './table-context'
 
-import type { DataTable } from '@ez-kit/data-grid-core'
+import type { ErasedRow, DataTable, GridFeatures } from '../types'
+import type { FormColumnMeta } from '@ez-kit/data-grid-core'
 import type { Column, Header } from '@tanstack/table-core'
-import type { KeyboardEvent, MouseEvent, ReactNode } from 'react'
+import type { KeyboardEvent, ReactNode } from 'react'
 
 /**
  * What a `<DataGrid.HeaderCell>` render function receives.
@@ -35,10 +39,9 @@ import type { KeyboardEvent, MouseEvent, ReactNode } from 'react'
  * `<DataGrid.HeaderCell<Order>>` — and the render arguments are typed. See
  * {@link DataGridBodyRenderArgs} for why it is explicit rather than inferred.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type DataGridHeaderCellRenderArgs<TRow extends object = any> = {
-	header: Header<TRow, unknown>
-	column: Column<TRow>
+export type DataGridHeaderCellRenderArgs<TRow extends object = ErasedRow> = {
+	header: Header<GridFeatures, TRow>
+	column: Column<GridFeatures, TRow>
 	canSort: boolean
 	sortDirection: ColumnSortDirection
 	/** The column's own `header` content, with no sorting behaviour attached. */
@@ -47,22 +50,39 @@ export type DataGridHeaderCellRenderArgs<TRow extends object = any> = {
 	sortTrigger: ReactNode
 	/** The column overflow menu (sort / pin / hide), or `null` when it has no sections. */
 	menu: ReactNode
-	/** The column's filter control, or `null` when this column is not filterable. */
+	/**
+	 * The column's filter control, ready to render inline in the cell. `null` when this column
+	 * is not filterable.
+	 *
+	 * Rendering it — or not — is what puts a filter in the header, which is what the removed
+	 * `filtering.variant: 'panel'` used to say. Rendering it **and** mounting
+	 * `<DataGrid.FilterPanel/>` gives both at once: two controls bound to one `columnFilters`
+	 * entry, which no value of that enum could express.
+	 */
 	filter: ReactNode
+	/**
+	 * The same control behind the kit's `FilterPopover` trigger — an icon in the header that
+	 * opens the input. `null` when this column is not filterable.
+	 *
+	 * The replacement for `filtering.variant: 'popover'`. Render this instead of
+	 * {@link DataGridHeaderCellRenderArgs.filter}, never both: they are one control in two
+	 * presentations, and the pair would field the same filter value twice.
+	 */
+	filterPopover: ReactNode
 	/** The resize handle, or `null` when the column cannot be resized. */
 	resizer: ReactNode
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type DataGridHeaderCellProps<TRow extends object = any> = {
-	header: Header<TRow, unknown>
+export type DataGridHeaderCellProps<TRow extends object = ErasedRow> = {
+	header: Header<GridFeatures, TRow>
 	/**
 	 * Custom content for this one header cell, rendered inside the kit's `Th` — so the cell keeps
 	 * its pinning offset, its `data-*` attributes, its `headerClassName` and its resize handle.
 	 *
-	 * Omit it for the built-in header: sort affordance, column menu, and the inline or popover
-	 * filter control. The render-function form hands back those same parts
-	 * ({@link DataGridHeaderCellRenderArgs}) so a custom cell can reuse the ones it still wants.
+	 * Omit it for the built-in header: sort affordance, column menu, and the column's filter
+	 * control inline under the label. The render-function form hands back those same parts
+	 * ({@link DataGridHeaderCellRenderArgs}) so a custom cell can reuse the ones it still wants
+	 * — and `filterPopover` beside `filter`, for the popover presentation.
 	 */
 	children?: ReactNode | ((args: DataGridHeaderCellRenderArgs<TRow>) => ReactNode)
 }
@@ -75,11 +95,16 @@ export type DataGridHeaderCellProps<TRow extends object = any> = {
  * global "something is dirty" check — so a column whose own sort is unchanged stays unmarked
  * even while a sibling column's sort (or an unrelated filter) is pending.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function computeDraftSortIndex(table: DataTable<any>, columnId: string): number {
+function computeDraftSortIndex<TRow extends object>(table: DataTable<GridFeatures, TRow>, columnId: string): number {
 	if (table.options.draft !== true) return -1
 	const draftSorting = table.draft.get().sorting
-	const appliedSorting = table.getState().applied.sorting
+	// A snapshot read, not a subscription — the v8 line read `applied.sorting` off the whole snapshot
+	// and this is the same read against v9's store. `<DataGrid.Header>` owns the subscriptions
+	// these cells re-render through, and `applied` is not among them: what actually drives this
+	// marker is `state.sorting`, which the header does subscribe to and which moves on every
+	// draft edit. Making this a subscription would add one subscriber per column and is a
+	// render-behaviour change, so it is deliberately not done here.
+	const appliedSorting = table.store.state.applied.sorting
 	const draftIndex = draftSorting.findIndex((s) => s.id === columnId)
 	if (draftIndex < 0) return -1
 	const draftEntry = draftSorting[draftIndex]
@@ -97,8 +122,11 @@ function computeDraftSortIndex(table: DataTable<any>, columnId: string): number 
  * Rendering it requires the surrounding `<DataGrid.Header>`, which owns the state subscriptions
  * these cells read through.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function DataGridHeaderCell<TRow extends object = any>({ header, children }: DataGridHeaderCellProps<TRow>) {
+
+export function DataGridHeaderCell<TRow extends object = ErasedRow>({
+	header,
+	children,
+}: DataGridHeaderCellProps<TRow>) {
 	const table = useDataGridTable<TRow>()
 	const gridComponents = useGridComponents()
 	const { Th, Input, Checkbox, Menu } = gridComponents.core
@@ -107,15 +135,30 @@ export function DataGridHeaderCell<TRow extends object = any>({ header, children
 	const { OperatorSelect, BetweenInput, FilterPopover, MultiSelectFilter, ClearFilterButton } = gridComponents.filtering
 	const cellTypes = useCellTypes()
 
-	const meta = header.column.columnDef.meta
-	const canSort = header.column.getCanSort()
-	const rawSortDir = header.column.getIsSorted()
+	// `ColumnMeta` is declared `in out` in both its `TFeatures` and its `TData` upstream, so no
+	// concrete instantiation is assignable to any other and this cast is forced by the variance
+	// annotation rather than chosen. `FormColumnMeta` is the one name core declares for it, and
+	// this is the same cast core's own `creating.ts` makes at its boundary.
+	const meta = header.column.columnDef.meta as FormColumnMeta | undefined
+	// Optional-called, not called: every read on this line runs for **every header cell of every
+	// grid**, and the method only exists once its feature is registered. Design D1's claim is that
+	// a feature you did not register costs nothing, so a grid with no sorting must render a header
+	// rather than throw. See `feature-optionality.test.tsx`, which builds a grid without each one.
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const canSort = header.column.getCanSort?.() ?? false
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const rawSortDir = header.column.getIsSorted?.() ?? false
 	const pinVars = getCommonPinStyles(header.column)
 	const pinned = header.column.getIsPinned()
 	// One check, not two: `createTable` now emits `enableColumnResizing: false` when the feature
 	// is off, so `getCanResize()` accounts for the table-level gate as well as the column's own
 	// `resizing: false`. Anything composing its own header can rely on the same single call.
-	const canResize = header.column.getCanResize()
+	//
+	// Optional-called for the same reason as the two above. This is also what makes
+	// `getResizeHandler()` and `getIsResizing()` below safe without guards of their own: both sit
+	// inside the `canResize ? … : null` subtree, which a grid without the feature never enters.
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const canResize = header.column.getCanResize?.() ?? false
 
 	// Selection column: a select-all checkbox, and none of the rest.
 	if (header.column.id === SELECTION_COLUMN_ID) {
@@ -153,19 +196,34 @@ export function DataGridHeaderCell<TRow extends object = any>({ header, children
 		)
 	}
 
-	const rawSortHandler = canSort ? header.column.getToggleSortingHandler() : undefined
-	const sortHandler = rawSortHandler
-		? (e: MouseEvent) => {
-				if (isInteractiveTarget(e)) return
-				rawSortHandler(e)
-			}
-		: undefined
-	const onSortKeyDown = rawSortHandler
+	// A real `<button>` below, so a click means sort and there is nothing to ask about its
+	// target. That replaced a `role='button'` div plus a predicate dropping any click that
+	// started on an interactive descendant — a guard for controls a consumer put in
+	// `column.header`, which could not tell one from the kit's own sort arrow, and so made the
+	// arrow (sitting at the header's centre, where a pointer lands) dead.
+	const sortHandler = canSort ? header.column.getToggleSortingHandler() : undefined
+
+	/**
+	 * `Enter` / `Space`, which a `<button>` ought to give us for free — and does, in the shadcn
+	 * kit. **HeroUI cancels it.** Its `Th` comes from React Aria's table, whose grid keyboard
+	 * manager calls `preventDefault()` on the bubbling keydown, and a cancelled keydown performs
+	 * no activation, so the button never sees a click. Probed rather than assumed: a listener on
+	 * the button reads `defaultPrevented === false` and one on `document` reads `true` for the
+	 * same event, i.e. the cancel happens above us on the way up.
+	 *
+	 * So the chord is handled here, at the target, where it still arrives intact. `preventDefault`
+	 * is what keeps this to **one** sort where the default action does survive: it suppresses the
+	 * activation click the browser would synthesise afterwards.
+	 *
+	 * Deliberately nothing but the two keys — no question about where the event started. That
+	 * predicate is what this change removed, and it is not needed: nothing interactive may live
+	 * inside the affordance.
+	 */
+	const onSortKeyDown = sortHandler
 		? (e: KeyboardEvent) => {
 				if (e.key !== 'Enter' && e.key !== ' ') return
-				if (isInteractiveTarget(e)) return
 				e.preventDefault()
-				rawSortHandler(e)
+				sortHandler(e)
 			}
 		: undefined
 
@@ -195,10 +253,15 @@ export function DataGridHeaderCell<TRow extends object = any>({ header, children
 	const onHeaderKeyDown = canMove
 		? (e: KeyboardEvent) => {
 				if (!e.altKey || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return
-				// Option+Arrow moves by word inside a text field — never steal it from a filter
-				// input or any other control living in the header.
-				if (isInteractiveTarget(e)) return
-				const towardsStart = (e.key === 'ArrowLeft') !== (table.options.columnResizeDirection === GridDirection.Rtl)
+				// Option+Arrow moves by word inside a text field, and opens a native select —
+				// never steal it from the filter input living in this `<th>`. Only a control that
+				// owns the chord keeps it; a button or a checkbox does not.
+				if (isTextEntryTarget(e)) return
+				// The grid's own direction, never `table.options.columnResizeDirection`: that option
+				// is declared on `TableOptions_ColumnResizing` and core writes it only inside its
+				// resizing branch, so on the default grid — ordering on, resizing off — it is
+				// `undefined` and both shortcuts moved the column the wrong way under RTL.
+				const towardsStart = (e.key === 'ArrowLeft') !== (table.grid.direction === GridDirection.Rtl)
 				const direction = towardsStart ? ColumnMoveDirection.Start : ColumnMoveDirection.End
 				if (!canMoveColumn(table, header.column.id, direction)) return
 				e.preventDefault()
@@ -217,13 +280,12 @@ export function DataGridHeaderCell<TRow extends object = any>({ header, children
 		table.grid.messages.columnMenu,
 	)
 
-	const filteringVariant = table.grid.filtering.variant
+	// Genuinely filterable — nothing here asks *where* the control goes. The expression carried
+	// a `variant !== 'panel'` term, which forced `filter` to `null` for every caller whenever one
+	// grid-wide option said the panel owned the controls; a render function then had no filter to
+	// place even when it wanted one in the header.
 	const canFilter =
-		Boolean(table.options.getFilteredRowModel) &&
-		meta?.filtering !== false &&
-		!meta?.isSystemColumn &&
-		header.column.getCanFilter() &&
-		filteringVariant !== FilteringVariant.Panel
+		filtersRows(table) && meta?.filtering !== false && !meta?.isSystemColumn && header.column.getCanFilter()
 	const filterContent = canFilter
 		? renderFilterInput({
 				header,
@@ -249,20 +311,43 @@ export function DataGridHeaderCell<TRow extends object = any>({ header, children
 	const headerSlot = meta?.systemHeader ?? header.column.columnDef.header
 	const label = header.isPlaceholder ? null : flexRender(headerSlot, header.getContext())
 
-	const sortTrigger = (
-		<div
+	const sortIndicator = (
+		<SortIndicator
+			sortDirection={sortDirection}
+			canSort={canSort}
+		/>
+	)
+
+	/**
+	 * The column's name and its sort arrow, as one affordance.
+	 *
+	 * A real `<button>` when the column sorts, and a plain `<div>` when it does not — the same
+	 * split the old `role={canSort ? 'button' : undefined}` made, now in the element rather than
+	 * in an attribute. Everything clickable being a button is what lets the handler be
+	 * `getToggleSortingHandler()` and nothing else: there is no longer anything to ask about the
+	 * click's target, because nothing interactive may live in here.
+	 *
+	 * **So `column.header` content must not be interactive.** It renders inside this button, and
+	 * a nested `<button>` is invalid HTML — the parser closes the outer one and the header comes
+	 * apart. An icon, a badge or a tooltip is fine; a button or a link is not, and a header that
+	 * needs one composes `<DataGrid.HeaderCell>` and places `label` outside `sortTrigger`.
+	 */
+	const sortTrigger = canSort ? (
+		<button
+			type='button'
 			data-slot='sort-trigger'
-			{...(canSort ? { 'data-sortable': 'true', 'data-sort-direction': sortDirection } : {})}
-			role={canSort ? 'button' : undefined}
-			tabIndex={canSort ? 0 : undefined}
+			data-sortable='true'
+			data-sort-direction={sortDirection}
 			onClick={sortHandler}
 			onKeyDown={onSortKeyDown}
 		>
 			{label}
-			<SortIndicator
-				sortDirection={sortDirection}
-				canSort={canSort}
-			/>
+			{sortIndicator}
+		</button>
+	) : (
+		<div data-slot='sort-trigger'>
+			{label}
+			{sortIndicator}
 		</div>
 	)
 
@@ -286,37 +371,42 @@ export function DataGridHeaderCell<TRow extends object = any>({ header, children
 		/>
 	) : null
 
+	const filterPopover = canFilter ? (
+		<FilterPopover hasActiveFilter={Boolean(header.column.getFilterValue())}>{filterContent}</FilterPopover>
+	) : null
+
+	// The built-in cell renders the control inline. The popover presentation is one render
+	// function away — see `PopoverFiltersLayout` — and is no longer a grid-wide option.
 	const defaultContent = (
 		<>
-			<div data-slot='header-main'>
+			<HeaderMain>
 				{sortTrigger}
-				{filteringVariant === FilteringVariant.Popover && canFilter && (
-					<FilterPopover hasActiveFilter={Boolean(header.column.getFilterValue())}>{filterContent}</FilterPopover>
-				)}
 				{menu}
-			</div>
-			{filteringVariant !== FilteringVariant.Popover && canFilter && (
-				<div data-slot='header-extras'>{filterContent}</div>
-			)}
+			</HeaderMain>
+			{canFilter && <HeaderExtras>{filterContent}</HeaderExtras>}
 		</>
 	)
 
-	const content =
-		children === undefined
-			? defaultContent
-			: typeof children === 'function'
-				? children({
-						header,
-						column: header.column,
-						canSort,
-						sortDirection,
-						label,
-						sortTrigger,
-						menu,
-						filter: filterContent,
-						resizer,
-					})
-				: children
+	/**
+	 * Built unconditionally, then both **published** through {@link HeaderCellProvider} and passed
+	 * to a render function — so the two ways of composing a header cell read the same object and
+	 * cannot drift apart. It costs nothing the default path did not already pay: every member is
+	 * computed above, because the default cell renders them.
+	 */
+	const args: DataGridHeaderCellRenderArgs<TRow> = {
+		header,
+		column: header.column,
+		canSort,
+		sortDirection,
+		label,
+		sortTrigger,
+		menu,
+		filter: filterContent,
+		filterPopover,
+		resizer,
+	}
+
+	const content = children === undefined ? defaultContent : typeof children === 'function' ? children(args) : children
 
 	return (
 		<Th
@@ -333,8 +423,10 @@ export function DataGridHeaderCell<TRow extends object = any>({ header, children
 			{...(canResize ? { 'data-resizable': 'true' } : {})}
 			{...draftSortAttrs}
 		>
-			{content}
-			{resizer}
+			<HeaderCellProvider value={args}>
+				{content}
+				{resizer}
+			</HeaderCellProvider>
 		</Th>
 	)
 }

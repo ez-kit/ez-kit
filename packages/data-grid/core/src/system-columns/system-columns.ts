@@ -3,7 +3,8 @@ import { ColumnPinSide, SystemColumnType } from '../column/types'
 import { getActionsColumnSize, RowActionsPlacement } from '../features/row-actions'
 import { setIfDefined } from '../utils/set-if-defined'
 
-import type { SystemColumnDef, TanStackColumnDef } from '../column/types'
+import type { MappedColumnDef, SystemColumnDef } from '../column/types'
+import type { TableFeatures } from '@tanstack/table-core'
 
 /** Identifier constants for auto-injected system columns. */
 export const SELECTION_COLUMN_ID = '__selection__'
@@ -44,11 +45,11 @@ type SystemColumnsOptions = {
 	 */
 	customRowActions: boolean
 	/** Presentation of the `__selection__` column, from `selection.column`. */
-	selectionColumn?: SystemColumnDef
+	selectionColumn?: SystemColumnDef<TableFeatures>
 	/** Presentation of the `__expand__` column, from `expanding.column`. */
-	expandingColumn?: SystemColumnDef
+	expandingColumn?: SystemColumnDef<TableFeatures>
 	/** Presentation of the `__actions__` column, from `rowActions.column`. */
-	rowActionsColumn?: SystemColumnDef
+	rowActionsColumn?: SystemColumnDef<TableFeatures>
 }
 
 /**
@@ -71,14 +72,14 @@ type SystemColumnSpec = {
 	defaultWidth: number
 	/** Edge used when the def names none. */
 	defaultPinning: ColumnPinSide
-	def: SystemColumnDef | undefined
+	def: SystemColumnDef<TableFeatures> | undefined
 }
 
 /**
  * Turns one system column's spec plus its (optional) user def into a TanStack column.
  *
  * The def's fields go through the very same normalizers a user column's do, so
- * `pinning: 'left'`, `width: 60` and `align: 'center'` mean here exactly what they mean
+ * `pinning: 'start'`, `width: 60` and `align: 'center'` mean here exactly what they mean
  * anywhere else. `header` reaches the React layer on `meta.systemHeader` rather than
  * TanStack's `header`, because the header cells for these columns are rendered by the grid
  * (the select-all checkbox lives there) and have to be able to fall back to the built-in.
@@ -89,11 +90,11 @@ function buildSystemColumn<TRow extends object>({
 	defaultWidth,
 	defaultPinning,
 	def,
-}: SystemColumnSpec): TanStackColumnDef<TRow> {
+}: SystemColumnSpec): MappedColumnDef<TRow> {
 	const widthDef = normalizeColumnWidth(def?.width) ?? { default: defaultWidth }
 	const pinning = def?.pinning === undefined ? { side: defaultPinning } : normalizeColumnPinning(def.pinning)
 
-	const meta: TanStackColumnDef<TRow>['meta'] = {
+	const meta: MappedColumnDef<TRow>['meta'] = {
 		isSystemColumn: true,
 		systemColumnType: type,
 	}
@@ -116,14 +117,14 @@ function buildSystemColumn<TRow extends object>({
 	setIfDefined(column, 'minSize', widthDef.min)
 	setIfDefined(column, 'maxSize', widthDef.max)
 
-	return column as TanStackColumnDef<TRow>
+	return column as MappedColumnDef<TRow>
 }
 
 export function buildColumnList<TRow extends object>(
-	userColumns: TanStackColumnDef<TRow>[],
+	userColumns: MappedColumnDef<TRow>[],
 	opts: SystemColumnsOptions,
-): TanStackColumnDef<TRow>[] {
-	const result: TanStackColumnDef<TRow>[] = []
+): MappedColumnDef<TRow>[] {
+	const result: MappedColumnDef<TRow>[] = []
 
 	if (opts.selection) {
 		result.push(
@@ -131,7 +132,7 @@ export function buildColumnList<TRow extends object>(
 				id: SELECTION_COLUMN_ID,
 				type: SystemColumnType.Selection,
 				defaultWidth: NARROW_SYSTEM_COLUMN_SIZE,
-				defaultPinning: ColumnPinSide.Left,
+				defaultPinning: ColumnPinSide.Start,
 				def: opts.selectionColumn,
 			}),
 		)
@@ -143,10 +144,10 @@ export function buildColumnList<TRow extends object>(
 				id: EXPAND_COLUMN_ID,
 				type: SystemColumnType.Expand,
 				defaultWidth: NARROW_SYSTEM_COLUMN_SIZE,
-				// Pinned left, like the selection column it sits beside. It was the one system
-				// column pinned nowhere, so a horizontally scrolled grid kept the checkbox in
-				// view and let the chevron of the same row slide out of it.
-				defaultPinning: ColumnPinSide.Left,
+				// Pinned at the start edge, like the selection column it sits beside. It was the
+				// one system column pinned nowhere, so a horizontally scrolled grid kept the
+				// checkbox in view and let the chevron of the same row slide out of it.
+				defaultPinning: ColumnPinSide.Start,
 				def: opts.expandingColumn,
 			}),
 		)
@@ -170,7 +171,7 @@ export function buildColumnList<TRow extends object>(
 					custom: opts.customRowActions,
 					placement: opts.rowActionsPlacement ?? RowActionsPlacement.Inline,
 				}),
-				defaultPinning: ColumnPinSide.Right,
+				defaultPinning: ColumnPinSide.End,
 				def: opts.rowActionsColumn,
 			}),
 		)
@@ -186,10 +187,10 @@ export function buildColumnList<TRow extends object>(
  * are registered in initial state.
  */
 export function extractPinningState<TRow extends object>(
-	columns: TanStackColumnDef<TRow>[],
-): { left: string[]; right: string[] } {
-	const left: string[] = []
-	const right: string[] = []
+	columns: MappedColumnDef<TRow>[],
+): { start: string[]; end: string[] } {
+	const start: string[] = []
+	const end: string[] = []
 
 	for (const col of columns) {
 		const pinDef = col.meta?.pinning
@@ -197,9 +198,9 @@ export function extractPinningState<TRow extends object>(
 		const position = pinDef.side ?? pinDef.initialSide
 		const colId = col.id ?? (col as { accessorKey?: string }).accessorKey ?? undefined
 		if (!position || !colId) continue
-		if (position === ColumnPinSide.Left) left.push(colId)
-		else right.push(colId)
+		if (position === ColumnPinSide.Start) start.push(colId)
+		else end.push(colId)
 	}
 
-	return { left, right }
+	return { start, end }
 }
