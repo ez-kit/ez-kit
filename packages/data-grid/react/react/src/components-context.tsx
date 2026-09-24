@@ -23,6 +23,17 @@ const GridComponentsContext = createContext<FullGridComponents>(emptyComponents)
 
 export type GridComponentsProviderProps = {
 	components?: GridComponents
+	/**
+	 * Wraps the resolved registry before it is published. The grid root passes
+	 * `guardComponents` here under `IS_DEV`, which is the runtime component contract's lazy half.
+	 *
+	 * A prop rather than a call inside `useGridComponents()`, and the reason is bundle size: the
+	 * guard reads `FEATURE_COMPONENTS`, so importing it *here* would put the whole contract map
+	 * into the graph of every entry that reads a component — `cell-types` measured +728 B against
+	 * its budget for a development-only check. Named by the one caller that already carries the
+	 * contract, it costs the other entries nothing.
+	 */
+	guard?: (registry: FullGridComponents) => FullGridComponents
 	children: ReactNode
 }
 
@@ -52,17 +63,25 @@ function mergeGridComponents(base: FullGridComponents, override: GridComponents)
  * app root to apply the shared structural CSS (positioning, layout, overflow,
  * z-index, cursor). Visuals are then layered on top by the kit's own CSS.
  */
-export function GridComponentsProvider({ components, children }: GridComponentsProviderProps) {
+export function GridComponentsProvider({ components, guard, children }: GridComponentsProviderProps) {
 	const parentComponents = useContext(GridComponentsContext)
 
-	const value = useMemo(
-		() => (components ? mergeGridComponents(parentComponents, components) : parentComponents),
-		[parentComponents, components],
-	)
+	const value = useMemo(() => {
+		const merged = components ? mergeGridComponents(parentComponents, components) : parentComponents
+		return guard ? guard(merged) : merged
+	}, [parentComponents, components, guard])
 
 	return <GridComponentsContext.Provider value={value}>{children}</GridComponentsContext.Provider>
 }
 
+/**
+ * The resolved registry, read as `useGridComponents().core`.
+ *
+ * In development the grid root publishes it wrapped by `guardComponents`, so a required component
+ * a **partial** kit never registered renders as a named error rather than as React's `undefined is
+ * not a component` — see `components-guard.ts` for why the error is raised on the render and not
+ * on the read. Production publishes the registry untouched.
+ */
 export function useGridComponents(): FullGridComponents {
 	return useContext(GridComponentsContext)
 }
