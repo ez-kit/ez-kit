@@ -12,6 +12,7 @@ type ServerRow = {
 	manager?: string
 	account?: string
 	amount?: number
+	closedAt?: string
 	subRows?: ServerRow[] | undefined
 }
 
@@ -132,5 +133,74 @@ describe('the manual grouped row model, tree shape', () => {
 		const flatOnly: ServerRow[] = [{ id: '1', region: 'EMEA', account: 'Acme', amount: 70 }]
 
 		expect(build(flatOnly, ['region']).getRowModel().rows[0]?.getIsGrouped()).toBe(false)
+	})
+
+	it('clears stale marks when `grouping.by` shrinks, and clears every mark when it empties', () => {
+		const twoLevel: ServerRow[] = [
+			{
+				id: 'g:EMEA',
+				region: 'EMEA',
+				amount: 100,
+				subRows: [{ id: 'g:EMEA>Ivanov', manager: 'Ivanov', amount: 100, subRows: EMEA_SUBROWS }],
+			},
+		]
+		const table = createTable({
+			features: MANUAL,
+			data: twoLevel,
+			columns: COLUMNS,
+			grouping: { by: ['region', 'manager'], getSubRows: (row) => row.subRows },
+			getRowId: (row) => row.id,
+		})
+
+		const outerBefore = table.getRowModel().rows[0]
+		const innerBefore = outerBefore?.subRows[0]
+		expect(outerBefore?.getIsGrouped()).toBe(true)
+		expect(innerBefore?.getIsGrouped()).toBe(true)
+
+		// Shrinking `by` re-runs the model over the SAME `Row` objects (the core row model is
+		// memoised on `table.options.data` alone) — the inner `manager` row is no longer inside
+		// `by` and must demote back to a record rather than keep its stale marks.
+		table.setGrouping(['region'])
+		const outerAfterShrink = table.getRowModel().rows[0]
+		const innerAfterShrink = outerAfterShrink?.subRows[0]
+		expect(outerAfterShrink?.getIsGrouped()).toBe(true)
+		expect(innerAfterShrink?.getIsGrouped()).toBe(false)
+		expect(innerAfterShrink?.groupingColumnId).toBeUndefined()
+
+		// Emptying `by` altogether must leave no mark anywhere in the tree, including the outer row.
+		table.setGrouping([])
+		for (const row of table.getRowModel().flatRows) {
+			expect(row.getIsGrouped(), row.id).toBe(false)
+			expect(row.groupingColumnId, row.id).toBeUndefined()
+		}
+	})
+
+	it('derives the grouping key from `grouping.getValue`, mirroring client grouping', () => {
+		const byMonth = createColumns<ServerRow>([
+			{ accessorKey: 'region' },
+			{ accessorKey: 'account' },
+			{ accessorKey: 'amount' },
+			{ accessorKey: 'closedAt', grouping: { getValue: (row) => row.closedAt?.slice(0, 7) } },
+		])
+		const monthly: ServerRow[] = [
+			{
+				id: 'g:2026-01',
+				closedAt: '2026-01-14',
+				subRows: [
+					{ id: '1', closedAt: '2026-01-14', amount: 50 },
+					{ id: '2', closedAt: '2026-01-22', amount: 30 },
+				],
+			},
+		]
+		const table = createTable({
+			features: MANUAL,
+			data: monthly,
+			columns: byMonth,
+			grouping: { by: ['closedAt'], getSubRows: (row) => row.subRows },
+			getRowId: (row) => row.id,
+		})
+
+		// The raw field is '2026-01-14'; the bucketed grouping key is '2026-01'.
+		expect(table.getRowModel().rows[0]?.groupingValue).toBe('2026-01')
 	})
 })

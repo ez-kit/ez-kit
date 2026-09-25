@@ -11,6 +11,10 @@ import type { Row, RowData, RowModel, Table, TableFeatures } from '@tanstack/tab
  * Omit both and the model expects a **tree**: rows nested through `grouping.getSubRows`, where
  * depth alone says what is a group (anything shallower than `grouping.by` is one) and no adapter
  * is needed at all.
+ *
+ * **Not implemented yet.** `createManualGroupedRowModel` currently only reads the tree shape;
+ * passing either field is accepted but silently ignored — `foldByLevel` for the flat shape is the
+ * next task's work. These two sentences are deleted once that lands.
  */
 export type ManualGroupingAdapters<TRow> = {
 	/** Whether this row is a group row rather than a record. */
@@ -57,6 +61,9 @@ export type ManualGroupingAdapters<TRow> = {
  *
  * Keep it out of `allDataGridFeatures` — two models cannot occupy one slot, and the all-in set is
  * the client one.
+ *
+ * **Not implemented yet:** `adapters` is accepted but not yet honoured — see
+ * {@link ManualGroupingAdapters}. This sentence is deleted once the flat shape lands.
  */
 // `TData = any` matches `createGroupedRowModel`'s own signature exactly, so the two factories
 // stay interchangeable in the `groupedRowModel` slot.
@@ -74,6 +81,24 @@ export function createManualGroupedRowModel<TFeatures extends TableFeatures, TDa
 		})
 }
 
+/**
+ * The row surface this model marks and clears, named structurally rather than through
+ * `Row<TFeatures, TData>` — `TFeatures` is unresolved inside this factory, so
+ * `Row_ColumnGrouping`'s members (`groupingColumnId`, `groupingValue`, `getGroupingValue`) are a
+ * `TS2339` on the generic type, the same wall `../../feature-state` exists for on state atoms.
+ * This factory is only ever registered as `groupedRowModel`, which requires `columnGroupingFeature`
+ * to be registered for it to run at all, so these members are genuinely present at runtime; naming
+ * them here states that fact instead of casting past it silently. `leafRows` is not a typed Row
+ * member anywhere upstream either (see the factory's own docblock) — it is this model's own mark,
+ * named here for the same reason.
+ */
+type MarkableRow<TFeatures extends TableFeatures, TData extends RowData> = Row<TFeatures, TData> & {
+	groupingColumnId?: string
+	groupingValue?: unknown
+	leafRows?: Row<TFeatures, TData>[]
+	getGroupingValue: (columnId: string) => unknown
+}
+
 // `adapters` names the flat-shape adapters (see `ManualGroupingAdapters`) and is unused by this
 // task's tree-only path — `foldByLevel` and flat handling are the next task's work, and that is
 // where this parameter starts being read.
@@ -82,9 +107,9 @@ function build<TFeatures extends TableFeatures, TData extends RowData>(
 	_adapters: ManualGroupingAdapters<TData> | undefined,
 ): RowModel<TFeatures, TData> {
 	const model = table.getPreGroupedRowModel()
-	const grouping = readForeignSlice(table, 'grouping') ?? []
-	if (!model.rows.length || !grouping.length) return model
+	if (!model.rows.length) return model
 
+	const grouping = readForeignSlice(table, 'grouping') ?? []
 	// Only the levels that still resolve to a column, exactly as upstream filters them: a grouping
 	// state can outlive a column it names.
 	const levels = grouping.filter((columnId) => table.getAllColumns().some((column) => column.id === columnId))
@@ -93,7 +118,8 @@ function build<TFeatures extends TableFeatures, TData extends RowData>(
 	const rowsById = makeObjectMap<Row<TFeatures, TData>>()
 
 	const walk = (rows: Row<TFeatures, TData>[], depth: number): void => {
-		for (const row of rows) {
+		for (const rawRow of rows) {
+			const row = rawRow as MarkableRow<TFeatures, TData>
 			flatRows.push(row)
 			rowsById[row.id] = row
 
@@ -104,11 +130,24 @@ function build<TFeatures extends TableFeatures, TData extends RowData>(
 			if (columnId !== undefined && row.subRows.length > 0) {
 				Object.assign(row, {
 					groupingColumnId: columnId,
-					groupingValue: row.getValue(columnId),
+					groupingValue: row.getGroupingValue(columnId),
 					leafRows: flattenBy(row.subRows, (child: Row<TFeatures, TData>) => child.subRows).filter(
 						(candidate) => candidate.subRows.length === 0,
 					),
 				})
+			} else {
+				// The core row model re-runs this walk over the **same** `Row` objects whenever
+				// `grouping.by` changes (or a marked column drops out of `options.columns`) — it is
+				// memoised on `table.options.data` alone, not on grouping state. Without clearing, a
+				// row a shrinking `by` demotes stays `getIsGrouped() === true` forever: its label
+				// survives, its own columns stay hidden behind the `__group__` column, and
+				// `groupingColumnId` can go on naming a column no longer in `by`. `delete` rather than
+				// assigning `undefined`, so the property is genuinely absent — what a freshly
+				// constructed row looks like, and what `row_getIsGrouped`'s `!!row.groupingColumnId`
+				// reads the same way either way.
+				delete row.groupingColumnId
+				delete row.groupingValue
+				delete row.leafRows
 			}
 
 			if (row.subRows.length > 0) walk(row.subRows, depth + 1)
