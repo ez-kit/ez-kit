@@ -95,12 +95,16 @@ describe('@ez-kit/data-grid-core/features', () => {
 		for (const name of ROW_MODEL_FACTORIES) expect(typeof features[name](), name).toBe('function')
 		// `createDraftAtoms` shares the `create` prefix without being a row-model factory — it is
 		// the atom set a hand-built draft table hands to `createTable` — so it is named here
-		// rather than left to widen the count silently.
+		// rather than left to widen the count silently. `createManualGroupedRowModel` *is* a
+		// row-model factory — it occupies the same `groupedRowModel` slot as `createGroupedRowModel`
+		// — but it is ours rather than a re-export, so it stays out of `ROW_MODEL_FACTORIES` (which
+		// this test's own name scopes to the nine re-exported ones) and is named here instead.
+		expect(typeof features.createManualGroupedRowModel(), 'createManualGroupedRowModel').toBe('function')
 		expect(
 			Object.keys(features)
 				.filter((k) => k.startsWith('create'))
 				.sort(),
-		).toEqual([...ROW_MODEL_FACTORIES, 'createDraftAtoms'].sort())
+		).toEqual([...ROW_MODEL_FACTORIES, 'createDraftAtoms', 'createManualGroupedRowModel'].sort())
 	})
 
 	it('re-exports tableFeatures, which returns the set it was given', () => {

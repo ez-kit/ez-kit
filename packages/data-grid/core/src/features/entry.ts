@@ -89,6 +89,11 @@ export {
 	createSortedRowModel,
 } from '@tanstack/table-core'
 
+// `createManualGroupedRowModel` is **our** row-model factory, not a re-export: it occupies the
+// same `groupedRowModel` slot as `createGroupedRowModel` above, for a table whose rows the server
+// already grouped. See its own docblock for why there is no `manualGrouping` flag instead.
+export { createManualGroupedRowModel, type ManualGroupingAdapters } from './grouping/create-manual-grouped-row-model'
+
 // The grid's own features. Each registers itself in `Plugins` and declares its state, options and
 // table APIs under its own key in the corresponding `*_FeatureMap`, so a feature left out of a
 // table's set contributes neither behaviour nor types.
