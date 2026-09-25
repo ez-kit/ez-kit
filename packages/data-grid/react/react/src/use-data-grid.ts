@@ -1347,6 +1347,10 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 		// consumer's callbacks are typed in their row, `ResolvedGridOptions` is row-erased,
 		// and v9's row types are invariant so the two do not overlap. See `ErasedRow`.
 		selection: { bar: normalizedSelectionBar as unknown as ResolvedGridOptions['selection']['bar'] },
+		aggregation: {
+			manual: config.aggregation?.manual ?? false,
+			...(config.aggregation?.totals !== undefined ? { totals: config.aggregation.totals } : {}),
+		},
 		expanding: {
 			component: expandingCfg?.component as ResolvedGridOptions['expanding']['component'],
 		},

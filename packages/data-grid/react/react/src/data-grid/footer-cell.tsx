@@ -1,11 +1,13 @@
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
+import { useGridOptions } from '../use-grid-options'
 
 import { getAlignAttrs } from './align-attrs'
 import { resolveViewComponent } from './cell'
 import { flexRender } from './flex-render'
 
 import type { CellTypeRegistry, CellViewProps } from '../cell-types-context'
+import type { ResolvedGridOptions } from '../resolved-options'
 import type { ErasedRow, GridFeatures } from '../types'
 import type { FormColumnMeta } from '@ez-kit/data-grid-core'
 import type { Header } from '@tanstack/table-core'
@@ -52,11 +54,18 @@ export type DataGridFooterCellProps<TRow extends object = ErasedRow> = {
  * footer changes. The fallback reaches only a column that wrote `aggregation` and no `footer`,
  * which is a column that asked to be totalled and said nothing about where.
  *
- * **This is the whole of the "footer grand total", and it needs no grouping.**
- * `column.getAggregationValue()` totals the filtered row model, so a grid registering
- * `rowAggregationFeature` alone — no `columnGroupingFeature`, no grouped row model — gets the
- * number. That is the split the two upstream features exist for, and registering grouping merely
- * to total a column is the mistake upstream's own guidance leads with.
+ * **A server-supplied total comes first and needs no feature.** `aggregation.totals` is looked
+ * up by column id before `rowAggregationFeature` is consulted at all, so a grid whose totals all
+ * come from the server registers neither that feature nor an `aggregationFn` — there is nothing
+ * to ask. `aggregation.manual` turns the computed fallback off: once it is set, a column with no
+ * entry under `totals` renders nothing rather than a client-computed number the server disagrees
+ * with.
+ *
+ * Absent a supplied total (and with `manual` off), `column.getAggregationValue()` totals the
+ * filtered row model, so a grid registering `rowAggregationFeature` alone — no
+ * `columnGroupingFeature`, no grouped row model — gets the number. That is the split the two
+ * upstream features exist for, and registering grouping merely to total a column is the mistake
+ * upstream's own guidance leads with.
  *
  * Rendered through the column's existing cell-type view, so a `number` column's total is
  * formatted the way its values are, exactly as an aggregated cell on a group row is.
@@ -65,16 +74,30 @@ function footerContentOf<TRow extends object>(
 	header: Header<GridFeatures, TRow>,
 	meta: FormColumnMeta | undefined,
 	cellTypes: CellTypeRegistry,
+	aggregation: ResolvedGridOptions['aggregation'],
 ): ReactNode {
 	const { column } = header
 	if (column.columnDef.footer !== undefined) return flexRender(column.columnDef.footer, header.getContext())
 
-	// Optional-called: this runs for every footer cell of every grid, and `rowAggregationFeature`
-	// is not structural — see the FEATURE GUARDS note in `types.ts`. A column with no
-	// `aggregation` has no aggregation function either, so it answers `undefined` and the cell
-	// stays empty, which is what a footer cell has always been without a `footer`.
-	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
-	const total: unknown = column.getAggregationValue?.()
+	// A supplied total wins over computing one, and is looked up **before** the feature is
+	// consulted: a grid whose totals all come from the server registers neither
+	// `rowAggregationFeature` nor `aggregationFns`, so there is nothing to ask. `Object.hasOwn`
+	// rather than `!== undefined` — `0` and `null` are real totals, and `0` is the right answer
+	// for an empty result set.
+	const supplied = aggregation.totals
+	const total: unknown =
+		supplied !== undefined && Object.hasOwn(supplied, column.id)
+			? supplied[column.id]
+			: aggregation.manual
+				? undefined
+				: // Optional-called: this runs for every footer cell of every grid, and
+					// `rowAggregationFeature` is not structural — see the FEATURE GUARDS note in
+					// `types.ts`. A column with no `aggregation` has no aggregation function either, so it
+					// answers `undefined` and the cell stays empty, which is what a footer cell has
+					// always been without a `footer`.
+					// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+					column.getAggregationValue?.()
+
 	if (total === undefined) return null
 
 	const aggregatedComp = (meta as { aggregation?: { component?: unknown } } | undefined)?.aggregation?.component as
@@ -113,7 +136,8 @@ export function DataGridFooterCell<TRow extends object = ErasedRow>({
 	// this is the same cast core's own `creating.ts` makes at its boundary.
 	const meta = header.column.columnDef.meta as FormColumnMeta | undefined
 	const cellTypes = useCellTypes()
-	const content = header.isPlaceholder ? null : (footerContentOf(header, meta, cellTypes) ?? null)
+	const { aggregation } = useGridOptions()
+	const content = header.isPlaceholder ? null : (footerContentOf(header, meta, cellTypes, aggregation) ?? null)
 
 	return (
 		<Td

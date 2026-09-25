@@ -217,6 +217,20 @@ export type ResolvedGridOptions = {
 		 */
 		bar?: NormalizedSelectionBarConfig | undefined
 	}
+	/**
+	 * Server-supplied aggregates, resolved. The group is always present, so no reader guards the
+	 * property.
+	 *
+	 * Read by the footer cell. It is config rather than state, which is why it lives here — and
+	 * it has to reach a column that registered no aggregation feature at all, which is why the
+	 * footer reads this instead of asking the table.
+	 */
+	aggregation: {
+		/** `aggregation.manual` — never compute a total on the client. */
+		manual: boolean
+		/** `aggregation.totals` — grand total per column id. */
+		totals?: Record<string, unknown> | undefined
+	}
 	expanding: {
 		/** Sub-content detail-panel renderer, if one was supplied. */
 		component?: ComponentType<ExpandedRowProps<never>> | undefined
@@ -283,6 +297,7 @@ export function defaultResolvedGridOptions(core?: GridOptions<never>): ResolvedG
 			boundaries: DATA_GRID_DEFAULTS.pagination.boundaries,
 		},
 		selection: {},
+		aggregation: { manual: false },
 		expanding: {},
 		// Every feature is off here, but a fallback is not a feature: a grid with nothing to
 		// show still has to show something, so the three states are on and readers can rely on
