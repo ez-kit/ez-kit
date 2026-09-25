@@ -608,8 +608,21 @@ export type GroupingConfig<
 	 * its alignment. See {@link SystemColumnDef}.
 	 */
 	column?: SystemColumnDef<TFeatures, TRow, TNode>
-	/** Rows arrive already grouped from the server; the grid does not group them again. */
-	manual?: boolean
+	/**
+	 * Reads a group row's children. Writing it says the rows arrive **already grouped**, as a
+	 * tree.
+	 *
+	 * It has to be here rather than on the row model, because the tree must exist in the *core*
+	 * row model — built before any grouped model runs — so reading children is a table option.
+	 * Pair it with `groupedRowModel: createManualGroupedRowModel()`: the model is what stops the
+	 * grid grouping the rows a second time, and this is what lets it see the hierarchy.
+	 *
+	 * Deliberately **not** `expanding.getSubRows`. That one is wired only under
+	 * `expanding.mode: 'tree'`, and writing an `expanding` config injects the `__expand__`
+	 * column — a second chevron column a server-grouped grid does not want, since the `__group__`
+	 * cell carries its own.
+	 */
+	getSubRows?: (row: TRow, index: number) => TRow[] | undefined
 	/** Called whenever the grouping levels change. Receives the full list, outermost first. */
 	onChange?: (grouping: string[]) => void
 }

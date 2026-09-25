@@ -94,14 +94,14 @@ A page counts **rendered** rows, and a group row is a rendered row — so a page
 
 ## Options
 
-| Option              | Type                           | Description                                                              |
-| ------------------- | ------------------------------ | ------------------------------------------------------------------------ |
-| `grouping.by`       | `string[]`                     | Starting levels, outermost first. Column ids.                            |
-| `grouping.mode`     | `'single' \| 'multiple'`       | How many columns carry the labels. Default `'single'`.                   |
-| `grouping.column`   | `SystemColumnDef`              | Presentation of the injected `__group__` column — width, pinning, align. |
-| `grouping.manual`   | `boolean`                      | Rows arrive already grouped; the grid does not group them again.         |
-| `grouping.onChange` | `(grouping: string[]) => void` | Called whenever the levels change.                                       |
-| `grouping.enabled`  | `boolean`                      | Turns a `grouping` inherited from a defaults layer off for this grid.    |
+| Option                | Type                           | Description                                                                    |
+| --------------------- | ------------------------------ | ------------------------------------------------------------------------------ |
+| `grouping.by`         | `string[]`                     | Starting levels, outermost first. Column ids.                                  |
+| `grouping.mode`       | `'single' \| 'multiple'`       | How many columns carry the labels. Default `'single'`.                         |
+| `grouping.column`     | `SystemColumnDef`              | Presentation of the injected `__group__` column — width, pinning, align.       |
+| `grouping.getSubRows` | `(row, index) => TRow[]`       | Reads a group row's children. Writing it says the rows arrive already grouped. |
+| `grouping.onChange`   | `(grouping: string[]) => void` | Called whenever the levels change.                                             |
+| `grouping.enabled`    | `boolean`                      | Turns a `grouping` inherited from a defaults layer off for this grid.          |
 
 ### Column options
 

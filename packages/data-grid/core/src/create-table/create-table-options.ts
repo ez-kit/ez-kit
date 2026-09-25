@@ -1132,13 +1132,17 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 		// and a strict boolean check would have left `{ onChange }` reading as "off".
 		...(isFeatureEnabled(config.visibility) ? {} : { enableHiding: false }),
 		...(normalizedPinning.column ? {} : { enableColumnPinning: false }),
-		...(hasExpanding && expandMode === ExpandingMode.Tree
-			? {
-					getSubRows:
-						expandingCfg?.getSubRows ??
-						((row: TRow) => (row as Record<string, unknown>).children as TRow[] | undefined),
-				}
-			: {}),
+		// `grouping.getSubRows` first: a server-grouped grid states the tree there and writes no
+		// `expanding` config at all, which is what keeps `__expand__` out of the column list.
+		...(groupingCfg?.getSubRows !== undefined
+			? { getSubRows: groupingCfg.getSubRows }
+			: hasExpanding && expandMode === ExpandingMode.Tree
+				? {
+						getSubRows:
+							expandingCfg?.getSubRows ??
+							((row: TRow) => (row as Record<string, unknown>).children as TRow[] | undefined),
+					}
+				: {}),
 		...(hasExpanding && expandMode === ExpandingMode.SubContent && expandingCfg?.getRowCanExpand
 			? { getRowCanExpand: expandingCfg.getRowCanExpand }
 			: {}),
@@ -1151,7 +1155,11 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 		// twice on every group row and nothing at all on every leaf row, where its cells are
 		// placeholders. AG Grid's default is the same, and for the same reason.
 		...(hasGrouping ? { groupedColumnMode: 'remove' as const } : {}),
-		...(groupingCfg?.manual === true ? { manualGrouping: true } : {}),
+		// No `manualGrouping`. Upstream's flag makes `getGroupedRowModel()` return the pre-grouped
+		// model untouched, and every part of group-row behaviour keys on `row.groupingColumnId`,
+		// which only a grouped row model sets — so the flag produced an empty `__group__` column
+		// and a grouped column missing from the list. Server grouping is
+		// `createManualGroupedRowModel()` instead; see its docblock.
 		// Row selection
 		enableRowSelection: hasSelection,
 		// Single-row selection. TanStack defaults `enableMultiRowSelection` to true, so the gate

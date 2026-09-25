@@ -245,15 +245,21 @@ describe('row grouping', () => {
 		expect(onChange).toHaveBeenCalledWith(['region'])
 	})
 
-	it('leaves the rows alone under `manual`, where the server grouped them', () => {
+	it('builds the tree from `grouping.getSubRows` without an expanding config', () => {
+		type ServerRow = { id: string; region: string; amount: number; subRows?: ServerRow[] }
 		const table = createTable({
 			features: GROUPING,
-			data: DATA,
-			columns: COLUMNS,
-			grouping: { by: ['region'], manual: true },
+			data: [
+				{ id: 'g:EMEA', region: 'EMEA', amount: 100, subRows: [{ id: '1', region: 'EMEA', amount: 100 }] },
+			] satisfies ServerRow[],
+			columns: createColumns<ServerRow>([{ accessorKey: 'region' }, { accessorKey: 'amount' }]),
+			grouping: { by: ['region'], getSubRows: (row) => row.subRows },
+			getRowId: (row) => row.id,
 		})
 
-		expect(table.getRowModel().rows).toHaveLength(DATA.length)
+		expect(table.getCoreRowModel().rows[0]?.subRows).toHaveLength(1)
+		// No `expanding` config, so no `__expand__` column is injected.
+		expect(table.getAllColumns().map((column) => column.id)).not.toContain('__expand__')
 	})
 })
 
