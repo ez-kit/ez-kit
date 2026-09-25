@@ -1,25 +1,10 @@
 import { createColumns } from '@ez-kit/data-grid-core'
-import {
-	columnGroupingFeature,
-	columnPinningFeature,
-	columnSizingFeature,
-	columnVisibilityFeature,
-	createExpandedRowModel,
-	createManualGroupedRowModel,
-	rowExpandingFeature,
-	tableFeatures,
-} from '@ez-kit/data-grid-core/features'
 import { screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
-import { renderWithComponents, TEST_FEATURES } from '../test-utils'
-import { useDataGrid } from '../use-data-grid'
+import { MANUAL_GROUPING, renderGrid, TREE } from './manual-grouping-fixtures'
 
-import { DataGrid } from './data-grid'
-
-import type { GridFeatures } from '../types'
-import type { UseDataGridConfig } from '../use-data-grid'
-import type { ReactElement } from 'react'
+import type { ServerRow } from './manual-grouping-fixtures'
 
 type Deal = { id: string; account: string; amount: number }
 
@@ -28,77 +13,6 @@ const PAGE: Deal[] = [
 	{ id: '1', account: 'Acme', amount: 70 },
 	{ id: '2', account: 'Globex', amount: 30 },
 ]
-
-// ── server-grouped fixtures (Task 5's shape, redeclared here — see the react package's own
-// fixture note: core's `MANUAL` carries no structural features because nothing renders there,
-// while a React feature set needs the structural three or the grid throws at render) ──────────
-
-type ServerRow = {
-	id: string
-	region?: string
-	account?: string
-	amount?: number
-	subRows?: ServerRow[] | undefined
-}
-
-const EMEA_SUBROWS: ServerRow[] = [
-	{ id: '1', region: 'EMEA', account: 'Acme', amount: 70 },
-	{ id: '2', region: 'EMEA', account: 'Globex', amount: 30 },
-]
-
-const EMEA_GROUP: ServerRow = { id: 'g:EMEA', region: 'EMEA', amount: 100, subRows: EMEA_SUBROWS }
-
-const TREE: ServerRow[] = [EMEA_GROUP]
-
-/**
- * The structural three (required for any React render) plus server grouping — and deliberately
- * no `rowAggregationFeature` / `aggregationFns`. That absence is the point: it is what makes the
- * tests below prove the new `isAggregated` arm in `cell.tsx` rather than upstream's.
- */
-const MANUAL_GROUPING = tableFeatures({
-	columnVisibilityFeature,
-	columnPinningFeature,
-	columnSizingFeature,
-	columnGroupingFeature,
-	groupedRowModel: createManualGroupedRowModel(),
-	rowExpandingFeature,
-	expandedRowModel: createExpandedRowModel(),
-})
-
-/**
- * A grid harness whose config can be swapped after mount.
- *
- * `test-utils`'s `renderGrid` closes over its config once inside `Harness`, so its returned
- * `rerender` re-mounts the same closed-over props rather than accepting new ones — it cannot
- * drive the "a new `totals` object arrives with an unchanged `data` array" case below. This one
- * carries `config` as a prop instead, so React Testing Library's own `rerender` (re-invoked with
- * a new `config` prop) is the rerender this file needs.
- *
- * Generic over the row, defaulting to {@link Deal}, so the group-row cases below can supply
- * {@link ServerRow} data and columns without an `as any` at the call site — the same reason
- * `test-utils`'s own `renderGrid` is generic.
- */
-function Harness<TRow extends object = Deal>({
-	config,
-}: {
-	config: Partial<UseDataGridConfig<GridFeatures, TRow>>
-}): ReactElement {
-	const table = useDataGrid<GridFeatures, TRow>({
-		features: TEST_FEATURES,
-		...config,
-	} as UseDataGridConfig<GridFeatures, TRow>)
-	return <DataGrid<GridFeatures, TRow> table={table} />
-}
-
-function renderGrid<TRow extends object = Deal>(config: Partial<UseDataGridConfig<GridFeatures, TRow>>) {
-	const result = renderWithComponents(<Harness<TRow> config={config} />)
-	return {
-		...result,
-		rerender: (nextConfig: Partial<UseDataGridConfig<GridFeatures, TRow>>) => {
-			result.rerender(<Harness<TRow> config={nextConfig} />)
-		},
-	}
-}
 
 describe('server-supplied grand totals', () => {
 	it('renders `aggregation.totals` in the footer of a column that never wrote `aggregation`', () => {
