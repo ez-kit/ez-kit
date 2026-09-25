@@ -1,4 +1,5 @@
 import {
+	aggregationFns,
 	columnFacetingFeature,
 	columnFilteringFeature,
 	constructAggregationFn,
@@ -672,6 +673,77 @@ describe('createTableOptions', () => {
 					typeof createTableOptions
 				>[1],
 			)
+
+			expect(warnings()).toHaveLength(0)
+		})
+	})
+
+	describe('aggregation config warnings', () => {
+		afterEach(() => {
+			vi.restoreAllMocks()
+		})
+
+		const warnings = (): string[] => {
+			const spy = vi.mocked(console.warn)
+			return spy.mock.calls.map((call) => String(call[0]))
+		}
+
+		// `rowAggregationFeature` alone would trip the `aggregationFns`-missing warning tested above
+		// for every case here, since each column names its aggregation by string. `aggregationFns`
+		// rides along so these cases assert exactly the warnings under test.
+		const AGGREGATION = tableFeatures({ rowAggregationFeature, aggregationFns })
+
+		it('names the column when `manual` is on and no total was supplied for it', () => {
+			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+			const totalled = createColumns<Row>([{ accessorKey: 'age', aggregation: 'sum' }])
+			createTableOptions({
+				features: AGGREGATION,
+				data: rows,
+				columns: totalled,
+				aggregation: { manual: true, totals: {} },
+			})
+
+			expect(warnings()).toHaveLength(1)
+			expect(warnings()[0]).toContain("'age'")
+			expect(warnings()[0]).toContain('aggregation.totals')
+		})
+
+		it('warns about a total keyed to a column that does not exist', () => {
+			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+			const totalled = createColumns<Row>([{ accessorKey: 'age', aggregation: 'sum' }])
+			createTableOptions({
+				features: AGGREGATION,
+				data: rows,
+				columns: totalled,
+				aggregation: { manual: true, totals: { age: 1, revenue: 2 } },
+			})
+
+			expect(warnings()).toHaveLength(1)
+			expect(warnings()[0]).toContain("'revenue'")
+		})
+
+		it('warns about an aggregation object that names neither a function nor a renderer', () => {
+			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+			const misconfigured = createColumns<Row>([{ accessorKey: 'age', aggregation: {} }])
+			createTableOptions({ features: AGGREGATION, data: rows, columns: misconfigured })
+
+			expect(warnings()).toHaveLength(1)
+			expect(warnings()[0]).toContain('neither')
+		})
+
+		it('says nothing on a complete config', () => {
+			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+			const totalled = createColumns<Row>([{ accessorKey: 'age', aggregation: 'sum' }])
+			createTableOptions({
+				features: AGGREGATION,
+				data: rows,
+				columns: totalled,
+				aggregation: { manual: true, totals: { age: 1 } },
+			})
 
 			expect(warnings()).toHaveLength(0)
 		})

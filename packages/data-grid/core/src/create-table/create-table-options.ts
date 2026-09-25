@@ -843,6 +843,45 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 		)
 	}
 
+	// ── the supplied-totals bag ────────────────────────────────────────────
+	// Runtime-only, like every guard in this file: the config states behaviour and nothing
+	// type-checks it against the columns — see the note on `TableConfig.features`.
+	if (IS_DEV) {
+		// Same fallback `collectInitialHidden` / `collectInitialPinned` use on the authored def
+		// (`def.id ?? def.accessorKey`), read off the mapped column instead: `mapColumns` only ever
+		// writes `result.id` when the author named one explicitly, so an accessor-only column is
+		// named by its `accessorKey` here too.
+		const resolvedColumnId = (col: unknown): string =>
+			(col as { id?: string; accessorKey?: string }).id ?? (col as { accessorKey?: string }).accessorKey ?? '?'
+
+		const aggregationCfg = config.aggregation
+		const totals = aggregationCfg?.totals
+		const columnIds = new Set(mappedUserColumns.map((col) => resolvedColumnId(col)))
+
+		if (aggregationCfg?.manual === true) {
+			for (const col of mappedUserColumns) {
+				const id = resolvedColumnId(col)
+				if ((col as { aggregationFn?: unknown }).aggregationFn === undefined) continue
+				if (totals !== undefined && Object.hasOwn(totals, id)) continue
+				console.warn(
+					`[data-grid] Column '${id}' names an \`aggregation\` function and \`aggregation.manual\` is ` +
+						'on, so the grid will not compute its total — but `aggregation.totals` carries no entry ' +
+						"for it, so its footer renders empty. Supply it, or drop the column's `aggregation`.",
+				)
+			}
+		}
+
+		if (totals !== undefined) {
+			for (const id of Object.keys(totals)) {
+				if (columnIds.has(id)) continue
+				console.warn(
+					`[data-grid] \`aggregation.totals\` has an entry for '${id}', which is not a column id — ` +
+						'nothing renders it. A renamed column is the usual cause.',
+				)
+			}
+		}
+	}
+
 	// `rowActions` defaults to on: omitting it must keep the actions column appearing as soon as
 	// editing / deleting / row pinning is in play, which is what it has always done. Only an
 	// explicit `false` (or `{ enabled: false }`) suppresses the column outright — the read-only

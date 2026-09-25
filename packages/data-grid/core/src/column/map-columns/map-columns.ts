@@ -214,6 +214,13 @@ function mapColumn<TRow extends object>(
 		// like, and writing the key as `undefined` would both break `exactOptionalPropertyTypes`
 		// and make the column read as aggregated to `create-table-options.ts`'s `aggregatedColumns`
 		// walk — which would then ask for `rowAggregationFeature` on a grid that needs none.
+		if (IS_DEV && aggregation.fn === undefined && aggregation.component === undefined) {
+			console.warn(
+				`[data-grid] Column "${id ?? accessorKey ?? '?'}" writes \`aggregation\` with neither \`fn\` nor ` +
+					'`component`, so it says nothing: a total comes from `aggregation.fn` or from the table-level ' +
+					'`aggregation.totals`, and `component` is what renders it.',
+			)
+		}
 		if (aggregation.fn !== undefined) result.aggregationFn = aggregation.fn
 		if (aggregation.component !== undefined) meta.aggregation = { component: aggregation.component }
 	}
