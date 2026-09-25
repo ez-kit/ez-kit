@@ -34,6 +34,17 @@ const APAC_GROUP: ServerRow = {
 
 const TREE: ServerRow[] = [EMEA_GROUP, APAC_GROUP]
 
+// Shared by the two-level tests below, for the same reason `EMEA_SUBROWS` is shared: one named
+// fixture instead of a `TREE[0]`-style index access repeated at each call site.
+const TWO_LEVEL: ServerRow[] = [
+	{
+		id: 'g:EMEA',
+		region: 'EMEA',
+		amount: 100,
+		subRows: [{ id: 'g:EMEA>Ivanov', manager: 'Ivanov', amount: 100, subRows: EMEA_SUBROWS }],
+	},
+]
+
 const COLUMNS = createColumns<ServerRow>([
 	{ accessorKey: 'region' },
 	{ accessorKey: 'manager' },
@@ -107,15 +118,7 @@ describe('the manual grouped row model, tree shape', () => {
 	})
 
 	it('groups two levels, outermost first', () => {
-		const twoLevel: ServerRow[] = [
-			{
-				id: 'g:EMEA',
-				region: 'EMEA',
-				amount: 100,
-				subRows: [{ id: 'g:EMEA>Ivanov', manager: 'Ivanov', amount: 100, subRows: EMEA_SUBROWS }],
-			},
-		]
-		const group = build(twoLevel, ['region', 'manager']).getRowModel().rows[0]
+		const group = build(TWO_LEVEL, ['region', 'manager']).getRowModel().rows[0]
 
 		expect(group?.groupingColumnId).toBe('region')
 		expect(group?.subRows[0]?.getIsGrouped()).toBe(true)
@@ -129,6 +132,16 @@ describe('the manual grouped row model, tree shape', () => {
 		expect(group?.getLeafRows()).toHaveLength(3)
 	})
 
+	it('the `leafRows` property holds only the childless descendants, unlike `getLeafRows()`', () => {
+		const group = build(TWO_LEVEL, ['region', 'manager']).getRowModel().rows[0]
+
+		// `leafRows` is this model's own internal mark, not a typed member of `Row` anywhere (see
+		// the model's own docblock), hence the cast rather than a direct property read.
+		const marked = group as unknown as { leafRows?: unknown[] }
+		expect(marked.leafRows).toHaveLength(2)
+		expect(group?.getLeafRows()).toHaveLength(3)
+	})
+
 	it('leaves a childless top-level row as a record', () => {
 		const flatOnly: ServerRow[] = [{ id: '1', region: 'EMEA', account: 'Acme', amount: 70 }]
 
@@ -136,17 +149,9 @@ describe('the manual grouped row model, tree shape', () => {
 	})
 
 	it('clears stale marks when `grouping.by` shrinks, and clears every mark when it empties', () => {
-		const twoLevel: ServerRow[] = [
-			{
-				id: 'g:EMEA',
-				region: 'EMEA',
-				amount: 100,
-				subRows: [{ id: 'g:EMEA>Ivanov', manager: 'Ivanov', amount: 100, subRows: EMEA_SUBROWS }],
-			},
-		]
 		const table = createTable({
 			features: MANUAL,
-			data: twoLevel,
+			data: TWO_LEVEL,
 			columns: COLUMNS,
 			grouping: { by: ['region', 'manager'], getSubRows: (row) => row.subRows },
 			getRowId: (row) => row.id,

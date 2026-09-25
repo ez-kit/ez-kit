@@ -64,6 +64,18 @@ export type ManualGroupingAdapters<TRow> = {
  *
  * **Not implemented yet:** `adapters` is accepted but not yet honoured — see
  * {@link ManualGroupingAdapters}. This sentence is deleted once the flat shape lands.
+ *
+ * This model has no `onAfterUpdate`. Upstream's does: it calls `table_autoResetExpanded` /
+ * `table_autoResetPageIndex` when the grouping or the pre-grouped model changed, so changing
+ * `by` also collapses expanded groups and jumps back to the first page. Neither helper is
+ * exported from `@tanstack/table-core`, so this model cannot call the same functions upstream
+ * does, and it does not reach back into `table.resetExpanded()` / `resetPageIndex()` to
+ * approximate them — a row model driving table state from inside its own update is how render
+ * loops start. The consumer-visible result: after `by` changes, previously expanded rows stay
+ * expanded and the page index is unchanged. This interacts with the stale-marks fix above — a
+ * row that is still marked as grouped *and* still expanded was the visible symptom of that bug;
+ * with marks cleared correctly, an expanded id pointing at a row that is now a plain record is
+ * comparatively harmless (an expand affordance with nothing left to hide).
  */
 // `TData = any` matches `createGroupedRowModel`'s own signature exactly, so the two factories
 // stay interchangeable in the `groupedRowModel` slot.
