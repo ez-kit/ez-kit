@@ -209,3 +209,100 @@ describe('the manual grouped row model, tree shape', () => {
 		expect(table.getRowModel().rows[0]?.groupingValue).toBe('2026-01')
 	})
 })
+
+describe('the manual grouped row model, flat shape', () => {
+	type FlatRow = { id: string; level: number; region?: string; account?: string; amount?: number }
+
+	const FLAT: FlatRow[] = [
+		{ id: 'g:EMEA', level: 0, region: 'EMEA', amount: 100 },
+		{ id: '1', level: 1, region: 'EMEA', account: 'Acme', amount: 70 },
+		{ id: '2', level: 1, region: 'EMEA', account: 'Globex', amount: 30 },
+		{ id: 'g:APAC', level: 0, region: 'APAC', amount: 100 },
+		{ id: '3', level: 1, region: 'APAC', account: 'Umbrella', amount: 100 },
+	]
+
+	const FLAT_FEATURES = tableFeatures({
+		columnGroupingFeature,
+		groupedRowModel: createManualGroupedRowModel({
+			isGroupRow: (row: FlatRow) => row.level === 0,
+			getLevel: (row: FlatRow) => row.level,
+		}),
+		rowExpandingFeature,
+		expandedRowModel: createExpandedRowModel(),
+	})
+
+	const buildFlat = (data: FlatRow[]) =>
+		createTable({
+			features: FLAT_FEATURES,
+			data,
+			columns: createColumns<FlatRow>([
+				{ accessorKey: 'region' },
+				{ accessorKey: 'account' },
+				{ accessorKey: 'amount' },
+			]),
+			grouping: { by: ['region'] },
+			getRowId: (row) => row.id,
+		})
+
+	it('folds the sequence into groups and their records', () => {
+		const rows = buildFlat(FLAT).getRowModel().rows
+
+		expect(rows).toHaveLength(2)
+		expect(rows[0]?.getIsGrouped()).toBe(true)
+		expect(rows[0]?.groupingValue).toBe('EMEA')
+		expect(rows[0]?.subRows.map((row) => row.id)).toEqual(['1', '2'])
+		expect(rows[1]?.subRows.map((row) => row.id)).toEqual(['3'])
+	})
+
+	it('reads the subtotal off the group row rather than computing it', () => {
+		expect(buildFlat(FLAT).getRowModel().rows[0]?.getValue('amount')).toBe(100)
+	})
+
+	it('sets depth and parent on the folded records', () => {
+		const group = buildFlat(FLAT).getRowModel().rows[0]
+
+		expect(group?.depth).toBe(0)
+		expect(group?.subRows[0]?.depth).toBe(1)
+		expect(group?.subRows[0]?.parentId).toBe('g:EMEA')
+	})
+
+	it('throws in development on a level that jumps by more than one', () => {
+		expect(() =>
+			buildFlat([
+				{ id: 'g:EMEA', level: 0, region: 'EMEA' },
+				{ id: '1', level: 2, account: 'Acme' },
+			]).getRowModel(),
+		).toThrow(/level/i)
+	})
+
+	it('keeps a record that arrives before any group row at the top level', () => {
+		const rows = buildFlat([{ id: '1', level: 1, account: 'Acme', amount: 70 }]).getRowModel().rows
+
+		expect(rows).toHaveLength(1)
+		expect(rows[0]?.getIsGrouped()).toBe(false)
+	})
+
+	it('folds the same tree on a rerun over the same rows, rather than doubling it', () => {
+		// The core row model is memoised on `data` alone, so `grouping.by` staying the same across
+		// a `setGrouping` call still reruns this model over the SAME `Row` objects it already
+		// folded once. `foldByLevel` resets each row's `subRows` before rebuilding it, so a second
+		// run must produce an identical tree rather than duplicate or orphaned rows.
+		const table = buildFlat(FLAT)
+
+		const first = table.getRowModel().rows
+		expect(first).toHaveLength(2)
+		expect(first[0]?.subRows.map((row) => row.id)).toEqual(['1', '2'])
+		expect(first[1]?.subRows.map((row) => row.id)).toEqual(['3'])
+
+		// Force the memoised row model to recompute without changing `data` or `grouping.by`.
+		table.setGrouping(['region'])
+		const second = table.getRowModel().rows
+
+		expect(second).toHaveLength(2)
+		expect(second[0]?.id).toBe('g:EMEA')
+		expect(second[0]?.subRows.map((row) => row.id)).toEqual(['1', '2'])
+		expect(second[1]?.id).toBe('g:APAC')
+		expect(second[1]?.subRows.map((row) => row.id)).toEqual(['3'])
+		expect(second[0]?.getLeafRows()).toHaveLength(2)
+	})
+})

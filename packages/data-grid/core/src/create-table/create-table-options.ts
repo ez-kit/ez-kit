@@ -5,6 +5,7 @@ import { buildColumnInvariants, enforceColumnInvariants, mergePinningSeed } from
 import { DEFAULT_PAGE_SIZE, UNKNOWN_PAGE_COUNT } from '../defaults'
 import { CreatingMode } from '../features/creating'
 import { EditingMode } from '../features/editing'
+import { MANUAL_GROUPED_ROW_MODEL } from '../features/grouping/create-manual-grouped-row-model'
 import { buildOperatorRegistry } from '../features/operators'
 import { RowActionsPlacement } from '../features/row-actions'
 import { buildColumnList, extractPinningState } from '../system-columns'
@@ -848,6 +849,41 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 				'`features` — the name resolves to nothing, so the column totals nothing and its group ' +
 				'rows and footer total render empty. Add `aggregationFns` to your `tableFeatures({ … })` call.',
 		)
+	}
+
+	// ── grouped row model vs. `grouping` config ───────────────────────────
+	// The two grouped row models are interchangeable at the `groupedRowModel` slot — both are
+	// plain functions — so nothing stops a config that contradicts the one registered, and both
+	// mismatches are silent. `grouping.getSubRows` with the client model means the grid groups an
+	// already-grouped tree a second time; the manual model with neither `getSubRows` nor adapters
+	// means flat rows and no grouping at all.
+	//
+	// Runtime-only, like every guard in this file.
+	if (IS_DEV && hasGrouping) {
+		const model = (registeredFeatures as { groupedRowModel?: Record<symbol, unknown> }).groupedRowModel
+		const marker = model?.[MANUAL_GROUPED_ROW_MODEL] as { flat: boolean } | undefined
+		const isManualModel = marker !== undefined
+		const hasTreeReader = groupingCfg?.getSubRows !== undefined
+
+		if (hasTreeReader && !isManualModel) {
+			console.warn(
+				'[data-grid] `grouping.getSubRows` says the rows arrive already grouped, but `features` ' +
+					'registers the client grouped row model, which will group them a second time. Register ' +
+					'`groupedRowModel: createManualGroupedRowModel()` instead.',
+			)
+		}
+
+		// The flat-shape adapters are arguments to the factory, not config, so they cannot be read
+		// from here — `marker.flat` is how the factory reports whether it was given `isGroupRow`,
+		// which is what keeps a correctly configured flat-shape grid (adapters, no `getSubRows`)
+		// silent.
+		if (isManualModel && !hasTreeReader && !marker.flat) {
+			console.warn(
+				'[data-grid] `createManualGroupedRowModel()` is registered but nothing tells the grid where ' +
+					'the groups are: write `grouping.getSubRows` for a tree response, or pass the model ' +
+					'`isGroupRow` / `getLevel` for a flat one. As it stands the rows render ungrouped.',
+			)
+		}
 	}
 
 	// ── the supplied-totals bag ────────────────────────────────────────────

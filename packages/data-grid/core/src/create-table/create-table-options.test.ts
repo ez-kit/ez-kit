@@ -2,15 +2,19 @@ import {
 	aggregationFns,
 	columnFacetingFeature,
 	columnFilteringFeature,
+	columnGroupingFeature,
 	constructAggregationFn,
+	createExpandedRowModel,
 	createFacetedRowModel,
 	createFacetedUniqueValues,
 	createFilteredRowModel,
+	createGroupedRowModel,
 	createPaginatedRowModel,
 	createSortedRowModel,
 	filterFns,
 	globalFilteringFeature,
 	rowAggregationFeature,
+	rowExpandingFeature,
 	rowPaginationFeature,
 	rowSortingFeature,
 	sortFns,
@@ -22,6 +26,7 @@ import { createColumns } from '../column/create-columns'
 import { DEFAULT_PAGE_SIZE } from '../defaults'
 import {
 	creatingFeature,
+	createManualGroupedRowModel,
 	deletingFeature,
 	draftFeature,
 	editingFeature,
@@ -31,6 +36,7 @@ import {
 } from '../features/entry'
 import { RowActionsPlacement } from '../features/row-actions'
 
+import { createTable } from './create-table'
 import { createTableOptions } from './create-table-options'
 
 import type { StateHandlerTable } from './create-table-options'
@@ -785,5 +791,92 @@ describe('createTableOptions', () => {
 
 	it('throws when draft is on without a manual axis', () => {
 		expect(() => createTableOptions({ features, data: rows, columns, draft: true })).toThrow(/manual/)
+	})
+})
+
+describe('grouped row model vs. grouping config', () => {
+	afterEach(() => {
+		vi.restoreAllMocks()
+	})
+
+	type GroupedRow = { id: string; region: string; amount: number; subRows?: GroupedRow[] }
+
+	const GROUPED_DATA: GroupedRow[] = [{ id: '1', region: 'EMEA', amount: 10 }]
+	const GROUPED_COLUMNS = createColumns<GroupedRow>([{ accessorKey: 'region' }, { accessorKey: 'amount' }])
+
+	const GROUPING = tableFeatures({
+		columnGroupingFeature,
+		groupedRowModel: createGroupedRowModel(),
+		rowExpandingFeature,
+		expandedRowModel: createExpandedRowModel(),
+	})
+
+	it('warns when `grouping.getSubRows` is written but the client model is registered', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+		createTable({
+			features: GROUPING, // groupedRowModel: createGroupedRowModel()
+			data: GROUPED_DATA,
+			columns: GROUPED_COLUMNS,
+			grouping: { by: ['region'], getSubRows: (row) => row.subRows },
+		})
+
+		expect(warn).toHaveBeenCalledWith(expect.stringContaining('createManualGroupedRowModel'))
+	})
+
+	it('warns when the manual model is registered with nothing to read the groups from', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+		createTable({
+			features: tableFeatures({
+				columnGroupingFeature,
+				groupedRowModel: createManualGroupedRowModel(),
+				rowExpandingFeature,
+				expandedRowModel: createExpandedRowModel(),
+			}),
+			data: GROUPED_DATA,
+			columns: GROUPED_COLUMNS,
+			grouping: { by: ['region'] },
+		})
+
+		expect(warn).toHaveBeenCalledWith(expect.stringContaining('getSubRows'))
+	})
+
+	it('says nothing when the model and the config agree', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+		createTable({
+			features: tableFeatures({
+				columnGroupingFeature,
+				groupedRowModel: createManualGroupedRowModel(),
+				rowExpandingFeature,
+				expandedRowModel: createExpandedRowModel(),
+			}),
+			data: GROUPED_DATA,
+			columns: GROUPED_COLUMNS,
+			grouping: { by: ['region'], getSubRows: (row) => row.subRows },
+		})
+
+		expect(warn).not.toHaveBeenCalled()
+	})
+
+	it('says nothing for a correctly configured flat-shape grid — adapters, no `getSubRows`', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+		createTable({
+			features: tableFeatures({
+				columnGroupingFeature,
+				groupedRowModel: createManualGroupedRowModel({
+					isGroupRow: (row: GroupedRow) => row.subRows === undefined,
+				}),
+				rowExpandingFeature,
+				expandedRowModel: createExpandedRowModel(),
+			}),
+			data: GROUPED_DATA,
+			columns: GROUPED_COLUMNS,
+			grouping: { by: ['region'] },
+		})
+
+		expect(warn).not.toHaveBeenCalled()
 	})
 })

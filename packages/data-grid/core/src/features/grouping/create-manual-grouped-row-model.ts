@@ -4,6 +4,11 @@ import { readForeignSlice } from '../../feature-state'
 
 import type { Row, RowData, RowModel, Table, TableFeatures } from '@tanstack/table-core'
 
+// Runtime-only, like every `IS_DEV` guard in this package — each module that needs it declares
+// its own copy rather than importing a shared one (see `create-table-options.ts`,
+// `operators.ts`, `map-columns.ts`).
+const IS_DEV = process.env.NODE_ENV !== 'production'
+
 /**
  * How to read a **flat** server response — one sequence of rows carrying their own level, which is
  * what a SQL backend produces from `GROUPING SETS` / `ROLLUP`.
@@ -11,10 +16,6 @@ import type { Row, RowData, RowModel, Table, TableFeatures } from '@tanstack/tab
  * Omit both and the model expects a **tree**: rows nested through `grouping.getSubRows`, where
  * depth alone says what is a group (anything shallower than `grouping.by` is one) and no adapter
  * is needed at all.
- *
- * **Not implemented yet.** `createManualGroupedRowModel` currently only reads the tree shape;
- * passing either field is accepted but silently ignored — `foldByLevel` for the flat shape is the
- * next task's work. These two sentences are deleted once that lands.
  */
 export type ManualGroupingAdapters<TRow> = {
 	/** Whether this row is a group row rather than a record. */
@@ -22,6 +23,18 @@ export type ManualGroupingAdapters<TRow> = {
 	/** This row's nesting level, outermost `0`. */
 	getLevel?: (row: TRow) => number
 }
+
+/**
+ * Marks a factory's return value as the server-grouping model.
+ *
+ * Core cannot otherwise tell the two grouped row models apart — both are plain functions in the
+ * same slot — and it has to, because a `grouping.getSubRows` paired with the client model and a
+ * manual model paired with nothing are both silent wrong answers rather than errors. The value
+ * is `{ flat: boolean }` rather than a bare `true`: `.flat` says whether the factory was given
+ * `isGroupRow`, which is what lets the mismatch guard in `create-table-options.ts` stay silent on
+ * a correctly configured flat-shape grid — one with adapters and no `grouping.getSubRows`.
+ */
+export const MANUAL_GROUPED_ROW_MODEL = Symbol('ez-kit.manualGroupedRowModel')
 
 /**
  * The grouped row model for rows the **server** already grouped.
@@ -62,8 +75,8 @@ export type ManualGroupingAdapters<TRow> = {
  * Keep it out of `allDataGridFeatures` — two models cannot occupy one slot, and the all-in set is
  * the client one.
  *
- * **Not implemented yet:** `adapters` is accepted but not yet honoured — see
- * {@link ManualGroupingAdapters}. This sentence is deleted once the flat shape lands.
+ * The returned factory carries {@link MANUAL_GROUPED_ROW_MODEL} so core can tell it apart from
+ * `createGroupedRowModel()` at the `groupedRowModel` slot — see that symbol's own docblock.
  *
  * This model has no `onAfterUpdate`. Upstream's does: it calls `table_autoResetExpanded` /
  * `table_autoResetPageIndex` when the grouping or the pre-grouped model changed, so changing
@@ -83,7 +96,7 @@ export type ManualGroupingAdapters<TRow> = {
 export function createManualGroupedRowModel<TFeatures extends TableFeatures, TData extends RowData = any>(
 	adapters?: ManualGroupingAdapters<TData>,
 ): (table: Table<TFeatures, TData>) => () => RowModel<TFeatures, TData> {
-	return (table) =>
+	const factory = (table: Table<TFeatures, TData>) =>
 		tableMemo({
 			feature: 'columnGroupingFeature',
 			table,
@@ -91,6 +104,7 @@ export function createManualGroupedRowModel<TFeatures extends TableFeatures, TDa
 			memoDeps: () => [readForeignSlice(table, 'grouping'), table.getPreGroupedRowModel(), table.options.columns],
 			fn: () => build(table, adapters),
 		})
+	return Object.assign(factory, { [MANUAL_GROUPED_ROW_MODEL]: { flat: adapters?.isGroupRow !== undefined } })
 }
 
 /**
@@ -111,12 +125,67 @@ type MarkableRow<TFeatures extends TableFeatures, TData extends RowData> = Row<T
 	getGroupingValue: (columnId: string) => unknown
 }
 
-// `adapters` names the flat-shape adapters (see `ManualGroupingAdapters`) and is unused by this
-// task's tree-only path — `foldByLevel` and flat handling are the next task's work, and that is
-// where this parameter starts being read.
+/**
+ * Folds a flat sequence into a hierarchy using each row's own level.
+ *
+ * A level greater than the previous row's opens a child list; an equal or smaller one closes back
+ * to that depth. A jump of more than one past the row before it is a hole in the response — a
+ * group level the server skipped — and it **throws in development**, because both alternatives are
+ * worse: attaching the row anyway invents a parent it does not have, and dropping it loses data
+ * silently. In production it attaches at the nearest legal depth, so a bad page degrades rather
+ * than blanks.
+ *
+ * The check is against the **previous row's own declared level**, not the stack's current depth —
+ * the two are not the same thing. A row can legally close back several levels at once (going
+ * straight from a level-2 record to a new level-0 group is an ordinary "start the next group"),
+ * which would read as just as large a gap against `stack.length` as a genuine skipped level does.
+ * And the very first row of the whole sequence has no previous row to jump from at all: a lone
+ * record arriving at level 1 with nothing before it is not a hole, it is a childless top-level row
+ * (see the model's own docblock on that case) — there is nothing to skip past yet.
+ *
+ * Idempotent by construction: every row gets a fresh `subRows: []` before any child is pushed onto
+ * it, in the same pass that assigns it. A rerun over rows this already folded (the core row model
+ * reruns the same `Row` objects whenever `grouping.by`-independent state changes) walks the same
+ * flat sequence in the same order and overwrites each row's stale `subRows` before reading it, so
+ * the result is the same tree rather than a doubled one.
+ */
+function foldByLevel<TFeatures extends TableFeatures, TData extends RowData>(
+	rows: Row<TFeatures, TData>[],
+	getLevel: (row: TData) => number,
+): Row<TFeatures, TData>[] {
+	const roots: Row<TFeatures, TData>[] = []
+	// `stack[d]` is the row currently open at depth `d`.
+	const stack: Row<TFeatures, TData>[] = []
+	// The previous row's own declared level — the baseline the throw guard below measures a jump
+	// against. `undefined` for the very first row, which has nothing to jump from.
+	let previousLevel: number | undefined
+
+	for (const row of rows) {
+		const declared = getLevel(row.original)
+		if (IS_DEV && previousLevel !== undefined && declared > previousLevel + 1) {
+			throw new Error(
+				`[data-grid] Row '${row.id}' declares level ${String(declared)} but the previous row declared ` +
+					`${String(previousLevel)} — the response skipped a group level. Rows must arrive in order, ` +
+					'outermost first.',
+			)
+		}
+
+		const depth = Math.min(declared, stack.length)
+		stack.length = depth
+		const parent = depth > 0 ? stack[depth - 1] : undefined
+		Object.assign(row, { depth, subRows: [], parentId: parent?.id })
+		if (parent) parent.subRows.push(row)
+		else roots.push(row)
+		stack.push(row)
+		previousLevel = declared
+	}
+
+	return roots
+}
+
 function build<TFeatures extends TableFeatures, TData extends RowData>(
 	table: Table<TFeatures, TData>,
-	_adapters: ManualGroupingAdapters<TData> | undefined,
+	adapters: ManualGroupingAdapters<TData> | undefined,
 ): RowModel<TFeatures, TData> {
 	const model = table.getPreGroupedRowModel()
 	if (!model.rows.length) return model
@@ -125,6 +194,13 @@ function build<TFeatures extends TableFeatures, TData extends RowData>(
 	// Only the levels that still resolve to a column, exactly as upstream filters them: a grouping
 	// state can outlive a column it names.
 	const levels = grouping.filter((columnId) => table.getAllColumns().some((column) => column.id === columnId))
+
+	// `isGroupRow` is what selects the flat shape; `getLevel` is what gives the depth. With
+	// `isGroupRow` alone the fold degenerates to one group level, which is the common case.
+	const rootRows =
+		adapters?.isGroupRow !== undefined
+			? foldByLevel(model.rows, adapters.getLevel ?? ((row: TData) => (adapters.isGroupRow?.(row) === true ? 0 : 1)))
+			: model.rows
 
 	const flatRows: Row<TFeatures, TData>[] = []
 	const rowsById = makeObjectMap<Row<TFeatures, TData>>()
@@ -166,7 +242,7 @@ function build<TFeatures extends TableFeatures, TData extends RowData>(
 		}
 	}
 
-	walk(model.rows, 0)
+	walk(rootRows, 0)
 
-	return { rows: model.rows, flatRows, rowsById }
+	return { rows: rootRows, flatRows, rowsById }
 }

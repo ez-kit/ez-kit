@@ -107,6 +107,15 @@ describe('@ez-kit/data-grid-core/features', () => {
 		).toEqual([...ROW_MODEL_FACTORIES, 'createDraftAtoms', 'createManualGroupedRowModel'].sort())
 	})
 
+	// `MANUAL_GROUPED_ROW_MODEL` is neither a `*Feature` nor a `create*` export, so it is invisible
+	// to both counted filters above — named here the same way `createDraftAtoms` is named beside
+	// the row-model factories test, rather than left to widen either count silently.
+	it('exports MANUAL_GROUPED_ROW_MODEL, the marker createManualGroupedRowModel stamps its factory with', () => {
+		expect(typeof features.MANUAL_GROUPED_ROW_MODEL).toBe('symbol')
+		const factory = features.createManualGroupedRowModel() as unknown as Record<symbol, unknown>
+		expect(factory[features.MANUAL_GROUPED_ROW_MODEL]).toEqual({ flat: false })
+	})
+
 	it('re-exports tableFeatures, which returns the set it was given', () => {
 		const set = features.tableFeatures({ rowSortingFeature: features.rowSortingFeature })
 		expect(set.rowSortingFeature).toBe(features.rowSortingFeature)
