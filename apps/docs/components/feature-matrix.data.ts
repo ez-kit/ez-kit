@@ -234,7 +234,8 @@ export const FEATURE_MATRIX: readonly FeatureRow[] = [
 		category: 'Rows & Selection',
 		feature: 'Row grouping + aggregation',
 		description: 'Group rows by a column value and display aggregated summaries.',
-		status: FeatureStatus.Planned,
+		status: FeatureStatus.Done,
+		doc: 'grouping',
 	},
 
 	// Cells

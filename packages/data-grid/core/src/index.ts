@@ -54,6 +54,7 @@ export {
 	BASE_CELL_TYPE_IDS,
 	BadgeVariant,
 	BuiltInCellType,
+	BuiltInAggregationFn,
 	BuiltInSortingFn,
 	ColumnAlign,
 	ColumnPinSide,
@@ -78,7 +79,7 @@ export type {
 } from './messages'
 
 // System column IDs
-export { ACTIONS_COLUMN_ID, EXPAND_COLUMN_ID, SELECTION_COLUMN_ID } from './system-columns'
+export { ACTIONS_COLUMN_ID, EXPAND_COLUMN_ID, GROUP_COLUMN_ID, SELECTION_COLUMN_ID } from './system-columns'
 
 // One custom action entry — contributed per row (`rowActions.actions`) or for the whole
 // selection (`selection.bar.actions`), and rendered by the kit either way.
@@ -105,6 +106,8 @@ export type {
 	NumberCellConfig,
 	TextCellConfig,
 	CellViewCtx,
+	ColumnAggregationConfig,
+	ColumnAggregationMeta,
 	ColumnCellMeta,
 	ColumnFilteringMeta,
 	ColumnCreatingConfig,
@@ -114,6 +117,7 @@ export type {
 	ColumnAlignDef,
 	ColumnPinningDef,
 	ColumnWidthDef,
+	ColumnGroupingConfig,
 	ColumnSortingConfig,
 	ColumnVisibilityDef,
 	// The renderer slot itself. Every user-facing render point on a column (`header`,
@@ -267,6 +271,7 @@ export {
 	GridDirection,
 	ColumnResizeMode,
 	ExpandingMode,
+	GroupingMode,
 	LoadMoreDirection,
 	MultiSortEvent,
 	PaginationMode,
@@ -274,6 +279,7 @@ export {
 export type {
 	DataTable,
 	ExpandingConfig,
+	GroupingConfig,
 	FilteringConfig,
 	GlobalFilterFn,
 	GlobalFilterFnId,

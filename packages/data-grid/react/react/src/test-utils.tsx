@@ -934,9 +934,9 @@ export const TEST_FEATURES = allDataGridFeatures
  */
 export const NARROW_TEST_FEATURES = tableFeatures({})
 
-export type RenderGridResult = ReturnType<typeof render> & {
+export type RenderGridResult<TRow extends object = TestRow> = ReturnType<typeof render> & {
 	/** The live table — drive state from a test with `table.setSorting(…)` etc. */
-	table: DataTable<GridFeatures, TestRow>
+	table: DataTable<GridFeatures, TRow>
 }
 
 /**
@@ -947,9 +947,15 @@ export type RenderGridResult = ReturnType<typeof render> & {
  * preset each kit binds. Pass `children` for a case about a control that no preset mounts (the
  * chips strip, a hand-placed page sizer): composition is the only way to put one on the page
  * now that the `filtering.chips` / `pagination.pageSizer` options are gone.
+ *
+ * Generic over the row, defaulting to {@link TestRow} so that every existing case reads exactly
+ * as before. A suite whose subject needs a different shape — grouping wants a column to group by
+ * and one to total — supplies `data` and `columns` of its own and writes the row type once:
+ * `renderGrid<Order>({ data, columns })`. Before this the only way to do that was an `as any` at
+ * each call site, which switched off the very checking these tests are written in.
  */
-export function renderGrid(
-	config: Partial<UseDataGridConfig<GridFeatures, TestRow>> = {},
+export function renderGrid<TRow extends object = TestRow>(
+	config: Partial<UseDataGridConfig<GridFeatures, TRow>> = {},
 	children?: ReactNode,
 	/**
 	 * Wraps the grid in whatever a case needs above it — a provider a *bundle* would normally
@@ -957,16 +963,20 @@ export function renderGrid(
 	 * such switch, and the focus-model cases render through this.
 	 */
 	wrap?: (grid: ReactNode) => ReactNode,
-): RenderGridResult {
+): RenderGridResult<TRow> {
 	// Wrapper object, not a bare `let`: reassigning an outer variable during render is
 	// a side effect the react-hooks lint rule rejects.
-	const ref: { table: DataTable<GridFeatures, TestRow> | null } = { table: null }
+	const ref: { table: DataTable<GridFeatures, TRow> | null } = { table: null }
 
 	function Harness(): ReactElement {
-		const table = useDataGrid<GridFeatures, TestRow>({
+		const table = useDataGrid<GridFeatures, TRow>({
+			// The defaults are the `TestRow` fixtures, which are only assignable when `TRow` *is*
+			// `TestRow` — and when it is not, the caller has supplied both `data` and `columns` in
+			// `config`, which spreads over them. The cast is that argument, made once here rather
+			// than at every call site that names its own row.
 			features: TEST_FEATURES,
-			data: TEST_ROWS,
-			columns: TEST_COLUMNS,
+			data: TEST_ROWS as unknown as TRow[],
+			columns: TEST_COLUMNS as unknown as UseDataGridConfig<GridFeatures, TRow>['columns'],
 			...config,
 		})
 		// Handed out in an effect, not during render: writing to an outer object mid-render
@@ -974,7 +984,7 @@ export function renderGrid(
 		useEffect(() => {
 			ref.table = table
 		}, [table])
-		const grid = <DataGrid<GridFeatures, TestRow> table={table}>{children}</DataGrid>
+		const grid = <DataGrid<GridFeatures, TRow> table={table}>{children}</DataGrid>
 		return <>{wrap ? wrap(grid) : grid}</>
 	}
 

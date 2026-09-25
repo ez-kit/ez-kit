@@ -24,6 +24,7 @@ import { Footer } from './footer'
 import { DataGridFooterCell } from './footer-cell'
 import { DataGridFooterRow } from './footer-row'
 import { GlobalFilterInput } from './global-filter-input'
+import { GroupByBar } from './group-by-bar'
 import { Header } from './header'
 import { DataGridHeaderCell } from './header-cell'
 import { DataGridHeaderRow } from './header-row'
@@ -486,6 +487,7 @@ export type DataGridStatics = {
 	SortMenuTrigger: typeof SortMenuTrigger
 	GlobalFilterInput: typeof GlobalFilterInput
 	ActiveFiltersBar: typeof ActiveFiltersBar
+	GroupByBar: typeof GroupByBar
 	ClearFiltersButton: typeof ClearFiltersButton
 	FilterPanel: typeof FilterPanel
 	CreatingModal: typeof CreatingModal
@@ -555,6 +557,7 @@ export const DataGrid: DataGridType = /* @__PURE__ */ Object.assign(DataGridRoot
 	SortMenuTrigger,
 	GlobalFilterInput,
 	ActiveFiltersBar,
+	GroupByBar,
 	ClearFiltersButton,
 	FilterPanel,
 	CreatingModal,

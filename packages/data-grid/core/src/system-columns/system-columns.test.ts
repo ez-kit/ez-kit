@@ -7,6 +7,7 @@ import {
 	extractPinningState,
 	ACTIONS_COLUMN_ID,
 	EXPAND_COLUMN_ID,
+	GROUP_COLUMN_ID,
 	SELECTION_COLUMN_ID,
 } from './system-columns'
 
@@ -28,6 +29,7 @@ describe('buildColumnList', () => {
 			deleting: false,
 			pinning: false,
 			ordering: false,
+			grouping: false,
 			creating: false,
 			customRowActions: false,
 		})
@@ -43,6 +45,7 @@ describe('buildColumnList', () => {
 			deleting: false,
 			pinning: false,
 			ordering: false,
+			grouping: false,
 			creating: false,
 			customRowActions: false,
 		})
@@ -58,6 +61,7 @@ describe('buildColumnList', () => {
 			deleting: false,
 			pinning: false,
 			ordering: false,
+			grouping: false,
 			creating: false,
 			customRowActions: false,
 		})
@@ -74,6 +78,7 @@ describe('buildColumnList', () => {
 			deleting: false,
 			pinning: false,
 			ordering: false,
+			grouping: false,
 			creating: false,
 			customRowActions: false,
 		})
@@ -88,6 +93,7 @@ describe('buildColumnList', () => {
 			deleting: true,
 			pinning: false,
 			ordering: false,
+			grouping: false,
 			creating: false,
 			customRowActions: false,
 		})
@@ -103,6 +109,7 @@ describe('buildColumnList', () => {
 			deleting: false,
 			pinning: true,
 			ordering: false,
+			grouping: false,
 			creating: false,
 			customRowActions: false,
 		})
@@ -115,6 +122,7 @@ describe('buildColumnList', () => {
 				selection: false,
 				expanding: false,
 				ordering: false,
+				grouping: false,
 				creating: false,
 				customRowActions: false,
 				...opts,
@@ -138,6 +146,7 @@ describe('buildColumnList', () => {
 			deleting: true,
 			pinning: true,
 			ordering: false,
+			grouping: false,
 			creating: false,
 			customRowActions: false,
 			rowActionsPlacement: RowActionsPlacement.Inline,
@@ -149,6 +158,7 @@ describe('buildColumnList', () => {
 			deleting: true,
 			pinning: true,
 			ordering: false,
+			grouping: false,
 			creating: false,
 			customRowActions: false,
 			rowActionsPlacement: RowActionsPlacement.Menu,
@@ -165,6 +175,7 @@ describe('buildColumnList', () => {
 			deleting: false,
 			pinning: false,
 			ordering: false,
+			grouping: false,
 			creating: false,
 			customRowActions: true,
 		})
@@ -180,6 +191,7 @@ describe('buildColumnList', () => {
 			deleting: true,
 			pinning: false,
 			ordering: false,
+			grouping: false,
 			creating: false,
 			customRowActions: false,
 		}
@@ -198,11 +210,94 @@ describe('buildColumnList', () => {
 			deleting: true,
 			pinning: false,
 			ordering: false,
+			grouping: false,
 			creating: false,
 			customRowActions: false,
 		})
 		const ids = cols.map((c) => c.id)
 		expect(ids).toEqual([SELECTION_COLUMN_ID, EXPAND_COLUMN_ID, 'name', ACTIONS_COLUMN_ID])
+	})
+
+	it('inserts __group__ after __expand__ and before the user columns', () => {
+		const cols = buildColumnList([USER_COL], {
+			selection: true,
+			expanding: true,
+			editing: true,
+			deleting: false,
+			pinning: false,
+			ordering: false,
+			grouping: true,
+			creating: false,
+			customRowActions: false,
+		})
+		expect(cols.map((c) => c.id)).toEqual([
+			SELECTION_COLUMN_ID,
+			EXPAND_COLUMN_ID,
+			GROUP_COLUMN_ID,
+			'name',
+			ACTIONS_COLUMN_ID,
+		])
+	})
+
+	it('omits __group__ when grouping is off', () => {
+		const cols = buildColumnList([USER_COL], {
+			selection: false,
+			expanding: false,
+			editing: false,
+			deleting: false,
+			pinning: false,
+			ordering: false,
+			grouping: false,
+			creating: false,
+			customRowActions: false,
+		})
+		expect(cols.map((c) => c.id)).not.toContain(GROUP_COLUMN_ID)
+	})
+
+	it('__group__ is wider than the single-control system columns and pins to the start edge', () => {
+		const cols = buildColumnList([USER_COL], {
+			selection: true,
+			expanding: false,
+			editing: false,
+			deleting: false,
+			pinning: false,
+			ordering: false,
+			grouping: true,
+			creating: false,
+			customRowActions: false,
+		})
+		const group = cols.find((c) => c.id === GROUP_COLUMN_ID)
+		const selection = cols.find((c) => c.id === SELECTION_COLUMN_ID)
+		expect(group?.size).toBeGreaterThan(selection?.size ?? 0)
+		expect(group?.meta?.pinning).toEqual({ side: 'start' })
+		expect(group?.meta?.systemColumnType).toBe('group')
+	})
+
+	it('__group__ honours its SystemColumnDef like every other system column', () => {
+		const cols = buildColumnList([USER_COL], {
+			selection: false,
+			expanding: false,
+			editing: false,
+			deleting: false,
+			pinning: false,
+			ordering: false,
+			grouping: true,
+			creating: false,
+			customRowActions: false,
+			groupingColumn: {
+				header: 'Breakdown',
+				width: 320,
+				pinning: false,
+				align: 'center',
+				cellClassName: 'group-cell',
+			},
+		})
+		const group = cols.find((c) => c.id === GROUP_COLUMN_ID)
+		expect(group?.size).toBe(320)
+		expect(group?.meta?.systemHeader).toBe('Breakdown')
+		expect(group?.meta?.pinning).toBe(false)
+		expect(group?.meta?.align).toEqual({ header: 'center', cell: 'center', footer: 'center' })
+		expect(group?.meta?.cellClassName).toBe('group-cell')
 	})
 })
 

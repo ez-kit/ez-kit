@@ -30,6 +30,11 @@ export const defaultMessages: GridMessages = {
 		collapse: 'Collapse row',
 		columnHeader: 'Row expansion',
 	},
+	grouping: {
+		count: ({ count }) => `(${String(count)})`,
+		blank: '(Blank)',
+		columnHeader: 'Group',
+	},
 	resizing: {
 		resize: 'Resize column',
 	},
@@ -47,6 +52,16 @@ export const defaultMessages: GridMessages = {
 		order: 'Order',
 		moveStart: 'Move left',
 		moveEnd: 'Move right',
+		grouping: 'Grouping',
+		groupBy: 'Group by this column',
+		ungroup: 'Ungroup',
+	},
+	groupBar: {
+		label: 'Grouped by',
+		remove: 'Remove grouping level',
+		moveOuter: 'Group by this first',
+		moveInner: 'Group by this later',
+		add: 'Add grouping level',
 	},
 	rowActions: {
 		columnHeader: 'Row actions',

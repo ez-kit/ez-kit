@@ -52,15 +52,15 @@ export {
  *
  * Re-exported because a consumer composing a set has no other way to reach them through this
  * entry point, and leaving one out is silent in the worst way — the name resolves to nothing, the
- * stage runs, and the grid looks like a filter that matches everything or a sort that ignores the
- * comparator it was given. `createTable` warns about the `filterFns` and `sortFns` cases.
+ * stage runs, and the grid looks like a filter that matches everything, a sort that ignores the
+ * comparator it was given, or a subtotal column that totals nothing. `createTable` warns about
+ * all three.
  *
- * `aggregationFns` it cannot see, and this is a property of the config rather than an omission:
- * `TableConfig` has no `grouping` option and `ColumnDef` no `aggregationFn`, so nothing a consumer
- * writes reaches `createTable` asking for an aggregation. `columnGroupingFeature` and
- * `rowAggregationFeature` arrive with the all-in set and are exercisable only through upstream's
- * own `constructTable` — see the last case in `entry.test.ts`. A guard would have no condition to
- * test until grouping gains a config key.
+ * `aggregationFns` was the exception for as long as nothing in a config could ask for an
+ * aggregation — `TableConfig` had no `grouping` option and `ColumnDef` no aggregation field, so
+ * the two features were reachable only through upstream's own `constructTable`. Both are now real
+ * options (`TableConfig.grouping`, `ColumnDef.aggregation`), so the guard has a condition to test
+ * and `create-table-options.ts`'s `AGGREGATION_FNS_SLOT` is it.
  *
  * All three are marked `@deprecated` upstream in favour of registering the individual
  * `filterFn_*` / `sortFn_*` / `aggregationFn_*` members a table actually uses, for a smaller

@@ -144,6 +144,13 @@ export function moveRow(table: RowOrderingTable, rowId: string, direction: RowMo
 	// feature is a composition mistake, and the named throw says so rather than letting an empty
 	// order compute every move from the original positions.
 	if ((readForeignSlice(table, 'sorting') ?? []).length > 0) return undefined
+	// Grouping is refused for the very same reason, and is foreign in the very same way: the row
+	// order is computed from the grouping levels, so a manual move would be recomputed away on
+	// the next render. It is additionally meaningless — half the rows are synthetic groups, and
+	// "move this row one step" across a group boundary has no answer. Guarded here rather than in
+	// the adapter so that one check covers both affordances: the menu entries stay listed and
+	// disabled, and the `Alt+Arrow` handler refuses, exactly as they do under a sort.
+	if ((readForeignSlice(table, 'grouping') ?? []).length > 0) return undefined
 	const rowOrder = readOwnSlice(table, 'rowOrder')
 
 	// Projected through `rowOrder` rather than read straight off the row model. An adapter

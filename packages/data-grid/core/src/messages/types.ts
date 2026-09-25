@@ -66,6 +66,26 @@ export type GridMessages = {
 		 */
 		columnHeader: string
 	}
+	/** Row grouping — the group rows themselves, not the bar that lists the levels. */
+	grouping: {
+		/** How a group row reports how many rows it holds. */
+		count: (ctx: CountContext) => string
+		/**
+		 * The label a group row carries when its grouping value is `null`, `undefined` or `''`.
+		 *
+		 * Such rows are grouped rather than dropped — the absence of a value is itself something
+		 * a reader is looking for — so the group needs a name, and an empty cell beside a count
+		 * reads as a rendering bug.
+		 */
+		blank: string
+		/**
+		 * Accessible name of the group column's header cell, rendered visually hidden.
+		 *
+		 * The column's heading changes with the levels, so the `<th>` has no fixed text — see
+		 * {@link GridMessages.expanding.columnHeader}.
+		 */
+		columnHeader: string
+	}
 	/** Column resizing. */
 	resizing: {
 		/** Accessible name of a column's resize handle. */
@@ -112,6 +132,32 @@ export type GridMessages = {
 		moveStart: string
 		/** Move one step toward the end of the order. */
 		moveEnd: string
+		/** Heading of the grouping section. */
+		grouping: string
+		/** Add this column as a grouping level. */
+		groupBy: string
+		/** Drop this column as a grouping level. */
+		ungroup: string
+	}
+	/** The bar that lists the active grouping levels — `<DataGrid.GroupByBar />`. */
+	groupBar: {
+		/** Accessible name of the bar itself. */
+		label: string
+		/** Remove one level. */
+		remove: string
+		/**
+		 * Make this level nest one step further out.
+		 *
+		 * Neither logical nor physical, because nesting depth is neither: it is not a screen
+		 * axis, so nothing about it flips under RTL and nothing about it runs up or down. So
+		 * none of the `moveStart` / `moveUp` reasoning applies — the key names the thing that
+		 * actually changes, which is how deep the level sits.
+		 */
+		moveOuter: string
+		/** Make this level nest one step further in. */
+		moveInner: string
+		/** Accessible name of the picker that adds a level. */
+		add: string
 	}
 	/** Built-in row actions. Custom actions carry their own `label`. */
 	rowActions: {

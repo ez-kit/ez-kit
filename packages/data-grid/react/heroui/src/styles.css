@@ -334,35 +334,111 @@ tr[data-expanded-row] > td {
 	gap: 0.25rem;
 }
 
-tr[data-depth='1'] [data-system-column='expand'] {
-	padding-left: 1rem;
+/* ---- Nesting depth ----
+ * One step of indentation per level, on whichever column carries the hierarchy: `__expand__` on
+ * a tree grid, `__group__` on a grouped one. **When both are present only the group column
+ * indents** — a grid that groups *and* expands sub-content rows has an `__expand__` chevron that
+ * opens a detail panel rather than the hierarchy, so indenting it too would double every step.
+ *
+ * The step travels as `--dg-depth-indent`, declared and read in this stylesheet alone;
+ * `css-custom-properties.test.ts` counts a CSS declaration as a writer. `padding-inline-start`
+ * rather than `padding-left`, because indentation runs from the reading edge and this grid
+ * treats RTL as first-class — these rules were physical before they were generalised here.
+ *
+ * The cap is five levels; deeper nesting renders and stops indenting further. */
+tr[data-depth='1'] {
+	--dg-depth-indent: 1rem;
 }
-tr[data-depth='1'] [data-system-column='expand'] + td {
-	padding-left: 1rem;
+tr[data-depth='2'] {
+	--dg-depth-indent: 2rem;
 }
-tr[data-depth='2'] [data-system-column='expand'] {
-	padding-left: 2rem;
+tr[data-depth='3'] {
+	--dg-depth-indent: 3rem;
 }
-tr[data-depth='2'] [data-system-column='expand'] + td {
-	padding-left: 2rem;
+tr[data-depth='4'] {
+	--dg-depth-indent: 4rem;
 }
-tr[data-depth='3'] [data-system-column='expand'] {
-	padding-left: 3rem;
+tr[data-depth='5'] {
+	--dg-depth-indent: 5rem;
 }
-tr[data-depth='3'] [data-system-column='expand'] + td {
-	padding-left: 3rem;
+
+tr [data-system-column='group'],
+tr:not(:has([data-system-column='group'])) [data-system-column='expand'],
+tr :is([data-system-column='group'], [data-system-column='expand']) + td {
+	padding-inline-start: var(--dg-depth-indent, 0);
 }
-tr[data-depth='4'] [data-system-column='expand'] {
-	padding-left: 4rem;
+
+/* ---- Row grouping ---- */
+[data-slot='group-cell'] {
+	display: flex;
+	align-items: center;
+	gap: 0.375rem;
+	min-width: 0;
 }
-tr[data-depth='4'] [data-system-column='expand'] + td {
-	padding-left: 4rem;
+
+[data-slot='group-label'] {
+	font-weight: 500;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
-tr[data-depth='5'] [data-system-column='expand'] {
-	padding-left: 5rem;
+
+[data-slot='group-count'] {
+	color: color-mix(in oklab, var(--surface-foreground) 60%, transparent);
+	font-variant-numeric: tabular-nums;
 }
-tr[data-depth='5'] [data-system-column='expand'] + td {
-	padding-left: 5rem;
+
+/* A group row is structure rather than a record, so it reads as a shelf its leaf rows sit
+ * under. React Aria writes its own `data-*` on a `Row` after spreading ours, which is why the
+ * grid namespaces this one as `data-group-row` — see `row.tsx`. */
+tr[data-group-row='true'] {
+	background-color: color-mix(in oklab, var(--surface) 92%, var(--surface-foreground));
+	--dg-pin-cell-background: color-mix(in oklab, var(--surface) 92%, var(--surface-foreground));
+}
+
+[data-aggregated-cell='true'] {
+	font-weight: 500;
+	font-variant-numeric: tabular-nums;
+}
+
+/* ---- The group-by bar ----
+ * Laid out like the active-filters strip it sits beside in a toolbar, so two strips in one
+ * toolbar read as one row rather than as two competing ones. */
+[data-slot='group-by-bar'] {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.375rem;
+	align-items: center;
+}
+
+[data-slot='group-by-bar-label'] {
+	color: color-mix(in oklab, var(--surface-foreground) 60%, transparent);
+	font-size: 0.875rem;
+}
+
+[data-slot='group-by-chip'] {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.125rem;
+	border: 1px solid color-mix(in oklab, var(--surface-foreground) 20%, transparent);
+	border-radius: 0.25rem;
+	background-color: var(--surface-secondary);
+	font-size: 0.875rem;
+	padding-inline: 0.5rem;
+	padding-block: 0.125rem;
+}
+
+[data-slot='group-by-chip-label'] {
+	font-weight: 500;
+}
+
+/* The chip's menu trigger shrinks to the chip's own line height — the stock row trigger is
+ * sized for a table row and would make every chip as tall as one. Selected as `button` rather
+ * than by a slot, because neither kit's `Menu` stamps one on its trigger. */
+[data-slot='group-by-chip'] button {
+	height: 1.25rem;
+	width: 1.25rem;
+	min-width: 1.25rem;
 }
 
 /* ---- ActionBar entrance animations ---- */

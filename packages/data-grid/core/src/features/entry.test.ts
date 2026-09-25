@@ -1,5 +1,3 @@
-import { constructTable } from '@tanstack/table-core'
-import { storeReactivityBindings } from '@tanstack/table-core/store-reactivity-bindings'
 import { describe, expect, it } from 'vitest'
 
 import { createTable } from '../create-table'
@@ -206,23 +204,12 @@ describe('allDataGridFeatures — what each named-function registry actually buy
 		expect(table.getRowModel().rows.map((r) => r.original.name)).toEqual(['item2', 'item10'])
 	})
 
-	// Built through `constructTable` rather than `createTable`, deliberately. Grouping is the one
-	// corner of this set the grid's own API cannot reach: `TableConfig` has no `grouping` option
-	// and `ColumnDef` no `aggregationFn`, so the only way to exercise the slot is the constructor
-	// upstream ships — which is a legitimate consumer of a set built from this entry point, and is
-	// how `useTable` reaches it too. Recorded rather than papered over: `columnGroupingFeature` and
-	// `rowAggregationFeature` arrive with `stockFeatures` and stay unreachable from `createTable`.
-	//
-	// The call needs no cast, which is itself the contrast: upstream's own `ColumnDef` *does* carry
-	// `aggregationFn` once `rowAggregationFeature` is in the set, so `columns` and `initialState`
-	// both type-check against the real options — it is only **our** `ColumnDef` and `TableConfig`
-	// that have no key for them.
 	it('aggregates a grouped column — without `aggregationFns` the group value is undefined', () => {
-		const table = constructTable({
-			features: { coreReactivityFeature: storeReactivityBindings(), ...allDataGridFeatures },
+		const table = createTable({
+			features: allDataGridFeatures,
 			data: ITEMS,
-			columns: [{ accessorKey: 'group' }, { accessorKey: 'amount', aggregationFn: 'sum' }],
-			initialState: { grouping: ['group'] },
+			columns: [{ accessorKey: 'group' }, { accessorKey: 'amount', aggregation: 'sum' }],
+			grouping: { by: ['group'] },
 		})
 
 		expect(table.getRowModel().rows[0]?.getValue('amount')).toBe(5)

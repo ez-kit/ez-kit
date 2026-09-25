@@ -568,6 +568,52 @@ export type ExpandingConfig<
 	column?: SystemColumnDef<TFeatures, TRow, TNode>
 }
 
+/**
+ * How many columns carry the grouping labels — not how they look, hence `mode` rather than
+ * `variant`, like {@link ExpandingMode}.
+ *
+ * Named members for internal reference; the option is typed as the plain string union, so
+ * `mode: 'multiple'` is equally valid and needs no import.
+ */
+export const GroupingMode = {
+	/** Every level in one `__group__` column, nesting shown by indentation. The default. */
+	Single: 'single',
+	/** One `__group__` column per active level. */
+	Multiple: 'multiple',
+} as const
+
+export type GroupingMode = (typeof GroupingMode)[keyof typeof GroupingMode]
+
+/**
+ * Row grouping: rows collapse into synthetic group rows keyed by one or more columns' values.
+ *
+ * Two axes, both wanted: `by` seeds the grouping an author wants, and `enabled` decides whether
+ * the user may change it afterwards through the column menu or `<DataGrid.GroupByBar />`.
+ *
+ * Grouping is **not** how a column is totalled — that is the separate `aggregation` column
+ * option, which works with `rowAggregationFeature` alone and needs no grouped row model. A grid
+ * that only wants a footer total must not pay for `createGroupedRowModel()`.
+ */
+export type GroupingConfig<
+	TFeatures extends TableFeatures,
+	TRow extends object = object,
+	TNode = unknown,
+> = FeatureToggle & {
+	/** Starting grouping levels, outermost first. Column ids. */
+	by?: string[]
+	/** How many columns carry the labels. Default: {@link GroupingMode.Single}. */
+	mode?: GroupingMode
+	/**
+	 * Presentation of the auto-injected `__group__` column — its width, which edge it pins to,
+	 * its alignment. See {@link SystemColumnDef}.
+	 */
+	column?: SystemColumnDef<TFeatures, TRow, TNode>
+	/** Rows arrive already grouped from the server; the grid does not group them again. */
+	manual?: boolean
+	/** Called whenever the grouping levels change. Receives the full list, outermost first. */
+	onChange?: (grouping: string[]) => void
+}
+
 export type VisibilityConfig = FeatureToggle & {
 	/**
 	 * Called whenever column visibility changes. Receives the resolved {@link ColumnVisibilityState}.
@@ -871,6 +917,19 @@ export type TableConfig<TFeatures extends TableFeatures, TRow extends object> = 
 	pagination?: boolean | PaginationConfig
 	selection?: boolean | SelectionConfig<TFeatures, TRow>
 	expanding?: boolean | ExpandingConfig<TFeatures, TRow>
+	/**
+	 * Row grouping — rows collapse into group rows keyed by one or more columns' values, with
+	 * the labels carried by an auto-injected `__group__` column.
+	 *
+	 * Requires `columnGroupingFeature` **and** `createGroupedRowModel()` in the feature set, and
+	 * additionally `rowExpandingFeature` + `createExpandedRowModel()`: a group row is a row with
+	 * `subRows`, and expansion is what opens it. Writing this option without them is a
+	 * development-mode warning, not a type error — see the FEATURE GUARDS note on
+	 * {@link TableConfig.features}.
+	 *
+	 * Totalling a column is the separate per-column `aggregation` option, which needs neither.
+	 */
+	grouping?: boolean | GroupingConfig<TFeatures, TRow>
 	/**
 	 * Column visibility (hide/show columns). `false` / omitted disables hiding for all
 	 * columns; `true` enables it (per-column `visibility` controls still apply).

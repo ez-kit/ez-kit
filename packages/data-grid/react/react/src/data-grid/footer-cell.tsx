@@ -1,12 +1,15 @@
+import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
 
 import { getAlignAttrs } from './align-attrs'
+import { resolveViewComponent } from './cell'
 import { flexRender } from './flex-render'
 
+import type { CellTypeRegistry, CellViewProps } from '../cell-types-context'
 import type { ErasedRow, GridFeatures } from '../types'
 import type { FormColumnMeta } from '@ez-kit/data-grid-core'
 import type { Header } from '@tanstack/table-core'
-import type { ReactNode } from 'react'
+import type { ComponentType, ReactNode } from 'react'
 
 /**
  * What a `<DataGrid.FooterCell>` render function receives.
@@ -17,7 +20,11 @@ import type { ReactNode } from 'react'
  */
 export type DataGridFooterCellRenderArgs<TRow extends object = ErasedRow> = {
 	header: Header<GridFeatures, TRow>
-	/** The column's own `footer` content, already rendered. `null` for a placeholder cell. */
+	/**
+	 * What this cell would have rendered on its own, already resolved: the column's `footer`, or
+	 * — for a column that wrote `aggregation` and no `footer` — its grand total. `null` for a
+	 * placeholder cell, and for a column with neither.
+	 */
 	content: ReactNode
 }
 
@@ -31,10 +38,59 @@ export type DataGridFooterCellProps<TRow extends object = ErasedRow> = {
 	 * Custom content for this one footer cell, rendered inside the kit's `Td` — so the cell keeps
 	 * its `colSpan`, its pinning offset, its `data-align` and its `footerClassName`.
 	 *
-	 * Omit it for the column's own `footer`. The render-function form hands that content back
+	 * Omit it for the column's own `footer`, or its grand total when it wrote `aggregation` and no
+	 * `footer`. The render-function form hands that content back
 	 * ({@link DataGridFooterCellRenderArgs}) so a custom cell can wrap rather than replace it.
 	 */
 	children?: ReactNode | ((args: DataGridFooterCellRenderArgs<TRow>) => ReactNode)
+}
+
+/**
+ * A footer cell's default content: the column's own `footer`, or its grand total.
+ *
+ * The two never compete — `footer` wins whenever the column def has one, so no existing grid's
+ * footer changes. The fallback reaches only a column that wrote `aggregation` and no `footer`,
+ * which is a column that asked to be totalled and said nothing about where.
+ *
+ * **This is the whole of the "footer grand total", and it needs no grouping.**
+ * `column.getAggregationValue()` totals the filtered row model, so a grid registering
+ * `rowAggregationFeature` alone — no `columnGroupingFeature`, no grouped row model — gets the
+ * number. That is the split the two upstream features exist for, and registering grouping merely
+ * to total a column is the mistake upstream's own guidance leads with.
+ *
+ * Rendered through the column's existing cell-type view, so a `number` column's total is
+ * formatted the way its values are, exactly as an aggregated cell on a group row is.
+ */
+function footerContentOf<TRow extends object>(
+	header: Header<GridFeatures, TRow>,
+	meta: FormColumnMeta | undefined,
+	cellTypes: CellTypeRegistry,
+): ReactNode {
+	const { column } = header
+	if (column.columnDef.footer !== undefined) return flexRender(column.columnDef.footer, header.getContext())
+
+	// Optional-called: this runs for every footer cell of every grid, and `rowAggregationFeature`
+	// is not structural — see the FEATURE GUARDS note in `types.ts`. A column with no
+	// `aggregation` has no aggregation function either, so it answers `undefined` and the cell
+	// stays empty, which is what a footer cell has always been without a `footer`.
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const total: unknown = column.getAggregationValue?.()
+	if (total === undefined) return null
+
+	const aggregatedComp = (meta as { aggregation?: { component?: unknown } } | undefined)?.aggregation?.component as
+		| ComponentType<CellViewProps>
+		| undefined
+	const viewComp = aggregatedComp ?? resolveViewComponent(column.columnDef.meta, cellTypes)
+	if (!viewComp) return String(total)
+
+	return flexRender(viewComp, {
+		value: total,
+		// A grand total belongs to no row, so there is none to hand the renderer. A cell-type view
+		// reads `value`; one that reaches for `row` is a column renderer and belongs on `footer`.
+		row: undefined,
+		rowIndex: -1,
+		...(meta?.cell?.config !== undefined ? { config: meta.cell.config } : {}),
+	})
 }
 
 /**
@@ -56,7 +112,8 @@ export function DataGridFooterCell<TRow extends object = ErasedRow>({
 	// annotation rather than chosen. `FormColumnMeta` is the one name core declares for it, and
 	// this is the same cast core's own `creating.ts` makes at its boundary.
 	const meta = header.column.columnDef.meta as FormColumnMeta | undefined
-	const content = header.isPlaceholder ? null : flexRender(header.column.columnDef.footer, header.getContext())
+	const cellTypes = useCellTypes()
+	const content = header.isPlaceholder ? null : (footerContentOf(header, meta, cellTypes) ?? null)
 
 	return (
 		<Td

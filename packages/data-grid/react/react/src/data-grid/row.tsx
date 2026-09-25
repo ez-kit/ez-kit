@@ -122,6 +122,7 @@ function renderRowContent<TRow extends object>(
  * - `data-row-id` (table row id)
  * - `data-row-selected="true"` while the row is selected
  * - `data-depth` (sub-row depth for expansion)
+ * - `data-group-row="true"` on a synthetic group row
  * - `data-pinned="top" | "bottom"` for pinned rows (offset from `--dg-row-pin-offset`)
  * - `data-virtual="row"` for virtualized rows (positioned via runtime `transform`)
  * - `data-movable="true"` while row reordering is on
@@ -188,6 +189,20 @@ function DataGridRowImpl<TRow extends object = ErasedRow>(
 	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
 	const isExpanded = useDataGridState(() => row.getIsExpanded?.() ?? false)
 
+	/**
+	 * `data-group-row` — this row is a synthetic group, not a record.
+	 *
+	 * Namespaced for the reason `data-row-selected` is: React Aria's `Row` writes its own
+	 * `data-*` set after spreading what it was handed, so a name it already uses is erased in the
+	 * heroui kit. Checked against that set — it writes `data-expanded`, `data-level`,
+	 * `data-selected`, `data-placeholder` and friends, and nothing called `data-group-row`.
+	 *
+	 * Both kits' stylesheets target it, and so does every guard below that has to know a row is
+	 * not a record — editing, deleting and the row actions have nothing to act on here.
+	 */
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const isGroupRow = row.getIsGrouped?.() ?? false
+
 	const canMove = table.grid.ordering.row
 	/**
 	 * `Alt+ArrowUp` / `Alt+ArrowDown` move the row one step.
@@ -230,6 +245,7 @@ function DataGridRowImpl<TRow extends object = ErasedRow>(
 			data-slot='tr'
 			data-row-id={row.id}
 			data-row-selected={isSelected ? 'true' : undefined}
+			data-group-row={isGroupRow ? 'true' : undefined}
 			{...(canSelect ? { 'aria-selected': isSelected } : {})}
 			{...ariaRowIndexAttrs}
 			{...ariaExpandedAttrs(canExpand, isExpanded)}

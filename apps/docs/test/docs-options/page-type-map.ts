@@ -124,6 +124,9 @@ export const DocPage = {
 	ExpandingControlled: 'content/docs/data-grid/expanding/controlled.mdx',
 	ExpandingSubContent: 'content/docs/data-grid/expanding/sub-content.mdx',
 	ExpandingTree: 'content/docs/data-grid/expanding/tree.mdx',
+	GroupingIndex: 'content/docs/data-grid/grouping/index.mdx',
+	GroupingAggregation: 'content/docs/data-grid/grouping/aggregation.mdx',
+	GroupingInteractive: 'content/docs/data-grid/grouping/interactive.mdx',
 	FilteringDateRange: 'content/docs/data-grid/filtering/date-range.mdx',
 	FilteringGlobal: 'content/docs/data-grid/filtering/global.mdx',
 	FilteringIndex: 'content/docs/data-grid/filtering/index.mdx',
@@ -238,6 +241,8 @@ export const GRID_TYPE = {
 	SortingConfig: { module: TypeModule.Core, name: 'SortingConfig' },
 	MultiSortConfig: { module: TypeModule.Core, name: 'MultiSortConfig' },
 	ColumnSortingConfig: { module: TypeModule.Core, name: 'ColumnSortingConfig' },
+	ColumnGroupingConfig: { module: TypeModule.Core, name: 'ColumnGroupingConfig', typeArgs: ROW_TYPE_ARGS },
+	ColumnAggregationConfig: { module: TypeModule.Core, name: 'ColumnAggregationConfig' },
 	ColumnFilteringConfig: { module: TypeModule.Core, name: 'ColumnFilteringConfig' },
 	ColumnOperatorsConfig: { module: TypeModule.Core, name: 'ColumnOperatorsConfig' },
 	TableOperatorsConfig: { module: TypeModule.Core, name: 'TableOperatorsConfig' },
@@ -848,6 +853,30 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.ExpandingTree,
 		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 2 }],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.GroupingIndex,
+		optionTables: [
+			{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 6 },
+			{ heading: 'Column options', roots: [GRID_TYPE.ColumnDef, GRID_TYPE.ColumnGroupingConfig], expectedCount: 2 },
+		],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.GroupingAggregation,
+		optionTables: [
+			{
+				heading: 'Options',
+				roots: [GRID_TYPE.ColumnDef, GRID_TYPE.ColumnAggregationConfig],
+				expectedCount: 3,
+			},
+		],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.GroupingInteractive,
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 3 }],
 		nonOptionTables: [],
 	},
 	{

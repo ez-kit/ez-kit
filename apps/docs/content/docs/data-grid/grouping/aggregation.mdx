@@ -1,0 +1,79 @@
+---
+title: Grouping · Aggregation
+description: Total a column on its group rows and in the footer — with or without grouping.
+---
+
+A column with an `aggregation` is totalled. The total renders on each group row as that group's subtotal, and in the footer as a grand total.
+
+**Aggregation is independent of grouping in both directions**, and that is the whole reason the two ship as separate features. A grid that only wants a footer total must not pay for `createGroupedRowModel()` — registering `columnGroupingFeature` merely to total a column is the mistake upstream's own guidance leads with.
+
+```ts
+const features = tableFeatures({
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	rowAggregationFeature,
+	aggregationFns,
+})
+```
+
+`aggregationFns` is the registry v9 resolves a name through. Leave it out and the name resolves to nothing: the column totals nothing, silently. The grid warns about that in development.
+
+## A footer total, with no grouping at all
+
+<DataGridDocsExample exampleId='grouping-aggregation' />
+
+```tsx
+const columns = createColumns<Deal>([
+	{ accessorKey: 'account', header: 'Account', footer: 'Total' },
+	{ accessorKey: 'revenue', header: 'Revenue', cell: { type: 'number' }, aggregation: 'sum' },
+])
+```
+
+A footer cell renders the column's own `footer` when it has one, and its grand total otherwise. The two never compete — writing `footer` wins — so adding `aggregation` to a column that already has a footer changes nothing in the footer.
+
+## Subtotals on group rows
+
+With grouping on, the same option puts each group's subtotal under its own column.
+
+<DataGridDocsExample exampleId='grouping-basic' />
+
+## The built-in functions
+
+Eleven, from upstream: `sum`, `mean`, `median`, `min`, `max`, `extent`, `count`, `uniqueCount`, `unique`, `first`, `last`.
+
+```tsx
+{ accessorKey: 'revenue', aggregation: 'sum' }
+{ accessorKey: 'closedAt', aggregation: 'extent' }
+```
+
+## A renderer of your own
+
+The scalar names the function. The object form adds a renderer for the aggregated cell:
+
+```tsx
+{
+	accessorKey: 'revenue',
+	aggregation: {
+		fn: 'sum',
+		component: ({ value }) => <strong>{formatMoney(value)}</strong>,
+	},
+}
+```
+
+Without one, the total renders through the column's **existing** cell-type view — so a `number` column's subtotal is formatted exactly the way its values are, and most columns need no renderer at all.
+
+`fn` also takes an inline definition built with upstream's `constructAggregationFn`, for a total the eleven do not cover.
+
+## Options
+
+| Option                  | Type                                           | Description                                                       |
+| ----------------------- | ---------------------------------------------- | ----------------------------------------------------------------- |
+| `aggregation`           | `AggregationFnName \| ColumnAggregationConfig` | The scalar names a function; the object adds a renderer.          |
+| `aggregation.fn`        | `AggregationFnName \| AggregationFnDef`        | A built-in or registered name, or an inline definition.           |
+| `aggregation.component` | `ComponentType`                                | Renders the aggregate. Falls back to the column's cell-type view. |
+
+## Source
+
+- `@ez-kit/data-grid-core` — [`packages/data-grid/core/src/column/types.ts`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/core/src/column/types.ts)
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/footer-cell.tsx`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/footer-cell.tsx)

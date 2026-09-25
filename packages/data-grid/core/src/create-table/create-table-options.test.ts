@@ -1,6 +1,7 @@
 import {
 	columnFacetingFeature,
 	columnFilteringFeature,
+	constructAggregationFn,
 	createFacetedRowModel,
 	createFacetedUniqueValues,
 	createFilteredRowModel,
@@ -8,6 +9,7 @@ import {
 	createSortedRowModel,
 	filterFns,
 	globalFilteringFeature,
+	rowAggregationFeature,
 	rowPaginationFeature,
 	rowSortingFeature,
 	sortFns,
@@ -494,8 +496,72 @@ describe('createTableOptions', () => {
 			expect(warnings()).toHaveLength(0)
 		})
 
-		// The deliberate gap: `aggregationFns` gets no guard because nothing in `TableConfig` can
-		// ask for an aggregation — see the `SORT_FNS_SLOT` docblock and `features/entry.test.ts`.
+		it('warns when a column names an aggregation and `aggregationFns` is absent', () => {
+			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+			const noFns = tableFeatures({ rowAggregationFeature })
+			const totalled = createColumns<Row>([{ accessorKey: 'name' }, { accessorKey: 'age', aggregation: 'sum' }])
+			createTableOptions({ features: noFns, data: rows, columns: totalled })
+
+			expect(warnings()).toHaveLength(1)
+			expect(warnings()[0]).toContain('`aggregationFns` is not in `features`')
+		})
+
+		it('warns without grouping — the footer grand total resolves the same registry', () => {
+			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+			// No `columnGroupingFeature`, no grouped row model, no `grouping` config. This is the
+			// configuration the two features were split apart to serve, and it needs the slot
+			// exactly as much as a grouped one does.
+			const noFns = tableFeatures({ rowAggregationFeature })
+			const totalled = createColumns<Row>([{ accessorKey: 'age', aggregation: 'sum' }])
+			createTableOptions({ features: noFns, data: rows, columns: totalled })
+
+			expect(warnings()).toHaveLength(1)
+			expect(warnings()[0]).toContain('`aggregationFns` is not in `features`')
+		})
+
+		it('stays quiet for an inline aggregation definition, which resolves no name', () => {
+			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+			const noFns = tableFeatures({ rowAggregationFeature })
+			const inline = createColumns<Row>([
+				{ accessorKey: 'age', aggregation: { fn: constructAggregationFn({ aggregate: () => 0 }) } },
+			])
+			createTableOptions({ features: noFns, data: rows, columns: inline })
+
+			expect(warnings()).toHaveLength(0)
+		})
+
+		it('stays quiet when no column asks to be aggregated', () => {
+			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+			createTableOptions({ features: tableFeatures({ rowAggregationFeature }), data: rows, columns })
+
+			expect(warnings()).toHaveLength(0)
+		})
+
+		it('warns when a column is aggregated and `rowAggregationFeature` is absent', () => {
+			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+			// Two independent gaps again: the feature that would total is absent, and so is the
+			// registry the name resolves through.
+			const totalled = createColumns<Row>([{ accessorKey: 'age', aggregation: 'sum' }])
+			createTableOptions({ features: tableFeatures({}), data: rows, columns: totalled })
+
+			expect(warnings()).toHaveLength(2)
+			expect(warnings()[0]).toContain("`a column's `aggregation`` is configured, but `rowAggregationFeature`")
+			expect(warnings()[1]).toContain('`aggregationFns` is not in `features`')
+		})
+
+		it('warns when `grouping` is configured and `columnGroupingFeature` is absent', () => {
+			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+			createTableOptions({ features: tableFeatures({}), data: rows, columns, grouping: true })
+
+			expect(warnings()).toHaveLength(1)
+			expect(warnings()[0]).toContain('`grouping` is configured, but `columnGroupingFeature` is not in `features`')
+		})
 
 		it('still warns for a top-level option whose feature is absent', () => {
 			vi.spyOn(console, 'warn').mockImplementation(() => undefined)

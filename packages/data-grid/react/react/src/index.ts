@@ -222,6 +222,7 @@ export { VisibilityTrigger as DataGridVisibilityTrigger } from './data-grid/visi
 export { SortMenuTrigger as DataGridSortMenuTrigger } from './data-grid/sort-menu-trigger'
 export { GlobalFilterInput as DataGridGlobalFilterInput } from './data-grid/global-filter-input'
 export { ActiveFiltersBar as DataGridActiveFiltersBar } from './data-grid/active-filters-bar'
+export { GroupByBar as DataGridGroupByBar } from './data-grid/group-by-bar'
 export { ClearFiltersButton as DataGridClearFiltersButton } from './data-grid/clear-filters-button'
 export { FilterPanel as DataGridFilterPanel } from './data-grid/filter-panel'
 export { CreatingModal as DataGridCreatingModal } from './data-grid/creating-modal'
@@ -276,6 +277,7 @@ export type { DataGridGlobalFilterInputProps } from './data-grid/global-filter-i
 // Sub-components (also available as DataGrid.ActionBar)
 export { ActionBar } from './data-grid/action-bar'
 export { ActiveFiltersBar } from './data-grid/active-filters-bar'
+export { GroupByBar } from './data-grid/group-by-bar'
 export { ClearFiltersButton } from './data-grid/clear-filters-button'
 
 // Layout presets for `core.Layout` — what a UI kit binds so its prebuilt `<DataGrid>` renders

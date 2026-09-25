@@ -562,6 +562,38 @@
 		"exportName": "ExpandingSubContentExample"
 	},
 	{
+		"id": "grouping-basic",
+		"label": "Basic",
+		"group": "grouping",
+		"groupLabel": "Grouping",
+		"sourceFile": "components/grouping/basic.tsx",
+		"exportName": "GroupingBasicExample"
+	},
+	{
+		"id": "grouping-nested",
+		"label": "Two levels",
+		"group": "grouping",
+		"groupLabel": "Grouping",
+		"sourceFile": "components/grouping/basic.tsx",
+		"exportName": "GroupingNestedExample"
+	},
+	{
+		"id": "grouping-aggregation",
+		"label": "Footer total \u00b7 no grouping",
+		"group": "grouping",
+		"groupLabel": "Grouping",
+		"sourceFile": "components/grouping/aggregation.tsx",
+		"exportName": "GroupingAggregationExample"
+	},
+	{
+		"id": "grouping-interactive",
+		"label": "Interactive",
+		"group": "grouping",
+		"groupLabel": "Grouping",
+		"sourceFile": "components/grouping/interactive.tsx",
+		"exportName": "GroupingInteractiveExample"
+	},
+	{
 		"id": "expanding-tree",
 		"label": "Tree",
 		"group": "expanding",

@@ -1,5 +1,7 @@
 import {
+	columnGroupingFeature,
 	createExpandedRowModel,
+	createGroupedRowModel,
 	createSortedRowModel,
 	rowExpandingFeature,
 	rowPinningFeature,
@@ -33,6 +35,15 @@ const ROW_ORDERING = tableFeatures({
 	rowSortingFeature,
 	rowPinningFeature,
 	sortedRowModel: createSortedRowModel(),
+})
+
+/** The same, plus what grouping needs — a group row is a row with `subRows`. */
+const ROW_ORDERING_GROUPED = tableFeatures({
+	rowOrderingFeature,
+	columnGroupingFeature,
+	groupedRowModel: createGroupedRowModel(),
+	rowExpandingFeature,
+	expandedRowModel: createExpandedRowModel(),
 })
 
 /** The same, plus what tree data needs to render its sub-rows. */
@@ -81,6 +92,35 @@ describe('canMoveRow', () => {
 
 		expect(canMoveRow(table, 'b', RowMoveDirection.Up)).toBe(false)
 		expect(canMoveRow(table, 'b', RowMoveDirection.Down)).toBe(false)
+	})
+
+	it('refuses every move while a grouping is applied', () => {
+		// The same reasoning as the sort above, and a second one on top: the order is computed
+		// from the grouping levels, so a manual move springs back — and half the rows are
+		// synthetic groups, so "move this row one step" has no answer across a group boundary.
+		const table = createTable({
+			features: ROW_ORDERING_GROUPED,
+			data: DATA,
+			columns: createColumns<Row>([{ accessorKey: 'name', header: 'Name' }]),
+			getRowId: (row) => row.id,
+			grouping: { by: ['name'] },
+		})
+
+		expect(canMoveRow(table, 'b', RowMoveDirection.Up)).toBe(false)
+		expect(canMoveRow(table, 'b', RowMoveDirection.Down)).toBe(false)
+	})
+
+	it('moves freely again once the grouping is dropped', () => {
+		// The control: the refusal is the grouping's, not the feature set's.
+		const table = createTable({
+			features: ROW_ORDERING_GROUPED,
+			data: DATA,
+			columns: createColumns<Row>([{ accessorKey: 'name', header: 'Name' }]),
+			getRowId: (row) => row.id,
+			grouping: true,
+		})
+
+		expect(canMoveRow(table, 'b', RowMoveDirection.Up)).toBe(true)
 	})
 
 	it('does not move a row into a different pinning band', () => {

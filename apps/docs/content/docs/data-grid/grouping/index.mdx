@@ -1,0 +1,116 @@
+---
+title: Grouping
+description: Collapse rows into group rows keyed by one or more columns, with subtotals under their own columns.
+---
+
+Rows collapse into **group rows** keyed by the value of one or more columns. Every level lives in one auto-injected `__group__` column, indented one step per level, so adding a second level does not change the shape of the table.
+
+Grouping needs four members in the feature set, and two of them are easy to forget: a group row is a row with `subRows`, so expansion is what opens it.
+
+```ts
+const features = tableFeatures({
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	columnGroupingFeature,
+	groupedRowModel: createGroupedRowModel(),
+	rowExpandingFeature,
+	expandedRowModel: createExpandedRowModel(),
+})
+```
+
+## Usage
+
+<DataGridDocsExample exampleId='grouping-basic' />
+
+```tsx
+<DataGrid
+	features={features}
+	data={data}
+	columns={columns}
+	grouping={{ by: ['region'] }}
+>
+	<DataGrid.Toolbar start={<DataGrid.GroupByBar />} />
+	<DataGrid.Table>
+		<DataGrid.Header />
+		<DataGrid.Body />
+	</DataGrid.Table>
+</DataGrid>
+```
+
+`grouping.by` alone is enough to group; `<DataGrid.GroupByBar />` is what makes the level
+removable again. A grouped column leaves the column list, so it has no header cell left to hang a
+menu on — without the bar this grid is grouped for good. [Grouping · Interactive](/docs/data-grid/grouping/interactive) has the rest of what the bar and the column menu do.
+
+The grouped column is **taken out of the column list** while it is grouped — `__group__` already carries its value, so leaving it in would show the same thing twice on every group row and nothing at all on every leaf row. Drop the level and the column comes back.
+
+## Nesting
+
+Levels are ordered outermost first.
+
+<DataGridDocsExample exampleId='grouping-nested' />
+
+```tsx
+<DataGrid
+	features={features}
+	data={data}
+	columns={columns}
+	grouping={{ by: ['region', 'manager'] }}
+/>
+```
+
+Indentation is styled for **five levels**. Deeper nesting still renders and still groups correctly; it simply stops indenting further, so beyond that depth the levels read from the labels rather than from the offset.
+
+## Grouping by a derived value
+
+A column groups by its own value unless it says otherwise. `grouping.getValue` derives the key instead — the month of a date, a bucket, a first letter.
+
+```tsx
+const columns = createColumns<Deal>([
+	{
+		accessorKey: 'closedAt',
+		header: 'Closed',
+		cell: { type: 'date' },
+		grouping: { getValue: (row) => row.closedAt.slice(0, 7) },
+	},
+])
+```
+
+`grouping: false` on a column opts it out of being a level altogether: it gets no **Group by** entry in its column menu, and `column.getCanGroup()` returns `false`.
+
+## What a group row is, and is not
+
+A group row is **not a record**, and the grid treats it that way:
+
+- it carries no row actions, no edit affordance and no delete;
+- a column that is neither the grouping one nor aggregated renders **nothing** on it, rather than one arbitrary row's value — a manager's name beside a region's subtotal would read as the region's manager;
+- its checkbox cascades to every leaf row beneath it, and shows indeterminate for a partial selection.
+
+Row **reordering** is refused outright while a grouping is applied — the row order is computed from the levels, so a manual move would be recomputed away on the next render. This is the same rule that already refuses a move while a sort is applied.
+
+## Pagination counts group rows
+
+A page counts **rendered** rows, and a group row is a rendered row — so a page can end in the middle of a group. This is upstream behaviour and both AG Grid and MUI X share it. If that reads badly for your data, raise the page size or paginate the source query rather than the grouped model.
+
+## Options
+
+| Option              | Type                           | Description                                                              |
+| ------------------- | ------------------------------ | ------------------------------------------------------------------------ |
+| `grouping.by`       | `string[]`                     | Starting levels, outermost first. Column ids.                            |
+| `grouping.mode`     | `'single' \| 'multiple'`       | How many columns carry the labels. Default `'single'`.                   |
+| `grouping.column`   | `SystemColumnDef`              | Presentation of the injected `__group__` column — width, pinning, align. |
+| `grouping.manual`   | `boolean`                      | Rows arrive already grouped; the grid does not group them again.         |
+| `grouping.onChange` | `(grouping: string[]) => void` | Called whenever the levels change.                                       |
+| `grouping.enabled`  | `boolean`                      | Turns a `grouping` inherited from a defaults layer off for this grid.    |
+
+### Column options
+
+| Option              | Type                            | Description                                                     |
+| ------------------- | ------------------------------- | --------------------------------------------------------------- |
+| `grouping`          | `false \| ColumnGroupingConfig` | `false` opts the column out of being a grouping level.          |
+| `grouping.getValue` | `(row, index) => unknown`       | Group by a value derived from the row rather than the column's. |
+
+## Source
+
+- `@ez-kit/data-grid-core` — [`packages/data-grid/core/src/types.ts`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/core/src/types.ts)
+- `@ez-kit/data-grid-core` — [`packages/data-grid/core/src/system-columns/system-columns.ts`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/core/src/system-columns/system-columns.ts)

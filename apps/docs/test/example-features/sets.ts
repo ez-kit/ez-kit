@@ -41,8 +41,10 @@ export const BASE_FEATURES = ['columnVisibilityFeature', 'columnPinningFeature',
  * descending puts `User 9999` on top without the registry and `User 10001` with it. It shipped
  * silently because below about ten rows lexicographic and alphanumeric agree, so every small
  * example's spec passed; it took a 10 000-row virtualization example to make it visible.
- * `filterFns` has the same shape and core does warn about that one; `aggregationFns` it does not
- * (`features/entry.ts:56` says so outright).
+ * `filterFns` has the same shape, and core now warns about all three — `aggregationFns` was the
+ * exception only while nothing in a config could ask for an aggregation, which the `grouping` and
+ * column `aggregation` options ended. This map still carries the three, because core's guards run
+ * per grid at render while this one reads every example at build.
  */
 export const REQUIRED_BY_OPTION: Readonly<Record<string, readonly string[]>> = {
 	sorting: ['rowSortingFeature', 'sortedRowModel', 'sortFns'],
@@ -56,6 +58,16 @@ export const REQUIRED_BY_OPTION: Readonly<Record<string, readonly string[]>> = {
 	creating: ['creatingFeature'],
 	deleting: ['deletingFeature'],
 	draft: ['draftFeature'],
+	// Grouping needs four members, and the two it is easiest to forget are the ones that make a
+	// group row openable: a group row is a row with `subRows`, so `rowExpandingFeature` +
+	// `expandedRowModel` are what its chevron drives. Without them the groups build and nothing
+	// can be opened — the silent half of this map's whole purpose.
+	grouping: ['columnGroupingFeature', 'groupedRowModel', 'rowExpandingFeature', 'expandedRowModel'],
+	// A **column** key rather than a table one, and it works — see the note on `writesOption`.
+	// Deliberately not folded into `grouping` above: aggregation is independent in both
+	// directions, so a grid totalling a column into the footer needs these two and no grouping
+	// at all, which is the configuration upstream split the features apart to serve.
+	aggregation: ['rowAggregationFeature', 'aggregationFns'],
 }
 
 /**
@@ -87,6 +99,9 @@ export const REQUIRED_BY_PERSISTED_SLICE: Readonly<Record<string, string>> = {
 	columnOrder: 'columnOrderingFeature',
 	rowPinning: 'rowPinningFeature',
 	columnSizing: 'columnSizingFeature',
+	// Without this a persisted snapshot silently drops the grouping levels — the `columnOrder`
+	// defect this map's docblock records, one slice over.
+	grouping: 'columnGroupingFeature',
 }
 
 /** One example file, with the set it declares and the config keys it writes. */
@@ -162,7 +177,24 @@ function withoutComments(source: string): string {
 	return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1')
 }
 
-/** Whether `key` is written as a JSX prop or as a key of a config object literal. */
+/**
+ * Whether `key` is written as a JSX prop or as a key of a config object literal.
+ *
+ * **There is no notion of nesting depth here, and that is what lets a *column* key be checked
+ * at all.** `aggregation` and a column's `grouping` are column options, and this matches them
+ * exactly as it matches a table-level one, because the test is positional rather than
+ * structural: the key must **start its own line**.
+ *
+ * That was measured before {@link REQUIRED_BY_OPTION} gained those two entries, and it is also
+ * this function's blind spot. A column written on one line —
+ * `{ id: 'revenue', aggregation: 'sum' }` — is **not** seen, because the key is preceded by
+ * `, ` rather than by a newline. The same has always been true of a column's `sorting`,
+ * `filtering` and `editing`, so this is a pre-existing limit rather than one the column-level
+ * entries introduced; a multi-line column def, which is what Prettier produces past the print
+ * width, is matched. Widening the pattern to catch the inline form would also match a key
+ * inside a string or a nested unrelated object, so the narrow form stays and this note is the
+ * record of what it cannot see.
+ */
 function writesOption(source: string, key: string): boolean {
 	return new RegExp(String.raw`\n\s+${key}(=|:\s|,\n|\n|$)`, 'm').test(source)
 }

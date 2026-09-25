@@ -285,6 +285,12 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 			canPin: table.grid.pinning.column && isMenuEligible && !isPinningDisabled && !isStaticPin,
 			canHide: isMenuEligible && header.column.getCanHide(),
 			canMove,
+			// `getCanGroup()` answers both halves at once — the table-level `grouping` gate that
+			// core resolves to `enableGrouping`, and the column's own `grouping: false`. Absent
+			// without `columnGroupingFeature`, so optional-called like every other feature read on
+			// this path; see `feature-optionality.test.tsx`.
+			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+			canGroup: isMenuEligible && (header.column.getCanGroup?.() ?? false),
 		},
 		table.grid.messages.columnMenu,
 	)

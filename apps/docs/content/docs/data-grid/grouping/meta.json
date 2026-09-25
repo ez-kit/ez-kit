@@ -1,0 +1,5 @@
+{
+	"title": "Grouping",
+	"description": "Group rows by a column's value, with subtotals and a grand total",
+	"pages": ["index", "aggregation", "interactive"]
+}

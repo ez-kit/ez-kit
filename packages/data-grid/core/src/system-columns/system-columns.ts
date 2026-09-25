@@ -10,6 +10,7 @@ import type { TableFeatures } from '@tanstack/table-core'
 export const SELECTION_COLUMN_ID = '__selection__'
 export const EXPAND_COLUMN_ID = '__expand__'
 export const ACTIONS_COLUMN_ID = '__actions__'
+export const GROUP_COLUMN_ID = '__group__'
 
 type SystemColumnsOptions = {
 	selection: boolean
@@ -23,6 +24,12 @@ type SystemColumnsOptions = {
 	 * actions cell, so an ordering-only grid still gets that column.
 	 */
 	ordering: boolean
+	/**
+	 * Row grouping — unlike row pinning and ordering this *does* get a column of its own, because
+	 * it has something to render rather than a menu entry to contribute: a group row's label, its
+	 * descendant count and its chevron need a cell, and there is nowhere else to put them.
+	 */
+	grouping: boolean
 	/**
 	 * Whether an inline creating row can appear (`creating.mode` is `'row'` or `'pin-row'`).
 	 *
@@ -48,13 +55,15 @@ type SystemColumnsOptions = {
 	selectionColumn?: SystemColumnDef<TableFeatures>
 	/** Presentation of the `__expand__` column, from `expanding.column`. */
 	expandingColumn?: SystemColumnDef<TableFeatures>
+	/** Presentation of the `__group__` column, from `grouping.column`. */
+	groupingColumn?: SystemColumnDef<TableFeatures>
 	/** Presentation of the `__actions__` column, from `rowActions.column`. */
 	rowActionsColumn?: SystemColumnDef<TableFeatures>
 }
 
 /**
  * Builds the final column list:
- * [__selection__, __expand__, ...user columns, __actions__]
+ * [__selection__, __expand__, __group__, ...user columns, __actions__]
  *
  * System columns contain no cell renderers (framework-agnostic stubs).
  * The React layer renders them based on meta.systemColumnType.
@@ -64,6 +73,15 @@ type SystemColumnsOptions = {
  */
 /** Default width of the two single-control system columns (checkbox, chevron). */
 const NARROW_SYSTEM_COLUMN_SIZE = 44
+
+/**
+ * Default width of the `__group__` column.
+ *
+ * Wider than the other start-edge system columns because it is the only one carrying text: a
+ * group row's label and count sit here, indented one step per nesting level, so the narrow
+ * single-control width would truncate the second level of every grid.
+ */
+const GROUP_COLUMN_SIZE = 220
 
 type SystemColumnSpec = {
 	id: string
@@ -149,6 +167,22 @@ export function buildColumnList<TRow extends object>(
 				// checkbox in view and let the chevron of the same row slide out of it.
 				defaultPinning: ColumnPinSide.Start,
 				def: opts.expandingColumn,
+			}),
+		)
+	}
+
+	if (opts.grouping) {
+		result.push(
+			buildSystemColumn({
+				id: GROUP_COLUMN_ID,
+				type: SystemColumnType.Group,
+				defaultWidth: GROUP_COLUMN_SIZE,
+				// After `__expand__` and before the user's columns, which is where both commercial
+				// grids put theirs: the label is what a reader scans down, so it wants to be the
+				// first thing with text in it. Pinned at the start edge like its two neighbours, so
+				// a horizontally scrolled grid keeps the label beside the rows it names.
+				defaultPinning: ColumnPinSide.Start,
+				def: opts.groupingColumn,
 			}),
 		)
 	}

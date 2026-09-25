@@ -150,6 +150,12 @@ export function Body<TRow extends object = ErasedRow>({ children }: DataGridBody
 	useDataGridState((s) => s.rowPinning)
 	// Cells come out of `row.getVisibleCells()` in column order, so a reorder repaints rows.
 	useDataGridState((s) => s.columnOrder)
+	// Grouping rebuilds the row model **and** the column list — `groupedColumnMode: 'remove'`
+	// takes a grouped column out while it is a level — so every component that reads either has
+	// to re-derive on it. Optional-chained because the slice exists only with
+	// `columnGroupingFeature` registered; see `feature-optionality.test.tsx`.
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	useDataGridState((s) => s.grouping ?? null)
 
 	// Read before the early returns below: the offset hooks must run on every render.
 	const hasPinning = Boolean(table.options.enableRowPinning)
