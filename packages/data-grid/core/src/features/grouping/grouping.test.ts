@@ -23,6 +23,8 @@ import { createColumns } from '../../column/create-columns'
 import { createTable } from '../../create-table'
 import { GROUP_COLUMN_ID } from '../../system-columns'
 
+import { createManualGroupedRowModel } from './create-manual-grouped-row-model'
+
 type Row = { id: string; region: string; manager: string; amount: number; closedAt: string }
 
 const DATA: Row[] = [
@@ -115,6 +117,21 @@ const GROUPING_FILTERED = tableFeatures({
 	columnFilteringFeature,
 	filteredRowModel: createFilteredRowModel(),
 	filterFns,
+})
+
+/**
+ * The server-grouping model, for the one test below that writes `grouping.getSubRows` — a tree
+ * response the rows already arrive nested in. `createGroupedRowModel()` (the `GROUPING` set above)
+ * groups its own input from scratch and does not read `getSubRows` at all, so pairing it with a
+ * tree reader means the client groups an already-grouped tree a second time; the mismatch guard in
+ * `create-table-options.ts` warns on exactly this pairing now that `createManualGroupedRowModel()`
+ * exists to be the correct one.
+ */
+const MANUAL_GROUPING = tableFeatures({
+	columnGroupingFeature,
+	groupedRowModel: createManualGroupedRowModel(),
+	rowExpandingFeature,
+	expandedRowModel: createExpandedRowModel(),
 })
 
 /**
@@ -248,7 +265,7 @@ describe('row grouping', () => {
 	it('builds the tree from `grouping.getSubRows` without an expanding config', () => {
 		type ServerRow = { id: string; region: string; amount: number; subRows?: ServerRow[] }
 		const table = createTable({
-			features: GROUPING,
+			features: MANUAL_GROUPING,
 			data: [
 				{ id: 'g:EMEA', region: 'EMEA', amount: 100, subRows: [{ id: '1', region: 'EMEA', amount: 100 }] },
 			] satisfies ServerRow[],
