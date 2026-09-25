@@ -36,15 +36,21 @@ describe('a server-grouped grid', () => {
 		expect(screen.getByText('APAC')).toBeInTheDocument()
 	})
 
+	/**
+	 * Asserted on `data-column-id` rather than on the header's text, mirroring
+	 * `grouping.test.tsx`'s identical "takes the grouped column out of the header" case: a
+	 * header's rendered label is the fixture kit's business (here it's the label plus the
+	 * group-by menu's own text, "Account ⋮ Group by this column", since the fixture kit's `Menu`
+	 * double renders every entry inline rather than behind a closed trigger) and differs between
+	 * React 18 and 19, while which columns the header holds is the thing this case is actually
+	 * about.
+	 */
 	it('takes the grouped column out of the header', () => {
-		setup()
+		const { container } = setup()
 
-		// A `columnheader`'s accessible name here is its label plus the group-by menu's own text
-		// ("Account ⋮ Group by this column"), not the bare label — the fixture kit's `Menu` double
-		// renders every entry inline rather than behind a closed trigger. `draft.test.tsx` queries
-		// column headers the same way for the same reason.
-		expect(screen.queryByRole('columnheader', { name: /Region/ })).not.toBeInTheDocument()
-		expect(screen.getByRole('columnheader', { name: /Account/ })).toBeInTheDocument()
+		const headers = [...container.querySelectorAll('[data-slot="th"]')].map((el) => el.getAttribute('data-column-id'))
+		expect(headers).not.toContain('region')
+		expect(headers).toContain('account')
 	})
 
 	it('shows the grand total in the footer and the subtotals on the group rows', () => {
