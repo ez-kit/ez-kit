@@ -92,6 +92,8 @@ Row **reordering** is refused outright while a grouping is applied — the row o
 
 A page counts **rendered** rows, and a group row is a rendered row — so a page can end in the middle of a group. This is upstream behaviour and both AG Grid and MUI X share it. If that reads badly for your data, raise the page size or paginate the source query rather than the grouped model.
 
+That advice assumes the client is doing the grouping. Under [server grouping](/docs/data-grid/grouping/aggregation#server-supplied-totals) the server already decided what belongs on the page before the response arrived, so a page can end mid-group with nothing the grid can do about it — it never saw the rows that would have completed the group.
+
 ## Options
 
 | Option                | Type                           | Description                                                                    |
