@@ -687,25 +687,32 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 		? (featureConfig(orderingCfgResolved?.row) ?? {})
 		: undefined
 
+	// Group columns hold no values and are never aggregated, so every walk below over a (possibly
+	// nested) column tree visits leaves only — one traversal, reused by `aggregatedColumns` and by
+	// the supplied-totals guards further down, rather than each writing its own recursion.
+	const walkLeafColumns = (cols: unknown[], visit: (col: unknown) => void): void => {
+		for (const col of cols) {
+			const children = (col as { columns?: unknown[] }).columns
+			if (children !== undefined) {
+				walkLeafColumns(children, visit)
+				continue
+			}
+			visit(col)
+		}
+	}
+
 	// Every column that says it is aggregated, and separately those that name the function by
 	// string — the first asks for `rowAggregationFeature`, the second for the `aggregationFns`
-	// registry, and an inline definition asks only for the first. Group columns hold no values
-	// and are never aggregated, so only leaves are walked, exactly as the sort guard does.
+	// registry, and an inline definition asks only for the first.
 	const aggregatedColumns = ((): { any: boolean; named: boolean } => {
 		let any = false
 		let named = false
-		const walk = (col: unknown): void => {
-			const children = (col as { columns?: unknown[] }).columns
-			if (children !== undefined) {
-				for (const child of children) walk(child)
-				return
-			}
+		walkLeafColumns(mappedUserColumns, (col) => {
 			const fn = (col as { aggregationFn?: unknown }).aggregationFn
 			if (fn === undefined) return
 			any = true
 			if (typeof fn === 'string') named = true
-		}
-		for (const col of mappedUserColumns) walk(col)
+		})
 
 		return { any, named }
 	})()
@@ -851,31 +858,34 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 		// (`def.id ?? def.accessorKey`), read off the mapped column instead: `mapColumns` only ever
 		// writes `result.id` when the author named one explicitly, so an accessor-only column is
 		// named by its `accessorKey` here too.
-		const resolvedColumnId = (col: unknown): string =>
-			(col as { id?: string; accessorKey?: string }).id ?? (col as { accessorKey?: string }).accessorKey ?? '?'
+		const resolvedColumnId = (col: unknown): string => {
+			const c = col as { id?: string; accessorKey?: string }
+			return c.id ?? c.accessorKey ?? '?'
+		}
 
 		const aggregationCfg = config.aggregation
 		const totals = aggregationCfg?.totals
-		const columnIds = new Set(mappedUserColumns.map((col) => resolvedColumnId(col)))
+		const columnIds = new Set<string>()
+		walkLeafColumns(mappedUserColumns, (col) => columnIds.add(resolvedColumnId(col)))
 
 		if (aggregationCfg?.manual === true) {
-			for (const col of mappedUserColumns) {
+			walkLeafColumns(mappedUserColumns, (col) => {
 				const id = resolvedColumnId(col)
-				if ((col as { aggregationFn?: unknown }).aggregationFn === undefined) continue
-				if (totals !== undefined && Object.hasOwn(totals, id)) continue
+				if ((col as { aggregationFn?: unknown }).aggregationFn === undefined) return
+				if (totals !== undefined && Object.hasOwn(totals, id)) return
 				console.warn(
-					`[data-grid] Column '${id}' names an \`aggregation\` function and \`aggregation.manual\` is ` +
+					`[data-grid] Column "${id}" names an \`aggregation\` function and \`aggregation.manual\` is ` +
 						'on, so the grid will not compute its total — but `aggregation.totals` carries no entry ' +
 						"for it, so its footer renders empty. Supply it, or drop the column's `aggregation`.",
 				)
-			}
+			})
 		}
 
 		if (totals !== undefined) {
 			for (const id of Object.keys(totals)) {
 				if (columnIds.has(id)) continue
 				console.warn(
-					`[data-grid] \`aggregation.totals\` has an entry for '${id}', which is not a column id — ` +
+					`[data-grid] \`aggregation.totals\` has an entry for "${id}", which is not a column id — ` +
 						'nothing renders it. A renamed column is the usual cause.',
 				)
 			}

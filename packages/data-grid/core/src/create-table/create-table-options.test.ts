@@ -705,7 +705,7 @@ describe('createTableOptions', () => {
 			})
 
 			expect(warnings()).toHaveLength(1)
-			expect(warnings()[0]).toContain("'age'")
+			expect(warnings()[0]).toContain('"age"')
 			expect(warnings()[0]).toContain('aggregation.totals')
 		})
 
@@ -721,7 +721,41 @@ describe('createTableOptions', () => {
 			})
 
 			expect(warnings()).toHaveLength(1)
-			expect(warnings()[0]).toContain("'revenue'")
+			expect(warnings()[0]).toContain('"revenue"')
+		})
+
+		it('finds an aggregated leaf inside a column group for a legitimate `totals` entry', () => {
+			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+			const grouped = createColumns<Row>([
+				{ id: 'group', header: 'Group', columns: [{ accessorKey: 'age', aggregation: 'sum' }] },
+			])
+			createTableOptions({
+				features: AGGREGATION,
+				data: rows,
+				columns: grouped,
+				aggregation: { manual: true, totals: { age: 1 } },
+			})
+
+			expect(warnings()).toHaveLength(0)
+		})
+
+		it('names a grouped, aggregated leaf missing its total under `manual`', () => {
+			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+			const grouped = createColumns<Row>([
+				{ id: 'group', header: 'Group', columns: [{ accessorKey: 'age', aggregation: 'sum' }] },
+			])
+			createTableOptions({
+				features: AGGREGATION,
+				data: rows,
+				columns: grouped,
+				aggregation: { manual: true, totals: {} },
+			})
+
+			expect(warnings()).toHaveLength(1)
+			expect(warnings()[0]).toContain('"age"')
+			expect(warnings()[0]).toContain('aggregation.totals')
 		})
 
 		it('warns about an aggregation object that names neither a function nor a renderer', () => {
