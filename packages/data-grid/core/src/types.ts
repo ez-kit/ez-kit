@@ -830,6 +830,40 @@ export type InitialTableState<TFeatures extends TableFeatures> = Omit<
 	draft?: Partial<AppliedState>
 }
 
+/**
+ * Table-level aggregation — the half a column cannot state.
+ *
+ * A column says *what* is totalled (`aggregation.fn`) and *how the total looks*
+ * (`aggregation.component`). Neither can carry a value the server computed, because columns are
+ * declared once — `createColumns` at module scope, in every example in the docs — while a total
+ * changes with every response. So a supplied total lives here, beside the other per-response
+ * server data (`data`, `pagination.rowCount`).
+ *
+ * Deliberately **not** a {@link FeatureToggle}. Every sibling config has `enabled`, and here it
+ * would lie: this key governs supplied totals, while what a reader would expect
+ * `aggregation.enabled: false` to switch off is every column's aggregate — including the group
+ * subtotals that come from a group row's own fields and owe nothing to this object.
+ */
+export type AggregationConfig = {
+	/**
+	 * Never compute a total on the client.
+	 *
+	 * Without it, `column.getAggregationValue()` totals the rows the client holds — which under
+	 * `filtering.manual` or `pagination.manual` is one page, rendering as if it were the dataset.
+	 * With it, a totalled column that has no entry in {@link AggregationConfig.totals} renders an
+	 * **empty** footer cell instead of a wrong number.
+	 */
+	manual?: boolean
+	/**
+	 * Grand total per column id — what the footer of a totalled column shows.
+	 *
+	 * Group **subtotals** are not here: they arrive as ordinary fields on the group row the server
+	 * sent, so they need no option at all. A column needs no `aggregation` of its own for an entry
+	 * here to render.
+	 */
+	totals?: Record<string, unknown>
+}
+
 export type TableConfig<TFeatures extends TableFeatures, TRow extends object> = {
 	/**
 	 * The features registered on this table, built once with `tableFeatures()` from
@@ -898,6 +932,8 @@ export type TableConfig<TFeatures extends TableFeatures, TRow extends object> = 
 	 * and per-column overrides apply.
 	 */
 	sorting?: boolean | SortingConfig
+	/** Server-supplied aggregates. See {@link AggregationConfig}. */
+	aggregation?: AggregationConfig
 	/**
 	 * Column-level filtering configuration. Falsy fully disables column filters
 	 * (per-column inputs / operator popovers); truthy enables them. Independent

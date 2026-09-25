@@ -210,7 +210,11 @@ function mapColumn<TRow extends object>(
 	if (typeof aggregation === 'string') {
 		result.aggregationFn = aggregation
 	} else if (aggregation !== undefined) {
-		result.aggregationFn = aggregation.fn
+		// Only when the author named one. An absent `fn` is what a server-totalled column looks
+		// like, and writing the key as `undefined` would both break `exactOptionalPropertyTypes`
+		// and make the column read as aggregated to `create-table-options.ts`'s `aggregatedColumns`
+		// walk — which would then ask for `rowAggregationFeature` on a grid that needs none.
+		if (aggregation.fn !== undefined) result.aggregationFn = aggregation.fn
 		if (aggregation.component !== undefined) meta.aggregation = { component: aggregation.component }
 	}
 

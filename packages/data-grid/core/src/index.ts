@@ -277,6 +277,7 @@ export {
 	PaginationMode,
 } from './types'
 export type {
+	AggregationConfig,
 	DataTable,
 	ExpandingConfig,
 	GroupingConfig,

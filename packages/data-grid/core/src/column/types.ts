@@ -926,6 +926,10 @@ export type ColumnAggregationConfig<TNode = unknown> = {
 	/**
 	 * A built-in or registered aggregation name, or an inline definition.
 	 *
+	 * **Optional**, because a grid whose totals come from the server has nothing to name: the
+	 * value arrives in the table-level `aggregation.totals` and the only reason left to write this
+	 * option is `component`. An object with neither is meaningless and warns in development.
+	 *
 	 * The definition's result type is `any` rather than `unknown`, and it has to be: upstream's
 	 * `AggregationFnDef` is **invariant** in that parameter, because the optional `merge` reads
 	 * `subRowResults: TResult[]` as an input while `aggregate` returns it as an output. So
@@ -934,7 +938,7 @@ export type ColumnAggregationConfig<TNode = unknown> = {
 	 * rejected at its call site.
 	 */
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	fn: BuiltInAggregationFn | (string & {}) | AggregationFnDef<TableFeatures, any, any, any>
+	fn?: BuiltInAggregationFn | (string & {}) | AggregationFnDef<TableFeatures, any, any, any>
 	/** Renders the aggregated value. Falls back to the column's own cell-type view. */
 	component?: TNode
 }
