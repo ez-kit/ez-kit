@@ -52,6 +52,7 @@ export const exampleModules: Record<string, () => Promise<Record<string, Compone
 	'components/grouping/basic.tsx': () => import('./components/grouping/basic'),
 	'components/grouping/aggregation.tsx': () => import('./components/grouping/aggregation'),
 	'components/grouping/interactive.tsx': () => import('./components/grouping/interactive'),
+	'components/grouping/server.tsx': () => import('./components/grouping/server'),
 	'components/fallbacks.tsx': () => import('./components/fallbacks'),
 	'components/example-task-board.tsx': () => import('./components/example-task-board'),
 	'components/example-team-members.tsx': () => import('./components/example-team-members'),

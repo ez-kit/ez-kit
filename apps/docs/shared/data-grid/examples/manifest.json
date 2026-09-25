@@ -586,6 +586,14 @@
 		"exportName": "GroupingAggregationExample"
 	},
 	{
+		"id": "grouping-server",
+		"label": "Server-supplied totals",
+		"group": "grouping",
+		"groupLabel": "Grouping",
+		"sourceFile": "components/grouping/server.tsx",
+		"exportName": "ServerGroupingExample"
+	},
+	{
 		"id": "grouping-interactive",
 		"label": "Interactive",
 		"group": "grouping",

@@ -32,6 +32,37 @@ const columns = createColumns<Deal>([
 
 A footer cell renders the column's own `footer` when it has one, and its grand total otherwise. The two never compete — writing `footer` wins — so adding `aggregation` to a column that already has a footer changes nothing in the footer.
 
+## Server-supplied totals
+
+Everything above computes on the client. A grid whose server already did the summing does not register `rowAggregationFeature` at all — it hands the totals to the table through `aggregation`, a second, table-level option that happens to share its name with the column one above but is otherwise unrelated to it.
+
+```ts
+const features = tableFeatures({
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	columnGroupingFeature,
+	// The server grouped these rows; this model marks them rather than grouping them again.
+	groupedRowModel: createManualGroupedRowModel(),
+	rowExpandingFeature,
+	expandedRowModel: createExpandedRowModel(),
+	// Deliberately no `rowAggregationFeature` and no `aggregationFns`: every number here was
+	// computed by the server.
+})
+```
+
+<DataGridDocsExample exampleId='grouping-server' />
+
+**A supplied total is looked up by column id, before anything is computed.** `aggregation.totals.revenue` renders the `revenue` column's footer whether or not that column writes an `aggregation` of its own — the lookup happens first, and a hit short-circuits `column.getAggregationValue()` entirely. A grid that only ever shows server totals needs no column `aggregation` anywhere.
+
+**`aggregation.manual` means _compute nothing on the client_, and it exists because the unguarded default is quietly wrong.** Without it, a totalled column with no entry under `totals` falls back to `column.getAggregationValue()`, which totals the rows the client currently holds — the rows on the table's own row model, not the rows on the server. Under `filtering.manual` or `pagination.manual` that is not the dataset the reader thinks they are looking at: the footer keeps rendering a number, in the same cell, in the same font, and it is the **page's** total. Nothing about the cell says so. `aggregation.manual` turns that fallback off — a column with no supplied total then renders an empty footer cell instead of a page total dressed as a grand one.
+
+**Group subtotals need no option at all.** They are not looked up the way the grand total is — a group row's subtotal is simply the field the server put on it, read by the column's ordinary accessor. `createManualGroupedRowModel()` deliberately leaves `getValue` alone rather than replacing it with an aggregating one (the way the client grouped row model does), so a `revenue` column reads a group row's `revenue` field exactly as it reads a leaf row's. Nothing under `aggregation.totals` is involved, and the column needs no `aggregation` for it either.
+
+**Together, a server-grouped grid with server-supplied totals registers neither `rowAggregationFeature` nor `aggregationFns`.** There is nothing for either to do: no group subtotal is computed (it arrives as a field) and no grand total is computed (it arrives in `aggregation.totals`). What turns server grouping on is the row model, not a flag — `groupedRowModel: createManualGroupedRowModel()` occupies the same slot `createGroupedRowModel()` does, paired with `grouping.getSubRows` for a tree response (as above) or the model's own `isGroupRow` / `getLevel` adapters for a flat, level-tagged one. The grid warns in development when the two disagree — `grouping.getSubRows` set against the client model, or the manual model registered with neither `getSubRows` nor adapters.
+
+**This also changes what [Pagination counts group rows](/docs/data-grid/grouping#pagination-counts-group-rows) means in practice.** That page describes the client-paginated case, where raising the page size is at least an option. Under server grouping the server decided what belongs on the page before the response ever reached the grid — a page can end in the middle of a group, and there is nothing the grid can do about it, because it never saw the rows that would have completed the group.
+
 ## Subtotals on group rows
 
 With grouping on, the same option puts each group's subtotal under its own column.
@@ -72,6 +103,13 @@ Without one, the total renders through the column's **existing** cell-type view 
 | `aggregation`           | `AggregationFnName \| ColumnAggregationConfig` | The scalar names a function; the object adds a renderer.          |
 | `aggregation.fn`        | `AggregationFnName \| AggregationFnDef`        | A built-in or registered name, or an inline definition.           |
 | `aggregation.component` | `ComponentType`                                | Renders the aggregate. Falls back to the column's cell-type view. |
+
+### Table options
+
+| Option               | Type                      | Description                          |
+| -------------------- | ------------------------- | ------------------------------------ |
+| `aggregation.manual` | `boolean`                 | Never compute a total on the client. |
+| `aggregation.totals` | `Record<string, unknown>` | Grand total per column id.           |
 
 ## Source
 

@@ -63,8 +63,13 @@ export const REQUIRED_BY_OPTION: Readonly<Record<string, readonly string[]>> = {
 	// `expandedRowModel` are what its chevron drives. Without them the groups build and nothing
 	// can be opened — the silent half of this map's whole purpose.
 	grouping: ['columnGroupingFeature', 'groupedRowModel', 'rowExpandingFeature', 'expandedRowModel'],
-	// A **column** key rather than a table one, and it works — see the note on `writesOption`.
-	// Deliberately not folded into `grouping` above: aggregation is independent in both
+	// Was a **column-only** key when this comment was first written — it is not anymore.
+	// `AggregationConfig` gave the table its own `aggregation={{ manual, totals }}` prop for
+	// server-supplied totals, which shares the name with a column's `aggregation: 'sum' | {…}`.
+	// Only the column form asks the client to compute anything, so only it needs these two; a
+	// grid whose totals are all server-supplied registers neither, which is the entire point of
+	// that feature. `writesColumnAggregation` (below) is what tells the two forms apart — see its
+	// own note. Deliberately not folded into `grouping` above: aggregation is independent in both
 	// directions, so a grid totalling a column into the footer needs these two and no grouping
 	// at all, which is the configuration upstream split the features apart to serve.
 	aggregation: ['rowAggregationFeature', 'aggregationFns'],
@@ -181,11 +186,14 @@ function withoutComments(source: string): string {
  * Whether `key` is written as a JSX prop or as a key of a config object literal.
  *
  * **There is no notion of nesting depth here, and that is what lets a *column* key be checked
- * at all.** `aggregation` and a column's `grouping` are column options, and this matches them
- * exactly as it matches a table-level one, because the test is positional rather than
- * structural: the key must **start its own line**.
+ * at all.** A column's `grouping` is a column option, and this matches it exactly as it matches
+ * a table-level one, because the test is positional rather than structural: the key must
+ * **start its own line**. (`aggregation` used to be checked the same way, back when it was a
+ * column-only key; it now has a table-level form too and is checked by
+ * {@link writesColumnAggregation} instead, precisely because this function cannot tell the two
+ * apart.)
  *
- * That was measured before {@link REQUIRED_BY_OPTION} gained those two entries, and it is also
+ * That was measured before {@link REQUIRED_BY_OPTION} gained its grouping entry, and it is also
  * this function's blind spot. A column written on one line —
  * `{ id: 'revenue', aggregation: 'sum' }` — is **not** seen, because the key is preceded by
  * `, ` rather than by a newline. The same has always been true of a column's `sorting`,
@@ -197,6 +205,24 @@ function withoutComments(source: string): string {
  */
 function writesOption(source: string, key: string): boolean {
 	return new RegExp(String.raw`\n\s+${key}(=|:\s|,\n|\n|$)`, 'm').test(source)
+}
+
+/**
+ * Whether `source` writes a **column-level** `aggregation` — `aggregation: 'sum'` or
+ * `aggregation: { fn: …, component: … }` inside a column definition.
+ *
+ * `aggregation` stopped being a column-only key once `AggregationConfig` gave the table its own
+ * `aggregation={{ manual, totals }}` prop, and `writesOption`'s generic alternation
+ * (`=|:\s|,\n|\n|$`) matches both forms — it would flag a server-totals grid as needing
+ * `rowAggregationFeature` / `aggregationFns` for a prop that asks the client to compute nothing.
+ * The two forms are distinguishable without any nesting awareness, because a JSX prop always
+ * assigns with `=` and an object-literal key always assigns with `:` — a table's `aggregation={{`
+ * can never read as `aggregation:`, and a column's `aggregation:` can never read as `aggregation=`.
+ * So this narrows to the colon form only, leaving `writesOption` itself untouched for every other
+ * key (`grouping` among them, which still has to match its own table-level `=` form).
+ */
+function writesColumnAggregation(source: string): boolean {
+	return /\n\s+aggregation:\s/.test(source)
 }
 
 /**
@@ -254,7 +280,9 @@ export function collectExampleSets(docsRoot: string): ExampleSet[] {
 		return {
 			file: relative(docsRoot, path),
 			members: [...literal.matchAll(MEMBER_PATTERN)].map((match) => match[1] ?? ''),
-			options: Object.keys(REQUIRED_BY_OPTION).filter((key) => writesOption(source, key)),
+			options: Object.keys(REQUIRED_BY_OPTION).filter((key) =>
+				key === 'aggregation' ? writesColumnAggregation(source) : writesOption(source, key),
+			),
 			buildsAGrid: GRID_PATTERN.test(source),
 			isInfinite: /mode:\s*'infinite'/.test(source),
 			persistedSlices: persistedSlicesOf(source),
