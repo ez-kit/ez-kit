@@ -1,4 +1,14 @@
 import { createColumns } from '@ez-kit/data-grid-core'
+import {
+	columnGroupingFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	columnVisibilityFeature,
+	createExpandedRowModel,
+	createManualGroupedRowModel,
+	rowExpandingFeature,
+	tableFeatures,
+} from '@ez-kit/data-grid-core/features'
 import { screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
@@ -19,6 +29,42 @@ const PAGE: Deal[] = [
 	{ id: '2', account: 'Globex', amount: 30 },
 ]
 
+// ── server-grouped fixtures (Task 5's shape, redeclared here — see the react package's own
+// fixture note: core's `MANUAL` carries no structural features because nothing renders there,
+// while a React feature set needs the structural three or the grid throws at render) ──────────
+
+type ServerRow = {
+	id: string
+	region?: string
+	account?: string
+	amount?: number
+	subRows?: ServerRow[] | undefined
+}
+
+const EMEA_SUBROWS: ServerRow[] = [
+	{ id: '1', region: 'EMEA', account: 'Acme', amount: 70 },
+	{ id: '2', region: 'EMEA', account: 'Globex', amount: 30 },
+]
+
+const EMEA_GROUP: ServerRow = { id: 'g:EMEA', region: 'EMEA', amount: 100, subRows: EMEA_SUBROWS }
+
+const TREE: ServerRow[] = [EMEA_GROUP]
+
+/**
+ * The structural three (required for any React render) plus server grouping — and deliberately
+ * no `rowAggregationFeature` / `aggregationFns`. That absence is the point: it is what makes the
+ * tests below prove the new `isAggregated` arm in `cell.tsx` rather than upstream's.
+ */
+const MANUAL_GROUPING = tableFeatures({
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	columnGroupingFeature,
+	groupedRowModel: createManualGroupedRowModel(),
+	rowExpandingFeature,
+	expandedRowModel: createExpandedRowModel(),
+})
+
 /**
  * A grid harness whose config can be swapped after mount.
  *
@@ -27,21 +73,29 @@ const PAGE: Deal[] = [
  * drive the "a new `totals` object arrives with an unchanged `data` array" case below. This one
  * carries `config` as a prop instead, so React Testing Library's own `rerender` (re-invoked with
  * a new `config` prop) is the rerender this file needs.
+ *
+ * Generic over the row, defaulting to {@link Deal}, so the group-row cases below can supply
+ * {@link ServerRow} data and columns without an `as any` at the call site — the same reason
+ * `test-utils`'s own `renderGrid` is generic.
  */
-function Harness({ config }: { config: Partial<UseDataGridConfig<GridFeatures, Deal>> }): ReactElement {
-	const table = useDataGrid<GridFeatures, Deal>({
+function Harness<TRow extends object = Deal>({
+	config,
+}: {
+	config: Partial<UseDataGridConfig<GridFeatures, TRow>>
+}): ReactElement {
+	const table = useDataGrid<GridFeatures, TRow>({
 		features: TEST_FEATURES,
 		...config,
-	} as UseDataGridConfig<GridFeatures, Deal>)
-	return <DataGrid<GridFeatures, Deal> table={table} />
+	} as UseDataGridConfig<GridFeatures, TRow>)
+	return <DataGrid<GridFeatures, TRow> table={table} />
 }
 
-function renderGrid(config: Partial<UseDataGridConfig<GridFeatures, Deal>>) {
-	const result = renderWithComponents(<Harness config={config} />)
+function renderGrid<TRow extends object = Deal>(config: Partial<UseDataGridConfig<GridFeatures, TRow>>) {
+	const result = renderWithComponents(<Harness<TRow> config={config} />)
 	return {
 		...result,
-		rerender: (nextConfig: Partial<UseDataGridConfig<GridFeatures, Deal>>) => {
-			result.rerender(<Harness config={nextConfig} />)
+		rerender: (nextConfig: Partial<UseDataGridConfig<GridFeatures, TRow>>) => {
+			result.rerender(<Harness<TRow> config={nextConfig} />)
 		},
 	}
 }
@@ -120,5 +174,39 @@ describe('server-supplied grand totals', () => {
 		rerender({ data: PAGE, columns, aggregation: { manual: true, totals: { amount: 2 } }, layout: { footer: true } })
 
 		expect(screen.getByText('2')).toBeInTheDocument()
+	})
+})
+
+describe("a group row's server-supplied subtotal", () => {
+	it("renders a group row's supplied subtotal through `aggregation.component`", () => {
+		renderGrid<ServerRow>({
+			features: MANUAL_GROUPING, // no rowAggregationFeature, no aggregationFns
+			data: TREE,
+			columns: createColumns<ServerRow>([
+				{ accessorKey: 'region' },
+				{
+					accessorKey: 'amount',
+					// `aggregation.component` is `TNode` on the core column def — not a renderer signature —
+					// so an inline arrow gets no contextual type for its parameter; annotate it explicitly.
+					aggregation: { component: ({ value }: { value: unknown }) => <b>{`sum ${String(value)}`}</b> },
+				},
+			]),
+			grouping: { by: ['region'], getSubRows: (row) => row.subRows },
+			getRowId: (row) => row.id,
+		})
+
+		expect(screen.getByText('sum 100')).toBeInTheDocument()
+	})
+
+	it('stamps a group row aggregate cell so a kit can style it', () => {
+		const { container } = renderGrid<ServerRow>({
+			features: MANUAL_GROUPING,
+			data: TREE,
+			columns: createColumns<ServerRow>([{ accessorKey: 'region' }, { accessorKey: 'amount' }]),
+			grouping: { by: ['region'], getSubRows: (row) => row.subRows },
+			getRowId: (row) => row.id,
+		})
+
+		expect(container.querySelectorAll('[data-aggregated-cell="true"]').length).toBeGreaterThan(0)
 	})
 })

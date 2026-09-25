@@ -501,7 +501,23 @@ function BodyDataCell<TRow extends object>({ cell, row, children }: DataGridCell
 	 * rendered, and the placeholder case has no value to render at all.
 	 */
 	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
-	const isAggregated = cell.getIsAggregated?.() ?? false
+	const isUpstreamAggregated = cell.getIsAggregated?.() ?? false
+	// Upstream's answer is gated on a **resolvable aggregation function**
+	// (`column_getAggregationFns(column).some((e) => !!e.aggregationFn)`), which a server-grouped
+	// column does not have and does not want: its subtotal is a field the server put on the group
+	// row. Without this second arm, `aggregation.component` and `data-aggregated-cell` would both
+	// go missing on exactly the grids that supply their own numbers — while the value rendered
+	// anyway, through the ordinary view branch, so nothing would look broken.
+	//
+	// It reads `row.getIsGrouped()`, which is not a second notion of what a group row is: the
+	// manual row model sets `groupingColumnId`, so that method is authoritative in both modes. A
+	// column on a group row with no aggregate of any kind is unaffected — `getValue()` is
+	// `undefined` there, which is what the `!== undefined` clause keeps out.
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const isGroupRow = row.getIsGrouped?.() ?? false
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const isGroupedColumn = cell.column.getIsGrouped?.() ?? false
+	const isAggregated = isUpstreamAggregated || (isGroupRow && !isGroupedColumn && cell.getValue() !== undefined)
 	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
 	const isPlaceholder = cell.getIsPlaceholder?.() ?? false
 
