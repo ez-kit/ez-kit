@@ -175,6 +175,25 @@ const PACKAGES: readonly Package[] = [
 			},
 		],
 	},
+	/**
+	 * The server-grouping row model, imported alone from `@ez-kit/data-grid-core/features`.
+	 *
+	 * It is our own factory (see `features/entry.ts`), not a re-export of upstream's
+	 * `createGroupedRowModel`, so nothing here should reach the client grouped row model's graph —
+	 * `createManualGroupedRowModel` builds a tree or reads flat-response adapters and touches
+	 * nothing the client model owns.
+	 */
+	{
+		name: '@ez-kit/data-grid-core/features (createManualGroupedRowModel)',
+		entry: subpathEntryOf('data-grid/core', 'features/index.js'),
+		shakeable: [],
+		cases: [
+			{
+				imports: ['createManualGroupedRowModel'],
+				pulls: ['@ez-kit/data-grid-core', '@ez-kit/data-grid-core/features'],
+			},
+		],
+	},
 ]
 
 /**

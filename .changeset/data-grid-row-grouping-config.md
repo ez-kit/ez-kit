@@ -10,9 +10,10 @@ could write that reached them. Now there is:
 
 - **`TableConfig.grouping`** — `boolean | GroupingConfig`, with `by` (the starting levels), `mode`
   (`GroupingMode.Single` / `.Multiple`), `column` (a `SystemColumnDef` for the auto-injected
-  `__group__` column), `manual` and `onChange`. A grouped grid gets a fourth system column between
-  `__expand__` and the user's columns, and the grouped column itself is taken out of the list while
-  it is grouped, so its value is not shown twice.
+  `__group__` column), `getSubRows` (rows that arrive already grouped, as a tree — pair it with
+  `groupedRowModel: createManualGroupedRowModel()`) and `onChange`. A grouped grid gets a fourth
+  system column between `__expand__` and the user's columns, and the grouped column itself is
+  taken out of the list while it is grouped, so its value is not shown twice.
 - **`ColumnDef.grouping`** — `false` to lock a column out of being a grouping level, or
   `{ getValue }` to group by a derived value (the month of a date, a bucket, a first letter).
 - **`ColumnDef.aggregation`** — `'sum'` and the ten other built-in names, or `{ fn, component }`
