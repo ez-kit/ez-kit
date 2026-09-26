@@ -918,11 +918,19 @@ export type ColumnGroupingConfig<TRow extends object = object> = {
 /**
  * Column-level aggregation config — the object arm of {@link ColumnDefCommon.aggregation}.
  *
- * The scalar names the function; this adds a renderer for the aggregated cell. `component` is
- * `TNode` for the same reason every other column renderer is: core never calls it, it only
- * carries it through to whichever adapter renders the cell.
+ * The scalar names the function; this adds a renderer for the aggregated cell. `component` is a
+ * {@link ColumnRenderer} over `TNode` for the same reason every other column renderer is: core
+ * never calls it, it only carries it through to whichever adapter renders the cell.
+ *
+ * `TRow` / `TValue` are here to type that renderer's props, exactly as they do on
+ * {@link CellDef}'s `component` — the aggregated cell's renderer is handed the same
+ * {@link CellViewCtx} the column's own view is. They were missing until the slot's own type was:
+ * `component` was declared bare `TNode`, so the documented functional form was a `TS2322` under
+ * any adapter that binds `TNode` (`ReactNode` in React), with no workaround. The guard is
+ * `react-columns.test.tsx`, which compiles the documented form beside `cell.component` as a
+ * control.
  */
-export type ColumnAggregationConfig<TNode = unknown> = {
+export type ColumnAggregationConfig<TRow extends object = object, TValue = unknown, TNode = unknown> = {
 	/**
 	 * A built-in or registered aggregation name, or an inline definition.
 	 *
@@ -940,7 +948,7 @@ export type ColumnAggregationConfig<TNode = unknown> = {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	fn?: BuiltInAggregationFn | (string & {}) | AggregationFnDef<TableFeatures, any, any, any>
 	/** Renders the aggregated value. Falls back to the column's own cell-type view. */
-	component?: TNode
+	component?: ColumnRenderer<CellViewCtx<TRow, TValue>, TNode>
 }
 
 /**
@@ -1105,7 +1113,7 @@ export type ColumnDefCommon<
 	 * gets a footer total out of this. Registering grouping merely to total a column is the
 	 * mistake upstream's own guidance leads with.
 	 */
-	aggregation?: BuiltInAggregationFn | (string & {}) | ColumnAggregationConfig<TNode>
+	aggregation?: BuiltInAggregationFn | (string & {}) | ColumnAggregationConfig<TRow, TValue, TNode>
 
 	/**
 	 * Cell display and input configuration.
