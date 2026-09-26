@@ -40,6 +40,21 @@ describe('server-supplied grand totals', () => {
 		expect(screen.getByText('0')).toBeInTheDocument()
 	})
 
+	it('treats a present key with an `undefined` value as a real (empty) total, not an absent one', () => {
+		// `Object.hasOwn(supplied, column.id)` is true here, so the total is `undefined` and the
+		// footer renders nothing — it must NOT fall through to the client-computed sum (100), which
+		// is what an absent key (with `manual` off) would do. A `!== undefined` presence check
+		// cannot tell these two cases apart; `Object.hasOwn` is what pins the difference.
+		renderGrid({
+			data: PAGE,
+			columns: createColumns<Deal>([{ accessorKey: 'amount', header: 'Amount', aggregation: 'sum' }]),
+			aggregation: { totals: { amount: undefined } },
+			layout: { footer: true },
+		})
+
+		expect(screen.queryByText('100')).not.toBeInTheDocument()
+	})
+
 	it("lets the column's own `footer` win over a supplied total", () => {
 		renderGrid({
 			data: PAGE,
