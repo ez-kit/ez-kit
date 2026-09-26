@@ -16,6 +16,8 @@ const SEEDED = 'grouping-basic'
 const INTERACTIVE = 'grouping-interactive'
 /** No grouping at all, a footer instead — the aggregation-without-grouping case. */
 const TOTALS = 'grouping-aggregation'
+/** The server grouped these rows; no `rowAggregationFeature` is registered at all. */
+const SERVER = 'grouping-server'
 
 const GROUP_ROW = '[data-slot="tr"][data-group-row="true"]'
 const GROUP_CELL = '[data-slot="group-cell"]'
@@ -175,5 +177,64 @@ test.describe('a grand total without grouping', () => {
 		await expect(page.locator(TFOOT)).toContainText('485')
 		// The column that wrote its own `footer` keeps it — the total is only a fallback.
 		await expect(page.locator(TFOOT)).toContainText('Total')
+	})
+})
+
+test.describe('a server-grouped grid', () => {
+	test.beforeEach(async ({ grid }) => {
+		await grid.open(SERVER)
+	})
+
+	test('renders one group row per region, each with a label and a count', async ({ page }) => {
+		await expect(groupRows(page)).toHaveCount(2)
+		await expect(page.locator(GROUP_LABEL)).toHaveText(['EMEA', 'APAC'])
+		// Three EMEA deals, two APAC — counted through `subRows`, same as the client-grouped case.
+		await expect(page.locator(GROUP_COUNT)).toHaveText(['(3)', '(2)'])
+	})
+
+	/**
+	 * P11 (Task 8) and Task 9 both deferred click-driven chevron coverage to the browser suite:
+	 * the shared fixture kit renders `Chevron: () => null`, and the browser tooling's iframe
+	 * preview could not confirm a click here — nor, as a control, on the already-shipped
+	 * `grouping-basic` example. This is that coverage.
+	 */
+	test('expands and collapses on a chevron click', async ({ page, grid }) => {
+		const first = groupRows(page).first()
+		await expect(first).toHaveAttribute('aria-expanded', 'false')
+
+		const before = await grid.rows().count()
+		const chevron = first.locator(GROUP_CELL).getByRole('button')
+		await chevron.click()
+
+		await expect(first).toHaveAttribute('aria-expanded', 'true')
+		const expanded = await grid.rows().count()
+		expect(expanded).toBeGreaterThan(before)
+
+		await chevron.click()
+
+		await expect(first).toHaveAttribute('aria-expanded', 'false')
+		expect(await grid.rows().count()).toBeLessThan(expanded)
+	})
+
+	test('shows a subtotal under revenue with no rowAggregationFeature registered', async ({ page }) => {
+		// The group row's own `revenue` field, not a computed aggregation — this example is the
+		// only one whose group rows carry server-supplied fields, so it is the only branch that
+		// exercises a subtotal with no `rowAggregationFeature` in the feature set.
+		//
+		// The count is 1 because the example's group rows omit `account` entirely — the server
+		// sends nothing for it on a region row. A response that instead sent a placeholder there
+		// (even `''`) would legitimately make this 2: `cell.tsx`'s `isAggregated` reads any defined
+		// value on a group row's non-grouped column as a subtotal, by design. So a future failure
+		// here is a question about the fixture, not about the grid.
+		await expect(groupRows(page).first().locator(AGGREGATED_CELL)).toHaveCount(1)
+	})
+
+	test('shows the server-supplied grand total in the footer', async ({ page }) => {
+		await expect(page.locator(TFOOT)).toContainText('188,000')
+	})
+
+	test('takes the grouped column out of the header', async ({ grid }) => {
+		await expect(grid.header('region')).toHaveCount(0)
+		await expect(grid.header('revenue')).toHaveCount(1)
 	})
 })
