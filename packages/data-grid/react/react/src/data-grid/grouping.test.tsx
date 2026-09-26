@@ -80,6 +80,31 @@ describe('the group cell', () => {
 		expect(depths).toContain('0')
 	})
 
+	/**
+	 * Regression for the count reading `row.getLeafRows?.().length`: upstream's `getLeafRows` is
+	 * `flattenBy(row.subRows, d => d.subRows)`, and `flattenBy` pushes every node it visits —
+	 * intermediate group rows included, not just true leaves. At one grouping level every subRow
+	 * is already a leaf, so the count is right; at two levels the EMEA/Ivanov/Petrova region row
+	 * has two manager group rows as direct children, and each of those is counted alongside the
+	 * leaves beneath it. EMEA's three actual leaf rows (2 Ivanov + 1 Petrova) render as an
+	 * inflated 5 (2 manager group rows + 3 leaves) without the fix; APAC's one leaf renders as an
+	 * inflated 2 (1 manager group row + 1 leaf).
+	 */
+	it('counts leaf rows only, not intermediate group rows, when grouped two levels deep', () => {
+		const { container, table } = grouped({ grouping: { by: ['region', 'manager'] } })
+
+		// Expand both region-level rows so their manager-level group cells render too — a group
+		// cell's count doesn't depend on whether that row itself is expanded.
+		act(() => {
+			table.getRowModel().rows.forEach((row) => {
+				row.toggleExpanded()
+			})
+		})
+
+		const counts = [...container.querySelectorAll('[data-slot="group-count"]')].map((el) => el.textContent)
+		expect(counts).toEqual(['(3)', '(2)', '(1)', '(1)', '(1)'])
+	})
+
 	it('names a group whose value is blank rather than leaving the cell empty', () => {
 		const sparse: Row[] = [{ id: 1, region: '', manager: 'Ivanov', amount: 1 }]
 		const { container } = grouped({ data: sparse })

@@ -370,8 +370,15 @@ function GroupCell<TRow extends object>({ cell, row, chrome, children }: SystemS
 	const isExpanded = row.getIsExpanded?.() ?? false
 	// Counted through `subRows`, never off the render model: `getRowModel().rows` is render order
 	// and mixes group rows with leaf rows, which upstream flags as the commonest grouping mistake.
+	// `getLeafRows` is `flattenBy(row.subRows, d => d.subRows)` (upstream's own
+	// `coreRowsFeature.utils`), and `flattenBy` pushes every node it visits — intermediate group
+	// rows included, not just true leaves. That is exact at one grouping level, where every
+	// subRow already is a leaf, and inflated at two or more, where a group row's direct children
+	// are themselves group rows. So this filters to rows with no children of their own rather
+	// than trusting the raw length; `subRows` needs no optional chain because upstream's
+	// `constructRow` sets it unconditionally (`row.subRows = subRows ?? []`).
 	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
-	const count = row.getLeafRows?.().length ?? 0
+	const count = row.getLeafRows?.().filter((leaf) => leaf.subRows.length === 0).length ?? 0
 	const label = groupLabelOf(row.groupingValue, messages.grouping.blank)
 
 	return (
