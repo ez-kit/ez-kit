@@ -510,9 +510,14 @@ function BodyDataCell<TRow extends object>({ cell, row, children }: DataGridCell
 	// anyway, through the ordinary view branch, so nothing would look broken.
 	//
 	// It reads `row.getIsGrouped()`, which is not a second notion of what a group row is: the
-	// manual row model sets `groupingColumnId`, so that method is authoritative in both modes. A
-	// column on a group row with no aggregate of any kind is unaffected — `getValue()` is
-	// `undefined` there, which is what the `!== undefined` clause keeps out.
+	// manual row model sets `groupingColumnId`, so that method is authoritative in both modes.
+	// Under CLIENT grouping, a column on a group row with no aggregate of any kind is unaffected
+	// — `getValue()` is `undefined` there, which is what the `!== undefined` clause keeps out.
+	// Under SERVER grouping there is no such guarantee: the group row carries whatever fields the
+	// server sent, so a non-aggregate field with a defined value — an empty string, say — reads as
+	// a subtotal here. The remedy is for the response to omit the field, not for the grid to guess;
+	// `''` and `0` are both valid subtotals (a real aggregate can legitimately be zero), so there is
+	// no value this clause could exclude without also excluding a correct one.
 	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
 	const isGroupRow = row.getIsGrouped?.() ?? false
 	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
