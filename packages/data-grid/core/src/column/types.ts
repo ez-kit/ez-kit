@@ -955,8 +955,17 @@ export type ColumnAggregationConfig<TRow extends object = object, TValue = unkno
  * The resolved half of {@link ColumnAggregationConfig} that reaches `meta`.
  *
  * Only the renderer: `fn` is TanStack's native `aggregationFn` column-def field and goes
- * straight onto the def. Row-erased like {@link ColumnCellMeta}'s `view` beside it — an
- * aggregated cell is rendered by components that have no `TRow`.
+ * straight onto the def. An aggregated cell is rendered by components that have no `TRow`, so the
+ * renderer arrives row-erased.
+ *
+ * `component` is `unknown` rather than a row-erased **function** type, and the difference is load
+ * bearing. {@link ColumnCellMeta}'s `view` beside it is the latter, and cited as a precedent it
+ * would argue for widening this one to match — but it is why `map-columns` pays a cast to fill
+ * `view` from `cell.component`: under `strictFunctionTypes` a
+ * `(ctx: CellViewCtx<Deal, number>) => ReactNode` is not assignable to a signature written over
+ * `unknown`. `unknown` here is what lets the same function assign `aggregation.component` with no
+ * cast at all. So this is the stronger choice, not the lazier one — do not "tidy" it into a
+ * signature.
  */
 export type ColumnAggregationMeta = {
 	/** The column's own aggregated-cell renderer, from `aggregation.component`. */
