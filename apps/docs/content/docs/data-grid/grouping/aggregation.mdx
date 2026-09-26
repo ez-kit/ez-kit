@@ -98,11 +98,11 @@ Without one, the total renders through the column's **existing** cell-type view 
 
 ## Options
 
-| Option                  | Type                                           | Description                                                       |
-| ----------------------- | ---------------------------------------------- | ----------------------------------------------------------------- |
-| `aggregation`           | `AggregationFnName \| ColumnAggregationConfig` | The scalar names a function; the object adds a renderer.          |
-| `aggregation.fn`        | `AggregationFnName \| AggregationFnDef`        | A built-in or registered name, or an inline definition.           |
-| `aggregation.component` | `ColumnRenderer`                               | Renders the aggregate. Falls back to the column's cell-type view. |
+| Option                  | Type                                              | Description                                                       |
+| ----------------------- | ------------------------------------------------- | ----------------------------------------------------------------- |
+| `aggregation`           | `BuiltInAggregationFn \| ColumnAggregationConfig` | The scalar names a function; the object adds a renderer.          |
+| `aggregation.fn`        | `BuiltInAggregationFn \| AggregationFnDef`        | A built-in or registered name, or an inline definition.           |
+| `aggregation.component` | `ColumnRenderer`                                  | Renders the aggregate. Falls back to the column's cell-type view. |
 
 ### Table options
 
