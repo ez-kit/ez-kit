@@ -104,6 +104,9 @@ export function createManualGroupedRowModel<TFeatures extends TableFeatures, TDa
 			memoDeps: () => [readForeignSlice(table, 'grouping'), table.getPreGroupedRowModel(), table.options.columns],
 			fn: () => build(table, adapters),
 		})
+	// `Object.assign` here (rather than a plain property write) is what keeps the return type
+	// `(table) => () => RowModel<TFeatures, TData>` rather than widening to the assigned object's
+	// own shape — it relies on the overload of `Object.assign` typed `T & U`, not the general one.
 	return Object.assign(factory, { [MANUAL_GROUPED_ROW_MODEL]: { flat: adapters?.isGroupRow !== undefined } })
 }
 
