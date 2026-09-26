@@ -148,6 +148,19 @@ describe('the manual grouped row model, tree shape', () => {
 		expect(build(flatOnly, ['region']).getRowModel().rows[0]?.getIsGrouped()).toBe(false)
 	})
 
+	it('treats a grouping level as absent once its column is gone, rather than marking with a stale id', () => {
+		// 'gone' names no column in COLUMNS, so `levels` filters it out entirely (mirroring
+		// upstream's own filter) and the top level has no columnId left to mark with — the row
+		// keeps its own shape (still has subRows) but is demoted to a record rather than grouped
+		// under a column id nothing declares any more.
+		const table = build(TREE, ['gone'])
+		const outer = table.getRowModel().rows[0]
+
+		expect(outer?.getIsGrouped()).toBe(false)
+		expect(outer?.groupingColumnId).toBeUndefined()
+		expect(outer?.subRows).toHaveLength(2)
+	})
+
 	it('clears stale marks when `grouping.by` shrinks, and clears every mark when it empties', () => {
 		const table = createTable({
 			features: MANUAL,
