@@ -30,7 +30,8 @@ const features = tableFeatures({
 
 type Deal = {
 	id: string
-	account: string
+	// Optional: a group row carries no account at all — see the comment on `RESPONSE` below.
+	account?: string
 	region: string
 	revenue: number
 	subRows?: Deal[]
@@ -47,7 +48,10 @@ const RESPONSE: { rows: Deal[]; totals: Record<string, unknown> } = {
 	rows: [
 		{
 			id: 'region-emea',
-			account: '',
+			// No `account` key here, deliberately: the server groups by region, so a region has no
+			// account to report. Writing one anyway — even `''` — would read as a subtotal for that
+			// column (`cell.tsx`'s `isAggregated` treats any defined value on a group row's
+			// non-grouped column that way), and `account` has no aggregation of its own.
 			region: 'EMEA',
 			revenue: 110_000,
 			subRows: [
@@ -58,7 +62,6 @@ const RESPONSE: { rows: Deal[]; totals: Record<string, unknown> } = {
 		},
 		{
 			id: 'region-apac',
-			account: '',
 			region: 'APAC',
 			revenue: 78_000,
 			subRows: [
