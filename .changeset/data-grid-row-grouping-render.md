@@ -1,5 +1,6 @@
 ---
 '@ez-kit/data-grid-react': minor
+'@ez-kit/data-grid-heroui': minor
 ---
 
 Render group rows, column aggregates and a footer grand total.
@@ -35,7 +36,9 @@ composition, never by an option: `<DataGrid.Toolbar start={<DataGrid.GroupByBar 
 Note that **dropping a level is the bar's job, not the column menu's**: `groupedColumnMode:
 'remove'` takes a grouped column out of the list, so it has no header cell to hang a menu on.
 
-Both kits gained `GridMenuIcon.Group` / `.Ungroup` glyphs. `renderGrid` in the package's test
+Both kits gained `GridMenuIcon.Group` / `.Ungroup` glyphs, and each styles the seven new slots —
+`group-cell`, `group-label`, `group-count`, `group-by-bar`, `group-by-bar-label`, `group-by-chip`
+and `group-by-chip-label`. `renderGrid` in the package's test
 utilities is now generic over the row type.
 
 The grid's body, header and table now re-derive on the `grouping` slice. Without that a grouping
