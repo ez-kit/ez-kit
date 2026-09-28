@@ -40,5 +40,16 @@ through `buttonVariants`, which is HeroUI's documented way to put a component's 
 element that is not that component. The `Dropdown` form of the visibility menu is unchanged: that
 one follows react-aria's menu-trigger pattern and takes the button itself.
 
+The heroui kit's **loading skeleton** had the same `empty-table-header` defect one layer down, and
+it is fixed here too. `Th` marks the first visible non-system column as react-aria's row header, so
+that column's body cell is a `rowheader` in every row of the collection — the skeleton rows
+included — and the `<tr>` takes its name from it. A `<Skeleton>` contributes no text, so each
+skeleton row shipped an unnamed `rowheader` and an unnamed row, on every heroui grid that ever
+showed a loading state. Each skeleton cell now carries `messages.fallbacks.loading` as visually
+hidden text — the first use of a key that was already in the dictionary, documented as "accessible
+name of the loading state". Text rather than an `aria-label`, because `Table.Cell` does not forward
+that attribute and a cell's name is its content. The shadcn kit needs no counterpart: its table is
+plain DOM and no cell carries `rowheader`.
+
 `apps/docs/e2e/packages/data-grid/a11y/names.spec.ts` runs axe over four examples in both kits for
 exactly these rules, so a regression fails in a browser rather than in a screen reader.
