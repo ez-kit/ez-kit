@@ -131,6 +131,25 @@ describe('canMoveRow', () => {
 		expect(canMoveRow(table, 'b', RowMoveDirection.Up)).toBe(false)
 		expect(canMoveRow(table, 'b', RowMoveDirection.Down)).toBe(true)
 	})
+
+	it('steps over a pinned row to reach a sibling of its own band', () => {
+		// Pinning a row does not take it out of the row model, so 'b' sits between two centre-band
+		// rows while being rendered at the top, away from both. The user sees 'a' and 'c' adjacent,
+		// so a step between them is the step they are asking for. Treating the pinned row as the end
+		// of the order instead left those two unable to be reordered from the menu at all — and left
+		// a drag onto the same target succeeding where the menu entry refused, since a drop compares
+		// the bands of its two ends and cannot see what lies between them.
+		const table = makeTable({ pinning: { row: { top: true, bottom: true } } })
+		table.getRow('b').pin('top', false, false)
+
+		expect(canMoveRow(table, 'a', RowMoveDirection.Down)).toBe(true)
+		expect(canMoveRow(table, 'c', RowMoveDirection.Up)).toBe(true)
+		expect(moveRow(table, 'a', RowMoveDirection.Down)).toEqual({
+			rowId: 'a',
+			targetRowId: 'c',
+			direction: RowMoveDirection.Down,
+		})
+	})
 })
 
 describe('canMoveRow in a tree', () => {

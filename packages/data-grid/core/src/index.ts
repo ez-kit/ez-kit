@@ -192,14 +192,20 @@ export {
 // because the rules they encode (same pin band, same parent, locked columns) are the feature's
 // semantics, not its chrome. `applyRowOrder` is here for the same reason an adapter needs it:
 // rendering an uncontrolled row order means reordering `data`, and the rule for a row the order
-// does not name belongs to the feature.
+// does not name belongs to the feature. The `drop*` pair is the same rules applied to a target the
+// user named rather than one computed by stepping — the drag affordance's only route into the
+// ordering state, and the one place its boundaries are enforced.
 export {
 	applyRowMove,
 	applyRowOrder,
+	canDropColumn,
+	canDropRow,
 	canMoveColumn,
 	canMoveRow,
 	ColumnMoveDirection,
 	ColumnMoveScope,
+	dropColumn,
+	dropRow,
 	moveColumn,
 	moveRow,
 	RowMoveDirection,

@@ -44,7 +44,7 @@ export type RowMove = {
  * `getIsPinned` exists only where `rowPinningFeature` is registered, and a grid with no row
  * pinning has no bands for a move to cross.
  */
-type OrderableRow = {
+export type OrderableRow = {
 	id: string
 	depth: number
 	parentId?: string | undefined
@@ -75,6 +75,9 @@ const pinnedBand = (row: OrderableRow): unknown => row.getIsPinned?.() ?? false
  */
 export type RowOrderingTable = AnyTable & { getRowModel: () => { rows: OrderableRow[] } }
 
+/** What {@link findNeighbourIndex} answers when there is no neighbour: no index, not a row. */
+const NO_NEIGHBOUR = -1
+
 /**
  * The neighbour a move would swap with, or `undefined` when there is none.
  *
@@ -88,33 +91,93 @@ export type RowOrderingTable = AnyTable & { getRowModel: () => { rows: Orderable
  *   that jumped into an adjacent subtree would change its parent, which is a different
  *   operation with a different meaning.
  *
- * Either mismatch **ends** the search rather than skipping past it, exactly as `findNeighbour`
- * does for a column: what lies beyond a boundary is not this row's neighbour at all.
+ * The two mismatches fail differently, exactly as `findNeighbour` does for a column. A foreign
+ * band is **stepped over**: pinning is orthogonal to the order, so a pinned row may sit between
+ * two rows of one band, and the user — who sees the pinned rows gathered at the edge — sees those
+ * two adjacent. A foreign parent **ends** the search: what lies beyond that boundary is not this
+ * row's neighbour at all.
  *
  * Rows **deeper** than this one are the exception, and are stepped over rather than treated as a
  * boundary. An expanded parent is followed in the rendered list by its own children, and a
  * sibling below them is still the sibling below: stopping at the first child would mean an
  * expanded row could never move at all, which is the opposite of moving among siblings.
  */
-function findNeighbour(rows: OrderableRow[], index: number, direction: RowMoveDirection): OrderableRow | undefined {
+function findNeighbourIndex(rows: OrderableRow[], index: number, direction: RowMoveDirection): number {
 	const row = rows[index]
-	if (!row) return undefined
+	if (!row) return NO_NEIGHBOUR
 
 	const step = direction === RowMoveDirection.Up ? -1 : 1
-	// Skip the subtree between this row and its sibling — descendants of this row going down,
-	// descendants of the sibling above going up. Anything at this depth or shallower is the
-	// candidate, and the two checks below decide whether it is a neighbour or a boundary.
 	let cursor = index + step
-	let candidate = rows[cursor]
-	while (candidate !== undefined && candidate.depth > row.depth) {
-		cursor += step
-		candidate = rows[cursor]
-	}
 
-	if (!candidate) return undefined
-	if (pinnedBand(candidate) !== pinnedBand(row)) return undefined
-	if (candidate.parentId !== row.parentId) return undefined
-	return candidate
+	for (;;) {
+		// Skip the subtree between this row and its sibling — descendants of this row going down,
+		// descendants of the sibling above going up. Anything at this depth or shallower is the
+		// candidate, and the two checks below decide whether it is a neighbour or a boundary.
+		let candidate = rows[cursor]
+		while (candidate !== undefined && candidate.depth > row.depth) {
+			cursor += step
+			candidate = rows[cursor]
+		}
+
+		if (!candidate) return NO_NEIGHBOUR
+		// A different band is stepped over rather than ending the search, for the reason
+		// `findNeighbour` in `./ordering` records per column: pinning is orthogonal to the order, so
+		// a pinned row may sit between two rows of one band, and the user — who sees the pinned rows
+		// gathered at the edge — sees those two adjacent. Ending here refused a step they expect,
+		// and left this path disagreeing with `./drop`, which compares its two ends and cannot see
+		// what lies between them.
+		if (pinnedBand(candidate) !== pinnedBand(row)) {
+			cursor += step
+			continue
+		}
+		// A different parent still ends it: a leaf that jumped into an adjacent subtree would change
+		// its parent, which is a different operation with a different meaning.
+		if (candidate.parentId !== row.parentId) return NO_NEIGHBOUR
+		return cursor
+	}
+}
+
+/**
+ * The neighbour a move would swap with, or `undefined` when there is none.
+ *
+ * See {@link findNeighbourIndex} for the rules; this is the row-shaped answer its callers want.
+ */
+function findNeighbour(rows: OrderableRow[], index: number, direction: RowMoveDirection): OrderableRow | undefined {
+	const neighbour = findNeighbourIndex(rows, index, direction)
+	return neighbour === NO_NEIGHBOUR ? undefined : rows[neighbour]
+}
+
+/**
+ * Whether repeated stepping from `sourceIndex` lands on `targetIndex`.
+ *
+ * The row twin of `isColumnReachableByStepping`, and here for the same reason: a drag must not be
+ * able to produce an arrangement a menu entry would have refused, and asking the step path is the
+ * only way to be sure of that rather than to hope a second copy of the rules still matches.
+ *
+ * A two-end comparison looked safe on this axis, because a row's only walls are its band and its
+ * parent and leaves under one parent are contiguous in the rendered list. That argument is wrong in
+ * one word: contiguity is an invariant the **move rules** maintain, not one the **state**
+ * guarantees. `applyRowOrder` permutes the rendered list within the slots the named rows already
+ * occupy, so an order naming a sub-row lifts it above its own parent in the projection — depths
+ * interleave, and a parent check over the two ends then sees siblings where this walk sees a
+ * boundary.
+ *
+ * NOTE: {@link NO_NEIGHBOUR} must be tested before `targetIndex`, because the sentinel and a
+ * caller's own `-1` are the same number. Callers resolve both ends before asking, so `-1` never
+ * arrives here — the order of the two checks is what keeps that from mattering.
+ */
+export function isRowReachableByStepping(rows: OrderableRow[], sourceIndex: number, targetIndex: number): boolean {
+	if (sourceIndex === targetIndex) return false
+
+	const direction = targetIndex > sourceIndex ? RowMoveDirection.Down : RowMoveDirection.Up
+	// Terminates because `findNeighbourIndex` only ever looks in `direction`, so each hop moves
+	// strictly that way and the list is finite.
+	for (let index = sourceIndex; ; ) {
+		const neighbour = findNeighbourIndex(rows, index, direction)
+		if (neighbour === NO_NEIGHBOUR) return false
+		if (neighbour === targetIndex) return true
+		index = neighbour
+	}
 }
 
 /**

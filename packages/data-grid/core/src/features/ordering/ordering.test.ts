@@ -128,6 +128,27 @@ describe('moveColumn', () => {
 		expect(canMoveColumn(table, 'name', ColumnMoveDirection.Start)).toBe(false)
 	})
 
+	it('steps over a pinned column to reach a sibling of its own band', () => {
+		// Pinning is orthogonal to the leaf order, so `email` can sit between two centre-band columns
+		// while being rendered away from both of them. The user sees `name` and `age` side by side,
+		// so a step between them is the step they are asking for. Treating the pinned column as the
+		// end of the order instead left those two unable to be reordered from the menu at all — and
+		// left a drag onto the same target succeeding where the menu entry refused, since a drop
+		// compares the bands of its two ends and cannot see what lies between them.
+		const table = makeTable(
+			[
+				{ accessorKey: 'name', header: 'Name' },
+				{ accessorKey: 'email', header: 'Email', pinning: 'start' },
+				{ accessorKey: 'age', header: 'Age' },
+			],
+			{ pinning: true },
+		)
+
+		expect(canMoveColumn(table, 'name', ColumnMoveDirection.End)).toBe(true)
+		expect(canMoveColumn(table, 'age', ColumnMoveDirection.Start)).toBe(true)
+		expect(moveColumn(table, 'name', ColumnMoveDirection.End)).toEqual(['email', 'age', 'name', '__actions__'])
+	})
+
 	it('keeps a move inside its header group', () => {
 		// Leaping into a sibling group would split that group's header cell in two.
 		const table = makeTable([
@@ -180,6 +201,13 @@ describe('ColumnMoveScope.All', () => {
 		{ accessorKey: 'age', header: 'Age' },
 	]
 
+	/** The same, with the hidden column also pinned — a hidden column in a band of its own. */
+	const WITH_HIDDEN_PINNED: ColumnDef<Row>[] = [
+		{ accessorKey: 'name', header: 'Name' },
+		{ accessorKey: 'email', header: 'Email', pinning: 'start', visibility: { initialHidden: true } },
+		{ accessorKey: 'age', header: 'Age' },
+	]
+
 	it('lands on a hidden neighbour instead of stepping past it', () => {
 		// The column panel lists hidden columns, so a step there moves past the row the user
 		// can see in *that* surface — one place, not two.
@@ -195,8 +223,13 @@ describe('ColumnMoveScope.All', () => {
 		expect(canMoveColumn(table, 'email', ColumnMoveDirection.End, ColumnMoveScope.All)).toBe(true)
 	})
 
-	it('is still bound by pin bands, header groups and locks', () => {
-		// Widening which neighbours count says nothing about which moves are legal.
+	it('is still bound by locks under All', () => {
+		// Widening which neighbours count says nothing about which moves are legal. Each assertion
+		// here is refused by a **lock**, and deliberately so: `age` carries `ordering: false`, which
+		// stops it moving at the `isMovable` gate and stops it being landed on from `name`. The band
+		// is covered by the two cases below rather than here — before bands became skippable this one
+		// test carried all three reasons, and two of them were passing for the lock's sake while
+		// reading as band coverage.
 		const table = makeTable(
 			[
 				{ accessorKey: 'name', header: 'Name' },
@@ -206,9 +239,34 @@ describe('ColumnMoveScope.All', () => {
 			{ pinning: true, visibility: true },
 		)
 
-		expect(canMoveColumn(table, 'email', ColumnMoveDirection.End, ColumnMoveScope.All)).toBe(false)
 		expect(canMoveColumn(table, 'age', ColumnMoveDirection.Start, ColumnMoveScope.All)).toBe(false)
 		expect(canMoveColumn(table, 'name', ColumnMoveDirection.End, ColumnMoveScope.All)).toBe(false)
+	})
+
+	it('refuses a move whose band holds nothing beyond it, under All', () => {
+		// The genuine band refusal: `email` is alone in the start band, so widening the scope finds
+		// it no neighbour there. This is what stays `false` after a foreign band became something a
+		// step walks over rather than stops at.
+		const table = makeTable(WITH_HIDDEN_PINNED, { pinning: true, visibility: true })
+
+		expect(canMoveColumn(table, 'email', ColumnMoveDirection.End, ColumnMoveScope.All)).toBe(false)
+		expect(canMoveColumn(table, 'email', ColumnMoveDirection.Start, ColumnMoveScope.All)).toBe(false)
+	})
+
+	it('steps over a hidden pinned column to an unlocked sibling, under All', () => {
+		// The pinned column is hidden *and* in another band, so under All it is passed twice over:
+		// once as a foreign band, and not at all as a hidden column, since All counts those. What
+		// makes this case worth its own test is that something unlocked lies beyond it — the two
+		// assertions above would both hold even if the walk stopped at the pinned column.
+		const table = makeTable(WITH_HIDDEN_PINNED, { pinning: true, visibility: true })
+
+		expect(canMoveColumn(table, 'name', ColumnMoveDirection.End, ColumnMoveScope.All)).toBe(true)
+		expect(moveColumn(table, 'name', ColumnMoveDirection.End, ColumnMoveScope.All)).toEqual([
+			'email',
+			'age',
+			'name',
+			'__actions__',
+		])
 	})
 
 	it('defaults to the visible scope, so the header is unchanged', () => {
