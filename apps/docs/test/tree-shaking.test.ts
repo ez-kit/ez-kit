@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
@@ -390,5 +391,94 @@ describe.each(PACKAGES)('$name', ({ entry, shakeable, cases }) => {
 		const everything = await entryPointsPulledBy(entry)
 
 		expect(shakeable.filter((entryPoint) => !everything.includes(entryPoint))).toEqual([])
+	})
+})
+
+/**
+ * The drag library never reaches a kit root.
+ *
+ * A kit root is "everything by construction" — `data-grid.tsx` binds every component group and
+ * every feature — so the one thing that must *not* be everything is the optional peer. An import
+ * of `./dnd` from the kit's `index.ts` or `data-grid.tsx` would make `@dnd-kit/react` a required
+ * install for every existing consumer, and nothing else in the build would object: the package
+ * would compile, the types would resolve, and the breakage would surface in someone's fresh
+ * install.
+ *
+ * Asked with {@link bundledCodeOf} rather than {@link entryPointsPulledBy}, and the reason is the
+ * `workspaceOnly` plugin: it externalises every non-`@ez-kit/` specifier, so a drag library can
+ * never appear in a `pulls` set, and `entryPointOf` folds `dist/dnd.js` onto the bare package name
+ * besides. The flip side of that same fact is what makes this work — an externalised import
+ * survives in the output text as a literal `from "@dnd-kit/react"`, which is the string matched.
+ *
+ * **The root case bundles the whole surface, not one export, and that is load-bearing.** Both
+ * weaker forms were tried against a real leak — `export { adapter } from './dnd'` added to the
+ * kit's `index.ts` — and both passed it:
+ *
+ * - `bundledCodeOf(KIT_ROOT, ['DataGrid'])` passes because esbuild shakes the unreferenced
+ *   `adapter` out again. True, and not the question: the hazard is that the package *names* the
+ *   peer at all.
+ * - Grepping `dist/index.js` and `dist/index.d.ts` passes because `splitting: true` puts the
+ *   import in a shared chunk. Grepping every `dist` file does not discriminate either — a chunk
+ *   names the library in the clean build too, since that is where the adapter's own code lives.
+ *
+ * Reachability from the root's full surface is the property that actually differs, so that is what
+ * is asserted.
+ */
+describe('@ez-kit/data-grid-heroui and the optional drag peer', () => {
+	const DND_ENTRY = subpathEntryOf('data-grid/react/heroui', 'dnd.js')
+	const DRAG_LIBRARY = '@dnd-kit'
+
+	/*
+	 * Every published entry, not only the root. The kit ships sixteen, and a `./dnd` import added to
+	 * a block that one of them reaches but the root's own surface does not would otherwise pass —
+	 * `./core` and `./visibility` are the plausible places for a drag handle to land in a later
+	 * phase. Read from the manifest rather than listed here, so a new subpath is covered the day it
+	 * is added instead of the day someone remembers this file.
+	 */
+	const KIT_ENTRIES = Object.entries(
+		(
+			JSON.parse(readFileSync(resolve(REPO_ROOT, 'packages/data-grid/react/heroui/package.json'), 'utf8')) as {
+				exports: Record<string, { import?: string } | string>
+			}
+		).exports,
+	)
+		.filter(([subpath, target]) => subpath !== './dnd' && typeof target === 'object' && target.import)
+		.map(
+			([subpath, target]) =>
+				[
+					subpath,
+					resolve(REPO_ROOT, 'packages/data-grid/react/heroui', (target as { import: string }).import),
+				] as const,
+		)
+
+	it.each(KIT_ENTRIES)('does not reach the drag library from %s', async (_subpath, entry) => {
+		const code = await bundledCodeOf(entry)
+
+		expect(code).not.toContain(DRAG_LIBRARY)
+	})
+
+	/*
+	 * The positive control. Without it the assertion above passes for the wrong reason — a typo'd
+	 * entry path bundles nothing and contains no drag library either.
+	 */
+	it('does reach it from the ./dnd subpath', async () => {
+		const code = await bundledCodeOf(DND_ENTRY, ['adapter'])
+
+		expect(code).toContain(DRAG_LIBRARY)
+	})
+
+	/*
+	 * `@dnd-kit/react/sortable` is a *subpath* specifier, which a bare-string `external` in the
+	 * kit's tsup config would not match — the sortable half of the library would be inlined into
+	 * `dist/dnd.js`, turning an optional peer into a vendored copy. The build uses a regex; this is
+	 * what says so from the outside.
+	 */
+	it('externalises the drag library rather than inlining it', async () => {
+		const code = await bundledCodeOf(DND_ENTRY, ['adapter'])
+
+		expect(code).toContain('@dnd-kit/react/sortable')
+		// esbuild emits a class as `var Sortable = class extends …`, so a bare `class Sortable`
+		// pattern would never match and this assertion would pass on an inlined library too.
+		expect(code).not.toMatch(/(?:var|const|let)\s+Sortable\s*=\s*class|class\s+Sortable\b/)
 	})
 })

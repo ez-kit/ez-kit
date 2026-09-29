@@ -1,0 +1,192 @@
+import { useSortable } from '@dnd-kit/react/sortable'
+import { render } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+
+import { adapter, toDropEvent } from './dnd'
+
+import type { SortableDragEndEvent } from './dnd'
+import type * as SortableModule from '@dnd-kit/react/sortable'
+import type { SortableItemHandle } from '@ez-kit/data-grid-react'
+
+/**
+ * Why the drop translation is tested through a named helper rather than by driving a drag.
+ *
+ * dnd-kit measures layout to decide anything, and jsdom reports every element as zero-sized — so a
+ * simulated pointer drag here would exercise the measuring, not the mapping, and would be a test of
+ * jsdom's geometry stub. Driving a real drag is Playwright's job once a handle exists (phase 4).
+ * What *can* be tested without a browser is the half where the refusals live, and that is why
+ * `toDropEvent` is an exported function instead of a closure inside the provider.
+ */
+
+/*
+ * The hook is spied on, not replaced: the real implementation still runs, so the handle a case
+ * reads comes from a real sortable, while the two mapping cases can read the input the adapter
+ * built. Nothing else in this package can see that input — it is the adapter's only real decision,
+ * and without this it would be asserted nowhere.
+ */
+vi.mock('@dnd-kit/react/sortable', async (importOriginal) => {
+	const actual = await importOriginal<typeof SortableModule>()
+
+	return { ...actual, useSortable: vi.fn(actual.useSortable) }
+})
+
+const useSortableSpy = vi.mocked(useSortable)
+
+afterEach(() => {
+	useSortableSpy.mockClear()
+})
+
+/** A `dragend` event with the fields the adapter reads. */
+function dragEnd(overrides: Partial<SortableDragEndEvent> = {}): SortableDragEndEvent {
+	return {
+		canceled: false,
+		operation: {
+			source: { id: 'row-1', type: 'row' },
+			target: { id: 'row-4', type: 'row' },
+		},
+		...overrides,
+	}
+}
+
+/** Renders one registered item and hands back what the adapter returned for it. */
+function renderItem(spec: Parameters<typeof adapter.useSortableItem>[0]): { handle: SortableItemHandle | null } {
+	const seen: { handle: SortableItemHandle | null } = { handle: null }
+	function Item() {
+		const handle = adapter.useSortableItem(spec)
+		seen.handle = handle
+		return <div ref={handle.ref} />
+	}
+	render(
+		<adapter.Provider onDrop={() => {}}>
+			<Item />
+		</adapter.Provider>,
+	)
+
+	return seen
+}
+
+describe('the adapter satisfies the port', () => {
+	it('exposes a Provider and a useSortableItem', () => {
+		expect(adapter.Provider).toBeTypeOf('function')
+		expect(adapter.useSortableItem).toBeTypeOf('function')
+	})
+
+	it('returns exactly the three-member handle for a registered item', () => {
+		// Arrange / Act — the hook needs dnd-kit's own provider above it, which is what
+		// `adapter.Provider` mounts; rendering through it also checks the two halves compose.
+		const seen = renderItem({ id: 'row-1', index: 0, axis: 'row' })
+
+		// Assert — exactly three, not at least three. The hook returns eight and the adapter maps
+		// member by member precisely so an upstream addition cannot widen what this kit hands back.
+		expect(Object.keys(seen.handle ?? {}).sort()).toEqual(['handleRef', 'isDragging', 'ref'])
+		expect(seen.handle?.ref).toBeTypeOf('function')
+		expect(seen.handle?.handleRef).toBeTypeOf('function')
+		expect(seen.handle?.isDragging).toBe(false)
+	})
+
+	/*
+	 * What the adapter actually decides is the *input* it builds; nothing downstream of
+	 * `useSortable` is observable in jsdom, so the returned handle looks identical whatever the
+	 * spec said. These two cases are the only place `type` / `accept` / `disabled` are pinned.
+	 */
+	it('maps the spec onto the sortable input, with the axis on both type and accept', () => {
+		renderItem({ id: 'col-1', index: 2, axis: 'column', disabled: true })
+
+		expect(useSortableSpy.mock.calls[0]?.[0]).toEqual({
+			id: 'col-1',
+			index: 2,
+			type: 'column',
+			accept: 'column',
+			disabled: true,
+		})
+	})
+
+	it('omits disabled rather than passing it as undefined', () => {
+		// `exactOptionalPropertyTypes`: omitted and `undefined` are different things, and dnd-kit's
+		// own types are not written under that flag. The conditional spread is what keeps them apart.
+		renderItem({ id: 'row-1', index: 0, axis: 'row' })
+
+		expect(useSortableSpy.mock.calls[0]?.[0]).not.toHaveProperty('disabled')
+	})
+})
+
+describe('translating a completed drag', () => {
+	it('reports the move by ids, on the row axis', () => {
+		// Arrange
+		const event = dragEnd()
+
+		// Act
+		const drop = toDropEvent(event)
+
+		// Assert — ids, no direction and no indices: the same convention the core drop helpers state.
+		expect(drop).toEqual({ axis: 'row', sourceId: 'row-1', targetId: 'row-4' })
+	})
+
+	it('reports the column axis from the source type', () => {
+		const drop = toDropEvent(
+			dragEnd({
+				operation: { source: { id: 'name', type: 'column' }, target: { id: 'email', type: 'column' } },
+			}),
+		)
+
+		expect(drop).toEqual({ axis: 'column', sourceId: 'name', targetId: 'email' })
+	})
+
+	it('stringifies a numeric id', () => {
+		// dnd-kit's `UniqueIdentifier` is `string | number`; the port's ids are strings.
+		const drop = toDropEvent(dragEnd({ operation: { source: { id: 1, type: 'row' }, target: { id: 4, type: 'row' } } }))
+
+		expect(drop).toEqual({ axis: 'row', sourceId: '1', targetId: '4' })
+	})
+
+	it('refuses an aborted drag', () => {
+		// Escape, or a programmatic cancel. A release over nothing is the *next* case — dnd-kit
+		// reports that one as `canceled: false` with a null target.
+		expect(toDropEvent(dragEnd({ canceled: true }))).toBeNull()
+	})
+
+	it('refuses a drop with no target', () => {
+		const drop = toDropEvent(dragEnd({ operation: { source: { id: 'row-1', type: 'row' }, target: null } }))
+
+		expect(drop).toBeNull()
+	})
+
+	it('refuses a drop onto the item itself', () => {
+		// Forwarding this would commit a no-op move and fire `onChange` for nothing, breaking the
+		// "exactly one onChange per drag" promise.
+		const drop = toDropEvent(
+			dragEnd({ operation: { source: { id: 'row-1', type: 'row' }, target: { id: 'row-1', type: 'row' } } }),
+		)
+
+		expect(drop).toBeNull()
+	})
+
+	it('refuses a type this adapter did not set', () => {
+		// Another DragDropProvider in the tree, or a draggable of some other kind. Not ours.
+		const drop = toDropEvent(
+			dragEnd({
+				operation: {
+					source: { id: 'x', type: 'something-else' },
+					target: { id: 'y', type: 'something-else' },
+				},
+			}),
+		)
+
+		expect(drop).toBeNull()
+	})
+
+	it('refuses a target of a different kind', () => {
+		// `accept` gates collisions, so a row cannot reach a column today. It cannot gate a droppable
+		// registered without an `accept` — a trash zone, a group header — and such a drop would
+		// otherwise commit a foreign id as the target.
+		const drop = toDropEvent(dragEnd({ operation: { source: { id: 'row-1', type: 'row' }, target: { id: 'trash' } } }))
+
+		expect(drop).toBeNull()
+	})
+
+	it('refuses a source with no type at all', () => {
+		const drop = toDropEvent(dragEnd({ operation: { source: { id: 'x' }, target: { id: 'y', type: 'row' } } }))
+
+		expect(drop).toBeNull()
+	})
+})

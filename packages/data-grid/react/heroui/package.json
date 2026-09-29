@@ -132,6 +132,11 @@
 			"import": "./dist/expanding/index.js",
 			"default": "./dist/expanding/index.js"
 		},
+		"./dnd": {
+			"types": "./dist/dnd.d.ts",
+			"import": "./dist/dnd.js",
+			"default": "./dist/dnd.js"
+		},
 		"./styles.css": "./dist/styles.css"
 	},
 	"main": "./dist/index.js",
@@ -375,6 +380,16 @@
 				"@internationalized/date",
 				"lucide-react"
 			]
+		},
+		{
+			"path": "dist/dnd.js",
+			"limit": "560 B",
+			"ignore": [
+				"@ez-kit/data-grid-core",
+				"@ez-kit/data-grid-react",
+				"@internationalized/date",
+				"lucide-react"
+			]
 		}
 	],
 	"dependencies": {
@@ -384,6 +399,7 @@
 		"lucide-react": "^0.577.0"
 	},
 	"devDependencies": {
+		"@dnd-kit/react": "^0.1.21",
 		"@heroui/react": "^3.2.6",
 		"@heroui/styles": "^3.2.6",
 		"@internationalized/date": "^3.12.4",
@@ -397,10 +413,16 @@
 		"react-dom": "^19.2.4"
 	},
 	"peerDependencies": {
+		"@dnd-kit/react": "^0.1.21",
 		"@heroui/react": "^3.2.0",
 		"@heroui/styles": "^3.2.0",
 		"react": ">=19.0.0",
 		"react-aria-components": "^1.21.1",
 		"react-dom": ">=19.0.0"
+	},
+	"peerDependenciesMeta": {
+		"@dnd-kit/react": {
+			"optional": true
+		}
 	}
 }

@@ -43,6 +43,8 @@ export default defineConfig({
 		'fallbacks/index': 'src/blocks/fallbacks/fallbacks-components.ts',
 		'infinite/index': 'src/blocks/infinite/infinite-components.ts',
 		'expanding/index': 'src/blocks/expanding/expanding-components.ts',
+		// The drag adapter, on its own entry so the optional peer stays out of every other one.
+		dnd: 'src/dnd.tsx',
 	},
 	format: ['esm'],
 	dts: true,
@@ -50,5 +52,11 @@ export default defineConfig({
 	// Shared code lands in hash-named chunks rather than being copied into every entry that
 	// reaches it — without this, sixteen entries would each carry their own copy of what they share.
 	splitting: true,
-	external: ['react', 'react-dom'],
+	/*
+	 * A **regex**, not the string `'@dnd-kit/react'`. `src/dnd.tsx` also imports
+	 * `@dnd-kit/react/sortable`, and a bare-string external does not match a subpath specifier — the
+	 * sortable half would be inlined into `dist/dnd.js`, silently turning an optional peer into a
+	 * vendored copy of half the library.
+	 */
+	external: ['react', 'react-dom', /^@dnd-kit\//],
 })
