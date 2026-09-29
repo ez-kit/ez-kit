@@ -1,5 +1,5 @@
 import { CreatingMode, EditingMode, featureConfig, isFeatureEnabled } from '@ez-kit/data-grid-core'
-import { useRef } from 'react'
+import { useCallback, useRef } from 'react'
 
 import { CellTypesProvider, mergeCellTypes } from '../cell-types-context'
 import { GridComponentsProvider, useGridComponents } from '../components-context'
@@ -17,7 +17,7 @@ import { ColumnFilter } from './column-filter'
 import { ComponentGuard } from './component-guard'
 import { CreateTrigger } from './create-trigger'
 import { CreatingModal } from './creating-modal'
-import { DndAdapterProvider, DndBundleProvider, useDndBundleAdapter } from './dnd'
+import { DndAdapterProvider, DndBundleProvider, DragAxis, useDndAdapter, useDndBundleAdapter } from './dnd'
 import { EditingModal } from './editing-modal'
 import { EmptyStateRow } from './empty-state-row'
 import { FilterPanel } from './filter-panel'
@@ -36,6 +36,8 @@ import { PageSizer } from './page-sizer'
 import { Pagination } from './pagination'
 import { DataGridRow } from './row'
 import { RowCountStatus } from './row-count-status'
+import { RowDragHandle } from './row-drag-handle'
+import { RowDragRegistryProvider } from './row-drag-registry'
 import { SortMenuTrigger } from './sort-menu-trigger'
 import { DataGridTable } from './table'
 import { TableProvider, useDataGridTable, useDataGridState } from './table-context'
@@ -45,6 +47,7 @@ import { VisibilityTrigger } from './visibility-trigger'
 import type { CellTypeRegistry } from '../cell-types-context'
 import type { GridComponents } from '../contract'
 import type { DataTable, ErasedRow, GridFeatures } from '../types'
+import type { DndDropEvent } from './dnd'
 import type {
 	BulkConfirmationConfig,
 	ConfirmationConfig,
@@ -291,6 +294,56 @@ function GridBody({ children }: { children: ReactNode }) {
 	return <DataGridTable />
 }
 
+/**
+ * Mounts the registered adapter's own provider, and commits what it reports.
+ *
+ * A component rather than a few lines inside {@link DataGridControlled}, because reading the
+ * adapter is a hook and rendering `children` unchanged when there is none has to be a *render*
+ * decision, not a branch around one.
+ *
+ * The commit is one call: `table.ordering.dropRow` resolves controlled versus uncontrolled itself
+ * and refuses anything the step path would have refused — the same rules, applied to a target the
+ * user named rather than one reached by stepping. It is safe to call unconditionally; with row
+ * ordering off it reads its own config and returns.
+ */
+function GridDndProvider({ children }: { children: ReactNode }) {
+	const adapter = useDndAdapter()
+	const table = useDataGridTable()
+
+	const onDrop = useCallback(
+		(event: DndDropEvent) => {
+			/*
+			 * Rows only, deliberately and visibly. The column axis arrives once header dragging
+			 * exists and commits through `dropColumn`, which returns a whole `ColumnOrderState`
+			 * rather than a move — a different call, not a wider branch here. Writing this as an
+			 * explicit check rather than an `if (axis === Row)` with an implicit fallthrough keeps
+			 * the gap legible.
+			 */
+			switch (event.axis) {
+				case DragAxis.Row: {
+					/*
+					 * The adapter reports where the item landed; the row living at that index is the
+					 * target `dropRow` wants. This mapping is here rather than in the adapter because
+					 * the row model is here — see `DndDropEvent` for why an index is what an adapter
+					 * can honestly report.
+					 */
+					const target = table.getRowModel().rows[event.targetIndex]
+					if (!target || target.id === event.sourceId) return
+					table.ordering.dropRow(event.sourceId, target.id)
+					return
+				}
+				case DragAxis.Column:
+					return
+			}
+		},
+		[table],
+	)
+
+	if (!adapter) return <>{children}</>
+
+	return <adapter.Provider onDrop={onDrop}>{children}</adapter.Provider>
+}
+
 function DataGridControlled<TFeatures extends TableFeatures, TRow extends object>({
 	table,
 	components,
@@ -368,13 +421,22 @@ function DataGridControlled<TFeatures extends TableFeatures, TRow extends object
 						>
 							<TableProvider table={table}>
 								{IS_DEV && <ComponentGuard />}
-								<GridRoot>
-									<RowCountStatus />
-									<GridBody>{children}</GridBody>
-									{writeOptions.creating?.mode === CreatingMode.Modal && <CreatingModal />}
-									{writeOptions.editing?.mode === EditingMode.Modal && <EditingModal />}
-									<ConfirmDialogRenderer />
-								</GridRoot>
+								{/*
+								 * Inside `TableProvider`, because the commit reads the table — and
+								 * around everything that renders a row, because that is what the drag
+								 * layer has to contain.
+								 */}
+								<GridDndProvider>
+									<RowDragRegistryProvider>
+										<GridRoot>
+											<RowCountStatus />
+											<GridBody>{children}</GridBody>
+											{writeOptions.creating?.mode === CreatingMode.Modal && <CreatingModal />}
+											{writeOptions.editing?.mode === EditingMode.Modal && <EditingModal />}
+											<ConfirmDialogRenderer />
+										</GridRoot>
+									</RowDragRegistryProvider>
+								</GridDndProvider>
 							</TableProvider>
 						</GridComponentsProvider>
 					</CellTypesProvider>
@@ -514,6 +576,7 @@ export type DataGridStatics = {
 	LoadingBody: typeof LoadingBody
 	EmptyStateRow: typeof EmptyStateRow
 	NoResultsRow: typeof NoResultsRow
+	RowDragHandle: typeof RowDragHandle
 }
 
 type DataGridType = typeof DataGridRoot & DataGridStatics
@@ -584,4 +647,5 @@ export const DataGrid: DataGridType = /* @__PURE__ */ Object.assign(DataGridRoot
 	LoadingBody,
 	EmptyStateRow,
 	NoResultsRow,
+	RowDragHandle,
 })

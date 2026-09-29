@@ -7,7 +7,7 @@ import { DragAxis } from '@ez-kit/data-grid-react'
 import type { DndAdapter, DndDropEvent, DndProviderProps, DragSpec, SortableItemHandle } from '@ez-kit/data-grid-react'
 
 /**
- * The HeroUI kit's drag-and-drop adapter, built on `@dnd-kit/react`.
+ * The shadcn kit's drag-and-drop adapter, built on `@dnd-kit/react`.
  *
  * **This module is the only place in the repository that names a drag library, and it is imported
  * by nothing else in this package.** That is the whole delivery shape: `@dnd-kit/react` is an

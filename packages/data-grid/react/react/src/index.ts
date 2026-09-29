@@ -159,6 +159,10 @@ export type {
 // no-op as `dnd` would report DnD as *on* and render a handle behind every inert item — the exact
 // affordance-that-does-nothing the gate exists to prevent. Switching drag off is `dnd: undefined`.
 export { DndAdapterProvider, useDndEnabled, useSortableItem } from './data-grid/dnd'
+// What a kit or an application needs to write a drag handle of its own, in place of
+// `<DataGrid.RowDragHandle />`: the row publishes its activator ref here.
+export { useRowDrag } from './data-grid/row-drag-registry'
+export type { RowDragValue } from './data-grid/row-drag-registry'
 export type { DndAdapter, DndDropEvent, DndProviderProps, DragSpec, SortableItemHandle } from './data-grid/dnd'
 
 // UI-kit contract (tiers + full-support marker + feature map)
@@ -245,6 +249,7 @@ export { EditingModal as DataGridEditingModal } from './data-grid/editing-modal'
 export { LoadingBody as DataGridLoadingBody } from './data-grid/loading-body'
 export { EmptyStateRow as DataGridEmptyStateRow } from './data-grid/empty-state-row'
 export { NoResultsRow as DataGridNoResultsRow } from './data-grid/no-results-row'
+export { RowDragHandle as DataGridRowDragHandle } from './data-grid/row-drag-handle'
 export type {
 	DataGridProps,
 	DataGridControlledProps,
@@ -261,6 +266,7 @@ export type { DataGridFooterProps, DataGridFooterRenderArgs } from './data-grid/
 export type { DataGridFooterRowProps, DataGridFooterRowRenderArgs } from './data-grid/footer-row'
 export type { DataGridFooterCellProps, DataGridFooterCellRenderArgs } from './data-grid/footer-cell'
 export type { DataGridRowProps, DataGridRowRenderArgs } from './data-grid/row'
+export type { DataGridRowDragHandleProps } from './data-grid/row-drag-handle'
 export type { DataGridCellProps, DataGridCellRenderArgs } from './data-grid/cell'
 export type { DataGridPaginationProps, DataGridPaginationRenderArgs } from './data-grid/pagination'
 export type { DataGridSortMenuTriggerProps, DataGridSortMenuTriggerRenderArgs } from './data-grid/sort-menu-trigger'

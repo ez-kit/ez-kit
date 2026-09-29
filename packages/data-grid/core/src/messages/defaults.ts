@@ -90,6 +90,9 @@ export const defaultMessages: GridMessages = {
 		thenBy: 'then by',
 		add: 'Add Sort',
 	},
+	ordering: {
+		dragRow: 'Reorder row',
+	},
 	visibility: {
 		menu: 'Column visibility',
 		trigger: 'Columns',

@@ -86,16 +86,34 @@ export type SortableItemHandle = {
 /**
  * A completed drop, as the adapter reports it.
  *
- * **Ids are the source of truth** — the same convention `dropRow` / `dropColumn` state in core.
- * No `direction` and no indices: the drop index comes from the collision model that drew the
- * visual displacement, so the ids alone are self-consistent with what the user saw.
+ * **The landing place is an index, not a target id, and that is a correction.** The first revision
+ * of this port carried `targetId`, on the PRD's rule that ids are the source of truth and no
+ * position is derived. Measured against the real library, that does not survive contact: a sortable
+ * displaces its neighbours optimistically *during* the drag, so by the time the drop is reported
+ * the source already occupies the place it is going and the collision resolves **to itself** —
+ * `source.id === target.id`, every time. An id-based target is degenerate exactly when it matters.
+ *
+ * dnd-kit's own `move()` helper says the same thing in code: where the ids do not resolve it falls
+ * back to `source.initialIndex` → `source.index`, which is the projected position and the only
+ * honest answer once optimistic sorting is on. Turning that sorting off would restore a usable
+ * `targetId` and take the visual displacement with it — the thing the whole design is built around.
+ *
+ * So the adapter reports **where the item landed** and the grid turns that into the target its own
+ * commit path wants. Ids remain the currency at the core boundary: `dropRow` still takes two row
+ * ids, and the grid resolves the second from this index against its own row model, which is the
+ * only place that mapping is knowable.
  */
 export type DndDropEvent = {
 	axis: DragAxis
 	/** The item that was picked up. */
 	sourceId: string
-	/** The item it was released onto. */
-	targetId: string
+	/**
+	 * Where it should land: the index it occupies in its axis' order at the end of the drag.
+	 *
+	 * The index is into the same order `DragSpec.index` counts in — the real one, never a position
+	 * within a rendered window.
+	 */
+	targetIndex: number
 }
 
 /**

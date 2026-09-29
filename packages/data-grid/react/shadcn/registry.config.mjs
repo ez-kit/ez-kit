@@ -75,7 +75,14 @@ const outPath = generateRegistryManifest({
 	rootFiles: ['data-grid.tsx', 'styles.css'],
 	// The npm barrel (and its test) — only relevant to this repo's own internal `workspace:*`
 	// consumption (apps/docs), not to registry consumers copying source into their own project.
-	excludeTopLevel: ['index.ts', 'index.test.ts'],
+	/*
+	 * `dnd.tsx` is the drag adapter and the one module in this package that names `@dnd-kit/react`.
+	 * It must **never** enter the registry payload: `npx shadcn add` copies these files verbatim, so
+	 * shipping it would make an optional peer a required install for every consumer of the block —
+	 * including the ones who never wanted drag. The DnD block gets its own registry item, with its
+	 * own dependencies, once the generator emits more than one.
+	 */
+	excludeTopLevel: ['index.ts', 'index.test.ts', 'dnd.tsx', 'dnd.test.tsx'],
 })
 
 console.log(`Wrote ${outPath}`)

@@ -24,6 +24,22 @@ const PAGE_ROWS = 10
 /** Marks the cell currently open for editing — the editor owns `Escape` and `Enter` there. */
 const EDITING_CELL_ATTR = 'data-editing-cell'
 
+/**
+ * Marks the row being dragged. While one exists, this model stands down entirely.
+ *
+ * Two keys are at stake and the second is the reason. The arrows would fight the drag sensor for
+ * the same presses; and **`Escape` must reach the drag layer**, which cancels the gesture itself
+ * and reports it as cancelled — the grid taking `Escape` here would leave a drag in flight with
+ * nothing left to end it. So this is not a place to write a cancel; it is a place to write none.
+ *
+ * A DOM read rather than a subscription, exactly as {@link EDITING_CELL_ATTR} is and for the same
+ * reason: this handler runs on every keystroke in the grid and must not re-render anything to
+ * answer the question.
+ *
+ * `data-row-dragging`, not `data-dragging`: React Aria's `Row` owns the latter and overwrites it.
+ */
+const DRAGGING_ATTR = 'data-row-dragging'
+
 /** What a grid with the focus model spreads onto the kit's `Table`. */
 export type GridNavigationProps = {
 	role?: 'grid'
@@ -187,6 +203,9 @@ export function useGridKeyboardNavigation({ enabled, rootRef, scrollRef, directi
 			if (event.altKey) return
 			const root = rootRef.current
 			if (!root) return
+			// A drag is in flight: every key belongs to the drag layer until it ends. See
+			// `DRAGGING_ATTR` for why `Escape` in particular must not be taken here.
+			if (root.querySelector(`[${DRAGGING_ATTR}]`)) return
 			const cell = cellOf(event.target)
 			if (!cell) return
 

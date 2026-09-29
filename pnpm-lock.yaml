@@ -463,6 +463,9 @@ importers:
         specifier: ^4.1.18
         version: 4.2.4
     devDependencies:
+      '@dnd-kit/react':
+        specifier: ^0.1.21
+        version: 0.1.21(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.14

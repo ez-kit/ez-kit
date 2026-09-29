@@ -223,6 +223,22 @@ export type GridMessages = {
 		add: string
 	}
 	/** The toolbar column-visibility menu. */
+	/**
+	 * Reordering, as a **drag** rather than a step.
+	 *
+	 * A group of its own because reordering had no user-visible string until now: the one-step
+	 * affordances borrow the vocabulary of where they live — `columnMenu.moveStart` in the header
+	 * menu, `visibility.moveStart` in the column panel. A drag handle belongs to neither.
+	 *
+	 * This group is where the drag's remaining strings land as the surfaces arrive — the live-region
+	 * announcements and the handle's ARIA description among them. It is deliberately started here,
+	 * with the one key a rendered control cannot go without: an icon-only button needs an accessible
+	 * name from its first frame, not from the release that completes the feature.
+	 */
+	ordering: {
+		/** Accessible name of a row's drag handle. */
+		dragRow: string
+	}
 	visibility: {
 		/** Accessible name of the toolbar's visibility trigger. */
 		menu: string

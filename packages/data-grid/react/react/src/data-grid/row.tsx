@@ -1,17 +1,22 @@
 import { RowMoveDirection } from '@ez-kit/data-grid-core'
-import { forwardRef } from 'react'
+import { forwardRef, useMemo } from 'react'
 
 import { useGridComponents } from '../components-context'
 import { joinClassNames } from '../utils/class-names'
+import { mergeRefs } from '../utils/merge-refs'
 import { isTextEntryTarget } from '../utils/text-entry-target'
 
 import { useAriaRowIndexAttrs } from './aria-row-index'
 import { ariaExpandedAttrs } from './aria-state'
 import { DataGridCell } from './cell'
 import { RowProvider } from './composition-context'
+import { DragAxis, useDndEnabled, useSortableItem } from './dnd'
 import { useRowNavigationProps } from './keyboard-navigation'
+import { RowDragHandle } from './row-drag-handle'
+import { useRegisterRowDrag } from './row-drag-registry'
 import { useDataGridState, useDataGridTable } from './table-context'
 
+import type { RowDragValue } from './row-drag-registry'
 import type { ErasedRow, GridFeatures } from '../types'
 import type { PinSide } from './use-pinned-row-offsets'
 import type { RowPropsResolver } from '../use-data-grid'
@@ -37,6 +42,17 @@ export type DataGridRowRenderArgs<TRow extends object = ErasedRow> = {
 	 * cell renders; this is for the rows that only wanted something beside the defaults.
 	 */
 	content: ReactNode
+	/**
+	 * The row's drag handle, ready to place — or `null` when this row cannot be dragged (no adapter
+	 * bound with `createDataGrid({ dnd })`, row ordering off, or a synthetic group row).
+	 *
+	 * An element rather than a ref, exactly as `sortTrigger` and `resizer` are on a header cell: a
+	 * call site decides *where* it goes, never how it is wired. `<DataGrid.RowDragHandle />` is the
+	 * same handle reached from inside a cell renderer instead.
+	 */
+	dragHandle: ReactNode
+	/** True while this row is the one being dragged. `false` in a grid with no drag adapter. */
+	isDragging: boolean
 }
 
 export type DataGridRowProps<TRow extends object = ErasedRow> = {
@@ -82,6 +98,7 @@ function renderRowContent<TRow extends object>(
 	children: DataGridRowProps<TRow>['children'],
 	row: Row<GridFeatures, TRow>,
 	cells: DataGridRowRenderArgs<TRow>['cells'],
+	drag: RowDragValue | null,
 ): ReactNode {
 	/**
 	 * `content` behind a cached getter, which is what preserves the skip above now that a static
@@ -94,6 +111,10 @@ function renderRowContent<TRow extends object>(
 	const args: DataGridRowRenderArgs<TRow> = {
 		row,
 		cells,
+		// Built unconditionally — it is one element and renders `null` itself when `drag` is absent,
+		// which keeps this object's shape the same for every row of every grid.
+		dragHandle: drag ? <RowDragHandle rowId={row.id} /> : null,
+		isDragging: drag?.isDragging ?? false,
 		get content() {
 			if (!isBuilt) {
 				built = cells.map((cell) => (
@@ -126,6 +147,7 @@ function renderRowContent<TRow extends object>(
  * - `data-pinned="top" | "bottom"` for pinned rows (offset from `--dg-row-pin-offset`)
  * - `data-virtual="row"` for virtualized rows (positioned via runtime `transform`)
  * - `data-movable="true"` while row reordering is on
+ * - `data-row-dragging="true"` while this row is the one being dragged
  *
  * Consumer props from `rowProps` are applied first, so those structural attributes always win;
  * `className` is the exception and is merged rather than overwritten.
@@ -204,6 +226,57 @@ function DataGridRowImpl<TRow extends object = ErasedRow>(
 	const isGroupRow = row.getIsGrouped?.() ?? false
 
 	const canMove = table.grid.ordering.row
+
+	/**
+	 * The row's registration with the drag adapter.
+	 *
+	 * Called **unconditionally**, whatever the grid registered — it is a hook, and the port's no-op
+	 * exists precisely so this line is the same line in a grid with no drag. What varies is
+	 * `disabled`, and what it gates is whether the item can be picked up at all.
+	 *
+	 * `disabled` carries only what is knowable here: ordering switched off, and a synthetic group
+	 * row, which is not a record and has nothing to reorder. Every other refusal — a pin band, a
+	 * parent, an applied sort or grouping — is the drop helpers' business and is applied on release.
+	 * That split is the PRD's boundary model: locked items are not draggable, and the rest is
+	 * refused at the commit rather than signalled mid-drag.
+	 *
+	 * `row.index` is the row's place in the current row model, which is what `DragSpec.index`
+	 * documents and requires. It is **not** a position within a rendered window; a virtualized body
+	 * renders a slice, and passing the slice-relative number would land every drag in a scrolled
+	 * grid somewhere else.
+	 */
+	const isDndEnabled = useDndEnabled()
+	const isDraggable = isDndEnabled && canMove && !isGroupRow
+	const sortable = useSortableItem({
+		id: row.id,
+		index: row.index,
+		axis: DragAxis.Row,
+		disabled: !isDraggable,
+	})
+	/*
+	 * Everything downstream reads `drag`, never `sortable` directly — including the attribute. A
+	 * row that cannot be picked up cannot be dragging, whatever an adapter reports for an item it
+	 * was handed as `disabled`; reading the raw hook for the attribute let a grid with ordering off
+	 * stamp it on every row.
+	 *
+	 * The attribute is `data-row-dragging`, **not** the obvious `data-dragging`, and for the reason
+	 * `data-row-selected` is not `data-selected`: React Aria's `Row` writes its own `data-*` set
+	 * *after* spreading the props it was handed, and `data-dragging` is one of its own — it supports
+	 * dragging natively. In the heroui kit the value was therefore replaced by RAC's empty string,
+	 * so the attribute was present and said nothing. `data-row-*` is this layer's namespace.
+	 */
+	const drag: RowDragValue | null = isDraggable
+		? { handleRef: sortable.handleRef, isDragging: sortable.isDragging }
+		: null
+	/*
+	 * Memoised over the two refs it joins: React calls a *changed* ref callback with `null` and
+	 * then the node, so a fresh merge every render would detach and reattach both — re-registering
+	 * the draggable in the middle of a gesture. See `mergeRefs`.
+	 */
+	useRegisterRowDrag(row.id, drag)
+	const sortableRef = sortable.ref
+	const rowRef = useMemo(() => mergeRefs<HTMLTableRowElement>(ref, sortableRef), [ref, sortableRef])
+
 	/**
 	 * `Alt+ArrowUp` / `Alt+ArrowDown` move the row one step.
 	 *
@@ -241,7 +314,7 @@ function DataGridRowImpl<TRow extends object = ErasedRow>(
 		<Tr
 			{...consumerProps}
 			{...navigationProps}
-			ref={ref}
+			ref={rowRef}
 			data-slot='tr'
 			data-row-id={row.id}
 			data-row-selected={isSelected ? 'true' : undefined}
@@ -256,8 +329,9 @@ function DataGridRowImpl<TRow extends object = ErasedRow>(
 			data-virtual={dataVirtual}
 			{...(onRowKeyDown ? { onKeyDown: onRowKeyDown } : {})}
 			{...(canMove ? { 'data-movable': 'true' } : {})}
+			{...(drag?.isDragging ? { 'data-row-dragging': 'true' } : {})}
 		>
-			{renderRowContent(children, row, cells)}
+			{renderRowContent(children, row, cells, drag)}
 		</Tr>
 	)
 }

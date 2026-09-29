@@ -424,8 +424,8 @@ describe.each(PACKAGES)('$name', ({ entry, shakeable, cases }) => {
  * Reachability from the root's full surface is the property that actually differs, so that is what
  * is asserted.
  */
-describe('@ez-kit/data-grid-heroui and the optional drag peer', () => {
-	const DND_ENTRY = subpathEntryOf('data-grid/react/heroui', 'dnd.js')
+describe.each(['heroui', 'shadcn'])('@ez-kit/data-grid-%s and the optional drag peer', (kit) => {
+	const DND_ENTRY = subpathEntryOf(`data-grid/react/${kit}`, 'dnd.js')
 	const DRAG_LIBRARY = '@dnd-kit'
 
 	/*

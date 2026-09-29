@@ -133,6 +133,11 @@
 			"import": "./dist/expanding/index.js",
 			"default": "./dist/expanding/index.js"
 		},
+		"./dnd": {
+			"types": "./dist/dnd.d.ts",
+			"import": "./dist/dnd.js",
+			"default": "./dist/dnd.js"
+		},
 		"./styles.css": "./dist/styles.css"
 	},
 	"main": "./dist/index.js",
@@ -537,6 +542,23 @@
 				"tailwind-merge",
 				"tailwindcss"
 			]
+		},
+		{
+			"path": "dist/dnd.js",
+			"limit": "560 B",
+			"ignore": [
+				"@ez-kit/data-grid-core",
+				"@ez-kit/data-grid-react",
+				"class-variance-authority",
+				"clsx",
+				"date-fns",
+				"lucide-react",
+				"radix-ui",
+				"react-day-picker",
+				"shadcn",
+				"tailwind-merge",
+				"tailwindcss"
+			]
 		}
 	],
 	"dependencies": {
@@ -553,13 +575,20 @@
 		"tailwindcss": "^4.1.18"
 	},
 	"devDependencies": {
+		"@dnd-kit/react": "^0.1.21",
 		"@types/react": "^19.2.14",
 		"@types/react-dom": "^19.2.3",
 		"react": "^19.2.4",
 		"react-dom": "^19.2.4"
 	},
 	"peerDependencies": {
+		"@dnd-kit/react": "^0.1.21",
 		"react": ">=18.0.0",
 		"react-dom": ">=18.0.0"
+	},
+	"peerDependenciesMeta": {
+		"@dnd-kit/react": {
+			"optional": true
+		}
 	}
 }

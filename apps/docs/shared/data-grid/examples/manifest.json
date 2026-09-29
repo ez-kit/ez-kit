@@ -579,7 +579,7 @@
 	},
 	{
 		"id": "grouping-aggregation",
-		"label": "Footer total \u00b7 no grouping",
+		"label": "Footer total · no grouping",
 		"group": "grouping",
 		"groupLabel": "Grouping",
 		"sourceFile": "components/grouping/aggregation.tsx",
@@ -974,5 +974,13 @@
 		"groupLabel": "Layout",
 		"sourceFile": "components/layout-presets.tsx",
 		"exportName": "LayoutPopoverFiltersExample"
+	},
+	{
+		"id": "row-drag",
+		"label": "Row drag and drop",
+		"group": "ordering",
+		"groupLabel": "Ordering",
+		"sourceFile": "components/row-drag.tsx",
+		"exportName": "RowDragExample"
 	}
 ]
