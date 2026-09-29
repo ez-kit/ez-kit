@@ -17,6 +17,7 @@ import { ColumnFilter } from './column-filter'
 import { ComponentGuard } from './component-guard'
 import { CreateTrigger } from './create-trigger'
 import { CreatingModal } from './creating-modal'
+import { DndAdapterProvider, DndBundleProvider, useDndBundleAdapter } from './dnd'
 import { EditingModal } from './editing-modal'
 import { EmptyStateRow } from './empty-state-row'
 import { FilterPanel } from './filter-panel'
@@ -310,6 +311,11 @@ function DataGridControlled<TFeatures extends TableFeatures, TRow extends object
 	// `grid` is declared non-optional on `DataTable`, because every table the React layer
 	// renders is meant to carry it — which is exactly the claim being checked here, so asking
 	// the question at all needs a cast.
+	// Read in the shared core rather than in `DataGridRoot`: `DataGridUncontrolled` sits between
+	// the two and is where `useDataGrid` runs, so reading higher would fork the controlled and
+	// uncontrolled paths for no gain.
+	const bundleDndAdapter = useDndBundleAdapter()
+
 	const isPrepared = (table as { grid?: { messages?: unknown } }).grid?.messages !== undefined
 	if (IS_DEV && !isPrepared) {
 		throw new Error(
@@ -339,29 +345,42 @@ function DataGridControlled<TFeatures extends TableFeatures, TRow extends object
 	}
 
 	return (
-		// The factory option layer a bound `<DataGrid>` publishes has done its job by the time we
-		// get here — this table is built. Close it off so it stops at the grid it configures:
-		// without this, a nested `<DataGrid data columns />` rendered among `children` would
-		// silently inherit the outer kit's defaults instead of standing on its own.
-		<GridFactoryDefaultsProvider defaults={undefined}>
-			<CellTypesProvider cellTypes={resolvedCellTypes}>
-				<GridComponentsProvider
-					{...(components !== undefined ? { components } : {})}
-					{...(IS_DEV ? { guard: guardComponents } : {})}
-				>
-					<TableProvider table={table}>
-						{IS_DEV && <ComponentGuard />}
-						<GridRoot>
-							<RowCountStatus />
-							<GridBody>{children}</GridBody>
-							{writeOptions.creating?.mode === CreatingMode.Modal && <CreatingModal />}
-							{writeOptions.editing?.mode === EditingMode.Modal && <EditingModal />}
-							<ConfirmDialogRenderer />
-						</GridRoot>
-					</TableProvider>
-				</GridComponentsProvider>
-			</CellTypesProvider>
-		</GridFactoryDefaultsProvider>
+		// The bundle's drag adapter, promoted to this grid's own layer and then closed off — the
+		// same move as the factory option layer below, for the same reason. Every root publishes a
+		// grid-level value, **including `null`**: without that, a nested `<DataGrid>` rendered among
+		// another grid's `children` would read the outer grid's adapter, since every context in this
+		// package is created at module scope and is therefore shared by everything resolving the
+		// same copy of it. A grid says what it runs on; it never inherits it.
+		<DndBundleProvider adapter={null}>
+			<DndAdapterProvider adapter={bundleDndAdapter}>
+				{/*
+				 * The factory option layer a bound `<DataGrid>` publishes has done its job by the time
+				 * we get here — this table is built. Close it off so it stops at the grid it
+				 * configures: without this, a nested `<DataGrid data columns />` rendered among
+				 * `children` would silently inherit the outer kit's defaults instead of standing on
+				 * its own.
+				 */}
+				<GridFactoryDefaultsProvider defaults={undefined}>
+					<CellTypesProvider cellTypes={resolvedCellTypes}>
+						<GridComponentsProvider
+							{...(components !== undefined ? { components } : {})}
+							{...(IS_DEV ? { guard: guardComponents } : {})}
+						>
+							<TableProvider table={table}>
+								{IS_DEV && <ComponentGuard />}
+								<GridRoot>
+									<RowCountStatus />
+									<GridBody>{children}</GridBody>
+									{writeOptions.creating?.mode === CreatingMode.Modal && <CreatingModal />}
+									{writeOptions.editing?.mode === EditingMode.Modal && <EditingModal />}
+									<ConfirmDialogRenderer />
+								</GridRoot>
+							</TableProvider>
+						</GridComponentsProvider>
+					</CellTypesProvider>
+				</GridFactoryDefaultsProvider>
+			</DndAdapterProvider>
+		</DndBundleProvider>
 	)
 }
 

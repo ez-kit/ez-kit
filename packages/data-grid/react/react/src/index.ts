@@ -146,6 +146,21 @@ export type {
 	DataGridBundle,
 } from './create-data-grid'
 
+// Drag-and-drop port — the contract a kit's `/dnd` adapter implements, and the hooks a surface
+// reads it through. This package ships **no** implementation and names no drag library: the
+// mechanics arrive from `@ez-kit/data-grid-<kit>/dnd` as an optional peer and are bound once, with
+// `createDataGrid({ dnd })`. With none bound, `useDndEnabled()` is `false` — which is what a drag
+// handle renders behind — and `useSortableItem` hands back an inert handle.
+//
+// Three names are deliberately **not** here. `DndBundleProvider` / `useDndBundleAdapter` are the
+// factory-to-root handshake, and publishing them would let a consumer register a bundle adapter
+// around an arbitrary subtree — the leak the grid-level layer exists to close. `noopDndAdapter` is
+// withheld for a sharper reason: `useDndEnabled()` is "an adapter is registered", so binding the
+// no-op as `dnd` would report DnD as *on* and render a handle behind every inert item — the exact
+// affordance-that-does-nothing the gate exists to prevent. Switching drag off is `dnd: undefined`.
+export { DndAdapterProvider, useDndEnabled, useSortableItem } from './data-grid/dnd'
+export type { DndAdapter, DndDropEvent, DndProviderProps, DragSpec, SortableItemHandle } from './data-grid/dnd'
+
 // UI-kit contract (tiers + full-support marker + feature map)
 export { GridFeature, FEATURE_COMPONENTS, COMPONENT_FEATURE } from './contract'
 export type {
@@ -386,6 +401,9 @@ export {
 	ActionBarVariant,
 	SortDirection,
 } from './types'
+// Same form, different home: the drag axis belongs to the port rather than to the component
+// contract, so it is exported from `./data-grid/dnd` beside the types that name it.
+export { DragAxis } from './data-grid/dnd'
 
 // TanStack state slice types. Every feature's `onChange` is typed with one of these, so a
 // consumer that lifts a handler out of the JSX must be able to name it — without adding

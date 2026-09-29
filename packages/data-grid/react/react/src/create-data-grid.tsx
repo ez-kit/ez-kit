@@ -3,6 +3,7 @@
 import { CellTypesProvider } from './cell-types-context'
 import { GridComponentsProvider } from './components-context'
 import { DataGrid } from './data-grid/data-grid'
+import { DndBundleProvider } from './data-grid/dnd'
 import { KeyboardNavigationProvider } from './data-grid/keyboard-navigation'
 import { useDataGridState } from './data-grid/table-context'
 import { GridFactoryDefaultsProvider } from './data-grid-options-context'
@@ -12,6 +13,7 @@ import { useDataGrid } from './use-data-grid'
 import type { CellTypeRegistry } from './cell-types-context'
 import type { GridComponents } from './contract'
 import type { DataGridControlledProps, DataGridSharedProps, DataGridStatics } from './data-grid/data-grid'
+import type { DndAdapter } from './data-grid/dnd'
 import type { DataGridDefaultOptions } from './data-grid-options-context'
 import type { ColumnDef, ColumnHelper } from './react-columns'
 import type { DataTable, GridFeatures } from './types'
@@ -82,6 +84,30 @@ export type CreateDataGridOptions<
 	 * break, once there is a consumer asking for one.
 	 */
 	keyboardNavigation?: boolean
+	/**
+	 * The drag-and-drop adapter every grid from this bundle runs on.
+	 *
+	 * A statement by the bundle, beside {@link CreateDataGridOptions.keyboardNavigation} and for the
+	 * same reason: the mechanics are the kit's, not the grid's. This is the **only** way drag is
+	 * switched on — there is no `<DataGrid dnd>` prop and no `dnd` field on the grid config, so the
+	 * kit roots stay byte-identical for every consumer who never asked for it.
+	 *
+	 * Omitted, a grid renders exactly the DOM it did before: no handle, `useDndEnabled()` false, and
+	 * `useSortableItem` on an inert handle.
+	 *
+	 * **A kit package must not pass this in its own `createDataGrid` call.** A kit root is a
+	 * prebuilt grid compiled once and shipped to everyone, so an adapter named there drags the drag
+	 * library into every consumer's bundle and makes an optional peer a required install. The
+	 * adapter ships from the kit's own `/dnd` subpath and a consumer names it themselves;
+	 * `apps/docs/test/tree-shaking.test.ts` asserts no drag library is reachable from a kit root.
+	 *
+	 * Explicitly `| undefined`, unlike its neighbours above, and for a reason specific to this
+	 * field: under `exactOptionalPropertyTypes` a bare `dnd?: DndAdapter` rejects
+	 * `dnd: flagOn ? adapter : undefined`, and drag behind a feature flag or an environment check
+	 * is the ordinary way to write this — where `components` and `features` are not. Passing
+	 * `undefined` means the same as omitting it: no adapter, `useDndEnabled()` false.
+	 */
+	dnd?: DndAdapter | undefined
 	/**
 	 * Kit-level default grid options baked into the bundle. Merged as the **base** layer
 	 * under an app-level `DataGridOptionsProvider` and the per-call config
@@ -193,6 +219,7 @@ export function createDataGrid<
 	cellTypes,
 	features,
 	defaults,
+	dnd,
 	keyboardNavigation = false,
 }: CreateDataGridOptions<TCellTypes, TFeatures>): DataGridBundle<TCellTypes, TFeatures> {
 	/*
@@ -209,26 +236,31 @@ export function createDataGrid<
 	type BoundProps = Parameters<typeof DataGrid>[0]
 	function BoundDataGrid(props: BoundProps) {
 		return (
-			<KeyboardNavigationProvider enabled={keyboardNavigation}>
-				<GridComponentsProvider components={components}>
-					{/*
-					 * The uncontrolled form runs `useDataGrid` inside `<DataGrid>`, out of reach of the
-					 * bound hook below, so the factory layer is published here as well. It is a context of
-					 * its own rather than a `DataGridOptionsProvider`: this provider sits *inside* whatever
-					 * the consumer put around the grid, and an app-level `DataGridOptionsProvider` must
-					 * outrank the kit's defaults, not the other way round.
-					 */}
-					<GridFactoryDefaultsProvider defaults={factoryDefaults}>
-						{cellTypes != null ? (
-							<CellTypesProvider cellTypes={cellTypes}>
+			// The bundle's adapter, published for the grid root below to promote to its own layer
+			// and then close off. Outermost, because it is the outermost fact: what this bundle was
+			// built with, before anything about one grid.
+			<DndBundleProvider adapter={dnd ?? null}>
+				<KeyboardNavigationProvider enabled={keyboardNavigation}>
+					<GridComponentsProvider components={components}>
+						{/*
+						 * The uncontrolled form runs `useDataGrid` inside `<DataGrid>`, out of reach of the
+						 * bound hook below, so the factory layer is published here as well. It is a context of
+						 * its own rather than a `DataGridOptionsProvider`: this provider sits *inside* whatever
+						 * the consumer put around the grid, and an app-level `DataGridOptionsProvider` must
+						 * outrank the kit's defaults, not the other way round.
+						 */}
+						<GridFactoryDefaultsProvider defaults={factoryDefaults}>
+							{cellTypes != null ? (
+								<CellTypesProvider cellTypes={cellTypes}>
+									<DataGrid {...props} />
+								</CellTypesProvider>
+							) : (
 								<DataGrid {...props} />
-							</CellTypesProvider>
-						) : (
-							<DataGrid {...props} />
-						)}
-					</GridFactoryDefaultsProvider>
-				</GridComponentsProvider>
-			</KeyboardNavigationProvider>
+							)}
+						</GridFactoryDefaultsProvider>
+					</GridComponentsProvider>
+				</KeyboardNavigationProvider>
+			</DndBundleProvider>
 		)
 	}
 	// Copy the whole compound namespace rather than listing members by hand. The hand-written
