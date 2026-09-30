@@ -2,7 +2,7 @@
 
 import { DragDropProvider } from '@dnd-kit/react'
 import { useSortable } from '@dnd-kit/react/sortable'
-import { DragAxis } from '@ez-kit/data-grid-react'
+import { DragAxis, DragSurface } from '@ez-kit/data-grid-react'
 
 import type {
 	DndAdapter,
@@ -40,8 +40,105 @@ import type {
  * authorship, not the attribute. Nothing here writes a style or a class.
  */
 
-/** dnd-kit's `Type` is `string | number | symbol`; the two this adapter ever sets are the axes. */
+/** The one character that joins an axis to a surface. Neither closed set contains it. */
+const DRAG_KEY_SEPARATOR = ':'
+
+/** The axes this adapter sets. dnd-kit's `Type` is `string | number | symbol`; these are strings. */
 const DRAG_AXES: readonly string[] = [DragAxis.Row, DragAxis.Column]
+
+/** The surfaces this adapter sets. */
+const DRAG_SURFACES: readonly string[] = [DragSurface.Table, DragSurface.Panel]
+
+/**
+ * How one sortable's **partition** is spelled for dnd-kit: `<axis>:<surface>`.
+ *
+ * Three of the library's options take it — `type`, `accept` and `group` — and they do two different
+ * jobs. `type` / `accept` gate *collisions*, so a row can never be a drop target for a column
+ * header. `group` partitions the *index space*, which is what `OptimisticSortingPlugin` requires to
+ * be dense (`0..n-1`) per group: it sorts each group's sortables by index and asserts the i-th has
+ * `index === i`, bailing out of everything otherwise. Both jobs want the same partition, so both
+ * get the same string.
+ *
+ * **Both halves are needed, and the panel is why.** Rows at `0..7` beside columns at `0..4` in one
+ * group fail the density assertion at the second position — measured, and the failure is silent for
+ * both axes. The column axis then turned out to have *two* index spaces of its own: the header
+ * registers the visible leaves, the visibility panel every listed leaf including the hidden ones, and
+ * those two lists have different lengths. So the axis alone does not partition it either.
+ *
+ * **This is not the composite `group` key the PRD removed in r3, and the difference is not cosmetic.**
+ * That one encoded a column's pin band and its `parentId` to enforce boundaries mid-drag — facts
+ * about data, carried in a string, which is why it needed an injective encoding against ids that may
+ * contain the separator. Boundaries are enforced by `canDrop` and the core drop helpers instead.
+ * What this joins is two closed sets of literals, neither of which contains `:` and neither of which
+ * a caller supplies — so the encoding is injective by construction and {@link fromDragKey} refuses
+ * anything else rather than guessing.
+ */
+function toDragKey(spec: Pick<DragSpec, 'axis' | 'surface'>): string {
+	return `${spec.axis}${DRAG_KEY_SEPARATOR}${spec.surface}`
+}
+
+/**
+ * Read a key back, or `null` when it is not one this adapter wrote.
+ *
+ * `null` covers every "not ours": another `DragDropProvider` in the tree, a droppable registered in
+ * this one without a `type`, or a shape a future version of the library hands over. Refusing is the
+ * right answer to all of them — a drag this adapter did not register is not one it can commit.
+ */
+function fromDragKey(key: string | number | symbol | undefined): Pick<DragSpec, 'axis' | 'surface'> | null {
+	if (typeof key !== 'string') return null
+
+	const parts = key.split(DRAG_KEY_SEPARATOR)
+	if (parts.length !== 2) return null
+
+	const [axis, surface] = parts
+	if (axis === undefined || !DRAG_AXES.includes(axis)) return null
+	if (surface === undefined || !DRAG_SURFACES.includes(surface)) return null
+
+	return { axis: axis as DragSpec['axis'], surface: surface as DragSpec['surface'] }
+}
+
+/**
+ * The identifier one sortable is **registered** under: its partition, then the grid's own id.
+ *
+ * **dnd-kit's registry is keyed by id across the whole manager — not per `group`, not per `type` —
+ * and a second registration under an existing id replaces the first.** Measured, and the symptom was
+ * severe: the column panel lists the same columns the header does, so both surfaces registered a
+ * sortable called `name`. Opening the panel replaced the header's `name` draggable with the panel's,
+ * whose element lives in a popover; closing it unregistered that entry outright. From the first time
+ * the panel was opened, **the header's handle stopped starting a drag at all** — not a failed commit,
+ * no pickup, and nothing in the DOM to show why. The same hazard exists across axes: a grid whose
+ * `getRowId` returns a string that is also a column id would have collided before the panel existed.
+ *
+ * So the registered id carries the partition and the port's id stays the grid's own. The encoding is
+ * injective without escaping anything, which is the part worth being precise about: the first two
+ * segments are drawn from two closed sets of literals that contain no `:`, so
+ * {@link fromSortableId} recovers the id by skipping exactly two separators — and an id containing
+ * any number of `:` survives untouched.
+ *
+ * **This is not the composite key the PRD removed in r3, and the distinction is the same one
+ * {@link toDragKey} draws.** That key encoded a column's pin band and its `parentId` — data, in order
+ * to enforce boundaries mid-drag, which is why it needed an injective encoding of *caller* values.
+ * Boundaries are still refused by `canDrop` and the core drop helpers. This prefix exists because the
+ * library demands a unique id per registration and two surfaces legitimately show the same column.
+ */
+function toSortableId(spec: DragSpec): string {
+	return `${toDragKey(spec)}${DRAG_KEY_SEPARATOR}${spec.id}`
+}
+
+/**
+ * Recover the grid's own id from a registered one, or `null` when the shape is not this adapter's.
+ *
+ * Skips exactly two separators rather than splitting: an id may contain `:` and must come back
+ * byte-identical, which is what makes the prefix safe to add at all.
+ */
+function fromSortableId(raw: string | number): string | null {
+	const text = String(raw)
+	const first = text.indexOf(DRAG_KEY_SEPARATOR)
+	if (first === -1) return null
+	const second = text.indexOf(DRAG_KEY_SEPARATOR, first + 1)
+	if (second === -1) return null
+	return text.slice(second + 1)
+}
 
 /**
  * The shape this adapter reads out of dnd-kit's `dragend` event.
@@ -106,9 +203,9 @@ export function toDropEvent(event: SortableDragEndEvent): DndDropEvent | null {
 	const { source, target } = event.operation
 	if (!source || !target) return null
 
-	const axis = source.type
-	if (typeof axis !== 'string' || !DRAG_AXES.includes(axis)) return null
-	if (target.type !== axis) return null
+	const kind = fromDragKey(source.type)
+	if (!kind) return null
+	if (target.type !== source.type) return null
 
 	/*
 	 * `index` off the draggable, `initialIndex` off the sortable behind it — the draggable proxies
@@ -120,7 +217,10 @@ export function toDropEvent(event: SortableDragEndEvent): DndDropEvent | null {
 	if (typeof index !== 'number' || typeof initialIndex !== 'number') return null
 	if (index === initialIndex) return null
 
-	return { axis: axis as DndDropEvent['axis'], sourceId: String(source.id), targetIndex: index }
+	const sourceId = fromSortableId(source.id)
+	if (sourceId === null) return null
+
+	return { ...kind, sourceId, targetIndex: index }
 }
 
 /**
@@ -156,12 +256,16 @@ export function toDragOverEvent(event: SortableDragOverEvent): DndDragOverEvent 
 	const { source, target } = event.operation
 	if (!source || !target) return null
 
-	const axis = source.type
-	if (typeof axis !== 'string' || !DRAG_AXES.includes(axis)) return null
-	if (target.type !== axis) return null
+	const kind = fromDragKey(source.type)
+	if (!kind) return null
+	if (target.type !== source.type) return null
 	if (source.id === target.id) return null
 
-	return { axis: axis as DndDragOverEvent['axis'], sourceId: String(source.id), targetId: String(target.id) }
+	const sourceId = fromSortableId(source.id)
+	const targetId = fromSortableId(target.id)
+	if (sourceId === null || targetId === null) return null
+
+	return { ...kind, sourceId, targetId }
 }
 
 function DndProvider({ onDrop, canDrop, children }: DndProviderProps) {
@@ -203,29 +307,24 @@ function DndProvider({ onDrop, canDrop, children }: DndProviderProps) {
 }
 
 function useSortableItem(spec: DragSpec): SortableItemHandle {
+	const key = toDragKey(spec)
 	const { ref, handleRef, isDragging } = useSortable({
-		id: spec.id,
-		index: spec.index,
-		// The axis is both what this item **is** and what it accepts, which is what keeps the two
-		// orders from colliding: without `accept`, a row would be a valid drop target for a column
-		// header. The port has no other mechanism for this — the PRD's r3 revision removed the
-		// composite `group` key that would have been the alternative.
-		type: spec.axis,
-		accept: spec.axis,
 		/*
-		 * And the axis is the sortable's **group**, which is a different job from the two above:
-		 * `type` / `accept` gate collisions, `group` partitions the *index space*. Measured in
-		 * `@dnd-kit/dom@0.1.21`'s `OptimisticSortingPlugin`: it sorts each group's registered
-		 * sortables by index and asserts the i-th has `index === i`. Left unset, every sortable in
-		 * a grid lands in one group — so rows at 0..7 beside columns at 0..4 fail that assertion at
-		 * the second position, the plugin returns early, and **both** axes stop displacing and stop
-		 * committing (`sortable.index` is never updated, so `toDropEvent` sees no movement).
-		 *
-		 * This is **not** the composite `group` key the PRD removed in r3: that one encoded the pin
-		 * band and `parentId` to enforce boundaries mid-drag, and boundaries are still refused at
-		 * the commit. This carries the axis and nothing else.
+		 * The registry's id, not the grid's — see `toSortableId`. dnd-kit keys its registry by id across
+		 * the whole manager, so two surfaces showing the same column would otherwise replace each
+		 * other's registration and the header's handle would stop working the moment the panel opened.
 		 */
-		group: spec.axis,
+		id: toSortableId(spec),
+		index: spec.index,
+		/*
+		 * One partition for all three, computed once: `type` / `accept` gate collisions, `group`
+		 * partitions the index space, and both jobs want the same answer — the item's axis *and* its
+		 * surface. `toDragKey`'s docblock has the measurement and the reason the axis alone is not
+		 * enough, which the visibility panel is what proved.
+		 */
+		type: key,
+		accept: key,
+		group: key,
 		// `exactOptionalPropertyTypes`: omitted is not the same as `undefined`, and dnd-kit's types
 		// are not written under that flag. This is the boundary where that mismatch is paid for.
 		...(spec.disabled !== undefined ? { disabled: spec.disabled } : {}),

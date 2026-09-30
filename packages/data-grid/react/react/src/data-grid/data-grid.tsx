@@ -1,5 +1,6 @@
 import {
 	canDropColumn,
+	ColumnMoveScope,
 	CreatingMode,
 	dropColumn,
 	EditingMode,
@@ -13,6 +14,7 @@ import { GridComponentsProvider, useGridComponents } from '../components-context
 import { guardComponents } from '../components-guard'
 import { GridFactoryDefaultsProvider } from '../data-grid-options-context'
 import { useDataGrid, type UseDataGridConfig } from '../use-data-grid'
+import { getVisibilityPanelColumns } from '../utils/visibility-panel-columns'
 import { getVisualLeafColumns } from '../utils/visual-column-order'
 
 import { ActionBar, buildSelectionBarArgs } from './action-bar'
@@ -26,7 +28,7 @@ import { ColumnFilter } from './column-filter'
 import { ComponentGuard } from './component-guard'
 import { CreateTrigger } from './create-trigger'
 import { CreatingModal } from './creating-modal'
-import { DndAdapterProvider, DndBundleProvider, DragAxis, useDndAdapter, useDndBundleAdapter } from './dnd'
+import { DndAdapterProvider, DndBundleProvider, DragAxis, DragSurface, useDndAdapter, useDndBundleAdapter } from './dnd'
 import { EditingModal } from './editing-modal'
 import { EmptyStateRow } from './empty-state-row'
 import { FilterPanel } from './filter-panel'
@@ -51,6 +53,7 @@ import { SortMenuTrigger } from './sort-menu-trigger'
 import { DataGridTable } from './table'
 import { TableProvider, useDataGridTable, useDataGridState } from './table-context'
 import { Toolbar } from './toolbar'
+import { VisibilityItem } from './visibility-item'
 import { VisibilityTrigger } from './visibility-trigger'
 
 import type { CellTypeRegistry } from '../cell-types-context'
@@ -304,6 +307,40 @@ function GridBody({ children }: { children: ReactNode }) {
 }
 
 /**
+ * Which `ColumnMoveScope` a column drop is judged under, per surface.
+ *
+ * The header shows the visible leaves and nothing else, so `Visible` is the only scope a drop there
+ * can honestly be asked about — a hidden column renders no header cell and can be neither end of
+ * that drop. The panel lists hidden columns *precisely so they can be reordered*, which is `All`,
+ * and is the same scope its one-step move pair already uses (`visibility-trigger.tsx`). So the two
+ * surfaces of one axis commit the same slice under two scopes, which is what `DragSurface` exists
+ * to tell apart.
+ *
+ * A lookup keyed by the closed set rather than a ternary, so a third surface is a compile error
+ * here rather than a silent fall back to `Visible`.
+ */
+const COLUMN_DROP_SCOPE: Record<DragSurface, ColumnMoveScope> = {
+	[DragSurface.Table]: ColumnMoveScope.Visible,
+	[DragSurface.Panel]: ColumnMoveScope.All,
+}
+
+/**
+ * The list a column drop's `targetIndex` counts in, per surface — the same list that surface
+ * registered its sortables against, which is the whole requirement.
+ *
+ * The header's is the **visual** leaf order: `getVisibleLeafColumns()` would be the wrong list,
+ * since it keeps the declaration order and ignores pinning, and the two sides have to agree or a
+ * drop lands on a different column than the pointer did. The panel's is `getVisibilityPanelColumns`,
+ * declaration order including hidden columns, because a hidden column has no visual position at all.
+ */
+function columnDropOrder<TRow extends object>(
+	table: DataTable<GridFeatures, TRow>,
+	surface: DragSurface,
+): { id: string }[] {
+	return surface === DragSurface.Panel ? getVisibilityPanelColumns(table) : getVisualLeafColumns(table)
+}
+
+/**
  * Mounts the registered adapter's own provider, and commits what it reports.
  *
  * A component rather than a few lines inside {@link DataGridControlled}, because reading the
@@ -343,12 +380,13 @@ function GridDndProvider({ children }: { children: ReactNode }) {
 				}
 				case DragAxis.Column: {
 					/*
-					 * The same mapping the row arm makes, against the list the header registered its
-					 * items in: the **visual** leaf order. `getVisibleLeafColumns()` would be the
-					 * wrong list — it keeps the declaration order and ignores pinning — and the two
-					 * sides have to agree or a drop lands on a different column than the pointer did.
+					 * The same mapping the row arm makes, against the list the surface the drag came
+					 * from registered its items in — `columnDropOrder`, because the axis has two and
+					 * they are two different lists. The two sides have to agree or a drop lands on a
+					 * different column than the pointer did.
 					 */
-					const target = getVisualLeafColumns(table)[event.targetIndex]
+					const scope = COLUMN_DROP_SCOPE[event.surface]
+					const target = columnDropOrder(table, event.surface)[event.targetIndex]
 					if (!target || target.id === event.sourceId) return
 					/*
 					 * Asked before committing, because `dropColumn` answers a refusal with the
@@ -368,13 +406,14 @@ function GridDndProvider({ children }: { children: ReactNode }) {
 					 * its own state); it is deliberately not built, because the reachable case is
 					 * gone and no residual one has been demonstrated.
 					 *
-					 * The scope is `ColumnMoveScope.Visible`, `dropColumn`'s default and the right
-					 * one here: a hidden column renders no header cell, so it can be neither end of
-					 * a drop on this surface. The column panel is the same axis with the other scope
-					 * and an index space of its own.
+					 * The scope comes from the surface, not from `dropColumn`'s default: a header drop
+					 * is judged under `ColumnMoveScope.Visible`, because a hidden column renders no
+					 * header cell and can be neither end of a drop there, and a panel drop under
+					 * `All`, because listing hidden columns so they can be reordered is what the
+					 * panel is for. `COLUMN_DROP_SCOPE` has the whole argument.
 					 */
-					if (!canDropColumn(table, event.sourceId, target.id)) return
-					table.setColumnOrder(dropColumn(table, event.sourceId, target.id))
+					if (!canDropColumn(table, event.sourceId, target.id, scope)) return
+					table.setColumnOrder(dropColumn(table, event.sourceId, target.id, scope))
 					return
 				}
 			}
@@ -426,7 +465,9 @@ function GridDndProvider({ children }: { children: ReactNode }) {
 					// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
 					return table.ordering?.canDropRow?.(event.sourceId, event.targetId) ?? false
 				case DragAxis.Column:
-					return canDropColumn(table, event.sourceId, event.targetId)
+					// Same scope the commit will use, from the same lookup: a step the surface's own
+					// scope allows must not be refused here, and one it forbids must not be allowed.
+					return canDropColumn(table, event.sourceId, event.targetId, COLUMN_DROP_SCOPE[event.surface])
 			}
 		},
 		[table],
@@ -665,6 +706,7 @@ export type DataGridStatics = {
 	ActionBar: typeof ActionBar
 	CreateTrigger: typeof CreateTrigger
 	VisibilityTrigger: typeof VisibilityTrigger
+	VisibilityItem: typeof VisibilityItem
 	SortMenuTrigger: typeof SortMenuTrigger
 	GlobalFilterInput: typeof GlobalFilterInput
 	ActiveFiltersBar: typeof ActiveFiltersBar
@@ -737,6 +779,7 @@ export const DataGrid: DataGridType = /* @__PURE__ */ Object.assign(DataGridRoot
 	ActionBar,
 	CreateTrigger,
 	VisibilityTrigger,
+	VisibilityItem,
 	SortMenuTrigger,
 	GlobalFilterInput,
 	ActiveFiltersBar,

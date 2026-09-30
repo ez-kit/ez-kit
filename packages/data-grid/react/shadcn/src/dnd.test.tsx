@@ -49,8 +49,8 @@ function dragEnd(overrides: Partial<SortableDragEndEvent> = {}): SortableDragEnd
 			 * fixture's target carries the source's own id: that is what the library really reports,
 			 * and reading the target's id was the defect this contract replaced.
 			 */
-			source: { id: 'row-1', type: 'row', index: 3, sortable: { index: 3, initialIndex: 0 } },
-			target: { id: 'row-1', type: 'row' },
+			source: { id: 'row:table:row-1', type: 'row:table', index: 3, sortable: { index: 3, initialIndex: 0 } },
+			target: { id: 'row:table:row-1', type: 'row:table' },
 		},
 		...overrides,
 	}
@@ -85,7 +85,7 @@ describe('the adapter satisfies the port', () => {
 	it('returns exactly the three-member handle for a registered item', () => {
 		// Arrange / Act — the hook needs dnd-kit's own provider above it, which is what
 		// `adapter.Provider` mounts; rendering through it also checks the two halves compose.
-		const seen = renderItem({ id: 'row-1', index: 0, axis: 'row' })
+		const seen = renderItem({ id: 'row-1', index: 0, axis: 'row', surface: 'table' })
 
 		// Assert — exactly three, not at least three. The hook returns eight and the adapter maps
 		// member by member precisely so an upstream addition cannot widen what this kit hands back.
@@ -102,14 +102,14 @@ describe('the adapter satisfies the port', () => {
 	 * pinned.
 	 */
 	it('maps the spec onto the sortable input, with the axis on type, accept and group', () => {
-		renderItem({ id: 'col-1', index: 2, axis: 'column', disabled: true })
+		renderItem({ id: 'col-1', index: 2, axis: 'column', surface: 'table', disabled: true })
 
 		expect(useSortableSpy.mock.calls[0]?.[0]).toEqual({
-			id: 'col-1',
+			id: 'column:table:col-1',
 			index: 2,
-			type: 'column',
-			accept: 'column',
-			group: 'column',
+			type: 'column:table',
+			accept: 'column:table',
+			group: 'column:table',
 			disabled: true,
 		})
 	})
@@ -121,14 +121,54 @@ describe('the adapter satisfies the port', () => {
 	 * share one space and both axes go dead. See the comment on it in `dnd.tsx`.
 	 */
 	it('groups an item by its axis, so the two orders keep separate index spaces', () => {
-		renderItem({ id: 'row-1', index: 0, axis: 'row' })
-		expect(useSortableSpy.mock.calls[0]?.[0]).toMatchObject({ group: 'row' })
+		renderItem({ id: 'row-1', index: 0, axis: 'row', surface: 'table' })
+		expect(useSortableSpy.mock.calls[0]?.[0]).toMatchObject({ group: 'row:table' })
+	})
+
+	/*
+	 * The panel's items sit in their own index space, which is the whole reason the key carries a
+	 * surface: the header registers the visible leaves and the panel every listed leaf, so the two
+	 * runs have different lengths and cannot share one dense `0..n-1` group.
+	 */
+	it('partitions a panel item away from a header item of the same axis', () => {
+		renderItem({ id: 'col-1', index: 0, axis: 'column', surface: 'panel' })
+
+		expect(useSortableSpy.mock.calls[0]?.[0]).toMatchObject({
+			type: 'column:panel',
+			accept: 'column:panel',
+			group: 'column:panel',
+		})
+	})
+
+	/**
+	 * The registry is keyed by id across the whole manager, so the same column on two surfaces must
+	 * register under two ids — measured the hard way: it did not, and opening the column panel stopped
+	 * the header's handle from starting a drag at all, permanently and with nothing in the DOM to show
+	 * why. `toSortableId` has the account.
+	 */
+	it('registers the same column under a different id on each surface', () => {
+		renderItem({ id: 'name', index: 0, axis: 'column', surface: 'table' })
+		const header = useSortableSpy.mock.calls[0]?.[0]
+		useSortableSpy.mockClear()
+		renderItem({ id: 'name', index: 0, axis: 'column', surface: 'panel' })
+		const panel = useSortableSpy.mock.calls[0]?.[0]
+
+		expect(header).toMatchObject({ id: 'column:table:name' })
+		expect(panel).toMatchObject({ id: 'column:panel:name' })
+	})
+
+	it('leaves an id containing the separator byte-identical', () => {
+		// The prefix is two segments drawn from two closed sets that contain no `:`, so the id itself
+		// needs no escaping — and must come back exactly as it went in.
+		renderItem({ id: 'a:b:c', index: 0, axis: 'column', surface: 'panel' })
+
+		expect(useSortableSpy.mock.calls[0]?.[0]).toMatchObject({ id: 'column:panel:a:b:c' })
 	})
 
 	it('omits disabled rather than passing it as undefined', () => {
 		// `exactOptionalPropertyTypes`: omitted and `undefined` are different things, and dnd-kit's
 		// own types are not written under that flag. The conditional spread is what keeps them apart.
-		renderItem({ id: 'row-1', index: 0, axis: 'row' })
+		renderItem({ id: 'row-1', index: 0, axis: 'row', surface: 'table' })
 
 		expect(useSortableSpy.mock.calls[0]?.[0]).not.toHaveProperty('disabled')
 	})
@@ -143,20 +183,20 @@ describe('translating a completed drag', () => {
 		const drop = toDropEvent(event)
 
 		// Assert — the landing index, not the target's id. The grid resolves the row living there.
-		expect(drop).toEqual({ axis: 'row', sourceId: 'row-1', targetIndex: 3 })
+		expect(drop).toEqual({ axis: 'row', surface: 'table', sourceId: 'row-1', targetIndex: 3 })
 	})
 
 	it('reports the column axis from the source type', () => {
 		const drop = toDropEvent(
 			dragEnd({
 				operation: {
-					source: { id: 'name', type: 'column', index: 0, sortable: { index: 0, initialIndex: 2 } },
-					target: { id: 'name', type: 'column' },
+					source: { id: 'column:table:name', type: 'column:table', index: 0, sortable: { index: 0, initialIndex: 2 } },
+					target: { id: 'column:table:name', type: 'column:table' },
 				},
 			}),
 		)
 
-		expect(drop).toEqual({ axis: 'column', sourceId: 'name', targetIndex: 0 })
+		expect(drop).toEqual({ axis: 'column', surface: 'table', sourceId: 'name', targetIndex: 0 })
 	})
 
 	it('stringifies a numeric id', () => {
@@ -164,13 +204,13 @@ describe('translating a completed drag', () => {
 		const drop = toDropEvent(
 			dragEnd({
 				operation: {
-					source: { id: 1, type: 'row', index: 2, sortable: { index: 2, initialIndex: 0 } },
-					target: { id: 1, type: 'row' },
+					source: { id: 'row:table:1', type: 'row:table', index: 2, sortable: { index: 2, initialIndex: 0 } },
+					target: { id: 'row:table:1', type: 'row:table' },
 				},
 			}),
 		)
 
-		expect(drop).toEqual({ axis: 'row', sourceId: '1', targetIndex: 2 })
+		expect(drop).toEqual({ axis: 'row', surface: 'table', sourceId: '1', targetIndex: 2 })
 	})
 
 	it('refuses an aborted drag', () => {
@@ -183,7 +223,7 @@ describe('translating a completed drag', () => {
 		const drop = toDropEvent(
 			dragEnd({
 				operation: {
-					source: { id: 'row-1', type: 'row', index: 3, sortable: { index: 3, initialIndex: 0 } },
+					source: { id: 'row:table:row-1', type: 'row:table', index: 3, sortable: { index: 3, initialIndex: 0 } },
 					target: null,
 				},
 			}),
@@ -198,8 +238,8 @@ describe('translating a completed drag', () => {
 		const drop = toDropEvent(
 			dragEnd({
 				operation: {
-					source: { id: 'row-1', type: 'row', index: 2, sortable: { index: 2, initialIndex: 2 } },
-					target: { id: 'row-1', type: 'row' },
+					source: { id: 'row:table:row-1', type: 'row:table', index: 2, sortable: { index: 2, initialIndex: 2 } },
+					target: { id: 'row:table:row-1', type: 'row:table' },
 				},
 			}),
 		)
@@ -209,7 +249,12 @@ describe('translating a completed drag', () => {
 
 	it('refuses a source with no sortable behind it — a plain draggable', () => {
 		const drop = toDropEvent(
-			dragEnd({ operation: { source: { id: 'row-1', type: 'row' }, target: { id: 'row-1', type: 'row' } } }),
+			dragEnd({
+				operation: {
+					source: { id: 'row:table:row-1', type: 'row:table' },
+					target: { id: 'row:table:row-1', type: 'row:table' },
+				},
+			}),
 		)
 
 		expect(drop).toBeNull()
@@ -220,8 +265,8 @@ describe('translating a completed drag', () => {
 		const drop = toDropEvent(
 			dragEnd({
 				operation: {
-					source: { id: 'x', type: 'something-else', index: 1, sortable: { index: 1, initialIndex: 0 } },
-					target: { id: 'x', type: 'something-else' },
+					source: { id: 'something-else:x', type: 'something-else', index: 1, sortable: { index: 1, initialIndex: 0 } },
+					target: { id: 'something-else:x', type: 'something-else' },
 				},
 			}),
 		)
@@ -236,8 +281,111 @@ describe('translating a completed drag', () => {
 		const drop = toDropEvent(
 			dragEnd({
 				operation: {
-					source: { id: 'row-1', type: 'row', index: 3, sortable: { index: 3, initialIndex: 0 } },
+					source: { id: 'row:table:row-1', type: 'row:table', index: 3, sortable: { index: 3, initialIndex: 0 } },
 					target: { id: 'trash' },
+				},
+			}),
+		)
+
+		expect(drop).toBeNull()
+	})
+
+	/*
+	 * The panel is the second surface of the column axis, and its whole reason to exist is that its
+	 * index space is a different list — see `toDragKey`. A drop has to carry which one it came from,
+	 * because the grid resolves `targetIndex` against that list and commits under that surface's
+	 * `ColumnMoveScope`.
+	 */
+	it('reports the panel surface, on the same axis as the header', () => {
+		const drop = toDropEvent(
+			dragEnd({
+				operation: {
+					source: { id: 'column:panel:name', type: 'column:panel', index: 4, sortable: { index: 4, initialIndex: 1 } },
+					target: { id: 'column:panel:name', type: 'column:panel' },
+				},
+			}),
+		)
+
+		expect(drop).toEqual({ axis: 'column', surface: 'panel', sourceId: 'name', targetIndex: 4 })
+	})
+
+	it('refuses a key with a surface this adapter did not set', () => {
+		// The axis half parses and the surface half does not. Refusing the whole key rather than
+		// defaulting the surface is the point: a default would put the item in another surface's
+		// index space, which is the silent-death case the field exists to prevent.
+		const drop = toDropEvent(
+			dragEnd({
+				operation: {
+					source: {
+						id: 'column:sidebar:name',
+						type: 'column:sidebar',
+						index: 1,
+						sortable: { index: 1, initialIndex: 0 },
+					},
+					target: { id: 'column:sidebar:name', type: 'column:sidebar' },
+				},
+			}),
+		)
+
+		expect(drop).toBeNull()
+	})
+
+	it('refuses a key with more than two parts', () => {
+		const drop = toDropEvent(
+			dragEnd({
+				operation: {
+					source: {
+						id: 'column:panel:extra:name',
+						type: 'column:panel:extra',
+						index: 1,
+						sortable: { index: 1, initialIndex: 0 },
+					},
+					target: { id: 'column:panel:extra:name', type: 'column:panel:extra' },
+				},
+			}),
+		)
+
+		expect(drop).toBeNull()
+	})
+
+	it('refuses a bare axis with no surface — the key shape this adapter wrote before the panel', () => {
+		const drop = toDropEvent(
+			dragEnd({
+				operation: {
+					source: { id: 'row-1', type: 'row', index: 3, sortable: { index: 3, initialIndex: 0 } },
+					target: { id: 'row-1', type: 'row' },
+				},
+			}),
+		)
+
+		expect(drop).toBeNull()
+	})
+
+	it('recovers an id containing the separator from the registered one', () => {
+		const drop = toDropEvent(
+			dragEnd({
+				operation: {
+					source: {
+						id: 'column:panel:a:b:c',
+						type: 'column:panel',
+						index: 2,
+						sortable: { index: 2, initialIndex: 0 },
+					},
+					target: { id: 'column:panel:a:b:c', type: 'column:panel' },
+				},
+			}),
+		)
+
+		expect(drop).toEqual({ axis: 'column', surface: 'panel', sourceId: 'a:b:c', targetIndex: 2 })
+	})
+
+	it('refuses a registered id with no partition prefix', () => {
+		// A draggable registered by something other than this adapter, under a bare id.
+		const drop = toDropEvent(
+			dragEnd({
+				operation: {
+					source: { id: 'name', type: 'column:table', index: 1, sortable: { index: 1, initialIndex: 0 } },
+					target: { id: 'name', type: 'column:table' },
 				},
 			}),
 		)
@@ -249,8 +397,8 @@ describe('translating a completed drag', () => {
 		const drop = toDropEvent(
 			dragEnd({
 				operation: {
-					source: { id: 'x', index: 1, sortable: { index: 1, initialIndex: 0 } },
-					target: { id: 'y', type: 'row' },
+					source: { id: 'row:table:x', index: 1, sortable: { index: 1, initialIndex: 0 } },
+					target: { id: 'row:table:y', type: 'row:table' },
 				},
 			}),
 		)
@@ -277,8 +425,16 @@ describe('toDragOverEvent', () => {
 	})
 
 	it('reports both ends as ids, which is what the core canDrop helpers take', () => {
-		expect(toDragOverEvent(dragOver({ id: 'name', type: 'column' }, { id: 'salary', type: 'column' }))).toEqual({
+		expect(
+			toDragOverEvent(
+				dragOver(
+					{ id: 'column:table:name', type: 'column:table' },
+					{ id: 'column:table:salary', type: 'column:table' },
+				),
+			),
+		).toEqual({
 			axis: 'column',
+			surface: 'table',
 			sourceId: 'name',
 			targetId: 'salary',
 		})
@@ -290,16 +446,24 @@ describe('toDragOverEvent', () => {
 	 * itself. There is no question to ask, and asking it would answer "no".
 	 */
 	it('asks nothing when the source is hovering itself', () => {
-		expect(toDragOverEvent(dragOver({ id: 'name', type: 'column' }, { id: 'name', type: 'column' }))).toBeNull()
+		expect(
+			toDragOverEvent(
+				dragOver({ id: 'column:table:name', type: 'column:table' }, { id: 'column:table:name', type: 'column:table' }),
+			),
+		).toBeNull()
 	})
 
 	it('asks nothing when either end is missing', () => {
-		expect(toDragOverEvent(dragOver(null, { id: 'name', type: 'column' }))).toBeNull()
-		expect(toDragOverEvent(dragOver({ id: 'name', type: 'column' }, null))).toBeNull()
+		expect(toDragOverEvent(dragOver(null, { id: 'column:table:name', type: 'column:table' }))).toBeNull()
+		expect(toDragOverEvent(dragOver({ id: 'column:table:name', type: 'column:table' }, null))).toBeNull()
 	})
 
 	it('asks nothing about a type this adapter did not set, on either end', () => {
 		expect(toDragOverEvent(dragOver({ id: 'x', type: 'trash' }, { id: 'y', type: 'trash' }))).toBeNull()
-		expect(toDragOverEvent(dragOver({ id: 'name', type: 'column' }, { id: '1', type: 'row' }))).toBeNull()
+		expect(
+			toDragOverEvent(
+				dragOver({ id: 'column:table:name', type: 'column:table' }, { id: 'row:table:1', type: 'row:table' }),
+			),
+		).toBeNull()
 	})
 })

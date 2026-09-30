@@ -20,7 +20,8 @@ import type { ComponentType, ReactNode } from 'react'
  * Two values, not three: the **visibility panel is the column axis**, because it reorders
  * columns — the same `columnOrder` slice the header does, differing only in scope
  * (`ColumnMoveScope.All`, so hidden columns are valid neighbours there and not in the header).
- * Do not add a `'panel'` member for it.
+ * Do not add a `'panel'` member for it: the surface it differs on is {@link DragSurface}, a
+ * separate closed set, precisely so the axis keeps naming the slice a drop writes.
  *
  * Named members for internal reference; the option is typed as the plain string union, so
  * `axis: 'row'` is equally valid and needs no import.
@@ -34,6 +35,38 @@ export const DragAxis = {
 
 export type DragAxis = (typeof DragAxis)[keyof typeof DragAxis]
 
+/**
+ * Which **surface** an item is dragged on — the second half of what partitions a drag.
+ *
+ * Not a third axis, and the reason is the one {@link DragAxis} already states: the column panel
+ * reorders columns, writes the same `columnOrder` slice the header does, and differs only in
+ * *scope*. What it does not share is the **index space**. The header registers the visible leaf
+ * columns (`ColumnMoveScope.Visible`); the panel registers every listed leaf column, hidden ones
+ * included (`ColumnMoveScope.All`). Those two lists have different lengths and different
+ * positions, so an item from each cannot sit in one dense `0..n-1` run — and density is not
+ * negotiable: see {@link DragSpec.index} for the measurement, and note the failure is silent.
+ *
+ * So one axis, two surfaces, and an adapter partitions its library's index space by **both**. Two
+ * closed sets of literals rather than one set of three values, because the axis decides which
+ * slice a drop writes and the surface decides which list an index counts in — a drop arriving
+ * from the panel is committed against `columnOrder` exactly as a header drop is, with the other
+ * scope.
+ *
+ * This is **not** the composite `group` key the PRD removed in r3. That one encoded a column's pin
+ * band and its `parentId` — facts about *data*, needing an injective encoding because ids may
+ * contain any character — in order to enforce boundaries mid-drag. Boundaries are still refused by
+ * the core drop helpers and by `canDrop`. This carries two closed sets of literals and nothing a
+ * caller supplies.
+ */
+export const DragSurface = {
+	/** The grid's own table: rows in the body, header cells in the header. */
+	Table: 'table',
+	/** The column visibility panel, which lists hidden columns too. */
+	Panel: 'panel',
+} as const
+
+export type DragSurface = (typeof DragSurface)[keyof typeof DragSurface]
+
 /** What one draggable item tells the adapter about itself. */
 export type DragSpec = {
 	/** The row id or column id. The same identifier the core drop helpers take. */
@@ -44,9 +77,12 @@ export type DragSpec = {
 	 * Stated here because a virtualized body renders a slice: passing the slice-relative index
 	 * would make every drag in a scrolled grid land somewhere else.
 	 *
-	 * **And the indices of one axis must be dense: exactly `0..n-1`, no gap and no duplicate.**
+	 * **And the indices of one axis *and surface* must be dense: exactly `0..n-1`, no gap and no
+	 * duplicate.**
 	 * That is a requirement of the library behind the adapter rather than of this port, but it is
 	 * recorded here because a caller has no other way to learn it and the failure is silent.
+	 * The pair is what an adapter partitions its library's index space by — see {@link
+	 * DragSurface} for why the axis alone is not enough.
 	 * Measured in `@dnd-kit/dom@0.1.21`'s `OptimisticSortingPlugin`: it sorts each group's
 	 * registered items by index and then asserts the i-th has `index === i`, bailing out entirely
 	 * otherwise — which costs the visual displacement **and** the commit, since the item's index is
@@ -56,6 +92,15 @@ export type DragSpec = {
 	index: number
 	/** Which order this item belongs to. Items of different axes never collide. */
 	axis: DragAxis
+	/**
+	 * Which surface this item is rendered on — see {@link DragSurface}.
+	 *
+	 * Required rather than defaulted to {@link DragSurface.Table}: the field exists because two
+	 * surfaces of one axis keep **separate index spaces**, and a default would let a new surface
+	 * silently join an existing one's — which breaks its density and kills the drag for both, with
+	 * no error anywhere. A caller that has to name it is a caller that had to think about it.
+	 */
+	surface: DragSurface
 	/**
 	 * Whether this item may be picked up at all.
 	 *
@@ -114,6 +159,11 @@ export type SortableItemHandle = {
  */
 export type DndDropEvent = {
 	axis: DragAxis
+	/**
+	 * The surface the drop happened on, which is what decides the list {@link
+	 * DndDropEvent.targetIndex} counts in and the `ColumnMoveScope` the commit uses.
+	 */
+	surface: DragSurface
 	/** The item that was picked up. */
 	sourceId: string
 	/**
@@ -136,6 +186,8 @@ export type DndDropEvent = {
  */
 export type DndDragOverEvent = {
 	axis: DragAxis
+	/** The surface both ends are on. Two surfaces never collide, so one field covers both. */
+	surface: DragSurface
 	/** The item being held. */
 	sourceId: string
 	/**

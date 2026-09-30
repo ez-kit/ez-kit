@@ -1,8 +1,10 @@
 'use client'
 
+import { DataGridVisibilityItem } from '@ez-kit/data-grid-react'
 import { useGridMessages } from '@ez-kit/data-grid-react/kit'
 import { ArrowDown, ArrowUp, Columns2 } from 'lucide-react'
 
+import { ColumnDragHandle } from '@grid-shadcn/blocks/ordering/ColumnDragHandle'
 import { Button } from '@grid-shadcn/components/ui/button'
 import { Checkbox } from '@grid-shadcn/components/ui/checkbox'
 import { Popover, PopoverContent, PopoverTrigger } from '@grid-shadcn/components/ui/popover'
@@ -72,11 +74,27 @@ export function VisibilityMenu({ columns }: VisibilityMenuProps) {
 			>
 				<div className='space-y-1'>
 					{columns.map((col) => (
-						<div
+						/*
+						 * The row is `<DataGridVisibilityItem>` rather than a plain `div`: it carries the
+						 * `column-visibility-item` slot as before and takes this kit's class, and it is
+						 * what registers the row with the drag adapter when one is bound. Every decision
+						 * behind that — the index space, which columns take part, the `ColumnMoveScope`
+						 * the drop commits under — stays in `@ez-kit/data-grid-react`; this kit renders
+						 * the markup and the grip. A grid with no adapter gets the same `div` it got
+						 * before.
+						 */
+						<DataGridVisibilityItem
 							key={col.id}
 							className='flex items-center gap-1 rounded pe-1 hover:bg-muted'
-							data-slot='column-visibility-item'
+							columnId={col.id}
 						>
+							{/*
+							 * Renders nothing unless this row is draggable — no adapter, the panel's
+							 * moves switched off, or a column whose place the author fixed. First in
+							 * the row, where a grip belongs, and before the label so a pointer looking
+							 * for it does not have to cross the checkbox.
+							 */}
+							<ColumnDragHandle />
 							{/*
 							 * The label wraps only the checkbox and the name: a button inside a
 							 * `<label>` would toggle the column on its way to moving it.
@@ -102,7 +120,7 @@ export function VisibilityMenu({ columns }: VisibilityMenuProps) {
 								column={col}
 								labels={{ start: messages.visibility.moveStart, end: messages.visibility.moveEnd }}
 							/>
-						</div>
+						</DataGridVisibilityItem>
 					))}
 				</div>
 			</PopoverContent>

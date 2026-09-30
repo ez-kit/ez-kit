@@ -1,8 +1,11 @@
 'use client'
 
+import { DataGridVisibilityItem } from '@ez-kit/data-grid-react'
 import { useGridMessages } from '@ez-kit/data-grid-react/kit'
 import { Button, buttonVariants, Checkbox, Dropdown, Label, Popover } from '@heroui/react'
 import { ArrowDown, ArrowUp, Columns2 } from 'lucide-react'
+
+import { ColumnDragHandle } from '../ordering/ColumnDragHandle'
 
 import type { GridMessages, VisibilityMenuProps, VisibilityColumnItem } from '@ez-kit/data-grid-react'
 import type { Selection } from '@heroui/react'
@@ -75,11 +78,27 @@ function ColumnPanel({ columns, messages }: { columns: VisibilityColumnItem[]; m
 				>
 					<div className='grid min-w-60 gap-1'>
 						{columns.map((col) => (
-							<div
+							/*
+							 * The row is `<DataGridVisibilityItem>` rather than a plain `div`: it carries
+							 * the `column-visibility-item` slot as before and takes this kit's class, and
+							 * it is what registers the row with the drag adapter when one is bound. Every
+							 * decision behind that — the index space, which columns take part, the
+							 * `ColumnMoveScope` the drop commits under — stays in
+							 * `@ez-kit/data-grid-react`; this kit renders the markup and the grip. A grid
+							 * with no adapter gets the same `div` it got before.
+							 */
+							<DataGridVisibilityItem
 								key={col.id}
 								className='flex items-center gap-1 rounded pe-1'
-								data-slot='column-visibility-item'
+								columnId={col.id}
 							>
+								{/*
+								 * Renders nothing unless this row is draggable — no adapter, the panel's
+								 * moves switched off, or a column whose place the author fixed. First in
+								 * the row, where a grip belongs, and before the label so a pointer looking
+								 * for it does not have to cross the checkbox.
+								 */}
+								<ColumnDragHandle />
 								<Checkbox
 									className='min-w-0 flex-1 px-2 py-1.5'
 									isDisabled={!col.canHide}
@@ -126,7 +145,7 @@ function ColumnPanel({ columns, messages }: { columns: VisibilityColumnItem[]; m
 								>
 									<ArrowDown className='size-4' />
 								</Button>
-							</div>
+							</DataGridVisibilityItem>
 						))}
 					</div>
 				</Popover.Dialog>

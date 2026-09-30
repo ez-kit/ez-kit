@@ -249,6 +249,7 @@ export { ColumnFilter as DataGridColumnFilter } from './data-grid/column-filter'
 export { ActionBar as DataGridActionBar } from './data-grid/action-bar'
 export { CreateTrigger as DataGridCreateTrigger } from './data-grid/create-trigger'
 export { VisibilityTrigger as DataGridVisibilityTrigger } from './data-grid/visibility-trigger'
+export { VisibilityItem as DataGridVisibilityItem } from './data-grid/visibility-item'
 export { SortMenuTrigger as DataGridSortMenuTrigger } from './data-grid/sort-menu-trigger'
 export { GlobalFilterInput as DataGridGlobalFilterInput } from './data-grid/global-filter-input'
 export { ActiveFiltersBar as DataGridActiveFiltersBar } from './data-grid/active-filters-bar'
@@ -287,6 +288,7 @@ export type {
 	DataGridVisibilityTriggerProps,
 	DataGridVisibilityTriggerRenderArgs,
 } from './data-grid/visibility-trigger'
+export type { DataGridVisibilityItemProps } from './data-grid/visibility-item'
 export type {
 	DataGridFilterPanelColumn,
 	DataGridFilterPanelProps,
@@ -422,7 +424,7 @@ export {
 } from './types'
 // Same form, different home: the drag axis belongs to the port rather than to the component
 // contract, so it is exported from `./data-grid/dnd` beside the types that name it.
-export { DragAxis } from './data-grid/dnd'
+export { DragAxis, DragSurface } from './data-grid/dnd'
 
 // TanStack state slice types. Every feature's `onChange` is typed with one of these, so a
 // consumer that lifts a handler out of the JSX must be able to name it — without adding

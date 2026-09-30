@@ -10,7 +10,7 @@ import { useAriaRowIndexAttrs } from './aria-row-index'
 import { ariaExpandedAttrs } from './aria-state'
 import { DataGridCell } from './cell'
 import { RowProvider } from './composition-context'
-import { DragAxis, useDndEnabled, useSortableItem } from './dnd'
+import { DragAxis, DragSurface, useDndEnabled, useSortableItem } from './dnd'
 import { useRowNavigationProps } from './keyboard-navigation'
 import { RowDragHandle } from './row-drag-handle'
 import { useRegisterRowDrag } from './row-drag-registry'
@@ -251,6 +251,7 @@ function DataGridRowImpl<TRow extends object = ErasedRow>(
 		id: row.id,
 		index: row.index,
 		axis: DragAxis.Row,
+		surface: DragSurface.Table,
 		disabled: !isDraggable,
 	})
 	/*

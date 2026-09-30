@@ -53,10 +53,33 @@ export type DataGridColumnDragHandleProps = {
  */
 export function ColumnDragHandle({ children, 'aria-label': ariaLabel }: DataGridColumnDragHandleProps = {}) {
 	const drag = useColumnDrag()
-	const { Button } = useGridComponents().core
+	const components = useGridComponents()
 	const messages = useGridMessages()
 
 	if (!drag) return null
+
+	/*
+	 * Destructured **after** the early return, not with the other reads above it.
+	 *
+	 * The hooks all run unconditionally, as they must; what waits is the property access. Outside a
+	 * grid — a kit's `VisibilityMenu` rendered standalone in its own unit test, which both kits do —
+	 * there is no components context, so `.core` is undefined and destructuring it throws before the
+	 * `null` this component is supposed to return. There is no drag there either, so the return is
+	 * the right answer and the crash was only about the order of two lines.
+	 *
+	 * Safe by construction rather than by luck: `drag` is non-`null` only where a shell published it,
+	 * and every shell reads the table through `useDataGridTable()`, which throws outside a grid. So
+	 * non-`null` drag implies a grid implies a components context.
+	 *
+	 * **The root cause is one file over and is not fixed here.** `useGridComponents()` is typed
+	 * `FullGridComponents` and its context default is `{} as FullGridComponents`
+	 * (`components-context.tsx`), so *every* `useGridComponents().<group>` in this package is a
+	 * latent `Cannot destructure … of undefined` outside a grid, with no named error. The honest fix
+	 * is a dev-mode throw there, matching what `useDataGridTable` does with the same situation — and
+	 * it is deliberately not done in this phase, because it would change what a dozen existing
+	 * standalone kit-block tests do and belongs in a change of its own rather than riding along.
+	 */
+	const { Button } = components.core
 
 	return (
 		<Button

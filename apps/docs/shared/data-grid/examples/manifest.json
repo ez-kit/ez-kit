@@ -992,6 +992,14 @@
 		"exportName": "ColumnDragExample"
 	},
 	{
+		"id": "column-panel-drag",
+		"label": "Column panel drag and drop",
+		"group": "ordering",
+		"groupLabel": "Ordering",
+		"sourceFile": "components/column-panel-drag.tsx",
+		"exportName": "ColumnPanelDragExample"
+	},
+	{
 		"id": "column-drag-rtl",
 		"label": "Column drag (RTL)",
 		"group": "ordering",

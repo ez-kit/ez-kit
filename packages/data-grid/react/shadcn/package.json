@@ -477,7 +477,7 @@
 		},
 		{
 			"path": "dist/visibility/index.js",
-			"limit": "2.3 KB",
+			"limit": "2.5 KB",
 			"ignore": [
 				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
@@ -545,7 +545,7 @@
 		},
 		{
 			"path": "dist/dnd.js",
-			"limit": "660 B",
+			"limit": "820 B",
 			"ignore": [
 				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",

@@ -4,7 +4,7 @@ import { createContext, useContext } from 'react'
 
 import { useGridComponents } from '../components-context'
 
-import { DragAxis, useSortableItem } from './dnd'
+import { DragAxis, DragSurface, useSortableItem } from './dnd'
 
 import type { SortableItemHandle } from './dnd'
 import type { ThProps } from '../types'
@@ -26,12 +26,18 @@ export type HeaderThProps = ThProps & { [key: `data-${string}`]: string | undefi
  * Declared again rather than sharing `RowDragValue`: the two are the same shape today and are two
  * different published types, so folding them together would rename one of them. They may also
  * diverge — a column has a resizer beside its handle and a row does not.
+ *
+ * Exported within the package because the column axis has **two** surfaces: a header cell's
+ * {@link ColumnDragShell} publishes it, and so does the visibility panel's item shell
+ * (`visibility-item.tsx`). One context means `<DataGrid.ColumnDragHandle />` is one component on
+ * both, which is right — the handle asks whether the column it sits in is draggable and where its
+ * activator is, and neither surface answers that differently. Not part of the public API.
  */
-const ColumnDragContext = createContext<ColumnDragValue | null>(null)
+export const ColumnDragContext = createContext<ColumnDragValue | null>(null)
 
 /**
- * The drag state of the header cell this is rendered in — `null` when the column cannot be dragged,
- * or when there is no header cell above.
+ * The drag state of the column surface this is rendered in — a header cell or a row of the
+ * visibility panel — and `null` when the column cannot be dragged, or when there is neither above.
  *
  * The public read for `isDragging` on the column axis. It exists because the sortable lives in
  * {@link ColumnDragShell} rather than in `DataGridHeaderCell`, so the cell's render arguments cannot
@@ -102,7 +108,13 @@ export type ColumnDragShellProps = {
  */
 export function ColumnDragShell({ columnId, index, disabled, thProps, children }: ColumnDragShellProps) {
 	const { Th } = useGridComponents().core
-	const sortable = useSortableItem({ id: columnId, index, axis: DragAxis.Column, disabled })
+	const sortable = useSortableItem({
+		id: columnId,
+		index,
+		axis: DragAxis.Column,
+		surface: DragSurface.Table,
+		disabled,
+	})
 	/*
 	 * Everything downstream reads `drag`, never `sortable` directly — including the attribute. A
 	 * column that cannot be picked up cannot be dragging, whatever an adapter reports for an item it

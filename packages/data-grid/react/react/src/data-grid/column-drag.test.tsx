@@ -410,7 +410,7 @@ describe('committing a column drop', () => {
 		renderDndGrid(adapter, { ordering: { column: { onChange } } }, headerWithHandleArg)
 
 		// `name` is at index 0 and `age` at index 1; the adapter reports where the item landed.
-		fireDrop({ axis: 'column', sourceId: 'name', targetIndex: 1 })
+		fireDrop({ axis: 'column', surface: 'table', sourceId: 'name', targetIndex: 1 })
 
 		expect(onChange).toHaveBeenCalledTimes(1)
 		expect(onChange).toHaveBeenCalledWith(['age', 'name'])
@@ -421,7 +421,7 @@ describe('committing a column drop', () => {
 		const { adapter, fireDrop } = makeDrivableAdapter()
 		renderDndGrid(adapter, { ordering: { column: { onChange } } }, headerWithHandleArg)
 
-		fireDrop({ axis: 'column', sourceId: 'name', targetIndex: 0 })
+		fireDrop({ axis: 'column', surface: 'table', sourceId: 'name', targetIndex: 0 })
 
 		expect(onChange).not.toHaveBeenCalled()
 	})
@@ -431,7 +431,7 @@ describe('committing a column drop', () => {
 		const { adapter, fireDrop } = makeDrivableAdapter()
 		renderDndGrid(adapter, { ordering: { column: { onChange } } }, headerWithHandleArg)
 
-		fireDrop({ axis: 'column', sourceId: 'name', targetIndex: 99 })
+		fireDrop({ axis: 'column', surface: 'table', sourceId: 'name', targetIndex: 99 })
 
 		expect(onChange).not.toHaveBeenCalled()
 	})
@@ -450,7 +450,7 @@ describe('committing a column drop', () => {
 		const { adapter, fireDrop } = makeDrivableAdapter()
 		renderDndGrid(adapter, { columns: groupedColumns, ordering: { column: { onChange } } }, headerWithHandleArg)
 
-		fireDrop({ axis: 'column', sourceId: 'name', targetIndex: 1 })
+		fireDrop({ axis: 'column', surface: 'table', sourceId: 'name', targetIndex: 1 })
 
 		expect(onChange).not.toHaveBeenCalled()
 	})
@@ -460,7 +460,7 @@ describe('committing a column drop', () => {
 		const { adapter, fireDrop } = makeDrivableAdapter()
 		renderDndGrid(adapter, { ordering: { column: { onChange }, row: true } }, headerWithHandleArg)
 
-		fireDrop({ axis: 'row', sourceId: '1', targetIndex: 2 })
+		fireDrop({ axis: 'row', surface: 'table', sourceId: '1', targetIndex: 2 })
 
 		expect(onChange).not.toHaveBeenCalled()
 	})
@@ -487,7 +487,7 @@ describe('the canDrop predicate', () => {
 		const { adapter, askCanDrop } = makeDrivableAdapter()
 		renderDndGrid(adapter, { columns: groupedColumns }, headerWithHandleArg)
 
-		expect(askCanDrop({ axis: 'column', sourceId: 'name', targetId: 'age' })).toBe(true)
+		expect(askCanDrop({ axis: 'column', surface: 'table', sourceId: 'name', targetId: 'age' })).toBe(true)
 	})
 
 	it('refuses a leaf leaving its header group', () => {
@@ -498,7 +498,7 @@ describe('the canDrop predicate', () => {
 		const { adapter, askCanDrop } = makeDrivableAdapter()
 		renderDndGrid(adapter, { columns: groupedColumns }, headerWithHandleArg)
 
-		expect(askCanDrop({ axis: 'column', sourceId: 'name', targetId: 'age' })).toBe(false)
+		expect(askCanDrop({ axis: 'column', surface: 'table', sourceId: 'name', targetId: 'age' })).toBe(false)
 	})
 
 	it('refuses a locked column as the source', () => {
@@ -509,7 +509,7 @@ describe('the canDrop predicate', () => {
 		const { adapter, askCanDrop } = makeDrivableAdapter()
 		renderDndGrid(adapter, { columns: lockedColumns }, headerWithHandleArg)
 
-		expect(askCanDrop({ axis: 'column', sourceId: 'name', targetId: 'age' })).toBe(false)
+		expect(askCanDrop({ axis: 'column', surface: 'table', sourceId: 'name', targetId: 'age' })).toBe(false)
 	})
 
 	/*
@@ -523,15 +523,15 @@ describe('the canDrop predicate', () => {
 		const { adapter, askCanDrop } = makeDrivableAdapter()
 		renderDndGrid(adapter, { ordering: { row: true, column: true } }, headerWithHandleArg)
 
-		expect(askCanDrop({ axis: 'column', sourceId: 'name', targetId: 'name' })).toBe(true)
-		expect(askCanDrop({ axis: 'row', sourceId: '1', targetId: '1' })).toBe(true)
+		expect(askCanDrop({ axis: 'column', surface: 'table', sourceId: 'name', targetId: 'name' })).toBe(true)
+		expect(askCanDrop({ axis: 'row', surface: 'table', sourceId: '1', targetId: '1' })).toBe(true)
 	})
 
 	it('refuses an id no column owns', () => {
 		const { adapter, askCanDrop } = makeDrivableAdapter()
 		renderDndGrid(adapter, {}, headerWithHandleArg)
 
-		expect(askCanDrop({ axis: 'column', sourceId: 'name', targetId: 'nope' })).toBe(false)
+		expect(askCanDrop({ axis: 'column', surface: 'table', sourceId: 'name', targetId: 'nope' })).toBe(false)
 	})
 
 	// The row arm of the same predicate, asked from a grid that registered row ordering. Its own
@@ -541,16 +541,16 @@ describe('the canDrop predicate', () => {
 		renderDndGrid(adapter, { ordering: { row: true, column: true } }, headerWithHandleArg)
 
 		// `TEST_ROWS` carry their own `id`, so the row ids are '1'..'3', not positions.
-		expect(askCanDrop({ axis: 'row', sourceId: '1', targetId: '2' })).toBe(true)
+		expect(askCanDrop({ axis: 'row', surface: 'table', sourceId: '1', targetId: '2' })).toBe(true)
 		// A row id nothing owns still reaches `canDropRow`, which refuses it.
-		expect(askCanDrop({ axis: 'row', sourceId: '1', targetId: 'nope' })).toBe(false)
+		expect(askCanDrop({ axis: 'row', surface: 'table', sourceId: '1', targetId: 'nope' })).toBe(false)
 	})
 
 	it('refuses the row axis in a grid that has no row ordering', () => {
 		const { adapter, askCanDrop } = makeDrivableAdapter()
 		renderDndGrid(adapter, { ordering: { column: true } }, headerWithHandleArg)
 
-		expect(askCanDrop({ axis: 'row', sourceId: '1', targetId: '2' })).toBe(false)
+		expect(askCanDrop({ axis: 'row', surface: 'table', sourceId: '1', targetId: '2' })).toBe(false)
 	})
 })
 

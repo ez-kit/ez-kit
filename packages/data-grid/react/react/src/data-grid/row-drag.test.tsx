@@ -96,7 +96,7 @@ describe('the row registers itself with the adapter', () => {
 
 		// Assert — `index` is the row's place in the row model, which is what a virtualized body
 		// would otherwise get wrong by handing over a window-relative position.
-		expect(specFor('2')).toEqual({ id: '2', index: 1, axis: 'row', disabled: false })
+		expect(specFor('2')).toEqual({ id: '2', index: 1, axis: 'row', surface: 'table', disabled: false })
 	})
 
 	it('disables every row while row ordering is off', () => {
@@ -255,7 +255,7 @@ describe('committing a drop', () => {
 		renderDndGrid(adapter, { ordering: { row: { onChange } } })
 
 		// Act
-		fireDrop({ axis: 'row', sourceId: '1', targetIndex: 2 })
+		fireDrop({ axis: 'row', surface: 'table', sourceId: '1', targetIndex: 2 })
 
 		// Assert — exactly one, which is the PRD's own success metric for a drag.
 		expect(onChange).toHaveBeenCalledOnce()
@@ -269,7 +269,7 @@ describe('committing a drop', () => {
 		const { adapter, fireDrop } = makeDrivableAdapter()
 		renderDndGrid(adapter, { ordering: { row: { onChange } } })
 
-		fireDrop({ axis: 'column', sourceId: 'name', targetIndex: 1 })
+		fireDrop({ axis: 'column', surface: 'table', sourceId: 'name', targetIndex: 1 })
 
 		expect(onChange).not.toHaveBeenCalled()
 	})
@@ -281,7 +281,7 @@ describe('committing a drop', () => {
 		const { adapter, fireDrop } = makeDrivableAdapter()
 		renderDndGrid(adapter, { ordering: { row: { onChange } } })
 
-		fireDrop({ axis: 'row', sourceId: '1', targetIndex: 99 })
+		fireDrop({ axis: 'row', surface: 'table', sourceId: '1', targetIndex: 99 })
 
 		expect(onChange).not.toHaveBeenCalled()
 	})
@@ -293,7 +293,7 @@ describe('committing a drop', () => {
 		const { adapter, fireDrop } = makeDrivableAdapter()
 		renderDndGrid(adapter, { ordering: { row: { onChange } } })
 
-		fireDrop({ axis: 'row', sourceId: '1', targetIndex: 0 })
+		fireDrop({ axis: 'row', surface: 'table', sourceId: '1', targetIndex: 0 })
 
 		expect(onChange).not.toHaveBeenCalled()
 	})

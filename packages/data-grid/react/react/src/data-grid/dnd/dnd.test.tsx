@@ -34,8 +34,8 @@ function DndProbe({ label }: { label: string }) {
 describe('the no-op adapter', () => {
 	it('hands back one inert handle, whatever the spec', () => {
 		// Arrange / Act
-		const first = noopDndAdapter.useSortableItem({ id: 'a', index: 0, axis: 'row' })
-		const second = noopDndAdapter.useSortableItem({ id: 'b', index: 7, axis: 'column' })
+		const first = noopDndAdapter.useSortableItem({ id: 'a', index: 0, axis: 'row', surface: 'table' })
+		const second = noopDndAdapter.useSortableItem({ id: 'b', index: 7, axis: 'column', surface: 'table' })
 
 		// Assert — the *same object*, so a grid with no DnD never invalidates a memo keyed on it.
 		expect(first).toBe(second)
@@ -128,7 +128,7 @@ describe('a grid whose bundle brought an adapter', () => {
 		const seen: { handle: SortableItemHandle | null } = { handle: null }
 
 		function Item() {
-			const item = useSortableItem({ id: 'row-3', index: 3, axis: 'row', disabled: false })
+			const item = useSortableItem({ id: 'row-3', index: 3, axis: 'row', surface: 'table', disabled: false })
 			useEffect(() => {
 				seen.handle = item
 			}, [item])
@@ -145,7 +145,7 @@ describe('a grid whose bundle brought an adapter', () => {
 			</BoundDataGrid>,
 		)
 
-		expect(specs).toContainEqual({ id: 'row-3', index: 3, axis: 'row', disabled: false })
+		expect(specs).toContainEqual({ id: 'row-3', index: 3, axis: 'row', surface: 'table', disabled: false })
 		expect(seen.handle).toBe(handle)
 	})
 
@@ -194,7 +194,7 @@ describe('a grid whose bundle brought an adapter', () => {
 		const { DataGrid: InnerDataGrid } = createDataGrid({ components: testComponents, dnd: inner.adapter })
 
 		function InnerItem() {
-			useSortableItem({ id: 'inner-row', index: 0, axis: 'row' })
+			useSortableItem({ id: 'inner-row', index: 0, axis: 'row', surface: 'table' })
 			return null
 		}
 
@@ -218,7 +218,7 @@ describe('a grid whose bundle brought an adapter', () => {
 
 		expect(screen.getByTestId('bundle-outer')).toHaveTextContent('enabled')
 		expect(screen.getByTestId('bundle-inner')).toHaveTextContent('enabled')
-		expect(inner.specs).toContainEqual({ id: 'inner-row', index: 0, axis: 'row' })
+		expect(inner.specs).toContainEqual({ id: 'inner-row', index: 0, axis: 'row', surface: 'table' })
 		expect(outer.specs).toEqual([])
 	})
 })
