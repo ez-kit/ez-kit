@@ -74,25 +74,18 @@ export function ColumnDragHandle({ children, 'aria-label': ariaLabel }: DataGrid
 	if (!drag) return null
 
 	/*
-	 * Destructured **after** the early return, not with the other reads above it.
+	 * Destructured **after** the early return rather than beside the hook reads above it.
 	 *
-	 * The hooks all run unconditionally, as they must; what waits is the property access. Outside a
-	 * grid — a kit's `VisibilityMenu` rendered standalone in its own unit test, which both kits do —
-	 * there is no components context, so `.core` is undefined and destructuring it throws before the
-	 * `null` this component is supposed to return. There is no drag there either, so the return is
-	 * the right answer and the crash was only about the order of two lines.
+	 * This is no longer load-bearing and the comment says so rather than claiming a hazard it fixed.
+	 * When it was written, `useGridComponents()` outside a grid returned `{} as FullGridComponents`, so
+	 * `.core` was `undefined` and this line threw `Cannot destructure property 'Button' of undefined`
+	 * before the `null` above could be reached — which is how a kit's own standalone `VisibilityMenu`
+	 * test found it. `components-context.tsx` now hands back one empty object per group, so the
+	 * destructure is safe wherever it sits.
 	 *
-	 * Safe by construction rather than by luck: `drag` is non-`null` only where a shell published it,
-	 * and every shell reads the table through `useDataGridTable()`, which throws outside a grid. So
-	 * non-`null` drag implies a grid implies a components context.
-	 *
-	 * **The root cause is one file over and is not fixed here.** `useGridComponents()` is typed
-	 * `FullGridComponents` and its context default is `{} as FullGridComponents`
-	 * (`components-context.tsx`), so *every* `useGridComponents().<group>` in this package is a
-	 * latent `Cannot destructure … of undefined` outside a grid, with no named error. The honest fix
-	 * is a dev-mode throw there, matching what `useDataGridTable` does with the same situation — and
-	 * it is deliberately not done in this phase, because it would change what a dozen existing
-	 * standalone kit-block tests do and belongs in a change of its own rather than riding along.
+	 * It stays below the return because that is the honest order for a component whose first decision
+	 * is whether it renders at all, and because `visibility-item.test.tsx` pins the behaviour either
+	 * way: rendered with no drag surface above it, this component produces nothing.
 	 */
 	const { Button } = components.core
 
