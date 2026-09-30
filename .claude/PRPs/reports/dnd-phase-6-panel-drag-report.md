@@ -72,9 +72,9 @@ by construction.
 | `pnpm typecheck`                      | ✅ clean                                                                                             |
 | `pnpm lint`                           | ✅ clean (0 warnings)                                                                                |
 | `pnpm --filter …data-grid-react test` | ✅ 937 (939 after phase 9's first task)                                                              |
-| `pnpm test`, whole repo               | ✅ every package — heroui 95, shadcn 79, core 797, docs 208, react 937; **red first**, see finding 5 |
+| `pnpm test`, whole repo               | ✅ every package — heroui 95, shadcn 79, core 797, docs 206, react 937; **red first**, see finding 5 |
 | `test:react18`                        | ✅ 937 — no new ref hazard; the panel item is a plain `div`                                          |
-| `pnpm --filter @ez-kit/docs test`     | ✅ 208 — page map, e2e slots and tree shaking unchanged                                              |
+| `pnpm --filter @ez-kit/docs test`     | ✅ 206 — page map, e2e slots and tree shaking unchanged                                              |
 | `pnpm build`                          | ✅                                                                                                   |
 | `pnpm size`                           | ✅ after three explicit raises; measured figures below                                               |
 | Registry payload                      | ✅ `@dnd-kit` count 0                                                                                |
@@ -93,6 +93,11 @@ by construction.
 | `@ez-kit/data-grid-shadcn` `visibility`  | ~2.2 kB  | **2.36 kB**  | 2.3 → **2.5 kB**   |
 | `@ez-kit/data-grid-heroui` root          | 14.94 kB | 14.98 kB     | 16.6 kB, unchanged |
 | `@ez-kit/data-grid-shadcn` root          | 17.06 kB | 17.04 kB     | 19 kB, unchanged   |
+
+**A correction to this table.** It first read `docs 208`, in two places. Measured again afterwards on
+a clean tree — the docs suite at this commit is **206**, and the only thing that moves it is the
+`registry-payload.test.ts` added later, which takes it to 210. Where 208 came from I cannot
+reconstruct, so it is corrected to the number that reproduces rather than defended.
 
 **The whole browser suite came out with no failures at all**, on two consecutive runs — including
 `filtering/chips.spec.ts:127`, which the phase-5 report recorded as failing 2/2 on a baseline tree in

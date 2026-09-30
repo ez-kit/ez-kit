@@ -44,7 +44,17 @@ library already provides.
 ## Key Hypothesis
 
 We believe a drag affordance over the existing ordering state will make reordering usable, without
-costing a byte or a required install to grids that do not use it.
+costing a byte to grids that do not use it.
+
+**Revised: "or a required install" no longer holds on the shadcn path, deliberately.** It holds on
+npm, where `@dnd-kit/react` is an optional peer of both kits and `bundledCodeOf()` asserts the library
+is unreachable from a kit root. It cannot hold in the shadcn registry, whose item format carries one
+`dependencies` list that `shadcn add` installs — there is no "optional" to express. The trade was taken
+towards shipping it, because that kit is not published to npm and a file the registry does not copy
+cannot be imported at all: withholding it did not make drag optional there, it made drag impossible.
+What a non-DnD registry consumer now pays is an install (six packages, ~1.7 MB unpacked, one line in
+their `package.json`) and **no bundle bytes**, since an unused module tree-shakes. `apps/docs/test/registry-payload.test.ts`
+holds that decision.
 
 We will know we are right when a bundle of `{ DataGrid }` from a kit root contains no `@dnd-kit`
 identifier — asserted with `bundledCodeOf()` — and the kit roots' size-limit numbers are unchanged.
@@ -83,14 +93,14 @@ newIndex)` and never consults a direction. `direction` stays informational; `dro
 
 ## Success Metrics
 
-| Metric                                       | Target                           | How Measured                                                                                                                |
-| -------------------------------------------- | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `@dnd-kit` reachable from a kit root         | never                            | `bundledCodeOf()` in `apps/docs/test/tree-shaking.test.ts` asserts the identifier is absent from a bundle of `{ DataGrid }` |
-| Bytes added to a kit root                    | 0                                | `pnpm size`, kit root entry, before/after                                                                                   |
-| Peer install required for a non-DnD consumer | none                             | fresh install without `@dnd-kit/react` builds and runs                                                                      |
-| `onChange` calls per drag                    | exactly 1                        | spec assertion                                                                                                              |
-| Existing ordering behaviour                  | unchanged                        | `ordering.test.tsx`, `row-ordering-keyboard.test.tsx`, `tree-row-ordering.test.tsx` — untouched                             |
-| Drag paths covered end to end                | rows, header, panel, virtualized | Playwright specs, both kits                                                                                                 |
+| Metric                                       | Target                                      | How Measured                                                                                                                   |
+| -------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `@dnd-kit` reachable from a kit root         | never                                       | `bundledCodeOf()` in `apps/docs/test/tree-shaking.test.ts` asserts the identifier is absent from a bundle of `{ DataGrid }`    |
+| Bytes added to a kit root                    | 0                                           | `pnpm size`, kit root entry, before/after                                                                                      |
+| Peer install required for a non-DnD consumer | none on npm; **one on the shadcn registry** | fresh npm install without `@dnd-kit/react` builds and runs; the registry item names it, asserted by `registry-payload.test.ts` |
+| `onChange` calls per drag                    | exactly 1                                   | spec assertion                                                                                                                 |
+| Existing ordering behaviour                  | unchanged                                   | `ordering.test.tsx`, `row-ordering-keyboard.test.tsx`, `tree-row-ordering.test.tsx` — untouched                                |
+| Drag paths covered end to end                | rows, header, panel, virtualized            | Playwright specs, both kits                                                                                                    |
 
 **The entry-point-set metric from r1 does not work and must not be restored.**
 `tree-shaking/bundle.ts`'s `workspaceOnly` plugin externalises every non-`@ez-kit/` specifier, so
@@ -302,14 +312,41 @@ The virtual path gets its own spec rather than being inferred from the non-virtu
 The heroui grid prerenders at build time. The drag layer is inert until hydration and authors no
 attributes that diverge between server and client.
 
-### shadcn delivery
+### shadcn delivery — decided, and not the way this section first read
 
-`blocks/dnd/` **cannot** simply be "a separate registry item excluded from the main payload":
-`scripts/generate-shadcn-registry-manifest.mjs` walks `srcDir` recursively and emits exactly one
-item (`items: [{ name, files }]`), and its only exclusion knob is `excludeTopLevel`, top-level only.
-So the phase's real scope is **a generator change** — multi-item output with per-item file sets and
-dependencies. Until that exists the alternatives are shipping `@dnd-kit` in every `shadcn add`
-(unacceptable) or no shadcn DnD.
+The original text is kept below because the reasoning still holds and only the verdict changed.
+
+> `blocks/dnd/` **cannot** simply be "a separate registry item excluded from the main payload":
+> `scripts/generate-shadcn-registry-manifest.mjs` walks `srcDir` recursively and emits exactly one
+> item (`items: [{ name, files }]`), and its only exclusion knob is `excludeTopLevel`, top-level only.
+> So the phase's real scope is **a generator change** — multi-item output with per-item file sets and
+> dependencies. Until that exists the alternatives are shipping `@dnd-kit` in every `shadcn add`
+> (unacceptable) or no shadcn DnD.
+
+**The first alternative was chosen.** `src/dnd.tsx` is in `rootFiles`, `@dnd-kit/react` is in the
+item's `dependencies` at the range the kit declares as its peer, and `shadcn add` installs it for
+everyone who takes the block.
+
+What made "unacceptable" the wrong call: the second alternative is not "no shadcn DnD _yet_", it is no
+shadcn DnD **at all** until the generator changes, because that kit is not published to npm — a file
+the registry does not copy is a file nobody can import. So the choice was never between a cost and no
+cost; it was between an install and an unavailable feature. The install is six packages and ~1.7 MB
+unpacked, plus a line in the consumer's `package.json`, and **no bundle bytes**: `dnd.tsx` is reachable
+only from a `createDataGrid({ dnd: adapter })` the consumer writes, so an unused module tree-shakes
+like any other. The adapter's own docblock — which ships verbatim — says so and says that deleting the
+file and the dependency is supported.
+
+Three things follow and are worth keeping:
+
+- **The npm path is untouched.** `@dnd-kit/react` is still an optional peer of both kits and
+  `bundledCodeOf()` still asserts it is unreachable from a kit root's bundle. This is a statement about
+  the registry payload only.
+- **It is a one-way door for anyone who installs before the generator changes.** `shadcn add` copies
+  verbatim and shadcn has no uninstall, so a second item later does not take the file or the dependency
+  back out of an existing project. That was the argument against, it was put, and it was overridden.
+- **Phase 10 is now an improvement rather than a prerequisite.** Its scope is unchanged — teach the
+  generator multi-item output, then move the adapter into its own item — but nothing is blocked on it,
+  and `apps/docs/test/registry-payload.test.ts` is what will fail when the payload's shape changes.
 
 ### Typing and lint
 
@@ -409,9 +446,14 @@ keeping the dragged row mounted while it scrolls out of the window — which nee
 drag **start**, since nothing today tells the grid which row is being held — plus `getItemKey` and the
 scrollport decision for the auto-scroller.
 
-**Phase 10 — shadcn registry.** Scope: teach the generator multi-item output, then add the DnD
-block. Success: `registry:build` output for the main `data-grid.json` carries no `@dnd-kit`
+**Phase 10 — shadcn registry.** Scope: teach the generator multi-item output, then move the adapter
+into its own item. Success: `data-grid.json` carries two items, and the main one carries no `@dnd-kit`
 reference.
+
+_Restated._ This was written as the prerequisite for shadcn drag and is no longer that: the adapter and
+its dependency ship in the single item today, so the shadcn path works. What phase 10 buys is taking
+the install back off consumers who do not want drag — see **shadcn delivery** above for why that trade
+was made in this direction, including the part it cannot undo for anyone who has already installed.
 
 **Phase 11 — Docs, e2e, release.** Scope: a composed DnD-bound grid for the docs app; the new page
 added to `DocPage` **and** classified in `PAGE_ENTRIES` (or `DELIBERATELY_UNMAPPED` with a reason —

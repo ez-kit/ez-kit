@@ -1,46 +1,104 @@
 // @vitest-environment node
-import { existsSync, readFileSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const PAYLOAD = resolve(__dirname, '../public/r/data-grid.json')
-
 /**
- * What `npx shadcn add` copies into a consumer's project.
+ * What the shadcn registry payload ships, asserted rather than trusted to a config line.
  *
- * The shadcn kit's `src` **is** the registry payload — the generator walks it and emits one item,
- * so a file added there reaches every consumer verbatim. That is fine for a block and wrong for the
- * drag adapter: `src/dnd.tsx` is the one module naming `@dnd-kit/react`, an *optional* peer, and
- * copying it would make that peer a required install for everyone who adds the grid, drag or no
- * drag. `registry.config.mjs` keeps it out through `excludeTopLevel`; this is what says so from the
- * outside.
+ * `apps/docs/public/r/data-grid.json` is what `npx shadcn add` copies **verbatim** into a consumer's
+ * project, and its one `dependencies` list is what that command installs. So every entry here is a
+ * decision about other people's repositories, and there is no uninstall: a file or a dependency that
+ * ships once stays in every project that ran the command until someone removes it by hand. That
+ * asymmetry is why this file exists — the generator's own `assertTopLevelCoverage` only checks that a
+ * top-level entry is *accounted for*, not which list it landed in, so moving a name from
+ * `excludeTopLevel` to `rootFiles` is a one-line edit with no failing check behind it.
  *
- * The generator throws on an unaccounted top-level entry, so forgetting the exclusion fails loudly.
- * What it cannot catch is the same file listed in `rootFiles` by mistake, which would include it
- * silently — and that is the case this test exists for.
+ * The drag adapter is the case that made it worth writing. It was excluded for five phases on the
+ * grounds that shipping it turns an optional peer into a required install; that trade was then taken
+ * the other way deliberately, because the shadcn path is not an npm package and a file that is not
+ * copied cannot be imported — so withholding it left that path with no way to switch drag on at all.
+ * The pair of assertions below is that decision written where a change to it fails.
+ *
+ * Note this reads the **built** payload, so it needs `registry:build` to have run — which
+ * `apps/docs`' own `build` and `dev` scripts both chain, and which the turbo `test` task's
+ * `dependsOn` covers through the same build.
  */
-describe('the shadcn registry payload', () => {
-	it('names no drag library', () => {
-		if (!existsSync(PAYLOAD)) {
-			throw new Error(`${PAYLOAD} is missing — run \`pnpm --filter @ez-kit/docs registry:build\` first.`)
-		}
 
-		expect(readFileSync(PAYLOAD, 'utf8')).not.toContain('@dnd-kit')
+const PAYLOAD = resolve(__dirname, '../public/r/data-grid.json')
+const SHADCN_PKG = resolve(__dirname, '../../../packages/data-grid/react/shadcn/package.json')
+
+type RegistryFile = { path: string; type: string; target: string }
+type Payload = { files: RegistryFile[]; dependencies: string[] }
+
+function readPayload(): Payload {
+	return JSON.parse(readFileSync(PAYLOAD, 'utf8')) as Payload
+}
+
+describe('the shadcn registry payload', () => {
+	it('ships the drag adapter, as a lib, at the path its docblock tells consumers to import', () => {
+		const { files } = readPayload()
+		const adapter = files.find((file) => file.path === 'src/dnd.tsx')
+
+		// The `@/components/data-grid/dnd` in the adapter's own docblock is this target, so the two
+		// have to move together — a consumer following that import is following this line.
+		expect(adapter).toMatchObject({ type: 'registry:lib', target: 'components/data-grid/dnd.tsx' })
 	})
 
-	it('does not ship the adapter module', () => {
-		// `data-grid.json` is the item itself — `files` at the top level. The `items` wrapper lives
-		// in `registry.json` beside it, which is the index rather than the payload.
-		const payload = JSON.parse(readFileSync(PAYLOAD, 'utf8')) as { files: { path: string }[] }
-		const paths = payload.files.map((file) => file.path)
+	it('declares the drag library at exactly the range the kit declares as its peer', () => {
+		const { dependencies } = readPayload()
+		const peerRange = (JSON.parse(readFileSync(SHADCN_PKG, 'utf8')) as { peerDependencies: Record<string, string> })
+			.peerDependencies['@dnd-kit/react']
 
-		expect(paths.filter((path) => path.endsWith('dnd.tsx'))).toEqual([])
-		// The *block* is payload-safe and must stay: it imports the port from
-		// `@ez-kit/data-grid-react`, never the drag library, so a consumer who adds the grid gets a
-		// handle that renders nothing until they bind an adapter themselves.
-		expect(paths.some((path) => path.endsWith('RowDragHandle.tsx'))).toBe(true)
+		/*
+		 * One range, two delivery paths. A registry consumer installs what this list says; an npm
+		 * consumer of the heroui kit is checked against its peer range. Letting them drift would mean
+		 * one of the two running the adapter against a version it was never measured on — and the
+		 * measurements that matter here are on shapes the adapter declares structurally rather than
+		 * imports, so a mismatch fails silently rather than at the type level.
+		 */
+		expect(dependencies).toContain(`@dnd-kit/react@${String(peerRange)}`)
+	})
+
+	it('ships no test file and no npm barrel', () => {
+		const { files } = readPayload()
+		const paths = files.map((file) => file.path)
+
+		// The barrel exists for this repo's own `workspace:*` consumption and means nothing in a
+		// consumer's project; a test file would arrive with imports they do not have.
+		expect(paths.filter((path) => path.includes('.test.'))).toEqual([])
+		expect(paths).not.toContain('src/index.ts')
+	})
+
+	it('names every dependency the copied files actually import, and nothing else', () => {
+		const { dependencies } = readPayload()
+
+		/*
+		 * A list, not a pattern: the point is that adding a dependency is visible in a diff of this
+		 * test. Each name here is installed into every consumer's project by one `shadcn add`, so the
+		 * list growing is a thing to notice rather than to discover later.
+		 */
+		// Names without their ranges: a scoped name's own leading `@` is not a separator, so the split
+		// is on the *last* one and only when something precedes it.
+		const names = dependencies.map((dependency) => {
+			const at = dependency.lastIndexOf('@')
+			return at > 0 ? dependency.slice(0, at) : dependency
+		})
+
+		expect(names.sort()).toMatchInlineSnapshot(`
+			[
+			  "@dnd-kit/react",
+			  "@ez-kit/data-grid-core",
+			  "@ez-kit/data-grid-react",
+			  "class-variance-authority",
+			  "clsx",
+			  "date-fns",
+			  "lucide-react",
+			  "radix-ui",
+			  "react-day-picker",
+			  "tailwind-merge",
+			]
+		`)
 	})
 })

@@ -14,30 +14,47 @@ import type {
 } from '@ez-kit/data-grid-react'
 
 /**
- * The shadcn kit's drag-and-drop adapter, built on `@dnd-kit/react`.
+ * This kit's drag-and-drop adapter, built on `@dnd-kit/react` — and the only module here that names
+ * a drag library.
  *
- * **This module is the only place in the repository that names a drag library, and it is imported
- * by nothing else in this package.** That is the whole delivery shape: `@dnd-kit/react` is an
- * *optional* peer, this module gets its own build entry (`dist/dnd.js`), and the kit root — which
- * is "everything by construction", since `data-grid.tsx` binds every component and every feature —
- * never reaches it. An import of `./dnd` from `index.ts` or `data-grid.tsx` would make the peer a
- * required install for every existing consumer of this kit; `apps/docs/test/tree-shaking.test.ts`
- * asserts it stays absent from a bundle of the root, and asserts it is present in a bundle of this
- * subpath so that the first assertion cannot pass for the wrong reason.
+ * **Switching drag on is one field, and this file is the only thing you import for it:**
  *
- * **The export is `adapter`, not `dndKitAdapter`.** That breaks symmetry with the sibling
- * precedent `reactRouterAdapter` (`store-persist/src/url/react-router.ts`) deliberately: a kit has
- * exactly one drag adapter and the subpath already names it, so
- * `import { adapter } from '@ez-kit/data-grid-heroui/dnd'` reads correctly at the call site. The
- * PRD's decisions log records this; do not "restore" the symmetry.
+ * ```tsx
+ * import { adapter } from '@/components/data-grid/dnd'
  *
- * Its `size-limit` entry measures **this module alone**: `size-limit` excludes peer dependencies,
- * so the number is the adapter's own code and says nothing about what drag costs a consumer who
- * installs the peer. Read it as a regression check on the adapter, not as a budget for the feature.
+ * export const { DataGrid } = createDataGrid({ components: allComponents, cellTypes, features, dnd: adapter })
+ * ```
  *
- * dnd-kit applies its own transforms as inline styles on the elements the refs land on. The
- * no-styles rule governs `@ez-kit/data-grid-react`, not a kit — and even there the test is
- * authorship, not the attribute. Nothing here writes a style or a class.
+ * Nothing else imports it. A grid built without `dnd` renders exactly the DOM it rendered before —
+ * no handle, `useDndEnabled()` false — and your bundler drops this module and the library with it,
+ * because nothing reaches them. So the cost of having the file sitting here unused is zero bytes;
+ * what it costs is the `@dnd-kit/react` line in your `package.json`, which came with the block.
+ *
+ * **Deleting it is safe and supported.** If you are never going to drag anything: remove this file
+ * and drop `@dnd-kit/react` from your dependencies. Nothing else in the block references either.
+ *
+ * **The export is `adapter`, not `dndKitAdapter`** — a kit has exactly one, and the module name
+ * already says what it is.
+ *
+ * dnd-kit applies its own transforms as inline styles on the elements the refs below land on. This
+ * file authors no style and no class of its own.
+ *
+ * ---
+ *
+ * The rest of this docblock is for whoever edits the file. The two translation helpers below —
+ * `toDropEvent` and `toDragOverEvent` — are where every refusal lives, and each refusal is a real
+ * event the library delivers rather than a defensive check; their own docblocks say which. Two
+ * measurements are worth keeping in view before changing anything:
+ *
+ * - **The index space of one axis and surface must be dense, `0..n-1`.** `OptimisticSortingPlugin`
+ *   sorts each group's sortables by index and asserts the i-th has `index === i`, bailing out of
+ *   everything otherwise — and its loop spans *every* group, so one broken space stops the others
+ *   too. The failure is silent: handles work, the pointer moves, nothing commits.
+ * - **The registered id must be unique across the whole manager.** dnd-kit's registry is keyed by
+ *   id, and a second registration under an existing id replaces the first. See `toSortableId`.
+ *
+ * Both are the reason `type` / `accept` / `group` and the id carry the axis *and* the surface
+ * rather than the axis alone.
  */
 
 /** The one character that joins an axis to a surface. Neither closed set contains it. */

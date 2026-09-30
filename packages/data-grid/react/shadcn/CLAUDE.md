@@ -40,9 +40,9 @@ file exists in production only because `apps/docs`' `build` script chains `regis
 `next build`; `apps/docs/vercel.json` pins that as the deploy's `buildCommand` so a dashboard
 default can't silently drop it and 404 the install URL with a green build.
 `components/ui/**`, `blocks/**`, `hooks/**`,
-`lib/**`, `data-grid.tsx` and `styles.css` are copied byte-for-byte into the consumer's project
+`lib/**`, `data-grid.tsx`, `dnd.tsx` and `styles.css` are copied byte-for-byte into the consumer's project
 (imports are rewritten from this package's `@grid-shadcn/*` alias to `@/*` as part of that build —
-see `apps/docs/scripts/build-registry.mjs`). `index.ts`/`index.test.ts` are excluded — they exist
+see `apps/docs/scripts/build-registry.mjs`). `dnd.tsx` is the drag adapter, and the one copied file that brings a dependency of its own (`@dnd-kit/react`, in the item's `dependencies`, so `shadcn add` installs it for everyone) — the root `AGENTS.md` records why that trade was taken and `apps/docs/test/registry-payload.test.ts` holds it. `index.ts`/`index.test.ts` are excluded — they exist
 only for this repo's internal `workspace:*` consumption (`apps/docs`), not for registry consumers.
 
 ## Layering
