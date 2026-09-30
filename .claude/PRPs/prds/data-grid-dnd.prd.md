@@ -394,6 +394,21 @@ no English string literal in the drag path; a manual check of a full keyboard dr
 **Phase 9 — Virtualization.** Scope: the four requirements. Success: a spec drags a row from index
 5 to index 400 in a virtualized grid.
 
+_Partly done._ Requirement 1 — "`index` is the real row index, not the position in the window" —
+turned out to be a **live defect in the non-virtual grid as well**, and is fixed and released
+separately (`fix(data-grid): count a row's drag index in the rows the body renders`). The row
+registered TanStack's `row.index`, which is a position among a row's parent's children in the core
+model: it broke density on page two of a paginated grid, under any column filter, and with tree rows,
+so row dragging silently did nothing in all three. `getRowDropOrder` is now the one list the row and
+`GridDndProvider` share, and it is the rows the body renders in render order rather than the row
+model — see its docblock for why the pinned bands force that.
+
+Requirements 2–4 are **not** done, and the virtual path therefore still does not drag: a window
+renders a slice, so the rows outside it register nothing and the space has gaps. What remains is
+keeping the dragged row mounted while it scrolls out of the window — which needs the port to report a
+drag **start**, since nothing today tells the grid which row is being held — plus `getItemKey` and the
+scrollport decision for the auto-scroller.
+
 **Phase 10 — shadcn registry.** Scope: teach the generator multi-item output, then add the DnD
 block. Success: `registry:build` output for the main `data-grid.json` carries no `@dnd-kit`
 reference.
