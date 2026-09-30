@@ -14,6 +14,7 @@ import { GridComponentsProvider, useGridComponents } from '../components-context
 import { guardComponents } from '../components-guard'
 import { GridFactoryDefaultsProvider } from '../data-grid-options-context'
 import { useDataGrid, type UseDataGridConfig } from '../use-data-grid'
+import { getRowDropOrder } from '../utils/row-drop-order'
 import { getVisibilityPanelColumns } from '../utils/visibility-panel-columns'
 import { getVisualLeafColumns } from '../utils/visual-column-order'
 
@@ -331,7 +332,9 @@ const COLUMN_DROP_SCOPE: Record<DragSurface, ColumnMoveScope> = {
  * The header's is the **visual** leaf order: `getVisibleLeafColumns()` would be the wrong list,
  * since it keeps the declaration order and ignores pinning, and the two sides have to agree or a
  * drop lands on a different column than the pointer did. The panel's is `getVisibilityPanelColumns`,
- * declaration order including hidden columns, because a hidden column has no visual position at all.
+ * which is the `columnOrder` order with the hidden columns left in — **not** the declaration order,
+ * which `getAllLeafColumns()` only falls back to when that slice is empty. A hidden column has no
+ * visual position at all, which is why the panel cannot use the header's list.
  */
 function columnDropOrder<TRow extends object>(
 	table: DataTable<GridFeatures, TRow>,
@@ -372,8 +375,15 @@ function GridDndProvider({ children }: { children: ReactNode }) {
 					 * target `dropRow` wants. This mapping is here rather than in the adapter because
 					 * the row model is here — see `DndDropEvent` for why an index is what an adapter
 					 * can honestly report.
+					 *
+					 * Through `getRowDropOrder` rather than reading the row model inline, because
+					 * `<DataGrid.Row>` registers its index from the same helper and the two lists must
+					 * be one list. They were not: the row registered `row.index`, a position among its
+					 * parent's children, which disagrees with this one under pagination, a filter or
+					 * tree rows — and a disagreement here is a drop landing on a row the pointer never
+					 * passed. That helper's docblock has the account.
 					 */
-					const target = table.getRowModel().rows[event.targetIndex]
+					const target = getRowDropOrder(table)[event.targetIndex]
 					if (!target || target.id === event.sourceId) return
 					table.ordering.dropRow(event.sourceId, target.id)
 					return

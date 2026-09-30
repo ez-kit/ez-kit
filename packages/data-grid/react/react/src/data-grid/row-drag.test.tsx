@@ -99,6 +99,48 @@ describe('the row registers itself with the adapter', () => {
 		expect(specFor('2')).toEqual({ id: '2', index: 1, axis: 'row', surface: 'table', disabled: false })
 	})
 
+	/**
+	 * The index is a position in the **row model**, not `row.index` — and the difference is the whole
+	 * defect this case exists for.
+	 *
+	 * TanStack's `row.index` is a row's place among its parent's children in the *core* model, so on a
+	 * later page it starts at the page offset: two rows on page three register `4` and `5`, which is
+	 * not the `0..n-1` the drag library requires per group. It bails out of everything silently — the
+	 * handle works, the pointer moves, nothing displaces and nothing commits — so nothing but an
+	 * assertion on the registered numbers can catch it.
+	 */
+	it('counts from zero on a later page, where row.index does not', () => {
+		const { adapter, specs } = makeDrivableAdapter()
+		const data = Array.from({ length: 6 }, (_, i) => ({ id: i + 1, name: `Row ${String(i + 1)}`, age: 20 + i }))
+		// `initialState.pagination` alone: writing `pagination.pageSize` beside it is the mistake
+		// `createTable` warns about in development.
+		renderDndGrid(adapter, { data, initialState: { pagination: { pageIndex: 2, pageSize: 2 } } })
+
+		expect(specs.filter((spec) => spec.axis === 'row').map((spec) => [spec.id, spec.index])).toEqual([
+			['5', 0],
+			['6', 1],
+		])
+	})
+
+	/**
+	 * The same defect through a different door: a filter keeps each surviving row's original
+	 * `row.index`, so the registered run has **gaps** rather than an offset. Same silent death.
+	 */
+	it('counts from zero under a filter, where row.index leaves gaps', () => {
+		const { adapter, specs } = makeDrivableAdapter()
+		const data = [
+			{ id: 1, name: 'Alice', age: 30 },
+			{ id: 2, name: 'Bob', age: 24 },
+			{ id: 3, name: 'Alfred', age: 41 },
+		]
+		renderDndGrid(adapter, { data, initialState: { columnFilters: [{ id: 'name', value: 'Al' }] } })
+
+		expect(specs.filter((spec) => spec.axis === 'row').map((spec) => [spec.id, spec.index])).toEqual([
+			['1', 0],
+			['3', 1],
+		])
+	})
+
 	it('disables every row while row ordering is off', () => {
 		const { adapter, specs } = makeDrivableAdapter()
 		renderDndGrid(adapter, { ordering: { row: false } })

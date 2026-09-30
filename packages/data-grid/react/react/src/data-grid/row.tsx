@@ -4,6 +4,7 @@ import { forwardRef, useMemo } from 'react'
 import { useGridComponents } from '../components-context'
 import { joinClassNames } from '../utils/class-names'
 import { mergeRefs } from '../utils/merge-refs'
+import { getRowDropOrder } from '../utils/row-drop-order'
 import { isTextEntryTarget } from '../utils/text-entry-target'
 
 import { useAriaRowIndexAttrs } from './aria-row-index'
@@ -240,16 +241,35 @@ function DataGridRowImpl<TRow extends object = ErasedRow>(
 	 * That split is the PRD's boundary model: locked items are not draggable, and the rest is
 	 * refused at the commit rather than signalled mid-drag.
 	 *
-	 * `row.index` is the row's place in the current row model, which is what `DragSpec.index`
-	 * documents and requires. It is **not** a position within a rendered window; a virtualized body
-	 * renders a slice, and passing the slice-relative number would land every drag in a scrolled
-	 * grid somewhere else.
+	 * The index is this row's **position in the row model**, from `getRowDropOrder` — not `row.index`,
+	 * which is a row's place among its parent's children in the *core* model and agrees with a
+	 * rendered position only on page one of a flat, unfiltered grid. On page two the indices start at
+	 * the page offset; under a filter the run has gaps; with tree rows a sub-row duplicates a
+	 * top-level one. Each breaks the density `DragSpec.index` requires, and the failure is silent.
+	 * That helper's docblock has the account, and `GridDndProvider` resolves a drop against the same
+	 * list.
+	 *
+	 * Gated on the adapter first, which is a performance requirement rather than tidiness: the lookup
+	 * scans the list once per row, so a grid with no drag — which is most grids — must not pay for it.
+	 * The same *performance* gate `header-cell.tsx` puts in front of its own; what that file does with
+	 * a `-1` is deliberately not the same, and the note below says why.
+	 *
+	 * **The `0` fallback is a known-imperfect last resort, and the honest account of it is this.** The
+	 * list covers every row the built-in bodies render — the pinned bands included, which is why it is
+	 * not `getRowModel().rows` — so `-1` needs a hand-written body rendering a `<DataGrid.Row>` for a
+	 * row none of those lists contains. Such a row registers at `0`, and if another row already holds
+	 * `0` that is a **duplicate**, which kills the axis exactly as a gap would. A negative index would
+	 * be worse still. The clean answer is the header's: `header-cell.tsx` renders a *different
+	 * component* for a non-participant so no sortable registers at all, and doing that here means
+	 * splitting this component in two, which is a larger change than this fix. Recorded rather than
+	 * papered over.
 	 */
 	const isDndEnabled = useDndEnabled()
+	const dropIndex = isDndEnabled ? getRowDropOrder(table).findIndex((candidate) => candidate.id === row.id) : 0
 	const isDraggable = isDndEnabled && canMove && !isGroupRow
 	const sortable = useSortableItem({
 		id: row.id,
-		index: row.index,
+		index: Math.max(dropIndex, 0),
 		axis: DragAxis.Row,
 		surface: DragSurface.Table,
 		disabled: !isDraggable,
