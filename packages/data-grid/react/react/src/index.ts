@@ -160,10 +160,21 @@ export type {
 // affordance-that-does-nothing the gate exists to prevent. Switching drag off is `dnd: undefined`.
 export { DndAdapterProvider, useDndEnabled, useSortableItem } from './data-grid/dnd'
 // What a kit or an application needs to write a drag handle of its own, in place of
-// `<DataGrid.RowDragHandle />`: the row publishes its activator ref here.
+// `<DataGrid.RowDragHandle />` / `<DataGrid.ColumnDragHandle />`: each axis publishes its
+// activator ref here. The row's read takes an id because a cell renderer sits outside the row's
+// subtree in the HeroUI kit; a header cell's body does not, so the column's takes none.
 export { useRowDrag } from './data-grid/row-drag-registry'
 export type { RowDragValue } from './data-grid/row-drag-registry'
-export type { DndAdapter, DndDropEvent, DndProviderProps, DragSpec, SortableItemHandle } from './data-grid/dnd'
+export { useColumnDrag } from './data-grid/column-drag'
+export type { ColumnDragValue } from './data-grid/column-drag'
+export type {
+	DndAdapter,
+	DndDragOverEvent,
+	DndDropEvent,
+	DndProviderProps,
+	DragSpec,
+	SortableItemHandle,
+} from './data-grid/dnd'
 
 // UI-kit contract (tiers + full-support marker + feature map)
 export { GridFeature, FEATURE_COMPONENTS, COMPONENT_FEATURE } from './contract'
@@ -249,6 +260,7 @@ export { EditingModal as DataGridEditingModal } from './data-grid/editing-modal'
 export { LoadingBody as DataGridLoadingBody } from './data-grid/loading-body'
 export { EmptyStateRow as DataGridEmptyStateRow } from './data-grid/empty-state-row'
 export { NoResultsRow as DataGridNoResultsRow } from './data-grid/no-results-row'
+export { ColumnDragHandle as DataGridColumnDragHandle } from './data-grid/column-drag-handle'
 export { RowDragHandle as DataGridRowDragHandle } from './data-grid/row-drag-handle'
 export type {
 	DataGridProps,
@@ -267,6 +279,7 @@ export type { DataGridFooterRowProps, DataGridFooterRowRenderArgs } from './data
 export type { DataGridFooterCellProps, DataGridFooterCellRenderArgs } from './data-grid/footer-cell'
 export type { DataGridRowProps, DataGridRowRenderArgs } from './data-grid/row'
 export type { DataGridRowDragHandleProps } from './data-grid/row-drag-handle'
+export type { DataGridColumnDragHandleProps } from './data-grid/column-drag-handle'
 export type { DataGridCellProps, DataGridCellRenderArgs } from './data-grid/cell'
 export type { DataGridPaginationProps, DataGridPaginationRenderArgs } from './data-grid/pagination'
 export type { DataGridSortMenuTriggerProps, DataGridSortMenuTriggerRenderArgs } from './data-grid/sort-menu-trigger'

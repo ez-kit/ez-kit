@@ -2,9 +2,9 @@ import { useSortable } from '@dnd-kit/react/sortable'
 import { render } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { adapter, toDropEvent } from './dnd'
+import { adapter, toDragOverEvent, toDropEvent } from './dnd'
 
-import type { SortableDragEndEvent } from './dnd'
+import type { SortableDragEndEvent, SortableDragOverEvent } from './dnd'
 import type * as SortableModule from '@dnd-kit/react/sortable'
 import type { SortableItemHandle } from '@ez-kit/data-grid-react'
 
@@ -65,7 +65,10 @@ function renderItem(spec: Parameters<typeof adapter.useSortableItem>[0]): { hand
 		return <div ref={handle.ref} />
 	}
 	render(
-		<adapter.Provider onDrop={() => {}}>
+		<adapter.Provider
+			onDrop={() => {}}
+			canDrop={() => true}
+		>
 			<Item />
 		</adapter.Provider>,
 	)
@@ -95,9 +98,10 @@ describe('the adapter satisfies the port', () => {
 	/*
 	 * What the adapter actually decides is the *input* it builds; nothing downstream of
 	 * `useSortable` is observable in jsdom, so the returned handle looks identical whatever the
-	 * spec said. These two cases are the only place `type` / `accept` / `disabled` are pinned.
+	 * spec said. These two cases are the only place `type` / `accept` / `group` / `disabled` are
+	 * pinned.
 	 */
-	it('maps the spec onto the sortable input, with the axis on both type and accept', () => {
+	it('maps the spec onto the sortable input, with the axis on type, accept and group', () => {
 		renderItem({ id: 'col-1', index: 2, axis: 'column', disabled: true })
 
 		expect(useSortableSpy.mock.calls[0]?.[0]).toEqual({
@@ -105,8 +109,20 @@ describe('the adapter satisfies the port', () => {
 			index: 2,
 			type: 'column',
 			accept: 'column',
+			group: 'column',
 			disabled: true,
 		})
+	})
+
+	/*
+	 * `group` has its own case because it is the one member whose absence is invisible in a grid
+	 * with a single axis — which every grid was until header dragging existed. It partitions the
+	 * index space `OptimisticSortingPlugin` asserts is dense per group; unset, rows and columns
+	 * share one space and both axes go dead. See the comment on it in `dnd.tsx`.
+	 */
+	it('groups an item by its axis, so the two orders keep separate index spaces', () => {
+		renderItem({ id: 'row-1', index: 0, axis: 'row' })
+		expect(useSortableSpy.mock.calls[0]?.[0]).toMatchObject({ group: 'row' })
 	})
 
 	it('omits disabled rather than passing it as undefined', () => {
@@ -240,5 +256,50 @@ describe('translating a completed drag', () => {
 		)
 
 		expect(drop).toBeNull()
+	})
+})
+
+/**
+ * `toDragOverEvent` — the predicate side of the adapter, and the half that keeps a refused drop from
+ * ever happening.
+ *
+ * A hover is invisible in jsdom, so these exercise the pure translation directly. What the provider
+ * does with the answer — `event.preventDefault()`, which this library's `setDropTarget` reads as
+ * "not a landing place" — is the browser spec's business.
+ */
+describe('toDragOverEvent', () => {
+	const dragOver = (
+		source: { id: string; type?: string } | null,
+		target: { id: string; type?: string } | null,
+	): SortableDragOverEvent => ({
+		operation: { source, target },
+		preventDefault: () => {},
+	})
+
+	it('reports both ends as ids, which is what the core canDrop helpers take', () => {
+		expect(toDragOverEvent(dragOver({ id: 'name', type: 'column' }, { id: 'salary', type: 'column' }))).toEqual({
+			axis: 'column',
+			sourceId: 'name',
+			targetId: 'salary',
+		})
+	})
+
+	/*
+	 * The case that would break every legal drag if it were treated as a refusal: after the first
+	 * displacement the source occupies its destination, so the collision resolves to the source
+	 * itself. There is no question to ask, and asking it would answer "no".
+	 */
+	it('asks nothing when the source is hovering itself', () => {
+		expect(toDragOverEvent(dragOver({ id: 'name', type: 'column' }, { id: 'name', type: 'column' }))).toBeNull()
+	})
+
+	it('asks nothing when either end is missing', () => {
+		expect(toDragOverEvent(dragOver(null, { id: 'name', type: 'column' }))).toBeNull()
+		expect(toDragOverEvent(dragOver({ id: 'name', type: 'column' }, null))).toBeNull()
+	})
+
+	it('asks nothing about a type this adapter did not set, on either end', () => {
+		expect(toDragOverEvent(dragOver({ id: 'x', type: 'trash' }, { id: 'y', type: 'trash' }))).toBeNull()
+		expect(toDragOverEvent(dragOver({ id: 'name', type: 'column' }, { id: '1', type: 'row' }))).toBeNull()
 	})
 })

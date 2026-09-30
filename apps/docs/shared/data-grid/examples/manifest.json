@@ -982,5 +982,21 @@
 		"groupLabel": "Ordering",
 		"sourceFile": "components/row-drag.tsx",
 		"exportName": "RowDragExample"
+	},
+	{
+		"id": "column-drag",
+		"label": "Column drag and drop",
+		"group": "ordering",
+		"groupLabel": "Ordering",
+		"sourceFile": "components/column-drag.tsx",
+		"exportName": "ColumnDragExample"
+	},
+	{
+		"id": "column-drag-rtl",
+		"label": "Column drag (RTL)",
+		"group": "ordering",
+		"groupLabel": "Ordering",
+		"sourceFile": "components/column-drag.tsx",
+		"exportName": "ColumnDragRtlExample"
 	}
 ]

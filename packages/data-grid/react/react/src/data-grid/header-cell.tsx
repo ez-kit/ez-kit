@@ -14,11 +14,15 @@ import { ColumnSortDirection, SortDirection } from '../types'
 import { filtersRows } from '../utils/filters-rows'
 import { getCommonPinStyles } from '../utils/pin-styles'
 import { isTextEntryTarget } from '../utils/text-entry-target'
+import { getVisualLeafColumns } from '../utils/visual-column-order'
 
 import { getAlignAttrs } from './align-attrs'
 import { ariaSortAttrs } from './aria-state'
+import { ColumnDragShell } from './column-drag'
+import { ColumnDragHandle } from './column-drag-handle'
 import { buildColumnMenuSections } from './column-menu-sections'
 import { HeaderCellProvider } from './composition-context'
+import { useDndEnabled } from './dnd'
 import { flexRender } from './flex-render'
 import { HeaderExtras, HeaderMain } from './header-slots'
 import { useCellNavigationProps } from './keyboard-navigation'
@@ -26,10 +30,11 @@ import { renderFilterInput } from './render-filter-input'
 import { useDataGridTable } from './table-context'
 import { VisuallyHidden } from './visually-hidden'
 
+import type { HeaderThProps } from './column-drag'
 import type { ErasedRow, DataTable, GridFeatures } from '../types'
 import type { FormColumnMeta } from '@ez-kit/data-grid-core'
 import type { Column, Header } from '@tanstack/table-core'
-import type { KeyboardEvent, ReactNode } from 'react'
+import type { KeyboardEvent, ReactElement, ReactNode } from 'react'
 
 /**
  * What a `<DataGrid.HeaderCell>` render function receives.
@@ -75,6 +80,25 @@ export type DataGridHeaderCellRenderArgs<TRow extends object = ErasedRow> = {
 	filterPopover: ReactNode
 	/** The resize handle, or `null` when the column cannot be resized. */
 	resizer: ReactNode
+	/**
+	 * The column's drag handle, ready to place — or `null` when this column cannot be dragged (no
+	 * adapter bound with `createDataGrid({ dnd })`, column ordering off, a system column,
+	 * `ordering: false`, or a header that is not a leaf).
+	 *
+	 * An element rather than a ref, exactly as {@link sortTrigger} and {@link resizer} are: a call
+	 * site decides *where* it goes, never how it is wired. `<DataGrid.ColumnDragHandle />` is the
+	 * same handle reached from a header cell body that reads `useDataGridHeaderCell()` instead.
+	 *
+	 * The resizer stays its own activator — a drag starts from this element and nothing else, which
+	 * is what keeps a pointer on the resizer resizing and a keyboard pickup away from the sort
+	 * affordance.
+	 *
+	 * There is no `isDragging` beside it, unlike a row's render arguments: the sortable lives in the
+	 * shell that renders the `<th>`, not in this component, so the boolean is not knowable here. The
+	 * `<th>` carries `data-column-dragging`, and `useColumnDrag()` is the public read — see
+	 * `column-drag.tsx` for why the shell owns it.
+	 */
+	dragHandle: ReactNode
 }
 
 export type DataGridHeaderCellProps<TRow extends object = ErasedRow> = {
@@ -164,6 +188,69 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 	// inside the `canResize ? … : null` subtree, which a grid without the feature never enters.
 	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
 	const canResize = header.column.getCanResize?.() ?? false
+	const isDndEnabled = useDndEnabled()
+
+	const colPinDef = meta?.pinning
+	const isStaticPin = typeof colPinDef === 'object' && colPinDef.side !== undefined
+	const isPinningDisabled = colPinDef === false
+	const isMenuEligible = !meta?.isSystemColumn && !header.isPlaceholder
+
+	// One flag for all three affordances the feature has — the menu pair, the keyboard shortcut and
+	// the drag handle — so they can never disagree about whether this column may move. Read above
+	// the selection-column branch below because the drag registration needs it there too: a system
+	// column takes part in the drag's index space as a *disabled* item, never as an absent one.
+	const canMove = table.grid.ordering.column && isMenuEligible && meta?.ordering !== false
+
+	/**
+	 * Whether this header cell registers a draggable, and at which index.
+	 *
+	 * Only the bottom header row's real leaf headers take part: a column group has sub-headers, and
+	 * a placeholder stands in for a leaf that renders its real header in another row — neither is a
+	 * member of the leaf order the index counts in. An item registered outside that order breaks the
+	 * order's **density**, which silently kills the drag for the whole axis; `column-drag.tsx` has
+	 * the measurement.
+	 *
+	 * The order is the *visual* one, because that is the order the header rows render in and the
+	 * order a drop has to be resolved against. `getVisibleLeafColumns()` keeps the declaration order
+	 * and ignores pinning — see `getVisualLeafColumns`' docblock.
+	 *
+	 * A `-1` means this cell was rendered for a column the visual leaf list does not contain, which
+	 * a hand-written `<DataGrid.Header>` can do. Such a cell stays out of the drag rather than
+	 * registering a negative index.
+	 */
+	const isLeafHeader = header.subHeaders.length === 0 && !header.isPlaceholder
+	/*
+	 * Gated on `isDndEnabled` first, and that is a performance requirement rather than tidiness:
+	 * `getVisualLeafColumns` builds a fresh three-part array and this scans it, once per header
+	 * cell — O(n²) per header render. A grid with no drag adapter must not pay that, which is most
+	 * grids. Skipping it also skips mounting the shell below, so such a grid renders the bare `Th`
+	 * it rendered before this phase; the phase-2 identical-DOM test compares against exactly that.
+	 */
+	const visualIndex =
+		isDndEnabled && isLeafHeader
+			? getVisualLeafColumns(table).findIndex((column) => column.id === header.column.id)
+			: -1
+	const isDragParticipant = visualIndex >= 0
+
+	/**
+	 * The `<th>`, through the drag shell when this cell takes part and bare when it does not.
+	 *
+	 * A closure rather than a branch at each return, because both returns below — the selection
+	 * column's and the composed one — need the same choice made the same way.
+	 */
+	const renderTh = (thProps: HeaderThProps, inner: ReactNode): ReactElement =>
+		isDragParticipant ? (
+			<ColumnDragShell
+				columnId={header.column.id}
+				index={visualIndex}
+				disabled={!canMove}
+				thProps={thProps}
+			>
+				{inner}
+			</ColumnDragShell>
+		) : (
+			<Th {...thProps}>{inner}</Th>
+		)
 
 	// Selection column: a select-all checkbox, and none of the rest.
 	if (header.column.id === SELECTION_COLUMN_ID) {
@@ -172,18 +259,26 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 		// Under `selection.multi: false` only one row can be selected at a time, so a select-all
 		// control has nothing to select — the header cell stays empty but keeps its width.
 		const canSelectAll = table.options.enableMultiRowSelection !== false
-		return (
-			<Th
-				{...navigationProps}
-				data-slot='th'
-				data-slot-selection-th='true'
-				data-column-id={header.column.id}
-				colSpan={header.colSpan}
-				style={pinVars}
-				pinned={pinned}
-				{...(pinned ? { 'data-pinned': pinned } : {})}
-				{...getAlignAttrs(meta, 'header')}
-			>
+		/*
+		 * Routed through `renderTh` like the composed cell, and for one reason: the selection column
+		 * is a visible leaf, so it **occupies an index** in the drag's order. Rendering a bare `Th`
+		 * here would leave a hole at index 0 of nearly every grid, and the drag would silently stop
+		 * working — `column-drag.tsx` has the measurement. It registers disabled, since a system
+		 * column is never movable.
+		 */
+		return renderTh(
+			{
+				...navigationProps,
+				'data-slot': 'th',
+				'data-slot-selection-th': 'true',
+				'data-column-id': header.column.id,
+				colSpan: header.colSpan,
+				style: pinVars,
+				pinned,
+				...(pinned ? { 'data-pinned': pinned } : {}),
+				...getAlignAttrs(meta, 'header'),
+			},
+			<>
 				{/* An explicit `selection.column.header` replaces the select-all checkbox — the
 				    only thing worth putting there instead, and what a grid with
 				    `selection.multi: false` (which renders no checkbox anyway) wants. */}
@@ -201,7 +296,7 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 						aria-label={table.grid.messages.selection.selectAll}
 					/>
 				)}
-			</Th>
+			</>,
 		)
 	}
 
@@ -236,17 +331,8 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 			}
 		: undefined
 
-	const colPinDef = meta?.pinning
-	const isStaticPin = typeof colPinDef === 'object' && colPinDef.side !== undefined
-	const isPinningDisabled = colPinDef === false
-	const isMenuEligible = !meta?.isSystemColumn && !header.isPlaceholder
-
 	const draftSortIndex = computeDraftSortIndex(table, header.column.id)
 	const draftSortAttrs = draftSortIndex >= 0 ? { 'data-draft-sorting': String(draftSortIndex) } : {}
-
-	// One flag for both affordances the feature has — the menu pair and the keyboard shortcut —
-	// so they can never disagree about whether this column may move.
-	const canMove = table.grid.ordering.column && isMenuEligible && meta?.ordering !== false
 
 	/**
 	 * `Alt+ArrowLeft` / `Alt+ArrowRight` move the column one step.
@@ -440,31 +526,34 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 		filter: filterContent,
 		filterPopover,
 		resizer,
+		// Built only where a drag is actually available, so a call site placing `dragHandle`
+		// unconditionally renders nothing in a grid without one. The component would return `null`
+		// by itself too — this keeps the arg honest as well as the DOM.
+		dragHandle: isDragParticipant && canMove ? <ColumnDragHandle /> : null,
 	}
 
 	const content = children === undefined ? defaultContent : typeof children === 'function' ? children(args) : children
 
-	return (
-		<Th
-			{...navigationProps}
-			data-slot='th'
-			data-column-id={header.column.id}
-			colSpan={header.colSpan}
-			style={pinVars}
-			pinned={pinned}
-			{...(onHeaderKeyDown ? { onKeyDown: onHeaderKeyDown } : {})}
-			{...(canMove ? { 'data-movable': 'true' } : {})}
-			{...(meta?.headerClassName !== undefined ? { className: meta.headerClassName } : {})}
-			{...(pinned ? { 'data-pinned': pinned } : {})}
-			{...getAlignAttrs(meta, 'header')}
-			{...(canResize ? { 'data-resizable': 'true' } : {})}
-			{...ariaSortAttrs(canSort, sortDirection)}
-			{...draftSortAttrs}
-		>
-			<HeaderCellProvider value={args}>
-				{content}
-				{resizer}
-			</HeaderCellProvider>
-		</Th>
+	return renderTh(
+		{
+			...navigationProps,
+			'data-slot': 'th',
+			'data-column-id': header.column.id,
+			colSpan: header.colSpan,
+			style: pinVars,
+			pinned,
+			...(onHeaderKeyDown ? { onKeyDown: onHeaderKeyDown } : {}),
+			...(canMove ? { 'data-movable': 'true' } : {}),
+			...(meta?.headerClassName !== undefined ? { className: meta.headerClassName } : {}),
+			...(pinned ? { 'data-pinned': pinned } : {}),
+			...getAlignAttrs(meta, 'header'),
+			...(canResize ? { 'data-resizable': 'true' } : {}),
+			...ariaSortAttrs(canSort, sortDirection),
+			...draftSortAttrs,
+		},
+		<HeaderCellProvider value={args}>
+			{content}
+			{resizer}
+		</HeaderCellProvider>,
 	)
 }

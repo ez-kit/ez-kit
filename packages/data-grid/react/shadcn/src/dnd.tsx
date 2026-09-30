@@ -4,7 +4,14 @@ import { DragDropProvider } from '@dnd-kit/react'
 import { useSortable } from '@dnd-kit/react/sortable'
 import { DragAxis } from '@ez-kit/data-grid-react'
 
-import type { DndAdapter, DndDropEvent, DndProviderProps, DragSpec, SortableItemHandle } from '@ez-kit/data-grid-react'
+import type {
+	DndAdapter,
+	DndDragOverEvent,
+	DndDropEvent,
+	DndProviderProps,
+	DragSpec,
+	SortableItemHandle,
+} from '@ez-kit/data-grid-react'
 
 /**
  * The shadcn kit's drag-and-drop adapter, built on `@dnd-kit/react`.
@@ -116,9 +123,75 @@ export function toDropEvent(event: SortableDragEndEvent): DndDropEvent | null {
 	return { axis: axis as DndDropEvent['axis'], sourceId: String(source.id), targetIndex: index }
 }
 
-function DndProvider({ onDrop, children }: DndProviderProps) {
+/**
+ * The shape this adapter reads out of dnd-kit's `dragover` event, and the one member of it that
+ * matters beyond the two ends: `preventDefault`.
+ *
+ * Declared structurally for the reason {@link SortableDragEndEvent} is — the real type is generic
+ * over four parameters and reaching it means naming `@dnd-kit/abstract`, a transitive dependency
+ * this package does not declare.
+ */
+export type SortableDragOverEvent = {
+	operation: {
+		source: { id: string | number; type?: string | number | symbol } | null
+		target: { id: string | number; type?: string | number | symbol } | null
+	}
+	preventDefault: () => void
+}
+
+/**
+ * Translate a hover into the port's {@link DndDragOverEvent}, or `null` when there is no question
+ * to ask.
+ *
+ * `null` for three reasons, and the third is the one worth stating: **the source hovering itself is
+ * normal, not an error.** Once the sortable has displaced its neighbours the source occupies the
+ * place it is going, so the collision resolves to it — the same degeneracy that made an id-based
+ * *drop* target unusable (see {@link toDropEvent}). Treating that as a refusal would prevent every
+ * legal step after the first.
+ *
+ * A named function rather than an inline closure so the unit tests can exercise it directly, which
+ * is the only way to reach it: nothing about a hover is observable in jsdom.
+ */
+export function toDragOverEvent(event: SortableDragOverEvent): DndDragOverEvent | null {
+	const { source, target } = event.operation
+	if (!source || !target) return null
+
+	const axis = source.type
+	if (typeof axis !== 'string' || !DRAG_AXES.includes(axis)) return null
+	if (target.type !== axis) return null
+	if (source.id === target.id) return null
+
+	return { axis: axis as DndDragOverEvent['axis'], sourceId: String(source.id), targetId: String(target.id) }
+}
+
+function DndProvider({ onDrop, canDrop, children }: DndProviderProps) {
 	return (
 		<DragDropProvider
+			/*
+			 * `preventDefault()` is how this library is told a hover is not a landing place, and it is
+			 * a first-class answer rather than a trick: `DragActions.setDropTarget` dispatches this
+			 * event and **returns** `event.defaultPrevented`, its own JSDoc calling that "true if the
+			 * drop was prevented".
+			 *
+			 * **What it suppresses is the displacement, not the target.** Read rather than assumed:
+			 * `setDropTarget` assigns `dragOperation.targetIdentifier` *before* dispatching, and its
+			 * only caller — the collision notifier — ignores the flag it gets back. So the illegal
+			 * item remains the operation's target for as long as the pointer is over it; what does
+			 * not happen is the sortable plugin's `move()` and the index reassignment that comes with
+			 * it, because that arm reads `defaultPrevented` first. That is all the grid needs — see
+			 * `DndProviderProps.canDrop` for why undoing a displacement afterwards is not available —
+			 * but it is also why the grid's commit-time guards still earn their place, and why a kit
+			 * that one day styles a drop target would need more than this.
+			 *
+			 * Synchronous on purpose: the plugin reads `defaultPrevented` in a microtask queued from
+			 * the same dispatch, so a handler that deferred its answer would arrive too late. Which
+			 * listener runs first does not matter, since both run inside the dispatch and the
+			 * microtask reads the flag after them.
+			 */
+			onDragOver={(event) => {
+				const over = toDragOverEvent(event as SortableDragOverEvent)
+				if (over && !canDrop(over)) event.preventDefault()
+			}}
 			onDragEnd={(event) => {
 				const drop = toDropEvent(event as SortableDragEndEvent)
 				if (drop) onDrop(drop)
@@ -139,6 +212,20 @@ function useSortableItem(spec: DragSpec): SortableItemHandle {
 		// composite `group` key that would have been the alternative.
 		type: spec.axis,
 		accept: spec.axis,
+		/*
+		 * And the axis is the sortable's **group**, which is a different job from the two above:
+		 * `type` / `accept` gate collisions, `group` partitions the *index space*. Measured in
+		 * `@dnd-kit/dom@0.1.21`'s `OptimisticSortingPlugin`: it sorts each group's registered
+		 * sortables by index and asserts the i-th has `index === i`. Left unset, every sortable in
+		 * a grid lands in one group — so rows at 0..7 beside columns at 0..4 fail that assertion at
+		 * the second position, the plugin returns early, and **both** axes stop displacing and stop
+		 * committing (`sortable.index` is never updated, so `toDropEvent` sees no movement).
+		 *
+		 * This is **not** the composite `group` key the PRD removed in r3: that one encoded the pin
+		 * band and `parentId` to enforce boundaries mid-drag, and boundaries are still refused at
+		 * the commit. This carries the axis and nothing else.
+		 */
+		group: spec.axis,
 		// `exactOptionalPropertyTypes`: omitted is not the same as `undefined`, and dnd-kit's types
 		// are not written under that flag. This is the boundary where that mismatch is paid for.
 		...(spec.disabled !== undefined ? { disabled: spec.disabled } : {}),

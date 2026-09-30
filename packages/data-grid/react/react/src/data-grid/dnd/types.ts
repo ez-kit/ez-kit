@@ -43,6 +43,15 @@ export type DragSpec = {
 	 *
 	 * Stated here because a virtualized body renders a slice: passing the slice-relative index
 	 * would make every drag in a scrolled grid land somewhere else.
+	 *
+	 * **And the indices of one axis must be dense: exactly `0..n-1`, no gap and no duplicate.**
+	 * That is a requirement of the library behind the adapter rather than of this port, but it is
+	 * recorded here because a caller has no other way to learn it and the failure is silent.
+	 * Measured in `@dnd-kit/dom@0.1.21`'s `OptimisticSortingPlugin`: it sorts each group's
+	 * registered items by index and then asserts the i-th has `index === i`, bailing out entirely
+	 * otherwise — which costs the visual displacement **and** the commit, since the item's index is
+	 * then never updated and the adapter sees no movement to report. So an item that cannot be
+	 * dragged is registered `disabled` at its real index, never left out.
 	 */
 	index: number
 	/** Which order this item belongs to. Items of different axes never collide. */
@@ -117,21 +126,61 @@ export type DndDropEvent = {
 }
 
 /**
- * What a grid hands its adapter's provider.
+ * A **prospective** drop: the item is still held, and the pointer is over `targetId`.
  *
- * @remarks Not yet in use. The grid root does not mount {@link DndAdapter.Provider} and nothing
- * calls {@link DndProviderProps.onDrop} until the commit phase lands — so an adapter written
- * against this release will have its hook called and its provider ignored. The contract is
- * published now so a kit's adapter can be written and typed against it, not because the grid
- * drives it yet.
+ * Both ends are ids rather than indices, which is the opposite of {@link DndDropEvent} and is not
+ * an inconsistency. That event reports where an item **landed**, by which time optimistic sorting
+ * has made the ids degenerate; this one is asked *before* any displacement, so the two ends are
+ * genuinely two different items and the ids are the honest currency — the same currency the core
+ * `canDrop*` helpers take.
+ */
+export type DndDragOverEvent = {
+	axis: DragAxis
+	/** The item being held. */
+	sourceId: string
+	/**
+	 * The item the pointer is over.
+	 *
+	 * It **may** be the source itself, and usually is once a displacement has happened: the source
+	 * then occupies its destination and the collision resolves to it. An adapter is welcome to
+	 * filter that case out, and both in-repo ones do, but it is not obliged to — the grid answers
+	 * `true` for a self-hover, because a refusal there would stop every legal step after the first.
+	 */
+	targetId: string
+}
+
+/**
+ * What a grid hands its adapter's provider.
  */
 export type DndProviderProps = {
 	/**
-	 * Called once per completed drop, never during one. A refused drop — across a pin band, across
-	 * a parent, onto a locked item — still arrives here and is rejected by the core drop helpers,
-	 * which is where boundaries are enforced.
+	 * Called once per completed drop, never during one.
+	 *
+	 * A drop the grid cannot honour still arrives here and is refused by the core drop helpers,
+	 * which remain the place boundaries are enforced. {@link DndProviderProps.canDrop} exists so
+	 * that refusal is normally unreachable, not so it can be skipped.
 	 */
 	onDrop: (event: DndDropEvent) => void
+	/**
+	 * Whether the held item may land on the item it is currently over. Called while the drag is in
+	 * flight, as often as the pointer changes target.
+	 *
+	 * **An adapter that ignores this is incorrect, not merely less helpful.** A drag library with
+	 * optimistic sorting displaces the neighbours *and reassigns its own indices* as the pointer
+	 * moves; if the grid then declines the drop at release, nothing in React state changed, so no
+	 * re-render pushes those indices back — the library's index space and the grid's disagree from
+	 * then on, the header or body is left visibly permuted, and the next drag on that axis commits
+	 * nothing. Measured, in `@dnd-kit/dom@0.1.21`: its `dragend` restore path runs only for a
+	 * **cancelled** operation, and a refused drop is not a cancelled one.
+	 *
+	 * So the refusal has to happen before the displacement rather than after it, which is what this
+	 * predicate is for. The same question `onDrop`'s commit asks, asked earlier — an adapter passes
+	 * the answer to whatever its library offers for rejecting a hover.
+	 *
+	 * Returning `false` does not end the drag. The item stays where it legally got to, and a release
+	 * there commits that position; it is only the illegal step that does not happen.
+	 */
+	canDrop: (event: DndDragOverEvent) => boolean
 	children: ReactNode
 }
 
@@ -149,7 +198,6 @@ export type DndAdapter = {
 	/**
 	 * Mounts the drag context for one grid. Receives the grid's commit callback.
 	 *
-	 * @remarks Declared, not yet mounted — see {@link DndProviderProps}.
 	 */
 	Provider: ComponentType<DndProviderProps>
 	/** Registers one item. A hook — same call order every render, like any other. */

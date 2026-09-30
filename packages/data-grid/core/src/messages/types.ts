@@ -238,6 +238,8 @@ export type GridMessages = {
 	ordering: {
 		/** Accessible name of a row's drag handle. */
 		dragRow: string
+		/** Accessible name of a column header's drag handle. Same standing as {@link dragRow}. */
+		dragColumn: string
 	}
 	visibility: {
 		/** Accessible name of the toolbar's visibility trigger. */

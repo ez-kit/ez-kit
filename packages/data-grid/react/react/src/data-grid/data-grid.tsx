@@ -1,4 +1,11 @@
-import { CreatingMode, EditingMode, featureConfig, isFeatureEnabled } from '@ez-kit/data-grid-core'
+import {
+	canDropColumn,
+	CreatingMode,
+	dropColumn,
+	EditingMode,
+	featureConfig,
+	isFeatureEnabled,
+} from '@ez-kit/data-grid-core'
 import { useCallback, useRef } from 'react'
 
 import { CellTypesProvider, mergeCellTypes } from '../cell-types-context'
@@ -6,6 +13,7 @@ import { GridComponentsProvider, useGridComponents } from '../components-context
 import { guardComponents } from '../components-guard'
 import { GridFactoryDefaultsProvider } from '../data-grid-options-context'
 import { useDataGrid, type UseDataGridConfig } from '../use-data-grid'
+import { getVisualLeafColumns } from '../utils/visual-column-order'
 
 import { ActionBar, buildSelectionBarArgs } from './action-bar'
 import { ActiveFiltersBar } from './active-filters-bar'
@@ -13,6 +21,7 @@ import { Body } from './body'
 import { BottomBar } from './bottom-bar'
 import { DataGridCell } from './cell'
 import { ClearFiltersButton } from './clear-filters-button'
+import { ColumnDragHandle } from './column-drag-handle'
 import { ColumnFilter } from './column-filter'
 import { ComponentGuard } from './component-guard'
 import { CreateTrigger } from './create-trigger'
@@ -47,7 +56,7 @@ import { VisibilityTrigger } from './visibility-trigger'
 import type { CellTypeRegistry } from '../cell-types-context'
 import type { GridComponents } from '../contract'
 import type { DataTable, ErasedRow, GridFeatures } from '../types'
-import type { DndDropEvent } from './dnd'
+import type { DndDragOverEvent, DndDropEvent } from './dnd'
 import type {
 	BulkConfirmationConfig,
 	ConfirmationConfig,
@@ -313,11 +322,11 @@ function GridDndProvider({ children }: { children: ReactNode }) {
 	const onDrop = useCallback(
 		(event: DndDropEvent) => {
 			/*
-			 * Rows only, deliberately and visibly. The column axis arrives once header dragging
-			 * exists and commits through `dropColumn`, which returns a whole `ColumnOrderState`
-			 * rather than a move — a different call, not a wider branch here. Writing this as an
-			 * explicit check rather than an `if (axis === Row)` with an implicit fallthrough keeps
-			 * the gap legible.
+			 * One arm per axis, and the two commit through **different calls** rather than through
+			 * one widened branch: `dropRow` describes a move and `table.ordering` performs it, while
+			 * `dropColumn` returns a whole `ColumnOrderState` this layer writes with
+			 * `setColumnOrder`. Written as a `switch` over the closed set so a third axis would be a
+			 * compile error rather than a silent fallthrough.
 			 */
 			switch (event.axis) {
 				case DragAxis.Row: {
@@ -332,8 +341,92 @@ function GridDndProvider({ children }: { children: ReactNode }) {
 					table.ordering.dropRow(event.sourceId, target.id)
 					return
 				}
-				case DragAxis.Column:
+				case DragAxis.Column: {
+					/*
+					 * The same mapping the row arm makes, against the list the header registered its
+					 * items in: the **visual** leaf order. `getVisibleLeafColumns()` would be the
+					 * wrong list — it keeps the declaration order and ignores pinning — and the two
+					 * sides have to agree or a drop lands on a different column than the pointer did.
+					 */
+					const target = getVisualLeafColumns(table)[event.targetIndex]
+					if (!target || target.id === event.sourceId) return
+					/*
+					 * Asked before committing, because `dropColumn` answers a refusal with the
+					 * current order — indistinguishable from a legal drop that changed nothing — so
+					 * an unguarded call would fire `onChange` on a drop across a header group or a
+					 * pin band. `drop.ts` states this as the reason `canDropColumn` exists at all.
+					 *
+					 * **This is now a backstop, not the enforcement point.** `canDrop` refuses the
+					 * illegal *step*, so a drag cannot arrive here across a boundary in the first
+					 * place. The two are not literally the same question, which is why this stays:
+					 * `canDrop` is asked about a target **id** while this resolves one from an
+					 * index, and the mapping could in principle disagree. If it ever does, the
+					 * refusal costs what a refusal used to cost everywhere — the drag library's
+					 * indices are left permuted with nothing to restore them, per
+					 * `DndProviderProps.canDrop`. Closing that last gap would mean answering the
+					 * adapter from here too (a `void | false` return on `onDrop`, so it can restore
+					 * its own state); it is deliberately not built, because the reachable case is
+					 * gone and no residual one has been demonstrated.
+					 *
+					 * The scope is `ColumnMoveScope.Visible`, `dropColumn`'s default and the right
+					 * one here: a hidden column renders no header cell, so it can be neither end of
+					 * a drop on this surface. The column panel is the same axis with the other scope
+					 * and an index space of its own.
+					 */
+					if (!canDropColumn(table, event.sourceId, target.id)) return
+					table.setColumnOrder(dropColumn(table, event.sourceId, target.id))
 					return
+				}
+			}
+		},
+		[table],
+	)
+
+	/**
+	 * Whether the held item may land where the pointer currently is — the same question `onDrop`'s
+	 * commit asks, asked while the drag is still in flight.
+	 *
+	 * It exists because refusing at release is not enough: an adapter's library displaces the
+	 * neighbours and reassigns its own indices as the pointer moves, and a refusal writes no state,
+	 * so nothing re-renders to push the real indices back. The two index spaces then disagree, the
+	 * grid is left visibly permuted, and the next drag on that axis commits nothing.
+	 * `DndProviderProps.canDrop` has the measurement. The commit's own guards stay where they are —
+	 * this makes their refusal unreachable, it does not replace it.
+	 *
+	 * Both arms are optional-called, for the reason every feature read on a render path is: a grid
+	 * may register the drag adapter and not the ordering feature for one axis, in which case there
+	 * is nothing draggable on it and nothing to answer.
+	 *
+	 * **One caveat, narrow and worth naming rather than engineering around.** This answers from the
+	 * table's state at hover time and the commit answers from it at release, so a change in between
+	 * — an async load that hides or repins a column — can make the two disagree, and that one drag
+	 * gets the old behaviour: the step is allowed, the commit refuses it, and the library's indices
+	 * are left permuted. Nothing short of freezing the column model for the drag's duration closes
+	 * it, which costs more than it buys.
+	 */
+	const canDrop = useCallback(
+		(event: DndDragOverEvent): boolean => {
+			/*
+			 * A self-hover is normal and is allowed here rather than left to the adapter to filter.
+			 * Once a sortable has displaced its first neighbour the source occupies its destination,
+			 * so the collision resolves to the source on nearly every later frame; and every
+			 * `canDrop*` helper answers `false` for a drop onto oneself, quite correctly, since as a
+			 * *drop* it is nothing. Asking them would therefore stop every legal step after the
+			 * first, silently.
+			 *
+			 * Both in-repo adapters already filter it, and keep doing so — the reason belongs in
+			 * their prose. But the grid is the side that knows a self-hover means "no question", and
+			 * an invariant that every future adapter has to remember, with total and silent failure
+			 * as the penalty for forgetting, does not belong distributed across them.
+			 */
+			if (event.sourceId === event.targetId) return true
+
+			switch (event.axis) {
+				case DragAxis.Row:
+					// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+					return table.ordering?.canDropRow?.(event.sourceId, event.targetId) ?? false
+				case DragAxis.Column:
+					return canDropColumn(table, event.sourceId, event.targetId)
 			}
 		},
 		[table],
@@ -341,7 +434,14 @@ function GridDndProvider({ children }: { children: ReactNode }) {
 
 	if (!adapter) return <>{children}</>
 
-	return <adapter.Provider onDrop={onDrop}>{children}</adapter.Provider>
+	return (
+		<adapter.Provider
+			onDrop={onDrop}
+			canDrop={canDrop}
+		>
+			{children}
+		</adapter.Provider>
+	)
 }
 
 function DataGridControlled<TFeatures extends TableFeatures, TRow extends object>({
@@ -576,6 +676,7 @@ export type DataGridStatics = {
 	LoadingBody: typeof LoadingBody
 	EmptyStateRow: typeof EmptyStateRow
 	NoResultsRow: typeof NoResultsRow
+	ColumnDragHandle: typeof ColumnDragHandle
 	RowDragHandle: typeof RowDragHandle
 }
 
@@ -647,5 +748,6 @@ export const DataGrid: DataGridType = /* @__PURE__ */ Object.assign(DataGridRoot
 	LoadingBody,
 	EmptyStateRow,
 	NoResultsRow,
+	ColumnDragHandle,
 	RowDragHandle,
 })

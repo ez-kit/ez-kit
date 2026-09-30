@@ -37,3 +37,5 @@ export * from '@ez-kit/data-grid-react'
 // The row drag handle, wearing this kit's glyph. The shared control authors no visual; this
 // wrapper supplies the grip, as `blocks/resizing/Resizer.tsx` supplies the resizer's cursor.
 export { RowDragHandle } from './blocks/ordering/RowDragHandle'
+// The column header's drag handle, wearing this kit's glyph. Same control, the other axis.
+export { ColumnDragHandle } from './blocks/ordering/ColumnDragHandle'

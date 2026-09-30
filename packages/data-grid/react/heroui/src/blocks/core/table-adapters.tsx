@@ -183,7 +183,15 @@ export const Tr = forwardRef<HTMLTableRowElement, TrProps>(function Tr({ childre
 	)
 })
 
-export function Th({ pinned, className, ...props }: ThProps) {
+// `forwardRef` for the same reason as {@link Thead} and {@link Tr}: `ThProps` declares the ref
+// because a drag library is handed the `<th>` through it to move a column.
+//
+// Note this kit's chain is React 19 only, one level below here: HeroUI's own `Table.Column` is a
+// plain function component that destructures `ref` out of its props, which is React 19 semantics.
+// That is not a defect to work around — `@heroui/react` declares `react: >=19.0.0` — but it does
+// mean the shared package's React 18 support does not extend through this kit, and the reason to
+// write `forwardRef` here is the contract rather than a React 18 path that works end to end.
+export const Th = forwardRef<HTMLTableCellElement, ThProps>(function Th({ pinned, className, ...props }, ref) {
 	const { rowHeaderId } = useContext(HeaderContext)
 	const propsWithData = props as ThProps & { 'data-column-id'?: string }
 	const columnId = propsWithData['data-column-id']
@@ -197,9 +205,10 @@ export function Th({ pinned, className, ...props }: ThProps) {
 			{...(columnId !== undefined ? { id: columnId } : {})}
 			className={mergedClassName}
 			{...(isRowHeader ? { isRowHeader: true } : {})}
+			ref={ref}
 		/>
 	)
-}
+})
 
 export function Td({ pinned, className, style, ...props }: TdProps) {
 	// Rows are CSS grids (see styles.css "grid column model"), and `colSpan` means nothing to a

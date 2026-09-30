@@ -8,4 +8,11 @@ export {
 } from './context'
 export { noopDndAdapter } from './noop'
 export { DragAxis } from './types'
-export type { DndAdapter, DndDropEvent, DndProviderProps, DragSpec, SortableItemHandle } from './types'
+export type {
+	DndAdapter,
+	DndDragOverEvent,
+	DndDropEvent,
+	DndProviderProps,
+	DragSpec,
+	SortableItemHandle,
+} from './types'

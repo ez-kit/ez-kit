@@ -25,20 +25,30 @@ const PAGE_ROWS = 10
 const EDITING_CELL_ATTR = 'data-editing-cell'
 
 /**
- * Marks the row being dragged. While one exists, this model stands down entirely.
+ * Marks the item being dragged, on either axis. While one exists, this model stands down entirely.
  *
  * Two keys are at stake and the second is the reason. The arrows would fight the drag sensor for
  * the same presses; and **`Escape` must reach the drag layer**, which cancels the gesture itself
  * and reports it as cancelled — the grid taking `Escape` here would leave a drag in flight with
  * nothing left to end it. So this is not a place to write a cancel; it is a place to write none.
  *
+ * **Both attributes, and the column one is not decoration.** A header cell carries
+ * `role="columnheader"`, which is in this model's own `CELL_SELECTOR`, and a drag handle is a button
+ * *inside* that cell — so a column drag puts focus on a descendant of a cell the model navigates.
+ * With only the row attribute listed, `Escape` mid-drag took the "inside the cell's own controls"
+ * branch below: the drag still cancelled, because the drag layer listens on the document and
+ * `preventDefault()` does not stop propagation, but the grid pulled focus off the handle while it
+ * did. The claim above was simply false for that axis until both names were here.
+ *
  * A DOM read rather than a subscription, exactly as {@link EDITING_CELL_ATTR} is and for the same
  * reason: this handler runs on every keystroke in the grid and must not re-render anything to
  * answer the question.
  *
- * `data-row-dragging`, not `data-dragging`: React Aria's `Row` owns the latter and overwrites it.
+ * `data-row-dragging` / `data-column-dragging` rather than a plain `data-dragging`: React Aria's
+ * `Row` owns that one and overwrites it. Its `Column` does not, and the column name matches its
+ * sibling for consistency rather than out of necessity — `column-drag.tsx` records the measurement.
  */
-const DRAGGING_ATTR = 'data-row-dragging'
+const DRAGGING_SELECTOR = '[data-row-dragging], [data-column-dragging]'
 
 /** What a grid with the focus model spreads onto the kit's `Table`. */
 export type GridNavigationProps = {
@@ -203,9 +213,9 @@ export function useGridKeyboardNavigation({ enabled, rootRef, scrollRef, directi
 			if (event.altKey) return
 			const root = rootRef.current
 			if (!root) return
-			// A drag is in flight: every key belongs to the drag layer until it ends. See
-			// `DRAGGING_ATTR` for why `Escape` in particular must not be taken here.
-			if (root.querySelector(`[${DRAGGING_ATTR}]`)) return
+			// A drag is in flight, on either axis: every key belongs to the drag layer until it ends.
+			// See `DRAGGING_SELECTOR` for why `Escape` in particular must not be taken here.
+			if (root.querySelector(DRAGGING_SELECTOR)) return
 			const cell = cellOf(event.target)
 			if (!cell) return
 

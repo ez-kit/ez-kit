@@ -545,7 +545,7 @@
 		},
 		{
 			"path": "dist/dnd.js",
-			"limit": "560 B",
+			"limit": "660 B",
 			"ignore": [
 				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",

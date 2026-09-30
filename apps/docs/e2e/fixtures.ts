@@ -21,7 +21,16 @@ export type GridFixture = {
 	open: (exampleId: string) => Promise<void>
 	/** Every body row, in render order. */
 	rows: () => Locator
-	/** A column's header cell. */
+	/**
+	 * A column's header cell.
+	 *
+	 * **Not unique on a grid that mixes grouped and top-level columns.** A top-level leaf beside
+	 * column groups renders twice — its real header in the leaf row and a placeholder spanning the
+	 * rows above it — and both carry the same `data-column-id`, so this locator matches two elements
+	 * and strict mode rejects it. Either group every leaf (what the drag examples do) or narrow with
+	 * `.first()` at the call site; the fixture does not choose for you, since which of the two a spec
+	 * wants depends on what it is asserting.
+	 */
 	header: (columnId: string) => Locator
 	/** A column's sort trigger — the element carrying `data-sort-direction`. */
 	sortTrigger: (columnId: string) => Locator

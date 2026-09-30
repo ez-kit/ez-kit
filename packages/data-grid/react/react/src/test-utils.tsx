@@ -85,9 +85,18 @@ const TestTr = forwardRef<HTMLTableRowElement, TrProps>(function TestTr(props, r
 		/>
 	)
 })
-function TestTh(props: ThProps) {
-	return <th {...props} />
-}
+// `forwardRef` for the same reason as {@link TestTr}, and both kits' `Th`: `ThProps` declares the
+// ref because a drag library is handed the `<th>` through it, and on React 18 `ref` never reaches a
+// function component's props — so a plain spread drops it, silently, on exactly the React version
+// `test:react18` exists to cover.
+const TestTh = forwardRef<HTMLTableCellElement, ThProps>(function TestTh(props, ref) {
+	return (
+		<th
+			{...props}
+			ref={ref}
+		/>
+	)
+})
 function TestTd(props: TdProps) {
 	return <td {...props} />
 }

@@ -623,3 +623,16 @@ tr[data-group-row='true'] {
 	position: relative;
 	z-index: 2;
 }
+
+/*
+ * A column being dragged.
+ *
+ * The header-cell twin of the row rule above, and the same discipline: opacity plus a lift, never a
+ * layout property. The neighbours part by the library's transform and must not be pushed by
+ * anything here.
+ */
+[data-slot='th'][data-column-dragging] {
+	opacity: 0.6;
+	position: relative;
+	z-index: 2;
+}

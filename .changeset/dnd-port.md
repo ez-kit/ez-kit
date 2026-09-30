@@ -13,7 +13,3 @@ behind, and `useSortableItem` hands back an inert handle. Each grid root publish
 
 This package names no drag library and takes no new dependency; the mechanics arrive from a kit
 subpath as an optional peer.
-
-The port is not end-to-end yet: the grid root does not mount an adapter's `Provider` and nothing
-calls `onDrop`, so an adapter written against this release has its hook called and its provider
-ignored. The contract ships now so a kit's adapter can be written and typed against it.

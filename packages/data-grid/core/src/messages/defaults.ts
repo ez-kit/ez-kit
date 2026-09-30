@@ -92,6 +92,7 @@ export const defaultMessages: GridMessages = {
 	},
 	ordering: {
 		dragRow: 'Reorder row',
+		dragColumn: 'Reorder column',
 	},
 	visibility: {
 		menu: 'Column visibility',
