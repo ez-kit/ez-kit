@@ -115,6 +115,7 @@ export const DocPage = {
 	ColumnsGroupedHeaders: 'content/docs/data-grid/columns/grouped-headers.mdx',
 	ColumnsOrdering: 'content/docs/data-grid/columns/ordering.mdx',
 	RowOrdering: 'content/docs/data-grid/row-ordering.mdx',
+	DragAndDrop: 'content/docs/data-grid/drag-and-drop.mdx',
 	PinningApi: 'content/docs/data-grid/pinning/api.mdx',
 	PinningColumns: 'content/docs/data-grid/pinning/columns.mdx',
 	ColumnsVisibility: 'content/docs/data-grid/columns/visibility.mdx',
@@ -736,6 +737,25 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		page: DocPage.RowOrdering,
 		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 1 }],
 		nonOptionTables: [],
+	},
+	{
+		/*
+		 * No option table, and that is the page being consistent rather than thin: drag adds no option
+		 * of its own. It is switched on by `createDataGrid({ dnd: adapter })`, a field of
+		 * `CreateDataGridOptions` — and every field of that type is documented in prose and a code
+		 * fence, never a table (`keyboardNavigation`, its sibling, has exactly one line in
+		 * `accessibility.mdx`). The behaviour a reader configures is `ordering`, which the two ordering
+		 * pages already table.
+		 */
+		page: DocPage.DragAndDrop,
+		optionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'The three surfaces',
+				reason:
+					'The first column names a drag surface; the rest are the handle to render, the state slice it writes and the list it counts in — none is a key of any config type.',
+			},
+		],
 	},
 	{
 		page: DocPage.Localization,

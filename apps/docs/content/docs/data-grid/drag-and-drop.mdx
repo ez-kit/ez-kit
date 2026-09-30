@@ -1,0 +1,209 @@
+---
+title: Drag and drop
+description: Drag a row, a column header, or a row of the column panel — a fourth affordance over the same ordering state.
+---
+
+The grid already reorders rows and columns three ways: the [column menu](/docs/data-grid/columns/ordering),
+the [row action menu](/docs/data-grid/row-ordering), and `Alt+Arrow` on either. All three move **one
+step at a time**, which nobody uses to move a column six places. Drag is the fourth, over the same
+`rowOrder` and `columnOrder` state, committing through the same rules.
+
+It is **opt-in and composed** — there is no `<DataGrid dnd>` prop and neither kit's prebuilt grid
+carries it, so a grid that does not name it pays nothing.
+
+## Switching it on
+
+### shadcn
+
+The adapter arrives with the block: `npx shadcn add` copies it to
+`components/data-grid/dnd.tsx` and installs `@dnd-kit/react` alongside the rest.
+
+```tsx title="src/lib/data-grid.tsx"
+import { allDataGridFeatures } from '@ez-kit/data-grid-core/features/all'
+import { createDataGrid } from '@ez-kit/data-grid-react'
+
+import { allComponents, cellTypes } from '@/components/data-grid/data-grid'
+import { adapter } from '@/components/data-grid/dnd'
+
+export const { DataGrid } = createDataGrid({
+	components: allComponents,
+	cellTypes,
+	features: allDataGridFeatures,
+	dnd: adapter,
+})
+```
+
+If you are never going to drag anything, delete `dnd.tsx` and drop `@dnd-kit/react` — nothing else
+in the block references either. (The install comes with every copy of the block because a shadcn
+registry item has one dependency list and no way to mark part of it optional; the file itself costs
+no bundle bytes unused.)
+
+### HeroUI
+
+`@dnd-kit/react` is an **optional peer** — install it only if you want drag:
+
+```bash
+pnpm add @dnd-kit/react
+```
+
+```tsx title="src/lib/data-grid.tsx"
+import { allDataGridFeatures } from '@ez-kit/data-grid-core/features/all'
+import { allComponents, cellTypes } from '@ez-kit/data-grid-heroui'
+import { adapter } from '@ez-kit/data-grid-heroui/dnd'
+import { createDataGrid } from '@ez-kit/data-grid-react'
+
+export const { DataGrid } = createDataGrid({
+	components: allComponents,
+	cellTypes,
+	features: allDataGridFeatures,
+	dnd: adapter,
+})
+```
+
+The peer range is pinned to `0.1.x` on purpose: the adapter reads shapes of that library which a
+minor release before its own 1.0 is free to rename, and a version mismatch would otherwise fail
+silently rather than at install.
+
+### Then, either way
+
+Turn the axis on as you always would — drag adds no option of its own:
+
+```tsx
+<DataGrid
+	features={features}
+	data={data}
+	columns={columns}
+	ordering={{ row: true, column: { visibilityMenu: true } }}
+/>
+```
+
+## Rows
+
+<DataGridDocsExample exampleId='row-drag' />
+
+A row is dragged by a handle you place, in a column of its own:
+
+```tsx
+const columns = createColumns<Employee>([
+	{ id: 'drag', header: '', width: 48, align: 'center', cell: { component: () => <RowDragHandle /> } },
+	// …
+])
+```
+
+`RowDragHandle` from your kit wears the kit's grip; `<DataGrid.RowDragHandle />` is the same control
+with no glyph, for a call site that supplies its own content. It needs no arguments — it finds the
+row it is in.
+
+**Set `getRowId`.** The order is recorded as row ids, and without one a row falls back to its index,
+which changes the moment it moves. The same requirement [row ordering](/docs/data-grid/row-ordering#getrowid-is-not-optional-here)
+has, for the same reason.
+
+## Column headers
+
+<DataGridDocsExample exampleId='column-drag' />
+
+The header cell's render function hands you a `dragHandle` beside the parts you already know:
+
+```tsx
+<DataGrid.HeaderCell header={header}>
+	{({ dragHandle, sortTrigger, menu }) => (
+		<DataGrid.HeaderMain>
+			{dragHandle}
+			{sortTrigger}
+			{menu}
+		</DataGrid.HeaderMain>
+	)}
+</DataGrid.HeaderCell>
+```
+
+Or place your kit's `<ColumnDragHandle />` inside the cell's body, which is what the example above
+does — same handle, same sortable, one reads the context the other publishes.
+
+**Not inside `column.header`.** That content renders within the sort trigger's `<button>`, and a
+button inside a button is invalid HTML. Compose `<DataGrid.HeaderCell>` and put the handle outside
+`sortTrigger`, exactly as the sort-trigger docs already ask.
+
+The resizer is untouched: a drag starts from the handle element and nothing else, so the two
+gestures on one header cell cannot be confused for each other.
+
+## The column panel
+
+<DataGridDocsExample exampleId='column-panel-drag' />
+
+Under [`ordering.column.visibilityMenu`](/docs/data-grid/columns/ordering#in-the-column-panel) the
+Columns toggle becomes a column panel, and its rows are draggable with nothing to compose:
+
+```tsx
+<DataGrid.Toolbar end={<DataGrid.VisibilityTrigger />} />
+```
+
+The panel is the **same axis** as the header — one `columnOrder` — and differs in one way that
+matters: it lists the hidden columns, so a hidden column can be dragged there and has no header cell
+to drag at all. In the example `joinedAt` starts hidden; move it in the panel and the visible order
+rearranges around it.
+
+A kit rendering its own panel composes the row from `<DataGrid.VisibilityItem>`. One obligation
+comes with that: render one item per column the panel lists, all of them. Filtering the list — a
+search box over a long panel — leaves a gap in the drag's index space, and a gap stops panel
+dragging with no error. Filter what a row renders, not which rows exist.
+
+## The three surfaces
+
+| Surface       | Handle                                                      | Writes        | Scope                                                     |
+| ------------- | ----------------------------------------------------------- | ------------- | --------------------------------------------------------- |
+| Row           | `<RowDragHandle />` in a column's `cell.component`          | `rowOrder`    | The rows the body renders, pinned bands included          |
+| Column header | `dragHandle` from `<DataGrid.HeaderCell>`, or the component | `columnOrder` | The **visible** leaf columns, in the order they are drawn |
+| Column panel  | the component, inside `<DataGrid.VisibilityItem>`           | `columnOrder` | **Every** listed leaf column, hidden ones included        |
+
+## What a drag will not do
+
+The same boundaries the one-step affordances honour — drag adds none and removes none:
+
+- **Cross a pin band.** A move from the centre into a pinned edge would read as a pin, not a reorder.
+- **Leave a header group.** A leaf moves among its siblings.
+- **Leave its own subtree**, with [tree data](/docs/data-grid/expanding/tree).
+- **Move a locked item.** A system column, a column declared `ordering: false`, a synthetic group
+  row: these render no handle at all, rather than one that does nothing.
+- **Move anything while a sort or a grouping is applied**, on the row axis — both compute the order
+  from the data, so a manual arrangement would be recomputed away.
+
+**An illegal drop does not snap back.** The refused step simply never happens: the item travels as
+far as its own group or band allows and commits there, which is also what was on screen the whole
+time. Release outside the grid, or press `Escape`, and nothing is written.
+
+One completed drag produces one change — the neighbours part by transform while you drag and no
+state is touched until you let go.
+
+## RTL
+
+<DataGridDocsExample exampleId='column-drag-rtl' />
+
+The column axis is logical, so under `dir="rtl"` the later a column sits in the order, the further
+left it is drawn — and dragging leftwards moves a column later. Pass `direction='rtl'` to the grid
+beside the `dir` on an ancestor, the same pair [column pinning](/docs/data-grid/pinning/columns) needs.
+
+## Not built yet
+
+Stated rather than left to be discovered:
+
+- **Virtualized rows do not drag.** A [virtualized](/docs/data-grid/virtualization) body renders a
+  window, so the rows outside it register nothing and the gesture does nothing. Column headers and
+  the panel are unaffected.
+- **No keyboard drag, and no announcements.** The pointer is the only way to drag today; the
+  keyboard path to reordering is `Alt+Arrow` and the menus, which is what satisfies the keyboard
+  equivalent a drag handle needs. A drag in flight is not announced to a screen reader yet.
+- **Two HeroUI-specific limits**, both in [Kit parity](/docs/data-grid/kit-parity): a header column
+  cannot be dragged while the column panel is open, and `Escape` during a panel drag can leave the
+  order changed without reporting it.
+
+## See also
+
+- [Column ordering](/docs/data-grid/columns/ordering) — the menu and `Alt+Arrow` on the same state
+- [Row ordering](/docs/data-grid/row-ordering) — the row axis, its two modes, and `getRowId`
+- [Column visibility](/docs/data-grid/columns/visibility) — the toggle the panel is built from
+- [Kit parity](/docs/data-grid/kit-parity) — what differs between the two kits
+
+## Source
+
+- `@ez-kit/data-grid-react` — [`src/data-grid/dnd/types.ts`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/dnd/types.ts), the port a kit's adapter implements
+- `@ez-kit/data-grid-core` — [`src/features/ordering/drop.ts`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/core/src/features/ordering/drop.ts), where every refusal lives

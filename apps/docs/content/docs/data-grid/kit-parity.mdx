@@ -13,16 +13,19 @@ limitation: please [open an issue](https://github.com/ez-kit/ez-kit/issues/new).
 
 ## Known divergences
 
-| Capability                                                        | shadcn | HeroUI       | Why                                                                     |
-| ----------------------------------------------------------------- | ------ | ------------ | ----------------------------------------------------------------------- |
-| [Grouped headers](/docs/data-grid/columns/grouped-headers)        | Full   | Renders flat | React Aria removed nested columns from its collection before GA         |
-| [`Alt+Arrow` column reordering](/docs/data-grid/columns/ordering) | Works  | Menu only    | React Aria's column spreads its own props last, overwriting the handler |
-| [`Alt+Arrow` row reordering](/docs/data-grid/row-ordering)        | Works  | Menu only    | React Aria's row owns focus inside the grid and forwards no key handler |
+| Capability                                                                  | shadcn                          | HeroUI                      | Why                                                                                       |
+| --------------------------------------------------------------------------- | ------------------------------- | --------------------------- | ----------------------------------------------------------------------------------------- |
+| [Grouped headers](/docs/data-grid/columns/grouped-headers)                  | Full                            | Renders flat                | React Aria removed nested columns from its collection before GA                           |
+| [`Alt+Arrow` column reordering](/docs/data-grid/columns/ordering)           | Works                           | Menu only                   | React Aria's column spreads its own props last, overwriting the handler                   |
+| [`Alt+Arrow` row reordering](/docs/data-grid/row-ordering)                  | Works                           | Menu only                   | React Aria's row owns focus inside the grid and forwards no key handler                   |
+| [Header drag while the column panel is open](/docs/data-grid/drag-and-drop) | Works                           | Does not start              | HeroUI's popover covers the header, so the pointer never reaches the handle               |
+| [`Escape` during a panel drag](/docs/data-grid/drag-and-drop)               | Reports nothing, writes nothing | Can write without reporting | Unexplained; `Escape` is both the popover's dismiss key and the drag library's cancel key |
 
-All three are upstream constraints of React Aria, which HeroUI's table is built on, and all
+The first three are upstream constraints of React Aria, which HeroUI's table is built on, and all
 three are narrow: the feature is still reachable in HeroUI, just not in that one shape. None of
 them affects the data, the state or the options you write — moving a grid between kits never means rewriting a
-config.
+config. The last two are drag-specific and newer; the second of them is a defect rather than a
+constraint.
 
 ### Grouped headers render flat in HeroUI
 
@@ -41,6 +44,32 @@ In HeroUI the column header's own prop bag is spread after the one the grid hand
 handler is overwritten. **The column menu's Move left / Move right entries work in both kits**, so
 the capability is present either way — only the shortcut is missing. Tracked in
 [#223](https://github.com/ez-kit/ez-kit/issues/223).
+
+### A header column does not drag while the column panel is open (HeroUI)
+
+Both [drag surfaces of the column axis](/docs/data-grid/drag-and-drop) work in both kits. What
+HeroUI cannot do is the two at once: with the Columns panel open, its popover covers the header, so a
+pointer aimed at a header cell's grip never reaches it and no drag starts. In the shadcn kit the same
+gesture works.
+
+Measured rather than inferred — nothing overlays the handle in the accessibility sense, the element
+is where it was and its `pointer-events` are `auto`; the popover's own overlay is simply in front. It
+is a property of that kit's popover rather than of the drag layer, and it costs little: the panel is
+itself the affordance for reordering while it is open. Drag a header column before opening the panel,
+or drag inside the panel.
+
+### `Escape` during a panel drag can write without reporting (HeroUI)
+
+A known defect, not a constraint. Pressing `Escape` mid-drag in the column panel should end the drag
+and write nothing, which is what the shadcn kit does. In HeroUI the committed order can change while
+`ordering.column.onChange` is never called — so an application persisting the order from that callback
+would miss the change and its stored order would disagree with the grid's.
+
+Why is not yet known. The likely place is that `Escape` is both the popover's dismiss key and the
+drag library's cancel key, so the panel's draggables unmount inside a live drag operation. Until it is
+closed: an application that persists the column order should read it from
+`initialState`/`state.columnOrder` on the grid rather than trusting the callback alone if its users
+work in the panel, or reorder from the header, where the gesture is unaffected.
 
 ### `Alt+Arrow` row reordering is shadcn-only
 

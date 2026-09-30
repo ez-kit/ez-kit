@@ -44,8 +44,13 @@ export function RowDragExample() {
 
 	return (
 		<div className='flex flex-col gap-2'>
-			{/* The spec reads this: one drag must produce exactly one commit. */}
-			<span data-testid='row-drag-commits'>{moves}</span>
+			{/*
+			 * The spec reads the inner span, so its text has to stay the bare number — the label sits
+			 * outside it. This example is on a docs page, where a stray `0` above a grid reads as a bug.
+			 */}
+			<span className='text-sm text-muted-foreground'>
+				Rows moved <span data-testid='row-drag-commits'>{moves}</span>
+			</span>
 			<DataGridDnd
 				features={features}
 				data={data}

@@ -30,6 +30,9 @@ axis.
   menu each time. The menu closes on select in both kits, so this is the path for a column that
   has to travel several places. Not yet wired in the HeroUI kit — see the note below.
 - **The Columns toggle**, once `visibilityMenu` asks for it — see below.
+- **Dragging the header**, once a [drag adapter](/docs/data-grid/drag-and-drop) is bound. That is the
+  one affordance that moves a column several places in a single gesture; everything on this page
+  moves it one step.
 
 A step swaps the column with its **visible** neighbour. Hidden columns keep their own places: a
 column that is hidden and shown again comes back where it was, which is exactly why the order and
@@ -63,6 +66,10 @@ order and it can still be moved.
 For the same reason a step here lands on the row **next to it**, hidden rows included, rather than
 passing over hidden columns the way the header does. Both are the same rule from two places: a
 step moves a column past what the user can see, and each surface shows something different.
+
+Rows of this panel are also **draggable**, with the same adapter and nothing to compose — see
+[Drag and drop](/docs/data-grid/drag-and-drop#the-column-panel). It is the only surface where a
+hidden column can be moved at all.
 
 The panel's arrows point up and down. The two moves are logical — `start` and `end`, since the
 column order flips under RTL — but this list runs from the start of the order at the top in either

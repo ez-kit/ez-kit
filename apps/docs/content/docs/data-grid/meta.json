@@ -20,6 +20,7 @@
 		"selection",
 		"row-actions",
 		"row-ordering",
+		"drag-and-drop",
 		"pinning",
 		"expanding",
 		"grouping",
