@@ -77,7 +77,8 @@ by construction.
 | `pnpm size`                           | ✅ after three explicit raises; measured figures below                                               |
 | Registry payload                      | ✅ `@dnd-kit` count 0                                                                                |
 | Browser, `column panel drag`          | ✅ 10/10 (5 × 2 kits), first run and again in the whole group                                        |
-| Browser, whole `ordering/` group      | ✅ 58/58 both kits — row drag and header drag unaffected by the key change                           |
+| Browser, whole `ordering/` group      | ✅ 58/58 both kits, twice — row drag and header drag unaffected                                      |
+| Browser, **whole suite**              | ✅ **621 / 0 / 2** (`pnpm test:e2e`, CI's shape) and **951 / 0 / 2** including the `@smoke` specs    |
 
 ### Sizes, measured
 
@@ -90,6 +91,13 @@ by construction.
 | `@ez-kit/data-grid-shadcn` `visibility`  | ~2.2 kB  | **2.36 kB**  | 2.3 → **2.5 kB**   |
 | `@ez-kit/data-grid-heroui` root          | 14.94 kB | 14.98 kB     | 16.6 kB, unchanged |
 | `@ez-kit/data-grid-shadcn` root          | 17.06 kB | 17.04 kB     | 19 kB, unchanged   |
+
+**The whole browser suite came out with no failures at all**, on two consecutive runs — including
+`filtering/chips.spec.ts:127`, which the phase-5 report recorded as failing 2/2 on a baseline tree in
+both kits, and the third, different, flaky failure it saw on each run. Nothing in this phase touches
+filtering. Recorded as an observation rather than a fix: the honest reading is that those were flakes
+at a rate two runs could not distinguish from a standing failure, and AGENTS.md's reference figure of
+610 / 3 / 2 should be read with that in mind.
 
 The `dnd.js` overrun is `toDragKey` / `fromDragKey` plus `toSortableId` / `fromSortableId`, and nothing else; the two `visibility` entries
 carry the kit's grip import. **The react root's limit was raised although it was not exceeded**, and
