@@ -625,13 +625,20 @@ tr[data-group-row='true'] {
 }
 
 /*
- * A column being dragged.
+ * A column being dragged — in the header, and in the column panel.
  *
  * The header-cell twin of the row rule above, and the same discipline: opacity plus a lift, never a
  * layout property. The neighbours part by the library's transform and must not be pushed by
  * anything here.
+ *
+ * Both selectors, not one on the attribute alone, and not the header alone either. The panel's row
+ * stamps the same attribute and had no rule at all, so a panel drag showed only the library's own
+ * transform — no dimming, no lift, while the header's drag had both. Keeping the two selectors
+ * explicit rather than writing `[data-column-dragging]` is what keeps this from also catching a
+ * consumer's element that happens to carry the attribute.
  */
-[data-slot='th'][data-column-dragging] {
+[data-slot='th'][data-column-dragging],
+[data-slot='column-visibility-item'][data-column-dragging] {
 	opacity: 0.6;
 	position: relative;
 	z-index: 2;

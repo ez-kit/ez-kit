@@ -101,7 +101,7 @@ describe('the adapter satisfies the port', () => {
 	 * spec said. These two cases are the only place `type` / `accept` / `group` / `disabled` are
 	 * pinned.
 	 */
-	it('maps the spec onto the sortable input, with the axis on type, accept and group', () => {
+	it('maps the spec onto the sortable input, with the axis and surface on type, accept and group', () => {
 		renderItem({ id: 'col-1', index: 2, axis: 'column', surface: 'table', disabled: true })
 
 		expect(useSortableSpy.mock.calls[0]?.[0]).toEqual({
@@ -120,7 +120,7 @@ describe('the adapter satisfies the port', () => {
 	 * index space `OptimisticSortingPlugin` asserts is dense per group; unset, rows and columns
 	 * share one space and both axes go dead. See the comment on it in `dnd.tsx`.
 	 */
-	it('groups an item by its axis, so the two orders keep separate index spaces', () => {
+	it('groups an item by its axis and surface, so the index spaces stay separate', () => {
 		renderItem({ id: 'row-1', index: 0, axis: 'row', surface: 'table' })
 		expect(useSortableSpy.mock.calls[0]?.[0]).toMatchObject({ group: 'row:table' })
 	})

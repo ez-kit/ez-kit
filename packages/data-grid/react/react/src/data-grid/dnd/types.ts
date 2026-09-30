@@ -111,7 +111,7 @@ export type DragSpec = {
 	 *
 	 * Under `exactOptionalPropertyTypes` this may be **omitted** but not passed as `undefined`, so
 	 * a call site builds the spec with the conditional spread this package uses throughout:
-	 * `{ id, index, axis, ...(disabled !== undefined ? { disabled } : {}) }`.
+	 * `{ id, index, axis, surface, ...(disabled !== undefined ? { disabled } : {}) }`.
 	 */
 	disabled?: boolean
 }

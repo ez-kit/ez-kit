@@ -49,6 +49,10 @@ filtering the rows, a collapsed section — leaves gaps in the index space, and 
 dragging entirely with no error. Filter what a row _renders_, not which rows exist. Both kits simply
 map `<DataGrid.VisibilityTrigger>`'s `columns`, which is that list.
 
+Each panel grip is named for its own column — `Drag column: Salary` — because unlike the header, where
+every handle sits in its own cell beside the column name, a panel is a list of otherwise identical
+buttons. Both kits also style the dragged panel row the way they already styled a dragged header cell.
+
 A grid with no adapter, or one whose panel offers no moves, renders exactly the markup it rendered
 before and registers nothing. A column whose place the author fixed with `ordering: false` keeps its
 index — it must, or the space has a hole and nothing commits anywhere — and offers no grip.

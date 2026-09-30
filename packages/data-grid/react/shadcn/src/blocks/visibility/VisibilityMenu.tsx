@@ -93,8 +93,13 @@ export function VisibilityMenu({ columns }: VisibilityMenuProps) {
 							 * moves switched off, or a column whose place the author fixed. First in
 							 * the row, where a grip belongs, and before the label so a pointer looking
 							 * for it does not have to cross the checkbox.
+							 *
+							 * The name carries the column, which the header's handle does not need: there
+							 * each grip sits in its own `<th>` beside the column name, while here a
+							 * screen reader would otherwise read N identical "Drag column" buttons in one
+							 * list. Same shape the move pair below already uses.
 							 */}
-							<ColumnDragHandle />
+							<ColumnDragHandle aria-label={`${messages.ordering.dragColumn}: ${col.label}`} />
 							{/*
 							 * The label wraps only the checkbox and the name: a button inside a
 							 * `<label>` would toggle the column on its way to moving it.

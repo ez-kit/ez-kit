@@ -1,6 +1,8 @@
 # Implementation Report: DnD Phase 6 — Visibility-panel drag
 
-**Status: COMPLETE.** The open decision the phase carried — how the panel and the header keep
+**Status: COMPLETE for this phase's scope**, which does not include its docs page — that belongs to
+phase 11, along with every other surface's, and is listed in the notes at the end. The open decision
+the phase carried — how the panel and the header keep
 separate index spaces — is taken, implemented and tested. The browser suite is green in both kits on
 two consecutive runs, and the react package is green on React 19 and React 18.
 
@@ -167,7 +169,7 @@ was the only instrument that could see this.** Every unit suite passed throughou
 passed, `typecheck` and `lint` passed, and the panel's own five browser cases passed — because none of
 them has a header handle in the same grid.
 
-**6. Two things are left open, both found while writing that case, and neither is fixed.**
+**6. Three things are left open, all found while writing that case, and none is fixed.**
 
 - **In the HeroUI kit a header column cannot be dragged while the column panel is open.** The
   popover's own overlay covers the header, so the pointer never reaches the handle; the shadcn kit's
@@ -175,6 +177,16 @@ them has a header handle in the same grid.
   separate thing. It is a kit-popover property rather than anything the drag layer can reach, the
   gesture is an odd one to want, and the panel is the affordance for reordering while it is open — so
   it is recorded rather than worked around.
+- **In the HeroUI kit, `Escape` during a panel drag leaves the committed order changed while
+  `ordering.column.onChange` is never called.** Found by adding an order assertion to the `Escape` case,
+  which is what a review pass asked for; the assertion is **not** in the shipped spec, because a red
+  test for a defect this phase neither introduced nor can close is worse than a case that says what it
+  can prove. Measured carefully rather than inferred: the order is read back from a **reopened** panel,
+  so it is state and not the drag library's leftover transform, and the counter is an auto-retrying
+  `toHaveText('0')`, so the callback genuinely did not fire within five seconds. Either two things write
+  the order or one write skips the callback. The shadcn kit does not do it. Unexplained; the place to
+  start is that `Escape` is both the popover's dismiss key and dnd-kit's cancel key, so the panel's
+  sortables unmount inside a live operation — which is the same collision phase 7 has to settle anyway.
 - **A second _scripted_ drag on this example does not commit, in either kit, whichever surface it is
   on and whichever came first** — while a second scripted drag on `column-drag.spec.ts`' example does,
   with the same per-neighbour leg rule. Waiting out the drag library's leftover clone did not change
@@ -188,7 +200,7 @@ the full `pnpm test` found it.** Both kits render `VisibilityMenu` **standalone*
 it takes a `columns` array, so a grid is not needed to exercise it — and the new row component
 reached for two contexts that only a grid provides. Five cases across the two kits went red while
 `typecheck`, `lint`, the react package's own 937 and the 58 browser cases were all green, because
-none of those renders a kit block on its own. Two fixes, and neither is a workaround:
+none of those renders a kit block on its own. Two fixes:
 
 - `useOptionalDataGridTable()` — a non-throwing read beside `useDataGridTable()`, used by
   `VisibilityItem` alone. The throw is right for a component that reads the table to _do_ something;
@@ -202,6 +214,17 @@ none of those renders a kit block on its own. Two fixes, and neither is a workar
 The lesson is about the seam rather than the two lines: **a component the shared package hands a kit
 to mount is rendered in whatever the kit renders it in**, including a test harness with no grid, and
 has to be correct there. Worth remembering for phase 7, which will hand the kits more.
+
+Two qualifications a review pass was right to insist on. The non-throwing read's justification is
+**not** that a consumer may render `VisibilityMenu` outside a grid — nothing in the public API says
+that; what is grid-less is the kits' own unit suites, plus the shadcn kit's copy being registry
+payload that a consumer can mount anywhere. And the reorder in `ColumnDragHandle` is correct but it
+does **paper over** a missing guard: `useGridComponents()` is typed `FullGridComponents` while its
+context default is `{} as FullGridComponents`, so every `useGridComponents().<group>` in the package
+is a latent unnamed crash outside a grid. The honest fix is a dev-mode throw there, deliberately left
+to a change of its own — it would alter what a dozen existing standalone kit-block tests do.
+`visibility-item.test.tsx` now locks both components' grid-less behaviour on _this_ side of the seam,
+so the next tidy-up that re-hoists that destructure fails here rather than in another package.
 
 **8. A test filtered on the surface alone and read the rows as columns.** `latestOn('table')`
 returned six entries where three were expected: a grid with a body registers every **row** on the

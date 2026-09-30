@@ -15,8 +15,9 @@ import type { ReactNode } from 'react'
 /**
  * The visibility panel is the **second surface of the column axis**, and every case here is about
  * the one thing that makes it a surface rather than another axis: its index space is a different
- * list. The header registers the visible leaves in visual order; the panel registers every listed
- * leaf, hidden ones included, in declaration order. Those two runs cannot share one dense `0..n-1`
+ * list. The header registers the visible leaves in visual (pin-banded) order; the panel registers
+ * every listed leaf, hidden ones included, in the `columnOrder` order — not the declaration order,
+ * which `getAllLeafColumns()` only falls back to when that slice is empty. Those two runs cannot share one dense `0..n-1`
  * space — and the penalty for trying is total, silent failure of both. See `DragSurface`.
  *
  * Driven through `<DataGrid.VisibilityTrigger>`'s render function rather than through a kit's
@@ -177,6 +178,40 @@ describe('a panel in a grid with no drag adapter', () => {
 	})
 })
 
+/**
+ * The two components a kit's `VisibilityMenu` mounts have to survive being rendered **outside** a
+ * grid, because that is what both kits' own unit suites do — the menu is a DI component taking a
+ * `columns` array, so a grid is not needed to exercise its markup. Five of their cases went red
+ * when this phase first landed, and neither `typecheck`, `lint` nor anything in this package caught
+ * it: nothing here rendered a kit block on its own. These two cases are that gap closed on this side
+ * of the boundary, where the components live.
+ */
+describe('rendered outside a grid', () => {
+	it('renders the row with its slot and no handle', () => {
+		const { container } = render(
+			<DataGrid.VisibilityItem columnId='name'>
+				<ColumnDragHandle />
+				<span>Name</span>
+			</DataGrid.VisibilityItem>,
+		)
+
+		expect(container.querySelector('[data-slot="column-visibility-item"]')).not.toBeNull()
+		expect(container.querySelector('[data-slot="column-drag-handle"]')).toBeNull()
+	})
+
+	/*
+	 * The handle's own half, rendered with no row above it either. It reads three contexts and must
+	 * reach its `null` return before touching any of their values — which is why the components
+	 * destructure sits *below* the early return in that file, and this is what stops a tidy-up from
+	 * hoisting it back up.
+	 */
+	it('renders nothing at all with no surface above it', () => {
+		const { container } = render(<ColumnDragHandle />)
+
+		expect(container.innerHTML).toBe('')
+	})
+})
+
 describe('the panel index space', () => {
 	it('registers every listed column once, at dense indices in the panel list order', () => {
 		const { adapter, latestOn } = makeDrivableAdapter()
@@ -188,6 +223,30 @@ describe('the panel index space', () => {
 			['email', 2],
 			['city', 3],
 		])
+	})
+
+	/**
+	 * "Once" needs its own case, because the one above **cannot see a duplicate**: `latestOn` folds the
+	 * recorded specs through a `Map` keyed by id, so two registrations of one column collapse into one
+	 * before the assertion runs. That fold is right for reading the *current* value of each spec across
+	 * re-renders and wrong for counting registrations, so counting gets its own read of the raw list.
+	 *
+	 * The duplicate it guards against is not hypothetical: a panel that renders one column twice — a
+	 * "pinned" section repeating a row, or two `<DataGrid.VisibilityTrigger>` in one grid — puts two
+	 * sortables at one index, which the drag library refuses exactly as it refuses a gap, and silently.
+	 */
+	it('registers each column exactly once per render pass, with no duplicate index', () => {
+		const { adapter, specs } = makeDrivableAdapter()
+		renderPanelGrid(adapter)
+
+		const panel = specs.filter((spec) => spec.surface === 'panel' && spec.axis === 'column')
+		// One render pass per column, and the passes are whole: the count is a multiple of the list
+		// length, and within the last pass every index appears once.
+		const passes = panel.length / PANEL_COLUMNS.length
+		expect(Number.isInteger(passes)).toBe(true)
+		const lastPass = panel.slice(-PANEL_COLUMNS.length)
+		expect(new Set(lastPass.map((spec) => spec.id)).size).toBe(PANEL_COLUMNS.length)
+		expect(lastPass.map((spec) => spec.index).sort((a, b) => a - b)).toEqual([0, 1, 2, 3])
 	})
 
 	/*
