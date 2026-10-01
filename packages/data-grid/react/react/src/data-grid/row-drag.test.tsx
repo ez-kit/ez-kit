@@ -297,7 +297,7 @@ describe('committing a drop', () => {
 		renderDndGrid(adapter, { ordering: { row: { onChange } } })
 
 		// Act
-		fireDrop({ axis: 'row', surface: 'table', sourceId: '1', targetIndex: 2 })
+		fireDrop({ axis: 'row', surface: 'table', sourceId: '1', targetId: '3' })
 
 		// Assert — exactly one, which is the PRD's own success metric for a drag.
 		expect(onChange).toHaveBeenCalledOnce()
@@ -311,31 +311,33 @@ describe('committing a drop', () => {
 		const { adapter, fireDrop } = makeDrivableAdapter()
 		renderDndGrid(adapter, { ordering: { row: { onChange } } })
 
-		fireDrop({ axis: 'column', surface: 'table', sourceId: 'name', targetIndex: 1 })
+		fireDrop({ axis: 'column', surface: 'table', sourceId: 'name', targetId: 'age' })
 
 		expect(onChange).not.toHaveBeenCalled()
 	})
 
-	it('ignores a landing index no row occupies', () => {
-		// The grid resolves the index against its own row model; out of range there is nothing to
-		// aim at, and guessing a neighbour would move a row the user never pointed at.
+	it('ignores a target id no row carries', () => {
+		// `dropRow` resolves both ids against the table's own row model; an id that is in neither end
+		// of it names nothing to aim at, and guessing a neighbour would move a row the user never
+		// pointed at.
 		const onChange = vi.fn()
 		const { adapter, fireDrop } = makeDrivableAdapter()
 		renderDndGrid(adapter, { ordering: { row: { onChange } } })
 
-		fireDrop({ axis: 'row', surface: 'table', sourceId: '1', targetIndex: 99 })
+		fireDrop({ axis: 'row', surface: 'table', sourceId: '1', targetId: 'nope' })
 
 		expect(onChange).not.toHaveBeenCalled()
 	})
 
-	it('ignores a landing index the source already occupies', () => {
+	it('ignores a drop onto the source itself', () => {
 		// Nothing moved, so nothing is committed — this is what keeps "exactly one onChange per
-		// drag" true for a drag that ends where it began.
+		// drag" true for a drag that ends where it began. An adapter reports no drop in that case
+		// either; the grid does not depend on it having done so.
 		const onChange = vi.fn()
 		const { adapter, fireDrop } = makeDrivableAdapter()
 		renderDndGrid(adapter, { ordering: { row: { onChange } } })
 
-		fireDrop({ axis: 'row', surface: 'table', sourceId: '1', targetIndex: 0 })
+		fireDrop({ axis: 'row', surface: 'table', sourceId: '1', targetId: '1' })
 
 		expect(onChange).not.toHaveBeenCalled()
 	})

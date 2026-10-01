@@ -6,9 +6,13 @@ import type { Row } from '@tanstack/table-core'
  * — the pinned top band, then the centre, then the pinned bottom band, which is exactly what
  * `body.tsx` and `virtual-body.tsx` put in the DOM.
  *
- * `GridDndProvider` resolves a drop's `targetIndex` against this same list. The two have to be one
- * list or a drop lands on a row the pointer never passed; note that is the only thing they share —
- * `dropRow` takes row **ids**, so nothing requires this list to be the row model itself.
+ * **This list has exactly one reader: the rows registering their own positions in it.** A drop is
+ * reported as an id and committed with `dropRow`, which takes two row **ids** and resolves them
+ * against the table's own model — so nothing reads a position back out of here, and nothing requires
+ * this list to be the row model itself. It used to have a second reader, `GridDndProvider` resolving
+ * a landing index, and that is exactly what a virtualized body's auto-scroll broke: the two sides
+ * disagreed about a list one of them was renumbering mid-gesture. `DndDropEvent` records the
+ * measurement.
  *
  * **This replaced `row.index`, which was wrong whenever the grid was doing anything.** TanStack's
  * `row.index` is a row's position among its **parent's** children in the *core* model, and it agrees
@@ -38,8 +42,10 @@ import type { Row } from '@tanstack/table-core'
  * `dropColumn`, so the bands need no index space of their own.
  *
  * **What this does not cover is a virtualized body**, which renders a window: the rows outside it
- * register nothing, so the space has gaps and the row axis does not drag. That is phase 9 of the drag
- * PRD and is not built — read the PRD's phase table rather than assuming the virtual case works.
+ * register nothing, so a space derived from the whole model has gaps and the row axis does not drag.
+ * That body therefore does not use this function — it declares what it renders, and
+ * {@link getRowDropIndex} prefers the declaration. This one stays the answer for the two bodies whose
+ * rendered set *is* derivable.
  *
  * Read on the row's own render path, so it is `O(n)` per row and `O(n²)` per body — which is why every
  * caller gates it on the drag adapter being present first, the way `header-cell.tsx` gates its own
@@ -51,4 +57,28 @@ export function getRowDropOrder<TRow extends object>(table: DataTable<GridFeatur
 	if (table.options.enableRowPinning !== true) return table.getRowModel().rows
 
 	return [...table.getTopRows(), ...table.getCenterRows(), ...table.getBottomRows()]
+}
+
+/**
+ * Where a row sits in the drag's index space, or `-1`.
+ *
+ * `published` is the list a **virtualized** body declares it is rendering — the window plus the row
+ * being held mounted through a drag. It wins when present, because in that body the rendered set is
+ * not derivable from the table: it is a function of the scroll offset and of the gesture in flight.
+ * Everything else — the built-in non-virtual body, a hand-written one — passes `null` and gets the
+ * derivation above, which is what it renders.
+ *
+ * This is the density the library demands, and the reason a virtualized grid could not drag at all:
+ * the window's rows registered their positions in the *whole* model, so the zeroth sortable of a
+ * window starting at row 5 claimed index `5`, and `OptimisticSortingPlugin` returned on the first
+ * frame. See {@link getRowDropOrder} for the same failure arriving through pagination and filters.
+ */
+export function getRowDropIndex<TRow extends object>(
+	table: DataTable<GridFeatures, TRow>,
+	published: readonly string[] | null,
+	rowId: string,
+): number {
+	if (published) return published.indexOf(rowId)
+
+	return getRowDropOrder(table).findIndex((candidate) => candidate.id === rowId)
 }

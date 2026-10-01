@@ -317,12 +317,12 @@ describe('the panel drag handle', () => {
 })
 
 describe('committing a panel drop', () => {
-	it('resolves the target in the panel list and writes the order once', () => {
+	it('writes the order once, from the target the drop names', () => {
 		const onChange = vi.fn()
 		const { adapter, fireDrop } = makeDrivableAdapter()
 		renderPanelGrid(adapter, { ordering: { column: { visibilityMenu: true, onChange } } })
 
-		fireDrop({ axis: 'column', surface: 'panel', sourceId: 'name', targetIndex: 2 })
+		fireDrop({ axis: 'column', surface: 'panel', sourceId: 'name', targetId: 'email' })
 
 		expect(onChange).toHaveBeenCalledTimes(1)
 		expect(onChange).toHaveBeenCalledWith(['age', 'email', 'name', 'city'])
@@ -341,8 +341,8 @@ describe('committing a panel drop', () => {
 			ordering: { column: { visibilityMenu: true, onChange } },
 		})
 
-		// Index 1 in the panel list is `age`, hidden — and the panel still counts it.
-		fireDrop({ axis: 'column', surface: 'panel', sourceId: 'email', targetIndex: 1 })
+		// `age` is hidden, and the panel's `All` scope still accepts it as a landing place.
+		fireDrop({ axis: 'column', surface: 'panel', sourceId: 'email', targetId: 'age' })
 
 		expect(onChange).toHaveBeenCalledTimes(1)
 		expect(onChange).toHaveBeenCalledWith(['name', 'email', 'age', 'city'])
@@ -353,17 +353,17 @@ describe('committing a panel drop', () => {
 		const { adapter, fireDrop } = makeDrivableAdapter()
 		renderPanelGrid(adapter, { ordering: { column: { visibilityMenu: true, onChange } } })
 
-		fireDrop({ axis: 'column', surface: 'panel', sourceId: 'city', targetIndex: 0 })
+		fireDrop({ axis: 'column', surface: 'panel', sourceId: 'city', targetId: 'name' })
 
 		expect(onChange).not.toHaveBeenCalled()
 	})
 
-	it('commits nothing for an index the panel list does not reach', () => {
+	it('commits nothing for a target id the panel list does not hold', () => {
 		const onChange = vi.fn()
 		const { adapter, fireDrop } = makeDrivableAdapter()
 		renderPanelGrid(adapter, { ordering: { column: { visibilityMenu: true, onChange } } })
 
-		fireDrop({ axis: 'column', surface: 'panel', sourceId: 'name', targetIndex: 99 })
+		fireDrop({ axis: 'column', surface: 'panel', sourceId: 'name', targetId: 'nope' })
 
 		expect(onChange).not.toHaveBeenCalled()
 	})

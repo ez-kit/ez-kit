@@ -1,5 +1,5 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 
 import { useGridComponents } from '../components-context'
 import { DATA_GRID_DEFAULTS } from '../defaults'
@@ -24,6 +24,13 @@ import type { CSSProperties, ReactNode } from 'react'
 /** Marks the scrollport; the value lists the axes that element scrolls. */
 const SCROLLPORT_ATTR = 'data-scrollport'
 const SCROLLPORT_AXES = 'x y'
+
+/**
+ * The row list a non-virtualized table hands the virtualizer: empty, and the *same* empty array
+ * every render, so `getItemKey`'s memo holds there too rather than recomputing for a virtualizer
+ * that is disabled anyway.
+ */
+const NO_ROWS: readonly never[] = []
 
 function updateScrollShadows(scrollEl: HTMLElement, wrapperEl: HTMLElement): void {
 	// `scrollLeft` is signed under RTL (0 at the inline-start edge, negative towards the end),
@@ -176,7 +183,31 @@ export function DataGridTable<TRow extends object = ErasedRow>({ children }: Dat
 	// scrollRef — the `data-slot="table-scroll"` div (non-virtualized mode); see getScrollElement
 	const scrollRef = useRef<HTMLDivElement>(null)
 
-	const rows = isVirtualized ? (table.options.enableRowPinning ? table.getCenterRows() : table.getRowModel().rows) : []
+	const rows = isVirtualized
+		? table.options.enableRowPinning
+			? table.getCenterRows()
+			: table.getRowModel().rows
+		: NO_ROWS
+
+	/**
+	 * Keyed by row id, not by window position, so a row keeps its identity across a reorder — the
+	 * commit rewrites the order under the virtualizer, and a position key would hand the measured
+	 * height and the element of one row to whichever row later took its slot.
+	 *
+	 * **The function's own identity has to hold across a render, too.** `useVirtualizer` calls
+	 * `instance.setOptions(resolvedOptions)` during render, and `getItemKey` is one of the
+	 * identity-compared dependencies of `virtual-core`'s `getMeasurementOptions` memo — whose body
+	 * resets `pendingMeasuredCacheIndexes`, which `getMeasurements` derives its starting point from.
+	 * A fresh closure per render therefore restarts the measurement loop at 0 every time and leaves
+	 * the incremental path permanently dead: a full `count`-length recompute and allocation on every
+	 * render of a grid whose point is tens of thousands of rows, once per auto-scroll frame while a
+	 * row is being dragged.
+	 *
+	 * Memoised on the `rows` array rather than read through a ref written during render: TanStack
+	 * memoises that array, so its identity holds across scroll frames and changes exactly when a
+	 * commit rewrites the order — which is when a full recompute is what we want.
+	 */
+	const getItemKey = useMemo(() => (index: number) => rows[index]?.id ?? index, [rows])
 
 	// eslint-disable-next-line react-hooks/incompatible-library
 	const rowVirtualizer = useVirtualizer({
@@ -185,6 +216,7 @@ export function DataGridTable<TRow extends object = ErasedRow>({ children }: Dat
 		estimateSize: resolveEstimateSize(virtualizationConfig?.row.estimateSize),
 		overscan: virtualizationConfig?.row.overscan ?? DATA_GRID_DEFAULTS.virtualization.row.overscan,
 		enabled: isVirtualized,
+		getItemKey,
 	})
 
 	// One name for "the element that scrolls", known rather than hunted for: the `TableScroll`

@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useRef, useSyncExternalStore } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useSyncExternalStore } from 'react'
 
 import type { SortableItemHandle } from './dnd'
 import type { ReactNode } from 'react'
@@ -29,6 +29,62 @@ export type RowDragValue = Pick<SortableItemHandle, 'handleRef' | 'isDragging'>
 class RowDragRegistry {
 	readonly #values = new Map<string, RowDragValue>()
 	readonly #listeners = new Map<string, Set<() => void>>()
+	#renderedRowIds: readonly string[] | null = null
+	#activeRowId: string | null = null
+	readonly #activeListeners = new Set<() => void>()
+	readonly #warnedRowIds = new Set<string>()
+
+	/**
+	 * Whether `row.id`'s unpublished-row defect is still unreported here — true once, false after.
+	 *
+	 * On the registry rather than in a module-level `Set` so the record is **per grid**. `getRowId`
+	 * usually returns the record's own id, so two grids over the same records use the same row ids,
+	 * and a module-level set let grid A's warning for row `"1"` permanently suppress grid B's — hiding
+	 * a real defect in the second grid. It also survived Fast Refresh, so the warning would not
+	 * re-fire after a fix without a full reload. Dev-only either way; see `row.tsx` for the condition.
+	 */
+	shouldReportUnpublishedRow(rowId: string): boolean {
+		if (this.#warnedRowIds.has(rowId)) return false
+		this.#warnedRowIds.add(rowId)
+
+		return true
+	}
+
+	/**
+	 * The rows a body has declared it is rendering, in DOM order — or `null` for "derive it".
+	 *
+	 * Only a **virtualized** body publishes. A built-in non-virtual body renders exactly
+	 * `getRowDropOrder(table)`, so publishing it would be copying a value in order to compare it
+	 * with itself, at one array allocation per render for every grid; and a hand-written body cannot
+	 * publish, because the rows it renders are the consumer's choice. Both therefore fall back to
+	 * the derivation, so the common case pays nothing for a list it could derive.
+	 */
+	getRenderedRowIds(): readonly string[] | null {
+		return this.#renderedRowIds
+	}
+
+	setRenderedRowIds(ids: readonly string[] | null): void {
+		this.#renderedRowIds = ids
+	}
+
+	/** The row being dragged right now, whether or not it is still inside the virtual window. */
+	getActiveRowId(): string | null {
+		return this.#activeRowId
+	}
+
+	setActiveRowId(rowId: string | null): void {
+		if (this.#activeRowId === rowId) return
+		this.#activeRowId = rowId
+		for (const listener of this.#activeListeners) listener()
+	}
+
+	subscribeActiveRow(listener: () => void): () => void {
+		this.#activeListeners.add(listener)
+
+		return () => {
+			this.#activeListeners.delete(listener)
+		}
+	}
 
 	get(rowId: string): RowDragValue | null {
 		return this.#values.get(rowId) ?? null
@@ -88,6 +144,93 @@ export function useRegisterRowDrag(rowId: string, value: RowDragValue | null): v
 	useEffect(() => {
 		if (changed) registry?.notify(rowId)
 	})
+}
+
+/**
+ * Declare the rows this body renders, in DOM order. Called by `VirtualBody`; `null` from `Body`.
+ *
+ * Written **during render** for the same reason `useRegisterRowDrag` is: the readers are the body's
+ * own children, so React has already run this by the time any of them computes an index. No
+ * notification, and none needed — nothing subscribes, and a body that re-renders re-publishes.
+ *
+ * The array is deliberately **not** memoised. The only consumers read it positionally and hand a
+ * *number* to the sortable, so a fresh array of the same ids changes nothing downstream; memoising
+ * on a joined key would cost a string the length of the window on every scroll frame to protect
+ * against a re-registration that does not happen.
+ */
+export function usePublishRenderedRows(ids: readonly string[] | null): void {
+	useContext(RowDragRegistryContext)?.setRenderedRowIds(ids)
+}
+
+/** The published rendered-row list, or `null` when the body derives it. Read during render. */
+export function useRenderedRowIds(): readonly string[] | null {
+	return useContext(RowDragRegistryContext)?.getRenderedRowIds() ?? null
+}
+
+/**
+ * Report this grid's unpublished-row defect at most once per row id — see
+ * {@link RowDragRegistry.shouldReportUnpublishedRow}. Called during render, by `row.tsx`, in
+ * development only; `false` with no registry above, which is a state the condition cannot reach.
+ */
+export function useShouldReportUnpublishedRow(): (rowId: string) => boolean {
+	const registry = useContext(RowDragRegistryContext)
+
+	return useCallback((rowId: string) => registry?.shouldReportUnpublishedRow(rowId) ?? false, [registry])
+}
+
+/**
+ * The row currently being dragged, subscribed — so a virtualized body re-renders when one starts.
+ *
+ * This is what lets the body keep the dragged row mounted after the window has scrolled past it.
+ * Without it the row unmounts mid-gesture, its sortable unregisters, and the index space it left
+ * behind has a hole: the drag keeps *looking* alive, because the visible element from then on is
+ * dnd-kit's own clone rather than React's row, and the drop resolves the source to `-1`. Measured;
+ * `dnd-phase-9-virtualized-drag.plan.md` records the probe.
+ */
+export function useActiveDraggingRow(): string | null {
+	const registry = useContext(RowDragRegistryContext)
+	// Stable, so `useSyncExternalStore` does not tear the subscription down and set it up again on
+	// every render — which, for the one subscriber that re-renders per auto-scroll frame, is a
+	// per-frame cost. `useRowDrag` below has the same shape; it is not on this path.
+	const subscribe = useCallback(
+		(listener: () => void) => (registry ? registry.subscribeActiveRow(listener) : () => {}),
+		[registry],
+	)
+
+	return useSyncExternalStore(
+		subscribe,
+		() => registry?.getActiveRowId() ?? null,
+		() => null,
+	)
+}
+
+/**
+ * Record this row as the active drag while it is dragging. Called by `<DataGrid.Row>`.
+ *
+ * **Cancellation needs no separate path, which is the one elegant part of holding a row.** A
+ * cancelled drag fires no `onDrop`, so clearing the record on commit would leak it — but the row is
+ * still mounted precisely *because* it is recorded, so its own `isDragging` going false clears it
+ * either way. That is why the port grew no `onDragEnd`.
+ *
+ * `isDragging` must come from the derived `drag` value rather than the raw sortable, or a row the
+ * grid refused to make draggable could pin itself active forever.
+ */
+export function useReportActiveDraggingRow(rowId: string, isDragging: boolean): void {
+	const registry = useContext(RowDragRegistryContext)
+
+	useEffect(() => {
+		if (!registry) return undefined
+		if (!isDragging) {
+			// Another row may have become active in the meantime; only ever clear our own record.
+			if (registry.getActiveRowId() === rowId) registry.setActiveRowId(null)
+			return undefined
+		}
+		registry.setActiveRowId(rowId)
+
+		return () => {
+			if (registry.getActiveRowId() === rowId) registry.setActiveRowId(null)
+		}
+	}, [registry, rowId, isDragging])
 }
 
 /**

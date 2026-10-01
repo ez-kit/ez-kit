@@ -409,8 +409,8 @@ describe('committing a column drop', () => {
 		const { adapter, fireDrop } = makeDrivableAdapter()
 		renderDndGrid(adapter, { ordering: { column: { onChange } } }, headerWithHandleArg)
 
-		// `name` is at index 0 and `age` at index 1; the adapter reports where the item landed.
-		fireDrop({ axis: 'column', surface: 'table', sourceId: 'name', targetIndex: 1 })
+		// The adapter reports the column the pointer was over; `name` takes `age`'s place.
+		fireDrop({ axis: 'column', surface: 'table', sourceId: 'name', targetId: 'age' })
 
 		expect(onChange).toHaveBeenCalledTimes(1)
 		expect(onChange).toHaveBeenCalledWith(['age', 'name'])
@@ -421,17 +421,17 @@ describe('committing a column drop', () => {
 		const { adapter, fireDrop } = makeDrivableAdapter()
 		renderDndGrid(adapter, { ordering: { column: { onChange } } }, headerWithHandleArg)
 
-		fireDrop({ axis: 'column', surface: 'table', sourceId: 'name', targetIndex: 0 })
+		fireDrop({ axis: 'column', surface: 'table', sourceId: 'name', targetId: 'name' })
 
 		expect(onChange).not.toHaveBeenCalled()
 	})
 
-	it('commits nothing for an index no column occupies', () => {
+	it('commits nothing for a target id no column carries', () => {
 		const onChange = vi.fn()
 		const { adapter, fireDrop } = makeDrivableAdapter()
 		renderDndGrid(adapter, { ordering: { column: { onChange } } }, headerWithHandleArg)
 
-		fireDrop({ axis: 'column', surface: 'table', sourceId: 'name', targetIndex: 99 })
+		fireDrop({ axis: 'column', surface: 'table', sourceId: 'name', targetId: 'nope' })
 
 		expect(onChange).not.toHaveBeenCalled()
 	})
@@ -450,7 +450,7 @@ describe('committing a column drop', () => {
 		const { adapter, fireDrop } = makeDrivableAdapter()
 		renderDndGrid(adapter, { columns: groupedColumns, ordering: { column: { onChange } } }, headerWithHandleArg)
 
-		fireDrop({ axis: 'column', surface: 'table', sourceId: 'name', targetIndex: 1 })
+		fireDrop({ axis: 'column', surface: 'table', sourceId: 'name', targetId: 'age' })
 
 		expect(onChange).not.toHaveBeenCalled()
 	})
@@ -460,7 +460,7 @@ describe('committing a column drop', () => {
 		const { adapter, fireDrop } = makeDrivableAdapter()
 		renderDndGrid(adapter, { ordering: { column: { onChange }, row: true } }, headerWithHandleArg)
 
-		fireDrop({ axis: 'row', surface: 'table', sourceId: '1', targetIndex: 2 })
+		fireDrop({ axis: 'row', surface: 'table', sourceId: '1', targetId: '3' })
 
 		expect(onChange).not.toHaveBeenCalled()
 	})

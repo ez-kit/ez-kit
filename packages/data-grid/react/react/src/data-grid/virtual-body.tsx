@@ -5,6 +5,7 @@ import { DATA_GRID_DEFAULTS } from '../defaults'
 import { LoadMoreTrigger } from '../types'
 
 import { DataGridRow } from './row'
+import { useActiveDraggingRow, usePublishRenderedRows } from './row-drag-registry'
 import { useDataGridTable, useDataGridState } from './table-context'
 import { useInfiniteScroll } from './use-infinite-scroll'
 import { usePinnedRowOffsets } from './use-pinned-row-offsets'
@@ -52,6 +53,9 @@ export function VirtualBody() {
 	const controller = useInfiniteScroll()
 	// Subscribe to infinite slice so the loader row re-renders on status change.
 	useDataGridState((s) => s.infinite)
+	// Re-renders this body when a row drag starts or ends, which is what lets it keep the dragged row
+	// mounted after the window has scrolled past it.
+	const activeRowId = useActiveDraggingRow()
 
 	const virtualItems = rowVirtualizer?.getVirtualItems() ?? []
 	const lastIndex = virtualItems.length > 0 ? (virtualItems[virtualItems.length - 1]?.index ?? -1) : -1
@@ -84,6 +88,56 @@ export function VirtualBody() {
 		}
 	}, [enabled, trigger, hasNextPage, isFetching, lastIndex, rowCount, thresholdRows, loadMore])
 
+	/*
+	 * The centre rows this body renders, in index order: the virtualizer's window, plus the row being
+	 * dragged once the window has scrolled past it.
+	 *
+	 * Holding that row is the whole of why a virtualized grid can be reordered by drag at all. Let it
+	 * unmount and its sortable unregisters mid-gesture, which puts a hole in an index space the
+	 * library requires to be exactly `0..n-1` — and the failure is invisible, because from then on the
+	 * element under the pointer is dnd-kit's clone rather than React's row, so the drag looks alive
+	 * while the drop resolves the source to `-1`. Measured; see the plan's Task 1 gate.
+	 *
+	 * OUT_OF_WINDOW_ROW: the pinned bands below already render outside the virtualizer's range, so
+	 * this reuses that rather than reaching for a `rangeExtractor`.
+	 */
+	const windowEntries = virtualItems.flatMap((virtualRow: VirtualItem) => {
+		const row = centerRows[virtualRow.index]
+		return row ? [{ index: virtualRow.index, row, start: virtualRow.start, size: virtualRow.size }] : []
+	})
+	const heldIndex = activeRowId === null ? -1 : centerRows.findIndex((row) => row.id === activeRowId)
+	const heldRow = heldIndex < 0 ? undefined : centerRows[heldIndex]
+	// Indexed by row index and built for every row from `estimateSize`, so this is present whenever
+	// the row is. Without it the row would have to render at an offset it does not occupy, which for
+	// an upward drag means a ghost row above the window — so a missing measurement holds nothing and
+	// lets `row.tsx`'s development error report the hole instead of hiding it behind a wrong position.
+	const heldMeasurement = heldIndex < 0 ? undefined : rowVirtualizer?.measurementsCache[heldIndex]
+	// One id, one registration: a row that is both in the window and held must render exactly once.
+	const isHeldInWindow = windowEntries.some((entry) => entry.index === heldIndex)
+	const centerEntries =
+		heldRow && heldMeasurement && !isHeldInWindow
+			? [
+					...windowEntries,
+					{ index: heldIndex, row: heldRow, start: heldMeasurement.start, size: heldMeasurement.size },
+				].sort((left, right) => left.index - right.index)
+			: windowEntries
+
+	/*
+	 * What this body renders, in DOM order, for the two readers that need to agree on it: a row
+	 * computing its own drag index, and the provider resolving where a drop landed. The held row is in
+	 * it by construction — it is built as "window plus the held row" rather than appended — so the
+	 * space keeps its density the moment the row leaves the window.
+	 */
+	usePublishRenderedRows(
+		rowVirtualizer
+			? [
+					...topRows.map((row) => row.id),
+					...centerEntries.map((entry) => entry.row.id),
+					...bottomRows.map((row) => row.id),
+				]
+			: null,
+	)
+
 	if (!rowVirtualizer) return null
 
 	const totalSize = rowVirtualizer.getTotalSize()
@@ -106,18 +160,14 @@ export function VirtualBody() {
 				/>
 			))}
 
-			{virtualItems.map((virtualRow: VirtualItem) => {
-				const row = centerRows[virtualRow.index]
-				if (!row) return null
-				return (
-					<DataGridRow
-						key={row.id}
-						row={row}
-						data-virtual='row'
-						style={{ transform: `translateY(${String(virtualRow.start)}px)`, height: `${String(virtualRow.size)}px` }}
-					/>
-				)
-			})}
+			{centerEntries.map((entry) => (
+				<DataGridRow
+					key={entry.row.id}
+					row={entry.row}
+					data-virtual='row'
+					style={{ transform: `translateY(${String(entry.start)}px)`, height: `${String(entry.size)}px` }}
+				/>
+			))}
 
 			{bottomRows.map((row, index) => (
 				<DataGridRow

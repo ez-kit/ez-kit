@@ -182,7 +182,10 @@ export function canDropRow(table: RowOrderingTable, rowId: string, targetRowId: 
  *   there: a leaf that jumped into an adjacent subtree would change its parent, which is a
  *   different operation with a different meaning. This helper knows nothing of controlled versus
  *   uncontrolled mode — the uncontrolled order cannot express a sub-row's position at all, and
- *   that limit is enforced one level up, on `table.ordering.dropRow`, where `isTopLevelRow` lives.
+ *   that limit is enforced one level up, in `rowOrderingFeature`. This helper makes no such check:
+ *   `isTopLevelRow` is called by `canDropRow`, which refuses a sub-row in uncontrolled mode before
+ *   this is reached, and by the shared `commit` that `table.ordering.dropRow` hands its result to,
+ *   which drops the move rather than writing an order that cannot express it.
  *
  * Describes the drop and performs none of it, exactly as `moveRow` does.
  */

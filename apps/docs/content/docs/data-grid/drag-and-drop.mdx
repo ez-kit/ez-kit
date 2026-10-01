@@ -98,6 +98,44 @@ row it is in.
 which changes the moment it moves. The same requirement [row ordering](/docs/data-grid/row-ordering#getrowid-is-not-optional-here)
 has, for the same reason.
 
+### In a virtualized body
+
+<DataGridDocsExample exampleId='virtualized-row-drag' />
+
+A [virtualized](/docs/data-grid/virtualization) body needs no drag option of its own: the handle
+column and the bound adapter are the ones from [Rows](#rows) above, and `virtualization` is the only
+addition.
+
+```tsx
+<DataGrid
+	features={features}
+	data={data}
+	columns={columns} // the same drag-handle column
+	getRowId={(row) => String(row.id)}
+	virtualization={{ row: { estimateSize: 49, overscan: 10 } }}
+	ordering={{ row: true }}
+/>
+```
+
+Two things make that work, and both are about the body rendering a **window** rather than the whole
+list:
+
+- **A row's drag index counts within the window, not within the row model.** The body declares the
+  rows it renders and each row takes its index from that declaration, so the positions a drag sees
+  run from zero with no gap — which is what the library behind the adapter requires, and what a row
+  reporting its place in the whole model could never satisfy once the window had scrolled.
+- **The row you are holding stays mounted when the window scrolls past it.** The body builds its list
+  as the window _plus_ the held row, so the row keeps its registration — and therefore its place in
+  that dense space — for as long as you hold it. Let it unmount and the gesture breaks without
+  looking broken.
+
+The virtualizer is keyed by row id, so a row keeps its identity, its measured height and its element
+across a commit: the order is rewritten underneath it, and nothing hands one row's measurement to
+whichever row takes its slot.
+
+One limit comes with the window, and it is in [Not built yet](#not-built-yet): a drag of exactly one
+place needs to end in the upper part of the row you are aiming at.
+
 ## Column headers
 
 <DataGridDocsExample exampleId='column-drag' />
@@ -186,15 +224,18 @@ beside the `dir` on an ancestor, the same pair [column pinning](/docs/data-grid/
 
 Stated rather than left to be discovered:
 
-- **Virtualized rows do not drag.** A [virtualized](/docs/data-grid/virtualization) body renders a
-  window, so the rows outside it register nothing and the gesture does nothing. Column headers and
-  the panel are unaffected.
 - **No keyboard drag, and no announcements.** The pointer is the only way to drag today; the
   keyboard path to reordering is `Alt+Arrow` and the menus, which is what satisfies the keyboard
   equivalent a drag handle needs. A drag in flight is not announced to a screen reader yet.
 - **Two HeroUI-specific limits**, both in [Kit parity](/docs/data-grid/kit-parity): a header column
   cannot be dragged while the column panel is open, and `Escape` during a panel drag can leave the
   order changed without reporting it.
+- **A one-row drag in a virtualized body can do nothing at all.** Moving a row exactly one place
+  commits only while you are still in the upper part of the row you are aiming at; release in its
+  lower half and the rows spring back on the way to the drop, so the grid sees no move and reports
+  none — no error, no change. Aim near the top of the target row, or drag more than one row, and it
+  commits every time. Non-virtualized bodies are unaffected at every position. The displacement is
+  lost inside the drag library, so this is not something the grid can fix from here.
 
 ## See also
 

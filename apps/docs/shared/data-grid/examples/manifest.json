@@ -992,6 +992,14 @@
 		"exportName": "ColumnDragExample"
 	},
 	{
+		"id": "virtualized-row-drag",
+		"label": "Virtualized row drag",
+		"group": "ordering",
+		"groupLabel": "Ordering",
+		"sourceFile": "components/virtualized-row-drag.tsx",
+		"exportName": "VirtualizedRowDragExample"
+	},
+	{
 		"id": "column-panel-drag",
 		"label": "Column panel drag and drop",
 		"group": "ordering",

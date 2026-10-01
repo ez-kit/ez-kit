@@ -14,9 +14,6 @@ import { GridComponentsProvider, useGridComponents } from '../components-context
 import { guardComponents } from '../components-guard'
 import { GridFactoryDefaultsProvider } from '../data-grid-options-context'
 import { useDataGrid, type UseDataGridConfig } from '../use-data-grid'
-import { getRowDropOrder } from '../utils/row-drop-order'
-import { getVisibilityPanelColumns } from '../utils/visibility-panel-columns'
-import { getVisualLeafColumns } from '../utils/visual-column-order'
 
 import { ActionBar, buildSelectionBarArgs } from './action-bar'
 import { ActiveFiltersBar } from './active-filters-bar'
@@ -326,24 +323,6 @@ const COLUMN_DROP_SCOPE: Record<DragSurface, ColumnMoveScope> = {
 }
 
 /**
- * The list a column drop's `targetIndex` counts in, per surface — the same list that surface
- * registered its sortables against, which is the whole requirement.
- *
- * The header's is the **visual** leaf order: `getVisibleLeafColumns()` would be the wrong list,
- * since it keeps the declaration order and ignores pinning, and the two sides have to agree or a
- * drop lands on a different column than the pointer did. The panel's is `getVisibilityPanelColumns`,
- * which is the `columnOrder` order with the hidden columns left in — **not** the declaration order,
- * which `getAllLeafColumns()` only falls back to when that slice is empty. A hidden column has no
- * visual position at all, which is why the panel cannot use the header's list.
- */
-function columnDropOrder<TRow extends object>(
-	table: DataTable<GridFeatures, TRow>,
-	surface: DragSurface,
-): { id: string }[] {
-	return surface === DragSurface.Panel ? getVisibilityPanelColumns(table) : getVisualLeafColumns(table)
-}
-
-/**
  * Mounts the registered adapter's own provider, and commits what it reports.
  *
  * A component rather than a few lines inside {@link DataGridControlled}, because reading the
@@ -371,50 +350,37 @@ function GridDndProvider({ children }: { children: ReactNode }) {
 			switch (event.axis) {
 				case DragAxis.Row: {
 					/*
-					 * The adapter reports where the item landed; the row living at that index is the
-					 * target `dropRow` wants. This mapping is here rather than in the adapter because
-					 * the row model is here — see `DndDropEvent` for why an index is what an adapter
-					 * can honestly report.
+					 * Both ends are ids, so there is no mapping to make and no list to make it
+					 * against: `dropRow` resolves the pair itself, against the table's own model.
 					 *
-					 * Through `getRowDropOrder` rather than reading the row model inline, because
-					 * `<DataGrid.Row>` registers its index from the same helper and the two lists must
-					 * be one list. They were not: the row registered `row.index`, a position among its
-					 * parent's children, which disagrees with this one under pagination, a filter or
-					 * tree rows — and a disagreement here is a drop landing on a row the pointer never
-					 * passed. That helper's docblock has the account.
+					 * **This replaced resolving the target from a landing index.** That needed the
+					 * rendered-row list a row registers its index in, read here at drop time, and the
+					 * two readers had to agree about a list a virtualized body renumbers mid-gesture.
+					 * They did not — a drag's auto-scroll grew the library's index space past the
+					 * list's and the drop committed three or four rows beyond the one released on.
+					 * `DndDropEvent` has the measurement. The list now has exactly one reader, the
+					 * registration side, which is the only side a position means anything on.
 					 */
-					const target = getRowDropOrder(table)[event.targetIndex]
-					if (!target || target.id === event.sourceId) return
-					table.ordering.dropRow(event.sourceId, target.id)
+					if (event.targetId === event.sourceId) return
+					table.ordering.dropRow(event.sourceId, event.targetId)
 					return
 				}
 				case DragAxis.Column: {
-					/*
-					 * The same mapping the row arm makes, against the list the surface the drag came
-					 * from registered its items in — `columnDropOrder`, because the axis has two and
-					 * they are two different lists. The two sides have to agree or a drop lands on a
-					 * different column than the pointer did.
-					 */
+					if (event.targetId === event.sourceId) return
 					const scope = COLUMN_DROP_SCOPE[event.surface]
-					const target = columnDropOrder(table, event.surface)[event.targetIndex]
-					if (!target || target.id === event.sourceId) return
 					/*
 					 * Asked before committing, because `dropColumn` answers a refusal with the
 					 * current order — indistinguishable from a legal drop that changed nothing — so
 					 * an unguarded call would fire `onChange` on a drop across a header group or a
 					 * pin band. `drop.ts` states this as the reason `canDropColumn` exists at all.
 					 *
-					 * **This is now a backstop, not the enforcement point.** `canDrop` refuses the
+					 * **This is a backstop, not the enforcement point.** `canDrop` refuses the
 					 * illegal *step*, so a drag cannot arrive here across a boundary in the first
-					 * place. The two are not literally the same question, which is why this stays:
-					 * `canDrop` is asked about a target **id** while this resolves one from an
-					 * index, and the mapping could in principle disagree. If it ever does, the
-					 * refusal costs what a refusal used to cost everywhere — the drag library's
-					 * indices are left permuted with nothing to restore them, per
-					 * `DndProviderProps.canDrop`. Closing that last gap would mean answering the
-					 * adapter from here too (a `void | false` return on `onDrop`, so it can restore
-					 * its own state); it is deliberately not built, because the reachable case is
-					 * gone and no residual one has been demonstrated.
+					 * place — and now that both ask about the same target **id**, they are literally
+					 * the same question rather than two that could disagree through a mapping. What
+					 * keeps this here is time: the two are asked at different moments, so an async
+					 * load that repins a column between the last hover and the release can still
+					 * make them differ. See `canDrop` below for that caveat in full.
 					 *
 					 * The scope comes from the surface, not from `dropColumn`'s default: a header drop
 					 * is judged under `ColumnMoveScope.Visible`, because a hidden column renders no
@@ -422,8 +388,8 @@ function GridDndProvider({ children }: { children: ReactNode }) {
 					 * `All`, because listing hidden columns so they can be reordered is what the
 					 * panel is for. `COLUMN_DROP_SCOPE` has the whole argument.
 					 */
-					if (!canDropColumn(table, event.sourceId, target.id, scope)) return
-					table.setColumnOrder(dropColumn(table, event.sourceId, target.id, scope))
+					if (!canDropColumn(table, event.sourceId, event.targetId, scope)) return
+					table.setColumnOrder(dropColumn(table, event.sourceId, event.targetId, scope))
 					return
 				}
 			}

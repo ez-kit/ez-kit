@@ -4,7 +4,7 @@ import { forwardRef, useMemo } from 'react'
 import { useGridComponents } from '../components-context'
 import { joinClassNames } from '../utils/class-names'
 import { mergeRefs } from '../utils/merge-refs'
-import { getRowDropOrder } from '../utils/row-drop-order'
+import { getRowDropIndex } from '../utils/row-drop-order'
 import { isTextEntryTarget } from '../utils/text-entry-target'
 
 import { useAriaRowIndexAttrs } from './aria-row-index'
@@ -14,7 +14,12 @@ import { RowProvider } from './composition-context'
 import { DragAxis, DragSurface, useDndEnabled, useSortableItem } from './dnd'
 import { useRowNavigationProps } from './keyboard-navigation'
 import { RowDragHandle } from './row-drag-handle'
-import { useRegisterRowDrag } from './row-drag-registry'
+import {
+	useRegisterRowDrag,
+	useRenderedRowIds,
+	useReportActiveDraggingRow,
+	useShouldReportUnpublishedRow,
+} from './row-drag-registry'
 import { useDataGridState, useDataGridTable } from './table-context'
 
 import type { RowDragValue } from './row-drag-registry'
@@ -23,6 +28,8 @@ import type { PinSide } from './use-pinned-row-offsets'
 import type { RowPropsResolver } from '../use-data-grid'
 import type { Row } from '@tanstack/table-core'
 import type { CSSProperties, KeyboardEvent, ReactElement, ReactNode, Ref } from 'react'
+
+const IS_DEV = process.env.NODE_ENV !== 'production'
 
 /**
  * What a `<DataGrid.Row>` render function receives.
@@ -265,7 +272,24 @@ function DataGridRowImpl<TRow extends object = ErasedRow>(
 	 * papered over.
 	 */
 	const isDndEnabled = useDndEnabled()
-	const dropIndex = isDndEnabled ? getRowDropOrder(table).findIndex((candidate) => candidate.id === row.id) : 0
+	const publishedRowIds = useRenderedRowIds()
+	const shouldReportUnpublishedRow = useShouldReportUnpublishedRow()
+	const dropIndex = isDndEnabled ? getRowDropIndex(table, publishedRowIds, row.id) : 0
+	/*
+	 * A published list that does not contain this row is a **defect**, not a fallback case: a
+	 * virtualized body publishes the window plus the row it is holding through a drag, so every row
+	 * it renders is in it by construction. Before the row was held, this was the live path — the
+	 * source unmounted mid-gesture, `indexOf` returned `-1`, `Math.max` clamped it to `0`, and the
+	 * dragged row silently landed at the top of the grid instead of where it was dropped. Reported
+	 * once per row so a regression is visible rather than arithmetic.
+	 */
+	if (IS_DEV && isDndEnabled && publishedRowIds !== null && dropIndex < 0 && shouldReportUnpublishedRow(row.id)) {
+		console.error(
+			`<DataGrid.Row> for row "${row.id}" is not in the list its body published, so it has no ` +
+				'position in the drag index space and a drop involving it will resolve to the wrong row. ' +
+				'A virtualized body must publish the window plus the row being dragged.',
+		)
+	}
 	const isDraggable = isDndEnabled && canMove && !isGroupRow
 	const sortable = useSortableItem({
 		id: row.id,
@@ -295,6 +319,12 @@ function DataGridRowImpl<TRow extends object = ErasedRow>(
 	 * the draggable in the middle of a gesture. See `mergeRefs`.
 	 */
 	useRegisterRowDrag(row.id, drag)
+	/*
+	 * Keeps a virtualized body rendering this row after the window has scrolled past it. Derived
+	 * `drag`, never `sortable`, so a row the grid refused cannot pin itself active — DRAG_STATE_IS_
+	 * DERIVED_NOT_RAW, the same rule the attribute above follows.
+	 */
+	useReportActiveDraggingRow(row.id, drag?.isDragging ?? false)
 	const sortableRef = sortable.ref
 	const rowRef = useMemo(() => mergeRefs<HTMLTableRowElement>(ref, sortableRef), [ref, sortableRef])
 

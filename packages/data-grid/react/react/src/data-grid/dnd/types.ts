@@ -72,10 +72,23 @@ export type DragSpec = {
 	/** The row id or column id. The same identifier the core drop helpers take. */
 	id: string
 	/**
-	 * The item's **real** index in its axis' order — never its position in a rendered window.
+	 * The item's index in the list its axis *and surface* **renders** — counted from zero, over that
+	 * list and no other.
 	 *
-	 * Stated here because a virtualized body renders a slice: passing the slice-relative index
-	 * would make every drag in a scrolled grid land somewhere else.
+	 * Stated this way because the obvious readings are wrong in both directions, and this docblock
+	 * used to carry one of them ("the real index in its axis' order — never a position in a rendered
+	 * window"). It is not an item's place in the underlying model: TanStack's `row.index` counts a
+	 * row among its *parent's* children, which coincides with a rendered position only on page one of
+	 * a flat, unfiltered grid. And in a **virtualized** body it is not a place in the whole order
+	 * either — there the index *is* a position within the rendered window. That body declares the
+	 * rows it renders (the window, plus the row it holds mounted for the length of a drag) and each
+	 * row takes its index from the declaration. A row reporting its place in the whole model is
+	 * exactly how the virtual case failed: the zeroth sortable of a window starting at row 5 claimed
+	 * index `5`, and the plugin named below returned on the first frame.
+	 *
+	 * **Nothing reads this back.** A drop is reported as an id ({@link DndDropEvent}), so the
+	 * declaration has exactly one reader and no second list has to agree with it — which is why a
+	 * window that moves mid-drag is no longer a hazard on the commit side, only on this one.
 	 *
 	 * **And the indices of one axis *and surface* must be dense: exactly `0..n-1`, no gap and no
 	 * duplicate.**
@@ -138,51 +151,77 @@ export type SortableItemHandle = {
 }
 
 /**
- * A completed drop, as the adapter reports it.
+ * A completed drop, as the adapter reports it: **two ids, and no position anywhere.**
  *
- * **The landing place is an index, not a target id, and that is a correction.** The first revision
- * of this port carried `targetId`, on the PRD's rule that ids are the source of truth and no
- * position is derived. Measured against the real library, that does not survive contact: a sortable
- * displaces its neighbours optimistically *during* the drag, so by the time the drop is reported
- * the source already occupies the place it is going and the collision resolves **to itself** —
- * `source.id === target.id`, every time. An id-based target is degenerate exactly when it matters.
+ * This revision replaced a `targetIndex: number`, and the reason is worth stating in full, because
+ * the index form reads like the safer answer and is not one.
  *
- * dnd-kit's own `move()` helper says the same thing in code: where the ids do not resolve it falls
- * back to `source.initialIndex` → `source.index`, which is the projected position and the only
- * honest answer once optimistic sorting is on. Turning that sorting off would restore a usable
- * `targetId` and take the visual displacement with it — the thing the whole design is built around.
+ * **An index is only meaningful while the list it counts in holds still, and a virtualized body's
+ * does not.** There the index space is the rendered window (see {@link DragSpec.index}), and a
+ * drag's own auto-scroll changes it mid-gesture — rows unmount, rows mount, and every survivor is
+ * renumbered — so the same number denotes a different row from frame to frame. Instrumented on a
+ * 10 000-row grid, dragging one row far down with the library's auto-scroll: across three runs the
+ * index the drop carried was consistently 3–4 higher than the row the pointer was actually over,
+ * because the library's space had grown by however many rows had scrolled past, and the grid
+ * committed a row three or four places beyond the one the user released on. The **id** was right
+ * in all three. That is not a tuning problem; the drift is unbounded in the length of the scroll.
  *
- * So the adapter reports **where the item landed** and the grid turns that into the target its own
- * commit path wants. Ids remain the currency at the core boundary: `dropRow` still takes two row
- * ids, and the grid resolves the second from this index against its own row model, which is the
- * only place that mapping is knowable.
+ * **The adapter is also the only side that can source the id honestly, which is why this is not
+ * simply a read of the library's drop target — that value is unsound in two opposite ways, in two
+ * frames of one gesture.** Measured against `@dnd-kit/dom@0.1.21`:
+ *
+ * - *A displacement that succeeded* ends with `manager.actions.setDropTarget(source.id)`
+ *   (`sortable.js:418`), and nothing takes the target off the source afterwards, because
+ *   `CollisionObserver.computeCollisions` does not skip the source's own droppable
+ *   (`@dnd-kit/abstract@0.1.21/index.js:394-412`) and the source element follows the pointer. So the
+ *   reported target **is** the dragged item, every time, and reading it would be a self-drop.
+ * - *A displacement that bailed* leaves the target as the row the pointer is genuinely over. The
+ *   plugin's move is a microtask chain (`sortable.js:373-418`) that returns early when a group's
+ *   indices are not dense or a registered sortable has gone — which a virtualized body's auto-scroll
+ *   causes continuously. There the **id is right** and the indices are the stale ones.
+ *
+ * Neither frame's signal is sound alone, and the pair is why: an index is wrong exactly where the id
+ * is right, and the id is degenerate exactly where the index is fine. So the honest id is the last
+ * target the pointer was over that the grid *allowed*, which an adapter already computes every frame
+ * to answer {@link DndProviderProps.canDrop}; it remembers that and reports it here. Each in-repo
+ * adapter's `toDropEvent` carries the mechanism, the citations, and one known caveat about the
+ * no-movement check it still makes with indices of its own.
+ *
+ * So positions stay where they are meaningful — inside the drag library, which is the only thing
+ * that needs them, and on {@link DragSpec.index}, which is how an item registers one. **Nothing
+ * crosses this boundary but ids**, which is also the currency at the core boundary beneath it:
+ * `dropRow` and `dropColumn` take two ids and resolve them against the table's own model, so no
+ * second list has to agree with a first.
  */
 export type DndDropEvent = {
 	axis: DragAxis
 	/**
-	 * The surface the drop happened on, which is what decides the list {@link
-	 * DndDropEvent.targetIndex} counts in and the `ColumnMoveScope` the commit uses.
+	 * The surface the drop happened on, which is what decides the `ColumnMoveScope` the commit uses.
+	 *
+	 * It no longer decides a list to count an index in — there is no index — but it is still load
+	 * bearing: a header drop is judged among the visible columns and a panel drop among every
+	 * listed one, including the hidden.
 	 */
 	surface: DragSurface
 	/** The item that was picked up. */
 	sourceId: string
 	/**
-	 * Where it should land: the index it occupies in its axis' order at the end of the drag.
+	 * The item it should land on: whatever the pointer was legally over when the drag was released.
 	 *
-	 * The index is into the same order `DragSpec.index` counts in — the real one, never a position
-	 * within a rendered window.
+	 * Never the source itself — an adapter that cannot name a target other than the source reports
+	 * no drop at all, since that is the degenerate reading described above rather than a drop onto
+	 * oneself. The grid guards it anyway, and the core helpers refuse it a third time.
 	 */
-	targetIndex: number
+	targetId: string
 }
 
 /**
  * A **prospective** drop: the item is still held, and the pointer is over `targetId`.
  *
- * Both ends are ids rather than indices, which is the opposite of {@link DndDropEvent} and is not
- * an inconsistency. That event reports where an item **landed**, by which time optimistic sorting
- * has made the ids degenerate; this one is asked *before* any displacement, so the two ends are
- * genuinely two different items and the ids are the honest currency — the same currency the core
- * `canDrop*` helpers take.
+ * Both ends are ids, as on {@link DndDropEvent} — the whole port speaks ids. This one is asked
+ * *before* the displacement that makes the library's own target degenerate, so its target is simply
+ * the item under the pointer, and it is the id a correct adapter remembers in order to report the
+ * drop. Same currency the core `canDrop*` helpers take.
  */
 export type DndDragOverEvent = {
 	axis: DragAxis
