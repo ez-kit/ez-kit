@@ -1,6 +1,6 @@
 'use client'
 
-import { DragDropProvider } from '@dnd-kit/react'
+import { DragDropProvider, KeyboardSensor, PointerSensor } from '@dnd-kit/react'
 import { useSortable } from '@dnd-kit/react/sortable'
 import { DragAxis, DragSurface } from '@ez-kit/data-grid-react'
 import { useRef } from 'react'
@@ -49,6 +49,202 @@ const DRAG_AXES: readonly string[] = [DragAxis.Row, DragAxis.Column]
 
 /** The surfaces this adapter sets. */
 const DRAG_SURFACES: readonly string[] = [DragSurface.Table, DragSurface.Panel]
+
+/** `PointerEvent.pointerType` for a mouse. */
+const POINTER_TYPE_MOUSE = 'mouse'
+
+/** `PointerEvent.pointerType` for a finger. */
+const POINTER_TYPE_TOUCH = 'touch'
+
+/**
+ * `Node.ELEMENT_NODE`, as a number rather than through the global: `Node` is bound to one realm, and
+ * every docs example renders the grid inside an iframe.
+ */
+const ELEMENT_NODE_TYPE = 1
+
+/** The elements a caret can sit in, by tag name. */
+const TEXT_INPUT_TAG_NAMES: readonly string[] = ['INPUT', 'TEXTAREA']
+
+/** The attribute that makes anything else one. */
+const CONTENT_EDITABLE_ATTRIBUTE = 'contenteditable'
+
+/** The one value of it that means "no". */
+const CONTENT_EDITABLE_FALSE = 'false'
+
+/**
+ * How far a pointer must travel from the handle before a drag starts, in CSS pixels.
+ *
+ * **Adopted from the library rather than chosen here:** `@dnd-kit/dom@0.1.21`'s pointer sensor
+ * applies `distance: { value: 5 }` to every pointer it constrains (`index.js:1545-1548`). It is
+ * named and passed explicitly because of the one path that constraint never reached — see
+ * {@link dragActivationConstraints}.
+ */
+const DRAG_DISTANCE_PX = 5
+
+/**
+ * How long a finger must rest on the handle before a drag starts. The library's 250 ms
+ * (`index.js:1535-1538`).
+ */
+const DRAG_TOUCH_DELAY_MS = 250
+
+/**
+ * How far a finger may stray during that delay before the gesture is left to the scroller. The
+ * library's 5 px (`index.js:1535-1538`).
+ */
+const DRAG_TOUCH_TOLERANCE_PX = 5
+
+/**
+ * How long any other pointer must rest before a drag starts. The library's 200 ms, which it applies
+ * to both of its remaining branches — the text field (`index.js:1540-1544`) and everything else
+ * (`index.js:1545-1548`).
+ */
+const DRAG_HOLD_DELAY_MS = 200
+
+/** How far it may stray during that delay. The library's 10 px (`index.js:1545-1548`). */
+const DRAG_HOLD_TOLERANCE_PX = 10
+
+/**
+ * How far a pointer resting in a text field may stray before the gesture is left to the caret: not
+ * at all. The library's `0` (`index.js:1540-1544`), and {@link dragActivationConstraints} has why it
+ * is load bearing here rather than defensive.
+ */
+const DRAG_TEXT_INPUT_TOLERANCE_PX = 0
+
+/**
+ * Whether a pointer event's target is an element at all.
+ *
+ * Reimplemented rather than imported: the library's `isElement` is exported from
+ * `@dnd-kit/dom/utilities` (`utilities.js:1317-1320`), and `@dnd-kit/dom` is a transitive dependency
+ * this package does not declare — the two sensor classes are reached through `@dnd-kit/react`'s
+ * re-export of them, which these guards have no equivalent of.
+ */
+function isElementTarget(target: EventTarget | null): target is Element {
+	return target !== null && (target as Node).nodeType === ELEMENT_NODE_TYPE
+}
+
+/**
+ * Whether the pointer came down on the source's handle, or on something inside it — upstream's own
+ * condition (`index.js:1532`).
+ *
+ * `false` when the sortable rendered **no** handle, which is a reachable composition rather than a
+ * defect: see {@link dragActivationConstraints}.
+ */
+function isOnHandle(target: EventTarget | null, handle: Element | undefined): boolean {
+	if (!isElementTarget(target) || !handle) return false
+
+	return handle === target || handle.contains(target)
+}
+
+/**
+ * Whether the target is a text field — an `<input>`, a `<textarea>`, or anything `contenteditable`.
+ * The library's own test (`utilities.js:1341-1349`), reimplemented for the reason
+ * {@link isElementTarget} is.
+ */
+function isTextInputTarget(target: EventTarget | null): boolean {
+	if (!isElementTarget(target)) return false
+	if (TEXT_INPUT_TAG_NAMES.includes(target.tagName)) return true
+
+	const editable = target.getAttribute(CONTENT_EDITABLE_ATTRIBUTE)
+
+	return editable !== null && editable !== CONTENT_EDITABLE_FALSE
+}
+
+/**
+ * The activation constraints this adapter sets, in dnd-kit's own vocabulary: a drag starts once the
+ * pointer has travelled `distance.value`, or once it has rested for `delay.value` without straying
+ * further than `delay.tolerance` (`index.js:1689-1703`).
+ *
+ * Declared structurally for the reason {@link SortableDragEndEvent} is — the library's own
+ * `ActivationConstraints` is exported from `@dnd-kit/dom`, a transitive dependency this package does
+ * not declare.
+ */
+export type DragActivationConstraints = {
+	delay?: { value: number; tolerance: number }
+	distance?: { value: number }
+}
+
+/** The slice of the `PointerEvent` the constraints read. */
+export type DragActivationEvent = Pick<PointerEvent, 'pointerType' | 'target' | 'defaultPrevented'>
+
+/**
+ * The slice of dnd-kit's `Draggable` they read: its handle, which a sortable need not have.
+ *
+ * `Element | undefined` rather than `| null`, because that is what the library's own `Draggable`
+ * declares and `exactOptionalPropertyTypes` makes the difference a type error at the boundary.
+ */
+export type DragActivationSource = { handle?: Element | undefined }
+
+/**
+ * What must happen after a `pointerdown` before a drag starts, given the event **and the draggable
+ * it was bound for**.
+ *
+ * Both arguments are upstream's own, and the second is why: the branch that matters most here is
+ * conditional on the **handle**, not on the pointer type alone (`index.js:1532`). Every number is
+ * adopted from that default rather than invented (`index.js:1528-1550`), the four branches are its
+ * four in its order, and **exactly one of them deviates**.
+ *
+ * - **a mouse on the handle** — upstream returns `undefined`: no distance and no delay, so the drag
+ *   begins on the `pointerdown` itself and a click that twitches one pixel is a drag. It now gets
+ *   the same `distance` upstream applies to every pointer it does constrain, and still no delay,
+ *   because pressing a handle and holding still with a mouse should start nothing. **This is the
+ *   only deviation, and the whole behavioural change in this module.**
+ * - **touch** — upstream's delay and tolerance verbatim: a finger that strays first is scrolling.
+ * - **a text field** — upstream's `tolerance: 0` verbatim, and it is load bearing rather than
+ *   defensive, because **a sortable need not render a handle**. `dragHandle` is a *render argument*
+ *   of `<DataGrid.HeaderCell>` and `<RowDragHandle/>` an offered child, while the sortable is
+ *   registered on the `<th>` or the row either way — so a header written without one is a draggable
+ *   element containing that column's filter input. Dragging a few pixels to select text in it would
+ *   otherwise cross {@link DRAG_DISTANCE_PX} and start a column drag mid-selection; upstream
+ *   abandons the drag on the first pixel instead, and so does this.
+ * - **anything else** (a pen, a mouse that came down outside the handle, and whatever a later
+ *   pointer type turns out to be) — upstream's values verbatim.
+ *
+ * Exported so the unit tests can drive it — nothing about an activation constraint is observable in
+ * jsdom, for the reason recorded at the top of `dnd.test.tsx`.
+ */
+export function dragActivationConstraints(
+	event: DragActivationEvent,
+	source: DragActivationSource,
+): DragActivationConstraints {
+	const { pointerType, target } = event
+
+	if (pointerType === POINTER_TYPE_MOUSE && isOnHandle(target, source.handle)) {
+		return { distance: { value: DRAG_DISTANCE_PX } }
+	}
+
+	if (pointerType === POINTER_TYPE_TOUCH) {
+		return { delay: { value: DRAG_TOUCH_DELAY_MS, tolerance: DRAG_TOUCH_TOLERANCE_PX } }
+	}
+
+	if (isTextInputTarget(target) && !event.defaultPrevented) {
+		return { delay: { value: DRAG_HOLD_DELAY_MS, tolerance: DRAG_TEXT_INPUT_TOLERANCE_PX } }
+	}
+
+	return {
+		delay: { value: DRAG_HOLD_DELAY_MS, tolerance: DRAG_HOLD_TOLERANCE_PX },
+		distance: { value: DRAG_DISTANCE_PX },
+	}
+}
+
+/**
+ * The sensors this adapter mounts — and **listing them at all is opting out of the library's
+ * preset**, which is the one hazard in this block.
+ *
+ * `defaultPreset.sensors` is `[PointerSensor, KeyboardSensor]` (`index.js:1819-1822`) and
+ * `DragDropManager` falls back to it only while `sensors` is absent (`index.js:1825-1831`). So the
+ * keyboard sensor is named here purely to keep it: a keyboard drag has worked since the handle
+ * existed, its activation is already handle-only — `event.target === (source.handle ??
+ * source.element)` (`index.js:1351-1356`) — and its keys are the library's (`Space` / `Enter` to
+ * pick up and to drop, the four arrows to move, `Escape` to cancel, `Tab` to drop). Nothing about
+ * it is configured; omitting it would have deleted it. `dnd.test.tsx` asserts it is in this array
+ * rather than trusting the diff.
+ *
+ * Module scope rather than inline, and not because a per-render array would be wasted: the provider
+ * **reassigns** `manager.sensors` whenever the array's identity changes
+ * (`@dnd-kit/react@0.1.21/index.js:163-164`), so a fresh one per render re-instantiates the sensors
+ * — including in the middle of a gesture one of them is driving.
+ */
+const DRAG_SENSORS = [PointerSensor.configure({ activationConstraints: dragActivationConstraints }), KeyboardSensor]
 
 /**
  * How one sortable's **partition** is spelled for dnd-kit: `<axis>:<surface>`.
@@ -607,6 +803,7 @@ function DndProvider({ onDrop, canDrop, children }: DndProviderProps) {
 
 	return (
 		<DragDropProvider
+			sensors={DRAG_SENSORS}
 			/*
 			 * `preventDefault()` is how this library is told a hover is not a landing place, and it is
 			 * a first-class answer rather than a trick: `DragActions.setDropTarget` dispatches this

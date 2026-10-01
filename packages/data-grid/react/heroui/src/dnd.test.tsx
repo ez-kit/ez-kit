@@ -1,11 +1,26 @@
+import { KeyboardSensor, PointerSensor } from '@dnd-kit/react'
 import { useSortable } from '@dnd-kit/react/sortable'
 import { render } from '@testing-library/react'
 import { createElement } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { adapter, AnchorSide, hasTravelled, toDragAnchor, toDragOverEvent, toDropEvent } from './dnd'
+import {
+	adapter,
+	AnchorSide,
+	dragActivationConstraints,
+	hasTravelled,
+	toDragAnchor,
+	toDragOverEvent,
+	toDropEvent,
+} from './dnd'
 
-import type { DragAnchor, SortableDragEndEvent, SortableDragOverEvent, SortableManager } from './dnd'
+import type {
+	DragActivationEvent,
+	DragAnchor,
+	SortableDragEndEvent,
+	SortableDragOverEvent,
+	SortableManager,
+} from './dnd'
 import type * as DndKitModule from '@dnd-kit/react'
 import type * as SortableModule from '@dnd-kit/react/sortable'
 import type { DndDragOverEvent, DndDropEvent, SortableItemHandle } from '@ez-kit/data-grid-react'
@@ -27,6 +42,11 @@ type CapturedHandlers = {
 	 * and assert that it changes nothing.
 	 */
 	onDragEnd?: (event: SortableDragEndEvent, manager?: SortableManager) => void
+	/**
+	 * The sensor list, as `unknown` members: a configured sensor is a `PluginDescriptor` out of
+	 * `@dnd-kit/abstract`, and the cases below narrow what they need rather than naming that package.
+	 */
+	sensors?: readonly unknown[]
 }
 
 /**
@@ -983,5 +1003,168 @@ describe('toDragOverEvent', () => {
 				dragOver({ id: 'column:table:name', type: 'column:table' }, { id: 'row:table:1', type: 'row:table' }),
 			),
 		).toBeNull()
+	})
+})
+
+/**
+ * The sensors, and why these cases exist at all.
+ *
+ * Passing `sensors` **opts out of `defaultPreset`**, so the keyboard sensor the preset supplied has
+ * to be listed by hand — and a kit that silently lost it would look exactly like a kit that never
+ * had it. These cases therefore assert the configuration object the adapter hands the provider,
+ * which is the limit of what is reachable at unit level: driving a real keyboard pickup needs
+ * layout, and jsdom reports every element as zero-sized, for the reason recorded at the top of this
+ * file. What is asserted is that the keyboard sensor is in the array, that the pointer sensor is
+ * configured with this module's constraints, and that each constraint comes out as intended. That a
+ * keyboard pickup then *works* is Playwright's.
+ */
+describe('the sensors the adapter mounts', () => {
+	/** The array the adapter passed the provider, mounted fresh. */
+	function mountedSensors(): readonly unknown[] {
+		resetCapture()
+		renderItem({ id: 'row-1', index: 0, axis: 'row', surface: 'table' })
+		const { sensors } = capturedHandlers()
+		if (!sensors) throw new Error('the adapter passed no sensors, so the preset is back')
+
+		return sensors
+	}
+
+	/*
+	 * The case this whole block is for. `KeyboardSensor` is listed as the bare class — nothing about
+	 * it is configured — so identity is the assertion, and it holds because the module mock above
+	 * spreads the real exports rather than replacing them.
+	 */
+	it('lists the keyboard sensor, which opting out of the preset would otherwise delete', () => {
+		expect(mountedSensors()).toContain(KeyboardSensor)
+	})
+
+	/*
+	 * The library's own handle-only gate, driven directly: it is what keeps a keyboard pickup away
+	 * from the sort toggle and the selection checkbox, and the adapter relies on it rather than
+	 * writing one. Listing the sensor unconfigured is what keeps this default in force.
+	 */
+	it('keeps the keyboard activation on the handle alone', () => {
+		const handle = document.createElement('button')
+		const row = document.createElement('div')
+		row.append(handle)
+		// Through `unknown`: `shouldActivate` takes the library's own `Draggable`, which lives in
+		// `@dnd-kit/abstract`. The two fields it reads are the two given here.
+		const shouldActivate = KeyboardSensor.defaults.shouldActivate as unknown as (args: {
+			event: { target: Element }
+			source: { handle?: Element; element: Element }
+		}) => boolean
+
+		expect(shouldActivate({ event: { target: handle }, source: { handle, element: row } })).toBe(true)
+		expect(shouldActivate({ event: { target: row }, source: { handle, element: row } })).toBe(false)
+	})
+
+	it('configures the pointer sensor with this module’s constraints', () => {
+		const descriptor = mountedSensors().find(
+			(sensor): sensor is { plugin: unknown; options?: { activationConstraints?: unknown } } =>
+				typeof sensor === 'object' && sensor !== null && 'plugin' in sensor,
+		)
+
+		expect(descriptor?.plugin).toBe(PointerSensor)
+		expect(descriptor?.options?.activationConstraints).toBe(dragActivationConstraints)
+	})
+
+	/*
+	 * The four branches, driven through the parameter pair upstream passes. The handle is the axis
+	 * that matters: a sortable need not render one — `dragHandle` is a render argument of
+	 * `<DataGrid.HeaderCell>` and `<RowDragHandle/>` an offered child, while the sortable is
+	 * registered either way — so every case states whether the pointer came down on a handle, and
+	 * the handle-less ones are the cases a `pointerType`-only check got wrong.
+	 */
+	describe('the pointer activation constraints', () => {
+		/** A header cell holding a filter input, and a handle inside it only when asked for one. */
+		function sortableElement({ withHandle }: { withHandle: boolean }): {
+			source: { handle?: Element }
+			handle: Element | null
+			input: Element
+		} {
+			const cell = document.createElement('div')
+			const input = document.createElement('input')
+			cell.append(input)
+			if (!withHandle) return { source: {}, handle: null, input }
+
+			const handle = document.createElement('button')
+			cell.append(handle)
+
+			return { source: { handle }, handle, input }
+		}
+
+		/** An event with the three fields the constraints read. */
+		const pointerDown = (pointerType: string, target: Element | null): DragActivationEvent => ({
+			pointerType,
+			target,
+			defaultPrevented: false,
+		})
+
+		/*
+		 * The one deviation from upstream, and the whole behavioural change: upstream returns
+		 * `undefined` here, so the drag began on the `pointerdown` itself.
+		 */
+		it('gives a mouse on the handle a distance and no delay', () => {
+			const { source, handle } = sortableElement({ withHandle: true })
+
+			expect(dragActivationConstraints(pointerDown('mouse', handle), source)).toEqual({ distance: { value: 5 } })
+		})
+
+		/*
+		 * The HIGH this block exists for. Keyed on `pointerType` alone, this reached the distance
+		 * branch and a few pixels of text selection started a column drag; upstream abandons the
+		 * gesture on the first pixel, which is what `tolerance: 0` says.
+		 */
+		it('leaves a mouse in a text field on the library’s zero tolerance, handle or no handle', () => {
+			const withHandle = sortableElement({ withHandle: true })
+			const without = sortableElement({ withHandle: false })
+			const zeroTolerance = { delay: { value: 200, tolerance: 0 } }
+
+			expect(dragActivationConstraints(pointerDown('mouse', withHandle.input), withHandle.source)).toEqual(
+				zeroTolerance,
+			)
+			expect(dragActivationConstraints(pointerDown('mouse', without.input), without.source)).toEqual(zeroTolerance)
+		})
+
+		/** A `contenteditable` cell is a text field too, and `contenteditable='false'` is not. */
+		it('counts a contenteditable element as a text field, and false as not one', () => {
+			const editable = document.createElement('div')
+			editable.setAttribute('contenteditable', 'true')
+			const plain = document.createElement('div')
+			plain.setAttribute('contenteditable', 'false')
+
+			expect(dragActivationConstraints(pointerDown('mouse', editable), {})).toEqual({
+				delay: { value: 200, tolerance: 0 },
+			})
+			expect(dragActivationConstraints(pointerDown('mouse', plain), {})).toEqual({
+				delay: { value: 200, tolerance: 10 },
+				distance: { value: 5 },
+			})
+		})
+
+		/*
+		 * The library's own 250 ms / 5 px, adopted rather than retuned: a finger that strays before
+		 * the delay is scrolling, and the tolerance is what hands the gesture back to the scroller.
+		 * Touch is checked before the handle, so it holds for a handle-less sortable too.
+		 */
+		it('keeps the library’s delay and tolerance for a finger', () => {
+			const { source, handle } = sortableElement({ withHandle: true })
+			const touch = { delay: { value: 250, tolerance: 5 } }
+
+			expect(dragActivationConstraints(pointerDown('touch', handle), source)).toEqual(touch)
+			expect(dragActivationConstraints(pointerDown('touch', sortableElement({ withHandle: false }).input), {})).toEqual(
+				touch,
+			)
+		})
+
+		/** A pen, and a mouse that came down outside the handle, keep the library's values. */
+		it('leaves every other pointer on the library’s values', () => {
+			const { source, handle } = sortableElement({ withHandle: true })
+			const fallback = { delay: { value: 200, tolerance: 10 }, distance: { value: 5 } }
+
+			expect(dragActivationConstraints(pointerDown('pen', handle), source)).toEqual(fallback)
+			expect(dragActivationConstraints(pointerDown('mouse', document.createElement('span')), source)).toEqual(fallback)
+			expect(dragActivationConstraints(pointerDown('mouse', null), source)).toEqual(fallback)
+		})
 	})
 })

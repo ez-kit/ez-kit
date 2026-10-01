@@ -23,6 +23,7 @@ import { ColumnDragHandle } from './column-drag-handle'
 import { buildColumnMenuSections } from './column-menu-sections'
 import { HeaderCellProvider } from './composition-context'
 import { useDndEnabled } from './dnd'
+import { COLUMN_DRAGGING_SELECTOR } from './dnd/dragging-attrs'
 import { flexRender } from './flex-render'
 import { HeaderExtras, HeaderMain } from './header-slots'
 import { useCellNavigationProps } from './keyboard-navigation'
@@ -348,6 +349,34 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 	const onHeaderKeyDown = canMove
 		? (e: KeyboardEvent) => {
 				if (!e.altKey || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return
+				/*
+				 * This column is being dragged, **by any means**: the drag owns it until it is
+				 * dropped, and reordering it from under a live gesture is not an alternative worth
+				 * offering — the position the user is dragging towards is the one that counts.
+				 *
+				 * During a *keyboard* drag that also removes a real double-move, since dnd-kit's
+				 * sensor takes the same arrows. During a *pointer* drag the sensor is idle for
+				 * keystrokes (`@dnd-kit/dom@0.1.21`, `index.js:1611` — it refuses while an
+				 * operation is non-idle), so the chord is dropped with nothing replacing it: the
+				 * accepted trade, not an oversight.
+				 *
+				 * Asked of the DOM rather than of `useColumnDrag()`, which is **unreachable from
+				 * here**: `ColumnDragShell` renders the `<th>` and puts `ColumnDragContext.Provider`
+				 * inside it, around the children — and this handler is a prop of that same `<th>`,
+				 * so it is written one level above the context it would read. Hoisting the sortable
+				 * out of the shell to fix that is what the shell's own docblock explains cannot be
+				 * done: a header cell is one component for a leaf, a group and a placeholder, and
+				 * only the leaf may register.
+				 *
+				 * So the handler asks the event where it came from. `closest()` is narrow by
+				 * construction — true only for a keystroke that started inside the column actually
+				 * being dragged, never for a drag elsewhere in the grid, which a root-wide
+				 * `querySelector` like the focus model's could not distinguish.
+				 *
+				 * Like the focus model's gate, this cannot be folded in with the chord check: that
+				 * one is two cheap property reads and must stay in front of the DOM walk.
+				 */
+				if (e.target instanceof Element && e.target.closest(COLUMN_DRAGGING_SELECTOR) !== null) return
 				// Option+Arrow moves by word inside a text field, and opens a native select —
 				// never steal it from the filter input living in this `<th>`. Only a control that
 				// owns the chord keeps it; a button or a checkbox does not.

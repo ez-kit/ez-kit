@@ -12,6 +12,7 @@ import { ariaExpandedAttrs } from './aria-state'
 import { DataGridCell } from './cell'
 import { RowProvider } from './composition-context'
 import { DragAxis, DragSurface, useDndEnabled, useSortableItem } from './dnd'
+import { ROW_DRAGGING_ATTR } from './dnd/dragging-attrs'
 import { useRowNavigationProps } from './keyboard-navigation'
 import { RowDragHandle } from './row-drag-handle'
 import {
@@ -347,6 +348,27 @@ function DataGridRowImpl<TRow extends object = ErasedRow>(
 	const onRowKeyDown = canMove
 		? (e: KeyboardEvent<HTMLTableRowElement>) => {
 				if (!e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return
+				/*
+				 * This row is being dragged, **by any means**: the drag owns it until it is
+				 * dropped, and reordering it from under a live gesture is not something to offer
+				 * as an alternative — the position the user is dragging towards is the one that
+				 * counts, and moving the row underneath invalidates it.
+				 *
+				 * During a *keyboard* drag that also removes a genuine double-move: dnd-kit's
+				 * sensor takes the same arrows, so one press moved the row twice, once per handler.
+				 * During a *pointer* drag the sensor is idle for keystrokes
+				 * (`@dnd-kit/dom@0.1.21`, `index.js:1611` — it refuses while an operation is
+				 * non-idle), so the chord is simply dropped, and that is the accepted trade rather
+				 * than an oversight.
+				 *
+				 * It has to be here rather than in the grid's focus model, which also stands down
+				 * on a drag: this handler is on the `<tr>`, below the element that one listens on,
+				 * so it has already acted by the time the event bubbles up there.
+				 *
+				 * Derived `drag`, never `sortable` — DRAG_STATE_IS_DERIVED_NOT_RAW, the rule
+				 * `data-row-dragging` and `useReportActiveDraggingRow` above both follow.
+				 */
+				if (drag?.isDragging === true) return
 				// Only a control that owns `Alt+Arrow` keeps it — a text field moving by word, a
 				// native select opening. A checkbox or a button does not, and a row has nothing
 				// else to focus, so a predicate counting those would refuse every event here.
@@ -380,7 +402,7 @@ function DataGridRowImpl<TRow extends object = ErasedRow>(
 			data-virtual={dataVirtual}
 			{...(onRowKeyDown ? { onKeyDown: onRowKeyDown } : {})}
 			{...(canMove ? { 'data-movable': 'true' } : {})}
-			{...(drag?.isDragging ? { 'data-row-dragging': 'true' } : {})}
+			{...(drag?.isDragging ? { [ROW_DRAGGING_ATTR]: 'true' } : {})}
 		>
 			{renderRowContent(children, row, cells, drag)}
 		</Tr>

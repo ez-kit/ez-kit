@@ -1000,6 +1000,14 @@
 		"exportName": "VirtualizedRowDragExample"
 	},
 	{
+		"id": "keyboard-sensors",
+		"label": "Keyboard sensors",
+		"group": "ordering",
+		"groupLabel": "Ordering",
+		"sourceFile": "components/keyboard-sensors.tsx",
+		"exportName": "KeyboardSensorsExample"
+	},
+	{
 		"id": "column-panel-drag",
 		"label": "Column panel drag and drop",
 		"group": "ordering",

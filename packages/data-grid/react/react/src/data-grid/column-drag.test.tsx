@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { createDataGrid } from '../create-data-grid'
@@ -384,6 +384,81 @@ describe('the dragging attribute', () => {
 		const { container } = renderDndGrid(adapter, { ordering: { column: false } }, headerWithHandleArg)
 
 		expect(container.querySelector('[data-column-dragging]')).toBeNull()
+	})
+})
+
+/**
+ * `Alt+ArrowLeft` / `Alt+ArrowRight` move a column, and the drag layer's keyboard sensor moves the
+ * one it has picked up with the same keys — so while a column is being dragged, exactly one of the
+ * two may act on a press.
+ *
+ * The grid's focus model also stands down on a drag, and cannot help here: `onHeaderKeyDown` is a
+ * prop of the `<th>`, below the element that model listens on, so it has already acted by the time
+ * the event bubbles up there. The gate has to be on this handler.
+ */
+describe('Alt+Arrow while a column is being dragged', () => {
+	/** The leaf columns in DOM order — what a reorder changes and a stood-down handler does not. */
+	function headerOrder(container: HTMLElement): (string | null)[] {
+		return [...container.querySelectorAll('[data-slot="th"]')].map((th) => th.getAttribute('data-column-id'))
+	}
+
+	it('does not reorder the dragged column, so one keystroke moves it once', () => {
+		const { adapter } = makeDrivableAdapter('name')
+		const { container } = renderDndGrid(adapter, {}, headerWithHandleArg)
+		const before = headerOrder(container)
+		// Fired from the handle inside the dragged `<th>`, which is where the keyboard sensor's own
+		// activation requires the keystroke to come from — not from the `<th>`, where a `closest()`
+		// matching the element itself would pass with a narrower gate than the real gesture needs.
+		const handle = container.querySelector<HTMLElement>('[data-column-dragging] button')
+		if (!handle) throw new Error('the dragged header cell rendered no handle')
+
+		fireEvent.keyDown(handle, { key: 'ArrowRight', altKey: true, bubbles: true })
+
+		expect(headerOrder(container)).toEqual(before)
+	})
+
+	/*
+	 * The negative control, and **the only thing pinning the gate narrow**: it fires the chord on a
+	 * column that is not the one being dragged, while a drag is in flight. The gate is a `closest()`
+	 * from the event's target, so the chord still works — and any `querySelector` over the grid or
+	 * the document, which is what the focus model's own gate uses, fails here. That is exactly what
+	 * this case exists to catch.
+	 *
+	 * **Its subject is the gate's scope, not a permission.** That a sibling column can be reordered
+	 * during a pointer drag — mutating the index space `OptimisticSortingPlugin` is operating over —
+	 * is a real hazard, pre-existing, and nothing this phase decided to allow; asserting the chord
+	 * reaches the ungated column is not an endorsement of doing it.
+	 */
+	it('still reorders a different column while one is being dragged', () => {
+		const { adapter } = makeDrivableAdapter('name')
+		const { container } = renderDndGrid(adapter, {}, headerWithHandleArg)
+		const age = container.querySelector<HTMLElement>('[data-slot="th"][data-column-id="age"]')
+		if (!age) throw new Error('the grid rendered no header cell for "age"')
+		// The literal, as every other assertion in this file writes it: a test of a DOM contract
+		// states the attribute it expects rather than reading it back from the module under test.
+		expect(age.closest('[data-column-dragging]')).toBeNull()
+
+		fireEvent.keyDown(age, { key: 'ArrowLeft', altKey: true, bubbles: true })
+
+		expect(headerOrder(container)).toEqual(['age', 'name'])
+	})
+
+	/*
+	 * The second control, pinning the other half: the gate must not **over-suppress** when idle. On
+	 * its own it is weak — a gate querying the whole grid passes it, since nothing is dragging to
+	 * suppress — which is why it sits beside the case above rather than replacing it. Together: that
+	 * one says the gate is per-item, this one says it is off when there is no drag.
+	 */
+	it('reorders the same column on Alt+Arrow when no drag is in flight', () => {
+		const { adapter } = makeDrivableAdapter()
+		const { container } = renderDndGrid(adapter, {}, headerWithHandleArg)
+		expect(container.querySelector('[data-column-dragging]')).toBeNull()
+		const name = container.querySelector<HTMLElement>('[data-slot="th"][data-column-id="name"]')
+		if (!name) throw new Error('the grid rendered no header cell for "name"')
+
+		fireEvent.keyDown(name, { key: 'ArrowRight', altKey: true, bubbles: true })
+
+		expect(headerOrder(container)).toEqual(['age', 'name'])
 	})
 })
 

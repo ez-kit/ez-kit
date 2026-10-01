@@ -423,4 +423,70 @@ describe('the keyboard model while a drag is in flight', () => {
 		// Still on the first cell: the model returned before it moved the stop.
 		expect(document.activeElement).toBe(first)
 	})
+
+	/*
+	 * `Alt+ArrowUp` / `Alt+ArrowDown` move the row, and the drag layer's keyboard sensor moves the
+	 * row it has picked up with the same keys — so while this row is being dragged exactly one of
+	 * the two may act, or one press moves it twice.
+	 *
+	 * The gate is on `onRowKeyDown` itself and nowhere else it could be. The focus model above also
+	 * stands down on a drag and cannot help: that handler is on the kit's `Table`, above the `<tr>`
+	 * this one sits on, so the reorder has already happened by the time the event reaches it.
+	 */
+	it('does not reorder the dragged row on Alt+Arrow', () => {
+		const onChange = vi.fn()
+		const { adapter } = makeDrivableAdapter('2')
+		renderDndGrid(adapter, { ordering: { row: { onChange } } })
+
+		const dragged = document.querySelector<HTMLElement>('[data-row-dragging="true"]')
+		if (!dragged) throw new Error('the grid reported no dragging row')
+
+		fireEvent.keyDown(dragged, { key: 'ArrowDown', altKey: true, bubbles: true })
+
+		expect(onChange).not.toHaveBeenCalled()
+	})
+
+	/*
+	 * The negative control, and **the only thing pinning the gate narrow**: it fires the chord on a
+	 * row that is not the one being dragged, while a drag is in flight. The gate reads this row's
+	 * own drag state, so the chord still works; any grid-wide or `document`-wide variant of the gate
+	 * fails here, which is exactly what this case exists to catch.
+	 *
+	 * **Its subject is the gate's scope, not a permission.** That a second row can be reordered
+	 * during a pointer drag — mutating the index space `OptimisticSortingPlugin` is operating over —
+	 * is a real hazard, pre-existing, and nothing this phase decided to allow; asserting the chord
+	 * reaches the ungated row is not an endorsement of doing it.
+	 */
+	it('still reorders a different row while one is being dragged', () => {
+		const onChange = vi.fn()
+		const { adapter } = makeDrivableAdapter('2')
+		renderDndGrid(adapter, { ordering: { row: { onChange } } })
+
+		const other = document.querySelector<HTMLElement>('[data-row-id="1"]')
+		if (!other) throw new Error('the grid rendered no row "1"')
+
+		fireEvent.keyDown(other, { key: 'ArrowDown', altKey: true, bubbles: true })
+
+		expect(onChange).toHaveBeenCalledTimes(1)
+	})
+
+	/*
+	 * The second control, pinning the other half: the gate must not **over-suppress** when idle. On
+	 * its own it is weak — a grid-wide gate passes it, since nothing is dragging to suppress — which
+	 * is exactly why it sits beside the case above rather than replacing it. Together: that one says
+	 * the gate is per-item, this one says it is off when there is no drag.
+	 */
+	it('reorders the same row on Alt+Arrow when no drag is in flight', () => {
+		const onChange = vi.fn()
+		const { adapter } = makeDrivableAdapter()
+		renderDndGrid(adapter, { ordering: { row: { onChange } } })
+
+		expect(document.querySelector('[data-row-dragging="true"]')).toBeNull()
+		const row = document.querySelector<HTMLElement>('[data-row-id="2"]')
+		if (!row) throw new Error('the grid rendered no row "2"')
+
+		fireEvent.keyDown(row, { key: 'ArrowDown', altKey: true, bubbles: true })
+
+		expect(onChange).toHaveBeenCalledTimes(1)
+	})
 })

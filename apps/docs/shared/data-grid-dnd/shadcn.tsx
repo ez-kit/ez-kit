@@ -17,4 +17,13 @@ export const { DataGrid: DataGridDnd } = createDataGrid({
 	cellTypes,
 	features: allDataGridFeatures,
 	dnd: adapter,
+	/**
+	 * The same statement the kit's own prebuilt grid makes (`shadcn/src/data-grid.tsx`): this kit
+	 * renders plain DOM and brings no focus manager, so it takes the package's. Without it a grid
+	 * composed here would be the one shadcn grid in the docs with no arrow-key navigation — and the
+	 * sensors spec needs navigation and dragging in the same grid to show that neither takes the
+	 * other's keys. The heroui wrapper deliberately does **not** set it: its table is React Aria's,
+	 * which has a roving focus manager already.
+	 */
+	keyboardNavigation: true,
 })

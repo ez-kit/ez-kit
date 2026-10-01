@@ -150,6 +150,74 @@ describe('keyboard navigation', () => {
 		expect(table.store.state.columnOrder).toEqual(['age', 'name'])
 	})
 
+	/**
+	 * The stand-down gate, driven with **no drag adapter mounted**.
+	 *
+	 * The gate is `root.querySelector('[data-row-dragging], [data-column-dragging]')` — a DOM read,
+	 * not a read of any drag state — so writing the attribute is the whole precondition. Mounting
+	 * an adapter to reach a `querySelector` would test the adapter instead of the gate.
+	 */
+	function markRowDragging(): void {
+		const row = document.querySelectorAll<HTMLElement>('[data-slot="tr"]')[1]
+		expect(row).toBeTruthy()
+		// The literal, not the module's constant: a test of a DOM contract states the attribute it
+		// expects rather than reading it back from the code under test.
+		row?.setAttribute('data-row-dragging', 'true')
+	}
+
+	/** On a `<th>`, which is the only element in a table that production stamps this on. */
+	function markColumnDragging(): void {
+		const th = document.querySelector<HTMLElement>('[data-slot="th"]')
+		expect(th).toBeTruthy()
+		th?.setAttribute('data-column-dragging', 'true')
+	}
+
+	/** Whether the grid's handler called `preventDefault()` on the keystroke it just saw. */
+	async function pressRecordingDefault(
+		user: ReturnType<typeof userEvent.setup>,
+		keys: string,
+	): Promise<{ prevented: boolean }> {
+		const seen = { prevented: false }
+		const listen = (event: KeyboardEvent): void => {
+			seen.prevented = event.defaultPrevented
+		}
+		// Bubble phase on the document: the grid's own handler sits on the kit's `Table`, below
+		// this, so by the time the event arrives here it carries the handler's verdict.
+		document.addEventListener('keydown', listen)
+		try {
+			await user.keyboard(keys)
+		} finally {
+			document.removeEventListener('keydown', listen)
+		}
+		return seen
+	}
+
+	it('stands down while a row is being dragged', async () => {
+		renderNavigableGrid()
+		const user = userEvent.setup()
+		await focusFirstCell(user)
+		const before = active()
+		markRowDragging()
+
+		const { prevented } = await pressRecordingDefault(user, '{ArrowRight}')
+
+		expect(active()).toBe(before)
+		expect(prevented).toBe(false)
+	})
+
+	it('stands down while a column is being dragged', async () => {
+		renderNavigableGrid()
+		const user = userEvent.setup()
+		await focusFirstCell(user)
+		const before = active()
+		markColumnDragging()
+
+		const { prevented } = await pressRecordingDefault(user, '{ArrowDown}')
+
+		expect(active()).toBe(before)
+		expect(prevented).toBe(false)
+	})
+
 	it('keeps the tab stop where the user left it across a re-render', async () => {
 		const { table } = renderNavigableGrid()
 		const user = userEvent.setup()

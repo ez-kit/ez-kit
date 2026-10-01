@@ -2,6 +2,7 @@ import { GridDirection } from '@ez-kit/data-grid-core'
 import { useCallback, useLayoutEffect, useRef } from 'react'
 
 import { isTextEntryTarget } from '../../utils/text-entry-target'
+import { ANY_DRAGGING_SELECTOR } from '../dnd/dragging-attrs'
 
 import {
 	addressOf,
@@ -44,11 +45,11 @@ const EDITING_CELL_ATTR = 'data-editing-cell'
  * reason: this handler runs on every keystroke in the grid and must not re-render anything to
  * answer the question.
  *
- * `data-row-dragging` / `data-column-dragging` rather than a plain `data-dragging`: React Aria's
- * `Row` owns that one and overwrites it. Its `Column` does not, and the column name matches its
- * sibling for consistency rather than out of necessity — `column-drag.tsx` records the measurement.
+ * The attribute names come from `dnd/dragging-attrs.ts`, which also records why they are
+ * `data-row-*` / `data-column-*` rather than one `data-dragging`. That module imports nothing, so
+ * naming them here does not reach the drag stack.
  */
-const DRAGGING_SELECTOR = '[data-row-dragging], [data-column-dragging]'
+const DRAGGING_SELECTOR = ANY_DRAGGING_SELECTOR
 
 /** What a grid with the focus model spreads onto the kit's `Table`. */
 export type GridNavigationProps = {
@@ -210,11 +211,14 @@ export function useGridKeyboardNavigation({ enabled, rootRef, scrollRef, directi
 		(event: KeyboardEvent<HTMLElement>) => {
 			// `Alt+Arrow` moves a column or a row. Yielding the whole chord — rather than only the
 			// arrow keys — keeps this from having to know which chords the reorder handlers grew.
+			// First, so the reorder hot path never reaches the DOM query below.
 			if (event.altKey) return
 			const root = rootRef.current
 			if (!root) return
 			// A drag is in flight, on either axis: every key belongs to the drag layer until it ends.
-			// See `DRAGGING_SELECTOR` for why `Escape` in particular must not be taken here.
+			// See `DRAGGING_SELECTOR` for why `Escape` in particular must not be taken here. Standing
+			// down for the chord itself is `row.tsx`'s and `header-cell.tsx`'s job — their handlers
+			// sit below this one and act before the event ever bubbles here.
 			if (root.querySelector(DRAGGING_SELECTOR)) return
 			const cell = cellOf(event.target)
 			if (!cell) return

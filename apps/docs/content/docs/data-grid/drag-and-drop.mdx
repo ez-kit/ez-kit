@@ -193,6 +193,54 @@ dragging with no error. Filter what a row renders, not which rows exist.
 | Column header | `dragHandle` from `<DataGrid.HeaderCell>`, or the component | `columnOrder` | The **visible** leaf columns, in the order they are drawn |
 | Column panel  | the component, inside `<DataGrid.VisibilityItem>`           | `columnOrder` | **Every** listed leaf column, hidden ones included        |
 
+## Starting a drag
+
+Both input paths start from the same element — the handle, and nothing else. That is the drag
+library's own rule rather than ours: it compares the event's target to the handle before it activates
+anything, which is what structurally keeps a pick-up away from the sort trigger beside it and from the
+selection checkbox in the row.
+
+### Pointer
+
+A mouse drag begins once the pointer has **moved a little** from the handle, so a plain click on a
+handle is a click and not a one-pixel reorder. A finger drag begins on a **press and hold**, and a
+finger that strays before the hold is up is left to the scroller rather than taken for a drag. Any
+other pointer — a pen — takes the hold or the movement, whichever comes first.
+
+Every one of those thresholds is the drag library's own value, named in each kit's `dnd.tsx` so the
+feel of the gesture no longer depends on a default a minor release is free to move.
+
+### Keyboard
+
+<DataGridDocsExample exampleId='keyboard-sensors' />
+
+A drag handle is focusable, and a drag is operable from the keyboard alone — `Tab` to a grip in the
+example above and try it:
+
+| Key                 | While focused on a handle | Mid-drag                                              |
+| ------------------- | ------------------------- | ----------------------------------------------------- |
+| `Space` or `Enter`  | Picks the item up         | Drops it where it is                                  |
+| `ArrowUp` / `Down`  | —                         | Moves a row                                           |
+| `ArrowLeft`/`Right` | —                         | Moves a column                                        |
+| `Escape`            | —                         | Cancels; nothing is written                           |
+| `Tab`               | Moves focus as usual      | Ends the drag and **commits** at the position reached |
+
+`Tab` committing rather than cancelling is the drag library's documented behaviour, and we did not
+override it: a drag that ended because focus moved on has already shown the reader where the item
+would land, and throwing that away silently is the worse of the two. `Escape` is the deliberate way
+to abandon one.
+
+The item being held reports the same state a pointer drag does — `data-row-dragging` on a row — so a
+kit's stylesheet needs nothing keyboard-specific.
+
+`Alt+Arrow` on a row or a header still moves it one step, as it always did, and the two do not
+compound: while an item is being dragged with the keyboard, the arrows move it through the drag only.
+Another row's `Alt+Arrow` is unaffected meanwhile.
+
+Two differences here belong to HeroUI and both are React Aria's, listed in
+[Kit parity](/docs/data-grid/kit-parity): `Alt+Arrow` row reordering does not reach that kit at all,
+and on `Tab` mid-drag the shadcn kit keeps focus on the handle while HeroUI's focus leaves the table.
+
 ## What a drag will not do
 
 The same boundaries the one-step affordances honour — drag adds none and removes none:
@@ -224,9 +272,10 @@ beside the `dir` on an ancestor, the same pair [column pinning](/docs/data-grid/
 
 Stated rather than left to be discovered:
 
-- **No keyboard drag, and no announcements.** The pointer is the only way to drag today; the
-  keyboard path to reordering is `Alt+Arrow` and the menus, which is what satisfies the keyboard
-  equivalent a drag handle needs. A drag in flight is not announced to a screen reader yet.
+- **No announcements.** A drag is operable from the keyboard — see [Keyboard](#keyboard) — but it is
+  not narrated: a screen reader is told neither that an item was picked up, nor where each arrow key
+  moved it, nor what the drop wrote. Until it is, `Alt+Arrow` and the menus are the path that reports
+  what it did.
 - **Two HeroUI-specific limits**, both in [Kit parity](/docs/data-grid/kit-parity): a header column
   cannot be dragged while the column panel is open, and `Escape` during a panel drag can leave the
   order changed without reporting it.

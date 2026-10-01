@@ -755,6 +755,11 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 				reason:
 					'The first column names a drag surface; the rest are the handle to render, the state slice it writes and the list it counts in — none is a key of any config type.',
 			},
+			{
+				heading: 'Keyboard',
+				reason:
+					'The first column is a key on the keyboard (`Space` or `Enter`, `Escape`, `Tab`); the other two are what pressing it does on a focused handle and mid-drag. Nothing here is settable.',
+			},
 		],
 	},
 	{

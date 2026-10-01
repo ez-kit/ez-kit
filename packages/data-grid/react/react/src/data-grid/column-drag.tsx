@@ -5,6 +5,7 @@ import { createContext, useContext } from 'react'
 import { useGridComponents } from '../components-context'
 
 import { DragAxis, DragSurface, useSortableItem } from './dnd'
+import { COLUMN_DRAGGING_ATTR } from './dnd/dragging-attrs'
 
 import type { SortableItemHandle } from './dnd'
 import type { ThProps } from '../types'
@@ -129,7 +130,7 @@ export function ColumnDragShell({ columnId, index, disabled, thProps, children }
 		<Th
 			{...thProps}
 			ref={sortable.ref}
-			{...(drag?.isDragging ? { 'data-column-dragging': 'true' } : {})}
+			{...(drag?.isDragging ? { [COLUMN_DRAGGING_ATTR]: 'true' } : {})}
 		>
 			<ColumnDragContext.Provider value={drag}>{children}</ColumnDragContext.Provider>
 		</Th>
