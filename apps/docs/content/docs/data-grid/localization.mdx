@@ -136,6 +136,21 @@ Some keys are never rendered visibly, and translating them is the whole point of
   or a search term changes how many rows match. It is announced, never shown.
 - `selection.columnHeader`, `expanding.columnHeader` and `rowActions.columnHeader` name the three
   system columns, whose `<th>` holds a control or nothing at all.
+- The whole `ordering` group beyond `dragRow` / `dragColumn` is a
+  [drag](/docs/data-grid/drag-and-drop#announcements) nobody can see being made: `draggable` is what a
+  handle is called in place of its role, `instructions` is how to drive one from the keyboard, and
+  `rowPickedUp` / `rowMovedTo` / `rowDropped` / `rowCancelled` with their four `column*` counterparts
+  are the live-region sentences. Those eight take a context and return a **whole sentence** rather
+  than a fragment the grid completes, for the reason the plurals above do. Left in English, so is the
+  drag.
+
+One limit inside that group is worth knowing before you translate it. `ordering.instructions` — the
+sentence a screen reader reads when focus reaches a handle — is read **once, when the grid mounts**,
+and does not follow a later change of language: the drag library builds that node from the string it
+was handed at construction and never rewrites it. Everything else about the drag does follow, so a
+locale switch mid-session re-translates the handle's name and all eight announcements and leaves only
+the keyboard instructions in the language the page started in. If your app switches language without a
+reload, remount the grid to pick the new sentence up.
 
 A dictionary that leaves them in English leaves a screen-reader user in English.
 

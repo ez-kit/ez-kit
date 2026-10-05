@@ -25,7 +25,18 @@ const corePkgVersion = JSON.parse(readFileSync(`${corePkgDir}/package.json`, 'ut
  * `defaultPrevented`), each measured against 0.1.21. A minor release before 1.0 is free to rename
  * them, and the failure would be silent; a narrow peer range turns it into a message at install.
  */
-const dndPeerRange = JSON.parse(readFileSync(`${pkgDir}/package.json`, 'utf8')).peerDependencies['@dnd-kit/react']
+const dndPeers = JSON.parse(readFileSync(`${pkgDir}/package.json`, 'utf8')).peerDependencies
+const dndPeerRange = dndPeers['@dnd-kit/react']
+/*
+ * The second half of the same install, and necessary rather than sloppy: the five plugins
+ * `src/dnd.tsx` passes as `plugins` live only on `@dnd-kit/dom`'s own root, because `@dnd-kit/react`
+ * re-exports exactly three names from it — `DragDropManager`, `KeyboardSensor`, `PointerSensor` — and
+ * no plugin among them. It is already in every tree as `@dnd-kit/react`'s own dependency, so naming
+ * it downloads nothing new; what makes the declaration unavoidable is pnpm's isolated layout, under
+ * which a transitive dependency is simply unresolvable from a package that has not declared it.
+ * Read from the same `peerDependencies` for the same reason as the range above.
+ */
+const dndDomPeerRange = dndPeers['@dnd-kit/dom']
 
 const outPath = generateRegistryManifest({
 	pkgDir,
@@ -88,6 +99,7 @@ const outPath = generateRegistryManifest({
 		 * uninstall, so a consumer keeps the file and the dependency until they remove them by hand.
 		 */
 		`@dnd-kit/react@${dndPeerRange}`,
+		`@dnd-kit/dom@${dndDomPeerRange}`,
 	],
 	srcDir: 'src',
 	typeByTopDir: {

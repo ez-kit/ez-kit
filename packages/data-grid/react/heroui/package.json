@@ -383,7 +383,7 @@
 		},
 		{
 			"path": "dist/dnd.js",
-			"limit": "1.6 kB",
+			"limit": "2 kB",
 			"ignore": [
 				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
@@ -399,6 +399,7 @@
 		"lucide-react": "^0.577.0"
 	},
 	"devDependencies": {
+		"@dnd-kit/dom": "^0.1.21",
 		"@dnd-kit/react": "^0.1.21",
 		"@heroui/react": "^3.2.6",
 		"@heroui/styles": "^3.2.6",
@@ -413,6 +414,7 @@
 		"react-dom": "^19.2.4"
 	},
 	"peerDependencies": {
+		"@dnd-kit/dom": "^0.1.21",
 		"@dnd-kit/react": "^0.1.21",
 		"@heroui/react": "^3.2.0",
 		"@heroui/styles": "^3.2.0",
@@ -421,6 +423,9 @@
 		"react-dom": ">=19.0.0"
 	},
 	"peerDependenciesMeta": {
+		"@dnd-kit/dom": {
+			"optional": true
+		},
 		"@dnd-kit/react": {
 			"optional": true
 		}

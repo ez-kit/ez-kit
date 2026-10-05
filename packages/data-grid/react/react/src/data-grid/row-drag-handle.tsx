@@ -72,12 +72,24 @@ export function RowDragHandle({ children, 'aria-label': ariaLabel, rowId }: Data
 
 	if (!drag) return null
 
+	/*
+	 * `aria-roledescription` comes from the catalogue, because the drag library writes `"draggable"`
+	 * there otherwise — in English whatever the app's locale. `@dnd-kit/dom@0.1.21`'s `Accessibility`
+	 * plugin sets the attribute **only when it is absent**, so ours is what a reader hears wherever it
+	 * reaches the DOM.
+	 *
+	 * It does not reach the DOM in every kit, and that is accepted rather than worked around: shadcn's
+	 * `Button` spreads the caller's props last, so the attribute lands, while HeroUI's forwards to a
+	 * React Aria button that drops it — measured, and pinned by that kit's own test. There the plugin's
+	 * value stays, which is the same word in English and the honest outcome of a kit not forwarding it.
+	 */
 	return (
 		<Button
 			ref={drag.handleRef}
 			type='button'
 			data-slot='row-drag-handle'
 			aria-label={ariaLabel ?? messages.ordering.dragRow}
+			aria-roledescription={messages.ordering.draggable}
 		>
 			{children}
 		</Button>

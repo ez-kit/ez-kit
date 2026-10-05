@@ -75,6 +75,8 @@ export type {
 	DraftSummaryContext,
 	FilterPlaceholderContext,
 	GridMessages,
+	OrderingColumnContext,
+	OrderingPositionContext,
 	PartialGridMessages,
 } from './messages'
 

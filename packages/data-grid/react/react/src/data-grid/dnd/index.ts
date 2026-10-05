@@ -7,10 +7,13 @@ export {
 	useSortableItem,
 } from './context'
 export { noopDndAdapter } from './noop'
-export { DragAxis, DragSurface } from './types'
+export { DragAxis, DragInput, DragSurface } from './types'
 export type {
 	DndAdapter,
+	DndAnnouncement,
+	DndAnnouncements,
 	DndDragOverEvent,
+	DndDragSourceEvent,
 	DndDropEvent,
 	DndProviderProps,
 	DragSpec,

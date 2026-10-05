@@ -181,6 +181,21 @@ describe('the handle', () => {
 		expect(screen.queryByRole('button', { name: 'Reorder row' })).toBeNull()
 	})
 
+	it('describes its role from the message catalogue', () => {
+		/*
+		 * REGRESSION. `messages.ordering.draggable` reached nothing: no component read it, and the drag
+		 * library's accessibility plugin wrote its own hardcoded English `"draggable"` into the
+		 * attribute — so a translated dictionary was ignored. The plugin only writes the attribute when
+		 * it is absent, which is what makes authoring it here sufficient.
+		 */
+		const { adapter } = makeDrivableAdapter()
+		renderDndGrid(adapter, { columns: DRAG_COLUMNS, messages: { ordering: { draggable: 'перетаскиваемый' } } })
+
+		const handles = screen.getAllByRole('button', { name: 'Reorder row' })
+		expect(handles).toHaveLength(TEST_ROWS.length)
+		expect(handles[0]).toHaveAttribute('aria-roledescription', 'перетаскиваемый')
+	})
+
 	it('takes a caller’s label over the default', () => {
 		const { adapter } = makeDrivableAdapter()
 		const columns = createColumns<TestRow>([

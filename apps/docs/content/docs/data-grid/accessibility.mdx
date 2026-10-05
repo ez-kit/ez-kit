@@ -40,6 +40,12 @@ Its text is `messages.grid.rowCount`, so translating it is part of translating t
 [Localization](/docs/data-grid/localization). Nothing is announced on mount: a live region's
 initial content is not an update.
 
+One region is not the grid's and is counted separately: a grid with
+[drag and drop](/docs/data-grid/drag-and-drop#announcements) switched on narrates a **keyboard** drag
+through a region of its own, created per grid by the drag layer and fed from the dictionary's
+`ordering` group. It reports a gesture the user is making, not a change to what the table holds, which
+is why it does not compete with the one above.
+
 ## Roles and focus
 
 Two arrangements, decided by the kit rather than by the grid config:

@@ -1,3 +1,4 @@
+import { Accessibility, AutoScroller, Cursor, defaultPreset, Feedback, PreventSelection } from '@dnd-kit/dom'
 import { KeyboardSensor, PointerSensor } from '@dnd-kit/react'
 import { useSortable } from '@dnd-kit/react/sortable'
 import { render } from '@testing-library/react'
@@ -19,11 +20,12 @@ import type {
 	DragAnchor,
 	SortableDragEndEvent,
 	SortableDragOverEvent,
+	SortableDragStartEvent,
 	SortableManager,
 } from './dnd'
 import type * as DndKitModule from '@dnd-kit/react'
 import type * as SortableModule from '@dnd-kit/react/sortable'
-import type { DndDragOverEvent, DndDropEvent, SortableItemHandle } from '@ez-kit/data-grid-react'
+import type { DndAnnouncements, DndDragOverEvent, DndDropEvent, SortableItemHandle } from '@ez-kit/data-grid-react'
 
 /**
  * The handlers the adapter hands dnd-kit's provider, as this file drives them.
@@ -47,6 +49,8 @@ type CapturedHandlers = {
 	 * `@dnd-kit/abstract`, and the cases below narrow what they need rather than naming that package.
 	 */
 	sensors?: readonly unknown[]
+	/** The plugin list, as `unknown` members, for the reason the sensors are. */
+	plugins?: readonly unknown[]
 }
 
 /**
@@ -1166,5 +1170,358 @@ describe('the sensors the adapter mounts', () => {
 			expect(dragActivationConstraints(pointerDown('mouse', document.createElement('span')), source)).toEqual(fallback)
 			expect(dragActivationConstraints(pointerDown('mouse', null), source)).toEqual(fallback)
 		})
+	})
+})
+
+/**
+ * The plugins, which carry the same hazard as the sensors above and a sharper edge.
+ *
+ * Passing `plugins` **opts out of `defaultPreset`**, and four of the five the adapter lists are
+ * listed purely to keep them: drop `AutoScroller`, `Cursor`, `Feedback` or `PreventSelection` and
+ * auto-scrolling, the grab cursor, the dragged element's own movement or text-selection suppression
+ * disappear with no error anywhere. A kit that lost one would look exactly like a kit that never had
+ * it, which is why the array is asserted here rather than read off a diff.
+ *
+ * The second case is the one a reviewer cannot perform: it compares the array against the
+ * **library's own preset**, so a future version that adds a sixth plugin fails here instead of
+ * silently losing it at the next bump.
+ */
+describe('the plugins the adapter mounts', () => {
+	/** The array the adapter passed the provider, mounted fresh. */
+	function mountedPlugins(): readonly unknown[] {
+		resetCapture()
+		renderItem({ id: 'row-1', index: 0, axis: 'row', surface: 'table' })
+		const { plugins } = capturedHandlers()
+		if (!plugins) throw new Error('the adapter passed no plugins, so the preset is back')
+
+		return plugins
+	}
+
+	/**
+	 * A listed plugin's constructor: the class itself, or the one a configured descriptor wraps.
+	 *
+	 * Every member is a bare class today. It is written to see through a descriptor because the
+	 * announcements seam in `dnd.tsx` turns `Accessibility` into one, and this comparison has to keep
+	 * holding when it does.
+	 */
+	const constructorOf = (plugin: unknown): unknown =>
+		typeof plugin === 'object' && plugin !== null && 'plugin' in plugin ? plugin.plugin : plugin
+
+	it('lists all five, so opting out of the preset deletes none of them', () => {
+		expect(mountedPlugins().map(constructorOf)).toEqual([
+			Accessibility,
+			AutoScroller,
+			Cursor,
+			Feedback,
+			PreventSelection,
+		])
+	})
+
+	/*
+	 * Against the library's list rather than against the five named above — those two agree today,
+	 * and this case is what notices the release where they stop agreeing. The failure names the
+	 * missing plugin rather than reporting a length.
+	 */
+	it('accounts for every plugin the library’s own preset supplies', () => {
+		const mounted = mountedPlugins().map(constructorOf)
+
+		expect(defaultPreset.plugins.filter((plugin) => !mounted.includes(plugin))).toEqual([])
+	})
+})
+
+/**
+ * Announcing a drag: the half of the accessibility story the grid writes and this adapter speaks.
+ *
+ * The library's `Accessibility` plugin owns the live region and the hidden instructions node, and its
+ * own callbacks receive ids and nothing else — so the sentences come from the grid, through
+ * `DndProviderProps.announcements`, and this file's job is the translation: one of the library's
+ * events in, one of the port's events plus `input` out, `undefined` for "say nothing".
+ *
+ * Driven through the **configured plugin descriptor** the adapter hands the provider, which is as far
+ * as a unit test can reach: whether the returned string then lands in a `role="status"` region is the
+ * library's work and the browser spec's to confirm. What is asserted here is every decision this
+ * adapter makes — which port event each library event becomes, how `input` is derived, and the one
+ * piece of ordering that a reader cannot see from the code alone.
+ */
+describe('announcing a drag', () => {
+	const GROUP = 'row:table'
+	const sortableId = (id: string) => `${GROUP}:${id}`
+
+	/** A registry whose order is the array's order, all of it in one group. */
+	const orderOf = (ids: string[]): SortableManager => ({
+		registry: { droppables: ids.map((id, index) => ({ id: sortableId(id), sortable: { index, group: GROUP } })) },
+	})
+
+	/** A keyboard activator, which is what makes a drag one the grid narrates. */
+	const KEYBOARD_ACTIVATOR = { key: 'ArrowDown' } as unknown as Event
+
+	/** And a mouse one, which is what makes a drag the plugin's listener leaves alone. */
+	const POINTER_ACTIVATOR = { pointerType: 'mouse' } as unknown as Event
+
+	const hover = (sourceId: string, targetId: string): SortableDragOverEvent => ({
+		operation: {
+			source: { id: sortableId(sourceId), type: GROUP },
+			target: { id: sortableId(targetId), type: GROUP },
+			activatorEvent: KEYBOARD_ACTIVATOR,
+		},
+		preventDefault: () => {},
+	})
+
+	/** A release, with the source as its own target — what the library reports after a displacement. */
+	const release = (sourceId: string, overrides: Partial<SortableDragEndEvent> = {}): SortableDragEndEvent => ({
+		canceled: false,
+		operation: {
+			source: {
+				id: sortableId(sourceId),
+				type: GROUP,
+				index: 2,
+				sortable: { index: 2, initialIndex: 0, group: GROUP },
+			},
+			target: { id: sortableId(sourceId), type: GROUP },
+			activatorEvent: KEYBOARD_ACTIVATOR,
+		},
+		...overrides,
+	})
+
+	/**
+	 * A bag that writes down every call in order, beside whatever the grid's own `onDrop` writes.
+	 *
+	 * The sentences name the port fields they were given, so a case can tell *which* event reached
+	 * *which* callback rather than only that something was said.
+	 */
+	function bagOf(log: string[]): DndAnnouncements {
+		return {
+			instructions: 'Press space to pick up.',
+			dragStart: (event) => {
+				log.push('announce dragStart')
+
+				return `start ${event.axis}/${event.surface} ${event.sourceId} by ${event.input}`
+			},
+			dragOver: (event) => {
+				log.push('announce dragOver')
+
+				return `over ${event.targetId} by ${event.input}`
+			},
+			dragEnd: (event) => {
+				log.push('announce dragEnd')
+
+				return `end ${event.sourceId} onto ${event.targetId} by ${event.input}`
+			},
+			dragCancel: (event) => {
+				log.push('announce dragCancel')
+
+				return `cancel ${event.sourceId} by ${event.input}`
+			},
+		}
+	}
+
+	/** The library's announcement callbacks, as the adapter configured them. */
+	type LibraryAnnouncements = {
+		dragstart: (event: SortableDragStartEvent) => string | undefined
+		dragover: (event: SortableDragOverEvent) => string | undefined
+		dragend: (event: SortableDragEndEvent) => string | undefined
+	}
+
+	/**
+	 * One provider, with the grid's commit and its announcements writing into **one** log.
+	 *
+	 * The shared array is the point rather than a convenience: the only way to assert that the commit
+	 * happens before the sentence is to have both record themselves in the same order.
+	 */
+	function mount(log: string[], announcements?: DndAnnouncements) {
+		const drops: DndDropEvent[] = []
+		resetCapture()
+		render(
+			<adapter.Provider
+				onDrop={(event) => {
+					drops.push(event)
+					log.push('commit')
+				}}
+				canDrop={() => true}
+				{...(announcements ? { announcements } : {})}
+			>
+				<div />
+			</adapter.Provider>,
+		)
+
+		return { props: capturedHandlers(), log, drops }
+	}
+
+	/**
+	 * The options the adapter passed `Accessibility.configure`.
+	 *
+	 * Reached by finding the one descriptor in the plugins array, which is also what proves the plugin
+	 * was configured at all rather than listed bare.
+	 */
+	function configuredOptions(plugins: readonly unknown[] | undefined): {
+		announcements: LibraryAnnouncements
+		screenReaderInstructions: { draggable: string }
+	} {
+		const descriptor = plugins?.find(
+			(plugin): plugin is { plugin: unknown; options: unknown } =>
+				typeof plugin === 'object' && plugin !== null && 'plugin' in plugin,
+		)
+		if (!descriptor) throw new Error('the adapter listed no configured plugin')
+		expect(descriptor.plugin).toBe(Accessibility)
+
+		return descriptor.options as {
+			announcements: LibraryAnnouncements
+			screenReaderInstructions: { draggable: string }
+		}
+	}
+
+	/** A drag of `row-1` past two neighbours, left held: what every `dragend` case starts from. */
+	function heldItem(log: string[]) {
+		const mounted = mount(log, bagOf(log))
+		mounted.props.onDragStart?.(release('row-1'), orderOf(['row-1', 'row-4', 'row-5']))
+		mounted.props.onDragOver?.(hover('row-1', 'row-4'), orderOf(['row-4', 'row-1', 'row-5']))
+		mounted.props.onDragOver?.(hover('row-1', 'row-5'), orderOf(['row-4', 'row-5', 'row-1']))
+
+		return mounted
+	}
+
+	it('leaves the plugin bare when the grid passes no announcements', () => {
+		// The module constant, by identity — nothing to reassign, which is the point of it being one.
+		const { props } = mount([])
+
+		expect(props.plugins).toEqual([Accessibility, AutoScroller, Cursor, Feedback, PreventSelection])
+	})
+
+	it('configures the plugin and keeps the other four beside it', () => {
+		// The trap this array exists for: configuring one plugin must not cost the four that came with
+		// the preset, and the configured one is a descriptor rather than the class.
+		const { props } = mount([], bagOf([]))
+
+		expect(props.plugins?.slice(1)).toEqual([AutoScroller, Cursor, Feedback, PreventSelection])
+		expect(configuredOptions(props.plugins).announcements.dragend).toBeTypeOf('function')
+	})
+
+	it('puts the catalogue’s instructions on the hidden description node', () => {
+		// Replacing the library's own English paragraph about the space bar, which is the whole reason
+		// `instructions` is a plain string rather than a callback.
+		const { props } = mount([], bagOf([]))
+
+		expect(configuredOptions(props.plugins).screenReaderInstructions).toEqual({
+			draggable: 'Press space to pick up.',
+		})
+	})
+
+	it('turns a pickup into the port’s source event', () => {
+		const { props } = mount([], bagOf([]))
+
+		expect(configuredOptions(props.plugins).announcements.dragstart(release('row-1'))).toBe(
+			'start row/table row-1 by keyboard',
+		)
+	})
+
+	it('turns a hover into the port’s drag-over event', () => {
+		const { props } = mount([], bagOf([]))
+
+		expect(configuredOptions(props.plugins).announcements.dragover(hover('row-1', 'row-4'))).toBe(
+			'over row-4 by keyboard',
+		)
+	})
+
+	/*
+	 * `input` is what lets the grid narrate a keyboard drag and stay silent on a pointer one, so the
+	 * derivation is asserted on its own. `instanceof KeyboardEvent` is deliberately not how it is
+	 * read — the constructor is bound to one realm and every docs example renders inside an iframe —
+	 * so what is checked is the `key` field, across a keyboard activator, a pointer one and none.
+	 */
+	it('derives the input from the activator, treating anything but a key as a pointer', () => {
+		const { props } = mount([], bagOf([]))
+		const { dragstart } = configuredOptions(props.plugins).announcements
+		const withActivator = (activatorEvent: Event | null) => {
+			const event = release('row-1')
+
+			return dragstart({ operation: { ...event.operation, activatorEvent } })
+		}
+
+		expect(withActivator(KEYBOARD_ACTIVATOR)).toBe('start row/table row-1 by keyboard')
+		expect(withActivator(POINTER_ACTIVATOR)).toBe('start row/table row-1 by pointer')
+		expect(withActivator(null)).toBe('start row/table row-1 by pointer')
+	})
+
+	/**
+	 * **What the plugin's `dragend` is for, now that it is all it is for.**
+	 *
+	 * It describes the drop and performs none of it: the sentence names the landing place the
+	 * hovers recorded, and `onDrop` is the provider's handler's business alone. An earlier revision
+	 * committed from here so the grid could read the moved table back; the grid derives a drop's
+	 * position from a pickup snapshot instead, so the commit went and this is what remains.
+	 */
+	it('describes the drop, naming the landing place the hovers recorded', () => {
+		const log: string[] = []
+		const { props } = heldItem(log)
+
+		const sentence = configuredOptions(props.plugins).announcements.dragend(release('row-1'))
+
+		expect(sentence).toBe('end row-1 onto row-5 by keyboard')
+		expect(log).toEqual(['announce dragEnd'])
+	})
+
+	/**
+	 * **The guard against the commit coming back.** Both listeners read the same refs through the
+	 * same resolver, and exactly one of them may act on the answer — so a re-introduced commit here
+	 * shows up as a drop recorded before the provider's handler ever ran, rather than as a
+	 * double-commit nobody notices.
+	 */
+	it('commits nothing of its own, leaving the provider’s handler the only committer', () => {
+		const log: string[] = []
+		const { props, drops } = heldItem(log)
+
+		configuredOptions(props.plugins).announcements.dragend(release('row-1'))
+
+		expect(drops).toEqual([])
+
+		props.onDragEnd?.(release('row-1'))
+
+		// One commit, and after the sentence — which is the order the library's own registration
+		// produces and the adapter now depends on.
+		expect(drops).toEqual([{ axis: 'row', surface: 'table', sourceId: 'row-1', targetId: 'row-5' }])
+		expect(log).toEqual(['announce dragEnd', 'commit'])
+	})
+
+	/**
+	 * **The order dependence, pinned by its failure rather than by its success.**
+	 *
+	 * The plugin's listener is registered first (inside `new DragDropManager`), so it reads the
+	 * operation's refs while they still hold it. Driven the other way round — the provider's handler
+	 * first, which clears them — the drop goes **unannounced** rather than announced wrongly, because
+	 * `toDropEvent` refuses without an anchor. That is what makes the dependence safe to have, and it
+	 * is the half a reader cannot infer from the registration order.
+	 */
+	it('says nothing about a drop the provider’s handler has already cleared', () => {
+		const log: string[] = []
+		const { props } = heldItem(log)
+
+		props.onDragEnd?.(release('row-1'))
+		const sentence = configuredOptions(props.plugins).announcements.dragend(release('row-1'))
+
+		expect(sentence).toBeUndefined()
+		expect(log).toEqual(['commit'])
+	})
+
+	it('describes a cancellation from the source alone, and commits nothing', () => {
+		// `canceled` is the library's own flag, and the port splits it off as a source event because
+		// nothing landed anywhere — there is no target to name.
+		const log: string[] = []
+		const { props, drops } = heldItem(log)
+
+		const sentence = configuredOptions(props.plugins).announcements.dragend(release('row-1', { canceled: true }))
+
+		expect(sentence).toBe('cancel row-1 by keyboard')
+		expect(drops).toEqual([])
+	})
+
+	it('says nothing about a drag it could not read', () => {
+		// A `type` this adapter never wrote: another provider in the tree, or a shape a future version
+		// hands over. The refusal is the same one `toDragOverEvent` makes, and silence is the right
+		// answer rather than a sentence about an id the grid does not know.
+		const { props } = mount([], bagOf([]))
+		const { dragstart } = configuredOptions(props.plugins).announcements
+
+		expect(dragstart({ operation: { source: { id: 'trash:1', type: 'trash' } } })).toBeUndefined()
+		expect(dragstart({ operation: { source: null } })).toBeUndefined()
 	})
 })

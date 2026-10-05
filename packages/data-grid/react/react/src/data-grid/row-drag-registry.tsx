@@ -168,6 +168,28 @@ export function useRenderedRowIds(): readonly string[] | null {
 }
 
 /**
+ * A **stable reader** of the same list, for a caller that needs it outside its own render.
+ *
+ * {@link useRenderedRowIds} answers at render time, which is the right moment for a row computing
+ * its own index — React has already run the body by then. It is the wrong moment for anything that
+ * fires *during* a drag: a virtualized body re-publishes on every auto-scroll frame without the
+ * provider above it re-rendering, so a value captured at the provider's last render is stale by the
+ * second frame. This hands back a function instead, memoised on the registry alone, so a `useCallback`
+ * that closes over it reads the current window whenever it is called.
+ *
+ * There was a reader of this shape before, serving `GridDndProvider`'s landing-index resolution, and
+ * it went when the drop started naming its target by id — `row-drag-registry.test.tsx` records that.
+ * This is not that reader returning: the hazard it had was **two sides having to agree** about a list
+ * one of them renumbers mid-gesture, and a position that is only ever read aloud has no second side.
+ * A stale window here costs one wrong number in one sentence; a stale window there cost the wrong row.
+ */
+export function useRenderedRowIdsReader(): () => readonly string[] | null {
+	const registry = useContext(RowDragRegistryContext)
+
+	return useCallback(() => registry?.getRenderedRowIds() ?? null, [registry])
+}
+
+/**
  * Report this grid's unpublished-row defect at most once per row id — see
  * {@link RowDragRegistry.shouldReportUnpublishedRow}. Called during render, by `row.tsx`, in
  * development only; `false` with no registry above, which is a state the condition cannot reach.

@@ -93,6 +93,22 @@ export const defaultMessages: GridMessages = {
 	ordering: {
 		dragRow: 'Reorder row',
 		dragColumn: 'Reorder column',
+		draggable: 'draggable',
+		instructions:
+			'Press Space to pick this item up, then the arrow keys to move it. Press Space again to drop it, or Escape to cancel.',
+		rowPickedUp: ({ position, total }) => `Picked up row ${String(position)} of ${String(total)}.`,
+		rowMovedTo: ({ position, total }) => `Moved the row to position ${String(position)} of ${String(total)}.`,
+		rowDropped: ({ position, total }) => `Dropped the row at position ${String(position)} of ${String(total)}.`,
+		rowCancelled: ({ position, total }) =>
+			`Cancelled, the row is back at position ${String(position)} of ${String(total)}.`,
+		columnPickedUp: ({ name, position, total }) =>
+			`Picked up column ${name}, position ${String(position)} of ${String(total)}.`,
+		columnMovedTo: ({ name, position, total }) =>
+			`Moved column ${name} to position ${String(position)} of ${String(total)}.`,
+		columnDropped: ({ name, position, total }) =>
+			`Dropped column ${name} at position ${String(position)} of ${String(total)}.`,
+		columnCancelled: ({ name, position, total }) =>
+			`Cancelled, column ${name} is back at position ${String(position)} of ${String(total)}.`,
 	},
 	visibility: {
 		menu: 'Column visibility',

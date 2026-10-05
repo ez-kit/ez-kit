@@ -169,7 +169,10 @@ export { useColumnDrag } from './data-grid/column-drag'
 export type { ColumnDragValue } from './data-grid/column-drag'
 export type {
 	DndAdapter,
+	DndAnnouncement,
+	DndAnnouncements,
 	DndDragOverEvent,
+	DndDragSourceEvent,
 	DndDropEvent,
 	DndProviderProps,
 	DragSpec,
@@ -424,7 +427,7 @@ export {
 } from './types'
 // Same form, different home: the drag axis belongs to the port rather than to the component
 // contract, so it is exported from `./data-grid/dnd` beside the types that name it.
-export { DragAxis, DragSurface } from './data-grid/dnd'
+export { DragAxis, DragInput, DragSurface } from './data-grid/dnd'
 
 // TanStack state slice types. Every feature's `onChange` is typed with one of these, so a
 // consumer that lifts a handler out of the JSX must be able to name it — without adding

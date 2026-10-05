@@ -1,13 +1,16 @@
 'use client'
 
+import { Accessibility, AutoScroller, Cursor, Feedback, PreventSelection } from '@dnd-kit/dom'
 import { DragDropProvider, KeyboardSensor, PointerSensor } from '@dnd-kit/react'
 import { useSortable } from '@dnd-kit/react/sortable'
-import { DragAxis, DragSurface } from '@ez-kit/data-grid-react'
-import { useRef } from 'react'
+import { DragAxis, DragInput, DragSurface } from '@ez-kit/data-grid-react'
+import { useCallback, useMemo, useRef } from 'react'
 
 import type {
 	DndAdapter,
+	DndAnnouncements,
 	DndDragOverEvent,
+	DndDragSourceEvent,
 	DndDropEvent,
 	DndProviderProps,
 	DragSpec,
@@ -264,6 +267,77 @@ export function dragActivationConstraints(
 const DRAG_SENSORS = [PointerSensor.configure({ activationConstraints: dragActivationConstraints }), KeyboardSensor]
 
 /**
+ * The plugins this adapter mounts — and **listing them at all is opting out of the library's
+ * preset**, exactly as {@link DRAG_SENSORS} is. This array is the same hazard one axis over, and it
+ * is the more dangerous one, because four of the five are listed purely to keep them.
+ *
+ * `defaultPreset.plugins` is `[Accessibility, AutoScroller, Cursor, Feedback, PreventSelection]`
+ * (`@dnd-kit/dom@0.1.21/index.js:1819-1821`) and `DragDropManager` falls back to it only while
+ * `plugins` is absent (`index.js:1825-1831`). Nothing merges: omit `AutoScroller` and a drag stops
+ * scrolling a long grid, omit `Cursor` and the grab cursor goes, omit `Feedback` and the dragged
+ * element stops following the pointer, omit `PreventSelection` and a drag selects text as it goes.
+ * All four failures are silent, and all four look like a drag that was never built rather than one
+ * that lost a plugin. `dnd.test.tsx` asserts this array against the library's own preset rather
+ * than trusting the diff — so a version that grows a sixth plugin fails there too.
+ *
+ * The preset's list is the whole exposure: `ScrollListener` and `Scroller` are prepended to
+ * whatever `plugins` is given (`index.js:1831-1832`), so those two cannot be lost this way.
+ *
+ * **Imported from `@dnd-kit/dom` rather than from `@dnd-kit/react`, which is why this kit declares
+ * both.** The latter re-exports exactly three names from the former — `DragDropManager`,
+ * `KeyboardSensor`, `PointerSensor` (`@dnd-kit/react@0.1.21/index.d.ts:5`) — and no plugin among
+ * them; all five live only on `@dnd-kit/dom`'s root (`index.d.ts:298`). It is a plain dependency of
+ * `@dnd-kit/react` rather than a peer, and pnpm's isolated layout makes a transitive dependency
+ * unresolvable from a package that has not declared it, so the declaration is what makes this import
+ * work at all. It changes nothing about what a consumer pays: both are **optional** peers, this
+ * module is reachable only through the `./dnd` subpath, and `@dnd-kit/dom` is already in every tree
+ * that installed `@dnd-kit/react`.
+ *
+ * `Accessibility` is here for a reason of its own. It is **already running** in both kits today, by
+ * the fallback above, and it is already writing English into the DOM: a
+ * `role="status" aria-live="polite"` region on `document.body`, a hidden instructions node wired
+ * onto each handle as `aria-describedby`, and sentences built from `source.id` — *"Picked up
+ * draggable item 7."*, where `7` is a record id. Naming it here is what makes it configurable.
+ *
+ * ---
+ *
+ * **ANNOUNCEMENTS SEAM.** The text is not this file's to write. The library hands its callbacks
+ * only `source.id` / `target.id`, and turning an id into "Price, column 3 of 9" needs the table and
+ * the message catalogue — neither of which an adapter has, or should. So the grid builds the
+ * sentences and the port carries them: `DndProviderProps` grows an announcement bag, and the change
+ * here is to replace the bare class with
+ * `Accessibility.configure({ announcements, screenReaderInstructions })` built from that bag.
+ *
+ * Three constraints come with that change, and they are why the seam is marked rather than guessed:
+ *
+ * - **It cannot stay at module scope.** A configured descriptor depends on props, so the array has
+ *   to be built inside {@link DndProvider} — and then memoised on the bag's identity, because the
+ *   provider **reassigns** `manager.plugins` whenever the array's identity changes (the same
+ *   `useOnValueChange` that watches `sensors`), which re-instantiates every plugin in it, including
+ *   in the middle of a gesture. A grid that hands over a fresh bag per render would rebuild the
+ *   live region mid-drag; keeping the bag stable is the grid's half of the contract.
+ * - **Do not pass an explicit `id`.** The description node and the live region are created per
+ *   manager (`index.js:209-226`), so three grids on one page have three regions and each announces
+ *   only its own drag. A fixed `id` would collide them, and the last grid to mount would win.
+ * - **The callbacks are translated, not forwarded.** The library hands them its own events, so the
+ *   adapter maps those to the port's vocabulary, derives whether the drag is a pointer or a keyboard
+ *   one, and splits `dragend` into a drop and a cancellation.
+ *
+ * What does **not** need configuring is the handle's `aria-roledescription`: the plugin sets it, and
+ * `role` / `tabindex` / `aria-describedby` with it, only when the attribute is absent
+ * (`index.js:243-262`), so a handle that writes its own value keeps it. Its live
+ * `aria-pressed` / `aria-grabbed` / `aria-disabled` reflection is unconditional and is one of the
+ * reasons the plugin is configured rather than replaced.
+ */
+const DRAG_PLUGINS_BESIDE_ACCESSIBILITY = [AutoScroller, Cursor, Feedback, PreventSelection]
+
+/**
+ * The array as it is mounted when the grid passes no announcements: the plugin unconfigured, and the
+ * other four kept. Module scope, so a grid without announcements never reassigns `manager.plugins`.
+ */
+const DRAG_PLUGINS = [Accessibility, ...DRAG_PLUGINS_BESIDE_ACCESSIBILITY]
+
+/**
  * How one sortable's **partition** is spelled for dnd-kit: `<axis>:<surface>`.
  *
  * Three of the library's options take it — `type`, `accept` and `group` — and they do two different
@@ -391,6 +465,8 @@ export type SortableDragEndEvent = {
 			sortable?: { index?: number; initialIndex?: number; group?: string | number | symbol }
 		} | null
 		target: { id: string | number; type?: string | number | symbol } | null
+		/** See {@link SortableDragStartEvent.operation.activatorEvent}. */
+		activatorEvent?: Event | null
 	}
 }
 
@@ -409,6 +485,13 @@ export type SortableDragStartEvent = {
 			type?: string | number | symbol
 			sortable?: { group?: string | number | symbol }
 		} | null
+		/**
+		 * The event that started the operation, which is how {@link toDragInput} tells a keyboard
+		 * drag from a pointer one. `@dnd-kit/abstract@0.1.21` keeps it on the operation as
+		 * `activatorEvent: Event | null`; optional here because nothing else in this file needs it and
+		 * a version that stops exposing it should degrade to "pointer", not throw.
+		 */
+		activatorEvent?: Event | null
 	}
 }
 
@@ -676,6 +759,8 @@ export type SortableDragOverEvent = {
 	operation: {
 		source: { id: string | number; type?: string | number | symbol } | null
 		target: { id: string | number; type?: string | number | symbol } | null
+		/** See {@link SortableDragStartEvent.operation.activatorEvent}. */
+		activatorEvent?: Event | null
 	}
 	preventDefault: () => void
 }
@@ -735,7 +820,134 @@ function sourceAnchor(event: SortableDragStartEvent, manager: SortableManager): 
 	return toDragAnchor(manager, source.id, group)
 }
 
-function DndProvider({ onDrop, canDrop, children }: DndProviderProps) {
+/**
+ * Whether this operation is being driven from the keyboard — the one fact an announcement needs and
+ * the port's events do not carry, so it is derived here and handed over on {@link DndAnnouncement}.
+ *
+ * It decides whether anything is said at all: the grid narrates a keyboard drag, because that is a
+ * sequence of discrete steps its user gets no visual feedback from, and stays silent on a pointer
+ * drag, which the person making it can see and which would otherwise announce several times a
+ * second. The adapter's job is to report it faithfully rather than to decide the policy.
+ *
+ * **Not `activatorEvent instanceof KeyboardEvent`.** That constructor is bound to one realm and
+ * every docs example renders the grid inside an iframe — the same reason {@link ELEMENT_NODE_TYPE}
+ * is a number rather than a read of `Node`. A keyboard event is the one carrying `key`, which is
+ * true across realms and survives minification.
+ *
+ * Anything else, including a missing activator, reads as a pointer: the honest default is the one
+ * that says nothing, so a version of the library that stops exposing the activator goes quiet rather
+ * than narrating every mouse move.
+ */
+function toDragInput(operation: { activatorEvent?: Event | null }): DragInput {
+	const { activatorEvent } = operation
+	if (!activatorEvent) return DragInput.Pointer
+
+	return typeof (activatorEvent as { key?: unknown }).key === 'string' ? DragInput.Keyboard : DragInput.Pointer
+}
+
+/**
+ * The held item alone, as the port's {@link DndDragSourceEvent} — a pickup, or a cancellation.
+ *
+ * Neither moment has a target, which is the whole reason the port carries a third event shape: at
+ * pickup nothing has been hovered yet, and a cancellation returns the item whence it came. Refuses
+ * the same way {@link toDragOverEvent} does, and for the same reasons: a `type` this adapter did not
+ * write, or an id it cannot read back, is not a drag it can describe.
+ */
+function toDragSourceEvent(event: SortableDragStartEvent): DndDragSourceEvent | null {
+	const { source } = event.operation
+	if (!source) return null
+
+	const kind = fromDragKey(source.type)
+	if (!kind) return null
+
+	const sourceId = fromSortableId(source.id)
+	if (sourceId === null) return null
+
+	return { ...kind, sourceId }
+}
+
+/**
+ * The grid's announcements, as the options `Accessibility` takes — the one place this file translates
+ * between the library's vocabulary and the port's.
+ *
+ * Four translations, each refusing rather than guessing. The library hands its own events, so every
+ * callback maps one to the port's shape, adds {@link toDragInput}, and returns `undefined` when there
+ * is nothing honest to describe — which the plugin reads as "say nothing" exactly as the port does.
+ *
+ * **`dragend` is two events on the port and one here**, split on `canceled`: a cancellation is a
+ * {@link DndDragSourceEvent}, because nothing landed anywhere, while a drop is the same
+ * {@link DndDropEvent} `onDrop` receives.
+ *
+ * **These callbacks describe and commit nothing.** `resolveDrop` is a read of the operation's refs,
+ * and {@link DndProvider}'s `onDragEnd` is the only place `onDrop` is ever called — on every path,
+ * and inside the `trackRendering` -> `startTransition` that handler is wrapped in
+ * (`@dnd-kit/react@0.1.21/index.js:58-68,141-146`). An earlier revision committed from here, so that
+ * the sentence could be built against a table that had already moved the item. The grid no longer
+ * reads the table to answer that — a drop's position is derived from a snapshot taken at pickup — so
+ * the commit, and the per-operation idempotence that made it safe, bought nothing and are gone. Do
+ * not reintroduce either.
+ *
+ * **What this does depend on is the order the two `dragend` listeners run in, and that is a
+ * dependence to state rather than leave discovered.** The plugin's own listener is registered inside
+ * `new DragDropManager(input)`, before `DragDropProvider` adds the one that calls `onDragEnd`
+ * (`@dnd-kit/react@0.1.21/index.js:114-147`), so this callback runs *first* — while
+ * `hoveredTargetId` / `startAnchor` / `endAnchor` still hold the operation, which the provider's
+ * handler clears as soon as it has committed.
+ *
+ * **It is safe to depend on because inverting it costs a sentence and cannot produce a wrong one.**
+ * Were a later version to register the provider's listener first, those refs would be cleared before
+ * this callback read them, {@link toDropEvent} would refuse for want of an anchor, and the drop would
+ * go unannounced — silence, which is what every other refusal in this file answers with, rather than
+ * a sentence naming a position the item is not in. `dnd.test.tsx` drives that order and pins the
+ * silence, so the degradation is measured rather than asserted.
+ */
+function toAccessibilityOptions(
+	announcements: DndAnnouncements,
+	resolveDrop: (event: SortableDragEndEvent) => DndDropEvent | null,
+): {
+	announcements: {
+		dragstart: (event: SortableDragStartEvent) => string | undefined
+		dragover: (event: SortableDragOverEvent) => string | undefined
+		dragend: (event: SortableDragEndEvent) => string | undefined
+	}
+	screenReaderInstructions: { draggable: string }
+} {
+	return {
+		announcements: {
+			dragstart: (event) => {
+				const source = toDragSourceEvent(event)
+
+				return source ? announcements.dragStart({ ...source, input: toDragInput(event.operation) }) : undefined
+			},
+			dragover: (event) => {
+				const over = toDragOverEvent(event)
+
+				return over ? announcements.dragOver({ ...over, input: toDragInput(event.operation) }) : undefined
+			},
+			dragend: (event) => {
+				const input = toDragInput(event.operation)
+
+				if (event.canceled) {
+					const source = toDragSourceEvent(event)
+
+					return source ? announcements.dragCancel({ ...source, input }) : undefined
+				}
+
+				// Resolved, not committed — see this function's docblock. The grid's own gate keeps a
+				// pointer drag silent, so there is no input test to make here.
+				const drop = resolveDrop(event)
+
+				return drop ? announcements.dragEnd({ ...drop, input }) : undefined
+			},
+		},
+		// The plugin's own default is an English paragraph about the space bar and the arrow keys; this
+		// is the same thing in the application's language, on the hidden node each handle points at
+		// through `aria-describedby`.
+		screenReaderInstructions: { draggable: announcements.instructions },
+	}
+}
+
+function DndProvider({ onDrop, canDrop, announcements, children }: DndProviderProps) {
 	/*
 	 * The last target the pointer was over **and the grid allowed**, for the length of one operation.
 	 *
@@ -818,9 +1030,59 @@ function DndProvider({ onDrop, canDrop, children }: DndProviderProps) {
 	 */
 	const endAnchor = useRef<DragAnchor | null>(null)
 
+	/**
+	 * This operation's drop as the refs above currently stand — a **read**, and the only call to
+	 * {@link toDropEvent} in this file.
+	 *
+	 * Both `dragend` listeners reach it: the accessibility plugin's, to describe where the item
+	 * landed, and the provider's own handler below, which is the one that then calls `onDrop`.
+	 * Nothing here writes anything, so two callers cost one extra translation and change no
+	 * outcome — which is why the per-operation idempotence an earlier revision needed went out with
+	 * the commit it protected. {@link toAccessibilityOptions} has the ordering that replaced it.
+	 *
+	 * Stable for the life of the provider, closing over refs alone: the plugins array below is
+	 * memoised on this function's identity, and reassigning `manager.plugins` re-instantiates every
+	 * plugin in it.
+	 */
+	const resolveDrop = useCallback(
+		(event: SortableDragEndEvent): DndDropEvent | null =>
+			toDropEvent(event, {
+				hoveredTargetId: hoveredTargetId.current,
+				startAnchor: startAnchor.current,
+				endAnchor: endAnchor.current,
+			}),
+		[],
+	)
+
+	/**
+	 * The plugins, configured with this grid's announcements when it has any.
+	 *
+	 * **Memoised on the bag's identity, and that is a correctness requirement rather than an
+	 * optimisation.** The provider reassigns `manager.plugins` whenever the array's identity changes
+	 * (the same `useOnValueChange` that watches `sensors`), which re-instantiates every plugin in it —
+	 * so a fresh array per render would tear down and rebuild the live region, the cursor and the drag
+	 * feedback in the middle of the gesture using them. The grid's half of that contract is to keep
+	 * the bag stable, which `GridDndProvider` does by memoising it.
+	 *
+	 * A grid that passes none gets {@link DRAG_PLUGINS}, a module constant, so the common path has no
+	 * identity to change at all. Still no explicit `id`: the live region and the description node are
+	 * created per manager, so three grids on a page have three regions, each announcing only its own.
+	 */
+	const plugins = useMemo(
+		() =>
+			announcements
+				? [
+						Accessibility.configure(toAccessibilityOptions(announcements, resolveDrop)),
+						...DRAG_PLUGINS_BESIDE_ACCESSIBILITY,
+					]
+				: DRAG_PLUGINS,
+		[announcements, resolveDrop],
+	)
+
 	return (
 		<DragDropProvider
 			sensors={DRAG_SENSORS}
+			plugins={plugins}
 			/*
 			 * `preventDefault()` is how this library is told a hover is not a landing place, and it is
 			 * a first-class answer rather than a trick: `DragActions.setDropTarget` dispatches this
@@ -870,15 +1132,14 @@ function DndProvider({ onDrop, canDrop, children }: DndProviderProps) {
 				hoveredTargetId.current = over.targetId
 			}}
 			onDragEnd={(event) => {
-				const drop = toDropEvent(event as SortableDragEndEvent, {
-					hoveredTargetId: hoveredTargetId.current,
-					startAnchor: startAnchor.current,
-					endAnchor: endAnchor.current,
-				})
+				// The one commit, on every path and on this listener alone. An announcement callback may
+				// have read the same refs a moment ago to describe this drop; it did not perform it.
+				// Clearing comes after, which is what the ordering in `toAccessibilityOptions` rests on.
+				const drop = resolveDrop(event as SortableDragEndEvent)
+				if (drop) onDrop(drop)
 				hoveredTargetId.current = null
 				startAnchor.current = null
 				endAnchor.current = null
-				if (drop) onDrop(drop)
 			}}
 		>
 			{children}

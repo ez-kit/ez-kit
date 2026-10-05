@@ -196,6 +196,22 @@ describe('the column drag handle', () => {
 		expect(container.querySelectorAll('[data-slot="column-drag-handle"]')).toHaveLength(TEST_COLUMNS.length)
 	})
 
+	it('describes its role from the message catalogue', () => {
+		// REGRESSION, the column half of the same defect `row-drag.test.tsx` records:
+		// `messages.ordering.draggable` reached no element, so the drag library's own English
+		// `"draggable"` was what a screen reader read whatever the dictionary said.
+		const { adapter } = makeDrivableAdapter()
+		const { container } = renderDndGrid(
+			adapter,
+			{ messages: { ordering: { draggable: 'перетаскиваемый' } } },
+			headerWithHandleArg,
+		)
+
+		const handles = container.querySelectorAll('[data-slot="column-drag-handle"]')
+		expect(handles).toHaveLength(TEST_COLUMNS.length)
+		expect(handles[0]).toHaveAttribute('aria-roledescription', 'перетаскиваемый')
+	})
+
 	it('renders nothing when column ordering is off', () => {
 		const { adapter } = makeDrivableAdapter()
 		const { container } = renderDndGrid(adapter, { ordering: { column: false } }, headerWithHandleArg)

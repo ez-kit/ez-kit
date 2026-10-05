@@ -89,12 +89,16 @@ export function ColumnDragHandle({ children, 'aria-label': ariaLabel }: DataGrid
 	 */
 	const { Button } = components.core
 
+	// `aria-roledescription` comes from the catalogue, for the reasons `row-drag-handle.tsx` states in
+	// full: the drag library writes English `"draggable"` there when the attribute is absent, and one
+	// of the two kits drops it on the way to the DOM.
 	return (
 		<Button
 			ref={drag.handleRef}
 			type='button'
 			data-slot='column-drag-handle'
 			aria-label={ariaLabel ?? messages.ordering.dragColumn}
+			aria-roledescription={messages.ordering.draggable}
 		>
 			{children}
 		</Button>

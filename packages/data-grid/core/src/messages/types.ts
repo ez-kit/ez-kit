@@ -234,12 +234,71 @@ export type GridMessages = {
 	 * announcements and the handle's ARIA description among them. It is deliberately started here,
 	 * with the one key a rendered control cannot go without: an icon-only button needs an accessible
 	 * name from its first frame, not from the release that completes the feature.
+	 *
+	 * **The announcement keys below are a sentence each, not a stem plus a value.** A sentence
+	 * assembled from fragments cannot be translated: word order differs between languages, and a
+	 * locale that puts the position before the verb has nowhere to say so if the verb arrives as one
+	 * key and the position as another. So every key here returns a whole sentence from a named
+	 * context, which is also why the row and the column forms are **separate keys** rather than one
+	 * key taking a name the grid built — "row 3" is itself a phrase, and building it above the
+	 * catalogue would put an English fragment back in the sentence.
+	 *
+	 * These replace the English the drag library announces on its own. Left unconfigured,
+	 * `@dnd-kit/dom`'s `Accessibility` plugin writes its own sentences into a live region it creates
+	 * — in English whatever the app's locale, and naming the record id rather than the column or the
+	 * position, because its callbacks receive only the two ids.
 	 */
 	ordering: {
 		/** Accessible name of a row's drag handle. */
 		dragRow: string
 		/** Accessible name of a column header's drag handle. Same standing as {@link dragRow}. */
 		dragColumn: string
+		/**
+		 * What a screen reader calls a drag handle — the `aria-roledescription` of the element,
+		 * which replaces the role a user would otherwise hear ("button").
+		 *
+		 * One word or a very short noun phrase, never a sentence: it is read in place of the role,
+		 * after the accessible name, so "Reorder row, draggable" is what a user hears.
+		 */
+		draggable: string
+		/**
+		 * How to drive a drag from the keyboard, read once when a handle takes focus.
+		 *
+		 * Rendered into a hidden element the handle points `aria-describedby` at, so it is
+		 * announced after the name and the role description and never seen. It names keys, which is
+		 * why it is a constant rather than a function: nothing about the grid's state changes it.
+		 *
+		 * **This is the one key in this group that is not live, and the limit is the drag library's.**
+		 * `@dnd-kit/dom@0.1.21`'s `Accessibility` plugin builds its hidden text node from the string
+		 * captured in its constructor and recreates the node only once it has been disconnected from
+		 * the document — and the plugin registry reuses one instance per constructor rather than
+		 * constructing a second. So a dictionary swapped at runtime reaches the nine announcement
+		 * sentences below and **does not** reach this one: the mounted grid keeps the instructions it
+		 * was first given. Remounting the grid picks up the new text. Stated here rather than left to
+		 * be discovered, because every other key in this group behaves the other way.
+		 */
+		instructions: string
+		/** Announced when a row is picked up. */
+		rowPickedUp: (ctx: OrderingPositionContext) => string
+		/** Announced when a held row reaches a new position. */
+		rowMovedTo: (ctx: OrderingPositionContext) => string
+		/** Announced when a row is dropped. */
+		rowDropped: (ctx: OrderingPositionContext) => string
+		/**
+		 * Announced when a row drag is cancelled.
+		 *
+		 * The position is where the row is, which after a cancellation is where it started: nothing
+		 * was committed, so the grid's own state never moved.
+		 */
+		rowCancelled: (ctx: OrderingPositionContext) => string
+		/** Announced when a column is picked up. */
+		columnPickedUp: (ctx: OrderingColumnContext) => string
+		/** Announced when a held column reaches a new position. */
+		columnMovedTo: (ctx: OrderingColumnContext) => string
+		/** Announced when a column is dropped. */
+		columnDropped: (ctx: OrderingColumnContext) => string
+		/** Announced when a column drag is cancelled — see {@link rowCancelled} on the position. */
+		columnCancelled: (ctx: OrderingColumnContext) => string
 	}
 	visibility: {
 		/** Accessible name of the toolbar's visibility trigger. */
@@ -461,6 +520,48 @@ export type GridMessages = {
 export type CountContext = {
 	/** How many of the thing there are. Always ≥ 1 — a zero segment is not rendered. */
 	count: number
+}
+
+/**
+ * What a row-ordering announcement is given.
+ *
+ * `position` is **1-based**, because it is read aloud: a user hears "row 3 of 20", never "row 2 of
+ * 20" for the third row. Everything inside the drag counts from zero; the conversion happens once,
+ * where the sentence is built.
+ *
+ * Both numbers describe **the rows the body renders**, which is what the drag moved among and what
+ * the user is looking at — not the row model. The two differ wherever the grid is doing something:
+ * under pagination they are the current page, under a filter the survivors, and in a **virtualized**
+ * body they are the rendered window, so a 10 000-row grid announces a position within the few dozen
+ * rows on screen. That last one is a real limit rather than a rounding: the window is the only list
+ * the drag's own index space agrees with, and announcing a model position instead would name a place
+ * the drag was never counting in.
+ */
+export type OrderingPositionContext = {
+	/** Where the row is, counted from one, among the rows the body renders. */
+	position: number
+	/** How many rows the body renders. */
+	total: number
+}
+
+/**
+ * What a column-ordering announcement is given — {@link OrderingPositionContext} plus the name.
+ *
+ * A column has a heading and so can be called something; a row has only its place. Hence two
+ * context types and two sets of keys rather than one set taking a name the grid had to invent.
+ */
+export type OrderingColumnContext = {
+	/**
+	 * The column's heading when it is text, and its id when the heading is an element.
+	 *
+	 * Never a rendered element flattened to text: a header may be arbitrary JSX, and turning one
+	 * into a string means rendering it out of tree. The id is a worse name and an honest one.
+	 */
+	name: string
+	/** Where the column is, counted from one, among the columns its surface lists. */
+	position: number
+	/** How many columns that surface lists — the visible leaves in the header, every leaf in the panel. */
+	total: number
 }
 
 /** What {@link GridMessages.draft.summary} is given. */

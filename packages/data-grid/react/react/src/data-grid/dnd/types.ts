@@ -241,6 +241,118 @@ export type DndDragOverEvent = {
 }
 
 /**
+ * How a drag was driven — which is **the one fact an announcement needs and the port did not
+ * carry**, so it arrives here rather than being widened onto the events above.
+ *
+ * A live region exists for a gesture its user cannot see. A pointer drag is visible to the person
+ * making it, and a mouse crosses a new neighbour several times a second, so narrating one is noise
+ * that drowns out everything else the page announces; a keyboard drag is a sequence of discrete
+ * steps with no visual feedback a screen-reader user receives, and is the whole reason the region is
+ * there. So the grid announces the keyboard path and stays silent on the pointer one — which it can
+ * only do if it is told which it is looking at.
+ *
+ * Deliberately **not** added to {@link DndDragOverEvent} or {@link DndDropEvent}: `canDrop` and
+ * `onDrop` answer the same question whichever device asked it, and a field neither of them reads
+ * would be one more thing an adapter has to populate correctly for nothing. It is instead a member
+ * of {@link DndAnnouncement}, which is the only place it is consumed.
+ *
+ * Both values are derivable by an adapter without the port learning anything new — a drag library
+ * either exposes the activating event (`@dnd-kit/abstract@0.1.21` keeps
+ * `DragOperation.activatorEvent`) or names the sensor that started the operation. **How** an adapter
+ * gets from one of those to this classification is its own business, and this port deliberately
+ * prescribes nothing: what it asks for is the answer, not a technique for arriving at it.
+ *
+ * One technique in particular is **not** prescribed, because both in-repo adapters refuse it on good
+ * grounds: `event instanceof KeyboardEvent` tests identity against the *realm's* constructor, so it
+ * answers `false` for an event minted in another document — and every docs example renders the grid
+ * inside an iframe. Those adapters read the event's own `key` instead, which is true across realms;
+ * see `toDragInput` in either kit's `dnd.tsx`.
+ */
+export const DragInput = {
+	/** A mouse, a pen or a touch — a gesture its own user can see. */
+	Pointer: 'pointer',
+	/** The keyboard: discrete steps, and the reason the live region exists. */
+	Keyboard: 'keyboard',
+} as const
+
+export type DragInput = (typeof DragInput)[keyof typeof DragInput]
+
+/**
+ * A drag seen **from the held item alone** — a pickup, or a cancellation.
+ *
+ * The one shape the port was missing, and the minimum it was missing by. Neither moment has a
+ * target: at pickup nothing has been hovered yet, and a cancellation returns the item whence it came
+ * rather than landing it anywhere, so a `targetId` would have nothing honest to put in it. Same
+ * currency as every other event here — the axis, the surface and one id.
+ *
+ * One type for both moments rather than two identical ones: they differ in when they happen, not in
+ * what they carry, and the bag's two members already say which is which.
+ */
+export type DndDragSourceEvent = {
+	axis: DragAxis
+	/** The surface the item is on. */
+	surface: DragSurface
+	/** The item picked up, or the item whose drag was cancelled. */
+	sourceId: string
+}
+
+/**
+ * One of the port's events, as an **announcement** sees it: the event plus how the drag is driven.
+ *
+ * A wrapper rather than a field on each event, so {@link DndDropEvent} and {@link DndDragOverEvent}
+ * stay exactly what `onDrop` and `canDrop` are documented to receive — see {@link DragInput}.
+ */
+export type DndAnnouncement<TEvent> = TEvent & {
+	/** Pointer or keyboard. */
+	input: DragInput
+}
+
+/**
+ * The sentences a drag should be narrated with, built by the grid and spoken by the adapter.
+ *
+ * **Why the grid builds them.** A drag library's own announcement callbacks receive the ids it is
+ * moving and nothing else, so the best sentence they can produce names a record id — *"Picked up
+ * draggable item 7."* Turning that into something a user can follow needs the column's heading, the
+ * position among the rows on screen and the message catalogue, none of which a kit's adapter has or
+ * should: it exists to not know about tables. So the grid builds whole sentences and the adapter
+ * hands them to whatever its library announces through.
+ *
+ * **A callback may return `undefined`, and that means "say nothing".** It is how the grid declines to
+ * narrate a pointer drag (see {@link DragInput}), and an adapter must treat it as silence rather
+ * than printing it — `@dnd-kit/dom@0.1.21`'s live region already skips a falsy value, so forwarding
+ * the return value straight through is correct there.
+ *
+ * {@link instructions} is a constant rather than a callback because it is read before any drag
+ * exists: it is the text a handle points `aria-describedby` at. It is also the one member a running
+ * app cannot change — `@dnd-kit/dom@0.1.21`'s plugin captures it once and builds its hidden node from
+ * that copy, so a dictionary swapped at runtime reaches every callback below and not this. The
+ * catalogue key says so too.
+ *
+ * **The four callbacks are a sequence, not four independent questions.** {@link dragEnd} describes
+ * where the item landed, which is *computed* from the list as it stood at pickup — so an adapter that
+ * forwards the drop without having forwarded the pickup gets silence rather than a wrong number.
+ * Forward all four.
+ */
+export type DndAnnouncements = {
+	/** How to drive a drag from the keyboard, for the hidden element a handle describes itself by. */
+	instructions: string
+	/** The item has been picked up. Also what the grid measures {@link dragEnd} against. */
+	dragStart: (event: DndAnnouncement<DndDragSourceEvent>) => string | undefined
+	/** The held item is over a new neighbour. Called as often as that changes. */
+	dragOver: (event: DndAnnouncement<DndDragOverEvent>) => string | undefined
+	/**
+	 * The item was dropped. The same event {@link DndProviderProps.onDrop} is given.
+	 *
+	 * **It may be called before or after the commit — the sentence does not read the result back.**
+	 * See `buildDndAnnouncements`: the landing position is derived from the move, because no state
+	 * read at this moment can answer it in a controlled grid.
+	 */
+	dragEnd: (event: DndAnnouncement<DndDropEvent>) => string | undefined
+	/** The drag was abandoned and nothing was committed. */
+	dragCancel: (event: DndAnnouncement<DndDragSourceEvent>) => string | undefined
+}
+
+/**
  * What a grid hands its adapter's provider.
  */
 export type DndProviderProps = {
@@ -272,6 +384,25 @@ export type DndProviderProps = {
 	 * there commits that position; it is only the illegal step that does not happen.
 	 */
 	canDrop: (event: DndDragOverEvent) => boolean
+	/**
+	 * What to say about this drag, in the application's language — see {@link DndAnnouncements}.
+	 *
+	 * **Optional, and an adapter that ignores it is still correct — merely silent.** Unlike
+	 * {@link canDrop}, nothing about the grid's state depends on this: a drag that is never announced
+	 * commits exactly what an announced one commits. So an existing adapter keeps compiling and keeps
+	 * working, and the cost of not forwarding it is paid entirely by screen-reader users, who hear
+	 * whatever the drag library says on its own behalf.
+	 *
+	 * Worth knowing what that is, because it is not silence. `@dnd-kit/dom`'s default preset includes
+	 * an `Accessibility` plugin that creates its own live region and announces into it — in English
+	 * whatever the app's locale, naming record ids rather than columns and positions. An adapter
+	 * built on that library has a third option beyond forwarding and ignoring, and it is the worst
+	 * one: leaving the default in place while the rest of the grid speaks another language.
+	 *
+	 * Optional in the `exactOptionalPropertyTypes` sense, so the grid passes it with the conditional
+	 * spread this package uses throughout rather than passing `undefined`.
+	 */
+	announcements?: DndAnnouncements
 	children: ReactNode
 }
 

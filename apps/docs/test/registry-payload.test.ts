@@ -61,6 +61,21 @@ describe('the shadcn registry payload', () => {
 		expect(dependencies).toContain(`@dnd-kit/react@${String(peerRange)}`)
 	})
 
+	it('declares the drag library’s dom package too, at that package’s own peer range', () => {
+		const { dependencies } = readPayload()
+		const peerRange = (JSON.parse(readFileSync(SHADCN_PKG, 'utf8')) as { peerDependencies: Record<string, string> })
+			.peerDependencies['@dnd-kit/dom']
+
+		/*
+		 * A second name for one library, and the reason is that `@dnd-kit/react` re-exports only the
+		 * manager and the two sensors from `@dnd-kit/dom` — no plugin among them — while the adapter
+		 * passes a `plugins` array of five. Pinned to the kit's own peer range, like its sibling above,
+		 * so a registry consumer and an npm consumer cannot end up on different versions of the package
+		 * the adapter's plugin list resolves through.
+		 */
+		expect(dependencies).toContain(`@dnd-kit/dom@${String(peerRange)}`)
+	})
+
 	it('ships no test file and no npm barrel', () => {
 		const { files } = readPayload()
 		const paths = files.map((file) => file.path)
@@ -88,6 +103,7 @@ describe('the shadcn registry payload', () => {
 
 		expect(names.sort()).toMatchInlineSnapshot(`
 			[
+			  "@dnd-kit/dom",
 			  "@dnd-kit/react",
 			  "@ez-kit/data-grid-core",
 			  "@ez-kit/data-grid-react",

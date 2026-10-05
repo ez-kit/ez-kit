@@ -1,19 +1,19 @@
 import {
 	canDropColumn,
-	ColumnMoveScope,
 	CreatingMode,
 	dropColumn,
 	EditingMode,
 	featureConfig,
 	isFeatureEnabled,
 } from '@ez-kit/data-grid-core'
-import { useCallback, useRef } from 'react'
+import { useCallback, useMemo, useRef } from 'react'
 
 import { CellTypesProvider, mergeCellTypes } from '../cell-types-context'
 import { GridComponentsProvider, useGridComponents } from '../components-context'
 import { guardComponents } from '../components-guard'
 import { GridFactoryDefaultsProvider } from '../data-grid-options-context'
 import { useDataGrid, type UseDataGridConfig } from '../use-data-grid'
+import { useGridMessages } from '../use-grid-messages'
 
 import { ActionBar, buildSelectionBarArgs } from './action-bar'
 import { ActiveFiltersBar } from './active-filters-bar'
@@ -26,7 +26,9 @@ import { ColumnFilter } from './column-filter'
 import { ComponentGuard } from './component-guard'
 import { CreateTrigger } from './create-trigger'
 import { CreatingModal } from './creating-modal'
-import { DndAdapterProvider, DndBundleProvider, DragAxis, DragSurface, useDndAdapter, useDndBundleAdapter } from './dnd'
+import { DndAdapterProvider, DndBundleProvider, DragAxis, useDndAdapter, useDndBundleAdapter } from './dnd'
+import { COLUMN_DROP_SCOPE } from './dnd/column-drop-scope'
+import { buildDndAnnouncements } from './dnd-announcements'
 import { EditingModal } from './editing-modal'
 import { EmptyStateRow } from './empty-state-row'
 import { FilterPanel } from './filter-panel'
@@ -46,7 +48,7 @@ import { Pagination } from './pagination'
 import { DataGridRow } from './row'
 import { RowCountStatus } from './row-count-status'
 import { RowDragHandle } from './row-drag-handle'
-import { RowDragRegistryProvider } from './row-drag-registry'
+import { RowDragRegistryProvider, useRenderedRowIdsReader } from './row-drag-registry'
 import { SortMenuTrigger } from './sort-menu-trigger'
 import { DataGridTable } from './table'
 import { TableProvider, useDataGridTable, useDataGridState } from './table-context'
@@ -305,24 +307,6 @@ function GridBody({ children }: { children: ReactNode }) {
 }
 
 /**
- * Which `ColumnMoveScope` a column drop is judged under, per surface.
- *
- * The header shows the visible leaves and nothing else, so `Visible` is the only scope a drop there
- * can honestly be asked about — a hidden column renders no header cell and can be neither end of
- * that drop. The panel lists hidden columns *precisely so they can be reordered*, which is `All`,
- * and is the same scope its one-step move pair already uses (`visibility-trigger.tsx`). So the two
- * surfaces of one axis commit the same slice under two scopes, which is what `DragSurface` exists
- * to tell apart.
- *
- * A lookup keyed by the closed set rather than a ternary, so a third surface is a compile error
- * here rather than a silent fall back to `Visible`.
- */
-const COLUMN_DROP_SCOPE: Record<DragSurface, ColumnMoveScope> = {
-	[DragSurface.Table]: ColumnMoveScope.Visible,
-	[DragSurface.Panel]: ColumnMoveScope.All,
-}
-
-/**
  * Mounts the registered adapter's own provider, and commits what it reports.
  *
  * A component rather than a few lines inside {@link DataGridControlled}, because reading the
@@ -337,6 +321,47 @@ const COLUMN_DROP_SCOPE: Record<DragSurface, ColumnMoveScope> = {
 function GridDndProvider({ children }: { children: ReactNode }) {
 	const adapter = useDndAdapter()
 	const table = useDataGridTable()
+	const messages = useGridMessages()
+	const readRenderedRowIds = useRenderedRowIdsReader()
+
+	/**
+	 * The current table and dictionary, for callbacks that outlive the render that built them.
+	 *
+	 * Assigned during render on purpose — the same shape the controlled/uncontrolled warning below
+	 * uses. An effect would be a frame late, and nothing reads this during render; the readers below
+	 * are invoked from the drag library's own event handling, which is strictly after paint.
+	 */
+	const latestRef = useRef({ table, messages })
+	latestRef.current = { table, messages }
+
+	const readTable = useCallback(() => latestRef.current.table, [])
+	const readMessages = useCallback(() => latestRef.current.messages, [])
+
+	/**
+	 * What a drag says, in the application's language — built here because this is the only layer
+	 * that holds both halves of the sentence.
+	 *
+	 * The drag library hands its own announcement callbacks the ids it is moving and nothing else, so
+	 * the best it can do unaided is name a record id. A column's heading, a row's place among the
+	 * rows on screen and the message catalogue all live here; a kit's adapter has none of them and
+	 * exists in order not to. So the grid writes whole sentences and the adapter speaks them.
+	 *
+	 * **Built once, and every dependency is a reader — this memo must stay stable.** The drag
+	 * library's plugin registry reuses a plugin instance keyed by its constructor and only reassigns
+	 * `options`, and `@dnd-kit/dom@0.1.21`'s `Accessibility` reads the bag in its constructor alone,
+	 * so a bag rebuilt per render is a bag the live region never sees. Adding `table` or `messages`
+	 * back to the dependency list therefore does not refresh the announcements — it freezes them at
+	 * the first render *and* churns a value nothing re-reads. `messages` in particular is rebuilt on
+	 * every render of any grid with a `messages` override.
+	 *
+	 * `readRenderedRowIds` is stable per registry and is a reader for an adjacent reason: a
+	 * virtualized body republishes its window under a drag's auto-scroll without this provider
+	 * re-rendering.
+	 */
+	const announcements = useMemo(
+		() => buildDndAnnouncements(readTable, readMessages, readRenderedRowIds),
+		[readTable, readMessages, readRenderedRowIds],
+	)
 
 	const onDrop = useCallback(
 		(event: DndDropEvent) => {
@@ -455,6 +480,7 @@ function GridDndProvider({ children }: { children: ReactNode }) {
 		<adapter.Provider
 			onDrop={onDrop}
 			canDrop={canDrop}
+			announcements={announcements}
 		>
 			{children}
 		</adapter.Provider>
@@ -543,8 +569,28 @@ function DataGridControlled<TFeatures extends TableFeatures, TRow extends object
 								 * around everything that renders a row, because that is what the drag
 								 * layer has to contain.
 								 */}
-								<GridDndProvider>
-									<RowDragRegistryProvider>
+								{/*
+								 * The registry sits **above** the drag provider, and this order is load bearing:
+								 * `GridDndProvider` reads it. Specifically it calls `useRenderedRowIdsReader()`
+								 * and hands that reader to `buildDndAnnouncements`, which is how a row-drag
+								 * announcement can say "row 3 of 20" — the position has to be counted in the
+								 * window a virtualized body published, since that is the only list the drag's own
+								 * index space agrees with. Nested the other way round the registry context is
+								 * unreachable from `GridDndProvider` and there is no window to count in.
+								 *
+								 * **Check that read before changing this.** This nesting existed once with nothing
+								 * behind it — a landing-index resolution that had already been replaced by an id —
+								 * and was correctly reverted as an arbitrary order dressed up as a requirement. If
+								 * `GridDndProvider` stops reading the registry, revert it again.
+								 *
+								 * What makes the read safe, where the removed one was not: a position that is only
+								 * ever **read aloud** has no second side to disagree with. The old reader fed a
+								 * commit, so a stale window meant the wrong row moved; a stale window here costs
+								 * one wrong number in one sentence. The registry is otherwise a plain store that
+								 * only rows and handles touch, so hoisting it costs nothing.
+								 */}
+								<RowDragRegistryProvider>
+									<GridDndProvider>
 										<GridRoot>
 											<RowCountStatus />
 											<GridBody>{children}</GridBody>
@@ -552,8 +598,8 @@ function DataGridControlled<TFeatures extends TableFeatures, TRow extends object
 											{writeOptions.editing?.mode === EditingMode.Modal && <EditingModal />}
 											<ConfirmDialogRenderer />
 										</GridRoot>
-									</RowDragRegistryProvider>
-								</GridDndProvider>
+									</GridDndProvider>
+								</RowDragRegistryProvider>
 							</TableProvider>
 						</GridComponentsProvider>
 					</CellTypesProvider>

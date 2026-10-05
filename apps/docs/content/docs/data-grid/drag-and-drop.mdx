@@ -241,6 +241,59 @@ Two differences here belong to HeroUI and both are React Aria's, listed in
 [Kit parity](/docs/data-grid/kit-parity): `Alt+Arrow` row reordering does not reach that kit at all,
 and on `Tab` mid-drag the shadcn kit keeps focus on the handle while HeroUI's focus leaves the table.
 
+## Announcements
+
+A keyboard drag is narrated. Focusing a handle reads its name and how to drive it from the keyboard —
+and, in the shadcn kit, what the gesture is. The pick-up, the drop and a cancellation each reach a
+polite live region as they happen, and so does the arrows' progress, so the gesture is followable
+without seeing the rows move.
+
+**Movement is announced as the position you settle on, not as every position you pass through.** The
+drag library coalesces its move announcements: every arrow press records the sentence for where the
+item now sits, and the region is written once the keys have been quiet for a moment. Tap `ArrowDown`
+four times in quick succession and a screen reader reads the fourth position rather than all four.
+That is the right output, not a shortfall — a region that spoke each intermediate step of a fast key
+repeat would be a stream nobody can follow, every sentence cut off by the next, and the position a
+user arrives at is the one they are deciding about. The pick-up, the drop and the cancellation are not
+coalesced; each of those is said as it happens.
+
+The sentences name things a user can act on rather than internals. A **column** is called by its
+header text — or by its column id when the header is a React element, since flattening arbitrary JSX
+to a string means rendering it out of tree, and a worse name is better than an invented one. A **row**
+has no name, so it is given its place: both axes count **from one**, among the items the surface
+actually lists, because the number is read aloud.
+
+Every string is in the [message catalogue](/docs/data-grid/localization)'s `ordering` group and is
+overridden like any other, per key:
+
+```ts
+const ru: PartialGridMessages = {
+	ordering: {
+		draggable: 'перетаскиваемый',
+		instructions: 'Нажмите пробел, чтобы взять элемент…',
+		rowPickedUp: ({ position, total }) => `Взята строка ${position} из ${total}.`,
+		columnMovedTo: ({ name, position, total }) => `${name}: позиция ${position} из ${total}.`,
+	},
+}
+```
+
+Each key is a **whole sentence** taking named values, never a stem the grid completes: word order
+differs between languages, and the row and column forms are separate keys for the same reason. The
+keys are `draggable` and `instructions` for the handle itself, then `rowPickedUp` / `rowMovedTo` /
+`rowDropped` / `rowCancelled` and their four `column*` counterparts.
+
+Three things are deliberately true of this:
+
+- **A pointer drag is not announced.** Whoever is moving a row with a mouse can see it move, and
+  narrating every `dragover` of a pointer would talk over the gesture being made.
+- **This is not the grid's own live region.** [`grid.rowCount`](/docs/data-grid/localization) reports
+  how many rows a query matches and remains the one thing the grid announces about its contents; the
+  drag's region is a sibling of it, created per grid, so several grids on one page never announce each
+  other's drags.
+- **The handle's `aria-roledescription` reaches shadcn and not HeroUI** — React Aria's attribute
+  allow-list, not the kit's adapter, so there a screen reader says the drag library's English
+  `draggable` rather than yours. In [Kit parity](/docs/data-grid/kit-parity), with the rest.
+
 ## What a drag will not do
 
 The same boundaries the one-step affordances honour — drag adds none and removes none:
@@ -272,10 +325,10 @@ beside the `dir` on an ancestor, the same pair [column pinning](/docs/data-grid/
 
 Stated rather than left to be discovered:
 
-- **No announcements.** A drag is operable from the keyboard — see [Keyboard](#keyboard) — but it is
-  not narrated: a screen reader is told neither that an item was picked up, nor where each arrow key
-  moved it, nor what the drop wrote. Until it is, `Alt+Arrow` and the menus are the path that reports
-  what it did.
+- **The announcements have not been through a screen reader.** What is verified is that the right
+  sentence reaches a correctly shaped live region at the right moment, in both kits, which is a
+  different claim from "it reads well through NVDA or VoiceOver" — that one is untested. See
+  [Announcements](#announcements) for what is said and the one attribute HeroUI drops.
 - **Two HeroUI-specific limits**, both in [Kit parity](/docs/data-grid/kit-parity): a header column
   cannot be dragged while the column panel is open, and `Escape` during a panel drag can leave the
   order changed without reporting it.
