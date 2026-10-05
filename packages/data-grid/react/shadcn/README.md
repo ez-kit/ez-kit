@@ -12,6 +12,18 @@ npx shadcn@latest add https://ez-kit-docs.vercel.app/r/data-grid.json
 
 This copies `components/data-grid/**` into your project (cells, toolbar, filtering, pagination, editing blocks, plus the shadcn UI primitives they use) and adds `@ez-kit/data-grid-react`, `@ez-kit/data-grid-core` and the other runtime dependencies to your `package.json`. Core is on that list because the copied `data-grid.tsx` imports it: that file is where the grid's feature set is named, and it ships bound to the all-in set so the grid works the moment it lands. Narrowing it is an edit to a file you now own. To pull in later updates, re-run the same command or use `npx shadcn add https://ez-kit-docs.vercel.app/r/data-grid.json --diff` to see what changed upstream first.
 
+### With drag and drop
+
+Drag is a second registry item — it is the one part of the kit with a library of its own (`@dnd-kit`), and a registry item has a single dependency list with no way to mark part of it optional. A grid without drag therefore no longer installs that library. If you want drag, add the drag item **instead of** the one above:
+
+```bash
+npx shadcn@latest add https://ez-kit-docs.vercel.app/r/data-grid-dnd.json
+```
+
+Still one command: the drag item names the grid item as a registry dependency, so both file sets and both dependency lists land in one run. `--diff` works the same way on that URL.
+
+This spares **future** installs the `@dnd-kit` dependency and nothing more. If you installed before the split, `@dnd-kit/react` and `@dnd-kit/dom` are already in your `package.json`; `shadcn add` has no uninstall and re-running the plain command will not remove them, so take the two lines out yourself if you do not need drag.
+
 ## Usage
 
 Import from where the CLI placed the file — by default `@/components/data-grid/data-grid`. `createColumns` / `createColumnHelper` are bound to this kit's cell-type registry; the ones from `@ez-kit/data-grid-react` are not, and using those silently stops checking `cell: { type: '…' }` against the types this kit actually renders.

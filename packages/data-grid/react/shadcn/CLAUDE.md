@@ -31,8 +31,11 @@ its bar genuinely uses it.
 This package is **not** published to npm (`private: true`). Instead `registry.config.mjs` +
 `../../../../scripts/generate-shadcn-registry-manifest.mjs` describe it as a shadcn registry item;
 `pnpm --filter @ez-kit/docs registry:build` compiles `registry.json` (via the official `shadcn
-build` CLI) into `apps/docs/public/r/data-grid.json`, which external consumers install with
-`npx shadcn add https://ez-kit-docs.vercel.app/r/data-grid.json`. That origin is not written here by
+build` CLI) into **two** per-item files under `apps/docs/public/r/`, which external consumers install
+with `npx shadcn add https://ez-kit-docs.vercel.app/r/data-grid.json` or, for the drag block,
+`…/r/data-grid-dnd.json`. The multi-item `registry.json` is build input only — a URL argument is
+parsed against the registry **item** schema, so pointing `shadcn add` at an index fails with
+`Invalid discriminator value`; never document one as installable. That origin is not written here by
 hand — it comes from `site.config.json` at the repo root, and `scripts/check-site-url.mjs` (run by
 `pnpm lint`) fails if any `.md`/`.mdx` names a different one, so the install command in the docs can
 never drift from the site that actually serves the JSON. `apps/docs/public/r/**` is gitignored, so the
@@ -42,7 +45,7 @@ default can't silently drop it and 404 the install URL with a green build.
 `components/ui/**`, `blocks/**`, `hooks/**`,
 `lib/**`, `data-grid.tsx`, `dnd.tsx` and `styles.css` are copied byte-for-byte into the consumer's project
 (imports are rewritten from this package's `@grid-shadcn/*` alias to `@/*` as part of that build —
-see `apps/docs/scripts/build-registry.mjs`). `dnd.tsx` is the drag adapter, and the one copied file that brings dependencies of its own (`@dnd-kit/react` **and** `@dnd-kit/dom` — the plugins the adapter lists are not re-exported by the first — both in the item's `dependencies`, so `shadcn add` installs them for everyone) — the root `AGENTS.md` records why that trade was taken and `apps/docs/test/registry-payload.test.ts` holds it. `index.ts`/`index.test.ts` are excluded — they exist
+see `apps/docs/scripts/build-registry.mjs`). `dnd.tsx` is the drag adapter and the one copied file that brings dependencies of its own (`@dnd-kit/react` **and** `@dnd-kit/dom` — the plugins the adapter lists are not re-exported by the first), which is exactly why it is **not** in the grid item: it is the whole content of a second item, `data-grid-dnd`, which declares both packages and names the grid item in its `registryDependencies` so one command still installs everything. The grid item is `@dnd-kit`-free, and that spares **future** installs only — `shadcn add` has no uninstall, so a project that installed before the split keeps both packages until someone deletes the lines. The root `AGENTS.md` records why the adapter has to ship at all (a file the registry does not copy cannot be imported, this package not being on npm) and `apps/docs/test/registry-payload.test.ts` holds both items. `index.ts`/`index.test.ts` are excluded — they exist
 only for this repo's internal `workspace:*` consumption (`apps/docs`), not for registry consumers.
 
 ## Layering
