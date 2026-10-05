@@ -59,10 +59,12 @@ imperative `ref` write in a slot every button in that kit renders, which is out 
 attribute. Both halves are pinned by tests rather than asserted here, and the difference is in
 **Kit parity**.
 
-**Consumers of the shadcn registry item gain `@dnd-kit/dom` in their install.** The plugin classes live
-only there — `@dnd-kit/react` re-exports the manager and the sensors and nothing else. It downloads
-nothing new, being already in every tree that has `@dnd-kit/react`, but it is one more name in the
-`package.json` that `shadcn add` writes. On the npm path both stay **optional** peers.
+**The shadcn registry's drag item declares `@dnd-kit/dom` beside `@dnd-kit/react`.** The plugin
+classes live only there — `@dnd-kit/react` re-exports the manager and the sensors and nothing else —
+and pnpm's isolated layout cannot resolve a transitive dependency a package has not declared, so it
+is named rather than inherited. It downloads nothing new, being already in every tree that has
+`@dnd-kit/react`. The plain grid item carries neither name, and on the npm path both stay
+**optional** peers.
 
 The new keys are additive and `PartialGridMessages` types any subset, so an existing dictionary keeps
 working; one that replaces `ordering` wholesale rather than per entry will want them. The grid's own

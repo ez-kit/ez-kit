@@ -42,12 +42,11 @@ export const { DataGrid } = createDataGrid({
 })
 ```
 
-If you change your mind, delete `dnd.tsx` and drop `@dnd-kit/react` and `@dnd-kit/dom` — nothing
-else in the block references any of them. That is also the only way to get rid of them: a registry
-item has one dependency list with no way to mark part of it optional, which is why drag is a
-separate item at all, and `shadcn add` has no uninstall. So if you installed the shadcn block
-**before** the split, those two packages are in your `package.json` already and re-running the
-plain command will not take them out — remove them by hand. Unused, the adapter costs no bundle
+If you change your mind, delete `dnd.tsx` and drop `@dnd-kit/react` and `@dnd-kit/dom` by hand —
+nothing else in the block references any of them. By hand is the only way: `shadcn add` has no
+uninstall, and a registry item carries one dependency list with no way to mark part of it optional.
+That is exactly why drag is a separate item rather than a flag on the main one — so that choosing
+not to drag is a choice you make before anything is installed. Unused, the adapter costs no bundle
 bytes either way.
 
 ### HeroUI

@@ -37,5 +37,5 @@ works meanwhile.
 Nothing is removed and no option is added. Two kit differences are documented rather than fixed, both
 React Aria's: `Alt+Arrow` row reordering does not reach the HeroUI kit ([#223](https://github.com/ez-kit/ez-kit/issues/223)),
 and on `Tab` mid-drag the shadcn kit keeps focus on the handle while HeroUI's focus leaves the table.
-A drag in flight is still not announced to a screen reader; the **Drag and drop** page says so beside
-the new keyboard section.
+A keyboard drag is narrated from the message catalogue, which ships in this same release; the
+**Drag and drop** page documents the keys and the announcements together.

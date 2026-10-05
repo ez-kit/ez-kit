@@ -40,7 +40,31 @@ const rowIds = (page: Page): Promise<string[]> =>
 const handleFor = (page: Page, rowId: string) =>
 	page.locator(`[data-slot="tbody"] [data-slot="tr"][data-row-id="${rowId}"] [data-slot="row-drag-handle"]`).first()
 
-const draggingCount = (page: Page) => page.locator('[data-row-dragging="true"]').count()
+/**
+ * The leaf columns of the `column-drag` example, in the order it declares them.
+ *
+ * Named rather than derived, for the reason `ordering/column-drag.spec.ts` records: a **group**
+ * header carries `data-column-id` too, and the two kits do not render the same header rows — shadcn
+ * draws the group row, heroui drops it. Filtering the DOM down to this set reads the same in both.
+ */
+const LEAF_COLUMNS = ['id', 'name', 'department', 'joinedAt', 'salary']
+
+const columnOrder = async (page: Page): Promise<string[]> => {
+	const ids = await page
+		.locator('[data-slot="thead"] [data-slot="th"][data-column-id]')
+		.evaluateAll((cells) => cells.map((cell) => cell.getAttribute('data-column-id') ?? ''))
+	return ids.filter((id) => LEAF_COLUMNS.includes(id))
+}
+
+/** `.first()` because a top-level leaf beside column groups renders its header twice in shadcn. */
+const columnHandleFor = (page: Page, columnId: string) =>
+	page.locator(`[data-slot="th"][data-column-id="${columnId}"] [data-slot="column-drag-handle"]`).first()
+
+/**
+ * Whether a drag is in flight, on **either** axis — the axes stamp their own attribute, so a gate
+ * watching only the row one waits forever for a column pick-up that has already happened.
+ */
+const draggingCount = (page: Page) => page.locator('[data-row-dragging="true"], [data-column-dragging="true"]').count()
 
 const selectedCount = (page: Page) => page.locator('[data-slot="tbody"] [data-slot="tr"][aria-selected="true"]').count()
 
@@ -133,10 +157,14 @@ async function pressHandle(page: Page, rowId: string, key: string): Promise<void
  * The signal is the rendered order changing, which is what the optimistic displacement does, rather
  * than a sleep.
  */
-async function pressAndSettle(page: Page, key: string): Promise<void> {
-	const before = (await rowIds(page)).join(',')
+async function pressAndSettle(
+	page: Page,
+	key: string,
+	order: (page: Page) => Promise<string[]> = rowIds,
+): Promise<void> {
+	const before = (await order(page)).join(',')
 	await page.keyboard.press(key)
-	await expect.poll(async () => (await rowIds(page)).join(',')).not.toBe(before)
+	await expect.poll(async () => (await order(page)).join(',')).not.toBe(before)
 }
 
 test.describe('keyboard sensors', () => {
@@ -292,6 +320,50 @@ test.describe('keyboard sensors', () => {
 		expect(await draggingCount(page), 'Space on a checkbox must not pick a row up').toBe(0)
 		expect(await rowIds(page)).toEqual(INITIAL_ORDER)
 		expect(await sortDirections(page)).toEqual(sortBefore)
+	})
+
+	/**
+	 * A keyboard drag of a **column** — the same sensor, the same handle-only activator and the same
+	 * keys as the row case above, on a different surface and through a different drop helper.
+	 *
+	 * It is here rather than in `ordering/column-drag.spec.ts` because that file drives the header with
+	 * a pointer; before this case the column axis' keyboard path had no browser coverage at all. It
+	 * opens the `column-drag` example because that is the one with column handles — the grid this file
+	 * otherwise drives has a row handle only.
+	 */
+	test('a keyboard drag of a column commits the new order', async ({ grid, page }) => {
+		await grid.open('column-drag')
+		const handle = columnHandleFor(page, 'name')
+		await expect(handle).toBeVisible()
+		expect(await columnOrder(page)).toEqual(LEAF_COLUMNS)
+
+		await focusControl(handle)
+		await page.keyboard.press('Space')
+		await expect.poll(() => draggingCount(page)).toBeGreaterThan(0)
+
+		await pressAndSettle(page, 'ArrowRight', columnOrder)
+		await page.keyboard.press('Space')
+
+		await expect.poll(() => draggingCount(page)).toBe(0)
+		// One place along the inline axis: `name` and `department` have traded places and nothing else
+		// moved. Logical under RTL, where `ordering/column-drag.spec.ts` covers the pointer gesture.
+		await expect.poll(() => columnOrder(page)).toEqual(['id', 'department', 'name', 'joinedAt', 'salary'])
+	})
+
+	test('Escape mid-drag leaves the column order untouched', async ({ grid, page }) => {
+		await grid.open('column-drag')
+		const handle = columnHandleFor(page, 'name')
+		await expect(handle).toBeVisible()
+		expect(await columnOrder(page)).toEqual(LEAF_COLUMNS)
+
+		await focusControl(handle)
+		await page.keyboard.press('Space')
+		await expect.poll(() => draggingCount(page)).toBeGreaterThan(0)
+		await pressAndSettle(page, 'ArrowRight', columnOrder)
+		await page.keyboard.press('Escape')
+
+		await expect.poll(() => draggingCount(page)).toBe(0)
+		await expect.poll(() => columnOrder(page)).toEqual(LEAF_COLUMNS)
 	})
 
 	/**

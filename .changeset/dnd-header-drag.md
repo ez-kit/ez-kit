@@ -63,11 +63,13 @@ exactly this reason — a drag library is handed the element it moves through a 
 were plain function components, which silently drop `ref` on React 18. `useColumnDrag()` is exported
 beside `useRowDrag()` for a kit or an application writing a handle of its own.
 
-The drag adapters now set the sortable's `group` from the axis. Without it every sortable in a grid
-shared one index space, and a grid with both rows and columns draggable would have had **both** axes
-stop working: the drag library's optimistic sorting requires each group's indices to be contiguous,
-and two interleaved axes are not. This is a prerequisite rather than a refinement, and it is not the
-composite group key an earlier design considered and dropped — it carries the axis and nothing else.
+The drag adapters now partition the sortable's `group` instead of letting every sortable in a grid
+share one index space. Without that a grid with both rows and columns draggable would have had
+**both** axes stop working: the drag library's optimistic sorting requires each group's indices to be
+contiguous, and two interleaved axes are not. The key is `<axis>:<surface>` — the surface half, and
+the measurement behind it, arrive with the column panel in this same release. This is a prerequisite
+rather than a refinement, and it is not the composite group key an earlier design considered and
+dropped: it carries two closed sets of literals and nothing about a column's data.
 
 For the shadcn registry, the vendored `components/ui/table.tsx` gains a `forwardRef` on
 `TableHead`, alongside the two the file already carries on `TableHeader` and `TableRow` and for the

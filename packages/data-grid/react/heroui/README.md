@@ -70,7 +70,48 @@ Registering a feature does not switch it on: `features` decides what exists, the
 
 Composing a set governs **behaviour** — an unregistered feature contributes no state slice, no API and no work at runtime — **and it governs your bundle**. Measured against the built entry: `tableFeatures` alone costs 994 bytes, `rowSortingFeature` 998, a sorting-only set 1 035, and `editingFeature` 17 163, which is what a feature with a real implementation behind it weighs. The all-in set lives on its own subpath, `@ez-kit/data-grid-core/features/all`, precisely so that reaching it is a choice: while it sat on the main entry, each of those imports cost ~46 kB, because a top-level `tableFeatures({ …stockFeatures, … })` call is not something a bundler can drop.
 
-Full documentation: [ez-kit-docs.vercel.app/docs/data-grid](https://ez-kit-docs.vercel.app/docs/data-grid).
+## Drag and drop
+
+Three surfaces drag — table rows, column headers, and the column panel (the visibility menu with
+`ordering.column.visibilityMenu` on) — and a row drags in a virtualized body too. Drag is **opt-in
+and costs nothing unused**: `@dnd-kit/react` and `@dnd-kit/dom` are **optional peer dependencies**,
+this kit's adapter sits on its own `./dnd` subpath, and a tree-shaking test asserts that no
+`@dnd-kit` specifier reaches any published entry but that one. A consumer who never names it installs
+nothing and ships nothing.
+
+Install the peer, then bind the adapter once, where you compose the bundle:
+
+```bash
+pnpm add @dnd-kit/react
+```
+
+```tsx
+import { allComponents, cellTypes } from '@ez-kit/data-grid-heroui'
+import { adapter } from '@ez-kit/data-grid-heroui/dnd'
+import { createDataGrid } from '@ez-kit/data-grid-react'
+
+export const { DataGrid } = createDataGrid({
+	components: allComponents,
+	cellTypes,
+	features,
+	dnd: adapter,
+})
+```
+
+Then turn the axis on as you always would — drag adds no option of its own:
+`ordering={{ row: true, column: { visibilityMenu: true } }}`.
+
+A drag is operable from the keyboard alone: the handle is the activator, `Space` or `Enter` picks the
+item up, the arrows move it, `Space` or `Enter` drops it, `Escape` cancels. It is announced through a
+live region whose text comes from the `messages` catalogue, so it translates with everything else.
+
+**One kit difference worth knowing up front:** `Alt+Arrow` row reordering and the grid's own
+arrow-key caret do not reach this kit, because React Aria's row forwards no key handler and brings
+its own focus manager. The drag itself works in both kits.
+
+Full documentation: [ez-kit-docs.vercel.app/docs/data-grid](https://ez-kit-docs.vercel.app/docs/data-grid),
+and [/docs/data-grid/drag-and-drop](https://ez-kit-docs.vercel.app/docs/data-grid/drag-and-drop) for
+the detail on this section.
 
 ## License
 

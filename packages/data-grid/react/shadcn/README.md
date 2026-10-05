@@ -22,7 +22,7 @@ npx shadcn@latest add https://ez-kit-docs.vercel.app/r/data-grid-dnd.json
 
 Still one command: the drag item names the grid item as a registry dependency, so both file sets and both dependency lists land in one run. `--diff` works the same way on that URL.
 
-This spares **future** installs the `@dnd-kit` dependency and nothing more. If you installed before the split, `@dnd-kit/react` and `@dnd-kit/dom` are already in your `package.json`; `shadcn add` has no uninstall and re-running the plain command will not remove them, so take the two lines out yourself if you do not need drag.
+There is no legacy cost to this split: the adapter has never been in a released registry build, so no install of this kit has ever pulled `@dnd-kit` in. It matters because `shadcn add` has no uninstall — a dependency a registry item declares is one the consumer removes by hand or not at all, which is why the drag library gets an item of its own instead of a line in the main list.
 
 ## Usage
 

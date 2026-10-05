@@ -32,12 +32,6 @@ It is still one command, not two: the drag item names the grid item as a registr
 the CLI installs both file sets and both dependency lists in one run. Pick one of the two commands —
 the plain one for a grid without drag, the `-dnd` one for a grid with it.
 
-If you already installed before the split, your `package.json` has `@dnd-kit/react` and
-`@dnd-kit/dom` in it. Nothing here takes them back out — `shadcn add` has no uninstall, and
-re-running the plain command does not remove a dependency it no longer declares. Drop the two
-entries yourself if you are not going to drag anything; the split is what spares the **next**
-project from acquiring them in the first place.
-
 Then add `@ez-kit/data-grid-core`:
 
 ```bash

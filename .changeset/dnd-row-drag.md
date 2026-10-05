@@ -41,5 +41,13 @@ before.
 `@ez-kit/data-grid-core` gains one message key, `ordering.dragRow`, for the handle's accessible
 name. `@ez-kit/data-grid-heroui` gains `RowDragHandle`, the shared control wearing the kit's grip.
 
-This also retires the caveat from the previous release: an adapter passed to `createDataGrid` is
-now driven rather than merely carried.
+A row's drag index is its position in the rows the body **renders** — the pinned top band, the
+centre, then the pinned bottom band — rather than TanStack's `row.index`, which counts a row among
+its _parent's_ children and so coincides with a rendered position only on page one of a flat,
+unfiltered grid. That is why dragging works on page two, under a column filter and with tree rows:
+the drag library requires each index space to be exactly `0..n-1` with no gap and no duplicate, and
+bails out of the whole space otherwise — silently, the handle working and the pointer moving while
+nothing displaces and nothing commits. Reading the rendered rows is also what keeps a row pinned
+under `keepPinnedRows` draggable after a page change or a filter has taken it out of the row model.
+A **virtualized** body is the one case this derivation cannot serve, and declares its own list
+instead — see the note on dragging a row in a virtualized grid.

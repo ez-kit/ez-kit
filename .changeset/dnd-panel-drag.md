@@ -21,8 +21,9 @@ the panel lists the hidden ones precisely so they can be reordered, and commits 
 hidden neighbour in the panel and cannot in the header, in one grid, and both are correct.
 
 That distinction is now in the port. `DragSpec` takes a `surface` beside its `axis`, and both
-`DndDropEvent` and `DndDragOverEvent` report it, so the grid knows which list to resolve a drop's
-index in and which scope to judge it under. **An adapter must partition its library's index space by
+`DndDropEvent` and `DndDragOverEvent` report it. The pair is what an item registers under, and what
+decides the scope a drop is judged and committed under; no index is resolved from it, because a drop
+names the item it landed on by id. **An adapter must partition its library's index space by
 the pair, not by the axis alone** — the two surfaces' lists have different lengths, and the drag
 library requires each space to be contiguous, so sharing one would silently kill dragging on both.
 Both in-repo adapters now register `type` / `accept` / `group` as `<axis>:<surface>`, **and the id they

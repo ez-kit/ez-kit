@@ -10,5 +10,6 @@ mechanics.
 new, and nothing the kit root exports reaches the drag library — the root's bundle size is
 unchanged, and a test asserts both halves rather than assuming them.
 
-Nothing renders differently yet. The grid does not mount the adapter's provider and no drop is
-committed until the drag surfaces land, so an adapter passed today is carried and not yet driven.
+A bound adapter is driven rather than merely carried: the grid mounts its provider and commits
+drops on all three drag surfaces — rows, header cells and the column panel — which ship in this
+same release.

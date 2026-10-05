@@ -17,8 +17,10 @@ a hand-written one — keeps the derivation, which is what it renders.
 The second defect only appeared once the first was fixed, and it failed invisibly. The dragged row
 unmounted as soon as the window scrolled past it, putting a hole in the space it had just left; from
 then on the element under the pointer was the drag library's own clone rather than the grid's row, so
-the gesture looked alive while the drop resolved its source to `-1` — clamped to zero, which landed
-the row at the **top** of the grid. The row now records itself as the active drag and the body builds
+the gesture looked alive while the drop landed the row at the **top** of the grid. (It resolved the
+source to `-1` and clamped it to zero — the shape of the contract at the time, recorded as the
+history of this fix: a drop now names the item it landed on by id, and the port carries no index at
+all.) The row now records itself as the active drag and the body builds
 its list as the window _plus_ the held row, so holding a row keeps both its registration and the
 space's density.
 
