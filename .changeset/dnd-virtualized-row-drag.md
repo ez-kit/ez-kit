@@ -30,11 +30,3 @@ whichever row later took its slot.
 
 No new option, on the grid or on the drag port: a virtualized grid drags with the same handle in the
 same column as any other. There is a **Virtualized row drag** example on the drag and drop page.
-
-One limit ships with it, stated here so that it is not read as a regression later. In a virtualized
-body a drag of exactly **one** place commits only while the release lands in the upper part of the
-target row; lower down, the drag library displaces the neighbour and un-displaces it again, so the
-rows are physically back where they started and the grid correctly reports no move — silently, since
-there is nothing to report. Aiming higher, or dragging more than one row, commits at every position,
-and a non-virtual body is unaffected throughout. The lost displacement is `@dnd-kit/dom`'s own; both
-local workarounds were measured and neither changes the outcome, so this waits on upstream.

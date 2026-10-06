@@ -1011,10 +1011,12 @@ function DndProvider({ onDrop, canDrop, announcements, children }: DndProviderPr
 	 * neighbour one step down, it committed at 0.25 of the row's height and not at 0.75 or 0.95, with
 	 * the two kits differing at 0.50 only because their handles sit a few pixels apart in the row. Two
 	 * or more steps were unaffected at every position, and a non-virtual body committed everywhere.
-	 * The note that follows is about a different mechanism and is unchanged. **A collision
-	 * detection override that excludes the dragged row was tried and measured to change the outcome not
-	 * at all**, delta for delta, because the un-displacing frames are the plugin's own explicit
-	 * `setDropTarget(source.id)` rather than collisions — nothing an adapter configures reaches them.
+	 *
+	 * **The un-displacing frames themselves are the plugin's, and no adapter setting reaches them —
+	 * which is a separate mechanism from the flow fix above and is why a collision-detection override
+	 * that excludes the dragged row was tried and measured to change the outcome not at all**, delta
+	 * for delta: those frames are the plugin's own explicit `setDropTarget(source.id)` rather than
+	 * collisions.
 	 */
 	const endAnchor = useRef<DragAnchor | null>(null)
 

@@ -185,8 +185,9 @@ table[data-slot='table'] {
 /* `relative` is the load-bearing half: it is the containing block that `row-held`'s `absolute
    top-0 left-0` below is placed against, and it applies in both kits. Read in heroui — that kit's
    `styles.css` records the tbody computing `grid` / `relative` in virtualized mode. In shadcn it is
-   reasoning rather than a reading: this rule is unscoped, and the only thing that kit sets on the
-   tbody is the inline `display: 'block'` described below, which does not touch `position`.
+   reasoning rather than a reading: this rule is unscoped, and what that kit's `TableBody` sets on
+   the tbody — the inline `display: 'block'` described below and a `[&_tr:last-child]:border-0`
+   class — leaves `position` alone.
 
    `grid` is dead in the shadcn kit, and deliberately left as it is. That kit's vendored
    `components/ui/table.tsx` sets an inline `display: 'block'` on `<tbody>`, which beats this

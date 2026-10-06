@@ -54,7 +54,7 @@ With `layout.stickyHeader`, pinned rows stack below the header rather than under
 
 ## Notes
 
-- Virtualization is **not free**: the window of rows is offset inside a body whose height is computed at runtime, so anything measuring real row geometry needs care. If your data set is small (≤ 200 rows), leave virtualization off.
+- Virtualization is **not free**: the window of rows is offset inside a body whose `min-height` is computed at runtime, so anything measuring real row geometry needs care. If your data set is small (≤ 200 rows), leave virtualization off.
 - Column sizing works the same virtualized or not — the column width variables are set on the shared `<table>` element in both modes, so [resizing](/docs/data-grid/columns/resizing) needs no extra configuration here.
 - The shadcn and HeroUI flavors both honor `virtualization` — toggle the flavor above to see equivalent behavior.
 
