@@ -1013,17 +1013,22 @@ function DndProvider({ onDrop, canDrop, announcements, children }: DndProviderPr
 	 * answers both, and the exposure does not earn a complicated one — so it is recorded here rather
 	 * than engineered around.
 	 *
-	 * **A second, unrelated loss sits upstream, and the refusal it produces is correct.** In a
-	 * **virtualized** body a one-step drag commits only while the dragged row's top stays above the
-	 * neighbour's top. Past that point `OptimisticSortingPlugin` displaces the neighbour and
-	 * un-displaces it on alternating frames — the raw target flips between the neighbour and the source
-	 * — so at release the rows are physically back in their original arrangement, nothing has moved,
-	 * and refusing is the right answer: the defect is the displacement the plugin lost, not the
-	 * comparison here. Measured by sweeping the pointer within the neighbour one step down: it commits
-	 * at 0.25 of the row's height and not at 0.75 or 0.95, with the two kits differing at 0.50 only
-	 * because their handles sit a few pixels apart in the row. Two or more steps are unaffected at
-	 * every position, and a non-virtual body commits everywhere — a virtualized row is placed by
-	 * `transform`, so its rect travels with the pointer while its neighbours' stay put. **A collision
+	 * **A second, unrelated defect used to sit here, it is fixed, and its attribution was wrong.** In
+	 * a **virtualized** body a one-step drag used to commit only while the dragged row's top stayed
+	 * above the neighbour's top. Past that point `OptimisticSortingPlugin` displaced the neighbour and
+	 * un-displaced it on alternating frames — the raw target flipping between the neighbour and the
+	 * source — so at release the rows were physically back in their original arrangement, nothing had
+	 * moved, and refusing was the right answer. **Nothing was lost upstream, which is what the earlier
+	 * revision of this paragraph got wrong**: the cause was this package's own windowing, which placed
+	 * every virtual row with a `transform` and so took it out of flow — where the plugin's reorder has
+	 * no layout change to animate, and a dragged row's rect travels with the pointer while its
+	 * neighbours' stay put. The band is now offset by the tbody's own padding and its rows are in flow,
+	 * so the neighbours move and a one-place drag commits wherever it is released. **The measurement is
+	 * kept as a record of the old behaviour and no longer reproduces**: sweeping the pointer within the
+	 * neighbour one step down, it committed at 0.25 of the row's height and not at 0.75 or 0.95, with
+	 * the two kits differing at 0.50 only because their handles sit a few pixels apart in the row. Two
+	 * or more steps were unaffected at every position, and a non-virtual body committed everywhere.
+	 * The note that follows is about a different mechanism and is unchanged. **A collision
 	 * detection override that excludes the dragged row was tried and measured to change the outcome not
 	 * at all**, delta for delta, because the un-displacing frames are the plugin's own explicit
 	 * `setDropTarget(source.id)` rather than collisions — nothing an adapter configures reaches them.

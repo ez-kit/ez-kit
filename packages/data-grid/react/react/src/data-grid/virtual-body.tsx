@@ -199,7 +199,9 @@ export function VirtualBody() {
 	 * both pads with `Math.max(…, 0)`. And the margin cannot escape the tbody instead of spacing
 	 * inside it — that needs the loader to be the parent's first in-flow child with no
 	 * `padding-top` above it, and an empty window (the only state with no rows before the loader)
-	 * returns `NO_PADS`, so `bottomPad` is `0px` exactly then.
+	 * returns `NO_PADS`, so `bottomPad` is `0px` then. Only the implication is claimed: `0px` also
+	 * arises whenever the window's last row ends at `totalSize`, which is the ordinary state at the
+	 * end of the list and has rows before the loader, so it is not the escaping case either way.
 	 *
 	 * **The dependency is that `[data-slot='tr']` has no vertical margin.** A `margin-bottom` added
 	 * to a virtual row, a pinned-bottom row or the loader's neighbour breaks this: in shadcn's block

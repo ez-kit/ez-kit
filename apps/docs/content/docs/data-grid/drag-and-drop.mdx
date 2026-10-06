@@ -139,13 +139,19 @@ list:
   as the window _plus_ the held row, so the row keeps its registration — and therefore its place in
   that dense space — for as long as you hold it. Let it unmount and the gesture breaks without
   looking broken.
+- **The window's rows are in normal flow, and the window is offset by the body's own band.** The body
+  pads the space above and below the rows it renders rather than placing each row with a `transform`.
+  That is what lets the drag library move a dragged row's neighbours aside: it reorders the rows and
+  animates the layout change that follows, and out of flow there is no layout change to animate. The
+  one row placed out of flow is the held row of the bullet above, once the window has scrolled past
+  it, so that it does not displace a band it is no longer part of.
 
 The virtualizer is keyed by row id, so a row keeps its identity, its measured height and its element
 across a commit: the order is rewritten underneath it, and nothing hands one row's measurement to
 whichever row takes its slot.
 
-One limit comes with the window, and it is in [Not built yet](#not-built-yet): a drag of exactly one
-place needs to end in the upper part of the row you are aiming at.
+So a virtualized body displaces a dragged row's neighbours exactly as a non-virtualized one does, and
+a drag of one place commits wherever you release it.
 
 ## Column headers
 
@@ -343,12 +349,6 @@ Stated rather than left to be discovered:
 - **Two HeroUI-specific limits**, both in [Kit parity](/docs/data-grid/kit-parity): a header column
   cannot be dragged while the column panel is open, and `Escape` during a panel drag can leave the
   order changed without reporting it.
-- **A one-row drag in a virtualized body can do nothing at all.** Moving a row exactly one place
-  commits only while you are still in the upper part of the row you are aiming at; release in its
-  lower half and the rows spring back on the way to the drop, so the grid sees no move and reports
-  none — no error, no change. Aim near the top of the target row, or drag more than one row, and it
-  commits every time. Non-virtualized bodies are unaffected at every position. The displacement is
-  lost inside the drag library, so this is not something the grid can fix from here.
 
 ## See also
 
