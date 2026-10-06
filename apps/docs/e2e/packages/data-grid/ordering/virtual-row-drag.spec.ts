@@ -110,15 +110,31 @@ async function scrollTo(page: Page, top: number): Promise<void> {
 }
 
 /**
- * A row's committed position in the whole 10 000-row list, read from the transform the virtualizer
- * positions it with.
+ * A row's committed position in the whole 10 000-row list, measured from the top edge of the
+ * virtualized `tbody`.
  *
- * This is how the far cases check a landing, instead of scrolling back and reading DOM order: a
- * virtualized row's `translateY` **is** its index times the row height, so one read answers "where in
- * the list is this row now" without a second scroll to race the virtualizer against. An earlier
- * revision did scroll to the top and read the head, and it reported a false failure — `scrollTop = 0`
- * plus one frame is not enough for the window to re-render, so the previous slice was still mounted
- * and the row that had correctly moved to row ~105 was still in the DOM at its old place.
+ * This is how the far cases check a landing, instead of scrolling back and reading DOM order: one
+ * read answers "where in the list is this row now" without a second scroll to race the virtualizer
+ * against. An earlier revision did scroll to the top and read the head, and it reported a false
+ * failure — `scrollTop = 0` plus one frame is not enough for the window to re-render, so the previous
+ * slice was still mounted and the row that had correctly moved to row ~105 was still in the DOM at
+ * its old place. That hazard is unchanged, which is why this still reads geometry rather than order.
+ *
+ * **What replaced the transform.** This used to read `getComputedStyle(row).transform`'s `m42`,
+ * because a virtualized row was absolutely positioned and its `translateY` *was* its index times the
+ * row height. The rows are now in normal flow, with no transform at all — the window's band is placed
+ * by the tbody's own `paddingTop`, which is the first windowed row's offset in the list, and the band
+ * then lays its rows out edge to edge with an explicit inline `height` each. So a row's top minus the
+ * **tbody's** top is `paddingTop` plus the row's distance down the band, i.e. the row's offset in the
+ * whole list — the same number the transform used to carry, from the one edge that is still fixed
+ * while the window turns over. Neither kit gives the tbody a border, so its border box and its
+ * padding box share that edge.
+ *
+ * It holds for the dragged row the window has scrolled past, too, which is the one row still placed
+ * by a transform: `data-virtual='row-held'` is `position: absolute; top: 0` inside the `relative`
+ * tbody and carries `translateY(start)`, measured from the same edge. Hence no `data-virtual` value
+ * in the selector — both kinds of row answer correctly, and narrowing to `row` would make a held row
+ * read as "not in the list".
  *
  * `-1` while the id matches more than once, which it does for a moment after release: the drag
  * library's clone of the dragged row is still in the `tbody`. Measured, it is gone within a second —
@@ -128,11 +144,13 @@ async function scrollTo(page: Page, top: number): Promise<void> {
 const committedIndexOf = (page: Page, rowId: string): Promise<number> =>
 	page.evaluate(
 		({ id, rowHeight }) => {
-			const selector = `[data-slot="tbody"] [data-slot="tr"][data-virtual="row"][data-row-id="${id}"]`
+			const selector = `[data-slot="tbody"] [data-slot="tr"][data-row-id="${id}"]`
 			const rows = [...document.querySelectorAll(selector)]
 			const row = rows.length === 1 ? rows[0] : undefined
-			if (row === undefined) return -1
-			return Math.round(new DOMMatrixReadOnly(getComputedStyle(row).transform).m42 / rowHeight)
+			if (!(row instanceof HTMLElement)) return -1
+			const band = row.closest('[data-slot="tbody"][data-virtualized="true"]')
+			if (!(band instanceof HTMLElement)) return -1
+			return Math.round((row.getBoundingClientRect().top - band.getBoundingClientRect().top) / rowHeight)
 		},
 		{ id: rowId, rowHeight: ROW_HEIGHT },
 	)
@@ -294,61 +312,118 @@ test.describe('virtualized row drag', () => {
 	})
 
 	/*
-	 * ONE STEP — a row onto its immediate neighbour, and the measured rule it obeys.
+	 * ONE STEP — a row onto its immediate neighbour, at both of the fractions that used to disagree.
 	 *
-	 * **A one-step drag commits only while the dragged row's top stays above the neighbour's top.**
-	 * Past that point `@dnd-kit/dom`'s `OptimisticSortingPlugin` displaces the neighbour and then
-	 * un-displaces it — the raw target alternates `neighbour, source, neighbour, source`, two moves that
-	 * cancel — so at release the rows are physically back where they started and the adapter's
-	 * neighbour-id anchor correctly observes that nothing moved. The refusal is right; the move is lost
-	 * upstream, in the plugin.
+	 * **There is no threshold any more, and the two cases below pin that.** A one-step drag now commits
+	 * wherever in the neighbour it is released, which is what the non-virtual `row-drag` grid has always
+	 * done. The fractions are kept — and kept as two cases rather than folded into one — because they
+	 * are where the behaviour used to differ: a single case at one fraction would not notice the old
+	 * split coming back.
 	 *
-	 * **Virtualization is required for it.** Every row here is absolutely positioned by
-	 * `transform: translateY(...)`, so the dragged row's rect travels with the pointer while its
-	 * neighbours' stay put; the same sweep on the non-virtual `row-drag` grid commits at every fraction,
-	 * in both kits.
+	 * **What the old split actually was.** It was recorded here as the drag library losing the move, and
+	 * that was wrong: `@dnd-kit/dom`'s `OptimisticSortingPlugin` displaced the neighbour and then
+	 * un-displaced it, so at release the rows were physically back where they started and the adapter's
+	 * neighbour-id anchor correctly observed that nothing had moved. The cause was one level down, in
+	 * this package. Every virtualized row was placed out of flow by `transform: translateY(...)`, so the
+	 * dragged row's rect travelled with the pointer while its neighbours' rects stayed exactly where
+	 * they were — the library had no layout change to animate, and its own displacement bookkeeping
+	 * oscillated against geometry that never moved. The rows are in normal flow now, the neighbours
+	 * really move aside (see the displacement case below), and the oscillation is gone with the cause.
 	 *
-	 * **A collision-detector override was tried and measured to change nothing, delta for delta, in both
-	 * kits** — excluding the drag source's own droppable via `useSortable`'s `collisionDetector`, with
-	 * `defaultCollisionDetection` for everything else. It cannot work: the frames that report the source
-	 * as the target are the plugin's own explicit `setDropTarget(source.id)` after it writes the
-	 * displaced indices, not collisions, so collision resolution has no say in them. Do not spend a day
-	 * re-running that experiment.
+	 * **The old measurement, as a record of what the old behaviour was — it no longer reproduces.**
+	 * Deltas of the dragged row's top minus the neighbour's top at the fractions used: 0.25 h gave −11.7
+	 * under shadcn and −17.7 under heroui, both committing; 0.75 h gave +12.8 and +6.8, neither
+	 * committing. Both fractions commit in both kits on this geometry. The fractions are the same for
+	 * both kits on purpose — the kits' handles sit ~6 px apart vertically, which was enough to put the
+	 * obvious "release over the middle of the next row" on opposite sides of the old line, so a case
+	 * written at 0.5 h stated a kit's geometry rather than the library's behaviour.
 	 *
-	 * The two cases below pin both sides of the threshold. Measured deltas (dragged row's top minus the
-	 * neighbour's top) at the fractions used: 0.25 h gives −11.7 under shadcn and −17.7 under heroui,
-	 * both committing; 0.75 h gives +12.8 and +6.8, neither committing. The fractions are the same for
-	 * both kits on purpose — the kits' handles sit ~6 px apart vertically, which is enough to put the
-	 * obvious "release over the middle of the next row" on opposite sides of the line, so a case written
-	 * at 0.5 h would state a kit's geometry rather than the library's behaviour.
+	 * **A collision-detector override was tried against the old defect and measured to change nothing,
+	 * delta for delta, in both kits** — excluding the drag source's own droppable via `useSortable`'s
+	 * `collisionDetector`, with `defaultCollisionDetection` for everything else. It could not work: the
+	 * frames that reported the source as the target were the plugin's own explicit
+	 * `setDropTarget(source.id)` after it wrote the displaced indices, not collisions, so collision
+	 * resolution had no say in them. Kept so that nobody spends a day re-running that experiment on the
+	 * next drag defect.
 	 */
-	const NEIGHBOUR_FRACTION_COMMITS = 0.25
-	const NEIGHBOUR_FRACTION_LOST = 0.75
+	const NEIGHBOUR_FRACTION_NEAR = 0.25
+	const NEIGHBOUR_FRACTION_FAR = 0.75
 
-	test('a one-step drag commits while the dragged row stays above the neighbour', async ({ grid, page }) => {
+	test('a one-step drag released in the near half of the neighbour commits', async ({ grid, page }) => {
 		await grid.open(EXAMPLE)
 		expect((await windowedRowIds(page)).slice(0, INITIAL_HEAD.length)).toEqual(INITIAL_HEAD)
 
-		await dragRowOnto(page, '2', '3', NEIGHBOUR_FRACTION_COMMITS)
+		await dragRowOnto(page, '2', '3', NEIGHBOUR_FRACTION_NEAR)
 
 		await expect.poll(async () => (await windowedRowIds(page)).slice(0, 6)).toEqual(['1', '3', '2', '4', '5', '6'])
 	})
 
 	/**
-	 * The other side of the threshold, as an **expected failure** rather than a skip.
+	 * The other side of the old threshold — a plain assertion, and deliberately no longer a
+	 * `test.fail()`.
 	 *
-	 * `test.fail()` keeps the suite green on today's `@dnd-kit/dom` and turns red the day the plugin stops
-	 * losing the move — which is the notification wanted, and what a `skip` or a deleted case would not
-	 * give. If this one starts passing, delete it and widen the case above to every fraction.
+	 * It was an expected failure for as long as a release past the neighbour's midpoint committed
+	 * nothing, on the reading that the drag library was losing the move. Flow windowing commits it: the
+	 * cause was this package placing every virtual row out of flow, not the library. Measured in both
+	 * kits before the marker was removed — it failed with "Expected to fail, but passed".
 	 */
-	test('a one-step drag past the neighbour is lost by the drag library', async ({ grid, page }) => {
-		test.fail()
+	test('a one-step drag released past the neighbour commits too', async ({ grid, page }) => {
 		await grid.open(EXAMPLE)
 		expect((await windowedRowIds(page)).slice(0, INITIAL_HEAD.length)).toEqual(INITIAL_HEAD)
 
-		await dragRowOnto(page, '2', '3', NEIGHBOUR_FRACTION_LOST)
+		await dragRowOnto(page, '2', '3', NEIGHBOUR_FRACTION_FAR)
 
 		await expect.poll(async () => (await windowedRowIds(page)).slice(0, 6)).toEqual(['1', '3', '2', '4', '5', '6'])
+	})
+
+	/**
+	 * The displacement itself, **while the pointer is still down** — the behaviour the whole flow-windowing
+	 * change exists to produce, and the one thing no spec in either kit asserted.
+	 *
+	 * Every other case here reads the committed order after release, which a grid can get right while
+	 * showing the user nothing at all on the way there: that was exactly the old state, where the dragged
+	 * row's rect travelled with the pointer and its neighbours' rects stayed put because each row was
+	 * placed by its own `transform`. In flow the drag library reorders the DOM nodes and animates the
+	 * layout change, so the rows between the source and the target move up by one row's height.
+	 *
+	 * Rows `4` and `5` are the two the pointer unambiguously passes over. Row `6` is left out on purpose:
+	 * the gesture ends three row-heights from the handle's centre, which lands within a few pixels of
+	 * row `6`'s boundary, and the two kits' handles sit ~6 px apart vertically — so whether `6` has
+	 * displaced yet states a kit's geometry rather than the displacement. Row `3` is the source and row
+	 * ids are the record's `id` field numbered from one, so this gesture starts at model index 2: a
+	 * non-zero offset, which a zero one could not distinguish from no offset at all.
+	 */
+	test('the rows between the source and the target move aside while the row is held', async ({ grid, page }) => {
+		await grid.open(EXAMPLE)
+		expect((await windowedRowIds(page)).slice(0, INITIAL_HEAD.length)).toEqual(INITIAL_HEAD)
+
+		const topOf = async (rowId: string) => (await boxOf(rowById(page, rowId))).y
+		const before = { four: await topOf('4'), five: await topOf('5') }
+
+		const handle = await boxOf(handleIn(rowById(page, '3')))
+		const x = handle.x + handle.width / 2
+		const from = handle.y + handle.height / 2
+
+		await page.mouse.move(x, from)
+		await page.mouse.down()
+		// In steps, like every other gesture here: a browser starts a drag only once the pointer has
+		// actually travelled, and a single jump is dropped.
+		await page.mouse.move(x, from + ROW_HEIGHT * 3, { steps: 16 })
+
+		/*
+		 * Both up by exactly one row's height — and both inside the poll, which is not a courtesy to the
+		 * second one. The drag library animates the displacement, and the two rows do not land on the
+		 * same frame: measured in heroui, row 4 was already at its full 49 while row 5 was at 43, i.e.
+		 * still on its easing tail. Asserting the pair together waits for the arrangement rather than
+		 * for one row of it.
+		 */
+		await expect
+			.poll(async () => [Math.round(before.four - (await topOf('4'))), Math.round(before.five - (await topOf('5')))], {
+				message: 'rows 4 and 5 did not move aside for the row being dragged over them',
+			})
+			.toEqual([ROW_HEIGHT, ROW_HEIGHT])
+
+		await page.mouse.up()
 	})
 
 	/**

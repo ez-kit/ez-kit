@@ -17,6 +17,12 @@ import type { Locator, Page } from '@playwright/test'
 
 const EXAMPLE = 'virtualized'
 
+/**
+ * The virtualized grid that also loads pages as it scrolls — the only example where anything
+ * follows the window's band inside the `tbody`.
+ */
+const INFINITE_EXAMPLE = 'infinite-scroll-virtualized'
+
 /** `VIRTUAL_ROW_COUNT`, `estimateSize` and `overscan` in `components/virtualized.tsx`. */
 const TOTAL_ROWS = 10_000
 const ROW_HEIGHT = 49
@@ -121,6 +127,97 @@ test.describe('a virtualized grid', () => {
 		// The control: the body really did move.
 		const firstRowAfter = await boxOf(grid.rows().first())
 		expect(Math.abs(firstRowAfter.y - firstRowBefore.y)).toBeGreaterThan(0)
+	})
+})
+
+/**
+ * The loader row, which is the one thing that renders **after** the window's band inside the
+ * virtualized `tbody` — and therefore the one thing the band's own scroll reservation can push out of
+ * reach.
+ *
+ * Kept in this file rather than in an infinite-scroll spec of its own (there is none) because the
+ * claim is about the reservation that `reserves the height of the whole list` above measures, read
+ * from the other side: that test says the tbody is as tall as the list, this one says the tbody is
+ * not *only* that tall.
+ */
+test.describe('a virtualized grid that loads more rows', () => {
+	/**
+	 * The loader's **content** — the spinner or message a kit renders — rather than the
+	 * `load-more-row` that carries it.
+	 *
+	 * The row is the wrong element to measure. It takes the band's bottom pad as its own `margin-top`,
+	 * and in heroui's `display: grid` body that margin lands inside the row's grid area: the row
+	 * reports a border box that starts where the margin starts and is the margin plus the content tall
+	 * (measured: 417 px for 392 px of pad and 25 px of content), so its box bottom is hundreds of
+	 * pixels from where anything is drawn. The content element is what has to be on screen.
+	 */
+	const LOADER = `${VIRTUALIZED_BODY} [data-slot="load-more"]`
+
+	/** How long the poll below has to catch the loader mounted — see the test's own note. */
+	const LOADER_POLL_MS = 15_000
+
+	/**
+	 * Scrolls the grid to the end of its range and measures the loader against the scrollport, all
+	 * inside one task so that no React render can land between the scroll and the read.
+	 *
+	 * `null` rather than a verdict in the two states where there is nothing to judge: a range no longer
+	 * than the viewport (the grid before its first page lands — its loader sits at the top and is
+	 * trivially inside, which is a vacuous pass, measured), and no loader content mounted.
+	 */
+	const loaderAtBottomOfScroll = (page: Page) =>
+		page.evaluate((selector) => {
+			const port = document.querySelector('[data-scrollport~="y"]')
+			if (!(port instanceof HTMLElement)) return null
+			port.scrollTop = port.scrollHeight
+			if (port.scrollHeight <= port.clientHeight) return null
+			const loader = document.querySelector(selector)
+			if (!(loader instanceof HTMLElement)) return null
+			const portBox = port.getBoundingClientRect()
+			const loaderBox = loader.getBoundingClientRect()
+			return {
+				/** A clipped loader can report a zero-height box instead of a box out of bounds. */
+				hasBox: loaderBox.height > 0,
+				/** Its bottom edge is above the scrollport's, i.e. the range reaches it. */
+				isInside: portBox.bottom - loaderBox.bottom >= 0,
+				/** And it is the element at its own centre — the symptom was a control nothing could click. */
+				isHittable: document
+					.elementsFromPoint(loaderBox.left + loaderBox.width / 2, loaderBox.top + loaderBox.height / 2)
+					.includes(loader),
+			}
+		}, LOADER)
+
+	/*
+	 * The regression this exists for, which nothing else on any level can see.
+	 *
+	 * The tbody reserves the virtual scroll range with `min-height`, not `height`. Fixed, the loader —
+	 * which is in flow after the band — could only *overflow* the tbody. The shadcn kit tolerates that,
+	 * because the overflow reaches the scrollport's scrollable range anyway; the heroui kit does not,
+	 * because its own `<table>` is `overflow: clip`, so at the bottom of the scroll the loader was
+	 * clipped away and its control was not hit-testable. Re-measured here by imposing the old geometry
+	 * on the live page: heroui's loader went to 52 px below the scrollport's bottom edge with
+	 * `elementsFromPoint` no longer returning it, while shadcn's stayed 9 px inside and hittable. So
+	 * **this case fails in heroui and passes in shadcn on the old geometry** — one kit is all it takes,
+	 * and asserting it per kit would state which kit clips rather than that the loader is reachable.
+	 *
+	 * jsdom returns zeros from `getBoundingClientRect`, so no unit test can hold this, and no other
+	 * spec measures the loader at all.
+	 *
+	 * **Polled, and the poll needs its own budget.** The example's trigger is `auto` and its loader
+	 * renders content only while a page is in flight, so the measurable state is the ~600 ms of each
+	 * fetch — which each attempt starts by scrolling to the bottom. The grid holds ten pages, so there
+	 * are about nine of those windows to catch; measured, an attempt lands inside one roughly five
+	 * times in six, and the default 5 s expect timeout leaves too little room for that to be
+	 * comfortable.
+	 */
+	test('keeps the loader inside the scrollport at the bottom of the range', async ({ grid, page }) => {
+		await grid.open(INFINITE_EXAMPLE)
+
+		await expect
+			.poll(() => loaderAtBottomOfScroll(page), {
+				message: 'the loader never came into reach at the end of the range',
+				timeout: LOADER_POLL_MS,
+			})
+			.toEqual({ hasBox: true, isInside: true, isHittable: true })
 	})
 })
 
