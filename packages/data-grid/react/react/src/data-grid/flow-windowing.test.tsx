@@ -31,6 +31,34 @@ const DATA: TestRow[] = Array.from({ length: ROW_COUNT }, (_, index) => ({
 const HELD_ROW_ID = '3'
 const HELD_ROW_INDEX = 2
 
+/** How many rows every window in these cases spans. */
+const WINDOW_COUNT = 5
+
+/**
+ * The window the downward-drag cases scroll **to**, and the row a late window has scrolled **past**.
+ *
+ * `HELD_BELOW_*` is the mirror image: a row picked up near the end of the model while the window
+ * then scrolls back to the top, so the held row sits *below* the window rather than above it. Both
+ * directions are needed to pin both pads — see `padsFor`.
+ */
+const SCROLLED_WINDOW_FIRST = 200
+const HELD_BELOW_ROW_ID = '900'
+const HELD_BELOW_ROW_INDEX = 899
+
+/**
+ * The two pads a window of {@link WINDOW_COUNT} rows at `firstIndex` must produce.
+ *
+ * Derived from the window rather than written out, so the pair cannot drift apart from the window
+ * it describes: this is `resolveVirtualWindowPads`' own arithmetic — the first row's offset above,
+ * and whatever is left below the last row's bottom edge.
+ */
+function padsFor(firstIndex: number) {
+	return {
+		paddingTop: `${String(firstIndex * ROW_HEIGHT)}px`,
+		paddingBottom: `${String(TOTAL_SIZE - (firstIndex + WINDOW_COUNT) * ROW_HEIGHT)}px`,
+	}
+}
+
 /** A window of `count` rows starting at `firstIndex`, the shape `getVirtualItems()` returns. */
 function windowItems(firstIndex: number, count: number): VirtualItem[] {
 	return Array.from({ length: count }, (_, offset) => {
@@ -183,27 +211,66 @@ describe('flow windowing', () => {
 		// Row "3" is picked up inside the opening window, then the window scrolls to index 200 — far
 		// enough that the row is nowhere near it. Row "3" rather than "1" so the offset asserted below
 		// is not zero, which is also what a missing transform reads as.
-		const { container } = renderWindowWithDrag(HELD_ROW_ID, windowItems(0, 5), windowItems(200, 5))
+		const { container } = renderWindowWithDrag(
+			HELD_ROW_ID,
+			windowItems(0, WINDOW_COUNT),
+			windowItems(SCROLLED_WINDOW_FIRST, WINDOW_COUNT),
+		)
 		const tbody = container.querySelector('[data-slot="tbody"][data-virtualized="true"]')
 		const heldRow = container.querySelector(`[data-slot="tr"][data-row-id="${HELD_ROW_ID}"]`)
 
-		expect(tbody).toHaveStyle({ paddingTop: `${String(200 * ROW_HEIGHT)}px` })
+		// Both pads, because the measured regression had two halves: `paddingTop` stuck at `0px` and
+		// the band shrinking by the held row's `size` per auto-scroll frame. The `height` case below
+		// cannot stand in for the second half — that is `getTotalSize()`, which neither pad feeds.
+		expect(tbody).toHaveStyle(padsFor(SCROLLED_WINDOW_FIRST))
 		expect(heldRow).toHaveAttribute('data-virtual', 'row-held')
 		expect(heldRow?.getAttribute('style')).toContain(`translateY(${String(HELD_ROW_INDEX * ROW_HEIGHT)}px)`)
 	})
 
+	it('keeps both pads when the window has scrolled back **above** the held row', () => {
+		/*
+		 * The upward drag, and the only arrangement in which the **bottom** pad is assertable at all.
+		 *
+		 * The case above holds a row the window has passed going down, so the held row sorts to the
+		 * front of `centerEntries` and the list's *last* entry is still the window's own last row —
+		 * which means a bottom pad computed from `centerEntries` comes out right there by accident.
+		 * Probed: mutating only the `after` arithmetic passed every other case in this file. Held
+		 * from below, the held row is `centerEntries.at(-1)` and its `end` of 36000px would collapse
+		 * the pad from 39800px to 4000px, so this is what makes the pair of pads a real assertion.
+		 */
+		const { container } = renderWindowWithDrag(
+			HELD_BELOW_ROW_ID,
+			windowItems(HELD_BELOW_ROW_INDEX - 2, WINDOW_COUNT),
+			windowItems(0, WINDOW_COUNT),
+		)
+		const tbody = container.querySelector('[data-slot="tbody"][data-virtualized="true"]')
+		const heldRow = container.querySelector(`[data-slot="tr"][data-row-id="${HELD_BELOW_ROW_ID}"]`)
+
+		expect(tbody).toHaveStyle(padsFor(0))
+		expect(heldRow).toHaveAttribute('data-virtual', 'row-held')
+		expect(heldRow?.getAttribute('style')).toContain(`translateY(${String(HELD_BELOW_ROW_INDEX * ROW_HEIGHT)}px)`)
+	})
+
 	it('keeps the reserved scroll height while a row outside the window is held', () => {
-		const { container } = renderWindowWithDrag(HELD_ROW_ID, windowItems(0, 5), windowItems(200, 5))
+		const { container } = renderWindowWithDrag(
+			HELD_ROW_ID,
+			windowItems(0, WINDOW_COUNT),
+			windowItems(SCROLLED_WINDOW_FIRST, WINDOW_COUNT),
+		)
 		const tbody = container.querySelector('[data-slot="tbody"][data-virtualized="true"]')
 
 		expect(tbody).toHaveStyle({ height: `${String(TOTAL_SIZE)}px` })
 	})
 
-	it('leaves a held row that is still inside the window in flow', () => {
-		const { container } = renderWindowWithDrag(HELD_ROW_ID, windowItems(0, 5))
-		const heldRow = container.querySelector(`[data-slot="tr"][data-row-id="${HELD_ROW_ID}"]`)
+	it('leaves a held row that is still inside the window in flow, rendered once', () => {
+		const { container } = renderWindowWithDrag(HELD_ROW_ID, windowItems(0, WINDOW_COUNT))
+		const heldRows = container.querySelectorAll(`[data-slot="tr"][data-row-id="${HELD_ROW_ID}"]`)
 
-		expect(heldRow).toHaveAttribute('data-virtual', 'row')
-		expect(heldRow?.getAttribute('style')).not.toContain('transform')
+		// The count, not just the first match: a row that is both in the window and held must render
+		// exactly once, which is what `isHeldInWindow` in `VirtualBody` is for. `querySelector` alone
+		// reads the first of two identical rows and cannot tell a duplicate from a single row.
+		expect(heldRows).toHaveLength(1)
+		expect(heldRows[0]).toHaveAttribute('data-virtual', 'row')
+		expect(heldRows[0]?.getAttribute('style')).not.toContain('transform')
 	})
 })
