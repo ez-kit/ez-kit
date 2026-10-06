@@ -40,7 +40,7 @@ When the defaults suit you, a bare `virtualization` prop is shorthand for `virtu
 />
 ```
 
-With `layout.stickyHeader`, pinned rows stack below the header rather than under it, in this mode as in the non-virtualized one.
+With `layout.stickyHeader`, pinned rows stack below the header rather than under it, in this mode as in the non-virtualized one. Virtualized, `layout.stickyHeader` is **required** for pinned rows: the window's band is offset on the assumption that the header is sticky, so dropping it leaves the band short by the header's own height — see [`virtual-window-pads.ts`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/react/react/src/utils/virtual-window-pads.ts) for the arithmetic.
 
 ## Options
 

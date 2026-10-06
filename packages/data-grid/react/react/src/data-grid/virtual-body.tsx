@@ -26,10 +26,13 @@ import type { VirtualItem } from '@tanstack/react-virtual'
  * comes from the structural stylesheet shipped with this package.
  *
  * A floor rather than a fixed `height`, because the loader row below can make
- * the band's content exceed the reservation, and the two are equivalent when it
- * does not: the pads are exact, so without a loader the box lands on `minHeight`
- * to the pixel. Fixed, the loader could only *overflow* the tbody — which the
- * shadcn kit happens to tolerate (the overflow reaches the scrollport's
+ * the band's content exceed the reservation. Without a loader the box usually
+ * lands on `minHeight`, since the pads are exact — but not always: when a
+ * window's `end` overshoots `totalSize`, `resolveVirtualWindowPads` clamps the
+ * bottom pad at zero, so the pads plus the band sum to more than the floor and
+ * the box grows past it. Harmless precisely because the reservation is a floor
+ * and not a fixed height. Fixed, the loader could only *overflow* the tbody —
+ * which the shadcn kit happens to tolerate (the overflow reaches the scrollport's
  * scrollable range) and the heroui kit does not: its own `<table>` is
  * `overflow: clip`, so the whole loader was clipped away and unreachable, at the
  * bottom of the scroll. Measured in both kits. A floor keeps the reservation

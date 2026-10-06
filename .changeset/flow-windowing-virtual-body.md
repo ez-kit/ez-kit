@@ -10,6 +10,13 @@ one, and a one-place drag commits wherever it is released. The infinite loader i
 band and so sizes to its own content, which retires the fixed allowance that used to budget for it
 and keeps a wrapped error message from being clipped.
 
+One consequence is worth checking if you style the grid yourself: a vertical `margin` on
+`[data-slot='tr']` used to be inert in a virtualized grid, because the rows were out of flow. Now
+that they are in flow it shifts the band's geometry, and by a different amount depending on the UI
+kit — where the tbody is a grid container the adjacent rows' margins add up, and where it is a block
+they collapse to the larger of the two. Size rows with `height` or padding rather than with a
+vertical margin.
+
 Also fixes pinned-row stacking in a virtualized grid: the scrollport never stamped
 `data-sticky-header` / `data-sticky-footer` in virtualized mode, so pinned-top rows stuck at the
 scrollport's own edge and sat under the sticky header instead of below it.
