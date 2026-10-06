@@ -111,13 +111,24 @@ export function VirtualBody() {
 	const heldMeasurement = heldIndex < 0 ? undefined : rowVirtualizer?.measurementsCache[heldIndex]
 	// One id, one registration: a row that is both in the window and held must render exactly once.
 	const isHeldInWindow = windowEntries.some((entry) => entry.index === heldIndex)
+	/*
+	 * `isHeldOutOfWindow` rides on the entry rather than being recomputed where the rows render: the
+	 * distinction is made here, once, and a second derivation at the call site could disagree with
+	 * this one about which row the window still contains.
+	 */
 	const centerEntries =
 		heldRow && heldMeasurement && !isHeldInWindow
 			? [
-					...windowEntries,
-					{ index: heldIndex, row: heldRow, start: heldMeasurement.start, size: heldMeasurement.size },
+					...windowEntries.map((entry) => ({ ...entry, isHeldOutOfWindow: false })),
+					{
+						index: heldIndex,
+						row: heldRow,
+						start: heldMeasurement.start,
+						size: heldMeasurement.size,
+						isHeldOutOfWindow: true,
+					},
 				].sort((left, right) => left.index - right.index)
-			: windowEntries
+			: windowEntries.map((entry) => ({ ...entry, isHeldOutOfWindow: false }))
 
 	/*
 	 * What this body renders, in DOM order, for the two readers that need to agree on it: a row
@@ -145,7 +156,8 @@ export function VirtualBody() {
 	 * dragged once the window has scrolled past it, at its model index — so a held row near the top
 	 * of a list becomes `centerEntries[0]` and its `start` of 0 silences `paddingTop` for the rest of
 	 * the gesture. Measured: the band stopped being offset at all and the tbody shrank by one row's
-	 * height per auto-scroll frame. That row is placed out of flow instead; see `data-virtual`.
+	 * height per auto-scroll frame. That row is placed out of flow instead, and says so with
+	 * `data-virtual='row-held'` — see where `centerEntries` is rendered below.
 	 */
 	const firstWindowItem = virtualItems[0]
 	const lastWindowItem = virtualItems[virtualItems.length - 1]
@@ -173,14 +185,36 @@ export function VirtualBody() {
 				/>
 			))}
 
-			{centerEntries.map((entry) => (
-				<DataGridRow
-					key={entry.row.id}
-					row={entry.row}
-					data-virtual='row'
-					style={{ height: `${String(entry.size)}px` }}
-				/>
-			))}
+			{/*
+			 * The window's rows are in flow inside the padded band. The held row is not: it is no
+			 * longer part of the band, and left in flow it re-enters it and pushes every row below it
+			 * down by its own height — measured, one row's height per auto-scroll frame, which is the
+			 * regression `resolveVirtualWindowPads`'s window-only arithmetic exists to prevent and
+			 * which this placement completes. A `transform` is therefore legitimate here and nowhere
+			 * else on this path: out of flow there is nothing but a transform that can place the row
+			 * at the offset its measurement gives it, and the drag library is moving the element with
+			 * a transform of its own for the duration of the gesture anyway.
+			 */}
+			{centerEntries.map((entry) =>
+				entry.isHeldOutOfWindow ? (
+					<DataGridRow
+						key={entry.row.id}
+						row={entry.row}
+						data-virtual='row-held'
+						style={{
+							transform: `translateY(${String(entry.start)}px)`,
+							height: `${String(entry.size)}px`,
+						}}
+					/>
+				) : (
+					<DataGridRow
+						key={entry.row.id}
+						row={entry.row}
+						data-virtual='row'
+						style={{ height: `${String(entry.size)}px` }}
+					/>
+				),
+			)}
 
 			{bottomRows.map((row, index) => (
 				<DataGridRow

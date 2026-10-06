@@ -8,6 +8,7 @@ import { DataGrid } from './data-grid'
 import { VirtualProvider } from './virtual-context'
 
 import type { TestRow } from '../test-utils'
+import type { DndAdapter, SortableItemHandle } from './dnd'
 import type { Virtualizer, VirtualItem } from '@tanstack/react-virtual'
 
 const ROW_HEIGHT = 40
@@ -19,6 +20,16 @@ const DATA: TestRow[] = Array.from({ length: ROW_COUNT }, (_, index) => ({
 	name: `Row ${String(index + 1)}`,
 	age: 20 + (index % 50),
 }))
+
+/**
+ * The row the drag cases pick up, and the model index it sits at.
+ *
+ * The two are not the same number: no `getRowId` is given, so the core falls back to the record's
+ * own `id`, which these records number from one. Row `'3'` is therefore index 2 — and the offset
+ * that index implies is non-zero, which is what makes the held row's `transform` assertable at all.
+ */
+const HELD_ROW_ID = '3'
+const HELD_ROW_INDEX = 2
 
 /** A window of `count` rows starting at `firstIndex`, the shape `getVirtualItems()` returns. */
 function windowItems(firstIndex: number, count: number): VirtualItem[] {
@@ -44,7 +55,8 @@ function windowItems(firstIndex: number, count: number): VirtualItem[] {
  * test's control while `VirtualBody` runs for real.
  *
  * `measurementsCache` is full-length on purpose: the virtualizer builds it for every row from
- * `estimateSize`, and `VirtualBody` reads it by row index to hold a dragged row.
+ * `estimateSize`, and `VirtualBody` reads it by row index to hold a dragged row — which is the path
+ * the three `renderWindowWithDrag` cases below drive, and the offset they assert the held row at.
  */
 function stubVirtualizer(items: VirtualItem[]): Virtualizer<HTMLDivElement, Element> {
 	return {
@@ -85,6 +97,58 @@ function renderWindow(items: VirtualItem[]) {
 	)
 }
 
+/**
+ * The smallest adapter that reports one row as dragging — the only half of a kit's adapter these
+ * cases need.
+ *
+ * `virtualized-row-drag.test.tsx`'s `makeDrivableAdapter` also exposes the index each row
+ * registered at and a way to fire a drop; neither is geometry, so this does not copy them. What it
+ * does share is the mechanism: the body keeps a dragged row mounted because a row that renders
+ * while `isDragging` records itself as the grid's active drag, which is why a held row can only be
+ * driven here by rendering the window **over** it first and scrolling away after.
+ */
+function makeDraggingAdapter(draggingId: string): DndAdapter {
+	return {
+		Provider: ({ children }) => <>{children}</>,
+		useSortableItem: (spec): SortableItemHandle => ({
+			ref: () => {},
+			handleRef: () => {},
+			isDragging: spec.id === draggingId,
+		}),
+	}
+}
+
+/**
+ * `renderWindow` with a drag in flight, rendered once per window handed in.
+ *
+ * The first window has to contain the dragged row: nothing publishes an active drag but a rendering
+ * row, so a grid whose first frame is already scrolled past the row holds nothing. Each further
+ * window is a re-render, which is what an auto-scroll frame is.
+ */
+function renderWindowWithDrag(draggingId: string, ...windows: VirtualItem[][]) {
+	const { DataGrid: DragGrid } = createDataGrid({ components: testComponents, dnd: makeDraggingAdapter(draggingId) })
+	const tree = (items: VirtualItem[]) => (
+		<DragGrid
+			features={TEST_FEATURES}
+			data={DATA}
+			columns={TEST_COLUMNS}
+			pagination={{ pageSize: ROW_COUNT }}
+			ordering={{ row: true }}
+		>
+			<VirtualProvider rowVirtualizer={stubVirtualizer(items)}>
+				<DataGrid.Table>
+					<DataGrid.Body />
+				</DataGrid.Table>
+			</VirtualProvider>
+		</DragGrid>
+	)
+	const [first, ...rest] = windows
+	const result = render(tree(first ?? []))
+	for (const items of rest) result.rerender(tree(items))
+
+	return result
+}
+
 describe('flow windowing', () => {
 	it('offsets the band with the tbody padding and reserves the rest below it', () => {
 		const { container } = renderWindow(windowItems(10, 5))
@@ -113,5 +177,33 @@ describe('flow windowing', () => {
 		const tbody = container.querySelector('[data-slot="tbody"][data-virtualized="true"]')
 
 		expect(tbody).toHaveStyle({ paddingTop: '0px', paddingBottom: '0px', height: `${String(TOTAL_SIZE)}px` })
+	})
+
+	it('renders a held row that has left the window out of flow, so the band keeps its offset', () => {
+		// Row "3" is picked up inside the opening window, then the window scrolls to index 200 — far
+		// enough that the row is nowhere near it. Row "3" rather than "1" so the offset asserted below
+		// is not zero, which is also what a missing transform reads as.
+		const { container } = renderWindowWithDrag(HELD_ROW_ID, windowItems(0, 5), windowItems(200, 5))
+		const tbody = container.querySelector('[data-slot="tbody"][data-virtualized="true"]')
+		const heldRow = container.querySelector(`[data-slot="tr"][data-row-id="${HELD_ROW_ID}"]`)
+
+		expect(tbody).toHaveStyle({ paddingTop: `${String(200 * ROW_HEIGHT)}px` })
+		expect(heldRow).toHaveAttribute('data-virtual', 'row-held')
+		expect(heldRow?.getAttribute('style')).toContain(`translateY(${String(HELD_ROW_INDEX * ROW_HEIGHT)}px)`)
+	})
+
+	it('keeps the reserved scroll height while a row outside the window is held', () => {
+		const { container } = renderWindowWithDrag(HELD_ROW_ID, windowItems(0, 5), windowItems(200, 5))
+		const tbody = container.querySelector('[data-slot="tbody"][data-virtualized="true"]')
+
+		expect(tbody).toHaveStyle({ height: `${String(TOTAL_SIZE)}px` })
+	})
+
+	it('leaves a held row that is still inside the window in flow', () => {
+		const { container } = renderWindowWithDrag(HELD_ROW_ID, windowItems(0, 5))
+		const heldRow = container.querySelector(`[data-slot="tr"][data-row-id="${HELD_ROW_ID}"]`)
+
+		expect(heldRow).toHaveAttribute('data-virtual', 'row')
+		expect(heldRow?.getAttribute('style')).not.toContain('transform')
 	})
 })

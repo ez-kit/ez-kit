@@ -70,7 +70,7 @@ export type DataGridRowProps<TRow extends object = ErasedRow> = {
 	/** Forwarded to the kit's `Tr`; pinned rows are measured through it (see `usePinnedRowOffsets`). */
 	ref?: Ref<HTMLTableRowElement>
 	'data-pinned'?: PinSide
-	'data-virtual'?: 'row'
+	'data-virtual'?: 'row' | 'row-held'
 	/**
 	 * Custom cell content for this row, rendered inside the kit's `Tr` — so the row keeps its
 	 * structural attributes, its pinning offset and its virtualized height.
@@ -156,6 +156,8 @@ function renderRowContent<TRow extends object>(
  * - `data-pinned="top" | "bottom"` for pinned rows (offset from `--dg-row-pin-offset`)
  * - `data-virtual="row"` for virtualized rows (in flow, sized by a runtime `height`; the window's
  *   offset is the tbody's padding — see `VirtualBody`)
+ * - `data-virtual="row-held"` for a dragged row the window has scrolled past (out of flow, so it
+ *   does not displace the band it is no longer part of; positioned by a runtime `transform`)
  * - `data-movable="true"` while row reordering is on
  * - `data-row-dragging="true"` while this row is the one being dragged
  *

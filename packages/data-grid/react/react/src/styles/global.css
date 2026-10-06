@@ -184,6 +184,12 @@ table[data-slot='table'] {
 [data-slot='tr'][data-virtual='row'] {
 	@apply w-full;
 }
+/* A dragged row the window has scrolled past. It stays mounted so the drag's index space keeps its
+   density, and out of flow so it does not displace the band it is no longer part of — its offset
+   comes from the inline `transform` `VirtualBody` gives it. */
+[data-slot='tr'][data-virtual='row-held'] {
+	@apply absolute top-0 left-0 w-full;
+}
 
 /* ── infinite scroll ──────────────────────────────────────────────────── */
 
