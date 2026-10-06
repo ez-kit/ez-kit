@@ -253,8 +253,11 @@
  * native table box does not take the table semantics with it.
  *
  * Virtualized mode needs this too — there the shared structural stylesheet
- * positions each virtual row absolutely, and without a column template those
- * rows blockify and their cells collapse. */
+ * makes the tbody a grid and the window's rows are its items, so without a
+ * column template those rows blockify and their cells collapse. (It used to say
+ * the shared layer positioned each virtual row absolutely; the window is in
+ * flow now, and only a dragged row the window has scrolled past is taken out of
+ * it. The template is needed either way.) */
 /* Only the rows carry the grid; the table, header and body stay block containers —
  * the same split shadcn uses. Making the <table> itself the grid instead is what one
  * would reach for first, and it does lay the columns out correctly, but it stretches
@@ -279,8 +282,10 @@ table[data-slot='table'] {
 }
 /* A `table-row-group` left inside a non-table parent gets wrapped in an anonymous table
  * box, which shrink-wraps its rows instead of filling the width — the body would then be
- * narrower than the header. (Virtualized mode excluded: there the shared stylesheet makes
- * this the positioning context for the absolutely-placed virtual rows.) */
+ * narrower than the header. (Virtualized mode excluded: there the shared stylesheet owns the
+ * box outright — `display: grid` for the band's rows, `position: relative` so a dragged row the
+ * window has scrolled past has a containing block to be placed against. Measured in this kit:
+ * the tbody computes `grid` / `relative`, its pads place the band, and the kit adds nothing.) */
 [data-slot='table'] tbody:not([data-virtualized='true']) {
 	display: block;
 }
