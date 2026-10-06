@@ -56,8 +56,12 @@ const SETTLE_MS = 150
 /**
  * The windowed rows, in render order.
  *
- * `data-virtual="row"` rather than a bare row selector: the virtualizer mounts spacer rows around
- * the slice, and only the real ones carry an id to read.
+ * `data-virtual="row"` rather than a bare row selector — and no longer because of spacer rows, of
+ * which there are none now: the band is offset by the tbody's own `padding`, so the window's rows are
+ * the only rows in it. What the attribute still buys is narrowing to the band. The same tbody may
+ * also hold the dragged row as `data-virtual="row-held"` once the window has scrolled past it — out
+ * of flow, mounted only to keep the gesture's index space dense — and would hold pinned rows in a
+ * grid that pinned any. Neither is part of the window this reads.
  */
 const windowedRowIds = (page: Page): Promise<string[]> =>
 	page
@@ -135,6 +139,11 @@ async function scrollTo(page: Page, top: number): Promise<void> {
  * tbody and carries `translateY(start)`, measured from the same edge. Hence no `data-virtual` value
  * in the selector — both kinds of row answer correctly, and narrowing to `row` would make a held row
  * read as "not in the list".
+ *
+ * The widened selector does admit one row the old one excluded: a **pinned** row with that id, which
+ * sticks rather than sitting at its offset and would therefore report a position it does not hold.
+ * This example pins nothing, so it cannot arise here — but a virtualized drag example that pinned a
+ * row would need `:not([data-pinned])` rather than a re-reading of the number that came back.
  *
  * `-1` while the id matches more than once, which it does for a moment after release: the drag
  * library's clone of the dragged row is still in the `tbody`. Measured, it is gone within a second —

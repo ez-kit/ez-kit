@@ -145,24 +145,31 @@ test.describe('a virtualized grid that loads more rows', () => {
 	 * The loader's **content** — the spinner or message a kit renders — rather than the
 	 * `load-more-row` that carries it.
 	 *
-	 * The row is the wrong element to measure. It takes the band's bottom pad as its own `margin-top`,
-	 * and in heroui's `display: grid` body that margin lands inside the row's grid area: the row
-	 * reports a border box that starts where the margin starts and is the margin plus the content tall
-	 * (measured: 417 px for 392 px of pad and 25 px of content), so its box bottom is hundreds of
-	 * pixels from where anything is drawn. The content element is what has to be on screen.
+	 * The row is the wrong element to measure as soon as the window's band stops short of the end of
+	 * the list, which is every state but the one this case drives. The row takes the band's bottom pad
+	 * as its own `margin-top`, and in heroui's `display: grid` body the pad is counted twice: the
+	 * margin offsets the row to the end of the list correctly, and the row's implicit grid track is
+	 * then sized to its *margin box* and the row stretched to the whole track — so its border box
+	 * keeps its correct top and is pad-plus-content tall, with the pad as empty space **below** the
+	 * content. Measured at two different pads in the same session: a 392 px pad gave a 417 px box over
+	 * 25 px of content, and a 1 323 px pad gave 1 348 px; in both the row's bottom edge came out
+	 * exactly one pad below the end of the scrollable range, i.e. an assertion on the row fails by
+	 * exactly the pad on a **healthy** build. The content element is what has to be on screen, and it
+	 * is right in every state.
 	 */
 	const LOADER = `${VIRTUALIZED_BODY} [data-slot="load-more"]`
 
-	/** How long the poll below has to catch the loader mounted — see the test's own note. */
-	const LOADER_POLL_MS = 15_000
+	/** The example's simulated network latency (`_api.ts`), which the frozen clock never reaches. */
+	const FETCH_DELAY_MS = 600
 
 	/**
 	 * Scrolls the grid to the end of its range and measures the loader against the scrollport, all
 	 * inside one task so that no React render can land between the scroll and the read.
 	 *
-	 * `null` rather than a verdict in the two states where there is nothing to judge: a range no longer
-	 * than the viewport (the grid before its first page lands — its loader sits at the top and is
-	 * trivially inside, which is a vacuous pass, measured), and no loader content mounted.
+	 * `null` rather than a verdict where there is nothing to judge: no loader content mounted, or a
+	 * range no shorter than the viewport. That second guard is not hypothetical — the first version of
+	 * this case read the grid before its first page landed, where the virtualizer's total size is 0 and
+	 * the loader sits at the top of an empty body, and it passed in both kits while measuring nothing.
 	 */
 	const loaderAtBottomOfScroll = (page: Page) =>
 		page.evaluate((selector) => {
@@ -193,31 +200,41 @@ test.describe('a virtualized grid that loads more rows', () => {
 	 * which is in flow after the band — could only *overflow* the tbody. The shadcn kit tolerates that,
 	 * because the overflow reaches the scrollport's scrollable range anyway; the heroui kit does not,
 	 * because its own `<table>` is `overflow: clip`, so at the bottom of the scroll the loader was
-	 * clipped away and its control was not hit-testable. Re-measured here by imposing the old geometry
-	 * on the live page: heroui's loader went to 52 px below the scrollport's bottom edge with
-	 * `elementsFromPoint` no longer returning it, while shadcn's stayed 9 px inside and hittable. So
-	 * **this case fails in heroui and passes in shadcn on the old geometry** — one kit is all it takes,
-	 * and asserting it per kit would state which kit clips rather than that the loader is reachable.
+	 * clipped away and its control was not hit-testable.
+	 *
+	 * **It is heroui that this case discriminates in, and shadcn's run is a control rather than a
+	 * guard.** Re-measured in exactly the state below, by imposing the old geometry on the live page:
+	 * heroui's scrollable range fell from 1 082 px to 1 017 px, putting the loader 52 px past its end
+	 * with `elementsFromPoint` no longer returning it, while shadcn's stayed 9 px inside and hittable
+	 * on **both** geometries. So a green shadcn run says nothing about the reservation; it is kept
+	 * because the claim — the loader is reachable at the end of the range — is one every kit owes, and
+	 * a kit that starts clipping its table would be caught here rather than by a reader.
 	 *
 	 * jsdom returns zeros from `getBoundingClientRect`, so no unit test can hold this, and no other
 	 * spec measures the loader at all.
 	 *
-	 * **Polled, and the poll needs its own budget.** The example's trigger is `auto` and its loader
-	 * renders content only while a page is in flight, so the measurable state is the ~600 ms of each
-	 * fetch — which each attempt starts by scrolling to the bottom. The grid holds ten pages, so there
-	 * are about nine of those windows to catch; measured, an attempt lands inside one roughly five
-	 * times in six, and the default 5 s expect timeout leaves too little room for that to be
-	 * comfortable.
+	 * **Deterministic, with no poll, because the state is frozen rather than raced.** The example's
+	 * trigger is `auto` and its loader renders content only while a page is in flight — and the flight
+	 * is a 600 ms `setTimeout`, with ten pages of twenty rows behind it. A poll for that window is not
+	 * merely slow: each attempt *consumes* one of the nine windows by scrolling to the bottom, and once
+	 * the last page lands the loader unmounts for good, so the failure state absorbs and no budget
+	 * rescues it. `page.clock.install()` removes the race instead: the grid's own mount-time auto-load
+	 * schedules the timer, the clock never reaches it, and the loader stays mounted indefinitely.
+	 *
+	 * The virtualizer survives the installed clock, which was the thing to check before relying on it
+	 * — Playwright's clock stubs `requestAnimationFrame` too. Measured under it: 20 rows mounted, a
+	 * 980 px reservation and a 1 082 px range, identical to the un-stubbed figures, and the measurement
+	 * below is stable across further `runFor` calls.
 	 */
 	test('keeps the loader inside the scrollport at the bottom of the range', async ({ grid, page }) => {
+		await page.clock.install()
 		await grid.open(INFINITE_EXAMPLE)
+		// Page 1 lands; the auto-trigger immediately asks for page 2, whose timer the clock never
+		// reaches — so from here the grid holds a window, a reservation and a mounted loader, and holds
+		// them still.
+		await page.clock.runFor(FETCH_DELAY_MS + 100)
 
-		await expect
-			.poll(() => loaderAtBottomOfScroll(page), {
-				message: 'the loader never came into reach at the end of the range',
-				timeout: LOADER_POLL_MS,
-			})
-			.toEqual({ hasBox: true, isInside: true, isHittable: true })
+		expect(await loaderAtBottomOfScroll(page)).toEqual({ hasBox: true, isInside: true, isHittable: true })
 	})
 })
 
