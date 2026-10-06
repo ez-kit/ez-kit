@@ -187,6 +187,26 @@ export function VirtualBody() {
 	 * range reserved beneath it. On the margin it sits at `totalSize`, where the last row ends, which
 	 * is where the old `translateY(totalSize)` put it from a padding-box origin.
 	 *
+	 * **The margin is collapse-safe, and that is checked rather than assumed.** It does collapse in
+	 * the shadcn kit: that kit's vendored `components/ui/table.tsx` sets an inline
+	 * `display: 'block'` on `<tbody>`, so the structural stylesheet's `grid` never applies there and
+	 * the body is a block container, where adjacent vertical margins collapse. It is lossless
+	 * anyway, because collapsing takes the **max** of the two margins rather than their sum, and the
+	 * other margin is always zero: nothing in either kit's stylesheet or in this package's
+	 * `global.css` gives `[data-slot='tr']` a `margin`, so whatever precedes the loader — the
+	 * window's last row, or a pinned-bottom row — contributes nothing for `max()` to lose. The
+	 * negative case `max()` would mishandle cannot arise either: `resolveVirtualWindowPads` clamps
+	 * both pads with `Math.max(…, 0)`. And the margin cannot escape the tbody instead of spacing
+	 * inside it — that needs the loader to be the parent's first in-flow child with no
+	 * `padding-top` above it, and an empty window (the only state with no rows before the loader)
+	 * returns `NO_PADS`, so `bottomPad` is `0px` exactly then.
+	 *
+	 * **The dependency is that `[data-slot='tr']` has no vertical margin.** A `margin-bottom` added
+	 * to a virtual row, a pinned-bottom row or the loader's neighbour breaks this: in shadcn's block
+	 * flow the larger of the two wins and the band's reservation is short by the difference, while
+	 * in heroui's grid body the two sum instead — the two kits would disagree. Place such spacing
+	 * with padding, or re-measure both kits.
+	 *
 	 * Nothing reserves the loader's own height, which is the point: it grows the tbody past the
 	 * `minHeight` floor and so extends the scrollport's scrollable range by exactly what it needs —
 	 * a two-line error message included. That is what retired `LOAD_MORE_ALLOWANCE_PX`, the fixed

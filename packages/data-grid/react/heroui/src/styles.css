@@ -252,9 +252,12 @@
  * (`role="grid"` / `"row"` / `"rowheader"` / `"columnheader"`), so dropping the
  * native table box does not take the table semantics with it.
  *
- * Virtualized mode needs this too — there the shared structural stylesheet
- * makes the tbody a grid and the window's rows are its items, so without a
- * column template those rows blockify and their cells collapse. (It used to say
+ * Virtualized mode needs this too — in this kit the shared structural
+ * stylesheet makes the tbody a grid and the window's rows are its items, so
+ * without a column template those rows blockify and their cells collapse.
+ * Scoped to this kit on purpose: the same shared rule is dead in shadcn, whose
+ * vendored `<tbody>` carries an inline `display: block` that beats it, so the
+ * split named above is a split of two different layout modes. (This used to say
  * the shared layer positioned each virtual row absolutely; the window is in
  * flow now, and only a dragged row the window has scrolled past is taken out of
  * it. The template is needed either way.) */

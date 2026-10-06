@@ -182,6 +182,21 @@ table[data-slot='table'] {
 
 /* ── virtual body & rows ──────────────────────────────────────────────── */
 
+/* `relative` is the load-bearing half: it is the containing block that `row-held`'s `absolute
+   top-0 left-0` below is placed against, and it applies in both kits (measured — the tbody
+   computes `position: relative` in each).
+
+   `grid` is dead in the shadcn kit, and deliberately left as it is. That kit's vendored
+   `components/ui/table.tsx` sets an inline `display: 'block'` on `<tbody>`, which beats this
+   stylesheet, so its virtualized body is a block container while heroui's is a grid. Nothing
+   depends on the difference: each row carries its own inline `display: grid` +
+   `gridTemplateColumns`, and `w-full` resolves the same in both modes.
+
+   What the divergence does mean is that the two kits' virtualized bands sit in **different layout
+   modes**, so vertical margins behave differently inside them: a margin added to a virtual row,
+   to the loader or to a pinned row sums with its neighbour's in heroui's grid and collapses to
+   `max()` in shadcn's block flow. The loader's `marginTop` is correct under both, for reasons
+   `virtual-body.tsx`'s `bottomPad` docblock states — read it before adding a margin here. */
 [data-slot='tbody'][data-virtualized='true'] {
 	@apply relative grid;
 }
