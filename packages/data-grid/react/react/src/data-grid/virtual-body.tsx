@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import { useGridComponents } from '../components-context'
 import { DATA_GRID_DEFAULTS } from '../defaults'
 import { LoadMoreTrigger } from '../types'
+import { resolveVirtualWindowPads } from '../utils/virtual-window-pads'
 
 import { DataGridRow } from './row'
 import { useActiveDraggingRow, usePublishRenderedRows } from './row-drag-registry'
@@ -14,35 +15,31 @@ import { useVirtualContext } from './virtual-context'
 import type { VirtualItem } from '@tanstack/react-virtual'
 
 /**
- * Vertical space reserved below the virtual rows for the load-more loader (px).
- * Fixed allowance: kits must keep their `LoadMoreRow` within this height in
- * virtualized mode, or a tall/wrapping loader (e.g. a long error message) can
- * overflow the reserved area. Generous enough for the shipped shadcn/heroui kits.
- */
-const LOAD_MORE_ALLOWANCE_PX = 56
-
-/**
  * Virtualized tbody — renders only the rows currently in the viewport.
  *
- * The tbody emits `data-slot="tbody" data-virtualized="true"` and a single
- * runtime-computed `height` inline style (the virtualizer's total size). The
- * `display: grid` / `position: relative` shape comes from the structural
- * stylesheet shipped with this package.
+ * The tbody emits `data-slot="tbody" data-virtualized="true"` and three
+ * runtime-computed inline styles: a `height` (the virtualizer's total size,
+ * which is what reserves the scroll range) and the `paddingTop` /
+ * `paddingBottom` that place the window's band inside it. The two compose
+ * rather than add up because of `box-sizing: border-box`, which both kits load
+ * with Tailwind's preflight. The `display: grid` / `position: relative` shape
+ * comes from the structural stylesheet shipped with this package.
  *
- * Each virtual row receives runtime `transform: translateY(start)` and `height`
- * inline styles — values come from the virtualizer and cannot move to CSS — plus
- * a `data-virtual="row"` for the structural CSS that sets
- * `position: absolute; left: 0; top: 0; width: 100%`. The explicit height makes
- * the row fill exactly the slot the virtualizer reserved for it: nothing measures
- * the rows back, so a kit whose natural row height differs from `estimateSize`
- * would otherwise leave a gap (or an overlap) between every pair of rows.
+ * The window's rows are in flow, offset by the tbody's `paddingTop` /
+ * `paddingBottom` rather than by a per-row transform — see
+ * `resolveVirtualWindowPads`'s docblock for why: it is what lets the drag
+ * library displace a row's neighbours. Each row still receives a runtime
+ * `height` inline style, because nothing measures the rows back — a kit whose
+ * natural row height differs from `estimateSize` would otherwise leave a gap
+ * (or an overlap) between every pair of rows, and the explicit height keeps the
+ * band aligned with the virtualizer's own arithmetic.
  *
  * Pinned rows (top / bottom) use the same data-attr + `--dg-row-pin-offset`
  * pattern as the non-virtual Body.
  *
  * Infinite scroll: detection here is virtualizer-index based (the last rendered
- * index nearing the row count), and the loader row is absolutely positioned just
- * below the spacer with extra height reserved.
+ * index nearing the row count), and the loader row is translated to just below
+ * the band.
  */
 export function VirtualBody() {
 	const table = useDataGridTable()
@@ -142,14 +139,30 @@ export function VirtualBody() {
 
 	const totalSize = rowVirtualizer.getTotalSize()
 	const showLoadMore = enabled && (hasNextPage || controller.isFetching || controller.error != null)
-	const tbodyHeight = totalSize + (showLoadMore ? LOAD_MORE_ALLOWANCE_PX : 0)
 	const columnCount = table.getVisibleLeafColumns().length
+	/*
+	 * Computed from the **window**, never from `centerEntries`: that list also carries the row being
+	 * dragged once the window has scrolled past it, at its model index — so a held row near the top
+	 * of a list becomes `centerEntries[0]` and its `start` of 0 silences `paddingTop` for the rest of
+	 * the gesture. Measured: the band stopped being offset at all and the tbody shrank by one row's
+	 * height per auto-scroll frame. That row is placed out of flow instead; see `data-virtual`.
+	 */
+	const firstWindowItem = virtualItems[0]
+	const lastWindowItem = virtualItems[virtualItems.length - 1]
+	const pads = resolveVirtualWindowPads(
+		firstWindowItem && lastWindowItem ? { start: firstWindowItem.start, end: lastWindowItem.end } : undefined,
+		totalSize,
+	)
 
 	return (
 		<Tbody
 			data-slot='tbody'
 			data-virtualized='true'
-			style={{ height: `${String(tbodyHeight)}px` }}
+			style={{
+				height: `${String(totalSize)}px`,
+				paddingTop: `${String(pads.before)}px`,
+				paddingBottom: `${String(pads.after)}px`,
+			}}
 		>
 			{topRows.map((row, index) => (
 				<DataGridRow
@@ -165,7 +178,7 @@ export function VirtualBody() {
 					key={entry.row.id}
 					row={entry.row}
 					data-virtual='row'
-					style={{ transform: `translateY(${String(entry.start)}px)`, height: `${String(entry.size)}px` }}
+					style={{ height: `${String(entry.size)}px` }}
 				/>
 			))}
 

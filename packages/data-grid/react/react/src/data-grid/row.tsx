@@ -73,7 +73,7 @@ export type DataGridRowProps<TRow extends object = ErasedRow> = {
 	'data-virtual'?: 'row'
 	/**
 	 * Custom cell content for this row, rendered inside the kit's `Tr` — so the row keeps its
-	 * structural attributes, its pinning offset and its virtualization transform.
+	 * structural attributes, its pinning offset and its virtualized height.
 	 *
 	 * Omit it for the built-in cells. Supply it to reorder, group or replace them without giving
 	 * up the row itself, which a `<DataGrid.Body>` render function would have forced.
@@ -154,7 +154,8 @@ function renderRowContent<TRow extends object>(
  * - `data-depth` (sub-row depth for expansion)
  * - `data-group-row="true"` on a synthetic group row
  * - `data-pinned="top" | "bottom"` for pinned rows (offset from `--dg-row-pin-offset`)
- * - `data-virtual="row"` for virtualized rows (positioned via runtime `transform`)
+ * - `data-virtual="row"` for virtualized rows (in flow, sized by a runtime `height`; the window's
+ *   offset is the tbody's padding — see `VirtualBody`)
  * - `data-movable="true"` while row reordering is on
  * - `data-row-dragging="true"` while this row is the one being dragged
  *

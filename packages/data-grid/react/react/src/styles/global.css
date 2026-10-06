@@ -178,8 +178,11 @@ table[data-slot='table'] {
 [data-slot='tbody'][data-virtualized='true'] {
 	@apply relative grid;
 }
+/* In flow: the window's band is offset by the tbody's padding, not by a per-row transform. That is
+   what lets the drag library displace a row's neighbours — it reorders DOM nodes and animates the
+   layout change, and out of flow there is none. */
 [data-slot='tr'][data-virtual='row'] {
-	@apply absolute top-0 left-0 w-full;
+	@apply w-full;
 }
 
 /* ── infinite scroll ──────────────────────────────────────────────────── */
