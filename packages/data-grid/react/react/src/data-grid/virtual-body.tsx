@@ -18,12 +18,22 @@ import type { VirtualItem } from '@tanstack/react-virtual'
  * Virtualized tbody — renders only the rows currently in the viewport.
  *
  * The tbody emits `data-slot="tbody" data-virtualized="true"` and three
- * runtime-computed inline styles: a `height` (the virtualizer's total size,
+ * runtime-computed inline styles: a `minHeight` (the virtualizer's total size,
  * which is what reserves the scroll range) and the `paddingTop` /
  * `paddingBottom` that place the window's band inside it. The two compose
  * rather than add up because of `box-sizing: border-box`, which both kits load
  * with Tailwind's preflight. The `display: grid` / `position: relative` shape
  * comes from the structural stylesheet shipped with this package.
+ *
+ * A floor rather than a fixed `height`, because the loader row below can make
+ * the band's content exceed the reservation, and the two are equivalent when it
+ * does not: the pads are exact, so without a loader the box lands on `minHeight`
+ * to the pixel. Fixed, the loader could only *overflow* the tbody — which the
+ * shadcn kit happens to tolerate (the overflow reaches the scrollport's
+ * scrollable range) and the heroui kit does not: its own `<table>` is
+ * `overflow: clip`, so the whole loader was clipped away and unreachable, at the
+ * bottom of the scroll. Measured in both kits. A floor keeps the reservation
+ * without asking any kit not to clip.
  *
  * The window's rows are in flow, offset by the tbody's `paddingTop` /
  * `paddingBottom` rather than by a per-row transform — see
@@ -38,8 +48,9 @@ import type { VirtualItem } from '@tanstack/react-virtual'
  * pattern as the non-virtual Body.
  *
  * Infinite scroll: detection here is virtualizer-index based (the last rendered
- * index nearing the row count), and the loader row is translated to just below
- * the band.
+ * index nearing the row count), and the loader row is in flow after the band,
+ * carrying the bottom pad as its own `marginTop` — see `bottomPad` below for
+ * why the pad cannot stay on the container once a row follows the band.
  */
 export function VirtualBody() {
 	const table = useDataGridTable()
@@ -165,15 +176,33 @@ export function VirtualBody() {
 		firstWindowItem && lastWindowItem ? { start: firstWindowItem.start, end: lastWindowItem.end } : undefined,
 		totalSize,
 	)
+	/*
+	 * The bottom pad is reserved exactly once, by whatever is last in this tbody's flow: its own
+	 * `paddingBottom` with no loader, the loader's `marginTop` with one.
+	 *
+	 * It cannot be both, and it cannot stay on the container when a loader follows the band, because
+	 * `padding-bottom` is laid out *after* every child — so it separates the band from the tbody's
+	 * bottom edge and never from a row below it. Left there, the loader renders at the window's own
+	 * bottom edge: a "Load more" control floating mid-list, with the whole unscrolled remainder of the
+	 * range reserved beneath it. On the margin it sits at `totalSize`, where the last row ends, which
+	 * is where the old `translateY(totalSize)` put it from a padding-box origin.
+	 *
+	 * Nothing reserves the loader's own height, which is the point: it grows the tbody past the
+	 * `minHeight` floor and so extends the scrollport's scrollable range by exactly what it needs —
+	 * a two-line error message included. That is what retired `LOAD_MORE_ALLOWANCE_PX`, the fixed
+	 * 56px this used to budget for it, and measuring the three states is what showed the allowance
+	 * was both too small (the error state wants 68px in shadcn, 81px in heroui) and unnecessary.
+	 */
+	const bottomPad = `${String(pads.after)}px`
 
 	return (
 		<Tbody
 			data-slot='tbody'
 			data-virtualized='true'
 			style={{
-				height: `${String(totalSize)}px`,
+				minHeight: `${String(totalSize)}px`,
 				paddingTop: `${String(pads.before)}px`,
-				paddingBottom: `${String(pads.after)}px`,
+				paddingBottom: showLoadMore ? '0px' : bottomPad,
 			}}
 		>
 			{topRows.map((row, index) => (
@@ -230,7 +259,7 @@ export function VirtualBody() {
 					data-slot='load-more-row'
 					data-direction='forward'
 					data-virtual='load-more'
-					style={{ transform: `translateY(${String(totalSize)}px)` }}
+					style={{ marginTop: bottomPad }}
 				>
 					<Td
 						data-slot='td'

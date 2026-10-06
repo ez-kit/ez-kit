@@ -2,6 +2,7 @@ import { render } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
 import { createDataGrid } from '../create-data-grid'
+import { PaginationMode } from '../index'
 import { TEST_COLUMNS, TEST_FEATURES, testComponents } from '../test-utils'
 
 import { DataGrid } from './data-grid'
@@ -126,6 +127,42 @@ function renderWindow(items: VirtualItem[]) {
 }
 
 /**
+ * `renderWindow` with infinite scroll active, so the loader row renders.
+ *
+ * `pagination` rather than a top-level `infinite` option: the config lives at
+ * `pagination.mode: 'infinite'` with `hasNextPage` / `onLoadMore` beside it, and
+ * `normalizeInfinite` returns nothing for any other mode — so a grid configured any other way
+ * renders no loader at all and the cases below would assert against `null`.
+ *
+ * `pageSize` stays for the reason `renderWindow` gives, and infinite mode does not excuse it: the
+ * mode means to show every accumulated row, but `TEST_FEATURES` registers `paginatedRowModel`
+ * anyway, so the model is still sliced to one page — which core warns about by name here. Without
+ * it the window at index 10 finds no row behind it and the pads under test would be measured on an
+ * empty band.
+ */
+function renderWindowWithInfinite(items: VirtualItem[]) {
+	return render(
+		<Grid
+			features={TEST_FEATURES}
+			data={DATA}
+			columns={TEST_COLUMNS}
+			pagination={{
+				mode: PaginationMode.Infinite,
+				pageSize: ROW_COUNT,
+				hasNextPage: true,
+				onLoadMore: () => {},
+			}}
+		>
+			<VirtualProvider rowVirtualizer={stubVirtualizer(items)}>
+				<DataGrid.Table>
+					<DataGrid.Body />
+				</DataGrid.Table>
+			</VirtualProvider>
+		</Grid>,
+	)
+}
+
+/**
  * The smallest adapter that reports one row as dragging — the only half of a kit's adapter these
  * cases need.
  *
@@ -189,7 +226,10 @@ describe('flow windowing', () => {
 		const { container } = renderWindow(windowItems(10, 5))
 		const tbody = container.querySelector('[data-slot="tbody"][data-virtualized="true"]')
 
-		expect(tbody).toHaveStyle({ height: `${String(TOTAL_SIZE)}px` })
+		// A floor, not a fixed `height`: the loader row can push the band's content past the
+		// reservation, and a fixed height would leave it overflowing a box the heroui kit clips.
+		// The two are the same box whenever nothing follows the band — see `VirtualBody`'s docblock.
+		expect(tbody).toHaveStyle({ minHeight: `${String(TOTAL_SIZE)}px` })
 	})
 
 	it('keeps rows in flow — an explicit height and no transform', () => {
@@ -204,7 +244,7 @@ describe('flow windowing', () => {
 		const { container } = renderWindow([])
 		const tbody = container.querySelector('[data-slot="tbody"][data-virtualized="true"]')
 
-		expect(tbody).toHaveStyle({ paddingTop: '0px', paddingBottom: '0px', height: `${String(TOTAL_SIZE)}px` })
+		expect(tbody).toHaveStyle({ paddingTop: '0px', paddingBottom: '0px', minHeight: `${String(TOTAL_SIZE)}px` })
 	})
 
 	it('renders a held row that has left the window out of flow, so the band keeps its offset', () => {
@@ -259,7 +299,7 @@ describe('flow windowing', () => {
 		)
 		const tbody = container.querySelector('[data-slot="tbody"][data-virtualized="true"]')
 
-		expect(tbody).toHaveStyle({ height: `${String(TOTAL_SIZE)}px` })
+		expect(tbody).toHaveStyle({ minHeight: `${String(TOTAL_SIZE)}px` })
 	})
 
 	it('leaves a held row that is still inside the window in flow, rendered once', () => {
@@ -272,5 +312,37 @@ describe('flow windowing', () => {
 		expect(heldRows).toHaveLength(1)
 		expect(heldRows[0]).toHaveAttribute('data-virtual', 'row')
 		expect(heldRows[0]?.getAttribute('style')).not.toContain('transform')
+	})
+
+	it('renders the virtualized loader row in flow, with no transform', () => {
+		const { container } = renderWindowWithInfinite(windowItems(10, WINDOW_COUNT))
+		const loader = container.querySelector('[data-slot="load-more-row"][data-virtual="load-more"]')
+
+		expect(loader).not.toBeNull()
+		expect(loader?.getAttribute('style') ?? '').not.toContain('transform')
+	})
+
+	it('moves the bottom pad onto the loader, so it follows the band instead of landing inside it', () => {
+		/*
+		 * The pad is reserved exactly once, and by the loader rather than by the tbody.
+		 *
+		 * `padding-bottom` is laid out *after* every child, so it cannot separate the band from a row
+		 * that follows it: left on the tbody it puts the loader at the window's bottom edge — which,
+		 * for a window near the top of a long list, is a "Load more" control floating mid-list with
+		 * 39 400px of reserved range below it. Both halves are asserted because either one alone
+		 * passes for the wrong reason: a `0px` pad with no margin drops the reservation and shortens
+		 * the list by the pad, and a margin beside a live pad counts it twice and puts the loader a
+		 * whole pad *below* the list's end.
+		 */
+		const { container } = renderWindowWithInfinite(windowItems(10, WINDOW_COUNT))
+		const tbody = container.querySelector('[data-slot="tbody"][data-virtualized="true"]')
+		const loader = container.querySelector('[data-slot="load-more-row"][data-virtual="load-more"]')
+
+		// The band is real, not an empty tbody the pads happen to be written on: `pageSize` is what
+		// keeps the model from being sliced past this window, and without it the two assertions below
+		// would still pass while measuring nothing.
+		expect(container.querySelectorAll('[data-slot="tr"][data-virtual="row"]')).toHaveLength(WINDOW_COUNT)
+		expect(tbody).toHaveStyle({ paddingTop: padsFor(10).paddingTop, paddingBottom: '0px' })
+		expect(loader).toHaveStyle({ marginTop: padsFor(10).paddingBottom })
 	})
 })

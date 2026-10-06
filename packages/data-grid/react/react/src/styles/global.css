@@ -193,9 +193,13 @@ table[data-slot='table'] {
 
 /* ── infinite scroll ──────────────────────────────────────────────────── */
 
-/* Virtualized loader row is absolutely positioned below the spacer via inline translateY. */
+/* In flow, after the window's band: the loader is the last row of the tbody and takes the band's
+   bottom pad as its own `marginTop`, which `VirtualBody` gives it. There is no spacer element and
+   no reserved allowance — the loader grows the tbody past the `min-height` that reserves the
+   virtual scroll range, so the space it occupies is the space its own content asks for, which is
+   what keeps a wrapped error message from being clipped. */
 [data-slot='tbody'][data-virtualized='true'] [data-slot='load-more-row'][data-virtual='load-more'] {
-	@apply absolute top-0 left-0 w-full;
+	@apply w-full;
 }
 
 /* ── pinned body rows ─────────────────────────────────────────────────── */
