@@ -52,9 +52,16 @@ table[data-slot='table'] {
 	@apply overflow-x-auto;
 }
 /* One bound, two stickies: a sticky header and a sticky footer both need this div to be the
- * bounded vertical scrollport, so either attribute opens it. */
-[data-slot='table-scroll'][data-sticky-header='true'],
-[data-slot='table-scroll'][data-sticky-footer='true'] {
+ * bounded vertical scrollport, so either attribute opens it.
+ *
+ * Virtualized mode is excluded because it bounds the scrollport the other way round: the wrapper
+ * takes `--dg-virtual-height` and this div fills it (`h-full`, below). `max-height` is the one
+ * declaration the rule below does not override, so without the exclusion a virtualized grid that
+ * states no `layout.maxHeight` would be clamped to this rule's own 400px default while its wrapper
+ * stayed 600px tall. Scoped rather than reordered: both modes stamp the sticky attributes, which is
+ * what lets one pinned-row rule serve both. */
+[data-slot='table-scroll'][data-sticky-header='true']:not([data-virtualized='true']),
+[data-slot='table-scroll'][data-sticky-footer='true']:not([data-virtualized='true']) {
 	@apply overflow-y-auto;
 	max-height: var(--dg-table-max-height, 400px);
 }
@@ -214,7 +221,11 @@ table[data-slot='table'] {
 	bottom: var(--dg-row-pin-offset, 0);
 }
 
-/* Under a sticky header, pinned-top rows stack below it. */
+/* Under a sticky header, pinned-top rows stack below it — in both modes, which is why the
+   virtualized scrollport stamps the attribute too. A virtualized grid whose pinned rows stick at
+   the scrollport's own edge puts them under the `z-10` header, and takes the band's displacement
+   (the pinned rows' height, ahead of the band in the same tbody) out from under the window the
+   virtualizer sized for the viewport. See `table.tsx`'s `stickyAttrs`. */
 [data-slot='table-scroll'][data-sticky-header='true'] [data-slot='tr'][data-pinned='top'] {
 	top: calc(var(--dg-row-pin-offset, 0px) + var(--dg-header-height, 0px));
 }

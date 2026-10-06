@@ -88,6 +88,7 @@ export const exampleModules: Record<string, () => Promise<Record<string, Compone
 	'components/column-panel-drag.tsx': () => import('./components/column-panel-drag'),
 	'components/keyboard-sensors.tsx': () => import('./components/keyboard-sensors'),
 	'components/virtualized-row-drag.tsx': () => import('./components/virtualized-row-drag'),
+	'components/virtualized-row-pinning.tsx': () => import('./components/virtualized-row-pinning'),
 	'components/row-drag.tsx': () => import('./components/row-drag'),
 	'components/row-ordering.tsx': () => import('./components/row-ordering'),
 	'components/grouped-headers.tsx': () => import('./components/grouped-headers'),

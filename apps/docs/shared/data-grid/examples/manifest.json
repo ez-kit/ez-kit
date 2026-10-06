@@ -688,6 +688,12 @@
 		"exportName": "VirtualizedExample"
 	},
 	{
+		"id": "virtualized-row-pinning",
+		"label": "Virtualized with pinned rows",
+		"sourceFile": "components/virtualized-row-pinning.tsx",
+		"exportName": "VirtualizedRowPinningExample"
+	},
+	{
 		"id": "crud-client",
 		"label": "Client",
 		"group": "crud",

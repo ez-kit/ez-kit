@@ -22,6 +22,26 @@ Virtualization is enabled entirely through this option — there is no separate 
 
 When the defaults suit you, a bare `virtualization` prop is shorthand for `virtualization={{ row: true }}`, which uses an `estimateSize` of 50 and an `overscan` of 5.
 
+## With pinned rows
+
+[Pinned rows](/docs/data-grid/pinning) work virtualized, and need nothing extra. A pinned row leaves the centre list, so the virtualizer stops counting it and renders it from the pinned band instead — above the window for `top`, below it for `bottom` — while the scroll range still covers the whole list.
+
+<DataGridDocsExample exampleId='virtualized-row-pinning' />
+
+```tsx
+<DataGrid
+	features={features} // includes rowPinningFeature
+	data={data}
+	columns={columns}
+	pinning={{ row: true }}
+	initialState={{ rowPinning: { top: ['1'], bottom: ['10000'] } }}
+	layout={{ stickyHeader: true }}
+	virtualization={{ row: { estimateSize: 49, overscan: 10 } }}
+/>
+```
+
+With `layout.stickyHeader`, pinned rows stack below the header rather than under it, in this mode as in the non-virtualized one.
+
 ## Options
 
 | Option                   | Type                                 | Description                                                                                                                    |
@@ -34,7 +54,7 @@ When the defaults suit you, a bare `virtualization` prop is shorthand for `virtu
 
 ## Notes
 
-- Virtualization is **not free**: rows are absolutely positioned and the body's height is computed at runtime, so anything measuring real row geometry needs care. If your data set is small (≤ 200 rows), leave virtualization off.
+- Virtualization is **not free**: the window of rows is offset inside a body whose height is computed at runtime, so anything measuring real row geometry needs care. If your data set is small (≤ 200 rows), leave virtualization off.
 - Column sizing works the same virtualized or not — the column width variables are set on the shared `<table>` element in both modes, so [resizing](/docs/data-grid/columns/resizing) needs no extra configuration here.
 - The shadcn and HeroUI flavors both honor `virtualization` — toggle the flavor above to see equivalent behavior.
 

@@ -163,6 +163,75 @@ function renderWindowWithInfinite(items: VirtualItem[]) {
 }
 
 /**
+ * The two ids the pinning cases pin, and what pinning them does to the centre list's numbering.
+ *
+ * A pinned row leaves `getCenterRows()`, which is the list the virtualizer counts and the list
+ * `VirtualBody` indexes the window into — so pinning the first row shifts every centre index by
+ * one, and with the ids numbered from one, centre index `i` is the record `i + 2`. The two ends of
+ * the model are pinned on purpose: neither band is ever also inside the window, which is what makes
+ * the band's own offset readable on its own.
+ */
+const PINNED_TOP_ROW_ID = '1'
+const PINNED_BOTTOM_ROW_ID = String(ROW_COUNT)
+const CENTER_INDEX_TO_ID = 2
+
+/**
+ * `renderWindow` with both ends of the model pinned, so the three bands share one tbody.
+ *
+ * `stubVirtualizer` still reports {@link TOTAL_SIZE} for the full {@link ROW_COUNT} while the centre
+ * list is two rows shorter — a fixture artefact with no bearing on what these cases assert, since
+ * the pads read the window's own span and the total size and never the row count. In a browser the
+ * two agree: the virtualizer counts the centre rows, the pinned rows are in flow around the band,
+ * and the three sum to the full list's height.
+ */
+function renderWindowWithPinnedRows(items: VirtualItem[]) {
+	return render(
+		<Grid
+			features={TEST_FEATURES}
+			data={DATA}
+			columns={TEST_COLUMNS}
+			pagination={{ pageSize: ROW_COUNT }}
+			pinning={{ row: true }}
+			initialState={{ rowPinning: { top: [PINNED_TOP_ROW_ID], bottom: [PINNED_BOTTOM_ROW_ID] } }}
+		>
+			<VirtualProvider rowVirtualizer={stubVirtualizer(items)}>
+				<DataGrid.Table>
+					<DataGrid.Body />
+				</DataGrid.Table>
+			</VirtualProvider>
+		</Grid>,
+	)
+}
+
+/**
+ * The virtualized **shell**, which is what carries the scrollport the pinned rows stick inside.
+ *
+ * `virtualization` on the grid is what makes `DataGrid.Table` render its virtualized branch at all;
+ * the stub provider inside still overrides the virtualizer the body reads, so the window stays the
+ * test's own while the wrapper and scrollport come out as a browser would get them.
+ */
+function renderVirtualShell(layout: { stickyHeader: boolean }) {
+	return render(
+		<Grid
+			features={TEST_FEATURES}
+			data={DATA}
+			columns={TEST_COLUMNS}
+			pagination={{ pageSize: ROW_COUNT }}
+			virtualization={{ row: { estimateSize: ROW_HEIGHT } }}
+			layout={layout}
+			pinning={{ row: true }}
+			initialState={{ rowPinning: { top: [PINNED_TOP_ROW_ID], bottom: [PINNED_BOTTOM_ROW_ID] } }}
+		>
+			<VirtualProvider rowVirtualizer={stubVirtualizer(windowItems(10, WINDOW_COUNT))}>
+				<DataGrid.Table>
+					<DataGrid.Body />
+				</DataGrid.Table>
+			</VirtualProvider>
+		</Grid>,
+	)
+}
+
+/**
  * The smallest adapter that reports one row as dragging — the only half of a kit's adapter these
  * cases need.
  *
@@ -344,5 +413,79 @@ describe('flow windowing', () => {
 		expect(container.querySelectorAll('[data-slot="tr"][data-virtual="row"]')).toHaveLength(WINDOW_COUNT)
 		expect(tbody).toHaveStyle({ paddingTop: padsFor(10).paddingTop, paddingBottom: '0px' })
 		expect(loader).toHaveStyle({ marginTop: padsFor(10).paddingBottom })
+	})
+})
+
+describe('flow windowing with pinned rows', () => {
+	/*
+	 * Pinned rows share the tbody with the band, and the offset deliberately stays on the container
+	 * — which means the band is displaced by the pinned-top rows' height, since they are in flow
+	 * ahead of it. That reads like a defect and is not one: measured in both kits, the displacement
+	 * is exactly the height the pinned band overlays once it sticks below the header, so the first
+	 * row the user can actually see sits at the centre offset the virtualizer computed from
+	 * `scrollTop` — which is why nothing here needs a `scrollMargin`. The brief's two predicted
+	 * failures were measured and both are arithmetic, not geometry: the tbody exceeding `totalSize`
+	 * by the pinned rows' height is the pinned rows paying for themselves, because a pinned row
+	 * leaves `getCenterRows()` and so leaves the virtualizer's count — the scrollport's
+	 * `scrollHeight` came out within 1px of the same grid with nothing pinned (490 040 against
+	 * 490 041 in shadcn, 490 054 against 490 039 in heroui, the 1px being a border).
+	 *
+	 * What the measurement did indict is one rule away from the band: see the sticky-header case at
+	 * the end of this block.
+	 */
+	it('keeps the pads window-derived while the pinned bands share the tbody', () => {
+		const { container } = renderWindowWithPinnedRows(windowItems(10, WINDOW_COUNT))
+		const tbody = container.querySelector('[data-slot="tbody"][data-virtualized="true"]')
+
+		expect(tbody).toHaveStyle({ ...padsFor(10), minHeight: `${String(TOTAL_SIZE)}px` })
+	})
+
+	it('renders the pinned bands around the band, with the window still in flow', () => {
+		const { container } = renderWindowWithPinnedRows(windowItems(10, WINDOW_COUNT))
+		const rows = [...container.querySelectorAll('[data-slot="tr"][data-row-id]')]
+		const windowRows = [...container.querySelectorAll('[data-slot="tr"][data-virtual="row"]')]
+
+		// DOM order, not just presence: the top band has to precede the band for the container's
+		// padding to land ahead of it, and the bottom band has to follow it.
+		expect(rows.map((row) => row.getAttribute('data-row-id'))).toEqual([
+			PINNED_TOP_ROW_ID,
+			...Array.from({ length: WINDOW_COUNT }, (_, offset) => String(10 + offset + CENTER_INDEX_TO_ID)),
+			PINNED_BOTTOM_ROW_ID,
+		])
+		// No margin and no transform on the band's own rows: the offset stays on the container,
+		// which is what the displacement above is the consequence of.
+		for (const row of windowRows) {
+			expect(row).toHaveStyle({ height: `${String(ROW_HEIGHT)}px` })
+			expect(row.getAttribute('style') ?? '').not.toContain('margin')
+			expect(row.getAttribute('style') ?? '').not.toContain('transform')
+		}
+	})
+
+	it('declares the sticky header on the virtualized scrollport, so pinned rows stack below it', () => {
+		/*
+		 * The one thing the measurement indicted. The virtualized branch used to omit this
+		 * attribute, which left the stylesheet's
+		 * `[data-slot='table-scroll'][data-sticky-header='true'] [data-slot='tr'][data-pinned='top']`
+		 * rule unmatched — so a pinned row stuck at the scrollport's own top edge, under a `z-10`
+		 * sticky header: measured at `scrollTop` 4900, 41px of its 49 painted over in shadcn and 37
+		 * of 58 in heroui, and the band's first rows exposed underneath the window instead.
+		 *
+		 * Asserted on the attribute rather than on the offset because jsdom computes no layout and
+		 * resolves no `calc()`; the geometry is measured in a browser, and this is the structural
+		 * half that a later edit to either branch would break silently.
+		 */
+		const { container } = renderVirtualShell({ stickyHeader: true })
+		const scroll = container.querySelector('[data-slot="table-scroll"][data-virtualized="true"]')
+
+		expect(scroll).toHaveAttribute('data-sticky-header', 'true')
+	})
+
+	it('leaves the attribute off a virtualized grid whose header does not stick', () => {
+		// The pair, because the attribute also opens the `max-height` bound meant for the
+		// non-virtualized scrollport — stamping it unconditionally would be a different defect.
+		const { container } = renderVirtualShell({ stickyHeader: false })
+		const scroll = container.querySelector('[data-slot="table-scroll"][data-virtualized="true"]')
+
+		expect(scroll).not.toHaveAttribute('data-sticky-header')
 	})
 })

@@ -313,6 +313,32 @@ export function DataGridTable<TRow extends object = ErasedRow>({ children }: Dat
 		direction: table.grid.direction,
 	})
 
+	/**
+	 * The shell's sticky state, stamped on the scrollport in **both** modes.
+	 *
+	 * The virtualized branch used to omit these, which left
+	 * `[data-slot='table-scroll'][data-sticky-header='true'] [data-slot='tr'][data-pinned='top']`
+	 * unmatched — so a pinned row in a virtualized grid stuck at the scrollport's own top edge,
+	 * under a `z-10` sticky header, with only the few pixels the header does not cover left
+	 * visible. Measured in both kits: at `scrollTop` 4900 the pinned row sat at the header's own
+	 * `top` and 41px of 49 (shadcn) / 37 of 58 (heroui) were painted over.
+	 *
+	 * It also quietly shortened the window. The band is displaced by the pinned rows' height — they
+	 * are in flow, ahead of it, inside the same tbody — and that displacement is exactly what the
+	 * pinned band overlays once it sticks below the header, which is why the virtualizer's
+	 * `scrollTop`-to-offset arithmetic needs no `scrollMargin` term. Stuck too high, the pinned rows
+	 * overlaid the header instead of the band, and the band's first rows showed through underneath
+	 * the window the virtualizer had sized for the viewport.
+	 *
+	 * `data-sticky-footer` comes along for consistency rather than for a rule of its own: nothing in
+	 * the stylesheet pairs a sticky footer with pinned-bottom rows yet, and the one rule that reads
+	 * the attribute is scoped away from virtualized mode (see `global.css`).
+	 */
+	const stickyAttrs = {
+		...(isStickyHeader ? { 'data-sticky-header': 'true' } : {}),
+		...(isStickyFooter ? { 'data-sticky-footer': 'true' } : {}),
+	}
+
 	const tableEl = (
 		<AriaRowIndexProvider
 			table={table}
@@ -371,6 +397,7 @@ export function DataGridTable<TRow extends object = ErasedRow>({ children }: Dat
 							data-slot='table-scroll'
 							data-virtualized='true'
 							className={classNames?.scroll}
+							{...stickyAttrs}
 						>
 							{tableEl}
 						</Scroll>
@@ -393,8 +420,7 @@ export function DataGridTable<TRow extends object = ErasedRow>({ children }: Dat
 					ref={scrollRef}
 					data-slot='table-scroll'
 					className={classNames?.scroll}
-					{...(isStickyHeader ? { 'data-sticky-header': 'true' } : {})}
-					{...(isStickyFooter ? { 'data-sticky-footer': 'true' } : {})}
+					{...stickyAttrs}
 				>
 					{tableEl}
 				</Scroll>
