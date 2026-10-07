@@ -284,4 +284,42 @@ describe('applyRowMove', () => {
 
 		expect(order).toEqual(['a', 'b', 'c'])
 	})
+
+	describe('over data rows', () => {
+		const rows = [{ id: 1 }, { id: 2 }, { id: 3 }]
+		const getRowId = (row: { id: number }) => String(row.id)
+
+		it('moves the row down past its target, keeping the row objects', () => {
+			const move = { rowId: '1', targetRowId: '3', direction: RowMoveDirection.Down }
+
+			const next = applyRowMove(rows, move, getRowId)
+
+			expect(next.map(getRowId)).toEqual(['2', '3', '1'])
+			expect(next[2]).toBe(rows[0])
+		})
+
+		it('moves the row up past its target', () => {
+			const move = { rowId: '3', targetRowId: '2', direction: RowMoveDirection.Up }
+
+			expect(applyRowMove(rows, move, getRowId).map(getRowId)).toEqual(['1', '3', '2'])
+		})
+
+		it('passes each row its index, as getRowId does elsewhere', () => {
+			const move = { rowId: '0', targetRowId: '2', direction: RowMoveDirection.Down }
+
+			const next = applyRowMove(['x', 'y', 'z'], move, (_row, index) => String(index))
+
+			expect(next).toEqual(['y', 'z', 'x'])
+		})
+
+		it('returns a copy when either row is missing, without mutating', () => {
+			const move = { rowId: '9', targetRowId: '1', direction: RowMoveDirection.Up }
+
+			const next = applyRowMove(rows, move, getRowId)
+
+			expect(next).toEqual(rows)
+			expect(next).not.toBe(rows)
+			expect(rows.map(getRowId)).toEqual(['1', '2', '3'])
+		})
+	})
 })

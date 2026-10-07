@@ -231,19 +231,37 @@ export function moveRow(table: RowOrderingTable, rowId: string, direction: RowMo
 }
 
 /**
- * `order` with `move` applied — the row lifted out and re-inserted at its target's index.
+ * `rows` with `move` applied — the row lifted out and re-inserted at its target's index.
  *
- * Pure and non-mutating. An order naming neither row is returned unchanged rather than
- * repaired: it describes rows this order does not contain, and guessing where they belong is
- * how a reorder silently scrambles a list.
+ * Two shapes, one rule. Over an order of ids it is what the uncontrolled path writes back to
+ * state. Over the application's own `data`, with the grid's `getRowId`, it is the whole body of a
+ * controlled `ordering.row.onChange` — `setData((rows) => applyRowMove(rows, move, getRowId))` —
+ * which every such handler otherwise hand-writes as a `findIndex` / `splice` pair. The signature
+ * mirrors {@link applyRowOrder}, which takes the same `getRowId` for the same reason.
+ *
+ * Pure and non-mutating; the row objects themselves are moved, never copied. A list naming
+ * neither row is returned unchanged rather than repaired: it describes rows this list does not
+ * contain, and guessing where they belong is how a reorder silently scrambles a list.
  */
-export function applyRowMove(order: readonly string[], move: RowMove): string[] {
-	const from = order.indexOf(move.rowId)
-	const to = order.indexOf(move.targetRowId)
-	if (from === -1 || to === -1) return [...order]
+export function applyRowMove(order: readonly string[], move: RowMove): string[]
+export function applyRowMove<TRow>(
+	rows: readonly TRow[],
+	move: RowMove,
+	getRowId: (row: TRow, index: number) => string,
+): TRow[]
+export function applyRowMove<TRow>(
+	rows: readonly TRow[],
+	move: RowMove,
+	getRowId: (row: TRow, index: number) => string = (row) => row as string,
+): TRow[] {
+	const ids = rows.map(getRowId)
+	const from = ids.indexOf(move.rowId)
+	const to = ids.indexOf(move.targetRowId)
+	const moved = rows[from]
+	if (moved === undefined || to === -1) return [...rows]
 
-	const next = [...order]
+	const next = [...rows]
 	next.splice(from, 1)
-	next.splice(to, 0, move.rowId)
+	next.splice(to, 0, moved)
 	return next
 }

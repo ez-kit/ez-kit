@@ -40,8 +40,7 @@ and the problem never arises.
   That is the affordance for a row that has to travel several places; everything else on this page
   moves it one step. The boundaries below apply to it unchanged.
 
-Row ordering has no column of its own: like [row pinning](/docs/data-grid/pinning/rows), its
-entries live in the actions cell, so turning it on is enough to make that column appear.
+Turning it on adds move controls to the row's action menu.
 
 ## The two modes
 
@@ -63,8 +62,8 @@ server-driven pagination, where the grid holds one page and cannot speak for the
 	features={features}
 	data={rows}
 	columns={columns}
-	getRowId={(row) => row.id}
-	ordering={{ row: { onChange: (move) => reorder(move) } }}
+	getRowId={getRowId}
+	ordering={{ row: { onChange: (move) => setRows((rows) => applyRowMove(rows, move, getRowId)) } }}
 />
 ```
 
@@ -80,9 +79,9 @@ type RowMove = {
 }
 ```
 
-Two ids and a direction are the largest fact the grid actually has, and they are enough to splice
-an array or to `PATCH` a position. Column reordering emits the complete order instead, because a
-grid always knows every column — it does not always know every row.
+Two ids and a direction are enough to splice an array or to `PATCH` a position on the server. For
+the splice, `applyRowMove(rows, move, getRowId)` returns a new array with the row moved — pass it
+the same `getRowId` the grid has, so the ids in the move name the same rows.
 
 ## What cannot move
 
