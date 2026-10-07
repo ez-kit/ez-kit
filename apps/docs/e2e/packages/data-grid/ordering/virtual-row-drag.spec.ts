@@ -46,6 +46,20 @@ const FAR_SCROLL_TOP = FAR_ROW_INDEX * ROW_HEIGHT
  * spec is about used to put the row.
  */
 const FAR_REGION_FLOOR = FAR_ROW_INDEX - 30
+/**
+ * How far the displacement case auto-scrolls before it looks at the neighbours: forty rows, which is
+ * more than a window (~29 rows) — so every row mounted when the drag started has been unmounted and
+ * every row on screen was mounted mid-gesture — and short enough to cost a few seconds rather than the
+ * far cases' dozen.
+ */
+const TURNOVER_ROW_INDEX = 40
+const TURNOVER_SCROLL_TOP = TURNOVER_ROW_INDEX * ROW_HEIGHT
+/** The landing floor for that case, by the same one-window-of-slack rule as {@link FAR_REGION_FLOOR}. */
+const TURNOVER_REGION_FLOOR = TURNOVER_ROW_INDEX - 30
+/** How many rows the pointer travels once the window has turned over, and so how many rows it passes. */
+const TURNOVER_STEP_ROWS = 2
+/** Sub-pixel layout and the end of the displacement's easing, both measured within a pixel or so. */
+const DISPLACEMENT_TOLERANCE = 2
 /** Where inside the scrollport's bottom edge the drag library starts auto-scrolling. */
 const AUTOSCROLL_EDGE = 3
 const AUTOSCROLL_TICK_MS = 250
@@ -188,6 +202,82 @@ async function dragRowOnto(page: Page, sourceId: string, targetId: string, fract
 	await page.mouse.up()
 }
 
+/** Where a gesture is: the pointer's column, fixed for the whole drag, and its current height. */
+type Pointer = { x: number; y: number }
+
+/** Presses on a row's drag handle and moves just far enough for the drag library to start the drag. */
+async function pickUp(page: Page, sourceId: string): Promise<Pointer> {
+	const handle = await boxOf(handleIn(rowById(page, sourceId)))
+	const x = handle.x + handle.width / 2
+	const y = handle.y + handle.height / 2
+
+	await page.mouse.move(x, y)
+	await page.mouse.down()
+	await page.mouse.move(x, y + ROW_HEIGHT / 2, { steps: 3 })
+
+	return { x, y: y + ROW_HEIGHT / 2 }
+}
+
+/**
+ * Holds the pointer in the band at the scrollport's bottom edge, where the drag library auto-scrolls,
+ * until the window has scrolled at least `minScrollTop` — then leaves the band and waits for the
+ * scrolling to stop, so whatever is measured next holds still. Returns where the pointer came to rest:
+ * the middle of the scrollport.
+ */
+async function autoScrollHeldRow(page: Page, x: number, minScrollTop: number): Promise<Pointer> {
+	const port = await boxOf(scrollport(page))
+
+	await page.mouse.move(x, port.y + port.height - AUTOSCROLL_EDGE, { steps: 6 })
+	let top = 0
+	for (let tick = 0; tick < AUTOSCROLL_TICKS; tick++) {
+		// A pixel of travel per tick: the pointer has to stay inside the band, and a motionless pointer
+		// leaves the library's collision detection looking at where it last was.
+		await page.mouse.move(x, port.y + port.height - AUTOSCROLL_EDGE - (tick % 2))
+		await page.waitForTimeout(AUTOSCROLL_TICK_MS)
+		top = await scrollport(page).evaluate((element) => element.scrollTop)
+		if (top >= minScrollTop) break
+	}
+	expect(top, 'the drag library did not auto-scroll the window far enough').toBeGreaterThanOrEqual(minScrollTop)
+
+	// Out of the band, so the scrolling stops and the rows the drop is measured against hold still.
+	const middle = port.y + port.height / 2
+	await page.mouse.move(x, middle, { steps: 4 })
+	await expect
+		.poll(async () => {
+			const before = await scrollport(page).evaluate((element) => element.scrollTop)
+			await page.waitForTimeout(SETTLE_MS)
+			const after = await scrollport(page).evaluate((element) => element.scrollTop)
+			return before === after
+		})
+		.toBe(true)
+
+	return { x, y: middle }
+}
+
+/**
+ * Releases the held row over whatever row the pointer has come to rest on, and returns that row's id.
+ *
+ * Re-centres on that row before letting go. Between the last move and this point the library displaces
+ * the rows by a row's height, so the pointer can end up within a pixel or two of a row boundary — and
+ * there the DOM read below and the library's own hit test can resolve to different neighbours, which is
+ * a one-row disagreement between what the spec believes it dropped on and what was committed. Landing
+ * the pointer back on a row's centre removes the ambiguity instead of tolerating it.
+ */
+async function releaseOnRestingRow(page: Page, sourceId: string, pointer: Pointer): Promise<string> {
+	const resting = await rowUnderPointer(page, pointer.x, pointer.y, sourceId)
+	expect(resting, 'no row under the pointer before release').not.toBe('')
+	const restingBox = await boxOf(rowById(page, resting))
+	await page.mouse.move(pointer.x, restingBox.y + restingBox.height / 2)
+	await page.waitForTimeout(SETTLE_MS)
+
+	const underPointer = await rowUnderPointer(page, pointer.x, restingBox.y + restingBox.height / 2, sourceId)
+	expect(underPointer, 'no row under the pointer at release').not.toBe('')
+
+	await page.mouse.up()
+
+	return underPointer
+}
+
 /**
  * Drags a row from the top of the list into the far region by holding the pointer in the scrollport's
  * auto-scroll band, then drops it on a row that is genuinely on screen there. Returns that row's id.
@@ -198,41 +288,8 @@ async function dragRowOnto(page: Page, sourceId: string, targetId: string, fract
  * a no-op that would assert nothing.
  */
 async function dragRowFarDown(page: Page, sourceId: string): Promise<string> {
-	const port = await boxOf(scrollport(page))
-	const handle = await boxOf(handleIn(rowById(page, sourceId)))
-	const x = handle.x + handle.width / 2
-	const y = handle.y + handle.height / 2
-
-	await page.mouse.move(x, y)
-	await page.mouse.down()
-	await page.mouse.move(x, y + ROW_HEIGHT / 2, { steps: 3 })
-
-	// Into the band at the bottom edge where the drag library auto-scrolls, and held there until the
-	// window has reached a region that shares no row with the one the drag started in.
-	await page.mouse.move(x, port.y + port.height - AUTOSCROLL_EDGE, { steps: 6 })
-	let top = 0
-	for (let tick = 0; tick < AUTOSCROLL_TICKS; tick++) {
-		// A pixel of travel per tick: the pointer has to stay inside the band, and a motionless pointer
-		// leaves the library's collision detection looking at where it last was.
-		await page.mouse.move(x, port.y + port.height - AUTOSCROLL_EDGE - (tick % 2))
-		await page.waitForTimeout(AUTOSCROLL_TICK_MS)
-		top = await scrollport(page).evaluate((element) => element.scrollTop)
-		if (top >= FAR_SCROLL_TOP) break
-	}
-	expect(top, 'the drag library did not auto-scroll the window to the far region').toBeGreaterThanOrEqual(
-		FAR_SCROLL_TOP,
-	)
-
-	// Out of the band, so the scrolling stops and the rows the drop is measured against hold still.
-	await page.mouse.move(x, port.y + port.height / 2, { steps: 4 })
-	await expect
-		.poll(async () => {
-			const before = await scrollport(page).evaluate((element) => element.scrollTop)
-			await page.waitForTimeout(SETTLE_MS)
-			const after = await scrollport(page).evaluate((element) => element.scrollTop)
-			return before === after
-		})
-		.toBe(true)
+	const { x } = await pickUp(page, sourceId)
+	await autoScrollHeldRow(page, x, FAR_SCROLL_TOP)
 
 	const visible = (await visibleRowIds(page)).filter((id) => id !== sourceId)
 	const targetId = visible[Math.floor(visible.length / 2)] ?? ''
@@ -246,26 +303,7 @@ async function dragRowFarDown(page: Page, sourceId: string): Promise<string> {
 	await expect(rowById(page, targetId)).toBeVisible()
 	await page.waitForTimeout(SETTLE_MS * 4)
 
-	/*
-	 * Re-centre on whatever row the pointer has come to rest over before letting go. Between the move
-	 * above and this point the library displaces the rows by a row's height, so the pointer can end up
-	 * within a pixel or two of a row boundary — and there the DOM read below and the library's own hit
-	 * test can resolve to different neighbours, which is a one-row disagreement between what the spec
-	 * believes it dropped on and what was committed. Landing the pointer back on a row's centre removes
-	 * the ambiguity instead of tolerating it.
-	 */
-	const resting = await rowUnderPointer(page, x, dropY, sourceId)
-	expect(resting, 'no row under the pointer before release').not.toBe('')
-	const restingBox = await boxOf(rowById(page, resting))
-	await page.mouse.move(x, restingBox.y + restingBox.height / 2)
-	await page.waitForTimeout(SETTLE_MS)
-
-	const underPointer = await rowUnderPointer(page, x, restingBox.y + restingBox.height / 2, sourceId)
-	expect(underPointer, 'no row under the pointer at release').not.toBe('')
-
-	await page.mouse.up()
-
-	return underPointer
+	return releaseOnRestingRow(page, sourceId, { x, y: dropY })
 }
 
 /**
@@ -298,8 +336,13 @@ function rowUnderPointer(page: Page, px: number, py: number, sourceId: string): 
  * position 0; asserting only that it reached the far region is what would have passed while the drop's
  * index was 3–4 rows stale.
  */
-async function expectLandedOn(page: Page, sourceId: string, targetId: string): Promise<void> {
-	await expect.poll(() => committedIndexOf(page, sourceId)).toBeGreaterThan(FAR_REGION_FLOOR)
+async function expectLandedOn(
+	page: Page,
+	sourceId: string,
+	targetId: string,
+	floor: number = FAR_REGION_FLOOR,
+): Promise<void> {
+	await expect.poll(() => committedIndexOf(page, sourceId)).toBeGreaterThan(floor)
 
 	const landed = await committedIndexOf(page, sourceId)
 	const droppedOn = await committedIndexOf(page, targetId)
@@ -485,6 +528,72 @@ test.describe('virtualized row drag', () => {
 		// than the guard having refused it and the row having stayed put.
 		await scrollTo(page, 0)
 		await expect.poll(async () => (await windowedRowIds(page))[0]).toBe('2')
+	})
+
+	/**
+	 * Displacement **after** the window has turned over under the drag — the case the in-flow band alone
+	 * did not fix, reported from use rather than found by a spec.
+	 *
+	 * The displacement case above runs inside the first window, where nothing re-renders mid-gesture. Once
+	 * the drag library's auto-scroll has carried the row a window or more down, the body has re-rendered on
+	 * every frame of that scroll, and it used to re-render in **model** order with the held row at its
+	 * original place — while the library had moved that row's DOM node and its sortable index to where the
+	 * pointer took it. The two orders then disagreed about the held row, the library's index space had a
+	 * gap and a duplicate, and its optimistic sorting bails on any space that is not exactly `0..n-1`: the
+	 * neighbours stopped moving for the rest of the gesture. Measured: before the fix no visible row moved
+	 * at all when the pointer then travelled over two of them.
+	 *
+	 * So this reads the visible rows' tops, moves the pointer down over two rows, and asserts that a
+	 * neighbour moved by one row's height — any of them, since which rows the pointer passes depends on
+	 * where the held row rests after the scroll, which is a kit's geometry. Then the drop, the same way the
+	 * far cases assert it.
+	 */
+	test('neighbours keep moving aside after the window turns over under the drag', async ({ grid, page }) => {
+		test.slow()
+		await grid.open(EXAMPLE)
+		expect((await windowedRowIds(page)).slice(0, INITIAL_HEAD.length)).toEqual(INITIAL_HEAD)
+
+		const sourceId = '2'
+		const { x } = await pickUp(page, sourceId)
+		const resting = await autoScrollHeldRow(page, x, TURNOVER_SCROLL_TOP)
+		// The arrangement the pointer's arrival in the middle produced has to land before it is the baseline.
+		await page.waitForTimeout(SETTLE_MS * 4)
+
+		const topsOf = (): Promise<Record<string, number>> =>
+			page.evaluate((source) => {
+				const tops: Record<string, number> = {}
+				for (const row of document.querySelectorAll(
+					'[data-slot="tbody"] [data-slot="tr"][data-virtual="row"][data-row-id]',
+				)) {
+					const id = row.getAttribute('data-row-id') ?? ''
+					if (id !== source) tops[id] = row.getBoundingClientRect().top
+				}
+				return tops
+			}, sourceId)
+		const visible = new Set((await visibleRowIds(page)).filter((id) => id !== sourceId))
+		const before = await topsOf()
+
+		const to = resting.y + ROW_HEIGHT * TURNOVER_STEP_ROWS
+		await page.mouse.move(x, to, { steps: 8 })
+
+		await expect
+			.poll(
+				async () => {
+					const after = await topsOf()
+					return [...visible].some((id) => {
+						const from = before[id]
+						const now = after[id]
+						if (from === undefined || now === undefined) return false
+						return Math.abs(Math.abs(now - from) - ROW_HEIGHT) <= DISPLACEMENT_TOLERANCE
+					})
+				},
+				{ message: 'no visible row moved aside after the window turned over under the drag' },
+			)
+			.toBe(true)
+
+		const targetId = await releaseOnRestingRow(page, sourceId, { x, y: to })
+
+		await expectLandedOn(page, sourceId, targetId, TURNOVER_REGION_FLOOR)
 	})
 
 	test('Escape cancels the drag and leaves the order untouched', async ({ grid, page }) => {
