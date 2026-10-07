@@ -1155,3 +1155,78 @@ Branch off `develop`, push with `-u`, and open the PR into `develop` — not `ma
 description in English, with no agent attribution. Include: what changed, the measurement that
 motivated it, and the fact that it removes a documented limitation (so reviewers look for the
 `Not built yet` deletion rather than flagging it).
+
+---
+
+### Follow-up (not executed): Bump `@dnd-kit` to 0.5.0 and re-measure
+
+The findings were measured on `@dnd-kit/{react,dom}` 0.1.21. 0.5.0 (2026-09-12) is current and
+carries PR #1919 — the `Feedback` plugin supports rows placed with a CSS `transform`, and
+`Sortable.animate()` cancels CSS transitions before it measures. Both touch exactly the mechanism
+the findings diagnose, Written after Tasks 1–8 had shipped on this branch, so it is a follow-up rather than a first step: the
+bump is no longer needed for displacement, but the projected order added after the final review
+(`onDisplace`, the deferred anchor re-take) depends on `@dnd-kit/react`'s `renderer.rendering`
+covering the React commit `onDisplace` triggers — measured on 0.1.21, not contractual. A bump must
+re-run `apps/docs/e2e/packages/data-grid/ordering/virtual-row-drag.spec.ts` in both kits on purpose.
+
+**Files:**
+
+- Modify: `packages/data-grid/react/shadcn/package.json` (`devDependencies` + `peerDependencies`)
+- Modify: `packages/data-grid/react/heroui/package.json` (`devDependencies` + `peerDependencies`)
+- Modify: `apps/docs/package.json` (only if it declares `@dnd-kit/*` itself — grep first)
+- Modify, if the API moved: `packages/data-grid/react/{shadcn,heroui}/src/dnd.tsx`
+- Create: `.changeset/dnd-kit-0-5.md`
+
+- [ ] **Step 1: Read the upstream changes between 0.1.21 and 0.5.0**
+
+Read the `@dnd-kit/react`, `@dnd-kit/dom` and `@dnd-kit/abstract` CHANGELOGs (GitHub
+`clauderic/dnd-kit`, `packages/*/CHANGELOG.md`) for every name the adapters import —
+`Accessibility`, `AutoScroller`, `Cursor`, `Feedback`, `PreventSelection`, `DragDropProvider`,
+`KeyboardSensor`, `PointerSensor`, `useSortable` — and for the `DragDropProvider` event payloads
+`onDragOver` / `onDragEnd` read (`operation.source` / `.target`, `canceled`, `preventDefault`).
+Write the breaking changes found into the findings file under a new `## dnd-kit 0.5.0` heading.
+
+- [ ] **Step 2: Bump the ranges in the manifests and install**
+
+Edit `"^0.1.21"` → `"^0.5.0"` for both packages in every manifest listed above, then run a plain
+`pnpm install`. **Never `pnpm up -r`** (AGENTS.md). Verify:
+`ls node_modules/.pnpm | grep -E '^@dnd-kit\+(dom|react|abstract|state)@'` shows only 0.5.x.
+
+- [ ] **Step 3: Make both kits compile and pass their unit tests**
+
+Run: `pnpm --filter @ez-kit/data-grid-shadcn typecheck && pnpm --filter @ez-kit/data-grid-heroui typecheck`
+then `pnpm --filter @ez-kit/data-grid-shadcn test && pnpm --filter @ez-kit/data-grid-heroui test`.
+Fix `dnd.tsx` in both kits for any API change from Step 1; change both kits identically.
+`apps/docs/test/registry-payload.test.ts` reads the ranges from the kits' `peerDependencies`, so it
+needs no edit — run it to confirm: `pnpm --filter @ez-kit/docs exec vitest run test/registry-payload.test.ts`.
+
+- [ ] **Step 4: Run the drag e2e on the current (absolute) body in both kits**
+
+Build (`pnpm build --filter @ez-kit/docs^...`), then run
+`apps/docs/e2e/packages/data-grid/ordering/*drag*.spec.ts` and
+`apps/docs/e2e/packages/data-grid/a11y/drag-announcements.spec.ts` for both kit projects.
+Everything that passed on 0.1.21 must pass. Repeat findings Measurement 1 (neighbour positions
+before/during a one-step drag) on `/examples/shadcn/virtualized-row-drag` and record it in the
+findings file.
+
+- [ ] **Step 5: Decision gate**
+
+- `virtual-row-drag.spec.ts` must stay green in both kits, including the auto-scrolled displacement
+  case and the one-step immediate-release case; a red one means the stand-down timing moved.
+- If 0.5.0 makes the projected order unnecessary (the plugin no longer bails on a re-rendered group),
+  report before removing anything.
+
+- [ ] **Step 6: Changeset and commit**
+
+`.changeset/dnd-kit-0-5.md`: `'@ez-kit/data-grid-heroui': minor` only — the shadcn kit is in the
+changeset `ignore` list and must not be named. Body: the optional `@dnd-kit/react` / `@dnd-kit/dom`
+peers move to `^0.5.0`; drag has not shipped yet (its changesets are still pending), so no released
+consumer holds the old range.
+
+```bash
+git add packages/data-grid/react/*/package.json pnpm-lock.yaml .changeset/dnd-kit-0-5.md \
+  docs/superpowers/plans/2026-10-06-flow-windowing-virtual-body.findings.md
+git commit -m "chore(data-grid): bump @dnd-kit to 0.5.0"
+```
+
+(add `packages/data-grid/react/*/src/dnd.tsx` and `apps/docs/package.json` if Steps 2–3 changed them)
