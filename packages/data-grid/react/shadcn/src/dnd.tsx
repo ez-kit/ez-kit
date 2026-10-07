@@ -947,7 +947,7 @@ function toAccessibilityOptions(
 	}
 }
 
-function DndProvider({ onDrop, canDrop, announcements, children }: DndProviderProps) {
+function DndProvider({ onDrop, canDrop, onDisplace, announcements, children }: DndProviderProps) {
 	/*
 	 * The last target the pointer was over **and the grid allowed**, for the length of one operation.
 	 *
@@ -970,12 +970,14 @@ function DndProvider({ onDrop, canDrop, announcements, children }: DndProviderPr
 	 * `sortable.index` has two writers that do not coordinate. `OptimisticSortingPlugin` writes it
 	 * from its own displacement, and `useSortable`'s layout effect writes it from the index prop —
 	 * `@dnd-kit/react@0.1.21/sortable.js:61-67`, which assigns `sortable.index = index` whenever the
-	 * prop changes, with no guard for an operation in flight. In a virtualized grid that prop is the
-	 * row's position in the list the body is publishing, which is the **undisplaced** order. So any
-	 * re-render landing between the last displacement and the release resets every index in the group
-	 * to the order the drag started from, making a freshly computed end anchor equal the start one and
-	 * refusing a real move with nothing to show for it. Reachable: a grid with `infinite` whose
-	 * `loadMore` promise resolves while a row is held.
+	 * prop changes, with no guard for an operation in flight. That prop is the row's position in the
+	 * list its body renders, and a body that renders the **undisplaced** order — the non-virtualized
+	 * one, or a hand-written one — therefore resets every index in the group to the order the drag
+	 * started from on any re-render landing between the last displacement and the release, making a
+	 * freshly computed end anchor equal the start one and refusing a real move with nothing to show
+	 * for it. Reachable: a grid with `infinite` whose `loadMore` promise resolves while a row is held.
+	 * (A virtualized body no longer does this: it renders the drag's projected arrangement from
+	 * `onDisplace`, so its indices carry the displacement — see `onDragOver` below.)
 	 *
 	 * Recording leaves nothing to corrupt. A `dragover` arrives on every frame the operation is live,
 	 * **including the one the plugin itself causes** right after it displaces: it finishes by calling
@@ -984,7 +986,10 @@ function DndProvider({ onDrop, canDrop, announcements, children }: DndProviderPr
 	 * when the target changes (`@dnd-kit/abstract@0.1.21/index.js:662-677`). That frame is the one
 	 * whose registry reflects the displacement, which is why the anchor is taken on *every* hover and
 	 * not only on the ones the grid allows — `toDragOverEvent` filters the source hovering itself,
-	 * correctly, for the question it answers.
+	 * correctly, for the question it answers. **Where the grid renders the displacement instead** — a
+	 * virtualized body, through `onDisplace` — the plugin stands down and that frame never comes, so
+	 * the allowed hover also re-takes the anchor once `renderer.rendering` settles; `onDragOver` has
+	 * the measurement.
 	 *
 	 * The semantics the pair had are unchanged **once a displacement has rendered**. A pointer that
 	 * never moved produces no `dragover` with anything displaced, so the recorded anchor is the start
@@ -1036,6 +1041,12 @@ function DndProvider({ onDrop, canDrop, announcements, children }: DndProviderPr
 	 * collisions.
 	 */
 	const endAnchor = useRef<DragAnchor | null>(null)
+	/*
+	 * Which operation is current, counted. Read by the one deferred write below — the end anchor taken
+	 * once a grid-driven displacement has rendered — so that a write arriving after its operation ended
+	 * cannot land in the next one.
+	 */
+	const operation = useRef(0)
 
 	/**
 	 * This operation's drop as the refs above currently stand — a **read**, and the only call to
@@ -1114,6 +1125,7 @@ function DndProvider({ onDrop, canDrop, announcements, children }: DndProviderPr
 			onDragStart={(event, manager) => {
 				// A fresh operation inherits nothing: all three refs are set from this operation alone,
 				// and `dragend` clears them again for one whose end never reaches that handler.
+				operation.current += 1
 				hoveredTargetId.current = null
 				startAnchor.current = sourceAnchor(event as SortableDragStartEvent, manager)
 				endAnchor.current = null
@@ -1137,6 +1149,40 @@ function DndProvider({ onDrop, canDrop, announcements, children }: DndProviderPr
 				// Remembered only once allowed: a refused hover must not become the landing place, or
 				// the commit would be refused again and the legal position already displaced to lost.
 				hoveredTargetId.current = over.targetId
+				/*
+				 * The same allowed hover, told to the grid as the displacement it is about to become, so a
+				 * virtualized body renders the arrangement the library is showing — see
+				 * `DndProviderProps.onDisplace`. Synchronous, inside the library's `trackRendering`, which
+				 * is what makes the grid's render the one this displacement waits on: the plugin's own move
+				 * runs after `renderer.rendering` settles, finds every index already rewritten by React's
+				 * render, and stands down rather than moving the element a second time. Measured on the
+				 * virtualized example in both kits: across a 40-row auto-scroll and four displacements
+				 * after it, the plugin's `reorder` ran zero times, while on the non-virtualized `row-drag`
+				 * example — whose body renders no projection — it ran on every step.
+				 */
+				onDisplace?.(over)
+				/*
+				 * **And so the end anchor has to be taken again once that render lands.** When the plugin
+				 * stands down it also skips the `setDropTarget(source.id)` that ends its own move, and that
+				 * call's synchronous `dragover` is the frame `endAnchor` relies on to see a displacement
+				 * (see its docblock). Without it the last anchor recorded is this frame's, taken *before*
+				 * the displacement, so a one-step drag reads as never having travelled and is refused —
+				 * measured on the virtualized example: a single move into the neighbour, released with
+				 * no further movement, committed nothing in five runs out of five in both kits, where the
+				 * plugin-driven path had committed all five.
+				 *
+				 * `renderer.rendering` settles after the commit `trackRendering` started, which is after
+				 * the grid's own update — that one is synchronous and flushed first — so the registry read
+				 * here carries the displaced indices. Where the plugin does move (a body that renders no
+				 * projection), this runs before its continuation and is overwritten by the `dragover` that
+				 * continuation dispatches, so the outcome there is unchanged. Guarded by the operation
+				 * count, because a promise can outlive the drag it was taken in.
+				 */
+				const displacing = operation.current
+				void manager.renderer.rendering.then(() => {
+					if (operation.current !== displacing) return
+					endAnchor.current = sourceAnchor(event as SortableDragStartEvent, manager)
+				})
 			}}
 			onDragEnd={(event) => {
 				// The one commit, on every path and on this listener alone. An announcement callback may
@@ -1144,6 +1190,7 @@ function DndProvider({ onDrop, canDrop, announcements, children }: DndProviderPr
 				// Clearing comes after, which is what the ordering in `toAccessibilityOptions` rests on.
 				const drop = resolveDrop(event as SortableDragEndEvent)
 				if (drop) onDrop(drop)
+				operation.current += 1
 				hoveredTargetId.current = null
 				startAnchor.current = null
 				endAnchor.current = null

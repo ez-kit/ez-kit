@@ -66,6 +66,8 @@ const AUTOSCROLL_TICK_MS = 250
 /** Generous: the slower kit scrolls at roughly 400 px/s, so ~4 900 px needs about 12 s of holding. */
 const AUTOSCROLL_TICKS = 120
 const SETTLE_MS = 150
+/** How far a gesture moves before its real move, so the drag library has started the drag by then. */
+const PICKUP_TRAVEL = 10
 
 /**
  * The windowed rows, in render order.
@@ -255,32 +257,80 @@ async function autoScrollHeldRow(page: Page, x: number, minScrollTop: number): P
 }
 
 /**
- * Releases the held row over whatever row the pointer has come to rest on, and returns that row's id.
+ * Releases the held row where the drag is showing it, and returns the id of the row shown directly
+ * **after** it — the row a landing is asserted against.
  *
- * Re-centres on that row before letting go. Between the last move and this point the library displaces
- * the rows by a row's height, so the pointer can end up within a pixel or two of a row boundary — and
- * there the DOM read below and the library's own hit test can resolve to different neighbours, which is
- * a one-row disagreement between what the spec believes it dropped on and what was committed. Landing
- * the pointer back on a row's centre removes the ambiguity instead of tolerating it.
+ * Once the pointer comes to rest the drag displaces the held row into the slot under it, so the slot
+ * under the pointer is the held row's own: the element there is the drag library's placeholder for it,
+ * and the row the user is looking at as "where it goes" is the arrangement around that slot rather
+ * than any row under the pointer. So this reads the arrangement. It used to read the row under the
+ * pointer instead, which was only possible while displacement died with the first window turnover and
+ * left some other row there.
+ *
+ * Why the row *after*, and not the one before: the commit is `dropRow(source, target)` with `target`
+ * the last row the held row was displaced past, and it lands the source on `target`'s far side as the
+ * **model** orders the two. Every case here drags downwards, so the source is above every far-region row
+ * in the model and lands directly behind `target`. The last displacement may have been downwards —
+ * `target` is then the row before the held row, and the source lands exactly where it was shown — or,
+ * after the pointer settles back up a little, upwards — `target` is then the row after it, and the
+ * source lands one past where it was shown. The row shown after the held row is adjacent to the landing
+ * in both, which is what {@link expectLandedOn} asserts.
+ *
+ * Re-centres on the held row's slot before reading: near a row boundary the library can displace back
+ * and forth by a row, and the read has to describe the arrangement the release is taken against.
  */
 async function releaseOnRestingRow(page: Page, sourceId: string, pointer: Pointer): Promise<string> {
-	const resting = await rowUnderPointer(page, pointer.x, pointer.y, sourceId)
-	expect(resting, 'no row under the pointer before release').not.toBe('')
-	const restingBox = await boxOf(rowById(page, resting))
-	await page.mouse.move(pointer.x, restingBox.y + restingBox.height / 2)
+	const slotCentre = await heldSlotCentre(page, sourceId)
+	expect(slotCentre, 'the held row occupies no slot in the band before release').not.toBeNull()
+	await page.mouse.move(pointer.x, slotCentre ?? pointer.y)
 	await page.waitForTimeout(SETTLE_MS)
 
-	const underPointer = await rowUnderPointer(page, pointer.x, restingBox.y + restingBox.height / 2, sourceId)
-	expect(underPointer, 'no row under the pointer at release').not.toBe('')
+	const shownAfter = await rowShownAfter(page, sourceId)
+	expect(shownAfter, 'no row is shown after the held row at release').not.toBe('')
 
 	await page.mouse.up()
 
-	return underPointer
+	return shownAfter
+}
+
+/**
+ * The vertical centre of the slot the held row occupies in the band, or `null`.
+ *
+ * While a drag is in flight the held row's id is on two elements: the row itself, which the drag
+ * library has lifted to `position: fixed` to follow the pointer, and the placeholder it leaves in flow.
+ * The placeholder is the slot, so the element that is **not** fixed is the one measured.
+ */
+function heldSlotCentre(page: Page, sourceId: string): Promise<number | null> {
+	return page.evaluate((source) => {
+		const slot = [
+			...document.querySelectorAll(`[data-slot="tbody"] [data-slot="tr"][data-virtual="row"][data-row-id="${source}"]`),
+		].find((row) => getComputedStyle(row).position !== 'fixed')
+		if (slot === undefined) return null
+		const box = slot.getBoundingClientRect()
+		return box.top + box.height / 2
+	}, sourceId)
+}
+
+/**
+ * The row the band shows directly after the held row, by DOM order — the arrangement the drag is
+ * showing, read rather than assumed. Both elements carrying the held row's id sit together in the band
+ * (see {@link heldSlotCentre}), so the answer is the first windowed row after the last of them.
+ */
+function rowShownAfter(page: Page, sourceId: string): Promise<string> {
+	return page.evaluate((source) => {
+		const ids = [
+			...document.querySelectorAll('[data-slot="tbody"] [data-slot="tr"][data-virtual="row"][data-row-id]'),
+		].map((row) => row.getAttribute('data-row-id') ?? '')
+		const last = ids.lastIndexOf(source)
+		return last < 0 ? '' : (ids[last + 1] ?? '')
+	}, sourceId)
 }
 
 /**
  * Drags a row from the top of the list into the far region by holding the pointer in the scrollport's
- * auto-scroll band, then drops it on a row that is genuinely on screen there. Returns that row's id.
+ * auto-scroll band, then drops it on a row that is genuinely on screen there. Returns the id of the row
+ * shown directly after it at release — see {@link releaseOnRestingRow} for why that is the row a landing
+ * is asserted against.
  *
  * The target is picked from {@link visibleRowIds} rather than from the window: the overscan mounts
  * rows outside the clip region which report a box no pointer can reach, so aiming at one drops
@@ -307,30 +357,9 @@ async function dragRowFarDown(page: Page, sourceId: string): Promise<string> {
 }
 
 /**
- * The row the pointer is **actually** over, read rather than assumed.
- *
- * The target a far drag picked was chosen a few hundred milliseconds before release, and the library
- * displaces the rows under the pointer in between — so the row let go of is not necessarily the row
- * aimed at. The contract is that the dragged row lands next to the row the pointer was over when it was
- * released, so that row is what the caller asserts against; this is a faithful reading of the gesture,
- * not a loosened assertion. The dragged row itself is skipped because its clone travels with the
- * pointer and sits on top of everything.
- */
-function rowUnderPointer(page: Page, px: number, py: number, sourceId: string): Promise<string> {
-	return page.evaluate(
-		({ atX, atY, source }) =>
-			document
-				.elementsFromPoint(atX, atY)
-				.map((element) => element.closest('[data-slot="tr"][data-row-id]'))
-				.find((row) => row !== null && row.getAttribute('data-row-id') !== source)
-				?.getAttribute('data-row-id') ?? '',
-		{ atX: px, atY: py, source: sourceId },
-	)
-}
-
-/**
  * The landing, asserted the only way that distinguishes the two defects this spec exists for: the row
- * sits **next to the row it was dropped on**, and it sits in the far region rather than near the top.
+ * sits **next to the row it was shown beside at release** (see {@link releaseOnRestingRow}), and it
+ * sits in the far region rather than near the top.
  *
  * Asserting only that it left its old place is what would have passed while the row teleported to
  * position 0; asserting only that it reached the far region is what would have passed while the drop's
@@ -424,6 +453,36 @@ test.describe('virtualized row drag', () => {
 		expect((await windowedRowIds(page)).slice(0, INITIAL_HEAD.length)).toEqual(INITIAL_HEAD)
 
 		await dragRowOnto(page, '2', '3', NEIGHBOUR_FRACTION_FAR)
+
+		await expect.poll(async () => (await windowedRowIds(page)).slice(0, 6)).toEqual(['1', '3', '2', '4', '5', '6'])
+	})
+
+	/**
+	 * One step taken in **one** move and released without the pointer moving again — the gesture with
+	 * the least for the adapter to go on, and the one the grid-rendered displacement first broke.
+	 *
+	 * While a row is held the body renders the drag's arrangement itself, so the drag library's own
+	 * reorder stands down, and with it the closing frame the adapter used to read the displaced order
+	 * from. The cases above all keep moving after the crossing and so produce later frames that hid
+	 * this; released straight after a single crossing, the drag read as never having travelled and was
+	 * refused — measured five times out of five in both kits before the adapter re-took its reading once
+	 * the grid's render had landed.
+	 */
+	test('a one-step drag released straight after the crossing commits', async ({ grid, page }) => {
+		await grid.open(EXAMPLE)
+		expect((await windowedRowIds(page)).slice(0, INITIAL_HEAD.length)).toEqual(INITIAL_HEAD)
+
+		const handle = await boxOf(handleIn(rowById(page, '2')))
+		const target = await boxOf(rowById(page, '3'))
+		const x = handle.x + handle.width / 2
+		const from = handle.y + handle.height / 2
+
+		await page.mouse.move(x, from)
+		await page.mouse.down()
+		// Just far enough to start the drag, then the crossing as a single move, then nothing.
+		await page.mouse.move(x, from + PICKUP_TRAVEL, { steps: 3 })
+		await page.mouse.move(x, target.y + target.height / 2)
+		await page.mouse.up()
 
 		await expect.poll(async () => (await windowedRowIds(page)).slice(0, 6)).toEqual(['1', '3', '2', '4', '5', '6'])
 	})

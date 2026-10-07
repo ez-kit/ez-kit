@@ -35,9 +35,16 @@ import type { DndAnnouncements, DndDragOverEvent, DndDropEvent, SortableItemHand
  * `@dnd-kit/abstract`, a transitive dependency this package does not declare. The adapter casts in the
  * same direction at the same boundary.
  */
+/** A manager as an allowed hover reads it: the registry, plus the promise a render settles. */
+type RenderingManager = SortableManager & { renderer: { rendering: Promise<void> } }
+
 type CapturedHandlers = {
 	onDragStart?: (event: SortableDragEndEvent, manager: SortableManager) => void
-	onDragOver?: (event: SortableDragOverEvent, manager: SortableManager) => void
+	/**
+	 * With the manager's `renderer` too: an allowed hover waits on `renderer.rendering` to take the end
+	 * anchor again once the grid's displacement has rendered — see `rendered` below.
+	 */
+	onDragOver?: (event: SortableDragOverEvent, manager: RenderingManager) => void
 	/**
 	 * The manager is **optional**, and that is the point of the last case below: the adapter no longer
 	 * reads a group's order at release, so a case can hand it the stale one a re-render leaves behind
@@ -750,8 +757,9 @@ describe('remembering the hover and the anchor', () => {
 	const sortableId = (id: string) => `${GROUP}:${id}`
 
 	/** A registry whose order is the array's order, all of it in one group. */
-	const orderOf = (ids: string[]): SortableManager => ({
+	const orderOf = (ids: string[]): RenderingManager => ({
 		registry: { droppables: ids.map((id, index) => ({ id: sortableId(id), sortable: { index, group: GROUP } })) },
+		renderer: { rendering: Promise.resolve() },
 	})
 
 	const hover = (sourceId: string, targetId: string): SortableDragOverEvent => ({
@@ -787,18 +795,94 @@ describe('remembering the hover and the anchor', () => {
 
 	function mountProvider(canDrop: (event: DndDragOverEvent) => boolean = () => true) {
 		const drops: DndDropEvent[] = []
+		const displacements: DndDragOverEvent[] = []
 		resetCapture()
 		render(
 			<adapter.Provider
 				onDrop={(event) => drops.push(event)}
 				canDrop={canDrop}
+				onDisplace={(event) => displacements.push(event)}
 			>
 				<div />
 			</adapter.Provider>,
 		)
 
-		return { props: capturedHandlers(), drops }
+		return { props: capturedHandlers(), drops, displacements }
 	}
+
+	it('takes the end anchor again once a displacement the grid renders has landed', async () => {
+		/*
+		 * In a virtualized body the grid renders the displacement itself, from `onDisplace`, and the
+		 * plugin stands down — so the plugin's closing `setDropTarget(source.id)`, whose `dragover` is
+		 * what normally records the displaced anchor, never comes. The only anchor recorded on the hover
+		 * is the one before the render, which for a one-step drag equals the start one. Re-taking it once
+		 * `renderer.rendering` settles is what keeps that drag from being refused.
+		 */
+		const { props, drops } = mountProvider()
+		const before = ['row-1', 'row-2', 'row-3']
+		let rendered: () => void = () => {}
+		const manager = orderOf(before)
+		manager.renderer.rendering = new Promise<void>((resolve) => {
+			rendered = resolve
+		})
+		props.onDragStart?.(moved('row-1'), orderOf(before))
+		props.onDragOver?.(hover('row-1', 'row-2'), manager)
+
+		// The grid's render lands: the registry now carries the displaced indices.
+		manager.registry = orderOf(['row-2', 'row-1', 'row-3']).registry
+		rendered()
+		await manager.renderer.rendering
+		props.onDragEnd?.(moved('row-1'))
+
+		expect(drops).toEqual([{ axis: 'row', surface: 'table', sourceId: 'row-1', targetId: 'row-2' }])
+	})
+
+	it('drops a re-taken anchor that arrives after its drag has ended', async () => {
+		// A promise can outlive the operation it was taken in; its write must not land in the next one.
+		const { props, drops } = mountProvider()
+		const manager = orderOf(['row-1', 'row-2', 'row-3'])
+		let rendered: () => void = () => {}
+		manager.renderer.rendering = new Promise<void>((resolve) => {
+			rendered = resolve
+		})
+		props.onDragStart?.(moved('row-1'), orderOf(['row-1', 'row-2', 'row-3']))
+		props.onDragOver?.(hover('row-1', 'row-2'), manager)
+		props.onDragEnd?.(moved('row-1'))
+
+		// A second drag of the same row starts and hovers a row without anything being displaced yet —
+		// and only then does the first drag's render settle, reporting a displacement of its own.
+		props.onDragStart?.(moved('row-1'), orderOf(['row-1', 'row-2', 'row-3']))
+		props.onDragOver?.(hover('row-1', 'row-3'), orderOf(['row-1', 'row-2', 'row-3']))
+		await Promise.resolve()
+		manager.registry = orderOf(['row-2', 'row-1', 'row-3']).registry
+		rendered()
+		await manager.renderer.rendering
+		props.onDragEnd?.(moved('row-1'))
+
+		// The first drag's write would read as a move for the second, which never travelled.
+		expect(drops).toEqual([])
+	})
+
+	it('tells the grid about every allowed displacement, in order, and about nothing else', () => {
+		/*
+		 * `onDisplace` is what a virtualized body renders the drag's arrangement from, and that arrangement
+		 * is a sequence of steps — so every allowed hover has to arrive, in order. A refused hover is not a
+		 * displacement (`preventDefault` stopped it), and a self-hover is the library reporting the source
+		 * over its own new slot, not a step: forwarding either would move the grid's arrangement where the
+		 * library's did not go.
+		 */
+		const { props, displacements } = mountProvider((event) => event.targetId !== 'row-6')
+		props.onDragStart?.(moved('row-1'), orderOf(['row-1', 'row-4', 'row-5', 'row-6']))
+		props.onDragOver?.(hover('row-1', 'row-4'), orderOf(['row-4', 'row-1', 'row-5', 'row-6']))
+		props.onDragOver?.(hover('row-1', 'row-1'), orderOf(['row-4', 'row-1', 'row-5', 'row-6']))
+		props.onDragOver?.(hover('row-1', 'row-5'), orderOf(['row-4', 'row-5', 'row-1', 'row-6']))
+		props.onDragOver?.(hover('row-1', 'row-6'), orderOf(['row-4', 'row-5', 'row-1', 'row-6']))
+
+		expect(displacements).toEqual([
+			{ axis: 'row', surface: 'table', sourceId: 'row-1', targetId: 'row-4' },
+			{ axis: 'row', surface: 'table', sourceId: 'row-1', targetId: 'row-5' },
+		])
+	})
 
 	it('reports the last allowed hover as the drop’s target', () => {
 		// Arrange / Act — picked up first in its group, two legal steps, released last.
@@ -1248,8 +1332,9 @@ describe('announcing a drag', () => {
 	const sortableId = (id: string) => `${GROUP}:${id}`
 
 	/** A registry whose order is the array's order, all of it in one group. */
-	const orderOf = (ids: string[]): SortableManager => ({
+	const orderOf = (ids: string[]): RenderingManager => ({
 		registry: { droppables: ids.map((id, index) => ({ id: sortableId(id), sortable: { index, group: GROUP } })) },
+		renderer: { rendering: Promise.resolve() },
 	})
 
 	/** A keyboard activator, which is what makes a drag one the grid narrates. */
