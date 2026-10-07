@@ -14,8 +14,8 @@ export type DataGridRowDragHandleProps = {
 	/** Accessibility label. Defaults to `messages.ordering.dragRow` when omitted. */
 	'aria-label'?: string
 	/**
-	 * Which row this handle drags. Optional: inside a column's `cell.component` — the ordinary
-	 * placement — it is taken from the cell, so nothing has to be passed.
+	 * Which row this handle drags. Optional: inside a column's `cell.component` it is taken from
+	 * the cell, so nothing has to be passed.
 	 *
 	 * Name it where there is no cell above: a row's own render function does, which is why the
 	 * ready-made `dragHandle` it hands back carries it already.
@@ -31,9 +31,11 @@ export type DataGridRowDragHandleProps = {
  * all. A control that promises a gesture the grid cannot perform is worse than no control, which
  * is why the check is the adapter's presence rather than anything about the current drag.
  *
- * Place it wherever a row has room: inside a column's `cell.component` is the ordinary way, since
- * a consumer already owns that renderer. The other door is the row's own render function, which
- * hands back the same element ready-made:
+ * Ordinarily nobody places it: with row ordering on and an adapter bound, the grid renders it in the
+ * `__drag__` system column — through the kit's `core.RowDragHandle` when one is registered, so the
+ * grip wears the kit's glyph. With that column turned off (`ordering.row.column: false`), place it
+ * wherever a row has room: inside a column's `cell.component`, or through the row's own render
+ * function, which hands back the same element ready-made:
  *
  * ```tsx
  * <DataGrid.Row row={row}>{({ dragHandle, content }) => <>{dragHandle}{content}</>}</DataGrid.Row>

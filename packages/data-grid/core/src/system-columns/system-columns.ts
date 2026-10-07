@@ -11,8 +11,14 @@ export const SELECTION_COLUMN_ID = '__selection__'
 export const EXPAND_COLUMN_ID = '__expand__'
 export const ACTIONS_COLUMN_ID = '__actions__'
 export const GROUP_COLUMN_ID = '__group__'
+export const DRAG_COLUMN_ID = '__drag__'
 
 type SystemColumnsOptions = {
+	/**
+	 * Row dragging — row ordering on **and** a drag adapter bound. Core cannot see the adapter,
+	 * which is a React-layer fact, so the caller resolves both halves into this one flag.
+	 */
+	rowDrag: boolean
 	selection: boolean
 	expanding: boolean
 	editing: boolean
@@ -51,6 +57,8 @@ type SystemColumnsOptions = {
 	 * false is exactly how the option went missing before.
 	 */
 	customRowActions: boolean
+	/** Presentation of the `__drag__` column, from `ordering.row.column`. */
+	rowDragColumn?: SystemColumnDef<TableFeatures>
 	/** Presentation of the `__selection__` column, from `selection.column`. */
 	selectionColumn?: SystemColumnDef<TableFeatures>
 	/** Presentation of the `__expand__` column, from `expanding.column`. */
@@ -63,7 +71,7 @@ type SystemColumnsOptions = {
 
 /**
  * Builds the final column list:
- * [__selection__, __expand__, __group__, ...user columns, __actions__]
+ * [__drag__, __selection__, __expand__, __group__, ...user columns, __actions__]
  *
  * System columns contain no cell renderers (framework-agnostic stubs).
  * The React layer renders them based on meta.systemColumnType.
@@ -71,7 +79,7 @@ type SystemColumnsOptions = {
  * Row pinning has no column of its own: its menu is one more action in the
  * `__actions__` cell, so a pinning-only grid still gets that column.
  */
-/** Default width of the two single-control system columns (checkbox, chevron). */
+/** Default width of the single-control system columns (grip, checkbox, chevron). */
 const NARROW_SYSTEM_COLUMN_SIZE = 44
 
 /**
@@ -143,6 +151,22 @@ export function buildColumnList<TRow extends object>(
 	opts: SystemColumnsOptions,
 ): MappedColumnDef<TRow>[] {
 	const result: MappedColumnDef<TRow>[] = []
+
+	if (opts.rowDrag) {
+		result.push(
+			buildSystemColumn({
+				id: DRAG_COLUMN_ID,
+				type: SystemColumnType.Drag,
+				defaultWidth: NARROW_SYSTEM_COLUMN_SIZE,
+				// First, ahead of the checkbox: the grip is what the row is held by, so it sits at the
+				// row's leading edge, where both commercial grids put it. Pinned so a horizontally
+				// scrolled grid keeps it in reach, and a system column so its track is fixed rather
+				// than one more `1fr` share of the free width.
+				defaultPinning: ColumnPinSide.Start,
+				def: opts.rowDragColumn,
+			}),
+		)
+	}
 
 	if (opts.selection) {
 		result.push(

@@ -77,8 +77,8 @@ silently rather than at install.
 
 ### Then, either way
 
-Turn the axis on as you always would. The two handles you place need no option of their own — a
-row drags iff you rendered a row handle, a header drags iff you rendered a header one:
+Turn the axis on as you always would. Rows need nothing more: the grid puts their handle in a column
+of its own. A header drags iff you rendered a header handle:
 
 ```tsx
 <DataGrid
@@ -97,18 +97,38 @@ write — so which affordance it carries is the one thing drag does put in the c
 
 <DataGridDocsExample exampleId='row-drag' />
 
-A row is dragged by a handle you place, in a column of its own:
+A row is dragged by its grip, and you do not place it: with `ordering.row` on and an adapter bound,
+the grid adds a `__drag__` system column — first in the row, ahead of the selection checkbox, pinned
+at the start edge and fixed at `44` px, so it never takes a share of the free width. A grid with no
+adapter gets no such column; its rows move through the actions menu instead.
+
+The column is configured like the other system columns, through `ordering.row.column` — `width`,
+`pinning`, `align`, `header`, `headerClassName`, `cellClassName`:
+
+```tsx
+<DataGrid
+	// …
+	ordering={{ row: { column: { width: 36 } } }}
+/>
+```
+
+To put the handle somewhere else, turn the column off with `column: false` and place it yourself —
+in a column's `cell.component`, or through a row's render function, which hands back a ready-made
+`dragHandle`:
 
 ```tsx
 const columns = createColumns<Employee>([
-	{ id: 'drag', header: '', width: 48, align: 'center', cell: { component: () => <RowDragHandle /> } },
+	{ accessorKey: 'name', header: 'Name', cell: { component: ({ value }) => <><RowDragHandle />{value}</> } },
 	// …
 ])
+
+<DataGrid ordering={{ row: { column: false } }} /* … */ />
 ```
 
 `RowDragHandle` from your kit wears the kit's grip; `<DataGrid.RowDragHandle />` is the same control
 with no glyph, for a call site that supplies its own content. It needs no arguments — it finds the
-row it is in.
+row it is in. Each kit registers its own as the optional `core.RowDragHandle` slot, which is what the
+system column renders; a kit that registers none gets the glyph-less control.
 
 **Set `getRowId`.** The order is recorded as row ids, and without one a row falls back to its index,
 which changes the moment it moves. The same requirement [row ordering](/docs/data-grid/row-ordering#getrowid-is-not-optional-here)
@@ -126,7 +146,7 @@ addition.
 <DataGrid
 	features={features}
 	data={data}
-	columns={columns} // the same drag-handle column
+	columns={columns}
 	getRowId={(row) => String(row.id)}
 	virtualization={{ row: { estimateSize: 49, overscan: 10 } }}
 	ordering={{ row: true }}
@@ -226,7 +246,7 @@ dragging with no error. Filter what a row renders, not which rows exist.
 
 | Surface       | Handle                                                      | Writes        | Scope                                                     |
 | ------------- | ----------------------------------------------------------- | ------------- | --------------------------------------------------------- |
-| Row           | `<RowDragHandle />` in a column's `cell.component`          | `rowOrder`    | The rows the body renders, pinned bands included          |
+| Row           | the `__drag__` system column, or `<RowDragHandle />`        | `rowOrder`    | The rows the body renders, pinned bands included          |
 | Column header | `dragHandle` from `<DataGrid.HeaderCell>`, or the component | `columnOrder` | The **visible** leaf columns, in the order they are drawn |
 | Column panel  | the component, inside `<DataGrid.VisibilityItem>`           | `columnOrder` | **Every** listed leaf column, hidden ones included        |
 

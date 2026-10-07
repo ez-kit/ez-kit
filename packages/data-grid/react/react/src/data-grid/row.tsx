@@ -23,12 +23,13 @@ import {
 } from './row-drag-registry'
 import { useDataGridState, useDataGridTable } from './table-context'
 
+import type { DataGridRowDragHandleProps } from './row-drag-handle'
 import type { RowDragValue } from './row-drag-registry'
 import type { ErasedRow, GridFeatures } from '../types'
 import type { PinSide } from './use-pinned-row-offsets'
 import type { RowPropsResolver } from '../use-data-grid'
 import type { Row } from '@tanstack/table-core'
-import type { CSSProperties, KeyboardEvent, ReactElement, ReactNode, Ref } from 'react'
+import type { ComponentType, CSSProperties, KeyboardEvent, ReactElement, ReactNode, Ref } from 'react'
 
 const IS_DEV = process.env.NODE_ENV !== 'production'
 
@@ -108,6 +109,7 @@ function renderRowContent<TRow extends object>(
 	row: Row<GridFeatures, TRow>,
 	cells: DataGridRowRenderArgs<TRow>['cells'],
 	drag: RowDragValue | null,
+	DragHandle: ComponentType<DataGridRowDragHandleProps>,
 ): ReactNode {
 	/**
 	 * `content` behind a cached getter, which is what preserves the skip above now that a static
@@ -122,7 +124,7 @@ function renderRowContent<TRow extends object>(
 		cells,
 		// Built unconditionally — it is one element and renders `null` itself when `drag` is absent,
 		// which keeps this object's shape the same for every row of every grid.
-		dragHandle: drag ? <RowDragHandle rowId={row.id} /> : null,
+		dragHandle: drag ? <DragHandle rowId={row.id} /> : null,
 		isDragging: drag?.isDragging ?? false,
 		get content() {
 			if (!isBuilt) {
@@ -172,7 +174,7 @@ function DataGridRowImpl<TRow extends object = ErasedRow>(
 	{ row, style, 'data-pinned': dataPinned, 'data-virtual': dataVirtual, children }: Omit<DataGridRowProps<TRow>, 'ref'>,
 	ref: Ref<HTMLTableRowElement>,
 ) {
-	const { Tr } = useGridComponents().core
+	const { Tr, RowDragHandle: KitRowDragHandle } = useGridComponents().core
 	const table = useDataGridTable<TRow>()
 	// A crossing back out of the erased world, and the mirror of the one `useDataGrid` makes
 	// when it stores this resolver. `table.grid` is row-erased (see `ErasedRow`), so the stored
@@ -407,7 +409,7 @@ function DataGridRowImpl<TRow extends object = ErasedRow>(
 			{...(canMove ? { 'data-movable': 'true' } : {})}
 			{...(drag?.isDragging ? { [ROW_DRAGGING_ATTR]: 'true' } : {})}
 		>
-			{renderRowContent(children, row, cells, drag)}
+			{renderRowContent(children, row, cells, drag, KitRowDragHandle ?? RowDragHandle)}
 		</Tr>
 	)
 }

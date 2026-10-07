@@ -11,6 +11,7 @@ import { useTable } from '@tanstack/react-table'
 import { table_publishExternalState } from '@tanstack/table-core/static-functions'
 import { useEffect, useRef, useState } from 'react'
 
+import { useDndBundleAdapter } from './data-grid/dnd'
 import { mergeGridOptionLayers, useDataGridOptions, useGridFactoryDefaults } from './data-grid-options-context'
 import { DATA_GRID_DEFAULTS, DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
 import { createGridContextAtom, EMPTY_GRID_CONTEXT, syncGridContext } from './grid-context'
@@ -19,6 +20,7 @@ import { useOrderedData } from './use-ordered-data'
 import { useSafeLayoutEffect } from './utils/use-safe-layout-effect'
 
 import type { CellTypeRegistry } from './cell-types-context'
+import type { DndAdapter } from './data-grid/dnd'
 import type { PaginationLabelModel } from './data-grid/pagination-label'
 import type { DataGridDefaultOptions } from './data-grid-options-context'
 import type { GridContext, GridContextAtom } from './grid-context'
@@ -843,6 +845,11 @@ function isControlledEcho(
  *   Internal — supplied by the kit factory, not by application call sites. Omitted when the
  *   hook runs inside a bound `<DataGrid>` (the uncontrolled form), where the same layer
  *   arrives through `GridFactoryDefaultsProvider` instead.
+ * @param bundleDnd The drag adapter bound by `createDataGrid({ dnd })`, or `null` for none.
+ *   Internal, like `factoryDefaults` and for the same reason: omitted inside a bound `<DataGrid>`,
+ *   where the adapter arrives through `DndBundleProvider`. It decides whether row ordering gets
+ *   its `__drag__` handle column — a column core builds but cannot know to build, since the
+ *   adapter is a React-layer fact.
  *
  * @example
  * const instance = useDataGrid({ data: users, columns, sorting: true })
@@ -851,8 +858,11 @@ function isControlledEcho(
 export function useDataGrid<TFeatures extends TableFeatures, TRow extends object>(
 	instanceConfig: UseDataGridConfig<TFeatures, TRow>,
 	factoryDefaults?: DataGridDefaultOptions<TFeatures, TRow>,
+	bundleDnd?: DndAdapter | null,
 ): DataTable<TFeatures, TRow> {
 	const providerDefaults = useDataGridOptions<TFeatures, TRow>()
+	const contextDnd = useDndBundleAdapter()
+	const canDragRows = (bundleDnd === undefined ? contextDnd : bundleDnd) !== null
 	// The uncontrolled `<DataGrid data columns />` runs this hook itself, so the kit factory has
 	// no argument to bind its defaults to — the bound `DataGrid` publishes them as context instead.
 	const contextFactoryDefaults = useGridFactoryDefaults<TFeatures, TRow>()
@@ -1103,7 +1113,10 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 		// The cast is the generic boundary, not a widening — the same one `createTable` makes:
 		// `ExternalAtoms<TFeatures>` is keyed by a feature set unresolved here, so no concrete
 		// atom set is provably assignable to it.
-		draftAtoms !== undefined ? { atoms: draftAtoms as unknown as ExternalAtoms<TFeatures> } : {},
+		{
+			...(draftAtoms !== undefined ? { atoms: draftAtoms as unknown as ExternalAtoms<TFeatures> } : {}),
+			rowDrag: canDragRows,
+		},
 	)
 
 	// A key the resolver **stops** writing must still be written, as `undefined`. `useTable`

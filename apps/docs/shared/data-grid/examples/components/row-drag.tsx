@@ -10,7 +10,6 @@ import {
 import { createColumns } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 
-import { RowDragHandle } from 'shared/data-grid-dnd/handle'
 import { DataGridDnd } from 'shared/DataGridDnd'
 
 import { EMPLOYEE_DATA } from './_data'
@@ -28,11 +27,10 @@ const features = tableFeatures({
 })
 
 /**
- * The handle goes in a column's own cell renderer — there is no system column for it and no
- * placement option, by design. A consumer already owns this renderer, so this is the ordinary door.
+ * No column for the handle: with row ordering on and a drag adapter bound, the grid puts the grip
+ * in a `__drag__` system column of its own — first in the row, pinned, fixed in width.
  */
 const columns = createColumns<Employee>([
-	{ id: 'drag', header: '', width: 48, align: 'center', cell: { component: () => <RowDragHandle /> } },
 	{ accessorKey: 'name', header: 'Name' },
 	{ accessorKey: 'department', header: 'Department' },
 	{ accessorKey: 'salary', header: 'Salary', align: 'end', cell: { type: 'number' } },

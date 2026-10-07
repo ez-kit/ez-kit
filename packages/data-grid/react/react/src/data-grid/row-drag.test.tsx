@@ -47,9 +47,8 @@ function makeDrivableAdapter(draggingId?: string) {
 }
 
 /**
- * The ordinary placement: a column whose cell renderer is the handle. Nothing mounts a handle by
- * itself — there is no system column and no placement option, by design — so a test that wants one
- * places it exactly as a consumer would.
+ * The handle placed by hand, in a column's cell renderer — the door a grid uses once it turns the
+ * `__drag__` system column off with `ordering.row.column: false`.
  */
 const DRAG_COLUMNS = createColumns<TestRow>([
 	{ id: 'drag', header: '', cell: { component: () => <RowDragHandle /> } },
@@ -149,15 +148,78 @@ describe('the row registers itself with the adapter', () => {
 	})
 })
 
+describe('the __drag__ system column', () => {
+	it('is first in every row, ahead of the user columns', () => {
+		const { adapter } = makeDrivableAdapter()
+		renderDndGrid(adapter)
+
+		const firstRow = document.querySelector('[data-slot="tbody"] [data-slot="tr"]')
+		const firstCell = firstRow?.querySelector('[data-slot="td"]')
+		expect(firstCell).toHaveAttribute('data-system-column', 'drag')
+		expect(firstCell?.querySelector('[data-slot="row-drag-handle"]')).not.toBeNull()
+	})
+
+	it('names its header cell from the message catalogue', () => {
+		const { adapter } = makeDrivableAdapter()
+		renderDndGrid(adapter)
+
+		expect(screen.getByRole('columnheader', { name: 'Row order' })).toBeInTheDocument()
+	})
+
+	it('is absent without an adapter, and with `ordering.row.column: false`', () => {
+		const { DataGrid: Unbound } = createDataGrid({ components: testComponents })
+		const { unmount } = render(
+			<Unbound
+				features={TEST_FEATURES}
+				data={TEST_ROWS}
+				columns={TEST_COLUMNS}
+				ordering={{ row: true }}
+			/>,
+		)
+		expect(document.querySelector('[data-system-column="drag"]')).toBeNull()
+		unmount()
+
+		const { adapter } = makeDrivableAdapter()
+		renderDndGrid(adapter, { ordering: { row: { column: false } } })
+		expect(document.querySelector('[data-system-column="drag"]')).toBeNull()
+	})
+
+	it('renders the kit’s registered `core.RowDragHandle` when there is one', () => {
+		const { adapter } = makeDrivableAdapter()
+		const KitHandle = () => <span data-testid='kit-handle' />
+		const { DataGrid: BoundDataGrid } = createDataGrid({
+			components: { ...testComponents, core: { ...testComponents.core, RowDragHandle: KitHandle } },
+			dnd: adapter,
+		})
+		render(
+			<BoundDataGrid
+				features={TEST_FEATURES}
+				data={TEST_ROWS}
+				columns={TEST_COLUMNS}
+				ordering={{ row: true }}
+			/>,
+		)
+
+		expect(screen.getAllByTestId('kit-handle')).toHaveLength(TEST_ROWS.length)
+	})
+})
+
 describe('the handle', () => {
 	it('renders once per row, named from the message catalogue', () => {
 		const { adapter } = makeDrivableAdapter()
-		renderDndGrid(adapter, { columns: DRAG_COLUMNS })
+		renderDndGrid(adapter)
 
 		// Reached by its accessible name rather than by a class — the name is the contract.
 		const handles = screen.getAllByRole('button', { name: 'Reorder row' })
 		expect(handles).toHaveLength(TEST_ROWS.length)
 		expect(handles[0]).toHaveAttribute('data-slot', 'row-drag-handle')
+	})
+
+	it('renders once per row when placed by hand with the system column off', () => {
+		const { adapter } = makeDrivableAdapter()
+		renderDndGrid(adapter, { columns: DRAG_COLUMNS, ordering: { row: { column: false } } })
+
+		expect(screen.getAllByRole('button', { name: 'Reorder row' })).toHaveLength(TEST_ROWS.length)
 	})
 
 	it('renders nothing for a row that cannot be dragged', () => {
@@ -189,7 +251,7 @@ describe('the handle', () => {
 		 * it is absent, which is what makes authoring it here sufficient.
 		 */
 		const { adapter } = makeDrivableAdapter()
-		renderDndGrid(adapter, { columns: DRAG_COLUMNS, messages: { ordering: { draggable: 'перетаскиваемый' } } })
+		renderDndGrid(adapter, { messages: { ordering: { draggable: 'перетаскиваемый' } } })
 
 		const handles = screen.getAllByRole('button', { name: 'Reorder row' })
 		expect(handles).toHaveLength(TEST_ROWS.length)
@@ -202,7 +264,7 @@ describe('the handle', () => {
 			{ id: 'drag', header: '', cell: { component: () => <RowDragHandle aria-label='Move this order' /> } },
 			...TEST_COLUMNS,
 		] as never)
-		renderDndGrid(adapter, { columns })
+		renderDndGrid(adapter, { columns, ordering: { row: { column: false } } })
 
 		expect(screen.getAllByRole('button', { name: 'Move this order' })).toHaveLength(TEST_ROWS.length)
 		expect(screen.queryByRole('button', { name: 'Reorder row' })).toBeNull()
@@ -224,7 +286,7 @@ describe('the row’s render arguments', () => {
 				features={TEST_FEATURES}
 				data={TEST_ROWS}
 				columns={TEST_COLUMNS}
-				ordering={{ row: true }}
+				ordering={{ row: { column: false } }}
 			>
 				<DataGrid.Table>
 					<DataGrid.Body>

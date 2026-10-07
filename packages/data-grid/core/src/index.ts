@@ -81,7 +81,13 @@ export type {
 } from './messages'
 
 // System column IDs
-export { ACTIONS_COLUMN_ID, EXPAND_COLUMN_ID, GROUP_COLUMN_ID, SELECTION_COLUMN_ID } from './system-columns'
+export {
+	ACTIONS_COLUMN_ID,
+	DRAG_COLUMN_ID,
+	EXPAND_COLUMN_ID,
+	GROUP_COLUMN_ID,
+	SELECTION_COLUMN_ID,
+} from './system-columns'
 
 // One custom action entry — contributed per row (`rowActions.actions`) or for the whole
 // selection (`selection.bar.actions`), and rendered by the kit either way.

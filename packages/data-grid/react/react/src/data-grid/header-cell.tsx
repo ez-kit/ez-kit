@@ -459,7 +459,9 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 				? table.grid.messages.expanding.columnHeader
 				: meta?.systemColumnType === SystemColumnType.Actions
 					? table.grid.messages.rowActions.columnHeader
-					: undefined
+					: meta?.systemColumnType === SystemColumnType.Drag
+						? table.grid.messages.ordering.columnHeader
+						: undefined
 	const label = systemColumnName === undefined ? rendered : <VisuallyHidden>{systemColumnName}</VisuallyHidden>
 
 	const sortIndicator = (

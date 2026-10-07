@@ -402,7 +402,9 @@ test.describe('keyboard sensors', () => {
 		test.skip(kit !== 'shadcn', "heroui brings React Aria's own focus manager, not the package's")
 		await open(grid, page)
 
-		const dragCell = page.locator('[data-slot="tbody"] [data-slot="tr"][data-row-id="1"] [data-slot="td"]').nth(1)
+		const dragCell = page.locator(
+			'[data-slot="tbody"] [data-slot="tr"][data-row-id="1"] [data-slot="td"][data-system-column="drag"]',
+		)
 		await dragCell.evaluate((element: HTMLElement) => {
 			element.tabIndex = 0
 			element.focus()

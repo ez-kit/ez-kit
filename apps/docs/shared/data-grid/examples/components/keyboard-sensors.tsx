@@ -13,7 +13,6 @@ import {
 } from '@ez-kit/data-grid-core/features'
 import { createColumns } from '@ez-kit/data-grid-react'
 
-import { RowDragHandle } from 'shared/data-grid-dnd/handle'
 import { DataGridDnd } from 'shared/DataGridDnd'
 
 import { EMPLOYEE_DATA } from './_data'
@@ -38,7 +37,6 @@ const features = tableFeatures({
 })
 
 const columns = createColumns<Employee>([
-	{ id: 'drag', header: '', width: 48, align: 'center', cell: { component: () => <RowDragHandle /> } },
 	{ accessorKey: 'name', header: 'Name' },
 	{ accessorKey: 'department', header: 'Department' },
 	{ accessorKey: 'salary', header: 'Salary', align: 'end', cell: { type: 'number' } },

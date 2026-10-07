@@ -11,7 +11,6 @@ import {
 import { createColumns } from '@ez-kit/data-grid-react'
 import { useMemo } from 'react'
 
-import { RowDragHandle } from 'shared/data-grid-dnd/handle'
 import { DataGridDnd } from 'shared/DataGridDnd'
 
 const features = tableFeatures({
@@ -27,7 +26,6 @@ const VIRTUAL_ROW_COUNT = 10_000
 type Task = { id: number; name: string; owner: string }
 
 const columns = createColumns<Task>([
-	{ id: 'drag', header: '', width: 48, align: 'center', cell: { component: () => <RowDragHandle /> } },
 	{ accessorKey: 'id', header: '#', width: 80 },
 	{ accessorKey: 'name', header: 'Task' },
 	{ accessorKey: 'owner', header: 'Owner' },

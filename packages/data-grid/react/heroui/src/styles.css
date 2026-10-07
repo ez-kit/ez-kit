@@ -657,3 +657,35 @@ tr[data-group-row='true'] {
 	position: relative;
 	z-index: 2;
 }
+
+/*
+ * The row and column drag handles: a quiet grip, not a button.
+ *
+ * Both reach the DOM through `core.Button`, whose default here is HeroUI's filled primary — a
+ * full-size pill sitting in every row. A grip is furniture, so it drops to an icon-sized ghost by
+ * overriding the button's own tokens rather than its properties: `--button-bg*` is what HeroUI's
+ * hover and press states read, so the states keep working and only the colours change. The press
+ * scale goes too — the drag library owns the transform from that moment on.
+ */
+button[data-slot='row-drag-handle'],
+button[data-slot='column-drag-handle'] {
+	--button-bg: transparent;
+	--button-bg-hover: var(--default);
+	--button-bg-pressed: var(--default);
+	--button-fg: var(--muted);
+	width: 1.5rem;
+	min-width: 1.5rem;
+	height: 1.5rem;
+	padding: 0;
+	border-radius: 0.375rem;
+}
+
+button[data-slot='row-drag-handle']:is(:hover, [data-hovered='true']),
+button[data-slot='column-drag-handle']:is(:hover, [data-hovered='true']) {
+	--button-fg: var(--default-foreground);
+}
+
+button[data-slot='row-drag-handle']:is(:active, [data-pressed='true']),
+button[data-slot='column-drag-handle']:is(:active, [data-pressed='true']) {
+	transform: none;
+}

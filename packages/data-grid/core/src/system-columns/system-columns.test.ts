@@ -6,6 +6,7 @@ import {
 	buildColumnList,
 	extractPinningState,
 	ACTIONS_COLUMN_ID,
+	DRAG_COLUMN_ID,
 	EXPAND_COLUMN_ID,
 	GROUP_COLUMN_ID,
 	SELECTION_COLUMN_ID,
@@ -23,6 +24,7 @@ const USER_COL: MappedColumnDef<Row> = { id: 'name', header: 'Name', meta: {} }
 describe('buildColumnList', () => {
 	it('returns only user columns when no system columns needed', () => {
 		const cols = buildColumnList([USER_COL], {
+			rowDrag: false,
 			selection: false,
 			expanding: false,
 			editing: false,
@@ -39,6 +41,7 @@ describe('buildColumnList', () => {
 
 	it('prepends __selection__ when selection is true', () => {
 		const cols = buildColumnList([USER_COL], {
+			rowDrag: false,
 			selection: true,
 			expanding: false,
 			editing: false,
@@ -55,6 +58,7 @@ describe('buildColumnList', () => {
 
 	it('prepends __expand__ after __selection__', () => {
 		const cols = buildColumnList([USER_COL], {
+			rowDrag: false,
 			selection: true,
 			expanding: true,
 			editing: false,
@@ -72,6 +76,7 @@ describe('buildColumnList', () => {
 
 	it('appends __actions__ when editing or deleting', () => {
 		const cols = buildColumnList([USER_COL], {
+			rowDrag: false,
 			selection: false,
 			expanding: false,
 			editing: true,
@@ -87,6 +92,7 @@ describe('buildColumnList', () => {
 
 	it('actions column has pinning: { side: "end" } in meta', () => {
 		const cols = buildColumnList([USER_COL], {
+			rowDrag: false,
 			selection: false,
 			expanding: false,
 			editing: false,
@@ -103,6 +109,7 @@ describe('buildColumnList', () => {
 
 	it('appends __actions__ when only row pinning is enabled', () => {
 		const cols = buildColumnList([USER_COL], {
+			rowDrag: false,
 			selection: false,
 			expanding: false,
 			editing: false,
@@ -119,6 +126,7 @@ describe('buildColumnList', () => {
 	it('actions column width grows with the number of inline actions', () => {
 		const sizeOf = (opts: { editing: boolean; deleting: boolean; pinning: boolean }) =>
 			buildColumnList([USER_COL], {
+				rowDrag: false,
 				selection: false,
 				expanding: false,
 				ordering: false,
@@ -140,6 +148,7 @@ describe('buildColumnList', () => {
 
 	it('menu placement collapses the actions column to a single trigger', () => {
 		const inline = buildColumnList([USER_COL], {
+			rowDrag: false,
 			selection: false,
 			expanding: false,
 			editing: false,
@@ -152,6 +161,7 @@ describe('buildColumnList', () => {
 			rowActionsPlacement: RowActionsPlacement.Inline,
 		}).find((c) => c.id === ACTIONS_COLUMN_ID)?.size
 		const menu = buildColumnList([USER_COL], {
+			rowDrag: false,
 			selection: false,
 			expanding: false,
 			editing: false,
@@ -169,6 +179,7 @@ describe('buildColumnList', () => {
 
 	it('injects the actions column for a grid whose only action is a custom one', () => {
 		const cols = buildColumnList([USER_COL], {
+			rowDrag: false,
 			selection: false,
 			expanding: false,
 			editing: false,
@@ -185,6 +196,7 @@ describe('buildColumnList', () => {
 
 	it('reserves the overflow trigger width for custom actions', () => {
 		const base = {
+			rowDrag: false,
 			selection: false,
 			expanding: false,
 			editing: false,
@@ -204,6 +216,7 @@ describe('buildColumnList', () => {
 
 	it('full order: [selection, expand, user..., actions]', () => {
 		const cols = buildColumnList([USER_COL], {
+			rowDrag: false,
 			selection: true,
 			expanding: true,
 			editing: true,
@@ -220,6 +233,7 @@ describe('buildColumnList', () => {
 
 	it('inserts __group__ after __expand__ and before the user columns', () => {
 		const cols = buildColumnList([USER_COL], {
+			rowDrag: false,
 			selection: true,
 			expanding: true,
 			editing: true,
@@ -241,6 +255,7 @@ describe('buildColumnList', () => {
 
 	it('omits __group__ when grouping is off', () => {
 		const cols = buildColumnList([USER_COL], {
+			rowDrag: false,
 			selection: false,
 			expanding: false,
 			editing: false,
@@ -256,6 +271,7 @@ describe('buildColumnList', () => {
 
 	it('__group__ is wider than the single-control system columns and pins to the start edge', () => {
 		const cols = buildColumnList([USER_COL], {
+			rowDrag: false,
 			selection: true,
 			expanding: false,
 			editing: false,
@@ -275,6 +291,7 @@ describe('buildColumnList', () => {
 
 	it('__group__ honours its SystemColumnDef like every other system column', () => {
 		const cols = buildColumnList([USER_COL], {
+			rowDrag: false,
 			selection: false,
 			expanding: false,
 			editing: false,
@@ -298,6 +315,49 @@ describe('buildColumnList', () => {
 		expect(group?.meta?.pinning).toBe(false)
 		expect(group?.meta?.align).toEqual({ header: 'center', cell: 'center', footer: 'center' })
 		expect(group?.meta?.cellClassName).toBe('group-cell')
+	})
+})
+
+describe('buildColumnList — the __drag__ column', () => {
+	const NONE = {
+		rowDrag: false,
+		selection: false,
+		expanding: false,
+		editing: false,
+		deleting: false,
+		pinning: false,
+		ordering: false,
+		grouping: false,
+		creating: false,
+		customRowActions: false,
+	}
+
+	it('omits __drag__ when rowDrag is off', () => {
+		const cols = buildColumnList([USER_COL], NONE)
+		expect(cols.map((c) => c.id)).toEqual(['name'])
+	})
+
+	it('puts __drag__ first, ahead of __selection__ and __expand__', () => {
+		const cols = buildColumnList([USER_COL], { ...NONE, rowDrag: true, selection: true, expanding: true })
+		expect(cols.map((c) => c.id)).toEqual([DRAG_COLUMN_ID, SELECTION_COLUMN_ID, EXPAND_COLUMN_ID, 'name'])
+	})
+
+	it('is a narrow system column pinned at the start edge', () => {
+		const [drag] = buildColumnList([USER_COL], { ...NONE, rowDrag: true })
+		expect(drag?.meta).toMatchObject({ isSystemColumn: true, systemColumnType: 'drag', pinning: { side: 'start' } })
+		expect(drag?.size).toBe(44)
+		expect(drag?.enableSorting).toBe(false)
+	})
+
+	it('honours its SystemColumnDef like every other system column', () => {
+		const [drag] = buildColumnList([USER_COL], {
+			...NONE,
+			rowDrag: true,
+			rowDragColumn: { width: 32, pinning: false, align: 'center' },
+		})
+		expect(drag?.size).toBe(32)
+		expect(drag?.meta?.pinning).toBe(false)
+		expect(drag?.meta?.align).toEqual({ cell: 'center', header: 'center', footer: 'center' })
 	})
 })
 

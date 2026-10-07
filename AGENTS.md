@@ -268,10 +268,20 @@ and move on.
   `<DataGrid.Table />`, and SSR output stops matching the client. The composition has none of
   that, which is why it won.
 
-- **The three system columns are configured like columns.** `selection.column`,
-  `expanding.column` and `rowActions.column` take `SystemColumnDef` — `header`, `width`,
-  `pinning`, `align`, `headerClassName`, `cellClassName`, in the column vocabulary and with the
-  column scalar-or-object forms. What the column _does_ stays on the feature.
+- **The system columns are configured like columns.** `selection.column`,
+  `expanding.column`, `grouping.column`, `rowActions.column` and `ordering.row.column` take
+  `SystemColumnDef` — `header`, `width`, `pinning`, `align`, `headerClassName`, `cellClassName`, in
+  the column vocabulary and with the column scalar-or-object forms. What the column _does_ stays on
+  the feature.
+- **The row drag handle has a system column, `__drag__`.** It was once deliberately left to a
+  consumer-written column, and that put the grip in an ordinary `minmax(size, 1fr)` track: it took a
+  share of the free width like any data column, so a 48 px column rendered several times that and
+  the centred grip floated far from the row's edge. A system column gets a fixed track. It is
+  injected first, pinned at the start, only when `ordering.row` is on **and** the bundle has a drag
+  adapter — core cannot see the adapter, so `useDataGrid` passes it down as
+  `createTableOptions(config, { rowDrag })`. `ordering.row.column: false` hands placement back to the
+  consumer. The cell renders the kit's `core.RowDragHandle`, an optional-tier slot whose fallback —
+  the shared, glyph-less handle — is correct, which is what lets it sit outside `FullGridComponents`.
 - **New UI is composed from `core` primitives; the component contract grows only by generic
   ones.** A feature that needs a button, a menu, a dialog or a chip reaches for the `core` slot —
   the way the row-pin menu uses `core.Menu`, and every number field uses `core.NumberInput`, which

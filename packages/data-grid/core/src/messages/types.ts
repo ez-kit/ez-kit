@@ -254,6 +254,13 @@ export type GridMessages = {
 		/** Accessible name of a column header's drag handle. Same standing as {@link dragRow}. */
 		dragColumn: string
 		/**
+		 * Accessible name of the row drag-handle column's header cell, rendered visually hidden.
+		 *
+		 * The column carries grips and no heading, so the `<th>` has no text of its own — see
+		 * {@link GridMessages.selection.columnHeader}.
+		 */
+		columnHeader: string
+		/**
 		 * What a screen reader calls a drag handle — the `aria-roledescription` of the element,
 		 * which replaces the role a user would otherwise hear ("button").
 		 *

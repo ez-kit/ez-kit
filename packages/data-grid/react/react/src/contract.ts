@@ -138,6 +138,11 @@ export const FEATURE_OPTIONAL_COMPONENTS = {
 		// those stylesheets aim at.
 		'HeaderMain',
 		'HeaderExtras',
+		// The grip the `__drag__` column renders. Optional because the shared handle is a correct
+		// fallback — a labelled button that drags — and only the glyph is the kit's. It names the
+		// one control rather than a generic `Icon`: a kit draws a grip inside its own handle
+		// already, so registering that component is the whole cost.
+		'RowDragHandle',
 	] as const,
 	[GridFeature.Pagination]: [] as const,
 	[GridFeature.Sorting]: [] as const,

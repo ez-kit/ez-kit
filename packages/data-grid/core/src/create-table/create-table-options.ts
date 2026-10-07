@@ -521,7 +521,16 @@ function named(option: string, handler: StateChangeHandler | undefined): Record<
  */
 export function createTableOptions<TFeatures extends TableFeatures, TRow extends object>(
 	config: TableConfig<TFeatures, TRow>,
-	externals?: { atoms?: ExternalAtoms<TFeatures> },
+	externals?: {
+		atoms?: ExternalAtoms<TFeatures>
+		/**
+		 * Whether this grid can drag rows — a drag adapter is bound. Core cannot see the adapter,
+		 * which lives in the React layer, so that layer says so here. With row ordering on it puts
+		 * the `__drag__` handle column in; absent, there is none, which is right for a table built
+		 * outside React, where nothing could render the handle anyway.
+		 */
+		rowDrag?: boolean
+	},
 ) {
 	/**
 	 * `{ atoms }` when the application owns any slice, `{}` when it owns none.
@@ -943,6 +952,8 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 	const expandingColumn = featureConfig(config.expanding)?.column as SystemColumnDef<TableFeatures> | undefined
 	const groupingColumn = groupingCfg?.column as SystemColumnDef<TableFeatures> | undefined
 	const rowActionsColumn = rowActionsCfg?.column as SystemColumnDef<TableFeatures> | undefined
+	const rowDragColumnDef = rowOrderingCfg?.column
+	const rowDragColumn = rowDragColumnDef === false ? undefined : rowDragColumnDef
 
 	// Where an inline draft row puts its save / cancel pair. It shares the actions cell with the
 	// row actions — but only when that column is there anyway, or when the draft row itself is
@@ -958,6 +969,7 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 	const creatingInActionsColumn = hasPinRowCreating || (hasInlineCreating && hasOtherRowActions)
 
 	const allColumns = buildColumnList(mappedUserColumns, {
+		rowDrag: externals?.rowDrag === true && rowOrderingCfg !== undefined && rowDragColumnDef !== false,
 		selection: hasSelection,
 		expanding: hasExpanding,
 		grouping: hasGrouping,
@@ -968,6 +980,7 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 		creating: creatingInActionsColumn,
 		rowActionsPlacement,
 		customRowActions: rowActionsEnabled && customRowActions !== undefined,
+		...(rowDragColumn !== undefined ? { rowDragColumn } : {}),
 		...(selectionColumn !== undefined ? { selectionColumn } : {}),
 		...(expandingColumn !== undefined ? { expandingColumn } : {}),
 		...(groupingColumn !== undefined ? { groupingColumn } : {}),

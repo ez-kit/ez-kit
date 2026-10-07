@@ -519,3 +519,27 @@ tr :is([data-system-column='group'], [data-system-column='expand']) + td {
 	position: relative;
 	z-index: 2;
 }
+
+/*
+ * The row and column drag handles: a quiet grip, not a button.
+ *
+ * Both reach the DOM through `core.Button`, whose default here is the filled primary variant — a
+ * full-size call to action sitting in every row. A grip is furniture, so it drops to an icon-sized
+ * ghost: no fill at rest, muted glyph, and the hover surface the kit's ghost variant uses. The
+ * focus ring stays the button's own. Selected by slot, because the shared handle authors no class.
+ */
+button[data-slot='row-drag-handle'],
+button[data-slot='column-drag-handle'] {
+	width: 1.5rem;
+	height: 1.5rem;
+	padding: 0;
+	border-radius: var(--radius-sm);
+	background-color: transparent;
+	color: var(--muted-foreground);
+}
+
+button[data-slot='row-drag-handle']:hover,
+button[data-slot='column-drag-handle']:hover {
+	background-color: var(--muted);
+	color: var(--foreground);
+}

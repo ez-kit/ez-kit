@@ -1311,6 +1311,8 @@ export const SystemColumnType = {
 	Actions: 'actions',
 	/** The grouping column — a group row's label, its descendant count and its chevron. */
 	Group: 'group',
+	/** The row drag-handle column — the grip that starts a row drag. */
+	Drag: 'drag',
 } as const
 
 export type SystemColumnType = (typeof SystemColumnType)[keyof typeof SystemColumnType]
@@ -1331,7 +1333,8 @@ export type SystemColumnType = (typeof SystemColumnType)[keyof typeof SystemColu
  * Labelling the actions column, widening it, or unpinning it on a narrow grid had no route
  * through the public API.
  *
- * Reached as `selection.column`, `expanding.column` and `rowActions.column`.
+ * Reached as `selection.column`, `expanding.column`, `rowActions.column` and
+ * `ordering.row.column`.
  */
 export type SystemColumnDef<TFeatures extends TableFeatures, TRow extends object = object, TNode = unknown> = {
 	/**
@@ -1344,13 +1347,13 @@ export type SystemColumnDef<TFeatures extends TableFeatures, TRow extends object
 	 */
 	header?: string | ColumnRenderer<HeaderContext<TFeatures, TRow, unknown>, TNode>
 	/**
-	 * Width in pixels. Defaults: `44` for selection and expand, and for actions a width
-	 * derived from how many buttons the widest row state renders.
+	 * Width in pixels. Defaults: `44` for selection, expand and the row drag handle, and for
+	 * actions a width derived from how many buttons the widest row state renders.
 	 */
 	width?: number | ColumnWidthDef
 	/**
 	 * Which edge the column sticks to, or `false` for none. Defaults: `'start'` for
-	 * selection and expand, `'end'` for actions.
+	 * selection, expand and the row drag handle, `'end'` for actions.
 	 *
 	 * Logical, like a normal column's `pinning` and for the same reason — see
 	 * {@link ColumnPinSide}.

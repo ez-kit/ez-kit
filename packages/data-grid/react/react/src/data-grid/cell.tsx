@@ -1,6 +1,7 @@
 import {
 	ACTIONS_COLUMN_ID,
 	CommitStatus,
+	DRAG_COLUMN_ID,
 	EditingMode,
 	EXPAND_COLUMN_ID,
 	GROUP_COLUMN_ID,
@@ -18,6 +19,7 @@ import { getAlignAttrs } from './align-attrs'
 import { CellProvider } from './composition-context'
 import { flexRender } from './flex-render'
 import { useCellNavigationProps } from './keyboard-navigation'
+import { RowDragHandle } from './row-drag-handle'
 import { useDataGridTable, useDataGridState } from './table-context'
 import { columnNameOf, VisuallyHiddenLabel } from './visually-hidden'
 
@@ -128,7 +130,7 @@ const FOCUSABLE_SELECTOR = 'input, select, textarea, button, [contenteditable="t
  * Renders a single table body cell.
  *
  * Dispatches to:
- * - {@link SystemCell} — for the three system columns: selection, expand, actions
+ * - {@link SystemCell} — for the system columns: drag, selection, expand, group, actions
  *   (row pinning has no column of its own — its menu lives in the actions one)
  * - {@link BodyDataCell} — for regular data columns (with narrow editing subscription)
  *
@@ -173,6 +175,17 @@ function SystemCell<TRow extends object>({ cell, row, children }: DataGridCellPr
 	const chrome = useCellChrome(cell)
 	const { Td } = useGridComponents().core
 
+	if (columnId === DRAG_COLUMN_ID) {
+		return (
+			<DragCell
+				cell={cell}
+				row={row}
+				chrome={chrome}
+			>
+				{children}
+			</DragCell>
+		)
+	}
 	if (columnId === SELECTION_COLUMN_ID) {
 		return (
 			<SelectionCell
@@ -274,6 +287,32 @@ function SelectionCell<TRow extends object>({ cell, row, chrome, children }: Sys
 					aria-label={messages.selection.selectRow}
 				/>,
 			)}
+		</Td>
+	)
+}
+
+/**
+ * The `__drag__` cell — the row's grip.
+ *
+ * The kit's registered `core.RowDragHandle` when there is one, so the grip wears the kit's glyph;
+ * the shared handle otherwise. Either renders nothing for a row that cannot be dragged — a group
+ * row, or any row while the grid has no adapter — so the cell is simply empty there.
+ */
+function DragCell<TRow extends object>({ cell, row, chrome, children }: SystemSubProps<TRow>) {
+	const { Td, RowDragHandle: KitRowDragHandle } = useGridComponents().core
+	const Handle = KitRowDragHandle ?? RowDragHandle
+	return (
+		<Td
+			{...chrome.navigation}
+			data-slot='td'
+			style={chrome.pinVars}
+			pinned={chrome.pinned}
+			{...chrome.pinnedAttrs}
+			{...chrome.alignAttrs}
+			{...chrome.classNameAttr}
+			data-system-column='drag'
+		>
+			{renderCellContent(children, cell, row, <Handle rowId={row.id} />)}
 		</Td>
 	)
 }

@@ -729,6 +729,21 @@ export type RowOrderingConfig = FeatureToggle & {
 	 * rows and cannot name the order of the rest.
 	 */
 	onChange?: (move: RowMove) => void
+	/**
+	 * Presentation of the auto-injected `__drag__` column — the drag handle's own column, first in
+	 * the row, pinned at the start edge and fixed in width. See {@link SystemColumnDef}.
+	 *
+	 * The column exists only when the grid can actually drag: row ordering on **and** a drag
+	 * adapter bound with `createDataGrid({ dnd })`. Without an adapter rows move through the
+	 * actions menu, and an empty column would only take width.
+	 *
+	 * `false` leaves the column out, for a grid that places `<DataGrid.RowDragHandle />` itself —
+	 * in a column's `cell.component`, or through a row's render function.
+	 *
+	 * Row-erased rather than generic over the row like its siblings on `selection` / `expanding`:
+	 * the column renders no row value, and `ordering` is not generic.
+	 */
+	column?: false | SystemColumnDef<TableFeatures>
 }
 
 /**

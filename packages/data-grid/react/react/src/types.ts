@@ -1,3 +1,4 @@
+import type { DataGridRowDragHandleProps } from './data-grid/row-drag-handle'
 import type { GridContextAtom } from './grid-context'
 import type { GridMenuItem, GridMenuProps } from './menu'
 import type { ResolvedGridOptions } from './resolved-options'
@@ -1045,6 +1046,13 @@ export type GridComponentRegistry = {
 	Modal?: ComponentType<ModalProps>
 	/** Optional — see {@link TooltipProps}. Falls back to rendering `children` alone. */
 	Tooltip?: ComponentType<TooltipProps>
+	/**
+	 * Optional — the row drag handle the `__drag__` system column and a row's `dragHandle` render
+	 * arg place. A kit registers its own `<DataGrid.RowDragHandle />` wearing its grip glyph; the
+	 * fallback is the shared handle itself — a working, labelled button with no glyph, since this
+	 * package draws none.
+	 */
+	RowDragHandle?: ComponentType<DataGridRowDragHandleProps>
 	// composite
 	Toolbar?: ComponentType<ToolbarProps>
 	GlobalFilterInput?: ComponentType<GlobalFilterInputProps>

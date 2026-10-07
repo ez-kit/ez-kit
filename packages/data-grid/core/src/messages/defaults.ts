@@ -93,6 +93,7 @@ export const defaultMessages: GridMessages = {
 	ordering: {
 		dragRow: 'Reorder row',
 		dragColumn: 'Reorder column',
+		columnHeader: 'Row order',
 		draggable: 'draggable',
 		instructions:
 			'Press Space to pick this item up, then the arrow keys to move it. Press Space again to drop it, or Escape to cancel.',

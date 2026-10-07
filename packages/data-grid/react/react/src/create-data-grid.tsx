@@ -299,6 +299,9 @@ export function createDataGrid<
 		return useDataGrid<TConfigFeatures, TRow>(
 			config,
 			factoryDefaults as DataGridDefaultOptions<TConfigFeatures, TRow> | undefined,
+			// The controlled form runs this in the consumer's tree, outside `DndBundleProvider`, so
+			// the adapter is handed over the way the defaults are.
+			dnd ?? null,
 		)
 	}
 
