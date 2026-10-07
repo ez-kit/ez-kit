@@ -728,7 +728,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.ColumnsOrdering,
 		optionTables: [
-			{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 2 },
+			{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 4 },
 			{ heading: 'Column options', roots: [GRID_TYPE.ColumnDef], expectedCount: 1 },
 		],
 		nonOptionTables: [],
@@ -740,12 +740,13 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 	{
 		/*
-		 * No option table, and that is the page being consistent rather than thin: drag adds no option
-		 * of its own. It is switched on by `createDataGrid({ dnd: adapter })`, a field of
-		 * `CreateDataGridOptions` — and every field of that type is documented in prose and a code
-		 * fence, never a table (`keyboardNavigation`, its sibling, has exactly one line in
-		 * `accessibility.mdx`). The behaviour a reader configures is `ordering`, which the two ordering
-		 * pages already table.
+		 * No option table, and that is the page being consistent rather than thin. Drag is switched on
+		 * by `createDataGrid({ dnd: adapter })`, a field of `CreateDataGridOptions` — and every field
+		 * of that type is documented in prose and a code fence, never a table (`keyboardNavigation`,
+		 * its sibling, has exactly one line in `accessibility.mdx`). The behaviour a reader configures
+		 * is `ordering`, which the two ordering pages already table — including the one option drag
+		 * does add, `ordering.column.visibilityMenu.drag`, tabled on `columns/ordering.mdx` beside the
+		 * flag it overrides.
 		 */
 		page: DocPage.DragAndDrop,
 		optionTables: [],

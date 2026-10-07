@@ -32,11 +32,17 @@ import type { Column } from '@tanstack/table-core'
  * places in the layout and neither hide nor move. Beyond that the list widens under
  * `ordering.column.visibilityMenu`, because a menu that offers moves has to show every column the
  * order contains — a list that skipped some of them could not be read as the order.
+ *
+ * It reads `visibilityMenu.enabled` and **not** which of the two affordances resolved on. The wide
+ * list follows from the author asking for an ordering panel, which is one question; `drag` and
+ * `moveControls` answer a different one. Keeping it that way is also what lets this stay a plain
+ * function: resolving an affordance needs `useDndEnabled()`, and all three readers would then have
+ * to agree on a hook's value rather than on a table's.
  */
 export function getVisibilityPanelColumns<TRow extends object>(
 	table: DataTable<GridFeatures, TRow>,
 ): Column<GridFeatures, TRow>[] {
-	const withOrdering = table.grid.ordering.visibilityMenu
+	const withOrdering = table.grid.ordering.visibilityMenu.enabled
 
 	return table
 		.getAllLeafColumns()

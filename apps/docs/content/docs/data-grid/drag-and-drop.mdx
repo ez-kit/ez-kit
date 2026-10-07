@@ -77,7 +77,8 @@ silently rather than at install.
 
 ### Then, either way
 
-Turn the axis on as you always would — drag adds no option of its own:
+Turn the axis on as you always would. The two handles you place need no option of their own — a
+row drags iff you rendered a row handle, a header drags iff you rendered a header one:
 
 ```tsx
 <DataGrid
@@ -87,6 +88,10 @@ Turn the axis on as you always would — drag adds no option of its own:
 	ordering={{ row: true, column: { visibilityMenu: true } }}
 />
 ```
+
+The column panel is the exception, because its rows are a list the kit maps rather than markup you
+write — so which affordance it carries is the one thing drag does put in the config. See
+[The column panel](#the-column-panel).
 
 ## Rows
 
@@ -202,6 +207,15 @@ The panel is the **same axis** as the header — one `columnOrder` — and diffe
 matters: it lists the hidden columns, so a hidden column can be dragged there and has no header cell
 to drag at all. In the example `joinedAt` starts hidden; move it in the panel and the visible order
 rearranges around it.
+
+**This is the one surface whose affordance is a config question, and the arrows step aside for the
+drag.** A row handle and a header handle are there iff a call site wrote them, so for those two
+surfaces the JSX already is the switch; a kit's panel maps its rows, so nobody writes that markup.
+With an adapter bound, `visibilityMenu: true` therefore means the grip and not the
+[one-step pair](/docs/data-grid/columns/ordering#in-the-column-panel) — the pair moves a column by
+the same rules and the drag is keyboard-operable too, so offering both is the same move twice.
+`{ moveControls: true }` asks for both and `{ drag: false }` keeps the pair alone, in a grid whose
+rows and headers still drag.
 
 A kit rendering its own panel composes the row from `<DataGrid.VisibilityItem>`. One obligation
 comes with that: render one item per column the panel lists, all of them. Filtering the list — a

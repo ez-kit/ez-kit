@@ -124,32 +124,10 @@ function ColumnPanel({ columns, messages }: { columns: VisibilityColumnItem[]; m
 										<span className='truncate'>{col.label}</span>
 									</Checkbox.Content>
 								</Checkbox>
-								<Button
-									aria-label={`${messages.visibility.moveStart}: ${col.label}`}
-									data-slot='column-visibility-move-start'
-									isDisabled={col.ordering?.canMoveStart !== true}
-									isIconOnly
-									size='sm'
-									variant='ghost'
-									onPress={() => {
-										col.ordering?.onMoveStart()
-									}}
-								>
-									<ArrowUp className='size-4' />
-								</Button>
-								<Button
-									aria-label={`${messages.visibility.moveEnd}: ${col.label}`}
-									data-slot='column-visibility-move-end'
-									isDisabled={col.ordering?.canMoveEnd !== true}
-									isIconOnly
-									size='sm'
-									variant='ghost'
-									onPress={() => {
-										col.ordering?.onMoveEnd()
-									}}
-								>
-									<ArrowDown className='size-4' />
-								</Button>
+								<MoveControls
+									column={col}
+									labels={{ start: messages.visibility.moveStart, end: messages.visibility.moveEnd }}
+								/>
 							</DataGridVisibilityItem>
 						))}
 					</div>
@@ -159,9 +137,56 @@ function ColumnPanel({ columns, messages }: { columns: VisibilityColumnItem[]; m
 	)
 }
 
-export function VisibilityMenu({ columns }: VisibilityMenuProps) {
+/**
+ * The move pair, drawn as arrows along the list rather than along the table — the same component
+ * the shadcn kit draws, for the same reasons, and gated the same way.
+ *
+ * **Absent, not disabled, when the item carries no `ordering`.** It used to render unconditionally
+ * with `col.ordering?.canMoveStart !== true` standing in for both "this column is at the end" and
+ * "this panel has no moves", which was indistinguishable while a panel always had them. A
+ * drag-only panel has none, and two permanently dead buttons beside every grip is not what
+ * "the drag instead of the arrows" means.
+ */
+function MoveControls({ column, labels }: { column: VisibilityColumnItem; labels: { start: string; end: string } }) {
+	const ordering = column.ordering
+	if (!ordering) return null
+	return (
+		<>
+			<Button
+				aria-label={`${labels.start}: ${column.label}`}
+				data-slot='column-visibility-move-start'
+				isDisabled={!ordering.canMoveStart}
+				isIconOnly
+				size='sm'
+				variant='ghost'
+				onPress={ordering.onMoveStart}
+			>
+				<ArrowUp className='size-4' />
+			</Button>
+			<Button
+				aria-label={`${labels.end}: ${column.label}`}
+				data-slot='column-visibility-move-end'
+				isDisabled={!ordering.canMoveEnd}
+				isIconOnly
+				size='sm'
+				variant='ghost'
+				onPress={ordering.onMoveEnd}
+			>
+				<ArrowDown className='size-4' />
+			</Button>
+		</>
+	)
+}
+
+export function VisibilityMenu({ columns, isColumnPanel }: VisibilityMenuProps) {
 	const messages = useGridMessages()
-	if (columns.some((col) => col.ordering !== undefined)) {
+	/*
+	 * Branched on the panel, not on `col.ordering`. The two are different questions once the
+	 * panel's affordances are independent: a draggable panel carries no move pair, and reading
+	 * the shape off the pair sent it back down the list-box path below — which renders no
+	 * `<DataGridVisibilityItem>`, so the drag disappeared with the arrows.
+	 */
+	if (isColumnPanel) {
 		return (
 			<ColumnPanel
 				columns={columns}

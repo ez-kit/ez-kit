@@ -301,6 +301,7 @@ export type {
 	RowOrderingConfig,
 	ColumnPinningConfig,
 	VisibilityConfig,
+	VisibilityMenuOrderingConfig,
 	PaginationTotals,
 	PinningConfig,
 	RowPinningConfig,

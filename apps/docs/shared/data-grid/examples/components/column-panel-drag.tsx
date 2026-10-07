@@ -53,7 +53,10 @@ const columns = createColumns<Employee>([
  *
  * `ordering.column.visibilityMenu` is what turns the Columns toggle into a panel in the first place,
  * and it is a prerequisite: without it the toggle is a checkbox list with no order to read, so there
- * is nothing to drag and no row registers.
+ * is nothing to drag and no row registers. `true` beside a bound adapter resolves to the grip and
+ * **not** the one-step move pair — which is why no arrows appear in this panel while
+ * `column-panel-ordering`, the same panel with no adapter, is all arrows. `{ moveControls: true }`
+ * would show both here.
  *
  * **The header cells carry a handle too, and that is the point of the example rather than decoration.**
  * The two surfaces share the column axis and keep separate index spaces, and the hazards that split

@@ -651,7 +651,7 @@ export type ColumnOrderingConfig = FeatureToggle & {
 	 */
 	onChange?: (columnOrder: ColumnOrderState) => void
 	/**
-	 * Offer the two move controls in the Columns toggle as well, which then becomes a column
+	 * Offer a move affordance in the Columns toggle as well, which then becomes a column
 	 * panel: it lists **every** non-system leaf column rather than only the hideable ones, so
 	 * that the list reads as the column order itself and a step lands on the row next to it.
 	 *
@@ -661,8 +661,50 @@ export type ColumnOrderingConfig = FeatureToggle & {
 	 *
 	 * Opt-in, default `false`: the Columns toggle is a visibility control in every grid written
 	 * so far, and gaining a second job is a change those grids did not ask for.
+	 *
+	 * `true` takes whichever affordance the grid can actually offer — see
+	 * {@link VisibilityMenuOrderingConfig} for the two and for why the choice is a config
+	 * question at all when the row and header handles are composed in JSX.
 	 */
-	visibilityMenu?: boolean
+	visibilityMenu?: boolean | VisibilityMenuOrderingConfig
+}
+
+/**
+ * Which move affordances the column panel offers, chosen independently.
+ *
+ * **The panel is the one surface of either axis whose controls a call site does not compose.** A
+ * row's drag handle and a header's are there iff someone wrote `<RowDragHandle />` or placed
+ * `dragHandle`, so "does this surface drag" is already answered by the JSX and needs no option —
+ * the rule the rest of this config follows. A kit's `VisibilityMenu` instead renders both the grip
+ * and the move pair unconditionally and lets each one self-hide, because the panel's rows are a
+ * list the kit maps rather than markup an author writes. So the question lands here.
+ *
+ * Both default to **the affordance the grid can offer, and only one of them**: with a drag adapter
+ * bound, `visibilityMenu: true` means the grip; with none, it means the arrows. The pair is a
+ * one-step simplification of the drag — same axis, same state, same refusals — so offering both at
+ * once is duplication rather than choice, and the arrows no longer carry a keyboard story the drag
+ * lacks (`ordering.*` announcements and the keyboard sensors cover that). Name a field to override:
+ * `{ moveControls: true }` asks for both, `{ drag: false }` for the arrows alone.
+ *
+ * The **wide list** is not one of these. It follows from the author asking for an ordering panel at
+ * all — a list that skipped a column could not be read as the order — so it is on under either
+ * affordance and under both.
+ */
+export type VisibilityMenuOrderingConfig = {
+	/**
+	 * Panel rows are draggable. Default: whether a drag adapter is bound
+	 * (`createDataGrid({ dnd })`).
+	 *
+	 * `true` cannot conjure one: with no adapter there are no mechanics behind a grip, so the
+	 * panel falls back to the arrows and the React layer warns in development. Writing it is
+	 * therefore only ever a way of saying "both", beside `moveControls: true`.
+	 */
+	drag?: boolean
+	/**
+	 * Panel rows carry the one-step move pair. Default: `true` exactly when the drag resolves
+	 * **off**, so a panel always offers something and never offers the same move twice.
+	 */
+	moveControls?: boolean
 }
 
 /**

@@ -1,4 +1,5 @@
 ---
+'@ez-kit/data-grid-core': minor
 '@ez-kit/data-grid-react': minor
 '@ez-kit/data-grid-heroui': minor
 ---
@@ -8,11 +9,49 @@ Column panel drag and drop — a column moves by dragging it in the Columns pane
 The third drag surface, and the second one on the column axis. `ordering.column.visibilityMenu`
 already turns the Columns toggle into a panel that lists **every** column and offers the one-step
 move pair; with an adapter bound through `createDataGrid({ dnd })`, each row of that panel is now
-draggable too, and the kits' panels render it with no work at the call site:
+draggable instead, and the kits' panels render it with no work at the call site:
 
 ```tsx
 <DataGrid.Toolbar end={<DataGrid.VisibilityTrigger />} />
 ```
+
+**The arrows step aside for the drag, and `visibilityMenu` grew the two switches that say so.** It
+now takes `boolean | { drag?: boolean; moveControls?: boolean }`, where `true` means the grip when
+an adapter is bound and the arrows when none is — one affordance, never both. The pair moves a
+column by the same rules as the drag, over the same state, with the same refusals, and the drag is
+operable from the keyboard too, so a panel offering both offers the same move twice. Write
+`{ moveControls: true }` for both, or `{ drag: false }` for the arrows alone in a grid whose rows
+and headers still drag.
+
+The **wide list** is not one of the switches: it follows from asking for an ordering panel at all,
+since a list that skipped a column could not be read as the order, so it is on under either
+affordance. Two combinations the grid cannot honour now warn in development instead of going quiet
+— `{ drag: true }` with no adapter falls back to the arrows, and `{ moveControls: false }` with no
+adapter leaves a panel that reads as the order and offers no way to change it.
+
+**This is the only surface where that choice is an option at all, and the asymmetry is the point.**
+A row drags iff a call site rendered `<RowDragHandle />` and a header iff it placed `dragHandle`, so
+for those two the JSX is already the switch and an option would be the duplication this config
+avoids. A kit's panel maps its rows rather than having them written, so nobody has JSX to leave
+out — which is why the question lands in the config here and nowhere else. A panel that wants
+something else entirely still composes it from `<DataGrid.VisibilityTrigger>`'s render function and
+`<DataGrid.VisibilityItem>`.
+
+**`VisibilityMenuProps` gains `isColumnPanel`, and a kit must branch its panel's shape on that
+rather than on `col.ordering`.** The two were the same question while a panel always carried the
+move pair, and are not once the pair can be absent: the HeroUI kit read "some item carries moves"
+as "render the column panel", so a drag-only panel fell back to its react-aria list box — which
+mounts no `<DataGridVisibilityItem>`, and therefore registered no row with the drag. The panel
+looked like a plain Columns toggle and dragging was silently gone; five browser specs caught it.
+`<DataGrid.VisibilityTrigger>`'s render function receives the same field. Each _control_ still
+follows the item — `col.ordering` for the pair, `<ColumnDragHandle />`, which self-hides, for the
+grip.
+
+HeroUI's move pair is now absent rather than disabled when an item carries no `ordering`, matching
+the shadcn kit: it used to render unconditionally with `col.ordering?.canMoveStart !== true`
+covering both "this column is at the end" and "this panel has no moves", which would have left two
+dead buttons beside every grip. The shadcn panel's popover takes its width from `isColumnPanel` for
+the same reason — a grip needs the room the arrows used to.
 
 What makes the panel a surface of its own rather than more of the header is the list its indices
 count in. The header registers the **visible** leaves, so a hidden column has no place in it at all;
@@ -54,6 +93,6 @@ Each panel grip is named for its own column — `Drag column: Salary` — becaus
 every handle sits in its own cell beside the column name, a panel is a list of otherwise identical
 buttons. Both kits also style the dragged panel row the way they already styled a dragged header cell.
 
-A grid with no adapter, or one whose panel offers no moves, renders exactly the markup it rendered
-before and registers nothing. A column whose place the author fixed with `ordering: false` keeps its
+A grid with no adapter, one whose panel offers no moves, or one whose panel takes the move pair
+instead, renders exactly the markup it rendered before and registers nothing. A column whose place the author fixed with `ordering: false` keeps its
 index — it must, or the space has a hole and nothing commits anywhere — and offers no grip.

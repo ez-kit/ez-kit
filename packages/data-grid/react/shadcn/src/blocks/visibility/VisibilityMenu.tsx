@@ -50,10 +50,14 @@ function MoveControls({ column, labels }: { column: VisibilityColumnItem; labels
 	)
 }
 
-export function VisibilityMenu({ columns }: VisibilityMenuProps) {
+export function VisibilityMenu({ columns, isColumnPanel }: VisibilityMenuProps) {
 	const messages = useGridMessages()
-	// Every row carries the pair or none does, so the popover's width is decided once.
-	const withOrdering = columns.some((col) => col.ordering !== undefined)
+	/*
+	 * Decided once, and off the panel rather than off `col.ordering`: a panel row carries either
+	 * the move pair or a grip, so both want the wider popover, while only the pair shows up in
+	 * the items. Every row of one panel carries the same thing, so there is nothing per-row here.
+	 */
+	const withOrdering = isColumnPanel
 
 	return (
 		<Popover>

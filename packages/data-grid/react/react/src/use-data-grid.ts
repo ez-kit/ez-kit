@@ -1296,7 +1296,19 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 	// Read off the column axis's own config, and only while that axis is on: a grid that turned
 	// column reordering off cannot be left offering it from the Columns toggle.
 	const columnOrderingCfg = featureConfig(orderingCfg?.column)
-	const orderingInVisibilityMenu = columnOrderingEnabled && columnOrderingCfg?.visibilityMenu === true
+	const rawVisibilityMenu = columnOrderingCfg?.visibilityMenu
+	const visibilityMenuCfg = typeof rawVisibilityMenu === 'object' ? rawVisibilityMenu : undefined
+	const orderingInVisibilityMenu =
+		columnOrderingEnabled && rawVisibilityMenu !== undefined && rawVisibilityMenu !== false
+	/*
+	 * The panel's two affordances travel **as authored**, because which one wins depends on a drag
+	 * adapter and this hook cannot see one: a controlled grid calls `useDataGrid` outside
+	 * `<DataGrid>`, so the bundle's adapter context is not above it. `resolvePanelAffordances`
+	 * finishes the job in the two components that do read it. Both are forced to `undefined` while
+	 * the panel is off, so nothing downstream has to re-check `enabled` to read them honestly.
+	 */
+	const visibilityMenuDrag = orderingInVisibilityMenu ? visibilityMenuCfg?.drag : undefined
+	const visibilityMenuMoveControls = orderingInVisibilityMenu ? visibilityMenuCfg?.moveControls : undefined
 
 	// Rebuilt per render, and handed out on this render's table below. It cannot be written to the
 	// instance instead: `useTable` has already spread it by the time the hook body runs, so a
@@ -1328,7 +1340,15 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 			// Core resolved this one, under its own name (`rowPinning`); see the note above.
 			...(erasedCoreGrid.rowPinning !== undefined ? { rowConfig: erasedCoreGrid.rowPinning } : {}),
 		},
-		ordering: { column: columnOrderingEnabled, row: rowOrderingEnabled, visibilityMenu: orderingInVisibilityMenu },
+		ordering: {
+			column: columnOrderingEnabled,
+			row: rowOrderingEnabled,
+			visibilityMenu: {
+				enabled: orderingInVisibilityMenu,
+				drag: visibilityMenuDrag,
+				moveControls: visibilityMenuMoveControls,
+			},
+		},
 		visibility: visibilityEnabled,
 		sorting: sortingEnabled,
 		filtering: { debounce: filteringDebounce },
