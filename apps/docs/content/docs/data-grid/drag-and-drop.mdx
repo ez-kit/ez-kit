@@ -128,8 +128,8 @@ addition.
 />
 ```
 
-Two things make that work, and both are about the body rendering a **window** rather than the whole
-list:
+Four things make that work, and all of them are about the body rendering a **window** rather than the
+whole list:
 
 - **A row's drag index counts within the window, not within the row model.** The body declares the
   rows it renders and each row takes its index from that declaration, so the positions a drag sees
@@ -145,6 +145,12 @@ list:
   animates the layout change that follows, and out of flow there is no layout change to animate. The
   one row placed out of flow is the held row of the bullet above, once the window has scrolled past
   it, so that it does not displace a band it is no longer part of.
+- **While you hold a row, the body renders the arrangement the drag is showing, not the saved
+  order.** The body re-renders on every frame of a drag's auto-scroll, and the held row is
+  wherever the pointer has carried it — so the body draws the saved order with that one row moved
+  to its new place, and the drag and the body agree about where every row is however many times
+  the window turns over. Nothing is saved until you release: the order you pass in, and
+  `onOrderChange`, do not move mid-gesture, and `Escape` puts everything back.
 
 The virtualizer is keyed by row id, so a row keeps its identity, its measured height and its element
 across a commit: the order is rewritten underneath it, and nothing hands one row's measurement to

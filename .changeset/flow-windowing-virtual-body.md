@@ -10,6 +10,16 @@ one, and a one-place drag commits wherever it is released. The infinite loader i
 band and so sizes to its own content, which retires the fixed allowance that used to budget for it
 and keeps a wrapped error message from being clipped.
 
+While a row is held, a virtualized body now renders the arrangement the drag is showing — the order
+with the held row moved to where the pointer has carried it — rather than the saved order. Before,
+the neighbours stopped moving aside for the rest of the gesture once the drag's auto-scroll had
+turned the window over, because the body re-rendered the held row at its old place while the drag
+library had moved it. Nothing is committed mid-gesture: `ordering` and `onOrderChange` still change
+only on release, and `Escape` restores the saved order. The drag port gains an optional
+`DndProviderProps.onDisplace`, which both kits' adapters call for every hover the grid allows; an
+adapter of your own that does not call it keeps working, and only loses the displacement after a
+window turnover.
+
 One consequence is worth checking if you style the grid yourself: a vertical `margin` on
 `[data-slot='tr']` used to be inert in a virtualized grid, because the rows were out of flow. Now
 that they are in flow it shifts the band's geometry, and by a different amount depending on the UI
