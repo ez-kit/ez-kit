@@ -80,13 +80,8 @@ const features = tableFeatures({
 })
 ```
 
-They are structural rather than optional. The grid lays its rows out on a CSS column grid, so
-before it can render anything it has to know every column's width, whether the column is visible,
-and which pin group it belongs to. `getColumnSizeVars` and `getGridTemplateColumns` read
-`header.getSize()`, `column.getSize()`, `column.getIsPinned()` and `table.getVisibleLeafColumns()`
-on every render, and `getVisualLeafColumns` orders each row's cells with
-`getStartVisibleLeafColumns()` / `getCenterVisibleLeafColumns()` / `getEndVisibleLeafColumns()`.
-Leave one of the three out and the grid throws on first paint.
+They are structural rather than optional — the grid needs them to lay out its columns. Leave one
+of the three out and the grid throws on first paint.
 
 **Everything else is genuinely optional.** A grid that registers only these three renders: no
 sorting, no filtering, no pagination, no editing, no row actions, and nothing missing. That is the

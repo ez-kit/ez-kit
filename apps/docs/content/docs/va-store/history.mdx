@@ -33,7 +33,7 @@ function Toolbar() {
 }
 ```
 
-`withHistory(options)` builds an enhancer; applying it mutates the proxy it's given and returns it — same identity, widened by `{ history: StoreHistory<T> }`. Nothing is attached until the enhancer runs, so a named enhancer can seed several stores. `store.history` is enumerable and `ref()`-wrapped (so `snapshot(store).history` is the same live object, not a deep-cloned copy), and its `toJSON()` returns `undefined`, so it never leaks into `JSON.stringify(store)`.
+`withHistory` adds a `history` object to the proxy with methods like `undo()`, `redo()`, and `goto(index)`. It stays out of `JSON.stringify(store)`, and `snapshot(store).history` is the same live object rather than a copy.
 
 A photo-adjustment panel is the shape this is really for — every write is a step, `undo` walks them
 back, and the strip along the bottom is the timeline `goto(index)` addresses:

@@ -40,7 +40,7 @@ When the defaults suit you, a bare `virtualization` prop is shorthand for `virtu
 />
 ```
 
-With `layout.stickyHeader`, pinned rows stack below the header rather than under it, in this mode as in the non-virtualized one. Virtualized, `layout.stickyHeader` is **required** for pinned rows: the window's band is offset on the assumption that the header is sticky, so dropping it leaves the band short by the header's own height — see [`virtual-window-pads.ts`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/react/react/src/utils/virtual-window-pads.ts) for the arithmetic.
+With `layout.stickyHeader`, pinned rows stack below the header rather than under it, in this mode as in the non-virtualized one. Virtualized, `layout.stickyHeader` is **required** for pinned rows to render correctly.
 
 ## Options
 
@@ -54,9 +54,9 @@ With `layout.stickyHeader`, pinned rows stack below the header rather than under
 
 ## Notes
 
-- Virtualization is **not free**: the window of rows is offset inside a body whose `min-height` is computed at runtime, so anything measuring real row geometry needs care. If your data set is small (≤ 200 rows), leave virtualization off.
-- Column sizing works the same virtualized or not — the column width variables are set on the shared `<table>` element in both modes, so [resizing](/docs/data-grid/columns/resizing) needs no extra configuration here.
-- The shadcn and HeroUI flavors both honor `virtualization` — toggle the flavor above to see equivalent behavior.
+- If your data set is small (≤ 200 rows), leave virtualization off — the overhead is not worth it.
+- Column sizing works the same virtualized or not — [resizing](/docs/data-grid/columns/resizing) needs no extra configuration.
+- Both shadcn and HeroUI honor `virtualization` — toggle the flavor above to see equivalent behavior.
 
 ## Source
 

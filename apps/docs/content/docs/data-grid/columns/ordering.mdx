@@ -63,9 +63,7 @@ read as the column order. A column locked with `visibility: false` is therefore 
 checkbox disabled — it can never be hidden, and that is unchanged, but it does hold a place in the
 order and it can still be moved.
 
-For the same reason a step here lands on the row **next to it**, hidden rows included, rather than
-passing over hidden columns the way the header does. Both are the same rule from two places: a
-step moves a column past what the user can see, and each surface shows something different.
+A step lands on the row **next to it**, including hidden columns, because the panel shows the full order.
 
 The panel's arrows point up and down. The two moves are logical — `start` and `end`, since the
 column order flips under RTL — but this list runs from the start of the order at the top in either
@@ -98,12 +96,11 @@ ordering={{
 }}
 ```
 
-The **wide list** is not one of the two switches: it follows from asking for an ordering panel at
-all, so it is on under either affordance and under both.
+The panel lists every column under either affordance.
 
-Two combinations the grid cannot honour, and it says so in development rather than going quiet:
-`{ drag: true }` with no adapter bound falls back to the arrows, and `{ moveControls: false }` with
-no adapter leaves a panel that reads as the order and offers no way to change it.
+Two combinations the grid cannot honour, and it warns in development: `{ drag: true }` with no
+adapter bound falls back to the arrows, and `{ moveControls: false }` with no adapter leaves a panel
+that shows the order and offers no way to change it.
 
 A grid whose panel should offer something else entirely composes it:
 `<DataGrid.VisibilityTrigger>` hands its render function the same `columns` the kits map — each item
@@ -136,9 +133,7 @@ everywhere a handle is JSX, [composition is the switch](/docs/data-grid/drag-and
 />
 ```
 
-`onChange` receives the **complete** order as column ids, in visual order. That is deliberate:
-TanStack reads a partial `columnOrder` as "these first, then the rest as declared", so a partial
-list would quietly rearrange columns nobody touched.
+`onChange` receives the **complete** order as column ids, in visual order.
 
 `columnOrder` is part of the persisted view state — see
 [State persistence](/docs/data-grid/state/persistence), where it travels with `columnVisibility`

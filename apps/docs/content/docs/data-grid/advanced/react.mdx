@@ -21,9 +21,8 @@ The React adapter sits between [core](/docs/data-grid/advanced/core) and the UI-
 
 ### Naming a component instead of the namespace
 
-`DataGrid` is one object carrying all 29 components, so a bundler that sees the name keeps every
-one of them — that is what a namespace is. Importing the components you actually render lets it
-keep only those:
+`DataGrid` is one object carrying every component, so a bundler that sees the name keeps all of
+them. Importing the components you actually render lets it keep only those:
 
 ```tsx
 import {
@@ -47,11 +46,6 @@ import {
 	</DataGridTable>
 </DataGridRoot>
 ```
-
-Measured with esbuild, minified and gzipped with React external: `DataGrid` costs 34 272 bytes
-whatever a page renders, and a grid composed from ten named components costs 19 265. About 9 500
-of either is the shared floor every grid pays, so the components themselves go from ~25 kB to
-~10 kB.
 
 Use `DataGridRoot`, not `DataGrid`, as the host — naming the compound anywhere in the tree brings
 the other components back. `DataGrid.X` stays supported and is still the shorter thing to write

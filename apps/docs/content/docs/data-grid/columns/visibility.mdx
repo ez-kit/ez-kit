@@ -9,8 +9,6 @@ Let users toggle which columns are visible. Hidden columns retain their filter a
 
 <DataGridDocsExample exampleId='column-visibility' />
 
-The grid exposes a `column-visibility-trigger` slot that renders the kit's menu component. Hidden columns are computed from the engine's visibility state.
-
 ```ts
 const table = useDataGrid({ features, data, columns })
 table.setColumnVisibility({ email: false })
@@ -44,8 +42,7 @@ value.
 
 `visibility: false` is an invariant, not a seed. Such a column can never be hidden — not by
 `initialState`, not by controlled `state`, not by `table.setColumnVisibility(…)`. Its menu has no Hide option and
-the Columns toggle offers it none, so a state that hid it could never be undone by the user. The
-system columns (`__selection__`, `__expand__`, `__actions__`) are covered by the same rule.
+the Columns toggle offers it none, so a state that hid it could never be undone by the user. System columns like selection and actions are covered by the same rule.
 
 By default such a column is simply absent from the Columns toggle. It is listed, with its checkbox
 disabled, only under

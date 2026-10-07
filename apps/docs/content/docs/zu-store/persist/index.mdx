@@ -24,14 +24,9 @@ The core never imports React, `URLSearchParams`, or a storage API. Its only inte
 
 Because each source is just an adapter, a single field can sync to **two** substrates at once (a shared `?q=` in the URL _and_ a cached copy in storage), and async sources (IndexedDB) never stall the synchronous URL.
 
-## Mental model
+## How it works
 
-The store is the **source of truth**; the substrate is a **mirror**.
-
-- **store → substrate**: a `subscribe` watches the store; changed fields are coalesced into one commit per tick (throttled).
-- **substrate → store**: an external change pushes the diff back in, writing only what changed — pulls never re-write the substrate, so Back/forward and other-tab writes are safe.
-- **One `setState` per arrival**: fields are addressed by **path** (`filters.price.min`). A pull rebuilds only the touched paths into a new state object and issues **one** `setState` for the whole batch, so untouched branches keep their reference and an `Object.is`-comparing selector re-renders exactly the components that read a changed field.
-- **Loop breaking**: each direction writes only when the value differs in normalized form. Parsers carry a round-trip contract so the feedback loop terminates.
+The store is the **source of truth**; the substrate is a **mirror**. When you write to the store, the change is synced to the substrate. When the substrate changes externally (a deep link, browser back button, another tab), the change is synced back to the store — and only the components that read a changed field re-render.
 
 ## Declaring fields
 

@@ -97,10 +97,8 @@ write — so which affordance it carries is the one thing drag does put in the c
 
 <DataGridDocsExample exampleId='row-drag' />
 
-A row is dragged by its grip, and you do not place it: with `ordering.row` on and an adapter bound,
-the grid adds a `__drag__` system column — first in the row, ahead of the selection checkbox, pinned
-at the start edge and fixed at `44` px, so it never takes a share of the free width. A grid with no
-adapter gets no such column; its rows move through the actions menu instead.
+With `ordering.row` on and an adapter bound, the column with the drag handle is created
+automatically. Without an adapter, rows move through the actions menu.
 
 The column is configured like the other system columns, through `ordering.row.column` — `width`,
 `pinning`, `align`, `header`, `headerClassName`, `cellClassName`:
@@ -246,7 +244,7 @@ dragging with no error. Filter what a row renders, not which rows exist.
 
 | Surface       | Handle                                                      | Writes        | Scope                                                     |
 | ------------- | ----------------------------------------------------------- | ------------- | --------------------------------------------------------- |
-| Row           | the `__drag__` system column, or `<RowDragHandle />`        | `rowOrder`    | The rows the body renders, pinned bands included          |
+| Row           | the automatic handle column, or `<RowDragHandle />`         | `rowOrder`    | The rows the body renders, pinned bands included          |
 | Column header | `dragHandle` from `<DataGrid.HeaderCell>`, or the component | `columnOrder` | The **visible** leaf columns, in the order they are drawn |
 | Column panel  | the component, inside `<DataGrid.VisibilityItem>`           | `columnOrder` | **Every** listed leaf column, hidden ones included        |
 

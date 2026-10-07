@@ -50,13 +50,11 @@ is why it does not compete with the one above.
 
 Two arrangements, decided by the kit rather than by the grid config:
 
-- **A kit that brings no focus manager** — the shadcn kit — registers
-  `createDataGrid({ keyboardNavigation: true })`, and the package supplies `role="grid"`,
-  `role="row"`, `role="gridcell"` / `role="columnheader"`, a roving `tabindex`, and arrow / Home /
-  End / PageUp / PageDown / Enter / F2 handling. The whole grid is then **one** tab stop instead of
-  one per sort trigger, checkbox and menu button.
-- **A kit built on React Aria** — the heroui kit — brings its own, and must not be given a second.
-  Its roles and its roving focus come from React Aria's collection.
+- **shadcn** — provides `role="grid"` with roving focus and keyboard navigation (arrow keys, Home,
+  End, PageUp, PageDown, Enter, F2). The whole grid is **one** tab stop. A kit of your own with no
+  focus manager gets the same by passing `createDataGrid({ keyboardNavigation: true })`.
+- **HeroUI** — uses React Aria's collection for roles and focus management. A kit built on React
+  Aria brings its own and must not be given a second.
 
 `aria-multiselectable` follows that split: it is not an allowed attribute on `role="table"`, so the
 package writes it only where it owns the role. A React Aria kit's table is a `grid` on its own
@@ -64,12 +62,9 @@ terms and its own collection answers for it.
 
 ## Names
 
-Every control the grid renders without a visible label is named from the dictionary, never from a
-literal: the column filters, the draft creating row, a cell being edited in place, and the
-`__selection__` / `__expand__` / `__actions__` system columns, whose `<th>` holds a control or
-nothing at all. Where the grid renders the control itself it writes `aria-label`; where the control
-is the kit's component it renders a visually hidden `<label htmlFor>` bound by `FieldState.id`,
-which every kit component honours.
+Every control the grid renders without a visible label is named from the dictionary. Where the
+grid renders the control it writes `aria-label`; where the control is a kit component it renders
+a visually hidden `<label>`, which every kit component respects.
 
 ## What is checked, and where
 

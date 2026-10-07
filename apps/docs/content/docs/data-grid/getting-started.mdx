@@ -118,13 +118,13 @@ Three things are stated in that file, and each of them is a decision the prebuil
 
 ### What your own bundle saves
 
-A grid built this way never reaches the code it did not name. Measured with esbuild against the shadcn flavor (minified, gzipped, React external), the four-group composition above is **44.6 kB** against **58.5 kB** for the prebuilt grid — 24%. What stays out: the date picker and `react-day-picker`, the filter panel and its popovers, both write forms, the confirm dialog, the action bar, the row-actions cell, the resizer, the visibility menu, the seven cell types the grid does not use, and the implementations behind every feature it did not register.
+A composed grid bundles only the features and components it names — you pay for what you use. The
+prebuilt grid ships everything, which is the fastest way to see it work but not the shape a
+production grid keeps.
 
-That is the whole saving, and it does not grow with your data or your column count — it is a fixed amount of code that either ships or does not.
-
-The two axes behind that number are independent: `components` decides which UI is compiled in, `features` decides which of the grid's behaviours are. You can name `allComponents` and still leave out `editingFeature`, or compose four component groups and register everything. Trim both — see [Feature set](/docs/data-grid/feature-set).
-
-What you cannot do is trim the second axis on the **prebuilt** grid. It binds the all-in set, and that is not a default waiting to be overridden: its fourteen component groups read the features' APIs, so they drag the implementations in whatever set a call site names. Passing `features` there still narrows what the grid _does_ — the state slices and APIs it creates — and gives none of the bytes back. Measured the same way, the prebuilt grid with a sorting-only set is 54.6 kB against 58.5 kB with everything: 3.9 kB, for eight imports at every call site. That is why it stopped asking.
+You can independently trim which **features** you register and which **component groups** you import.
+See [Feature set](/docs/data-grid/feature-set) for more. On the **prebuilt** grid only the second
+helps: passing `features` there narrows what the grid does, but gives no bytes back.
 
 ### Which to pick
 
