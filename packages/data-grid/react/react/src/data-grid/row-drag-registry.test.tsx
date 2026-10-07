@@ -1,12 +1,15 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
+import { useEffect } from 'react'
 import { describe, expect, it } from 'vitest'
 
 import {
 	RowDragRegistryProvider,
 	useActiveDraggingRow,
+	useDisplaceRow,
 	usePublishRenderedRows,
 	useRenderedRowIds,
 	useReportActiveDraggingRow,
+	useRowDragProjection,
 } from './row-drag-registry'
 
 import type { ReactNode } from 'react'
@@ -304,5 +307,88 @@ describe('the active dragging row', () => {
 		)
 
 		expect(active()).toBe('none')
+	})
+})
+
+describe('the drag projection', () => {
+	const ORDER = ['a', 'b', 'c', 'd']
+
+	/** Exposes the writer to the test, the way `GridDndProvider` holds it. */
+	const writer: { displace: ((order: readonly string[], sourceId: string, targetId: string) => void) | null } = {
+		displace: null,
+	}
+	function Displacer() {
+		const displaceRow = useDisplaceRow()
+		useEffect(() => {
+			writer.displace = displaceRow
+		}, [displaceRow])
+		return null
+	}
+	const displace = (order: readonly string[], sourceId: string, targetId: string) => {
+		if (writer.displace === null) throw new Error('the writer is not mounted')
+		writer.displace(order, sourceId, targetId)
+	}
+
+	function ProjectionProbe() {
+		const projection = useRowDragProjection()
+		return (
+			<span data-testid='projection'>
+				{projection === null ? 'none' : `${projection.sourceId}:${projection.placement}:${projection.targetId}`}
+			</span>
+		)
+	}
+
+	const projection = () => screen.getByTestId('projection').textContent
+	const tree = (isDragging: boolean) =>
+		inRegistry(
+			<>
+				<Reporter
+					rowId='a'
+					isDragging={isDragging}
+				/>
+				<Displacer />
+				<ProjectionProbe />
+			</>,
+		)
+
+	it('is null until the held row is displaced, then records each step', () => {
+		render(tree(true))
+		expect(projection()).toBe('none')
+
+		act(() => {
+			displace(ORDER, 'a', 'c')
+		})
+		expect(projection()).toBe('a:after:c')
+
+		// Back over `b`, which the held row is now below — so in front of it, not behind.
+		act(() => {
+			displace(ORDER, 'a', 'b')
+		})
+		expect(projection()).toBe('a:before:b')
+	})
+
+	it('is cleared when the dragged row stops dragging — a drop and a cancel alike', () => {
+		const { rerender } = render(tree(true))
+		act(() => {
+			displace(ORDER, 'a', 'c')
+		})
+		expect(projection()).toBe('a:after:c')
+
+		rerender(tree(false))
+
+		expect(projection()).toBe('none')
+	})
+
+	it('keeps a displacement that reached the registry before the row reported itself active', () => {
+		// The adapter's first hover can arrive before the row's activation effect has run; it belongs to
+		// the same gesture and must not be thrown away when the activation lands.
+		const { rerender } = render(tree(false))
+		act(() => {
+			displace(ORDER, 'a', 'c')
+		})
+
+		rerender(tree(true))
+
+		expect(projection()).toBe('a:after:c')
 	})
 })

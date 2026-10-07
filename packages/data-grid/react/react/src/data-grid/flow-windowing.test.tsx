@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react'
+import { act, render } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
 import { createDataGrid } from '../create-data-grid'
@@ -6,10 +6,11 @@ import { PaginationMode } from '../index'
 import { TEST_COLUMNS, TEST_FEATURES, testComponents } from '../test-utils'
 
 import { DataGrid } from './data-grid'
+import { DragAxis, DragSurface } from './dnd'
 import { VirtualProvider } from './virtual-context'
 
 import type { TestRow } from '../test-utils'
-import type { DndAdapter, SortableItemHandle } from './dnd'
+import type { DndAdapter, DndDragOverEvent, SortableItemHandle } from './dnd'
 import type { Virtualizer, VirtualItem } from '@tanstack/react-virtual'
 
 const ROW_HEIGHT = 40
@@ -487,5 +488,148 @@ describe('flow windowing with pinned rows', () => {
 		const scroll = container.querySelector('[data-slot="table-scroll"][data-virtualized="true"]')
 
 		expect(scroll).not.toHaveAttribute('data-sticky-header')
+	})
+})
+
+describe('flow windowing while a drag displaces the held row', () => {
+	/*
+	 * The body renders the drag's **projected** order: the model with the held row moved to where the
+	 * adapter reported displacing it. Rendered in model order instead, the body put the held row back at
+	 * its old slot on every re-render of an auto-scroll while the drag library had moved it — the two
+	 * orders disagreed about one row, the library's index space lost its density, and displacement died
+	 * for the rest of the gesture. `DndProviderProps.onDisplace` has the measurement.
+	 */
+
+	/** An adapter whose Provider hands the test the grid's `onDisplace`, with the dragged row switchable. */
+	function makeDisplacingAdapter(drag: { id: string | null }) {
+		const captured: { onDisplace?: (event: DndDragOverEvent) => void } = {}
+		const adapter: DndAdapter = {
+			Provider: ({ onDisplace, children }) => {
+				if (onDisplace) captured.onDisplace = onDisplace
+				return <>{children}</>
+			},
+			useSortableItem: (spec): SortableItemHandle => ({
+				ref: () => {},
+				handleRef: () => {},
+				isDragging: spec.id === drag.id,
+			}),
+		}
+		return { adapter, captured }
+	}
+
+	function renderDisplacing(firstWindow: VirtualItem[]) {
+		const drag: { id: string | null } = { id: HELD_ROW_ID }
+		const { adapter, captured } = makeDisplacingAdapter(drag)
+		const { DataGrid: DragGrid } = createDataGrid({ components: testComponents, dnd: adapter })
+		const tree = (items: VirtualItem[]) => (
+			<DragGrid
+				features={TEST_FEATURES}
+				data={DATA}
+				columns={TEST_COLUMNS}
+				pagination={{ pageSize: ROW_COUNT }}
+				ordering={{ row: true }}
+			>
+				<VirtualProvider rowVirtualizer={stubVirtualizer(items)}>
+					<DataGrid.Table>
+						<DataGrid.Body />
+					</DataGrid.Table>
+				</VirtualProvider>
+			</DragGrid>
+		)
+		const result = render(tree(firstWindow))
+
+		return {
+			...result,
+			scrollTo: (items: VirtualItem[]) => {
+				result.rerender(tree(items))
+			},
+			displaceOnto: (targetId: string) => {
+				act(() => {
+					captured.onDisplace?.({
+						axis: DragAxis.Row,
+						surface: DragSurface.Table,
+						sourceId: HELD_ROW_ID,
+						targetId,
+					})
+				})
+			},
+			release: (items: VirtualItem[]) => {
+				drag.id = null
+				result.rerender(tree(items))
+			},
+		}
+	}
+
+	const bandIds = (container: HTMLElement) =>
+		[...container.querySelectorAll('[data-slot="tr"][data-virtual="row"]')].map((row) =>
+			row.getAttribute('data-row-id'),
+		)
+
+	it('renders the held row in flow at the slot it was displaced to', () => {
+		const { container, displaceOnto } = renderDisplacing(windowItems(0, WINDOW_COUNT))
+
+		displaceOnto('5')
+
+		// `3` carried past `4` and `5`, and the two moved up into the slots it left — what the drag
+		// library shows, and so what the body has to render for the two orders to be one.
+		expect(bandIds(container)).toEqual(['1', '2', '4', '5', '3'])
+		expect(container.querySelectorAll(`[data-row-id="${HELD_ROW_ID}"]`)).toHaveLength(1)
+	})
+
+	it('keeps the displaced arrangement after the window turns over under the drag', () => {
+		/*
+		 * The reported case. The window scrolls far from where the drag started, the held row is
+		 * displaced into the new window, and the window then moves on by a row — a re-render that used to
+		 * put `3` back at model slot 2, outside the window, while the library had it at slot 201.
+		 */
+		const { container, scrollTo, displaceOnto } = renderDisplacing(windowItems(0, WINDOW_COUNT))
+		scrollTo(windowItems(SCROLLED_WINDOW_FIRST, WINDOW_COUNT))
+		displaceOnto('203')
+		scrollTo(windowItems(SCROLLED_WINDOW_FIRST + 1, WINDOW_COUNT))
+
+		// With `3` lifted out every later row moves up a slot, so slot 201 holds `203` and `3` sits right
+		// behind it at slot 202 — the slot the library displaced it to.
+		expect(bandIds(container)).toEqual(['203', '3', '204', '205', '206'])
+		expect(container.querySelector('[data-virtual="row-held"]')).toBeNull()
+	})
+
+	it('keeps the pads the window’s own while the held row moves within it', () => {
+		/*
+		 * The window's span is unchanged by a displacement — a slot's geometry is the model's, only its
+		 * occupant moves — so the band must not jump by a row. Measured in both kits too: `paddingTop`
+		 * held its value across every displacement step.
+		 */
+		const { container, scrollTo, displaceOnto } = renderDisplacing(windowItems(0, WINDOW_COUNT))
+		scrollTo(windowItems(SCROLLED_WINDOW_FIRST, WINDOW_COUNT))
+		const tbody = container.querySelector('[data-slot="tbody"][data-virtualized="true"]')
+		expect(tbody).toHaveStyle(padsFor(SCROLLED_WINDOW_FIRST))
+
+		displaceOnto('202')
+		expect(tbody).toHaveStyle(padsFor(SCROLLED_WINDOW_FIRST))
+		displaceOnto('204')
+		expect(tbody).toHaveStyle(padsFor(SCROLLED_WINDOW_FIRST))
+	})
+
+	it('holds the held row out of flow at its projected slot once that slot leaves the window', () => {
+		const { container, scrollTo, displaceOnto } = renderDisplacing(windowItems(0, WINDOW_COUNT))
+		scrollTo(windowItems(SCROLLED_WINDOW_FIRST, WINDOW_COUNT))
+		displaceOnto('203')
+		scrollTo(windowItems(0, WINDOW_COUNT))
+
+		// Slot 202, not model slot 2 — which the window at 0 would otherwise contain and render it in.
+		const heldRow = container.querySelector(`[data-slot="tr"][data-row-id="${HELD_ROW_ID}"]`)
+		expect(heldRow).toHaveAttribute('data-virtual', 'row-held')
+		expect(heldRow?.getAttribute('style')).toContain(`translateY(${String(202 * ROW_HEIGHT)}px)`)
+		expect(bandIds(container)).toEqual(['1', '2', '4', '5', '6'])
+	})
+
+	it('returns to the model order when the drag ends, drop or cancel alike', () => {
+		const { container, displaceOnto, release } = renderDisplacing(windowItems(0, WINDOW_COUNT))
+		displaceOnto('5')
+
+		// The table did not change — the adapter committed nothing — so the model is what renders.
+		release(windowItems(0, WINDOW_COUNT))
+
+		expect(bandIds(container)).toEqual(['1', '2', '3', '4', '5'])
 	})
 })

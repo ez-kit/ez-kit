@@ -2,7 +2,10 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useSyncExternalStore } from 'react'
 
+import { advanceDragProjection } from '../utils/project-drag-order'
+
 import type { SortableItemHandle } from './dnd'
+import type { DragProjection } from '../utils/project-drag-order'
 import type { ReactNode } from 'react'
 
 /** The drag half of one row: its activator ref, and whether it is the row being dragged. */
@@ -31,6 +34,7 @@ class RowDragRegistry {
 	readonly #listeners = new Map<string, Set<() => void>>()
 	#renderedRowIds: readonly string[] | null = null
 	#activeRowId: string | null = null
+	#rowProjection: DragProjection | null = null
 	readonly #activeListeners = new Set<() => void>()
 	readonly #warnedRowIds = new Set<string>()
 
@@ -75,6 +79,38 @@ class RowDragRegistry {
 	setActiveRowId(rowId: string | null): void {
 		if (this.#activeRowId === rowId) return
 		this.#activeRowId = rowId
+		/*
+		 * The projection belongs to one gesture, so it goes when that gesture's row stops being active —
+		 * on a drop and on a cancel alike, since both end in the row's own `isDragging` going false. That
+		 * is what makes a cancel safe: the drag library restores its own arrangement for a cancelled
+		 * operation, and the body has to stop rendering the displaced one in the same breath, or the two
+		 * would disagree again in the opposite direction.
+		 *
+		 * Kept when the row becoming active is the one it was projected for: a displacement that reached
+		 * the registry a moment before the row's activation effect ran is still this gesture's.
+		 */
+		if (this.#rowProjection?.sourceId !== rowId) this.#rowProjection = null
+		this.#notifyActive()
+	}
+
+	/** Where the row being dragged has been displaced to, or `null` while it has not been. */
+	getRowProjection(): DragProjection | null {
+		return this.#rowProjection
+	}
+
+	/**
+	 * Record one displacement of a held row onto `targetId` — see {@link advanceDragProjection}, which
+	 * this steps through. `order` is the list the rows are drawn in, the one the drag library's group
+	 * is ordered by.
+	 */
+	displaceRow(order: readonly string[], sourceId: string, targetId: string): void {
+		const next = advanceDragProjection(order, this.#rowProjection, sourceId, targetId)
+		if (next === this.#rowProjection) return
+		this.#rowProjection = next
+		this.#notifyActive()
+	}
+
+	#notifyActive(): void {
 		for (const listener of this.#activeListeners) listener()
 	}
 
@@ -223,6 +259,43 @@ export function useActiveDraggingRow(): string | null {
 		subscribe,
 		() => registry?.getActiveRowId() ?? null,
 		() => null,
+	)
+}
+
+/**
+ * Where the row being dragged has been displaced to, subscribed — so a virtualized body re-renders in
+ * the drag's arrangement rather than the model's. See `DndProviderProps.onDisplace` for why it must.
+ *
+ * Drag-local: written only by {@link useDisplaceRow}, and gone the moment the dragged row stops being
+ * active, so outside a gesture this is always `null` and the body renders the model.
+ */
+export function useRowDragProjection(): DragProjection | null {
+	const registry = useContext(RowDragRegistryContext)
+	// Stable for the reason `useActiveDraggingRow`'s is: its one subscriber re-renders per scroll frame.
+	const subscribe = useCallback(
+		(listener: () => void) => (registry ? registry.subscribeActiveRow(listener) : () => {}),
+		[registry],
+	)
+
+	return useSyncExternalStore(
+		subscribe,
+		() => registry?.getRowProjection() ?? null,
+		() => null,
+	)
+}
+
+/**
+ * The writer behind {@link useRowDragProjection}: records that a held row has been displaced onto a
+ * target. Called by `GridDndProvider` from the adapter's `onDisplace`. Stable per registry.
+ */
+export function useDisplaceRow(): (order: readonly string[], sourceId: string, targetId: string) => void {
+	const registry = useContext(RowDragRegistryContext)
+
+	return useCallback(
+		(order: readonly string[], sourceId: string, targetId: string) => {
+			registry?.displaceRow(order, sourceId, targetId)
+		},
+		[registry],
 	)
 }
 

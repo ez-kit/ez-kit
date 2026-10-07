@@ -385,6 +385,34 @@ export type DndProviderProps = {
 	 */
 	canDrop: (event: DndDragOverEvent) => boolean
 	/**
+	 * The held item has just been displaced onto `targetId` — called for a hover {@link canDrop}
+	 * **allowed**, at the moment the adapter lets its library displace for it, and never for a refused
+	 * one or for the source hovering itself.
+	 *
+	 * **Not a commit, and nothing in the table changes.** {@link onDrop} stays the only commit; neither
+	 * `ordering` nor `onOrderChange` moves mid-gesture. What this feeds is the arrangement a
+	 * **virtualized** body renders while the pointer is down: that body re-renders on every frame of a
+	 * drag's auto-scroll, and in model order it would put the held row back at its old place while the
+	 * library has moved its element — and its index — to where the pointer took it. The two orders then
+	 * disagree about one row, the library's index space has a gap and a duplicate, and its optimistic
+	 * sorting bails on every hover after that: the neighbours stop moving for the rest of the gesture,
+	 * though the drop still lands. Measured on a 10 000-row grid, after an auto-scroll of ~40 rows. With
+	 * this, the body renders the **projected** order — the model with the held row moved to where the
+	 * drag displaced it — so React's order and the library's are one order, and the space stays dense
+	 * through any number of window turnovers.
+	 *
+	 * The same event {@link canDrop} was just asked about, so an adapter calls it with what it already
+	 * has, after the gate. Displacement is a step from the arrangement as it stands, not a function of
+	 * the model, so the grid needs **every** allowed displacement, in order — an adapter that forwards
+	 * only some of them leaves the grid's arrangement and its library's apart.
+	 *
+	 * **Optional, and an adapter that ignores it stays correct where it was correct before** — every
+	 * commit is by id, so nothing wrong is ever committed. What it costs is the defect above: in a
+	 * virtualized body the neighbours stop moving once the window has turned over under the drag. A
+	 * non-virtualized body does not read it.
+	 */
+	onDisplace?: (event: DndDragOverEvent) => void
+	/**
 	 * What to say about this drag, in the application's language — see {@link DndAnnouncements}.
 	 *
 	 * **Optional, and an adapter that ignores it is still correct — merely silent.** Unlike

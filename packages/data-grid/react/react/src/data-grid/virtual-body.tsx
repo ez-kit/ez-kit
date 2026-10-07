@@ -1,12 +1,13 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 
 import { useGridComponents } from '../components-context'
 import { DATA_GRID_DEFAULTS } from '../defaults'
 import { LoadMoreTrigger } from '../types'
+import { projectDragOrder } from '../utils/project-drag-order'
 import { resolveVirtualWindowPads } from '../utils/virtual-window-pads'
 
 import { DataGridRow } from './row'
-import { useActiveDraggingRow, usePublishRenderedRows } from './row-drag-registry'
+import { useActiveDraggingRow, usePublishRenderedRows, useRowDragProjection } from './row-drag-registry'
 import { useDataGridTable, useDataGridState } from './table-context'
 import { useInfiniteScroll } from './use-infinite-scroll'
 import { usePinnedRowOffsets } from './use-pinned-row-offsets'
@@ -67,6 +68,8 @@ export function VirtualBody() {
 	// Re-renders this body when a row drag starts or ends, which is what lets it keep the dragged row
 	// mounted after the window has scrolled past it.
 	const activeRowId = useActiveDraggingRow()
+	// And when the drag displaces that row: see `projectedRows` below.
+	const projection = useRowDragProjection()
 
 	const virtualItems = rowVirtualizer?.getVirtualItems() ?? []
 	const lastIndex = virtualItems.length > 0 ? (virtualItems[virtualItems.length - 1]?.index ?? -1) : -1
@@ -100,8 +103,43 @@ export function VirtualBody() {
 	}, [enabled, trigger, hasNextPage, isFetching, lastIndex, rowCount, thresholdRows, loadMore])
 
 	/*
+	 * The centre rows **in the arrangement the drag is showing**: the model, with the row being dragged
+	 * moved to where the drag library has displaced it. Outside a gesture there is no projection and
+	 * this is `centerRows` itself.
+	 *
+	 * This is what keeps displacement alive once the window has turned over under a drag. The library
+	 * moves the held row's element and rewrites the group's indices on every displacement, while this
+	 * body re-renders on every frame of the drag's auto-scroll — and rendered in model order, it put the
+	 * held row back at its old slot. The library's index for that row and the one published here then
+	 * disagreed, the group had a gap and a duplicate, and `OptimisticSortingPlugin` bails on every hover
+	 * after that: the neighbours stopped moving for the rest of the gesture. Rendering the projection
+	 * makes the two one order, so the published indices are the library's and the space stays dense.
+	 * `DndProviderProps.onDisplace` has the measurement.
+	 *
+	 * **The window indexes the projected list, and the virtualizer's geometry stays the model's.** Slot
+	 * `i` of the window renders `projectedRows[i]` at the virtualizer's `start` / `size` for slot `i`, so
+	 * a displacement shifts which row sits in a slot and never where a slot is. That is exactly what the
+	 * pads need: they are computed from the window alone (see below), the window's span does not change
+	 * when the projection does, and so the band cannot jump by a row when the held row moves — measured,
+	 * `paddingTop` held its value across every displacement. The one approximation is a row's size: the
+	 * row in slot `i` takes slot `i`'s measurement, which is its own only when every row shares
+	 * `estimateSize`. Nothing measures rows back (see this component's docblock), so with uniform rows
+	 * there is no difference to see; a variable-height grid would show the rows between the source and
+	 * the target at their neighbour's height for the length of the gesture, and back at their own after
+	 * it.
+	 *
+	 * Memoised because this body re-renders on every scroll frame and the projection is a copy of the
+	 * whole centre list, while both inputs hold still across those frames: the row model is memoised by
+	 * the table, and the projection changes only when the drag displaces.
+	 */
+	const projectedRows = useMemo(
+		() => projectDragOrder(centerRows, (row) => row.id, projection),
+		[centerRows, projection],
+	)
+
+	/*
 	 * The centre rows this body renders, in index order: the virtualizer's window, plus the row being
-	 * dragged once the window has scrolled past it.
+	 * dragged once its slot has left the window.
 	 *
 	 * Holding that row is the whole of why a virtualized grid can be reordered by drag at all. Let it
 	 * unmount and its sortable unregisters mid-gesture, which puts a hole in an index space the
@@ -109,15 +147,19 @@ export function VirtualBody() {
 	 * element under the pointer is dnd-kit's clone rather than React's row, so the drag looks alive
 	 * while the drop resolves the source to `-1`. Measured; see the plan's Task 1 gate.
 	 *
+	 * The held row's slot is its **projected** one: while it is displaced into the window it renders in
+	 * flow there, occupying the gap its neighbours moved aside for, and it is only held out of flow once
+	 * that slot has scrolled out of the window.
+	 *
 	 * OUT_OF_WINDOW_ROW: the pinned bands below already render outside the virtualizer's range, so
 	 * this reuses that rather than reaching for a `rangeExtractor`.
 	 */
 	const windowEntries = virtualItems.flatMap((virtualRow: VirtualItem) => {
-		const row = centerRows[virtualRow.index]
+		const row = projectedRows[virtualRow.index]
 		return row ? [{ index: virtualRow.index, row, start: virtualRow.start, size: virtualRow.size }] : []
 	})
-	const heldIndex = activeRowId === null ? -1 : centerRows.findIndex((row) => row.id === activeRowId)
-	const heldRow = heldIndex < 0 ? undefined : centerRows[heldIndex]
+	const heldIndex = activeRowId === null ? -1 : projectedRows.findIndex((row) => row.id === activeRowId)
+	const heldRow = heldIndex < 0 ? undefined : projectedRows[heldIndex]
 	// Indexed by row index and built for every row from `estimateSize`, so this is present whenever
 	// the row is. Without it the row would have to render at an offset it does not occupy, which for
 	// an upward drag means a ghost row above the window — so a missing measurement holds nothing and

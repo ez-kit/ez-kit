@@ -14,6 +14,7 @@ import { guardComponents } from '../components-guard'
 import { GridFactoryDefaultsProvider } from '../data-grid-options-context'
 import { useDataGrid, type UseDataGridConfig } from '../use-data-grid'
 import { useGridMessages } from '../use-grid-messages'
+import { getRowDropOrder } from '../utils/row-drop-order'
 
 import { ActionBar, buildSelectionBarArgs } from './action-bar'
 import { ActiveFiltersBar } from './active-filters-bar'
@@ -26,7 +27,7 @@ import { ColumnFilter } from './column-filter'
 import { ComponentGuard } from './component-guard'
 import { CreateTrigger } from './create-trigger'
 import { CreatingModal } from './creating-modal'
-import { DndAdapterProvider, DndBundleProvider, DragAxis, useDndAdapter, useDndBundleAdapter } from './dnd'
+import { DndAdapterProvider, DndBundleProvider, DragAxis, DragSurface, useDndAdapter, useDndBundleAdapter } from './dnd'
 import { COLUMN_DROP_SCOPE } from './dnd/column-drop-scope'
 import { buildDndAnnouncements } from './dnd-announcements'
 import { EditingModal } from './editing-modal'
@@ -48,7 +49,7 @@ import { Pagination } from './pagination'
 import { DataGridRow } from './row'
 import { RowCountStatus } from './row-count-status'
 import { RowDragHandle } from './row-drag-handle'
-import { RowDragRegistryProvider, useRenderedRowIdsReader } from './row-drag-registry'
+import { RowDragRegistryProvider, useDisplaceRow, useRenderedRowIdsReader } from './row-drag-registry'
 import { SortMenuTrigger } from './sort-menu-trigger'
 import { DataGridTable } from './table'
 import { TableProvider, useDataGridTable, useDataGridState } from './table-context'
@@ -323,6 +324,7 @@ function GridDndProvider({ children }: { children: ReactNode }) {
 	const table = useDataGridTable()
 	const messages = useGridMessages()
 	const readRenderedRowIds = useRenderedRowIdsReader()
+	const displaceRow = useDisplaceRow()
 
 	/**
 	 * The current table and dictionary, for callbacks that outlive the render that built them.
@@ -474,12 +476,36 @@ function GridDndProvider({ children }: { children: ReactNode }) {
 		[table],
 	)
 
+	/**
+	 * Record where the drag has displaced a held row, so a virtualized body renders that arrangement
+	 * rather than the model's for the rest of the gesture — see `DndProviderProps.onDisplace`, which has
+	 * the defect this closes and the measurement.
+	 *
+	 * The row axis on the table surface only. Columns are never virtualized, and the panel lists every
+	 * column at once, so neither surface re-renders mid-gesture into an order that could disagree with
+	 * the library's. The order handed over is the list the rows are drawn in — the one the library's
+	 * group is ordered by, and so the one whose arrangement a displacement steps from. `O(n)` per
+	 * displacement, which happens at most once per row the pointer crosses.
+	 */
+	const onDisplace = useCallback(
+		(event: DndDragOverEvent) => {
+			if (event.axis !== DragAxis.Row || event.surface !== DragSurface.Table) return
+			displaceRow(
+				getRowDropOrder(table).map((row) => row.id),
+				event.sourceId,
+				event.targetId,
+			)
+		},
+		[table, displaceRow],
+	)
+
 	if (!adapter) return <>{children}</>
 
 	return (
 		<adapter.Provider
 			onDrop={onDrop}
 			canDrop={canDrop}
+			onDisplace={onDisplace}
 			announcements={announcements}
 		>
 			{children}
