@@ -1,5 +1,117 @@
 # @ez-kit/docs
 
+## 0.2.0
+
+### Minor Changes
+
+- bf064e9: Document drag and drop.
+
+  Drag was built surface by surface with no page at all: its examples sat in the manifest, reachable
+  only by URL and referenced from no `.mdx` — `verify-manifest-coverage.mjs` reported every one of
+  them, and it does not run in CI so nothing failed. There is now a **Drag and drop** section of four pages:
+  **Installation** (each kit's adapter and a first drag), **Rows** (the handle column, a handle of your
+  own, with and without virtualization), **Columns** (the header, the column panel and RTL) and
+  **API** (every option, component, key and message, in tables). Every drag example is on one of them,
+  including five new row and column cases.
+
+  The three ordering pages gain a pointer to it rather than a copy of it, since drag adds no option of
+  its own — it is the fourth affordance over `ordering`, the one that moves something several places in
+  a single gesture where the menus and `Alt+Arrow` move it one step.
+
+  Two corrections ride along. `production.mdx` still said "drag reordering … not built yet". And
+  `row-ordering.mdx`'s **What cannot move** list had been collapsed into one run-on paragraph, taking
+  three of its five bullets and an example with it.
+
+  Kit parity gains the two HeroUI drag limits: a header column does not drag while the column panel is
+  open, and `Escape` during a panel drag can change the order without reporting it through
+  `ordering.column.onChange` — the second is a defect, and an application persisting the order from
+  that callback should know about it.
+
+  The three examples that count commits now label the counter instead of rendering a bare `0` above
+  the grid, which read as a glitch once they were on a page.
+
+- eb46bc9: Serve the shadcn data-grid registry as two items, so a grid without drag never installs `@dnd-kit`.
+
+  `https://ez-kit-docs.vercel.app/r/data-grid.json` is unchanged as a URL and still installs a single
+  item — it carries neither `dnd.tsx` nor the two `@dnd-kit` dependencies that exist only for it. Drag
+  has its own item at `…/r/data-grid-dnd.json`, carrying that file and those dependencies. It is still
+  **one** command for a drag consumer: the drag item names the grid item as a registry dependency,
+  which the CLI resolves, so both file sets and both dependency lists land in one run. Switching drag
+  on is then the same one field it is on npm:
+
+  ```tsx
+  import { adapter } from '@/components/data-grid/dnd'
+
+  export const { DataGrid } = createDataGrid({ components: allComponents, cellTypes, features, dnd: adapter })
+  ```
+
+  **Why two items rather than one, since the path is the argument.** The adapter was first left out of
+  the payload altogether so that an optional peer stayed optional, and the cost of that was larger than
+  it looked: this kit is not published to npm, so a file the registry does not copy cannot be imported
+  at all — withholding it did not make drag optional on the shadcn path, it made drag impossible there.
+  The answer to that is not a removal but a second item. Putting the adapter into the single item would
+  work, and was built that way first, but it hands the install to every consumer whether they drag
+  anything or not, because a `registry-item` carries one `dependencies` list and `shadcn add` installs
+  all of it — there is no `peerDependenciesMeta` here. **That single-item arrangement is superseded and
+  no release carries it**: the only item that mentions `@dnd-kit` is the drag item, and
+  `apps/docs/test/registry-payload.test.ts` asserts the grid item mentions it neither in its
+  `dependencies` nor inside any file's content.
+
+  What the drag item costs a consumer who chooses it, measured rather than guessed: six packages,
+  roughly 1.7 MB unpacked, one line in `package.json` — and **no bundle bytes**, since nothing reaches
+  `dnd.tsx` unless you write `dnd: adapter`, so an unused module is tree-shaken like any other.
+  Deleting the file and dropping the dependencies is supported and nothing in the grid item references
+  either; the file's own docblock says so.
+
+  **The npm path is untouched throughout.** `@dnd-kit/react` remains an _optional_ peer of both kits,
+  and the guarantee that a kit root's bundle cannot reach it is still asserted.
+
+  One thing to know for later: `shadcn add` copies verbatim and has no uninstall, and re-running a
+  command does not drop a dependency an item no longer declares. So the split is what any future
+  narrowing of the payload will have to reckon with — a dependency that reaches a consumer's
+  `package.json` through the registry stays there until they remove the line by hand.
+
+### Patch Changes
+
+- Updated dependencies [0c06604]
+- Updated dependencies [94a0c4d]
+- Updated dependencies [00e6169]
+- Updated dependencies [e6d0171]
+- Updated dependencies [22912f2]
+- Updated dependencies [e859429]
+- Updated dependencies [e859429]
+- Updated dependencies [07111b7]
+- Updated dependencies [7d999e6]
+- Updated dependencies [df96bef]
+- Updated dependencies [48c0028]
+- Updated dependencies [ede6b9c]
+- Updated dependencies [845ad09]
+- Updated dependencies [14ba3d6]
+- Updated dependencies [fd8f55d]
+- Updated dependencies [57def5d]
+- Updated dependencies [cc18261]
+- Updated dependencies [5d0bd8b]
+- Updated dependencies [df96bef]
+- Updated dependencies [9e8a879]
+- Updated dependencies [16d63fa]
+- Updated dependencies [c4ac267]
+- Updated dependencies [03df900]
+- Updated dependencies [0dc4733]
+- Updated dependencies [a3c4aba]
+- Updated dependencies [1abedfe]
+- Updated dependencies [0c06604]
+- Updated dependencies [e39e8c2]
+- Updated dependencies [fbfc9b9]
+- Updated dependencies [6827856]
+  - @ez-kit/data-grid-core@0.9.0
+  - @ez-kit/data-grid-react@0.10.0
+  - @ez-kit/data-grid-heroui@0.10.0
+  - @ez-kit/form-core@0.4.0
+  - @ez-kit/form-react@0.4.0
+  - @ez-kit/form-shadcn@0.4.0
+  - @ez-kit/form-heroui@0.5.0
+  - @ez-kit/data-grid-shadcn@0.2.0
+
 ## 0.1.3
 
 ### Patch Changes
