@@ -166,3 +166,36 @@ export const EMPLOYEE_DATA: Employee[] = [
 	{ id: 7, name: 'Grace Kim', department: 'Sales', salary: 77000, joinedAt: '2020-12-30', active: true },
 	{ id: 8, name: 'Hank Patel', department: 'Engineering', salary: 115000, joinedAt: '2018-06-25', active: true },
 ]
+
+const EMPLOYEE_FIRST_NAMES = [
+	'Ivy',
+	'Jack',
+	'Kate',
+	'Liam',
+	'Mia',
+	'Noah',
+	'Olga',
+	'Paul',
+	'Quinn',
+	'Rosa',
+	'Sam',
+	'Tina',
+]
+const EMPLOYEE_LAST_NAMES = ['Adams', 'Baker', 'Clark', 'Diaz', 'Evans', 'Fox', 'Gray', 'Hill', 'Ito', 'Jones', 'Khan']
+const EMPLOYEE_DEPARTMENTS = ['Engineering', 'Marketing', 'Sales', 'Support']
+
+/** {@link EMPLOYEE_DATA} followed by generated employees, `count` in all. */
+export function makeEmployees(count: number): Employee[] {
+	const generated = Array.from({ length: Math.max(0, count - EMPLOYEE_DATA.length) }, (_, i) => {
+		const id = EMPLOYEE_DATA.length + i + 1
+		return {
+			id,
+			name: `${EMPLOYEE_FIRST_NAMES[i % EMPLOYEE_FIRST_NAMES.length] ?? ''} ${EMPLOYEE_LAST_NAMES[i % EMPLOYEE_LAST_NAMES.length] ?? ''}`,
+			department: EMPLOYEE_DEPARTMENTS[i % EMPLOYEE_DEPARTMENTS.length] ?? '',
+			salary: 60000 + ((i * 7919) % 60) * 1000,
+			joinedAt: `20${String(18 + (i % 6))}-${String((i % 12) + 1).padStart(2, '0')}-${String((i % 27) + 1).padStart(2, '0')}`,
+			active: i % 4 !== 0,
+		}
+	})
+	return [...EMPLOYEE_DATA, ...generated].slice(0, count)
+}

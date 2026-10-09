@@ -15,7 +15,7 @@ import { createColumns } from '@ez-kit/data-grid-react'
 
 import { DataGridDnd } from 'shared/DataGridDnd'
 
-import { EMPLOYEE_DATA } from './_data'
+import { makeEmployees } from './_data'
 
 import type { Employee } from './_data'
 
@@ -36,18 +36,19 @@ const columns = createColumns<Employee>([
 	{ accessorKey: 'salary', header: 'Salary', align: 'end', cell: { type: 'number' } },
 ])
 
-export function KeyboardSensorsExample() {
+const ROW_COUNT = 24
+
+export function RowDragSortingSelectionExample() {
 	return (
-		<div className='flex flex-col gap-2'>
-			<DataGridDnd
-				features={features}
-				data={EMPLOYEE_DATA.slice(0, 8)}
-				columns={columns}
-				getRowId={(row: Employee) => String(row.id)}
-				sorting
-				selection={{}}
-				ordering={{ row: true }}
-			/>
-		</div>
+		<DataGridDnd
+			features={features}
+			data={makeEmployees(ROW_COUNT)}
+			columns={columns}
+			getRowId={(row: Employee) => String(row.id)}
+			layout={{ stickyHeader: true, maxHeight: '420px' }}
+			sorting
+			selection={{}}
+			ordering={{ row: true }}
+		/>
 	)
 }

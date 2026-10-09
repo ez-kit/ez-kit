@@ -115,7 +115,10 @@ export const DocPage = {
 	ColumnsGroupedHeaders: 'content/docs/data-grid/columns/grouped-headers.mdx',
 	ColumnsOrdering: 'content/docs/data-grid/columns/ordering.mdx',
 	RowOrdering: 'content/docs/data-grid/row-ordering.mdx',
-	DragAndDrop: 'content/docs/data-grid/drag-and-drop.mdx',
+	DragAndDropApi: 'content/docs/data-grid/drag-and-drop/api.mdx',
+	DragAndDropColumns: 'content/docs/data-grid/drag-and-drop/columns.mdx',
+	DragAndDropIndex: 'content/docs/data-grid/drag-and-drop/index.mdx',
+	DragAndDropRows: 'content/docs/data-grid/drag-and-drop/rows.mdx',
 	PinningApi: 'content/docs/data-grid/pinning/api.mdx',
 	PinningColumns: 'content/docs/data-grid/pinning/columns.mdx',
 	ColumnsVisibility: 'content/docs/data-grid/columns/visibility.mdx',
@@ -276,6 +279,14 @@ export const GRID_TYPE = {
 	BulkDeletingConfig: { module: TypeModule.Core, name: 'BulkDeletingConfig', typeArgs: ROW_TYPE_ARGS },
 	CellTypeDefinition: { module: TypeModule.React, name: 'CellTypeDefinition' },
 	LayoutConfig: { module: TypeModule.React, name: 'LayoutConfig' },
+	/** The options of `createDataGrid` — a bundle-level config, where the drag adapter is bound. */
+	CreateDataGridOptions: {
+		module: TypeModule.React,
+		name: 'CreateDataGridOptions',
+		typeArgs: '<Record<never, never>>',
+	},
+	/** The message catalogue; tables address its keys as `<group>.<key>`. */
+	GridMessages: { module: TypeModule.Core, name: 'GridMessages' },
 } as const satisfies Record<string, TypeRef>
 
 /**
@@ -728,7 +739,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.ColumnsOrdering,
 		optionTables: [
-			{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 4 },
+			{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 6 },
 			{ heading: 'Column options', roots: [GRID_TYPE.ColumnDef], expectedCount: 1 },
 		],
 		nonOptionTables: [],
@@ -739,22 +750,55 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		nonOptionTables: [],
 	},
 	{
-		/*
-		 * No option table, and that is the page being consistent rather than thin. Drag is switched on
-		 * by `createDataGrid({ dnd: adapter })`, a field of `CreateDataGridOptions` — and every field
-		 * of that type is documented in prose and a code fence, never a table (`keyboardNavigation`,
-		 * its sibling, has exactly one line in `accessibility.mdx`). The behaviour a reader configures
-		 * is `ordering`, which the two ordering pages already table — including the one option drag
-		 * does add, `ordering.column.visibilityMenu.drag`, tabled on `columns/ordering.mdx` beside the
-		 * flag it overrides.
-		 */
-		page: DocPage.DragAndDrop,
+		// The narrative pages of the split: prose and live examples, every table moved to
+		// `drag-and-drop/api.mdx` below. Mapped with two empty arrays so each stays inside
+		// `everyPageIsMapped` rather than silently unchecked.
+		page: DocPage.DragAndDropIndex,
+		optionTables: [],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.DragAndDropRows,
+		optionTables: [],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.DragAndDropColumns,
 		optionTables: [],
 		nonOptionTables: [
 			{
-				heading: 'The three surfaces',
+				heading: 'The short form',
+				reason:
+					'The first column is an intent in prose ("The move pair alone, no drag"); the other two name the option per surface, and every one of them is checked on `drag-and-drop/api.mdx` and `columns/ordering.mdx`.',
+			},
+		],
+	},
+	{
+		page: DocPage.DragAndDropApi,
+		optionTables: [
+			// `createDataGrid({ dnd })` — the one field drag adds to the bundle config.
+			{ heading: 'Binding', roots: [GRID_TYPE.CreateDataGridOptions], expectedCount: 1 },
+			// The `ordering` tree, resolved through its `boolean | …Config` and `false | SystemColumnDef`
+			// unions, plus `getRowId` and `direction`, which row and RTL drags read.
+			{ heading: 'Grid options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 13 },
+			{ heading: 'Column def', roots: [GRID_TYPE.ColumnDef], expectedCount: 1 },
+			{ heading: 'Announcements', roots: [GRID_TYPE.GridMessages], expectedCount: 13 },
+		],
+		nonOptionTables: [
+			{
+				heading: 'Components',
+				reason:
+					'The first column names components, a render argument and a helper function — exported symbols and JSX, not keys of any config type.',
+			},
+			{
+				heading: 'Surfaces',
 				reason:
 					'The first column names a drag surface; the rest are the handle to render, the state slice it writes and the list it counts in — none is a key of any config type.',
+			},
+			{
+				heading: 'Pointer',
+				reason:
+					'The first column is a kind of pointer (mouse, touch, pen); the other two describe when a drag starts. Nothing here is settable.',
 			},
 			{
 				heading: 'Keyboard',

@@ -31,13 +31,6 @@ const columns = createColumns<Task>([
 	{ accessorKey: 'owner', header: 'Owner' },
 ] as never)
 
-/**
- * Dragging a row in a **virtualized** grid — ten thousand rows, a window of a few dozen.
- *
- * The case the whole of phase 9 is about: a windowed body renders a slice, so what a row can honestly
- * report as its index, and what stays mounted while the pointer moves, are both different from the
- * non-virtual grid.
- */
 export function VirtualizedRowDragExample() {
 	const data = useMemo(
 		() =>

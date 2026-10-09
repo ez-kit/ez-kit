@@ -13,15 +13,15 @@ limitation: please [open an issue](https://github.com/ez-kit/ez-kit/issues/new).
 
 ## Known divergences
 
-| Capability                                                                            | shadcn                          | HeroUI                                 | Why                                                                                       |
-| ------------------------------------------------------------------------------------- | ------------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------- |
-| [Grouped headers](/docs/data-grid/columns/grouped-headers)                            | Full                            | Renders flat                           | React Aria removed nested columns from its collection before GA                           |
-| [`Alt+Arrow` column reordering](/docs/data-grid/columns/ordering)                     | Works                           | Menu only                              | React Aria's column spreads its own props last, overwriting the handler                   |
-| [`Alt+Arrow` row reordering](/docs/data-grid/row-ordering)                            | Works                           | Menu only                              | React Aria's row owns focus inside the grid and forwards no key handler                   |
-| [Header drag while the column panel is open](/docs/data-grid/drag-and-drop)           | Works                           | Does not start                         | HeroUI's popover covers the header, so the pointer never reaches the handle               |
-| [`Escape` during a panel drag](/docs/data-grid/drag-and-drop)                         | Reports nothing, writes nothing | Can write without reporting            | Unexplained; `Escape` is both the popover's dismiss key and the drag library's cancel key |
-| [Focus after `Tab` ends a keyboard drag](/docs/data-grid/drag-and-drop#keyboard)      | Stays on the handle             | Leaves the table                       | React Aria's focus manager owns focus inside the grid                                     |
-| [A drag handle's `aria-roledescription`](/docs/data-grid/drag-and-drop#announcements) | From the dictionary             | The drag library's English `draggable` | React Aria's button forwards an allow-list of ARIA attributes and this is not on it       |
+| Capability                                                                                | shadcn                          | HeroUI                                 | Why                                                                                       |
+| ----------------------------------------------------------------------------------------- | ------------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------- |
+| [Grouped headers](/docs/data-grid/columns/grouped-headers)                                | Full                            | Renders flat                           | React Aria removed nested columns from its collection before GA                           |
+| [`Alt+Arrow` column reordering](/docs/data-grid/columns/ordering)                         | Works                           | Menu only                              | React Aria's column spreads its own props last, overwriting the handler                   |
+| [`Alt+Arrow` row reordering](/docs/data-grid/row-ordering)                                | Works                           | Menu only                              | React Aria's row owns focus inside the grid and forwards no key handler                   |
+| [Header drag while the column panel is open](/docs/data-grid/drag-and-drop/columns)       | Works                           | Does not start                         | HeroUI's popover covers the header, so the pointer never reaches the handle               |
+| [`Escape` during a panel drag](/docs/data-grid/drag-and-drop/columns#the-column-panel)    | Reports nothing, writes nothing | Can write without reporting            | Unexplained; `Escape` is both the popover's dismiss key and the drag library's cancel key |
+| [Focus after `Tab` ends a keyboard drag](/docs/data-grid/drag-and-drop/api#keyboard)      | Stays on the handle             | Leaves the table                       | React Aria's focus manager owns focus inside the grid                                     |
+| [A drag handle's `aria-roledescription`](/docs/data-grid/drag-and-drop/api#announcements) | From the dictionary             | The drag library's English `draggable` | React Aria's button forwards an allow-list of ARIA attributes and this is not on it       |
 
 None of these affect the data, state, or options you write — moving a grid between kits never
 requires rewriting your config. The first three are upstream constraints; the last four are drag-specific.
@@ -39,7 +39,7 @@ the menu entries still work in both kits, so the capability is present either wa
 
 ### A header column does not drag while the column panel is open (HeroUI)
 
-Both [drag surfaces of the column axis](/docs/data-grid/drag-and-drop) work in both kits. What
+Both [drag surfaces of the column axis](/docs/data-grid/drag-and-drop/columns) work in both kits. What
 HeroUI cannot do is the two at once: with the Columns panel open, its popover covers the header, so a
 pointer aimed at a header cell's grip never reaches it and no drag starts. In the shadcn kit the same
 gesture works.

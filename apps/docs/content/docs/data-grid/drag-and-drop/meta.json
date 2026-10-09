@@ -1,0 +1,5 @@
+{
+	"title": "Drag and drop",
+	"description": "Drag rows, column headers and the rows of the column panel",
+	"pages": ["index", "rows", "columns", "api"]
+}

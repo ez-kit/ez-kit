@@ -6,11 +6,11 @@ Document drag and drop.
 
 Drag was built surface by surface with no page at all: its examples sat in the manifest, reachable
 only by URL and referenced from no `.mdx` — `verify-manifest-coverage.mjs` reported every one of
-them, and it does not run in CI so nothing failed. There is now a **Drag and drop** page covering the
-three surfaces, how each kit switches the adapter on, the boundaries a drag honours, the keyboard
-path and its announcements, RTL, and what is not built yet. All six examples are on it: `row-drag`,
-`virtualized-row-drag`, `column-drag`, `column-panel-drag`, `keyboard-sensors` and
-`column-drag-rtl`.
+them, and it does not run in CI so nothing failed. There is now a **Drag and drop** section of four pages:
+**Installation** (each kit's adapter and a first drag), **Rows** (the handle column, a handle of your
+own, with and without virtualization), **Columns** (the header, the column panel and RTL) and
+**API** (every option, component, key and message, in tables). Every drag example is on one of them,
+including five new row and column cases.
 
 The three ordering pages gain a pointer to it rather than a copy of it, since drag adds no option of
 its own — it is the fourth affordance over `ordering`, the one that moves something several places in
