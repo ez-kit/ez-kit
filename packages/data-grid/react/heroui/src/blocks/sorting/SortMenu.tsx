@@ -1,7 +1,7 @@
 'use client'
 
 import { SortDirection, useGridMessages } from '@ez-kit/data-grid-react/kit'
-import { Button, ListBox, Popover, Select } from '@heroui/react'
+import { Button, buttonVariants, ListBox, Popover, Select } from '@heroui/react'
 import { ArrowUpDown, Plus, Trash2 } from 'lucide-react'
 
 import type { SortMenuItem, SortMenuProps } from '@ez-kit/data-grid-react'
@@ -95,20 +95,21 @@ export function SortMenu({ items, canAddSort, onAddSort, onResetSorting }: SortM
 
 	return (
 		<Popover>
-			<Popover.Trigger>
-				<Button
-					data-slot='sort-menu-trigger'
-					size='sm'
-					variant='outline'
-				>
-					<ArrowUpDown size={16} />
-					{messages.sorting.trigger}
-					{activeCount > 0 ? (
-						<span className='ml-0.5 rounded-full bg-accent px-1.5 py-0 text-xs leading-5 font-medium text-accent-foreground'>
-							{activeCount}
-						</span>
-					) : null}
-				</Button>
+			{/* No `<Button>` in here: `Popover.Trigger` renders its own `div[role="button"]` around
+			    whatever it is given, so a button inside it is `nested-interactive`. The looks come
+			    from `buttonVariants`, plus `inline-flex` to beat `popover__trigger`'s `inline-block` —
+			    see `VisibilityMenu` for the full note. */}
+			<Popover.Trigger
+				data-slot='sort-menu-trigger'
+				className={`${buttonVariants({ size: 'sm', variant: 'outline' })} inline-flex`}
+			>
+				<ArrowUpDown size={16} />
+				{messages.sorting.trigger}
+				{activeCount > 0 ? (
+					<span className='ml-0.5 rounded-full bg-accent px-1.5 py-0 text-xs leading-5 font-medium text-accent-foreground'>
+						{activeCount}
+					</span>
+				) : null}
 			</Popover.Trigger>
 			<Popover.Content>
 				<Popover.Dialog

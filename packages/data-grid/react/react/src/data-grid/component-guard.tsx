@@ -3,6 +3,7 @@
 import { isFeatureEnabled } from '@ez-kit/data-grid-core'
 
 import { useGridComponents } from '../components-context'
+import { isMissingComponent, missingComponentsError } from '../components-guard'
 import { COMPONENT_FEATURE } from '../contract'
 
 import { useDataGridTable } from './table-context'
@@ -28,11 +29,23 @@ const REQUIRED_STRUCTURAL = [
  * provider tree by the DataGrid root; renders nothing.
  *
  * Kits that declare `satisfies FullGridComponents` are already complete at compile
- * time — this guard is the runtime safety net for *partial* kits (typed against
+ * time — the runtime contract is the safety net for *partial* kits (typed against
  * `GridComponents`), where a feature can reference a component the kit never
- * registered. It asserts only components whose need is unambiguous at render time
- * (the always-rendered structural primitives, plus components gated by a config that
- * is definitively present) so it can never fire a false positive.
+ * registered. It has two halves, and this is the **eager** one: it asserts, at mount,
+ * only the components whose need is unambiguous before anything is rendered — the
+ * always-rendered structural primitives, plus the ones a definitively present config
+ * calls for — so it can never fire a false positive.
+ *
+ * Its value over the lazy half is *when* it fires. `ConfirmDialog` and `FormShell`
+ * render on an interaction that may be a dozen clicks into a flow; a config that asks
+ * for them says so at mount, so that is where the error belongs.
+ *
+ * Everything else is covered by `guardComponents` in `../components-guard`, which
+ * resolves a missing required component to a placeholder that throws when rendered.
+ * That is why this list stays short rather than growing to all of
+ * {@link FEATURE_COMPONENTS} — and why `Tfoot` is deliberately absent from the
+ * structural set: a footer renders only if a layout composed `<DataGrid.Footer>`, and
+ * a config cannot know whether one did.
  *
  * Stripped from production builds by the `IS_DEV` guard at the call site.
  */
@@ -53,17 +66,11 @@ export function ComponentGuard(): null {
 		// Resolve the component through its feature group; a partial kit may omit the
 		// whole group or the individual member.
 		const group = components[COMPONENT_FEATURE[key]] as Record<string, unknown> | undefined
-		return group?.[key] == null
+		const registered = group?.[key]
+		return registered == null || isMissingComponent(registered)
 	})
 
-	if (missing.length > 0) {
-		const detail = missing.map((key) => `  - ${key} (${COMPONENT_FEATURE[key]})`).join('\n')
-		throw new Error(
-			`[data-grid] Missing required UI-kit component(s):\n${detail}\n` +
-				'Register them via createDataGrid({ components }) or a local <DataGrid components={{…}} /> override. ' +
-				'See @ez-kit/data-grid-react CONTRACT.md.',
-		)
-	}
+	if (missing.length > 0) throw missingComponentsError(missing)
 
 	return null
 }

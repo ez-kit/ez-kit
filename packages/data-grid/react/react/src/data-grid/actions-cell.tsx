@@ -184,6 +184,21 @@ export function ActionsCell({ row }: ActionsCellProps) {
 	const { Menu } = useGridComponents().core
 	const messages = table.grid.messages.rowActions
 
+	/*
+	 * A group row is not a record, so it has nothing to edit, delete, pin or move.
+	 *
+	 * Returned **before** every hook below would be a rules-of-hooks violation, so the guard sits
+	 * after them and renders nothing. That costs a group row the subscriptions and buys the thing
+	 * that matters: without it the cell draws a full set of affordances whose every action names
+	 * `row.id` — a synthetic id no `onDelete` can resolve — so Delete on a region's header row
+	 * reaches the consumer's handler with an id that matches no record.
+	 *
+	 * `null` rather than an empty `<Renderer>`: the `<td>` is drawn by `cell.tsx` either way, so
+	 * the column track is intact and only its contents are absent.
+	 */
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const isGroupRow = row.getIsGrouped?.() ?? false
+
 	// Stable booleans — non-target rows stay `false` across any editing change.
 	//
 	// Optional-chained: this column mounts whenever `editing`, `deleting`, row `pinning` **or**
@@ -212,6 +227,8 @@ export function ActionsCell({ row }: ActionsCellProps) {
 	// (core's `GridOptions`). Reading them off `options` now yields `undefined` — which is how
 	// the whole pin section of this cell disappeared.
 	const pinConfig = table.grid.pinning.rowConfig
+
+	if (isGroupRow) return null
 
 	// Mid-edit: save / cancel only. Row mode alone — a modal carries its own buttons, and a cell
 	// edit commits itself, so neither should swap this column out from under the user.

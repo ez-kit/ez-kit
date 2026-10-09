@@ -19,6 +19,19 @@ This requires an existing shadcn project (`npx shadcn init` if you don't have on
 UI primitives they build on — into your project, and adds `@ez-kit/data-grid-react` plus the
 kit's other runtime dependencies to your `package.json`.
 
+That is the command you want unless you also want [drag and drop](/docs/data-grid/drag-and-drop).
+Drag ships as a second registry item, because it is the one part of the kit that needs a library of
+its own (`@dnd-kit`), and a registry item has one dependency list with no way to mark part of it
+optional. If you want it, add **that** item instead of the one above:
+
+```bash
+npx shadcn@latest add https://ez-kit-docs.vercel.app/r/data-grid-dnd.json
+```
+
+It is still one command, not two: the drag item names the grid item as a registry dependency, so
+the CLI installs both file sets and both dependency lists in one run. Pick one of the two commands —
+the plain one for a grid without drag, the `-dnd` one for a grid with it.
+
 Then add `@ez-kit/data-grid-core`:
 
 ```bash
@@ -31,10 +44,16 @@ re-exported through the React adapter — it is separate so that it tree-shakes,
 would anchor the whole feature graph into every consumer's bundle. Pin it to the same version as
 the `@ez-kit/data-grid-react` the CLI added.
 
-To pick up a later update, re-run the same command, or check what changed first with:
+To pick up a later update, re-run whichever command you installed with, or check what changed first
+with `--diff` on that same URL:
 
 ```bash
 npx shadcn@latest add https://ez-kit-docs.vercel.app/r/data-grid.json --diff
+```
+
+```bash
+# if you installed the drag item
+npx shadcn@latest add https://ez-kit-docs.vercel.app/r/data-grid-dnd.json --diff
 ```
 
 ## 2. Import the stylesheet

@@ -1,0 +1,93 @@
+---
+title: Columns
+description: Drag columns by their headers or by the rows of the column panel — including hidden columns.
+---
+
+Columns drag on two surfaces over one `columnOrder`: the **header** and the **column panel**. Both
+assume the adapter is bound as in [Installation](/docs/data-grid/drag-and-drop). Each option is in the
+[API reference](/docs/data-grid/drag-and-drop/api).
+
+## The short form
+
+Turn the column axis on and every header gets a grip before its label. Add
+`ordering.column.visibilityMenu` and the Columns toggle in the toolbar becomes a panel whose rows drag
+too — no children, no extra components:
+
+<DataGridDocsExample exampleId='column-panel-drag-basic' />
+
+```tsx
+<DataGrid
+	features={features}
+	data={data}
+	columns={columns}
+	visibility
+	ordering={{ column: { visibilityMenu: true } }}
+/>
+```
+
+With a grip on the header, the column menu drops **Move left** / **Move right** — they are the same
+move one step at a time, and the drag is keyboard-operable too. The panel does the same with its
+arrows. Each surface takes two overrides:
+
+| You want                     | Header                               | Panel                                               |
+| ---------------------------- | ------------------------------------ | --------------------------------------------------- |
+| The grip and the move pair   | `ordering.column.moveControls: true` | `ordering.column.visibilityMenu.moveControls: true` |
+| The move pair alone, no drag | `ordering.column.drag: false`        | `ordering.column.visibilityMenu.drag: false`        |
+
+## Hidden columns
+
+The panel lists hidden columns too, so a hidden column can be dragged there and nowhere else.
+`Joined` starts hidden; move it in the panel and the visible order rearranges around it. `Id` is
+locked with `ordering: false` and offers no grip on either surface:
+
+<DataGridDocsExample exampleId='column-panel-drag' />
+
+A kit rendering its own panel composes each row from `<DataGrid.VisibilityItem>`. Render one item per
+listed column, all of them: filtering the list — a search box over a long panel — stops panel
+dragging with no error. Filter what a row renders, not which rows exist.
+
+## A header you compose
+
+Compose `<DataGrid.HeaderCell>` and the grip is yours to place: its render function hands back
+`dragHandle`, or place your kit's `<ColumnDragHandle />`. Not inside `column.header` — that content
+renders within the sort trigger's `<button>`, and a button inside a button is invalid HTML.
+
+<DataGridDocsExample exampleId='column-drag' />
+
+```tsx
+<DataGrid.HeaderCell header={header}>
+	{({ dragHandle, sortTrigger, menu }) => (
+		<DataGrid.HeaderMain>
+			{dragHandle}
+			{sortTrigger}
+			{menu}
+		</DataGrid.HeaderMain>
+	)}
+</DataGrid.HeaderCell>
+```
+
+In the example, the leaves under `Details` move among themselves but cannot be dropped under
+`Money`, and the resizer still resizes: a drag starts from the handle and nothing else.
+
+## Right-to-left
+
+<DataGridDocsExample exampleId='column-drag-rtl' />
+
+The column axis is logical, so under `dir="rtl"` the later a column sits in the order, the further
+left it is drawn — and dragging leftwards moves a column later. Pass `direction='rtl'` to the grid
+beside the `dir` on an ancestor, the same pair [column pinning](/docs/data-grid/pinning/columns) needs.
+
+## What a column drag will not do
+
+- **Cross a pin band.** A move from the centre into a pinned edge would read as a pin, not a reorder.
+- **Leave a header group.** A leaf moves among its siblings.
+- **Move a locked column.** A system column or one declared `ordering: false` renders no handle.
+
+**An illegal drop does not snap back.** The column travels as far as its group or band allows and
+commits there. Release outside the grid, or press `Escape`, and nothing is written.
+
+## See also
+
+- [Column ordering](/docs/data-grid/columns/ordering) — the menu and `Alt+Arrow` on the same state
+- [Column visibility](/docs/data-grid/columns/visibility) — the toggle the panel is built from
+- [API](/docs/data-grid/drag-and-drop/api) — keys, messages and the full option list

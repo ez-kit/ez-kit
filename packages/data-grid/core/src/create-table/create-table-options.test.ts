@@ -1,13 +1,20 @@
 import {
+	aggregationFns,
 	columnFacetingFeature,
 	columnFilteringFeature,
+	columnGroupingFeature,
+	constructAggregationFn,
+	createExpandedRowModel,
 	createFacetedRowModel,
 	createFacetedUniqueValues,
 	createFilteredRowModel,
+	createGroupedRowModel,
 	createPaginatedRowModel,
 	createSortedRowModel,
 	filterFns,
 	globalFilteringFeature,
+	rowAggregationFeature,
+	rowExpandingFeature,
 	rowPaginationFeature,
 	rowSortingFeature,
 	sortFns,
@@ -19,6 +26,7 @@ import { createColumns } from '../column/create-columns'
 import { DEFAULT_PAGE_SIZE } from '../defaults'
 import {
 	creatingFeature,
+	createManualGroupedRowModel,
 	deletingFeature,
 	draftFeature,
 	editingFeature,
@@ -28,6 +36,7 @@ import {
 } from '../features/entry'
 import { RowActionsPlacement } from '../features/row-actions'
 
+import { createTable } from './create-table'
 import { createTableOptions } from './create-table-options'
 
 import type { StateHandlerTable } from './create-table-options'
@@ -494,8 +503,72 @@ describe('createTableOptions', () => {
 			expect(warnings()).toHaveLength(0)
 		})
 
-		// The deliberate gap: `aggregationFns` gets no guard because nothing in `TableConfig` can
-		// ask for an aggregation — see the `SORT_FNS_SLOT` docblock and `features/entry.test.ts`.
+		it('warns when a column names an aggregation and `aggregationFns` is absent', () => {
+			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+			const noFns = tableFeatures({ rowAggregationFeature })
+			const totalled = createColumns<Row>([{ accessorKey: 'name' }, { accessorKey: 'age', aggregation: 'sum' }])
+			createTableOptions({ features: noFns, data: rows, columns: totalled })
+
+			expect(warnings()).toHaveLength(1)
+			expect(warnings()[0]).toContain('`aggregationFns` is not in `features`')
+		})
+
+		it('warns without grouping — the footer grand total resolves the same registry', () => {
+			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+			// No `columnGroupingFeature`, no grouped row model, no `grouping` config. This is the
+			// configuration the two features were split apart to serve, and it needs the slot
+			// exactly as much as a grouped one does.
+			const noFns = tableFeatures({ rowAggregationFeature })
+			const totalled = createColumns<Row>([{ accessorKey: 'age', aggregation: 'sum' }])
+			createTableOptions({ features: noFns, data: rows, columns: totalled })
+
+			expect(warnings()).toHaveLength(1)
+			expect(warnings()[0]).toContain('`aggregationFns` is not in `features`')
+		})
+
+		it('stays quiet for an inline aggregation definition, which resolves no name', () => {
+			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+			const noFns = tableFeatures({ rowAggregationFeature })
+			const inline = createColumns<Row>([
+				{ accessorKey: 'age', aggregation: { fn: constructAggregationFn({ aggregate: () => 0 }) } },
+			])
+			createTableOptions({ features: noFns, data: rows, columns: inline })
+
+			expect(warnings()).toHaveLength(0)
+		})
+
+		it('stays quiet when no column asks to be aggregated', () => {
+			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+			createTableOptions({ features: tableFeatures({ rowAggregationFeature }), data: rows, columns })
+
+			expect(warnings()).toHaveLength(0)
+		})
+
+		it('warns when a column is aggregated and `rowAggregationFeature` is absent', () => {
+			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+			// Two independent gaps again: the feature that would total is absent, and so is the
+			// registry the name resolves through.
+			const totalled = createColumns<Row>([{ accessorKey: 'age', aggregation: 'sum' }])
+			createTableOptions({ features: tableFeatures({}), data: rows, columns: totalled })
+
+			expect(warnings()).toHaveLength(2)
+			expect(warnings()[0]).toContain("`a column's `aggregation`` is configured, but `rowAggregationFeature`")
+			expect(warnings()[1]).toContain('`aggregationFns` is not in `features`')
+		})
+
+		it('warns when `grouping` is configured and `columnGroupingFeature` is absent', () => {
+			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+			createTableOptions({ features: tableFeatures({}), data: rows, columns, grouping: true })
+
+			expect(warnings()).toHaveLength(1)
+			expect(warnings()[0]).toContain('`grouping` is configured, but `columnGroupingFeature` is not in `features`')
+		})
 
 		it('still warns for a top-level option whose feature is absent', () => {
 			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
@@ -611,7 +684,199 @@ describe('createTableOptions', () => {
 		})
 	})
 
+	describe('aggregation config warnings', () => {
+		afterEach(() => {
+			vi.restoreAllMocks()
+		})
+
+		const warnings = (): string[] => {
+			const spy = vi.mocked(console.warn)
+			return spy.mock.calls.map((call) => String(call[0]))
+		}
+
+		// `rowAggregationFeature` alone would trip the `aggregationFns`-missing warning tested above
+		// for every case here, since each column names its aggregation by string. `aggregationFns`
+		// rides along so these cases assert exactly the warnings under test.
+		const AGGREGATION = tableFeatures({ rowAggregationFeature, aggregationFns })
+
+		it('names the column when `manual` is on and no total was supplied for it', () => {
+			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+			const totalled = createColumns<Row>([{ accessorKey: 'age', aggregation: 'sum' }])
+			createTableOptions({
+				features: AGGREGATION,
+				data: rows,
+				columns: totalled,
+				aggregation: { manual: true, totals: {} },
+			})
+
+			expect(warnings()).toHaveLength(1)
+			expect(warnings()[0]).toContain('"age"')
+			expect(warnings()[0]).toContain('aggregation.totals')
+		})
+
+		it('warns about a total keyed to a column that does not exist', () => {
+			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+			const totalled = createColumns<Row>([{ accessorKey: 'age', aggregation: 'sum' }])
+			createTableOptions({
+				features: AGGREGATION,
+				data: rows,
+				columns: totalled,
+				aggregation: { manual: true, totals: { age: 1, revenue: 2 } },
+			})
+
+			expect(warnings()).toHaveLength(1)
+			expect(warnings()[0]).toContain('"revenue"')
+		})
+
+		it('finds an aggregated leaf inside a column group for a legitimate `totals` entry', () => {
+			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+			const grouped = createColumns<Row>([
+				{ id: 'group', header: 'Group', columns: [{ accessorKey: 'age', aggregation: 'sum' }] },
+			])
+			createTableOptions({
+				features: AGGREGATION,
+				data: rows,
+				columns: grouped,
+				aggregation: { manual: true, totals: { age: 1 } },
+			})
+
+			expect(warnings()).toHaveLength(0)
+		})
+
+		it('names a grouped, aggregated leaf missing its total under `manual`', () => {
+			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+			const grouped = createColumns<Row>([
+				{ id: 'group', header: 'Group', columns: [{ accessorKey: 'age', aggregation: 'sum' }] },
+			])
+			createTableOptions({
+				features: AGGREGATION,
+				data: rows,
+				columns: grouped,
+				aggregation: { manual: true, totals: {} },
+			})
+
+			expect(warnings()).toHaveLength(1)
+			expect(warnings()[0]).toContain('"age"')
+			expect(warnings()[0]).toContain('aggregation.totals')
+		})
+
+		it('warns about an aggregation object that names neither a function nor a renderer', () => {
+			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+			const misconfigured = createColumns<Row>([{ accessorKey: 'age', aggregation: {} }])
+			createTableOptions({ features: AGGREGATION, data: rows, columns: misconfigured })
+
+			expect(warnings()).toHaveLength(1)
+			expect(warnings()[0]).toContain('neither')
+		})
+
+		it('says nothing on a complete config', () => {
+			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+			const totalled = createColumns<Row>([{ accessorKey: 'age', aggregation: 'sum' }])
+			createTableOptions({
+				features: AGGREGATION,
+				data: rows,
+				columns: totalled,
+				aggregation: { manual: true, totals: { age: 1 } },
+			})
+
+			expect(warnings()).toHaveLength(0)
+		})
+	})
+
 	it('throws when draft is on without a manual axis', () => {
 		expect(() => createTableOptions({ features, data: rows, columns, draft: true })).toThrow(/manual/)
+	})
+})
+
+describe('grouped row model vs. grouping config', () => {
+	afterEach(() => {
+		vi.restoreAllMocks()
+	})
+
+	type GroupedRow = { id: string; region: string; amount: number; subRows?: GroupedRow[] }
+
+	const GROUPED_DATA: GroupedRow[] = [{ id: '1', region: 'EMEA', amount: 10 }]
+	const GROUPED_COLUMNS = createColumns<GroupedRow>([{ accessorKey: 'region' }, { accessorKey: 'amount' }])
+
+	const GROUPING = tableFeatures({
+		columnGroupingFeature,
+		groupedRowModel: createGroupedRowModel(),
+		rowExpandingFeature,
+		expandedRowModel: createExpandedRowModel(),
+	})
+
+	it('warns when `grouping.getSubRows` is written but the client model is registered', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+		createTable({
+			features: GROUPING, // groupedRowModel: createGroupedRowModel()
+			data: GROUPED_DATA,
+			columns: GROUPED_COLUMNS,
+			grouping: { by: ['region'], getSubRows: (row) => row.subRows },
+		})
+
+		expect(warn).toHaveBeenCalledWith(expect.stringContaining('createManualGroupedRowModel'))
+	})
+
+	it('warns when the manual model is registered with nothing to read the groups from', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+		createTable({
+			features: tableFeatures({
+				columnGroupingFeature,
+				groupedRowModel: createManualGroupedRowModel(),
+				rowExpandingFeature,
+				expandedRowModel: createExpandedRowModel(),
+			}),
+			data: GROUPED_DATA,
+			columns: GROUPED_COLUMNS,
+			grouping: { by: ['region'] },
+		})
+
+		expect(warn).toHaveBeenCalledWith(expect.stringContaining('getSubRows'))
+	})
+
+	it('says nothing when the model and the config agree', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+		createTable({
+			features: tableFeatures({
+				columnGroupingFeature,
+				groupedRowModel: createManualGroupedRowModel(),
+				rowExpandingFeature,
+				expandedRowModel: createExpandedRowModel(),
+			}),
+			data: GROUPED_DATA,
+			columns: GROUPED_COLUMNS,
+			grouping: { by: ['region'], getSubRows: (row) => row.subRows },
+		})
+
+		expect(warn).not.toHaveBeenCalled()
+	})
+
+	it('says nothing for a correctly configured flat-shape grid — adapters, no `getSubRows`', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+		createTable({
+			features: tableFeatures({
+				columnGroupingFeature,
+				groupedRowModel: createManualGroupedRowModel({
+					isGroupRow: (row: GroupedRow) => row.subRows === undefined,
+				}),
+				rowExpandingFeature,
+				expandedRowModel: createExpandedRowModel(),
+			}),
+			data: GROUPED_DATA,
+			columns: GROUPED_COLUMNS,
+			grouping: { by: ['region'] },
+		})
+
+		expect(warn).not.toHaveBeenCalled()
 	})
 })

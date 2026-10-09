@@ -96,6 +96,29 @@ describe('@ez-kit/data-grid-heroui', () => {
 		expect(screen.getByText('Ada')).toBeInTheDocument()
 	})
 
+	/**
+	 * The column footer, which this kit renders through HeroUI's React Aria collection.
+	 *
+	 * Worth a case of its own because the footer is the one section the collection did not
+	 * understand until react-aria-components 1.18: a `<tfoot>` was silently dropped, so every
+	 * column `footer` here rendered nothing while the grid looked fine.
+	 */
+	it('renders a column footer inside the table', () => {
+		render(
+			<DataGrid
+				features={allDataGridFeatures}
+				data={[{ id: 1, name: 'Ada' }]}
+				columns={createColumns<User>([{ accessorKey: 'name', header: 'Name', footer: 'Total' }])}
+			/>,
+		)
+
+		const cell = screen.getByText('Total')
+
+		expect(cell).toBeInTheDocument()
+		expect(cell.closest('tfoot')).not.toBeNull()
+		expect(cell.closest('table')).toBe(screen.getByRole('grid', { name: 'Data grid' }))
+	})
+
 	it('selects rows through the grid checkbox', () => {
 		const table = createTable<GridFeatures, User>({
 			features: allDataGridFeatures,
@@ -230,7 +253,12 @@ describe('@ez-kit/data-grid-heroui', () => {
 	it('toggles column visibility items', () => {
 		const onToggle = vi.fn()
 
-		render(<VisibilityMenu columns={[{ id: 'name', label: 'Name', isVisible: true, canHide: true, onToggle }]} />)
+		render(
+			<VisibilityMenu
+				columns={[{ id: 'name', label: 'Name', isVisible: true, canHide: true, onToggle }]}
+				isColumnPanel={false}
+			/>,
+		)
 
 		const [columnsButton] = screen.getAllByRole('button', { name: /columns/i })
 		if (!columnsButton) throw new Error('expected columns button')
@@ -259,7 +287,12 @@ describe('@ez-kit/data-grid-heroui', () => {
 			},
 		]
 
-		render(<VisibilityMenu columns={columns} />)
+		render(
+			<VisibilityMenu
+				columns={columns}
+				isColumnPanel
+			/>,
+		)
 		const [columnsButton] = screen.getAllByRole('button', { name: /columns/i })
 		if (!columnsButton) throw new Error('expected columns button')
 		fireEvent.click(columnsButton)
@@ -274,6 +307,30 @@ describe('@ez-kit/data-grid-heroui', () => {
 		fireEvent.click(moveDown)
 
 		expect(onMoveEnd).toHaveBeenCalledTimes(1)
+	})
+
+	/**
+	 * The **drag-only** panel, which is what `visibilityMenu: true` resolves to once an adapter is
+	 * bound: the rows carry a grip and no move pair, so nothing on an item says "this is a panel".
+	 * Branching the shape on `col.ordering` sent this case down the react-aria list-box path, which
+	 * renders no `<DataGridVisibilityItem>` and therefore registered no row with the drag — the
+	 * panel looked like a plain Columns toggle and dragging was gone. Five browser specs caught it;
+	 * this is the same regression one layer down.
+	 */
+	it('draws the panel for a drag-only panel, whose items carry no moves', () => {
+		render(
+			<VisibilityMenu
+				columns={[{ id: 'name', label: 'Name', isVisible: true, canHide: true, onToggle: vi.fn() }]}
+				isColumnPanel
+			/>,
+		)
+		const [columnsButton] = screen.getAllByRole('button', { name: /columns/i })
+		if (!columnsButton) throw new Error('expected columns button')
+		fireEvent.click(columnsButton)
+
+		expect(screen.queryByRole('menuitemcheckbox')).toBeNull()
+		expect(screen.getByRole('checkbox', { name: 'Name' })).toBeInTheDocument()
+		expect(screen.queryByRole('button', { name: /move/i })).toBeNull()
 	})
 })
 

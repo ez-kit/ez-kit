@@ -67,15 +67,6 @@ const components = {
  */
 const allComponents: FullGridComponents = components
 
-/**
- * `extendDataGrid` re-invokes the factory with the same HeroUI components while
- * merging in additional custom cell types (return typed to the merged keys).
- *
- * @example
- * const { DataGrid, createColumns } = extendDataGrid({
- *   rating: { view: RatingCellView, edit: RatingCellInput },
- * })
- */
 // Annotated, not inferred. The declaration emitter prints an *inferred* type structurally, so
 // without this the bundled `.d.ts` re-prints the whole bundle into every signature that mentions
 // it. Naming the bundle's type keeps `KitCellTypes` — which is itself declared rather than read
@@ -86,11 +77,11 @@ const allComponents: FullGridComponents = components
  * `features` is required everywhere else — a grid pays for what it registers, and the headless
  * `createDataGrid` still demands a set. This one export is the exception, because here the set
  * buys almost nothing: the fourteen component groups above already read the features' APIs, so
- * they drag the implementations in whatever set a call site names. Measured against this kit
- * (esbuild, minified, gzipped, React and HeroUI external): this prebuilt with a sorting-only set
- * is 51.7 kB against 55.7 kB with every feature — 4 kB for eight imports. The same grid composed
- * through `createDataGrid` with four component groups is 41.1 kB, which is where the saving
- * actually lives, and that path keeps `features` required.
+ * they drag the implementations in whatever set a call site names. Measured against this kit, the
+ * difference between this prebuilt on a sorting-only set and on every feature is a few kB — for
+ * eight imports at every call site. The same grid composed through `createDataGrid` with four
+ * component groups is substantially smaller than either, which is where the saving actually lives,
+ * and that path keeps `features` required.
  *
  * So naming it here makes the export's cost match its name: importing `DataGrid` from the kit
  * root has always meant "everything", and now it means everything on both axes. A set named at a
@@ -131,20 +122,11 @@ const bundle: DataGridBundle<KitCellTypes, KitFeatures> = createDataGrid<KitCell
 const { DataGrid, GridComponentsProvider, useDataGrid } = bundle
 
 // Annotated one by one rather than destructured: a destructured binding is re-inferred by the
-// declaration emitter, which re-prints the signature instead of naming it, and a re-printed
-// `DataGridBundle<KitCellTypes & TExtra>` degenerates to an error type at the call site — the
-// consumer then gets an unchecked `createColumns` off the extended bundle. Indexing the bundle's
-// type keeps `KitCellTypes` a name in the three signatures that carry a `CellDef` union.
+// declaration emitter, which re-prints the signature structurally instead of naming it, and a
+// re-printed bundle type degenerates to an error type at the call site — the consumer then gets
+// an unchecked `createColumns`. Indexing the bundle's type keeps `KitCellTypes` a name in both
+// signatures that carry a `CellDef` union.
 const createColumns: DataGridBundle<KitCellTypes, KitFeatures>['createColumns'] = bundle.createColumns
 const createColumnHelper: DataGridBundle<KitCellTypes, KitFeatures>['createColumnHelper'] = bundle.createColumnHelper
-const extendDataGrid: DataGridBundle<KitCellTypes, KitFeatures>['extendDataGrid'] = bundle.extendDataGrid
 
-export {
-	DataGrid,
-	GridComponentsProvider,
-	useDataGrid,
-	extendDataGrid,
-	createColumns,
-	createColumnHelper,
-	allComponents,
-}
+export { DataGrid, GridComponentsProvider, useDataGrid, createColumns, createColumnHelper, allComponents }

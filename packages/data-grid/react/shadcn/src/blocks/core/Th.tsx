@@ -1,3 +1,5 @@
+import { forwardRef } from 'react'
+
 import { TableHead } from '@grid-shadcn/components/ui/table'
 
 import type { ThProps } from '@ez-kit/data-grid-react'
@@ -13,8 +15,12 @@ import type { ThProps } from '@ez-kit/data-grid-react'
  * picks the start, so the group lands exactly over its leaves.
  *
  * Mirrors what `Td` already does for full-width body rows.
+ *
+ * `forwardRef`, not a `ref` prop: `ThProps` declares the ref because a drag library is handed the
+ * `<th>` through it, and on React 18 — which this package supports — `ref` never reaches a function
+ * component's props. The same reason `Thead` and `Tr` are already `forwardRef`.
  */
-export function Th({ colSpan, style, ...props }: ThProps) {
+export const Th = forwardRef<HTMLTableCellElement, ThProps>(function Th({ colSpan, style, ...props }, ref) {
 	const spans = typeof colSpan === 'number' && colSpan > 1
 
 	return (
@@ -22,6 +28,7 @@ export function Th({ colSpan, style, ...props }: ThProps) {
 			{...props}
 			{...(colSpan ? { colSpan } : {})}
 			style={spans ? { gridColumn: `span ${String(colSpan)}`, ...style } : style}
+			ref={ref}
 		/>
 	)
-}
+})

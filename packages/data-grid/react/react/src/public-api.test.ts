@@ -58,6 +58,7 @@ describe('public API surface', () => {
 		expect(publicApi.CreatingMode.PinRow).toBe('pin-row')
 		expect(publicApi.EditingMode.Cell).toBe('cell')
 		expect(publicApi.ExpandingMode.Tree).toBe('tree')
+		expect(publicApi.DragAxis.Column).toBe('column')
 	})
 
 	it('keeps the React-layer config types alongside their headless originals', () => {

@@ -10,6 +10,8 @@ import {
 	ChevronRight,
 	ChevronUp,
 	EyeOff,
+	List,
+	ListTree,
 	Pencil,
 	PinOff,
 	Trash2,
@@ -46,6 +48,10 @@ const GRID_MENU_ICON_COMPONENTS: Record<GridMenuIcon, LucideIcon> = {
 	[GridMenuIcon.ClearSort]: X,
 	[GridMenuIcon.Calendar]: CalendarClock,
 	[GridMenuIcon.Hide]: EyeOff,
+	// Nested rows vs. a flat list — what grouping does to the body, rather than lucide's own
+	// `Group` / `Ungroup`, which are the design-tool sense of grouping shapes on a canvas.
+	[GridMenuIcon.Group]: ListTree,
+	[GridMenuIcon.Ungroup]: List,
 	// Chevrons, not the plain arrows: those already mean pinning in this menu.
 	[GridMenuIcon.MoveStart]: ChevronLeft,
 	[GridMenuIcon.MoveEnd]: ChevronRight,

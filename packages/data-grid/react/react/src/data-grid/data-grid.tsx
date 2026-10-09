@@ -1,10 +1,20 @@
-import { CreatingMode, EditingMode, featureConfig, isFeatureEnabled } from '@ez-kit/data-grid-core'
-import { useRef } from 'react'
+import {
+	canDropColumn,
+	CreatingMode,
+	dropColumn,
+	EditingMode,
+	featureConfig,
+	isFeatureEnabled,
+} from '@ez-kit/data-grid-core'
+import { useCallback, useMemo, useRef } from 'react'
 
 import { CellTypesProvider, mergeCellTypes } from '../cell-types-context'
 import { GridComponentsProvider, useGridComponents } from '../components-context'
+import { guardComponents } from '../components-guard'
 import { GridFactoryDefaultsProvider } from '../data-grid-options-context'
 import { useDataGrid, type UseDataGridConfig } from '../use-data-grid'
+import { useGridMessages } from '../use-grid-messages'
+import { getRowDropOrder } from '../utils/row-drop-order'
 
 import { ActionBar, buildSelectionBarArgs } from './action-bar'
 import { ActiveFiltersBar } from './active-filters-bar'
@@ -12,10 +22,14 @@ import { Body } from './body'
 import { BottomBar } from './bottom-bar'
 import { DataGridCell } from './cell'
 import { ClearFiltersButton } from './clear-filters-button'
+import { ColumnDragHandle } from './column-drag-handle'
 import { ColumnFilter } from './column-filter'
 import { ComponentGuard } from './component-guard'
 import { CreateTrigger } from './create-trigger'
 import { CreatingModal } from './creating-modal'
+import { DndAdapterProvider, DndBundleProvider, DragAxis, DragSurface, useDndAdapter, useDndBundleAdapter } from './dnd'
+import { COLUMN_DROP_SCOPE } from './dnd/column-drop-scope'
+import { buildDndAnnouncements } from './dnd-announcements'
 import { EditingModal } from './editing-modal'
 import { EmptyStateRow } from './empty-state-row'
 import { FilterPanel } from './filter-panel'
@@ -23,6 +37,7 @@ import { Footer } from './footer'
 import { DataGridFooterCell } from './footer-cell'
 import { DataGridFooterRow } from './footer-row'
 import { GlobalFilterInput } from './global-filter-input'
+import { GroupByBar } from './group-by-bar'
 import { Header } from './header'
 import { DataGridHeaderCell } from './header-cell'
 import { DataGridHeaderRow } from './header-row'
@@ -32,15 +47,20 @@ import { NoResultsRow } from './no-results-row'
 import { PageSizer } from './page-sizer'
 import { Pagination } from './pagination'
 import { DataGridRow } from './row'
+import { RowCountStatus } from './row-count-status'
+import { RowDragHandle } from './row-drag-handle'
+import { RowDragRegistryProvider, useDisplaceRow, useRenderedRowIdsReader } from './row-drag-registry'
 import { SortMenuTrigger } from './sort-menu-trigger'
 import { DataGridTable } from './table'
 import { TableProvider, useDataGridTable, useDataGridState } from './table-context'
 import { Toolbar } from './toolbar'
+import { VisibilityItem } from './visibility-item'
 import { VisibilityTrigger } from './visibility-trigger'
 
 import type { CellTypeRegistry } from '../cell-types-context'
 import type { GridComponents } from '../contract'
 import type { DataTable, ErasedRow, GridFeatures } from '../types'
+import type { DndDragOverEvent, DndDropEvent } from './dnd'
 import type {
 	BulkConfirmationConfig,
 	ConfirmationConfig,
@@ -287,6 +307,212 @@ function GridBody({ children }: { children: ReactNode }) {
 	return <DataGridTable />
 }
 
+/**
+ * Mounts the registered adapter's own provider, and commits what it reports.
+ *
+ * A component rather than a few lines inside {@link DataGridControlled}, because reading the
+ * adapter is a hook and rendering `children` unchanged when there is none has to be a *render*
+ * decision, not a branch around one.
+ *
+ * The commit is one call: `table.ordering.dropRow` resolves controlled versus uncontrolled itself
+ * and refuses anything the step path would have refused — the same rules, applied to a target the
+ * user named rather than one reached by stepping. It is safe to call unconditionally; with row
+ * ordering off it reads its own config and returns.
+ */
+function GridDndProvider({ children }: { children: ReactNode }) {
+	const adapter = useDndAdapter()
+	const table = useDataGridTable()
+	const messages = useGridMessages()
+	const readRenderedRowIds = useRenderedRowIdsReader()
+	const displaceRow = useDisplaceRow()
+
+	/**
+	 * The current table and dictionary, for callbacks that outlive the render that built them.
+	 *
+	 * Assigned during render on purpose — the same shape the controlled/uncontrolled warning below
+	 * uses. An effect would be a frame late, and nothing reads this during render; the readers below
+	 * are invoked from the drag library's own event handling, which is strictly after paint.
+	 */
+	const latestRef = useRef({ table, messages })
+	latestRef.current = { table, messages }
+
+	const readTable = useCallback(() => latestRef.current.table, [])
+	const readMessages = useCallback(() => latestRef.current.messages, [])
+
+	/**
+	 * What a drag says, in the application's language — built here because this is the only layer
+	 * that holds both halves of the sentence.
+	 *
+	 * The drag library hands its own announcement callbacks the ids it is moving and nothing else, so
+	 * the best it can do unaided is name a record id. A column's heading, a row's place among the
+	 * rows on screen and the message catalogue all live here; a kit's adapter has none of them and
+	 * exists in order not to. So the grid writes whole sentences and the adapter speaks them.
+	 *
+	 * **Built once, and every dependency is a reader — this memo must stay stable.** The drag
+	 * library's plugin registry reuses a plugin instance keyed by its constructor and only reassigns
+	 * `options`, and `@dnd-kit/dom@0.1.21`'s `Accessibility` reads the bag in its constructor alone,
+	 * so a bag rebuilt per render is a bag the live region never sees. Adding `table` or `messages`
+	 * back to the dependency list therefore does not refresh the announcements — it freezes them at
+	 * the first render *and* churns a value nothing re-reads. `messages` in particular is rebuilt on
+	 * every render of any grid with a `messages` override.
+	 *
+	 * `readRenderedRowIds` is stable per registry and is a reader for an adjacent reason: a
+	 * virtualized body republishes its window under a drag's auto-scroll without this provider
+	 * re-rendering.
+	 */
+	const announcements = useMemo(
+		() => buildDndAnnouncements(readTable, readMessages, readRenderedRowIds),
+		[readTable, readMessages, readRenderedRowIds],
+	)
+
+	const onDrop = useCallback(
+		(event: DndDropEvent) => {
+			/*
+			 * One arm per axis, and the two commit through **different calls** rather than through
+			 * one widened branch: `dropRow` describes a move and `table.ordering` performs it, while
+			 * `dropColumn` returns a whole `ColumnOrderState` this layer writes with
+			 * `setColumnOrder`. Written as a `switch` over the closed set so a third axis would be a
+			 * compile error rather than a silent fallthrough.
+			 */
+			switch (event.axis) {
+				case DragAxis.Row: {
+					/*
+					 * Both ends are ids, so there is no mapping to make and no list to make it
+					 * against: `dropRow` resolves the pair itself, against the table's own model.
+					 *
+					 * **This replaced resolving the target from a landing index.** That needed the
+					 * rendered-row list a row registers its index in, read here at drop time, and the
+					 * two readers had to agree about a list a virtualized body renumbers mid-gesture.
+					 * They did not — a drag's auto-scroll grew the library's index space past the
+					 * list's and the drop committed three or four rows beyond the one released on.
+					 * `DndDropEvent` has the measurement. The list now has exactly one reader, the
+					 * registration side, which is the only side a position means anything on.
+					 */
+					if (event.targetId === event.sourceId) return
+					table.ordering.dropRow(event.sourceId, event.targetId)
+					return
+				}
+				case DragAxis.Column: {
+					if (event.targetId === event.sourceId) return
+					const scope = COLUMN_DROP_SCOPE[event.surface]
+					/*
+					 * Asked before committing, because `dropColumn` answers a refusal with the
+					 * current order — indistinguishable from a legal drop that changed nothing — so
+					 * an unguarded call would fire `onChange` on a drop across a header group or a
+					 * pin band. `drop.ts` states this as the reason `canDropColumn` exists at all.
+					 *
+					 * **This is a backstop, not the enforcement point.** `canDrop` refuses the
+					 * illegal *step*, so a drag cannot arrive here across a boundary in the first
+					 * place — and now that both ask about the same target **id**, they are literally
+					 * the same question rather than two that could disagree through a mapping. What
+					 * keeps this here is time: the two are asked at different moments, so an async
+					 * load that repins a column between the last hover and the release can still
+					 * make them differ. See `canDrop` below for that caveat in full.
+					 *
+					 * The scope comes from the surface, not from `dropColumn`'s default: a header drop
+					 * is judged under `ColumnMoveScope.Visible`, because a hidden column renders no
+					 * header cell and can be neither end of a drop there, and a panel drop under
+					 * `All`, because listing hidden columns so they can be reordered is what the
+					 * panel is for. `COLUMN_DROP_SCOPE` has the whole argument.
+					 */
+					if (!canDropColumn(table, event.sourceId, event.targetId, scope)) return
+					table.setColumnOrder(dropColumn(table, event.sourceId, event.targetId, scope))
+					return
+				}
+			}
+		},
+		[table],
+	)
+
+	/**
+	 * Whether the held item may land where the pointer currently is — the same question `onDrop`'s
+	 * commit asks, asked while the drag is still in flight.
+	 *
+	 * It exists because refusing at release is not enough: an adapter's library displaces the
+	 * neighbours and reassigns its own indices as the pointer moves, and a refusal writes no state,
+	 * so nothing re-renders to push the real indices back. The two index spaces then disagree, the
+	 * grid is left visibly permuted, and the next drag on that axis commits nothing.
+	 * `DndProviderProps.canDrop` has the measurement. The commit's own guards stay where they are —
+	 * this makes their refusal unreachable, it does not replace it.
+	 *
+	 * Both arms are optional-called, for the reason every feature read on a render path is: a grid
+	 * may register the drag adapter and not the ordering feature for one axis, in which case there
+	 * is nothing draggable on it and nothing to answer.
+	 *
+	 * **One caveat, narrow and worth naming rather than engineering around.** This answers from the
+	 * table's state at hover time and the commit answers from it at release, so a change in between
+	 * — an async load that hides or repins a column — can make the two disagree, and that one drag
+	 * gets the old behaviour: the step is allowed, the commit refuses it, and the library's indices
+	 * are left permuted. Nothing short of freezing the column model for the drag's duration closes
+	 * it, which costs more than it buys.
+	 */
+	const canDrop = useCallback(
+		(event: DndDragOverEvent): boolean => {
+			/*
+			 * A self-hover is normal and is allowed here rather than left to the adapter to filter.
+			 * Once a sortable has displaced its first neighbour the source occupies its destination,
+			 * so the collision resolves to the source on nearly every later frame; and every
+			 * `canDrop*` helper answers `false` for a drop onto oneself, quite correctly, since as a
+			 * *drop* it is nothing. Asking them would therefore stop every legal step after the
+			 * first, silently.
+			 *
+			 * Both in-repo adapters already filter it, and keep doing so — the reason belongs in
+			 * their prose. But the grid is the side that knows a self-hover means "no question", and
+			 * an invariant that every future adapter has to remember, with total and silent failure
+			 * as the penalty for forgetting, does not belong distributed across them.
+			 */
+			if (event.sourceId === event.targetId) return true
+
+			switch (event.axis) {
+				case DragAxis.Row:
+					// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+					return table.ordering?.canDropRow?.(event.sourceId, event.targetId) ?? false
+				case DragAxis.Column:
+					// Same scope the commit will use, from the same lookup: a step the surface's own
+					// scope allows must not be refused here, and one it forbids must not be allowed.
+					return canDropColumn(table, event.sourceId, event.targetId, COLUMN_DROP_SCOPE[event.surface])
+			}
+		},
+		[table],
+	)
+
+	/**
+	 * Record where the drag has displaced a held row, so a virtualized body renders that arrangement
+	 * rather than the model's for the rest of the gesture — see `DndProviderProps.onDisplace`, which has
+	 * the defect this closes and the measurement.
+	 *
+	 * The row axis on the table surface only. Columns are never virtualized, and the panel lists every
+	 * column at once, so neither surface re-renders mid-gesture into an order that could disagree with
+	 * the library's. The order handed over is the list the rows are drawn in — the one the library's
+	 * group is ordered by, and so the one whose arrangement a displacement steps from. `O(n)` per
+	 * displacement, which happens at most once per row the pointer crosses.
+	 */
+	const onDisplace = useCallback(
+		(event: DndDragOverEvent) => {
+			if (event.axis !== DragAxis.Row || event.surface !== DragSurface.Table) return
+			displaceRow(
+				getRowDropOrder(table).map((row) => row.id),
+				event.sourceId,
+				event.targetId,
+			)
+		},
+		[table, displaceRow],
+	)
+
+	if (!adapter) return <>{children}</>
+
+	return (
+		<adapter.Provider
+			onDrop={onDrop}
+			canDrop={canDrop}
+			onDisplace={onDisplace}
+			announcements={announcements}
+		>
+			{children}
+		</adapter.Provider>
+	)
+}
+
 function DataGridControlled<TFeatures extends TableFeatures, TRow extends object>({
 	table,
 	components,
@@ -307,6 +533,11 @@ function DataGridControlled<TFeatures extends TableFeatures, TRow extends object
 	// `grid` is declared non-optional on `DataTable`, because every table the React layer
 	// renders is meant to carry it — which is exactly the claim being checked here, so asking
 	// the question at all needs a cast.
+	// Read in the shared core rather than in `DataGridRoot`: `DataGridUncontrolled` sits between
+	// the two and is where `useDataGrid` runs, so reading higher would fork the controlled and
+	// uncontrolled paths for no gain.
+	const bundleDndAdapter = useDndBundleAdapter()
+
 	const isPrepared = (table as { grid?: { messages?: unknown } }).grid?.messages !== undefined
 	if (IS_DEV && !isPrepared) {
 		throw new Error(
@@ -336,25 +567,71 @@ function DataGridControlled<TFeatures extends TableFeatures, TRow extends object
 	}
 
 	return (
-		// The factory option layer a bound `<DataGrid>` publishes has done its job by the time we
-		// get here — this table is built. Close it off so it stops at the grid it configures:
-		// without this, a nested `<DataGrid data columns />` rendered among `children` would
-		// silently inherit the outer kit's defaults instead of standing on its own.
-		<GridFactoryDefaultsProvider defaults={undefined}>
-			<CellTypesProvider cellTypes={resolvedCellTypes}>
-				<GridComponentsProvider {...(components !== undefined ? { components } : {})}>
-					<TableProvider table={table}>
-						{IS_DEV && <ComponentGuard />}
-						<GridRoot>
-							<GridBody>{children}</GridBody>
-							{writeOptions.creating?.mode === CreatingMode.Modal && <CreatingModal />}
-							{writeOptions.editing?.mode === EditingMode.Modal && <EditingModal />}
-							<ConfirmDialogRenderer />
-						</GridRoot>
-					</TableProvider>
-				</GridComponentsProvider>
-			</CellTypesProvider>
-		</GridFactoryDefaultsProvider>
+		// The bundle's drag adapter, promoted to this grid's own layer and then closed off — the
+		// same move as the factory option layer below, for the same reason. Every root publishes a
+		// grid-level value, **including `null`**: without that, a nested `<DataGrid>` rendered among
+		// another grid's `children` would read the outer grid's adapter, since every context in this
+		// package is created at module scope and is therefore shared by everything resolving the
+		// same copy of it. A grid says what it runs on; it never inherits it.
+		<DndBundleProvider adapter={null}>
+			<DndAdapterProvider adapter={bundleDndAdapter}>
+				{/*
+				 * The factory option layer a bound `<DataGrid>` publishes has done its job by the time
+				 * we get here — this table is built. Close it off so it stops at the grid it
+				 * configures: without this, a nested `<DataGrid data columns />` rendered among
+				 * `children` would silently inherit the outer kit's defaults instead of standing on
+				 * its own.
+				 */}
+				<GridFactoryDefaultsProvider defaults={undefined}>
+					<CellTypesProvider cellTypes={resolvedCellTypes}>
+						<GridComponentsProvider
+							{...(components !== undefined ? { components } : {})}
+							{...(IS_DEV ? { guard: guardComponents } : {})}
+						>
+							<TableProvider table={table}>
+								{IS_DEV && <ComponentGuard />}
+								{/*
+								 * Inside `TableProvider`, because the commit reads the table — and
+								 * around everything that renders a row, because that is what the drag
+								 * layer has to contain.
+								 */}
+								{/*
+								 * The registry sits **above** the drag provider, and this order is load bearing:
+								 * `GridDndProvider` reads it. Specifically it calls `useRenderedRowIdsReader()`
+								 * and hands that reader to `buildDndAnnouncements`, which is how a row-drag
+								 * announcement can say "row 3 of 20" — the position has to be counted in the
+								 * window a virtualized body published, since that is the only list the drag's own
+								 * index space agrees with. Nested the other way round the registry context is
+								 * unreachable from `GridDndProvider` and there is no window to count in.
+								 *
+								 * **Check that read before changing this.** This nesting existed once with nothing
+								 * behind it — a landing-index resolution that had already been replaced by an id —
+								 * and was correctly reverted as an arbitrary order dressed up as a requirement. If
+								 * `GridDndProvider` stops reading the registry, revert it again.
+								 *
+								 * What makes the read safe, where the removed one was not: a position that is only
+								 * ever **read aloud** has no second side to disagree with. The old reader fed a
+								 * commit, so a stale window meant the wrong row moved; a stale window here costs
+								 * one wrong number in one sentence. The registry is otherwise a plain store that
+								 * only rows and handles touch, so hoisting it costs nothing.
+								 */}
+								<RowDragRegistryProvider>
+									<GridDndProvider>
+										<GridRoot>
+											<RowCountStatus />
+											<GridBody>{children}</GridBody>
+											{writeOptions.creating?.mode === CreatingMode.Modal && <CreatingModal />}
+											{writeOptions.editing?.mode === EditingMode.Modal && <EditingModal />}
+											<ConfirmDialogRenderer />
+										</GridRoot>
+									</GridDndProvider>
+								</RowDragRegistryProvider>
+							</TableProvider>
+						</GridComponentsProvider>
+					</CellTypesProvider>
+				</GridFactoryDefaultsProvider>
+			</DndAdapterProvider>
+		</DndBundleProvider>
 	)
 }
 
@@ -398,7 +675,9 @@ function DataGridUncontrolled<TFeatures extends TableFeatures, TRow extends obje
  *   <DataGrid.Pagination />
  * </DataGrid>
  */
-function DataGridRoot<TFeatures extends TableFeatures, TRow extends object>(props: DataGridProps<TFeatures, TRow>) {
+export function DataGridRoot<TFeatures extends TableFeatures, TRow extends object>(
+	props: DataGridProps<TFeatures, TRow>,
+) {
 	const isControlled = props.table != null
 
 	// Dev-only: flipping a mounted grid between controlled and uncontrolled
@@ -475,9 +754,11 @@ export type DataGridStatics = {
 	ActionBar: typeof ActionBar
 	CreateTrigger: typeof CreateTrigger
 	VisibilityTrigger: typeof VisibilityTrigger
+	VisibilityItem: typeof VisibilityItem
 	SortMenuTrigger: typeof SortMenuTrigger
 	GlobalFilterInput: typeof GlobalFilterInput
 	ActiveFiltersBar: typeof ActiveFiltersBar
+	GroupByBar: typeof GroupByBar
 	ClearFiltersButton: typeof ClearFiltersButton
 	FilterPanel: typeof FilterPanel
 	CreatingModal: typeof CreatingModal
@@ -485,6 +766,8 @@ export type DataGridStatics = {
 	LoadingBody: typeof LoadingBody
 	EmptyStateRow: typeof EmptyStateRow
 	NoResultsRow: typeof NoResultsRow
+	ColumnDragHandle: typeof ColumnDragHandle
+	RowDragHandle: typeof RowDragHandle
 }
 
 type DataGridType = typeof DataGridRoot & DataGridStatics
@@ -499,22 +782,19 @@ type DataGridType = typeof DataGridRoot & DataGridStatics
  *
  * It was 29 top-level `DataGrid.X = …` statements, and **esbuild** cannot drop a top-level
  * assignment: it kept every one, and each one anchored its component and everything that
- * component reached. So any partial import of `./index` paid for ~92% of the surface — measured
- * on the built `dist` (`--bundle --minify`, React external), `{ useDataGridTable }` cost 155 370
- * bytes against 168 998 for the whole surface. As one annotated call it costs 27 901.
- * `{ DataGrid }` is unchanged at 155 313, which is correct and is the point: this name *is*
- * everything, and what got cheaper is the import that never asked for it.
- * `apps/docs/test/tree-shaking.test.ts` holds that, so a regression fails there.
+ * component reached. So any partial import of `./index` paid for nearly the whole surface. As one
+ * annotated call, a hook import costs a fraction of it, while `{ DataGrid }` is unchanged — which
+ * is correct and is the point: this name *is* everything, and what got cheaper is the import that
+ * never asked for it. `apps/docs/test/tree-shaking.test.ts` holds that, so a regression fails
+ * there rather than in prose that goes stale.
  *
  * **Read "a bundler" as esbuild, and only esbuild — the other two were probed and neither was
- * ever affected.** Rollup 4.60 dropped the namespace on the assignment form already (31 633 bytes
- * for the hook against 160 213 for `DataGrid`, unminified, core external), and so did Turbopack
- * through a real `next build` of a one-page app (573 824 bytes of client chunks for the hook
- * against 702 874 for `DataGrid`, with `FilterPanel`'s slot literal absent and present). Both
- * measure identically after this change. Webpack was not probed — Next 16 no longer ships a
- * runnable terser plugin and the package is not otherwise installed here. So this fix is worth
- * its 127 kB to a consumer bundling with esbuild and worth nothing to one on Rollup, Vite's
- * production build or Next; it cannot cost any of them anything, which is why it shipped anyway.
+ * ever affected.** Rollup dropped the namespace on the assignment form already, and so did
+ * Turbopack through a real `next build` of a one-page app. Both measure identically after this
+ * change. Webpack was not probed — Next 16 no longer ships a runnable terser plugin and the
+ * package is not otherwise installed here. So this fix is worth real bytes to a consumer bundling
+ * with esbuild and nothing to one on Rollup, Vite's production build or Next; it cannot cost any
+ * of them anything, which is why it shipped anyway.
  *
  * The annotation works here and does **not** work for `allDataGridFeatures` one package over —
  * the two are opposite sides of one line, which AGENTS.md states with the probe behind it:
@@ -523,8 +803,8 @@ type DataGridType = typeof DataGridRoot & DataGridStatics
  * `...someGroup` to it silently restores the defect and costs the comment bytes on top.
  *
  * A getter namespace (`Object.defineProperties(DataGrid, { Toolbar: { get: () => Toolbar } … })`)
- * was measured as the cheaper-looking alternative and is worse than doing nothing: 156 021 bytes.
- * A top-level call that names the component anchors it whatever form the call takes.
+ * was measured as the cheaper-looking alternative and came out worse than doing nothing. A
+ * top-level call that names the component anchors it whatever form the call takes.
  */
 export const DataGrid: DataGridType = /* @__PURE__ */ Object.assign(DataGridRoot, {
 	Toolbar,
@@ -547,9 +827,11 @@ export const DataGrid: DataGridType = /* @__PURE__ */ Object.assign(DataGridRoot
 	ActionBar,
 	CreateTrigger,
 	VisibilityTrigger,
+	VisibilityItem,
 	SortMenuTrigger,
 	GlobalFilterInput,
 	ActiveFiltersBar,
+	GroupByBar,
 	ClearFiltersButton,
 	FilterPanel,
 	CreatingModal,
@@ -557,4 +839,6 @@ export const DataGrid: DataGridType = /* @__PURE__ */ Object.assign(DataGridRoot
 	LoadingBody,
 	EmptyStateRow,
 	NoResultsRow,
+	ColumnDragHandle,
+	RowDragHandle,
 })

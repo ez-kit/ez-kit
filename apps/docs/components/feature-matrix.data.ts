@@ -234,7 +234,8 @@ export const FEATURE_MATRIX: readonly FeatureRow[] = [
 		category: 'Rows & Selection',
 		feature: 'Row grouping + aggregation',
 		description: 'Group rows by a column value and display aggregated summaries.',
-		status: FeatureStatus.Planned,
+		status: FeatureStatus.Done,
+		doc: 'grouping',
 	},
 
 	// Cells
@@ -312,7 +313,9 @@ export const FEATURE_MATRIX: readonly FeatureRow[] = [
 	{
 		category: 'State & Tooling',
 		feature: 'Full ARIA grid + keyboard navigation',
-		description: 'Complete ARIA grid role implementation with full keyboard navigation support.',
-		status: FeatureStatus.Planned,
+		description:
+			'Grid roles and a roving focus model for kits that bring none, state semantics (sort, selection, row counts, busy) for every kit, and a live region for the result count.',
+		status: FeatureStatus.Done,
+		doc: 'accessibility',
 	},
 ]

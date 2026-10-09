@@ -1,0 +1,124 @@
+---
+title: Drag and drop API
+description: Every option, component, key and message drag and drop adds — in tables.
+---
+
+The full surface of drag and drop. How each piece is used is on [Installation](/docs/data-grid/drag-and-drop),
+[Rows](/docs/data-grid/drag-and-drop/rows) and [Columns](/docs/data-grid/drag-and-drop/columns).
+
+## Binding
+
+| Option | Type         | Description                                                                                                                      |
+| ------ | ------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| `dnd`  | `DndAdapter` | An option of `createDataGrid`, not of `<DataGrid>`. Pass the kit's `adapter`; without it no handle drags and no column is added. |
+
+## Grid options
+
+| Option                                        | Type                                   | Description                                                                                                                                                                                                                                           |
+| --------------------------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ordering`                                    | `boolean \| { row?: …, column?: … }`   | Reordering, per axis. A bare `true` means columns only; an axis turns on by being named.                                                                                                                                                              |
+| `ordering.row`                                | `boolean \| RowOrderingConfig`         | Row reordering. `true` keeps the order inside the grid.                                                                                                                                                                                               |
+| `ordering.row.onChange`                       | `(move: RowMove) => void`              | Called once per completed drag with `{ rowId, targetRowId, direction }`. Its presence makes the axis controlled: you reorder your own data, e.g. with `applyRowMove`.                                                                                 |
+| `ordering.row.column`                         | `false \| SystemColumnDef`             | The handle column — `header`, `width`, `pinning`, `align`, `headerClassName`, `cellClassName`. `false` leaves it out so you can place the handle yourself. See [Row actions](/docs/data-grid/row-actions/api#the-column-itself) for the shared shape. |
+| `ordering.column`                             | `boolean \| ColumnOrderingConfig`      | Column reordering. With an adapter bound, every header carries a grip.                                                                                                                                                                                |
+| `ordering.column.onChange`                    | `(columnOrder: string[]) => void`      | Called with the full column order, as ids, after each completed drag.                                                                                                                                                                                 |
+| `ordering.column.drag`                        | `boolean`                              | Headers drag, and the built-in header cell places a grip before the label. Default: whether an adapter is bound.                                                                                                                                      |
+| `ordering.column.moveControls`                | `boolean`                              | The column menu carries **Move left** / **Move right**. Default: `true` exactly when `drag` resolves off, so the header never offers both.                                                                                                            |
+| `ordering.column.visibilityMenu`              | `boolean \| object`                    | Turns the Columns toggle into a column panel whose rows can be moved. Default `false`.                                                                                                                                                                |
+| `ordering.column.visibilityMenu.drag`         | `boolean`                              | Panel rows are draggable. Default: whether an adapter is bound.                                                                                                                                                                                       |
+| `ordering.column.visibilityMenu.moveControls` | `boolean`                              | Panel rows carry the one-step move pair. Default: `true` exactly when `drag` resolves off, so the panel never offers both.                                                                                                                            |
+| `getRowId`                                    | `(row: TRow, index: number) => string` | Required for row drag in practice: the order is recorded as row ids, and an index changes the moment a row moves.                                                                                                                                     |
+| `direction`                                   | `'ltr' \| 'rtl'`                       | Which way the column axis is drawn. Pass `'rtl'` beside a `dir="rtl"` ancestor.                                                                                                                                                                       |
+
+## Column def
+
+| Option     | Type    | Description                                                                                           |
+| ---------- | ------- | ----------------------------------------------------------------------------------------------------- |
+| `ordering` | `false` | Lock this column where it was declared. It renders no drag handle, and its neighbours cannot pass it. |
+
+## Components
+
+| Component                            | Where it goes                                                   | Description                                                                                                             |
+| ------------------------------------ | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `<RowDragHandle />`                  | Inside a row — a cell's `cell.component`, a row render function | The kit's row handle, with the kit's grip. Finds the row it is in; takes no arguments.                                  |
+| `<DataGrid.RowDragHandle />`         | Same                                                            | The same control without a glyph, for a call site that supplies its own content.                                        |
+| `<ColumnDragHandle />`               | Inside `<DataGrid.HeaderCell>`, outside `sortTrigger`           | The kit's header handle, with the kit's grip.                                                                           |
+| `dragHandle`                         | A render argument of `<DataGrid.HeaderCell>`                    | The glyph-less header handle, ready to place.                                                                           |
+| `<DataGrid.VisibilityItem>`          | A custom column panel                                           | One row of the panel, draggable when the panel is. Render one per listed column — a filtered list stops panel dragging. |
+| `applyRowMove(rows, move, getRowId)` | An `ordering.row.onChange` handler                              | Returns `rows` with the move applied, without mutating them.                                                            |
+
+## Surfaces
+
+| Surface       | Handle                                                                | Writes        | Scope                                                     |
+| ------------- | --------------------------------------------------------------------- | ------------- | --------------------------------------------------------- |
+| Row           | the automatic handle column, or `<RowDragHandle />`                   | `rowOrder`    | The rows the body renders, pinned bands included          |
+| Column header | the built-in grip, or `dragHandle` / the component in a composed cell | `columnOrder` | The **visible** leaf columns, in the order they are drawn |
+| Column panel  | the component, inside `<DataGrid.VisibilityItem>`                     | `columnOrder` | **Every** listed leaf column, hidden ones included        |
+
+## Pointer
+
+| Pointer | A drag starts when                               | Otherwise                                          |
+| ------- | ------------------------------------------------ | -------------------------------------------------- |
+| Mouse   | The pointer has moved a little from the handle   | A plain click is a click, not a one-pixel reorder  |
+| Touch   | The finger presses and holds                     | A finger that strays first is left to the scroller |
+| Pen     | Whichever comes first — the hold or the movement | —                                                  |
+
+A drag only ever starts from the handle element, never from the sort trigger or checkbox beside it.
+
+## Keyboard
+
+<DataGridDocsExample exampleId='keyboard-sensors' />
+
+`Tab` to a grip in the grid above and try the keys below.
+
+| Key                 | While focused on a handle | Mid-drag                                              |
+| ------------------- | ------------------------- | ----------------------------------------------------- |
+| `Space` or `Enter`  | Picks the item up         | Drops it where it is                                  |
+| `ArrowUp` / `Down`  | —                         | Moves a row                                           |
+| `ArrowLeft`/`Right` | —                         | Moves a column                                        |
+| `Escape`            | —                         | Cancels; nothing is written                           |
+| `Tab`               | Moves focus as usual      | Ends the drag and **commits** at the position reached |
+
+`Alt+Arrow` on a row or header still moves it one step; while an item is held, the arrows move it
+through the drag only. In HeroUI `Alt+Arrow` reordering is unavailable on either axis, and `Tab` mid-drag moves
+focus out of the table — see [Kit parity](/docs/data-grid/kit-parity).
+
+## Announcements
+
+A keyboard drag is narrated through a polite live region; a pointer drag is not. Every sentence is a
+key of the `ordering` group in the [message catalogue](/docs/data-grid/localization), overridden per
+key:
+
+| Key                        | Type                                    | Description                                                                          |
+| -------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------ |
+| `ordering.dragRow`         | `string`                                | Accessible name of a row handle.                                                     |
+| `ordering.dragColumn`      | `string`                                | Accessible name of a column handle.                                                  |
+| `ordering.columnHeader`    | `string`                                | Header of the handle column.                                                         |
+| `ordering.draggable`       | `string`                                | Read in place of the role, after the name. Reaches shadcn only — HeroUI drops it.    |
+| `ordering.instructions`    | `string`                                | How to drag from the keyboard, read once when a handle takes focus.                  |
+| `ordering.rowPickedUp`     | `({ position, total }) => string`       | A row is picked up.                                                                  |
+| `ordering.rowMovedTo`      | `({ position, total }) => string`       | A held row settles on a new position. Rapid presses are read once, at the last one.  |
+| `ordering.rowDropped`      | `({ position, total }) => string`       | A row is dropped.                                                                    |
+| `ordering.rowCancelled`    | `({ position, total }) => string`       | A row drag is cancelled; `position` is where it started.                             |
+| `ordering.columnPickedUp`  | `({ name, position, total }) => string` | A column is picked up. `name` is the header text, or the column id for a JSX header. |
+| `ordering.columnMovedTo`   | `({ name, position, total }) => string` | A held column settles on a new position.                                             |
+| `ordering.columnDropped`   | `({ name, position, total }) => string` | A column is dropped.                                                                 |
+| `ordering.columnCancelled` | `({ name, position, total }) => string` | A column drag is cancelled.                                                          |
+
+Positions count from one, among the items the surface lists.
+
+```ts
+const ru: PartialGridMessages = {
+	ordering: {
+		draggable: 'перетаскиваемый',
+		rowPickedUp: ({ position, total }) => `Взята строка ${position} из ${total}.`,
+		columnMovedTo: ({ name, position, total }) => `${name}: позиция ${position} из ${total}.`,
+	},
+}
+```
+
+## Source
+
+- `@ez-kit/data-grid-react` — [`src/data-grid/dnd/types.ts`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/dnd/types.ts), the port a kit's adapter implements
+- `@ez-kit/data-grid-core` — [`src/features/ordering/drop.ts`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/core/src/features/ordering/drop.ts), where every refusal lives
+- `@ez-kit/data-grid-core` — [`src/messages/types.ts`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/core/src/messages/types.ts), the `ordering` message group

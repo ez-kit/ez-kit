@@ -1,14 +1,17 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 
 import { useGridComponents } from '../components-context'
 import { DATA_GRID_DEFAULTS } from '../defaults'
 import { getColumnSizeVars, getGridTemplateColumns } from '../utils/column-size-vars'
 
+import { AriaRowIndexProvider } from './aria-row-index'
+import { hasPartialRowSet, resolveAriaRowCount } from './aria-state'
 import { Body } from './body'
 import { Footer } from './footer'
 import { Header } from './header'
 import { InfiniteProvider } from './infinite-context'
+import { useGridKeyboardNavigation, useKeyboardNavigationEnabled } from './keyboard-navigation'
 import { PinShadowOverlay } from './pin-shadow-overlay'
 import { useDataGridTable, useDataGridState } from './table-context'
 import { VirtualProvider } from './virtual-context'
@@ -21,6 +24,13 @@ import type { CSSProperties, ReactNode } from 'react'
 /** Marks the scrollport; the value lists the axes that element scrolls. */
 const SCROLLPORT_ATTR = 'data-scrollport'
 const SCROLLPORT_AXES = 'x y'
+
+/**
+ * The row list a non-virtualized table hands the virtualizer: empty, and the *same* empty array
+ * every render, so `getItemKey`'s memo holds there too rather than recomputing for a virtualizer
+ * that is disabled anyway.
+ */
+const NO_ROWS: readonly never[] = []
 
 function updateScrollShadows(scrollEl: HTMLElement, wrapperEl: HTMLElement): void {
 	// `scrollLeft` is signed under RTL (0 at the inline-start edge, negative towards the end),
@@ -138,6 +148,12 @@ export function DataGridTable<TRow extends object = ErasedRow>({ children }: Dat
 	const pagination = useDataGridState((s) => s.pagination)
 	useDataGridState((s) => s.expanded)
 	useDataGridState((s) => s.rowPinning)
+	// Grouping rebuilds the row model **and** the column list — `groupedColumnMode: 'remove'`
+	// takes a grouped column out while it is a level — so every component that reads either has
+	// to re-derive on it. Optional-chained because the slice exists only with
+	// `columnGroupingFeature` registered; see `feature-optionality.test.tsx`.
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	useDataGridState((s) => s.grouping ?? null)
 
 	const sizeVars = getColumnSizeVars(table)
 	const gridTemplateColumns = getGridTemplateColumns(table)
@@ -167,7 +183,31 @@ export function DataGridTable<TRow extends object = ErasedRow>({ children }: Dat
 	// scrollRef — the `data-slot="table-scroll"` div (non-virtualized mode); see getScrollElement
 	const scrollRef = useRef<HTMLDivElement>(null)
 
-	const rows = isVirtualized ? (table.options.enableRowPinning ? table.getCenterRows() : table.getRowModel().rows) : []
+	const rows = isVirtualized
+		? table.options.enableRowPinning
+			? table.getCenterRows()
+			: table.getRowModel().rows
+		: NO_ROWS
+
+	/**
+	 * Keyed by row id, not by window position, so a row keeps its identity across a reorder — the
+	 * commit rewrites the order under the virtualizer, and a position key would hand the measured
+	 * height and the element of one row to whichever row later took its slot.
+	 *
+	 * **The function's own identity has to hold across a render, too.** `useVirtualizer` calls
+	 * `instance.setOptions(resolvedOptions)` during render, and `getItemKey` is one of the
+	 * identity-compared dependencies of `virtual-core`'s `getMeasurementOptions` memo — whose body
+	 * resets `pendingMeasuredCacheIndexes`, which `getMeasurements` derives its starting point from.
+	 * A fresh closure per render therefore restarts the measurement loop at 0 every time and leaves
+	 * the incremental path permanently dead: a full `count`-length recompute and allocation on every
+	 * render of a grid whose point is tens of thousands of rows, once per auto-scroll frame while a
+	 * row is being dragged.
+	 *
+	 * Memoised on the `rows` array rather than read through a ref written during render: TanStack
+	 * memoises that array, so its identity holds across scroll frames and changes exactly when a
+	 * commit rewrites the order — which is when a full recompute is what we want.
+	 */
+	const getItemKey = useMemo(() => (index: number) => rows[index]?.id ?? index, [rows])
 
 	// eslint-disable-next-line react-hooks/incompatible-library
 	const rowVirtualizer = useVirtualizer({
@@ -176,6 +216,7 @@ export function DataGridTable<TRow extends object = ErasedRow>({ children }: Dat
 		estimateSize: resolveEstimateSize(virtualizationConfig?.row.estimateSize),
 		overscan: virtualizationConfig?.row.overscan ?? DATA_GRID_DEFAULTS.virtualization.row.overscan,
 		enabled: isVirtualized,
+		getItemKey,
 	})
 
 	// One name for "the element that scrolls", known rather than hunted for: the `TableScroll`
@@ -241,34 +282,103 @@ export function DataGridTable<TRow extends object = ErasedRow>({ children }: Dat
 		if (scrollEl) scrollEl.scrollTop = 0
 	}, [querySignature, infiniteEnabled, getScrollElement, table])
 
+	/**
+	 * The focus model, wired here because this is where the refs are: `TableProps` carries no
+	 * `RefAttributes`, so the `<table>` itself cannot be held — the wrapper can, and every query
+	 * the model makes is scoped to it anyway.
+	 */
+	/**
+	 * The grid's state as the accessibility tree reads it — see `aria-state.ts` for why all of
+	 * it is written here rather than in each kit.
+	 *
+	 * `aria-busy` costs this component a subscription it did not have, so a refetch now
+	 * re-renders the table element (and with it `Header` / `Body` / `Footer`) twice per request.
+	 * That is the price of announcing "busy" at all: the attribute belongs on the table, and
+	 * nothing below it can put it there.
+	 */
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const isBusy = useDataGridState((s) => (s.loading?.isPending ?? false) || (s.loading?.isFetching ?? false))
+	const partialRowSet = hasPartialRowSet(table)
+	// Only a grid that owns its own `role="grid"` writes this: on a `role="table"` element
+	// `aria-multiselectable` is not an allowed attribute, and the kits that bring their own focus
+	// manager bring their own role with it. See `keyboard-navigation/context.tsx`.
+	const ownsGridRole = useKeyboardNavigationEnabled()
+	const isMultiSelectable =
+		ownsGridRole && table.options.enableRowSelection === true && table.options.enableMultiRowSelection !== false
+
+	const navigationProps = useGridKeyboardNavigation({
+		enabled: useKeyboardNavigationEnabled(),
+		rootRef: wrapperRef,
+		scrollRef: scrollElementRef,
+		direction: table.grid.direction,
+	})
+
+	/**
+	 * The shell's sticky state, stamped on the scrollport in **both** modes.
+	 *
+	 * The virtualized branch used to omit these, which left
+	 * `[data-slot='table-scroll'][data-sticky-header='true'] [data-slot='tr'][data-pinned='top']`
+	 * unmatched — so a pinned row in a virtualized grid stuck at the scrollport's own top edge,
+	 * under a `z-10` sticky header, with only the few pixels the header does not cover left
+	 * visible. Measured in both kits: at `scrollTop` 4900 the pinned row sat at the header's own
+	 * `top` and 41px of 49 (shadcn) / 37 of 58 (heroui) were painted over.
+	 *
+	 * It also quietly shortened the window. The band is displaced by the pinned rows' height — they
+	 * are in flow, ahead of it, inside the same tbody — and that displacement is exactly what the
+	 * pinned band overlays once it sticks below the header, which is why the virtualizer's
+	 * `scrollTop`-to-offset arithmetic needs no `scrollMargin` term. Stuck too high, the pinned rows
+	 * overlaid the header instead of the band, and the band's first rows showed through underneath
+	 * the window the virtualizer had sized for the viewport.
+	 *
+	 * `data-sticky-footer` comes along for consistency rather than for a rule of its own: nothing in
+	 * the stylesheet pairs a sticky footer with pinned-bottom rows yet, and the one rule that reads
+	 * the attribute is scoped away from virtualized mode (see `global.css`).
+	 */
+	const stickyAttrs = {
+		...(isStickyHeader ? { 'data-sticky-header': 'true' } : {}),
+		...(isStickyFooter ? { 'data-sticky-footer': 'true' } : {}),
+	}
+
 	const tableEl = (
-		<Table
-			data-slot='table'
-			// `grid.label` is documented as "accessible name of the table element", so
-			// it is written here rather than left to each kit: the heroui adapter sets the same
-			// string on React Aria's grid (and keeps doing so), while shadcn renders the bare
-			// `<table>`, which had no name at all until this line.
-			aria-label={table.grid.messages.grid.label}
-			{...(isVirtualized ? { 'data-virtualized': 'true' } : {})}
-			style={
-				{
-					...sizeVars,
-					'--grid-template-columns': gridTemplateColumns,
-				} as CSSProperties
-			}
+		<AriaRowIndexProvider
+			table={table}
+			enabled={partialRowSet}
 		>
-			{children === undefined ? (
-				<>
-					<Header />
-					<Body />
-					{hasFooter ? <Footer /> : null}
-				</>
-			) : typeof children === 'function' ? (
-				children({ table, headerGroups: table.getHeaderGroups(), rows: table.getRowModel().rows })
-			) : (
-				children
-			)}
-		</Table>
+			<Table
+				data-slot='table'
+				{...navigationProps}
+				// `grid.label` is documented as "accessible name of the table element", so
+				// it is written here rather than left to each kit: the heroui adapter sets the same
+				// string on React Aria's grid (and keeps doing so), while shadcn renders the bare
+				// `<table>`, which had no name at all until this line.
+				aria-label={table.grid.messages.grid.label}
+				{...(isBusy ? { 'aria-busy': true } : {})}
+				{...(isMultiSelectable ? { 'aria-multiselectable': true } : {})}
+				// Written only when the DOM holds less than the whole row set, which is the case
+				// `aria-rowcount` exists for: a paginated, virtualized or infinite grid otherwise
+				// reads to a screen reader as a table of exactly the rows it can see.
+				{...(partialRowSet ? { 'aria-rowcount': resolveAriaRowCount(table) } : {})}
+				{...(isVirtualized ? { 'data-virtualized': 'true' } : {})}
+				style={
+					{
+						...sizeVars,
+						'--grid-template-columns': gridTemplateColumns,
+					} as CSSProperties
+				}
+			>
+				{children === undefined ? (
+					<>
+						<Header />
+						<Body />
+						{hasFooter ? <Footer /> : null}
+					</>
+				) : typeof children === 'function' ? (
+					children({ table, headerGroups: table.getHeaderGroups(), rows: table.getRowModel().rows })
+				) : (
+					children
+				)}
+			</Table>
+		</AriaRowIndexProvider>
 	)
 
 	if (isVirtualized) {
@@ -287,6 +397,7 @@ export function DataGridTable<TRow extends object = ErasedRow>({ children }: Dat
 							data-slot='table-scroll'
 							data-virtualized='true'
 							className={classNames?.scroll}
+							{...stickyAttrs}
 						>
 							{tableEl}
 						</Scroll>
@@ -309,8 +420,7 @@ export function DataGridTable<TRow extends object = ErasedRow>({ children }: Dat
 					ref={scrollRef}
 					data-slot='table-scroll'
 					className={classNames?.scroll}
-					{...(isStickyHeader ? { 'data-sticky-header': 'true' } : {})}
-					{...(isStickyFooter ? { 'data-sticky-footer': 'true' } : {})}
+					{...stickyAttrs}
 				>
 					{tableEl}
 				</Scroll>

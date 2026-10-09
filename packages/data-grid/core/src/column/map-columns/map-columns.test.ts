@@ -481,3 +481,17 @@ describe('mapColumns — betweenOperator warnings', () => {
 		warn.mockRestore()
 	})
 })
+
+describe('mapColumns — aggregation', () => {
+	it('leaves `aggregationFn` unset when a column writes only a renderer', () => {
+		const [column] = mapColumns<{ id: string; amount: number }>([
+			{ accessorKey: 'amount', aggregation: { component: () => null } },
+		])
+
+		expect('aggregationFn' in (column as object)).toBe(false)
+		expect((column as { meta?: { aggregation?: unknown } }).meta?.aggregation).toEqual({
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- `expect.any()` is typed `any` by vitest
+			component: expect.any(Function),
+		})
+	})
+})

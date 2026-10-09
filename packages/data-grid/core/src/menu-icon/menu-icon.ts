@@ -39,6 +39,10 @@ export const GridMenuIcon = {
 	MoveDown: 'move-down',
 	/** A date affordance — the trigger of a date-preset menu. */
 	Calendar: 'calendar',
+	/** Add this column as a grouping level. No direction, so no logical/physical question. */
+	Group: 'group',
+	/** Drop this column as a grouping level. */
+	Ungroup: 'ungroup',
 } as const
 
 export type GridMenuIcon = (typeof GridMenuIcon)[keyof typeof GridMenuIcon]

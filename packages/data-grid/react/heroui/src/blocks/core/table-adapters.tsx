@@ -1,10 +1,11 @@
 'use client'
 
-import { DataGrid } from '@ez-kit/data-grid-react'
 import { getVisualLeafColumns, useDataGridState, useDataGridTable, useGridMessages } from '@ez-kit/data-grid-react/kit'
 import { Table as HeroTable, cn } from '@heroui/react'
-import { Children, createContext, forwardRef, Fragment, isValidElement, useContext, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { Children, createContext, forwardRef, useContext, useRef } from 'react'
+import { TableFooter as RacTableFooter } from 'react-aria-components'
+
+import { asAriaStateCarrier, useAriaStateMirror } from './aria-state'
 
 import type {
 	TableProps,
@@ -16,12 +17,9 @@ import type {
 	TheadProps,
 	TrProps,
 } from '@ez-kit/data-grid-react'
-import type { ComponentProps, Key, ReactNode } from 'react'
+import type { ComponentProps, Key } from 'react'
 
 const HeaderContext = createContext<{ inHeader: boolean; rowHeaderId?: string }>({ inHeader: false })
-
-/** Inside the footer, rows and cells are plain elements — see {@link Table}. */
-const FooterContext = createContext(false)
 
 /**
  * The grid shell's scrollport, for this kit.
@@ -59,80 +57,19 @@ export function TableScroll({ children, ...props }: TableScrollProps) {
  */
 export function Table({ children, ...props }: TableProps) {
 	const messages = useGridMessages()
-	const heroProps = props as unknown as ComponentProps<typeof HeroTable.Content>
-	const { collection, footer } = splitFooter(children)
+	const heroProps = asAriaStateCarrier(props) as unknown as ComponentProps<typeof HeroTable.Content>
+	const ref = useRef<HTMLTableElement>(null)
+	// One mirror for the whole grid, mounted on the element whose ref does land.
+	useAriaStateMirror(ref)
 
 	return (
-		<>
-			<HeroTable.Content
-				aria-label={messages.grid.label}
-				{...heroProps}
-			>
-				{collection}
-			</HeroTable.Content>
-			{footer === null ? null : <FooterPortal>{footer}</FooterPortal>}
-		</>
-	)
-}
-
-/**
- * Split `<DataGrid.Footer />` out of the table's children.
- *
- * HeroUI's table is a React Aria collection: everything under `Table.Content` is rendered by a
- * collection renderer whose "document" is not the DOM, and which understands only `Header`,
- * `Body`, `Row` and `Cell`. A `<tfoot>` is none of those, so it was silently dropped and every
- * column `footer` in this kit rendered nothing. Nor can the footer portal itself out from in
- * there — that renderer has no DOM to portal from. So it is lifted out here, before the
- * collection ever sees it, and {@link FooterPortal} puts it back into the real `<table>`.
- *
- * Fragments are walked through because the default layout hands its children over as one.
- * A footer nested any deeper (wrapped in a component of your own) stays in the collection and is
- * dropped, exactly as before.
- */
-function splitFooter(children: ReactNode): { collection: ReactNode[]; footer: ReactNode | null } {
-	const collection: ReactNode[] = []
-	let footer: ReactNode | null = null
-
-	const walk = (nodes: ReactNode): void => {
-		for (const child of Children.toArray(nodes)) {
-			if (isValidElement(child) && child.type === Fragment) {
-				walk((child.props as { children?: ReactNode }).children)
-				continue
-			}
-			if (isValidElement(child) && child.type === DataGrid.Footer) {
-				footer = child
-				continue
-			}
-			collection.push(child)
-		}
-	}
-	walk(children)
-
-	return { collection, footer }
-}
-
-/**
- * Render the footer into the `<table>` HeroUI produced, after its `<tbody>` — the same column
- * grid and the same scrollport, so widths, pinning and `position: sticky` resolve against the
- * real table rather than against a detached element.
- *
- * The anchor is a zero-size `<div>` rather than an id on `Table.Content`: it needs no cooperation
- * from HeroUI about which props reach the `<table>` element.
- */
-function FooterPortal({ children }: { children: ReactNode }) {
-	const [anchor, setAnchor] = useState<HTMLDivElement | null>(null)
-	const tableEl = anchor?.parentElement?.querySelector('table') ?? null
-
-	return (
-		<>
-			<div
-				ref={setAnchor}
-				hidden
-			/>
-			{tableEl === null
-				? null
-				: createPortal(<FooterContext.Provider value={true}>{children}</FooterContext.Provider>, tableEl)}
-		</>
+		<HeroTable.Content
+			aria-label={messages.grid.label}
+			{...heroProps}
+			ref={ref}
+		>
+			{children}
+		</HeroTable.Content>
 	)
 }
 
@@ -199,39 +136,37 @@ export function Tbody(props: TbodyProps) {
 }
 
 /**
- * The `<tfoot>` itself. Plain, because {@link splitFooter} has already lifted it out of the
- * collection and {@link FooterPortal} has put it inside the real `<table>`. HeroUI's own
- * `Table.Footer` is no help here: it is a container *outside* the table, meant for pagination,
- * with none of the column grid.
+ * The `<tfoot>` itself — React Aria's `TableFooter`, a collection section like `Header` and `Body`.
+ *
+ * It is imported from `react-aria-components` rather than from `@heroui/react` because HeroUI does
+ * not re-export it: their own `Table.Footer` is a `<div>` *outside* the table, meant for
+ * pagination, with none of the column grid. `HeroTable.Content` is React Aria's `Table`, so the
+ * section lands in the collection it belongs to. The package is a peer of `@heroui/react` from
+ * 3.2.3 on, so this adds no install for anyone already using the kit.
+ *
+ * This replaced a workaround: `react-aria-components` had no footer section until 1.18, a `<tfoot>`
+ * was not a node the collection recognised, and it was silently dropped — so the kit lifted
+ * `<DataGrid.Footer>` out of the children before the collection saw them, portalled it back into
+ * the real `<table>` after the `<tbody>`, and flipped `Tr` / `Td` into a plain-DOM mode through a
+ * context while it rendered. Four moving parts to place one element; all four are gone.
  */
 export function Tfoot(props: TfootProps) {
-	return <tfoot {...props} />
+	return <RacTableFooter {...(props as ComponentProps<typeof RacTableFooter>)} />
 }
 
 // `forwardRef` for the same reason as {@link Thead}: pinned rows are measured through this ref.
 export const Tr = forwardRef<HTMLTableRowElement, TrProps>(function Tr({ children, ...props }, ref) {
 	const { inHeader } = useContext(HeaderContext)
-	const inFooter = useContext(FooterContext)
-
-	// Header rows render as a fragment and footer rows as a plain `<tr>`; neither is ever measured,
-	// so only the footer branch has an element to hand the ref to.
+	// Header rows render as a fragment: React Aria's `Column`s are the row, and a `<tr>` around
+	// them would be a node the collection did not put there. Footer rows need no branch — they are
+	// `Row`s of the footer section, the same collection node a body row is.
 	if (inHeader) return <>{children}</>
-	if (inFooter)
-		return (
-			<tr
-				className='table__row'
-				{...props}
-				ref={ref}
-			>
-				{children}
-			</tr>
-		)
 
 	const propsWithData = props as TrProps & { 'data-row-id'?: Key }
 	const maybeRowId = propsWithData.id ?? propsWithData['data-row-id']
 	const rowId =
 		typeof maybeRowId === 'symbol' ? undefined : typeof maybeRowId === 'bigint' ? String(maybeRowId) : maybeRowId
-	const heroProps = propsWithData as unknown as ComponentProps<typeof HeroTable.Row>
+	const heroProps = asAriaStateCarrier(propsWithData) as unknown as ComponentProps<typeof HeroTable.Row>
 
 	// `data-row-id` is passed through, not consumed: React Aria needs the value as its
 	// collection `id` (it surfaces as `data-key`), but the attribute itself is part of the
@@ -248,11 +183,19 @@ export const Tr = forwardRef<HTMLTableRowElement, TrProps>(function Tr({ childre
 	)
 })
 
-export function Th({ pinned, className, ...props }: ThProps) {
+// `forwardRef` for the same reason as {@link Thead} and {@link Tr}: `ThProps` declares the ref
+// because a drag library is handed the `<th>` through it to move a column.
+//
+// Note this kit's chain is React 19 only, one level below here: HeroUI's own `Table.Column` is a
+// plain function component that destructures `ref` out of its props, which is React 19 semantics.
+// That is not a defect to work around — `@heroui/react` declares `react: >=19.0.0` — but it does
+// mean the shared package's React 18 support does not extend through this kit, and the reason to
+// write `forwardRef` here is the contract rather than a React 18 path that works end to end.
+export const Th = forwardRef<HTMLTableCellElement, ThProps>(function Th({ pinned, className, ...props }, ref) {
 	const { rowHeaderId } = useContext(HeaderContext)
 	const propsWithData = props as ThProps & { 'data-column-id'?: string }
 	const columnId = propsWithData['data-column-id']
-	const baseHeroProps = props as unknown as ComponentProps<typeof HeroTable.Column>
+	const baseHeroProps = asAriaStateCarrier(props) as unknown as ComponentProps<typeof HeroTable.Column>
 	const isRowHeader = rowHeaderId !== undefined && columnId !== undefined && columnId === rowHeaderId
 	const mergedClassName = cn(className, pinned ? 'bg-surface-secondary' : undefined) ?? ''
 
@@ -262,12 +205,12 @@ export function Th({ pinned, className, ...props }: ThProps) {
 			{...(columnId !== undefined ? { id: columnId } : {})}
 			className={mergedClassName}
 			{...(isRowHeader ? { isRowHeader: true } : {})}
+			ref={ref}
 		/>
 	)
-}
+})
 
 export function Td({ pinned, className, style, ...props }: TdProps) {
-	const inFooter = useContext(FooterContext)
 	// Rows are CSS grids (see styles.css "grid column model"), and `colSpan` means nothing to a
 	// grid item — a full-width fallback cell would sit in the first track. Span it explicitly,
 	// the same way the shadcn kit's Td does. `colSpan` itself stays on the element for a11y.
@@ -278,15 +221,6 @@ export function Td({ pinned, className, style, ...props }: TdProps) {
 		...(pinned ? { backgroundColor: 'var(--dg-pin-cell-background)' } : {}),
 		...style,
 	}
-	if (inFooter)
-		return (
-			<td
-				{...props}
-				className={cn('table__cell', className) ?? ''}
-				style={resolvedStyle}
-			/>
-		)
-
 	return (
 		<HeroTable.Cell
 			{...(props as unknown as ComponentProps<typeof HeroTable.Cell>)}

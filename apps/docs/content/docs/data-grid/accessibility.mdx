@@ -1,0 +1,91 @@
+---
+title: Accessibility
+description: What the grid tells the accessibility tree — roles, state, names and the one live region — and which parts belong to the shared layer rather than to a UI kit.
+---
+
+Everything on this page is emitted by `@ez-kit/data-grid-react`, not by a UI kit. A screen
+reader's account of a sort, a selection or a row total is a property of the grid, so a rule that
+lived in each kit would be a rule one kit could quietly not have. Both kits get all of it, and so
+does a kit of your own.
+
+## State semantics
+
+| Attribute              | Where                     | When it is written                                                                                                                                                                              |
+| ---------------------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `aria-sort`            | the column's header cell  | On a column that **can** sort. `'none'` means "sortable, not sorted", so an unsortable column gets no attribute rather than `'none'`.                                                           |
+| `aria-selected`        | the row                   | On a row that can be selected. A grid with no selection writes nothing, rather than announcing every row as selectable and none as chosen.                                                      |
+| `aria-multiselectable` | the table                 | Multi-row selection, on a grid that owns its own `role="grid"` — see [Roles and focus](#roles-and-focus).                                                                                       |
+| `aria-expanded`        | the row                   | On a row that **can** expand — a tree parent, or a row with a sub-content panel. `false` means "expandable, currently closed", so a row that never opens gets no attribute rather than `false`. |
+| `aria-rowcount`        | the table                 | Only when the DOM holds **less** than the whole row set: paginated, virtualized or infinite. ARIA is explicit that a complete table needs neither this nor `aria-rowindex`.                     |
+| `aria-rowindex`        | every header and body row | Alongside `aria-rowcount`, 1-based over the whole set. The header rows take the first indices, because ARIA counts them.                                                                        |
+| `aria-busy`            | the table                 | While the grid is pending or refetching.                                                                                                                                                        |
+
+### The unknown total
+
+A grid with `pagination.manual` and neither `rowCount` nor `pageCount` genuinely does not know how
+many rows exist — `hasNextPage` says another page is there without saying how big it is. That case
+writes `aria-rowcount="-1"`, which is ARIA's own sentinel for it, rather than a number invented
+from the page in the DOM. It is the same test the pagination label makes before it prints "of N".
+
+## The live region
+
+The grid has exactly one: a polite `role="status"` reporting how many rows the current query
+matches. A filter, a search term or a cleared chip otherwise changes the table under a
+screen-reader user with no announcement at all — the rows simply become different rows.
+
+It is deliberately the only thing announced. A region that narrated sorting and pagination as well
+would talk over the control the user is still operating.
+
+Its text is `messages.grid.rowCount`, so translating it is part of translating the grid — see
+[Localization](/docs/data-grid/localization). Nothing is announced on mount: a live region's
+initial content is not an update.
+
+One region is not the grid's and is counted separately: a grid with
+[drag and drop](/docs/data-grid/drag-and-drop/api#announcements) switched on narrates a **keyboard** drag
+through a region of its own, created per grid by the drag layer and fed from the dictionary's
+`ordering` group. It reports a gesture the user is making, not a change to what the table holds, which
+is why it does not compete with the one above.
+
+## Roles and focus
+
+Two arrangements, decided by the kit rather than by the grid config:
+
+- **shadcn** — provides `role="grid"` with roving focus and keyboard navigation (arrow keys, Home,
+  End, PageUp, PageDown, Enter, F2). The whole grid is **one** tab stop. A kit of your own with no
+  focus manager gets the same by passing `createDataGrid({ keyboardNavigation: true })`.
+- **HeroUI** — uses React Aria's collection for roles and focus management. A kit built on React
+  Aria brings its own and must not be given a second.
+
+`aria-multiselectable` follows that split: it is not an allowed attribute on `role="table"`, so the
+package writes it only where it owns the role. A React Aria kit's table is a `grid` on its own
+terms and its own collection answers for it.
+
+## Names
+
+Every control the grid renders without a visible label is named from the dictionary. Where the
+grid renders the control it writes `aria-label`; where the control is a kit component it renders
+a visually hidden `<label>`, which every kit component respects.
+
+## What is checked, and where
+
+- `packages/data-grid/react/react/src/data-grid/aria-state.test.tsx` — the shared layer writes the
+  attributes above.
+- `apps/docs/e2e/packages/data-grid/a11y/names.spec.ts` — axe, rule-scoped, both kits.
+- `apps/docs/e2e/packages/data-grid/a11y/state-semantics.spec.ts` — the attributes **survive the
+  kit**, in a browser. Axe cannot cover this: it checks that an attribute is allowed, never that it
+  is there.
+- `apps/docs/e2e/packages/data-grid/a11y/keyboard-navigation.spec.ts` — the focus model.
+
+## Known gaps
+
+- **Grouped header rows are dropped in the heroui kit.** React Aria's collection has no node for
+  them; the kit keeps the leaf row, which carries every affordance. See
+  [Kit parity](/docs/data-grid/kit-parity).
+- **`color-contrast` on heroui's header sort trigger** is below AA. It is a value in that kit's
+  stylesheet and needs a design decision rather than a fix.
+- **No announcement for sorting or pagination.** Deliberate — see the live region above.
+- **No `aria-colcount` / `aria-colindex`.** By the same ARIA rule that makes `aria-rowcount`
+  conditional: the DOM holds every column the grid has. Hiding a column takes it out of the table
+  rather than out of the DOM, and pinning moves one without removing it, so there is no larger
+  column set for a reader to be told about. Column virtualization is what would change that, and is
+  the point at which to revisit this.

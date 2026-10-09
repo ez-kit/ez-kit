@@ -1,8 +1,10 @@
 'use client'
 
-import { CellTypesProvider, mergeCellTypes } from './cell-types-context'
+import { CellTypesProvider } from './cell-types-context'
 import { GridComponentsProvider } from './components-context'
 import { DataGrid } from './data-grid/data-grid'
+import { DndBundleProvider } from './data-grid/dnd'
+import { KeyboardNavigationProvider } from './data-grid/keyboard-navigation'
 import { useDataGridState } from './data-grid/table-context'
 import { GridFactoryDefaultsProvider } from './data-grid-options-context'
 import { createColumnHelper } from './react-columns'
@@ -11,6 +13,7 @@ import { useDataGrid } from './use-data-grid'
 import type { CellTypeRegistry } from './cell-types-context'
 import type { GridComponents } from './contract'
 import type { DataGridControlledProps, DataGridSharedProps, DataGridStatics } from './data-grid/data-grid'
+import type { DndAdapter } from './data-grid/dnd'
 import type { DataGridDefaultOptions } from './data-grid-options-context'
 import type { ColumnDef, ColumnHelper } from './react-columns'
 import type { DataTable, GridFeatures } from './types'
@@ -60,6 +63,51 @@ export type CreateDataGridOptions<
 	 * dropped by the annotation and the compiler says so at the first call site.
 	 */
 	features?: TFeatures
+	/**
+	 * Whether this kit wants the package's own keyboard focus model — one tab stop for the whole
+	 * grid, arrows between cells, `Enter` into a cell's controls and `Escape` back out, with the
+	 * `grid` / `row` / `gridcell` roles that go with it.
+	 *
+	 * **A statement by the kit, not an option of the grid, and that distinction is the whole
+	 * design.** A kit built on React Aria (heroui) already has a roving focus manager; a second
+	 * one would fight it for the arrow keys. Were this a field of the grid config instead,
+	 * `keyboard: false` would change nothing at all in that kit — an option that type-checks
+	 * clean and silently does nothing, which is the defect class `REQUIRED_FEATURE` already
+	 * warns about for unregistered features. So it sits here, beside `components` and
+	 * `features`, where it reads as what it is: what this bundle brings.
+	 *
+	 * Default `false`, so a bundle that says nothing renders exactly the DOM it did before.
+	 *
+	 * Note it is a property of the **bundle**, so a consumer composing their own with
+	 * `createDataGrid` decides for themselves — which is also the escape hatch for an
+	 * application that needs the model off. A per-grid switch can be added later without a
+	 * break, once there is a consumer asking for one.
+	 */
+	keyboardNavigation?: boolean
+	/**
+	 * The drag-and-drop adapter every grid from this bundle runs on.
+	 *
+	 * A statement by the bundle, beside {@link CreateDataGridOptions.keyboardNavigation} and for the
+	 * same reason: the mechanics are the kit's, not the grid's. This is the **only** way drag is
+	 * switched on — there is no `<DataGrid dnd>` prop and no `dnd` field on the grid config, so the
+	 * kit roots stay byte-identical for every consumer who never asked for it.
+	 *
+	 * Omitted, a grid renders exactly the DOM it did before: no handle, `useDndEnabled()` false, and
+	 * `useSortableItem` on an inert handle.
+	 *
+	 * **A kit package must not pass this in its own `createDataGrid` call.** A kit root is a
+	 * prebuilt grid compiled once and shipped to everyone, so an adapter named there drags the drag
+	 * library into every consumer's bundle and makes an optional peer a required install. The
+	 * adapter ships from the kit's own `/dnd` subpath and a consumer names it themselves;
+	 * `apps/docs/test/tree-shaking.test.ts` asserts no drag library is reachable from a kit root.
+	 *
+	 * Explicitly `| undefined`, unlike its neighbours above, and for a reason specific to this
+	 * field: under `exactOptionalPropertyTypes` a bare `dnd?: DndAdapter` rejects
+	 * `dnd: flagOn ? adapter : undefined`, and drag behind a feature flag or an environment check
+	 * is the ordinary way to write this — where `components` and `features` are not. Passing
+	 * `undefined` means the same as omitting it: no adapter, `useDndEnabled()` false.
+	 */
+	dnd?: DndAdapter | undefined
 	/**
 	 * Kit-level default grid options baked into the bundle. Merged as the **base** layer
 	 * under an app-level `DataGridOptionsProvider` and the per-call config
@@ -118,9 +166,7 @@ export type BoundDataGrid<TFeatures extends TableFeatures> = (<
 
 /**
  * The bundle returned by {@link createDataGrid}: the bound compound `DataGrid`, the
- * hooks, the components provider, cell-type-aware column helpers, and `extendDataGrid`
- * — a re-invocation of the factory that reuses the same `components` while merging in
- * extra cell types (return typed to the merged key union).
+ * hooks, the components provider, and cell-type-aware column helpers.
  *
  * `TFeatures` is `undefined` unless the factory was given a `features` set. That is the whole
  * difference between the two bundles: with a set bound, `DataGrid` and `useDataGrid` stop
@@ -142,9 +188,6 @@ export type DataGridBundle<
 	GridComponentsProvider: typeof GridComponentsProvider
 	createColumns: <TRow extends object>(defs: ColumnDef<TRow, TCellTypes>[]) => ColumnDef<TRow, TCellTypes>[]
 	createColumnHelper: <TRow extends object>() => ColumnHelper<TRow, TCellTypes>
-	extendDataGrid: <TExtra extends CellTypeRegistry>(
-		extraCellTypes: TExtra,
-	) => DataGridBundle<TCellTypes & TExtra, TFeatures>
 }
 
 /**
@@ -159,8 +202,13 @@ export type DataGridBundle<
  *
  * @example
  * // With custom cell types
- * export const { DataGrid, useDataGrid, createColumns } = extendDataGrid({
- *   rating: defineCellType<{ max: number }>()({ view: RatingCellView, editing: RatingCellInput }),
+ * export const { DataGrid, useDataGrid, createColumns } = createDataGrid({
+ *   components: allComponents,
+ *   features: allDataGridFeatures,
+ *   cellTypes: {
+ *     ...cellTypes,
+ *     rating: defineCellType<{ max: number }>()({ view: RatingCellView, editing: RatingCellInput }),
+ *   },
  * })
  */
 export function createDataGrid<
@@ -171,6 +219,8 @@ export function createDataGrid<
 	cellTypes,
 	features,
 	defaults,
+	dnd,
+	keyboardNavigation = false,
 }: CreateDataGridOptions<TCellTypes, TFeatures>): DataGridBundle<TCellTypes, TFeatures> {
 	/*
 	 * `features` is folded into the defaults layer rather than carried separately: the layer
@@ -186,24 +236,31 @@ export function createDataGrid<
 	type BoundProps = Parameters<typeof DataGrid>[0]
 	function BoundDataGrid(props: BoundProps) {
 		return (
-			<GridComponentsProvider components={components}>
-				{/*
-				 * The uncontrolled form runs `useDataGrid` inside `<DataGrid>`, out of reach of the
-				 * bound hook below, so the factory layer is published here as well. It is a context of
-				 * its own rather than a `DataGridOptionsProvider`: this provider sits *inside* whatever
-				 * the consumer put around the grid, and an app-level `DataGridOptionsProvider` must
-				 * outrank the kit's defaults, not the other way round.
-				 */}
-				<GridFactoryDefaultsProvider defaults={factoryDefaults}>
-					{cellTypes != null ? (
-						<CellTypesProvider cellTypes={cellTypes}>
-							<DataGrid {...props} />
-						</CellTypesProvider>
-					) : (
-						<DataGrid {...props} />
-					)}
-				</GridFactoryDefaultsProvider>
-			</GridComponentsProvider>
+			// The bundle's adapter, published for the grid root below to promote to its own layer
+			// and then close off. Outermost, because it is the outermost fact: what this bundle was
+			// built with, before anything about one grid.
+			<DndBundleProvider adapter={dnd ?? null}>
+				<KeyboardNavigationProvider enabled={keyboardNavigation}>
+					<GridComponentsProvider components={components}>
+						{/*
+						 * The uncontrolled form runs `useDataGrid` inside `<DataGrid>`, out of reach of the
+						 * bound hook below, so the factory layer is published here as well. It is a context of
+						 * its own rather than a `DataGridOptionsProvider`: this provider sits *inside* whatever
+						 * the consumer put around the grid, and an app-level `DataGridOptionsProvider` must
+						 * outrank the kit's defaults, not the other way round.
+						 */}
+						<GridFactoryDefaultsProvider defaults={factoryDefaults}>
+							{cellTypes != null ? (
+								<CellTypesProvider cellTypes={cellTypes}>
+									<DataGrid {...props} />
+								</CellTypesProvider>
+							) : (
+								<DataGrid {...props} />
+							)}
+						</GridFactoryDefaultsProvider>
+					</GridComponentsProvider>
+				</KeyboardNavigationProvider>
+			</DndBundleProvider>
 		)
 	}
 	// Copy the whole compound namespace rather than listing members by hand. The hand-written
@@ -242,19 +299,10 @@ export function createDataGrid<
 		return useDataGrid<TConfigFeatures, TRow>(
 			config,
 			factoryDefaults as DataGridDefaultOptions<TConfigFeatures, TRow> | undefined,
+			// The controlled form runs this in the consumer's tree, outside `DndBundleProvider`, so
+			// the adapter is handed over the way the defaults are.
+			dnd ?? null,
 		)
-	}
-
-	function boundExtendDataGrid<TExtra extends CellTypeRegistry>(
-		extraCellTypes: TExtra,
-	): DataGridBundle<TCellTypes & TExtra, TFeatures> {
-		const mergedCellTypes = mergeCellTypes(cellTypes ?? {}, extraCellTypes) as TCellTypes & TExtra
-		return createDataGrid<TCellTypes & TExtra, TFeatures>({
-			components,
-			cellTypes: mergedCellTypes,
-			...(features !== undefined ? { features } : {}),
-			...(defaults !== undefined ? { defaults } : {}),
-		})
 	}
 
 	/*
@@ -277,6 +325,5 @@ export function createDataGrid<
 		GridComponentsProvider,
 		createColumns: boundDefineColumns,
 		createColumnHelper: boundCreateColumnHelper,
-		extendDataGrid: boundExtendDataGrid,
 	}
 }

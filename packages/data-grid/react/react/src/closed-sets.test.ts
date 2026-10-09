@@ -11,6 +11,8 @@ import {
 	FilterChipKind,
 	FilterChipsPosition,
 	ColumnSortDirection,
+	DragAxis,
+	DragInput,
 	LoadMoreDirection,
 	LoadMoreTrigger,
 	MultiSortEvent,
@@ -58,6 +60,8 @@ describe('closed sets keep the bare-string form valid for consumers', () => {
 	it('exposes the named members, each equal to its bare literal', () => {
 		expect(ColumnResizeMode.OnEnd).toBe('onEnd')
 		expect(GridDirection.Ltr).toBe('ltr')
+		expect(DragAxis.Row).toBe('row')
+		expect(DragInput.Keyboard).toBe('keyboard')
 		expect(ColumnSortUndefined.Last).toBe('last')
 		expect(CommitStatus.Validating).toBe('validating')
 		expect(MultiSortEvent.Ctrl).toBe('ctrl')

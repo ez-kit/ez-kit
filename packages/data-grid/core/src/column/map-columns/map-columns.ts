@@ -112,6 +112,8 @@ function mapColumn<TRow extends object>(
 		visibility,
 		ordering,
 		sorting,
+		grouping,
+		aggregation,
 		cell,
 		filtering,
 		editing,
@@ -141,6 +143,9 @@ function mapColumn<TRow extends object>(
 	setIfDefined(meta, 'align', normalizeColumnAlign(align))
 	setIfDefined(meta, 'visibility', visibility)
 	setIfDefined(meta, 'ordering', ordering)
+	// Only the `false` switch reaches meta. `grouping.getValue` is TanStack's own
+	// `getGroupingValue` column-def field and goes onto the def below, the way `sorting.fn` does.
+	if (grouping === false) meta.grouping = false
 	setIfDefined(meta, 'editing', editing as ColumnMetaEditing)
 	setIfDefined(meta, 'creating', creating as ColumnMetaCreating<TRow>)
 	setIfDefined(meta, 'headerClassName', headerClassName)
@@ -188,6 +193,36 @@ function mapColumn<TRow extends object>(
 		setIfDefined(result, 'sortUndefined', sorting.undefined)
 		setIfDefined(result, 'invertSorting', sorting.invert)
 		if (sorting.multi === false) result.enableMultiSort = false
+	}
+
+	// grouping: false → this column can never be a grouping level
+	if (grouping === false) {
+		result.enableGrouping = false
+	} else if (grouping !== undefined) {
+		// TanStack passes `(originalRow, index, row)`; the config's callback names the first two,
+		// which is the whole of what deriving a grouping key needs.
+		setIfDefined(result, 'getGroupingValue', grouping.getValue)
+	}
+
+	// `aggregation` is the scalar-or-object pair the other column options use. The function is
+	// TanStack's native `aggregationFn` and is passed straight through — only the renderer is
+	// ours, and only it goes through meta.
+	if (typeof aggregation === 'string') {
+		result.aggregationFn = aggregation
+	} else if (aggregation !== undefined) {
+		// Only when the author named one. An absent `fn` is what a server-totalled column looks
+		// like, and writing the key as `undefined` would both break `exactOptionalPropertyTypes`
+		// and make the column read as aggregated to `create-table-options.ts`'s `aggregatedColumns`
+		// walk — which would then ask for `rowAggregationFeature` on a grid that needs none.
+		if (IS_DEV && aggregation.fn === undefined && aggregation.component === undefined) {
+			console.warn(
+				`[data-grid] Column "${id ?? accessorKey ?? '?'}" writes \`aggregation\` with neither \`fn\` nor ` +
+					'`component`, so it says nothing: a total comes from `aggregation.fn` or from the table-level ' +
+					'`aggregation.totals`, and `component` is what renders it.',
+			)
+		}
+		if (aggregation.fn !== undefined) result.aggregationFn = aggregation.fn
+		if (aggregation.component !== undefined) meta.aggregation = { component: aggregation.component }
 	}
 
 	// visibility: false → hiding disabled for this column (always visible)

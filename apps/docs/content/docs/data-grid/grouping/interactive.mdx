@@ -1,0 +1,81 @@
+---
+title: Grouping · Interactive
+description: Let a reader regroup the table from the column menu and the group-by bar.
+---
+
+`grouping.by` seeds the levels an author wants. Whether a reader may change them is the separate question, and the answer is the two controls on this page — both of which are on as soon as `grouping` is.
+
+<DataGridDocsExample exampleId='grouping-interactive' />
+
+## The column menu adds a level
+
+Every groupable column's menu carries **Group by this column**. A column that wrote `grouping: false` has no such entry, and neither does any column on a grid that does not group.
+
+```tsx
+<DataGrid
+	features={features}
+	data={data}
+	columns={columns}
+	// No `by`: the grid starts flat and the reader groups it.
+	grouping
+/>
+```
+
+## The bar removes and reorders them
+
+`<DataGrid.GroupByBar />` renders one chip per active level, outermost first. Each chip's menu moves its level one step out or in, or drops it. The bar renders nothing while the grid is ungrouped, so a layout can mount it unconditionally.
+
+It is mounted by **composition**, never by an option:
+
+```tsx
+<DataGrid
+	features={features}
+	data={data}
+	columns={columns}
+	grouping
+>
+	<DataGrid.Toolbar start={<DataGrid.GroupByBar />} />
+	<DataGrid.Table>
+		<DataGrid.Header />
+		<DataGrid.Body />
+	</DataGrid.Table>
+</DataGrid>
+```
+
+**Dropping a level is the bar's job rather than the column menu's**, and that follows from how grouping renders: a grouped column is taken out of the column list, so it has no header cell left to hang a menu on. If you want grouping to be removable, mount the bar.
+
+## Reacting to a change
+
+`grouping.onChange` fires with the full list, outermost first, whenever the levels change — from either control.
+
+```tsx
+<DataGrid
+	features={features}
+	data={data}
+	columns={columns}
+	grouping={{ onChange: (grouping) => saveToUrl(grouping) }}
+/>
+```
+
+To restore levels from a deep link, seed `initialState.grouping` instead of `grouping.by`. Both routes exist on purpose — the option is where an author _states_ the grouping, the seed is where a link _restores_ the one a reader picked — and writing both is a mistake the grid warns about in development, with the seed winning.
+
+## Persisting the levels
+
+`grouping` is an ordinary state slice, so it travels with the rest of the grid's state. A snapshot that names its keys explicitly has to include it, **and** the set has to register `columnGroupingFeature` — a slice exists only when its feature does, so without it the key is silently absent from every snapshot.
+
+```tsx
+const snapshot = extractState(table, { keys: ['grouping', 'sorting', 'columnFilters'] })
+```
+
+## Options
+
+| Option              | Type                           | Description                                                           |
+| ------------------- | ------------------------------ | --------------------------------------------------------------------- |
+| `grouping.by`       | `string[]`                     | Starting levels, outermost first. Column ids.                         |
+| `grouping.onChange` | `(grouping: string[]) => void` | Called whenever the levels change, from either control.               |
+| `grouping.enabled`  | `boolean`                      | Turns a `grouping` inherited from a defaults layer off for this grid. |
+
+## Source
+
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/group-by-bar.tsx`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/group-by-bar.tsx)
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/column-menu-sections.ts`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/column-menu-sections.ts)

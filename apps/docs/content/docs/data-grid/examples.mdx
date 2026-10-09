@@ -9,10 +9,10 @@ surface — and, where something is deliberately not an option, why it is writte
 
 ## Task board
 
-The layout every issue tracker converges on: a search box and, following it, faceted filters in the
-toolbar,
-sortable columns, badge and icon-labelled cells, an overflow menu per row, and a footer carrying
-the selection count, the page size and the page controls.
+The layout every issue tracker converges on: a search box followed by the two filters people reach
+for most, the rest behind each column's header, sortable columns, badge and icon-labelled cells, an
+overflow menu per row, and a footer carrying the selection count, the page size and the page
+controls.
 
 <DataGridDocsExample exampleId='example-task-board' />
 
@@ -21,7 +21,8 @@ the selection count, the page size and the page controls.
 | Surface                                    | Option                                                                                         |
 | ------------------------------------------ | ---------------------------------------------------------------------------------------------- |
 | Search box, before the filters             | `globalFiltering: { placeholder }` + `<DataGrid.GlobalFilterInput />` first in `Toolbar.start` |
-| Column filters in the toolbar              | `filtering: { faceted: true }` + `<DataGrid.FilterPanel />` in `Toolbar.start`                 |
+| Status and Priority filters in the toolbar | `filtering: { faceted: true }` + `<DataGrid.ColumnFilter columnId />` in `Toolbar.start`       |
+| Est. Hours and Created At filters          | `filterPopover` in `<DataGrid.HeaderCell>` for every column not in the toolbar                 |
 | Which columns get a filter                 | `filtering: false` on the columns that should not (Task and Title here)                        |
 | Sort menu with its active-sort count       | `sorting` + `<DataGrid.SortMenuTrigger />`                                                     |
 | Column visibility menu                     | `visibility` + `<DataGrid.VisibilityTrigger />`                                                |

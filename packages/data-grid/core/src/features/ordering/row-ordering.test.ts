@@ -1,5 +1,7 @@
 import {
+	columnGroupingFeature,
 	createExpandedRowModel,
+	createGroupedRowModel,
 	createSortedRowModel,
 	rowExpandingFeature,
 	rowPinningFeature,
@@ -33,6 +35,15 @@ const ROW_ORDERING = tableFeatures({
 	rowSortingFeature,
 	rowPinningFeature,
 	sortedRowModel: createSortedRowModel(),
+})
+
+/** The same, plus what grouping needs — a group row is a row with `subRows`. */
+const ROW_ORDERING_GROUPED = tableFeatures({
+	rowOrderingFeature,
+	columnGroupingFeature,
+	groupedRowModel: createGroupedRowModel(),
+	rowExpandingFeature,
+	expandedRowModel: createExpandedRowModel(),
 })
 
 /** The same, plus what tree data needs to render its sub-rows. */
@@ -83,6 +94,35 @@ describe('canMoveRow', () => {
 		expect(canMoveRow(table, 'b', RowMoveDirection.Down)).toBe(false)
 	})
 
+	it('refuses every move while a grouping is applied', () => {
+		// The same reasoning as the sort above, and a second one on top: the order is computed
+		// from the grouping levels, so a manual move springs back — and half the rows are
+		// synthetic groups, so "move this row one step" has no answer across a group boundary.
+		const table = createTable({
+			features: ROW_ORDERING_GROUPED,
+			data: DATA,
+			columns: createColumns<Row>([{ accessorKey: 'name', header: 'Name' }]),
+			getRowId: (row) => row.id,
+			grouping: { by: ['name'] },
+		})
+
+		expect(canMoveRow(table, 'b', RowMoveDirection.Up)).toBe(false)
+		expect(canMoveRow(table, 'b', RowMoveDirection.Down)).toBe(false)
+	})
+
+	it('moves freely again once the grouping is dropped', () => {
+		// The control: the refusal is the grouping's, not the feature set's.
+		const table = createTable({
+			features: ROW_ORDERING_GROUPED,
+			data: DATA,
+			columns: createColumns<Row>([{ accessorKey: 'name', header: 'Name' }]),
+			getRowId: (row) => row.id,
+			grouping: true,
+		})
+
+		expect(canMoveRow(table, 'b', RowMoveDirection.Up)).toBe(true)
+	})
+
 	it('does not move a row into a different pinning band', () => {
 		const table = makeTable({ pinning: { row: { top: true, bottom: true } } })
 		table.getRow('a').pin('top', false, false)
@@ -90,6 +130,25 @@ describe('canMoveRow', () => {
 		// 'b' now leads the centre band. What sits above it is pinned, so it is not a neighbour.
 		expect(canMoveRow(table, 'b', RowMoveDirection.Up)).toBe(false)
 		expect(canMoveRow(table, 'b', RowMoveDirection.Down)).toBe(true)
+	})
+
+	it('steps over a pinned row to reach a sibling of its own band', () => {
+		// Pinning a row does not take it out of the row model, so 'b' sits between two centre-band
+		// rows while being rendered at the top, away from both. The user sees 'a' and 'c' adjacent,
+		// so a step between them is the step they are asking for. Treating the pinned row as the end
+		// of the order instead left those two unable to be reordered from the menu at all — and left
+		// a drag onto the same target succeeding where the menu entry refused, since a drop compares
+		// the bands of its two ends and cannot see what lies between them.
+		const table = makeTable({ pinning: { row: { top: true, bottom: true } } })
+		table.getRow('b').pin('top', false, false)
+
+		expect(canMoveRow(table, 'a', RowMoveDirection.Down)).toBe(true)
+		expect(canMoveRow(table, 'c', RowMoveDirection.Up)).toBe(true)
+		expect(moveRow(table, 'a', RowMoveDirection.Down)).toEqual({
+			rowId: 'a',
+			targetRowId: 'c',
+			direction: RowMoveDirection.Down,
+		})
 	})
 })
 
@@ -224,5 +283,43 @@ describe('applyRowMove', () => {
 		applyRowMove(order, { rowId: 'b', targetRowId: 'c', direction: RowMoveDirection.Down })
 
 		expect(order).toEqual(['a', 'b', 'c'])
+	})
+
+	describe('over data rows', () => {
+		const rows = [{ id: 1 }, { id: 2 }, { id: 3 }]
+		const getRowId = (row: { id: number }) => String(row.id)
+
+		it('moves the row down past its target, keeping the row objects', () => {
+			const move = { rowId: '1', targetRowId: '3', direction: RowMoveDirection.Down }
+
+			const next = applyRowMove(rows, move, getRowId)
+
+			expect(next.map(getRowId)).toEqual(['2', '3', '1'])
+			expect(next[2]).toBe(rows[0])
+		})
+
+		it('moves the row up past its target', () => {
+			const move = { rowId: '3', targetRowId: '2', direction: RowMoveDirection.Up }
+
+			expect(applyRowMove(rows, move, getRowId).map(getRowId)).toEqual(['1', '3', '2'])
+		})
+
+		it('passes each row its index, as getRowId does elsewhere', () => {
+			const move = { rowId: '0', targetRowId: '2', direction: RowMoveDirection.Down }
+
+			const next = applyRowMove(['x', 'y', 'z'], move, (_row, index) => String(index))
+
+			expect(next).toEqual(['y', 'z', 'x'])
+		})
+
+		it('returns a copy when either row is missing, without mutating', () => {
+			const move = { rowId: '9', targetRowId: '1', direction: RowMoveDirection.Up }
+
+			const next = applyRowMove(rows, move, getRowId)
+
+			expect(next).toEqual(rows)
+			expect(next).not.toBe(rows)
+			expect(rows.map(getRowId)).toEqual(['1', '2', '3'])
+		})
 	})
 })

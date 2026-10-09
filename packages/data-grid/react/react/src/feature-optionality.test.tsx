@@ -3,8 +3,11 @@ import {
 	columnPinningFeature,
 	columnResizingFeature,
 	columnSizingFeature,
+	columnGroupingFeature,
 	columnVisibilityFeature,
+	createExpandedRowModel,
 	createFilteredRowModel,
+	createGroupedRowModel,
 	createSortedRowModel,
 	creatingFeature,
 	deletingFeature,
@@ -12,6 +15,8 @@ import {
 	editingFeature,
 	infiniteFeature,
 	loadingFeature,
+	rowAggregationFeature,
+	rowExpandingFeature,
 	rowSelectionFeature,
 	rowSortingFeature,
 	tableFeatures,
@@ -55,6 +60,13 @@ const BASE = {
 	rowSelectionFeature,
 	editingFeature,
 	deletingFeature,
+	// Grouping brings three companions, and they travel together: a group row is a row with
+	// `subRows`, so `rowExpandingFeature` + `expandedRowModel` are what open it, and
+	// `groupedRowModel` is what builds it. Dropping `columnGroupingFeature` below therefore has to
+	// drop its row model too, which `withoutFeature` handles the way it already does for sorting.
+	columnGroupingFeature,
+	rowExpandingFeature,
+	rowAggregationFeature,
 }
 
 /**
@@ -66,7 +78,11 @@ const BASE = {
  */
 function withoutFeature(name: keyof typeof BASE) {
 	const { [name]: _dropped, ...rest } = BASE
-	const withModel = name === 'rowSortingFeature' ? rest : { ...rest, sortedRowModel: createSortedRowModel() }
+	const withSort = name === 'rowSortingFeature' ? rest : { ...rest, sortedRowModel: createSortedRowModel() }
+	const withGroup =
+		name === 'columnGroupingFeature' ? withSort : { ...withSort, groupedRowModel: createGroupedRowModel() }
+	const withModel =
+		name === 'rowExpandingFeature' ? withGroup : { ...withGroup, expandedRowModel: createExpandedRowModel() }
 	return tableFeatures(withModel) as unknown as GridFeatures
 }
 
@@ -89,6 +105,15 @@ const OPTIONAL = [
 	'rowSelectionFeature',
 	'editingFeature',
 	'deletingFeature',
+	// Grouping is **not** structural, and the structural three stay exactly three. A grid built
+	// without `columnGroupingFeature` renders and does not group: `row.getIsGrouped?.()`,
+	// `cell.getIsAggregated?.()` and `cell.getIsPlaceholder?.()` all answer `false`, so the group
+	// cell draws an empty `<td>` and every body cell takes the ordinary view branch.
+	'columnGroupingFeature',
+	'rowExpandingFeature',
+	// Likewise the footer: `column.getAggregationValue?.()` is absent, so a footer cell with no
+	// `footer` renders nothing, which is what it always did.
+	'rowAggregationFeature',
 ] as const satisfies readonly (keyof typeof BASE)[]
 
 describe('a feature the consumer did not register costs nothing', () => {

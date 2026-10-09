@@ -1,0 +1,118 @@
+---
+title: Installation
+description: Install the drag adapter, bind it to your grid, and drag your first row.
+---
+
+The grid already reorders rows and columns three ways: the [column menu](/docs/data-grid/columns/ordering),
+the [row action menu](/docs/data-grid/row-ordering), and `Alt+Arrow` on either. All three move **one
+step at a time**, which nobody uses to move a column six places. Drag is the fourth, over the same
+`rowOrder` and `columnOrder` state, committing through the same rules.
+
+It is **opt-in and composed** — there is no `<DataGrid dnd>` prop and neither kit's prebuilt grid
+carries it, so a grid that does not name it pays nothing.
+
+## shadcn
+
+The adapter is a [registry item of its own](/docs/data-grid/installation/shadcn), so the plain
+`npx shadcn add …/r/data-grid.json` does not bring it — or `@dnd-kit` with it. Add the drag item
+instead, which copies `components/data-grid/dnd.tsx`, installs `@dnd-kit/react` and `@dnd-kit/dom`,
+and — because it names the grid item as a registry dependency — installs the grid in the same run:
+
+```bash
+npx shadcn@latest add https://ez-kit-docs.vercel.app/r/data-grid-dnd.json
+```
+
+If you already have the grid from the plain command, this is still the command to run: it copies
+the one file it owns and leaves the rest alone.
+
+```tsx title="src/lib/data-grid.tsx"
+import { allDataGridFeatures } from '@ez-kit/data-grid-core/features/all'
+import { createDataGrid } from '@ez-kit/data-grid-react'
+
+import { allComponents, cellTypes } from '@/components/data-grid/data-grid'
+import { adapter } from '@/components/data-grid/dnd'
+
+export const { DataGrid } = createDataGrid({
+	components: allComponents,
+	cellTypes,
+	features: allDataGridFeatures,
+	dnd: adapter,
+})
+```
+
+To remove it later, delete `dnd.tsx` and drop `@dnd-kit/react` and `@dnd-kit/dom` by hand — nothing
+else in the block references any of them. `shadcn add` has no uninstall, which is why drag is a
+separate item rather than a part of the main one: not dragging is a choice you make before anything
+is installed. Unused, the adapter costs no bundle bytes either way.
+
+## HeroUI
+
+`@dnd-kit/react` is an **optional peer** — install it only if you want drag:
+
+```bash
+pnpm add @dnd-kit/react
+```
+
+```tsx title="src/lib/data-grid.tsx"
+import { allDataGridFeatures } from '@ez-kit/data-grid-core/features/all'
+import { allComponents, cellTypes } from '@ez-kit/data-grid-heroui'
+import { adapter } from '@ez-kit/data-grid-heroui/dnd'
+import { createDataGrid } from '@ez-kit/data-grid-react'
+
+export const { DataGrid } = createDataGrid({
+	components: allComponents,
+	cellTypes,
+	features: allDataGridFeatures,
+	dnd: adapter,
+})
+```
+
+The peer range is pinned to `0.1.x` on purpose: a minor release of that library before its own 1.0
+is free to rename what the adapter reads, and a mismatch would otherwise fail silently rather than at
+install.
+
+## Your first drag
+
+Turn an ordering axis on as you always would. Rows need nothing more — the grid puts their handle in
+a column of its own:
+
+<DataGridDocsExample exampleId='row-drag' />
+
+```tsx
+<DataGrid
+	features={features}
+	data={data}
+	columns={columns}
+	getRowId={(row) => String(row.id)}
+	ordering={{
+		row: {
+			onChange: (move) => setData((rows) => applyRowMove(rows, move, getRowId)),
+		},
+	}}
+/>
+```
+
+**Set `getRowId`.** The order is recorded as row ids, and without one a row falls back to its index,
+which changes the moment it moves.
+
+## Where next
+
+- [Rows](/docs/data-grid/drag-and-drop/rows) — the handle column, a handle of your own, a virtualized
+  body, and what a row drag refuses.
+- [Columns](/docs/data-grid/drag-and-drop/columns) — header handles, the column panel and RTL.
+- [API](/docs/data-grid/drag-and-drop/api) — every option, component, key and message.
+
+## Not built yet
+
+- **The announcements have not been through a screen reader.** What is verified is that the right
+  sentence reaches a correctly shaped live region at the right moment, in both kits — not that it
+  reads well through NVDA or VoiceOver.
+- **Two HeroUI-specific limits**, both in [Kit parity](/docs/data-grid/kit-parity): a header column
+  cannot be dragged while the column panel is open, and `Escape` during a panel drag can leave the
+  order changed without reporting it.
+
+## See also
+
+- [Column ordering](/docs/data-grid/columns/ordering) — the menu and `Alt+Arrow` on the same state
+- [Row ordering](/docs/data-grid/row-ordering) — the row axis, its two modes, and `getRowId`
+- [Kit parity](/docs/data-grid/kit-parity) — what differs between the two kits

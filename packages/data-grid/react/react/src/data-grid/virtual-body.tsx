@@ -1,10 +1,13 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 
 import { useGridComponents } from '../components-context'
 import { DATA_GRID_DEFAULTS } from '../defaults'
 import { LoadMoreTrigger } from '../types'
+import { projectDragOrder } from '../utils/project-drag-order'
+import { resolveVirtualWindowPads } from '../utils/virtual-window-pads'
 
 import { DataGridRow } from './row'
+import { useActiveDraggingRow, usePublishRenderedRows, useRowDragProjection } from './row-drag-registry'
 import { useDataGridTable, useDataGridState } from './table-context'
 import { useInfiniteScroll } from './use-infinite-scroll'
 import { usePinnedRowOffsets } from './use-pinned-row-offsets'
@@ -13,35 +16,45 @@ import { useVirtualContext } from './virtual-context'
 import type { VirtualItem } from '@tanstack/react-virtual'
 
 /**
- * Vertical space reserved below the virtual rows for the load-more loader (px).
- * Fixed allowance: kits must keep their `LoadMoreRow` within this height in
- * virtualized mode, or a tall/wrapping loader (e.g. a long error message) can
- * overflow the reserved area. Generous enough for the shipped shadcn/heroui kits.
- */
-const LOAD_MORE_ALLOWANCE_PX = 56
-
-/**
  * Virtualized tbody — renders only the rows currently in the viewport.
  *
- * The tbody emits `data-slot="tbody" data-virtualized="true"` and a single
- * runtime-computed `height` inline style (the virtualizer's total size). The
- * `display: grid` / `position: relative` shape comes from the structural
- * stylesheet shipped with this package.
+ * The tbody emits `data-slot="tbody" data-virtualized="true"` and three
+ * runtime-computed inline styles: a `minHeight` (the virtualizer's total size,
+ * which is what reserves the scroll range) and the `paddingTop` /
+ * `paddingBottom` that place the window's band inside it. The two compose
+ * rather than add up because of `box-sizing: border-box`, which both kits load
+ * with Tailwind's preflight. The `display: grid` / `position: relative` shape
+ * comes from the structural stylesheet shipped with this package.
  *
- * Each virtual row receives runtime `transform: translateY(start)` and `height`
- * inline styles — values come from the virtualizer and cannot move to CSS — plus
- * a `data-virtual="row"` for the structural CSS that sets
- * `position: absolute; left: 0; top: 0; width: 100%`. The explicit height makes
- * the row fill exactly the slot the virtualizer reserved for it: nothing measures
- * the rows back, so a kit whose natural row height differs from `estimateSize`
- * would otherwise leave a gap (or an overlap) between every pair of rows.
+ * A floor rather than a fixed `height`, because the loader row below can make
+ * the band's content exceed the reservation. Without a loader the box usually
+ * lands on `minHeight`, since the pads are exact — but not always: when a
+ * window's `end` overshoots `totalSize`, `resolveVirtualWindowPads` clamps the
+ * bottom pad at zero, so the pads plus the band sum to more than the floor and
+ * the box grows past it. Harmless precisely because the reservation is a floor
+ * and not a fixed height. Fixed, the loader could only *overflow* the tbody —
+ * which the shadcn kit happens to tolerate (the overflow reaches the scrollport's
+ * scrollable range) and the heroui kit does not: its own `<table>` is
+ * `overflow: clip`, so the whole loader was clipped away and unreachable, at the
+ * bottom of the scroll. Measured in both kits. A floor keeps the reservation
+ * without asking any kit not to clip.
+ *
+ * The window's rows are in flow, offset by the tbody's `paddingTop` /
+ * `paddingBottom` rather than by a per-row transform — see
+ * `resolveVirtualWindowPads`'s docblock for why: it is what lets the drag
+ * library displace a row's neighbours. Each row still receives a runtime
+ * `height` inline style, because nothing measures the rows back — a kit whose
+ * natural row height differs from `estimateSize` would otherwise leave a gap
+ * (or an overlap) between every pair of rows, and the explicit height keeps the
+ * band aligned with the virtualizer's own arithmetic.
  *
  * Pinned rows (top / bottom) use the same data-attr + `--dg-row-pin-offset`
  * pattern as the non-virtual Body.
  *
  * Infinite scroll: detection here is virtualizer-index based (the last rendered
- * index nearing the row count), and the loader row is absolutely positioned just
- * below the spacer with extra height reserved.
+ * index nearing the row count), and the loader row is in flow after the band,
+ * carrying the bottom pad as its own `marginTop` — see `bottomPad` below for
+ * why the pad cannot stay on the container once a row follows the band.
  */
 export function VirtualBody() {
 	const table = useDataGridTable()
@@ -52,6 +65,11 @@ export function VirtualBody() {
 	const controller = useInfiniteScroll()
 	// Subscribe to infinite slice so the loader row re-renders on status change.
 	useDataGridState((s) => s.infinite)
+	// Re-renders this body when a row drag starts or ends, which is what lets it keep the dragged row
+	// mounted after the window has scrolled past it.
+	const activeRowId = useActiveDraggingRow()
+	// And when the drag displaces that row: see `projectedRows` below.
+	const projection = useRowDragProjection()
 
 	const virtualItems = rowVirtualizer?.getVirtualItems() ?? []
 	const lastIndex = virtualItems.length > 0 ? (virtualItems[virtualItems.length - 1]?.index ?? -1) : -1
@@ -84,18 +102,175 @@ export function VirtualBody() {
 		}
 	}, [enabled, trigger, hasNextPage, isFetching, lastIndex, rowCount, thresholdRows, loadMore])
 
+	/*
+	 * The centre rows **in the arrangement the drag is showing**: the model, with the row being dragged
+	 * moved to where the drag library has displaced it. Outside a gesture there is no projection and
+	 * this is `centerRows` itself.
+	 *
+	 * This is what keeps displacement alive once the window has turned over under a drag. The library
+	 * moves the held row's element and rewrites the group's indices on every displacement, while this
+	 * body re-renders on every frame of the drag's auto-scroll — and rendered in model order, it put the
+	 * held row back at its old slot. The library's index for that row and the one published here then
+	 * disagreed, the group had a gap and a duplicate, and `OptimisticSortingPlugin` bails on every hover
+	 * after that: the neighbours stopped moving for the rest of the gesture. Rendering the projection
+	 * makes the two one order, so the published indices are the library's and the space stays dense.
+	 * `DndProviderProps.onDisplace` has the measurement.
+	 *
+	 * **The window indexes the projected list, and the virtualizer's geometry stays the model's.** Slot
+	 * `i` of the window renders `projectedRows[i]` at the virtualizer's `start` / `size` for slot `i`, so
+	 * a displacement shifts which row sits in a slot and never where a slot is. That is exactly what the
+	 * pads need: they are computed from the window alone (see below), the window's span does not change
+	 * when the projection does, and so the band cannot jump by a row when the held row moves — measured,
+	 * `paddingTop` held its value across every displacement. The one approximation is a row's size: the
+	 * row in slot `i` takes slot `i`'s measurement, which is its own only when every row shares
+	 * `estimateSize`. Nothing measures rows back (see this component's docblock), so with uniform rows
+	 * there is no difference to see; a variable-height grid would show the rows between the source and
+	 * the target at their neighbour's height for the length of the gesture, and back at their own after
+	 * it.
+	 *
+	 * Memoised because this body re-renders on every scroll frame and the projection is a copy of the
+	 * whole centre list, while both inputs hold still across those frames: the row model is memoised by
+	 * the table, and the projection changes only when the drag displaces.
+	 */
+	const projectedRows = useMemo(
+		() => projectDragOrder(centerRows, (row) => row.id, projection),
+		[centerRows, projection],
+	)
+
+	/*
+	 * The centre rows this body renders, in index order: the virtualizer's window, plus the row being
+	 * dragged once its slot has left the window.
+	 *
+	 * Holding that row is the whole of why a virtualized grid can be reordered by drag at all. Let it
+	 * unmount and its sortable unregisters mid-gesture, which puts a hole in an index space the
+	 * library requires to be exactly `0..n-1` — and the failure is invisible, because from then on the
+	 * element under the pointer is dnd-kit's clone rather than React's row, so the drag looks alive
+	 * while the drop resolves the source to `-1`. Measured; see the plan's Task 1 gate.
+	 *
+	 * The held row's slot is its **projected** one: while it is displaced into the window it renders in
+	 * flow there, occupying the gap its neighbours moved aside for, and it is only held out of flow once
+	 * that slot has scrolled out of the window.
+	 *
+	 * OUT_OF_WINDOW_ROW: the pinned bands below already render outside the virtualizer's range, so
+	 * this reuses that rather than reaching for a `rangeExtractor`.
+	 */
+	const windowEntries = virtualItems.flatMap((virtualRow: VirtualItem) => {
+		const row = projectedRows[virtualRow.index]
+		return row ? [{ index: virtualRow.index, row, start: virtualRow.start, size: virtualRow.size }] : []
+	})
+	const heldIndex = activeRowId === null ? -1 : projectedRows.findIndex((row) => row.id === activeRowId)
+	const heldRow = heldIndex < 0 ? undefined : projectedRows[heldIndex]
+	// Indexed by row index and built for every row from `estimateSize`, so this is present whenever
+	// the row is. Without it the row would have to render at an offset it does not occupy, which for
+	// an upward drag means a ghost row above the window — so a missing measurement holds nothing and
+	// lets `row.tsx`'s development error report the hole instead of hiding it behind a wrong position.
+	const heldMeasurement = heldIndex < 0 ? undefined : rowVirtualizer?.measurementsCache[heldIndex]
+	// One id, one registration: a row that is both in the window and held must render exactly once.
+	const isHeldInWindow = windowEntries.some((entry) => entry.index === heldIndex)
+	/*
+	 * `isHeldOutOfWindow` rides on the entry rather than being recomputed where the rows render: the
+	 * distinction is made here, once, and a second derivation at the call site could disagree with
+	 * this one about which row the window still contains.
+	 */
+	const centerEntries =
+		heldRow && heldMeasurement && !isHeldInWindow
+			? [
+					...windowEntries.map((entry) => ({ ...entry, isHeldOutOfWindow: false })),
+					{
+						index: heldIndex,
+						row: heldRow,
+						start: heldMeasurement.start,
+						size: heldMeasurement.size,
+						isHeldOutOfWindow: true,
+					},
+				].sort((left, right) => left.index - right.index)
+			: windowEntries.map((entry) => ({ ...entry, isHeldOutOfWindow: false }))
+
+	/*
+	 * What this body renders, in DOM order, for the two readers that need to agree on it: a row
+	 * computing its own drag index, and the provider resolving where a drop landed. The held row is in
+	 * it by construction — it is built as "window plus the held row" rather than appended — so the
+	 * space keeps its density the moment the row leaves the window.
+	 */
+	usePublishRenderedRows(
+		rowVirtualizer
+			? [
+					...topRows.map((row) => row.id),
+					...centerEntries.map((entry) => entry.row.id),
+					...bottomRows.map((row) => row.id),
+				]
+			: null,
+	)
+
 	if (!rowVirtualizer) return null
 
 	const totalSize = rowVirtualizer.getTotalSize()
 	const showLoadMore = enabled && (hasNextPage || controller.isFetching || controller.error != null)
-	const tbodyHeight = totalSize + (showLoadMore ? LOAD_MORE_ALLOWANCE_PX : 0)
 	const columnCount = table.getVisibleLeafColumns().length
+	/*
+	 * Computed from the **window**, never from `centerEntries`: that list also carries the row being
+	 * dragged once the window has scrolled past it, at its model index — so a held row near the top
+	 * of a list becomes `centerEntries[0]` and its `start` of 0 silences `paddingTop` for the rest of
+	 * the gesture. Measured: the band stopped being offset at all and the tbody shrank by one row's
+	 * height per auto-scroll frame. That row is placed out of flow instead, and says so with
+	 * `data-virtual='row-held'` — see where `centerEntries` is rendered below.
+	 */
+	const firstWindowItem = virtualItems[0]
+	const lastWindowItem = virtualItems[virtualItems.length - 1]
+	const pads = resolveVirtualWindowPads(
+		firstWindowItem && lastWindowItem ? { start: firstWindowItem.start, end: lastWindowItem.end } : undefined,
+		totalSize,
+	)
+	/*
+	 * The bottom pad is reserved exactly once, by whatever is last in this tbody's flow: its own
+	 * `paddingBottom` with no loader, the loader's `marginTop` with one.
+	 *
+	 * It cannot be both, and it cannot stay on the container when a loader follows the band, because
+	 * `padding-bottom` is laid out *after* every child — so it separates the band from the tbody's
+	 * bottom edge and never from a row below it. Left there, the loader renders at the window's own
+	 * bottom edge: a "Load more" control floating mid-list, with the whole unscrolled remainder of the
+	 * range reserved beneath it. On the margin it sits at `totalSize`, where the last row ends, which
+	 * is where the old `translateY(totalSize)` put it from a padding-box origin.
+	 *
+	 * **The margin is collapse-safe, and that is checked rather than assumed.** It does collapse in
+	 * the shadcn kit: that kit's vendored `components/ui/table.tsx` sets an inline
+	 * `display: 'block'` on `<tbody>`, so the structural stylesheet's `grid` never applies there and
+	 * the body is a block container, where adjacent vertical margins collapse. It is lossless
+	 * anyway, because collapsing takes the **max** of the two margins rather than their sum, and the
+	 * other margin is always zero: nothing in either kit's stylesheet or in this package's
+	 * `global.css` gives `[data-slot='tr']` a `margin`, so whatever precedes the loader — the
+	 * window's last row, or a pinned-bottom row — contributes nothing for `max()` to lose. The
+	 * negative case `max()` would mishandle cannot arise either: `resolveVirtualWindowPads` clamps
+	 * both pads with `Math.max(…, 0)`. And the margin cannot escape the tbody instead of spacing
+	 * inside it — that needs the loader to be the parent's first in-flow child with no
+	 * `padding-top` above it, and an empty window (the only state with no rows before the loader)
+	 * returns `NO_PADS`, so `bottomPad` is `0px` then. Only the implication is claimed: `0px` also
+	 * arises whenever the window's last row ends at `totalSize`, which is the ordinary state at the
+	 * end of the list and has rows before the loader, so it is not the escaping case either way.
+	 *
+	 * **The dependency is that `[data-slot='tr']` has no vertical margin.** A `margin-bottom` added
+	 * to a virtual row, a pinned-bottom row or the loader's neighbour breaks this: in shadcn's block
+	 * flow the larger of the two wins and the band's reservation is short by the difference, while
+	 * in heroui's grid body the two sum instead — the two kits would disagree. Place such spacing
+	 * with padding, or re-measure both kits.
+	 *
+	 * Nothing reserves the loader's own height, which is the point: it grows the tbody past the
+	 * `minHeight` floor and so extends the scrollport's scrollable range by exactly what it needs —
+	 * a two-line error message included. That is what retired `LOAD_MORE_ALLOWANCE_PX`, the fixed
+	 * 56px this used to budget for it, and measuring the three states is what showed the allowance
+	 * was both too small (the error state wants 68px in shadcn, 81px in heroui) and unnecessary.
+	 */
+	const bottomPad = `${String(pads.after)}px`
 
 	return (
 		<Tbody
 			data-slot='tbody'
 			data-virtualized='true'
-			style={{ height: `${String(tbodyHeight)}px` }}
+			style={{
+				minHeight: `${String(totalSize)}px`,
+				paddingTop: `${String(pads.before)}px`,
+				paddingBottom: showLoadMore ? '0px' : bottomPad,
+			}}
 		>
 			{topRows.map((row, index) => (
 				<DataGridRow
@@ -106,18 +281,36 @@ export function VirtualBody() {
 				/>
 			))}
 
-			{virtualItems.map((virtualRow: VirtualItem) => {
-				const row = centerRows[virtualRow.index]
-				if (!row) return null
-				return (
+			{/*
+			 * The window's rows are in flow inside the padded band. The held row is not: it is no
+			 * longer part of the band, and left in flow it re-enters it and pushes every row below it
+			 * down by its own height — measured, one row's height per auto-scroll frame, which is the
+			 * regression `resolveVirtualWindowPads`'s window-only arithmetic exists to prevent and
+			 * which this placement completes. A `transform` is therefore legitimate here and nowhere
+			 * else on this path: out of flow there is nothing but a transform that can place the row
+			 * at the offset its measurement gives it, and the drag library is moving the element with
+			 * a transform of its own for the duration of the gesture anyway.
+			 */}
+			{centerEntries.map((entry) =>
+				entry.isHeldOutOfWindow ? (
 					<DataGridRow
-						key={row.id}
-						row={row}
-						data-virtual='row'
-						style={{ transform: `translateY(${String(virtualRow.start)}px)`, height: `${String(virtualRow.size)}px` }}
+						key={entry.row.id}
+						row={entry.row}
+						data-virtual='row-held'
+						style={{
+							transform: `translateY(${String(entry.start)}px)`,
+							height: `${String(entry.size)}px`,
+						}}
 					/>
-				)
-			})}
+				) : (
+					<DataGridRow
+						key={entry.row.id}
+						row={entry.row}
+						data-virtual='row'
+						style={{ height: `${String(entry.size)}px` }}
+					/>
+				),
+			)}
 
 			{bottomRows.map((row, index) => (
 				<DataGridRow
@@ -133,7 +326,7 @@ export function VirtualBody() {
 					data-slot='load-more-row'
 					data-direction='forward'
 					data-virtual='load-more'
-					style={{ transform: `translateY(${String(totalSize)}px)` }}
+					style={{ marginTop: bottomPad }}
 				>
 					<Td
 						data-slot='td'

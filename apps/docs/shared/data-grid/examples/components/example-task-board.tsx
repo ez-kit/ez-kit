@@ -155,6 +155,8 @@ const COUNT_STYLE = {
 	opacity: 0.6,
 }
 
+const TOOLBAR_FILTERS: readonly string[] = ['status', 'priority']
+
 const columns = createColumns<Task>([
 	{ accessorKey: 'id', header: 'Task', width: 110, filtering: false },
 	{
@@ -252,19 +254,16 @@ export function ExampleTaskBoardExample() {
 				items: [10, 20, 30, 50],
 			}}
 		>
-			{/*
-			 * Search leading, the filter panel beside it, the controls trailing — the order every
-			 * issue tracker uses, and the one that used to cost five options at once
-			 * (`globalFiltering: { toolbar: 'start' }`, `filtering: { panel: 'toolbar' }`,
-			 * `sorting: { toolbar: true }`, `visibility: { toolbar: true }`, `filtering.toolbar`).
-			 * It is this JSX now. `FilterPanelLayout` from `@ez-kit/data-grid-react` is
-			 * the same arrangement as a named preset, for a grid that wants it wholesale.
-			 */}
 			<DataGrid.Toolbar
 				start={
 					<>
 						<DataGrid.GlobalFilterInput />
-						<DataGrid.FilterPanel />
+						{TOOLBAR_FILTERS.map((columnId) => (
+							<DataGrid.ColumnFilter
+								key={columnId}
+								columnId={columnId}
+							/>
+						))}
 					</>
 				}
 				end={
@@ -289,15 +288,10 @@ export function ExampleTaskBoardExample() {
 											key={header.id}
 											header={header}
 										>
-											{/*
-											 * No `filter`: the panel above is the whole filter UI here, so the headers
-											 * give their controls up for height and stay sortable. That used to be
-											 * `filtering: { variant: 'panel' }`, which bundled it with *mounting* the
-											 * panel — two decisions the enum could only make together.
-											 */}
-											{({ sortTrigger, menu }) => (
+											{({ sortTrigger, filterPopover, menu }) => (
 												<DataGrid.HeaderMain>
 													{sortTrigger}
+													{TOOLBAR_FILTERS.includes(header.column.id) ? null : filterPopover}
 													{menu}
 												</DataGrid.HeaderMain>
 											)}

@@ -3,7 +3,7 @@ title: createContextStore
 description: Wrap a Zustand vanilla store in React context so every Provider gets its own isolated instance.
 ---
 
-Wraps a Zustand vanilla store in React context. Each `<Provider>` creates its own store instance (via `useRef`), so the same store factory can power multiple isolated subtrees.
+Wraps a Zustand vanilla store in React context. Each `<Provider>` creates its own isolated store instance, so the same store factory can power multiple independent subtrees.
 
 This page is the guide — what the pieces are for and how they behave. Every signature, prop and option is listed on [API reference](./create-context-store/api).
 
@@ -24,7 +24,7 @@ The factory is seeded through a single `defaultValue` envelope — type its para
 </counterStore.Provider>
 ```
 
-The factory runs **once per mount** (held in a `useRef`), so changing `defaultValue` after the first render won't recreate the store.
+The factory runs **once per mount**, so changing `defaultValue` after the first render won't recreate the store.
 
 ## Reading state
 

@@ -1,8 +1,4 @@
 {
-	"enabledPlugins": {
-		"ecc@ecc": true,
-		"oh-my-claudecode@omc": true
-	},
 	"permissions": {
 		"allow": [
 			"Bash(pnpm typecheck:*)",
@@ -19,5 +15,6 @@
 			"Bash(pnpm --filter @ez-kit/docs lint:*)",
 			"Bash(pnpm --filter @ez-kit/docs typecheck:*)"
 		]
-	}
+	},
+	"enabledPlugins": {}
 }

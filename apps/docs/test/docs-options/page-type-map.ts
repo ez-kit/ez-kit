@@ -110,11 +110,16 @@ export const DocPage = {
 	LayoutIndex: 'content/docs/data-grid/layout/index.mdx',
 	Theming: 'content/docs/data-grid/theming.mdx',
 	Localization: 'content/docs/data-grid/localization.mdx',
+	Accessibility: 'content/docs/data-grid/accessibility.mdx',
 	ExamplesIndex: 'content/docs/data-grid/examples.mdx',
 	ColumnsColumnHelper: 'content/docs/data-grid/columns/column-helper.mdx',
 	ColumnsGroupedHeaders: 'content/docs/data-grid/columns/grouped-headers.mdx',
 	ColumnsOrdering: 'content/docs/data-grid/columns/ordering.mdx',
 	RowOrdering: 'content/docs/data-grid/row-ordering.mdx',
+	DragAndDropApi: 'content/docs/data-grid/drag-and-drop/api.mdx',
+	DragAndDropColumns: 'content/docs/data-grid/drag-and-drop/columns.mdx',
+	DragAndDropIndex: 'content/docs/data-grid/drag-and-drop/index.mdx',
+	DragAndDropRows: 'content/docs/data-grid/drag-and-drop/rows.mdx',
 	PinningApi: 'content/docs/data-grid/pinning/api.mdx',
 	PinningColumns: 'content/docs/data-grid/pinning/columns.mdx',
 	ColumnsVisibility: 'content/docs/data-grid/columns/visibility.mdx',
@@ -124,6 +129,9 @@ export const DocPage = {
 	ExpandingControlled: 'content/docs/data-grid/expanding/controlled.mdx',
 	ExpandingSubContent: 'content/docs/data-grid/expanding/sub-content.mdx',
 	ExpandingTree: 'content/docs/data-grid/expanding/tree.mdx',
+	GroupingIndex: 'content/docs/data-grid/grouping/index.mdx',
+	GroupingAggregation: 'content/docs/data-grid/grouping/aggregation.mdx',
+	GroupingInteractive: 'content/docs/data-grid/grouping/interactive.mdx',
 	FilteringDateRange: 'content/docs/data-grid/filtering/date-range.mdx',
 	FilteringGlobal: 'content/docs/data-grid/filtering/global.mdx',
 	FilteringIndex: 'content/docs/data-grid/filtering/index.mdx',
@@ -241,6 +249,9 @@ export const GRID_TYPE = {
 	SortingConfig: { module: TypeModule.Core, name: 'SortingConfig' },
 	MultiSortConfig: { module: TypeModule.Core, name: 'MultiSortConfig' },
 	ColumnSortingConfig: { module: TypeModule.Core, name: 'ColumnSortingConfig' },
+	ColumnGroupingConfig: { module: TypeModule.Core, name: 'ColumnGroupingConfig', typeArgs: ROW_TYPE_ARGS },
+	ColumnAggregationConfig: { module: TypeModule.Core, name: 'ColumnAggregationConfig' },
+	AggregationConfig: { module: TypeModule.Core, name: 'AggregationConfig' },
 	ColumnFilteringConfig: { module: TypeModule.Core, name: 'ColumnFilteringConfig' },
 	ColumnOperatorsConfig: { module: TypeModule.Core, name: 'ColumnOperatorsConfig' },
 	TableOperatorsConfig: { module: TypeModule.Core, name: 'TableOperatorsConfig' },
@@ -272,6 +283,14 @@ export const GRID_TYPE = {
 	BulkDeletingConfig: { module: TypeModule.Core, name: 'BulkDeletingConfig', typeArgs: ROW_TYPE_ARGS },
 	CellTypeDefinition: { module: TypeModule.React, name: 'CellTypeDefinition' },
 	LayoutConfig: { module: TypeModule.React, name: 'LayoutConfig' },
+	/** The options of `createDataGrid` — a bundle-level config, where the drag adapter is bound. */
+	CreateDataGridOptions: {
+		module: TypeModule.React,
+		name: 'CreateDataGridOptions',
+		typeArgs: '<Record<never, never>>',
+	},
+	/** The message catalogue; tables address its keys as `<group>.<key>`. */
+	GridMessages: { module: TypeModule.Core, name: 'GridMessages' },
 } as const satisfies Record<string, TypeRef>
 
 /**
@@ -754,7 +773,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.ColumnsOrdering,
 		optionTables: [
-			{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 2 },
+			{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 6 },
 			{ heading: 'Column options', roots: [GRID_TYPE.ColumnDef], expectedCount: 1 },
 		],
 		nonOptionTables: [],
@@ -765,9 +784,78 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		nonOptionTables: [],
 	},
 	{
+		// The narrative pages of the split: prose and live examples, every table moved to
+		// `drag-and-drop/api.mdx` below. Mapped with two empty arrays so each stays inside
+		// `everyPageIsMapped` rather than silently unchecked.
+		page: DocPage.DragAndDropIndex,
+		optionTables: [],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.DragAndDropRows,
+		optionTables: [],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.DragAndDropColumns,
+		optionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'The short form',
+				reason:
+					'The first column is an intent in prose ("The move pair alone, no drag"); the other two name the option per surface, and every one of them is checked on `drag-and-drop/api.mdx` and `columns/ordering.mdx`.',
+			},
+		],
+	},
+	{
+		page: DocPage.DragAndDropApi,
+		optionTables: [
+			// `createDataGrid({ dnd })` — the one field drag adds to the bundle config.
+			{ heading: 'Binding', roots: [GRID_TYPE.CreateDataGridOptions], expectedCount: 1 },
+			// The `ordering` tree, resolved through its `boolean | …Config` and `false | SystemColumnDef`
+			// unions, plus `getRowId` and `direction`, which row and RTL drags read.
+			{ heading: 'Grid options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 13 },
+			{ heading: 'Column def', roots: [GRID_TYPE.ColumnDef], expectedCount: 1 },
+			{ heading: 'Announcements', roots: [GRID_TYPE.GridMessages], expectedCount: 13 },
+		],
+		nonOptionTables: [
+			{
+				heading: 'Components',
+				reason:
+					'The first column names components, a render argument and a helper function — exported symbols and JSX, not keys of any config type.',
+			},
+			{
+				heading: 'Surfaces',
+				reason:
+					'The first column names a drag surface; the rest are the handle to render, the state slice it writes and the list it counts in — none is a key of any config type.',
+			},
+			{
+				heading: 'Pointer',
+				reason:
+					'The first column is a kind of pointer (mouse, touch, pen); the other two describe when a drag starts. Nothing here is settable.',
+			},
+			{
+				heading: 'Keyboard',
+				reason:
+					'The first column is a key on the keyboard (`Space` or `Enter`, `Escape`, `Tab`); the other two are what pressing it does on a focused handle and mid-drag. Nothing here is settable.',
+			},
+		],
+	},
+	{
 		page: DocPage.Localization,
 		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 1 }],
 		nonOptionTables: [],
+	},
+	{
+		page: DocPage.Accessibility,
+		optionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'State semantics',
+				reason:
+					'Documents the ARIA attributes the grid writes onto the DOM — attribute names, not keys of any config type.',
+			},
+		],
 	},
 	{
 		page: DocPage.ExamplesIndex,
@@ -870,6 +958,35 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.ExpandingTree,
 		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 2 }],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.GroupingIndex,
+		optionTables: [
+			{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 6 },
+			{ heading: 'Column options', roots: [GRID_TYPE.ColumnDef, GRID_TYPE.ColumnGroupingConfig], expectedCount: 2 },
+		],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.GroupingAggregation,
+		optionTables: [
+			{
+				heading: 'Options',
+				roots: [GRID_TYPE.ColumnDef, GRID_TYPE.ColumnAggregationConfig],
+				expectedCount: 3,
+			},
+			{
+				heading: 'Table options',
+				roots: [GRID_TYPE.UseDataGridConfig, GRID_TYPE.AggregationConfig],
+				expectedCount: 2,
+			},
+		],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.GroupingInteractive,
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 3 }],
 		nonOptionTables: [],
 	},
 	{

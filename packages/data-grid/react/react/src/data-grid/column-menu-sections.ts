@@ -19,6 +19,10 @@ export const ColumnActionId = {
 	Hide: 'hide',
 	MoveStart: 'move-start',
 	MoveEnd: 'move-end',
+	// No direction here, so none of the logical/physical reasoning the pin and move pairs carry
+	// applies: a grouping level is added or dropped, and neither flips under RTL.
+	GroupBy: 'group-by',
+	Ungroup: 'ungroup',
 } as const
 
 export type ColumnActionId = (typeof ColumnActionId)[keyof typeof ColumnActionId]
@@ -27,12 +31,14 @@ const SORTING_SECTION = 'sorting'
 const ORDER_SECTION = 'order'
 const PIN_SECTION = 'pin'
 const VISIBILITY_SECTION = 'visibility'
+const GROUPING_SECTION = 'grouping'
 
 export type ColumnMenuCapabilities = {
 	canSort: boolean
 	canPin: boolean
 	canHide: boolean
 	canMove: boolean
+	canGroup: boolean
 }
 
 /**
@@ -48,7 +54,7 @@ export type ColumnMenuCapabilities = {
  */
 export function buildColumnMenuSections<TRow extends object>(
 	header: Header<GridFeatures, TRow>,
-	{ canSort, canPin, canHide, canMove }: ColumnMenuCapabilities,
+	{ canSort, canPin, canHide, canMove, canGroup }: ColumnMenuCapabilities,
 	messages: GridMessages['columnMenu'],
 ): GridMenuSection[] {
 	const column = header.column
@@ -166,5 +172,36 @@ export function buildColumnMenuSections<TRow extends object>(
 		})
 	}
 
-	return toMenuSections([sorting, order, pin, visibility])
+	/*
+	 * One entry, not two: a column is either a grouping level or it is not, so listing both
+	 * spellings would always leave one of them inert. The pin section lists three because a
+	 * column has three pin states; this axis has two.
+	 *
+	 * **In practice only `GroupBy` is reachable, and that is a consequence of
+	 * `groupedColumnMode: 'remove'` rather than an oversight.** Core removes a column from the
+	 * list while it is a grouping level — which is what stops `__group__` and the column showing
+	 * the same value twice — so a grouped column has no header cell, and a header cell is what
+	 * hangs this menu. Dropping a level is therefore `<DataGrid.GroupByBar />`'s job. The
+	 * `Ungroup` branch stays because it costs nothing and is correct the moment a grid renders a
+	 * grouped column's header by any other route; `group-by-bar.test.tsx` pins the fact that it
+	 * does not today, so this comment cannot quietly go stale.
+	 *
+	 * Optional-called like the sort read above — this runs for every header cell of every grid,
+	 * and `columnGroupingFeature` is not structural.
+	 */
+	const grouping: GridMenuSection = { id: GROUPING_SECTION, label: messages.grouping, items: [] }
+	if (canGroup) {
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+		const isGrouped = column.getIsGrouped?.() ?? false
+		grouping.items.push({
+			id: isGrouped ? ColumnActionId.Ungroup : ColumnActionId.GroupBy,
+			label: isGrouped ? messages.ungroup : messages.groupBy,
+			icon: isGrouped ? GridMenuIcon.Ungroup : GridMenuIcon.Group,
+			onAction: () => {
+				column.toggleGrouping()
+			},
+		})
+	}
+
+	return toMenuSections([sorting, grouping, order, pin, visibility])
 }

@@ -9,9 +9,13 @@ import {
 import { describe, expect, it } from 'vitest'
 
 import { createTable } from '../create-table'
+import { createTableOptions } from '../create-table/create-table-options'
 import { deletingFeature } from '../features/deleting'
+import { rowOrderingFeature } from '../features/ordering'
 
-import { ACTIONS_COLUMN_ID, EXPAND_COLUMN_ID, SELECTION_COLUMN_ID } from './system-columns'
+import { ACTIONS_COLUMN_ID, DRAG_COLUMN_ID, EXPAND_COLUMN_ID, SELECTION_COLUMN_ID } from './system-columns'
+
+import type { TableConfig } from '../types'
 
 type Row = { id: string; name: string; children?: Row[] }
 
@@ -172,5 +176,49 @@ describe('SystemColumnDef', () => {
 		const meta = table.getColumn(SELECTION_COLUMN_ID)?.columnDef.meta
 		expect(meta?.headerClassName).toBe('th-pick')
 		expect(meta?.cellClassName).toBe('td-pick')
+	})
+})
+
+describe('the __drag__ column through createTableOptions', () => {
+	const ROW_ORDERING = tableFeatures({ rowOrderingFeature, columnPinningFeature, columnSizingFeature })
+	const getRowId = (row: Row): string => row.id
+
+	const columnIds = (config: TableConfig<typeof ROW_ORDERING, Row>, rowDrag?: boolean): string[] =>
+		createTableOptions(config, rowDrag === undefined ? {} : { rowDrag }).options.columns.map(
+			(column) => (column as { id?: string }).id ?? '',
+		)
+
+	it('is injected first when row ordering is on and the grid can drag', () => {
+		const ids = columnIds(
+			{ features: ROW_ORDERING, data: DATA, columns: COLUMNS, getRowId, ordering: { row: true } },
+			true,
+		)
+		expect(ids[0]).toBe(DRAG_COLUMN_ID)
+	})
+
+	it('is absent without a drag adapter — rows then move through the actions menu', () => {
+		const ids = columnIds({ features: ROW_ORDERING, data: DATA, columns: COLUMNS, getRowId, ordering: { row: true } })
+		expect(ids).not.toContain(DRAG_COLUMN_ID)
+	})
+
+	it('is absent when row ordering is off, whatever the adapter', () => {
+		const ids = columnIds({ features: ROW_ORDERING, data: DATA, columns: COLUMNS, getRowId, ordering: true }, true)
+		expect(ids).not.toContain(DRAG_COLUMN_ID)
+	})
+
+	it('`ordering.row.column: false` leaves it out, for a grid that places the handle itself', () => {
+		const ids = columnIds(
+			{ features: ROW_ORDERING, data: DATA, columns: COLUMNS, getRowId, ordering: { row: { column: false } } },
+			true,
+		)
+		expect(ids).not.toContain(DRAG_COLUMN_ID)
+	})
+
+	it('`ordering.row.column` configures it like any system column', () => {
+		const { options } = createTableOptions<typeof ROW_ORDERING, Row>(
+			{ features: ROW_ORDERING, data: DATA, columns: COLUMNS, getRowId, ordering: { row: { column: { width: 32 } } } },
+			{ rowDrag: true },
+		)
+		expect((options.columns[0] as { size?: number }).size).toBe(32)
 	})
 })

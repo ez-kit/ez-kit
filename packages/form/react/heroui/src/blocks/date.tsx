@@ -29,21 +29,30 @@ function toCalendarDate(value: string | undefined): CalendarDate | null {
 
 /** The month grid, identical for both pickers apart from its root. */
 function CalendarBody({ Root }: { Root: typeof Calendar | typeof RangeCalendar }): ReactNode {
+	// HeroUI 3.2 made `Calendar` generic over its value and selection mode while `RangeCalendar`
+	// stayed a plain component, so the union no longer has one call signature and JSX cannot use
+	// it (`TS2604`). The two render the same tree here — only the value they carry differs, and
+	// that is the caller's business — so the non-generic one stands in for both. The runtime value
+	// is whichever root was passed; this narrows nothing but the signature.
+	const CalendarRoot = Root as typeof RangeCalendar
+
 	return (
-		<Root>
-			<Root.Header>
-				<Root.YearPickerTrigger>
-					<Root.YearPickerTriggerHeading />
-					<Root.YearPickerTriggerIndicator />
-				</Root.YearPickerTrigger>
-				<Root.NavButton slot='previous' />
-				<Root.NavButton slot='next' />
-			</Root.Header>
-			<Root.Grid>
-				<Root.GridHeader>{(day: string) => <Root.HeaderCell>{day}</Root.HeaderCell>}</Root.GridHeader>
-				<Root.GridBody>{(date: CalendarDate) => <Root.Cell date={date} />}</Root.GridBody>
-			</Root.Grid>
-		</Root>
+		<CalendarRoot>
+			<CalendarRoot.Header>
+				<CalendarRoot.YearPickerTrigger>
+					<CalendarRoot.YearPickerTriggerHeading />
+					<CalendarRoot.YearPickerTriggerIndicator />
+				</CalendarRoot.YearPickerTrigger>
+				<CalendarRoot.NavButton slot='previous' />
+				<CalendarRoot.NavButton slot='next' />
+			</CalendarRoot.Header>
+			<CalendarRoot.Grid>
+				<CalendarRoot.GridHeader>
+					{(day: string) => <CalendarRoot.HeaderCell>{day}</CalendarRoot.HeaderCell>}
+				</CalendarRoot.GridHeader>
+				<CalendarRoot.GridBody>{(date: CalendarDate) => <CalendarRoot.Cell date={date} />}</CalendarRoot.GridBody>
+			</CalendarRoot.Grid>
+		</CalendarRoot>
 	)
 }
 

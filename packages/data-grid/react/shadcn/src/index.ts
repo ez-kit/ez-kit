@@ -4,7 +4,6 @@ export {
 	DataGrid,
 	GridComponentsProvider,
 	useDataGrid,
-	extendDataGrid,
 	createColumns,
 	createColumnHelper,
 	// Every group this kit registers, for a grid that uses most of them. Composing only the
@@ -34,3 +33,9 @@ export type { KitCellTypes } from './blocks/cell-types'
  * `src/index.test.ts` guards this.
  */
 export * from '@ez-kit/data-grid-react'
+
+// The row drag handle, wearing this kit's glyph. The shared control authors no visual; this
+// wrapper supplies the grip, as `blocks/resizing/Resizer.tsx` supplies the resizer's cursor.
+export { RowDragHandle } from './blocks/ordering/RowDragHandle'
+// The column header's drag handle, wearing this kit's glyph. Same control, the other axis.
+export { ColumnDragHandle } from './blocks/ordering/ColumnDragHandle'

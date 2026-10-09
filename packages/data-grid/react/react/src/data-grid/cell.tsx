@@ -1,8 +1,10 @@
 import {
 	ACTIONS_COLUMN_ID,
 	CommitStatus,
+	DRAG_COLUMN_ID,
 	EditingMode,
 	EXPAND_COLUMN_ID,
+	GROUP_COLUMN_ID,
 	SELECTION_COLUMN_ID,
 } from '@ez-kit/data-grid-core'
 import { useEffect } from 'react'
@@ -16,7 +18,10 @@ import { ActionsCell } from './actions-cell'
 import { getAlignAttrs } from './align-attrs'
 import { CellProvider } from './composition-context'
 import { flexRender } from './flex-render'
+import { useCellNavigationProps } from './keyboard-navigation'
+import { RowDragHandle } from './row-drag-handle'
 import { useDataGridTable, useDataGridState } from './table-context'
+import { columnNameOf, VisuallyHiddenLabel } from './visually-hidden'
 
 import type { CellTypeRegistry, CellViewProps } from '../cell-types-context'
 import type { ErasedRow, GridFeatures } from '../types'
@@ -80,6 +85,15 @@ export type DataGridCellProps<TRow extends object = ErasedRow> = {
 
 /** The chrome a body cell wears regardless of what it renders: pin offsets, alignment, class. */
 type CellChrome = {
+	/**
+	 * The grid role and the roving tab stop, when the kit asked for the package's focus model.
+	 * Empty otherwise, so a kit that manages focus itself renders the DOM it always did.
+	 *
+	 * Part of the chrome for the same reason `classNameAttr` is: five branches render a `<Td>`
+	 * and every one of them needs it, and the two that resolved their own class are exactly the
+	 * bug that note records.
+	 */
+	navigation: { role?: string; tabIndex?: number }
 	pinVars: CSSProperties
 	pinned: false | ColumnPinSide
 	pinnedAttrs: { 'data-pinned'?: ColumnPinSide }
@@ -116,7 +130,7 @@ const FOCUSABLE_SELECTOR = 'input, select, textarea, button, [contenteditable="t
  * Renders a single table body cell.
  *
  * Dispatches to:
- * - {@link SystemCell} — for the three system columns: selection, expand, actions
+ * - {@link SystemCell} — for the system columns: drag, selection, expand, group, actions
  *   (row pinning has no column of its own — its menu lives in the actions one)
  * - {@link BodyDataCell} — for regular data columns (with narrow editing subscription)
  *
@@ -158,9 +172,20 @@ export function DataGridCell<TRow extends object = ErasedRow>({ cell, row, child
 
 function SystemCell<TRow extends object>({ cell, row, children }: DataGridCellProps<TRow>) {
 	const columnId = cell.column.id
-	const chrome = getCellChrome(cell)
+	const chrome = useCellChrome(cell)
 	const { Td } = useGridComponents().core
 
+	if (columnId === DRAG_COLUMN_ID) {
+		return (
+			<DragCell
+				cell={cell}
+				row={row}
+				chrome={chrome}
+			>
+				{children}
+			</DragCell>
+		)
+	}
 	if (columnId === SELECTION_COLUMN_ID) {
 		return (
 			<SelectionCell
@@ -183,9 +208,21 @@ function SystemCell<TRow extends object>({ cell, row, children }: DataGridCellPr
 			</ExpandCell>
 		)
 	}
+	if (columnId === GROUP_COLUMN_ID) {
+		return (
+			<GroupCell
+				cell={cell}
+				row={row}
+				chrome={chrome}
+			>
+				{children}
+			</GroupCell>
+		)
+	}
 	if (columnId === ACTIONS_COLUMN_ID) {
 		return (
 			<Td
+				{...chrome.navigation}
 				data-slot='td'
 				style={chrome.pinVars}
 				pinned={chrome.pinned}
@@ -229,6 +266,7 @@ function SelectionCell<TRow extends object>({ cell, row, chrome, children }: Sys
 	const isIndeterminate = typeof row.getIsSomeSelected === 'function' ? row.getIsSomeSelected() : undefined
 	return (
 		<Td
+			{...chrome.navigation}
 			data-slot='td'
 			style={chrome.pinVars}
 			pinned={chrome.pinned}
@@ -253,6 +291,32 @@ function SelectionCell<TRow extends object>({ cell, row, chrome, children }: Sys
 	)
 }
 
+/**
+ * The `__drag__` cell — the row's grip.
+ *
+ * The kit's registered `core.RowDragHandle` when there is one, so the grip wears the kit's glyph;
+ * the shared handle otherwise. Either renders nothing for a row that cannot be dragged — a group
+ * row, or any row while the grid has no adapter — so the cell is simply empty there.
+ */
+function DragCell<TRow extends object>({ cell, row, chrome, children }: SystemSubProps<TRow>) {
+	const { Td, RowDragHandle: KitRowDragHandle } = useGridComponents().core
+	const Handle = KitRowDragHandle ?? RowDragHandle
+	return (
+		<Td
+			{...chrome.navigation}
+			data-slot='td'
+			style={chrome.pinVars}
+			pinned={chrome.pinned}
+			{...chrome.pinnedAttrs}
+			{...chrome.alignAttrs}
+			{...chrome.classNameAttr}
+			data-system-column='drag'
+		>
+			{renderCellContent(children, cell, row, <Handle rowId={row.id} />)}
+		</Td>
+	)
+}
+
 function ExpandCell<TRow extends object>({ cell, row, chrome, children }: SystemSubProps<TRow>) {
 	const gridComponents = useGridComponents()
 	const { Td } = gridComponents.core
@@ -263,6 +327,7 @@ function ExpandCell<TRow extends object>({ cell, row, chrome, children }: System
 	const isExpanded = row.getIsExpanded()
 	return (
 		<Td
+			{...chrome.navigation}
 			data-slot='td'
 			style={chrome.pinVars}
 			pinned={chrome.pinned}
@@ -289,6 +354,119 @@ function ExpandCell<TRow extends object>({ cell, row, chrome, children }: System
 	)
 }
 
+/**
+ * The `__group__` cell — a group row's label, how many rows it holds, and its chevron.
+ *
+ * **Composed, not a contract slot.** There is no `GroupCell` in `FEATURE_COMPONENTS` and none is
+ * planned: this is `core.Td`, the existing `expanding.Chevron` and text, and a kit styles it
+ * through `data-slot='group-cell'` + `data-system-column='group'` the way it styles every other
+ * system cell. A slot added later is a minor; a slot added now and regretted is a major.
+ *
+ * The chevron is the **expanding** group's, which is why a grid that groups must register
+ * `rowExpandingFeature`: a group row is a row with `subRows`, and `row.toggleExpanded()` is what
+ * opens it. One control serves both meanings with no branching — on a group row it opens the
+ * children, on a leaf row in sub-content mode it opens the detail panel.
+ *
+ * A leaf row renders an empty cell here rather than `null`: the column is part of the grid's
+ * column track, so the `<td>` has to exist or every cell to its right shifts one place left on
+ * that row.
+ */
+function GroupCell<TRow extends object>({ cell, row, chrome, children }: SystemSubProps<TRow>) {
+	const gridComponents = useGridComponents()
+	const { Td } = gridComponents.core
+	const { Chevron } = gridComponents.expanding
+	const { messages } = useDataGridTable().grid
+	// Subscribed for the reason `ExpandCell` subscribes: `getIsExpanded` answers from the
+	// `expanded` slice, and a group opened from anywhere but its own chevron re-renders only
+	// because of this read.
+	useDataGridState((s) => s.expanded)
+	// Every read below is optional-called. This runs for **every row of every grid** that has a
+	// `__group__` column, and `columnGroupingFeature` is not structural — see the FEATURE GUARDS
+	// note in `types.ts`. Do not "tidy up" the disables: they read as unnecessary only because
+	// the widest instantiation says the method is always there.
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const isGrouped = row.getIsGrouped?.() ?? false
+
+	if (!isGrouped) {
+		return (
+			<Td
+				{...chrome.navigation}
+				data-slot='group-cell'
+				style={chrome.pinVars}
+				pinned={chrome.pinned}
+				{...chrome.pinnedAttrs}
+				{...chrome.alignAttrs}
+				{...chrome.classNameAttr}
+				data-system-column='group'
+				data-depth={row.depth}
+			/>
+		)
+	}
+
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const canExpand = row.getCanExpand?.() ?? false
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const isExpanded = row.getIsExpanded?.() ?? false
+	// Counted through `subRows`, never off the render model: `getRowModel().rows` is render order
+	// and mixes group rows with leaf rows, which upstream flags as the commonest grouping mistake.
+	// `getLeafRows` is `flattenBy(row.subRows, d => d.subRows)` (upstream's own
+	// `coreRowsFeature.utils`), and `flattenBy` pushes every node it visits — intermediate group
+	// rows included, not just true leaves. That is exact at one grouping level, where every
+	// subRow already is a leaf, and inflated at two or more, where a group row's direct children
+	// are themselves group rows. So this filters to rows with no children of their own rather
+	// than trusting the raw length; `subRows` needs no optional chain because upstream's
+	// `constructRow` sets it unconditionally (`row.subRows = subRows ?? []`).
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const count = row.getLeafRows?.().filter((leaf) => leaf.subRows.length === 0).length ?? 0
+	const label = groupLabelOf(row.groupingValue, messages.grouping.blank)
+
+	return (
+		<Td
+			{...chrome.navigation}
+			data-slot='group-cell'
+			style={chrome.pinVars}
+			pinned={chrome.pinned}
+			{...chrome.pinnedAttrs}
+			{...chrome.alignAttrs}
+			{...chrome.classNameAttr}
+			data-system-column='group'
+			data-depth={row.depth}
+		>
+			{renderCellContent(
+				children,
+				cell,
+				row,
+				<>
+					{canExpand ? (
+						<Chevron
+							expanded={isExpanded}
+							onClick={() => {
+								row.toggleExpanded()
+							}}
+						/>
+					) : null}
+					<span data-slot='group-label'>{label}</span>
+					<span data-slot='group-count'>{messages.grouping.count({ count })}</span>
+				</>,
+			)}
+		</Td>
+	)
+}
+
+/**
+ * A group's label, as text.
+ *
+ * `null`, `undefined` and `''` all become the dictionary's "blank" wording rather than an empty
+ * cell: such rows are grouped rather than dropped, so the group needs a name, and a count beside
+ * nothing reads as a rendering bug. Anything else is stringified — a grouping value is whatever
+ * the column's accessor or `grouping.getValue` returned, so it has no type to render through.
+ */
+function groupLabelOf(value: unknown, blank: string): string {
+	if (value === null || value === undefined || value === '') return blank
+
+	return String(value)
+}
+
 // ── data columns ────────────────────────────────────────────────────────────
 
 function BodyDataCell<TRow extends object>({ cell, row, children }: DataGridCellProps<TRow>) {
@@ -297,7 +475,7 @@ function BodyDataCell<TRow extends object>({ cell, row, children }: DataGridCell
 	const cellTypes = useCellTypes()
 	const columnId = cell.column.id
 	const meta = cell.column.columnDef.meta
-	const chrome = getCellChrome(cell)
+	const chrome = useCellChrome(cell)
 
 	const editMode: EditingMode = table.options.editing?.mode ?? EditingMode.Row
 	const cellId = `${row.id}_${columnId}`
@@ -353,6 +531,95 @@ function BodyDataCell<TRow extends object>({ cell, row, children }: DataGridCell
 		)
 	}
 
+	/*
+	 * ── the two group-row modes ───────────────────────────────────────────────
+	 *
+	 * Upstream describes four cell modes and warns against conflating them. Two of the four never
+	 * reach here, both for the same reason: `groupedColumnMode: 'remove'` takes a grouped column
+	 * out of the list while it is grouped, because `__group__` already carries its value — so
+	 * there is no grouped cell and no placeholder cell either (see the note on that branch). What
+	 * is left is the aggregated cell and the ordinary one, and a cell on a group row whose column
+	 * is neither, which falls through to the view branch and finds `getValue()` `undefined`.
+	 *
+	 * Both reads are optional-called and both run for every body cell of every grid — see the
+	 * FEATURE GUARDS note in `types.ts`. Checked **before** the view branch rather than inside
+	 * it, because what a group row's cell shows is a different question from how a value is
+	 * rendered, and the placeholder case has no value to render at all.
+	 */
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const isUpstreamAggregated = cell.getIsAggregated?.() ?? false
+	// Upstream's answer is gated on a **resolvable aggregation function**
+	// (`column_getAggregationFns(column).some((e) => !!e.aggregationFn)`), which a server-grouped
+	// column does not have and does not want: its subtotal is a field the server put on the group
+	// row. Without this second arm, `aggregation.component` and `data-aggregated-cell` would both
+	// go missing on exactly the grids that supply their own numbers — while the value rendered
+	// anyway, through the ordinary view branch, so nothing would look broken.
+	//
+	// It reads `row.getIsGrouped()`, which is not a second notion of what a group row is: the
+	// manual row model sets `groupingColumnId`, so that method is authoritative in both modes.
+	// Under CLIENT grouping, a column on a group row with no aggregate of any kind is unaffected
+	// — `getValue()` is `undefined` there, which is what the `!== undefined` clause keeps out.
+	// Under SERVER grouping there is no such guarantee: the group row carries whatever fields the
+	// server sent, so a non-aggregate field with a defined value — an empty string, say — reads as
+	// a subtotal here. The remedy is for the response to omit the field, not for the grid to guess;
+	// `''` and `0` are both valid subtotals (a real aggregate can legitimately be zero), so there is
+	// no value this clause could exclude without also excluding a correct one.
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const isGroupRow = row.getIsGrouped?.() ?? false
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const isGroupedColumn = cell.column.getIsGrouped?.() ?? false
+	const isAggregated = isUpstreamAggregated || (isGroupRow && !isGroupedColumn && cell.getValue() !== undefined)
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	const isPlaceholder = cell.getIsPlaceholder?.() ?? false
+
+	if (isAggregated) {
+		return (
+			<AggregatedCell
+				cell={cell}
+				row={row}
+				chrome={chrome}
+			>
+				{children}
+			</AggregatedCell>
+		)
+	}
+
+	/*
+	 * A placeholder renders **nothing**.
+	 *
+	 * Upstream's `getIsPlaceholder()` is narrower than "any cell on a group row with no value of
+	 * its own": it is `!cell.getIsGrouped() && cell.column.getIsGrouped()` — a cell of a **grouped
+	 * column** on a row that is not that column's own group row. Under `groupedColumnMode:
+	 * 'remove'`, which core sets, a grouped column is taken out of the list entirely, so no such
+	 * cell is rendered and **this branch is currently unreachable**. Measured, not assumed.
+	 *
+	 * It stays, for two reasons. It costs one optional call, and it is what keeps this component
+	 * correct if `groupedColumnMode` ever becomes something a consumer can change — the mode is a
+	 * value core writes, not a law of the grid. The case the spec worried about, a non-aggregated
+	 * column showing one arbitrary row's datum beside a subtotal, is handled a level down instead:
+	 * `cell.getValue()` is `undefined` on such a cell, so the view branch renders nothing. That is
+	 * what `shows no leaf datum for a column that is neither grouped nor aggregated` asserts, and
+	 * asserting it there rather than here is deliberate — it tests the guarantee rather than the
+	 * mechanism this branch happens to provide.
+	 *
+	 * The `<td>` itself still renders — it is part of the column track, and dropping it would
+	 * shift every cell to its right one place left on that row.
+	 */
+	if (isPlaceholder) {
+		return (
+			<Td
+				{...chrome.navigation}
+				data-slot='td'
+				style={chrome.pinVars}
+				pinned={chrome.pinned}
+				{...chrome.pinnedAttrs}
+				{...chrome.alignAttrs}
+				{...chrome.classNameAttr}
+				data-placeholder-cell='true'
+			/>
+		)
+	}
+
 	// ── normal view cell ───────────────────────────────────────────────────────
 	// `editing: false` opts a column out at every mode, cell mode included: it used to be
 	// bypassed here, so a read-only column still became an input on double-click.
@@ -367,6 +634,7 @@ function BodyDataCell<TRow extends object>({ cell, row, children }: DataGridCell
 
 	return (
 		<Td
+			{...chrome.navigation}
 			data-slot='td'
 			style={chrome.pinVars}
 			pinned={chrome.pinned}
@@ -389,6 +657,53 @@ function BodyDataCell<TRow extends object>({ cell, row, children }: DataGridCell
 							...(meta?.cell?.config !== undefined ? { config: meta.cell.config } : {}),
 						})
 					: flexRender(cell.column.columnDef.cell, cell.getContext()),
+			)}
+		</Td>
+	)
+}
+
+/**
+ * A column's aggregate, on a group row.
+ *
+ * Renders through `column.aggregation.component` when the author supplied one, and otherwise
+ * through the column's **existing** cell-type view — a `number` column's subtotal is formatted
+ * the way its values are, which is the whole reason this is not a contract slot of its own. The
+ * value is the cell's own `getValue()`: on an aggregated cell that is already the aggregate, not
+ * a row datum.
+ *
+ * `data-aggregated-cell` rather than a `data-slot` of its own: this is still a `td`, and a kit
+ * that wants to weight a subtotal targets the attribute on it.
+ */
+function AggregatedCell<TRow extends object>({ cell, row, chrome, children }: SystemSubProps<TRow>) {
+	const { Td } = useGridComponents().core
+	const cellTypes = useCellTypes()
+	const meta = cell.column.columnDef.meta
+	const aggregatedComp = meta?.aggregation?.component as ComponentType<CellViewProps> | undefined
+	const viewComp = aggregatedComp ?? resolveViewComponent(meta, cellTypes)
+
+	return (
+		<Td
+			{...chrome.navigation}
+			data-slot='td'
+			style={chrome.pinVars}
+			pinned={chrome.pinned}
+			{...chrome.pinnedAttrs}
+			{...chrome.alignAttrs}
+			{...chrome.classNameAttr}
+			data-aggregated-cell='true'
+		>
+			{renderCellContent(
+				children,
+				cell,
+				row,
+				viewComp
+					? flexRender(viewComp, {
+							value: cell.getValue<unknown>(),
+							row: cell.row.original as unknown,
+							rowIndex: cell.row.index,
+							...(meta?.cell?.config !== undefined ? { config: meta.cell.config } : {}),
+						})
+					: String(cell.getValue<unknown>() ?? ''),
 			)}
 		</Td>
 	)
@@ -490,6 +805,9 @@ function EditingCell<TRow extends object>({ cell, row, editMode, cellId, chrome,
 		}
 	}, [isCellEdit, table])
 
+	/** The column's header text — this control's accessible name while the cell is being edited. */
+	const fieldName = columnNameOf(cell.column.columnDef.header, columnId)
+
 	const fieldState: FieldState = {
 		id: cellId,
 		value,
@@ -505,6 +823,7 @@ function EditingCell<TRow extends object>({ cell, row, editMode, cellId, chrome,
 
 	return (
 		<Td
+			{...chrome.navigation}
 			data-slot='td'
 			style={chrome.pinVars}
 			pinned={chrome.pinned}
@@ -519,10 +838,17 @@ function EditingCell<TRow extends object>({ cell, row, editMode, cellId, chrome,
 				cell,
 				row,
 				editComp ? (
-					flexRender(editComp, fieldState)
+					<>
+						{/* An edited cell shows the control and no label — the column header above it is
+						    the label, and a screen reader cannot follow that. Same defect, and same fix,
+						    as the creating row and the column filters. */}
+						<VisuallyHiddenLabel htmlFor={fieldState.id}>{fieldName}</VisuallyHiddenLabel>
+						{flexRender(editComp, fieldState)}
+					</>
 				) : (
 					<Input
 						value={(value ?? '') as string | number | readonly string[]}
+						aria-label={fieldName}
 						onChange={(e) => {
 							table.editing.setValue(columnId, e.target.value)
 						}}
@@ -536,7 +862,17 @@ function EditingCell<TRow extends object>({ cell, row, editMode, cellId, chrome,
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 
-function getCellChrome<TRow extends object>(cell: Cell<GridFeatures, TRow>): CellChrome {
+/**
+ * {@link getCellChrome} plus the focus model's own props, which come from context and so cannot
+ * be read by a pure function. The two call sites that build chrome use this; the three that
+ * receive it as a prop are unchanged.
+ */
+function useCellChrome<TRow extends object>(cell: Cell<GridFeatures, TRow>): CellChrome {
+	const navigation = useCellNavigationProps('gridcell')
+	return { ...getCellChrome(cell), navigation }
+}
+
+function getCellChrome<TRow extends object>(cell: Cell<GridFeatures, TRow>): Omit<CellChrome, 'navigation'> {
 	const pinVars = getCommonPinStyles(cell.column)
 	const pinned = cell.column.getIsPinned()
 	const pinnedAttrs: CellChrome['pinnedAttrs'] = pinned ? { 'data-pinned': pinned } : {}
@@ -623,7 +959,7 @@ function resolveEditComponent<TRow extends object>(
  * The headless package ships **no** built-in cell types. Consumers/UI kits
  * register them via `CellTypesProvider` or `createDataGrid({ cellTypes })`.
  */
-function resolveViewComponent<TRow extends object>(
+export function resolveViewComponent<TRow extends object>(
 	meta: ColumnMeta<GridFeatures, TRow> | undefined,
 	registry: CellTypeRegistry,
 ): ComponentType<CellViewProps> | undefined {

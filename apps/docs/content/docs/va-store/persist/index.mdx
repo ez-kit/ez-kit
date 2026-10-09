@@ -24,14 +24,9 @@ The core never imports React, `URLSearchParams`, or a storage API. Its only inte
 
 Because each source is just an adapter, a single field can sync to **two** substrates at once (a shared `?q=` in the URL _and_ a cached copy in storage), and async sources (IndexedDB) never stall the synchronous URL.
 
-## Mental model
+## How it works
 
-Valtio is the **source of truth**; the substrate is a **mirror**.
-
-- **proxy → substrate**: a `subscribe` watches the store; changed fields are coalesced into one commit per tick (throttled).
-- **substrate → proxy**: an external change pushes the diff back into the store, writing only what changed — pulls never re-write the substrate, so Back/forward and other-tab writes are safe.
-- **Identity-preserving writes**: fields are addressed by **path** (`filters.price.min`). A pull assigns only the **leaf** — nested objects keep their identity; the engine never replaces a whole subtree.
-- **Loop breaking**: each direction writes only when the value differs in normalized form. Parsers carry a round-trip contract so the feedback loop terminates.
+Valtio is the **source of truth**; the substrate is a **mirror**. When you mutate the proxy, the change is synced to the substrate. When the substrate changes externally (a deep link, browser back button, another tab), the change is synced back to the proxy.
 
 ## Two ways to declare fields
 
