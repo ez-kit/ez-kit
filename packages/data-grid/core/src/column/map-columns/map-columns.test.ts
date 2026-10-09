@@ -215,6 +215,26 @@ describe('mapColumns', () => {
 		expect(result[0]?.maxSize).toBeUndefined()
 	})
 
+	// The React layer fixes a column whose author named a starting width, and lets one without
+	// fill the grid. TanStack merges its own default `size` into every column def, so the
+	// resolved def cannot tell the two apart — the authored width has to reach meta.
+	it('carries the authored width to meta, normalized off the scalar form', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', width: 200 }, { accessorKey: 'age' }])
+		expect(result[0]?.meta?.width).toEqual({ default: 200 })
+		expect(result[1]?.meta?.width).toBeUndefined()
+	})
+
+	// TanStack floors every column at a 20px `minSize`, which would turn `width: 10` into 20.
+	it('lets a starting width below TanStack’s default minimum stand', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', width: 10 }])
+		expect(result[0]?.minSize).toBe(10)
+	})
+
+	it('keeps an authored min over the starting width', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', width: { default: 10, min: 5 } }])
+		expect(result[0]?.minSize).toBe(5)
+	})
+
 	it('resizing: false → enableResizing: false on the TanStack column', () => {
 		const result = mapColumns<Row>([{ accessorKey: 'name', resizing: false }])
 		expect(result[0]?.enableResizing).toBe(false)

@@ -34,6 +34,7 @@ function mockTable(columns: MockColumn[], pinning: MockPinning = {}): DataTable<
 		})
 	return {
 		options: {},
+		store: { state: { columnSizing: {} } },
 		getVisibleLeafColumns: () => columns.map(toColumn),
 		getStartVisibleLeafColumns: () => group(start),
 		getEndVisibleLeafColumns: () => group(end),

@@ -1177,7 +1177,8 @@ export type ColumnDefCommon<
 
 	/**
 	 * Column-level resizing. `false` pins the column's width — the resize handle is not
-	 * rendered and `column.getCanResize()` returns false.
+	 * rendered, `column.getCanResize()` returns false, and the column does not fill the grid's
+	 * free width either.
 	 *
 	 * The alias for TanStack's `enableResizing`, matching the `sorting` / `filtering` /
 	 * `visibility` shape. There is deliberately no raw `enable*` pass-through on a column:
@@ -1240,6 +1241,20 @@ export type ColumnDefCommon<
 	 * { accessorKey: 'name', width: { default: 200, min: 80, max: 400 } }
 	 * ```
 	 *
+	 * A starting width is the width the column renders at. A column that names none fills the
+	 * grid's free width instead, from its `min` (or TanStack's 150px when it has none) up to its
+	 * `max`, sharing what is left equally with the other filling columns:
+	 *
+	 * ```ts
+	 * { accessorKey: 'id', width: 60 }              // exactly 60
+	 * { accessorKey: 'name', width: { min: 120 } } // fills, never narrower than 120
+	 * { accessorKey: 'email' }                       // fills
+	 * ```
+	 *
+	 * When every column names a width, nothing fills and the grid ends where its last column does.
+	 * A drag fixes every column where it stands, so it moves only the column being dragged; a
+	 * double-click on the border hands the column back — to its starting width, or to filling.
+	 *
 	 * Replaces the `size` / `minSize` / `maxSize` pass-throughs: three TanStack names, spelled in
 	 * TanStack's vocabulary rather than the grid's, for one property of a column.
 	 *
@@ -1282,11 +1297,17 @@ export type ColumnDef<TRow extends object, TCellTypes extends CellTypeRegistrySh
 	| (ColumnDefCommon<TRow, unknown, TCellTypes, TNode> & { accessorKey?: undefined })
 
 export type ColumnWidthDef = {
-	/** Starting width in pixels. TanStack's `size`. */
+	/**
+	 * Starting width in pixels — the width the column renders at. TanStack's `size`. Leave it out
+	 * for a column that fills the grid's free width.
+	 */
 	default?: number
-	/** Lower bound while resizing, in pixels. TanStack's `minSize`. */
+	/**
+	 * Lower bound while resizing, and the narrowest a filling column gets, in pixels. TanStack's
+	 * `minSize`. Defaults to TanStack's 20px, or to `default` when that is smaller.
+	 */
 	min?: number
-	/** Upper bound while resizing, in pixels. TanStack's `maxSize`. */
+	/** Upper bound while resizing and while filling the grid's free width, in pixels. TanStack's `maxSize`. */
 	max?: number
 }
 
@@ -1395,6 +1416,15 @@ declare module '@tanstack/table-core' {
 		pinning?: false | ColumnPinningDef
 		/** Resolved per-part alignment from `column.align`, normalized off the scalar form. */
 		align?: ColumnAlignDef
+		/**
+		 * The authored `column.width`, normalized off the scalar form.
+		 *
+		 * The resolved def cannot answer "did the author name a width": TanStack merges its own
+		 * default `size` into every column. The React layer needs exactly that answer — a named
+		 * starting width is the width the column renders at, while a column without one fills the
+		 * grid — so the authored value is kept here.
+		 */
+		width?: ColumnWidthDef
 		/** Resolved cell definition from `column.cell`, normalized off the scalar form. */
 		cell?: ColumnCellMeta
 		/** Class for this column's header cell, from `column.headerClassName`. */

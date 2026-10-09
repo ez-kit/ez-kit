@@ -29,7 +29,7 @@ const features = tableFeatures({
 
 const staticPinColumns = createColumns<Product>([
 	{ accessorKey: 'name', header: 'Name', width: 220, pinning: 'start' },
-	{ accessorKey: 'category', header: 'Category', width: 220 },
+	{ accessorKey: 'category', header: 'Category', width: { min: 220 } },
 	{ accessorKey: 'status', header: 'Status', width: 200 },
 	{ accessorKey: 'website', header: 'Website', width: 220, cell: { type: 'link' } },
 	{ accessorKey: 'stock', header: 'Stock %', width: 220, cell: { type: 'progress', config: { max: 100 } } },
