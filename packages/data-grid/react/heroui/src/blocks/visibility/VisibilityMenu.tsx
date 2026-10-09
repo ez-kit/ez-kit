@@ -21,6 +21,11 @@ import type { Selection } from '@heroui/react'
  * The button's looks come from `buttonVariants`, which is HeroUI's documented way to put a
  * component's styles on an element that is not that component — so this stays the kit's own
  * button styling rather than a hand-rolled copy of it, and follows the recipe when it changes.
+ *
+ * The trigger also carries `inline-flex`. `Popover.Trigger` adds its own `popover__trigger`, whose
+ * `display: inline-block` sits in the same layer and at the same specificity as `.button`'s
+ * `inline-flex` and comes later in HeroUI's stylesheet, so it wins and the icon stacks above the
+ * label. A utility is in a later layer than both, which is what puts the button's layout back.
  */
 function TriggerContent({ label }: { label: string }) {
 	return (
@@ -67,7 +72,7 @@ function ColumnPanel({ columns, messages }: { columns: VisibilityColumnItem[]; m
 		<Popover>
 			<Popover.Trigger
 				data-slot='column-visibility-trigger'
-				className={buttonVariants({ size: 'sm', variant: 'outline' })}
+				className={`${buttonVariants({ size: 'sm', variant: 'outline' })} inline-flex`}
 			>
 				<TriggerContent label={messages.visibility.trigger} />
 			</Popover.Trigger>
@@ -112,15 +117,20 @@ function ColumnPanel({ columns, messages }: { columns: VisibilityColumnItem[]; m
 										col.onToggle()
 									}}
 								>
-									<Checkbox.Control>
-										<Checkbox.Indicator />
-									</Checkbox.Control>
 									{/*
-									 * A plain span, not `Label`: HeroUI's `Checkbox` root already *is* the
-									 * `<label>`, and nesting a second one inside it is invalid markup. The
-									 * name still resolves — an implicit label names the control it wraps.
+									 * The control goes inside `Checkbox.Content`, not beside it. The root is the
+									 * field — a column, so description and error text stack under the box — and
+									 * `Checkbox.Content` is the clickable `<label>` that lays the box and its text
+									 * out in a row. A control placed beside it lands on its own line.
+									 *
+									 * A plain span, not `Label`: `Checkbox.Content` already *is* the `<label>`,
+									 * and nesting a second one inside it is invalid markup. The name still
+									 * resolves — an implicit label names the control it wraps.
 									 */}
 									<Checkbox.Content>
+										<Checkbox.Control>
+											<Checkbox.Indicator />
+										</Checkbox.Control>
 										<span className='truncate'>{col.label}</span>
 									</Checkbox.Content>
 								</Checkbox>

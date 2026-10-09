@@ -97,10 +97,11 @@ export function SortMenu({ items, canAddSort, onAddSort, onResetSorting }: SortM
 		<Popover>
 			{/* No `<Button>` in here: `Popover.Trigger` renders its own `div[role="button"]` around
 			    whatever it is given, so a button inside it is `nested-interactive`. The looks come
-			    from `buttonVariants` — see `VisibilityMenu` for the full note. */}
+			    from `buttonVariants`, plus `inline-flex` to beat `popover__trigger`'s `inline-block` —
+			    see `VisibilityMenu` for the full note. */}
 			<Popover.Trigger
 				data-slot='sort-menu-trigger'
-				className={buttonVariants({ size: 'sm', variant: 'outline' })}
+				className={`${buttonVariants({ size: 'sm', variant: 'outline' })} inline-flex`}
 			>
 				<ArrowUpDown size={16} />
 				{messages.sorting.trigger}
