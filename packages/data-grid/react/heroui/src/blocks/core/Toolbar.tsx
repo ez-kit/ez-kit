@@ -12,6 +12,10 @@ import type { ToolbarProps } from '@ez-kit/data-grid-react'
  * layer's contract with the kits' CSS and with the browser specs, and a kit that swallows one
  * diverges silently — nothing here renders differently, the name for the region simply stops
  * existing in this kit.
+ *
+ * The leading side wraps and the trailing one does not: a search box beside a filter panel
+ * outgrows the row long before the trailing buttons do, and wrapping the side that grew keeps
+ * those buttons pinned to the end of the first line.
  */
 export function Toolbar({ children, start, end, className, ...props }: ToolbarProps) {
 	if (children) {
@@ -34,13 +38,13 @@ export function Toolbar({ children, start, end, className, ...props }: ToolbarPr
 		>
 			<div
 				data-slot='toolbar-start'
-				className='flex items-center gap-2'
+				className='flex min-w-0 flex-1 flex-wrap items-center gap-2'
 			>
 				{start}
 			</div>
 			<div
 				data-slot='toolbar-end'
-				className='flex items-center gap-2'
+				className='flex shrink-0 items-center gap-2'
 			>
 				{end}
 			</div>

@@ -21,6 +21,16 @@
 	margin-top: 0.75rem;
 }
 
+/* A filter panel standing free above the table needs the gap a toolbar leaves below itself. Put in
+ * a toolbar, it is one more item on the toolbar's row, and the same margin lifts its chips off the
+ * line the search box and the buttons sit on. */
+[data-slot='filter-panel'] {
+	margin-bottom: 0.75rem;
+}
+[data-slot='toolbar'] [data-slot='filter-panel'] {
+	margin-bottom: 0;
+}
+
 @custom-variant dark (&:is(.dark *));
 @source "../../**/*.{ts,tsx}";
 
