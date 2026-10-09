@@ -129,6 +129,7 @@ describe('withHistory', () => {
 		// API, so a member appearing or vanishing should fail loudly rather than ship.
 		expect(Object.keys(state.history).sort()).toEqual([
 			'clear',
+			'clearFutures',
 			'goto',
 			'isPaused',
 			'pause',
@@ -213,6 +214,53 @@ describe('withHistory', () => {
 
 		expect(state.count).toBe(99)
 		expect(state.history.state.pasts).toEqual([{ count: 0 }])
+	})
+
+	it('clearFutures closes the redo branch without touching pasts, and composes with skip', async () => {
+		const state = pipe(proxy({ count: 0 }), withHistory())
+		state.count = 1
+		await flush()
+		state.history.undo()
+
+		state.history.clearFutures()
+		state.history.skip(() => {
+			state.count = 7
+		})
+		await flush()
+		state.history.redo()
+
+		expect(state.count).toBe(7)
+		expect(state.history.state.pasts).toHaveLength(0)
+		expect(state.history.state.futures).toHaveLength(0)
+	})
+
+	it('flushes a still-pending write before clearFutures, recording it as a step', async () => {
+		const state = pipe(proxy({ count: 0 }), withHistory())
+		state.count = 1
+		await flush()
+		state.history.undo()
+		state.count = 5
+		// pending: no flush before clearFutures below
+
+		state.history.clearFutures()
+		await flush()
+
+		expect(state.count).toBe(5)
+		expect(state.history.state.pasts).toEqual([{ count: 0 }])
+		expect(state.history.state.futures).toHaveLength(0)
+	})
+
+	it('clearFutures empties futures while recording is paused', async () => {
+		const state = pipe(proxy({ count: 0 }), withHistory())
+		state.count = 1
+		await flush()
+		state.history.undo()
+
+		state.history.pause()
+		state.history.clearFutures()
+
+		expect(state.history.state.futures).toHaveLength(0)
+		expect(state.history.state.pasts).toHaveLength(0)
 	})
 
 	it('flushes a still-pending write before pause, instead of losing it', async () => {

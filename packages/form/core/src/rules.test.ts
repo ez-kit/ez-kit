@@ -89,8 +89,33 @@ describe('compileCondition', () => {
 		expect(compileCondition({ field: 'a', gt: 1 })({ a: 'x' })).toBe(false)
 	})
 
-	test('rejects a relative reference — reserved for arrays, unusable in v1', () => {
+	test('rejects a relative reference outside an item scope', () => {
 		expect(() => compileCondition({ field: './type', eq: 'x' })).toThrow(/relative/i)
+	})
+
+	test('resolves a relative reference against the item it was given', () => {
+		const predicate = compileCondition({ field: './type', eq: 'person' }, 'people[1]')
+		expect(predicate({ people: [{ type: 'business' }, { type: 'person' }] })).toBe(true)
+		expect(predicate({ people: [{ type: 'person' }, { type: 'business' }] })).toBe(false)
+	})
+
+	test('an absolute reference still reaches the form root from inside an item', () => {
+		const predicate = compileCondition({ field: 'country', eq: 'RU' }, 'people[0]')
+		expect(predicate({ country: 'RU', people: [{ type: 'x' }] })).toBe(true)
+	})
+
+	test('carries the item scope through and / or / not', () => {
+		const predicate = compileCondition(
+			{ and: [{ field: './type', eq: 'person' }, { not: { field: './hidden', truthy: true } }] },
+			'people[0]',
+		)
+		expect(predicate({ people: [{ type: 'person', hidden: false }] })).toBe(true)
+		expect(predicate({ people: [{ type: 'person', hidden: true }] })).toBe(false)
+	})
+
+	test('resolves a relative reference against a nested item scope', () => {
+		const predicate = compileCondition({ field: './label', eq: 'x' }, 'people[0].tags[2]')
+		expect(predicate({ people: [{ tags: [{}, {}, { label: 'x' }] }] })).toBe(true)
 	})
 })
 
@@ -104,5 +129,19 @@ describe('collectRuleFields', () => {
 
 	test('returns an empty list for a function condition', () => {
 		expect(collectRuleFields(() => true)).toEqual([])
+	})
+
+	test('resolves relative references against the item scope, so subscriptions are real paths', () => {
+		expect(
+			collectRuleFields(
+				{
+					and: [
+						{ field: './type', eq: 1 },
+						{ field: 'country', eq: 2 },
+					],
+				},
+				'people[1]',
+			),
+		).toEqual(['people[1].type', 'country'])
 	})
 })

@@ -4,6 +4,7 @@ import type {
 	DateRangeFieldRenderProps,
 	FieldRenderProps,
 	FormComponents,
+	FormFieldSlots,
 	GridItemRenderProps,
 	SectionRenderProps,
 	WizardRenderProps,
@@ -243,7 +244,99 @@ function TestDateRangeField({
 	)
 }
 
-export const testComponents: FormComponents = {
+/** Minimal array chrome: enough surface for a test to drive, no styling of any kind. */
+const TestArrayField: FormComponents['ArrayField'] = ({
+	label,
+	description,
+	errors,
+	invalid,
+	children,
+	addLabel,
+	onAdd,
+	canAdd,
+	...field
+}) => (
+	<div
+		data-testkit='array'
+		{...field}
+	>
+		{label !== null && label !== undefined && <span data-testkit='array-label'>{label}</span>}
+		{description !== null && description !== undefined && <span data-testkit='array-description'>{description}</span>}
+		<div data-testkit='array-items'>{children}</div>
+		<button
+			type='button'
+			disabled={!canAdd}
+			onClick={onAdd}
+		>
+			{addLabel}
+		</button>
+		{invalid && <span data-testkit='array-errors'>{errors.join(', ')}</span>}
+	</div>
+)
+
+const TestArrayItem: FormComponents['ArrayItem'] = ({
+	index,
+	label,
+	removeLabel,
+	moveUpLabel,
+	moveDownLabel,
+	disabled,
+	onRemove,
+	onMoveUp,
+	onMoveDown,
+	children,
+	...item
+}) => (
+	<div
+		data-testkit='array-item'
+		{...item}
+	>
+		{label !== null && label !== undefined && (
+			<span
+				data-testkit='array-item-label'
+				data-testid='array-item-label'
+			>
+				{label}
+			</span>
+		)}
+		{children}
+		<button
+			type='button'
+			aria-label={`${String(removeLabel)} ${String(index)}`}
+			disabled={disabled}
+			onClick={onRemove}
+		>
+			{removeLabel}
+		</button>
+		{(onMoveUp !== undefined || onMoveDown !== undefined) && (
+			<>
+				<button
+					type='button'
+					aria-label={`up ${String(index)}`}
+					disabled={disabled === true || onMoveUp === undefined}
+					onClick={onMoveUp}
+				>
+					{moveUpLabel}
+				</button>
+				<button
+					type='button'
+					aria-label={`down ${String(index)}`}
+					disabled={disabled === true || onMoveDown === undefined}
+					onClick={onMoveDown}
+				>
+					{moveDownLabel}
+				</button>
+			</>
+		)}
+	</div>
+)
+
+/**
+ * The twelve field kinds. Split from `testComponents` when the contract did: a kit's field
+ * set is open and reaches `createForm` as `fields`, its chrome is closed and reaches it as
+ * `components`.
+ */
+export const testFields: FormFieldSlots = {
 	TextField: ({ value, onChange, type, placeholder, id, name, onBlur, disabled, required, ...field }) => (
 		<Shell
 			id={id}
@@ -655,11 +748,18 @@ export const testComponents: FormComponents = {
 	// Two native inputs rather than a calendar: this kit exists so the adapter's own tests
 	// never depend on a real picker.
 	DateRangeField: (props) => <TestDateRangeField {...props} />,
-	Button: ({ type, disabled, children }) => (
+}
+
+/** The chrome half — the seven slots that are not field kinds. */
+export const testComponents: FormComponents = {
+	ArrayField: TestArrayField,
+	ArrayItem: TestArrayItem,
+	Button: ({ type, disabled, onClick, children }) => (
 		<button
 			data-testkit='button'
 			type={type === 'submit' ? 'submit' : 'button'}
 			disabled={disabled}
+			onClick={onClick}
 		>
 			{children}
 		</button>

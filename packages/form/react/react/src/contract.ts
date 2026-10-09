@@ -2,7 +2,7 @@ import type { DateRangeValue, SelectOption, TextInputType } from '@ez-kit/form-c
 import type { ComponentPropsWithoutRef, ReactNode } from 'react'
 
 /**
- * The UI-kit contract.
+ * The UI-kit contract, in **two bags**.
  *
  * This package renders **no visuals of its own** and — deliberately — no DOM structure
  * either. It binds TanStack Form state, normalises errors, and hands one flat props object
@@ -16,10 +16,25 @@ import type { ComponentPropsWithoutRef, ReactNode } from 'react'
  * siblings in a grid — and both now express their natural anatomy without fighting a
  * one-size layout.
  *
- * Both `@ez-kit/form-shadcn` and `@ez-kit/form-heroui` implement this identical interface,
- * which is what lets one example render under either kit. Register a kit with
- * `satisfies FormComponents` so a forgotten field is a compile error rather than a runtime
- * crash.
+ * The two bags differ in whether they are **closed**:
+ *
+ * - {@link FormComponents} is the form's **chrome** — the array frame and entry, the button,
+ *   the `<form>` element, the section grid and the wizard. Seven slots, a closed set: nothing
+ *   an app registers belongs here, because none of it is a field kind.
+ * - {@link FormFieldSlots} is the twelve **field kinds**. It is the shape a kit's
+ *   `formFieldSlots` export is written against (`satisfies FormFieldSlots`), so a forgotten
+ *   built-in is a compile error there — but `createForm({ fields })` accepts *additional*
+ *   keys, which is how an app adds `RatingField` to the instance and `{ type: 'rating' }` to
+ *   a schema document.
+ *
+ * Both `@ez-kit/form-shadcn` and `@ez-kit/form-heroui` implement these identical interfaces,
+ * which is what lets one example render under either kit:
+ *
+ * ```ts
+ * export const formComponents = { ArrayField, ArrayItem, … } satisfies FormComponents
+ * export const formFieldSlots = { TextField, NumberField, … } satisfies FormFieldSlots
+ * createForm({ components: formComponents, fields: formFieldSlots })
+ * ```
  */
 
 /**
@@ -227,6 +242,84 @@ export type SliderFieldRenderProps = FieldRenderProps & {
 	step: number | undefined
 }
 
+// ── arrays ───────────────────────────────────────────────────────────────────
+
+/**
+ * The chrome around **one** entry of a repeatable group.
+ *
+ * A separate slot from {@link ArrayFieldRenderProps} for the same reason `GridItem` is separate
+ * from `Section`: the container draws the list, the item draws one row of it — and only the item
+ * can place its own remove control, since it is the only component that knows where the row ends.
+ *
+ * The item's fields arrive as `children`, already bound to this entry's paths. A kit renders
+ * them; it never needs to know the index they resolved to.
+ */
+export type ArrayItemRenderProps = {
+	/** The zero-based position, spread onto the kit's root so CSS and tests can address a row. */
+	'data-index': number
+	index: number
+	/**
+	 * Caption for this entry, already resolved — a card heading, typically. Empty when the author
+	 * gave none, which is the common case for a compact row.
+	 */
+	label: ReactNode
+	/** Caption for the remove control, already resolved. */
+	removeLabel: ReactNode
+	/**
+	 * Captions for the two reorder controls, already resolved. Present whether or not the move
+	 * is currently possible, so the disabled control still has an accessible name.
+	 */
+	moveUpLabel: ReactNode
+	moveDownLabel: ReactNode
+	/**
+	 * The list is disabled. Passed down to the entry because a disabled array must not offer a
+	 * live remove or move control on every row — the fields inside may be disabled by the kit's
+	 * own `fieldset`, but these controls are the entry's chrome and belong to this slot.
+	 */
+	disabled: boolean | undefined
+	onRemove: () => void
+	/**
+	 * Move this entry one place earlier or later. `undefined` when reordering is off **or** when
+	 * the move is impossible — the first entry has no `onMoveUp` — so a kit disables or omits the
+	 * control by asking one question rather than correlating a flag with an index and a length.
+	 */
+	onMoveUp: (() => void) | undefined
+	onMoveDown: (() => void) | undefined
+	children: ReactNode
+}
+
+/**
+ * A repeatable group of fields.
+ *
+ * `errors` are the **list's own** — a `minLength`, or a cross-item rule that blamed the list
+ * rather than an entry. Errors belonging to a field inside an entry reach that field through its
+ * own slot and never appear here, which is why the two are not merged: a kit that showed both in
+ * one place would repeat every item's message at the top of the list.
+ */
+export type ArrayFieldRenderProps = {
+	'data-field': string
+	/** Always `'array'`, for symmetry with every other field's `data-field-type`. */
+	'data-field-type': string
+	name: string
+	label: ReactNode
+	description: ReactNode
+	errors: string[]
+	invalid: boolean
+	disabled: boolean | undefined
+	required: boolean | undefined
+	/** The entries, each already wrapped in the kit's own `ArrayItem`. */
+	children: ReactNode
+	/** Caption for the control that appends an entry, already resolved. */
+	addLabel: ReactNode
+	onAdd: () => void
+	/**
+	 * Whether appending is possible right now — `false` once a `maxLength` bound is reached. A
+	 * plain boolean rather than an absent `onAdd`, because a kit should be able to render the
+	 * control disabled rather than have it vanish under the user's cursor.
+	 */
+	canAdd: boolean
+}
+
 // ── layout ───────────────────────────────────────────────────────────────────
 
 export type SectionRenderProps = {
@@ -278,6 +371,13 @@ export type WizardRenderProps = {
 export type ButtonProps = {
 	type?: 'submit' | 'button'
 	disabled?: boolean
+	/**
+	 * Optional so the submit button (which fires through the surrounding `<form>`'s submit
+	 * event, not a click handler) can keep passing none. Typed `() => void` rather than a DOM
+	 * `MouseEventHandler` so a scope callback — `add`, say — can be handed straight through
+	 * without an event parameter to ignore.
+	 */
+	onClick?: () => void
 	children: ReactNode
 }
 
@@ -286,10 +386,22 @@ export type FormElementProps = ComponentPropsWithoutRef<'form'>
 // ── the contract itself ──────────────────────────────────────────────────────
 
 /**
- * Every component a kit must supply — one per field kind, plus the two form-level pieces.
- * There is no partial tier in v1 because every field is part of the base set.
+ * The twelve built-in field kinds a kit supplies.
+ *
+ * Written against with `satisfies FormFieldSlots` so a forgotten built-in is a compile error
+ * in the kit. It is **not** what `createForm({ fields })` accepts — that takes any
+ * {@link FormFieldRegistry}, the kit's twelve spread beside whatever the app registers —
+ * which is the one asymmetry with {@link FormComponents}: the chrome is closed, the field
+ * set is open.
+ *
+ * The key names are load-bearing twice over. Each one routes to that field's own binder
+ * (replacing `TextField` here swaps the kit's input while keeping the `asText` coercion and
+ * the rest of the text binding), and each one **derives its document id** by dropping a
+ * trailing `Field` and lowercasing the rest — `RadioGroupField` → `radiogroup`. The
+ * derivation runs this way round because the reverse is lossy: nothing recovers
+ * `RadioGroupField` from `radiogroup`.
  */
-export type FormComponents = {
+export type FormFieldSlots = {
 	TextField: (props: TextFieldRenderProps) => ReactNode
 	NumberField: (props: NumberFieldRenderProps) => ReactNode
 	TextareaField: (props: TextareaFieldRenderProps) => ReactNode
@@ -302,6 +414,20 @@ export type FormComponents = {
 	CheckboxGroupField: (props: CheckboxGroupFieldRenderProps) => ReactNode
 	DateField: (props: DateFieldRenderProps) => ReactNode
 	DateRangeField: (props: DateRangeFieldRenderProps) => ReactNode
+}
+
+/**
+ * The form's chrome — every component a kit must supply that is **not** a field kind.
+ *
+ * A closed set of seven, all required: the array frame and its entry, the generic button,
+ * the `<form>` element, the section grid, its cell and the wizard. The field kinds live in
+ * {@link FormFieldSlots}; `ArrayField` / `ArrayItem` are here rather than there because they
+ * are consumed as chrome by one binder (`createArrayField`), not registered as a per-kind
+ * binder of their own.
+ */
+export type FormComponents = {
+	ArrayField: (props: ArrayFieldRenderProps) => ReactNode
+	ArrayItem: (props: ArrayItemRenderProps) => ReactNode
 	Button: (props: ButtonProps) => ReactNode
 	Form: (props: FormElementProps) => ReactNode
 	Section: (props: SectionRenderProps) => ReactNode

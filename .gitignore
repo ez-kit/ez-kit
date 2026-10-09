@@ -73,3 +73,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# tsup writes this beside a package's tsup.config.ts while it builds and removes it after.
+# An interrupted build leaves it behind, and because it is in no tsconfig, `eslint` fails on it
+# with `parserOptions.project ... file was not found`, in a package nobody touched.
+packages/**/tsup.config.bundled_*.mjs

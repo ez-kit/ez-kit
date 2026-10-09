@@ -1,4 +1,12 @@
-import { FORM_FIELD_TYPES, FormFieldType, resolveSelectOptions, resolveText } from '@ez-kit/form-core'
+import {
+	FORM_FIELD_TYPES,
+	FormFieldType,
+	isFieldNode,
+	resolveSelectOptions,
+	resolveText,
+	setValueAtPath,
+	walkNodes,
+} from '@ez-kit/form-core'
 
 import { fieldRenderProps } from '../field-render-props'
 import { useOptionSourceParams } from '../options/use-source-params'
@@ -9,13 +17,16 @@ import { useConditionValue } from './use-condition'
 import type { ConditionSubscribableForm } from './use-condition'
 import type { BindableForm, FieldValue } from '../bindable-form'
 import type { FormComponents } from '../contract'
-import type { FormFieldComponents } from '../field-props'
+import type { ArrayFieldProps, ArrayReorderable, FormFieldComponents } from '../field-props'
 import type { BlockRegistry, CustomFieldRegistry } from './registries'
 import type {
+	AnyArrayNode,
 	BlockNode,
 	CustomFieldNode,
 	FieldNode,
+	FormNode,
 	LocalizedSelectOption,
+	LocalizedText,
 	OptionsSource,
 	OptionValue,
 	SectionNode,
@@ -39,6 +50,13 @@ export type RenderNodeContext = {
 	translate: Translate | undefined
 	fields: CustomFieldRegistry | undefined
 	blocks: BlockRegistry | undefined
+	/**
+	 * The array entry the nodes below are being rendered for, as an absolute path. `undefined`
+	 * at the form root. It is what gives a `./`-prefixed condition its meaning, and it travels
+	 * in the context rather than being derived from the node, because a node has no way to know
+	 * which entry it is currently standing in.
+	 */
+	itemPath: string | undefined
 }
 
 /**
@@ -55,6 +73,7 @@ export type RenderNodeArgs<TValues> = {
 		| CustomFieldNode<TValues, string>
 		| BlockNode<TValues>
 		| SubmitNode<TValues>
+		| AnyArrayNode
 	/** The bound field components already attached to the form instance — see `createForm`. */
 	form: FormFieldComponents<TValues>
 	layout: LayoutComponents
@@ -62,7 +81,14 @@ export type RenderNodeArgs<TValues> = {
 }
 
 /** Every `type` the `switch` below handles by name, for narrowing a custom field kind away. */
-const BUILT_IN_OR_CONTAINER_TYPES: readonly string[] = [...FORM_FIELD_TYPES, 'section', 'block', 'submit']
+const ARRAY_NODE_TYPE = 'array'
+const BUILT_IN_OR_CONTAINER_TYPES: readonly string[] = [
+	...FORM_FIELD_TYPES,
+	'section',
+	'block',
+	'submit',
+	ARRAY_NODE_TYPE,
+]
 
 /**
  * `CustomFieldNode<TValues, string>`'s own `type` is a bare `string`, not a literal — a
@@ -78,7 +104,8 @@ function isCustomFieldNode<TValues>(
 		| SectionNode<TValues, string>
 		| CustomFieldNode<TValues, string>
 		| BlockNode<TValues>
-		| SubmitNode<TValues>,
+		| SubmitNode<TValues>
+		| AnyArrayNode,
 ): node is CustomFieldNode<TValues, string> {
 	return !BUILT_IN_OR_CONTAINER_TYPES.includes(node.type)
 }
@@ -132,6 +159,71 @@ function nodeOptionsProps(
 }
 
 /**
+ * The value a freshly added entry starts from, assembled out of the item subtree's own
+ * `defaultValue`s.
+ *
+ * No `newItem` option on the node, deliberately: a document already states each field's default,
+ * and a second place to state it could disagree with the first. The JSX API has no equivalent
+ * source to read, which is why `newItem` is a required prop there and absent here.
+ *
+ * A field with no `defaultValue` contributes no key at all rather than an explicit `undefined`,
+ * so an entry looks exactly like one the server would send.
+ */
+function defaultItemValue(children: readonly FormNode<unknown, string>[]): unknown {
+	let item: unknown = {}
+	walkNodes({ version: 1, children: [...children] }, (child) => {
+		if (!isFieldNode(child)) return
+		const { defaultValue } = child
+		if (defaultValue === undefined) return
+		item = setValueAtPath(item, child.name, defaultValue)
+	})
+	return item
+}
+
+/**
+ * The node's `reorderable` in the shape the JSX prop takes.
+ *
+ * The two forms carry the same meaning and differ only in the type of their captions: a document
+ * writes `LocalizedText`, a component takes a `ReactNode`. So the boolean passes straight through
+ * and the object form is resolved key by key, exactly as `add` / `remove` are.
+ */
+function resolveReorderable(
+	value: NonNullable<AnyArrayNode['reorderable']>,
+	translate: Translate | undefined,
+): ArrayReorderable {
+	if (typeof value === 'boolean') return value
+	return {
+		...(value.up !== undefined && { up: { label: resolveText(value.up.label, translate) } }),
+		...(value.down !== undefined && { down: { label: resolveText(value.down.label, translate) } }),
+	}
+}
+
+/** An entry's caption, with its position merged in so a translation may place it. */
+function itemLabelAt(label: LocalizedText | undefined, index: number, translate: Translate | undefined): ReactNode {
+	if (label === undefined) return null
+	if (typeof label === 'string') return label
+	return resolveText({ ...label, params: { ...label.params, index } }, translate)
+}
+
+/**
+ * The single array path of a stand-in value type, used only to spell {@link ErasedArrayField}.
+ */
+type ErasedArrayValues = { items: unknown[] }
+
+/**
+ * `form.ArrayField` with its item type erased.
+ *
+ * The JSX component derives the item type from `name` — right for an author writing a literal
+ * path, unavailable here: a schema node's `name` is a plain `string` (relative to whatever entry
+ * it sits in) and its fresh item is assembled from the node's children at runtime. Pinning the
+ * stand-in's one array path gives the rest of the props their real shapes (`newItem: unknown`, a
+ * scope over `unknown`) while `name` widens back to `string`.
+ */
+type ErasedArrayField = (
+	props: Omit<ArrayFieldProps<ErasedArrayValues, 'items'>, 'name'> & { name: string },
+) => ReactNode
+
+/**
  * Turn one field or section node into the already-bound kit component for its kind.
  *
  * A **component**, not a plain function, on purpose: it calls `useConditionValue` twice
@@ -168,8 +260,8 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 	// — so this narrows it to just the store shape `useConditionValue` needs, the same
 	// `as unknown` pattern `buildFieldComponents` uses for `BindableForm`.
 	const conditionForm = form as unknown as ConditionSubscribableForm<TValues>
-	const visible = useConditionValue(conditionForm, node.when, true)
-	const disabledByCondition = useConditionValue(conditionForm, node.disabledWhen, false)
+	const visible = useConditionValue(conditionForm, node.when, true, context.itemPath)
+	const disabledByCondition = useConditionValue(conditionForm, node.disabledWhen, false, context.itemPath)
 	// Unconditional, exactly like the two above: only the four select-like kinds can carry
 	// `optionsFrom`, but every node has to have called this for the hook order to stay stable.
 	// `undefined` for every node that does not.
@@ -369,6 +461,57 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					{...(node.step !== undefined && { step: node.step })}
 				/>
 			)
+		case ARRAY_NODE_TYPE: {
+			// The node's own `name` is relative to whatever entry it sits in, so the absolute path
+			// is rebuilt here the same way the runtime rebuilds it — this is what a nested array's
+			// entries resolve against.
+			const arrayPath = context.itemPath === undefined ? node.name : `${context.itemPath}.${node.name}`
+			// The item type is a property of the *node*, which the switch cannot express as a type
+			// parameter — the correlation is enforced where the schema is authored, and recovered at
+			// runtime by the path the field resolves to. See {@link ErasedArrayField}.
+			const ArrayField = form.ArrayField as ErasedArrayField
+			return (
+				<ArrayField
+					name={node.name}
+					label={label}
+					description={description}
+					disabled={disabledByCondition}
+					newItem={defaultItemValue(node.children)}
+					addLabel={resolveText(node.add?.label, context.translate)}
+					removeLabel={resolveText(node.remove?.label, context.translate)}
+					{...(node.reorderable !== undefined && {
+						reorderable: resolveReorderable(node.reorderable, context.translate),
+					})}
+					// Every other node kind passes no `validate` here: on the schema path the constraints
+					// are compiled into the form-level validator by `buildValidator`. An array passes the
+					// one that is also an **interaction** bound, because `maxLength` decides when the add
+					// control stops offering. The duplicate check that comes with it is harmless — both
+					// produce the same message, and a field's own error occupies the same slot.
+					{...(node.validate?.maxLength !== undefined && {
+						validate: { maxLength: node.validate.maxLength },
+					})}
+					{...(node.item?.label !== undefined && {
+						itemLabel: (index: number) => itemLabelAt(node.item?.label, index, context.translate),
+					})}
+				>
+					{({ items }) =>
+						items.map((item) => (
+							<item.Item key={item.key}>
+								{renderChildren(node.children, {
+									// The scope carries the entry's field components, but `RenderNode` also
+									// reads the live store to evaluate conditions — so the real instance goes
+									// underneath and the scoped components sit on top of it.
+									form: { ...form, ...item },
+									layout,
+									context: { ...context, itemPath: `${arrayPath}[${String(item.index)}]` },
+									parentColumns: undefined,
+								})}
+							</item.Item>
+						))
+					}
+				</ArrayField>
+			)
+		}
 		case 'section': {
 			const title = resolveText(node.title, context.translate)
 			return (

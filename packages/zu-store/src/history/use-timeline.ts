@@ -1,7 +1,9 @@
 'use client'
 
+import { useMemo } from 'react'
 import { useStore } from 'zustand'
 
+import { readSlice } from './slice-reader'
 import { useHistory } from './use-history'
 
 import type { StoreHistory } from './types'
@@ -12,7 +14,7 @@ export type Timeline<T> = {
 	steps: readonly T[]
 	/** Where the store sits on `steps` (`pasts.length`). `steps[index] === current`. */
 	index: number
-	/** The live state, shaped like a step. */
+	/** The live state, shaped like a step: the `partialize` slice of it, when the store has one. */
 	current: T
 	/** Jumps to an absolute position on `steps`; out-of-range indices clamp. */
 	goto: (index: number) => void
@@ -27,9 +29,14 @@ export type Timeline<T> = {
  * not. Folded into `useHistory`, that cost would land on every caller, including a toolbar that only
  * wanted `undo` / `redo`. Here it lands only on a caller that renders the state anyway.
  */
-export function useTimeline<T>(store: StoreApi<T> & { history: StoreApi<StoreHistory<T>> }): Timeline<T> {
+export function useTimeline<T, TSlice = T>(
+	store: StoreApi<T> & { history: StoreApi<StoreHistory<TSlice>> },
+): Timeline<TSlice> {
 	const { pasts, futures, goto } = useHistory(store)
-	const current = useStore(store)
+	const state = useStore(store)
+	// `partialize` builds a fresh object per call; memoised so `current` keeps its identity across a
+	// render that did not change the state.
+	const current = useMemo(() => readSlice(store.history, state) as TSlice, [store.history, state])
 
 	return { steps: [...pasts, current, ...futures], index: pasts.length, current, goto }
 }

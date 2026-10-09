@@ -24,24 +24,27 @@ You install exactly one of the two flavours; it pulls the rest in and re-exports
 
 ## Why the layering
 
-`@ez-kit/form-react` knows how to bind a field to form state, normalise errors and track submit state — but it owns no pixels and no markup. Each field's entire element tree is supplied by a kit through a `FormComponents` contract, so a React Aria kit can nest its label and error inside the field root while a plain-DOM kit keeps them as siblings. That is what lets the **same example render under either kit**, and it is why you can [build your own kit](/docs/form/custom-kit) without forking anything.
+`@ez-kit/form-react` knows how to bind a field to form state, normalise errors and track submit state — but it owns no pixels and no markup. Each field's entire element tree is supplied by a kit through a two-part contract — `FormComponents` for the form's own chrome, `FormFieldSlots` for the field kinds — so a React Aria kit can nest its label and error inside the field root while a plain-DOM kit keeps them as siblings. That is what lets the **same example render under either kit**, and it is why you can [build your own kit](/docs/form/custom-kit) without forking anything.
 
 ## What's in the box
 
-| Export                                            | Purpose                                                                                     |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| [`Form`](/docs/form/getting-started)              | The `<form>` element. Creates the instance, or takes yours.                                 |
-| [`useForm`](/docs/form/getting-started)           | The extended hook, for when you need the instance yourself.                                 |
-| [`form.TextField` and friends](/docs/form/fields) | Twelve base fields: text, number, textarea, select, multi-select, checkbox, switch, date, … |
-| `form.SubmitButton`                               | Subscribed to `canSubmit` / `isSubmitting`, so it disables itself.                          |
-| [`FormRenderer`](/docs/form/schema)               | Renders a serialisable document — the schema-driven mode.                                   |
-| [`createForm`](/docs/form/custom-kit)             | The factory a UI kit calls to bind its own components.                                      |
+| Export                                                | Purpose                                                                                     |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| [`Form`](/docs/form/getting-started)                  | The `<form>` element. Creates the instance, or takes yours.                                 |
+| [`useForm`](/docs/form/getting-started)               | The extended hook, for when you need the instance yourself.                                 |
+| [`form.TextField` and friends](/docs/form/fields)     | Twelve base fields: text, number, textarea, select, multi-select, checkbox, switch, date, … |
+| `form.SubmitButton`                                   | Subscribed to `canSubmit` / `isSubmitting`, so it disables itself.                          |
+| [`form.ArrayField` / `form.Array`](/docs/form/arrays) | A repeatable group — with the kit's own chrome, or with none at all.                        |
+| [`FormRenderer`](/docs/form/schema)                   | Renders a serialisable document — the schema-driven mode.                                   |
+| [`createForm`](/docs/form/custom-kit)                 | The factory a UI kit calls to bind its own components.                                      |
 
 Validation has **no custom resolver**: it is pure pass-through of TanStack Form's native [standard-schema](https://github.com/standard-schema/standard-schema) support, so a zod, valibot or arktype schema just works. See [Validation](/docs/form/validation).
 
 ## Not included yet
 
-Repeatable array fields are the notable gap: relative field references (`./`) are reserved in the format but not supported, so a list of addresses is written by hand today. Time and file inputs are not covered either, and a searchable field's debouncing is still its [option source](/docs/form/select/option-sources)'s job rather than the package's.
+Time and file inputs are not covered.
+
+A searchable field's query reaches its [option source](/docs/form/select/option-sources) raw, on every keystroke: debouncing and a minimum query length live in the source, next to the cache it already owns. That is deliberate rather than missing — but it is [also not permanent](/docs/form/select/searchable#debouncing-and-minchars-are-the-sources-job--for-now); the package intends to take both over.
 
 A field kind we do not cover is written with [the native API](/docs/form/native-api), or — in a document — [registered as a custom field type](/docs/form/schema#registries) and rendered like any built-in one.
 

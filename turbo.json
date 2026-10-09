@@ -14,6 +14,26 @@
 	   capping it is faster too. A percentage rather than a number so a smaller CI runner scales
 	   down with it. */
 	"concurrency": "50%",
+	/* Root files every package's tasks depend on but none of them contains.
+
+	   Turbo hashes a task from the files inside its own package, so a change to one of these is
+	   invisible to it: editing `vitest.shared.ts` — which decides how every suite in the repo is
+	   run — replayed all 28 tasks from cache and proved nothing about the change. That is the
+	   failure `--force` exists to work around, except nobody knows to reach for it, because a
+	   cache hit looks exactly like a pass.
+
+	   Kept deliberately short. Everything here invalidates *every* task in the repo, so a file
+	   earns its place only by genuinely changing what a task does. These six do: the test config
+	   and its setup file, the tsconfig every package extends, the flat ESLint config, the pinned
+	   Node version, and the Prettier config that `pnpm lint` checks against. */
+	"globalDependencies": [
+		"vitest.shared.ts",
+		"vitest.setup.ts",
+		"tsconfig.base.json",
+		"eslint.config.mjs",
+		".nvmrc",
+		".prettierrc.json"
+	],
 	"tasks": {
 		"build": {
 			"dependsOn": ["^build"],

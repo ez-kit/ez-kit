@@ -1,7 +1,7 @@
 import { resolveText } from './localized-text'
-import { getValueAtPath } from './rules'
+import { getValueAtPath, toIssuePath } from './rules'
 import { visibleFieldNames } from './visibility'
-import { isFieldNode, walkNodes } from './walk'
+import { hasValue, walkInstances, walkNodes } from './walk'
 
 import type { LocalizedText, Translate } from './localized-text'
 import type { AnyFormSchema, FieldValidate } from './schema'
@@ -9,13 +9,28 @@ import type { StandardSchemaV1 } from '@tanstack/form-core'
 
 export type { FieldValidate } from './schema'
 
+/** Where one issue from a rule belongs, and what it says. */
+export type RuleIssue = {
+	/**
+	 * Where to show the message, **relative to the node the rule is attached to**. On an array
+	 * rule that is the offending entry — `'[1].email'` — which is how a cross-item check names
+	 * the item at fault instead of blaming the whole list. Both index spellings work: paths are
+	 * normalised, so `'1.email'` addresses the same place.
+	 */
+	path: string
+	message: string
+}
+
 /**
  * A validation rule an app registers under a name (e.g. `'ru-inn'`) so a schema can reference
  * it via `validate.rule` without the schema itself carrying executable code — required for a
- * schema that may arrive as BDUI JSON (spec I2/I3). Returns `true` when the value passes, or
- * the failure message to show otherwise.
+ * schema that may arrive as BDUI JSON (spec I2/I3).
+ *
+ * Answers `true` when the value passes; a message to show on the node itself; or a list of
+ * issues that name their own places. The list form is what a rule attached to an **array** needs:
+ * "these two people share an email" belongs on the two offending entries, not on the list.
  */
-export type NamedRule = (value: unknown, values: unknown) => true | string
+export type NamedRule = (value: unknown, values: unknown) => true | string | readonly RuleIssue[]
 
 type BuildValidatorOptions = {
 	rules?: Record<string, NamedRule>
@@ -92,20 +107,52 @@ function resolveMessage(
 	return resolveText(override, translate)
 }
 
-/** Looks up `config.rule` in the registered rules, throwing at build time if it is unknown. */
-function resolveNamedRule(config: FieldValidate, rules: Record<string, NamedRule> | undefined): NamedRule | undefined {
-	if (config.rule === undefined) return undefined
-	const rule = rules?.[config.rule]
-	if (rule === undefined) {
-		throw new Error(
-			`FormSchema references validation rule "${config.rule}" but it was not registered in \`buildValidator\`'s \`rules\` option.`,
-		)
+/** Looks up `config.rule` in the registered rules, throwing at build time if any is unknown. */
+function resolveNamedRules(config: FieldValidate, rules: Record<string, NamedRule> | undefined): NamedRule[] {
+	if (config.rule === undefined) return []
+	const names = Array.isArray(config.rule) ? config.rule : [config.rule]
+	return names.map((name) => {
+		const rule = rules?.[name]
+		if (rule === undefined) {
+			throw new Error(
+				`FormSchema references validation rule "${name}" but it was not registered in \`buildValidator\`'s \`rules\` option.`,
+			)
+		}
+		return rule
+	})
+}
+
+/** One failing check: a message, and where to attach it relative to the node. */
+type Violation = { message: string; path: string | undefined }
+
+/**
+ * Runs the named rules, in the order the schema lists them, stopping at the first that fails.
+ *
+ * A rule may answer with one message — attached to the node itself — or with a list of issues
+ * that name their own places, which is what a cross-item check needs in order to point at the
+ * entry at fault. `messages.rule` overrides the one-message form only: a single override cannot
+ * stand in for a list of individually-placed messages.
+ */
+function runRules(
+	value: unknown,
+	values: unknown,
+	config: FieldValidate,
+	rules: readonly NamedRule[],
+	translate: Translate | undefined,
+): Violation[] {
+	for (const rule of rules) {
+		const result = rule(value, values)
+		if (result === true) continue
+		if (typeof result === 'string') {
+			return [{ message: resolveMessage('rule', config, translate, result), path: undefined }]
+		}
+		if (result.length > 0) return result.map((issue) => ({ message: issue.message, path: issue.path }))
 	}
-	return rule
+	return []
 }
 
 /**
- * Runs a single field's constraints, in a fixed order, stopping at the first failure — a field
+ * Runs a single node's constraints, in a fixed order, stopping at the first failure — a field
  * with several violated constraints reports only the most relevant one rather than piling up
  * redundant messages for the user.
  */
@@ -113,37 +160,53 @@ function runConstraints(
 	value: unknown,
 	values: unknown,
 	config: FieldValidate,
-	rule: NamedRule | undefined,
+	rules: readonly NamedRule[],
 	translate: Translate | undefined,
-): string | undefined {
+): Violation[] {
 	if (config.required === true && isEmpty(value)) {
-		return resolveMessage('required', config, translate, 'This field is required')
+		return [{ message: resolveMessage('required', config, translate, 'This field is required'), path: undefined }]
 	}
-	// An optional, empty value has nothing left to check.
-	if (isEmpty(value)) return undefined
+	// An optional field left blank has nothing left to check — but an empty **list** is still a
+	// list, and both a length bound and a rule have something to say about it. Without this an
+	// `array` with `minLength: 1` would pass on `[]`, which is the one case that option exists
+	// for. It also makes `minLength` work on an empty multi-select, where it previously fell
+	// through in silence.
+	if (isEmpty(value) && !Array.isArray(value)) return []
 
 	if (config.min !== undefined && isBelow(value, config.min)) {
-		return resolveMessage('min', config, translate, `Must be at least ${String(config.min)}`)
+		return [
+			{ message: resolveMessage('min', config, translate, `Must be at least ${String(config.min)}`), path: undefined },
+		]
 	}
 	if (config.max !== undefined && isAbove(value, config.max)) {
-		return resolveMessage('max', config, translate, `Must be at most ${String(config.max)}`)
+		return [
+			{ message: resolveMessage('max', config, translate, `Must be at most ${String(config.max)}`), path: undefined },
+		]
 	}
 	const length = lengthOf(value)
 	if (config.minLength !== undefined && length !== undefined && length < config.minLength) {
-		return resolveMessage('minLength', config, translate, minLengthMessage(value, config.minLength))
+		return [
+			{
+				message: resolveMessage('minLength', config, translate, minLengthMessage(value, config.minLength)),
+				path: undefined,
+			},
+		]
 	}
 	if (config.maxLength !== undefined && length !== undefined && length > config.maxLength) {
-		return resolveMessage('maxLength', config, translate, maxLengthMessage(value, config.maxLength))
+		return [
+			{
+				message: resolveMessage('maxLength', config, translate, maxLengthMessage(value, config.maxLength)),
+				path: undefined,
+			},
+		]
 	}
 	if (config.format !== undefined && typeof value === 'string' && !FORMAT_PATTERNS[config.format].test(value)) {
-		return resolveMessage('format', config, translate, `Must be a valid ${config.format}`)
-	}
-	if (rule !== undefined) {
-		const result = rule(value, values)
-		if (result !== true) return resolveMessage('rule', config, translate, result)
+		return [
+			{ message: resolveMessage('format', config, translate, `Must be a valid ${config.format}`), path: undefined },
+		]
 	}
 
-	return undefined
+	return runRules(value, values, config, rules, translate)
 }
 
 /** What {@link runFieldValidate} needs beyond the value: the same two `buildValidator` takes. */
@@ -169,33 +232,33 @@ export function runFieldValidate(
 	config: FieldValidate,
 	options: RunFieldValidateOptions = {},
 ): string | undefined {
-	return runConstraints(value, values, config, resolveNamedRule(config, options.rules), options.translate)
-}
-
-type FieldCheck = {
-	name: string
-	run: (value: unknown, values: unknown) => string | undefined
+	return runConstraints(value, values, config, resolveNamedRules(config, options.rules), options.translate)[0]?.message
 }
 
 /**
- * Walks the schema once, resolving each field's `rule` reference eagerly so an unregistered
- * rule key throws when the validator is built (on mount) rather than on the user's first
- * keystroke.
+ * Resolves every node's `rule` references eagerly, so an unregistered rule key throws when the
+ * validator is built (on mount) rather than on the user's first keystroke.
+ *
+ * Keyed by node identity rather than by name: one `array` node yields as many field instances as
+ * there are items, and they all share the node — and its rules — so resolving per instance would
+ * repeat the lookup for every entry on every keystroke. The schema is static authored config, so
+ * the node objects are stable for the validator's whole life.
  */
-function collectChecks<TValues>(schema: AnyFormSchema<TValues>, options: BuildValidatorOptions): FieldCheck[] {
-	const checks: FieldCheck[] = []
+function resolveRulesByNode<TValues>(
+	schema: AnyFormSchema<TValues>,
+	options: BuildValidatorOptions,
+): Map<object, NamedRule[]> {
+	const byNode = new Map<object, NamedRule[]>()
 	walkNodes(schema, (node) => {
-		if (!isFieldNode(node)) return
-		const config = node.validate
-		if (config === undefined) return
-
-		const rule = resolveNamedRule(config, options.rules)
-		checks.push({
-			name: node.name,
-			run: (value, values) => runConstraints(value, values, config, rule, options.translate),
-		})
+		if (!hasValue(node) || node.validate === undefined) return
+		byNode.set(node, resolveNamedRules(node.validate, options.rules))
 	})
-	return checks
+	return byNode
+}
+
+/** Joins a rule-supplied relative path onto the node it came from. */
+function joinIssuePath(base: string, relative: string): string {
+	return relative.startsWith('[') ? `${base}${relative}` : `${base}.${relative}`
 }
 
 /**
@@ -206,6 +269,11 @@ function collectChecks<TValues>(schema: AnyFormSchema<TValues>, options: BuildVa
  *
  * Implemented by hand rather than by delegating to a schema library: a consumer who writes
  * forms in JSX and validates by hand should never have to install one for code they never call.
+ *
+ * The checks are collected **inside** `validate`, not once when the validator is built. An
+ * `array` node stands for as many field instances as the current values hold, so which checks
+ * exist at all is a property of the values — the one thing not knowable at build time. Only the
+ * rule *lookup* is hoisted, since that depends on the schema alone.
  */
 export function buildValidator<TValues>(
 	schema: AnyFormSchema<TValues>,
@@ -213,7 +281,7 @@ export function buildValidator<TValues>(
 	// and a missing argument would otherwise crash on `options.rules` rather than validate.
 	options: BuildValidatorOptions = {},
 ): StandardSchemaV1<TValues, TValues> {
-	const checks = collectChecks(schema, options)
+	const rulesByNode = resolveRulesByNode(schema, options)
 
 	return {
 		'~standard': {
@@ -224,11 +292,23 @@ export function buildValidator<TValues>(
 				const visible = visibleFieldNames(schema, values)
 				const issues: { message: string; path: (string | number)[] }[] = []
 
-				for (const check of checks) {
-					if (!visible.has(check.name)) continue
-					const message = check.run(getValueAtPath(values, check.name), values)
-					if (message !== undefined) issues.push({ message, path: check.name.split('.') })
-				}
+				walkInstances(schema, values, ({ node, path }) => {
+					if (path === undefined || !hasValue(node)) return
+					const config = node.validate
+					if (config === undefined || !visible.has(path)) return
+
+					const violations = runConstraints(
+						getValueAtPath(values, path),
+						values,
+						config,
+						rulesByNode.get(node) ?? [],
+						options.translate,
+					)
+					for (const violation of violations) {
+						const target = violation.path === undefined ? path : joinIssuePath(path, violation.path)
+						issues.push({ message: violation.message, path: toIssuePath(target) })
+					}
+				})
 
 				return issues.length > 0 ? { issues } : { value: values }
 			},

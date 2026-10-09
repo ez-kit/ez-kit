@@ -5,7 +5,7 @@ import { fieldRenderProps } from '../field-render-props'
 import { fieldValidators } from '../field-validate'
 
 import type { BindableForm } from '../bindable-form'
-import type { FormComponents } from '../contract'
+import type { FormFieldSlots } from '../contract'
 import type { SliderFieldProps } from '../field-props'
 import type { ReactNode } from 'react'
 
@@ -19,7 +19,7 @@ const DEFAULT_SLIDER_ORIGIN = 0
 /** Build the `SliderField` component bound to one form instance. */
 export function createSliderField<TFormData>(
 	form: BindableForm,
-	KitSliderField: FormComponents['SliderField'],
+	KitSliderField: FormFieldSlots['SliderField'],
 ): (props: SliderFieldProps<TFormData>) => ReactNode {
 	return function SliderField({
 		name,

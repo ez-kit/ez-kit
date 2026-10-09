@@ -509,6 +509,7 @@ pnpm format           # Prettier write across the whole repo (scripts/prettier.m
 pnpm format:check     # Prettier check across the whole repo
 pnpm size             # Check bundle size limits
 pnpm run ci               # Full CI check: lint + typecheck + test + build + size
+pnpm verify:affected  # lint + typecheck + test for what changed, and its dependents, only
 ```
 
 **Never bump a dependency with `pnpm up -r`.** It re-resolves the whole tree inside the declared
@@ -524,6 +525,34 @@ Note also that `@heroui/react` moved `react-aria`, `react-aria-components`, `@re
 `@react-aria/utils` and `@internationalized/date` from its dependencies to its **peers** in 3.2.3.
 They are declared in the heroui kits' and the docs app's `devDependencies`, and a consumer of
 `@ez-kit/data-grid-heroui` installs them alongside `@heroui/react` themselves.
+
+### Which of those to run, and when
+
+**Between edits, run `pnpm verify:affected`, not the full gate.** It is
+`turbo run lint typecheck test --filter=...[HEAD] --concurrency=2`: `...[HEAD]` selects the
+packages whose files differ from `HEAD` **plus everything that depends on them**, so touching
+`@ez-kit/form-react` runs it, the two kits, and `@ez-kit/docs`. `docs` belongs in that set and is
+not incidental — `docs-option-names.test.ts` is what catches a documented option name that no
+longer matches the real type, and it is the check a package-only run misses. Turbo replays
+everything unchanged from cache, so the usual cost is seconds.
+
+**Run the full gate once, before committing, and run it sequentially** — `build`, then `lint`,
+then `typecheck`, then `test`, then `size`, each its own `turbo run`. Doing all five in one
+invocation lets `@ez-kit/docs#typecheck` race `@ez-kit/docs#build` over `.next/types` and fail
+with `TS6053 … cache-life.d.ts not found`, which is an artefact of the parallelism and not a
+defect. `pnpm run ci` already sequences them.
+
+**A red suite on a busy machine is usually not a red suite.** Every vitest instance sizes its
+worker pool to the machine, and turbo runs several packages at once, so an unconstrained run can
+put an order of magnitude more threads on the box than it has cores. Nothing fails outright —
+tests that wait on a deadline (`waitFor`, and vitest's 5 s default) stop being scheduled in time,
+and one test in whichever package lost the race goes red. The symptoms are distinctive: **only
+timeouts, never a failed assertion, and the same test passes when its package is run alone.**
+`vitest.shared.ts` caps `maxThreads` **and** raises `testTimeout` to 15 s, and the root `test`
+script caps turbo's concurrency — the caps alone reduced this without removing it (a measured
+failure sat at 5466 ms against the old 5000 ms limit), so the three are one fix rather than
+alternatives. When it still matters, run the one package directly. If you raise the timeout again,
+put the measurement that justified it in the same change.
 
 Run a single package's tests directly (faster, no turbo overhead):
 
@@ -746,8 +775,8 @@ Coverage over the documented packages is **total**: the explicit page → type m
 `apps/docs/test/docs-options/page-type-map.ts` classifies every page under the four scanned roots —
 `content/docs/data-grid/**`, `form/**`, `zu-store/**` and `va-store/**` — keyed by file path **plus
 the heading above each table** so multiple tables in one file map independently: 114 pages / 90
-option tables / 430 checked names today, of which the store packages contribute 43 pages / 24 tables
-/ 67 names. Pages with no option table still get an entry with two empty arrays, and that is the
+option tables / 432 checked names today, of which the store packages contribute 43 pages / 24 tables
+/ 69 names. Pages with no option table still get an entry with two empty arrays, and that is the
 point: while coverage was partial, an unmapped page was checked by nothing, and the two worst pages
 in the docs were unmapped ones — `columns/resizing.mdx` documented a `sizing` option that never
 existed, and the whole `editing/**` section documented a `meta.editType` / `onCellEdit` API that

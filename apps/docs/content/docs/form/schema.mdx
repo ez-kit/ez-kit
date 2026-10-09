@@ -68,7 +68,7 @@ A `section` adds `title`, `description`, `columns` (an integer **1–4**, defaul
 
 Fields may carry their own `defaultValue`. When you pass no `defaultValues` to the renderer, it builds them from the schema — which is the only way a backend-delivered field can start out as anything but `undefined`. A `defaultValues` you pass yourself always wins.
 
-`defaultValues` is also the inference site for the form's value type, exactly as in the JSX API: pass it and `onSubmit`'s `value` is typed; leave it out and it arrives as `unknown`.
+The **schema** carries the form's value type, so `onSubmit`'s `value` is typed whether or not you pass `defaultValues` — which matters most for a backend-delivered document, the case that has no `defaultValues` to state it with. A schema built by `defineFormSchema<Values>()` or by `parseFormSchema<Values>()` says `Values`; one assembled as a bare object literal says nothing, and `value` arrives as `unknown` until you annotate it. Passing `defaultValues` as well is still checked against the same type.
 
 ## TypeScript and JSON are the same document
 
@@ -146,7 +146,7 @@ The operator set is closed on purpose — every operator added is one backends w
 | `{ and: [...] }` / `{ or: [...] }` | all / any of the nested rules         |
 | `{ not: rule }`                    | the nested rule does not hold         |
 
-`field` is a path from the root of the values. A `./`-prefixed path is **reserved** for array items, which v1 does not ship — it is rejected today so the rule language never has to change once documents exist in databases.
+`field` is a path from the root of the values — or, **inside an array item**, a `./`-prefixed path relative to that item: `{ field: './kind', eq: 'company' }` means _this_ entry's `kind`, whatever index it ended up at. An absolute path still reaches the form root from inside an item, so a row can depend on a top-level field. Only one level of relativity exists — there is no `../` — and a `./` written outside an array item is rejected, because there is no item for it to resolve against. See [Arrays](/docs/form/arrays).
 
 <KitExample exampleId='form-schema-conditional' />
 
@@ -270,22 +270,30 @@ v1 strips top-level keys only: a hidden field addressed by a dotted path (`compa
 
 ## Registries
 
-Three registries, all keyed by string, all props on the renderer:
+Three registries, in two places. **Custom fields are registered once, on `createForm`** — the same registration that makes `form.RatingField` available in JSX — while blocks and rules are props on the renderer:
+
+```ts
+export const { FormRenderer } = createForm({
+	components: formComponents,
+	fields: { ...formFieldSlots, RatingField }, // custom FIELD — has a name, bound to a value
+})
+```
 
 ```tsx
 <FormRenderer
 	schema={schema}
-	fields={{ rating: RatingField }} // custom FIELD — has a name, bound to a value
 	blocks={{ 'promo-banner': PromoBanner }} // custom BLOCK — no name, no binding
 	rules={{ 'ru-inn': isValidInn }} // named validation rules
 />
 ```
 
-A **custom field** is referenced by its `type` and receives exactly what a built-in field receives — `id`, `data-field`, normalised `errors`, `invalid`, `onBlur`, `disabled`, all computed by the binding layer — plus `value`, `onChange` and the node's own `props`, passed through uninterpreted. Getting that binding for free is the entire reason a custom field goes through a registry instead of being written inline.
+A **custom field** is referenced from a document by its `type`, which its component name derives: `RatingField` → `rating`. It receives exactly what a built-in field receives — `id`, `data-field`, normalised `errors`, `invalid`, `onBlur`, `disabled`, all computed by the binding layer — plus `value`, `onChange` and the node's own `props`, passed through uninterpreted. Getting that binding for free is the entire reason a custom field goes through a registry instead of being written inline.
+
+There is **one** registration site, deliberately: a field registered on the factory is reachable from JSX _and_ from a document, so the two can never disagree about what `rating` means. `FormRenderer` took a per-form `fields` prop in earlier versions; it is gone, and passing one is now a type error.
 
 A **block** is a `{ type: 'block', component: 'promo-banner' }` node; it holds no value and receives only its `props`.
 
-Registering a key that collides with a reserved node type — `section`, `step`, `submit`, `block` or any of the eight field types — throws when the renderer mounts. A node whose `type` is neither built-in nor registered is an error too, never a silently skipped hole: a backend sending a field the frontend cannot render must fail loudly.
+Registering a key that collides with a reserved node type — `section`, `step`, `submit`, `block` or any of the eight field types — throws: a block key when the renderer mounts, a field key when `createForm` runs, so a `SectionField` that would shadow `section` is rejected at startup rather than on the first document that uses it. A node whose `type` is neither built-in nor registered is an error too, never a silently skipped hole: a backend sending a field the frontend cannot render must fail loudly.
 
 Custom types are declared to the type system as the second parameter of `defineFormSchema`:
 
@@ -373,7 +381,7 @@ A key with no `translate` supplied is a parse-time error, not a blank label.
 | -------------------------------------------- | ------------ | ----------------------------------------------------------- |
 | `schema`                                     | both         | the document to render                                      |
 | `form`                                       | controlled   | your own instance; the renderer binds into it               |
-| `fields` / `blocks`                          | both         | the custom-field and block registries above                 |
+| `blocks`                                     | both         | the block registry above — custom fields go on `createForm` |
 | `rules`                                      | uncontrolled | named validation rules — see below                          |
 | `translate`                                  | both         | resolves `LocalizedText` keys                               |
 | `keepHiddenValues`                           | uncontrolled | keep hidden fields in the submitted value (default: strip)  |

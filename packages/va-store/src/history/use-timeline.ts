@@ -1,7 +1,9 @@
 'use client'
 
+import { useMemo } from 'react'
 import { useSnapshot } from 'valtio'
 
+import { readSlice } from './slice-reader'
 import { useHistory } from './use-history'
 
 import type { StoreHistory } from './with-history'
@@ -14,7 +16,7 @@ export type Timeline<T> = {
 	steps: readonly T[]
 	/** Where the store sits on `steps` (`pasts.length`). `steps[index] === current`. */
 	index: number
-	/** The live state, shaped like a step: the store's own fields, without `history`. */
+	/** The live state, shaped like a step: the store's own fields, without `history` — or its `partialize` slice. */
 	current: T
 	/** Jumps to an absolute position on `steps`; out-of-range indices clamp. */
 	goto: (index: number) => void
@@ -30,14 +32,19 @@ export type Timeline<T> = {
  * into `useHistory`, that cost would land on every caller, including a toolbar that only wanted
  * `undo`/`redo`. Here it lands only on a caller that renders the state anyway.
  */
-export function useTimeline<T extends object>(store: T & { history: StoreHistory<T> }): Timeline<T> {
+export function useTimeline<T extends object, TSlice extends object = T>(
+	store: T & { history: StoreHistory<TSlice> },
+): Timeline<TSlice> {
 	const { pasts, futures, goto } = useHistory(store)
-	// Stack entries are declared `T` (see `useHistory` on why that cast is the honest shape); `current`
-	// has to be the same shape for `steps` to type as one timeline.
-	const { [HISTORY_KEY]: _history, ...rest } = useSnapshot(store) as unknown as T & {
-		history: StoreHistory<T>
-	}
-	const current = rest as T
+	// Stack entries are declared `TSlice` (see `useHistory` on why that cast is the honest shape);
+	// `current` has to be the same shape for `steps` to type as one timeline.
+	const snap = useSnapshot(store) as unknown as T & { history: StoreHistory<TSlice> }
+	// `partialize` and the key strip both build a fresh object; memoised on the snapshot, which Valtio
+	// keeps at one reference until the next write, so `current` holds its identity between writes.
+	const current = useMemo(() => {
+		const { [HISTORY_KEY]: _history, ...rest } = snap
+		return readSlice(store.history, rest) as TSlice
+	}, [store.history, snap])
 
 	return { steps: [...pasts, current, ...futures], index: pasts.length, current, goto }
 }

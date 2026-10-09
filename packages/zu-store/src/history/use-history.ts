@@ -15,9 +15,9 @@ import type { StoreApi } from 'zustand/vanilla'
  * never records (paused, `skip`ped, or filtered out by `shouldRecord`) leaves a toolbar built on
  * this hook alone untouched; use {@link useTimeline} where the store's own state has to render.
  */
-export function useHistory<T>(
-	store: StoreApi<T> & { history: StoreApi<StoreHistory<T>> },
-): StoreHistory<T> & { canUndo: boolean; canRedo: boolean } {
+export function useHistory<T, TSlice = T>(
+	store: StoreApi<T> & { history: StoreApi<StoreHistory<TSlice>> },
+): StoreHistory<TSlice> & { canUndo: boolean; canRedo: boolean } {
 	const state = useStore(store.history)
 
 	return {

@@ -1,8 +1,11 @@
-import { expectTypeOf, test } from 'vitest'
+import { expect, expectTypeOf, test } from 'vitest'
 
 import { FormFieldType } from './field-types'
+import { parseFormSchema } from './parse'
 import { defineFormSchema } from './schema'
 import { TextInputType } from './text-input-type'
+
+import type { AnyFormSchema, FormSchema } from './schema'
 
 type Values = { email: string; age: number }
 
@@ -205,4 +208,51 @@ test('creatable is a string-list feature, rejected on a numeric one', () => {
 	})
 
 	expectTypeOf(define).toBeFunction()
+})
+
+/**
+ * `TValues` must be recoverable *from a schema value*, not just supplied to the authoring
+ * helper. Everything downstream — `FormRenderer`'s `onSubmit`, `stripHiddenValues`,
+ * `buildValidator` — is generic over `TValues` and has nowhere else to read it from: the
+ * type appears in a node only inside `DeepKeysOfType<TValues, …>`, a conditional type no
+ * inference can run backwards. The `__values` marker is the position that makes it work, so
+ * this is the test that fails if it is ever "tidied away" as unused.
+ */
+test('a defined schema carries its value type where inference can reach it', () => {
+	const schema = defineFormSchema<Values>()({
+		version: 1,
+		children: [{ type: FormFieldType.Text, name: 'email' }],
+	})
+
+	// The exact shape every consumer declares its `schema` prop with.
+	const inferValues = <TValues>(_schema: AnyFormSchema<TValues>): TValues => undefined as TValues
+
+	expectTypeOf(inferValues(schema)).toEqualTypeOf<Values>()
+	// Not `any` wearing a disguise: a mismatched value type must still be rejected.
+	expectTypeOf(inferValues(schema)).not.toEqualTypeOf<{ nope: boolean }>()
+})
+
+test('a schema parsed at runtime carries it too', () => {
+	const schema = parseFormSchema<Values>({
+		version: 1,
+		children: [{ type: FormFieldType.Text, name: 'email' }],
+	})
+
+	const inferValues = <TValues>(_schema: AnyFormSchema<TValues>): TValues => undefined as TValues
+
+	expectTypeOf(inferValues(schema)).toEqualTypeOf<Values>()
+})
+
+test('the marker is type-only — it never reaches the returned object', () => {
+	const literal: FormSchema<Values> = {
+		version: 1,
+		children: [{ type: FormFieldType.Text, name: 'email' }],
+	}
+	const schema = defineFormSchema<Values>()(literal)
+
+	// `defineFormSchema` returns its argument by identity; the marker is not a runtime key,
+	// so it cannot be serialised back to a backend or trip an exact-shape assertion.
+	expect(schema).toBe(literal)
+	expect(Object.keys(schema)).toStrictEqual(['version', 'children'])
+	expect('__values' in schema).toBe(false)
 })

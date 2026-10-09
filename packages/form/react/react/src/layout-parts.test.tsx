@@ -3,9 +3,9 @@ import userEvent from '@testing-library/user-event'
 import { expect, test } from 'vitest'
 
 import { createForm } from './create-form'
-import { testComponents } from './test-kit'
+import { testComponents, testFields } from './test-kit'
 
-const { Form } = createForm({ components: testComponents })
+const { Form } = createForm({ components: testComponents, fields: testFields })
 
 type Values = { email: string; notes: string }
 

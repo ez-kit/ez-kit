@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { createForm } from './create-form'
 import { FormOptionSources } from './options/source-context'
-import { testComponents } from './test-kit'
+import { testComponents, testFields } from './test-kit'
 
 import type { OptionSource, OptionSourceRegistry } from './options/source-types'
 import type { FormSchema } from '@ez-kit/form-core'
@@ -39,7 +39,7 @@ const COUNTRIES = [
 	{ label: 'Russia', value: 'ru' },
 ]
 
-const { useForm, Form, FormRenderer } = createForm({ components: testComponents })
+const { useForm, Form, FormRenderer } = createForm({ components: testComponents, fields: testFields })
 
 /** Renders `children` under a stable registry — sources are hooks, so identity must not churn. */
 function withSources(sources: OptionSourceRegistry, children: ReactNode): ReactNode {

@@ -1,7 +1,8 @@
 import { describe, expectTypeOf, it } from 'vitest'
 
 import { createForm } from './create-form'
-import { testComponents } from './test-kit'
+import { defineFieldType } from './field-registry'
+import { testComponents, testFields } from './test-kit'
 
 import type { KitWithFormProps } from './composition'
 import type { NoInjectedComponents } from './kit-form'
@@ -12,7 +13,18 @@ type Values = { email: string; address: { city: string } }
 
 const DEFAULTS: Values = { email: '', address: { city: '' } }
 
-const { useForm, withForm, withFieldGroup } = createForm({ components: testComponents })
+const { useForm, withForm, withFieldGroup } = createForm({ components: testComponents, fields: testFields })
+
+type RatingProps = { max: number }
+
+const RatingField = defineFieldType<RatingProps, string>()(function Rating(): ReactNode {
+	return null
+})
+
+const { useForm: useExtendedForm, withForm: withExtendedForm } = createForm({
+	components: testComponents,
+	fields: { ...testFields, RatingField },
+})
 
 /**
  * Spec §12. Nothing here executes — every assertion is checked by `typecheck`, which is the
@@ -200,5 +212,47 @@ describe('withFieldGroup — types', () => {
 		}
 
 		expectTypeOf(Parent).toBeFunction()
+	})
+})
+
+describe("withForm — the app's own field kinds", () => {
+	/**
+	 * `withForm` is declared inside `createForm<TFields>`, so the registry is already in scope
+	 * and a block should see it without the call site spelling anything. Before `TFields` reached
+	 * `KitFormBlock`, `form` inside a block fell back to the kit's twelve and this was
+	 * "Property 'RatingField' does not exist" — against a form that demonstrably carries one.
+	 */
+	it('exposes a registered field on the render prop form', () => {
+		const ScoreBlock = withExtendedForm({
+			defaultValues: DEFAULTS,
+			render: ({ form }) => (
+				<form.RatingField
+					name='email'
+					label='Score'
+					max={5}
+				/>
+			),
+		})
+
+		function Parent(): ReactNode {
+			const form = useExtendedForm({ defaultValues: DEFAULTS })
+			return <ScoreBlock form={form} />
+		}
+
+		expectTypeOf(Parent).toBeFunction()
+	})
+
+	it('still types a block built from the plain kit against the twelve', () => {
+		const EmailBlock = withForm({
+			defaultValues: DEFAULTS,
+			render: ({ form }) => (
+				<form.TextField
+					name='email'
+					label='Email'
+				/>
+			),
+		})
+
+		expectTypeOf(EmailBlock).toBeFunction()
 	})
 })
