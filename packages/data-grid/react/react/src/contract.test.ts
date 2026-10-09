@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { COMPONENT_FEATURE, FEATURE_COMPONENTS, FEATURE_OPTIONAL_COMPONENTS, GridFeature } from './contract'
 
 describe('COMPONENT_FEATURE', () => {
-	it('maps every injectable component key to a feature (39 required + 8 optional)', () => {
-		expect(Object.keys(COMPONENT_FEATURE)).toHaveLength(47)
+	it('maps every injectable component key to a feature (39 required + 9 optional)', () => {
+		expect(Object.keys(COMPONENT_FEATURE)).toHaveLength(48)
 	})
 
 	it('groups the always-rendered structural primitives under core', () => {
@@ -43,6 +43,7 @@ describe('COMPONENT_FEATURE', () => {
 			'HeaderMain',
 			'HeaderExtras',
 			'RowDragHandle',
+			'ColumnDragHandle',
 		])
 	})
 

@@ -1,5 +1,6 @@
 import { ActionBar } from '../action-bar/ActionBar'
 import { NumberInput } from '../editing/NumberInput'
+import { ColumnDragHandle } from '../ordering/ColumnDragHandle'
 import { RowDragHandle } from '../ordering/RowDragHandle'
 
 import { Button } from './Button'
@@ -43,6 +44,7 @@ export const coreComponents: FullGridComponents['core'] = {
 	NumberInput,
 	Modal,
 	Tooltip,
-	// Optional-tier: what the `__drag__` column renders, so the grip there wears this kit's glyph.
+	// Optional-tier: the row and header drag handles, so each grip wears this kit's glyph.
 	RowDragHandle,
+	ColumnDragHandle,
 }

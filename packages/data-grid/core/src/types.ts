@@ -651,6 +651,19 @@ export type ColumnOrderingConfig = FeatureToggle & {
 	 */
 	onChange?: (columnOrder: ColumnOrderState) => void
 	/**
+	 * Header cells are draggable, and the built-in header cell places a grip before the label.
+	 * Default: whether a drag adapter is bound (`createDataGrid({ dnd })`).
+	 *
+	 * The same rule {@link VisibilityMenuOrderingConfig.drag} follows for the panel: `true` cannot
+	 * conjure an adapter, and `false` keeps the headers still in a grid whose rows or panel drag.
+	 */
+	drag?: boolean
+	/**
+	 * The column menu carries the one-step move pair. Default: `true` exactly when the header drag
+	 * resolves **off**, so the header never offers the same move twice. `Alt+Arrow` is unaffected.
+	 */
+	moveControls?: boolean
+	/**
 	 * Offer a move affordance in the Columns toggle as well, which then becomes a column
 	 * panel: it lists **every** non-system leaf column rather than only the hideable ones, so
 	 * that the list reads as the column order itself and a step lands on the row next to it.
@@ -664,7 +677,7 @@ export type ColumnOrderingConfig = FeatureToggle & {
 	 *
 	 * `true` takes whichever affordance the grid can actually offer — see
 	 * {@link VisibilityMenuOrderingConfig} for the two and for why the choice is a config
-	 * question at all when the row and header handles are composed in JSX.
+	 * question at all.
 	 */
 	visibilityMenu?: boolean | VisibilityMenuOrderingConfig
 }
@@ -672,12 +685,11 @@ export type ColumnOrderingConfig = FeatureToggle & {
 /**
  * Which move affordances the column panel offers, chosen independently.
  *
- * **The panel is the one surface of either axis whose controls a call site does not compose.** A
- * row's drag handle and a header's are there iff someone wrote `<RowDragHandle />` or placed
- * `dragHandle`, so "does this surface drag" is already answered by the JSX and needs no option —
- * the rule the rest of this config follows. A kit's `VisibilityMenu` instead renders both the grip
- * and the move pair unconditionally and lets each one self-hide, because the panel's rows are a
- * list the kit maps rather than markup an author writes. So the question lands here.
+ * **The panel's rows are a list the kit maps rather than markup an author writes**, so a kit's
+ * `VisibilityMenu` renders both the grip and the move pair unconditionally and lets each one
+ * self-hide, and "which one" is a config question. The header asks the same question of its own
+ * built-in cell and column menu, through {@link ColumnOrderingConfig.drag} /
+ * {@link ColumnOrderingConfig.moveControls}, with the same defaults.
  *
  * Both default to **the affordance the grid can offer, and only one of them**: with a drag adapter
  * bound, `visibilityMenu: true` means the grip; with none, it means the arrows. The pair is a

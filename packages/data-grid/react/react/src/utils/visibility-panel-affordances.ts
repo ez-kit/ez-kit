@@ -37,3 +37,19 @@ export function resolvePanelAffordances(
 
 	return { drag, moveControls: visibilityMenu.moveControls ?? !drag }
 }
+
+/**
+ * Resolve the header's two affordances — `ordering.column.drag` / `.moveControls` — by the rule
+ * {@link resolvePanelAffordances} applies to the panel: the drag defaults to whether an adapter is
+ * bound, and the menu's move pair to the inverse of the resolved drag.
+ */
+export function resolveHeaderAffordances(
+	ordering: Pick<ResolvedGridOptions['ordering'], 'column' | 'header'>,
+	hasAdapter: boolean,
+): PanelAffordances {
+	if (!ordering.column) return { drag: false, moveControls: false }
+
+	const drag = (ordering.header.drag ?? hasAdapter) && hasAdapter
+
+	return { drag, moveControls: ordering.header.moveControls ?? !drag }
+}

@@ -721,3 +721,69 @@ describe('useColumnDrag', () => {
 		expect(reads.at(-1)).toBeNull()
 	})
 })
+
+describe('the default header cell', () => {
+	const handlesIn = (container: HTMLElement) => container.querySelectorAll('[data-slot="column-drag-handle"]')
+
+	it('places a drag handle in every header when an adapter is bound', () => {
+		const { adapter } = makeDrivableAdapter()
+		const { container } = renderDndGrid(adapter)
+
+		expect(handlesIn(container)).toHaveLength(TEST_COLUMNS.length)
+	})
+
+	it('drops the move pair from the column menu while the header drags', () => {
+		const { adapter } = makeDrivableAdapter()
+		renderDndGrid(adapter)
+
+		expect(screen.queryByRole('button', { name: 'Move left' })).toBeNull()
+		expect(screen.queryByRole('button', { name: 'Move right' })).toBeNull()
+	})
+
+	it('keeps the move pair and renders no handle without an adapter', () => {
+		const { container } = renderDndGrid(undefined)
+
+		expect(handlesIn(container)).toHaveLength(0)
+		expect(screen.getAllByRole('button', { name: 'Move left' }).length).toBeGreaterThan(0)
+	})
+
+	it('takes the move pair alone under `drag: false`, with no handle and no registration', () => {
+		const drivable = makeDrivableAdapter()
+		const { container } = renderDndGrid(drivable.adapter, { ordering: { column: { drag: false } } })
+
+		expect(handlesIn(container)).toHaveLength(0)
+		expect(drivable.columnSpecs()).toHaveLength(0)
+		expect(screen.getAllByRole('button', { name: 'Move left' }).length).toBeGreaterThan(0)
+	})
+
+	it('offers both under `moveControls: true`', () => {
+		const { adapter } = makeDrivableAdapter()
+		const { container } = renderDndGrid(adapter, { ordering: { column: { moveControls: true } } })
+
+		expect(handlesIn(container)).toHaveLength(TEST_COLUMNS.length)
+		expect(screen.getAllByRole('button', { name: 'Move left' }).length).toBeGreaterThan(0)
+	})
+
+	it("renders the kit's registered `core.ColumnDragHandle` in place of the shared one", () => {
+		const { adapter } = makeDrivableAdapter()
+		const KitHandle = () => (
+			<ColumnDragHandle>
+				<span data-testid='kit-grip' />
+			</ColumnDragHandle>
+		)
+		const { DataGrid: BoundDataGrid } = createDataGrid({
+			components: { ...testComponents, core: { ...testComponents.core, ColumnDragHandle: KitHandle } },
+			dnd: adapter,
+		})
+		render(
+			<BoundDataGrid
+				features={TEST_FEATURES}
+				data={TEST_ROWS}
+				columns={TEST_COLUMNS}
+				ordering={{ column: true }}
+			/>,
+		)
+
+		expect(screen.getAllByTestId('kit-grip')).toHaveLength(TEST_COLUMNS.length)
+	})
+})

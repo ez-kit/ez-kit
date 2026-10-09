@@ -1,3 +1,4 @@
+import type { DataGridColumnDragHandleProps } from './data-grid/column-drag-handle'
 import type { DataGridRowDragHandleProps } from './data-grid/row-drag-handle'
 import type { GridContextAtom } from './grid-context'
 import type { GridMenuItem, GridMenuProps } from './menu'
@@ -1053,6 +1054,11 @@ export type GridComponentRegistry = {
 	 * package draws none.
 	 */
 	RowDragHandle?: ComponentType<DataGridRowDragHandleProps>
+	/**
+	 * Optional — the column drag handle the built-in header cell and the `dragHandle` render arg
+	 * place. The twin of {@link RowDragHandle}, with the same fallback.
+	 */
+	ColumnDragHandle?: ComponentType<DataGridColumnDragHandleProps>
 	// composite
 	Toolbar?: ComponentType<ToolbarProps>
 	GlobalFilterInput?: ComponentType<GlobalFilterInputProps>

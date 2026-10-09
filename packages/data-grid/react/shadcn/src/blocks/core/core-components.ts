@@ -4,6 +4,7 @@ import { Table, TableBody, TableHeader, TableRow } from '@grid-shadcn/components
 
 import { ActionBar } from '../action-bar/ActionBar'
 import { NumberInput } from '../editing/NumberInput'
+import { ColumnDragHandle } from '../ordering/ColumnDragHandle'
 import { RowDragHandle } from '../ordering/RowDragHandle'
 
 import { Checkbox } from './Checkbox'
@@ -45,8 +46,9 @@ export const coreComponents: FullGridComponents['core'] = {
 	NumberInput,
 	Modal,
 	Tooltip,
-	// Optional-tier: what the `__drag__` column renders, so the grip there wears this kit's glyph.
+	// Optional-tier: the row and header drag handles, so each grip wears this kit's glyph.
 	RowDragHandle,
+	ColumnDragHandle,
 	// `core`, not a `selection` or `draft` group: a grid with `draft` and no row-selection
 	// feature still renders the bar, so it must not depend on a kit advertising selection.
 	ActionBar,

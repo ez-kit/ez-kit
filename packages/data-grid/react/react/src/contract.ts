@@ -143,6 +143,8 @@ export const FEATURE_OPTIONAL_COMPONENTS = {
 		// one control rather than a generic `Icon`: a kit draws a grip inside its own handle
 		// already, so registering that component is the whole cost.
 		'RowDragHandle',
+		// The header's twin, for the built-in header cell and the `dragHandle` render arg.
+		'ColumnDragHandle',
 	] as const,
 	[GridFeature.Pagination]: [] as const,
 	[GridFeature.Sorting]: [] as const,

@@ -1361,6 +1361,10 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 				drag: visibilityMenuDrag,
 				moveControls: visibilityMenuMoveControls,
 			},
+			header: {
+				drag: columnOrderingEnabled ? columnOrderingCfg?.drag : undefined,
+				moveControls: columnOrderingEnabled ? columnOrderingCfg?.moveControls : undefined,
+			},
 		},
 		visibility: visibilityEnabled,
 		sorting: sortingEnabled,

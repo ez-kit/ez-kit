@@ -543,3 +543,16 @@ button[data-slot='column-drag-handle']:hover {
 	background-color: var(--muted);
 	color: var(--foreground);
 }
+
+/*
+ * A panel row without a grip — a column the author locked with `ordering: false` — is indented by
+ * the grip's width plus the row's gap, so its checkbox lines up with the rows that drag. Only while
+ * some row in the same list carries a grip: a panel with no drag at all keeps its rows flush.
+ *
+ * A stylesheet rule rather than a placeholder in the markup, because the grip decides for itself
+ * whether to render and the panel is not told; `:has()` reads the outcome instead of re-deriving it.
+ */
+:has(> [data-slot='column-visibility-item'] [data-slot='column-drag-handle'])
+	> [data-slot='column-visibility-item']:not(:has([data-slot='column-drag-handle'])) {
+	padding-inline-start: 1.75rem;
+}

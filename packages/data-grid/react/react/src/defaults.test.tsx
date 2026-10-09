@@ -274,22 +274,39 @@ describe('grid.ordering — the two axes resolve independently', () => {
 
 	/** The panel off, with both affordances left for the two components to resolve. */
 	const PANEL_OFF = { enabled: false, drag: undefined, moveControls: undefined }
+	/** The header's two affordances, unauthored — an adapter decides them. */
+	const HEADER_UNSET = { drag: undefined, moveControls: undefined }
 
 	it('names the row axis to turn it on', () => {
-		expect(gridOrdering({ row: true })).toEqual({ column: false, row: true, visibilityMenu: PANEL_OFF })
+		expect(gridOrdering({ row: true })).toEqual({
+			column: false,
+			row: true,
+			visibilityMenu: PANEL_OFF,
+			header: HEADER_UNSET,
+		})
 	})
 
 	it('keeps a bare `true` columns-only', () => {
 		// An upgrade must not hand a grid written against `ordering: true` a second affordance.
-		expect(gridOrdering(true)).toEqual({ column: true, row: false, visibilityMenu: PANEL_OFF })
+		expect(gridOrdering(true)).toEqual({ column: true, row: false, visibilityMenu: PANEL_OFF, header: HEADER_UNSET })
 	})
 
 	it('honours `enabled: false` on the row axis', () => {
-		expect(gridOrdering({ row: { enabled: false } })).toEqual({ column: false, row: false, visibilityMenu: PANEL_OFF })
+		expect(gridOrdering({ row: { enabled: false } })).toEqual({
+			column: false,
+			row: false,
+			visibilityMenu: PANEL_OFF,
+			header: HEADER_UNSET,
+		})
 	})
 
 	it('leaves both axes off when the option is absent', () => {
-		expect(gridOrdering(undefined)).toEqual({ column: false, row: false, visibilityMenu: PANEL_OFF })
+		expect(gridOrdering(undefined)).toEqual({
+			column: false,
+			row: false,
+			visibilityMenu: PANEL_OFF,
+			header: HEADER_UNSET,
+		})
 	})
 
 	it('carries the panel affordances as authored rather than resolving them', () => {
@@ -299,6 +316,7 @@ describe('grid.ordering — the two axes resolve independently', () => {
 			column: true,
 			row: false,
 			visibilityMenu: { enabled: true, drag: false, moveControls: undefined },
+			header: HEADER_UNSET,
 		})
 	})
 
@@ -315,6 +333,15 @@ describe('grid.ordering — the two axes resolve independently', () => {
 			column: false,
 			row: false,
 			visibilityMenu: PANEL_OFF,
+			header: HEADER_UNSET,
 		})
+	})
+
+	it('carries the header affordances as authored, and drops them with the column axis', () => {
+		expect(gridOrdering({ column: { drag: false, moveControls: true } }).header).toEqual({
+			drag: false,
+			moveControls: true,
+		})
+		expect(gridOrdering({ column: { enabled: false, drag: true } }).header).toEqual(HEADER_UNSET)
 	})
 })

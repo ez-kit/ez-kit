@@ -102,6 +102,17 @@ export type ResolvedGridOptions = {
 			/** `visibilityMenu.moveControls` as authored. `undefined` → the inverse of the drag. */
 			moveControls: boolean | undefined
 		}
+		/**
+		 * The header's two affordances, as authored, for the reason `visibilityMenu` carries its
+		 * own that way: an adapter decides the defaults, and this object cannot see one.
+		 * `resolveHeaderAffordances` finishes the job in the header cell.
+		 */
+		header: {
+			/** `ordering.column.drag` as authored. `undefined` → an adapter decides. */
+			drag: boolean | undefined
+			/** `ordering.column.moveControls` as authored. `undefined` → the inverse of the drag. */
+			moveControls: boolean | undefined
+		}
 	}
 	/**
 	 * Pinning, resolved per axis — the two halves of the `pinning` option under the two names
@@ -302,6 +313,7 @@ export function defaultResolvedGridOptions(core?: GridOptions<never>): ResolvedG
 			column: false,
 			row: false,
 			visibilityMenu: { enabled: false, drag: undefined, moveControls: undefined },
+			header: { drag: undefined, moveControls: undefined },
 		},
 		// `column` / `row` stay off — this is the all-features-off shape — while `rowConfig`
 		// carries core's normalized settings across when it resolved any. `exactOptionalPropertyTypes`

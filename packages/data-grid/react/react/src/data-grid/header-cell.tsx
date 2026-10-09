@@ -14,6 +14,7 @@ import { ColumnSortDirection, SortDirection } from '../types'
 import { filtersRows } from '../utils/filters-rows'
 import { getCommonPinStyles } from '../utils/pin-styles'
 import { isTextEntryTarget } from '../utils/text-entry-target'
+import { resolveHeaderAffordances } from '../utils/visibility-panel-affordances'
 import { getVisualLeafColumns } from '../utils/visual-column-order'
 
 import { getAlignAttrs } from './align-attrs'
@@ -158,7 +159,7 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 }: DataGridHeaderCellProps<TRow>) {
 	const table = useDataGridTable<TRow>()
 	const gridComponents = useGridComponents()
-	const { Th, Input, Checkbox, Menu } = gridComponents.core
+	const { Th, Input, Checkbox, Menu, ColumnDragHandle: KitColumnDragHandle } = gridComponents.core
 	const { Resizer } = gridComponents.resizing
 	const { SortIndicator } = gridComponents.sorting
 	const { OperatorSelect, BetweenInput, FilterPopover, MultiSelectFilter, ClearFilterButton } = gridComponents.filtering
@@ -190,6 +191,7 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
 	const canResize = header.column.getCanResize?.() ?? false
 	const isDndEnabled = useDndEnabled()
+	const headerAffordances = resolveHeaderAffordances(table.grid.ordering, isDndEnabled)
 
 	const colPinDef = meta?.pinning
 	const isStaticPin = typeof colPinDef === 'object' && colPinDef.side !== undefined
@@ -228,7 +230,7 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 	 * it rendered before this phase; the phase-2 identical-DOM test compares against exactly that.
 	 */
 	const visualIndex =
-		isDndEnabled && isLeafHeader
+		isDndEnabled && table.grid.ordering.header.drag !== false && isLeafHeader
 			? getVisualLeafColumns(table).findIndex((column) => column.id === header.column.id)
 			: -1
 	const isDragParticipant = visualIndex >= 0
@@ -399,7 +401,8 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 			canSort: canSort && !header.isPlaceholder,
 			canPin: table.grid.pinning.column && isMenuEligible && !isPinningDisabled && !isStaticPin,
 			canHide: isMenuEligible && header.column.getCanHide(),
-			canMove,
+			// The menu's pair steps aside while the header itself drags — the same move twice.
+			canMove: canMove && headerAffordances.moveControls,
 			// `getCanGroup()` answers both halves at once — the table-level `grouping` gate that
 			// core resolves to `enableGrouping`, and the column's own `grouping: false`. Absent
 			// without `columnGroupingFeature`, so optional-called like every other feature read on
@@ -530,9 +533,16 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 
 	// The built-in cell renders the control inline. The popover presentation is one render
 	// function away — see `PopoverFiltersLayout` — and is no longer a grid-wide option.
+	// Built only where a drag is actually available, so a call site placing `dragHandle`
+	// unconditionally renders nothing in a grid without one. The kit's registered handle wears its
+	// grip; the shared one is the glyph-less fallback.
+	const DragHandle = KitColumnDragHandle ?? ColumnDragHandle
+	const dragHandle = isDragParticipant && canMove ? <DragHandle /> : null
+
 	const defaultContent = (
 		<>
 			<HeaderMain>
+				{headerAffordances.drag && dragHandle}
 				{sortTrigger}
 				{menu}
 			</HeaderMain>
@@ -557,10 +567,7 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 		filter: filterContent,
 		filterPopover,
 		resizer,
-		// Built only where a drag is actually available, so a call site placing `dragHandle`
-		// unconditionally renders nothing in a grid without one. The component would return `null`
-		// by itself too — this keeps the arg honest as well as the DOM.
-		dragHandle: isDragParticipant && canMove ? <ColumnDragHandle /> : null,
+		dragHandle,
 	}
 
 	const content = children === undefined ? defaultContent : typeof children === 'function' ? children(args) : children
