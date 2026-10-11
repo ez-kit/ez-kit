@@ -45,7 +45,7 @@ const colPinColumns = createColumns<Product>([
 			},
 		},
 	},
-	{ accessorKey: 'category', header: 'Category', width: 200 },
+	{ accessorKey: 'category', header: 'Category', width: { min: 200 } },
 	{
 		accessorKey: 'image',
 		header: 'Image',

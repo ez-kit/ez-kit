@@ -28,18 +28,32 @@ Width updates only after release — no re-renders during drag.
 
 A bare `resizing` prop enables resizing with the defaults.
 
+## How columns fill the grid
+
+A column that names a starting width renders at exactly that width. A column that names none fills the free width of the grid, sharing it equally with the other filling columns:
+
+```ts
+{ accessorKey: 'id', width: 60 }               // exactly 60px
+{ accessorKey: 'name', width: { min: 120 } }  // fills, never narrower than 120px
+{ accessorKey: 'email' }                        // fills
+```
+
+A filling column never gets narrower than its `min`, or 150px when it has no `min`, and never wider than its `max`. In the grids above, **Name**, **Age** and **Active** name their widths and **Email** fills the rest. When every column names a width, nothing fills and the grid ends where its last column does.
+
+When the user starts dragging a border, every column keeps the width it has on screen, so the drag moves that one column and nothing else. Narrowing it leaves empty space on the right; widening it past the grid scrolls. A double-click on a border hands that column back: to the width it names, or to filling when it names none.
+
 ## Options
 
-| Option               | Type                                 | Description                                                                                                                                                                               |
-| -------------------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `resizing`           | `boolean \| ResizingConfig`          | Master switch. Default off. `true` uses the defaults below.                                                                                                                               |
-| `resizing.mode`      | `'onChange' \| 'onEnd'`              | `'onChange'` (default) updates sizes during the drag; `'onEnd'` commits once on mouseup. Use `'onEnd'` for very wide tables where re-layout cost matters.                                 |
-| `direction`          | `'ltr' \| 'rtl'`                     | Text direction the whole grid is laid out in — a root option, not a resize setting. Default `'ltr'`. Column `align` is logical and flips on its own; this is what the resize delta reads. |
-| `resizing.onChange`  | `(columnSizing) => void`             | Fires with the committed column sizes whenever a width changes — the resize-only counterpart to `onStateChange`.                                                                          |
-| Per-column `width`   | `number \| { default?, min?, max? }` | Starting width, and the bounds a drag stays inside. Set `resizing: false` on a column to pin its width entirely.                                                                          |
-| `state.columnSizing` | `Record<string, number>`             | Controlled sizing state, as part of the grid's single controlled-state object.                                                                                                            |
-| `onStateChange`      | `(state) => void`                    | Fires on every state change, including sizing, with the resolved state. Persist it to your own state to keep sizes.                                                                       |
-| `resizing.enabled`   | `boolean`                            | Explicit off-switch for a config that came from a defaults layer — the settings survive, the feature does not. Default `true`.                                                            |
+| Option               | Type                                 | Description                                                                                                                                                                                                |
+| -------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `resizing`           | `boolean \| ResizingConfig`          | Master switch. Default off. `true` uses the defaults below.                                                                                                                                                |
+| `resizing.mode`      | `'onChange' \| 'onEnd'`              | `'onChange'` (default) updates sizes during the drag; `'onEnd'` commits once on mouseup. Use `'onEnd'` for very wide tables where re-layout cost matters.                                                  |
+| `direction`          | `'ltr' \| 'rtl'`                     | Text direction the whole grid is laid out in — a root option, not a resize setting. Default `'ltr'`. Column `align` is logical and flips on its own; this is what the resize delta reads.                  |
+| `resizing.onChange`  | `(columnSizing) => void`             | Fires with the committed column sizes whenever a width changes — the resize-only counterpart to `onStateChange`.                                                                                           |
+| Per-column `width`   | `number \| { default?, min?, max? }` | Starting width, and the bounds a drag stays inside. Leave out `default` for a column that fills the grid; its `min` and `max` then bound that too. Set `resizing: false` to pin a column's width entirely. |
+| `state.columnSizing` | `Record<string, number>`             | Controlled sizing state, as part of the grid's single controlled-state object.                                                                                                                             |
+| `onStateChange`      | `(state) => void`                    | Fires on every state change, including sizing, with the resolved state. Persist it to your own state to keep sizes.                                                                                        |
+| `resizing.enabled`   | `boolean`                            | Explicit off-switch for a config that came from a defaults layer — the settings survive, the feature does not. Default `true`.                                                                             |
 
 Persist column widths through [controlled state](/docs/data-grid/state/controlled) or [state persistence](/docs/data-grid/state/persistence), which restores sizes automatically.
 

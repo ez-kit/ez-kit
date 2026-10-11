@@ -12,6 +12,7 @@ import { useGridComponents } from '../components-context'
 import { GridMenuVariant } from '../menu'
 import { ColumnSortDirection, SortDirection } from '../types'
 import { filtersRows } from '../utils/filters-rows'
+import { freezeRenderedWidths, releaseUnmovedWidths } from '../utils/freeze-rendered-widths'
 import { getCommonPinStyles } from '../utils/pin-styles'
 import { isTextEntryTarget } from '../utils/text-entry-target'
 import { resolveHeaderAffordances } from '../utils/visibility-panel-affordances'
@@ -36,7 +37,10 @@ import type { HeaderThProps } from './column-drag'
 import type { ErasedRow, DataTable, GridFeatures } from '../types'
 import type { FormColumnMeta } from '@ez-kit/data-grid-core'
 import type { Column, Header } from '@tanstack/table-core'
-import type { KeyboardEvent, ReactElement, ReactNode } from 'react'
+import type { KeyboardEvent, MouseEvent, ReactElement, ReactNode, TouchEvent } from 'react'
+
+/** `MouseEvent.button` for the main button — a left click for a right-handed mouse. */
+const PRIMARY_BUTTON = 0
 
 /**
  * What a `<DataGrid.HeaderCell>` render function receives.
@@ -516,10 +520,23 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 			/>
 		) : null
 
-	const resizer = canResize ? (
+	const startResize = canResize ? header.getResizeHandler() : null
+	const beginResize = (event: MouseEvent<HTMLElement> | TouchEvent<HTMLElement>): void => {
+		if (!startResize) return
+		const frozen = freezeRenderedWidths(table, event.currentTarget)
+		startResize(event)
+		releaseUnmovedWidths(table, header, frozen, event.currentTarget.ownerDocument)
+	}
+	const resizer = startResize ? (
 		<Resizer
-			onMouseDown={header.getResizeHandler()}
-			onTouchStart={header.getResizeHandler()}
+			onMouseDown={(event) => {
+				// Only the primary button resizes; a context-menu press must not fix the column.
+				if (event.button === PRIMARY_BUTTON) beginResize(event)
+			}}
+			onTouchStart={(event) => {
+				// A pinch is not a resize — the same guard TanStack applies inside its handler.
+				if (event.touches.length === 1) beginResize(event)
+			}}
 			onDoubleClick={() => {
 				header.column.resetSize()
 			}}

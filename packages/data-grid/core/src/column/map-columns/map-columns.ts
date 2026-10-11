@@ -17,10 +17,24 @@ import type {
 	ColumnDef,
 	ColumnEditingConfig,
 	ColumnFilteringMeta,
+	ColumnWidthDef,
 	MappedColumnDef,
 } from '../types'
 
 const IS_DEV = process.env.NODE_ENV !== 'production'
+
+/** TanStack's default `minSize` for every column — `getDefaultColumnSizingColumnDef()`, not exported. */
+const TANSTACK_DEFAULT_MIN_WIDTH = 20
+
+/**
+ * The `minSize` a column gets: the authored `min`, or — when only a starting width below TanStack's
+ * 20px default floor was written — that starting width, so `width: 10` means 10 rather than 20.
+ */
+function resolveMinWidth(widthDef: ColumnWidthDef | undefined): number | undefined {
+	if (widthDef?.min !== undefined) return widthDef.min
+	const start = widthDef?.default
+	return start !== undefined && start < TANSTACK_DEFAULT_MIN_WIDTH ? start : undefined
+}
 
 /** Cell types unchecked: `mapColumns` runs over already-authored columns of any grid. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -141,6 +155,7 @@ function mapColumn<TRow extends object>(
 
 	setIfDefined(meta, 'pinning', normalizeColumnPinning(pinning))
 	setIfDefined(meta, 'align', normalizeColumnAlign(align))
+	setIfDefined(meta, 'width', normalizeColumnWidth(width))
 	setIfDefined(meta, 'visibility', visibility)
 	setIfDefined(meta, 'ordering', ordering)
 	// Only the `false` switch reaches meta. `grouping.getValue` is TanStack's own
@@ -181,7 +196,7 @@ function mapColumn<TRow extends object>(
 	if (resizing === false) result.enableResizing = false
 	const widthDef = normalizeColumnWidth(width)
 	setIfDefined(result, 'size', widthDef?.default)
-	setIfDefined(result, 'minSize', widthDef?.min)
+	setIfDefined(result, 'minSize', resolveMinWidth(widthDef))
 	setIfDefined(result, 'maxSize', widthDef?.max)
 
 	// sorting: false → disable sorting for this column

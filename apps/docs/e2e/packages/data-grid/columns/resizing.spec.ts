@@ -18,10 +18,18 @@ import type { Locator, Page } from '@playwright/test'
 const ON_CHANGE = 'resizing-on-change'
 const ON_END = 'resizing-on-end'
 
-/** `resizableColumns` in `apps/docs/shared/data-grid/examples/components/_data.ts`. */
+/**
+ * `resizableColumns` in `apps/docs/shared/data-grid/examples/components/_data.ts`.
+ *
+ * A column that names a starting width renders at it; `email` names none, so it fills the rest.
+ * `active` has `resizing: false`, which pins its width.
+ */
 const NAME_DEFAULT = 200
 const NAME_MIN = 80
 const NAME_MAX = 400
+const AGE_DEFAULT = 80
+const ACTIVE_WIDTH = 100
+const COLUMN_IDS = ['name', 'email', 'age', 'active'] as const
 /** `active` is the one column that opts out with `resizing: false`. */
 const RESIZABLE_COLUMNS = 3
 
@@ -76,38 +84,63 @@ test.describe('a grid with resizable columns', () => {
 		await expect(resizerIn(grid.header('name'))).toHaveAttribute('aria-label', 'Resize column')
 	})
 
-	test('starts at the width the column asked for', async ({ grid }) => {
+	// Resizing used to fix every track, which left the right of a resizable grid empty.
+	test('the columns fill the width of the grid', async ({ grid, page }) => {
+		const scrollport = page.locator('[data-scrollport]')
+		const available = await scrollport.evaluate((el) => el.clientWidth)
+		const widths = await Promise.all(COLUMN_IDS.map((id) => columnWidth(grid, id)))
+
+		expect(widths.reduce((sum, width) => sum + width, 0)).toBeCloseTo(available, -1)
+	})
+
+	test('a column that names a width starts at it', async ({ grid }) => {
 		expect(await columnWidth(grid, 'name')).toBeCloseTo(NAME_DEFAULT, 0)
+		expect(await columnWidth(grid, 'age')).toBeCloseTo(AGE_DEFAULT, 0)
+		expect(await columnWidth(grid, 'active')).toBeCloseTo(ACTIVE_WIDTH, 0)
 	})
 
-	test('dragging the handle widens the column, body and all', async ({ grid, page }) => {
+	test('dragging the handle narrows the column, body and all', async ({ grid, page }) => {
+		await dragResizer(page, grid.header('name'), -DRAG_BY)
+
+		expect(await columnWidth(grid, 'name')).toBeCloseTo(NAME_DEFAULT - DRAG_BY, -1)
+	})
+
+	// The drag starts from the width on screen. Starting from the one in state — the 150px
+	// TanStack gives a column that names no width — would snap it there on the first move.
+	test('dragging a filling column starts from the width it renders at', async ({ grid, page }) => {
+		const before = await columnWidth(grid, 'email')
+
+		await dragResizer(page, grid.header('email'), -DRAG_BY)
+
+		expect(await columnWidth(grid, 'email')).toBeCloseTo(before - DRAG_BY, -1)
+	})
+
+	test('dragging it back widens the column again', async ({ grid, page }) => {
 		const before = await columnWidth(grid, 'name')
+		await dragResizer(page, grid.header('name'), -DRAG_BY)
 
 		await dragResizer(page, grid.header('name'), DRAG_BY)
 
-		expect(await columnWidth(grid, 'name')).toBeCloseTo(before + DRAG_BY, -1)
+		expect(await columnWidth(grid, 'name')).toBeCloseTo(before, -1)
 	})
 
-	test('dragging it back narrows the column again', async ({ grid, page }) => {
-		await dragResizer(page, grid.header('name'), DRAG_BY)
-		const widened = await columnWidth(grid, 'name')
+	// The other columns are fixed where they stand when the drag starts. Left filling, they would
+	// take the width this one gives up, and the user would watch a neighbour's edge move.
+	test('dragging one column leaves every other column where it was', async ({ grid, page }) => {
+		const others = ['email', 'age', 'active'] as const
+		const before = await Promise.all(others.map((id) => columnWidth(grid, id)))
 
 		await dragResizer(page, grid.header('name'), -DRAG_BY)
 
-		expect(await columnWidth(grid, 'name')).toBeLessThan(widened)
-		expect(await columnWidth(grid, 'name')).toBeCloseTo(NAME_DEFAULT, -1)
-	})
-
-	test('resizing one column leaves its neighbour alone', async ({ grid, page }) => {
-		const emailBefore = await columnWidth(grid, 'email')
-
-		await dragResizer(page, grid.header('name'), DRAG_BY)
-
-		expect(await columnWidth(grid, 'name')).toBeGreaterThan(NAME_DEFAULT)
-		expect(await columnWidth(grid, 'email')).toBeCloseTo(emailBefore, 0)
+		const after = await Promise.all(others.map((id) => columnWidth(grid, id)))
+		after.forEach((width, index) => {
+			expect(width, others[index]).toBeCloseTo(before[index] ?? 0, 0)
+		})
 	})
 
 	test('stops at the column’s max', async ({ grid, page }) => {
+		await dragResizer(page, grid.header('name'), -DRAG_BY)
+
 		await dragResizer(page, grid.header('name'), DRAG_FAR)
 
 		expect(await columnWidth(grid, 'name')).toBeCloseTo(NAME_MAX, -1)
@@ -119,13 +152,23 @@ test.describe('a grid with resizable columns', () => {
 		expect(await columnWidth(grid, 'name')).toBeCloseTo(NAME_MIN, -1)
 	})
 
-	test('a double-click on the handle restores the default width', async ({ grid, page }) => {
-		await dragResizer(page, grid.header('name'), DRAG_BY)
-		expect(await columnWidth(grid, 'name')).toBeGreaterThan(NAME_DEFAULT)
+	test('a double-click on the handle restores the width the column names', async ({ grid, page }) => {
+		await dragResizer(page, grid.header('name'), -DRAG_BY)
+		expect(await columnWidth(grid, 'name')).toBeLessThan(NAME_DEFAULT)
 
 		await resizerIn(grid.header('name')).dblclick()
 
 		expect(await columnWidth(grid, 'name')).toBeCloseTo(NAME_DEFAULT, 0)
+	})
+
+	test('a double-click on the handle of a column that names no width lets it fill again', async ({ grid, page }) => {
+		const filling = await columnWidth(grid, 'email')
+		await dragResizer(page, grid.header('email'), -DRAG_BY)
+		expect(await columnWidth(grid, 'email')).toBeLessThan(filling)
+
+		await resizerIn(grid.header('email')).dblclick()
+
+		expect(await columnWidth(grid, 'email')).toBeCloseTo(filling, 0)
 	})
 })
 
@@ -137,31 +180,30 @@ test.describe('a grid with resizable columns', () => {
 test.describe("resizing.mode: 'onChange'", () => {
 	test('follows the pointer while it is still down', async ({ grid, page }) => {
 		await grid.open(ON_CHANGE)
+		const before = await columnWidth(grid, 'name')
 		let midDragWidth = 0
 
-		await dragResizer(page, grid.header('name'), DRAG_BY, async () => {
+		await dragResizer(page, grid.header('name'), -DRAG_BY, async () => {
 			midDragWidth = await columnWidth(grid, 'name')
 		})
 
-		expect(midDragWidth, 'the column did not move until the pointer was released').toBeCloseTo(
-			NAME_DEFAULT + DRAG_BY,
-			-1,
-		)
-		expect(await columnWidth(grid, 'name')).toBeCloseTo(NAME_DEFAULT + DRAG_BY, -1)
+		expect(midDragWidth, 'the column did not move until the pointer was released').toBeCloseTo(before - DRAG_BY, -1)
+		expect(await columnWidth(grid, 'name')).toBeCloseTo(before - DRAG_BY, -1)
 	})
 })
 
 test.describe("resizing.mode: 'onEnd'", () => {
 	test('holds the old width until the pointer comes up', async ({ grid, page }) => {
 		await grid.open(ON_END)
+		const before = await columnWidth(grid, 'name')
 		let midDragWidth = 0
 
-		await dragResizer(page, grid.header('name'), DRAG_BY, async () => {
+		await dragResizer(page, grid.header('name'), -DRAG_BY, async () => {
 			midDragWidth = await columnWidth(grid, 'name')
 		})
 
-		expect(midDragWidth, 'the column moved mid-drag — that is onChange’s behaviour').toBeCloseTo(NAME_DEFAULT, 0)
+		expect(midDragWidth, 'the column moved mid-drag — that is onChange’s behaviour').toBeCloseTo(before, 0)
 		// And it does land on release: the mode defers the commit, it does not drop it.
-		expect(await columnWidth(grid, 'name')).toBeCloseTo(NAME_DEFAULT + DRAG_BY, -1)
+		expect(await columnWidth(grid, 'name')).toBeCloseTo(before - DRAG_BY, -1)
 	})
 })
