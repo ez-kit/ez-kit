@@ -221,3 +221,48 @@ describe('@ez-kit/form-heroui package root', () => {
 		expect(screen.getByTestId('rating')).toHaveTextContent('0 / 5')
 	})
 })
+
+const CONTACT: kit.FormSchema<{ email: string }> = {
+	version: 1,
+	children: [
+		{ type: kit.FormFieldType.Text, name: 'email', label: 'Email' },
+		{ type: 'submit', label: 'Save' },
+	],
+}
+
+/**
+ * The prebuilt `useForm` / `Form` and the prebuilt `SchemaForm` come from two separate factory
+ * calls — `createForm` and `createSchemaForm` — so an instance from one rendered by the other is
+ * the case that would break if the two bundles stopped agreeing.
+ */
+describe('@ez-kit/form-heroui prebuilt bundles together', () => {
+	it('renders a prebuilt useForm instance through the controlled SchemaForm and submits it', async () => {
+		const user = userEvent.setup()
+		const onSubmit = vi.fn()
+
+		function Controlled() {
+			const form = kit.useForm({
+				defaultValues: { email: '' },
+				onSubmit: ({ value }) => {
+					onSubmit(value)
+				},
+			})
+
+			return (
+				<kit.SchemaForm
+					form={form}
+					schema={CONTACT}
+				/>
+			)
+		}
+
+		render(<Controlled />)
+
+		await user.type(screen.getByLabelText('Email'), 'a@b.c')
+		await user.click(screen.getByRole('button', { name: 'Save' }))
+
+		await waitFor(() => {
+			expect(onSubmit).toHaveBeenCalledWith({ email: 'a@b.c' })
+		})
+	})
+})

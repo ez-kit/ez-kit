@@ -30,5 +30,10 @@ tree-shake:
   (`export const Form = kit.Form`) or a spread argument anchors both bundles and every component
   they register; `apps/docs/test/tree-shaking.test.ts` fails if one comes back.
 
+Accepted residue: a one-field form still carries a few hundred bytes of top-level statements from
+the vendored `components/ui/combobox.tsx` and `components/ui/input-group.tsx` (a property read, a
+`forwardRef` call, two `cva` calls) and the `@base-ui/react` import line, which esbuild cannot prove
+pure. It stays because vendored files are not edited; the combobox's real code is still dropped.
+
 All visual styling for the form lives in this package: `@ez-kit/form-react` contains none
 by design and only emits `data-*` attributes.

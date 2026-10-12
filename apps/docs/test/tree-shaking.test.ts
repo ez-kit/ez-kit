@@ -408,8 +408,8 @@ describe('@ez-kit/form-react schema renderer', () => {
 const ONE_FIELD_FORM = ['createForm', 'FormElement', 'TextField', 'SubmitButton']
 
 /**
- * Per kit, a literal only its date block's code contains (`calendar`), and — for shadcn — one only
- * its searchable select's code contains (`combobox`).
+ * Per kit, a literal only its date block's code contains (`calendar`), and one only its searchable
+ * selects' code contains (`combobox`).
  *
  * Literals rather than the module specifiers those blocks import (`react-day-picker`,
  * `@internationalized/date`, `@base-ui/react`): the harness leaves every non-workspace package
@@ -431,7 +431,8 @@ const FORM_KITS = [
 		entry: entryOf('form/react/heroui'),
 		/** The date block's conversion into React Aria's value — a call, so the import line does not match. */
 		calendar: 'parseDate(',
-		combobox: undefined,
+		/** The searchable selects' empty state. */
+		combobox: 'No matches',
 	},
 ] as const
 
@@ -457,11 +458,11 @@ describe.each(FORM_KITS)('$name root', ({ entry, calendar, combobox }) => {
 		expect(code).not.toContain(SCHEMA_MARKER)
 	})
 
-	it.runIf(combobox !== undefined)('reaches the combobox through SelectField (control)', async () => {
+	it('reaches the combobox through SelectField (control)', async () => {
 		expect(await bundledCodeOf(entry, ['SelectField'])).toContain(combobox)
 	})
 
-	it.runIf(combobox !== undefined)('a one-field form pulls no combobox', async () => {
+	it('a one-field form pulls no combobox', async () => {
 		expect(await bundledCodeOf(entry, ONE_FIELD_FORM)).not.toContain(combobox)
 	})
 

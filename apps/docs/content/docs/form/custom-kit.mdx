@@ -66,7 +66,7 @@ Nineteen components, in the **two bags** `createForm` takes. The twelve field ki
 ```tsx
 import { createSchemaForm } from '@ez-kit/form-react'
 
-import type { FormComponents, FormFieldSlots } from '@ez-kit/form-react'
+import type { AllFormFieldSlots, FormComponents } from '@ez-kit/form-react'
 
 export const allFormFields = {
 	TextField,
@@ -82,7 +82,7 @@ export const allFormFields = {
 	DateField,
 	DateRangeField,
 	ArrayField: Object.assign(ArrayFieldView, { Item: ArrayItemView }),
-} satisfies FormFieldSlots
+} satisfies AllFormFieldSlots
 
 export const allFormComponents = { SubmitButton, Section, GridItem, Wizard } satisfies FormComponents
 
