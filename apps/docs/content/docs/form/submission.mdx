@@ -24,11 +24,11 @@ It runs **only after validation has passed**. `handleSubmit` first marks every f
 
 An exception thrown from the handler is not swallowed: `isSubmitting` is cleared, the form is marked unsuccessful, and the error propagates out of `handleSubmit`. Since `<Form>` calls it as `void form.handleSubmit()`, an unhandled rejection there is an unhandled rejection in the page — catch what you expect to fail, and see the next section for the failure worth modelling properly.
 
-To submit from outside the element — a dialog footer, a toolbar, a keyboard shortcut — call `form.handleSubmit()` yourself; see [Native API](/docs/form/native-api).
+To submit from outside the element — a dialog footer, a toolbar, a keyboard shortcut — call `form.handleSubmit()` yourself, or use [`form.Submit`](#formsubmit); see also [Native API](/docs/form/native-api).
 
 ## Submit state
 
-Two pieces of state describe a submission, and `form.SubmitButton` is already subscribed to both.
+Two pieces of state describe a submission, and `form.SubmitButton` is already subscribed to both. It reads the form from context, so it needs `<Form>`, `<SchemaForm>` or a [`FormProvider`](/docs/form/composition#formprovider) above it.
 
 `isSubmitting` is true from the moment validation passes until the handler settles. `canSubmit` is the form's own answer to "would submitting be meaningful right now": true while the form is pristine and has never been submitted — otherwise the very first submit could never happen — and thereafter true only when the form is valid, not validating and not already submitting.
 
@@ -41,6 +41,47 @@ So the button disables itself while a request is in flight and again whenever th
 ```
 
 Reaching for `form.Subscribe` here rather than reading `form.state.isSubmitting` is the general rule, explained in [Reactivity](/docs/form/reactivity).
+
+## `form.Submit`
+
+`form.SubmitButton` is the kit's button. The primitive under it is `form.Submit`, a headless render prop that subscribes to the submit state and hands it out, so a control of your own — a link, a menu item, a button from a design system the kit does not wrap — gets the same behaviour:
+
+```tsx
+<form.Submit>
+	{({ canSubmit, isSubmitting, submit }) => (
+		<MyButton
+			isDisabled={!canSubmit || isSubmitting}
+			onPress={() => void submit()}
+		>
+			{isSubmitting ? 'Saving…' : 'Save'}
+		</MyButton>
+	)}
+</form.Submit>
+```
+
+| Key            | Type                  | Notes                                                                                                          |
+| -------------- | --------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `canSubmit`    | `boolean`             | The form's own answer to "would submitting be meaningful right now" — see above.                               |
+| `isSubmitting` | `boolean`             | True from the moment validation passes until the handler settles.                                              |
+| `isDirty`      | `boolean`             | Whether any value differs from its default.                                                                    |
+| `formErrors`   | `string[]`            | The form-level errors as display strings. Field-level issues are not among them.                               |
+| `submit`       | `() => Promise<void>` | `form.handleSubmit`. A control built on it works outside a `<form>` element too, where a submit button cannot. |
+
+### Outside the `<form>` element
+
+`submit` is what makes a button on `form.Submit` independent of the DOM. Put the button in a dialog footer, a toolbar or a sticky bar that is not a descendant of the `<form>`, give the tree a [`FormProvider`](/docs/form/composition#formprovider) so the button can find the form, and it submits:
+
+```tsx
+<FormProvider form={form}>
+	<form.TextField
+		name='email'
+		label='Email'
+	/>
+	<form.SubmitButton>Save</form.SubmitButton>
+</FormProvider>
+```
+
+The kit's `SubmitButton` is written on `form.Submit`. Inside a `<form>` it is an ordinary submit button and the element's own handler runs; with no `<form>` above it, a click calls `submit` instead, and only one of the two paths ever fires.
 
 ## Errors that come back from the server
 

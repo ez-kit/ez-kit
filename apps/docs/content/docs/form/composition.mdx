@@ -11,7 +11,7 @@ Pull a group of fields out into its own component and it loses the form. Hand th
 
 Not `any` — the whole value of these fields is that `name='shipping.city'` is a compile error the moment `shipping` stops having a `city`. The type has to carry both the form's data shape and the flat field components hanging off the instance.
 
-The type is `FormInstance`, exported by every kit. It takes the form's value type and nothing else:
+The type is `FormInstance`, exported by every kit. It takes the form's value type, and by default describes the kit's full bundle — every built-in field kind and all four components:
 
 ```tsx
 import type { FormInstance } from '@ez-kit/form-shadcn'
@@ -29,6 +29,8 @@ function AddressBlock({ form, path }: { form: FormInstance<Checkout>; path: 'bil
 Any instance `useForm` returns for a `Checkout` is accepted, whatever validators it was given — they stay on the instance and do not have to be restated in the prop's type. The price is that the prop's type no longer knows them: through a `FormInstance`, everything typed from a validator or the submit meta is `any` — `state.errors`, `state.errorMap`, `getAllErrors()`, field-level errors, `options.validators`, `options.onSubmitMeta` and the meta `handleSubmit` takes. Values and field names stay fully typed. The same openness works in reverse: a `FormInstance` is accepted by a `withForm` block that declared validators of its own, so a block that relies on its errors being typed should be handed the instance `useForm` returned, not one passed through a `FormInstance` prop.
 
 <KitExample exampleId='form-composition' />
+
+A form built from a subset names its own shape once: `FormInstance<V, typeof fields, typeof components>`, with `NoRegistry` standing for a set left empty. A block typed with the one-argument form asks for the kit's full bundle, so an instance that registered fewer fields is not assignable to it.
 
 The example is a checkout with a billing and a shipping address. `AddressBlock` is written once, takes `form` plus the path it should write into, and is rendered twice. Inside it, `form.TextField` is the same component, checked against the same value type, as at the top level.
 
@@ -72,7 +74,7 @@ TanStack types the render prop's `form` as an API parameterised by the component
 
 So `withForm` is wrapped, and the single thing the wrapper changes is that declared type: it names the kit's own form instance — the type `useForm` returns, with the validators the block's options declare — rather than TanStack's component-less one. A block therefore sees exactly the instance it is handed. The reasoning is written out in full at the top of `packages/form/react/react/src/composition.ts`.
 
-That wrapping is what puts `withForm` on the kit rather than on the adapter's general surface: it is produced by `createForm({ components })` together with `useForm` and `Form` (and by `createSchemaForm`, which adds `SchemaForm`), so you import it from `@ez-kit/form-shadcn` or `@ez-kit/form-heroui` alongside them.
+That wrapping is what puts `withForm` on the kit rather than on the adapter's general surface: it is produced by `createForm({ fields, components })` together with `useForm`, `Form` and `FormProvider` (and by `createSchemaForm`, which adds `SchemaForm`), so you import it from `@ez-kit/form-shadcn` or `@ez-kit/form-heroui` alongside them.
 
 ## `withFieldGroup`
 
@@ -102,6 +104,63 @@ import { useFieldGroup, useFormGroup } from '@ez-kit/form-shadcn'
 ```
 
 The [TanStack Form documentation](https://tanstack.com/form/latest/docs/framework/react/quick-start) is the reference for their options; nothing here changes them.
+
+## Components that know about the form
+
+A block is tied to the shape of one form. Many components are not: a save bar, an error summary, a "discard changes" button need the form's _state_ and _submit_, not its field names. They read the form from context.
+
+`<Form>` and `<SchemaForm>` set that context, and `useFormContext()` returns the form's **base API** — `Subscribe`, `state`, `handleSubmit`, `Submit`, `Array`, `Field` — without the fields a bundle registered, and with the values typed `unknown`. It is exported by the package and by each kit, not by the bundle, so it can be used from a component the bundle itself registers.
+
+```tsx
+import { useFormContext } from '@ez-kit/form-shadcn'
+
+function ErrorSummary() {
+	const form = useFormContext()
+
+	return (
+		<form.Subscribe selector={(state) => state.errors}>
+			{(errors) => (errors.length > 0 ? <p role='alert'>{errors.length} problems</p> : null)}
+		</form.Subscribe>
+	)
+}
+```
+
+Register it in `components` and it is `<form.ErrorSummary />` with its own props; leave it out and render `<ErrorSummary />` directly. It is the same component either way, which is why `createForm` attaches components as they are rather than binding them to an instance.
+
+```tsx
+export const { useForm, Form } = createForm({
+	FormElement,
+	fields: allFormFields,
+	components: { ...allFormComponents, ErrorSummary },
+})
+```
+
+### `FormProvider`
+
+When you own the `<form>` element, or there is none, `<Form>` is not in the tree and nothing sets the context. `FormProvider` sets it without rendering a `<form>`:
+
+```tsx
+const form = useForm({ defaultValues: { email: '' }, onSubmit })
+
+return (
+	<FormProvider form={form}>
+		<form
+			onSubmit={(event) => {
+				event.preventDefault()
+				void form.handleSubmit()
+			}}
+		>
+			<form.TextField
+				name='email'
+				label='Email'
+			/>
+		</form>
+		<form.SubmitButton>Save</form.SubmitButton>
+	</FormProvider>
+)
+```
+
+A component that reads the form from context — `form.SubmitButton`, `form.ErrorSummary`, your own — throws `useFormContext() must be called inside <Form>, <SchemaForm> or <FormProvider>` without one. A hand-written `<form>` does not count. Here the submit button sits outside the `<form>` element and still works: it is built on [`form.Submit`](/docs/form/submission#formsubmit), which hands out `submit`.
 
 ## Choosing
 

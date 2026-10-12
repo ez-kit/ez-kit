@@ -342,6 +342,10 @@ export const FORM_TYPE = {
 	 * and because this one is an open registry, so a kit or an app may add keys to it.
 	 */
 	FormFieldSlots: { module: TypeModule.FormReact, name: 'FormFieldSlots' },
+	/** The factory's options: `FormElement`, `fields` and `components`. Both type parameters default. */
+	CreateFormOptions: { module: TypeModule.FormReact, name: 'CreateFormOptions' },
+	/** What `form.Submit` hands its render function. */
+	SubmitRenderProps: { module: TypeModule.FormReact, name: 'SubmitRenderProps' },
 	/**
 	 * What a *custom* field's component receives: everything `FieldRenderProps` carries plus
 	 * the three the registry adds — `value`, `onChange` and the nested `props` bag. Both type
@@ -1101,6 +1105,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			// The base-props table sits under "Fields"; the per-kind table under the
 			// "#### Per-kind props" subheading added for exactly this reason — a
 			// heading addresses at most one table.
+			{ heading: 'The options', roots: [FORM_TYPE.CreateFormOptions], expectedCount: 3 },
 			{ heading: 'Fields', roots: [FORM_TYPE.FieldRenderProps], expectedCount: 11 },
 			{ heading: 'Per-kind props', roots: [FORM_TYPE.FormFieldSlots], expectedCount: 12 },
 			{ heading: 'Form level', roots: [FORM_TYPE.FormComponents], expectedCount: 1 },
@@ -1340,7 +1345,11 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{ page: DocPage.FormSelectIndex, optionTables: [], nonOptionTables: [] },
 	{ page: DocPage.FormSelectOptionSources, optionTables: [], nonOptionTables: [] },
 	{ page: DocPage.FormSelectSearchable, optionTables: [], nonOptionTables: [] },
-	{ page: DocPage.FormSubmission, optionTables: [], nonOptionTables: [] },
+	{
+		page: DocPage.FormSubmission,
+		optionTables: [{ heading: '`form.Submit`', roots: [FORM_TYPE.SubmitRenderProps], expectedCount: 5 }],
+		nonOptionTables: [],
+	},
 	{ page: DocPage.FormValidation, optionTables: [], nonOptionTables: [] },
 	// --- @ez-kit/zu-store ---------------------------------------------------
 	{

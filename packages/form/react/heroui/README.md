@@ -80,7 +80,16 @@ The API is identical to `@ez-kit/form-shadcn` — the same example renders under
 ### v1 field set
 
 `TextField`, `NumberField`, `TextareaField`, `SelectField`, `CheckboxField`, plus
-`SubmitButton` (subscribed to `canSubmit` / `isSubmitting`) and `Form`.
+`SubmitButton` (built on `form.Submit`, subscribed to `canSubmit` / `isSubmitting`) and `Form`.
+
+### Assembling your own
+
+`createForm` and `createSchemaForm` are re-exported with the kit's sets beside them — `FormElement`,
+`allFormFields`, `allFormComponents` and every component by name — so an app registers a field kind
+of its own, or only the fields it renders, without forking the kit. Pass `FormElement` when you do.
+`FormProvider` and `useFormContext` are exported too: `form.SubmitButton` and any component you
+register read the form from context, which `<Form>`, `<SchemaForm>` or `<FormProvider form={form}>`
+sets.
 
 ### Layout
 
@@ -99,8 +108,9 @@ renders chrome as siblings of the input, so the adapters in `src/blocks/`:
   number-field group would otherwise go unlabelled);
 - render error text as a plain danger-token element rather than HeroUI's `FieldError`,
   which requires the enclosing field context;
-- use a plain `<form>` rather than HeroUI's `Form`, since TanStack Form owns submission and
-  validation reporting.
+- render HeroUI's `Form` as the `<form>` element (the kit's `FormElement`, with
+  `validationBehavior='aria'`), so the fields sit inside React Aria's form context while TanStack
+  Form still owns submission and validation reporting.
 
 ## License
 

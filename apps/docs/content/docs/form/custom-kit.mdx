@@ -1,6 +1,6 @@
 ---
 title: Custom kit
-description: The two-bag kit contract — FormComponents and FormFieldSlots — and createForm, so your own design system's inputs get the same fields.
+description: The kit contract — FormElement, fields and components — and createForm, so your own design system's inputs get the same fields.
 ---
 
 `@ez-kit/form-shadcn` and `@ez-kit/form-heroui` are not special. Each is a folder of components that implement one contract, plus a single file that hands them to one factory. Your design system can do the same.
@@ -61,12 +61,10 @@ Rendered outside that root, `FieldError` has nothing to read and `Label` has not
 
 ## The contract
 
-Nineteen components, in the **two bags** `createForm` takes. The twelve field kinds and the array frame — which carries its entry view as `ArrayField.Item` — go to `fields`; the five pieces the form needs around them — the `<form>` element, the submit button, the two layout primitives and the wizard chrome — go to `components`:
+A kit hands the factory three things: the `<form>` element (`FormElement`), the field kinds (`fields`) and the form-aware components (`components`). The twelve field kinds and the array frame — which carries its entry view as `ArrayField.Item` — go to `fields`; the four components the form needs around them — the submit button, the two layout primitives and the wizard chrome — go to `components`. Eighteen pieces in all, written in two files. The first, `src/sets.ts`, gathers them into the two bags:
 
 ```tsx
-import { createSchemaForm } from '@ez-kit/form-react'
-
-import type { AllFormFieldSlots, FormComponents } from '@ez-kit/form-react'
+import type { AllFormComponents, AllFormFieldSlots } from '@ez-kit/form-react'
 
 export const allFormFields = {
 	TextField,
@@ -84,25 +82,75 @@ export const allFormFields = {
 	ArrayField: Object.assign(ArrayFieldView, { Item: ArrayItemView }),
 } satisfies AllFormFieldSlots
 
-export const allFormComponents = { SubmitButton, Section, GridItem, Wizard } satisfies FormComponents
+export const allFormComponents = { SubmitButton, Section, GridItem, Wizard } satisfies AllFormComponents
+```
 
-export const { useForm, Form, SchemaForm, withForm, withFieldGroup } = createSchemaForm({
+The second, `src/form.tsx`, holds only the prebuilt bundle:
+
+```tsx
+import { createForm, createSchemaForm } from '@ez-kit/form-react'
+
+import type { FormBundle, SchemaFormBundle } from '@ez-kit/form-react'
+
+type KitFormBundle = FormBundle<typeof allFormFields, typeof allFormComponents>
+type KitSchemaFormBundle = SchemaFormBundle<typeof allFormFields, typeof allFormComponents>
+
+const kit: KitFormBundle = /* @__PURE__ */ createForm({
 	FormElement,
 	fields: allFormFields,
 	components: allFormComponents,
 })
+const schemaKit: KitSchemaFormBundle = /* @__PURE__ */ createSchemaForm({
+	FormElement,
+	fields: allFormFields,
+	components: allFormComponents,
+})
+
+export const useForm: KitFormBundle['useForm'] = (options) => kit.useForm(options)
+export const withForm: KitFormBundle['withForm'] = (options) => kit.withForm(options)
+// …`withFieldGroup`, `Form` and `SchemaForm` delegate the same way
 ```
 
-`satisfies` on each — rather than a type annotation, which would erase your components' own prop types — is the whole registration check: a missing or mistyped slot is a compile error. Neither bag has a partial tier: all five chrome slots, all twelve field kinds and the array frame are required, because a document may reach any of them. `fields` is a required option in its own right — `createForm({ components })` alone does not compile. That is the entire wiring; both shipped kits' `src/form.tsx` is this file and nothing else.
+Both calls are annotated `/* @__PURE__ */` with flat, spread-free arguments, and every export **delegates inside a function body** instead of reading a property of the bundle at the top level. That is what lets a bundler drop the whole bundle for an app that imports a single field: `export const Form = kit.Form` would be a top-level property read, anchor the bundle, and with it every component it registers. The kit's root also exports every component directly from its own file, never through `form.tsx`, for the same reason.
 
-The split is not cosmetic, and it is the reason there are two types rather than one:
+### Two levels of contract
 
-- **`components` is closed.** Those five are the form's own furniture. Nothing else belongs there, and nothing is ever added to it by an app.
-- **`fields` is an open registry.** The twelve are its floor, not its ceiling. An app spreads the kit's twelve beside a field kind of its own and calls `createForm` itself — which is why both shipped kits export `allFormComponents` and `allFormFields` alongside their ready-made bundle. See [Custom fields](/docs/form/custom-fields).
+- **A kit implements the slots.** Each slot has a props type, and `satisfies AllFormFieldSlots` / `satisfies AllFormComponents` checks that the kit ships every one and that each takes the props the slot promises. `satisfies` — rather than a type annotation, which would erase your components' own prop types — also does the excess-property check, so a misspelt key is a compile error.
+- **An app assembles any subset.** Nothing is required at any level: every key of `FormFieldSlots` and `FormComponents` is optional, `createForm()` alone compiles, and `form.X` exists in the types for exactly what was passed. A new slot added after 1.0 is therefore additive. A document that reaches a component nobody passed does not warn: `createSchemaForm` throws a named error before it renders anything, so a document that names a `Wizard` the factory was not given fails before the first render rather than when the user reaches a step.
+
+```tsx
+export const { useForm, Form, withForm } = createForm({
+	FormElement,
+	fields: { TextField, NumberField },
+	components: { SubmitButton },
+})
+```
+
+### The options
+
+| Option        | Type                                     | Notes                                                                                                                                                 |
+| ------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `FormElement` | `(props: FormElementProps) => ReactNode` | The `<form>` element `<Form>` and `<SchemaForm>` render. A plain `<form>` when omitted. It must put every prop it receives on a real `<form>`.        |
+| `fields`      | `FormFieldRegistry`                      | The field kinds, keyed by component name. Each key becomes `form.<Key>`; a key that is not a built-in is a custom field, bound by the generic binder. |
+| `components`  | `FormComponentRegistry`                  | Any components, each attached as `form.<Key>` with its own props. The four the kit contract names are also what `SchemaForm` draws with.              |
+
+<Callout type='warn'>
+	**Pass the kit's `FormElement` whenever you call `createForm` yourself.** Without it the form renders a bare `<form>`,
+	and on HeroUI that loses React Aria's form context: the fields still render, but `isInvalid` and the error wiring stop
+	reaching them, silently and with no type error. Both kits export `FormElement` for this reason.
+</Callout>
+
+`components` is an open set. A component of your own — `{ SaveBar }` — becomes `<form.SaveBar />` with its own prop types, and is the same component whether it is rendered as `form.SaveBar` or directly as `<SaveBar />`, because it reads the form from context rather than from a closure. That context is set by `<Form>`, `<SchemaForm>` or [`FormProvider`](/docs/form/composition#components-that-know-about-the-form); a hand-written `<form>` around an instance from `useForm` is not enough.
+
+A key that equals a member the form instance already owns (`Subscribe`, `state`, `reset`, `handleSubmit`, and our own `Field`, `Array`, `Submit`, …), or that appears in both `fields` and `components`, is a type error and throws at `createForm`, naming the key.
+
+Every custom entry in `fields` is checked against what the generic binder hands it. A component registered without `defineFieldType` has to take the default `CustomFieldRenderProps`; typing its value is what [`defineFieldType`](/docs/form/custom-fields) is for. A misspelt built-in key (`TextFeild`) is a compile error, not a custom field.
+
+Neither shipped kit's `form.tsx` is anything beyond the file above, and both export `allFormFields` and `allFormComponents` beside each component and the bundle. That is what lets an app spread the kit's sets beside a field of its own and call `createForm` itself — see [Custom fields](/docs/form/custom-fields).
 
 ### Fields
 
-These twelve, with the array frame, are the `fields` bag. Every field kind receives the same base props:
+These twelve, with the array frame, are the `fields` registry. Every field kind receives the same base props:
 
 | Prop                            | Meaning                                                           |
 | ------------------------------- | ----------------------------------------------------------------- |
@@ -139,15 +187,15 @@ On top of that, per kind:
 
 ### Form level
 
-The `<form>` element is the `FormElement` option, which receives the full `<form>` props. The rest are the `components` bag, starting with the submit button:
+The `<form>` element is the `FormElement` option, which receives the full `<form>` props. The rest are `components`, starting with the submit button:
 
-| Component      | Props                   | Renders                                                    |
-| -------------- | ----------------------- | ---------------------------------------------------------- |
-| `SubmitButton` | `disabled?`, `children` | The submit button, built on `form.Submit` and the context. |
+| Component      | Props                   | Renders                                                                                                              |
+| -------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `SubmitButton` | `disabled?`, `children` | The submit button, built on `form.Submit` and the context, so it also works under a `FormProvider` with no `<form>`. |
 
 ### Layout and wizard
 
-Three more `components` members, which the _document_ side leans on hardest, though `Section` and `GridItem` are equally reachable from JSX as `form.Section` / `form.GridItem` — see [Layout](/docs/form/layout). The array frame — `ArrayField` in `fields`, with its entry view as `ArrayField.Item` — is documented with the feature it serves, in the [arrays API](/docs/form/arrays/api).
+Three more `components`, which the _document_ side leans on hardest, though `Section` and `GridItem` are equally reachable from JSX as `form.Section` / `form.GridItem` — see [Layout](/docs/form/layout). The array frame — `ArrayField` in `fields`, with its entry view as `ArrayField.Item` — is documented with the feature it serves, in the [arrays API](/docs/form/arrays/api).
 
 | Component  | Props                                                                                                         | Renders                                                                                                                           |
 | ---------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |

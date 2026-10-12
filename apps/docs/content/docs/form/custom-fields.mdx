@@ -1,9 +1,9 @@
 ---
 title: Custom fields
-description: defineFieldType and the open fields registry — add a field kind the kit does not ship, reachable from JSX and from a schema document alike.
+description: defineFieldType and the open fields registry — add a field kind the kit does not ship, reachable from JSX and, through createSchemaForm, from a schema document.
 ---
 
-The twelve field kinds a kit ships are the floor of `createForm({ fields })`, not its ceiling. `fields` is an **open registry**: spread the kit's own slots beside a component of your own, and the bundle that comes back has a thirteenth field on it — bound to form state, validated, and addressable from a schema document — without forking the kit.
+The twelve field kinds a kit ships are the floor of `createForm({ fields })`, not its ceiling. `fields` is an **open registry**: spread the kit's own slots beside a component of your own, and the bundle that comes back has a thirteenth field on it — bound to form state, validated, and addressable from a schema document when the factory is `createSchemaForm` — without forking the kit.
 
 ```tsx
 import { allFormComponents, allFormFields, createSchemaForm, defineFieldType, FormElement } from '@ez-kit/form-shadcn'
@@ -25,6 +25,8 @@ export const { useForm, Form, SchemaForm, withForm, withFieldGroup } = createSch
 ```
 
 `<form.RatingField name='score' max={5} />` now compiles, `name` is narrowed to the paths whose value is a `number`, and `max` is required.
+
+Pass the kit's `FormElement` whenever you call the factory yourself: without it the form renders a bare `<form>`, and on HeroUI that silently drops React Aria's form context (see [Custom kit](/docs/form/custom-kit#the-options)). A schema document reaches the field only through `createSchemaForm`; `createForm` registers it for JSX and leaves `SchemaForm` out of the bundle.
 
 ## `defineFieldType`
 
@@ -53,6 +55,8 @@ The nesting is deliberate. A schema document's node carries its author props und
 
 Getting that binding for free, rather than wiring `form.AppField` by hand, is the entire reason a custom field goes through the registry instead of being written inline.
 
+A component registered **without** `defineFieldType` receives the default `CustomFieldRenderProps` — `value` is `unknown` and `props` is an untyped bag. Typing the value is what `defineFieldType` is for: a hand-written `(p: CustomFieldRenderProps<number>) => …` is a compile error, because without the type-only markers the binder can promise nothing narrower than `unknown`. A misspelt built-in key (`TextFeild`) is a compile error rather than a custom field.
+
 ## The name derives the document type id
 
 A registry key resolves to a document `type` by one rule: **drop a trailing `Field`, lowercase the rest.**
@@ -66,7 +70,7 @@ const schema = defineFormSchema<Values, 'rating'>()({
 })
 ```
 
-There is **one** registration site, deliberately: a field registered on the factory is reachable from JSX _and_ from a document, so the two can never disagree about what `rating` means. See [Schema-driven forms](/docs/form/schema#registries) for the document side.
+There is **one** registration site, deliberately: a field registered on the factory is reachable from JSX _and_, through `createSchemaForm`, from a document, so the two can never disagree about what `rating` means. See [Schema-driven forms](/docs/form/schema#registries) for the document side.
 
 ### Why the derivation runs this way and not the other
 
@@ -75,7 +79,7 @@ The rule maps a component name to an id, never an id back to a component name. T
 Two ways the derivation can go wrong, both of which throw at `createForm` rather than on the first document that hits them:
 
 - **Two keys deriving one id.** `RatingField` and `Rating` both derive `rating`.
-- **An id that collides with a reserved node type.** A slot named `SectionField` derives `section` and would silently shadow the container node; so would `StepField`, `SubmitField` or `BlockField`. A key that collides with one of the form's own non-field components — `SubmitButton`, `Submit`, `Section`, `GridItem`, `Array` — throws for the same reason. `ArrayField` is not a field kind either, but it is a `fields` key of its own: the kit's array frame, which derives no document id.
+- **An id that collides with a reserved node type.** A slot named `SectionField` derives `section` and would silently shadow the container node; so would `StepField`, `SubmitField` or `BlockField`. A key that the form instance already owns (`Subscribe`, `state`, `Field`, `Submit`, `Array`, …), or that is also a key of `components`, is rejected for the same reason: a type error, and a throw by name at the factory. `ArrayField` is not a field kind either, but it is a `fields` key of its own: the kit's array frame, which derives no document id.
 
 Replacing a built-in _at its own key_ is not an error: handing `fields` your own `TextField` beside the other eleven is the point of an open registry.
 

@@ -75,8 +75,17 @@ compile.
 ### v1 field set
 
 `TextField`, `NumberField`, `TextareaField`, `SelectField`, `CheckboxField`, plus
-`SubmitButton` (subscribed to `canSubmit` / `isSubmitting`), plus the standalone `Form`
+`SubmitButton` (built on `form.Submit`, subscribed to `canSubmit` / `isSubmitting`), plus the standalone `Form`
 element wired to `handleSubmit`.
+
+### Assembling your own
+
+`createForm` and `createSchemaForm` are re-exported with the kit's sets beside them — `FormElement`,
+`allFormFields`, `allFormComponents` and every component by name — so an app registers a field kind
+of its own, or only the fields it renders, without forking the kit. Pass `FormElement` when you do.
+`FormProvider` and `useFormContext` are exported too: `form.SubmitButton` and any component you
+register read the form from context, which `<Form>`, `<SchemaForm>` or `<FormProvider form={form}>`
+sets.
 
 ### Layout
 

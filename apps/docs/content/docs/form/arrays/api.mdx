@@ -39,6 +39,8 @@ The full surface of the feature. What each one is for, and when to reach for it,
 | `index` | `number`                               | Its zero-based position. Fine for display; never for `key`.                                                         |
 | `Item`  | `(props: ArrayItemProps) => ReactNode` | The entry's chrome — heading, remove control, reorder controls. Wrap the entry's fields.                            |
 
+A kit registers the frame under `fields.ArrayField`, and the entry view travels with it as `ArrayField.Item` (`Object.assign(ArrayFieldView, { Item: ArrayItemView })`), so `item.Item` is the kit's own row wherever it is rendered. Inside an entry, only field components are scoped to it: `item.TextField` and its siblings exist, while `Section`, `GridItem` and `SubmitButton` are not on the entry's scope — use them from the form (`form.Section`) around the array, and give a custom layout its own buttons.
+
 ## `form.Array`
 
 | Prop       | Type                    | Notes                                                                                                                                                   |

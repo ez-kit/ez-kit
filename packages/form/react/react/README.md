@@ -10,7 +10,7 @@ injects, plus `data-*` attributes for that kit's CSS to target. Install a kit pa
 
 ## The idea
 
-`createForm({ components, fields })` returns `{ useForm, Form, FormProvider, withForm, withFieldGroup }`; `createSchemaForm` takes the same options and adds `SchemaForm`. `<Form>` is the `<form>` element:
+`createForm({ FormElement?, fields?, components? })` returns `{ useForm, Form, FormProvider, withForm, withFieldGroup }`; `createSchemaForm` takes the same options and adds `SchemaForm`. Every option is optional and `form.X` exists for exactly what was passed. `<Form>` is the `<form>` element:
 give it the options TanStack's `useForm` takes and it hands you an instance that is a
 **superset** of TanStack's — flat fields on top, the whole native API untouched underneath.
 
@@ -53,6 +53,12 @@ give it the options TanStack's `useForm` takes and it hands you an instance that
 The form is created by mounting the element, so unmounting it — closing a dialog — takes the
 state with it. When the instance is needed outside the markup, call `useForm` yourself and
 pass it in: `<Form form={form}>` with plain JSX children.
+
+`form.SubmitButton` is the kit's submit button, passed in `components`; the primitive under it,
+`form.Submit`, is a render prop handing out `{ canSubmit, isSubmitting, isDirty, formErrors, submit }`,
+so a control built on it works outside a `<form>`. Components read the form from context, which
+`<Form>`, `<SchemaForm>` or `<FormProvider form={form}>` sets — a hand-written `<form>` is not
+enough — and `useFormContext()` returns the form's base API for a component of your own.
 
 Each `*Field` renders label + input + description + error text itself. `name` is narrowed
 to the paths in your form data whose value type fits the field, so
@@ -113,7 +119,7 @@ hand-written one produce identical DOM.
 />
 ```
 
-Custom field kinds are not a prop: register them once on `createSchemaForm({ components, fields })`
+Custom field kinds are not a prop: register them once on `createSchemaForm({ FormElement, fields, components })`
 and a node's `type` reaches them (`RatingField` answers to `{ type: 'rating' }`), from JSX and from
 a document alike.
 
@@ -128,13 +134,14 @@ The format itself, `defineFormSchema` and the `parseFormSchema` trust boundary l
 
 ## Building a kit
 
-Implement the two bags — `FormFieldSlots` and `FormComponents` — and hand them to `createForm`:
+Implement each slot's props type, check the sets with `satisfies`, and hand them to the factory
+together with the kit's `FormElement`:
 
 ```tsx
 import { createSchemaForm } from '@ez-kit/form-react'
-import type { FormComponents, FormFieldSlots } from '@ez-kit/form-react'
+import type { AllFormComponents, AllFormFieldSlots } from '@ez-kit/form-react'
 
-const fields = {
+export const allFormFields = {
 	TextField,
 	NumberField,
 	TextareaField,
@@ -148,22 +155,23 @@ const fields = {
 	DateField,
 	DateRangeField,
 	ArrayField: Object.assign(ArrayFieldView, { Item: ArrayItemView }),
-} satisfies FormFieldSlots
+} satisfies AllFormFieldSlots
 
-const components = {
-	Button,
-	Form,
-	Section,
-	GridItem,
-	Wizard,
-} satisfies FormComponents
+export const allFormComponents = { SubmitButton, Section, GridItem, Wizard } satisfies AllFormComponents
 
-export const { useForm, SchemaForm, withForm, withFieldGroup } = createSchemaForm({ components, fields })
+export const { useForm, SchemaForm, withForm, withFieldGroup } = createSchemaForm({
+	FormElement,
+	fields: allFormFields,
+	components: allFormComponents,
+})
 ```
 
-`satisfies` on each bag turns a forgotten field into a compile error rather than a
-runtime crash. Components are bound by closure at `createForm` time — no runtime provider
-is involved.
+Nothing is required at any level: every key of `FormFieldSlots` and `FormComponents` is
+optional, and `AllFormFieldSlots` / `AllFormComponents` are the variants that require them all,
+which is how a kit checks its own completeness. An app assembles any subset. A kit's own
+`form.tsx` calls the factories under `/* @__PURE__ */` and delegates every export inside a
+function body, so importing one field keeps neither bundle. Components are bound by closure
+at `createForm` time — no runtime provider is involved.
 
 This package renders **no elements at all** — not even a field wrapper. It hands each kit
 one flat props object per field (identity, `label`, `description`, `errors`, `invalid`,

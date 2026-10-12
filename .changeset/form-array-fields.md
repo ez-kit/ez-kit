@@ -50,7 +50,7 @@ in a table, a remove control folded into a card heading, and so on):
 	name='people'
 	newItem={{ firstName: '' }}
 >
-	{({ items, add, Button }) => (
+	{({ items, add }) => (
 		<>
 			{items.map((item, index) => (
 				<item.Item
@@ -63,7 +63,12 @@ in a table, a remove control folded into a card heading, and so on):
 					/>
 				</item.Item>
 			))}
-			<Button onClick={add}>Add person</Button>
+			<button
+				type='button'
+				onClick={add}
+			>
+				Add person
+			</button>
 		</>
 	)}
 </form.Array>
@@ -77,38 +82,11 @@ likewise `errors` and `invalid` carry the list's own validation failures, but **
 them for you** — a `minLength` failure still blocks submit even when the render prop doesn't read
 `errors`. https://ez-kit-docs.vercel.app/docs/form/arrays calls this out at length.
 
-**`ButtonProps` gained an optional `onClick`.** The kit's generic button used to be only the
-submit button, which fires through the surrounding `<form>`'s submit event and takes no handler —
-now the scope's `Button` (used above for `add`) needs to be clickable too. This is additive at the
-type level and adds no `FormComponents` key, but it is a real behavioural gap for a kit outside
-this repo: **implement `Button` without honouring `onClick` and it silently becomes a dead
-control**, something the type system cannot catch. The shadcn and HeroUI kits already wire it
-through.
-
-**The submit marker moved off the non-submit buttons.** Both kits stamped every `Button` as the
-form's submit — `data-slot='form-submit'` in shadcn, `data-form-submit` in HeroUI — which was
-accurate while the only `Button` was the submit button. Now that the array scope hands the same
-component out for add, remove, duplicate and reorder controls, the marker is stamped only when the
-button's `type` is `'submit'`; anything else gets `data-slot='form-button'` / `data-form-button`.
-CSS or a test keying on the submit marker to reach a scope button needs to switch to the new one.
-This matters beyond this repo for shadcn: those files ship as the registry payload `npx shadcn add`
-copies into a project, so a consumer who already ran it has the old spelling in their own tree.
-
-**The item type is read from `name`.** `ArrayProps` and `ArrayFieldProps` are generic over the
-array path (`<TFormData, TName extends ArrayKeys<TFormData>>`) rather than over the item, so `name`
-is the inference site and `newItem`, `children` and the scope are resolved from the value at that
-path. An inline `newItem` therefore needs no annotation even when a key of the item is itself an
-array, and a `newItem` that does not match reports on **`newItem`**, naming the item type and the
-key at fault. A `newItem` missing a key of the item is now a compile error rather than an
-uncontrolled input on the new row. `@ez-kit/form-core` exports `ArrayKeys` and `ArrayItemOf`, the
-two helpers the schema side already used, so a kit or app can spell the same thing. Type-level
-only — no runtime change — but code that wrote the type arguments explicitly
-(`ArrayProps<Values, Person>`) becomes `ArrayProps<Values, 'people'>`.
-
-**Breaking for a kit outside this repo.** `FormComponents` gains two required slots,
-`ArrayField` and `ArrayItem`, so a kit that wrote `satisfies FormComponents` must implement
-them. The shadcn and HeroUI kits already do. `form.Array` adds no further slot — it reuses the
-same two.
+**Breaking for a kit outside this repo.** The array frame is a new kit slot, `ArrayField`, which carries
+its entry view as `ArrayField.Item`; a kit that checks itself with `satisfies AllFormFieldSlots` must
+implement both. The shadcn and HeroUI kits already do. `form.Array` adds no further slot — it reuses
+the same two. The scope hands out no button: a custom layout renders its own controls and calls
+`add`, `remove` and `move`.
 
 Two behavioural fixes come with it, both from the same root cause — the traversal that decides
 what a schema owns now follows paths instead of top-level keys:

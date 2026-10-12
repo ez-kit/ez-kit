@@ -78,7 +78,7 @@ And if you would rather own the `<form>` element entirely, skip `<Form>` — tak
 </form>
 ```
 
-The flat fields do not care which element they sit in — they bind to the form instance, not to the DOM node.
+The flat fields do not care which element they sit in — they bind to the form instance, not to the DOM node. Components that read the form from context — `form.SubmitButton` and any component you registered in `components` — are different: they need `<Form>`, `<SchemaForm>` or a [`FormProvider`](/docs/form/composition#formprovider) above them, and a hand-written `<form>` is not one.
 
 ## Composition helpers
 
