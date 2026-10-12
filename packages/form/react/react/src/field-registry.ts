@@ -126,6 +126,7 @@ export function fieldTypeIdFor(key: string): string {
  */
 export const LAYOUT_COMPONENT_KEYS = {
 	SubmitButton: true,
+	Submit: true,
 	Section: true,
 	GridItem: true,
 	ArrayField: true,

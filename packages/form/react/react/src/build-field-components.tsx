@@ -12,6 +12,7 @@ import { createNumberField } from './fields/number-field'
 import { createRadioGroupField } from './fields/radio-group-field'
 import { createSelectField } from './fields/select-field'
 import { createSliderField } from './fields/slider-field'
+import { createSubmit } from './fields/submit'
 import { createSwitchField } from './fields/switch-field'
 import { createTextField } from './fields/text-field'
 import { createTextareaField } from './fields/textarea-field'
@@ -113,6 +114,7 @@ export function buildFieldComponents<TFormData>(
 	 */
 	const layout = {
 		SubmitButton: createSubmitButton(form, Button),
+		Submit: createSubmit(form),
 		Section: createSection(KitSection),
 		GridItem: createGridItem(KitGridItem),
 		// Replaced below: an array's entries render the *same* field set, scoped to the entry, so

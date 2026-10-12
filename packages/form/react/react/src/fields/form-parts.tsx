@@ -3,7 +3,7 @@ import type { FormComponents } from '../contract'
 import type { SubmitButtonProps } from '../field-props'
 import type { ReactNode } from 'react'
 
-function selectSubmitState(state: SubmitState): SubmitState {
+function selectSubmitState(state: SubmitState): Pick<SubmitState, 'canSubmit' | 'isSubmitting'> {
 	return { canSubmit: state.canSubmit, isSubmitting: state.isSubmitting }
 }
 

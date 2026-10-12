@@ -93,8 +93,11 @@ export type BindableForm = SubmittableForm & {
 	}) => ReactNode
 }
 
-/** The form-state members `SubmitButton` subscribes to. */
+/** The form-state members `form.Submit` subscribes to. */
 export type SubmitState = {
 	canSubmit: boolean
 	isSubmitting: boolean
+	isDirty: boolean
+	/** TanStack's form-level errors, raw; `form.Submit` normalises them. */
+	errors: readonly unknown[]
 }

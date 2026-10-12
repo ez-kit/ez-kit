@@ -93,6 +93,8 @@ export type {
 	SimpleOptionSource,
 	SliderFieldProps,
 	SubmitButtonProps,
+	SubmitProps,
+	SubmitRenderProps,
 	SwitchFieldProps,
 	TextareaFieldProps,
 	TextFieldProps,

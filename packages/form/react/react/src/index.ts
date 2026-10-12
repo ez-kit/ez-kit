@@ -68,6 +68,8 @@ export type {
 	SelectFieldProps,
 	SliderFieldProps,
 	SubmitButtonProps,
+	SubmitProps,
+	SubmitRenderProps,
 	SwitchFieldProps,
 	TextareaFieldProps,
 	TextFieldProps,

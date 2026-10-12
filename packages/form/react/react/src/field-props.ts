@@ -385,6 +385,21 @@ export type SubmitButtonProps = {
 	disabled?: boolean
 }
 
+/** What `form.Submit` hands its render function. */
+export type SubmitRenderProps = {
+	canSubmit: boolean
+	isSubmitting: boolean
+	isDirty: boolean
+	/** The form-level errors as display strings; field-level issues are not among them. */
+	formErrors: string[]
+	/** `form.handleSubmit`, so a control built on it works outside a `<form>` element too. */
+	submit: () => Promise<void>
+}
+
+export type SubmitProps = {
+	children: (state: SubmitRenderProps) => ReactNode
+}
+
 /**
  * The flat components attached to the form instance by `createForm`. They sit alongside —
  * never in place of — the native TanStack Form API (`Field`, `Subscribe`, `handleSubmit`,
@@ -417,6 +432,7 @@ export type BuiltInFormFieldComponents<TFormData, TFields extends FormFieldRegis
 	 */
 	Array: <TName extends ArrayKeys<TFormData>>(props: ArrayProps<TFormData, TName, TFields>) => ReactNode
 	SubmitButton: (props: SubmitButtonProps) => ReactNode
+	Submit: (props: SubmitProps) => ReactNode
 	Section: (props: SectionProps) => ReactNode
 	GridItem: (props: GridItemProps) => ReactNode
 }
