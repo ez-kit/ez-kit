@@ -6,6 +6,7 @@ import {
 	stripHiddenValues,
 	walkNodes,
 } from '@ez-kit/form-core'
+import { useMemo } from 'react'
 
 import { SchemaTranslate } from '../options/source-context'
 
@@ -345,10 +346,12 @@ export function isWizardSchema<TValues>(schema: AnyFormSchema<TValues>): boolean
  * (`deriveFieldTypeIds`), so `createForm` always has one to pass — there is no per-form `fields`
  * prop any more. `blocks` is still something a caller may simply not have. Do not make `fields`
  * optional to match: a call site that passes `{}` instead compiles, and turns every custom field
- * in every document into `Unknown node type`.
+ * in every document into a missing-field error.
  *
  * Every component the document can need is asserted first, visible or not — see
- * `assertDocumentComponents`.
+ * `assertDocumentComponents`. The walk is memoised on the schema and the registries, so it runs
+ * once per document rather than on every render; that is why the body is a component
+ * (`SchemaFields`) rather than inline in this function.
  *
  * A document whose top level is `step` nodes is a wizard and goes to `FormWizard` instead,
  * which renders one step at a time through the kit's `Wizard` (spec §4.5, §10). A `step` found
@@ -362,10 +365,35 @@ export function renderSchemaFields<TValues>(
 	fields: CustomFieldRegistry,
 	blocks: BlockRegistry | undefined,
 ): ReactNode {
+	return (
+		<SchemaFields
+			schema={schema as AnyFormSchema<unknown>}
+			instance={instance}
+			layout={layout}
+			translate={translate}
+			fields={fields}
+			blocks={blocks}
+		/>
+	)
+}
+
+type SchemaFieldsProps = {
+	schema: AnyFormSchema<unknown>
+	instance: object
+	layout: LayoutComponents
+	translate: Translate | undefined
+	fields: CustomFieldRegistry
+	blocks: BlockRegistry | undefined
+}
+
+/** The body of {@link renderSchemaFields}. */
+function SchemaFields({ schema, instance, layout, translate, fields, blocks }: SchemaFieldsProps): ReactNode {
 	// The instance carries exactly what its bundle registered; the renderer reads every member as
 	// possibly absent and names what a document needed and did not get.
-	const form = instance as FormFieldComponents<TValues>
-	assertDocumentComponents(schema as AnyFormSchema<unknown>, layout, Object.hasOwn(instance, 'ArrayField'))
+	const form = instance as FormFieldComponents<unknown>
+	useMemo(() => {
+		assertDocumentComponents(schema, layout, { instance, custom: fields })
+	}, [schema, layout, instance, fields])
 
 	// `itemPath` starts undefined: the schema root sits in no array entry, and each array node
 	// replaces it for the subtree of every entry it renders.

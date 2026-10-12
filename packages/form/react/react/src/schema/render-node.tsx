@@ -12,12 +12,19 @@ import { fieldRenderProps } from '../field-render-props'
 import { useOptionSourceParams } from '../options/use-source-params'
 
 import { renderChildren } from './render-children'
-import { assertComponent, MissingComponentMessage } from './required-components'
+import {
+	assertComponent,
+	BUILT_IN_SLOT_BY_TYPE,
+	isBuiltInFieldType,
+	missingBuiltInFieldMessage,
+	missingCustomFieldMessage,
+	MissingComponentMessage,
+} from './required-components'
 import { useConditionValue } from './use-condition'
 
 import type { ConditionSubscribableForm } from './use-condition'
 import type { BindableForm, FieldValue } from '../bindable-form'
-import type { FormComponents, FormFieldSlots } from '../contract'
+import type { FormComponents } from '../contract'
 import type { ArrayFieldProps, ArrayReorderable, BuiltInFieldComponents, FormFieldComponents } from '../field-props'
 import type { BlockRegistry, CustomFieldRegistry } from './registries'
 import type {
@@ -67,25 +74,6 @@ export type RenderNodeContext = {
  * field state. Every one is optional: a document that needs one nobody passed throws, naming it.
  */
 export type LayoutComponents = FormComponents
-
-/**
- * The slot each built-in field kind renders through. A document naming a kind whose slot the form
- * did not register gets the same `Unknown node type` error an unregistered custom kind does.
- */
-const BUILT_IN_SLOT_BY_TYPE = {
-	[FormFieldType.Text]: 'TextField',
-	[FormFieldType.Number]: 'NumberField',
-	[FormFieldType.Textarea]: 'TextareaField',
-	[FormFieldType.Select]: 'SelectField',
-	[FormFieldType.Checkbox]: 'CheckboxField',
-	[FormFieldType.Switch]: 'SwitchField',
-	[FormFieldType.RadioGroup]: 'RadioGroupField',
-	[FormFieldType.Slider]: 'SliderField',
-	[FormFieldType.Date]: 'DateField',
-	[FormFieldType.DateRange]: 'DateRangeField',
-	[FormFieldType.MultiSelect]: 'MultiSelectField',
-	[FormFieldType.CheckboxGroup]: 'CheckboxGroupField',
-} as const satisfies Record<FormFieldType, Exclude<keyof FormFieldSlots, 'ArrayField'>>
 
 export type RenderNodeArgs<TValues> = {
 	node:
@@ -297,9 +285,11 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 	if (!visible) return null
 
 	if (isCustomFieldNode(node)) {
+		// `assertDocumentComponents` has already rejected an unregistered kind up front, before any
+		// node rendered; this check only narrows the lookup.
 		const CustomField = context.fields?.[node.type]
 		if (CustomField === undefined) {
-			throw new Error(`Unknown node type "${node.type}".`)
+			throw new Error(missingCustomFieldMessage(node.type))
 		}
 
 		// A custom field has no `create*Field` wrapper (see `buildFieldComponents`), so it
@@ -335,10 +325,10 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 	}
 
 	// The bound field set holds exactly what the form registered, so a built-in kind can be absent.
-	if (Object.hasOwn(BUILT_IN_SLOT_BY_TYPE, node.type)) {
-		const slot = BUILT_IN_SLOT_BY_TYPE[node.type as FormFieldType]
-		if ((form as Partial<BuiltInFieldComponents<TValues>>)[slot] === undefined) {
-			throw new Error(`Unknown node type "${node.type}".`)
+	// `assertDocumentComponents` has already rejected that up front; this only keeps the narrowing.
+	if (isBuiltInFieldType(node.type)) {
+		if ((form as Partial<BuiltInFieldComponents<TValues>>)[BUILT_IN_SLOT_BY_TYPE[node.type]] === undefined) {
+			throw new Error(missingBuiltInFieldMessage(node.type))
 		}
 	}
 

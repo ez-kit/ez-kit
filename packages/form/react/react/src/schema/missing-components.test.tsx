@@ -111,7 +111,7 @@ describe('SchemaForm without the component a document needs', () => {
 		}).toThrow('SchemaForm: the document has an array, but no ArrayField was passed in fields.')
 	})
 
-	it('keeps the unknown-type error for a built-in field kind that was not registered', () => {
+	it('throws naming the slot for a built-in field kind that was not registered', () => {
 		const schema: FormSchema<Values> = {
 			version: 1,
 			children: [{ type: FormFieldType.Text, name: 'name' }],
@@ -124,7 +124,7 @@ describe('SchemaForm without the component a document needs', () => {
 					{...COMMON}
 				/>,
 			)
-		}).toThrow('Unknown node type "text".')
+		}).toThrow('SchemaForm: the document has a text field, but no TextField was passed in fields.')
 	})
 
 	it('throws on the first render when the node needing the component is hidden by when', () => {
@@ -147,6 +147,47 @@ describe('SchemaForm without the component a document needs', () => {
 				/>,
 			)
 		}).toThrow('SchemaForm: the document has a section, but no Section component was passed in components.')
+	})
+
+	it('throws on the first render when a built-in field kind nobody registered is hidden by when', () => {
+		const schema = {
+			version: 1,
+			children: [
+				{ type: FormFieldType.Text, name: 'name' },
+				{ type: FormFieldType.Date, name: 'due', when: { field: 'name', eq: 'show' } },
+			],
+		} as FormSchema<Values & { due: string }>
+		const { SchemaForm } = createSchemaForm({ fields: { TextField: testFields.TextField } })
+		expect(() => {
+			render(
+				<SchemaForm
+					schema={schema}
+					defaultValues={{ ...DEFAULT_VALUES, due: '' }}
+					onSubmit={() => {}}
+				/>,
+			)
+		}).toThrow('SchemaForm: the document has a date field, but no DateField was passed in fields.')
+	})
+
+	it('throws on the first render when a custom field kind nobody registered is hidden by when', () => {
+		const schema = {
+			version: 1,
+			children: [
+				{ type: FormFieldType.Text, name: 'name' },
+				{ type: 'rating', name: 'score', when: { field: 'name', eq: 'show' } },
+			],
+		} as FormSchema<Values & { score: number }, 'rating'>
+		expect(() => {
+			render(
+				<FieldsOnly
+					schema={schema}
+					defaultValues={{ ...DEFAULT_VALUES, score: 0 }}
+					onSubmit={() => {}}
+				/>,
+			)
+		}).toThrow(
+			'SchemaForm: the document has a field of type "rating", but no component registered in fields derives that type id.',
+		)
 	})
 
 	it('throws on the first render when the node needing the component is in a later wizard step', () => {
