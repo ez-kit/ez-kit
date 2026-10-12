@@ -1,3 +1,4 @@
+export { SubmitButton } from './blocks/form-parts'
 export { useForm, Form, SchemaForm, withForm, withFieldGroup } from './form'
 
 // The factory and the two bags it takes, so an app can call `createForm` itself with the
