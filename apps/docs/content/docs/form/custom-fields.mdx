@@ -6,7 +6,7 @@ description: defineFieldType and the open fields registry — add a field kind t
 The twelve field kinds a kit ships are the floor of `createForm({ fields })`, not its ceiling. `fields` is an **open registry**: spread the kit's own slots beside a component of your own, and the bundle that comes back has a thirteenth field on it — bound to form state, validated, and addressable from a schema document — without forking the kit.
 
 ```tsx
-import { createSchemaForm, defineFieldType, formComponents, formFieldSlots } from '@ez-kit/form-shadcn'
+import { allFormComponents, allFormFields, createSchemaForm, defineFieldType, FormElement } from '@ez-kit/form-shadcn'
 
 const RatingField = defineFieldType<{ max: number }, number>()(({ value, onChange, props, ...field }) => (
 	<Stars
@@ -18,8 +18,9 @@ const RatingField = defineFieldType<{ max: number }, number>()(({ value, onChang
 ))
 
 export const { useForm, Form, SchemaForm, withForm, withFieldGroup } = createSchemaForm({
-	components: formComponents,
-	fields: { ...formFieldSlots, RatingField },
+	FormElement,
+	fields: { ...allFormFields, RatingField },
+	components: allFormComponents,
 })
 ```
 
@@ -91,14 +92,19 @@ So call it once, in one module, and export the result from there. The failure mo
 ```tsx
 // ❌ two calls — `form.RatingField` below belongs to a different context than `<Form>`
 import { Form } from '@ez-kit/form-shadcn' // the kit's ready-made bundle
-const { useForm } = createForm({ components: formComponents, fields: { ...formFieldSlots, RatingField } })
+const { useForm } = createForm({
+	FormElement,
+	fields: { ...allFormFields, RatingField },
+	components: allFormComponents,
+})
 ```
 
 ```tsx
 // ✅ one call, one module, one bundle
 export const { useForm, Form, SchemaForm, withForm, withFieldGroup } = createSchemaForm({
-	components: formComponents,
-	fields: { ...formFieldSlots, RatingField },
+	FormElement,
+	fields: { ...allFormFields, RatingField },
+	components: allFormComponents,
 })
 ```
 

@@ -404,6 +404,78 @@ describe('@ez-kit/form-react schema renderer', () => {
 	})
 })
 
+/** The imports of a form with one field kind and a submit button, composed through `createForm`. */
+const ONE_FIELD_FORM = ['createForm', 'FormElement', 'TextField', 'SubmitButton']
+
+/**
+ * Per kit, a literal only its date block's code contains (`calendar`), and — for shadcn — one only
+ * its searchable select's code contains (`combobox`).
+ *
+ * Literals rather than the module specifiers those blocks import (`react-day-picker`,
+ * `@internationalized/date`, `@base-ui/react`): the harness leaves every non-workspace package
+ * external, and esbuild keeps an external import statement whether or not anything still reads
+ * its bindings, so a specifier stays in the text after the code that used it was dropped. A string
+ * written in the block's own body is present exactly when that body is.
+ */
+const FORM_KITS = [
+	{
+		name: '@ez-kit/form-shadcn',
+		entry: entryOf('form/react/shadcn'),
+		/** `DateField`'s placeholder. */
+		calendar: 'Pick a date',
+		/** The searchable select's empty state. */
+		combobox: 'No matches',
+	},
+	{
+		name: '@ez-kit/form-heroui',
+		entry: entryOf('form/react/heroui'),
+		/** The date block's conversion into React Aria's value — a call, so the import line does not match. */
+		calendar: 'parseDate(',
+		combobox: undefined,
+	},
+] as const
+
+/**
+ * A kit root must tree-shake: a component is exported from its own block, never through the module
+ * that assembles the prebuilt bundle, and that bundle is built so a bundler can drop it. Each
+ * absence is read against a control that shows the same marker present when the import does reach
+ * it — without one, a marker that no longer exists would satisfy the absence.
+ */
+describe.each(FORM_KITS)('$name root', ({ entry, calendar, combobox }) => {
+	it('reaches the calendar through DateField (control)', async () => {
+		expect(await bundledCodeOf(entry, ['DateField'])).toContain(calendar)
+	})
+
+	it('reaches the schema renderer through SchemaForm (control)', async () => {
+		expect(await bundledCodeOf(entry, ['SchemaForm'])).toContain(SCHEMA_MARKER)
+	})
+
+	it('a one-field form pulls no calendar and no schema renderer', async () => {
+		const code = await bundledCodeOf(entry, ONE_FIELD_FORM)
+
+		expect(code).not.toContain(calendar)
+		expect(code).not.toContain(SCHEMA_MARKER)
+	})
+
+	it.runIf(combobox !== undefined)('reaches the combobox through SelectField (control)', async () => {
+		expect(await bundledCodeOf(entry, ['SelectField'])).toContain(combobox)
+	})
+
+	it.runIf(combobox !== undefined)('a one-field form pulls no combobox', async () => {
+		expect(await bundledCodeOf(entry, ONE_FIELD_FORM)).not.toContain(combobox)
+	})
+
+	it('the prebuilt Form pulls no schema renderer', async () => {
+		expect(await bundledCodeOf(entry, ['Form'])).not.toContain(SCHEMA_MARKER)
+	})
+
+	it('a one-field form costs well under the whole root', async () => {
+		const [narrow, everything] = await Promise.all([bundledCodeOf(entry, ONE_FIELD_FORM), bundledCodeOf(entry)])
+
+		expect(narrow.length).toBeLessThan(everything.length / 2)
+	})
+})
+
 describe.each(PACKAGES)('$name', ({ entry, shakeable, cases }) => {
 	it.each(cases)('importing $imports pulls in $pulls', async ({ imports, pulls }) => {
 		expect(await entryPointsPulledBy(entry, imports)).toEqual([...pulls].sort())

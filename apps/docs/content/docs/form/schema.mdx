@@ -274,8 +274,9 @@ Three registries, in two places. **Custom fields are registered once, on `create
 
 ```ts
 export const { SchemaForm } = createSchemaForm({
-	components: formComponents,
-	fields: { ...formFieldSlots, RatingField }, // custom FIELD — has a name, bound to a value
+	FormElement,
+	fields: { ...allFormFields, RatingField }, // custom FIELD — has a name, bound to a value
+	components: allFormComponents,
 })
 ```
 

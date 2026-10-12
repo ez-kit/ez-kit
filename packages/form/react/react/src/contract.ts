@@ -34,9 +34,9 @@ import type { ComponentPropsWithoutRef, ReactNode } from 'react'
  * which is what lets one example render under either kit:
  *
  * ```ts
- * export const formFieldSlots = { TextField, NumberField, …, ArrayField } satisfies FormFieldSlots
- * export const formComponents = { SubmitButton, Section, GridItem, Wizard } satisfies FormComponents
- * createForm({ FormElement, fields: formFieldSlots, components: formComponents })
+ * export const allFormFields = { TextField, NumberField, …, ArrayField } satisfies FormFieldSlots
+ * export const allFormComponents = { SubmitButton, Section, GridItem, Wizard } satisfies FormComponents
+ * createForm({ FormElement, fields: allFormFields, components: allFormComponents })
  * ```
  */
 

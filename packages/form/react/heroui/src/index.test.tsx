@@ -175,21 +175,26 @@ describe('@ez-kit/form-heroui package root', () => {
 	it('exports the factory, both contract bags and every field component', () => {
 		expect(typeof kit.createForm).toBe('function')
 		expect(typeof kit.defineFieldType).toBe('function')
-		expect(Object.keys(kit.formFieldSlots)).toHaveLength(13)
-		expect(kit.formFieldSlots.ArrayField.Item).toBeTypeOf('function')
-		expect(Object.keys(kit.formComponents).sort()).toEqual(['GridItem', 'Section', 'SubmitButton', 'Wizard'])
-		expect(kit.formComponents.SubmitButton).toBe(kit.SubmitButton)
+		expect(Object.keys(kit.allFormFields)).toHaveLength(13)
+		expect(kit.allFormFields.ArrayField.Item).toBeTypeOf('function')
+		expect(Object.keys(kit.allFormComponents).sort()).toEqual(['GridItem', 'Section', 'SubmitButton', 'Wizard'])
+		expect(kit.allFormComponents.SubmitButton).toBe(kit.SubmitButton)
 		expect(kit.FormElement).toBeTypeOf('function')
-		for (const name of Object.keys(kit.formFieldSlots)) {
-			expect(kit[name as keyof typeof kit]).toBe(kit.formFieldSlots[name as keyof typeof kit.formFieldSlots])
+		for (const name of Object.keys(kit.allFormFields)) {
+			expect(kit[name as keyof typeof kit]).toBe(kit.allFormFields[name as keyof typeof kit.allFormFields])
 		}
+		for (const name of Object.keys(kit.allFormComponents)) {
+			expect(kit[name as keyof typeof kit]).toBe(kit.allFormComponents[name as keyof typeof kit.allFormComponents])
+		}
+		expect(kit).not.toHaveProperty('formFieldSlots')
+		expect(kit).not.toHaveProperty('formComponents')
 	})
 
 	it('recomposes a bundle from the exported bags that renders the real HeroUI input', () => {
 		const { Form: Rebuilt } = kit.createForm({
 			FormElement: kit.FormElement,
-			fields: { ...kit.formFieldSlots, RatingField },
-			components: kit.formComponents,
+			fields: { ...kit.allFormFields, RatingField },
+			components: kit.allFormComponents,
 		})
 
 		const { container } = render(

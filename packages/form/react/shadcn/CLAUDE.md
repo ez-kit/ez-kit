@@ -15,9 +15,20 @@ This rule applies to humans and to AI assistants — no exceptions.
 
 ## Layering
 
-`createForm({ components })` in `src/form.tsx` is wired exclusively to `src/blocks/*`
-adapters, which internally re-use `src/components/ui/*` primitives. Always add or override
-behaviour in `src/blocks/`, never in `src/components/ui/`.
+Every form component is a `src/blocks/*` adapter, which internally re-uses `src/components/ui/*`
+primitives. Always add or override behaviour in `src/blocks/`, never in `src/components/ui/`.
+
+Three modules put those adapters on the package root, and the split is what lets the root
+tree-shake:
+
+- `src/index.ts` exports each component **straight from its block**, never through `./form`.
+- `src/sets.ts` holds `allFormFields` / `allFormComponents` — every component at once, in the two
+  bags `createForm` takes. Importing one is a deliberate "everything".
+- `src/form.tsx` holds the prebuilt bundle and nothing else: one `/* @__PURE__ */ createForm(…)` and
+  one `/* @__PURE__ */ createSchemaForm(…)`, each with a flat, spread-free argument, and exports
+  that read the bundle only inside a function body. A top-level property read
+  (`export const Form = kit.Form`) or a spread argument anchors both bundles and every component
+  they register; `apps/docs/test/tree-shaking.test.ts` fails if one comes back.
 
 All visual styling for the form lives in this package: `@ez-kit/form-react` contains none
 by design and only emits `data-*` attributes.

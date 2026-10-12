@@ -1,27 +1,29 @@
-export { SubmitButton } from './blocks/form-parts'
-export { useForm, Form, SchemaForm, withForm, withFieldGroup } from './form'
-
-// The factory and the two bags it takes, so an app can call `createForm` itself with the
-// kit's field slots spread beside a field kind of its own. The ready-made bundle
-// above stays the zero-config path; this is the extension one.
+// Every component straight from its block, never through `./form`: the module that assembles the
+// prebuilt bundle names all of them, so an import routed through it is what used to drag the date
+// picker, the comboboxes and the schema renderer into a one-field form.
+export { ArrayField } from './blocks/array'
+export { DateField, DateRangeField } from './blocks/date'
 export {
-	ArrayField,
 	CheckboxField,
-	CheckboxGroupField,
-	DateField,
-	DateRangeField,
-	FormElement,
-	formComponents,
-	formFieldSlots,
-	MultiSelectField,
 	NumberField,
 	RadioGroupField,
-	SelectField,
 	SliderField,
 	SwitchField,
 	TextareaField,
 	TextField,
-} from './form'
+} from './blocks/fields'
+export { FormElement, SubmitButton } from './blocks/form-parts'
+export { GridItem, Section } from './blocks/layout'
+export { CheckboxGroupField, MultiSelectField } from './blocks/multi-value'
+export { SelectField } from './blocks/select'
+export { Wizard } from './blocks/wizard'
+
+// Every component at once, in the two bags `createForm` takes — a deliberate "everything", for an
+// app that spreads the kit beside a field kind of its own.
+export { allFormComponents, allFormFields } from './sets'
+
+// The prebuilt bundle: the zero-config path. Its binding lives in `./form`, never here.
+export { Form, SchemaForm, useForm, withFieldGroup, withForm } from './form'
 
 // Curated re-export of the consumer surface from the adapter, so a kit consumer never has
 // to add `@ez-kit/form-react` as a second dependency. Deliberately not `export *`: the star

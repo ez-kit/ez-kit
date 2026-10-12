@@ -93,7 +93,8 @@ untouched — reach for them whenever a field needs bespoke markup.
 
 - `src/components/ui/**` — vendored shadcn primitives, **immutable** (see `CLAUDE.md`).
 - `src/blocks/**` — the adapters that implement the `@ez-kit/form-react` contract.
-- `src/form.tsx` — `createForm({ components })`, where the two meet.
+- `src/sets.ts` — `allFormFields` / `allFormComponents`, every block in the two bags `createForm` takes.
+- `src/form.tsx` — the prebuilt bundle (`useForm`, `Form`, `SchemaForm`, …) built from those sets.
 
 ## License
 

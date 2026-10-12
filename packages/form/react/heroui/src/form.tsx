@@ -2,107 +2,53 @@
 
 import { createForm, createSchemaForm } from '@ez-kit/form-react'
 
-import { ArrayField } from './blocks/array'
-import { DateField, DateRangeField } from './blocks/date'
-import {
-	CheckboxField,
-	NumberField,
-	RadioGroupField,
-	SliderField,
-	SwitchField,
-	TextareaField,
-	TextField,
-} from './blocks/fields'
-import { FormElement, SubmitButton } from './blocks/form-parts'
-import { GridItem, Section } from './blocks/layout'
-import { CheckboxGroupField, MultiSelectField } from './blocks/multi-value'
-import { SelectField } from './blocks/select'
-import { Wizard } from './blocks/wizard'
+import { FormElement } from './blocks/form-parts'
+import { allFormComponents, allFormFields } from './sets'
 
-import type { AllFormFieldSlots, FormBundle, FormComponents, SchemaFormBundle } from '@ez-kit/form-react'
+import type { FormBundle, SchemaFormBundle } from '@ez-kit/form-react'
+import type { ComponentType } from 'react'
 
 /**
- * The HeroUI v3 implementation of the UI contract, in the two bags `createForm` takes.
- *
- * `satisfies AllFormFieldSlots` makes a forgotten field kind a compile error, and
- * `satisfies FormComponents` checks each component's props. Both are **exported**, beside the
- * kit's `FormElement`: an app that wants a field kind of its own spreads `formFieldSlots` and
- * calls `createForm` itself — the twelve keep their bespoke binders, the new one gets the
- * generic one.
+ * The prebuilt bundle's types, named through `@ez-kit/form-react` so the kit's declarations do
+ * too: an inferred type would be spelled out in `dist/index.d.ts` in terms of TanStack Form and
+ * `@ez-kit/form-core`, which this kit does not depend on and so cannot resolve.
  */
-export const formFieldSlots = {
-	TextField,
-	NumberField,
-	TextareaField,
-	SelectField,
-	CheckboxField,
-	SwitchField,
-	RadioGroupField,
-	SliderField,
-	MultiSelectField,
-	CheckboxGroupField,
-	DateField,
-	DateRangeField,
-	ArrayField,
-} satisfies AllFormFieldSlots
-
-export const formComponents = {
-	SubmitButton,
-	Section,
-	GridItem,
-	Wizard,
-} satisfies FormComponents
+type KitFormBundle = FormBundle<typeof allFormFields, typeof allFormComponents>
+type KitSchemaFormBundle = SchemaFormBundle<typeof allFormFields, typeof allFormComponents>
 
 /**
- * The bundle's type, named through `@ez-kit/form-react` so the kit's declarations do too.
- *
- * Each export below is annotated rather than inferred for that reason: an inferred type is
- * spelled out in `dist/index.d.ts` in terms of the packages it is built from — TanStack Form and
- * `@ez-kit/form-core` — which this kit no longer depends on and so cannot resolve from its own
- * location. An annotation is emitted as written, as a reference into `@ez-kit/form-react`, which
- * does depend on both.
+ * Both calls are pure with flat, spread-free arguments, and nothing at the top level reads a
+ * property of either: every export delegates inside a function body. So a consumer that imports
+ * only `TextField` from the kit root keeps neither bundle, and one that imports `Form` keeps the
+ * form bundle and not the schema renderer. A property read here (`export const Form = kit.Form`)
+ * would anchor the bundle and every component it registers — the defect this module replaced.
  */
-type KitFormBundle = FormBundle<typeof formFieldSlots, typeof formComponents>
-type KitSchemaFormBundle = SchemaFormBundle<typeof formFieldSlots, typeof formComponents>
-
-const bundle: KitFormBundle = createForm({
+const kit: KitFormBundle = /* @__PURE__ */ createForm({
 	FormElement,
-	fields: formFieldSlots,
-	components: formComponents,
+	fields: allFormFields,
+	components: allFormComponents,
+})
+const schemaKit: KitSchemaFormBundle = /* @__PURE__ */ createSchemaForm({
+	FormElement,
+	fields: allFormFields,
+	components: allFormComponents,
 })
 
-// A second bundle for `SchemaForm`: `createForm` no longer carries the schema renderer, so the
-// document-driven form comes from `createSchemaForm`, over the same three options.
-const schemaBundle: KitSchemaFormBundle = createSchemaForm({
-	FormElement,
-	fields: formFieldSlots,
-	components: formComponents,
-})
+export const useForm: KitFormBundle['useForm'] = (options) => kit.useForm(options)
+export const withForm: KitFormBundle['withForm'] = (options) => kit.withForm(options)
+export const withFieldGroup: KitFormBundle['withFieldGroup'] = (options) => kit.withFieldGroup(options)
 
-export const useForm: KitFormBundle['useForm'] = bundle.useForm
-export const Form: KitFormBundle['Form'] = bundle.Form
-export const SchemaForm: KitSchemaFormBundle['SchemaForm'] = schemaBundle.SchemaForm
-export const withForm: KitFormBundle['withForm'] = bundle.withForm
-export const withFieldGroup: KitFormBundle['withFieldGroup'] = bundle.withFieldGroup
+// The two components are overloaded (controlled and uncontrolled), which no arrow can be
+// contextually typed by — so each one delegates through a plain props bag and is asserted back
+// to the bundle's own type.
+export const Form = ((props: object) => {
+	const Impl = kit.Form as ComponentType<object>
 
-/**
- * The field components on their own — the twelve kinds and the array frame — so an app that
- * calls `createForm` itself can spread `formFieldSlots` and still reach — or wrap — any single
- * one of them by name. `FormElement` is the kit's `<form>`, for the same `createForm` call.
- */
-export {
-	ArrayField,
-	CheckboxField,
-	CheckboxGroupField,
-	DateField,
-	DateRangeField,
-	FormElement,
-	MultiSelectField,
-	NumberField,
-	RadioGroupField,
-	SelectField,
-	SliderField,
-	SwitchField,
-	TextField,
-	TextareaField,
-}
+	return <Impl {...props} />
+}) as unknown as KitFormBundle['Form']
+
+export const SchemaForm = ((props: object) => {
+	const Impl = schemaKit.SchemaForm as ComponentType<object>
+
+	return <Impl {...props} />
+}) as unknown as KitSchemaFormBundle['SchemaForm']

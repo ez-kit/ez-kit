@@ -148,21 +148,26 @@ describe('@ez-kit/form-shadcn package root', () => {
 	it('exports the factory, both contract bags and every field component', () => {
 		expect(typeof kit.createForm).toBe('function')
 		expect(typeof kit.defineFieldType).toBe('function')
-		expect(Object.keys(kit.formFieldSlots)).toHaveLength(13)
-		expect(kit.formFieldSlots.ArrayField.Item).toBeTypeOf('function')
-		expect(Object.keys(kit.formComponents).sort()).toEqual(['GridItem', 'Section', 'SubmitButton', 'Wizard'])
-		expect(kit.formComponents.SubmitButton).toBe(kit.SubmitButton)
+		expect(Object.keys(kit.allFormFields)).toHaveLength(13)
+		expect(kit.allFormFields.ArrayField.Item).toBeTypeOf('function')
+		expect(Object.keys(kit.allFormComponents).sort()).toEqual(['GridItem', 'Section', 'SubmitButton', 'Wizard'])
+		expect(kit.allFormComponents.SubmitButton).toBe(kit.SubmitButton)
 		expect(kit.FormElement).toBeTypeOf('function')
-		for (const name of Object.keys(kit.formFieldSlots)) {
-			expect(kit[name as keyof typeof kit]).toBe(kit.formFieldSlots[name as keyof typeof kit.formFieldSlots])
+		for (const name of Object.keys(kit.allFormFields)) {
+			expect(kit[name as keyof typeof kit]).toBe(kit.allFormFields[name as keyof typeof kit.allFormFields])
 		}
+		for (const name of Object.keys(kit.allFormComponents)) {
+			expect(kit[name as keyof typeof kit]).toBe(kit.allFormComponents[name as keyof typeof kit.allFormComponents])
+		}
+		expect(kit).not.toHaveProperty('formFieldSlots')
+		expect(kit).not.toHaveProperty('formComponents')
 	})
 
 	it('recomposes a bundle from the exported bags that renders the real shadcn input', () => {
 		const { Form: Rebuilt } = kit.createForm({
 			FormElement: kit.FormElement,
-			fields: { ...kit.formFieldSlots, RatingField },
-			components: kit.formComponents,
+			fields: { ...kit.allFormFields, RatingField },
+			components: kit.allFormComponents,
 		})
 
 		const { container } = render(
@@ -187,5 +192,50 @@ describe('@ez-kit/form-shadcn package root', () => {
 		expect(container.querySelector('[data-slot="input"]')).toBeInTheDocument()
 		expect(screen.getByLabelText('Email')).toBeInTheDocument()
 		expect(screen.getByTestId('rating')).toHaveTextContent('0 / 5')
+	})
+})
+
+const CONTACT: kit.FormSchema<{ email: string }> = {
+	version: 1,
+	children: [
+		{ type: kit.FormFieldType.Text, name: 'email', label: 'Email' },
+		{ type: 'submit', label: 'Save' },
+	],
+}
+
+/**
+ * The prebuilt `useForm` / `Form` and the prebuilt `SchemaForm` come from two separate factory
+ * calls — `createForm` and `createSchemaForm` — so an instance from one rendered by the other is
+ * the case that would break if the two bundles stopped agreeing.
+ */
+describe('@ez-kit/form-shadcn prebuilt bundles together', () => {
+	it('renders a prebuilt useForm instance through the controlled SchemaForm and submits it', async () => {
+		const user = userEvent.setup()
+		const onSubmit = vi.fn()
+
+		function Controlled() {
+			const form = kit.useForm({
+				defaultValues: { email: '' },
+				onSubmit: ({ value }) => {
+					onSubmit(value)
+				},
+			})
+
+			return (
+				<kit.SchemaForm
+					form={form}
+					schema={CONTACT}
+				/>
+			)
+		}
+
+		render(<Controlled />)
+
+		await user.type(screen.getByLabelText('Email'), 'a@b.c')
+		await user.click(screen.getByRole('button', { name: 'Save' }))
+
+		await waitFor(() => {
+			expect(onSubmit).toHaveBeenCalledWith({ email: 'a@b.c' })
+		})
 	})
 })

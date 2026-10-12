@@ -62,7 +62,7 @@ export type CreateFormOptions<
 	 * Every value is re-asserted here against what its binder will hand it, because the bound
 	 * alone checks nothing: `FormFieldRegistry` takes `any` props — parameters are contravariant,
 	 * so a narrower bound would reject a correct kit. The spread-and-override form —
-	 * `{ ...formFieldSlots, TextField: X }` — is an object literal checked against the registry,
+	 * `{ ...allFormFields, TextField: X }` — is an object literal checked against the registry,
 	 * never against a kit's own `satisfies`. Two checks close that:
 	 *
 	 * - a **built-in** key against its slot in `FormFieldSlots` (the `Pick`), so
@@ -133,8 +133,8 @@ export type CreateFormOptions<
  * // in a kit package
  * export const { useForm, Form } = createForm({
  *   FormElement,
- *   fields: formFieldSlots,
- *   components: formComponents,
+ *   fields: allFormFields,
+ *   components: allFormComponents,
  * })
  *
  * // in an app that registers the fields it uses and a component of its own
