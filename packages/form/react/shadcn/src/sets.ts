@@ -15,7 +15,7 @@ import { CheckboxGroupField, MultiSelectField } from './blocks/multi-value'
 import { SelectField } from './blocks/select'
 import { Wizard } from './blocks/wizard'
 
-import type { AllFormFieldSlots, FormComponents } from '@ez-kit/form-react'
+import type { AllFormComponents, AllFormFieldSlots } from '@ez-kit/form-react'
 
 /**
  * Every field kind the shadcn kit ships, keyed as `createForm({ fields })` takes them.
@@ -45,4 +45,4 @@ export const allFormFields = {
 } satisfies AllFormFieldSlots
 
 /** Every form-aware component the shadcn kit ships, keyed as `createForm({ components })` takes them. */
-export const allFormComponents = { SubmitButton, Section, GridItem, Wizard } satisfies FormComponents
+export const allFormComponents = { SubmitButton, Section, GridItem, Wizard } satisfies AllFormComponents
