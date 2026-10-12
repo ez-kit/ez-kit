@@ -107,8 +107,9 @@ export function buildFieldComponents<TFormData>(
 	 * `as unknown as` erases checking on everything it covers, so a check that is to mean anything
 	 * has to sit on a sub-expression outside it. With the `satisfies` here, a third primitive fails
 	 * in two places if either is forgotten: at the constant, and here. `built` stays unchecked,
-	 * which is correct — its keys are the open registry's, and `deriveFieldTypeIds` checks them at
-	 * `createForm`, including against these two.
+	 * which is correct — its keys are the open registry's, and `createForm` checks them before they
+	 * get here: against these two and every other key the instance owns (`reserved-keys.ts`), and
+	 * for the document ids they derive (`deriveFieldTypeIds`).
 	 */
 	const primitives = {
 		Submit: createSubmit(form),

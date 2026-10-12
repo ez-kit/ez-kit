@@ -1,0 +1,157 @@
+import type { FormPrimitives } from './field-props'
+import type { NoInjectedComponents } from './kit-form'
+import type { AppFieldExtendedReactFormApi } from '@tanstack/react-form'
+
+/**
+ * Every key the form instance already owns. A field or component registered under one of these
+ * would be written over it by `Object.assign` — `Subscribe` silently replaced, `state` (a getter)
+ * a `TypeError` — so `createForm` refuses them.
+ *
+ * Derived from the type `useAppForm` returns — TanStack's `FormApi` and `ReactFormApi` (`Field`,
+ * `FormGroup`, `Subscribe`) plus `AppField` / `AppForm` — instantiated exactly as `createForm`
+ * instantiates it, so the list is what the instance carries before this package adds anything.
+ * Then the primitives this package adds ({@link FormPrimitives}), and the three names the
+ * composition spec reserves for members still to come: `NativeField`, `Steps` and `Step`.
+ *
+ * Never written down as a free list: `RESERVED_FORM_KEYS` below is annotated with this union, so a
+ * TanStack upgrade that adds or removes a member fails to compile here. `keyof` sees only the
+ * public members — a TypeScript-`private` field of `FormApi` is still on the object at runtime and
+ * is not in this list.
+ */
+export type ReservedFormKey =
+	| keyof AppFieldExtendedReactFormApi<
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- only the key set is read
+			any,
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- only the key set is read
+			any,
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- only the key set is read
+			any,
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- only the key set is read
+			any,
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- only the key set is read
+			any,
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- only the key set is read
+			any,
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- only the key set is read
+			any,
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- only the key set is read
+			any,
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- only the key set is read
+			any,
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- only the key set is read
+			any,
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- only the key set is read
+			any,
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- only the key set is read
+			any,
+			NoInjectedComponents,
+			NoInjectedComponents
+	  >
+	| keyof FormPrimitives<unknown>
+	| 'NativeField'
+	| 'Steps'
+	| 'Step'
+
+export const RESERVED_FORM_KEYS: Record<ReservedFormKey, true> = {
+	// TanStack's `FormApi`
+	options: true,
+	baseStore: true,
+	fieldMetaDerived: true,
+	formGroupMetaDerived: true,
+	store: true,
+	fieldInfo: true,
+	formGroupApis: true,
+	state: true,
+	timeoutIds: true,
+	_formId: true,
+	formId: true,
+	runValidator: true,
+	mount: true,
+	update: true,
+	reset: true,
+	validateAllFields: true,
+	validateArrayFieldsStartingFrom: true,
+	validateField: true,
+	validateSync: true,
+	validateAsync: true,
+	validate: true,
+	handleSubmit: true,
+	_handleSubmit: true,
+	getFieldValue: true,
+	getFieldMeta: true,
+	getFormGroupMeta: true,
+	getFieldInfo: true,
+	setFieldMeta: true,
+	resetFieldMeta: true,
+	setFieldValue: true,
+	deleteField: true,
+	pushFieldValue: true,
+	insertFieldValue: true,
+	replaceFieldValue: true,
+	removeFieldValue: true,
+	swapFieldValues: true,
+	moveFieldValues: true,
+	clearFieldValues: true,
+	resetField: true,
+	setErrorMap: true,
+	getAllErrors: true,
+	parseValuesWithSchema: true,
+	parseValuesWithSchemaAsync: true,
+	// `ReactFormApi`, and what `createFormHook` adds
+	Field: true,
+	FormGroup: true,
+	Subscribe: true,
+	AppField: true,
+	AppForm: true,
+	// this package
+	Submit: true,
+	Array: true,
+	NativeField: true,
+	Steps: true,
+	Step: true,
+}
+
+/** Throws when `registry` (named `option` in the message) registers a reserved key. */
+export function assertNoReservedKeys(registry: object, option: 'fields' | 'components'): void {
+	for (const key of Object.keys(registry)) {
+		if (Object.hasOwn(RESERVED_FORM_KEYS, key)) {
+			throw new Error(`createForm: "${key}" is reserved by the form instance and cannot be registered in ${option}.`)
+		}
+	}
+}
+
+/** Throws when one key is registered as both a field and a component. */
+export function assertNoSharedKeys(fields: object, components: object): void {
+	for (const key of Object.keys(fields)) {
+		if (Object.hasOwn(components, key)) {
+			throw new Error(`createForm: "${key}" is registered in both fields and components.`)
+		}
+	}
+}
+
+/**
+ * Type-level guard: each reserved key of `T` must be this message, which no component is.
+ *
+ * A homomorphic remap (`keyof T` filtered by an `as` clause), so a key keeps its `?`; every other
+ * key maps to nothing, so the guard intersects as `{}` on a registry that reserves none.
+ */
+export type ReservedKeyGuard<T> = {
+	[K in keyof T as K extends ReservedFormKey ? K : never]: `Error: "${K & string}" is reserved by the form instance`
+}
+
+/**
+ * Type-level guard: each key of `TComponents` that `TFields` also names must be this message.
+ *
+ * Only literal keys count: a registry typed by its bound (`Record<string, …>`) names no key, and
+ * without the `string extends K` filter its index signature would match the other's and turn every
+ * component into an error.
+ */
+export type SharedKeyGuard<TComponents, TFields> = {
+	[K in keyof TComponents as K extends string
+		? string extends K
+			? never
+			: K extends keyof TFields
+				? K
+				: never
+		: never]: `Error: "${K & string}" is registered in both fields and components`
+}

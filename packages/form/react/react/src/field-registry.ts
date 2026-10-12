@@ -98,26 +98,12 @@ export function fieldTypeIdFor(key: string): string {
 }
 
 /**
- * Every registry key mapped to the document id it derives, checked for the two ways the
- * derivation can go wrong.
- *
- * Run **once, at `createForm` time** — the registry is static, authored config, so the
- * answer cannot change between renders and paying a per-node cost for it would be wasted
- * work (the principle `assertNoReservedFieldKeyCollision` already states for the other
- * registry).
- *
- * It throws when two keys derive one id, and when an id collides with a reserved container
- * node type — without which a slot named `SectionField` would silently shadow `section`.
- * It deliberately does **not** throw when a built-in key derives its own built-in id:
- * replacing a kit's `TextField` at its own key is the whole point of an open registry.
- */
-/**
  * The members of the bound field set that are **not** registry keys — the two primitives the
  * builder writes over the registry's own output after the loop.
  *
- * A registry key that collides with one of these would be accepted and then silently overwritten.
- * Both happen to derive a reserved node type (`submit`, `array`) as well, so the reserved-type
- * check would also catch them — but by accident, which is what this list stops relying on.
+ * A registry key equal to one of these is rejected by `createForm`, together with every other key
+ * the instance owns (`RESERVED_FORM_KEYS` in `reserved-keys.ts`), before the registry reaches the
+ * builder. This list is what the builder and the entry types anchor the primitives to.
  *
  * `satisfies Record<keyof FormPrimitives<unknown>, true>` is what stops this becoming a
  * hand-written list that drifts from the builder: adding a primitive there is a compile error
@@ -164,6 +150,23 @@ export const BESPOKE_FIELD_KEYS = {
 	ArrayField: true,
 } as const satisfies Partial<Record<keyof FormFieldSlots, true>>
 
+/**
+ * Every registry key mapped to the document id it derives, checked for the two ways the
+ * derivation can go wrong.
+ *
+ * Run **once, at `createForm` time** — the registry is static, authored config, so the
+ * answer cannot change between renders and paying a per-node cost for it would be wasted
+ * work (the principle `assertNoReservedFieldKeyCollision` already states for the other
+ * registry).
+ *
+ * It throws when two keys derive one id, and when an id collides with a reserved container
+ * node type — without which a slot named `SectionField` would silently shadow `section`.
+ * It deliberately does **not** throw when a built-in key derives its own built-in id:
+ * replacing a kit's `TextField` at its own key is the whole point of an open registry.
+ *
+ * A key the form instance already owns (`Submit`, `Array`, `Field`, …) is not checked here:
+ * `createForm` rejects it before calling this — see `reserved-keys.ts`.
+ */
 export function deriveFieldTypeIds(fields: FormFieldRegistry): Record<string, string> {
 	const ids: Record<string, string> = {}
 
@@ -175,12 +178,6 @@ export function deriveFieldTypeIds(fields: FormFieldRegistry): Record<string, st
 		if ((RESERVED_NODE_TYPES as readonly string[]).includes(id)) {
 			throw new Error(
 				`Field "${key}" derives the type id "${id}", which is a reserved node type and would shadow it in a schema document.`,
-			)
-		}
-
-		if (Object.hasOwn(LAYOUT_COMPONENT_KEYS, key)) {
-			throw new Error(
-				`Field "${key}" collides with the form's own "${key}" component and would be silently overwritten. Rename it.`,
 			)
 		}
 

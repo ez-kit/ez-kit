@@ -9,6 +9,7 @@ import { FormProvider } from './form-context'
 import { splitFormProps } from './form-options'
 import { FormShell } from './form-shell'
 import { NO_INJECTED_COMPONENTS } from './kit-form'
+import { assertNoReservedKeys, assertNoSharedKeys } from './reserved-keys'
 import { assertNoReservedFieldKeyCollision } from './schema/registries'
 import {
 	isSchemaFormControlled,
@@ -25,6 +26,7 @@ import type { BuiltInFieldKey, PropsOf, ValueOf } from './field-props'
 import type { FormFieldRegistry } from './field-registry'
 import type { FormControlledProps, AnyFormProps, FormUncontrolledImplProps, FormUncontrolledProps } from './form-props'
 import type { KitFormApi } from './kit-form'
+import type { ReservedKeyGuard, SharedKeyGuard } from './reserved-keys'
 import type { CustomFieldRegistry, CustomFieldRenderProps } from './schema/registries'
 import type {
 	AnySchemaFormProps,
@@ -92,7 +94,8 @@ export type CreateFormOptions<
 	 */
 	fields?: TFields &
 		Pick<FormFieldSlots, keyof NoInfer<TFields> & keyof FormFieldSlots> &
-		CustomFieldChecks<NoInfer<TFields>>
+		CustomFieldChecks<NoInfer<TFields>> &
+		ReservedKeyGuard<NoInfer<TFields>>
 	/**
 	 * Any components, each attached to the instance as-is under its key: `{ SaveBar }` gives
 	 * `<form.SaveBar />` with `SaveBar`'s own props. A component reads the form through
@@ -110,8 +113,17 @@ export type CreateFormOptions<
 	 * names, for the reason — and in the shape — `fields` re-asserts the built-ins. `SubmitButton`,
 	 * `Section`, `GridItem` and `Wizard` are also what `SchemaForm` draws a `submit`, `section`,
 	 * grid cell and stepped document with.
+	 *
+	 * Both registries also reject, at the key, a name the instance already owns (`Subscribe`,
+	 * `state`, `Field`, `Submit`, … — {@link ReservedKeyGuard}) and a name used in both registries
+	 * ({@link SharedKeyGuard}), and `createForm` throws on either. Like the checks above they read
+	 * `NoInfer<…>` only — the `fields` guard is also spelled over it, and so is `TFields` here — so
+	 * `createForm({ components: { SaveBar } })` still infers `TFields` from nothing and type-checks.
 	 */
-	components?: TComponents & Pick<FormComponents, keyof NoInfer<TComponents> & keyof FormComponents>
+	components?: TComponents &
+		Pick<FormComponents, keyof NoInfer<TComponents> & keyof FormComponents> &
+		ReservedKeyGuard<NoInfer<TComponents>> &
+		SharedKeyGuard<NoInfer<TComponents>, NoInfer<TFields>>
 }
 
 /**
@@ -169,6 +181,14 @@ export function createForm<
 	const FormElement = options.FormElement ?? DEFAULT_FORM_ELEMENT
 	const fields: FormFieldRegistry = options.fields ?? {}
 	const components: FormComponentRegistry & FormComponents = options.components ?? {}
+
+	// `Object.assign(form, fieldComponents, components)` below would write a reserved or shared
+	// key over the instance's own member — or over the field of the same name — so refuse both
+	// here, in every environment, and before `deriveFieldTypeIds`: a reserved key such as `Field`
+	// otherwise fails there first, with a message about its document id rather than about the key.
+	assertNoReservedKeys(fields, 'fields')
+	assertNoReservedKeys(components, 'components')
+	assertNoSharedKeys(fields, components)
 
 	/**
 	 * The same registry, re-keyed by the document id each component name derives — what the

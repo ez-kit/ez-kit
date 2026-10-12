@@ -421,12 +421,13 @@ describe('the factory runs the registry checks', () => {
 
 	/**
 	 * The builder writes its two primitives over the registry's output, so a field registered
-	 * under one of them would be accepted and then silently overwritten.
+	 * under one of them would be accepted and then silently overwritten. Both are reserved keys
+	 * of the instance, and the reserved-key check runs first.
 	 */
 	it.each(['Submit', 'Array'])('rejects %s, which the builder would overwrite', (key) => {
 		expect(() =>
 			createForm({ FormElement: testFormElement, fields: { ...testFields, [key]: Noop }, components: testComponents }),
-		).toThrow(new RegExp(key))
+		).toThrow(`createForm: "${key}" is reserved by the form instance and cannot be registered in fields.`)
 	})
 
 	it('rejects two keys deriving one id', () => {
