@@ -5,7 +5,10 @@ import { createForm } from './create-form'
 import { FormProvider, useFormContext } from './form-context'
 import { testComponents, testFields, testFormElement } from './test-kit'
 
+import type { NoRegistry } from './contract'
 import type { FormContextApi } from './form-context'
+import type { FormInstance } from './form-instance'
+import type { FormControlledProps } from './form-props'
 import type { ReactNode } from 'react'
 
 const { Form, useForm } = createForm({ FormElement: testFormElement, fields: testFields, components: testComponents })
@@ -37,6 +40,52 @@ describe('useFormContext', () => {
 		const { container } = render(<Host />)
 		expect(screen.getByTestId('probe').textContent).toBe('{"n":1}')
 		expect(container.querySelector('form')).toBeNull()
+	})
+
+	it('reads the form a controlled <Form form> passes, and its SubmitButton finds it', async () => {
+		const onSubmit = vi.fn()
+		function Host(): ReactNode {
+			const form = useForm({
+				defaultValues: { n: 1 },
+				onSubmit: ({ value }) => {
+					onSubmit(value)
+				},
+			})
+			return (
+				<Form form={form}>
+					<ValueProbe testId='probe' />
+					<form.SubmitButton>Save</form.SubmitButton>
+				</Form>
+			)
+		}
+		render(<Host />)
+		expect(screen.getByTestId('probe').textContent).toBe('{"n":1}')
+		screen.getByRole('button', { name: 'Save' }).click()
+		await vi.waitFor(() => {
+			expect(onSubmit).toHaveBeenCalledWith({ n: 1 })
+		})
+	})
+
+	it('takes a whole form instance in controlled <Form form>, not just a handleSubmit', () => {
+		expectTypeOf<FormControlledProps<{ n: number }>['form']>().toEqualTypeOf<
+			FormInstance<{ n: number }, NoRegistry, NoRegistry>
+		>()
+		const handleSubmit = (): Promise<void> => Promise.resolve()
+		// @ts-expect-error -- an object with only `handleSubmit` is not a form the context can serve
+		const _element = <Form form={{ handleSubmit }}>{null}</Form>
+	})
+
+	it('takes a form whose values hold an array', () => {
+		function Host(): ReactNode {
+			const form = useForm({ defaultValues: { tags: ['a'] } })
+			return (
+				<FormProvider form={form}>
+					<ValueProbe testId='probe' />
+				</FormProvider>
+			)
+		}
+		render(<Host />)
+		expect(screen.getByTestId('probe').textContent).toBe('{"tags":["a"]}')
 	})
 
 	it('returns the nearest form when forms nest', () => {

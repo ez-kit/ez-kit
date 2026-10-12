@@ -16,10 +16,10 @@ import { assertDocumentComponents } from './required-components'
 
 import type { BlockRegistry, CustomFieldRegistry } from './registries'
 import type { LayoutComponents } from './render-node'
-import type { SubmittableForm } from '../bindable-form'
 import type { AllFormFieldSlots, FormElementProps, NoRegistry } from '../contract'
 import type { FormFieldComponents } from '../field-props'
 import type { FormFieldRegistry } from '../field-registry'
+import type { AnyFormInstance } from '../form-context'
 import type { FormInstance } from '../form-instance'
 import type {
 	AnyFormSchema,
@@ -169,7 +169,7 @@ export type SchemaFormUncontrolledProps<
  */
 export type AnySchemaFormProps = FormElementRest &
 	SharedSchemaFormProps<unknown> & {
-		form?: SubmittableForm
+		form?: AnyFormInstance
 	}
 
 /** The uncontrolled shape at its least specific, once the overloads have validated the caller. */

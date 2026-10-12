@@ -9,8 +9,10 @@ import type { ReactNode } from 'react'
 /**
  * Any form instance, at its widest — what `FormProvider` accepts and what the context holds.
  *
- * Every `useForm` result is assignable: the value type and the field registry are open, and the
- * component set is the empty one — an instance's components are extra members on top of it.
+ * The value type and the field registry are open, and the component set is the empty one — an
+ * instance's components are extra members on top of it. A concrete instance whose values hold an
+ * array does not assign to it directly (see `FormProvider`); a parameter that takes one is
+ * `FormInstance<TValues, NoRegistry, NoRegistry>`, generic over `TValues`, which widens to this.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- the widest instance, see above
 export type AnyFormInstance = FormInstance<any, any, NoRegistry>
@@ -32,8 +34,21 @@ export type FormContextApi = FormInstance<unknown, NoRegistry, NoRegistry>
  */
 const FormContext = createContext<AnyFormInstance | null>(null)
 
-/** Provides `form` to `useFormContext()` without rendering a `<form>`. */
-export function FormProvider({ form, children }: { form: AnyFormInstance; children: ReactNode }): ReactNode {
+/**
+ * Provides `form` to `useFormContext()` without rendering a `<form>`.
+ *
+ * Generic over the values rather than typed `AnyFormInstance`: a form whose values hold an array is
+ * not assignable to `FormInstance<any, …>` — `pushFieldValue` and its siblings constrain their
+ * field to the array paths, and `any` has none — while `FormInstance<TValues, …>` takes every
+ * `useForm` result, and widens to the context's type with no cast.
+ */
+export function FormProvider<TValues>({
+	form,
+	children,
+}: {
+	form: FormInstance<TValues, NoRegistry, NoRegistry>
+	children: ReactNode
+}): ReactNode {
 	return <FormContext.Provider value={form}>{children}</FormContext.Provider>
 }
 

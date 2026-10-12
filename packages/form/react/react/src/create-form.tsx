@@ -16,6 +16,7 @@ import type { KitFormBlock, KitWithFormProps } from './composition'
 import type { FormComponentRegistry, FormComponents, FormElementProps, FormFieldSlots, NoRegistry } from './contract'
 import type { BuiltInFieldKey, PropsOf, ValueOf } from './field-props'
 import type { FormFieldRegistry } from './field-registry'
+import type { AnyFormInstance } from './form-context'
 import type { FormControlledProps, AnyFormProps, FormUncontrolledImplProps, FormUncontrolledProps } from './form-props'
 import type { KitFormApi } from './kit-form'
 import type { ReservedKeyGuard, SharedKeyGuard } from './reserved-keys'
@@ -376,7 +377,7 @@ export function createFormInternals<TFields extends FormFieldRegistry, TComponen
 	 * through a union target, so a single `FormProps` parameter would silently fall back to
 	 * the defaults and strip the types off `validators` and `onSubmit`.
 	 */
-	function Form(props: FormControlledProps): ReactNode
+	function Form<TValues>(props: FormControlledProps<TValues>): ReactNode
 	function Form<
 		TFormData,
 		TOnMount extends undefined | FormValidateOrFn<TFormData>,
@@ -555,7 +556,7 @@ const DEFAULT_FORM_ELEMENT = 'form'
  * `form` is the discriminant: the uncontrolled shape declares it as `form?: never`, so its
  * only legal value there is `undefined`.
  */
-function isControlled(props: { form?: unknown }): props is FormControlledProps {
+function isControlled(props: AnyFormProps): props is AnyFormProps & { form: AnyFormInstance; children: ReactNode } {
 	return props.form !== undefined
 }
 

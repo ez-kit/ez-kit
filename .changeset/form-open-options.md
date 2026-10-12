@@ -10,6 +10,10 @@ its own props — `components: { SaveBar }` gives `<form.SaveBar />`. Without `F
 renders a plain `<form>`. A component reads the form from context, so it needs `<Form>`,
 `<SchemaForm>` or `<FormProvider>` above it: an instance from `useForm` rendered under a
 hand-written `<form>` is wrapped in `<FormProvider form={form}>`, or `form.SubmitButton` throws.
+Because `<Form form>` puts its instance in that context, the controlled `form` prop now takes a
+whole form instance (`FormInstance<V, NoRegistry, NoRegistry>`, generic over the values) rather than
+any object with a `handleSubmit`; every `useForm` result is accepted, and `FormProvider` now also
+accepts one whose values hold an array.
 
 Breaking: the `Button` and `Form` slots are gone. Pass the kit's `FormElement` as `FormElement`, and
 its `SubmitButton`, `Section`, `GridItem` and `Wizard` in `components`; `form.SubmitButton` is now

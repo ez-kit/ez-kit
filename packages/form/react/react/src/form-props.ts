@@ -1,6 +1,13 @@
-import type { SubmittableForm } from './bindable-form'
-import type { AllFormComponents, AllFormFieldSlots, FormComponentRegistry, FormElementProps } from './contract'
+import type {
+	AllFormComponents,
+	AllFormFieldSlots,
+	FormComponentRegistry,
+	FormElementProps,
+	NoRegistry,
+} from './contract'
 import type { FormFieldRegistry } from './field-registry'
+import type { AnyFormInstance } from './form-context'
+import type { FormInstance } from './form-instance'
 import type { KitFormApi } from './kit-form'
 import type { FormAsyncValidateOrFn, FormOptions, FormValidateOrFn } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
@@ -16,14 +23,14 @@ type FormElementRest = Omit<FormElementProps, 'onSubmit' | 'children'>
 /**
  * Controlled mode: the caller owns the instance and passes it in.
  *
- * The instance is typed by what this component actually needs — a `handleSubmit` — rather
- * than by the full generic form API. Nothing here has to know the form's data type: the
- * typed field components travel on the caller's own instance, so `name` stays checked
- * without a single generic reaching this component.
+ * The instance is typed as a whole form — what `FormProvider` takes — because `<Form>` puts it in
+ * context, where `form.SubmitButton` and `useFormContext()` read the full base API, not just
+ * `handleSubmit`. `TValues` is inferred from the instance and checks nothing else: the typed field
+ * components travel on the caller's own instance, so `name` stays checked there.
  */
-export type FormControlledProps = FormElementRest & {
+export type FormControlledProps<TValues = unknown> = FormElementRest & {
 	/** Instance returned by `useForm`. */
-	form: SubmittableForm
+	form: FormInstance<TValues, NoRegistry, NoRegistry>
 	children: ReactNode
 }
 
@@ -96,7 +103,7 @@ export type FormUncontrolledProps<
  * API: a call site should always land on one of the two overloads.
  */
 export type AnyFormProps = FormElementRest & {
-	form?: SubmittableForm
+	form?: AnyFormInstance
 	children: ReactNode | ((form: never) => ReactNode)
 }
 
@@ -156,7 +163,7 @@ export type FormProps<
 	TFields extends FormFieldRegistry = AllFormFieldSlots,
 	TComponents extends FormComponentRegistry = AllFormComponents,
 > =
-	| FormControlledProps
+	| FormControlledProps<TFormData>
 	| FormUncontrolledProps<
 			TFormData,
 			TOnMount,
