@@ -126,6 +126,12 @@ export function Header<TRow extends object = ErasedRow>({ sticky, children }: Da
 	useDataGridState((s) => s.columnSizing)
 	useDataGridState((s) => s.columnResizing)
 	useDataGridState((s) => s.rowSelection)
+	// Grouping rebuilds the row model **and** the column list — `groupedColumnMode: 'remove'`
+	// takes a grouped column out while it is a level — so every component that reads either has
+	// to re-derive on it. Optional-chained because the slice exists only with
+	// `columnGroupingFeature` registered; see `feature-optionality.test.tsx`.
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	useDataGridState((s) => s.grouping ?? null)
 
 	const { Thead } = useGridComponents().core
 	const headerGroups = table.getHeaderGroups()

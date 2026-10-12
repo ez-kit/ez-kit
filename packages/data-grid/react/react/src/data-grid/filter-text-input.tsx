@@ -13,6 +13,15 @@ type FilterTextInputProps = {
 	/** Commits a new value into the column filter. */
 	onCommit: (value: string) => void
 	placeholder: string
+	/**
+	 * Accessible name for the input.
+	 *
+	 * Separate from `placeholder` even though the two carry the same text today: a placeholder is
+	 * a hint that disappears the moment the user types, and axe's `label` rule does not accept one
+	 * as a name. The kits' `Input` is `InputHTMLAttributes<HTMLInputElement>`, so this reaches the
+	 * element whichever kit is mounted.
+	 */
+	'aria-label': string
 	/** Commit debounce in milliseconds. `0` = pass-through (commit on every keystroke). */
 	debounce: number
 	/**
@@ -33,7 +42,15 @@ type FilterTextInputProps = {
  * With `debounce === 0` the hook is a pass-through, so commits fire on every
  * keystroke — identical to the previous non-debounced behaviour.
  */
-export function FilterTextInput({ Input, value, onCommit, placeholder, debounce, onEnterApply }: FilterTextInputProps) {
+export function FilterTextInput({
+	Input,
+	value,
+	onCommit,
+	placeholder,
+	'aria-label': ariaLabel,
+	debounce,
+	onEnterApply,
+}: FilterTextInputProps) {
 	const [draft, setDraft] = useState(value)
 	const debouncedDraft = useDebouncedValue(draft, debounce)
 
@@ -63,6 +80,7 @@ export function FilterTextInput({ Input, value, onCommit, placeholder, debounce,
 	return (
 		<Input
 			placeholder={placeholder}
+			aria-label={ariaLabel}
 			value={draft}
 			onChange={(e) => {
 				setDraft(e.target.value)

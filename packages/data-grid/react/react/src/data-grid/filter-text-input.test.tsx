@@ -6,13 +6,13 @@ import { FilterTextInput } from './filter-text-input'
 
 import type { InputProps } from '../types'
 
+/**
+ * The stub kit input. It spreads what it is given and adds nothing: the accessible name the
+ * queries below look up comes from `FilterTextInput`'s own `aria-label`, which is how a real
+ * kit's `core.Input` (typed `InputHTMLAttributes<HTMLInputElement>`) receives it too.
+ */
 function TestInput(props: InputProps) {
-	return (
-		<input
-			aria-label='filter'
-			{...props}
-		/>
-	)
+	return <input {...props} />
 }
 
 afterEach(() => {
@@ -28,6 +28,7 @@ describe('FilterTextInput', () => {
 				value=''
 				onCommit={onCommit}
 				placeholder='Filter…'
+				aria-label='filter'
 				debounce={0}
 			/>,
 		)
@@ -50,6 +51,7 @@ describe('FilterTextInput', () => {
 				value=''
 				onCommit={onCommit}
 				placeholder='Filter…'
+				aria-label='filter'
 				debounce={200}
 			/>,
 		)
@@ -81,6 +83,7 @@ describe('FilterTextInput', () => {
 						value={value}
 						onCommit={() => {}}
 						placeholder='Filter…'
+						aria-label='filter'
 						debounce={0}
 					/>
 					<button

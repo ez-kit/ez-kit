@@ -562,6 +562,46 @@
 		"exportName": "ExpandingSubContentExample"
 	},
 	{
+		"id": "grouping-basic",
+		"label": "Basic",
+		"group": "grouping",
+		"groupLabel": "Grouping",
+		"sourceFile": "components/grouping/basic.tsx",
+		"exportName": "GroupingBasicExample"
+	},
+	{
+		"id": "grouping-nested",
+		"label": "Two levels",
+		"group": "grouping",
+		"groupLabel": "Grouping",
+		"sourceFile": "components/grouping/basic.tsx",
+		"exportName": "GroupingNestedExample"
+	},
+	{
+		"id": "grouping-aggregation",
+		"label": "Footer total · no grouping",
+		"group": "grouping",
+		"groupLabel": "Grouping",
+		"sourceFile": "components/grouping/aggregation.tsx",
+		"exportName": "GroupingAggregationExample"
+	},
+	{
+		"id": "grouping-server",
+		"label": "Server-supplied totals",
+		"group": "grouping",
+		"groupLabel": "Grouping",
+		"sourceFile": "components/grouping/server.tsx",
+		"exportName": "ServerGroupingExample"
+	},
+	{
+		"id": "grouping-interactive",
+		"label": "Interactive",
+		"group": "grouping",
+		"groupLabel": "Grouping",
+		"sourceFile": "components/grouping/interactive.tsx",
+		"exportName": "GroupingInteractiveExample"
+	},
+	{
 		"id": "expanding-tree",
 		"label": "Tree",
 		"group": "expanding",
@@ -646,6 +686,12 @@
 		"label": "Virtualized",
 		"sourceFile": "components/virtualized.tsx",
 		"exportName": "VirtualizedExample"
+	},
+	{
+		"id": "virtualized-row-pinning",
+		"label": "Virtualized with pinned rows",
+		"sourceFile": "components/virtualized-row-pinning.tsx",
+		"exportName": "VirtualizedRowPinningExample"
 	},
 	{
 		"id": "crud-client",
@@ -934,5 +980,101 @@
 		"groupLabel": "Layout",
 		"sourceFile": "components/layout-presets.tsx",
 		"exportName": "LayoutPopoverFiltersExample"
+	},
+	{
+		"id": "row-drag",
+		"label": "Row drag and drop",
+		"group": "ordering",
+		"groupLabel": "Ordering",
+		"sourceFile": "components/row-drag.tsx",
+		"exportName": "RowDragExample"
+	},
+	{
+		"id": "column-drag",
+		"label": "Column drag and drop",
+		"group": "ordering",
+		"groupLabel": "Ordering",
+		"sourceFile": "components/column-drag.tsx",
+		"exportName": "ColumnDragExample"
+	},
+	{
+		"id": "virtualized-row-drag",
+		"label": "Virtualized row drag",
+		"group": "ordering",
+		"groupLabel": "Ordering",
+		"sourceFile": "components/virtualized-row-drag.tsx",
+		"exportName": "VirtualizedRowDragExample"
+	},
+	{
+		"id": "keyboard-sensors",
+		"label": "Keyboard sensors",
+		"group": "ordering",
+		"groupLabel": "Ordering",
+		"sourceFile": "components/keyboard-sensors.tsx",
+		"exportName": "KeyboardSensorsExample"
+	},
+	{
+		"id": "column-panel-drag",
+		"label": "Column panel drag and drop",
+		"group": "ordering",
+		"groupLabel": "Ordering",
+		"sourceFile": "components/column-panel-drag.tsx",
+		"exportName": "ColumnPanelDragExample"
+	},
+	{
+		"id": "column-drag-rtl",
+		"label": "Column drag (RTL)",
+		"group": "ordering",
+		"groupLabel": "Ordering",
+		"sourceFile": "components/column-drag.tsx",
+		"exportName": "ColumnDragRtlExample"
+	},
+	{
+		"id": "row-drag-handle-column",
+		"label": "Row drag: configured handle column",
+		"group": "ordering",
+		"groupLabel": "Ordering",
+		"sourceFile": "components/row-drag-handle.tsx",
+		"exportName": "RowDragHandleColumnExample"
+	},
+	{
+		"id": "row-drag-cell-handle",
+		"label": "Row drag: handle inside a cell",
+		"group": "ordering",
+		"groupLabel": "Ordering",
+		"sourceFile": "components/row-drag-handle.tsx",
+		"exportName": "RowDragCellHandleExample"
+	},
+	{
+		"id": "virtualized-row-drag-cell-handle",
+		"label": "Virtualized row drag: handle inside a cell",
+		"group": "ordering",
+		"groupLabel": "Ordering",
+		"sourceFile": "components/row-drag-handle.tsx",
+		"exportName": "VirtualizedRowDragCellHandleExample"
+	},
+	{
+		"id": "row-drag-default",
+		"label": "Row drag: default handle column",
+		"group": "ordering",
+		"groupLabel": "Ordering",
+		"sourceFile": "components/row-drag-handle.tsx",
+		"exportName": "RowDragDefaultExample"
+	},
+	{
+		"id": "row-drag-sorting-selection",
+		"label": "Row drag beside sorting and selection",
+		"group": "ordering",
+		"groupLabel": "Ordering",
+		"sourceFile": "components/row-drag-sorting-selection.tsx",
+		"exportName": "RowDragSortingSelectionExample"
+	},
+	{
+		"id": "column-panel-drag-basic",
+		"label": "Column panel drag: no composition",
+		"group": "ordering",
+		"groupLabel": "Ordering",
+		"sourceFile": "components/column-panel-drag-basic.tsx",
+		"exportName": "ColumnPanelDragBasicExample"
 	}
 ]

@@ -1,6 +1,7 @@
 import { NO_HEADING } from './mdx-tables'
 import {
 	FORM_API_TYPE_ARGS,
+	FORM_ARRAY_TYPE_ARGS,
 	FORM_VALUE_TYPE_ARGS,
 	FEATURES_ROW_TYPE_ARGS,
 	FEATURES_TYPE_ARGS,
@@ -109,11 +110,16 @@ export const DocPage = {
 	LayoutIndex: 'content/docs/data-grid/layout/index.mdx',
 	Theming: 'content/docs/data-grid/theming.mdx',
 	Localization: 'content/docs/data-grid/localization.mdx',
+	Accessibility: 'content/docs/data-grid/accessibility.mdx',
 	ExamplesIndex: 'content/docs/data-grid/examples.mdx',
 	ColumnsColumnHelper: 'content/docs/data-grid/columns/column-helper.mdx',
 	ColumnsGroupedHeaders: 'content/docs/data-grid/columns/grouped-headers.mdx',
 	ColumnsOrdering: 'content/docs/data-grid/columns/ordering.mdx',
 	RowOrdering: 'content/docs/data-grid/row-ordering.mdx',
+	DragAndDropApi: 'content/docs/data-grid/drag-and-drop/api.mdx',
+	DragAndDropColumns: 'content/docs/data-grid/drag-and-drop/columns.mdx',
+	DragAndDropIndex: 'content/docs/data-grid/drag-and-drop/index.mdx',
+	DragAndDropRows: 'content/docs/data-grid/drag-and-drop/rows.mdx',
 	PinningApi: 'content/docs/data-grid/pinning/api.mdx',
 	PinningColumns: 'content/docs/data-grid/pinning/columns.mdx',
 	ColumnsVisibility: 'content/docs/data-grid/columns/visibility.mdx',
@@ -123,6 +129,9 @@ export const DocPage = {
 	ExpandingControlled: 'content/docs/data-grid/expanding/controlled.mdx',
 	ExpandingSubContent: 'content/docs/data-grid/expanding/sub-content.mdx',
 	ExpandingTree: 'content/docs/data-grid/expanding/tree.mdx',
+	GroupingIndex: 'content/docs/data-grid/grouping/index.mdx',
+	GroupingAggregation: 'content/docs/data-grid/grouping/aggregation.mdx',
+	GroupingInteractive: 'content/docs/data-grid/grouping/interactive.mdx',
 	FilteringDateRange: 'content/docs/data-grid/filtering/date-range.mdx',
 	FilteringGlobal: 'content/docs/data-grid/filtering/global.mdx',
 	FilteringIndex: 'content/docs/data-grid/filtering/index.mdx',
@@ -130,6 +139,9 @@ export const DocPage = {
 	FilteringOperators: 'content/docs/data-grid/filtering/operators.mdx',
 	FilteringActiveFilters: 'content/docs/data-grid/filtering/active-filters.mdx',
 	FilteringVariants: 'content/docs/data-grid/filtering/variants.mdx',
+	FormArrays: 'content/docs/form/arrays/index.mdx',
+	FormArraysApi: 'content/docs/form/arrays/api.mdx',
+	FormCustomFields: 'content/docs/form/custom-fields.mdx',
 	FormCustomKit: 'content/docs/form/custom-kit.mdx',
 	FormFields: 'content/docs/form/fields.mdx',
 	FormLayout: 'content/docs/form/layout.mdx',
@@ -237,6 +249,9 @@ export const GRID_TYPE = {
 	SortingConfig: { module: TypeModule.Core, name: 'SortingConfig' },
 	MultiSortConfig: { module: TypeModule.Core, name: 'MultiSortConfig' },
 	ColumnSortingConfig: { module: TypeModule.Core, name: 'ColumnSortingConfig' },
+	ColumnGroupingConfig: { module: TypeModule.Core, name: 'ColumnGroupingConfig', typeArgs: ROW_TYPE_ARGS },
+	ColumnAggregationConfig: { module: TypeModule.Core, name: 'ColumnAggregationConfig' },
+	AggregationConfig: { module: TypeModule.Core, name: 'AggregationConfig' },
 	ColumnFilteringConfig: { module: TypeModule.Core, name: 'ColumnFilteringConfig' },
 	ColumnOperatorsConfig: { module: TypeModule.Core, name: 'ColumnOperatorsConfig' },
 	TableOperatorsConfig: { module: TypeModule.Core, name: 'TableOperatorsConfig' },
@@ -268,6 +283,14 @@ export const GRID_TYPE = {
 	BulkDeletingConfig: { module: TypeModule.Core, name: 'BulkDeletingConfig', typeArgs: ROW_TYPE_ARGS },
 	CellTypeDefinition: { module: TypeModule.React, name: 'CellTypeDefinition' },
 	LayoutConfig: { module: TypeModule.React, name: 'LayoutConfig' },
+	/** The options of `createDataGrid` — a bundle-level config, where the drag adapter is bound. */
+	CreateDataGridOptions: {
+		module: TypeModule.React,
+		name: 'CreateDataGridOptions',
+		typeArgs: '<Record<never, never>>',
+	},
+	/** The message catalogue; tables address its keys as `<group>.<key>`. */
+	GridMessages: { module: TypeModule.Core, name: 'GridMessages' },
 } as const satisfies Record<string, TypeRef>
 
 /**
@@ -305,10 +328,25 @@ export const FORM_TYPE = {
 	/** The `section` node — `CommonProps` (so `colSpan`) plus the grid's own keys. */
 	SectionNode: { module: TypeModule.FormCore, name: 'SectionNode', typeArgs: ROW_TYPE_ARGS },
 	DateFieldProps: { module: TypeModule.FormReact, name: 'DateFieldProps', typeArgs: ROW_TYPE_ARGS },
-	/** What a kit's field component receives — the base half of the `FormComponents` contract. */
+	/** What a kit's field component receives — the base half of the field-slot contract. */
 	FieldRenderProps: { module: TypeModule.FormReact, name: 'FieldRenderProps' },
-	/** The kit contract itself; its keys are the component slots a kit must supply. */
+	/**
+	 * The chrome half of the kit contract: the seven slots that are not field kinds —
+	 * `Form`, `Button`, `Section`, `GridItem`, `Wizard` and the two array slots.
+	 */
 	FormComponents: { module: TypeModule.FormReact, name: 'FormComponents' },
+	/**
+	 * The field half: the twelve field kinds a kit supplies as `createForm({ fields })`.
+	 * Separate from {@link FORM_TYPE.FormComponents} because the two are separate options —
+	 * and because this one is an open registry, so a kit or an app may add keys to it.
+	 */
+	FormFieldSlots: { module: TypeModule.FormReact, name: 'FormFieldSlots' },
+	/**
+	 * What a *custom* field's component receives: everything `FieldRenderProps` carries plus
+	 * the three the registry adds — `value`, `onChange` and the nested `props` bag. Both type
+	 * parameters default, so it instantiates bare.
+	 */
+	CustomFieldRenderProps: { module: TypeModule.FormReact, name: 'CustomFieldRenderProps' },
 	FormRendererControlledProps: {
 		module: TypeModule.FormReact,
 		name: 'FormRendererControlledProps',
@@ -319,6 +357,21 @@ export const FORM_TYPE = {
 		name: 'FormRendererUncontrolledProps',
 		typeArgs: FORM_API_TYPE_ARGS,
 	},
+	/** The JSX array trio: the component's props, the render prop's scope, and one entry of it. */
+	ArrayFieldProps: { module: TypeModule.FormReact, name: 'ArrayFieldProps', typeArgs: FORM_ARRAY_TYPE_ARGS },
+	ArrayFieldScope: { module: TypeModule.FormReact, name: 'ArrayFieldScope', typeArgs: '<string>' },
+	ArrayItemScope: { module: TypeModule.FormReact, name: 'ArrayItemScope', typeArgs: '<string>' },
+	/** The headless primitive's own trio: `form.Array`'s props, its scope, and `item.Item`'s own props. */
+	ArrayProps: { module: TypeModule.FormReact, name: 'ArrayProps', typeArgs: FORM_ARRAY_TYPE_ARGS },
+	ArrayScope: { module: TypeModule.FormReact, name: 'ArrayScope', typeArgs: '<string>' },
+	ArrayItemProps: { module: TypeModule.FormReact, name: 'ArrayItemProps' },
+	/**
+	 * The `array` node with its value type erased. `ArrayNode<DocsProbeRow>` is not usable:
+	 * the probe row holds no array path, so the distribution has nothing to distribute over
+	 * and the type collapses to `never`. `AnyArrayNode` is the shape traversal and the
+	 * renderer actually see, and it carries the same keys.
+	 */
+	AnyArrayNode: { module: TypeModule.FormCore, name: 'AnyArrayNode' },
 	/** The instance `useForm` returns: TanStack's own API plus the flat field components. */
 	KitFormApi: { module: TypeModule.FormReact, name: 'KitFormApi', typeArgs: FORM_API_TYPE_ARGS },
 } as const satisfies Record<string, TypeRef>
@@ -720,7 +773,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.ColumnsOrdering,
 		optionTables: [
-			{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 2 },
+			{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 6 },
 			{ heading: 'Column options', roots: [GRID_TYPE.ColumnDef], expectedCount: 1 },
 		],
 		nonOptionTables: [],
@@ -731,9 +784,78 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		nonOptionTables: [],
 	},
 	{
+		// The narrative pages of the split: prose and live examples, every table moved to
+		// `drag-and-drop/api.mdx` below. Mapped with two empty arrays so each stays inside
+		// `everyPageIsMapped` rather than silently unchecked.
+		page: DocPage.DragAndDropIndex,
+		optionTables: [],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.DragAndDropRows,
+		optionTables: [],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.DragAndDropColumns,
+		optionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'The short form',
+				reason:
+					'The first column is an intent in prose ("The move pair alone, no drag"); the other two name the option per surface, and every one of them is checked on `drag-and-drop/api.mdx` and `columns/ordering.mdx`.',
+			},
+		],
+	},
+	{
+		page: DocPage.DragAndDropApi,
+		optionTables: [
+			// `createDataGrid({ dnd })` — the one field drag adds to the bundle config.
+			{ heading: 'Binding', roots: [GRID_TYPE.CreateDataGridOptions], expectedCount: 1 },
+			// The `ordering` tree, resolved through its `boolean | …Config` and `false | SystemColumnDef`
+			// unions, plus `getRowId` and `direction`, which row and RTL drags read.
+			{ heading: 'Grid options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 13 },
+			{ heading: 'Column def', roots: [GRID_TYPE.ColumnDef], expectedCount: 1 },
+			{ heading: 'Announcements', roots: [GRID_TYPE.GridMessages], expectedCount: 13 },
+		],
+		nonOptionTables: [
+			{
+				heading: 'Components',
+				reason:
+					'The first column names components, a render argument and a helper function — exported symbols and JSX, not keys of any config type.',
+			},
+			{
+				heading: 'Surfaces',
+				reason:
+					'The first column names a drag surface; the rest are the handle to render, the state slice it writes and the list it counts in — none is a key of any config type.',
+			},
+			{
+				heading: 'Pointer',
+				reason:
+					'The first column is a kind of pointer (mouse, touch, pen); the other two describe when a drag starts. Nothing here is settable.',
+			},
+			{
+				heading: 'Keyboard',
+				reason:
+					'The first column is a key on the keyboard (`Space` or `Enter`, `Escape`, `Tab`); the other two are what pressing it does on a focused handle and mid-drag. Nothing here is settable.',
+			},
+		],
+	},
+	{
 		page: DocPage.Localization,
 		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 1 }],
 		nonOptionTables: [],
+	},
+	{
+		page: DocPage.Accessibility,
+		optionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'State semantics',
+				reason:
+					'Documents the ARIA attributes the grid writes onto the DOM — attribute names, not keys of any config type.',
+			},
+		],
 	},
 	{
 		page: DocPage.ExamplesIndex,
@@ -839,6 +961,35 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		nonOptionTables: [],
 	},
 	{
+		page: DocPage.GroupingIndex,
+		optionTables: [
+			{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 6 },
+			{ heading: 'Column options', roots: [GRID_TYPE.ColumnDef, GRID_TYPE.ColumnGroupingConfig], expectedCount: 2 },
+		],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.GroupingAggregation,
+		optionTables: [
+			{
+				heading: 'Options',
+				roots: [GRID_TYPE.ColumnDef, GRID_TYPE.ColumnAggregationConfig],
+				expectedCount: 3,
+			},
+			{
+				heading: 'Table options',
+				roots: [GRID_TYPE.UseDataGridConfig, GRID_TYPE.AggregationConfig],
+				expectedCount: 2,
+			},
+		],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.GroupingInteractive,
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 3 }],
+		nonOptionTables: [],
+	},
+	{
 		page: DocPage.FilteringDateRange,
 		optionTables: [
 			{ heading: '`filtering.presets`', roots: [GRID_TYPE.ColumnFilteringConfig], expectedCount: 1 },
@@ -935,13 +1086,22 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		],
 	},
 	{
+		page: DocPage.FormCustomFields,
+		optionTables: [
+			// The three props the registry adds on top of `FieldRenderProps`; the eleven it
+			// shares are documented once, on the kit-contract page, and linked from here.
+			{ heading: 'What the component receives', roots: [FORM_TYPE.CustomFieldRenderProps], expectedCount: 3 },
+		],
+		nonOptionTables: [],
+	},
+	{
 		page: DocPage.FormCustomKit,
 		optionTables: [
 			// The base-props table sits under "Fields"; the per-kind table under the
 			// "#### Per-kind props" subheading added for exactly this reason — a
 			// heading addresses at most one table.
 			{ heading: 'Fields', roots: [FORM_TYPE.FieldRenderProps], expectedCount: 11 },
-			{ heading: 'Per-kind props', roots: [FORM_TYPE.FormComponents], expectedCount: 12 },
+			{ heading: 'Per-kind props', roots: [FORM_TYPE.FormFieldSlots], expectedCount: 12 },
 			{ heading: 'Form level', roots: [FORM_TYPE.FormComponents], expectedCount: 2 },
 			{ heading: 'Layout and wizard', roots: [FORM_TYPE.FormComponents], expectedCount: 3 },
 		],
@@ -1003,10 +1163,13 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			// each row with the mode it belongs to: `form` exists only on the
 			// controlled props, `keepHiddenValues` and the `useForm` options only on
 			// the uncontrolled ones.
+			//
+			// Nine, not ten: the per-form `fields` registry was removed in favour of
+			// `createForm({ fields })`, the single registration site. `blocks` stays.
 			{
 				heading: 'Renderer props',
 				roots: [FORM_TYPE.FormRendererControlledProps, FORM_TYPE.FormRendererUncontrolledProps],
-				expectedCount: 10,
+				expectedCount: 9,
 			},
 		],
 		nonOptionTables: [
@@ -1139,6 +1302,35 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{ page: DocPage.FormBasicConcepts, optionTables: [], nonOptionTables: [] },
 	{ page: DocPage.FormComposition, optionTables: [], nonOptionTables: [] },
 	{ page: DocPage.FormExamples, optionTables: [], nonOptionTables: [] },
+	{
+		// The narrative half of the split: prose and live examples, every table moved to
+		// `arrays/api.mdx` below. Mapped with an empty optionTables so the page stays inside
+		// `everyPageIsMapped` rather than silently unchecked. `Styling hooks` is the one table
+		// that stays here — it documents DOM attributes, not a type's props.
+		page: DocPage.FormArrays,
+		optionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'Styling hooks',
+				reason: 'Documents the `data-*` attributes the kits emit onto the DOM, not props of any type.',
+			},
+		],
+	},
+	{
+		page: DocPage.FormArraysApi,
+		optionTables: [
+			{ heading: '`form.ArrayField`', roots: [FORM_TYPE.ArrayFieldProps], expectedCount: 12 },
+			{ heading: 'The render prop', roots: [FORM_TYPE.ArrayFieldScope], expectedCount: 3 },
+			{ heading: 'One entry', roots: [FORM_TYPE.ArrayItemScope], expectedCount: 3 },
+			{ heading: '`form.Array`', roots: [FORM_TYPE.ArrayProps], expectedCount: 6 },
+			{ heading: 'The scope', roots: [FORM_TYPE.ArrayScope], expectedCount: 12 },
+			{ heading: 'One entry, from the primitive', roots: [FORM_TYPE.ArrayItemScope], expectedCount: 8 },
+			{ heading: "`item.Item`'s own props", roots: [FORM_TYPE.ArrayItemProps], expectedCount: 4 },
+			{ heading: 'Validating the list', roots: [FORM_TYPE.FieldValidate], expectedCount: 3 },
+			{ heading: 'The `array` node', roots: [FORM_TYPE.AnyArrayNode], expectedCount: 10 },
+		],
+		nonOptionTables: [],
+	},
 	{ page: DocPage.FormGettingStarted, optionTables: [], nonOptionTables: [] },
 	{ page: DocPage.FormInstallationHeroui, optionTables: [], nonOptionTables: [] },
 	{ page: DocPage.FormInstallationShadcn, optionTables: [], nonOptionTables: [] },

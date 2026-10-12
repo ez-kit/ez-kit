@@ -3,9 +3,9 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
 import { createForm } from './create-form'
-import { testComponents } from './test-kit'
+import { testComponents, testFields } from './test-kit'
 
-import type { FormComponents } from './contract'
+import type { FormFieldSlots } from './contract'
 import type { FormSchema } from '@ez-kit/form-core'
 
 /**
@@ -30,7 +30,7 @@ const OPTIONS = [
 	{ label: 'Admin', value: 'admin' },
 ]
 
-const { useForm, Form, FormRenderer } = createForm({ components: testComponents })
+const { useForm, Form, FormRenderer } = createForm({ components: testComponents, fields: testFields })
 
 /** The stand-in kit stamps `data-loading` on the control whenever the contract says so. */
 const LOADING_ATTRIBUTE = 'data-loading'
@@ -98,14 +98,14 @@ describe('loading options', () => {
 
 	it('hands the kit a boolean, never `undefined`, when the prop is omitted', () => {
 		const seen: unknown[] = []
-		const components: FormComponents = {
-			...testComponents,
+		const fields: FormFieldSlots = {
+			...testFields,
 			SelectField: (props) => {
 				seen.push(props.loading)
-				return testComponents.SelectField(props)
+				return testFields.SelectField(props)
 			},
 		}
-		const { useForm: useSpyForm, Form: SpyForm } = createForm({ components })
+		const { useForm: useSpyForm, Form: SpyForm } = createForm({ components: testComponents, fields })
 
 		function Case() {
 			const form = useSpyForm({ defaultValues: DEFAULTS })

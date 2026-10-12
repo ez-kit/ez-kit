@@ -1,3 +1,5 @@
+import type { DataGridColumnDragHandleProps } from './data-grid/column-drag-handle'
+import type { DataGridRowDragHandleProps } from './data-grid/row-drag-handle'
 import type { GridContextAtom } from './grid-context'
 import type { GridMenuItem, GridMenuProps } from './menu'
 import type { ResolvedGridOptions } from './resolved-options'
@@ -558,14 +560,17 @@ export type VisibilityColumnItem = {
 	canHide: boolean
 	onToggle: () => void
 	/**
-	 * The two one-step moves along the column order, or absent when this menu does not offer
-	 * reordering at all — which is the default.
+	 * The two one-step moves along the column order, or absent when this menu does not offer the
+	 * pair — which is the default, and is also what a **draggable** panel does: the grip and the
+	 * arrows are the same move, so a panel offers one of them. See
+	 * `ordering.column.visibilityMenu.moveControls`, and {@link VisibilityMenuProps.isColumnPanel}
+	 * for the question this field does *not* answer.
 	 *
 	 * The vocabulary is logical, the same `start` / `end` the core step uses, because the order
 	 * flips under RTL. What glyph stands for each is the kit's decision: both kits here draw a
 	 * vertical pair, the list running from the start of the order at the top.
 	 *
-	 * Present on every listed column once the menu offers moves, with both flags `false` for a
+	 * Present on every listed column once the pair is offered, with both flags `false` for a
 	 * column the author locked — the disabled pair is what says "this one is fixed".
 	 */
 	ordering?: {
@@ -578,6 +583,22 @@ export type VisibilityColumnItem = {
 
 export type VisibilityMenuProps = {
 	columns: VisibilityColumnItem[]
+	/**
+	 * Whether this is the **column panel** rather than the plain Columns toggle — i.e. whether
+	 * `ordering.column.visibilityMenu` asked for one.
+	 *
+	 * A kit needs it because the panel's two affordances are independent: a panel whose rows are
+	 * draggable carries no `ordering` pair on its items, so `columns.some((col) => col.ordering)`
+	 * answers "are the arrows offered" and **not** "is this a panel". Reading the second question
+	 * off the first is what silently turned a drag-only panel back into a checkbox list, taking
+	 * the drag with it — the rows' drag lives in `<DataGridVisibilityItem>`, which only a panel
+	 * renders.
+	 *
+	 * So: branch the panel's *shape* on this, and each control on what the item carries —
+	 * `col.ordering` for the move pair, and `<ColumnDragHandle />`, which self-hides, for the
+	 * grip.
+	 */
+	isColumnPanel: boolean
 }
 
 /**
@@ -1026,6 +1047,18 @@ export type GridComponentRegistry = {
 	Modal?: ComponentType<ModalProps>
 	/** Optional — see {@link TooltipProps}. Falls back to rendering `children` alone. */
 	Tooltip?: ComponentType<TooltipProps>
+	/**
+	 * Optional — the row drag handle the `__drag__` system column and a row's `dragHandle` render
+	 * arg place. A kit registers its own `<DataGrid.RowDragHandle />` wearing its grip glyph; the
+	 * fallback is the shared handle itself — a working, labelled button with no glyph, since this
+	 * package draws none.
+	 */
+	RowDragHandle?: ComponentType<DataGridRowDragHandleProps>
+	/**
+	 * Optional — the column drag handle the built-in header cell and the `dragHandle` render arg
+	 * place. The twin of {@link RowDragHandle}, with the same fallback.
+	 */
+	ColumnDragHandle?: ComponentType<DataGridColumnDragHandleProps>
 	// composite
 	Toolbar?: ComponentType<ToolbarProps>
 	GlobalFilterInput?: ComponentType<GlobalFilterInputProps>

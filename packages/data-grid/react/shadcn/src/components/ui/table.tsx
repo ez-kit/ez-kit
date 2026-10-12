@@ -82,12 +82,13 @@ const TableRow = React.forwardRef<HTMLTableRowElement, React.ComponentProps<'tr'
 	)
 })
 
-function TableHead({
-	className,
-	pinned,
-	style,
-	...props
-}: React.ComponentProps<'th'> & { pinned?: 'start' | 'end' | false }) {
+// `forwardRef` for the same reason as {@link TableRow}: a header cell is the element a pointer
+// drag moves a column by, and a drag library is handed that node through a ref. React 18 strips
+// `ref` from a function component's props, so the spread below cannot deliver it there.
+const TableHead = React.forwardRef<
+	HTMLTableCellElement,
+	React.ComponentProps<'th'> & { pinned?: 'start' | 'end' | false }
+>(function TableHead({ className, pinned, style, ...props }, ref) {
 	return (
 		<th
 			data-slot='table-head'
@@ -97,9 +98,10 @@ function TableHead({
 			)}
 			style={pinned ? { backgroundColor: 'var(--dg-pin-cell-background)', ...style } : style}
 			{...props}
+			ref={ref}
 		/>
 	)
-}
+})
 
 function TableCell({
 	className,

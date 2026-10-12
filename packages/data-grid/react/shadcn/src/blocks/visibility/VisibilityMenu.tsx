@@ -1,8 +1,10 @@
 'use client'
 
+import { DataGridVisibilityItem } from '@ez-kit/data-grid-react'
 import { useGridMessages } from '@ez-kit/data-grid-react/kit'
 import { ArrowDown, ArrowUp, Columns2 } from 'lucide-react'
 
+import { ColumnDragHandle } from '@grid-shadcn/blocks/ordering/ColumnDragHandle'
 import { Button } from '@grid-shadcn/components/ui/button'
 import { Checkbox } from '@grid-shadcn/components/ui/checkbox'
 import { Popover, PopoverContent, PopoverTrigger } from '@grid-shadcn/components/ui/popover'
@@ -48,10 +50,14 @@ function MoveControls({ column, labels }: { column: VisibilityColumnItem; labels
 	)
 }
 
-export function VisibilityMenu({ columns }: VisibilityMenuProps) {
+export function VisibilityMenu({ columns, isColumnPanel }: VisibilityMenuProps) {
 	const messages = useGridMessages()
-	// Every row carries the pair or none does, so the popover's width is decided once.
-	const withOrdering = columns.some((col) => col.ordering !== undefined)
+	/*
+	 * Decided once, and off the panel rather than off `col.ordering`: a panel row carries either
+	 * the move pair or a grip, so both want the wider popover, while only the pair shows up in
+	 * the items. Every row of one panel carries the same thing, so there is nothing per-row here.
+	 */
+	const withOrdering = isColumnPanel
 
 	return (
 		<Popover>
@@ -72,11 +78,32 @@ export function VisibilityMenu({ columns }: VisibilityMenuProps) {
 			>
 				<div className='space-y-1'>
 					{columns.map((col) => (
-						<div
+						/*
+						 * The row is `<DataGridVisibilityItem>` rather than a plain `div`: it carries the
+						 * `column-visibility-item` slot as before and takes this kit's class, and it is
+						 * what registers the row with the drag adapter when one is bound. Every decision
+						 * behind that — the index space, which columns take part, the `ColumnMoveScope`
+						 * the drop commits under — stays in `@ez-kit/data-grid-react`; this kit renders
+						 * the markup and the grip. A grid with no adapter gets the same `div` it got
+						 * before.
+						 */
+						<DataGridVisibilityItem
 							key={col.id}
 							className='flex items-center gap-1 rounded pe-1 hover:bg-muted'
-							data-slot='column-visibility-item'
+							columnId={col.id}
 						>
+							{/*
+							 * Renders nothing unless this row is draggable — no adapter, the panel's
+							 * moves switched off, or a column whose place the author fixed. First in
+							 * the row, where a grip belongs, and before the label so a pointer looking
+							 * for it does not have to cross the checkbox.
+							 *
+							 * The name carries the column, which the header's handle does not need: there
+							 * each grip sits in its own `<th>` beside the column name, while here a
+							 * screen reader would otherwise read N identical "Drag column" buttons in one
+							 * list. Same shape the move pair below already uses.
+							 */}
+							<ColumnDragHandle aria-label={`${messages.ordering.dragColumn}: ${col.label}`} />
 							{/*
 							 * The label wraps only the checkbox and the name: a button inside a
 							 * `<label>` would toggle the column on its way to moving it.
@@ -102,7 +129,7 @@ export function VisibilityMenu({ columns }: VisibilityMenuProps) {
 								column={col}
 								labels={{ start: messages.visibility.moveStart, end: messages.visibility.moveEnd }}
 							/>
-						</div>
+						</DataGridVisibilityItem>
 					))}
 				</div>
 			</PopoverContent>

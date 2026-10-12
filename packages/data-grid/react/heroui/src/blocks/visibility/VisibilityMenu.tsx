@@ -1,12 +1,48 @@
 'use client'
 
+import { DataGridVisibilityItem } from '@ez-kit/data-grid-react'
 import { useGridMessages } from '@ez-kit/data-grid-react/kit'
-import { Button, Checkbox, Dropdown, Label, Popover } from '@heroui/react'
+import { Button, buttonVariants, Checkbox, Dropdown, Label, Popover } from '@heroui/react'
 import { ArrowDown, ArrowUp, Columns2 } from 'lucide-react'
+
+import { ColumnDragHandle } from '../ordering/ColumnDragHandle'
 
 import type { GridMessages, VisibilityMenuProps, VisibilityColumnItem } from '@ez-kit/data-grid-react'
 import type { Selection } from '@heroui/react'
 
+/**
+ * The panel's trigger content — icon and label, and **not** a `<Button>`.
+ *
+ * `Popover.Trigger` renders its own `div[role="button"]` around whatever it is given (it wraps
+ * the child in react-aria's `Pressable`), so a `<Button>` inside it is a button inside a button:
+ * axe reports `nested-interactive`, serious, on every grid that mounts this control. HeroUI's own
+ * "interactive content" example puts plain markup in the trigger for exactly this reason.
+ *
+ * The button's looks come from `buttonVariants`, which is HeroUI's documented way to put a
+ * component's styles on an element that is not that component — so this stays the kit's own
+ * button styling rather than a hand-rolled copy of it, and follows the recipe when it changes.
+ *
+ * The trigger also carries `inline-flex`. `Popover.Trigger` adds its own `popover__trigger`, whose
+ * `display: inline-block` sits in the same layer and at the same specificity as `.button`'s
+ * `inline-flex` and comes later in HeroUI's stylesheet, so it wins and the icon stacks above the
+ * label. A utility is in a later layer than both, which is what puts the button's layout back.
+ */
+function TriggerContent({ label }: { label: string }) {
+	return (
+		<>
+			<Columns2 size={16} />
+			{label}
+		</>
+	)
+}
+
+/**
+ * The same trigger as a real `<Button>`, for the `Dropdown` form below.
+ *
+ * `Dropdown` follows react-aria's menu-trigger pattern and takes the button itself rather than
+ * wrapping it, so here the `<Button>` is right — the nesting above is a `Popover.Trigger`
+ * property, not a rule about triggers.
+ */
 function Trigger({ label }: { label: string }) {
 	return (
 		<Button
@@ -14,8 +50,7 @@ function Trigger({ label }: { label: string }) {
 			size='sm'
 			variant='outline'
 		>
-			<Columns2 size={16} />
-			{label}
+			<TriggerContent label={label} />
 		</Button>
 	)
 }
@@ -35,8 +70,11 @@ function Trigger({ label }: { label: string }) {
 function ColumnPanel({ columns, messages }: { columns: VisibilityColumnItem[]; messages: GridMessages }) {
 	return (
 		<Popover>
-			<Popover.Trigger>
-				<Trigger label={messages.visibility.trigger} />
+			<Popover.Trigger
+				data-slot='column-visibility-trigger'
+				className={`${buttonVariants({ size: 'sm', variant: 'outline' })} inline-flex`}
+			>
+				<TriggerContent label={messages.visibility.trigger} />
 			</Popover.Trigger>
 			<Popover.Content>
 				<Popover.Dialog
@@ -45,11 +83,32 @@ function ColumnPanel({ columns, messages }: { columns: VisibilityColumnItem[]; m
 				>
 					<div className='grid min-w-60 gap-1'>
 						{columns.map((col) => (
-							<div
+							/*
+							 * The row is `<DataGridVisibilityItem>` rather than a plain `div`: it carries
+							 * the `column-visibility-item` slot as before and takes this kit's class, and
+							 * it is what registers the row with the drag adapter when one is bound. Every
+							 * decision behind that — the index space, which columns take part, the
+							 * `ColumnMoveScope` the drop commits under — stays in
+							 * `@ez-kit/data-grid-react`; this kit renders the markup and the grip. A grid
+							 * with no adapter gets the same `div` it got before.
+							 */
+							<DataGridVisibilityItem
 								key={col.id}
 								className='flex items-center gap-1 rounded pe-1'
-								data-slot='column-visibility-item'
+								columnId={col.id}
 							>
+								{/*
+								 * Renders nothing unless this row is draggable — no adapter, the panel's
+								 * moves switched off, or a column whose place the author fixed. First in
+								 * the row, where a grip belongs, and before the label so a pointer looking
+								 * for it does not have to cross the checkbox.
+								 *
+								 * The name carries the column, which the header's handle does not need:
+								 * there each grip sits in its own `<th>` beside the column name, while here
+								 * a screen reader would otherwise read N identical "Drag column" buttons in
+								 * one list. Same shape the move pair below already uses.
+								 */}
+								<ColumnDragHandle aria-label={`${messages.ordering.dragColumn}: ${col.label}`} />
 								<Checkbox
 									className='min-w-0 flex-1 px-2 py-1.5'
 									isDisabled={!col.canHide}
@@ -58,45 +117,28 @@ function ColumnPanel({ columns, messages }: { columns: VisibilityColumnItem[]; m
 										col.onToggle()
 									}}
 								>
-									<Checkbox.Control>
-										<Checkbox.Indicator />
-									</Checkbox.Control>
 									{/*
-									 * A plain span, not `Label`: HeroUI's `Checkbox` root already *is* the
-									 * `<label>`, and nesting a second one inside it is invalid markup. The
-									 * name still resolves — an implicit label names the control it wraps.
+									 * The control goes inside `Checkbox.Content`, not beside it. The root is the
+									 * field — a column, so description and error text stack under the box — and
+									 * `Checkbox.Content` is the clickable `<label>` that lays the box and its text
+									 * out in a row. A control placed beside it lands on its own line.
+									 *
+									 * A plain span, not `Label`: `Checkbox.Content` already *is* the `<label>`,
+									 * and nesting a second one inside it is invalid markup. The name still
+									 * resolves — an implicit label names the control it wraps.
 									 */}
 									<Checkbox.Content>
+										<Checkbox.Control>
+											<Checkbox.Indicator />
+										</Checkbox.Control>
 										<span className='truncate'>{col.label}</span>
 									</Checkbox.Content>
 								</Checkbox>
-								<Button
-									aria-label={`${messages.visibility.moveStart}: ${col.label}`}
-									data-slot='column-visibility-move-start'
-									isDisabled={col.ordering?.canMoveStart !== true}
-									isIconOnly
-									size='sm'
-									variant='ghost'
-									onPress={() => {
-										col.ordering?.onMoveStart()
-									}}
-								>
-									<ArrowUp className='size-4' />
-								</Button>
-								<Button
-									aria-label={`${messages.visibility.moveEnd}: ${col.label}`}
-									data-slot='column-visibility-move-end'
-									isDisabled={col.ordering?.canMoveEnd !== true}
-									isIconOnly
-									size='sm'
-									variant='ghost'
-									onPress={() => {
-										col.ordering?.onMoveEnd()
-									}}
-								>
-									<ArrowDown className='size-4' />
-								</Button>
-							</div>
+								<MoveControls
+									column={col}
+									labels={{ start: messages.visibility.moveStart, end: messages.visibility.moveEnd }}
+								/>
+							</DataGridVisibilityItem>
 						))}
 					</div>
 				</Popover.Dialog>
@@ -105,9 +147,56 @@ function ColumnPanel({ columns, messages }: { columns: VisibilityColumnItem[]; m
 	)
 }
 
-export function VisibilityMenu({ columns }: VisibilityMenuProps) {
+/**
+ * The move pair, drawn as arrows along the list rather than along the table — the same component
+ * the shadcn kit draws, for the same reasons, and gated the same way.
+ *
+ * **Absent, not disabled, when the item carries no `ordering`.** It used to render unconditionally
+ * with `col.ordering?.canMoveStart !== true` standing in for both "this column is at the end" and
+ * "this panel has no moves", which was indistinguishable while a panel always had them. A
+ * drag-only panel has none, and two permanently dead buttons beside every grip is not what
+ * "the drag instead of the arrows" means.
+ */
+function MoveControls({ column, labels }: { column: VisibilityColumnItem; labels: { start: string; end: string } }) {
+	const ordering = column.ordering
+	if (!ordering) return null
+	return (
+		<>
+			<Button
+				aria-label={`${labels.start}: ${column.label}`}
+				data-slot='column-visibility-move-start'
+				isDisabled={!ordering.canMoveStart}
+				isIconOnly
+				size='sm'
+				variant='ghost'
+				onPress={ordering.onMoveStart}
+			>
+				<ArrowUp className='size-4' />
+			</Button>
+			<Button
+				aria-label={`${labels.end}: ${column.label}`}
+				data-slot='column-visibility-move-end'
+				isDisabled={!ordering.canMoveEnd}
+				isIconOnly
+				size='sm'
+				variant='ghost'
+				onPress={ordering.onMoveEnd}
+			>
+				<ArrowDown className='size-4' />
+			</Button>
+		</>
+	)
+}
+
+export function VisibilityMenu({ columns, isColumnPanel }: VisibilityMenuProps) {
 	const messages = useGridMessages()
-	if (columns.some((col) => col.ordering !== undefined)) {
+	/*
+	 * Branched on the panel, not on `col.ordering`. The two are different questions once the
+	 * panel's affordances are independent: a draggable panel carries no move pair, and reading
+	 * the shape off the pair sent it back down the list-box path below — which renders no
+	 * `<DataGridVisibilityItem>`, so the drag disappeared with the arrows.
+	 */
+	if (isColumnPanel) {
 		return (
 			<ColumnPanel
 				columns={columns}

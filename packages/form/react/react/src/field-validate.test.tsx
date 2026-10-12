@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import { createForm } from './create-form'
-import { testComponents } from './test-kit'
+import { testComponents, testFields } from './test-kit'
 
 import type { SelectOption } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
@@ -26,7 +26,7 @@ const TAGS: readonly SelectOption[] = [
 	{ label: 'Chore', value: 'chore' },
 ]
 
-const { Form } = createForm({ components: testComponents })
+const { Form } = createForm({ components: testComponents, fields: testFields })
 
 /** Shared, never mutated — every case below starts from the same empty form. */
 const DEFAULTS: Values = { email: '', age: 0, tags: [] }

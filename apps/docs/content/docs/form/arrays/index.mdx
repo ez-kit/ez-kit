@@ -1,0 +1,346 @@
+---
+title: Arrays
+description: Repeatable groups of fields — add, remove and reorder entries, in JSX and in a document.
+---
+
+Some forms hold a list of the same thing: the people on a booking, the line items of an invoice, the phone numbers of a contact. `ArrayField` is that list. It binds to an array in the form values, renders one group of fields per entry, and hands you the controls to append, remove and reorder them.
+
+Unlike [layout](/docs/form/layout), this is **not** cosmetic: an array owns a path, carries its own validation, and rewrites what its children's names mean.
+
+Every prop, scope member and schema property this page's components accept is in the [API reference](/docs/form/arrays/api).
+
+## In TSX
+
+<KitExample exampleId='form-arrays' />
+
+## The same list as a document
+
+<KitExample exampleId='form-arrays-schema' />
+
+## Two rules that decide whether it works
+
+Everything else on this page is detail. These two are the ones that bite.
+
+### Key by `item.key`, never by the index
+
+```tsx
+items.map((item) => <item.Item key={item.key}>…</item.Item>)
+```
+
+`item.key` is a stable id minted when the entry is created and carried with it across every add, remove and move. The index is not: removing the middle entry of three renumbers the third from `2` to `1`, and React — which reconciles by `(type, key)` — then hands the third entry's component instance the second entry's data.
+
+The reason this is worth a section of its own is that **the submitted values still look correct**. What moves is the state React keeps _inside_ the controls: an open calendar, a half-typed search query, the caret, a scroll position. A submit-level test passes; a user watching their own screen sees a date picker open on the wrong row.
+
+### Names inside an entry are relative to the entry
+
+```tsx
+<item.TextField
+	name='email'
+	label='Email'
+/>
+```
+
+That `email` resolves to `members[1].email` — the prefix is joined on at render, from the entry the component is being drawn in. Nothing at the call site composes a path, and nothing needs to know the index.
+
+The type follows the same rule: inside the entry, `name` is checked against the **item** type, so `<item.TextField name='teamName' />` is a compile error even though `teamName` is a real field of the form. The reverse holds outside — a bare `email` is not a path of the form.
+
+## `form.ArrayField`
+
+The component takes the array's `name`, a `newItem` to append, and a render prop:
+
+```tsx
+<form.ArrayField
+	name='members'
+	label='Members'
+	newItem={{ name: '', email: '', role: 'viewer' }}
+>
+	{({ items }) =>
+		items.map((item) => (
+			<item.Item key={item.key}>
+				<item.TextField
+					name='name'
+					label='Name'
+				/>
+			</item.Item>
+		))
+	}
+</form.ArrayField>
+```
+
+`newItem` is required here and has no counterpart in a document. A document declares each field's `defaultValue`, so the renderer can build a fresh entry by reading the item's subtree; a render prop declares nothing the package can read, so you state the starting value yourself. It must carry every key of the item — a missing one would be an uncontrolled input on the new row, so the type requires the whole item rather than a partial.
+
+Every prop `form.ArrayField` takes — `name`, `newItem`, `label`, `validate` and the rest — is in the [API reference](/docs/form/arrays/api#formarrayfield).
+
+`validate.maxLength` is both bounds at once: it is the constraint that fails with a message, and it is the point at which the add control stops offering — `canAdd` goes `false` and the kit renders the control disabled rather than letting it vanish from under the cursor. One option, one meaning, the same on both paths.
+
+**The item type comes from `name`.** `name` is the one prop TypeScript infers from: it pins the array path, and `newItem`, `children` and the whole scope are then resolved from the value at that path. So an inline `newItem` needs no annotation, even when a key of the item is itself an array — the empty array is checked against the item type rather than being asked to produce it:
+
+```tsx
+<form.ArrayField
+	name='lines'
+	newItem={{ name: '', members: [] }}
+>
+```
+
+Annotating a shared const still works and is worth it when several arrays start from the same value, but it is no longer load-bearing:
+
+```tsx
+const NEW_LINE: Line = { name: '', members: [] }
+
+<form.ArrayField
+	name='lines'
+	newItem={NEW_LINE}
+>
+```
+
+A `newItem` that does not match the item reports on `newItem`, naming the item type and the key at fault — `Object literal may only specify known properties, and 'nmae' does not exist in type 'Line'` for a typo, `Property 'members' is missing in type '{ name: string; }' but required in type 'Line'` for an omitted key. The same holds for `form.Array`, which reads its item type from `name` the same way.
+
+A wrong `name` reports on `name` itself — that is the primary, correct diagnostic. When `newItem` is otherwise well-formed, TypeScript can also emit a second, misleading error against it: with `name` rejected, the prop falls back to its constraint (every array path in `TFormData`), so `newItem` is then checked against the union of every one of those item types and can fail against an item the rejected `name` never pointed at — for example `Object literal may only specify known properties, and 'members' does not exist in type 'Member'` when `name` meant `lines` but was misspelled and `newItem` was written for `Line`. Fixing `name` clears that second error along with the first; only the `name` diagnostic needs acting on.
+
+`ArrayKeys<TFormData>` and `ArrayItemOf<TFormData, TName>` — the two rules above — are exported from `@ez-kit/form-core` for a kit or app that needs to spell the same constraint itself.
+
+### The render prop
+
+The render prop receives the live list and the controls for it — every key, `items`, `add` and `canAdd`, is in the [API reference](/docs/form/arrays/api#the-render-prop).
+
+### One entry
+
+Each member of `items` **is** the form's field set retyped over the item, plus eight keys of its own. Three of them are what a `form.ArrayField` layout uses; the other five — `isFirst`, `isLast`, `remove`, `moveUp`, `moveDown` — are already spent here on the remove and reorder controls `item.Item` draws for you, so they are documented [with the primitive](#one-entry-from-the-primitive) instead. `key`, `index` and `Item` are in the [API reference](/docs/form/arrays/api#one-entry).
+
+Inside `form.ArrayField` the only prop `Item` needs is `children`; the rest of `ArrayItemProps` exists for the primitive, where there is no array-level `itemLabel` / `removeLabel` / `reorderable` to inherit — see [`item.Item`'s own props](#itemitems-own-props).
+
+Everything else on the object is `item.TextField`, `item.SelectField`, `item.ArrayField` and the rest, each addressing this entry's paths. `item.ArrayField` is why nesting needs no extra machinery: a list inside an entry is the same component, one prefix deeper.
+
+## Custom layout
+
+`form.ArrayField` owns its frame: the add control is drawn by the component, and remove / reorder
+live inside `item.Item`. Reach for `form.Array` when that frame does not fit — an add control in a
+section heading rather than beside the list, a row that is a `<table>` row rather than a card, a
+duplicate-below control built on `insert`.
+
+`form.Array` renders **nothing** but `children(scope)`. Everything on screen — the add control, the
+rows, the list's own errors — is drawn by the author:
+
+<KitExample exampleId='form-arrays-custom' />
+
+The add control in the section heading and the duplicate control on each row are both built
+directly from the scope — `add` for the first, `insert(item.index + 1, value)` for the second.
+`form.ArrayField` hands out the same scope, `add` and `insert` included, and its own `children`
+region is real space — a duplicate button beside each row can be written there today. What it will
+not give up is the frame around that region: the legend and description are drawn from `label` /
+`description` and take no control of yours, its add control sits where the kit puts it and cannot
+be suppressed, and a row that uses `item.Item` is that card. `form.Array` draws none of it, so the
+scope is the only thing on offer and every control it builds can go anywhere.
+
+**The primitive renders no errors.** `form.ArrayField` shows the list's `validate` failures on its
+own frame; `form.Array` has no frame, so nothing shows them unless the render prop reads `errors`
+itself, the way the example above does with `{invalid && <p role='alert'>{errors.join(', ')}</p>}`.
+Skip that and a `minLength` failure still blocks submit — it just does so with nothing on screen to
+explain why.
+
+### `form.Array`
+
+Every prop `form.Array` takes — `name`, `newItem`, `children` and the rest — is in the [API reference](/docs/form/arrays/api#formarray).
+
+### The scope
+
+`ArrayScope` is the same type `form.ArrayField`'s render prop receives — `ArrayFieldScope` is a
+bare alias of it — so nothing below is exclusive to the primitive. `form.ArrayField`'s own
+[render-prop table](/docs/form/arrays/api#the-render-prop) shows only three of its members, `items`,
+`add` and `canAdd`, because those are the ones its composed layout leaves anything for an author to
+do with; the rest sit unused behind its own add control and its own `item.Item` chrome. Here there is
+no chrome using them up, so the full scope is worth documenting — see the
+[API reference](/docs/form/arrays/api#the-scope) for all of it.
+
+`field` is **not** the raw TanStack field API. It is `BoundFieldApi`, the narrowed shape the rest of
+this package binds against: `name`, `state` — the whole list as one value, plus its `errors` and
+`isTouched` — and `handleChange` / `handleBlur`. That is enough to read the list as a whole (`errors`
+and `invalid` above are computed from exactly this) or to write it wholesale, and it is not an escape
+hatch onto TanStack's own array helpers: `pushValue`, `removeValue` and `moveValue` are not on it.
+`insert` / `remove` / `move` are how this scope spells those, and they are the ones that keep each
+entry's `key` attached to the entry — the raw helpers index, and would not.
+
+`add` is deliberately arity-zero: `insert` / `remove` / `move` all take a mandatory index first, so
+none of them can be handed a click event by mistake. `add` would be the one exception — the single
+member an author could write as `onClick={add}` verbatim — and whether that compiled would turn on
+whether the item type happened to be structurally satisfied by a `MouseEvent`. Writing
+`onClick={() => { add() }}`, as the example above does, sidesteps the question entirely.
+
+### One entry, from the primitive
+
+`item.Item` — the kit's native row, heading and remove/reorder chrome included — is available from
+the bare primitive too, not only from `form.ArrayField`. The example above ignores it and draws a
+table row instead, but nothing stops mixing the two: bring your own outer layout and still use
+`item.Item` for the row.
+
+`items` is `ArrayItemScope`, the same type under `form.ArrayField` — [the "One entry" table in the
+API reference](/docs/form/arrays/api#one-entry) documents only three of its members, because the rest are what `item.Item`'s own
+remove and reorder controls are already built from there. Here there is no `item.Item` chrome
+consuming them for you, so the full set is worth documenting — see the
+[API reference](/docs/form/arrays/api#one-entry-from-the-primitive) for all of it.
+
+Everything else on the object is `item.TextField`, `item.NumberField` and the rest, each addressing
+this entry's paths, exactly as under `form.ArrayField`.
+
+### `item.Item`'s own props
+
+Inside `form.ArrayField`, a row's caption and reorder captions usually come from the array's own
+`itemLabel` / `removeLabel` / `reorderable`. There is no outer component holding those for a bare
+`form.Array`, so `Item` takes its own — every prop is in the
+[API reference](/docs/form/arrays/api#itemitems-own-props).
+
+`label`'s fallback is the one to watch: `removeLabel` and the reorder captions always land on
+something visible, but a row with no `label` prop — and no `itemLabel` to inherit, since there is
+no `form.ArrayField` here — renders with no heading at all.
+
+## Drag and drop
+
+Dragging a row to reorder it is only possible on the primitive. `ArrayItemProps` takes `children`,
+`label`, `removeLabel` and `reorderable` — nothing else — so `item.Item` has no `ref` to attach a
+sortable hook to and spreads no props onto the element it renders. `form.Array` gives up that
+frame entirely, so the row is whatever element the author draws, and the two refs
+[`@dnd-kit/react`](https://next.dndkit.com)'s `useSortable` returns land on two different
+elements: `ref` on the row itself, and `handleRef` on a dedicated drag handle inside it.
+
+<KitExample exampleId='form-arrays-dnd' />
+
+A dedicated handle is not optional here. The row's only visible surface is its two inputs, each
+with its own cursor and its own idea of what a pointer-down means — pressing inside a text field
+correctly does not start a drag, since dnd-kit defers to the native input to preserve caret
+placement and text selection. A `ref` on the row alone leaves nothing reliably grabbable, and
+stamping `role="button"` and a click handler onto a `<tr>` that contains editable fields is also
+an ARIA defect independent of that: a button's contents are presentational, which is not true of
+this row. `handleRef` on a real `<button>` grip fixes both at once — an actually grabbable
+surface, and the activator role landing on something that is actually a button.
+
+`move(from, to)` — the same scope method `item.moveUp` / `item.moveDown` already call, documented
+[with the primitive](#one-entry-from-the-primitive) — is what a drag maps onto: `useSortable`'s
+`index` reports where a row started and where it landed, and `onDragEnd` hands that pair straight
+to `move`. `@dnd-kit/react` reorders the DOM optimistically while the drag is in progress and
+commits to form state once, on drop, so there is no per-frame `move` call to make.
+
+`item.key` doubles as the sortable id. It is minted once per entry and carried across every add,
+remove and move — [the same stability `item.key` gives React reconciliation](#key-by-itemkey-never-by-the-index)
+is what lets `useSortable` track one row through a drag rather than losing it to a reused index.
+
+`DragDropProvider` includes a keyboard sensor by default, so the same rows are reorderable without
+a mouse: focus a row's drag handle, press Space to pick it up, the arrow keys to move it, and
+Space again to drop it.
+
+For an explicit up control instead of a drag gesture, see the custom-layout example above, built
+on `item.moveUp`.
+
+## Validating the list
+
+`validate` on an array constrains the **list**, and its messages surface on the list rather than on any one field. The vocabulary is the same [`FieldValidate`](/docs/form/schema#validation) every field uses; `minLength`, `maxLength` and `rule` are the three keys that mean something here — see the [API reference](/docs/form/arrays/api#validating-the-list) for each.
+
+A field _inside_ an entry validates itself as usual, with its own `validate` block; those messages belong to that field and never appear on the list. The two are kept apart deliberately — a kit that merged them would repeat every entry's message at the top of the list.
+
+### Cross-item rules
+
+A named rule attached to an array receives the **whole array** as its value, which is what makes "no two people share an email" expressible at all. It answers one of three ways: `true`, a single message for the list, or a list of issues that name their own place:
+
+```ts
+const uniqueEmails: NamedRule = (value) => {
+	const issues = findDuplicates(value).map((index) => ({
+		path: `[${index}].email`,
+		message: 'Already used',
+	}))
+	return issues.length > 0 ? issues : true
+}
+```
+
+```tsx
+<FormRenderer
+	schema={schema}
+	rules={{ 'unique-emails': uniqueEmails }}
+/>
+```
+
+An issue's `path` is relative to the node the rule sits on, so `[1].email` is the second entry's email box. Both index spellings work — `1.email` addresses the same place.
+
+`rule` is a document-only key: it names an entry in a registry because JSON cannot carry code, and JSX can. On the JSX side, write the check as a TanStack validator on the form instead — [Validation](/docs/form/validation#per-field-validators) covers why there is no registry on that side.
+
+## The `array` node
+
+A document says `array`, names the field set under `children`, and groups the three captions:
+
+```ts
+{
+	type: 'array',
+	name: 'attendees',
+	label: 'Attendees',
+	reorderable: true,
+	validate: { minLength: 1, maxLength: 4, rule: 'unique-emails' },
+	item: { label: 'Attendee' },
+	add: { label: 'Add attendee' },
+	remove: { label: 'Remove' },
+	children: [
+		{ type: FormFieldType.Text, name: 'name', label: 'Name', defaultValue: '' },
+	],
+}
+```
+
+There is no `newItem`: a fresh entry is built from the `defaultValue`s of the children, so a child with none contributes no key at all to the new entry. Every property the node takes — `type`, `name`, `children`, `validate`, `reorderable`, `item`, `add`, `remove` and the rest — is in the [API reference](/docs/form/arrays/api#the-array-node).
+
+Array nodes carry the [common node properties](/docs/form/schema#common-node-properties) too, so `when` hides a whole list at once.
+
+### Conditions inside an entry
+
+A `when` on a child of an array is evaluated against **that entry**, using the `./` prefix:
+
+```ts
+{ type: FormFieldType.Text, name: 'company', when: { field: './kind', eq: 'company' } }
+```
+
+`./kind` is this entry's `kind`. An absolute `field` still reaches the form root from inside an entry, so both are available and the spelling says which you meant. There is no `../`: one form of relativity, one meaning.
+
+Hiding works per entry, not per list — the third attendee can have its company box while the others do not. And a value hidden by a condition is stripped from the submitted payload the same way a top-level one is.
+
+### Reusing an entry's field set
+
+`defineFormItem` authors a `children` block against the item type instead of inline, so one block serves several arrays:
+
+```ts
+const attendeeFields = defineFormItem<Attendee>()([
+	{ type: FormFieldType.Text, name: 'name', label: 'Name', defaultValue: '' },
+	{ type: FormFieldType.Text, name: 'email', label: 'Email', defaultValue: '' },
+])
+
+const schema = defineFormSchema<Booking>()({
+	version: 1,
+	children: [
+		{ type: 'array', name: 'attendees', children: attendeeFields },
+		{ type: 'array', name: 'waitlist', children: attendeeFields },
+	],
+})
+```
+
+It is curried for the same reason `defineFormSchema` is — TypeScript has no partial generic inference — and it is **array-item-only** by construction. The names in the block are item-relative, so dropping it into a `section` is a compile error, not a runtime surprise. Mounting a shared field set at a nested non-array path (`address.city`) is a different feature and does not exist.
+
+## Styling hooks
+
+Both kits stamp the same attributes on an entry, so app CSS can reach a row without forking a kit:
+
+| Attribute                             | Element                                  |
+| ------------------------------------- | ---------------------------------------- |
+| `data-field-type='array'`             | The list's root, beside `data-field`.    |
+| `data-slot='form-array-item'`         | One entry. Carries `data-index` as well. |
+| `data-slot='form-array-item-label'`   | The entry's caption.                     |
+| `data-slot='form-array-item-fields'`  | The entry's fields.                      |
+| `data-slot='form-array-item-actions'` | The entry's remove and reorder controls. |
+
+The list's own container differs between the kits: the shadcn kit publishes `form-array`, `form-array-items` and `form-array-add`, while the HeroUI kit renders a real `<fieldset>` through HeroUI's `Fieldset` and leaves the library's own slots in place. Address the list through `data-field` / `data-field-type` rather than a slot if the rule must hold for both.
+
+## What an array is not
+
+- **Not a layout.** Unlike a `Section`, it changes what a child's `name` means, and it owns a path in the values.
+- **Not drag-and-drop.** `reorderable` exposes move-up / move-down; the gesture is the kit's business, and neither kit ships a drag handle.
+- **Not virtualized.** A list of a few dozen entries is the shape this is built for. Every entry is rendered, and three levels of nesting at a hundred entries each is a million fields.
+
+## See also
+
+- [API reference](/docs/form/arrays/api)
+- [Config-driven forms](/docs/form/schema) — the `array` node lives here too
+- [Validation](/docs/form/validation) — per-field validators, for the JSX side of cross-item rules
+- [Layout](/docs/form/layout) — cosmetic grouping, not a path of its own

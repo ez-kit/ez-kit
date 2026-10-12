@@ -15,16 +15,19 @@
  * number. The un-annotated lines assert the opposite — that legal columns still compile, and
  * that a renderer's context is still contextually typed rather than an implicit `any`.
  */
+import { allDataGridFeatures } from '@ez-kit/data-grid-core/features/all'
 import {
+	allComponents as heroAllComponents,
+	cellTypes as heroCellTypes,
 	createColumnHelper as createHeroColumnHelper,
 	createColumns as createHeroColumns,
-	extendDataGrid as extendHeroDataGrid,
 } from '@ez-kit/data-grid-heroui'
-import { defineCellType } from '@ez-kit/data-grid-react'
+import { createDataGrid, defineCellType } from '@ez-kit/data-grid-react'
 import {
+	allComponents as shadcnAllComponents,
+	cellTypes as shadcnCellTypes,
 	createColumnHelper as createShadcnColumnHelper,
 	createColumns as createShadcnColumns,
-	extendDataGrid as extendShadcnDataGrid,
 } from '@ez-kit/data-grid-shadcn'
 
 type User = { id: string; name: string; age: number; status: string }
@@ -96,15 +99,19 @@ heroColumn.select({ accessorKey: 'status', config: { items: STATUS_ITEMS } })
 const heroMissingMethod: keyof typeof heroColumn = 'nope'
 void heroMissingMethod
 
-// ── extendDataGrid keeps the same guarantees on the merged registry ────────
+// ── a bundle built over the kit's registry keeps the same guarantees ──────
 
 type RatingConfig = { max: number }
 const ratingCellType = defineCellType<RatingConfig>()({})
 
-const extendedShadcn = extendShadcnDataGrid({ rating: ratingCellType })
+const extendedShadcn = createDataGrid({
+	components: shadcnAllComponents,
+	cellTypes: { ...shadcnCellTypes, rating: ratingCellType },
+	features: allDataGridFeatures,
+})
 extendedShadcn.createColumns<User>([
 	{ accessorKey: 'age', cell: { type: 'rating', config: { max: 5 } } },
-	// the base registry survives the merge
+	// the kit's own registry survives the spread
 	{ accessorKey: 'status', cell: { type: 'select', config: { items: STATUS_ITEMS } } },
 ])
 extendedShadcn.createColumns<User>([
@@ -112,11 +119,15 @@ extendedShadcn.createColumns<User>([
 	{ accessorKey: 'age', cell: { type: 'rating', config: { maximum: 5 } } },
 ])
 extendedShadcn.createColumns<User>([
-	// @ts-expect-error still not a registered cell type after the merge
+	// @ts-expect-error still not a registered cell type
 	{ accessorKey: 'status', cell: { type: 'nope' } },
 ])
 
-const extendedHero = extendHeroDataGrid({ rating: ratingCellType })
+const extendedHero = createDataGrid({
+	components: heroAllComponents,
+	cellTypes: { ...heroCellTypes, rating: ratingCellType },
+	features: allDataGridFeatures,
+})
 extendedHero.createColumns<User>([{ accessorKey: 'age', cell: { type: 'rating', config: { max: 5 } } }])
 extendedHero.createColumns<User>([
 	// @ts-expect-error `max` is `rating`'s only config key

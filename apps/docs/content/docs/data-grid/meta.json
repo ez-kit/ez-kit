@@ -20,8 +20,10 @@
 		"selection",
 		"row-actions",
 		"row-ordering",
+		"drag-and-drop",
 		"pinning",
 		"expanding",
+		"grouping",
 		"editing",
 		"virtualization",
 		"fallbacks",
@@ -29,6 +31,7 @@
 		"state",
 		"theming",
 		"localization",
+		"accessibility",
 		"examples",
 		"advanced",
 		"ai"

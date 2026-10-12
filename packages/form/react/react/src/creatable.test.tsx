@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { createForm } from './create-form'
 import { FormOptionSources } from './options/source-context'
-import { testComponents } from './test-kit'
+import { testComponents, testFields } from './test-kit'
 
 import type { OptionSourceRegistry } from './options/source-types'
 import type { SelectOption } from '@ez-kit/form-core'
@@ -33,7 +33,7 @@ const TAGS: readonly SelectOption[] = [
 	{ label: 'Chore', value: 'chore' },
 ]
 
-const { useForm, Form } = createForm({ components: testComponents })
+const { useForm, Form } = createForm({ components: testComponents, fields: testFields })
 
 function selectFor(name: string): HTMLSelectElement {
 	const element = document.querySelector(`select[name="${name}"]`)

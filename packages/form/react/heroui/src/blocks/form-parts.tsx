@@ -5,15 +5,21 @@ import type { ReactNode } from 'react'
 
 /** The form-level primitives for the HeroUI kit: the submit button and the `<form>` shell. */
 
-export function Button({ type, disabled, children }: ButtonProps): ReactNode {
+export function Button({ type, disabled, onClick, children }: ButtonProps): ReactNode {
 	return (
 		<HeroButton
 			// Not `data-slot`: HeroUI stamps its own before spreading props, so ours would win
 			// and detach the element from `@heroui/styles`.
-			data-form-submit=''
+			//
+			// The marker says what the button *is*. `Button` was the submit button and nothing
+			// else until the array scope started handing it out for add / remove / duplicate /
+			// reorder controls; stamping `data-form-submit` unconditionally tagged four
+			// non-submitting controls per row as the form's submit.
+			{...(type === 'submit' ? { 'data-form-submit': '' } : { 'data-form-button': '' })}
 			type={type ?? 'button'}
 			variant='primary'
 			{...(disabled !== undefined ? { isDisabled: disabled } : {})}
+			{...(onClick !== undefined ? { onPress: onClick } : {})}
 		>
 			{children}
 		</HeroButton>

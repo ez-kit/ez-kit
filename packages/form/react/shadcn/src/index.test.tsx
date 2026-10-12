@@ -4,6 +4,10 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { Form } from './form'
 
+import * as kit from './index'
+
+import type { ReactNode } from 'react'
+
 type Values = {
 	email: string
 	age: number
@@ -18,6 +22,18 @@ const ROLE_OPTIONS = [
 	{ label: 'User', value: 'user' },
 	{ label: 'Admin', value: 'admin' },
 ]
+
+/**
+ * A field kind the kit does not ship, declared the way an app would — the proof that a
+ * bundle recomposed from the package root's own exports accepts a thirteenth slot.
+ */
+const RatingField = kit.defineFieldType<{ max: number }, number>()(function Rating(props): ReactNode {
+	return (
+		<div data-testid='rating'>
+			{props.value} / {props.props.max}
+		</div>
+	)
+})
 
 describe('@ez-kit/form-shadcn smoke', () => {
 	function Case({ onSubmit }: { onSubmit?: (value: Values) => void }) {
@@ -125,5 +141,49 @@ describe('@ez-kit/form-shadcn smoke', () => {
 		await waitFor(() => {
 			expect(checkbox).toHaveAttribute('data-state', 'checked')
 		})
+	})
+})
+
+describe('@ez-kit/form-shadcn package root', () => {
+	it('exports the factory, both contract bags and every field component', () => {
+		expect(typeof kit.createForm).toBe('function')
+		expect(typeof kit.defineFieldType).toBe('function')
+		expect(Object.keys(kit.formFieldSlots)).toHaveLength(12)
+		expect(Object.keys(kit.formComponents)).toEqual(
+			expect.arrayContaining(['ArrayField', 'ArrayItem', 'Button', 'Form', 'Section', 'GridItem', 'Wizard']),
+		)
+		for (const name of Object.keys(kit.formFieldSlots)) {
+			expect(kit[name as keyof typeof kit]).toBe(kit.formFieldSlots[name as keyof typeof kit.formFieldSlots])
+		}
+	})
+
+	it('recomposes a bundle from the exported bags that renders the real shadcn input', () => {
+		const { Form: Rebuilt } = kit.createForm({
+			components: kit.formComponents,
+			fields: { ...kit.formFieldSlots, RatingField },
+		})
+
+		const { container } = render(
+			<Rebuilt defaultValues={{ email: '', score: 0 }}>
+				{(form) => (
+					<>
+						<form.TextField
+							name='email'
+							label='Email'
+						/>
+						<form.RatingField
+							name='score'
+							label='Score'
+							max={5}
+						/>
+					</>
+				)}
+			</Rebuilt>,
+		)
+
+		// The kit's own vendored primitive, not the guard placeholder a missing slot renders.
+		expect(container.querySelector('[data-slot="input"]')).toBeInTheDocument()
+		expect(screen.getByLabelText('Email')).toBeInTheDocument()
+		expect(screen.getByTestId('rating')).toHaveTextContent('0 / 5')
 	})
 })

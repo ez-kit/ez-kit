@@ -10,6 +10,7 @@ import type {
 } from '../features/operators'
 import type { FieldState, ValidateOn } from '../features/validation'
 import type {
+	AggregationFnDef,
 	CellData,
 	ColumnDef as TableCoreColumnDef,
 	ColumnMeta as TableCoreColumnMeta,
@@ -765,6 +766,45 @@ export const BuiltInSortingFn = {
 export type BuiltInSortingFn = (typeof BuiltInSortingFn)[keyof typeof BuiltInSortingFn]
 
 /**
+ * The aggregation functions TanStack ships, addressable by name from `column.aggregation`.
+ *
+ * Named members for internal reference; the option is typed as the plain string union (with a
+ * `string & {}` tail for custom registry ids), so `aggregation: 'sum'` is equally valid and
+ * needs no import — the same shape as {@link BuiltInSortingFn} beside it.
+ *
+ * Whichever names a column uses must be registered on the table's feature set through
+ * `aggregationFns`, exactly as `sorting.fn` needs `sortFns`: v9 resolves a name at run time and
+ * an unregistered one resolves to nothing, so the stage runs and totals nothing rather than
+ * failing.
+ */
+export const BuiltInAggregationFn = {
+	/** Adds the values. */
+	Sum: 'sum',
+	/** Arithmetic mean. */
+	Mean: 'mean',
+	/** Middle value. */
+	Median: 'median',
+	/** Smallest value. */
+	Min: 'min',
+	/** Largest value. */
+	Max: 'max',
+	/** `[min, max]` as a pair. */
+	Extent: 'extent',
+	/** How many rows the group holds. */
+	Count: 'count',
+	/** How many distinct values the group holds. */
+	UniqueCount: 'uniqueCount',
+	/** The distinct values themselves. */
+	Unique: 'unique',
+	/** The first row's value. */
+	First: 'first',
+	/** The last row's value. */
+	Last: 'last',
+} as const
+
+export type BuiltInAggregationFn = (typeof BuiltInAggregationFn)[keyof typeof BuiltInAggregationFn]
+
+/**
  * Where `undefined` values land during a sort.
  *
  * The const object carries the two named positions. `false` — the absence of any special
@@ -854,6 +894,82 @@ export type ColumnSortingConfig = {
 	invert?: boolean
 	/** Allow this column to participate in multi-sort. Default: true (when multi enabled). */
 	multi?: boolean
+}
+
+/**
+ * Column-level grouping config — the object arm of {@link ColumnDefCommon.grouping}.
+ *
+ * One field, because there is only one thing a column can say about being grouped that the
+ * table-level config cannot: what value its levels are keyed by.
+ */
+export type ColumnGroupingConfig<TRow extends object = object> = {
+	/**
+	 * Group by a value derived from the row rather than by this column's own value — the month
+	 * of a date, a bucket, a first letter.
+	 *
+	 * @example One group per month rather than one per timestamp
+	 * ```ts
+	 * { accessorKey: 'createdAt', grouping: { getValue: (row) => row.createdAt.slice(0, 7) } }
+	 * ```
+	 */
+	getValue?: (row: TRow, index: number) => unknown
+}
+
+/**
+ * Column-level aggregation config — the object arm of {@link ColumnDefCommon.aggregation}.
+ *
+ * The scalar names the function; this adds a renderer for the aggregated cell. `component` is a
+ * {@link ColumnRenderer} over `TNode` for the same reason every other column renderer is: core
+ * never calls it, it only carries it through to whichever adapter renders the cell.
+ *
+ * `TRow` / `TValue` are here to type that renderer's props, exactly as they do on
+ * {@link CellDef}'s `component` — the aggregated cell's renderer is handed the same
+ * {@link CellViewCtx} the column's own view is. They were missing until the slot's own type was:
+ * `component` was declared bare `TNode`, so the documented functional form was a `TS2322` under
+ * any adapter that binds `TNode` (`ReactNode` in React), with no workaround. The guard is
+ * `react-columns.test.tsx`, which compiles the documented form beside `cell.component` as a
+ * control.
+ */
+export type ColumnAggregationConfig<TRow extends object = object, TValue = unknown, TNode = unknown> = {
+	/**
+	 * A built-in or registered aggregation name, or an inline definition.
+	 *
+	 * **Optional**, because a grid whose totals come from the server has nothing to name: the
+	 * value arrives in the table-level `aggregation.totals` and the only reason left to write this
+	 * option is `component`. An object with neither is meaningless and warns in development.
+	 *
+	 * The definition's result type is `any` rather than `unknown`, and it has to be: upstream's
+	 * `AggregationFnDef` is **invariant** in that parameter, because the optional `merge` reads
+	 * `subRowResults: TResult[]` as an input while `aggregate` returns it as an output. So
+	 * `AggregationFnDef<…, number>` — which is what `constructAggregationFn` infers for a summing
+	 * function — is not assignable to one written `unknown`, and every inline definition would be
+	 * rejected at its call site.
+	 */
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	fn?: BuiltInAggregationFn | (string & {}) | AggregationFnDef<TableFeatures, any, any, any>
+	/** Renders the aggregated value. Falls back to the column's own cell-type view. */
+	component?: ColumnRenderer<CellViewCtx<TRow, TValue>, TNode>
+}
+
+/**
+ * The resolved half of {@link ColumnAggregationConfig} that reaches `meta`.
+ *
+ * Only the renderer: `fn` is TanStack's native `aggregationFn` column-def field and goes
+ * straight onto the def. An aggregated cell is rendered by components that have no `TRow`, so the
+ * renderer arrives row-erased.
+ *
+ * `component` is `unknown` rather than a row-erased **function** type, and the difference is load
+ * bearing. {@link ColumnCellMeta}'s `view` beside it is the latter, and cited as a precedent it
+ * would argue for widening this one to match — but it is why `map-columns` pays a cast to fill
+ * `view` from `cell.component`: under `strictFunctionTypes` a
+ * `(ctx: CellViewCtx<Deal, number>) => ReactNode` is not assignable to a signature written over
+ * `unknown`. `unknown` here is what lets the same function assign `aggregation.component` with no
+ * cast at all. So this is the stronger choice, not the lazier one — do not "tidy" it into a
+ * signature.
+ */
+export type ColumnAggregationMeta = {
+	/** The column's own aggregated-cell renderer, from `aggregation.component`. */
+	component?: unknown
 }
 
 /**
@@ -983,6 +1099,32 @@ export type ColumnDefCommon<
 	sorting?: false | ColumnSortingConfig
 
 	/**
+	 * Column-level grouping config.
+	 * - `false` — this column can never be a grouping level: the column menu offers no
+	 *   **Group by** entry for it and `column.getCanGroup()` returns false
+	 * - {@link ColumnGroupingConfig} — group by a value derived from the row rather than by
+	 *   the column's own value
+	 *
+	 * Reads like every other per-column switch (`sorting: false`, `visibility: false`). Whether
+	 * the *table* groups at all is {@link TableConfig.grouping}, and how a grouped column is
+	 * totalled is {@link ColumnDefCommon.aggregation} — three separate questions.
+	 */
+	grouping?: false | ColumnGroupingConfig<TRow>
+	/**
+	 * How this column is totalled — on a group row, and in the footer's grand total.
+	 *
+	 * - `'sum'` — the scalar: a built-in or registered aggregation name, nothing else to say
+	 * - `{ fn: 'sum', component }` — the name plus a renderer for the aggregated cell
+	 *
+	 * The scalar-or-object shape `cell` and `pinning` use. Independent of grouping in both
+	 * directions: a column can be grouped without being aggregated, and a grid with
+	 * `rowAggregationFeature` alone — no `columnGroupingFeature`, no grouped row model — still
+	 * gets a footer total out of this. Registering grouping merely to total a column is the
+	 * mistake upstream's own guidance leads with.
+	 */
+	aggregation?: BuiltInAggregationFn | (string & {}) | ColumnAggregationConfig<TRow, TValue, TNode>
+
+	/**
 	 * Cell display and input configuration.
 	 *
 	 * - `'number'` — the scalar: a registered cell type, nothing else to say
@@ -1035,7 +1177,8 @@ export type ColumnDefCommon<
 
 	/**
 	 * Column-level resizing. `false` pins the column's width — the resize handle is not
-	 * rendered and `column.getCanResize()` returns false.
+	 * rendered, `column.getCanResize()` returns false, and the column does not fill the grid's
+	 * free width either.
 	 *
 	 * The alias for TanStack's `enableResizing`, matching the `sorting` / `filtering` /
 	 * `visibility` shape. There is deliberately no raw `enable*` pass-through on a column:
@@ -1098,6 +1241,20 @@ export type ColumnDefCommon<
 	 * { accessorKey: 'name', width: { default: 200, min: 80, max: 400 } }
 	 * ```
 	 *
+	 * A starting width is the width the column renders at. A column that names none fills the
+	 * grid's free width instead, from its `min` (or TanStack's 150px when it has none) up to its
+	 * `max`, sharing what is left equally with the other filling columns:
+	 *
+	 * ```ts
+	 * { accessorKey: 'id', width: 60 }              // exactly 60
+	 * { accessorKey: 'name', width: { min: 120 } } // fills, never narrower than 120
+	 * { accessorKey: 'email' }                       // fills
+	 * ```
+	 *
+	 * When every column names a width, nothing fills and the grid ends where its last column does.
+	 * A drag fixes every column where it stands, so it moves only the column being dragged; a
+	 * double-click on the border hands the column back — to its starting width, or to filling.
+	 *
 	 * Replaces the `size` / `minSize` / `maxSize` pass-throughs: three TanStack names, spelled in
 	 * TanStack's vocabulary rather than the grid's, for one property of a column.
 	 *
@@ -1140,11 +1297,17 @@ export type ColumnDef<TRow extends object, TCellTypes extends CellTypeRegistrySh
 	| (ColumnDefCommon<TRow, unknown, TCellTypes, TNode> & { accessorKey?: undefined })
 
 export type ColumnWidthDef = {
-	/** Starting width in pixels. TanStack's `size`. */
+	/**
+	 * Starting width in pixels — the width the column renders at. TanStack's `size`. Leave it out
+	 * for a column that fills the grid's free width.
+	 */
 	default?: number
-	/** Lower bound while resizing, in pixels. TanStack's `minSize`. */
+	/**
+	 * Lower bound while resizing, and the narrowest a filling column gets, in pixels. TanStack's
+	 * `minSize`. Defaults to TanStack's 20px, or to `default` when that is smaller.
+	 */
 	min?: number
-	/** Upper bound while resizing, in pixels. TanStack's `maxSize`. */
+	/** Upper bound while resizing and while filling the grid's free width, in pixels. TanStack's `maxSize`. */
 	max?: number
 }
 
@@ -1167,6 +1330,10 @@ export const SystemColumnType = {
 	Expand: 'expand',
 	/** The per-row actions column — edit, delete, row-pin menu, custom actions. */
 	Actions: 'actions',
+	/** The grouping column — a group row's label, its descendant count and its chevron. */
+	Group: 'group',
+	/** The row drag-handle column — the grip that starts a row drag. */
+	Drag: 'drag',
 } as const
 
 export type SystemColumnType = (typeof SystemColumnType)[keyof typeof SystemColumnType]
@@ -1187,7 +1354,8 @@ export type SystemColumnType = (typeof SystemColumnType)[keyof typeof SystemColu
  * Labelling the actions column, widening it, or unpinning it on a narrow grid had no route
  * through the public API.
  *
- * Reached as `selection.column`, `expanding.column` and `rowActions.column`.
+ * Reached as `selection.column`, `expanding.column`, `rowActions.column` and
+ * `ordering.row.column`.
  */
 export type SystemColumnDef<TFeatures extends TableFeatures, TRow extends object = object, TNode = unknown> = {
 	/**
@@ -1200,13 +1368,13 @@ export type SystemColumnDef<TFeatures extends TableFeatures, TRow extends object
 	 */
 	header?: string | ColumnRenderer<HeaderContext<TFeatures, TRow, unknown>, TNode>
 	/**
-	 * Width in pixels. Defaults: `44` for selection and expand, and for actions a width
-	 * derived from how many buttons the widest row state renders.
+	 * Width in pixels. Defaults: `44` for selection, expand and the row drag handle, and for
+	 * actions a width derived from how many buttons the widest row state renders.
 	 */
 	width?: number | ColumnWidthDef
 	/**
 	 * Which edge the column sticks to, or `false` for none. Defaults: `'start'` for
-	 * selection and expand, `'end'` for actions.
+	 * selection, expand and the row drag handle, `'end'` for actions.
 	 *
 	 * Logical, like a normal column's `pinning` and for the same reason — see
 	 * {@link ColumnPinSide}.
@@ -1248,6 +1416,15 @@ declare module '@tanstack/table-core' {
 		pinning?: false | ColumnPinningDef
 		/** Resolved per-part alignment from `column.align`, normalized off the scalar form. */
 		align?: ColumnAlignDef
+		/**
+		 * The authored `column.width`, normalized off the scalar form.
+		 *
+		 * The resolved def cannot answer "did the author name a width": TanStack merges its own
+		 * default `size` into every column. The React layer needs exactly that answer — a named
+		 * starting width is the width the column renders at, while a column without one fills the
+		 * grid — so the authored value is kept here.
+		 */
+		width?: ColumnWidthDef
 		/** Resolved cell definition from `column.cell`, normalized off the scalar form. */
 		cell?: ColumnCellMeta
 		/** Class for this column's header cell, from `column.headerClassName`. */
@@ -1263,6 +1440,21 @@ declare module '@tanstack/table-core' {
 		visibility?: false | ColumnVisibilityDef
 		/** Resolved from `column.ordering` — `false` means the column cannot be moved. */
 		ordering?: false
+		/**
+		 * Resolved from `column.grouping` — `false` means the column cannot be a grouping level.
+		 *
+		 * Only the switch reaches meta. `grouping.getValue` does not: it is TanStack's own
+		 * `getGroupingValue` column-def field, so it is passed straight through rather than
+		 * routed through here — the same split `sorting.fn` has.
+		 */
+		grouping?: false
+		/**
+		 * Renderer for this column's aggregated cells, from `column.aggregation.component`.
+		 *
+		 * Only the renderer reaches meta; the function itself is TanStack's native
+		 * `aggregationFn` column-def field and is passed straight through.
+		 */
+		aggregation?: ColumnAggregationMeta
 		isSystemColumn?: boolean
 		systemColumnType?: SystemColumnType
 		/**

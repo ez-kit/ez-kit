@@ -6,7 +6,7 @@ import type { Locator, Page } from '@playwright/test'
  * The filter panel — one chip per filterable column, and the two regions that can hold the
  * strip of them.
  *
- * In both examples the panel is the whole filter UI: their header cells render everything but
+ * In the first example the panel is the whole filter UI: its header cells render everything but
  * `filter`, so the headers gave their controls up for it. That used to be one enum value,
  * `filtering: { variant: 'panel' }`, which bundled *mounting the panel* with *stripping the
  * headers*; they are two lines of JSX now, and the panel's region is a third — where
@@ -17,8 +17,8 @@ import type { Locator, Page } from '@playwright/test'
 
 /** 8 orders, no pagination; the panel written above `<DataGrid.Table />`, in its own strip. */
 const ABOVE = 'filter-panel'
-/** The full task board — the panel written into `Toolbar.start`, beside the search box. */
-const IN_TOOLBAR = 'example-task-board'
+/** `FilterPanelLayout` — the panel written into `Toolbar.start`, beside the search box. */
+const IN_TOOLBAR = 'layout-filter-panel'
 
 const PANEL = '[data-slot="filter-panel"]'
 const PANEL_CHIP = '[data-slot="filter-panel-chip"]'
@@ -126,5 +126,10 @@ test.describe('where the panel goes', () => {
 		// (`start={<><GlobalFilterInput/><FilterPanel/></>}`), which is now the only thing that
 		// decides it. It took two options to ask for before.
 		expect(search.x + search.width).toBeLessThanOrEqual(panel.x)
+
+		// On the search box's line, not lifted off it: the gap a free-standing panel keeps below
+		// itself is dropped inside a toolbar, so its chips centre where every other control does.
+		const chip = await boxOf(page.locator(PANEL_CHIP).first())
+		expect(Math.abs(chip.y + chip.height / 2 - (search.y + search.height / 2))).toBeLessThanOrEqual(1)
 	})
 })

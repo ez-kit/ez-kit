@@ -24,11 +24,17 @@ import { readAuthoredSlots, readSpecSlots, stripComments } from './e2e-slots/slo
 const REPO_ROOT = resolve(__dirname, '../../..')
 const E2E_ROOT = resolve(__dirname, '../e2e')
 
-/** The three packages that render a data grid. A spec may address any kit's slots. */
+/**
+ * The React packages the browser suite drives — a data grid and a form, each as a shared layer
+ * plus its two kits. A spec may address any kit's slots.
+ */
 const SLOT_AUTHORS = [
 	'packages/data-grid/react/react/src',
 	'packages/data-grid/react/shadcn/src',
 	'packages/data-grid/react/heroui/src',
+	'packages/form/react/react/src',
+	'packages/form/react/shadcn/src',
+	'packages/form/react/heroui/src',
 ].map((path) => resolve(REPO_ROOT, path))
 
 const authored = readAuthoredSlots(SLOT_AUTHORS)

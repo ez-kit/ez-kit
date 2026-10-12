@@ -146,6 +146,39 @@ export type {
 	DataGridBundle,
 } from './create-data-grid'
 
+// Drag-and-drop port — the contract a kit's `/dnd` adapter implements, and the hooks a surface
+// reads it through. This package ships **no** implementation and names no drag library: the
+// mechanics arrive from `@ez-kit/data-grid-<kit>/dnd` as an optional peer and are bound once, with
+// `createDataGrid({ dnd })`. With none bound, `useDndEnabled()` is `false` — which is what a drag
+// handle renders behind — and `useSortableItem` hands back an inert handle.
+//
+// Three names are deliberately **not** here. `DndBundleProvider` / `useDndBundleAdapter` are the
+// factory-to-root handshake, and publishing them would let a consumer register a bundle adapter
+// around an arbitrary subtree — the leak the grid-level layer exists to close. `noopDndAdapter` is
+// withheld for a sharper reason: `useDndEnabled()` is "an adapter is registered", so binding the
+// no-op as `dnd` would report DnD as *on* and render a handle behind every inert item — the exact
+// affordance-that-does-nothing the gate exists to prevent. Switching drag off is `dnd: undefined`.
+export { DndAdapterProvider, useDndEnabled, useSortableItem } from './data-grid/dnd'
+// What a kit or an application needs to write a drag handle of its own, in place of
+// `<DataGrid.RowDragHandle />` / `<DataGrid.ColumnDragHandle />`: each axis publishes its
+// activator ref here. The row's read takes an id because a cell renderer sits outside the row's
+// subtree in the HeroUI kit; a header cell's body does not, so the column's takes none.
+export { useRowDrag } from './data-grid/row-drag-registry'
+export type { RowDragValue } from './data-grid/row-drag-registry'
+export { useColumnDrag } from './data-grid/column-drag'
+export type { ColumnDragValue } from './data-grid/column-drag'
+export type {
+	DndAdapter,
+	DndAnnouncement,
+	DndAnnouncements,
+	DndDragOverEvent,
+	DndDragSourceEvent,
+	DndDropEvent,
+	DndProviderProps,
+	DragSpec,
+	SortableItemHandle,
+} from './data-grid/dnd'
+
 // UI-kit contract (tiers + full-support marker + feature map)
 export { GridFeature, FEATURE_COMPONENTS, COMPONENT_FEATURE } from './contract'
 export type {
@@ -167,6 +200,72 @@ export type {
 
 // Compound component
 export { DataGrid } from './data-grid/data-grid'
+
+/**
+ * The same components, one by one — `DataGrid.X` is an alias for these, not the only door to them.
+ *
+ * The compound is assembled by a single annotated `Object.assign` over a flat literal, so a
+ * bundler keeps every member the moment anything names `DataGrid`: that is what the namespace
+ * *is*, and it is priced accordingly. Naming a component instead keeps that component, and a grid
+ * composed out of the ones it renders is a fraction of the compound. Adding this block cost the
+ * whole surface only these `export` lines.
+ *
+ * Read the saving as the components' share, not the grid's: {@link DataGridRoot} renders
+ * `children ?? core.Layout ?? <DataGridTable/>`, so any grid reaches the table chain through the
+ * root whichever door it used, and the shared floor (context, `useDataGridTable`) is paid once
+ * either way. `apps/docs/test/tree-shaking.test.ts` is where this is measured.
+ *
+ * This is **not** the alternative AGENTS.md records as rejected. That one *moved* `DataGrid.X`
+ * onto a subpath, costing a major and every existing call site for the same bytes. Here the
+ * compound stays exactly where it is and the names are added beside it, so nothing written
+ * against this package changes.
+ *
+ * The names carry the `DataGrid` prefix while the compound's keys stay short, which is the shape
+ * `@heroui/react` settled on for its own table (`TableBody` beside `Table.Body`) and for the same
+ * reason: `Body`, `Row`, `Cell` and `Header` are too general to sit in a package root next to
+ * `createColumns` and `createDataGrid`. It also finishes a split this package already had —
+ * `DataGridRow` and `DataGridCell` were prefixed, `Body` and `Header` were not, and every
+ * `DataGrid*Props` type was.
+ *
+ * {@link DataGridRoot} is the bare root, without the statics: rendering `<DataGrid>` to host
+ * named children would pull the namespace back in and hand back the saving. Its type is the plain
+ * component, so `DataGridRoot.Footer` does not type-check even though the two are one object at
+ * runtime.
+ */
+export { DataGridRoot } from './data-grid/data-grid'
+export { Toolbar as DataGridToolbar } from './data-grid/toolbar'
+export { DataGridTable } from './data-grid/table'
+export { Header as DataGridHeader } from './data-grid/header'
+export { DataGridHeaderRow } from './data-grid/header-row'
+export { DataGridHeaderCell } from './data-grid/header-cell'
+export { HeaderMain as DataGridHeaderMain, HeaderExtras as DataGridHeaderExtras } from './data-grid/header-slots'
+export { Body as DataGridBody } from './data-grid/body'
+export { DataGridRow } from './data-grid/row'
+export { DataGridCell } from './data-grid/cell'
+export { Footer as DataGridFooter } from './data-grid/footer'
+export { DataGridFooterRow } from './data-grid/footer-row'
+export { DataGridFooterCell } from './data-grid/footer-cell'
+export { Pagination as DataGridPagination } from './data-grid/pagination'
+export { PageSizer as DataGridPageSizer } from './data-grid/page-sizer'
+export { BottomBar as DataGridBottomBar } from './data-grid/bottom-bar'
+export { ColumnFilter as DataGridColumnFilter } from './data-grid/column-filter'
+export { ActionBar as DataGridActionBar } from './data-grid/action-bar'
+export { CreateTrigger as DataGridCreateTrigger } from './data-grid/create-trigger'
+export { VisibilityTrigger as DataGridVisibilityTrigger } from './data-grid/visibility-trigger'
+export { VisibilityItem as DataGridVisibilityItem } from './data-grid/visibility-item'
+export { SortMenuTrigger as DataGridSortMenuTrigger } from './data-grid/sort-menu-trigger'
+export { GlobalFilterInput as DataGridGlobalFilterInput } from './data-grid/global-filter-input'
+export { ActiveFiltersBar as DataGridActiveFiltersBar } from './data-grid/active-filters-bar'
+export { GroupByBar as DataGridGroupByBar } from './data-grid/group-by-bar'
+export { ClearFiltersButton as DataGridClearFiltersButton } from './data-grid/clear-filters-button'
+export { FilterPanel as DataGridFilterPanel } from './data-grid/filter-panel'
+export { CreatingModal as DataGridCreatingModal } from './data-grid/creating-modal'
+export { EditingModal as DataGridEditingModal } from './data-grid/editing-modal'
+export { LoadingBody as DataGridLoadingBody } from './data-grid/loading-body'
+export { EmptyStateRow as DataGridEmptyStateRow } from './data-grid/empty-state-row'
+export { NoResultsRow as DataGridNoResultsRow } from './data-grid/no-results-row'
+export { ColumnDragHandle as DataGridColumnDragHandle } from './data-grid/column-drag-handle'
+export { RowDragHandle as DataGridRowDragHandle } from './data-grid/row-drag-handle'
 export type {
 	DataGridProps,
 	DataGridControlledProps,
@@ -183,6 +282,8 @@ export type { DataGridFooterProps, DataGridFooterRenderArgs } from './data-grid/
 export type { DataGridFooterRowProps, DataGridFooterRowRenderArgs } from './data-grid/footer-row'
 export type { DataGridFooterCellProps, DataGridFooterCellRenderArgs } from './data-grid/footer-cell'
 export type { DataGridRowProps, DataGridRowRenderArgs } from './data-grid/row'
+export type { DataGridRowDragHandleProps } from './data-grid/row-drag-handle'
+export type { DataGridColumnDragHandleProps } from './data-grid/column-drag-handle'
 export type { DataGridCellProps, DataGridCellRenderArgs } from './data-grid/cell'
 export type { DataGridPaginationProps, DataGridPaginationRenderArgs } from './data-grid/pagination'
 export type { DataGridSortMenuTriggerProps, DataGridSortMenuTriggerRenderArgs } from './data-grid/sort-menu-trigger'
@@ -190,6 +291,7 @@ export type {
 	DataGridVisibilityTriggerProps,
 	DataGridVisibilityTriggerRenderArgs,
 } from './data-grid/visibility-trigger'
+export type { DataGridVisibilityItemProps } from './data-grid/visibility-item'
 export type {
 	DataGridFilterPanelColumn,
 	DataGridFilterPanelProps,
@@ -214,6 +316,7 @@ export type { DataGridGlobalFilterInputProps } from './data-grid/global-filter-i
 // Sub-components (also available as DataGrid.ActionBar)
 export { ActionBar } from './data-grid/action-bar'
 export { ActiveFiltersBar } from './data-grid/active-filters-bar'
+export { GroupByBar } from './data-grid/group-by-bar'
 export { ClearFiltersButton } from './data-grid/clear-filters-button'
 
 // Layout presets for `core.Layout` — what a UI kit binds so its prebuilt `<DataGrid>` renders
@@ -322,6 +425,9 @@ export {
 	ActionBarVariant,
 	SortDirection,
 } from './types'
+// Same form, different home: the drag axis belongs to the port rather than to the component
+// contract, so it is exported from `./data-grid/dnd` beside the types that name it.
+export { DragAxis, DragInput, DragSurface } from './data-grid/dnd'
 
 // TanStack state slice types. Every feature's `onChange` is typed with one of these, so a
 // consumer that lifts a handler out of the JSX must be able to name it — without adding

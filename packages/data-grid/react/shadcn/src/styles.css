@@ -21,6 +21,16 @@
 	margin-top: 0.75rem;
 }
 
+/* A filter panel standing free above the table needs the gap a toolbar leaves below itself. Put in
+ * a toolbar, it is one more item on the toolbar's row, and the same margin lifts its chips off the
+ * line the search box and the buttons sit on. */
+[data-slot='filter-panel'] {
+	margin-bottom: 0.75rem;
+}
+[data-slot='toolbar'] [data-slot='filter-panel'] {
+	margin-bottom: 0;
+}
+
 @custom-variant dark (&:is(.dark *));
 @source "../../**/*.{ts,tsx}";
 
@@ -301,35 +311,114 @@ tr[data-expanded-row] > td {
 	height: 2rem;
 }
 
-tr[data-depth='1'] [data-system-column='expand'] {
-	padding-left: 1rem;
+/* ---- Nesting depth ----
+ * One step of indentation per level, on whichever column carries the hierarchy.
+ *
+ * Two columns can: `__expand__` on a tree grid, `__group__` on a grouped one. **When both are
+ * present only the group column indents** — that is what the `:not(:has(…))` is for. A grid that
+ * groups *and* expands sub-content rows has an `__expand__` cell whose chevron opens a detail
+ * panel rather than the hierarchy, so indenting it too would double every step.
+ *
+ * The step travels as `--dg-depth-indent` so the five depth rules carry a value each and the
+ * three selectors that apply it are written once. It is declared and read in this stylesheet
+ * alone; `css-custom-properties.test.ts` counts a CSS declaration as a writer.
+ *
+ * `padding-inline-start`, not `padding-left`: indentation runs from the reading edge, and this
+ * grid treats RTL as first-class (the root `direction` option). These rules were physical before
+ * they were generalised here, so an RTL tree indented from the wrong side.
+ *
+ * The cap is five levels. Deeper nesting renders and simply stops indenting further — said on
+ * the grouping page rather than left implicit. */
+tr[data-depth='1'] {
+	--dg-depth-indent: 1rem;
 }
-tr[data-depth='1'] [data-system-column='expand'] + td {
-	padding-left: 1rem;
+tr[data-depth='2'] {
+	--dg-depth-indent: 2rem;
 }
-tr[data-depth='2'] [data-system-column='expand'] {
-	padding-left: 2rem;
+tr[data-depth='3'] {
+	--dg-depth-indent: 3rem;
 }
-tr[data-depth='2'] [data-system-column='expand'] + td {
-	padding-left: 2rem;
+tr[data-depth='4'] {
+	--dg-depth-indent: 4rem;
 }
-tr[data-depth='3'] [data-system-column='expand'] {
-	padding-left: 3rem;
+tr[data-depth='5'] {
+	--dg-depth-indent: 5rem;
 }
-tr[data-depth='3'] [data-system-column='expand'] + td {
-	padding-left: 3rem;
+
+tr [data-system-column='group'],
+tr:not(:has([data-system-column='group'])) [data-system-column='expand'],
+tr :is([data-system-column='group'], [data-system-column='expand']) + td {
+	padding-inline-start: var(--dg-depth-indent, 0);
 }
-tr[data-depth='4'] [data-system-column='expand'] {
-	padding-left: 4rem;
+
+/* ---- Row grouping ----
+ * The group cell lays its chevron, label and count on one line. The label is the thing a reader
+ * scans down a grouped grid, so it takes the weight and the count stays quiet beside it. */
+[data-slot='group-cell'] {
+	display: flex;
+	align-items: center;
+	gap: 0.375rem;
+	min-width: 0;
 }
-tr[data-depth='4'] [data-system-column='expand'] + td {
-	padding-left: 4rem;
+
+[data-slot='group-label'] {
+	@apply font-medium;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
-tr[data-depth='5'] [data-system-column='expand'] {
-	padding-left: 5rem;
+
+[data-slot='group-count'] {
+	@apply text-muted-foreground;
+	font-variant-numeric: tabular-nums;
 }
-tr[data-depth='5'] [data-system-column='expand'] + td {
-	padding-left: 5rem;
+
+/* A group row is structure rather than a record, so it reads as a shelf the leaf rows sit under
+ * — the same tone a pinned row takes, which is already this kit's "not an ordinary row" surface. */
+[data-slot='tr'][data-group-row='true'] {
+	background-color: color-mix(in oklab, var(--muted) 40%, var(--background));
+	--dg-pin-cell-background: color-mix(in oklab, var(--muted) 40%, var(--background));
+}
+
+/* A subtotal is a number to compare down a column, so it lines up like one. */
+[data-aggregated-cell='true'] {
+	@apply font-medium;
+	font-variant-numeric: tabular-nums;
+}
+
+/* ---- The group-by bar ----
+ * Laid out like the active-filters strip it sits beside in a toolbar, so two strips in one
+ * toolbar read as one row rather than as two competing ones. */
+[data-slot='group-by-bar'] {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.375rem;
+	align-items: center;
+}
+
+[data-slot='group-by-bar-label'] {
+	@apply text-muted-foreground text-sm;
+}
+
+[data-slot='group-by-chip'] {
+	@apply border-border bg-muted/40 rounded-sm border text-sm;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.125rem;
+	padding-inline: 0.5rem;
+	padding-block: 0.125rem;
+}
+
+[data-slot='group-by-chip-label'] {
+	@apply font-medium;
+}
+
+/* The chip's menu trigger shrinks to the chip's own line height — the stock row trigger is
+ * sized for a table row and would make every chip as tall as one. Selected as `button` rather
+ * than by a slot, because neither kit's `Menu` stamps one on its trigger. */
+[data-slot='group-by-chip'] button {
+	height: 1.25rem;
+	width: 1.25rem;
 }
 
 /* ---- Deferred apply: the "not yet real" treatment ----
@@ -406,4 +495,74 @@ tr[data-depth='5'] [data-system-column='expand'] + td {
 	align-items: center;
 	gap: 0.375rem;
 	white-space: nowrap;
+}
+
+/*
+ * A row being dragged.
+ *
+ * The drag library moves the element with its own transform; what is left for a kit is saying
+ * which row the user is holding. Opacity plus a lift, no layout properties — the neighbours part
+ * by transform and must not be pushed by anything here.
+ */
+[data-slot='tr'][data-row-dragging] {
+	opacity: 0.6;
+	position: relative;
+	z-index: 2;
+}
+
+/*
+ * A column being dragged — in the header, and in the column panel.
+ *
+ * The header-cell twin of the row rule above, and the same discipline: opacity plus a lift, never a
+ * layout property. The neighbours part by the library's transform and must not be pushed by
+ * anything here.
+ *
+ * Both selectors, not one on the attribute alone, and not the header alone either. The panel's row
+ * stamps the same attribute and had no rule at all, so a panel drag showed only the library's own
+ * transform — no dimming, no lift, while the header's drag had both. Keeping the two selectors
+ * explicit rather than writing `[data-column-dragging]` is what keeps this from also catching a
+ * consumer's element that happens to carry the attribute.
+ */
+[data-slot='th'][data-column-dragging],
+[data-slot='column-visibility-item'][data-column-dragging] {
+	opacity: 0.6;
+	position: relative;
+	z-index: 2;
+}
+
+/*
+ * The row and column drag handles: a quiet grip, not a button.
+ *
+ * Both reach the DOM through `core.Button`, whose default here is the filled primary variant — a
+ * full-size call to action sitting in every row. A grip is furniture, so it drops to an icon-sized
+ * ghost: no fill at rest, muted glyph, and the hover surface the kit's ghost variant uses. The
+ * focus ring stays the button's own. Selected by slot, because the shared handle authors no class.
+ */
+button[data-slot='row-drag-handle'],
+button[data-slot='column-drag-handle'] {
+	width: 1.5rem;
+	height: 1.5rem;
+	padding: 0;
+	border-radius: var(--radius-sm);
+	background-color: transparent;
+	color: var(--muted-foreground);
+}
+
+button[data-slot='row-drag-handle']:hover,
+button[data-slot='column-drag-handle']:hover {
+	background-color: var(--muted);
+	color: var(--foreground);
+}
+
+/*
+ * A panel row without a grip — a column the author locked with `ordering: false` — is indented by
+ * the grip's width plus the row's gap, so its checkbox lines up with the rows that drag. Only while
+ * some row in the same list carries a grip: a panel with no drag at all keeps its rows flush.
+ *
+ * A stylesheet rule rather than a placeholder in the markup, because the grip decides for itself
+ * whether to render and the panel is not told; `:has()` reads the outcome instead of re-deriving it.
+ */
+:has(> [data-slot='column-visibility-item'] [data-slot='column-drag-handle'])
+	> [data-slot='column-visibility-item']:not(:has([data-slot='column-drag-handle'])) {
+	padding-inline-start: 1.75rem;
 }

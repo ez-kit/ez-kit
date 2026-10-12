@@ -24,8 +24,10 @@ import { FormFieldType, TextInputType, formatFieldErrors, hasFieldErrors } from 
 import type { LocalizedSelectOption, SelectOption } from '@ez-kit/form-core'
 ```
 
-- **`FormFieldType`** / **`FORM_FIELD_TYPES`** — the built-in field kinds: `text`,
-  `number`, `textarea`, `select`, `checkbox`, `switch`, `radiogroup`, `slider`.
+- **`FormFieldType`** / **`FORM_FIELD_TYPES`** — the built-in field kinds: `text`, `number`,
+  `textarea`, `select`, `multiselect`, `checkbox`, `checkboxgroup`, `switch`, `radiogroup`,
+  `slider`, `date`, `daterange`. A repeatable group is **not** one of these: it is the `array`
+  container node, whose `type` is reserved like `section` and `step`.
 - **`TextInputType`** — the `inputType` a text field may ask for (`email`, `tel`, …).
 - **`SelectOption<TValue>`** — `{ label, value, disabled? }` with `label` already resolved
   to a string, the option shape every select-like field consumes.

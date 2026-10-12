@@ -25,7 +25,7 @@ const features = tableFeatures({
 
 const bothAxesColumns = createColumns<User>([
 	{ accessorKey: 'name', header: 'Name', width: 200, pinning: { initialSide: 'start' } },
-	{ accessorKey: 'email', header: 'Email', width: 260 },
+	{ accessorKey: 'email', header: 'Email', width: { min: 260 } },
 	{ accessorKey: 'age', header: 'Age', width: 220, cell: { type: 'number' } },
 	{ accessorKey: 'active', header: 'Active', width: 220, cell: { type: 'boolean' } },
 ])

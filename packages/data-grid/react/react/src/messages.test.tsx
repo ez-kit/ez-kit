@@ -7,6 +7,7 @@ import { DataGrid } from './data-grid/data-grid'
 import { DataGridOptionsProvider } from './data-grid-options-context'
 import { TEST_FEATURES, testComponents } from './test-utils'
 import { useDataGrid } from './use-data-grid'
+import { useGridMessages } from './use-grid-messages'
 
 import type { GridFeatures } from './types'
 import type { PartialGridMessages } from '@ez-kit/data-grid-core'
@@ -76,6 +77,80 @@ describe('messages', () => {
 
 		expect(screen.getAllByLabelText('Отметить строку').length).toBe(USERS.length)
 		expect(screen.getByLabelText('Выбрать все')).toBeTruthy()
+	})
+
+	it('words a drag announcement from the English dictionary', () => {
+		// The announcement keys are whole sentences taking a named context, so a default is read by
+		// calling it — there is no stem to assert on. Both axes, because a row is announced by its
+		// position alone and a column by its name as well.
+		expect(defaultMessages.ordering.rowPickedUp({ position: 3, total: 20 })).toBe('Picked up row 3 of 20.')
+		expect(defaultMessages.ordering.columnDropped({ name: 'Price', position: 2, total: 9 })).toBe(
+			'Dropped column Price at position 2 of 9.',
+		)
+	})
+
+	it('replaces one announcement, keeping the drag handles’ own names', () => {
+		const { result } = renderHook(() =>
+			useDataGrid<GridFeatures, User>({
+				features: TEST_FEATURES,
+				data: USERS,
+				columns: COLUMNS,
+				messages: {
+					ordering: {
+						rowPickedUp: ({ position, total }) => `Взяли строку ${String(position)} из ${String(total)}.`,
+					},
+				},
+			}),
+		)
+
+		const { ordering } = result.current.grid.messages
+		expect(ordering.rowPickedUp({ position: 1, total: 2 })).toBe('Взяли строку 1 из 2.')
+		// The group's siblings survive — the handle name that shipped before the announcements, the
+		// other sentences, and the two constants beside them.
+		expect(ordering.dragRow).toBe(defaultMessages.ordering.dragRow)
+		expect(ordering.rowDropped({ position: 1, total: 2 })).toBe(
+			defaultMessages.ordering.rowDropped({ position: 1, total: 2 }),
+		)
+		expect(ordering.draggable).toBe(defaultMessages.ordering.draggable)
+		expect(ordering.instructions).toBe(defaultMessages.ordering.instructions)
+	})
+
+	it('lets a grid override one `ordering` key of the provider’s dictionary, keeping the rest', () => {
+		function Probe() {
+			const messages = useGridMessages()
+			return (
+				<>
+					<span data-testid='picked'>{messages.ordering.rowPickedUp({ position: 2, total: 7 })}</span>
+					<span data-testid='roledescription'>{messages.ordering.draggable}</span>
+				</>
+			)
+		}
+		function Grid() {
+			const table = useDataGrid<GridFeatures, User>({
+				features: TEST_FEATURES,
+				data: USERS,
+				columns: COLUMNS,
+				messages: { ordering: { rowPickedUp: ({ position }) => `Строка ${String(position)}.` } },
+			})
+			return <DataGrid table={table}>{<Probe />}</DataGrid>
+		}
+
+		render(
+			<GridComponentsProvider components={testComponents}>
+				<DataGridOptionsProvider
+					defaults={{
+						messages: {
+							ordering: { rowPickedUp: () => 'не видно', draggable: 'перетаскиваемый' },
+						},
+					}}
+				>
+					<Grid />
+				</DataGridOptionsProvider>
+			</GridComponentsProvider>,
+		)
+
+		expect(screen.getByTestId('picked').textContent).toBe('Строка 2.')
+		expect(screen.getByTestId('roledescription').textContent).toBe('перетаскиваемый')
 	})
 
 	it('resolves onto `table.grid.messages` complete, never partial', () => {

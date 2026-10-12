@@ -7,10 +7,6 @@ A column's filter control does not change with where it sits: the same input, op
 and value list, chosen from the column's `cell.type` and its `filtering.operators`. What changes
 is **where the JSX puts it**.
 
-This used to be `filtering.variant`, a table-level enum with three values. It is gone, because it
-decided two unrelated things at once — whether the header cell renders a filter, and what that
-filter looks like — and could therefore never express the fourth arrangement on this page.
-
 | Where the control lives             | How you say it                                                                     | Reach for it when                                                                         |
 | ----------------------------------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | In the header cell, under the label | Nothing — the built-in header cell renders it. **The default.**                    | A few filterable columns, and filtering is the main thing the user does.                  |
@@ -195,7 +191,6 @@ It renders nothing for a column that is not filterable, so no guard is needed ar
 ## Both at once
 
 Mount the panel **and** keep rendering `filter`, and the grid has a filter control in both places.
-This was inexpressible while one enum decided both questions — there was no value for it.
 
 <DataGridDocsExample exampleId='filter-panel-and-header' />
 
@@ -211,9 +206,7 @@ This was inexpressible while one enum decided both questions — there was no va
 </DataGrid>
 ```
 
-Both write to the one `columnFilters` slice, so a column's two controls are two inputs bound to one
-value: type in either and the other follows. That needed no coordination to build — it is what two
-controls reading one state slice already do.
+A column's two controls are two inputs bound to one value: type in either and the other follows.
 
 ## See also
 

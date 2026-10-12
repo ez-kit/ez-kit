@@ -1,0 +1,5 @@
+{
+	"title": "Arrays",
+	"description": "Repeatable groups of fields — add, remove and reorder entries, in JSX and in a document.",
+	"pages": ["index", "api"]
+}

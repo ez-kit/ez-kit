@@ -7,7 +7,7 @@ When the built-in cell types don't cover your needs, register your own. A custom
 
 ## Usage
 
-This grid registers custom `rating` and `color` cell types via `extendDataGrid()` — click Edit on any row to try the custom inputs.
+This grid registers custom `rating` and `color` cell types through its own `createDataGrid` bundle — click Edit on any row to try the custom inputs.
 
 <DataGridDocsExample exampleId='custom-cell-types' />
 
@@ -77,15 +77,25 @@ The fallbacks run one way only — `creating → edit` and `filter → edit`, ne
 
 `CellTypeDefinition` also takes optional `operators` / `defaultOperator`, which seed the filter UI for columns of that type.
 
-Register the whole map once for a grid module. `extendDataGrid` comes from your UI kit, not from the headless package — for HeroUI that's the `@ez-kit/data-grid-heroui` npm package; for shadcn it's the copy the registry put in your project (`@/components/data-grid/data-grid`), since that flavor ships as source you own rather than as a package:
+Register the whole map once for a grid module, in the [bundle file](/docs/data-grid/getting-started#the-two-shapes) your app already builds — a custom cell type is a `cellTypes` entry and nothing else:
 
-```tsx
-import { extendDataGrid } from '@/components/data-grid/data-grid'
+```tsx title="src/lib/data-grid.ts"
+import { allDataGridFeatures } from '@ez-kit/data-grid-core/features/all'
+import { allComponents, cellTypes } from '@ez-kit/data-grid-heroui'
+import { createDataGrid } from '@ez-kit/data-grid-react'
 
-const grid = extendDataGrid(CELL_TYPES)
-
-export const { DataGrid, useDataGrid, createColumns, createColumnHelper } = grid
+export const { DataGrid, useDataGrid, createColumns, createColumnHelper } = createDataGrid({
+	components: allComponents,
+	cellTypes: { ...cellTypes, ...CELL_TYPES },
+	features: allDataGridFeatures,
+})
 ```
+
+The three aggregates above are what the kit's prebuilt `DataGrid` binds, so this is that grid with a
+wider registry. A bundle that composes only the component groups and features it renders trims both
+— see [Getting Started](/docs/data-grid/getting-started#what-your-own-bundle-saves). On shadcn the
+kit import is the copy the registry put in your project (`@/components/data-grid/data-grid`), since
+that flavor ships as source you own rather than as a package.
 
 …or per grid, with the `cellTypes` prop — registries nest, so this merges over the ones the kit already provides instead of replacing them:
 
@@ -104,7 +114,7 @@ keeps the kit's `editing`, `filtering` and the config the type declared.
 
 ## More examples
 
-Each custom type is just a docs-layer renderer registered via `extendDataGrid()`. The three below show different render strategies — a visual bar, a formatted value, and a composite view.
+Each custom type is just a docs-layer renderer registered through `cellTypes`. The three below show different render strategies — a visual bar, a formatted value, and a composite view.
 
 ### Progress
 
@@ -126,7 +136,7 @@ A composite view that derives an initials avatar (color hashed from the name) ne
 
 ## Type-safety
 
-The registry's **keys** are the source of truth. `extendDataGrid()` returns a bundle whose `createColumnHelper` is typed to those keys, so the builder gains a matching `createColumn.status({ … })` method and a typo in the method name is a TS error.
+The registry's **keys** are the source of truth. `createDataGrid({ cellTypes })` returns a bundle whose `createColumnHelper` is typed to those keys, so the builder gains a matching `createColumn.status({ … })` method and a typo in the method name is a TS error.
 
 Hand-written `cell: { type: '…' }` is **not** id-checked — `CellType` keeps a `string & {}` tail so custom ids stay assignable. A typo there silently falls through to the raw, unstyled value instead of your renderer: no compile error, and no visibly broken cell to tip you off. One more reason to go through the helper.
 

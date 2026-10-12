@@ -11,7 +11,7 @@ import {
 	rowPaginationFeature,
 	tableFeatures,
 } from '@ez-kit/data-grid-core/features'
-import { createColumns } from '@ez-kit/data-grid-react'
+import { applyRowMove, createColumns } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 
 import { DataGrid } from 'shared/DataGrid'
@@ -19,11 +19,8 @@ import { DataGrid } from 'shared/DataGrid'
 import { EMPLOYEE_DATA } from './_data'
 
 import type { Employee } from './_data'
-import type { RowMove } from '@ez-kit/data-grid-react'
 
 const features = tableFeatures({
-	// Structural: the grid shell reads column widths, visibility and pin groups to lay out
-	// the column grid. Everything below is this example's own.
 	columnVisibilityFeature,
 	columnPinningFeature,
 	columnSizingFeature,
@@ -40,12 +37,8 @@ const columns = createColumns<Employee>([
 	{ accessorKey: 'salary', header: 'Salary', align: 'end', cell: { type: 'number' } },
 ])
 
-/**
- * Uncontrolled: the grid keeps the order the user arranges and renders it.
- *
- * `getRowId` is what the order is recorded as, so it has to be stable — without one, a row id
- * falls back to its index and the order would refer to whichever rows later sit there.
- */
+const getRowId = (row: Employee) => String(row.id)
+
 export function RowOrderingExample() {
 	return (
 		<DataGrid
@@ -58,24 +51,6 @@ export function RowOrderingExample() {
 	)
 }
 
-/** `data` with `move` applied — the row lifted out and dropped where its target sits. */
-function withMove(rows: Employee[], move: RowMove): Employee[] {
-	const from = rows.findIndex((row) => String(row.id) === move.rowId)
-	const to = rows.findIndex((row) => String(row.id) === move.targetRowId)
-	if (from === -1 || to === -1) return rows
-
-	const next = [...rows]
-	const [moved] = next.splice(from, 1)
-	if (moved) next.splice(to, 0, moved)
-	return next
-}
-
-/**
- * Controlled: supplying `onChange` hands the order back to the application.
- *
- * The grid then stores nothing and reorders nothing — it reports one move, and this component
- * decides what that means. A server-backed list would `PATCH` the position here instead.
- */
 export function RowOrderingControlledExample() {
 	const [rows, setRows] = useState(EMPLOYEE_DATA)
 
@@ -84,11 +59,11 @@ export function RowOrderingControlledExample() {
 			features={features}
 			data={rows}
 			columns={columns}
-			getRowId={(row) => String(row.id)}
+			getRowId={getRowId}
 			ordering={{
 				row: {
 					onChange: (move) => {
-						setRows((current) => withMove(current, move))
+						setRows((current) => applyRowMove(current, move, getRowId))
 					},
 				},
 			}}
@@ -129,13 +104,6 @@ const teamColumns = createColumns<Team>([
 	{ accessorKey: 'department', header: 'Department' },
 ])
 
-/**
- * Uncontrolled, with pagination: the order spans the whole list, not the page on screen.
- *
- * A move is defined over the rows the user can see — the arrows are disabled at a page edge —
- * but what the grid records is the order of every row it holds, so a move made on one page does
- * not strand the rows on the others.
- */
 export function RowOrderingPaginatedExample() {
 	return (
 		<DataGrid
@@ -149,14 +117,6 @@ export function RowOrderingPaginatedExample() {
 	)
 }
 
-/**
- * Uncontrolled, with tree data: a row moves among its siblings.
- *
- * An expanded parent steps over its own children to reach the sibling below them. Its children
- * cannot move here at all — the order the grid keeps is a list of ids over the top-level array,
- * and a child's position lives inside its parent, so those entries are disabled. Controlled mode
- * reports a sub-row move like any other.
- */
 export function RowOrderingTreeExample() {
 	return (
 		<DataGrid

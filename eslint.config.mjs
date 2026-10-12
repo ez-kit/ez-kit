@@ -25,6 +25,9 @@ export default tseslint.config(
 			'apps/docs/scripts/**',
 			'scripts/**',
 			'.claude/skills/**/scripts/**',
+			// Review artifacts, not shipped code: standalone oracle scripts kept beside the PRP
+			// reports as the record of how a phase was verified. See their README.
+			'.claude/PRPs/artifacts/**',
 			'apps/docs/shared/data-grid/sandpack/generated/**',
 			'**/*.config.{js,cjs,mjs,ts,mts,cts}',
 			'**/*.d.ts',

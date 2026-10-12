@@ -56,10 +56,8 @@ Document order decides it: write the strip before `<DataGrid.Table />` or after 
 <DataGrid.ActiveFiltersBar position='below' />
 ```
 
-`position` is not what moves it. It is what the strip reports itself as, through
-`data-chip-position`, and it exists because a stylesheet cannot read a JSX position: both kits rule
-on `[data-slot='active-filters-bar'][data-chip-position='…']` for the margin above versus below.
-Set it to match where you put the strip. Default `'above'`.
+Set `position` to match where you put the strip; the kits use it to style the margin correctly.
+Default `'above'`.
 
 ## The two are independent
 
@@ -91,9 +89,6 @@ its appearing and disappearing makes the toolbar jump.
 ```tsx
 <DataGrid.Toolbar end={<DataGrid.ClearFiltersButton alwaysShow />} />
 ```
-
-A prop of the button rather than a table option, because it is a question about this one control's
-behaviour and nothing else in the grid reads it.
 
 ## Labels and order
 

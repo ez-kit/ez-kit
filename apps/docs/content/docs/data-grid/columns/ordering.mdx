@@ -30,6 +30,9 @@ axis.
   menu each time. The menu closes on select in both kits, so this is the path for a column that
   has to travel several places. Not yet wired in the HeroUI kit — see the note below.
 - **The Columns toggle**, once `visibilityMenu` asks for it — see below.
+- **Dragging the header**, once a [drag adapter](/docs/data-grid/drag-and-drop/columns) is bound. That is the
+  one affordance that moves a column several places in a single gesture; everything on this page
+  moves it one step. With it, every header carries a grip and the menu drops its move pair.
 
 A step swaps the column with its **visible** neighbour. Hidden columns keep their own places: a
 column that is hidden and shown again comes back where it was, which is exactly why the order and
@@ -60,14 +63,53 @@ read as the column order. A column locked with `visibility: false` is therefore 
 checkbox disabled — it can never be hidden, and that is unchanged, but it does hold a place in the
 order and it can still be moved.
 
-For the same reason a step here lands on the row **next to it**, hidden rows included, rather than
-passing over hidden columns the way the header does. Both are the same rule from two places: a
-step moves a column past what the user can see, and each surface shows something different.
+A step lands on the row **next to it**, including hidden columns, because the panel shows the full order.
 
 The panel's arrows point up and down. The two moves are logical — `start` and `end`, since the
 column order flips under RTL — but this list runs from the start of the order at the top in either
 writing direction, so up and down are what the arrows honestly point at. Their wording comes from
 `messages.visibility.moveStart` / `moveEnd` (`Move up` / `Move down`).
+
+### The arrows or the drag, not both
+
+Rows of this panel can also be **dragged**, with nothing to compose, once a
+[drag adapter](/docs/data-grid/drag-and-drop) is bound. It is the only surface where a hidden
+column can be moved at all.
+
+`visibilityMenu: true` then means **the drag and not the arrows**. The pair is a one-step
+simplification of the same gesture — same axis, same state, same refusals — so a panel offering
+both would offer the same move twice, and the drag is operable from the keyboard too
+([pick-up, arrows, drop](/docs/data-grid/drag-and-drop/api#keyboard)), which is the one thing the pair
+used to have to itself. With no adapter bound, `true` means the arrows, which is what every grid
+written before drag existed already gets.
+
+Name a field to override it:
+
+```tsx
+ordering={{
+	column: {
+		// Both, if a one-step control beside the grip is what the screen wants.
+		visibilityMenu: { moveControls: true },
+		// The arrows alone, in a grid whose rows and headers still drag.
+		visibilityMenu: { drag: false },
+	},
+}}
+```
+
+The panel lists every column under either affordance.
+
+Two combinations the grid cannot honour, and it warns in development: `{ drag: true }` with no
+adapter bound falls back to the arrows, and `{ moveControls: false }` with no adapter leaves a panel
+that shows the order and offers no way to change it.
+
+A grid whose panel should offer something else entirely composes it:
+`<DataGrid.VisibilityTrigger>` hands its render function the same `columns` the kits map — each item
+carrying its `ordering` pair when the arrows are the chosen affordance — beside an `isColumnPanel`
+flag, and `<DataGrid.VisibilityItem>` is the row the drag registers. Branch the panel's shape on the
+flag and each control on the item: `col.ordering` for the arrows, `<ColumnDragHandle />`, which
+self-hides, for the grip. The
+options above exist because the kits' own panel is a list they map rather than markup you write; a
+header you compose yourself places its grip the same way — see [A header you compose](/docs/data-grid/drag-and-drop/columns#a-header-you-compose).
 
 ## What cannot move
 
@@ -91,9 +133,7 @@ writing direction, so up and down are what the arrows honestly point at. Their w
 />
 ```
 
-`onChange` receives the **complete** order as column ids, in visual order. That is deliberate:
-TanStack reads a partial `columnOrder` as "these first, then the rest as declared", so a partial
-list would quietly rearrange columns nobody touched.
+`onChange` receives the **complete** order as column ids, in visual order.
 
 `columnOrder` is part of the persisted view state — see
 [State persistence](/docs/data-grid/state/persistence), where it travels with `columnVisibility`
@@ -108,10 +148,14 @@ was handed, so the handler the grid puts there is overwritten. Tracked in
 
 ## Options
 
-| Option                           | Type                        | Description                                                                                                   |
-| -------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `ordering`                       | `boolean \| { column?: … }` | Reordering, per axis. `true` enables the column axis; `{ column: { onChange } }` reports the new order.       |
-| `ordering.column.visibilityMenu` | `boolean`                   | Offer the two moves in the Columns toggle as well, which then lists every non-system column. Default `false`. |
+| Option                                        | Type                        | Description                                                                                                                  |
+| --------------------------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `ordering`                                    | `boolean \| { column?: … }` | Reordering, per axis. `true` enables the column axis; `{ column: { onChange } }` reports the new order.                      |
+| `ordering.column.drag`                        | `boolean`                   | Headers drag, with a grip before the label. Default: whether a drag adapter is bound.                                        |
+| `ordering.column.moveControls`                | `boolean`                   | The column menu carries the move pair. Default: `true` exactly when the header drag resolves off.                            |
+| `ordering.column.visibilityMenu`              | `boolean \| object`         | Turn the Columns toggle into a column panel: it lists every non-system column and offers a move affordance. Default `false`. |
+| `ordering.column.visibilityMenu.drag`         | `boolean`                   | Panel rows are draggable. Default: whether a drag adapter is bound.                                                          |
+| `ordering.column.visibilityMenu.moveControls` | `boolean`                   | Panel rows carry the one-step move pair. Default: `true` exactly when the drag resolves off, so the panel never offers both. |
 
 ## Column options
 

@@ -22,7 +22,7 @@ export function FilterPanelChip({ label, valueDisplay, hasValue, onClear, childr
 					type='button'
 					variant={hasValue ? 'secondary' : 'outline'}
 					size='sm'
-					className='h-7 gap-1 px-2 text-xs font-normal'
+					className='h-8 gap-1 px-2.5 text-xs font-normal'
 					data-slot='filter-panel-chip'
 					data-has-value={hasValue || undefined}
 				>

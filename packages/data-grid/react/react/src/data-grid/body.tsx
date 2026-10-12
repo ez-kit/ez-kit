@@ -10,6 +10,7 @@ import { LoadingBody } from './loading-body'
 import { NoResultsRow } from './no-results-row'
 import { RefetchOverlayHost } from './refetch-overlay'
 import { DataGridRow } from './row'
+import { usePublishRenderedRows } from './row-drag-registry'
 import { useDataGridTable, useDataGridState } from './table-context'
 import { usePinnedRowOffsets } from './use-pinned-row-offsets'
 import { VirtualBody } from './virtual-body'
@@ -150,6 +151,24 @@ export function Body<TRow extends object = ErasedRow>({ children }: DataGridBody
 	useDataGridState((s) => s.rowPinning)
 	// Cells come out of `row.getVisibleCells()` in column order, so a reorder repaints rows.
 	useDataGridState((s) => s.columnOrder)
+	// Grouping rebuilds the row model **and** the column list — `groupedColumnMode: 'remove'`
+	// takes a grouped column out while it is a level — so every component that reads either has
+	// to re-derive on it. Optional-chained because the slice exists only with
+	// `columnGroupingFeature` registered; see `feature-optionality.test.tsx`.
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	useDataGridState((s) => s.grouping ?? null)
+
+	/*
+	 * This body publishes nothing, and that is the decision rather than an omission.
+	 *
+	 * The built-in non-virtual body renders exactly `getRowDropOrder(table)`, so publishing it would
+	 * copy an array per render in order to compare it with itself; a hand-written body cannot publish,
+	 * because which rows it renders is the consumer's choice. Both get the derivation, which is right
+	 * for them. The `null` matters all the same: it clears whatever a virtualized body published
+	 * before the grid stopped being virtualized, and a parent always renders before its children, so
+	 * the `VirtualBody` this may return below re-publishes afterwards.
+	 */
+	usePublishRenderedRows(null)
 
 	// Read before the early returns below: the offset hooks must run on every render.
 	const hasPinning = Boolean(table.options.enableRowPinning)

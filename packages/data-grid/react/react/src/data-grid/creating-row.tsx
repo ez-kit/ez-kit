@@ -15,6 +15,7 @@ import { getVisualLeafColumns } from '../utils/visual-column-order'
 
 import { flexRender } from './flex-render'
 import { useDataGridState, useDataGridTable } from './table-context'
+import { columnNameOf, VisuallyHiddenLabel } from './visually-hidden'
 
 import type { CellTypeRegistry } from '../cell-types-context'
 import type { InputProps } from '../types'
@@ -182,7 +183,10 @@ export function CreatingRow() {
 							field: fieldState,
 							cellTypes,
 							Input,
-							placeholder: typeof col.columnDef.header === 'string' ? col.columnDef.header : col.id,
+							// The column's header is the label a sighted user reads above this cell. It is
+							// the placeholder, and — through the hidden label / `aria-label` below — the
+							// accessible name too, so the two can never say different things.
+							name: columnNameOf(col.columnDef.header, col.id),
 						})}
 					</Td>
 				)
@@ -198,15 +202,29 @@ type CreatingInputArgs = {
 	field: FieldState
 	cellTypes: CellTypeRegistry
 	Input: ComponentType<InputProps>
-	placeholder?: string
+	/** The column's header text: this control's placeholder and its accessible name. */
+	name: string
 }
 
-function renderCreatingInput({ meta, field, cellTypes, Input, placeholder }: CreatingInputArgs): ReactNode {
+function renderCreatingInput({ meta, field, cellTypes, Input, name }: CreatingInputArgs): ReactNode {
+	/**
+	 * The draft row renders no visible label — `FieldState.label` is set only in the modal form,
+	 * where a kit composite draws one. Inline, the header cell above is the label, and a screen
+	 * reader cannot follow that: axe reported `label` on every field of the creating row, in both
+	 * kits. See {@link VisuallyHiddenLabel}.
+	 */
+	const label = <VisuallyHiddenLabel htmlFor={field.id}>{name}</VisuallyHiddenLabel>
 	// 1. column-level creating.component, falling back to editing.component
 	const creatingConfig = resolveColumnFormConfig(meta, ColumnFormMode.Creating)
 	if (creatingConfig !== false && creatingConfig !== undefined) {
 		const comp = creatingConfig.component
-		if (comp) return flexRender(comp, field)
+		if (comp)
+			return (
+				<>
+					{label}
+					{flexRender(comp, field)}
+				</>
+			)
 	}
 
 	// 2. registry creating → editing fallback by cell type
@@ -214,14 +232,21 @@ function renderCreatingInput({ meta, field, cellTypes, Input, placeholder }: Cre
 	if (cellTypeId) {
 		const def = cellTypes[cellTypeId]
 		const comp = def?.creating ?? def?.editing
-		if (comp) return flexRender(comp, field)
+		if (comp)
+			return (
+				<>
+					{label}
+					{flexRender(comp, field)}
+				</>
+			)
 	}
 
 	// 3. default Input
 	return (
 		<Input
 			value={field.value as string | number | readonly string[]}
-			placeholder={placeholder}
+			placeholder={name}
+			aria-label={name}
 			onChange={(e: ChangeEvent<HTMLInputElement>) => {
 				field.onChange(e.target.value)
 			}}

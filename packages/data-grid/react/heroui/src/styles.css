@@ -76,6 +76,16 @@
 	margin-top: 0.75rem;
 }
 
+/* A filter panel standing free above the table needs the gap a toolbar leaves below itself. Put in
+ * a toolbar, it is one more item on the toolbar's row, and the same margin lifts its chips off the
+ * line the search box and the buttons sit on. */
+[data-slot='filter-panel'] {
+	margin-bottom: 0.75rem;
+}
+[data-slot='toolbar'] [data-slot='filter-panel'] {
+	margin-bottom: 0;
+}
+
 /* ── scrollport ownership ──────────────────────────────────────────────────
  * `position: sticky` resolves against the nearest scroll container, and this kit nests one:
  * `Table.ScrollContainer` sits inside `.table-root`, which is `overflow: clip` over a
@@ -103,20 +113,27 @@
 	height: 100%;
 }
 
-/* HeroUI's `.table__row` is `height: 100%`, which in native table layout resolves against the row's
- * own content. The virtualized load-more row is absolutely positioned inside the tbody instead
- * (shared stylesheet), so that percentage resolves against the tbody's *total* virtual height — the
- * loader became as tall as the whole scrollable list, an opaque box covering everything below its
- * own top. (The virtual rows escape this because the shared component gives each one the explicit
- * height of its virtualizer slot; the loader has no slot to take a height from.) */
-[data-slot='tbody'][data-virtualized='true'] > [data-slot='load-more-row'] {
-	height: auto;
-}
+/* The virtualized load-more row needs nothing from this kit, and what stood here is gone.
+ *
+ * HeroUI's `.table__row` is `height: 100%`, which in native table layout resolves against the row's
+ * own content. While the loader was absolutely positioned inside the tbody (shared stylesheet) that
+ * percentage resolved against the tbody's *total* virtual height instead, and the loader became as
+ * tall as the whole scrollable list — an opaque box covering everything below its own top. A
+ * `height: auto` here neutralized it.
+ *
+ * The shared package now owns the loader's box outright: it renders in flow after the window's
+ * band, and reserves the virtual scroll range with `min-height` rather than `height` — so the tbody
+ * has no definite height for a percentage to resolve against and `height: 100%` computes to the
+ * same box as `auto`. Measured in this kit, both ways, at the bottom of the scroll. The `min-height`
+ * is also what keeps the loader out of this kit's `overflow: clip` on `.table__content`, which used
+ * to clip it away entirely; that is the shared package's job and not a bound for this kit to
+ * relocate. */
 
-/* HeroUI has no footer slot of its own — the adapter renders a plain `<tfoot>` — so the kit
- * gives it the table's own footer treatment here: the header's surface, a separating rule and
- * the weight a totals row wants. The background is what makes the sticky variant work at all;
- * without it the rows scroll through the footer. */
+/* HeroUI has no footer slot of its own — `Table.Footer` there is a container *outside* the table,
+ * for pagination — so the adapter renders React Aria's `TableFooter` and the kit gives it the
+ * table's own footer treatment here: the header's surface, a separating rule and the weight a
+ * totals row wants. The background is what makes the sticky variant work at all; without it the
+ * rows scroll through the footer. */
 [data-slot='tfoot'] {
 	background: var(--surface-secondary);
 	border-top: 1px solid var(--separator);
@@ -245,9 +262,15 @@
  * (`role="grid"` / `"row"` / `"rowheader"` / `"columnheader"`), so dropping the
  * native table box does not take the table semantics with it.
  *
- * Virtualized mode needs this too — there the shared structural stylesheet
- * positions each virtual row absolutely, and without a column template those
- * rows blockify and their cells collapse. */
+ * Virtualized mode needs this too — in this kit the shared structural
+ * stylesheet makes the tbody a grid and the window's rows are its items, so
+ * without a column template those rows blockify and their cells collapse.
+ * Scoped to this kit on purpose: the same shared rule is dead in shadcn, whose
+ * vendored `<tbody>` carries an inline `display: block` that beats it, so the
+ * split named above is a split of two different layout modes. (This used to say
+ * the shared layer positioned each virtual row absolutely; the window is in
+ * flow now, and only a dragged row the window has scrolled past is taken out of
+ * it. The template is needed either way.) */
 /* Only the rows carry the grid; the table, header and body stay block containers —
  * the same split shadcn uses. Making the <table> itself the grid instead is what one
  * would reach for first, and it does lay the columns out correctly, but it stretches
@@ -272,8 +295,10 @@ table[data-slot='table'] {
 }
 /* A `table-row-group` left inside a non-table parent gets wrapped in an anonymous table
  * box, which shrink-wraps its rows instead of filling the width — the body would then be
- * narrower than the header. (Virtualized mode excluded: there the shared stylesheet makes
- * this the positioning context for the absolutely-placed virtual rows.) */
+ * narrower than the header. (Virtualized mode excluded: there the shared stylesheet owns the
+ * box outright — `display: grid` for the band's rows, `position: relative` so a dragged row the
+ * window has scrolled past has a containing block to be placed against. Measured in this kit:
+ * the tbody computes `grid` / `relative`, its pads place the band, and the kit adds nothing.) */
 [data-slot='table'] tbody:not([data-virtualized='true']) {
 	display: block;
 }
@@ -333,35 +358,111 @@ tr[data-expanded-row] > td {
 	gap: 0.25rem;
 }
 
-tr[data-depth='1'] [data-system-column='expand'] {
-	padding-left: 1rem;
+/* ---- Nesting depth ----
+ * One step of indentation per level, on whichever column carries the hierarchy: `__expand__` on
+ * a tree grid, `__group__` on a grouped one. **When both are present only the group column
+ * indents** — a grid that groups *and* expands sub-content rows has an `__expand__` chevron that
+ * opens a detail panel rather than the hierarchy, so indenting it too would double every step.
+ *
+ * The step travels as `--dg-depth-indent`, declared and read in this stylesheet alone;
+ * `css-custom-properties.test.ts` counts a CSS declaration as a writer. `padding-inline-start`
+ * rather than `padding-left`, because indentation runs from the reading edge and this grid
+ * treats RTL as first-class — these rules were physical before they were generalised here.
+ *
+ * The cap is five levels; deeper nesting renders and stops indenting further. */
+tr[data-depth='1'] {
+	--dg-depth-indent: 1rem;
 }
-tr[data-depth='1'] [data-system-column='expand'] + td {
-	padding-left: 1rem;
+tr[data-depth='2'] {
+	--dg-depth-indent: 2rem;
 }
-tr[data-depth='2'] [data-system-column='expand'] {
-	padding-left: 2rem;
+tr[data-depth='3'] {
+	--dg-depth-indent: 3rem;
 }
-tr[data-depth='2'] [data-system-column='expand'] + td {
-	padding-left: 2rem;
+tr[data-depth='4'] {
+	--dg-depth-indent: 4rem;
 }
-tr[data-depth='3'] [data-system-column='expand'] {
-	padding-left: 3rem;
+tr[data-depth='5'] {
+	--dg-depth-indent: 5rem;
 }
-tr[data-depth='3'] [data-system-column='expand'] + td {
-	padding-left: 3rem;
+
+tr [data-system-column='group'],
+tr:not(:has([data-system-column='group'])) [data-system-column='expand'],
+tr :is([data-system-column='group'], [data-system-column='expand']) + td {
+	padding-inline-start: var(--dg-depth-indent, 0);
 }
-tr[data-depth='4'] [data-system-column='expand'] {
-	padding-left: 4rem;
+
+/* ---- Row grouping ---- */
+[data-slot='group-cell'] {
+	display: flex;
+	align-items: center;
+	gap: 0.375rem;
+	min-width: 0;
 }
-tr[data-depth='4'] [data-system-column='expand'] + td {
-	padding-left: 4rem;
+
+[data-slot='group-label'] {
+	font-weight: 500;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
-tr[data-depth='5'] [data-system-column='expand'] {
-	padding-left: 5rem;
+
+[data-slot='group-count'] {
+	color: color-mix(in oklab, var(--surface-foreground) 60%, transparent);
+	font-variant-numeric: tabular-nums;
 }
-tr[data-depth='5'] [data-system-column='expand'] + td {
-	padding-left: 5rem;
+
+/* A group row is structure rather than a record, so it reads as a shelf its leaf rows sit
+ * under. React Aria writes its own `data-*` on a `Row` after spreading ours, which is why the
+ * grid namespaces this one as `data-group-row` — see `row.tsx`. */
+tr[data-group-row='true'] {
+	background-color: color-mix(in oklab, var(--surface) 92%, var(--surface-foreground));
+	--dg-pin-cell-background: color-mix(in oklab, var(--surface) 92%, var(--surface-foreground));
+}
+
+[data-aggregated-cell='true'] {
+	font-weight: 500;
+	font-variant-numeric: tabular-nums;
+}
+
+/* ---- The group-by bar ----
+ * Laid out like the active-filters strip it sits beside in a toolbar, so two strips in one
+ * toolbar read as one row rather than as two competing ones. */
+[data-slot='group-by-bar'] {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.375rem;
+	align-items: center;
+}
+
+[data-slot='group-by-bar-label'] {
+	color: color-mix(in oklab, var(--surface-foreground) 60%, transparent);
+	font-size: 0.875rem;
+}
+
+[data-slot='group-by-chip'] {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.125rem;
+	border: 1px solid color-mix(in oklab, var(--surface-foreground) 20%, transparent);
+	border-radius: 0.25rem;
+	background-color: var(--surface-secondary);
+	font-size: 0.875rem;
+	padding-inline: 0.5rem;
+	padding-block: 0.125rem;
+}
+
+[data-slot='group-by-chip-label'] {
+	font-weight: 500;
+}
+
+/* The chip's menu trigger shrinks to the chip's own line height — the stock row trigger is
+ * sized for a table row and would make every chip as tall as one. Selected as `button` rather
+ * than by a slot, because neither kit's `Menu` stamps one on its trigger. */
+[data-slot='group-by-chip'] button {
+	height: 1.25rem;
+	width: 1.25rem;
+	min-width: 1.25rem;
 }
 
 /* ---- ActionBar entrance animations ---- */
@@ -532,4 +633,82 @@ tr[data-depth='5'] [data-system-column='expand'] + td {
 	align-items: center;
 	gap: 0.375rem;
 	white-space: nowrap;
+}
+
+/*
+ * A row being dragged.
+ *
+ * The drag library moves the element with its own transform; what is left for a kit is saying
+ * which row the user is holding. Opacity plus a lift, no layout properties — the neighbours part
+ * by transform and must not be pushed by anything here.
+ */
+[data-slot='tr'][data-row-dragging] {
+	opacity: 0.6;
+	position: relative;
+	z-index: 2;
+}
+
+/*
+ * A column being dragged — in the header, and in the column panel.
+ *
+ * The header-cell twin of the row rule above, and the same discipline: opacity plus a lift, never a
+ * layout property. The neighbours part by the library's transform and must not be pushed by
+ * anything here.
+ *
+ * Both selectors, not one on the attribute alone, and not the header alone either. The panel's row
+ * stamps the same attribute and had no rule at all, so a panel drag showed only the library's own
+ * transform — no dimming, no lift, while the header's drag had both. Keeping the two selectors
+ * explicit rather than writing `[data-column-dragging]` is what keeps this from also catching a
+ * consumer's element that happens to carry the attribute.
+ */
+[data-slot='th'][data-column-dragging],
+[data-slot='column-visibility-item'][data-column-dragging] {
+	opacity: 0.6;
+	position: relative;
+	z-index: 2;
+}
+
+/*
+ * The row and column drag handles: a quiet grip, not a button.
+ *
+ * Both reach the DOM through `core.Button`, whose default here is HeroUI's filled primary — a
+ * full-size pill sitting in every row. A grip is furniture, so it drops to an icon-sized ghost by
+ * overriding the button's own tokens rather than its properties: `--button-bg*` is what HeroUI's
+ * hover and press states read, so the states keep working and only the colours change. The press
+ * scale goes too — the drag library owns the transform from that moment on.
+ */
+button[data-slot='row-drag-handle'],
+button[data-slot='column-drag-handle'] {
+	--button-bg: transparent;
+	--button-bg-hover: var(--default);
+	--button-bg-pressed: var(--default);
+	--button-fg: var(--muted);
+	width: 1.5rem;
+	min-width: 1.5rem;
+	height: 1.5rem;
+	padding: 0;
+	border-radius: 0.375rem;
+}
+
+button[data-slot='row-drag-handle']:is(:hover, [data-hovered='true']),
+button[data-slot='column-drag-handle']:is(:hover, [data-hovered='true']) {
+	--button-fg: var(--default-foreground);
+}
+
+button[data-slot='row-drag-handle']:is(:active, [data-pressed='true']),
+button[data-slot='column-drag-handle']:is(:active, [data-pressed='true']) {
+	transform: none;
+}
+
+/*
+ * A panel row without a grip — a column the author locked with `ordering: false` — is indented by
+ * the grip's width plus the row's gap, so its checkbox lines up with the rows that drag. Only while
+ * some row in the same list carries a grip: a panel with no drag at all keeps its rows flush.
+ *
+ * A stylesheet rule rather than a placeholder in the markup, because the grip decides for itself
+ * whether to render and the panel is not told; `:has()` reads the outcome instead of re-deriving it.
+ */
+:has(> [data-slot='column-visibility-item'] [data-slot='column-drag-handle'])
+	> [data-slot='column-visibility-item']:not(:has([data-slot='column-drag-handle'])) {
+	padding-inline-start: 1.75rem;
 }

@@ -8,8 +8,13 @@ import type { ReactNode } from 'react'
  * `number[]`), and a date range holds one `{ start, end }` object: each is a single field
  * under a single `name`, never a pair of sibling paths — see the `daterange` node in
  * `@ez-kit/form-core`'s `schema.ts`.
+ *
+ * `readonly unknown[]` is the `array` field's whole value: a list of item objects whose shape
+ * this layer cannot know, written back wholesale on every add, remove and move. It is the one
+ * member deliberately wider than the rest, and the consumer-facing `ArrayFieldProps` is where
+ * the item type stays precise.
  */
-export type FieldValue = string | number | boolean | OptionValue[] | DateRangeValue | undefined
+export type FieldValue = string | number | boolean | OptionValue[] | DateRangeValue | readonly unknown[] | undefined
 
 /**
  * The slice of a TanStack field the flat wrappers read.

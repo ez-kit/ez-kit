@@ -166,6 +166,14 @@ test.describe('rowActions.actions — a described entry', () => {
 		await button(actionsCell(page, INACTIVE_ROW), 'Row actions').click()
 		await expect(menuItem(page, 'Duplicate')).toBeDisabled()
 		await page.keyboard.press('Escape')
+		// Wait for the first menu to be *gone*, not merely dismissed. HeroUI's popover keeps the
+		// overlay mounted for its 100ms exit animation (`data-exiting`, `animation: exit .1s`), and
+		// this is the one test in the suite that drives a second interaction after an Escape —
+		// opening the next row's menu inside that window puts two `menuitem`s named "Duplicate" in
+		// the DOM and the locator resolves to both. Asserting the dismissal first is what every
+		// other Escape in these specs already does, and it makes this one check that Escape closes
+		// the menu instead of taking it on trust.
+		await expect(menuItem(page, 'Duplicate')).toHaveCount(0)
 
 		await button(actionsCell(page, ACTIVE_ROW), 'Row actions').click()
 		await expect(menuItem(page, 'Duplicate')).toBeEnabled()

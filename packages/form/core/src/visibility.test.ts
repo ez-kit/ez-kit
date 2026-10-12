@@ -50,28 +50,55 @@ test('keys no field node owns survive stripping', () => {
 	expect(stripHiddenValues(schema, values)).toHaveProperty('meta', 1)
 })
 
-test('v1: hidden fields addressed by dotted paths still reach onSubmit inside their parent object', () => {
-	// Top-level keys only — the schema owns 'company.inn', not 'company'.
-	// When 'company.inn' is hidden, the parent 'company' object is not owned so it passes through,
-	// leaving the hidden value untouched inside it.
-	type NestedValues = { clientType: string; company: { inn: string } }
+test('strips a hidden field addressed by a dotted path, out of its parent object', () => {
+	// Before arrays this leaked: only top-level keys were considered, so a hidden 'company.inn'
+	// rode along inside an unowned 'company'. Nesting was opt-in then; inside an array item it is
+	// unavoidable, so the walk had to become path-aware and this case was fixed with it.
+	type NestedValues = { clientType: string; company: { inn: string; name: string } }
 	const nestedSchema: AnyFormSchema<NestedValues> = {
 		version: 1,
 		children: [
 			{ type: FormFieldType.Text, name: 'clientType' },
-			{
-				type: FormFieldType.Text,
-				name: 'company.inn',
-				when: { field: 'clientType', eq: 'business' },
-			},
+			{ type: FormFieldType.Text, name: 'company.inn', when: { field: 'clientType', eq: 'business' } },
 		],
 	}
 
-	const nestedValues: NestedValues = {
+	const result = stripHiddenValues(nestedSchema, {
 		clientType: 'person',
-		company: { inn: '77' },
-	}
-	const result = stripHiddenValues(nestedSchema, nestedValues)
-	// 'company' is not a top-level key owned by the schema, so it passes through
-	expect(result.company.inn).toBe('77')
+		company: { inn: '77', name: 'Acme' },
+	})
+
+	expect(result.company).not.toHaveProperty('inn')
+	// A sibling the schema does not own is untouched, and the parent object survives.
+	expect(result.company.name).toBe('Acme')
+})
+
+test('keeps a hidden field inside one array item from leaking, without renumbering the list', () => {
+	type Values = { people: { name: string; kind: string; secret?: string }[] }
+	const schema: AnyFormSchema<Values> = {
+		version: 1,
+		children: [
+			{
+				type: 'array',
+				name: 'people',
+				children: [
+					{ type: FormFieldType.Text, name: 'name' },
+					{ type: FormFieldType.Text, name: 'kind' },
+					{ type: FormFieldType.Text, name: 'secret', when: { field: './kind', eq: 'vip' } },
+				],
+			},
+		],
+	} as unknown as AnyFormSchema<Values>
+
+	const result = stripHiddenValues(schema, {
+		people: [
+			{ name: 'A', kind: 'vip', secret: 'keep' },
+			{ name: 'B', kind: 'plain', secret: 'drop' },
+		],
+	})
+
+	expect(result.people).toHaveLength(2)
+	expect(result.people[0]).toHaveProperty('secret', 'keep')
+	expect(result.people[1]).not.toHaveProperty('secret')
+	expect(result.people[1]?.name).toBe('B')
 })

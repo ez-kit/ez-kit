@@ -141,9 +141,7 @@ A table-level definition sharing a built-in id replaces that built-in everywhere
 
 ### `BetweenOperatorConfig`
 
-Number-only, and that is the whole type. `between` is one operator whose comparison never changes, so
-nothing here says how the control looks — that is the UI kit's business. Date presets are not a
-`between` thing either: they fill whichever operator is current, so they live on the column's
+Number-only. Date presets are configured on the column instead, through
 [`filtering.presets`](/docs/data-grid/filtering/date-range).
 
 | Option   | Type      | Description                                                                                                                          |

@@ -36,9 +36,11 @@ and the problem never arises.
   pointer — and a disabled entry is also what says "this row is already at the top".
 - **`Alt+ArrowUp` / `Alt+ArrowDown`** move a row with focus inside it one step, without reopening
   the menu each time. Not wired in the HeroUI kit — see the note below.
+- **Dragging the row** by a handle, once a [drag adapter](/docs/data-grid/drag-and-drop/rows) is bound.
+  That is the affordance for a row that has to travel several places; everything else on this page
+  moves it one step. The boundaries below apply to it unchanged.
 
-Row ordering has no column of its own: like [row pinning](/docs/data-grid/pinning/rows), its
-entries live in the actions cell, so turning it on is enough to make that column appear.
+Turning it on adds move controls to the row's action menu.
 
 ## The two modes
 
@@ -60,8 +62,8 @@ server-driven pagination, where the grid holds one page and cannot speak for the
 	features={features}
 	data={rows}
 	columns={columns}
-	getRowId={(row) => row.id}
-	ordering={{ row: { onChange: (move) => reorder(move) } }}
+	getRowId={getRowId}
+	ordering={{ row: { onChange: (move) => setRows((rows) => applyRowMove(rows, move, getRowId)) } }}
 />
 ```
 
@@ -77,9 +79,9 @@ type RowMove = {
 }
 ```
 
-Two ids and a direction are the largest fact the grid actually has, and they are enough to splice
-an array or to `PATCH` a position. Column reordering emits the complete order instead, because a
-grid always knows every column — it does not always know every row.
+Two ids and a direction are enough to splice an array or to `PATCH` a position on the server. For
+the splice, `applyRowMove(rows, move, getRowId)` returns a new array with the row moved — pass it
+the same `getRowId` the grid has, so the ids in the move name the same rows.
 
 ## What cannot move
 
@@ -91,14 +93,17 @@ grid always knows every column — it does not always know every row.
   row of the page. What the grid _records_ is the order of every row it holds, though, so a move
   made on one page does not strand the rows on the others.
 
-<DataGridDocsExample exampleId='row-ordering-paginated' />- **Across a pinning band.** A step from the centre into the
-pinned top or bottom would read as a pin, not a reorder. [Pin the row](/docs/data-grid/pinning/rows) instead. - **Out of
-its own subtree.** With [tree data](/docs/data-grid/expanding/tree) a row moves among its siblings: changing a row's
-parent is a different operation with a different meaning. An expanded parent still steps over its own children to reach
-the sibling below them. - **A sub-row, in uncontrolled mode.** The order the grid keeps is a list of ids over the
-top-level `data` array, and a child's position lives inside its parent's row object — so the move has nowhere to be
-recorded. The entries are disabled for sub-rows there. Controlled mode has no such limit: the application owns the data
-and is told about the move like any other.
+<DataGridDocsExample exampleId='row-ordering-paginated' />
+
+- **Across a pinning band.** A step from the centre into the pinned top or bottom would read as a
+  pin, not a reorder. [Pin the row](/docs/data-grid/pinning/rows) instead.
+- **Out of its own subtree.** With [tree data](/docs/data-grid/expanding/tree) a row moves among its
+  siblings: changing a row's parent is a different operation with a different meaning. An expanded
+  parent still steps over its own children to reach the sibling below them.
+- **A sub-row, in uncontrolled mode.** The order the grid keeps is a list of ids over the top-level
+  `data` array, and a child's position lives inside its parent's row object — so the move has
+  nowhere to be recorded. The entries are disabled for sub-rows there. Controlled mode has no such
+  limit: the application owns the data and is told about the move like any other.
 
 <DataGridDocsExample exampleId='row-ordering-tree' />
 

@@ -7,11 +7,9 @@ description: The grid's one floating or inline bar, with a live section per conc
 or the draft is dirty. Either alone is enough — a grid with `draft` and no selection feature still
 gets the bar.
 
-It is **one** component with a section per concern — the selection, and the pending
+It has a section per concern — the selection, and the pending
 [draft](/docs/data-grid/state/deferred-apply) — so `children` receives `{ open, variant, selection,
-draft }` and each section is absent when it has nothing to show. It replaced a
-`SelectionBar` / `DraftBar` pair, which could both mount at the same sticky position because the
-gate hiding one of them did not re-run on a draft edit.
+draft }` and each section is absent when it has nothing to show.
 
 ## Floating
 

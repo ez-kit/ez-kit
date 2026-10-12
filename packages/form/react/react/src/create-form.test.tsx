@@ -4,9 +4,9 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import { createForm } from './create-form'
-import { testComponents } from './test-kit'
+import { testComponents, testFields } from './test-kit'
 
-import type { FormComponents } from './contract'
+import type { FormFieldSlots } from './contract'
 
 type Values = {
 	email: string
@@ -30,7 +30,7 @@ const PLAN_OPTIONS = [
 	{ label: 'Pro', value: 'pro' },
 ]
 
-const { useForm, Form } = createForm({ components: testComponents })
+const { useForm, Form } = createForm({ components: testComponents, fields: testFields })
 
 describe('createForm — field binding', () => {
 	function TextCase() {
@@ -255,7 +255,7 @@ describe('createForm — field binding', () => {
 	})
 
 	it('rests at the minimum when the bound value is not a real number', () => {
-		const { useForm: useSliderForm } = createForm({ components: testComponents })
+		const { useForm: useSliderForm } = createForm({ components: testComponents, fields: testFields })
 
 		function FallbackCase() {
 			// `NaN` is a `number` to the type system but "no value" to `asNumber`, so the thumb must
@@ -533,8 +533,8 @@ describe('createForm — dependency injection', () => {
 	})
 
 	it('binds a different component set per createForm call', () => {
-		const altComponents: FormComponents = {
-			...testComponents,
+		const altFields: FormFieldSlots = {
+			...testFields,
 			TextField: ({ value, onChange, id, name }) => (
 				<input
 					data-alt-kit='text-input'
@@ -547,7 +547,7 @@ describe('createForm — dependency injection', () => {
 				/>
 			),
 		}
-		const { useForm: useAltForm } = createForm({ components: altComponents })
+		const { useForm: useAltForm } = createForm({ components: testComponents, fields: altFields })
 
 		function AltCase() {
 			const form = useAltForm({ defaultValues: DEFAULTS })

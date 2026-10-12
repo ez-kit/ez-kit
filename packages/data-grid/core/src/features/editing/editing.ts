@@ -98,16 +98,26 @@ export type EditingApi<TData = unknown> = {
 }
 
 /**
- * The single in-flight `AbortController` for a table, held in a box rather than directly.
+ * The in-flight `AbortController`s for a table, held in a box rather than directly.
  *
- * `initTableInstanceData` installs the member once; every swap after that mutates
- * `box.controller`, so nothing ever reassigns the property that was installed. That is what lets
- * `resetTableInstanceData` clear the controller without needing the whole `Table_FeatureMap` entry
- * back in hand, and what keeps `table.editing`'s closure and the reset hook looking at one box.
+ * `initTableInstanceData` installs the member once; every swap after that mutates a field of the
+ * box, so nothing ever reassigns the property that was installed. That is what lets
+ * `resetTableInstanceData` clear them without needing the whole `Table_FeatureMap` entry back in
+ * hand, and what keeps `table.editing`'s closure and the reset hook looking at one box.
+ *
+ * **Two controllers, because two different things cancel them.** A field validation is cancelled
+ * by the next blur or keystroke; a form operation is cancelled by `cancel`, by the next commit, or
+ * by a table reset. They shared one controller until it was measured that a field event then
+ * cancelled a save: see {@link resetFormController}.
  */
-// `| undefined` explicitly: under `exactOptionalPropertyTypes` a bare `controller?:` could not be
-// cleared by assignment, and clearing it is what `cancel` and `resetTableInstanceData` both do.
-export type EditingAbortBox = { controller?: AbortController | undefined }
+// `| undefined` explicitly: under `exactOptionalPropertyTypes` a bare `form?:` could not be
+// cleared by assignment, and clearing both is what `cancel` and `resetTableInstanceData` do.
+export type EditingAbortBox = {
+	/** `commit`, `commitCell` and `validate` — whatever owns the form as a whole. */
+	form?: AbortController | undefined
+	/** `validateField` and the debounced change validation — one field, one blur, one keystroke. */
+	field?: AbortController | undefined
+}
 
 declare module '@tanstack/table-core' {
 	// Declaration merging needs interfaces; these are the shapes upstream declares as such.
@@ -309,21 +319,79 @@ async function runValidate(
 	return zodSafeParseToResult(config.validate.schema, values)
 }
 
-/** Abort whatever is in flight and install a fresh controller in the box. */
-function resetController(table: AnyTable): AbortController {
+/**
+ * Begin a form-level operation: supersede the previous one **and** any pending field validation.
+ *
+ * Field work and form work are cancelled by different events, so they cannot share a controller.
+ * While they did, clicking Save with the caret still in an editor was a race between the click and
+ * the blur that click causes: whichever reached the box second aborted the first. With a UI kit
+ * whose button takes focus on press, the blur landed before `commit` started and everything worked.
+ * With one that leaves focus where it is, the blur arrived **during** the save's `await` and
+ * aborted it — so `onSave` resolved straight into `if (signal.aborted) return`, and the row sat in
+ * its editor for ever, showing neither the saved value nor the rejection it should have. The
+ * asymmetry was HeroUI 3.2 against 3.0; the defect was here. A field event must not cancel a form
+ * operation, whatever a kit does with focus.
+ *
+ * The reverse **is** wanted, which is why this aborts `field` too: a save validates the whole form,
+ * so a half-finished field check is not worth keeping, and letting it finish would write
+ * `commitStatus: Idle` over the `Saving` this operation is about to set.
+ */
+function resetFormController(table: AnyTable): AbortController {
 	const box = abortBox(table)
-	box.controller?.abort()
+	box.form?.abort()
+	box.field?.abort()
+	box.field = undefined
 	const c = new AbortController()
-	box.controller = c
+	box.form = c
 	return c
 }
 
+/**
+ * Begin a field-level validation, cancelling only the previous one — never the form's.
+ *
+ * Returns `undefined` while a form operation is in flight, and the caller then does nothing: the
+ * commit validates every field anyway, and a blur that resolved afterwards would write
+ * `commitStatus: Idle` over the commit's own status, re-enabling the save button mid-save.
+ */
+function resetFieldController(table: EditingTable): AbortController | undefined {
+	if (readEditing(table).commitStatus !== CommitStatus.Idle) return undefined
+
+	const box = abortBox(table)
+	box.field?.abort()
+	const c = new AbortController()
+	box.field = c
+	return c
+}
+
+/** Tear both down — a new form opens, the user cancels, or the table resets. */
+function abortAll(table: AnyTable): void {
+	const box = abortBox(table)
+	box.form?.abort()
+	box.field?.abort()
+	box.form = undefined
+	box.field = undefined
+}
+
+/**
+ * Validate one field and write only that field's errors.
+ *
+ * **It must not touch `commitStatus`.** That status describes the *form* — `isPending` in the
+ * actions cell is `commitStatus !== Idle`, and the kits bind it to the save button's disabled
+ * state. A field validation runs on blur, and the blur that matters is the one the save click
+ * itself causes: pointer down on Save, focus leaves the editor, this ran, the button went disabled
+ * for the length of an `await`, and React Aria cancelled the press it was in the middle of. The
+ * click never became a press, `commit` was never called, and the row sat in its editor with no
+ * error and no saved value. Whether the disable landed inside the press window depended on the
+ * kit's focus timing, which is why it looked like a HeroUI 3.2 regression and was not one — shadcn
+ * and HeroUI 3.0 simply got lucky with the ordering.
+ *
+ * The field's own errors are the whole output; anything wider belongs to `commit` and `validate`.
+ */
 async function validateAndApplyField(table: EditingTable, columnId: string, signal: AbortSignal): Promise<void> {
 	if (signal.aborted) return
 	const config = editingOption(table)
 	if (!config?.validate) return
 
-	writeEditing(table, { commitStatus: CommitStatus.Validating })
 	const values = readEditing(table).values
 	let result: ValidationResult
 	try {
@@ -332,7 +400,6 @@ async function validateAndApplyField(table: EditingTable, columnId: string, sign
 		if (isAbortError(e)) return
 		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 		if (signal.aborted) return
-		writeEditing(table, { commitStatus: CommitStatus.Idle })
 		throw e
 	}
 	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
@@ -342,12 +409,13 @@ async function validateAndApplyField(table: EditingTable, columnId: string, sign
 		const { [columnId]: _removed, ...rest } = prev.errors
 		const fieldErrs = result?.errors?.[columnId]
 		const nextErrors = fieldErrs && fieldErrs.length > 0 ? { ...rest, [columnId]: fieldErrs } : rest
-		return { ...prev, errors: nextErrors, commitStatus: CommitStatus.Idle }
+		return { ...prev, errors: nextErrors }
 	})
 }
 
 function scheduleChangeValidation(table: EditingTable, columnId: string): void {
-	const c = resetController(table)
+	const c = resetFieldController(table)
+	if (!c) return
 	const ms = resolveDebounceMs(table, columnId)
 	void (async () => {
 		try {
@@ -377,7 +445,7 @@ function snapshotRow(table: EditingTable, rowId: string): Record<string, unknown
 function createEditingApi(table: EditingTable): EditingApi<RowData> {
 	return {
 		start: (rowId) => {
-			resetController(table)
+			abortAll(table)
 			writeEditing(table, {
 				rowId,
 				cellId: null,
@@ -393,7 +461,7 @@ function createEditingApi(table: EditingTable): EditingApi<RowData> {
 			// The React layer already renders no double-click affordance for it; this
 			// makes the programmatic path agree rather than quietly opening an input.
 			if (table.getColumn(columnId)?.columnDef.meta?.editing === false) return
-			resetController(table)
+			abortAll(table)
 			const row = table.getRowModel().rows.find((r) => r.id === rowId)
 			const initialValue = row?.getValue(columnId)
 			writeEditing(table, {
@@ -407,9 +475,7 @@ function createEditingApi(table: EditingTable): EditingApi<RowData> {
 		},
 
 		cancel: () => {
-			const box = abortBox(table)
-			box.controller?.abort()
-			box.controller = undefined
+			abortAll(table)
 			writeEditing(table, { ...INITIAL_STATE })
 		},
 
@@ -420,7 +486,7 @@ function createEditingApi(table: EditingTable): EditingApi<RowData> {
 			if (!rowId) return
 			if (commitStatus !== CommitStatus.Idle) return // UI invariant
 
-			const c = resetController(table)
+			const c = resetFormController(table)
 
 			writeEditing(table, {
 				errors: {},
@@ -481,7 +547,7 @@ function createEditingApi(table: EditingTable): EditingApi<RowData> {
 			const columnId = extractColumnId(rowId, cellId)
 			const cellValues: Record<string, unknown> = { [columnId]: values[columnId] }
 
-			const c = resetController(table)
+			const c = resetFormController(table)
 
 			writeEditing(table, {
 				errors: {},
@@ -567,7 +633,7 @@ function createEditingApi(table: EditingTable): EditingApi<RowData> {
 		validate: async () => {
 			const config = editingOption(table)
 			if (!config?.validate) return null
-			const c = resetController(table)
+			const c = resetFormController(table)
 			const values = readEditing(table).values
 			writeEditing(table, { commitStatus: CommitStatus.Validating })
 			let result: ValidationResult
@@ -588,7 +654,8 @@ function createEditingApi(table: EditingTable): EditingApi<RowData> {
 		},
 
 		validateField: async (columnId) => {
-			const c = resetController(table)
+			const c = resetFieldController(table)
+			if (!c) return
 			try {
 				await validateAndApplyField(table, columnId, c.signal)
 			} catch (e) {
@@ -640,9 +707,7 @@ export const editingFeature: TableFeature = {
 	//
 	// Behaviour v8 did not have — the controller lived in a closure with no reset hook to reach it.
 	resetTableInstanceData: (table) => {
-		const box = abortBox(table)
-		box.controller?.abort()
-		box.controller = undefined
+		abortAll(table)
 	},
 
 	assignRowPrototype: (prototype, table) => {

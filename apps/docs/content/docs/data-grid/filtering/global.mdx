@@ -54,9 +54,7 @@ filtering is on, so `globalFiltering` on its own still gives you a search box.
 />
 ```
 
-Search leading, **then** the filter panel, is the order most issue trackers use, and it used to
-take two options (`globalFiltering: { toolbar: 'start' }` plus `filtering: { panel: 'toolbar' }`)
-to ask for. It is now one slot:
+To place search and filter panel together at the toolbar's start:
 
 ```tsx
 <DataGrid.Toolbar

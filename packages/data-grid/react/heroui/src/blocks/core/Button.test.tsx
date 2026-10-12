@@ -40,4 +40,41 @@ describe('heroui Button', () => {
 
 		expect(screen.getByRole('button', { name: 'Press me' })).toBeDisabled()
 	})
+
+	/**
+	 * **`aria-roledescription` does not reach the DOM through this slot, and that is measured rather
+	 * than assumed.** React Aria's button filters the props it forwards against an allow-list, and
+	 * that attribute is not on it: rendered with all four of `aria-label`, `aria-describedby`,
+	 * `data-slot` and `aria-roledescription`, the first three land on the `<button>` and the fourth
+	 * is absent. The adapter is not what drops it — it spreads the caller's props before its own
+	 * two, and `ButtonProps` (`ButtonHTMLAttributes & RefAttributes`) accepts the attribute
+	 * perfectly well.
+	 *
+	 * Why it matters: the drag handle renders this slot, and `@dnd-kit/dom`'s `Accessibility` plugin
+	 * writes `aria-roledescription="draggable"` — English, from the library — onto any handle that
+	 * does not already carry one (`index.js:251-258`). So a grid that sets the attribute from its
+	 * message catalogue gets its own wording in the shadcn kit and the library's English here. This
+	 * case pins that difference instead of letting a future reader assume parity; the shadcn kit's
+	 * `blocks/core/Button.test.tsx` holds the other half.
+	 *
+	 * Asserted as the current behaviour, not as something desirable. The attribute could be forced
+	 * on through a `ref`, which would be an imperative DOM write in a slot every button in the kit
+	 * renders — not a trade to make silently.
+	 */
+	it('drops aria-roledescription, so the library’s own wording stays on the handle', () => {
+		render(
+			<Button
+				aria-roledescription='sortable row'
+				aria-label='Drag row'
+			>
+				Drag
+			</Button>,
+		)
+		const button = screen.getByRole('button', { name: 'Drag row' })
+
+		expect(button).not.toHaveAttribute('aria-roledescription')
+		// The neighbouring attributes do arrive, so the case is about the allow-list and not about a
+		// prop the adapter failed to pass on.
+		expect(button).toHaveAttribute('aria-label', 'Drag row')
+	})
 })

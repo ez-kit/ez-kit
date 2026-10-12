@@ -62,6 +62,30 @@ Registering a feature does not switch it on: `features` decides what exists, the
 
 Composing a set governs **behaviour** — an unregistered feature contributes no state slice, no API and no work at runtime — **and it governs your bundle**. Measured against the built entry: `tableFeatures` alone costs 994 bytes, `rowSortingFeature` 998, a sorting-only set 1 035, and `editingFeature` 17 163, which is what a feature with a real implementation behind it weighs. The all-in set lives on its own subpath, `@ez-kit/data-grid-core/features/all`, precisely so that reaching it is a choice: while it sat on the main entry, each of those imports cost ~46 kB, because a top-level `tableFeatures({ …stockFeatures, … })` call is not something a bundler can drop.
 
+## Drag and drop
+
+This package defines **what a drag adapter is**. It authors none and names no drag library: the port
+is `DndAdapter` / `DragSpec` and the event shapes around them, plus `DndAdapterProvider`,
+`useDndEnabled` and `useSortableItem` for a surface to consume. The mechanics arrive from a kit's own
+`/dnd` subpath — `@ez-kit/data-grid-shadcn/dnd`, `@ez-kit/data-grid-heroui/dnd`, where the drag
+library is an optional peer — or from an adapter you write against the same port while building a
+flavour.
+
+An adapter is bound once, where the bundle is composed:
+
+```tsx
+const { DataGrid } = createDataGrid({ components, dnd: adapter })
+```
+
+With none bound, `useDndEnabled()` is `false` and no surface renders a handle, so drag is opt-in and
+costs nothing when unused. Bind one and three surfaces drag: table rows — including in a virtualized
+body — column headers, and the column panel. A drag is operable from the keyboard (the handle is the
+activator, `Space` or `Enter` picks up, the arrows move, `Space` or `Enter` drops, `Escape` cancels)
+and is announced through a live region whose text comes from the `messages` catalogue, so it
+translates with everything else.
+
+Full contract: [Drag and drop](https://ez-kit-docs.vercel.app/docs/data-grid/drag-and-drop).
+
 ## State persistence
 
 `extractState` / `parseState` (Layer 1 utilities) and `useExtractedState` (Layer 2 reactive hook) let you serialize grid state to the URL or storage and rehydrate it. `parseState` is defensive against malformed/untrusted input and never throws.

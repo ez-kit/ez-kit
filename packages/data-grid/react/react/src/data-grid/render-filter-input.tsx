@@ -5,6 +5,7 @@ import { GridMenuVariant, toMenuSections } from '../menu'
 import { activePresetId, presetValue, presetsForOperator } from './date-presets'
 import { FilterTextInput } from './filter-text-input'
 import { flexRender } from './flex-render'
+import { VisuallyHiddenLabel } from './visually-hidden'
 
 import type { CellTypeRegistry } from '../cell-types-context'
 import type { GridMenuProps } from '../menu'
@@ -178,6 +179,24 @@ export function renderFilterInput<TRow extends object>({
 				}
 			: undefined
 
+	/**
+	 * The control's accessible name, and the id a `<label htmlFor>` binds it by.
+	 *
+	 * One name for every branch below, taken from the same dictionary entry the placeholder uses:
+	 * "Filter <column>" is what the control is, whichever operator is current. Without it the
+	 * filter inputs are anonymous — axe reports `label` (critical) on every filtered column, in
+	 * both kits.
+	 *
+	 * Two routes, because the branches render two different kinds of control. A cell type's own
+	 * component is the kit's, and only some of them forward `aria-label` — but every one honours
+	 * `FieldState.id`, so those get the visually-hidden `<label htmlFor>`. The fallback text input
+	 * goes through the kit's `core.Input`, which is `InputHTMLAttributes<HTMLInputElement>`, so
+	 * that one takes the attribute directly and needs no label element.
+	 */
+	const fieldId = `filter-${header.column.id}`
+	const fieldName = messages.filtering.placeholder({ columnId: header.column.id })
+	const fieldLabel = <VisuallyHiddenLabel htmlFor={fieldId}>{fieldName}</VisuallyHiddenLabel>
+
 	// ── operator-aware path ────────────────────────────────────────────────
 	if (filteringMeta && resolvedOperators && resolvedOperators.length > 0) {
 		const sv = header.column.getFilterValue() as StructuredFilterValue | undefined
@@ -328,7 +347,7 @@ export function renderFilterInput<TRow extends object>({
 			const comp = def?.filtering ?? def?.editing
 			if (comp) {
 				const field: FieldState = {
-					id: `filter-${header.column.id}`,
+					id: fieldId,
 					value: inputValue,
 					onChange: onValueChange,
 					onBlur: () => {},
@@ -340,6 +359,7 @@ export function renderFilterInput<TRow extends object>({
 				return (
 					<>
 						<div data-slot='filter-control'>
+							{fieldLabel}
 							{/* Mounted, not called: invoking a renderer as `Comp(props)` smuggles its hooks into
 							    this header cell's fiber, and swapping one renderer for another — which is what
 							    changing the operator does — reorders them. */}
@@ -358,7 +378,8 @@ export function renderFilterInput<TRow extends object>({
 				<div data-slot='filter-control'>
 					<FilterTextInput
 						Input={Input}
-						placeholder={messages.filtering.placeholder({ columnId: header.column.id })}
+						placeholder={fieldName}
+						aria-label={fieldName}
 						value={(inputValue ?? '') as string}
 						onCommit={onValueChange}
 						debounce={debounce}
@@ -394,7 +415,7 @@ export function renderFilterInput<TRow extends object>({
 		const comp = def?.filtering ?? def?.editing
 		if (comp) {
 			const field: FieldState = {
-				id: `filter-${header.column.id}`,
+				id: fieldId,
 				value: filterValue,
 				onChange,
 				onBlur: () => {},
@@ -403,14 +424,20 @@ export function renderFilterInput<TRow extends object>({
 				errors: [],
 				isValidating: false,
 			}
-			return (comp as (p: FieldState) => ReactNode)(field)
+			return (
+				<>
+					{fieldLabel}
+					{flexRender(comp, field)}
+				</>
+			)
 		}
 	}
 
 	return (
 		<FilterTextInput
 			Input={Input}
-			placeholder={messages.filtering.placeholder({ columnId: header.column.id })}
+			placeholder={fieldName}
+			aria-label={fieldName}
 			value={(filterValue ?? '') as string}
 			onCommit={onChange}
 			debounce={debounce}

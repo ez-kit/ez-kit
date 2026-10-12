@@ -1,4 +1,5 @@
 export * from './ordering'
 export * from './row-ordering'
 export * from './apply-row-order'
+export * from './drop'
 export * from './row-ordering-feature'

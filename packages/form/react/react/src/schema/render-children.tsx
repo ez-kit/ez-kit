@@ -1,4 +1,4 @@
-import { isFieldNode } from '@ez-kit/form-core'
+import { isArrayNode, isFieldNode } from '@ez-kit/form-core'
 import { Fragment } from 'react'
 
 import { RenderNode } from './render-node'
@@ -53,6 +53,19 @@ export function renderChildren<TValues>(
 		let rendered: ReactNode
 
 		if (isFieldNode(node)) {
+			key = node.name
+			rendered = (
+				<RenderNode
+					node={node}
+					form={form}
+					layout={layout}
+					context={context}
+				/>
+			)
+		} else if (isArrayNode(node)) {
+			// An array has a `name` of its own, so it keys off that like a field rather than off
+			// its position — `isFieldNode` excludes it because it is a container, not because it
+			// is nameless.
 			key = node.name
 			rendered = (
 				<RenderNode

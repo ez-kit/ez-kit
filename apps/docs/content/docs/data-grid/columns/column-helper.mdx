@@ -93,13 +93,21 @@ const RATING_CELL_TYPES = {
 />
 ```
 
-Or once for a whole grid module, via `extendDataGrid()` from your UI kit — the usual choice in an app, since every grid built from the returned bundle inherits the types. The import below is the shadcn flavor's copied source; on HeroUI it's `@ez-kit/data-grid-heroui`:
+Or once for a whole grid module, in your [bundle file](/docs/data-grid/getting-started#the-two-shapes) — the usual choice in an app, since every grid built from that bundle inherits the types. The kit imports below are the shadcn flavor's copied source; on HeroUI they come from `@ez-kit/data-grid-heroui`:
 
-```tsx
-import { extendDataGrid } from '@/components/data-grid/data-grid'
+```tsx title="src/lib/data-grid.ts"
+import { allDataGridFeatures } from '@ez-kit/data-grid-core/features/all'
+import { createDataGrid } from '@ez-kit/data-grid-react'
 
-const grid = extendDataGrid({
-	rating: defineCellType()({ view: StarRatingView, editing: StarRatingInput }),
+import { allComponents, cellTypes } from '@/components/data-grid/data-grid'
+
+const grid = createDataGrid({
+	components: allComponents,
+	cellTypes: {
+		...cellTypes,
+		rating: defineCellType()({ view: StarRatingView, editing: StarRatingInput }),
+	},
+	features: allDataGridFeatures,
 })
 
 export const { DataGrid, createColumnHelper, createColumns } = grid

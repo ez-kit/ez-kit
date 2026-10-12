@@ -5,10 +5,10 @@ export { isDateRangeValue, isIsoDate } from './date-value'
 export { resolveText } from './localized-text'
 export { resolveSelectOptions } from './select-option'
 export { FormSchemaError, parseFormSchema } from './parse'
-export { clampToGridRange, defineFormSchema, GRID_MAX, GRID_MIN, RESERVED_NODE_TYPES } from './schema'
+export { clampToGridRange, defineFormItem, defineFormSchema, GRID_MAX, GRID_MIN, RESERVED_NODE_TYPES } from './schema'
 export { TextInputType } from './text-input-type'
 export { buildValidator, runFieldValidate } from './validate'
-export { isFieldNode, walkNodes } from './walk'
+export { hasValue, isArrayNode, isFieldNode, walkInstances, walkNodes } from './walk'
 export { stripHiddenValues, visibleFieldNames } from './visibility'
 
 export type { DateRangeValue } from './date-value'
@@ -18,7 +18,11 @@ export type { LocalizedSelectOption, OptionValue, SelectOption } from './select-
 export type { LocalizedText, Translate } from './localized-text'
 export type { ParseOptions } from './parse'
 export type {
+	AnyArrayNode,
 	AnyFormSchema,
+	ArrayItemOf,
+	ArrayKeys,
+	ArrayNode,
 	BlockNode,
 	CustomFieldNode,
 	FieldNode,
@@ -28,7 +32,8 @@ export type {
 	StepNode,
 	SubmitNode,
 } from './schema'
-export type { FieldConstraintKey, FieldValidate, NamedRule, RunFieldValidateOptions } from './validate'
+export type { FieldConstraintKey, FieldValidate, NamedRule, RuleIssue, RunFieldValidateOptions } from './validate'
+export type { NodeInstance } from './walk'
 
 /**
  * Curated re-exports of the framework-agnostic TanStack Form types the kits and the

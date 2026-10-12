@@ -35,7 +35,7 @@ function orderSection(table: DataTable<GridFeatures, User>, columnId: string) {
 	if (!header) throw new Error(`no header for ${columnId}`)
 	const sections = buildColumnMenuSections(
 		header,
-		{ canSort: false, canPin: false, canHide: false, canMove: table.grid.ordering.column },
+		{ canSort: false, canPin: false, canHide: false, canMove: table.grid.ordering.column, canGroup: false },
 		defaultMessages.columnMenu,
 	)
 	return sections.find((section) => section.id === 'order')

@@ -3,11 +3,9 @@ title: withHistory
 description: A real Zustand middleware that adds undo / redo / goto to any store. Records actions automatically, composes with persist and subscribeWithSelector, filters writes by action tag.
 ---
 
-`withHistory` is a real Zustand `StateCreator` middleware. It wraps an initializer (not a store), so it sees every write — including those issued from inside actions via the inner `set`. It exposes a separate `history` sub-store on the resulting `StoreApi<T>`, with `undo`, `redo`, `goto`, `clear`, `clearFutures`, `pause`, `resume`, and `skip`.
+`withHistory` is a Zustand middleware: it wraps an initializer (not a store), so it records every write, including those from inside actions. It adds a `history` sub-store with `undo`, `redo`, `goto`, `clear`, `clearFutures`, `pause`, `resume` and `skip`, and composes with `persist`, `devtools`, `subscribeWithSelector` and `immer`.
 
-Because it follows the canonical middleware shape and registers a `StoreMutators` entry under `'ez-kit/history'`, it composes cleanly with `persist`, `devtools`, `subscribeWithSelector`, and `immer`.
-
-`withHistory`, `useHistory`, `useTimeline` and their types are exported from the package root and, unchanged, from the `@ez-kit/zu-store/history` subpath — reach for the subpath when you want history without pulling the rest of the package into the bundle. The same split exists in [`@ez-kit/va-store`](../va-store/history), and both are built on the shared stack engine in `@ez-kit/store-core/history`, so the option and stack vocabulary (`limit`, `defaultPaused`, `shouldRecord`, `pasts` / `futures`) is identical across the two.
+`withHistory`, `useHistory`, `useTimeline` and their types are exported from the package root and from the `@ez-kit/zu-store/history` subpath — use the subpath for history without the rest of the package in the bundle. The options (`limit`, `defaultPaused`, `shouldRecord`, `pasts` / `futures`) are the same as in [`@ez-kit/va-store`](../va-store/history).
 
 ## Basic usage
 

@@ -286,6 +286,87 @@ describe('row ordering and tree sub-rows', () => {
 			direction: RowMoveDirection.Down,
 		})
 	})
+
+	it('offers no uncontrolled drop to a sub-row', () => {
+		// The same limit the step path has, for the same reason: the uncontrolled order is a list of
+		// ids over the top-level `data` array, so a child's position — which lives inside its
+		// parent's row object — is not something it can express. `canDropRow` answers `false` so a
+		// drag handle can be disabled rather than the drop refused on release.
+		const table = makeTreeTable({ row: true })
+
+		expect(table.ordering.canDropRow('c1', 'c2')).toBe(false)
+
+		table.ordering.dropRow('c1', 'c2')
+
+		expect(rowOrderOf(table)).toEqual([])
+	})
+
+	it('reports a sub-row drop when controlled', () => {
+		// Controlled mode owns the data and can splice a child list, so the limit does not apply.
+		const onChange = vi.fn()
+		const table = makeTreeTable({ row: { onChange } })
+
+		expect(table.ordering.canDropRow('c1', 'c2')).toBe(true)
+
+		table.ordering.dropRow('c1', 'c2')
+
+		expect(onChange).toHaveBeenCalledTimes(1)
+		expect(onChange).toHaveBeenCalledWith({
+			rowId: 'c1',
+			targetRowId: 'c2',
+			direction: RowMoveDirection.Down,
+		})
+	})
+})
+
+describe('ordering.dropRow', () => {
+	it('reports the drop and writes nothing when controlled', () => {
+		// Arrange
+		const onChange = vi.fn()
+		const table = makeTable({ row: { onChange } })
+
+		// Act
+		table.ordering.dropRow('a', 'c')
+
+		// Assert
+		expect(onChange).toHaveBeenCalledTimes(1)
+		expect(onChange).toHaveBeenCalledWith({
+			rowId: 'a',
+			targetRowId: 'c',
+			direction: RowMoveDirection.Down,
+		})
+		expect(rowOrderOf(table)).toEqual([])
+	})
+
+	it('seeds the complete order on an uncontrolled drop', () => {
+		// The order is written over every row the table holds, not over the rendered ones — the same
+		// rule the step path follows, and for the same reason.
+		const table = makeTable({ row: true })
+
+		table.ordering.dropRow('a', 'c')
+
+		expect(rowOrderOf(table)).toEqual(['b', 'c', 'a'])
+	})
+
+	it('does nothing at all for an unavailable drop', () => {
+		const onChange = vi.fn()
+		const table = makeTable({ row: { onChange } })
+
+		table.ordering.dropRow('a', 'a')
+
+		expect(onChange).not.toHaveBeenCalled()
+		expect(rowOrderOf(table)).toEqual([])
+	})
+
+	it('leaves the row axis off for a bare `ordering: true`', () => {
+		const table = makeTable(true)
+
+		expect(table.ordering.canDropRow('a', 'c')).toBe(false)
+
+		table.ordering.dropRow('a', 'c')
+
+		expect(rowOrderOf(table)).toEqual([])
+	})
 })
 
 describe('row ordering row identity', () => {

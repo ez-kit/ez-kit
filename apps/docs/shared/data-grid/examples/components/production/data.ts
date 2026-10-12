@@ -101,7 +101,7 @@ export const orderColumns = createColumns<Order>([
 	{
 		accessorKey: 'customer',
 		header: 'Customer',
-		width: { default: 220, min: 160 },
+		width: { min: 160 },
 		filtering: { operators: true },
 		creating: { description: 'Full name as it appears on the invoice' },
 	},

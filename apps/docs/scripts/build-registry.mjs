@@ -18,8 +18,16 @@ const docsDir = fileURLToPath(new URL('..', import.meta.url))
 const repoRoot = fileURLToPath(new URL('../../..', import.meta.url))
 const outputDir = `${docsDir}/public/r`
 
-/** Packages that publish a shadcn registry. Add an entry here to opt a new one in. */
-const PACKAGES = [{ dir: 'packages/data-grid/react/shadcn', itemName: 'data-grid' }]
+/**
+ * Packages that publish a shadcn registry. Add an entry here to opt a new one in.
+ *
+ * No item name here: a package may publish SEVERAL items (the shadcn kit publishes `data-grid` and
+ * `data-grid-dnd`), and which ones is said by its own `registry.config.mjs`. Naming one here would
+ * be the same fact written twice, and the half that went stale would be this one — leaving a
+ * second item compiled into `public/r` but never post-processed, which is precisely the defect
+ * below. So the names are read back out of the manifest the config just generated.
+ */
+const PACKAGES = [{ dir: 'packages/data-grid/react/shadcn' }]
 
 function packageAliasPrefix(pkgAbsDir) {
 	const componentsJsonPath = `${pkgAbsDir}/components.json`
@@ -67,8 +75,9 @@ function rewriteAliasesInPlace(itemJsonPath, aliasPrefix) {
 // the compiled items themselves (which is also how we already know each build actually produced
 // the file it claimed to).
 const items = []
+let registryMeta
 
-for (const { dir, itemName } of PACKAGES) {
+for (const { dir } of PACKAGES) {
 	const pkgAbsDir = `${repoRoot}/${dir}`
 
 	execFileSync('node', ['registry.config.mjs'], { cwd: pkgAbsDir, stdio: 'inherit' })
@@ -77,18 +86,26 @@ for (const { dir, itemName } of PACKAGES) {
 		stdio: 'inherit',
 	})
 
-	const itemPath = `${outputDir}/${itemName}.json`
-	rewriteAliasesInPlace(itemPath, packageAliasPrefix(pkgAbsDir))
+	// `shadcn build` emits one `<name>.json` per item in the manifest, so the alias rewrite has to
+	// run over EVERY one of them. Rewriting a single hardcoded output path was correct only while a
+	// package published exactly one item: with two, the second shipped carrying this package's own
+	// `@grid-shadcn/*` imports, which resolve to nothing in a consumer's project — and it would have
+	// shipped silently, since the build succeeds and nothing in this repo compiles the payload.
+	// `apps/docs/test/registry-payload.test.ts` asserts no emitted payload contains that alias.
+	const sourceManifest = JSON.parse(readFileSync(`${pkgAbsDir}/registry.json`, 'utf8'))
+	registryMeta ??= { name: sourceManifest.name, homepage: sourceManifest.homepage }
+	const aliasPrefix = packageAliasPrefix(pkgAbsDir)
 
-	const { name, type, title, description } = JSON.parse(readFileSync(itemPath, 'utf8'))
-	items.push({ name, type, title, description })
+	for (const { name: itemName } of sourceManifest.items) {
+		const itemPath = `${outputDir}/${itemName}.json`
+		rewriteAliasesInPlace(itemPath, aliasPrefix)
+
+		const { name, type, title, description } = JSON.parse(readFileSync(itemPath, 'utf8'))
+		items.push({ name, type, title, description })
+	}
 }
 
-const sourceManifest = JSON.parse(readFileSync(`${repoRoot}/${PACKAGES[0].dir}/registry.json`, 'utf8'))
-writeFileSync(
-	`${outputDir}/registry.json`,
-	`${JSON.stringify({ name: sourceManifest.name, homepage: sourceManifest.homepage, items }, null, '\t')}\n`,
-)
+writeFileSync(`${outputDir}/registry.json`, `${JSON.stringify({ ...registryMeta, items }, null, '\t')}\n`)
 
-console.log(`Built shadcn registry for: ${PACKAGES.map((p) => p.itemName).join(', ')}`)
+console.log(`Built shadcn registry items: ${items.map((item) => item.name).join(', ')}`)
 console.log(`Output: ${readdirSync(outputDir).join(', ')}`)

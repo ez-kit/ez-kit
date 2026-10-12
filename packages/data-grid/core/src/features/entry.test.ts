@@ -1,5 +1,3 @@
-import { constructTable } from '@tanstack/table-core'
-import { storeReactivityBindings } from '@tanstack/table-core/store-reactivity-bindings'
 import { describe, expect, it } from 'vitest'
 
 import { createTable } from '../create-table'
@@ -97,12 +95,25 @@ describe('@ez-kit/data-grid-core/features', () => {
 		for (const name of ROW_MODEL_FACTORIES) expect(typeof features[name](), name).toBe('function')
 		// `createDraftAtoms` shares the `create` prefix without being a row-model factory — it is
 		// the atom set a hand-built draft table hands to `createTable` — so it is named here
-		// rather than left to widen the count silently.
+		// rather than left to widen the count silently. `createManualGroupedRowModel` *is* a
+		// row-model factory — it occupies the same `groupedRowModel` slot as `createGroupedRowModel`
+		// — but it is ours rather than a re-export, so it stays out of `ROW_MODEL_FACTORIES` (which
+		// this test's own name scopes to the nine re-exported ones) and is named here instead.
+		expect(typeof features.createManualGroupedRowModel(), 'createManualGroupedRowModel').toBe('function')
 		expect(
 			Object.keys(features)
 				.filter((k) => k.startsWith('create'))
 				.sort(),
-		).toEqual([...ROW_MODEL_FACTORIES, 'createDraftAtoms'].sort())
+		).toEqual([...ROW_MODEL_FACTORIES, 'createDraftAtoms', 'createManualGroupedRowModel'].sort())
+	})
+
+	// `MANUAL_GROUPED_ROW_MODEL` is neither a `*Feature` nor a `create*` export, so it is invisible
+	// to both counted filters above — named here the same way `createDraftAtoms` is named beside
+	// the row-model factories test, rather than left to widen either count silently.
+	it('exports MANUAL_GROUPED_ROW_MODEL, the marker createManualGroupedRowModel stamps its factory with', () => {
+		expect(typeof features.MANUAL_GROUPED_ROW_MODEL).toBe('symbol')
+		const factory = features.createManualGroupedRowModel() as unknown as Record<symbol, unknown>
+		expect(factory[features.MANUAL_GROUPED_ROW_MODEL]).toEqual({ flat: false })
 	})
 
 	it('re-exports tableFeatures, which returns the set it was given', () => {
@@ -206,23 +217,12 @@ describe('allDataGridFeatures — what each named-function registry actually buy
 		expect(table.getRowModel().rows.map((r) => r.original.name)).toEqual(['item2', 'item10'])
 	})
 
-	// Built through `constructTable` rather than `createTable`, deliberately. Grouping is the one
-	// corner of this set the grid's own API cannot reach: `TableConfig` has no `grouping` option
-	// and `ColumnDef` no `aggregationFn`, so the only way to exercise the slot is the constructor
-	// upstream ships — which is a legitimate consumer of a set built from this entry point, and is
-	// how `useTable` reaches it too. Recorded rather than papered over: `columnGroupingFeature` and
-	// `rowAggregationFeature` arrive with `stockFeatures` and stay unreachable from `createTable`.
-	//
-	// The call needs no cast, which is itself the contrast: upstream's own `ColumnDef` *does* carry
-	// `aggregationFn` once `rowAggregationFeature` is in the set, so `columns` and `initialState`
-	// both type-check against the real options — it is only **our** `ColumnDef` and `TableConfig`
-	// that have no key for them.
 	it('aggregates a grouped column — without `aggregationFns` the group value is undefined', () => {
-		const table = constructTable({
-			features: { coreReactivityFeature: storeReactivityBindings(), ...allDataGridFeatures },
+		const table = createTable({
+			features: allDataGridFeatures,
 			data: ITEMS,
-			columns: [{ accessorKey: 'group' }, { accessorKey: 'amount', aggregationFn: 'sum' }],
-			initialState: { grouping: ['group'] },
+			columns: [{ accessorKey: 'group' }, { accessorKey: 'amount', aggregation: 'sum' }],
+			grouping: { by: ['group'] },
 		})
 
 		expect(table.getRowModel().rows[0]?.getValue('amount')).toBe(5)

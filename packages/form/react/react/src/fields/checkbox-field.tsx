@@ -5,14 +5,14 @@ import { fieldRenderProps } from '../field-render-props'
 import { fieldValidators } from '../field-validate'
 
 import type { BindableForm } from '../bindable-form'
-import type { FormComponents } from '../contract'
+import type { FormFieldSlots } from '../contract'
 import type { CheckboxFieldProps } from '../field-props'
 import type { ReactNode } from 'react'
 
 /** Build the `CheckboxField` component bound to one form instance. */
 export function createCheckboxField<TFormData>(
 	form: BindableForm,
-	KitCheckboxField: FormComponents['CheckboxField'],
+	KitCheckboxField: FormFieldSlots['CheckboxField'],
 ): (props: CheckboxFieldProps<TFormData>) => ReactNode {
 	return function CheckboxField({
 		name,

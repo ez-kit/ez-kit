@@ -25,6 +25,8 @@ const bareTable = (): AnyTable => ({ options: {}, baseAtoms: {} })
 const API: RowOrderingApi = {
 	canMoveRow: () => false,
 	moveRow: () => undefined,
+	canDropRow: () => false,
+	dropRow: () => undefined,
 }
 
 describe('assignTableInstanceData', () => {

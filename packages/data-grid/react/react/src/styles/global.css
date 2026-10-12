@@ -52,9 +52,16 @@ table[data-slot='table'] {
 	@apply overflow-x-auto;
 }
 /* One bound, two stickies: a sticky header and a sticky footer both need this div to be the
- * bounded vertical scrollport, so either attribute opens it. */
-[data-slot='table-scroll'][data-sticky-header='true'],
-[data-slot='table-scroll'][data-sticky-footer='true'] {
+ * bounded vertical scrollport, so either attribute opens it.
+ *
+ * Virtualized mode is excluded because it bounds the scrollport the other way round: the wrapper
+ * takes `--dg-virtual-height` and this div fills it (`h-full`, below). `max-height` is the one
+ * declaration the rule below does not override, so without the exclusion a virtualized grid that
+ * states no `layout.maxHeight` would be clamped to this rule's own 400px default while its wrapper
+ * stayed 600px tall. Scoped rather than reordered: both modes stamp the sticky attributes, which is
+ * what lets one pinned-row rule serve both. */
+[data-slot='table-scroll'][data-sticky-header='true']:not([data-virtualized='true']),
+[data-slot='table-scroll'][data-sticky-footer='true']:not([data-virtualized='true']) {
 	@apply overflow-y-auto;
 	max-height: var(--dg-table-max-height, 400px);
 }
@@ -175,18 +182,49 @@ table[data-slot='table'] {
 
 /* ── virtual body & rows ──────────────────────────────────────────────── */
 
+/* `relative` is the load-bearing half: it is the containing block that `row-held`'s `absolute
+   top-0 left-0` below is placed against, and it applies in both kits. Read in heroui — that kit's
+   `styles.css` records the tbody computing `grid` / `relative` in virtualized mode. In shadcn it is
+   reasoning rather than a reading: this rule is unscoped, and what that kit's `TableBody` sets on
+   the tbody — the inline `display: 'block'` described below and a `[&_tr:last-child]:border-0`
+   class — leaves `position` alone.
+
+   `grid` is dead in the shadcn kit, and deliberately left as it is. That kit's vendored
+   `components/ui/table.tsx` sets an inline `display: 'block'` on `<tbody>`, which beats this
+   stylesheet, so its virtualized body is a block container while heroui's is a grid. Nothing
+   depends on the difference: each row carries its own inline `display: grid` +
+   `gridTemplateColumns`, and `w-full` resolves the same in both modes.
+
+   What the divergence does mean is that the two kits' virtualized bands sit in **different layout
+   modes**, so vertical margins behave differently inside them: a margin added to a virtual row,
+   to the loader or to a pinned row sums with its neighbour's in heroui's grid and collapses to
+   `max()` in shadcn's block flow. The loader's `marginTop` is correct under both, for reasons
+   `virtual-body.tsx`'s `bottomPad` docblock states — read it before adding a margin here. */
 [data-slot='tbody'][data-virtualized='true'] {
 	@apply relative grid;
 }
+/* In flow: the window's band is offset by the tbody's padding, not by a per-row transform. That is
+   what lets the drag library displace a row's neighbours — it reorders DOM nodes and animates the
+   layout change, and out of flow there is none. */
 [data-slot='tr'][data-virtual='row'] {
+	@apply w-full;
+}
+/* A dragged row the window has scrolled past. It stays mounted so the drag's index space keeps its
+   density, and out of flow so it does not displace the band it is no longer part of — its offset
+   comes from the inline `transform` `VirtualBody` gives it. */
+[data-slot='tr'][data-virtual='row-held'] {
 	@apply absolute top-0 left-0 w-full;
 }
 
 /* ── infinite scroll ──────────────────────────────────────────────────── */
 
-/* Virtualized loader row is absolutely positioned below the spacer via inline translateY. */
+/* In flow, after the window's band: the loader is the last row of the tbody and takes the band's
+   bottom pad as its own `marginTop`, which `VirtualBody` gives it. There is no spacer element and
+   no reserved allowance — the loader grows the tbody past the `min-height` that reserves the
+   virtual scroll range, so the space it occupies is the space its own content asks for, which is
+   what keeps a wrapped error message from being clipped. */
 [data-slot='tbody'][data-virtualized='true'] [data-slot='load-more-row'][data-virtual='load-more'] {
-	@apply absolute top-0 left-0 w-full;
+	@apply w-full;
 }
 
 /* ── pinned body rows ─────────────────────────────────────────────────── */
@@ -201,7 +239,11 @@ table[data-slot='table'] {
 	bottom: var(--dg-row-pin-offset, 0);
 }
 
-/* Under a sticky header, pinned-top rows stack below it. */
+/* Under a sticky header, pinned-top rows stack below it — in both modes, which is why the
+   virtualized scrollport stamps the attribute too. A virtualized grid whose pinned rows stick at
+   the scrollport's own edge puts them under the `z-10` header, and takes the band's displacement
+   (the pinned rows' height, ahead of the band in the same tbody) out from under the window the
+   virtualizer sized for the viewport. See `table.tsx`'s `stickyAttrs`. */
 [data-slot='table-scroll'][data-sticky-header='true'] [data-slot='tr'][data-pinned='top'] {
 	top: calc(var(--dg-row-pin-offset, 0px) + var(--dg-header-height, 0px));
 }
@@ -217,4 +259,19 @@ table[data-slot='table'] {
 }
 [data-pin-shadow] {
 	@apply absolute top-0 bottom-0 pointer-events-none;
+}
+
+/* ── accessible-name carriers ─────────────────────────────────────────── */
+
+/* Text that exists for the accessibility tree only: the header of a system column (which
+ * carries chevrons or checkboxes and no heading of its own) and the name of a column filter
+ * control. Both are `<th>`/control content the sighted user reads from context and a screen
+ * reader has no other route to, which is why the name is real text rather than an `aria-label`:
+ * the kits' controls are the kits' own components and only some of them forward one.
+ *
+ * Structural, not visual — clip and position, the same class of rule as the sticky offsets
+ * above. `sr-only` is Tailwind's own utility, so the clip rectangle stays one definition for
+ * the whole app rather than a second spelling of it here. */
+[data-slot='sr-only'] {
+	@apply sr-only;
 }

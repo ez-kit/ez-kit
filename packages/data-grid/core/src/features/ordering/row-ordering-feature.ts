@@ -1,9 +1,10 @@
 import { assignTableInstanceData, readOwnSlice, writeOwnSlice } from '../../feature-state'
 
 import { applyRowOrder } from './apply-row-order'
+import { dropRow } from './drop'
 import { applyRowMove, moveRow } from './row-ordering'
 
-import type { RowMoveDirection } from './row-ordering'
+import type { RowMove, RowMoveDirection } from './row-ordering'
 import type { RowOrderingConfig } from '../../types'
 import type { RowData, TableFeature, TableFeatures } from '@tanstack/table-core'
 
@@ -21,6 +22,17 @@ export type RowOrderingApi = {
 	canMoveRow: (rowId: string, direction: RowMoveDirection) => boolean
 	/** Take one step, if it is available. A no-op otherwise. */
 	moveRow: (rowId: string, direction: RowMoveDirection) => void
+	/**
+	 * Whether this row may land on that one — what a drag handle's `disabled` reads.
+	 *
+	 * Answers `false` for a sub-row on the uncontrolled path, for the reason
+	 * {@link isTopLevelRow} records: the order is a list of ids over the top-level `data` array,
+	 * so the move would be recorded and then render identically. A drag handle can therefore be
+	 * disabled up front rather than refusing the drop on release.
+	 */
+	canDropRow: (rowId: string, targetRowId: string) => boolean
+	/** Move `rowId` onto `targetRowId`, if that drop is available. A no-op otherwise. */
+	dropRow: (rowId: string, targetRowId: string) => void
 }
 
 declare module '@tanstack/table-core' {
@@ -131,6 +143,39 @@ export const rowOrderingFeature: TableFeature = {
 	}),
 
 	initTableInstanceData: (table) => {
+		/**
+		 * Record one resolved move, in whichever mode this grid is in.
+		 *
+		 * Shared by the step and the drop because it is the half of them that is genuinely the same:
+		 * the producers differ — one takes a direction and walks, the other takes a target id — and
+		 * that difference stays visible at each member. Everything from here on takes only the move
+		 * and the id that made it.
+		 */
+		const commit = (rowId: string, move: RowMove, config: RowOrderingConfig): void => {
+			if (config.onChange) {
+				config.onChange(move)
+				return
+			}
+
+			if (!isTopLevelRow(table, rowId)) return
+
+			// Uncontrolled. The order is written over **every** row the table holds, not over
+			// the rendered ones: a page or a filter shows a subset, and an order naming only
+			// that subset would silently drop the next move made outside it — `applyRowMove`
+			// leaves an order that names neither row alone, so the row would simply not move
+			// while its menu entry stayed enabled.
+			//
+			// `applyRowOrder` is what merges the two: the ids already arranged keep the order
+			// the user gave them, and every other row keeps its position in `data`. That also
+			// makes this a no-op on an adapter that already renders the projected data.
+			const order = applyRowOrder(
+				table.getCoreRowModel().rows.map((row) => row.id),
+				readOwnSlice(table, 'rowOrder'),
+				(rowId) => rowId,
+			)
+			writeOwnSlice(table, 'rowOrder', applyRowMove(order, move))
+		}
+
 		const api: RowOrderingApi = {
 			canMoveRow: (rowId, direction) => {
 				const config = rowOrderingOption(table)
@@ -146,28 +191,26 @@ export const rowOrderingFeature: TableFeature = {
 				const move = moveRow(table, rowId, direction)
 				if (!move) return
 
-				if (config.onChange) {
-					config.onChange(move)
-					return
-				}
+				commit(rowId, move, config)
+			},
 
-				if (!isTopLevelRow(table, rowId)) return
+			canDropRow: (rowId, targetRowId) => {
+				const config = rowOrderingOption(table)
+				if (config === undefined) return false
+				if (config.onChange === undefined && !isTopLevelRow(table, rowId)) return false
+				return dropRow(table, rowId, targetRowId) !== undefined
+			},
 
-				// Uncontrolled. The order is written over **every** row the table holds, not over
-				// the rendered ones: a page or a filter shows a subset, and an order naming only
-				// that subset would silently drop the next move made outside it — `applyRowMove`
-				// leaves an order that names neither row alone, so the row would simply not move
-				// while its menu entry stayed enabled.
-				//
-				// `applyRowOrder` is what merges the two: the ids already arranged keep the order
-				// the user gave them, and every other row keeps its position in `data`. That also
-				// makes this a no-op on an adapter that already renders the projected data.
-				const order = applyRowOrder(
-					table.getCoreRowModel().rows.map((row) => row.id),
-					readOwnSlice(table, 'rowOrder'),
-					(rowId) => rowId,
-				)
-				writeOwnSlice(table, 'rowOrder', applyRowMove(order, move))
+			dropRow: (rowId, targetRowId) => {
+				const config = rowOrderingOption(table)
+				if (config === undefined) return
+
+				// Resolves to the module binding, not to the member being defined — a property is
+				// not a binding — exactly as the `moveRow` member above relies on.
+				const move = dropRow(table, rowId, targetRowId)
+				if (!move) return
+
+				commit(rowId, move, config)
 			},
 		}
 

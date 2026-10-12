@@ -36,7 +36,7 @@ const combinedColumns = createColumns<User>([
 		width: { default: 200, min: 80, max: 400 },
 		pinning: { initialSide: 'start' },
 	},
-	{ accessorKey: 'email', header: 'Email', width: { default: 250, min: 120 } },
+	{ accessorKey: 'email', header: 'Email', width: { min: 120 } },
 	{
 		accessorKey: 'age',
 		header: 'Age',

@@ -1,13 +1,37 @@
 export { useForm, Form, FormRenderer, withForm, withFieldGroup } from './form'
 
+// The factory and the two bags it takes, so an app can call `createForm` itself with the
+// kit's twelve field slots spread beside a field kind of its own. The ready-made bundle
+// above stays the zero-config path; this is the extension one.
+export {
+	CheckboxField,
+	CheckboxGroupField,
+	DateField,
+	DateRangeField,
+	formComponents,
+	formFieldSlots,
+	MultiSelectField,
+	NumberField,
+	RadioGroupField,
+	SelectField,
+	SliderField,
+	SwitchField,
+	TextareaField,
+	TextField,
+} from './form'
+
 // Curated re-export of the consumer surface from the adapter, so a kit consumer never has
 // to add `@ez-kit/form-react` as a second dependency. Deliberately not `export *`: the star
-// would also re-export the unbound `createForm`, which a consumer must not call with a
-// different component set and still call "the shadcn kit". For the same reason the kit-author
-// contract (`FormComponents`, the per-kind `*RenderProps`) stays out — writing a kit means
-// depending on the adapter directly, which `custom-kit.mdx` already says.
+// would also export the kit-author contract types — `FormComponents`, the per-kind
+// `*RenderProps` — whose home is `custom-kit.mdx`, and writing a kit means depending on the
+// adapter directly. `createForm` itself is re-exported on purpose: calling it with the kit's
+// components and an extended field set is the supported way to add a field kind, so the old
+// reason for withholding it (that a differently-composed bundle must not be called "the shadcn
+// kit") no longer holds — what a consumer extends is still this kit's components.
 export {
 	clampToGridRange,
+	createForm,
+	defineFieldType,
 	FormFieldType,
 	FormOptionSources,
 	formatFieldErrors,
@@ -21,6 +45,9 @@ export {
 } from '@ez-kit/form-react'
 export type {
 	AnyFormProps,
+	ArrayFieldProps,
+	ArrayFieldScope,
+	ArrayItemScope,
 	BaseFieldProps,
 	BlockRegistry,
 	BoundForm,
@@ -28,11 +55,14 @@ export type {
 	CheckboxGroupFieldProps,
 	CustomFieldRegistry,
 	CustomFieldRenderProps,
+	FieldTypeDefinition,
 	DateFieldProps,
 	DateRangeFieldProps,
 	DateRangeValue,
 	FormControlledProps,
 	FormFieldComponents,
+	FormFieldRegistry,
+	FormFieldSlots,
 	FormProps,
 	FormRendererControlledProps,
 	FormRendererUncontrolledProps,
@@ -74,6 +104,7 @@ export type {
 // tell a reader to copy has to resolve from the kit itself.
 export {
 	buildValidator,
+	defineFormItem,
 	defineFormSchema,
 	FormSchemaError,
 	isFieldNode,
@@ -85,6 +116,7 @@ export {
 } from '@ez-kit/form-core'
 export type {
 	AnyFormSchema,
+	ArrayNode,
 	BlockNode,
 	Condition,
 	CustomFieldNode,

@@ -68,6 +68,35 @@ export function useDataGridTable<TRow extends object = ErasedRow>(): DataTable<G
 }
 
 /**
+ * The table, or `null` outside `<DataGrid>` — the non-throwing read, for the few components that
+ * are legitimately rendered on their own.
+ *
+ * Not an escape hatch from {@link useDataGridTable}: the throw is right for everything that reads
+ * the table to *do* something, because such a component outside a grid is a mistake with no useful
+ * behaviour left. What this serves is the opposite case — a component whose grid-less rendering is
+ * a supported arrangement and needs no table at all.
+ *
+ * The one member of that set today is `<DataGrid.VisibilityItem>`, which a kit's `VisibilityMenu`
+ * renders per row. That menu is a DI component taking a `columns` array, so it can be — and in both
+ * kits is — rendered standalone in a unit test; the item then has no drag to register and falls back
+ * to the plain markup it replaced, which is exactly what a grid with no adapter gets.
+ *
+ * The kits' `VisibilityMenu` is also **registry payload** in the shadcn kit — copied verbatim into a
+ * consumer's project by `npx shadcn add` — so its grid-less rendering is not only a test shape: it
+ * can be mounted anywhere a consumer chooses. The alternatives were worse for the phase's whole
+ * point: making the kits wrap their tests in a grid, or handing them a participation flag, both put
+ * the decision back in the kits.
+ *
+ * Internal to this package: it is not exported from `index.ts`, and `VisibilityItem` is its only
+ * caller. Nothing enforces that — there is no test for it — so a second caller is the moment to ask
+ * whether the throw was the wrong default rather than to add a third.
+ */
+export function useOptionalDataGridTable<TRow extends object = ErasedRow>(): DataTable<GridFeatures, TRow> | null {
+	// The same cast {@link useDataGridTable} makes, for the reason recorded there.
+	return useContext(TableContext) as unknown as DataTable<GridFeatures, TRow> | null
+}
+
+/**
  * Subscribe to a slice of the table state from context. Re-renders only when the selected
  * slice changes. The selector must return a referentially stable value — see
  * {@link useDataGridSelector} for the full contract.

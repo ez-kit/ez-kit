@@ -140,6 +140,12 @@ const components = {
 	SwitchField,
 	RadioGroupField,
 	SliderField,
+	MultiSelectField,
+	CheckboxGroupField,
+	DateField,
+	DateRangeField,
+	ArrayField,
+	ArrayItem,
 	Button,
 	Form,
 	Section,
@@ -166,11 +172,11 @@ siblings.
 Two attributes travel with every field for the kit to spread onto its root, plus one on the
 form:
 
-| Attribute         | Where          | Value                                                                                                                                  |
-| ----------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `data-field`      | the kit's root | the field's `name`                                                                                                                     |
-| `data-field-type` | the kit's root | the node's `type` — `text`, `number`, `textarea`, `select`, `checkbox`, `switch`, `radiogroup`, `slider`, or a custom field's own kind |
-| `data-form`       | the `<form>`   | always present                                                                                                                         |
+| Attribute         | Where          | Value                                                                                                                                                                                                |
+| ----------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `data-field`      | the kit's root | the field's `name`                                                                                                                                                                                   |
+| `data-field-type` | the kit's root | the node's `type` — `text`, `number`, `textarea`, `select`, `multiselect`, `checkbox`, `checkboxgroup`, `switch`, `radiogroup`, `slider`, `date`, `daterange`, `array`, or a custom field's own kind |
+| `data-form`       | the `<form>`   | always present                                                                                                                                                                                       |
 
 Accessibility is the kit's to wire, because only the kit knows its markup. The shared layer
 supplies the raw material: a stable `id`, the label and description nodes, and the

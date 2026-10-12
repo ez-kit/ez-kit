@@ -25,7 +25,7 @@ Every kit owes exactly three things:
    	// …one group per feature (see the tables below)
    } satisfies FullGridComponents
 
-   export const { DataGrid, useDataGrid, extendDataGrid } = createDataGrid({ components })
+   export const { DataGrid, useDataGrid, createColumns } = createDataGrid({ components })
    ```
 
    The group keys are the feature names, spelled exactly as the options are — `core`,

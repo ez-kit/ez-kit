@@ -1,6 +1,6 @@
 ---
 title: Custom kit
-description: The FormComponents contract and createForm — bind your own design system's inputs and get the same fields.
+description: The two-bag kit contract — FormComponents and FormFieldSlots — and createForm, so your own design system's inputs get the same fields.
 ---
 
 `@ez-kit/form-shadcn` and `@ez-kit/form-heroui` are not special. Each is a folder of components that implement one contract, plus a single file that hands them to one factory. Your design system can do the same.
@@ -61,14 +61,14 @@ Rendered outside that root, `FieldError` has nothing to read and `Label` has not
 
 ## The contract
 
-Seventeen components: twelve fields, two form-level pieces, two layout primitives and the wizard chrome. Registering them is one object:
+Nineteen components, in the **two bags** `createForm` takes. The twelve field kinds go to `fields`; the seven pieces the form needs around them — the `<form>` element, the submit button, the two layout primitives, the wizard chrome and the two array slots — go to `components`:
 
 ```tsx
 import { createForm } from '@ez-kit/form-react'
 
-import type { FormComponents } from '@ez-kit/form-react'
+import type { FormComponents, FormFieldSlots } from '@ez-kit/form-react'
 
-const components = {
+const fields = {
 	TextField,
 	NumberField,
 	TextareaField,
@@ -81,6 +81,11 @@ const components = {
 	CheckboxGroupField,
 	DateField,
 	DateRangeField,
+} satisfies FormFieldSlots
+
+const components = {
+	ArrayField,
+	ArrayItem,
 	Button,
 	Form: FormElement,
 	Section,
@@ -88,14 +93,19 @@ const components = {
 	Wizard,
 } satisfies FormComponents
 
-export const { useForm, Form, FormRenderer, withForm, withFieldGroup } = createForm({ components })
+export const { useForm, Form, FormRenderer, withForm, withFieldGroup } = createForm({ components, fields })
 ```
 
-`satisfies FormComponents` — rather than a type annotation, which would erase your components' own prop types — is the whole registration check: a missing or mistyped slot is a compile error, and there is no partial tier — every one of the seventeen is required, because a document may reach any of them. That is the entire wiring; both shipped kits' `src/form.tsx` is this file and nothing else.
+`satisfies` on each — rather than a type annotation, which would erase your components' own prop types — is the whole registration check: a missing or mistyped slot is a compile error. Neither bag has a partial tier: all seven chrome slots and all twelve field kinds are required, because a document may reach any of them. `fields` is a required option in its own right — `createForm({ components })` alone does not compile. That is the entire wiring; both shipped kits' `src/form.tsx` is this file and nothing else.
+
+The split is not cosmetic, and it is the reason there are two types rather than one:
+
+- **`components` is closed.** Those seven are the form's own furniture. Nothing else belongs there, and nothing is ever added to it by an app.
+- **`fields` is an open registry.** The twelve are its floor, not its ceiling. An app spreads the kit's twelve beside a field kind of its own and calls `createForm` itself — which is why both shipped kits export `formComponents` and `formFieldSlots` alongside their ready-made bundle. See [Custom fields](/docs/form/custom-fields).
 
 ### Fields
 
-Every field receives the same base props:
+These twelve are the `fields` bag. Every one of them receives the same base props:
 
 | Prop                            | Meaning                                                           |
 | ------------------------------- | ----------------------------------------------------------------- |
@@ -132,6 +142,8 @@ On top of that, per kind:
 
 ### Form level
 
+The remaining seven are the `components` bag. Two of them are the form itself:
+
 | Component | Props                            | Renders                      |
 | --------- | -------------------------------- | ---------------------------- |
 | `Button`  | `type?`, `disabled?`, `children` | The submit button.           |
@@ -139,7 +151,7 @@ On top of that, per kind:
 
 ### Layout and wizard
 
-Three components the _document_ side leans on hardest, though `Section` and `GridItem` are equally reachable from JSX as `form.Section` / `form.GridItem` — see [Layout](/docs/form/layout).
+Three more `components` members, which the _document_ side leans on hardest, though `Section` and `GridItem` are equally reachable from JSX as `form.Section` / `form.GridItem` — see [Layout](/docs/form/layout). The last two — `ArrayField` and `ArrayItem` — are documented with the feature they serve, in the [arrays API](/docs/form/arrays/api).
 
 | Component  | Props                                                                                                         | Renders                                                                                                                           |
 | ---------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |

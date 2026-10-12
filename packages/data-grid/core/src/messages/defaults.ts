@@ -15,6 +15,7 @@ import type { GridMessages } from './types'
 export const defaultMessages: GridMessages = {
 	grid: {
 		label: 'Data grid',
+		rowCount: ({ count }) => `${String(count)} rows`,
 	},
 	selection: {
 		delete: 'Delete',
@@ -22,10 +23,17 @@ export const defaultMessages: GridMessages = {
 		selectAll: 'Select all rows',
 		clear: 'Clear selection',
 		count: ({ count }) => `${String(count)} selected`,
+		columnHeader: 'Row selection',
 	},
 	expanding: {
 		expand: 'Expand row',
 		collapse: 'Collapse row',
+		columnHeader: 'Row expansion',
+	},
+	grouping: {
+		count: ({ count }) => `(${String(count)})`,
+		blank: '(Blank)',
+		columnHeader: 'Group',
 	},
 	resizing: {
 		resize: 'Resize column',
@@ -44,8 +52,19 @@ export const defaultMessages: GridMessages = {
 		order: 'Order',
 		moveStart: 'Move left',
 		moveEnd: 'Move right',
+		grouping: 'Grouping',
+		groupBy: 'Group by this column',
+		ungroup: 'Ungroup',
+	},
+	groupBar: {
+		label: 'Grouped by',
+		remove: 'Remove grouping level',
+		moveOuter: 'Group by this first',
+		moveInner: 'Group by this later',
+		add: 'Add grouping level',
 	},
 	rowActions: {
+		columnHeader: 'Row actions',
 		menu: 'Row actions',
 		pinning: 'Row pinning',
 		edit: 'Edit',
@@ -70,6 +89,27 @@ export const defaultMessages: GridMessages = {
 		sortBy: 'sort by',
 		thenBy: 'then by',
 		add: 'Add Sort',
+	},
+	ordering: {
+		dragRow: 'Reorder row',
+		dragColumn: 'Reorder column',
+		columnHeader: 'Row order',
+		draggable: 'draggable',
+		instructions:
+			'Press Space to pick this item up, then the arrow keys to move it. Press Space again to drop it, or Escape to cancel.',
+		rowPickedUp: ({ position, total }) => `Picked up row ${String(position)} of ${String(total)}.`,
+		rowMovedTo: ({ position, total }) => `Moved the row to position ${String(position)} of ${String(total)}.`,
+		rowDropped: ({ position, total }) => `Dropped the row at position ${String(position)} of ${String(total)}.`,
+		rowCancelled: ({ position, total }) =>
+			`Cancelled, the row is back at position ${String(position)} of ${String(total)}.`,
+		columnPickedUp: ({ name, position, total }) =>
+			`Picked up column ${name}, position ${String(position)} of ${String(total)}.`,
+		columnMovedTo: ({ name, position, total }) =>
+			`Moved column ${name} to position ${String(position)} of ${String(total)}.`,
+		columnDropped: ({ name, position, total }) =>
+			`Dropped column ${name} at position ${String(position)} of ${String(total)}.`,
+		columnCancelled: ({ name, position, total }) =>
+			`Cancelled, column ${name} is back at position ${String(position)} of ${String(total)}.`,
 	},
 	visibility: {
 		menu: 'Column visibility',

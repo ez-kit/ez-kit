@@ -1,5 +1,7 @@
 import { ActionBar } from '../action-bar/ActionBar'
 import { NumberInput } from '../editing/NumberInput'
+import { ColumnDragHandle } from '../ordering/ColumnDragHandle'
+import { RowDragHandle } from '../ordering/RowDragHandle'
 
 import { Button } from './Button'
 import { Checkbox } from './Checkbox'
@@ -42,4 +44,7 @@ export const coreComponents: FullGridComponents['core'] = {
 	NumberInput,
 	Modal,
 	Tooltip,
+	// Optional-tier: the row and header drag handles, so each grip wears this kit's glyph.
+	RowDragHandle,
+	ColumnDragHandle,
 }

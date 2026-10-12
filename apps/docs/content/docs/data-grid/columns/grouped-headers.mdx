@@ -46,17 +46,8 @@ no single value under it to sort or filter by.
 
 ## Kit support
 
-**shadcn renders grouped headers. HeroUI does not** — there the group row is dropped and the leaf
-row renders alone, with a warning in development.
-
-That is upstream, not a gap in this kit: HeroUI's table is a React Aria collection, and React Aria
-removed nested column support before its GA
-([#5537](https://github.com/adobe/react-spectrum/pull/5537)); the request to bring it back
-([#5263](https://github.com/adobe/react-spectrum/issues/5263)) has been open since 2023 with no API
-proposed. A `Column` nested inside a `Column` is not a collection node there. The alternative —
-painting a second header row outside the collection — would mean an accessibility tree React Aria
-does not know about and column widths to re-sync on every resize, reorder and hide, so the flat
-header is the deliberate choice.
+**shadcn renders grouped headers. HeroUI does not** — the group row is skipped and only the leaf
+row renders, with a development warning.
 
 ## Interaction with the other column features
 

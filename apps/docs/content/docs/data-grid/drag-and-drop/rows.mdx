@@ -1,0 +1,161 @@
+---
+title: Rows
+description: Drag rows by the automatic handle column or by a handle you place — in a plain body and in a virtualized one.
+---
+
+Every example on this page assumes the adapter is bound as in [Installation](/docs/data-grid/drag-and-drop)
+and that the grid has a `getRowId`. Each option used here is in the [API reference](/docs/data-grid/drag-and-drop/api).
+
+## Without virtualization
+
+### The handle column
+
+With `ordering.row` on and an adapter bound, the grid adds a handle column of its own — first in the
+row, pinned to the start edge, fixed in width:
+
+<DataGridDocsExample exampleId='row-drag-default' />
+
+```tsx
+<DataGrid
+	// …
+	getRowId={getRowId}
+	ordering={{
+		row: {
+			onChange: (move) => setData((rows) => applyRowMove(rows, move, getRowId)),
+		},
+	}}
+/>
+```
+
+### A configured handle column
+
+The column is configured like the other system columns, through `ordering.row.column`. Here it sits
+at the end, wider, with a header:
+
+<DataGridDocsExample exampleId='row-drag-handle-column' />
+
+```tsx
+<DataGrid
+	// …
+	ordering={{ row: { column: { header: 'Order', width: 72, pinning: 'end', align: 'center' } } }}
+/>
+```
+
+Without an adapter there is no column at all, and rows move through the actions menu.
+
+### A handle inside a cell
+
+Turn the column off with `column: false` and put the handle where you want it — here, in front of
+the name:
+
+<DataGridDocsExample exampleId='row-drag-cell-handle' />
+
+```tsx
+function NameWithHandle({ value }: { value: unknown }) {
+	return (
+		<span className='flex items-center gap-2'>
+			<RowDragHandle />
+			{String(value)}
+		</span>
+	)
+}
+
+const columns = createColumns<Employee>([
+	{ accessorKey: 'name', header: 'Name', cell: { component: NameWithHandle } },
+	// …
+])
+
+<DataGrid ordering={{ row: { column: false } }} /* … */ />
+```
+
+`RowDragHandle` from your kit wears the kit's grip; `<DataGrid.RowDragHandle />` is the same control
+with no glyph, for a call site that supplies its own content. It needs no arguments — it finds the
+row it is in. A row's render function hands back the same control as `dragHandle`.
+
+### Beside sorting and selection
+
+Drag shares the row with the sort trigger and the selection checkbox, and neither gesture is taken
+for the other: a drag starts from the handle and nothing else. While a column is sorted, a drag
+moves nothing — a sort computes the order from the data, so a manual arrangement would be
+recomputed away. Clear the sort and rows move again.
+
+<DataGridDocsExample exampleId='row-drag-sorting-selection' />
+
+```tsx
+<DataGrid
+	// …
+	sorting
+	selection={{}}
+	ordering={{ row: true }}
+/>
+```
+
+`ordering={{ row: true }}` keeps the order inside the grid; pass `onChange` instead, as in
+[Installation](/docs/data-grid/drag-and-drop#your-first-drag), to keep it in your own data.
+
+## With virtualization
+
+### The handle column
+
+A [virtualized](/docs/data-grid/virtualization) body needs no drag option of its own — the handle
+column and the adapter are the same, and `virtualization` is the only addition. Ten thousand rows,
+a window of a few dozen; hold a row and drag it past the edge to scroll:
+
+<DataGridDocsExample exampleId='virtualized-row-drag' />
+
+```tsx
+<DataGrid
+	features={features}
+	data={data}
+	columns={columns}
+	getRowId={(row) => String(row.id)}
+	layout={{ stickyHeader: true, maxHeight: '420px' }}
+	virtualization={{ row: { estimateSize: 49, overscan: 10 } }}
+	ordering={{ row: true }}
+/>
+```
+
+### A handle inside a cell
+
+The handle of your own works the same way in a virtualized body:
+
+<DataGridDocsExample exampleId='virtualized-row-drag-cell-handle' />
+
+```tsx
+<DataGrid
+	// …
+	virtualization={{ row: { estimateSize: 49, overscan: 10 } }}
+	ordering={{ row: { column: false } }}
+/>
+```
+
+### What to expect
+
+- **The row you hold stays with the pointer however far the window scrolls.** It is kept mounted
+  until you let go, so a long drag does not drop it on the way.
+- **The neighbours part as they do in a plain body**, and a drag of one place commits wherever you
+  release it.
+- **Nothing is saved until you release.** The order you pass in and `onChange` do not move
+  mid-gesture, and `Escape` puts everything back.
+- **A row keeps its measured height across a commit**, because the virtualizer is keyed by row id
+  rather than by position.
+
+## What a row drag will not do
+
+The same boundaries the one-step affordances honour — drag adds none and removes none:
+
+- **Cross a pin band.** A move from the body into a [pinned](/docs/data-grid/pinning/rows) top or
+  bottom row would read as a pin, not a reorder.
+- **Leave its own subtree**, with [tree data](/docs/data-grid/expanding/tree).
+- **Move a synthetic group row.** It renders no handle at all rather than one that does nothing.
+- **Move anything while a sort or a grouping is applied** — both compute the order from the data.
+
+**An illegal drop does not snap back.** The row travels as far as its band or subtree allows and
+commits there, which is also what was on screen the whole time. Release outside the grid, or press
+`Escape`, and nothing is written.
+
+## See also
+
+- [Row ordering](/docs/data-grid/row-ordering) — the row axis, its two modes, and `getRowId`
+- [Virtualization](/docs/data-grid/virtualization) — the windowed body
+- [API](/docs/data-grid/drag-and-drop/api) — keys, messages and the full option list

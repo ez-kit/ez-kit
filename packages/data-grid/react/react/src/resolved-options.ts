@@ -79,11 +79,40 @@ export type ResolvedGridOptions = {
 		 */
 		row: boolean
 		/**
-		 * The Columns toggle offers the same two moves, and lists every non-system column
-		 * rather than only the hideable ones. Off unless `ordering.column.visibilityMenu`
-		 * asked for it; always `false` while the column axis itself is off.
+		 * The Columns toggle as a column panel: it offers a move affordance and lists every
+		 * non-system column rather than only the hideable ones.
+		 *
+		 * **The two affordances are carried as the author wrote them, not resolved here, and
+		 * that is forced rather than chosen.** Which one a panel ends up with depends on
+		 * whether a drag adapter is bound, and this object cannot know: `useDataGrid` is a
+		 * public hook a controlled grid calls *outside* `<DataGrid>`, so the bundle's adapter
+		 * context is not above it. Resolving here would give a controlled grid arrows and the
+		 * same grid uncontrolled a grip. `resolvePanelAffordances` does it instead, in the two
+		 * components that read `useDndEnabled()`.
 		 */
-		visibilityMenu: boolean
+		visibilityMenu: {
+			/**
+			 * The toggle is a column panel at all: the list widens, and the affordances below
+			 * are live. Off unless `ordering.column.visibilityMenu` asked for it; always
+			 * `false` while the column axis itself is off.
+			 */
+			enabled: boolean
+			/** `visibilityMenu.drag` as authored. `undefined` → an adapter decides. */
+			drag: boolean | undefined
+			/** `visibilityMenu.moveControls` as authored. `undefined` → the inverse of the drag. */
+			moveControls: boolean | undefined
+		}
+		/**
+		 * The header's two affordances, as authored, for the reason `visibilityMenu` carries its
+		 * own that way: an adapter decides the defaults, and this object cannot see one.
+		 * `resolveHeaderAffordances` finishes the job in the header cell.
+		 */
+		header: {
+			/** `ordering.column.drag` as authored. `undefined` → an adapter decides. */
+			drag: boolean | undefined
+			/** `ordering.column.moveControls` as authored. `undefined` → the inverse of the drag. */
+			moveControls: boolean | undefined
+		}
 	}
 	/**
 	 * Pinning, resolved per axis — the two halves of the `pinning` option under the two names
@@ -217,6 +246,20 @@ export type ResolvedGridOptions = {
 		 */
 		bar?: NormalizedSelectionBarConfig | undefined
 	}
+	/**
+	 * Server-supplied aggregates, resolved. The group is always present, so no reader guards the
+	 * property.
+	 *
+	 * Read by the footer cell. It is config rather than state, which is why it lives here — and
+	 * it has to reach a column that registered no aggregation feature at all, which is why the
+	 * footer reads this instead of asking the table.
+	 */
+	aggregation: {
+		/** `aggregation.manual` — never compute a total on the client. */
+		manual: boolean
+		/** `aggregation.totals` — grand total per column id. */
+		totals?: Record<string, unknown> | undefined
+	}
 	expanding: {
 		/** Sub-content detail-panel renderer, if one was supplied. */
 		component?: ComponentType<ExpandedRowProps<never>> | undefined
@@ -266,7 +309,12 @@ export function defaultResolvedGridOptions(core?: GridOptions<never>): ResolvedG
 		rowActions: core?.rowActions ?? { placement: RowActionsPlacement.Inline },
 		direction: core?.direction ?? GridDirection.Ltr,
 		layout: { stickyHeader: false, footer: false, stickyFooter: false },
-		ordering: { column: false, row: false, visibilityMenu: false },
+		ordering: {
+			column: false,
+			row: false,
+			visibilityMenu: { enabled: false, drag: undefined, moveControls: undefined },
+			header: { drag: undefined, moveControls: undefined },
+		},
 		// `column` / `row` stay off — this is the all-features-off shape — while `rowConfig`
 		// carries core's normalized settings across when it resolved any. `exactOptionalPropertyTypes`
 		// is why it is spread rather than assigned `undefined`.
@@ -283,6 +331,7 @@ export function defaultResolvedGridOptions(core?: GridOptions<never>): ResolvedG
 			boundaries: DATA_GRID_DEFAULTS.pagination.boundaries,
 		},
 		selection: {},
+		aggregation: { manual: false },
 		expanding: {},
 		// Every feature is off here, but a fallback is not a feature: a grid with nothing to
 		// show still has to show something, so the three states are on and readers can rely on

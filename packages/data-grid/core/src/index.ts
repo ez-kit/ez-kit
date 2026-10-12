@@ -54,6 +54,7 @@ export {
 	BASE_CELL_TYPE_IDS,
 	BadgeVariant,
 	BuiltInCellType,
+	BuiltInAggregationFn,
 	BuiltInSortingFn,
 	ColumnAlign,
 	ColumnPinSide,
@@ -74,11 +75,19 @@ export type {
 	DraftSummaryContext,
 	FilterPlaceholderContext,
 	GridMessages,
+	OrderingColumnContext,
+	OrderingPositionContext,
 	PartialGridMessages,
 } from './messages'
 
 // System column IDs
-export { ACTIONS_COLUMN_ID, EXPAND_COLUMN_ID, SELECTION_COLUMN_ID } from './system-columns'
+export {
+	ACTIONS_COLUMN_ID,
+	DRAG_COLUMN_ID,
+	EXPAND_COLUMN_ID,
+	GROUP_COLUMN_ID,
+	SELECTION_COLUMN_ID,
+} from './system-columns'
 
 // One custom action entry — contributed per row (`rowActions.actions`) or for the whole
 // selection (`selection.bar.actions`), and rendered by the kit either way.
@@ -105,6 +114,8 @@ export type {
 	NumberCellConfig,
 	TextCellConfig,
 	CellViewCtx,
+	ColumnAggregationConfig,
+	ColumnAggregationMeta,
 	ColumnCellMeta,
 	ColumnFilteringMeta,
 	ColumnCreatingConfig,
@@ -114,6 +125,7 @@ export type {
 	ColumnAlignDef,
 	ColumnPinningDef,
 	ColumnWidthDef,
+	ColumnGroupingConfig,
 	ColumnSortingConfig,
 	ColumnVisibilityDef,
 	// The renderer slot itself. Every user-facing render point on a column (`header`,
@@ -188,14 +200,20 @@ export {
 // because the rules they encode (same pin band, same parent, locked columns) are the feature's
 // semantics, not its chrome. `applyRowOrder` is here for the same reason an adapter needs it:
 // rendering an uncontrolled row order means reordering `data`, and the rule for a row the order
-// does not name belongs to the feature.
+// does not name belongs to the feature. The `drop*` pair is the same rules applied to a target the
+// user named rather than one computed by stepping — the drag affordance's only route into the
+// ordering state, and the one place its boundaries are enforced.
 export {
 	applyRowMove,
 	applyRowOrder,
+	canDropColumn,
+	canDropRow,
 	canMoveColumn,
 	canMoveRow,
 	ColumnMoveDirection,
 	ColumnMoveScope,
+	dropColumn,
+	dropRow,
 	moveColumn,
 	moveRow,
 	RowMoveDirection,
@@ -267,13 +285,16 @@ export {
 	GridDirection,
 	ColumnResizeMode,
 	ExpandingMode,
+	GroupingMode,
 	LoadMoreDirection,
 	MultiSortEvent,
 	PaginationMode,
 } from './types'
 export type {
+	AggregationConfig,
 	DataTable,
 	ExpandingConfig,
+	GroupingConfig,
 	FilteringConfig,
 	GlobalFilterFn,
 	GlobalFilterFnId,
@@ -286,6 +307,7 @@ export type {
 	RowOrderingConfig,
 	ColumnPinningConfig,
 	VisibilityConfig,
+	VisibilityMenuOrderingConfig,
 	PaginationTotals,
 	PinningConfig,
 	RowPinningConfig,

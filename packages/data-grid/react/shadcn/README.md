@@ -12,6 +12,18 @@ npx shadcn@latest add https://ez-kit-docs.vercel.app/r/data-grid.json
 
 This copies `components/data-grid/**` into your project (cells, toolbar, filtering, pagination, editing blocks, plus the shadcn UI primitives they use) and adds `@ez-kit/data-grid-react`, `@ez-kit/data-grid-core` and the other runtime dependencies to your `package.json`. Core is on that list because the copied `data-grid.tsx` imports it: that file is where the grid's feature set is named, and it ships bound to the all-in set so the grid works the moment it lands. Narrowing it is an edit to a file you now own. To pull in later updates, re-run the same command or use `npx shadcn add https://ez-kit-docs.vercel.app/r/data-grid.json --diff` to see what changed upstream first.
 
+### With drag and drop
+
+Drag is a second registry item — it is the one part of the kit with a library of its own (`@dnd-kit`), and a registry item has a single dependency list with no way to mark part of it optional. A grid without drag therefore no longer installs that library. If you want drag, add the drag item **instead of** the one above:
+
+```bash
+npx shadcn@latest add https://ez-kit-docs.vercel.app/r/data-grid-dnd.json
+```
+
+Still one command: the drag item names the grid item as a registry dependency, so both file sets and both dependency lists land in one run. `--diff` works the same way on that URL.
+
+There is no legacy cost to this split: the adapter has never been in a released registry build, so no install of this kit has ever pulled `@dnd-kit` in. It matters because `shadcn add` has no uninstall — a dependency a registry item declares is one the consumer removes by hand or not at all, which is why the drag library gets an item of its own instead of a line in the main list.
+
 ## Usage
 
 Import from where the CLI placed the file — by default `@/components/data-grid/data-grid`. `createColumns` / `createColumnHelper` are bound to this kit's cell-type registry; the ones from `@ez-kit/data-grid-react` are not, and using those silently stops checking `cell: { type: '…' }` against the types this kit actually renders.
@@ -61,7 +73,7 @@ Composing a set governs **behaviour** — an unregistered feature contributes no
 
 ### Extending cell types
 
-`cellTypes` and the `KitCellTypes` type — needed by `extendDataGrid` to add a custom cell type — are also exported from `@/components/data-grid/data-grid`, alongside everything above. Everything else (`ColumnDef`, `ColumnSortingConfig`, `RowActionsVariant`, and the rest of the headless API surface) is not re-exported from the copied files — import those directly from `@ez-kit/data-grid-react`, which is already a `package.json` dependency after install.
+`allComponents`, `cellTypes` and the `KitCellTypes` type — what a `createDataGrid` bundle of your own needs to add a custom cell type — are also exported from `@/components/data-grid/data-grid`, alongside everything above. Everything else (`ColumnDef`, `ColumnSortingConfig`, `RowActionsVariant`, and the rest of the headless API surface) is not re-exported from the copied files — import those directly from `@ez-kit/data-grid-react`, which is already a `package.json` dependency after install.
 
 Full documentation: [ez-kit-docs.vercel.app/docs/data-grid](https://ez-kit-docs.vercel.app/docs/data-grid).
 

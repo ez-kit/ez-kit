@@ -4,12 +4,11 @@ import { defineConfig } from 'tsup'
  * Multiple entries, not one.
  *
  * A single-entry build emits one pre-bundled `dist/index.js`, and a consumer's bundler does not
- * shake an export out of it. Measured on `@ez-kit/data-grid-react` before this change: importing
- * the `PAGE_GAP` constant cost 54 857 bytes gzipped against 54 873 for the whole `DataGrid`, 16
- * bytes apart. Three plausible causes were measured and ruled out — the 28 `DataGrid.X = …`
- * compound assignments (273 bytes), the `export *` star (2.5 kB), the top-level `createContext`
- * calls (nothing). Giving a module its own entry is what worked: the same import then cost 53
- * bytes.
+ * shake an export out of it. Measured on `@ez-kit/data-grid-react` before this change, importing
+ * the `PAGE_GAP` constant cost the same as importing the whole `DataGrid`, to within a few bytes.
+ * Three plausible causes were measured and ruled out — the 28 `DataGrid.X = …` compound
+ * assignments, the `export *` star and the top-level `createContext` calls. Giving a module its
+ * own entry is what worked.
  *
  * So each feature group and each cell type is reachable on its own here, and a consumer that
  * composes a reduced set through `createDataGrid` stops paying for the rest. `.` still exports the
@@ -44,6 +43,8 @@ export default defineConfig({
 		'fallbacks/index': 'src/blocks/fallbacks/fallbacks-components.ts',
 		'infinite/index': 'src/blocks/infinite/infinite-components.ts',
 		'expanding/index': 'src/blocks/expanding/expanding-components.ts',
+		// The drag adapter, on its own entry so the optional peer stays out of every other one.
+		dnd: 'src/dnd.tsx',
 	},
 	format: ['esm'],
 	dts: true,
@@ -51,5 +52,11 @@ export default defineConfig({
 	// Shared code lands in hash-named chunks rather than being copied into every entry that
 	// reaches it — without this, sixteen entries would each carry their own copy of what they share.
 	splitting: true,
-	external: ['react', 'react-dom'],
+	/*
+	 * A **regex**, not the string `'@dnd-kit/react'`. `src/dnd.tsx` also imports
+	 * `@dnd-kit/react/sortable`, and a bare-string external does not match a subpath specifier — the
+	 * sortable half would be inlined into `dist/dnd.js`, silently turning an optional peer into a
+	 * vendored copy of half the library.
+	 */
+	external: ['react', 'react-dom', /^@dnd-kit\//],
 })

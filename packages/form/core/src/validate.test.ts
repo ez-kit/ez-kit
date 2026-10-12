@@ -1,9 +1,9 @@
-import { expect, test } from 'vitest'
+import { describe, expect, test } from 'vitest'
 
 import { FormFieldType } from './field-types'
 import { buildValidator } from './validate'
 
-import type { FormSchema } from './schema'
+import type { AnyFormSchema, FormSchema } from './schema'
 
 type Values = { email: string; age: number; inn: string }
 
@@ -115,4 +115,113 @@ test('an empty selection fails required, and length constraints count items', ()
 	expect(validate({ tags: [] })).toEqual(['This field is required'])
 	expect(validate({ tags: ['a', 'b', 'c'] })).toEqual(['Must be at most 2 items'])
 	expect(validate({ tags: ['a'] })).toEqual([])
+})
+
+describe('arrays', () => {
+	const schema = {
+		version: 1 as const,
+		children: [
+			{
+				type: 'array' as const,
+				name: 'people',
+				validate: { minLength: 1 },
+				children: [{ type: FormFieldType.Text, name: 'email', validate: { required: true, format: 'email' } }],
+			},
+		],
+	} as unknown as AnyFormSchema<unknown>
+
+	const run = (values: unknown, options?: Parameters<typeof buildValidator>[1]) => {
+		const result = buildValidator(schema, options)['~standard'].validate(values)
+		return 'issues' in result ? (result.issues ?? []) : []
+	}
+
+	test('checks each item separately, and names it by its real path', () => {
+		const issues = run({ people: [{ email: 'a@b.co' }, { email: 'nope' }] })
+		expect(issues).toHaveLength(1)
+		expect(issues[0]?.path).toEqual(['people', 1, 'email'])
+	})
+
+	test('emits a numeric index, not the string "1" — a string segment would address a property', () => {
+		const [issue] = run({ people: [{ email: 'nope' }] })
+		expect(issue?.path?.[1]).toBe(0)
+		expect(typeof issue?.path?.[1]).toBe('number')
+	})
+
+	test('a constraint on the list itself lands on the list', () => {
+		const [issue] = run({ people: [] })
+		expect(issue?.path).toEqual(['people'])
+		expect(issue?.message).toBe('Must be at least 1 items')
+	})
+
+	test('runs a rule on an empty list, where a scalar field would have been skipped', () => {
+		const withRule = {
+			version: 1 as const,
+			children: [{ type: 'array' as const, name: 'people', validate: { rule: 'nonEmpty' }, children: [] }],
+		} as unknown as AnyFormSchema<unknown>
+		const result = buildValidator(withRule, {
+			rules: { nonEmpty: (value) => (Array.isArray(value) && value.length > 0 ? true : 'Add at least one') },
+		})['~standard'].validate({ people: [] })
+		expect('issues' in result && result.issues?.[0]?.message).toBe('Add at least one')
+	})
+
+	test('a cross-item rule points at the offending entries, not at the list', () => {
+		const withRule = {
+			version: 1 as const,
+			children: [{ type: 'array' as const, name: 'people', validate: { rule: 'uniqueEmail' }, children: [] }],
+		} as unknown as AnyFormSchema<unknown>
+		const result = buildValidator(withRule, {
+			rules: {
+				uniqueEmail: (value) => {
+					const list = value as { email: string }[]
+					const duplicates = list
+						.map((entry, index) => ({ entry, index }))
+						.filter(({ entry, index }) => list.findIndex((other) => other.email === entry.email) !== index)
+					return duplicates.length === 0
+						? true
+						: duplicates.map(({ index }) => ({ path: `[${String(index)}].email`, message: 'Already used' }))
+				},
+			},
+		})['~standard'].validate({ people: [{ email: 'a@b.co' }, { email: 'a@b.co' }] })
+		const issues = 'issues' in result ? (result.issues ?? []) : []
+		expect(issues).toHaveLength(1)
+		expect(issues[0]?.path).toEqual(['people', 1, 'email'])
+	})
+
+	test('runs every rule in a list, in order', () => {
+		const withRules = {
+			version: 1 as const,
+			children: [{ type: 'array' as const, name: 'people', validate: { rule: ['first', 'second'] }, children: [] }],
+		} as unknown as AnyFormSchema<unknown>
+		const result = buildValidator(withRules, {
+			rules: { first: () => true, second: () => 'second failed' },
+		})['~standard'].validate({ people: [{}] })
+		expect('issues' in result && result.issues?.[0]?.message).toBe('second failed')
+	})
+
+	test('skips an item hidden by a ./ condition', () => {
+		const conditional = {
+			version: 1 as const,
+			children: [
+				{
+					type: 'array' as const,
+					name: 'people',
+					children: [
+						{ type: FormFieldType.Text, name: 'kind' },
+						{
+							type: FormFieldType.Text,
+							name: 'vipCode',
+							when: { field: './kind', eq: 'vip' },
+							validate: { required: true },
+						},
+					],
+				},
+			],
+		} as unknown as AnyFormSchema<unknown>
+		const result = buildValidator(conditional)['~standard'].validate({
+			people: [{ kind: 'plain' }, { kind: 'vip' }],
+		})
+		const issues = 'issues' in result ? (result.issues ?? []) : []
+		expect(issues).toHaveLength(1)
+		expect(issues[0]?.path).toEqual(['people', 1, 'vipCode'])
+	})
 })

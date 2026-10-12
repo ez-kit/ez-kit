@@ -25,10 +25,8 @@ pipeline.
 />
 ```
 
-The feature is enabled by its **handler**, not by its presence: a config without `onSave`
-resolves away rather than mounting an Edit button whose commit would call `undefined`. That is
-what lets a [defaults layer](/docs/data-grid/state/defaults) describe how editing should _look_ for
-a whole app while only the grids that supply `onSave` actually get it.
+Editing only activates when you supply `onSave` — without it, no Edit button is mounted. This lets
+a [defaults layer](/docs/data-grid/state/defaults) describe how editing should _look_ for a whole app while only the grids that supply `onSave` actually enable it.
 
 ## Modes
 

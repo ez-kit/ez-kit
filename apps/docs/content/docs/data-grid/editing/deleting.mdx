@@ -91,10 +91,7 @@ bulk: {
 
 ## When the handler fails
 
-What the grid _does_ own is the delete flow around your handler, and it reads the outcome of the
-promise you return. Three things follow from that, and the example below shows all of them —
-tick the checkbox to have the handler rethrow, untick it to have it swallow the error, then select
-every row and press Delete.
+Here are three important patterns to know when the delete handler fails:
 
 <DataGridDocsExample exampleId='deleting-rollback' />
 
@@ -116,10 +113,8 @@ still in the table.
 console. If you rethrow to keep the selection, still handle the error yourself — report it to the
 user in the same handler, before rethrowing.
 
-The prompt is not part of this: `confirm()` clears `state.deleting.pendingRowId` _before_ awaiting
-the handler, so the dialog closes as soon as the user presses Delete and never reflects the
-outcome. There is no built-in pending or error state on the dialog — a grid that needs one renders
-it around the table, as the panel in the example does.
+The dialog closes immediately after the user presses Delete, regardless of the handler's outcome.
+If you need to show pending or error feedback, render it separately beside the grid.
 
 ## Options
 

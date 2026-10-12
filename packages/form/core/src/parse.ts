@@ -2,7 +2,7 @@ import { isDateRangeValue, isIsoDate } from './date-value'
 import { FORM_FIELD_TYPES, FormFieldType } from './field-types'
 import { collectRuleFields } from './rules'
 import { GRID_MAX, GRID_MIN, RESERVED_NODE_TYPES } from './schema'
-import { hasChildren, isFieldNode, walkNodes } from './walk'
+import { hasChildren, isArrayNode, isFieldNode, walkNodes } from './walk'
 
 import type { Condition } from './rules'
 import type { AnyFormSchema, FieldValidate, FormNode } from './schema'
@@ -158,6 +158,21 @@ function assertKnownFieldType(type: string, path: string, options: ParseOptions)
 	}
 }
 
+/**
+ * Names are unique **within the scope that owns them**, not across the document.
+ *
+ * Every array item opens a new scope: its fields are named relative to the item, so
+ * `people[].firstName` and `staff[].firstName` are two different fields that happen to share a
+ * spelling, and either may also coexist with a root-level `firstName`. The scope is identified
+ * by the chain of enclosing arrays; an array's own name belongs to its parent's scope.
+ */
+function scopeKey(ancestors: readonly FormNode<unknown, string>[]): string {
+	return ancestors
+		.filter((ancestor) => isArrayNode(ancestor))
+		.map((ancestor) => ancestor.name)
+		.join('.')
+}
+
 function assertUniqueName(rawName: unknown, path: string, seenNames: Set<string>): void {
 	if (typeof rawName !== 'string' || rawName.length === 0) {
 		throw new FormSchemaError('Field node is missing a "name"', path)
@@ -170,8 +185,14 @@ function assertUniqueName(rawName: unknown, path: string, seenNames: Set<string>
 
 function assertKnownRule(validate: FieldValidate | undefined, path: string, options: ParseOptions): void {
 	if (validate?.rule === undefined) return
-	if (!options.rules?.includes(validate.rule)) {
-		throw new FormSchemaError(`Unknown validation rule "${validate.rule}"`, path)
+	const names = Array.isArray(validate.rule) ? validate.rule : [validate.rule]
+	for (const name of names) {
+		if (typeof name !== 'string' || name.length === 0) {
+			throw new FormSchemaError('Validation rule name must be a non-empty string', path)
+		}
+		if (!options.rules?.includes(name)) {
+			throw new FormSchemaError(`Unknown validation rule "${name}"`, path)
+		}
 	}
 }
 
@@ -245,18 +266,26 @@ function assertRuleShape(value: unknown, path: string): void {
  * Rejects a `when` / `disabledWhen` that cannot survive a trip through `JSON.parse`: a
  * function condition (never serialisable — this is what makes `parseFormSchema` the trust
  * boundary for BDUI payloads, spec I2/I3), a value that isn't a well-formed `Rule`, and a
- * relative field reference, reserved for array items and not yet supported in v1.
+ * `./`-prefixed field reference written outside an array item, where there is no item for it
+ * to resolve against.
+ *
+ * @param insideArray whether the node sits anywhere under an `array`. Inside one, `./` is the
+ * only way to name a sibling field of *this* entry — the entry's index is not knowable when the
+ * document is authored, so an absolute path would pin the condition to one row. `compileCondition`
+ * resolves it against the entry it renders; outside an array it throws, so accepting it here
+ * would only move the failure from parse time to render time.
  */
-function assertKnownCondition(condition: Condition<unknown> | undefined, path: string): void {
+function assertKnownCondition(condition: Condition<unknown> | undefined, path: string, insideArray: boolean): void {
 	if (condition === undefined) return
 	if (typeof condition === 'function') {
 		throw new FormSchemaError('Condition must be a serialisable rule object, not a function', path)
 	}
 	assertRuleShape(condition, path)
+	if (insideArray) return
 	for (const field of collectRuleFields(condition)) {
 		if (field.startsWith(RELATIVE_FIELD_PREFIX)) {
 			throw new FormSchemaError(
-				`Relative field reference "${field}" is reserved for array items and is not supported in FormSchema v1`,
+				`Relative field reference "${field}" is only valid inside an array item; there is no item scope here`,
 				path,
 			)
 		}
@@ -342,11 +371,11 @@ function assertKnownOptionSource(source: unknown, path: string, options: ParseOp
 }
 
 /**
- * `dependsOn`'s values are field references, and are held to the same rule every other one in
- * the format is: an absolute path from the root of the form values. `./` stays reserved for
- * array items (see `assertKnownCondition`) and is not supported in v1.
+ * `dependsOn`'s values are field references, and are held to exactly the rule a condition's are
+ * (see `assertKnownCondition`): an absolute path from the root of the form values, or — inside
+ * an array item — a `./`-prefixed path relative to that item.
  */
-function assertDependsOn(value: unknown, path: string): void {
+function assertDependsOn(value: unknown, path: string, insideArray: boolean): void {
 	if (value === undefined) return
 	if (!isPlainObject(value)) {
 		throw new FormSchemaError('"dependsOn" must map a parameter name to a field path', path)
@@ -355,9 +384,9 @@ function assertDependsOn(value: unknown, path: string): void {
 		if (typeof ref !== 'string' || ref.length === 0) {
 			throw new FormSchemaError(`"dependsOn.${parameter}" must be a field path string, got ${describeValue(ref)}`, path)
 		}
-		if (ref.startsWith(RELATIVE_FIELD_PREFIX)) {
+		if (!insideArray && ref.startsWith(RELATIVE_FIELD_PREFIX)) {
 			throw new FormSchemaError(
-				`Relative field reference "${ref}" is reserved for array items and is not supported in FormSchema v1`,
+				`Relative field reference "${ref}" is only valid inside an array item; there is no item scope here`,
 				path,
 			)
 		}
@@ -369,7 +398,7 @@ function assertDependsOn(value: unknown, path: string): void {
  * `params` and the `dependsOn` map that together make up the argument object the source
  * receives. A bare string is sugar for `{ source }`.
  */
-function assertOptionsFrom(value: unknown, path: string, options: ParseOptions): void {
+function assertOptionsFrom(value: unknown, path: string, options: ParseOptions, insideArray: boolean): void {
 	if (typeof value === 'string') {
 		assertKnownOptionSource(value, path, options)
 		return
@@ -381,7 +410,7 @@ function assertOptionsFrom(value: unknown, path: string, options: ParseOptions):
 		)
 	}
 	assertKnownOptionSource(value.source, path, options)
-	assertDependsOn(value.dependsOn, path)
+	assertDependsOn(value.dependsOn, path, insideArray)
 	if (value.params !== undefined) {
 		if (!isJsonObject(value.params)) {
 			throw new FormSchemaError(`"params" must be an object of JSON values, got ${describeValue(value.params)}`, path)
@@ -398,7 +427,12 @@ function assertOptionsFrom(value: unknown, path: string, options: ParseOptions):
  * the failure a trust boundary exists to catch — and each `label` is `LocalizedText`, so it
  * needs the same check every other label gets.
  */
-function assertOptions(node: FormNode<unknown, string>, path: string, options: ParseOptions): void {
+function assertOptions(
+	node: FormNode<unknown, string>,
+	path: string,
+	options: ParseOptions,
+	insideArray: boolean,
+): void {
 	// `node.type` is a bare `string` here (a custom field kind can be anything), so it is
 	// compared against the widened list rather than the enum members directly.
 	if (!OPTION_FIELD_TYPES.includes(node.type)) return
@@ -410,7 +444,7 @@ function assertOptions(node: FormNode<unknown, string>, path: string, options: P
 		throw new FormSchemaError(`"${node.type}" cannot carry both "options" and "optionsFrom"`, path)
 	}
 	if (hasSource) {
-		assertOptionsFrom(raw.optionsFrom, path, options)
+		assertOptionsFrom(raw.optionsFrom, path, options, insideArray)
 		return
 	}
 
@@ -621,17 +655,28 @@ function validateNode(
 	path: string,
 	options: ParseOptions,
 	seenNames: Set<string>,
+	insideArray: boolean,
 ): void {
 	if (isFieldNode(node)) {
 		assertKnownFieldType(node.type, path, options)
 		assertUniqueName((node as unknown as UnknownRecord).name, path, seenNames)
-		assertOptions(node, path, options)
+		assertOptions(node, path, options, insideArray)
 		assertSearchable(node, path)
 		assertCreatable(node, path)
 		assertDateValues(node, path)
 		assertMultiValueDefault(node, path)
 		assertKnownRule(node.validate, path, options)
 		assertValidateMessages(node.validate, path, options)
+	} else if (isArrayNode(node)) {
+		// An array names a value and carries constraints like a field, but its `type` is reserved
+		// and its children are a scope of their own — so it takes the value-side checks and none
+		// of the field-kind ones.
+		assertUniqueName(node.name, path, seenNames)
+		assertKnownRule(node.validate, path, options)
+		assertValidateMessages(node.validate, path, options)
+		assertLocalizedText(node.item?.label, path, options)
+		assertLocalizedText(node.add?.label, path, options)
+		assertLocalizedText(node.remove?.label, path, options)
 	} else if (node.type === 'block') {
 		assertKnownBlock(node.component, path, options)
 	} else if (node.type === 'section' || node.type === 'step') {
@@ -643,8 +688,8 @@ function validateNode(
 	}
 	assertGridValue((node as unknown as UnknownRecord).colSpan, 'colSpan', path)
 
-	assertKnownCondition(node.when, path)
-	assertKnownCondition(node.disabledWhen, path)
+	assertKnownCondition(node.when, path, insideArray)
+	assertKnownCondition(node.disabledWhen, path, insideArray)
 	assertLocalizedText(node.label, path, options)
 	assertLocalizedText(node.description, path, options)
 }
@@ -652,7 +697,7 @@ function validateNode(
 /**
  * The trust boundary for a `FormSchema` that did not come from this bundle — typically one
  * delivered by a backend as BDUI payload (spec I2/I3). Validates shape, node types, name
- * uniqueness, validation-rule registration, condition serialisability and absoluteness, and
+ * uniqueness, validation-rule registration, condition serialisability and scope, and
  * translation-key availability, throwing `FormSchemaError` with the offending node's path on
  * the first violation. A function passed as a `when`/`disabledWhen` cannot survive
  * `JSON.parse` anyway, but a caller passing a hand-built object must still be told it is not a
@@ -674,12 +719,19 @@ export function parseFormSchema<TValues>(input: unknown, options: ParseOptions =
 
 	const schema = input as unknown as AnyFormSchema<TValues>
 	const untypedSchema = schema as unknown as AnyFormSchema<unknown>
-	const seenNames = new Set<string>()
+	const seenNamesByScope = new Map<string, Set<string>>()
 	walkNodes(schema, (node, ancestors) => {
 		const untypedNode = node as unknown as FormNode<unknown, string>
 		const untypedAncestors = ancestors as unknown as FormNode<unknown, string>[]
 		const path = computeNodePath(untypedSchema, untypedNode, untypedAncestors)
-		validateNode(untypedNode, path, options, seenNames)
+
+		const key = scopeKey(untypedAncestors)
+		let seenNames = seenNamesByScope.get(key)
+		if (seenNames === undefined) {
+			seenNames = new Set<string>()
+			seenNamesByScope.set(key, seenNames)
+		}
+		validateNode(untypedNode, path, options, seenNames, untypedAncestors.some(isArrayNode))
 	})
 
 	return schema

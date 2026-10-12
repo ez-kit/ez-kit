@@ -5,10 +5,11 @@ import { buildColumnInvariants, enforceColumnInvariants, mergePinningSeed } from
 import { DEFAULT_PAGE_SIZE, UNKNOWN_PAGE_COUNT } from '../defaults'
 import { CreatingMode } from '../features/creating'
 import { EditingMode } from '../features/editing'
+import { MANUAL_GROUPED_ROW_MODEL } from '../features/grouping/create-manual-grouped-row-model'
 import { buildOperatorRegistry } from '../features/operators'
 import { RowActionsPlacement } from '../features/row-actions'
 import { buildColumnList, extractPinningState } from '../system-columns'
-import { ColumnResizeMode, ExpandingMode, GridDirection, MultiSortEvent, PaginationMode } from '../types'
+import { ColumnResizeMode, ExpandingMode, GridDirection, GroupingMode, MultiSortEvent, PaginationMode } from '../types'
 import { featureConfig, isFeatureEnabled } from '../utils/feature-flag'
 import { setIfDefined } from '../utils/set-if-defined'
 
@@ -19,6 +20,7 @@ import type { RowActionsConfig } from '../features/row-actions'
 import type {
 	GlobalFilterFn,
 	GridDirection as GridDirectionValue,
+	GroupingMode as GroupingModeValue,
 	InitialTableState,
 	MultiSortConfig,
 	PinningConfig,
@@ -152,6 +154,15 @@ const REQUIRED_FEATURE = {
 	creating: 'creatingFeature',
 	deleting: 'deletingFeature',
 	draft: 'draftFeature',
+	// Checked against the paragraph above before it was added, and it passes for the same reason
+	// `draft` does: a bare `grouping: true` is the whole feature — there is no sub-axis it could
+	// mean instead — and such a grid always needs `columnGroupingFeature`, because without it
+	// there is no `grouping` slice, no `column.toggleGrouping()` and no group rows, so the config
+	// key does nothing at all. Note this names only the feature: grouping additionally needs
+	// `groupedRowModel`, `rowExpandingFeature` and `expandedRowModel`, and those are row models
+	// and a second feature, which this map's one-key-to-one-feature shape cannot carry. They are
+	// guarded on the docs side by `apps/docs/test/example-features/sets.ts`.
+	grouping: 'columnGroupingFeature',
 } as const satisfies Partial<Record<keyof TableConfig<TableFeatures, object>, string>>
 
 /**
@@ -168,6 +179,12 @@ const REQUIRED_FEATURE = {
  * - **`infiniteFeature`** is asked for by `pagination.mode: 'infinite'`, a *value* of another
  *   feature's option rather than an option of its own. `pagination` itself already maps to
  *   `rowPaginationFeature` above, so the key is taken and means something else.
+ * - **`rowAggregationFeature`** is asked for by a **column**'s `aggregation`, and one column
+ *   asking is enough — so there is no `keyof TableConfig` to key it by. Deliberately not keyed by
+ *   `grouping` either, which would get the split backwards in both directions: a grouped grid
+ *   need not total anything, and a column totalled into the footer's grand total needs no
+ *   grouping at all. That independence is the whole reason upstream ships the two as separate
+ *   features.
  * - **`loadingFeature`** has no config key whatsoever. Its slice is fully user-owned — the
  *   consumer feeds it through `initialState.loading` or an external `atoms.loading` — so supplying
  *   one of those *is* the ask, and each is named separately below so the warning quotes what the
@@ -181,6 +198,7 @@ const REQUIRED_FEATURE = {
  */
 const CONDITIONAL_REQUIRED_FEATURES = {
 	orderingRow: { option: 'ordering.row', feature: 'rowOrderingFeature' },
+	columnAggregation: { option: "a column's `aggregation`", feature: 'rowAggregationFeature' },
 	paginationInfinite: { option: "pagination.mode: 'infinite'", feature: 'infiniteFeature' },
 	initialLoading: { option: 'initialState.loading', feature: 'loadingFeature' },
 	loadingAtom: { option: 'atoms.loading', feature: 'loadingFeature' },
@@ -253,14 +271,33 @@ const FILTER_FNS_SLOT = 'filterFns'
  * counted, or a table whose every column names one of its own comparators would be warned at for
  * nothing.
  *
- * **There is deliberately no `aggregationFns` sibling.** `TableConfig` has no `grouping` option and
- * `ColumnDef` no `aggregationFn` — `columnGroupingFeature` and `rowAggregationFeature` are
- * reachable only through upstream's `constructTable`, never through this function — so nothing in
- * a config can ask for an aggregation, and a guard here would have no condition to test.
- * `src/features/entry.test.ts` records the same boundary from the other side. If grouping ever
- * gains a config key, this is the shape its guard takes.
+ * {@link AGGREGATION_FNS_SLOT} is the third of these, added when grouping and aggregation gained
+ * their config keys.
  */
 const SORT_FNS_SLOT = 'sortFns'
+
+/**
+ * The feature-set slot v9 resolves a **named** aggregation function through.
+ *
+ * The third sibling of {@link FILTER_FNS_SLOT} and {@link SORT_FNS_SLOT}, and for a long time
+ * this file carried a paragraph explaining why it could not exist: `TableConfig` had no
+ * `grouping` option and `ColumnDef` no aggregation field, so nothing a consumer wrote reached
+ * here asking for one. Both are now real options, so the condition exists and this is it.
+ *
+ * Narrower than its two siblings, because unlike a comparator or a filter function there is no
+ * implicit `'auto'` to fall into: a column is aggregated only if it **says so**. So the condition
+ * is exactly "some column named an aggregation by string", and a column carrying an inline
+ * {@link AggregationFnDef} needs nothing here — the same exclusion `sortFn`'s function form gets.
+ *
+ * Deliberately **not** gated on grouping being on. `column.getAggregationValue()` resolves the
+ * same registry for the footer's grand total, so a grid with `rowAggregationFeature` alone and no
+ * grouped row model needs the slot exactly as much — and that configuration is the one the two
+ * features were split apart to serve.
+ *
+ * Silent in the same way the other two are: the name resolves to no function, the column totals
+ * nothing, and the group row shows an empty cell where the subtotal belongs.
+ */
+const AGGREGATION_FNS_SLOT = 'aggregationFns'
 
 /**
  * Warn about a column seeded into a state the user can never leave.
@@ -356,6 +393,16 @@ export type GridOptions<TRow extends object> = {
 	 * owns virtualization entirely and there is nothing for the core to resolve.
 	 */
 	virtualization?: boolean | VirtualizationConfig
+	/**
+	 * How many columns carry the grouping labels. Absent when grouping is off.
+	 *
+	 * Resolved here but **not** acted on here, for a structural reason: `'multiple'` makes the
+	 * column *count* a function of the live grouping state, and this function runs once, at
+	 * construction — `options.columns` is a fixed array. So core always builds exactly one
+	 * `__group__` column and the React layer, which is where grouping state is reactive, is what
+	 * splits it per level. The same division `virtualization` above has.
+	 */
+	groupingMode?: GroupingModeValue
 	/** The grid's text direction, declared once at the root. */
 	direction: GridDirectionValue
 }
@@ -378,6 +425,7 @@ type FeatureOnChangeHandlers = {
 	rowPinning?: ((next: RowPinningState) => void) | undefined
 	resizing?: ((next: ColumnSizingState) => void) | undefined
 	expanding?: ((next: ExpandedState) => void) | undefined
+	grouping?: ((next: string[]) => void) | undefined
 }
 
 /**
@@ -473,7 +521,16 @@ function named(option: string, handler: StateChangeHandler | undefined): Record<
  */
 export function createTableOptions<TFeatures extends TableFeatures, TRow extends object>(
 	config: TableConfig<TFeatures, TRow>,
-	externals?: { atoms?: ExternalAtoms<TFeatures> },
+	externals?: {
+		atoms?: ExternalAtoms<TFeatures>
+		/**
+		 * Whether this grid can drag rows — a drag adapter is bound. Core cannot see the adapter,
+		 * which lives in the React layer, so that layer says so here. With row ordering on it puts
+		 * the `__drag__` handle column in; absent, there is none, which is right for a table built
+		 * outside React, where nothing could render the handle anyway.
+		 */
+		rowDrag?: boolean
+	},
 ) {
 	/**
 	 * `{ atoms }` when the application owns any slice, `{}` when it owns none.
@@ -502,6 +559,7 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 	const paginationCfg = featureConfig(config.pagination)
 	const selectionCfg = featureConfig(config.selection)
 	const expandingCfg = featureConfig(config.expanding)
+	const groupingCfg = featureConfig(config.grouping)
 	const resizingCfg = featureConfig(config.resizing)
 	const creatingCfg = featureConfig(config.creating)
 	const editingCfg = featureConfig(config.editing)
@@ -513,6 +571,7 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 	const hasPagination = isFeatureEnabled(config.pagination)
 	const hasSelection = isFeatureEnabled(config.selection)
 	const hasExpanding = isFeatureEnabled(config.expanding)
+	const hasGrouping = isFeatureEnabled(config.grouping)
 	const hasResizing = isFeatureEnabled(config.resizing)
 	const hasEditing = isFeatureEnabled(config.editing)
 	// Cell editing is entered by double-clicking the cell itself, never from the actions column:
@@ -638,6 +697,36 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 		? (featureConfig(orderingCfgResolved?.row) ?? {})
 		: undefined
 
+	// Group columns hold no values and are never aggregated, so every walk below over a (possibly
+	// nested) column tree visits leaves only — one traversal, reused by `aggregatedColumns` and by
+	// the supplied-totals guards further down, rather than each writing its own recursion.
+	const walkLeafColumns = (cols: unknown[], visit: (col: unknown) => void): void => {
+		for (const col of cols) {
+			const children = (col as { columns?: unknown[] }).columns
+			if (children !== undefined) {
+				walkLeafColumns(children, visit)
+				continue
+			}
+			visit(col)
+		}
+	}
+
+	// Every column that says it is aggregated, and separately those that name the function by
+	// string — the first asks for `rowAggregationFeature`, the second for the `aggregationFns`
+	// registry, and an inline definition asks only for the first.
+	const aggregatedColumns = ((): { any: boolean; named: boolean } => {
+		let any = false
+		let named = false
+		walkLeafColumns(mappedUserColumns, (col) => {
+			const fn = (col as { aggregationFn?: unknown }).aggregationFn
+			if (fn === undefined) return
+			any = true
+			if (typeof fn === 'string') named = true
+		})
+
+		return { any, named }
+	})()
+
 	// ── registered vs. configured, the three that need a predicate ───────────
 	// The second half of the guard above, run here rather than beside it because these read
 	// resolved locals (`rowOrderingCfg`, `paginationCfg`) that do not exist that far up.
@@ -653,6 +742,7 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 		// One predicate per catalogue key. `satisfies` is what makes a missing one a compile error.
 		const asked = {
 			orderingRow: rowOrderingCfg !== undefined,
+			columnAggregation: aggregatedColumns.any,
 			paginationInfinite: paginationCfg?.mode === PaginationMode.Infinite,
 			initialLoading: initialStateBag?.loading !== undefined,
 			loadingAtom: externalAtomsBag?.loading !== undefined,
@@ -759,6 +849,94 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 		}
 	}
 
+	// ── named aggregations vs. the `aggregationFns` slot ─────────────────────
+	// Not gated on grouping: the same registry answers `column.getAggregationValue()`, which is
+	// how a grid with no grouped row model gets its footer grand total.
+	if (IS_DEV && aggregatedColumns.named && !(AGGREGATION_FNS_SLOT in registeredFeatures)) {
+		console.warn(
+			'[data-grid] A column names an `aggregation` function, but `aggregationFns` is not in ' +
+				'`features` — the name resolves to nothing, so the column totals nothing and its group ' +
+				'rows and footer total render empty. Add `aggregationFns` to your `tableFeatures({ … })` call.',
+		)
+	}
+
+	// ── grouped row model vs. `grouping` config ───────────────────────────
+	// The two grouped row models are interchangeable at the `groupedRowModel` slot — both are
+	// plain functions — so nothing stops a config that contradicts the one registered, and both
+	// mismatches are silent. `grouping.getSubRows` with the client model means the grid groups an
+	// already-grouped tree a second time; the manual model with neither `getSubRows` nor adapters
+	// means flat rows and no grouping at all.
+	//
+	// Runtime-only, like every guard in this file.
+	if (IS_DEV && hasGrouping) {
+		const model = (registeredFeatures as { groupedRowModel?: Record<symbol, unknown> }).groupedRowModel
+		const marker = model?.[MANUAL_GROUPED_ROW_MODEL] as { flat: boolean } | undefined
+		const isManualModel = marker !== undefined
+		const hasTreeReader = groupingCfg?.getSubRows !== undefined
+
+		if (hasTreeReader && !isManualModel) {
+			console.warn(
+				'[data-grid] `grouping.getSubRows` says the rows arrive already grouped, but `features` ' +
+					'registers the client grouped row model, which will group them a second time. Register ' +
+					'`groupedRowModel: createManualGroupedRowModel()` instead.',
+			)
+		}
+
+		// The flat-shape adapters are arguments to the factory, not config, so they cannot be read
+		// from here — `marker.flat` is how the factory reports whether it was given `isGroupRow`,
+		// which is what keeps a correctly configured flat-shape grid (adapters, no `getSubRows`)
+		// silent.
+		if (isManualModel && !hasTreeReader && !marker.flat) {
+			console.warn(
+				'[data-grid] `createManualGroupedRowModel()` is registered but nothing tells the grid where ' +
+					'the groups are: write `grouping.getSubRows` for a tree response, or pass the model ' +
+					'`isGroupRow` / `getLevel` for a flat one. As it stands the rows render ungrouped.',
+			)
+		}
+	}
+
+	// ── the supplied-totals bag ────────────────────────────────────────────
+	// Runtime-only, like every guard in this file: the config states behaviour and nothing
+	// type-checks it against the columns — see the note on `TableConfig.features`.
+	if (IS_DEV) {
+		// Same fallback `collectInitialHidden` / `collectInitialPinned` use on the authored def
+		// (`def.id ?? def.accessorKey`), read off the mapped column instead: `mapColumns` only ever
+		// writes `result.id` when the author named one explicitly, so an accessor-only column is
+		// named by its `accessorKey` here too.
+		const resolvedColumnId = (col: unknown): string => {
+			const c = col as { id?: string; accessorKey?: string }
+			return c.id ?? c.accessorKey ?? '?'
+		}
+
+		const aggregationCfg = config.aggregation
+		const totals = aggregationCfg?.totals
+		const columnIds = new Set<string>()
+		walkLeafColumns(mappedUserColumns, (col) => columnIds.add(resolvedColumnId(col)))
+
+		if (aggregationCfg?.manual === true) {
+			walkLeafColumns(mappedUserColumns, (col) => {
+				const id = resolvedColumnId(col)
+				if ((col as { aggregationFn?: unknown }).aggregationFn === undefined) return
+				if (totals !== undefined && Object.hasOwn(totals, id)) return
+				console.warn(
+					`[data-grid] Column "${id}" names an \`aggregation\` function and \`aggregation.manual\` is ` +
+						'on, so the grid will not compute its total — but `aggregation.totals` carries no entry ' +
+						"for it, so its footer renders empty. Supply it, or drop the column's `aggregation`.",
+				)
+			})
+		}
+
+		if (totals !== undefined) {
+			for (const id of Object.keys(totals)) {
+				if (columnIds.has(id)) continue
+				console.warn(
+					`[data-grid] \`aggregation.totals\` has an entry for "${id}", which is not a column id — ` +
+						'nothing renders it. A renamed column is the usual cause.',
+				)
+			}
+		}
+	}
+
 	// `rowActions` defaults to on: omitting it must keep the actions column appearing as soon as
 	// editing / deleting / row pinning is in play, which is what it has always done. Only an
 	// explicit `false` (or `{ enabled: false }`) suppresses the column outright — the read-only
@@ -772,7 +950,10 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 	// column renders no row value, so nothing downstream has a `TRow` left to keep.
 	const selectionColumn = selectionCfg?.column as SystemColumnDef<TableFeatures> | undefined
 	const expandingColumn = featureConfig(config.expanding)?.column as SystemColumnDef<TableFeatures> | undefined
+	const groupingColumn = groupingCfg?.column as SystemColumnDef<TableFeatures> | undefined
 	const rowActionsColumn = rowActionsCfg?.column as SystemColumnDef<TableFeatures> | undefined
+	const rowDragColumnDef = rowOrderingCfg?.column
+	const rowDragColumn = rowDragColumnDef === false ? undefined : rowDragColumnDef
 
 	// Where an inline draft row puts its save / cancel pair. It shares the actions cell with the
 	// row actions — but only when that column is there anyway, or when the draft row itself is
@@ -788,8 +969,10 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 	const creatingInActionsColumn = hasPinRowCreating || (hasInlineCreating && hasOtherRowActions)
 
 	const allColumns = buildColumnList(mappedUserColumns, {
+		rowDrag: externals?.rowDrag === true && rowOrderingCfg !== undefined && rowDragColumnDef !== false,
 		selection: hasSelection,
 		expanding: hasExpanding,
+		grouping: hasGrouping,
 		editing: rowActionsEnabled && hasRowEditAction,
 		deleting: rowActionsEnabled && hasDeleting,
 		pinning: rowActionsEnabled && hasPinning,
@@ -797,8 +980,10 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 		creating: creatingInActionsColumn,
 		rowActionsPlacement,
 		customRowActions: rowActionsEnabled && customRowActions !== undefined,
+		...(rowDragColumn !== undefined ? { rowDragColumn } : {}),
 		...(selectionColumn !== undefined ? { selectionColumn } : {}),
 		...(expandingColumn !== undefined ? { expandingColumn } : {}),
+		...(groupingColumn !== undefined ? { groupingColumn } : {}),
 		...(rowActionsColumn !== undefined ? { rowActionsColumn } : {}),
 	})
 
@@ -864,6 +1049,19 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 		)
 	}
 
+	// The same two routes to one value, and the same resolution: `grouping.by` is where an author
+	// states the starting levels, `initialState.grouping` is where a deep link restores the ones
+	// the user picked, and the seed wins when both are written.
+	const seededGrouping = userInitialState?.grouping ?? (hasGrouping ? groupingCfg?.by : undefined)
+
+	if (IS_DEV && groupingCfg?.by !== undefined && userInitialState?.grouping !== undefined) {
+		console.warn(
+			`[data-grid] Both \`grouping.by\` (${groupingCfg.by.join(', ')}) and ` +
+				`\`initialState.grouping\` (${userInitialState.grouping.join(', ')}) are set. ` +
+				`The seed wins; the option is ignored. Set one of them.`,
+		)
+	}
+
 	// Infinite mode shows ALL accumulated rows — no client-side page slicing, no footer. In v8
 	// that was `getPaginationRowModel` simply not being attached here; in v9 the paginated row
 	// model is a slot in the feature set, so the only way to leave the rows unsliced is for the
@@ -918,6 +1116,7 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 			...seededSlices,
 			pagination: mergedPagination,
 			columnPinning: seededPinning,
+			...(seededGrouping !== undefined ? { grouping: seededGrouping } : {}),
 			...(Object.keys(mergedVisibility).length > 0 ? { columnVisibility: mergedVisibility } : {}),
 		},
 		columnInvariants,
@@ -982,16 +1181,34 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 		// and a strict boolean check would have left `{ onChange }` reading as "off".
 		...(isFeatureEnabled(config.visibility) ? {} : { enableHiding: false }),
 		...(normalizedPinning.column ? {} : { enableColumnPinning: false }),
-		...(hasExpanding && expandMode === ExpandingMode.Tree
-			? {
-					getSubRows:
-						expandingCfg?.getSubRows ??
-						((row: TRow) => (row as Record<string, unknown>).children as TRow[] | undefined),
-				}
-			: {}),
+		// `grouping.getSubRows` first: a server-grouped grid states the tree there and writes no
+		// `expanding` config at all, which is what keeps `__expand__` out of the column list.
+		...(groupingCfg?.getSubRows !== undefined
+			? { getSubRows: groupingCfg.getSubRows }
+			: hasExpanding && expandMode === ExpandingMode.Tree
+				? {
+						getSubRows:
+							expandingCfg?.getSubRows ??
+							((row: TRow) => (row as Record<string, unknown>).children as TRow[] | undefined),
+					}
+				: {}),
 		...(hasExpanding && expandMode === ExpandingMode.SubContent && expandingCfg?.getRowCanExpand
 			? { getRowCanExpand: expandingCfg.getRowCanExpand }
 			: {}),
+		// Grouping, gated at the table level like sorting and filtering above: falsy config turns
+		// `column.getCanGroup()` off for every column, truthy leaves the TanStack default in place
+		// so each column's own `grouping: false` keeps working.
+		...(hasGrouping ? {} : { enableGrouping: false }),
+		// `'remove'` rather than upstream's `'reorder'` default: the `__group__` column already
+		// carries the label, so leaving the source column in place would show the same value
+		// twice on every group row and nothing at all on every leaf row, where its cells are
+		// placeholders. AG Grid's default is the same, and for the same reason.
+		...(hasGrouping ? { groupedColumnMode: 'remove' as const } : {}),
+		// No `manualGrouping`. Upstream's flag makes `getGroupedRowModel()` return the pre-grouped
+		// model untouched, and every part of group-row behaviour keys on `row.groupingColumnId`,
+		// which only a grouped row model sets — so the flag produced an empty `__group__` column
+		// and a grouped column missing from the list. Server grouping is
+		// `createManualGroupedRowModel()` instead; see its docblock.
 		// Row selection
 		enableRowSelection: hasSelection,
 		// Single-row selection. TanStack defaults `enableMultiRowSelection` to true, so the gate
@@ -1067,6 +1284,7 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 		rowPinning: rowPinningOnChange,
 		resizing: featureConfig(config.resizing)?.onChange,
 		expanding: featureConfig(config.expanding)?.onChange,
+		grouping: groupingCfg?.onChange,
 	}
 
 	// The consumer's selection callback takes the ids as well as the map, so it is adapted
@@ -1134,6 +1352,7 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 		// pointer move mid-drag, so its built-in writer is left alone.
 		...named('onColumnSizingChange', buildSliceHandler<ColumnSizingState>(table, 'columnSizing', onChange.resizing)),
 		...named('onExpandedChange', buildSliceHandler<ExpandedState>(table, 'expanded', onChange.expanding)),
+		...named('onGroupingChange', buildSliceHandler<string[]>(table, 'grouping', onChange.grouping)),
 		// The two slices an invariant constrains. These get a handler whether or not the
 		// consumer asked for a callback: the column-derived rules have to hold on every write,
 		// not only on the seed, because the affordance that would undo a violation is
@@ -1175,6 +1394,7 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 			: {}),
 		// A fact about the grid, not a resize setting, so it does not wait for `resizing` to be
 		// on — unlike `columnResizeDirection`, which is an option of the resizing feature.
+		...(hasGrouping ? { groupingMode: groupingCfg?.mode ?? GroupingMode.Single } : {}),
 		direction: config.direction ?? GridDirection.Ltr,
 	}
 

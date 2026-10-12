@@ -568,6 +568,65 @@ export type ExpandingConfig<
 	column?: SystemColumnDef<TFeatures, TRow, TNode>
 }
 
+/**
+ * How many columns carry the grouping labels — not how they look, hence `mode` rather than
+ * `variant`, like {@link ExpandingMode}.
+ *
+ * Named members for internal reference; the option is typed as the plain string union, so
+ * `mode: 'multiple'` is equally valid and needs no import.
+ */
+export const GroupingMode = {
+	/** Every level in one `__group__` column, nesting shown by indentation. The default. */
+	Single: 'single',
+	/** One `__group__` column per active level. */
+	Multiple: 'multiple',
+} as const
+
+export type GroupingMode = (typeof GroupingMode)[keyof typeof GroupingMode]
+
+/**
+ * Row grouping: rows collapse into synthetic group rows keyed by one or more columns' values.
+ *
+ * Two axes, both wanted: `by` seeds the grouping an author wants, and `enabled` decides whether
+ * the user may change it afterwards through the column menu or `<DataGrid.GroupByBar />`.
+ *
+ * Grouping is **not** how a column is totalled — that is the separate `aggregation` column
+ * option, which works with `rowAggregationFeature` alone and needs no grouped row model. A grid
+ * that only wants a footer total must not pay for `createGroupedRowModel()`.
+ */
+export type GroupingConfig<
+	TFeatures extends TableFeatures,
+	TRow extends object = object,
+	TNode = unknown,
+> = FeatureToggle & {
+	/** Starting grouping levels, outermost first. Column ids. */
+	by?: string[]
+	/** How many columns carry the labels. Default: {@link GroupingMode.Single}. */
+	mode?: GroupingMode
+	/**
+	 * Presentation of the auto-injected `__group__` column — its width, which edge it pins to,
+	 * its alignment. See {@link SystemColumnDef}.
+	 */
+	column?: SystemColumnDef<TFeatures, TRow, TNode>
+	/**
+	 * Reads a group row's children. Writing it says the rows arrive **already grouped**, as a
+	 * tree.
+	 *
+	 * It has to be here rather than on the row model, because the tree must exist in the *core*
+	 * row model — built before any grouped model runs — so reading children is a table option.
+	 * Pair it with `groupedRowModel: createManualGroupedRowModel()`: the model is what stops the
+	 * grid grouping the rows a second time, and this is what lets it see the hierarchy.
+	 *
+	 * Deliberately **not** `expanding.getSubRows`. That one is wired only under
+	 * `expanding.mode: 'tree'`, and writing an `expanding` config injects the `__expand__`
+	 * column — a second chevron column a server-grouped grid does not want, since the `__group__`
+	 * cell carries its own.
+	 */
+	getSubRows?: (row: TRow, index: number) => TRow[] | undefined
+	/** Called whenever the grouping levels change. Receives the full list, outermost first. */
+	onChange?: (grouping: string[]) => void
+}
+
 export type VisibilityConfig = FeatureToggle & {
 	/**
 	 * Called whenever column visibility changes. Receives the resolved {@link ColumnVisibilityState}.
@@ -592,7 +651,20 @@ export type ColumnOrderingConfig = FeatureToggle & {
 	 */
 	onChange?: (columnOrder: ColumnOrderState) => void
 	/**
-	 * Offer the two move controls in the Columns toggle as well, which then becomes a column
+	 * Header cells are draggable, and the built-in header cell places a grip before the label.
+	 * Default: whether a drag adapter is bound (`createDataGrid({ dnd })`).
+	 *
+	 * The same rule {@link VisibilityMenuOrderingConfig.drag} follows for the panel: `true` cannot
+	 * conjure an adapter, and `false` keeps the headers still in a grid whose rows or panel drag.
+	 */
+	drag?: boolean
+	/**
+	 * The column menu carries the one-step move pair. Default: `true` exactly when the header drag
+	 * resolves **off**, so the header never offers the same move twice. `Alt+Arrow` is unaffected.
+	 */
+	moveControls?: boolean
+	/**
+	 * Offer a move affordance in the Columns toggle as well, which then becomes a column
 	 * panel: it lists **every** non-system leaf column rather than only the hideable ones, so
 	 * that the list reads as the column order itself and a step lands on the row next to it.
 	 *
@@ -602,8 +674,49 @@ export type ColumnOrderingConfig = FeatureToggle & {
 	 *
 	 * Opt-in, default `false`: the Columns toggle is a visibility control in every grid written
 	 * so far, and gaining a second job is a change those grids did not ask for.
+	 *
+	 * `true` takes whichever affordance the grid can actually offer — see
+	 * {@link VisibilityMenuOrderingConfig} for the two and for why the choice is a config
+	 * question at all.
 	 */
-	visibilityMenu?: boolean
+	visibilityMenu?: boolean | VisibilityMenuOrderingConfig
+}
+
+/**
+ * Which move affordances the column panel offers, chosen independently.
+ *
+ * **The panel's rows are a list the kit maps rather than markup an author writes**, so a kit's
+ * `VisibilityMenu` renders both the grip and the move pair unconditionally and lets each one
+ * self-hide, and "which one" is a config question. The header asks the same question of its own
+ * built-in cell and column menu, through {@link ColumnOrderingConfig.drag} /
+ * {@link ColumnOrderingConfig.moveControls}, with the same defaults.
+ *
+ * Both default to **the affordance the grid can offer, and only one of them**: with a drag adapter
+ * bound, `visibilityMenu: true` means the grip; with none, it means the arrows. The pair is a
+ * one-step simplification of the drag — same axis, same state, same refusals — so offering both at
+ * once is duplication rather than choice, and the arrows no longer carry a keyboard story the drag
+ * lacks (`ordering.*` announcements and the keyboard sensors cover that). Name a field to override:
+ * `{ moveControls: true }` asks for both, `{ drag: false }` for the arrows alone.
+ *
+ * The **wide list** is not one of these. It follows from the author asking for an ordering panel at
+ * all — a list that skipped a column could not be read as the order — so it is on under either
+ * affordance and under both.
+ */
+export type VisibilityMenuOrderingConfig = {
+	/**
+	 * Panel rows are draggable. Default: whether a drag adapter is bound
+	 * (`createDataGrid({ dnd })`).
+	 *
+	 * `true` cannot conjure one: with no adapter there are no mechanics behind a grip, so the
+	 * panel falls back to the arrows and the React layer warns in development. Writing it is
+	 * therefore only ever a way of saying "both", beside `moveControls: true`.
+	 */
+	drag?: boolean
+	/**
+	 * Panel rows carry the one-step move pair. Default: `true` exactly when the drag resolves
+	 * **off**, so a panel always offers something and never offers the same move twice.
+	 */
+	moveControls?: boolean
 }
 
 /**
@@ -628,6 +741,21 @@ export type RowOrderingConfig = FeatureToggle & {
 	 * rows and cannot name the order of the rest.
 	 */
 	onChange?: (move: RowMove) => void
+	/**
+	 * Presentation of the auto-injected `__drag__` column — the drag handle's own column, first in
+	 * the row, pinned at the start edge and fixed in width. See {@link SystemColumnDef}.
+	 *
+	 * The column exists only when the grid can actually drag: row ordering on **and** a drag
+	 * adapter bound with `createDataGrid({ dnd })`. Without an adapter rows move through the
+	 * actions menu, and an empty column would only take width.
+	 *
+	 * `false` leaves the column out, for a grid that places `<DataGrid.RowDragHandle />` itself —
+	 * in a column's `cell.component`, or through a row's render function.
+	 *
+	 * Row-erased rather than generic over the row like its siblings on `selection` / `expanding`:
+	 * the column renders no row value, and `ordering` is not generic.
+	 */
+	column?: false | SystemColumnDef<TableFeatures>
 }
 
 /**
@@ -784,6 +912,40 @@ export type InitialTableState<TFeatures extends TableFeatures> = Omit<
 	draft?: Partial<AppliedState>
 }
 
+/**
+ * Table-level aggregation — the half a column cannot state.
+ *
+ * A column says *what* is totalled (`aggregation.fn`) and *how the total looks*
+ * (`aggregation.component`). Neither can carry a value the server computed, because columns are
+ * declared once — `createColumns` at module scope, in every example in the docs — while a total
+ * changes with every response. So a supplied total lives here, beside the other per-response
+ * server data (`data`, `pagination.rowCount`).
+ *
+ * Deliberately **not** a {@link FeatureToggle}. Every sibling config has `enabled`, and here it
+ * would lie: this key governs supplied totals, while what a reader would expect
+ * `aggregation.enabled: false` to switch off is every column's aggregate — including the group
+ * subtotals that come from a group row's own fields and owe nothing to this object.
+ */
+export type AggregationConfig = {
+	/**
+	 * Never compute a total on the client.
+	 *
+	 * Without it, `column.getAggregationValue()` totals the rows the client holds — which under
+	 * `filtering.manual` or `pagination.manual` is one page, rendering as if it were the dataset.
+	 * With it, a totalled column that has no entry in {@link AggregationConfig.totals} renders an
+	 * **empty** footer cell instead of a wrong number.
+	 */
+	manual?: boolean
+	/**
+	 * Grand total per column id — what the footer of a totalled column shows.
+	 *
+	 * Group **subtotals** are not here: they arrive as ordinary fields on the group row the server
+	 * sent, so they need no option at all. A column needs no `aggregation` of its own for an entry
+	 * here to render.
+	 */
+	totals?: Record<string, unknown>
+}
+
 export type TableConfig<TFeatures extends TableFeatures, TRow extends object> = {
 	/**
 	 * The features registered on this table, built once with `tableFeatures()` from
@@ -852,6 +1014,8 @@ export type TableConfig<TFeatures extends TableFeatures, TRow extends object> = 
 	 * and per-column overrides apply.
 	 */
 	sorting?: boolean | SortingConfig
+	/** Server-supplied aggregates. See {@link AggregationConfig}. */
+	aggregation?: AggregationConfig
 	/**
 	 * Column-level filtering configuration. Falsy fully disables column filters
 	 * (per-column inputs / operator popovers); truthy enables them. Independent
@@ -871,6 +1035,19 @@ export type TableConfig<TFeatures extends TableFeatures, TRow extends object> = 
 	pagination?: boolean | PaginationConfig
 	selection?: boolean | SelectionConfig<TFeatures, TRow>
 	expanding?: boolean | ExpandingConfig<TFeatures, TRow>
+	/**
+	 * Row grouping — rows collapse into group rows keyed by one or more columns' values, with
+	 * the labels carried by an auto-injected `__group__` column.
+	 *
+	 * Requires `columnGroupingFeature` **and** `createGroupedRowModel()` in the feature set, and
+	 * additionally `rowExpandingFeature` + `createExpandedRowModel()`: a group row is a row with
+	 * `subRows`, and expansion is what opens it. Writing this option without them is a
+	 * development-mode warning, not a type error — see the FEATURE GUARDS note on
+	 * {@link TableConfig.features}.
+	 *
+	 * Totalling a column is the separate per-column `aggregation` option, which needs neither.
+	 */
+	grouping?: boolean | GroupingConfig<TFeatures, TRow>
 	/**
 	 * Column visibility (hide/show columns). `false` / omitted disables hiding for all
 	 * columns; `true` enables it (per-column `visibility` controls still apply).
@@ -928,7 +1105,8 @@ export type TableConfig<TFeatures extends TableFeatures, TRow extends object> = 
 	 *
 	 * Named for the thing it produces, like every other feature: the API it turns on is
 	 * `table.draft`, the state it seeds is `initialState.draft`, the bar that reports it is
-	 * `<DataGrid.DraftBar />`, and the axes are `DraftAxis`. It was `deferredApply`,
+	 * `<DataGrid.ActionBar />` — one bar with a section per concern, selection beside the
+	 * pending draft — and the axes are `DraftAxis`. It was `deferredApply`,
 	 * which left one feature answering to two words depending on where you touched it.
 	 *
 	 * The object form exists for the same reason every other feature has one — `enabled: false`

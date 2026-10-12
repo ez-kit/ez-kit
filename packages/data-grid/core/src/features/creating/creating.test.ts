@@ -152,7 +152,8 @@ describe('creatingFeature — feature composition', () => {
 
 				// 2 — instance data: only the hook could have done this.
 				expect(observedAbort).toBe(true)
-				expect(table._creatingAbort.controller).toBeUndefined()
+				expect(table._creatingAbort.form).toBeUndefined()
+				expect(table._creatingAbort.field).toBeUndefined()
 				return p
 			})
 	})

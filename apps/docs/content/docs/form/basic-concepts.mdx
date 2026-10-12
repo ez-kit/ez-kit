@@ -13,7 +13,7 @@ The package is split across three layers, and the split is not bookkeeping — i
 
 `@ez-kit/form-react` is the behaviour: binding a field to form state, tracking submit state, wiring `id` / `aria-labelledby` / `aria-describedby`, deciding when an error is shown. It contains **zero visual styling** — no inline styles, no class names. What it emits are `data-*` attributes and a call into the kit.
 
-The kit — `@ez-kit/form-shadcn` or `@ez-kit/form-heroui` — owns every pixel. A field's entire element tree comes from the kit through a `FormComponents` contract, which is why a React Aria kit can nest its label and error _inside_ the field root while a plain-DOM kit keeps them as siblings, and why neither arrangement is hard-coded anywhere in the react layer.
+The kit — `@ez-kit/form-shadcn` or `@ez-kit/form-heroui` — owns every pixel. A field's entire element tree comes from the kit through a two-part contract — `FormComponents` for the form's own chrome, `FormFieldSlots` for the field kinds — which is why a React Aria kit can nest its label and error _inside_ the field root while a plain-DOM kit keeps them as siblings, and why neither arrangement is hard-coded anywhere in the react layer.
 
 Two consequences worth carrying forward. First, you install exactly one kit and it pulls the other two in; the kit re-exports the whole consumer surface, so it is the only import specifier you ever write. Second — and this trips people up — **a field's props are not a kit component's props**. `label`, `description`, `required` and the rest are the react layer's vocabulary; the kit decides what markup they become. That boundary is the whole subject of [Custom kit](/docs/form/custom-kit).
 
