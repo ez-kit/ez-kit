@@ -235,26 +235,119 @@ describe('form.Field', () => {
 		})
 	})
 
-	it('keeps the same element, focused, while a sibling Subscribe re-renders', async () => {
-		const user = userEvent.setup()
-		render(
-			<Form defaultValues={DEFAULTS}>
-				{(form) => (
-					<>
-						<form.Field name='guest'>{(field) => <TextInput {...field} />}</form.Field>
-						<ValuesOutput form={form} />
-					</>
-				)}
-			</Form>,
-		)
+	describe('identity while the parent re-renders on every keystroke', () => {
+		const IdentityCity = withFieldGroup({
+			defaultValues: { city: '' },
+			render: ({ group }) => <group.Field name='city'>{(field) => <TextInput {...field} />}</group.Field>,
+		})
 
-		const before = screen.getByLabelText('guest')
-		await user.type(before, 'abc')
-		const after = screen.getByLabelText('guest')
+		function ValuesParent({
+			form,
+			children,
+		}: {
+			form: FormInstance<Values, NoRegistry, NoRegistry>
+			children: () => ReactNode
+		}): ReactNode {
+			return (
+				<form.Subscribe selector={(state) => state.values}>
+					{(values) => (
+						<>
+							{children()}
+							<output>{JSON.stringify(values)}</output>
+						</>
+					)}
+				</form.Subscribe>
+			)
+		}
 
-		expect(status()).toHaveTextContent('"guest":"abc"')
-		expect(after).toBe(before)
-		expect(document.activeElement).toBe(after)
+		async function expectStableWhileTyping(label: string, written: string): Promise<void> {
+			const user = userEvent.setup()
+			const before = screen.getByLabelText(label)
+			await user.type(before, 'abc')
+			const after = screen.getByLabelText(label)
+
+			expect(status()).toHaveTextContent(written)
+			expect(after).toBe(before)
+			expect(document.activeElement).toBe(after)
+			expect(after).toHaveValue('abc')
+		}
+
+		it('form.Field', async () => {
+			render(
+				<Form defaultValues={DEFAULTS}>
+					{(form) => (
+						<ValuesParent form={form}>
+							{() => <form.Field name='guest'>{(field) => <TextInput {...field} />}</form.Field>}
+						</ValuesParent>
+					)}
+				</Form>,
+			)
+			await expectStableWhileTyping('guest', '"guest":"abc"')
+		})
+
+		it("a form group's group.Field", async () => {
+			render(
+				<Form defaultValues={DEFAULTS}>
+					{(form) => (
+						<ValuesParent form={form}>
+							{() => (
+								<form.FormGroup name='address'>
+									{(group) => <group.Field name='city'>{(field) => <TextInput {...field} />}</group.Field>}
+								</form.FormGroup>
+							)}
+						</ValuesParent>
+					)}
+				</Form>,
+			)
+			await expectStableWhileTyping('address.city', '"address":{"city":"abc"}')
+		})
+
+		it('item.Field', async () => {
+			render(
+				<Form defaultValues={DEFAULTS}>
+					{(form) => (
+						<ValuesParent form={form}>
+							{() => (
+								<form.Array
+									name='tags'
+									newItem={{ label: '' }}
+								>
+									{({ items }) =>
+										items.map((item) => (
+											<item.Field
+												key={item.key}
+												name='label'
+											>
+												{(field) => <TextInput {...field} />}
+											</item.Field>
+										))
+									}
+								</form.Array>
+							)}
+						</ValuesParent>
+					)}
+				</Form>,
+			)
+			await expectStableWhileTyping('tags[0].label', '"tags":[{"label":"abc"}]')
+		})
+
+		it("a field group's group.Field", async () => {
+			render(
+				<Form defaultValues={DEFAULTS}>
+					{(form) => (
+						<ValuesParent form={form}>
+							{() => (
+								<IdentityCity
+									form={form}
+									fields='address'
+								/>
+							)}
+						</ValuesParent>
+					)}
+				</Form>,
+			)
+			await expectStableWhileTyping('address.city', '"address":{"city":"abc"}')
+		})
 	})
 
 	it('binds an array entry relative to the entry', async () => {
