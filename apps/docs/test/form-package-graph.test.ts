@@ -74,8 +74,13 @@ describe('form package graph', () => {
 		expect(declarations).not.toMatch(/from '(@tanstack\/|@ez-kit\/form-core)/)
 	})
 
-	it('re-exports useStore from the kits, so an app never installs TanStack itself', () => {
-		expect(kitExports('@ez-kit/form-shadcn').values).toContain('useStore')
-		expect(kitExports('@ez-kit/form-heroui').values).toContain('useStore')
+	it('re-exports useSelector from the kits, so an app never installs TanStack itself', () => {
+		expect(kitExports('@ez-kit/form-shadcn').values).toContain('useSelector')
+		expect(kitExports('@ez-kit/form-heroui').values).toContain('useSelector')
+	})
+
+	it('does not re-export the deprecated useStore alias from the kits', () => {
+		expect(kitExports('@ez-kit/form-shadcn').values).not.toContain('useStore')
+		expect(kitExports('@ez-kit/form-heroui').values).not.toContain('useStore')
 	})
 })

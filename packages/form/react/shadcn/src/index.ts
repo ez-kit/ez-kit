@@ -98,7 +98,7 @@ export type {
 // The schema-authoring half of the same surface. It originates in `@ez-kit/form-core` and arrives
 // through `@ez-kit/form-react`, which re-exports it, so the kit has no direct dependency on core:
 // under pnpm's strict `node_modules` layout a transitive dependency is not importable, so every
-// import the docs tell a reader to copy has to resolve from the kit itself. `useStore` comes the
+// import the docs tell a reader to copy has to resolve from the kit itself. `useSelector` comes the
 // same way, from the one TanStack copy `@ez-kit/form-react` owns — reading the form's store through
 // a second copy would read a different store.
 export {
@@ -111,10 +111,7 @@ export {
 	RESERVED_NODE_TYPES,
 	resolveText,
 	visibleFieldNames,
-	// TanStack Store marks `useStore` a deprecated alias of `useSelector`; it is re-exported so an
-	// app reads the store through the same TanStack copy the form uses — see `@ez-kit/form-react`.
-	// eslint-disable-next-line @typescript-eslint/no-deprecated -- deliberate, see above
-	useStore,
+	useSelector,
 	walkNodes,
 } from '@ez-kit/form-react'
 export type {

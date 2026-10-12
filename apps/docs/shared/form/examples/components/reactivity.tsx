@@ -34,12 +34,11 @@ const currency = new Intl.NumberFormat('en-GB', { style: 'currency', currency: '
  * wrap a field is that a *prop* of it depends on another field — `disabled`, or the
  * `optionsParams` of a dependent select — which is what the option-sources example does.
  *
- * The same subscription is also available as a hook, `useStore(form.store, selector)`, for
+ * The same subscription is also available as a hook, `useSelector(form.store, selector)`, for
  * when the value is needed in the component body rather than in the JSX — but it subscribes
  * the **whole component**, so inside a form it costs precisely what `Subscribe` exists to
  * avoid. It is worth reaching for one level up, in a component that renders no fields of its
- * own. It comes from `@tanstack/react-store`, which the kits do not re-export; the examples
- * here use `Subscribe` throughout.
+ * own. The kits re-export it; the examples here use `Subscribe` throughout.
  */
 export function ReactivityExample() {
 	return (
