@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { StrictMode } from 'react'
+import { StrictMode, useState } from 'react'
 import { describe, expect, expectTypeOf, it, vi } from 'vitest'
 
 import { createForm } from './create-form'
@@ -67,6 +67,88 @@ describe('form.NativeField', () => {
 
 		await user.type(screen.getByLabelText('Bound email'), 'a')
 		expect(screen.getByLabelText('native email')).toHaveValue('a')
+	})
+
+	it('is a member of its own, not the seam, under StrictMode', () => {
+		const seen: { NativeField: unknown; AppField: unknown }[] = []
+		const fields: unknown[] = []
+		function Probe(): ReactNode {
+			const form = useForm({ defaultValues: DEFAULTS })
+			seen.push({ NativeField: form.NativeField, AppField: form.AppField })
+			return (
+				<Form form={form}>
+					<form.NativeField name='email'>
+						{(field) => {
+							fields.push(field)
+							return null
+						}}
+					</form.NativeField>
+				</Form>
+			)
+		}
+		render(
+			<StrictMode>
+				<Probe />
+			</StrictMode>,
+		)
+
+		const last = seen.at(-1)
+		expect(last?.NativeField).toBeDefined()
+		expect(last?.NativeField).not.toBe(last?.AppField)
+		expect(fields.at(-1)).toHaveProperty('form')
+		expect(fields.at(-1)).toHaveProperty('pushValue')
+	})
+
+	it('stays native, and every field keeps writing, after a formId change', async () => {
+		const user = userEvent.setup()
+		const seen: { NativeField: unknown; AppField: unknown }[] = []
+		function FormIdCase(): ReactNode {
+			const [formId, setFormId] = useState('first')
+			const form = useForm({ defaultValues: DEFAULTS, formId })
+			seen.push({ NativeField: form.NativeField, AppField: form.AppField })
+			return (
+				<>
+					<button
+						type='button'
+						onClick={() => {
+							setFormId('second')
+						}}
+					>
+						Switch
+					</button>
+					<Form form={form}>
+						<form.NativeField name='email'>
+							{(field) => (
+								<input
+									aria-label='native email'
+									value={field.state.value}
+									onChange={(event) => {
+										field.handleChange(event.target.value)
+									}}
+								/>
+							)}
+						</form.NativeField>
+						<form.TextField
+							name='email'
+							label='Bound email'
+						/>
+					</Form>
+				</>
+			)
+		}
+		render(<FormIdCase />)
+		const before = seen.at(-1)
+
+		await user.click(screen.getByRole('button', { name: 'Switch' }))
+		const after = seen.at(-1)
+		expect(after?.NativeField).toBeDefined()
+		expect(after?.NativeField).not.toBe(before?.NativeField)
+		expect(after?.NativeField).not.toBe(after?.AppField)
+
+		await user.type(screen.getByLabelText('native email'), 'n')
+		expect(screen.getByLabelText('Bound email')).toHaveValue('n')
+		await user.type(screen.getByLabelText('Bound email'), 'b')
+		expect(screen.getByLabelText('native email')).toHaveValue('nb')
 	})
 
 	it('is item-relative on an array entry', async () => {

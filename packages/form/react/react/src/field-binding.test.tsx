@@ -1,6 +1,7 @@
 import { FormFieldType } from '@ez-kit/form-core'
 import { act, render, screen } from '@testing-library/react'
-import { useState } from 'react'
+import userEvent from '@testing-library/user-event'
+import { StrictMode, useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { createForm } from './create-form'
@@ -84,6 +85,71 @@ describe('the binding seam', () => {
 			/>,
 		)
 		expect(bound).toContain('name')
+	})
+
+	it('leaves NativeField outside the seam under StrictMode and after a formId change', async () => {
+		bound.length = 0
+		const user = userEvent.setup()
+		const { Form, useForm } = createForm({ FormElement: testFormElement, fields: testFields })
+		function Probe(): ReactNode {
+			const [formId, setFormId] = useState('first')
+			const form = useForm({ defaultValues: DEFAULTS, formId })
+			return (
+				<>
+					<button
+						type='button'
+						onClick={() => {
+							setFormId('second')
+						}}
+					>
+						Switch
+					</button>
+					<Form form={form}>
+						<form.NativeField name='seats'>{() => null}</form.NativeField>
+						<form.TextField name='email' />
+					</Form>
+				</>
+			)
+		}
+		render(
+			<StrictMode>
+				<Probe />
+			</StrictMode>,
+		)
+		await user.click(screen.getByRole('button', { name: 'Switch' }))
+
+		expect(bound).toContain('email')
+		expect(bound).not.toContain('seats')
+	})
+
+	it('forwards every prop it is handed to TanStack', async () => {
+		const user = userEvent.setup()
+		const onChange = vi.fn()
+		const { Form } = createForm({ FormElement: testFormElement, fields: testFields })
+		render(
+			<Form defaultValues={DEFAULTS}>
+				{(form) => (
+					<form.AppField
+						name='email'
+						listeners={{ onChange }}
+					>
+						{(field) => (
+							<input
+								aria-label='app email'
+								value={field.state.value}
+								onChange={(event) => {
+									field.handleChange(event.target.value)
+								}}
+							/>
+						)}
+					</form.AppField>
+				)}
+			</Form>,
+		)
+
+		await user.type(screen.getByLabelText('app email'), 'x')
+		expect(onChange).toHaveBeenCalledTimes(1)
+		expect(onChange.mock.calls[0]?.[0]).toHaveProperty('value', 'x')
 	})
 
 	it('keeps NativeField and AppField identities across a parent re-render', () => {
