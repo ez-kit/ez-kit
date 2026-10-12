@@ -110,11 +110,13 @@ export const FORM_VALUE_TYPE_ARGS = `<${PROBE_ROW_TYPE_NAME}, string>`
 export const FORM_ARRAY_TYPE_ARGS = `<${PROBE_ARRAY_ROW_TYPE_NAME}, '${PROBE_ARRAY_NAME}'>`
 /**
  * Type-argument list for the form types that mirror TanStack's twelve-parameter validator
- * list verbatim (`KitFormApi`, `FormRendererUncontrolledProps`). Every validator slot is
- * `undefined` and the submit meta `never` — the least specific instantiation, which is what
- * the overloads collapse to and which leaves the key set untouched.
+ * list verbatim (`FormRendererUncontrolledProps`). Every validator slot is `undefined` and the
+ * submit meta `never` — the least specific instantiation, which is what the overloads collapse
+ * to and which leaves the key set untouched.
  */
 export const FORM_API_TYPE_ARGS = `<${PROBE_ROW_TYPE_NAME}, ${new Array(10).fill('undefined').join(', ')}, never>`
+/** Type-argument list for `FormInstance<TValues>`: the validator slots are already open. */
+export const FORM_INSTANCE_TYPE_ARGS = `<${PROBE_ROW_TYPE_NAME}>`
 /** Type-argument list for the `zu-store` types generic over a store handle, e.g. `CachedStoreGroup<TStore, TDefault>`. */
 export const STORE_TYPE_ARGS = `<${PROBE_STORE_TYPE_NAME}>`
 /** As {@link STORE_TYPE_ARGS}, plus the seed type the cached-group types take second. */

@@ -4,15 +4,13 @@ export { FormOptionSources } from './options/source-context'
 
 export type { CreateFormOptions, FormBundle } from './create-form'
 export type { FieldTypeDefinition, FormFieldRegistry } from './field-registry'
-export type { BoundFieldApi } from './bindable-form'
 export type { KitFormBlock, KitWithFormProps } from './composition'
 export type { FieldValidateProps } from './field-validate'
-export type { BoundForm, KitFormApi } from './kit-form'
+export type { FormInstance } from './form-instance'
 export type { AnyFormProps, FormControlledProps, FormProps, FormUncontrolledProps } from './form-props'
 export type {
 	FormRendererControlledProps,
 	FormRendererUncontrolledProps,
-	RendererForm,
 	SharedRendererProps,
 } from './schema/form-renderer'
 export type { BlockRegistry, CustomFieldRegistry, CustomFieldRenderProps } from './schema/registries'

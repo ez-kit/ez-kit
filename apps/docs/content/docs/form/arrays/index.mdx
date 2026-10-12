@@ -152,8 +152,8 @@ do with; the rest sit unused behind its own add control and its own `item.Item` 
 no chrome using them up, so the full scope is worth documenting — see the
 [API reference](/docs/form/arrays/api#the-scope) for all of it.
 
-`field` is **not** the raw TanStack field API. It is `BoundFieldApi`, the narrowed shape the rest of
-this package binds against: `name`, `state` — the whole list as one value, plus its `errors` and
+`field` is **not** the raw TanStack field API. It is the narrowed shape the rest of this package
+binds against: `name`, `state` — the whole list as one value, plus its `errors` and
 `isTouched` — and `handleChange` / `handleBlur`. That is enough to read the list as a whole (`errors`
 and `invalid` above are computed from exactly this) or to write it wholesale, and it is not an escape
 hatch onto TanStack's own array helpers: `pushValue`, `removeValue` and `moveValue` are not on it.

@@ -18,6 +18,7 @@ import type { SubmittableForm } from '../bindable-form'
 import type { FormElementProps, FormFieldSlots } from '../contract'
 import type { FormFieldComponents } from '../field-props'
 import type { FormFieldRegistry } from '../field-registry'
+import type { FormInstance } from '../form-instance'
 import type {
 	AnyFormSchema,
 	FormAsyncValidateOrFn,
@@ -71,10 +72,10 @@ export type SharedRendererProps<TValues> = {
 }
 
 /**
- * What `FormRenderer` needs from a form instance: enough to wire `<form onSubmit>` (from
- * `SubmittableForm`) and one bound component per field kind (from `FormFieldComponents`).
- * Narrower than the full `KitFormApi` on purpose — mirrors why `FormControlledProps` types
- * its `form` as `SubmittableForm` rather than the whole TanStack surface.
+ * What `FormRenderer`'s implementation needs from a form instance: enough to wire
+ * `<form onSubmit>` (from `SubmittableForm`) and one bound component per field kind (from
+ * `FormFieldComponents`). Internal: the public controlled prop is the full `FormInstance`, which
+ * is assignable to this narrower shape, so the implementation is written against what it reads.
  *
  * `TFields` is **defaulted**, and carrying it is what keeps the two halves of the registry
  * agreeing: a factory that registered `RatingField` makes `form.RatingField` reachable from
@@ -83,7 +84,7 @@ export type SharedRendererProps<TValues> = {
  * registered the custom field its schema names — the failure would then surface at render
  * time, as `Unknown node type "rating"`, rather than at the call site.
  */
-export type RendererForm<TValues, TFields extends FormFieldRegistry = FormFieldSlots> = SubmittableForm &
+type RendererForm<TValues, TFields extends FormFieldRegistry = FormFieldSlots> = SubmittableForm &
 	FormFieldComponents<TValues, TFields>
 
 /**
@@ -117,7 +118,7 @@ export type RendererForm<TValues, TFields extends FormFieldRegistry = FormFieldS
  */
 export type FormRendererControlledProps<TValues, TFields extends FormFieldRegistry = FormFieldSlots> = FormElementRest &
 	SharedRendererProps<TValues> & {
-		form: RendererForm<TValues, TFields>
+		form: FormInstance<TValues, TFields>
 	}
 
 /**
@@ -168,7 +169,7 @@ export type FormRendererUncontrolledProps<
  *
  * `TFields` is carried rather than defaulted away at the call site: `FormRenderer`'s
  * implementation signature is written against this type, and an overload declaring
- * `form: RendererForm<TValues, TFields>` is only compatible with an implementation that
+ * `form: FormInstance<TValues, TFields>` is only compatible with an implementation that
  * admits the same registry. The factory passes its own `TFields` in, so the loose shape is
  * loose about the *mode* and about `TValues`, and about nothing else.
  */

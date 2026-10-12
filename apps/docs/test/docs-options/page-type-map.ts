@@ -2,6 +2,7 @@ import { NO_HEADING } from './mdx-tables'
 import {
 	FORM_API_TYPE_ARGS,
 	FORM_ARRAY_TYPE_ARGS,
+	FORM_INSTANCE_TYPE_ARGS,
 	FORM_VALUE_TYPE_ARGS,
 	FEATURES_ROW_TYPE_ARGS,
 	FEATURES_TYPE_ARGS,
@@ -373,7 +374,7 @@ export const FORM_TYPE = {
 	 */
 	AnyArrayNode: { module: TypeModule.FormCore, name: 'AnyArrayNode' },
 	/** The instance `useForm` returns: TanStack's own API plus the flat field components. */
-	KitFormApi: { module: TypeModule.FormReact, name: 'KitFormApi', typeArgs: FORM_API_TYPE_ARGS },
+	FormInstance: { module: TypeModule.FormReact, name: 'FormInstance', typeArgs: FORM_INSTANCE_TYPE_ARGS },
 } as const satisfies Record<string, TypeRef>
 
 /**
@@ -1147,7 +1148,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			// the remainder resolved against the instance `useForm` returns.
 			{
 				heading: NO_HEADING,
-				roots: [FORM_TYPE.KitFormApi],
+				roots: [FORM_TYPE.FormInstance],
 				stripPrefix: FORM_RECEIVER_PREFIX,
 				expectedCount: 6,
 			},

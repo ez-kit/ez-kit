@@ -4,6 +4,8 @@ import { useState } from 'react'
 
 import { Form, useForm } from 'shared/form/FormKit'
 
+import type { FormInstance } from 'shared/form/FormKit'
+
 type Address = {
 	street: string
 	city: string
@@ -21,30 +23,13 @@ const EMPTY_ADDRESS: Address = { street: '', city: '', postcode: '' }
 const DEFAULT_CHECKOUT: Checkout = { email: '', billing: EMPTY_ADDRESS, shipping: EMPTY_ADDRESS }
 
 /**
- * The form as a named hook, so the instance it returns has a name too.
- *
- * `CheckoutForm` below is that return type, and it is what a reusable block declares its
- * `form` prop as — the block then knows which paths exist and that the flat field
- * components hang off the instance. This is `KitFormApi` under a shorter name; deriving it
- * rather than writing the twelve generic arguments out keeps it in step with the options.
- */
-function useCheckoutForm(onSave: (value: Checkout) => void) {
-	return useForm({
-		defaultValues: DEFAULT_CHECKOUT,
-		onSubmit: ({ value }) => {
-			onSave(value)
-		},
-	})
-}
-
-type CheckoutForm = ReturnType<typeof useCheckoutForm>
-
-/**
  * One block of fields, written once and rendered twice.
  *
- * The `form` prop is what makes it work: hand a block the instance and `form.TextField`
- * inside it is the same component, checked against the same value type, as at the top level
- * — `name='shipping.city'` is a compile error the moment `shipping` loses its `city`.
+ * The `form` prop is what makes it work: `FormInstance<Checkout>` names a form over this value
+ * type, so `form.TextField` inside the block is the same component, checked against the same
+ * value type, as at the top level — `name='shipping.city'` is a compile error the moment
+ * `shipping` loses its `city`. Any instance `useForm` returns for `Checkout` is accepted,
+ * whatever validators it was given.
  *
  * A kit ships this pattern as `withForm`, which infers the type for you:
  *
@@ -71,7 +56,7 @@ type CheckoutForm = ReturnType<typeof useCheckoutForm>
  */
 type AddressPath = 'billing' | 'shipping'
 
-function AddressBlock({ form, path, heading }: { form: CheckoutForm; path: AddressPath; heading: string }) {
+function AddressBlock({ form, path, heading }: { form: FormInstance<Checkout>; path: AddressPath; heading: string }) {
 	return (
 		<fieldset className='flex flex-col gap-4 rounded-md border border-black/10 p-4 dark:border-white/15'>
 			<legend className='px-1 text-sm font-medium'>{heading}</legend>
@@ -93,7 +78,12 @@ function AddressBlock({ form, path, heading }: { form: CheckoutForm; path: Addre
 
 export function CompositionExample() {
 	const [saved, setSaved] = useState<Checkout | null>(null)
-	const form = useCheckoutForm(setSaved)
+	const form = useForm({
+		defaultValues: DEFAULT_CHECKOUT,
+		onSubmit: ({ value }) => {
+			setSaved(value)
+		},
+	})
 
 	return (
 		<div className='flex flex-col gap-4'>

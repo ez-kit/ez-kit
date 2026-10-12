@@ -11,20 +11,22 @@ Pull a group of fields out into its own component and it loses the form. Hand th
 
 Not `any` — the whole value of these fields is that `name='shipping.city'` is a compile error the moment `shipping` stops having a `city`. The type has to carry both the form's data shape and the flat field components hanging off the instance.
 
-The type is `KitFormApi`, exported by every kit. The convenient way to name it is to derive it, so the block stays in step with the options rather than restating twelve generic arguments:
+The type is `FormInstance`, exported by every kit. It takes the form's value type and nothing else:
 
 ```tsx
-function useCheckoutForm(onSave: (value: Checkout) => void) {
-	return useForm({
-		defaultValues: DEFAULT_CHECKOUT,
-		onSubmit: ({ value }) => {
-			onSave(value)
-		},
-	})
-}
+import type { FormInstance } from '@ez-kit/form-shadcn'
 
-type CheckoutForm = ReturnType<typeof useCheckoutForm>
+function AddressBlock({ form, path }: { form: FormInstance<Checkout>; path: 'billing' | 'shipping' }) {
+	return (
+		<form.TextField
+			name={`${path}.city`}
+			label='City'
+		/>
+	)
+}
 ```
+
+Any instance `useForm` returns for a `Checkout` is accepted, whatever validators it was given — those stay on the instance and do not have to be restated in the prop's type.
 
 <KitExample exampleId='form-composition' />
 
@@ -87,7 +89,7 @@ The same block then serves any form that has an `Address` somewhere in it, under
 
 The trade is deliberate and is the thing to weigh when choosing between the two. A group's render prop receives a **group API**, and a group API carries the native `group.Field`, not the flat field components — because a group has no idea what the surrounding form's value type is, which is exactly the freedom you asked for. Inside a field group you are in [native API](/docs/form/native-api) territory.
 
-Because of that, `withFieldGroup` needed no retyping and is re-exported as TanStack builds it. It still comes from your kit, since `createForm` returns it — and the parent `form` prop of the component it produces already accepts a `KitFormApi`, that type being an intersection over TanStack's.
+Because of that, `withFieldGroup` needed no retyping and is re-exported as TanStack builds it. It still comes from your kit, since `createForm` returns it — and the parent `form` prop of the component it produces already accepts a `FormInstance`, that type being an intersection over TanStack's.
 
 ## The two hooks
 
@@ -107,7 +109,7 @@ Reuse a block within **one form's** shape — an address at two paths, a step in
 
 Reuse a block across **different forms** and `withFieldGroup` is the only one that can, at the cost of writing its fields natively.
 
-And if the block is only ever rendered once, it does not need either: a plain component taking `form: KitFormApi<…>`, or a derived alias like the example's `CheckoutForm`, is less machinery for the same result.
+And if the block is only ever rendered once, it does not need either: a plain component taking `form: FormInstance<Values>`, as the example's `AddressBlock` does, is less machinery for the same result.
 
 <Callout>
 	A `FormSchema` has an analogue in nested `section` and `step` nodes, but it is not the same mechanism. Those group
