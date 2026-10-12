@@ -22,7 +22,9 @@ document needs a component that was not passed.
 Every key of `FormFieldSlots` and `FormComponents` is now optional, so a third-party kit checks
 that it ships all of them with `satisfies AllFormFieldSlots` / `satisfies AllFormComponents`. A
 field set typed `FormFieldSlots` gives possibly-`undefined` members; a `satisfies`-checked one gives
-required members. A misspelt built-in key in `fields` is a type error. The exported
+required members. A misspelt built-in key in `fields` is a type error, and every custom entry is checked against
+what the generic binder passes: a hand-written field that types its value
+(`(p: CustomFieldRenderProps<number>) => …`) is declared with `defineFieldType` instead. The exported
 `FormFieldComponents` holds only the field kinds — `Array` and `Submit` are `FormPrimitives`, and
 `SubmitButton`, `Section` and `GridItem` are the components you pass. `FormInstance<V>` defaults to
 every field kind and all four components, the shape a kit's bundle has; name `NoRegistry` for an

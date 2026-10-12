@@ -451,9 +451,15 @@ export type FormPrimitives<TFormData, TFields extends FormFieldRegistry = AllFor
 }
 
 /**
- * Reads the phantom `__props` that `defineFieldType` attaches. An entry registered without
- * it — a bare component the author wrote by hand — falls to an untyped bag rather than to a
- * compile error: graceful degradation is the point, since the registry is open.
+ * Reads the phantom `__props` that `defineFieldType` attaches. An entry without it falls to an
+ * untyped bag.
+ *
+ * That fallback is the **instance** side only: `form.<Key>` for a bare hand-written component
+ * takes untyped props. Registration is stricter — `createForm({ fields })` checks every custom
+ * entry against what the generic binder hands it, so a component either comes from
+ * `defineFieldType` or takes the untyped default `CustomFieldRenderProps`. A bare
+ * `(p: CustomFieldRenderProps<number>) => …` is rejected: without the phantom the binder can
+ * only promise `unknown`, and typing the value is what `defineFieldType` is for.
  */
 export type PropsOf<TDefinition> = TDefinition extends { __props?: infer TProps }
 	? unknown extends TProps

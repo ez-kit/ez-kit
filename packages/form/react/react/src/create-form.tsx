@@ -39,10 +39,17 @@ import type { ReactNode } from 'react'
  * Every key of `TFields` that is not a built-in, checked against what the generic binder hands
  * it: `CustomFieldRenderProps` over the value and props the entry's `defineFieldType` phantoms
  * declare — or `unknown` and an untyped bag when it has none.
+ *
+ * A homomorphic remap (`keyof TFields` filtered by an `as` clause) so each key keeps its `?`: a
+ * custom field spread in conditionally — `...(flag ? { RatingField } : {})` — is optional in the
+ * value and must stay optional in the check, or the intersection would demand it.
  */
 export type CustomFieldChecks<TFields> = {
-	[TKey in Exclude<keyof TFields, BuiltInFieldKey>]: (
-		props: CustomFieldRenderProps<ValueOf<TFields[TKey]>, PropsOf<TFields[TKey]>>,
+	[TKey in keyof TFields as TKey extends BuiltInFieldKey ? never : TKey]: (
+		props: CustomFieldRenderProps<
+			ValueOf<Exclude<TFields[TKey], undefined>>,
+			PropsOf<Exclude<TFields[TKey], undefined>>
+		>,
 	) => ReactNode
 }
 

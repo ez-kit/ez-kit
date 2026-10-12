@@ -30,9 +30,10 @@ type Open = any
  * full twelve-parameter shape stays internal — `useForm` needs it to infer validators — and is
  * assignable to this one.
  *
- * The defaults describe a full kit: every built-in field kind and no components. An app that
- * registered a subset — or components of its own — names its bundle's shape once, as
- * `FormInstance<V, typeof fields, typeof components>`.
+ * The defaults describe a full kit: every built-in field kind and all four named components
+ * (`AllFormFieldSlots`, `AllFormComponents`). An app that registered a subset — or components of
+ * its own — names its bundle's shape once, as `FormInstance<V, typeof fields, typeof components>`,
+ * with `NoRegistry` for a set it left empty.
  */
 export type FormInstance<
 	TValues,

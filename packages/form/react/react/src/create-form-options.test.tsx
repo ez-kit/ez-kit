@@ -2,10 +2,11 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, expectTypeOf, it, vi } from 'vitest'
 
 import { createForm } from './create-form'
+import { defineFieldType } from './field-registry'
 import { useFormContext } from './form-context'
 import { testComponents, testFields, testFormElement } from './test-kit'
 
-import type { FormComponents, FormFieldSlots, FormInstance, NoRegistry } from './index'
+import type { CustomFieldRenderProps, FormComponents, FormFieldSlots, FormInstance, NoRegistry } from './index'
 import type { ReactNode } from 'react'
 
 describe('createForm options', () => {
@@ -191,6 +192,33 @@ describe('createForm options — what the instance carries', () => {
 			return null
 		}
 		expectTypeOf(Probe).toBeFunction()
+	})
+
+	it('keeps a conditionally spread custom field optional rather than demanding it', () => {
+		const RatingField = defineFieldType<{ max: number }, number>()(() => null)
+		const flag = Math.random() > 0.5
+		const { useForm } = createForm({ fields: { ...testFields, ...(flag ? { RatingField } : {}) } })
+		const annotated: typeof testFields & { RatingField?: typeof RatingField } = testFields
+		createForm({ fields: annotated })
+		function Probe(): ReactNode {
+			const form = useForm({ defaultValues: { score: 0 } })
+			return form.RatingField ? (
+				<form.RatingField
+					name='score'
+					max={5}
+				/>
+			) : null
+		}
+		expectTypeOf(Probe).toBeFunction()
+	})
+
+	it('rejects a bare custom field that types its value without defineFieldType', () => {
+		createForm({
+			fields: {
+				// @ts-expect-error — the generic binder can only promise `unknown` without the phantom
+				ScoreField: (_: CustomFieldRenderProps<number>) => null,
+			},
+		})
 	})
 
 	it('rejects a misspelt built-in key, which would reach the generic binder with the wrong props', () => {
