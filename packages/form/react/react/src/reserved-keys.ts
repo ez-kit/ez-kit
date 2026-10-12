@@ -2,6 +2,9 @@ import type { FormPrimitives } from './field-props'
 import type { NoInjectedComponents } from './kit-form'
 import type { AppFieldExtendedReactFormApi } from '@tanstack/react-form'
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- only the key set of the instance type is read
+type AnyArg = any
+
 /**
  * Every key the form instance already owns. A field or component registered under one of these
  * would be written over it by `Object.assign` — `Subscribe` silently replaced, `state` (a getter)
@@ -18,9 +21,6 @@ import type { AppFieldExtendedReactFormApi } from '@tanstack/react-form'
  * public members — a TypeScript-`private` field of `FormApi` is still on the object at runtime and
  * is not in this list.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- only the key set of the instance type is read
-type AnyArg = any
-
 export type ReservedFormKey =
 	| keyof AppFieldExtendedReactFormApi<
 			AnyArg,
@@ -104,20 +104,35 @@ export const RESERVED_FORM_KEYS: Record<ReservedFormKey, true> = {
 	Step: true,
 }
 
-/** Throws when `registry` (named `option` in the message) registers a reserved key. */
-export function assertNoReservedKeys(registry: object, option: 'fields' | 'components'): void {
+/** The factory a registry was passed to, named at the head of every message it throws. */
+export const FormFactoryName = {
+	CreateForm: 'createForm',
+	CreateSchemaForm: 'createSchemaForm',
+} as const
+
+export type FormFactoryName = (typeof FormFactoryName)[keyof typeof FormFactoryName]
+
+/**
+ * Throws when `registry` (named `option` in the message) registers a reserved key. `factory` is the
+ * function the app called, so the message names the call site it can find.
+ */
+export function assertNoReservedKeys(
+	registry: object,
+	option: 'fields' | 'components',
+	factory: FormFactoryName,
+): void {
 	for (const key of Object.keys(registry)) {
 		if (Object.hasOwn(RESERVED_FORM_KEYS, key)) {
-			throw new Error(`createForm: "${key}" is reserved by the form instance and cannot be registered in ${option}.`)
+			throw new Error(`${factory}: "${key}" is reserved by the form instance and cannot be registered in ${option}.`)
 		}
 	}
 }
 
-/** Throws when one key is registered as both a field and a component. */
-export function assertNoSharedKeys(fields: object, components: object): void {
+/** Throws when one key is registered as both a field and a component, naming `factory`. */
+export function assertNoSharedKeys(fields: object, components: object, factory: FormFactoryName): void {
 	for (const key of Object.keys(fields)) {
 		if (Object.hasOwn(components, key)) {
-			throw new Error(`createForm: "${key}" is registered in both fields and components.`)
+			throw new Error(`${factory}: "${key}" is registered in both fields and components.`)
 		}
 	}
 }

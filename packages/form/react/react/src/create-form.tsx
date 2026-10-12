@@ -9,7 +9,7 @@ import { FormProvider } from './form-context'
 import { splitFormProps } from './form-options'
 import { FormShell } from './form-shell'
 import { NO_INJECTED_COMPONENTS } from './kit-form'
-import { assertNoReservedKeys, assertNoSharedKeys } from './reserved-keys'
+import { assertNoReservedKeys, assertNoSharedKeys, FormFactoryName } from './reserved-keys'
 
 import type { BindableForm } from './bindable-form'
 import type { KitFormBlock, KitWithFormProps } from './composition'
@@ -163,7 +163,7 @@ export function createForm<
 	TFields extends FormFieldRegistry = NoRegistry,
 	TComponents extends FormComponentRegistry = NoRegistry,
 >(options: CreateFormOptions<TFields, TComponents> = {}) {
-	return createFormInternals<TFields, TComponents>(options).bundle
+	return createFormInternals<TFields, TComponents>(options, FormFactoryName.CreateForm).bundle
 }
 
 /**
@@ -179,6 +179,8 @@ export function createForm<
  */
 export function createFormInternals<TFields extends FormFieldRegistry, TComponents extends FormComponentRegistry>(
 	options: CreateFormOptions<TFields, TComponents>,
+	/** The factory the app called — what a configuration error names. */
+	factory: FormFactoryName,
 ) {
 	/**
 	 * Read once, here, so every consumer below — the field builder, the schema renderer and the
@@ -195,9 +197,9 @@ export function createFormInternals<TFields extends FormFieldRegistry, TComponen
 	// key over the instance's own member — or over the field of the same name — so refuse both
 	// here, in every environment, and before `deriveFieldTypeIds`: a reserved key such as `Field`
 	// otherwise fails there first, with a message about its document id rather than about the key.
-	assertNoReservedKeys(fields, 'fields')
-	assertNoReservedKeys(components, 'components')
-	assertNoSharedKeys(fields, components)
+	assertNoReservedKeys(fields, 'fields', factory)
+	assertNoReservedKeys(components, 'components', factory)
+	assertNoSharedKeys(fields, components, factory)
 
 	/**
 	 * Each component name's document id (`RatingField` → `rating`), derived here for **both**

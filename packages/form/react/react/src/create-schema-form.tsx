@@ -5,6 +5,7 @@ import { useMemo } from 'react'
 import { createFormInternals } from './create-form'
 import { splitFormProps } from './form-options'
 import { FormShell } from './form-shell'
+import { FormFactoryName } from './reserved-keys'
 import { assertNoReservedFieldKeyCollision } from './schema/registries'
 import {
 	isSchemaFormControlled,
@@ -51,7 +52,7 @@ export function createSchemaForm<
 	TFields extends FormFieldRegistry = NoRegistry,
 	TComponents extends FormComponentRegistry = NoRegistry,
 >(options: CreateFormOptions<TFields, TComponents> = {}) {
-	const { bundle, internals } = createFormInternals<TFields, TComponents>(options)
+	const { bundle, internals } = createFormInternals<TFields, TComponents>(options, FormFactoryName.CreateSchemaForm)
 	const { useForm, FormElement, fields, components, fieldTypeIds } = internals
 
 	/**

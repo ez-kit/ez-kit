@@ -1,6 +1,7 @@
 import { describe, expect, expectTypeOf, it } from 'vitest'
 
 import { createForm } from './create-form'
+import { createSchemaForm } from './create-schema-form'
 import { testComponents, testFields } from './test-kit'
 
 import type { FormComponentRegistry } from './contract'
@@ -39,6 +40,18 @@ describe('reserved keys', () => {
 		expect(() =>
 			createForm({ fields: { RatingField: Noop } as never, components: { RatingField: Noop } as never }),
 		).toThrow('createForm: "RatingField" is registered in both fields and components.')
+	})
+
+	it('names createSchemaForm when the reserved key reaches it through that factory', () => {
+		expect(() => createSchemaForm({ fields: { Subscribe: Noop } as never })).toThrow(
+			'createSchemaForm: "Subscribe" is reserved by the form instance and cannot be registered in fields.',
+		)
+		expect(() => createSchemaForm({ components: { state: Noop } as never })).toThrow(
+			'createSchemaForm: "state" is reserved by the form instance and cannot be registered in components.',
+		)
+		expect(() =>
+			createSchemaForm({ fields: { RatingField: Noop } as never, components: { RatingField: Noop } as never }),
+		).toThrow('createSchemaForm: "RatingField" is registered in both fields and components.')
 	})
 
 	it('accepts a key named after an Object.prototype member, which the instance does not own', () => {
