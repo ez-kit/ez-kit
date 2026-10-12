@@ -214,4 +214,35 @@ describe('form.Array / form.ArrayField — types', () => {
 
 		expectTypeOf(WrongFieldItem).toBeFunction()
 	})
+
+	it('scopes only field components to an entry', () => {
+		function EntryScope(): ReactNode {
+			return (
+				<Form defaultValues={DEFAULTS}>
+					{(form) => (
+						<form.Array
+							name='lines'
+							newItem={{ name: '', members: [] }}
+						>
+							{({ items }) =>
+								items.map((item) => {
+									expectTypeOf(item.TextField).toBeFunction()
+									expectTypeOf(item.ArrayField).toBeFunction()
+									// @ts-expect-error — not scoped to an entry
+									expectTypeOf(item.SubmitButton).toBeFunction()
+									// @ts-expect-error — not scoped to an entry
+									expectTypeOf(item.Section).toBeFunction()
+									// @ts-expect-error — not scoped to an entry
+									expectTypeOf(item.GridItem).toBeFunction()
+									return <item.Item key={item.key}>{item.index}</item.Item>
+								})
+							}
+						</form.Array>
+					)}
+				</Form>
+			)
+		}
+
+		expectTypeOf(EntryScope).toBeFunction()
+	})
 })

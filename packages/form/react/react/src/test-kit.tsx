@@ -1,6 +1,8 @@
 import { useState } from 'react'
 
 import type {
+	ArrayFieldRenderProps,
+	ArrayItemRenderProps,
 	DateRangeFieldRenderProps,
 	FieldRenderProps,
 	FormComponents,
@@ -245,7 +247,7 @@ function TestDateRangeField({
 }
 
 /** Minimal array chrome: enough surface for a test to drive, no styling of any kind. */
-const TestArrayField: FormComponents['ArrayField'] = ({
+const TestArrayFrame = ({
 	label,
 	description,
 	errors,
@@ -255,7 +257,7 @@ const TestArrayField: FormComponents['ArrayField'] = ({
 	onAdd,
 	canAdd,
 	...field
-}) => (
+}: ArrayFieldRenderProps): ReactNode => (
 	<div
 		data-testkit='array'
 		{...field}
@@ -274,7 +276,7 @@ const TestArrayField: FormComponents['ArrayField'] = ({
 	</div>
 )
 
-const TestArrayItem: FormComponents['ArrayItem'] = ({
+const TestArrayItem = ({
 	index,
 	label,
 	removeLabel,
@@ -286,7 +288,7 @@ const TestArrayItem: FormComponents['ArrayItem'] = ({
 	onMoveDown,
 	children,
 	...item
-}) => (
+}: ArrayItemRenderProps): ReactNode => (
 	<div
 		data-testkit='array-item'
 		{...item}
@@ -331,8 +333,11 @@ const TestArrayItem: FormComponents['ArrayItem'] = ({
 	</div>
 )
 
+/** The array frame, carrying its entry view — the shape a kit's `ArrayField` export has. */
+const TestArrayField = Object.assign(TestArrayFrame, { Item: TestArrayItem })
+
 /**
- * The twelve field kinds. Split from `testComponents` when the contract did: a kit's field
+ * The twelve field kinds and the array frame. Split from `testComponents` when the contract did: a kit's field
  * set is open and reaches `createForm` as `fields`, its chrome is closed and reaches it as
  * `components`.
  */
@@ -748,12 +753,11 @@ export const testFields: FormFieldSlots = {
 	// Two native inputs rather than a calendar: this kit exists so the adapter's own tests
 	// never depend on a real picker.
 	DateRangeField: (props) => <TestDateRangeField {...props} />,
+	ArrayField: TestArrayField,
 }
 
-/** The chrome half — the seven slots that are not field kinds. */
+/** The chrome half — the five slots that are not field kinds. */
 export const testComponents: FormComponents = {
-	ArrayField: TestArrayField,
-	ArrayItem: TestArrayItem,
 	Button: ({ type, disabled, onClick, children }) => (
 		<button
 			data-testkit='button'

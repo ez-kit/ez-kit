@@ -175,10 +175,9 @@ describe('@ez-kit/form-heroui package root', () => {
 	it('exports the factory, both contract bags and every field component', () => {
 		expect(typeof kit.createForm).toBe('function')
 		expect(typeof kit.defineFieldType).toBe('function')
-		expect(Object.keys(kit.formFieldSlots)).toHaveLength(12)
-		expect(Object.keys(kit.formComponents)).toEqual(
-			expect.arrayContaining(['ArrayField', 'ArrayItem', 'Button', 'Form', 'Section', 'GridItem', 'Wizard']),
-		)
+		expect(Object.keys(kit.formFieldSlots)).toHaveLength(13)
+		expect(kit.formFieldSlots.ArrayField.Item).toBeTypeOf('function')
+		expect(Object.keys(kit.formComponents).sort()).toEqual(['Button', 'Form', 'GridItem', 'Section', 'Wizard'])
 		for (const name of Object.keys(kit.formFieldSlots)) {
 			expect(kit[name as keyof typeof kit]).toBe(kit.formFieldSlots[name as keyof typeof kit.formFieldSlots])
 		}

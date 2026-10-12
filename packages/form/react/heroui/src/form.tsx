@@ -2,7 +2,7 @@
 
 import { createForm } from '@ez-kit/form-react'
 
-import { ArrayField, ArrayItem } from './blocks/array'
+import { ArrayField } from './blocks/array'
 import { DateField, DateRangeField } from './blocks/date'
 import {
 	CheckboxField,
@@ -41,11 +41,10 @@ export const formFieldSlots = {
 	CheckboxGroupField,
 	DateField,
 	DateRangeField,
+	ArrayField,
 } satisfies FormFieldSlots
 
 export const formComponents = {
-	ArrayField,
-	ArrayItem,
 	Button,
 	Form: FormElement,
 	Section,
@@ -76,10 +75,12 @@ export const withForm: KitFormBundle['withForm'] = bundle.withForm
 export const withFieldGroup: KitFormBundle['withFieldGroup'] = bundle.withFieldGroup
 
 /**
- * The twelve field components on their own, so an app that calls `createForm` itself can
- * spread `formFieldSlots` and still reach — or wrap — any single one of them by name.
+ * The field components on their own — the twelve kinds and the array frame — so an app that
+ * calls `createForm` itself can spread `formFieldSlots` and still reach — or wrap — any single
+ * one of them by name.
  */
 export {
+	ArrayField,
 	CheckboxField,
 	CheckboxGroupField,
 	DateField,

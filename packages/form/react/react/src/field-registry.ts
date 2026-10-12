@@ -9,7 +9,7 @@ import type { ReactNode } from 'react'
  * The suffix a field slot's name may end in, and which the document id drops.
  *
  * Declared once because two things depend on it agreeing with itself: `fieldTypeIdFor`
- * strips it, and `FormFieldSlots`' twelve keys all carry it.
+ * strips it, and every `FormFieldSlots` key carries it.
  */
 export const FIELD_NAME_SUFFIX = 'Field'
 
@@ -111,32 +111,47 @@ export function fieldTypeIdFor(key: string): string {
  * replacing a kit's `TextField` at its own key is the whole point of an open registry.
  */
 /**
- * The members of the bound field set that are **not** field kinds — the five the builder writes
- * over the registry's own output after the loop.
+ * The members of the bound field set that are **not** registry keys — the five the builder
+ * writes over the registry's own output after the loop.
  *
  * A registry key that collides with one of these is accepted by every other check and then
  * silently overwritten: `form.GridItem` renders the layout component and the author's field
- * never appears, with no error anywhere. Three of the five used to be caught only *by accident*,
+ * never appears, with no error anywhere. Two of the five used to be caught only *by accident*,
  * because their derived ids (`section`, `array`) happen to be reserved node types;
  * `submitbutton` and `griditem` are not, and were not caught at all.
  *
  * `satisfies Record<Exclude<keyof BuiltInFormFieldComponents<unknown>, keyof FormFieldSlots>, true>`
  * is what stops this becoming a hand-written list that drifts from the builder: the five are
  * derived from the bound type, so adding a sixth member there is a compile error here.
+ * `ArrayField` is not among them: it is a registry key ({@link BESPOKE_FIELD_KEYS}).
  */
 export const LAYOUT_COMPONENT_KEYS = {
 	SubmitButton: true,
 	Submit: true,
 	Section: true,
 	GridItem: true,
-	ArrayField: true,
 	Array: true,
 } satisfies Record<Exclude<keyof BuiltInFormFieldComponents<unknown>, keyof FormFieldSlots>, true>
+
+/**
+ * The registry keys that are **not** field kinds a document can name — they route to a binder of
+ * their own and derive no document id.
+ *
+ * `ArrayField` is the one: its frame is registered with the fields (it carries its entry view as
+ * `ArrayField.Item`), but an array in a document is the reserved `array` node type, not a
+ * registered `type`. Without this exclusion its derived id would be exactly that reserved type,
+ * and every form would throw at `createForm`.
+ */
+export const BESPOKE_FIELD_KEYS = {
+	ArrayField: true,
+} as const satisfies Partial<Record<keyof FormFieldSlots, true>>
 
 export function deriveFieldTypeIds(fields: FormFieldRegistry): Record<string, string> {
 	const ids: Record<string, string> = {}
 
 	for (const key of Object.keys(fields)) {
+		if (Object.hasOwn(BESPOKE_FIELD_KEYS, key)) continue
+
 		const id = fieldTypeIdFor(key)
 
 		if ((RESERVED_NODE_TYPES as readonly string[]).includes(id)) {

@@ -128,13 +128,13 @@ The format itself, `defineFormSchema` and the `parseFormSchema` trust boundary l
 
 ## Building a kit
 
-Implement `FormComponents` and hand it to `createForm`:
+Implement the two bags — `FormFieldSlots` and `FormComponents` — and hand them to `createForm`:
 
 ```tsx
 import { createForm } from '@ez-kit/form-react'
-import type { FormComponents } from '@ez-kit/form-react'
+import type { FormComponents, FormFieldSlots } from '@ez-kit/form-react'
 
-const components = {
+const fields = {
 	TextField,
 	NumberField,
 	TextareaField,
@@ -147,8 +147,10 @@ const components = {
 	CheckboxGroupField,
 	DateField,
 	DateRangeField,
-	ArrayField,
-	ArrayItem,
+	ArrayField: Object.assign(ArrayFieldView, { Item: ArrayItemView }),
+} satisfies FormFieldSlots
+
+const components = {
 	Button,
 	Form,
 	Section,
@@ -156,10 +158,10 @@ const components = {
 	Wizard,
 } satisfies FormComponents
 
-export const { useForm, SchemaForm, withForm, withFieldGroup } = createForm({ components })
+export const { useForm, SchemaForm, withForm, withFieldGroup } = createForm({ components, fields })
 ```
 
-`satisfies FormComponents` turns a forgotten field into a compile error rather than a
+`satisfies` on each bag turns a forgotten field into a compile error rather than a
 runtime crash. Components are bound by closure at `createForm` time — no runtime provider
 is involved.
 

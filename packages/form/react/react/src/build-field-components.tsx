@@ -1,4 +1,4 @@
-import { fieldTypeIdFor } from './field-registry'
+import { BESPOKE_FIELD_KEYS, fieldTypeIdFor } from './field-registry'
 import { createArray, createArrayField } from './fields/array-field'
 import { createCheckboxField } from './fields/checkbox-field'
 import { createCheckboxGroupField } from './fields/checkbox-group-field'
@@ -18,7 +18,7 @@ import { createTextField } from './fields/text-field'
 import { createTextareaField } from './fields/textarea-field'
 
 import type { BindableForm } from './bindable-form'
-import type { FormComponents, FormFieldSlots } from './contract'
+import type { ArrayFieldSlot, FormComponents, FormFieldSlots } from './contract'
 import type { FormFieldComponents } from './field-props'
 import type { FormFieldRegistry, LAYOUT_COMPONENT_KEYS } from './field-registry'
 import type { CustomFieldRenderProps } from './schema/registries'
@@ -27,7 +27,7 @@ import type { ReactNode } from 'react'
 /**
  * One bespoke binder per built-in field kind, keyed by the slot it binds.
  *
- * `satisfies Record<keyof FormFieldSlots, …>` is what makes a thirteenth built-in a compile
+ * `satisfies Record<…keyof FormFieldSlots…, …>` is what makes a thirteenth built-in a compile
  * error here rather than a slot that quietly falls through to the generic binder — which
  * would still *render*, and would silently drop that kind's own coercion and option
  * handling. The distinction is not cosmetic: `createSelectField` wraps `FieldOptions`
@@ -47,7 +47,7 @@ const BUILT_IN_BINDERS = {
 	CheckboxGroupField: createCheckboxGroupField,
 	DateField: createDateField,
 	DateRangeField: createDateRangeField,
-} satisfies Record<keyof FormFieldSlots, unknown>
+} satisfies Record<Exclude<keyof FormFieldSlots, keyof typeof BESPOKE_FIELD_KEYS>, unknown>
 
 /**
  * The twelve binders at their least specific shape.
@@ -96,6 +96,8 @@ export function buildFieldComponents<TFormData>(
 
 	const built: Record<string, unknown> = {}
 	for (const [key, Component] of Object.entries(fields)) {
+		// Bound below, once the finished record exists — see `layout`.
+		if (Object.hasOwn(BESPOKE_FIELD_KEYS, key)) continue
 		const binder = Object.hasOwn(BUILT_IN_BINDERS, key) ? binders[key] : undefined
 		built[key] =
 			binder === undefined
@@ -117,16 +119,25 @@ export function buildFieldComponents<TFormData>(
 		Submit: createSubmit(form),
 		Section: createSection(KitSection),
 		GridItem: createGridItem(KitGridItem),
-		// Replaced below: an array's entries render the *same* field set, scoped to the entry, so
-		// the component needs the finished record — including, for a nested array, itself.
-		ArrayField: () => null,
+		// Replaced below, with `ArrayField`: an array's entries render the *same* field set, scoped
+		// to the entry, so the component needs the finished record — including, for a nested
+		// array, itself.
 		Array: () => null,
 	} satisfies Record<keyof typeof LAYOUT_COMPONENT_KEYS, unknown>
 
 	const fieldComponents = { ...built, ...layout } as unknown as FormFieldComponents<TFormData>
 
-	fieldComponents.ArrayField = createArrayField<TFormData>(form, components, fieldComponents)
-	fieldComponents.Array = createArray<TFormData>(form, components, fieldComponents)
+	/**
+	 * What an array entry scopes to its own path: every registry key, the frame included, plus the
+	 * headless `Array` — a nested array is addressed relative to the entry like any field. The
+	 * layout members are left out: a `SubmitButton` or a `Section` has no `name` to prefix, and
+	 * wrapping it would only hand it a bogus one.
+	 */
+	const entryKeys = [...Object.keys(built), 'ArrayField', 'Array']
+	const slot = fields.ArrayField as ArrayFieldSlot
+
+	fieldComponents.ArrayField = createArrayField<TFormData>(form, slot, Button, fieldComponents, entryKeys)
+	fieldComponents.Array = createArray<TFormData>(form, slot, Button, fieldComponents, entryKeys)
 
 	return fieldComponents
 }

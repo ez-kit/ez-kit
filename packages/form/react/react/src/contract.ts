@@ -18,10 +18,10 @@ import type { ComponentPropsWithoutRef, ReactNode } from 'react'
  *
  * The two bags differ in whether they are **closed**:
  *
- * - {@link FormComponents} is the form's **chrome** — the array frame and entry, the button,
- *   the `<form>` element, the section grid and the wizard. Seven slots, a closed set: nothing
- *   an app registers belongs here, because none of it is a field kind.
- * - {@link FormFieldSlots} is the twelve **field kinds**. It is the shape a kit's
+ * - {@link FormComponents} is the form's **chrome** — the button, the `<form>` element, the
+ *   section grid and the wizard. Five slots, a closed set: nothing an app registers belongs
+ *   here, because none of it is a field kind.
+ * - {@link FormFieldSlots} is the twelve **field kinds** plus the array frame. It is the shape a kit's
  *   `formFieldSlots` export is written against (`satisfies FormFieldSlots`), so a forgotten
  *   built-in is a compile error there — but `createForm({ fields })` accepts *additional*
  *   keys, which is how an app adds `RatingField` to the instance and `{ type: 'rating' }` to
@@ -31,8 +31,8 @@ import type { ComponentPropsWithoutRef, ReactNode } from 'react'
  * which is what lets one example render under either kit:
  *
  * ```ts
- * export const formComponents = { ArrayField, ArrayItem, … } satisfies FormComponents
- * export const formFieldSlots = { TextField, NumberField, … } satisfies FormFieldSlots
+ * export const formComponents = { Button, Form, … } satisfies FormComponents
+ * export const formFieldSlots = { TextField, NumberField, …, ArrayField } satisfies FormFieldSlots
  * createForm({ components: formComponents, fields: formFieldSlots })
  * ```
  */
@@ -247,7 +247,7 @@ export type SliderFieldRenderProps = FieldRenderProps & {
 /**
  * The chrome around **one** entry of a repeatable group.
  *
- * A separate slot from {@link ArrayFieldRenderProps} for the same reason `GridItem` is separate
+ * A separate component from {@link ArrayFieldRenderProps} for the same reason `GridItem` is separate
  * from `Section`: the container draws the list, the item draws one row of it — and only the item
  * can place its own remove control, since it is the only component that knows where the row ends.
  *
@@ -307,7 +307,7 @@ export type ArrayFieldRenderProps = {
 	invalid: boolean
 	disabled: boolean | undefined
 	required: boolean | undefined
-	/** The entries, each already wrapped in the kit's own `ArrayItem`. */
+	/** The entries, each already wrapped in the kit's own `ArrayField.Item`. */
 	children: ReactNode
 	/** Caption for the control that appends an entry, already resolved. */
 	addLabel: ReactNode
@@ -318,6 +318,21 @@ export type ArrayFieldRenderProps = {
 	 * control disabled rather than have it vanish under the user's cursor.
 	 */
 	canAdd: boolean
+}
+
+/**
+ * The array frame, carrying its entry view as `Item`.
+ *
+ * The frame and the entry are one registration because they are one thing to a kit: the entry
+ * is drawn inside the frame, and a kit that replaces one without the other gets a list whose
+ * rows do not match their container. Registering the pair under one key in `fields` also means
+ * the headless `form.Array` — which renders no frame — still finds the entry view through it.
+ *
+ * @example
+ * export const ArrayField = Object.assign(ArrayFieldView, { Item: ArrayItemView })
+ */
+export type ArrayFieldSlot = ((props: ArrayFieldRenderProps) => ReactNode) & {
+	Item: (props: ArrayItemRenderProps) => ReactNode
 }
 
 // ── layout ───────────────────────────────────────────────────────────────────
@@ -386,7 +401,7 @@ export type FormElementProps = ComponentPropsWithoutRef<'form'>
 // ── the contract itself ──────────────────────────────────────────────────────
 
 /**
- * The twelve built-in field kinds a kit supplies.
+ * The twelve built-in field kinds a kit supplies, plus the array frame.
  *
  * Written against with `satisfies FormFieldSlots` so a forgotten built-in is a compile error
  * in the kit. It is **not** what `createForm({ fields })` accepts — that takes any
@@ -400,6 +415,9 @@ export type FormElementProps = ComponentPropsWithoutRef<'form'>
  * trailing `Field` and lowercasing the rest — `RadioGroupField` → `radiogroup`. The
  * derivation runs this way round because the reverse is lossy: nothing recovers
  * `RadioGroupField` from `radiogroup`.
+ *
+ * `ArrayField` is the one **bespoke** key: it routes to the array binder and derives no
+ * document id — an array node is the reserved `array` type, not a registered field kind.
  */
 export type FormFieldSlots = {
 	TextField: (props: TextFieldRenderProps) => ReactNode
@@ -414,20 +432,17 @@ export type FormFieldSlots = {
 	CheckboxGroupField: (props: CheckboxGroupFieldRenderProps) => ReactNode
 	DateField: (props: DateFieldRenderProps) => ReactNode
 	DateRangeField: (props: DateRangeFieldRenderProps) => ReactNode
+	ArrayField: ArrayFieldSlot
 }
 
 /**
  * The form's chrome — every component a kit must supply that is **not** a field kind.
  *
- * A closed set of seven, all required: the array frame and its entry, the generic button,
- * the `<form>` element, the section grid, its cell and the wizard. The field kinds live in
- * {@link FormFieldSlots}; `ArrayField` / `ArrayItem` are here rather than there because they
- * are consumed as chrome by one binder (`createArrayField`), not registered as a per-kind
- * binder of their own.
+ * A closed set of five, all required: the generic button, the `<form>` element, the section
+ * grid, its cell and the wizard. The field kinds — and the array frame, which carries its entry
+ * view as `ArrayField.Item` — live in {@link FormFieldSlots}.
  */
 export type FormComponents = {
-	ArrayField: (props: ArrayFieldRenderProps) => ReactNode
-	ArrayItem: (props: ArrayItemRenderProps) => ReactNode
 	Button: (props: ButtonProps) => ReactNode
 	Form: (props: FormElementProps) => ReactNode
 	Section: (props: SectionRenderProps) => ReactNode

@@ -2,9 +2,10 @@ export { SubmitButton } from './blocks/form-parts'
 export { useForm, Form, SchemaForm, withForm, withFieldGroup } from './form'
 
 // The factory and the two bags it takes, so an app can call `createForm` itself with the
-// kit's twelve field slots spread beside a field kind of its own. The ready-made bundle
+// kit's field slots spread beside a field kind of its own. The ready-made bundle
 // above stays the zero-config path; this is the extension one.
 export {
+	ArrayField,
 	CheckboxField,
 	CheckboxGroupField,
 	DateField,

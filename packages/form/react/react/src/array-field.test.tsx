@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { createForm } from './create-form'
 import { testComponents, testFields } from './test-kit'
 
+import type { ArrayFieldRenderProps, ArrayItemRenderProps } from './contract'
 import type { ReactNode } from 'react'
 
 type Person = { firstName: string }
@@ -645,5 +646,89 @@ describe('the array scope', () => {
 				],
 			})
 		})
+	})
+})
+
+describe('the array slot', () => {
+	it('takes the frame from fields.ArrayField and the entry from fields.ArrayField.Item', () => {
+		const Frame = Object.assign((props: ArrayFieldRenderProps) => <div data-testid='frame'>{props.children}</div>, {
+			Item: (props: ArrayItemRenderProps) => <div data-testid='entry'>{props.children}</div>,
+		})
+		const { Form: FramedForm } = createForm({
+			components: testComponents,
+			fields: { ...testFields, ArrayField: Frame },
+		})
+		render(
+			<FramedForm defaultValues={{ tags: [{ label: 'a' }] }}>
+				{(form) => (
+					<form.ArrayField
+						name='tags'
+						newItem={{ label: '' }}
+					>
+						{({ items }) =>
+							items.map((item) => (
+								<item.Item key={item.key}>
+									<item.TextField name='label' />
+								</item.Item>
+							))
+						}
+					</form.ArrayField>
+				)}
+			</FramedForm>,
+		)
+		expect(screen.getByTestId('frame')).toBeInTheDocument()
+		expect(screen.getByTestId('entry')).toBeInTheDocument()
+	})
+
+	it('takes the headless entry from fields.ArrayField.Item as well', () => {
+		const Frame = Object.assign((props: ArrayFieldRenderProps) => <div>{props.children}</div>, {
+			Item: (props: ArrayItemRenderProps) => <div data-testid='entry'>{props.children}</div>,
+		})
+		const { Form: FramedForm } = createForm({
+			components: testComponents,
+			fields: { ...testFields, ArrayField: Frame },
+		})
+		render(
+			<FramedForm defaultValues={{ tags: [{ label: 'a' }] }}>
+				{(form) => (
+					<form.Array
+						name='tags'
+						newItem={{ label: '' }}
+					>
+						{({ items }) =>
+							items.map((item) => (
+								<item.Item key={item.key}>
+									<item.TextField name='label' />
+								</item.Item>
+							))
+						}
+					</form.Array>
+				)}
+			</FramedForm>,
+		)
+		expect(screen.getByTestId('entry')).toBeInTheDocument()
+	})
+
+	it('scopes only field components to an entry', () => {
+		let scopeKeys: string[] = []
+		render(
+			<Form defaultValues={{ title: '', people: [NEW_PERSON] }}>
+				{(form) => (
+					<form.Array
+						name='people'
+						newItem={NEW_PERSON}
+					>
+						{({ items }) => {
+							scopeKeys = Object.keys(first(items))
+							return null
+						}}
+					</form.Array>
+				)}
+			</Form>,
+		)
+		expect(scopeKeys).toEqual(expect.arrayContaining(['TextField', 'ArrayField', 'Array', 'Item']))
+		for (const layoutKey of ['SubmitButton', 'Submit', 'Section', 'GridItem']) {
+			expect(scopeKeys).not.toContain(layoutKey)
+		}
 	})
 })

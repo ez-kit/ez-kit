@@ -1,4 +1,4 @@
-import type { FormComponents, FormFieldSlots } from './contract'
+import type { ArrayFieldRenderProps, ArrayFieldSlot, FormComponents, FormFieldSlots } from './contract'
 import type { FormFieldRegistry } from './field-registry'
 import type { ReactNode } from 'react'
 
@@ -12,8 +12,6 @@ const IS_DEV = process.env.NODE_ENV !== 'production'
  * than a slot the guard silently stops checking.
  */
 const COMPONENT_KEYS = {
-	ArrayField: true,
-	ArrayItem: true,
 	Button: true,
 	Form: true,
 	Section: true,
@@ -24,8 +22,8 @@ const COMPONENT_KEYS = {
 /**
  * Every key of {@link FormFieldSlots}, as a runtime list, kept honest the same way.
  *
- * Exported because it is the only enumeration of the twelve built-ins that cannot drift from
- * the contract, which makes it what `field-registry.test.ts` drives the id derivation from.
+ * Exported because it is the only enumeration of the built-ins that cannot drift from the
+ * contract, which makes it what `field-registry.test.ts` drives the id derivation from.
  */
 export const FIELD_KEYS = {
 	TextField: true,
@@ -40,6 +38,7 @@ export const FIELD_KEYS = {
 	CheckboxGroupField: true,
 	DateField: true,
 	DateRangeField: true,
+	ArrayField: true,
 } satisfies Record<keyof FormFieldSlots, true>
 
 /**
@@ -82,6 +81,28 @@ function createMissingComponent(key: string, option: GuardedOption): () => React
 }
 
 /**
+ * The stand-in for a missing `ArrayField`, or for one that came without its `Item`.
+ *
+ * The array binder reads `ArrayField.Item` for every entry, the headless `form.Array` included,
+ * so a placeholder frame without one would only move the "Element type is invalid" crash one
+ * level down. A frame that is present keeps rendering; only the missing half goes blank.
+ */
+function guardArrayField(frame: unknown): ArrayFieldSlot {
+	if (typeof frame !== 'function') {
+		return Object.assign(createMissingComponent('ArrayField', GuardedOption.Fields), {
+			Item: createMissingComponent('ArrayField.Item', GuardedOption.Fields),
+		})
+	}
+	const Frame = frame as ArrayFieldSlot
+	if (typeof (frame as { Item?: unknown }).Item === 'function') return Frame
+	// A new function rather than an `Item` written onto the kit's own component, which the
+	// guard does not own and which another form may be using as it is.
+	return Object.assign((props: ArrayFieldRenderProps): ReactNode => <Frame {...props} />, {
+		Item: createMissingComponent('ArrayField.Item', GuardedOption.Fields),
+	})
+}
+
+/**
  * Fills the gaps in the **chrome** set with warn-once placeholders that render nothing.
  *
  * A kit written in TypeScript cannot reach this: `CreateFormOptions.components` is
@@ -114,7 +135,7 @@ export function guardComponents(components: FormComponents): FormComponents {
  * being open.
  *
  * An open registry has no key list to check a caller's set against, so this can only assert
- * the twelve built-ins — a key the app invented is, by construction, a key nothing can say is
+ * the built-ins — a key the app invented is, by construction, a key nothing can say is
  * missing. That is the correct scope, not an oversight: widening it would mean inventing a
  * required set for something whose whole point is that the set is the author's.
  *
@@ -124,8 +145,10 @@ export function guardFields(fields: FormFieldRegistry): FormFieldRegistry {
 	const guarded = { ...fields } as Record<string, unknown>
 
 	for (const key of Object.keys(FIELD_KEYS)) {
+		if (key === 'ArrayField') continue
 		if (typeof guarded[key] !== 'function') guarded[key] = createMissingComponent(key, GuardedOption.Fields)
 	}
+	guarded.ArrayField = guardArrayField(guarded.ArrayField)
 
 	return guarded as FormFieldRegistry
 }

@@ -24,6 +24,7 @@ export type {
 } from './options/source-types'
 export type {
 	ArrayFieldRenderProps,
+	ArrayFieldSlot,
 	ArrayItemRenderProps,
 	ButtonProps,
 	CheckboxFieldRenderProps,

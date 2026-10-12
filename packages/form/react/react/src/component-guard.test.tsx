@@ -14,7 +14,7 @@ function Stub({ children }: { children?: ReactNode }): ReactNode {
 
 /** A complete chrome set, so a test can remove exactly the one slot it is about. */
 function completeComponents(): FormComponents {
-	const keys = ['ArrayField', 'ArrayItem', 'Button', 'Section', 'GridItem', 'Wizard'] as const
+	const keys = ['Button', 'Section', 'GridItem', 'Wizard'] as const
 
 	const components = Object.fromEntries(keys.map((key) => [key, Stub])) as unknown as FormComponents
 	return { ...components, Form: ({ children, ...props }) => <form {...props}>{children}</form> }
@@ -37,7 +37,11 @@ function completeFields(): FormFieldSlots {
 		'DateRangeField',
 	] as const
 
-	return Object.fromEntries(keys.map((key) => [key, Stub])) as unknown as FormFieldSlots
+	const fields = Object.fromEntries(keys.map((key) => [key, Stub])) as unknown as FormFieldSlots
+	return {
+		...fields,
+		ArrayField: Object.assign((props: { children?: ReactNode }) => <Stub {...props} />, { Item: Stub }),
+	}
 }
 
 afterEach(() => {
@@ -131,6 +135,47 @@ describe('guardFields', () => {
 		expect(container).toBeEmptyDOMElement()
 		expect(warn).toHaveBeenCalledOnce()
 		expect(warn.mock.calls[0]?.[0]).toContain('TextField')
+	})
+
+	it('passes a complete ArrayField through untouched', () => {
+		const fields = completeFields()
+
+		const guarded = guardFields(fields)
+
+		expect(guarded.ArrayField).toBe(fields.ArrayField)
+	})
+
+	it('replaces a missing ArrayField with a placeholder that still has an Item', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+		const { ArrayField: _omitted, ...partial } = completeFields()
+
+		const guarded = guardFields(partial) as Partial<FormFieldSlots>
+
+		const { container } = render(
+			<>
+				{guarded.ArrayField?.({} as never)}
+				{guarded.ArrayField?.Item({} as never)}
+			</>,
+		)
+		expect(container).toBeEmptyDOMElement()
+		expect(warn.mock.calls.map((call) => String(call[0]))).toEqual([
+			expect.stringContaining('"ArrayField"'),
+			expect.stringContaining('"ArrayField.Item"'),
+		])
+	})
+
+	it('keeps a present ArrayField frame and fills only its missing Item', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+		const Frame = ({ children }: { children?: ReactNode }): ReactNode => <div data-testid='frame'>{children}</div>
+
+		const guarded = guardFields({ ...completeFields(), ArrayField: Frame }) as Partial<FormFieldSlots>
+		const GuardedFrame = guarded.ArrayField as unknown as (props: { children?: ReactNode }) => ReactNode
+
+		render(<GuardedFrame>{guarded.ArrayField?.Item({} as never)}</GuardedFrame>)
+		expect(screen.getByTestId('frame')).toBeEmptyDOMElement()
+		expect(warn).toHaveBeenCalledOnce()
+		expect(warn.mock.calls[0]?.[0]).toContain('"ArrayField.Item"')
+		expect(Frame).not.toHaveProperty('Item')
 	})
 
 	it('warns once however often the placeholder renders', () => {

@@ -1,6 +1,6 @@
 import type { BoundFieldApi } from './bindable-form'
 import type { FormComponents, FormFieldSlots } from './contract'
-import type { FormFieldRegistry } from './field-registry'
+import type { FormFieldRegistry, LAYOUT_COMPONENT_KEYS } from './field-registry'
 import type { FieldValidateProps } from './field-validate'
 import type {
 	ArrayItemOf,
@@ -215,16 +215,24 @@ export type SliderFieldProps<TFormData> = BaseFieldProps<TFormData, number> & {
 }
 
 /**
+ * The members of the form's field set an array entry does **not** carry: the layout members,
+ * none of which has a `name` to address relative to the entry, so they are reached through the
+ * form instead. `Array` stays — a nested array is addressed relative to the entry like a field.
+ */
+type EntryUnscopedKey = Exclude<keyof typeof LAYOUT_COMPONENT_KEYS, 'Array'>
+
+/**
  * What one entry of a repeatable group hands the author.
  *
  * It **is** the form's own field set, retyped over the item: inside an entry `name` addresses
  * the item's paths, so `<item.TextField name='firstName' />` is checked against the item type
  * and a root-level name is a compile error there. No path is composed at the call site — the
- * prefix is joined on at render.
+ * prefix is joined on at render. The layout members (`SubmitButton`, `Section`, …) are not part
+ * of it — see {@link EntryUnscopedKey}.
  */
-export type ArrayItemScope<TItem, TFields extends FormFieldRegistry = FormFieldSlots> = FormFieldComponents<
-	TItem,
-	TFields
+export type ArrayItemScope<TItem, TFields extends FormFieldRegistry = FormFieldSlots> = Omit<
+	FormFieldComponents<TItem, TFields>,
+	EntryUnscopedKey
 > & {
 	/**
 	 * A stable id for this entry, for React's `key`. **Never the index**: removing an entry from

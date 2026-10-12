@@ -74,7 +74,7 @@ The rule maps a component name to an id, never an id back to a component name. T
 Two ways the derivation can go wrong, both of which throw at `createForm` rather than on the first document that hits them:
 
 - **Two keys deriving one id.** `RatingField` and `Rating` both derive `rating`.
-- **An id that collides with a reserved node type.** A slot named `SectionField` derives `section` and would silently shadow the container node; so would `StepField`, `SubmitField` or `BlockField`. A key that collides with one of the form's own non-field components — `SubmitButton`, `Section`, `GridItem`, `ArrayField`, `Array` — throws for the same reason.
+- **An id that collides with a reserved node type.** A slot named `SectionField` derives `section` and would silently shadow the container node; so would `StepField`, `SubmitField` or `BlockField`. A key that collides with one of the form's own non-field components — `SubmitButton`, `Submit`, `Section`, `GridItem`, `Array` — throws for the same reason. `ArrayField` is not a field kind either, but it is a `fields` key of its own: the kit's array frame, which derives no document id.
 
 Replacing a built-in _at its own key_ is not an error: handing `fields` your own `TextField` beside the other eleven is the point of an open registry.
 

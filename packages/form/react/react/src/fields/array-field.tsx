@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useRef } from 'react'
 import { fieldValidators } from '../field-validate'
 
 import type { BindableForm, BoundFieldApi } from '../bindable-form'
-import type { ArrayFieldRenderProps, FormComponents } from '../contract'
+import type { ArrayFieldRenderProps, ArrayFieldSlot, FormComponents } from '../contract'
 import type {
 	ArrayFieldProps,
 	ArrayItemProps,
@@ -115,13 +115,21 @@ function useItemKeys(length: number): {
 	return { keys: keysRef.current, onAdd, onInsert, onRemove, onMove }
 }
 
-/** Build the `ArrayField` component bound to one form instance. */
+/**
+ * Build the `ArrayField` component bound to one form instance.
+ *
+ * `slot` is the kit's frame, carrying its entry view as `slot.Item`. `entryKeys` names the
+ * members of `fieldComponents` an entry scopes to its own path — the field components only; see
+ * `scopedFieldsFor`.
+ */
 export function createArrayField<TFormData>(
 	form: BindableForm,
-	components: FormComponents,
+	slot: ArrayFieldSlot,
+	Button: FormComponents['Button'],
 	fieldComponents: FormFieldComponents<TFormData>,
+	entryKeys: readonly string[],
 ): FormFieldComponents<TFormData>['ArrayField'] {
-	const { ArrayField: KitArrayField } = components
+	const KitArrayField = slot
 
 	// The record is the same object the form already exposes; only its *type* is reinterpreted
 	// per entry, because inside an entry the same components address the item's paths rather
@@ -151,8 +159,10 @@ export function createArrayField<TFormData>(
 					<ArrayBody
 						field={field}
 						fieldName={name}
-						components={components}
+						Entry={slot.Item}
+						Button={Button}
 						fieldComponents={unscoped}
+						entryKeys={entryKeys}
 						label={label}
 						description={description}
 						disabled={disabled}
@@ -188,8 +198,10 @@ export function createArrayField<TFormData>(
  */
 export function createArray<TFormData>(
 	form: BindableForm,
-	components: FormComponents,
+	slot: ArrayFieldSlot,
+	Button: FormComponents['Button'],
 	fieldComponents: FormFieldComponents<TFormData>,
+	entryKeys: readonly string[],
 ): FormFieldComponents<TFormData>['Array'] {
 	const unscoped = fieldComponents as unknown as FormFieldComponents<unknown>
 
@@ -210,8 +222,10 @@ export function createArray<TFormData>(
 					<ArrayBody
 						field={field}
 						fieldName={name}
-						components={components}
+						Entry={slot.Item}
+						Button={Button}
 						fieldComponents={unscoped}
+						entryKeys={entryKeys}
 						label={null}
 						description={null}
 						disabled={disabled}
@@ -262,8 +276,12 @@ type ArrayFrameProps = Omit<ArrayFieldRenderProps, 'children'>
 type ArrayBodyProps = {
 	field: BoundFieldApi
 	fieldName: string
-	components: FormComponents
+	/** The kit's entry view, `ArrayField.Item`. */
+	Entry: ArrayFieldSlot['Item']
+	Button: FormComponents['Button']
 	fieldComponents: FormFieldComponents<unknown>
+	/** The members of `fieldComponents` scoped to each entry's path — see `scopedFieldsFor`. */
+	entryKeys: readonly string[]
 	label: ReactNode
 	description: ReactNode
 	disabled: boolean | undefined
@@ -285,8 +303,10 @@ type ArrayBodyProps = {
 function ArrayBody({
 	field,
 	fieldName,
-	components,
+	Entry: KitArrayItem,
+	Button,
 	fieldComponents,
+	entryKeys,
 	label,
 	description,
 	disabled,
@@ -299,7 +319,6 @@ function ArrayBody({
 	validate,
 	render,
 }: ArrayBodyProps): ReactNode {
-	const { ArrayItem: KitArrayItem } = components
 	const list = Array.isArray(field.state.value) ? (field.state.value as readonly unknown[]) : []
 	const keys = useItemKeys(list.length)
 
@@ -391,15 +410,23 @@ function ArrayBody({
 	 * reorder. It is read directly off `itemDataRef` rather than through context, so it resolves
 	 * correctly whether or not the author wraps the entry's fields in `<item.Item>` — the two are
 	 * independent, and the fields do not depend on the entry's chrome to find their own path.
+	 *
+	 * Only `entryKeys` are copied in — the field components, nested arrays included. A layout
+	 * member (`SubmitButton`, `Section`, …) has no `name` to prefix, and scoping it would only
+	 * hand it a bogus one; it is reached through the form, not the entry.
 	 */
 	const scopedFieldsFor = (key: string): FormFieldComponents<unknown> => {
 		const existing = scopedFieldsRef.current.get(key)
 		if (existing !== undefined) return existing
 
+		const unscopedRecord = fieldComponents as unknown as Record<string, (props: { name: string }) => ReactNode>
 		const record = Object.fromEntries(
-			Object.entries(fieldComponents).map(([name, Component]) => [
+			entryKeys.map((name) => [
 				name,
-				scopeComponent(Component as (props: { name: string }) => ReactNode, () => itemDataRef.current.get(key)?.path),
+				scopeComponent(
+					unscopedRecord[name] as (props: { name: string }) => ReactNode,
+					() => itemDataRef.current.get(key)?.path,
+				),
 			]),
 		) as unknown as FormFieldComponents<unknown>
 		scopedFieldsRef.current.set(key, record)
@@ -508,7 +535,7 @@ function ArrayBody({
 					// props — see the doc comment on `ArrayScope`.
 					disabled: disabled ?? false,
 					required: required ?? false,
-					Button: components.Button,
+					Button,
 					field,
 				},
 				frame,
