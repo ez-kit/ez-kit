@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import { createForm } from './create-form'
-import { testComponents, testFields } from './test-kit'
+import { testComponents, testFields, testFormElement } from './test-kit'
 
 import type { FormFieldSlots } from './contract'
 
@@ -30,7 +30,7 @@ const PLAN_OPTIONS = [
 	{ label: 'Pro', value: 'pro' },
 ]
 
-const { useForm, Form } = createForm({ components: testComponents, fields: testFields })
+const { useForm, Form } = createForm({ FormElement: testFormElement, fields: testFields, components: testComponents })
 
 describe('createForm — field binding', () => {
 	function TextCase() {
@@ -255,7 +255,11 @@ describe('createForm — field binding', () => {
 	})
 
 	it('rests at the minimum when the bound value is not a real number', () => {
-		const { useForm: useSliderForm } = createForm({ components: testComponents, fields: testFields })
+		const { useForm: useSliderForm } = createForm({
+			FormElement: testFormElement,
+			fields: testFields,
+			components: testComponents,
+		})
 
 		function FallbackCase() {
 			// `NaN` is a `number` to the type system but "no value" to `asNumber`, so the thumb must
@@ -547,7 +551,11 @@ describe('createForm — dependency injection', () => {
 				/>
 			),
 		}
-		const { useForm: useAltForm } = createForm({ components: testComponents, fields: altFields })
+		const { useForm: useAltForm } = createForm({
+			FormElement: testFormElement,
+			fields: altFields,
+			components: testComponents,
+		})
 
 		function AltCase() {
 			const form = useAltForm({ defaultValues: DEFAULTS })
@@ -600,7 +608,7 @@ describe('createForm — dependency injection', () => {
 
 describe('createForm — bundle shape', () => {
 	it('returns the config-driven form as SchemaForm', () => {
-		const bundle = createForm({ components: testComponents, fields: testFields })
+		const bundle = createForm({ FormElement: testFormElement, fields: testFields, components: testComponents })
 
 		expect(typeof bundle.SchemaForm).toBe('function')
 		expect('FormRenderer' in bundle).toBe(false)

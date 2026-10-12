@@ -21,7 +21,7 @@ export type AnyFormInstance = FormInstance<any, any>
  * `withForm` / `withFieldGroup` type it where it is placed. The context serves components that do
  * not depend on a particular form: a save bar, an error summary, a kit's `SubmitButton`.
  */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- an empty field registry
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- an empty field registry; no components either
 export type FormContextApi = FormInstance<unknown, {}>
 
 /**
@@ -42,5 +42,7 @@ export function useFormContext(): FormContextApi {
 	if (form === null) {
 		throw new Error('useFormContext() must be called inside <Form>, <SchemaForm> or <FormProvider>.')
 	}
-	return form as FormContextApi
+	// Through `unknown`: the widest instance names every built-in field kind, which the base API
+	// deliberately does not, so TypeScript sees no overlap between the two to convert along.
+	return form as unknown as FormContextApi
 }

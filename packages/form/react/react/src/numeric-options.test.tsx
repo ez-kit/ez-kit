@@ -5,7 +5,7 @@ import { describe, expect, it, test, vi } from 'vitest'
 
 import { createForm } from './create-form'
 import { fromKitValue, fromKitValues, toKitOptions } from './option-values'
-import { testComponents, testFields } from './test-kit'
+import { testComponents, testFields, testFormElement } from './test-kit'
 
 import type { FormSchema } from '@ez-kit/form-core'
 
@@ -42,7 +42,11 @@ const ROLE_ID_OPTIONS = [
 	{ label: 'Viewer', value: 8 },
 ]
 
-const { useForm, Form, SchemaForm } = createForm({ components: testComponents, fields: testFields })
+const { useForm, Form, SchemaForm } = createForm({
+	FormElement: testFormElement,
+	fields: testFields,
+	components: testComponents,
+})
 
 /** `typeof value` alongside the value, so a stringified `7` cannot pass for the number. */
 function describeValue(value: unknown): string {

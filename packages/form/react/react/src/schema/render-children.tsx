@@ -1,7 +1,7 @@
 import { isArrayNode, isFieldNode } from '@ez-kit/form-core'
 import { Fragment } from 'react'
 
-import { RenderNode } from './render-node'
+import { assertComponent, MissingComponentMessage, RenderNode } from './render-node'
 
 import type { LayoutComponents, RenderNodeContext } from './render-node'
 import type { FormFieldComponents } from '../field-props'
@@ -115,6 +115,7 @@ export function renderChildren<TValues>(
 			return <Fragment key={key}>{rendered}</Fragment>
 		}
 
+		assertComponent(layout.GridItem, MissingComponentMessage.GridItem)
 		return (
 			<layout.GridItem
 				key={key}

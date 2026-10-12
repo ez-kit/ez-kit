@@ -4,7 +4,6 @@ import { createFormHook, createFormHookContexts } from '@tanstack/react-form'
 import { useMemo } from 'react'
 
 import { buildFieldComponents } from './build-field-components'
-import { guardComponents, guardFields } from './component-guard'
 import { deriveFieldTypeIds } from './field-registry'
 import { FormProvider } from './form-context'
 import { splitFormProps } from './form-options'
@@ -21,7 +20,13 @@ import {
 
 import type { BindableForm } from './bindable-form'
 import type { KitFormBlock, KitWithFormProps } from './composition'
-import type { FormComponents, FormFieldSlots } from './contract'
+import type {
+	AllFormFieldSlots,
+	FormComponentRegistry,
+	FormComponents,
+	FormElementProps,
+	FormFieldSlots,
+} from './contract'
 import type { FormFieldRegistry } from './field-registry'
 import type { FormControlledProps, AnyFormProps, FormUncontrolledImplProps, FormUncontrolledProps } from './form-props'
 import type { KitFormApi } from './kit-form'
@@ -35,33 +40,54 @@ import type {
 import type { FormAsyncValidateOrFn, FormOptions, FormValidateOrFn } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
 
-export type CreateFormOptions<TFields extends FormFieldRegistry = FormFieldSlots> = {
-	/** The kit's chrome — the array frame and entry, button, `<form>`, section, cell, wizard. */
-	components: FormComponents
+export type CreateFormOptions<
+	// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- no fields registered
+	TFields extends FormFieldRegistry = {},
+	// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- no components registered
+	TComponents extends FormComponentRegistry = {},
+> = {
 	/**
-	 * The field kinds, keyed by component name — the kit's twelve, plus whatever the app adds.
+	 * The `<form>` element `<Form>` and `<SchemaForm>` render. A plain `<form>` when omitted.
 	 *
-	 * **Required.** A kit that forgets it gets a compile error rather than twelve blank fields
-	 * and twelve console warnings; the zero-config path survives because each kit still exports
-	 * its ready-made bundle, so an app with no custom fields never calls this factory at all.
-	 *
-	 * Every key that is not one of the twelve built-ins is bound by the generic binder and
-	 * reachable as `form.<Key>`, under the document id its name derives
-	 * (`RatingField` → `rating`).
-	 *
-	 * `& Partial<FormFieldSlots>` is what re-asserts the twelve **here**, and it is load-bearing.
-	 * `FormFieldRegistry`'s own bound has to take `any` props — parameters are contravariant, so
-	 * a narrower bound would reject a correct kit — which means the bound alone checks nothing
-	 * about a built-in key. A kit authoring its own twelve is still covered by its
-	 * `satisfies FormFieldSlots`, but the spread-and-override form is not: `{ ...formFieldSlots,
-	 * TextField: X }` is an object literal checked against the registry, never against
-	 * `FormFieldSlots`. That is the one path this feature exists for, so without this intersection
-	 * `TextField: (p: { totallyUnrelated: symbol }) => null` compiles, reaches the bespoke text
-	 * binder, and hands the author a `TextFieldRenderProps` their component never declared.
-	 * `Partial` rather than the whole type because the twelve are not required *here* — a kit
-	 * may legitimately register only some, and `guardFields` covers what is absent at runtime.
+	 * It receives the full `<form>` props — `onSubmit`, `noValidate`, `data-form` and whatever
+	 * the caller put on `<Form>` — and must put them on a real `<form>` element.
 	 */
-	fields: TFields & Partial<FormFieldSlots>
+	FormElement?: (props: FormElementProps) => ReactNode
+	/**
+	 * The field kinds, keyed by component name — any subset of the kit's twelve and its array
+	 * frame, plus whatever the app adds. Each key becomes `form.<Key>`; nothing else does.
+	 *
+	 * Every key that is not one of the built-ins is bound by the generic binder and reachable as
+	 * `form.<Key>`, under the document id its name derives (`RatingField` → `rating`).
+	 *
+	 * The `& Pick<FormFieldSlots, …>` is what re-asserts the built-ins **here**, and it is
+	 * load-bearing. `FormFieldRegistry`'s own bound has to take `any` props — parameters are
+	 * contravariant, so a narrower bound would reject a correct kit — which means the bound alone
+	 * checks nothing about a built-in key. The spread-and-override form — `{ ...formFieldSlots, TextField: X }` —
+	 * is an object literal checked against the registry, never against a kit's own `satisfies`,
+	 * so without this intersection `TextField: (p: { totallyUnrelated: symbol }) => null` would
+	 * compile, reach the bespoke text binder, and hand the author a `TextFieldRenderProps` their
+	 * component never declared.
+	 *
+	 * A `Pick` over the keys actually passed rather than the whole `FormFieldSlots`: inferring
+	 * `TFields` from `TFields & FormFieldSlots` matches a source *typed* `FormFieldSlots` against
+	 * the fixed half and leaves nothing to infer from, so a kit set annotated `: FormFieldSlots`
+	 * would produce an instance with no fields. The `Pick` depends on `TFields`, which keeps the
+	 * inference on the whole source and the check on exactly the keys it names.
+	 */
+	fields?: TFields & Pick<FormFieldSlots, keyof TFields & keyof FormFieldSlots>
+	/**
+	 * Any components, each attached to the instance as-is under its key: `{ SaveBar }` gives
+	 * `<form.SaveBar />` with `SaveBar`'s own props. A component reads the form through
+	 * `useFormContext()`, so it is the same component whether it is rendered as `form.SaveBar` or
+	 * directly.
+	 *
+	 * The `& Pick<FormComponents, …>` re-asserts the props of the four keys the kit contract
+	 * names, for the reason — and in the shape — `fields` re-asserts the built-ins. `SubmitButton`,
+	 * `Section`, `GridItem` and `Wizard` are also what `SchemaForm` draws a `submit`, `section`,
+	 * grid cell and stepped document with.
+	 */
+	components?: TComponents & Pick<FormComponents, keyof TComponents & keyof FormComponents>
 }
 
 /**
@@ -69,23 +95,31 @@ export type CreateFormOptions<TFields extends FormFieldRegistry = FormFieldSlots
  * analogue for forms.
  *
  * `useForm` is a **superset of TanStack Form's `useForm`**: the instance carries flat,
- * fully-wired field components (`form.TextField`, `form.NumberField`, …) plus
- * `form.SubmitButton`, while the entire native API (`form.Field`, `form.Subscribe`,
- * `form.handleSubmit`, `form.state`, `form.AppField`, …) stays untouched on the same
- * object. `Form` renders the `<form>` element, either around a caller-owned instance or
- * around one it creates itself.
+ * fully-wired components for exactly the `fields` and `components` passed, plus the two
+ * primitives every form has (`form.Submit`, `form.Array`), while the entire native API
+ * (`form.Field`, `form.Subscribe`, `form.handleSubmit`, `form.state`, `form.AppField`, …) stays
+ * untouched on the same object. `Form` renders the `<form>` element, either around a
+ * caller-owned instance or around one it creates itself.
+ *
+ * Every option is optional: `createForm()` alone gives a form with a plain `<form>` and only
+ * the primitives.
  *
  * Validation is pure pass-through: hand TanStack's native standard-schema validators
  * (zod / valibot / arktype) via `validators.onChange` / `onBlur` / `onSubmit`.
  *
  * @example
  * // in a kit package
- * export const { useForm, Form } = createForm({ components: formComponents, fields: formFieldSlots })
- *
- * // in an app that adds a field kind of its own
  * export const { useForm, Form } = createForm({
+ *   FormElement,
+ *   fields: formFieldSlots,
  *   components: formComponents,
- *   fields: { ...formFieldSlots, RatingField },
+ * })
+ *
+ * // in an app that registers the fields it uses and a component of its own
+ * export const { useForm, Form } = createForm({
+ *   FormElement,
+ *   fields: { TextField, NumberField, RatingField },
+ *   components: { SubmitButton, SaveBar },
  * })
  *
  * // in an app — the form lives exactly as long as the element
@@ -98,22 +132,21 @@ export type CreateFormOptions<TFields extends FormFieldRegistry = FormFieldSlots
  *   )}
  * </Form>
  */
-export function createForm<TFields extends FormFieldRegistry = FormFieldSlots>({
-	components: kitComponents,
-	fields: kitFields,
-}: CreateFormOptions<TFields>) {
+export function createForm<
+	// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- no fields registered
+	TFields extends FormFieldRegistry = {},
+	// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- no components registered
+	TComponents extends FormComponentRegistry = {},
+>(options: CreateFormOptions<TFields, TComponents> = {}) {
 	/**
-	 * Guarded once, here, so every consumer below — the field builder, the schema renderer and
-	 * the three `FormElement` call sites — sees the same filled set and the same component
-	 * identities. A slot the kit left out renders nothing and warns once instead of taking the
-	 * whole form down with React's unnamed "Element type is invalid".
+	 * Read once, here, so every consumer below — the field builder, the schema renderer and the
+	 * three `FormElement` call sites — sees the same component identities. Nothing is filled in:
+	 * a key that was not passed is not on the instance, and `SchemaForm` names what a document
+	 * needed and did not get.
 	 */
-	const components = guardComponents(kitComponents)
-	/**
-	 * The same treatment for the field registry — see `guardFields` on why an open registry
-	 * can only fill the twelve it can name.
-	 */
-	const fields = guardFields(kitFields)
+	const FormElement = options.FormElement ?? DEFAULT_FORM_ELEMENT
+	const fields: FormFieldRegistry = options.fields ?? {}
+	const components: FormComponentRegistry & FormComponents = options.components ?? {}
 
 	/**
 	 * The same registry, re-keyed by the document id each component name derives — what the
@@ -164,7 +197,7 @@ export function createForm<TFields extends FormFieldRegistry = FormFieldSlots>({
 		TOnServer extends undefined | FormAsyncValidateOrFn<TFormData>,
 		TSubmitMeta,
 	>(
-		options: FormOptions<
+		formOptions: FormOptions<
 			TFormData,
 			TOnMount,
 			TOnChange,
@@ -191,22 +224,24 @@ export function createForm<TFields extends FormFieldRegistry = FormFieldSlots>({
 		TOnDynamicAsync,
 		TOnServer,
 		TSubmitMeta,
-		TFields
+		TFields,
+		TComponents
 	> {
-		const form = useAppForm(options)
+		const form = useAppForm(formOptions)
 
 		const fieldComponents = useMemo(
-			() => buildFieldComponents<TFormData>(form as unknown as BindableForm, components, fields),
+			() => buildFieldComponents<TFormData>(form as unknown as BindableForm, fields),
 			// The form instance is stable for the lifetime of the component, so the field
 			// components — and therefore the mounted inputs — are built exactly once.
 			[form],
 		)
 
 		// Augmenting the instance rather than spreading it: the TanStack form API is a class
-		// with prototype methods and getters, which a spread would flatten and break.
+		// with prototype methods and getters, which a spread would flatten and break. The
+		// components go on as-is — they read the form from context, so nothing binds them.
 		return useMemo(
 			() =>
-				Object.assign(form, fieldComponents) as unknown as KitFormApi<
+				Object.assign(form, fieldComponents, components) as unknown as KitFormApi<
 					TFormData,
 					TOnMount,
 					TOnChange,
@@ -219,7 +254,8 @@ export function createForm<TFields extends FormFieldRegistry = FormFieldSlots>({
 					TOnDynamicAsync,
 					TOnServer,
 					TSubmitMeta,
-					TFields
+					TFields,
+					TComponents
 				>,
 			[form, fieldComponents],
 		)
@@ -259,7 +295,8 @@ export function createForm<TFields extends FormFieldRegistry = FormFieldSlots>({
 			TOnDynamicAsync,
 			TOnServer,
 			TSubmitMeta,
-			TFields
+			TFields,
+			TComponents
 		>,
 	): ReactNode {
 		const { children, form: _ignored, ...rest } = props
@@ -284,7 +321,7 @@ export function createForm<TFields extends FormFieldRegistry = FormFieldSlots>({
 		return (
 			<FormShell
 				form={instance}
-				FormElement={components.Form}
+				FormElement={FormElement}
 				elementProps={elementProps}
 			>
 				{children(instance)}
@@ -327,7 +364,8 @@ export function createForm<TFields extends FormFieldRegistry = FormFieldSlots>({
 			TOnDynamicAsync,
 			TOnServer,
 			TSubmitMeta,
-			TFields
+			TFields,
+			TComponents
 		>,
 	): ReactNode
 	function Form(props: AnyFormProps): ReactNode {
@@ -336,7 +374,7 @@ export function createForm<TFields extends FormFieldRegistry = FormFieldSlots>({
 			return (
 				<FormShell
 					form={form}
-					FormElement={components.Form}
+					FormElement={FormElement}
 					elementProps={elementProps}
 				>
 					{children}
@@ -346,7 +384,7 @@ export function createForm<TFields extends FormFieldRegistry = FormFieldSlots>({
 
 		// Overload resolution has already checked the caller; the implementation signature is
 		// deliberately the loose one, so the shape is spelled out again for the inner component.
-		return <UncontrolledForm {...(props as FormUncontrolledImplProps<TFields>)} />
+		return <UncontrolledForm {...(props as FormUncontrolledImplProps<TFields, TComponents>)} />
 	}
 
 	/**
@@ -432,7 +470,7 @@ export function createForm<TFields extends FormFieldRegistry = FormFieldSlots>({
 		return (
 			<FormShell
 				form={instance}
-				FormElement={components.Form}
+				FormElement={FormElement}
 				elementProps={elementProps}
 			>
 				{renderSchemaFields(schema, instance, components, translate, customFieldsById, blocks)}
@@ -486,7 +524,7 @@ export function createForm<TFields extends FormFieldRegistry = FormFieldSlots>({
 			return (
 				<FormShell
 					form={form}
-					FormElement={components.Form}
+					FormElement={FormElement}
 					elementProps={elementProps}
 				>
 					{renderSchemaFields(schema, form, components, translate, customFieldsById, blocks)}
@@ -561,7 +599,8 @@ export function createForm<TFields extends FormFieldRegistry = FormFieldSlots>({
 			TOnServer,
 			TSubmitMeta,
 			TRenderProps,
-			TFields
+			TFields,
+			TComponents
 		>,
 	): KitFormBlock<
 		TFormData,
@@ -576,7 +615,9 @@ export function createForm<TFields extends FormFieldRegistry = FormFieldSlots>({
 		TOnDynamicAsync,
 		TOnServer,
 		TSubmitMeta,
-		TRenderProps
+		TRenderProps,
+		TFields,
+		TComponents
 	> {
 		// The two shapes differ only in the `form` type discussed above, which no assignment
 		// can express: a component asking for the richer `KitFormApi` is not assignable to one
@@ -596,7 +637,9 @@ export function createForm<TFields extends FormFieldRegistry = FormFieldSlots>({
 			TOnDynamicAsync,
 			TOnServer,
 			TSubmitMeta,
-			TRenderProps
+			TRenderProps,
+			TFields,
+			TComponents
 		>
 	}
 
@@ -606,6 +649,12 @@ export function createForm<TFields extends FormFieldRegistry = FormFieldSlots>({
 	// returns already accepts a `KitFormApi`, that type being an intersection over TanStack's.
 	return { useForm, Form, FormProvider, SchemaForm, withForm, withFieldGroup }
 }
+
+/**
+ * The `<form>` element when the caller passed no `FormElement`: the intrinsic tag, which takes
+ * exactly the props a kit's element is handed.
+ */
+const DEFAULT_FORM_ELEMENT = 'form'
 
 /**
  * Which mode the caller picked.
@@ -624,4 +673,8 @@ function isControlled(props: { form?: unknown }): props is FormControlledProps {
  * on a generic function that form instantiates at the constraint, which would quietly type
  * every bundle over `FormFieldRegistry` and lose the app's own field kinds.
  */
-export type FormBundle<TFields extends FormFieldRegistry = FormFieldSlots> = ReturnType<typeof createForm<TFields>>
+export type FormBundle<
+	TFields extends FormFieldRegistry = AllFormFieldSlots,
+	// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- no components registered
+	TComponents extends FormComponentRegistry = {},
+> = ReturnType<typeof createForm<TFields, TComponents>>

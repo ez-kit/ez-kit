@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
 
 import { createForm } from '../create-form'
-import { testComponents, testFields } from '../test-kit'
+import { testComponents, testFields, testFormElement } from '../test-kit'
 
 import type { CustomFieldRenderProps } from './registries'
 import type { FormSchema } from '@ez-kit/form-core'
@@ -40,7 +40,11 @@ const RatingField = ({ id, label, value, onChange, props, invalid }: CustomField
  * `Field`, so every `{ type: 'rating' }` node below resolves against this one registration, and
  * the same component is reachable from JSX as `form.RatingField`.
  */
-const { SchemaForm } = createForm({ components: testComponents, fields: { ...testFields, RatingField } })
+const { SchemaForm } = createForm({
+	FormElement: testFormElement,
+	fields: { ...testFields, RatingField },
+	components: testComponents,
+})
 
 test('a custom field receives the full binding, not just its own props', async () => {
 	const user = userEvent.setup()
@@ -126,7 +130,11 @@ test('an unknown node type throws with the type named', () => {
 	// A bundle whose factory registered nothing beyond the kit's twelve — `rating` is
 	// neither a built-in kind nor registered, and there is no per-form prop left that could
 	// have supplied it after the fact.
-	const { SchemaForm: BareSchemaForm } = createForm({ components: testComponents, fields: testFields })
+	const { SchemaForm: BareSchemaForm } = createForm({
+		FormElement: testFormElement,
+		fields: testFields,
+		components: testComponents,
+	})
 
 	const schema = {
 		version: 1,

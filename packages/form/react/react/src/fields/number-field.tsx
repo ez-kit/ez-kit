@@ -5,14 +5,14 @@ import { fieldRenderProps } from '../field-render-props'
 import { fieldValidators } from '../field-validate'
 
 import type { BindableForm } from '../bindable-form'
-import type { FormFieldSlots } from '../contract'
+import type { AllFormFieldSlots } from '../contract'
 import type { NumberFieldProps } from '../field-props'
 import type { ReactNode } from 'react'
 
 /** Build the `NumberField` component bound to one form instance. */
 export function createNumberField<TFormData>(
 	form: BindableForm,
-	KitNumberField: FormFieldSlots['NumberField'],
+	KitNumberField: AllFormFieldSlots['NumberField'],
 ): (props: NumberFieldProps<TFormData>) => ReactNode {
 	return function NumberField({
 		name,

@@ -3,11 +3,11 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, expectTypeOf, it, vi } from 'vitest'
 
 import { createForm } from './create-form'
-import { testComponents, testFields } from './test-kit'
+import { testComponents, testFields, testFormElement } from './test-kit'
 
 import type { SubmitRenderProps } from './index'
 
-const { Form } = createForm({ components: testComponents, fields: testFields })
+const { Form } = createForm({ FormElement: testFormElement, fields: testFields, components: testComponents })
 
 describe('form.Submit', () => {
 	it('hands over the submit state', () => {

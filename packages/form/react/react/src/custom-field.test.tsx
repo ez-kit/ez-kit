@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import { createForm } from './create-form'
 import { defineFieldType } from './field-registry'
-import { testComponents, testFields } from './test-kit'
+import { testComponents, testFields, testFormElement } from './test-kit'
 
 import type { FormFieldSlots, TextFieldRenderProps } from './contract'
 import type { CustomFieldRenderProps } from './schema/registries'
@@ -53,8 +53,9 @@ const CapturingTextField: FormFieldSlots['TextField'] = (props) => {
 }
 
 const { Form, SchemaForm } = createForm({
-	components: testComponents,
+	FormElement: testFormElement,
 	fields: { ...testFields, TextField: CapturingTextField, NoteField },
+	components: testComponents,
 })
 
 beforeEach(() => {
@@ -178,8 +179,9 @@ describe('replacing a built-in field at its own key', () => {
 	}
 
 	const { Form: ReplacedForm } = createForm({
-		components: testComponents,
+		FormElement: testFormElement,
 		fields: { ...testFields, TextField: ReplacementTextField },
+		components: testComponents,
 	})
 
 	it('renders the replacement and still routes through the bespoke text binder', () => {
@@ -224,8 +226,9 @@ describe('a custom field inside an array entry', () => {
 	})
 
 	const { Form: ArrayForm } = createForm({
-		components: testComponents,
+		FormElement: testFormElement,
 		fields: { ...testFields, RatingField },
+		components: testComponents,
 	})
 
 	it('binds to the entry path with no extra work', () => {
@@ -270,8 +273,9 @@ describe('author props named after Object.prototype members', () => {
 	})
 
 	const { Form: ShadowForm } = createForm({
-		components: testComponents,
+		FormElement: testFormElement,
 		fields: { ...testFields, ShadowField },
+		components: testComponents,
 	})
 
 	it('reach the component instead of being swallowed by the prototype chain', () => {
@@ -379,9 +383,13 @@ describe('the factory runs the registry checks', () => {
 	 * checked again. This is the test that goes red instead.
 	 */
 	it('rejects a key whose derived id shadows a reserved node type', () => {
-		expect(() => createForm({ components: testComponents, fields: { ...testFields, SectionField: Noop } })).toThrow(
-			/section/i,
-		)
+		expect(() =>
+			createForm({
+				FormElement: testFormElement,
+				fields: { ...testFields, SectionField: Noop },
+				components: testComponents,
+			}),
+		).toThrow(/section/i)
 	})
 
 	/**
@@ -392,8 +400,9 @@ describe('the factory runs the registry checks', () => {
 	 */
 	it('binds a key named after an Object.prototype member as a custom field, not a built-in', () => {
 		const { Form: ProtoForm } = createForm({
-			components: testComponents,
+			FormElement: testFormElement,
 			fields: { ...testFields, toString: Noop },
+			components: testComponents,
 		})
 
 		expect(() =>
@@ -411,20 +420,22 @@ describe('the factory runs the registry checks', () => {
 	})
 
 	/**
-	 * The builder writes five of its own keys over the registry's output, so a field registered
-	 * under one of them was accepted everywhere and then silently overwritten — `form.GridItem`
-	 * rendered the layout component and the author's field never appeared. `Section` and `Array`
-	 * were caught only by accident, their ids happening to be reserved node types.
+	 * The builder writes its two primitives over the registry's output, so a field registered
+	 * under one of them would be accepted and then silently overwritten.
 	 */
-	it.each(['GridItem', 'SubmitButton'])('rejects %s, which the builder would overwrite', (key) => {
-		expect(() => createForm({ components: testComponents, fields: { ...testFields, [key]: Noop } })).toThrow(
-			new RegExp(key),
-		)
+	it.each(['Submit', 'Array'])('rejects %s, which the builder would overwrite', (key) => {
+		expect(() =>
+			createForm({ FormElement: testFormElement, fields: { ...testFields, [key]: Noop }, components: testComponents }),
+		).toThrow(new RegExp(key))
 	})
 
 	it('rejects two keys deriving one id', () => {
 		expect(() =>
-			createForm({ components: testComponents, fields: { ...testFields, Rating: Noop, RatingField: Noop } }),
+			createForm({
+				FormElement: testFormElement,
+				fields: { ...testFields, Rating: Noop, RatingField: Noop },
+				components: testComponents,
+			}),
 		).toThrow(/rating/i)
 	})
 })
@@ -439,7 +450,11 @@ describe('the authored props bag', () => {
 		return null
 	})
 
-	const { Form: BagForm } = createForm({ components: testComponents, fields: { ...testFields, BagField } })
+	const { Form: BagForm } = createForm({
+		FormElement: testFormElement,
+		fields: { ...testFields, BagField },
+		components: testComponents,
+	})
 
 	function Harness(): ReactNode {
 		const [, force] = useReducer((n: number) => n + 1, 0)

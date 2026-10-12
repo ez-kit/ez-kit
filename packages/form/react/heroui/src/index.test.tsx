@@ -177,7 +177,9 @@ describe('@ez-kit/form-heroui package root', () => {
 		expect(typeof kit.defineFieldType).toBe('function')
 		expect(Object.keys(kit.formFieldSlots)).toHaveLength(13)
 		expect(kit.formFieldSlots.ArrayField.Item).toBeTypeOf('function')
-		expect(Object.keys(kit.formComponents).sort()).toEqual(['Button', 'Form', 'GridItem', 'Section', 'Wizard'])
+		expect(Object.keys(kit.formComponents).sort()).toEqual(['GridItem', 'Section', 'SubmitButton', 'Wizard'])
+		expect(kit.formComponents.SubmitButton).toBe(kit.SubmitButton)
+		expect(kit.FormElement).toBeTypeOf('function')
 		for (const name of Object.keys(kit.formFieldSlots)) {
 			expect(kit[name as keyof typeof kit]).toBe(kit.formFieldSlots[name as keyof typeof kit.formFieldSlots])
 		}
@@ -185,8 +187,9 @@ describe('@ez-kit/form-heroui package root', () => {
 
 	it('recomposes a bundle from the exported bags that renders the real HeroUI input', () => {
 		const { Form: Rebuilt } = kit.createForm({
-			components: kit.formComponents,
+			FormElement: kit.FormElement,
 			fields: { ...kit.formFieldSlots, RatingField },
+			components: kit.formComponents,
 		})
 
 		const { container } = render(
@@ -207,8 +210,7 @@ describe('@ez-kit/form-heroui package root', () => {
 			</Rebuilt>,
 		)
 
-		// HeroUI's own class on the React Aria composition, not the guard placeholder a
-		// missing slot renders.
+		// HeroUI's own class on the React Aria composition.
 		expect(container.querySelector('.textfield')).toBeInTheDocument()
 		expect(screen.getByLabelText('Email')).toBeInTheDocument()
 		expect(screen.getByTestId('rating')).toHaveTextContent('0 / 5')

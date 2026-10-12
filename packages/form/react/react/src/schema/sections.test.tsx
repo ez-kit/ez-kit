@@ -3,11 +3,11 @@ import { render, screen } from '@testing-library/react'
 import { expect, test } from 'vitest'
 
 import { createForm } from '../create-form'
-import { testComponents, testFields } from '../test-kit'
+import { testComponents, testFields, testFormElement } from '../test-kit'
 
 import type { FormSchema } from '@ez-kit/form-core'
 
-const { SchemaForm } = createForm({ components: testComponents, fields: testFields })
+const { SchemaForm } = createForm({ FormElement: testFormElement, fields: testFields, components: testComponents })
 
 type Values = { email: string; age: number }
 

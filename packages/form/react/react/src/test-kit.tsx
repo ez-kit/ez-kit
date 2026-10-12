@@ -1,17 +1,19 @@
 import { useState } from 'react'
 
+import { useFormContext } from './form-context'
+
 import type {
 	ArrayFieldRenderProps,
 	ArrayItemRenderProps,
 	DateRangeFieldRenderProps,
+	AllFormFieldSlots,
 	FieldRenderProps,
 	FormComponents,
-	FormFieldSlots,
-	GridItemRenderProps,
-	SectionRenderProps,
+	FormElementProps,
 	WizardRenderProps,
 	WizardStep,
 } from './contract'
+import type { GridItemProps, SectionProps, SubmitButtonProps } from './field-props'
 import type { ReactNode } from 'react'
 
 /**
@@ -86,7 +88,7 @@ function Shell({ id, label, description, errors, invalid, children, controlFirst
 }
 
 /** The layout half of the test kit — unstyled, marker attributes only. */
-function Section({ title, description, columns, children }: SectionRenderProps): ReactNode {
+function Section({ title, description, columns, children }: SectionProps): ReactNode {
 	return (
 		<section
 			data-testid='section'
@@ -99,7 +101,7 @@ function Section({ title, description, columns, children }: SectionRenderProps):
 	)
 }
 
-function GridItem({ colSpan, children }: GridItemRenderProps): ReactNode {
+function GridItem({ colSpan, children }: GridItemProps): ReactNode {
 	return (
 		<div
 			data-testid='grid-item'
@@ -336,12 +338,8 @@ const TestArrayItem = ({
 /** The array frame, carrying its entry view — the shape a kit's `ArrayField` export has. */
 const TestArrayField = Object.assign(TestArrayFrame, { Item: TestArrayItem })
 
-/**
- * The twelve field kinds and the array frame. Split from `testComponents` when the contract did: a kit's field
- * set is open and reaches `createForm` as `fields`, its chrome is closed and reaches it as
- * `components`.
- */
-export const testFields: FormFieldSlots = {
+/** The twelve field kinds and the array frame — the test kit's `fields`. */
+export const testFields = {
 	TextField: ({ value, onChange, type, placeholder, id, name, onBlur, disabled, required, ...field }) => (
 		<Shell
 			id={id}
@@ -754,29 +752,45 @@ export const testFields: FormFieldSlots = {
 	// never depend on a real picker.
 	DateRangeField: (props) => <TestDateRangeField {...props} />,
 	ArrayField: TestArrayField,
-}
+} satisfies AllFormFieldSlots
 
-/** The chrome half — the five slots that are not field kinds. */
-export const testComponents: FormComponents = {
-	Button: ({ type, disabled, onClick, children }) => (
-		<button
-			data-testkit='button'
-			type={type === 'submit' ? 'submit' : 'button'}
-			disabled={disabled}
-			onClick={onClick}
-		>
-			{children}
-		</button>
-	),
-	Form: ({ children, ...rest }) => (
+/** The test kit's `<form>` element — the `FormElement` option. */
+export function testFormElement({ children, ...rest }: FormElementProps): ReactNode {
+	return (
 		<form
 			data-testkit='form'
 			{...rest}
 		>
 			{children}
 		</form>
-	),
+	)
+}
+
+/**
+ * The submit button, built the way a kit builds one: on `form.Submit`, reading the form from
+ * context, so it works as `form.SubmitButton` and as a plain component alike.
+ */
+function SubmitButton({ children, disabled }: SubmitButtonProps): ReactNode {
+	const form = useFormContext()
+	return (
+		<form.Submit>
+			{({ canSubmit, isSubmitting }) => (
+				<button
+					data-testkit='button'
+					type='submit'
+					disabled={disabled === true || !canSubmit || isSubmitting}
+				>
+					{children}
+				</button>
+			)}
+		</form.Submit>
+	)
+}
+
+/** The test kit's `components`. */
+export const testComponents = {
+	SubmitButton,
 	Section,
 	GridItem,
 	Wizard,
-}
+} satisfies FormComponents

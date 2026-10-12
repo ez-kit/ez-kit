@@ -332,8 +332,8 @@ export const FORM_TYPE = {
 	/** What a kit's field component receives — the base half of the field-slot contract. */
 	FieldRenderProps: { module: TypeModule.FormReact, name: 'FieldRenderProps' },
 	/**
-	 * The chrome half of the kit contract: the seven slots that are not field kinds —
-	 * `Form`, `Button`, `Section`, `GridItem`, `Wizard` and the two array slots.
+	 * The `components` half of the kit contract: the four named components that are not field
+	 * kinds — `SubmitButton`, `Section`, `GridItem` and `Wizard`.
 	 */
 	FormComponents: { module: TypeModule.FormReact, name: 'FormComponents' },
 	/**
@@ -1103,7 +1103,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			// heading addresses at most one table.
 			{ heading: 'Fields', roots: [FORM_TYPE.FieldRenderProps], expectedCount: 11 },
 			{ heading: 'Per-kind props', roots: [FORM_TYPE.FormFieldSlots], expectedCount: 12 },
-			{ heading: 'Form level', roots: [FORM_TYPE.FormComponents], expectedCount: 2 },
+			{ heading: 'Form level', roots: [FORM_TYPE.FormComponents], expectedCount: 1 },
 			{ heading: 'Layout and wizard', roots: [FORM_TYPE.FormComponents], expectedCount: 3 },
 		],
 		nonOptionTables: [],
@@ -1324,7 +1324,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			{ heading: 'The render prop', roots: [FORM_TYPE.ArrayFieldScope], expectedCount: 3 },
 			{ heading: 'One entry', roots: [FORM_TYPE.ArrayItemScope], expectedCount: 3 },
 			{ heading: '`form.Array`', roots: [FORM_TYPE.ArrayProps], expectedCount: 6 },
-			{ heading: 'The scope', roots: [FORM_TYPE.ArrayScope], expectedCount: 12 },
+			{ heading: 'The scope', roots: [FORM_TYPE.ArrayScope], expectedCount: 11 },
 			{ heading: 'One entry, from the primitive', roots: [FORM_TYPE.ArrayItemScope], expectedCount: 8 },
 			{ heading: "`item.Item`'s own props", roots: [FORM_TYPE.ArrayItemProps], expectedCount: 4 },
 			{ heading: 'Validating the list', roots: [FORM_TYPE.FieldValidate], expectedCount: 3 },

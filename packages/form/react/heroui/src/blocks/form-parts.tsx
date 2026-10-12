@@ -1,31 +1,10 @@
 import { useFormContext } from '@ez-kit/form-react'
 import { Button as HeroButton, Form as HeroForm } from '@heroui/react'
 
-import type { ButtonProps, FormElementProps, SubmitButtonProps } from '@ez-kit/form-react'
+import type { FormElementProps, SubmitButtonProps } from '@ez-kit/form-react'
 import type { ReactNode } from 'react'
 
-/** The form-level primitives for the HeroUI kit: the submit button and the `<form>` shell. */
-
-export function Button({ type, disabled, onClick, children }: ButtonProps): ReactNode {
-	return (
-		<HeroButton
-			// Not `data-slot`: HeroUI stamps its own before spreading props, so ours would win
-			// and detach the element from `@heroui/styles`.
-			//
-			// The marker says what the button *is*. `Button` was the submit button and nothing
-			// else until the array scope started handing it out for add / remove / duplicate /
-			// reorder controls; stamping `data-form-submit` unconditionally tagged four
-			// non-submitting controls per row as the form's submit.
-			{...(type === 'submit' ? { 'data-form-submit': '' } : { 'data-form-button': '' })}
-			type={type ?? 'button'}
-			variant='primary'
-			{...(disabled !== undefined ? { isDisabled: disabled } : {})}
-			{...(onClick !== undefined ? { onPress: onClick } : {})}
-		>
-			{children}
-		</HeroButton>
-	)
-}
+/** The form-level parts of the HeroUI kit: the `<form>` element and the submit button. */
 
 /**
  * HeroUI's `Form` — the same React Aria `Form` the kit's fields already expect.
@@ -47,7 +26,7 @@ export function Button({ type, disabled, onClick, children }: ButtonProps): Reac
  * on the real `<form>`. Contract props win by design — a caller's explicit `noValidate` or
  * `onSubmit` should not be silently dropped.
  */
-export function Form({ className, children, ...props }: FormElementProps): ReactNode {
+export function FormElement({ className, children, ...props }: FormElementProps): ReactNode {
 	return (
 		<HeroForm
 			className={['flex flex-col gap-4', className].filter(Boolean).join(' ')}

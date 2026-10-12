@@ -2,7 +2,7 @@ import { defineFormSchema, FormFieldType } from '@ez-kit/form-core'
 import { describe, expectTypeOf, it } from 'vitest'
 
 import { createForm } from './create-form'
-import { testComponents, testFields } from './test-kit'
+import { testComponents, testFields, testFormElement } from './test-kit'
 
 import type { CustomFieldRenderProps } from './schema/registries'
 import type { FormSchema } from '@ez-kit/form-core'
@@ -12,7 +12,11 @@ type Values = { email: string; age: number }
 
 const DEFAULTS: Values = { email: '', age: 0 }
 
-const { useForm, Form, SchemaForm } = createForm({ components: testComponents, fields: testFields })
+const { useForm, Form, SchemaForm } = createForm({
+	FormElement: testFormElement,
+	fields: testFields,
+	components: testComponents,
+})
 
 /**
  * Type-level guarantees of `<Form>`. Nothing here is rendered — a violation fails

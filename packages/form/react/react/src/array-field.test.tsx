@@ -4,7 +4,7 @@ import { memo, useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { createForm } from './create-form'
-import { testComponents, testFields } from './test-kit'
+import { testComponents, testFields, testFormElement } from './test-kit'
 
 import type { ArrayFieldRenderProps, ArrayItemRenderProps } from './contract'
 import type { ReactNode } from 'react'
@@ -26,7 +26,7 @@ function last<T>(items: readonly T[]): T {
 	return tail
 }
 
-const { Form } = createForm({ components: testComponents, fields: testFields })
+const { Form } = createForm({ FormElement: testFormElement, fields: testFields, components: testComponents })
 
 const NEW_PERSON: Person = { firstName: '' }
 
@@ -655,8 +655,9 @@ describe('the array slot', () => {
 			Item: (props: ArrayItemRenderProps) => <div data-testid='entry'>{props.children}</div>,
 		})
 		const { Form: FramedForm } = createForm({
-			components: testComponents,
+			FormElement: testFormElement,
 			fields: { ...testFields, ArrayField: Frame },
+			components: testComponents,
 		})
 		render(
 			<FramedForm defaultValues={{ tags: [{ label: 'a' }] }}>
@@ -685,8 +686,9 @@ describe('the array slot', () => {
 			Item: (props: ArrayItemRenderProps) => <div data-testid='entry'>{props.children}</div>,
 		})
 		const { Form: FramedForm } = createForm({
-			components: testComponents,
+			FormElement: testFormElement,
 			fields: { ...testFields, ArrayField: Frame },
+			components: testComponents,
 		})
 		render(
 			<FramedForm defaultValues={{ tags: [{ label: 'a' }] }}>

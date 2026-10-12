@@ -4,13 +4,13 @@ import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { createForm } from './create-form'
-import { testComponents, testFields } from './test-kit'
+import { testComponents, testFields, testFormElement } from './test-kit'
 
 type Values = { email: string }
 
 const DEFAULTS: Values = { email: '' }
 
-const { useForm, Form } = createForm({ components: testComponents, fields: testFields })
+const { useForm, Form } = createForm({ FormElement: testFormElement, fields: testFields, components: testComponents })
 
 describe('Form — uncontrolled', () => {
 	it('runs the hook itself and hands the instance to the render prop', async () => {

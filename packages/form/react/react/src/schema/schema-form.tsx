@@ -15,7 +15,7 @@ import { renderChildren } from './render-children'
 import type { BlockRegistry, CustomFieldRegistry } from './registries'
 import type { LayoutComponents } from './render-node'
 import type { SubmittableForm } from '../bindable-form'
-import type { FormElementProps, FormFieldSlots } from '../contract'
+import type { FormElementProps, AllFormFieldSlots } from '../contract'
 import type { FormFieldComponents } from '../field-props'
 import type { FormFieldRegistry } from '../field-registry'
 import type { FormInstance } from '../form-instance'
@@ -84,7 +84,7 @@ export type SharedSchemaFormProps<TValues> = {
  * registered the custom field its schema names — the failure would then surface at render
  * time, as `Unknown node type "rating"`, rather than at the call site.
  */
-type RendererForm<TValues, TFields extends FormFieldRegistry = FormFieldSlots> = SubmittableForm &
+type RendererForm<TValues, TFields extends FormFieldRegistry = AllFormFieldSlots> = SubmittableForm &
 	FormFieldComponents<TValues, TFields>
 
 /**
@@ -116,7 +116,10 @@ type RendererForm<TValues, TFields extends FormFieldRegistry = FormFieldSlots> =
  * render (a per-render `formApi.update(opts)`), so any wrap `SchemaForm` applied would just
  * lose that race back to your unwrapped `onSubmit`.
  */
-export type SchemaFormControlledProps<TValues, TFields extends FormFieldRegistry = FormFieldSlots> = FormElementRest &
+export type SchemaFormControlledProps<
+	TValues,
+	TFields extends FormFieldRegistry = AllFormFieldSlots,
+> = FormElementRest &
 	SharedSchemaFormProps<TValues> & {
 		form: FormInstance<TValues, TFields>
 	}
@@ -173,7 +176,7 @@ export type SchemaFormUncontrolledProps<
  * admits the same registry. The factory passes its own `TFields` in, so the loose shape is
  * loose about the *mode* and about `TValues`, and about nothing else.
  */
-export type AnySchemaFormProps<TFields extends FormFieldRegistry = FormFieldSlots> = FormElementRest &
+export type AnySchemaFormProps<TFields extends FormFieldRegistry = AllFormFieldSlots> = FormElementRest &
 	SharedSchemaFormProps<unknown> & {
 		form?: RendererForm<unknown, TFields>
 	}
@@ -195,7 +198,7 @@ export type SchemaFormUncontrolledImplProps = SchemaFormUncontrolledProps<
 >
 
 /** Which mode the caller picked — `form` is the discriminant, exactly as for `Form`. */
-export function isSchemaFormControlled<TValues, TFields extends FormFieldRegistry = FormFieldSlots>(props: {
+export function isSchemaFormControlled<TValues, TFields extends FormFieldRegistry = AllFormFieldSlots>(props: {
 	form?: unknown
 }): props is SchemaFormControlledProps<TValues, TFields> {
 	return props.form !== undefined
@@ -358,7 +361,7 @@ export function isWizardSchema<TValues>(schema: AnyFormSchema<TValues>): boolean
  * which renders one step at a time through the kit's `Wizard` (spec §4.5, §10). A `step` found
  * anywhere else still throws via `renderChildren`, exactly as a genuinely unknown `type` does.
  */
-export function renderSchemaFields<TValues, TFields extends FormFieldRegistry = FormFieldSlots>(
+export function renderSchemaFields<TValues, TFields extends FormFieldRegistry = AllFormFieldSlots>(
 	schema: AnyFormSchema<TValues>,
 	form: FormFieldComponents<TValues, TFields>,
 	layout: LayoutComponents,

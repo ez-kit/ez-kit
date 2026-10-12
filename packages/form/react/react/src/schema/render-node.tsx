@@ -16,8 +16,8 @@ import { useConditionValue } from './use-condition'
 
 import type { ConditionSubscribableForm } from './use-condition'
 import type { BindableForm, FieldValue } from '../bindable-form'
-import type { FormComponents } from '../contract'
-import type { ArrayFieldProps, ArrayReorderable, FormFieldComponents } from '../field-props'
+import type { FormComponents, FormFieldSlots } from '../contract'
+import type { ArrayFieldProps, ArrayReorderable, BuiltInFieldComponents, FormFieldComponents } from '../field-props'
 import type { BlockRegistry, CustomFieldRegistry } from './registries'
 import type {
 	AnyArrayNode,
@@ -60,11 +60,53 @@ export type RenderNodeContext = {
 }
 
 /**
- * The container primitives from the raw kit contract — separate from `form` (the bound,
- * per-field components attached to the form instance) because `Section`, `GridItem` and
- * `Wizard` carry no field state; they are wired straight from `createForm`'s `components`.
+ * The components the renderer draws a document's structure with — `Section`, `GridItem`,
+ * `Wizard` and `SubmitButton` — straight from `createForm`'s `components`, separate from `form`
+ * (the bound, per-field components attached to the form instance) because none of them carries
+ * field state. Every one is optional: a document that needs one nobody passed throws, naming it.
  */
-export type LayoutComponents = Pick<FormComponents, 'Section' | 'GridItem' | 'Wizard'>
+export type LayoutComponents = FormComponents
+
+/**
+ * What `SchemaForm` says when a document needs a component that was not passed — one message per
+ * component, each naming the option it belongs in.
+ */
+export const MissingComponentMessage = {
+	Section: 'SchemaForm: the document has a section, but no Section component was passed in components.',
+	GridItem: 'SchemaForm: a section has a grid, but no GridItem component was passed in components.',
+	Wizard: 'SchemaForm: the document has steps, but no Wizard component was passed in components.',
+	SubmitButton: 'SchemaForm: the document has a submit node, but no SubmitButton component was passed in components.',
+	ArrayField: 'SchemaForm: the document has an array, but no ArrayField was passed in fields.',
+} as const
+
+export type MissingComponentMessage = (typeof MissingComponentMessage)[keyof typeof MissingComponentMessage]
+
+/** Throws `message` when the form was given no `component`. */
+export function assertComponent<TComponent>(
+	component: TComponent | undefined,
+	message: MissingComponentMessage,
+): asserts component is TComponent {
+	if (component === undefined) throw new Error(message)
+}
+
+/**
+ * The slot each built-in field kind renders through. A document naming a kind whose slot the form
+ * did not register gets the same `Unknown node type` error an unregistered custom kind does.
+ */
+const BUILT_IN_SLOT_BY_TYPE = {
+	[FormFieldType.Text]: 'TextField',
+	[FormFieldType.Number]: 'NumberField',
+	[FormFieldType.Textarea]: 'TextareaField',
+	[FormFieldType.Select]: 'SelectField',
+	[FormFieldType.Checkbox]: 'CheckboxField',
+	[FormFieldType.Switch]: 'SwitchField',
+	[FormFieldType.RadioGroup]: 'RadioGroupField',
+	[FormFieldType.Slider]: 'SliderField',
+	[FormFieldType.Date]: 'DateField',
+	[FormFieldType.DateRange]: 'DateRangeField',
+	[FormFieldType.MultiSelect]: 'MultiSelectField',
+	[FormFieldType.CheckboxGroup]: 'CheckboxGroupField',
+} as const satisfies Record<FormFieldType, Exclude<keyof FormFieldSlots, 'ArrayField'>>
 
 export type RenderNodeArgs<TValues> = {
 	node:
@@ -238,13 +280,15 @@ type ErasedArrayField = (
  *
  * A section contributes nothing to a field's `name` — it only groups children into a headed,
  * column-gridded block via `layout.Section` and recurses into them via `renderChildren`,
- * which is what wraps each child in `layout.GridItem` when the section declares `columns`.
+ * which is what wraps each child in `layout.GridItem` when the section declares `columns`. A
+ * `submit` node renders `layout.SubmitButton` — the component passed in `components`, which
+ * reads the form from context.
  *
  * `node.when` false hides the node entirely (returns `null`, after both hooks have still
  * run); `node.disabledWhen` true only disables it — spec §5 draws that line deliberately, so
  * a disabled field's already-typed value stays visible and submitted rather than vanishing.
  * `disabledWhen` only reaches built-in and custom field kinds: a `section` has no `disabled`
- * slot in the kit contract (`SectionRenderProps`), and neither does a `block`, so those only
+ * prop on `SectionProps`, and neither does a `block`, so those only
  * ever hide via `when`, never disable.
  *
  * Resolution order for a node past the built-in kinds and `section` (spec §4.7, §8):
@@ -309,6 +353,14 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 				)}
 			</bindableForm.AppField>
 		)
+	}
+
+	// The bound field set holds exactly what the form registered, so a built-in kind can be absent.
+	if (Object.hasOwn(BUILT_IN_SLOT_BY_TYPE, node.type)) {
+		const slot = BUILT_IN_SLOT_BY_TYPE[node.type as FormFieldType]
+		if ((form as Partial<BuiltInFieldComponents<TValues>>)[slot] === undefined) {
+			throw new Error(`Unknown node type "${node.type}".`)
+		}
 	}
 
 	switch (node.type) {
@@ -469,7 +521,9 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 			// The item type is a property of the *node*, which the switch cannot express as a type
 			// parameter — the correlation is enforced where the schema is authored, and recovered at
 			// runtime by the path the field resolves to. See {@link ErasedArrayField}.
-			const ArrayField = form.ArrayField as ErasedArrayField
+			const bound: Partial<BuiltInFieldComponents<TValues>> = form
+			assertComponent(bound.ArrayField, MissingComponentMessage.ArrayField)
+			const ArrayField = bound.ArrayField as ErasedArrayField
 			return (
 				<ArrayField
 					name={node.name}
@@ -514,6 +568,7 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 		}
 		case 'section': {
 			const title = resolveText(node.title, context.translate)
+			assertComponent(layout.Section, MissingComponentMessage.Section)
 			return (
 				<layout.Section
 					title={title}
@@ -532,8 +587,11 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 			return <Block props={node.props ?? {}} />
 		}
 		case 'submit': {
+			assertComponent(layout.SubmitButton, MissingComponentMessage.SubmitButton)
 			return (
-				<form.SubmitButton {...(node.disabled !== undefined && { disabled: node.disabled })}>{label}</form.SubmitButton>
+				<layout.SubmitButton {...(node.disabled !== undefined && { disabled: node.disabled })}>
+					{label}
+				</layout.SubmitButton>
 			)
 		}
 		default: {

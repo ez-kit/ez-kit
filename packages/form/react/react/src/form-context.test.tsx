@@ -3,12 +3,12 @@ import { describe, expect, expectTypeOf, it, vi } from 'vitest'
 
 import { createForm } from './create-form'
 import { FormProvider, useFormContext } from './form-context'
-import { testComponents, testFields } from './test-kit'
+import { testComponents, testFields, testFormElement } from './test-kit'
 
 import type { FormContextApi } from './form-context'
 import type { ReactNode } from 'react'
 
-const { Form, useForm } = createForm({ components: testComponents, fields: testFields })
+const { Form, useForm } = createForm({ FormElement: testFormElement, fields: testFields, components: testComponents })
 
 function ValueProbe({ testId }: { testId: string }): ReactNode {
 	const form = useFormContext()
@@ -80,6 +80,8 @@ describe('useFormContext', () => {
 	})
 
 	it('is returned by createForm as FormProvider', () => {
-		expect(createForm({ components: testComponents, fields: testFields }).FormProvider).toBe(FormProvider)
+		expect(
+			createForm({ FormElement: testFormElement, fields: testFields, components: testComponents }).FormProvider,
+		).toBe(FormProvider)
 	})
 })

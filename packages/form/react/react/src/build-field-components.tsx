@@ -5,8 +5,6 @@ import { createCheckboxGroupField } from './fields/checkbox-group-field'
 import { createCustomField } from './fields/custom-field'
 import { createDateField } from './fields/date-field'
 import { createDateRangeField } from './fields/date-range-field'
-import { createSubmitButton } from './fields/form-parts'
-import { createGridItem, createSection } from './fields/layout-parts'
 import { createMultiSelectField } from './fields/multi-select-field'
 import { createNumberField } from './fields/number-field'
 import { createRadioGroupField } from './fields/radio-group-field'
@@ -18,8 +16,8 @@ import { createTextField } from './fields/text-field'
 import { createTextareaField } from './fields/textarea-field'
 
 import type { BindableForm } from './bindable-form'
-import type { ArrayFieldSlot, FormComponents, FormFieldSlots } from './contract'
-import type { FormFieldComponents } from './field-props'
+import type { ArrayFieldSlot, FormFieldSlots } from './contract'
+import type { FormFieldComponents, FormPrimitives } from './field-props'
 import type { FormFieldRegistry, LAYOUT_COMPONENT_KEYS } from './field-registry'
 import type { CustomFieldRenderProps } from './schema/registries'
 import type { ReactNode } from 'react'
@@ -60,22 +58,21 @@ const BUILT_IN_BINDERS = {
 type LooseBinder = (form: BindableForm, Component: never) => (props: never) => ReactNode
 
 /**
- * Build the flat field components for one form instance.
+ * Build the flat field components for one form instance, and its two primitives.
  *
- * Each component closes over both the injected components and the `form` it belongs to,
- * which is why they are built per instance rather than once per kit: `form.AppField` needs
- * the concrete form. `createForm` memoises the result so the identities stay stable across
- * renders and React never remounts the inputs.
+ * Each component closes over the `form` it belongs to, which is why they are built per instance
+ * rather than once per kit: `form.AppField` needs the concrete form. `createForm` memoises the
+ * result so the identities stay stable across renders and React never remounts the inputs.
  *
  * `fields` is looped rather than destructured: a key the binder table names routes to that
  * kind's bespoke binder, and anything else — which is every field the app registered — gets
- * the one generic binder, under the document id its name derives.
+ * the one generic binder, under the document id its name derives. Only the keys present are
+ * bound; an absent built-in is simply not on the instance.
  */
 export function buildFieldComponents<TFormData>(
 	form: BindableForm,
-	components: FormComponents,
 	fields: FormFieldRegistry,
-): FormFieldComponents<TFormData> {
+): FormFieldComponents<TFormData> & FormPrimitives<TFormData> {
 	/**
 	 * `Object.hasOwn`, never `binders[key] === undefined`.
 	 *
@@ -92,11 +89,10 @@ export function buildFieldComponents<TFormData>(
 	 * this survived a review pass.
 	 */
 	const binders = BUILT_IN_BINDERS as unknown as Record<string, LooseBinder>
-	const { Button, Section: KitSection, GridItem: KitGridItem } = components
 
 	const built: Record<string, unknown> = {}
 	for (const [key, Component] of Object.entries(fields)) {
-		// Bound below, once the finished record exists — see `layout`.
+		// Bound below, once the finished record exists — see `primitives`.
 		if (Object.hasOwn(BESPOKE_FIELD_KEYS, key)) continue
 		const binder = Object.hasOwn(BUILT_IN_BINDERS, key) ? binders[key] : undefined
 		built[key] =
@@ -106,38 +102,38 @@ export function buildFieldComponents<TFormData>(
 	}
 
 	/**
-	 * The layout half, anchored to {@link LAYOUT_COMPONENT_KEYS} **before** the cast below.
+	 * The primitives, anchored to {@link LAYOUT_COMPONENT_KEYS} **before** the cast below.
 	 *
 	 * `as unknown as` erases checking on everything it covers, so a check that is to mean anything
-	 * has to sit on a sub-expression outside it. With the `satisfies` here, a sixth layout member
-	 * fails in two places if either is forgotten: at the constant, and here. `built` stays
-	 * unchecked, which is correct — its keys are the open registry's, and `deriveFieldTypeIds`
-	 * checks them at `createForm`, including against these five.
+	 * has to sit on a sub-expression outside it. With the `satisfies` here, a third primitive fails
+	 * in two places if either is forgotten: at the constant, and here. `built` stays unchecked,
+	 * which is correct — its keys are the open registry's, and `deriveFieldTypeIds` checks them at
+	 * `createForm`, including against these two.
 	 */
-	const layout = {
-		SubmitButton: createSubmitButton(form, Button),
+	const primitives = {
 		Submit: createSubmit(form),
-		Section: createSection(KitSection),
-		GridItem: createGridItem(KitGridItem),
 		// Replaced below, with `ArrayField`: an array's entries render the *same* field set, scoped
 		// to the entry, so the component needs the finished record — including, for a nested
 		// array, itself.
 		Array: () => null,
 	} satisfies Record<keyof typeof LAYOUT_COMPONENT_KEYS, unknown>
 
-	const fieldComponents = { ...built, ...layout } as unknown as FormFieldComponents<TFormData>
+	const fieldComponents = { ...built, ...primitives } as unknown as FormFieldComponents<TFormData> &
+		FormPrimitives<TFormData>
 
 	/**
-	 * What an array entry scopes to its own path: every registry key, the frame included, plus the
-	 * headless `Array` — a nested array is addressed relative to the entry like any field. The
-	 * layout members are left out: a `SubmitButton` or a `Section` has no `name` to prefix, and
-	 * wrapping it would only hand it a bogus one.
+	 * What an array entry scopes to its own path: every registry key, the frame included when it
+	 * was registered, plus the headless `Array` — a nested array is addressed relative to the
+	 * entry like any field. `Submit` is left out: it has no `name` to prefix, and wrapping it would
+	 * only hand it a bogus one.
 	 */
-	const entryKeys = [...Object.keys(built), 'ArrayField', 'Array']
-	const slot = fields.ArrayField as ArrayFieldSlot
+	const slot = fields.ArrayField as ArrayFieldSlot | undefined
+	const entryKeys = [...Object.keys(built), ...(slot === undefined ? [] : ['ArrayField']), 'Array']
 
-	fieldComponents.ArrayField = createArrayField<TFormData>(form, slot, Button, fieldComponents, entryKeys)
-	fieldComponents.Array = createArray<TFormData>(form, slot, Button, fieldComponents, entryKeys)
+	if (slot !== undefined) {
+		fieldComponents.ArrayField = createArrayField<TFormData>(form, slot, fieldComponents, entryKeys)
+	}
+	fieldComponents.Array = createArray<TFormData>(form, slot, fieldComponents, entryKeys)
 
 	return fieldComponents
 }

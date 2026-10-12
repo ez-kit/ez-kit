@@ -4,11 +4,11 @@ import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
 
 import { createForm } from '../create-form'
-import { testComponents, testFields } from '../test-kit'
+import { testComponents, testFields, testFormElement } from '../test-kit'
 
 import type { FormSchema } from '@ez-kit/form-core'
 
-const { SchemaForm } = createForm({ components: testComponents, fields: testFields })
+const { SchemaForm } = createForm({ FormElement: testFormElement, fields: testFields, components: testComponents })
 
 type Values = { email: string; age: number }
 
@@ -122,7 +122,7 @@ test('a nested field name gets its default at the nested path, not under a dotte
 })
 
 test('renders through a caller-owned form instance in controlled mode', () => {
-	const { useForm } = createForm({ components: testComponents, fields: testFields })
+	const { useForm } = createForm({ FormElement: testFormElement, fields: testFields, components: testComponents })
 
 	function Harness(): ReturnType<typeof SchemaForm> {
 		const form = useForm<

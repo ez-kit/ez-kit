@@ -1,5 +1,5 @@
 import type { BoundFieldApi } from './bindable-form'
-import type { FormComponents, FormFieldSlots } from './contract'
+import type { AllFormFieldSlots, FormFieldSlots } from './contract'
 import type { FormFieldRegistry, LAYOUT_COMPONENT_KEYS } from './field-registry'
 import type { FieldValidateProps } from './field-validate'
 import type {
@@ -215,9 +215,10 @@ export type SliderFieldProps<TFormData> = BaseFieldProps<TFormData, number> & {
 }
 
 /**
- * The members of the form's field set an array entry does **not** carry: the layout members,
- * none of which has a `name` to address relative to the entry, so they are reached through the
- * form instead. `Array` stays — a nested array is addressed relative to the entry like a field.
+ * The primitives an array entry does **not** carry: `Submit` has no `name` to address relative
+ * to the entry, so it is reached through the form instead. `Array` stays — a nested array is
+ * addressed relative to the entry like a field. The registered `components` are not on an entry
+ * either; they read the form from context and have no path of their own.
  */
 type EntryUnscopedKey = Exclude<keyof typeof LAYOUT_COMPONENT_KEYS, 'Array'>
 
@@ -227,11 +228,11 @@ type EntryUnscopedKey = Exclude<keyof typeof LAYOUT_COMPONENT_KEYS, 'Array'>
  * It **is** the form's own field set, retyped over the item: inside an entry `name` addresses
  * the item's paths, so `<item.TextField name='firstName' />` is checked against the item type
  * and a root-level name is a compile error there. No path is composed at the call site — the
- * prefix is joined on at render. The layout members (`SubmitButton`, `Section`, …) are not part
- * of it — see {@link EntryUnscopedKey}.
+ * prefix is joined on at render. `form.Submit` and the registered components are not part of
+ * it — see {@link EntryUnscopedKey}.
  */
-export type ArrayItemScope<TItem, TFields extends FormFieldRegistry = FormFieldSlots> = Omit<
-	FormFieldComponents<TItem, TFields>,
+export type ArrayItemScope<TItem, TFields extends FormFieldRegistry = AllFormFieldSlots> = Omit<
+	FormFieldComponents<TItem, TFields> & FormPrimitives<TItem, TFields>,
 	EntryUnscopedKey
 > & {
 	/**
@@ -288,7 +289,7 @@ export type ArrayItemProps = {
  */
 export type ArrayReorderable = boolean | { up?: { label?: ReactNode }; down?: { label?: ReactNode } }
 
-export type ArrayScope<TItem, TFields extends FormFieldRegistry = FormFieldSlots> = {
+export type ArrayScope<TItem, TFields extends FormFieldRegistry = AllFormFieldSlots> = {
 	items: readonly ArrayItemScope<TItem, TFields>[]
 	/**
 	 * Append a fresh entry, built from the field's own `newItem`. Deliberately no parameter: an
@@ -322,14 +323,12 @@ export type ArrayScope<TItem, TFields extends FormFieldRegistry = FormFieldSlots
 	 */
 	disabled: boolean
 	required: boolean
-	/** The kit's generic button, for a control an author draws themselves outside `Item`. */
-	Button: FormComponents['Button']
 	/** The array field's own bound field — for a `Subscribe`-style read the scope does not cover. */
 	field: BoundFieldApi
 }
 
 /** One scope serves both `form.ArrayField` and the headless `form.Array`. */
-export type ArrayFieldScope<TItem, TFields extends FormFieldRegistry = FormFieldSlots> = ArrayScope<TItem, TFields>
+export type ArrayFieldScope<TItem, TFields extends FormFieldRegistry = AllFormFieldSlots> = ArrayScope<TItem, TFields>
 
 /**
  * A repeatable group of fields — the JSX spelling of an `array` node.
@@ -341,7 +340,7 @@ export type ArrayFieldScope<TItem, TFields extends FormFieldRegistry = FormField
 export type ArrayFieldProps<
 	TFormData,
 	TName extends ArrayKeys<TFormData>,
-	TFields extends FormFieldRegistry = FormFieldSlots,
+	TFields extends FormFieldRegistry = AllFormFieldSlots,
 > = {
 	name: TName
 	label?: ReactNode
@@ -376,7 +375,7 @@ export type ArrayFieldProps<
 export type ArrayProps<
 	TFormData,
 	TName extends ArrayKeys<TFormData>,
-	TFields extends FormFieldRegistry = FormFieldSlots,
+	TFields extends FormFieldRegistry = AllFormFieldSlots,
 > = {
 	name: TName
 	disabled?: boolean
@@ -409,14 +408,13 @@ export type SubmitProps = {
 }
 
 /**
- * The flat components attached to the form instance by `createForm`. They sit alongside —
- * never in place of — the native TanStack Form API (`Field`, `Subscribe`, `handleSubmit`,
- * `state`, `AppField`, …), which stays fully available on the same object.
+ * The bound component for each built-in field kind, keyed like {@link FormFieldSlots}.
  *
- * The `<form>` element is not among them: it lives in the standalone `<Form>` component,
- * which is the single place that renders it in either mode.
+ * Only the keys a form registered reach its instance — see {@link FormFieldComponents}. They sit
+ * alongside, never in place of, the native TanStack Form API (`Field`, `Subscribe`,
+ * `handleSubmit`, `state`, `AppField`, …), which stays fully available on the same object.
  */
-export type BuiltInFormFieldComponents<TFormData, TFields extends FormFieldRegistry = FormFieldSlots> = {
+export type BuiltInFieldComponents<TFormData, TFields extends FormFieldRegistry = AllFormFieldSlots> = {
 	TextField: (props: TextFieldProps<TFormData>) => ReactNode
 	NumberField: (props: NumberFieldProps<TFormData>) => ReactNode
 	TextareaField: (props: TextareaFieldProps<TFormData>) => ReactNode
@@ -435,14 +433,21 @@ export type BuiltInFormFieldComponents<TFormData, TFields extends FormFieldRegis
 	 * entry work with no extra machinery.
 	 */
 	ArrayField: <TName extends ArrayKeys<TFormData>>(props: ArrayFieldProps<TFormData, TName, TFields>) => ReactNode
+}
+
+/** The key of every built-in field kind and of the array frame. */
+export type BuiltInFieldKey = keyof FormFieldSlots
+
+/**
+ * The two primitives every form instance carries, whatever it registered: the headless array
+ * and the headless submit. Neither draws anything, so neither needs a kit component.
+ */
+export type FormPrimitives<TFormData, TFields extends FormFieldRegistry = AllFormFieldSlots> = {
 	/**
 	 * Generic per call, for the same reason `ArrayField` is — see its doc comment.
 	 */
 	Array: <TName extends ArrayKeys<TFormData>>(props: ArrayProps<TFormData, TName, TFields>) => ReactNode
-	SubmitButton: (props: SubmitButtonProps) => ReactNode
 	Submit: (props: SubmitProps) => ReactNode
-	Section: (props: SectionProps) => ReactNode
-	GridItem: (props: GridItemProps) => ReactNode
 }
 
 /**
@@ -474,25 +479,30 @@ export type CustomFieldComponentsOf<TFormData, TFields> = {
 }
 
 /**
- * The flat components attached to the form instance by `createForm` — the twelve built-ins
- * and the layout pieces, plus one per field kind the app registered.
+ * The bound field components a form instance carries — **only the keys `TFields` has**.
  *
- * `TFields` is **defaulted**, and the default is load-bearing: every internal spelling of
- * `FormFieldComponents<T>` with one argument keeps compiling and keeps meaning exactly what
- * it meant before the registry existed.
+ * A built-in key gets its bespoke props ({@link BuiltInFieldComponents}); any other key is a
+ * field kind the app registered and gets the generic binding, typed from the phantoms
+ * `defineFieldType` wrote. A key that was not registered is not on the instance, so
+ * `form.NumberField` on a form that registered only `TextField` is a compile error.
+ *
+ * `-?` because a kit's own set may be typed `FormFieldSlots`, whose keys are optional: a key
+ * that is present in the registry is a component on the instance, never `undefined`.
+ *
+ * `TFields` is **defaulted** to every built-in, which is what keeps every one-argument spelling of
+ * this type meaning what it meant when the field set was closed.
  */
-export type FormFieldComponents<
-	TFormData,
-	TFields extends FormFieldRegistry = FormFieldSlots,
-> = BuiltInFormFieldComponents<TFormData, TFields> &
-	CustomFieldComponentsOf<TFormData, Omit<TFields, keyof FormFieldSlots>>
+export type FormFieldComponents<TFormData, TFields extends FormFieldRegistry = AllFormFieldSlots> = {
+	[TKey in keyof TFields & BuiltInFieldKey]-?: BuiltInFieldComponents<TFormData, TFields>[TKey]
+} & CustomFieldComponentsOf<TFormData, Omit<TFields, BuiltInFieldKey>>
 
 /**
  * A headed group of fields on a column grid — the JSX spelling of a `section` node.
  *
  * The two entry points render the same kit component and therefore the same DOM: a document
  * says `{ type: 'section', title, columns }`, JSX writes `<form.Section title columns>`, and
- * both reach `FormComponents['Section']`. Sections are pure layout — nesting a field inside
+ * both reach the `Section` passed in `createForm({ components })` — which is also what a kit's
+ * `Section` takes, so these are the props a kit implements. Sections are pure layout — nesting a field inside
  * one changes neither its `name`, nor the path its value lives at, nor its validation.
  *
  * `columns` is the same 1..4 range the v1 format allows (`GRID_MIN`/`GRID_MAX`); the kit
@@ -509,10 +519,10 @@ export type FormFieldComponents<
  * </form.Section>
  */
 export type SectionProps = {
-	title?: ReactNode
-	description?: ReactNode
+	title?: ReactNode | undefined
+	description?: ReactNode | undefined
 	/** Grid columns for the direct children. Default 1. Must be an integer 1..4. */
-	columns?: number
+	columns?: number | undefined
 	children: ReactNode
 }
 
@@ -530,6 +540,6 @@ export type SectionProps = {
  */
 export type GridItemProps = {
 	/** Columns this item spans. Default 1. Must be an integer 1..4. */
-	colSpan?: number
+	colSpan?: number | undefined
 	children: ReactNode
 }

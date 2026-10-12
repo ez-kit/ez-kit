@@ -141,12 +141,11 @@ On top of that, per kind:
 
 ### Form level
 
-The remaining five are the `components` bag. Two of them are the form itself:
+The `<form>` element is the `FormElement` option, which receives the full `<form>` props. The rest are the `components` bag, starting with the submit button:
 
-| Component | Props                            | Renders                      |
-| --------- | -------------------------------- | ---------------------------- |
-| `Button`  | `type?`, `disabled?`, `children` | The submit button.           |
-| `Form`    | `<form>` props                   | The `<form>` element itself. |
+| Component      | Props                   | Renders                                                    |
+| -------------- | ----------------------- | ---------------------------------------------------------- |
+| `SubmitButton` | `disabled?`, `children` | The submit button, built on `form.Submit` and the context. |
 
 ### Layout and wizard
 

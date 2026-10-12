@@ -4,11 +4,11 @@ import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
 
 import { createForm } from '../create-form'
-import { testComponents, testFields } from '../test-kit'
+import { testComponents, testFields, testFormElement } from '../test-kit'
 
 import type { FormSchema } from '@ez-kit/form-core'
 
-const { SchemaForm } = createForm({ components: testComponents, fields: testFields })
+const { SchemaForm } = createForm({ FormElement: testFormElement, fields: testFields, components: testComponents })
 
 type EmailValues = { email: string }
 

@@ -7,14 +7,14 @@ import { fromKitValue, toKitOptions } from '../option-values'
 import { CLEARED_VALUE, FieldOptions } from '../options/field-options'
 
 import type { BindableForm } from '../bindable-form'
-import type { FormFieldSlots } from '../contract'
+import type { AllFormFieldSlots } from '../contract'
 import type { RadioGroupFieldProps } from '../field-props'
 import type { ReactNode } from 'react'
 
 /** Build the `RadioGroupField` component bound to one form instance. */
 export function createRadioGroupField<TFormData>(
 	form: BindableForm,
-	KitRadioGroupField: FormFieldSlots['RadioGroupField'],
+	KitRadioGroupField: AllFormFieldSlots['RadioGroupField'],
 ): (props: RadioGroupFieldProps<TFormData>) => ReactNode {
 	return function RadioGroupField(props: RadioGroupFieldProps<TFormData>): ReactNode {
 		const { name, label, description, disabled, required, validate } = props

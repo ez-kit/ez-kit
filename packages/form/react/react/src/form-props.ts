@@ -1,5 +1,5 @@
 import type { SubmittableForm } from './bindable-form'
-import type { FormElementProps, FormFieldSlots } from './contract'
+import type { AllFormFieldSlots, FormComponentRegistry, FormElementProps } from './contract'
 import type { FormFieldRegistry } from './field-registry'
 import type { KitFormApi } from './kit-form'
 import type { FormAsyncValidateOrFn, FormOptions, FormValidateOrFn } from '@ez-kit/form-core'
@@ -48,7 +48,9 @@ export type FormUncontrolledProps<
 	TOnServer extends undefined | FormAsyncValidateOrFn<TFormData>,
 	TSubmitMeta,
 	/** The registry `createForm` was given, so a field the app added is typed on `form`. */
-	TFields extends FormFieldRegistry = FormFieldSlots,
+	TFields extends FormFieldRegistry = AllFormFieldSlots,
+	// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- no components registered
+	TComponents extends FormComponentRegistry = {},
 > = FormElementRest &
 	FormOptions<
 		TFormData,
@@ -80,7 +82,8 @@ export type FormUncontrolledProps<
 				TOnDynamicAsync,
 				TOnServer,
 				TSubmitMeta,
-				TFields
+				TFields,
+				TComponents
 			>,
 		) => ReactNode
 	}
@@ -102,7 +105,11 @@ export type AnyFormProps = FormElementRest & {
  * The uncontrolled shape at its least specific — what the implementation hands to the
  * inner component once the overloads have already validated the caller's props.
  */
-export type FormUncontrolledImplProps<TFields extends FormFieldRegistry = FormFieldSlots> = FormUncontrolledProps<
+export type FormUncontrolledImplProps<
+	TFields extends FormFieldRegistry = AllFormFieldSlots,
+	// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- no components registered
+	TComponents extends FormComponentRegistry = {},
+> = FormUncontrolledProps<
 	unknown,
 	undefined,
 	undefined,
@@ -115,7 +122,8 @@ export type FormUncontrolledImplProps<TFields extends FormFieldRegistry = FormFi
 	undefined,
 	undefined,
 	never,
-	TFields
+	TFields,
+	TComponents
 >
 
 /**
@@ -147,7 +155,9 @@ export type FormProps<
 	TOnDynamicAsync extends undefined | FormAsyncValidateOrFn<TFormData>,
 	TOnServer extends undefined | FormAsyncValidateOrFn<TFormData>,
 	TSubmitMeta,
-	TFields extends FormFieldRegistry = FormFieldSlots,
+	TFields extends FormFieldRegistry = AllFormFieldSlots,
+	// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- no components registered
+	TComponents extends FormComponentRegistry = {},
 > =
 	| FormControlledProps
 	| FormUncontrolledProps<
@@ -163,5 +173,6 @@ export type FormProps<
 			TOnDynamicAsync,
 			TOnServer,
 			TSubmitMeta,
-			TFields
+			TFields,
+			TComponents
 	  >

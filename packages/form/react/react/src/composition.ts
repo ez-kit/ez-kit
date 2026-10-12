@@ -1,4 +1,4 @@
-import type { FormFieldSlots } from './contract'
+import type { AllFormFieldSlots, FormComponentRegistry } from './contract'
 import type { FormFieldRegistry } from './field-registry'
 import type { KitFormApi } from './kit-form'
 import type { FormAsyncValidateOrFn, FormOptions, FormValidateOrFn } from '@ez-kit/form-core'
@@ -37,11 +37,14 @@ export type KitFormBlock<
 	 * call site writes nothing. Defaulted so every existing twelve-argument spelling of this
 	 * type keeps compiling and keeps meaning "the kit's twelve".
 	 *
-	 * Without it a block sees `FormFieldSlots` while the instance it is handed carries the
+	 * Without it a block sees `AllFormFieldSlots` while the instance it is handed carries the
 	 * app's fields too, and `<form.RatingField />` inside a block is a compile error against a
-	 * form that demonstrably has one.
+	 * form that demonstrably has one. `TComponents` is bound the same way, for the same reason:
+	 * a block sees the components its factory registered.
 	 */
-	TFields extends FormFieldRegistry = FormFieldSlots,
+	TFields extends FormFieldRegistry = AllFormFieldSlots,
+	// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- no components registered
+	TComponents extends FormComponentRegistry = {},
 > = FunctionComponent<
 	PropsWithChildren<
 		NoInfer<TRenderProps> & {
@@ -58,7 +61,8 @@ export type KitFormBlock<
 				TOnDynamicAsync,
 				TOnServer,
 				TSubmitMeta,
-				TFields
+				TFields,
+				TComponents
 			>
 		}
 	>
@@ -84,7 +88,9 @@ export type KitWithFormProps<
 	TSubmitMeta,
 	TRenderProps extends object,
 	/** Bound by the factory — see {@link KitFormBlock}'s own `TFields`. */
-	TFields extends FormFieldRegistry = FormFieldSlots,
+	TFields extends FormFieldRegistry = AllFormFieldSlots,
+	// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- no components registered
+	TComponents extends FormComponentRegistry = {},
 > = FormOptions<
 	TFormData,
 	TOnMount,
@@ -114,6 +120,7 @@ export type KitWithFormProps<
 		TOnServer,
 		TSubmitMeta,
 		TRenderProps,
-		TFields
+		TFields,
+		TComponents
 	>
 }

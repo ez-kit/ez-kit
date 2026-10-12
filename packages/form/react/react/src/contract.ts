@@ -1,3 +1,4 @@
+import type { GridItemProps, SectionProps, SubmitButtonProps } from './field-props'
 import type { DateRangeValue, SelectOption, TextInputType } from '@ez-kit/form-core'
 import type { ComponentPropsWithoutRef, ReactNode } from 'react'
 
@@ -16,24 +17,26 @@ import type { ComponentPropsWithoutRef, ReactNode } from 'react'
  * siblings in a grid — and both now express their natural anatomy without fighting a
  * one-size layout.
  *
- * The two bags differ in whether they are **closed**:
+ * The two bags:
  *
- * - {@link FormComponents} is the form's **chrome** — the button, the `<form>` element, the
- *   section grid and the wizard. Five slots, a closed set: nothing an app registers belongs
- *   here, because none of it is a field kind.
- * - {@link FormFieldSlots} is the twelve **field kinds** plus the array frame. It is the shape a kit's
- *   `formFieldSlots` export is written against (`satisfies FormFieldSlots`), so a forgotten
- *   built-in is a compile error there — but `createForm({ fields })` accepts *additional*
- *   keys, which is how an app adds `RatingField` to the instance and `{ type: 'rating' }` to
+ * - {@link FormFieldSlots} is the twelve **field kinds** plus the array frame — value-bound
+ *   components, each routed to its own binder. `createForm({ fields })` accepts *additional*
+ *   keys too, which is how an app adds `RatingField` to the instance and `{ type: 'rating' }` to
  *   a schema document.
+ * - {@link FormComponents} names the four other components a kit ships — `SubmitButton`,
+ *   `Section`, `GridItem`, `Wizard`. They are ordinary components that read the form from
+ *   context; `createForm({ components })` is open beyond them.
+ *
+ * Every key of both is optional, and so is the `<form>` element itself (`FormElement`): an app
+ * passes the subset it uses, and the instance carries exactly that.
  *
  * Both `@ez-kit/form-shadcn` and `@ez-kit/form-heroui` implement these identical interfaces,
  * which is what lets one example render under either kit:
  *
  * ```ts
- * export const formComponents = { Button, Form, … } satisfies FormComponents
  * export const formFieldSlots = { TextField, NumberField, …, ArrayField } satisfies FormFieldSlots
- * createForm({ components: formComponents, fields: formFieldSlots })
+ * export const formComponents = { SubmitButton, Section, GridItem, Wizard } satisfies FormComponents
+ * createForm({ FormElement, fields: formFieldSlots, components: formComponents })
  * ```
  */
 
@@ -247,8 +250,8 @@ export type SliderFieldRenderProps = FieldRenderProps & {
 /**
  * The chrome around **one** entry of a repeatable group.
  *
- * A separate component from {@link ArrayFieldRenderProps} for the same reason `GridItem` is separate
- * from `Section`: the container draws the list, the item draws one row of it — and only the item
+ * A separate component from {@link ArrayFieldRenderProps} for the same reason a grid cell is separate
+ * from its section: the container draws the list, the item draws one row of it — and only the item
  * can place its own remove control, since it is the only component that knows where the row ends.
  *
  * The item's fields arrive as `children`, already bound to this entry's paths. A kit renders
@@ -335,22 +338,6 @@ export type ArrayFieldSlot = ((props: ArrayFieldRenderProps) => ReactNode) & {
 	Item: (props: ArrayItemRenderProps) => ReactNode
 }
 
-// ── layout ───────────────────────────────────────────────────────────────────
-
-export type SectionRenderProps = {
-	title: ReactNode
-	description: ReactNode
-	/** Grid columns for the direct children. `undefined` means one column. */
-	columns: number | undefined
-	children: ReactNode
-}
-
-export type GridItemRenderProps = {
-	/** Columns this item spans. `undefined` means one. */
-	colSpan: number | undefined
-	children: ReactNode
-}
-
 // ── wizard ───────────────────────────────────────────────────────────────────
 
 export type WizardStep = {
@@ -383,31 +370,18 @@ export type WizardRenderProps = {
 
 // ── form level ───────────────────────────────────────────────────────────────
 
-export type ButtonProps = {
-	type?: 'submit' | 'button'
-	disabled?: boolean
-	/**
-	 * Optional so the submit button (which fires through the surrounding `<form>`'s submit
-	 * event, not a click handler) can keep passing none. Typed `() => void` rather than a DOM
-	 * `MouseEventHandler` so a scope callback — `add`, say — can be handed straight through
-	 * without an event parameter to ignore.
-	 */
-	onClick?: () => void
-	children: ReactNode
-}
-
 export type FormElementProps = ComponentPropsWithoutRef<'form'>
 
 // ── the contract itself ──────────────────────────────────────────────────────
 
 /**
- * The twelve built-in field kinds a kit supplies, plus the array frame.
+ * The twelve built-in field kinds a kit supplies, plus the array frame — every key optional.
  *
- * Written against with `satisfies FormFieldSlots` so a forgotten built-in is a compile error
- * in the kit. It is **not** what `createForm({ fields })` accepts — that takes any
- * {@link FormFieldRegistry}, the kit's twelve spread beside whatever the app registers —
- * which is the one asymmetry with {@link FormComponents}: the chrome is closed, the field
- * set is open.
+ * Optional because nothing is required at any level: a kit implements whichever kinds it
+ * implements, an app registers whichever subset it uses, and `form.X` exists in the types for
+ * exactly the keys passed. What a kit's `satisfies FormFieldSlots` still checks is each slot's
+ * **props** and every key's spelling — a typo is an excess property. A kit that means to ship
+ * all thirteen writes `satisfies AllFormFieldSlots` instead.
  *
  * The key names are load-bearing twice over. Each one routes to that field's own binder
  * (replacing `TextField` here swaps the kit's input while keeping the `asText` coercion and
@@ -420,32 +394,53 @@ export type FormElementProps = ComponentPropsWithoutRef<'form'>
  * document id — an array node is the reserved `array` type, not a registered field kind.
  */
 export type FormFieldSlots = {
-	TextField: (props: TextFieldRenderProps) => ReactNode
-	NumberField: (props: NumberFieldRenderProps) => ReactNode
-	TextareaField: (props: TextareaFieldRenderProps) => ReactNode
-	SelectField: (props: SelectFieldRenderProps) => ReactNode
-	CheckboxField: (props: CheckboxFieldRenderProps) => ReactNode
-	SwitchField: (props: SwitchFieldRenderProps) => ReactNode
-	RadioGroupField: (props: RadioGroupFieldRenderProps) => ReactNode
-	SliderField: (props: SliderFieldRenderProps) => ReactNode
-	MultiSelectField: (props: MultiSelectFieldRenderProps) => ReactNode
-	CheckboxGroupField: (props: CheckboxGroupFieldRenderProps) => ReactNode
-	DateField: (props: DateFieldRenderProps) => ReactNode
-	DateRangeField: (props: DateRangeFieldRenderProps) => ReactNode
-	ArrayField: ArrayFieldSlot
+	TextField?: (props: TextFieldRenderProps) => ReactNode
+	NumberField?: (props: NumberFieldRenderProps) => ReactNode
+	TextareaField?: (props: TextareaFieldRenderProps) => ReactNode
+	SelectField?: (props: SelectFieldRenderProps) => ReactNode
+	CheckboxField?: (props: CheckboxFieldRenderProps) => ReactNode
+	SwitchField?: (props: SwitchFieldRenderProps) => ReactNode
+	RadioGroupField?: (props: RadioGroupFieldRenderProps) => ReactNode
+	SliderField?: (props: SliderFieldRenderProps) => ReactNode
+	MultiSelectField?: (props: MultiSelectFieldRenderProps) => ReactNode
+	CheckboxGroupField?: (props: CheckboxGroupFieldRenderProps) => ReactNode
+	DateField?: (props: DateFieldRenderProps) => ReactNode
+	DateRangeField?: (props: DateRangeFieldRenderProps) => ReactNode
+	ArrayField?: ArrayFieldSlot
 }
 
 /**
- * The form's chrome — every component a kit must supply that is **not** a field kind.
+ * Every built-in field kind and the array frame, all present — what a full kit implements, and
+ * the field set `FormInstance<TValues>` assumes when it is given no other.
+ */
+export type AllFormFieldSlots = Required<FormFieldSlots>
+
+/**
+ * The components the kit contract names outside the field kinds, every one optional.
  *
- * A closed set of five, all required: the generic button, the `<form>` element, the section
- * grid, its cell and the wizard. The field kinds — and the array frame, which carries its entry
- * view as `ArrayField.Item` — live in {@link FormFieldSlots}.
+ * These are ordinary components: each becomes `form.<Key>` with its own props, and each reads
+ * the form from context (`useFormContext`), so `<form.SubmitButton>` and a plain
+ * `<SubmitButton>` are the same component. The keys are named here only because the schema
+ * renderer draws them — a `section` node through `Section`, a grid cell through `GridItem`, a
+ * stepped document through `Wizard`, a `submit` node through `SubmitButton` — and because
+ * `createForm({ components })` re-asserts these props on exactly these keys.
+ *
+ * `components` is open beyond them: `{ SaveBar }` gives `<form.SaveBar />`.
  */
 export type FormComponents = {
-	Button: (props: ButtonProps) => ReactNode
-	Form: (props: FormElementProps) => ReactNode
-	Section: (props: SectionRenderProps) => ReactNode
-	GridItem: (props: GridItemRenderProps) => ReactNode
-	Wizard: (props: WizardRenderProps) => ReactNode
+	SubmitButton?: (props: SubmitButtonProps) => ReactNode
+	Section?: (props: SectionProps) => ReactNode
+	GridItem?: (props: GridItemProps) => ReactNode
+	Wizard?: (props: WizardRenderProps) => ReactNode
 }
+
+/**
+ * What `createForm({ components })` accepts: any components, keyed by the name they take on the
+ * instance.
+ *
+ * The `any` is the trade {@link FormFieldRegistry} makes, for the same reason — a parameter is
+ * contravariant, so no single non-`any` props type accepts every component an app may register.
+ * The check on the known keys is `CreateFormOptions.components`' `& FormComponents`.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- props are contravariant, see above
+export type FormComponentRegistry = Record<string, (props: any) => ReactNode>

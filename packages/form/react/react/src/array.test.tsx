@@ -3,12 +3,12 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import { createForm } from './create-form'
-import { testComponents, testFields } from './test-kit'
+import { testComponents, testFields, testFormElement } from './test-kit'
 
 type Person = { firstName: string }
 type Values = { people: Person[] }
 
-const { Form } = createForm({ components: testComponents, fields: testFields })
+const { Form } = createForm({ FormElement: testFormElement, fields: testFields, components: testComponents })
 const NEW_PERSON: Person = { firstName: '' }
 
 function BareList({ onSubmit }: { onSubmit?: (values: Values) => void }) {

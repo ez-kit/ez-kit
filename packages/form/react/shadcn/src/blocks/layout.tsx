@@ -3,7 +3,7 @@ import { clampToGridRange, GRID_MIN } from '@ez-kit/form-react'
 import { FieldDescription, FieldLegend, FieldSet } from '@form-shadcn/components/ui/field'
 import { cn } from '@form-shadcn/lib/utils'
 
-import type { GridItemRenderProps, SectionRenderProps } from '@ez-kit/form-react'
+import type { GridItemProps, SectionProps } from '@ez-kit/form-react'
 import type { ReactNode } from 'react'
 
 /**
@@ -47,7 +47,7 @@ function colSpanClassName(colSpan: number | undefined): string {
 	return COL_SPAN_CLASS[resolved] ?? 'col-span-1'
 }
 
-export function Section({ title, description, columns, children }: SectionRenderProps): ReactNode {
+export function Section({ title, description, columns, children }: SectionProps): ReactNode {
 	return (
 		<FieldSet data-slot='form-section'>
 			{title !== undefined && <FieldLegend>{title}</FieldLegend>}
@@ -62,7 +62,7 @@ export function Section({ title, description, columns, children }: SectionRender
 	)
 }
 
-export function GridItem({ colSpan, children }: GridItemRenderProps): ReactNode {
+export function GridItem({ colSpan, children }: GridItemProps): ReactNode {
 	return (
 		<div
 			data-slot='form-grid-item'

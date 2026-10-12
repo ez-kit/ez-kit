@@ -13,20 +13,22 @@ import {
 	TextareaField,
 	TextField,
 } from '@form-shadcn/blocks/fields'
-import { Button, Form as FormElement } from '@form-shadcn/blocks/form-parts'
+import { FormElement, SubmitButton } from '@form-shadcn/blocks/form-parts'
 import { GridItem, Section } from '@form-shadcn/blocks/layout'
 import { CheckboxGroupField, MultiSelectField } from '@form-shadcn/blocks/multi-value'
 import { SelectField } from '@form-shadcn/blocks/select'
 import { Wizard } from '@form-shadcn/blocks/wizard'
 
-import type { FormBundle, FormComponents, FormFieldSlots } from '@ez-kit/form-react'
+import type { AllFormFieldSlots, FormBundle, FormComponents } from '@ez-kit/form-react'
 
 /**
  * The shadcn implementation of the UI contract, in the two bags `createForm` takes.
  *
- * `satisfies` on each makes a forgotten slot a compile error. Both are **exported**: an app
- * that wants a field kind of its own spreads `formFieldSlots` and calls `createForm`
- * itself — the twelve keep their bespoke binders, the new one gets the generic one.
+ * `satisfies AllFormFieldSlots` makes a forgotten field kind a compile error, and
+ * `satisfies FormComponents` checks each component's props. Both are **exported**, beside the
+ * kit's `FormElement`: an app that wants a field kind of its own spreads `formFieldSlots` and
+ * calls `createForm` itself — the twelve keep their bespoke binders, the new one gets the
+ * generic one.
  *
  * Every entry is a `blocks/` adapter — the vendored shadcn primitives under `components/ui/`
  * are never edited (see CLAUDE.md).
@@ -45,11 +47,10 @@ export const formFieldSlots = {
 	DateField,
 	DateRangeField,
 	ArrayField,
-} satisfies FormFieldSlots
+} satisfies AllFormFieldSlots
 
 export const formComponents = {
-	Button,
-	Form: FormElement,
+	SubmitButton,
 	Section,
 	GridItem,
 	Wizard,
@@ -64,11 +65,12 @@ export const formComponents = {
  * location. An annotation is emitted as written, as a reference into `@ez-kit/form-react`, which
  * does depend on both.
  */
-type KitFormBundle = FormBundle<typeof formFieldSlots>
+type KitFormBundle = FormBundle<typeof formFieldSlots, typeof formComponents>
 
 const bundle: KitFormBundle = createForm({
-	components: formComponents,
+	FormElement,
 	fields: formFieldSlots,
+	components: formComponents,
 })
 
 export const useForm: KitFormBundle['useForm'] = bundle.useForm
@@ -80,7 +82,7 @@ export const withFieldGroup: KitFormBundle['withFieldGroup'] = bundle.withFieldG
 /**
  * The field components on their own — the twelve kinds and the array frame — so an app that
  * calls `createForm` itself can spread `formFieldSlots` and still reach — or wrap — any single
- * one of them by name.
+ * one of them by name. `FormElement` is the kit's `<form>`, for the same `createForm` call.
  */
 export {
 	ArrayField,
@@ -88,6 +90,7 @@ export {
 	CheckboxGroupField,
 	DateField,
 	DateRangeField,
+	FormElement,
 	MultiSelectField,
 	NumberField,
 	RadioGroupField,

@@ -1,5 +1,5 @@
-import type { FormFieldSlots } from './contract'
-import type { FormFieldComponents } from './field-props'
+import type { AllFormFieldSlots, FormComponentRegistry } from './contract'
+import type { FormFieldComponents, FormPrimitives } from './field-props'
 import type { FormFieldRegistry } from './field-registry'
 import type { FormAsyncValidateOrFn, FormValidateOrFn } from '@ez-kit/form-core'
 import type { AppFieldExtendedReactFormApi } from '@tanstack/react-form'
@@ -18,15 +18,21 @@ export const NO_INJECTED_COMPONENTS = {} as const
 export type NoInjectedComponents = typeof NO_INJECTED_COMPONENTS
 
 /**
- * A form instance carrying both the native TanStack API and the flat field components.
+ * A form instance carrying the native TanStack API, the field components it registered, the two
+ * primitives and the components it registered.
  *
  * `TFields` is the registry `createForm` was given, so a field the app registered is on the
- * instance under its own key, typed from the phantoms `defineFieldType` wrote. It is
- * **defaulted**, which is what keeps every one-and-two-argument spelling of this type
- * compiling unchanged.
+ * instance under its own key, typed from the phantoms `defineFieldType` wrote. `TComponents` is
+ * the `components` bag, attached as-is: each key is `form.<Key>` with that component's own props.
+ * Both are **defaulted**, which is what keeps the shorter spellings of this type compiling.
  */
-export type BoundForm<TForm, TFormData, TFields extends FormFieldRegistry = FormFieldSlots> = TForm &
-	FormFieldComponents<TFormData, TFields>
+export type BoundForm<
+	TForm,
+	TFormData,
+	TFields extends FormFieldRegistry = AllFormFieldSlots,
+	// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- no components registered
+	TComponents extends FormComponentRegistry = {},
+> = TForm & FormFieldComponents<TFormData, TFields> & FormPrimitives<TFormData, TFields> & TComponents
 
 /**
  * What `useForm` hands back, spelled out as a nameable type.
@@ -49,7 +55,9 @@ export type KitFormApi<
 	TOnDynamicAsync extends undefined | FormAsyncValidateOrFn<TFormData>,
 	TOnServer extends undefined | FormAsyncValidateOrFn<TFormData>,
 	TSubmitMeta,
-	TFields extends FormFieldRegistry = FormFieldSlots,
+	TFields extends FormFieldRegistry = AllFormFieldSlots,
+	// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- no components registered
+	TComponents extends FormComponentRegistry = {},
 > = BoundForm<
 	AppFieldExtendedReactFormApi<
 		TFormData,
@@ -68,5 +76,6 @@ export type KitFormApi<
 		NoInjectedComponents
 	>,
 	TFormData,
-	TFields
+	TFields,
+	TComponents
 >

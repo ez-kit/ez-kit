@@ -2,9 +2,8 @@ import { describe, expectTypeOf, it } from 'vitest'
 
 import { createForm } from './create-form'
 import { defineFieldType } from './field-registry'
-import { testComponents, testFields } from './test-kit'
+import { testComponents, testFields, testFormElement } from './test-kit'
 
-import type { FormComponents } from './contract'
 import type { FormInstance } from './index'
 import type { AnyFormSchema } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
@@ -13,7 +12,7 @@ type Values = { email: string; age: number }
 const DEFAULTS: Values = { email: '', age: 0 }
 
 const { useForm, withForm, withFieldGroup, SchemaForm } = createForm({
-	components: testComponents,
+	FormElement: testFormElement,
 	fields: testFields,
 })
 
@@ -76,8 +75,8 @@ describe('FormInstance', () => {
 	})
 
 	it('accepts an instance from a factory built with its own components', () => {
-		const components: FormComponents = { ...testComponents, Button: () => null }
-		const custom = createForm({ components, fields: testFields })
+		const components = { ...testComponents, SaveBar: () => null }
+		const custom = createForm({ FormElement: testFormElement, fields: testFields, components })
 
 		function Probe(): ReactNode {
 			const form = custom.useForm({ defaultValues: DEFAULTS })
@@ -171,7 +170,11 @@ describe('FormInstance — where the kit takes a form', () => {
 		const NoteField = defineFieldType<{ hint: string }, string>()(function Note(): ReactNode {
 			return null
 		})
-		const extended = createForm({ components: testComponents, fields: { ...testFields, NoteField } })
+		const extended = createForm({
+			FormElement: testFormElement,
+			fields: { ...testFields, NoteField },
+			components: testComponents,
+		})
 
 		function Probe(): ReactNode {
 			const form = extended.useForm({ defaultValues: DEFAULTS })

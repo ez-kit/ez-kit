@@ -1,4 +1,4 @@
-import type { FormFieldSlots } from './contract'
+import type { AllFormFieldSlots, FormComponentRegistry } from './contract'
 import type { FormFieldRegistry } from './field-registry'
 import type { KitFormApi } from './kit-form'
 
@@ -29,19 +29,14 @@ type Open = any
  * Replaces `KitFormApi`, `BoundForm`, `RendererForm` and `BoundFieldApi` on the public surface. The
  * full twelve-parameter shape stays internal — `useForm` needs it to infer validators — and is
  * assignable to this one.
+ *
+ * The defaults describe a full kit: every built-in field kind and no components. An app that
+ * registered a subset — or components of its own — names its bundle's shape once, as
+ * `FormInstance<V, typeof fields, typeof components>`.
  */
-export type FormInstance<TValues, TFields extends FormFieldRegistry = FormFieldSlots> = KitFormApi<
+export type FormInstance<
 	TValues,
-	Open,
-	Open,
-	Open,
-	Open,
-	Open,
-	Open,
-	Open,
-	Open,
-	Open,
-	Open,
-	Open,
-	TFields
->
+	TFields extends FormFieldRegistry = AllFormFieldSlots,
+	// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- no components registered
+	TComponents extends FormComponentRegistry = {},
+> = KitFormApi<TValues, Open, Open, Open, Open, Open, Open, Open, Open, Open, Open, Open, TFields, TComponents>

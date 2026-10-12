@@ -1,7 +1,7 @@
 import { describe, expectTypeOf, it } from 'vitest'
 
 import { createForm } from './create-form'
-import { testComponents, testFields } from './test-kit'
+import { testComponents, testFields, testFormElement } from './test-kit'
 
 import type { ReactNode } from 'react'
 
@@ -11,7 +11,7 @@ type Values = { title: string; lines: Line[] }
 
 const DEFAULTS: Values = { title: '', lines: [] }
 
-const { Form } = createForm({ components: testComponents, fields: testFields })
+const { Form } = createForm({ FormElement: testFormElement, fields: testFields, components: testComponents })
 
 /**
  * Type-level guarantees of `form.Array` / `form.ArrayField`. Nothing here renders — every

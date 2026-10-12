@@ -3,6 +3,7 @@ import { useFormGroup, useSelector } from '@tanstack/react-form'
 import { Fragment, useCallback, useMemo, useRef, useState } from 'react'
 
 import { renderChildren } from './render-children'
+import { assertComponent, MissingComponentMessage } from './render-node'
 import { useStepFieldNames } from './use-step-fields'
 
 import type { LayoutComponents, RenderNodeContext } from './render-node'
@@ -219,6 +220,7 @@ export type FormWizardProps<TValues> = {
  * step (spec §10.3), which renders through `renderChildren` like any other node.
  */
 export function FormWizard<TValues>({ schema, form, layout, context }: FormWizardProps<TValues>): ReactNode {
+	assertComponent(layout.Wizard, MissingComponentMessage.Wizard)
 	// The real bound instance carries far more than `FormFieldComponents`; this narrows it to
 	// the store and the two methods used below, the same `as unknown` pattern `RenderNode` uses
 	// for `ConditionSubscribableForm`.

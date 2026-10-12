@@ -5,8 +5,8 @@ import { testComponents } from '../test-kit'
 
 /**
  * The layout contract — `Section` and `GridItem` — is what config-driven forms use to group
- * fields into headed, column-gridded blocks. This test proves the test kit implements it,
- * which is what makes it a compile error (`satisfies FormComponents`) for a real kit to skip.
+ * fields into headed, column-gridded blocks. This test proves the test kit implements it, with
+ * the props a real kit's `satisfies FormComponents` checks.
  */
 test('the test kit implements the layout contract', () => {
 	render(

@@ -2,7 +2,7 @@ import { describe, expectTypeOf, it } from 'vitest'
 
 import { createForm } from './create-form'
 import { defineFieldType } from './field-registry'
-import { testComponents, testFields } from './test-kit'
+import { testComponents, testFields, testFormElement } from './test-kit'
 
 import type { KitWithFormProps } from './composition'
 import type { NoInjectedComponents } from './kit-form'
@@ -13,7 +13,11 @@ type Values = { email: string; address: { city: string } }
 
 const DEFAULTS: Values = { email: '', address: { city: '' } }
 
-const { useForm, withForm, withFieldGroup } = createForm({ components: testComponents, fields: testFields })
+const { useForm, withForm, withFieldGroup } = createForm({
+	FormElement: testFormElement,
+	fields: testFields,
+	components: testComponents,
+})
 
 type RatingProps = { max: number }
 
@@ -22,8 +26,9 @@ const RatingField = defineFieldType<RatingProps, string>()(function Rating(): Re
 })
 
 const { useForm: useExtendedForm, withForm: withExtendedForm } = createForm({
-	components: testComponents,
+	FormElement: testFormElement,
 	fields: { ...testFields, RatingField },
+	components: testComponents,
 })
 
 /**

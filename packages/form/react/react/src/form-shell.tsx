@@ -1,15 +1,15 @@
 import { FormProvider } from './form-context'
 
 import type { SubmittableForm } from './bindable-form'
-import type { FormComponents, FormElementProps } from './contract'
+import type { FormElementProps } from './contract'
 import type { AnyFormInstance } from './form-context'
 import type { ReactNode } from 'react'
 
 type FormShellProps = {
 	/** The instance whose `handleSubmit` the `<form>` is wired to. */
 	form: SubmittableForm
-	/** The kit's `<form>` primitive. */
-	FormElement: FormComponents['Form']
+	/** The kit's `<form>` element, or the intrinsic `'form'` when none was passed. */
+	FormElement: ((props: FormElementProps) => ReactNode) | 'form'
 	children: ReactNode
 	elementProps: Omit<FormElementProps, 'onSubmit' | 'children'>
 }

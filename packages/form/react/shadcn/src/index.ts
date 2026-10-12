@@ -10,6 +10,7 @@ export {
 	CheckboxGroupField,
 	DateField,
 	DateRangeField,
+	FormElement,
 	formComponents,
 	formFieldSlots,
 	MultiSelectField,

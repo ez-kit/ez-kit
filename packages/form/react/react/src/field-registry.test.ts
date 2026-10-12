@@ -1,8 +1,7 @@
 import { FORM_FIELD_TYPES, RESERVED_NODE_TYPES } from '@ez-kit/form-core'
 import { describe, expect, expectTypeOf, it } from 'vitest'
 
-import { FIELD_KEYS } from './component-guard'
-import { BESPOKE_FIELD_KEYS, defineFieldType, deriveFieldTypeIds, fieldTypeIdFor } from './field-registry'
+import { BESPOKE_FIELD_KEYS, defineFieldType, deriveFieldTypeIds, FIELD_KEYS, fieldTypeIdFor } from './field-registry'
 
 import type { DeepKeysOfType } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'

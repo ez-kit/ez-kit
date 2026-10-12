@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
 import { createForm } from './create-form'
-import { testComponents, testFields } from './test-kit'
+import { testComponents, testFields, testFormElement } from './test-kit'
 
 import type { FormFieldSlots } from './contract'
 import type { FormSchema } from '@ez-kit/form-core'
@@ -30,7 +30,11 @@ const OPTIONS = [
 	{ label: 'Admin', value: 'admin' },
 ]
 
-const { useForm, Form, SchemaForm } = createForm({ components: testComponents, fields: testFields })
+const { useForm, Form, SchemaForm } = createForm({
+	FormElement: testFormElement,
+	fields: testFields,
+	components: testComponents,
+})
 
 /** The stand-in kit stamps `data-loading` on the control whenever the contract says so. */
 const LOADING_ATTRIBUTE = 'data-loading'
@@ -105,7 +109,11 @@ describe('loading options', () => {
 				return testFields.SelectField(props)
 			},
 		}
-		const { useForm: useSpyForm, Form: SpyForm } = createForm({ components: testComponents, fields })
+		const { useForm: useSpyForm, Form: SpyForm } = createForm({
+			FormElement: testFormElement,
+			fields,
+			components: testComponents,
+		})
 
 		function Case() {
 			const form = useSpyForm({ defaultValues: DEFAULTS })
