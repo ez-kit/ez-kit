@@ -3,7 +3,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
-import { Form, FormRenderer } from './form'
+import { Form, SchemaForm } from './form'
 
 import type { DateRangeValue, FormSchema } from '@ez-kit/form-core'
 
@@ -148,7 +148,7 @@ describe('@ez-kit/form-shadcn wizard', () => {
 	it('shows one step at a time and walks forward and back', async () => {
 		const user = userEvent.setup()
 		render(
-			<FormRenderer
+			<SchemaForm
 				schema={WIZARD}
 				defaultValues={{ name: '', age: '' }}
 			/>,
@@ -168,7 +168,7 @@ describe('@ez-kit/form-shadcn wizard', () => {
 
 	it('renders the step list through the kit chrome', () => {
 		const { container } = render(
-			<FormRenderer
+			<SchemaForm
 				schema={WIZARD}
 				defaultValues={{ name: '', age: '' }}
 			/>,
@@ -198,7 +198,7 @@ const SECTIONED: FormSchema<StepValues> = {
 describe('@ez-kit/form-shadcn sections and grid', () => {
 	it('renders a section with its title, description and both children', () => {
 		render(
-			<FormRenderer
+			<SchemaForm
 				schema={SECTIONED}
 				defaultValues={{ name: '', age: '' }}
 			/>,
@@ -212,7 +212,7 @@ describe('@ez-kit/form-shadcn sections and grid', () => {
 
 	it('wraps each child in a grid item, so `colSpan` has something to act on', () => {
 		const { container } = render(
-			<FormRenderer
+			<SchemaForm
 				schema={SECTIONED}
 				defaultValues={{ name: '', age: '' }}
 			/>,

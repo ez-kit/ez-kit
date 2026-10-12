@@ -3,7 +3,7 @@
 import { useState } from 'react'
 
 import { Dialog } from 'shared/form/Dialog'
-import { defineFormSchema, FormFieldType, FormRenderer } from 'shared/form/FormKit'
+import { defineFormSchema, FormFieldType, SchemaForm } from 'shared/form/FormKit'
 
 type Profile = {
 	name: string
@@ -34,11 +34,11 @@ const schema = defineFormSchema<Profile>()({
 /**
  * The dialog form from the JSX side, written as a document.
  *
- * The lifetime argument is identical: `<FormRenderer>` calls `useForm` itself, so the form
+ * The lifetime argument is identical: `<SchemaForm>` calls `useForm` itself, so the form
  * lives exactly as long as this element and the dialog's unmount-while-closed is what
  * resets it. The one arrangement that does not carry over is the split body/footer — the
  * `submit` node is part of the document, so it renders where the document puts it rather
- * than in the dialog's own footer. Put the renderer in the body and keep only `Cancel`
+ * than in the dialog's own footer. Put `SchemaForm` in the body and keep only `Cancel`
  * below it, or drop the `submit` node and drive `form.handleSubmit()` from a footer button
  * in the controlled mode.
  */
@@ -56,7 +56,7 @@ export function DialogSchemaExample() {
 
 				<Dialog.Content title='Edit profile'>
 					<Dialog.Body>
-						<FormRenderer
+						<SchemaForm
 							schema={schema}
 							onSubmit={({ value }) => {
 								setSaved(JSON.stringify(value, null, 2))

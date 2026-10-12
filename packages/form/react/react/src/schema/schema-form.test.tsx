@@ -8,7 +8,7 @@ import { testComponents, testFields } from '../test-kit'
 
 import type { FormSchema } from '@ez-kit/form-core'
 
-const { FormRenderer } = createForm({ components: testComponents, fields: testFields })
+const { SchemaForm } = createForm({ components: testComponents, fields: testFields })
 
 type Values = { email: string; age: number }
 
@@ -22,7 +22,7 @@ const schema: FormSchema<Values> = {
 
 test('renders one bound field per node, through the injected kit', () => {
 	const { container } = render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			defaultValues={{ email: '', age: 0 }}
 			onSubmit={() => {}}
@@ -37,7 +37,7 @@ test('renders one bound field per node, through the injected kit', () => {
 
 test('the rendered field carries the same data attributes as the JSX API', () => {
 	const { container } = render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			defaultValues={{ email: '', age: 0 }}
 			onSubmit={() => {}}
@@ -58,7 +58,7 @@ test('builds defaultValues from the schema when the caller does not supply them'
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schemaWithDefaults}
 			onSubmit={() => {}}
 		/>,
@@ -78,7 +78,7 @@ test('a caller-supplied defaultValues wins over the schema default', () => {
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schemaWithDefaults}
 			defaultValues={{ email: 'override@b.com', age: 7 }}
 			onSubmit={() => {}}
@@ -102,7 +102,7 @@ test('a nested field name gets its default at the nested path, not under a dotte
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={nestedSchema}
 			onSubmit={onSubmit}
 		/>,
@@ -124,7 +124,7 @@ test('a nested field name gets its default at the nested path, not under a dotte
 test('renders through a caller-owned form instance in controlled mode', () => {
 	const { useForm } = createForm({ components: testComponents, fields: testFields })
 
-	function Harness(): ReturnType<typeof FormRenderer> {
+	function Harness(): ReturnType<typeof SchemaForm> {
 		const form = useForm<
 			Values,
 			undefined,
@@ -143,7 +143,7 @@ test('renders through a caller-owned form instance in controlled mode', () => {
 			onSubmit: () => {},
 		})
 		return (
-			<FormRenderer
+			<SchemaForm
 				form={form}
 				schema={schema}
 			/>
@@ -174,7 +174,7 @@ test('resolves a select option label through `translate`', () => {
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={localizedSchema}
 			defaultValues={{ country: 'RU' }}
 			translate={(key: string): string => (key === 'country.ru' ? 'Россия' : 'Страна')}
@@ -199,7 +199,7 @@ test('binds a date node to the kit input and submits the picked day', async () =
 	}
 
 	const { container } = render(
-		<FormRenderer
+		<SchemaForm
 			schema={dateSchema}
 			defaultValues={{ startsOn: '' }}
 			onSubmit={onSubmit}
@@ -229,7 +229,7 @@ test('a date range is one field holding one { start, end } value', async () => {
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={rangeSchema}
 			defaultValues={{ stay: { start: '2026-08-01', end: '2026-08-05' } }}
 			onSubmit={onSubmit}
@@ -257,7 +257,7 @@ test('a schema defaultValue seeds a date field, and a bad one never reaches the 
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={seeded}
 			onSubmit={() => {}}
 		/>,
@@ -288,7 +288,7 @@ test('a checkbox group holds one list under one name', async () => {
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={listSchema}
 			onSubmit={onSubmit}
 		/>,
@@ -321,7 +321,7 @@ test('a required multi-select is not satisfied by an empty selection', async () 
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={listSchema}
 			onSubmit={onSubmit}
 		/>,

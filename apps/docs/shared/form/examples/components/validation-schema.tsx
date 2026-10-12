@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-import { defineFormSchema, FormFieldType, FormRenderer, TextInputType } from 'shared/form/FormKit'
+import { defineFormSchema, FormFieldType, SchemaForm, TextInputType } from 'shared/form/FormKit'
 
 type Signup = {
 	email: string
@@ -16,7 +16,7 @@ type Signup = {
  *
  * Each `validate` block is data, so it survives `JSON.stringify` and can arrive from a
  * backend. `buildValidator` compiles the whole document into one Standard Schema validator
- * and `FormRenderer` attaches it to both `onChange` and `onSubmit`, where the JSX twin
+ * and `SchemaForm` attaches it to both `onChange` and `onSubmit`, where the JSX twin
  * attaches zod to `onChange` alone — the extra pass at submit changes nothing for a
  * synchronous validator, it only closes the gap for a field never touched.
  *
@@ -34,7 +34,7 @@ type Signup = {
  * cross-field check, a checksum. A regular expression is deliberately absent too: one
  * arriving from an untrusted document is a ReDoS hazard. Instead the document *names* a rule
  * — `validate: { rule: 'adult-in-country' }` — and the app supplies the code for it through
- * `FormRenderer`'s `rules` prop (`rules={{ 'adult-in-country': (value, values) => … }}`),
+ * `SchemaForm`'s `rules` prop (`rules={{ 'adult-in-country': (value, values) => … }}`),
  * returning `true` or the message to show. An unregistered name throws when the validator is
  * built rather than on the user's first keystroke.
  */
@@ -83,7 +83,7 @@ export function ValidationSchemaExample() {
 
 	return (
 		<div className='flex flex-col gap-4'>
-			<FormRenderer
+			<SchemaForm
 				schema={schema}
 				onSubmit={({ value }) => {
 					setSaved(JSON.stringify(value, null, 2))

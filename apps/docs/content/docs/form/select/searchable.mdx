@@ -77,7 +77,7 @@ This is not an invention: react-admin pays exactly the same price, with a `getMa
 
 ## The kit never learns there are two queries
 
-The renderer calls both hooks and merges their results — search results first, any selected option the search did not return appended, deduped by value — before handing one `options` list to the kit. `loading` is true while **either** hook is loading.
+`SchemaForm` calls both hooks and merges their results — search results first, any selected option the search did not return appended, deduped by value — before handing one `options` list to the kit. `loading` is true while **either** hook is loading.
 
 So from a kit's side nothing changed: it is still "find the option whose value matches". A kit gets one new key — the identical one on `SelectFieldRenderProps` and `MultiSelectFieldRenderProps`:
 
@@ -86,7 +86,7 @@ So from a kit's side nothing changed: it is still "find the option whose value m
 search: { query: string; onQueryChange: (query: string) => void } | undefined
 ```
 
-Its presence _is_ the mode switch. The renderer owns the query — it must, since it is what feeds the source — so the kit stays fully controlled, exactly as it is for every value in the contract. A kit must **never filter `options` itself**: that filtering already happened, server-side, and a second pass would hide rows the search deliberately returned.
+Its presence _is_ the mode switch. `SchemaForm` owns the query — it must, since it is what feeds the source — so the kit stays fully controlled, exactly as it is for every value in the contract. A kit must **never filter `options` itself**: that filtering already happened, server-side, and a second pass would hide rows the search deliberately returned.
 
 ## Existing sources are unaffected
 
@@ -161,7 +161,7 @@ Both examples **start with two cities already chosen**. Nothing has been typed, 
 `searchable` is legal on `select` and `multiselect` — the two kinds that draw one control standing for the selection.
 
 - **`radiogroup` and `checkboxgroup`** render every option inline. There is no trigger to type into and no page to narrow, so the flag is meaningless there and always will be. `parseFormSchema` rejects it.
-- A `searchable` field with a **static `options` list** is filtered in the renderer, by a case-insensitive substring of the label and with no configuration. Everything else on this page — the second hook, the merged-in selection, the cleared query — is about a _source_, which is what you need the moment matching has to be anything more particular than that. See [Creatable select](/docs/form/select/creatable) for the static case.
+- A `searchable` field with a **static `options` list** is filtered in `SchemaForm`, by a case-insensitive substring of the label and with no configuration. Everything else on this page — the second hook, the merged-in selection, the cleared query — is about a _source_, which is what you need the moment matching has to be anything more particular than that. See [Creatable select](/docs/form/select/creatable) for the static case.
 
 ## What still holds
 

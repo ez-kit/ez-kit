@@ -348,14 +348,14 @@ export const FORM_TYPE = {
 	 * parameters default, so it instantiates bare.
 	 */
 	CustomFieldRenderProps: { module: TypeModule.FormReact, name: 'CustomFieldRenderProps' },
-	FormRendererControlledProps: {
+	SchemaFormControlledProps: {
 		module: TypeModule.FormReact,
-		name: 'FormRendererControlledProps',
+		name: 'SchemaFormControlledProps',
 		typeArgs: ROW_TYPE_ARGS,
 	},
-	FormRendererUncontrolledProps: {
+	SchemaFormUncontrolledProps: {
 		module: TypeModule.FormReact,
-		name: 'FormRendererUncontrolledProps',
+		name: 'SchemaFormUncontrolledProps',
 		typeArgs: FORM_API_TYPE_ARGS,
 	},
 	/** The JSX array trio: the component's props, the render prop's scope, and one entry of it. */
@@ -1168,8 +1168,8 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			// Nine, not ten: the per-form `fields` registry was removed in favour of
 			// `createForm({ fields })`, the single registration site. `blocks` stays.
 			{
-				heading: 'Renderer props',
-				roots: [FORM_TYPE.FormRendererControlledProps, FORM_TYPE.FormRendererUncontrolledProps],
+				heading: 'SchemaForm props',
+				roots: [FORM_TYPE.SchemaFormControlledProps, FORM_TYPE.SchemaFormUncontrolledProps],
 				expectedCount: 9,
 			},
 		],

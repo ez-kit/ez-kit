@@ -8,7 +8,7 @@ import { testComponents, testFields } from '../test-kit'
 
 import type { FormSchema } from '@ez-kit/form-core'
 
-const { FormRenderer } = createForm({ components: testComponents, fields: testFields })
+const { SchemaForm } = createForm({ components: testComponents, fields: testFields })
 
 type EmailValues = { email: string }
 
@@ -23,7 +23,7 @@ test('constraints in the schema produce field errors', async () => {
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			defaultValues={{ email: '' }}
 			onSubmit={() => {}}
@@ -46,7 +46,7 @@ test('the same message from onChange and onSubmit renders exactly once', async (
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			defaultValues={{ email: '' }}
 			onSubmit={() => {}}
@@ -76,7 +76,7 @@ test('typing in one field does not redden the other required fields', async () =
 	const user = userEvent.setup()
 
 	const { container } = render(
-		<FormRenderer
+		<SchemaForm
 			schema={twoRequiredFields}
 			defaultValues={{ a: '', b: '' }}
 			onSubmit={() => {}}
@@ -98,7 +98,7 @@ test('a submit attempt still shows every untouched field its error', async () =>
 	const user = userEvent.setup()
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={twoRequiredFields}
 			defaultValues={{ a: '', b: '' }}
 			onSubmit={() => {}}
@@ -120,7 +120,7 @@ test('supplying both schema constraints and validators throws a descriptive erro
 
 	expect(() =>
 		render(
-			<FormRenderer
+			<SchemaForm
 				schema={schema}
 				defaultValues={{ email: '' }}
 				onSubmit={() => {}}
@@ -138,7 +138,7 @@ test('caller-supplied validators are used verbatim when the schema has no constr
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			defaultValues={{ email: '' }}
 			onSubmit={() => {}}
@@ -173,7 +173,7 @@ test('a hidden required field does not block submission', async () => {
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			defaultValues={{ showExtra: false, extra: '' }}
 			onSubmit={onSubmit}

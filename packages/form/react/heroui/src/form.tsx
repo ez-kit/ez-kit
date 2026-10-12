@@ -53,12 +53,12 @@ export const formComponents = {
 	Wizard,
 } satisfies FormComponents
 
-const { useForm, Form, FormRenderer, withForm, withFieldGroup } = createForm({
+const { useForm, Form, SchemaForm, withForm, withFieldGroup } = createForm({
 	components: formComponents,
 	fields: formFieldSlots,
 })
 
-export { useForm, Form, FormRenderer, withForm, withFieldGroup }
+export { useForm, Form, SchemaForm, withForm, withFieldGroup }
 
 /**
  * The twelve field components on their own, so an app that calls `createForm` itself can

@@ -6,7 +6,7 @@ Framework-agnostic core for the `@ez-kit/form-*` packages, built on
 It holds what neither React nor a specific UI kit owns: the closed set of built-in
 field kinds, the shared `SelectOption` shape, the normalisation of raw validator errors
 into display strings — and the whole **`FormSchema`** format, the plain-data description
-of a form that `<FormRenderer>` walks.
+of a form that `<SchemaForm>` walks.
 
 ## Install
 
@@ -34,7 +34,7 @@ import type { LocalizedSelectOption, SelectOption } from '@ez-kit/form-core'
 - **`LocalizedSelectOption<TValue>`** — the same shape with `label: LocalizedText`, which is
   what a `select` / `radiogroup` **node in a schema** carries, so a delivered document can
   name a translation key. `resolveSelectOptions(options, translate)` turns one into the
-  other; `FormRenderer` calls it for you.
+  other; `SchemaForm` calls it for you.
 - **`formatFieldErrors(errors)`** — normalises `field.state.meta.errors` (standard-schema
   issues, `Error` instances, plain strings) into `string[]`, dropping empty slots.
 - **`hasFieldErrors(errors)`** — the `invalid` / `aria-invalid` predicate.
@@ -46,7 +46,7 @@ standard-schema validators (zod / valibot / arktype). There is no custom resolve
 
 A `FormSchema` is `{ version: 1, children: FormNode[] }` — a form written as data. It is
 JSON, with no functions anywhere, so the same document can be authored in TypeScript,
-stored in a database, or delivered by a backend. `<FormRenderer>` (from a kit package)
+stored in a database, or delivered by a backend. `<SchemaForm>` (from a kit package)
 renders it through the same bound field components the JSX API uses.
 
 The full guide lives at [ez-kit-docs.vercel.app/docs/form/schema](https://ez-kit-docs.vercel.app/docs/form/schema).
@@ -138,7 +138,7 @@ import { stripHiddenValues, visibleFieldNames } from '@ez-kit/form-core'
 - **`visibleFieldNames(schema, values)`** — the names whose `when` conditions currently
   hold, all the way up the tree.
 - **`stripHiddenValues(schema, values)`** — the submitted payload with hidden fields
-  removed. An uncontrolled `<FormRenderer>` applies this for you unless you pass
+  removed. An uncontrolled `<SchemaForm>` applies this for you unless you pass
   `keepHiddenValues`; a controlled caller owns `onSubmit` and calls it themselves. v1
   strips top-level keys only.
 

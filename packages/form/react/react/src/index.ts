@@ -9,10 +9,10 @@ export type { FieldValidateProps } from './field-validate'
 export type { FormInstance } from './form-instance'
 export type { AnyFormProps, FormControlledProps, FormProps, FormUncontrolledProps } from './form-props'
 export type {
-	FormRendererControlledProps,
-	FormRendererUncontrolledProps,
-	SharedRendererProps,
-} from './schema/form-renderer'
+	SchemaFormControlledProps,
+	SchemaFormUncontrolledProps,
+	SharedSchemaFormProps,
+} from './schema/schema-form'
 export type { BlockRegistry, CustomFieldRegistry, CustomFieldRenderProps } from './schema/registries'
 export type {
 	OptionSource,
@@ -75,8 +75,8 @@ export type {
 // `@ez-kit/form-core` for the option shape its `Select` renders, or — for `GRID_MIN`/`GRID_MAX`/
 // `clampToGridRange` — for the numeric range `columns`/`colSpan` share with `parseFormSchema`.
 // `stripHiddenValues` is here for the same reason, aimed at one specific caller: a controlled
-// `FormRenderer` cannot strip hidden values on a caller's behalf (see the doc comment on
-// `FormRendererControlledProps`), so the caller applies it themselves inside their own
+// `SchemaForm` cannot strip hidden values on a caller's behalf (see the doc comment on
+// `SchemaFormControlledProps`), so the caller applies it themselves inside their own
 // `onSubmit` — that only works without a second dependency if it is reachable from here.
 export {
 	clampToGridRange,

@@ -67,7 +67,7 @@ The component takes the array's `name`, a `newItem` to append, and a render prop
 </form.ArrayField>
 ```
 
-`newItem` is required here and has no counterpart in a document. A document declares each field's `defaultValue`, so the renderer can build a fresh entry by reading the item's subtree; a render prop declares nothing the package can read, so you state the starting value yourself. It must carry every key of the item — a missing one would be an uncontrolled input on the new row, so the type requires the whole item rather than a partial.
+`newItem` is required here and has no counterpart in a document. A document declares each field's `defaultValue`, so `SchemaForm` can build a fresh entry by reading the item's subtree; a render prop declares nothing the package can read, so you state the starting value yourself. It must carry every key of the item — a missing one would be an uncontrolled input on the new row, so the type requires the whole item rather than a partial.
 
 Every prop `form.ArrayField` takes — `name`, `newItem`, `label`, `validate` and the rest — is in the [API reference](/docs/form/arrays/api#formarrayfield).
 
@@ -251,7 +251,7 @@ const uniqueEmails: NamedRule = (value) => {
 ```
 
 ```tsx
-<FormRenderer
+<SchemaForm
 	schema={schema}
 	rules={{ 'unique-emails': uniqueEmails }}
 />

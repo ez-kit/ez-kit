@@ -72,7 +72,7 @@ TanStack types the render prop's `form` as an API parameterised by the component
 
 So `withForm` is wrapped, and the single thing the wrapper changes is that declared type: it names the kit's own form instance — the type `useForm` returns, with the validators the block's options declare — rather than TanStack's component-less one. A block therefore sees exactly the instance it is handed. The reasoning is written out in full at the top of `packages/form/react/react/src/composition.ts`.
 
-That wrapping is what puts `withForm` on the kit rather than on the adapter's general surface: it is produced by `createForm({ components })` together with `useForm`, `Form` and `FormRenderer`, so you import it from `@ez-kit/form-shadcn` or `@ez-kit/form-heroui` alongside them.
+That wrapping is what puts `withForm` on the kit rather than on the adapter's general surface: it is produced by `createForm({ components })` together with `useForm`, `Form` and `SchemaForm`, so you import it from `@ez-kit/form-shadcn` or `@ez-kit/form-heroui` alongside them.
 
 ## `withFieldGroup`
 

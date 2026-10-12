@@ -42,7 +42,7 @@ const ROLE_ID_OPTIONS = [
 	{ label: 'Viewer', value: 8 },
 ]
 
-const { useForm, Form, FormRenderer } = createForm({ components: testComponents, fields: testFields })
+const { useForm, Form, SchemaForm } = createForm({ components: testComponents, fields: testFields })
 
 /** `typeof value` alongside the value, so a stringified `7` cannot pass for the number. */
 function describeValue(value: unknown): string {
@@ -179,7 +179,7 @@ describe('option-values helpers', () => {
 	})
 })
 
-test('a schema-driven numeric select round-trips through FormRenderer', async () => {
+test('a schema-driven numeric select round-trips through SchemaForm', async () => {
 	const user = userEvent.setup()
 	const onSubmit = vi.fn()
 
@@ -192,7 +192,7 @@ test('a schema-driven numeric select round-trips through FormRenderer', async ()
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			onSubmit={onSubmit}
 		/>,

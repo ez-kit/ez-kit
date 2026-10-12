@@ -110,7 +110,7 @@ export const FORM_VALUE_TYPE_ARGS = `<${PROBE_ROW_TYPE_NAME}, string>`
 export const FORM_ARRAY_TYPE_ARGS = `<${PROBE_ARRAY_ROW_TYPE_NAME}, '${PROBE_ARRAY_NAME}'>`
 /**
  * Type-argument list for the form types that mirror TanStack's twelve-parameter validator
- * list verbatim (`FormRendererUncontrolledProps`). Every validator slot is `undefined` and the
+ * list verbatim (`SchemaFormUncontrolledProps`). Every validator slot is `undefined` and the
  * submit meta `never` — the least specific instantiation, which is what the overloads collapse
  * to and which leaves the key set untouched.
  */

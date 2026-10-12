@@ -212,7 +212,7 @@ test('creatable is a string-list feature, rejected on a numeric one', () => {
 
 /**
  * `TValues` must be recoverable *from a schema value*, not just supplied to the authoring
- * helper. Everything downstream — `FormRenderer`'s `onSubmit`, `stripHiddenValues`,
+ * helper. Everything downstream — `SchemaForm`'s `onSubmit`, `stripHiddenValues`,
  * `buildValidator` — is generic over `TValues` and has nowhere else to read it from: the
  * type appears in a node only inside `DeepKeysOfType<TValues, …>`, a conditional type no
  * inference can run backwards. The `__values` marker is the position that makes it work, so

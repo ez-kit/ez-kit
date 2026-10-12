@@ -43,7 +43,7 @@ beforeEach(() => {
 	groupSpy.validateCauses.length = 0
 })
 
-const { FormRenderer } = createForm({ components: testComponents, fields: testFields })
+const { SchemaForm } = createForm({ components: testComponents, fields: testFields })
 
 type TwoStepValues = { name: string; age: string }
 
@@ -61,7 +61,7 @@ test('renders only the current step and advances on next', async () => {
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			defaultValues={{ name: '', age: '' }}
 			onSubmit={() => {}}
@@ -94,7 +94,7 @@ test('next is blocked while the current step has invalid fields', async () => {
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			defaultValues={{ name: '', age: '' }}
 			onSubmit={() => {}}
@@ -123,7 +123,7 @@ test('a field on a later step does not block the current step', async () => {
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			defaultValues={{ name: '', age: '' }}
 			onSubmit={() => {}}
@@ -162,7 +162,7 @@ test('a step hidden by `when` is removed from steps and indices are recomputed',
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			defaultValues={{ isCompany: false, name: '', company: '', note: '' }}
 			onSubmit={() => {}}
@@ -205,7 +205,7 @@ test('invalid is false for a step that has never been visited', async () => {
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			defaultValues={{ name: '', age: '' }}
 			onSubmit={() => {}}
@@ -250,7 +250,7 @@ test('a step with `path` binds a form group, never calls its validate, and still
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			defaultValues={{ contact: { email: '' }, alias: '', note: '' }}
 			onSubmit={() => {}}
@@ -295,7 +295,7 @@ test('step titles and descriptions are resolved before the kit sees them', () =>
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			defaultValues={{ name: '', age: '' }}
 			onSubmit={() => {}}
@@ -326,7 +326,7 @@ test('a step does not open red on arrival after the user has typed elsewhere', a
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			defaultValues={{ name: '', age: '' }}
 			onSubmit={() => {}}
@@ -363,7 +363,7 @@ test('hiding the current step falls back to the nearest earlier step, not to the
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			defaultValues={{ name: '', note: '', skip: false }}
 			onSubmit={() => {}}
@@ -407,7 +407,7 @@ test('`disabledWhen` disables an already-visited step and its goTo', async () =>
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			defaultValues={{ name: '', lock: false }}
 			onSubmit={() => {}}
@@ -460,7 +460,7 @@ test('a step reached by the hidden-step fallback does not open red either', asyn
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			defaultValues={{ name: '', email: '', show: false, skip: false }}
 			onSubmit={() => {}}
@@ -515,7 +515,7 @@ test('backing out of a step does not count as validating it, but failing to leav
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			defaultValues={{ name: '', age: '', note: '' }}
 			onSubmit={() => {}}

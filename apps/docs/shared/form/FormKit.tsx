@@ -5,9 +5,9 @@ import { createContext, useContext } from 'react'
 import type {
 	AnyFormProps,
 	FormControlledProps,
-	FormRendererControlledProps,
+	SchemaFormControlledProps,
 	Form as ShadcnForm,
-	FormRenderer as ShadcnFormRenderer,
+	SchemaForm as ShadcnSchemaForm,
 	useForm as useShadcnForm,
 } from '@ez-kit/form-shadcn'
 import type { ReactNode } from 'react'
@@ -39,7 +39,7 @@ export type { AnyFormSchema, FormSchema, NamedRule, RuleIssue } from '@ez-kit/fo
 export type FormKit = {
 	useForm: typeof useShadcnForm
 	Form: typeof ShadcnForm
-	FormRenderer: typeof ShadcnFormRenderer
+	SchemaForm: typeof ShadcnSchemaForm
 }
 
 const FormKitContext = createContext<FormKit | null>(null)
@@ -76,14 +76,14 @@ export const Form = ((props: AnyFormProps) => {
 }) as typeof ShadcnForm
 
 /**
- * The kit's `<FormRenderer>` — the config-driven entry point — resolved the same way as
+ * The kit's `<SchemaForm>` — the config-driven entry point — resolved the same way as
  * `Form` above, and cast for the same reason: the two overloads (controlled / uncontrolled)
  * would otherwise flatten and an example would lose the inferred value type of `onSubmit`.
  */
-export const FormRenderer = ((props: FormRendererControlledProps<unknown>) => {
-	const { FormRenderer: KitFormRenderer } = useFormKit()
+export const SchemaForm = ((props: SchemaFormControlledProps<unknown>) => {
+	const { SchemaForm: KitSchemaForm } = useFormKit()
 
 	// Which overload the props satisfy was settled at the call site; at runtime the two
 	// modes are one component, so forwarding through either signature is equivalent.
-	return <KitFormRenderer {...props} />
-}) as typeof ShadcnFormRenderer
+	return <KitSchemaForm {...props} />
+}) as typeof ShadcnSchemaForm

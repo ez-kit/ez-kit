@@ -1,6 +1,6 @@
 'use client'
 
-import { defineFormSchema, FormFieldType, FormRenderer } from 'shared/form/FormKit'
+import { defineFormSchema, FormFieldType, SchemaForm } from 'shared/form/FormKit'
 
 type Order = {
 	company: string
@@ -94,5 +94,5 @@ const schema = defineFormSchema<Order>()({
 })
 
 export function LayoutSchemaExample() {
-	return <FormRenderer schema={schema} />
+	return <SchemaForm schema={schema} />
 }

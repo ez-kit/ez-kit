@@ -38,7 +38,7 @@ export type CustomFieldRenderProps<TValue = unknown, TProps = Record<string, unk
  *
  * **Not a prop.** This is the shape `createForm` derives from its `fields` registry — keyed
  * by component name there, by document id here (`deriveFieldTypeIds`) — and hands to the
- * schema renderer. A per-form `fields` prop on `FormRenderer` existed and was removed: the
+ * schema renderer. A per-form `fields` prop on `SchemaForm` existed and was removed: the
  * factory is the single registration site, so a field registered once is reachable from JSX
  * *and* from a document, and the two can no longer disagree about what `rating` means.
  */
@@ -62,7 +62,7 @@ export type BlockRegistry = Record<string, (props: { props: Record<string, unkno
 const RESERVED_REGISTRY_KEYS: readonly string[] = [...RESERVED_NODE_TYPES, ...FORM_FIELD_TYPES]
 
 /**
- * Checked once when `FormRenderer` mounts, not per node — the registry is static, authored
+ * Checked once when `SchemaForm` mounts, not per node — the registry is static, authored
  * config, so the answer cannot change between renders, and paying a per-node cost for a
  * condition that never changes would be wasted work.
  *

@@ -12,7 +12,7 @@ import type { ReactNode } from 'react'
 type Values = { email: string; age: number }
 const DEFAULTS: Values = { email: '', age: 0 }
 
-const { useForm, withForm, withFieldGroup, FormRenderer } = createForm({
+const { useForm, withForm, withFieldGroup, SchemaForm } = createForm({
 	components: testComponents,
 	fields: testFields,
 })
@@ -144,11 +144,11 @@ describe('FormInstance — where the kit takes a form', () => {
 	})
 
 	/**
-	 * The controlled `FormRenderer` takes a `FormInstance`. It took a structural slice before
+	 * The controlled `SchemaForm` takes a `FormInstance`. It took a structural slice before
 	 * (`handleSubmit` plus the field components); every case here was checked against that type
 	 * too and gives the same answer, so the change rejects only objects `useForm` did not build.
 	 */
-	it('is what a controlled FormRenderer takes, validators and all', () => {
+	it('is what a controlled SchemaForm takes, validators and all', () => {
 		function Probe(): ReactNode {
 			const form = useForm({
 				defaultValues: DEFAULTS,
@@ -158,7 +158,7 @@ describe('FormInstance — where the kit takes a form', () => {
 				},
 			})
 			return (
-				<FormRenderer
+				<SchemaForm
 					form={form}
 					schema={valuesSchema}
 				/>
@@ -167,7 +167,7 @@ describe('FormInstance — where the kit takes a form', () => {
 		expectTypeOf(Probe).toBeFunction()
 	})
 
-	it("carries the factory's own fields into its controlled FormRenderer", () => {
+	it("carries the factory's own fields into its controlled SchemaForm", () => {
 		const NoteField = defineFieldType<{ hint: string }, string>()(function Note(): ReactNode {
 			return null
 		})
@@ -177,7 +177,7 @@ describe('FormInstance — where the kit takes a form', () => {
 			const form = extended.useForm({ defaultValues: DEFAULTS })
 			expectTypeOf(form.NoteField).toBeFunction()
 			return (
-				<extended.FormRenderer
+				<extended.SchemaForm
 					form={form}
 					schema={valuesSchema}
 				/>
@@ -191,7 +191,7 @@ describe('FormInstance — where the kit takes a form', () => {
 			const form = useForm({ defaultValues: DEFAULTS })
 			return (
 				// @ts-expect-error — the schema's values must be the form's values
-				<FormRenderer
+				<SchemaForm
 					form={form}
 					schema={subsetSchema}
 				/>

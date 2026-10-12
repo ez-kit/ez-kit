@@ -10,7 +10,7 @@ injects, plus `data-*` attributes for that kit's CSS to target. Install a kit pa
 
 ## The idea
 
-`createForm({ components })` returns `{ useForm, Form, FormRenderer, withForm, withFieldGroup }`. `<Form>` is the `<form>` element:
+`createForm({ components })` returns `{ useForm, Form, SchemaForm, withForm, withFieldGroup }`. `<Form>` is the `<form>` element:
 give it the options TanStack's `useForm` takes and it hands you an instance that is a
 **superset** of TanStack's — flat fields on top, the whole native API untouched underneath.
 
@@ -99,13 +99,13 @@ native `form.Field` / `form.AppField`.
 
 ## Config-driven forms
 
-`<FormRenderer schema={…} />` renders a plain-data
+`<SchemaForm schema={…} />` renders a plain-data
 [`FormSchema`](https://ez-kit-docs.vercel.app/docs/form/schema) — the same document a backend can deliver
 as JSON — through the very same bound field components, so a config-driven form and a
 hand-written one produce identical DOM.
 
 ```tsx
-<FormRenderer
+<SchemaForm
 	schema={schema}
 	fields={{ rating: RatingField }} // custom field kinds, by node `type`
 	blocks={{ 'promo-banner': Promo }} // value-less markup, by node `component`
@@ -153,7 +153,7 @@ const components = {
 	Wizard,
 } satisfies FormComponents
 
-export const { useForm, FormRenderer, withForm, withFieldGroup } = createForm({ components })
+export const { useForm, SchemaForm, withForm, withFieldGroup } = createForm({ components })
 ```
 
 `satisfies FormComponents` turns a forgotten field into a compile error rather than a

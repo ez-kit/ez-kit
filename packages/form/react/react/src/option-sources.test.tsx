@@ -39,7 +39,7 @@ const COUNTRIES = [
 	{ label: 'Russia', value: 'ru' },
 ]
 
-const { useForm, Form, FormRenderer } = createForm({ components: testComponents, fields: testFields })
+const { useForm, Form, SchemaForm } = createForm({ components: testComponents, fields: testFields })
 
 /** Renders `children` under a stable registry — sources are hooks, so identity must not churn. */
 function withSources(sources: OptionSourceRegistry, children: ReactNode): ReactNode {
@@ -105,7 +105,7 @@ describe('option sources', () => {
 		render(
 			withSources(
 				{ cities: recordingCitySource(seen) },
-				<FormRenderer
+				<SchemaForm
 					schema={schema}
 					defaultValues={{ ...DEFAULTS, country: 'de' }}
 				/>,
@@ -153,7 +153,7 @@ describe('option sources', () => {
 		render(
 			withSources(
 				{ cities: localized },
-				<FormRenderer
+				<SchemaForm
 					schema={schema}
 					defaultValues={DEFAULTS}
 					translate={(key) => (key === 'city.berlin' ? 'Berlin (translated)' : key)}
@@ -255,7 +255,7 @@ describe('option sources', () => {
 
 			return withSources(
 				sources,
-				<FormRenderer
+				<SchemaForm
 					schema={schema}
 					defaultValues={{ ...DEFAULTS, country: 'ru', city: 'msk' }}
 				/>,

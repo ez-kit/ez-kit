@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-import { defineFormItem, defineFormSchema, FormFieldType, FormRenderer } from 'shared/form/FormKit'
+import { defineFormItem, defineFormSchema, FormFieldType, SchemaForm } from 'shared/form/FormKit'
 
 import type { NamedRule, RuleIssue } from 'shared/form/FormKit'
 
@@ -109,7 +109,7 @@ export function ArraysSchemaExample() {
 
 	return (
 		<div className='flex flex-col gap-4'>
-			<FormRenderer
+			<SchemaForm
 				schema={schema}
 				// The value type comes from `defaultValues`: a document's own `TValues` sits too deep
 				// inside `FormNode` for TypeScript to infer it back out of `schema` alone.

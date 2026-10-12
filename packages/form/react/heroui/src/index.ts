@@ -1,4 +1,4 @@
-export { useForm, Form, FormRenderer, withForm, withFieldGroup } from './form'
+export { useForm, Form, SchemaForm, withForm, withFieldGroup } from './form'
 
 // The factory and the two bags it takes, so an app can call `createForm` itself with the
 // kit's twelve field slots spread beside a field kind of its own. The ready-made bundle
@@ -64,8 +64,8 @@ export type {
 	FormFieldSlots,
 	FormInstance,
 	FormProps,
-	FormRendererControlledProps,
-	FormRendererUncontrolledProps,
+	SchemaFormControlledProps,
+	SchemaFormUncontrolledProps,
 	FormUncontrolledProps,
 	GridItemProps,
 	JsonValue,
@@ -85,7 +85,7 @@ export type {
 	SectionProps,
 	SelectFieldProps,
 	SelectOption,
-	SharedRendererProps,
+	SharedSchemaFormProps,
 	SimpleOptionSource,
 	SliderFieldProps,
 	SubmitButtonProps,

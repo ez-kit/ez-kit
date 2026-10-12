@@ -30,7 +30,7 @@ const OPTIONS = [
 	{ label: 'Admin', value: 'admin' },
 ]
 
-const { useForm, Form, FormRenderer } = createForm({ components: testComponents, fields: testFields })
+const { useForm, Form, SchemaForm } = createForm({ components: testComponents, fields: testFields })
 
 /** The stand-in kit stamps `data-loading` on the control whenever the contract says so. */
 const LOADING_ATTRIBUTE = 'data-loading'
@@ -141,7 +141,7 @@ describe('loading options', () => {
 			],
 		}
 
-		const { container } = render(<FormRenderer schema={schema} />)
+		const { container } = render(<SchemaForm schema={schema} />)
 
 		expect(container.querySelector(`[${LOADING_ATTRIBUTE}]`)).toBeNull()
 	})

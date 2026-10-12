@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-import { defineFormSchema, FormFieldType, FormRenderer, TextInputType } from 'shared/form/FormKit'
+import { defineFormSchema, FormFieldType, SchemaForm, TextInputType } from 'shared/form/FormKit'
 
 import type { DateRangeValue } from '@ez-kit/form-react'
 
@@ -35,7 +35,7 @@ type Registration = {
  * `columns`, and the kit draws the heading and the grid; in JSX that markup is yours to
  * write. Validation is **named rules** — `required`, `format: 'email'`, `min` — instead of a
  * validator function, because a document has to stay data: arbitrary JS could not be
- * delivered over the wire, so the format names the constraints it knows and the renderer
+ * delivered over the wire, so the format names the constraints it knows and `SchemaForm`
  * compiles them. The JSX twin expresses these same three rules with a zod schema.
  */
 const schema = defineFormSchema<Registration>()({
@@ -195,7 +195,7 @@ export function ShowcaseSchemaExample() {
 
 	return (
 		<div className='flex flex-col gap-6'>
-			<FormRenderer
+			<SchemaForm
 				schema={schema}
 				onSubmit={({ value }) => {
 					setSaved(JSON.stringify(value, null, 2))

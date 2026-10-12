@@ -9,14 +9,14 @@ import { deriveFieldTypeIds } from './field-registry'
 import { splitFormProps } from './form-options'
 import { FormShell } from './form-shell'
 import { NO_INJECTED_COMPONENTS } from './kit-form'
+import { assertNoReservedFieldKeyCollision } from './schema/registries'
 import {
-	isRendererControlled,
+	isSchemaFormControlled,
 	renderSchemaFields,
 	resolveSchemaValidators,
 	schemaDefaultValues,
 	stripHiddenValuesOnSubmit,
-} from './schema/form-renderer'
-import { assertNoReservedFieldKeyCollision } from './schema/registries'
+} from './schema/schema-form'
 
 import type { BindableForm } from './bindable-form'
 import type { KitFormBlock, KitWithFormProps } from './composition'
@@ -24,13 +24,13 @@ import type { FormComponents, FormFieldSlots } from './contract'
 import type { FormFieldRegistry } from './field-registry'
 import type { FormControlledProps, AnyFormProps, FormUncontrolledImplProps, FormUncontrolledProps } from './form-props'
 import type { KitFormApi } from './kit-form'
-import type {
-	AnyFormRendererProps,
-	FormRendererControlledProps,
-	FormRendererUncontrolledImplProps,
-	FormRendererUncontrolledProps,
-} from './schema/form-renderer'
 import type { CustomFieldRegistry } from './schema/registries'
+import type {
+	AnySchemaFormProps,
+	SchemaFormControlledProps,
+	SchemaFormUncontrolledImplProps,
+	SchemaFormUncontrolledProps,
+} from './schema/schema-form'
 import type { FormAsyncValidateOrFn, FormOptions, FormValidateOrFn } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
 
@@ -122,7 +122,7 @@ export function createForm<TFields extends FormFieldRegistry = FormFieldSlots>({
 	 * that derives a duplicate or reserved document id is a configuration error the app hears
 	 * about at startup rather than on the first document that happens to use it.
 	 *
-	 * This is the **only** field registration site — `FormRenderer` has no `fields` prop —
+	 * This is the **only** field registration site — `SchemaForm` has no `fields` prop —
 	 * so a field registered on the factory is reachable from JSX as `form.RatingField` and
 	 * from a document as `{ type: 'rating' }`, and the two halves cannot disagree. The
 	 * built-in ids in here (`text`, `number`, …) are unreachable by construction:
@@ -349,10 +349,10 @@ export function createForm<TFields extends FormFieldRegistry = FormFieldSlots>({
 	}
 
 	/**
-	 * Uncontrolled mode for `FormRenderer`, split out for the same reason as `UncontrolledForm`
+	 * Uncontrolled mode for `SchemaForm`, split out for the same reason as `UncontrolledForm`
 	 * — the hook must run unconditionally.
 	 */
-	function UncontrolledFormRenderer<
+	function UncontrolledSchemaForm<
 		TFormData,
 		TOnMount extends undefined | FormValidateOrFn<TFormData>,
 		TOnChange extends undefined | FormValidateOrFn<TFormData>,
@@ -366,7 +366,7 @@ export function createForm<TFields extends FormFieldRegistry = FormFieldSlots>({
 		TOnServer extends undefined | FormAsyncValidateOrFn<TFormData>,
 		TSubmitMeta,
 	>(
-		props: FormRendererUncontrolledProps<
+		props: SchemaFormUncontrolledProps<
 			TFormData,
 			TOnMount,
 			TOnChange,
@@ -448,8 +448,8 @@ export function createForm<TFields extends FormFieldRegistry = FormFieldSlots>({
 	 * Two overloads for the same reason as `Form`: TypeScript does not infer generics
 	 * through a union target.
 	 */
-	function FormRenderer<TValues>(props: FormRendererControlledProps<TValues, TFields>): ReactNode
-	function FormRenderer<
+	function SchemaForm<TValues>(props: SchemaFormControlledProps<TValues, TFields>): ReactNode
+	function SchemaForm<
 		TFormData,
 		TOnMount extends undefined | FormValidateOrFn<TFormData>,
 		TOnChange extends undefined | FormValidateOrFn<TFormData>,
@@ -463,7 +463,7 @@ export function createForm<TFields extends FormFieldRegistry = FormFieldSlots>({
 		TOnServer extends undefined | FormAsyncValidateOrFn<TFormData>,
 		TSubmitMeta,
 	>(
-		props: FormRendererUncontrolledProps<
+		props: SchemaFormUncontrolledProps<
 			TFormData,
 			TOnMount,
 			TOnChange,
@@ -478,8 +478,8 @@ export function createForm<TFields extends FormFieldRegistry = FormFieldSlots>({
 			TSubmitMeta
 		>,
 	): ReactNode
-	function FormRenderer(props: AnyFormRendererProps<TFields>): ReactNode {
-		if (isRendererControlled<unknown, TFields>(props)) {
+	function SchemaForm(props: AnySchemaFormProps<TFields>): ReactNode {
+		if (isSchemaFormControlled<unknown, TFields>(props)) {
 			const { form, schema, translate, blocks, rules: _rules, ...elementProps } = props
 			assertNoReservedFieldKeyCollision(blocks)
 			return (
@@ -495,7 +495,7 @@ export function createForm<TFields extends FormFieldRegistry = FormFieldSlots>({
 
 		// Overload resolution has already checked the caller; the implementation signature is
 		// deliberately the loose one, so the shape is spelled out again for the inner component.
-		return <UncontrolledFormRenderer {...(props as FormRendererUncontrolledImplProps)} />
+		return <UncontrolledSchemaForm {...(props as SchemaFormUncontrolledImplProps)} />
 	}
 
 	/**
@@ -603,7 +603,7 @@ export function createForm<TFields extends FormFieldRegistry = FormFieldSlots>({
 	// prop receives a **group** API, which correctly carries no flat field components (spec
 	// §12 — native `form.Field` territory), and the parent `form` prop of the component it
 	// returns already accepts a `KitFormApi`, that type being an intersection over TanStack's.
-	return { useForm, Form, FormRenderer, withForm, withFieldGroup }
+	return { useForm, Form, SchemaForm, withForm, withFieldGroup }
 }
 
 /**

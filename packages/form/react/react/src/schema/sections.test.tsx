@@ -7,7 +7,7 @@ import { testComponents, testFields } from '../test-kit'
 
 import type { FormSchema } from '@ez-kit/form-core'
 
-const { FormRenderer } = createForm({ components: testComponents, fields: testFields })
+const { SchemaForm } = createForm({ components: testComponents, fields: testFields })
 
 type Values = { email: string; age: number }
 
@@ -28,7 +28,7 @@ test('a section renders through the kit and wraps children in grid items', () =>
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			defaultValues={{ email: '', age: 0 }}
 			onSubmit={() => {}}
@@ -45,7 +45,7 @@ test('a section without a title renders no heading', () => {
 		children: [{ type: 'section', children: [{ type: FormFieldType.Text, name: 'email' }] }],
 	}
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			defaultValues={{ email: '', age: 0 }}
 			onSubmit={() => {}}
@@ -76,7 +76,7 @@ test('nested sections build a different grid inside a grid', () => {
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			defaultValues={{ email: '', age: 0 }}
 			onSubmit={() => {}}

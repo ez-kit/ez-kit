@@ -3,7 +3,7 @@ import { expect, test } from '../../../fixtures'
 import type { Locator, Page } from '@playwright/test'
 
 /**
- * The same list declared as a document (`FormRenderer`), which adds two things the JSX example
+ * The same list declared as a document (`SchemaForm`), which adds two things the JSX example
  * cannot show: a condition addressed **relative to the entry** (`./kind`), and a cross-entry rule
  * that reports its issues against a path of its own (`[1].email`).
  *

@@ -1,6 +1,6 @@
 ---
 title: Config-driven forms
-description: Describe a form as plain data — a FormSchema — and render it with FormRenderer. The same machinery as the JSX API, entered from the other side.
+description: Describe a form as plain data — a FormSchema — and render it with SchemaForm. The same machinery as the JSX API, entered from the other side.
 ---
 
 A **`FormSchema`** is a form written as data instead of JSX:
@@ -9,7 +9,7 @@ A **`FormSchema`** is a form written as data instead of JSX:
 { version: 1, children: [ /* nodes */ ] }
 ```
 
-`<FormRenderer>` walks that document and renders it through the _same_ bound field components the JSX API exposes — `form.TextField`, `form.SelectField`, `form.SubmitButton`. A config-driven form and a hand-written one produce the same DOM, because there is only one implementation.
+`<SchemaForm>` walks that document and renders it through the _same_ bound field components the JSX API exposes — `form.TextField`, `form.SelectField`, `form.SubmitButton`. A config-driven form and a hand-written one produce the same DOM, because there is only one implementation.
 
 Why bother describing a form as data:
 
@@ -19,10 +19,10 @@ Why bother describing a form as data:
 
 <KitExample exampleId='form-schema-basic' />
 
-Everything a schema needs — the renderer and the format alike — comes from your kit, which re-exports the schema-authoring API of `@ez-kit/form-core` so the kit stays the only package you install:
+Everything a schema needs — `SchemaForm` and the format alike — comes from your kit, which re-exports the schema-authoring API of `@ez-kit/form-core` so the kit stays the only package you install:
 
 ```ts
-import { defineFormSchema, FormFieldType, FormRenderer, parseFormSchema } from '@ez-kit/form-shadcn'
+import { defineFormSchema, FormFieldType, SchemaForm, parseFormSchema } from '@ez-kit/form-shadcn'
 ```
 
 ## The document
@@ -54,7 +54,7 @@ Every node may carry:
 
 A `date` node carries `min`, `max` and `defaultValue` as `YYYY-MM-DD` strings; a `daterange` node's `defaultValue` is `{ start, end }` of two such strings, and its value reaches `onSubmit` in that same shape under one `name`. Dates are strings on purpose — a `Date` does not survive `JSON.stringify`, and a calendar date has no time zone to lose. See [Fields](./form/fields) for what each kit renders.
 
-A `select`, `multiselect`, `radiogroup` or `checkboxgroup` node adds `options`: a `{ value, label, disabled? }` list whose `label` is `LocalizedText` like every other label in the format, so a delivered document can name a translation key instead of shipping copy in one language. The renderer resolves them before the kit sees them — a kit only ever receives finished strings.
+A `select`, `multiselect`, `radiogroup` or `checkboxgroup` node adds `options`: a `{ value, label, disabled? }` list whose `label` is `LocalizedText` like every other label in the format, so a delivered document can name a translation key instead of shipping copy in one language. `SchemaForm` resolves them before the kit sees them — a kit only ever receives finished strings.
 
 An option `value` is a **string or a number**, and the node's `name` is checked against it: a `number`-valued path takes numeric options (a `number[]` one for `multiselect` / `checkboxgroup`), a string-valued path string ones. That is what makes a backend-authored document over integer entity ids expressible — the id stays a number all the way into form state and back out of `onSubmit`. One list carries one scalar type; see [Numeric option values](/docs/form/select#numeric-option-values).
 
@@ -66,7 +66,7 @@ A `section` adds `title`, `description`, `columns` (an integer **1–4**, defaul
 
 ### `defaultValue`
 
-Fields may carry their own `defaultValue`. When you pass no `defaultValues` to the renderer, it builds them from the schema — which is the only way a backend-delivered field can start out as anything but `undefined`. A `defaultValues` you pass yourself always wins.
+Fields may carry their own `defaultValue`. When you pass no `defaultValues` to `SchemaForm`, it builds them from the schema — which is the only way a backend-delivered field can start out as anything but `undefined`. A `defaultValues` you pass yourself always wins.
 
 The **schema** carries the form's value type, so `onSubmit`'s `value` is typed whether or not you pass `defaultValues` — which matters most for a backend-delivered document, the case that has no `defaultValues` to state it with. A schema built by `defineFormSchema<Values>()` or by `parseFormSchema<Values>()` says `Values`; one assembled as a bare object literal says nothing, and `value` arrives as `unknown` until you annotate it. Passing `defaultValues` as well is still checked against the same type.
 
@@ -171,7 +171,7 @@ const schema = defineFormSchema<Values>()({
 })
 ```
 
-Runtime behaviour is identical: the renderer subscribes to the form's values and re-evaluates the predicate on every change, exactly as it does a compiled rule, so visibility, the "hidden fields are never validated" rule and the stripping of hidden values all work the same way.
+Runtime behaviour is identical: `SchemaForm` subscribes to the form's values and re-evaluates the predicate on every change, exactly as it does a compiled rule, so visibility, the "hidden fields are never validated" rule and the stripping of hidden values all work the same way.
 
 What you give up is everything that depends on the schema being data:
 
@@ -211,17 +211,17 @@ Constraints are checked in that order and stop at the first failure, so a field 
 
 There is no `pattern`. A regular expression from an untrusted source is a ReDoS hazard, and a hung tab is a worse failure than a missing client-side check.
 
-The renderer walks the tree once and builds **one** validator for the whole form, implementing the standard-schema interface directly — no zod, no new runtime dependency — and attaches it to `onChange` and `onSubmit`. TanStack maps its issues back onto fields by path, so nesting comes for free.
+`SchemaForm` walks the tree once and builds **one** validator for the whole form, implementing the standard-schema interface directly — no zod, no new runtime dependency — and attaches it to `onChange` and `onSubmit`. TanStack maps its issues back onto fields by path, so nesting comes for free.
 
 ### One source of validation
 
-This is all **uncontrolled-mode** machinery: the renderer can only own a validator when it is the one calling `useForm`. Pass your own `form` and the schema's `validate` blocks are inert — build the validator yourself with `buildValidator`.
+This is all **uncontrolled-mode** machinery: `SchemaForm` can only own a validator when it is the one calling `useForm`. Pass your own `form` and the schema's `validate` blocks are inert — build the validator yourself with `buildValidator`.
 
 TanStack accepts exactly one validator per trigger, so the two modes are mutually exclusive:
 
-- the schema carries `validate` blocks → the renderer generates and owns the validator;
+- the schema carries `validate` blocks → `SchemaForm` generates and owns the validator;
 - you pass `validators` → yours is used verbatim and schema constraints are ignored;
-- **both** → `FormRenderer` throws, naming the conflict. There is no silent winner and no merging of two issue sets onto one path.
+- **both** → `SchemaForm` throws, naming the conflict. There is no silent winner and no merging of two issue sets onto one path.
 
 Field-level validators through the native `form.Field` still compose with either mode — TanStack runs field-level and form-level validators together.
 
@@ -230,7 +230,7 @@ Field-level validators through the native `form.Field` still compose with either
 Logic that cannot be expressed as data stays reachable from a delivered document: the schema _names_ a rule, your app registers the implementation.
 
 ```tsx
-<FormRenderer
+<SchemaForm
 	schema={schema}
 	rules={{ 'ru-inn': (value) => isValidInn(value) || 'Invalid tax ID' }}
 />
@@ -238,7 +238,7 @@ Logic that cannot be expressed as data stays reachable from a delivered document
 
 A rule returns `true` when the value passes, or the message to show. A `validate.rule` with no registered implementation throws when the validator is built — on mount, not on the user's first keystroke.
 
-`rules` is meaningful in **uncontrolled** mode only, for the same reason `validate` is: the renderer builds the validator only when it is the one calling `useForm`. A controlled caller builds their own instance, so they build their own validator too — call `buildValidator(schema, { rules })` — re-exported by your kit — and pass the result as `validators.onChange` / `validators.onSubmit`.
+`rules` is meaningful in **uncontrolled** mode only, for the same reason `validate` is: `SchemaForm` builds the validator only when it is the one calling `useForm`. A controlled caller builds their own instance, so they build their own validator too — call `buildValidator(schema, { rules })` — re-exported by your kit — and pass the result as `validators.onChange` / `validators.onSubmit`.
 
 ## Visibility and the submitted payload
 
@@ -250,10 +250,10 @@ Two behaviours, deliberately separated:
 Stripping happens _at submit time_, by filtering the values against the computed visibility tree — not by deleting state when a field hides. Toggle a condition back and forth and what the user typed is still there.
 
 ```tsx
-<FormRenderer schema={schema} keepHiddenValues onSubmit={…} />
+<SchemaForm schema={schema} keepHiddenValues onSubmit={…} />
 ```
 
-`keepHiddenValues` exists **only in uncontrolled mode**, and that asymmetry is not an oversight: in controlled mode you own `onSubmit`, and the renderer has no seam to wrap it in — TanStack's own `useForm` re-applies your original options into the instance on every render, so any wrapper would lose that race. The escape hatch is explicit instead:
+`keepHiddenValues` exists **only in uncontrolled mode**, and that asymmetry is not an oversight: in controlled mode you own `onSubmit`, and `SchemaForm` has no seam to wrap it in — TanStack's own `useForm` re-applies your original options into the instance on every render, so any wrapper would lose that race. The escape hatch is explicit instead:
 
 ```ts
 import { stripHiddenValues } from '@ez-kit/form-shadcn'
@@ -263,24 +263,24 @@ const form = useForm({
 	onSubmit: ({ value }) => save(stripHiddenValues(schema, value)),
 })
 
-<FormRenderer form={form} schema={schema} />
+<SchemaForm form={form} schema={schema} />
 ```
 
 v1 strips top-level keys only: a hidden field addressed by a dotted path (`company.inn`) still reaches `onSubmit` inside its parent object.
 
 ## Registries
 
-Three registries, in two places. **Custom fields are registered once, on `createForm`** — the same registration that makes `form.RatingField` available in JSX — while blocks and rules are props on the renderer:
+Three registries, in two places. **Custom fields are registered once, on `createForm`** — the same registration that makes `form.RatingField` available in JSX — while blocks and rules are props on `SchemaForm`:
 
 ```ts
-export const { FormRenderer } = createForm({
+export const { SchemaForm } = createForm({
 	components: formComponents,
 	fields: { ...formFieldSlots, RatingField }, // custom FIELD — has a name, bound to a value
 })
 ```
 
 ```tsx
-<FormRenderer
+<SchemaForm
 	schema={schema}
 	blocks={{ 'promo-banner': PromoBanner }} // custom BLOCK — no name, no binding
 	rules={{ 'ru-inn': isValidInn }} // named validation rules
@@ -289,11 +289,11 @@ export const { FormRenderer } = createForm({
 
 A **custom field** is referenced from a document by its `type`, which its component name derives: `RatingField` → `rating`. It receives exactly what a built-in field receives — `id`, `data-field`, normalised `errors`, `invalid`, `onBlur`, `disabled`, all computed by the binding layer — plus `value`, `onChange` and the node's own `props`, passed through uninterpreted. Getting that binding for free is the entire reason a custom field goes through a registry instead of being written inline.
 
-There is **one** registration site, deliberately: a field registered on the factory is reachable from JSX _and_ from a document, so the two can never disagree about what `rating` means. `FormRenderer` took a per-form `fields` prop in earlier versions; it is gone, and passing one is now a type error.
+There is **one** registration site, deliberately: a field registered on the factory is reachable from JSX _and_ from a document, so the two can never disagree about what `rating` means. `SchemaForm` took a per-form `fields` prop in earlier versions; it is gone, and passing one is now a type error.
 
 A **block** is a `{ type: 'block', component: 'promo-banner' }` node; it holds no value and receives only its `props`.
 
-Registering a key that collides with a reserved node type — `section`, `step`, `submit`, `block` or any of the eight field types — throws: a block key when the renderer mounts, a field key when `createForm` runs, so a `SectionField` that would shadow `section` is rejected at startup rather than on the first document that uses it. A node whose `type` is neither built-in nor registered is an error too, never a silently skipped hole: a backend sending a field the frontend cannot render must fail loudly.
+Registering a key that collides with a reserved node type — `section`, `step`, `submit`, `block` or any of the eight field types — throws: a block key when `SchemaForm` mounts, a field key when `createForm` runs, so a `SectionField` that would shadow `section` is rejected at startup rather than on the first document that uses it. A node whose `type` is neither built-in nor registered is an error too, never a silently skipped hole: a backend sending a field the frontend cannot render must fail loudly.
 
 Custom types are declared to the type system as the second parameter of `defineFormSchema`:
 
@@ -305,13 +305,13 @@ Keeping that set closed is what preserves the checking on built-in nodes — an 
 
 ## Wizards
 
-When the document's **top-level** children are `step` nodes, it is a wizard: the renderer shows one step at a time and asks your kit for the chrome (`Wizard` in the kit contract — neither shadcn nor HeroUI ships a stepper, so each kit draws its own). Steps live in the same tree as everything else, so a step can carry `when` — "skip the company step for an individual" is a first-class case.
+When the document's **top-level** children are `step` nodes, it is a wizard: `SchemaForm` shows one step at a time and asks your kit for the chrome (`Wizard` in the kit contract — neither shadcn nor HeroUI ships a stepper, so each kit draws its own). Steps live in the same tree as everything else, so a step can carry `when` — "skip the company step for an individual" is a first-class case.
 
 <KitExample exampleId='form-wizard' />
 
-A step's `title` and `description` are resolved by the renderer before the kit sees them — `WizardStep` types both as `ReactNode`, so a kit never has to know what a translation key is. Mixing `step` nodes with non-`step` siblings at the same level throws, in the parser and at render time alike: the loose nodes would otherwise be silently dropped.
+A step's `title` and `description` are resolved by `SchemaForm` before the kit sees them — `WizardStep` types both as `ReactNode`, so a kit never has to know what a translation key is. Mixing `step` nodes with non-`step` siblings at the same level throws, in the parser and at render time alike: the loose nodes would otherwise be silently dropped.
 
-Four behaviours the renderer settles so no kit has to:
+Four behaviours `SchemaForm` settles so no kit has to:
 
 - **Which fields a step owns is decided by layout, never by a data path.** `goNext` collects the field names in the step's own subtree and runs the form-level validators scoped to exactly those, so a step's "next" can never write errors onto fields further along. A step's optional `path` does not change that scope: it mounts a `useFormGroup` binding for the step and nothing more.
 - **A step never opens red on arrival.** The schema's constraints compile into a _form-level_ `onChange` validator, which sees every field in the document — including ones the user has not reached. A step is marked `invalid` only once the user has tried to _leave_ it, and arriving on a step the user has never left clears the errors its fields were carrying.
@@ -360,14 +360,14 @@ The parser is the trust boundary. It rejects, throwing `FormSchemaError` with th
 
 Passing the registries' keys in the options is what lets the parser check a delivered document against _this_ app's capabilities, which is the check that matters: the backend can only send what the frontend can actually render.
 
-`FormRenderer` deliberately does not call the parser for you. Parsing is a step you take at the boundary where the document arrives — once, where you can log it and fall back — not on every render.
+`SchemaForm` deliberately does not call the parser for you. Parsing is a step you take at the boundary where the document arrives — once, where you can log it and fall back — not on every render.
 
 ## Localisation
 
 `label`, `description`, `title`, `validate.messages` and a select's **option labels** all take `LocalizedText`: a plain string is finished copy, an object `{ key, params }` is a translation key resolved by the `translate` prop.
 
 ```tsx
-<FormRenderer
+<SchemaForm
 	schema={schema}
 	translate={(key, params) => t(key, params)}
 />
@@ -375,18 +375,18 @@ Passing the registries' keys in the options is what lets the parser check a deli
 
 A key with no `translate` supplied is a parse-time error, not a blank label.
 
-## Renderer props
+## SchemaForm props
 
 | prop                                         | mode         | purpose                                                     |
 | -------------------------------------------- | ------------ | ----------------------------------------------------------- |
 | `schema`                                     | both         | the document to render                                      |
-| `form`                                       | controlled   | your own instance; the renderer binds into it               |
+| `form`                                       | controlled   | your own instance; `SchemaForm` binds into it               |
 | `blocks`                                     | both         | the block registry above — custom fields go on `createForm` |
 | `rules`                                      | uncontrolled | named validation rules — see below                          |
 | `translate`                                  | both         | resolves `LocalizedText` keys                               |
 | `keepHiddenValues`                           | uncontrolled | keep hidden fields in the submitted value (default: strip)  |
-| `defaultValues`, `onSubmit`, `validators`, … | uncontrolled | everything `useForm` takes — the renderer owns the instance |
+| `defaultValues`, `onSubmit`, `validators`, … | uncontrolled | everything `useForm` takes — `SchemaForm` owns the instance |
 
 Anything else you pass lands on the `<form>` element.
 
-In **controlled** mode the renderer binds into an instance you already own, which is how a config-driven part sits inside a hand-written form; in **uncontrolled** mode mounting the element _is_ creating the form, so closing the dialog it lives in throws the state away with it.
+In **controlled** mode `SchemaForm` binds into an instance you already own, which is how a config-driven part sits inside a hand-written form; in **uncontrolled** mode mounting the element _is_ creating the form, so closing the dialog it lives in throws the state away with it.

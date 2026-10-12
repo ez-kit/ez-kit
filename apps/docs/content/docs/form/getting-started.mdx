@@ -111,7 +111,7 @@ The submit button sits in the footer and is still a native `type='submit'` insid
 
 ### The same form as a document
 
-`<FormRenderer>` calls `useForm` itself, so the lifetime argument above holds unchanged. The one arrangement that does not carry over is the split body/footer: the `submit` node is part of the document and renders where the document puts it, so the renderer goes in the dialog's body and only the dismiss button stays in the footer.
+`<SchemaForm>` calls `useForm` itself, so the lifetime argument above holds unchanged. The one arrangement that does not carry over is the split body/footer: the `submit` node is part of the document and renders where the document puts it, so `SchemaForm` goes in the dialog's body and only the dismiss button stays in the footer.
 
 <KitExample exampleId='form-dialog-schema' />
 
@@ -146,7 +146,7 @@ The two modes are mutually exclusive — passing `form` together with `defaultVa
 
 ### The same form as a document
 
-The same form described as data and handed to `<FormRenderer>` — the second entry point, covered in [Config-driven forms](/docs/form/schema).
+The same form described as data and handed to `<SchemaForm>` — the second entry point, covered in [Config-driven forms](/docs/form/schema).
 
 <KitExample exampleId='form-schema-basic' />
 

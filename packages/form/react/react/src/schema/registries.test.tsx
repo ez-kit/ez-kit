@@ -35,12 +35,12 @@ const RatingField = ({ id, label, value, onChange, props, invalid }: CustomField
 )
 
 /**
- * Registered on the **factory**, which is the only registration site there is — `FormRenderer`
+ * Registered on the **factory**, which is the only registration site there is — `SchemaForm`
  * has no `fields` prop. `RatingField` derives the document id `rating` by dropping the trailing
  * `Field`, so every `{ type: 'rating' }` node below resolves against this one registration, and
  * the same component is reachable from JSX as `form.RatingField`.
  */
-const { FormRenderer } = createForm({ components: testComponents, fields: { ...testFields, RatingField } })
+const { SchemaForm } = createForm({ components: testComponents, fields: { ...testFields, RatingField } })
 
 test('a custom field receives the full binding, not just its own props', async () => {
 	const user = userEvent.setup()
@@ -51,7 +51,7 @@ test('a custom field receives the full binding, not just its own props', async (
 	} as FormSchema<RatingValues, 'rating'>
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			defaultValues={{ score: 0 }}
 			onSubmit={() => {}}
@@ -78,7 +78,7 @@ test('a custom field receives `invalid`, distinct from its own `props`', () => {
 	} as FormSchema<RatingValues, 'rating'>
 
 	const { container } = render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			defaultValues={{ score: 0 }}
 			onSubmit={() => {}}
@@ -106,7 +106,7 @@ test('a block renders without binding to any value', () => {
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			blocks={{ banner: Banner }}
 			defaultValues={{ name: '' }}
@@ -126,7 +126,7 @@ test('an unknown node type throws with the type named', () => {
 	// A bundle whose factory registered nothing beyond the kit's twelve — `rating` is
 	// neither a built-in kind nor registered, and there is no per-form prop left that could
 	// have supplied it after the fact.
-	const { FormRenderer: BareRenderer } = createForm({ components: testComponents, fields: testFields })
+	const { SchemaForm: BareSchemaForm } = createForm({ components: testComponents, fields: testFields })
 
 	const schema = {
 		version: 1,
@@ -135,7 +135,7 @@ test('an unknown node type throws with the type named', () => {
 
 	expect(() =>
 		render(
-			<BareRenderer
+			<BareSchemaForm
 				schema={schema}
 				defaultValues={{ score: 0 }}
 				onSubmit={() => {}}
@@ -153,7 +153,7 @@ test('registering a reserved block key throws', () => {
 	// rejection moved to `createForm` — see `custom-field.test.tsx`.
 	expect(() =>
 		render(
-			<FormRenderer
+			<SchemaForm
 				schema={emptySchema}
 				blocks={{ section: Custom }}
 				defaultValues={{ score: 0 }}
@@ -178,7 +178,7 @@ test('the submit node renders the kit button and submits the form', async () => 
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			defaultValues={{ name: '' }}
 			onSubmit={onSubmit}

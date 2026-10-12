@@ -17,7 +17,7 @@ const RatingField = defineFieldType<{ max: number }, number>()(({ value, onChang
 	/>
 ))
 
-export const { useForm, Form, FormRenderer, withForm, withFieldGroup } = createForm({
+export const { useForm, Form, SchemaForm, withForm, withFieldGroup } = createForm({
 	components: formComponents,
 	fields: { ...formFieldSlots, RatingField },
 })
@@ -96,14 +96,14 @@ const { useForm } = createForm({ components: formComponents, fields: { ...formFi
 
 ```tsx
 // ✅ one call, one module, one bundle
-export const { useForm, Form, FormRenderer, withForm, withFieldGroup } = createForm({
+export const { useForm, Form, SchemaForm, withForm, withFieldGroup } = createForm({
 	components: formComponents,
 	fields: { ...formFieldSlots, RatingField },
 })
 ```
 
-A kit's own `Form` / `useForm` / `FormRenderer` exports come from the kit's single `createForm` call. The moment you make your own bundle, that one becomes the bundle your app uses — import `Form` from your module, not from the kit.
+A kit's own `Form` / `useForm` / `SchemaForm` exports come from the kit's single `createForm` call. The moment you make your own bundle, that one becomes the bundle your app uses — import `Form` from your module, not from the kit.
 
 ## Blocks are not fields
 
-A **custom field** has a `name` and is bound to a value. A [**block**](/docs/form/schema#registries) has neither: it is a `{ type: 'block', component: 'promo-banner' }` node that receives only its `props`, and it is registered as a `blocks` prop on `FormRenderer`, not on the factory. If what you are adding renders a value the user edits, it is a field; if it is markup the document wants to place, it is a block.
+A **custom field** has a `name` and is bound to a value. A [**block**](/docs/form/schema#registries) has neither: it is a `{ type: 'block', component: 'promo-banner' }` node that receives only its `props`, and it is registered as a `blocks` prop on `SchemaForm`, not on the factory. If what you are adding renders a value the user edits, it is a field; if it is markup the document wants to place, it is a block.

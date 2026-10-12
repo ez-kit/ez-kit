@@ -87,7 +87,7 @@ There are two ways in, and they run the same code underneath.
 
 **JSX** — `<Form>` plus flat fields. Everything JavaScript can express is available: inline validators, arbitrary conditions, `form.Subscribe`, your own components between the fields.
 
-**The document** — a `FormSchema` handed to `<FormRenderer>`. The renderer walks the document and renders it through the _same_ bound field components the JSX API exposes, so both produce the same DOM. There is one implementation, not two.
+**The document** — a `FormSchema` handed to `<SchemaForm>`. `SchemaForm` walks the document and renders it through the _same_ bound field components the JSX API exposes, so both produce the same DOM. There is one implementation, not two.
 
 ### In TSX
 
@@ -100,8 +100,8 @@ There are two ways in, and they run the same code underneath.
 The boundary between them is worth stating plainly rather than discovering later. A document is data — it survives `JSON.stringify`, which means it can be delivered by a backend, stored in a table, or produced by a visual builder. That is also its limit:
 
 - **Validation is named rules only.** `validate: { required: true, format: 'email' }`, plus rules you register yourself. An arbitrary JavaScript predicate is deliberately not expressible — a document that carried executable code would not be safe to accept over the wire.
-- **Conditions are declarative.** `when` and `disabledWhen` cover showing, hiding and disabling against other field values. There is no `form.Subscribe` in a document; the renderer handles re-rendering itself.
-- **Some things exist only on the document side.** Wizards are the notable case: `step` nodes and the step chrome are a renderer feature, and there is no `<Step>` component in the JSX API.
+- **Conditions are declarative.** `when` and `disabledWhen` cover showing, hiding and disabling against other field values. There is no `form.Subscribe` in a document; `SchemaForm` handles re-rendering itself.
+- **Some things exist only on the document side.** Wizards are the notable case: `step` nodes and the step chrome are a `SchemaForm` feature, and there is no `<Step>` component in the JSX API.
 
 Neither entry point is the fallback for the other. Reach for the document when the form's shape is data — long forms, backend-delivered forms, forms a non-developer edits. Reach for JSX when the form's shape is code. The format is described in full in [Config-driven forms](/docs/form/schema).
 

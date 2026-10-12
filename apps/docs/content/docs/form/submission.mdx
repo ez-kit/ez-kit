@@ -77,13 +77,13 @@ Because the request is a validator, `isSubmitting` is already true while it awai
 
 <KitExample exampleId='form-submit-schema' />
 
-The document describes the fields and the button; it does not describe what happens to the values, because that is code. The twin is also the one example rendered **controlled**, and for a reason worth knowing: an uncontrolled `FormRenderer` compiles the schema's own `validate` blocks into the form's validators and refuses to do so while a `validators` prop is present, since TanStack accepts exactly one validator per trigger. The server round trip _is_ a validator, so the two have to be assembled in one place — call [`buildValidator`](/docs/form/schema#one-source-of-validation) yourself, own the instance, and give the constraints to `onChange` and the server to `onSubmitAsync`.
+The document describes the fields and the button; it does not describe what happens to the values, because that is code. The twin is also the one example rendered **controlled**, and for a reason worth knowing: an uncontrolled `SchemaForm` compiles the schema's own `validate` blocks into the form's validators and refuses to do so while a `validators` prop is present, since TanStack accepts exactly one validator per trigger. The server round trip _is_ a validator, so the two have to be assembled in one place — call [`buildValidator`](/docs/form/schema#one-source-of-validation) yourself, own the instance, and give the constraints to `onChange` and the server to `onSubmitAsync`.
 
 ## Hidden values and the submitted payload
 
 A field that is not on screen has usually stopped being part of the answer, and the value it holds should not travel with the submission.
 
-In a [config-driven form](/docs/form/schema#visibility-and-the-submitted-payload) this is handled: a field hidden by a `when` condition is stripped from the value at submit time, `keepHiddenValues` opts out, and a controlled caller applies `stripHiddenValues(schema, value)` at the top of their own handler because the renderer has no seam to wrap.
+In a [config-driven form](/docs/form/schema#visibility-and-the-submitted-payload) this is handled: a field hidden by a `when` condition is stripped from the value at submit time, `keepHiddenValues` opts out, and a controlled caller applies `stripHiddenValues(schema, value)` at the top of their own handler because `SchemaForm` has no seam to wrap.
 
 In the JSX API there is no `when` and therefore nothing to compute visibility from — hiding a field means not rendering it, and that is a decision only your component knows about. Unmounting a field resets its meta but deliberately **leaves its value in form state**, so that a field toggled away and back does not lose what the user typed. The consequence is that the value still reaches `onSubmit`, and dropping it is an explicit act: omit the key when you build the request, or call `form.deleteField(name)` when the field goes away.
 

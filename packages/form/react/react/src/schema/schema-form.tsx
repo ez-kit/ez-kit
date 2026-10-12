@@ -31,7 +31,7 @@ import type {
 import type { ReactNode } from 'react'
 
 /**
- * The `<form>` element's own props, minus the ones `FormRenderer` owns.
+ * The `<form>` element's own props, minus the ones `SchemaForm` owns.
  *
  * `translate` is dropped as well as `onSubmit`/`children`: `<form>` carries a DOM `translate`
  * attribute typed `'yes' | 'no'`, and without this the two definitions intersect into
@@ -40,9 +40,9 @@ import type { ReactNode } from 'react'
  */
 type FormElementRest = Omit<FormElementProps, 'onSubmit' | 'children' | 'translate'>
 
-export type SharedRendererProps<TValues> = {
+export type SharedSchemaFormProps<TValues> = {
 	/**
-	 * The document `FormRenderer` walks — field nodes, optionally grouped into `section`s.
+	 * The document `SchemaForm` walks — field nodes, optionally grouped into `section`s.
 	 * Typed `AnyFormSchema` (`FormSchema<TValues, string>`), not `FormSchema<TValues>`
 	 * (`TCustom` defaulting to `never`): a schema authored with `defineFormSchema<TValues,
 	 * TCustom>()` carries its own closed `TCustom` set, which would otherwise make it
@@ -64,7 +64,7 @@ export type SharedRendererProps<TValues> = {
 	/**
 	 * Named validation rules a `validate.rule` reference resolves against — the same shape
 	 * `@ez-kit/form-core`'s `buildValidator` consumes. Only meaningful in uncontrolled mode,
-	 * where `FormRenderer` calls `buildValidator` itself (see `resolveSchemaValidators`); a
+	 * where `SchemaForm` calls `buildValidator` itself (see `resolveSchemaValidators`); a
 	 * controlled caller builds its own instance and so builds its own validator too, the same
 	 * reason `keepHiddenValues` only exists on the uncontrolled props below.
 	 */
@@ -72,7 +72,7 @@ export type SharedRendererProps<TValues> = {
 }
 
 /**
- * What `FormRenderer`'s implementation needs from a form instance: enough to wire
+ * What `SchemaForm`'s implementation needs from a form instance: enough to wire
  * `<form onSubmit>` (from `SubmittableForm`) and one bound component per field kind (from
  * `FormFieldComponents`). Internal: the public controlled prop is the full `FormInstance`, which
  * is assignable to this narrower shape, so the implementation is written against what it reads.
@@ -80,7 +80,7 @@ export type SharedRendererProps<TValues> = {
  * `TFields` is **defaulted**, and carrying it is what keeps the two halves of the registry
  * agreeing: a factory that registered `RatingField` makes `form.RatingField` reachable from
  * JSX, and a document's `{ type: 'rating' }` resolves against the same registration. Left at
- * the default, a controlled `FormRenderer` would accept an instance from a factory that never
+ * the default, a controlled `SchemaForm` would accept an instance from a factory that never
  * registered the custom field its schema names — the failure would then surface at render
  * time, as `Unknown node type "rating"`, rather than at the call site.
  */
@@ -90,9 +90,9 @@ type RendererForm<TValues, TFields extends FormFieldRegistry = FormFieldSlots> =
 /**
  * Controlled mode: the caller owns the instance and passes it in.
  *
- * In this mode `FormRenderer` cannot strip hidden values for you — you own `onSubmit`, not
+ * In this mode `SchemaForm` cannot strip hidden values for you — you own `onSubmit`, not
  * it — so there is deliberately no `keepHiddenValues` here (see
- * `FormRendererUncontrolledProps`, the only mode that has it). Call `stripHiddenValues`
+ * `SchemaFormUncontrolledProps`, the only mode that has it). Call `stripHiddenValues`
  * yourself at the top of your own handler to get the same default the uncontrolled mode
  * gives you for free:
  *
@@ -101,31 +101,31 @@ type RendererForm<TValues, TFields extends FormFieldRegistry = FormFieldSlots> =
  *   defaultValues,
  *   onSubmit: ({ value }) => save(stripHiddenValues(schema, value)),
  * })
- * <FormRenderer form={form} schema={schema} />
+ * <SchemaForm form={form} schema={schema} />
  * ```
  *
  * (`stripHiddenValues` is re-exported from `@ez-kit/form-react`'s root, so this needs no
  * second dependency on `@ez-kit/form-core`.)
  *
- * Why `FormRenderer` can't do this itself: uncontrolled mode wraps `onSubmit` *before* it is
- * ever handed to `useForm` (see `UncontrolledFormRenderer` in `../create-form.tsx`), which
- * only works because `FormRenderer` is the one calling `useForm`. Here, `onSubmit` is already
- * closed over inside an instance you built yourself — by the time `FormRenderer` sees `form`,
+ * Why `SchemaForm` can't do this itself: uncontrolled mode wraps `onSubmit` *before* it is
+ * ever handed to `useForm` (see `UncontrolledSchemaForm` in `../create-form.tsx`), which
+ * only works because `SchemaForm` is the one calling `useForm`. Here, `onSubmit` is already
+ * closed over inside an instance you built yourself — by the time `SchemaForm` sees `form`,
  * there is no seam left to wrap. Reaching into the live instance from here wouldn't help
  * either: TanStack's own `useForm` re-syncs your original, unwrapped options into it on every
- * render (a per-render `formApi.update(opts)`), so any wrap `FormRenderer` applied would just
+ * render (a per-render `formApi.update(opts)`), so any wrap `SchemaForm` applied would just
  * lose that race back to your unwrapped `onSubmit`.
  */
-export type FormRendererControlledProps<TValues, TFields extends FormFieldRegistry = FormFieldSlots> = FormElementRest &
-	SharedRendererProps<TValues> & {
+export type SchemaFormControlledProps<TValues, TFields extends FormFieldRegistry = FormFieldSlots> = FormElementRest &
+	SharedSchemaFormProps<TValues> & {
 		form: FormInstance<TValues, TFields>
 	}
 
 /**
  * Uncontrolled mode: pass the options `useForm` takes (mirrors `FormUncontrolledProps`) and
- * `FormRenderer` runs the hook itself.
+ * `SchemaForm` runs the hook itself.
  */
-export type FormRendererUncontrolledProps<
+export type SchemaFormUncontrolledProps<
 	TValues,
 	TOnMount extends undefined | FormValidateOrFn<TValues>,
 	TOnChange extends undefined | FormValidateOrFn<TValues>,
@@ -153,7 +153,7 @@ export type FormRendererUncontrolledProps<
 		TOnServer,
 		TSubmitMeta
 	> &
-	SharedRendererProps<TValues> & {
+	SharedSchemaFormProps<TValues> & {
 		/** Mutually exclusive with the inline options — never pass both. */
 		form?: never
 		/**
@@ -165,21 +165,21 @@ export type FormRendererUncontrolledProps<
 	}
 
 /**
- * The widest shape that covers both modes — what sits behind `FormRenderer`'s overloads.
+ * The widest shape that covers both modes — what sits behind `SchemaForm`'s overloads.
  *
- * `TFields` is carried rather than defaulted away at the call site: `FormRenderer`'s
+ * `TFields` is carried rather than defaulted away at the call site: `SchemaForm`'s
  * implementation signature is written against this type, and an overload declaring
  * `form: FormInstance<TValues, TFields>` is only compatible with an implementation that
  * admits the same registry. The factory passes its own `TFields` in, so the loose shape is
  * loose about the *mode* and about `TValues`, and about nothing else.
  */
-export type AnyFormRendererProps<TFields extends FormFieldRegistry = FormFieldSlots> = FormElementRest &
-	SharedRendererProps<unknown> & {
+export type AnySchemaFormProps<TFields extends FormFieldRegistry = FormFieldSlots> = FormElementRest &
+	SharedSchemaFormProps<unknown> & {
 		form?: RendererForm<unknown, TFields>
 	}
 
 /** The uncontrolled shape at its least specific, once the overloads have validated the caller. */
-export type FormRendererUncontrolledImplProps = FormRendererUncontrolledProps<
+export type SchemaFormUncontrolledImplProps = SchemaFormUncontrolledProps<
 	unknown,
 	undefined,
 	undefined,
@@ -195,9 +195,9 @@ export type FormRendererUncontrolledImplProps = FormRendererUncontrolledProps<
 >
 
 /** Which mode the caller picked — `form` is the discriminant, exactly as for `Form`. */
-export function isRendererControlled<TValues, TFields extends FormFieldRegistry = FormFieldSlots>(props: {
+export function isSchemaFormControlled<TValues, TFields extends FormFieldRegistry = FormFieldSlots>(props: {
 	form?: unknown
-}): props is FormRendererControlledProps<TValues, TFields> {
+}): props is SchemaFormControlledProps<TValues, TFields> {
 	return props.form !== undefined
 }
 
@@ -243,7 +243,7 @@ export function schemaDefaultValues<TValues>(schema: AnyFormSchema<TValues>): Re
  * `undefined` rather than becoming a no-op function TanStack would still treat as "handler
  * provided".
  *
- * Deliberately loose-typed (`unknown` in, `unknown` out): this runs in `UncontrolledFormRenderer`
+ * Deliberately loose-typed (`unknown` in, `unknown` out): this runs in `UncontrolledSchemaForm`
  * against `options` before it is cast to the real, deeply-generic `FormOptions<…>` shape — see
  * the call site in `../create-form.tsx`, which already casts the same object the same way.
  */
@@ -263,7 +263,7 @@ export function stripHiddenValuesOnSubmit<TValues>(
 
 /**
  * Whether any field node in `schema` declares a `validate` block. Cheap on its own, but called
- * from `resolveSchemaValidators`, which `UncontrolledFormRenderer` memoises — so in practice
+ * from `resolveSchemaValidators`, which `UncontrolledSchemaForm` memoises — so in practice
  * this only re-walks the tree when `schema` itself changes identity, not on every render.
  */
 export function schemaHasValidateConstraints<TValues>(schema: AnyFormSchema<TValues>): boolean {
@@ -275,7 +275,7 @@ export function schemaHasValidateConstraints<TValues>(schema: AnyFormSchema<TVal
 }
 
 /**
- * The `validators` option `UncontrolledFormRenderer` hands to `useForm` — either the schema's
+ * The `validators` option `UncontrolledSchemaForm` hands to `useForm` — either the schema's
  * declarative constraints compiled by `buildValidator`, or the caller's own `validators`
  * verbatim. Never both: TanStack Form accepts exactly one validator per trigger, a standard
  * schema *or* a function, so there is no way to merge two issue sets onto one path without
@@ -289,7 +289,7 @@ export function schemaHasValidateConstraints<TValues>(schema: AnyFormSchema<TVal
  * `onChange`/`onSubmit` slot with no defined precedence.
  *
  * Not memoised here: this is a plain function so it stays trivially unit-testable. Its one
- * call site (`UncontrolledFormRenderer`) wraps it in `useMemo` — every call otherwise re-walks
+ * call site (`UncontrolledSchemaForm`) wraps it in `useMemo` — every call otherwise re-walks
  * the schema and, when constraints exist, builds a fresh `buildValidator` instance and a fresh
  * `{ onChange, onSubmit }` object, which would hand `useForm` a differently-identitied
  * `validators` value on every render.
@@ -304,7 +304,7 @@ export function resolveSchemaValidators<TValues>(
 
 	if (callerValidators !== undefined) {
 		throw new Error(
-			'FormRenderer received both schema `validate` constraints and a `validators` prop. ' +
+			'SchemaForm received both schema `validate` constraints and a `validators` prop. ' +
 				'Use either the schema constraints or your own `validators` — never both. ' +
 				'Field-level validators through `form.Field` still compose with either.',
 		)

@@ -52,7 +52,7 @@ const CapturingTextField: FormFieldSlots['TextField'] = (props) => {
 	)
 }
 
-const { Form, FormRenderer } = createForm({
+const { Form, SchemaForm } = createForm({
 	components: testComponents,
 	fields: { ...testFields, TextField: CapturingTextField, NoteField },
 })
@@ -339,7 +339,7 @@ describe('the two entry points meet the same component', () => {
 		} as FormSchema<{ note: string }, 'note'>
 
 		render(
-			<FormRenderer
+			<SchemaForm
 				schema={schema}
 				defaultValues={{ note: 'hi' }}
 				onSubmit={() => {}}

@@ -60,7 +60,7 @@ Your backend distinguishes new from existing the same way it always did — `'fl
 
 ## A created value labels itself
 
-Once created, the value is on no list: not the static one, not a page of search results, and not what a source's `useSelectedOptions` can answer, since the server was never told the value exists. The renderer therefore re-adds every current value the list cannot label as an option labelling itself — which, the value being the typed text, reads correctly with no work from you.
+Once created, the value is on no list: not the static one, not a page of search results, and not what a source's `useSelectedOptions` can answer, since the server was never told the value exists. `SchemaForm` therefore re-adds every current value the list cannot label as an option labelling itself — which, the value being the typed text, reads correctly with no work from you.
 
 This is what keeps a multiselect's chips from going blank, and what keeps a combobox from drawing an empty input over a value it is still holding.
 
@@ -92,7 +92,7 @@ const translate = (key, params) => (key === 'tags.create' ? `Добавить «
 
 A value is created by typing it, and `searchable` is what gives the field somewhere to type. Without it both kits render a plain listbox — Radix `Select`, HeroUI `Select` — which has no text input at all, so a `creatable` plain select would offer a row nobody could ever summon. `parseFormSchema` rejects the pair, and the JSX path throws naming the field.
 
-That requirement costs less than it used to: **`searchable` no longer needs an option source.** A static `options` list is filtered in the renderer by one fixed rule — a case-insensitive substring of the label — with no configuration at all. If you need prefix matching, accent folding or a result limit, write an option source; the filter is yours there, and this package still owns none of it.
+That requirement costs less than it used to: **`searchable` no longer needs an option source.** A static `options` list is filtered in `SchemaForm` by one fixed rule — a case-insensitive substring of the label — with no configuration at all. If you need prefix matching, accent folding or a result limit, write an option source; the filter is yours there, and this package still owns none of it.
 
 <Callout>
 	The cap is on purpose. "Just filter it" is how MUI ended up with `createFilterOptions({ ignoreAccents, ignoreCase,

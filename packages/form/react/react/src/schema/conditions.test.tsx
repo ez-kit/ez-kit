@@ -8,7 +8,7 @@ import { testComponents, testFields } from '../test-kit'
 
 import type { FormSchema } from '@ez-kit/form-core'
 
-const { FormRenderer, useForm } = createForm({ components: testComponents, fields: testFields })
+const { SchemaForm, useForm } = createForm({ components: testComponents, fields: testFields })
 
 type Values = { clientType: string; inn: string }
 
@@ -30,7 +30,7 @@ test('a field appears and disappears with its condition', async () => {
 	const user = userEvent.setup()
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={conditionalSchema}
 			defaultValues={{ clientType: '', inn: '' }}
 			onSubmit={() => {}}
@@ -58,7 +58,7 @@ test('disabledWhen disables rather than hides', async () => {
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			defaultValues={{ clientType: '', inn: '' }}
 			onSubmit={() => {}}
@@ -80,7 +80,7 @@ test('hidden values do not reach onSubmit by default', async () => {
 	const onSubmit = vi.fn()
 
 	const { container } = render(
-		<FormRenderer
+		<SchemaForm
 			schema={conditionalSchema}
 			defaultValues={{ clientType: 'business', inn: '' }}
 			onSubmit={onSubmit}
@@ -107,7 +107,7 @@ test('keepHiddenValues includes them', async () => {
 	const onSubmit = vi.fn()
 
 	const { container } = render(
-		<FormRenderer
+		<SchemaForm
 			schema={conditionalSchema}
 			defaultValues={{ clientType: 'business', inn: '' }}
 			onSubmit={onSubmit}
@@ -133,7 +133,7 @@ test('a value survives hiding and re-showing — stripping happens at submit, no
 	const user = userEvent.setup()
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={conditionalSchema}
 			defaultValues={{ clientType: 'business', inn: '' }}
 			onSubmit={() => {}}
@@ -171,7 +171,7 @@ test('a function condition reacts to the whole values object', async () => {
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			defaultValues={{ count: '', premium: '' }}
 			onSubmit={() => {}}
@@ -211,7 +211,7 @@ test('a composite condition reacts to a change in either field', async () => {
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			defaultValues={{ clientType: '', country: '', inn: '' }}
 			onSubmit={() => {}}
@@ -234,7 +234,7 @@ test('a controlled caller composes stripHiddenValues themselves', async () => {
 	const user = userEvent.setup()
 	const onSubmit = vi.fn()
 
-	function Harness(): ReturnType<typeof FormRenderer> {
+	function Harness(): ReturnType<typeof SchemaForm> {
 		const form = useForm<
 			Values,
 			undefined,
@@ -250,15 +250,15 @@ test('a controlled caller composes stripHiddenValues themselves', async () => {
 			unknown
 		>({
 			defaultValues: { clientType: 'business', inn: '' },
-			// The escape hatch documented on `FormRendererControlledProps`: a controlled
-			// caller applies `stripHiddenValues` themselves, since `FormRenderer` cannot do
+			// The escape hatch documented on `SchemaFormControlledProps`: a controlled
+			// caller applies `stripHiddenValues` themselves, since `SchemaForm` cannot do
 			// it for them.
 			onSubmit: ({ value }) => {
 				onSubmit(stripHiddenValues(conditionalSchema, value))
 			},
 		})
 		return (
-			<FormRenderer
+			<SchemaForm
 				form={form}
 				schema={conditionalSchema}
 			/>
