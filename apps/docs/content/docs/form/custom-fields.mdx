@@ -86,15 +86,17 @@ Replacing a built-in _at its own key_ is not an error: handing `fields` your own
 ## One bundle per `createForm` call
 
 <Callout type='warn'>
-	Every `createForm` call builds its **own** bundle, with its own internal context. Mixing pieces across two calls —
-	`<Form>` from one bundle, `form.TextField` from another — breaks **at runtime, with no type error**, because each
-	call makes its own `createFormHookContexts()` and a field from one cannot find the provider from the other.
+	Every `createForm` call builds its **own** bundle, and each bundle's `useForm`, `Form` and `withForm` are typed for
+	the fields **that** call registered. Take `Form` or `withForm` from the kit and the instance it hands you is the
+	kit's, so `form.RatingField` is a **compile error** there — the kit never registered `RatingField`.
 </Callout>
 
-So call it once, in one module, and export the result from there. The failure mode is easy to reach by accident:
+Nothing breaks at runtime when instances cross bundles: a field component closes over the instance it was built for,
+and the form context is shared by every bundle, so an instance from your `useForm` renders through the kit's
+controlled `<Form form>` or `<SchemaForm form>` as well. The hazard is the types, and it is easy to reach by accident:
 
 ```tsx
-// ❌ two calls — `form.RatingField` below belongs to a different context than `<Form>`
+// ❌ two bundles — the kit's `Form` hands its children the kit's instance, which has no `RatingField`
 import { Form } from '@ez-kit/form-shadcn' // the kit's ready-made bundle
 const { useForm } = createForm({
 	FormElement,
@@ -102,6 +104,8 @@ const { useForm } = createForm({
 	components: allFormComponents,
 })
 ```
+
+So call it once, in one module, and export everything from there:
 
 ```tsx
 // ✅ one call, one module, one bundle
