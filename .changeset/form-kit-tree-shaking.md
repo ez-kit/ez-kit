@@ -10,8 +10,10 @@ renderer. Every component is exported on its own — the twelve field kinds, `Ar
 `formComponents` are renamed `allFormFields` / `allFormComponents`: importing one is a deliberate
 "everything".
 
-    export const { useForm, Form } = createForm({
-      FormElement,
-      fields: { TextField, SelectField, ArrayField },
-      components: { SubmitButton, Section },
-    })
+```tsx
+export const { useForm, Form } = createForm({
+	FormElement,
+	fields: { TextField, SelectField, ArrayField },
+	components: { SubmitButton, Section },
+})
+```
