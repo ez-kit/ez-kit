@@ -84,6 +84,7 @@ export type {
 	LocalizedSelectOption,
 	LocalizedText,
 	MultiSelectFieldProps,
+	NoRegistry,
 	NumberFieldProps,
 	OptionSource,
 	OptionSourceInput,

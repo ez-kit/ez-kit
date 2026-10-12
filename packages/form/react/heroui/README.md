@@ -100,14 +100,13 @@ sets.
 ## Notes on the HeroUI v3 mapping
 
 HeroUI v3 fields are React Aria **compositions**: a state-owning root wraps the control,
-and label / description / error are normally its children. The shared field layer instead
-renders chrome as siblings of the input, so the adapters in `src/blocks/`:
+and label / description / error are its children. The adapters in `src/blocks/` follow that
+anatomy, so:
 
-- pass `aria-labelledby` and `aria-describedby` explicitly, because React Aria cannot see a
-  label that is not its child (composite widgets such as the select trigger and the
-  number-field group would otherwise go unlabelled);
-- render error text as a plain danger-token element rather than HeroUI's `FieldError`,
-  which requires the enclosing field context;
+- label, description and error sit **inside** the field root, and React Aria derives the
+  control's `id`, `aria-labelledby` and `aria-describedby` itself (`blocks/field-state.ts`);
+- error text is HeroUI's own `<FieldError>`, fed by the root's validation state
+  (`blocks/field-chrome.tsx`);
 - render HeroUI's `Form` as the `<form>` element (the kit's `FormElement`, with
   `validationBehavior='aria'`), so the fields sit inside React Aria's form context while TanStack
   Form still owns submission and validation reporting.

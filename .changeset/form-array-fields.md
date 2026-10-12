@@ -82,6 +82,17 @@ likewise `errors` and `invalid` carry the list's own validation failures, but **
 them for you** — a `minLength` failure still blocks submit even when the render prop doesn't read
 `errors`. https://ez-kit-docs.vercel.app/docs/form/arrays calls this out at length.
 
+**The item type is read from `name`.** `ArrayProps` and `ArrayFieldProps` are generic over the
+array path (`<TFormData, TName extends ArrayKeys<TFormData>>`) rather than over the item, so `name`
+is the inference site and `newItem`, `children` and the scope are resolved from the value at that
+path. An inline `newItem` therefore needs no annotation even when a key of the item is itself an
+array, and a `newItem` that does not match reports on **`newItem`**, naming the item type and the
+key at fault. A `newItem` missing a key of the item is now a compile error rather than an
+uncontrolled input on the new row. `@ez-kit/form-core` exports `ArrayKeys` and `ArrayItemOf`, the
+two helpers the schema side already used, so a kit or app can spell the same thing. Type-level
+only — no runtime change — but code that wrote the type arguments explicitly
+(`ArrayProps<Values, Person>`) becomes `ArrayProps<Values, 'people'>`.
+
 **Breaking for a kit outside this repo.** The array frame is a new kit slot, `ArrayField`, which carries
 its entry view as `ArrayField.Item`; a kit that checks itself with `satisfies AllFormFieldSlots` must
 implement both. The shadcn and HeroUI kits already do. `form.Array` adds no further slot — it reuses

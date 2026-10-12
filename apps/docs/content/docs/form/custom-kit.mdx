@@ -116,7 +116,7 @@ Both calls are annotated `/* @__PURE__ */` with flat, spread-free arguments, and
 ### Two levels of contract
 
 - **A kit implements the slots.** Each slot has a props type, and `satisfies AllFormFieldSlots` / `satisfies AllFormComponents` checks that the kit ships every one and that each takes the props the slot promises. `satisfies` — rather than a type annotation, which would erase your components' own prop types — also does the excess-property check, so a misspelt key is a compile error.
-- **An app assembles any subset.** Nothing is required at any level: every key of `FormFieldSlots` and `FormComponents` is optional, `createForm()` alone compiles, and `form.X` exists in the types for exactly what was passed. A new slot added after 1.0 is therefore additive. A document that reaches a component nobody passed does not warn: `createSchemaForm` throws a named error before it renders anything, so a document that names a `Wizard` the factory was not given fails before the first render rather than when the user reaches a step.
+- **An app assembles any subset.** Nothing is required at any level: every key of `FormFieldSlots` and `FormComponents` is optional, `createForm()` alone compiles, and `form.X` exists in the types for exactly what was passed. A new slot added after 1.0 is therefore additive. A document that reaches a component nobody passed does not warn: `SchemaForm` throws a named error when it mounts with the document, before it renders anything, so a document that names a `Wizard` the factory was not given fails before the first render rather than when the user reaches a step.
 
 ```tsx
 export const { useForm, Form, withForm } = createForm({

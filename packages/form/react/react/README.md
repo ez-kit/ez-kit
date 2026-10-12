@@ -159,7 +159,8 @@ export const allFormFields = {
 
 export const allFormComponents = { SubmitButton, Section, GridItem, Wizard } satisfies AllFormComponents
 
-export const { useForm, SchemaForm, withForm, withFieldGroup } = createSchemaForm({
+// In an app, one call is enough:
+export const { useForm, Form, SchemaForm, withForm, withFieldGroup } = createSchemaForm({
 	FormElement,
 	fields: allFormFields,
 	components: allFormComponents,
@@ -169,9 +170,10 @@ export const { useForm, SchemaForm, withForm, withFieldGroup } = createSchemaFor
 Nothing is required at any level: every key of `FormFieldSlots` and `FormComponents` is
 optional, and `AllFormFieldSlots` / `AllFormComponents` are the variants that require them all,
 which is how a kit checks its own completeness. An app assembles any subset. A kit's own
-`form.tsx` calls the factories under `/* @__PURE__ */` and delegates every export inside a
-function body, so importing one field keeps neither bundle. Components are bound by closure
-at `createForm` time — no runtime provider is involved.
+`form.tsx` does not destructure the result at the top level: it calls
+`/* @__PURE__ */ createForm({ … })` and `/* @__PURE__ */ createSchemaForm({ … })` once, and each
+export delegates inside a function body (`export const useForm = (o) => kit.useForm(o)`), so importing one field keeps neither bundle. Field kinds close over the form
+instance; components read it from context.
 
 This package renders **no elements at all** — not even a field wrapper. It hands each kit
 one flat props object per field (identity, `label`, `description`, `errors`, `invalid`,
