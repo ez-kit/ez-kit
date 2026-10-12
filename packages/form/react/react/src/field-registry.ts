@@ -36,8 +36,9 @@ export type FieldTypeDefinition<TProps = Record<string, unknown>, TValue = unkno
  * single non-`any` parameter type accepts all of them, because a function parameter is
  * contravariant and `unknown` would reject every one. The real check is not here: it is the
  * kit's own `satisfies FormFieldSlots` on the twelve, `defineFieldType`'s phantoms on the
- * rest, and — for a built-in key — `CreateFormOptions.fields`' `& FormFieldSlots`,
- * which re-asserts the twelve at the option where a spread-and-override is written.
+ * rest, and `CreateFormOptions.fields`' own intersection, which re-asserts every key at the
+ * option where a spread-and-override is written — a built-in against its `FormFieldSlots` slot,
+ * any other key against the generic binder's `CustomFieldRenderProps`.
  * Narrowing this bound would not buy safety, it would only make a correct kit uncompilable.
  *
  * It cannot be spelled `FieldTypeDefinition<any, any>`, which looks like the same shape and is

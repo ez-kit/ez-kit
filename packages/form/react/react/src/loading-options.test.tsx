@@ -102,13 +102,13 @@ describe('loading options', () => {
 
 	it('hands the kit a boolean, never `undefined`, when the prop is omitted', () => {
 		const seen: unknown[] = []
-		const fields: FormFieldSlots = {
+		const fields = {
 			...testFields,
 			SelectField: (props) => {
 				seen.push(props.loading)
 				return testFields.SelectField(props)
 			},
-		}
+		} satisfies FormFieldSlots
 		const { useForm: useSpyForm, Form: SpyForm } = createForm({
 			FormElement: testFormElement,
 			fields,

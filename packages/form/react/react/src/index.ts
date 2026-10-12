@@ -23,6 +23,7 @@ export type {
 	SimpleOptionSource,
 } from './options/source-types'
 export type {
+	AllFormComponents,
 	AllFormFieldSlots,
 	ArrayFieldRenderProps,
 	ArrayFieldSlot,
@@ -37,6 +38,7 @@ export type {
 	FormElementProps,
 	FormFieldSlots,
 	MultiSelectFieldRenderProps,
+	NoRegistry,
 	NumberFieldRenderProps,
 	RadioGroupFieldRenderProps,
 	SelectFieldRenderProps,
@@ -62,6 +64,7 @@ export type {
 	GridItemProps,
 	MultiSelectFieldProps,
 	FormFieldComponents,
+	FormPrimitives,
 	NumberFieldProps,
 	RadioGroupFieldProps,
 	SectionProps,

@@ -435,12 +435,28 @@ export type FormComponents = {
 }
 
 /**
+ * Every component the kit contract names, all present — what a full kit ships, and the component
+ * set `FormInstance<TValues>` assumes when it is given no other.
+ */
+export type AllFormComponents = Required<FormComponents>
+
+/**
+ * An empty registry — what `createForm` registers when `fields` or `components` is omitted, and
+ * what to name in `FormInstance<V, typeof fields, NoRegistry>` for a bundle with no components.
+ *
+ * `Record<never, never>` rather than `{}`: it is the same empty object type without reading as
+ * "any non-nullish value".
+ */
+export type NoRegistry = Record<never, never>
+
+/**
  * What `createForm({ components })` accepts: any components, keyed by the name they take on the
  * instance.
  *
  * The `any` is the trade {@link FormFieldRegistry} makes, for the same reason — a parameter is
  * contravariant, so no single non-`any` props type accepts every component an app may register.
- * The check on the known keys is `CreateFormOptions.components`' `& FormComponents`.
+ * The check on the known keys is the `Pick<FormComponents, …>` that `CreateFormOptions.components`
+ * intersects in.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- props are contravariant, see above
 export type FormComponentRegistry = Record<string, (props: any) => ReactNode>

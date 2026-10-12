@@ -12,6 +12,7 @@ import { fieldRenderProps } from '../field-render-props'
 import { useOptionSourceParams } from '../options/use-source-params'
 
 import { renderChildren } from './render-children'
+import { assertComponent, MissingComponentMessage } from './required-components'
 import { useConditionValue } from './use-condition'
 
 import type { ConditionSubscribableForm } from './use-condition'
@@ -66,28 +67,6 @@ export type RenderNodeContext = {
  * field state. Every one is optional: a document that needs one nobody passed throws, naming it.
  */
 export type LayoutComponents = FormComponents
-
-/**
- * What `SchemaForm` says when a document needs a component that was not passed — one message per
- * component, each naming the option it belongs in.
- */
-export const MissingComponentMessage = {
-	Section: 'SchemaForm: the document has a section, but no Section component was passed in components.',
-	GridItem: 'SchemaForm: a section has a grid, but no GridItem component was passed in components.',
-	Wizard: 'SchemaForm: the document has steps, but no Wizard component was passed in components.',
-	SubmitButton: 'SchemaForm: the document has a submit node, but no SubmitButton component was passed in components.',
-	ArrayField: 'SchemaForm: the document has an array, but no ArrayField was passed in fields.',
-} as const
-
-export type MissingComponentMessage = (typeof MissingComponentMessage)[keyof typeof MissingComponentMessage]
-
-/** Throws `message` when the form was given no `component`. */
-export function assertComponent<TComponent>(
-	component: TComponent | undefined,
-	message: MissingComponentMessage,
-): asserts component is TComponent {
-	if (component === undefined) throw new Error(message)
-}
 
 /**
  * The slot each built-in field kind renders through. A document naming a kind whose slot the form

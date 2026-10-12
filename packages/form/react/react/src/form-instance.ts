@@ -1,4 +1,4 @@
-import type { AllFormFieldSlots, FormComponentRegistry } from './contract'
+import type { AllFormComponents, AllFormFieldSlots, FormComponentRegistry } from './contract'
 import type { FormFieldRegistry } from './field-registry'
 import type { KitFormApi } from './kit-form'
 
@@ -37,6 +37,5 @@ type Open = any
 export type FormInstance<
 	TValues,
 	TFields extends FormFieldRegistry = AllFormFieldSlots,
-	// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- no components registered
-	TComponents extends FormComponentRegistry = {},
+	TComponents extends FormComponentRegistry = AllFormComponents,
 > = KitFormApi<TValues, Open, Open, Open, Open, Open, Open, Open, Open, Open, Open, Open, TFields, TComponents>

@@ -537,7 +537,7 @@ describe('createForm — dependency injection', () => {
 	})
 
 	it('binds a different component set per createForm call', () => {
-		const altFields: FormFieldSlots = {
+		const altFields = {
 			...testFields,
 			TextField: ({ value, onChange, id, name }) => (
 				<input
@@ -550,7 +550,7 @@ describe('createForm — dependency injection', () => {
 					}}
 				/>
 			),
-		}
+		} satisfies FormFieldSlots
 		const { useForm: useAltForm } = createForm({
 			FormElement: testFormElement,
 			fields: altFields,

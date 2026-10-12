@@ -1,4 +1,4 @@
-import type { AllFormFieldSlots, FormComponentRegistry } from './contract'
+import type { AllFormComponents, AllFormFieldSlots, FormComponentRegistry } from './contract'
 import type { FormFieldRegistry } from './field-registry'
 import type { KitFormApi } from './kit-form'
 import type { FormAsyncValidateOrFn, FormOptions, FormValidateOrFn } from '@ez-kit/form-core'
@@ -43,8 +43,7 @@ export type KitFormBlock<
 	 * a block sees the components its factory registered.
 	 */
 	TFields extends FormFieldRegistry = AllFormFieldSlots,
-	// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- no components registered
-	TComponents extends FormComponentRegistry = {},
+	TComponents extends FormComponentRegistry = AllFormComponents,
 > = FunctionComponent<
 	PropsWithChildren<
 		NoInfer<TRenderProps> & {
@@ -89,8 +88,7 @@ export type KitWithFormProps<
 	TRenderProps extends object,
 	/** Bound by the factory — see {@link KitFormBlock}'s own `TFields`. */
 	TFields extends FormFieldRegistry = AllFormFieldSlots,
-	// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- no components registered
-	TComponents extends FormComponentRegistry = {},
+	TComponents extends FormComponentRegistry = AllFormComponents,
 > = FormOptions<
 	TFormData,
 	TOnMount,

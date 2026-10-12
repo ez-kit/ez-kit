@@ -20,17 +20,12 @@ import {
 
 import type { BindableForm } from './bindable-form'
 import type { KitFormBlock, KitWithFormProps } from './composition'
-import type {
-	AllFormFieldSlots,
-	FormComponentRegistry,
-	FormComponents,
-	FormElementProps,
-	FormFieldSlots,
-} from './contract'
+import type { FormComponentRegistry, FormComponents, FormElementProps, FormFieldSlots, NoRegistry } from './contract'
+import type { BuiltInFieldKey, PropsOf, ValueOf } from './field-props'
 import type { FormFieldRegistry } from './field-registry'
 import type { FormControlledProps, AnyFormProps, FormUncontrolledImplProps, FormUncontrolledProps } from './form-props'
 import type { KitFormApi } from './kit-form'
-import type { CustomFieldRegistry } from './schema/registries'
+import type { CustomFieldRegistry, CustomFieldRenderProps } from './schema/registries'
 import type {
 	AnySchemaFormProps,
 	SchemaFormControlledProps,
@@ -40,11 +35,20 @@ import type {
 import type { FormAsyncValidateOrFn, FormOptions, FormValidateOrFn } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
 
+/**
+ * Every key of `TFields` that is not a built-in, checked against what the generic binder hands
+ * it: `CustomFieldRenderProps` over the value and props the entry's `defineFieldType` phantoms
+ * declare — or `unknown` and an untyped bag when it has none.
+ */
+export type CustomFieldChecks<TFields> = {
+	[TKey in Exclude<keyof TFields, BuiltInFieldKey>]: (
+		props: CustomFieldRenderProps<ValueOf<TFields[TKey]>, PropsOf<TFields[TKey]>>,
+	) => ReactNode
+}
+
 export type CreateFormOptions<
-	// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- no fields registered
-	TFields extends FormFieldRegistry = {},
-	// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- no components registered
-	TComponents extends FormComponentRegistry = {},
+	TFields extends FormFieldRegistry = NoRegistry,
+	TComponents extends FormComponentRegistry = NoRegistry,
 > = {
 	/**
 	 * The `<form>` element `<Form>` and `<SchemaForm>` render. A plain `<form>` when omitted.
@@ -60,34 +64,47 @@ export type CreateFormOptions<
 	 * Every key that is not one of the built-ins is bound by the generic binder and reachable as
 	 * `form.<Key>`, under the document id its name derives (`RatingField` → `rating`).
 	 *
-	 * The `& Pick<FormFieldSlots, …>` is what re-asserts the built-ins **here**, and it is
-	 * load-bearing. `FormFieldRegistry`'s own bound has to take `any` props — parameters are
-	 * contravariant, so a narrower bound would reject a correct kit — which means the bound alone
-	 * checks nothing about a built-in key. The spread-and-override form — `{ ...formFieldSlots, TextField: X }` —
-	 * is an object literal checked against the registry, never against a kit's own `satisfies`,
-	 * so without this intersection `TextField: (p: { totallyUnrelated: symbol }) => null` would
-	 * compile, reach the bespoke text binder, and hand the author a `TextFieldRenderProps` their
-	 * component never declared.
+	 * Every value is re-asserted here against what its binder will hand it, because the bound
+	 * alone checks nothing: `FormFieldRegistry` takes `any` props — parameters are contravariant,
+	 * so a narrower bound would reject a correct kit. The spread-and-override form —
+	 * `{ ...formFieldSlots, TextField: X }` — is an object literal checked against the registry,
+	 * never against a kit's own `satisfies`. Two checks close that:
 	 *
-	 * A `Pick` over the keys actually passed rather than the whole `FormFieldSlots`: inferring
-	 * `TFields` from `TFields & FormFieldSlots` matches a source *typed* `FormFieldSlots` against
-	 * the fixed half and leaves nothing to infer from, so a kit set annotated `: FormFieldSlots`
-	 * would produce an instance with no fields. The `Pick` depends on `TFields`, which keeps the
-	 * inference on the whole source and the check on exactly the keys it names.
+	 * - a **built-in** key against its slot in `FormFieldSlots` (the `Pick`), so
+	 *   `TextField: (p: { totallyUnrelated: symbol }) => null` does not reach the text binder;
+	 * - **every other** key against the generic binder's `CustomFieldRenderProps`, typed from the
+	 *   phantoms `defineFieldType` writes ({@link CustomFieldChecks}), so a misspelt built-in —
+	 *   `TextFeild: MyTextField` — is an error rather than a custom field handed props its
+	 *   component never declared.
+	 *
+	 * Both checks are spelled over `NoInfer<TFields>`, so `TFields` is inferred from the value as
+	 * written and only checked here. That is also why the built-in check is a `Pick` over the keys
+	 * passed rather than the whole `FormFieldSlots`: TypeScript drops a source that *is* one member
+	 * of an intersection target from inference, so `TFields & FormFieldSlots` given a value typed
+	 * `: FormFieldSlots` left `TFields` with nothing to infer from — and the instance with no fields.
 	 */
-	fields?: TFields & Pick<FormFieldSlots, keyof TFields & keyof FormFieldSlots>
+	fields?: TFields &
+		Pick<FormFieldSlots, keyof NoInfer<TFields> & keyof FormFieldSlots> &
+		CustomFieldChecks<NoInfer<TFields>>
 	/**
 	 * Any components, each attached to the instance as-is under its key: `{ SaveBar }` gives
 	 * `<form.SaveBar />` with `SaveBar`'s own props. A component reads the form through
 	 * `useFormContext()`, so it is the same component whether it is rendered as `form.SaveBar` or
 	 * directly.
 	 *
+	 * **A component needs a provider above it.** It reads the form from context, which `<Form>`,
+	 * `<SchemaForm>` and `<FormProvider>` set. An instance from `useForm` rendered under a
+	 * hand-written `<form>` — no `<Form>` — has to be wrapped in `<FormProvider form={form}>`, or
+	 * `form.SubmitButton` throws `useFormContext()`'s error. The components are not bound to the
+	 * instance on purpose: binding them would make `form.SaveBar` and `<SaveBar />` two different
+	 * components.
+	 *
 	 * The `& Pick<FormComponents, …>` re-asserts the props of the four keys the kit contract
 	 * names, for the reason — and in the shape — `fields` re-asserts the built-ins. `SubmitButton`,
 	 * `Section`, `GridItem` and `Wizard` are also what `SchemaForm` draws a `submit`, `section`,
 	 * grid cell and stepped document with.
 	 */
-	components?: TComponents & Pick<FormComponents, keyof TComponents & keyof FormComponents>
+	components?: TComponents & Pick<FormComponents, keyof NoInfer<TComponents> & keyof FormComponents>
 }
 
 /**
@@ -133,10 +150,8 @@ export type CreateFormOptions<
  * </Form>
  */
 export function createForm<
-	// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- no fields registered
-	TFields extends FormFieldRegistry = {},
-	// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- no components registered
-	TComponents extends FormComponentRegistry = {},
+	TFields extends FormFieldRegistry = NoRegistry,
+	TComponents extends FormComponentRegistry = NoRegistry,
 >(options: CreateFormOptions<TFields, TComponents> = {}) {
 	/**
 	 * Read once, here, so every consumer below — the field builder, the schema renderer and the
@@ -517,7 +532,7 @@ export function createForm<
 			TSubmitMeta
 		>,
 	): ReactNode
-	function SchemaForm(props: AnySchemaFormProps<TFields>): ReactNode {
+	function SchemaForm(props: AnySchemaFormProps): ReactNode {
 		if (isSchemaFormControlled<unknown, TFields>(props)) {
 			const { form, schema, translate, blocks, rules: _rules, ...elementProps } = props
 			assertNoReservedFieldKeyCollision(blocks)
@@ -674,7 +689,6 @@ function isControlled(props: { form?: unknown }): props is FormControlledProps {
  * every bundle over `FormFieldRegistry` and lose the app's own field kinds.
  */
 export type FormBundle<
-	TFields extends FormFieldRegistry = AllFormFieldSlots,
-	// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- no components registered
-	TComponents extends FormComponentRegistry = {},
+	TFields extends FormFieldRegistry = NoRegistry,
+	TComponents extends FormComponentRegistry = NoRegistry,
 > = ReturnType<typeof createForm<TFields, TComponents>>

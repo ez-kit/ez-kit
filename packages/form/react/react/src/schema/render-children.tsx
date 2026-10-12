@@ -1,7 +1,8 @@
 import { isArrayNode, isFieldNode } from '@ez-kit/form-core'
 import { Fragment } from 'react'
 
-import { assertComponent, MissingComponentMessage, RenderNode } from './render-node'
+import { RenderNode } from './render-node'
+import { assertComponent, MissingComponentMessage } from './required-components'
 
 import type { LayoutComponents, RenderNodeContext } from './render-node'
 import type { FormFieldComponents } from '../field-props'

@@ -11,11 +11,12 @@ import { SchemaTranslate } from '../options/source-context'
 
 import { FormWizard, isStepNode } from './form-wizard'
 import { renderChildren } from './render-children'
+import { assertDocumentComponents } from './required-components'
 
 import type { BlockRegistry, CustomFieldRegistry } from './registries'
 import type { LayoutComponents } from './render-node'
 import type { SubmittableForm } from '../bindable-form'
-import type { FormElementProps, AllFormFieldSlots } from '../contract'
+import type { AllFormFieldSlots, FormElementProps, NoRegistry } from '../contract'
 import type { FormFieldComponents } from '../field-props'
 import type { FormFieldRegistry } from '../field-registry'
 import type { FormInstance } from '../form-instance'
@@ -72,22 +73,6 @@ export type SharedSchemaFormProps<TValues> = {
 }
 
 /**
- * What `SchemaForm`'s implementation needs from a form instance: enough to wire
- * `<form onSubmit>` (from `SubmittableForm`) and one bound component per field kind (from
- * `FormFieldComponents`). Internal: the public controlled prop is the full `FormInstance`, which
- * is assignable to this narrower shape, so the implementation is written against what it reads.
- *
- * `TFields` is **defaulted**, and carrying it is what keeps the two halves of the registry
- * agreeing: a factory that registered `RatingField` makes `form.RatingField` reachable from
- * JSX, and a document's `{ type: 'rating' }` resolves against the same registration. Left at
- * the default, a controlled `SchemaForm` would accept an instance from a factory that never
- * registered the custom field its schema names — the failure would then surface at render
- * time, as `Unknown node type "rating"`, rather than at the call site.
- */
-type RendererForm<TValues, TFields extends FormFieldRegistry = AllFormFieldSlots> = SubmittableForm &
-	FormFieldComponents<TValues, TFields>
-
-/**
  * Controlled mode: the caller owns the instance and passes it in.
  *
  * In this mode `SchemaForm` cannot strip hidden values for you — you own `onSubmit`, not
@@ -121,7 +106,14 @@ export type SchemaFormControlledProps<
 	TFields extends FormFieldRegistry = AllFormFieldSlots,
 > = FormElementRest &
 	SharedSchemaFormProps<TValues> & {
-		form: FormInstance<TValues, TFields>
+		/**
+		 * An instance over this bundle's fields. `TFields` is what keeps the two halves of the
+		 * registry agreeing: a document's `{ type: 'rating' }` resolves against the bundle that
+		 * registered `RatingField`, so an instance from a bundle without it is a compile error here
+		 * rather than `Unknown node type "rating"` at render. The components it registered are not
+		 * needed here, so any set is accepted.
+		 */
+		form: FormInstance<TValues, TFields, NoRegistry>
 	}
 
 /**
@@ -170,15 +162,13 @@ export type SchemaFormUncontrolledProps<
 /**
  * The widest shape that covers both modes — what sits behind `SchemaForm`'s overloads.
  *
- * `TFields` is carried rather than defaulted away at the call site: `SchemaForm`'s
- * implementation signature is written against this type, and an overload declaring
- * `form: FormInstance<TValues, TFields>` is only compatible with an implementation that
- * admits the same registry. The factory passes its own `TFields` in, so the loose shape is
- * loose about the *mode* and about `TValues`, and about nothing else.
+ * Loose about the mode, `TValues` and the registry: the overloads have already checked the
+ * caller — including that a controlled `form` comes from a bundle with the fields its document
+ * names — and the renderer reads the instance's members as possibly absent.
  */
-export type AnySchemaFormProps<TFields extends FormFieldRegistry = AllFormFieldSlots> = FormElementRest &
+export type AnySchemaFormProps = FormElementRest &
 	SharedSchemaFormProps<unknown> & {
-		form?: RendererForm<unknown, TFields>
+		form?: SubmittableForm
 	}
 
 /** The uncontrolled shape at its least specific, once the overloads have validated the caller. */
@@ -357,18 +347,26 @@ export function isWizardSchema<TValues>(schema: AnyFormSchema<TValues>): boolean
  * optional to match: a call site that passes `{}` instead compiles, and turns every custom field
  * in every document into `Unknown node type`.
  *
+ * Every component the document can need is asserted first, visible or not — see
+ * `assertDocumentComponents`.
+ *
  * A document whose top level is `step` nodes is a wizard and goes to `FormWizard` instead,
  * which renders one step at a time through the kit's `Wizard` (spec §4.5, §10). A `step` found
  * anywhere else still throws via `renderChildren`, exactly as a genuinely unknown `type` does.
  */
-export function renderSchemaFields<TValues, TFields extends FormFieldRegistry = AllFormFieldSlots>(
+export function renderSchemaFields<TValues>(
 	schema: AnyFormSchema<TValues>,
-	form: FormFieldComponents<TValues, TFields>,
+	instance: object,
 	layout: LayoutComponents,
 	translate: Translate | undefined,
 	fields: CustomFieldRegistry,
 	blocks: BlockRegistry | undefined,
 ): ReactNode {
+	// The instance carries exactly what its bundle registered; the renderer reads every member as
+	// possibly absent and names what a document needed and did not get.
+	const form = instance as FormFieldComponents<TValues>
+	assertDocumentComponents(schema as AnyFormSchema<unknown>, layout, Object.hasOwn(instance, 'ArrayField'))
+
 	// `itemPath` starts undefined: the schema root sits in no array entry, and each array node
 	// replaces it for the subtree of every entry it renders.
 	const context = { translate, fields, blocks, itemPath: undefined }

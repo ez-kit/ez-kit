@@ -3,7 +3,7 @@ import { useFormGroup, useSelector } from '@tanstack/react-form'
 import { Fragment, useCallback, useMemo, useRef, useState } from 'react'
 
 import { renderChildren } from './render-children'
-import { assertComponent, MissingComponentMessage } from './render-node'
+import { assertComponent, MissingComponentMessage } from './required-components'
 import { useStepFieldNames } from './use-step-fields'
 
 import type { LayoutComponents, RenderNodeContext } from './render-node'

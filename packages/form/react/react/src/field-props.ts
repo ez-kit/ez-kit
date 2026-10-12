@@ -486,14 +486,20 @@ export type CustomFieldComponentsOf<TFormData, TFields> = {
  * `defineFieldType` wrote. A key that was not registered is not on the instance, so
  * `form.NumberField` on a form that registered only `TextField` is a compile error.
  *
- * `-?` because a kit's own set may be typed `FormFieldSlots`, whose keys are optional: a key
- * that is present in the registry is a component on the instance, never `undefined`.
+ * The member keeps the key's optionality: a set typed `FormFieldSlots` — or built with a
+ * conditional spread — may lack any of its keys at runtime, so `form.TextField` is then possibly
+ * `undefined` and has to be narrowed before it is rendered. A `satisfies`-checked or literal set
+ * names its keys as required and gets required members. The `as` clause is what keeps the remap
+ * homomorphic, which is what carries the `?` across.
  *
  * `TFields` is **defaulted** to every built-in, which is what keeps every one-argument spelling of
  * this type meaning what it meant when the field set was closed.
  */
 export type FormFieldComponents<TFormData, TFields extends FormFieldRegistry = AllFormFieldSlots> = {
-	[TKey in keyof TFields & BuiltInFieldKey]-?: BuiltInFieldComponents<TFormData, TFields>[TKey]
+	[TKey in keyof TFields as TKey extends BuiltInFieldKey ? TKey : never]: BuiltInFieldComponents<
+		TFormData,
+		TFields
+	>[TKey & BuiltInFieldKey]
 } & CustomFieldComponentsOf<TFormData, Omit<TFields, BuiltInFieldKey>>
 
 /**

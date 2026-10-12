@@ -4,7 +4,7 @@ import { createForm } from './create-form'
 import { defineFieldType } from './field-registry'
 import { testComponents, testFields, testFormElement } from './test-kit'
 
-import type { FormInstance } from './index'
+import type { FormInstance, NoRegistry } from './index'
 import type { AnyFormSchema } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
 
@@ -14,6 +14,7 @@ const DEFAULTS: Values = { email: '', age: 0 }
 const { useForm, withForm, withFieldGroup, SchemaForm } = createForm({
 	FormElement: testFormElement,
 	fields: testFields,
+	components: testComponents,
 })
 
 /** Never read at runtime: every case below is a type assertion inside a function nothing calls. */
@@ -199,6 +200,44 @@ describe('FormInstance — where the kit takes a form', () => {
 					schema={subsetSchema}
 				/>
 			)
+		}
+		expectTypeOf(Probe).toBeFunction()
+	})
+})
+
+/**
+ * `FormInstance<V>` defaults to every built-in field kind and all four named components — the
+ * shape a full kit's bundle has. A bundle without components names its own shape.
+ */
+describe('FormInstance — the default registries', () => {
+	it('describes a kit-like bundle: its blocks accept FormInstance<V>, and its instance is one', () => {
+		const kitLike = createForm({ FormElement: testFormElement, fields: testFields, components: testComponents })
+		const Block = kitLike.withForm({
+			defaultValues: DEFAULTS,
+			validators: { onChange: ({ value }) => (value.email === '' ? 'Required' : undefined) },
+			render: () => null,
+		})
+
+		function Parent({ form }: { form: FormInstance<Values> }): ReactNode {
+			return <Block form={form} />
+		}
+		function Probe(): ReactNode {
+			const form = kitLike.useForm({ defaultValues: DEFAULTS })
+			expectTypeOf(form).toExtend<FormInstance<Values>>()
+			return null
+		}
+		expectTypeOf(Parent).toBeFunction()
+		expectTypeOf(Probe).toBeFunction()
+	})
+
+	it('does not describe a bundle with no components, which names NoRegistry instead', () => {
+		const fieldsOnly = createForm({ FormElement: testFormElement, fields: testFields })
+
+		function Probe(): ReactNode {
+			const form = fieldsOnly.useForm({ defaultValues: DEFAULTS })
+			expectTypeOf(form).not.toExtend<FormInstance<Values>>()
+			expectTypeOf(form).toExtend<FormInstance<Values, typeof testFields, NoRegistry>>()
+			return null
 		}
 		expectTypeOf(Probe).toBeFunction()
 	})

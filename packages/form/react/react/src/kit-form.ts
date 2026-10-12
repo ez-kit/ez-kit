@@ -1,4 +1,4 @@
-import type { AllFormFieldSlots, FormComponentRegistry } from './contract'
+import type { AllFormComponents, AllFormFieldSlots, FormComponentRegistry } from './contract'
 import type { FormFieldComponents, FormPrimitives } from './field-props'
 import type { FormFieldRegistry } from './field-registry'
 import type { FormAsyncValidateOrFn, FormValidateOrFn } from '@ez-kit/form-core'
@@ -30,8 +30,7 @@ export type BoundForm<
 	TForm,
 	TFormData,
 	TFields extends FormFieldRegistry = AllFormFieldSlots,
-	// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- no components registered
-	TComponents extends FormComponentRegistry = {},
+	TComponents extends FormComponentRegistry = AllFormComponents,
 > = TForm & FormFieldComponents<TFormData, TFields> & FormPrimitives<TFormData, TFields> & TComponents
 
 /**
@@ -56,8 +55,7 @@ export type KitFormApi<
 	TOnServer extends undefined | FormAsyncValidateOrFn<TFormData>,
 	TSubmitMeta,
 	TFields extends FormFieldRegistry = AllFormFieldSlots,
-	// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- no components registered
-	TComponents extends FormComponentRegistry = {},
+	TComponents extends FormComponentRegistry = AllFormComponents,
 > = BoundForm<
 	AppFieldExtendedReactFormApi<
 		TFormData,

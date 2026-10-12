@@ -1,5 +1,5 @@
 import type { SubmittableForm } from './bindable-form'
-import type { AllFormFieldSlots, FormComponentRegistry, FormElementProps } from './contract'
+import type { AllFormComponents, AllFormFieldSlots, FormComponentRegistry, FormElementProps } from './contract'
 import type { FormFieldRegistry } from './field-registry'
 import type { KitFormApi } from './kit-form'
 import type { FormAsyncValidateOrFn, FormOptions, FormValidateOrFn } from '@ez-kit/form-core'
@@ -49,8 +49,7 @@ export type FormUncontrolledProps<
 	TSubmitMeta,
 	/** The registry `createForm` was given, so a field the app added is typed on `form`. */
 	TFields extends FormFieldRegistry = AllFormFieldSlots,
-	// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- no components registered
-	TComponents extends FormComponentRegistry = {},
+	TComponents extends FormComponentRegistry = AllFormComponents,
 > = FormElementRest &
 	FormOptions<
 		TFormData,
@@ -107,8 +106,7 @@ export type AnyFormProps = FormElementRest & {
  */
 export type FormUncontrolledImplProps<
 	TFields extends FormFieldRegistry = AllFormFieldSlots,
-	// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- no components registered
-	TComponents extends FormComponentRegistry = {},
+	TComponents extends FormComponentRegistry = AllFormComponents,
 > = FormUncontrolledProps<
 	unknown,
 	undefined,
@@ -156,8 +154,7 @@ export type FormProps<
 	TOnServer extends undefined | FormAsyncValidateOrFn<TFormData>,
 	TSubmitMeta,
 	TFields extends FormFieldRegistry = AllFormFieldSlots,
-	// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- no components registered
-	TComponents extends FormComponentRegistry = {},
+	TComponents extends FormComponentRegistry = AllFormComponents,
 > =
 	| FormControlledProps
 	| FormUncontrolledProps<

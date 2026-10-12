@@ -126,4 +126,45 @@ describe('SchemaForm without the component a document needs', () => {
 			)
 		}).toThrow('Unknown node type "text".')
 	})
+
+	it('throws on the first render when the node needing the component is hidden by when', () => {
+		const schema: FormSchema<Values> = {
+			version: 1,
+			children: [
+				{ type: FormFieldType.Text, name: 'name' },
+				{
+					type: 'section',
+					when: { field: 'name', eq: 'show' },
+					children: [{ type: FormFieldType.Text, name: 'name' }],
+				},
+			],
+		}
+		expect(() => {
+			render(
+				<FieldsOnly
+					schema={schema}
+					{...COMMON}
+				/>,
+			)
+		}).toThrow('SchemaForm: the document has a section, but no Section component was passed in components.')
+	})
+
+	it('throws on the first render when the node needing the component is in a later wizard step', () => {
+		const schema: FormSchema<Values> = {
+			version: 1,
+			children: [
+				{ type: 'step', title: 'One', children: [{ type: FormFieldType.Text, name: 'name' }] },
+				{ type: 'step', title: 'Two', children: [{ type: 'submit', label: 'Save' }] },
+			],
+		}
+		const { SchemaForm } = createForm({ fields: testFields, components: { Wizard: testComponents.Wizard } })
+		expect(() => {
+			render(
+				<SchemaForm
+					schema={schema}
+					{...COMMON}
+				/>,
+			)
+		}).toThrow('SchemaForm: the document has a submit node, but no SubmitButton component was passed in components.')
+	})
 })
