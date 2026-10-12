@@ -18,30 +18,61 @@ export function NativeApiExample() {
 						name='seats'
 						validate={{ min: 1, messages: { min: 'Pick at least one seat' } }}
 					>
-						{({ value, onChange, errors, invalid, id }) => (
-							<div
-								id={id}
-								className='flex items-center gap-2'
-							>
-								<span className='text-sm'>Seats</span>
-								{SEAT_CHOICES.map((count) => (
-									<button
-										key={count}
-										type='button'
-										aria-pressed={value === count}
-										onClick={() => {
-											onChange(count)
-										}}
-										className={
-											value === count
-												? 'rounded-md bg-black px-3 py-1 text-sm text-white dark:bg-white dark:text-black'
-												: 'rounded-md border border-black/20 px-3 py-1 text-sm dark:border-white/25'
-										}
+						{({ value, onChange, onBlur, errors, invalid, id }) => (
+							<div className='flex flex-wrap items-center gap-2'>
+								<span
+									id={`${id}-label`}
+									className='text-sm'
+								>
+									Seats
+								</span>
+								<div
+									role='radiogroup'
+									aria-labelledby={`${id}-label`}
+									aria-invalid={invalid}
+									aria-describedby={invalid ? `${id}-error` : undefined}
+									className='flex items-center gap-2'
+								>
+									{SEAT_CHOICES.map((count, index) => (
+										<button
+											key={count}
+											id={index === 0 ? id : undefined}
+											type='button'
+											role='radio'
+											aria-checked={value === count}
+											onClick={() => {
+												onChange(count)
+											}}
+											onBlur={onBlur}
+											className={
+												value === count
+													? 'rounded-md bg-black px-3 py-1 text-sm text-white dark:bg-white dark:text-black'
+													: 'rounded-md border border-black/20 px-3 py-1 text-sm dark:border-white/25'
+											}
+										>
+											{count}
+										</button>
+									))}
+								</div>
+								<button
+									type='button'
+									onClick={() => {
+										onChange(0)
+									}}
+									onBlur={onBlur}
+									className='px-2 py-1 text-sm underline opacity-70'
+								>
+									Clear
+								</button>
+								{invalid && (
+									<p
+										id={`${id}-error`}
+										role='alert'
+										className='w-full text-sm text-red-600 dark:text-red-400'
 									>
-										{count}
-									</button>
-								))}
-								{invalid && <p role='alert'>{errors.join(', ')}</p>}
+										{errors.join(', ')}
+									</p>
+								)}
 							</div>
 						)}
 					</form.Field>

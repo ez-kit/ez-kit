@@ -44,7 +44,16 @@ render-prop field as `form.NativeField`.
 			<form.SubmitButton>Save</form.SubmitButton>
 
 			{/* TanStack's own field, with its FieldApi, on the same instance */}
-			<form.NativeField name='email'>{(field) => <input value={field.state.value} />}</form.NativeField>
+			<form.NativeField name='email'>
+				{(field) => (
+					<input
+						value={field.state.value}
+						onChange={(event) => {
+							field.handleChange(event.target.value)
+						}}
+					/>
+				)}
+			</form.NativeField>
 			<form.Subscribe selector={(s) => s.errors}>{(errors) => <pre>{errors.length}</pre>}</form.Subscribe>
 		</>
 	)}
