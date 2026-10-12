@@ -95,8 +95,9 @@ sets.
 
 ### Native API
 
-`form.Field`, `form.Subscribe`, `form.handleSubmit`, `form.state` and `form.AppField` are
-untouched — reach for them whenever a field needs bespoke markup.
+`form.Field` binds a control of your own like a registered field — `value`, a value-taking
+`onChange`, `errors`, `invalid`, `id` — and `form.NativeField` is TanStack's render-prop field.
+`form.Subscribe`, `form.handleSubmit` and `form.state` are TanStack's, untouched.
 
 ## Package layout
 

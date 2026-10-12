@@ -51,8 +51,9 @@ const DEFAULT_CHECKOUT: Checkout = { email: '', billing: EMPTY_ADDRESS, shipping
  * `withFieldGroup` is the other half of the pair, for a block that should be reusable across
  * *different* forms: it is written against the group's own shape (`Address`) and mapped onto
  * a parent path at the call site (`<AddressGroup form={form} fields='shipping' />`). The
- * trade is deliberate — a group API carries the native `group.Field`, not the flat field
- * components, because a group has no idea what the surrounding form's value type is.
+ * trade is deliberate — a group API carries `group.Field`, which binds a control of your own,
+ * and `group.NativeField`, not the flat field components, because a group has no idea what the
+ * surrounding form's value type is.
  */
 type AddressPath = 'billing' | 'shipping'
 

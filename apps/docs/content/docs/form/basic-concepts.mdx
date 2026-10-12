@@ -23,34 +23,41 @@ Two consequences worth carrying forward. First, you install exactly one kit and 
 
 ```tsx
 form.TextField // added by this package
-form.Field // TanStack's, untouched
+form.Field // added by this package: your own control, bound
+form.NativeField // TanStack's field
 form.handleSubmit // TanStack's, untouched
 form.state // TanStack's, untouched
 ```
 
-There is no adapter and no escape hatch to reach for, because you never left. Any TanStack Form documentation, recipe or plugin applies to this object as written. [Native API](/docs/form/native-api) is the mapping.
+There is no adapter and no escape hatch to reach for, because you never left. Any TanStack Form documentation, recipe or plugin applies to this object with one rename: TanStack's render-prop field is `form.NativeField` here, because `form.Field` is the bound one. [Native API](/docs/form/native-api) is the mapping.
 
 ## A field is complete
 
 `<form.TextField name='email' label='Email' />` is not an input. It renders the label, the input, the description, the error message once validation fails, and the accessibility wiring that ties them together — `id`, `for`, `aria-invalid`, `aria-labelledby`, `aria-describedby`, `role='alert'`. There is no `value`, no `onChange`, no `onBlur` to pass: the field reads and writes form state itself.
 
-TanStack's own `form.Field` render prop is still there and still works. The difference is what you own:
+A render prop is still there for a control the package does not ship. The difference is what you own:
 
 ```tsx
 // the flat field: name + label, and the chrome is done
 <form.TextField name='email' label='Email' />
 
-// form.Field: you render everything, including label and error
-<form.Field name='email'>
-	{(field) => (
-		<input
-			value={field.state.value}
-			onChange={(e) => field.handleChange(e.target.value)}
-			onBlur={field.handleBlur}
-		/>
+// form.Field: bound and validated like a flat field; you render everything, including label and error
+<form.Field name='email' validate={{ required: true }}>
+	{({ value, onChange, onBlur, errors, invalid, id }) => (
+		<>
+			<input
+				id={id}
+				value={value}
+				onChange={(e) => onChange(e.target.value)}
+				onBlur={onBlur}
+			/>
+			{invalid && <p role='alert'>{errors.join(', ')}</p>}
+		</>
 	)}
 </form.Field>
 ```
+
+TanStack's own render-prop field, with its whole `FieldApi`, is `form.NativeField`.
 
 Reach for `form.Field` when you need a control the package does not ship. If you want the flat fields' layout and error handling _around_ your own control, the answer is a kit, not a render prop.
 

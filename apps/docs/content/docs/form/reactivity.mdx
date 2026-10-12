@@ -27,7 +27,7 @@ The example is an order line. Two number fields feed one `Subscribe` that multip
 
 ## Do not wrap a field in `Subscribe`
 
-Every flat field is already its own subscriber. `form.TextField` renders through `form.AppField`, which subscribes to that one field's value and meta and re-renders only that field. This is why a large form stays cheap without you doing anything.
+Every flat field is already its own subscriber. `form.TextField` subscribes to that one field's value and meta and re-renders only that field. This is why a large form stays cheap without you doing anything.
 
 Wrapping a field in `Subscribe` therefore does not add reactivity — it adds a **second** subscription over a **wider** slice of state, and makes the field re-render for edits elsewhere in the form. It is a strict loss.
 

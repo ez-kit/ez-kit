@@ -28,10 +28,9 @@ const currency = new Intl.NumberFormat('en-GB', { style: 'currency', currency: '
  * and gives back exactly the re-render you were avoiding.
  *
  * **Do not wrap a field in `Subscribe`.** Every flat field is already its own subscriber:
- * `form.TextField` renders through `form.AppField`, which subscribes to that one field's
- * value and meta. Wrapping one adds a second subscription over a wider slice of state and
- * makes the field re-render for edits elsewhere in the form. The one legitimate reason to
- * wrap a field is that a *prop* of it depends on another field — `disabled`, or the
+ * `form.TextField` subscribes to that one field's value and meta. Wrapping one adds a second
+ * subscription over a wider slice of state and makes the field re-render for edits elsewhere
+ * in the form. The one legitimate reason to wrap a field is that a *prop* of it depends on another field — `disabled`, or the
  * `optionsParams` of a dependent select — which is what the option-sources example does.
  *
  * The same subscription is also available as a hook, `useSelector(form.store, selector)`, for

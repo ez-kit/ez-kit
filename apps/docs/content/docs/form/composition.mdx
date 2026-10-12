@@ -1,9 +1,9 @@
 ---
 title: Composition
-description: withForm, withFieldGroup, useFieldGroup and useFormGroup — reusable blocks of fields, and why one of the four had to be retyped.
+description: withForm, withFieldGroup, useFieldGroup and useFormGroup — reusable blocks of fields, and what each of the four takes.
 ---
 
-A form long enough to be worth building is a form long enough to want cutting into pieces: an address block that appears twice, a step you render in three different flows, a section a colleague owns. TanStack Form ships four helpers for that, and all four are re-exported by your kit — but only one of them needed changing on the way, and the reason is worth understanding before you pick between them.
+A form long enough to be worth building is a form long enough to want cutting into pieces: an address block that appears twice, a step you render in three different flows, a section a colleague owns. Your kit ships four helpers for that. `withForm` is TanStack's, with one type changed; `withFieldGroup`, `useFieldGroup` and `useFormGroup` are this package's own, built over TanStack's groups. The reasons are worth understanding before you pick between them.
 
 ## The problem a block has
 
@@ -89,27 +89,27 @@ That wrapping is what puts `withForm` on the kit rather than on the adapter's ge
 
 The same block then serves any form that has an `Address` somewhere in it, under whatever name.
 
-The trade is deliberate and is the thing to weigh when choosing between the two. A group's render prop receives a **group API**, and a group API carries the native `group.Field`, not the flat field components — because a group has no idea what the surrounding form's value type is, which is exactly the freedom you asked for. Inside a field group you are in [native API](/docs/form/native-api) territory.
+The trade is deliberate and is the thing to weigh when choosing between the two. A group's render prop receives a **group API**, and a group API carries `group.Field` — your own control, bound like a field, with `name` relative to the group — and `group.NativeField`, not the flat field components — because a group has no idea what the surrounding form's value type is, which is exactly the freedom you asked for. Both work as they do on the form; [Native API](/docs/form/native-api#groups-and-array-entries) covers them.
 
-Because of that, `withFieldGroup` needed no retyping and is re-exported as TanStack builds it. It still comes from your kit, since `createForm` returns it — and the parent `form` prop of the component it produces already accepts a `FormInstance`, that type being an intersection over TanStack's.
+`withFieldGroup` is this package's own, built on `useFieldGroup`. It comes from your kit, since `createForm` returns it, and the component it produces takes as its `form` the instance `useForm` returns — not a TanStack `FormApi`. A group cannot be another group's `form`.
 
 ## The two hooks
 
-`useFieldGroup` is the hook behind `withFieldGroup`: it takes the parent form and a `fields` mapping and returns the same group API, for when you want a group inside a component you are already writing rather than a standalone block. `useFormGroup` scopes a subtree of one form — a named branch with validators of its own — and returns a group API for that branch.
+`useFieldGroup` is the hook behind `withFieldGroup`: it takes the parent form and a `fields` mapping and returns the same group, with `Field` and `NativeField`, for when you want a group inside a component you are already writing rather than a standalone block. `useFormGroup` scopes a subtree of one form — a named branch with validators of its own — and returns the same group for that branch, with `Field` and `NativeField` relative to it. `form.FormGroup` is `useFormGroup` over this form, rendering `children(group)`.
 
-Neither is touched by this package, so both are re-exported **verbatim** from `@tanstack/react-form` by `@ez-kit/form-react`, and from there by each kit. Import them from your kit like everything else:
+Both hooks are this package's own, wrapping TanStack's: they take the instance `useForm` returns as their `form`, not a TanStack `FormApi`, and a group cannot be another group's `form`. `@ez-kit/form-react` exports them, and each kit re-exports them. Import them from your kit like everything else:
 
 ```ts
 import { useFieldGroup, useFormGroup } from '@ez-kit/form-shadcn'
 ```
 
-The [TanStack Form documentation](https://tanstack.com/form/latest/docs/framework/react/quick-start) is the reference for their options; nothing here changes them.
+`useFieldGroup` takes `form`, `fields` and an optional `defaultValues`. `useFormGroup` takes `form` plus TanStack's form-group options — `name`, `validators` and the rest — and the [TanStack Form documentation](https://tanstack.com/form/latest/docs/framework/react/quick-start) is the reference for those.
 
 ## Components that know about the form
 
 A block is tied to the shape of one form. Many components are not: a save bar, an error summary, a "discard changes" button need the form's _state_ and _submit_, not its field names. They read the form from context.
 
-`<Form>` and `<SchemaForm>` set that context, and `useFormContext()` returns the form's **base API** — `Subscribe`, `state`, `handleSubmit`, `Submit`, `Array`, `Field` — without the fields a bundle registered, and with the values typed `unknown`. It is exported by the package and by each kit, not by the bundle, so it can be used from a component the bundle itself registers.
+`<Form>` and `<SchemaForm>` set that context, and `useFormContext()` returns the form's **base API** — `Subscribe`, `state`, `handleSubmit`, `Submit`, `Array`, `Field`, `NativeField` — without the fields a bundle registered, and with the values typed `unknown`. It is exported by the package and by each kit, not by the bundle, so it can be used from a component the bundle itself registers.
 
 ```tsx
 import { useFormContext } from '@ez-kit/form-shadcn'
@@ -134,6 +134,24 @@ export const { useForm, Form } = createForm({
 	components: { ...allFormComponents, ErrorSummary },
 })
 ```
+
+### Typing the values
+
+`useFormContext` takes an optional type argument. `useFormContext<Values>()` types the same base API over `Values`, and adds the kit's **built-in** fields with their value-typed `name` — `form.TextField name` accepts only the string paths of `Values`:
+
+```tsx
+type SignUp = { email: string; age: number }
+
+function EmailHint() {
+	const form = useFormContext<SignUp>()
+
+	return (
+		<form.Subscribe selector={(state) => state.values.email}>{(email) => <p>Signing up as {email}</p>}</form.Subscribe>
+	)
+}
+```
+
+It is **a cast, not a check**: nothing verifies that the form above has these values, or that the bundle registered the built-in field you call. Fields and components you registered yourself are not on it, since naming them would need the bundle, and a component the bundle registers cannot import it. Call it with a concrete type; a component that names paths in one form's data is better written with `withForm` or `withFieldGroup`, which are checked where they are placed.
 
 ### `FormProvider`
 
@@ -166,7 +184,7 @@ A component that reads the form from context — `form.SubmitButton`, `form.Erro
 
 Reuse a block within **one form's** shape — an address at two paths, a step in a wizard over the same data — and `withForm` is the one to reach for, because it keeps the flat fields.
 
-Reuse a block across **different forms** and `withFieldGroup` is the only one that can, at the cost of writing its fields natively.
+Reuse a block across **different forms** and `withFieldGroup` is the only one that can, at the cost of the flat fields: inside it you write `group.Field` or `group.NativeField`.
 
 And if the block is only ever rendered once, it does not need either: a plain component taking `form: FormInstance<Values>`, as the example's `AddressBlock` does, is less machinery for the same result.
 

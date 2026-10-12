@@ -12,7 +12,8 @@ injects, plus `data-*` attributes for that kit's CSS to target. Install a kit pa
 
 `createForm({ FormElement?, fields?, components? })` returns `{ useForm, Form, FormProvider, withForm, withFieldGroup }`; `createSchemaForm` takes the same options and adds `SchemaForm`. Every option is optional and `form.X` exists for exactly what was passed. `<Form>` is the `<form>` element:
 give it the options TanStack's `useForm` takes and it hands you an instance that is a
-**superset** of TanStack's — flat fields on top, the whole native API untouched underneath.
+**superset** of TanStack's — flat fields on top, the native API underneath, with TanStack's
+render-prop field as `form.NativeField`.
 
 ```tsx
 <Form
@@ -42,8 +43,8 @@ give it the options TanStack's `useForm` takes and it hands you an instance that
 			/>
 			<form.SubmitButton>Save</form.SubmitButton>
 
-			{/* the native TanStack API is untouched on the same instance */}
-			<form.Field name='email'>{(field) => <input value={field.state.value} />}</form.Field>
+			{/* TanStack's own field, with its FieldApi, on the same instance */}
+			<form.NativeField name='email'>{(field) => <input value={field.state.value} />}</form.NativeField>
 			<form.Subscribe selector={(s) => s.errors}>{(errors) => <pre>{errors.length}</pre>}</form.Subscribe>
 		</>
 	)}
@@ -58,7 +59,8 @@ pass it in: `<Form form={form}>` with plain JSX children.
 `form.Submit`, is a render prop handing out `{ canSubmit, isSubmitting, isDirty, formErrors, submit }`,
 so a control built on it works outside a `<form>`. Components read the form from context, which
 `<Form>`, `<SchemaForm>` or `<FormProvider form={form}>` sets — a hand-written `<form>` is not
-enough — and `useFormContext()` returns the form's base API for a component of your own.
+enough — and `useFormContext()` returns the form's base API for a component of your own;
+`useFormContext<Values>()` types it over `Values`, as a cast rather than a check.
 
 Each `*Field` renders label + input + description + error text itself. `name` is narrowed
 to the paths in your form data whose value type fits the field, so
@@ -99,9 +101,10 @@ shape) is the only inference site for the block's form data: `withForm({ render 
 as `unknown`, which collapses the legal field names to `never` — nothing is writable inside
 such a block, and no real form is assignable to it from outside.
 
-`withFieldGroup`, and the re-exported `useFormGroup` / `useFieldGroup`, yield a **group** API,
-which correctly carries no flat field components — inside a group, fields are written with the
-native `form.Field` / `form.AppField`.
+`withFieldGroup`, `useFieldGroup` and `useFormGroup` are this package's own: they take the
+instance `useForm` returns, not a TanStack `FormApi`, and yield a **group** API, which carries
+no flat field components — inside a group, fields are written with `group.Field` (your own
+control, bound, `name` relative to the group) or `group.NativeField` (TanStack's field).
 
 ## Config-driven forms
 

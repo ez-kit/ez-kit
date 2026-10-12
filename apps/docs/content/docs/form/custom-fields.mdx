@@ -53,7 +53,7 @@ Everything a built-in field receives — `id`, `name`, `label`, `description`, `
 
 The nesting is deliberate. A schema document's node carries its author props under `node.props`, and a delivered document must never be able to overwrite `label`, `disabled`, `name` or `validate` by naming them — a flat bag would let a backend-driven payload silently break the binding. The JSX call site still writes them flat, and the binder collects every key outside the base props back into `props`.
 
-Getting that binding for free, rather than wiring `form.AppField` by hand, is the entire reason a custom field goes through the registry instead of being written inline.
+Getting that binding for free, rather than writing a `form.Field` at every call site, is the entire reason a custom field goes through the registry instead of being written inline.
 
 A component registered **without** `defineFieldType` receives the default `CustomFieldRenderProps` — `value` is `unknown` and `props` is an untyped bag. Typing the value is what `defineFieldType` is for: a hand-written `(p: CustomFieldRenderProps<number>) => …` is a compile error, because without the type-only markers the binder can promise nothing narrower than `unknown`. A misspelt built-in key (`TextFeild`) is a compile error rather than a custom field.
 

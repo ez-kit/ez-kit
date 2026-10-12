@@ -352,6 +352,8 @@ export const FORM_TYPE = {
 	 * parameters default, so it instantiates bare.
 	 */
 	CustomFieldRenderProps: { module: TypeModule.FormReact, name: 'CustomFieldRenderProps' },
+	/** What `form.Field` hands its render prop: `FieldRenderProps` plus `value` and a value-taking `onChange`. */
+	FieldControlProps: { module: TypeModule.FormReact, name: 'FieldControlProps', typeArgs: '<string>' },
 	SchemaFormControlledProps: {
 		module: TypeModule.FormReact,
 		name: 'SchemaFormControlledProps',
@@ -1157,6 +1159,9 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 				stripPrefix: FORM_RECEIVER_PREFIX,
 				expectedCount: 6,
 			},
+			// The thirteen keys of `form.Field`'s render prop: the eleven a registered field
+			// receives, plus `value` and `onChange`.
+			{ heading: '`form.Field`', roots: [FORM_TYPE.FieldControlProps], expectedCount: 13 },
 		],
 		nonOptionTables: [],
 	},

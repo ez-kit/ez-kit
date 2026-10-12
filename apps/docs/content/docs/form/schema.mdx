@@ -223,7 +223,7 @@ TanStack accepts exactly one validator per trigger, so the two modes are mutuall
 - you pass `validators` → yours is used verbatim and schema constraints are ignored;
 - **both** → `SchemaForm` throws, naming the conflict. There is no silent winner and no merging of two issue sets onto one path.
 
-Field-level validators through the native `form.Field` still compose with either mode — TanStack runs field-level and form-level validators together.
+Field-level validators through `form.NativeField` still compose with either mode — TanStack runs field-level and form-level validators together.
 
 ### Named rules
 

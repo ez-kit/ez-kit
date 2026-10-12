@@ -9,3 +9,7 @@ field, and a document that needs a component nobody passed is documented as a na
 first render. Submission documents `form.Submit` and its five render props, Composition gains
 `FormProvider` / `useFormContext` and the `FormInstance<V, typeof fields, typeof components>`
 spelling for a subset, and the arrays API notes that a kit's `ArrayField` carries `ArrayField.Item`.
+
+Native API now documents `form.Field`, which binds a control of your own, and `form.NativeField`,
+TanStack's field, on the form, on groups and on array entries; Composition documents the optional
+type argument of `useFormContext`.
