@@ -17,6 +17,7 @@ import { createTextareaField } from './fields/textarea-field'
 
 import type { BindableForm } from './bindable-form'
 import type { ArrayFieldSlot, FormFieldSlots } from './contract'
+import type { NativeFieldLike } from './field-binding'
 import type { FormFieldComponents, FormPrimitives } from './field-props'
 import type { FormFieldRegistry, PRIMITIVE_KEYS } from './field-registry'
 import type { CustomFieldRenderProps } from './schema/registries'
@@ -68,9 +69,14 @@ type LooseBinder = (form: BindableForm, Component: never) => (props: never) => R
  * kind's bespoke binder, and anything else — which is every field the app registered — gets
  * the one generic binder, under the document id its name derives. Only the keys present are
  * bound; an absent built-in is simply not on the instance.
+ *
+ * The record also carries `NativeField` — TanStack's `Field`, as `useForm` captured it — for the
+ * array entries' sake: each entry scopes it like a field, so `item.NativeField` is item-relative.
+ * `Object.assign` in `useForm` writes the same value onto the instance.
  */
 export function buildFieldComponents<TFormData>(
 	form: BindableForm,
+	NativeField: NativeFieldLike,
 	fields: FormFieldRegistry,
 ): FormFieldComponents<TFormData> & FormPrimitives<TFormData> {
 	/**
@@ -119,17 +125,17 @@ export function buildFieldComponents<TFormData>(
 		Array: () => null,
 	} satisfies Record<keyof typeof PRIMITIVE_KEYS, unknown>
 
-	const fieldComponents = { ...built, ...primitives } as unknown as FormFieldComponents<TFormData> &
+	const fieldComponents = { ...built, NativeField, ...primitives } as unknown as FormFieldComponents<TFormData> &
 		FormPrimitives<TFormData>
 
 	/**
 	 * What an array entry scopes to its own path: every registry key, the frame included when it
 	 * was registered, plus the headless `Array` — a nested array is addressed relative to the
-	 * entry like any field. `Submit` is left out: it has no `name` to prefix, and wrapping it would
-	 * only hand it a bogus one.
+	 * entry like any field — and `NativeField`. `Submit` is left out: it has no `name` to prefix,
+	 * and wrapping it would only hand it a bogus one.
 	 */
 	const slot = fields.ArrayField as ArrayFieldSlot | undefined
-	const entryKeys = [...Object.keys(built), ...(slot === undefined ? [] : ['ArrayField']), 'Array']
+	const entryKeys = [...Object.keys(built), ...(slot === undefined ? [] : ['ArrayField']), 'Array', 'NativeField']
 
 	if (slot !== undefined) {
 		fieldComponents.ArrayField = createArrayField<TFormData>(form, slot, fieldComponents, entryKeys)

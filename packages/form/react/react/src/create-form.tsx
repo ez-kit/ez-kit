@@ -4,6 +4,7 @@ import { createFormHook, createFormHookContexts } from '@tanstack/react-form'
 import { useMemo } from 'react'
 
 import { buildFieldComponents } from './build-field-components'
+import { createFieldBinding, nativeFieldOf } from './field-binding'
 import { deriveFieldTypeIds } from './field-registry'
 import { FormProvider } from './form-context'
 import { splitFormProps } from './form-options'
@@ -119,10 +120,11 @@ export type CreateFormOptions<
  *
  * `useForm` is a **superset of TanStack Form's `useForm`**: the instance carries flat,
  * fully-wired components for exactly the `fields` and `components` passed, plus the two
- * primitives every form has (`form.Submit`, `form.Array`), while the entire native API
- * (`form.Field`, `form.Subscribe`, `form.handleSubmit`, `form.state`, `form.AppField`, …) stays
- * untouched on the same object. `Form` renders the `<form>` element, either around a
- * caller-owned instance or around one it creates itself.
+ * primitives every form has (`form.Submit`, `form.Array`), while the native API
+ * (`form.Field`, `form.Subscribe`, `form.handleSubmit`, `form.state`, …) stays on the same
+ * object. TanStack's `Field` is also there as `form.NativeField`; `form.AppField` is replaced by
+ * the binding seam every bound field renders through (`field-binding.tsx`). `Form` renders the
+ * `<form>` element, either around a caller-owned instance or around one it creates itself.
  *
  * Every option is optional: `createForm()` alone gives a form with a plain `<form>` and only
  * the primitives.
@@ -272,11 +274,20 @@ export function createFormInternals<TFields extends FormFieldRegistry, TComponen
 	> {
 		const form = useAppForm(formOptions)
 
+		// TanStack's `Field`, captured before the assign below replaces the instance's `AppField`
+		// with the binding seam — see `nativeFieldOf`.
+		const native = useMemo(() => {
+			const NativeField = nativeFieldOf(form as unknown as Parameters<typeof nativeFieldOf>[0])
+			return { NativeField, AppField: createFieldBinding(NativeField) }
+		}, [form])
+
+		// The binders read `form.AppField` when they render — after the assign below — so they
+		// bind through the seam without being handed it.
 		const fieldComponents = useMemo(
-			() => buildFieldComponents<TFormData>(form as unknown as BindableForm, fields),
+			() => buildFieldComponents<TFormData>(form as unknown as BindableForm, native.NativeField, fields),
 			// The form instance is stable for the lifetime of the component, so the field
 			// components — and therefore the mounted inputs — are built exactly once.
-			[form],
+			[form, native],
 		)
 
 		// Augmenting the instance rather than spreading it: the TanStack form API is a class
@@ -284,7 +295,7 @@ export function createFormInternals<TFields extends FormFieldRegistry, TComponen
 		// components go on as-is — they read the form from context, so nothing binds them.
 		return useMemo(
 			() =>
-				Object.assign(form, fieldComponents, components) as unknown as KitFormApi<
+				Object.assign(form, native, fieldComponents, components) as unknown as KitFormApi<
 					TFormData,
 					TOnMount,
 					TOnChange,
@@ -300,7 +311,7 @@ export function createFormInternals<TFields extends FormFieldRegistry, TComponen
 					TFields,
 					TComponents
 				>,
-			[form, fieldComponents],
+			[form, native, fieldComponents],
 		)
 	}
 

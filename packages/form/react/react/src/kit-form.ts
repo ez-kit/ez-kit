@@ -2,7 +2,10 @@ import type { AllFormComponents, AllFormFieldSlots, FormComponentRegistry } from
 import type { FormFieldComponents, FormPrimitives } from './field-props'
 import type { FormFieldRegistry } from './field-registry'
 import type { FormAsyncValidateOrFn, FormValidateOrFn } from '@ez-kit/form-core'
-import type { AppFieldExtendedReactFormApi } from '@tanstack/react-form'
+import type { AppFieldExtendedReactFormApi, FieldComponent } from '@tanstack/react-form'
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- the validator parameters an entry's NativeField leaves open, as FormInstance does
+type Open = any
 
 /**
  * TanStack's own component slots stay empty: the kit's primitives are injected through
@@ -17,9 +20,29 @@ export const NO_INJECTED_COMPONENTS = {} as const
 
 export type NoInjectedComponents = typeof NO_INJECTED_COMPONENTS
 
+/** The members this package adds that are TanStack's own, renamed: `NativeField` is TanStack's `Field`. */
+export type NativeMembers<TForm> = { NativeField: TForm extends { Field: infer TField } ? TField : never }
+
+/** TanStack's render-prop field over `TFormData`, with its form-level validator types left open. */
+export type NativeFieldOf<TFormData> = FieldComponent<
+	TFormData,
+	Open,
+	Open,
+	Open,
+	Open,
+	Open,
+	Open,
+	Open,
+	Open,
+	Open,
+	Open,
+	Open
+>
+
 /**
- * A form instance carrying the native TanStack API, the field components it registered, the two
- * primitives and the components it registered.
+ * A form instance carrying the native TanStack API (and TanStack's `Field` again as
+ * `NativeField`), the field components it registered, the two primitives and the components it
+ * registered.
  *
  * `TFields` is the registry `createForm` was given, so a field the app registered is on the
  * instance under its own key, typed from the phantoms `defineFieldType` wrote. `TComponents` is
@@ -31,7 +54,11 @@ export type BoundForm<
 	TFormData,
 	TFields extends FormFieldRegistry = AllFormFieldSlots,
 	TComponents extends FormComponentRegistry = AllFormComponents,
-> = TForm & FormFieldComponents<TFormData, TFields> & FormPrimitives<TFormData, TFields> & TComponents
+> = TForm &
+	NativeMembers<TForm> &
+	FormFieldComponents<TFormData, TFields> &
+	FormPrimitives<TFormData, TFields> &
+	TComponents
 
 /**
  * What `useForm` hands back, spelled out as a nameable type.

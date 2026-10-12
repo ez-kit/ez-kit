@@ -2,6 +2,7 @@ import type { BoundFieldApi } from './bindable-form'
 import type { AllFormFieldSlots, FormFieldSlots } from './contract'
 import type { FormFieldRegistry, PRIMITIVE_KEYS } from './field-registry'
 import type { FieldValidateProps } from './field-validate'
+import type { NativeFieldOf } from './kit-form'
 import type {
 	ArrayItemOf,
 	ArrayKeys,
@@ -230,11 +231,13 @@ type EntryUnscopedKey = Exclude<keyof typeof PRIMITIVE_KEYS, 'Array'>
  * and a root-level name is a compile error there. No path is composed at the call site — the
  * prefix is joined on at render. `form.Submit` and the registered components are not part of
  * it — see {@link EntryUnscopedKey}.
+ *
+ * An entry carries `NativeField` too — TanStack's render-prop field, item-relative like the rest.
  */
 export type ArrayItemScope<TItem, TFields extends FormFieldRegistry = AllFormFieldSlots> = Omit<
 	FormFieldComponents<TItem, TFields> & FormPrimitives<TItem, TFields>,
 	EntryUnscopedKey
-> & {
+> & { NativeField: NativeFieldOf<TItem> } & {
 	/**
 	 * A stable id for this entry, for React's `key`. **Never the index**: removing an entry from
 	 * the middle renumbers everything after it, and a keyed-by-index list would then reuse the

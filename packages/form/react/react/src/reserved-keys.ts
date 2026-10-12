@@ -1,5 +1,5 @@
 import type { FormPrimitives } from './field-props'
-import type { NoInjectedComponents } from './kit-form'
+import type { NativeMembers, NoInjectedComponents } from './kit-form'
 import type { AppFieldExtendedReactFormApi } from '@tanstack/react-form'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- only the key set of the instance type is read
@@ -13,8 +13,9 @@ type AnyArg = any
  * Derived from the type `useAppForm` returns — TanStack's `FormApi` and `ReactFormApi` (`Field`,
  * `FormGroup`, `Subscribe`) plus `AppField` / `AppForm` — instantiated exactly as `createForm`
  * instantiates it, so the list is what the instance carries before this package adds anything.
- * Then the primitives this package adds ({@link FormPrimitives}), and the three names the
- * composition spec reserves for members still to come: `NativeField`, `Steps` and `Step`.
+ * Then the members this package adds — the primitives ({@link FormPrimitives}) and TanStack's
+ * `Field` renamed ({@link NativeMembers}) — and the two names the composition spec reserves for
+ * members still to come: `Steps` and `Step`.
  *
  * Never written down as a free list: `RESERVED_FORM_KEYS` below is annotated with this union, so a
  * TanStack upgrade that adds or removes a member fails to compile here. `keyof` sees only the
@@ -39,9 +40,9 @@ export type ReservedFormKey =
 			NoInjectedComponents
 	  >
 	| keyof FormPrimitives<unknown>
-	// Listed by hand until these members exist on the instance — `NativeField` in stage 3,
-	// `Steps` / `Step` in stage 6 — and derived from their types from then on.
-	| 'NativeField'
+	| keyof NativeMembers<unknown>
+	// Listed by hand until these members exist on the instance — `Steps` / `Step` in stage 6 —
+	// and derived from their types from then on.
 	| 'Steps'
 	| 'Step'
 

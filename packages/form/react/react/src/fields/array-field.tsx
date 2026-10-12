@@ -15,6 +15,7 @@ import type {
 	FormPrimitives,
 } from '../field-props'
 import type { FieldValidateProps } from '../field-validate'
+import type { NativeFieldOf } from '../kit-form'
 import type { ArrayKeys } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
 
@@ -276,8 +277,12 @@ type ItemData = {
 	onMoveDown: (() => void) | undefined
 }
 
-/** The members an entry scopes to its own path: the field components and the nested `Array`. */
-type EntryFields = FormFieldComponents<unknown> & Pick<FormPrimitives<unknown>, 'Array'>
+/**
+ * The members an entry scopes to its own path: the field components, the nested `Array` and
+ * TanStack's `NativeField`.
+ */
+type EntryFields = FormFieldComponents<unknown> &
+	Pick<FormPrimitives<unknown>, 'Array'> & { NativeField: NativeFieldOf<unknown> }
 
 /** The frame `ArrayField` renders around the entries — everything but the entries themselves. */
 type ArrayFrameProps = Omit<ArrayFieldRenderProps, 'children'>
