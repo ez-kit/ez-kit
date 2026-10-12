@@ -29,8 +29,26 @@ vi.mock('./field-binding', async (importOriginal) => {
 	}
 })
 
-type Values = { email: string; score: number; seats: number; tags: { label: string }[] }
-const DEFAULTS: Values = { email: '', score: 0, seats: 1, tags: [{ label: '' }] }
+type Values = {
+	email: string
+	guest: string
+	score: number
+	seats: number
+	address: { city: string }
+	billingCity: string
+	tags: { label: string }[]
+	notes: { label: string }[]
+}
+const DEFAULTS: Values = {
+	email: '',
+	guest: '',
+	score: 0,
+	seats: 1,
+	address: { city: '' },
+	billingCity: '',
+	tags: [{ label: '' }],
+	notes: [{ label: '' }],
+}
 
 const RatingField = defineFieldType<Record<never, never>, number>()(function Rating(): ReactNode {
 	return null
@@ -39,10 +57,14 @@ const RatingField = defineFieldType<Record<never, never>, number>()(function Rat
 describe('the binding seam', () => {
 	it('binds every bound field kind and leaves NativeField alone', () => {
 		bound.length = 0
-		const { Form } = createForm({
+		const { Form, withFieldGroup } = createForm({
 			FormElement: testFormElement,
 			fields: { ...testFields, RatingField },
 			components: testComponents,
+		})
+		const City = withFieldGroup({
+			defaultValues: { city: '' },
+			render: ({ group }) => <group.Field name='city'>{() => null}</group.Field>,
 		})
 		render(
 			<Form defaultValues={DEFAULTS}>
@@ -51,6 +73,7 @@ describe('the binding seam', () => {
 						<form.TextField name='email' />
 						<form.RatingField name='score' />
 						<form.NativeField name='seats'>{() => null}</form.NativeField>
+						<form.Field name='guest'>{() => null}</form.Field>
 						<form.ArrayField
 							name='tags'
 							newItem={{ label: '' }}
@@ -64,12 +87,45 @@ describe('the binding seam', () => {
 								))
 							}
 						</form.ArrayField>
+						<form.Array
+							name='notes'
+							newItem={{ label: '' }}
+						>
+							{({ items }) =>
+								items.map((item) => (
+									<item.Field
+										key={item.key}
+										name='label'
+									>
+										{() => null}
+									</item.Field>
+								))
+							}
+						</form.Array>
+						<City
+							form={form}
+							fields={{ city: 'billingCity' }}
+						/>
+						<form.FormGroup name='address'>
+							{(group) => <group.Field name='city'>{() => null}</group.Field>}
+						</form.FormGroup>
 					</>
 				)}
 			</Form>,
 		)
 
-		expect(bound).toEqual(expect.arrayContaining(['email', 'score', 'tags', 'tags[0].label']))
+		expect(bound).toEqual(
+			expect.arrayContaining([
+				'email',
+				'score',
+				'guest',
+				'tags',
+				'tags[0].label',
+				'notes[0].label',
+				'billingCity',
+				'address.city',
+			]),
+		)
 		expect(bound).not.toContain('seats')
 	})
 
@@ -90,10 +146,12 @@ describe('the binding seam', () => {
 	it('leaves NativeField outside the seam under StrictMode and after a formId change', async () => {
 		bound.length = 0
 		const user = userEvent.setup()
+		const distinct: boolean[] = []
 		const { Form, useForm } = createForm({ FormElement: testFormElement, fields: testFields })
 		function Probe(): ReactNode {
 			const [formId, setFormId] = useState('first')
 			const form = useForm({ defaultValues: DEFAULTS, formId })
+			distinct.push((form.NativeField as unknown) !== (form.Field as unknown))
 			return (
 				<>
 					<button
@@ -105,7 +163,9 @@ describe('the binding seam', () => {
 						Switch
 					</button>
 					<Form form={form}>
-						<form.NativeField name='seats'>{() => null}</form.NativeField>
+						<form.NativeField name='seats'>
+							{(field) => <output aria-label='native seats'>{typeof field.handleChange}</output>}
+						</form.NativeField>
 						<form.TextField name='email' />
 					</Form>
 				</>
@@ -120,6 +180,9 @@ describe('the binding seam', () => {
 
 		expect(bound).toContain('email')
 		expect(bound).not.toContain('seats')
+		expect(screen.getByLabelText('native seats')).toHaveTextContent('function')
+		expect(distinct.length).toBeGreaterThan(1)
+		expect(distinct.every(Boolean)).toBe(true)
 	})
 
 	it('forwards every prop it is handed to TanStack', async () => {

@@ -1,5 +1,5 @@
 import type { BoundFieldApi } from './bindable-form'
-import type { AllFormFieldSlots, FormFieldSlots } from './contract'
+import type { AllFormFieldSlots, FieldRenderProps, FormFieldSlots } from './contract'
 import type { FormFieldRegistry, PRIMITIVE_KEYS } from './field-registry'
 import type { FieldValidateProps } from './field-validate'
 import type {
@@ -11,6 +11,7 @@ import type {
 	SelectOption,
 	TextInputType,
 } from '@ez-kit/form-core'
+import type { DeepKeys, DeepValue } from '@tanstack/form-core'
 import type { LensFieldComponent } from '@tanstack/react-form'
 import type { ReactNode } from 'react'
 
@@ -220,11 +221,12 @@ export type SliderFieldProps<TFormData> = BaseFieldProps<TFormData, number> & {
 
 /**
  * The primitives an array entry does **not** carry: `Submit` has no `name` to address relative
- * to the entry, so it is reached through the form instead. `Array` stays — a nested array is
- * addressed relative to the entry like a field. The registered `components` are not on an entry
- * either; they read the form from context and have no path of their own.
+ * to the entry, so it is reached through the form instead. `Array` and `Field` stay — a nested
+ * array and an own control are addressed relative to the entry like any field, and the entry
+ * carries `NativeField` beside `Field`, item-relative too. The registered `components` are not on
+ * an entry either; they read the form from context and have no path of their own.
  */
-type EntryUnscopedKey = Exclude<keyof typeof PRIMITIVE_KEYS, 'Array'>
+type EntryUnscopedKey = Exclude<keyof typeof PRIMITIVE_KEYS, 'Array' | 'Field'>
 
 /**
  * What one entry of a repeatable group hands the author.
@@ -453,14 +455,49 @@ export type BuiltInFieldComponents<TFormData, TFields extends FormFieldRegistry 
 export type BuiltInFieldKey = keyof FormFieldSlots
 
 /**
- * The two primitives every form instance carries, whatever it registered: the headless array
- * and the headless submit. Neither draws anything, so neither needs a kit component.
+ * What `form.Field`'s render prop receives: what a `defineFieldType` field gets, minus its
+ * `props` bag — the identity, chrome and validation state of {@link FieldRenderProps}, plus the
+ * value and an `onChange` that takes the value itself rather than an event.
+ */
+export type FieldControlProps<TValue> = FieldRenderProps & {
+	value: TValue
+	onChange: (value: TValue) => void
+}
+
+/**
+ * `form.Field`'s props: an author's own control, bound like a registered field.
+ *
+ * `name` is any path of the form (TanStack's own key set), and the render prop's `value` is typed
+ * from it. Validation goes through `validate` — the vocabulary every field of this package takes
+ * — never TanStack's `validators`, which stay on `form.NativeField`. `required` is visual only,
+ * as on {@link BaseFieldProps}; `validate.required` implies it.
+ */
+export type FieldProps<TFormData, TName extends DeepKeys<TFormData>> = {
+	name: TName
+	validate?: FieldValidateProps
+	label?: ReactNode
+	description?: ReactNode
+	disabled?: boolean
+	required?: boolean
+	children: (field: FieldControlProps<DeepValue<TFormData, TName>>) => ReactNode
+}
+
+/** `form.Field`, `item.Field` and `group.Field`: `name` is inferred per call, and the render prop is typed from it. */
+export type BoundFieldComponent<TFormData> = <const TName extends DeepKeys<TFormData>>(
+	props: FieldProps<TFormData, TName>,
+) => ReactNode
+
+/**
+ * The three primitives every form instance carries, whatever it registered: the headless array,
+ * the headless submit and the headless field. None draws anything, so none needs a kit component.
  */
 export type FormPrimitives<TFormData, TFields extends FormFieldRegistry = AllFormFieldSlots> = {
 	/**
 	 * Generic per call, for the same reason `ArrayField` is — see its doc comment.
 	 */
 	Array: <TName extends ArrayKeys<TFormData>>(props: ArrayProps<TFormData, TName, TFields>) => ReactNode
+	/** An author's own control, bound like a registered field — see {@link FieldProps}. */
+	Field: BoundFieldComponent<TFormData>
 	Submit: (props: SubmitProps) => ReactNode
 }
 

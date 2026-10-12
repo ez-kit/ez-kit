@@ -2,8 +2,9 @@ import { formatFieldErrors } from '@ez-kit/form-core'
 
 import { resolveRequired } from './field-validate'
 
-import type { BoundFieldApi } from './bindable-form'
+import type { BoundFieldApi, FieldValue } from './bindable-form'
 import type { FieldRenderProps } from './contract'
+import type { FieldControlProps } from './field-props'
 import type { FieldValidateProps } from './field-validate'
 import type { ReactNode } from 'react'
 
@@ -67,5 +68,26 @@ export function fieldRenderProps(
 		onBlur: field.handleBlur,
 		disabled,
 		required: resolveRequired(required, validate),
+	}
+}
+
+/**
+ * Everything a bound control receives: {@link fieldRenderProps} plus the value and a value-taking
+ * `onChange`. The generic binder of a registered field adds the author's `props` bag to it;
+ * `form.Field` hands it as is — which is what makes `form.Field` a one-off `defineFieldType` field.
+ */
+export function fieldControlProps(
+	field: BoundFieldApi,
+	fieldType: string,
+	chrome: Parameters<typeof fieldRenderProps>[2],
+): FieldControlProps<unknown> {
+	return {
+		...fieldRenderProps(field, fieldType, chrome),
+		value: field.state.value,
+		onChange: (value: unknown) => {
+			// A control's value type is the author's, and `FieldValue` enumerates the built-in ones —
+			// the same cast `RenderNode`'s custom branch makes, for the same reason.
+			field.handleChange(value as FieldValue)
+		},
 	}
 }

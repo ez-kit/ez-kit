@@ -98,7 +98,7 @@ export function fieldTypeIdFor(key: string): string {
 }
 
 /**
- * The members of the bound field set that are **not** registry keys — the two primitives the
+ * The members of the bound field set that are **not** registry keys — the primitives the
  * builder writes over the registry's own output after the loop.
  *
  * A registry key equal to one of these is rejected by `createForm`, together with every other key
@@ -112,6 +112,7 @@ export function fieldTypeIdFor(key: string): string {
 export const PRIMITIVE_KEYS = {
 	Submit: true,
 	Array: true,
+	Field: true,
 } satisfies Record<keyof FormPrimitives<unknown>, true>
 
 /**

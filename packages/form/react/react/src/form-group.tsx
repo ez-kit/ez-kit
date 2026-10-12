@@ -4,7 +4,9 @@ import { useFormGroup as useTanStackFormGroup } from '@tanstack/react-form'
 import { useMemo } from 'react'
 
 import { scopeFieldProps } from './field-scope'
+import { createField } from './fields/field'
 
+import type { BindableForm } from './bindable-form'
 import type { NoRegistry } from './contract'
 import type { FormInstance } from './form-instance'
 import type { FormGroupComponentOf, FormGroupInstance, FormGroupProps } from './group-types'
@@ -15,16 +17,23 @@ type NameScoped = (props: { name: string }) => ReactNode
 
 /**
  * `Inner` with its names read relative to `prefix` — `name` and the validators' listen-to lists
- * ({@link scopeFieldProps}); `[0].label` under `tags` is `tags[0].label`.
+ * ({@link scopeFieldProps}); `[0].label` under `tags` is `tags[0].label`. Every other prop is
+ * passed through, so it scopes TanStack's `Field` and the binding seam alike.
  */
-export function scopeName(Inner: NameScoped, prefix: string): NameScoped {
+export function scopeName<TProps extends { name: string }>(
+	Inner: (props: TProps) => ReactNode,
+	prefix: string,
+): (props: TProps) => ReactNode {
 	return function Scoped(props) {
 		return <Inner {...scopeFieldProps(props, prefix)} />
 	}
 }
 
 /**
- * TanStack's form group over the branch `name`, plus `NativeField` relative to it.
+ * TanStack's form group over the branch `name`, plus `Field` and `NativeField` relative to it.
+ *
+ * `Field` is `createField` over the instance's `AppField` — the binding seam — scoped like
+ * `NativeField`, so a form group's own control is bound like every other field.
  *
  * TanStack's group object is rebuilt on every change of its state, so the members are built once
  * per form and name and written onto each new object.
@@ -35,8 +44,17 @@ export function useFormGroup<TFormData, const TName extends DeepKeys<TFormData>>
 	},
 ): FormGroupInstance<TFormData, TName> {
 	const group = useTanStackFormGroup(options as never) as unknown as object
-	const native = (options.form as unknown as { NativeField: NameScoped }).NativeField
-	const members = useMemo(() => ({ NativeField: scopeName(native, options.name) }), [native, options.name])
+	const { NativeField: native, AppField: appField } = options.form as unknown as {
+		NativeField: NameScoped
+		AppField: BindableForm['AppField']
+	}
+	const members = useMemo(
+		() => ({
+			Field: createField({ AppField: scopeName(appField, options.name) }),
+			NativeField: scopeName(native, options.name),
+		}),
+		[appField, native, options.name],
+	)
 	return useMemo(() => Object.assign(group, members), [group, members]) as unknown as FormGroupInstance<
 		TFormData,
 		TName

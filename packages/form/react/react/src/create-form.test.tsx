@@ -450,7 +450,7 @@ describe('createForm — submit', () => {
 })
 
 describe('createForm — native TanStack API', () => {
-	it('keeps Field, Subscribe, handleSubmit and state on the instance', async () => {
+	it('keeps NativeField, Subscribe, handleSubmit and state on the instance', async () => {
 		const user = userEvent.setup()
 		const onSubmit = vi.fn()
 
@@ -467,14 +467,61 @@ describe('createForm — native TanStack API', () => {
 
 			return (
 				<Form form={form}>
-					{/* the native render-prop Field, untouched by the flat wrappers */}
-					<form.Field name='email'>
+					{/* TanStack's render-prop field, as `NativeField` */}
+					<form.NativeField name='email'>
 						{(field) => (
 							<input
 								aria-label='native email'
 								value={field.state.value}
 								onChange={(event) => {
 									field.handleChange(event.target.value)
+								}}
+							/>
+						)}
+					</form.NativeField>
+					<form.Subscribe selector={(state) => state.values.email}>
+						{(email) => <output>{email}</output>}
+					</form.Subscribe>
+					<form.SubmitButton>Save</form.SubmitButton>
+				</Form>
+			)
+		}
+
+		render(<NativeCase />)
+		await user.type(screen.getByLabelText('native email'), 'x@y.z')
+
+		expect(screen.getByRole('status')).toHaveTextContent('x@y.z')
+
+		await user.click(screen.getByRole('button', { name: 'Save' }))
+		await waitFor(() => {
+			expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ email: 'x@y.z' }))
+		})
+	})
+
+	it('binds an own control through form.Field and submits it', async () => {
+		const user = userEvent.setup()
+		const onSubmit = vi.fn()
+
+		function BoundCase() {
+			const form = useForm({
+				defaultValues: DEFAULTS,
+				onSubmit: ({ value }) => {
+					onSubmit(value)
+				},
+			})
+
+			expect(form.state.values).toEqual(DEFAULTS)
+			expect(typeof form.handleSubmit).toBe('function')
+
+			return (
+				<Form form={form}>
+					<form.Field name='email'>
+						{({ value, onChange }) => (
+							<input
+								aria-label='bound email'
+								value={value}
+								onChange={(event) => {
+									onChange(event.target.value)
 								}}
 							/>
 						)}
@@ -487,8 +534,8 @@ describe('createForm — native TanStack API', () => {
 			)
 		}
 
-		render(<NativeCase />)
-		await user.type(screen.getByLabelText('native email'), 'x@y.z')
+		render(<BoundCase />)
+		await user.type(screen.getByLabelText('bound email'), 'x@y.z')
 
 		expect(screen.getByRole('status')).toHaveTextContent('x@y.z')
 

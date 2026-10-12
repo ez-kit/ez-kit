@@ -5,6 +5,7 @@ import { createCheckboxGroupField } from './fields/checkbox-group-field'
 import { createCustomField } from './fields/custom-field'
 import { createDateField } from './fields/date-field'
 import { createDateRangeField } from './fields/date-range-field'
+import { createField } from './fields/field'
 import { createMultiSelectField } from './fields/multi-select-field'
 import { createNumberField } from './fields/number-field'
 import { createRadioGroupField } from './fields/radio-group-field'
@@ -59,7 +60,7 @@ const BUILT_IN_BINDERS = {
 type LooseBinder = (form: BindableForm, Component: never) => (props: never) => ReactNode
 
 /**
- * Build the flat field components for one form instance, and its two primitives.
+ * Build the flat field components for one form instance, and its three primitives.
  *
  * Each component closes over the `form` it belongs to, which is why they are built per instance
  * rather than once per kit: `form.AppField` needs the concrete form. `createForm` memoises the
@@ -111,14 +112,15 @@ export function buildFieldComponents<TFormData>(
 	 * The primitives, anchored to {@link PRIMITIVE_KEYS} **before** the cast below.
 	 *
 	 * `as unknown as` erases checking on everything it covers, so a check that is to mean anything
-	 * has to sit on a sub-expression outside it. With the `satisfies` here, a third primitive fails
+	 * has to sit on a sub-expression outside it. With the `satisfies` here, a fourth primitive fails
 	 * in two places if either is forgotten: at the constant, and here. `built` stays unchecked,
 	 * which is correct — its keys are the open registry's, and `createForm` checks them before they
-	 * get here: against these two and every other key the instance owns (`reserved-keys.ts`), and
+	 * get here: against these and every other key the instance owns (`reserved-keys.ts`), and
 	 * for the document ids they derive (`deriveFieldTypeIds`).
 	 */
 	const primitives = {
 		Submit: createSubmit(form),
+		Field: createField<TFormData>(form),
 		// Replaced below, with `ArrayField`: an array's entries render the *same* field set, scoped
 		// to the entry, so the component needs the finished record — including, for a nested
 		// array, itself.
@@ -131,11 +133,17 @@ export function buildFieldComponents<TFormData>(
 	/**
 	 * What an array entry scopes to its own path: every registry key, the frame included when it
 	 * was registered, plus the headless `Array` — a nested array is addressed relative to the
-	 * entry like any field — and `NativeField`. `Submit` is left out: it has no `name` to prefix,
-	 * and wrapping it would only hand it a bogus one.
+	 * entry like any field — `Field` and `NativeField`. `Submit` is left out: it has no `name` to
+	 * prefix, and wrapping it would only hand it a bogus one.
 	 */
 	const slot = fields.ArrayField as ArrayFieldSlot | undefined
-	const entryKeys = [...Object.keys(built), ...(slot === undefined ? [] : ['ArrayField']), 'Array', 'NativeField']
+	const entryKeys = [
+		...Object.keys(built),
+		...(slot === undefined ? [] : ['ArrayField']),
+		'Array',
+		'Field',
+		'NativeField',
+	]
 
 	if (slot !== undefined) {
 		fieldComponents.ArrayField = createArrayField<TFormData>(form, slot, fieldComponents, entryKeys)

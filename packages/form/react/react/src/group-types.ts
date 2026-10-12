@@ -1,3 +1,4 @@
+import type { BoundFieldComponent } from './field-props'
 import type { NoInjectedComponents } from './kit-form'
 import type {
 	DeepKeys,
@@ -33,8 +34,14 @@ type NativeFieldGroup<TGroup, TSubmitMeta> = AppFieldExtendedReactFieldGroupApi<
 	NoInjectedComponents
 >
 
-/** What `withFieldGroup`'s `render` and `useFieldGroup` hand back: TanStack's field group, plus `NativeField`. */
-export type FieldGroupInstance<TGroup, TSubmitMeta = never> = NativeFieldGroup<TGroup, TSubmitMeta> & {
+/**
+ * What `withFieldGroup`'s `render` and `useFieldGroup` hand back: TanStack's field group, with this
+ * package's `Field` in place of TanStack's, plus `NativeField`. `Field` is replaced with `Omit`, not
+ * by intersection, for the reason the instance's is (see `BoundForm`).
+ */
+export type FieldGroupInstance<TGroup, TSubmitMeta = never> = Omit<NativeFieldGroup<TGroup, TSubmitMeta>, 'Field'> & {
+	/** An author's own control, bound like a registered field, with `name` read through the group's `fields`. */
+	Field: BoundFieldComponent<TGroup>
 	/**
 	 * TanStack's render-prop field, named through the group's `fields` (a path or a map). Named as
 	 * TanStack's `LensFieldComponent` directly rather than as the group's `Field`, so retyping
@@ -50,7 +57,11 @@ type GroupAsyncValidator<TFormData, TName extends DeepKeys<TFormData>> =
 	| undefined
 	| FormGroupAsyncValidateOrFn<TFormData, TName, DeepValue<TFormData, TName>>
 
-/** What `form.FormGroup`'s render prop and `useFormGroup` hand back: TanStack's form group, plus `NativeField`. */
+/**
+ * What `form.FormGroup`'s render prop and `useFormGroup` hand back: TanStack's form group, plus
+ * `Field` and `NativeField`. TanStack's form group has no `Field` of its own, so it is added by
+ * intersection.
+ */
 export type FormGroupInstance<TFormData, TName extends DeepKeys<TFormData>> = FormGroupApi<
 	TFormData,
 	TName,
@@ -77,6 +88,8 @@ export type FormGroupInstance<TFormData, TName extends DeepKeys<TFormData>> = Fo
 	Open,
 	Open
 > & {
+	/** An author's own control, bound like a registered field, with `name` relative to the group's own. */
+	Field: BoundFieldComponent<DeepValue<TFormData, TName>>
 	/**
 	 * TanStack's render-prop field, with `name` (and the validators' listen-to lists) relative to the
 	 * group's own. Typed as TanStack's `LensFieldComponent`, as a field group's is: the `field` its

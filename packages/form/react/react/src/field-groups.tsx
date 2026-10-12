@@ -3,6 +3,9 @@
 import { useFieldGroup as useTanStackFieldGroup } from '@tanstack/react-form'
 import { useMemo } from 'react'
 
+import { createField } from './fields/field'
+
+import type { BindableForm } from './bindable-form'
 import type { NoRegistry } from './contract'
 import type { FormInstance } from './form-instance'
 import type { FieldGroupInstance } from './group-types'
@@ -17,18 +20,25 @@ export type FieldGroupOptions<TFormData, TGroup> = {
 }
 
 type GroupSource = {
+	AppField: BindableForm['AppField']
 	form: { NativeField: (props: object) => ReactNode }
 	getFormFieldOptions: <TOptions extends { name: string }>(props: TOptions) => TOptions
 }
 
 /**
- * TanStack's field group, plus `NativeField`.
+ * TanStack's field group, with this package's `Field`, plus `NativeField`.
  *
  * TanStack's own hook, re-exported until now, types `form` as its `FormApi`, which the instance no
  * longer satisfies once `FormGroup` (and, next, `Field`) is retyped with `Omit` (a `private` member
  * does not survive it). The group itself is TanStack's, created once per component; `NativeField`
  * maps `name` through the group's `fields` with TanStack's own `getFormFieldOptions` and renders the
  * form's `NativeField`.
+ *
+ * `Field` **must** be overwritten here: TanStack's own `group.Field` renders the instance's `Field`,
+ * which is this package's by now, so it would hand the author a mapped name to a component that
+ * expects a render prop of control props — and type it as TanStack's. Ours is `createField` over the
+ * group's `AppField`, which TanStack builds to map the name through `fields` and render the
+ * instance's `AppField` — the binding seam.
  *
  * Like TanStack's, the group is read on the first render only: a `fields` changed after mount is
  * not picked up.
@@ -41,7 +51,7 @@ export function useFieldGroup<TFormData, TGroup>(
 		const NativeField = (props: { name: string }): ReactNode => (
 			<group.form.NativeField {...group.getFormFieldOptions(props)} />
 		)
-		return Object.assign(group, { NativeField })
+		return Object.assign(group, { Field: createField({ AppField: group.AppField }), NativeField })
 	}, [group]) as unknown as FieldGroupInstance<TGroup>
 }
 

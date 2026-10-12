@@ -61,10 +61,13 @@ export type {
 	ArrayProps,
 	ArrayScope,
 	BaseFieldProps,
+	BoundFieldComponent,
 	CheckboxFieldProps,
 	CheckboxGroupFieldProps,
 	DateFieldProps,
 	DateRangeFieldProps,
+	FieldControlProps,
+	FieldProps,
 	GridItemProps,
 	MultiSelectFieldProps,
 	FormFieldComponents,
@@ -147,8 +150,8 @@ export type {
 	SubmitNode,
 } from '@ez-kit/form-core'
 
-// The group hooks are the package's own since the instance's `FormGroup` (and `Field`) is retyped
-// with `Omit`, which TanStack's hooks no longer accept; each group carries `NativeField`.
+// The group hooks are the package's own since the instance's `FormGroup` and `Field` are retyped
+// with `Omit`, which TanStack's hooks no longer accept; each group carries `Field` and `NativeField`.
 export { useFieldGroup } from './field-groups'
 export { useFormGroup } from './form-group'
 // `useSelector` is re-exported so an app reads the form's store through the same TanStack copy the

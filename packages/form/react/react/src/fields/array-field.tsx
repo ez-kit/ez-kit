@@ -274,11 +274,11 @@ type ItemData = {
 }
 
 /**
- * The members an entry scopes to its own path: the field components, the nested `Array` and
- * TanStack's `NativeField`.
+ * The members an entry scopes to its own path: the field components, the nested `Array`, the
+ * headless `Field` and TanStack's `NativeField`.
  */
 type EntryFields = FormFieldComponents<unknown> &
-	Pick<FormPrimitives<unknown>, 'Array'> & { NativeField: LensFieldComponent<unknown, unknown> }
+	Pick<FormPrimitives<unknown>, 'Array' | 'Field'> & { NativeField: LensFieldComponent<unknown, unknown> }
 
 /** The frame `ArrayField` renders around the entries — everything but the entries themselves. */
 type ArrayFrameProps = Omit<ArrayFieldRenderProps, 'children'>

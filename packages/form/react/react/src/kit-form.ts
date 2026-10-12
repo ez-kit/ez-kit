@@ -23,7 +23,7 @@ export type NativeMembers<TForm> = { NativeField: TForm extends { Field: infer T
 
 /**
  * A form instance carrying the native TanStack API (and TanStack's `Field` again as
- * `NativeField`), the field components it registered, the two primitives and the components it
+ * `NativeField`), the field components it registered, the three primitives and the components it
  * registered.
  *
  * `TFields` is the registry `createForm` was given, so a field the app registered is on the
@@ -31,9 +31,11 @@ export type NativeMembers<TForm> = { NativeField: TForm extends { Field: infer T
  * the `components` bag, attached as-is: each key is `form.<Key>` with that component's own props.
  * Both are **defaulted**, which is what keeps the shorter spellings of this type compiling.
  *
- * `FormGroup` is this package's ({@link FormGroupComponentOf}), so its group carries `NativeField`.
- * It replaces TanStack's with `Omit` rather than by intersection: an intersection keeps TanStack's
- * signature as an overload, which an author would still reach. The cost is that `Omit` drops
+ * `Field` and `FormGroup` are this package's — `Field` binds an author's own control
+ * ({@link FormPrimitives}), and `FormGroup` ({@link FormGroupComponentOf}) hands a group carrying
+ * `Field` and `NativeField`. Both replace TanStack's with `Omit` rather than by intersection: an
+ * intersection keeps TanStack's signature as an overload, which an author would still reach — for
+ * `Field`, TanStack's own documentation example (`field.state.value`) would still compile in it. The cost is that `Omit` drops
  * `FormApi`'s `private` member, so the instance is no longer assignable to a TanStack parameter
  * typed `FormApi` — TanStack's `withFieldGroup`, `useFieldGroup` and `useFormGroup` all reject it.
  * That is why those three are this package's own (`field-groups.tsx`, `form-group.tsx`), taking
@@ -44,7 +46,7 @@ export type BoundForm<
 	TFormData,
 	TFields extends FormFieldRegistry = AllFormFieldSlots,
 	TComponents extends FormComponentRegistry = AllFormComponents,
-> = Omit<TForm, 'FormGroup'> & { FormGroup: FormGroupComponentOf<TFormData> } & NativeMembers<TForm> &
+> = Omit<TForm, 'Field' | 'FormGroup'> & { FormGroup: FormGroupComponentOf<TFormData> } & NativeMembers<TForm> &
 	FormFieldComponents<TFormData, TFields> &
 	FormPrimitives<TFormData, TFields> &
 	TComponents

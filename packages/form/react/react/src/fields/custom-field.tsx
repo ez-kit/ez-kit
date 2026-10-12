@@ -1,10 +1,10 @@
 import { useRef } from 'react'
 
 import { BASE_FIELD_PROP_KEYS } from '../field-registry'
-import { fieldRenderProps } from '../field-render-props'
+import { fieldControlProps } from '../field-render-props'
 import { fieldValidators } from '../field-validate'
 
-import type { BindableForm, FieldValue } from '../bindable-form'
+import type { BindableForm } from '../bindable-form'
 import type { BaseFieldProps } from '../field-props'
 import type { CustomFieldRenderProps } from '../schema/registries'
 import type { ReactNode } from 'react'
@@ -67,8 +67,9 @@ function useStableAuthoredProps(props: Record<string, unknown>): Record<string, 
  *
  * It is the JSX counterpart of the `AppField` block `RenderNode` already hand-writes for a
  * schema document's custom field node, and hands the component the same values in the same
- * {@link CustomFieldRenderProps} shape: same binding through `fieldRenderProps`, same `value` /
- * `onChange`, same nested `props`. One component therefore serves both entry points.
+ * {@link CustomFieldRenderProps} shape: the same binding, `value` and `onChange` — assembled by
+ * `fieldControlProps`, which `form.Field` hands its own control too — and the same nested `props`.
+ * One component therefore serves both entry points.
  *
  * `disabled` is the one prop the two paths do not spell identically: `RenderNode` always
  * computes a boolean — `false` when the node declares no `disabledWhen` — while a call site
@@ -98,14 +99,7 @@ export function createCustomField(
 			>
 				{(field) => (
 					<Component
-						{...fieldRenderProps(field, typeId, { label, description, disabled, required, validate })}
-						value={field.state.value}
-						onChange={(value: unknown) => {
-							// A custom field's value type is the author's, and `FieldValue` enumerates the
-							// built-in ones — the same cast `RenderNode`'s custom branch makes, for the
-							// same reason.
-							field.handleChange(value as FieldValue)
-						}}
+						{...fieldControlProps(field, typeId, { label, description, disabled, required, validate })}
 						props={authored}
 					/>
 				)}
