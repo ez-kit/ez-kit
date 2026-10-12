@@ -1,7 +1,5 @@
 ---
 '@ez-kit/form-react': minor
-'@ez-kit/form-shadcn': minor
-'@ez-kit/form-heroui': minor
 ---
 
 `createForm` rejects a field or component registered under a name the form instance already owns

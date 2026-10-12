@@ -3,6 +3,8 @@ import { describe, expect, expectTypeOf, it } from 'vitest'
 import { createForm } from './create-form'
 import { testComponents, testFields } from './test-kit'
 
+import type { FormComponentRegistry } from './contract'
+import type { FormFieldRegistry } from './field-registry'
 import type { ReservedKeyGuard, SharedKeyGuard } from './reserved-keys'
 
 const Noop = () => null
@@ -57,6 +59,13 @@ describe('reserved keys', () => {
 		expect(() => createForm({ fields: testFields, components: testComponents })).not.toThrow()
 	})
 
+	it('accepts literal components beside a fields registry typed by its bound', () => {
+		const wideFields: FormFieldRegistry = { RatingField: Noop }
+		const wideComponents: FormComponentRegistry = { SaveBar: Noop }
+		expect(() => createForm({ fields: wideFields, components: { SaveBar: Noop } })).not.toThrow()
+		expect(() => createForm({ fields: { RatingField: Noop }, components: wideComponents })).not.toThrow()
+	})
+
 	/**
 	 * The `@ts-expect-error` cases above only say *some* error fires. These pin that it is the
 	 * guard's — a reserved or shared key maps to its message, and nothing else maps at all.
@@ -75,5 +84,9 @@ describe('reserved keys', () => {
 		expectTypeOf<SharedKeyGuard<Record<string, unknown>, Record<string, unknown>>>().toEqualTypeOf<
 			Record<never, never>
 		>()
+		expectTypeOf<SharedKeyGuard<Record<string, unknown>, { RatingField: unknown }>>().toEqualTypeOf<
+			Record<never, never>
+		>()
+		expectTypeOf<SharedKeyGuard<{ SaveBar: unknown }, Record<string, unknown>>>().toEqualTypeOf<Record<never, never>>()
 	})
 })

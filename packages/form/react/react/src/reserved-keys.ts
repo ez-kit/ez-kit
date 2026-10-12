@@ -18,36 +18,29 @@ import type { AppFieldExtendedReactFormApi } from '@tanstack/react-form'
  * public members — a TypeScript-`private` field of `FormApi` is still on the object at runtime and
  * is not in this list.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- only the key set of the instance type is read
+type AnyArg = any
+
 export type ReservedFormKey =
 	| keyof AppFieldExtendedReactFormApi<
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- only the key set is read
-			any,
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- only the key set is read
-			any,
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- only the key set is read
-			any,
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- only the key set is read
-			any,
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- only the key set is read
-			any,
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- only the key set is read
-			any,
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- only the key set is read
-			any,
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- only the key set is read
-			any,
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- only the key set is read
-			any,
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- only the key set is read
-			any,
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- only the key set is read
-			any,
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- only the key set is read
-			any,
+			AnyArg,
+			AnyArg,
+			AnyArg,
+			AnyArg,
+			AnyArg,
+			AnyArg,
+			AnyArg,
+			AnyArg,
+			AnyArg,
+			AnyArg,
+			AnyArg,
+			AnyArg,
 			NoInjectedComponents,
 			NoInjectedComponents
 	  >
 	| keyof FormPrimitives<unknown>
+	// Listed by hand until these members exist on the instance — `NativeField` in stage 3,
+	// `Steps` / `Step` in stage 6 — and derived from their types from then on.
 	| 'NativeField'
 	| 'Steps'
 	| 'Step'
@@ -142,16 +135,18 @@ export type ReservedKeyGuard<T> = {
 /**
  * Type-level guard: each key of `TComponents` that `TFields` also names must be this message.
  *
- * Only literal keys count: a registry typed by its bound (`Record<string, …>`) names no key, and
- * without the `string extends K` filter its index signature would match the other's and turn every
- * component into an error.
+ * Only literal keys on **both** sides count: a registry typed by its bound (`Record<string, …>`)
+ * names no key, and its index signature would otherwise match every key of the other registry and
+ * turn each component into an error. Such a registry is still checked at runtime.
  */
 export type SharedKeyGuard<TComponents, TFields> = {
 	[K in keyof TComponents as K extends string
 		? string extends K
 			? never
-			: K extends keyof TFields
-				? K
-				: never
+			: string extends keyof TFields
+				? never
+				: K extends keyof TFields
+					? K
+					: never
 		: never]: `Error: "${K & string}" is registered in both fields and components`
 }
