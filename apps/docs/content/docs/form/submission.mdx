@@ -59,13 +59,13 @@ Reaching for `form.Subscribe` here rather than reading `form.state.isSubmitting`
 </form.Submit>
 ```
 
-| Key            | Type                  | Notes                                                                                                          |
-| -------------- | --------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `canSubmit`    | `boolean`             | The form's own answer to "would submitting be meaningful right now" — see above.                               |
-| `isSubmitting` | `boolean`             | True from the moment validation passes until the handler settles.                                              |
-| `isDirty`      | `boolean`             | Whether any value differs from its default.                                                                    |
-| `formErrors`   | `string[]`            | The form-level errors as display strings. Field-level issues are not among them.                               |
-| `submit`       | `() => Promise<void>` | `form.handleSubmit`. A control built on it works outside a `<form>` element too, where a submit button cannot. |
+| Key            | Type                  | Notes                                                                                                                                                    |
+| -------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `canSubmit`    | `boolean`             | The form's own answer to "would submitting be meaningful right now" — see above.                                                                         |
+| `isSubmitting` | `boolean`             | True from the moment validation passes until the handler settles.                                                                                        |
+| `isDirty`      | `boolean`             | Whether the user has changed any field. It stays `true` after the value is changed back; to compare with the defaults, read `form.state.isDefaultValue`. |
+| `formErrors`   | `string[]`            | The form-level errors as display strings. Field-level issues are not among them.                                                                         |
+| `submit`       | `() => Promise<void>` | `form.handleSubmit`. A control built on it works outside a `<form>` element too, where a submit button cannot.                                           |
 
 ### Outside the `<form>` element
 

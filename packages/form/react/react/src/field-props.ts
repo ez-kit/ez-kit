@@ -396,6 +396,11 @@ export type SubmitButtonProps = {
 export type SubmitRenderProps = {
 	canSubmit: boolean
 	isSubmitting: boolean
+	/**
+	 * Whether the user has modified at least one field — TanStack's `isDirty`. It stays `true` after
+	 * a value is changed back to its default; whether the values equal the defaults is
+	 * `form.state.isDefaultValue`.
+	 */
 	isDirty: boolean
 	/** The form-level errors as display strings; field-level issues are not among them. */
 	formErrors: string[]
