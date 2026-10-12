@@ -18,7 +18,7 @@ import { createTextareaField } from './fields/textarea-field'
 import type { BindableForm } from './bindable-form'
 import type { ArrayFieldSlot, FormFieldSlots } from './contract'
 import type { FormFieldComponents, FormPrimitives } from './field-props'
-import type { FormFieldRegistry, LAYOUT_COMPONENT_KEYS } from './field-registry'
+import type { FormFieldRegistry, PRIMITIVE_KEYS } from './field-registry'
 import type { CustomFieldRenderProps } from './schema/registries'
 import type { ReactNode } from 'react'
 
@@ -102,7 +102,7 @@ export function buildFieldComponents<TFormData>(
 	}
 
 	/**
-	 * The primitives, anchored to {@link LAYOUT_COMPONENT_KEYS} **before** the cast below.
+	 * The primitives, anchored to {@link PRIMITIVE_KEYS} **before** the cast below.
 	 *
 	 * `as unknown as` erases checking on everything it covers, so a check that is to mean anything
 	 * has to sit on a sub-expression outside it. With the `satisfies` here, a third primitive fails
@@ -117,7 +117,7 @@ export function buildFieldComponents<TFormData>(
 		// to the entry, so the component needs the finished record — including, for a nested
 		// array, itself.
 		Array: () => null,
-	} satisfies Record<keyof typeof LAYOUT_COMPONENT_KEYS, unknown>
+	} satisfies Record<keyof typeof PRIMITIVE_KEYS, unknown>
 
 	const fieldComponents = { ...built, ...primitives } as unknown as FormFieldComponents<TFormData> &
 		FormPrimitives<TFormData>

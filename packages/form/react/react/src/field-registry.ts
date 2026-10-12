@@ -109,7 +109,7 @@ export function fieldTypeIdFor(key: string): string {
  * hand-written list that drifts from the builder: adding a primitive there is a compile error
  * here. `ArrayField` is not among them: it is a registry key ({@link BESPOKE_FIELD_KEYS}).
  */
-export const LAYOUT_COMPONENT_KEYS = {
+export const PRIMITIVE_KEYS = {
 	Submit: true,
 	Array: true,
 } satisfies Record<keyof FormPrimitives<unknown>, true>

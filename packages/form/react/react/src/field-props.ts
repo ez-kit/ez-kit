@@ -1,6 +1,6 @@
 import type { BoundFieldApi } from './bindable-form'
 import type { AllFormFieldSlots, FormFieldSlots } from './contract'
-import type { FormFieldRegistry, LAYOUT_COMPONENT_KEYS } from './field-registry'
+import type { FormFieldRegistry, PRIMITIVE_KEYS } from './field-registry'
 import type { FieldValidateProps } from './field-validate'
 import type {
 	ArrayItemOf,
@@ -220,7 +220,7 @@ export type SliderFieldProps<TFormData> = BaseFieldProps<TFormData, number> & {
  * addressed relative to the entry like a field. The registered `components` are not on an entry
  * either; they read the form from context and have no path of their own.
  */
-type EntryUnscopedKey = Exclude<keyof typeof LAYOUT_COMPONENT_KEYS, 'Array'>
+type EntryUnscopedKey = Exclude<keyof typeof PRIMITIVE_KEYS, 'Array'>
 
 /**
  * What one entry of a repeatable group hands the author.
