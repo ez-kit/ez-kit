@@ -190,8 +190,8 @@ describe('withForm — types', () => {
 })
 
 /**
- * `withFieldGroup`'s render prop receives a **group** API, which correctly carries no flat
- * field components — spec §12 calls that native-`form.Field` territory. What has to hold is
+ * `withFieldGroup`'s render prop receives a **group** API: a group carries TanStack's `Field`
+ * (stage 4 makes it ours) and `NativeField`, and no flat fields (stage 5). What has to hold is
  * that the component it returns still accepts a kit form instance as its parent `form`.
  */
 describe('withFieldGroup — types', () => {
@@ -200,6 +200,7 @@ describe('withFieldGroup — types', () => {
 			defaultValues: { city: '' },
 			render: ({ group }) => {
 				expectTypeOf(group.Field).toBeFunction()
+				expectTypeOf(group.NativeField).toBeFunction()
 
 				return null
 			},

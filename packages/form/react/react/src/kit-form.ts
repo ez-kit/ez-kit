@@ -1,6 +1,7 @@
 import type { AllFormComponents, AllFormFieldSlots, FormComponentRegistry } from './contract'
 import type { FormFieldComponents, FormPrimitives } from './field-props'
 import type { FormFieldRegistry } from './field-registry'
+import type { FormGroupComponentOf } from './group-types'
 import type { FormAsyncValidateOrFn, FormValidateOrFn } from '@ez-kit/form-core'
 import type { AppFieldExtendedReactFormApi, FieldComponent } from '@tanstack/react-form'
 
@@ -48,14 +49,21 @@ export type NativeFieldOf<TFormData> = FieldComponent<
  * instance under its own key, typed from the phantoms `defineFieldType` wrote. `TComponents` is
  * the `components` bag, attached as-is: each key is `form.<Key>` with that component's own props.
  * Both are **defaulted**, which is what keeps the shorter spellings of this type compiling.
+ *
+ * `FormGroup` is this package's ({@link FormGroupComponentOf}), so its group carries `NativeField`.
+ * It replaces TanStack's with `Omit` rather than by intersection: an intersection keeps TanStack's
+ * signature as an overload, which an author would still reach. The cost is that `Omit` drops
+ * `FormApi`'s `private` member, so the instance is no longer assignable to a TanStack parameter
+ * typed `FormApi` — TanStack's `withFieldGroup`, `useFieldGroup` and `useFormGroup` all reject it.
+ * That is why those three are this package's own (`field-groups.tsx`, `form-group.tsx`), taking
+ * the instance as `FormProvider` does. `NativeMembers` reads `Field` from the un-omitted `TForm`.
  */
 export type BoundForm<
 	TForm,
 	TFormData,
 	TFields extends FormFieldRegistry = AllFormFieldSlots,
 	TComponents extends FormComponentRegistry = AllFormComponents,
-> = TForm &
-	NativeMembers<TForm> &
+> = Omit<TForm, 'FormGroup'> & { FormGroup: FormGroupComponentOf<TFormData> } & NativeMembers<TForm> &
 	FormFieldComponents<TFormData, TFields> &
 	FormPrimitives<TFormData, TFields> &
 	TComponents

@@ -9,6 +9,8 @@ export type { SchemaFormBundle } from './create-schema-form'
 export type { FieldTypeDefinition, FormFieldRegistry } from './field-registry'
 export type { KitFormBlock, KitWithFormProps } from './composition'
 export type { FieldValidateProps } from './field-validate'
+export type { FieldGroupOptions } from './field-groups'
+export type { FieldGroupInstance, FormGroupInstance, FormGroupProps } from './group-types'
 export type { AnyFormInstance, FormContextApi } from './form-context'
 export type { FormInstance } from './form-instance'
 export type { AnyFormProps, FormControlledProps, FormProps, FormUncontrolledProps } from './form-props'
@@ -145,10 +147,11 @@ export type {
 	SubmitNode,
 } from '@ez-kit/form-core'
 
-// Spec §12: the group hooks are re-exported verbatim — they yield a group API, which
-// correctly carries no injected field components, so unlike `withForm` they need no
-// retyping. Inside a group the fields are written with the native `form.Field` / `AppField`.
+// The group hooks are the package's own since the instance's `FormGroup` (and `Field`) is retyped
+// with `Omit`, which TanStack's hooks no longer accept; each group carries `NativeField`.
+export { useFieldGroup } from './field-groups'
+export { useFormGroup } from './form-group'
 // `useSelector` is re-exported so an app reads the form's store through the same TanStack copy the
 // form uses and never installs TanStack itself — a second copy would be a second store, and this
 // package owns the version.
-export { useFieldGroup, useFormGroup, useSelector } from '@tanstack/react-form'
+export { useSelector } from '@tanstack/react-form'

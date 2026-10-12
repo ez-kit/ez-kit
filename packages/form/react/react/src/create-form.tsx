@@ -5,8 +5,10 @@ import { useMemo } from 'react'
 
 import { buildFieldComponents } from './build-field-components'
 import { createFieldBinding, nativeFieldOf } from './field-binding'
+import { withFieldGroup } from './field-groups'
 import { deriveFieldTypeIds } from './field-registry'
 import { FormProvider } from './form-context'
+import { createFormGroup } from './form-group'
 import { splitFormProps } from './form-options'
 import { FormShell } from './form-shell'
 import { NO_INJECTED_COMPONENTS } from './kit-form'
@@ -18,6 +20,7 @@ import type { FormComponentRegistry, FormComponents, FormElementProps, FormField
 import type { BuiltInFieldKey, PropsOf, ValueOf } from './field-props'
 import type { FormFieldRegistry } from './field-registry'
 import type { AnyFormInstance } from './form-context'
+import type { FormInstance } from './form-instance'
 import type { FormControlledProps, AnyFormProps, FormUncontrolledImplProps, FormUncontrolledProps } from './form-props'
 import type { KitFormApi } from './kit-form'
 import type { ReservedKeyGuard, SharedKeyGuard } from './reserved-keys'
@@ -213,11 +216,7 @@ export function createFormInternals<TFields extends FormFieldRegistry, TComponen
 	const fieldTypeIds = deriveFieldTypeIds(fields)
 
 	const { fieldContext, formContext } = createFormHookContexts()
-	const {
-		useAppForm,
-		withForm: tanstackWithForm,
-		withFieldGroup,
-	} = createFormHook({
+	const { useAppForm, withForm: tanstackWithForm } = createFormHook({
 		fieldContext,
 		formContext,
 		fieldComponents: NO_INJECTED_COMPONENTS,
@@ -281,6 +280,13 @@ export function createFormInternals<TFields extends FormFieldRegistry, TComponen
 			return { NativeField, AppField: createFieldBinding(NativeField) }
 		}, [form])
 
+		// The instance's `FormGroup` is this package's, so its group carries `NativeField`. It reads
+		// `form.NativeField` when a group renders, which is after the assign below.
+		const FormGroup = useMemo(
+			() => createFormGroup(form as unknown as FormInstance<TFormData, NoRegistry, NoRegistry>),
+			[form],
+		)
+
 		// The binders read `form.AppField` when they render — after the assign below — so they
 		// bind through the seam without being handed it.
 		const fieldComponents = useMemo(
@@ -295,7 +301,7 @@ export function createFormInternals<TFields extends FormFieldRegistry, TComponen
 		// components go on as-is — they read the form from context, so nothing binds them.
 		return useMemo(
 			() =>
-				Object.assign(form, native, fieldComponents, components) as unknown as KitFormApi<
+				Object.assign(form, native, { FormGroup }, fieldComponents, components) as unknown as KitFormApi<
 					TFormData,
 					TOnMount,
 					TOnChange,
@@ -311,7 +317,7 @@ export function createFormInternals<TFields extends FormFieldRegistry, TComponen
 					TFields,
 					TComponents
 				>,
-			[form, native, fieldComponents],
+			[form, native, FormGroup, fieldComponents],
 		)
 	}
 
@@ -547,10 +553,7 @@ export function createFormInternals<TFields extends FormFieldRegistry, TComponen
 		>
 	}
 
-	// `withFieldGroup` needs no retyping and is re-exported as TanStack builds it: its render
-	// prop receives a **group** API, which correctly carries no flat field components (spec
-	// §12 — native `form.Field` territory), and the parent `form` prop of the component it
-	// returns already accepts a `KitFormApi`, that type being an intersection over TanStack's.
+	// The bundle's `withFieldGroup` is the package's own (`field-groups.tsx`).
 	return {
 		bundle: { useForm, Form, FormProvider, withForm, withFieldGroup },
 		internals: { useForm, FormElement, fields, components, fieldTypeIds },
