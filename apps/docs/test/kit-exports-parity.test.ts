@@ -12,6 +12,9 @@ import { kitExports } from './kit-exports-parity/exports-of'
  * first divergence found was in types only (`ArrayFieldScope`, `ArrayItemScope`, `ArrayNode`).
  *
  * A legitimate difference goes in `ONLY_IN`, with the reason. There is none today.
+ *
+ * The kits' React peer ranges do differ (`>=18` shadcn, `>=19` heroui, because HeroUI v3 requires
+ * 19), but that is a manifest difference, not an export one.
  */
 const ONLY_IN: Record<'shadcn' | 'heroui', Record<string, string>> = { shadcn: {}, heroui: {} }
 

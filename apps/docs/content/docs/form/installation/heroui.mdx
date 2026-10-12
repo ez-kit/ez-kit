@@ -10,7 +10,7 @@ pnpm add @ez-kit/form-heroui @heroui/react @heroui/styles
 ```
 
 `@heroui/react` and `@heroui/styles` (v3) are **peer dependencies**, as are `react` and
-`react-dom` (18 or 19). HeroUI is peer rather than bundled on purpose: it is built on React
+`react-dom` (19 — HeroUI v3 requires it). HeroUI is peer rather than bundled on purpose: it is built on React
 Aria, whose fields talk to their controls through React context. A second, differently
 versioned copy of `@heroui/react` in your tree would create a second set of contexts and the
 compositions would break in ways that are hard to trace.

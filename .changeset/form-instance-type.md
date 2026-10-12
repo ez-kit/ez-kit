@@ -8,7 +8,10 @@ Add `FormInstance<TValues>`, the one public type for a form instance. `KitFormAp
 `RendererForm` and `BoundFieldApi` are no longer exported: write `FormInstance<Values>` where you
 wrote `KitFormApi<Values, …twelve parameters…>`.
 
-`BoundFieldApi` has no new name: to name an array scope's `field`, write `ArrayScope<Item>['field']`.
-The controlled `FormRenderer`'s `form` prop is now a `FormInstance` rather than a structural slice of
+An app with custom fields writes `FormInstance<Values, Fields>` where it wrote
+`KitFormApi<Values, …twelve parameters…, Fields>`.
+
+`BoundFieldApi` has no new name: to name an array scope's `field`, write
+`ArrayFieldScope<Item>['field']`. The controlled `SchemaForm`'s `form` prop is now a `FormInstance` rather than a structural slice of
 one: every instance `useForm` returns is still accepted, but a hand-built object carrying only
 `handleSubmit` and the field components no longer is.

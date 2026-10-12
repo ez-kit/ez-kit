@@ -10,7 +10,7 @@ injects, plus `data-*` attributes for that kit's CSS to target. Install a kit pa
 
 ## The idea
 
-`createForm({ components })` returns `{ useForm, Form, SchemaForm, withForm, withFieldGroup }`. `<Form>` is the `<form>` element:
+`createForm({ components, fields })` returns `{ useForm, Form, SchemaForm, withForm, withFieldGroup }`. `<Form>` is the `<form>` element:
 give it the options TanStack's `useForm` takes and it hands you an instance that is a
 **superset** of TanStack's — flat fields on top, the whole native API untouched underneath.
 
@@ -107,12 +107,15 @@ hand-written one produce identical DOM.
 ```tsx
 <SchemaForm
 	schema={schema}
-	fields={{ rating: RatingField }} // custom field kinds, by node `type`
 	blocks={{ 'promo-banner': Promo }} // value-less markup, by node `component`
 	rules={{ 'ru-inn': isValidInn }} // named validation rules
 	onSubmit={({ value }) => save(value)}
 />
 ```
+
+Custom field kinds are not a prop: register them once on `createForm({ components, fields })`
+and a node's `type` reaches them (`RatingField` answers to `{ type: 'rating' }`), from JSX and from
+a document alike.
 
 It takes the same two modes as `<Form>`: pass `form` and it binds into an instance you own;
 pass `useForm`'s options and it owns the instance. Only in that second mode can it own the

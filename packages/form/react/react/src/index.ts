@@ -141,7 +141,7 @@ export type {
 // retyping. Inside a group the fields are written with the native `form.Field` / `AppField`.
 // `useStore` is re-exported so an app that reads the store outside a component never installs
 // TanStack itself — a second copy would be a second store, and this package owns the version.
-// TanStack Store now marks it a deprecated alias of `useSelector`; it is the name spec 009 (D9)
-// and the docs use, so the alias is re-exported as is rather than renamed here.
+// TanStack Store now marks it a deprecated alias of `useSelector`; it is re-exported
+// as is, so an app reads the store through the same TanStack copy the form uses.
 // eslint-disable-next-line @typescript-eslint/no-deprecated -- deliberate, see above
 export { useFieldGroup, useFormGroup, useStore } from '@tanstack/react-form'

@@ -42,6 +42,13 @@ describe('form package graph', () => {
 		expect(manifest('core').dependencies?.['@tanstack/form-core']).toBeUndefined()
 	})
 
+	it('pins both TanStack packages in @ez-kit/form-react to one exact, identical version', () => {
+		const deps = manifest('react/react').dependencies ?? {}
+		const [reactForm, formCore] = TANSTACK.map((name) => deps[name])
+		expect(reactForm).toMatch(/^\d+\.\d+\.\d+$/)
+		expect(formCore).toBe(reactForm)
+	})
+
 	it.each(KIT_DIRS)('keeps TanStack and form-core out of %s', (dir) => {
 		const kit = manifest(dir)
 		for (const section of ['dependencies', 'peerDependencies', 'devDependencies'] as const) {

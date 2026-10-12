@@ -23,7 +23,7 @@ const RatingField = defineFieldType<{ max: number }, number>()(({ value, onChang
 	/>
 ))
 
-export const { useForm, Form, FormRenderer, withForm } = createForm({
+export const { useForm, Form, SchemaForm, withForm } = createForm({
 	components: formComponents,
 	fields: { ...formFieldSlots, RatingField },
 })
@@ -68,15 +68,15 @@ should never have to call the factory.
 missing slot with a warn-once placeholder still ships, but it is for JavaScript consumers and
 partially-written kits — a TypeScript kit gets a compile error instead of twelve blank fields.
 
-**`FormRenderer`'s `fields` prop is gone.** Custom field kinds are registered at the factory, which
+**`SchemaForm`'s `fields` prop is gone.** Custom field kinds are registered at the factory, which
 is now the single registration site, so a per-form registry would have been a second spelling of the
 same thing keyed differently (`RatingField` there, `rating` here). `blocks` is unchanged — a block
 carries no binding and no field kind.
 
 **`FormBundle` is now generic** over the registry, defaulted, so the bare spelling keeps working.
-`FormFieldComponents`, `KitFormApi`, `BoundForm`, `RendererForm` and the array scope types likewise
-gained a trailing defaulted parameter; every existing one-argument spelling compiles unchanged and
-keeps meaning "the kit's twelve".
+`FormFieldComponents`, `FormInstance` and the array scope types (`ArrayFieldScope`,
+`ArrayItemScope`) likewise gained a trailing defaulted parameter; every existing one-argument
+spelling compiles unchanged and keeps meaning "the kit's twelve".
 
 ## Also in this release
 

@@ -60,7 +60,7 @@ export type OptionSourceInput = {
 	 * field that is not searchable.
 	 *
 	 * Additive: a source written before this key existed simply ignores it, which is why
-	 * {@link OptionSource} could grow the searchable form without breaking anyone.
+	 * `OptionSource` (from `@ez-kit/form-react`) could grow the searchable form without breaking anyone.
 	 *
 	 * It arrives **raw** — every keystroke, from the first character. Debouncing and a
 	 * minimum-length gate are the source's job for now, and belong inside it next to the

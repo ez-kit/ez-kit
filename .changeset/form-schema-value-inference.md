@@ -5,7 +5,7 @@
 '@ez-kit/form-heroui': minor
 ---
 
-A schema now carries its own value type, so `FormRenderer`'s `onSubmit` no longer needs
+A schema now carries its own value type, so `SchemaForm`'s `onSubmit` no longer needs
 `defaultValues` to type `value`.
 
 ```tsx
@@ -16,7 +16,7 @@ const schema = defineFormSchema<Order>()({
 
 // before: `value` was `unknown` here — only `defaultValues` could pin it
 // after:  `value` is `Order`
-<FormRenderer schema={schema} onSubmit={({ value }) => save(value)} />
+<SchemaForm schema={schema} onSubmit={({ value }) => save(value)} />
 ```
 
 `TValues` appeared in a node only inside `DeepKeysOfType<TValues, …>`, a conditional type no

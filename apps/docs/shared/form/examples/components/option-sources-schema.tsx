@@ -106,7 +106,7 @@ const schema = defineFormSchema<Address>()({
 			description: 'Reloads when the country changes — and the old city is cleared.',
 			placeholder: 'Pick a city',
 			// `dependsOn` is keyed by the source's parameter name, not by the field it reads —
-			// see `OptionSourceRef` in `packages/form/core/src/options-source.ts`. There is no live
+			// see `OptionSourceRef`, exported by the kit. There is no live
 			// value to pass here, unlike the JSX `optionsParams={{ domain: 'cities', country }}`:
 			// a document cannot hold one, so it names the path to read instead.
 			optionsFrom: { source: 'dictionary', params: { domain: 'cities' }, dependsOn: { country: 'country' } },

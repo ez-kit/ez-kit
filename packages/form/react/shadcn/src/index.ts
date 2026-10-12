@@ -111,8 +111,8 @@ export {
 	RESERVED_NODE_TYPES,
 	resolveText,
 	visibleFieldNames,
-	// TanStack Store marks `useStore` a deprecated alias of `useSelector`; it is re-exported under
-	// the name spec 009 (D9) and the docs use — see the same note in `@ez-kit/form-react`.
+	// TanStack Store marks `useStore` a deprecated alias of `useSelector`; it is re-exported so an
+	// app reads the store through the same TanStack copy the form uses — see `@ez-kit/form-react`.
 	// eslint-disable-next-line @typescript-eslint/no-deprecated -- deliberate, see above
 	useStore,
 	walkNodes,
