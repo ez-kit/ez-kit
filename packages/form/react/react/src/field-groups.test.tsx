@@ -282,3 +282,138 @@ describe('group APIs — types', () => {
 		expectTypeOf(Parent).toBeFunction()
 	})
 })
+
+type Pair = { first: string; second: string }
+type ListenValues = { shipping: Pair; rows: Pair[] }
+const LISTEN_DEFAULTS: ListenValues = { shipping: { first: '', second: '' }, rows: [{ first: '', second: '' }] }
+const CONFLICT = 'Conflicts with second'
+
+/** `first`'s validator: an error while the sibling `second` under the same prefix reads `bad`. */
+function conflictsWithSecond(prefix: string) {
+	return ({ fieldApi }: { fieldApi: { form: { state: { values: unknown } } } }): string | undefined => {
+		const values = fieldApi.form.state.values as ListenValues
+		const second = prefix === 'shipping' ? values.shipping.second : values.rows[0]?.second
+		return second === 'bad' ? CONFLICT : undefined
+	}
+}
+
+function ErrorInput({
+	field,
+}: {
+	field: {
+		name: string
+		state: { value: string; meta: { errors: unknown[] } }
+		handleChange: (value: string) => void
+	}
+}): ReactNode {
+	return (
+		<>
+			<NativeInput field={field} />
+			<span>{field.state.meta.errors.join(', ')}</span>
+		</>
+	)
+}
+
+describe('NativeField — listen-to names are relative too', () => {
+	it('re-validates a form-group field when the sibling it listens to changes', async () => {
+		const user = userEvent.setup()
+		function Case(): ReactNode {
+			const form = useForm({ defaultValues: LISTEN_DEFAULTS })
+			return (
+				<Form form={form}>
+					<form.FormGroup name='shipping'>
+						{(group) => (
+							<>
+								<group.NativeField
+									name='first'
+									validators={{ onChangeListenTo: ['second'], onChange: conflictsWithSecond('shipping') }}
+								>
+									{(field) => <ErrorInput field={field} />}
+								</group.NativeField>
+								<group.NativeField name='second'>{(field) => <NativeInput field={field} />}</group.NativeField>
+							</>
+						)}
+					</form.FormGroup>
+				</Form>
+			)
+		}
+		render(<Case />)
+
+		await user.type(screen.getByLabelText('shipping.second'), 'bad')
+		expect(screen.getByText(CONFLICT)).toBeInTheDocument()
+	})
+
+	it('re-validates an array-entry field when the sibling it listens to changes', async () => {
+		const user = userEvent.setup()
+		function Case(): ReactNode {
+			const form = useForm({ defaultValues: LISTEN_DEFAULTS })
+			return (
+				<Form form={form}>
+					<form.Array
+						name='rows'
+						newItem={{ first: '', second: '' }}
+					>
+						{({ items }) =>
+							items.map((item) => (
+								<div key={item.key}>
+									<item.NativeField
+										name='first'
+										validators={{ onChangeListenTo: ['second'], onChange: conflictsWithSecond('rows') }}
+									>
+										{(field) => <ErrorInput field={field} />}
+									</item.NativeField>
+									<item.NativeField name='second'>{(field) => <NativeInput field={field} />}</item.NativeField>
+								</div>
+							))
+						}
+					</form.Array>
+				</Form>
+			)
+		}
+		render(<Case />)
+
+		await user.type(screen.getByLabelText('rows[0].second'), 'bad')
+		expect(screen.getByText(CONFLICT)).toBeInTheDocument()
+	})
+
+	it('types the render prop field as the root form one: an absolute, string name', () => {
+		function Probe(): ReactNode {
+			const form = useForm({ defaultValues: LISTEN_DEFAULTS })
+			return (
+				<>
+					<form.FormGroup name='shipping'>
+						{(group) => (
+							<group.NativeField name='first'>
+								{(field) => {
+									expectTypeOf(field.name).toEqualTypeOf<string>()
+									expectTypeOf(field.state.value).toEqualTypeOf<string>()
+									return null
+								}}
+							</group.NativeField>
+						)}
+					</form.FormGroup>
+					<form.Array
+						name='rows'
+						newItem={{ first: '', second: '' }}
+					>
+						{({ items }) =>
+							items.map((item) => (
+								<item.NativeField
+									key={item.key}
+									name='first'
+								>
+									{(field) => {
+										expectTypeOf(field.name).toEqualTypeOf<string>()
+										expectTypeOf(field.state.value).toEqualTypeOf<string>()
+										return null
+									}}
+								</item.NativeField>
+							))
+						}
+					</form.Array>
+				</>
+			)
+		}
+		expectTypeOf(Probe).toBeFunction()
+	})
+})

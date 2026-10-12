@@ -1,8 +1,9 @@
 'use client'
 
-import { concatenatePaths } from '@tanstack/form-core'
 import { useFormGroup as useTanStackFormGroup } from '@tanstack/react-form'
 import { useMemo } from 'react'
+
+import { scopeFieldProps } from './field-scope'
 
 import type { NoRegistry } from './contract'
 import type { FormInstance } from './form-instance'
@@ -12,15 +13,13 @@ import type { ReactNode } from 'react'
 
 type NameScoped = (props: { name: string }) => ReactNode
 
-/** `Inner` with `name` read relative to `prefix` — `[0].label` under `tags` is `tags[0].label`. */
+/**
+ * `Inner` with its names read relative to `prefix` — `name` and the validators' listen-to lists
+ * ({@link scopeFieldProps}); `[0].label` under `tags` is `tags[0].label`.
+ */
 export function scopeName(Inner: NameScoped, prefix: string): NameScoped {
 	return function Scoped(props) {
-		return (
-			<Inner
-				{...props}
-				name={concatenatePaths(prefix, props.name)}
-			/>
-		)
+		return <Inner {...scopeFieldProps(props, prefix)} />
 	}
 }
 

@@ -10,3 +10,7 @@ through `fields`), and `form.FormGroup` and `useFormGroup` groups (names relativ
 `name`). `useFieldGroup`, `useFormGroup` and the bundle's `withFieldGroup` are now this package's own,
 taking the form instance `useForm` returns; they no longer accept a TanStack `FormApi` built
 elsewhere, nor a group as another group's `form`.
+
+On a group and on an array entry, `NativeField`'s `name` and its validators' `onChangeListenTo` /
+`onBlurListenTo` are relative; the `field` its render prop receives is the root form's, so
+`field.name` is the absolute path (`address.city`).

@@ -1,4 +1,4 @@
-import type { NativeFieldOf, NoInjectedComponents } from './kit-form'
+import type { NoInjectedComponents } from './kit-form'
 import type {
 	DeepKeys,
 	DeepValue,
@@ -8,7 +8,7 @@ import type {
 	FormGroupOptions,
 	FormGroupValidateOrFn,
 } from '@tanstack/form-core'
-import type { AppFieldExtendedReactFieldGroupApi } from '@tanstack/react-form'
+import type { AppFieldExtendedReactFieldGroupApi, LensFieldComponent } from '@tanstack/react-form'
 import type { ReactNode } from 'react'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TanStack's validator parameters, left open as FormInstance leaves them
@@ -35,8 +35,12 @@ type NativeFieldGroup<TGroup, TSubmitMeta> = AppFieldExtendedReactFieldGroupApi<
 
 /** What `withFieldGroup`'s `render` and `useFieldGroup` hand back: TanStack's field group, plus `NativeField`. */
 export type FieldGroupInstance<TGroup, TSubmitMeta = never> = NativeFieldGroup<TGroup, TSubmitMeta> & {
-	/** TanStack's render-prop field, named through the group's `fields` (a path or a map). */
-	NativeField: NativeFieldGroup<TGroup, TSubmitMeta>['Field']
+	/**
+	 * TanStack's render-prop field, named through the group's `fields` (a path or a map). Named as
+	 * TanStack's `LensFieldComponent` directly rather than as the group's `Field`, so retyping
+	 * `Field` cannot change it.
+	 */
+	NativeField: LensFieldComponent<TGroup, TSubmitMeta>
 }
 
 type GroupValidator<TFormData, TName extends DeepKeys<TFormData>> =
@@ -73,8 +77,12 @@ export type FormGroupInstance<TFormData, TName extends DeepKeys<TFormData>> = Fo
 	Open,
 	Open
 > & {
-	/** TanStack's render-prop field, with `name` relative to the group's own. */
-	NativeField: NativeFieldOf<DeepValue<TFormData, TName>>
+	/**
+	 * TanStack's render-prop field, with `name` (and the validators' listen-to lists) relative to the
+	 * group's own. Typed as TanStack's `LensFieldComponent`, as a field group's is: the `field` its
+	 * render prop receives is the root form's, so `field.name` is the absolute path, typed `string`.
+	 */
+	NativeField: LensFieldComponent<DeepValue<TFormData, TName>, Open>
 }
 
 /**

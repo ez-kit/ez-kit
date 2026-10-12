@@ -1,6 +1,7 @@
 import { formatFieldErrors } from '@ez-kit/form-core'
 import { createContext, useCallback, useContext, useRef } from 'react'
 
+import { scopeFieldProps } from '../field-scope'
 import { fieldValidators } from '../field-validate'
 
 import type { BindableForm, BoundFieldApi } from '../bindable-form'
@@ -15,8 +16,8 @@ import type {
 	FormPrimitives,
 } from '../field-props'
 import type { FieldValidateProps } from '../field-validate'
-import type { NativeFieldOf } from '../kit-form'
 import type { ArrayKeys } from '@ez-kit/form-core'
+import type { LensFieldComponent } from '@tanstack/react-form'
 import type { ReactNode } from 'react'
 
 const ARRAY_FIELD_TYPE = 'array'
@@ -41,8 +42,9 @@ const ARRAY_FIELD_TYPE = 'array'
 const ArrayKeyOrderContext = createContext<string>('')
 
 /**
- * Wraps one field component so its `name` prop is read as **item-relative** and handed on
- * resolved.
+ * Wraps one field component so its `name` prop — and, on `NativeField`, the validators'
+ * `onChangeListenTo` / `onBlurListenTo` — is read as **item-relative** and handed on resolved
+ * ({@link scopeFieldProps}).
  *
  * `getPath` is read during render rather than closed over as a plain string, so a single
  * `Scoped` instance stays valid across a reorder that renumbers its entry — the entry's own
@@ -62,13 +64,7 @@ function scopeComponent<TProps extends { name: string }>(
 	return function Scoped(props: TProps): ReactNode {
 		useContext(ArrayKeyOrderContext)
 		const prefix = getPath()
-		const name = prefix === undefined ? props.name : `${prefix}.${props.name}`
-		return (
-			<Inner
-				{...props}
-				name={name}
-			/>
-		)
+		return <Inner {...(prefix === undefined ? props : scopeFieldProps(props, prefix))} />
 	}
 }
 
@@ -282,7 +278,7 @@ type ItemData = {
  * TanStack's `NativeField`.
  */
 type EntryFields = FormFieldComponents<unknown> &
-	Pick<FormPrimitives<unknown>, 'Array'> & { NativeField: NativeFieldOf<unknown> }
+	Pick<FormPrimitives<unknown>, 'Array'> & { NativeField: LensFieldComponent<unknown, unknown> }
 
 /** The frame `ArrayField` renders around the entries — everything but the entries themselves. */
 type ArrayFrameProps = Omit<ArrayFieldRenderProps, 'children'>

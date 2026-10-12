@@ -2,7 +2,6 @@ import type { BoundFieldApi } from './bindable-form'
 import type { AllFormFieldSlots, FormFieldSlots } from './contract'
 import type { FormFieldRegistry, PRIMITIVE_KEYS } from './field-registry'
 import type { FieldValidateProps } from './field-validate'
-import type { NativeFieldOf } from './kit-form'
 import type {
 	ArrayItemOf,
 	ArrayKeys,
@@ -12,7 +11,11 @@ import type {
 	SelectOption,
 	TextInputType,
 } from '@ez-kit/form-core'
+import type { LensFieldComponent } from '@tanstack/react-form'
 import type { ReactNode } from 'react'
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- the root form's submit meta an entry's NativeField leaves open, as FormInstance does
+type Open = any
 
 /**
  * Consumer-facing props of the flat field components (`form.TextField`, …).
@@ -233,11 +236,14 @@ type EntryUnscopedKey = Exclude<keyof typeof PRIMITIVE_KEYS, 'Array'>
  * it — see {@link EntryUnscopedKey}.
  *
  * An entry carries `NativeField` too — TanStack's render-prop field, item-relative like the rest.
+ * It is typed as TanStack's own `LensFieldComponent`, as a field group's is: `name` (and the
+ * validators' listen-to lists) relative to the entry, while the `field` its render prop receives is
+ * the root form's — `field.name` is the absolute path, typed `string`.
  */
 export type ArrayItemScope<TItem, TFields extends FormFieldRegistry = AllFormFieldSlots> = Omit<
 	FormFieldComponents<TItem, TFields> & FormPrimitives<TItem, TFields>,
 	EntryUnscopedKey
-> & { NativeField: NativeFieldOf<TItem> } & {
+> & { NativeField: LensFieldComponent<TItem, Open> } & {
 	/**
 	 * A stable id for this entry, for React's `key`. **Never the index**: removing an entry from
 	 * the middle renumbers everything after it, and a keyed-by-index list would then reuse the
