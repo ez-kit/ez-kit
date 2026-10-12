@@ -59,8 +59,8 @@
 	],
 	"dependencies": {
 		"@ez-kit/form-core": "workspace:*",
-		"@tanstack/form-core": "^1.33.2",
-		"@tanstack/react-form": "^1.33.2"
+		"@tanstack/form-core": "1.33.2",
+		"@tanstack/react-form": "1.33.2"
 	},
 	"devDependencies": {
 		"@ez-kit/react18-env": "workspace:*",
