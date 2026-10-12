@@ -3,6 +3,7 @@ import { useReducer } from 'react'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { createForm } from './create-form'
+import { createSchemaForm } from './create-schema-form'
 import { defineFieldType } from './field-registry'
 import { testComponents, testFields, testFormElement } from './test-kit'
 
@@ -52,7 +53,7 @@ const CapturingTextField: FormFieldSlots['TextField'] = (props) => {
 	)
 }
 
-const { Form, SchemaForm } = createForm({
+const { Form, SchemaForm } = createSchemaForm({
 	FormElement: testFormElement,
 	fields: { ...testFields, TextField: CapturingTextField, NoteField },
 	components: testComponents,

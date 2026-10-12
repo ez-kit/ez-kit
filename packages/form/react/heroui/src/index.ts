@@ -34,6 +34,7 @@ export {
 export {
 	clampToGridRange,
 	createForm,
+	createSchemaForm,
 	defineFieldType,
 	FormFieldType,
 	FormOptionSources,

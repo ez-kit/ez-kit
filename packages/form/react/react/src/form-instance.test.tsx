@@ -1,6 +1,7 @@
 import { describe, expectTypeOf, it } from 'vitest'
 
 import { createForm } from './create-form'
+import { createSchemaForm } from './create-schema-form'
 import { defineFieldType } from './field-registry'
 import { testComponents, testFields, testFormElement } from './test-kit'
 
@@ -11,7 +12,7 @@ import type { ReactNode } from 'react'
 type Values = { email: string; age: number }
 const DEFAULTS: Values = { email: '', age: 0 }
 
-const { useForm, withForm, withFieldGroup, SchemaForm } = createForm({
+const { useForm, withForm, withFieldGroup, SchemaForm } = createSchemaForm({
 	FormElement: testFormElement,
 	fields: testFields,
 	components: testComponents,
@@ -171,7 +172,7 @@ describe('FormInstance — where the kit takes a form', () => {
 		const NoteField = defineFieldType<{ hint: string }, string>()(function Note(): ReactNode {
 			return null
 		})
-		const extended = createForm({
+		const extended = createSchemaForm({
 			FormElement: testFormElement,
 			fields: { ...testFields, NoteField },
 			components: testComponents,

@@ -10,7 +10,7 @@ injects, plus `data-*` attributes for that kit's CSS to target. Install a kit pa
 
 ## The idea
 
-`createForm({ components, fields })` returns `{ useForm, Form, SchemaForm, withForm, withFieldGroup }`. `<Form>` is the `<form>` element:
+`createForm({ components, fields })` returns `{ useForm, Form, FormProvider, withForm, withFieldGroup }`; `createSchemaForm` takes the same options and adds `SchemaForm`. `<Form>` is the `<form>` element:
 give it the options TanStack's `useForm` takes and it hands you an instance that is a
 **superset** of TanStack's — flat fields on top, the whole native API untouched underneath.
 
@@ -113,7 +113,7 @@ hand-written one produce identical DOM.
 />
 ```
 
-Custom field kinds are not a prop: register them once on `createForm({ components, fields })`
+Custom field kinds are not a prop: register them once on `createSchemaForm({ components, fields })`
 and a node's `type` reaches them (`RatingField` answers to `{ type: 'rating' }`), from JSX and from
 a document alike.
 
@@ -131,7 +131,7 @@ The format itself, `defineFormSchema` and the `parseFormSchema` trust boundary l
 Implement the two bags — `FormFieldSlots` and `FormComponents` — and hand them to `createForm`:
 
 ```tsx
-import { createForm } from '@ez-kit/form-react'
+import { createSchemaForm } from '@ez-kit/form-react'
 import type { FormComponents, FormFieldSlots } from '@ez-kit/form-react'
 
 const fields = {
@@ -158,7 +158,7 @@ const components = {
 	Wizard,
 } satisfies FormComponents
 
-export const { useForm, SchemaForm, withForm, withFieldGroup } = createForm({ components, fields })
+export const { useForm, SchemaForm, withForm, withFieldGroup } = createSchemaForm({ components, fields })
 ```
 
 `satisfies` on each bag turns a forgotten field into a compile error rather than a

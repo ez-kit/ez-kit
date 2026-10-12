@@ -1,9 +1,11 @@
 export { createForm } from './create-form'
+export { createSchemaForm } from './create-schema-form'
 export { defineFieldType } from './field-registry'
 export { FormProvider, useFormContext } from './form-context'
 export { FormOptionSources } from './options/source-context'
 
 export type { CreateFormOptions, FormBundle } from './create-form'
+export type { SchemaFormBundle } from './create-schema-form'
 export type { FieldTypeDefinition, FormFieldRegistry } from './field-registry'
 export type { KitFormBlock, KitWithFormProps } from './composition'
 export type { FieldValidateProps } from './field-validate'

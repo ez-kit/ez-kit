@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
-import { createForm } from './create-form'
+import { createSchemaForm } from './create-schema-form'
 import { FormOptionSources } from './options/source-context'
 import { testComponents, testFields, testFormElement } from './test-kit'
 
@@ -39,7 +39,7 @@ const COUNTRIES = [
 	{ label: 'Russia', value: 'ru' },
 ]
 
-const { useForm, Form, SchemaForm } = createForm({
+const { useForm, Form, SchemaForm } = createSchemaForm({
 	FormElement: testFormElement,
 	fields: testFields,
 	components: testComponents,

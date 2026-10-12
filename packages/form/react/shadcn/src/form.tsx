@@ -1,6 +1,6 @@
 'use client'
 
-import { createForm } from '@ez-kit/form-react'
+import { createForm, createSchemaForm } from '@ez-kit/form-react'
 
 import { ArrayField } from '@form-shadcn/blocks/array'
 import { DateField, DateRangeField } from '@form-shadcn/blocks/date'
@@ -19,7 +19,7 @@ import { CheckboxGroupField, MultiSelectField } from '@form-shadcn/blocks/multi-
 import { SelectField } from '@form-shadcn/blocks/select'
 import { Wizard } from '@form-shadcn/blocks/wizard'
 
-import type { AllFormFieldSlots, FormBundle, FormComponents } from '@ez-kit/form-react'
+import type { AllFormFieldSlots, FormBundle, FormComponents, SchemaFormBundle } from '@ez-kit/form-react'
 
 /**
  * The shadcn implementation of the UI contract, in the two bags `createForm` takes.
@@ -66,6 +66,7 @@ export const formComponents = {
  * does depend on both.
  */
 type KitFormBundle = FormBundle<typeof formFieldSlots, typeof formComponents>
+type KitSchemaFormBundle = SchemaFormBundle<typeof formFieldSlots, typeof formComponents>
 
 const bundle: KitFormBundle = createForm({
 	FormElement,
@@ -73,9 +74,17 @@ const bundle: KitFormBundle = createForm({
 	components: formComponents,
 })
 
+// A second bundle for `SchemaForm`: `createForm` no longer carries the schema renderer, so the
+// document-driven form comes from `createSchemaForm`, over the same three options.
+const schemaBundle: KitSchemaFormBundle = createSchemaForm({
+	FormElement,
+	fields: formFieldSlots,
+	components: formComponents,
+})
+
 export const useForm: KitFormBundle['useForm'] = bundle.useForm
 export const Form: KitFormBundle['Form'] = bundle.Form
-export const SchemaForm: KitFormBundle['SchemaForm'] = bundle.SchemaForm
+export const SchemaForm: KitSchemaFormBundle['SchemaForm'] = schemaBundle.SchemaForm
 export const withForm: KitFormBundle['withForm'] = bundle.withForm
 export const withFieldGroup: KitFormBundle['withFieldGroup'] = bundle.withFieldGroup
 

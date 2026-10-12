@@ -10,14 +10,6 @@ import { splitFormProps } from './form-options'
 import { FormShell } from './form-shell'
 import { NO_INJECTED_COMPONENTS } from './kit-form'
 import { assertNoReservedKeys, assertNoSharedKeys } from './reserved-keys'
-import { assertNoReservedFieldKeyCollision } from './schema/registries'
-import {
-	isSchemaFormControlled,
-	renderSchemaFields,
-	resolveSchemaValidators,
-	schemaDefaultValues,
-	stripHiddenValuesOnSubmit,
-} from './schema/schema-form'
 
 import type { BindableForm } from './bindable-form'
 import type { KitFormBlock, KitWithFormProps } from './composition'
@@ -27,13 +19,7 @@ import type { FormFieldRegistry } from './field-registry'
 import type { FormControlledProps, AnyFormProps, FormUncontrolledImplProps, FormUncontrolledProps } from './form-props'
 import type { KitFormApi } from './kit-form'
 import type { ReservedKeyGuard, SharedKeyGuard } from './reserved-keys'
-import type { CustomFieldRegistry, CustomFieldRenderProps } from './schema/registries'
-import type {
-	AnySchemaFormProps,
-	SchemaFormControlledProps,
-	SchemaFormUncontrolledImplProps,
-	SchemaFormUncontrolledProps,
-} from './schema/schema-form'
+import type { CustomFieldRenderProps } from './schema/registries'
 import type { FormAsyncValidateOrFn, FormOptions, FormValidateOrFn } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
 
@@ -167,18 +153,40 @@ export type CreateFormOptions<
  *     </>
  *   )}
  * </Form>
+ *
+ * `SchemaForm` is not here: a document-driven form comes from `createSchemaForm`, which takes the
+ * same options and returns this bundle plus `SchemaForm`. Keeping it out is what keeps the schema
+ * renderer out of an app that writes its forms in JSX.
  */
 export function createForm<
 	TFields extends FormFieldRegistry = NoRegistry,
 	TComponents extends FormComponentRegistry = NoRegistry,
 >(options: CreateFormOptions<TFields, TComponents> = {}) {
+	return createFormInternals<TFields, TComponents>(options).bundle
+}
+
+/**
+ * The body both factories share: the bundle `createForm` returns, plus the pieces
+ * `createSchemaForm` builds `SchemaForm` from. Not exported from the package.
+ *
+ * Called with **explicit** type arguments by both factories: their own `options` parameter
+ * already carries the checks, and inferring `TFields` again from a `TFields & Pick<…>` source
+ * can land on the intersection rather than on `TFields`.
+ *
+ * Nothing in here names the schema renderer, so a bundle reaching only `createForm` does not
+ * carry it.
+ */
+export function createFormInternals<TFields extends FormFieldRegistry, TComponents extends FormComponentRegistry>(
+	options: CreateFormOptions<TFields, TComponents>,
+) {
 	/**
 	 * Read once, here, so every consumer below — the field builder, the schema renderer and the
 	 * three `FormElement` call sites — sees the same component identities. Nothing is filled in:
 	 * a key that was not passed is not on the instance, and `SchemaForm` names what a document
 	 * needed and did not get.
 	 */
-	const FormElement = options.FormElement ?? DEFAULT_FORM_ELEMENT
+	const FormElement: ((props: FormElementProps) => ReactNode) | typeof DEFAULT_FORM_ELEMENT =
+		options.FormElement ?? DEFAULT_FORM_ELEMENT
 	const fields: FormFieldRegistry = options.fields ?? {}
 	const components: FormComponentRegistry & FormComponents = options.components ?? {}
 
@@ -191,23 +199,13 @@ export function createForm<
 	assertNoSharedKeys(fields, components)
 
 	/**
-	 * The same registry, re-keyed by the document id each component name derives — what the
-	 * schema renderer resolves a `{ type: 'rating' }` node against.
-	 *
-	 * Built once, here, never per render: the registry is static authored config, so a key
-	 * that derives a duplicate or reserved document id is a configuration error the app hears
-	 * about at startup rather than on the first document that happens to use it.
-	 *
-	 * This is the **only** field registration site — `SchemaForm` has no `fields` prop —
-	 * so a field registered on the factory is reachable from JSX as `form.RatingField` and
-	 * from a document as `{ type: 'rating' }`, and the two halves cannot disagree. The
-	 * built-in ids in here (`text`, `number`, …) are unreachable by construction:
-	 * `isCustomFieldNode` pulls them out before `RenderNode` ever consults this map, so a
-	 * replaced `TextField` still goes through its own bespoke binder.
+	 * Each component name's document id (`RatingField` → `rating`), derived here for **both**
+	 * factories: the registry is static authored config, so a key that derives a duplicate or
+	 * reserved document id is a configuration error the app hears about at startup — from
+	 * `createForm` too, which never reads a document — rather than on the first document that
+	 * happens to use it. `createSchemaForm` re-keys the registry by these ids.
 	 */
-	const customFieldsById: CustomFieldRegistry = Object.fromEntries(
-		Object.entries(deriveFieldTypeIds(fields)).map(([id, key]) => [id, fields[key] as CustomFieldRegistry[string]]),
-	)
+	const fieldTypeIds = deriveFieldTypeIds(fields)
 
 	const { fieldContext, formContext } = createFormHookContexts()
 	const {
@@ -430,156 +428,6 @@ export function createForm<
 	}
 
 	/**
-	 * Uncontrolled mode for `SchemaForm`, split out for the same reason as `UncontrolledForm`
-	 * — the hook must run unconditionally.
-	 */
-	function UncontrolledSchemaForm<
-		TFormData,
-		TOnMount extends undefined | FormValidateOrFn<TFormData>,
-		TOnChange extends undefined | FormValidateOrFn<TFormData>,
-		TOnChangeAsync extends undefined | FormAsyncValidateOrFn<TFormData>,
-		TOnBlur extends undefined | FormValidateOrFn<TFormData>,
-		TOnBlurAsync extends undefined | FormAsyncValidateOrFn<TFormData>,
-		TOnSubmit extends undefined | FormValidateOrFn<TFormData>,
-		TOnSubmitAsync extends undefined | FormAsyncValidateOrFn<TFormData>,
-		TOnDynamic extends undefined | FormValidateOrFn<TFormData>,
-		TOnDynamicAsync extends undefined | FormAsyncValidateOrFn<TFormData>,
-		TOnServer extends undefined | FormAsyncValidateOrFn<TFormData>,
-		TSubmitMeta,
-	>(
-		props: SchemaFormUncontrolledProps<
-			TFormData,
-			TOnMount,
-			TOnChange,
-			TOnChangeAsync,
-			TOnBlur,
-			TOnBlurAsync,
-			TOnSubmit,
-			TOnSubmitAsync,
-			TOnDynamic,
-			TOnDynamicAsync,
-			TOnServer,
-			TSubmitMeta
-		>,
-	): ReactNode {
-		const { schema, translate, keepHiddenValues, blocks, rules, form: _ignored, ...rest } = props
-		assertNoReservedFieldKeyCollision(blocks)
-		const { options, elementProps } = splitFormProps(rest)
-		// Spec §4.6: the schema's own `defaultValue` entries seed the form when the caller
-		// supplies none — theirs wins whenever they do.
-		const defaultValues = {
-			...schemaDefaultValues(schema),
-			...(options.defaultValues as Record<string, unknown> | undefined),
-		}
-		// Spec §7.4, §9.3: the schema's `validate` constraints drive `validators.onChange` /
-		// `onSubmit`, or the caller's own `validators` are used verbatim — never both. This
-		// only works because this component is the one calling `useForm` — same reason
-		// `stripHiddenValuesOnSubmit` below only exists in this mode.
-		//
-		// Memoised: `resolveSchemaValidators` re-walks the whole schema tree, and when the
-		// schema declares constraints it builds a brand-new `buildValidator` instance and a
-		// brand-new `{ onChange, onSubmit }` object each call. Without this, `useForm` would
-		// receive a differently-identitied `validators` value on every render — the same
-		// reason `fields` and the merged instance below are memoised.
-		const validators = useMemo(
-			() => resolveSchemaValidators(schema, options.validators, rules, translate),
-			[schema, options.validators, rules, translate],
-		)
-		// Spec §6: strip fields the schema currently hides out of the submitted value, unless
-		// the caller opted out with `keepHiddenValues`. This only works because this component
-		// is the one calling `useForm` — see `stripHiddenValuesOnSubmit`'s doc comment on why
-		// the controlled overload below cannot do the same.
-		const instance = useForm({
-			...options,
-			validators,
-			onSubmit: stripHiddenValuesOnSubmit(schema, options.onSubmit, keepHiddenValues),
-			defaultValues,
-		} as FormOptions<
-			TFormData,
-			TOnMount,
-			TOnChange,
-			TOnChangeAsync,
-			TOnBlur,
-			TOnBlurAsync,
-			TOnSubmit,
-			TOnSubmitAsync,
-			TOnDynamic,
-			TOnDynamicAsync,
-			TOnServer,
-			TSubmitMeta
-		>)
-
-		return (
-			<FormShell
-				form={instance}
-				FormElement={FormElement}
-				elementProps={elementProps}
-			>
-				{renderSchemaFields(schema, instance, components, translate, customFieldsById, blocks)}
-			</FormShell>
-		)
-	}
-
-	/**
-	 * Renders one bound field component per field node in `schema`, through the very same
-	 * `form.TextField` / `form.NumberField` / … components the JSX API exposes — see
-	 * `renderNode`. A config-driven form and a hand-written one therefore produce identical
-	 * DOM.
-	 *
-	 * Two overloads for the same reason as `Form`: TypeScript does not infer generics
-	 * through a union target.
-	 */
-	function SchemaForm<TValues>(props: SchemaFormControlledProps<TValues, TFields>): ReactNode
-	function SchemaForm<
-		TFormData,
-		TOnMount extends undefined | FormValidateOrFn<TFormData>,
-		TOnChange extends undefined | FormValidateOrFn<TFormData>,
-		TOnChangeAsync extends undefined | FormAsyncValidateOrFn<TFormData>,
-		TOnBlur extends undefined | FormValidateOrFn<TFormData>,
-		TOnBlurAsync extends undefined | FormAsyncValidateOrFn<TFormData>,
-		TOnSubmit extends undefined | FormValidateOrFn<TFormData>,
-		TOnSubmitAsync extends undefined | FormAsyncValidateOrFn<TFormData>,
-		TOnDynamic extends undefined | FormValidateOrFn<TFormData>,
-		TOnDynamicAsync extends undefined | FormAsyncValidateOrFn<TFormData>,
-		TOnServer extends undefined | FormAsyncValidateOrFn<TFormData>,
-		TSubmitMeta,
-	>(
-		props: SchemaFormUncontrolledProps<
-			TFormData,
-			TOnMount,
-			TOnChange,
-			TOnChangeAsync,
-			TOnBlur,
-			TOnBlurAsync,
-			TOnSubmit,
-			TOnSubmitAsync,
-			TOnDynamic,
-			TOnDynamicAsync,
-			TOnServer,
-			TSubmitMeta
-		>,
-	): ReactNode
-	function SchemaForm(props: AnySchemaFormProps): ReactNode {
-		if (isSchemaFormControlled<unknown, TFields>(props)) {
-			const { form, schema, translate, blocks, rules: _rules, ...elementProps } = props
-			assertNoReservedFieldKeyCollision(blocks)
-			return (
-				<FormShell
-					form={form}
-					FormElement={FormElement}
-					elementProps={elementProps}
-				>
-					{renderSchemaFields(schema, form, components, translate, customFieldsById, blocks)}
-				</FormShell>
-			)
-		}
-
-		// Overload resolution has already checked the caller; the implementation signature is
-		// deliberately the loose one, so the shape is spelled out again for the inner component.
-		return <UncontrolledSchemaForm {...(props as SchemaFormUncontrolledImplProps)} />
-	}
-
-	/**
 	 * TanStack's `withForm`, retyped — spec §12.
 	 *
 	 * Zero runtime: this hands the options straight to TanStack, which only closes over
@@ -689,7 +537,10 @@ export function createForm<
 	// prop receives a **group** API, which correctly carries no flat field components (spec
 	// §12 — native `form.Field` territory), and the parent `form` prop of the component it
 	// returns already accepts a `KitFormApi`, that type being an intersection over TanStack's.
-	return { useForm, Form, FormProvider, SchemaForm, withForm, withFieldGroup }
+	return {
+		bundle: { useForm, Form, FormProvider, withForm, withFieldGroup },
+		internals: { useForm, FormElement, fields, components, fieldTypeIds },
+	}
 }
 
 /**

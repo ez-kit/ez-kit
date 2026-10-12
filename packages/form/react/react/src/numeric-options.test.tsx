@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, test, vi } from 'vitest'
 
-import { createForm } from './create-form'
+import { createSchemaForm } from './create-schema-form'
 import { fromKitValue, fromKitValues, toKitOptions } from './option-values'
 import { testComponents, testFields, testFormElement } from './test-kit'
 
@@ -42,7 +42,7 @@ const ROLE_ID_OPTIONS = [
 	{ label: 'Viewer', value: 8 },
 ]
 
-const { useForm, Form, SchemaForm } = createForm({
+const { useForm, Form, SchemaForm } = createSchemaForm({
 	FormElement: testFormElement,
 	fields: testFields,
 	components: testComponents,

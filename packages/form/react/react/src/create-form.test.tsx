@@ -605,12 +605,3 @@ describe('createForm — dependency injection', () => {
 		expect(container.querySelector('[data-field="agree"]')).toHaveAttribute('data-field-type', 'checkbox')
 	})
 })
-
-describe('createForm — bundle shape', () => {
-	it('returns the config-driven form as SchemaForm', () => {
-		const bundle = createForm({ FormElement: testFormElement, fields: testFields, components: testComponents })
-
-		expect(typeof bundle.SchemaForm).toBe('function')
-		expect('FormRenderer' in bundle).toBe(false)
-	})
-})

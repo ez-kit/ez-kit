@@ -381,6 +381,29 @@ describe('@ez-kit/data-grid-react', () => {
 	})
 })
 
+const FORM_REACT_ENTRY = entryOf('form/react/react')
+/** A message only the schema renderer contains — present in a bundle exactly when it is. */
+const SCHEMA_MARKER = 'may not mix `step` nodes'
+
+/**
+ * `createForm` must not carry the schema renderer; `createSchemaForm` is the door to it.
+ *
+ * Asked with {@link bundledCodeOf} rather than through the `PACKAGES` table: every form package
+ * ships as one dist file, so an entry-point set cannot tell the two factories apart — the renderer
+ * either survived the shake or it did not.
+ */
+describe('@ez-kit/form-react schema renderer', () => {
+	// The control: without it the absence below would also be satisfied by a build that resolved
+	// nothing, or by a marker that no longer exists.
+	it('is reached through createSchemaForm', async () => {
+		expect(await bundledCodeOf(FORM_REACT_ENTRY, ['createSchemaForm'])).toContain(SCHEMA_MARKER)
+	})
+
+	it('is not reached through createForm', async () => {
+		expect(await bundledCodeOf(FORM_REACT_ENTRY, ['createForm'])).not.toContain(SCHEMA_MARKER)
+	})
+})
+
 describe.each(PACKAGES)('$name', ({ entry, shakeable, cases }) => {
 	it.each(cases)('importing $imports pulls in $pulls', async ({ imports, pulls }) => {
 		expect(await entryPointsPulledBy(entry, imports)).toEqual([...pulls].sort())

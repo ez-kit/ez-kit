@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
 
-import { createForm } from '../create-form'
+import { createSchemaForm } from '../create-schema-form'
 import { testComponents, testFields, testFormElement } from '../test-kit'
 
 import type { CustomFieldRenderProps } from './registries'
@@ -40,7 +40,7 @@ const RatingField = ({ id, label, value, onChange, props, invalid }: CustomField
  * `Field`, so every `{ type: 'rating' }` node below resolves against this one registration, and
  * the same component is reachable from JSX as `form.RatingField`.
  */
-const { SchemaForm } = createForm({
+const { SchemaForm } = createSchemaForm({
 	FormElement: testFormElement,
 	fields: { ...testFields, RatingField },
 	components: testComponents,
@@ -130,7 +130,7 @@ test('an unknown node type throws with the type named', () => {
 	// A bundle whose factory registered nothing beyond the kit's twelve — `rating` is
 	// neither a built-in kind nor registered, and there is no per-form prop left that could
 	// have supplied it after the fact.
-	const { SchemaForm: BareSchemaForm } = createForm({
+	const { SchemaForm: BareSchemaForm } = createSchemaForm({
 		FormElement: testFormElement,
 		fields: testFields,
 		components: testComponents,

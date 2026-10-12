@@ -1,7 +1,7 @@
 import { defineFormSchema, FormFieldType } from '@ez-kit/form-core'
 import { describe, expectTypeOf, it } from 'vitest'
 
-import { createForm } from './create-form'
+import { createSchemaForm } from './create-schema-form'
 import { testComponents, testFields, testFormElement } from './test-kit'
 
 import type { CustomFieldRenderProps } from './schema/registries'
@@ -12,7 +12,7 @@ type Values = { email: string; age: number }
 
 const DEFAULTS: Values = { email: '', age: 0 }
 
-const { useForm, Form, SchemaForm } = createForm({
+const { useForm, Form, SchemaForm } = createSchemaForm({
 	FormElement: testFormElement,
 	fields: testFields,
 	components: testComponents,
@@ -102,7 +102,7 @@ describe('Form — types', () => {
 })
 
 /**
- * The field registry has exactly one registration site, `createForm({ fields })`. `SchemaForm`
+ * The field registry has exactly one registration site, the factory's `fields`. `SchemaForm`
  * used to take a per-form `fields` prop that layered over it; it was removed, so a caller still
  * passing one has to hear about it at compile time rather than have the object silently land on
  * the `<form>` element as an unknown attribute.
@@ -121,7 +121,7 @@ describe('SchemaForm — types', () => {
 			return (
 				<SchemaForm
 					schema={schema}
-					// @ts-expect-error — the `fields` prop is gone; register on `createForm({ fields })`
+					// @ts-expect-error — the `fields` prop is gone; register on `createSchemaForm({ fields })`
 					fields={{ rating: Rating }}
 					defaultValues={DEFAULTS}
 					onSubmit={() => {}}

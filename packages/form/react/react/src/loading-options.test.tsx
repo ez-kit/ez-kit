@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
 import { createForm } from './create-form'
+import { createSchemaForm } from './create-schema-form'
 import { testComponents, testFields, testFormElement } from './test-kit'
 
 import type { FormFieldSlots } from './contract'
@@ -30,7 +31,7 @@ const OPTIONS = [
 	{ label: 'Admin', value: 'admin' },
 ]
 
-const { useForm, Form, SchemaForm } = createForm({
+const { useForm, Form, SchemaForm } = createSchemaForm({
 	FormElement: testFormElement,
 	fields: testFields,
 	components: testComponents,

@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, expect, test, vi } from 'vitest'
 
-import { createForm } from '../create-form'
+import { createSchemaForm } from '../create-schema-form'
 import { testComponents, testFields, testFormElement } from '../test-kit'
 
 import type { FormSchema } from '@ez-kit/form-core'
@@ -43,7 +43,11 @@ beforeEach(() => {
 	groupSpy.validateCauses.length = 0
 })
 
-const { SchemaForm } = createForm({ FormElement: testFormElement, fields: testFields, components: testComponents })
+const { SchemaForm } = createSchemaForm({
+	FormElement: testFormElement,
+	fields: testFields,
+	components: testComponents,
+})
 
 type TwoStepValues = { name: string; age: string }
 

@@ -2,7 +2,7 @@ import { FormFieldType } from '@ez-kit/form-core'
 import { render } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { createForm } from '../create-form'
+import { createSchemaForm } from '../create-schema-form'
 import { testComponents, testFields } from '../test-kit'
 
 import type { FormSchema } from '@ez-kit/form-core'
@@ -14,7 +14,7 @@ const DEFAULT_VALUES: Values = { name: '', tags: [] }
 
 const { ArrayField: _arrayField, ...fieldsWithoutArray } = testFields
 
-const { SchemaForm: FieldsOnly } = createForm({ fields: testFields })
+const { SchemaForm: FieldsOnly } = createSchemaForm({ fields: testFields })
 
 /** The props every case renders with, apart from the document. */
 const COMMON = { defaultValues: DEFAULT_VALUES, onSubmit: () => {} }
@@ -51,7 +51,7 @@ describe('SchemaForm without the component a document needs', () => {
 			version: 1,
 			children: [{ type: 'section', columns: 2, children: [{ type: FormFieldType.Text, name: 'name' }] }],
 		}
-		const { SchemaForm } = createForm({ fields: testFields, components: { Section: testComponents.Section } })
+		const { SchemaForm } = createSchemaForm({ fields: testFields, components: { Section: testComponents.Section } })
 		expect(() => {
 			render(
 				<SchemaForm
@@ -100,7 +100,7 @@ describe('SchemaForm without the component a document needs', () => {
 			version: 1,
 			children: [{ type: 'array', name: 'tags', children: [{ type: FormFieldType.Text, name: 'label' }] }],
 		}
-		const { SchemaForm } = createForm({ fields: fieldsWithoutArray })
+		const { SchemaForm } = createSchemaForm({ fields: fieldsWithoutArray })
 		expect(() => {
 			render(
 				<SchemaForm
@@ -116,7 +116,7 @@ describe('SchemaForm without the component a document needs', () => {
 			version: 1,
 			children: [{ type: FormFieldType.Text, name: 'name' }],
 		}
-		const { SchemaForm } = createForm({ fields: { NumberField: testFields.NumberField } })
+		const { SchemaForm } = createSchemaForm({ fields: { NumberField: testFields.NumberField } })
 		expect(() => {
 			render(
 				<SchemaForm
@@ -157,7 +157,7 @@ describe('SchemaForm without the component a document needs', () => {
 				{ type: 'step', title: 'Two', children: [{ type: 'submit', label: 'Save' }] },
 			],
 		}
-		const { SchemaForm } = createForm({ fields: testFields, components: { Wizard: testComponents.Wizard } })
+		const { SchemaForm } = createSchemaForm({ fields: testFields, components: { Wizard: testComponents.Wizard } })
 		expect(() => {
 			render(
 				<SchemaForm
