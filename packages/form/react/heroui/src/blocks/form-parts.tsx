@@ -1,5 +1,6 @@
 import { useFormContext } from '@ez-kit/form-react'
 import { Button as HeroButton, Form as HeroForm } from '@heroui/react'
+import { useRef } from 'react'
 
 import type { FormElementProps, SubmitButtonProps } from '@ez-kit/form-react'
 import type { ReactNode } from 'react'
@@ -50,9 +51,16 @@ export function FormElement({ className, children, ...props }: FormElementProps)
  * Inside a `<form>` it is an ordinary submit button and the `<form>`'s own submit handler runs.
  * Under a `FormProvider` with no `<form>` the browser has nothing to submit, so the click submits
  * the form itself; checking the button's form owner is what keeps the two paths from both firing.
+ *
+ * The owner wins over the context. A button whose owner is a different `<form>` than the context
+ * form — `<Form A>` around `<FormProvider B>` around this button — submits its owner, A; the
+ * context form, B, is submitted only when the button has no form owner at all.
  */
 export function SubmitButton({ children, disabled }: SubmitButtonProps): ReactNode {
 	const form = useFormContext()
+	// The owner check reads the DOM button through a ref: React Aria's `PressEvent.target` is typed
+	// as a plain `Element`, which carries no `form`.
+	const buttonRef = useRef<HTMLButtonElement>(null)
 	return (
 		<form.Submit>
 			{({ canSubmit, isSubmitting, submit }) => (
@@ -60,9 +68,10 @@ export function SubmitButton({ children, disabled }: SubmitButtonProps): ReactNo
 					data-form-submit=''
 					type='submit'
 					variant='primary'
+					ref={buttonRef}
 					isDisabled={disabled === true || !canSubmit || isSubmitting}
-					onPress={(event) => {
-						if ((event.target as HTMLButtonElement).form === null) void submit()
+					onPress={() => {
+						if (buttonRef.current?.form === null) void submit()
 					}}
 				>
 					{children}

@@ -26,6 +26,10 @@ export function FormElement({ className, children, ...props }: FormElementProps)
  * Inside a `<form>` it is an ordinary submit button and the `<form>`'s own submit handler runs.
  * Under a `FormProvider` with no `<form>` the browser has nothing to submit, so the click submits
  * the form itself; checking the button's form owner is what keeps the two paths from both firing.
+ *
+ * The owner wins over the context. A button whose owner is a different `<form>` than the context
+ * form — `<Form A>` around `<FormProvider B>` around this button — submits its owner, A; the
+ * context form, B, is submitted only when the button has no form owner at all.
  */
 export function SubmitButton({ children, disabled }: SubmitButtonProps): ReactNode {
 	const form = useFormContext()
