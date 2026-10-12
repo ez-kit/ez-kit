@@ -1,5 +1,8 @@
+import { FormProvider } from './form-context'
+
 import type { SubmittableForm } from './bindable-form'
 import type { FormComponents, FormElementProps } from './contract'
+import type { AnyFormInstance } from './form-context'
 import type { ReactNode } from 'react'
 
 type FormShellProps = {
@@ -19,19 +22,22 @@ type FormShellProps = {
  */
 export function FormShell({ form, FormElement, children, elementProps }: FormShellProps): ReactNode {
 	return (
-		<FormElement
-			data-form=''
-			noValidate
-			{...elementProps}
-			onSubmit={(event) => {
-				// The browser must not navigate, and a nested form's submit must not bubble
-				// out to an enclosing one.
-				event.preventDefault()
-				event.stopPropagation()
-				void form.handleSubmit()
-			}}
-		>
-			{children}
-		</FormElement>
+		// Every caller passes a real instance; the prop is typed by the one member the shell calls.
+		<FormProvider form={form as AnyFormInstance}>
+			<FormElement
+				data-form=''
+				noValidate
+				{...elementProps}
+				onSubmit={(event) => {
+					// The browser must not navigate, and a nested form's submit must not bubble
+					// out to an enclosing one.
+					event.preventDefault()
+					event.stopPropagation()
+					void form.handleSubmit()
+				}}
+			>
+				{children}
+			</FormElement>
+		</FormProvider>
 	)
 }

@@ -6,6 +6,7 @@ import { useMemo } from 'react'
 import { buildFieldComponents } from './build-field-components'
 import { guardComponents, guardFields } from './component-guard'
 import { deriveFieldTypeIds } from './field-registry'
+import { FormProvider } from './form-context'
 import { splitFormProps } from './form-options'
 import { FormShell } from './form-shell'
 import { NO_INJECTED_COMPONENTS } from './kit-form'
@@ -603,7 +604,7 @@ export function createForm<TFields extends FormFieldRegistry = FormFieldSlots>({
 	// prop receives a **group** API, which correctly carries no flat field components (spec
 	// §12 — native `form.Field` territory), and the parent `form` prop of the component it
 	// returns already accepts a `KitFormApi`, that type being an intersection over TanStack's.
-	return { useForm, Form, SchemaForm, withForm, withFieldGroup }
+	return { useForm, Form, FormProvider, SchemaForm, withForm, withFieldGroup }
 }
 
 /**

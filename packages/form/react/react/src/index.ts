@@ -1,11 +1,13 @@
 export { createForm } from './create-form'
 export { defineFieldType } from './field-registry'
+export { FormProvider, useFormContext } from './form-context'
 export { FormOptionSources } from './options/source-context'
 
 export type { CreateFormOptions, FormBundle } from './create-form'
 export type { FieldTypeDefinition, FormFieldRegistry } from './field-registry'
 export type { KitFormBlock, KitWithFormProps } from './composition'
 export type { FieldValidateProps } from './field-validate'
+export type { AnyFormInstance, FormContextApi } from './form-context'
 export type { FormInstance } from './form-instance'
 export type { AnyFormProps, FormControlledProps, FormProps, FormUncontrolledProps } from './form-props'
 export type {
