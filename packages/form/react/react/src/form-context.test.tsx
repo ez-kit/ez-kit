@@ -8,7 +8,7 @@ import { testComponents, testFields, testFormElement } from './test-kit'
 import type { NoRegistry } from './contract'
 import type { FormContextApi } from './form-context'
 import type { FormInstance } from './form-instance'
-import type { FormControlledProps } from './form-props'
+import type { AnyFormProps, FormControlledProps } from './form-props'
 import type { ReactNode } from 'react'
 
 const { Form, useForm } = createForm({ FormElement: testFormElement, fields: testFields, components: testComponents })
@@ -82,6 +82,22 @@ describe('useFormContext', () => {
 				<FormProvider form={form}>
 					<ValueProbe testId='probe' />
 				</FormProvider>
+			)
+		}
+		render(<Host />)
+		expect(screen.getByTestId('probe').textContent).toBe('{"tags":["a"]}')
+	})
+
+	it('lets a wrapper typed AnyFormProps take a form whose values hold an array', () => {
+		function Wrapper(props: AnyFormProps): ReactNode {
+			return <Form {...(props as FormControlledProps)} />
+		}
+		function Host(): ReactNode {
+			const form = useForm({ defaultValues: { tags: ['a'] } })
+			return (
+				<Wrapper form={form}>
+					<ValueProbe testId='probe' />
+				</Wrapper>
 			)
 		}
 		render(<Host />)

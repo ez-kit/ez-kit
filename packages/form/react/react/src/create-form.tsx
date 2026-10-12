@@ -556,7 +556,8 @@ const DEFAULT_FORM_ELEMENT = 'form'
  * Which mode the caller picked.
  *
  * `form` is the discriminant: the uncontrolled shape declares it as `form?: never`, so its
- * only legal value there is `undefined`.
+ * only legal value there is `undefined`. Narrowing it to a whole instance rests on the controlled
+ * overload, which already required one; `AnyFormProps` only asks for `handleSubmit`.
  */
 function isControlled(props: AnyFormProps): props is AnyFormProps & { form: AnyFormInstance; children: ReactNode } {
 	return props.form !== undefined

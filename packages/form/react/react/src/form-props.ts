@@ -1,3 +1,4 @@
+import type { SubmittableForm } from './bindable-form'
 import type {
 	AllFormComponents,
 	AllFormFieldSlots,
@@ -6,7 +7,6 @@ import type {
 	NoRegistry,
 } from './contract'
 import type { FormFieldRegistry } from './field-registry'
-import type { AnyFormInstance } from './form-context'
 import type { FormInstance } from './form-instance'
 import type { KitFormApi } from './kit-form'
 import type { FormAsyncValidateOrFn, FormOptions, FormValidateOrFn } from '@ez-kit/form-core'
@@ -101,9 +101,13 @@ export type FormUncontrolledProps<
  * implementation, overload resolution has already picked the mode — and what a wrapper
  * that forwards props on to `<Form>` without choosing a mode should accept. It is not the
  * API: a call site should always land on one of the two overloads.
+ *
+ * `form` asks only for `handleSubmit`, not for an `AnyFormInstance`: a form whose values hold an
+ * array does not assign to `FormInstance<any, …>` (see `FormProvider`), and no non-generic instance
+ * type takes every `useForm` result. The controlled overload is what checks for a whole instance.
  */
 export type AnyFormProps = FormElementRest & {
-	form?: AnyFormInstance
+	form?: SubmittableForm
 	children: ReactNode | ((form: never) => ReactNode)
 }
 
