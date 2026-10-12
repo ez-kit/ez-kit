@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, expectTypeOf, it, vi } from 'vitest'
 
 import { createForm } from './create-form'
+import { createSchemaForm } from './create-schema-form'
 import { FormProvider, useFormContext } from './form-context'
 import { testComponents, testFields, testFormElement } from './test-kit'
 
@@ -9,6 +10,7 @@ import type { NoRegistry } from './contract'
 import type { FormContextApi } from './form-context'
 import type { FormInstance } from './form-instance'
 import type { AnyFormProps, FormControlledProps } from './form-props'
+import type { FormSchema } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
 
 const { Form, useForm } = createForm({ FormElement: testFormElement, fields: testFields, components: testComponents })
@@ -138,10 +140,63 @@ describe('useFormContext', () => {
 		}
 	})
 
-	it('returns the base API with unknown values', () => {
+	it('types values, base API and built-in fields through the optional generic', () => {
+		type Guest = { name: string; seats: number; tags: { label: string }[] }
+		function Hint(): ReactNode {
+			const form = useFormContext<Guest>()
+			expectTypeOf(form.state.values).toEqualTypeOf<Guest>()
+			return (
+				<>
+					<form.TextField name='name' />
+					<form.TextField
+						// @ts-expect-error -- `seats` holds a number
+						name='seats'
+					/>
+					<form.Field name='seats'>{({ value }) => value.toFixed()}</form.Field>
+					<form.Subscribe selector={(state) => state.values.seats}>{(seats) => seats.toFixed()}</form.Subscribe>
+				</>
+			)
+		}
+		expectTypeOf(Hint).toBeFunction()
+	})
+
+	it('without the generic keeps unknown values and no fields', () => {
 		expectTypeOf<FormContextApi['state']['values']>().toEqualTypeOf<unknown>()
 		expectTypeOf<FormContextApi>().toHaveProperty('Subscribe')
 		expectTypeOf<FormContextApi>().toHaveProperty('handleSubmit')
+		expectTypeOf<FormContextApi>().not.toHaveProperty('TextField')
+		expectTypeOf<FormContextApi<{ a: string }>>().toHaveProperty('TextField')
+	})
+
+	it('is a cast: the generic returns the same instance', () => {
+		const seen: unknown[] = []
+		function Probe(): ReactNode {
+			seen.push(useFormContext(), useFormContext<{ email: string }>())
+			return null
+		}
+		render(<Form defaultValues={{ email: '' }}>{() => <Probe />}</Form>)
+		expect(seen[0]).toBe(seen[1])
+	})
+
+	it('is provided by <SchemaForm>', () => {
+		const { SchemaForm } = createSchemaForm({
+			FormElement: testFormElement,
+			fields: testFields,
+			components: testComponents,
+		})
+		const schema: FormSchema<{ name: string }> = {
+			version: 1,
+			children: [{ type: 'block', component: 'probe' }],
+		}
+		render(
+			<SchemaForm
+				schema={schema}
+				blocks={{ probe: () => <ValueProbe testId='probe' /> }}
+				defaultValues={{ name: 'Ann' }}
+				onSubmit={() => {}}
+			/>,
+		)
+		expect(screen.getByTestId('probe').textContent).toBe('{"name":"Ann"}')
 	})
 
 	it('is returned by createForm as FormProvider', () => {

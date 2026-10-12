@@ -2,7 +2,7 @@
 
 import { createContext, useContext } from 'react'
 
-import type { NoRegistry } from './contract'
+import type { AllFormFieldSlots, NoRegistry } from './contract'
 import type { FormInstance } from './form-instance'
 import type { ReactNode } from 'react'
 
@@ -18,14 +18,18 @@ import type { ReactNode } from 'react'
 export type AnyFormInstance = FormInstance<any, any, NoRegistry>
 
 /**
- * What `useFormContext()` returns: the form's base API — `Subscribe`, `state`, `handleSubmit`,
- * `Submit`, `Array`, … — without the fields a bundle registered, and with values of type `unknown`.
+ * What `useFormContext()` returns.
  *
- * A component that names paths in the form's data is a slice of one form or a reusable block, and
- * `withForm` / `withFieldGroup` type it where it is placed. The context serves components that do
- * not depend on a particular form: a save bar, an error summary, a kit's `SubmitButton`.
+ * Without a type argument: the form's base API — `Subscribe`, `state`, `handleSubmit`, `Submit`,
+ * `Array`, `Field`, `NativeField`, `FormGroup`, … — with values of type `unknown` and no kit fields.
+ *
+ * `FormContextApi<V>`: the same API typed over `V`, plus the kit's **built-in** fields with their
+ * value-typed `name`. Custom fields and components are not on it: naming them would need the
+ * bundle's registry, and a component the bundle registers cannot import the bundle (D6).
  */
-export type FormContextApi = FormInstance<unknown, NoRegistry, NoRegistry>
+export type FormContextApi<TValues = unknown> = unknown extends TValues
+	? FormInstance<unknown, NoRegistry, NoRegistry>
+	: FormInstance<TValues, AllFormFieldSlots, NoRegistry>
 
 /**
  * One context for the whole package, not one per `createForm` call: the prebuilt `Form`,
@@ -52,8 +56,18 @@ export function FormProvider<TValues>({
 	return <FormContext.Provider value={form}>{children}</FormContext.Provider>
 }
 
-/** The nearest form above this component, as its base API. */
-export function useFormContext(): FormContextApi {
+/** The nearest form above this component, as its base API with `unknown` values. */
+export function useFormContext(): FormContextApi
+/**
+ * The nearest form above this component, typed as a form over `TValues`.
+ *
+ * **A cast, not a check:** nothing verifies that the form above has these values, or that the
+ * bundle registered the built-in field a component calls. A component that names paths in one
+ * form's data is better written with `withForm` or `withFieldGroup`, which are checked where they
+ * are placed; this is for small helpers such as a hint beside a field.
+ */
+export function useFormContext<TValues>(): FormContextApi<TValues>
+export function useFormContext(): AnyFormInstance {
 	const form = useContext(FormContext)
 	if (form === null) {
 		throw new Error('useFormContext() must be called inside <Form>, <SchemaForm> or <FormProvider>.')
