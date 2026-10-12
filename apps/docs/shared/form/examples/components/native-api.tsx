@@ -27,9 +27,8 @@ export function NativeApiExample() {
 									Seats
 								</span>
 								<div
-									role='radiogroup'
+									role='group'
 									aria-labelledby={`${id}-label`}
-									aria-invalid={invalid}
 									aria-describedby={invalid ? `${id}-error` : undefined}
 									className='flex items-center gap-2'
 								>
@@ -38,8 +37,7 @@ export function NativeApiExample() {
 											key={count}
 											id={index === 0 ? id : undefined}
 											type='button'
-											role='radio'
-											aria-checked={value === count}
+											aria-pressed={value === count}
 											onClick={() => {
 												onChange(count)
 											}}
