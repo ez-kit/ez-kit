@@ -5,8 +5,7 @@ import { describe, expect, it } from 'vitest'
 
 import { Form } from './form'
 
-import type { OptionValue } from '@ez-kit/form-core'
-import type { OptionSourceRegistry, OptionSourceResult, SearchableOptionSource } from '@ez-kit/form-react'
+import type { OptionSourceRegistry, OptionSourceResult, OptionValue, SearchableOptionSource } from '@ez-kit/form-react'
 
 /**
  * A searchable select, end to end through this kit.

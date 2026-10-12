@@ -1,11 +1,11 @@
-import { FormFieldType } from '@ez-kit/form-core'
+import { FormFieldType } from '@ez-kit/form-react'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import { Form, SchemaForm } from './form'
 
-import type { DateRangeValue, FormSchema } from '@ez-kit/form-core'
+import type { DateRangeValue, FormSchema } from '@ez-kit/form-react'
 
 /**
  * The kit's remaining field kinds, and its wizard.

@@ -95,11 +95,12 @@ export type {
 	Translate,
 } from '@ez-kit/form-react'
 
-// The schema-authoring half of the same surface. It lives in `@ez-kit/form-core` and is not
-// re-exported by `@ez-kit/form-react`, so the kit takes a direct dependency on core to keep
-// the "one dependency" claim above true for config-driven forms as well: under pnpm's strict
-// `node_modules` layout a transitive dependency is not importable, so every import the docs
-// tell a reader to copy has to resolve from the kit itself.
+// The schema-authoring half of the same surface. It originates in `@ez-kit/form-core` and arrives
+// through `@ez-kit/form-react`, which re-exports it, so the kit has no direct dependency on core:
+// under pnpm's strict `node_modules` layout a transitive dependency is not importable, so every
+// import the docs tell a reader to copy has to resolve from the kit itself. `useStore` comes the
+// same way, from the one TanStack copy `@ez-kit/form-react` owns — reading the form's store through
+// a second copy would read a different store.
 export {
 	buildValidator,
 	defineFormItem,
@@ -110,8 +111,12 @@ export {
 	RESERVED_NODE_TYPES,
 	resolveText,
 	visibleFieldNames,
+	// TanStack Store marks `useStore` a deprecated alias of `useSelector`; it is re-exported under
+	// the name spec 009 (D9) and the docs use — see the same note in `@ez-kit/form-react`.
+	// eslint-disable-next-line @typescript-eslint/no-deprecated -- deliberate, see above
+	useStore,
 	walkNodes,
-} from '@ez-kit/form-core'
+} from '@ez-kit/form-react'
 export type {
 	AnyFormSchema,
 	ArrayNode,
@@ -124,9 +129,11 @@ export type {
 	FormNode,
 	FormSchema,
 	NamedRule,
+	OptionValue,
 	ParseOptions,
 	Rule,
+	RuleIssue,
 	SectionNode,
 	StepNode,
 	SubmitNode,
-} from '@ez-kit/form-core'
+} from '@ez-kit/form-react'

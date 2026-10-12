@@ -38,14 +38,12 @@
 			"path": "dist/index.js",
 			"limit": "4.5 KB",
 			"ignore": [
-				"@ez-kit/form-core",
 				"@ez-kit/form-react",
 				"@internationalized/date"
 			]
 		}
 	],
 	"dependencies": {
-		"@ez-kit/form-core": "workspace:*",
 		"@ez-kit/form-react": "workspace:*",
 		"@internationalized/date": "^3.12.4"
 	},
@@ -55,8 +53,6 @@
 		"@internationalized/date": "^3.12.4",
 		"@react-aria/ssr": "^3.10.1",
 		"@react-aria/utils": "^3.34.1",
-		"@tanstack/form-core": "^1.33.2",
-		"@tanstack/react-form": "^1.33.2",
 		"@types/react": "^19.2.14",
 		"@types/react-dom": "^19.2.3",
 		"react": "^19.2.4",
@@ -67,8 +63,6 @@
 	"peerDependencies": {
 		"@heroui/react": "^3.2.0",
 		"@heroui/styles": "^3.2.0",
-		"@tanstack/form-core": "^1.33.2",
-		"@tanstack/react-form": "^1.33.2",
 		"react": ">=19.0.0",
 		"react-dom": ">=19.0.0"
 	}

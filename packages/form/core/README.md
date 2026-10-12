@@ -15,7 +15,15 @@ pnpm add @ez-kit/form-core
 ```
 
 Most consumers do not install this directly — they use a UI-kit package
-(`@ez-kit/form-shadcn`, `@ez-kit/form-heroui`), which depends on it transitively.
+(`@ez-kit/form-shadcn`, `@ez-kit/form-heroui`), which reaches it through `@ez-kit/form-react`.
+
+`@tanstack/form-core` (v1) is a peer dependency: this package takes only types from it, and in a
+kit's tree `@ez-kit/form-react` supplies the one copy. Installed on its own — to import the
+schema helpers in a server component, say — add it beside this package:
+
+```bash
+pnpm add @ez-kit/form-core @tanstack/form-core
+```
 
 ## Field kinds and error normalisation
 

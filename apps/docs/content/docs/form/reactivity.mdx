@@ -55,16 +55,10 @@ The other everyday use is the submit button's label, since the button subscribes
 
 The same subscription exists as a hook, `useStore(form.store, selector)`, for when the value is needed in the component body rather than in the JSX.
 
-Two things to know before reaching for it. It subscribes the **whole component**, so used inside a component that renders fields it costs precisely what `Subscribe` exists to avoid; it earns its keep one level up, in a component that renders no fields of its own. And it is not part of this package's surface: `useStore` comes from `@tanstack/react-store` and is re-exported by `@tanstack/react-form`, but the kits re-export neither, so
+Two things to know before reaching for it. It subscribes the **whole component**, so used inside a component that renders fields it costs precisely what `Subscribe` exists to avoid; it earns its keep one level up, in a component that renders no fields of its own. And it comes from your kit, not from TanStack: `useStore` is TanStack's own hook, re-exported by `@ez-kit/form-react` and from there by each kit, so it resolves to the same TanStack copy the form is built on, and there is no TanStack package of your own to keep in step with it.
 
 ```ts
-import { useStore } from '@ez-kit/form-shadcn' // ✗ does not resolve
-```
-
-does not compile. Using it means importing from TanStack directly and taking that dependency on purpose:
-
-```ts
-import { useStore } from '@tanstack/react-form'
+import { useStore } from '@ez-kit/form-shadcn'
 ```
 
 Prefer `form.Subscribe`, which is already on the instance you have.

@@ -19,7 +19,7 @@ import { CheckboxGroupField, MultiSelectField } from './blocks/multi-value'
 import { SelectField } from './blocks/select'
 import { Wizard } from './blocks/wizard'
 
-import type { FormComponents, FormFieldSlots } from '@ez-kit/form-react'
+import type { FormBundle, FormComponents, FormFieldSlots } from '@ez-kit/form-react'
 
 /**
  * The HeroUI v3 implementation of the UI contract, in the two bags `createForm` takes.
@@ -53,12 +53,27 @@ export const formComponents = {
 	Wizard,
 } satisfies FormComponents
 
-const { useForm, Form, SchemaForm, withForm, withFieldGroup } = createForm({
+/**
+ * The bundle's type, named through `@ez-kit/form-react` so the kit's declarations do too.
+ *
+ * Each export below is annotated rather than inferred for that reason: an inferred type is
+ * spelled out in `dist/index.d.ts` in terms of the packages it is built from — TanStack Form and
+ * `@ez-kit/form-core` — which this kit no longer depends on and so cannot resolve from its own
+ * location. An annotation is emitted as written, as a reference into `@ez-kit/form-react`, which
+ * does depend on both.
+ */
+type KitFormBundle = FormBundle<typeof formFieldSlots>
+
+const bundle: KitFormBundle = createForm({
 	components: formComponents,
 	fields: formFieldSlots,
 })
 
-export { useForm, Form, SchemaForm, withForm, withFieldGroup }
+export const useForm: KitFormBundle['useForm'] = bundle.useForm
+export const Form: KitFormBundle['Form'] = bundle.Form
+export const SchemaForm: KitFormBundle['SchemaForm'] = bundle.SchemaForm
+export const withForm: KitFormBundle['withForm'] = bundle.withForm
+export const withFieldGroup: KitFormBundle['withFieldGroup'] = bundle.withFieldGroup
 
 /**
  * The twelve field components on their own, so an app that calls `createForm` itself can

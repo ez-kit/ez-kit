@@ -40,7 +40,9 @@
 			"path": "dist/index.js",
 			"limit": "10 KB",
 			"ignore": [
-				"@ez-kit/form-core"
+				"@ez-kit/form-core",
+				"@tanstack/form-core",
+				"@tanstack/react-form"
 			]
 		},
 		{
@@ -49,25 +51,25 @@
 			"import": "{ stripHiddenValues, clampToGridRange, GRID_MIN, GRID_MAX, FormFieldType }",
 			"limit": "0.5 KB",
 			"ignore": [
-				"@ez-kit/form-core"
+				"@ez-kit/form-core",
+				"@tanstack/form-core",
+				"@tanstack/react-form"
 			]
 		}
 	],
 	"dependencies": {
-		"@ez-kit/form-core": "workspace:*"
+		"@ez-kit/form-core": "workspace:*",
+		"@tanstack/form-core": "^1.33.2",
+		"@tanstack/react-form": "^1.33.2"
 	},
 	"devDependencies": {
 		"@ez-kit/react18-env": "workspace:*",
-		"@tanstack/form-core": "^1.33.2",
-		"@tanstack/react-form": "^1.33.2",
 		"@types/react": "^19.2.14",
 		"@types/react-dom": "^19.2.3",
 		"react": "^19.2.4",
 		"react-dom": "^19.2.4"
 	},
 	"peerDependencies": {
-		"@tanstack/form-core": "^1.33.2",
-		"@tanstack/react-form": "^1.33.2",
 		"react": ">=18.0.0"
 	}
 }

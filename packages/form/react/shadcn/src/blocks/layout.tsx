@@ -15,8 +15,8 @@ import type { ReactNode } from 'react'
  * template string would drop the utility from the build — these map the supported column
  * counts to literal class names instead.
  *
- * `GRID_MIN`/`clampToGridRange` come from `@ez-kit/form-core` (re-exported through
- * `@ez-kit/form-react`) rather than being redefined here: the 1..4 range is part of the v1
+ * `GRID_MIN`/`clampToGridRange` originate in `@ez-kit/form-core` and reach this kit through
+ * `@ez-kit/form-react` rather than being redefined here: the 1..4 range is part of the v1
  * format — `parseFormSchema` rejects a document outside it — so the format's own package owns
  * the numbers. Only the Tailwind class strings below are kit-owned, since they're visual.
  */

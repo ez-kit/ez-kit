@@ -100,7 +100,48 @@ export type {
 	Translate,
 } from '@ez-kit/form-core'
 
+// The schema-authoring half of the surface, so a kit depends on `@ez-kit/form-react` alone (spec
+// 009, D9). Under pnpm's strict layout a transitive dependency is not importable, so every name the
+// docs tell a reader to import from their kit has to be re-exported on this path.
+export {
+	buildValidator,
+	defineFormItem,
+	defineFormSchema,
+	FormSchemaError,
+	isFieldNode,
+	parseFormSchema,
+	RESERVED_NODE_TYPES,
+	resolveText,
+	visibleFieldNames,
+	walkNodes,
+} from '@ez-kit/form-core'
+export type {
+	AnyFormSchema,
+	ArrayNode,
+	BlockNode,
+	Condition,
+	CustomFieldNode,
+	FieldNode,
+	FieldRef,
+	FieldValidate,
+	FormNode,
+	FormSchema,
+	NamedRule,
+	OptionValue,
+	ParseOptions,
+	Rule,
+	RuleIssue,
+	SectionNode,
+	StepNode,
+	SubmitNode,
+} from '@ez-kit/form-core'
+
 // Spec §12: the group hooks are re-exported verbatim — they yield a group API, which
 // correctly carries no injected field components, so unlike `withForm` they need no
 // retyping. Inside a group the fields are written with the native `form.Field` / `AppField`.
-export { useFieldGroup, useFormGroup } from '@tanstack/react-form'
+// `useStore` is re-exported so an app that reads the store outside a component never installs
+// TanStack itself — a second copy would be a second store, and this package owns the version.
+// TanStack Store now marks it a deprecated alias of `useSelector`; it is the name spec 009 (D9)
+// and the docs use, so the alias is re-exported as is rather than renamed here.
+// eslint-disable-next-line @typescript-eslint/no-deprecated -- deliberate, see above
+export { useFieldGroup, useFormGroup, useStore } from '@tanstack/react-form'

@@ -42,7 +42,10 @@
 			]
 		}
 	],
-	"dependencies": {
+	"devDependencies": {
+		"@tanstack/form-core": "^1.33.2"
+	},
+	"peerDependencies": {
 		"@tanstack/form-core": "^1.33.2"
 	}
 }
