@@ -111,7 +111,8 @@ export type SchemaFormControlledProps<
 		 * An instance over this bundle's fields. `TFields` is what keeps the two halves of the
 		 * registry agreeing: a document's `{ type: 'rating' }` resolves against the bundle that
 		 * registered `RatingField`, so an instance from a bundle without it is a compile error here
-		 * rather than `Unknown node type "rating"` at render. The components it registered are not
+		 * rather than SchemaForm's "no component registered in fields derives that type id" error before
+		 * the first render. The components it registered are not
 		 * needed here, so any set is accepted.
 		 */
 		form: FormInstance<TValues, TFields, NoRegistry>

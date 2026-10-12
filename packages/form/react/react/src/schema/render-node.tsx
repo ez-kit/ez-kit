@@ -287,7 +287,9 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 	if (isCustomFieldNode(node)) {
 		// `assertDocumentComponents` has already rejected an unregistered kind up front, before any
 		// node rendered; this check only narrows the lookup.
-		const CustomField = context.fields?.[node.type]
+		// Own keys only: a document string such as "toString" must not resolve an Object.prototype member.
+		const CustomField =
+			context.fields !== undefined && Object.hasOwn(context.fields, node.type) ? context.fields[node.type] : undefined
 		if (CustomField === undefined) {
 			throw new Error(missingCustomFieldMessage(node.type))
 		}
@@ -549,7 +551,10 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 			)
 		}
 		case 'block': {
-			const Block = context.blocks?.[node.component]
+			const Block =
+				context.blocks !== undefined && Object.hasOwn(context.blocks, node.component)
+					? context.blocks[node.component]
+					: undefined
 			if (Block === undefined) {
 				throw new Error(`Unknown block component "${node.component}".`)
 			}

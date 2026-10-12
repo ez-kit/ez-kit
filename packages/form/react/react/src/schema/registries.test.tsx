@@ -126,6 +126,26 @@ test('a block renders without binding to any value', () => {
 	expect(screen.getByLabelText('Name')).toBeInTheDocument()
 })
 
+test('does not resolve a block component from Object.prototype', () => {
+	const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+	const schema: FormSchema<BlockValues> = {
+		version: 1,
+		children: [{ type: 'block', component: 'toString' }],
+	}
+
+	expect(() => {
+		render(
+			<SchemaForm
+				schema={schema}
+				blocks={{}}
+				defaultValues={{ name: '' }}
+				onSubmit={() => {}}
+			/>,
+		)
+	}).toThrow('Unknown block component "toString".')
+	consoleError.mockRestore()
+})
+
 test('an unknown node type throws with the type named', () => {
 	// A bundle whose factory registered nothing beyond the kit's own slots — `rating` is
 	// neither a built-in kind nor registered, and there is no per-form prop left that could

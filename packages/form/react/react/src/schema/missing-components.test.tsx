@@ -31,6 +31,23 @@ describe('SchemaForm without the component a document needs', () => {
 		consoleError.mockRestore()
 	})
 
+	it('does not resolve a custom field kind from Object.prototype', () => {
+		const schema = {
+			version: 1,
+			children: [{ type: 'toString', name: 'name' }],
+		} as FormSchema<Values, 'toString'>
+		expect(() => {
+			render(
+				<FieldsOnly
+					schema={schema}
+					{...COMMON}
+				/>,
+			)
+		}).toThrow(
+			'SchemaForm: the document has a field of type "toString", but no component registered in fields derives that type id.',
+		)
+	})
+
 	it('throws naming Section when the document has a section', () => {
 		const schema: FormSchema<Values> = {
 			version: 1,

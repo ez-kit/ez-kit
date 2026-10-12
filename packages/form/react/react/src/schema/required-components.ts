@@ -123,5 +123,5 @@ function assertFieldKind(type: string, registered: RegisteredFields): void {
 		if (!hasSlot(registered.instance, BUILT_IN_SLOT_BY_TYPE[type])) throw new Error(missingBuiltInFieldMessage(type))
 		return
 	}
-	if (registered.custom[type] === undefined) throw new Error(missingCustomFieldMessage(type))
+	if (!Object.hasOwn(registered.custom, type)) throw new Error(missingCustomFieldMessage(type))
 }
