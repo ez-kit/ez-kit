@@ -11,6 +11,13 @@ import type { KitFormApi } from './kit-form'
  * `useForm({ validators: { onChange } })`, and `unknown` for the submit meta rejects one whose meta
  * is `undefined`. TanStack's own `AnyFormApi` makes the same trade. Values and field names stay
  * typed, because they come from `TValues` and `TFields`, not from these.
+ *
+ * What the trade costs, on a `FormInstance`: every member typed from a validator or the submit
+ * meta is `any` — `state.errors`, `state.errorMap`, `getAllErrors()`, the field-level errors in
+ * field meta, `options.validators`, `options.onSubmitMeta` and `handleSubmit`'s meta argument.
+ * And since `any` is assignable both ways, a `FormInstance` is also accepted where a block
+ * declared specific validators, so a block that relies on its errors being typed should take the
+ * instance `useForm` returned rather than this name. `form-instance.test.tsx` pins both.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Open = any

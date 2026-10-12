@@ -26,7 +26,7 @@ function AddressBlock({ form, path }: { form: FormInstance<Checkout>; path: 'bil
 }
 ```
 
-Any instance `useForm` returns for a `Checkout` is accepted, whatever validators it was given — those stay on the instance and do not have to be restated in the prop's type.
+Any instance `useForm` returns for a `Checkout` is accepted, whatever validators it was given — they stay on the instance and do not have to be restated in the prop's type. The price is that the prop's type no longer knows them: through a `FormInstance`, everything typed from a validator or the submit meta is `any` — `state.errors`, `state.errorMap`, `getAllErrors()`, field-level errors, `options.validators`, `options.onSubmitMeta` and the meta `handleSubmit` takes. Values and field names stay fully typed. The same openness works in reverse: a `FormInstance` is accepted by a `withForm` block that declared validators of its own, so a block that relies on its errors being typed should be handed the instance `useForm` returned, not one passed through a `FormInstance` prop.
 
 <KitExample exampleId='form-composition' />
 
@@ -70,7 +70,7 @@ There is no runtime here. `withForm` hands the options straight to TanStack, whi
 
 TanStack types the render prop's `form` as an API parameterised by the components injected into `createFormHook`. This adapter injects **none** — the kit's primitives reach the fields by closure instead — so TanStack's own type describes an instance with no `TextField` on it, and `form.TextField` inside a block would fail to compile while working perfectly at runtime.
 
-So `withForm` is wrapped, and the single thing the wrapper changes is that declared type: it says `KitFormApi`, which is what `useForm` already returns. A block therefore sees exactly the instance it is handed. The reasoning is written out in full at the top of `packages/form/react/react/src/composition.ts`.
+So `withForm` is wrapped, and the single thing the wrapper changes is that declared type: it names the kit's own form instance — the type `useForm` returns, with the validators the block's options declare — rather than TanStack's component-less one. A block therefore sees exactly the instance it is handed. The reasoning is written out in full at the top of `packages/form/react/react/src/composition.ts`.
 
 That wrapping is what puts `withForm` on the kit rather than on the adapter's general surface: it is produced by `createForm({ components })` together with `useForm`, `Form` and `FormRenderer`, so you import it from `@ez-kit/form-shadcn` or `@ez-kit/form-heroui` alongside them.
 
