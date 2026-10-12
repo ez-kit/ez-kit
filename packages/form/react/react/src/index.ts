@@ -18,9 +18,7 @@ export type {
 export type { BlockRegistry, CustomFieldRegistry, CustomFieldRenderProps } from './schema/registries'
 export type {
 	OptionSource,
-	OptionSourceInput,
 	OptionSourceRegistry,
-	OptionSourceResult,
 	SearchableOptionSource,
 	SimpleOptionSource,
 } from './options/source-types'
@@ -97,7 +95,9 @@ export type {
 	JsonValue,
 	LocalizedSelectOption,
 	LocalizedText,
-	OptionsSource,
+	OptionSourceInput,
+	OptionSourceRef,
+	OptionSourceResult,
 	SelectOption,
 	Translate,
 } from '@ez-kit/form-core'

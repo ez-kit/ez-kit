@@ -80,7 +80,7 @@ export type {
 	OptionSourceInput,
 	OptionSourceRegistry,
 	OptionSourceResult,
-	OptionsSource,
+	OptionSourceRef,
 	RadioGroupFieldProps,
 	RendererForm,
 	SearchableOptionSource,

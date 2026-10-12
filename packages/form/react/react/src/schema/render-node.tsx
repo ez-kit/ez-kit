@@ -27,7 +27,7 @@ import type {
 	FormNode,
 	LocalizedSelectOption,
 	LocalizedText,
-	OptionsSource,
+	OptionSourceRef,
 	OptionValue,
 	SectionNode,
 	SelectOption,
@@ -133,7 +133,7 @@ function correlatedOptions(
 /** The two shapes a select-like node's options can arrive in, as one node type to read. */
 type OptionBearingNode = {
 	options?: readonly LocalizedSelectOption<OptionValue>[] | undefined
-	optionsFrom?: string | OptionsSource | undefined
+	optionsFrom?: string | OptionSourceRef | undefined
 }
 
 /**

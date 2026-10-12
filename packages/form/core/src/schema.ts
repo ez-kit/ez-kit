@@ -1,7 +1,7 @@
 import type { DateRangeValue } from './date-value'
 import type { FormFieldType } from './field-types'
 import type { LocalizedText } from './localized-text'
-import type { OptionsSource } from './options-source'
+import type { OptionSourceRef } from './options-source'
 import type { Condition } from './rules'
 import type { LocalizedSelectOption } from './select-option'
 import type { TextInputType } from './text-input-type'
@@ -93,7 +93,7 @@ type FieldCommon<TValues> = CommonProps<TValues> & {
  */
 type OptionsProvision<TValue> =
 	| { options: readonly LocalizedSelectOption<TValue>[]; optionsFrom?: never }
-	| { options?: never; optionsFrom: string | OptionsSource }
+	| { options?: never; optionsFrom: string | OptionSourceRef }
 
 /**
  * Whether the field accepts a value its option list does not contain — the text the user
