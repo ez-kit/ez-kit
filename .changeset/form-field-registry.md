@@ -75,7 +75,8 @@ same thing keyed differently (`RatingField` there, `rating` here). A field regis
 **`FormBundle` is now generic** over the registries, defaulted, so the bare spelling keeps working.
 `FormFieldComponents`, `FormInstance` and the array scope types (`ArrayFieldScope`,
 `ArrayItemScope`) likewise gained trailing defaulted parameters; every existing one-argument
-spelling compiles unchanged and keeps meaning "the kit's twelve".
+spelling compiles unchanged and keeps meaning a full kit: `AllFormFieldSlots` (the twelve field
+kinds and `ArrayField`) and, where the type takes components, all four of `AllFormComponents`.
 
 ## Also in this release
 

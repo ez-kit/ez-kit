@@ -127,7 +127,7 @@ test('a block renders without binding to any value', () => {
 })
 
 test('an unknown node type throws with the type named', () => {
-	// A bundle whose factory registered nothing beyond the kit's twelve — `rating` is
+	// A bundle whose factory registered nothing beyond the kit's own slots — `rating` is
 	// neither a built-in kind nor registered, and there is no per-form prop left that could
 	// have supplied it after the fact.
 	const { SchemaForm: BareSchemaForm } = createSchemaForm({

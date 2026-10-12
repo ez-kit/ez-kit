@@ -35,7 +35,8 @@ export type KitFormBlock<
 	 * Bound by the factory, never by the consumer: `withForm` is declared inside
 	 * `createForm<TFields>`, so the app's registry is already in lexical scope there and the
 	 * call site writes nothing. Defaulted so every existing twelve-argument spelling of this
-	 * type keeps compiling and keeps meaning "the kit's twelve".
+	 * type keeps compiling and keeps meaning a full kit — `AllFormFieldSlots`, the twelve field
+	 * kinds and `ArrayField` — with `TComponents` likewise defaulting to `AllFormComponents`.
 	 *
 	 * Without it a block sees `AllFormFieldSlots` while the instance it is handed carries the
 	 * app's fields too, and `<form.RatingField />` inside a block is a compile error against a

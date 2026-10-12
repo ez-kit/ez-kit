@@ -27,8 +27,8 @@ export type FieldTypeDefinition<TProps = Record<string, unknown>, TValue = unkno
 }
 
 /**
- * What `createForm({ fields })` accepts: the kit's twelve slots spread beside whatever the
- * app registers, keyed by component name.
+ * What `createForm({ fields })` accepts: the kit's slots (`AllFormFieldSlots` — the twelve field
+ * kinds and `ArrayField`) spread beside whatever the app registers, keyed by component name.
  *
  * The `any` is the same trade `CellTypeRegistry` makes in `@ez-kit/data-grid-react`, and for
  * the same reason: `FormFieldSlots`' twelve members take twelve different, mutually
