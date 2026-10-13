@@ -13,3 +13,6 @@ spelling for a subset, and the arrays API notes that a kit's `ArrayField` carrie
 Native API now documents `form.Field`, which binds a control of your own, and `form.NativeField`,
 TanStack's field, on the form, on groups and on array entries; Composition documents the optional
 type argument of `useFormContext`.
+
+Submission documents the dirty-state recipes: resetting after a save, late initial values and a
+`beforeunload` warning while the form is dirty.

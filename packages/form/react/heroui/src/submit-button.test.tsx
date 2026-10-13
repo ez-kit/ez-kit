@@ -58,6 +58,11 @@ describe('SubmitButton', () => {
 		expect(onSubmit).toHaveBeenCalledTimes(1)
 	})
 
+	it('is enabled on a pristine form, since it does not block on isDirty', () => {
+		render(<Form defaultValues={{ name: 'a' }}>{() => <SubmitButton>Save</SubmitButton>}</Form>)
+		expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled()
+	})
+
 	it('is disabled when told to be', () => {
 		render(<Form defaultValues={{}}>{() => <SubmitButton disabled>Save</SubmitButton>}</Form>)
 		expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()

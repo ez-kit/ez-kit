@@ -136,6 +136,48 @@ Three approaches, in the order they are worth trying:
 
 **Pass `defaultValues` as they arrive.** TanStack re-applies the options on every render, and replaces the form's values when `defaultValues` changes — but only while the form is still untouched. That proviso is the whole reason this is safe: data landing a moment after mount fills the fields, while a response landing after the user has started typing cannot overwrite their work. Render the form with empty defaults and swap them in when the request resolves.
 
-**Call `form.reset(values)`** when you want the change to apply regardless — after a successful save, or when the user explicitly discards their edits. It replaces both the values and the defaults the form compares against, so the form is pristine again rather than dirty against a stale baseline.
+**Call `form.reset(values)`** when you want the change to apply regardless — after a successful save, or when the user explicitly discards their edits. It replaces the values and leaves the form pristine, so `isDirty` is `false` again. It also makes `values` the baseline `isDefaultValue` compares against — but only until the next render. TanStack re-applies the options it was rendered with, a reset form is untouched, and so a `defaultValues` still holding the old record puts the old values back the next time the component renders, silently undoing the save. Feed the saved value back as `defaultValues`, from state, so the options and the reset agree:
+
+```tsx
+const [saved, setSaved] = useState(record)
+const form = useForm({
+	defaultValues: saved,
+	onSubmit: async ({ value, formApi }) => {
+		await save(value)
+		setSaved(value)
+		formApi.reset(value)
+	},
+})
+```
+
+`formApi.reset(value, { keepDefaultValues: true })` is the alternative when nothing reads `isDefaultValue`: the values stay and `isDirty` is `false`, while the baseline remains the original `defaultValues`, so `isDefaultValue` reads `false` from then on.
 
 **Remount with `key`** when the form should genuinely start over: `<Form key={recordId} …>` gives each record its own form instance, and switching records throws away the previous one's state instead of reconciling it. This is the blunt option, and the right one when reconciling would be wrong.
+
+## Warn before leaving with unsaved changes
+
+`isDirty` is what a "you have unsaved changes" prompt reads. The browser's own prompt on closing or reloading the tab is a `beforeunload` listener, attached only while the form is dirty — read the flag through `form.Submit` (or `form.Subscribe`) and hand it to a component that owns the effect:
+
+```tsx
+function LeaveGuard({ when }: { when: boolean }): ReactNode {
+	useEffect(() => {
+		if (!when) return
+		const warn = (event: BeforeUnloadEvent): void => {
+			event.preventDefault()
+		}
+		window.addEventListener('beforeunload', warn)
+		return () => {
+			window.removeEventListener('beforeunload', warn)
+		}
+	}, [when])
+	return null
+}
+```
+
+Render it anywhere inside the form:
+
+```tsx
+<form.Submit>{({ isDirty }) => <LeaveGuard when={isDirty} />}</form.Submit>
+```
+
+Navigation inside the app never fires `beforeunload`; blocking a route change is the router's business, through its own blocker, with the same `isDirty` as the condition.
