@@ -23,12 +23,15 @@ import {
 } from '@tanstack/table-core'
 import { describe, expect, it, vi } from 'vitest'
 
+import { allDataGridFeatures } from '../features/all'
 import { creatingFeature } from '../features/creating'
 import { deletingFeature } from '../features/deleting'
 import { editingFeature } from '../features/editing'
 import { loadingFeature } from '../features/loading'
 import { createTable, createColumns } from '../index'
 import { ACTIONS_COLUMN_ID, EXPAND_COLUMN_ID, SELECTION_COLUMN_ID } from '../system-columns'
+
+import { createTableOptions } from './create-table-options'
 
 import type { RowSelectionState, SortingState, TableFeatures, TableOptions_All, TableState } from '@tanstack/table-core'
 
@@ -686,6 +689,148 @@ describe('createTable — pagination', () => {
 		})
 		expect(table.options.rowCount).toBeUndefined()
 		expect(table.getPageCount()).toBe(5)
+	})
+})
+
+// ── infinite pagination ───────────────────────────────────────────────────────
+
+// More rows than a page, so a slice to one page is visible as a short row model. Unique names
+// make `grouping.by: ['name']` yield one group per row, so a grouped model is still 25 rows long.
+const MANY: Row[] = Array.from({ length: 25 }, (_, i) => ({
+	id: i + 1,
+	name: `Row ${String(i + 1).padStart(2, '0')}`,
+	age: i,
+}))
+
+describe('createTable — infinite pagination', () => {
+	// `allDataGridFeatures` registers `paginatedRowModel`. Infinite mode must not slice through it:
+	// regressed in #246, when the model became a slot of the feature set instead of something the
+	// core attached only for paged grids.
+	it('shows every accumulated row with the all-in feature set', () => {
+		const table = createTable({
+			features: allDataGridFeatures,
+			data: MANY,
+			columns: COLUMNS,
+			pagination: { mode: 'infinite', pageSize: 10 },
+		})
+		expect(table.getRowModel().rows).toHaveLength(25)
+	})
+
+	it('shows every accumulated row after sorting, filtering and grouping', () => {
+		const table = createTable({
+			features: allDataGridFeatures,
+			data: MANY,
+			columns: COLUMNS,
+			pagination: { mode: 'infinite', pageSize: 10 },
+			sorting: true,
+			filtering: true,
+			grouping: { by: ['name'] },
+			initialState: {
+				sorting: [{ id: 'age', desc: true }],
+				columnFilters: [{ id: 'name', value: 'Row' }],
+			},
+		})
+		const rows = table.getRowModel().rows
+		expect(rows).toHaveLength(25)
+		expect(rows[0]?.getIsGrouped()).toBe(true)
+	})
+
+	it('picks up data appended by a load', () => {
+		const table = createTable({
+			features: allDataGridFeatures,
+			data: MANY.slice(0, 20),
+			columns: COLUMNS,
+			pagination: { mode: 'infinite', pageSize: 10 },
+		})
+		table.setData([...MANY, ...MANY.slice(0, 15).map((r) => ({ ...r, id: r.id + 100 }))])
+		expect(table.getRowModel().rows).toHaveLength(40)
+	})
+
+	it('says nothing about paginatedRowModel when the set registers it', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+		createTable({
+			features: allDataGridFeatures,
+			data: MANY,
+			columns: COLUMNS,
+			pagination: { mode: 'infinite' },
+		})
+		const messages = warn.mock.calls.map((args) => String(args[0]))
+		expect(messages.filter((m) => m.includes('paginatedRowModel'))).toEqual([])
+		warn.mockRestore()
+	})
+
+	// An infinite grid has no page to be on: rows always start at the first one. A seeded index
+	// would otherwise reach `onStateChange`, a persisted URL and the ARIA row offsets.
+	it('starts at pageIndex 0 whatever the seed says, keeping the seeded pageSize', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+		const table = createTable({
+			features: allDataGridFeatures,
+			data: MANY,
+			columns: COLUMNS,
+			pagination: { mode: 'infinite' },
+			initialState: { pagination: { pageIndex: 2, pageSize: 20 } },
+		})
+		expect(table.store.state.pagination).toEqual({ pageIndex: 0, pageSize: 20 })
+		expect(table.getRowModel().rows).toHaveLength(25)
+		const messages = warn.mock.calls.map((args) => String(args[0]))
+		expect(messages.filter((m) => m.includes('initialState.pagination.pageIndex'))).toHaveLength(1)
+		expect(messages.find((m) => m.includes('initialState.pagination.pageIndex'))).toContain('infinite')
+		warn.mockRestore()
+	})
+
+	it('does not warn when the seed leaves pageIndex at 0', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+		createTable({
+			features: allDataGridFeatures,
+			data: MANY,
+			columns: COLUMNS,
+			pagination: { mode: 'infinite' },
+			initialState: { pagination: { pageIndex: 0, pageSize: 20 } },
+		})
+		expect(warn).not.toHaveBeenCalled()
+		warn.mockRestore()
+	})
+
+	// The same set, read by the other two modes: the fix is keyed on the mode, not on the set.
+	it('still slices client-side pages with the all-in feature set', () => {
+		const table = createTable({
+			features: allDataGridFeatures,
+			data: MANY,
+			columns: COLUMNS,
+			pagination: { pageSize: 10 },
+		})
+		expect(table.getRowModel().rows).toHaveLength(10)
+		expect(table.options.manualPagination).toBeUndefined()
+	})
+
+	it('still passes server pages through as they are with the all-in feature set', () => {
+		const table = createTable({
+			features: allDataGridFeatures,
+			data: MANY.slice(0, 10),
+			columns: COLUMNS,
+			pagination: { manual: true, pageSize: 10, rowCount: 100 },
+		})
+		expect(table.getRowModel().rows).toHaveLength(10)
+		expect(table.getPageCount()).toBe(10)
+		expect(table.getRowCount()).toBe(100)
+	})
+
+	// The React adapter rebuilds the options in its render body and `useTable` merges them over
+	// the previous ones, on the same instance. A mode switch has to take effect that way — which is
+	// why the fix is a per-call flag rather than leaving the model out, since the instance caches
+	// the paginated row model on first use.
+	it('switches from paged to infinite on a live instance', () => {
+		const base = { features: allDataGridFeatures, data: MANY, columns: COLUMNS }
+		const table = createTable({ ...base, pagination: { pageSize: 10 } })
+		expect(table.getRowModel().rows).toHaveLength(10)
+
+		const { options } = createTableOptions({ ...base, pagination: { mode: 'infinite', pageSize: 10 } })
+		// `createTableOptions` returns options typed at the widest set, not at this table's; the
+		// adapter merges them through the same loosened signature.
+		const setOptions = table.setOptions as unknown as (updater: (prev: object) => object) => void
+		setOptions((prev) => ({ ...prev, ...options }))
+
+		expect(table.getRowModel().rows).toHaveLength(25)
 	})
 })
 

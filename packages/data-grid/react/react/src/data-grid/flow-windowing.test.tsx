@@ -135,11 +135,9 @@ function renderWindow(items: VirtualItem[]) {
  * `normalizeInfinite` returns nothing for any other mode — so a grid configured any other way
  * renders no loader at all and the cases below would assert against `null`.
  *
- * `pageSize` stays for the reason `renderWindow` gives, and infinite mode does not excuse it: the
- * mode means to show every accumulated row, but `TEST_FEATURES` registers `paginatedRowModel`
- * anyway, so the model is still sliced to one page — which core warns about by name here. Without
- * it the window at index 10 finds no row behind it and the pads under test would be measured on an
- * empty band.
+ * No `pageSize`, unlike `renderWindow`: infinite mode shows every accumulated row even though
+ * `TEST_FEATURES` registers `paginatedRowModel`, so the default page of ten does not slice the
+ * model. A window past the first ten rows finding rows behind it is what proves that.
  */
 function renderWindowWithInfinite(items: VirtualItem[]) {
 	return render(
@@ -149,7 +147,6 @@ function renderWindowWithInfinite(items: VirtualItem[]) {
 			columns={TEST_COLUMNS}
 			pagination={{
 				mode: PaginationMode.Infinite,
-				pageSize: ROW_COUNT,
 				hasNextPage: true,
 				onLoadMore: () => {},
 			}}
@@ -384,6 +381,14 @@ describe('flow windowing', () => {
 		expect(heldRows[0]?.getAttribute('style')).not.toContain('transform')
 	})
 
+	it('hands the virtualizer every accumulated row, not one page of them', () => {
+		const { container } = renderWindowWithInfinite(windowItems(SCROLLED_WINDOW_FIRST, WINDOW_COUNT))
+		const rows = container.querySelectorAll('[data-slot="tr"][data-virtual="row"]')
+
+		expect(rows).toHaveLength(WINDOW_COUNT)
+		expect(rows[0]?.getAttribute('data-row-id')).toBe(String(SCROLLED_WINDOW_FIRST + 1))
+	})
+
 	it('renders the virtualized loader row in flow, with no transform', () => {
 		const { container } = renderWindowWithInfinite(windowItems(10, WINDOW_COUNT))
 		const loader = container.querySelector('[data-slot="load-more-row"][data-virtual="load-more"]')
@@ -408,9 +413,9 @@ describe('flow windowing', () => {
 		const tbody = container.querySelector('[data-slot="tbody"][data-virtualized="true"]')
 		const loader = container.querySelector('[data-slot="load-more-row"][data-virtual="load-more"]')
 
-		// The band is real, not an empty tbody the pads happen to be written on: `pageSize` is what
-		// keeps the model from being sliced past this window, and without it the two assertions below
-		// would still pass while measuring nothing.
+		// The band is real, not an empty tbody the pads happen to be written on: infinite mode leaves
+		// the model unsliced past this window, and without that the two assertions below would still
+		// pass while measuring nothing.
 		expect(container.querySelectorAll('[data-slot="tr"][data-virtual="row"]')).toHaveLength(WINDOW_COUNT)
 		expect(tbody).toHaveStyle({ paddingTop: padsFor(10).paddingTop, paddingBottom: '0px' })
 		expect(loader).toHaveStyle({ marginTop: padsFor(10).paddingBottom })

@@ -126,21 +126,4 @@ describe('data-grid example feature sets', () => {
 
 		expect(missing).toEqual([])
 	})
-
-	/**
-	 * The one case where a feature's own row model is the wrong answer.
-	 *
-	 * `pagination.mode: 'infinite'` shows every accumulated row, so `paginatedRowModel` slices them
-	 * back to one page. Core warns about this at construction; the warning is easy to miss in a docs
-	 * page that renders in an iframe, and the first mechanical pass over these examples made exactly
-	 * this mistake in all five infinite grids.
-	 */
-	it('leaves `paginatedRowModel` out of every infinite-scroll set', () => {
-		// Keyed off `pagination.mode: 'infinite'` in the source, not off `infiniteFeature` in the set:
-		// the feature is in the base set of every grid (the adapter mounts `<LoadMoreFooter />`
-		// unconditionally), so its presence says nothing about whether this grid scrolls infinitely.
-		const wrong = SETS.filter((set) => set.isInfinite && set.members.includes('paginatedRowModel'))
-
-		expect(wrong.map((set) => set.file)).toEqual([])
-	})
 })
