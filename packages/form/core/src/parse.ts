@@ -2,10 +2,12 @@ import { isDateRangeValue, isIsoDate } from './date-value'
 import { FORM_FIELD_TYPES, FormFieldType } from './field-types'
 import { collectRuleFields } from './rules'
 import { GRID_MAX, GRID_MIN, RESERVED_NODE_TYPES } from './schema'
+import { isSearchable } from './search-settings'
 import { hasChildren, isArrayNode, isFieldNode, walkNodes } from './walk'
 
 import type { Condition } from './rules'
 import type { AnyFormSchema, FieldValidate, FormNode } from './schema'
+import type { SearchSettings } from './search-settings'
 
 /**
  * Options that widen what `parseFormSchema` accepts: custom field kinds, block components
@@ -58,6 +60,9 @@ const DATE_FIELD_TYPES: readonly string[] = [FormFieldType.Date, FormFieldType.D
 
 /** Widened for the same reason as `DATE_FIELD_TYPES`: a node's `type` is a bare `string`. */
 const DATE_RANGE_TYPE: string = FormFieldType.DateRange
+
+/** The keys a `searchable` settings object may carry — the runtime face of `SearchSettings`. */
+const SEARCH_SETTING_KEYS: Record<keyof SearchSettings, true> = { debounce: true, minLength: true }
 
 /** The same widening, for the two kinds `searchable` has to tell apart. */
 const SELECT_TYPE: string = FormFieldType.Select
@@ -488,6 +493,9 @@ function assertOptions(
  * labels resolved through the source's `useSelectedOptions`. A `radiogroup` or a
  * `checkboxgroup` renders every option inline instead; there is nothing to type into and no
  * page of results to narrow, so the flag is meaningless there and always will be.
+ *
+ * Its object form, `{ debounce?, minLength? }`, carries only those two keys, each a
+ * non-negative integer — milliseconds and characters, neither of which has a fraction.
  */
 function assertSearchable(node: FormNode<unknown, string>, path: string): void {
 	const value = (node as unknown as UnknownRecord).searchable
@@ -500,8 +508,20 @@ function assertSearchable(node: FormNode<unknown, string>, path: string): void {
 			path,
 		)
 	}
-	if (typeof value !== 'boolean') {
-		throw new FormSchemaError(`"searchable" must be a boolean, got ${describeValue(value)}`, path)
+	if (typeof value === 'boolean') return
+	if (!isPlainObject(value)) {
+		throw new FormSchemaError(`"searchable" must be a boolean or an object, got ${describeValue(value)}`, path)
+	}
+	for (const [key, setting] of Object.entries(value)) {
+		if (!Object.hasOwn(SEARCH_SETTING_KEYS, key)) {
+			throw new FormSchemaError(`"searchable" has an unknown key "${key}"`, path)
+		}
+		if (typeof setting !== 'number' || !Number.isSafeInteger(setting) || setting < 0) {
+			throw new FormSchemaError(
+				`"searchable.${key}" must be a non-negative integer, got ${describeValue(setting)}`,
+				path,
+			)
+		}
 	}
 }
 
@@ -535,7 +555,7 @@ function assertCreatable(node: FormNode<unknown, string>, path: string): void {
 	if (typeof value !== 'boolean') {
 		throw new FormSchemaError(`"creatable" must be a boolean, got ${describeValue(value)}`, path)
 	}
-	if (value && record.searchable !== true) {
+	if (value && !isSearchable(record.searchable)) {
 		throw new FormSchemaError(
 			'"creatable" requires "searchable": true — a value is created by typing it, and only a ' +
 				'searchable field has somewhere to type',

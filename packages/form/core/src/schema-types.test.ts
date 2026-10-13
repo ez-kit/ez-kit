@@ -210,6 +210,36 @@ test('creatable is a string-list feature, rejected on a numeric one', () => {
 	expectTypeOf(define).toBeFunction()
 })
 
+test('searchable takes a settings object, and creatable rides on it', () => {
+	type Tagged = { tag: string }
+	const define = defineFormSchema<Tagged>()
+
+	define({
+		version: 1,
+		children: [{ type: FormFieldType.Select, name: 'tag', searchable: { debounce: 100 }, optionsFrom: 'tags' }],
+	})
+
+	define({
+		version: 1,
+		children: [{ type: FormFieldType.Select, name: 'tag', searchable: {}, creatable: true, optionsFrom: 'tags' }],
+	})
+
+	define({
+		version: 1,
+		children: [
+			{
+				type: FormFieldType.Select,
+				name: 'tag',
+				// @ts-expect-error -- a debounce is a number of milliseconds
+				searchable: { debounce: '100' },
+				optionsFrom: 'tags',
+			},
+		],
+	})
+
+	expectTypeOf(define).toBeFunction()
+})
+
 /**
  * `TValues` must be recoverable *from a schema value*, not just supplied to the authoring
  * helper. Everything downstream — `SchemaForm`'s `onSubmit`, `stripHiddenValues`,

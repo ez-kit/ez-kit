@@ -1,6 +1,6 @@
 'use client'
 
-import { getValueAtPath, resolveSelectOptions, resolveText } from '@ez-kit/form-core'
+import { getValueAtPath, isSearchable, resolveSelectOptions, resolveText } from '@ez-kit/form-core'
 import { useSelector } from '@tanstack/react-form'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
@@ -11,7 +11,7 @@ import { isSearchableSource } from './source-types'
 import type { SearchableOptionSource, SimpleOptionSource } from './source-types'
 import type { BindableForm, FieldValue } from '../bindable-form'
 import type { ConditionSubscribableForm } from '../schema/use-condition'
-import type { LocalizedText, OptionValue, SelectOption, Translate } from '@ez-kit/form-core'
+import type { LocalizedText, OptionValue, Searchable, SelectOption, Translate } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
 
 /**
@@ -76,7 +76,7 @@ export type FieldOptionsProps = {
 	 * Render as a search over the source rather than a plain list. `select` and `multiselect`
 	 * pass it; `parseFormSchema` rejects it on the two inline kinds.
 	 */
-	searchable?: boolean | undefined
+	searchable?: Searchable | undefined
 	/**
 	 * Offer the typed text as an extra option when it matches nothing. Requires `searchable`;
 	 * `parseFormSchema` rejects the pair in a document and {@link FieldOptions} throws for the
@@ -113,7 +113,7 @@ export function FieldOptions({
 	// Checked before either branch, and before any hook, because it is true of both: a value is
 	// created by typing it, and only a searchable field has an input to type into. A document
 	// is stopped earlier still, by `parseFormSchema`; this covers the JSX path.
-	if (creatable === true && searchable !== true) {
+	if (creatable === true && !isSearchable(searchable)) {
 		throw new Error(
 			`Field "${name}" is \`creatable\`, which requires \`searchable\`: a value is created by typing it, ` +
 				'and only a searchable field has somewhere to type.',
@@ -124,7 +124,7 @@ export function FieldOptions({
 		if (options === undefined) {
 			throw new Error(`Field "${name}" needs either an \`options\` list or an \`optionsFrom\` source name.`)
 		}
-		if (searchable === true) {
+		if (isSearchable(searchable)) {
 			return (
 				<StaticSearchableOptions
 					options={options}
@@ -151,7 +151,7 @@ export function FieldOptions({
 			form={form}
 			name={name}
 			clearedValue={clearedValue}
-			searchable={searchable === true}
+			searchable={isSearchable(searchable)}
 			creatable={creatable === true}
 			createLabel={createLabel}
 		>

@@ -62,24 +62,15 @@ export type OptionSourceInput = {
 	 * Additive: a source written before this key existed simply ignores it, which is why
 	 * `OptionSource` (from `@ez-kit/form-react`) could grow the searchable form without breaking anyone.
 	 *
-	 * It arrives **raw** — every keystroke, from the first character. Debouncing and a
-	 * minimum-length gate are the source's job for now, and belong inside it next to the
-	 * cache it already owns:
+	 * It arrives **debounced** and only once it is long enough. The renderer hands the source the
+	 * typed text after `debounce` ms without typing, and only when it is at least `minLength`
+	 * characters long; both are set on the source (`debounce`, `minLength` on a
+	 * `SearchableOptionSource`) or per field (`searchable: { debounce, minLength }`, in TSX or in a
+	 * schema node), the field winning. A source defaults to 300 ms and no minimum.
 	 *
-	 * ```tsx
-	 * function useCitiesSource({ params, query }) {
-	 *   const search = useDebouncedValue(query ?? '', 300)
-	 *   const result = useQuery({
-	 *     queryKey: ['cities', params, search],
-	 *     queryFn: () => fetchCities(params, search),
-	 *     enabled: search.length >= 2,
-	 *   })
-	 *   …
-	 * }
-	 * ```
-	 *
-	 * `@ez-kit/form-react` intends to take debouncing over later; until it does there is deliberately
-	 * no delay option, no timer and no default anywhere in it.
+	 * Below the minimum the hook receives `query: undefined` — "no search" — and should not fetch
+	 * a result page for it; the kit shows a hint instead of an empty list, and the selected
+	 * options still come from `useSelectedOptions`.
 	 */
 	query?: string
 }

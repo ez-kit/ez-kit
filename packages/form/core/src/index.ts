@@ -5,6 +5,7 @@ export { isDateRangeValue, isIsoDate } from './date-value'
 export { resolveText } from './localized-text'
 export { resolveSelectOptions } from './select-option'
 export { FormSchemaError, parseFormSchema } from './parse'
+export { isSearchable, LOCAL_SEARCH_DEFAULTS, REMOTE_SEARCH_DEFAULTS } from './search-settings'
 export { clampToGridRange, defineFormItem, defineFormSchema, GRID_MAX, GRID_MIN, RESERVED_NODE_TYPES } from './schema'
 export { TextInputType } from './text-input-type'
 export { buildValidator, runFieldValidate } from './validate'
@@ -17,6 +18,7 @@ export type { JsonValue, OptionSourceInput, OptionSourceRef, OptionSourceResult 
 export type { LocalizedSelectOption, OptionValue, SelectOption } from './select-option'
 export type { LocalizedText, Translate } from './localized-text'
 export type { ParseOptions } from './parse'
+export type { Searchable, SearchSettings } from './search-settings'
 export type {
 	AnyArrayNode,
 	AnyFormSchema,

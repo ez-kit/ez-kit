@@ -8,6 +8,7 @@ import type {
 	DateRangeValue,
 	DeepKeysOfType,
 	LocalizedText,
+	Searchable,
 	SelectOption,
 	TextInputType,
 } from '@ez-kit/form-core'
@@ -158,7 +159,7 @@ type SelectFieldPropsFor<TFormData, TValue> = BaseFieldProps<TFormData, TValue> 
 		 *
 		 * `select` and `multiselect` only; the two inline kinds do not have the prop at all.
 		 */
-		searchable?: boolean
+		searchable?: Searchable
 	} & CreatableProps<TValue>
 
 export type SelectFieldProps<TFormData> =
@@ -177,7 +178,7 @@ type MultiSelectFieldPropsFor<TFormData, TValue> = BaseFieldProps<TFormData, TVa
 		 * The source needs no change to serve both: `useSelectedOptions` already takes the
 		 * values to resolve as an **array**, and here it simply receives more than one.
 		 */
-		searchable?: boolean
+		searchable?: Searchable
 	} & CreatableProps<TValue>
 
 export type MultiSelectFieldProps<TFormData> =

@@ -3,6 +3,7 @@ import type { FormFieldType } from './field-types'
 import type { LocalizedText } from './localized-text'
 import type { OptionSourceRef } from './options-source'
 import type { Condition } from './rules'
+import type { Searchable } from './search-settings'
 import type { LocalizedSelectOption } from './select-option'
 import type { TextInputType } from './text-input-type'
 import type { DeepKeys, DeepKeysOfType, DeepValue } from '@tanstack/form-core'
@@ -141,8 +142,11 @@ type SelectMember<TValues, TValue> = FieldCommon<TValues> &
 		 *
 		 * Deliberately absent from `radiogroup` and `checkboxgroup` — they render every option
 		 * inline, so there is nothing to search. `parseFormSchema` rejects it on both.
+		 *
+		 * The object form, `{ debounce?, minLength? }`, is also "on" and tunes how the typed text
+		 * reaches the source — see {@link Searchable}.
 		 */
-		searchable?: boolean
+		searchable?: Searchable
 	}
 
 type MultiSelectMember<TValues, TValue> = FieldCommon<TValues> &
@@ -163,7 +167,7 @@ type MultiSelectMember<TValues, TValue> = FieldCommon<TValues> &
 		 * value array** and needs no change from a source already written for a searchable
 		 * `select`. Without it the chips would read as raw ids.
 		 */
-		searchable?: boolean
+		searchable?: Searchable
 	}
 
 type CheckboxGroupMember<TValues, TValue> = FieldCommon<TValues> &
