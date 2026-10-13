@@ -36,12 +36,22 @@ function useCitiesByValue({ values }: { values: readonly OptionValue[] }): Optio
 	return { options: CITIES.filter((city) => values.includes(city.value)), loading: false }
 }
 
-const CITY_SOURCE: SearchableOptionSource = { useOptions: useCitySearch, useSelectedOptions: useCitiesByValue }
+/** Every keystroke reaches the source at once, so no test waits out a real debounce. */
+const CITY_SOURCE: SearchableOptionSource = {
+	useOptions: useCitySearch,
+	useSelectedOptions: useCitiesByValue,
+	debounce: 0,
+}
 const SOURCES: OptionSourceRegistry = { cities: CITY_SOURCE }
 
-function SearchableCase({ cities }: { cities: string[] }) {
+/** A search whose answer never lands. */
+const IN_FLIGHT_SOURCES: OptionSourceRegistry = {
+	cities: { ...CITY_SOURCE, useOptions: () => ({ options: [], loading: true }) },
+}
+
+function SearchableCase({ cities, sources = SOURCES }: { cities: string[]; sources?: OptionSourceRegistry }) {
 	return (
-		<FormOptionSources value={SOURCES}>
+		<FormOptionSources value={sources}>
 			<Form defaultValues={{ cities } satisfies Values}>
 				{(form) => (
 					<form.MultiSelectField
@@ -103,7 +113,12 @@ describe('@ez-kit/form-shadcn searchable multiselect', () => {
 
 	it('stays interactive while a query is in flight', async () => {
 		const user = userEvent.setup()
-		render(<SearchableCase cities={[]} />)
+		render(
+			<SearchableCase
+				cities={[]}
+				sources={IN_FLIGHT_SOURCES}
+			/>,
+		)
 
 		const input = screen.getByRole('combobox')
 		await user.type(input, 'b')

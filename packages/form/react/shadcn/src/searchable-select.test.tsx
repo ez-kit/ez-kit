@@ -36,12 +36,22 @@ function useCitiesByValue({ values }: { values: readonly OptionValue[] }): Optio
 	return { options: CITIES.filter((city) => values.includes(city.value)), loading: false }
 }
 
-const CITY_SOURCE: SearchableOptionSource = { useOptions: useCitySearch, useSelectedOptions: useCitiesByValue }
+/** Every keystroke reaches the source at once, so no test waits out a real debounce. */
+const CITY_SOURCE: SearchableOptionSource = {
+	useOptions: useCitySearch,
+	useSelectedOptions: useCitiesByValue,
+	debounce: 0,
+}
 const SOURCES: OptionSourceRegistry = { cities: CITY_SOURCE }
 
-function SearchableCase({ city }: { city: string }) {
+/** A search whose answer never lands. */
+const IN_FLIGHT_SOURCES: OptionSourceRegistry = {
+	cities: { ...CITY_SOURCE, useOptions: () => ({ options: [], loading: true }) },
+}
+
+function SearchableCase({ city, sources = SOURCES }: { city: string; sources?: OptionSourceRegistry }) {
 	return (
-		<FormOptionSources value={SOURCES}>
+		<FormOptionSources value={sources}>
 			<Form defaultValues={{ city } satisfies Values}>
 				{(form) => (
 					<form.SelectField
@@ -87,7 +97,12 @@ describe('@ez-kit/form-shadcn searchable select', () => {
 
 	it('stays interactive while a query is in flight', async () => {
 		const user = userEvent.setup()
-		render(<SearchableCase city='' />)
+		render(
+			<SearchableCase
+				city=''
+				sources={IN_FLIGHT_SOURCES}
+			/>,
+		)
 
 		const input = screen.getByRole('combobox', { name: 'City' })
 		await user.type(input, 'b')
@@ -114,7 +129,9 @@ describe('@ez-kit/form-shadcn searchable select', () => {
 
 		function ChurningCase() {
 			return (
-				<FormOptionSources value={{ cities: { useOptions: useChurningSearch, useSelectedOptions: useCitiesByValue } }}>
+				<FormOptionSources
+					value={{ cities: { useOptions: useChurningSearch, useSelectedOptions: useCitiesByValue, debounce: 0 } }}
+				>
 					<Form defaultValues={{ city: 'lis' } satisfies Values}>
 						{(form) => (
 							<form.SelectField
