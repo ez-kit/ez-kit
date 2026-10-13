@@ -117,7 +117,7 @@ So a section that needs a "Save this section" button wherever it goes keeps the 
 	`group.form.handleSubmit()`.
 </Callout>
 
-The same `PasswordPair`, placed through a map in a sign-up form whose own schema checks only `login`. A mismatch shows on `confirm`, the real path, and blocks _Sign up_ until it is fixed:
+The same `PasswordPair`, placed through a map in a sign-up form whose own schema checks only `login`. A mismatch shows on `confirm`, the real path, and blocks _Sign up_ until it is fixed. The form's schema lists `password` and `confirm` without rules: a form's `validators` must type the whole form's shape, or the `<Form>` does not compile, so only `login` is checked by it:
 
 <KitExample exampleId='form-composition-sign-up' />
 
@@ -132,11 +132,11 @@ The same `PasswordPair`, placed through a map in a sign-up form whose own schema
 
 ### Placing a block
 
-| Prop            | Type                                       | Notes                                                                      |
-| --------------- | ------------------------------------------ | -------------------------------------------------------------------------- |
-| `form`          | `FormInstance<TFormData>`                  | Optional. Passed, `fields` is checked against it; omitted, the form above. |
-| `fields`        | path, or `{ [key in keyof TGroup]: path }` | Where the block lies: a branch, or a path per key.                         |
-| `onGroupSubmit` | `({ value, meta }) => unknown`             | Called when `group.handleSubmit()` finds the block valid.                  |
+| Prop            | Type                                       | Notes                                                                                                                                |
+| --------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `form`          | `FormInstance<TFormData>`                  | Optional. Passed, `fields` is checked against it; omitted, the form above.                                                           |
+| `fields`        | path, or `{ [key in keyof TGroup]: path }` | Where the block lies: a branch, or a path per key.                                                                                   |
+| `onGroupSubmit` | `({ value, meta }) => unknown`             | Called when `group.handleSubmit()` finds the block valid. `meta` is `undefined` when `handleSubmit()` is called without an argument. |
 
 ## `form.FormGroup`
 
