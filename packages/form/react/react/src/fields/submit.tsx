@@ -1,6 +1,6 @@
-import { formatFieldErrors } from '@ez-kit/form-core'
 import { useSyncExternalStore } from 'react'
 
+import { formatOwnErrors } from '../own-errors'
 import { serverErrorsOf } from '../server-errors'
 
 import type { BindableForm, SubmitState } from '../bindable-form'
@@ -49,7 +49,7 @@ export function createSubmit(form: BindableForm): (props: SubmitProps) => ReactN
 						canSubmit,
 						isSubmitting,
 						isDirty,
-						formErrors: formatFieldErrors([...errors, ...serverFormErrors]),
+						formErrors: formatOwnErrors([...errors, ...serverFormErrors]),
 						submit,
 					})
 				}

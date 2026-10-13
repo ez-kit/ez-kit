@@ -96,6 +96,8 @@ export type FormGroupInstance<TFormData, TName extends DeepKeys<TFormData>> = Fo
 	 * render prop receives is the root form's, so `field.name` is the absolute path, typed `string`.
 	 */
 	NativeField: LensFieldComponent<DeepValue<TFormData, TName>, Open>
+	/** The group's own messages — those its validators report with no path (R64). */
+	errors: string[]
 }
 
 /**

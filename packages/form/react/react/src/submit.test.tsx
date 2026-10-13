@@ -4,6 +4,7 @@ import { describe, expect, expectTypeOf, it, vi } from 'vitest'
 
 import { createForm } from './create-form'
 import { testComponents, testFields, testFormElement } from './test-kit'
+import { testSchema } from './test-schema'
 
 import type { SubmitRenderProps } from './index'
 
@@ -172,5 +173,41 @@ describe('form.Submit field-level issues', () => {
 			expect(screen.getByText('Required')).toBeTruthy()
 		})
 		expect(screen.getByTestId('errors').textContent).toBe('[]')
+	})
+})
+
+describe('form.Submit formErrors and a form-level standard schema', () => {
+	it('lists only the pathless issues of a form-level standard schema in formErrors (R64)', async () => {
+		const user = userEvent.setup()
+		const rootSchema = testSchema<{ a: string }>((values) => [
+			{ message: 'Root problem' },
+			...(values.a === '' ? [{ message: 'A is required', path: ['a'] }] : []),
+		])
+		render(
+			<Form
+				defaultValues={{ a: '' }}
+				validators={{ onSubmit: rootSchema }}
+			>
+				{(form) => (
+					<form.Submit>
+						{({ formErrors, submit }) => (
+							<>
+								<output data-testid='form-errors'>{formErrors.join('|')}</output>
+								<button
+									type='button'
+									onClick={() => void submit()}
+								>
+									Go
+								</button>
+							</>
+						)}
+					</form.Submit>
+				)}
+			</Form>,
+		)
+
+		await user.click(screen.getByRole('button', { name: 'Go' }))
+
+		expect(screen.getByTestId('form-errors')).toHaveTextContent(/^Root problem$/)
 	})
 })

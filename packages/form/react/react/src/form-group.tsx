@@ -5,6 +5,7 @@ import { useMemo } from 'react'
 
 import { scopeFieldProps } from './field-scope'
 import { createField } from './fields/field'
+import { formatOwnErrors } from './own-errors'
 
 import type { BindableForm } from './bindable-form'
 import type { NoRegistry } from './contract'
@@ -14,6 +15,13 @@ import type { DeepKeys } from '@tanstack/form-core'
 import type { ReactNode } from 'react'
 
 type NameScoped = (props: { name: string }) => ReactNode
+
+/** The slice of TanStack's group state `errors` is read from. */
+type GroupMeta = { errorMap: Record<string, unknown> }
+
+function groupMeta(group: object): GroupMeta {
+	return (group as { state: { meta: GroupMeta } }).state.meta
+}
 
 /**
  * `Inner` with its names read relative to `prefix` — `name` and the validators' listen-to lists
@@ -30,7 +38,8 @@ export function scopeName<TProps extends { name: string }>(
 }
 
 /**
- * TanStack's form group over the branch `name`, plus `Field` and `NativeField` relative to it.
+ * TanStack's form group over the branch `name`, plus `Field` and `NativeField` relative to it, and
+ * `errors`: the group's own messages ({@link formatOwnErrors}).
  *
  * `Field` is `createField` over the instance's `AppField` — the binding seam — scoped like
  * `NativeField`, so a form group's own control is bound like every other field.
@@ -55,10 +64,10 @@ export function useFormGroup<TFormData, const TName extends DeepKeys<TFormData>>
 		}),
 		[appField, native, options.name],
 	)
-	return useMemo(() => Object.assign(group, members), [group, members]) as unknown as FormGroupInstance<
-		TFormData,
-		TName
-	>
+	return useMemo(
+		() => Object.assign(group, members, { errors: formatOwnErrors(Object.values(groupMeta(group).errorMap)) }),
+		[group, members],
+	) as unknown as FormGroupInstance<TFormData, TName>
 }
 
 /** `form.FormGroup`: `useFormGroup` over this form, rendering `children(group)`. */

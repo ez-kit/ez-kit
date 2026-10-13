@@ -7,6 +7,7 @@ import { createForm } from './create-form'
 import { useFieldGroup } from './field-groups'
 import { useFormGroup } from './form-group'
 import { testComponents, testFields, testFormElement } from './test-kit'
+import { testSchema } from './test-schema'
 
 import type { NoRegistry } from './contract'
 import type { FormInstance } from './form-instance'
@@ -415,5 +416,46 @@ describe('NativeField — listen-to names are relative too', () => {
 			)
 		}
 		expectTypeOf(Probe).toBeFunction()
+	})
+})
+
+type PasswordPair = { password: string; confirm: string }
+type PairValues = { security: PasswordPair }
+const PAIR_DEFAULTS: PairValues = { security: { password: '', confirm: '' } }
+const MISMATCH = 'Passwords do not match'
+const SAME_AS_NAME = 'Must differ from the name'
+const pairSchema = testSchema<PasswordPair>((pair) => [
+	...(pair.password !== pair.confirm ? [{ message: MISMATCH, path: ['confirm'] }] : []),
+	...(pair.password === 'ann' ? [{ message: SAME_AS_NAME }] : []),
+])
+
+describe('form.FormGroup — group.errors (R64)', () => {
+	it('holds only the pathless issues; a path issue lands on its field', async () => {
+		const user = userEvent.setup()
+		const seen: string[][] = []
+		function Case(): ReactNode {
+			const form = useForm({ defaultValues: PAIR_DEFAULTS })
+			return (
+				<Form form={form}>
+					<form.FormGroup
+						name='security'
+						validators={{ onChange: pairSchema }}
+					>
+						{(group) => {
+							seen.push(group.errors)
+							return <group.NativeField name='password'>{(field) => <NativeInput field={field} />}</group.NativeField>
+						}}
+					</form.FormGroup>
+				</Form>
+			)
+		}
+		render(<Case />)
+
+		await user.type(screen.getByLabelText('security.password'), 'x')
+		expect(seen.at(-1)).toEqual([])
+
+		await user.clear(screen.getByLabelText('security.password'))
+		await user.type(screen.getByLabelText('security.password'), 'ann')
+		expect(seen.at(-1)).toEqual([SAME_AS_NAME])
 	})
 })
