@@ -28,7 +28,7 @@ import type { ReactNode } from 'react'
 // Re-exported so an example imports everything from this one specifier: the source panel
 // rewrites it to the kit package, and both kits re-export these from `@ez-kit/form-react`.
 export { FormFieldType, TextInputType } from '@ez-kit/form-react'
-export type { FormInstance, SelectOption } from '@ez-kit/form-react'
+export type { FormInstance, SelectOption, ServerErrors } from '@ez-kit/form-react'
 
 // The schema-authoring API, re-exported for the same reason — both kits re-export these
 // verbatim from `@ez-kit/form-core`, so an example that imports them from here displays

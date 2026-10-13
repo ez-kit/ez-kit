@@ -272,6 +272,22 @@
 		"exportName": "SubmitExample"
 	},
 	{
+		"id": "form-server-action",
+		"label": "Server action",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/server-action.tsx",
+		"exportName": "ServerActionExample"
+	},
+	{
+		"id": "form-server-action-schema",
+		"label": "Server action: document",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/server-action-schema.tsx",
+		"exportName": "ServerActionSchemaExample"
+	},
+	{
 		"id": "form-validation-schema",
 		"label": "Validation: document",
 		"group": "form",

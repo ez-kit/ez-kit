@@ -159,6 +159,7 @@ export const DocPage = {
 	FormSelectIndex: 'content/docs/form/select/index.mdx',
 	FormSelectOptionSources: 'content/docs/form/select/option-sources.mdx',
 	FormSelectSearchable: 'content/docs/form/select/searchable.mdx',
+	FormServerActions: 'content/docs/form/server-actions.mdx',
 	FormSubmission: 'content/docs/form/submission.mdx',
 	FormValidation: 'content/docs/form/validation.mdx',
 	PaginationInfiniteScroll: 'content/docs/data-grid/pagination/infinite-scroll.mdx',
@@ -1350,6 +1351,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{ page: DocPage.FormSelectIndex, optionTables: [], nonOptionTables: [] },
 	{ page: DocPage.FormSelectOptionSources, optionTables: [], nonOptionTables: [] },
 	{ page: DocPage.FormSelectSearchable, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.FormServerActions, optionTables: [], nonOptionTables: [] },
 	{
 		page: DocPage.FormSubmission,
 		optionTables: [{ heading: '`form.Submit`', roots: [FORM_TYPE.SubmitRenderProps], expectedCount: 5 }],

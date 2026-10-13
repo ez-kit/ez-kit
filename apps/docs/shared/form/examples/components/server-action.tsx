@@ -1,0 +1,45 @@
+'use client'
+
+import { startTransition, useActionState } from 'react'
+
+import { Form, TextInputType } from 'shared/form/FormKit'
+
+import { signUp } from '../actions/sign-up'
+
+export function ServerActionExample() {
+	const [state, action, isPending] = useActionState(signUp, {})
+
+	return (
+		<div className='flex flex-col gap-4'>
+			<Form
+				defaultValues={{ username: '', email: '' }}
+				serverErrors={state.serverErrors}
+				onSubmit={({ value }) => {
+					startTransition(() => {
+						action(value)
+					})
+				}}
+			>
+				{(form) => (
+					<>
+						<form.TextField
+							name='username'
+							label='Username'
+							description='Try admin to see the server reject it.'
+							validate={{ required: true, minLength: 3 }}
+						/>
+						<form.TextField
+							name='email'
+							label='Email'
+							type={TextInputType.Email}
+							validate={{ required: true, format: 'email' }}
+						/>
+						<form.SubmitButton disabled={isPending}>Sign up</form.SubmitButton>
+					</>
+				)}
+			</Form>
+
+			{state.ok ? <p className='text-sm'>Signed up.</p> : null}
+		</div>
+	)
+}

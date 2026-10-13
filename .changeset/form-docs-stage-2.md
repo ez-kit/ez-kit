@@ -19,3 +19,7 @@ Submission documents the dirty-state recipes: resetting after a save, late initi
 
 The kit contract, Native API, Fields and Custom fields pages document `data-form-id`, the form id
 every field wrapper carries beside `data-field`.
+
+A new Server actions page shows a form submitting to a real server action, with `serverErrors` from
+`useActionState`, and states that the form needs JavaScript; an end-to-end test checks that a
+server-rendered form hydrates without errors in both kits.

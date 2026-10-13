@@ -1,0 +1,125 @@
+---
+title: Server actions
+description: Submitting a form to a React server action, with the errors it returns put back on the fields through serverErrors.
+---
+
+**The form needs JavaScript.** A server action can receive a plain HTML form before the page has hydrated, but these forms are not plain HTML forms: the kits' fields are controlled components, and arrays, conditions and the wizard all live in JavaScript. Until the page hydrates there is nothing to submit, so treat a server action here as the endpoint the form calls, not as a no-JavaScript fallback.
+
+## The recipe
+
+Three pieces, all React's own: the action, `useActionState` to hold what it returned, and `startTransition` to call it.
+
+```ts
+'use server'
+
+import { buildValidator } from '@ez-kit/form-core'
+
+import { signUpSchema } from './sign-up-schema'
+
+import type { SignUpValues } from './sign-up-schema'
+import type { ServerErrors } from '@ez-kit/form-shadcn'
+
+export type SignUpResult = {
+	serverErrors?: ServerErrors<SignUpValues>
+	ok?: true
+}
+
+const TAKEN_USERNAMES = new Set(['admin', 'root'])
+
+const validator = buildValidator(signUpSchema)
+
+export async function signUp(_previous: SignUpResult, values: SignUpValues): Promise<SignUpResult> {
+	const result = await validator['~standard'].validate(values)
+
+	if (result.issues) {
+		const fields = Object.fromEntries(result.issues.map((issue) => [String(issue.path?.[0]), issue.message]))
+		return { serverErrors: { fields } }
+	}
+
+	if (TAKEN_USERNAMES.has(values.username.trim().toLowerCase())) {
+		return { serverErrors: { fields: { username: 'That username is taken' } } }
+	}
+
+	return { ok: true }
+}
+```
+
+The action returns a `serverErrors` object in the shape the form takes — field messages under `fields`, keyed by path, and an optional `form` for a message about the form as a whole — and the component hands it straight back to `<Form>`:
+
+```tsx
+'use client'
+
+import { startTransition, useActionState } from 'react'
+
+import { Form, TextInputType } from '@ez-kit/form-shadcn'
+
+import { signUp } from './sign-up'
+
+export function SignUp() {
+	const [state, action, isPending] = useActionState(signUp, {})
+
+	return (
+		<Form
+			defaultValues={{ username: '', email: '' }}
+			serverErrors={state.serverErrors}
+			onSubmit={({ value }) => {
+				startTransition(() => {
+					action(value)
+				})
+			}}
+		>
+			{(form) => (
+				<>
+					<form.TextField
+						name='username'
+						label='Username'
+						validate={{ required: true, minLength: 3 }}
+					/>
+					<form.TextField
+						name='email'
+						label='Email'
+						type={TextInputType.Email}
+						validate={{ required: true, format: 'email' }}
+					/>
+					<form.SubmitButton disabled={isPending}>Sign up</form.SubmitButton>
+				</>
+			)}
+		</Form>
+	)
+}
+```
+
+`onSubmit` runs only once the form's own validation has passed, and the value it passes is a plain object, which an action accepts as it is — no `FormData` to unpack. `action` is called inside `startTransition`, which is what `useActionState`'s dispatch requires outside a `<form action>`.
+
+**The button reads `isPending`.** `form.SubmitButton` already disables itself while `isSubmitting` is true, but that flag ends when `onSubmit` returns, and `onSubmit` returns as soon as the action has been _started_. The request is still in flight; `isPending` from `useActionState` is the flag that covers it. `disabled` on the kit's button adds a reason without overriding its own.
+
+### In TSX
+
+<KitExample exampleId='form-server-action' />
+
+### The same form as a document
+
+<KitExample exampleId='form-server-action-schema' />
+
+The document is the one the action validates against, imported by both. Its submit node renders the kit's button, which cannot read `isPending`, so the twin shows the pending state beside the form instead; render the form controlled if the button itself has to wait.
+
+## What `serverErrors` does
+
+A field's message shows at once — the field is marked touched so the display rule does not hide it — and the first field with an error, in page order, takes focus. It stays while the user tabs in and out, goes the first time the field's value changes, and does not come back for that value. Every server error goes on the next submit or reset. A `form` message reaches `form.Submit`'s `formErrors` and does not disable submitting. [Submission](/docs/form/submission#server-errors) has the full rules and the imperative `form.setServerErrors`.
+
+Two consequences of how the prop is read:
+
+- **It is applied when its reference changes.** `state.serverErrors` from `useActionState` changes exactly once per action result, which is what the prop expects — pass it as it is. If you reshape the action's result first, memoise the result (`useMemo` on `state`): a literal built inline is a new object on every render, and every render would then apply it again — restoring a message the user has edited away, marking the fields touched again and moving focus back.
+- **It is applied after hydration**, in an effect. Errors that arrive with the first render — a `useActionState` seeded with a previous result — are not in the server-rendered HTML; they appear when the page hydrates.
+
+## Validating on the server
+
+An action is a public endpoint: anything can POST to it, so it validates again whatever the browser already checked. `@ez-kit/form-core` runs without React, so the rules a document declares run on the server unchanged:
+
+- `buildValidator(schema)` compiles a document's `validate` blocks into a [standard-schema](https://github.com/standard-schema/standard-schema) validator — call its `'~standard'.validate(values)` and map the issues onto `fields`, as the action above does.
+- `stripHiddenValues(schema, values)` drops what a `when` condition hid, so the server sees the payload the form would have submitted.
+- `parseFormSchema(json)` checks a document that arrived as data before it is trusted.
+
+Import them from `@ez-kit/form-core` rather than from the kit, and add it to your dependencies: the kit packages are client modules, and a `'use server'` file cannot call into one. Types are erased, so `import type { ServerErrors }` from the kit is fine.
+
+A shared standard schema — zod, valibot, arktype — works the same way: validate with it in the action, and hand the same schema to the form's `validators`.

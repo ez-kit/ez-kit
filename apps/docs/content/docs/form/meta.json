@@ -15,6 +15,7 @@
 		"arrays",
 		"validation",
 		"submission",
+		"server-actions",
 		"reactivity",
 		"composition",
 		"schema",
