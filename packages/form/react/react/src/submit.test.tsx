@@ -210,4 +210,38 @@ describe('form.Submit formErrors and a form-level standard schema', () => {
 
 		expect(screen.getByTestId('form-errors')).toHaveTextContent(/^Root problem$/)
 	})
+
+	it('keeps the pathless issue when the form has a field named message', async () => {
+		const user = userEvent.setup()
+		const contactSchema = testSchema<{ message: string }>(() => [
+			{ message: 'Root problem' },
+			{ message: 'Message is required', path: ['message'] },
+		])
+		render(
+			<Form
+				defaultValues={{ message: '' }}
+				validators={{ onSubmit: contactSchema }}
+			>
+				{(form) => (
+					<form.Submit>
+						{({ formErrors, submit }) => (
+							<>
+								<output data-testid='form-errors'>{formErrors.join('|')}</output>
+								<button
+									type='button'
+									onClick={() => void submit()}
+								>
+									Go
+								</button>
+							</>
+						)}
+					</form.Submit>
+				)}
+			</Form>,
+		)
+
+		await user.click(screen.getByRole('button', { name: 'Go' }))
+
+		expect(screen.getByTestId('form-errors')).toHaveTextContent(/^Root problem$/)
+	})
 })

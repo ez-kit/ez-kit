@@ -524,28 +524,62 @@ function CoreHarness({
 	)
 }
 
-function renderCore(onSubmit?: () => void) {
+function renderCore(onSubmit?: () => void, { strict = false }: { strict?: boolean } = {}) {
 	let instance: Instance | undefined
 	let core: CoreLike | undefined
-	render(
+	// What the author's own `onMount` sees as the core's `reset` — wrapped already when ours ran first.
+	let resetAtMount: (() => void) | undefined
+	const harness = (
 		<CoreHarness
 			onForm={(form) => {
 				instance = form
 			}}
 			onCore={(next) => {
 				core = next
+				resetAtMount = next.reset
 			}}
 			onSubmit={onSubmit}
-		/>,
+		/>
 	)
-	if (instance === undefined || core === undefined) throw new Error('the form has not mounted')
-	return { form: instance, core }
+	render(strict ? <StrictMode>{harness}</StrictMode> : harness)
+	if (instance === undefined || core === undefined || resetAtMount === undefined) {
+		throw new Error('the form has not mounted')
+	}
+	return { form: instance, core, resetAtMount }
 }
 
 describe('server errors and the core formApi (R60)', () => {
 	it("still calls the author's listeners.onMount, with the core rather than the instance", () => {
 		const { form, core } = renderCore()
 		expect(core).not.toBe(form)
+	})
+
+	it("runs the author's listeners.onMount after the core is hooked", () => {
+		const { form, resetAtMount } = renderCore()
+		apply(form, { form: 'Down' })
+
+		act(() => {
+			resetAtMount()
+		})
+
+		expect(screen.getByTestId('form-errors')).toBeEmptyDOMElement()
+	})
+
+	it('clears them on a reset and a submit of the core under StrictMode', async () => {
+		const { form, core } = renderCore(undefined, { strict: true })
+		apply(form, { form: 'Down' })
+		act(() => {
+			core.reset()
+		})
+		expect(screen.getByTestId('form-errors')).toBeEmptyDOMElement()
+
+		apply(form, { form: 'Down' })
+		act(() => {
+			void core.handleSubmit()
+		})
+		await waitFor(() => {
+			expect(screen.getByTestId('form-errors')).toBeEmptyDOMElement()
+		})
 	})
 
 	it('clears them on a reset of the core', () => {

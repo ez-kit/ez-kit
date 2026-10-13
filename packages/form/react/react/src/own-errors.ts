@@ -3,8 +3,13 @@ import { formatFieldErrors } from '@ez-kit/form-core'
 /** The key under which a standard schema reports the issues that name no path. */
 const PATHLESS_KEY = ''
 
+/**
+ * Whether `value` is a record by path rather than one issue. Decided by the issue's shape, not by a
+ * `message` key: a form with a field named `message` has a record with that key, holding an array.
+ */
 function isPathRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === 'object' && value !== null && !Array.isArray(value) && !('message' in value)
+	if (typeof value !== 'object' || value === null || Array.isArray(value)) return false
+	return typeof (value as { message?: unknown }).message !== 'string'
 }
 
 function ownErrorsOf(value: unknown): readonly unknown[] {

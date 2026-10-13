@@ -1,3 +1,4 @@
+import { formatFieldErrors } from '@ez-kit/form-core'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
@@ -443,7 +444,18 @@ describe('form.FormGroup — group.errors (R64)', () => {
 					>
 						{(group) => {
 							seen.push(group.errors)
-							return <group.NativeField name='password'>{(field) => <NativeInput field={field} />}</group.NativeField>
+							return (
+								<>
+									<group.NativeField name='password'>{(field) => <NativeInput field={field} />}</group.NativeField>
+									<group.NativeField name='confirm'>
+										{(field) => (
+											<output data-testid='confirm-errors'>
+												{formatFieldErrors(field.state.meta.errors).join('|')}
+											</output>
+										)}
+									</group.NativeField>
+								</>
+							)
 						}}
 					</form.FormGroup>
 				</Form>
@@ -453,6 +465,7 @@ describe('form.FormGroup — group.errors (R64)', () => {
 
 		await user.type(screen.getByLabelText('security.password'), 'x')
 		expect(seen.at(-1)).toEqual([])
+		expect(screen.getByTestId('confirm-errors')).toHaveTextContent(MISMATCH)
 
 		await user.clear(screen.getByLabelText('security.password'))
 		await user.type(screen.getByLabelText('security.password'), 'ann')
