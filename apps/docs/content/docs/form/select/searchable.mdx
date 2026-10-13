@@ -41,6 +41,8 @@ The flag reads the same on either side, and the source it needs is registered on
 
 Both examples **start with a city already chosen**. Nothing has been typed, so the search has returned nothing at all — and the field still reads "Lisbon" rather than `4821` or an empty box. That is the entire feature.
 
+The source sets `minLength: 2`, so type two or more characters to search; clear the selection and type one, and the field says how much more to type. Change the country to watch the city clear — the same `optionsFrom` behaviour a non-searchable dependent field has.
+
 ## Why a source grows a second hook
 
 A searchable source answers two questions instead of one:
@@ -185,6 +187,8 @@ A [creatable](/docs/form/select/creatable) field's "Add …" row follows the typ
 <KitExample exampleId='form-searchable-multiselect-schema' />
 
 Both examples **start with two cities already chosen**. Nothing has been typed, so the search has returned nothing at all — and both chips read "Lisbon" and "Porto" rather than `4821` and `4825`. That is the whole reason `useSelectedOptions` exists: with a server-side search the current selection is normally off the current page of results, and a chip showing a raw id is exactly the blank-trigger failure of the single-value case, once per value.
+
+As in the single-value examples, the source sets `minLength: 2`. Pick a result and the typed query clears itself; drop a chip to remove one city; change the country and the whole selection clears to `[]`.
 
 `useSelectedOptions` receives the field's **whole value array** here, where a `select` sends a single-element one. Nothing else differs — the same registry entry serves both fields, even in the same form.
 

@@ -8,4 +8,4 @@ integers. `SearchSettings`, `Searchable`, `isSearchable` and the two default set
 
 `format: 'email'` now runs in linear time. Its pattern backtracked quadratically on a long input
 with many dots, which made a validator on a public endpoint a denial-of-service target; an address
-with an empty domain label (`a@b..c`) is now rejected.
+with an empty domain label (`a@b..c`, `a@.b.c`, `a@b.c.`) is now rejected.

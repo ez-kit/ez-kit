@@ -141,7 +141,7 @@ When errors are applied:
 And when they go:
 
 - **A field's error stays while the user moves in and out of the field**, and goes the first time its value changes. It does not come back for that value — typing the rejected username again does not restore the message; only the server can say it again.
-- **Every server error goes on the next submit**, and on `form.reset()`.
+- **Every server error goes on the next submit**, and on `form.reset()` — the `handleSubmit` and `reset` of the instance `useForm` returns. The `formApi` TanStack hands to `onSubmit`, listeners and validators is its core instance, without that clearing: `formApi.reset()`, or an auto-save listener calling `formApi.handleSubmit()`, leaves a `form` message in place.
 - Until it goes, a field's server error makes the form invalid, so `canSubmit` is `false` and the kit's button is disabled — the same as any field error, and the reason the error clears on the first edit. A `form` message never disables it.
 - **An error for a field that is not mounted is kept**, and shows when the field mounts, by the same rules. It does not block submitting while nothing shows it.
 
@@ -211,6 +211,8 @@ Three approaches, in the order they are worth trying:
 
 **Pass `defaultValues` as they arrive.** TanStack re-applies the options on every render, and replaces the form's values when `defaultValues` changes — but only while the form is still untouched. That proviso is the whole reason this is safe: data landing a moment after mount fills the fields, while a response landing after the user has started typing cannot overwrite their work. Render the form with empty defaults and swap them in when the request resolves.
 
+Server errors count as touching: applying them marks their fields touched, so a form that received errors on mount — a `serverErrors` seeded from a previous result — ignores a record that resolves afterwards. Apply the errors once the record is in, or remount with `key` as below.
+
 **Call `form.reset(values)`** when you want the change to apply regardless — after a successful save, or when the user explicitly discards their edits. It replaces the values and leaves the form pristine, so `isDirty` is `false` again. It also makes `values` the baseline `isDefaultValue` compares against — but only until the next render. TanStack re-applies the options it was rendered with, a reset form is untouched, and so a `defaultValues` still holding the old record puts the old values back the next time the component renders, silently undoing the save. Feed the saved value back as `defaultValues`, from state, so the options and the reset agree:
 
 ```tsx
@@ -224,6 +226,8 @@ const form = useForm({
 	},
 })
 ```
+
+The `formApi.reset` there is TanStack's core instance, which leaves server errors alone; the recipe does not mind, since the submit has already cleared them. Call `form.reset` where a reset should clear them too.
 
 The recipe seeds `useState` with `record`, so it assumes the record is there when the form mounts: render the form once the data has resolved, or key it by the record's id so a different record starts a fresh one.
 

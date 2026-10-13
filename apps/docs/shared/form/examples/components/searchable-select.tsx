@@ -92,11 +92,6 @@ const INITIAL_CITY_ID = 4821
 /** Long enough to see the pending state, short enough not to feel broken. */
 const RESPONSE_DELAY_MS = 400
 
-/**
- * The gate that keeps a one-character search from asking for half the catalogue. It is set on
- * the source below, so the form withholds a shorter query; once the selection is cleared, the kit
- * shows how much more to type.
- */
 const MIN_QUERY_LENGTH = 2
 
 type CityOption = { label: string; value: number }
@@ -179,17 +174,6 @@ const optionSources: OptionSourceRegistry = {
 	cities: { useOptions: useCitySearch, useSelectedOptions: useCitiesByValue, minLength: MIN_QUERY_LENGTH },
 }
 
-/**
- * A city search over a catalogue the form never receives whole.
- *
- * It **starts with Lisbon already chosen** — that is the point of the demo. Nothing has been
- * typed, so the search has returned nothing at all, and the field still shows "Lisbon" rather
- * than `4821` or an empty box, because the source's second hook resolved that one value.
- *
- * Then: type two or more characters to search (the minimum is set on the source; with the
- * selection cleared, the field shows a hint until it is reached), and change the country to watch the city clear —
- * the same `optionsFrom` behaviour a non-searchable dependent field has.
- */
 export function SearchableSelectExample() {
 	return (
 		<FormOptionSources value={optionSources}>

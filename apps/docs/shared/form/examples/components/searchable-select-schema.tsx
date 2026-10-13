@@ -94,11 +94,6 @@ const INITIAL_CITY_ID = 4821
 /** Long enough to see the pending state, short enough not to feel broken. */
 const RESPONSE_DELAY_MS = 400
 
-/**
- * The gate that keeps a one-character search from asking for half the catalogue. It is set on
- * the source below, so the form withholds a shorter query; once the selection is cleared, the kit
- * shows how much more to type.
- */
 const MIN_QUERY_LENGTH = 2
 
 type CityOption = { label: string; value: number }

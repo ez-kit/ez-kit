@@ -169,7 +169,7 @@ The document is the one the action validates against, imported by both. Its subm
 
 ## What `serverErrors` does
 
-A field's message shows at once — the field is marked touched so the display rule does not hide it — and the first field with an error, in page order, takes focus. It stays while the user tabs in and out, goes the first time the field's value changes, and does not come back for that value. Every server error goes on the next submit or reset. A `form` message reaches `form.Submit`'s `formErrors` and does not disable submitting. [Submission](/docs/form/submission#server-errors) has the full rules and the imperative `form.setServerErrors`.
+A field's message shows at once — the field is marked touched so the display rule does not hide it — and the first field with an error, in page order, takes focus. It stays while the user tabs in and out, goes the first time the field's value changes, and does not come back for that value. Every server error goes on the next submit or reset of the instance `useForm` returns. An answer that arrives after the user kept editing applies to the field's current value, not the submitted one, and moves focus into the field. A `form` message reaches `form.Submit`'s `formErrors` and does not disable submitting. [Submission](/docs/form/submission#server-errors) has the full rules and the imperative `form.setServerErrors`.
 
 Two consequences of how the prop is read:
 
