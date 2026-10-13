@@ -196,13 +196,15 @@ siblings.
 
 ## Styling hooks
 
-Two attributes travel with every field for the kit to spread onto its root, plus one on the
-form:
+Three attributes travel with every field for the kit to spread onto its root, plus one on the
+form. `data-form-id` is what focus-on-error scopes its walk by, so a kit that picks its props
+rather than spreading them must pass it on, or its fields are skipped:
 
 | Attribute         | Where          | Value                                                                                                                                                                                                |
 | ----------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `data-field`      | the kit's root | the field's `name`                                                                                                                                                                                   |
 | `data-field-type` | the kit's root | the node's `type` — `text`, `number`, `textarea`, `select`, `multiselect`, `checkbox`, `checkboxgroup`, `switch`, `radiogroup`, `slider`, `date`, `daterange`, `array`, or a custom field's own kind |
+| `data-form-id`    | the kit's root | the id of the form the field belongs to                                                                                                                                                              |
 | `data-form`       | the `<form>`   | always present                                                                                                                                                                                       |
 
 Accessibility is the kit's to wire, because only the kit knows its markup. The shared layer
