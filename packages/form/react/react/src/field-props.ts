@@ -158,6 +158,10 @@ type SelectFieldPropsFor<TFormData, TValue> = BaseFieldProps<TFormData, TValue> 
 		 * fetched separately — see {@link SearchableOptionSource}.
 		 *
 		 * `select` and `multiselect` only; the two inline kinds do not have the prop at all.
+		 *
+		 * The object form, `{ debounce?, minLength? }`, is also "on" and tunes how the typed text
+		 * reaches the source, key by key over the source's own settings (defaults 300 ms / 0 for a
+		 * source, 0 / 0 for an in-memory list).
 		 */
 		searchable?: Searchable
 	} & CreatableProps<TValue>

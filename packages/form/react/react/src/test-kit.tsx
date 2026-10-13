@@ -29,6 +29,9 @@ import type { ReactNode } from 'react'
 const DESCRIPTION_ID_SUFFIX = '-description'
 const ERROR_ID_SUFFIX = '-error'
 
+/** What a searchable field shows while the typed text is shorter than its `minLength`. */
+const searchHint = (minLength: number): string => `Type at least ${String(minLength)} characters`
+
 /** Only the chrome half of the field — the control half is handled by `children`. */
 type ShellProps = Omit<FieldRenderProps, 'name' | 'onBlur' | 'disabled' | 'required'> & {
 	/** Receives the ids the chrome actually rendered, so the control can point at them. */
@@ -454,12 +457,15 @@ export const testFields = {
 							}}
 						/>
 					)}
+					{search?.belowMinLength === true && <p data-testkit='search-hint'>{searchHint(search.minLength)}</p>}
 					<select
 						data-testkit='select'
 						data-loading={loading || undefined}
 						id={id}
 						name={name}
-						disabled={disabled === true || loading}
+						// Both real kits keep a searchable control enabled while it loads — it loads on
+						// nearly every pause in typing — so the stand-in does too.
+						disabled={disabled === true || (loading && search === undefined)}
 						required={required}
 						aria-invalid={field.invalid}
 						value={value}
@@ -662,6 +668,7 @@ export const testFields = {
 									search.onQueryChange(event.target.value)
 								}}
 							/>
+							{search.belowMinLength && <p data-testkit='search-hint'>{searchHint(search.minLength)}</p>}
 							<ul data-testkit='multiselect-chips'>
 								{value.map((entry) => (
 									<li
@@ -681,7 +688,8 @@ export const testFields = {
 						multiple
 						id={id}
 						name={name}
-						disabled={disabled === true || loading}
+						// Enabled while a search loads, as in both real kits — see the select above.
+						disabled={disabled === true || (loading && search === undefined)}
 						required={required}
 						aria-invalid={field.invalid}
 						// A native multiple select has no placeholder slot, and `aria-placeholder` is

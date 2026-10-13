@@ -26,3 +26,9 @@ Field errors live in TanStack's `errorMap.onServer`, so every kit renders them u
 uncontrolled `<Form>` and `<SchemaForm>`, applied whenever its value changes by reference — the shape
 `useActionState` hands back. Messages for the form as a whole arrive in `form.Submit`'s `formErrors`
 and do not disable submitting; the next submit clears them.
+
+**Searchable sources wait for the user.** A searchable field over an option source hands the source
+its query after 300 ms without typing, not on every keystroke; `debounce` and `minLength` on the
+source, or `searchable={{ debounce, minLength }}` on the field (and in a schema node), tune it. Below
+`minLength` the source receives `query: undefined` and the kit shows a hint. An in-memory searchable
+list still filters at once. **Kit contract:** `search` gains `minLength` and `belowMinLength`.

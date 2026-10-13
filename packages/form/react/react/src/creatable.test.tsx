@@ -213,6 +213,7 @@ describe('creatable over a source', () => {
 		const user = userEvent.setup()
 		const sources: OptionSourceRegistry = {
 			tags: {
+				debounce: 0,
 				useOptions: ({ query }) => ({
 					options: query === '' ? [] : TAGS.filter((tag) => tag.label.toLowerCase().startsWith(String(query))),
 					loading: false,

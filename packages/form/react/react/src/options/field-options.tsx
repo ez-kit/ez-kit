@@ -1,14 +1,23 @@
 'use client'
 
-import { getValueAtPath, isSearchable, resolveSelectOptions, resolveText } from '@ez-kit/form-core'
+import {
+	getValueAtPath,
+	isSearchable,
+	LOCAL_SEARCH_DEFAULTS,
+	REMOTE_SEARCH_DEFAULTS,
+	resolveSelectOptions,
+	resolveText,
+} from '@ez-kit/form-core'
 import { useSelector } from '@tanstack/react-form'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 
 import { paramsKey } from './params-key'
 import { useOptionSourceRegistry, useSchemaTranslate } from './source-context'
 import { isSearchableSource } from './source-types'
+import { resolveSearchSettings, useSearchQuery } from './use-search-query'
 
 import type { SearchableOptionSource, SimpleOptionSource } from './source-types'
+import type { SearchQuery } from './use-search-query'
 import type { BindableForm, FieldValue } from '../bindable-form'
 import type { ConditionSubscribableForm } from '../schema/use-condition'
 import type { LocalizedText, OptionValue, Searchable, SelectOption, Translate } from '@ez-kit/form-core'
@@ -37,10 +46,13 @@ export type FieldOptionsBinding = {
  *
  * The **renderer** owns the query — it has to, since it is what feeds the source — so the
  * kit is fully controlled here exactly like it is for every value in this contract.
+ * `minLength` / `belowMinLength` let it show a hint instead of an empty list.
  */
 export type SearchBinding = {
 	query: string
 	onQueryChange: (query: string) => void
+	minLength: number
+	belowMinLength: boolean
 }
 
 /** What the field renders with, whichever way its options arrived. */
@@ -128,6 +140,7 @@ export function FieldOptions({
 			return (
 				<StaticSearchableOptions
 					options={options}
+					searchable={searchable}
 					loading={loading ?? false}
 					form={form}
 					name={name}
@@ -151,7 +164,7 @@ export function FieldOptions({
 			form={form}
 			name={name}
 			clearedValue={clearedValue}
-			searchable={isSearchable(searchable)}
+			searchable={searchable}
 			creatable={creatable === true}
 			createLabel={createLabel}
 		>
@@ -171,9 +184,14 @@ export function FieldOptions({
  *
  * No parameters means nothing to clear on, so unlike the sourced branches there is no
  * `useClearOnParamsChange` here — the list cannot change out from under the value.
+ *
+ * It searches at once by default — filtering memory costs nothing — but honours a field's
+ * `searchable={{ debounce, minLength }}` exactly as the sourced branch does, and below the
+ * minimum holds only the selected options, as that branch does too.
  */
 function StaticSearchableOptions({
 	options,
+	searchable,
 	loading,
 	form,
 	name,
@@ -182,6 +200,7 @@ function StaticSearchableOptions({
 	children,
 }: {
 	options: readonly SelectOption<OptionValue>[]
+	searchable: Searchable
 	loading: boolean
 	form: BindableForm
 	name: string
@@ -190,7 +209,8 @@ function StaticSearchableOptions({
 	children: (resolved: ResolvedFieldOptions) => ReactNode
 }): ReactNode {
 	const translate = useSchemaTranslate()
-	const [query, setQuery] = useState('')
+	const search = useSearchQuery(resolveSearchSettings(searchable, undefined, LOCAL_SEARCH_DEFAULTS))
+	const { query, sourceQuery } = search
 	const values = useSelectedValues(form, name)
 
 	// The filter must not hide what is already selected. A selected option dropped from the
@@ -199,12 +219,13 @@ function StaticSearchableOptions({
 	// `useSelectedOptions` answered. Without this, `withCreated` would then mistake a real
 	// option for a value it had to label itself.
 	const visible = useMemo(() => {
-		const shown = mergeOptions(filterByLabel(options, query), selectedFrom(options, values))
+		const listed = sourceQuery === undefined ? NO_OPTIONS : filterByLabel(options, sourceQuery)
+		const shown = mergeOptions(listed, selectedFrom(options, values))
 		return withCreated(shown, { query, values, creatable, createLabel, translate })
-	}, [options, query, values, creatable, createLabel, translate])
-	const search = useMemo(() => ({ query, onQueryChange: setQuery }), [query])
+	}, [options, query, sourceQuery, values, creatable, createLabel, translate])
+	const binding = useSearchBinding(search)
 
-	return children({ options: visible, loading, search })
+	return children({ options: visible, loading: loading || search.pending, search: binding })
 }
 
 type SourcedFieldOptionsProps = {
@@ -213,7 +234,7 @@ type SourcedFieldOptionsProps = {
 	form: BindableForm
 	name: string
 	clearedValue: FieldValue
-	searchable: boolean
+	searchable: Searchable | undefined
 	creatable: boolean
 	createLabel: LocalizedText | undefined
 	children: (resolved: ResolvedFieldOptions) => ReactNode
@@ -242,7 +263,7 @@ function SourcedFieldOptions({
 		)
 	}
 
-	if (searchable) {
+	if (isSearchable(searchable)) {
 		// A searchable field's selected value is usually *not* on the current page of results,
 		// so without `useSelectedOptions` its label can never be resolved and the control would
 		// render permanently blank. Better a named throw than a form that looks broken.
@@ -256,6 +277,7 @@ function SourcedFieldOptions({
 		return (
 			<SearchableSourcedOptions
 				source={optionSource}
+				searchable={searchable}
 				creatable={creatable}
 				createLabel={createLabel}
 				{...rest}
@@ -329,6 +351,7 @@ function SourcedOptions({
  */
 function SearchableSourcedOptions({
 	source,
+	searchable,
 	params,
 	form,
 	name,
@@ -338,40 +361,50 @@ function SearchableSourcedOptions({
 	children,
 }: SourcedBodyProps & {
 	source: SearchableOptionSource
+	searchable: Searchable
 	creatable: boolean
 	createLabel: LocalizedText | undefined
 }): ReactNode {
 	const translate = useSchemaTranslate()
 	const key = paramsKey(params)
 	const stableParams = useStableParams(params, key)
-	const [query, setQuery] = useState('')
+	const search = useSearchQuery(resolveSearchSettings(searchable, source, REMOTE_SEARCH_DEFAULTS))
+	const { query, sourceQuery, belowMinLength } = search
+	// Spread rather than `query: sourceQuery`: under `exactOptionalPropertyTypes` an optional key
+	// may be absent but not `undefined`, and absent is what "no search" means to a source.
+	const input = { params: stableParams, ...(sourceQuery !== undefined && { query: sourceQuery }) }
 
-	const listed = source.useOptions({ params: stableParams, query })
+	const listed = source.useOptions(input)
 	const values = useSelectedValues(form, name)
-	const selected = source.useSelectedOptions({ params: stableParams, query, values })
+	const selected = source.useSelectedOptions({ ...input, values })
 
 	// The typed text belongs to the parameters it was typed under: a new country makes
-	// "berl" a search of the wrong catalogue, so it goes when the dependent value does.
-	const resetQuery = useCallback(() => {
-		setQuery('')
-	}, [])
-	useClearOnParamsChange(key, form, name, clearedValue, resetQuery)
+	// "berl" a search of the wrong catalogue, so it goes when the dependent value does — and a
+	// debounce still running for it is cancelled with it.
+	useClearOnParamsChange(key, form, name, clearedValue, search.reset)
 
+	// Below the minimum nothing was searched, so a page left over from a longer query must not
+	// show; the selected options stay, so a chosen label never disappears.
+	const listedOptions = belowMinLength ? NO_OPTIONS : listed.options
 	const options = useMemo(
 		() =>
 			withCreated(
-				mergeOptions(
-					resolveSelectOptions(listed.options, translate),
-					resolveSelectOptions(selected.options, translate),
-				),
+				mergeOptions(resolveSelectOptions(listedOptions, translate), resolveSelectOptions(selected.options, translate)),
 				{ query, values, creatable, createLabel, translate },
 			),
-		[listed.options, selected.options, translate, query, values, creatable, createLabel],
+		[listedOptions, selected.options, translate, query, values, creatable, createLabel],
 	)
+	const binding = useSearchBinding(search)
 
-	const search = useMemo(() => ({ query, onQueryChange: setQuery }), [query])
+	return children({ options, loading: search.pending || listed.loading || selected.loading, search: binding })
+}
 
-	return children({ options, loading: listed.loading || selected.loading, search })
+/** The part of a field's query state the kit sees, stable while none of it changes. */
+function useSearchBinding({ query, onQueryChange, minLength, belowMinLength }: SearchQuery): SearchBinding {
+	return useMemo(
+		() => ({ query, onQueryChange, minLength, belowMinLength }),
+		[query, onQueryChange, minLength, belowMinLength],
+	)
 }
 
 /** Everything both sourced bodies take, minus the parts the dispatcher above consumed. */
@@ -510,6 +543,9 @@ function withCreated(
 
 /** Nothing selected. A module constant so the array's identity is stable across renders. */
 const NO_VALUES: readonly OptionValue[] = []
+
+/** Nothing listed — the list below a search's minimum length. Stable for the same reason. */
+const NO_OPTIONS: readonly SelectOption<OptionValue>[] = []
 
 /**
  * The field's current value, as the `values` array `useSelectedOptions` takes.

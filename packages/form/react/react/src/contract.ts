@@ -159,11 +159,21 @@ type OptionsRenderProps = {
  * After a selection a kit is expected to clear the query (`onQueryChange('')`), so the next
  * search starts fresh rather than leaving a stale term beside a chip that already consumed it.
  *
- * The query arrives **raw**, on every keystroke. Debouncing is the source's job for now and is
- * not a kit concern.
+ * `query` is the typed text, immediately — what the input shows. The renderer debounces what the
+ * source sees and withholds it below a minimum length; neither is a kit concern beyond one hint:
+ * while `belowMinLength`, the list holds only the selected options and the kit says how much
+ * more to type (`Type at least ${minLength} characters`) where it would otherwise say there are
+ * no matches.
  */
 type SearchRenderProps = {
-	search: { query: string; onQueryChange: (query: string) => void } | undefined
+	search:
+		| {
+				query: string
+				onQueryChange: (query: string) => void
+				minLength: number
+				belowMinLength: boolean
+		  }
+		| undefined
 }
 
 export type SelectFieldRenderProps = FieldRenderProps &

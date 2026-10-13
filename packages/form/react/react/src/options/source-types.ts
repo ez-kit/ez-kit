@@ -1,4 +1,4 @@
-import type { OptionSourceInput, OptionSourceResult, OptionValue } from '@ez-kit/form-core'
+import type { OptionSourceInput, OptionSourceResult, OptionValue, SearchSettings } from '@ez-kit/form-core'
 
 export type { OptionSourceInput, OptionSourceResult }
 
@@ -74,8 +74,14 @@ export type SimpleOptionSource = (input: OptionSourceInput) => OptionSourceResul
  * its whole selection, and neither needs a different source. An empty array means nothing is
  * selected — a source should report `loading: false` and an empty list rather than issuing a
  * request.
+ *
+ * The source also says how it wants to be searched. `useOptions` receives the typed text after
+ * `debounce` ms without typing (default 300) and only once it is `minLength` characters long
+ * (default 0); below that it receives `query: undefined` and should not fetch. A field's
+ * `searchable={{ debounce, minLength }}` overrides either, key by key. `debounce: 0` hands over
+ * every keystroke in the same render.
  */
-export type SearchableOptionSource = {
+export type SearchableOptionSource = SearchSettings & {
 	useOptions: (input: OptionSourceInput) => OptionSourceResult
 	useSelectedOptions: (input: OptionSourceInput & { values: readonly OptionValue[] }) => OptionSourceResult
 }

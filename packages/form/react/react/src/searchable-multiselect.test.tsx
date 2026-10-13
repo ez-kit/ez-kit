@@ -84,7 +84,11 @@ type SearchSpy = {
  * Written exactly as a source for a searchable *select* would be — nothing about it knows the
  * field it serves holds a list.
  */
-function searchableCitySource(options?: { listLoading?: boolean; selectedLoading?: boolean }): SearchSpy {
+function searchableCitySource(options?: {
+	listLoading?: boolean
+	selectedLoading?: boolean
+	debounce?: number
+}): SearchSpy {
 	const queries: (string | undefined)[] = []
 	const selectedCalls: { values: readonly OptionValue[]; query: string | undefined }[] = []
 
@@ -101,7 +105,12 @@ function searchableCitySource(options?: { listLoading?: boolean; selectedLoading
 		}
 	}
 
-	return { source: { useOptions: useCitySearch, useSelectedOptions: useCitiesByValue }, queries, selectedCalls }
+	const settings = options?.debounce === undefined ? {} : { debounce: options.debounce }
+	return {
+		source: { ...settings, useOptions: useCitySearch, useSelectedOptions: useCitiesByValue },
+		queries,
+		selectedCalls,
+	}
 }
 
 /** The searchable multi-city field under test. Hoisted, so its identity is stable. */
@@ -224,9 +233,9 @@ describe('searchable multiselect', () => {
 		expect(spy.selectedCalls.some((call) => call.values.length === 1)).toBe(true)
 	})
 
-	it('passes the raw query straight to `useOptions`, with no debounce of its own', async () => {
+	it('hands a source with `debounce: 0` every keystroke, from the first character', async () => {
 		const user = userEvent.setup()
-		const spy = searchableCitySource()
+		const spy = searchableCitySource({ debounce: 0 })
 		renderSearchable({ cities: spy.source }, defaults([], 'de'))
 
 		await user.type(searchInput(), 'ber')
@@ -250,7 +259,7 @@ describe('searchable multiselect', () => {
 
 	it('clears the query once a selection lands', async () => {
 		const user = userEvent.setup()
-		const spy = searchableCitySource()
+		const spy = searchableCitySource({ debounce: 0 })
 		renderSearchable({ cities: spy.source }, defaults([], 'de'))
 
 		await user.type(searchInput(), 'berg')

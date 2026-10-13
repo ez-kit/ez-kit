@@ -112,6 +112,8 @@ export type {
 	OptionSourceInput,
 	OptionSourceRef,
 	OptionSourceResult,
+	Searchable,
+	SearchSettings,
 	SelectOption,
 	Translate,
 } from '@ez-kit/form-core'
