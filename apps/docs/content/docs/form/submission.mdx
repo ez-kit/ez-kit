@@ -141,7 +141,7 @@ When errors are applied:
 And when they go:
 
 - **A field's error stays while the user moves in and out of the field**, and goes the first time its value changes. It does not come back for that value — typing the rejected username again does not restore the message; only the server can say it again.
-- **Every server error goes on the next submit**, and on `form.reset()` — the `handleSubmit` and `reset` of the instance `useForm` returns. The `formApi` TanStack hands to `onSubmit`, listeners and validators is its core instance, without that clearing: `formApi.reset()`, or an auto-save listener calling `formApi.handleSubmit()`, leaves a `form` message in place.
+- **Every server error goes on the next submit or reset**, whichever API starts it — `form.handleSubmit`, `form.reset`, or the `formApi` TanStack hands to `onSubmit`, listeners and validators.
 - Until it goes, a field's server error makes the form invalid, so `canSubmit` is `false` and the kit's button is disabled — the same as any field error, and the reason the error clears on the first edit. A `form` message never disables it.
 - **An error for a field that is not mounted is kept**, and shows when the field mounts, by the same rules. It does not block submitting while nothing shows it.
 
@@ -226,8 +226,6 @@ const form = useForm({
 	},
 })
 ```
-
-The `formApi.reset` there is TanStack's core instance, which leaves server errors alone; the recipe does not mind, since the submit has already cleared them. Call `form.reset` where a reset should clear them too.
 
 The recipe seeds `useState` with `record`, so it assumes the record is there when the form mounts: render the form once the data has resolved, or key it by the record's id so a different record starts a fresh one.
 

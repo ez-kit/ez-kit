@@ -26,10 +26,9 @@ export type NativeMembers<TForm> = { NativeField: TForm extends { Field: infer T
 export type ServerErrorMembers<TFormData> = {
 	/**
 	 * Put errors a server reported onto the form. A field's error shows at once and goes the
-	 * first time its value changes; every server error goes on this instance's next `handleSubmit`
-	 * or `reset`. The core `formApi` TanStack passes to `onSubmit`, listeners and validators does
-	 * not clear them. Form-level messages arrive in `form.Submit`'s `formErrors`. The first field
-	 * with an error takes focus unless `focusOnError` is `false`.
+	 * first time its value changes; every server error goes on the form's next submit or reset,
+	 * whichever API starts it. Form-level messages arrive in `form.Submit`'s `formErrors`. The first
+	 * field with an error takes focus unless `focusOnError` is `false`.
 	 */
 	setServerErrors: (errors: ServerErrors<TFormData>) => void
 }

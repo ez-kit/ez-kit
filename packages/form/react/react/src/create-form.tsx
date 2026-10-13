@@ -4,6 +4,7 @@ import { createFormHook, createFormHookContexts } from '@tanstack/react-form'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 
 import { buildFieldComponents } from './build-field-components'
+import { hookCore } from './core-hooks'
 import { createFieldBinding, nativeFieldOf } from './field-binding'
 import { withFieldGroup } from './field-groups'
 import { deriveFieldTypeIds } from './field-registry'
@@ -14,11 +15,12 @@ import { splitFormProps } from './form-options'
 import { FormShell } from './form-shell'
 import { NO_INJECTED_COMPONENTS } from './kit-form'
 import { assertNoReservedKeys, assertNoSharedKeys, FormFactoryName } from './reserved-keys'
-import { attachServerErrors } from './server-errors'
+import { attachServerErrors, serverErrorsOf } from './server-errors'
 
 import type { BindableForm } from './bindable-form'
 import type { KitFormBlock, KitWithFormProps } from './composition'
 import type { FormComponentRegistry, FormComponents, FormElementProps, FormFieldSlots, NoRegistry } from './contract'
+import type { CoreHooks } from './core-hooks'
 import type { BuiltInFieldKey, PropsOf, ValueOf } from './field-props'
 import type { FormFieldRegistry } from './field-registry'
 import type { FormBehaviourOptions } from './form-behaviour'
@@ -284,6 +286,15 @@ export function createFormInternals<TFields extends FormFieldRegistry, TComponen
 			onSubmitInvalid: (props) => {
 				if (focusOnError) focusFirstFieldWithErrors(form)
 				tanstackOptions.onSubmitInvalid?.(props)
+			},
+			// The core `FormApi` is only ever handed to callbacks; `onMount` is the first of them, run in
+			// TanStack's mount layout effect. The author's own listener runs after ours.
+			listeners: {
+				...tanstackOptions.listeners,
+				onMount: (props) => {
+					hookCore(props.formApi, coreHooksFor(form))
+					tanstackOptions.listeners?.onMount?.(props)
+				},
 			},
 		})
 
@@ -610,6 +621,14 @@ type ErrorFocusSource = {
 /** Focus the first field of `form`, in DOM order, that has errors — after a failed submit or server errors. */
 function focusFirstFieldWithErrors(form: ErrorFocusSource): void {
 	focusFirstError(form.formId, (name) => (form.getFieldMeta(name)?.errors.length ?? 0) > 0)
+}
+
+/** What the core's members do for this instance: every submit and reset clears its server errors. */
+function coreHooksFor(form: object): CoreHooks {
+	const clear = (): void => {
+		serverErrorsOf(form)?.clear()
+	}
+	return { beforeSubmit: clear, beforeReset: clear }
 }
 
 /**

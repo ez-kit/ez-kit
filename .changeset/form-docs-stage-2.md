@@ -26,3 +26,6 @@ server-rendered form hydrates without errors in both kits.
 
 Submission documents focus on the first error and server errors (`serverErrors`,
 `form.setServerErrors`); Searchable selects documents the source's debounce and minimum length.
+
+Submission no longer warns that `formApi.reset()` keeps server errors: every submit and reset
+clears them.

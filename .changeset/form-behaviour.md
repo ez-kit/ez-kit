@@ -19,9 +19,9 @@ false` (an option of `useForm`, a prop of the uncontrolled `<Form>` / `<SchemaFo
 form: `fields` maps a field path to a message or a list of them, `form` holds messages for the form
 as a whole. A field's error shows at once, stays when the field is focused and left, and goes the
 first time its value changes — it does not come back if the value is changed back. Every server error
-goes on the next `form.handleSubmit()` or `form.reset()` of the instance `useForm` returns; the core
-`formApi` TanStack passes to `onSubmit`, listeners and validators does not clear them. When the errors
-name a field, the first field with an error takes focus, unless `focusOnError` is `false`.
+goes on the form's next submit or reset, whichever API starts it — the instance `useForm` returns, or
+the `formApi` TanStack passes to `onSubmit`, listeners and validators. When the errors name a field,
+the first field with an error takes focus, unless `focusOnError` is `false`.
 Field errors live in TanStack's `errorMap.onServer`, so every kit renders them unchanged.
 
 `serverErrors` is the declarative form of the same: an option of `useForm` and a prop of the

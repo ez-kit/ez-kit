@@ -1,7 +1,7 @@
 import { FormFieldType } from '@ez-kit/form-core'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { useEffect, useState } from 'react'
+import { StrictMode, useEffect, useState } from 'react'
 import { describe, expect, expectTypeOf, it, vi } from 'vitest'
 
 import { createForm } from './create-form'
@@ -472,5 +472,156 @@ describe('serverErrors types', () => {
 			)
 		}
 		expect(Probe).toBeTypeOf('function')
+	})
+})
+
+type CoreLike = { reset: () => void; handleSubmit: () => Promise<void> }
+
+/** A form whose core `formApi` the test can reach — captured by the author's own `listeners.onMount`. */
+function CoreHarness({
+	onForm,
+	onCore,
+	onSubmit,
+}: {
+	onForm: (form: Instance) => void
+	onCore: (core: CoreLike) => void
+	onSubmit?: (() => void) | undefined
+}): ReactNode {
+	const form = useForm({
+		defaultValues: DEFAULT_VALUES,
+		onSubmit: () => {
+			onSubmit?.()
+		},
+		listeners: {
+			onMount: ({ formApi }) => {
+				onCore(formApi)
+			},
+		},
+	})
+	useEffect(() => {
+		onForm(form)
+	}, [form, onForm])
+	return (
+		<Form form={form}>
+			<form.TextField
+				name='email'
+				label='Email'
+			/>
+			<form.NativeField name='name'>
+				{(field) => (
+					<button
+						type='button'
+						onClick={() => {
+							void field.form.handleSubmit()
+						}}
+					>
+						Field submit
+					</button>
+				)}
+			</form.NativeField>
+			<form.Submit>{({ formErrors }) => <output data-testid='form-errors'>{formErrors.join('|')}</output>}</form.Submit>
+		</Form>
+	)
+}
+
+function renderCore(onSubmit?: () => void) {
+	let instance: Instance | undefined
+	let core: CoreLike | undefined
+	render(
+		<CoreHarness
+			onForm={(form) => {
+				instance = form
+			}}
+			onCore={(next) => {
+				core = next
+			}}
+			onSubmit={onSubmit}
+		/>,
+	)
+	if (instance === undefined || core === undefined) throw new Error('the form has not mounted')
+	return { form: instance, core }
+}
+
+describe('server errors and the core formApi (R60)', () => {
+	it("still calls the author's listeners.onMount, with the core rather than the instance", () => {
+		const { form, core } = renderCore()
+		expect(core).not.toBe(form)
+	})
+
+	it('clears them on a reset of the core', () => {
+		const { form, core } = renderCore()
+		apply(form, { fields: { email: 'Taken' }, form: 'Down' })
+
+		act(() => {
+			core.reset()
+		})
+
+		expect(screen.queryByText('Taken')).not.toBeInTheDocument()
+		expect(screen.getByTestId('form-errors')).toBeEmptyDOMElement()
+	})
+
+	it('clears them before a submit through the core runs', async () => {
+		const seen: string[] = []
+		const { form, core } = renderCore(() => {
+			seen.push(screen.getByTestId('form-errors').textContent)
+		})
+		apply(form, { form: 'Down' })
+
+		// A synchronous `act`: React 18 holds an async one's renders until it ends, after `onSubmit`.
+		act(() => {
+			void core.handleSubmit()
+		})
+
+		await waitFor(() => {
+			expect(seen).toEqual([''])
+		})
+	})
+
+	it("clears them on a submit through a field's own form", async () => {
+		const user = userEvent.setup()
+		const { form } = renderCore()
+		apply(form, { form: 'Down' })
+
+		await user.click(screen.getByRole('button', { name: 'Field submit' }))
+
+		expect(screen.getByTestId('form-errors')).toBeEmptyDOMElement()
+	})
+})
+
+describe('server errors under StrictMode', () => {
+	it('releases the slot of a field that unmounts, and shows the error again when it comes back', () => {
+		let instance: Instance | undefined
+		const onForm = (form: Instance): void => {
+			instance = form
+		}
+		const { rerender } = render(
+			<StrictMode>
+				<Harness
+					onForm={onForm}
+					showLater
+				/>
+			</StrictMode>,
+		)
+		act(() => {
+			instance?.setServerErrors({ fields: { later: 'Taken' } })
+		})
+		expect(screen.getByTestId('can-submit')).toHaveTextContent('false')
+
+		rerender(
+			<StrictMode>
+				<Harness onForm={onForm} />
+			</StrictMode>,
+		)
+		expect(screen.getByTestId('can-submit')).toHaveTextContent('true')
+
+		rerender(
+			<StrictMode>
+				<Harness
+					onForm={onForm}
+					showLater
+				/>
+			</StrictMode>,
+		)
+		expect(screen.getByText('Taken')).toBeInTheDocument()
 	})
 })

@@ -35,7 +35,6 @@ export type ServerErrorsHost = {
 	getFieldValue: (name: string) => unknown
 	getFieldMeta: (name: string) => FieldMetaLike | undefined
 	setFieldMeta: (name: string, updater: (prev: FieldMetaLike) => FieldMetaLike) => void
-	handleSubmit: (...args: never[]) => Promise<void>
 	reset: (...args: never[]) => void
 	store: { subscribe: (listener: () => void) => { unsubscribe: () => void } }
 }
@@ -196,14 +195,11 @@ export function attachServerErrors(host: ServerErrorsHost): ServerErrorsControll
 		},
 	}
 
-	// Both are own properties of TanStack's React instance (`useForm` builds `handleSubmit` and
-	// spreads `reset` from the core instance), so replacing them here is what the app calls.
-	const { handleSubmit, reset } = host
+	// The instance's `reset` is a copy TanStack took when it spread the core, so the core's own wrap
+	// (`core-hooks.ts`) does not reach it; its `handleSubmit` delegates to the core's `_handleSubmit`,
+	// which does.
+	const { reset } = host
 	Object.assign(host, {
-		handleSubmit: (...args: Parameters<typeof handleSubmit>) => {
-			controller.clear()
-			return handleSubmit(...args)
-		},
 		reset: (...args: Parameters<typeof reset>) => {
 			controller.clear()
 			reset(...args)
