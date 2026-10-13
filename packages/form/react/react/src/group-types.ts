@@ -1,7 +1,11 @@
-import type { BoundFieldComponent } from './field-props'
+import type { AllFormFieldSlots, NoRegistry } from './contract'
+import type { BoundFieldComponent, FormFieldComponents, FormPrimitives } from './field-props'
+import type { FormFieldRegistry } from './field-registry'
+import type { FormInstance } from './form-instance'
 import type { NoInjectedComponents } from './kit-form'
 import type {
 	DeepKeys,
+	DeepKeysOfType,
 	DeepValue,
 	FieldsMap,
 	FormGroupApi,
@@ -10,7 +14,7 @@ import type {
 	FormGroupValidateOrFn,
 } from '@tanstack/form-core'
 import type { AppFieldExtendedReactFieldGroupApi, LensFieldComponent } from '@tanstack/react-form'
-import type { ReactNode } from 'react'
+import type { PropsWithChildren, ReactNode } from 'react'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TanStack's validator parameters, left open as FormInstance leaves them
 type Open = any
@@ -106,7 +110,11 @@ export type FormGroupInstance<TFormData, TName extends DeepKeys<TFormData>> = Fo
  * slot: inference of one parameter per slot through a nested object fails (measured), and the
  * value type the validator receives is what matters to an author.
  */
-export type FormGroupProps<TFormData, TName extends DeepKeys<TFormData>> = Omit<
+export type FormGroupProps<
+	TFormData,
+	TName extends DeepKeys<TFormData>,
+	TFields extends FormFieldRegistry = NoRegistry,
+> = Omit<
 	FormGroupOptions<
 		TFormData,
 		TName,
@@ -150,10 +158,82 @@ export type FormGroupProps<TFormData, TName extends DeepKeys<TFormData>> = Omit<
 		onDynamicAsync?: GroupAsyncValidator<TFormData, TName>
 		onDynamicAsyncDebounceMs?: number
 	}
-	children: (group: FormGroupInstance<TFormData, TName>) => ReactNode
+	/** Handed the group, with the bundle's fields named relative to it ({@link FormGroupScope}). */
+	children: (group: FormGroupScope<TFormData, TName, TFields>) => ReactNode
 }
 
-/** The instance's `form.FormGroup`: `name` is inferred per call, and the render prop is typed from it. */
-export type FormGroupComponentOf<TFormData> = <const TName extends DeepKeys<TFormData>>(
-	props: FormGroupProps<TFormData, TName>,
+/**
+ * The instance's `form.FormGroup`: `name` is inferred per call, and the render prop is typed from it.
+ * `TFields` is the bundle's registry, so the group carries the same fields the instance does.
+ */
+export type FormGroupComponentOf<TFormData, TFields extends FormFieldRegistry = NoRegistry> = <
+	const TName extends DeepKeys<TFormData>,
+>(
+	props: FormGroupProps<TFormData, TName, TFields>,
 ) => ReactNode
+
+/**
+ * The bundle's fields, `Array`, `Field` and `NativeField`, named relative to the group: `name='city'`
+ * inside a group over `address` is `address.city`, and a field map's own key inside a mapped block
+ * (R69). `Submit` is not among them: it has no `name` to resolve.
+ */
+export type GroupFields<TGroup, TFields extends FormFieldRegistry> = Omit<
+	FormFieldComponents<TGroup, TFields> & FormPrimitives<TGroup, TFields>,
+	'Submit'
+> & { NativeField: LensFieldComponent<TGroup, Open> }
+
+/** What a `withFieldGroup` block's `render` receives: the field group, plus {@link GroupFields}. */
+export type FieldGroupScope<TGroup, TFields extends FormFieldRegistry, TSubmitMeta = never> = Omit<
+	FieldGroupInstance<TGroup, TSubmitMeta>,
+	keyof GroupFields<TGroup, TFields>
+> &
+	GroupFields<TGroup, TFields>
+
+/** What `form.FormGroup`'s `children` receives: the form group, plus {@link GroupFields}. */
+export type FormGroupScope<TFormData, TName extends DeepKeys<TFormData>, TFields extends FormFieldRegistry> = Omit<
+	FormGroupInstance<TFormData, TName>,
+	keyof GroupFields<DeepValue<TFormData, TName>, TFields>
+> &
+	GroupFields<DeepValue<TFormData, TName>, TFields>
+
+/**
+ * Where a `withFieldGroup` block lies, with `form`: `fields` — a path to a `TGroup` branch, or a map
+ * from each of the block's keys to a path — is checked against that form.
+ */
+export type FieldGroupPlacementProps<TFormData, TGroup> = {
+	form: FormInstance<TFormData, NoRegistry, NoRegistry>
+	fields: DeepKeysOfType<TFormData, TGroup | null | undefined> | FieldsMap<TFormData, TGroup>
+}
+
+/**
+ * Where a `withFieldGroup` block lies, without `form`: the block reads the form above it, and
+ * `fields` is a cast, not a check — any path, or a map naming every key of the block (R68).
+ */
+export type UncheckedFieldGroupPlacementProps<TGroup> = {
+	form?: undefined
+	fields: string | { [TKey in keyof TGroup]: string }
+}
+
+/** What the bundle's `withFieldGroup` takes: the block's own shape, its extra props and its body. */
+export type WithFieldGroupOptions<
+	TGroup,
+	TSubmitMeta = never,
+	TRenderProps extends object = Record<never, never>,
+	TFields extends FormFieldRegistry = AllFormFieldSlots,
+> = {
+	defaultValues?: TGroup
+	props?: TRenderProps
+	render: (
+		props: PropsWithChildren<NoInfer<TRenderProps> & { group: FieldGroupScope<TGroup, TFields, TSubmitMeta> }>,
+	) => ReactNode
+}
+
+/**
+ * The component `withFieldGroup` returns, placed with `form` ({@link FieldGroupPlacementProps}) or
+ * without it ({@link UncheckedFieldGroupPlacementProps}). Two overloads, so `TFormData` is inferred
+ * from `form` when there is one and nothing is asked of it when there is not.
+ */
+export type FieldGroupBlock<TGroup, TRenderProps extends object> = {
+	<TFormData>(props: PropsWithChildren<NoInfer<TRenderProps> & FieldGroupPlacementProps<TFormData, TGroup>>): ReactNode
+	(props: PropsWithChildren<NoInfer<TRenderProps> & UncheckedFieldGroupPlacementProps<TGroup>>): ReactNode
+}

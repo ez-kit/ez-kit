@@ -4,13 +4,17 @@ import { useFieldGroup as useTanStackFieldGroup } from '@tanstack/react-form'
 import { useMemo } from 'react'
 
 import { createField } from './fields/field'
+import { missingFormMessage, useOptionalFormContext } from './form-context'
+import { scopeGroupMembers, withMembers } from './group-fields'
 
 import type { BindableForm } from './bindable-form'
 import type { NoRegistry } from './contract'
+import type { FormFieldRegistry } from './field-registry'
+import type { AnyFormInstance } from './form-context'
 import type { FormInstance } from './form-instance'
-import type { FieldGroupInstance } from './group-types'
+import type { FieldGroupBlock, FieldGroupInstance, WithFieldGroupOptions } from './group-types'
 import type { DeepKeysOfType, FieldsMap } from '@tanstack/form-core'
-import type { PropsWithChildren, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 /** What `useFieldGroup` and a `withFieldGroup` block take: the parent form and where the group lies in it. */
 export type FieldGroupOptions<TFormData, TGroup> = {
@@ -55,26 +59,73 @@ export function useFieldGroup<TFormData, TGroup>(
 	}, [group]) as unknown as FieldGroupInstance<TGroup>
 }
 
+type AnyPlacement = {
+	form?: AnyFormInstance | undefined
+	fields: string | Record<string, string>
+	children?: ReactNode
+}
+
 /**
- * A reusable block of fields, typed by its own shape and placed in any form through `fields`.
+ * The bundle's `withFieldGroup`, over the members its `fields` registry binds (R69, R23).
  *
- * Built on `useFieldGroup` rather than on TanStack's `withFieldGroup` for the reason `useFieldGroup`
- * gives. It is the same function in every bundle until stage 5 gives groups the bundle's flat fields.
+ * A reusable block of fields, typed by its own shape and placed in any form through `fields`. Built
+ * on `useFieldGroup` rather than on TanStack's `withFieldGroup` for the reason `useFieldGroup`
+ * gives. A block placed without `form` takes the form above it (R68).
  */
-export function withFieldGroup<TGroup, TSubmitMeta = never, TRenderProps extends object = Record<never, never>>({
-	render,
-	props,
-	defaultValues,
-}: {
-	defaultValues?: TGroup
-	props?: TRenderProps
-	render: (
-		props: PropsWithChildren<NoInfer<TRenderProps> & { group: FieldGroupInstance<TGroup, TSubmitMeta> }>,
-	) => ReactNode
-}): <TFormData>(params: PropsWithChildren<NoInfer<TRenderProps> & FieldGroupOptions<TFormData, TGroup>>) => ReactNode {
-	return function FieldGroupBlock(params) {
-		const group = useFieldGroup({ form: params.form, fields: params.fields, defaultValues })
-		// The spread of two generic object types, which TypeScript cannot prove equal to the declared props.
-		return render({ ...props, ...params, group } as never)
+export function createWithFieldGroup<TFields extends FormFieldRegistry>(memberKeys: readonly string[]) {
+	return function withFieldGroup<TGroup, TSubmitMeta = never, TRenderProps extends object = Record<never, never>>(
+		options: WithFieldGroupOptions<TGroup, TSubmitMeta, TRenderProps, TFields>,
+	): FieldGroupBlock<TGroup, TRenderProps> {
+		function FieldGroupBlockImpl(placement: AnyPlacement): ReactNode {
+			const contextForm = useOptionalFormContext()
+			const form = placement.form ?? contextForm
+			if (form === null) throw new Error(missingFormMessage('withFieldGroup'))
+			// `fields` is read on the first render only, as TanStack's group reads it — so the branch
+			// taken here never changes for a mounted block, and each block's hooks stay unconditional.
+			return typeof placement.fields === 'string' ? (
+				<BranchBlock
+					options={options as never}
+					placement={placement}
+					form={form}
+					memberKeys={memberKeys}
+				/>
+			) : (
+				<MappedBlock
+					options={options as never}
+					placement={placement}
+					form={form}
+					memberKeys={memberKeys}
+				/>
+			)
+		}
+		return FieldGroupBlockImpl
 	}
+}
+
+type BlockProps = {
+	options: WithFieldGroupOptions<unknown, unknown, object, FormFieldRegistry>
+	placement: AnyPlacement
+	form: AnyFormInstance
+	memberKeys: readonly string[]
+}
+
+/** The field group plus its flat members — shared by both placements. */
+function useBlockScope({ options, placement, form, memberKeys }: BlockProps): object {
+	const lens = useFieldGroup({ form, fields: placement.fields, defaultValues: options.defaultValues })
+	const source = lens as unknown as GroupSource
+	const members = useMemo(
+		() => scopeGroupMembers(form, memberKeys, (props) => source.getFormFieldOptions(props)),
+		[form, memberKeys, source],
+	)
+	return useMemo(() => withMembers(lens, members), [lens, members])
+}
+
+function BranchBlock(props: BlockProps): ReactNode {
+	const group = useBlockScope(props)
+	return props.options.render({ ...props.options.props, ...props.placement, group } as never)
+}
+
+function MappedBlock(props: BlockProps): ReactNode {
+	const group = useBlockScope(props)
+	return props.options.render({ ...props.options.props, ...props.placement, group } as never)
 }

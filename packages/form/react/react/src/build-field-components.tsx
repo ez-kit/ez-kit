@@ -60,6 +60,17 @@ const BUILT_IN_BINDERS = {
 type LooseBinder = (form: BindableForm, Component: never) => (props: never) => ReactNode
 
 /**
+ * The members a scope re-binds relative to its own path — an array entry and a group alike: every
+ * registry key, the frame when registered, the headless `Array`, `Field` and `NativeField`. `Submit`
+ * is not among them: it has no `name` to prefix.
+ */
+export function scopedMemberKeys(fields: FormFieldRegistry): readonly string[] {
+	const fieldKeys = Object.keys(fields).filter((key) => !Object.hasOwn(BESPOKE_FIELD_KEYS, key))
+	const frame = Object.hasOwn(fields, 'ArrayField') ? ['ArrayField'] : []
+	return [...fieldKeys, ...frame, 'Array', 'Field', 'NativeField']
+}
+
+/**
  * Build the flat field components for one form instance, and its three primitives.
  *
  * Each component closes over the `form` it belongs to, which is why they are built per instance
@@ -130,20 +141,8 @@ export function buildFieldComponents<TFormData>(
 	const fieldComponents = { ...built, NativeField, ...primitives } as unknown as FormFieldComponents<TFormData> &
 		FormPrimitives<TFormData>
 
-	/**
-	 * What an array entry scopes to its own path: every registry key, the frame included when it
-	 * was registered, plus the headless `Array` — a nested array is addressed relative to the
-	 * entry like any field — `Field` and `NativeField`. `Submit` is left out: it has no `name` to
-	 * prefix, and wrapping it would only hand it a bogus one.
-	 */
 	const slot = fields.ArrayField as ArrayFieldSlot | undefined
-	const entryKeys = [
-		...Object.keys(built),
-		...(slot === undefined ? [] : ['ArrayField']),
-		'Array',
-		'Field',
-		'NativeField',
-	]
+	const entryKeys = scopedMemberKeys(fields)
 
 	if (slot !== undefined) {
 		fieldComponents.ArrayField = createArrayField<TFormData>(form, slot, fieldComponents, entryKeys)

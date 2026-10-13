@@ -58,7 +58,9 @@ export type BoundForm<
 	TFormData,
 	TFields extends FormFieldRegistry = AllFormFieldSlots,
 	TComponents extends FormComponentRegistry = AllFormComponents,
-> = Omit<TForm, 'Field' | 'FormGroup'> & { FormGroup: FormGroupComponentOf<TFormData> } & NativeMembers<TForm> &
+> = Omit<TForm, 'Field' | 'FormGroup'> & {
+	FormGroup: FormGroupComponentOf<TFormData, TFields>
+} & NativeMembers<TForm> &
 	ServerErrorMembers<TFormData> &
 	FormFieldComponents<TFormData, TFields> &
 	FormPrimitives<TFormData, TFields> &

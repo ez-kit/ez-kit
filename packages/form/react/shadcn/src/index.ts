@@ -69,7 +69,10 @@ export type {
 	DateRangeFieldProps,
 	DateRangeValue,
 	FieldControlProps,
+	FieldGroupBlock,
 	FieldGroupInstance,
+	FieldGroupPlacementProps,
+	FieldGroupScope,
 	FieldGroupOptions,
 	FieldProps,
 	FormBehaviourOptions,
@@ -80,6 +83,8 @@ export type {
 	FormFieldSlots,
 	FormGroupInstance,
 	FormGroupProps,
+	FormGroupScope,
+	GroupFields,
 	FormInstance,
 	FormProps,
 	SchemaFormControlledProps,
@@ -118,6 +123,8 @@ export type {
 	TextareaFieldProps,
 	TextFieldProps,
 	Translate,
+	UncheckedFieldGroupPlacementProps,
+	WithFieldGroupOptions,
 } from '@ez-kit/form-react'
 
 // The schema-authoring half of the same surface. It originates in `@ez-kit/form-core` and arrives

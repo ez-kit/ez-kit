@@ -10,7 +10,18 @@ export type { FieldTypeDefinition, FormFieldRegistry } from './field-registry'
 export type { KitFormBlock, KitWithFormProps } from './composition'
 export type { FieldValidateProps } from './field-validate'
 export type { FieldGroupOptions } from './field-groups'
-export type { FieldGroupInstance, FormGroupInstance, FormGroupProps } from './group-types'
+export type {
+	FieldGroupBlock,
+	FieldGroupInstance,
+	FieldGroupPlacementProps,
+	FieldGroupScope,
+	FormGroupInstance,
+	FormGroupProps,
+	FormGroupScope,
+	GroupFields,
+	UncheckedFieldGroupPlacementProps,
+	WithFieldGroupOptions,
+} from './group-types'
 export type { AnyFormInstance, FormContextApi } from './form-context'
 export type { FormBehaviourOptions } from './form-behaviour'
 export type { ServerErrorMessages, ServerErrors } from './server-errors'

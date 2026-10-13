@@ -3,10 +3,10 @@
 import { createFormHook, createFormHookContexts } from '@tanstack/react-form'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 
-import { buildFieldComponents } from './build-field-components'
+import { buildFieldComponents, scopedMemberKeys } from './build-field-components'
 import { hookCore } from './core-hooks'
 import { createFieldBinding, nativeFieldOf } from './field-binding'
-import { withFieldGroup } from './field-groups'
+import { createWithFieldGroup } from './field-groups'
 import { deriveFieldTypeIds } from './field-registry'
 import { focusFirstError } from './focus-first-error'
 import { FormProvider, missingFormMessage, useOptionalFormContext } from './form-context'
@@ -220,6 +220,8 @@ export function createFormInternals<TFields extends FormFieldRegistry, TComponen
 	 * happens to use it. `createSchemaForm` re-keys the registry by these ids.
 	 */
 	const fieldTypeIds = deriveFieldTypeIds(fields)
+	/** What an array entry and a group re-bind relative to their own path (R69). */
+	const memberKeys = scopedMemberKeys(fields)
 
 	const { fieldContext, formContext } = createFormHookContexts()
 	const { useAppForm } = createFormHook({
@@ -325,10 +327,14 @@ export function createFormInternals<TFields extends FormFieldRegistry, TComponen
 			return { NativeField, AppField: createFieldBinding(NativeField) }
 		}, [form])
 
-		// The instance's `FormGroup` is this package's, so its group carries `NativeField`. It reads
-		// `form.NativeField` when a group renders, which is after the assign below.
+		// The instance's `FormGroup` is this package's, so its group carries `NativeField` and the
+		// bundle's flat fields. It reads them off `form` when a group renders, after the assign below.
 		const FormGroup = useMemo(
-			() => createFormGroup(form as unknown as FormInstance<TFormData, NoRegistry, NoRegistry>),
+			() =>
+				createFormGroup<TFormData, TFields>(
+					form as unknown as FormInstance<TFormData, NoRegistry, NoRegistry>,
+					memberKeys,
+				),
 			[form],
 		)
 
@@ -614,7 +620,9 @@ export function createFormInternals<TFields extends FormFieldRegistry, TComponen
 		>
 	}
 
-	// The bundle's `withFieldGroup` is the package's own (`field-groups.tsx`).
+	// The bundle's `withFieldGroup` is the package's own (`field-groups.tsx`), over this registry.
+	const withFieldGroup = createWithFieldGroup<TFields>(memberKeys)
+
 	return {
 		bundle: { useForm, Form, FormProvider, withForm, withFieldGroup },
 		internals: { useForm, FormElement, fields, components, fieldTypeIds },

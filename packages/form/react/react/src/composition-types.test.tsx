@@ -289,3 +289,66 @@ describe('withForm — the form prop is optional (D7)', () => {
 		expectTypeOf(Parent).toBeFunction()
 	})
 })
+
+describe('group fields — types (D7)', () => {
+	it('types group.X relative to the group, with a checked and an unchecked placement', () => {
+		type Pair = { password: string; confirm: string }
+		type PairValues = { email: string; n: number; security: Pair; newPassword: string; newPasswordRepeat: string }
+		const Block = withFieldGroup({
+			defaultValues: { password: '', confirm: '' },
+			render: ({ group }) => (
+				<>
+					<group.TextField name='password' />
+					<group.TextField
+						// @ts-expect-error -- names are relative to the block
+						name='security.password'
+					/>
+				</>
+			),
+		})
+		const pairDefaults: PairValues = {
+			email: '',
+			n: 0,
+			security: { password: '', confirm: '' },
+			newPassword: '',
+			newPasswordRepeat: '',
+		}
+		function Parent(): ReactNode {
+			const form = useForm({ defaultValues: pairDefaults })
+			return (
+				<>
+					<Block
+						form={form}
+						fields='security'
+					/>
+					<Block
+						form={form}
+						fields={{ password: 'newPassword', confirm: 'newPasswordRepeat' }}
+					/>
+					{/* @ts-expect-error -- email is not a Pair branch (an overloaded call reports at the tag) */}
+					<Block
+						form={form}
+						fields='email'
+					/>
+					{/* @ts-expect-error -- n is not a string path */}
+					<Block
+						form={form}
+						fields={{ password: 'n', confirm: 'newPasswordRepeat' }}
+					/>
+					<Block fields='security' />
+					{/* @ts-expect-error -- a map names every key of the block */}
+					<Block fields={{ password: 'newPassword' }} />
+					<form.FormGroup name='security'>
+						{(group) => (
+							<group.TextField
+								// @ts-expect-error -- relative to the group
+								name='security.password'
+							/>
+						)}
+					</form.FormGroup>
+				</>
+			)
+		}
+		expectTypeOf(Parent).toBeFunction()
+	})
+})

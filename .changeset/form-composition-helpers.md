@@ -12,3 +12,12 @@ path show on their fields). `group.state.meta.errors` stays TanStack's raw value
 `withForm`'s `form` prop is optional: a block placed without one takes the form above it (`<Form>`,
 `<SchemaForm>` or `FormProvider`), typed by the block's own options — a cast, as
 `useFormContext<V>()` is. With neither, it throws a named error.
+
+Groups carry the bundle's fields. Inside `form.FormGroup` and a `withFieldGroup` block, `group.TextField`,
+`group.ArrayField`, `group.Array` and every field the app registered take a `name` relative to the
+group — a path for `form.FormGroup` and `fields='…'`, the map's own key for a field map. `form.X`
+inside a group stays absolute: the coordinates come from the object a field is called through.
+`withFieldGroup` is now built per bundle, and a block placed without `form` takes the form above it,
+with `fields` then unchecked; with neither, it throws a named error. Both kits export the new types
+`GroupFields`, `FieldGroupScope`, `FormGroupScope`, `FieldGroupPlacementProps`,
+`UncheckedFieldGroupPlacementProps`, `WithFieldGroupOptions` and `FieldGroupBlock`.

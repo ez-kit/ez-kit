@@ -12,6 +12,9 @@ import type { CustomFieldRenderProps } from './schema/registries'
 import type { FormSchema } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
 
+/** How many forms the document-mounted `data-form-id` case renders side by side. */
+const FORM_COUNT = 2
+
 // ── a custom field bound to a string, so it can sit on the *same* path as a built-in ──────
 
 type NoteProps = { hint: string }
@@ -23,6 +26,8 @@ const NoteField = defineFieldType<NoteProps, string>()(function Note(props): Rea
 	return (
 		<input
 			data-testkit='note'
+			data-field={props['data-field']}
+			data-form-id={props['data-form-id']}
 			id={props.id}
 			name={props.name}
 			value={props.value}
@@ -316,6 +321,11 @@ describe('the two entry points meet the same component', () => {
 	 * the binder collects it back into `props`, while a document authors it under `props`
 	 * already — so a component written for one path works unchanged on the other.
 	 */
+	const NOTE_DOCUMENT = {
+		version: 1,
+		children: [{ type: 'note', name: 'note', label: 'Note', description: 'D', required: true, props: { hint: 'x' } }],
+	} as FormSchema<{ note: string }, 'note'>
+
 	it('hands a document-mounted field the same props a JSX-mounted one gets', () => {
 		render(
 			<Form defaultValues={{ note: 'hi' }}>
@@ -338,14 +348,9 @@ describe('the two entry points meet the same component', () => {
 			</Form>,
 		)
 
-		const schema = {
-			version: 1,
-			children: [{ type: 'note', name: 'note', label: 'Note', description: 'D', required: true, props: { hint: 'x' } }],
-		} as FormSchema<{ note: string }, 'note'>
-
 		render(
 			<SchemaForm
-				schema={schema}
+				schema={NOTE_DOCUMENT}
 				defaultValues={{ note: 'hi' }}
 				onSubmit={() => {}}
 			/>,
@@ -375,6 +380,29 @@ describe('the two entry points meet the same component', () => {
 		expect(docFormId).not.toBe(jsxFormId)
 		expect(docRest).toEqual(jsxRest)
 		expect(docRest.props).toEqual({ hint: 'x' })
+	})
+
+	it('stamps a document-mounted field with its own form id, beside a second form', () => {
+		render(
+			<>
+				<SchemaForm
+					schema={NOTE_DOCUMENT}
+					formId='first'
+					defaultValues={{ note: 'hi' }}
+					onSubmit={() => {}}
+				/>
+				<SchemaForm
+					schema={NOTE_DOCUMENT}
+					formId='second'
+					defaultValues={{ note: 'hi' }}
+					onSubmit={() => {}}
+				/>
+			</>,
+		)
+
+		const wrappers = [...document.querySelectorAll('[data-field]')]
+		expect(wrappers).toHaveLength(FORM_COUNT)
+		expect(wrappers.map((wrapper) => wrapper.getAttribute('data-form-id'))).toEqual(['first', 'second'])
 	})
 })
 

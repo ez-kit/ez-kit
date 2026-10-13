@@ -5,10 +5,12 @@ import { useMemo } from 'react'
 
 import { scopeFieldProps } from './field-scope'
 import { createField } from './fields/field'
+import { scopeGroupMembers, withMembers } from './group-fields'
 import { formatOwnErrors } from './own-errors'
 
 import type { BindableForm } from './bindable-form'
 import type { NoRegistry } from './contract'
+import type { FormFieldRegistry } from './field-registry'
 import type { FormInstance } from './form-instance'
 import type { FormGroupComponentOf, FormGroupInstance, FormGroupProps } from './group-types'
 import type { DeepKeys } from '@tanstack/form-core'
@@ -70,12 +72,24 @@ export function useFormGroup<TFormData, const TName extends DeepKeys<TFormData>>
 	) as unknown as FormGroupInstance<TFormData, TName>
 }
 
-/** `form.FormGroup`: `useFormGroup` over this form, rendering `children(group)`. */
-export function createFormGroup<TFormData>(
+/**
+ * `form.FormGroup`: `useFormGroup` over this form, rendering `children(scope)` — the group plus the
+ * bundle's flat fields under `memberKeys`, each named relative to the group (R69).
+ */
+export function createFormGroup<TFormData, TFields extends FormFieldRegistry>(
 	form: FormInstance<TFormData, NoRegistry, NoRegistry>,
-): FormGroupComponentOf<TFormData> {
-	return function FormGroup({ children, ...options }: FormGroupProps<TFormData, DeepKeys<TFormData>>): ReactNode {
+	memberKeys: readonly string[],
+): FormGroupComponentOf<TFormData, TFields> {
+	return function FormGroup({
+		children,
+		...options
+	}: FormGroupProps<TFormData, DeepKeys<TFormData>, TFields>): ReactNode {
 		const group = useFormGroup({ ...options, form })
-		return children(group)
-	} as FormGroupComponentOf<TFormData>
+		const members = useMemo(
+			() => scopeGroupMembers(form, memberKeys, (props) => scopeFieldProps(props, options.name)),
+			[options.name],
+		)
+		const scope = useMemo(() => withMembers(group, members), [group, members])
+		return children(scope as never)
+	} as FormGroupComponentOf<TFormData, TFields>
 }

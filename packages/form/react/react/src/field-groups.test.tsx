@@ -1,4 +1,5 @@
 import { formatFieldErrors } from '@ez-kit/form-core'
+import { useSelector } from '@tanstack/react-form'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
@@ -22,7 +23,7 @@ type Values = {
 }
 const DEFAULTS: Values = { email: '', address: { city: '' }, billingCity: '', tags: [{ label: '' }] }
 
-const { Form, useForm, withFieldGroup } = createForm({
+const { Form, FormProvider, useForm, withFieldGroup } = createForm({
 	FormElement: testFormElement,
 	fields: testFields,
 	components: testComponents,
@@ -263,9 +264,9 @@ describe('group APIs — types', () => {
 						form={form}
 						fields='address'
 					/>
+					{/* @ts-expect-error -- `email` is not a `{ city: string }` branch (an overloaded call reports at the tag) */}
 					<Address
 						form={form}
-						// @ts-expect-error -- `email` is not a `{ city: string }` branch
 						fields='email'
 					/>
 					<form.FormGroup name='address'>
@@ -470,5 +471,225 @@ describe('form.FormGroup — group.errors (R64)', () => {
 		await user.clear(screen.getByLabelText('security.password'))
 		await user.type(screen.getByLabelText('security.password'), 'ann')
 		expect(seen.at(-1)).toEqual([SAME_AS_NAME])
+	})
+})
+
+type Places = { email: string; address: { city: string }; billingCity: string; tags: { label: string }[] }
+const PLACES: Places = { email: '', address: { city: '' }, billingCity: '', tags: [{ label: '' }] }
+
+const PlaceBlock = withFieldGroup({
+	defaultValues: { city: '' },
+	props: { label: 'City' },
+	render: ({ group, label }) => (
+		<group.TextField
+			name='city'
+			label={label}
+		/>
+	),
+})
+
+function PlacesOutput({ form }: { form: FormInstance<Places, NoRegistry, NoRegistry> }): ReactNode {
+	return (
+		<form.Subscribe selector={(state) => JSON.stringify(state.values)}>
+			{(json) => <output>{json}</output>}
+		</form.Subscribe>
+	)
+}
+
+describe('flat fields on groups (D7)', () => {
+	it('form.FormGroup: group.TextField writes the path relative to the group', async () => {
+		const user = userEvent.setup()
+		function Case(): ReactNode {
+			const form = useForm({ defaultValues: PLACES })
+			return (
+				<Form form={form}>
+					<form.FormGroup name='address'>
+						{(group) => (
+							<group.TextField
+								name='city'
+								label='Town'
+							/>
+						)}
+					</form.FormGroup>
+					<PlacesOutput form={form} />
+				</Form>
+			)
+		}
+		render(<Case />)
+
+		await user.type(screen.getByLabelText('Town'), 'x')
+
+		expect(screen.getByRole('status')).toHaveTextContent('"address":{"city":"x"}')
+		expect(screen.getByLabelText('Town').closest('[data-field]')).toHaveAttribute('data-field', 'address.city')
+	})
+
+	it('withFieldGroup: writes through a path and through a map, with the form from context', async () => {
+		const user = userEvent.setup()
+		render(
+			<Form defaultValues={PLACES}>
+				{(form) => (
+					<>
+						<PlaceBlock
+							fields='address'
+							label='Shipping city'
+						/>
+						<PlaceBlock
+							fields={{ city: 'billingCity' }}
+							label='Billing city'
+						/>
+						<PlacesOutput form={form} />
+					</>
+				)}
+			</Form>,
+		)
+
+		await user.type(screen.getByLabelText('Shipping city'), 'a')
+		await user.type(screen.getByLabelText('Billing city'), 'b')
+
+		expect(screen.getByRole('status')).toHaveTextContent('"address":{"city":"a"},"billingCity":"b"')
+	})
+
+	it('withFieldGroup under a FormProvider with no <form>', async () => {
+		const user = userEvent.setup()
+		function Case(): ReactNode {
+			const form = useForm({ defaultValues: PLACES })
+			return (
+				<FormProvider form={form}>
+					<PlaceBlock
+						fields='address'
+						label='City'
+					/>
+					<PlacesOutput form={form} />
+				</FormProvider>
+			)
+		}
+		render(<Case />)
+
+		await user.type(screen.getByLabelText('City'), 'z')
+
+		expect(screen.getByRole('status')).toHaveTextContent('"address":{"city":"z"}')
+	})
+
+	it('withFieldGroup throws a named error with no form at all (R68)', () => {
+		vi.spyOn(console, 'error').mockImplementation(() => {})
+
+		expect(() =>
+			render(
+				<PlaceBlock
+					fields='address'
+					label='City'
+				/>,
+			),
+		).toThrow(/withFieldGroup\(\): the block needs a form/)
+		vi.restoreAllMocks()
+	})
+
+	it('keeps the same input while the parent re-renders on every keystroke (Review Focus 4)', async () => {
+		const user = userEvent.setup()
+		function Case(): ReactNode {
+			const form = useForm({ defaultValues: PLACES })
+			const city = useSelector(form.store, (state) => state.values.address.city)
+			return (
+				<Form form={form}>
+					<p>{city}</p>
+					<form.FormGroup name='address'>
+						{(group) => (
+							<group.TextField
+								name='city'
+								label='Town'
+							/>
+						)}
+					</form.FormGroup>
+					<PlaceBlock
+						fields={{ city: 'billingCity' }}
+						label='Billing city'
+					/>
+				</Form>
+			)
+		}
+		render(<Case />)
+
+		for (const label of ['Town', 'Billing city']) {
+			const input = screen.getByLabelText(label)
+			await user.type(input, 'abc')
+			expect(screen.getByLabelText(label)).toBe(input)
+			expect(input).toHaveFocus()
+			expect(input).toHaveValue('abc')
+		}
+	})
+
+	it('form.X stays absolute inside a group — coordinates follow the object (R72)', async () => {
+		const user = userEvent.setup()
+		function Case(): ReactNode {
+			const form = useForm({ defaultValues: PLACES })
+			return (
+				<Form form={form}>
+					<form.FormGroup name='address'>
+						{() => (
+							<form.TextField
+								name='address.city'
+								label='Town'
+							/>
+						)}
+					</form.FormGroup>
+					<PlacesOutput form={form} />
+				</Form>
+			)
+		}
+		render(<Case />)
+
+		await user.type(screen.getByLabelText('Town'), 'q')
+
+		expect(screen.getByRole('status')).toHaveTextContent('"address":{"city":"q"}')
+	})
+
+	it('group.Array is relative too', async () => {
+		const user = userEvent.setup()
+		function Case(): ReactNode {
+			const form = useForm({ defaultValues: { order: { tags: [{ label: '' }] } } })
+			return (
+				<Form form={form}>
+					<form.FormGroup name='order'>
+						{(group) => (
+							<group.Array
+								name='tags'
+								newItem={{ label: '' }}
+							>
+								{({ items }) =>
+									items.map((item) => (
+										<item.TextField
+											key={item.key}
+											name='label'
+											label={`Tag ${String(item.index)}`}
+										/>
+									))
+								}
+							</group.Array>
+						)}
+					</form.FormGroup>
+				</Form>
+			)
+		}
+		render(<Case />)
+
+		await user.type(screen.getByLabelText('Tag 0'), 'v')
+
+		expect(screen.getByLabelText('Tag 0').closest('[data-field]')).toHaveAttribute('data-field', 'order.tags[0].label')
+	})
+
+	it('names a registry key that collides with a group member (R69)', () => {
+		vi.spyOn(console, 'error').mockImplementation(() => {})
+		const bundle = createForm({ fields: { ...testFields, getMeta: testFields.TextField } as typeof testFields })
+		function Case(): ReactNode {
+			const form = bundle.useForm({ defaultValues: PLACES })
+			return (
+				<bundle.Form form={form}>
+					<form.FormGroup name='address'>{() => null}</form.FormGroup>
+				</bundle.Form>
+			)
+		}
+
+		expect(() => render(<Case />)).toThrow(/group\.getMeta/)
+		vi.restoreAllMocks()
 	})
 })
