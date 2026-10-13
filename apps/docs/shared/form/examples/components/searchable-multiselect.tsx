@@ -72,10 +72,8 @@ const INITIAL_CITY_IDS = [4821, 4825]
 const RESPONSE_DELAY_MS = 400
 
 /**
- * The gate that keeps a one-character search from asking for half the catalogue.
- *
- * It lives **here, in the source**, not in the form package — as does debouncing, which this
- * demo skips only because a 400 ms fake request is already its own throttle.
+ * The gate that keeps a one-character search from asking for half the catalogue. It is set on
+ * the source below, so the form withholds a shorter query and the kit shows how much more to type.
  */
 const MIN_QUERY_LENGTH = 2
 
@@ -139,7 +137,7 @@ function useRequest(key: string | undefined): { options: readonly CityOption[]; 
 function useCitySearch({ params, query }: { params: Record<string, unknown>; query?: string }) {
 	const country = typeof params.country === 'string' ? params.country : ''
 	const text = (query ?? '').trim().toLowerCase()
-	const key = country === '' || text.length < MIN_QUERY_LENGTH ? undefined : `${SEARCH_PREFIX}${country}:${text}`
+	const key = query === undefined || country === '' ? undefined : `${SEARCH_PREFIX}${country}:${text}`
 
 	return useRequest(key)
 }
@@ -158,7 +156,7 @@ function useCitiesByValue({ values }: { values: readonly (string | number)[] }) 
 
 /** Hoisted to a module constant: a registry rebuilt each render would swap hook identities. */
 const optionSources: OptionSourceRegistry = {
-	cities: { useOptions: useCitySearch, useSelectedOptions: useCitiesByValue },
+	cities: { useOptions: useCitySearch, useSelectedOptions: useCitiesByValue, minLength: MIN_QUERY_LENGTH },
 }
 
 /**
@@ -168,9 +166,10 @@ const optionSources: OptionSourceRegistry = {
  * has been typed, so the search has returned nothing at all, and both chips still read as
  * names rather than as `4821` and `4825`, because the source's second hook resolved them.
  *
- * Then: type two or more characters to search (the minimum is the *source's* rule, not the
- * package's), pick a result and watch the query clear itself, drop a chip to remove one city,
- * and change the country to watch the whole selection clear to `[]`.
+ * Then: type two or more characters to search (the minimum is set on the source, and the
+ * field shows a hint until it is reached), pick a result and watch the query clear itself,
+ * drop a chip to remove one city, and change the country to watch the whole selection clear
+ * to `[]`.
  */
 export function SearchableMultiSelectExample() {
 	return (

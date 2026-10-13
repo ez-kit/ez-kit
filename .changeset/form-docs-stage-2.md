@@ -23,3 +23,6 @@ every field wrapper carries beside `data-field`.
 A new Server actions page shows a form submitting to a real server action, with `serverErrors` from
 `useActionState`, and states that the form needs JavaScript; an end-to-end test checks that a
 server-rendered form hydrates without errors in both kits.
+
+Submission documents focus on the first error and server errors (`serverErrors`,
+`form.setServerErrors`); Searchable selects documents the source's debounce and minimum length.

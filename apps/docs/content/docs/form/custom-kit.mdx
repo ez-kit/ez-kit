@@ -186,6 +186,17 @@ On top of that, per kind:
 	primitives disagree — some hand you an event, some a value, some a React Aria callback. Unwrapping is the kit's job.
 </Callout>
 
+#### `search`
+
+`SelectField` and `MultiSelectField` receive `search` only when the field is [searchable](/docs/form/select/searchable); `undefined` means a plain listbox, and its presence is the mode switch. The object has four members:
+
+- **`query`** — the typed text, at once: what the input shows. The source sees it later, [debounced](/docs/form/select/searchable#debounce-and-minimum-length).
+- **`onQueryChange`** — report each change of the input. Call `onQueryChange('')` after a selection, so the next search starts fresh.
+- **`minLength`** — the shortest text the source is given, for the hint.
+- **`belowMinLength`** — the typed text is shorter than `minLength`: nothing is searched, and `options` holds only the selected options.
+
+Never filter `options` yourself — the renderer already did, or the server did. The one thing `belowMinLength` asks of a kit is the empty state: where it would say "No matches", say how much more to type instead ("Type at least 2 characters"). While a selected option keeps the list non-empty there is no empty state, and both shipped kits show no hint.
+
 ### Form level
 
 The `<form>` element is the `FormElement` option, which receives the full `<form>` props. The rest are `components`, starting with the submit button:

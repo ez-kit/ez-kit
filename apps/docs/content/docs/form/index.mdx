@@ -42,11 +42,11 @@ You install exactly one of the two flavours; it pulls the rest in and re-exports
 
 Validation has **no custom resolver**: it is pure pass-through of TanStack Form's native [standard-schema](https://github.com/standard-schema/standard-schema) support, so a zod, valibot or arktype schema just works. See [Validation](/docs/form/validation).
 
+A searchable field's query reaches its [option source](/docs/form/select/option-sources) debounced, and only once it is long enough — both tunable on the source or per field; see [Debounce and minimum length](/docs/form/select/searchable#debounce-and-minimum-length).
+
 ## Not included yet
 
 Time and file inputs are not covered.
-
-A searchable field's query reaches its [option source](/docs/form/select/option-sources) raw, on every keystroke: debouncing and a minimum query length live in the source, next to the cache it already owns. That is deliberate rather than missing — but it is [also not permanent](/docs/form/select/searchable#debouncing-and-minchars-are-the-sources-job--for-now); the package intends to take both over.
 
 A field kind we do not cover is written with [the native API](/docs/form/native-api), or — in a document — [registered as a custom field type](/docs/form/schema#registries) and rendered like any built-in one.
 

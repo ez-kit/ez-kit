@@ -347,6 +347,8 @@ export const FORM_TYPE = {
 	CreateFormOptions: { module: TypeModule.FormReact, name: 'CreateFormOptions' },
 	/** What `form.Submit` hands its render function. */
 	SubmitRenderProps: { module: TypeModule.FormReact, name: 'SubmitRenderProps' },
+	/** What this package adds to a form beside TanStack's options: `focusOnError` and `serverErrors`. */
+	FormBehaviourOptions: { module: TypeModule.FormReact, name: 'FormBehaviourOptions', typeArgs: ROW_TYPE_ARGS },
 	/**
 	 * What a *custom* field's component receives: everything `FieldRenderProps` carries plus
 	 * the three the registry adds — `value`, `onChange` and the nested `props` bag. Both type
@@ -1354,7 +1356,10 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{ page: DocPage.FormServerActions, optionTables: [], nonOptionTables: [] },
 	{
 		page: DocPage.FormSubmission,
-		optionTables: [{ heading: '`form.Submit`', roots: [FORM_TYPE.SubmitRenderProps], expectedCount: 5 }],
+		optionTables: [
+			{ heading: '`form.Submit`', roots: [FORM_TYPE.SubmitRenderProps], expectedCount: 5 },
+			{ heading: 'The two options', roots: [FORM_TYPE.FormBehaviourOptions], expectedCount: 2 },
+		],
 		nonOptionTables: [],
 	},
 	{ page: DocPage.FormValidation, optionTables: [], nonOptionTables: [] },

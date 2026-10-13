@@ -20,7 +20,7 @@ The handler is an option of the form, not a prop of the button:
 
 `value` is the form's values, typed by `defaultValues`. `formApi` is the instance, for the cases where the handler has to reach back into the form — resetting it after a successful save, or reading a field it was not given. `meta` carries whatever was passed to `handleSubmit(meta)`, which is how one form ends up with a "save" and a "save and publish" button that differ only in what the handler is told.
 
-It runs **only after validation has passed**. `handleSubmit` first marks every field touched — which is what makes a required-but-never-focused field show its error on the first submit attempt — then runs the field validators, then the form's, and returns early if either produced an issue. `onSubmitInvalid` is the hook for that early return, if you want to scroll to the first error or announce the failure.
+It runs **only after validation has passed**. `handleSubmit` first marks every field touched — which is what makes a required-but-never-focused field show its error on the first submit attempt — then runs the field validators, then the form's, and returns early if either produced an issue. On that early return the form [moves focus to the first field with an error](#focus-on-the-first-error), then calls `onSubmitInvalid` if you passed one — the hook for announcing the failure, or for anything else the early return should do.
 
 An exception thrown from the handler is not swallowed: `isSubmitting` is cleared, the form is marked unsuccessful, and the error propagates out of `handleSubmit`. Since `<Form>` calls it as `void form.handleSubmit()`, an unhandled rejection there is an unhandled rejection in the page — catch what you expect to fail, and see the next section for the failure worth modelling properly.
 
@@ -59,13 +59,13 @@ Reaching for `form.Subscribe` here rather than reading `form.state.isSubmitting`
 </form.Submit>
 ```
 
-| Key            | Type                  | Notes                                                                                                                                                    |
-| -------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `canSubmit`    | `boolean`             | The form's own answer to "would submitting be meaningful right now" — see above.                                                                         |
-| `isSubmitting` | `boolean`             | True from the moment validation passes until the handler settles.                                                                                        |
-| `isDirty`      | `boolean`             | Whether the user has changed any field. It stays `true` after the value is changed back; to compare with the defaults, read `form.state.isDefaultValue`. |
-| `formErrors`   | `string[]`            | The form-level errors as display strings. Field-level issues are not among them.                                                                         |
-| `submit`       | `() => Promise<void>` | `form.handleSubmit`. A control built on it works outside a `<form>` element too, where a submit button cannot.                                           |
+| Key            | Type                  | Notes                                                                                                                                                     |
+| -------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `canSubmit`    | `boolean`             | The form's own answer to "would submitting be meaningful right now" — see above.                                                                          |
+| `isSubmitting` | `boolean`             | True from the moment validation passes until the handler settles.                                                                                         |
+| `isDirty`      | `boolean`             | Whether the user has changed any field. It stays `true` after the value is changed back; to compare with the defaults, read `form.state.isDefaultValue`.  |
+| `formErrors`   | `string[]`            | The form-level errors as display strings: the form validators', then a server's [`form` messages](#server-errors). Field-level issues are not among them. |
+| `submit`       | `() => Promise<void>` | `form.handleSubmit`. A control built on it works outside a `<form>` element too, where a submit button cannot.                                            |
 
 ### Outside the `<form>` element
 
@@ -83,9 +83,82 @@ Reaching for `form.Subscribe` here rather than reading `form.state.isSubmitting`
 
 The kit's `SubmitButton` is written on `form.Submit`. Inside a `<form>` it is an ordinary submit button and the element's own handler runs; with no `<form>` above it, a click calls `submit` instead, and only one of the two paths ever fires.
 
-## Errors that come back from the server
+## Focus on the first error
 
-A uniqueness clash, a rejected card, a stale version — the interesting failures are the ones only the backend can detect, and they have to land on the field responsible rather than in a banner the user has to translate into an edit.
+After a submit that fails validation, focus moves to the first field with an error — first **in page order**, not in the order of `defaultValues`. Which element inside the field takes it: the one carrying the field's `id`, if it can take focus; otherwise the first focusable element inside the field; otherwise the field's wrapper, if that can. So a text field focuses its text box, and a radio group whose kit puts the `id` on a container focuses its first radio.
+
+It does not depend on a `<form>` element. The walk covers the whole page and keeps only the fields stamped with this form's `data-form-id`, so a form under [`FormProvider`](/docs/form/composition#formprovider) with no `<form>` behaves the same, and two forms with the same field names never reach into each other. A [custom kit](/docs/form/custom-kit#fields) has to put `data-form-id` beside `data-field` for its fields to take part.
+
+A field that is hidden — in a collapsed section, on an inactive tab — ignores focus. It is skipped, and the next field with an error takes focus instead; if none can, focus stays where it was. The form does not open what hides a field: revealing it is the layout's business.
+
+`focusOnError: false` turns all of this off — an option of `useForm`, and a prop of an uncontrolled `<Form>` or `<SchemaForm>`. It also governs the focus that follows [server errors](#server-errors). `onSubmitInvalid` runs after the focus has moved, either way.
+
+## Server errors
+
+A taken username, a declined card, a stale version — the failures only the backend can see often come back as the **answer** to a request that already went out: the handler ran, and the server replied with what it rejected. `serverErrors` puts that answer on the form, on the fields it names:
+
+```tsx
+<Form
+	defaultValues={{ username: '', email: '' }}
+	serverErrors={state.serverErrors}
+	onSubmit={({ value }) => {
+		startTransition(() => {
+			action(value)
+		})
+	}}
+>
+```
+
+That is the [server actions](/docs/form/server-actions) recipe, where the answer arrives as `useActionState`'s state. The shape is:
+
+```ts
+type ServerErrors<TFormData> = {
+	fields?: { [TPath in DeepKeys<TFormData>]?: string | readonly string[] | undefined }
+	form?: string | readonly string[] | undefined
+}
+```
+
+`fields` is keyed by a field's full path — the `name` you gave it, `address.city` or `members[1].email` — and takes one message or several. `form` is for a message about the form as a whole. An `undefined` entry is ignored, so zod's `flatten().fieldErrors` fits as it is.
+
+`serverErrors` is an option of `useForm`, and a prop of an uncontrolled `<Form>` or `<SchemaForm>`. A controlled `<Form form={form}>` does not take it — pass it to your own `useForm`, so it has one source. `form.setServerErrors(errors)` is the same mechanism called directly, for an answer that arrives in your own code:
+
+```tsx
+const form = useForm({
+	defaultValues: { username: '' },
+	onSubmit: async ({ value }) => {
+		const response = await signUp(value)
+		if (response.errors) form.setServerErrors(response.errors)
+	},
+})
+```
+
+When errors are applied:
+
+- **Each field named shows its messages at once**, through the kit's error component with `aria-invalid` set, like any other error. Applying them marks the field touched, so the display rule does not hide them.
+- **The first field with an error takes focus**, by the [rule above](#focus-on-the-first-error), unless `focusOnError` is `false`. Errors that name no field move nothing.
+- **A `form` message reaches [`form.Submit`](#formsubmit)'s `formErrors`** and does not disable submitting.
+
+And when they go:
+
+- **A field's error stays while the user moves in and out of the field**, and goes the first time its value changes. It does not come back for that value — typing the rejected username again does not restore the message; only the server can say it again.
+- **Every server error goes on the next submit**, and on `form.reset()`.
+- Until it goes, a field's server error makes the form invalid, so `canSubmit` is `false` and the kit's button is disabled — the same as any field error, and the reason the error clears on the first edit. A `form` message never disables it.
+- **An error for a field that is not mounted is kept**, and shows when the field mounts, by the same rules. It does not block submitting while nothing shows it.
+
+The prop is applied on mount and whenever its value changes **by reference** — the same object again applies nothing, so an error the user has since edited away stays gone. Pass the server's answer as it is (`state.serverErrors` changes once per result), or memoise any reshaping of it: a literal built inline is a new object on every render, and every render would apply it again — restoring a message the user edited away, marking the fields touched again and moving focus back. It is applied in an effect, so errors present on the first render appear once the page has hydrated, not in server-rendered HTML.
+
+One limitation: the errors are kept by path. TanStack's own array helpers on the instance — `removeFieldValue`, `swapFieldValues`, `moveFieldValues` — move values without moving them, so a server error on `members[1].email` can end up on the neighbouring row; the package's [`form.Array`](/docs/form/arrays) is not affected.
+
+### The two options
+
+| Option         | Type                                   | Notes                                                                                                |
+| -------------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `focusOnError` | `boolean`                              | Focus the first field with an error after an invalid submit, and after server errors. On by default. |
+| `serverErrors` | `ServerErrors<TFormData> \| undefined` | Errors a server reported. Applied on mount and when the reference changes.                           |
+
+## A server check as a validator
+
+A server check can also run **as validation**, before the handler: a uniqueness lookup that should keep `onSubmit` from running at all, rather than a response to a request it made.
 
 The seam for that is a **validator**, not the `onSubmit` handler. The handler's return value is ignored; `validators.onSubmit` and `validators.onSubmitAsync` are the two whose result TanStack maps back onto fields. Return `undefined` and submission proceeds to the handler; return an object with a `fields` map and it does not:
 
@@ -104,11 +177,13 @@ The seam for that is a **validator**, not the `onSubmit` handler. The handler's 
 >
 ```
 
-Each key of `fields` is a field name, and its message goes into that field's submit-time error slot — where the flat fields already look, so it renders through the kit's error component with `aria-invalid` and `aria-describedby` set, exactly like a schema issue. It is visible immediately because submitting has just marked every field touched. A `form` key may sit alongside `fields` for a message about the form as a whole; that one belongs to no field, so nothing renders it for you — read it from `form.state.errorMap.onSubmit` and put it where you want it.
+Each key of `fields` is a field name, and its message goes into that field's submit-time error slot — where the flat fields already look, so it renders through the kit's error component with `aria-invalid` and `aria-describedby` set, exactly like a schema issue. It is visible immediately because submitting has just marked every field touched. A `form` key may sit alongside `fields` for a message about the form as a whole; that one belongs to no field, so nothing renders it for you — read it from `form.Submit`'s `formErrors` and put it where you want it.
 
 The message then clears itself. Editing the rejected field runs its own change validation, and a field that now passes drops its stale submit-time error. That is not cosmetic: an unresolved error keeps the form invalid, and an invalid form keeps `canSubmit` false — without the clearing, one server rejection would disable the button for good.
 
 Because the request is a validator, `isSubmitting` is already true while it awaits, and the button is disabled for the whole round trip.
+
+**Which one?** Both put a server's message on a field. A server **validator** runs as part of submitting: the handler does not run until it answers, and its error stops the submission like any validation error. Server **errors** are a response you put on the form afterwards — the submission went through, and this is what came back. A [server action](/docs/form/server-actions) is the second shape, since the request _is_ the submission; a check that must pass before anything is saved is the first.
 
 ### In TSX
 
@@ -149,6 +224,8 @@ const form = useForm({
 	},
 })
 ```
+
+The recipe seeds `useState` with `record`, so it assumes the record is there when the form mounts: render the form once the data has resolved, or key it by the record's id so a different record starts a fresh one.
 
 `formApi.reset(value, { keepDefaultValues: true })` is the alternative when nothing reads `isDefaultValue`: the values stay and `isDirty` is `false`, while the baseline remains the original `defaultValues`, so `isDefaultValue` reads `false` from then on.
 

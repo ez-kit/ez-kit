@@ -94,7 +94,10 @@ const INITIAL_CITY_ID = 4821
 /** Long enough to see the pending state, short enough not to feel broken. */
 const RESPONSE_DELAY_MS = 400
 
-/** The gate that keeps a one-character search from asking for half the catalogue. */
+/**
+ * The gate that keeps a one-character search from asking for half the catalogue. It is set on
+ * the source below, so the form withholds a shorter query and the kit shows how much more to type.
+ */
 const MIN_QUERY_LENGTH = 2
 
 type CityOption = { label: string; value: number }
@@ -150,7 +153,7 @@ function useRequest(key: string | undefined): { options: readonly CityOption[]; 
 function useCitySearch({ params, query }: { params: Record<string, unknown>; query?: string }) {
 	const country = typeof params.country === 'string' ? params.country : ''
 	const text = (query ?? '').trim().toLowerCase()
-	const key = country === '' || text.length < MIN_QUERY_LENGTH ? undefined : `${SEARCH_PREFIX}${country}:${text}`
+	const key = query === undefined || country === '' ? undefined : `${SEARCH_PREFIX}${country}:${text}`
 
 	return useRequest(key)
 }
@@ -168,7 +171,7 @@ function useCitiesByValue({ values }: { values: readonly (string | number)[] }) 
 
 /** Hoisted to a module constant: a registry rebuilt each render would swap hook identities. */
 const optionSources: OptionSourceRegistry = {
-	cities: { useOptions: useCitySearch, useSelectedOptions: useCitiesByValue },
+	cities: { useOptions: useCitySearch, useSelectedOptions: useCitiesByValue, minLength: MIN_QUERY_LENGTH },
 }
 
 const schema = defineFormSchema<Address>()({
