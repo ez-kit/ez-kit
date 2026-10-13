@@ -1108,7 +1108,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			// "#### Per-kind props" subheading added for exactly this reason — a
 			// heading addresses at most one table.
 			{ heading: 'The options', roots: [FORM_TYPE.CreateFormOptions], expectedCount: 3 },
-			{ heading: 'Fields', roots: [FORM_TYPE.FieldRenderProps], expectedCount: 11 },
+			{ heading: 'Fields', roots: [FORM_TYPE.FieldRenderProps], expectedCount: 12 },
 			{ heading: 'Per-kind props', roots: [FORM_TYPE.FormFieldSlots], expectedCount: 12 },
 			{ heading: 'Form level', roots: [FORM_TYPE.FormComponents], expectedCount: 1 },
 			{ heading: 'Layout and wizard', roots: [FORM_TYPE.FormComponents], expectedCount: 3 },
@@ -1159,9 +1159,9 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 				stripPrefix: FORM_RECEIVER_PREFIX,
 				expectedCount: 6,
 			},
-			// The thirteen keys of `form.Field`'s render prop: the eleven a registered field
+			// The fourteen keys of `form.Field`'s render prop: the twelve a registered field
 			// receives, plus `value` and `onChange`.
-			{ heading: '`form.Field`', roots: [FORM_TYPE.FieldControlProps], expectedCount: 13 },
+			{ heading: '`form.Field`', roots: [FORM_TYPE.FieldControlProps], expectedCount: 14 },
 		],
 		nonOptionTables: [],
 	},

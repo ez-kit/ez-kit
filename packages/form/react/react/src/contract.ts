@@ -64,6 +64,13 @@ export type FieldRenderProps = {
 	 */
 	'data-field-type': string
 	/**
+	 * The id of the form this field belongs to; spread onto the kit's root beside `data-field`.
+	 * Focus-on-error walks `[data-field]` wrappers in DOM order and keeps only the ones whose
+	 * `data-form-id` is the submitting form's, so two forms on one page — or a form whose fields
+	 * sit under `FormProvider` with no `<form>` element — never reach into each other.
+	 */
+	'data-form-id': string
+	/**
 	 * The DOM id the kit must put on the focusable control, so `data-field` lookups and a
 	 * `<label for>` agree. React-Aria kits still let the library own its internal wiring —
 	 * this only pins the control's own id.
@@ -303,6 +310,8 @@ export type ArrayFieldRenderProps = {
 	'data-field': string
 	/** Always `'array'`, for symmetry with every other field's `data-field-type`. */
 	'data-field-type': string
+	/** The form's id, as on every other field — see `FieldRenderProps['data-form-id']`. */
+	'data-form-id': string
 	name: string
 	label: ReactNode
 	description: ReactNode

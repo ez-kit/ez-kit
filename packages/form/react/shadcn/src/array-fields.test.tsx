@@ -69,6 +69,7 @@ function Harness({
 		<ArrayField
 			data-field='people'
 			data-field-type='array'
+			data-form-id='harness'
 			name='people'
 			label='People'
 			description='Everyone travelling'
@@ -182,6 +183,7 @@ describe('@ez-kit/form-shadcn ArrayField', () => {
 			<ArrayField
 				data-field='people'
 				data-field-type='array'
+				data-form-id='harness'
 				name='people'
 				label='People'
 				description={null}

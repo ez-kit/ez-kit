@@ -21,9 +21,10 @@ export function fieldRoot({
 	disabled,
 	required,
 	...data
-}: Pick<FieldRenderProps, 'invalid' | 'disabled' | 'required' | 'data-field' | 'data-field-type'>): {
+}: Pick<FieldRenderProps, 'invalid' | 'disabled' | 'required' | 'data-field' | 'data-field-type' | 'data-form-id'>): {
 	'data-field': string
 	'data-field-type': string
+	'data-form-id': string
 	isInvalid: boolean
 	isDisabled?: boolean
 	isRequired?: boolean

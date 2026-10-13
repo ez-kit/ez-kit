@@ -25,6 +25,8 @@ export type FieldValue = string | number | boolean | OptionValue[] | DateRangeVa
  */
 export type BoundFieldApi = {
 	name: string
+	/** The form the field belongs to — TanStack's core `FormApi`, of which only `formId` is read. */
+	form: { formId: string }
 	handleBlur: () => void
 	handleChange: (value: FieldValue) => void
 	state: {

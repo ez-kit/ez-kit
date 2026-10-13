@@ -515,6 +515,7 @@ function ArrayBody({
 	const frame: ArrayFrameProps = {
 		'data-field': field.name,
 		'data-field-type': ARRAY_FIELD_TYPE,
+		'data-form-id': field.form.formId,
 		name: field.name,
 		label,
 		description,

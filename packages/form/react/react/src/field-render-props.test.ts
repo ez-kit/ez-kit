@@ -8,6 +8,7 @@ import type { BoundFieldApi } from './bindable-form'
 function boundField(overrides: { isTouched: boolean; errors?: readonly unknown[] }): BoundFieldApi {
 	return {
 		name: 'email',
+		form: { formId: 'profile' },
 		handleBlur: () => {},
 		handleChange: () => {},
 		state: {

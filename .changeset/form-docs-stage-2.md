@@ -16,3 +16,6 @@ type argument of `useFormContext`.
 
 Submission documents the dirty-state recipes: resetting after a save, late initial values and a
 `beforeunload` warning while the form is dirty.
+
+The kit contract, Native API, Fields and Custom fields pages document `data-form-id`, the form id
+every field wrapper carries beside `data-field`.

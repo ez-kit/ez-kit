@@ -298,6 +298,7 @@ export function SliderField({
 	required: _required,
 	'data-field': dataField,
 	'data-field-type': dataFieldType,
+	'data-form-id': dataFormId,
 }: SliderFieldRenderProps): ReactNode {
 	return (
 		// HeroUI's Slider anatomy: label and value output lead, then the track owns the fill and
@@ -308,6 +309,7 @@ export function SliderField({
 			value={value}
 			data-field={dataField}
 			data-field-type={dataFieldType}
+			data-form-id={dataFormId}
 			onChange={(next) => {
 				// A single-thumb slider yields a number; the range form yields an array. The contract
 				// binds one number, so collapse an array back to its first thumb.

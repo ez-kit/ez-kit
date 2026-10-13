@@ -43,11 +43,13 @@ function ArrayFieldView({
 	canAdd,
 	'data-field': dataField,
 	'data-field-type': dataFieldType,
+	'data-form-id': dataFormId,
 }: ArrayFieldRenderProps): ReactNode {
 	return (
 		<Fieldset
 			data-field={dataField}
 			data-field-type={dataFieldType}
+			data-form-id={dataFormId}
 			className='flex flex-col gap-4'
 			// React rejects neither, but "not disabled" has to mean the attribute is absent —
 			// `disabled={undefined}` and `data-invalid={false}` both read as a stale `false` in a

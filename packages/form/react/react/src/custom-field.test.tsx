@@ -361,14 +361,18 @@ describe('the two entry points meet the same component', () => {
 		// excludes `onBlur`: the two mounts hold two `FieldApi` instances, so their bound
 		// handlers are distinct functions by construction. Everything else — `id`,
 		// `data-field`, `data-field-type`, the normalised `errors`, `invalid`, `disabled`, and
-		// the whole `props` bag — is compared verbatim.
-		const { onBlur: jsxBlur, onChange: jsxChange, ...jsxRest } = jsx
-		const { onBlur: docBlur, onChange: docChange, ...docRest } = document_
+		// the whole `props` bag — is compared verbatim. `data-form-id` is excluded too: the two
+		// mounts are two forms, and each field carries its own form's id.
+		const { onBlur: jsxBlur, onChange: jsxChange, 'data-form-id': jsxFormId, ...jsxRest } = jsx
+		const { onBlur: docBlur, onChange: docChange, 'data-form-id': docFormId, ...docRest } = document_
 
 		expect(typeof jsxBlur).toBe('function')
 		expect(typeof docBlur).toBe('function')
 		expect(typeof jsxChange).toBe('function')
 		expect(typeof docChange).toBe('function')
+		expect(jsxFormId).toBeTypeOf('string')
+		expect(docFormId).toBeTypeOf('string')
+		expect(docFormId).not.toBe(jsxFormId)
 		expect(docRest).toEqual(jsxRest)
 		expect(docRest.props).toEqual({ hint: 'x' })
 	})

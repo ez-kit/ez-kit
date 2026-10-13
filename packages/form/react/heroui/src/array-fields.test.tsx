@@ -73,6 +73,7 @@ function List({
 		<ArrayField
 			data-field={FIELD_NAME}
 			data-field-type='array'
+			data-form-id='harness'
 			name={FIELD_NAME}
 			label={LIST_LABEL}
 			description={LIST_DESCRIPTION}
