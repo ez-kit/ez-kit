@@ -151,11 +151,12 @@ type SelectFieldPropsFor<TFormData, TValue> = BaseFieldProps<TFormData, TValue> 
 		 * Render as a search over the options rather than a plain dropdown — the JSX spelling of
 		 * the schema's `searchable`.
 		 *
-		 * Requires `optionsFrom`, and a source in the two-hook form (`useOptions` +
-		 * `useSelectedOptions`); both are runtime throws naming the field, for the same reason
-		 * the `options`/`optionsFrom` exclusion is. A server-side search returns only the page
-		 * matching the last query, so the option for the value already in form state has to be
-		 * fetched separately — see {@link SearchableOptionSource}.
+		 * With `optionsFrom`, the source must be in the two-hook form (`useOptions` +
+		 * `useSelectedOptions`) — a runtime throw names the field otherwise. A server-side search
+		 * returns only the page matching the last query, so the option for the value already in
+		 * form state has to be fetched separately — see {@link SearchableOptionSource}. Over an
+		 * in-memory `options` list the field filters locally, by a case-insensitive substring of
+		 * the label.
 		 *
 		 * `select` and `multiselect` only; the two inline kinds do not have the prop at all.
 		 *
@@ -175,9 +176,9 @@ type MultiSelectFieldPropsFor<TFormData, TValue> = BaseFieldProps<TFormData, TVa
 		placeholder?: string
 		/**
 		 * Render as a search over the options, with the selection shown as chips — the
-		 * multi-value spelling of {@link SelectFieldPropsFor.searchable}, with the same two
-		 * runtime requirements (an `optionsFrom` source, in the two-hook form) and the same
-		 * two throws naming the field when either is missing.
+		 * multi-value spelling of {@link SelectFieldPropsFor.searchable}, with the same rules:
+		 * with `optionsFrom` the source must be in the two-hook form (a runtime throw names the
+		 * field otherwise), and an in-memory `options` list is filtered locally.
 		 *
 		 * The source needs no change to serve both: `useSelectedOptions` already takes the
 		 * values to resolve as an **array**, and here it simply receives more than one.
