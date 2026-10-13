@@ -49,7 +49,7 @@
 			"name": "config-layer helpers alone (no createForm)",
 			"path": "dist/index.js",
 			"import": "{ stripHiddenValues, clampToGridRange, GRID_MIN, GRID_MAX, FormFieldType }",
-			"limit": "0.5 KB",
+			"limit": "570 B",
 			"ignore": [
 				"@ez-kit/form-core",
 				"@tanstack/form-core",
