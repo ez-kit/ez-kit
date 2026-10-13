@@ -3,7 +3,9 @@ title: Server actions
 description: Submitting a form to a React server action, with the errors it returns put back on the fields through serverErrors.
 ---
 
-**The form needs JavaScript.** A server action can receive a plain HTML form before the page has hydrated, but these forms are not plain HTML forms: the kits' fields are controlled components, and arrays, conditions and the wizard all live in JavaScript. Until the page hydrates there is nothing to submit, so treat a server action here as the endpoint the form calls, not as a no-JavaScript fallback.
+**The form needs JavaScript.** These are not plain HTML forms: the kits' fields are controlled components, and validation, arrays, conditions and the wizard all live in JavaScript, so a server action here is the endpoint the form calls, not a no-JavaScript fallback.
+
+What a press does **before** the page has hydrated is the browser's own submit. By default the kits render a `<form>` with no `method`, and their inputs carry `name`, so that submit is a **GET** to the current URL with every field's value in the query string — and from there in the browser history and the server's logs. A password field makes that a credential in a URL. Give the form `method='post'` — `<Form>` and `<SchemaForm>` pass it through to the `<form>` element in both kits — so an early press sends the values in a request body, which nothing on the page reads; or keep the submit control disabled until the page has hydrated.
 
 ## The recipe
 
@@ -24,15 +26,43 @@ export type SignUpResult = {
 	ok?: true
 }
 
+type IssuePath = readonly (PropertyKey | { readonly key: PropertyKey })[]
+
 const TAKEN_USERNAMES = new Set(['admin', 'root'])
+
+const MALFORMED_REQUEST = 'The request could not be read. Reload the page and try again.'
 
 const validator = buildValidator(signUpSchema)
 
-export async function signUp(_previous: SignUpResult, values: SignUpValues): Promise<SignUpResult> {
+function isSignUpValues(values: unknown): values is SignUpValues {
+	return (
+		typeof values === 'object' &&
+		values !== null &&
+		'username' in values &&
+		typeof values.username === 'string' &&
+		'email' in values &&
+		typeof values.email === 'string'
+	)
+}
+
+function toFieldPath(path: IssuePath): string {
+	return path
+		.map((segment) => (typeof segment === 'object' ? segment.key : segment))
+		.reduce<string>((joined, key) => {
+			if (typeof key === 'number') return `${joined}[${String(key)}]`
+			return joined === '' ? String(key) : `${joined}.${String(key)}`
+		}, '')
+}
+
+export async function signUp(_previous: SignUpResult, values: unknown): Promise<SignUpResult> {
+	if (!isSignUpValues(values)) {
+		return { serverErrors: { form: MALFORMED_REQUEST } }
+	}
+
 	const result = await validator['~standard'].validate(values)
 
 	if (result.issues) {
-		const fields = Object.fromEntries(result.issues.map((issue) => [String(issue.path?.[0]), issue.message]))
+		const fields = Object.fromEntries(result.issues.map((issue) => [toFieldPath(issue.path ?? []), issue.message]))
 		return { serverErrors: { fields } }
 	}
 
@@ -42,6 +72,39 @@ export async function signUp(_previous: SignUpResult, values: SignUpValues): Pro
 
 	return { ok: true }
 }
+```
+
+The document it validates against is shared with the form:
+
+```ts
+import { defineFormSchema, FormFieldType, TextInputType } from '@ez-kit/form-core'
+
+export type SignUpValues = {
+	username: string
+	email: string
+}
+
+export const signUpSchema = defineFormSchema<SignUpValues>()({
+	version: 1,
+	children: [
+		{
+			type: FormFieldType.Text,
+			name: 'username',
+			label: 'Username',
+			defaultValue: '',
+			validate: { required: true, minLength: 3, maxLength: 32 },
+		},
+		{
+			type: FormFieldType.Text,
+			name: 'email',
+			label: 'Email',
+			inputType: TextInputType.Email,
+			defaultValue: '',
+			validate: { required: true, maxLength: 254, format: 'email' },
+		},
+		{ type: 'submit', label: 'Sign up' },
+	],
+})
 ```
 
 The action returns a `serverErrors` object in the shape the form takes — field messages under `fields`, keyed by path, and an optional `form` for a message about the form as a whole — and the component hands it straight back to `<Form>`:
@@ -60,6 +123,7 @@ export function SignUp() {
 
 	return (
 		<Form
+			method='post'
 			defaultValues={{ username: '', email: '' }}
 			serverErrors={state.serverErrors}
 			onSubmit={({ value }) => {
@@ -73,13 +137,13 @@ export function SignUp() {
 					<form.TextField
 						name='username'
 						label='Username'
-						validate={{ required: true, minLength: 3 }}
+						validate={{ required: true, minLength: 3, maxLength: 32 }}
 					/>
 					<form.TextField
 						name='email'
 						label='Email'
 						type={TextInputType.Email}
-						validate={{ required: true, format: 'email' }}
+						validate={{ required: true, maxLength: 254, format: 'email' }}
 					/>
 					<form.SubmitButton disabled={isPending}>Sign up</form.SubmitButton>
 				</>
@@ -114,9 +178,14 @@ Two consequences of how the prop is read:
 
 ## Validating on the server
 
-An action is a public endpoint: anything can POST to it, so it validates again whatever the browser already checked. `@ez-kit/form-core` runs without React, so the rules a document declares run on the server unchanged:
+An action is a public endpoint: anything can POST to it, with any payload, so it validates again whatever the browser already checked. Two things the browser's checks never had to do come first:
 
-- `buildValidator(schema)` compiles a document's `validate` blocks into a [standard-schema](https://github.com/standard-schema/standard-schema) validator — call its `'~standard'.validate(values)` and map the issues onto `fields`, as the action above does.
+- **Check the payload's shape.** `buildValidator` checks the document's constraints, not the values' types — a `username` that arrives as a number passes `required` and skips `minLength`. The action above narrows `values` from `unknown` before it validates, and answers anything else with a form-level error rather than throwing. A standard schema that checks types (zod, valibot) does both at once.
+- **Bound every length.** A `format` check is a regular expression, and a regular expression over unbounded input is CPU an attacker can spend; on a public endpoint give each field a `maxLength`, which is checked before `format`.
+
+`@ez-kit/form-core` runs without React, so the rules a document declares run on the server unchanged:
+
+- `buildValidator(schema)` compiles a document's `validate` blocks into a [standard-schema](https://github.com/standard-schema/standard-schema) validator — call its `'~standard'.validate(values)` and map each issue's path onto `fields`, as `toFieldPath` above does — joined, so a nested field's error lands on `address.city` rather than on `address`.
 - `stripHiddenValues(schema, values)` drops what a `when` condition hid, so the server sees the payload the form would have submitted.
 - `parseFormSchema(json)` checks a document that arrived as data before it is trusted.
 

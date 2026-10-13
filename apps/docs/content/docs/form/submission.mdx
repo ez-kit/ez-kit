@@ -147,7 +147,7 @@ And when they go:
 
 The prop is applied on mount and whenever its value changes **by reference** — the same object again applies nothing, so an error the user has since edited away stays gone. Pass the server's answer as it is (`state.serverErrors` changes once per result), or memoise any reshaping of it: a literal built inline is a new object on every render, and every render would apply it again — restoring a message the user edited away, marking the fields touched again and moving focus back. It is applied in an effect, so errors present on the first render appear once the page has hydrated, not in server-rendered HTML.
 
-One limitation: the errors are kept by path. TanStack's own array helpers on the instance — `removeFieldValue`, `swapFieldValues`, `moveFieldValues` — move values without moving them, so a server error on `members[1].email` can end up on the neighbouring row; the package's [`form.Array`](/docs/form/arrays) is not affected.
+One limitation: the errors are kept by path, and a field's error goes once the value at its path changes. So after an entry of an array is removed or moved, an error on a later row is dropped — or, if the row that now sits at that path holds the same value, shown on that row instead. Two empty rows, or a duplicate-address error, are exactly the case where the values match.
 
 ### The two options
 

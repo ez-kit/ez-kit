@@ -73,7 +73,8 @@ const RESPONSE_DELAY_MS = 400
 
 /**
  * The gate that keeps a one-character search from asking for half the catalogue. It is set on
- * the source below, so the form withholds a shorter query and the kit shows how much more to type.
+ * the source below, so the form withholds a shorter query; once the selection is cleared, the kit
+ * shows how much more to type.
  */
 const MIN_QUERY_LENGTH = 2
 
@@ -166,8 +167,8 @@ const optionSources: OptionSourceRegistry = {
  * has been typed, so the search has returned nothing at all, and both chips still read as
  * names rather than as `4821` and `4825`, because the source's second hook resolved them.
  *
- * Then: type two or more characters to search (the minimum is set on the source, and the
- * field shows a hint until it is reached), pick a result and watch the query clear itself,
+ * Then: type two or more characters to search (the minimum is set on the source; with the
+ * selection cleared, the field shows a hint until it is reached), pick a result and watch the query clear itself,
  * drop a chip to remove one city, and change the country to watch the whole selection clear
  * to `[]`.
  */

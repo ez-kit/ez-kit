@@ -12,6 +12,7 @@ export function ServerActionExample() {
 	return (
 		<div className='flex flex-col gap-4'>
 			<Form
+				method='post'
 				defaultValues={{ username: '', email: '' }}
 				serverErrors={state.serverErrors}
 				onSubmit={({ value }) => {
@@ -26,13 +27,13 @@ export function ServerActionExample() {
 							name='username'
 							label='Username'
 							description='Try admin to see the server reject it.'
-							validate={{ required: true, minLength: 3 }}
+							validate={{ required: true, minLength: 3, maxLength: 32 }}
 						/>
 						<form.TextField
 							name='email'
 							label='Email'
 							type={TextInputType.Email}
-							validate={{ required: true, format: 'email' }}
+							validate={{ required: true, maxLength: 254, format: 'email' }}
 						/>
 						<form.SubmitButton disabled={isPending}>Sign up</form.SubmitButton>
 					</>

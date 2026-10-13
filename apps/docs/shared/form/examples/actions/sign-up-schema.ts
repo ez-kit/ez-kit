@@ -14,7 +14,7 @@ export const signUpSchema = defineFormSchema<SignUpValues>()({
 			label: 'Username',
 			description: 'Try admin to see the server reject it.',
 			defaultValue: '',
-			validate: { required: true, minLength: 3 },
+			validate: { required: true, minLength: 3, maxLength: 32 },
 		},
 		{
 			type: FormFieldType.Text,
@@ -22,7 +22,7 @@ export const signUpSchema = defineFormSchema<SignUpValues>()({
 			label: 'Email',
 			inputType: TextInputType.Email,
 			defaultValue: '',
-			validate: { required: true, format: 'email' },
+			validate: { required: true, maxLength: 254, format: 'email' },
 		},
 		{ type: 'submit', label: 'Sign up' },
 	],

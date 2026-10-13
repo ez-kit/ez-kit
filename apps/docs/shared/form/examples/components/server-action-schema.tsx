@@ -13,6 +13,7 @@ export function ServerActionSchemaExample() {
 	return (
 		<div className='flex flex-col gap-4'>
 			<SchemaForm
+				method='post'
 				schema={signUpSchema}
 				serverErrors={state.serverErrors}
 				onSubmit={({ value }) => {

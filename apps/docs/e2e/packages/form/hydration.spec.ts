@@ -10,7 +10,17 @@ import { expect, test } from '../../fixtures'
  * must every id a kit's UI library generates.
  *
  * The text control is reached by its `id`, the field's name, which both kits put on it.
+ *
+ * The server HTML alone satisfies a visibility check, and a click before React attaches would
+ * submit the form natively — so the spec waits for React's own fiber key on the input before it
+ * acts. The example sets `method='post'`, which the page recommends; asserting it on the
+ * `<form>` checks that `<Form>` passes it through to the element in both kits.
  */
+function isHydrated(id: string): boolean {
+	const input = document.getElementById(id)
+	return input !== null && Object.keys(input).some((key) => key.startsWith('__reactFiber'))
+}
+
 test('the server-rendered form hydrates without errors and submits to a real action', async ({ page, kit }) => {
 	const errors: string[] = []
 	page.on('pageerror', (error) => errors.push(error.message))
@@ -20,6 +30,8 @@ test('the server-rendered form hydrates without errors and submits to a real act
 
 	await page.goto(`/ssr/form/${kit}?theme=light`)
 	await expect(page.locator('[data-field="username"]')).toBeVisible()
+	await expect(page.locator('form')).toHaveAttribute('method', 'post')
+	await page.waitForFunction(isHydrated, 'username')
 
 	await page.locator('#username').fill('admin')
 	await page.locator('#email').fill('admin@example.com')
