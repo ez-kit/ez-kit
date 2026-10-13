@@ -2,6 +2,7 @@ import { Chip, CloseButton, Collection, ComboBox, Input, ListBox, Spinner } from
 
 import { FieldDescription, FieldErrorText, FieldLabel } from './field-chrome'
 import { fieldRoot } from './field-state'
+import { minLengthHint } from './search-hint'
 
 import type { MultiSelectFieldRenderProps } from '@ez-kit/form-react'
 import type { Key } from '@heroui/react'
@@ -155,7 +156,15 @@ export function SearchableMultiSelectField({
 								<span className='text-muted text-sm'>Searching…</span>
 							</div>
 						) : (
-							<div className='text-muted p-3 text-sm'>No matches</div>
+							// One element for both texts, so the polite live region survives the switch
+							// between them and the change is announced: React Aria's empty state is not
+							// announced on its own, unlike Base UI's `role="status"` one in the shadcn kit.
+							<div
+								className='text-muted p-3 text-sm'
+								aria-live='polite'
+							>
+								{search.belowMinLength ? minLengthHint(search.minLength) : 'No matches'}
+							</div>
 						)
 					}
 					{...(disabledKeys.length > 0 ? { disabledKeys } : {})}

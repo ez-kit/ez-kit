@@ -96,3 +96,41 @@ describe('@ez-kit/form-heroui searchable select', () => {
 		expect(input).not.toBeDisabled()
 	})
 })
+
+/** The same source, asking for two characters before it searches and taking every keystroke. */
+const GATED_SOURCES: OptionSourceRegistry = { cities: { ...CITY_SOURCE, debounce: 0, minLength: 2 } }
+
+function GatedCase() {
+	return (
+		<FormOptionSources value={GATED_SOURCES}>
+			<Form defaultValues={{ city: '' } satisfies Values}>
+				{(form) => (
+					<form.SelectField
+						name='city'
+						label='City'
+						searchable
+						optionsFrom='cities'
+					/>
+				)}
+			</Form>
+		</FormOptionSources>
+	)
+}
+
+describe('@ez-kit/form-heroui searchable select below its minimum length', () => {
+	it('says how much more to type where it would say there are no matches', async () => {
+		const user = userEvent.setup()
+		render(<GatedCase />)
+		const input = screen.getByRole('combobox', { name: 'City' })
+
+		await user.type(input, 'b')
+
+		expect(await screen.findByText('Type at least 2 characters')).toBeInTheDocument()
+		expect(screen.queryByText('No matches')).toBeNull()
+
+		await user.type(input, 'e')
+
+		expect(await screen.findByText('Berlin')).toBeInTheDocument()
+		expect(screen.queryByText('Type at least 2 characters')).toBeNull()
+	})
+})

@@ -11,6 +11,7 @@ import {
 } from '@form-shadcn/components/ui/combobox'
 
 import { FieldShell } from './field-shell'
+import { minLengthHint } from './search-hint'
 
 import type { SelectFieldRenderProps } from '@ez-kit/form-react'
 import type { ReactNode } from 'react'
@@ -111,7 +112,9 @@ export function SearchableSelectField({
 						{...binding}
 					/>
 					<ComboboxContent>
-						<ComboboxEmpty>{loading ? 'Searching…' : 'No matches'}</ComboboxEmpty>
+						<ComboboxEmpty>
+							{loading ? 'Searching…' : search.belowMinLength ? minLengthHint(search.minLength) : 'No matches'}
+						</ComboboxEmpty>
 						<ComboboxList>
 							<ComboboxCollection>
 								{(item: string) => (

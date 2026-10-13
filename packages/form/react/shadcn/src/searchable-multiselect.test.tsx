@@ -133,3 +133,43 @@ describe('@ez-kit/form-shadcn searchable multiselect', () => {
 		expect(container.querySelector('[data-slot="combobox-chips"]')).toBeNull()
 	})
 })
+
+/** The same source, asking for two characters before it searches and taking every keystroke. */
+const GATED_SOURCES: OptionSourceRegistry = { cities: { ...CITY_SOURCE, debounce: 0, minLength: 2 } }
+
+const NO_CITIES: Values = { cities: [] }
+
+function GatedCase() {
+	return (
+		<FormOptionSources value={GATED_SOURCES}>
+			<Form defaultValues={NO_CITIES}>
+				{(form) => (
+					<form.MultiSelectField
+						name='cities'
+						label='Cities'
+						searchable
+						optionsFrom='cities'
+					/>
+				)}
+			</Form>
+		</FormOptionSources>
+	)
+}
+
+describe('@ez-kit/form-shadcn searchable multiselect below its minimum length', () => {
+	it('says how much more to type where it would say there are no matches', async () => {
+		const user = userEvent.setup()
+		render(<GatedCase />)
+		const input = screen.getByRole('combobox', { name: 'Cities' })
+
+		await user.type(input, 'b')
+
+		expect(await screen.findByText('Type at least 2 characters')).toBeInTheDocument()
+		expect(screen.queryByText('No matches')).toBeNull()
+
+		await user.type(input, 'e')
+
+		expect(await screen.findByText('Berlin')).toBeInTheDocument()
+		expect(screen.queryByText('Type at least 2 characters')).toBeNull()
+	})
+})
