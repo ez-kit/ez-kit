@@ -7,7 +7,7 @@ import { hasChildren, isArrayNode, isFieldNode, walkNodes } from './walk'
 
 import type { Condition } from './rules'
 import type { AnyFormSchema, FieldValidate, FormNode } from './schema'
-import type { SearchSettings } from './search-settings'
+import type { Searchable, SearchSettings } from './search-settings'
 
 /**
  * Options that widen what `parseFormSchema` accepts: custom field kinds, block components
@@ -555,7 +555,8 @@ function assertCreatable(node: FormNode<unknown, string>, path: string): void {
 	if (typeof value !== 'boolean') {
 		throw new FormSchemaError(`"creatable" must be a boolean, got ${describeValue(value)}`, path)
 	}
-	if (value && !isSearchable(record.searchable)) {
+	// `assertSearchable` has already run on this node, so `searchable` is a valid `Searchable`.
+	if (value && !isSearchable(record.searchable as Searchable | undefined)) {
 		throw new FormSchemaError(
 			'"creatable" requires "searchable": true — a value is created by typing it, and only a ' +
 				'searchable field has somewhere to type',

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { FormFieldType } from './field-types'
 import { FormSchemaError, parseFormSchema } from './parse'
-import { isSearchable } from './search-settings'
+import { isSearchable, LOCAL_SEARCH_DEFAULTS, REMOTE_SEARCH_DEFAULTS } from './search-settings'
 
 import type { ParseOptions } from './parse'
 
@@ -188,5 +188,13 @@ describe('searchable settings object', () => {
 		expect(isSearchable(false)).toBe(false)
 		expect(isSearchable(true)).toBe(true)
 		expect(isSearchable({})).toBe(true)
+
+		// @ts-expect-error -- it reads a typed `Searchable`; validating an unknown is the parser's job
+		isSearchable('yes')
+	})
+
+	it('exports default sets no consumer can rewrite for every form', () => {
+		expect(Object.isFrozen(REMOTE_SEARCH_DEFAULTS)).toBe(true)
+		expect(Object.isFrozen(LOCAL_SEARCH_DEFAULTS)).toBe(true)
 	})
 })

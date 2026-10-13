@@ -385,7 +385,11 @@ function SearchableSourcedOptions({
 
 	// Below the minimum nothing was searched, so a page left over from a longer query must not
 	// show; the selected options stay, so a chosen label never disappears.
+	// Its `loading` goes with it: a query hook disabled for an absent query (TanStack Query v5's
+	// `isPending`) reports loading for as long as nothing is searched, which would put "Searching…"
+	// where the kit shows the hint.
 	const listedOptions = belowMinLength ? NO_OPTIONS : listed.options
+	const isListLoading = !belowMinLength && listed.loading
 	const options = useMemo(
 		() =>
 			withCreated(
@@ -396,7 +400,7 @@ function SearchableSourcedOptions({
 	)
 	const binding = useSearchBinding(search)
 
-	return children({ options, loading: search.pending || listed.loading || selected.loading, search: binding })
+	return children({ options, loading: search.pending || isListLoading || selected.loading, search: binding })
 }
 
 /** The part of a field's query state the kit sees, stable while none of it changes. */

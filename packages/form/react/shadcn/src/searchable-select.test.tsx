@@ -165,9 +165,12 @@ describe('@ez-kit/form-shadcn searchable select', () => {
 /** The same source, asking for two characters before it searches and taking every keystroke. */
 const GATED_SOURCES: OptionSourceRegistry = { cities: { ...CITY_SOURCE, debounce: 0, minLength: 2 } }
 
-function GatedCase() {
+/** One character is enough here — the hint must read in the singular. */
+const ONE_CHARACTER_SOURCES: OptionSourceRegistry = { cities: { ...CITY_SOURCE, debounce: 0, minLength: 1 } }
+
+function GatedCase({ sources = GATED_SOURCES }: { sources?: OptionSourceRegistry }) {
 	return (
-		<FormOptionSources value={GATED_SOURCES}>
+		<FormOptionSources value={sources}>
 			<Form defaultValues={{ city: '' } satisfies Values}>
 				{(form) => (
 					<form.SelectField
@@ -197,5 +200,16 @@ describe('@ez-kit/form-shadcn searchable select below its minimum length', () =>
 
 		expect(await screen.findByText('Berlin')).toBeInTheDocument()
 		expect(screen.queryByText('Type at least 2 characters')).toBeNull()
+	})
+
+	it('reads in the singular when one character is the minimum', async () => {
+		const user = userEvent.setup()
+		render(<GatedCase sources={ONE_CHARACTER_SOURCES} />)
+		const input = screen.getByRole('combobox', { name: 'City' })
+
+		await user.type(input, 'b')
+		await user.type(input, '{Backspace}')
+
+		expect(await screen.findByText('Type at least 1 character')).toBeInTheDocument()
 	})
 })

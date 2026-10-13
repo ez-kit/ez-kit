@@ -42,12 +42,14 @@ const { useForm, Form } = createForm({ FormElement: testFormElement, fields: tes
 type SearchSpy = { source: SearchableOptionSource; queries: (string | undefined)[] }
 
 /** A two-hook source recording every query its list hook was handed. */
-function citySource(settings: SearchSettings = {}): SearchSpy {
+function citySource(settings: SearchSettings = {}, { pendingWithoutQuery = false } = {}): SearchSpy {
 	const queries: (string | undefined)[] = []
 
+	// `pendingWithoutQuery` mimics a TanStack Query v5 hook disabled for an absent query: it stays
+	// `isPending`, so it reports `loading: true` for as long as there is nothing to search.
 	function useCitySearch({ query }: { params: Record<string, unknown>; query?: string }) {
 		queries.push(query)
-		return { options: searchCities(query ?? ''), loading: false }
+		return { options: searchCities(query ?? ''), loading: pendingWithoutQuery && query === undefined }
 	}
 
 	function useCitiesByValue({ values }: { values: readonly OptionValue[] }) {
@@ -238,6 +240,16 @@ describe.each<FieldKind>(['select', 'multiselect'])('the query a searchable %s h
 		expect(control(kind).dataset.loading).toBe('true')
 
 		advance(REMOTE_DEBOUNCE)
+		expect(control(kind).dataset.loading).toBeUndefined()
+	})
+
+	it("keeps a disabled source's loading out of the kit below the minimum", () => {
+		const spy = citySource({ debounce: 0, minLength: 2 }, { pendingWithoutQuery: true })
+		render(withSources({ cities: spy.source }, <City kind={kind} />))
+
+		type(searchInput(kind), 'b')
+
+		expect(hint()).toBe(HINT(2))
 		expect(control(kind).dataset.loading).toBeUndefined()
 	})
 

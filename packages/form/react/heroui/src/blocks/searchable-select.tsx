@@ -87,24 +87,25 @@ export function SearchableSelectField({
 			<ComboBox.Popover>
 				<ListBox
 					data-loading={loading || undefined}
-					renderEmptyState={() =>
-						loading ? (
-							<div className='flex items-center justify-center gap-2 p-3'>
-								<Spinner size='sm' />
-								<span className='text-muted text-sm'>Searching…</span>
-							</div>
-						) : (
-							// One element for both texts, so the polite live region survives the switch
-							// between them and the change is announced: React Aria's empty state is not
-							// announced on its own, unlike Base UI's `role="status"` one in the shadcn kit.
-							<div
-								className='text-muted p-3 text-sm'
-								aria-live='polite'
-							>
-								{search.belowMinLength ? minLengthHint(search.minLength) : 'No matches'}
-							</div>
-						)
-					}
+					renderEmptyState={() => (
+						// React Aria puts the empty state in a bare `role="option"` and announces none of
+						// it, unlike Base UI's `role="status"` one in the shadcn kit. One polite region
+						// around all three texts stays mounted while the list is empty, so a switch between
+						// "Searching…", the hint and "No matches" is announced; the first text arrives with
+						// the region itself, which not every screen reader announces.
+						<div aria-live='polite'>
+							{loading ? (
+								<div className='flex items-center justify-center gap-2 p-3'>
+									<Spinner size='sm' />
+									<span className='text-muted text-sm'>Searching…</span>
+								</div>
+							) : (
+								<div className='text-muted p-3 text-sm'>
+									{search.belowMinLength ? minLengthHint(search.minLength) : 'No matches'}
+								</div>
+							)}
+						</div>
+					)}
 					{...(disabledKeys.length > 0 ? { disabledKeys } : {})}
 				>
 					<Collection items={items}>

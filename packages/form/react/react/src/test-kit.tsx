@@ -29,8 +29,12 @@ import type { ReactNode } from 'react'
 const DESCRIPTION_ID_SUFFIX = '-description'
 const ERROR_ID_SUFFIX = '-error'
 
+/** The one minimum that reads in the singular. */
+const SINGULAR_MIN_LENGTH = 1
+
 /** What a searchable field shows while the typed text is shorter than its `minLength`. */
-const searchHint = (minLength: number): string => `Type at least ${String(minLength)} characters`
+const searchHint = (minLength: number): string =>
+	`Type at least ${String(minLength)} ${minLength === SINGULAR_MIN_LENGTH ? 'character' : 'characters'}`
 
 /** Only the chrome half of the field — the control half is handled by `children`. */
 type ShellProps = Omit<FieldRenderProps, 'name' | 'onBlur' | 'disabled' | 'required'> & {

@@ -32,3 +32,6 @@ its query after 300 ms without typing, not on every keystroke; `debounce` and `m
 source, or `searchable={{ debounce, minLength }}` on the field (and in a schema node), tune it. Below
 `minLength` the source receives `query: undefined` and the kit shows a hint. An in-memory searchable
 list still filters at once. **Kit contract:** `search` gains `minLength` and `belowMinLength`.
+
+**Migration:** a source that already debounces its query internally now waits twice — drop its own
+debounce, or set `debounce: 0` on the source.

@@ -125,7 +125,8 @@ describe('@ez-kit/form-heroui searchable select below its minimum length', () =>
 
 		await user.type(input, 'b')
 
-		expect(await screen.findByText('Type at least 2 characters')).toBeInTheDocument()
+		const hint = await screen.findByText('Type at least 2 characters')
+		expect(hint.closest('[aria-live="polite"]')).not.toBeNull()
 		expect(screen.queryByText('No matches')).toBeNull()
 
 		await user.type(input, 'e')
