@@ -74,3 +74,13 @@ export function useFormContext(): AnyFormInstance {
 	}
 	return form
 }
+
+/** The nearest form, or `null` — for the helpers that also take one as a prop. Not exported from the package. */
+export function useOptionalFormContext(): AnyFormInstance | null {
+	return useContext(FormContext)
+}
+
+/** The error a composition helper throws when it has no form to work on (R68). */
+export function missingFormMessage(helper: string): string {
+	return `${helper}(): the block needs a form — pass \`form\`, or render it inside <Form>, <SchemaForm> or <FormProvider>.`
+}

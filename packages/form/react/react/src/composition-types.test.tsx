@@ -262,3 +262,30 @@ describe("withForm — the app's own field kinds", () => {
 		expectTypeOf(EmailBlock).toBeFunction()
 	})
 })
+
+describe('withForm — the form prop is optional (D7)', () => {
+	it('compiles without form, and still checks a form that is passed', () => {
+		const Block = withForm({
+			defaultValues: { login: '' },
+			render: ({ form }) => (
+				<form.TextField
+					name='login'
+					label='Login'
+				/>
+			),
+		})
+		function Parent(): ReactNode {
+			const other = useForm({ defaultValues: { amount: 0 } })
+			return (
+				<>
+					<Block />
+					<Block
+						// @ts-expect-error -- a form of another shape is still rejected
+						form={other}
+					/>
+				</>
+			)
+		}
+		expectTypeOf(Parent).toBeFunction()
+	})
+})

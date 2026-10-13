@@ -5,8 +5,7 @@ import type { FormAsyncValidateOrFn, FormOptions, FormValidateOrFn } from '@ez-k
 import type { FunctionComponent, PropsWithChildren } from 'react'
 
 /**
- * One composed block: the component `withForm` returns, and the shape of the `render` prop
- * it was built from.
+ * The `render` option of `withForm`: the block's body, handed the form it works on.
  *
  * The only thing that differs from TanStack's own `WithFormProps['render']` is `form`:
  * TanStack types it as `AppFieldExtendedReactFormApi<…>` — parameterised by the components
@@ -17,7 +16,7 @@ import type { FunctionComponent, PropsWithChildren } from 'react'
  * `NoInfer<TRenderProps>` mirrors TanStack: the extra render props are inferred from the
  * `props` option, never from the render function's own parameter.
  */
-export type KitFormBlock<
+export type KitFormBlockRender<
 	TFormData,
 	TOnMount extends undefined | FormValidateOrFn<TFormData>,
 	TOnChange extends undefined | FormValidateOrFn<TFormData>,
@@ -69,6 +68,58 @@ export type KitFormBlock<
 >
 
 /**
+ * One composed block: the component `withForm` returns.
+ *
+ * Its `form` is optional. Passed, it is checked against the block's own options, as TanStack
+ * checks it. Omitted, the block takes the form above it — `<Form>`, `<SchemaForm>` or
+ * `<FormProvider>` — typed by the block's options: **a cast, not a check**, exactly as
+ * `useFormContext<TValues>()` is. With neither, the block throws a named error (R68).
+ *
+ * `render` receives the form either way — see {@link KitFormBlockRender}.
+ */
+export type KitFormBlock<
+	TFormData,
+	TOnMount extends undefined | FormValidateOrFn<TFormData>,
+	TOnChange extends undefined | FormValidateOrFn<TFormData>,
+	TOnChangeAsync extends undefined | FormAsyncValidateOrFn<TFormData>,
+	TOnBlur extends undefined | FormValidateOrFn<TFormData>,
+	TOnBlurAsync extends undefined | FormAsyncValidateOrFn<TFormData>,
+	TOnSubmit extends undefined | FormValidateOrFn<TFormData>,
+	TOnSubmitAsync extends undefined | FormAsyncValidateOrFn<TFormData>,
+	TOnDynamic extends undefined | FormValidateOrFn<TFormData>,
+	TOnDynamicAsync extends undefined | FormAsyncValidateOrFn<TFormData>,
+	TOnServer extends undefined | FormAsyncValidateOrFn<TFormData>,
+	TSubmitMeta,
+	TRenderProps extends object,
+	/** Bound by the factory — see {@link KitFormBlockRender}'s own `TFields`. */
+	TFields extends FormFieldRegistry = AllFormFieldSlots,
+	TComponents extends FormComponentRegistry = AllFormComponents,
+> = FunctionComponent<
+	PropsWithChildren<
+		NoInfer<TRenderProps> & {
+			form?:
+				| KitFormApi<
+						TFormData,
+						TOnMount,
+						TOnChange,
+						TOnChangeAsync,
+						TOnBlur,
+						TOnBlurAsync,
+						TOnSubmit,
+						TOnSubmitAsync,
+						TOnDynamic,
+						TOnDynamicAsync,
+						TOnServer,
+						TSubmitMeta,
+						TFields,
+						TComponents
+				  >
+				| undefined
+		}
+	>
+>
+
+/**
  * What `withForm` takes: the form options the block is typed against — the same list
  * `useForm` accepts, so validator and submit-meta inference survives — plus the render
  * function and the optional extra props handed to it.
@@ -87,7 +138,7 @@ export type KitWithFormProps<
 	TOnServer extends undefined | FormAsyncValidateOrFn<TFormData>,
 	TSubmitMeta,
 	TRenderProps extends object,
-	/** Bound by the factory — see {@link KitFormBlock}'s own `TFields`. */
+	/** Bound by the factory — see {@link KitFormBlockRender}'s own `TFields`. */
 	TFields extends FormFieldRegistry = AllFormFieldSlots,
 	TComponents extends FormComponentRegistry = AllFormComponents,
 > = FormOptions<
@@ -105,7 +156,7 @@ export type KitWithFormProps<
 	TSubmitMeta
 > & {
 	props?: TRenderProps
-	render: KitFormBlock<
+	render: KitFormBlockRender<
 		TFormData,
 		TOnMount,
 		TOnChange,

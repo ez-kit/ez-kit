@@ -9,7 +9,7 @@ import { createFieldBinding, nativeFieldOf } from './field-binding'
 import { withFieldGroup } from './field-groups'
 import { deriveFieldTypeIds } from './field-registry'
 import { focusFirstError } from './focus-first-error'
-import { FormProvider } from './form-context'
+import { FormProvider, missingFormMessage, useOptionalFormContext } from './form-context'
 import { createFormGroup } from './form-group'
 import { splitFormProps } from './form-options'
 import { FormShell } from './form-shell'
@@ -222,7 +222,7 @@ export function createFormInternals<TFields extends FormFieldRegistry, TComponen
 	const fieldTypeIds = deriveFieldTypeIds(fields)
 
 	const { fieldContext, formContext } = createFormHookContexts()
-	const { useAppForm, withForm: tanstackWithForm } = createFormHook({
+	const { useAppForm } = createFormHook({
 		fieldContext,
 		formContext,
 		fieldComponents: NO_INJECTED_COMPONENTS,
@@ -500,15 +500,19 @@ export function createFormInternals<TFields extends FormFieldRegistry, TComponen
 	}
 
 	/**
-	 * TanStack's `withForm`, retyped — spec §12.
+	 * TanStack's `withForm`, retyped — spec §12 — and with its `form` prop made optional (D7).
 	 *
-	 * Zero runtime: this hands the options straight to TanStack, which only closes over
-	 * `render`. The single thing the wrapper changes is the declared type of the render
-	 * prop's `form`: TanStack types it as `AppFieldExtendedReactFormApi<…>` parameterised by
-	 * the components injected into `createFormHook` — and this adapter injects none, because
-	 * the kit's primitives reach the fields by closure — so `form.TextField` would fail to
-	 * compile inside a block while working perfectly at runtime. `KitFormApi` is the type
-	 * `useForm` already returns, so a block sees exactly the instance it is handed.
+	 * Not zero runtime any more: the block is this package's own component. Like TanStack's, it
+	 * calls `render` as a function with the extra `props` and the placement's own props. What it
+	 * adds is the fallback: a block placed without `form` takes the form above it — `<Form>`,
+	 * `<SchemaForm>` or `<FormProvider>` — and throws a named error when there is none (R68).
+	 *
+	 * The declared type of the render prop's `form` is the other change. TanStack types it as
+	 * `AppFieldExtendedReactFormApi<…>` parameterised by the components injected into
+	 * `createFormHook` — and this adapter injects none, because the kit's primitives reach the
+	 * fields by closure — so `form.TextField` would fail to compile inside a block while working
+	 * perfectly at runtime. `KitFormApi` is the type `useForm` already returns, so a block sees
+	 * exactly the instance it is handed.
 	 *
 	 * The generic list mirrors `useForm` verbatim for the same reason it does there:
 	 * narrowing it would silently degrade validator and submit-meta inference.
@@ -581,12 +585,17 @@ export function createFormInternals<TFields extends FormFieldRegistry, TComponen
 		TFields,
 		TComponents
 	> {
-		// The two shapes differ only in the `form` type discussed above, which no assignment
-		// can express: a component asking for the richer `KitFormApi` is not assignable to one
-		// asking for TanStack's plainer API, and vice versa. Hence the round trip.
-		const block: unknown = tanstackWithForm(options as never)
-
-		return block as KitFormBlock<
+		const { render, props } = options
+		// TanStack's own `withForm` hands `form` through as given; a block placed without one reads the
+		// form above it instead (D7). The hook is unconditional, so a block may switch between the two.
+		// No `: ReactNode`: `render` is a `FunctionComponent`, whose result may also be a promise.
+		function FormBlock(blockProps: { form?: AnyFormInstance | undefined }) {
+			const contextForm = useOptionalFormContext()
+			const form = blockProps.form ?? contextForm
+			if (form === null) throw new Error(missingFormMessage('withForm'))
+			return render({ ...props, ...blockProps, form } as never)
+		}
+		return FormBlock as KitFormBlock<
 			TFormData,
 			TOnMount,
 			TOnChange,
