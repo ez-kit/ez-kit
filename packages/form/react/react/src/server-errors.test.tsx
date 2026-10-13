@@ -8,6 +8,7 @@ import { createForm } from './create-form'
 import { createSchemaForm } from './create-schema-form'
 import { testComponents, testFields, testFormElement } from './test-kit'
 
+import type { SchemaFormControlledProps, SchemaFormUncontrolledProps } from './schema/schema-form'
 import type { ServerErrors } from './server-errors'
 import type { FormSchema } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
@@ -197,9 +198,13 @@ describe('form.setServerErrors', () => {
 		expect(screen.getByTestId('form-errors')).toHaveTextContent('')
 	})
 
-	it('shows the error of a field that mounts after the errors were applied', () => {
+	it('leaves submitting open for an unmounted field, and shows its error once it mounts', async () => {
+		const user = userEvent.setup()
 		const { form, rerender, onForm } = renderHarness()
 		apply(form(), { fields: { later: 'Taken' } })
+
+		expect(screen.getByTestId('can-submit')).toHaveTextContent('true')
+		expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled()
 
 		rerender(
 			<Harness
@@ -207,8 +212,43 @@ describe('form.setServerErrors', () => {
 				showLater
 			/>,
 		)
-
 		expect(screen.getByText('Taken')).toBeInTheDocument()
+
+		await user.type(screen.getByLabelText('Later'), 'a')
+		expect(screen.queryByText('Taken')).not.toBeInTheDocument()
+	})
+
+	it('releases the slot of a field that unmounts, and shows the error again when it comes back', () => {
+		const { form, rerender, onForm } = renderHarness({ showLater: true })
+		apply(form(), { fields: { later: 'Taken' } })
+		expect(screen.getByTestId('can-submit')).toHaveTextContent('false')
+
+		rerender(<Harness onForm={onForm} />)
+		expect(screen.getByTestId('can-submit')).toHaveTextContent('true')
+		expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled()
+
+		rerender(
+			<Harness
+				onForm={onForm}
+				showLater
+			/>,
+		)
+		expect(screen.getByText('Taken')).toBeInTheDocument()
+	})
+
+	it('leaves focus alone when the errors name no field', async () => {
+		const user = userEvent.setup()
+		const { form } = renderHarness()
+		await user.type(screen.getByLabelText('Name'), 'a')
+		act(() => {
+			screen.getByLabelText('Name').blur()
+		})
+
+		apply(form(), { form: 'Service unavailable' })
+		expect(document.activeElement).toBe(document.body)
+
+		apply(form(), {})
+		expect(document.activeElement).toBe(document.body)
 	})
 
 	it('focuses the first field with an error after applying', () => {
@@ -240,6 +280,9 @@ describe('ServerErrors types', () => {
 		expectTypeOf<Instance['setServerErrors']>().parameter(0).toEqualTypeOf<ServerErrors<Values>>()
 		expectTypeOf<{ fields: { email: 'x' } }>().toExtend<ServerErrors<Values>>()
 		expectTypeOf<{ form: ['a', 'b'] }>().toExtend<ServerErrors<Values>>()
+		expectTypeOf<{ fields: { email?: string[] | undefined }; form: string | undefined }>().toExtend<
+			ServerErrors<Values>
+		>()
 		// @ts-expect-error -- not a path
 		const wrong: ServerErrors<Values> = { fields: { nope: 'x' } }
 		expect(wrong).toBeDefined()
@@ -392,6 +435,27 @@ describe('serverErrors types', () => {
 			return null
 		}
 		expect(Probe).toBeTypeOf('function')
+	})
+
+	it('is not a prop of the controlled <SchemaForm>', () => {
+		// An overloaded JSX call reports at the tag, not the attribute, so the absence is asserted directly.
+		expectTypeOf<SchemaFormControlledProps<EmailValues>>().not.toHaveProperty('serverErrors')
+		expectTypeOf<
+			SchemaFormUncontrolledProps<
+				EmailValues,
+				never,
+				never,
+				never,
+				never,
+				never,
+				never,
+				never,
+				never,
+				never,
+				never,
+				never
+			>
+		>().toHaveProperty('serverErrors')
 	})
 
 	it('is not a prop of the controlled <Form>', () => {

@@ -14,8 +14,8 @@ type AnyArg = any
  * `FormGroup`, `Subscribe`) plus `AppField` / `AppForm` — instantiated exactly as `createForm`
  * instantiates it, so the list is what the instance carries before this package adds anything.
  * Then the members this package adds — the primitives ({@link FormPrimitives}), TanStack's
- * `Field` renamed ({@link NativeMembers}) and `setServerErrors` ({@link ServerErrorMembers}) — and the two names the composition spec reserves for
- * members still to come: `Steps` and `Step`.
+ * `Field` renamed ({@link NativeMembers}) and `setServerErrors` ({@link ServerErrorMembers}) —
+ * and the two names the composition spec reserves for members still to come: `Steps` and `Step`.
  *
  * Never written down as a free list: `RESERVED_FORM_KEYS` below is annotated with this union, so a
  * TanStack upgrade that adds or removes a member fails to compile here. `keyof` sees only the

@@ -298,8 +298,8 @@ export function createFormInternals<TFields extends FormFieldRegistry, TComponen
 
 		const setServerErrors = useCallback(
 			(errors: ServerErrors<TFormData>) => {
-				serverErrors.apply(errors)
-				if (focusOnErrorRef.current) focusFirstFieldWithErrors(form)
+				const namedAField = serverErrors.apply(errors)
+				if (namedAField && focusOnErrorRef.current) focusFirstFieldWithErrors(form)
 			},
 			[serverErrors, form],
 		)

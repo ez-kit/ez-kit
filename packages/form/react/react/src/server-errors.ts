@@ -5,14 +5,14 @@ export type ServerErrorMessages = string | readonly string[]
 
 /** Errors a server reported, by field path, plus messages for the form as a whole. */
 export type ServerErrors<TFormData> = {
-	fields?: { [TName in DeepKeys<TFormData>]?: ServerErrorMessages }
-	form?: ServerErrorMessages
+	fields?: { [TName in DeepKeys<TFormData>]?: ServerErrorMessages | undefined } | undefined
+	form?: ServerErrorMessages | undefined
 }
 
 /** The server errors of one form instance — see {@link attachServerErrors}. */
 export type ServerErrorsController = {
-	/** Replace every server error with `errors`. */
-	apply: (errors: ServerErrors<unknown>) => void
+	/** Replace every server error with `errors`; returns whether they named at least one field. */
+	apply: (errors: ServerErrors<unknown>) => boolean
 	/** Remove every server error. */
 	clear: () => void
 	/** The current form-level messages; the same array until they change. */
@@ -26,11 +26,15 @@ export type ServerErrorsController = {
 /** The slice of a field's meta the controller reads and writes; the rest is carried through. */
 type FieldMetaLike = { isTouched: boolean; errorMap: Record<string, unknown> }
 
+/** A `fieldInfo` entry: `instance` is set while the field is mounted and `null` once it unmounts. */
+type FieldInfoLike = { instance: unknown }
+
 /** The members of TanStack's instance the controller reads and wraps. */
 export type ServerErrorsHost = {
+	fieldInfo: Partial<Record<string, FieldInfoLike>>
 	getFieldValue: (name: string) => unknown
 	getFieldMeta: (name: string) => FieldMetaLike | undefined
-	setFieldMeta: (name: string, updater: (prev: FieldMetaLike | undefined) => FieldMetaLike) => void
+	setFieldMeta: (name: string, updater: (prev: FieldMetaLike) => FieldMetaLike) => void
 	handleSubmit: (...args: never[]) => Promise<void>
 	reset: (...args: never[]) => void
 	store: { subscribe: (listener: () => void) => { unsubscribe: () => void } }
@@ -39,22 +43,6 @@ export type ServerErrorsHost = {
 type FieldEntry = { messages: readonly string[]; value: unknown }
 
 const NO_MESSAGES: readonly string[] = []
-
-/**
- * The base meta of a field TanStack has not created yet — a copy of its own (unexported)
- * `defaultFieldMeta`, minus what it derives. A field named in the errors before it mounts gets
- * its meta from here (R41); when it mounts, TanStack keeps a meta that already exists.
- */
-const UNMOUNTED_FIELD_META = {
-	isValidating: false,
-	isTouched: false,
-	isBlurred: false,
-	isDirty: false,
-	errorMap: {},
-	errorSourceMap: {},
-	_arrayVersion: 0,
-	_pendingValidationsCount: 0,
-}
 
 function toMessages(messages: ServerErrorMessages | undefined): readonly string[] {
 	if (messages === undefined) return NO_MESSAGES
@@ -80,6 +68,15 @@ export function serverErrorsOf(form: object): ServerErrorsController | undefined
  * this controller decides when an error appears and goes, and re-asserts the slot after every store
  * change. Form-level messages stay here, not in `errorMap`: there they would make `canSubmit` false
  * with nothing but a submit to clear them, and the kits disable submitting while `canSubmit` is false.
+ *
+ * For the same reason a slot is written only while its field is **mounted** (R49): TanStack derives
+ * `canSubmit` from the meta of every field it knows, so a slot on a field nobody can see or edit
+ * would disable submitting invisibly. The entry stays here, and the slot is written when the field
+ * mounts and cleared when it unmounts. Mounting is not always a store change — a field that comes
+ * back keeps its meta — so the controller watches the field's `fieldInfo.instance`, which TanStack
+ * sets on mount and nulls on unmount (after resetting the meta, which is why a slot re-asserted in
+ * between is cleared again there).
+ *
  * Idempotent per instance, so React's double memo in StrictMode gets the same controller.
  */
 export function attachServerErrors(host: ServerErrorsHost): ServerErrorsController {
@@ -92,18 +89,22 @@ export function attachServerErrors(host: ServerErrorsHost): ServerErrorsControll
 	let owned: ReadonlySet<string> = new Set()
 	let listeners: ReadonlySet<() => void> = new Set()
 	let syncing = false
+	const watched = new WeakSet<FieldInfoLike>()
 
 	const notify = (): void => {
 		for (const listener of listeners) listener()
 	}
 
-	const writeSlot = (name: string, messages: readonly string[] | undefined, touch: boolean): void => {
-		host.setFieldMeta(name, (prev = UNMOUNTED_FIELD_META) => ({
+	// A written error marks the field touched, or the display rule would hide it (R38).
+	const writeSlot = (name: string, messages: readonly string[] | undefined): void => {
+		host.setFieldMeta(name, (prev) => ({
 			...prev,
-			...(touch && { isTouched: true }),
+			...(messages !== undefined && { isTouched: true }),
 			errorMap: { ...prev.errorMap, onServer: messages },
 		}))
 	}
+
+	const isMounted = (name: string): boolean => Boolean(host.fieldInfo[name]?.instance)
 
 	// Writes made while `syncing` notify the store again; the flag keeps them from re-entering.
 	const withoutSync = (write: () => void): void => {
@@ -115,15 +116,48 @@ export function attachServerErrors(host: ServerErrorsHost): ServerErrorsControll
 		}
 	}
 
+	/**
+	 * Make every slot match the entries: written, by identity, for a mounted field with an entry;
+	 * cleared for an owned one that no longer has an entry or is no longer mounted. A field whose
+	 * meta TanStack has not created yet is left to the store change that creates it.
+	 */
+	const reconcile = (): void => {
+		withoutSync(() => {
+			const nextOwned = new Set<string>()
+			for (const name of new Set([...owned, ...fields.keys()])) {
+				watchMounting(name)
+				const meta = host.getFieldMeta(name)
+				if (meta === undefined) continue
+				const wanted = isMounted(name) ? fields.get(name)?.messages : undefined
+				if (meta.errorMap.onServer !== wanted && (wanted !== undefined || owned.has(name))) {
+					writeSlot(name, wanted)
+				}
+				if (wanted !== undefined) nextOwned.add(name)
+			}
+			owned = nextOwned
+		})
+	}
+
 	const sync = (): void => {
 		if (syncing) return
-		withoutSync(() => {
-			fields = new Map([...fields].filter(([name, entry]) => Object.is(host.getFieldValue(name), entry.value)))
-			for (const name of owned) {
-				const wanted = fields.get(name)?.messages
-				if (host.getFieldMeta(name)?.errorMap.onServer !== wanted) writeSlot(name, wanted, false)
-			}
-			owned = new Set([...owned].filter((name) => fields.has(name)))
+		fields = new Map([...fields].filter(([name, entry]) => Object.is(host.getFieldValue(name), entry.value)))
+		reconcile()
+	}
+
+	/** Re-sync when the field's `fieldInfo` entry gets or loses its instance — see the docblock above. */
+	function watchMounting(name: string): void {
+		const info = host.fieldInfo[name]
+		if (info === undefined || watched.has(info)) return
+		watched.add(info)
+		let instance = info.instance
+		Object.defineProperty(info, 'instance', {
+			configurable: true,
+			enumerable: true,
+			get: () => instance,
+			set: (next: unknown) => {
+				instance = next
+				sync()
+			},
 		})
 	}
 
@@ -135,19 +169,17 @@ export function attachServerErrors(host: ServerErrorsHost): ServerErrorsControll
 				const list = toMessages(messages)
 				if (list.length > 0) nextFields.set(name, { messages: list, value: host.getFieldValue(name) })
 			}
-			withoutSync(() => {
-				for (const name of owned) if (!nextFields.has(name)) writeSlot(name, undefined, false)
-				for (const [name, entry] of nextFields) writeSlot(name, entry.messages, true)
-			})
 			fields = nextFields
-			owned = new Set(nextFields.keys())
+			reconcile()
 			const nextForm = toMessages(errors.form)
-			if (sameMessages(nextForm, formMessages)) return
-			formMessages = nextForm
-			notify()
+			if (!sameMessages(nextForm, formMessages)) {
+				formMessages = nextForm
+				notify()
+			}
+			return nextFields.size > 0
 		},
 		clear() {
-			controller.apply({})
+			void controller.apply({})
 		},
 		formErrors: () => formMessages,
 		subscribe(listener) {
