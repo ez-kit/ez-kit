@@ -19,8 +19,8 @@ export type CoreFormApi = {
 export type CoreHooks = {
 	/** Before every submit, whoever starts it. */
 	beforeSubmit: () => void
-	/** Before every reset of the core. */
-	beforeReset: () => void
+	/** Around every reset of the core: `reset` is the core's own, to be called exactly once. */
+	aroundReset: (reset: () => void) => void
 	/** After TanStack has validated every field, inside the same `validateAllFields` call. */
 	afterValidateAllFields: (cause: ValidationCause) => Promise<void>
 }
@@ -44,8 +44,9 @@ export function hookCore(core: CoreFormApi, hooks: CoreHooks): void {
 			return submit(...args)
 		},
 		reset: (...args: Parameters<typeof reset>) => {
-			hooks.beforeReset()
-			reset(...args)
+			hooks.aroundReset(() => {
+				reset(...args)
+			})
 		},
 		validateAllFields: async (cause: ValidationCause) => {
 			const results = await validateAllFields(cause)

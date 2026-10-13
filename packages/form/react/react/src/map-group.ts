@@ -1,10 +1,11 @@
 import { isStandardSchemaValidator, standardSchemaValidators } from '@tanstack/form-core'
 
 import { focusesOnError, focusFirstFieldWithErrors } from './focus-first-error'
-import { isPathWithin, registerMapGroup } from './group-registry'
+import { hasOwnErrorsIn, isPathWithin, registerMapGroup, validateGroups } from './group-registry'
+import { formatOwnErrors } from './own-errors'
 import { serverErrorsOf } from './server-errors'
 
-import type { ValidatedGroup } from './group-registry'
+import type { GroupHost, ValidatedGroup } from './group-registry'
 import type { GroupAsyncValidator, GroupValidator, GroupValidators, OnGroupSubmit } from './group-types'
 
 /** The `errorMap` key a map group owns on its fields and on the form — `onGroup:<block id>` (R67). */
@@ -51,7 +52,7 @@ type ValidatableInstance = {
 }
 
 /** The members of the instance a map group reads and writes. */
-export type MapGroupHost = {
+export type MapGroupHost = GroupHost & {
 	formId: string
 	state: { errorMap: Record<string, unknown> }
 	fieldInfo: Partial<Record<string, { instance: ValidatableInstance | null }>>
@@ -111,16 +112,25 @@ function isGroupResult(raw: unknown): raw is { fields?: Record<string, unknown>;
 	return typeof raw === 'object' && raw !== null && 'fields' in raw
 }
 
-/** One validator's raw result as an {@link Outcome}: TanStack's `{ fields, group }`, or a plain error. */
-function toOutcome(raw: unknown, toAbsolute: (relative: string) => string): Outcome {
+/** How a block's relative paths resolve: whether one names a field of the block, and where it lies. */
+type Paths = { knows: (relative: string) => boolean; toAbsolute: (relative: string) => string }
+
+/**
+ * One validator's raw result as an {@link Outcome}: TanStack's `{ fields, group }`, or a plain error.
+ * A routed key that names no field of the block — a misspelt one — is the block's own error, so it
+ * shows in `group.errors` rather than blocking the submit with no message anywhere.
+ */
+function toOutcome(raw: unknown, paths: Paths): Outcome {
 	if (raw === undefined || raw === null || raw === false || raw === '') return EMPTY
 	if (!isGroupResult(raw)) return { fields: new Map(), own: asList(raw) }
 	const fields = new Map<string, readonly unknown[]>()
+	const own = raw.group === undefined ? [] : [...asList(raw.group)]
 	for (const [relative, error] of Object.entries(raw.fields ?? {})) {
 		if (error === undefined || error === null || error === false) continue
-		fields.set(toAbsolute(relative), asList(error))
+		if (paths.knows(relative)) fields.set(paths.toAbsolute(relative), asList(error))
+		else own.push(...asList(error))
 	}
-	return { fields, own: raw.group === undefined ? [] : asList(raw.group) }
+	return { fields, own }
 }
 
 /** A standard schema's `{ form, fields }` record as `{ fields, group }`: `''` holds the pathless issues. */
@@ -182,6 +192,65 @@ function debounceOf(validators: GroupValidators<unknown>, cause: MapGroupCause):
 	return NO_DEBOUNCE_MS
 }
 
+/** The first accessor of a relative path — `rows` in `rows[0].x`, `password` in `password`. */
+const FIRST_ACCESSOR = /^[^.[]*/
+
+type ResetListener = { before: () => void; after: () => void }
+
+const resetListeners = new WeakMap<object, Set<ResetListener>>()
+const hookedInstances = new WeakSet()
+
+/** Run `reset` with every map group of `form` told before and after it (see {@link createMapGroup}). */
+export function resetMapGroups(form: object, reset: () => void): void {
+	const listeners = [...(resetListeners.get(form) ?? [])]
+	for (const listener of listeners) listener.before()
+	try {
+		reset()
+	} finally {
+		for (const listener of listeners) listener.after()
+	}
+}
+
+/** The member of an instance whose `reset` is wrapped. */
+export type ResettableForm = { reset: (...args: never[]) => void }
+
+/**
+ * Announce the instance's own `reset` to its map groups, once per instance. The instance's `reset` is
+ * TanStack's copy of the core's, so the core hook (`core-hooks.ts`) does not reach it (R60).
+ */
+export function hookInstanceReset(form: ResettableForm): void {
+	if (hookedInstances.has(form)) return
+	hookedInstances.add(form)
+	const { reset } = form
+	Object.assign(form, {
+		reset: (...args: Parameters<typeof reset>) => {
+			resetMapGroups(form, () => {
+				reset(...args)
+			})
+		},
+	})
+}
+
+function onResetOf(form: object, listener: ResetListener): () => void {
+	const set = resetListeners.get(form) ?? new Set<ResetListener>()
+	resetListeners.set(form, set)
+	set.add(listener)
+	return () => {
+		set.delete(listener)
+	}
+}
+
+/** Whether two `errorMap` values show the same messages — a write that changes nothing is skipped. */
+function sameMessages(a: unknown, b: unknown): boolean {
+	if (a === b) return true
+	const left = formatOwnErrors([a])
+	const right = formatOwnErrors([b])
+	return left.length === right.length && left.every((message, index) => message === right[index])
+}
+
+/** One pass in flight: what aborts it, and what settles when it has. */
+type Pass = { controller: AbortController; done: Promise<boolean> }
+
 /**
  * The controller of one map block (R67). TanStack's field group has no validators and no submit, so
  * this runs the block's validators on its triggers — mount, a change of a mapped value, a blur of a
@@ -189,92 +258,159 @@ function debounceOf(validators: GroupValidators<unknown>, cause: MapGroupCause):
  * field's `errorMap` for an issue with a path, on the form's for the block's own. TanStack's slots are
  * not used, because a field's own validation rewrites them. The key is counted in `meta.errors`, so
  * the kit shows the message and the submit is blocked; `form.Submit` leaves it out of `formErrors`.
+ *
+ * Passes of one cause supersede each other as TanStack's do: a new pass aborts the previous one's
+ * async half, and a superseded pass settles with the pass that replaced it, so its caller reads that
+ * pass's verdict, never a half-run one. A reset forgets every result and runs no change pass for the
+ * values it restores.
  */
 export function createMapGroup({ form, map, validators = {}, id, toAbsolute }: MapGroupOptions): MapGroup {
 	const errorKey = `${GROUP_ERROR_KEY_PREFIX}${id}`
 	const mapped = Object.values(map)
 	const isMapped = (name: string): boolean => mapped.some((path) => isPathWithin(path, name))
+	const paths: Paths = {
+		knows: (relative) => Object.hasOwn(map, FIRST_ACCESSOR.exec(relative)?.[0] ?? relative),
+		toAbsolute,
+	}
 	const slots = new Map<SyncSlot, Outcome>()
-	const controllers = new Map<MapGroupCause, AbortController>()
+	const passes = new Map<MapGroupCause, Pass>()
 	let written: ReadonlySet<string> = new Set()
 	let snapshot: readonly unknown[] = []
+	let resetting = false
 
 	const value = (): Record<string, unknown> =>
 		Object.fromEntries(Object.entries(map).map(([key, path]) => [key, form.getFieldValue(path)]))
 	const mappedValues = (): readonly unknown[] => mapped.map((path) => form.getFieldValue(path))
 
-	/** Make every slot this block owns match `outcome`; a value is only written when it changed. */
+	/** Make every slot this block owns match `outcome`; a slot is only written when its messages changed. */
 	const writeOutcome = (outcome: Outcome): void => {
 		for (const path of new Set([...written, ...outcome.fields.keys()])) {
 			const meta = form.getFieldMeta(path)
 			if (meta === undefined) continue
 			const issues = outcome.fields.get(path)
-			if (meta.errorMap[errorKey] === issues) continue
+			if (sameMessages(meta.errorMap[errorKey], issues)) continue
 			form.setFieldMeta(path, (prev) => ({ ...prev, errorMap: { ...prev.errorMap, [errorKey]: issues } }))
 		}
 		written = new Set(outcome.fields.keys())
 		const own = outcome.own.length > 0 ? outcome.own : undefined
-		if (form.state.errorMap[errorKey] !== own) form.setErrorMap({ [errorKey]: own })
+		if (!sameMessages(form.state.errorMap[errorKey], own)) form.setErrorMap({ [errorKey]: own })
 	}
 	const write = (): void => {
 		writeOutcome(union(slots.values()))
 	}
 
-	/** The async half of a pass, once its sync half reported nothing; dropped when superseded. */
-	const runAsyncSlots = async (cause: MapGroupCause): Promise<void> => {
+	/** A superseded pass settles with the one that replaced it; with none (a reset, a disconnect), as not run. */
+	const settleSuperseded = async (cause: MapGroupCause, controller: AbortController): Promise<boolean> => {
+		const latest = passes.get(cause)
+		if (latest === undefined || latest.controller === controller) return false
+		return latest.done
+	}
+
+	/** The async half of a pass, once its sync half reported nothing. */
+	const runAsyncSlots = async (cause: MapGroupCause, controller: AbortController): Promise<boolean> => {
 		const pending = ASYNC_SLOTS[cause].flatMap((slot) => {
 			const validator = validators[slot]
 			return validator === undefined ? [] : [[slot, validator] as const]
 		})
-		if (pending.length === 0) return
-		controllers.get(cause)?.abort()
-		const controller = new AbortController()
-		controllers.set(cause, controller)
-		// A later pass of the same cause, or the disconnect, aborts this one.
+		if (pending.length === 0) return true
 		const superseded = (): boolean => controller.signal.aborted
 		await wait(debounceOf(validators, cause), controller.signal)
-		if (superseded()) return
+		if (superseded()) return settleSuperseded(cause, controller)
 		const current = value()
 		const results = await Promise.all(
 			pending.map(async ([slot, validator]) => {
-				return [slot, toOutcome(await runAsync(validator, current, controller.signal), toAbsolute)] as const
+				return [slot, toOutcome(await runAsync(validator, current, controller.signal), paths)] as const
 			}),
 		)
-		if (superseded()) return
+		if (superseded()) return settleSuperseded(cause, controller)
 		for (const [slot, outcome] of results) slots.set(ASYNC_TARGET[slot], outcome)
 		write()
+		return true
 	}
 
 	/**
 	 * One pass: the sync slots, written at once, then the async ones if the sync ones passed. A clean
-	 * pass other than a submit clears the submit slot, as TanStack does for a field.
+	 * pass other than a submit clears the submit slot, as TanStack does for a field. Settles `false`
+	 * when it was cancelled with nothing to replace it.
 	 */
-	const run = async (cause: MapGroupCause): Promise<void> => {
+	const runPass = async (cause: MapGroupCause, controller: AbortController): Promise<boolean> => {
 		const current = value()
 		const results = SYNC_SLOTS[cause].map((slot) => {
 			const validator = validators[slot]
-			return [slot, validator === undefined ? EMPTY : toOutcome(runSync(validator, current), toAbsolute)] as const
+			return [slot, validator === undefined ? EMPTY : toOutcome(runSync(validator, current), paths)] as const
 		})
 		for (const [slot, outcome] of results) slots.set(slot, outcome)
 		const passed = results.every(([, outcome]) => isEmpty(outcome))
 		if (passed && cause !== MapGroupCause.Submit) slots.delete('onSubmit')
 		write()
-		if (passed) await runAsyncSlots(cause)
+		return passed ? runAsyncSlots(cause, controller) : true
 	}
 
+	/** Start a pass of `cause`, aborting the one in flight — before its sync half, as TanStack does. */
+	const run = (cause: MapGroupCause): Promise<boolean> => {
+		passes.get(cause)?.controller.abort()
+		const controller = new AbortController()
+		const pass: Pass = { controller, done: Promise.resolve(false) }
+		passes.set(cause, pass)
+		pass.done = runPass(cause, controller)
+		return pass.done
+	}
+
+	const cancelPasses = (): void => {
+		for (const pass of passes.values()) pass.controller.abort()
+		passes.clear()
+	}
+
+	const hasOwnErrors = (): boolean => union(slots.values()).own.length > 0
+	/** The groups a block submit runs: those mounted inside a mapped path, but itself (R82). */
+	const inside = (other: ValidatedGroup): boolean =>
+		other.owner !== group.owner && mapped.some((path) => other.within(path))
 	const isValid = (): boolean =>
 		isEmpty(union(slots.values())) &&
+		!hasOwnErrorsIn(form, inside) &&
 		Object.keys(form.fieldInfo).every((name) => !isMapped(name) || (form.getFieldMeta(name)?.errors.length ?? 0) === 0)
 
 	/** Mark every mounted field inside the block touched, and run its own submit pass alone. */
 	const validateFields = async (): Promise<void> => {
-		const passes = Object.entries(form.fieldInfo).map(async ([name, info]) => {
+		const fieldPasses = Object.entries(form.fieldInfo).map(async ([name, info]) => {
 			const instance = info?.instance
 			if (instance === null || instance === undefined || !isMapped(name)) return
 			form.setFieldMeta(name, (prev) => (prev.isTouched ? prev : { ...prev, isTouched: true }))
 			await instance.validate(SUBMIT, { skipFormValidation: true, skipGroupValidation: true })
 		})
-		await Promise.all(passes)
+		await Promise.all(fieldPasses)
+	}
+
+	/** Connect to the store, the blur bus and the reset hooks; returns what disconnects them. */
+	const listen = (): (() => void) => {
+		snapshot = mappedValues()
+		const subscription = form.store.subscribe(() => {
+			if (resetting) return
+			const next = mappedValues()
+			if (next.every((entry, index) => Object.is(entry, snapshot[index]))) return
+			snapshot = next
+			void run(MapGroupCause.Change)
+		})
+		const offBlur = onBlurOf(form, (name) => {
+			if (isMapped(name)) void run(MapGroupCause.Blur)
+		})
+		const offReset = onResetOf(form, {
+			before: () => {
+				resetting = true
+				cancelPasses()
+			},
+			after: () => {
+				slots.clear()
+				writeOutcome(EMPTY)
+				snapshot = mappedValues()
+				resetting = false
+			},
+		})
+		return () => {
+			subscription.unsubscribe()
+			offBlur()
+			offReset()
+		}
 	}
 
 	const group: MapGroup = {
@@ -282,11 +418,13 @@ export function createMapGroup({ form, map, validators = {}, id, toAbsolute }: M
 		errorKey,
 		within: (scope) => mapped.every((path) => isPathWithin(scope, path)),
 		validate: () => run(MapGroupCause.Submit),
+		hasOwnErrors,
 		value,
 		async submit(meta, onGroupSubmit) {
 			serverErrorsOf(form)?.clearWhere(isMapped)
 			await validateFields()
-			await run(MapGroupCause.Submit)
+			await validateGroups(form, inside)
+			if (!(await run(MapGroupCause.Submit))) return
 			if (!isValid()) {
 				if (focusesOnError(form)) focusFirstFieldWithErrors(form, isMapped)
 				return
@@ -295,22 +433,12 @@ export function createMapGroup({ form, map, validators = {}, id, toAbsolute }: M
 		},
 		connect() {
 			const unregister = registerMapGroup(form, group)
-			snapshot = mappedValues()
-			const subscription = form.store.subscribe(() => {
-				const next = mappedValues()
-				if (next.every((entry, index) => Object.is(entry, snapshot[index]))) return
-				snapshot = next
-				void run(MapGroupCause.Change)
-			})
-			const offBlur = onBlurOf(form, (name) => {
-				if (isMapped(name)) void run(MapGroupCause.Blur)
-			})
+			const unlisten = listen()
 			void run(MapGroupCause.Mount)
 			return () => {
-				subscription.unsubscribe()
-				offBlur()
+				unlisten()
 				unregister()
-				for (const controller of controllers.values()) controller.abort()
+				cancelPasses()
 				slots.clear()
 				writeOutcome(EMPTY)
 			}

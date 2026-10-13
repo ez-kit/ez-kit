@@ -15,6 +15,7 @@ export type NativeGroupApi = {
 		options: { skipFormValidation: boolean; skipRelatedFieldValidation: boolean },
 	) => unknown
 	validateAllFields: (cause: ValidationCause) => Promise<unknown[]>
+	areRelatedFieldsValid: () => boolean
 	getInfo: () => { instance: NativeGroupApi | null }
 }
 
@@ -26,6 +27,12 @@ export type ValidatedGroup = {
 	within: (scope: string) => boolean
 	/** The group's submit pass. */
 	validate: () => Promise<unknown>
+	/**
+	 * Whether the group has errors of its own that no field and no TanStack verdict counts — a map
+	 * group's pathless issues, kept in the form's `errorMap` (R83). Always `false` for a native group,
+	 * whose own errors sit on its meta, which TanStack reads.
+	 */
+	hasOwnErrors: () => boolean
 }
 
 /** Is `name` the path `scope` or a path inside it — TanStack's own test, which it keeps private. */
@@ -53,6 +60,7 @@ export function groupsOf(form: GroupHost): readonly ValidatedGroup[] {
 		validate: async () => {
 			await api.validate(SUBMIT, GROUP_SUBMIT_PASS)
 		},
+		hasOwnErrors: () => false,
 	}))
 	return [...native, ...(mapGroups.get(form) ?? [])]
 }
@@ -66,24 +74,35 @@ export async function validateGroups(form: GroupHost, accept: (group: ValidatedG
 	)
 }
 
+/** Whether a group `accept` picks has errors of its own that only this package counts (R83). */
+export function hasOwnErrorsIn(form: GroupHost, accept: (group: ValidatedGroup) => boolean): boolean {
+	return groupsOf(form).some((group) => accept(group) && group.hasOwnErrors())
+}
+
 const hookedGroups = new WeakSet()
 
 /**
- * Run the groups mounted inside `group` after its own field pass, once per group instance (R63).
- * The instance is TanStack's real `FormGroupApi` — `getInfo().instance`, set on mount — whose
- * `_handleSubmit` calls `this.validateAllFields`.
+ * Run the groups mounted inside `group` after its own field pass, once per group instance (R63), and
+ * let a nested map group's own errors block it (R83). The instance is TanStack's real `FormGroupApi`
+ * — `getInfo().instance`, set on mount — whose `_handleSubmit` calls `this.validateAllFields`, then
+ * decides on `this.areRelatedFieldsValid()`, which reads only field metas.
+ *
+ * "Inside" is `isPathWithin`, so two groups on the same name each count as inside the other: a
+ * `form.FormGroup name='security'` around `<Block fields='security' />` runs the block's validators,
+ * and the block's own submit runs the outer group's. They cover the same fields, so each verdict is
+ * the one the other would reach.
  */
 export function hookGroupFields(group: NativeGroupApi, form: GroupHost): void {
 	if (hookedGroups.has(group)) return
 	hookedGroups.add(group)
-	const { validateAllFields } = group
+	const { validateAllFields, areRelatedFieldsValid } = group
+	const inside = (other: ValidatedGroup): boolean => other.owner !== group && other.within(group.name)
 	Object.assign(group, {
 		validateAllFields: async (cause: ValidationCause) => {
 			const results = await validateAllFields(cause)
-			if (cause === SUBMIT) {
-				await validateGroups(form, (other) => other.owner !== group && other.within(group.name))
-			}
+			if (cause === SUBMIT) await validateGroups(form, inside)
 			return results
 		},
+		areRelatedFieldsValid: () => areRelatedFieldsValid() && !hasOwnErrorsIn(form, inside),
 	})
 }

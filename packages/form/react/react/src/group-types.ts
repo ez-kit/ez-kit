@@ -244,8 +244,11 @@ export type GroupValidators<TGroup> = {
 	onSubmitAsync?: GroupAsyncValidator<TGroup>
 }
 
-/** Called by a valid group submit with the group's value, typed by the block, and the submit meta. */
-export type OnGroupSubmit<TGroup, TSubmitMeta> = (props: { value: TGroup; meta: TSubmitMeta }) => unknown
+/**
+ * Called by a valid group submit with the group's value, typed by the block, and the submit meta —
+ * `undefined` when `group.handleSubmit()` was called without one: a block has no default (R81).
+ */
+export type OnGroupSubmit<TGroup, TSubmitMeta> = (props: { value: TGroup; meta: TSubmitMeta | undefined }) => unknown
 
 /** What both placements of a block share beyond `fields`. */
 type GroupSubmitPlacement<TGroup, TSubmitMeta> = {

@@ -431,8 +431,11 @@ describe('@ez-kit/form-react config-layer helpers', () => {
 		expect(code).not.toContain(OPTION_SPLIT_MARKER)
 	})
 
-	/** A literal only the map-group controller contains. */
-	const MAP_GROUP_MARKER = 'onGroup:'
+	/**
+	 * A property only the map-group controller reads (its blur debounce). Not the `onGroup:` key
+	 * prefix, which `form.Submit` imports too and would reach a `createForm` bundle on its own.
+	 */
+	const MAP_GROUP_MARKER = 'onBlurAsyncDebounceMs'
 
 	it('reach the map-group controller through createForm (control)', async () => {
 		expect(await bundledCodeOf(FORM_REACT_ENTRY, ['createForm'])).toContain(MAP_GROUP_MARKER)

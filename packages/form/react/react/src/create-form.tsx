@@ -15,7 +15,7 @@ import { splitFormProps } from './form-options'
 import { FormShell } from './form-shell'
 import { validateGroups } from './group-registry'
 import { NO_INJECTED_COMPONENTS } from './kit-form'
-import { emitFieldBlur } from './map-group'
+import { emitFieldBlur, hookInstanceReset, resetMapGroups } from './map-group'
 import { assertNoReservedKeys, assertNoSharedKeys, FormFactoryName } from './reserved-keys'
 import { attachServerErrors, serverErrorsOf } from './server-errors'
 
@@ -309,7 +309,13 @@ export function createFormInternals<TFields extends FormFieldRegistry, TComponen
 			},
 		})
 
-		const serverErrors = useMemo(() => attachServerErrors(form as unknown as ServerErrorsHost), [form])
+		// The instance's `reset` is TanStack's copy of the core's, which the core hook does not reach: the
+		// server-errors controller wraps it, then the map groups do (R60).
+		const serverErrors = useMemo(() => {
+			const controller = attachServerErrors(form as unknown as ServerErrorsHost)
+			hookInstanceReset(form)
+			return controller
+		}, [form])
 		useEffect(() => serverErrors.connect(), [serverErrors])
 
 		// Read when the errors are applied, which is after the render that set it.
@@ -646,8 +652,8 @@ export function createFormInternals<TFields extends FormFieldRegistry, TComponen
 const SUBMIT_CAUSE = 'submit'
 
 /**
- * What the core's members do for this instance: every submit and reset clears its server errors,
- * and a submit runs every mounted group after the fields (R62).
+ * What the core's members do for this instance: every submit and reset clears its server errors, a
+ * reset is announced to the map groups, and a submit runs every mounted group after the fields (R62).
  */
 function coreHooksFor(form: object): CoreHooks {
 	const clear = (): void => {
@@ -655,7 +661,10 @@ function coreHooksFor(form: object): CoreHooks {
 	}
 	return {
 		beforeSubmit: clear,
-		beforeReset: clear,
+		aroundReset: (reset) => {
+			clear()
+			resetMapGroups(form, reset)
+		},
 		afterValidateAllFields: async (cause) => {
 			if (cause === SUBMIT_CAUSE) await validateGroups(form as unknown as GroupHost, () => true)
 		},

@@ -286,6 +286,93 @@ describe('group submit (D7, §4 scenario 2)', () => {
 	})
 })
 
+const NOT_LOGIN = 'Must differ from the login'
+
+describe('group submit (fix round 1)', () => {
+	it("is blocked by a nested map group's own error (R83)", async () => {
+		const user = userEvent.setup()
+		const onGroupSubmit = vi.fn()
+		const NotLogin = withFieldGroup({
+			defaultValues: { password: '', confirm: '' },
+			validators: {
+				onChange: testSchema<Pair>((pair) => (pair.password === 'ann-is-me' ? [{ message: NOT_LOGIN }] : [])),
+			},
+			render: ({ group }) => (
+				<>
+					<group.TextField
+						name='password'
+						label='Password'
+					/>
+					<output data-testid='block-errors'>{group.errors.join('|')}</output>
+				</>
+			),
+		})
+		render(
+			<Form defaultValues={PROFILE}>
+				{(form) => (
+					<form.FormGroup
+						name='security'
+						onGroupSubmit={onGroupSubmit}
+					>
+						{(group) => (
+							<>
+								<NotLogin fields={{ password: 'security.password', confirm: 'security.confirm' }} />
+								<button
+									type='button'
+									onClick={() => void group.handleSubmit()}
+								>
+									Change password
+								</button>
+							</>
+						)}
+					</form.FormGroup>
+				)}
+			</Form>,
+		)
+
+		await user.type(screen.getByLabelText('Password'), 'ann-is-me')
+		expect(screen.getByTestId('block-errors')).toHaveTextContent(NOT_LOGIN)
+		await user.click(screen.getByRole('button', { name: 'Change password' }))
+
+		expect(onGroupSubmit).not.toHaveBeenCalled()
+	})
+
+	it('leaves focus alone on an invalid group submit when focusOnError is false (R71)', async () => {
+		const user = userEvent.setup()
+		const onGroupSubmit = vi.fn()
+		function Case(): ReactNode {
+			const form = useForm({ defaultValues: PROFILE, focusOnError: false })
+			return (
+				<Form form={form}>
+					<form.FormGroup
+						name='security'
+						onGroupSubmit={onGroupSubmit}
+					>
+						{(group) => (
+							<>
+								<PasswordPair fields='security' />
+								<button
+									type='button'
+									onClick={() => void group.handleSubmit()}
+								>
+									Change password
+								</button>
+							</>
+						)}
+					</form.FormGroup>
+				</Form>
+			)
+		}
+		render(<Case />)
+
+		await user.click(screen.getByRole('button', { name: 'Change password' }))
+
+		expect(onGroupSubmit).not.toHaveBeenCalled()
+		expect(screen.getByText(TOO_SHORT)).toBeInTheDocument()
+		expect(screen.getByLabelText('Password')).not.toHaveFocus()
+	})
+})
+
 describe('group submit types', () => {
 	it("types onGroupSubmit's value by the block, and carries the submit meta through", () => {
 		type Meta = { reason: string }
@@ -307,7 +394,7 @@ describe('group submit types', () => {
 						fields='security'
 						onGroupSubmit={({ value, meta }) => {
 							expectTypeOf(value).toEqualTypeOf<Pair>()
-							expectTypeOf(meta).toEqualTypeOf<Meta>()
+							expectTypeOf(meta).toEqualTypeOf<Meta | undefined>()
 						}}
 					/>
 				)}
