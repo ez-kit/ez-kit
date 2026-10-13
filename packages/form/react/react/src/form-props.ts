@@ -7,6 +7,7 @@ import type {
 	NoRegistry,
 } from './contract'
 import type { FormFieldRegistry } from './field-registry'
+import type { FormBehaviourOptions } from './form-behaviour'
 import type { FormInstance } from './form-instance'
 import type { KitFormApi } from './kit-form'
 import type { FormAsyncValidateOrFn, FormOptions, FormValidateOrFn } from '@ez-kit/form-core'
@@ -71,7 +72,8 @@ export type FormUncontrolledProps<
 		TOnDynamicAsync,
 		TOnServer,
 		TSubmitMeta
-	> & {
+	> &
+	FormBehaviourOptions & {
 		/** Mutually exclusive with the inline options — never pass both. */
 		form?: never
 		children: (

@@ -12,6 +12,7 @@ export type { FieldValidateProps } from './field-validate'
 export type { FieldGroupOptions } from './field-groups'
 export type { FieldGroupInstance, FormGroupInstance, FormGroupProps } from './group-types'
 export type { AnyFormInstance, FormContextApi } from './form-context'
+export type { FormBehaviourOptions } from './form-behaviour'
 export type { FormInstance } from './form-instance'
 export type { AnyFormProps, FormControlledProps, FormProps, FormUncontrolledProps } from './form-props'
 export type {

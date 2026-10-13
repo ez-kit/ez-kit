@@ -19,6 +19,7 @@ import type { LayoutComponents } from './render-node'
 import type { AllFormFieldSlots, FormElementProps, NoRegistry } from '../contract'
 import type { FormFieldComponents } from '../field-props'
 import type { FormFieldRegistry } from '../field-registry'
+import type { FormBehaviourOptions } from '../form-behaviour'
 import type { AnyFormInstance } from '../form-context'
 import type { FormInstance } from '../form-instance'
 import type {
@@ -150,6 +151,7 @@ export type SchemaFormUncontrolledProps<
 		TOnServer,
 		TSubmitMeta
 	> &
+	FormBehaviourOptions &
 	SharedSchemaFormProps<TValues> & {
 		/** Mutually exclusive with the inline options — never pass both. */
 		form?: never

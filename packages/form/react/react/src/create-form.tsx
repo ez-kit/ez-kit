@@ -7,6 +7,7 @@ import { buildFieldComponents } from './build-field-components'
 import { createFieldBinding, nativeFieldOf } from './field-binding'
 import { withFieldGroup } from './field-groups'
 import { deriveFieldTypeIds } from './field-registry'
+import { focusFirstError } from './focus-first-error'
 import { FormProvider } from './form-context'
 import { createFormGroup } from './form-group'
 import { splitFormProps } from './form-options'
@@ -19,6 +20,7 @@ import type { KitFormBlock, KitWithFormProps } from './composition'
 import type { FormComponentRegistry, FormComponents, FormElementProps, FormFieldSlots, NoRegistry } from './contract'
 import type { BuiltInFieldKey, PropsOf, ValueOf } from './field-props'
 import type { FormFieldRegistry } from './field-registry'
+import type { FormBehaviourOptions } from './form-behaviour'
 import type { AnyFormInstance } from './form-context'
 import type { FormInstance } from './form-instance'
 import type { FormControlledProps, AnyFormProps, FormUncontrolledImplProps, FormUncontrolledProps } from './form-props'
@@ -254,7 +256,8 @@ export function createFormInternals<TFields extends FormFieldRegistry, TComponen
 			TOnDynamicAsync,
 			TOnServer,
 			TSubmitMeta
-		>,
+		> &
+			FormBehaviourOptions,
 	): KitFormApi<
 		TFormData,
 		TOnMount,
@@ -271,7 +274,18 @@ export function createFormInternals<TFields extends FormFieldRegistry, TComponen
 		TFields,
 		TComponents
 	> {
-		const form = useAppForm(formOptions)
+		const { focusOnError = true, ...tanstackOptions } = formOptions
+		const form = useAppForm({
+			...tanstackOptions,
+			// Runs inside `handleSubmit`, long after `form` is assigned. `formApi.update` re-syncs the
+			// options on every render, so this always sees the latest flag and the latest callback.
+			onSubmitInvalid: (props) => {
+				if (focusOnError) {
+					focusFirstError(form.formId, (name) => (form.getFieldMeta(name)?.errors.length ?? 0) > 0)
+				}
+				tanstackOptions.onSubmitInvalid?.(props)
+			},
+		})
 
 		// TanStack's `Field`, captured before the assign below replaces the instance's `AppField`
 		// with the binding seam — see `nativeFieldOf`.

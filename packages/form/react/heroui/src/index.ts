@@ -72,6 +72,7 @@ export type {
 	FieldGroupInstance,
 	FieldGroupOptions,
 	FieldProps,
+	FormBehaviourOptions,
 	FormContextApi,
 	FormControlledProps,
 	FormFieldComponents,

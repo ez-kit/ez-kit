@@ -1,3 +1,5 @@
+import { BEHAVIOUR_OPTION_KEYS } from './form-behaviour'
+
 import type { AnyFormOptions } from '@ez-kit/form-core'
 
 /**
@@ -9,6 +11,7 @@ import type { AnyFormOptions } from '@ez-kit/form-core'
  * is a compile error here (missing property) and one it drops is a compile error too
  * (excess property), rather than an option silently leaking onto the DOM element — where
  * React would warn about an unknown attribute and the form would quietly lose the option.
+ * The package's own behaviour options (`BEHAVIOUR_OPTION_KEYS`) travel with TanStack's.
  */
 const FORM_OPTION_KEYS: Record<keyof AnyFormOptions, true> = {
 	asyncAlways: true,
@@ -26,6 +29,9 @@ const FORM_OPTION_KEYS: Record<keyof AnyFormOptions, true> = {
 	validators: true,
 }
 
+/** The keys `useForm` takes: TanStack's and the package's own. */
+const USE_FORM_OPTION_KEYS: Record<string, true> = { ...FORM_OPTION_KEYS, ...BEHAVIOUR_OPTION_KEYS }
+
 type SplitProps = {
 	/** What `useForm` receives. */
 	options: Record<string, unknown>
@@ -34,7 +40,7 @@ type SplitProps = {
 }
 
 /**
- * Split uncontrolled `<Form>` props into the TanStack options and the DOM props.
+ * Split uncontrolled `<Form>` props into the options `useForm` takes and the DOM props.
  *
  * `children` belongs to neither — the caller has already taken it.
  */
@@ -43,7 +49,7 @@ export function splitFormProps(props: Record<string, unknown>): SplitProps {
 	const elementProps: Record<string, unknown> = {}
 
 	for (const [key, value] of Object.entries(props)) {
-		if (Object.hasOwn(FORM_OPTION_KEYS, key)) {
+		if (Object.hasOwn(USE_FORM_OPTION_KEYS, key)) {
 			options[key] = value
 		} else {
 			elementProps[key] = value
