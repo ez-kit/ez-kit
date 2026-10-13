@@ -24,7 +24,7 @@ registered field is bound: its render prop receives `id`, `name`, `value`, a val
 (TanStack's `validators` stay on `form.NativeField`). It is also on every array entry
 (`item.Field`) and every group (`group.Field`), with names relative to them. Code written against
 TanStack's `form.Field` (`field.state.value`, `field.handleChange`) moves to `form.NativeField` and
-no longer compiles in `form.Field`. Both kits export the new types `FieldProps`, `FieldControlProps`,
+no longer compiles in `form.Field`. Three more compile breaks follow from retyping `Field` and `FormGroup`: a group's submit meta now defaults to `never` (TanStack resolved an unspecified one to the form's) and `useFieldGroup` no longer takes `onSubmitMeta`; `useFieldGroup` no longer takes TanStack's `formComponents` option, so an existing `formComponents: {}` is an excess-property error; and the instance `useForm` returns is no longer assignable to a TanStack API whose parameter is typed `FormApi`, such as `useField({ form })` from `@tanstack/react-form`, which needs a cast. Both kits export the new types `FieldProps`, `FieldControlProps`,
 `BoundFieldComponent`, `FieldGroupInstance`, `FieldGroupOptions`, `FormGroupInstance` and
 `FormGroupProps`.
 
