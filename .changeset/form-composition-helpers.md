@@ -26,7 +26,8 @@ with `fields` then unchecked; with neither, it throws a named error. Both kits e
 over the block's own shape, on `onMount`, `onChange`, `onBlur`, `onSubmit` and their async forms.
 Issues with a path land on the real fields; issues without one are the block's `group.errors`.
 `group.handleSubmit()` checks the block and calls the `onGroupSubmit` passed where the block is
-placed, with `value` typed by the block. **Breaking:** a block's `group.handleSubmit` used to submit
+placed, with `value` typed by the block. `meta` is the argument `group.handleSubmit(meta)` was called
+with, `undefined` without one. **Breaking:** a block's `group.handleSubmit` used to submit
 the whole form; call `form.handleSubmit()` for that. On every group (`form.FormGroup`, `useFormGroup`,
 a block), a submit first clears the server errors of the fields inside it, runs the groups placed
 inside it, and focuses the group's first error when it fails. A whole-form submit now runs every
