@@ -12,6 +12,7 @@ const FOCUSABLE_SELECTOR = [
 const FIELD_SELECTOR = '[data-field]'
 const FIELD_ATTRIBUTE = 'data-field'
 const FORM_ID_ATTRIBUTE = 'data-form-id'
+const FOCUSED_SELECTOR = ':focus'
 
 function isFocusable(element: Element): element is HTMLElement {
 	return element instanceof HTMLElement && element.matches(FOCUSABLE_SELECTOR) && !element.matches(':disabled')
@@ -39,6 +40,11 @@ function focusTarget(wrapper: Element, id: string): HTMLElement | undefined {
  * The walk is always over the whole document and keeps only the wrappers stamped with this form's
  * id — which is what makes a `FormProvider` form with no `<form>` element, and two forms with the
  * same field names, behave like any other. A field's `id` is its `name` (`fieldRenderProps`).
+ *
+ * Only a focus that took counts: a control that is hidden (a collapsed section, an inactive step)
+ * ignores `focus()`, so the walk checks the target is now focused and otherwise moves on to the
+ * next field with errors. Opening what hides a field stays the layout's business. Returns whether
+ * focus landed anywhere.
  */
 export function focusFirstError(
 	formId: string,
@@ -52,7 +58,7 @@ export function focusFirstError(
 		const target = focusTarget(wrapper, name)
 		if (target === undefined) continue
 		target.focus()
-		return true
+		if (target.matches(FOCUSED_SELECTOR)) return true
 	}
 	return false
 }

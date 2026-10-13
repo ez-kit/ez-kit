@@ -1,7 +1,7 @@
 import { FormFieldType } from '@ez-kit/form-core'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createForm } from './create-form'
 import { createSchemaForm } from './create-schema-form'
@@ -29,6 +29,10 @@ function submitButton(name = 'Save'): HTMLElement {
 }
 
 describe('focus on the first error', () => {
+	afterEach(() => {
+		vi.restoreAllMocks()
+	})
+
 	it('focuses the first invalid field in DOM order, not in registration order', async () => {
 		const user = userEvent.setup()
 		render(
@@ -121,6 +125,52 @@ describe('focus on the first error', () => {
 		})
 	})
 
+	it('moves on when the first invalid control does not take focus', async () => {
+		const user = userEvent.setup()
+		const ignoreFocus = (element: HTMLInputElement | null): void => {
+			// jsdom rejects assigning `focus` on an element, so it is redefined instead.
+			if (element !== null) Object.defineProperty(element, 'focus', { value: () => {} })
+		}
+		render(
+			<Form defaultValues={{ hidden: '', shown: '' }}>
+				{(form) => (
+					<>
+						<form.Field
+							name='hidden'
+							validate={REQUIRED}
+						>
+							{(field) => (
+								<input
+									ref={ignoreFocus}
+									aria-label='Hidden'
+									data-field={field['data-field']}
+									data-form-id={field['data-form-id']}
+									id={field.id}
+									value={field.value}
+									onChange={(event) => {
+										field.onChange(event.target.value)
+									}}
+								/>
+							)}
+						</form.Field>
+						<form.TextField
+							name='shown'
+							label='Shown'
+							validate={REQUIRED}
+						/>
+						<form.SubmitButton>Save</form.SubmitButton>
+					</>
+				)}
+			</Form>,
+		)
+
+		await user.click(submitButton())
+
+		await waitFor(() => {
+			expect(document.activeElement).toBe(screen.getByLabelText('Shown'))
+		})
+	})
+
 	it("runs the author's onSubmitInvalid after the focus", async () => {
 		const user = userEvent.setup()
 		const seen: (Element | null)[] = []
@@ -181,14 +231,12 @@ describe('focus on the first error', () => {
 		await waitFor(() => {
 			expect(onSubmitInvalid).toHaveBeenCalledTimes(1)
 		})
-		const errorCalls = [...consoleError.mock.calls]
-		consoleError.mockRestore()
 		expect(document.activeElement).toBe(button)
 		const formElement = container.querySelector('form')
 		expect(formElement).not.toBeNull()
 		expect(formElement?.hasAttribute('focusOnError')).toBe(false)
 		expect(formElement?.hasAttribute('focusonerror')).toBe(false)
-		expect(errorCalls).toEqual([])
+		expect(consoleError).not.toHaveBeenCalled()
 	})
 
 	it('keeps two forms with the same field names apart', async () => {
