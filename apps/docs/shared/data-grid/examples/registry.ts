@@ -40,6 +40,7 @@ export const exampleModules: Record<string, () => Promise<Record<string, Compone
 	'components/custom-cell-progress.tsx': () => import('./components/custom-cell-progress'),
 	'components/custom-cell-types.tsx': () => import('./components/custom-cell-types'),
 	'components/custom-cell-user.tsx': () => import('./components/custom-cell-user'),
+	'components/custom-filter-panel.tsx': () => import('./components/custom-filter-panel'),
 	'components/date-cell.tsx': () => import('./components/date-cell'),
 	'components/default-options.tsx': () => import('./components/default-options'),
 	'components/delete-confirmation.tsx': () => import('./components/delete-confirmation'),

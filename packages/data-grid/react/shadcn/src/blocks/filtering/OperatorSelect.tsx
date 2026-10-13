@@ -3,6 +3,7 @@
 import { useGridMessages } from '@ez-kit/data-grid-react/kit'
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@grid-shadcn/components/ui/select'
+import { KIT_CLASS_NAME } from '@grid-shadcn/lib/kit-class-name'
 
 import type { OperatorSelectProps } from '@ez-kit/data-grid-react'
 
@@ -22,7 +23,10 @@ export function OperatorSelect({ operators, currentOperatorId, onChange }: Opera
 			>
 				<SelectValue />
 			</SelectTrigger>
-			<SelectContent align='start'>
+			<SelectContent
+				className={KIT_CLASS_NAME}
+				align='start'
+			>
 				{operators.map((op) => (
 					<SelectItem
 						key={op.id}

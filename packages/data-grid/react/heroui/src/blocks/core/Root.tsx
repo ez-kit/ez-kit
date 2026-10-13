@@ -1,5 +1,7 @@
 import { cn } from '@heroui/react'
 
+import { KIT_CLASS_NAME } from '../../lib/kit-class-name'
+
 import type { RootProps } from '@ez-kit/data-grid-react'
 
 /**
@@ -15,7 +17,7 @@ export function Root({ className, ...props }: RootProps) {
 	return (
 		<div
 			{...props}
-			className={cn(className) ?? ''}
+			className={cn(KIT_CLASS_NAME, className) ?? KIT_CLASS_NAME}
 		/>
 	)
 }

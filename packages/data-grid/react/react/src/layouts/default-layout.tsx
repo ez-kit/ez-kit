@@ -15,7 +15,8 @@ import { useToolbarEnd, useToolbarStart } from './toolbar-controls'
  * `filtering.panel`, `filtering.chips`, `filtering.variant`) are gone, and the arrangement they
  * described is these five lines of JSX. Each control is still gated on its feature being on —
  * see `useToolbarStart` / `useToolbarEnd`, which is where that lives so all four presets gate
- * identically.
+ * identically — and the sort builder and clear-filters are not mounted at all: a preset mounts a
+ * control only when the grid has no other way into its feature, and the header click sorts.
  *
  * **The action bar goes last, and where it goes is now a layout's decision like any other.**
  * That position is right for `floating`, which is the default: shadcn's floating bar is

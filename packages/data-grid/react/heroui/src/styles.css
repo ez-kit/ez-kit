@@ -1,471 +1,289 @@
-@import '@heroui/styles';
 @import '@ez-kit/data-grid-react/styles.css';
 
-/* HeroUI renders header cells as real `<th>` elements inside a native table layout, so they
- * inherit `vertical-align: middle` from the table. The row is as tall as its tallest cell, so
- * a column whose filter carries an operator select makes every shorter header cell centre its
- * content against that height — and the filter inputs end up on different levels. Align header
- * content to the top so the inputs line up across columns regardless of the extras each column
- * renders. (The shadcn kit gets this for free: its header row is a CSS grid, so header cells
- * stretch and their content flows from the top.) The selection checkbox column keeps its
- * centred content, matching shadcn, where that cell is a stretched flex box with `items-center`. */
-[data-slot='th'] {
-	vertical-align: top;
-}
-[data-slot='th'][data-slot-selection-th='true'] {
-	vertical-align: middle;
-}
-
-/* Inline (non-popover) column filters render the filter input and its operator select as
- * plain siblings of this slot (data-grid-react `render-filter-input.tsx`), which carries no
- * styling by design. Stack them with a gap so the operator does not sit flush against the
- * input. Items stay stretched, so the input keeps the column width while the operator
- * trigger opts out via `w-fit`. */
-[data-slot='header-extras'] {
-	display: flex;
-	flex-direction: column;
-	gap: 0.25rem;
-}
-
-/* The filter's value control and its date-preset menu are one group; the operator select sits
- * beside them. They were laid out by the between-input's own wrapper until the preset menu moved
- * out of it, so the row lives here now — where the rest of this kit's grid layout already is. */
-[data-slot='filter-control'] {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	min-width: 0;
-}
-
-/* The control takes the room it is given; the preset trigger keeps its own width at the end of
- * the row, so every filter control lines up on the column's width whatever the operator is. */
-[data-slot='filter-control'] > *:first-child {
-	flex: 1 1 auto;
-	min-width: 0;
-}
-
-/* A column with no `cell.type` falls back to the kit's bare `Input` (data-grid-react
- * `cell.tsx` / `creating-row.tsx`), which lands straight in the cell rather than inside
- * HeroUI's `TextField` — and it is that field's flex column that normally stretches an input
- * to the column width. Alone, the `<input>` keeps its intrinsic `size="20"` width (~180px):
- * too narrow in a wide column, and spilling over the neighbouring cell in a narrow one, since
- * cells do not clip. Stretch it to the cell it was rendered into. */
-[data-slot='td'] > [data-slot='input'],
-[data-slot='td'] > [data-slot='textarea'] {
-	width: 100%;
-}
-
-/* The generated create / edit form: each field composite renders its own label, control and
- * error, and nothing between them separates one field from the next. Stack them with a gap. */
-[data-slot='auto-form'] {
-	display: flex;
-	flex-direction: column;
-	gap: 1rem;
-}
-
-[data-slot='active-filters-bar'] {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 0.375rem;
-	align-items: center;
-}
-[data-slot='active-filters-bar'][data-chip-position='above'] {
-	margin-bottom: 0.75rem;
-}
-[data-slot='active-filters-bar'][data-chip-position='below'] {
-	margin-top: 0.75rem;
-}
-
-/* A filter panel standing free above the table needs the gap a toolbar leaves below itself. Put in
- * a toolbar, it is one more item on the toolbar's row, and the same margin lifts its chips off the
- * line the search box and the buttons sit on. */
-[data-slot='filter-panel'] {
-	margin-bottom: 0.75rem;
-}
-[data-slot='toolbar'] [data-slot='filter-panel'] {
-	margin-bottom: 0;
-}
-
-/* ── scrollport ownership ──────────────────────────────────────────────────
- * `position: sticky` resolves against the nearest scroll container, and this kit nests one:
- * `Table.ScrollContainer` sits inside `.table-root`, which is `overflow: clip` over a
- * `minmax(0, 1fr)` grid track — a width boundary nothing outside it can scroll past. So the
- * scrollport has to be that inner container, not a box above it.
- *
- * The kit says so by registering the `TableScroll` slot (`blocks/core/table-adapters.tsx`):
- * the shared layer's `data-slot='table-scroll'` lands on `Table.ScrollContainer` itself, and
- * with it every structural rule keyed on that slot — `overflow-x`, the sticky `max-height`
- * bound, the virtualized `overflow: auto` + height. One element owns both axes, and its `ref`
- * is what the pin shadows, infinite scroll and the row virtualizer drive.
- *
- * What stood here relocated that bound by hand, because the shared layer's own div was the
- * scrollport and this container nested inside it: per CSS Overflow 3 a non-`visible` value on
- * one axis computes the other to `auto`, so the inner container became the innermost scroll
- * container and stole the scrollport from the div that had the height bound, while nothing
- * bounded its own height (#105, #103). Three rules neutralized one box to hand the axes to the
- * other — in opposite directions depending on the mode. The slot removed the arrangement, so
- * it removed them.
- *
- * What the root still has to do is pass the virtualized height through: the shared stylesheet
- * gives the wrapper a definite `--dg-virtual-height` and sizes the scrollport with `h-full`,
- * and `.table-root` sits between them. */
-[data-slot='table-root'] {
-	height: 100%;
-}
-
-/* The virtualized load-more row needs nothing from this kit, and what stood here is gone.
- *
- * HeroUI's `.table__row` is `height: 100%`, which in native table layout resolves against the row's
- * own content. While the loader was absolutely positioned inside the tbody (shared stylesheet) that
- * percentage resolved against the tbody's *total* virtual height instead, and the loader became as
- * tall as the whole scrollable list — an opaque box covering everything below its own top. A
- * `height: auto` here neutralized it.
- *
- * The shared package now owns the loader's box outright: it renders in flow after the window's
- * band, and reserves the virtual scroll range with `min-height` rather than `height` — so the tbody
- * has no definite height for a percentage to resolve against and `height: 100%` computes to the
- * same box as `auto`. Measured in this kit, both ways, at the bottom of the scroll. The `min-height`
- * is also what keeps the loader out of this kit's `overflow: clip` on `.table__content`, which used
- * to clip it away entirely; that is the shared package's job and not a bound for this kit to
- * relocate. */
-
-/* HeroUI has no footer slot of its own — `Table.Footer` there is a container *outside* the table,
- * for pagination — so the adapter renders React Aria's `TableFooter` and the kit gives it the
- * table's own footer treatment here: the header's surface, a separating rule and the weight a
- * totals row wants. The background is what makes the sticky variant work at all; without it the
- * rows scroll through the footer. */
-[data-slot='tfoot'] {
-	background: var(--surface-secondary);
-	border-top: 1px solid var(--separator);
-	font-weight: 500;
-}
-
-:root {
+/* Every rule is scoped to the kit class: see openspec/config.yaml. */
+.ez-heroui-data-grid {
 	--dg-pin-shadow-color: oklch(0 0 0 / 0.14);
 	--dg-pin-cell-background: var(--surface);
-}
 
-.dark {
-	--dg-pin-shadow-color: oklch(0 0 0 / 0.35);
-}
+	.dark & {
+		--dg-pin-shadow-color: oklch(0 0 0 / 0.35);
+	}
 
-/* The sticky header needs no background or stacking rule here. HeroUI's own `.table__header`
- * already paints `--surface-secondary` — the color every non-sticky grid in this kit shows, and
- * the one HeroUI's own sticky-header recipe reaches for — and the shared stylesheet's
- * `[data-slot='thead'][data-sticky='true']` (higher specificity) owns `z-index`. Repainting the
- * header `--surface` here made the sticky grid the only white-headed table in the kit (#140). */
+	& [data-slot='th'] {
+		@apply align-top;
+	}
+	& [data-slot='th'][data-slot-selection-th='true'] {
+		@apply align-middle;
+	}
+	& [data-slot='header-extras'] {
+		@apply flex flex-col gap-1;
+	}
 
-/* HeroUI paints its row hover on `.table__cell` as `--surface` at 40% alpha, which composites
- * against what is actually behind the cells: `.table-root`, i.e. `--surface-secondary`. Mixing
- * against `--background` (the page, neutral) instead made the pinned column land on a different
- * lightness *and* a different hue than every other cell in the same row. */
-.table__row:hover,
-.table__row[data-hovered='true'] {
-	--dg-pin-cell-background: color-mix(in oklab, var(--surface) 40%, var(--surface-secondary));
-}
+	& [data-slot='filter-control'] {
+		@apply flex min-w-0 items-center gap-2;
+	}
+	& [data-slot='filter-control'] > *:first-child {
+		@apply min-w-0 flex-auto;
+	}
+	& [data-slot='td'] > [data-slot='input'],
+	& [data-slot='td'] > [data-slot='textarea'] {
+		@apply w-full;
+	}
 
-/* A selected row, painted the way HeroUI paints its hover — same token, same compositing base
- * — so selection reads as a stronger version of hover rather than as a different surface. The
- * pinned-cell variable moves with it: a pinned cell paints its own background and would stay
- * unselected-looking inside a selected row otherwise. */
-[data-slot='tr'][data-row-selected='true'] {
-	background-color: color-mix(in oklab, var(--surface) 70%, var(--surface-secondary));
-	--dg-pin-cell-background: color-mix(in oklab, var(--surface) 70%, var(--surface-secondary));
-}
+	& [data-slot='auto-form'] {
+		@apply flex flex-col gap-4;
+	}
 
-/* No `transition` on pinned cells here, deliberately — unlike shadcn (whose row carries
- * `transition-colors`), HeroUI paints `.table__cell` hover with no transition at all, so the
- * pinned column snapping instantly is what keeps it in step with the rest of the row. */
+	& [data-slot='active-filters-bar'] {
+		@apply flex flex-wrap items-center gap-1.5;
+	}
+	& [data-slot='active-filters-bar'][data-chip-position='above'] {
+		@apply mb-3;
+	}
+	& [data-slot='active-filters-bar'][data-chip-position='below'] {
+		@apply mt-3;
+	}
 
-/* The strip is 16px wide and the shadow is drawn against the edge that hugs the pinned
- * block: spread −6 against a 10px offset leaves ~4px of solid shade there, blurred out
- * over the remaining width. Anything narrower reads as nothing on a white surface.
- *
- * `box-shadow` has no logical form, so the offset's sign is the one thing here that has to
- * be restated under RTL: the strip itself is placed by `inset-inline-start` /
- * `inset-inline-end`, but which physical side of it hugs the pinned block flips. */
-[data-pin-shadow='start'] {
-	width: 16px;
-	box-shadow: inset 10px 0 8px -6px var(--dg-pin-shadow-color);
-	opacity: var(--dg-pin-start-shadow, 0);
-	transition: opacity 150ms;
-}
+	& [data-slot='filter-panel'] {
+		@apply mb-3;
+	}
+	& [data-slot='toolbar'] [data-slot='filter-panel'] {
+		@apply mb-0;
+	}
 
-[data-pin-shadow='end'] {
-	width: 16px;
-	box-shadow: inset -10px 0 8px -6px var(--dg-pin-shadow-color);
-	opacity: var(--dg-pin-end-shadow, 0);
-	transition: opacity 150ms;
-}
+	& [data-slot='table-root'] {
+		@apply h-full;
+	}
+	& [data-slot='tfoot'] {
+		@apply font-medium;
+		background: var(--surface-secondary);
+		border-top: 1px solid var(--separator);
+	}
 
-[dir='rtl'] [data-pin-shadow='start'] {
-	box-shadow: inset -10px 0 8px -6px var(--dg-pin-shadow-color);
-}
+	& .table__row:hover,
+	& .table__row[data-hovered='true'] {
+		--dg-pin-cell-background: color-mix(in oklab, var(--surface) 40%, var(--surface-secondary));
+	}
+	& [data-slot='tr'][data-row-selected='true'] {
+		background-color: color-mix(in oklab, var(--surface) 70%, var(--surface-secondary));
+		--dg-pin-cell-background: color-mix(in oklab, var(--surface) 70%, var(--surface-secondary));
+	}
 
-[dir='rtl'] [data-pin-shadow='end'] {
-	box-shadow: inset 10px 0 8px -6px var(--dg-pin-shadow-color);
-}
+	& [data-pin-shadow='start'] {
+		@apply w-4 transition-opacity duration-150;
+		box-shadow: inset 10px 0 8px -6px var(--dg-pin-shadow-color);
+		opacity: var(--dg-pin-start-shadow, 0);
+	}
+	& [data-pin-shadow='end'] {
+		@apply w-4 transition-opacity duration-150;
+		box-shadow: inset -10px 0 8px -6px var(--dg-pin-shadow-color);
+		opacity: var(--dg-pin-end-shadow, 0);
+	}
+	[dir='rtl'] & [data-pin-shadow='start'] {
+		box-shadow: inset -10px 0 8px -6px var(--dg-pin-shadow-color);
+	}
+	[dir='rtl'] & [data-pin-shadow='end'] {
+		box-shadow: inset 10px 0 8px -6px var(--dg-pin-shadow-color);
+	}
 
-[data-slot='tr'][data-pinned] {
-	--dg-pin-cell-background: color-mix(in oklab, var(--surface) 92%, var(--surface-foreground));
-	/* The row is 1px taller than its cells — HeroUI gives `.table__row` its own `border-bottom`,
-	 * and that border's color is 50% transparent. Painting only the cells (below) therefore leaves
-	 * a 1px band per pinned row that the scrolling content bleeds through. Background paints over
-	 * the border box, so covering the row covers that band too. */
-	background-color: var(--dg-pin-cell-background);
-}
+	& [data-slot='tr'][data-pinned] {
+		--dg-pin-cell-background: color-mix(in oklab, var(--surface) 92%, var(--surface-foreground));
+		background-color: var(--dg-pin-cell-background);
+	}
+	& [data-slot='tr'][data-pinned] > [data-slot='td'],
+	& [data-slot='tr'][data-pinned] > [data-slot='th'] {
+		@apply rounded-none;
+		background-color: var(--dg-pin-cell-background);
+	}
+	& [data-slot='tr'][data-pinned='top']:not(:has(+ [data-slot='tr'][data-pinned='top'])) {
+		box-shadow: 0 8px 5px -5px var(--dg-pin-shadow-color);
+		clip-path: inset(0 0 -12px 0);
+	}
+	& [data-slot='tr']:not([data-pinned='bottom']) + [data-slot='tr'][data-pinned='bottom'] {
+		box-shadow: 0 -8px 5px -5px var(--dg-pin-shadow-color);
+		clip-path: inset(-12px 0 0 0);
+	}
 
-/* Pinned rows must be opaque while body content scrolls underneath.
- *
- * The radius reset undoes HeroUI's `.table__body tr:first-child td:first-child` /
- * `…:last-child` top corners. Those exist because in HeroUI's layout the body *is* the top of the
- * card; a pinned row is the first row in the tbody, so it carried the card's rounded corners into
- * the middle of the table, floating under the header (#140). HeroUI's own `--secondary` variant
- * zeroes the same radii, so this is variant decoration rather than a table invariant. */
-[data-slot='tr'][data-pinned] > [data-slot='td'],
-[data-slot='tr'][data-pinned] > [data-slot='th'] {
-	background-color: var(--dg-pin-cell-background);
-	border-radius: 0;
-}
+	& table[data-slot='table'] {
+		@apply block min-w-min;
+	}
+	& [data-slot='table'] [data-slot='thead'],
+	& [data-slot='table'] tbody:not([data-virtualized='true']),
+	& [data-slot='table'] tfoot {
+		@apply block;
+	}
+	& [data-slot='table'] thead > tr,
+	& [data-slot='table'] tbody > tr,
+	& [data-slot='table'] tfoot > tr {
+		@apply grid;
+		grid-template-columns: var(--grid-template-columns);
+	}
 
-/* Soft edge shadow matching the column-pin overlay style.
-   Targets only the last pinned-top row and the first pinned-bottom row in a stack. */
-[data-slot='tr'][data-pinned='top']:not(:has(+ [data-slot='tr'][data-pinned='top'])) {
-	box-shadow: 0 8px 5px -5px var(--dg-pin-shadow-color);
-	clip-path: inset(0 0 -12px 0);
-}
-[data-slot='tr']:not([data-pinned='bottom']) + [data-slot='tr'][data-pinned='bottom'] {
-	box-shadow: 0 -8px 5px -5px var(--dg-pin-shadow-color);
-	clip-path: inset(-12px 0 0 0);
-}
+	& tr[data-expanded-row] {
+		display: block !important;
+		grid-template-columns: none !important;
+	}
+	& tr[data-expanded-row] > td {
+		@apply block w-full px-5 py-4;
+		background-color: color-mix(in oklab, var(--surface) 60%, var(--background));
+	}
 
-/* ── grid column model ──────────────────────────────────────────────────────
- * HeroUI renders a real <table>/<thead>/<tbody>/<tr>/<td>. Left to native table
- * layout those elements size themselves from their content, so the rendered
- * column widths diverge from the table model — a long cell value stretches its
- * column well past its declared `size`. Everything positional is computed from
- * the model: the sticky pin offsets (`--dg-pin-start` / `--dg-pin-end`, from
- * `column.getStart('start')` / `getAfter('end')`) and the pin-shadow overlay
- * offsets (`Σ col.getSize()`, `pin-shadow-overlay.tsx`). When model and DOM
- * disagree, pinned columns stick at the wrong offset — leaving a gap between
- * neighbouring pinned columns that the scrolling content shows through — and
- * the shadow strip floats over the middle of the table instead of hugging the
- * pinned edge (#141).
- *
- * Take the same layout model shadcn uses (its row is a CSS grid over the same
- * template), so the rendered widths ARE the model widths and every offset lands
- * where the model says. The template is published as `--grid-template-columns`
- * on the table root (data-grid-react `table.tsx`) and inherits down to the
- * header and rows.
- *
- * Semantics are unaffected: React Aria sets the roles explicitly on these nodes
- * (`role="grid"` / `"row"` / `"rowheader"` / `"columnheader"`), so dropping the
- * native table box does not take the table semantics with it.
- *
- * Virtualized mode needs this too — in this kit the shared structural
- * stylesheet makes the tbody a grid and the window's rows are its items, so
- * without a column template those rows blockify and their cells collapse.
- * Scoped to this kit on purpose: the same shared rule is dead in shadcn, whose
- * vendored `<tbody>` carries an inline `display: block` that beats it, so the
- * split named above is a split of two different layout modes. (This used to say
- * the shared layer positioned each virtual row absolutely; the window is in
- * flow now, and only a dragged row the window has scrolled past is taken out of
- * it. The template is needed either way.) */
-/* Only the rows carry the grid; the table, header and body stay block containers —
- * the same split shadcn uses. Making the <table> itself the grid instead is what one
- * would reach for first, and it does lay the columns out correctly, but it stretches
- * `<tbody>` to the scrollport height, and HeroUI's `.table__row` is `height: 100%` —
- * so every row then resolves to the full body height and the rows overlap. */
-table[data-slot='table'] {
-	display: block;
-	/* A block box is only as wide as its container, and HeroUI's `.table__content` is
-	 * `overflow: clip` — so without this the row grids are clipped at the container
-	 * width and the scroll container never sees anything to scroll to. (A native table
-	 * box grew to its columns on its own; a block box does not.) Floor it at the tracks'
-	 * width and let it stretch past that when there is room (`minmax(…, 1fr)` tracks).
-	 *
-	 * `min-content`, not `max-content`: a grid's max-content size resolves every `1fr` track
-	 * to the *largest* track minimum, so one 360px column stretched every other flexible
-	 * column to 360px too and the table ran off the viewport (#task-board). The min-content
-	 * size is the sum of the track minimums — exactly the floor this needs. */
-	min-width: min-content;
-}
-[data-slot='table'] [data-slot='thead'] {
-	display: block;
-}
-/* A `table-row-group` left inside a non-table parent gets wrapped in an anonymous table
- * box, which shrink-wraps its rows instead of filling the width — the body would then be
- * narrower than the header. (Virtualized mode excluded: there the shared stylesheet owns the
- * box outright — `display: grid` for the band's rows, `position: relative` so a dragged row the
- * window has scrolled past has a containing block to be placed against. Measured in this kit:
- * the tbody computes `grid` / `relative`, its pads place the band, and the kit adds nothing.) */
-[data-slot='table'] tbody:not([data-virtualized='true']) {
-	display: block;
-}
-/* Keyed on the elements, not on `data-slot`: the react layer stamps `data-slot="tbody"` /
- * `"tr"` on the regular body and rows, but the fallback bodies (empty state, no results)
- * render a bare `<Tbody><Tr>` and keep HeroUI's own `table-body` / `table-row` slots. A
- * slot-keyed rule skipped exactly those, so the fallback body fell back to an anonymous
- * table box and its full-width cell shrink-wrapped into the first column.
- *
- * Child combinators on purpose: a consumer's own <table> inside an expanded row or a
- * custom fallback must keep native table layout. */
-[data-slot='table'] thead > tr,
-[data-slot='table'] tbody > tr,
-[data-slot='table'] tfoot > tr {
-	display: grid;
-	grid-template-columns: var(--grid-template-columns);
-}
-/* Same reason as `tbody` above: a `table-row-group` inside a block parent shrink-wraps in an
- * anonymous table box, and the footer would come out narrower than the rows it totals. */
-[data-slot='table'] tfoot {
-	display: block;
-}
+	& [data-system-column='expand'] {
+		@apply justify-center px-1;
+	}
+	& [data-system-column='expand']:empty::before {
+		@apply block h-8 w-0;
+		content: '';
+	}
+	& [data-system-column='actions'] {
+		@apply flex items-center gap-1;
+	}
 
-tr[data-expanded-row] {
-	display: block !important;
-	grid-template-columns: none !important;
-}
-tr[data-expanded-row] > td {
-	display: block;
-	width: 100%;
-	background-color: color-mix(in oklab, var(--surface) 60%, var(--background));
-	padding: 1rem 1.25rem;
-}
+	& tr[data-depth='1'] {
+		--dg-depth-indent: 1rem;
+	}
+	& tr[data-depth='2'] {
+		--dg-depth-indent: 2rem;
+	}
+	& tr[data-depth='3'] {
+		--dg-depth-indent: 3rem;
+	}
+	& tr[data-depth='4'] {
+		--dg-depth-indent: 4rem;
+	}
+	& tr[data-depth='5'] {
+		--dg-depth-indent: 5rem;
+	}
+	& tr [data-system-column='group'],
+	& tr:not(:has([data-system-column='group'])) [data-system-column='expand'],
+	& tr :is([data-system-column='group'], [data-system-column='expand']) + td {
+		padding-inline-start: var(--dg-depth-indent, 0);
+	}
 
-[data-system-column='expand'] {
-	padding-inline: 0.25rem;
-	justify-content: center;
-}
+	& [data-slot='group-cell'] {
+		@apply flex min-w-0 items-center gap-1.5;
+	}
+	& [data-slot='group-label'] {
+		@apply truncate font-medium;
+	}
+	& [data-slot='group-count'] {
+		@apply tabular-nums;
+		color: color-mix(in oklab, var(--surface-foreground) 60%, transparent);
+	}
+	& tr[data-group-row='true'] {
+		background-color: color-mix(in oklab, var(--surface) 92%, var(--surface-foreground));
+		--dg-pin-cell-background: color-mix(in oklab, var(--surface) 92%, var(--surface-foreground));
+	}
+	& [data-aggregated-cell='true'] {
+		@apply font-medium tabular-nums;
+	}
 
-/* Leaf rows render no chevron (nothing left to expand), so reserve the button's height
- * here — otherwise a leaf row would sit lower than its parent and the tree would look
- * ragged. 2rem is the icon-button height in this kit. */
-[data-system-column='expand']:empty::before {
-	content: '';
-	display: block;
-	width: 0;
-	height: 2rem;
-}
+	& [data-slot='group-by-bar'] {
+		@apply flex flex-wrap items-center gap-1.5;
+	}
+	& [data-slot='group-by-bar-label'] {
+		@apply text-sm;
+		color: color-mix(in oklab, var(--surface-foreground) 60%, transparent);
+	}
+	& [data-slot='group-by-chip'] {
+		@apply inline-flex items-center gap-0.5 px-2 py-0.5 text-sm;
+		border-radius: 0.25rem;
+		border: 1px solid color-mix(in oklab, var(--surface-foreground) 20%, transparent);
+		background-color: var(--surface-secondary);
+	}
+	& [data-slot='group-by-chip-label'] {
+		@apply font-medium;
+	}
+	& [data-slot='group-by-chip'] button {
+		@apply size-5 min-w-5;
+	}
 
-/* Row-height rule: cell height is driven by content, and the action buttons are the only
- * icon-only buttons in the kit without an explicit `size`, so they fall back to HeroUI's
- * default `md` (36-40px) instead of matching the rest of the kit's `sm` (32px). A bare `<td>`
- * is not a flex container, so the two buttons also render as inline neighbours with no gap. */
-[data-system-column='actions'] {
-	display: flex;
-	align-items: center;
-	gap: 0.25rem;
-}
+	& [data-slot='action-bar'][data-state='open'][data-side='bottom'] {
+		animation: ez-action-bar-slide-from-bottom 250ms cubic-bezier(0.16, 1, 0.3, 1);
+	}
+	& [data-slot='action-bar'][data-state='open'][data-side='top'] {
+		animation: ez-action-bar-slide-from-top 250ms cubic-bezier(0.16, 1, 0.3, 1);
+	}
+	@media (prefers-reduced-motion: reduce) {
+		& [data-slot='action-bar'] {
+			animation: none !important;
+		}
+	}
 
-/* ---- Nesting depth ----
- * One step of indentation per level, on whichever column carries the hierarchy: `__expand__` on
- * a tree grid, `__group__` on a grouped one. **When both are present only the group column
- * indents** — a grid that groups *and* expands sub-content rows has an `__expand__` chevron that
- * opens a detail panel rather than the hierarchy, so indenting it too would double every step.
- *
- * The step travels as `--dg-depth-indent`, declared and read in this stylesheet alone;
- * `css-custom-properties.test.ts` counts a CSS declaration as a writer. `padding-inline-start`
- * rather than `padding-left`, because indentation runs from the reading edge and this grid
- * treats RTL as first-class — these rules were physical before they were generalised here.
- *
- * The cap is five levels; deeper nesting renders and stops indenting further. */
-tr[data-depth='1'] {
-	--dg-depth-indent: 1rem;
-}
-tr[data-depth='2'] {
-	--dg-depth-indent: 2rem;
-}
-tr[data-depth='3'] {
-	--dg-depth-indent: 3rem;
-}
-tr[data-depth='4'] {
-	--dg-depth-indent: 4rem;
-}
-tr[data-depth='5'] {
-	--dg-depth-indent: 5rem;
-}
+	& .dg-form-error {
+		background: color-mix(in oklab, var(--color-danger) 12%, transparent);
+		color: var(--color-danger);
+		border: 1px solid color-mix(in oklab, var(--color-danger) 40%, transparent);
+	}
+	& .dg-page-sizer-label,
+	& .dg-empty-state,
+	& .dg-no-results-state,
+	& .dg-load-more,
+	& .dg-pagination-label,
+	& .dg-draft-label {
+		color: var(--muted);
+	}
+	& .dg-sort-menu-footer {
+		border-top: 1px solid var(--separator);
+	}
+	& .dg-draft-pill {
+		@apply border border-dashed;
+		border-color: var(--separator);
+		color: var(--muted);
+	}
 
-tr [data-system-column='group'],
-tr:not(:has([data-system-column='group'])) [data-system-column='expand'],
-tr :is([data-system-column='group'], [data-system-column='expand']) + td {
-	padding-inline-start: var(--dg-depth-indent, 0);
-}
+	& [data-slot='th'][data-draft-sorting] {
+		color: var(--muted);
+	}
+	& [data-slot='th'][data-draft-sorting]::after {
+		@apply ms-1.5 inline-flex h-[1.125rem] min-w-[1.125rem] items-center justify-center border border-dashed px-1 align-middle text-[0.6875rem] leading-none tabular-nums;
+		content: attr(data-draft-sorting);
+		border-radius: 0.375rem;
+		border-color: var(--separator);
+	}
+	& [data-draft-filter] {
+		@apply border border-dashed bg-transparent;
+		border-color: var(--separator);
+		color: var(--muted);
+	}
 
-/* ---- Row grouping ---- */
-[data-slot='group-cell'] {
-	display: flex;
-	align-items: center;
-	gap: 0.375rem;
-	min-width: 0;
-}
+	& [data-slot='bottom-bar'] {
+		@apply mt-3 flex flex-wrap items-center justify-between gap-4;
+	}
+	& [data-slot='bottom-bar'] [data-slot='pagination'] {
+		@apply m-0 w-auto justify-end;
+	}
 
-[data-slot='group-label'] {
-	font-weight: 500;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
+	& [data-slot='tr'][data-row-dragging],
+	& [data-slot='th'][data-column-dragging],
+	& [data-slot='column-visibility-item'][data-column-dragging] {
+		@apply relative z-[2] opacity-60;
+	}
 
-[data-slot='group-count'] {
-	color: color-mix(in oklab, var(--surface-foreground) 60%, transparent);
-	font-variant-numeric: tabular-nums;
-}
+	& button[data-slot='row-drag-handle'],
+	& button[data-slot='column-drag-handle'] {
+		@apply size-6 min-w-6 p-0;
+		border-radius: 0.375rem;
+		--button-bg: transparent;
+		--button-bg-hover: var(--default);
+		--button-bg-pressed: var(--default);
+		--button-fg: var(--muted);
+	}
+	& button[data-slot='row-drag-handle']:is(:hover, [data-hovered='true']),
+	& button[data-slot='column-drag-handle']:is(:hover, [data-hovered='true']) {
+		--button-fg: var(--default-foreground);
+	}
+	& button[data-slot='row-drag-handle']:is(:active, [data-pressed='true']),
+	& button[data-slot='column-drag-handle']:is(:active, [data-pressed='true']) {
+		transform: none;
+	}
 
-/* A group row is structure rather than a record, so it reads as a shelf its leaf rows sit
- * under. React Aria writes its own `data-*` on a `Row` after spreading ours, which is why the
- * grid namespaces this one as `data-group-row` — see `row.tsx`. */
-tr[data-group-row='true'] {
-	background-color: color-mix(in oklab, var(--surface) 92%, var(--surface-foreground));
-	--dg-pin-cell-background: color-mix(in oklab, var(--surface) 92%, var(--surface-foreground));
+	&
+		:has(> [data-slot='column-visibility-item'] [data-slot='column-drag-handle'])
+		> [data-slot='column-visibility-item']:not(:has([data-slot='column-drag-handle'])) {
+		@apply ps-7;
+	}
 }
-
-[data-aggregated-cell='true'] {
-	font-weight: 500;
-	font-variant-numeric: tabular-nums;
-}
-
-/* ---- The group-by bar ----
- * Laid out like the active-filters strip it sits beside in a toolbar, so two strips in one
- * toolbar read as one row rather than as two competing ones. */
-[data-slot='group-by-bar'] {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 0.375rem;
-	align-items: center;
-}
-
-[data-slot='group-by-bar-label'] {
-	color: color-mix(in oklab, var(--surface-foreground) 60%, transparent);
-	font-size: 0.875rem;
-}
-
-[data-slot='group-by-chip'] {
-	display: inline-flex;
-	align-items: center;
-	gap: 0.125rem;
-	border: 1px solid color-mix(in oklab, var(--surface-foreground) 20%, transparent);
-	border-radius: 0.25rem;
-	background-color: var(--surface-secondary);
-	font-size: 0.875rem;
-	padding-inline: 0.5rem;
-	padding-block: 0.125rem;
-}
-
-[data-slot='group-by-chip-label'] {
-	font-weight: 500;
-}
-
-/* The chip's menu trigger shrinks to the chip's own line height — the stock row trigger is
- * sized for a table row and would make every chip as tall as one. Selected as `button` rather
- * than by a slot, because neither kit's `Menu` stamps one on its trigger. */
-[data-slot='group-by-chip'] button {
-	height: 1.25rem;
-	width: 1.25rem;
-	min-width: 1.25rem;
-}
-
-/* ---- ActionBar entrance animations ---- */
 
 @keyframes ez-action-bar-slide-from-bottom {
 	from {
@@ -477,7 +295,6 @@ tr[data-group-row='true'] {
 		transform: translateY(0);
 	}
 }
-
 @keyframes ez-action-bar-slide-from-top {
 	from {
 		opacity: 0;
@@ -487,228 +304,4 @@ tr[data-group-row='true'] {
 		opacity: 1;
 		transform: translateY(0);
 	}
-}
-
-/* The bar's surface, border and radius live on the component itself (`bg-overlay` etc.,
- * see `components/ui/action-bar.tsx`) — an action bar floats over content, so it takes the
- * overlay surface rather than `--background`, which is the page canvas it sits on. */
-
-[data-slot='action-bar'][data-state='open'][data-side='bottom'] {
-	animation: ez-action-bar-slide-from-bottom 250ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-[data-slot='action-bar'][data-state='open'][data-side='top'] {
-	animation: ez-action-bar-slide-from-top 250ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@media (prefers-reduced-motion: reduce) {
-	[data-slot='action-bar'] {
-		animation: none !important;
-	}
-}
-
-/* ---- Data-grid HeroUI theme-driven classes ----
-   These own the few properties that need a `color-mix()` over a theme token, which
-   has no plain Tailwind utility. Layout/spacing/typography for the same elements
-   stay as Tailwind classes on the JSX side.
-
-   Reach for a utility first. HeroUI v3 maps its semantic tokens into the Tailwind
-   theme via `@theme inline` (see `@heroui/styles/dist/themes/shared/theme.css`), so
-   `bg-surface-secondary`, `text-foreground`, `border-separator` etc. all exist — a
-   token being theme-driven is NOT a reason to hand-write CSS here.
-
-   Do NOT write `--heroui-*` tokens: those are v2 names and this package is on v3,
-   where they resolve to nothing. `hsl(var(--heroui-default-100))` is invalid at
-   computed-value time and silently drops the whole declaration (this is what broke
-   the inline selection bar's background — see #68). A `var(--heroui-*, <literal>)`
-   fallback form is no better: it renders, but always from the literal, so it is
-   frozen on one theme. */
-
-.dg-form-error {
-	background: color-mix(in oklab, var(--color-danger) 12%, transparent);
-	color: var(--color-danger);
-	border: 1px solid color-mix(in oklab, var(--color-danger) 40%, transparent);
-}
-
-/* HeroUI v3 has flat `--muted` / `--default` tokens — there is no `default-500` step, so a
- * `text-default-500` utility compiles to nothing and the text silently keeps its inherited
- * colour. Every muted surface in this kit goes through `var(--muted)` here instead. */
-.dg-page-sizer-label,
-.dg-empty-state,
-.dg-no-results-state,
-.dg-load-more,
-.dg-pagination-label {
-	color: var(--muted);
-}
-
-.dg-sort-menu-footer {
-	border-top: 1px solid var(--separator);
-}
-
-/* ---- Deferred apply: the "not yet real" treatment ----
- * Three surfaces carry it — a drafted sort on a header cell, a drafted filter chip, and the
- * pending pills inside the bar's draft section — and they read as one idea: outlined instead of
- * filled, `var(--muted)` instead of foreground. HeroUI v3 has no `default-500` step, so muted text
- * goes through `var(--muted)` here rather than a `text-default-*` utility that compiles to nothing
- * (same reason as the `.dg-*` block above). Both themes come from the token set, so there is no
- * `.dark` twin to keep in sync.
- *
- * There is no separate draft-bar animation rule any more: the draft is a *section* of the one
- * `[data-slot='action-bar']` root, which the entrance animations above already cover. */
-
-.dg-draft-label {
-	color: var(--muted);
-}
-
-.dg-draft-pill {
-	border: 1px dashed var(--separator);
-	color: var(--muted);
-}
-
-/* `data-draft-sorting` is spread by `@ez-kit/data-grid-react` onto the `<th>` and carries the
- * column's position in the *draft* sort order — the one piece the applied sort indicator cannot
- * show yet, so we print it instead of inventing a second indicator. */
-[data-slot='th'][data-draft-sorting] {
-	color: var(--muted);
-}
-
-[data-slot='th'][data-draft-sorting]::after {
-	content: attr(data-draft-sorting);
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	min-width: 1.125rem;
-	height: 1.125rem;
-	margin-inline-start: 0.375rem;
-	padding-inline: 0.25rem;
-	border: 1px dashed var(--separator);
-	border-radius: 0.375rem;
-	font-size: 0.6875rem;
-	font-variant-numeric: tabular-nums;
-	line-height: 1;
-	vertical-align: middle;
-}
-
-/* HeroUI's `Chip` sets its own `data-slot="chip"` *after* the caller's props, so this kit's
- * filter chip never keeps `data-slot="filter-chip"` — the mark attribute itself is the hook. */
-[data-draft-filter] {
-	background: transparent;
-	border: 1px dashed var(--separator);
-	color: var(--muted);
-}
-
-/* ---- Bottom bar ----
- * `<DataGrid.BottomBar>` is the grid's bottom region, opposite the toolbar: a row with two ends,
- * whatever it is given to hold. The default layout mounts it for `pagination: { pageSizer:
- * 'footer' }`, which puts the size control beside the pagination controls instead of in the
- * toolbar — sizer to the leading edge, page controls to the trailing one. The shared React
- * package ships the `data-slot` and no styling, so the layout has to live here. */
-
-[data-slot='bottom-bar'] {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 1rem;
-	flex-wrap: wrap;
-	margin-top: 0.75rem;
-}
-
-/* The pagination root is a bar of its own — HeroUI's own centring defaults, plus this kit's `mt-3`;
- * inside this bar it is one item of several, so the width, the centring and that margin have to
- * come back off or the controls wrap onto their own line. The rule keys on the child,
- * not on the bar, so a bottom bar holding something else is untouched by it — and the nested
- * pagination's own top margin, which would double the gap, goes with it. */
-
-[data-slot='bottom-bar'] [data-slot='pagination'] {
-	width: auto;
-	margin: 0;
-	justify-content: flex-end;
-}
-
-/* ---- Icon-bearing option values ----
- * `select` / `badge` items may carry an `icon`; the glyph and the label are one line, so the
- * cell's value wrapper lays them out rather than letting the icon wrap above the text. */
-
-[data-slot='select-cell-value'] {
-	display: inline-flex;
-	align-items: center;
-	gap: 0.375rem;
-	white-space: nowrap;
-}
-
-/*
- * A row being dragged.
- *
- * The drag library moves the element with its own transform; what is left for a kit is saying
- * which row the user is holding. Opacity plus a lift, no layout properties — the neighbours part
- * by transform and must not be pushed by anything here.
- */
-[data-slot='tr'][data-row-dragging] {
-	opacity: 0.6;
-	position: relative;
-	z-index: 2;
-}
-
-/*
- * A column being dragged — in the header, and in the column panel.
- *
- * The header-cell twin of the row rule above, and the same discipline: opacity plus a lift, never a
- * layout property. The neighbours part by the library's transform and must not be pushed by
- * anything here.
- *
- * Both selectors, not one on the attribute alone, and not the header alone either. The panel's row
- * stamps the same attribute and had no rule at all, so a panel drag showed only the library's own
- * transform — no dimming, no lift, while the header's drag had both. Keeping the two selectors
- * explicit rather than writing `[data-column-dragging]` is what keeps this from also catching a
- * consumer's element that happens to carry the attribute.
- */
-[data-slot='th'][data-column-dragging],
-[data-slot='column-visibility-item'][data-column-dragging] {
-	opacity: 0.6;
-	position: relative;
-	z-index: 2;
-}
-
-/*
- * The row and column drag handles: a quiet grip, not a button.
- *
- * Both reach the DOM through `core.Button`, whose default here is HeroUI's filled primary — a
- * full-size pill sitting in every row. A grip is furniture, so it drops to an icon-sized ghost by
- * overriding the button's own tokens rather than its properties: `--button-bg*` is what HeroUI's
- * hover and press states read, so the states keep working and only the colours change. The press
- * scale goes too — the drag library owns the transform from that moment on.
- */
-button[data-slot='row-drag-handle'],
-button[data-slot='column-drag-handle'] {
-	--button-bg: transparent;
-	--button-bg-hover: var(--default);
-	--button-bg-pressed: var(--default);
-	--button-fg: var(--muted);
-	width: 1.5rem;
-	min-width: 1.5rem;
-	height: 1.5rem;
-	padding: 0;
-	border-radius: 0.375rem;
-}
-
-button[data-slot='row-drag-handle']:is(:hover, [data-hovered='true']),
-button[data-slot='column-drag-handle']:is(:hover, [data-hovered='true']) {
-	--button-fg: var(--default-foreground);
-}
-
-button[data-slot='row-drag-handle']:is(:active, [data-pressed='true']),
-button[data-slot='column-drag-handle']:is(:active, [data-pressed='true']) {
-	transform: none;
-}
-
-/*
- * A panel row without a grip — a column the author locked with `ordering: false` — is indented by
- * the grip's width plus the row's gap, so its checkbox lines up with the rows that drag. Only while
- * some row in the same list carries a grip: a panel with no drag at all keeps its rows flush.
- *
- * A stylesheet rule rather than a placeholder in the markup, because the grip decides for itself
- * whether to render and the panel is not told; `:has()` reads the outcome instead of re-deriving it.
- */
-:has(> [data-slot='column-visibility-item'] [data-slot='column-drag-handle'])
-	> [data-slot='column-visibility-item']:not(:has([data-slot='column-drag-handle'])) {
-	padding-inline-start: 1.75rem;
 }

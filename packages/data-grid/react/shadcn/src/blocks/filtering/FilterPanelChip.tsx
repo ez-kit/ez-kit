@@ -4,6 +4,8 @@ import { X } from 'lucide-react'
 
 import { Button } from '@grid-shadcn/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@grid-shadcn/components/ui/popover'
+import { KIT_CLASS_NAME } from '@grid-shadcn/lib/kit-class-name'
+import { cn } from '@grid-shadcn/lib/utils'
 
 import type { FilterPanelChipProps } from '@ez-kit/data-grid-react'
 import type { MouseEvent } from 'react'
@@ -55,7 +57,7 @@ export function FilterPanelChip({ label, valueDisplay, hasValue, onClear, childr
 			</PopoverTrigger>
 			<PopoverContent
 				align='start'
-				className='w-auto min-w-56 p-3'
+				className={cn(KIT_CLASS_NAME, 'w-auto min-w-56 p-3')}
 			>
 				<div className='flex flex-col gap-2'>{children}</div>
 			</PopoverContent>

@@ -9,6 +9,68 @@ schema: spec-driven
 #     We use conventional commits
 #     Domain: e-commerce platform
 
+context: |
+  data-grid structural stylesheet (packages/data-grid/react/react/src/styles/global.css, shipped as
+  @ez-kit/data-grid-react/styles.css). Decisions behind its rules:
+  - Structural only: position, layout, overflow, z-index, cursor. Colours, borders, radius, shadows,
+    padding-for-look belong to the UI kits. Authored with Tailwind v4 @apply, so it must be @import-ed
+    from a stylesheet with Tailwind v4 set up.
+  - Every rule is nested under .ez-data-grid, which GridRoot always stamps (the one class the react
+    package authors), so the stylesheet reaches nothing outside a grid. A kit registering core.Root must
+    spread className onto its element. The class raises each rule's specificity by 0,1,0, so a kit rule
+    meant to override a structural one is scoped under .ez-data-grid as well (heroui's table min-width,
+    both kits' row-dragging and column-dragging header rules). [data-slot='sr-only'] is the one unscoped
+    rule: filter controls render inside portalled popovers, outside the root.
+  - table[data-slot='table'] is floored at --dg-table-min-width (summed column widths). Without it the
+    block table takes the scrollport's width, the grid tracks overflow it, and sticky pinned cells get
+    dragged out of view with their too-narrow containing block.
+  - The sticky-header / sticky-footer max-height rule excludes virtualized mode: there the wrapper takes
+    --dg-virtual-height and the scrollport fills it with h-full.
+  - Column pinning is logical (inset-inline-start/end), row pinning physical (top/bottom); a vertical
+    axis has no logical names. Pinned-top rows under a sticky header add --dg-header-height.
+  - A resizable th becomes relative only when not pinned, since pinned is already sticky and relative
+    would cancel the stickiness.
+  - data-align rules are qualified by grid slots because kit primitives use data-align with another
+    vocabulary. Each sets justify-* beside text-* because shadcn cells are flex; the header aligns via
+    sort-trigger, which is flex-1.
+  - sort-trigger resets the UA button styling so the kit's th rules apply.
+  - Virtualized tbody is relative (containing block for absolute row-held rows). Its grid is overridden
+    by shadcn's inline display:block; rows carry their own grid template, so nothing depends on it, but
+    vertical margins collapse in shadcn and sum in heroui - see virtual-body.tsx bottomPad.
+  - Virtual rows stay in flow (band offset by tbody padding) so the drag library can displace
+    neighbours; a dragged row scrolled out of the window is held absolute and placed by transform.
+  - The infinite-scroll loader is the tbody's last in-flow row taking the band's bottom pad as
+    marginTop, so a wrapped error message is never clipped.
+  - Pin shadows are positioned independently by inline inset offsets so they never share one box.
+
+  UI kit stylesheets (packages/data-grid/react/{shadcn,heroui}/src/styles.css):
+  - No global rules and no theme. Every rule nests under the kit class (ez-shadcn-data-grid /
+    ez-heroui-data-grid, KIT_CLASS_NAME in each kit's lib/kit-class-name.ts). The kit's core.Root stamps it on
+    the grid root, and every portalled surface the kit renders (popover, select, dropdown, tooltip, modal,
+    alert dialog content) stamps it too, because those render outside the root. A new portal in a kit must
+    carry KIT_CLASS_NAME or the grid's rules silently stop reaching it.
+  - The app owns the theme: shadcn tokens (:root/.dark/@theme inline/@layer base) and @heroui/styles are not
+    imported by the kits; docs example stylesheets carry them. --dg-* tokens are declared on the kit class,
+    so overrides go on that class, not on :root.
+  - Elements the kit renders itself get Tailwind classes in their className. Elements the shared react
+    package renders (it authors no classes) are reached by data-slot selectors under the kit class, values
+    via @apply; raw declarations only where no utility exists (color-mix, box-shadow, custom properties).
+    No arbitrary-variant selectors in className.
+  - Kit rules and structural rules carry the same scope weight (one class each), and kit CSS imports the
+    structural sheet first, so a kit rule meant to override a structural one wins by order (heroui table
+    min-width: min-content; dragging rows/headers going relative).
+  - heroui lays rows out as CSS grids over --grid-template-columns (table/thead/tbody/tfoot are blocks) so
+    rendered widths equal the model widths that pin offsets and shadows are computed from. Rows, not the
+    table, carry the grid: a grid table stretches tbody and HeroUI's height:100% rows overlap. Body/footer
+    rules are keyed on elements with child combinators so fallback bodies match and a consumer's nested
+    <table> keeps native layout. table min-width is min-content, not max-content (1fr tracks).
+  - heroui th aligns top so filter inputs line up; draft-filter is matched by [data-draft-filter] because
+    HeroUI's Chip overwrites data-slot; no transition on heroui pinned cells (HeroUI hover has none).
+  - Grouping/tree indentation uses padding-inline-start via --dg-depth-indent (5 levels); only the group
+    column indents when both group and expand columns exist.
+  - Pin shadow strips are 16px with an inset shadow; box-shadow has no logical form, so RTL flips the sign.
+  - Dragging rows/columns change only opacity and z-index, never layout: the drag library moves them.
+
 # Per-artifact rules (optional)
 # Add custom rules for specific artifacts.
 # Example:

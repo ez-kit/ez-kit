@@ -256,6 +256,8 @@ export const GRID_TYPE = {
 	ColumnOperatorsConfig: { module: TypeModule.Core, name: 'ColumnOperatorsConfig' },
 	TableOperatorsConfig: { module: TypeModule.Core, name: 'TableOperatorsConfig' },
 	BetweenOperatorConfig: { module: TypeModule.Core, name: 'BetweenOperatorConfig' },
+	UseColumnFiltersResult: { module: TypeModule.React, name: 'UseColumnFiltersResult' },
+	OperatorColumnFilterModel: { module: TypeModule.React, name: 'OperatorColumnFilterModel' },
 	DateValuePreset: { module: TypeModule.Core, name: 'DateValuePreset' },
 	FilterOperatorDef: { module: TypeModule.Core, name: 'FilterOperatorDef' },
 	DateRangePreset: { module: TypeModule.Core, name: 'DateRangePreset' },
@@ -1052,11 +1054,15 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		],
 	},
 	{
-		// The page has no option table at all any more: it documented `filtering.variant`, and
-		// where a filter control renders is now what the JSX says rather than what an option
-		// names. The one table left maps an arrangement to the composition that produces it.
+		// The page documented `filtering.variant`, and where a filter control renders is now what
+		// the JSX says rather than what an option names, so the first table maps an arrangement to
+		// the composition that produces it. The two option tables document what a panel built on
+		// a kit's own filter component reads: the hook's result and one column's filter model.
 		page: DocPage.FilteringVariants,
-		optionTables: [],
+		optionTables: [
+			{ heading: '`UseColumnFiltersResult`', roots: [GRID_TYPE.UseColumnFiltersResult], expectedCount: 4 },
+			{ heading: '`OperatorColumnFilterModel`', roots: [GRID_TYPE.OperatorColumnFilterModel], expectedCount: 18 },
+		],
 		nonOptionTables: [
 			{
 				heading: NO_HEADING,

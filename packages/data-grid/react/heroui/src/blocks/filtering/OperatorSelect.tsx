@@ -3,6 +3,8 @@
 import { useGridMessages } from '@ez-kit/data-grid-react/kit'
 import { ListBox, Select } from '@heroui/react'
 
+import { KIT_CLASS_NAME } from '../../lib/kit-class-name'
+
 import type { OperatorSelectProps } from '@ez-kit/data-grid-react'
 
 /** `.select` is a stretched flex item inside `header-extras`; `w-fit` keeps the trigger
@@ -42,7 +44,7 @@ export function OperatorSelect({ operators, currentOperatorId, onChange }: Opera
 				<Select.Value className={VALUE_CLASS} />
 				<Select.Indicator className={INDICATOR_CLASS} />
 			</Select.Trigger>
-			<Select.Popover>
+			<Select.Popover className={KIT_CLASS_NAME}>
 				<ListBox>
 					{operators.map((op) => (
 						<ListBox.Item

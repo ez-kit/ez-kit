@@ -7,7 +7,7 @@ Guidance for coding agents working in this repository. This file is the single s
 
 ### No styles in `packages/data-grid/react/react`
 
-The shared React package (`data-grid/react/react`) must contain **zero visual styling** — no inline `style={{}}`, no Tailwind/className-based styles. All visual styling belongs exclusively in the UI kit packages (`shadcn`, `heroui`). The react package may add semantic `data-*` attributes to elements so that UI kit CSS can target them, and may pass through a class it was **given** — `column.headerClassName` / `cellClassName`, `rowProps().className`, `layout.classNames` — without authoring one. The test is authorship, not the attribute: a literal class name written in this package is the violation.
+The shared React package (`data-grid/react/react`) must contain **zero visual styling** — no inline `style={{}}`, no Tailwind/className-based styles. All visual styling belongs exclusively in the UI kit packages (`shadcn`, `heroui`). The react package may add semantic `data-*` attributes to elements so that UI kit CSS can target them, and may pass through a class it was **given** — `column.headerClassName` / `cellClassName`, `rowProps().className`, `layout.classNames` — without authoring one. The test is authorship, not the attribute: a literal class name written in this package is the violation. The one exception is `ez-data-grid`, which the grid root always carries: it is the scope every rule in `@ez-kit/data-grid-react/styles.css` sits under, so the structural stylesheet reaches nothing outside a grid. It marks a boundary and styles nothing itself; do not add a second class beside it.
 
 ### Vendored shadcn primitives are immutable
 
@@ -363,6 +363,20 @@ and move on.
   tree. HeroUI's is below its `.table-root`, which is why the kit hoists `Table.Root` +
   `Table.ScrollContainer` into `TableScroll` and its `Table` slot renders `Table.Content` — so
   `data-slot='table'` lands on the real `<table>` and the root takes `data-slot='table-root'`.
+
+- **A preset mounts a feature's control only when the grid has no other way into — or back out
+  of — that feature.** That is the one rule `useToolbarControls` encodes, and it is why the presets
+  carry `GlobalFilterInput`, `VisibilityTrigger` (the only way back to a hidden column) and
+  `CreateTrigger` (except under `CreatingMode.PinRow`, whose pinned form is already a way in) — and
+  carry neither `SortMenuTrigger` (the header click sorts) nor `ClearFiltersButton` (each filter
+  clears in its own input). Both of those were opt-in before the placement options went; gating
+  every control on "the feature is on" turned them on in 0.9.0 by accident, and that was reverted.
+  Two alternatives were considered and **rejected**: a `sorting: { menu: true }` flag is
+  `sorting.toolbar` under a new name, i.e. the placement option this section forbids; and mounting
+  the builder iff `sorting.multi` is a mount decision inferred from config — the `pagination.items`
+  gate `DefaultLayout` refused — on a value whose absence does not even mean "off" (TanStack enables
+  Shift-click multi-sort by default). `presets.test.tsx` pins the split, so a new control added to
+  `useToolbarEnd` has to pass the rule rather than slip in.
 
 - **There is exactly one action bar, with a live section per concern — do not split it again.**
   `<DataGrid.ActionBar />` / `core.ActionBar` owns the chrome for both the current selection and

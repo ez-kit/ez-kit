@@ -5,6 +5,7 @@ import { Loader2 } from 'lucide-react'
 
 import { Button } from '@grid-shadcn/components/ui/button'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@grid-shadcn/components/ui/dialog'
+import { KIT_CLASS_NAME } from '@grid-shadcn/lib/kit-class-name'
 import { cn } from '@grid-shadcn/lib/utils'
 
 import type { FormShellProps } from '@ez-kit/data-grid-react'
@@ -23,7 +24,7 @@ export function FormShell({ open, title, formError, isPending, onSave, onCancel,
 				if (!isOpen) onCancel()
 			}}
 		>
-			<DialogContent>
+			<DialogContent className={KIT_CLASS_NAME}>
 				<DialogHeader>
 					<DialogTitle>{title}</DialogTitle>
 				</DialogHeader>

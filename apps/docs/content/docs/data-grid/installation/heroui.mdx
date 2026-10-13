@@ -12,8 +12,7 @@ pnpm add @ez-kit/data-grid-heroui @heroui/react @heroui/styles
 `@heroui/react` and `@heroui/styles` (v3) are **peer dependencies**, as are `react` and
 `react-dom` (18 or 19). HeroUI is peer rather than bundled on purpose: it is built on React
 Aria, whose components talk to each other through React context. A second, differently
-versioned copy of `@heroui/react` in your tree would create a second set of contexts — and,
-since the kit's stylesheet `@import`s `@heroui/styles`, a second copy of HeroUI's entire CSS.
+versioned copy of `@heroui/react` in your tree would create a second set of contexts.
 pnpm and npm resolve peers for you; add them explicitly if your package manager does not.
 
 Everything else arrives with the kit. It depends on `@ez-kit/data-grid-react` and re-exports its
@@ -40,13 +39,15 @@ application and every grid takes it from your own module.
 
 ## 2. Import the stylesheet
 
-Pull in the prebuilt CSS once at your app entry:
+Pull in the prebuilt CSS once, after your app's own HeroUI setup:
 
-```ts
-import '@ez-kit/data-grid-heroui/styles.css'
+```css
+@import 'tailwindcss';
+@import '@heroui/styles';
+@import '@ez-kit/data-grid-heroui/styles.css';
 ```
 
-This stylesheet defines the CSS tokens and `data-*` selectors the HeroUI flavor's components rely on. You can override any of them from your own design tokens — see [Theming](/docs/data-grid/theming).
+The kit's stylesheet does not import `@heroui/styles` itself — HeroUI's CSS is your app's, imported once. It holds only the grid's own rules, every one scoped to the `ez-heroui-data-grid` class the kit puts on the grid and on the popovers and dialogs it opens, so nothing in it reaches the rest of your app. You can override any of them from your own design tokens — see [Theming](/docs/data-grid/theming).
 
 ## 3. Render a grid
 

@@ -36,6 +36,12 @@ They are pure composition with no authored class name, so one set serves both UI
 gates its controls on the feature being registered and enabled, so a narrow grid renders a narrow
 toolbar rather than throwing.
 
+The toolbar they share holds search, "+ Add" and the column-visibility toggle — the controls that
+are the only way into their feature. The sort builder and the Clear-filters button are in **no**
+preset: sorting already has the header click, and every filter clears in its own input. Write
+`<DataGrid.SortMenuTrigger />` or `<DataGrid.ClearFiltersButton />` into a layout of your own where
+you want them.
+
 All four previews below run the **same** grid — same data, same columns, same feature set, same
 options. What differs is the preset.
 

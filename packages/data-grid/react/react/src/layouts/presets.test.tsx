@@ -392,3 +392,87 @@ describe('the action bar', () => {
 		expect(bar.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 	})
 })
+
+/**
+ * Which controls a preset mounts, as one rule: a feature's control goes in only when the grid has
+ * no other way into — or back out of — that feature.
+ *
+ * Search, the column-visibility toggle and "+ Add" pass it: each is the only surface its feature
+ * has, and a hidden column has no way back without the toggle. The sort builder and clear-filters
+ * fail it — sorting already has the header click, and every filter clears in its own input. Both
+ * were opt-in before the placement options were removed (`sorting.toolbar`, `filtering.toolbar`),
+ * and the presets turned them on by gating everything on "the feature is on". Asserted here so a
+ * later addition to `useToolbarEnd` has to argue with the rule rather than slip past it.
+ */
+describe('toolbar controls the presets mount', () => {
+	const SORT_BUILDER = 'sort builder'
+	const CLEAR_FILTERS = "[data-slot='clear-filter-button']"
+
+	const withSortMarker: GridComponents = {
+		...testComponents,
+		sorting: { ...testComponents.sorting, SortMenu: () => <span>{SORT_BUILDER}</span> },
+	}
+
+	function renderPreset(Layout: ComponentType) {
+		function Harness(): ReactElement {
+			const table = useDataGrid<GridFeatures, Row>({
+				features: TEST_FEATURES,
+				data: TEST_ROWS,
+				columns: FILTERABLE,
+				sorting: true,
+				filtering: true,
+				visibility: true,
+				initialState: { columnFilters: [{ id: 'name', value: 'a' }] },
+			})
+			return (
+				<DataGrid<GridFeatures, Row>
+					table={table}
+					components={{ core: { Layout } }}
+				/>
+			)
+		}
+		return render(
+			<GridComponentsProvider components={withSortMarker}>
+				<Harness />
+			</GridComponentsProvider>,
+		)
+	}
+
+	it.each([
+		['DefaultLayout', DefaultLayout],
+		['BottomBarLayout', BottomBarLayout],
+		['FilterPanelLayout', FilterPanelLayout],
+		['PopoverFiltersLayout', PopoverFiltersLayout],
+	])('%s mounts neither the sort builder nor clear-filters', (_name, Layout) => {
+		const { container } = renderPreset(Layout)
+
+		const toolbar = requireElement(container, TOOLBAR)
+		expect(within(toolbar).getByText('Columns')).toBeInTheDocument()
+		expect(screen.queryByText(SORT_BUILDER)).toBeNull()
+		expect(toolbar.querySelector(CLEAR_FILTERS)).toBeNull()
+	})
+
+	it('mounts both where a layout writes them', () => {
+		function SortAndClearLayout() {
+			return (
+				<>
+					<DataGrid.Toolbar
+						end={
+							<>
+								<DataGrid.ClearFiltersButton />
+								<DataGrid.SortMenuTrigger />
+							</>
+						}
+					/>
+					<DataGrid.Table />
+				</>
+			)
+		}
+
+		const { container } = renderPreset(SortAndClearLayout)
+
+		const toolbar = requireElement(container, TOOLBAR)
+		expect(within(toolbar).getByText(SORT_BUILDER)).toBeInTheDocument()
+		expect(toolbar.querySelector(CLEAR_FILTERS)).not.toBeNull()
+	})
+})

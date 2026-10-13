@@ -3,6 +3,7 @@
 import { useGridMessages } from '@ez-kit/data-grid-react/kit'
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@grid-shadcn/components/ui/select'
+import { KIT_CLASS_NAME } from '@grid-shadcn/lib/kit-class-name'
 
 import type { PageSizerProps } from '@ez-kit/data-grid-react'
 
@@ -27,7 +28,7 @@ export function PageSizer({ pageSize, items, onPageSizeChange }: PageSizerProps)
 				<SelectTrigger aria-label={messages.pagination.rowsPerPage}>
 					<SelectValue />
 				</SelectTrigger>
-				<SelectContent>
+				<SelectContent className={KIT_CLASS_NAME}>
 					{items.map((size) => (
 						<SelectItem
 							key={size}

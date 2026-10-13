@@ -4,6 +4,8 @@ import { baseCellTypes } from '@ez-kit/data-grid-react/cell-types'
 import { useGridMessages } from '@ez-kit/data-grid-react/kit'
 import { Description, FieldError, Label, ListBox, Select } from '@heroui/react'
 
+import { KIT_CLASS_NAME } from '../../lib/kit-class-name'
+
 import type { CellTypeDefinition, CellViewProps, FieldState, SelectCellConfig } from '@ez-kit/data-grid-react'
 import type { ReactNode } from 'react'
 
@@ -14,7 +16,10 @@ function SelectCellView({ value, config }: CellViewProps<SelectCellConfig>) {
 	const match = items.find((item) => item.value === String(value ?? ''))
 	if (!match) return <>{String(value ?? '')}</>
 	return (
-		<span data-slot='select-cell-value'>
+		<span
+			data-slot='select-cell-value'
+			className='inline-flex items-center gap-1.5 whitespace-nowrap'
+		>
 			{(match.icon as ReactNode) ?? null}
 			{match.label}
 		</span>
@@ -55,7 +60,7 @@ function SelectCellInput({
 				<Select.Value />
 				<Select.Indicator />
 			</Select.Trigger>
-			<Select.Popover>
+			<Select.Popover className={KIT_CLASS_NAME}>
 				<ListBox>
 					<ListBox.Item
 						id={ALL_SENTINEL}
