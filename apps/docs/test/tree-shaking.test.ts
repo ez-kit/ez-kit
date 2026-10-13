@@ -404,6 +404,54 @@ describe('@ez-kit/form-react schema renderer', () => {
 	})
 })
 
+/** The size-limit entry "config-layer helpers alone": everything it imports, and nothing else. */
+const FORM_HELPERS = ['stripHiddenValues', 'clampToGridRange', 'GRID_MIN', 'GRID_MAX', 'FormFieldType']
+/** Literals only the focus walk and the `<Form>` prop split contain. */
+const FOCUS_WALK_MARKER = 'contenteditable'
+const OPTION_SPLIT_MARKER = 'focusOnError'
+
+/**
+ * The config-layer helpers must carry none of the form's runtime. A top-level expression esbuild
+ * cannot prove pure — a `.join()` on a literal array, an object built by spreading two others —
+ * stays in every bundle of the entry whether or not anything reads it, and `size-limit` only shows
+ * that as bytes on an entry nobody connects to the module that grew.
+ */
+describe('@ez-kit/form-react config-layer helpers', () => {
+	it('reach the focus walk and the option split through createForm (control)', async () => {
+		const code = await bundledCodeOf(FORM_REACT_ENTRY, ['createForm'])
+
+		expect(code).toContain(FOCUS_WALK_MARKER)
+		expect(code).toContain(OPTION_SPLIT_MARKER)
+	})
+
+	it('carry neither on their own', async () => {
+		const code = await bundledCodeOf(FORM_REACT_ENTRY, FORM_HELPERS)
+
+		expect(code).not.toContain(FOCUS_WALK_MARKER)
+		expect(code).not.toContain(OPTION_SPLIT_MARKER)
+	})
+})
+
+/** A literal only the remote search defaults contain. */
+const SEARCH_DEFAULTS_MARKER = 'debounce: 300'
+
+/**
+ * The same helpers come from `@ez-kit/form-core`, and an app that bundles it pays for every
+ * top-level call there too: an unannotated `Object.freeze({…})` survives whether or not anything
+ * reads the frozen object.
+ */
+describe('@ez-kit/form-core helpers', () => {
+	const entry = entryOf('form/core')
+
+	it('reach the search defaults through REMOTE_SEARCH_DEFAULTS (control)', async () => {
+		expect(await bundledCodeOf(entry, ['REMOTE_SEARCH_DEFAULTS'])).toContain(SEARCH_DEFAULTS_MARKER)
+	})
+
+	it('do not carry them on their own', async () => {
+		expect(await bundledCodeOf(entry, FORM_HELPERS)).not.toContain(SEARCH_DEFAULTS_MARKER)
+	})
+})
+
 /** The imports of a form with one field kind and a submit button, composed through `createForm`. */
 const ONE_FIELD_FORM = ['createForm', 'FormElement', 'TextField', 'SubmitButton']
 

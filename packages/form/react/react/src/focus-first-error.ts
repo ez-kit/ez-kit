@@ -1,13 +1,11 @@
-/** Elements that take focus from script without further checks; `[disabled]` is excluded below. */
-const FOCUSABLE_SELECTOR = [
-	'input:not([type="hidden"])',
-	'select',
-	'textarea',
-	'button',
-	'a[href]',
-	'[tabindex]:not([tabindex="-1"])',
-	'[contenteditable="true"]',
-].join(',')
+/**
+ * Elements that take focus from script without further checks; `[disabled]` is excluded below.
+ *
+ * One literal rather than a `.join(',')` over a list: a top-level call esbuild cannot prove pure
+ * stays in every bundle of the entry, the config-layer helpers' included.
+ */
+const FOCUSABLE_SELECTOR =
+	'input:not([type="hidden"]),select,textarea,button,a[href],[tabindex]:not([tabindex="-1"]),[contenteditable="true"]'
 
 const FIELD_SELECTOR = '[data-field]'
 const FIELD_ATTRIBUTE = 'data-field'

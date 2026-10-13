@@ -39,11 +39,12 @@ type BehaviourOptionKey = [keyof FormBehaviourOptions<unknown> & keyof AnyFormOp
 	? keyof FormBehaviourOptions<unknown>
 	: 'Error: a behaviour option shares its name with a TanStack form option'
 
-/** The keys `useForm` takes: TanStack's and the package's own. */
-const USE_FORM_OPTION_KEYS: Record<keyof AnyFormOptions | BehaviourOptionKey, true> = {
-	...FORM_OPTION_KEYS,
-	...BEHAVIOUR_OPTION_KEYS,
-}
+/**
+ * The package's own keys, checked against TanStack's by the annotation alone. Not merged into
+ * one object with `FORM_OPTION_KEYS`: a top-level spread is an expression esbuild cannot prove
+ * pure, so the merged object would stay in every bundle of the entry, read or not.
+ */
+const OWN_OPTION_KEYS: Record<BehaviourOptionKey, true> = BEHAVIOUR_OPTION_KEYS
 
 type SplitProps = {
 	/** What `useForm` receives. */
@@ -62,7 +63,7 @@ export function splitFormProps(props: Record<string, unknown>): SplitProps {
 	const elementProps: Record<string, unknown> = {}
 
 	for (const [key, value] of Object.entries(props)) {
-		if (Object.hasOwn(USE_FORM_OPTION_KEYS, key)) {
+		if (Object.hasOwn(FORM_OPTION_KEYS, key) || Object.hasOwn(OWN_OPTION_KEYS, key)) {
 			options[key] = value
 		} else {
 			elementProps[key] = value

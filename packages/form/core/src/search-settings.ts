@@ -13,13 +13,13 @@ export type SearchSettings = {
 export type Searchable = boolean | SearchSettings
 
 /** A field over an option source: one request per pause in typing, from the first character. */
-export const REMOTE_SEARCH_DEFAULTS: Readonly<Required<SearchSettings>> = Object.freeze({
+export const REMOTE_SEARCH_DEFAULTS: Readonly<Required<SearchSettings>> = /* @__PURE__ */ Object.freeze({
 	debounce: 300,
 	minLength: 0,
 })
 
 /** An in-memory `options` list: filtering costs nothing, so it follows every keystroke. */
-export const LOCAL_SEARCH_DEFAULTS: Readonly<Required<SearchSettings>> = Object.freeze({
+export const LOCAL_SEARCH_DEFAULTS: Readonly<Required<SearchSettings>> = /* @__PURE__ */ Object.freeze({
 	debounce: 0,
 	minLength: 0,
 })
