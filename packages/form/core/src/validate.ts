@@ -46,7 +46,10 @@ export type FieldConstraintKey = 'required' | 'min' | 'max' | 'minLength' | 'max
  * document is a ReDoS hazard, and a hung tab is worse than a missing client-side check.
  */
 const FORMAT_PATTERNS: Record<NonNullable<FieldValidate['format']>, RegExp> = {
-	email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+	// The domain's labels exclude `.`, so every character has exactly one way to match: the
+	// pattern runs in linear time. Letting a label match `.` as well made it backtrack
+	// quadratically, which a long input on a public endpoint turns into a denial of service.
+	email: /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/,
 	url: /^https?:\/\/[^\s]+$/,
 	tel: /^\+?[0-9()\-.\s]{7,20}$/,
 }
