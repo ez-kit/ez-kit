@@ -346,6 +346,76 @@ describe('focus on the first error', () => {
 		})
 	})
 
+	it('focusOnError={false} on an uncontrolled <SchemaForm> leaves focus alone', async () => {
+		const user = userEvent.setup()
+		const schema: FormSchema<{ email: string }> = {
+			version: 1,
+			children: [
+				{ type: FormFieldType.Text, name: 'email', label: 'Email', validate: { required: true } },
+				{ type: 'submit', label: 'Save' },
+			],
+		}
+		const onSubmit = vi.fn()
+		const onSubmitInvalid = vi.fn()
+
+		render(
+			<SchemaForm
+				schema={schema}
+				defaultValues={{ email: '' }}
+				focusOnError={false}
+				onSubmit={onSubmit}
+				onSubmitInvalid={onSubmitInvalid}
+			/>,
+		)
+
+		const button = submitButton()
+		await user.click(button)
+
+		await waitFor(() => {
+			expect(onSubmitInvalid).toHaveBeenCalledTimes(1)
+		})
+		expect(onSubmit).not.toHaveBeenCalled()
+		expect(document.activeElement).not.toBe(screen.getByLabelText('Email'))
+		expect([button, document.body]).toContain(document.activeElement)
+	})
+
+	it('useForm({ focusOnError: false }) under FormProvider with no <form> leaves focus alone', async () => {
+		const user = userEvent.setup()
+		const onSubmit = vi.fn()
+		const onSubmitInvalid = vi.fn()
+
+		function ProviderForm(): ReactNode {
+			const form = useForm({ defaultValues: { email: '' }, focusOnError: false, onSubmit, onSubmitInvalid })
+			return (
+				<FormProvider form={form}>
+					<form.TextField
+						name='email'
+						label='Email'
+						validate={REQUIRED}
+					/>
+					<button
+						type='button'
+						onClick={() => {
+							void form.handleSubmit()
+						}}
+					>
+						Save
+					</button>
+				</FormProvider>
+			)
+		}
+
+		render(<ProviderForm />)
+
+		await user.click(submitButton())
+
+		await waitFor(() => {
+			expect(onSubmitInvalid).toHaveBeenCalledTimes(1)
+		})
+		expect(onSubmit).not.toHaveBeenCalled()
+		expect(screen.getByLabelText('Email')).not.toHaveFocus()
+	})
+
 	it('focuses nothing when only the form itself has an error', async () => {
 		const user = userEvent.setup()
 		const onSubmitInvalid = vi.fn()
@@ -378,9 +448,19 @@ describe('focus on the first error', () => {
 })
 
 /** Type-only: the option is accepted by `useForm` and checked as a boolean. Never rendered. */
-function useTypeCases(): void {
+function useTypeCases(): ReactNode {
 	useForm({ defaultValues: { a: '' }, focusOnError: false })
 	// @ts-expect-error -- not a boolean
 	useForm({ defaultValues: { a: '' }, focusOnError: 'no' })
+	const form = useForm({ defaultValues: { a: '' } })
+	return (
+		<Form
+			form={form}
+			// @ts-expect-error -- focusOnError is a useForm option
+			focusOnError={false}
+		>
+			{null}
+		</Form>
+	)
 }
 void useTypeCases

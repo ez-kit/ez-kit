@@ -60,3 +60,32 @@ export function focusFirstError(
 	}
 	return false
 }
+
+const focusFlags = new WeakMap<object, { current: boolean }>()
+
+/** Register the `focusOnError` of one instance — read when a group submit fails (R71). */
+export function setFocusOnError(form: object, flag: { current: boolean }): void {
+	focusFlags.set(form, flag)
+}
+
+/** Whether `form` focuses its first error after a failed submit; `true` for an unregistered one. */
+export function focusesOnError(form: object): boolean {
+	return focusFlags.get(form)?.current ?? true
+}
+
+/** The members of an instance the walk reads. */
+export type ErrorFocusSource = {
+	formId: string
+	getFieldMeta: (name: string) => { errors: readonly unknown[] } | undefined
+}
+
+/**
+ * Focus the first field of `form`, in DOM order, with errors — after a failed submit or server
+ * errors. `within` narrows the candidates to a group's own names (R71).
+ */
+export function focusFirstFieldWithErrors(
+	form: ErrorFocusSource,
+	within: (name: string) => boolean = () => true,
+): void {
+	focusFirstError(form.formId, (name) => within(name) && (form.getFieldMeta(name)?.errors.length ?? 0) > 0)
+}

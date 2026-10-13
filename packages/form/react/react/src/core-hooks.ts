@@ -21,12 +21,14 @@ export type CoreHooks = {
 	beforeSubmit: () => void
 	/** Before every reset of the core. */
 	beforeReset: () => void
+	/** After TanStack has validated every field, inside the same `validateAllFields` call. */
+	afterValidateAllFields: (cause: ValidationCause) => Promise<void>
 }
 
 const hookedCores = new WeakSet()
 
 /**
- * Wrap the core's submit and reset, once per core.
+ * Wrap the core's submit, reset and field pass, once per core.
  *
  * Called from `listeners.onMount`, which TanStack runs in its own mount layout effect — the first
  * moment the core is reachable, and before anyone can submit. StrictMode runs it twice with the same
@@ -35,7 +37,7 @@ const hookedCores = new WeakSet()
 export function hookCore(core: CoreFormApi, hooks: CoreHooks): void {
 	if (hookedCores.has(core)) return
 	hookedCores.add(core)
-	const { _handleSubmit: submit, reset } = core
+	const { _handleSubmit: submit, reset, validateAllFields } = core
 	Object.assign(core, {
 		_handleSubmit: (...args: Parameters<typeof submit>) => {
 			hooks.beforeSubmit()
@@ -44,6 +46,11 @@ export function hookCore(core: CoreFormApi, hooks: CoreHooks): void {
 		reset: (...args: Parameters<typeof reset>) => {
 			hooks.beforeReset()
 			reset(...args)
+		},
+		validateAllFields: async (cause: ValidationCause) => {
+			const results = await validateAllFields(cause)
+			await hooks.afterValidateAllFields(cause)
+			return results
 		},
 	})
 }

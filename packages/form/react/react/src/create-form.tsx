@@ -8,11 +8,12 @@ import { hookCore } from './core-hooks'
 import { createFieldBinding, nativeFieldOf } from './field-binding'
 import { createWithFieldGroup } from './field-groups'
 import { deriveFieldTypeIds } from './field-registry'
-import { focusFirstError } from './focus-first-error'
+import { focusFirstFieldWithErrors, setFocusOnError } from './focus-first-error'
 import { FormProvider, missingFormMessage, useOptionalFormContext } from './form-context'
 import { createFormGroup } from './form-group'
 import { splitFormProps } from './form-options'
 import { FormShell } from './form-shell'
+import { validateGroups } from './group-registry'
 import { NO_INJECTED_COMPONENTS } from './kit-form'
 import { assertNoReservedKeys, assertNoSharedKeys, FormFactoryName } from './reserved-keys'
 import { attachServerErrors, serverErrorsOf } from './server-errors'
@@ -27,6 +28,7 @@ import type { FormBehaviourOptions } from './form-behaviour'
 import type { AnyFormInstance } from './form-context'
 import type { FormInstance } from './form-instance'
 import type { FormControlledProps, AnyFormProps, FormUncontrolledImplProps, FormUncontrolledProps } from './form-props'
+import type { GroupHost } from './group-registry'
 import type { KitFormApi } from './kit-form'
 import type { ReservedKeyGuard, SharedKeyGuard } from './reserved-keys'
 import type { CustomFieldRenderProps } from './schema/registries'
@@ -308,6 +310,10 @@ export function createFormInternals<TFields extends FormFieldRegistry, TComponen
 		useEffect(() => {
 			focusOnErrorRef.current = focusOnError
 		}, [focusOnError])
+		// A memo rather than an effect: a group submit, which reads the flag, can only come after render.
+		useMemo(() => {
+			setFocusOnError(form, focusOnErrorRef)
+		}, [form])
 
 		const setServerErrors = useCallback(
 			(errors: ServerErrors<TFormData>) => {
@@ -629,23 +635,24 @@ export function createFormInternals<TFields extends FormFieldRegistry, TComponen
 	}
 }
 
-/** The members of an instance the focus walk reads. */
-type ErrorFocusSource = {
-	formId: string
-	getFieldMeta: (name: string) => { errors: readonly unknown[] } | undefined
-}
+/** The cause TanStack passes `validateAllFields` from a submit. */
+const SUBMIT_CAUSE = 'submit'
 
-/** Focus the first field of `form`, in DOM order, that has errors — after a failed submit or server errors. */
-function focusFirstFieldWithErrors(form: ErrorFocusSource): void {
-	focusFirstError(form.formId, (name) => (form.getFieldMeta(name)?.errors.length ?? 0) > 0)
-}
-
-/** What the core's members do for this instance: every submit and reset clears its server errors. */
+/**
+ * What the core's members do for this instance: every submit and reset clears its server errors,
+ * and a submit runs every mounted group after the fields (R62).
+ */
 function coreHooksFor(form: object): CoreHooks {
 	const clear = (): void => {
 		serverErrorsOf(form)?.clear()
 	}
-	return { beforeSubmit: clear, beforeReset: clear }
+	return {
+		beforeSubmit: clear,
+		beforeReset: clear,
+		afterValidateAllFields: async (cause) => {
+			if (cause === SUBMIT_CAUSE) await validateGroups(form as unknown as GroupHost, () => true)
+		},
+	}
 }
 
 /**

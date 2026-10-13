@@ -21,3 +21,14 @@ inside a group stays absolute: the coordinates come from the object a field is c
 with `fields` then unchecked; with neither, it throws a named error. Both kits export the new types
 `GroupFields`, `FieldGroupScope`, `FormGroupScope`, `FieldGroupPlacementProps`,
 `UncheckedFieldGroupPlacementProps`, `WithFieldGroupOptions` and `FieldGroupBlock`.
+
+**Groups validate and submit.** `withFieldGroup` takes `validators` — a Standard Schema or a function
+over the block's own shape, on `onMount`, `onChange`, `onBlur`, `onSubmit` and their async forms.
+Issues with a path land on the real fields; issues without one are the block's `group.errors`.
+`group.handleSubmit()` checks the block and calls the `onGroupSubmit` passed where the block is
+placed, with `value` typed by the block. **Breaking:** a block's `group.handleSubmit` used to submit
+the whole form; call `form.handleSubmit()` for that. On every group (`form.FormGroup`, `useFormGroup`,
+a block), a submit first clears the server errors of the fields inside it, runs the groups placed
+inside it, and focuses the group's first error when it fails. A whole-form submit now runs every
+mounted group's validators after the fields — before, TanStack ran none of them. Both kits also
+export `GroupValidators`, `GroupValidator`, `GroupAsyncValidator` and `OnGroupSubmit`.

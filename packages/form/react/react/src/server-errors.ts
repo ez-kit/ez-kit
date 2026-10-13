@@ -15,6 +15,11 @@ export type ServerErrorsController = {
 	apply: (errors: ServerErrors<unknown>) => boolean
 	/** Remove every server error. */
 	clear: () => void
+	/**
+	 * Remove the field errors whose path `isCleared` accepts — a group submit's own (R61). Form-level
+	 * messages stay.
+	 */
+	clearWhere: (isCleared: (field: string) => boolean) => void
 	/** The current form-level messages; the same array until they change. */
 	formErrors: () => readonly string[]
 	/** Listen for a change of the form-level messages; returns the unsubscribe. */
@@ -179,6 +184,12 @@ export function attachServerErrors(host: ServerErrorsHost): ServerErrorsControll
 		},
 		clear() {
 			void controller.apply({})
+		},
+		clearWhere(isCleared) {
+			const kept = new Map([...fields].filter(([name]) => !isCleared(name)))
+			if (kept.size === fields.size) return
+			fields = kept
+			reconcile()
 		},
 		formErrors: () => formMessages,
 		subscribe(listener) {

@@ -5,6 +5,7 @@ import { useMemo } from 'react'
 
 import { createField } from './fields/field'
 import { missingFormMessage, useOptionalFormContext } from './form-context'
+import { useFormGroup } from './form-group'
 import { scopeGroupMembers, withMembers } from './group-fields'
 
 import type { BindableForm } from './bindable-form'
@@ -62,6 +63,11 @@ export function useFieldGroup<TFormData, TGroup>(
 type AnyPlacement = {
 	form?: AnyFormInstance | undefined
 	fields: string | Record<string, string>
+	/**
+	 * Typed per block at the placement; here only passed on. TanStack calls it with
+	 * `{ value, groupApi, meta }`, a superset of the documented `{ value, meta }`.
+	 */
+	onGroupSubmit?: ((props: never) => unknown) | undefined
 	children?: ReactNode
 }
 
@@ -75,13 +81,14 @@ type AnyPlacement = {
 export function createWithFieldGroup<TFields extends FormFieldRegistry>(memberKeys: readonly string[]) {
 	return function withFieldGroup<TGroup, TSubmitMeta = never, TRenderProps extends object = Record<never, never>>(
 		options: WithFieldGroupOptions<TGroup, TSubmitMeta, TRenderProps, TFields>,
-	): FieldGroupBlock<TGroup, TRenderProps> {
+	): FieldGroupBlock<TGroup, TSubmitMeta, TRenderProps> {
 		function FieldGroupBlockImpl(placement: AnyPlacement): ReactNode {
 			const contextForm = useOptionalFormContext()
 			const form = placement.form ?? contextForm
 			if (form === null) throw new Error(missingFormMessage('withFieldGroup'))
-			// `fields` is read on the first render only, as TanStack's group reads it — so the branch
-			// taken here never changes for a mounted block, and each block's hooks stay unconditional.
+			// Two components rather than one with a branch inside, so each placement's hooks stay
+			// unconditional. The choice is made on every render: a `fields` that switches between a path
+			// and a map swaps the component, which remounts the block.
 			return typeof placement.fields === 'string' ? (
 				<BranchBlock
 					options={options as never}
@@ -120,8 +127,28 @@ function useBlockScope({ options, placement, form, memberKeys }: BlockProps): ob
 	return useMemo(() => withMembers(lens, members), [lens, members])
 }
 
+/** What `BranchBlock` reads off its native group. */
+type BranchGroup = { errors: string[]; handleSubmit: (meta?: unknown) => Promise<void> }
+
+/**
+ * A block over a path: TanStack's form group is mounted on the branch, always (R66), so the block's
+ * `validators`, `onGroupSubmit`, `errors` and `handleSubmit` are the native group's. The block's
+ * `defaultValues` is deliberately not the group's `defaultValue`, which TanStack would write over the
+ * form's own defaults while the group is untouched.
+ */
 function BranchBlock(props: BlockProps): ReactNode {
-	const group = useBlockScope(props)
+	const scope = useBlockScope(props)
+	const { onGroupSubmit } = props.placement
+	const branch = useFormGroup({
+		form: props.form,
+		name: props.placement.fields as string,
+		validators: props.options.validators,
+		...(onGroupSubmit !== undefined && { onGroupSubmit }),
+	} as never) as unknown as BranchGroup
+	const group = useMemo(
+		() => Object.assign(Object.create(scope) as object, { errors: branch.errors, handleSubmit: branch.handleSubmit }),
+		[scope, branch],
+	)
 	return props.options.render({ ...props.options.props, ...props.placement, group } as never)
 }
 

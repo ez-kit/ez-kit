@@ -18,7 +18,11 @@ export type {
 	FormGroupInstance,
 	FormGroupProps,
 	FormGroupScope,
+	GroupAsyncValidator,
 	GroupFields,
+	GroupValidator,
+	GroupValidators,
+	OnGroupSubmit,
 	UncheckedFieldGroupPlacementProps,
 	WithFieldGroupOptions,
 } from './group-types'
