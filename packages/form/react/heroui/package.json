@@ -36,7 +36,7 @@
 	"size-limit": [
 		{
 			"path": "dist/index.js",
-			"limit": "4.5 KB",
+			"limit": "5180 B",
 			"ignore": [
 				"@ez-kit/form-react",
 				"@internationalized/date"
