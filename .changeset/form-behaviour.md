@@ -14,3 +14,10 @@ that has an error takes focus — its control by `id`, or the first focusable el
 works in a `<form>`, under `FormProvider` alone, and with several forms on one page. `focusOnError:
 false` (an option of `useForm`, a prop of the uncontrolled `<Form>` / `<SchemaForm>`) turns it off;
 `onSubmitInvalid` still runs, after the focus.
+
+**Server errors.** `form.setServerErrors({ fields, form })` puts errors a server reported onto the
+form: `fields` maps a field path to a message or a list of them, `form` holds messages for the form
+as a whole. A field's error shows at once, stays when the field is focused and left, and goes the
+first time its value changes — it does not come back if the value is changed back. Every server error
+goes when the form is submitted again or reset. Afterwards the first field with an error takes focus.
+Field errors live in TanStack's `errorMap.onServer`, so every kit renders them unchanged.

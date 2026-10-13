@@ -1,0 +1,238 @@
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { useEffect } from 'react'
+import { describe, expect, expectTypeOf, it, vi } from 'vitest'
+
+import { createForm } from './create-form'
+import { testComponents, testFields, testFormElement } from './test-kit'
+
+import type { ServerErrors } from './server-errors'
+import type { ReactNode } from 'react'
+
+const { Form, useForm } = createForm({
+	FormElement: testFormElement,
+	fields: testFields,
+	components: testComponents,
+})
+
+type Values = { email: string; name: string; later: string }
+
+const DEFAULT_VALUES: Values = { email: '', name: '', later: '' }
+const MIN_TWO = { minLength: 2 } as const
+
+type Instance = ReturnType<typeof useValuesForm>
+
+type HarnessProps = {
+	onForm: (form: Instance) => void
+	onSubmit?: (() => void) | undefined
+	focusOnError?: boolean | undefined
+	showLater?: boolean
+}
+
+function useValuesForm({ onSubmit, focusOnError }: Pick<HarnessProps, 'onSubmit' | 'focusOnError'>) {
+	return useForm({
+		defaultValues: DEFAULT_VALUES,
+		onSubmit: () => onSubmit?.(),
+		...(focusOnError !== undefined && { focusOnError }),
+	})
+}
+
+/** A controlled form, so a test can reach `form.setServerErrors` and `form.reset` from outside. */
+function Harness({ onForm, onSubmit, focusOnError, showLater = false }: HarnessProps): ReactNode {
+	const form = useValuesForm({ onSubmit, focusOnError })
+	useEffect(() => {
+		onForm(form)
+	}, [form, onForm])
+
+	return (
+		<Form form={form}>
+			<form.TextField
+				name='email'
+				label='Email'
+			/>
+			<form.TextField
+				name='name'
+				label='Name'
+				validate={MIN_TWO}
+			/>
+			{showLater && (
+				<form.TextField
+					name='later'
+					label='Later'
+				/>
+			)}
+			<form.SubmitButton>Save</form.SubmitButton>
+			<form.Submit>
+				{({ formErrors, canSubmit }) => (
+					<>
+						<output data-testid='form-errors'>{formErrors.join('|')}</output>
+						<output data-testid='can-submit'>{String(canSubmit)}</output>
+					</>
+				)}
+			</form.Submit>
+		</Form>
+	)
+}
+
+function renderHarness(props: Omit<HarnessProps, 'onForm'> = {}) {
+	let instance: Instance | undefined
+	const onForm = (form: Instance): void => {
+		instance = form
+	}
+	const view = render(
+		<Harness
+			onForm={onForm}
+			{...props}
+		/>,
+	)
+	const form = (): Instance => {
+		if (instance === undefined) throw new Error('the form has not rendered')
+		return instance
+	}
+	return { ...view, form, onForm }
+}
+
+function formElement(): HTMLFormElement {
+	const element = document.querySelector('form')
+	if (element === null) throw new Error('no <form> rendered')
+	return element
+}
+
+function apply(form: Instance, errors: ServerErrors<Values>): void {
+	act(() => {
+		form.setServerErrors(errors)
+	})
+}
+
+describe('form.setServerErrors', () => {
+	it('shows field errors at once and blocks submitting', () => {
+		const { form } = renderHarness()
+
+		apply(form(), { fields: { email: 'Taken', name: ['Too common', 'Reserved'] } })
+
+		expect(screen.getByText('Taken')).toBeInTheDocument()
+		expect(screen.getByText('Too common, Reserved')).toBeInTheDocument()
+		expect(screen.getByTestId('can-submit')).toHaveTextContent('false')
+	})
+
+	it('keeps a field error when the field is focused and left without a change', async () => {
+		const user = userEvent.setup()
+		const { form } = renderHarness({ focusOnError: false })
+		apply(form(), { fields: { email: 'Taken', name: 'Too common' } })
+
+		await user.click(screen.getByLabelText('Email'))
+		await user.tab()
+		await user.click(screen.getByLabelText('Name'))
+		await user.tab()
+
+		expect(screen.getByText('Taken')).toBeInTheDocument()
+		expect(screen.getByText('Too common')).toBeInTheDocument()
+	})
+
+	it('clears a field error on its first change and does not bring it back on a revert', async () => {
+		const user = userEvent.setup()
+		const { form } = renderHarness()
+		apply(form(), { fields: { email: 'Taken' } })
+
+		await user.type(screen.getByLabelText('Email'), 'a')
+		expect(screen.queryByText('Taken')).not.toBeInTheDocument()
+
+		await user.clear(screen.getByLabelText('Email'))
+		expect(screen.queryByText('Taken')).not.toBeInTheDocument()
+	})
+
+	it('keeps a field error when another field changes', async () => {
+		const user = userEvent.setup()
+		const { form } = renderHarness()
+		apply(form(), { fields: { email: 'Taken' } })
+
+		await user.type(screen.getByLabelText('Name'), 'Ann')
+
+		expect(screen.getByText('Taken')).toBeInTheDocument()
+	})
+
+	it('clears every server error before a submit runs', async () => {
+		const user = userEvent.setup()
+		const seen = vi.fn<(text: string) => void>()
+		const { form } = renderHarness({
+			onSubmit: () => {
+				seen(document.body.textContent)
+			},
+		})
+		apply(form(), { fields: { email: 'Taken' }, form: 'Service unavailable' })
+
+		await user.type(screen.getByLabelText('Name'), 'Ann')
+		// The field error keeps the submit button disabled, which blocks implicit submission too —
+		// so the `<form>` is submitted directly, as a script or an `action` would.
+		fireEvent.submit(formElement())
+
+		await waitFor(() => {
+			expect(seen).toHaveBeenCalledTimes(1)
+		})
+		expect(seen.mock.calls[0]?.[0]).not.toContain('Taken')
+		expect(seen.mock.calls[0]?.[0]).not.toContain('Service unavailable')
+		expect(screen.queryByText('Taken')).not.toBeInTheDocument()
+	})
+
+	it('clears every server error on reset, and nothing comes back on a later change', async () => {
+		const user = userEvent.setup()
+		const { form } = renderHarness()
+		apply(form(), { fields: { email: 'Taken' }, form: 'Service unavailable' })
+
+		act(() => {
+			form().reset()
+		})
+		await user.type(screen.getByLabelText('Name'), 'Ann')
+
+		expect(screen.queryByText('Taken')).not.toBeInTheDocument()
+		expect(screen.getByTestId('form-errors')).toHaveTextContent('')
+	})
+
+	it('shows the error of a field that mounts after the errors were applied', () => {
+		const { form, rerender, onForm } = renderHarness()
+		apply(form(), { fields: { later: 'Taken' } })
+
+		rerender(
+			<Harness
+				onForm={onForm}
+				showLater
+			/>,
+		)
+
+		expect(screen.getByText('Taken')).toBeInTheDocument()
+	})
+
+	it('focuses the first field with an error after applying', () => {
+		const { form } = renderHarness()
+
+		apply(form(), { fields: { name: 'X' } })
+
+		expect(document.activeElement).toBe(screen.getByLabelText('Name'))
+	})
+
+	it('leaves focus alone with focusOnError: false', () => {
+		const { form } = renderHarness({ focusOnError: false })
+
+		apply(form(), { fields: { name: 'X' } })
+
+		expect(document.activeElement).toBe(document.body)
+	})
+
+	it('rejects setServerErrors as a registered key', () => {
+		const Noop = () => null
+		expect(() => createForm({ fields: { setServerErrors: Noop } as never })).toThrow(
+			'createForm: "setServerErrors" is reserved by the form instance and cannot be registered in fields.',
+		)
+	})
+})
+
+describe('ServerErrors types', () => {
+	it('names fields by path and takes a message or a list of them', () => {
+		expectTypeOf<Instance['setServerErrors']>().parameter(0).toEqualTypeOf<ServerErrors<Values>>()
+		expectTypeOf<{ fields: { email: 'x' } }>().toExtend<ServerErrors<Values>>()
+		expectTypeOf<{ form: ['a', 'b'] }>().toExtend<ServerErrors<Values>>()
+		// @ts-expect-error -- not a path
+		const wrong: ServerErrors<Values> = { fields: { nope: 'x' } }
+		expect(wrong).toBeDefined()
+	})
+})

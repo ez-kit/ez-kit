@@ -1,7 +1,7 @@
 'use client'
 
 import { createFormHook, createFormHookContexts } from '@tanstack/react-form'
-import { useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 
 import { buildFieldComponents } from './build-field-components'
 import { createFieldBinding, nativeFieldOf } from './field-binding'
@@ -14,6 +14,7 @@ import { splitFormProps } from './form-options'
 import { FormShell } from './form-shell'
 import { NO_INJECTED_COMPONENTS } from './kit-form'
 import { assertNoReservedKeys, assertNoSharedKeys, FormFactoryName } from './reserved-keys'
+import { attachServerErrors } from './server-errors'
 
 import type { BindableForm } from './bindable-form'
 import type { KitFormBlock, KitWithFormProps } from './composition'
@@ -27,6 +28,7 @@ import type { FormControlledProps, AnyFormProps, FormUncontrolledImplProps, Form
 import type { KitFormApi } from './kit-form'
 import type { ReservedKeyGuard, SharedKeyGuard } from './reserved-keys'
 import type { CustomFieldRenderProps } from './schema/registries'
+import type { ServerErrors, ServerErrorsHost } from './server-errors'
 import type { FormAsyncValidateOrFn, FormOptions, FormValidateOrFn } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
 
@@ -280,12 +282,27 @@ export function createFormInternals<TFields extends FormFieldRegistry, TComponen
 			// Runs inside `handleSubmit`, long after `form` is assigned. `formApi.update` re-syncs the
 			// options on every render, so this always sees the latest flag and the latest callback.
 			onSubmitInvalid: (props) => {
-				if (focusOnError) {
-					focusFirstError(form.formId, (name) => (form.getFieldMeta(name)?.errors.length ?? 0) > 0)
-				}
+				if (focusOnError) focusFirstFieldWithErrors(form)
 				tanstackOptions.onSubmitInvalid?.(props)
 			},
 		})
+
+		const serverErrors = useMemo(() => attachServerErrors(form as unknown as ServerErrorsHost), [form])
+		useEffect(() => serverErrors.connect(), [serverErrors])
+
+		// Read when the errors are applied, which is after the render that set it.
+		const focusOnErrorRef = useRef(focusOnError)
+		useEffect(() => {
+			focusOnErrorRef.current = focusOnError
+		}, [focusOnError])
+
+		const setServerErrors = useCallback(
+			(errors: ServerErrors<TFormData>) => {
+				serverErrors.apply(errors)
+				if (focusOnErrorRef.current) focusFirstFieldWithErrors(form)
+			},
+			[serverErrors, form],
+		)
 
 		// TanStack's `Field`, captured before the assign below replaces the instance's `AppField`
 		// with the binding seam — see `nativeFieldOf`.
@@ -315,7 +332,13 @@ export function createFormInternals<TFields extends FormFieldRegistry, TComponen
 		// components go on as-is — they read the form from context, so nothing binds them.
 		return useMemo(
 			() =>
-				Object.assign(form, native, { FormGroup }, fieldComponents, components) as unknown as KitFormApi<
+				Object.assign(
+					form,
+					native,
+					{ FormGroup, setServerErrors },
+					fieldComponents,
+					components,
+				) as unknown as KitFormApi<
 					TFormData,
 					TOnMount,
 					TOnChange,
@@ -331,7 +354,7 @@ export function createFormInternals<TFields extends FormFieldRegistry, TComponen
 					TFields,
 					TComponents
 				>,
-			[form, native, FormGroup, fieldComponents],
+			[form, native, FormGroup, setServerErrors, fieldComponents],
 		)
 	}
 
@@ -572,6 +595,17 @@ export function createFormInternals<TFields extends FormFieldRegistry, TComponen
 		bundle: { useForm, Form, FormProvider, withForm, withFieldGroup },
 		internals: { useForm, FormElement, fields, components, fieldTypeIds },
 	}
+}
+
+/** The members of an instance the focus walk reads. */
+type ErrorFocusSource = {
+	formId: string
+	getFieldMeta: (name: string) => { errors: readonly unknown[] } | undefined
+}
+
+/** Focus the first field of `form`, in DOM order, that has errors — after a failed submit or server errors. */
+function focusFirstFieldWithErrors(form: ErrorFocusSource): void {
+	focusFirstError(form.formId, (name) => (form.getFieldMeta(name)?.errors.length ?? 0) > 0)
 }
 
 /**

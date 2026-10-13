@@ -104,6 +104,8 @@ export type {
 	SectionProps,
 	SelectFieldProps,
 	SelectOption,
+	ServerErrorMessages,
+	ServerErrors,
 	SharedSchemaFormProps,
 	SimpleOptionSource,
 	SliderFieldProps,

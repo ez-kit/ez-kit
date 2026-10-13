@@ -2,6 +2,7 @@ import type { AllFormComponents, AllFormFieldSlots, FormComponentRegistry } from
 import type { FormFieldComponents, FormPrimitives } from './field-props'
 import type { FormFieldRegistry } from './field-registry'
 import type { FormGroupComponentOf } from './group-types'
+import type { ServerErrors } from './server-errors'
 import type { FormAsyncValidateOrFn, FormValidateOrFn } from '@ez-kit/form-core'
 import type { AppFieldExtendedReactFormApi } from '@tanstack/react-form'
 
@@ -20,6 +21,17 @@ export type NoInjectedComponents = typeof NO_INJECTED_COMPONENTS
 
 /** The members this package adds that are TanStack's own, renamed: `NativeField` is TanStack's `Field`. */
 export type NativeMembers<TForm> = { NativeField: TForm extends { Field: infer TField } ? TField : never }
+
+/** The members this package adds for errors a server reported — see `server-errors.ts`. */
+export type ServerErrorMembers<TFormData> = {
+	/**
+	 * Put errors a server reported onto the form. A field's error shows at once and goes the
+	 * first time its value changes; every server error goes on the next submit or reset. Form-level
+	 * messages arrive in `form.Submit`'s `formErrors`. The first field with an error takes focus
+	 * unless `focusOnError` is `false`.
+	 */
+	setServerErrors: (errors: ServerErrors<TFormData>) => void
+}
 
 /**
  * A form instance carrying the native TanStack API (and TanStack's `Field` again as
@@ -47,6 +59,7 @@ export type BoundForm<
 	TFields extends FormFieldRegistry = AllFormFieldSlots,
 	TComponents extends FormComponentRegistry = AllFormComponents,
 > = Omit<TForm, 'Field' | 'FormGroup'> & { FormGroup: FormGroupComponentOf<TFormData> } & NativeMembers<TForm> &
+	ServerErrorMembers<TFormData> &
 	FormFieldComponents<TFormData, TFields> &
 	FormPrimitives<TFormData, TFields> &
 	TComponents
