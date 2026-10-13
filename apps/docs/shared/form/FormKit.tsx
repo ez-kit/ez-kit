@@ -9,8 +9,10 @@ import type {
 	Form as ShadcnForm,
 	SchemaForm as ShadcnSchemaForm,
 	useForm as useShadcnForm,
+	withFieldGroup as shadcnWithFieldGroup,
+	withForm as shadcnWithForm,
 } from '@ez-kit/form-shadcn'
-import type { ReactNode } from 'react'
+import type { ComponentType, ReactNode } from 'react'
 
 /**
  * The docs-only runtime switcher for the form kits — the `shared/DataGrid.tsx` analogue.
@@ -40,6 +42,8 @@ export type FormKit = {
 	useForm: typeof useShadcnForm
 	Form: typeof ShadcnForm
 	SchemaForm: typeof ShadcnSchemaForm
+	withForm: typeof shadcnWithForm
+	withFieldGroup: typeof shadcnWithFieldGroup
 }
 
 const FormKitContext = createContext<FormKit | null>(null)
@@ -87,3 +91,38 @@ export const SchemaForm = ((props: SchemaFormControlledProps<unknown>) => {
 	// modes are one component, so forwarding through either signature is equivalent.
 	return <KitSchemaForm {...props} />
 }) as typeof ShadcnSchemaForm
+
+/**
+ * A block helper of the kit, resolved at render time. A block is declared at module scope in an
+ * example, while the kit is only known inside the embed route, so the real block is built on the
+ * first render under each kit and cached per kit.
+ */
+function delegateBlock<TOptions>(
+	build: (kit: FormKit, options: TOptions) => unknown,
+): (options: TOptions) => ComponentType<object> {
+	return (options) => {
+		const blocks = new WeakMap<FormKit, ComponentType<object>>()
+
+		return function KitBlock(props: object) {
+			const kit = useFormKit()
+			let Block = blocks.get(kit)
+
+			if (Block === undefined) {
+				Block = build(kit, options) as ComponentType<object>
+				blocks.set(kit, Block)
+			}
+
+			return <Block {...props} />
+		}
+	}
+}
+
+/** The kit's `withForm`, resolved at render time ({@link delegateBlock}). */
+export const withForm = delegateBlock((kit, options: Parameters<FormKit['withForm']>[0]) =>
+	kit.withForm(options),
+) as unknown as FormKit['withForm']
+
+/** The kit's `withFieldGroup`, resolved at render time ({@link delegateBlock}). */
+export const withFieldGroup = delegateBlock((kit, options: Parameters<FormKit['withFieldGroup']>[0]) =>
+	kit.withFieldGroup(options),
+) as unknown as FormKit['withFieldGroup']

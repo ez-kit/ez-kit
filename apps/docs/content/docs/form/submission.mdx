@@ -142,6 +142,7 @@ And when they go:
 
 - **A field's error stays while the user moves in and out of the field**, and goes the first time its value changes. It does not come back for that value — typing the rejected username again does not restore the message; only the server can say it again.
 - **Every server error goes on the next submit or reset**, whichever API starts it — `form.handleSubmit`, `form.reset`, or the `formApi` TanStack hands to `onSubmit`, listeners and validators.
+- **A group submit (`group.handleSubmit()`) clears only the server errors of the fields inside the group**; form-level messages and other fields' stay. See [Composition](/docs/form/composition#server-errors-and-group-submits).
 - Until it goes, a field's server error makes the form invalid, so `canSubmit` is `false` and the kit's button is disabled — the same as any field error, and the reason the error clears on the first edit. A `form` message never disables it.
 - **An error for a field that is not mounted is kept**, and shows when the field mounts, by the same rules. It does not block submitting while nothing shows it.
 

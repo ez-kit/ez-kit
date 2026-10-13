@@ -144,6 +144,14 @@
 		"exportName": "CompositionExample"
 	},
 	{
+		"id": "form-composition-sign-up",
+		"label": "Form composition — sign-up",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/composition.tsx",
+		"exportName": "CompositionSignUpExample"
+	},
+	{
 		"id": "form-creatable-schema",
 		"label": "Creatable select: document",
 		"group": "form",

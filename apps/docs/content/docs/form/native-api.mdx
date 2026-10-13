@@ -132,4 +132,4 @@ The flat fields do not care which element they sit in — they bind to the form 
 
 ## Composition helpers
 
-Your kit ships four composition helpers. `withForm` is TanStack's, retyped so the flat fields compile inside a block; `withFieldGroup`, `useFieldGroup` and `useFormGroup` are this package's own, taking the instance `useForm` returns rather than a TanStack `FormApi`. They have a page of their own: [Composition](/docs/form/composition).
+Your kit ships `withForm`, `withFieldGroup` and `form.FormGroup` for a part of a form, and the hooks `useFieldGroup` and `useFormGroup` behind the last two. A `withForm` or `withFieldGroup` block placed without a `form` prop takes the form above it. The groups — a `withFieldGroup` block and `form.FormGroup` — carry the bundle's flat fields as well as `group.Field` and `group.NativeField`, all named relative to the group. They have a page of their own: [Composition](/docs/form/composition).

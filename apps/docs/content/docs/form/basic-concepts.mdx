@@ -29,7 +29,7 @@ form.handleSubmit // TanStack's, untouched
 form.state // TanStack's, untouched
 ```
 
-There is no adapter and no escape hatch to reach for, because you never left. TanStack Form's documentation for the instance's own API — `handleSubmit`, `state`, `Subscribe`, `setFieldValue` and the rest — applies as written, with two differences. TanStack's render-prop field is `form.NativeField` here, because `form.Field` is the bound one. And the group helpers — `withFieldGroup`, `useFieldGroup`, `useFormGroup` — come from your kit, not from `@tanstack/react-form`: TanStack's own take a TanStack `FormApi` and reject this instance. [Native API](/docs/form/native-api) is the mapping.
+There is no adapter and no escape hatch to reach for, because you never left. TanStack Form's documentation for the instance's own API — `handleSubmit`, `state`, `Subscribe`, `setFieldValue` and the rest — applies as written, with three differences. TanStack's render-prop field is `form.NativeField` here, because `form.Field` is the bound one. And the group helpers — `withFieldGroup`, `useFieldGroup`, `useFormGroup` — come from your kit, not from `@tanstack/react-form`: TanStack's own take a TanStack `FormApi` and reject this instance. And a group's `handleSubmit` submits the group alone — TanStack's field group submits the whole form. [Native API](/docs/form/native-api) is the mapping.
 
 ## A field is complete
 

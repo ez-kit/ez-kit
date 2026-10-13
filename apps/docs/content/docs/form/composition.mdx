@@ -1,44 +1,21 @@
 ---
 title: Composition
-description: withForm, withFieldGroup, useFieldGroup and useFormGroup — reusable blocks of fields, and what each of the four takes.
+description: withForm, withFieldGroup and form.FormGroup — which one a part of a form needs, and what each brings.
 ---
 
-A form long enough to be worth building is a form long enough to want cutting into pieces: an address block that appears twice, a step you render in three different flows, a section a colleague owns. Your kit ships four helpers for that. `withForm` is TanStack's, with one type changed; `withFieldGroup`, `useFieldGroup` and `useFormGroup` are this package's own, built over TanStack's groups. The reasons are worth understanding before you pick between them.
+Reusing a whole form needs no helper: it is a component, and you render it twice. The helpers are for reusing a **part** of one — and which part you have decides which helper you want:
 
-## The problem a block has
+| You need                                                         | Use              |
+| ---------------------------------------------------------------- | ---------------- |
+| to cut **one** large form into files, a part that sees all of it | `withForm`       |
+| one set of fields in **different** forms, with its own rules     | `withFieldGroup` |
+| a branch **inside** a form with its own check and its own "Save" | `form.FormGroup` |
 
-Pull a group of fields out into its own component and it loses the form. Hand the form back as a prop and the question becomes: what type is that prop?
-
-Not `any` — the whole value of these fields is that `name='shipping.city'` is a compile error the moment `shipping` stops having a `city`. The type has to carry both the form's data shape and the flat field components hanging off the instance.
-
-The type is `FormInstance`, exported by every kit. It takes the form's value type, and by default describes the kit's full bundle — every built-in field kind and all four components:
-
-```tsx
-import type { FormInstance } from '@ez-kit/form-shadcn'
-
-function AddressBlock({ form, path }: { form: FormInstance<Checkout>; path: 'billing' | 'shipping' }) {
-	return (
-		<form.TextField
-			name={`${path}.city`}
-			label='City'
-		/>
-	)
-}
-```
-
-Any instance `useForm` returns for a `Checkout` is accepted, whatever validators it was given — they stay on the instance and do not have to be restated in the prop's type. The price is that the prop's type no longer knows them: through a `FormInstance`, everything typed from a validator or the submit meta is `any` — `state.errors`, `state.errorMap`, `getAllErrors()`, field-level errors, `options.validators`, `options.onSubmitMeta` and the meta `handleSubmit` takes. Values and field names stay fully typed. The same openness works in reverse: a `FormInstance` is accepted by a `withForm` block that declared validators of its own, so a block that relies on its errors being typed should be handed the instance `useForm` returned, not one passed through a `FormInstance` prop.
-
-<KitExample exampleId='form-composition' />
-
-A form built from a subset names its own shape once: `FormInstance<V, typeof fields, typeof components>`, with `NoRegistry` standing for a set left empty. A block typed with the one-argument form asks for the kit's full bundle, so an instance that registered fewer fields is not assignable to it.
-
-The example is a checkout with a billing and a shipping address. `AddressBlock` is written once, takes `form` plus the path it should write into, and is rendered twice. Inside it, `form.TextField` is the same component, checked against the same value type, as at the top level.
-
-That example declares its `form` prop by hand — deliberately, because it is rendered under two kits at once and so cannot import either kit's `withForm`. In your own app you would not: `withForm` infers the type for you.
+All three come from your kit — `withForm` and `withFieldGroup` are returned by `createForm` beside `useForm` and `Form`, and `form.FormGroup` hangs off every form instance — so import them from `@ez-kit/form-shadcn` or `@ez-kit/form-heroui` like everything else.
 
 ## `withForm`
 
-`withForm` builds a block from form options plus a render function, and infers the `form` prop's type from the options:
+`withForm` builds a part of **one** form: a block typed by the whole form's data, with the same flat fields the form has. It has no rules of its own — it is a file boundary, not a validation one.
 
 ```tsx
 import { withForm } from '@ez-kit/form-shadcn'
@@ -62,48 +39,172 @@ const AddressBlock = withForm({
 })
 ```
 
+The `form` prop is optional:
+
+- **Passed** — `<AddressBlock form={form} path='shipping' heading='Shipping' />` — and it is checked where the block is placed: a form over another shape does not compile.
+- **Omitted** — `<AddressBlock path='shipping' heading='Shipping' />` — and the block reads the form above it, from `<Form>`, `<SchemaForm>` or `FormProvider`. That is a **cast, not a check**, exactly like [`useFormContext<V>()`](#typing-the-values): nothing verifies that the form above has the block's data.
+- **Neither** — no prop and no form above — and the block throws ``withForm(): the block needs a form — pass `form`, or render it inside <Form>, <SchemaForm> or <FormProvider>.`` on its first render, in every environment.
+
 The form options are **required, not decorative**. `defaultValues` — or another option that pins the shape — is the only place the block's data type can be inferred from. A block written as `withForm({ render })` infers `unknown`, which collapses the set of writable field names to `never`: no `name` compiles inside it, and no real form is assignable to it from outside. Always declare a block against the form data it belongs to.
 
 Extra props go through the `props` option, which is also their inference site; they are not inferred from the render function's own parameter.
 
-There is no runtime here. `withForm` hands the options straight to TanStack, which only closes over `render`.
+The `form` the render function receives is typed as the kit's own form instance — the type `useForm` returns, with the validators the block's options declare — rather than TanStack's, which describes an instance without the flat fields; that is what makes `form.TextField` compile inside a block.
 
-### Why it had to be retyped
+### A plain component is enough once
 
-TanStack types the render prop's `form` as an API parameterised by the components injected into `createFormHook`. This adapter injects **none** — the kit's primitives reach the fields by closure instead — so TanStack's own type describes an instance with no `TextField` on it, and `form.TextField` inside a block would fail to compile while working perfectly at runtime.
-
-So `withForm` is wrapped, and the single thing the wrapper changes is that declared type: it names the kit's own form instance — the type `useForm` returns, with the validators the block's options declare — rather than TanStack's component-less one. A block therefore sees exactly the instance it is handed. The reasoning is written out in full at the top of `packages/form/react/react/src/composition.ts`.
-
-That wrapping is what puts `withForm` on the kit rather than on the adapter's general surface: it is produced by `createForm({ FormElement, fields, components })` together with `useForm`, `Form` and `FormProvider` (and by `createSchemaForm`, which adds `SchemaForm`), so you import it from `@ez-kit/form-shadcn` or `@ez-kit/form-heroui` alongside them.
+If a part is only ever rendered once, it needs no helper either. A plain component that takes the form as a prop typed `FormInstance<Values>` — exported by every kit — is less machinery for the same result, and any instance `useForm` returns for those values is accepted, whatever validators it was given. The price is that the prop's type no longer knows them: through a `FormInstance`, everything typed from a validator or the submit meta is `any`, while values and field names stay fully typed. A form built from a subset names its own shape once: `FormInstance<V, typeof fields, typeof components>`.
 
 ## `withFieldGroup`
 
-`withForm` ties a block to **one form's** shape. `withFieldGroup` is the other half of the pair, for a block that should be reusable across **different** forms: it is written against the group's own shape — `Address` — and mapped onto a parent path at the call site.
+`withFieldGroup` builds a block written in **its own** coordinates — typed by its own shape, not by any form's — and placed into any form that has that shape somewhere. Its `render` receives a `group` carrying every field your bundle registered, with names relative to the block: `group.TextField name='password'`, `group.ArrayField`, your own registered fields, `group.Field` and `group.NativeField`.
 
 ```tsx
-<AddressGroup
-	form={form}
-	fields='shipping'
+import { withFieldGroup } from '@ez-kit/form-shadcn'
+
+const PasswordPair = withFieldGroup({
+	defaultValues: PASSWORD_PAIR_DEFAULTS,
+	validators: { onChange: passwordPairSchema },
+	render: ({ group }) => (
+		<>
+			<group.TextField
+				name='password'
+				type={TextInputType.Password}
+				label='Password'
+			/>
+			<group.TextField
+				name='confirm'
+				type={TextInputType.Password}
+				label='Repeat password'
+			/>
+		</>
+	),
+})
+```
+
+### Placing it
+
+Where the block lies is said by `fields`, at the place:
+
+- **A path** — `<PasswordPair fields='security' />` — puts it on a branch: `password` is `security.password`.
+- **A map** — `<PasswordPair fields={{ password: 'password', confirm: 'confirm' }} />` — names a path for each of the block's keys, so its fields can sit anywhere in the form, the root included.
+
+The form is the one above the block, as for `withForm`, or the one you pass as `form`. With `form`, `fields` is checked against it: a path to a branch of another shape, or a map naming a path whose value does not fit, does not compile. Without it, `fields` is a cast — any path, or a map that names every key of the block.
+
+### Its own rules
+
+`validators` take the TanStack slots — `onMount`, `onChange`, `onBlur`, `onSubmit`, their async variants and debounces — each either a Standard Schema over the block's own shape, one per object, or a function of `{ value }`. The schema is written in the block's coordinates whatever placement it gets:
+
+- an issue **with a path** — `confirm` — lands on the real field: `security.confirm` under a path, `confirm` under the map above;
+- an issue **without one** — a refine over the whole object — is the block's own, and reaches `render` as `group.errors`, a `string[]`.
+
+### Its own submit
+
+`group.handleSubmit()`, called inside the block, submits the block: it checks the block's fields and its `validators`, then calls the `onGroupSubmit` the block was placed with, with `value` typed by the block. It does **not** submit the form. Invalid, it focuses the block's first field with an error, as the form's `focusOnError` says.
+
+```tsx
+<SecuritySection
+	fields='security'
+	onGroupSubmit={({ value }) => api.changePassword(value)}
 />
 ```
 
-The same block then serves any form that has an `Address` somewhere in it, under whatever name.
+So a section that needs a "Save this section" button wherever it goes keeps the button inside itself, and each page decides only where the section lies and what its submit does.
 
-The trade is deliberate and is the thing to weigh when choosing between the two. A group's render prop receives a **group API**, and a group API carries `group.Field` — your own control, bound like a field, with `name` relative to the group — and `group.NativeField`, not the flat field components — because a group has no idea what the surrounding form's value type is, which is exactly the freedom you asked for. Both work as they do on the form; [Native API](/docs/form/native-api#groups-and-array-entries) covers them.
+<Callout type='warn'>
+	**Breaking:** `group.handleSubmit()` inside a `withFieldGroup` block used to submit the whole form, as TanStack's
+	field group does. It now submits the block only. To submit the form from inside a block, call
+	`group.form.handleSubmit()`.
+</Callout>
 
-`withFieldGroup` is this package's own, built on `useFieldGroup`. It comes from your kit, since `createForm` returns it, and the component it produces takes as its `form` the instance `useForm` returns — not a TanStack `FormApi`. A group cannot be another group's `form`.
+The same `PasswordPair`, placed through a map in a sign-up form whose own schema checks only `login`. A mismatch shows on `confirm`, the real path, and blocks _Sign up_ until it is fixed:
+
+<KitExample exampleId='form-composition-sign-up' />
+
+### `withFieldGroup` options
+
+| Option          | Type                                      | Notes                                                               |
+| --------------- | ----------------------------------------- | ------------------------------------------------------------------- |
+| `defaultValues` | `TGroup`                                  | The block's own shape — the inference site for its type.            |
+| `props`         | `object`                                  | The block's extra props, inferred from here. Required at the place. |
+| `validators`    | `GroupValidators<TGroup>`                 | The block's own rules, in its coordinates.                          |
+| `render`        | `(props: { group } & props) => ReactNode` | The block's body.                                                   |
+
+### Placing a block
+
+| Prop            | Type                                       | Notes                                                                      |
+| --------------- | ------------------------------------------ | -------------------------------------------------------------------------- |
+| `form`          | `FormInstance<TFormData>`                  | Optional. Passed, `fields` is checked against it; omitted, the form above. |
+| `fields`        | path, or `{ [key in keyof TGroup]: path }` | Where the block lies: a branch, or a path per key.                         |
+| `onGroupSubmit` | `({ value, meta }) => unknown`             | Called when `group.handleSubmit()` finds the block valid.                  |
+
+## `form.FormGroup`
+
+`form.FormGroup` is a branch **inside** one form with its own check and its own submit — the right tool when a section needs a "Save" on one page only, or a rule that belongs to this form rather than to a reusable block.
+
+```tsx
+<form.FormGroup
+	name='payment'
+	validators={{ onChange: cardSchema }}
+	onGroupSubmit={({ value }) => api.savePayment(value)}
+>
+	{(group) => (
+		<>
+			<group.TextField
+				name='card'
+				label='Card'
+			/>
+			<group.TextField
+				name='cvc'
+				label='CVC'
+			/>
+		</>
+	)}
+</form.FormGroup>
+```
+
+Its `group` carries the bundle's flat fields, named relative to `name`: `group.TextField name='card'` writes `payment.card`. That is what puts the group's schema and its fields in one set of coordinates — TanStack hands the group's validators `values[name]`, so the schema's keys are relative too.
+
+`group.handleSubmit()` is a group submit: it checks the branch's fields, the blocks mounted inside it and the group's own `validators`, then calls `onGroupSubmit`; the form's `onSubmit` is not called. `group.errors` holds the group's own messages — those its validators report with no path — as strings; `group.state.meta.errors` is TanStack's raw value and can hold a record of every issue by path, which is not fit to display.
+
+The profile below wraps the sign-up's `PasswordPair` in a `form.FormGroup name='security'` with no validators of its own: the rule comes from the block. _Change password_ checks and sends only `security`; _Save profile_ sends everything, and runs the block too:
+
+<KitExample exampleId='form-composition' />
+
+## Coordinates come from the object, not the tree
+
+A field's path is read from the object you called it through — never from what sits above it in the tree:
+
+- `form.X` is **absolute**, inside a group too — and so are the schemas beside it: the form's, and a step's.
+- `group.X` is **relative** to the group's branch, `form.FormGroup` and `withFieldGroup` alike — and so is the group's schema.
+
+There is no implicit prefix. `form.TextField` is created once per form and cannot know what will render above it; if it took a prefix from its ancestors, its `name` could only be typed `string`, and moving a component would silently change where its data is written.
+
+So `form.TextField name='payment.card'` inside `form.FormGroup name='payment'` works — it writes `payment.card` — but do not write it: the field and the group's schema then name the same value in two coordinates. Inside a group, write `group.TextField name='card'`.
+
+## Where a rule goes
+
+- **The block owns it** — a card number's format, two passwords that must match — and it goes in the block's `validators`, so it travels with the block to every form.
+- **It depends on the place** — billing is required only when it differs from shipping — and it goes on a `form.FormGroup` or in the form's schema, at that place.
+- **The form's schema on `onSubmit`** is the last barrier.
+
+A whole-form submit runs every mounted group's validators too: a block that fails, even untouched, blocks the form's `onSubmit` — which is why _Save profile_ above stops on the password pair. The same rule on two levels is fine on different triggers — the group's on `onChange` or `onBlur`, the form's on `onSubmit` — and when both report it, the field shows the message once.
+
+## Server errors and group submits
+
+A group submit — `group.handleSubmit()` on a `form.FormGroup`, a `withFieldGroup` block or `useFormGroup` — clears the [server errors](/docs/form/submission#server-errors) of the fields inside the group, and only those: form-level messages and other fields' errors stay, because the group submit does not send the form. Invalid, it focuses the group's first field with an error.
 
 ## The two hooks
 
-`useFieldGroup` is the hook behind `withFieldGroup`: it takes the parent form and a `fields` mapping and returns the same group, with `Field` and `NativeField`, for when you want a group inside a component you are already writing rather than a standalone block. `useFormGroup` scopes a subtree of one form — a named branch with validators of its own — and returns the same group for that branch, with `Field` and `NativeField` relative to it. `form.FormGroup` is `useFormGroup` over this form, rendering `children(group)`.
+`useFieldGroup` is the hook behind `withFieldGroup`: it takes the parent form and a `fields` path or map and returns the field group, for when you want a group inside a component you are already writing rather than a standalone block. `useFormGroup` is the hook behind `form.FormGroup`: it scopes a named branch of one form, with validators of its own. Neither carries the flat fields — inside, fields are written with `group.Field` (your own control, bound, `name` relative to the group) or `group.NativeField`, as [Native API](/docs/form/native-api#groups-and-array-entries) describes.
 
-Both hooks are this package's own, wrapping TanStack's: they take the instance `useForm` returns as their `form`, not a TanStack `FormApi`, and a group cannot be another group's `form`. `@ez-kit/form-react` exports them, and each kit re-exports them. Import them from your kit like everything else:
+Both hooks are this package's own, wrapping TanStack's: they take the instance `useForm` returns as their `form`, not a TanStack `FormApi`, and a group cannot be another group's `form`. `@ez-kit/form-react` exports them, and each kit re-exports them:
 
 ```ts
 import { useFieldGroup, useFormGroup } from '@ez-kit/form-shadcn'
 ```
 
-`useFieldGroup` takes `form`, `fields` and an optional `defaultValues`. `useFormGroup` takes `form` plus TanStack's form-group options — `name`, `validators` and the rest — and the [TanStack Form documentation](https://tanstack.com/form/latest/docs/framework/react/quick-start) is the reference for those.
+`useFieldGroup` takes `form`, `fields` and an optional `defaultValues`. `useFormGroup` takes `form` plus TanStack's form-group options — `name`, `validators`, `onGroupSubmit` and the rest — and the [TanStack Form documentation](https://tanstack.com/form/latest/docs/framework/react/quick-start) is the reference for those. Its group also has `errors`, and its `handleSubmit` is the group submit described above.
 
 ## Components that know about the form
 
@@ -182,11 +283,12 @@ A component that reads the form from context — `form.SubmitButton`, `form.Erro
 
 ## Choosing
 
-Reuse a block within **one form's** shape — an address at two paths, a step in a wizard over the same data — and `withForm` is the one to reach for, because it keeps the flat fields.
+Each helper has one role:
 
-Reuse a block across **different forms** and `withFieldGroup` is the only one that can, at the cost of the flat fields: inside it you write `group.Field` or `group.NativeField`.
-
-And if the block is only ever rendered once, it does not need either: a plain component taking `form: FormInstance<Values>`, as the example's `AddressBlock` does, is less machinery for the same result.
+- **`withFieldGroup`** reuses a set of fields across forms, with its rules and, when it needs one, its submit.
+- **`withForm`** cuts one form into files, and each part sees the whole form — a later part can read what an earlier one wrote.
+- **`form.FormGroup`** is the validation and submit boundary of a branch inside one form.
+- **`form.Step`**, coming next, will say what is on screen and what to check before _Next_.
 
 <Callout>
 	A `FormSchema` has an analogue in nested `section` and `step` nodes, but it is not the same mechanism. Those group

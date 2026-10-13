@@ -1,115 +1,120 @@
 'use client'
 
 import { useState } from 'react'
+import { z } from 'zod'
 
-import { Form, useForm } from 'shared/form/FormKit'
+import { Button } from 'shared/form/Button'
+import { Form, TextInputType, withFieldGroup, withForm } from 'shared/form/FormKit'
 
-import type { FormInstance } from 'shared/form/FormKit'
+type PasswordPairValues = { password: string; confirm: string }
 
-type Address = {
-	street: string
-	city: string
-	postcode: string
-}
+type Profile = { displayName: string; security: PasswordPairValues }
 
-type Checkout = {
-	email: string
-	billing: Address
-	shipping: Address
-}
+type SignUp = { login: string; password: string; confirm: string }
 
-const EMPTY_ADDRESS: Address = { street: '', city: '', postcode: '' }
+type Sent = { to: string; value: unknown }
 
-const DEFAULT_CHECKOUT: Checkout = { email: '', billing: EMPTY_ADDRESS, shipping: EMPTY_ADDRESS }
+const MIN_PASSWORD = 8
 
-/**
- * One block of fields, written once and rendered twice.
- *
- * The `form` prop is what makes it work: `FormInstance<Checkout>` names a form over this value
- * type, so `form.TextField` inside the block is the same component, checked against the same
- * value type, as at the top level — `name='shipping.city'` is a compile error the moment
- * `shipping` loses its `city`. Any instance `useForm` returns for `Checkout` is accepted,
- * whatever validators it was given.
- *
- * A kit ships this pattern as `withForm`, which infers the type for you:
- *
- * ```tsx
- * const AddressBlock = withForm({
- *   defaultValues: DEFAULT_CHECKOUT,
- *   props: { path: 'billing' as AddressPath, heading: '' },
- *   render: ({ form, path, heading }) => …,
- * })
- * ```
- *
- * The form options are required there, not decorative: `defaultValues` is the only place the
- * block's data type can be inferred from, and a block written as `withForm({ render })`
- * infers `unknown` — which leaves no writable field name inside it and nothing assignable to
- * it from outside. `withForm` is created per kit by `createForm`, so it is imported from your
- * kit alongside `useForm`; this example declares the prop by hand because it is rendered
- * under two kits at once.
- *
- * `withFieldGroup` is the other half of the pair, for a block that should be reusable across
- * *different* forms: it is written against the group's own shape (`Address`) and mapped onto
- * a parent path at the call site (`<AddressGroup form={form} fields='shipping' />`). The
- * trade is deliberate — a group API carries `group.Field`, which binds a control of your own,
- * and `group.NativeField`, not the flat field components, because a group has no idea what the
- * surrounding form's value type is.
- */
-type AddressPath = 'billing' | 'shipping'
+const MIN_LOGIN = 3
 
-function AddressBlock({ form, path, heading }: { form: FormInstance<Checkout>; path: AddressPath; heading: string }) {
+const passwordPairSchema = z
+	.object({ password: z.string().min(MIN_PASSWORD), confirm: z.string() })
+	.refine((pair) => pair.password === pair.confirm, { path: ['confirm'], message: 'Passwords do not match' })
+
+const PASSWORD_PAIR_DEFAULTS: PasswordPairValues = { password: '', confirm: '' }
+
+const PasswordPair = withFieldGroup({
+	defaultValues: PASSWORD_PAIR_DEFAULTS,
+	validators: { onChange: passwordPairSchema },
+	render: ({ group }) => (
+		<>
+			<group.TextField
+				name='password'
+				type={TextInputType.Password}
+				label='Password'
+			/>
+			<group.TextField
+				name='confirm'
+				type={TextInputType.Password}
+				label='Repeat password'
+			/>
+		</>
+	),
+})
+
+const PROFILE_DEFAULTS: Profile = { displayName: 'Ann', security: PASSWORD_PAIR_DEFAULTS }
+
+export function CompositionExample() {
+	const [sent, setSent] = useState<Sent | null>(null)
+
 	return (
-		<fieldset className='flex flex-col gap-4 rounded-md border border-black/10 p-4 dark:border-white/15'>
-			<legend className='px-1 text-sm font-medium'>{heading}</legend>
-			<form.TextField
-				name={`${path}.street`}
-				label='Street'
-			/>
-			<form.TextField
-				name={`${path}.city`}
-				label='City'
-			/>
-			<form.TextField
-				name={`${path}.postcode`}
-				label='Postcode'
-			/>
-		</fieldset>
+		<Form
+			defaultValues={PROFILE_DEFAULTS}
+			onSubmit={({ value }) => {
+				setSent({ to: 'saveProfile', value })
+			}}
+		>
+			{(form) => (
+				<>
+					<form.TextField
+						name='displayName'
+						label='Display name'
+					/>
+					<form.FormGroup
+						name='security'
+						onGroupSubmit={({ value }) => {
+							setSent({ to: 'changePassword', value })
+						}}
+					>
+						{(group) => (
+							<form.Section title='Password'>
+								<PasswordPair fields='security' />
+								<Button onClick={() => void group.handleSubmit()}>Change password</Button>
+							</form.Section>
+						)}
+					</form.FormGroup>
+					<form.SubmitButton>Save profile</form.SubmitButton>
+					<pre>{JSON.stringify(sent, null, 2)}</pre>
+				</>
+			)}
+		</Form>
 	)
 }
 
-export function CompositionExample() {
-	const [saved, setSaved] = useState<Checkout | null>(null)
-	const form = useForm({
-		defaultValues: DEFAULT_CHECKOUT,
-		onSubmit: ({ value }) => {
-			setSaved(value)
-		},
-	})
+const SIGN_UP_DEFAULTS: SignUp = { login: '', password: '', confirm: '' }
+
+const signUpSchema = z.object({ login: z.string().min(MIN_LOGIN), password: z.string(), confirm: z.string() })
+
+const LoginPart = withForm({
+	defaultValues: SIGN_UP_DEFAULTS,
+	render: ({ form }) => (
+		<form.TextField
+			name='login'
+			label='Login'
+		/>
+	),
+})
+
+export function CompositionSignUpExample() {
+	const [sent, setSent] = useState<Sent | null>(null)
 
 	return (
-		<div className='flex flex-col gap-4'>
-			<Form form={form}>
-				<form.TextField
-					name='email'
-					label='Email'
-					placeholder='you@example.com'
-				/>
-				<AddressBlock
-					form={form}
-					path='billing'
-					heading='Billing address'
-				/>
-				<AddressBlock
-					form={form}
-					path='shipping'
-					heading='Shipping address'
-				/>
-				<form.SubmitButton>Place order</form.SubmitButton>
-			</Form>
-
-			{saved ? (
-				<pre className='rounded-md bg-black/5 p-3 text-xs dark:bg-white/10'>{JSON.stringify(saved, null, 2)}</pre>
-			) : null}
-		</div>
+		<Form
+			defaultValues={SIGN_UP_DEFAULTS}
+			validators={{ onSubmit: signUpSchema }}
+			onSubmit={({ value }) => {
+				setSent({ to: 'signUp', value })
+			}}
+		>
+			{(form) => (
+				<>
+					<LoginPart />
+					<PasswordPair fields={{ password: 'password', confirm: 'confirm' }} />
+					<form.SubmitButton>Sign up</form.SubmitButton>
+					<pre>{JSON.stringify(sent, null, 2)}</pre>
+				</>
+			)}
+		</Form>
 	)
 }

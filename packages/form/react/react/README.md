@@ -83,9 +83,9 @@ to the paths in your form data whose value type fits the field, so
 
 ## Composition
 
-`withForm` extracts part of a form into its own component. It is TanStack's helper, retyped
-so the flat fields compile inside the block — the `form` a block receives is exactly the
-instance `useForm` returns.
+`withForm` extracts part of a form into its own component. The `form` it receives is the
+instance `useForm` returns, so the flat fields compile inside the block; omit the prop and it
+reads the form above it.
 
 ```tsx
 const AddressBlock = withForm({
@@ -110,10 +110,16 @@ shape) is the only inference site for the block's form data: `withForm({ render 
 as `unknown`, which collapses the legal field names to `never` — nothing is writable inside
 such a block, and no real form is assignable to it from outside.
 
-`withFieldGroup`, `useFieldGroup` and `useFormGroup` are this package's own: they take the
-instance `useForm` returns, not a TanStack `FormApi`, and yield a **group** API, which carries
-no flat field components — inside a group, fields are written with `group.Field` (your own
-control, bound, `name` relative to the group) or `group.NativeField` (TanStack's field).
+`withFieldGroup` builds a block typed by its own shape and placed into any form through
+`fields` — a path (`fields='security'`) or a map of its keys to paths. Its `group` carries the
+bundle's flat fields, named relative to the block (`group.TextField name='password'`), and it
+takes `validators` in the block's coordinates. `group.handleSubmit()` submits the block alone
+and calls the `onGroupSubmit` it was placed with; it does not submit the form. `form.FormGroup`
+does the same for a named branch of one form.
+
+`useFieldGroup` and `useFormGroup` are the hooks behind them: they take the instance `useForm`
+returns, not a TanStack `FormApi`, and their group carries `group.Field` (your own control,
+bound, `name` relative to the group) and `group.NativeField` (TanStack's field).
 
 ## Config-driven forms
 

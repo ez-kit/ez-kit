@@ -29,3 +29,8 @@ Submission documents focus on the first error and server errors (`serverErrors`,
 
 Submission no longer warns that `formApi.reset()` keeps server errors: every submit and reset
 clears them.
+
+Composition is rewritten around the three helpers' roles: `withForm` (a part of one form, form from
+context), `withFieldGroup` (a block with its own fields, rules and submit, placed by path or map) and
+`form.FormGroup` (a branch with its own check and submit), with live examples of a profile form and a
+sign-up form, the coordinates rule and where to put a rule.

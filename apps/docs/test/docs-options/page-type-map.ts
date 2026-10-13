@@ -384,6 +384,18 @@ export const FORM_TYPE = {
 	AnyArrayNode: { module: TypeModule.FormCore, name: 'AnyArrayNode' },
 	/** The instance `useForm` returns: TanStack's own API plus the flat field components. */
 	FormInstance: { module: TypeModule.FormReact, name: 'FormInstance', typeArgs: FORM_INSTANCE_TYPE_ARGS },
+	/** `withFieldGroup`'s options: `defaultValues`, `props`, `validators`, `render`. */
+	WithFieldGroupOptions: { module: TypeModule.FormReact, name: 'WithFieldGroupOptions', typeArgs: ROW_TYPE_ARGS },
+	/**
+	 * Where a block is placed — the checked overload: `form`, `fields`, `onGroupSubmit`. Its
+	 * `<TFormData, TGroup>` takes the probe row and a scalar group: the group type only narrows
+	 * `fields`, never the key set.
+	 */
+	FieldGroupPlacementProps: {
+		module: TypeModule.FormReact,
+		name: 'FieldGroupPlacementProps',
+		typeArgs: FORM_VALUE_TYPE_ARGS,
+	},
 } as const satisfies Record<string, TypeRef>
 
 /**
@@ -1314,7 +1326,16 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 
 	{ page: DocPage.FormBasicConcepts, optionTables: [], nonOptionTables: [] },
-	{ page: DocPage.FormComposition, optionTables: [], nonOptionTables: [] },
+	{
+		page: DocPage.FormComposition,
+		optionTables: [
+			{ heading: '`withFieldGroup` options', roots: [FORM_TYPE.WithFieldGroupOptions], expectedCount: 4 },
+			{ heading: 'Placing a block', roots: [FORM_TYPE.FieldGroupPlacementProps], expectedCount: 3 },
+		],
+		nonOptionTables: [
+			{ heading: NO_HEADING, reason: 'Maps a need to the helper that serves it — helper names, not keys.' },
+		],
+	},
 	{ page: DocPage.FormExamples, optionTables: [], nonOptionTables: [] },
 	{
 		// The narrative half of the split: prose and live examples, every table moved to
