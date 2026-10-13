@@ -18,6 +18,7 @@ import {
 import type { FormComponentRegistry, NoRegistry } from './contract'
 import type { CreateFormOptions } from './create-form'
 import type { FormFieldRegistry } from './field-registry'
+import type { FormBehaviourOptions } from './form-behaviour'
 import type { CustomFieldRegistry } from './schema/registries'
 import type {
 	AnySchemaFormProps,
@@ -147,7 +148,8 @@ export function createSchemaForm<
 			TOnDynamicAsync,
 			TOnServer,
 			TSubmitMeta
-		>)
+		> &
+			FormBehaviourOptions<TFormData>)
 
 		return (
 			<FormShell

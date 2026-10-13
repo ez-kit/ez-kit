@@ -1,15 +1,24 @@
+import { FormFieldType } from '@ez-kit/form-core'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { describe, expect, expectTypeOf, it, vi } from 'vitest'
 
 import { createForm } from './create-form'
+import { createSchemaForm } from './create-schema-form'
 import { testComponents, testFields, testFormElement } from './test-kit'
 
 import type { ServerErrors } from './server-errors'
+import type { FormSchema } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
 
 const { Form, useForm } = createForm({
+	FormElement: testFormElement,
+	fields: testFields,
+	components: testComponents,
+})
+
+const { SchemaForm } = createSchemaForm({
 	FormElement: testFormElement,
 	fields: testFields,
 	components: testComponents,
@@ -234,5 +243,170 @@ describe('ServerErrors types', () => {
 		// @ts-expect-error -- not a path
 		const wrong: ServerErrors<Values> = { fields: { nope: 'x' } }
 		expect(wrong).toBeDefined()
+	})
+})
+
+type EmailValues = { email: string }
+
+const EMAIL_DEFAULTS: EmailValues = { email: '' }
+const EMAIL_TAKEN: ServerErrors<EmailValues> = { fields: { email: 'Taken' } }
+
+type DeclarativeProps = {
+	initial?: ServerErrors<EmailValues> | undefined
+	onSubmit?: (() => void) | undefined
+	onSet?: (set: (errors: ServerErrors<EmailValues> | undefined) => void) => void
+}
+
+/** An uncontrolled `<Form>` whose `serverErrors` live in its parent's state. */
+function Declarative({ initial, onSubmit, onSet }: DeclarativeProps): ReactNode {
+	const [errors, setErrors] = useState(initial)
+	useEffect(() => {
+		onSet?.(setErrors)
+	}, [onSet])
+
+	return (
+		<Form
+			defaultValues={EMAIL_DEFAULTS}
+			serverErrors={errors}
+			onSubmit={() => onSubmit?.()}
+		>
+			{(form) => (
+				<>
+					<form.TextField
+						name='email'
+						label='Email'
+					/>
+					<form.SubmitButton>Save</form.SubmitButton>
+					<form.Submit>
+						{({ formErrors, canSubmit }) => (
+							<>
+								<output data-testid='form-errors'>{formErrors.join('|')}</output>
+								<output data-testid='can-submit'>{String(canSubmit)}</output>
+							</>
+						)}
+					</form.Submit>
+				</>
+			)}
+		</Form>
+	)
+}
+
+function renderDeclarative(props: Omit<DeclarativeProps, 'onSet'> = {}) {
+	let setErrors: ((errors: ServerErrors<EmailValues> | undefined) => void) | undefined
+	const onSet = (set: typeof setErrors): void => {
+		setErrors = set
+	}
+	render(
+		<Declarative
+			{...props}
+			onSet={onSet}
+		/>,
+	)
+	return (errors: ServerErrors<EmailValues> | undefined): void => {
+		act(() => {
+			setErrors?.(errors)
+		})
+	}
+}
+
+describe('the serverErrors option', () => {
+	it('applies the errors whenever their reference changes, and only then', async () => {
+		const user = userEvent.setup()
+		const setErrors = renderDeclarative()
+		expect(screen.queryByText('Taken')).not.toBeInTheDocument()
+
+		setErrors(EMAIL_TAKEN)
+		expect(screen.getByText('Taken')).toBeInTheDocument()
+		expect(document.activeElement).toBe(screen.getByLabelText('Email'))
+
+		await user.type(screen.getByLabelText('Email'), 'a')
+		expect(screen.queryByText('Taken')).not.toBeInTheDocument()
+		setErrors(EMAIL_TAKEN)
+		expect(screen.queryByText('Taken')).not.toBeInTheDocument()
+
+		setErrors({ fields: { email: 'Taken' } })
+		expect(screen.getByText('Taken')).toBeInTheDocument()
+	})
+
+	it('applies the errors it mounts with and focuses the field', () => {
+		renderDeclarative({ initial: EMAIL_TAKEN })
+
+		expect(screen.getByText('Taken')).toBeInTheDocument()
+		expect(document.activeElement).toBe(screen.getByLabelText('Email'))
+	})
+
+	it('reaches an uncontrolled SchemaForm', () => {
+		const schema: FormSchema<EmailValues> = {
+			version: 1,
+			children: [{ type: FormFieldType.Text, name: 'email', label: 'Email' }],
+		}
+
+		render(
+			<SchemaForm
+				schema={schema}
+				defaultValues={EMAIL_DEFAULTS}
+				serverErrors={EMAIL_TAKEN}
+			/>,
+		)
+
+		expect(screen.getByText('Taken')).toBeInTheDocument()
+	})
+
+	it('never reaches the <form> element', () => {
+		renderDeclarative({ initial: EMAIL_TAKEN })
+
+		expect(formElement().hasAttribute('serverErrors')).toBe(false)
+		expect(formElement().hasAttribute('servererrors')).toBe(false)
+	})
+
+	it('hands form-level messages to form.Submit without blocking submitting, and a submit clears them', async () => {
+		const user = userEvent.setup()
+		const seen = vi.fn<(text: string) => void>()
+		renderDeclarative({
+			initial: { form: 'Service unavailable' },
+			onSubmit: () => {
+				seen(screen.getByTestId('form-errors').textContent)
+			},
+		})
+
+		expect(screen.getByTestId('form-errors')).toHaveTextContent('Service unavailable')
+		expect(screen.getByTestId('can-submit')).toHaveTextContent('true')
+		expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled()
+
+		await user.click(screen.getByRole('button', { name: 'Save' }))
+
+		await waitFor(() => {
+			expect(seen).toHaveBeenCalledTimes(1)
+		})
+		expect(seen).toHaveBeenCalledWith('')
+		expect(screen.getByTestId('form-errors')).toHaveTextContent('')
+	})
+})
+
+describe('serverErrors types', () => {
+	it('is a useForm option typed by the form data', () => {
+		function Probe(): ReactNode {
+			useForm({ defaultValues: { a: '' }, serverErrors: { fields: { a: 'x' } } })
+			// @ts-expect-error -- not a path
+			useForm({ defaultValues: { a: '' }, serverErrors: { fields: { b: 'x' } } })
+			return null
+		}
+		expect(Probe).toBeTypeOf('function')
+	})
+
+	it('is not a prop of the controlled <Form>', () => {
+		function Probe(): ReactNode {
+			const form = useForm({ defaultValues: { a: '' } })
+			return (
+				<Form
+					form={form}
+					// @ts-expect-error -- serverErrors is a useForm option
+					serverErrors={{ form: 'x' }}
+				>
+					{null}
+				</Form>
+			)
+		}
+		expect(Probe).toBeTypeOf('function')
 	})
 })

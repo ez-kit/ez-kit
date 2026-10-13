@@ -413,7 +413,12 @@ export type SubmitRenderProps = {
 	 * `form.state.isDefaultValue`.
 	 */
 	isDirty: boolean
-	/** The form-level errors as display strings; field-level issues are not among them. */
+	/**
+	 * The form-level errors as display strings: the form validators' errors, then the messages a
+	 * server reported for the form as a whole (`serverErrors.form`), de-duplicated. Field-level
+	 * issues are not among them. The server's messages do not affect `canSubmit`; the next submit
+	 * clears them.
+	 */
 	formErrors: string[]
 	/** `form.handleSubmit`, so a control built on it works outside a `<form>` element too. */
 	submit: () => Promise<void>

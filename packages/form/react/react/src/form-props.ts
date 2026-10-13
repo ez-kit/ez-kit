@@ -73,7 +73,7 @@ export type FormUncontrolledProps<
 		TOnServer,
 		TSubmitMeta
 	> &
-	FormBehaviourOptions & {
+	FormBehaviourOptions<TFormData> & {
 		/** Mutually exclusive with the inline options — never pass both. */
 		form?: never
 		children: (

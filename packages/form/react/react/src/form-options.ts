@@ -1,5 +1,6 @@
 import { BEHAVIOUR_OPTION_KEYS } from './form-behaviour'
 
+import type { FormBehaviourOptions } from './form-behaviour'
 import type { AnyFormOptions } from '@ez-kit/form-core'
 
 /**
@@ -29,8 +30,20 @@ const FORM_OPTION_KEYS: Record<keyof AnyFormOptions, true> = {
 	validators: true,
 }
 
+/**
+ * The package's own option keys, provided none of them is also a TanStack option — `useForm`
+ * strips them before TanStack sees the rest, so a shared name would silently take TanStack's
+ * option away. A clash turns this into a key the object below does not have: a compile error.
+ */
+type BehaviourOptionKey = [keyof FormBehaviourOptions<unknown> & keyof AnyFormOptions] extends [never]
+	? keyof FormBehaviourOptions<unknown>
+	: 'Error: a behaviour option shares its name with a TanStack form option'
+
 /** The keys `useForm` takes: TanStack's and the package's own. */
-const USE_FORM_OPTION_KEYS: Record<string, true> = { ...FORM_OPTION_KEYS, ...BEHAVIOUR_OPTION_KEYS }
+const USE_FORM_OPTION_KEYS: Record<keyof AnyFormOptions | BehaviourOptionKey, true> = {
+	...FORM_OPTION_KEYS,
+	...BEHAVIOUR_OPTION_KEYS,
+}
 
 type SplitProps = {
 	/** What `useForm` receives. */

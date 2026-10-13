@@ -9,6 +9,8 @@ import type { SubmitRenderProps } from './index'
 
 const { Form } = createForm({ FormElement: testFormElement, fields: testFields, components: testComponents })
 
+const SERVER_FORM_ERRORS = { form: ['Same', 'Other'] }
+
 describe('form.Submit', () => {
 	it('hands over the submit state', () => {
 		render(
@@ -104,6 +106,32 @@ describe('form.Submit', () => {
 		await userEvent.click(screen.getByText('go'))
 		await waitFor(() => {
 			expect(screen.getByTestId('errors').textContent).toBe('["Nothing to save"]')
+		})
+	})
+
+	it('puts the server form messages after the form validator errors, de-duplicated', async () => {
+		render(
+			<Form
+				defaultValues={{ name: '' }}
+				validators={{ onChange: () => 'Same' }}
+				serverErrors={SERVER_FORM_ERRORS}
+			>
+				{(form) => (
+					<>
+						<form.TextField
+							name='name'
+							label='Name'
+						/>
+						<form.Submit>
+							{({ formErrors }) => <output data-testid='errors'>{JSON.stringify(formErrors)}</output>}
+						</form.Submit>
+					</>
+				)}
+			</Form>,
+		)
+		await userEvent.type(screen.getByLabelText('Name'), 'x')
+		await waitFor(() => {
+			expect(screen.getByTestId('errors').textContent).toBe('["Same","Other"]')
 		})
 	})
 

@@ -151,7 +151,7 @@ export type SchemaFormUncontrolledProps<
 		TOnServer,
 		TSubmitMeta
 	> &
-	FormBehaviourOptions &
+	FormBehaviourOptions<TValues> &
 	SharedSchemaFormProps<TValues> & {
 		/** Mutually exclusive with the inline options — never pass both. */
 		form?: never

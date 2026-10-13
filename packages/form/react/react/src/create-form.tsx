@@ -259,7 +259,7 @@ export function createFormInternals<TFields extends FormFieldRegistry, TComponen
 			TOnServer,
 			TSubmitMeta
 		> &
-			FormBehaviourOptions,
+			FormBehaviourOptions<TFormData>,
 	): KitFormApi<
 		TFormData,
 		TOnMount,
@@ -276,7 +276,7 @@ export function createFormInternals<TFields extends FormFieldRegistry, TComponen
 		TFields,
 		TComponents
 	> {
-		const { focusOnError = true, ...tanstackOptions } = formOptions
+		const { focusOnError = true, serverErrors: appliedServerErrors, ...tanstackOptions } = formOptions
 		const form = useAppForm({
 			...tanstackOptions,
 			// Runs inside `handleSubmit`, long after `form` is assigned. `formApi.update` re-syncs the
@@ -303,6 +303,9 @@ export function createFormInternals<TFields extends FormFieldRegistry, TComponen
 			},
 			[serverErrors, form],
 		)
+		useEffect(() => {
+			if (appliedServerErrors !== undefined) setServerErrors(appliedServerErrors)
+		}, [appliedServerErrors, setServerErrors])
 
 		// TanStack's `Field`, captured before the assign below replaces the instance's `AppField`
 		// with the binding seam — see `nativeFieldOf`.
@@ -412,7 +415,8 @@ export function createFormInternals<TFields extends FormFieldRegistry, TComponen
 				TOnDynamicAsync,
 				TOnServer,
 				TSubmitMeta
-			>,
+			> &
+				FormBehaviourOptions<TFormData>,
 		)
 
 		return (
