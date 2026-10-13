@@ -430,6 +430,17 @@ describe('@ez-kit/form-react config-layer helpers', () => {
 		expect(code).not.toContain(FOCUS_WALK_MARKER)
 		expect(code).not.toContain(OPTION_SPLIT_MARKER)
 	})
+
+	/** A literal only the map-group controller contains. */
+	const MAP_GROUP_MARKER = 'onGroup:'
+
+	it('reach the map-group controller through createForm (control)', async () => {
+		expect(await bundledCodeOf(FORM_REACT_ENTRY, ['createForm'])).toContain(MAP_GROUP_MARKER)
+	})
+
+	it('do not carry the map-group controller on their own', async () => {
+		expect(await bundledCodeOf(FORM_REACT_ENTRY, FORM_HELPERS)).not.toContain(MAP_GROUP_MARKER)
+	})
 })
 
 /** A literal only the remote search defaults contain. */

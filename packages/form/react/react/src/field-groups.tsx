@@ -1,19 +1,22 @@
 'use client'
 
-import { useFieldGroup as useTanStackFieldGroup } from '@tanstack/react-form'
-import { useMemo } from 'react'
+import { useFieldGroup as useTanStackFieldGroup, useSelector } from '@tanstack/react-form'
+import { useEffect, useId, useMemo } from 'react'
 
 import { createField } from './fields/field'
 import { missingFormMessage, useOptionalFormContext } from './form-context'
 import { useFormGroup } from './form-group'
 import { scopeGroupMembers, withMembers } from './group-fields'
+import { createMapGroup } from './map-group'
+import { formatOwnErrors } from './own-errors'
 
 import type { BindableForm } from './bindable-form'
 import type { NoRegistry } from './contract'
 import type { FormFieldRegistry } from './field-registry'
 import type { AnyFormInstance } from './form-context'
 import type { FormInstance } from './form-instance'
-import type { FieldGroupBlock, FieldGroupInstance, WithFieldGroupOptions } from './group-types'
+import type { FieldGroupBlock, FieldGroupInstance, OnGroupSubmit, WithFieldGroupOptions } from './group-types'
+import type { MapGroupHost } from './map-group'
 import type { DeepKeysOfType, FieldsMap } from '@tanstack/form-core'
 import type { ReactNode } from 'react'
 
@@ -152,7 +155,45 @@ function BranchBlock(props: BlockProps): ReactNode {
 	return props.options.render({ ...props.options.props, ...props.placement, group } as never)
 }
 
+/** The form's store, and the slice of its state a map block reads its own errors from. */
+type ErrorMapStore = Parameters<typeof useSelector>[0]
+type ErrorMapState = { errorMap: Record<string, unknown> }
+
+/**
+ * A block over a field map: TanStack's field group has no validators and no submit, so the block's
+ * are this package's map-group controller (R67). Its own errors live in the form's `errorMap` under
+ * the controller's key, read here as `group.errors`.
+ */
 function MappedBlock(props: BlockProps): ReactNode {
-	const group = useBlockScope(props)
+	const scope = useBlockScope(props)
+	const id = useId()
+	const lens = scope as unknown as { getFormFieldName: (relative: string) => string }
+	const controller = useMemo(
+		() =>
+			createMapGroup({
+				form: props.form as unknown as MapGroupHost,
+				map: props.placement.fields as Record<string, string>,
+				validators: props.options.validators,
+				id,
+				toAbsolute: (relative) => lens.getFormFieldName(relative),
+			}),
+		// `fields` is read on the first render only, as TanStack's group reads it.
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- see above
+		[props.form, id],
+	)
+	useEffect(() => controller.connect(), [controller])
+	const own = useSelector(
+		(props.form as unknown as { store: ErrorMapStore }).store,
+		(state) => (state as ErrorMapState).errorMap[controller.errorKey],
+	)
+	const onGroupSubmit = props.placement.onGroupSubmit as OnGroupSubmit<unknown, unknown> | undefined
+	const group = useMemo(
+		() =>
+			Object.assign(Object.create(scope) as object, {
+				errors: formatOwnErrors([own]),
+				handleSubmit: (meta?: unknown) => controller.submit(meta, onGroupSubmit),
+			}),
+		[scope, own, controller, onGroupSubmit],
+	)
 	return props.options.render({ ...props.options.props, ...props.placement, group } as never)
 }

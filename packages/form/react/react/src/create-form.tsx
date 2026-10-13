@@ -15,6 +15,7 @@ import { splitFormProps } from './form-options'
 import { FormShell } from './form-shell'
 import { validateGroups } from './group-registry'
 import { NO_INJECTED_COMPONENTS } from './kit-form'
+import { emitFieldBlur } from './map-group'
 import { assertNoReservedKeys, assertNoSharedKeys, FormFactoryName } from './reserved-keys'
 import { attachServerErrors, serverErrorsOf } from './server-errors'
 
@@ -298,6 +299,12 @@ export function createFormInternals<TFields extends FormFieldRegistry, TComponen
 				onMount: (props) => {
 					hookCore(props.formApi, coreHooksFor(form))
 					tanstackOptions.listeners?.onMount?.(props)
+				},
+				// A map group listens for the blurs of its fields here (R67): TanStack runs this after the
+				// field's own blur pass, on every blur.
+				onBlur: (props) => {
+					emitFieldBlur(form, props.fieldApi.name as string)
+					tanstackOptions.listeners?.onBlur?.(props)
 				},
 			},
 		})

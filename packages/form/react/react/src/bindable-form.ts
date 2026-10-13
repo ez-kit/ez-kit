@@ -100,6 +100,6 @@ export type SubmitState = {
 	canSubmit: boolean
 	isSubmitting: boolean
 	isDirty: boolean
-	/** TanStack's form-level errors, raw; `form.Submit` normalises them. */
-	errors: readonly unknown[]
+	/** TanStack's form-level errors by slot, raw; `form.Submit` normalises them. */
+	errorMap: Record<string, unknown>
 }

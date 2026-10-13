@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 
+import { GROUP_ERROR_KEY_PREFIX } from '../map-group'
 import { formatOwnErrors } from '../own-errors'
 import { serverErrorsOf } from '../server-errors'
 
@@ -9,16 +10,23 @@ import type { ServerErrorsController } from '../server-errors'
 import type { ReactNode } from 'react'
 
 /**
- * Selects the raw slice and nothing derived: `errors` keeps its store identity, so the
- * subscription's shallow comparison does not see a fresh array on every state change.
+ * Selects the raw slice and nothing derived: `errorMap` keeps its store identity, so the
+ * subscription's shallow comparison does not see a fresh object on every state change.
  */
 function selectSubmitState(state: SubmitState): SubmitState {
 	return {
 		canSubmit: state.canSubmit,
 		isSubmitting: state.isSubmitting,
 		isDirty: state.isDirty,
-		errors: state.errors,
+		errorMap: state.errorMap,
 	}
+}
+
+/** The form's own errors: every `errorMap` slot but a map group's, which is that block's (R67). */
+function formLevelErrors(errorMap: Record<string, unknown>): unknown[] {
+	return Object.entries(errorMap)
+		.filter(([key]) => !key.startsWith(GROUP_ERROR_KEY_PREFIX))
+		.map(([, value]) => value)
 }
 
 const NO_SERVER_ERRORS: readonly string[] = []
@@ -34,7 +42,8 @@ const NO_CONTROLLER: Pick<ServerErrorsController, 'subscribe' | 'formErrors'> = 
  *
  * `formErrors` is TanStack's form-level errors followed by the server's form-level messages
  * (`form.setServerErrors`), which live outside TanStack's state — so they are read from the
- * instance's controller rather than through `form.Subscribe`.
+ * instance's controller rather than through `form.Subscribe`. A map group's own errors sit in the
+ * form's `errorMap` too, and are left out: they are that block's `group.errors`.
  */
 export function createSubmit(form: BindableForm): (props: SubmitProps) => ReactNode {
 	const submit = (): Promise<void> => form.handleSubmit()
@@ -44,12 +53,12 @@ export function createSubmit(form: BindableForm): (props: SubmitProps) => ReactN
 		const serverFormErrors = useSyncExternalStore(controller.subscribe, controller.formErrors, controller.formErrors)
 		return (
 			<form.Subscribe selector={selectSubmitState}>
-				{({ canSubmit, isSubmitting, isDirty, errors }) =>
+				{({ canSubmit, isSubmitting, isDirty, errorMap }) =>
 					children({
 						canSubmit,
 						isSubmitting,
 						isDirty,
-						formErrors: formatOwnErrors([...errors, ...serverFormErrors]),
+						formErrors: formatOwnErrors([...formLevelErrors(errorMap), ...serverFormErrors]),
 						submit,
 					})
 				}

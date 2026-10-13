@@ -33,15 +33,28 @@ export function isPathWithin(scope: string, name: string): boolean {
 	return name === scope || name.startsWith(`${scope}.`) || name.startsWith(`${scope}[`)
 }
 
-/** Every mounted group of `form`, as the submit passes run them. */
+const mapGroups = new WeakMap<object, Set<ValidatedGroup>>()
+
+/** Register a map group for the submit passes; returns the unregister. */
+export function registerMapGroup(form: object, group: ValidatedGroup): () => void {
+	const set = mapGroups.get(form) ?? new Set<ValidatedGroup>()
+	mapGroups.set(form, set)
+	set.add(group)
+	return () => {
+		set.delete(group)
+	}
+}
+
+/** Every mounted group of `form`, as the submit passes run them: the native ones, then the map ones. */
 export function groupsOf(form: GroupHost): readonly ValidatedGroup[] {
-	return [...form.formGroupApis].map((api) => ({
+	const native = [...form.formGroupApis].map((api) => ({
 		owner: api,
 		within: (scope: string) => isPathWithin(scope, api.name),
 		validate: async () => {
 			await api.validate(SUBMIT, GROUP_SUBMIT_PASS)
 		},
 	}))
+	return [...native, ...(mapGroups.get(form) ?? [])]
 }
 
 /** Run the submit validators of the groups `accept` picks — after the fields, never before (R62). */

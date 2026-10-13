@@ -32,3 +32,8 @@ a block), a submit first clears the server errors of the fields inside it, runs 
 inside it, and focuses the group's first error when it fails. A whole-form submit now runs every
 mounted group's validators after the fields — before, TanStack ran none of them. Both kits also
 export `GroupValidators`, `GroupValidator`, `GroupAsyncValidator` and `OnGroupSubmit`.
+
+A block placed with a field map — `fields={{ password: 'newPassword', confirm: 'newPasswordRepeat' }}`
+— validates and submits the same way: its value is assembled from the mapped fields, issues with a
+path land on the mapped field, and its own issues are `group.errors`. Those are kept under an
+`errorMap` key of the form `onGroup:<id>`, which `form.Submit`'s `formErrors` leaves out.
