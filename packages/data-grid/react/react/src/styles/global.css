@@ -1,277 +1,127 @@
-/*
- * Structural stylesheet for `@ez-kit/data-grid-react`.
- *
- * This file is SHARED structural CSS — positioning, layout, overflow, z-index,
- * cursor. NO visual rules (colors, fonts, borders, radius, shadows, hover/focus,
- * transitions, padding-for-look). Visual styling is the UI kit's responsibility.
- *
- * Authored with Tailwind v4 `@apply`. Must be imported via `@import` from a
- * kit / app stylesheet that has Tailwind v4 set up; the consumer's Tailwind
- * pipeline resolves the utilities at build time.
- *
- * Targets `data-slot` (identity) and `data-*` (state) attributes emitted by
- * the headless data-grid components.
- */
+/* Structural only, scoped to the grid root. See openspec/config.yaml for the rationale. */
 
-/* ── table layout ─────────────────────────────────────────────────────── */
+.ez-data-grid {
+	& table[data-slot='table'] {
+		min-width: var(--dg-table-min-width, 0px);
+	}
+	& [data-slot='table'][data-virtualized='true'],
+	& [data-slot='table'][data-virtualized='true'] [data-slot='thead'] {
+		@apply grid;
+	}
 
-/* The rows carry the column grid, but the table / header / body around them are
- * *block* boxes — so they take the scrollport's width, not the tracks' width, and
- * the grid tracks simply overflow. That silently breaks column pinning: a sticky
- * cell is clamped to its containing block, so once the row's right edge scrolls
- * past a left-pinned cell, the browser drags that cell out of view with the
- * content (only the pin shadow, which lives on the wrapper, stays behind).
- * Flooring the box at the summed column widths keeps the containing block as wide
- * as the content; `minmax(…, 1fr)` tracks still stretch past it when there's room.
- *
- * Keyed on the element, not on `data-slot` alone. It used to be that a kit could stamp
- * `data-slot="table"` on a wrapper around the real table — HeroUI's `.table-root`, which also
- * clipped and scrolled — and flooring *that* box would have pushed the overflow out of its own
- * scroller instead of into it. Since the shell's scrollport became a slot of its own, such a
- * kit registers `TableScroll` and the `table` slot lands on the real `<table>`; the element
- * qualifier stays because it costs nothing and keeps the rule honest about what it floors. */
-table[data-slot='table'] {
-	min-width: var(--dg-table-min-width, 0px);
-}
+	& [data-slot='table-wrapper'] {
+		@apply relative;
+	}
+	& [data-slot='table-wrapper'][data-virtualized='true'] {
+		height: var(--dg-virtual-height, 600px);
+	}
 
-[data-slot='table'][data-virtualized='true'] {
-	@apply grid;
-}
-[data-slot='table'][data-virtualized='true'] [data-slot='thead'] {
-	@apply grid;
-}
+	& [data-slot='table-scroll'] {
+		@apply overflow-x-auto;
+	}
+	& [data-slot='table-scroll'][data-sticky-header='true']:not([data-virtualized='true']),
+	& [data-slot='table-scroll'][data-sticky-footer='true']:not([data-virtualized='true']) {
+		@apply overflow-y-auto;
+		max-height: var(--dg-table-max-height, 400px);
+	}
+	& [data-slot='table-scroll'][data-virtualized='true'] {
+		@apply overflow-auto h-full;
+	}
 
-[data-slot='table-wrapper'] {
-	@apply relative;
-}
-[data-slot='table-wrapper'][data-virtualized='true'] {
-	height: var(--dg-virtual-height, 600px);
-}
+	& [data-slot='thead'][data-sticky='true'] {
+		@apply sticky top-0 z-10;
+	}
+	& [data-slot='tfoot'][data-sticky='true'] {
+		@apply sticky bottom-0 z-10;
+	}
 
-[data-slot='table-scroll'] {
-	@apply overflow-x-auto;
-}
-/* One bound, two stickies: a sticky header and a sticky footer both need this div to be the
- * bounded vertical scrollport, so either attribute opens it.
- *
- * Virtualized mode is excluded because it bounds the scrollport the other way round: the wrapper
- * takes `--dg-virtual-height` and this div fills it (`h-full`, below). `max-height` is the one
- * declaration the rule below does not override, so without the exclusion a virtualized grid that
- * states no `layout.maxHeight` would be clamped to this rule's own 400px default while its wrapper
- * stayed 600px tall. Scoped rather than reordered: both modes stamp the sticky attributes, which is
- * what lets one pinned-row rule serve both. */
-[data-slot='table-scroll'][data-sticky-header='true']:not([data-virtualized='true']),
-[data-slot='table-scroll'][data-sticky-footer='true']:not([data-virtualized='true']) {
-	@apply overflow-y-auto;
-	max-height: var(--dg-table-max-height, 400px);
-}
-[data-slot='table-scroll'][data-virtualized='true'] {
-	@apply overflow-auto h-full;
-}
+	& [data-slot='th'][data-pinned],
+	& [data-slot='td'][data-pinned] {
+		@apply sticky z-[1];
+	}
+	& [data-slot='th'][data-pinned='start'],
+	& [data-slot='td'][data-pinned='start'] {
+		inset-inline-start: var(--dg-pin-start);
+	}
+	& [data-slot='th'][data-pinned='end'],
+	& [data-slot='td'][data-pinned='end'] {
+		inset-inline-end: var(--dg-pin-end);
+	}
 
-/* ── sticky thead ─────────────────────────────────────────────────────── */
+	& [data-slot='th'][data-resizable='true']:not([data-pinned]) {
+		@apply relative;
+	}
 
-[data-slot='thead'][data-sticky='true'] {
-	@apply sticky top-0 z-10;
-}
+	& [data-slot='td'][data-align='start'],
+	& [data-slot='th'][data-align='start'] {
+		@apply justify-start text-start;
+	}
+	& [data-slot='td'][data-align='center'],
+	& [data-slot='th'][data-align='center'] {
+		@apply justify-center text-center;
+	}
+	& [data-slot='td'][data-align='end'],
+	& [data-slot='th'][data-align='end'] {
+		@apply justify-end text-end;
+	}
+	& [data-slot='th'][data-align='start'] [data-slot='sort-trigger'] {
+		@apply justify-start;
+	}
+	& [data-slot='th'][data-align='center'] [data-slot='sort-trigger'] {
+		@apply justify-center;
+	}
+	& [data-slot='th'][data-align='end'] [data-slot='sort-trigger'] {
+		@apply justify-end;
+	}
 
-/* ── sticky tfoot ─────────────────────────────────────────────────────── */
+	& [data-slot='header-main'] {
+		@apply flex items-center;
+	}
+	& [data-slot='sort-trigger'] {
+		@apply flex flex-1 items-center border-0 bg-transparent p-0 text-start font-[inherit] text-[inherit];
+		appearance: none;
+	}
+	& [data-slot='sort-trigger'][data-sortable='true'] {
+		@apply cursor-pointer;
+	}
 
-/* `position: sticky` sits on the `<tfoot>` itself, mirroring the header. The kits paint its
- * background off the same `[data-sticky='true']` hook the header uses — without an opaque
- * background a sticky footer shows the rows sliding underneath it. */
-[data-slot='tfoot'][data-sticky='true'] {
-	@apply sticky bottom-0 z-10;
-}
+	& [data-slot='loading-body-cell'] {
+		@apply p-0;
+	}
 
-/* ── pinned columns ───────────────────────────────────────────────────── */
+	& [data-slot='tbody'][data-virtualized='true'] {
+		@apply relative grid;
+	}
+	& [data-slot='tr'][data-virtual='row'],
+	& [data-slot='tbody'][data-virtualized='true'] [data-slot='load-more-row'][data-virtual='load-more'] {
+		@apply w-full;
+	}
+	& [data-slot='tr'][data-virtual='row-held'] {
+		@apply absolute top-0 left-0 w-full;
+	}
 
-[data-slot='th'][data-pinned],
-[data-slot='td'][data-pinned] {
-	@apply sticky z-[1];
-}
-/* Logical, not physical: a pinned column sticks to the inline-start or inline-end edge, and
-   which physical edge that is flips under RTL. Row pinning below stays `top` / `bottom` — a
-   vertical axis has no logical names. */
-[data-slot='th'][data-pinned='start'],
-[data-slot='td'][data-pinned='start'] {
-	inset-inline-start: var(--dg-pin-start);
-}
-[data-slot='th'][data-pinned='end'],
-[data-slot='td'][data-pinned='end'] {
-	inset-inline-end: var(--dg-pin-end);
-}
+	& [data-slot='tr'][data-pinned] {
+		@apply sticky z-[2];
+	}
+	& [data-slot='tr'][data-pinned='top'] {
+		top: var(--dg-row-pin-offset, 0);
+	}
+	& [data-slot='tr'][data-pinned='bottom'] {
+		bottom: var(--dg-row-pin-offset, 0);
+	}
+	& [data-slot='table-scroll'][data-sticky-header='true'] [data-slot='tr'][data-pinned='top'] {
+		top: calc(var(--dg-row-pin-offset, 0px) + var(--dg-header-height, 0px));
+	}
 
-/* ── resizable th — resizer is absolutely positioned inside ──────────── */
-
-/* Skip pinned headers: they are already `sticky`, which positions the resizer
-   just as well, and this rule would otherwise override that stickiness — a
-   pinned + resizable column would stop sticking and shift by its pin offset
-   instead, overlapping its neighbour. */
-[data-slot='th'][data-resizable='true']:not([data-pinned]) {
-	@apply relative;
-}
-
-/* ── column alignment ─────────────────────────────────────────────────── */
-
-/* `data-align` comes from a column's `align`, already resolved per part by the core.
- *
- * Selectors are qualified by `data-slot` on purpose: `data-align` is not ours alone — the kits'
- * `input-group` and `action-bar` primitives set it too, with an unrelated vocabulary
- * (`inline-start`, `block-end`). Scoping to the grid's own slots keeps the two apart.
- *
- * Alignment is layout, not decoration, so it belongs in this structural sheet: a column that asks
- * to be right-aligned should look the same in both kits, and leaving it to them is what made
- * `headerClassName` + `cellClassName` the only route to it. */
-/* Each rule carries `justify-*` beside `text-*` because a kit is free to lay its cells out with
- * flex — shadcn's `<TableCell>` is `flex items-center`, so its content is a flex item and
- * `text-align` has nothing left to move, exactly as it has nothing to move inside the header's
- * `sort-trigger` below. `justify-content` is inert on a block box, so the kits that keep their
- * cells as blocks (heroui) are unaffected. Without it the same `align: 'end'` right-aligned a
- * column's header in both kits but its body and footer cells in only one of them — a numeric
- * column with a total came out with the header at one edge and every value at the other. */
-[data-slot='td'][data-align='start'],
-[data-slot='th'][data-align='start'] {
-	@apply justify-start text-start;
-}
-[data-slot='td'][data-align='center'],
-[data-slot='th'][data-align='center'] {
-	@apply justify-center text-center;
-}
-[data-slot='td'][data-align='end'],
-[data-slot='th'][data-align='end'] {
-	@apply justify-end text-end;
+	& [data-slot='pin-shadow-overlay'] {
+		@apply absolute inset-0 pointer-events-none overflow-hidden;
+	}
+	& [data-pin-shadow] {
+		@apply absolute top-0 bottom-0 pointer-events-none;
+	}
 }
 
-/* The default header content is laid out by flex, and `[data-slot='sort-trigger']` — which holds
- * the label — is `flex-1`, so it fills the row and `text-align` on the `<th>` has nothing left to
- * move. The label follows the trigger's main axis instead. (The `<th>` rules above still carry
- * alignment for a header composed by hand, where no sort-trigger exists.) */
-[data-slot='th'][data-align='start'] [data-slot='sort-trigger'] {
-	@apply justify-start;
-}
-[data-slot='th'][data-align='center'] [data-slot='sort-trigger'] {
-	@apply justify-center;
-}
-[data-slot='th'][data-align='end'] [data-slot='sort-trigger'] {
-	@apply justify-end;
-}
-
-/* ── header inner layout ──────────────────────────────────────────────── */
-
-[data-slot='header-main'] {
-	@apply flex items-center;
-}
-/* The sortable variant is a real `<button>`, so this undoes the UA's own button styling —
- * centred text, a border, a background and a font of its own would each fight the header the
- * kit styles. Structural rather than decorative: it hands the element back to the kit's `<th>`
- * rules instead of picking any look for it. */
-[data-slot='sort-trigger'] {
-	@apply flex flex-1 items-center border-0 bg-transparent p-0 text-start font-[inherit] text-[inherit];
-	appearance: none;
-}
-[data-slot='sort-trigger'][data-sortable='true'] {
-	@apply cursor-pointer;
-}
-
-/* ── loading body ─────────────────────────────────────────────────────── */
-
-[data-slot='loading-body-cell'] {
-	@apply p-0;
-}
-
-/* ── virtual body & rows ──────────────────────────────────────────────── */
-
-/* `relative` is the load-bearing half: it is the containing block that `row-held`'s `absolute
-   top-0 left-0` below is placed against, and it applies in both kits. Read in heroui — that kit's
-   `styles.css` records the tbody computing `grid` / `relative` in virtualized mode. In shadcn it is
-   reasoning rather than a reading: this rule is unscoped, and what that kit's `TableBody` sets on
-   the tbody — the inline `display: 'block'` described below and a `[&_tr:last-child]:border-0`
-   class — leaves `position` alone.
-
-   `grid` is dead in the shadcn kit, and deliberately left as it is. That kit's vendored
-   `components/ui/table.tsx` sets an inline `display: 'block'` on `<tbody>`, which beats this
-   stylesheet, so its virtualized body is a block container while heroui's is a grid. Nothing
-   depends on the difference: each row carries its own inline `display: grid` +
-   `gridTemplateColumns`, and `w-full` resolves the same in both modes.
-
-   What the divergence does mean is that the two kits' virtualized bands sit in **different layout
-   modes**, so vertical margins behave differently inside them: a margin added to a virtual row,
-   to the loader or to a pinned row sums with its neighbour's in heroui's grid and collapses to
-   `max()` in shadcn's block flow. The loader's `marginTop` is correct under both, for reasons
-   `virtual-body.tsx`'s `bottomPad` docblock states — read it before adding a margin here. */
-[data-slot='tbody'][data-virtualized='true'] {
-	@apply relative grid;
-}
-/* In flow: the window's band is offset by the tbody's padding, not by a per-row transform. That is
-   what lets the drag library displace a row's neighbours — it reorders DOM nodes and animates the
-   layout change, and out of flow there is none. */
-[data-slot='tr'][data-virtual='row'] {
-	@apply w-full;
-}
-/* A dragged row the window has scrolled past. It stays mounted so the drag's index space keeps its
-   density, and out of flow so it does not displace the band it is no longer part of — its offset
-   comes from the inline `transform` `VirtualBody` gives it. */
-[data-slot='tr'][data-virtual='row-held'] {
-	@apply absolute top-0 left-0 w-full;
-}
-
-/* ── infinite scroll ──────────────────────────────────────────────────── */
-
-/* In flow, after the window's band: the loader is the last row of the tbody and takes the band's
-   bottom pad as its own `marginTop`, which `VirtualBody` gives it. There is no spacer element and
-   no reserved allowance — the loader grows the tbody past the `min-height` that reserves the
-   virtual scroll range, so the space it occupies is the space its own content asks for, which is
-   what keeps a wrapped error message from being clipped. */
-[data-slot='tbody'][data-virtualized='true'] [data-slot='load-more-row'][data-virtual='load-more'] {
-	@apply w-full;
-}
-
-/* ── pinned body rows ─────────────────────────────────────────────────── */
-
-[data-slot='tr'][data-pinned] {
-	@apply sticky z-[2];
-}
-[data-slot='tr'][data-pinned='top'] {
-	top: var(--dg-row-pin-offset, 0);
-}
-[data-slot='tr'][data-pinned='bottom'] {
-	bottom: var(--dg-row-pin-offset, 0);
-}
-
-/* Under a sticky header, pinned-top rows stack below it — in both modes, which is why the
-   virtualized scrollport stamps the attribute too. A virtualized grid whose pinned rows stick at
-   the scrollport's own edge puts them under the `z-10` header, and takes the band's displacement
-   (the pinned rows' height, ahead of the band in the same tbody) out from under the window the
-   virtualizer sized for the viewport. See `table.tsx`'s `stickyAttrs`. */
-[data-slot='table-scroll'][data-sticky-header='true'] [data-slot='tr'][data-pinned='top'] {
-	top: calc(var(--dg-row-pin-offset, 0px) + var(--dg-header-height, 0px));
-}
-
-/* ── pin-shadow overlay ───────────────────────────────────────────────── */
-
-/* Full-size, non-collapsing layer. Each shadow is positioned independently via its own
-   inline `inset-inline-start` / `inset-inline-end` offset (set in pin-shadow-overlay.tsx),
-   so the two shadows never share — and never collapse — a single sized box even when the
-   combined pinned-column width approaches the viewport. */
-[data-slot='pin-shadow-overlay'] {
-	@apply absolute inset-0 pointer-events-none overflow-hidden;
-}
-[data-pin-shadow] {
-	@apply absolute top-0 bottom-0 pointer-events-none;
-}
-
-/* ── accessible-name carriers ─────────────────────────────────────────── */
-
-/* Text that exists for the accessibility tree only: the header of a system column (which
- * carries chevrons or checkboxes and no heading of its own) and the name of a column filter
- * control. Both are `<th>`/control content the sighted user reads from context and a screen
- * reader has no other route to, which is why the name is real text rather than an `aria-label`:
- * the kits' controls are the kits' own components and only some of them forward one.
- *
- * Structural, not visual — clip and position, the same class of rule as the sticky offsets
- * above. `sr-only` is Tailwind's own utility, so the clip rectangle stays one definition for
- * the whole app rather than a second spelling of it here. */
+/* Unscoped on purpose: filter controls also render inside portalled popovers, outside the root. */
 [data-slot='sr-only'] {
 	@apply sr-only;
 }

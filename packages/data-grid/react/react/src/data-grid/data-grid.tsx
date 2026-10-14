@@ -14,6 +14,7 @@ import { guardComponents } from '../components-guard'
 import { GridFactoryDefaultsProvider } from '../data-grid-options-context'
 import { useDataGrid, type UseDataGridConfig } from '../use-data-grid'
 import { useGridMessages } from '../use-grid-messages'
+import { GRID_ROOT_CLASS_NAME, joinClassNames } from '../utils/class-names'
 import { getRowDropOrder } from '../utils/row-drop-order'
 
 import { ActionBar, buildSelectionBarArgs } from './action-bar'
@@ -270,7 +271,7 @@ function GridRoot({ children }: { children: ReactNode }) {
 	return (
 		<Root
 			data-slot='grid-root'
-			className={table.grid.layout.classNames?.root}
+			className={joinClassNames(GRID_ROOT_CLASS_NAME, table.grid.layout.classNames?.root)}
 		>
 			{children}
 		</Root>

@@ -7,6 +7,8 @@ import { Button } from '@grid-shadcn/components/ui/button'
 import { Checkbox } from '@grid-shadcn/components/ui/checkbox'
 import { Input } from '@grid-shadcn/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@grid-shadcn/components/ui/popover'
+import { KIT_CLASS_NAME } from '@grid-shadcn/lib/kit-class-name'
+import { cn } from '@grid-shadcn/lib/utils'
 
 import type { MultiSelectFilterProps } from '@ez-kit/data-grid-react'
 import type { ReactNode } from 'react'
@@ -56,7 +58,7 @@ export function MultiSelectFilter({ items, selectedValues, onChange, placeholder
 			</PopoverTrigger>
 			<PopoverContent
 				align='start'
-				className='w-64 p-2'
+				className={cn(KIT_CLASS_NAME, 'w-64 p-2')}
 			>
 				<div className='flex flex-col gap-2'>
 					<Input

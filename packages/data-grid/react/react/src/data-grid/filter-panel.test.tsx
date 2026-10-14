@@ -6,10 +6,12 @@ import { GridComponentsProvider } from '../components-context'
 import { prepareDataGridTable } from '../prepare-table'
 import { TEST_FEATURES, testComponents } from '../test-utils'
 
+import { ColumnFilter } from './column-filter'
 import { FilterPanel } from './filter-panel'
 import { TableProvider } from './table-context'
 
 import type { DataTable, GridFeatures } from '../types'
+import type { DataGridFilterPanelColumn, DataGridFilterPanelRenderArgs } from './filter-panel'
 import type { ReactNode } from 'react'
 
 type Row = {
@@ -230,5 +232,47 @@ describe('<FilterPanel>', () => {
 			</Wrapper>,
 		)
 		expect(container.querySelector('[data-slot="filter-panel"]')).toBeNull()
+	})
+})
+
+describe('<FilterPanel> — filter model', () => {
+	it('hands each column its filter model, leaving out system columns', () => {
+		const table = makeTable({ selection: true })
+		let seen: DataGridFilterPanelRenderArgs | undefined
+		render(
+			<Wrapper table={table}>
+				<FilterPanel>
+					{(args) => {
+						seen = args
+						return null
+					}}
+				</FilterPanel>
+			</Wrapper>,
+		)
+
+		expect(table.getAllLeafColumns().map((c) => c.id)).toContain('__selection__')
+		expect(seen?.columns.map((c) => c.filter.columnId)).toEqual(['name', 'age', 'role'])
+		const role = seen?.columns.find((c) => c.column.id === 'role')?.filter
+		expect(role?.hasOperators).toBe(true)
+		expect(role?.items.map((item) => item.label)).toEqual(['Admin', 'Member'])
+	})
+
+	it('hands the same model to <ColumnFilter>', () => {
+		const table = makeTable()
+		table.getColumn('age')?.setFilterValue({ operator: 'between', value: { from: 1 } })
+		let seen: DataGridFilterPanelColumn | undefined
+		render(
+			<Wrapper table={table}>
+				<ColumnFilter columnId='age'>
+					{(column) => {
+						seen = column
+						return null
+					}}
+				</ColumnFilter>
+			</Wrapper>,
+		)
+
+		expect(seen?.filter.editor).toBe('between')
+		expect(seen?.filter.value).toEqual({ operator: 'between', value: { from: 1 } })
 	})
 })

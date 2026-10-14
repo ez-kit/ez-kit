@@ -65,9 +65,7 @@ export function SortToolbarExample() {
 			 * component, which is what writing the component says instead.
 			 *
 			 * Naming `children` at all means composing the rest of the grid too, so the table is
-			 * written out below — this grid registers no pagination, so there is nothing else. A
-			 * grid that wants the standard shell with this control already in it reaches for
-			 * `DefaultLayout`, which mounts it whenever sorting is on.
+			 * written out below — this grid registers no pagination, so there is nothing else.
 			 */}
 			<DataGrid.Toolbar end={<DataGrid.SortMenuTrigger />} />
 			<DataGrid.Table />

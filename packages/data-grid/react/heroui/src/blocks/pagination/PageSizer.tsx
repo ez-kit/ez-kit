@@ -3,6 +3,8 @@
 import { useGridMessages } from '@ez-kit/data-grid-react/kit'
 import { ListBox, Select } from '@heroui/react'
 
+import { KIT_CLASS_NAME } from '../../lib/kit-class-name'
+
 import type { PageSizerProps } from '@ez-kit/data-grid-react'
 
 export function PageSizer({ pageSize, items, onPageSizeChange }: PageSizerProps) {
@@ -25,7 +27,7 @@ export function PageSizer({ pageSize, items, onPageSizeChange }: PageSizerProps)
 					<Select.Value />
 					<Select.Indicator />
 				</Select.Trigger>
-				<Select.Popover>
+				<Select.Popover className={KIT_CLASS_NAME}>
 					<ListBox>
 						{items.map((size) => (
 							<ListBox.Item

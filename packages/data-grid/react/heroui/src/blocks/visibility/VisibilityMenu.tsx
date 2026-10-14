@@ -5,6 +5,7 @@ import { useGridMessages } from '@ez-kit/data-grid-react/kit'
 import { Button, buttonVariants, Checkbox, Dropdown, Label, Popover } from '@heroui/react'
 import { ArrowDown, ArrowUp, Columns2 } from 'lucide-react'
 
+import { KIT_CLASS_NAME } from '../../lib/kit-class-name'
 import { ColumnDragHandle } from '../ordering/ColumnDragHandle'
 
 import type { GridMessages, VisibilityMenuProps, VisibilityColumnItem } from '@ez-kit/data-grid-react'
@@ -76,7 +77,7 @@ function ColumnPanel({ columns, messages }: { columns: VisibilityColumnItem[]; m
 			>
 				<TriggerContent label={messages.visibility.trigger} />
 			</Popover.Trigger>
-			<Popover.Content>
+			<Popover.Content className={KIT_CLASS_NAME}>
 				<Popover.Dialog
 					aria-label={messages.visibility.menu}
 					className='p-2'
@@ -221,7 +222,10 @@ export function VisibilityMenu({ columns, isColumnPanel }: VisibilityMenuProps) 
 	return (
 		<Dropdown>
 			<Trigger label={messages.visibility.trigger} />
-			<Dropdown.Popover placement='bottom end'>
+			<Dropdown.Popover
+				className={KIT_CLASS_NAME}
+				placement='bottom end'
+			>
 				<Dropdown.Menu
 					aria-label={messages.visibility.menu}
 					items={columns}

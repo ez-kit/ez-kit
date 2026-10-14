@@ -1030,10 +1030,24 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 	// Same reason as the two above, and the one slice where it was missed: spreading
 	// `userInitialState` replaces `pagination` wholesale, so seeding only `pageIndex`
 	// (a deep link to page 3) dropped the resolved `pageSize` to `undefined`.
+	const isInfinite = hasPagination && paginationCfg?.mode === PaginationMode.Infinite
+	// An infinite grid has no page to be on — its rows always start at the first one — so a
+	// seeded index is overridden rather than honoured: left in place it would reach
+	// `onStateChange`, a persisted URL and the ARIA row offsets as a page nobody is looking at.
+	// The seeded `pageSize` is left alone.
 	const mergedPagination = {
 		pageIndex: 0,
 		pageSize: defaultPageSize,
 		...userInitialState?.pagination,
+		...(isInfinite ? { pageIndex: 0 } : {}),
+	}
+
+	if (IS_DEV && isInfinite && (userInitialState?.pagination?.pageIndex ?? 0) !== 0) {
+		console.warn(
+			`[data-grid] \`initialState.pagination.pageIndex\` (${String(userInitialState?.pagination?.pageIndex)}) ` +
+				"is ignored under `pagination.mode: 'infinite'`, which always starts at the first row. " +
+				'Drop it from the seed.',
+		)
 	}
 
 	// Two routes to one value, kept on purpose: `pagination.pageSize` is where an author states
@@ -1059,24 +1073,6 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 			`[data-grid] Both \`grouping.by\` (${groupingCfg.by.join(', ')}) and ` +
 				`\`initialState.grouping\` (${userInitialState.grouping.join(', ')}) are set. ` +
 				`The seed wins; the option is ignored. Set one of them.`,
-		)
-	}
-
-	// Infinite mode shows ALL accumulated rows — no client-side page slicing, no footer. In v8
-	// that was `getPaginationRowModel` simply not being attached here; in v9 the paginated row
-	// model is a slot in the feature set, so the only way to leave the rows unsliced is for the
-	// consumer to leave it out. Configuring the mode no longer suppresses it, so say so rather
-	// than let a grid show one page of what it promised was everything.
-	if (
-		IS_DEV &&
-		hasPagination &&
-		paginationCfg?.mode === PaginationMode.Infinite &&
-		'paginatedRowModel' in registeredFeatures
-	) {
-		console.warn(
-			"[data-grid] `pagination.mode: 'infinite'` shows every accumulated row, but " +
-				'`paginatedRowModel` is registered in `features`, so the rows are still sliced to one ' +
-				'page. Drop it from your `tableFeatures({ … })` call for this table.',
 		)
 	}
 
@@ -1215,6 +1211,15 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 		// has to be spelled out — the same shape as the `enableHiding` / `enableColumnResizing`
 		// gates above.
 		...(selectionCfg?.multi === false ? { enableMultiRowSelection: false } : {}),
+		// Infinite mode shows every accumulated row, so nothing may slice them to one page. In v8
+		// that was `getPaginationRowModel` simply not being attached for this mode; in v9 the
+		// paginated row model is a slot of the consumer's feature set (#246), and leaving it out
+		// cannot be done from here — the instance caches it in `_rowModels.paginatedRowModel` on
+		// first use, so a grid switched from paged to infinite would keep slicing. Upstream reads
+		// `manualPagination` on every call instead, which makes it the switch that follows the
+		// config. No `rowCount` / `pageCount`: an infinite grid has no total, and `getRowCount()`
+		// falling back to the accumulated rows is the right answer.
+		...(isInfinite ? { manualPagination: true } : {}),
 		// Pagination manual
 		...(paginationCfg?.manual
 			? {

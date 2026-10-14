@@ -3,6 +3,8 @@
 import { buildMultiSelectLabel } from '@ez-kit/data-grid-react/kit'
 import { ListBox, Select } from '@heroui/react'
 
+import { KIT_CLASS_NAME } from '../../lib/kit-class-name'
+
 import type { MultiSelectFilterProps } from '@ez-kit/data-grid-react'
 import type { Key } from '@heroui/react'
 import type { ReactNode } from 'react'
@@ -47,7 +49,7 @@ export function MultiSelectFilter({ items, selectedValues, onChange, placeholder
 				</Select.Value>
 				<Select.Indicator />
 			</Select.Trigger>
-			<Select.Popover>
+			<Select.Popover className={KIT_CLASS_NAME}>
 				<ListBox selectionMode='multiple'>
 					{items.map((opt) => (
 						<ListBox.Item

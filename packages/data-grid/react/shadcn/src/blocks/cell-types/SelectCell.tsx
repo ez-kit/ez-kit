@@ -5,6 +5,7 @@ import { useGridMessages } from '@ez-kit/data-grid-react/kit'
 
 import { Field, FieldDescription, FieldError, FieldLabel } from '@grid-shadcn/components/ui/field'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@grid-shadcn/components/ui/select'
+import { KIT_CLASS_NAME } from '@grid-shadcn/lib/kit-class-name'
 
 import type { CellTypeDefinition, CellViewProps, FieldState, SelectCellConfig } from '@ez-kit/data-grid-react'
 import type { ReactNode } from 'react'
@@ -16,7 +17,10 @@ function SelectCellView({ value, config }: CellViewProps<SelectCellConfig>) {
 	const match = items.find((item) => item.value === String(value ?? ''))
 	if (!match) return <>{String(value ?? '')}</>
 	return (
-		<span data-slot='select-cell-value'>
+		<span
+			data-slot='select-cell-value'
+			className='inline-flex items-center gap-1.5 whitespace-nowrap'
+		>
 			{(match.icon as ReactNode) ?? null}
 			{match.label}
 		</span>
@@ -57,7 +61,7 @@ function SelectCellInput({
 				>
 					<SelectValue placeholder={messages.cells.all} />
 				</SelectTrigger>
-				<SelectContent>
+				<SelectContent className={KIT_CLASS_NAME}>
 					<SelectItem value={ALL_SENTINEL}>{messages.cells.all}</SelectItem>
 					{items.map((item) => (
 						<SelectItem

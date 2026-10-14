@@ -259,6 +259,8 @@ export { ActiveFiltersBar as DataGridActiveFiltersBar } from './data-grid/active
 export { GroupByBar as DataGridGroupByBar } from './data-grid/group-by-bar'
 export { ClearFiltersButton as DataGridClearFiltersButton } from './data-grid/clear-filters-button'
 export { FilterPanel as DataGridFilterPanel } from './data-grid/filter-panel'
+export { useColumnFilters } from './data-grid/filter-panel'
+export { FilterEditor } from './data-grid/column-filter-model'
 export { CreatingModal as DataGridCreatingModal } from './data-grid/creating-modal'
 export { EditingModal as DataGridEditingModal } from './data-grid/editing-modal'
 export { LoadingBody as DataGridLoadingBody } from './data-grid/loading-body'
@@ -296,7 +298,14 @@ export type {
 	DataGridFilterPanelColumn,
 	DataGridFilterPanelProps,
 	DataGridFilterPanelRenderArgs,
+	UseColumnFiltersResult,
 } from './data-grid/filter-panel'
+export type {
+	ColumnFilterModel,
+	OperatorColumnFilterModel,
+	PlainColumnFilterModel,
+} from './data-grid/column-filter-model'
+export type { ColumnFiltersValue } from './data-grid/column-filters-batch'
 export type { DataGridColumnFilterProps } from './data-grid/column-filter'
 export type { DataGridPageSizerProps, DataGridPageSizerRenderArgs } from './data-grid/page-sizer'
 export type { DataGridBottomBarProps } from './data-grid/bottom-bar'

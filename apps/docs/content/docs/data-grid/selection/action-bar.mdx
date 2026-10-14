@@ -52,11 +52,11 @@ selection: {
 }
 ```
 
-`variant` says what the bar **looks like** — an in-flow strip against an overlay — not where it
-goes. Where it goes is where the layout writes it, and every shipped preset writes it **last**, so
-an `inline` bar on a preset sits _below_ the table, as in the example above. To put it above, write
-a layout of your own with `<DataGrid.ActionBar />` first — see
-[Composition](/docs/data-grid/layout/composition#layout-presets).
+`variant` says what the bar **looks like**: an in-flow strip or an overlay. The shipped presets
+also place the bar by it. An `inline` bar goes between the toolbar and the table, next to the rows
+it acts on, as in the example above. A `floating` bar goes last. In a layout of your own the bar goes
+wherever you write `<DataGrid.ActionBar />` — see
+[Presets](/docs/data-grid/layout/presets#the-action-bar).
 
 ## The draft section
 

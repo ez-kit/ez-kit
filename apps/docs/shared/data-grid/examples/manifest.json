@@ -312,6 +312,14 @@
 		"exportName": "FilterPanelAndHeaderExample"
 	},
 	{
+		"id": "custom-filter-panel",
+		"label": "Custom filter panel",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/custom-filter-panel.tsx",
+		"exportName": "CustomFilterPanelExample"
+	},
+	{
 		"id": "selection-bar",
 		"label": "Floating",
 		"group": "selection",

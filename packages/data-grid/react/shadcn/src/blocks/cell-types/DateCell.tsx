@@ -8,6 +8,8 @@ import { Button } from '@grid-shadcn/components/ui/button'
 import { Calendar } from '@grid-shadcn/components/ui/calendar'
 import { Field, FieldDescription, FieldError, FieldLabel } from '@grid-shadcn/components/ui/field'
 import { Popover, PopoverContent, PopoverTrigger } from '@grid-shadcn/components/ui/popover'
+import { KIT_CLASS_NAME } from '@grid-shadcn/lib/kit-class-name'
+import { cn } from '@grid-shadcn/lib/utils'
 
 import type { CellTypeDefinition, CellViewProps, DateCellConfig, FieldState } from '@ez-kit/data-grid-react'
 import type { Matcher } from 'react-day-picker'
@@ -71,7 +73,7 @@ function DateCellInput({
 					</Button>
 				</PopoverTrigger>
 				<PopoverContent
-					className='w-auto p-0'
+					className={cn(KIT_CLASS_NAME, 'w-auto p-0')}
 					align='start'
 				>
 					<Calendar

@@ -2,6 +2,8 @@
 
 import { Tooltip as TooltipRoot } from '@heroui/react'
 
+import { KIT_CLASS_NAME } from '../../lib/kit-class-name'
+
 import type { TooltipProps } from '@ez-kit/data-grid-react'
 
 /**
@@ -34,7 +36,7 @@ export function Tooltip({ content, children }: TooltipProps) {
 	return (
 		<TooltipRoot delay={0}>
 			<TooltipRoot.Trigger tabIndex={-1}>{children}</TooltipRoot.Trigger>
-			<TooltipRoot.Content>{content}</TooltipRoot.Content>
+			<TooltipRoot.Content className={KIT_CLASS_NAME}>{content}</TooltipRoot.Content>
 		</TooltipRoot>
 	)
 }

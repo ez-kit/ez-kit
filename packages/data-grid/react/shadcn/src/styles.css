@@ -1,568 +1,221 @@
 @import '@ez-kit/data-grid-react/styles.css';
 
-/* The generated create / edit form: each field composite renders its own label, control and
- * error, and nothing between them separates one field from the next. Stack them with a gap. */
-[data-slot='auto-form'] {
-	display: flex;
-	flex-direction: column;
-	gap: 1rem;
-}
-
-[data-slot='active-filters-bar'] {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 0.375rem;
-	align-items: center;
-}
-[data-slot='active-filters-bar'][data-chip-position='above'] {
-	margin-bottom: 0.75rem;
-}
-[data-slot='active-filters-bar'][data-chip-position='below'] {
-	margin-top: 0.75rem;
-}
-
-/* A filter panel standing free above the table needs the gap a toolbar leaves below itself. Put in
- * a toolbar, it is one more item on the toolbar's row, and the same margin lifts its chips off the
- * line the search box and the buttons sit on. */
-[data-slot='filter-panel'] {
-	margin-bottom: 0.75rem;
-}
-[data-slot='toolbar'] [data-slot='filter-panel'] {
-	margin-bottom: 0;
-}
-
-@custom-variant dark (&:is(.dark *));
 @source "../../**/*.{ts,tsx}";
 
-@theme inline {
-	--color-background: var(--background);
-	--color-foreground: var(--foreground);
-	--color-card: var(--card);
-	--color-card-foreground: var(--card-foreground);
-	--color-popover: var(--popover);
-	--color-popover-foreground: var(--popover-foreground);
-	--color-primary: var(--primary);
-	--color-primary-foreground: var(--primary-foreground);
-	--color-secondary: var(--secondary);
-	--color-secondary-foreground: var(--secondary-foreground);
-	--color-muted: var(--muted);
-	--color-muted-foreground: var(--muted-foreground);
-	--color-accent: var(--accent);
-	--color-accent-foreground: var(--accent-foreground);
-	--color-destructive: var(--destructive);
-	--color-destructive-foreground: var(--destructive-foreground);
-	--color-border: var(--border);
-	--color-input: var(--input);
-	--color-ring: var(--ring);
-	--color-chart-1: var(--chart-1);
-	--color-chart-2: var(--chart-2);
-	--color-chart-3: var(--chart-3);
-	--color-chart-4: var(--chart-4);
-	--color-chart-5: var(--chart-5);
-	--radius-sm: calc(var(--radius) * 0.6);
-	--radius-md: calc(var(--radius) * 0.8);
-	--radius-lg: var(--radius);
-	--radius-xl: calc(var(--radius) * 1.4);
-	--radius-2xl: calc(var(--radius) * 1.8);
-	--radius-3xl: calc(var(--radius) * 2.2);
-	--radius-4xl: calc(var(--radius) * 2.6);
-	--color-sidebar: var(--sidebar);
-	--color-sidebar-foreground: var(--sidebar-foreground);
-	--color-sidebar-primary: var(--sidebar-primary);
-	--color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-	--color-sidebar-accent: var(--sidebar-accent);
-	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-	--color-sidebar-border: var(--sidebar-border);
-	--color-sidebar-ring: var(--sidebar-ring);
-}
-
-:root {
-	--radius: 0.625rem;
+/* Every rule is scoped to the kit class: see openspec/config.yaml. */
+.ez-shadcn-data-grid {
 	--dg-pin-shadow-color: oklch(0 0 0 / 0.14);
-	--background: oklch(1 0 0);
-	--foreground: oklch(0.145 0 0);
-	--card: oklch(1 0 0);
-	--card-foreground: oklch(0.145 0 0);
-	--popover: oklch(1 0 0);
-	--popover-foreground: oklch(0.145 0 0);
-	--primary: oklch(0.205 0 0);
-	--primary-foreground: oklch(0.985 0 0);
-	--secondary: oklch(0.97 0 0);
-	--secondary-foreground: oklch(0.205 0 0);
-	--muted: oklch(0.97 0 0);
-	--muted-foreground: oklch(0.556 0 0);
-	--accent: oklch(0.97 0 0);
-	--accent-foreground: oklch(0.205 0 0);
-	--destructive: oklch(0.577 0.245 27.325);
-	--border: oklch(0.922 0 0);
-	--input: oklch(0.922 0 0);
-	--ring: oklch(0.708 0 0);
-	--chart-1: oklch(0.646 0.222 41.116);
-	--chart-2: oklch(0.6 0.118 184.704);
-	--chart-3: oklch(0.398 0.07 227.392);
-	--chart-4: oklch(0.828 0.189 84.429);
-	--chart-5: oklch(0.769 0.188 70.08);
-	--sidebar: oklch(0.985 0 0);
-	--sidebar-foreground: oklch(0.145 0 0);
-	--sidebar-primary: oklch(0.205 0 0);
-	--sidebar-primary-foreground: oklch(0.985 0 0);
-	--sidebar-accent: oklch(0.97 0 0);
-	--sidebar-accent-foreground: oklch(0.205 0 0);
-	--sidebar-border: oklch(0.922 0 0);
-	--sidebar-ring: oklch(0.708 0 0);
-
 	--dg-pin-cell-background: var(--background);
-}
 
-/* The filter's value control and its date-preset menu are one group; the operator select sits
- * beside them. They were laid out by the between-input's own wrapper until the preset menu moved
- * out of it, so the row lives here now — where the rest of this kit's grid layout already is. */
-[data-slot='filter-control'] {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	min-width: 0;
-}
-
-/* The control takes the room it is given; the preset trigger keeps its own width at the end of
- * the row, so every filter control lines up on the column's width whatever the operator is. */
-[data-slot='filter-control'] > *:first-child {
-	flex: 1 1 auto;
-	min-width: 0;
-}
-
-[data-slot='table-scroll'] {
-	@apply rounded-sm border border-border;
-}
-
-[data-slot='table-head'] {
-	@apply px-3 py-1.5;
-}
-
-[data-slot-selection-th='true'] {
-	display: flex;
-	align-items: center;
-}
-
-[data-slot='table-header'] {
-	@apply bg-background;
-}
-
-[data-sticky='true'] {
-	@apply bg-background;
-	z-index: 2;
-}
-
-/* The sticky footer keeps the footer's own colour instead of taking `bg-background` from the
- * rule above: shadcn's `<TableFooter>` paints `bg-muted/50`, and a sticky element needs that
- * same tone *opaque* — at 50% alpha the rows scroll through it. This is `bg-muted/50` already
- * composited against the page. */
-[data-slot='tfoot'][data-sticky='true'] {
-	background: color-mix(in oklab, var(--muted) 50%, var(--background));
-}
-
-[data-slot='table-row']:hover,
-[data-slot='tr']:hover,
-[data-slot='table-row']:has([aria-expanded='true']),
-[data-slot='tr']:has([aria-expanded='true']) {
-	--dg-pin-cell-background: color-mix(in oklab, var(--muted) 50%, var(--background));
-}
-
-/* `data-selected` is what the react layer emits; `data-state='selected'` is upstream shadcn's
- * own spelling, kept so a consumer's `<TableRow data-state>` still lands on the same surface.
- * The background lives here rather than on the vendored primitive's class list because only
- * this sheet knows the pinned-cell variable has to move with it — a pinned cell paints its own
- * background and would otherwise stay unselected-looking inside a selected row. */
-[data-slot='table-row'][data-state='selected'],
-[data-slot='tr'][data-state='selected'],
-[data-slot='tr'][data-row-selected='true'] {
-	background-color: var(--muted);
-	--dg-pin-cell-background: var(--muted);
-}
-
-[data-slot='table-row'][data-pinned],
-[data-slot='tr'][data-pinned] {
-	--dg-pin-cell-background: color-mix(in oklab, var(--muted) 40%, var(--background));
-}
-
-/* Pinned cells paint an opaque `--dg-pin-cell-background` instead of letting the row's
- * `hover:bg-muted/50` show through, so they need the row's transition too. Custom properties
- * are not animatable, but `background-color` is — the var is only its source — so the same
- * `transition-colors` the row uses makes the pinned column fade in step with it instead of
- * snapping instantly (which read as a separate, non-table element). */
-[data-slot='th'][data-pinned],
-[data-slot='td'][data-pinned] {
-	@apply transition-colors;
-}
-
-/* Pinned rows must be opaque while body content scrolls underneath. */
-[data-slot='tr'][data-pinned] > [data-slot='td'],
-[data-slot='tr'][data-pinned] > [data-slot='th'] {
-	background-color: var(--dg-pin-cell-background);
-}
-
-/* Soft edge shadow matching the column-pin overlay style.
-   Targets only the last pinned-top row and the first pinned-bottom row in a stack. */
-[data-slot='tr'][data-pinned='top']:not(:has(+ [data-slot='tr'][data-pinned='top'])) {
-	box-shadow: 0 8px 5px -5px var(--dg-pin-shadow-color);
-	clip-path: inset(0 0 -12px 0);
-}
-[data-slot='tr']:not([data-pinned='bottom']) + [data-slot='tr'][data-pinned='bottom'] {
-	box-shadow: 0 -8px 5px -5px var(--dg-pin-shadow-color);
-	clip-path: inset(-12px 0 0 0);
-}
-
-.dark {
-	--background: oklch(0.145 0 0);
-	--dg-pin-shadow-color: oklch(0 0 0 / 0.35);
-	--foreground: oklch(0.985 0 0);
-	--card: oklch(0.205 0 0);
-	--card-foreground: oklch(0.985 0 0);
-	--popover: oklch(0.205 0 0);
-	--popover-foreground: oklch(0.985 0 0);
-	--primary: oklch(0.922 0 0);
-	--primary-foreground: oklch(0.205 0 0);
-	--secondary: oklch(0.269 0 0);
-	--secondary-foreground: oklch(0.985 0 0);
-	--muted: oklch(0.269 0 0);
-	--muted-foreground: oklch(0.708 0 0);
-	--accent: oklch(0.269 0 0);
-	--accent-foreground: oklch(0.985 0 0);
-	--destructive: oklch(0.704 0.191 22.216);
-	--border: oklch(1 0 0 / 10%);
-	--input: oklch(1 0 0 / 15%);
-	--ring: oklch(0.556 0 0);
-	--chart-1: oklch(0.488 0.243 264.376);
-	--chart-2: oklch(0.696 0.17 162.48);
-	--chart-3: oklch(0.769 0.188 70.08);
-	--chart-4: oklch(0.627 0.265 303.9);
-	--chart-5: oklch(0.645 0.246 16.439);
-	--sidebar: oklch(0.205 0 0);
-	--sidebar-foreground: oklch(0.985 0 0);
-	--sidebar-primary: oklch(0.488 0.243 264.376);
-	--sidebar-primary-foreground: oklch(0.985 0 0);
-	--sidebar-accent: oklch(0.269 0 0);
-	--sidebar-accent-foreground: oklch(0.985 0 0);
-	--sidebar-border: oklch(1 0 0 / 10%);
-	--sidebar-ring: oklch(0.556 0 0);
-}
-
-@layer base {
-	* {
-		@apply border-border outline-ring/50;
+	.dark & {
+		--dg-pin-shadow-color: oklch(0 0 0 / 0.35);
 	}
-	body {
-		@apply bg-background text-foreground;
+
+	& [data-slot='auto-form'] {
+		@apply flex flex-col gap-4;
 	}
-}
 
-/* The strip is 16px wide and the shadow is drawn against the edge that hugs the pinned
- * block: spread −6 against a 10px offset leaves ~4px of solid shade there, blurred out
- * over the remaining width. Anything narrower reads as nothing on a white surface.
- *
- * `box-shadow` has no logical form, so the offset's sign is the one thing here that has to
- * be restated under RTL: the strip itself is placed by `inset-inline-start` /
- * `inset-inline-end`, but which physical side of it hugs the pinned block flips. */
-[data-pin-shadow='start'] {
-	width: 16px;
-	box-shadow: inset 10px 0 8px -6px var(--dg-pin-shadow-color);
-	opacity: var(--dg-pin-start-shadow, 0);
-	transition: opacity 150ms;
-}
+	& [data-slot='active-filters-bar'] {
+		@apply flex flex-wrap items-center gap-1.5;
+	}
+	& [data-slot='active-filters-bar'][data-chip-position='above'] {
+		@apply mb-3;
+	}
+	& [data-slot='active-filters-bar'][data-chip-position='below'] {
+		@apply mt-3;
+	}
 
-[data-pin-shadow='end'] {
-	width: 16px;
-	box-shadow: inset -10px 0 8px -6px var(--dg-pin-shadow-color);
-	opacity: var(--dg-pin-end-shadow, 0);
-	transition: opacity 150ms;
-}
+	& [data-slot='filter-panel'] {
+		@apply mb-3;
+	}
+	& [data-slot='toolbar'] [data-slot='filter-panel'] {
+		@apply mb-0;
+	}
 
-[dir='rtl'] [data-pin-shadow='start'] {
-	box-shadow: inset -10px 0 8px -6px var(--dg-pin-shadow-color);
-}
+	& [data-slot='filter-control'] {
+		@apply flex min-w-0 items-center gap-2;
+	}
+	& [data-slot='filter-control'] > *:first-child {
+		@apply min-w-0 flex-auto;
+	}
 
-[dir='rtl'] [data-pin-shadow='end'] {
-	box-shadow: inset 10px 0 8px -6px var(--dg-pin-shadow-color);
-}
+	& [data-slot='table-scroll'] {
+		@apply rounded-sm border border-border;
+	}
+	& [data-slot='table-head'] {
+		@apply px-3 py-1.5;
+	}
+	& [data-slot-selection-th='true'] {
+		@apply flex items-center;
+	}
+	& [data-slot='table-header'] {
+		@apply bg-background;
+	}
+	& [data-sticky='true'] {
+		@apply z-[2] bg-background;
+	}
+	& [data-slot='tfoot'][data-sticky='true'] {
+		background: color-mix(in oklab, var(--muted) 50%, var(--background));
+	}
 
-tr[data-expanded-row] {
-	display: block !important;
-	grid-template-columns: none !important;
-}
-tr[data-expanded-row] > td {
-	display: block;
-	width: 100%;
-	background-color: hsl(var(--muted) / 0.4);
-	padding: 1rem 1.25rem;
-}
+	& [data-slot='table-row']:hover,
+	& [data-slot='tr']:hover,
+	& [data-slot='table-row']:has([aria-expanded='true']),
+	& [data-slot='tr']:has([aria-expanded='true']) {
+		--dg-pin-cell-background: color-mix(in oklab, var(--muted) 50%, var(--background));
+	}
+	& [data-slot='table-row'][data-state='selected'],
+	& [data-slot='tr'][data-state='selected'],
+	& [data-slot='tr'][data-row-selected='true'] {
+		@apply bg-muted;
+		--dg-pin-cell-background: var(--muted);
+	}
 
-[data-system-column='expand'] {
-	padding-inline: 0.25rem;
-	justify-content: center;
-}
+	& [data-slot='table-row'][data-pinned],
+	& [data-slot='tr'][data-pinned] {
+		--dg-pin-cell-background: color-mix(in oklab, var(--muted) 40%, var(--background));
+	}
+	& [data-slot='th'][data-pinned],
+	& [data-slot='td'][data-pinned] {
+		@apply transition-colors;
+	}
+	& [data-slot='tr'][data-pinned] > [data-slot='td'],
+	& [data-slot='tr'][data-pinned] > [data-slot='th'] {
+		background-color: var(--dg-pin-cell-background);
+	}
+	& [data-slot='tr'][data-pinned='top']:not(:has(+ [data-slot='tr'][data-pinned='top'])) {
+		box-shadow: 0 8px 5px -5px var(--dg-pin-shadow-color);
+		clip-path: inset(0 0 -12px 0);
+	}
+	& [data-slot='tr']:not([data-pinned='bottom']) + [data-slot='tr'][data-pinned='bottom'] {
+		box-shadow: 0 -8px 5px -5px var(--dg-pin-shadow-color);
+		clip-path: inset(-12px 0 0 0);
+	}
 
-/* Leaf rows render no chevron (nothing left to expand), so reserve the button's height
- * here — otherwise a leaf row would sit lower than its parent and the tree would look
- * ragged. 2rem is the icon-button height in this kit. */
-[data-system-column='expand']:empty::before {
-	content: '';
-	display: block;
-	width: 0;
-	height: 2rem;
-}
+	& [data-pin-shadow='start'] {
+		@apply w-4 transition-opacity duration-150;
+		box-shadow: inset 10px 0 8px -6px var(--dg-pin-shadow-color);
+		opacity: var(--dg-pin-start-shadow, 0);
+	}
+	& [data-pin-shadow='end'] {
+		@apply w-4 transition-opacity duration-150;
+		box-shadow: inset -10px 0 8px -6px var(--dg-pin-shadow-color);
+		opacity: var(--dg-pin-end-shadow, 0);
+	}
+	[dir='rtl'] & [data-pin-shadow='start'] {
+		box-shadow: inset -10px 0 8px -6px var(--dg-pin-shadow-color);
+	}
+	[dir='rtl'] & [data-pin-shadow='end'] {
+		box-shadow: inset 10px 0 8px -6px var(--dg-pin-shadow-color);
+	}
 
-/* ---- Nesting depth ----
- * One step of indentation per level, on whichever column carries the hierarchy.
- *
- * Two columns can: `__expand__` on a tree grid, `__group__` on a grouped one. **When both are
- * present only the group column indents** — that is what the `:not(:has(…))` is for. A grid that
- * groups *and* expands sub-content rows has an `__expand__` cell whose chevron opens a detail
- * panel rather than the hierarchy, so indenting it too would double every step.
- *
- * The step travels as `--dg-depth-indent` so the five depth rules carry a value each and the
- * three selectors that apply it are written once. It is declared and read in this stylesheet
- * alone; `css-custom-properties.test.ts` counts a CSS declaration as a writer.
- *
- * `padding-inline-start`, not `padding-left`: indentation runs from the reading edge, and this
- * grid treats RTL as first-class (the root `direction` option). These rules were physical before
- * they were generalised here, so an RTL tree indented from the wrong side.
- *
- * The cap is five levels. Deeper nesting renders and simply stops indenting further — said on
- * the grouping page rather than left implicit. */
-tr[data-depth='1'] {
-	--dg-depth-indent: 1rem;
-}
-tr[data-depth='2'] {
-	--dg-depth-indent: 2rem;
-}
-tr[data-depth='3'] {
-	--dg-depth-indent: 3rem;
-}
-tr[data-depth='4'] {
-	--dg-depth-indent: 4rem;
-}
-tr[data-depth='5'] {
-	--dg-depth-indent: 5rem;
-}
+	& tr[data-expanded-row] {
+		display: block !important;
+		grid-template-columns: none !important;
+	}
+	& tr[data-expanded-row] > td {
+		@apply block w-full px-5 py-4;
+		background-color: hsl(var(--muted) / 0.4);
+	}
 
-tr [data-system-column='group'],
-tr:not(:has([data-system-column='group'])) [data-system-column='expand'],
-tr :is([data-system-column='group'], [data-system-column='expand']) + td {
-	padding-inline-start: var(--dg-depth-indent, 0);
-}
+	& [data-system-column='expand'] {
+		@apply justify-center px-1;
+	}
+	& [data-system-column='expand']:empty::before {
+		@apply block h-8 w-0;
+		content: '';
+	}
 
-/* ---- Row grouping ----
- * The group cell lays its chevron, label and count on one line. The label is the thing a reader
- * scans down a grouped grid, so it takes the weight and the count stays quiet beside it. */
-[data-slot='group-cell'] {
-	display: flex;
-	align-items: center;
-	gap: 0.375rem;
-	min-width: 0;
-}
+	& tr[data-depth='1'] {
+		--dg-depth-indent: 1rem;
+	}
+	& tr[data-depth='2'] {
+		--dg-depth-indent: 2rem;
+	}
+	& tr[data-depth='3'] {
+		--dg-depth-indent: 3rem;
+	}
+	& tr[data-depth='4'] {
+		--dg-depth-indent: 4rem;
+	}
+	& tr[data-depth='5'] {
+		--dg-depth-indent: 5rem;
+	}
+	& tr [data-system-column='group'],
+	& tr:not(:has([data-system-column='group'])) [data-system-column='expand'],
+	& tr :is([data-system-column='group'], [data-system-column='expand']) + td {
+		padding-inline-start: var(--dg-depth-indent, 0);
+	}
 
-[data-slot='group-label'] {
-	@apply font-medium;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
+	& [data-slot='group-cell'] {
+		@apply flex min-w-0 items-center gap-1.5;
+	}
+	& [data-slot='group-label'] {
+		@apply truncate font-medium;
+	}
+	& [data-slot='group-count'] {
+		@apply text-muted-foreground tabular-nums;
+	}
+	& [data-slot='tr'][data-group-row='true'] {
+		background-color: color-mix(in oklab, var(--muted) 40%, var(--background));
+		--dg-pin-cell-background: color-mix(in oklab, var(--muted) 40%, var(--background));
+	}
+	& [data-aggregated-cell='true'] {
+		@apply font-medium tabular-nums;
+	}
 
-[data-slot='group-count'] {
-	@apply text-muted-foreground;
-	font-variant-numeric: tabular-nums;
-}
+	& [data-slot='group-by-bar'] {
+		@apply flex flex-wrap items-center gap-1.5;
+	}
+	& [data-slot='group-by-bar-label'] {
+		@apply text-sm text-muted-foreground;
+	}
+	& [data-slot='group-by-chip'] {
+		@apply inline-flex items-center gap-0.5 rounded-sm border border-border bg-muted/40 px-2 py-0.5 text-sm;
+	}
+	& [data-slot='group-by-chip-label'] {
+		@apply font-medium;
+	}
+	& [data-slot='group-by-chip'] button {
+		@apply size-5;
+	}
 
-/* A group row is structure rather than a record, so it reads as a shelf the leaf rows sit under
- * — the same tone a pinned row takes, which is already this kit's "not an ordinary row" surface. */
-[data-slot='tr'][data-group-row='true'] {
-	background-color: color-mix(in oklab, var(--muted) 40%, var(--background));
-	--dg-pin-cell-background: color-mix(in oklab, var(--muted) 40%, var(--background));
-}
+	& [data-slot='th'][data-draft-sorting] {
+		@apply text-muted-foreground;
+	}
+	& [data-slot='th'][data-draft-sorting]::after {
+		@apply ms-1.5 inline-flex h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-sm border border-dashed border-border px-1 align-middle text-[0.6875rem] leading-none tabular-nums;
+		content: attr(data-draft-sorting);
+	}
+	& [data-slot='filter-chip'][data-draft-filter] {
+		@apply border border-dashed border-border bg-transparent text-muted-foreground;
+	}
 
-/* A subtotal is a number to compare down a column, so it lines up like one. */
-[data-aggregated-cell='true'] {
-	@apply font-medium;
-	font-variant-numeric: tabular-nums;
-}
+	& [data-slot='bottom-bar'] {
+		@apply mt-3 flex flex-wrap items-center justify-between gap-4;
+	}
+	& [data-slot='bottom-bar'] [data-slot='pagination'] {
+		@apply m-0 w-auto justify-end;
+	}
 
-/* ---- The group-by bar ----
- * Laid out like the active-filters strip it sits beside in a toolbar, so two strips in one
- * toolbar read as one row rather than as two competing ones. */
-[data-slot='group-by-bar'] {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 0.375rem;
-	align-items: center;
-}
+	& [data-slot='tr'][data-row-dragging],
+	& [data-slot='th'][data-column-dragging],
+	& [data-slot='column-visibility-item'][data-column-dragging] {
+		@apply relative z-[2] opacity-60;
+	}
 
-[data-slot='group-by-bar-label'] {
-	@apply text-muted-foreground text-sm;
-}
+	& button[data-slot='row-drag-handle'],
+	& button[data-slot='column-drag-handle'] {
+		@apply size-6 rounded-sm bg-transparent p-0 text-muted-foreground;
+	}
+	& button[data-slot='row-drag-handle']:hover,
+	& button[data-slot='column-drag-handle']:hover {
+		@apply bg-muted text-foreground;
+	}
 
-[data-slot='group-by-chip'] {
-	@apply border-border bg-muted/40 rounded-sm border text-sm;
-	display: inline-flex;
-	align-items: center;
-	gap: 0.125rem;
-	padding-inline: 0.5rem;
-	padding-block: 0.125rem;
-}
-
-[data-slot='group-by-chip-label'] {
-	@apply font-medium;
-}
-
-/* The chip's menu trigger shrinks to the chip's own line height — the stock row trigger is
- * sized for a table row and would make every chip as tall as one. Selected as `button` rather
- * than by a slot, because neither kit's `Menu` stamps one on its trigger. */
-[data-slot='group-by-chip'] button {
-	height: 1.25rem;
-	width: 1.25rem;
-}
-
-/* ---- Deferred apply: the "not yet real" treatment ----
- * Three surfaces carry it — a drafted sort on a header cell, a drafted filter chip, and
- * the pending pills inside the draft bar — and they must read as one idea: outlined
- * instead of filled, muted instead of foreground. A dashed outline over `--muted-foreground`
- * inherits both themes from the token set, so nothing here needs a `.dark` twin.
- *
- * `data-draft-sorting` is spread by `@ez-kit/data-grid-react` onto the `<th>` and carries the
- * column's position in the *draft* sort order, which is exactly the piece the applied sort
- * indicator cannot show yet — so we print it rather than inventing a second indicator. */
-
-[data-slot='th'][data-draft-sorting] {
-	color: var(--muted-foreground);
-}
-
-[data-slot='th'][data-draft-sorting]::after {
-	content: attr(data-draft-sorting);
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	min-width: 1.125rem;
-	height: 1.125rem;
-	margin-inline-start: 0.375rem;
-	padding-inline: 0.25rem;
-	border: 1px dashed var(--border);
-	border-radius: calc(var(--radius) - 4px);
-	font-size: 0.6875rem;
-	font-variant-numeric: tabular-nums;
-	line-height: 1;
-	vertical-align: middle;
-}
-
-[data-slot='filter-chip'][data-draft-filter] {
-	background-color: transparent;
-	border: 1px dashed var(--border);
-	color: var(--muted-foreground);
-}
-
-/* ---- Bottom bar ----
- * `<DataGrid.BottomBar>` is the grid's bottom region, opposite the toolbar: a row with two ends,
- * whatever it is given to hold. The default layout mounts it for `pagination: { pageSizer:
- * 'footer' }`, which puts the size control beside the pagination controls instead of in the
- * toolbar — sizer to the leading edge, page controls to the trailing one. The shared React
- * package ships the `data-slot` and no styling, so the layout has to live here. */
-
-[data-slot='bottom-bar'] {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 1rem;
-	flex-wrap: wrap;
-	margin-top: 0.75rem;
-}
-
-/* The pagination root is a full-width centred bar of its own (`mx-auto w-full justify-center`);
- * inside this bar it is one item of several, so the width and the centring have to come back off
- * or the controls wrap onto their own line. The rule keys on the child,
- * not on the bar, so a bottom bar holding something else is untouched by it — and the nested
- * pagination's own top margin, which would double the gap, goes with it. */
-
-[data-slot='bottom-bar'] [data-slot='pagination'] {
-	width: auto;
-	margin: 0;
-	justify-content: flex-end;
-}
-
-/* ---- Icon-bearing option values ----
- * `select` / `badge` items may carry an `icon`; the glyph and the label are one line, so the
- * cell's value wrapper lays them out rather than letting the icon wrap above the text. */
-
-[data-slot='select-cell-value'] {
-	display: inline-flex;
-	align-items: center;
-	gap: 0.375rem;
-	white-space: nowrap;
-}
-
-/*
- * A row being dragged.
- *
- * The drag library moves the element with its own transform; what is left for a kit is saying
- * which row the user is holding. Opacity plus a lift, no layout properties — the neighbours part
- * by transform and must not be pushed by anything here.
- */
-[data-slot='tr'][data-row-dragging] {
-	opacity: 0.6;
-	position: relative;
-	z-index: 2;
-}
-
-/*
- * A column being dragged — in the header, and in the column panel.
- *
- * The header-cell twin of the row rule above, and the same discipline: opacity plus a lift, never a
- * layout property. The neighbours part by the library's transform and must not be pushed by
- * anything here.
- *
- * Both selectors, not one on the attribute alone, and not the header alone either. The panel's row
- * stamps the same attribute and had no rule at all, so a panel drag showed only the library's own
- * transform — no dimming, no lift, while the header's drag had both. Keeping the two selectors
- * explicit rather than writing `[data-column-dragging]` is what keeps this from also catching a
- * consumer's element that happens to carry the attribute.
- */
-[data-slot='th'][data-column-dragging],
-[data-slot='column-visibility-item'][data-column-dragging] {
-	opacity: 0.6;
-	position: relative;
-	z-index: 2;
-}
-
-/*
- * The row and column drag handles: a quiet grip, not a button.
- *
- * Both reach the DOM through `core.Button`, whose default here is the filled primary variant — a
- * full-size call to action sitting in every row. A grip is furniture, so it drops to an icon-sized
- * ghost: no fill at rest, muted glyph, and the hover surface the kit's ghost variant uses. The
- * focus ring stays the button's own. Selected by slot, because the shared handle authors no class.
- */
-button[data-slot='row-drag-handle'],
-button[data-slot='column-drag-handle'] {
-	width: 1.5rem;
-	height: 1.5rem;
-	padding: 0;
-	border-radius: var(--radius-sm);
-	background-color: transparent;
-	color: var(--muted-foreground);
-}
-
-button[data-slot='row-drag-handle']:hover,
-button[data-slot='column-drag-handle']:hover {
-	background-color: var(--muted);
-	color: var(--foreground);
-}
-
-/*
- * A panel row without a grip — a column the author locked with `ordering: false` — is indented by
- * the grip's width plus the row's gap, so its checkbox lines up with the rows that drag. Only while
- * some row in the same list carries a grip: a panel with no drag at all keeps its rows flush.
- *
- * A stylesheet rule rather than a placeholder in the markup, because the grip decides for itself
- * whether to render and the panel is not told; `:has()` reads the outcome instead of re-deriving it.
- */
-:has(> [data-slot='column-visibility-item'] [data-slot='column-drag-handle'])
-	> [data-slot='column-visibility-item']:not(:has([data-slot='column-drag-handle'])) {
-	padding-inline-start: 1.75rem;
+	&
+		:has(> [data-slot='column-visibility-item'] [data-slot='column-drag-handle'])
+		> [data-slot='column-visibility-item']:not(:has([data-slot='column-drag-handle'])) {
+		@apply ps-7;
+	}
 }

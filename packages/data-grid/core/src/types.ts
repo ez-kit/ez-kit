@@ -416,6 +416,9 @@ export const PaginationMode = {
 	/**
 	 * Infinite scroll — mutually exclusive with the pagination bar. The grid is **event-only**:
 	 * it calls {@link PaginationConfig.onLoadMore} at a load edge and the consumer appends rows.
+	 *
+	 * Every accumulated row is shown, whatever the feature set registers — `paginatedRowModel`
+	 * included, so one set serves a paged grid and an infinite one. It starts at `pageIndex` 0.
 	 */
 	Infinite: 'infinite',
 } as const
@@ -445,6 +448,11 @@ export type PaginationConfig = FeatureToggle &
 		 * {@link PaginationMode.Infinite} the grid is **event-only**: it calls
 		 * {@link PaginationConfig.onLoadMore} when a load edge is reached, and the consumer
 		 * appends rows via `table.appendData(rows)`.
+		 *
+		 * The mode is runtime config, not a feature-set decision: infinite mode shows every
+		 * accumulated row even with `paginatedRowModel` registered (the table runs with
+		 * `manualPagination: true`), and it starts at `pageIndex` 0 — a seeded index is
+		 * overridden, with a development warning.
 		 */
 		mode?: PaginationMode
 		/**

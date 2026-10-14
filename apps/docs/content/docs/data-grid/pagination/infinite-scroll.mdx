@@ -7,10 +7,31 @@ Infinite scroll loads more rows as the user approaches the bottom. It is a **mod
 pagination** (`pagination.mode: 'infinite'`), mutually exclusive with the classic page
 footer.
 
-Register `infiniteFeature` beside `rowPaginationFeature`, and — unlike every other pagination
-grid — **without** `paginatedRowModel`: infinite mode shows every accumulated row, so the model
-would slice them back to one page. `createTable` warns in development if you register it anyway.
-See [Feature set](/docs/data-grid/feature-set).
+The mode is chosen by the config, not by the feature set. Register `rowPaginationFeature` and
+`paginatedRowModel` exactly as a paged grid does — `infiniteFeature` is already in the base set —
+and infinite mode shows every accumulated row anyway: the slice to one page only applies while
+the grid is paged. So one set serves a paged table on one screen and an infinite feed on another:
+
+```tsx
+const features = tableFeatures({
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	infiniteFeature,
+	rowPaginationFeature,
+	paginatedRowModel: createPaginatedRowModel(),
+})
+
+// A paged table…
+<DataGrid features={features} data={orders} columns={orderColumns} pagination={{ pageSize: 25 }} />
+
+// …and an infinite feed, on the same set.
+<DataGrid features={features} data={events} columns={eventColumns} pagination={{ mode: 'infinite', hasNextPage, onLoadMore }} />
+```
+
+An infinite grid has no page to be on, so it starts at `pageIndex` 0: a seeded
+`initialState.pagination.pageIndex` is ignored, with a warning in development. See
+[Feature set](/docs/data-grid/feature-set).
 
 The grid is **event-only**: it owns edge detection and request status, _you_ own the data.
 When an edge is reached the grid calls `onLoadMore`; you fetch the page and append the rows

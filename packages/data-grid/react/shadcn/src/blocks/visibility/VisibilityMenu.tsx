@@ -8,6 +8,7 @@ import { ColumnDragHandle } from '@grid-shadcn/blocks/ordering/ColumnDragHandle'
 import { Button } from '@grid-shadcn/components/ui/button'
 import { Checkbox } from '@grid-shadcn/components/ui/checkbox'
 import { Popover, PopoverContent, PopoverTrigger } from '@grid-shadcn/components/ui/popover'
+import { KIT_CLASS_NAME } from '@grid-shadcn/lib/kit-class-name'
 import { cn } from '@grid-shadcn/lib/utils'
 
 import type { VisibilityColumnItem, VisibilityMenuProps } from '@ez-kit/data-grid-react'
@@ -74,7 +75,7 @@ export function VisibilityMenu({ columns, isColumnPanel }: VisibilityMenuProps) 
 			</PopoverTrigger>
 			<PopoverContent
 				align='end'
-				className={cn('p-2', withOrdering ? 'w-60' : 'w-48')}
+				className={cn(KIT_CLASS_NAME, 'p-2', withOrdering ? 'w-60' : 'w-48')}
 			>
 				<div className='space-y-1'>
 					{columns.map((col) => (

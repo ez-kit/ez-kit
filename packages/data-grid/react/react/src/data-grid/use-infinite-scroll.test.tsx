@@ -81,15 +81,11 @@ afterEach(() => {
  * slices — every case in this file then dies in the header's size vars before reaching its own
  * assertion.
  *
- * The set is {@link TEST_FEATURES} **minus `paginatedRowModel`**, which is the one place a
- * per-file set is the right answer rather than a drift: every grid here runs
- * `pagination.mode: 'infinite'`, infinite mode shows every accumulated row, and registering the
- * paginated row model beside it is the misconfiguration core warns about in development.
+ * The full {@link TEST_FEATURES}, `paginatedRowModel` included: infinite mode shows every
+ * accumulated row whatever the set registers, so these grids need no set of their own.
  */
-const { paginatedRowModel: _paginatedRowModel, ...INFINITE_FEATURES } = TEST_FEATURES
-
 function InfiniteGrid(props: { config: Omit<UseDataGridConfig<GridFeatures, User>, 'features'> }) {
-	const table = useDataGrid<GridFeatures, User>({ features: INFINITE_FEATURES, ...props.config })
+	const table = useDataGrid<GridFeatures, User>({ features: TEST_FEATURES, ...props.config })
 	return <DataGrid table={table} />
 }
 

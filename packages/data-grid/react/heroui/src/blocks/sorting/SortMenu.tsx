@@ -4,6 +4,8 @@ import { SortDirection, useGridMessages } from '@ez-kit/data-grid-react/kit'
 import { Button, buttonVariants, ListBox, Popover, Select } from '@heroui/react'
 import { ArrowUpDown, Plus, Trash2 } from 'lucide-react'
 
+import { KIT_CLASS_NAME } from '../../lib/kit-class-name'
+
 import type { SortMenuItem, SortMenuProps } from '@ez-kit/data-grid-react'
 
 function SortRow({ item, index }: { item: SortMenuItem; index: number }) {
@@ -29,7 +31,7 @@ function SortRow({ item, index }: { item: SortMenuItem; index: number }) {
 						<Select.Value />
 						<Select.Indicator />
 					</Select.Trigger>
-					<Select.Popover>
+					<Select.Popover className={KIT_CLASS_NAME}>
 						<ListBox>
 							{item.availableColumns.map((col) => (
 								<ListBox.Item
@@ -57,7 +59,7 @@ function SortRow({ item, index }: { item: SortMenuItem; index: number }) {
 						<Select.Value />
 						<Select.Indicator />
 					</Select.Trigger>
-					<Select.Popover>
+					<Select.Popover className={KIT_CLASS_NAME}>
 						<ListBox>
 							<ListBox.Item
 								id='asc'
@@ -111,7 +113,7 @@ export function SortMenu({ items, canAddSort, onAddSort, onResetSorting }: SortM
 					</span>
 				) : null}
 			</Popover.Trigger>
-			<Popover.Content>
+			<Popover.Content className={KIT_CLASS_NAME}>
 				<Popover.Dialog
 					aria-label={messages.sorting.menu}
 					data-slot='sort-menu'

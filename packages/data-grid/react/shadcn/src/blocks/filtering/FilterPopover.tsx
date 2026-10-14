@@ -5,6 +5,8 @@ import { ListFilter } from 'lucide-react'
 
 import { Button } from '@grid-shadcn/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@grid-shadcn/components/ui/popover'
+import { KIT_CLASS_NAME } from '@grid-shadcn/lib/kit-class-name'
+import { cn } from '@grid-shadcn/lib/utils'
 
 import type { FilterPopoverProps } from '@ez-kit/data-grid-react'
 
@@ -24,7 +26,7 @@ export function FilterPopover({ children, hasActiveFilter }: FilterPopoverProps)
 			</PopoverTrigger>
 			<PopoverContent
 				align='start'
-				className='w-64 p-3'
+				className={cn(KIT_CLASS_NAME, 'w-64 p-3')}
 			>
 				<div className='flex flex-col gap-2'>{children}</div>
 			</PopoverContent>
