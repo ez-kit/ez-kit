@@ -1,6 +1,6 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { useEffect } from 'react'
+import { StrictMode, useEffect } from 'react'
 import { afterEach, describe, expect, expectTypeOf, it, vi } from 'vitest'
 
 import { createForm } from './create-form'
@@ -370,6 +370,49 @@ describe('group submit (fix round 1)', () => {
 		expect(onGroupSubmit).not.toHaveBeenCalled()
 		expect(screen.getByText(TOO_SHORT)).toBeInTheDocument()
 		expect(screen.getByLabelText('Password')).not.toHaveFocus()
+	})
+})
+
+describe('group submit under StrictMode', () => {
+	it("runs a group's onSubmitAsync exactly once per whole-form submit", async () => {
+		const user = userEvent.setup()
+		const onSubmit = vi.fn()
+		const onSubmitAsync = vi.fn(async () => {
+			await Promise.resolve()
+			return undefined
+		})
+		const ServerChecked = withFieldGroup({
+			defaultValues: { password: '', confirm: '' },
+			validators: { onSubmitAsync },
+			render: ({ group }) => (
+				<group.TextField
+					name='password'
+					label='Password'
+				/>
+			),
+		})
+		render(
+			<StrictMode>
+				<Form
+					defaultValues={PROFILE}
+					onSubmit={onSubmit}
+				>
+					{(form) => (
+						<>
+							<ServerChecked fields='security' />
+							<form.SubmitButton>Save profile</form.SubmitButton>
+						</>
+					)}
+				</Form>
+			</StrictMode>,
+		)
+
+		await user.click(screen.getByRole('button', { name: 'Save profile' }))
+		await waitFor(() => {
+			expect(onSubmit).toHaveBeenCalledTimes(1)
+		})
+
+		expect(onSubmitAsync).toHaveBeenCalledTimes(1)
 	})
 })
 

@@ -488,6 +488,18 @@ const PlaceBlock = withFieldGroup({
 	),
 })
 
+const CheckedPlaceBlock = withFieldGroup({
+	defaultValues: { city: '' },
+	props: { label: 'City' },
+	validators: { onChange: testSchema<{ city: string }>(() => []) },
+	render: ({ group, label }) => (
+		<group.TextField
+			name='city'
+			label={label}
+		/>
+	),
+})
+
 function PlacesOutput({ form }: { form: FormInstance<Places, NoRegistry, NoRegistry> }): ReactNode {
 	return (
 		<form.Subscribe selector={(state) => JSON.stringify(state.values)}>
@@ -617,6 +629,37 @@ describe('flat fields on groups (D7)', () => {
 			expect(input).toHaveValue('abc')
 		}
 	})
+
+	it.each([
+		['without validators', PlaceBlock],
+		['with validators', CheckedPlaceBlock],
+	])(
+		'keeps the input of a map placed as an inline literal while the parent re-renders on every keystroke, %s (Review Focus 4)',
+		async (_, Block) => {
+			const user = userEvent.setup()
+			function Case(): ReactNode {
+				const form = useForm({ defaultValues: PLACES })
+				const billingCity = useSelector(form.store, (state) => state.values.billingCity)
+				return (
+					<Form form={form}>
+						<p>{billingCity}</p>
+						<Block
+							fields={{ city: 'billingCity' }}
+							label='Billing city'
+						/>
+					</Form>
+				)
+			}
+			render(<Case />)
+
+			const input = screen.getByLabelText('Billing city')
+			await user.type(input, 'abc')
+
+			expect(screen.getByLabelText('Billing city')).toBe(input)
+			expect(input).toHaveFocus()
+			expect(input).toHaveValue('abc')
+		},
+	)
 
 	it('form.X stays absolute inside a group — coordinates follow the object (R72)', async () => {
 		const user = userEvent.setup()

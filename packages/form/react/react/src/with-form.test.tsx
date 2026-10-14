@@ -3,8 +3,10 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createForm } from './create-form'
+import { createSchemaForm } from './create-schema-form'
 import { testComponents, testFields, testFormElement } from './test-kit'
 
+import type { FormSchema } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
 
 const { Form, FormProvider, useForm, withForm } = createForm({
@@ -41,6 +43,41 @@ describe('withForm without a form prop (D7)', () => {
 		await user.type(screen.getByLabelText('Login'), 'ann')
 
 		expect(screen.getByRole('status')).toHaveTextContent('ann')
+	})
+
+	it('takes the form of the <SchemaForm> above it', async () => {
+		const user = userEvent.setup()
+		const { SchemaForm, withForm: withSchemaForm } = createSchemaForm({
+			FormElement: testFormElement,
+			fields: testFields,
+			components: testComponents,
+		})
+		const SchemaLoginPart = withSchemaForm({
+			defaultValues: SIGN_UP,
+			render: ({ form }) => (
+				<>
+					<form.TextField
+						name='login'
+						label='Login'
+					/>
+					<form.Subscribe selector={(state) => state.values.login}>
+						{(login) => <output>{login}</output>}
+					</form.Subscribe>
+				</>
+			),
+		})
+		const schema: FormSchema<SignUp> = { version: 1, children: [{ type: 'block', component: 'login' }] }
+		render(
+			<SchemaForm
+				schema={schema}
+				defaultValues={SIGN_UP}
+				blocks={{ login: () => <SchemaLoginPart /> }}
+			/>,
+		)
+
+		await user.type(screen.getByLabelText('Login'), 'cid')
+
+		expect(screen.getByRole('status')).toHaveTextContent('cid')
 	})
 
 	it('takes the form of a FormProvider with no <form>', async () => {
