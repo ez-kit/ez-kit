@@ -1,0 +1,58 @@
+# Tasks
+
+## 1. Ядро: пагинация режет строки только в клиентском постраничном режиме
+
+- [x] 1.1 Написать падающие тесты в `packages/data-grid/core/src/create-table/create-table.test.ts` (TDD, RED) на 50 строках с `allDataGridFeatures`: без `pagination`, с `pagination: false`, с `pagination: { enabled: false, pageSize: 5 }` → `getRowModel().rows.length === 50`, `getRowCount() === 50`, `options.manualPagination === true`. Проверить: `pnpm --filter @ez-kit/data-grid-core test` красный именно на этих случаях
+- [x] 1.2 Написать падающий тест засева: без `pagination`, `initialState.pagination: { pageIndex: 2, pageSize: 10 }` → 50 строк, первая — первая строка данных, `store.state.pagination` равен засеву. Проверить: тест красный
+- [x] 1.3 Написать падающие тесты живого экземпляра со слиянием `setOptions(prev => ({ ...prev, ...options }))`: выключено → `{ pageSize: 10 }` → выключено даёт 50 / 10 / 50; `infinite` → `{ pageSize: 10 }` и `{ manual: true, rowCount: 100 }` → `{ pageSize: 10 }` дают 10 строк и `getRowCount() === 25` без прежнего `rowCount`; засеянный `pageIndex: 2` после включения показывает строки 21–30. Проверить: красные случаи — возвраты в клиентский режим и выключение
+- [x] 1.4 В `create-table-options.ts` заменить две условные ветки (`isInfinite ? { manualPagination: true }` и `paginationCfg?.manual ? { manualPagination: true, … }`) одним безусловным `manualPagination: !isClientPaged` (design, решение 1). `rowCount` / `pageCount` писать только в ветке `manual`, а в остальных случаях писать их явно как `undefined`, чтобы слияние не оставило прежние значения. Обновить комментарий над гейтом: правило, регрессия #246, кеш `_rowModels.paginatedRowModel`. Проверить: тесты 1.1–1.3 зелёные
+- [x] 1.5 Проверить, что регрессионные тесты infinite / клиентской / серверной пагинации (`createTable — infinite pagination`) и `create-table-options.test.ts` зелёные без правки их ожиданий; ожидание `manualPagination` `toBeUndefined()` для клиентского режима (`create-table.test.ts`, ~стр. 803) обновить на `false`. Проверить: `pnpm --filter @ez-kit/data-grid-core test` зелёный
+- [x] 1.6 Обновить docblock `pagination` в `packages/data-grid/core/src/types.ts`: без включённой пагинации видны все строки при любом наборе фич, засеянное состояние пагинации ждёт включения. Проверить: `pnpm --filter @ez-kit/data-grid-core typecheck` и `lint` зелёные
+- [x] 1.7 Документация: `apps/docs/content/docs/data-grid/feature-set.mdx` (абзац «One set covers both pagination modes» обобщить: набор с `paginatedRowModel` подходит и гриду без пагинации) и `pagination/index.mdx` (без `pagination` видны все строки). Проверить: `pnpm --filter @ez-kit/docs test -- docs-option-names` зелёный
+
+## 2. Ядро: выключенные группировка и колоночные фильтры не меняют строки
+
+- [x] 2.1 Написать падающие тесты в `create-table.test.ts`: без `grouping`, `initialState.grouping: ['age']` → 50 несгруппированных строк, `store.state.grouping` равен `['age']`; с `grouping: true` строки сгруппированы. Проверить: красный только случай без `grouping`
+- [x] 2.2 Ставить `manualGrouping: !hasGrouping` безусловным булевым (design, решение 2); дополнить существующий комментарий «No `manualGrouping`»: флаг отвергнут для включённой группировки, при выключенной колонки `__group__` нет. Проверить: тесты 2.1 зелёные, тесты серверной группировки (`createManualGroupedRowModel`) зелёные
+- [x] 2.3 Написать падающие тесты: без `filtering`, засеянный `columnFilters`, которому соответствуют 9 из 50 строк, → 50 строк и засев в состоянии; без `filtering`, с `globalFiltering: true`, тем же засевом и поиском на 5 строк → ровно 5 строк; с `filtering: true` → 9 строк. Проверить: красный только случай без `filtering`
+- [x] 2.4 В `packages/data-grid/core/src/column/map-columns/map-columns.ts` при выключенной колоночной фильтрации ставить каждой листовой колонке пропускающий `filterFn` вместо диспетчера операторов (design, решение 3); групповые колонки не трогать. Добавить кейс в `map-columns.test.ts`. Проверить: тесты 2.3 и `map-columns.test.ts` зелёные, dev-проверка слота `filterFns` при выключенной фильтрации по-прежнему молчит
+- [x] 2.4a Писать `enableColumnFilters: hasColumnFiltering` безусловно и заменять слот `filteredRowModel` обёрткой, которая пересоздаёт внутреннюю модель при смене `options.enableColumnFilters` (design, решение 3); обёртку кешировать по слоту, собранный набор — по набору потребителя. Тест: `options.features` одного и того же конфига идентичен между двумя вызовами `createTableOptions`. Проверить: тест 2.5 зелёный в обе стороны (включение и выключение `filtering` на лету)
+- [x] 2.5 Написать тест переключения на живом экземпляре: засеянные `grouping` и `columnFilters`, конфиг без `grouping` / `filtering`, затем с ними, затем снова без них → строки сначала не сгруппированы и не отфильтрованы, затем сгруппированы и отфильтрованы, затем снова все. Проверить: тест зелёный
+- [x] 2.6 Документация: `filtering/index.mdx` и `grouping/index.mdx` — выключенная фича не применяет засеянное состояние, оно вступает в силу при включении. Проверить: `pnpm --filter @ez-kit/docs test -- docs-option-names` зелёный
+
+## 3. Ядро: предупреждения о засеве выключенной фичи
+
+- [x] 3.1 Написать падающие тесты в блоке `createTable — unreachable seeds`: по одному `console.warn` на каждый засев из таблицы design (решение 5) — `pagination`, `columnFilters`, `grouping`, `sorting`, `globalFilter`, `expanded` (без `expanding` и `grouping`), `rowPinning`; сообщение называет засев и фичу. Проверить: тесты красные
+- [x] 3.2 Написать тесты отсутствия предупреждения: фича включена; засева нет (ядро само пишет `pagination` в `initialState` — о нём молчать); `expanded` при включённой `grouping`; контролируемое `state.columnFilters` (ядро `state` не получает — `useDataGrid` выносит его до `createTableOptions`, поэтому этот случай проверяется в 4.3). Проверить: тесты зелёные до и после реализации
+- [x] 3.3 Реализовать предупреждения в `create-table-options.ts` по образцу `warnUnreachableSeed` под `IS_DEV`, читая только `userInitialState`. Проверить: тесты 3.1–3.2 зелёные, `pnpm --filter @ez-kit/data-grid-core test` зелёный целиком (существующие тесты, засевающие выключенные фичи, не получают новых шумных `warn` без мока — поправить их моками, если появятся)
+- [x] 3.4 Документация: `apps/docs/content/docs/data-grid/state/index.mdx`, раздел `initialState` — засев выключенной фичи хранится, не влияет на строки и даёт предупреждение в development; граница с засевами колонок (`initialHidden`, `initialSide`). Проверить: `pnpm --filter @ez-kit/docs test` зелёный
+
+## 4. React: ARIA и рендер грида без пагинации
+
+- [x] 4.1 Перевести тест «writes neither when the DOM already holds every row» в `packages/data-grid/react/react/src/data-grid/aria-state.test.tsx` с `ROWS.slice(0, 3)` на все 12 строк и добавить парный случай с набором без `paginatedRowModel`; добавить случаи «без `pagination`, засеянный `pageIndex: 2` → нет `aria-rowindex`» и «статус числа строк объявляет 12». Проверить: `pnpm --filter @ez-kit/data-grid-react test` красный на случае с полным набором до правки ядра; после групп 1–3 и до правки 4.2 — красный на `aria-rowcount="-1"`
+- [x] 4.2 В `aria-state.ts` в `hasPartialRowSet` и `hasTrustedRowTotal` после проверки infinite добавить ветку `!table.grid.pagination.enabled` (полный набор, итог доверенный) до чтения `manualPagination` (design, решение 6); обновить их docblock'и. Проверить: тесты 4.1 зелёные, существующие ARIA-тесты infinite / клиентского / серверного режима зелёные без правки ожиданий
+- [x] 4.3 Добавить тесты рендера: `<DataGrid>` с полным набором и 50 строками без `pagination` рендерит 50 строк в `tbody`; `useDataGrid({ data, columns })` без `pagination` отдаёт 50 строк, `<DataGrid table={table} />` рендерит 50; переключение пропа `pagination` выключено → `{ pageSize: 10 }` → выключено без перемонтирования даёт 50 / 10 / 50. Проверить: тесты зелёные
+- [x] 4.4 В `packages/data-grid/react/react/src/feature-optionality.test.tsx` добавить случай «набор регистрирует `paginatedRowModel`, конфиг не включает `pagination`» → все строки видны. Проверить: тест зелёный
+
+## 5. Киты: готовый DataGrid
+
+- [x] 5.1 heroui: в `packages/data-grid/react/heroui/src/blocks/core/aria-state.test.tsx` (рядом с тестом `aria-rowcount`, который уже рендерит готовый `DataGrid`) — готовый `DataGrid` с 25 строками без `pagination` рендерит 25 строк и не пишет `aria-rowcount`. Проверить: `pnpm --filter @ez-kit/data-grid-heroui test` зелёный
+- [x] 5.2 shadcn: новый `packages/data-grid/react/shadcn/src/blocks/core/aria-state.test.tsx` с тем же случаем (не в корне `src/`: `assertTopLevelCoverage` реестра падает на неучтённом файле верхнего уровня) для готового `DataGrid`. Проверить: `pnpm --filter @ez-kit/data-grid-shadcn test` зелёный, а `registry:build` не включает тест в payload (`apps/docs/test/registry-payload.test.ts` зелёный)
+
+## 6. Changeset, сверка документации и общий гейт
+
+- [x] 6.1 Вторая проверка документации по смыслу, а не по именам: найти в `packages/data-grid/**` (docblock'и, README) и `apps/docs/content/**` утверждения вида «без пагинации — первая страница», «засев выключенной фичи применяется», «one set covers both modes» и исправить устаревшие. Проверить: `grep -rniE "(first page|one page|slice).{0,60}pagination|pagination.{0,60}(first page|one page|slice)"` по этим путям не находит устаревших утверждений
+- [x] 6.2 Добавить `.changeset/disabled-features-keep-rows.md`: **minor** для `@ez-kit/data-grid-core` и `@ez-kit/data-grid-react` (без `@ez-kit/data-grid-shadcn`). Текст на английском: регрессия с 0.7.0 (#246); выключенная фича не меняет строки, её засев хранится и вступает в силу при включении; dev-предупреждения о засеве; наблюдаемые значения — `options.manualPagination` у грида без клиентской пагинации, `getFilterFn()` колонок при выключенной `filtering`. Проверить: `node scripts/check-changesets.mjs` зелёный
+- [x] 6.3 Полный гейт последовательно: `pnpm build`, затем `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm size` (каждый отдельно). Проверить: всё зелёное; таймауты на загруженной машине перепроверить запуском пакета отдельно
+- [x] 6.4 e2e пагинации, бесконечной прокрутки, фильтрации и группировки для shadcn и heroui (`apps/docs/e2e/packages/data-grid/{pagination,filtering,grouping}/`). Проверить: спеки зелёные — прогон всего каталога `e2e/packages/data-grid` для обоих китов: 666 passed, 5 skipped, 1 failed — `[shadcn] ordering/virtual-row-drag.spec.ts:551`, известная нестабильность виртуального перетаскивания (~1 из 10, отложена 2026-10-07; пример не использует ни пагинацию, ни засев); повтор этого кейса 8/8 зелёный
+
+## 7. Попутные правки, найденные по ходу
+
+- [x] 7.1 Закрепление строк включается, если включена хоть одна сторона: гейт `hasPinning` читал `top ?? bottom`, и `pinning: { row: { top: false, bottom: true } }` не включал закрепление вовсе (а новое предупреждение о засеве `rowPinning` говорило бы, что оно выключено). Тесты в `create-table.test.ts` (`createTable — pinning`): `{ top: false, bottom: true }` → `enableRowPinning: true`, `{ top: false, bottom: false }` → не включено. Проверить: тест падал до правки, `pnpm --filter @ez-kit/data-grid-core test` зелёный
+- [x] 7.2 `apps/docs/content/docs/data-grid/state/index.mdx`: `initialState.pagination` сливается по ключам, а не заменяет срез; при двух размерах побеждает засев, и `createTable` предупреждает, а не молчит. Проверить: `pnpm --filter @ez-kit/docs test` зелёный
+
+## Workflow follow-up
+
+- Не коммитить без явной просьбы пользователя.
+- После мержа: удалить у потребителей обходные пути (второй набор без `paginatedRowModel` для гридов без пагинации, `pagination: { pageSize: Infinity }`).
+- Архивировать изменение после ревью.

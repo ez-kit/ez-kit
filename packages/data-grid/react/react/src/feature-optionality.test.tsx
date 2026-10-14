@@ -8,6 +8,7 @@ import {
 	createExpandedRowModel,
 	createFilteredRowModel,
 	createGroupedRowModel,
+	createPaginatedRowModel,
 	createSortedRowModel,
 	creatingFeature,
 	deletingFeature,
@@ -17,6 +18,7 @@ import {
 	loadingFeature,
 	rowAggregationFeature,
 	rowExpandingFeature,
+	rowPaginationFeature,
 	rowSelectionFeature,
 	rowSortingFeature,
 	tableFeatures,
@@ -26,6 +28,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { DataGrid } from './data-grid/data-grid'
 import { renderGrid } from './test-utils'
 
+import type { TestRow } from './test-utils'
 import type { GridFeatures } from './types'
 
 /**
@@ -221,5 +224,33 @@ describe('the active-filters chips strip does not require the draft feature', ()
 		const { container } = renderChips(tableFeatures({ ...FILTERING, draftFeature }))
 
 		expect(container.querySelector("[data-slot='active-filters-bar']")).not.toBeNull()
+	})
+})
+
+describe('a registered row model does nothing while its feature is off', () => {
+	/**
+	 * The mirror of everything above: registering a feature must not switch it on either. The set
+	 * registers pagination and its row model, the config never mentions `pagination`, and the data
+	 * runs past a page — under v9 that grid used to render its first page and nothing else, because
+	 * the core seeds a `pagination` slice on every grid and upstream slices whatever it is handed.
+	 */
+	const PAGED_SET = tableFeatures({
+		...BASE,
+		sortedRowModel: createSortedRowModel(),
+		groupedRowModel: createGroupedRowModel(),
+		expandedRowModel: createExpandedRowModel(),
+		rowPaginationFeature,
+		paginatedRowModel: createPaginatedRowModel(),
+	}) as unknown as GridFeatures
+	const MANY: TestRow[] = Array.from({ length: 25 }, (_, index) => ({
+		id: index + 1,
+		name: `Row ${String(index + 1)}`,
+		age: 20 + index,
+	}))
+
+	it('renders every row of a grid that registers pagination but never turns it on', () => {
+		const { container } = renderGrid({ features: PAGED_SET, data: MANY })
+
+		expect(container.querySelectorAll('[data-slot="tbody"] [data-slot="tr"]')).toHaveLength(25)
 	})
 })

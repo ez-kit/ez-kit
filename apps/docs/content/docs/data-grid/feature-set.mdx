@@ -122,10 +122,16 @@ row model is what actually sorts, filters or slices the rows.
 `virtualization`, `toolbar`, `messages`, `direction` and `layout` hold no table state and are not
 features — they are config, and always available.
 
-One set covers both pagination modes. `pagination.mode: 'infinite'` shows every accumulated row
-even with `paginatedRowModel` registered — the slice to one page only applies while the grid is
-paged — so a shared grid can render a paged table on one screen and an infinite feed on another
+One set covers every pagination mode, including none. The slice to one page applies only while
+the grid paginates client-side: a grid without `pagination`, an infinite feed and a server-paged
+grid all show the rows they have even with `paginatedRowModel` registered. So a shared grid can
+render a paged table on one screen, an infinite feed on another and an unpaged list on a third
 without a second set.
+
+The same holds for the other row models. A feature that is registered but not switched on in the
+config changes no rows: a seeded `initialState.grouping` or `initialState.columnFilters` waits in
+state until `grouping` or `filtering` is turned on, and createTable warns about the seed in
+development.
 
 ## The failures that are silent
 

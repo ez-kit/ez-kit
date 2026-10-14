@@ -55,6 +55,18 @@ or a setter such as `table.setColumnPinning(…)` — is free to change it after
 />
 ```
 
+A seed does not switch its feature on. `sorting` and `pagination` are written above for a reason:
+without them the two slices would still be seeded, but would change no row — no sort, no slice to a
+page — until the feature is switched on, at which point they take effect. The same goes for
+`columnFilters` without `filtering`, `grouping` without `grouping`, `globalFilter` without
+`globalFiltering`, `expanded` without `expanding` (or `grouping`) and `rowPinning` without
+`pinning.row`. `createTable` warns about each such seed in development, so a seed that seems to do
+nothing says why.
+
+Column seeds are the other way round. `visibility.initialHidden` and `pinning.initialSide` apply
+whether or not the table-level feature is on — a column can start hidden or pinned in a grid that
+gives the user no way to change it — and `createTable` warns that the seed has become permanent.
+
 ## 4. Controlled `state`
 
 Re-applied on every render, so it wins over all three. Pass it together with `onStateChange` or the
@@ -88,7 +100,7 @@ uncontrolled. See [Controlled state](/docs/data-grid/state/controlled).
 | `initialState`             | grid       | once, at mount              | anything the user does afterwards, and by `state`                    |
 | `state`                    | grid       | every render                | nothing                                                              |
 
-## `initialState` merges for columns, replaces for everything else
+## `initialState` merges for columns and pagination, replaces for everything else
 
 `initialState.columnPinning` and `initialState.columnVisibility` **merge** with the defaults derived
 from the column defs. A column you do not mention keeps its column-level seed; a column you do
@@ -120,14 +132,17 @@ unpinned from `initialState`; remove the `initialSide` from the column def inste
 Unmentioned `start` seeds are placed in front of your `start` ids and unmentioned `end` seeds after
 your `end` ids, so a pinned selection column stays first and a pinned actions column stays last.
 
-Every other `initialState` slice replaces the whole slice — `sorting`, `pagination`,
-`rowSelection`, `expanded`, `columnSizing`, `rowPinning`, `globalFilter`, `columnFilters`,
-`loading`, `infinite`. Each slice is all-or-nothing: the type asks for the complete slice object,
-so there is no partial seed to merge.
+`initialState.pagination` merges **per key**: a key you leave out keeps its resolved default —
+`pageIndex: 0`, and `pageSize` from `pagination.pageSize` — so a deep link to page 3 is
+`{ pagination: { pageIndex: 2 } }` and nothing more.
+
+Every other `initialState` slice replaces the whole slice — `sorting`, `rowSelection`, `expanded`,
+`columnSizing`, `rowPinning`, `globalFilter`, `columnFilters`, `loading`, `infinite`. Each slice is
+all-or-nothing: the type asks for the complete slice object, so there is no partial seed to merge.
 
 ## Pagination: pick one
 
-Page size can be set from two places, and they are not merged:
+Page size can be set from two places:
 
 ```tsx
 // A — feature config
@@ -137,12 +152,13 @@ Page size can be set from two places, and they are not merged:
 <DataGrid features={features} data={data} columns={columns} pagination initialState={{ pagination: { pageIndex: 0, pageSize: 25 } }} />
 ```
 
-Both are legal. Use one or the other. `initialState.pagination` replaces the whole pagination
-slice, so when both are present `initialState.pagination.pageSize` wins and `pagination.pageSize`
-is silently ignored.
+Both are legal. Use one or the other. When both name a size, `initialState.pagination.pageSize`
+wins — the seed is the more specific, per-mount statement — and `createTable` warns about the pair
+in development.
 
-Prefer `pagination.pageSize` unless you also need a non-zero starting `pageIndex` — e.g. restoring a
-page from the URL, where you are writing the whole slice anyway.
+Prefer `pagination.pageSize` for "this grid shows 25 rows", and `initialState.pagination` for
+restoring what the user picked — a starting `pageIndex` from the URL, say, where the size can be
+left to `pagination.pageSize`.
 
 ## Invariants no state can break
 

@@ -13,6 +13,8 @@ import { ColumnResizeMode, ExpandingMode, GridDirection, GroupingMode, MultiSort
 import { featureConfig, isFeatureEnabled } from '../utils/feature-flag'
 import { setIfDefined } from '../utils/set-if-defined'
 
+import { withGatedFilteredRowModel } from './gate-column-filters'
+
 import type { ColumnDef, SystemColumnDef } from '../column/types'
 import type { ColumnInvariants } from '../column-state'
 import type { DraftApplyHandlers } from '../features/deferred-apply'
@@ -319,6 +321,33 @@ function warnUnreachableSeed(columnId: string, seed: string, feature: string): v
 			`so nothing can change it back — the seed becomes permanent. ` +
 			`Enable \`${feature}\` on the table to give the user that control, or drop the seed.`,
 	)
+}
+
+/**
+ * Warn about an `initialState` slice seeded for a feature the config leaves off.
+ *
+ * Unlike {@link warnUnreachableSeed}, whose column seeds take effect regardless, a row-state seed
+ * for a feature that is off changes no row: the slice is kept in state and applies once the
+ * feature is switched on. So the grid looks as if the seed was ignored, and this says it was not.
+ * Stripped from production builds, like the other seed warnings.
+ */
+function warnDormantSeed(slice: string, feature: string): void {
+	console.warn(
+		`[data-grid] \`initialState.${slice}\` is seeded, but \`${feature}\` is off, so it changes no row. ` +
+			`The seed is kept and takes effect once \`${feature}\` is switched on — enable it, or drop the seed.`,
+	)
+}
+
+/**
+ * Whether a seeded slice says anything. An empty list, an empty search or a pinning state with
+ * no row in it is what a persisted grid restores for a feature it never used, so it is not worth
+ * a warning; a number, `true` or a non-empty string is.
+ */
+function hasSeedContent(value: unknown): boolean {
+	if (value === undefined || value === null || value === '' || value === false) return false
+	if (Array.isArray(value)) return value.length > 0
+	if (typeof value === 'object') return Object.values(value).some(hasSeedContent)
+	return true
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -677,13 +706,16 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 	// ── map user columns → TanStack columns ──────────────────────────────────
 	const mappedUserColumns = mapColumns(config.columns, operatorRegistry, {
 		tableFaceted,
+		columnFiltering: hasColumnFiltering,
 		...(tableOperators !== undefined ? { tableOperators } : {}),
 	})
 
 	const expandMode = expandingCfg?.mode ?? ExpandingMode.SubContent
 	const normalizedPinning = normalizePinning(config.pinning)
 	const rowPinConfig = normalizedPinning.row
-	const hasPinning = Boolean(rowPinConfig && (rowPinConfig.top ?? rowPinConfig.bottom))
+	// Either side on is row pinning on. Not `top ?? bottom`: a side switched off explicitly is
+	// `false`, not absent, so `{ top: false, bottom: true }` read as off.
+	const hasPinning = rowPinConfig !== false && (rowPinConfig.top === true || rowPinConfig.bottom === true)
 
 	// `ordering` groups the axes, so the callback hangs off the axis, not the group — the same
 	// shape `pinning.column` / `pinning.row` already use.
@@ -1031,6 +1063,8 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 	// `userInitialState` replaces `pagination` wholesale, so seeding only `pageIndex`
 	// (a deep link to page 3) dropped the resolved `pageSize` to `undefined`.
 	const isInfinite = hasPagination && paginationCfg?.mode === PaginationMode.Infinite
+	// The one mode in which the table slices its rows into pages itself.
+	const isClientPaged = hasPagination && !isInfinite && paginationCfg?.manual !== true
 	// An infinite grid has no page to be on — its rows always start at the first one — so a
 	// seeded index is overridden rather than honoured: left in place it would reach
 	// `onStateChange`, a persisted URL and the ARIA row offsets as a page nobody is looking at.
@@ -1040,6 +1074,27 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 		pageSize: defaultPageSize,
 		...userInitialState?.pagination,
 		...(isInfinite ? { pageIndex: 0 } : {}),
+	}
+
+	// The row-state slices whose seed waits for a feature, each with the option that switches it
+	// on and whether this config does. `expanded` also serves grouping: expansion is what opens a
+	// group row, so a grouped grid uses the seed without `expanding`.
+	if (IS_DEV && userInitialState !== undefined) {
+		// Keyed by the slices themselves, so renaming one fails to compile instead of quietly
+		// switching its warning off.
+		const seededFeatures = {
+			pagination: ['pagination', hasPagination],
+			columnFilters: ['filtering', hasColumnFiltering],
+			grouping: ['grouping', hasGrouping],
+			sorting: ['sorting', hasSorting],
+			globalFilter: ['globalFiltering', hasGlobalFiltering],
+			expanded: ['expanding', hasExpanding || hasGrouping],
+			rowPinning: ['pinning.row', hasPinning],
+		} satisfies Partial<Record<keyof InitialTableState<TableFeatures>, readonly [feature: string, enabled: boolean]>>
+		const seeds = userInitialState as Record<string, unknown>
+		for (const [slice, [feature, enabled]] of Object.entries(seededFeatures)) {
+			if (!enabled && hasSeedContent(seeds[slice])) warnDormantSeed(slice, feature)
+		}
 	}
 
 	if (IS_DEV && isInfinite && (userInitialState?.pagination?.pageIndex ?? 0) !== 0) {
@@ -1126,15 +1181,18 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 	// at all. The consumer's own `tableFeatures({ sortFns })` entries stay: `sorting.fns` is the
 	// more specific, per-table statement, so it wins on a key collision.
 	//
-	// `config.features` passes through by reference when there is nothing to merge, so a
-	// consumer can still compare the set they handed in against `options.features`.
+	// Before that, a registered `filteredRowModel` is wrapped so it follows column filtering being
+	// switched on a live instance — see `gate-column-filters.ts`. The wrapped set is cached per
+	// consumer set, so without `sorting.fns` the table still gets one stable object across calls;
+	// it is no longer the consumer's own object.
+	const gatedFeatures = withGatedFilteredRowModel(config.features)
 	const sortFns = sortingCfg?.fns
 	const features =
 		sortFns === undefined
-			? config.features
+			? gatedFeatures
 			: ({
-					...config.features,
-					sortFns: { ...(config.features as { sortFns?: object }).sortFns, ...sortFns },
+					...gatedFeatures,
+					sortFns: { ...(gatedFeatures as { sortFns?: object }).sortFns, ...sortFns },
 				} as TFeatures)
 
 	// The three deferred axes' consumer callbacks, handed to `draftFeature` rather than to the
@@ -1170,7 +1228,10 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 		// Filtering: each axis is gated independently:
 		// - `filtering` falsy → enableColumnFilters: false (per-column UI disabled)
 		// - `globalFiltering` falsy → enableGlobalFilter: false (search disabled)
-		...(hasColumnFiltering ? {} : { enableColumnFilters: false }),
+		// Written on every call: the gated filtered row model rebuilds itself when it flips — see
+		// `gate-column-filters.ts` — and a conditional spread would leave a `false` from an earlier
+		// call behind under `useTable`'s merge. `true` is upstream's own default.
+		enableColumnFilters: hasColumnFiltering,
 		...(hasGlobalFiltering ? {} : { enableGlobalFilter: false }),
 		...(resolvedGlobalFilterFn !== undefined ? { globalFilterFn: resolvedGlobalFilterFn } : {}),
 		// `isFeatureEnabled`, not `=== true`: the option grew a config object (for `onChange`),
@@ -1200,38 +1261,46 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 		// twice on every group row and nothing at all on every leaf row, where its cells are
 		// placeholders. AG Grid's default is the same, and for the same reason.
 		...(hasGrouping ? { groupedColumnMode: 'remove' as const } : {}),
-		// No `manualGrouping`. Upstream's flag makes `getGroupedRowModel()` return the pre-grouped
-		// model untouched, and every part of group-row behaviour keys on `row.groupingColumnId`,
-		// which only a grouped row model sets — so the flag produced an empty `__group__` column
-		// and a grouped column missing from the list. Server grouping is
-		// `createManualGroupedRowModel()` instead; see its docblock.
+		// `manualGrouping` only while grouping is off. Upstream's flag makes `getGroupedRowModel()`
+		// return the pre-grouped model untouched, and every part of group-row behaviour keys on
+		// `row.groupingColumnId`, which only a grouped row model sets — so with grouping on the
+		// flag produced an empty `__group__` column and a grouped column missing from the list.
+		// Server grouping is `createManualGroupedRowModel()` instead; see its docblock. With
+		// grouping off there is no `__group__` column to empty, and the flag is exactly what keeps
+		// a seeded `grouping` slice from grouping a grid that has no grouping UI: upstream applies
+		// a registered grouped model to whatever state it holds, and `enableGrouping: false` only
+		// hides the affordances. Written on every call, for the merge reason `manualPagination`
+		// gives below.
+		manualGrouping: !hasGrouping,
 		// Row selection
 		enableRowSelection: hasSelection,
 		// Single-row selection. TanStack defaults `enableMultiRowSelection` to true, so the gate
 		// has to be spelled out — the same shape as the `enableHiding` / `enableColumnResizing`
 		// gates above.
 		...(selectionCfg?.multi === false ? { enableMultiRowSelection: false } : {}),
-		// Infinite mode shows every accumulated row, so nothing may slice them to one page. In v8
-		// that was `getPaginationRowModel` simply not being attached for this mode; in v9 the
-		// paginated row model is a slot of the consumer's feature set (#246), and leaving it out
-		// cannot be done from here — the instance caches it in `_rowModels.paginatedRowModel` on
-		// first use, so a grid switched from paged to infinite would keep slicing. Upstream reads
-		// `manualPagination` on every call instead, which makes it the switch that follows the
-		// config. No `rowCount` / `pageCount`: an infinite grid has no total, and `getRowCount()`
-		// falling back to the accumulated rows is the right answer.
-		...(isInfinite ? { manualPagination: true } : {}),
-		// Pagination manual
-		...(paginationCfg?.manual
-			? {
-					manualPagination: true,
-					// When rowCount is provided, omit pageCount so TanStack derives it
-					// automatically from rowCount ÷ pageSize. When only pageCount is
-					// given (or neither), fall back to the explicit value or -1 (unknown).
-					...(paginationCfg.rowCount !== undefined
-						? { rowCount: paginationCfg.rowCount }
-						: { pageCount: paginationCfg.pageCount ?? UNKNOWN_PAGE_COUNT }),
-				}
-			: {}),
+		// Rows are sliced to one page only while the grid paginates client-side. In v8 that was
+		// `getPaginationRowModel` being attached for that mode alone; in v9 the paginated row model
+		// is a slot of the consumer's feature set (#246), and leaving it out cannot be done from
+		// here — the instance caches it in `_rowModels.paginatedRowModel` on first use, so a grid
+		// switched out of client-side paging would keep slicing. Upstream reads `manualPagination`
+		// on every call instead, which makes it the switch that follows the config. It is on for
+		// the three modes that must not slice: pagination off (the `pagination` slice is seeded on
+		// every grid, so a registered model would otherwise cut it to the first page), infinite
+		// (every accumulated row is shown) and manual (the server already sliced).
+		//
+		// Written on every call, never spread conditionally: `useTable` merges new options over the
+		// previous ones, so an omitted key would keep the value an earlier mode left behind.
+		manualPagination: !isClientPaged,
+		// The server's total, for manual mode only. When rowCount is provided, pageCount stays
+		// unset so TanStack derives it from rowCount ÷ pageSize; when only pageCount is given (or
+		// neither), it falls back to the explicit value or -1 (unknown). Every other mode clears
+		// both, for the merge reason above — an infinite or unpaged grid has no total, and
+		// `getRowCount()` falling back to the pre-paginated rows is the right answer for both.
+		rowCount: paginationCfg?.manual ? paginationCfg.rowCount : undefined,
+		pageCount:
+			paginationCfg?.manual && paginationCfg.rowCount === undefined
+				? (paginationCfg.pageCount ?? UNKNOWN_PAGE_COUNT)
+				: undefined,
 		// Filtering manual — TanStack has a single `manualFiltering` switch covering both column
 		// filters and global search, so either axis asking for manual mode turns it on for both.
 		...(filteringCfg?.manual || globalFilteringCfg?.manual ? { manualFiltering: true } : {}),
@@ -1388,7 +1457,7 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 			placement: rowActionsPlacement,
 			...(rowActionsEnabled && customRowActions ? { actions: customRowActions } : {}),
 		},
-		...(hasPinning && rowPinConfig !== false ? { rowPinning: rowPinConfig } : {}),
+		...(hasPinning ? { rowPinning: rowPinConfig } : {}),
 		// The `!== undefined` conjunct is unreachable at runtime — `isFeatureEnabled(undefined)`
 		// is already `false` — and exists only to narrow the type so the scalar `true` survives.
 		// Do **not** "simplify" it to `typeof config.virtualization === 'object'`: that drops

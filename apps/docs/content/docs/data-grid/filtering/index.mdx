@@ -30,6 +30,11 @@ seeds the filters the grid opens with:
 />
 ```
 
+The seed filters only while `filtering` is on. Leave `filtering` off and the grid shows every row,
+even with `filteredRowModel` registered: the seeded filters wait in state and take effect once
+`filtering` is switched on, and createTable warns about the seed in development. Global search is
+separate — `globalFiltering` keeps searching with column filters off.
+
 ## Options
 
 ### `filtering`
