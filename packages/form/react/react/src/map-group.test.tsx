@@ -587,6 +587,34 @@ describe('map group passes (fix round 1)', () => {
 		expect(onSubmit).not.toHaveBeenCalled()
 	})
 
+	it('writes a message-less own error, blocks the submit, and clears it once the validator passes (T6)', async () => {
+		const user = userEvent.setup()
+		const onSubmit = vi.fn()
+		const MESSAGE_LESS = { message: '' }
+		const Block = pairBlock({ onChange: ({ value }) => (value.password === 'x' ? MESSAGE_LESS : undefined) })
+		render(
+			<Form
+				defaultValues={SIGN_UP}
+				onSubmit={onSubmit}
+			>
+				{(form) => (
+					<>
+						<Block fields={ROOT_MAP} />
+						<form.SubmitButton>Sign up</form.SubmitButton>
+					</>
+				)}
+			</Form>,
+		)
+
+		await user.type(screen.getByLabelText('Password'), 'x')
+		await user.click(screen.getByRole('button', { name: 'Sign up' }))
+		expect(onSubmit).not.toHaveBeenCalled()
+		await user.type(screen.getByLabelText('Password'), 'y')
+		await user.click(screen.getByRole('button', { name: 'Sign up' }))
+
+		expect(onSubmit).toHaveBeenCalledTimes(1)
+	})
+
 	it('leaves focus alone on an invalid block submit when focusOnError is false (R71)', async () => {
 		const user = userEvent.setup()
 		const Block = pairBlock({ onChange: pairSchema })

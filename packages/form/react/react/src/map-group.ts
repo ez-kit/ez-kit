@@ -240,12 +240,26 @@ function onResetOf(form: object, listener: ResetListener): () => void {
 	}
 }
 
-/** Whether two `errorMap` values show the same messages — a write that changes nothing is skipped. */
+function errorsIn(value: unknown): readonly unknown[] {
+	return value === undefined ? [] : asList(value)
+}
+
+/**
+ * Whether two `errorMap` values hold the same errors — a write that changes nothing is skipped.
+ *
+ * The raw values are compared first, item by item: an error that formats to no text (an issue with an
+ * empty `message`, R77) still blocks the submit, so it must not compare equal to no error at all.
+ * Only lists of the same length fall back to the formatted text, which keeps a fresh pass that reports
+ * the same messages from rewriting the store.
+ */
 function sameMessages(a: unknown, b: unknown): boolean {
-	if (a === b) return true
-	const left = formatOwnErrors([a])
-	const right = formatOwnErrors([b])
-	return left.length === right.length && left.every((message, index) => message === right[index])
+	const left = errorsIn(a)
+	const right = errorsIn(b)
+	if (left.length !== right.length) return false
+	if (left.every((error, index) => Object.is(error, right[index]))) return true
+	const leftText = formatOwnErrors([left])
+	const rightText = formatOwnErrors([right])
+	return leftText.length === rightText.length && leftText.every((message, index) => message === rightText[index])
 }
 
 /** One pass in flight: what aborts it, and what settles when it has. */
