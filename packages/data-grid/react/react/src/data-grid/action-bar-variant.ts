@@ -12,11 +12,11 @@ import type { DataTable, GridFeatures } from '../types'
  * in step. Hence {@link ActionBarVariant} rather than a selection-specific name: one type for
  * the one bar both sections render into.
  *
- * The mode says what the bar **looks like** — an in-flow strip against an overlay — and nothing
- * about where it renders. Layouts used to read it too, through a `GridShell` wrapper that placed
- * the bars for them; that was a config value deciding an element's position, so it went the way
- * of the eight placement options before it. A layout writes the bars where it wants them, and
- * one that asks for `inline` writes them above the table.
+ * The mode says what the bar **looks like** — an in-flow strip against an overlay. The shipped
+ * presets also read it to put the bar where that kind of bar belongs: an in-flow strip above the
+ * table, an overlay last (`useActionBarSlots`, internal to `../layouts`). That is a preset rendering an
+ * enabled feature correctly, not a placement option. A layout of one's own puts the bar wherever
+ * it writes it, whatever the mode.
  */
 export function resolveActionBarVariant<TRow extends object>(table: DataTable<GridFeatures, TRow>): ActionBarVariant {
 	// Already settled by `useDataGrid`. The fallback covers the grid that renders the draft

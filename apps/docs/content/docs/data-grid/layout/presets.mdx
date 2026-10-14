@@ -140,22 +140,29 @@ the pair would field the same filter value twice.
 
 ## The action bar
 
-All four render `<DataGrid.ActionBar />` **last**, which is where the default `floating` bar
-belongs: it overlays the rows, and coming last in document order keeps it out of the tab order
-until there is something to act on.
+Each preset puts `<DataGrid.ActionBar />` where its variant needs it:
 
-Nothing places it for you — a layout renders it where it writes it, like every other member. The
-consequence to know: `selection: { bar: 'inline' }` on one of these presets puts that in-flow strip
-**below** the table. A grid that wants `inline` writes a layout of its own with the bar first:
+- **`floating`**, the default, goes **last**. It overlays the rows, and coming last in document
+  order keeps it out of the tab order until there is something to act on.
+- **`inline`** goes **between the toolbar and the table**. It is a strip in the document flow, so
+  it sits next to the rows it acts on. In `FilterPanelLayout` it goes after the active-filters
+  strip, directly above the table: the chips describe the query the toolbar writes, so they stay
+  next to the toolbar.
+
+There is always exactly one bar. A grid with a controlled `selection.bar` can switch between the
+two variants, and the bar moves without losing the selection.
+
+A layout of your own puts the bar wherever you write it, whatever the variant. For an inline bar
+below the table:
 
 ```tsx
-function InlineBarLayout() {
+function BarBelowLayout() {
 	return (
 		<>
-			<DataGrid.ActionBar />
 			<DataGrid.Toolbar />
 			<DataGrid.Table />
 			<DataGrid.Pagination />
+			<DataGrid.ActionBar />
 		</>
 	)
 }

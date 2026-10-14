@@ -460,20 +460,17 @@ describe('<DataGrid>', () => {
 		}
 
 		/**
-		 * Where the bar renders is the layout's decision, not `selection.bar.variant`'s — so the
-		 * bound preset puts it after the toolbar under **both** variants. It used to branch, through
-		 * a `GridShell` wrapper that read the variant and placed the bars for you; that was the
-		 * last placement option left standing, and it is gone.
-		 *
-		 * The variant still decides what the kit *renders* (an in-flow strip against an overlay),
-		 * which is why `inline` wants the bar written first — the arrangement `presets.test.tsx`
-		 * covers, since it takes a layout of its own.
+		 * The bound preset puts the bar after the toolbar under **both** variants: an `inline` bar
+		 * between the toolbar and the table, a `floating` one last. Where exactly is pinned in
+		 * `presets.test.tsx`; this case checks that the kit-bound grid renders the bar in the variant
+		 * asked for, after the toolbar.
 		 */
 		it.each([ActionBarVariant.Inline, ActionBarVariant.Floating])(
 			'renders the %s ActionBar after the Toolbar, as the bound layout writes it',
 			(variant) => {
 				const { actionBar, toolbar } = renderWithVariant(variant)
 
+				expect(actionBar).toHaveAttribute('data-variant', variant)
 				expect(toolbar.compareDocumentPosition(actionBar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 			},
 		)

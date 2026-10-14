@@ -1,4 +1,3 @@
-import { ActionBar } from '../data-grid/action-bar'
 import { Body } from '../data-grid/body'
 import { Header } from '../data-grid/header'
 import { DataGridHeaderCell } from '../data-grid/header-cell'
@@ -8,6 +7,7 @@ import { Pagination } from '../data-grid/pagination'
 import { DataGridTable } from '../data-grid/table'
 import { Toolbar } from '../data-grid/toolbar'
 
+import { useActionBarSlots } from './action-bar-slots'
 import { useToolbarEnd, useToolbarStart } from './toolbar-controls'
 
 /**
@@ -25,6 +25,7 @@ import { useToolbarEnd, useToolbarStart } from './toolbar-controls'
 export function PopoverFiltersLayout() {
 	const start = useToolbarStart()
 	const end = useToolbarEnd()
+	const actionBar = useActionBarSlots()
 
 	return (
 		<>
@@ -32,6 +33,7 @@ export function PopoverFiltersLayout() {
 				start={start}
 				end={end}
 			/>
+			{actionBar.top}
 			<DataGridTable>
 				<Header>
 					{({ headerGroups }) =>
@@ -63,7 +65,7 @@ export function PopoverFiltersLayout() {
 				<Body />
 			</DataGridTable>
 			<Pagination />
-			<ActionBar />
+			{actionBar.bottom}
 		</>
 	)
 }
