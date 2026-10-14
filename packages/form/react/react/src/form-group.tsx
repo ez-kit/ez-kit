@@ -1,13 +1,13 @@
 'use client'
 
 import { useFormGroup as useTanStackFormGroup } from '@tanstack/react-form'
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 
 import { scopeFieldProps } from './field-scope'
 import { createField } from './fields/field'
 import { focusesOnError, focusFirstFieldWithErrors } from './focus-first-error'
 import { scopeGroupMembers, withMembers } from './group-fields'
-import { hookGroupFields, isPathWithin } from './group-registry'
+import { hookGroupFields, isPathWithin, warnOnStackedGroups } from './group-registry'
 import { formatOwnErrors } from './own-errors'
 import { serverErrorsOf } from './server-errors'
 
@@ -82,6 +82,11 @@ export function useFormGroup<TFormData, const TName extends DeepKeys<TFormData>>
 			;(options as { onGroupSubmitInvalid?: (props: unknown) => void }).onGroupSubmitInvalid?.(props)
 		},
 	} as never) as unknown as object
+	useEffect(() => {
+		if (process.env.NODE_ENV !== 'production') {
+			warnOnStackedGroups(options.form as unknown as GroupHost, options.name)
+		}
+	}, [options.form, options.name])
 	const { NativeField: native, AppField: appField } = options.form as unknown as {
 		NativeField: NameScoped
 		AppField: BindableForm['AppField']

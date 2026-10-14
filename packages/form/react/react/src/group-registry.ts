@@ -17,6 +17,7 @@ export type NativeGroupApi = {
 	validateAllFields: (cause: ValidationCause) => Promise<unknown[]>
 	areRelatedFieldsValid: () => boolean
 	getInfo: () => { instance: NativeGroupApi | null }
+	options: { validators?: Record<string, unknown> | undefined }
 }
 
 /** One group the submit passes run: a native one, or a map group (`map-group.ts`). */
@@ -89,8 +90,10 @@ const hookedGroups = new WeakSet()
  *
  * "Inside" is `isPathWithin`, so two groups on the same name each count as inside the other: a
  * `form.FormGroup name='security'` around `<Block fields='security' />` runs the block's validators,
- * and the block's own submit runs the outer group's. They cover the same fields, so each verdict is
- * the one the other would reach.
+ * and the block's own submit runs the outer group's. That holds while at most one of them carries
+ * validators: TanStack keeps a group's meta under its name, so two groups on one name share one
+ * `errorMap`, and the later pass erases the other's own (pathless) errors. One validating group per
+ * branch is the supported layout; {@link warnOnStackedGroups} says so in development (R86).
  */
 export function hookGroupFields(group: NativeGroupApi, form: GroupHost): void {
 	if (hookedGroups.has(group)) return
@@ -105,4 +108,30 @@ export function hookGroupFields(group: NativeGroupApi, form: GroupHost): void {
 		},
 		areRelatedFieldsValid: () => areRelatedFieldsValid() && !hasOwnErrorsIn(form, inside),
 	})
+}
+
+/** The development message for two validating native groups on one branch (R86). */
+export function stackedGroupsMessage(name: string): string {
+	return `Two form groups with validators are mounted on '${name}'. They share one meta, so each pass erases the other's own errors — keep one validating group per branch: move the rules into one of them, or give the outer group no validators.`
+}
+
+function hasValidators(group: NativeGroupApi): boolean {
+	return Object.values(group.options.validators ?? {}).some((validator) => validator !== undefined)
+}
+
+const warnedNames = new WeakMap<object, Set<string>>()
+
+/**
+ * Warn, once per form and name, when two or more mounted native groups on `name` carry validators —
+ * `form.FormGroup`, `useFormGroup` and a path-placed `withFieldGroup` block alike (R86). Called after
+ * the groups mount; the caller keeps it to development builds.
+ */
+export function warnOnStackedGroups(form: GroupHost, name: string): void {
+	const validating = [...form.formGroupApis].filter((group) => group.name === name && hasValidators(group))
+	if (validating.length < 2) return
+	const warned = warnedNames.get(form) ?? new Set<string>()
+	warnedNames.set(form, warned)
+	if (warned.has(name)) return
+	warned.add(name)
+	console.error(stackedGroupsMessage(name))
 }

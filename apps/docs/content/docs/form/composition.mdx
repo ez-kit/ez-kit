@@ -187,6 +187,7 @@ So `form.TextField name='payment.card'` inside `form.FormGroup name='payment'` w
 - **The block owns it** — a card number's format, two passwords that must match — and it goes in the block's `validators`, so it travels with the block to every form.
 - **It depends on the place** — billing is required only when it differs from shipping — and it goes on a `form.FormGroup` or in the form's schema, at that place.
 - **The form's schema on `onSubmit`** is the last barrier.
+- **One validating group per branch.** A `form.FormGroup` and a block placed on the same name share one group state, so when both carry `validators`, the later pass erases the other's own errors. Put the place's rule in the form's schema, or keep the outer group without validators as _Change password_ above does. In development, two validating groups on one name log an error.
 
 A whole-form submit runs every mounted group's validators too: a block that fails, even untouched, blocks the form's `onSubmit` — which is why _Save profile_ above stops on the password pair. The same rule on two levels is fine on different triggers — the group's on `onChange` or `onBlur`, the form's on `onSubmit` — and when both report it, the field shows the message once.
 

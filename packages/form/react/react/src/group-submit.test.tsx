@@ -1,7 +1,7 @@
 import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useEffect } from 'react'
-import { describe, expect, expectTypeOf, it, vi } from 'vitest'
+import { afterEach, describe, expect, expectTypeOf, it, vi } from 'vitest'
 
 import { createForm } from './create-form'
 import { testComponents, testFields, testFormElement } from './test-kit'
@@ -370,6 +370,66 @@ describe('group submit (fix round 1)', () => {
 		expect(onGroupSubmit).not.toHaveBeenCalled()
 		expect(screen.getByText(TOO_SHORT)).toBeInTheDocument()
 		expect(screen.getByLabelText('Password')).not.toHaveFocus()
+	})
+})
+
+const STACKED_GROUPS = 'one validating group per branch'
+
+describe('two native groups on one branch (R86)', () => {
+	afterEach(() => {
+		vi.restoreAllMocks()
+	})
+
+	it('warns in development when both groups carry validators', () => {
+		const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+		render(
+			<Form defaultValues={PROFILE}>
+				{(form) => (
+					<form.FormGroup
+						name='security'
+						validators={{ onChange: testSchema<Pair>(() => []) }}
+					>
+						{() => <PasswordPair fields='security' />}
+					</form.FormGroup>
+				)}
+			</Form>,
+		)
+
+		const warnings = error.mock.calls.filter(([message]) => String(message).includes(STACKED_GROUPS))
+		expect(warnings).toHaveLength(1)
+		expect(String(warnings[0]?.[0])).toContain("'security'")
+	})
+
+	it('stays quiet in production', () => {
+		vi.stubEnv('NODE_ENV', 'production')
+		const error = vi.spyOn(console, 'error')
+		render(
+			<Form defaultValues={PROFILE}>
+				{(form) => (
+					<form.FormGroup
+						name='security'
+						validators={{ onChange: testSchema<Pair>(() => []) }}
+					>
+						{() => <PasswordPair fields='security' />}
+					</form.FormGroup>
+				)}
+			</Form>,
+		)
+		vi.unstubAllEnvs()
+
+		expect(error).not.toHaveBeenCalledWith(expect.stringContaining(STACKED_GROUPS))
+	})
+
+	it('stays quiet for a group without validators around a validating block', () => {
+		const error = vi.spyOn(console, 'error')
+		render(
+			<ProfileCase
+				onSubmit={vi.fn()}
+				onGroupSubmit={vi.fn()}
+			/>,
+		)
+
+		expect(error).not.toHaveBeenCalledWith(expect.stringContaining(STACKED_GROUPS))
 	})
 })
 
