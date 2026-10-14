@@ -65,7 +65,7 @@ adjust the path if your shadcn `components` alias differs from the default:
 import '@/components/data-grid/styles.css'
 ```
 
-This stylesheet defines the CSS tokens and `data-*` selectors that the flavor's components rely on. You can override any of them from your own design tokens — see [Theming](/docs/data-grid/theming).
+The stylesheet carries no theme: the components read your app's shadcn tokens (`--background`, `--muted`, `--border`, …), the ones `shadcn init` already wrote. It holds only the grid's own rules, every one scoped to the `ez-shadcn-data-grid` class the kit puts on the grid and on the popovers and dialogs it opens, so nothing in it reaches the rest of your app. You can override any of them from your own design tokens — see [Theming](/docs/data-grid/theming).
 
 ## 3. Render a grid
 

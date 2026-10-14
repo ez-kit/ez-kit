@@ -9,6 +9,8 @@ import { Calendar } from '@grid-shadcn/components/ui/calendar'
 import { Input } from '@grid-shadcn/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@grid-shadcn/components/ui/popover'
 import { Slider } from '@grid-shadcn/components/ui/slider'
+import { KIT_CLASS_NAME } from '@grid-shadcn/lib/kit-class-name'
+import { cn } from '@grid-shadcn/lib/utils'
 
 import type { BetweenInputProps } from '@ez-kit/data-grid-react'
 import type { DateRange } from 'react-day-picker'
@@ -92,7 +94,7 @@ function CalendarRange({ value, onChange }: Pick<BetweenInputProps, 'value' | 'o
 				</Button>
 			</PopoverTrigger>
 			<PopoverContent
-				className='w-auto p-0'
+				className={cn(KIT_CLASS_NAME, 'w-auto p-0')}
 				align='start'
 			>
 				<Calendar

@@ -4,6 +4,7 @@ import { BetweenBranch, useBetweenValue, useGridMessages } from '@ez-kit/data-gr
 import { Button, Popover, RangeCalendar, Slider, useLocale } from '@heroui/react'
 import { getLocalTimeZone, parseDate } from '@internationalized/date'
 
+import { KIT_CLASS_NAME } from '../../lib/kit-class-name'
 import { NumberFieldControl } from '../core/NumberField'
 
 import type { BetweenInputProps } from '@ez-kit/data-grid-react'
@@ -71,7 +72,7 @@ function DateRangeControl({ value, onChange }: Pick<BetweenInputProps, 'value' |
 					<span>{displayLabel}</span>
 				</Button>
 			</Popover.Trigger>
-			<Popover.Content className={POPOVER_CLASS}>
+			<Popover.Content className={`${KIT_CLASS_NAME} ${POPOVER_CLASS}`}>
 				<Popover.Dialog
 					aria-label={messages.filtering.dateRange}
 					className={POPOVER_CLASS}

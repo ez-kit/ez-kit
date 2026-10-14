@@ -1,8 +1,8 @@
-import { ActionBar } from '../data-grid/action-bar'
 import { BottomBar } from '../data-grid/bottom-bar'
 import { DataGridTable } from '../data-grid/table'
 import { Toolbar } from '../data-grid/toolbar'
 
+import { useActionBarSlots } from './action-bar-slots'
 import { useToolbarEnd, useToolbarStart } from './toolbar-controls'
 
 /**
@@ -16,6 +16,7 @@ import { useToolbarEnd, useToolbarStart } from './toolbar-controls'
 export function BottomBarLayout() {
 	const start = useToolbarStart()
 	const end = useToolbarEnd()
+	const actionBar = useActionBarSlots()
 
 	return (
 		<>
@@ -23,9 +24,10 @@ export function BottomBarLayout() {
 				start={start}
 				end={end}
 			/>
+			{actionBar.top}
 			<DataGridTable />
 			<BottomBar />
-			<ActionBar />
+			{actionBar.bottom}
 		</>
 	)
 }

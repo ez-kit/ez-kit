@@ -7,7 +7,7 @@ Guidance for coding agents working in this repository. This file is the single s
 
 ### No styles in `packages/data-grid/react/react`
 
-The shared React package (`data-grid/react/react`) must contain **zero visual styling** — no inline `style={{}}`, no Tailwind/className-based styles. All visual styling belongs exclusively in the UI kit packages (`shadcn`, `heroui`). The react package may add semantic `data-*` attributes to elements so that UI kit CSS can target them, and may pass through a class it was **given** — `column.headerClassName` / `cellClassName`, `rowProps().className`, `layout.classNames` — without authoring one. The test is authorship, not the attribute: a literal class name written in this package is the violation.
+The shared React package (`data-grid/react/react`) must contain **zero visual styling** — no inline `style={{}}`, no Tailwind/className-based styles. All visual styling belongs exclusively in the UI kit packages (`shadcn`, `heroui`). The react package may add semantic `data-*` attributes to elements so that UI kit CSS can target them, and may pass through a class it was **given** — `column.headerClassName` / `cellClassName`, `rowProps().className`, `layout.classNames` — without authoring one. The test is authorship, not the attribute: a literal class name written in this package is the violation. The one exception is `ez-data-grid`, which the grid root always carries: it is the scope every rule in `@ez-kit/data-grid-react/styles.css` sits under, so the structural stylesheet reaches nothing outside a grid. It marks a boundary and styles nothing itself; do not add a second class beside it.
 
 ### Vendored shadcn primitives are immutable
 
@@ -333,20 +333,28 @@ and move on.
   in a kit or in an application, is the intended way to get a new arrangement; adding an option is
   not.
 
-  **A layout places `ActionBar` itself, and `selection.bar.variant` does not.**
-  A `GridShell` wrapper briefly did — it read the variant and put the bar above the grid for
-  `inline`, below it for `floating`, and all four presets wrapped themselves in it. That is a
-  config value deciding where an element renders, i.e. the ninth placement option, arrived at by
-  accident while removing the other eight; it never shipped. All four presets now write the bar
-  **last**, which is right for the default `floating`: shadcn positions that bar out of a
-  zero-height sticky anchor that has to follow the rows it overlays, heroui portals its own to a
-  fixed overlay where tree position changes nothing, and in both kits coming last keeps it out of
-  the tab order until there is something to act on. The variant survives as what the bar _looks
-  like_ — an in-flow strip against an overlay, stamped `data-variant` and branched on by both
-  kits — so it is a behaviour option and stays in the config. **The accepted cost is that
-  `selection: { bar: 'inline' }` on a preset renders that in-flow strip below the table**; an
-  `inline` grid writes a layout of its own with the bar first, and `presets.test.tsx` covers
-  both halves so the split is pinned rather than implied. Moving the variant onto the
+  **A preset places `ActionBar` by its variant; a layout of one's own places it where it writes
+  it.** The rule the placement options broke is narrower than "a preset never reads config": what
+  is forbidden is an option that exists **only** to say where something goes. A preset may read a
+  mode the config already carries for behaviour, to put an enabled feature where that kind of
+  element belongs — `useToolbarControls` already reads `creating.mode` to decide whether
+  `CreateTrigger` mounts at all. So all four presets take the bar from `useActionBarSlots`
+  (`layouts/action-bar-slots.tsx`): `floating`, the default, goes **last**, because both kits
+  position that bar out of a zero-height sticky anchor that has to follow the rows it overlays, and
+  coming last keeps it out of the tab order until there is something to act on; `inline` goes **between the toolbar and the table** —
+  in `FilterPanelLayout` after the chips, which belong to the toolbar that writes them — because an
+  in-flow strip below the pagination is out of sight of the rows it acts on. One keyed element in
+  one of two slots, so there is never a second bar and a runtime flip moves it rather than
+  remounting it. A grid whose body is `children` or its own `core.Layout` gets no say from the
+  variant at all.
+
+  This reverses an earlier revision of this entry, which made the presets write the bar last
+  whatever the variant and called the inline strip below the table an accepted cost. That shipped
+  in 0.9.0 and is reversed, as a breaking change, in the minor after 0.10.0. Do not restore it: a preset that renders an
+  enabled feature wrongly is not neutral, it is wrong. Do not restore the `GridShell` wrapper that
+  came before it either — it did the same thing but took the order of children away from each
+  preset, where the slots leave it in every preset's JSX. The variant is still what the bar _looks
+  like_ too — stamped `data-variant` and branched on by both kits. Moving the variant onto the
   component as a prop was considered and not taken — it is the more consistent answer by the
   surviving-enum rule above, and it was judged not worth the config break here.
 
@@ -363,6 +371,20 @@ and move on.
   tree. HeroUI's is below its `.table-root`, which is why the kit hoists `Table.Root` +
   `Table.ScrollContainer` into `TableScroll` and its `Table` slot renders `Table.Content` — so
   `data-slot='table'` lands on the real `<table>` and the root takes `data-slot='table-root'`.
+
+- **A preset mounts a feature's control only when the grid has no other way into — or back out
+  of — that feature.** That is the one rule `useToolbarControls` encodes, and it is why the presets
+  carry `GlobalFilterInput`, `VisibilityTrigger` (the only way back to a hidden column) and
+  `CreateTrigger` (except under `CreatingMode.PinRow`, whose pinned form is already a way in) — and
+  carry neither `SortMenuTrigger` (the header click sorts) nor `ClearFiltersButton` (each filter
+  clears in its own input). Both of those were opt-in before the placement options went; gating
+  every control on "the feature is on" turned them on in 0.9.0 by accident, and that was reverted.
+  Two alternatives were considered and **rejected**: a `sorting: { menu: true }` flag is
+  `sorting.toolbar` under a new name, i.e. the placement option this section forbids; and mounting
+  the builder iff `sorting.multi` is a mount decision inferred from config — the `pagination.items`
+  gate `DefaultLayout` refused — on a value whose absence does not even mean "off" (TanStack enables
+  Shift-click multi-sort by default). `presets.test.tsx` pins the split, so a new control added to
+  `useToolbarEnd` has to pass the rule rather than slip in.
 
 - **There is exactly one action bar, with a live section per concern — do not split it again.**
   `<DataGrid.ActionBar />` / `core.ActionBar` owns the chrome for both the current selection and

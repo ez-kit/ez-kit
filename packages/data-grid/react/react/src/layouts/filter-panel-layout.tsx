@@ -1,9 +1,9 @@
-import { ActionBar } from '../data-grid/action-bar'
 import { ActiveFiltersBar } from '../data-grid/active-filters-bar'
 import { BottomBar } from '../data-grid/bottom-bar'
 import { DataGridTable } from '../data-grid/table'
 import { Toolbar } from '../data-grid/toolbar'
 
+import { useActionBarSlots } from './action-bar-slots'
 import { useToolbarEnd, useToolbarStart } from './toolbar-controls'
 
 /**
@@ -32,6 +32,11 @@ import { useToolbarEnd, useToolbarStart } from './toolbar-controls'
  * The chips strip goes under the toolbar, where `filtering: { chips: 'above' }` put it, and the
  * page sizer shares the bottom bar with the page controls.
  *
+ * An `inline` action bar goes **after** the chips, directly above the table, not between the
+ * toolbar and the chips. The chips belong to the toolbar: they describe the query the toolbar
+ * writes, so they stay next to it. The action bar acts on the rows that query returns, so it goes
+ * next to them.
+ *
  * Note the panel here **adds** to the header's own filter controls rather than replacing them,
  * because the built-in header cell still renders each column's control. Both write to one
  * `columnFilters` slice, which is two inputs bound to one value — a grid with filters in the
@@ -42,6 +47,7 @@ import { useToolbarEnd, useToolbarStart } from './toolbar-controls'
 export function FilterPanelLayout() {
 	const start = useToolbarStart({ filterPanel: true })
 	const end = useToolbarEnd()
+	const actionBar = useActionBarSlots()
 
 	return (
 		<>
@@ -50,9 +56,10 @@ export function FilterPanelLayout() {
 				end={end}
 			/>
 			<ActiveFiltersBar />
+			{actionBar.top}
 			<DataGridTable />
 			<BottomBar />
-			<ActionBar />
+			{actionBar.bottom}
 		</>
 	)
 }

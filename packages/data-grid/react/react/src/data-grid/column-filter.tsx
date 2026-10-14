@@ -1,6 +1,6 @@
 import { useGridComponents } from '../components-context'
 
-import { useFilterPanelColumns } from './filter-panel'
+import { useColumnFilters } from './filter-panel'
 
 import type { DataGridFilterPanelColumn } from './filter-panel'
 import type { ReactNode } from 'react'
@@ -12,7 +12,9 @@ export type DataGridColumnFilterProps = {
 	 * Custom content, replacing the kit's chip chrome.
 	 *
 	 * Receives the same per-column shape `<DataGrid.FilterPanel>`'s render function hands over
-	 * — label, value summary, the ready-made control, the clear callback.
+	 * — label, value summary, the ready-made control, the clear callback, and the column's
+	 * `filter` model (operators, current value, editor, values on offer, `setValue`) for a
+	 * control built on a kit's own filter component.
 	 *
 	 * @example
 	 * ```tsx
@@ -42,7 +44,7 @@ export type DataGridColumnFilterProps = {
  */
 export function ColumnFilter({ columnId, children }: DataGridColumnFilterProps) {
 	const { FilterPanelChip } = useGridComponents().filtering
-	const resolved = useFilterPanelColumns()
+	const resolved = useColumnFilters()
 
 	const entry = resolved?.columns.find((c) => c.column.id === columnId)
 	if (entry === undefined) return null

@@ -3,12 +3,15 @@
 import { useGridMessages } from '@ez-kit/data-grid-react/kit'
 import { Button, Modal as HeroModal } from '@heroui/react'
 
+import { KIT_CLASS_NAME } from '../../lib/kit-class-name'
+
 import type { ModalProps } from '@ez-kit/data-grid-react'
 
 export function Modal({ open, onClose, onSave, onCancel, title, children }: ModalProps) {
 	const messages = useGridMessages()
 	return (
 		<HeroModal.Backdrop
+			className={KIT_CLASS_NAME}
 			isOpen={open}
 			onOpenChange={(isOpen) => {
 				if (!isOpen) onClose()

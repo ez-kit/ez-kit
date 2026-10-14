@@ -27,7 +27,7 @@ describe('layout.classNames', () => {
 		const root = container.querySelector(ROOT)
 
 		expect(root).not.toBeNull()
-		expect(root?.className).toBe('')
+		expect(root?.className).toBe('ez-data-grid')
 		expect(root?.querySelector(WRAPPER)).not.toBeNull()
 	})
 
@@ -46,7 +46,7 @@ describe('layout.classNames', () => {
 			/>,
 		)
 
-		expect(container.querySelector(ROOT)?.className).toBe('kit-card app-card')
+		expect(container.querySelector(ROOT)?.className).toBe('ez-data-grid kit-card app-card')
 	})
 
 	it('classes both shell boxes', () => {

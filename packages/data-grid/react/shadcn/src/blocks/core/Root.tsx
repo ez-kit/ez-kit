@@ -1,3 +1,4 @@
+import { KIT_CLASS_NAME } from '@grid-shadcn/lib/kit-class-name'
 import { cn } from '@grid-shadcn/lib/utils'
 
 import type { RootProps } from '@ez-kit/data-grid-react'
@@ -15,7 +16,7 @@ export function Root({ className, ...props }: RootProps) {
 	return (
 		<div
 			{...props}
-			className={cn(className)}
+			className={cn(KIT_CLASS_NAME, className)}
 		/>
 	)
 }

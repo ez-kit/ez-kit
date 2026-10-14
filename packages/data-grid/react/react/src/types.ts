@@ -904,7 +904,7 @@ export type LoadMoreRowProps = {
 export const ActionBarVariant = {
 	/** A positioned/sticky bar, typically overlaying the table area. The default. */
 	Floating: 'floating',
-	/** A normal block in the document flow, above the Toolbar. */
+	/** A normal block in the document flow. The presets put it between the toolbar and the table. */
 	Inline: 'inline',
 } as const
 

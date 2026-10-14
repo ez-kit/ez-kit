@@ -16,8 +16,9 @@ Initial sort, multi-column, and custom sort functions:
 <DataGridDocsExample exampleId='sorting' />
 
 A multi-sort builder for selecting sort field + direction. It is a component, not an option:
-mount `<DataGrid.SortMenuTrigger />` where you want it — `DefaultLayout`, which both UI kits bind,
-puts it in the toolbar's trailing group whenever sorting is on.
+mount `<DataGrid.SortMenuTrigger />` where you want it. No layout preset mounts it — `sorting`
+alone means click-to-sort in the header, and the builder earns its place mostly with multi-column
+sorting or more columns than the header shows.
 
 <DataGridDocsExample exampleId='sort-toolbar' />
 

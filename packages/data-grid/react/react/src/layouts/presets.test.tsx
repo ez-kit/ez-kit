@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest'
 import { GridComponentsProvider } from '../components-context'
 import { DataGrid } from '../data-grid/data-grid'
 import { TEST_COLUMNS, TEST_FEATURES, TEST_ROWS, testComponents } from '../test-utils'
+import { ActionBarVariant } from '../types'
 import { useDataGrid } from '../use-data-grid'
 
 import { BottomBarLayout } from './bottom-bar-layout'
@@ -333,25 +334,190 @@ describe('the built-in header cell', () => {
 })
 
 /**
- * The action bar, which every preset renders **last** — exactly one of it — and which no
- * config places any more.
+ * The action bar: exactly one of it, placed by the bar's own variant.
  *
- * A `GridShell` wrapper used to read `selection.bar.variant` and put the bars above the grid
- * for `inline` and below it for `floating`. It was the last placement option in the package —
- * a config value deciding where an element renders — so it went the way of the other eight,
- * and a layout that wants the bar somewhere else writes it somewhere else.
+ * `inline` is a strip in the flow beside the rows it acts on, so every preset puts it between the
+ * toolbar and the table — and in `FilterPanelLayout` after the chips, which belong to the toolbar
+ * that writes them. `floating` overlays the rows, so it stays last. A layout of one's own still
+ * puts it wherever it writes it: the variant decides nothing there.
  */
 describe('the action bar', () => {
 	const ACTION_BAR = "[data-slot='action-bar']"
+	// The test double for the bar is a `role='toolbar'` too; the grid's toolbar is the one without
+	// a slot.
+	const GRID_TOOLBAR = '[role="toolbar"]:not([data-slot])'
+	const TABLE_WRAPPER = "[data-slot='table-wrapper']"
+	const ACTIVE_FILTERS = "[data-slot='active-filters-bar']"
 
-	function renderSelected(Layout: ComponentType) {
-		return renderLayout(Layout, {
-			selection: true,
+	const PRESETS: [string, ComponentType][] = [
+		['DefaultLayout', DefaultLayout],
+		['BottomBarLayout', BottomBarLayout],
+		['FilterPanelLayout', FilterPanelLayout],
+		['PopoverFiltersLayout', PopoverFiltersLayout],
+	]
+
+	type Bar = NonNullable<UseDataGridConfig<GridFeatures, Row>['selection']>
+
+	function selectedConfig(selection: Bar): Partial<UseDataGridConfig<GridFeatures, Row>> {
+		return {
+			selection,
 			// Toolbar renders null without content — `creating` gives it the "+ Add" trigger, so
 			// there is a toolbar to be after.
 			creating: { onSave: () => Promise.resolve() },
 			initialState: { rowSelection: { '1': true } },
+		}
+	}
+
+	/** Asserts the elements appear in the DOM in the order given, none nested in another. */
+	function expectInOrder(...elements: HTMLElement[]) {
+		elements.slice(1).forEach((element, index) => {
+			const position = elements[index]?.compareDocumentPosition(element) ?? 0
+			expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+			expect(position & Node.DOCUMENT_POSITION_CONTAINED_BY).toBeFalsy()
 		})
+	}
+
+	it.each(PRESETS)('%s puts an inline bar between the toolbar and the table', (_name, Layout) => {
+		const { container } = renderLayout(Layout, selectedConfig({ bar: ActionBarVariant.Inline }))
+
+		expect(container.querySelectorAll(ACTION_BAR)).toHaveLength(1)
+		expectInOrder(
+			requireElement(container, GRID_TOOLBAR),
+			requireElement(container, ACTION_BAR),
+			requireElement(container, TABLE_WRAPPER),
+		)
+	})
+
+	it('puts an inline bar after the active-filters strip in FilterPanelLayout', () => {
+		const { container } = renderLayout(FilterPanelLayout, {
+			...selectedConfig({ bar: ActionBarVariant.Inline }),
+			columns: FILTERABLE,
+			filtering: true,
+			initialState: { rowSelection: { '1': true }, columnFilters: [{ id: 'name', value: 'Ali' }] },
+		})
+
+		expectInOrder(
+			requireElement(container, GRID_TOOLBAR),
+			requireElement(container, ACTIVE_FILTERS),
+			requireElement(container, ACTION_BAR),
+			requireElement(container, TABLE_WRAPPER),
+		)
+	})
+
+	const BOTTOM_CASES: [string, ComponentType, Bar][] = PRESETS.flatMap(([name, Layout]) => [
+		[`${name}, default`, Layout, true],
+		[`${name}, floating`, Layout, { bar: ActionBarVariant.Floating }],
+	])
+
+	it.each(BOTTOM_CASES)('%s: renders one bar, after the table', (_name, Layout, selection) => {
+		const { container } = renderLayout(Layout, selectedConfig(selection))
+
+		expect(container.querySelectorAll(ACTION_BAR)).toHaveLength(1)
+		expectInOrder(requireElement(container, TABLE_WRAPPER), requireElement(container, ACTION_BAR))
+	})
+
+	/**
+	 * A controlled `selection.bar` can flip at runtime. The bar moves rather than remounting —
+	 * one keyed element in either slot — and the selection, which lives in the table's store,
+	 * is untouched either way.
+	 */
+	it.each(PRESETS)('%s moves the bar when the variant changes at runtime', (_name, Layout) => {
+		function Harness({ variant }: { variant: ActionBarVariant }): ReactElement {
+			const table = useDataGrid<GridFeatures, Row>({
+				features: TEST_FEATURES,
+				data: TEST_ROWS,
+				columns: TEST_COLUMNS,
+				...selectedConfig({ bar: variant }),
+			})
+			return (
+				<DataGrid<GridFeatures, Row>
+					table={table}
+					components={{ core: { Layout } }}
+				/>
+			)
+		}
+		const ui = (variant: ActionBarVariant) => (
+			<GridComponentsProvider components={testComponents}>
+				<Harness variant={variant} />
+			</GridComponentsProvider>
+		)
+
+		const { container, rerender } = render(ui(ActionBarVariant.Floating))
+		const floatingBar = requireElement(container, ACTION_BAR)
+		expectInOrder(requireElement(container, TABLE_WRAPPER), floatingBar)
+
+		rerender(ui(ActionBarVariant.Inline))
+		const inlineBar = requireElement(container, ACTION_BAR)
+		expect(container.querySelectorAll(ACTION_BAR)).toHaveLength(1)
+		expectInOrder(inlineBar, requireElement(container, TABLE_WRAPPER))
+		expect(inlineBar).toBe(floatingBar)
+		expect(inlineBar).toHaveAttribute('data-selected-count', '1')
+
+		rerender(ui(ActionBarVariant.Floating))
+		expect(container.querySelectorAll(ACTION_BAR)).toHaveLength(1)
+		expectInOrder(requireElement(container, TABLE_WRAPPER), requireElement(container, ACTION_BAR))
+		expect(requireElement(container, ACTION_BAR)).toHaveAttribute('data-selected-count', '1')
+	})
+
+	it('leaves the bar where a layout of its own writes it, whatever the variant', () => {
+		const { container } = renderLayout(
+			DefaultLayout,
+			selectedConfig({ bar: ActionBarVariant.Inline }),
+			<>
+				<DataGrid.Toolbar />
+				<DataGrid.Table />
+				<DataGrid.ActionBar />
+			</>,
+		)
+
+		expect(container.querySelectorAll(ACTION_BAR)).toHaveLength(1)
+		expectInOrder(requireElement(container, TABLE_WRAPPER), requireElement(container, ACTION_BAR))
+	})
+})
+
+/**
+ * Which controls a preset mounts, as one rule: a feature's control goes in only when the grid has
+ * no other way into — or back out of — that feature.
+ *
+ * Search, the column-visibility toggle and "+ Add" pass it: each is the only surface its feature
+ * has, and a hidden column has no way back without the toggle. The sort builder and clear-filters
+ * fail it — sorting already has the header click, and every filter clears in its own input. Both
+ * were opt-in before the placement options were removed (`sorting.toolbar`, `filtering.toolbar`),
+ * and the presets turned them on by gating everything on "the feature is on". Asserted here so a
+ * later addition to `useToolbarEnd` has to argue with the rule rather than slip past it.
+ */
+describe('toolbar controls the presets mount', () => {
+	const SORT_BUILDER = 'sort builder'
+	const CLEAR_FILTERS = "[data-slot='clear-filter-button']"
+
+	const withSortMarker: GridComponents = {
+		...testComponents,
+		sorting: { ...testComponents.sorting, SortMenu: () => <span>{SORT_BUILDER}</span> },
+	}
+
+	function renderPreset(Layout: ComponentType) {
+		function Harness(): ReactElement {
+			const table = useDataGrid<GridFeatures, Row>({
+				features: TEST_FEATURES,
+				data: TEST_ROWS,
+				columns: FILTERABLE,
+				sorting: true,
+				filtering: true,
+				visibility: true,
+				initialState: { columnFilters: [{ id: 'name', value: 'a' }] },
+			})
+			return (
+				<DataGrid<GridFeatures, Row>
+					table={table}
+					components={{ core: { Layout } }}
+				/>
+			)
+		}
+		return render(
+			<GridComponentsProvider components={withSortMarker}>
+				<Harness />
+			</GridComponentsProvider>,
+		)
 	}
 
 	it.each([
@@ -359,36 +525,36 @@ describe('the action bar', () => {
 		['BottomBarLayout', BottomBarLayout],
 		['FilterPanelLayout', FilterPanelLayout],
 		['PopoverFiltersLayout', PopoverFiltersLayout],
-	])('%s renders one action bar, after the table', (_name, Layout) => {
-		const { container } = renderSelected(Layout)
+	])('%s mounts neither the sort builder nor clear-filters', (_name, Layout) => {
+		const { container } = renderPreset(Layout)
 
-		const table = requireElement(container, 'table')
-		expect(container.querySelectorAll(ACTION_BAR)).toHaveLength(1)
-		const bar = requireElement(container, ACTION_BAR)
-		expect(table.compareDocumentPosition(bar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+		const toolbar = requireElement(container, TOOLBAR)
+		expect(within(toolbar).getByText('Columns')).toBeInTheDocument()
+		expect(screen.queryByText(SORT_BUILDER)).toBeNull()
+		expect(toolbar.querySelector(CLEAR_FILTERS)).toBeNull()
 	})
 
-	/**
-	 * The recipe `DefaultLayout`'s docblock gives for `selection: { bar: 'inline' }`, whose bar is
-	 * a block in the flow rather than an overlay and so belongs above the table. That it takes a
-	 * layout of one's own is the accepted cost of removing the wrapper: the presets are written
-	 * for the default `floating`, and they say so.
-	 */
-	it('puts it above the table when a layout writes it first', () => {
-		function InlineBarLayout() {
+	it('mounts both where a layout writes them', () => {
+		function SortAndClearLayout() {
 			return (
 				<>
-					<DataGrid.ActionBar />
-					<DataGrid.Toolbar />
+					<DataGrid.Toolbar
+						end={
+							<>
+								<DataGrid.ClearFiltersButton />
+								<DataGrid.SortMenuTrigger />
+							</>
+						}
+					/>
 					<DataGrid.Table />
 				</>
 			)
 		}
 
-		const { container } = renderSelected(InlineBarLayout)
+		const { container } = renderPreset(SortAndClearLayout)
 
-		const table = requireElement(container, 'table')
-		const bar = requireElement(container, ACTION_BAR)
-		expect(bar.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+		const toolbar = requireElement(container, TOOLBAR)
+		expect(within(toolbar).getByText(SORT_BUILDER)).toBeInTheDocument()
+		expect(toolbar.querySelector(CLEAR_FILTERS)).not.toBeNull()
 	})
 })

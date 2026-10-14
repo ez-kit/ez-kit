@@ -4,6 +4,8 @@ import { baseCellTypes } from '@ez-kit/data-grid-react/cell-types'
 import { useGridMessages } from '@ez-kit/data-grid-react/kit'
 import { Description, FieldError, Label, ListBox, Select, Switch } from '@heroui/react'
 
+import { KIT_CLASS_NAME } from '../../lib/kit-class-name'
+
 import type { BooleanCellConfig, CellTypeDefinition, CellViewProps, FieldState } from '@ez-kit/data-grid-react'
 
 const ALL_SENTINEL = '__all__'
@@ -74,7 +76,7 @@ function BooleanFilterInput({ id, value, onChange, onBlur, label, description, e
 				<Select.Value />
 				<Select.Indicator />
 			</Select.Trigger>
-			<Select.Popover>
+			<Select.Popover className={KIT_CLASS_NAME}>
 				<ListBox>
 					<ListBox.Item
 						id={ALL_SENTINEL}

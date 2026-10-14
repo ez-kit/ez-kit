@@ -14,6 +14,7 @@ import {
 	AlertDialogMedia,
 	AlertDialogTitle,
 } from '@grid-shadcn/components/ui/alert-dialog'
+import { KIT_CLASS_NAME } from '@grid-shadcn/lib/kit-class-name'
 
 import type { ConfirmDialogProps } from '@ez-kit/data-grid-react'
 
@@ -39,7 +40,7 @@ export function ConfirmDialog({ open, title, description, onConfirm, onCancel }:
 				if (!isOpen) onCancel()
 			}}
 		>
-			<AlertDialogContent>
+			<AlertDialogContent className={KIT_CLASS_NAME}>
 				<AlertDialogHeader>
 					<AlertDialogMedia className='rounded-full bg-destructive/10 text-destructive'>
 						<CircleAlert />

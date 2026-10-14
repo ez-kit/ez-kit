@@ -6,6 +6,8 @@ import { ArrowUpDown, Plus, Trash2 } from 'lucide-react'
 import { Button } from '@grid-shadcn/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@grid-shadcn/components/ui/popover'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@grid-shadcn/components/ui/select'
+import { KIT_CLASS_NAME } from '@grid-shadcn/lib/kit-class-name'
+import { cn } from '@grid-shadcn/lib/utils'
 
 import type { SortDirection, SortMenuItem, SortMenuProps } from '@ez-kit/data-grid-react'
 
@@ -30,7 +32,7 @@ function SortRow({ item, index }: { item: SortMenuItem; index: number }) {
 				>
 					<SelectValue />
 				</SelectTrigger>
-				<SelectContent>
+				<SelectContent className={KIT_CLASS_NAME}>
 					{item.availableColumns.map((col) => (
 						<SelectItem
 							key={col.id}
@@ -55,7 +57,7 @@ function SortRow({ item, index }: { item: SortMenuItem; index: number }) {
 				>
 					<SelectValue />
 				</SelectTrigger>
-				<SelectContent>
+				<SelectContent className={KIT_CLASS_NAME}>
 					<SelectItem
 						value='asc'
 						className='text-xs'
@@ -108,7 +110,7 @@ export function SortMenu({ items, canAddSort, onAddSort, onResetSorting }: SortM
 			</PopoverTrigger>
 			<PopoverContent
 				align='end'
-				className='w-[26rem] p-3'
+				className={cn(KIT_CLASS_NAME, 'w-[26rem] p-3')}
 				data-slot='sort-menu'
 			>
 				{activeCount === 0 ? (

@@ -31,7 +31,6 @@ test-results/
 .claude/skills/
 .claude/commands
 
-openspec
 .specify
 
 .playwright-mcp

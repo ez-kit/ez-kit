@@ -3,6 +3,8 @@
 import { Button, Popover } from '@heroui/react'
 import { X } from 'lucide-react'
 
+import { KIT_CLASS_NAME } from '../../lib/kit-class-name'
+
 import type { FilterPanelChipProps } from '@ez-kit/data-grid-react'
 import type { MouseEvent } from 'react'
 
@@ -86,7 +88,7 @@ export function FilterPanelChip({ label, valueDisplay, hasValue, onClear, childr
 					)}
 				</Button>
 			</Popover.Trigger>
-			<Popover.Content>
+			<Popover.Content className={KIT_CLASS_NAME}>
 				<Popover.Dialog
 					aria-label={`Filter ${label}`}
 					className='p-2'

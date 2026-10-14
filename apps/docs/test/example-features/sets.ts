@@ -119,8 +119,6 @@ export type ExampleSet = {
 	readonly options: readonly string[]
 	/** Whether the file builds a grid at all — a file that does not needs no set. */
 	readonly buildsAGrid: boolean
-	/** Whether it writes `pagination.mode: 'infinite'`, which forbids `paginatedRowModel`. */
-	readonly isInfinite: boolean
 	/** Slice names the file names in a `keys: [...]` allowlist for `extractState` / `useExtractedState`. */
 	readonly persistedSlices: readonly string[]
 }
@@ -174,8 +172,7 @@ function sourceFiles(root: string): string[] {
  * Comments are stripped before anything is read.
  *
  * Several examples *explain* a feature in prose — `_use-paged-users.ts`'s docblock says "pass
- * straight to `useDataGrid({ state })`", and the infinite-scroll sets carry a comment about the
- * `paginatedRowModel` they deliberately omit. Naming a thing is not writing it, and a checker that
+ * straight to `useDataGrid({ state })`". Naming a thing is not writing it, and a checker that
  * cannot tell the two apart reports the files whose comments are most useful.
  */
 function withoutComments(source: string): string {
@@ -284,7 +281,6 @@ export function collectExampleSets(docsRoot: string): ExampleSet[] {
 				key === 'aggregation' ? writesColumnAggregation(source) : writesOption(source, key),
 			),
 			buildsAGrid: GRID_PATTERN.test(source),
-			isInfinite: /mode:\s*'infinite'/.test(source),
 			persistedSlices: persistedSlicesOf(source),
 		}
 	})

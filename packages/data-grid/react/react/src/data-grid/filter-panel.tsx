@@ -1,104 +1,18 @@
-import { localizeOperators } from '@ez-kit/data-grid-core'
-
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
 import { filtersRows } from '../utils/filters-rows'
 
+import { columnLabel, filteringMetaOf, resolveColumnFilter } from './column-filter-model'
+import { applyColumnFiltersValue, readColumnFiltersValue } from './column-filters-batch'
 import { renderFilterInput } from './render-filter-input'
 import { useDataGridState, useDataGridTable } from './table-context'
 
 import type { ErasedRow, GridFeatures } from '../types'
-import type {
-	FormColumnMeta,
-	BadgeItem,
-	BetweenValue,
-	GridMessages,
-	SelectItem,
-	StructuredFilterValue,
-} from '@ez-kit/data-grid-core'
+import type { ColumnFilterModel, OperatorColumnFilterModel } from './column-filter-model'
+import type { ColumnFiltersValue } from './column-filters-batch'
+import type { StructuredFilterValue } from '@ez-kit/data-grid-core'
 import type { Column, Header } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
-
-const MAX_INLINE_VALUES = 2
-
-function formatBetweenValue(value: BetweenValue, anyLabel: string): { display: string; hasValue: boolean } {
-	const { from, to } = value
-	const fromDefined = from !== undefined && from !== ''
-	const toDefined = to !== undefined && to !== ''
-	if (!fromDefined && !toDefined) return { display: anyLabel, hasValue: false }
-	if (fromDefined && toDefined) return { display: `${String(from)} – ${String(to)}`, hasValue: true }
-	if (fromDefined) return { display: `≥ ${String(from)}`, hasValue: true }
-	return { display: `≤ ${String(to)}`, hasValue: true }
-}
-
-function resolveOptionLabel(rawValue: string, meta: FormColumnMeta | undefined): string {
-	const filteringMeta = meta?.filtering === false ? undefined : meta?.filtering
-	const explicit = filteringMeta?.items
-	if (explicit) {
-		const hit = explicit.find((o) => o.value === rawValue)
-		if (hit) return hit.label
-	}
-	if (meta?.cell?.type === 'select' || meta?.cell?.type === 'badge') {
-		const items = (meta.cell.config as { items?: (SelectItem | BadgeItem)[] } | undefined)?.items
-		const hit = items?.find((o) => o.value === rawValue)
-		if (hit) return hit.label
-	}
-	return rawValue
-}
-
-function formatMultiValue(
-	values: unknown[],
-	meta: FormColumnMeta | undefined,
-	anyLabel: string,
-): { display: string; hasValue: boolean } {
-	if (values.length === 0) return { display: anyLabel, hasValue: false }
-	const labels = values.map((v) => resolveOptionLabel(String(v), meta))
-	if (labels.length <= MAX_INLINE_VALUES) return { display: labels.join(', '), hasValue: true }
-	const inline = labels.slice(0, MAX_INLINE_VALUES).join(', ')
-	return { display: `${inline} +${String(labels.length - MAX_INLINE_VALUES)}`, hasValue: true }
-}
-
-function formatFilterValue(
-	filterValue: unknown,
-	meta: FormColumnMeta | undefined,
-	anyLabel: string,
-	operatorMessages: GridMessages['operators'],
-): { display: string; hasValue: boolean } {
-	if (filterValue == null || filterValue === '') return { display: anyLabel, hasValue: false }
-
-	if (typeof filterValue === 'object' && 'operator' in filterValue) {
-		const sv = filterValue as StructuredFilterValue
-		const filteringMeta = meta?.filtering === false ? undefined : meta?.filtering
-		const rawOperators = filteringMeta?.operators
-		const op = (rawOperators ? localizeOperators(rawOperators, meta?.cell?.type, operatorMessages) : undefined)?.find(
-			(o) => o.id === sv.operator,
-		)
-		const inner = sv.value
-
-		// `requiresInput === false` operators (e.g. isEmpty / isNotEmpty) — show operator label.
-		if (op?.requiresInput === false) {
-			return { display: op.label, hasValue: true }
-		}
-
-		// Between value
-		if (inner !== null && typeof inner === 'object' && ('from' in inner || 'to' in inner)) {
-			return formatBetweenValue(inner, anyLabel)
-		}
-
-		// Multi value (in / notIn)
-		if (Array.isArray(inner)) {
-			return formatMultiValue(inner, meta, anyLabel)
-		}
-
-		// Plain inner value
-		if (inner == null || inner === '') return { display: anyLabel, hasValue: false }
-		return { display: String(inner), hasValue: true }
-	}
-
-	// Plain (non-operator) filter value
-	if (Array.isArray(filterValue)) return formatMultiValue(filterValue, meta, anyLabel)
-	return { display: String(filterValue), hasValue: true }
-}
 
 /**
  * Compound member: standalone surface that renders one filter chip per filterable column.
@@ -127,6 +41,12 @@ export type DataGridFilterPanelColumn<TRow extends object = ErasedRow> = {
 	 */
 	input: ReactNode
 	onClear: () => void
+	/**
+	 * The data the ready-made `input` is built from — operators in the grid's wording, the current
+	 * operator and value, the editor they call for, the values on offer, presets, debounce, and the
+	 * setters. What a panel built on a kit's own filter controls reads instead of `input`.
+	 */
+	filter: ColumnFilterModel
 }
 
 /** What a `<DataGrid.FilterPanel>` render function receives. */
@@ -134,7 +54,27 @@ export type DataGridFilterPanelRenderArgs = {
 	columns: DataGridFilterPanelColumn[]
 	/** True when at least one column currently has a filter value. */
 	hasActiveFilter: boolean
+	/**
+	 * Every column with operators that currently holds a filter, keyed by column id — the shape a
+	 * kit's own filter component takes as one value. A column without operators is not in it; its
+	 * plain filter stays on its `filter.value`.
+	 *
+	 * A fresh object on every render, so compare it by content rather than by reference.
+	 */
+	value: Record<string, StructuredFilterValue>
+	/**
+	 * Writes the panel's whole value in **one** state change — so `filtering.onChange` fires once,
+	 * and under `draft` the write lands in the draft like any other. Every column with operators
+	 * takes its entry from `next` and loses its filter when `next` does not name it; an empty
+	 * value (no value, `''`, `[]`, a range with neither bound) counts as not named, except under
+	 * an operator that takes none. Columns without operators keep their filters, and a key that
+	 * names no column with operators is ignored, with a warning in development.
+	 */
+	setValue: (next: ColumnFiltersValue) => void
 }
+
+/** What {@link useColumnFilters} returns — the same thing a `<DataGrid.FilterPanel>` render function receives. */
+export type UseColumnFiltersResult = DataGridFilterPanelRenderArgs
 
 export type DataGridFilterPanelProps = {
 	/**
@@ -142,6 +82,10 @@ export type DataGridFilterPanelProps = {
 	 *
 	 * The panel still renders nothing at all when the grid has no filtered row model or no
 	 * filterable columns, so `children` are not called in those states.
+	 *
+	 * A render function receives what {@link useColumnFilters} returns: each column's ready-made
+	 * `input` beside its `filter` model, and the panel's whole `value` with a `setValue` that writes
+	 * it in one state change — what a panel built on a kit's own filter component reads.
 	 *
 	 * @example
 	 * ```tsx
@@ -162,13 +106,24 @@ export type DataGridFilterPanelProps = {
 }
 
 /**
- * The filterable columns with their labels, value summaries and ready-made controls — what
- * both `<FilterPanel>` and `<ColumnFilter>` render.
+ * The grid's filters as a panel sees them: the filterable columns with their labels, value
+ * summaries, filter models and ready-made controls, plus the panel's whole value and a setter that
+ * writes it in one state change. What `<FilterPanel>` and `<ColumnFilter>` render from, and what a
+ * panel built on a kit's own filter component reads anywhere under `<DataGrid>`.
  *
  * `undefined` when the grid has nothing to filter (no filtered row model, or no filterable
  * column), which is what makes both components render nothing in those states.
+ *
+ * @example
+ * ```tsx
+ * function MyFilters() {
+ *   const filters = useColumnFilters()
+ *   if (!filters) return null
+ *   return <Filters value={filters.value} onChange={filters.setValue} mode='confirm' />
+ * }
+ * ```
  */
-export function useFilterPanelColumns(): DataGridFilterPanelRenderArgs | undefined {
+export function useColumnFilters(): UseColumnFiltersResult | undefined {
 	const table = useDataGridTable()
 	useDataGridState((s) => s.columnFilters)
 	useDataGridState((s) => s.columnVisibility)
@@ -178,14 +133,12 @@ export function useFilterPanelColumns(): DataGridFilterPanelRenderArgs | undefin
 	const { OperatorSelect, BetweenInput, MultiSelectFilter, ClearFilterButton } = gridComponents.filtering
 	const cellTypes = useCellTypes()
 	const filteringDebounce = table.grid.filtering.debounce
+	const { messages } = table.grid
 
 	if (!filtersRows(table)) return undefined
 
 	const filterableColumns = table.getAllLeafColumns().filter((column) => {
-		// `ColumnMeta` is declared `in out` upstream, so no concrete instantiation is assignable to
-		// any other and this cast is forced by the variance annotation rather than chosen. Same
-		// cast, same name, same reason as `header-cell.tsx` and core's own `creating.ts`.
-		const meta = column.columnDef.meta as FormColumnMeta | undefined
+		const { meta } = filteringMetaOf(column)
 		if (meta?.isSystemColumn) return false
 		if (meta?.filtering === false) return false
 		return column.getCanFilter()
@@ -196,17 +149,8 @@ export function useFilterPanelColumns(): DataGridFilterPanelRenderArgs | undefin
 	const hasActiveFilter = filterableColumns.some((c) => c.getFilterValue() !== undefined)
 
 	const resolvedColumns: DataGridFilterPanelColumn[] = filterableColumns.map((column) => {
-		// Same cast, same reason as the one in the filter above.
-		const meta = column.columnDef.meta as FormColumnMeta | undefined
-		const headerDef = column.columnDef.header
-		const label = typeof headerDef === 'string' ? headerDef : column.id
-		const filterValue = column.getFilterValue()
-		const { display, hasValue } = formatFilterValue(
-			filterValue,
-			meta,
-			table.grid.messages.filtering.any,
-			table.grid.messages.operators,
-		)
+		const { meta } = filteringMetaOf(column)
+		const filter = resolveColumnFilter(column, { messages, tableDebounce: filteringDebounce, cellTypes })
 
 		const headerLike = { id: column.id, column } as unknown as Header<GridFeatures, ErasedRow>
 
@@ -221,29 +165,52 @@ export function useFilterPanelColumns(): DataGridFilterPanelRenderArgs | undefin
 			BetweenInput,
 			MultiSelectFilter,
 			debounce: filteringDebounce,
-			messages: table.grid.messages,
+			messages,
 			table,
+			model: filter,
 		})
 
 		const onClear = (): void => {
 			column.setFilterValue(undefined)
 		}
 
-		return { column, label, valueDisplay: display, hasValue, input, onClear }
+		return {
+			column,
+			label: columnLabel(column),
+			valueDisplay: filter.valueDisplay,
+			hasValue: filter.hasValue,
+			input,
+			onClear,
+			filter,
+		}
 	})
 
-	return { columns: resolvedColumns, hasActiveFilter }
+	const operatorModels = new Map<string, OperatorColumnFilterModel>()
+	for (const { filter } of resolvedColumns) {
+		if (filter.hasOperators) operatorModels.set(filter.columnId, filter)
+	}
+
+	const setValue = (next: ColumnFiltersValue): void => {
+		table.setColumnFilters((prev) => applyColumnFiltersValue(prev, next, operatorModels))
+	}
+
+	return {
+		columns: resolvedColumns,
+		hasActiveFilter,
+		value: readColumnFiltersValue([...operatorModels.values()]),
+		setValue,
+	}
 }
 
 export function FilterPanel({ children }: DataGridFilterPanelProps = {}) {
 	const { FilterPanel: FilterPanelChrome, FilterPanelChip } = useGridComponents().filtering
-	const resolved = useFilterPanelColumns()
+	const resolved = useColumnFilters()
 	if (resolved === undefined) return null
 
 	const { columns, hasActiveFilter } = resolved
 
 	if (children !== undefined) {
-		return typeof children === 'function' ? children({ columns, hasActiveFilter }) : children
+		return typeof children === 'function' ? children(resolved) : children
 	}
 
 	const chips = columns.map(({ column, label, valueDisplay, hasValue, input, onClear }) => (

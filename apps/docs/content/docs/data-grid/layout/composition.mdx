@@ -86,18 +86,15 @@ and enabled, so a narrow grid renders a narrow toolbar rather than throwing.
 [**Presets**](/docs/data-grid/layout/presets) has a live preview of each, on one grid, and which
 to reach for.
 
-All four render `<DataGrid.ActionBar />` **last**, which is where the default `floating` bar
-belongs: it overlays the rows, and coming last in document order keeps it out of the tab order
-until there is something to act on.
+All four render `<DataGrid.ActionBar />`.
 
 That is one bar with a section per concern — the current selection, and the pending draft. It
 replaced a `SelectionBar` / `DraftBar` pair that each drew a whole bar and were kept apart by a
 gate that did not re-run on a draft edit, so both could mount at the same sticky position.
 
-Nothing places it for you; a layout renders it where it writes it, like every other member. The
-consequence to know: `selection: { bar: 'inline' }` on one of these presets puts that in-flow strip
-**below** the table, because the preset writes the bar last either way. An `inline` grid writes a
-layout of its own with `<DataGrid.ActionBar />` first.
+The presets place it by its variant: a `floating` bar goes last, an `inline` one between the
+toolbar and the table — see [Presets](/docs/data-grid/layout/presets#the-action-bar). A layout of
+your own renders it where it writes it, like every other member.
 
 `FilterPanelLayout` is the arrangement that used to read:
 
@@ -549,7 +546,7 @@ offsets and `cellClassName`, and lets you replace only what goes inside.
 The remaining slots take `children` for the same reason as everything above: replace the content,
 keep the conditions under which it appears. A modal and a fallback row are mounted by their feature
 rather than by a layout — neither has a position a layout could give it. `<DataGrid.ActionBar>` does:
-a layout writes it where it wants it, and the four presets all write it last.
+a layout writes it where it wants it, and the four presets place it by its variant.
 
 | Slot                                                   | Renders when                             | `children` receives                                             |
 | ------------------------------------------------------ | ---------------------------------------- | --------------------------------------------------------------- |

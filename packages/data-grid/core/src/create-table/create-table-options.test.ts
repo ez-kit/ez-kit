@@ -648,10 +648,9 @@ describe('createTableOptions', () => {
 				rowPaginationFeature,
 				sortedRowModel: createSortedRowModel(),
 				sortFns,
-				// No `paginatedRowModel`: infinite mode shows every accumulated row, and
-				// registering the slice-to-one-page model beside it trips a different,
-				// pre-existing warning. Leaving it out is both correct for the mode and what lets
-				// this case assert that **nothing at all** was logged.
+				// Registered beside infinite mode on purpose: the mode turns slicing off with
+				// `manualPagination`, so the model is legal here and must not be warned about.
+				paginatedRowModel: createPaginatedRowModel(),
 				creatingFeature,
 				editingFeature,
 				deletingFeature,

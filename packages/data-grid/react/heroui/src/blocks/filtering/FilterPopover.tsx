@@ -4,6 +4,8 @@ import { useGridMessages } from '@ez-kit/data-grid-react/kit'
 import { Popover, cn } from '@heroui/react'
 import { ListFilter } from 'lucide-react'
 
+import { KIT_CLASS_NAME } from '../../lib/kit-class-name'
+
 import type { FilterPopoverProps } from '@ez-kit/data-grid-react'
 
 export function FilterPopover({ children, hasActiveFilter }: FilterPopoverProps) {
@@ -21,7 +23,7 @@ export function FilterPopover({ children, hasActiveFilter }: FilterPopoverProps)
 					/>
 				</span>
 			</Popover.Trigger>
-			<Popover.Content>
+			<Popover.Content className={KIT_CLASS_NAME}>
 				<Popover.Dialog
 					aria-label={messages.filtering.trigger}
 					className='p-3'

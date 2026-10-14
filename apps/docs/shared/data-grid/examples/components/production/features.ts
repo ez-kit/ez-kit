@@ -119,11 +119,8 @@ export const deferredApplyFeatures = tableFeatures({
 })
 
 /**
- * The virtualized feed: rows accumulate, so there is no filtering stack and no `paginatedRowModel`.
- *
- * Leaving that row model out is the point rather than an omission. `pagination.mode: 'infinite'`
- * shows every row loaded so far, and `paginatedRowModel` would slice them back to one page; core
- * warns at construction, and a warning inside an iframed docs example is easy to miss.
+ * The virtualized feed: rows accumulate and nothing filters or pages them, so the set carries
+ * neither the filtering stack nor `paginatedRowModel`.
  */
 export const feedFeatures = tableFeatures({
 	// Structural: the grid shell reads column widths, visibility and pin groups to lay out
