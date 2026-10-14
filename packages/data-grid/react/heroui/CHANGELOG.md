@@ -1,5 +1,70 @@
 # @ez-kit/data-grid-heroui
 
+## 0.11.0
+
+### Minor Changes
+
+- 589a883: **Breaking: the layout presets put an `inline` action bar above the table.**
+
+  With `selection: { bar: 'inline' }`, `DefaultLayout`, `BottomBarLayout`, `FilterPanelLayout` and
+  `PopoverFiltersLayout` now render the action bar between the toolbar and the table. In
+  `FilterPanelLayout` it goes after the active-filters strip, directly above the table. Before, every
+  preset rendered the bar last, so an inline bar sat below the pagination, away from the rows it acts
+  on. The `floating` bar, which is the default, still renders last. Every kit's prebuilt `DataGrid`
+  binds `DefaultLayout`, so it changes too.
+
+  Each preset still renders exactly one bar. When a controlled `selection.bar` switches variant, the
+  bar moves without losing the selection. A grid whose body is `children` or its own `core.Layout`
+  is unaffected: the bar stays where that layout writes it.
+
+  The inline bar renders nothing until a row is selected or a draft is pending, so above the table it
+  now pushes the rows down when it appears. To keep it below the table, write a layout of your own with the bar last:
+
+  ```tsx
+  <DataGrid selection={{ bar: 'inline' }}>
+  	<DataGrid.Toolbar />
+  	<DataGrid.Table />
+  	<DataGrid.Pagination />
+  	<DataGrid.ActionBar />
+  </DataGrid>
+  ```
+
+- 86caca6: **Breaking: the layout presets no longer mount `SortMenuTrigger` or `ClearFiltersButton`.**
+
+  A preset now mounts a feature's control only when the grid has no other way into — or back out of —
+  that feature. Search, the column-visibility toggle and "+ Add" stay. The sort builder goes, because
+  sorting already has the header click, and Clear-filters goes, because every filter clears in its own
+  input. `sorting: true` again means click-to-sort and nothing more.
+
+  This restores the defaults from before 0.9.0, where `sorting.toolbar` and `filtering.toolbar` were
+  opt-in. Moving placement into JSX gated every preset control on "the feature is on", which turned
+  both on by accident. `DefaultLayout`, `BottomBarLayout`, `FilterPanelLayout` and
+  `PopoverFiltersLayout` all change, and so does every kit's prebuilt `DataGrid`, which binds
+  `DefaultLayout`.
+
+  To keep either control, write it into a layout of your own:
+
+  ```tsx
+  <DataGrid.Toolbar
+  	end={
+  		<>
+  			<DataGrid.ClearFiltersButton />
+  			<DataGrid.SortMenuTrigger />
+  			<DataGrid.VisibilityTrigger />
+  		</>
+  	}
+  />
+  ```
+
+### Patch Changes
+
+- Updated dependencies [86caca6]
+- Updated dependencies [ad4ae90]
+- Updated dependencies [589a883]
+- Updated dependencies [86caca6]
+  - @ez-kit/data-grid-react@0.11.0
+  - @ez-kit/data-grid-core@0.10.0
+
 ## 0.10.0
 
 ### Minor Changes

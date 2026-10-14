@@ -1,5 +1,114 @@
 # @ez-kit/data-grid-react
 
+## 0.11.0
+
+### Minor Changes
+
+- 86caca6: **A filter panel can now be built on a kit's own filter component.**
+
+  `useColumnFilters()` — and the `<DataGrid.FilterPanel>` render function, which receives the same
+  thing — hands over each filterable column's **filter model** as `filter`: operators labelled from
+  the grid's messages, the default and current operator, the current value, the `FilterEditor` the
+  operator calls for (`text`, `number`, `date`, `boolean`, `select`, `between`, `multiSelect`, `none`,
+  `custom`), the values on offer with faceted counts, the date presets, the `between` bounds, the
+  debounce, and `setValue` / `nextValueForOperator`. Rebuilding that from `column.columnDef.meta` is no
+  longer necessary; the grid's own header and panel controls now render from the same model.
+
+  Beside the columns comes the panel's whole `value` — one `{ operator, value }` per column with
+  operators, keyed by column id — and a `setValue` that writes it in **one** state change, so an
+  Apply button fires `filtering.onChange` once rather than once per column. Empty values are dropped
+  rather than stored as filters, and under `draft` the write lands in the draft.
+
+  Additive: `FilterPanel`, `FilterPanelChip`, `ColumnFilter` and the existing render-function fields
+  are unchanged. New exports: `useColumnFilters`, `FilterEditor`, and the types `ColumnFilterModel`,
+  `OperatorColumnFilterModel`, `PlainColumnFilterModel`, `UseColumnFiltersResult`,
+  `ColumnFiltersValue`.
+
+- ad4ae90: **`pagination.mode: 'infinite'` shows every loaded row again, whatever the feature set registers.**
+
+  Since 0.7.0 (the TanStack Table v9 migration, #246) an infinite grid whose set registered
+  `paginatedRowModel` — `allDataGridFeatures` does — rendered only the first page of its rows:
+  `onLoadMore` fired and `data` grew, but the rows were still sliced by `pageIndex` / `pageSize`, so
+  loading looked broken. The only way out was a second feature set without the model.
+
+  The mode is now config again rather than a feature-set decision. In infinite mode the table runs
+  with `manualPagination: true`, so `getRowModel()` returns every accumulated row with or without
+  `paginatedRowModel`, and one set serves a paged grid and an infinite one — including on a live
+  instance switched from one mode to the other. A set without the model keeps working exactly as
+  before, so a workaround such as a separate infinite-only set can be dropped whenever convenient.
+  The development warning telling you to drop `paginatedRowModel` is gone.
+
+  Two consequences worth knowing:
+  - **`table.options.manualPagination` is now `true` in infinite mode.** Code that reads that flag as
+    "the server pages this grid" should check `pagination.mode` as well.
+  - **Infinite mode starts at `pageIndex` 0.** A seeded `initialState.pagination.pageIndex` is
+    overridden (with a development warning), so it no longer reaches `onStateChange` or persisted
+    state; the seeded `pageSize` is kept. Whatever the index later holds, it never shifts the rows
+    or `aria-rowindex`.
+
+  `@ez-kit/data-grid-react` reads the mode rather than that flag for accessibility. An infinite grid
+  writes `aria-rowcount="-1"` while `hasNextPage` or `hasPreviousPage` is set and no `aria-rowcount`
+  once everything has loaded; `aria-rowindex` counts from the first loaded row and is never offset by
+  `pageIndex`. The row-count live region likewise stays silent while more rows can load, since the
+  rows on screen are not the total, and announces the count once they all have.
+
+- 589a883: **Breaking: the layout presets put an `inline` action bar above the table.**
+
+  With `selection: { bar: 'inline' }`, `DefaultLayout`, `BottomBarLayout`, `FilterPanelLayout` and
+  `PopoverFiltersLayout` now render the action bar between the toolbar and the table. In
+  `FilterPanelLayout` it goes after the active-filters strip, directly above the table. Before, every
+  preset rendered the bar last, so an inline bar sat below the pagination, away from the rows it acts
+  on. The `floating` bar, which is the default, still renders last. Every kit's prebuilt `DataGrid`
+  binds `DefaultLayout`, so it changes too.
+
+  Each preset still renders exactly one bar. When a controlled `selection.bar` switches variant, the
+  bar moves without losing the selection. A grid whose body is `children` or its own `core.Layout`
+  is unaffected: the bar stays where that layout writes it.
+
+  The inline bar renders nothing until a row is selected or a draft is pending, so above the table it
+  now pushes the rows down when it appears. To keep it below the table, write a layout of your own with the bar last:
+
+  ```tsx
+  <DataGrid selection={{ bar: 'inline' }}>
+  	<DataGrid.Toolbar />
+  	<DataGrid.Table />
+  	<DataGrid.Pagination />
+  	<DataGrid.ActionBar />
+  </DataGrid>
+  ```
+
+- 86caca6: **Breaking: the layout presets no longer mount `SortMenuTrigger` or `ClearFiltersButton`.**
+
+  A preset now mounts a feature's control only when the grid has no other way into — or back out of —
+  that feature. Search, the column-visibility toggle and "+ Add" stay. The sort builder goes, because
+  sorting already has the header click, and Clear-filters goes, because every filter clears in its own
+  input. `sorting: true` again means click-to-sort and nothing more.
+
+  This restores the defaults from before 0.9.0, where `sorting.toolbar` and `filtering.toolbar` were
+  opt-in. Moving placement into JSX gated every preset control on "the feature is on", which turned
+  both on by accident. `DefaultLayout`, `BottomBarLayout`, `FilterPanelLayout` and
+  `PopoverFiltersLayout` all change, and so does every kit's prebuilt `DataGrid`, which binds
+  `DefaultLayout`.
+
+  To keep either control, write it into a layout of your own:
+
+  ```tsx
+  <DataGrid.Toolbar
+  	end={
+  		<>
+  			<DataGrid.ClearFiltersButton />
+  			<DataGrid.SortMenuTrigger />
+  			<DataGrid.VisibilityTrigger />
+  		</>
+  	}
+  />
+  ```
+
+### Patch Changes
+
+- Updated dependencies [ad4ae90]
+  - @ez-kit/data-grid-core@0.10.0
+
 ## 0.10.0
 
 ### Minor Changes
