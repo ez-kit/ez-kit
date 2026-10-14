@@ -166,25 +166,54 @@ These twelve, with the array frame, are the `fields` registry. Every field kind 
 
 On top of that, per kind:
 
-| Component            | Value props                                                                                                                    |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `TextField`          | `value: string`, `onChange(value)`, `placeholder?`, `type?`                                                                    |
-| `NumberField`        | `value: number \| undefined`, `onChange(value)`, `placeholder?`, `min/max/step?`                                               |
-| `TextareaField`      | `value: string`, `onChange(value)`, `placeholder?`, `rows?`                                                                    |
-| `SelectField`        | `value: string`, `onChange(value)`, `options`, `loading`, `search?`, `placeholder?`                                            |
-| `MultiSelectField`   | `value: readonly string[]`, `onChange(value)`, `options`, `loading`, `search?`, `placeholder?`                                 |
-| `CheckboxField`      | `checked: boolean`, `onChange(checked)`                                                                                        |
-| `SwitchField`        | `checked: boolean`, `onChange(checked)`                                                                                        |
-| `RadioGroupField`    | `value: string`, `onChange(value)`, `options`, `loading`                                                                       |
-| `CheckboxGroupField` | `value: readonly string[]`, `onChange(value)`, `options`, `loading`                                                            |
-| `SliderField`        | `value: number` — always concrete, never empty — `onChange(value)`, `min/max/step?`                                            |
-| `DateField`          | `value: string \| undefined` (`YYYY-MM-DD`), `onChange(value)`, `placeholder?`, `min/max?`                                     |
-| `DateRangeField`     | `value: DateRangeValue \| undefined` — reported only once both ends are picked — `onChange(value)`, `placeholder?`, `min/max?` |
+| Component            | Value props                                                                                        |
+| -------------------- | -------------------------------------------------------------------------------------------------- |
+| `TextField`          | `value: string`, `onChange(value)`                                                                 |
+| `NumberField`        | `value: number \| undefined`, `onChange(value)`                                                    |
+| `TextareaField`      | `value: string`, `onChange(value)`                                                                 |
+| `SelectField`        | `value: string`, `onChange(value)`, `options`, `loading`, `search?`                                |
+| `MultiSelectField`   | `value: readonly string[]`, `onChange(value)`, `options`, `loading`, `search?`                     |
+| `CheckboxField`      | `checked: boolean`, `onChange(checked)`                                                            |
+| `SwitchField`        | `checked: boolean`, `onChange(checked)`                                                            |
+| `RadioGroupField`    | `value: string`, `onChange(value)`, `options`, `loading`                                           |
+| `CheckboxGroupField` | `value: readonly string[]`, `onChange(value)`, `options`, `loading`                                |
+| `SliderField`        | `value: number` — always concrete, never empty — `onChange(value)`                                 |
+| `DateField`          | `value: string \| undefined` (`YYYY-MM-DD`), `onChange(value)`                                     |
+| `DateRangeField`     | `value: DateRangeValue \| undefined` — reported only once both ends are picked — `onChange(value)` |
 
 <Callout type='warn'>
 	`onChange` receives **the value**, not a DOM event. That is what keeps the contract identical across kits whose
 	primitives disagree — some hand you an event, some a value, some a React Aria callback. Unwrapping is the kit's job.
 </Callout>
+
+#### Kit props
+
+The contract names no input attribute — no `placeholder`, `type`, `rows`, `min`, `max` or `step`. A component that renders one declares it in its own props, beside the render props:
+
+```tsx
+type TextFieldKitProps = {
+	placeholder?: string | undefined
+	type?: 'text' | 'email' | 'password' | undefined
+	variant?: 'flat' | 'bordered' | undefined
+}
+
+export function TextField({
+	value,
+	onChange,
+	placeholder,
+	type,
+	variant,
+	...field
+}: TextFieldRenderProps & TextFieldKitProps) {
+	// …
+}
+```
+
+- **What you declare is what `form.TextField` accepts.** A component's props beyond its render props become props of the bound field, read off the component's own parameter — no helper, no registration. Under the kit above, `variant='outlined'` is a compile error, and so is a prop the component does not declare. A field set typed with the contract's own signatures (`AllFormFieldSlots`, which a bare `FormInstance<V>` assumes) accepts none — name the set, `FormInstance<V, typeof fields>`, to keep them.
+- **They must be optional.** `satisfies FormFieldSlots` rejects a component that requires a prop beyond the contract: the schema renderer, and every call site that omits it, could not supply it.
+- **The computed props win.** The author's props reach your component first and the binding's after them, so `value`, `onChange`, `id`, `name` and the rest are always the binding's — and none of them can be written on `form.TextField` to begin with.
+
+A document reaches the same props: the schema renderer passes a field node's `placeholder`, `rows`, `min`, `max` and `step` under those names, and `inputType` as `type`. That path is unchecked — a component that does not declare one still receives it. Both shipped kits declare all of them, and export the type of each field's kit props as `<Field>KitProps`.
 
 #### `search`
 

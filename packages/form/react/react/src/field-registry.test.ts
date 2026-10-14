@@ -1,8 +1,17 @@
 import { FORM_FIELD_TYPES, RESERVED_NODE_TYPES } from '@ez-kit/form-core'
 import { describe, expect, expectTypeOf, it } from 'vitest'
 
-import { BESPOKE_FIELD_KEYS, defineFieldType, deriveFieldTypeIds, FIELD_KEYS, fieldTypeIdFor } from './field-registry'
+import {
+	BASE_FIELD_PROP_KEYS,
+	BESPOKE_FIELD_KEYS,
+	defineFieldType,
+	deriveFieldTypeIds,
+	FIELD_KEYS,
+	fieldTypeIdFor,
+	OPTION_FIELD_PROP_KEYS,
+} from './field-registry'
 
+import type { BaseFieldProps, OptionFieldBindingProps } from './field-props'
 import type { DeepKeysOfType } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
 
@@ -82,6 +91,39 @@ describe('deriveFieldTypeIds', () => {
 			const key = Object.hasOwn(BESPOKE_FIELD_KEYS, `${base}Field`) ? base : `${base}Field`
 			expect(() => deriveFieldTypeIds({ [key]: Noop })).toThrow(new RegExp(reserved))
 		}
+	})
+})
+
+describe('OPTION_FIELD_PROP_KEYS', () => {
+	it('lists the base keys and every option-binding key, and nothing else', () => {
+		expect(Object.keys(OPTION_FIELD_PROP_KEYS).sort()).toEqual(
+			[
+				...Object.keys(BASE_FIELD_PROP_KEYS),
+				'options',
+				'optionsFrom',
+				'optionsParams',
+				'loading',
+				'searchable',
+				'creatable',
+				'createLabel',
+			].sort(),
+		)
+		expectTypeOf<keyof typeof OPTION_FIELD_PROP_KEYS>().toEqualTypeOf<
+			keyof BaseFieldProps<never, never> | keyof OptionFieldBindingProps
+		>()
+	})
+
+	it('cannot fall behind the type — the check it is declared with rejects a missing key', () => {
+		const incomplete = {
+			options: true,
+			optionsFrom: true,
+			optionsParams: true,
+			loading: true,
+			searchable: true,
+			creatable: true,
+			// @ts-expect-error -- `createLabel` is missing, so the set no longer covers the binding props
+		} satisfies Record<keyof OptionFieldBindingProps, true>
+		expect(incomplete).not.toHaveProperty('createLabel')
 	})
 })
 

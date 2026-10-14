@@ -18,6 +18,22 @@ export { CheckboxGroupField, MultiSelectField } from './blocks/multi-value'
 export { SelectField } from './blocks/select'
 export { Wizard } from './blocks/wizard'
 
+// What each field takes beyond the contract — its React Aria root's props, plus the few an input
+// takes directly — which reach it flat from `form.<Field>`. `KitProps`, not `Props`: the
+// `<Field>Props` names below are the adapter's consumer types, re-exported as they are.
+export type { DateFieldKitProps, DateRangeFieldKitProps } from './blocks/date'
+export type {
+	CheckboxFieldKitProps,
+	NumberFieldKitProps,
+	RadioGroupFieldKitProps,
+	SliderFieldKitProps,
+	SwitchFieldKitProps,
+	TextareaFieldKitProps,
+	TextFieldKitProps,
+} from './blocks/fields'
+export type { CheckboxGroupFieldKitProps, MultiSelectFieldKitProps } from './blocks/multi-value'
+export type { SelectFieldKitProps } from './blocks/select'
+
 // Every component at once, in the two bags `createForm` takes — a deliberate "everything", for an
 // app that spreads the kit beside a field kind of its own.
 export { allFormComponents, allFormFields } from './sets'
@@ -46,7 +62,6 @@ export {
 	GRID_MIN,
 	hasFieldErrors,
 	stripHiddenValues,
-	TextInputType,
 	useFieldGroup,
 	useFormContext,
 	useFormGroup,

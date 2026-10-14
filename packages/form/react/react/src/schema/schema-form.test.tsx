@@ -1,11 +1,11 @@
-import { FormFieldType } from '@ez-kit/form-core'
+import { FormFieldType, TextInputType } from '@ez-kit/form-core'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
 
 import { createForm } from '../create-form'
 import { createSchemaForm } from '../create-schema-form'
-import { testComponents, testFields, testFormElement } from '../test-kit'
+import { captureField, testComponents, testFields, testFormElement } from '../test-kit'
 
 import type { FormSchema } from '@ez-kit/form-core'
 
@@ -336,4 +336,33 @@ test('a required multi-select is not satisfied by an empty selection', async () 
 
 	expect(onSubmit).not.toHaveBeenCalled()
 	expect(screen.getByText('This field is required')).toBeInTheDocument()
+})
+
+test('hands a node’s input attributes to the kit as its own props, inputType as type', () => {
+	const capture = captureField()
+	const kit = createSchemaForm({ fields: { ...testFields, TextField: capture.Capture, NumberField: capture.Capture } })
+
+	render(
+		<kit.SchemaForm
+			schema={{
+				version: 1,
+				children: [
+					{
+						type: FormFieldType.Text,
+						name: 'email',
+						placeholder: 'you@example.com',
+						inputType: TextInputType.Email,
+					},
+					{ type: FormFieldType.Number, name: 'age', placeholder: '0', min: 1, max: 120, step: 1 },
+				],
+			}}
+			defaultValues={{ email: '', age: 0 }}
+			onSubmit={() => {}}
+		/>,
+	)
+
+	const byName = new Map(capture.calls.map((props) => [props.name, props]))
+	expect(byName.get('email')).toMatchObject({ placeholder: 'you@example.com', type: 'email' })
+	expect(byName.get('email')).not.toHaveProperty('inputType')
+	expect(byName.get('age')).toMatchObject({ placeholder: '0', min: 1, max: 120, step: 1 })
 })

@@ -1,12 +1,12 @@
-import { TextInputType } from '@ez-kit/form-core'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import { createForm } from './create-form'
-import { testComponents, testFields, testFormElement } from './test-kit'
+import { captureField, testComponents, testFields, testFormElement } from './test-kit'
 
 import type { FormFieldSlots } from './contract'
+import type { ReactNode } from 'react'
 
 type Values = {
 	email: string
@@ -41,7 +41,7 @@ describe('createForm — field binding', () => {
 				<form.TextField
 					name='email'
 					label='Email'
-					type={TextInputType.Email}
+					type='email'
 					placeholder='you@example.com'
 				/>
 				<form.Subscribe selector={(state) => state.values.email}>{(email) => <output>{email}</output>}</form.Subscribe>
@@ -63,7 +63,7 @@ describe('createForm — field binding', () => {
 		render(<TextCase />)
 
 		const input = screen.getByLabelText('Email')
-		expect(input).toHaveAttribute('type', TextInputType.Email)
+		expect(input).toHaveAttribute('type', 'email')
 		expect(input).toHaveAttribute('placeholder', 'you@example.com')
 	})
 
@@ -651,4 +651,119 @@ describe('createForm — dependency injection', () => {
 		expect(container.querySelector('[data-field="age"]')).toHaveAttribute('data-field-type', 'number')
 		expect(container.querySelector('[data-field="agree"]')).toHaveAttribute('data-field-type', 'checkbox')
 	})
+})
+
+describe('createForm — props beyond the binding reach the kit flat', () => {
+	type KindValues = {
+		text: string
+		count: number
+		notes: string
+		agree: boolean
+		notify: boolean
+		level: number
+		day: string
+		stay: { start: string; end: string }
+	}
+	const KIND_DEFAULTS: KindValues = {
+		text: 'hi',
+		count: 2,
+		notes: '',
+		agree: false,
+		notify: false,
+		level: 3,
+		day: '',
+		stay: { start: '2026-01-01', end: '2026-01-02' },
+	}
+
+	/** Each plain built-in, the path it binds, and the attributes the contract used to carry for it. */
+	const KINDS = [
+		{ key: 'TextField', valueKey: 'value', name: 'text', former: { type: 'password', placeholder: 'Secret' } },
+		{ key: 'NumberField', valueKey: 'value', name: 'count', former: { placeholder: '0', min: 1, max: 9, step: 2 } },
+		{ key: 'TextareaField', valueKey: 'value', name: 'notes', former: { placeholder: 'Notes', rows: 4 } },
+		{ key: 'CheckboxField', valueKey: 'checked', name: 'agree', former: {} },
+		{ key: 'SwitchField', valueKey: 'checked', name: 'notify', former: {} },
+		{ key: 'SliderField', valueKey: 'value', name: 'level', former: { min: 1, max: 9, step: 2 } },
+		{
+			key: 'DateField',
+			valueKey: 'value',
+			name: 'day',
+			former: { placeholder: 'Pick', min: '2026-01-01', max: '2026-12-31' },
+		},
+		{
+			key: 'DateRangeField',
+			valueKey: 'value',
+			name: 'stay',
+			former: { placeholder: 'Pick', min: '2026-01-01', max: '2026-12-31' },
+		},
+	] as const
+
+	/** Render `form.<key>` with arbitrary props, past the per-kind types a table of kinds cannot name. */
+	function renderKind(key: string, props: Record<string, unknown>): ReturnType<typeof captureField> {
+		const capture = captureField()
+		const kit = createForm({ fields: { [key]: capture.Capture } })
+		function Case(): ReactNode {
+			const form = kit.useForm({ defaultValues: KIND_DEFAULTS })
+			const Field = (form as unknown as Record<string, (props: Record<string, unknown>) => ReactNode>)[key]
+			return Field === undefined ? null : <Field {...props} />
+		}
+		render(<Case />)
+		return capture
+	}
+
+	it.each(KINDS)('$key hands every prop it does not bind to the kit, under its own name', ({ key, name, former }) => {
+		const capture = renderKind(key, {
+			name,
+			label: 'Label',
+			autoComplete: 'off',
+			'data-testid': 'probe',
+			variant: 'bordered',
+			...former,
+		})
+
+		expect(capture.last()).toMatchObject({
+			autoComplete: 'off',
+			'data-testid': 'probe',
+			variant: 'bordered',
+			...former,
+		})
+	})
+
+	it.each(KINDS)('$key keeps its binding props to itself', ({ key, name }) => {
+		const capture = renderKind(key, { name, validate: { required: true } })
+
+		expect(capture.last()).not.toHaveProperty('validate')
+		expect(capture.last()).toMatchObject({ required: true })
+	})
+
+	it.each(KINDS)('$key passes a prop named after an Object.prototype member', ({ key, name }) => {
+		const capture = renderKind(key, { name, toString: 'kept', constructor: 'kept' })
+
+		expect(capture.last()).toMatchObject({ toString: 'kept', constructor: 'kept' })
+	})
+
+	it.each(KINDS)('$key resolves `required` from validate, over one written past the types', ({ key, name }) => {
+		const capture = renderKind(key, { name, validate: { required: true }, required: false })
+
+		expect(capture.last()).toMatchObject({ required: true })
+	})
+
+	it.each(KINDS)(
+		'$key lets a computed prop win over the same key written past the types',
+		({ key, name, valueKey }) => {
+			const authorOnChange = vi.fn()
+			const capture = renderKind(key, {
+				name,
+				onChange: authorOnChange,
+				[valueKey]: 'author',
+				id: 'author-id',
+				'data-field': 'author-field',
+			})
+
+			const received = capture.last()
+			expect(received).toMatchObject({ id: name, name, 'data-field': name })
+			expect(received).toHaveProperty(valueKey)
+			expect(received?.[valueKey]).not.toBe('author')
+			expect(received?.onChange).not.toBe(authorOnChange)
+		},
+	)
 })

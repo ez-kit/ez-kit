@@ -4,6 +4,7 @@ import { FieldDescription, FieldErrorText, FieldLabel } from './field-chrome'
 import { fieldRoot } from './field-state'
 import { minLengthHint } from './search-hint'
 
+import type { MultiSelectFieldKitProps } from './multi-value'
 import type { MultiSelectFieldRenderProps } from '@ez-kit/form-react'
 import type { Key } from '@heroui/react'
 import type { ComponentProps, ReactNode } from 'react'
@@ -76,7 +77,8 @@ export function SearchableMultiSelectField({
 	description,
 	errors,
 	...field
-}: MultiSelectFieldRenderProps & { search: NonNullable<MultiSelectFieldRenderProps['search']> }): ReactNode {
+}: MultiSelectFieldRenderProps &
+	MultiSelectFieldKitProps & { search: NonNullable<MultiSelectFieldRenderProps['search']> }): ReactNode {
 	const items: ComboItem[] = options.map((option) => ({
 		id: option.value,
 		label: option.label,

@@ -239,3 +239,75 @@ describe('@ez-kit/form-shadcn prebuilt bundles together', () => {
 		})
 	})
 })
+
+describe('@ez-kit/form-shadcn — props beyond the contract land on the control', () => {
+	it('puts native input attributes on the <input>, `type` included, with no import', () => {
+		render(
+			<Form defaultValues={DEFAULTS}>
+				{(form) => (
+					<>
+						<form.TextField
+							name='email'
+							label='Password'
+							type='password'
+							autoComplete='current-password'
+							inputMode='text'
+							maxLength={64}
+							placeholder='••••'
+						/>
+						<form.NumberField
+							name='age'
+							label='Age'
+							placeholder='18'
+							min={1}
+							max={120}
+							step={1}
+						/>
+						<form.TextareaField
+							name='bio'
+							label='Bio'
+							rows={5}
+							maxLength={280}
+						/>
+					</>
+				)}
+			</Form>,
+		)
+
+		const password = screen.getByLabelText('Password')
+		expect(password).toHaveAttribute('type', 'password')
+		expect(password).toHaveAttribute('autocomplete', 'current-password')
+		expect(password).toHaveAttribute('inputmode', 'text')
+		expect(password).toHaveAttribute('maxlength', '64')
+		expect(password).toHaveAttribute('placeholder', '••••')
+
+		const age = screen.getByLabelText('Age')
+		expect(age).toHaveAttribute('type', 'number')
+		expect(age).toHaveAttribute('placeholder', '18')
+		expect(age).toHaveAttribute('min', '1')
+		expect(age).toHaveAttribute('max', '120')
+
+		const bio = screen.getByLabelText('Bio')
+		expect(bio).toHaveAttribute('rows', '5')
+		expect(bio).toHaveAttribute('maxlength', '280')
+	})
+
+	it('keeps the binding’s own id and name on the control', () => {
+		render(
+			<Form defaultValues={DEFAULTS}>
+				{(form) => (
+					<form.TextField
+						name='email'
+						label='Email'
+						autoComplete='email'
+					/>
+				)}
+			</Form>,
+		)
+
+		const input = screen.getByLabelText('Email')
+		expect(input).toHaveAttribute('id', 'email')
+		expect(input).toHaveAttribute('name', 'email')
+		expect(input).toHaveAttribute('autocomplete', 'email')
+	})
+})

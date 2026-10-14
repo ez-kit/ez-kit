@@ -131,5 +131,7 @@ export function createFormGroup<TFormData, TFields extends FormFieldRegistry>(
 		)
 		const scope = useMemo(() => withMembers(group, members), [group, members])
 		return children(scope as never)
-	} as FormGroupComponentOf<TFormData, TFields>
+		// Through `unknown`: the scope's field members carry each kit component's own props, a
+		// conditional type TypeScript cannot relate to this implementation while `TFields` is open.
+	} as unknown as FormGroupComponentOf<TFormData, TFields>
 }

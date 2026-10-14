@@ -51,7 +51,7 @@ Everything a built-in field receives — `id`, `name`, `label`, `description`, `
 | `onChange` | `(value: TValue) => void`. Receives **the value**, never a DOM event — the same rule every kit slot follows. |
 | `props`    | The author's own props, typed as `TProps`, in a **nested** bag rather than spread flat beside the binding.   |
 
-The nesting is deliberate. A schema document's node carries its author props under `node.props`, and a delivered document must never be able to overwrite `label`, `disabled`, `name` or `validate` by naming them — a flat bag would let a backend-driven payload silently break the binding. The JSX call site still writes them flat, and the binder collects every key outside the base props back into `props`.
+The nesting is deliberate. A schema document's node carries its author props under `node.props`, and a delivered document must never be able to overwrite `label`, `disabled`, `name` or `validate` by naming them — a flat bag would let a backend-driven payload silently break the binding. The JSX call site still writes them flat, and the binder collects every key outside the base props back into `props`. A **built-in** field replaced in a kit is different on this one point: its extra props arrive flat, beside the render props — see [Kit props](/docs/form/custom-kit#kit-props).
 
 Getting that binding for free, rather than writing a `form.Field` at every call site, is the entire reason a custom field goes through the registry instead of being written inline.
 

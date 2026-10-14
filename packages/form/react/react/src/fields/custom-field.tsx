@@ -3,6 +3,7 @@ import { useRef } from 'react'
 import { BASE_FIELD_PROP_KEYS } from '../field-registry'
 import { fieldControlProps } from '../field-render-props'
 import { fieldValidators } from '../field-validate'
+import { propsOutside } from '../kit-props'
 
 import type { BindableForm } from '../bindable-form'
 import type { BaseFieldProps } from '../field-props'
@@ -11,26 +12,6 @@ import type { ReactNode } from 'react'
 
 /** The flat props a custom field's JSX call site writes: the binding, plus the author's own. */
 type FlatCustomFieldProps = BaseFieldProps<unknown, unknown> & Record<string, unknown>
-
-/**
- * Split a flat call site's props into the binding half and the author's half.
- *
- * The author's keys are whatever is **not** in `BASE_FIELD_PROP_KEYS`, which is the list
- * `satisfies Record<keyof BaseFieldProps<never, never>, true>` keeps in step with the type —
- * so a seventh base prop cannot quietly start arriving in the component's `props` bag.
- *
- * `Object.hasOwn`, not `in`: `BASE_FIELD_PROP_KEYS` is an object literal, so `in` walks
- * `Object.prototype` too and would silently swallow an author prop named `toString`,
- * `constructor`, `valueOf` or any other member of it. The prop would vanish between the call
- * site and the component with nothing reported anywhere.
- */
-function authoredProps(props: Record<string, unknown>): Record<string, unknown> {
-	const authored: Record<string, unknown> = {}
-	for (const [key, value] of Object.entries(props)) {
-		if (!Object.hasOwn(BASE_FIELD_PROP_KEYS, key)) authored[key] = value
-	}
-	return authored
-}
 
 function shallowEqual(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
 	const keys = Object.keys(a)
@@ -53,7 +34,7 @@ function shallowEqual(a: Record<string, unknown>, b: Record<string, unknown>): b
  * bag this hook calls unchanged is exactly a bag those two would also treat as unchanged.
  */
 function useStableAuthoredProps(props: Record<string, unknown>): Record<string, unknown> {
-	const next = authoredProps(props)
+	const next = propsOutside(props, BASE_FIELD_PROP_KEYS)
 	const previous = useRef(next)
 
 	if (previous.current !== next && !shallowEqual(previous.current, next)) previous.current = next

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-import { Form, TextInputType } from 'shared/form/FormKit'
+import { Form } from 'shared/form/FormKit'
 
 /**
  * The wizard from `wizard`, hand-rolled — because the JSX API has no `<Step>`.
@@ -105,13 +105,13 @@ export function WizardJsxExample() {
 												name='email'
 												label='Email'
 												placeholder='you@example.com'
-												type={TextInputType.Email}
+												type='email'
 												required
 											/>
 											<form.TextField
 												name='password'
 												label='Password'
-												type={TextInputType.Password}
+												type='password'
 												required
 											/>
 										</>

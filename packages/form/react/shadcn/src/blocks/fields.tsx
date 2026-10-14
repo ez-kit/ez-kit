@@ -6,9 +6,10 @@ import { Slider as SliderPrimitive } from '@form-shadcn/components/ui/slider'
 import { Switch as SwitchPrimitive } from '@form-shadcn/components/ui/switch'
 import { Textarea as TextareaPrimitive } from '@form-shadcn/components/ui/textarea'
 
-import { FieldShell } from './field-shell'
+import { FieldShell, splitChrome } from './field-shell'
 import { OptionListSkeleton } from './option-skeleton'
 
+import type { ControlProps } from './field-shell'
 import type {
 	CheckboxFieldRenderProps,
 	NumberFieldRenderProps,
@@ -29,36 +30,51 @@ const RADIO_ITEM_ID_SEPARATOR = '-'
  * Each one translates the contract's props (`value`/`onChange` carrying the value itself,
  * `invalid`) into what the vendored primitive expects (DOM events, `aria-invalid`), and
  * wraps the result in the kit's own {@link FieldShell} chrome.
+ *
+ * Each also takes **kit props** beyond the contract — `<Field>KitProps`, the props of the control
+ * it renders: a native `<input>` / `<textarea>` for the text kinds, the vendored Radix primitive
+ * for the rest. They arrive flat from `form.<Field>` and are spread onto that control *first*, so
+ * every computed prop (`id`, `name`, `value`, `aria-invalid`, …) is written after them and wins.
  */
 
-export function TextField({
-	value,
-	onChange,
-	type,
-	placeholder,
-	id,
-	name,
-	onBlur,
-	disabled,
-	required,
-	...field
-}: TextFieldRenderProps): ReactNode {
+/** A text field's kit props: the native `<input>` attributes — `type`, `placeholder`, `autoComplete`, … */
+export type TextFieldKitProps = ControlProps<'input', TextFieldRenderProps>
+
+/** A number field's kit props: the native `<input>` attributes but `type`, which is always `number`. */
+export type NumberFieldKitProps = ControlProps<'input', NumberFieldRenderProps, 'type'>
+
+/** A textarea field's kit props: the native `<textarea>` attributes — `rows`, `placeholder`, `maxLength`, … */
+export type TextareaFieldKitProps = ControlProps<'textarea', TextareaFieldRenderProps>
+
+/** A checkbox field's kit props: the vendored Radix checkbox's own. */
+export type CheckboxFieldKitProps = ControlProps<typeof CheckboxPrimitive, CheckboxFieldRenderProps, 'onCheckedChange'>
+
+/** A switch field's kit props: the vendored Radix switch's own. */
+export type SwitchFieldKitProps = ControlProps<typeof SwitchPrimitive, SwitchFieldRenderProps, 'onCheckedChange'>
+
+/** A radio-group field's kit props: the vendored Radix radio group's own. */
+export type RadioGroupFieldKitProps = ControlProps<typeof RadioGroup, RadioGroupFieldRenderProps, 'onValueChange'>
+
+/** A slider field's kit props: the vendored Radix slider's own — `min`, `max`, `step`, … */
+export type SliderFieldKitProps = ControlProps<typeof SliderPrimitive, SliderFieldRenderProps, 'onValueChange'>
+
+export function TextField(props: TextFieldRenderProps & TextFieldKitProps): ReactNode {
+	const {
+		chrome,
+		control: { value, onChange, type, ...input },
+	} = splitChrome(props)
+
 	return (
 		<FieldShell
-			id={id}
-			{...field}
+			id={input.id}
+			{...chrome}
 		>
 			{(binding) => (
 				<Input
-					id={id}
-					name={name}
+					{...input}
 					type={type ?? 'text'}
-					placeholder={placeholder}
-					disabled={disabled}
-					required={required}
-					aria-invalid={field.invalid}
+					aria-invalid={chrome.invalid}
 					value={value}
-					onBlur={onBlur}
 					onChange={(event) => {
 						onChange(event.target.value)
 					}}
@@ -69,42 +85,27 @@ export function TextField({
 	)
 }
 
-export function NumberField({
-	value,
-	onChange,
-	placeholder,
-	min,
-	max,
-	step,
-	id,
-	name,
-	onBlur,
-	disabled,
-	required,
-	...field
-}: NumberFieldRenderProps): ReactNode {
+export function NumberField(props: NumberFieldRenderProps & NumberFieldKitProps): ReactNode {
+	const {
+		chrome,
+		control: { value, onChange, ...input },
+	} = splitChrome(props)
+
 	return (
 		<FieldShell
-			id={id}
-			{...field}
+			id={input.id}
+			{...chrome}
 		>
 			{(binding) => (
 				<Input
-					id={id}
-					name={name}
-					type='number'
+					// The kit's default keyboard, ahead of the author's attributes so `inputMode` overrides it.
 					inputMode='decimal'
-					placeholder={placeholder}
-					min={min}
-					max={max}
-					step={step}
-					disabled={disabled}
-					required={required}
-					aria-invalid={field.invalid}
+					{...input}
+					type='number'
+					aria-invalid={chrome.invalid}
 					// An empty numeric control has no number; `''` keeps the input controlled while
 					// the form state holds `undefined`.
 					value={value ?? ''}
-					onBlur={onBlur}
 					onChange={(event) => {
 						onChange(event.target.value === '' ? undefined : event.target.valueAsNumber)
 					}}
@@ -115,34 +116,22 @@ export function NumberField({
 	)
 }
 
-export function TextareaField({
-	value,
-	onChange,
-	placeholder,
-	rows,
-	id,
-	name,
-	onBlur,
-	disabled,
-	required,
-	...field
-}: TextareaFieldRenderProps): ReactNode {
+export function TextareaField(props: TextareaFieldRenderProps & TextareaFieldKitProps): ReactNode {
+	const {
+		chrome,
+		control: { value, onChange, ...textarea },
+	} = splitChrome(props)
+
 	return (
 		<FieldShell
-			id={id}
-			{...field}
+			id={textarea.id}
+			{...chrome}
 		>
 			{(binding) => (
 				<TextareaPrimitive
-					id={id}
-					name={name}
-					placeholder={placeholder}
-					rows={rows}
-					disabled={disabled}
-					required={required}
-					aria-invalid={field.invalid}
+					{...textarea}
+					aria-invalid={chrome.invalid}
 					value={value}
-					onBlur={onBlur}
 					onChange={(event) => {
 						onChange(event.target.value)
 					}}
@@ -153,33 +142,27 @@ export function TextareaField({
 	)
 }
 
-export function CheckboxField({
-	checked,
-	onChange,
-	id,
-	name,
-	onBlur,
-	disabled,
-	required,
-	...field
-}: CheckboxFieldRenderProps): ReactNode {
+export function CheckboxField(props: CheckboxFieldRenderProps & CheckboxFieldKitProps): ReactNode {
+	const {
+		chrome,
+		control: { checked, onChange, disabled, required, ...checkbox },
+	} = splitChrome(props)
+
 	return (
 		<FieldShell
 			controlFirst
-			id={id}
-			{...field}
+			id={checkbox.id}
+			{...chrome}
 		>
 			{(binding) => (
 				<CheckboxPrimitive
-					id={id}
-					name={name}
+					{...checkbox}
 					// Radix's checkbox types `required` as a plain `boolean`, which under
 					// `exactOptionalPropertyTypes` rejects an explicit `undefined`.
 					{...(disabled !== undefined ? { disabled } : {})}
 					{...(required !== undefined ? { required } : {})}
-					aria-invalid={field.invalid}
+					aria-invalid={chrome.invalid}
 					checked={checked}
-					onBlur={onBlur}
 					onCheckedChange={(next) => {
 						// Radix models the tri-state 'indeterminate'; the contract is strictly boolean.
 						onChange(next === true)
@@ -191,33 +174,27 @@ export function CheckboxField({
 	)
 }
 
-export function SwitchField({
-	checked,
-	onChange,
-	id,
-	name,
-	onBlur,
-	disabled,
-	required,
-	...field
-}: SwitchFieldRenderProps): ReactNode {
+export function SwitchField(props: SwitchFieldRenderProps & SwitchFieldKitProps): ReactNode {
+	const {
+		chrome,
+		control: { checked, onChange, disabled, required, ...switchProps },
+	} = splitChrome(props)
+
 	return (
 		<FieldShell
 			controlFirst
-			id={id}
-			{...field}
+			id={switchProps.id}
+			{...chrome}
 		>
 			{(binding) => (
 				<SwitchPrimitive
-					id={id}
-					name={name}
+					{...switchProps}
 					// Radix types `disabled`/`required` as plain booleans, which under
 					// `exactOptionalPropertyTypes` reject an explicit `undefined`.
 					{...(disabled !== undefined ? { disabled } : {})}
 					{...(required !== undefined ? { required } : {})}
-					aria-invalid={field.invalid}
+					aria-invalid={chrome.invalid}
 					checked={checked}
-					onBlur={onBlur}
 					onCheckedChange={onChange}
 					{...binding}
 				/>
@@ -226,30 +203,23 @@ export function SwitchField({
 	)
 }
 
-export function RadioGroupField({
-	value,
-	onChange,
-	options,
-	loading,
-	id,
-	name,
-	onBlur,
-	disabled,
-	required,
-	...field
-}: RadioGroupFieldRenderProps): ReactNode {
+export function RadioGroupField(props: RadioGroupFieldRenderProps & RadioGroupFieldKitProps): ReactNode {
+	const {
+		chrome,
+		control: { value, onChange, options, loading, id, disabled, required, ...group },
+	} = splitChrome(props)
 	// See the checkbox group in `multi-value.tsx` — same reasoning, same placeholder rows.
 	const controlDisabled = loading ? true : disabled
 
 	return (
 		<FieldShell
 			id={id}
-			{...field}
+			{...chrome}
 		>
 			{(binding) => (
 				<RadioGroup
+					{...group}
 					id={id}
-					name={name}
 					data-loading={loading || undefined}
 					aria-busy={loading || undefined}
 					// Radix reserves `''` for "no selection", and under `exactOptionalPropertyTypes` an
@@ -257,9 +227,8 @@ export function RadioGroupField({
 					{...(value === '' ? {} : { value })}
 					{...(controlDisabled !== undefined ? { disabled: controlDisabled } : {})}
 					{...(required !== undefined ? { required } : {})}
-					aria-invalid={field.invalid}
+					aria-invalid={chrome.invalid}
 					onValueChange={onChange}
-					onBlur={onBlur}
 					{...binding}
 				>
 					{loading && <OptionListSkeleton />}
@@ -285,40 +254,34 @@ export function RadioGroupField({
 	)
 }
 
-export function SliderField({
-	value,
-	onChange,
-	min,
-	max,
-	step,
-	id,
-	name,
-	onBlur,
-	disabled,
-	// Radix's Slider has no `required` prop — a slider always holds a value — so the flag is
-	// dropped here rather than forwarded to the primitive.
-	required: _required,
-	...field
-}: SliderFieldRenderProps): ReactNode {
+export function SliderField(props: SliderFieldRenderProps & SliderFieldKitProps): ReactNode {
+	const {
+		chrome,
+		control: {
+			value,
+			onChange,
+			disabled,
+			// Radix's Slider has no `required` prop — a slider always holds a value — so the flag is
+			// dropped here rather than forwarded to the primitive.
+			required: _required,
+			...slider
+		},
+	} = splitChrome(props)
+
 	return (
 		<FieldShell
-			id={id}
-			{...field}
+			id={slider.id}
+			{...chrome}
 		>
 			{(binding) => (
 				<SliderPrimitive
-					id={id}
-					name={name}
-					// Radix types `min`/`max`/`step`/`disabled` as plain values, which under
-					// `exactOptionalPropertyTypes` reject an explicit `undefined`.
-					{...(min !== undefined ? { min } : {})}
-					{...(max !== undefined ? { max } : {})}
-					{...(step !== undefined ? { step } : {})}
+					{...slider}
+					// Radix types `disabled` as a plain boolean, which under `exactOptionalPropertyTypes`
+					// rejects an explicit `undefined`.
 					{...(disabled !== undefined ? { disabled } : {})}
-					aria-invalid={field.invalid}
+					aria-invalid={chrome.invalid}
 					// Radix models the multi-thumb range as an array; the contract is a single number.
 					value={[value]}
-					onBlur={onBlur}
 					onValueChange={(next) => {
 						onChange(next[0] ?? value)
 					}}

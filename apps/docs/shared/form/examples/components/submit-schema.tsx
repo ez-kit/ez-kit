@@ -2,14 +2,7 @@
 
 import { useState } from 'react'
 
-import {
-	buildValidator,
-	defineFormSchema,
-	FormFieldType,
-	SchemaForm,
-	TextInputType,
-	useForm,
-} from 'shared/form/FormKit'
+import { buildValidator, defineFormSchema, FormFieldType, SchemaForm, useForm } from 'shared/form/FormKit'
 
 type Account = {
 	email: string
@@ -36,7 +29,7 @@ const schema = defineFormSchema<Account>()({
 			name: 'email',
 			label: 'Email',
 			placeholder: 'you@example.com',
-			inputType: TextInputType.Email,
+			inputType: 'email',
 			description: `Try ${TAKEN_EMAIL} to see the server reject it.`,
 			defaultValue: '',
 			validate: { required: true, format: 'email' },
@@ -45,7 +38,7 @@ const schema = defineFormSchema<Account>()({
 			type: FormFieldType.Text,
 			name: 'password',
 			label: 'Password',
-			inputType: TextInputType.Password,
+			inputType: 'password',
 			defaultValue: '',
 			validate: { required: true, minLength: 8 },
 		},

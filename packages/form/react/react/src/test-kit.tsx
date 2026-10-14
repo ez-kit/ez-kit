@@ -5,16 +5,23 @@ import { useFormContext } from './form-context'
 import type {
 	ArrayFieldRenderProps,
 	ArrayItemRenderProps,
+	DateFieldRenderProps,
 	DateRangeFieldRenderProps,
 	AllFormFieldSlots,
 	FieldRenderProps,
 	FormComponents,
 	FormElementProps,
+	MultiSelectFieldRenderProps,
+	NumberFieldRenderProps,
+	SelectFieldRenderProps,
+	SliderFieldRenderProps,
+	TextareaFieldRenderProps,
+	TextFieldRenderProps,
 	WizardRenderProps,
 	WizardStep,
 } from './contract'
 import type { GridItemProps, SectionProps, SubmitButtonProps } from './field-props'
-import type { ReactNode } from 'react'
+import type { HTMLInputTypeAttribute, ReactNode } from 'react'
 
 /**
  * A minimal, deliberately unstyled kit used by this package's own tests.
@@ -24,6 +31,14 @@ import type { ReactNode } from 'react'
  * *injected* component rendered rather than something built in — this package ships no
  * visible elements of its own.
  */
+
+/**
+ * The props this kit takes beyond the contract — the input attributes it renders. A kit declares
+ * these itself; `form.<Field>` picks them up from the component's own parameter.
+ */
+type PlaceholderProps = { placeholder?: string | undefined }
+type NumericBoundsProps = { min?: number | undefined; max?: number | undefined; step?: number | undefined }
+type DateBoundsProps = PlaceholderProps & { min?: string | undefined; max?: string | undefined }
 
 /** Suffixes the kit appends to the field id to build the ids `aria-describedby` points at. */
 const DESCRIPTION_ID_SUFFIX = '-description'
@@ -195,6 +210,7 @@ function Wizard({
 function TestDateRangeField({
 	value,
 	onChange,
+	placeholder,
 	min,
 	max,
 	id,
@@ -203,7 +219,7 @@ function TestDateRangeField({
 	disabled,
 	required,
 	...field
-}: DateRangeFieldRenderProps): ReactNode {
+}: DateRangeFieldRenderProps & DateBoundsProps): ReactNode {
 	const [draft, setDraft] = useState<{ start: string; end: string }>({ start: '', end: '' })
 	const current = value ?? draft
 
@@ -224,6 +240,7 @@ function TestDateRangeField({
 						name={`${name}.start`}
 						type='date'
 						aria-label='start'
+						placeholder={placeholder}
 						min={min}
 						max={max}
 						disabled={disabled}
@@ -347,7 +364,18 @@ const TestArrayField = Object.assign(TestArrayFrame, { Item: TestArrayItem })
 
 /** The twelve field kinds and the array frame — the test kit's `fields`. */
 export const testFields = {
-	TextField: ({ value, onChange, type, placeholder, id, name, onBlur, disabled, required, ...field }) => (
+	TextField: ({
+		value,
+		onChange,
+		type,
+		placeholder,
+		id,
+		name,
+		onBlur,
+		disabled,
+		required,
+		...field
+	}: TextFieldRenderProps & PlaceholderProps & { type?: HTMLInputTypeAttribute | undefined }) => (
 		<Shell
 			id={id}
 			{...field}
@@ -372,7 +400,20 @@ export const testFields = {
 			)}
 		</Shell>
 	),
-	NumberField: ({ value, onChange, placeholder, min, max, step, id, name, onBlur, disabled, required, ...field }) => (
+	NumberField: ({
+		value,
+		onChange,
+		placeholder,
+		min,
+		max,
+		step,
+		id,
+		name,
+		onBlur,
+		disabled,
+		required,
+		...field
+	}: NumberFieldRenderProps & PlaceholderProps & NumericBoundsProps) => (
 		<Shell
 			id={id}
 			{...field}
@@ -402,7 +443,18 @@ export const testFields = {
 			)}
 		</Shell>
 	),
-	TextareaField: ({ value, onChange, placeholder, rows, id, name, onBlur, disabled, required, ...field }) => (
+	TextareaField: ({
+		value,
+		onChange,
+		placeholder,
+		rows,
+		id,
+		name,
+		onBlur,
+		disabled,
+		required,
+		...field
+	}: TextareaFieldRenderProps & PlaceholderProps & { rows?: number | undefined }) => (
 		<Shell
 			id={id}
 			{...field}
@@ -440,7 +492,7 @@ export const testFields = {
 		disabled,
 		required,
 		...field
-	}) => (
+	}: SelectFieldRenderProps & PlaceholderProps) => (
 		<Shell
 			id={id}
 			{...field}
@@ -583,7 +635,19 @@ export const testFields = {
 			)}
 		</Shell>
 	),
-	SliderField: ({ value, onChange, min, max, step, id, name, onBlur, disabled, required, ...field }) => (
+	SliderField: ({
+		value,
+		onChange,
+		min,
+		max,
+		step,
+		id,
+		name,
+		onBlur,
+		disabled,
+		required,
+		...field
+	}: SliderFieldRenderProps & NumericBoundsProps) => (
 		<Shell
 			id={id}
 			{...field}
@@ -610,7 +674,19 @@ export const testFields = {
 			)}
 		</Shell>
 	),
-	DateField: ({ value, onChange, placeholder, min, max, id, name, onBlur, disabled, required, ...field }) => (
+	DateField: ({
+		value,
+		onChange,
+		placeholder,
+		min,
+		max,
+		id,
+		name,
+		onBlur,
+		disabled,
+		required,
+		...field
+	}: DateFieldRenderProps & DateBoundsProps) => (
 		<Shell
 			id={id}
 			{...field}
@@ -650,7 +726,7 @@ export const testFields = {
 		disabled,
 		required,
 		...field
-	}) => (
+	}: MultiSelectFieldRenderProps & PlaceholderProps) => (
 		<Shell
 			id={id}
 			{...field}
@@ -762,7 +838,7 @@ export const testFields = {
 	),
 	// Two native inputs rather than a calendar: this kit exists so the adapter's own tests
 	// never depend on a real picker.
-	DateRangeField: (props) => <TestDateRangeField {...props} />,
+	DateRangeField: TestDateRangeField,
 	ArrayField: TestArrayField,
 } satisfies AllFormFieldSlots
 
@@ -806,3 +882,26 @@ export const testComponents = {
 	GridItem,
 	Wizard,
 } satisfies FormComponents
+
+/**
+ * A field component that renders nothing and records every props object it receives — for the
+ * tests that assert what reaches a kit, prop by prop, rather than what a kit made of it.
+ *
+ * Its parameter is an open bag, so it fits every built-in slot and `form.<Field>` accepts any prop
+ * beside the binding: exactly the stand-in for "a kit that declares whatever the test writes".
+ */
+export function captureField(): {
+	calls: Record<string, unknown>[]
+	last: () => Record<string, unknown> | undefined
+	Capture: (props: Record<string, unknown>) => ReactNode
+} {
+	const calls: Record<string, unknown>[] = []
+	return {
+		calls,
+		last: () => calls.at(-1),
+		Capture: (props) => {
+			calls.push(props)
+			return null
+		},
+	}
+}

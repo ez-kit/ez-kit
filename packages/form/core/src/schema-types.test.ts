@@ -36,6 +36,9 @@ test('inputType is a closed set, not a bare string', () => {
 		children: [{ type: FormFieldType.Text, name: 'email', inputType: TextInputType.Email }],
 	})
 
+	// A member's own string is the same value: a document needs no import to name one.
+	define({ version: 1, children: [{ type: FormFieldType.Text, name: 'email', inputType: 'email' }] })
+
 	// @ts-expect-error `inputType` is a TextInputType, not an arbitrary string
 	define({ version: 1, children: [{ type: FormFieldType.Text, name: 'email', inputType: 'nope' }] })
 

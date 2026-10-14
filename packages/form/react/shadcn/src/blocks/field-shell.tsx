@@ -1,7 +1,7 @@
 import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from '@form-shadcn/components/ui/field'
 
 import type { FieldRenderProps } from '@ez-kit/form-react'
-import type { ReactNode } from 'react'
+import type { ComponentPropsWithoutRef, ElementType, ReactNode } from 'react'
 
 /**
  * The chrome shared by every shadcn field: wrapper, label, description, error text — plus
@@ -53,6 +53,63 @@ export type FieldShellProps = Omit<FieldRenderProps, 'name' | 'onBlur' | 'disabl
 	/** Renders the control before the label — the checkbox reading order. */
 	controlFirst?: boolean
 }
+
+/** The keys of a field's props that {@link FieldShell} draws — the chrome around the control. */
+type ChromeKey = 'label' | 'description' | 'errors' | 'invalid' | 'data-field' | 'data-field-type' | 'data-form-id'
+
+/** The chrome half of a field's props, as {@link FieldShell} takes it beside the field's `id`. */
+export type FieldChrome = Pick<FieldRenderProps, ChromeKey>
+
+/**
+ * Splits a field's props into the chrome {@link FieldShell} draws and everything else — the
+ * computed control props (`id`, `name`, `value`, …) and the kit props an author wrote beside them,
+ * which the field forwards to its control.
+ */
+export function splitChrome<TProps extends FieldChrome>(
+	props: TProps,
+): { chrome: FieldChrome; control: Omit<TProps, ChromeKey> } {
+	const {
+		label,
+		description,
+		errors,
+		invalid,
+		'data-field': dataField,
+		'data-field-type': dataFieldType,
+		'data-form-id': dataFormId,
+		...control
+	} = props
+	return {
+		chrome: {
+			label,
+			description,
+			errors,
+			invalid,
+			'data-field': dataField,
+			'data-field-type': dataFieldType,
+			'data-form-id': dataFormId,
+		},
+		control,
+	}
+}
+
+/**
+ * Keys a control never takes from an author: the uncontrolled twins of the value the binding
+ * controls, the accessibility wiring this kit computes, and `children`, which the field renders.
+ */
+type ControlledKey = 'defaultValue' | 'defaultChecked' | 'aria-invalid' | 'aria-describedby' | 'children'
+
+/**
+ * The props a field forwards to its control, as its kit props: everything `TControl` takes except
+ * what the contract computes (`TRenderProps`), the {@link ControlledKey}s, and `TOmit` — the
+ * control's own spelling of a computed prop (`onCheckedChange`, `onValueChange`, …).
+ *
+ * Every member is optional, as a slot requires: they come off an element's or a primitive's props,
+ * which name nothing as mandatory.
+ */
+export type ControlProps<TControl extends ElementType, TRenderProps, TOmit extends PropertyKey = never> = Omit<
+	ComponentPropsWithoutRef<TControl>,
+	keyof TRenderProps | ControlledKey | TOmit
+>
 
 export function FieldShell({
 	id,

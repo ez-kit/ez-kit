@@ -123,7 +123,7 @@ describe('a custom field on the form instance', () => {
 		// so a seventh member of `FieldRenderProps` is covered the day it lands. `onBlur` is
 		// excluded only because the two fields hold two `FieldApi` instances and therefore two
 		// distinct bound handlers — its presence is asserted separately.
-		const { value: _v, onChange: _oc, type: _t, placeholder: _p, onBlur: _ob, ...builtInBinding } = text
+		const { value: _v, onChange: _oc, onBlur: _ob, ...builtInBinding } = text
 		const { value: _cv, onChange: _coc, props: _cp, onBlur: customBlur, ...customBinding } = note
 
 		expect(typeof customBlur).toBe('function')

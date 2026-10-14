@@ -1,4 +1,4 @@
-import { defineFormSchema, FormFieldType, TextInputType } from '@ez-kit/form-core'
+import { defineFormSchema, FormFieldType } from '@ez-kit/form-core'
 
 export type SignUpValues = {
 	username: string
@@ -20,7 +20,7 @@ export const signUpSchema = defineFormSchema<SignUpValues>()({
 			type: FormFieldType.Text,
 			name: 'email',
 			label: 'Email',
-			inputType: TextInputType.Email,
+			inputType: 'email',
 			defaultValue: '',
 			validate: { required: true, maxLength: 254, format: 'email' },
 		},

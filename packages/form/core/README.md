@@ -36,7 +36,7 @@ import type { LocalizedSelectOption, SelectOption } from '@ez-kit/form-core'
   `textarea`, `select`, `multiselect`, `checkbox`, `checkboxgroup`, `switch`, `radiogroup`,
   `slider`, `date`, `daterange`. A repeatable group is **not** one of these: it is the `array`
   container node, whose `type` is reserved like `section` and `step`.
-- **`TextInputType`** — the `inputType` a text field may ask for (`email`, `tel`, …).
+- **`TextInputType`** — the `inputType` a text field may ask for (`email`, `tel`, …). A const object, so a document may name a member (`TextInputType.Email`) or write its string (`'email'`).
 - **`SelectOption<TValue>`** — `{ label, value, disabled? }` with `label` already resolved
   to a string, the option shape every select-like field consumes.
 - **`LocalizedSelectOption<TValue>`** — the same shape with `label: LocalizedText`, which is

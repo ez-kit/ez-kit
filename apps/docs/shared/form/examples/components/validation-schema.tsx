@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-import { defineFormSchema, FormFieldType, SchemaForm, TextInputType } from 'shared/form/FormKit'
+import { defineFormSchema, FormFieldType, SchemaForm } from 'shared/form/FormKit'
 
 type Signup = {
 	email: string
@@ -46,7 +46,7 @@ const schema = defineFormSchema<Signup>()({
 			name: 'email',
 			label: 'Email',
 			placeholder: 'you@example.com',
-			inputType: TextInputType.Email,
+			inputType: 'email',
 			defaultValue: '',
 			validate: {
 				required: true,

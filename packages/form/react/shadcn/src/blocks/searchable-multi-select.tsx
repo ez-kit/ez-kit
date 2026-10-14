@@ -16,6 +16,7 @@ import {
 import { FieldShell } from './field-shell'
 import { minLengthHint } from './search-hint'
 
+import type { MultiSelectFieldKitProps } from './multi-value'
 import type { MultiSelectFieldRenderProps } from '@ez-kit/form-react'
 import type { ReactNode } from 'react'
 
@@ -57,7 +58,8 @@ export function SearchableMultiSelectField({
 	disabled,
 	required,
 	...field
-}: MultiSelectFieldRenderProps & { search: NonNullable<MultiSelectFieldRenderProps['search']> }): ReactNode {
+}: MultiSelectFieldRenderProps &
+	MultiSelectFieldKitProps & { search: NonNullable<MultiSelectFieldRenderProps['search']> }): ReactNode {
 	// The chips replace the input as the popup's anchor, so it spans the whole control.
 	const anchor = useComboboxAnchor()
 

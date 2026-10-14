@@ -8,9 +8,9 @@ import type {
 	DateRangeValue,
 	DeepKeysOfType,
 	LocalizedText,
+	OptionValue,
 	Searchable,
 	SelectOption,
-	TextInputType,
 } from '@ez-kit/form-core'
 import type { DeepKeys, DeepValue } from '@tanstack/form-core'
 import type { LensFieldComponent } from '@tanstack/react-form'
@@ -61,22 +61,11 @@ export type BaseFieldProps<TFormData, TValue> = {
 	validate?: FieldValidateProps
 }
 
-export type TextFieldProps<TFormData> = BaseFieldProps<TFormData, string> & {
-	placeholder?: string
-	type?: TextInputType
-}
+export type TextFieldProps<TFormData> = BaseFieldProps<TFormData, string>
 
-export type NumberFieldProps<TFormData> = BaseFieldProps<TFormData, number> & {
-	placeholder?: string
-	min?: number
-	max?: number
-	step?: number
-}
+export type NumberFieldProps<TFormData> = BaseFieldProps<TFormData, number>
 
-export type TextareaFieldProps<TFormData> = BaseFieldProps<TFormData, string> & {
-	placeholder?: string
-	rows?: number
-}
+export type TextareaFieldProps<TFormData> = BaseFieldProps<TFormData, string>
 
 /**
  * The select-like props, generated once per option-value scalar and unioned — the same split
@@ -144,9 +133,21 @@ type CreatableProps<TValue> = [TValue] extends [string]
 	? { creatable?: boolean; createLabel?: LocalizedText }
 	: { creatable?: false; createLabel?: never }
 
+/**
+ * Every key an option-bearing field binds beyond {@link BaseFieldProps}, at its widest: the option
+ * provision, `searchable`, and the `creatable` pair. Not a consumer type — the per-kind props above
+ * and below are, and keep `name` correlated with `options`. It exists so `OPTION_FIELD_PROP_KEYS`
+ * can be checked against one key set, which is what stops a later binding prop of these fields
+ * from silently arriving at the kit instead.
+ */
+export type OptionFieldBindingProps = OptionsProps<OptionValue> & {
+	searchable?: Searchable
+	creatable?: boolean
+	createLabel?: LocalizedText
+}
+
 type SelectFieldPropsFor<TFormData, TValue> = BaseFieldProps<TFormData, TValue> &
 	OptionsProps<TValue> & {
-		placeholder?: string
 		/**
 		 * Render as a search over the options rather than a plain dropdown — the JSX spelling of
 		 * the schema's `searchable`.
@@ -173,7 +174,6 @@ export type SelectFieldProps<TFormData> =
 
 type MultiSelectFieldPropsFor<TFormData, TValue> = BaseFieldProps<TFormData, TValue[]> &
 	OptionsProps<TValue> & {
-		placeholder?: string
 		/**
 		 * Render as a search over the options, with the selection shown as chips — the
 		 * multi-value spelling of {@link SelectFieldPropsFor.searchable}, with the same rules:
@@ -206,24 +206,11 @@ export type RadioGroupFieldProps<TFormData> =
 	| RadioGroupFieldPropsFor<TFormData, string>
 	| RadioGroupFieldPropsFor<TFormData, number>
 
-/** `min` / `max` are `YYYY-MM-DD` bounds on what the picker offers, not validation. */
-export type DateFieldProps<TFormData> = BaseFieldProps<TFormData, string> & {
-	placeholder?: string
-	min?: string
-	max?: string
-}
+export type DateFieldProps<TFormData> = BaseFieldProps<TFormData, string>
 
-export type DateRangeFieldProps<TFormData> = BaseFieldProps<TFormData, DateRangeValue> & {
-	placeholder?: string
-	min?: string
-	max?: string
-}
+export type DateRangeFieldProps<TFormData> = BaseFieldProps<TFormData, DateRangeValue>
 
-export type SliderFieldProps<TFormData> = BaseFieldProps<TFormData, number> & {
-	min?: number
-	max?: number
-	step?: number
-}
+export type SliderFieldProps<TFormData> = BaseFieldProps<TFormData, number>
 
 /**
  * The primitives an array entry does **not** carry: `Submit` has no `name` to address relative
@@ -434,26 +421,81 @@ export type SubmitProps = {
 	children: (state: SubmitRenderProps) => ReactNode
 }
 
+/** What a component typed by the contract itself adds to its field: nothing. */
+type NoKitProps = Record<never, never>
+
+/** `Omit` applied to each member of a union, so a kit whose props are a union keeps every arm. */
+type DistributiveOmit<T, TKeys extends PropertyKey> = T extends unknown ? Omit<T, TKeys> : never
+
+/** The built-in kinds whose binder also resolves options — the ones that own {@link OptionFieldBindingProps}. */
+type OptionFieldKey = 'SelectField' | 'MultiSelectField' | 'RadioGroupField' | 'CheckboxGroupField'
+
+/** Every built-in field kind, without the array frame — which has no binder of this shape. */
+type FieldKindKey = Exclude<BuiltInFieldKey, 'ArrayField'>
+
+/**
+ * The keys a kit component cannot receive from an author: everything its slot's render props
+ * carry (computed by the binding, which wins), and everything the binding itself takes.
+ */
+type OwnedKeysOf<TKey extends FieldKindKey> =
+	| keyof Parameters<NonNullable<FormFieldSlots[TKey]>>[0]
+	| keyof BaseFieldProps<never, never>
+	| (TKey extends OptionFieldKey ? keyof OptionFieldBindingProps : never)
+
+/**
+ * The props a kit component takes beyond what its field computes and binds — read straight off
+ * the component's parameter, so a kit declares them by typing its component and nothing else.
+ *
+ * `NonNullable` first because a set typed with optional keys reads `Component | undefined`, and
+ * the `undefined` arm would otherwise add an empty member to the union and switch every check
+ * off. An `any` parameter — a component registered through the open registry's own bound — adds
+ * nothing rather than everything.
+ */
+type KitPropsOfComponent<TComponent, TOwned extends PropertyKey> = [NonNullable<TComponent>] extends [
+	(props: infer TProps) => ReactNode,
+]
+	? 0 extends 1 & TProps
+		? NoKitProps
+		: DistributiveOmit<TProps, TOwned>
+	: NoKitProps
+
+/**
+ * What `form.<TKey>` accepts beyond its binding props, for the field set `TFields`: the extra props
+ * of the component registered under that key. Under `AllFormFieldSlots` — the contract's own
+ * signatures — that is nothing.
+ */
+export type KitFieldProps<TFields, TKey extends FieldKindKey> = TKey extends keyof TFields
+	? KitPropsOfComponent<TFields[TKey], OwnedKeysOf<TKey>>
+	: NoKitProps
+
 /**
  * The bound component for each built-in field kind, keyed like {@link FormFieldSlots}.
+ *
+ * Each takes its kind's binding props **and** {@link KitFieldProps} — whatever the component
+ * registered under the key accepts beyond its render props. The binder reads only the binding
+ * half and hands the rest to the component flat, so `autoComplete`, a kit's `variant` or `type`
+ * reach it as written, while a computed prop (`value`, `onChange`, `id`, …) can be neither written
+ * here nor overridden at runtime.
  *
  * Only the keys a form registered reach its instance — see {@link FormFieldComponents}. They sit
  * alongside, never in place of, the native TanStack Form API (`Field`, `Subscribe`,
  * `handleSubmit`, `state`, `AppField`, …), which stays fully available on the same object.
  */
 export type BuiltInFieldComponents<TFormData, TFields extends FormFieldRegistry = AllFormFieldSlots> = {
-	TextField: (props: TextFieldProps<TFormData>) => ReactNode
-	NumberField: (props: NumberFieldProps<TFormData>) => ReactNode
-	TextareaField: (props: TextareaFieldProps<TFormData>) => ReactNode
-	SelectField: (props: SelectFieldProps<TFormData>) => ReactNode
-	CheckboxField: (props: CheckboxFieldProps<TFormData>) => ReactNode
-	SwitchField: (props: SwitchFieldProps<TFormData>) => ReactNode
-	RadioGroupField: (props: RadioGroupFieldProps<TFormData>) => ReactNode
-	SliderField: (props: SliderFieldProps<TFormData>) => ReactNode
-	MultiSelectField: (props: MultiSelectFieldProps<TFormData>) => ReactNode
-	CheckboxGroupField: (props: CheckboxGroupFieldProps<TFormData>) => ReactNode
-	DateField: (props: DateFieldProps<TFormData>) => ReactNode
-	DateRangeField: (props: DateRangeFieldProps<TFormData>) => ReactNode
+	TextField: (props: TextFieldProps<TFormData> & KitFieldProps<TFields, 'TextField'>) => ReactNode
+	NumberField: (props: NumberFieldProps<TFormData> & KitFieldProps<TFields, 'NumberField'>) => ReactNode
+	TextareaField: (props: TextareaFieldProps<TFormData> & KitFieldProps<TFields, 'TextareaField'>) => ReactNode
+	SelectField: (props: SelectFieldProps<TFormData> & KitFieldProps<TFields, 'SelectField'>) => ReactNode
+	CheckboxField: (props: CheckboxFieldProps<TFormData> & KitFieldProps<TFields, 'CheckboxField'>) => ReactNode
+	SwitchField: (props: SwitchFieldProps<TFormData> & KitFieldProps<TFields, 'SwitchField'>) => ReactNode
+	RadioGroupField: (props: RadioGroupFieldProps<TFormData> & KitFieldProps<TFields, 'RadioGroupField'>) => ReactNode
+	SliderField: (props: SliderFieldProps<TFormData> & KitFieldProps<TFields, 'SliderField'>) => ReactNode
+	MultiSelectField: (props: MultiSelectFieldProps<TFormData> & KitFieldProps<TFields, 'MultiSelectField'>) => ReactNode
+	CheckboxGroupField: (
+		props: CheckboxGroupFieldProps<TFormData> & KitFieldProps<TFields, 'CheckboxGroupField'>,
+	) => ReactNode
+	DateField: (props: DateFieldProps<TFormData> & KitFieldProps<TFields, 'DateField'>) => ReactNode
+	DateRangeField: (props: DateRangeFieldProps<TFormData> & KitFieldProps<TFields, 'DateRangeField'>) => ReactNode
 	/**
 	 * Generic per call, not per form: the item type is inferred from `name`, which is what lets
 	 * one member cover every array in `TFormData` — and what makes a nested array inside an

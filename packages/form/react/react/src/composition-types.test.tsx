@@ -5,9 +5,11 @@ import { defineFieldType } from './field-registry'
 import { testComponents, testFields, testFormElement } from './test-kit'
 
 import type { KitWithFormProps } from './composition'
+import type { AllFormFieldSlots, TextFieldRenderProps } from './contract'
+import type { KitFieldProps } from './field-props'
 import type { NoInjectedComponents } from './kit-form'
 import type { WithFormProps } from '@tanstack/react-form'
-import type { ReactNode } from 'react'
+import type { ComponentPropsWithoutRef, ReactNode } from 'react'
 
 type Values = { email: string; address: { city: string } }
 
@@ -350,5 +352,62 @@ describe('group fields — types (D7)', () => {
 			)
 		}
 		expectTypeOf(Parent).toBeFunction()
+	})
+})
+
+/** A text field taking every native `<input>` attribute the contract does not already compute. */
+const InputTextField = (
+	_props: TextFieldRenderProps & Omit<ComponentPropsWithoutRef<'input'>, keyof TextFieldRenderProps>,
+): ReactNode => null
+const inputKit = createForm({ fields: { ...testFields, TextField: InputTextField } })
+
+describe('group fields — props beyond the binding come from the kit component', () => {
+	it('passes a native attribute on a group field when the kit accepts it, and only then', () => {
+		const InputBlock = inputKit.withFieldGroup({
+			defaultValues: { city: '' },
+			render: ({ group }) => (
+				<group.TextField
+					name='city'
+					autoComplete='address-level2'
+				/>
+			),
+		})
+		const PlainBlock = withFieldGroup({
+			defaultValues: { city: '' },
+			render: ({ group }) => (
+				<group.TextField
+					name='city'
+					// @ts-expect-error -- the test kit's TextField declares no `autoComplete`
+					autoComplete='address-level2'
+				/>
+			),
+		})
+		function Parent(): ReactNode {
+			const form = inputKit.useForm({ defaultValues: DEFAULTS })
+			return (
+				<>
+					<InputBlock
+						form={form}
+						fields='address'
+					/>
+					<form.FormGroup name='address'>
+						{(group) => (
+							<group.TextField
+								name='city'
+								autoComplete='address-level2'
+							/>
+						)}
+					</form.FormGroup>
+				</>
+			)
+		}
+		expectTypeOf(Parent).toBeFunction()
+		expectTypeOf(PlainBlock).toBeFunction()
+	})
+
+	it('adds nothing beyond the binding for the contract-typed default set', () => {
+		expectTypeOf<KitFieldProps<AllFormFieldSlots, 'TextField'>>().toEqualTypeOf<Record<never, never>>()
+		expectTypeOf<KitFieldProps<AllFormFieldSlots, 'SelectField'>>().toEqualTypeOf<Record<never, never>>()
+		expectTypeOf<KitFieldProps<AllFormFieldSlots, 'DateRangeField'>>().toEqualTypeOf<Record<never, never>>()
 	})
 })

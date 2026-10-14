@@ -266,3 +266,55 @@ describe('@ez-kit/form-heroui prebuilt bundles together', () => {
 		})
 	})
 })
+
+describe('@ez-kit/form-heroui — props beyond the contract reach the input', () => {
+	it('puts `type`, the input attributes and `placeholder` on the <input>, with no import', () => {
+		render(
+			<Form defaultValues={DEFAULTS}>
+				{(form) => (
+					<>
+						<form.TextField
+							name='email'
+							label='Password'
+							type='password'
+							autoComplete='current-password'
+							inputMode='text'
+							maxLength={64}
+							placeholder='••••'
+						/>
+						<form.NumberField
+							name='age'
+							label='Age'
+							placeholder='18'
+							min={1}
+							max={120}
+							step={1}
+						/>
+						<form.TextareaField
+							name='bio'
+							label='Bio'
+							rows={5}
+							placeholder='About you'
+							maxLength={280}
+						/>
+					</>
+				)}
+			</Form>,
+		)
+
+		const password = screen.getByLabelText('Password')
+		expect(password.tagName).toBe('INPUT')
+		expect(password).toHaveAttribute('type', 'password')
+		expect(password).toHaveAttribute('autocomplete', 'current-password')
+		expect(password).toHaveAttribute('inputmode', 'text')
+		expect(password).toHaveAttribute('maxlength', '64')
+		expect(password).toHaveAttribute('placeholder', '••••')
+
+		expect(screen.getByRole('textbox', { name: 'Age' })).toHaveAttribute('placeholder', '18')
+
+		const bio = screen.getByLabelText('Bio')
+		expect(bio).toHaveAttribute('rows', '5')
+		expect(bio).toHaveAttribute('placeholder', 'About you')
+		expect(bio).toHaveAttribute('maxlength', '280')
+	})
+})

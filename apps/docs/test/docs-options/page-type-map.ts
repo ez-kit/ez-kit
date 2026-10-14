@@ -301,8 +301,9 @@ export const GRID_TYPE = {
  * The split mirrors the packages: `@ez-kit/form-core` owns the serialisable
  * document (`SubmitNode`, `FieldValidate`), `@ez-kit/form-react` owns both
  * halves of the React surface — the *consumer* props a caller writes
- * (`BaseFieldProps`, `SliderFieldProps`, …) and the *kit contract* props a kit
- * receives (`FieldRenderProps`, `FormComponents`).
+ * (`BaseFieldProps`, …) and the *kit contract* props a kit receives
+ * (`FieldRenderProps`, `FormComponents`). A field's input attributes belong to
+ * neither: each UI kit declares them (`@ez-kit/form-shadcn`'s `<Field>KitProps`).
  */
 export const FORM_TYPE = {
 	/**
@@ -319,17 +320,22 @@ export const FORM_TYPE = {
 	/**
 	 * The props every flat field shares. Written once as
 	 * `BaseFieldProps<TFormData, TValue>` and intersected into each field's own
-	 * props, so it is the exact governing type for the "Shared props" table —
-	 * `TextFieldProps` would additionally bless `placeholder` and `type`.
+	 * props, so it is the exact governing type for the "Shared props" table — an
+	 * option-bearing field's props would additionally bless `options` and the rest.
 	 */
 	BaseFieldProps: { module: TypeModule.FormReact, name: 'BaseFieldProps', typeArgs: FORM_VALUE_TYPE_ARGS },
-	SliderFieldProps: { module: TypeModule.FormReact, name: 'SliderFieldProps', typeArgs: ROW_TYPE_ARGS },
+	/**
+	 * A field's input attributes are the kit's, not the adapter's: `form.<Field>` accepts whatever the
+	 * registered component declares beyond the contract. `fields.mdx` documents the props both shipped
+	 * kits declare; the shadcn kit's types stand for them, since HeroUI declares the same names.
+	 */
+	SliderFieldKitProps: { module: TypeModule.FormShadcn, name: 'SliderFieldKitProps' },
 	/** The JSX layout pair — neither is generic, both are pure presentation. */
 	SectionProps: { module: TypeModule.FormReact, name: 'SectionProps' },
 	GridItemProps: { module: TypeModule.FormReact, name: 'GridItemProps' },
 	/** The `section` node — `CommonProps` (so `colSpan`) plus the grid's own keys. */
 	SectionNode: { module: TypeModule.FormCore, name: 'SectionNode', typeArgs: ROW_TYPE_ARGS },
-	DateFieldProps: { module: TypeModule.FormReact, name: 'DateFieldProps', typeArgs: ROW_TYPE_ARGS },
+	DateFieldKitProps: { module: TypeModule.FormShadcn, name: 'DateFieldKitProps' },
 	/** What a kit's field component receives — the base half of the field-slot contract. */
 	FieldRenderProps: { module: TypeModule.FormReact, name: 'FieldRenderProps' },
 	/**
@@ -1134,8 +1140,8 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		page: DocPage.FormFields,
 		optionTables: [
 			{ heading: 'Shared props', roots: [FORM_TYPE.BaseFieldProps], expectedCount: 6 },
-			{ heading: '`form.SliderField`', roots: [FORM_TYPE.SliderFieldProps], expectedCount: 3 },
-			{ heading: '`form.DateField`', roots: [FORM_TYPE.DateFieldProps], expectedCount: 3 },
+			{ heading: '`form.SliderField`', roots: [FORM_TYPE.SliderFieldKitProps], expectedCount: 3 },
+			{ heading: '`form.DateField`', roots: [FORM_TYPE.DateFieldKitProps], expectedCount: 3 },
 		],
 		nonOptionTables: [
 			{

@@ -6,11 +6,13 @@ import { Checkbox } from '@form-shadcn/components/ui/checkbox'
 import { FieldSet } from '@form-shadcn/components/ui/field'
 import { Label } from '@form-shadcn/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@form-shadcn/components/ui/popover'
+import { cn } from '@form-shadcn/lib/utils'
 
-import { FieldShell } from './field-shell'
+import { FieldShell, splitChrome } from './field-shell'
 import { OptionListSkeleton, OptionSkeleton } from './option-skeleton'
 import { SearchableMultiSelectField } from './searchable-multi-select'
 
+import type { ControlProps } from './field-shell'
 import type { CheckboxGroupFieldRenderProps, MultiSelectFieldRenderProps, SelectOption } from '@ez-kit/form-react'
 import type { ReactNode } from 'react'
 
@@ -22,6 +24,12 @@ import type { ReactNode } from 'react'
  * filter, and the reason no extra primitive library is pulled in for it. The checkbox group
  * needs no popover at all: it is a `<fieldset>` of the vendored `Checkbox`.
  */
+
+/** A multi-select field's kit props: the `placeholder` its trigger shows while nothing is chosen. */
+export type MultiSelectFieldKitProps = { placeholder?: string | undefined }
+
+/** A checkbox-group field's kit props: the `<fieldset>` attributes the group renders as. */
+export type CheckboxGroupFieldKitProps = ControlProps<typeof FieldSet, CheckboxGroupFieldRenderProps>
 
 /** Joins the field id and an option value into the per-option id a `<label for>` targets. */
 const OPTION_ID_SEPARATOR = '-'
@@ -46,7 +54,7 @@ function toggle(value: readonly string[], option: string): string[] {
 	return value.includes(option) ? value.filter((entry) => entry !== option) : [...value, option]
 }
 
-export function MultiSelectField(props: MultiSelectFieldRenderProps): ReactNode {
+export function MultiSelectField(props: MultiSelectFieldRenderProps & MultiSelectFieldKitProps): ReactNode {
 	// `search` present *is* the mode switch — see `MultiSelectFieldRenderProps`. The two are
 	// different primitives with different anatomy (a Radix popover of checkboxes vs the Base UI
 	// combobox), so they are separate components rather than one with branches inside it.
@@ -75,7 +83,7 @@ function PlainMultiSelectField({
 	disabled,
 	required,
 	...field
-}: MultiSelectFieldRenderProps): ReactNode {
+}: MultiSelectFieldRenderProps & MultiSelectFieldKitProps): ReactNode {
 	const [open, setOpen] = useState(false)
 
 	return (
@@ -157,33 +165,29 @@ function PlainMultiSelectField({
 	)
 }
 
-export function CheckboxGroupField({
-	value,
-	onChange,
-	options,
-	loading,
-	id,
-	name,
-	onBlur,
-	disabled,
-	required,
-	...field
-}: CheckboxGroupFieldRenderProps): ReactNode {
+export function CheckboxGroupField(props: CheckboxGroupFieldRenderProps & CheckboxGroupFieldKitProps): ReactNode {
+	const {
+		chrome,
+		control: { value, onChange, options, loading, id, name, onBlur, disabled, required, className, ...fieldset },
+	} = splitChrome(props)
+
 	return (
 		<FieldShell
 			id={id}
-			{...field}
+			{...chrome}
 		>
 			{(binding) => (
 				// A real `<fieldset>`: the group's own label is the shell's, and each option keeps
 				// its own `<label for>` — which is what makes every box clickable by its text.
 				<FieldSet
+					{...fieldset}
+					// Merged, not replaced: an author's class adds to the kit's own spacing.
+					className={cn('gap-2', className)}
 					id={id}
 					data-loading={loading || undefined}
-					aria-invalid={field.invalid}
+					aria-invalid={chrome.invalid}
 					aria-required={required}
 					aria-busy={loading || undefined}
-					className='gap-2'
 					{...binding}
 				>
 					{/*

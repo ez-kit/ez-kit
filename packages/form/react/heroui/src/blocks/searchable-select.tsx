@@ -4,6 +4,7 @@ import { FieldDescription, FieldErrorText, FieldLabel } from './field-chrome'
 import { fieldRoot } from './field-state'
 import { minLengthHint } from './search-hint'
 
+import type { SelectFieldKitProps } from './select'
 import type { SelectFieldRenderProps } from '@ez-kit/form-react'
 import type { Key } from '@heroui/react'
 import type { ReactNode } from 'react'
@@ -53,7 +54,8 @@ export function SearchableSelectField({
 	description,
 	errors,
 	...field
-}: SelectFieldRenderProps & { search: NonNullable<SelectFieldRenderProps['search']> }): ReactNode {
+}: SelectFieldRenderProps &
+	SelectFieldKitProps & { search: NonNullable<SelectFieldRenderProps['search']> }): ReactNode {
 	const items: ComboItem[] = options.map((option) => ({
 		id: option.value,
 		label: option.label,

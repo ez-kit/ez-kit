@@ -1,5 +1,5 @@
 import type { GridItemProps, SectionProps, SubmitButtonProps } from './field-props'
-import type { DateRangeValue, SelectOption, TextInputType } from '@ez-kit/form-core'
+import type { DateRangeValue, SelectOption } from '@ez-kit/form-core'
 import type { ComponentPropsWithoutRef, ReactNode } from 'react'
 
 /**
@@ -26,6 +26,16 @@ import type { ComponentPropsWithoutRef, ReactNode } from 'react'
  * - {@link FormComponents} names the four other components a kit ships — `SubmitButton`,
  *   `Section`, `GridItem`, `Wizard`. They are ordinary components that read the form from
  *   context; `createForm({ components })` is open beyond them.
+ *
+ * A field's render props are only what the binding **computes** — identity, value, `onChange`,
+ * errors, the shared `label` / `description` / `disabled` / `required`, and for option-bearing
+ * fields the resolved `options`. They name no input attribute: `placeholder`, `type`, `rows`,
+ * `min`, `max`, `step` and everything else a control may take are the kit's to declare. A kit
+ * component's props beyond its render props become props of `form.<Field>` as they are, and
+ * whatever an author writes there reaches the component flat, under the computed ones — so a
+ * computed prop always wins. Those extra props must be optional: a component that requires one
+ * no longer fits its slot, because the schema renderer and every call site that omits it could
+ * not supply it.
  *
  * Every key of both is optional, and so is the `<form>` element itself (`FormElement`): an app
  * passes the subset it uses, and the instance carries exactly that.
@@ -94,8 +104,6 @@ export type FieldRenderProps = {
 export type TextFieldRenderProps = FieldRenderProps & {
 	value: string
 	onChange: (value: string) => void
-	placeholder: string | undefined
-	type: TextInputType | undefined
 }
 
 export type NumberFieldRenderProps = FieldRenderProps & {
@@ -105,17 +113,11 @@ export type NumberFieldRenderProps = FieldRenderProps & {
 	 */
 	value: number | undefined
 	onChange: (value: number | undefined) => void
-	placeholder: string | undefined
-	min: number | undefined
-	max: number | undefined
-	step: number | undefined
 }
 
 export type TextareaFieldRenderProps = FieldRenderProps & {
 	value: string
 	onChange: (value: string) => void
-	placeholder: string | undefined
-	rows: number | undefined
 }
 
 /**
@@ -181,7 +183,6 @@ export type SelectFieldRenderProps = FieldRenderProps &
 	SearchRenderProps & {
 		value: string
 		onChange: (value: string) => void
-		placeholder: string | undefined
 	}
 
 /**
@@ -196,7 +197,6 @@ export type MultiSelectFieldRenderProps = FieldRenderProps &
 	SearchRenderProps & {
 		value: readonly string[]
 		onChange: (value: string[]) => void
-		placeholder: string | undefined
 	}
 
 export type CheckboxGroupFieldRenderProps = FieldRenderProps &
@@ -231,9 +231,6 @@ export type DateFieldRenderProps = FieldRenderProps & {
 	/** `undefined` while nothing is picked — an empty date is genuinely "no date". */
 	value: string | undefined
 	onChange: (value: string | undefined) => void
-	placeholder: string | undefined
-	min: string | undefined
-	max: string | undefined
 }
 
 /**
@@ -244,9 +241,6 @@ export type DateFieldRenderProps = FieldRenderProps & {
 export type DateRangeFieldRenderProps = FieldRenderProps & {
 	value: DateRangeValue | undefined
 	onChange: (value: DateRangeValue | undefined) => void
-	placeholder: string | undefined
-	min: string | undefined
-	max: string | undefined
 }
 
 export type SliderFieldRenderProps = FieldRenderProps & {
@@ -257,9 +251,6 @@ export type SliderFieldRenderProps = FieldRenderProps & {
 	 */
 	value: number
 	onChange: (value: number) => void
-	min: number | undefined
-	max: number | undefined
-	step: number | undefined
 }
 
 // ── arrays ───────────────────────────────────────────────────────────────────

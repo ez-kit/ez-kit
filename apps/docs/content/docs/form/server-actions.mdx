@@ -77,7 +77,7 @@ export async function signUp(_previous: SignUpResult, values: unknown): Promise<
 The document it validates against is shared with the form:
 
 ```ts
-import { defineFormSchema, FormFieldType, TextInputType } from '@ez-kit/form-core'
+import { defineFormSchema, FormFieldType } from '@ez-kit/form-core'
 
 export type SignUpValues = {
 	username: string
@@ -98,7 +98,7 @@ export const signUpSchema = defineFormSchema<SignUpValues>()({
 			type: FormFieldType.Text,
 			name: 'email',
 			label: 'Email',
-			inputType: TextInputType.Email,
+			inputType: 'email',
 			defaultValue: '',
 			validate: { required: true, maxLength: 254, format: 'email' },
 		},
@@ -114,7 +114,7 @@ The action returns a `serverErrors` object in the shape the form takes — field
 
 import { startTransition, useActionState } from 'react'
 
-import { Form, TextInputType } from '@ez-kit/form-shadcn'
+import { Form } from '@ez-kit/form-shadcn'
 
 import { signUp } from './sign-up'
 
@@ -142,7 +142,7 @@ export function SignUp() {
 					<form.TextField
 						name='email'
 						label='Email'
-						type={TextInputType.Email}
+						type='email'
 						validate={{ required: true, maxLength: 254, format: 'email' }}
 					/>
 					<form.SubmitButton disabled={isPending}>Sign up</form.SubmitButton>

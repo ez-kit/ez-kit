@@ -26,6 +26,11 @@ export enum TypeModule {
 	FormCore = '@ez-kit/form-core',
 	/** `@ez-kit/form-react` — React form adapter; owns the kit contract, the consumer field props and the renderer props. */
 	FormReact = '@ez-kit/form-react',
+	/**
+	 * `@ez-kit/form-shadcn` — a UI kit; owns what its fields take beyond the contract (`<Field>KitProps`).
+	 * The governing module for a field's input attributes, which no longer exist in `@ez-kit/form-react`.
+	 */
+	FormShadcn = '@ez-kit/form-shadcn',
 	/** `@ez-kit/zu-store` — Zustand binding; owns its context-store and cache surface. */
 	ZuStore = '@ez-kit/zu-store',
 	/** `@ez-kit/zu-store/persist` — the Zustand-bound persist front. */

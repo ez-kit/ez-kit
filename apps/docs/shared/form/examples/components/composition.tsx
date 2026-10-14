@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { z } from 'zod'
 
 import { Button } from 'shared/form/Button'
-import { Form, TextInputType, withFieldGroup, withForm } from 'shared/form/FormKit'
+import { Form, withFieldGroup, withForm } from 'shared/form/FormKit'
 
 type PasswordPairValues = { password: string; confirm: string }
 
@@ -31,12 +31,12 @@ const PasswordPair = withFieldGroup({
 		<>
 			<group.TextField
 				name='password'
-				type={TextInputType.Password}
+				type='password'
 				label='Password'
 			/>
 			<group.TextField
 				name='confirm'
-				type={TextInputType.Password}
+				type='password'
 				label='Repeat password'
 			/>
 		</>

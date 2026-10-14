@@ -13,6 +13,7 @@ import {
 import { FieldShell } from './field-shell'
 import { minLengthHint } from './search-hint'
 
+import type { SelectFieldKitProps } from './select'
 import type { SelectFieldRenderProps } from '@ez-kit/form-react'
 import type { ReactNode } from 'react'
 
@@ -54,7 +55,8 @@ export function SearchableSelectField({
 	disabled,
 	required,
 	...field
-}: SelectFieldRenderProps & { search: NonNullable<SelectFieldRenderProps['search']> }): ReactNode {
+}: SelectFieldRenderProps &
+	SelectFieldKitProps & { search: NonNullable<SelectFieldRenderProps['search']> }): ReactNode {
 	const items: string[] = useMemo(() => options.map((option) => option.value), [options])
 	const labels = useMemo(() => new Map(options.map((option) => [option.value, option.label])), [options])
 	const disabledItems = useMemo(

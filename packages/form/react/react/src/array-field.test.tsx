@@ -4,7 +4,7 @@ import { memo, useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { createForm } from './create-form'
-import { testComponents, testFields, testFormElement } from './test-kit'
+import { captureField, testComponents, testFields, testFormElement } from './test-kit'
 
 import type { ArrayFieldRenderProps, ArrayItemRenderProps } from './contract'
 import type { ReactNode } from 'react'
@@ -732,5 +732,35 @@ describe('the array slot', () => {
 		for (const layoutKey of ['SubmitButton', 'Submit', 'Section', 'GridItem']) {
 			expect(scopeKeys).not.toContain(layoutKey)
 		}
+	})
+})
+
+describe('array entries — props beyond the binding reach the kit', () => {
+	it('hands an entry field’s own props to the kit, beside the entry-scoped name', () => {
+		const capture = captureField()
+		const kit = createForm({ fields: { ...testFields, TextField: capture.Capture } })
+
+		render(
+			<kit.Form defaultValues={{ title: '', people: [{ firstName: 'Ada' }] }}>
+				{(form) => (
+					<form.ArrayField
+						name='people'
+						newItem={NEW_PERSON}
+					>
+						{({ items }) =>
+							items.map((item) => (
+								<item.TextField
+									key={item.key}
+									name='firstName'
+									autoComplete='given-name'
+								/>
+							))
+						}
+					</form.ArrayField>
+				)}
+			</kit.Form>,
+		)
+
+		expect(capture.last()).toMatchObject({ name: 'people[0].firstName', autoComplete: 'given-name', value: 'Ada' })
 	})
 })

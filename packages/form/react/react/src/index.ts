@@ -117,7 +117,6 @@ export {
 	GRID_MIN,
 	hasFieldErrors,
 	stripHiddenValues,
-	TextInputType,
 } from '@ez-kit/form-core'
 export type {
 	DateRangeValue,

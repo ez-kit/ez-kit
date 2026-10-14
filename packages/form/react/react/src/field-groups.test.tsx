@@ -8,7 +8,7 @@ import { describe, expect, expectTypeOf, it, vi } from 'vitest'
 import { createForm } from './create-form'
 import { useFieldGroup } from './field-groups'
 import { useFormGroup } from './form-group'
-import { testComponents, testFields, testFormElement } from './test-kit'
+import { captureField, testComponents, testFields, testFormElement } from './test-kit'
 import { testSchema } from './test-schema'
 
 import type { NoRegistry } from './contract'
@@ -734,5 +734,46 @@ describe('flat fields on groups (D7)', () => {
 
 		expect(() => render(<Case />)).toThrow(/group\.getMeta/)
 		vi.restoreAllMocks()
+	})
+})
+
+describe('group fields — props beyond the binding reach the kit', () => {
+	it('hands a group field’s own props to the kit, in a form group and in a withFieldGroup block', () => {
+		const capture = captureField()
+		const kit = createForm({ fields: { ...testFields, TextField: capture.Capture } })
+		const CityBlock = kit.withFieldGroup({
+			defaultValues: { city: '' },
+			render: ({ group }) => (
+				<group.TextField
+					name='city'
+					autoComplete='address-level2'
+				/>
+			),
+		})
+
+		render(
+			<kit.Form defaultValues={DEFAULTS}>
+				{(form) => (
+					<>
+						<form.FormGroup name='address'>
+							{(group) => (
+								<group.TextField
+									name='city'
+									autoComplete='address-level1'
+								/>
+							)}
+						</form.FormGroup>
+						<CityBlock
+							form={form}
+							fields={{ city: 'billingCity' }}
+						/>
+					</>
+				)}
+			</kit.Form>,
+		)
+
+		const byName = new Map(capture.calls.map((props) => [props.name, props]))
+		expect(byName.get('address.city')).toMatchObject({ autoComplete: 'address-level1' })
+		expect(byName.get('billingCity')).toMatchObject({ autoComplete: 'address-level2' })
 	})
 })

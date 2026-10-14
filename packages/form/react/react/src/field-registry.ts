@@ -1,7 +1,7 @@
 import { RESERVED_NODE_TYPES } from '@ez-kit/form-core'
 
 import type { FormFieldSlots } from './contract'
-import type { BaseFieldProps, FormPrimitives } from './field-props'
+import type { BaseFieldProps, FormPrimitives, OptionFieldBindingProps } from './field-props'
 import type { CustomFieldRenderProps } from './schema/registries'
 import type { ReactNode } from 'react'
 
@@ -210,3 +210,31 @@ export const BASE_FIELD_PROP_KEYS = {
 	required: true,
 	validate: true,
 } satisfies Record<keyof BaseFieldProps<never, never>, true>
+
+/**
+ * Every key an option-bearing built-in binds — {@link BASE_FIELD_PROP_KEYS} plus the option
+ * provision, `searchable` and the `creatable` pair. A select-like binder keeps these and hands
+ * everything else to the kit, flat.
+ *
+ * Checked against the type the same way the base set is, so a binding prop added to these fields
+ * later is a compile error here rather than a prop that starts reaching the kit unread.
+ *
+ * The base keys are written out rather than spread from {@link BASE_FIELD_PROP_KEYS}: a top-level
+ * object that spreads cannot be dropped by a bundler — a spread may run getters — so the spread
+ * form landed in every bundle of this entry, the helpers-only import included.
+ */
+export const OPTION_FIELD_PROP_KEYS = {
+	name: true,
+	label: true,
+	description: true,
+	disabled: true,
+	required: true,
+	validate: true,
+	options: true,
+	optionsFrom: true,
+	optionsParams: true,
+	loading: true,
+	searchable: true,
+	creatable: true,
+	createLabel: true,
+} satisfies Record<keyof BaseFieldProps<never, never> | keyof OptionFieldBindingProps, true>

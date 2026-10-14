@@ -167,6 +167,40 @@ function nodeOptionsProps(
 	return { options: correlatedOptions(node.options ?? [], translate) }
 }
 
+/** The input attributes a document's field node may carry, as one node type to read. */
+type NodeInputAttributes = {
+	placeholder?: string | undefined
+	inputType?: string | undefined
+	rows?: number | undefined
+	min?: number | string | undefined
+	max?: number | string | undefined
+	step?: number | undefined
+}
+
+/**
+ * The node's input attributes as the kit props they become — `placeholder`, `rows`, `min`, `max`
+ * and `step` under their own names, `inputType` as `type` — in the one bag the renderer spreads
+ * onto a built-in field.
+ *
+ * **Typed as nothing, deliberately — a hole in the types until `SchemaForm` is reworked.** The
+ * contract no longer names these attributes; each kit declares them on its own components, so no
+ * type here can know which of them the registered component accepts. A document has always set
+ * exactly these keys, and every kit this package ships declares them, so the renderer keeps
+ * handing them over unchecked rather than dropping them. A kit that does not declare one receives
+ * it anyway, as it would from any call site that went around the types.
+ */
+function nodeKitProps(node: NodeInputAttributes): Record<never, never> {
+	// The declared return type is the cast: it widens the bag to "no known props" on the way out.
+	return {
+		...(node.placeholder !== undefined && { placeholder: node.placeholder }),
+		...(node.inputType !== undefined && { type: node.inputType }),
+		...(node.rows !== undefined && { rows: node.rows }),
+		...(node.min !== undefined && { min: node.min }),
+		...(node.max !== undefined && { max: node.max }),
+		...(node.step !== undefined && { step: node.step }),
+	}
+}
+
 /**
  * The value a freshly added entry starts from, assembled out of the item subtree's own
  * `defaultValue`s.
@@ -343,8 +377,7 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					description={description}
 					disabled={disabledByCondition}
 					{...(node.required !== undefined && { required: node.required })}
-					{...(node.placeholder !== undefined && { placeholder: node.placeholder })}
-					{...(node.inputType !== undefined && { type: node.inputType })}
+					{...nodeKitProps(node)}
 				/>
 			)
 		case FormFieldType.Number:
@@ -355,10 +388,7 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					description={description}
 					disabled={disabledByCondition}
 					{...(node.required !== undefined && { required: node.required })}
-					{...(node.placeholder !== undefined && { placeholder: node.placeholder })}
-					{...(node.min !== undefined && { min: node.min })}
-					{...(node.max !== undefined && { max: node.max })}
-					{...(node.step !== undefined && { step: node.step })}
+					{...nodeKitProps(node)}
 				/>
 			)
 		case FormFieldType.Textarea:
@@ -369,8 +399,7 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					description={description}
 					disabled={disabledByCondition}
 					{...(node.required !== undefined && { required: node.required })}
-					{...(node.placeholder !== undefined && { placeholder: node.placeholder })}
-					{...(node.rows !== undefined && { rows: node.rows })}
+					{...nodeKitProps(node)}
 				/>
 			)
 		case FormFieldType.Select:
@@ -382,7 +411,7 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					disabled={disabledByCondition}
 					{...nodeOptionsProps(node, sourceParams, context.translate)}
 					{...(node.required !== undefined && { required: node.required })}
-					{...(node.placeholder !== undefined && { placeholder: node.placeholder })}
+					{...nodeKitProps(node)}
 					{...(node.searchable !== undefined && { searchable: node.searchable })}
 					{...(node.creatable !== undefined && { creatable: node.creatable })}
 					{...(node.createLabel !== undefined && { createLabel: node.createLabel })}
@@ -428,7 +457,7 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					disabled={disabledByCondition}
 					{...nodeOptionsProps(node, sourceParams, context.translate)}
 					{...(node.required !== undefined && { required: node.required })}
-					{...(node.placeholder !== undefined && { placeholder: node.placeholder })}
+					{...nodeKitProps(node)}
 					{...(node.searchable !== undefined && { searchable: node.searchable })}
 					{...(node.creatable !== undefined && { creatable: node.creatable })}
 					{...(node.createLabel !== undefined && { createLabel: node.createLabel })}
@@ -453,9 +482,7 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					description={description}
 					disabled={disabledByCondition}
 					{...(node.required !== undefined && { required: node.required })}
-					{...(node.placeholder !== undefined && { placeholder: node.placeholder })}
-					{...(node.min !== undefined && { min: node.min })}
-					{...(node.max !== undefined && { max: node.max })}
+					{...nodeKitProps(node)}
 				/>
 			)
 		case FormFieldType.DateRange:
@@ -466,9 +493,7 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					description={description}
 					disabled={disabledByCondition}
 					{...(node.required !== undefined && { required: node.required })}
-					{...(node.placeholder !== undefined && { placeholder: node.placeholder })}
-					{...(node.min !== undefined && { min: node.min })}
-					{...(node.max !== undefined && { max: node.max })}
+					{...nodeKitProps(node)}
 				/>
 			)
 		case FormFieldType.Slider:
@@ -479,9 +504,7 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					description={description}
 					disabled={disabledByCondition}
 					{...(node.required !== undefined && { required: node.required })}
-					{...(node.min !== undefined && { min: node.min })}
-					{...(node.max !== undefined && { max: node.max })}
-					{...(node.step !== undefined && { step: node.step })}
+					{...nodeKitProps(node)}
 				/>
 			)
 		case ARRAY_NODE_TYPE: {

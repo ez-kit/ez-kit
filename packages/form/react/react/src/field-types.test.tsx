@@ -3,8 +3,9 @@ import { describe, expectTypeOf, it } from 'vitest'
 import { createForm } from './create-form'
 import { testComponents, testFields, testFormElement } from './test-kit'
 
+import type { FormFieldSlots, SelectFieldRenderProps, TextFieldRenderProps } from './contract'
 import type { FieldControlProps } from './field-props'
-import type { ReactNode } from 'react'
+import type { ComponentPropsWithoutRef, ReactNode } from 'react'
 
 type Values = { email: string; seats: number; address: { city: string }; tags: { label: string }[] }
 const DEFAULTS: Values = { email: '', seats: 1, address: { city: '' }, tags: [] }
@@ -101,5 +102,118 @@ describe('form.Field — types', () => {
 			)
 		}
 		expectTypeOf(Probe).toBeFunction()
+	})
+})
+
+/** A text field taking every native `<input>` attribute the contract does not already compute. */
+const InputTextField = (
+	_props: TextFieldRenderProps & Omit<ComponentPropsWithoutRef<'input'>, keyof TextFieldRenderProps>,
+): ReactNode => null
+/** A text field with one prop of its own, the shape a design-system kit's `variant` has. */
+const VariantTextField = (_props: TextFieldRenderProps & { variant?: 'flat' | 'bordered' }): ReactNode => null
+const VariantSelectField = (_props: SelectFieldRenderProps & { variant?: 'flat' | 'bordered' }): ReactNode => null
+
+const inputKit = createForm({ fields: { ...testFields, TextField: InputTextField } })
+const variantKit = createForm({
+	fields: { ...testFields, TextField: VariantTextField, SelectField: VariantSelectField },
+})
+
+describe('built-in fields — props beyond the binding come from the kit component', () => {
+	it('accepts a native attribute when the registered component accepts it', () => {
+		function Probe(): ReactNode {
+			const form = inputKit.useForm({ defaultValues: DEFAULTS })
+			return (
+				<form.TextField
+					name='email'
+					autoComplete='email'
+					inputMode='email'
+					maxLength={80}
+				/>
+			)
+		}
+		expectTypeOf(Probe).toBeFunction()
+	})
+
+	it('accepts a kit-only prop only where the kit declared it, and only its own values', () => {
+		function Probe(): ReactNode {
+			const withVariant = variantKit.useForm({ defaultValues: DEFAULTS })
+			const withInput = inputKit.useForm({ defaultValues: DEFAULTS })
+			return (
+				<>
+					<withVariant.TextField
+						name='email'
+						variant='bordered'
+					/>
+					<withVariant.TextField
+						name='email'
+						// @ts-expect-error -- not one of the kit's own variants
+						variant='outlined'
+					/>
+					<withInput.TextField
+						name='email'
+						// @ts-expect-error -- this kit's TextField does not declare `variant`
+						variant='bordered'
+					/>
+					<withVariant.TextField
+						name='email'
+						// @ts-expect-error -- this kit's TextField takes no native attributes
+						autoComplete='email'
+					/>
+				</>
+			)
+		}
+		expectTypeOf(Probe).toBeFunction()
+	})
+
+	it('keeps the computed props out of reach, even of a kit that accepts them natively', () => {
+		function Probe(): ReactNode {
+			const form = inputKit.useForm({ defaultValues: DEFAULTS })
+			return (
+				<>
+					<form.TextField
+						name='email'
+						// @ts-expect-error -- `onChange` is the binding's
+						onChange={() => undefined}
+					/>
+					<form.TextField
+						name='email'
+						// @ts-expect-error -- `value` is the binding's
+						value='x'
+					/>
+				</>
+			)
+		}
+		expectTypeOf(Probe).toBeFunction()
+	})
+
+	it('keeps `name` correlated with `options` on the select union, beside the kit props', () => {
+		function Probe(): ReactNode {
+			const form = variantKit.useForm({ defaultValues: DEFAULTS })
+			return (
+				<>
+					<form.SelectField
+						name='seats'
+						options={[{ label: 'One', value: 1 }]}
+						variant='flat'
+					/>
+					{/* @ts-expect-error -- `seats` is a number, the options are strings */}
+					<form.SelectField
+						name='seats'
+						options={[{ label: 'One', value: 'one' }]}
+						variant='flat'
+					/>
+				</>
+			)
+		}
+		expectTypeOf(Probe).toBeFunction()
+	})
+})
+
+describe('built-in fields — props beyond the contract must be optional', () => {
+	it('rejects a component that requires a prop the contract does not supply', () => {
+		const IconTextField = (_props: TextFieldRenderProps & { icon: string }): ReactNode => null
+		// @ts-expect-error -- a required `icon` would have to come from every call site and from the schema renderer
+		const fields = { TextField: IconTextField } satisfies FormFieldSlots
+		expectTypeOf(fields).not.toBeNever()
 	})
 })

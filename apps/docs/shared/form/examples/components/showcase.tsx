@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { z } from 'zod'
 
-import { Form, TextInputType } from 'shared/form/FormKit'
+import { Form } from 'shared/form/FormKit'
 
 import type { DateRangeValue } from '@ez-kit/form-react'
 
@@ -129,7 +129,7 @@ export function ShowcaseExample() {
 								name='email'
 								label='Email'
 								placeholder='you@example.com'
-								type={TextInputType.Email}
+								type='email'
 								required
 							/>
 							<form.GridItem colSpan={2}>

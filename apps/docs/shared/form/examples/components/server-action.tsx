@@ -2,7 +2,7 @@
 
 import { startTransition, useActionState } from 'react'
 
-import { Form, TextInputType } from 'shared/form/FormKit'
+import { Form } from 'shared/form/FormKit'
 
 import { signUp } from '../actions/sign-up'
 
@@ -32,7 +32,7 @@ export function ServerActionExample() {
 						<form.TextField
 							name='email'
 							label='Email'
-							type={TextInputType.Email}
+							type='email'
 							validate={{ required: true, maxLength: 254, format: 'email' }}
 						/>
 						<form.SubmitButton disabled={isPending}>Sign up</form.SubmitButton>

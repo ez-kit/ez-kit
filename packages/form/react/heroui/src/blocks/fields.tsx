@@ -11,9 +11,10 @@ import {
 } from '@heroui/react'
 
 import { FieldDescription, FieldErrorText, FieldLabel } from './field-chrome'
-import { fieldRoot } from './field-state'
+import { fieldRoot, splitRootState } from './field-state'
 import { OptionListSkeleton } from './option-skeleton'
 
+import type { RootProps } from './field-state'
 import type {
 	CheckboxFieldRenderProps,
 	NumberFieldRenderProps,
@@ -31,28 +32,61 @@ import type { ReactNode } from 'react'
  * Every one follows HeroUI's documented anatomy verbatim — `Label`, the control,
  * `Description`, `FieldError`, all children of the state-owning root. That is what earns
  * the kit's real spacing, focus and invalid styling instead of an approximation of it.
+ *
+ * Each also takes **kit props** beyond the contract — `<Field>KitProps`: the props of its React
+ * Aria root, which is where React Aria takes `type`, `autoComplete`, `inputMode`, `maxLength` and
+ * the rest of an input's attributes, plus the few it does not take there (`placeholder`, `rows`),
+ * which the field puts on the element itself. Bounds keep the contract's names, `min` / `max`,
+ * and are mapped onto React Aria's `minValue` / `maxValue`. The root props are spread *first*, so
+ * every computed prop is written after them and wins.
  */
 
-export function TextField({
-	value,
-	onChange,
-	type,
-	placeholder,
-	id,
-	name,
-	onBlur,
-	label,
-	description,
-	errors,
-	...field
-}: TextFieldRenderProps): ReactNode {
+/** A text field's kit props: the React Aria `TextField` root's — `type`, `autoComplete`, … — and the input's `placeholder`. */
+export type TextFieldKitProps = RootProps<typeof HeroTextField, TextFieldRenderProps> & {
+	placeholder?: string | undefined
+}
+
+/** A number field's kit props: the React Aria `NumberField` root's, the bounds, and the input's `placeholder`. */
+export type NumberFieldKitProps = RootProps<typeof HeroNumberField, NumberFieldRenderProps, 'minValue' | 'maxValue'> & {
+	placeholder?: string | undefined
+	min?: number | undefined
+	max?: number | undefined
+}
+
+/** A textarea field's kit props: the React Aria `TextField` root's, and the textarea's `placeholder` / `rows`. */
+export type TextareaFieldKitProps = RootProps<typeof HeroTextField, TextareaFieldRenderProps, 'type'> & {
+	placeholder?: string | undefined
+	rows?: number | undefined
+}
+
+/** A checkbox field's kit props: the React Aria `Checkbox` root's. */
+export type CheckboxFieldKitProps = RootProps<typeof HeroCheckbox, CheckboxFieldRenderProps>
+
+/** A switch field's kit props: the React Aria `Switch` root's. */
+export type SwitchFieldKitProps = RootProps<typeof HeroSwitch, SwitchFieldRenderProps>
+
+/** A radio-group field's kit props: the React Aria `RadioGroup` root's. */
+export type RadioGroupFieldKitProps = RootProps<typeof HeroRadioGroup, RadioGroupFieldRenderProps>
+
+/** A slider field's kit props: the React Aria `Slider` root's — `step`, … — and the bounds. */
+export type SliderFieldKitProps = RootProps<typeof HeroSlider, SliderFieldRenderProps, 'minValue' | 'maxValue'> & {
+	min?: number | undefined
+	max?: number | undefined
+}
+
+export function TextField(props: TextFieldRenderProps & TextFieldKitProps): ReactNode {
+	const {
+		state,
+		rest: { value, onChange, placeholder, id, name, onBlur, label, description, errors, ...root },
+	} = splitRootState(props)
+
 	return (
 		<HeroTextField
+			{...root}
 			value={value}
 			onChange={onChange}
 			name={name}
-			{...(type !== undefined ? { type } : {})}
-			{...fieldRoot(field)}
+			{...fieldRoot(state)}
 		>
 			<FieldLabel label={label} />
 			<Input
@@ -63,29 +97,21 @@ export function TextField({
 			<FieldDescription description={description} />
 			<FieldErrorText
 				errors={errors}
-				invalid={field.invalid}
+				invalid={state.invalid}
 			/>
 		</HeroTextField>
 	)
 }
 
-export function NumberField({
-	value,
-	onChange,
-	placeholder,
-	min,
-	max,
-	step,
-	id,
-	name,
-	onBlur,
-	label,
-	description,
-	errors,
-	...field
-}: NumberFieldRenderProps): ReactNode {
+export function NumberField(props: NumberFieldRenderProps & NumberFieldKitProps): ReactNode {
+	const {
+		state,
+		rest: { value, onChange, placeholder, min, max, id, name, onBlur, label, description, errors, ...root },
+	} = splitRootState(props)
+
 	return (
 		<HeroNumberField
+			{...root}
 			onChange={onChange}
 			name={name}
 			// An empty numeric control has no number, and React Aria reads an explicit
@@ -93,8 +119,7 @@ export function NumberField({
 			{...(value !== undefined ? { value } : {})}
 			{...(min !== undefined ? { minValue: min } : {})}
 			{...(max !== undefined ? { maxValue: max } : {})}
-			{...(step !== undefined ? { step } : {})}
-			{...fieldRoot(field)}
+			{...fieldRoot(state)}
 		>
 			<FieldLabel label={label} />
 			<HeroNumberField.Group>
@@ -109,33 +134,27 @@ export function NumberField({
 			<FieldDescription description={description} />
 			<FieldErrorText
 				errors={errors}
-				invalid={field.invalid}
+				invalid={state.invalid}
 			/>
 		</HeroNumberField>
 	)
 }
 
-export function TextareaField({
-	value,
-	onChange,
-	placeholder,
-	rows,
-	id,
-	name,
-	onBlur,
-	label,
-	description,
-	errors,
-	...field
-}: TextareaFieldRenderProps): ReactNode {
+export function TextareaField(props: TextareaFieldRenderProps & TextareaFieldKitProps): ReactNode {
+	const {
+		state,
+		rest: { value, onChange, placeholder, rows, id, name, onBlur, label, description, errors, ...root },
+	} = splitRootState(props)
+
 	return (
 		// The multi-line control is a bare primitive in HeroUI; `TextField` supplies the
 		// value, validation state and change handling around it.
 		<HeroTextField
+			{...root}
 			value={value}
 			onChange={onChange}
 			name={name}
-			{...fieldRoot(field)}
+			{...fieldRoot(state)}
 		>
 			<FieldLabel label={label} />
 			<TextArea
@@ -147,34 +166,30 @@ export function TextareaField({
 			<FieldDescription description={description} />
 			<FieldErrorText
 				errors={errors}
-				invalid={field.invalid}
+				invalid={state.invalid}
 			/>
 		</HeroTextField>
 	)
 }
 
-export function CheckboxField({
-	checked,
-	onChange,
-	id,
-	name,
-	onBlur,
-	label,
-	description,
-	errors,
-	...field
-}: CheckboxFieldRenderProps): ReactNode {
+export function CheckboxField(props: CheckboxFieldRenderProps & CheckboxFieldKitProps): ReactNode {
+	const {
+		state,
+		rest: { checked, onChange, id, name, onBlur, label, description, errors, ...root },
+	} = splitRootState(props)
+
 	return (
 		// The checkbox root is the row: control first, then `Checkbox.Content` — the column
 		// holding label and description. That is HeroUI's own anatomy, and it is why this kit
 		// no longer needs CSS `order` tricks to get `[control] Label` reading order.
 		<HeroCheckbox
+			{...root}
 			id={id}
 			name={name}
 			isSelected={checked}
 			onChange={onChange}
 			onBlur={onBlur}
-			{...fieldRoot(field)}
+			{...fieldRoot(state)}
 		>
 			<HeroCheckbox.Control>
 				<HeroCheckbox.Indicator />
@@ -185,33 +200,29 @@ export function CheckboxField({
 			</HeroCheckbox.Content>
 			<FieldErrorText
 				errors={errors}
-				invalid={field.invalid}
+				invalid={state.invalid}
 			/>
 		</HeroCheckbox>
 	)
 }
 
-export function SwitchField({
-	checked,
-	onChange,
-	id,
-	name,
-	onBlur,
-	label,
-	description,
-	errors,
-	...field
-}: SwitchFieldRenderProps): ReactNode {
+export function SwitchField(props: SwitchFieldRenderProps & SwitchFieldKitProps): ReactNode {
+	const {
+		state,
+		rest: { checked, onChange, id, name, onBlur, label, description, errors, ...root },
+	} = splitRootState(props)
+
 	return (
 		// HeroUI's Switch anatomy: `Switch.Content` is the clickable label wrapping the control
 		// track and the label text; `Description`/`FieldError` sit beside it as field-level rows.
 		<HeroSwitch
+			{...root}
 			id={id}
 			name={name}
 			isSelected={checked}
 			onChange={onChange}
 			onBlur={onBlur}
-			{...fieldRoot(field)}
+			{...fieldRoot(state)}
 		>
 			<HeroSwitch.Content>
 				<HeroSwitch.Control>
@@ -222,29 +233,23 @@ export function SwitchField({
 			<FieldDescription description={description} />
 			<FieldErrorText
 				errors={errors}
-				invalid={field.invalid}
+				invalid={state.invalid}
 			/>
 		</HeroSwitch>
 	)
 }
 
-export function RadioGroupField({
-	value,
-	onChange,
-	options,
-	loading,
-	id,
-	name,
-	onBlur,
-	label,
-	description,
-	errors,
-	...field
-}: RadioGroupFieldRenderProps): ReactNode {
+export function RadioGroupField(props: RadioGroupFieldRenderProps & RadioGroupFieldKitProps): ReactNode {
+	const {
+		state,
+		rest: { value, onChange, options, loading, id, name, onBlur, label, description, errors, ...root },
+	} = splitRootState(props)
+
 	return (
 		// The group root owns value/validation; label and description are its leading children,
 		// each `Radio` its own control + label, and `FieldError` the trailing group-level row.
 		<HeroRadioGroup
+			{...root}
 			id={id}
 			name={name}
 			value={value}
@@ -252,7 +257,7 @@ export function RadioGroupField({
 			onBlur={onBlur}
 			data-loading={loading || undefined}
 			// See the checkbox group in `multi-value.tsx` — same reasoning, same placeholder rows.
-			{...fieldRoot(loading ? { ...field, disabled: true } : field)}
+			{...fieldRoot(loading ? { ...state, disabled: true } : state)}
 		>
 			<FieldLabel label={label} />
 			<FieldDescription description={description} />
@@ -273,38 +278,27 @@ export function RadioGroupField({
 			))}
 			<FieldErrorText
 				errors={errors}
-				invalid={field.invalid}
+				invalid={state.invalid}
 			/>
 		</HeroRadioGroup>
 	)
 }
 
-export function SliderField({
-	value,
-	onChange,
-	min,
-	max,
-	step,
-	id,
-	name,
-	onBlur,
-	label,
-	description,
-	errors,
-	invalid,
-	disabled,
-	// React Aria's Slider models no `isRequired`/`isInvalid` — a slider always holds an in-range
-	// value — so those flags are not forwarded to the primitive.
-	required: _required,
-	'data-field': dataField,
-	'data-field-type': dataFieldType,
-	'data-form-id': dataFormId,
-}: SliderFieldRenderProps): ReactNode {
+export function SliderField(props: SliderFieldRenderProps & SliderFieldKitProps): ReactNode {
+	const {
+		state: { invalid, disabled, 'data-field': dataField, 'data-field-type': dataFieldType, 'data-form-id': dataFormId },
+		rest: { value, onChange, min, max, id, name, onBlur, label, description, errors, ...root },
+	} = splitRootState(props)
+
 	return (
 		// HeroUI's Slider anatomy: label and value output lead, then the track owns the fill and
 		// the single thumb; description and error close the field. The thumb carries `name`/`onBlur`
 		// because it is the focusable control React Aria wires the hidden form input to.
+		//
+		// React Aria's Slider models no `isRequired`/`isInvalid` — a slider always holds an in-range
+		// value — so `required` is not forwarded and `fieldRoot` is not used.
 		<HeroSlider
+			{...root}
 			id={id}
 			value={value}
 			data-field={dataField}
@@ -317,7 +311,6 @@ export function SliderField({
 			}}
 			{...(min !== undefined ? { minValue: min } : {})}
 			{...(max !== undefined ? { maxValue: max } : {})}
-			{...(step !== undefined ? { step } : {})}
 			{...(disabled !== undefined ? { isDisabled: disabled } : {})}
 		>
 			<FieldLabel label={label} />

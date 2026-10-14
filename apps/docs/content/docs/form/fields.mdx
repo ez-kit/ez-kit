@@ -38,21 +38,41 @@ The last two are a pair, not two spellings of one thing: `required` draws the as
 
 [Validation](./form/validation#per-field-validators) covers the whole constraint set, how it composes with a validator on the form, and the two keys the JSX spelling leaves to a document.
 
+## Kit props
+
+Those six are everything a field keeps for itself (an option-bearing field adds `options`, `optionsFrom` and the rest of [Options](/docs/form/select)). **Every other prop you write goes to the kit's component, unchanged** — so what a field accepts beyond the shared six is decided by the kit you installed, not by this list:
+
+- **shadcn** forwards the props of the control it renders: the native `<input>` / `<textarea>` attributes for the text fields, the Radix primitive's for the checkbox, switch, radio group and slider.
+- **HeroUI** forwards the props of the field's React Aria root, which is where React Aria takes an input's attributes, plus `placeholder` and `rows`, which it puts on the input itself.
+
+```tsx
+<form.TextField
+	name='password'
+	label='Password'
+	type='password'
+	autoComplete='current-password'
+	maxLength={64}
+/>
+```
+
+Both kits accept every prop this page names per field — `placeholder`, `type`, `rows`, `min`, `max`, `step` — so an example written for one compiles under the other. Each kit exports the type of what its fields take as `<Field>KitProps` (`TextFieldKitProps`, `SliderFieldKitProps`, …), for an app that wraps a field.
+
+What the binding computes for the control — `value`, `onChange`, `onBlur`, `id`, `name`, `errors`, the `data-field` attributes — cannot be passed: it is a compile error, and if it arrives anyway the binding's value wins. A kit you [write yourself](/docs/form/custom-kit#kit-props) gets the same treatment: whatever its components declare is what `form.<Field>` accepts.
+
 ## `form.TextField`
 
 Single-line text. Accepts `placeholder` and `type`.
 
 ```tsx
-import { TextInputType } from '@ez-kit/form-shadcn'
-;<form.TextField
+<form.TextField
 	name='email'
 	label='Email'
 	placeholder='you@example.com'
-	type={TextInputType.Email}
+	type='email'
 />
 ```
 
-`type` is the `TextInputType` enum — `Text`, `Email`, `Password`, `Tel`, `Url`, `Search` — rather than a bare string, so a typo cannot slip through.
+`type` is the input's own attribute, a plain string — like `autoComplete` or `inputMode`, it is a [kit prop](#kit-props) that both kits put on the `<input>`.
 
 ## `form.NumberField`
 

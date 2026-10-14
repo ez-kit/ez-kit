@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-import { defineFormSchema, FormFieldType, SchemaForm, TextInputType } from 'shared/form/FormKit'
+import { defineFormSchema, FormFieldType, SchemaForm } from 'shared/form/FormKit'
 
 import type { DateRangeValue } from '@ez-kit/form-react'
 
@@ -61,7 +61,7 @@ const schema = defineFormSchema<Registration>()({
 					name: 'email',
 					label: 'Email',
 					placeholder: 'you@example.com',
-					inputType: TextInputType.Email,
+					inputType: 'email',
 					defaultValue: '',
 					required: true,
 					validate: { required: true, format: 'email', messages: { format: 'Enter a valid email address' } },
