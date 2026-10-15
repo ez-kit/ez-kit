@@ -57,7 +57,7 @@ export function NoResultsRow({ children }: DataGridNoResultsRowProps = {}) {
 					data-slot='no-results-cell'
 					colSpan={columnCount}
 				>
-					{content}
+					<div data-slot='fallback-content'>{content}</div>
 				</Td>
 			</Tr>
 		</Tbody>

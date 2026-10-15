@@ -377,6 +377,38 @@ describe('mapColumns — table-level operators switch', () => {
 	})
 })
 
+describe('mapColumns — column filtering off', () => {
+	const registry = buildOperatorRegistry()
+	type PassFn = (row: unknown, columnId: string, filterValue: unknown) => boolean
+
+	// A seeded `columnFilters` slice must not filter a grid whose column filters are off, while
+	// global search — resolved from the table, not the column — keeps working.
+	it('gives every leaf a filterFn that keeps each row, operators or not', () => {
+		const result = mapColumns<Row>(
+			[{ accessorKey: 'name' }, { accessorKey: 'age', cell: { type: 'number' }, filtering: { operators: true } }],
+			registry,
+			{ columnFiltering: false },
+		)
+		for (const column of result) {
+			expect(column.filterFn).toBeTypeOf('function')
+			expect((column.filterFn as PassFn)({}, 'name', 'no row matches this')).toBe(true)
+		}
+	})
+
+	it('leaves group columns without a filterFn and reaches their leaves', () => {
+		const result = mapColumns<Row>([{ header: 'Group', columns: [{ accessorKey: 'name' }] }], registry, {
+			columnFiltering: false,
+		})
+		expect(result[0]?.filterFn).toBeUndefined()
+		expect(result[0]?.columns?.[0]?.filterFn).toBeTypeOf('function')
+	})
+
+	it('keeps the operator dispatcher while column filtering is on', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name' }], registry, { columnFiltering: true })
+		expect(result[0]?.filterFn).toBeUndefined()
+	})
+})
+
 describe('mapColumns — header/footer renderers', () => {
 	it('keeps a string header as-is', () => {
 		const result = mapColumns<Row>([{ accessorKey: 'name', header: 'Name' }])

@@ -900,6 +900,9 @@ export type InitialTableState<TFeatures extends TableFeatures> = Omit<
 	 * deep link *restores* the one the user picked. Write both and the seed wins — `createTable`
 	 * warns in development rather than leaving it to be noticed by a page that opens on a size
 	 * nobody asked for.
+	 *
+	 * With {@link TableConfig.pagination} off the seed is kept in state and slices nothing; it
+	 * takes effect once pagination is switched on.
 	 */
 	pagination?: Partial<PaginationState>
 	/**
@@ -1017,9 +1020,9 @@ export type TableConfig<TFeatures extends TableFeatures, TRow extends object> = 
 
 	/**
 	 * Sorting configuration. Falsy (`undefined` or `false`) fully disables sorting:
-	 * UI affordances are not rendered and `getSortedRowModel` is not attached,
-	 * regardless of per-column sorting config. Truthy (`true` or object) enables it
-	 * and per-column overrides apply.
+	 * UI affordances are not rendered and no column sorts — a registered `sortedRowModel` and a
+	 * seeded `initialState.sorting` included — regardless of per-column sorting config. Truthy
+	 * (`true` or object) enables it and per-column overrides apply.
 	 */
 	sorting?: boolean | SortingConfig
 	/** Server-supplied aggregates. See {@link AggregationConfig}. */
@@ -1028,6 +1031,9 @@ export type TableConfig<TFeatures extends TableFeatures, TRow extends object> = 
 	 * Column-level filtering configuration. Falsy fully disables column filters
 	 * (per-column inputs / operator popovers); truthy enables them. Independent
 	 * from {@link TableConfig.globalFiltering} — global search is configured separately.
+	 *
+	 * Off means no column filter applies, whatever the feature set registers: a seeded
+	 * `initialState.columnFilters` waits in state and takes effect once filtering is switched on.
 	 */
 	filtering?: boolean | FilteringConfig
 	/**
@@ -1040,6 +1046,12 @@ export type TableConfig<TFeatures extends TableFeatures, TRow extends object> = 
 	 * - `false` / omitted — disabled
 	 */
 	globalFiltering?: boolean | GlobalFilteringConfig<TFeatures>
+	/**
+	 * Pagination configuration. Falsy (`undefined` or `false`), or an object with
+	 * `enabled: false`, leaves the grid unpaged: every row is shown, whatever the feature set
+	 * registers — a `paginatedRowModel` in it slices only while the grid paginates client-side.
+	 * Truthy pages client-side, or by {@link PaginationConfig.mode} / `manual`.
+	 */
 	pagination?: boolean | PaginationConfig
 	selection?: boolean | SelectionConfig<TFeatures, TRow>
 	expanding?: boolean | ExpandingConfig<TFeatures, TRow>
@@ -1054,6 +1066,9 @@ export type TableConfig<TFeatures extends TableFeatures, TRow extends object> = 
 	 * {@link TableConfig.features}.
 	 *
 	 * Totalling a column is the separate per-column `aggregation` option, which needs neither.
+	 *
+	 * Off means no rows are grouped, whatever the feature set registers: a seeded
+	 * `initialState.grouping` waits in state and takes effect once grouping is switched on.
 	 */
 	grouping?: boolean | GroupingConfig<TFeatures, TRow>
 	/**

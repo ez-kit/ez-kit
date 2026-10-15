@@ -64,10 +64,15 @@ export function ariaExpandedAttrs(canExpand: boolean, isExpanded: boolean): { 'a
  * `aria-rowcount` / `aria-rowindex` exist for the case where it does not — paginated, virtualized
  * or infinitely scrolled — and ARIA is explicit that they are unnecessary when every row is
  * present. So a plain grid gets neither, and a reader counts the rows it can see.
+ *
+ * Read by mode first, never by `manualPagination` alone: the core sets that flag for every grid
+ * that does not page client-side — an unpaged one included — only to keep the rows from being
+ * sliced, so it means "server pages" only once pagination is known to be on.
  */
 export function hasPartialRowSet<TRow extends object = ErasedRow>(table: DataTable<GridFeatures, TRow>): boolean {
 	const infinite = table.grid.pagination.infinite
 	if (infinite !== undefined) return hasMoreToLoad(infinite)
+	if (!table.grid.pagination.enabled) return false
 	if (table.options.manualPagination === true) return true
 	const total = rowTotalOf(table)
 	return total !== undefined && total > table.getRowModel().rows.length
@@ -122,11 +127,14 @@ export function resolveAriaRowCount<TRow extends object = ErasedRow>(table: Data
  *
  * An infinite grid is read by its mode, not by `manualPagination`: the core sets that flag in
  * infinite mode only to stop the rows being sliced to one page, so it says nothing about a
- * server here. What it accumulated is the total exactly when nothing is left to load.
+ * server here. What it accumulated is the total exactly when nothing is left to load. An unpaged
+ * grid is read the same way, for the same reason: the flag is on there too, and the model it holds
+ * is the whole set.
  */
 export function hasTrustedRowTotal<TRow extends object = ErasedRow>(table: DataTable<GridFeatures, TRow>): boolean {
 	const infinite = table.grid.pagination.infinite
 	if (infinite !== undefined) return !hasMoreToLoad(infinite)
+	if (!table.grid.pagination.enabled) return true
 	return table.options.manualPagination !== true || table.options.rowCount !== undefined
 }
 

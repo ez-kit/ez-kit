@@ -16,8 +16,14 @@ import type { Page } from '@playwright/test'
 
 const EXAMPLE = 'fallbacks'
 
-/** `INITIAL_DATA` in `_data.ts`, under the example's `pageSize: 5`. */
+/** The example's six customers, under its `pageSize: 5`. */
 const DATA_ROWS = 5
+
+/** Wider than the visible area on purpose, so the grid scrolls sideways. */
+const SCROLLPORT = '[data-scrollport]'
+
+/** Px of slack for sub-pixel layout and the scrollbar's gutter. */
+const CENTRE_TOLERANCE = 4
 
 const LOADING_ROW = '[data-slot="tr"][data-loading-row="true"]'
 const EMPTY_CELL = '[data-slot="empty-state-cell"]'
@@ -74,6 +80,36 @@ test.describe('fallbacks', () => {
 		const cellWidth = await page.locator(EMPTY_CELL).evaluate((td) => td.getBoundingClientRect().width)
 		expect(Math.abs(cellWidth - table)).toBeLessThan(4)
 	})
+
+	// The fallback row spans every column, so on a grid wider than its scrollport a message centred
+	// in the row would sit off-screen. It is centred in what the reader can see instead, and stays
+	// there while they scroll.
+	for (const scrollTo of ['start', 'end'] as const) {
+		test(`the empty message is centred in the visible area, scrolled to the ${scrollTo}`, async ({ page }) => {
+			await mode(page, 'Empty data').click()
+			const scrollport = page.locator(SCROLLPORT)
+			await expect(page.locator(EMPTY_CELL)).toHaveCount(1)
+			await scrollport.evaluate((el, edge) => {
+				el.scrollLeft = edge === 'end' ? el.scrollWidth : 0
+			}, scrollTo)
+
+			const overflows = await scrollport.evaluate((el) => el.scrollWidth > el.clientWidth)
+			expect(overflows).toBe(true)
+			const message = page.locator(EMPTY_CELL).getByText('No data')
+			await expect(message).toBeInViewport()
+			const [messageBox, portBox] = await Promise.all([
+				message.boundingBox(),
+				scrollport.evaluate((el) => {
+					const rect = el.getBoundingClientRect()
+					return { x: rect.x + el.clientLeft, width: el.clientWidth }
+				}),
+			])
+			if (!messageBox) throw new Error('the empty message has no box')
+			const messageCentre = messageBox.x + messageBox.width / 2
+			const portCentre = portBox.x + portBox.width / 2
+			expect(Math.abs(messageCentre - portCentre)).toBeLessThan(CENTRE_TOLERANCE)
+		})
+	}
 
 	// The opposite state: there *is* data, a filter just matched none of it.
 	test('says there are no results when a filter matched nothing', async ({ grid, page }) => {

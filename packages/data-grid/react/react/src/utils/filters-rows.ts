@@ -9,9 +9,10 @@ import type { DataTable, GridFeatures } from '../types'
  * `features`, core writes no `getFilteredRowModel` option, and that probe reads `undefined` on
  * every grid — silently turning off every per-column filter control and the whole filter panel.
  *
- * The two options below are the same two predicates, and core still writes them (it writes them
- * only in the negative, `enableColumnFilters: false` / `enableGlobalFilter: false`, which is why
- * the comparison is `!== false` rather than a truth test — absent means on, TanStack's default).
+ * The two options below are the same two predicates, and core still writes them. It writes
+ * `enableColumnFilters` on every call, as a boolean, but `enableGlobalFilter` only in the negative,
+ * which is why the comparison is `!== false` rather than a truth test — absent means on, TanStack's
+ * default.
  */
 export function filtersRows<TRow extends object>(table: DataTable<GridFeatures, TRow>): boolean {
 	return table.options.enableColumnFilters !== false || table.options.enableGlobalFilter !== false
