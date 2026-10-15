@@ -89,6 +89,28 @@
 		@apply p-0;
 	}
 
+	/* A fallback cell spans every column, so on a grid wider than its scrollport anything centred
+	   in the cell sits off-screen. Its content box is held to the scrollport's width and stuck to
+	   its start edge instead, so a fallback is centred in what the reader can see. The cell drops
+	   its padding so that box spans exactly the visible area, must not clip (a clipping cell is
+	   the box a sticky child sticks to, not the scrollport), and must not centre the box itself
+	   (a kit that centres a spanning cell's content would push it off the start edge). */
+	& [data-slot='empty-state-cell'],
+	& [data-slot='no-results-cell'] {
+		@apply p-0 overflow-visible justify-start;
+	}
+	/* Only while a fallback is showing: `container-type` puts the scrollport under size
+	   containment, and a grid with rows has no use for it — the virtualized row-drag specs fail
+	   measurably more often with it on every scrollport. */
+	& [data-slot='table-scroll']:has([data-slot='fallback-content']) {
+		container-type: inline-size;
+	}
+	& [data-slot='fallback-content'] {
+		@apply sticky;
+		inset-inline-start: 0;
+		width: 100cqi;
+	}
+
 	& [data-slot='tbody'][data-virtualized='true'] {
 		@apply relative grid;
 	}

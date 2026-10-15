@@ -1,4 +1,10 @@
 import { createColumns, PaginationMode } from '@ez-kit/data-grid-core'
+import {
+	columnPinningFeature,
+	columnSizingFeature,
+	columnVisibilityFeature,
+	tableFeatures,
+} from '@ez-kit/data-grid-core/features'
 import { act, render } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
@@ -11,6 +17,8 @@ type Row = { id: number; name: string }
 
 const ROWS: Row[] = Array.from({ length: 12 }, (_, index) => ({ id: index + 1, name: `Row ${String(index + 1)}` }))
 const COLUMNS = createColumns<Row>([{ accessorKey: 'name', header: 'Name' }])
+/** The three structural features and nothing else — no `paginatedRowModel` to slice with. */
+const UNPAGED_FEATURES = tableFeatures({ columnVisibilityFeature, columnPinningFeature, columnSizingFeature })
 
 function renderGrid(config: Record<string, unknown> = {}) {
 	return render(
@@ -105,20 +113,39 @@ describe('aria-rowcount / aria-rowindex', () => {
 		expect(bodyRowsOf(container)[0]?.getAttribute('aria-rowindex')).toBe('7')
 	})
 
+	// An unpaged grid holds the whole set in the DOM, so ARIA says a reader may count what it sees.
+	// More rows than a page on purpose: with three, a grid sliced to its first page by a registered
+	// `paginatedRowModel` looked exactly like this one, which is how that regression went unseen.
 	it('writes neither when the DOM already holds every row', () => {
-		// Short enough to fit one page: the DOM holds the whole set, so ARIA says a reader may
-		// count what it sees.
+		const { container } = renderGrid()
+
+		expect(bodyRowsOf(container)).toHaveLength(12)
+		expect(tableOf(container)?.hasAttribute('aria-rowcount')).toBe(false)
+		expect(bodyRowsOf(container)[0]?.hasAttribute('aria-rowindex')).toBe(false)
+	})
+
+	it('writes neither for an unpaged grid whose set has no paginated row model', () => {
 		const { container } = render(
 			<DataGrid
-				features={TEST_FEATURES}
-				data={ROWS.slice(0, 3)}
+				features={UNPAGED_FEATURES}
+				data={ROWS}
 				columns={COLUMNS}
 				components={testComponents}
 			/>,
 		)
 
+		expect(bodyRowsOf(container)).toHaveLength(12)
+		expect(tableOf(container)?.hasAttribute('aria-rowcount')).toBe(false)
+	})
+
+	// The seed waits in state for pagination to be switched on; it must not offset a single index.
+	it('writes neither for an unpaged grid seeded with a page', () => {
+		const { container } = renderGrid({ initialState: { pagination: { pageIndex: 2 } } })
+
+		expect(bodyRowsOf(container)).toHaveLength(12)
 		expect(tableOf(container)?.hasAttribute('aria-rowcount')).toBe(false)
 		expect(bodyRowsOf(container)[0]?.hasAttribute('aria-rowindex')).toBe(false)
+		expect(container.querySelector('[role="status"]')?.textContent).toBe('12 rows')
 	})
 
 	it("reports ARIA's unknown sentinel for a manual grid given no total", () => {

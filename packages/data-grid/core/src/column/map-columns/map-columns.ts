@@ -106,7 +106,20 @@ export type MapColumnsOptions = {
 	 * `false` wins over any column that asks for them.
 	 */
 	tableOperators?: boolean
+	/**
+	 * Whether the table filters by column at all. `false` gives every leaf column
+	 * {@link KEEP_EVERY_ROW} as its filter function, replacing any operator dispatcher, so a
+	 * seeded `columnFilters` slice waits in state instead of filtering a grid that has no column
+	 * filter UI. Upstream applies the registered filtered row model to whatever state it holds,
+	 * and `enableColumnFilters: false` hides the affordances only. Its one switch,
+	 * `manualFiltering`, would take global search down too — and global search resolves its
+	 * function from the table, so it is untouched by this one.
+	 */
+	columnFiltering?: boolean
 }
+
+/** The filter function of a column whose table filters by no column: it keeps every row. */
+const KEEP_EVERY_ROW = (): boolean => true
 
 export function mapColumns<TRow extends object>(
 	defs: ColumnDef<TRow, AnyCellTypes>[],
@@ -373,6 +386,12 @@ function mapColumn<TRow extends object>(
 		meta.filtering = false
 	} else if (Object.keys(filteringMeta).length > 0) {
 		meta.filtering = filteringMeta
+	}
+
+	// Last, so it replaces the operator dispatcher above. Group columns hold no value of their
+	// own and are never filtered; their leaves get it through the recursion below.
+	if (options?.columnFiltering === false && columns === undefined) {
+		result.filterFn = KEEP_EVERY_ROW
 	}
 
 	// Nested columns (column groups)

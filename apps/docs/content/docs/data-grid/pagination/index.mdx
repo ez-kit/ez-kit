@@ -3,7 +3,7 @@ title: Pagination
 description: Paginate grid rows — client-side by default, with controlled state for server-side fetching.
 ---
 
-Pagination caps how many rows render at once. Client-side is the default and works out of the box; server-side pagination just means controlling the state and supplying the right slice of rows.
+Pagination caps how many rows render at once. It is off until `pagination` turns it on; client-side is then the default mode and works out of the box; server-side pagination just means controlling the state and supplying the right slice of rows.
 
 ## Usage
 
@@ -16,11 +16,14 @@ The "full" example below demonstrates pagination alongside sort and filter:
 	features={features}
 	data={data}
 	columns={columns}
-	initialState={{
-		pagination: { pageIndex: 0, pageSize: 10 },
-	}}
+	pagination={{ pageSize: 10 }}
 />
 ```
+
+Pagination is on only when `pagination` says so. Without it — or with `pagination: false` — the
+grid is unpaged and shows every row, even when the feature set registers `paginatedRowModel`. A
+seeded `initialState.pagination` does not switch it on: it waits in state until `pagination` does,
+and createTable warns about it in development.
 
 The footer and the page-size selector are also available as compound slots when you lay the grid
 out by hand — both read their config from the grid, so neither takes props:

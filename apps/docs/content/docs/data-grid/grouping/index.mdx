@@ -38,7 +38,10 @@ const features = tableFeatures({
 </DataGrid>
 ```
 
-`grouping.by` alone is enough to group; `<DataGrid.GroupByBar />` is what makes the level
+`grouping.by` alone is enough to group — and grouping has to be on for anything to group. A seeded
+`initialState.grouping` on a grid without `grouping` groups nothing, even with `groupedRowModel`
+registered: it waits in state until `grouping` is switched on, and createTable warns about it in
+development. `<DataGrid.GroupByBar />` is what makes the level
 removable again. A grouped column leaves the column list, so it has no header cell left to hang a
 menu on — without the bar this grid is grouped for good. [Grouping · Interactive](/docs/data-grid/grouping/interactive) has the rest of what the bar and the column menu do.
 
