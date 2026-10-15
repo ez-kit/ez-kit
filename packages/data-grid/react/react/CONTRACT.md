@@ -274,9 +274,16 @@ action-bar-draft-part    action-bar-action         action-bar-close
 action-bar-reset         action-bar-apply          count
 bottom-bar
 loading-body-cell        empty-state-cell          no-results-cell
-refetch-overlay          refetch-overlay-inner     load-more-row
-load-more-button         load-more-spinner         load-more-error
+fallback-content         refetch-overlay           refetch-overlay-inner
+load-more-row            load-more-button          load-more-spinner
+load-more-error
 ```
+
+`fallback-content` wraps whatever an `empty-state-cell` or `no-results-cell` shows. The
+structural stylesheet holds it to the scrollport's visible width and sticks it to the start
+edge, so on a grid that scrolls sideways the fallback stays centred in view rather than in the
+full-width cell. For that to work it resets the two cells' padding, clipping and content
+alignment — a kit should style the fallback inside `fallback-content`, not on those cells.
 
 Kits may add their own `data-slot`/`data-*` attributes inside their components; the
 react package only owns the structural ones above.
