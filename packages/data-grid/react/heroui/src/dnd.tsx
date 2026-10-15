@@ -4,7 +4,7 @@ import { Accessibility, AutoScroller, Cursor, Feedback, PreventSelection } from 
 import { DragDropProvider, KeyboardSensor, PointerSensor } from '@dnd-kit/react'
 import { useSortable } from '@dnd-kit/react/sortable'
 import { DragAxis, DragInput, DragSurface } from '@ez-kit/data-grid-react'
-import { useCallback, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 
 import type {
 	DndAdapter,
@@ -1184,6 +1184,35 @@ function DndProvider({ onDrop, canDrop, onDisplace, announcements, children }: D
 	)
 }
 
+/**
+ * A layout effect in the browser and a plain one on the server, where a layout effect only warns.
+ * Local rather than imported because this module imports nothing of the kit's own — see the top.
+ */
+const useIsomorphicLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
+
+/**
+ * An element the drag library may treat as a disabled item's activator, which nothing will ever see.
+ * One per item, created in an effect — there is no `document` on the server — rather than one per
+ * module: the plugin writes live state onto it and the sensors bind to it, and a node shared by every
+ * locked item of every grid would be module state for no gain.
+ *
+ * The accessibility plugin marks **every** registered draggable's activator — `handle ?? element` —
+ * with `role`, `tabindex`, `aria-roledescription`, `aria-describedby` and the live `aria-pressed` /
+ * `aria-grabbed` / `aria-disabled`, disabled ones included (`@dnd-kit/dom@0.1.21`, the Accessibility
+ * plugin's registry effect). A locked column renders no grip, so the activator was the row or the
+ * header cell itself: a `role="row"` with `aria-pressed` fails axe, and a plain `div` became a
+ * `button` and a tab stop for a gesture that cannot happen. Pointing the handle at a detached node
+ * moves all of that off the page while the item stays registered, so its index, its displacement
+ * and every drop rule are untouched. The sensors bind to the same node and so never fire, which is
+ * also correct for an item that cannot be picked up.
+ */
+function createInertHandle(): HTMLElement {
+	return document.createElement('span')
+}
+
+/** The handle ref a disabled item hands back: a grip given to it must not become an activator. */
+const NOOP_HANDLE_REF: SortableItemHandle['handleRef'] = () => {}
+
 function useSortableItem(spec: DragSpec): SortableItemHandle {
 	const key = toDragKey(spec)
 	const { ref, handleRef, isDragging } = useSortable({
@@ -1208,9 +1237,32 @@ function useSortableItem(spec: DragSpec): SortableItemHandle {
 		...(spec.disabled !== undefined ? { disabled: spec.disabled } : {}),
 	})
 
+	/*
+	 * Through the library's own `handleRef`, in a layout effect, rather than through `useSortable`'s
+	 * `handle` input. That input is applied by a layout effect of this component, which runs after a
+	 * child grip's ref has attached — so when an author unlocks a column at runtime, the input
+	 * changing back to `undefined` would overwrite the grip that just mounted. Done this way, locking
+	 * replaces whatever handle there was (the grip's ref has already detached by then), and unlocking
+	 * clears it in the cleanup, before the grip's own ref sets it.
+	 */
+	const isDisabled = spec.disabled === true
+	const inertHandleRef = useRef<HTMLElement | null>(null)
+	useIsomorphicLayoutEffect(() => {
+		if (!isDisabled) return undefined
+		inertHandleRef.current ??= createInertHandle()
+		handleRef(inertHandleRef.current)
+		/*
+		 * Unlocking hands the handle back: to the grip, whose ref attaches after this cleanup has run,
+		 * or, with no grip, to nothing — which makes the element its own activator again.
+		 */
+		return () => {
+			handleRef(null)
+		}
+	}, [isDisabled, handleRef])
+
 	// Mapped member by member rather than spread: the hook returns eight, the port declares three,
 	// and an upstream addition must not silently widen what this kit promises.
-	return { ref, handleRef, isDragging }
+	return { ref, handleRef: isDisabled ? NOOP_HANDLE_REF : handleRef, isDragging }
 }
 
 export const adapter: DndAdapter = {

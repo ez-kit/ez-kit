@@ -343,7 +343,7 @@
 		},
 		{
 			"path": "dist/visibility/index.js",
-			"limit": "1.15 kB",
+			"limit": "1.65 kB",
 			"ignore": [
 				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",

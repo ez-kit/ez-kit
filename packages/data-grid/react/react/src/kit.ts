@@ -23,6 +23,10 @@ export { useGridOptions } from './use-grid-options'
 export { useGridComponents } from './components-context'
 export { useDataGridState, useDataGridTable } from './data-grid/table-context'
 
+// A column panel built on a react-aria collection mounts this on the collection. It imports only the
+// dragging attribute's name, so a block calling it pays for no part of the drag stack.
+export { useColumnDragKeyboardGuard } from './data-grid/dnd/keyboard-guard'
+
 // Menu model — the kits' `Menu` and every block that contributes an item read these.
 // `isGridMenuIcon` sits here beside `GridMenuIcon` on purpose: both kits' `icons.tsx` imports the
 // pair, and leaving one of them off would have kept that file importing from the root, i.e. the

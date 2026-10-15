@@ -260,6 +260,11 @@
 		@apply relative z-[2] opacity-60;
 	}
 
+	/* A panel row is a react-aria grid row: it takes focus itself, and marks keyboard focus here. */
+	& [data-slot='column-visibility-item'][data-focus-visible] {
+		@apply ring-2 ring-focus;
+	}
+
 	& button[data-slot='row-drag-handle'],
 	& button[data-slot='column-drag-handle'] {
 		@apply size-6 min-w-6 p-0;

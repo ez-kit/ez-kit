@@ -138,6 +138,14 @@ const PACKAGES: readonly Package[] = [
 				imports: ['useGridMessages', 'PAGE_GAP', 'ActionBarVariant'],
 				pulls: ['@ez-kit/data-grid-core', '@ez-kit/data-grid-react'],
 			},
+			{
+				// The column panel's keyboard guard imports one attribute name and nothing else. It
+				// still lands beside code that reaches the headless layer, so the set matches the case
+				// above; what it must not bring — the compound and the drag stack — is asked of the
+				// bundle's text below, since an entry-point set cannot see either.
+				imports: ['useColumnDragKeyboardGuard'],
+				pulls: ['@ez-kit/data-grid-core', '@ez-kit/data-grid-react'],
+			},
 		],
 	},
 	/**
@@ -308,6 +316,20 @@ describe('@ez-kit/data-grid-heroui', () => {
 	 * surviving the shake. Note the marker is only unambiguous *here* — the kits' own
 	 * `./filtering` group authors that same literal.
 	 */
+	/**
+	 * The column panel's keyboard guard, asked of its text for the same reason: `./kit` reaches
+	 * `@ez-kit/data-grid-react` whatever it imports. `filter-panel` is the compound surviving, as
+	 * above, and the adapter-mismatch warning is written by the drag port's context and nothing
+	 * else, so its presence is the drag stack coming along with a hook that only reads an attribute.
+	 */
+	it('keeps the panel keyboard guard clear of the compound and of the drag stack', async () => {
+		const code = await bundledCodeOf(subpathEntryOf('data-grid/react/react', 'kit.js'), ['useColumnDragKeyboardGuard'])
+
+		expect(code).not.toContain('filter-panel')
+		expect(code).not.toContain('different drag-and-drop adapter')
+		expect(code).toContain('data-column-dragging')
+	})
+
 	it('does not reach the compound namespace through a component group', async () => {
 		const core = subpathEntryOf('data-grid/react/heroui', 'core/index.js')
 

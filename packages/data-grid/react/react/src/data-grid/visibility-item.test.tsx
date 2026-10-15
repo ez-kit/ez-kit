@@ -10,6 +10,7 @@ import { DataGrid } from './data-grid'
 
 import type { TestRow } from '../test-utils'
 import type { DndAdapter, DndDragOverEvent, DndDropEvent, DragSpec, SortableItemHandle } from './dnd'
+import type { DataGridVisibilityItemProps, VisibilityItemRenderProps } from './visibility-item'
 import type { ReactNode } from 'react'
 
 /**
@@ -21,8 +22,9 @@ import type { ReactNode } from 'react'
  * space — and the penalty for trying is total, silent failure of both. See `DragSurface`.
  *
  * Driven through `<DataGrid.VisibilityTrigger>`'s render function rather than through a kit's
- * `VisibilityMenu`, because the component under test is the one a kit mounts: this is exactly the
- * shape both kits' panels now have, minus their markup.
+ * `VisibilityMenu`, because the component under test is the one a kit mounts. The element form below
+ * is the shadcn panel's shape and the render-function form at the end is the HeroUI panel's, both
+ * minus their markup.
  */
 
 /** The same drivable double the other two drag suites use, with the surface exposed for filtering. */
@@ -31,6 +33,7 @@ function makeDrivableAdapter(draggingId?: string) {
 	const drops: ((event: DndDropEvent) => void)[] = []
 	const guards: ((event: DndDragOverEvent) => boolean)[] = []
 	const nodes = new Map<string, HTMLElement | null>()
+	const handles = new Map<string, HTMLElement | null>()
 
 	const adapter: DndAdapter = {
 		Provider: ({ onDrop, canDrop, children }) => {
@@ -44,7 +47,9 @@ function makeDrivableAdapter(draggingId?: string) {
 				ref: (node) => {
 					nodes.set(`${spec.surface}:${spec.id}`, node)
 				},
-				handleRef: () => {},
+				handleRef: (node) => {
+					handles.set(`${spec.surface}:${spec.id}`, node)
+				},
 				isDragging: spec.id === draggingId,
 			}
 		},
@@ -68,6 +73,7 @@ function makeDrivableAdapter(draggingId?: string) {
 		adapter,
 		specs,
 		nodes,
+		handles,
 		latestOn,
 		fireDrop: (event: DndDropEvent) => {
 			for (const onDrop of drops) onDrop(event)
@@ -414,5 +420,162 @@ describe('canDrop per surface', () => {
 		renderPanelGrid(adapter)
 
 		expect(askCanDrop({ axis: 'column', surface: 'panel', sourceId: 'name', targetId: 'name' })).toBe(true)
+	})
+})
+
+/**
+ * The render-function form, for a kit whose panel is a collection that renders the row element
+ * itself (react-aria's `GridList`). The component renders nothing of its own here: the kit spreads
+ * `itemProps` onto its row and `handleProps` onto its grip, and every decision behind them — the
+ * index, the participation rule, the lock — is still taken on this side.
+ */
+describe('the render-function form', () => {
+	/** Each column's latest render props, keyed by id, plus the panel as a kit would render it. */
+	function functionPanel() {
+		const seen = new Map<string, VisibilityItemRenderProps>()
+		const element = (
+			<DataGrid.VisibilityTrigger>
+				{({ columns }) => (
+					<div data-testid='list'>
+						{columns.map((col) => (
+							<DataGrid.VisibilityItem
+								key={col.id}
+								columnId={col.id}
+							>
+								{(props) => {
+									seen.set(col.id, props)
+									return (
+										<div {...props.itemProps}>
+											{props.handleProps && (
+												<button
+													ref={props.handleProps.ref}
+													data-testid={`grip-${col.id}`}
+													type='button'
+												/>
+											)}
+											<span>{col.label}</span>
+										</div>
+									)
+								}}
+							</DataGrid.VisibilityItem>
+						))}
+					</div>
+				)}
+			</DataGrid.VisibilityTrigger>
+		)
+		return { seen, element }
+	}
+
+	it('renders no element of its own: each row is the kit element, directly in the kit list', () => {
+		const { adapter } = makeDrivableAdapter()
+		const { element } = functionPanel()
+		const { container, getByTestId } = renderPanelGrid(adapter, {}, element)
+
+		const rows = container.querySelectorAll('[data-slot="column-visibility-item"]')
+		expect(rows).toHaveLength(PANEL_COLUMNS.length)
+		for (const row of rows) {
+			expect(row.parentElement).toBe(getByTestId('list'))
+			// The kit's own content sits directly in the row, so the row is the kit's element.
+			expect(row.firstElementChild?.tagName).toMatch(/^(BUTTON|SPAN)$/)
+		}
+		expect([...rows].map((row) => row.getAttribute('data-column-id'))).toEqual(['name', 'age', 'email', 'city'])
+	})
+
+	it('lands the sortable ref on the kit element and the handle ref on the kit grip', () => {
+		const { adapter, nodes, handles } = makeDrivableAdapter()
+		const { element } = functionPanel()
+		const { container, getByTestId } = renderPanelGrid(adapter, {}, element)
+
+		expect(nodes.get('panel:name')).toBe(
+			container.querySelector('[data-slot="column-visibility-item"][data-column-id="name"]'),
+		)
+		expect(handles.get('panel:name')).toBe(getByTestId('grip-name'))
+	})
+
+	it('registers the same index space as the element form', () => {
+		const elementForm = makeDrivableAdapter()
+		renderPanelGrid(elementForm.adapter, { initialState: { columnVisibility: { age: false } } })
+		const functionForm = makeDrivableAdapter()
+		renderPanelGrid(
+			functionForm.adapter,
+			{ initialState: { columnVisibility: { age: false } } },
+			functionPanel().element,
+		)
+
+		const project = (specs: DragSpec[]) => specs.map(({ id, index, disabled }) => [id, index, disabled])
+		expect(project(functionForm.latestOn('panel'))).toEqual(project(elementForm.latestOn('panel')))
+	})
+
+	it('hands a handle to every movable row and none to a locked one', () => {
+		const { adapter } = makeDrivableAdapter()
+		const { seen, element } = functionPanel()
+		renderPanelGrid(adapter, {}, element)
+
+		expect(seen.get('name')?.handleProps).not.toBeNull()
+		expect(seen.get('city')?.handleProps).toBeNull()
+	})
+
+	it('hands no handle with no adapter bound', () => {
+		const { seen, element } = functionPanel()
+		renderPanelGrid(undefined, {}, element)
+
+		expect([...seen.values()].map((props) => props.handleProps)).toEqual([null, null, null, null])
+	})
+
+	it('hands no handle when the panel drag is switched off, and registers nothing', () => {
+		const { adapter, latestOn } = makeDrivableAdapter()
+		const { seen, element } = functionPanel()
+		renderPanelGrid(adapter, { ordering: { column: { visibilityMenu: { drag: false } } } }, element)
+
+		expect([...seen.values()].map((props) => props.handleProps)).toEqual([null, null, null, null])
+		expect(latestOn('panel')).toHaveLength(0)
+	})
+
+	it('hands no handle outside a grid, and still names the slot and the column', () => {
+		let props: VisibilityItemRenderProps | undefined
+		const { container } = render(
+			<DataGrid.VisibilityItem columnId='name'>
+				{(received) => {
+					props = received
+					return <div {...received.itemProps} />
+				}}
+			</DataGrid.VisibilityItem>,
+		)
+
+		expect(props?.handleProps).toBeNull()
+		expect(props?.isDragging).toBe(false)
+		expect(container.querySelector('[data-slot="column-visibility-item"][data-column-id="name"]')).not.toBeNull()
+	})
+
+	it('reports the drag on the row being dragged, and on no other', () => {
+		const { adapter } = makeDrivableAdapter('email')
+		const { seen, element } = functionPanel()
+		const { container } = renderPanelGrid(adapter, {}, element)
+
+		expect(seen.get('email')?.isDragging).toBe(true)
+		expect(seen.get('name')?.isDragging).toBe(false)
+		const dragging = container.querySelectorAll('[data-column-dragging="true"]')
+		expect(dragging).toHaveLength(1)
+		expect(dragging[0]?.getAttribute('data-column-id')).toBe('email')
+	})
+
+	it('does not report a locked row as dragging, whatever the adapter says', () => {
+		const { adapter } = makeDrivableAdapter('city')
+		const { seen, element } = functionPanel()
+		const { container } = renderPanelGrid(adapter, {}, element)
+
+		expect(seen.get('city')?.isDragging).toBe(false)
+		expect(container.querySelector('[data-column-dragging]')).toBeNull()
+	})
+
+	it('refuses a class beside a render function, since the kit element carries its own', () => {
+		// @ts-expect-error -- `className` belongs to the element form only.
+		const props: DataGridVisibilityItemProps = {
+			columnId: 'name',
+			className: 'row',
+			children: () => null,
+		}
+
+		expect(typeof props.children).toBe('function')
 	})
 })

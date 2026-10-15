@@ -159,6 +159,9 @@ export type {
 // no-op as `dnd` would report DnD as *on* and render a handle behind every inert item — the exact
 // affordance-that-does-nothing the gate exists to prevent. Switching drag off is `dnd: undefined`.
 export { DndAdapterProvider, useDndEnabled, useSortableItem } from './data-grid/dnd'
+// For a kit whose column panel is a react-aria collection: keeps the collection's own keys out of
+// a keyboard drag. Its own module, importing no part of the drag stack — see its docblock.
+export { useColumnDragKeyboardGuard } from './data-grid/dnd/keyboard-guard'
 // What a kit or an application needs to write a drag handle of its own, in place of
 // `<DataGrid.RowDragHandle />` / `<DataGrid.ColumnDragHandle />`: each axis publishes its
 // activator ref here. The row's read takes an id because a cell renderer sits outside the row's
@@ -293,7 +296,11 @@ export type {
 	DataGridVisibilityTriggerProps,
 	DataGridVisibilityTriggerRenderArgs,
 } from './data-grid/visibility-trigger'
-export type { DataGridVisibilityItemProps } from './data-grid/visibility-item'
+export type {
+	DataGridVisibilityItemProps,
+	VisibilityItemElementProps,
+	VisibilityItemRenderProps,
+} from './data-grid/visibility-item'
 export type {
 	DataGridFilterPanelColumn,
 	DataGridFilterPanelProps,

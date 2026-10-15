@@ -46,6 +46,31 @@ A kit rendering its own panel composes each row from `<DataGrid.VisibilityItem>`
 listed column, all of them: filtering the list — a search box over a long panel — stops panel
 dragging with no error. Filter what a row renders, not which rows exist.
 
+### A panel that is a collection
+
+A collection such as react-aria's `GridList` renders each row element itself, so a row cannot be
+wrapped. Pass `<DataGrid.VisibilityItem>` a function instead: it renders nothing and hands back
+`itemProps` for the row and `handleProps` for the grip, which is `null` whenever the row cannot be
+dragged. Put `useColumnDragKeyboardGuard()` on the collection: a keyboard drag uses the arrows and
+`Space`, which the collection would otherwise also act on.
+
+```tsx
+const guardRef = useColumnDragKeyboardGuard()
+
+<GridList ref={guardRef} items={columns} aria-label='Columns'>
+	{(col) => (
+		<DataGrid.VisibilityItem columnId={col.id}>
+			{({ itemProps, handleProps }) => (
+				<GridListItem {...itemProps} id={col.id} textValue={col.label}>
+					{handleProps && <Button ref={handleProps.ref} aria-label={`Reorder ${col.label}`}>⠿</Button>}
+					{col.label}
+				</GridListItem>
+			)}
+		</DataGrid.VisibilityItem>
+	)}
+</GridList>
+```
+
 ## A header you compose
 
 Compose `<DataGrid.HeaderCell>` and the grip is yours to place: its render function hands back

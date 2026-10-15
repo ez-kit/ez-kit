@@ -5,11 +5,43 @@ import { getVisibilityPanelColumns } from '../utils/visibility-panel-columns'
 
 import { ColumnDragContext, type ColumnDragValue } from './column-drag'
 import { DragAxis, DragSurface, useDndEnabled, useSortableItem } from './dnd'
+import { COLUMN_DRAGGING_ATTR } from './dnd/dragging-attrs'
 import { useDataGridTable, useOptionalDataGridTable } from './table-context'
 
 import type { ReactNode } from 'react'
 
-export type DataGridVisibilityItemProps = {
+/** A ref a kit can put on any element: a callback, so it is assignable to every element's ref. */
+type ElementRef = (node: HTMLElement | null) => void
+
+/**
+ * What the kit spreads onto **its own** row element in the render-function form.
+ *
+ * `ref` is present only when the row takes part in the drag; the slot and the column id are always
+ * there, so a stylesheet or a spec addressing `column-visibility-item` finds the row whichever form
+ * rendered it. `data-column-dragging` is present only while this row is being dragged.
+ */
+export type VisibilityItemElementProps = {
+	ref?: ElementRef
+	'data-slot': 'column-visibility-item'
+	'data-column-id': string
+	'data-column-dragging'?: 'true'
+}
+
+/** What the render-function form of `<DataGrid.VisibilityItem>` hands the kit. */
+export type VisibilityItemRenderProps = {
+	/** Spread onto the element the collection renders for this row — the element a drag moves. */
+	itemProps: VisibilityItemElementProps
+	/**
+	 * Spread onto the kit's grip, or `null` when this row cannot be dragged: no adapter, the panel's
+	 * drag switched off, a column whose place the author fixed, or no grid above. `null` is the whole
+	 * "is it draggable" answer — render no grip for it.
+	 */
+	handleProps: { ref: ElementRef } | null
+	/** Whether this row is the one being dragged right now. */
+	isDragging: boolean
+}
+
+type VisibilityItemBaseProps = {
 	/**
 	 * The leaf column this row of the panel stands for.
 	 *
@@ -25,23 +57,44 @@ export type DataGridVisibilityItemProps = {
 	 * filter the rows themselves while the drag is on.
 	 */
 	columnId: string
+}
+
+/** The element form: this component renders the row, and the kit fills it. */
+type VisibilityItemElementFormProps = VisibilityItemBaseProps & {
 	/** The kit's own class for the row. Passed through, never authored here. */
 	className?: string
 	children: ReactNode
 }
 
 /**
+ * The render-function form: the kit renders the row, and this component renders nothing at all.
+ *
+ * For a kit whose panel is a collection that renders the row element itself — react-aria's
+ * `GridList` above all — so a wrapper this component rendered would never sit around the row. The
+ * kit's element carries its own class, which is why `className` is refused here rather than ignored.
+ */
+type VisibilityItemFunctionFormProps = VisibilityItemBaseProps & {
+	className?: never
+	children: (props: VisibilityItemRenderProps) => ReactNode
+}
+
+export type DataGridVisibilityItemProps = VisibilityItemElementFormProps | VisibilityItemFunctionFormProps
+
+type VisibilityItemChildren = DataGridVisibilityItemProps['children']
+
+/**
  * One row of the column visibility panel: the element a panel drag moves.
  *
- * **A kit's `VisibilityMenu` renders this instead of its own wrapper element**, which is the only
+ * **A kit's `VisibilityMenu` renders this for each row instead of a wrapper of its own**, which is the only
  * way the drag can live in this package rather than in the kits. The panel's list is built by
  * `<DataGrid.VisibilityTrigger>` and *rendered* by the kit's DI component, so the element the
  * sortable's `ref` has to land on is one only the kit puts in the DOM — and a shared component the
  * kit mounts is the seam that keeps every decision (the index space, the participation rule, the
  * scope) on this side of it. The kit keeps its class and its contents.
  *
- * It renders a plain `div` and carries `data-slot='column-visibility-item'`, the slot both kits
- * authored before this and the one the browser specs address. A `data-*` attribute is not styling —
+ * In the element form it renders a plain `div` and carries `data-slot='column-visibility-item'`, the
+ * slot both kits authored before this and the one the browser specs address; the render-function
+ * form hands the same slot to the kit's own row. A `data-*` attribute is not styling —
  * see the rule AGENTS.md states for this package — and `className` is passed through exactly as
  * `column.headerClassName` is.
  *
@@ -60,6 +113,16 @@ export type DataGridVisibilityItemProps = {
  * (`visibilityMenu: { drag: false }`), renders {@link VisibilityItemBox} and registers nothing, so
  * it pays neither the list scan nor a sortable. A column the author locked (`ordering: false`)
  * *does* register, `disabled`, because leaving it out would put a gap in the index space.
+ *
+ * **Two forms, one set of decisions.** With JSX children this renders the row as a `div` and
+ * publishes `ColumnDragContext`, so `<DataGrid.ColumnDragHandle />` inside it finds its activator.
+ * With a function child it renders nothing and hands the kit {@link VisibilityItemRenderProps}
+ * instead: the kit spreads `itemProps` onto the row its collection renders and `handleProps` onto its
+ * grip. Both branches below serve both forms, so the index, the participation rule and the lock are
+ * never decided twice. The function form publishes no context, and not by oversight: a react-aria
+ * collection renders a row's content from the collection root rather than under the element that
+ * declared it, so a provider here may never reach the grip — `handleProps` is the activator handed
+ * over directly, which leaves the context nothing to do.
  */
 export function VisibilityItem({ columnId, className, children }: DataGridVisibilityItemProps) {
 	/*
@@ -85,7 +148,14 @@ export function VisibilityItem({ columnId, className, children }: DataGridVisibi
 			: -1
 
 	if (index < 0) {
-		return <VisibilityItemBox className={className}>{children}</VisibilityItemBox>
+		return (
+			<VisibilityItemBox
+				className={className}
+				columnId={columnId}
+			>
+				{children}
+			</VisibilityItemBox>
+		)
 	}
 
 	return (
@@ -100,7 +170,23 @@ export function VisibilityItem({ columnId, className, children }: DataGridVisibi
 }
 
 /** The row as it renders with no drag behind it — the markup both kits shipped before this phase. */
-function VisibilityItemBox({ className, children }: { className: string | undefined; children: ReactNode }) {
+function VisibilityItemBox({
+	columnId,
+	className,
+	children,
+}: {
+	columnId: string
+	className: string | undefined
+	children: VisibilityItemChildren
+}) {
+	if (typeof children === 'function') {
+		return children({
+			itemProps: { 'data-slot': 'column-visibility-item', 'data-column-id': columnId },
+			handleProps: null,
+			isDragging: false,
+		})
+	}
+
 	return (
 		<div
 			className={className}
@@ -129,7 +215,7 @@ function VisibilityItemDragShell({
 	columnId: string
 	index: number
 	className: string | undefined
-	children: ReactNode
+	children: VisibilityItemChildren
 }) {
 	const table = useDataGridTable()
 
@@ -166,6 +252,19 @@ function VisibilityItemDragShell({
 	const drag: ColumnDragValue | null = disabled
 		? null
 		: { handleRef: sortable.handleRef, isDragging: sortable.isDragging }
+
+	if (typeof children === 'function') {
+		return children({
+			itemProps: {
+				ref: sortable.ref,
+				'data-slot': 'column-visibility-item',
+				'data-column-id': columnId,
+				...(drag?.isDragging ? { [COLUMN_DRAGGING_ATTR]: 'true' as const } : {}),
+			},
+			handleProps: drag ? { ref: drag.handleRef } : null,
+			isDragging: drag?.isDragging ?? false,
+		})
+	}
 
 	return (
 		<div
