@@ -198,6 +198,11 @@ export type InputComponentProps<TConfig = unknown> = {
 	onChange: (value: unknown) => void
 	/** The column's `cell.config`, when it declared one. */
 	config?: TConfig
+	/**
+	 * The filter's visible hint — the column's `filtering.placeholder`, else its accessible name.
+	 * A hint only: an input that needs a name should not take it from here.
+	 */
+	placeholder?: string
 }
 
 // ── cell config types ─────────────────────────────────────────────────────
@@ -542,6 +547,19 @@ export type ColumnFilteringConfig<TNode = unknown, TConfig = unknown> = {
 	 */
 	debounce?: number
 	/**
+	 * A short hint the column's filter shows while it is empty — `'10 digits'`, `'e.g. Acme'`.
+	 *
+	 * A hint, not a name: the control's accessible name stays `messages.filtering.placeholder`
+	 * whatever this says, so a screen reader never announces "10 digits" as what the field is.
+	 * Without it the visible placeholder is that same name, as before.
+	 *
+	 * Shown by the text input, the multi-select trigger, a cell type's filter component that
+	 * renders `FieldState.placeholder` (both kits' text and number filters do) and a
+	 * `component`, which receives it as `placeholder`. The `between` range keeps its own
+	 * "From" / "To" and ignores it.
+	 */
+	placeholder?: string
+	/**
 	 * Explicit value list for multi-value (`in` / `notIn`) filters. Wins over both
 	 * `cell.config.items` (for `select` / `badge` cell types) and faceted values.
 	 *
@@ -580,6 +598,8 @@ export type ColumnFilteringMeta = {
 	component?: ColumnInputRenderer<InputComponentProps, unknown>
 	/** Commit debounce in ms, from `filtering.debounce`. */
 	debounce?: number
+	/** The filter's visible hint, from `filtering.placeholder`. Never its accessible name. */
+	placeholder?: string
 	/** Explicit multi-select value list, from `filtering.items`. */
 	items?: FilterItem[]
 	/**
@@ -598,6 +618,57 @@ export type ColumnFilteringMeta = {
 	 * its cell type declares, else the first of {@link ColumnFilteringMeta.operators}.
 	 */
 	defaultOperator?: FilterOperatorId
+}
+
+/**
+ * A field of the server query that the grid filters by without showing it as a column — a
+ * warehouse, "has orders", a manager's region. Declared once per table in `filtering.fields`.
+ *
+ * Written in the column's own vocabulary — `id`, `header`, `cell`, `filtering` — so a field and a
+ * column with the same `cell` and `filtering` offer exactly the same operators, editor, values and
+ * presets. What a field does **not** have is everything a column has because it holds data: no
+ * accessor, and no part in visibility, ordering, sizing, pinning or sorting.
+ *
+ * Its value lives in the same `columnFilters` slice as a column's, under the field's `id`, so it
+ * reaches `filtering.onChange`, the draft and a restored state beside the column filters. Fields
+ * are offered only under `filtering.manual: true`: the server is what filters by them.
+ */
+export type FilterFieldDef<TNode = unknown> = {
+	/**
+	 * The key the field's value is stored and sent under. Unique across the table — a column id,
+	 * a system column id or another field's id here is an error when the table is created.
+	 */
+	id: string
+	/** The label filter surfaces show for the field. A string: a field has no header cell to render. */
+	header: string
+	/**
+	 * The field's value type, as on a column — the scalar `'select'` or `{ type, config }`. It picks
+	 * the default operators and the editor, and `config.items` of a `select` / `badge` type are the
+	 * values a select offers. Default: `'text'`.
+	 */
+	cell?: string | { type: string; config?: unknown }
+	/**
+	 * The field's filter, as on a column. `faceted` is absent: facets are counted over the rows'
+	 * values, and a field has none, so `items` come from `filtering.items` or `cell.config.items`.
+	 */
+	filtering?: Omit<ColumnFilteringConfig<TNode>, 'faceted'>
+}
+
+/**
+ * A {@link FilterFieldDef} as `createTable` resolved it — what the React layer reads off
+ * `table.grid` to build the field's filter.
+ *
+ * The same pieces a column carries on its meta, under the same names: `cell` is the
+ * {@link ColumnCellMeta} and `filtering` the {@link ColumnFilteringMeta}, resolved by the very rule
+ * columns are resolved by.
+ */
+export type ResolvedFilterField = {
+	id: string
+	/** The field's `header`. */
+	label: string
+	cell: ColumnCellMeta
+	/** The resolved filter, `undefined` when the field configured nothing. Never faceted. */
+	filtering: ColumnFilteringMeta | undefined
 }
 
 export type ColumnEditingConfig<TNode = unknown, TValue = unknown, TConfig = unknown> = {

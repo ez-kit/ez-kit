@@ -41,7 +41,13 @@ describe('resolveMessages', () => {
 			filtering: { placeholder: ({ columnId }) => `Фильтр по ${columnId}` },
 		})
 
-		expect(messages.filtering.placeholder({ columnId: 'email' })).toBe('Фильтр по email')
+		expect(messages.filtering.placeholder({ columnId: 'email', label: 'Email' })).toBe('Фильтр по email')
+	})
+
+	it('names a column filter by its label, not its id, by default', () => {
+		const messages = resolveMessages()
+
+		expect(messages.filtering.placeholder({ columnId: 'firstName', label: 'First name' })).toBe('Filter First name…')
 	})
 
 	it('does not mutate the default dictionary', () => {

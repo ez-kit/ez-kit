@@ -3,7 +3,7 @@ import { BASE_CELL_TYPE_IDS, FilterOperator, localizeDatePresets, localizeOperat
 import { presetsForOperator } from './date-presets'
 
 import type { CellTypeRegistry } from '../cell-types-context'
-import type { GridFeatures } from '../types'
+import type { FilterTarget, FilterTargetMeta } from './filter-target'
 import type {
 	BadgeItem,
 	BetweenOperatorConfig,
@@ -12,12 +12,10 @@ import type {
 	FilterItem,
 	FilterOperatorDef,
 	FilterOperatorId,
-	FormColumnMeta,
 	GridMessages,
 	SelectItem,
 	StructuredFilterValue,
 } from '@ez-kit/data-grid-core'
-import type { Column } from '@tanstack/table-core'
 
 /**
  * Which value editor a column's filter calls for under a given operator.
@@ -36,11 +34,11 @@ export const FilterEditor = {
 	Date: 'date',
 	/** A yes / no value. */
 	Boolean: 'boolean',
-	/** One of {@link ColumnFilterModel.items}. Select and badge cells under a one-value operator. */
+	/** One of {@link FilterModel.items}. Select and badge cells under a one-value operator. */
 	Select: 'select',
 	/** A {@link BetweenValue} range — the `between` operator. */
 	Between: 'between',
-	/** A set of {@link ColumnFilterModel.items} — the `in` / `notIn` operators. */
+	/** A set of {@link FilterModel.items} — the `in` / `notIn` operators. */
 	MultiSelect: 'multiSelect',
 	/** No value at all — an operator with `requiresInput: false` (`isEmpty`, `isNotEmpty`). */
 	None: 'none',
@@ -50,8 +48,8 @@ export const FilterEditor = {
 
 export type FilterEditor = (typeof FilterEditor)[keyof typeof FilterEditor]
 
-/** What {@link resolveColumnFilter} reads besides the column itself. */
-export type ColumnFilterModelContext = {
+/** What {@link resolveFilter} reads besides the target itself. */
+export type FilterModelContext = {
 	/** The grid's resolved dictionary — operator and preset labels come from it. */
 	messages: GridMessages
 	/** The table-level filter debounce, which a column's own `filtering.debounce` overrides. */
@@ -60,11 +58,12 @@ export type ColumnFilterModelContext = {
 	cellTypes: CellTypeRegistry
 }
 
-type ColumnFilterModelBase = {
-	columnId: string
-	/** The column's string header, falling back to its id. */
+type FilterModelBase = {
+	/** The filter's `columnFilters` key — the column id or the field id. */
+	id: string
+	/** The column's string header (falling back to its id), or the field's `header`. */
 	label: string
-	/** The column's cell type id, for project types {@link FilterEditor} cannot name. */
+	/** The cell type id, for project types {@link FilterEditor} cannot name. */
 	cellType: string | undefined
 	/** The editor the current operator calls for. */
 	editor: FilterEditor
@@ -73,7 +72,7 @@ type ColumnFilterModelBase = {
 	/**
 	 * The values a select or multi-select offers: `filtering.items`, else the select / badge cell's
 	 * `cell.config.items`, else the column's unique values when faceted. Counts ride along when the
-	 * column is faceted.
+	 * column is faceted. A field is never faceted.
 	 */
 	items: FilterItem[]
 	/** The column's date presets the current operator can take, labelled from the dictionary. */
@@ -82,18 +81,24 @@ type ColumnFilterModelBase = {
 	between: BetweenOperatorConfig | undefined
 	/** Commit debounce in ms — the column's `filtering.debounce`, else the table's. */
 	debounce: number
+	/**
+	 * The hint an empty control shows — the target's `filtering.placeholder`, else the filter's
+	 * name from `messages.filtering.placeholder`. A hint only: name the control by that message
+	 * (`Filter <label>…` by default), never by this, which an author may have set to "10 digits".
+	 */
+	placeholder: string
 	/** Human-readable current value, or the "Any" placeholder when unset. */
 	valueDisplay: string
 	hasValue: boolean
 }
 
-/** A column whose filter is an operator plus a value — what a filter panel edits as one entry. */
-export type OperatorColumnFilterModel = ColumnFilterModelBase & {
+/** A filter that is an operator plus a value — what a filter panel edits as one entry. */
+export type OperatorFilterModel = FilterModelBase & {
 	hasOperators: true
 	/** The column's operators, labelled from the grid's dictionary. */
 	operators: FilterOperatorDef[]
 	defaultOperator: FilterOperatorId | undefined
-	/** The current value's operator, else {@link OperatorColumnFilterModel.defaultOperator}. */
+	/** The current value's operator, else {@link OperatorFilterModel.defaultOperator}. */
 	operator: FilterOperatorId
 	/** The current filter, or `undefined` when the column is not filtered. */
 	value: StructuredFilterValue | undefined
@@ -103,14 +108,14 @@ export type OperatorColumnFilterModel = ColumnFilterModelBase & {
 	 * current value otherwise. Computes only — nothing is written.
 	 *
 	 * `from` switches a value other than the applied one — a panel's draft, which is ahead of
-	 * the grid until the user applies it. Defaults to {@link OperatorColumnFilterModel.value}.
+	 * the grid until the user applies it. Defaults to {@link OperatorFilterModel.value}.
 	 */
 	nextValueForOperator: (operator: FilterOperatorId, from?: StructuredFilterValue) => StructuredFilterValue
 	setValue: (next: StructuredFilterValue | undefined) => void
 }
 
-/** A column filtered by a plain value, with no operator — its value is whatever its control writes. */
-export type PlainColumnFilterModel = ColumnFilterModelBase & {
+/** A filter by a plain value, with no operator — its value is whatever its control writes. */
+export type PlainFilterModel = FilterModelBase & {
 	hasOperators: false
 	operators: []
 	defaultOperator: undefined
@@ -120,11 +125,11 @@ export type PlainColumnFilterModel = ColumnFilterModelBase & {
 }
 
 /**
- * Everything a filter control needs to know about one column, resolved the way the grid's own
- * controls resolve it. Data and callbacks only — no element — so a kit's own filter component can
- * be driven from it.
+ * Everything a filter control needs to know about one filter target — a column or a field —
+ * resolved the way the grid's own controls resolve it. Data and callbacks only — no element — so a
+ * kit's own filter component can be driven from it.
  */
-export type ColumnFilterModel = OperatorColumnFilterModel | PlainColumnFilterModel
+export type FilterModel = OperatorFilterModel | PlainFilterModel
 
 const MAX_INLINE_VALUES = 2
 
@@ -146,40 +151,22 @@ const EDITOR_BY_CELL_TYPE: Partial<Record<string, FilterEditor>> = {
 const BUILT_IN_CELL_TYPES: ReadonlySet<string> = new Set(BASE_CELL_TYPE_IDS)
 
 /**
- * The column's resolved `filtering` meta, or `undefined` when it has none or turned it off.
- *
- * `ColumnMeta` is declared `in out` upstream, so no concrete instantiation is assignable to any
- * other and the cast is forced by the variance annotation rather than chosen.
- */
-export function filteringMetaOf<TRow extends object>(column: Column<GridFeatures, TRow>) {
-	const meta = column.columnDef.meta as FormColumnMeta | undefined
-	return { meta, filteringMeta: meta?.filtering === false ? undefined : meta?.filtering }
-}
-
-/** The column's string header, falling back to its id. */
-export function columnLabel<TRow extends object>(column: Column<GridFeatures, TRow>): string {
-	const header = column.columnDef.header
-	return typeof header === 'string' ? header : column.id
-}
-
-/**
  * Resolves the option list for select and multi-value filters.
  *
  * Priority:
- * 1. `column.filtering.items` (explicit, wins over both other sources).
+ * 1. `filtering.items` (explicit, wins over both other sources).
  * 2. `cell.config.items` for `select` / `badge` cell types.
- * 3. `column.getFacetedUniqueValues()` when faceted is enabled and no explicit items.
+ * 3. The column's faceted unique values when faceted is enabled and no explicit items — never
+ *    for a field, which has no rows of its own.
  *
- * Counts from `getFacetedUniqueValues()` are always merged onto whichever option set
+ * Faceted counts are always merged onto whichever option set
  * is returned when faceted is enabled.
  */
-function resolveFilterItems<TRow extends object>(
-	column: Column<GridFeatures, TRow>,
-	meta: FormColumnMeta | undefined,
-): FilterItem[] {
-	const filteringMeta = meta?.filtering === false ? undefined : meta?.filtering
+function resolveFilterItems(target: FilterTarget): FilterItem[] {
+	const { meta } = target
+	const filteringMeta = meta.filtering
 	const facetedEnabled = filteringMeta?.faceted === true
-	const facetMap = facetedEnabled ? (column.getFacetedUniqueValues() as Map<unknown, number> | undefined) : undefined
+	const facetMap = facetedEnabled ? target.facetedValues?.() : undefined
 
 	const explicit = filteringMeta?.items
 	if (explicit && explicit.length > 0) {
@@ -191,7 +178,7 @@ function resolveFilterItems<TRow extends object>(
 			: explicit
 	}
 
-	if (meta?.cell?.type === 'select' || meta?.cell?.type === 'badge') {
+	if (meta.cell?.type === 'select' || meta.cell?.type === 'badge') {
 		const items = (meta.cell.config as { items?: (SelectItem | BadgeItem)[] } | undefined)?.items
 		if (items && items.length > 0) {
 			// `icon` rides along: one item states the glyph, and the cell and this list both draw it.
@@ -222,14 +209,13 @@ function resolveFilterItems<TRow extends object>(
 	return []
 }
 
-function resolveOptionLabel(rawValue: string, meta: FormColumnMeta | undefined): string {
-	const filteringMeta = meta?.filtering === false ? undefined : meta?.filtering
-	const explicit = filteringMeta?.items
+function resolveOptionLabel(rawValue: string, meta: FilterTargetMeta): string {
+	const explicit = meta.filtering?.items
 	if (explicit) {
 		const hit = explicit.find((o) => o.value === rawValue)
 		if (hit) return hit.label
 	}
-	if (meta?.cell?.type === 'select' || meta?.cell?.type === 'badge') {
+	if (meta.cell?.type === 'select' || meta.cell?.type === 'badge') {
 		const items = (meta.cell.config as { items?: (SelectItem | BadgeItem)[] } | undefined)?.items
 		const hit = items?.find((o) => o.value === rawValue)
 		if (hit) return hit.label
@@ -249,7 +235,7 @@ function formatBetweenValue(value: BetweenValue, anyLabel: string): ValueSummary
 	return { display: `≤ ${String(to)}`, hasValue: true }
 }
 
-function formatMultiValue(values: unknown[], meta: FormColumnMeta | undefined, anyLabel: string): ValueSummary {
+function formatMultiValue(values: unknown[], meta: FilterTargetMeta, anyLabel: string): ValueSummary {
 	if (values.length === 0) return { display: anyLabel, hasValue: false }
 	const labels = values.map((v) => resolveOptionLabel(String(v), meta))
 	if (labels.length <= MAX_INLINE_VALUES) return { display: labels.join(', '), hasValue: true }
@@ -259,7 +245,7 @@ function formatMultiValue(values: unknown[], meta: FormColumnMeta | undefined, a
 
 function formatFilterValue(
 	filterValue: unknown,
-	meta: FormColumnMeta | undefined,
+	meta: FilterTargetMeta,
 	anyLabel: string,
 	operators: FilterOperatorDef[],
 ): ValueSummary {
@@ -301,13 +287,9 @@ function formatFilterValue(
  * built-in cell type's kind. Kept in this order because it is the order the grid's own control
  * picks its renderer in.
  */
-function valueEditorOf(
-	meta: FormColumnMeta | undefined,
-	hasComponent: boolean,
-	cellTypes: CellTypeRegistry,
-): FilterEditor {
+function valueEditorOf(meta: FilterTargetMeta, hasComponent: boolean, cellTypes: CellTypeRegistry): FilterEditor {
 	if (hasComponent) return FilterEditor.Custom
-	const cellType = meta?.cell?.type
+	const cellType = meta.cell?.type
 	if (cellType === undefined) return FilterEditor.Text
 	if (!BUILT_IN_CELL_TYPES.has(cellType)) {
 		const definition = cellTypes[cellType]
@@ -362,34 +344,44 @@ function nextValueFor(
 }
 
 /**
- * Resolves one column's filter model: its operators in the grid's wording, the current operator
- * and value, the editor they call for, the values on offer, the presets, the debounce, the summary
- * and the setters.
+ * A filter's accessible name — `messages.filtering.placeholder` for this target. Also its visible
+ * placeholder while the target sets no `filtering.placeholder` hint of its own.
+ */
+export function filterName(target: FilterTarget, messages: GridMessages): string {
+	return messages.filtering.placeholder({ columnId: target.id, label: target.label })
+}
+
+/**
+ * Resolves one filter target's model — a column's or a field's: its operators in the grid's
+ * wording, the current operator and value, the editor they call for, the values on offer, the
+ * presets, the debounce, the summary and the setters.
  *
- * Pure apart from `setValue`, which writes through the column. The grid's own controls render from
+ * Pure apart from `setValue`, which writes through the target. The grid's own controls render from
  * this, which is what keeps a consumer-built panel and the header agreeing.
  */
-export function resolveColumnFilter<TRow extends object>(
-	column: Column<GridFeatures, TRow>,
-	{ messages, tableDebounce, cellTypes }: ColumnFilterModelContext,
-): ColumnFilterModel {
-	const { meta, filteringMeta } = filteringMetaOf(column)
-	const cellType = meta?.cell?.type
+export function resolveFilter(
+	target: FilterTarget,
+	{ messages, tableDebounce, cellTypes }: FilterModelContext,
+): FilterModel {
+	const { meta } = target
+	const filteringMeta = meta.filtering
+	const cellType = meta.cell?.type
 	const operators = filteringMeta?.operators
 		? localizeOperators(filteringMeta.operators, cellType, messages.operators)
 		: []
-	const rawValue = column.getFilterValue()
+	const rawValue = target.getValue()
 	const valueEditor = valueEditorOf(meta, filteringMeta?.component !== undefined, cellTypes)
 	const { display, hasValue } = formatFilterValue(rawValue, meta, messages.filtering.any, operators)
-	const items = resolveFilterItems(column, meta)
+	const items = resolveFilterItems(target)
 
 	const base = {
-		columnId: column.id,
-		label: columnLabel(column),
+		id: target.id,
+		label: target.label,
 		cellType,
 		items,
 		between: filteringMeta?.betweenOperator,
 		debounce: filteringMeta?.debounce ?? tableDebounce,
+		placeholder: filteringMeta?.placeholder ?? filterName(target, messages),
 		valueDisplay: display,
 		hasValue,
 	}
@@ -406,7 +398,7 @@ export function resolveColumnFilter<TRow extends object>(
 			editorFor: () => valueEditor,
 			presets: [],
 			setValue: (next: unknown) => {
-				column.setFilterValue(next)
+				target.setValue(next)
 			},
 		}
 	}
@@ -432,7 +424,7 @@ export function resolveColumnFilter<TRow extends object>(
 				? nextValueFor(next, operator, value?.value, operators)
 				: nextValueFor(next, from.operator, from.value, operators),
 		setValue: (next) => {
-			column.setFilterValue(next)
+			target.setValue(next)
 		},
 	}
 }

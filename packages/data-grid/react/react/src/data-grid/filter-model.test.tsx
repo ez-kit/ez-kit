@@ -6,16 +6,17 @@ import {
 	defaultMessages,
 	resolveMessages,
 } from '@ez-kit/data-grid-core'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { prepareDataGridTable } from '../prepare-table'
 import { TEST_FEATURES } from '../test-utils'
 
-import { FilterEditor, resolveColumnFilter } from './column-filter-model'
+import { FilterEditor, resolveFilter } from './filter-model'
+import { collectFilterTargets, columnFilterTarget } from './filter-target'
 
 import type { CellTypeRegistry } from '../cell-types-context'
 import type { GridFeatures } from '../types'
-import type { ColumnFilterModel, ColumnFilterModelContext } from './column-filter-model'
+import type { FilterModel, FilterModelContext } from './filter-model'
 import type { ColumnDef, GridMessages, StructuredFilterValue } from '@ez-kit/data-grid-core'
 import type { Column } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
@@ -106,7 +107,7 @@ const COLUMNS = createColumns<Row>([
 		accessorKey: 'age',
 		header: 'Age',
 		cell: { type: 'number' },
-		filtering: { operators: { betweenOperator: { min: 0, max: 100 } }, debounce: 1000 },
+		filtering: { operators: { betweenOperator: { min: 0, max: 100 } }, debounce: 1000, placeholder: 'Years' },
 	},
 	{
 		accessorKey: 'status',
@@ -153,21 +154,21 @@ function makeTable(config: Record<string, unknown> = {}, columns: unknown = COLU
 	)
 }
 
-function context(overrides: Partial<ColumnFilterModelContext> = {}): ColumnFilterModelContext {
+function context(overrides: Partial<FilterModelContext> = {}): FilterModelContext {
 	return { messages: resolveMessages(), tableDebounce: 250, cellTypes: CELL_TYPES, ...overrides }
 }
 
 function modelOf(
 	table: ReturnType<typeof makeTable>,
 	columnId: string,
-	ctx: ColumnFilterModelContext = context(),
-): ColumnFilterModel {
+	ctx: FilterModelContext = context(),
+): FilterModel {
 	const column = table.getColumn(columnId) as Column<GridFeatures, object> | undefined
 	if (!column) throw new Error(`no column ${columnId}`)
-	return resolveColumnFilter(column, ctx)
+	return resolveFilter(columnFilterTarget(column), ctx)
 }
 
-describe('resolveColumnFilter — operators', () => {
+describe('resolveFilter — operators', () => {
 	it('labels operators from the grid dictionary for the column cell type', () => {
 		const messages: GridMessages = resolveMessages({
 			operators: { date: { ...defaultMessages.operators.date, greaterThan: 'После' } },
@@ -185,7 +186,7 @@ describe('resolveColumnFilter — operators', () => {
 	})
 })
 
-describe('resolveColumnFilter — current operator and value', () => {
+describe('resolveFilter — current operator and value', () => {
 	it('falls back to the default operator when the column has no filter', () => {
 		const model = modelOf(makeTable(), 'status')
 
@@ -217,7 +218,7 @@ describe('resolveColumnFilter — current operator and value', () => {
 	})
 })
 
-describe('resolveColumnFilter — editor', () => {
+describe('resolveFilter — editor', () => {
 	it.each([
 		['name', FilterEditor.Text],
 		['age', FilterEditor.Number],
@@ -259,7 +260,7 @@ describe('resolveColumnFilter — editor', () => {
 	})
 })
 
-describe('resolveColumnFilter — items', () => {
+describe('resolveFilter — items', () => {
 	it('takes the options of a badge cell with their icons', () => {
 		expect(modelOf(makeTable(), 'priority').items).toEqual(PRIORITY_ITEMS)
 	})
@@ -274,7 +275,7 @@ describe('resolveColumnFilter — items', () => {
 	})
 })
 
-describe('resolveColumnFilter — presets', () => {
+describe('resolveFilter — presets', () => {
 	it('offers only range presets to between, localized', () => {
 		const messages = resolveMessages({
 			operators: { presets: { ...defaultMessages.operators.presets, last7: 'Последние 7 дней' } },
@@ -300,7 +301,7 @@ describe('resolveColumnFilter — presets', () => {
 	})
 })
 
-describe('resolveColumnFilter — debounce and between', () => {
+describe('resolveFilter — debounce and between', () => {
 	it('lets the column debounce win over the table one', () => {
 		expect(modelOf(makeTable(), 'age', context({ tableDebounce: 300 })).debounce).toBe(1000)
 	})
@@ -314,7 +315,17 @@ describe('resolveColumnFilter — debounce and between', () => {
 	})
 })
 
-describe('resolveColumnFilter — nextValueForOperator', () => {
+describe('resolveFilter — placeholder', () => {
+	it('hands over the column hint', () => {
+		expect(modelOf(makeTable(), 'age').placeholder).toBe('Years')
+	})
+
+	it('falls back to the filter name, built from the label', () => {
+		expect(modelOf(makeTable(), 'name').placeholder).toBe('Filter Name…')
+	})
+})
+
+describe('resolveFilter — nextValueForOperator', () => {
 	function withValue(columnId: string, value: StructuredFilterValue) {
 		const table = makeTable()
 		table.getColumn(columnId)?.setFilterValue(value)
@@ -363,7 +374,7 @@ describe('resolveColumnFilter — nextValueForOperator', () => {
 	})
 })
 
-describe('resolveColumnFilter — setValue and summary', () => {
+describe('resolveFilter — setValue and summary', () => {
 	it('writes and clears the column filter', () => {
 		const table = makeTable()
 		const model = modelOf(table, 'name')
@@ -391,5 +402,99 @@ describe('resolveColumnFilter — setValue and summary', () => {
 		for (const value of Object.values(model)) {
 			expect(value !== null && typeof value === 'object' && '$$typeof' in value).toBe(false)
 		}
+	})
+})
+
+describe('resolveFilter — fields', () => {
+	const ITEMS = [
+		{ value: 'msk', label: 'Moscow' },
+		{ value: 'spb', label: 'Saint Petersburg' },
+	]
+	const FIELDS = [
+		{
+			id: 'warehouse',
+			header: 'Warehouse',
+			cell: { type: 'select', config: { items: ITEMS } },
+			filtering: { operators: true },
+		},
+		{ id: 'region', header: 'Region', filtering: { operators: true } },
+	]
+
+	function fieldModel(table: ReturnType<typeof makeTable>, id: string): FilterModel {
+		const target = collectFilterTargets(table).find((t) => t.id === id)
+		if (!target) throw new Error(`no target ${id}`)
+		return resolveFilter(target, context())
+	}
+
+	it('gives a field the model of a column with the same cell and filtering', () => {
+		const table = makeTable({ filtering: { manual: true, faceted: true, fields: FIELDS } })
+		const model = fieldModel(table, 'warehouse')
+
+		expect(model.id).toBe('warehouse')
+		expect(model.label).toBe('Warehouse')
+		expect(model.hasOperators).toBe(true)
+		expect(model.operators.map((op) => op.id)).toContain('in')
+		expect(model.items).toEqual(ITEMS)
+	})
+
+	it('offers a field no faceted items, even under a table-wide `faceted: true`', () => {
+		const table = makeTable({ filtering: { manual: true, faceted: true, fields: FIELDS } })
+
+		expect(fieldModel(table, 'region').items).toEqual([])
+	})
+
+	it('writes and removes only the field entry', () => {
+		const onChange = vi.fn()
+		const table = makeTable({ filtering: { manual: true, onChange, fields: FIELDS } })
+		table.getColumn('name')?.setFilterValue({ operator: 'contains', value: 'a' })
+
+		fieldModel(table, 'warehouse').setValue({ operator: 'in', value: ['msk'] })
+		expect(table.atoms.columnFilters.get()).toEqual([
+			{ id: 'name', value: { operator: 'contains', value: 'a' } },
+			{ id: 'warehouse', value: { operator: 'in', value: ['msk'] } },
+		])
+		expect(onChange).toHaveBeenLastCalledWith([
+			{ id: 'name', value: { operator: 'contains', value: 'a' } },
+			{ id: 'warehouse', value: { operator: 'in', value: ['msk'] } },
+		])
+
+		fieldModel(table, 'warehouse').setValue(undefined)
+		expect(table.atoms.columnFilters.get()).toEqual([{ id: 'name', value: { operator: 'contains', value: 'a' } }])
+	})
+
+	it('reads a seeded field value', () => {
+		const seeded = { operator: 'equals', value: 'msk' }
+		const table = makeTable({
+			filtering: { manual: true, fields: FIELDS },
+			initialState: { columnFilters: [{ id: 'warehouse', value: seeded }] },
+		})
+		const model = fieldModel(table, 'warehouse')
+
+		expect(model.value).toEqual(seeded)
+		expect(model.hasValue).toBe(true)
+	})
+})
+
+describe('collectFilterTargets', () => {
+	it('lists filterable columns in order, then fields', () => {
+		const table = makeTable(
+			{
+				filtering: {
+					manual: true,
+					fields: [
+						{ id: 'warehouse', header: 'W' },
+						{ id: 'region', header: 'R' },
+					],
+				},
+			},
+			createColumns<Row>([
+				{ accessorKey: 'name', header: 'Name' },
+				{ accessorKey: 'status', header: 'Status' },
+			]),
+		)
+		const targets = collectFilterTargets(table)
+
+		expect(targets.map((t) => t.id)).toEqual(['name', 'status', 'warehouse', 'region'])
+		expect(targets.map((t) => t.source.kind)).toEqual(['column', 'column', 'field', 'field'])
 	})
 })

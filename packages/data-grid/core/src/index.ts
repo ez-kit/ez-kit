@@ -118,6 +118,8 @@ export type {
 	ColumnAggregationMeta,
 	ColumnCellMeta,
 	ColumnFilteringMeta,
+	FilterFieldDef,
+	ResolvedFilterField,
 	ColumnCreatingConfig,
 	ColumnDef,
 	ColumnEditingConfig,

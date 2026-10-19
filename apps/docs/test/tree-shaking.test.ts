@@ -92,7 +92,7 @@ const PACKAGES: readonly Package[] = [
 		shakeable: [],
 		cases: [
 			{ imports: ['DataGrid'], pulls: ['@ez-kit/data-grid-core', '@ez-kit/data-grid-react'] },
-			{ imports: ['useColumnFilters', 'FilterEditor'], pulls: ['@ez-kit/data-grid-core', '@ez-kit/data-grid-react'] },
+			{ imports: ['useFilters', 'FilterEditor'], pulls: ['@ez-kit/data-grid-core', '@ez-kit/data-grid-react'] },
 		],
 	},
 	{
@@ -396,7 +396,7 @@ describe('@ez-kit/data-grid-react', () => {
 	 * filter component reads the hook and must not pay for the chips it replaces.
 	 */
 	it('does not reach one through the filter-panel hook', async () => {
-		expect(await bundledCodeOf(ADAPTER_ENTRY, ['useColumnFilters'])).not.toContain(FILTER_PANEL_MARKER)
+		expect(await bundledCodeOf(ADAPTER_ENTRY, ['useFilters'])).not.toContain(FILTER_PANEL_MARKER)
 	})
 
 	/** And the bare root must stay bare — `<DataGrid>` as a host would hand the saving back. */

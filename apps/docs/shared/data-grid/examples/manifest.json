@@ -320,6 +320,14 @@
 		"exportName": "CustomFilterPanelExample"
 	},
 	{
+		"id": "filter-fields",
+		"label": "Filter fields",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/filter-fields.tsx",
+		"exportName": "FilterFieldsExample"
+	},
+	{
 		"id": "selection-bar",
 		"label": "Floating",
 		"group": "selection",

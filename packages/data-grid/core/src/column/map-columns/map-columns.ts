@@ -1,22 +1,15 @@
-import {
-	DATE_RANGE_PRESETS,
-	DATE_VALUE_PRESETS,
-	DEFAULT_OPERATOR_ID_BY_TYPE,
-	DEFAULT_OPERATORS_BY_TYPE,
-	createOperatorFilterFn,
-	resolveColumnOperators,
-} from '../../features/operators'
 import { setIfDefined } from '../../utils/set-if-defined'
 import { normalizeColumnAlign, normalizeColumnPinning, normalizeColumnWidth } from '../normalize'
 
-import type { ColumnOperatorsConfig, DatePreset, OperatorRegistry } from '../../features/operators'
+import { resolveFiltering } from './resolve-filtering'
+
+import type { OperatorRegistry } from '../../features/operators'
 import type {
 	CellViewCtx,
 	ColumnCellMeta,
 	ColumnCreatingConfig,
 	ColumnDef,
 	ColumnEditingConfig,
-	ColumnFilteringMeta,
 	ColumnWidthDef,
 	MappedColumnDef,
 } from '../types'
@@ -55,36 +48,6 @@ type ColumnMetaClassName = string | ((ctx: CellViewCtx<unknown, unknown>) => str
  */
 type ColumnMetaEditing = false | ColumnEditingConfig
 type ColumnMetaCreating<TRow> = false | ColumnCreatingConfig<TRow>
-
-const DATE_CELL_TYPE = 'date'
-
-/**
- * The column's `filtering.presets`, resolved to the list a control offers.
- *
- * Presets are dates, so they mean nothing on any other cell type. TypeScript cannot say that —
- * `presets` and `cell` are sibling fields of one column object, with no inference variable to
- * carry the type across (see the `ColumnInputRenderer` note in `column/types.ts`) — so the option
- * that landed on the wrong column is caught here, where the cell type is finally known.
- */
-function resolveDatePresets(
-	configured: boolean | DatePreset[] | undefined,
-	cellType: string | undefined,
-	columnId: string,
-): DatePreset[] | undefined {
-	if (configured === undefined || configured === false) return undefined
-	if (cellType !== DATE_CELL_TYPE) {
-		if (IS_DEV) {
-			console.warn(
-				`[data-grid] Column "${columnId}" sets \`filtering.presets\`, but its cell type is ` +
-					`"${cellType ?? 'text'}". Presets fill a date, so they only apply to ` +
-					`\`cell: { type: 'date' }\` columns and are ignored here.`,
-			)
-		}
-		return undefined
-	}
-	if (configured === true) return [...DATE_RANGE_PRESETS, ...DATE_VALUE_PRESETS]
-	return configured.length > 0 ? configured : undefined
-}
 
 /**
  * Converts our ColumnDef[] to TanStack ColumnDef[].
@@ -284,109 +247,17 @@ function mapColumn<TRow extends object>(
 		result.accessorFn = accessorFn
 	}
 
-	// Operator-aware filtering. Everything resolved here lands on `meta.filtering` under the
-	// name of the column option it came from — see `ColumnFilteringMeta`.
-	const filteringCfg = filtering !== undefined && filtering !== false ? filtering : undefined
-	const filteringMeta: ColumnFilteringMeta = {}
-	setIfDefined(filteringMeta, 'component', filteringCfg?.component)
-	setIfDefined(filteringMeta, 'debounce', filteringCfg?.debounce)
-	setIfDefined(filteringMeta, 'items', filteringCfg?.items)
-	const resolvedPresets = resolveDatePresets(filteringCfg?.presets, cellDef?.type, id ?? accessorKey ?? '?')
-	setIfDefined(filteringMeta, 'presets', resolvedPresets)
-	const colFaceted = filteringCfg?.faceted
-	const tableFaceted = options?.tableFaceted ?? false
-	const facetedEnabled = colFaceted === true || (colFaceted !== false && tableFaceted)
-	if (facetedEnabled) {
-		filteringMeta.faceted = true
-	}
-	// Same cascade as `faceted` above: the table states a default, the column overrides it in
-	// both directions. `operators: false` on the table is the stronger word — it means "no
-	// operator selectors in this grid", so a column asking for them does not get them.
-	const colOperators = filteringCfg?.operators
-	const tableOperators = options?.tableOperators
-	// A table-wide `true` reaches every column that can actually be filtered: not one that
-	// turned its filter off (`filtering: false`), and not a group header, which has no value
-	// of its own to compare.
-	const inheritsTableOperators = tableOperators === true && filtering !== false && columns === undefined
-	const operatorsEnabled =
-		tableOperators === false || colOperators === false ? false : colOperators !== undefined || inheritsTableOperators
-	if (operatorsEnabled && registry) {
-		const cellType = cellDef?.type
-		const columnId: string = id ?? accessorKey ?? '?'
-		const cellTypeOperators = DEFAULT_OPERATORS_BY_TYPE[cellType ?? 'text']
-		// A column inheriting the table's `true` offers its cell type's defaults — the same
-		// thing `operators: true` on the column itself means.
-		const operatorsConfig: true | ColumnOperatorsConfig = typeof colOperators === 'object' ? colOperators : true
-		const resolved = resolveColumnOperators(operatorsConfig, registry, cellTypeOperators, columnId)
-
-		if (resolved.length === 0) {
-			// `operators: true` on a cell type with no default set. Every built-in has one, so
-			// this can only be a project-registered type — which has to say which operators it
-			// offers, either through `defineCellType({ operators })` or per column.
-			//
-			// Only when the column asked: under a table-wide `operators: true` the author said
-			// "wherever they apply", and a custom cell type that declares none is a column
-			// where they do not — falling back to a plain input is the answer, not a warning
-			// per such column.
-			if (IS_DEV && colOperators !== undefined) {
-				console.warn(
-					`[data-grid] Column "${columnId}" enables \`filtering.operators\`, but cell type ` +
-						`"${cellType ?? 'text'}" declares no operators, so the column falls back to a plain ` +
-						`filter input. List them on the column (\`operators: { items: [...] }\`) or on the cell ` +
-						`type (\`defineCellType({ operators })\`).`,
-				)
-			}
-		} else {
-			result.filterFn = createOperatorFilterFn(resolved)
-			filteringMeta.operators = resolved
-
-			if (typeof operatorsConfig === 'object' && operatorsConfig.betweenOperator) {
-				const betweenConfig = operatorsConfig.betweenOperator
-
-				// A slider over an unknown domain can express nothing, so it needs a stated one. This
-				// used to be a silent `0..100`, which is an invention rather than the column's data.
-				if (
-					IS_DEV &&
-					betweenConfig.slider === true &&
-					(betweenConfig.min === undefined || betweenConfig.max === undefined)
-				) {
-					console.warn(
-						`[data-grid] Column "${columnId}" sets \`betweenOperator.slider: true\` without both ` +
-							`\`min\` and \`max\`. The filter falls back to two number fields.`,
-					)
-				}
-
-				filteringMeta.betweenOperator = betweenConfig
-			}
-
-			const defaultOpId =
-				filteringCfg?.defaultOperator ??
-				(cellType ? DEFAULT_OPERATOR_ID_BY_TYPE[cellType] : undefined) ??
-				resolved[0]?.id
-			if (defaultOpId) {
-				// An id the column does not actually offer selects nothing in the operator control
-				// and dispatches to no `filterFn` — the filter matches every row. Cheaper to catch
-				// here than in the browser.
-				if (IS_DEV && !resolved.some((op) => op.id === defaultOpId)) {
-					console.warn(
-						`[data-grid] Column "${columnId}" sets \`filtering.defaultOperator: "${defaultOpId}"\`, ` +
-							`which is not one of its operators (${resolved.map((op) => `"${op.id}"`).join(', ')}). ` +
-							`The filter would match every row.`,
-					)
-				}
-				filteringMeta.defaultOperator = defaultOpId
-			}
-		}
-	}
-
-	// `false` is a distinct value, not an empty config: it is what turns the column's filter
-	// control off, and readers test for it. An enabled column with nothing configured
-	// contributes no key at all, exactly as before.
-	if (filtering === false) {
-		meta.filtering = false
-	} else if (Object.keys(filteringMeta).length > 0) {
-		meta.filtering = filteringMeta
-	}
+	// Operator-aware filtering, resolved by the rule table-level filter fields share. Everything
+	// resolved lands on `meta.filtering` under the name of the column option it came from — see
+	// `ColumnFilteringMeta`.
+	const resolvedFiltering = resolveFiltering(id ?? accessorKey ?? '?', filtering, cellDef?.type, {
+		registry,
+		tableFaceted: options?.tableFaceted,
+		tableOperators: options?.tableOperators,
+		isGroup: columns !== undefined,
+	})
+	setIfDefined(meta, 'filtering', resolvedFiltering.meta)
+	setIfDefined(result, 'filterFn', resolvedFiltering.filterFn)
 
 	// Last, so it replaces the operator dispatcher above. Group columns hold no value of their
 	// own and are never filtered; their leaves get it through the recursion below.

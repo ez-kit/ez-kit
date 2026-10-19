@@ -329,7 +329,10 @@ export type GridMessages = {
 	filtering: {
 		/** Accessible name of a header's filter trigger. */
 		trigger: string
-		/** Placeholder of a column's text filter input. */
+		/**
+		 * A filter's accessible name, and its visible placeholder unless the column or field sets
+		 * its own `filtering.placeholder` hint.
+		 */
 		placeholder: (ctx: FilterPlaceholderContext) => string
 		/** Accessible name of the operator select. */
 		operator: string
@@ -584,8 +587,13 @@ export type DraftSummaryContext = {
 
 /** What {@link GridMessages.filtering.placeholder} is given. */
 export type FilterPlaceholderContext = {
-	/** The column's id — its `accessorKey` unless an explicit `id` was set. */
+	/** The column's id — its `accessorKey` unless an explicit `id` was set — or the field's `id`. */
 	columnId: string
+	/**
+	 * What a reader knows the filter by: the column's header when it is a string, else its id; a
+	 * field's `header`. The default dictionary names the filter with this, not with the id.
+	 */
+	label: string
 }
 
 /**

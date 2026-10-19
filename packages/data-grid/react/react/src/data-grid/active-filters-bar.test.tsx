@@ -1,7 +1,7 @@
 import { createTable, createColumns } from '@ez-kit/data-grid-core'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { GridComponentsProvider } from '../components-context'
 import { prepareDataGridTable } from '../prepare-table'
@@ -187,5 +187,64 @@ describe('<ActiveFiltersBar>', () => {
 		expect(container.querySelector('[data-slot="active-filters-bar"]')?.getAttribute('data-chip-position')).toBe(
 			'above',
 		)
+	})
+})
+
+describe('<ActiveFiltersBar> — fields', () => {
+	const fields = [{ id: 'warehouse', header: 'Warehouse', filtering: { operators: true } }]
+
+	it('renders a chip for a field filter, labelled with the field header', () => {
+		const table = makeTable({ filtering: { manual: true, fields } })
+		table.setColumnFilters([{ id: 'warehouse', value: { operator: 'contains', value: 'msk' } }])
+
+		render(
+			<Wrapper table={table}>
+				<ActiveFiltersBar />
+			</Wrapper>,
+		)
+
+		expect(screen.getByText('Warehouse')).toBeInTheDocument()
+		expect(screen.getByText('Contains msk')).toBeInTheDocument()
+	})
+
+	it('removing the chip of a field clears its entry and reports it', async () => {
+		const user = userEvent.setup()
+		const onChange = vi.fn()
+		const table = makeTable({ filtering: { manual: true, onChange, fields } })
+		table.setColumnFilters([
+			{ id: 'name', value: { operator: 'contains', value: 'ali' } },
+			{ id: 'warehouse', value: { operator: 'contains', value: 'msk' } },
+		])
+
+		render(
+			<Wrapper table={table}>
+				<ActiveFiltersBar />
+			</Wrapper>,
+		)
+		await user.click(screen.getByRole('button', { name: /remove warehouse filter/i }))
+
+		expect(table.store.state.columnFilters).toEqual([{ id: 'name', value: { operator: 'contains', value: 'ali' } }])
+		expect(onChange).toHaveBeenLastCalledWith([{ id: 'name', value: { operator: 'contains', value: 'ali' } }])
+	})
+})
+
+describe('<ActiveFiltersBar> — columns the filter surfaces do not offer', () => {
+	it('keeps the chip of a seeded filter on a column with `filtering: false`', () => {
+		const table = makeTable({
+			columns: createColumns<User>([
+				{ accessorKey: 'name', header: 'Name', filtering: false },
+				{ accessorKey: 'age', header: 'Age', cell: { type: 'number' } },
+			]),
+		})
+		table.setColumnFilters([{ id: 'name', value: 'ali' }])
+
+		render(
+			<Wrapper table={table}>
+				<ActiveFiltersBar />
+			</Wrapper>,
+		)
+
+		expect(screen.getByRole('button', { name: /remove name filter/i })).toBeInTheDocument()
+		expect(screen.getByText('ali')).toBeInTheDocument()
 	})
 })

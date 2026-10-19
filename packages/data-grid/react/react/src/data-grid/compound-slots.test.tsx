@@ -268,10 +268,10 @@ describe('compound render-prop slots', () => {
 		const { container } = renderWithComponents(
 			<DataGrid table={table}>
 				<DataGrid.FilterPanel>
-					{({ columns, hasActiveFilter }) => (
+					{({ filters, hasActiveFilter }) => (
 						<div data-active={String(hasActiveFilter)}>
-							{columns.map(({ column, label, input }) => (
-								<label key={column.id}>
+							{filters.map(({ id, label, input }) => (
+								<label key={id}>
 									{label}
 									{input}
 								</label>

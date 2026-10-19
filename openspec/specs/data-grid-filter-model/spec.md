@@ -153,6 +153,23 @@ debounce фильтрации уровня таблицы.
 - **WHEN** debounce таблицы равен 300, а колонка свой не задаёт
 - **THEN** `debounce` в модели равен 300
 
+### Requirement: Итоговая подсказка фильтра
+
+Модель фильтра MUST отдавать `placeholder`: `filtering.placeholder` цели, а если она не задана,
+имя фильтра из `messages.filtering.placeholder`. Это MUST быть то же значение, которое показывает
+встроенный фильтр этой цели.
+
+#### Scenario: Цель с подсказкой
+
+- **WHEN** колонка `inn` объявлена с `filtering: { placeholder: '10 цифр', operators: true }`
+- **THEN** модель её фильтра отдаёт `placeholder: '10 цифр'`
+
+#### Scenario: Цель без подсказки
+
+- **WHEN** колонка `email` с заголовком `Email` объявлена с `filtering: { operators: true }`, а
+  словарь дефолтный
+- **THEN** модель её фильтра отдаёт `placeholder: 'Filter Email…'`
+
 ### Requirement: Правила смены оператора
 
 `nextValueForOperator(operator)` MUST возвращать значение, которое встроенный фильтр записал бы

@@ -12,7 +12,7 @@ import type { CellTypeDefinition, FieldState, TextCellConfig } from '@ez-kit/dat
  * View rendering for `text` falls back to TanStack `flexRender` — no UI-kit
  * specific component is needed.
  */
-function TextCellInput({ id, value, onChange, onBlur, label, description, errors }: FieldState) {
+function TextCellInput({ id, value, onChange, onBlur, label, description, placeholder, errors }: FieldState) {
 	const hasError = errors.length > 0
 	return (
 		<TextField isInvalid={hasError}>
@@ -24,6 +24,7 @@ function TextCellInput({ id, value, onChange, onBlur, label, description, errors
 					onChange(e.target.value)
 				}}
 				onBlur={onBlur}
+				{...(placeholder === undefined ? {} : { placeholder })}
 			/>
 			{description !== undefined && <Description>{description}</Description>}
 			{hasError && <FieldError>{errors[0]}</FieldError>}

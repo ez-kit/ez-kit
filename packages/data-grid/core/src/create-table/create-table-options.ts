@@ -14,8 +14,9 @@ import { featureConfig, isFeatureEnabled } from '../utils/feature-flag'
 import { setIfDefined } from '../utils/set-if-defined'
 
 import { withGatedFilteredRowModel } from './gate-column-filters'
+import { resolveFilterFields } from './resolve-filter-fields'
 
-import type { ColumnDef, SystemColumnDef } from '../column/types'
+import type { ColumnDef, ResolvedFilterField, SystemColumnDef } from '../column/types'
 import type { ColumnInvariants } from '../column-state'
 import type { DraftApplyHandlers } from '../features/deferred-apply'
 import type { RowActionsConfig } from '../features/row-actions'
@@ -434,6 +435,11 @@ export type GridOptions<TRow extends object> = {
 	groupingMode?: GroupingModeValue
 	/** The grid's text direction, declared once at the root. */
 	direction: GridDirectionValue
+	/**
+	 * `filtering.fields`, checked and resolved by the rule columns are resolved by. Absent when the
+	 * table declares none, or when they are not offered because `filtering.manual` is not `true`.
+	 */
+	filterFields?: ResolvedFilterField[]
 }
 
 /**
@@ -1021,6 +1027,12 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 
 	const { start: pinnedStart, end: pinnedEnd } = extractPinningState(allColumns)
 
+	// After the system columns are in, so a field cannot take `__select__` or `__drag__` either.
+	const filterFields = resolveFilterFields(filteringCfg?.fields, allColumns, filteringCfg?.manual === true, {
+		registry: operatorRegistry,
+		tableOperators,
+	})
+
 	// ── build TanStack options ────────────────────────────────────────────────
 	const defaultPageSize = paginationCfg?.pageSize ?? DEFAULT_PAGE_SIZE
 
@@ -1470,6 +1482,7 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 		// on — unlike `columnResizeDirection`, which is an option of the resizing feature.
 		...(hasGrouping ? { groupingMode: groupingCfg?.mode ?? GroupingMode.Single } : {}),
 		direction: config.direction ?? GridDirection.Ltr,
+		...(filterFields.length > 0 ? { filterFields } : {}),
 	}
 
 	return { options, deferred, grid, bindStateHandlers }

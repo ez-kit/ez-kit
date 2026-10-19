@@ -9,12 +9,12 @@ import {
 	filterFns,
 	tableFeatures,
 } from '@ez-kit/data-grid-core/features'
-import { FilterEditor, createColumns, useColumnFilters } from '@ez-kit/data-grid-react'
+import { FilterEditor, createColumns, useFilters } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 
 import { DataGrid } from 'shared/DataGrid'
 
-import type { ColumnFilterModel, ColumnFiltersValue, OperatorColumnFilterModel } from '@ez-kit/data-grid-react'
+import type { FilterModel, FiltersValue, OperatorFilterModel } from '@ez-kit/data-grid-react'
 import type { CSSProperties, ReactNode } from 'react'
 
 const features = tableFeatures({
@@ -94,13 +94,13 @@ const INPUT_TYPE: Partial<Record<FilterEditor, string>> = {
 	[FilterEditor.Date]: 'date',
 }
 
-function parseInput(filter: ColumnFilterModel, raw: string): unknown {
+function parseInput(filter: FilterModel, raw: string): unknown {
 	if (raw === '') return undefined
 	return filter.cellType === 'number' ? Number(raw) : raw
 }
 
 type ValueEditorProps = {
-	filter: OperatorColumnFilterModel
+	filter: OperatorFilterModel
 	editor: FilterEditor
 	value: unknown
 	onChange: (value: unknown) => void
@@ -170,15 +170,15 @@ function ValueEditor({ filter, editor, value, onChange }: ValueEditorProps): Rea
 }
 
 type FilterFieldProps = {
-	filter: OperatorColumnFilterModel
-	pending: ColumnFiltersValue
-	onPendingChange: (next: ColumnFiltersValue) => void
+	filter: OperatorFilterModel
+	pending: FiltersValue
+	onPendingChange: (next: FiltersValue) => void
 }
 
 function FilterField({ filter, pending, onPendingChange }: FilterFieldProps) {
-	const current = pending[filter.columnId] ?? { operator: filter.operator, value: undefined }
-	const write = (value: ColumnFiltersValue[string]) => {
-		onPendingChange({ ...pending, [filter.columnId]: value })
+	const current = pending[filter.id] ?? { operator: filter.operator, value: undefined }
+	const write = (value: FiltersValue[string]) => {
+		onPendingChange({ ...pending, [filter.id]: value })
 	}
 
 	return (
@@ -216,18 +216,18 @@ function FilterField({ filter, pending, onPendingChange }: FilterFieldProps) {
 }
 
 function OrderFilters() {
-	const filters = useColumnFilters()
-	const [pending, setPending] = useState<ColumnFiltersValue | null>(null)
+	const filters = useFilters()
+	const [pending, setPending] = useState<FiltersValue | null>(null)
 	if (!filters) return null
 
 	const shown = pending ?? filters.value
-	const operatorFilters = filters.columns.flatMap(({ filter }) => (filter.hasOperators ? [filter] : []))
+	const operatorFilters = filters.filters.flatMap(({ filter }) => (filter.hasOperators ? [filter] : []))
 
 	return (
 		<div style={PANEL}>
 			{operatorFilters.map((filter) => (
 				<FilterField
-					key={filter.columnId}
+					key={filter.id}
 					filter={filter}
 					pending={shown}
 					onPendingChange={setPending}

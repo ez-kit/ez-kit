@@ -15,7 +15,7 @@ import type {
 	NormalizedVirtualizationConfig,
 	RowPropsResolver,
 } from './use-data-grid'
-import type { GridMessages, GridOptions, RowPinningConfig } from '@ez-kit/data-grid-core'
+import type { GridMessages, GridOptions, ResolvedFilterField, RowPinningConfig } from '@ez-kit/data-grid-core'
 import type { ComponentType, ReactNode } from 'react'
 
 /**
@@ -175,6 +175,12 @@ export type ResolvedGridOptions = {
 		 * box falls back to it even when column filtering is off.
 		 */
 		debounce: number
+		/**
+		 * The table's `filtering.fields`, as core resolved them. Empty unless the table declares
+		 * fields **and** filters on the server (`filtering.manual: true`) — the only case in which
+		 * the grid offers them.
+		 */
+		fields: ResolvedFilterField[]
 	}
 	/**
 	 * Global search UI config — what the input shows and how fast it commits. `undefined` when
@@ -321,7 +327,7 @@ export function defaultResolvedGridOptions(core?: GridOptions<never>): ResolvedG
 		pinning: { column: false, row: false, ...(core?.rowPinning !== undefined ? { rowConfig: core.rowPinning } : {}) },
 		visibility: false,
 		sorting: false,
-		filtering: { debounce: DATA_GRID_DEFAULTS.filtering.debounce },
+		filtering: { debounce: DATA_GRID_DEFAULTS.filtering.debounce, fields: core?.filterFields ?? [] },
 		pagination: {
 			enabled: false,
 			links: DATA_GRID_DEFAULTS.pagination.links,

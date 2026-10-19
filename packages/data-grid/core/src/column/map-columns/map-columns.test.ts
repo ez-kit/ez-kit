@@ -110,6 +110,16 @@ describe('mapColumns', () => {
 		expect(result[0]?.meta?.filtering).toEqual({ component })
 	})
 
+	it('filtering.placeholder goes into meta.filtering', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', filtering: { placeholder: '10 digits' } }])
+		expect(filteringMeta(result[0])?.placeholder).toBe('10 digits')
+	})
+
+	it('no filtering.placeholder leaves the key out of meta.filtering', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', filtering: { debounce: 0 } }])
+		expect(filteringMeta(result[0])).not.toHaveProperty('placeholder')
+	})
+
 	it('filtering: false goes into meta', () => {
 		const result = mapColumns<Row>([{ accessorKey: 'name', filtering: false }])
 		expect(result[0]?.meta?.filtering).toBe(false)

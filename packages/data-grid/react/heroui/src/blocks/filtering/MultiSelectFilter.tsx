@@ -22,7 +22,7 @@ const COUNT_STYLE = {
 	opacity: 0.6,
 }
 
-export function MultiSelectFilter({ items, selectedValues, onChange, placeholder }: MultiSelectFilterProps) {
+export function MultiSelectFilter({ items, selectedValues, onChange, label, placeholder }: MultiSelectFilterProps) {
 	const handleChange = (next: Key | Key[] | null): void => {
 		if (next == null) {
 			onChange([])
@@ -34,7 +34,7 @@ export function MultiSelectFilter({ items, selectedValues, onChange, placeholder
 
 	return (
 		<Select
-			aria-label={placeholder ?? 'Filter'}
+			aria-label={label ?? placeholder ?? 'Filter'}
 			placeholder={placeholder ?? 'Select…'}
 			selectionMode='multiple'
 			value={selectedValues}

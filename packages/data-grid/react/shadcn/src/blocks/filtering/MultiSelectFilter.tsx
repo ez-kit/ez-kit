@@ -15,7 +15,7 @@ import type { ReactNode } from 'react'
 
 const TRIGGER_BASE = 'h-7 min-w-[8rem] justify-between gap-2 px-2 text-xs font-normal'
 
-export function MultiSelectFilter({ items, selectedValues, onChange, placeholder }: MultiSelectFilterProps) {
+export function MultiSelectFilter({ items, selectedValues, onChange, label, placeholder }: MultiSelectFilterProps) {
 	const messages = useGridMessages()
 	const [query, setQuery] = useState('')
 
@@ -37,6 +37,10 @@ export function MultiSelectFilter({ items, selectedValues, onChange, placeholder
 	}
 
 	const triggerLabel = buildMultiSelectLabel(items, selectedValues, placeholder)
+	// Named by `label` and by what it shows: the text alone may be an author's hint or a bare
+	// "Open, Done" with no column in it, and `label` alone would leave a speech-input user unable
+	// to say what they see (WCAG 2.5.3). React Aria's Select composes the same pair in HeroUI.
+	const triggerName = label === undefined || label === triggerLabel ? label : `${label}, ${triggerLabel}`
 
 	return (
 		<Popover>
@@ -46,6 +50,7 @@ export function MultiSelectFilter({ items, selectedValues, onChange, placeholder
 					variant='outline'
 					size='sm'
 					className={TRIGGER_BASE}
+					{...(triggerName !== undefined ? { 'aria-label': triggerName } : {})}
 				>
 					<span className='truncate'>{triggerLabel}</span>
 					<span
@@ -72,7 +77,7 @@ export function MultiSelectFilter({ items, selectedValues, onChange, placeholder
 					/>
 					<div
 						role='group'
-						aria-label={placeholder ?? 'Filter'}
+						aria-label={label ?? placeholder ?? 'Filter'}
 						className='max-h-56 overflow-auto'
 					>
 						{filteredOptions.length === 0 ? (

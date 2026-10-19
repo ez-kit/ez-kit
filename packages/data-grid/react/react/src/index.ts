@@ -251,7 +251,7 @@ export { DataGridFooterCell } from './data-grid/footer-cell'
 export { Pagination as DataGridPagination } from './data-grid/pagination'
 export { PageSizer as DataGridPageSizer } from './data-grid/page-sizer'
 export { BottomBar as DataGridBottomBar } from './data-grid/bottom-bar'
-export { ColumnFilter as DataGridColumnFilter } from './data-grid/column-filter'
+export { Filter as DataGridFilter } from './data-grid/filter'
 export { ActionBar as DataGridActionBar } from './data-grid/action-bar'
 export { CreateTrigger as DataGridCreateTrigger } from './data-grid/create-trigger'
 export { VisibilityTrigger as DataGridVisibilityTrigger } from './data-grid/visibility-trigger'
@@ -262,8 +262,9 @@ export { ActiveFiltersBar as DataGridActiveFiltersBar } from './data-grid/active
 export { GroupByBar as DataGridGroupByBar } from './data-grid/group-by-bar'
 export { ClearFiltersButton as DataGridClearFiltersButton } from './data-grid/clear-filters-button'
 export { FilterPanel as DataGridFilterPanel } from './data-grid/filter-panel'
-export { useColumnFilters } from './data-grid/filter-panel'
-export { FilterEditor } from './data-grid/column-filter-model'
+export { useFilters } from './data-grid/filter-panel'
+export { FilterEditor } from './data-grid/filter-model'
+export { FilterSourceKind } from './data-grid/filter-target'
 export { CreatingModal as DataGridCreatingModal } from './data-grid/creating-modal'
 export { EditingModal as DataGridEditingModal } from './data-grid/editing-modal'
 export { LoadingBody as DataGridLoadingBody } from './data-grid/loading-body'
@@ -302,18 +303,15 @@ export type {
 	VisibilityItemRenderProps,
 } from './data-grid/visibility-item'
 export type {
-	DataGridFilterPanelColumn,
 	DataGridFilterPanelProps,
 	DataGridFilterPanelRenderArgs,
-	UseColumnFiltersResult,
+	DataGridFilterTarget,
+	UseFiltersResult,
 } from './data-grid/filter-panel'
-export type {
-	ColumnFilterModel,
-	OperatorColumnFilterModel,
-	PlainColumnFilterModel,
-} from './data-grid/column-filter-model'
-export type { ColumnFiltersValue } from './data-grid/column-filters-batch'
-export type { DataGridColumnFilterProps } from './data-grid/column-filter'
+export type { FilterModel, OperatorFilterModel, PlainFilterModel } from './data-grid/filter-model'
+export type { FilterSource } from './data-grid/filter-target'
+export type { FiltersValue } from './data-grid/filters-batch'
+export type { DataGridFilterProps } from './data-grid/filter'
 export type { DataGridPageSizerProps, DataGridPageSizerRenderArgs } from './data-grid/page-sizer'
 export type { DataGridBottomBarProps } from './data-grid/bottom-bar'
 export type { DataGridActionBarProps, DataGridActionBarRenderArgs } from './data-grid/action-bar'

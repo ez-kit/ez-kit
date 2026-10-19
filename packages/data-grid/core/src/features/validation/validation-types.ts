@@ -113,6 +113,13 @@ export type FieldState<TConfig = unknown, TValue = unknown> = {
 	 * `<FieldDescription>` / `<Description>` only when this is defined.
 	 */
 	description?: string
+	/**
+	 * Visible hint for an empty input (filter-context only) — the column's
+	 * `filtering.placeholder`, else the filter's accessible name. Never the
+	 * accessible name itself: a filter names this component through a
+	 * visually hidden `<label htmlFor={id}>`.
+	 */
+	placeholder?: string
 	/** First message for the field, or `undefined` if no error. Convenience accessor over `errors[0]`. */
 	error: string | undefined
 	/** All messages for the field — empty when no error. */

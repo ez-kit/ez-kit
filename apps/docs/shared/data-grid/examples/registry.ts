@@ -59,6 +59,7 @@ export const exampleModules: Record<string, () => Promise<Record<string, Compone
 	'components/example-team-members.tsx': () => import('./components/example-team-members'),
 	'components/filter-chips.tsx': () => import('./components/filter-chips'),
 	'components/filter-date-range.tsx': () => import('./components/filter-date-range'),
+	'components/filter-fields.tsx': () => import('./components/filter-fields'),
 	'components/filter-multi-value.tsx': () => import('./components/filter-multi-value'),
 	'components/filter-operators-between-inputs.tsx': () => import('./components/filter-operators-between-inputs'),
 	'components/filter-operators-between-slider.tsx': () => import('./components/filter-operators-between-slider'),

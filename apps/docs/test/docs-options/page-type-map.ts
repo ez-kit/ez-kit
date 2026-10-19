@@ -133,6 +133,7 @@ export const DocPage = {
 	GroupingAggregation: 'content/docs/data-grid/grouping/aggregation.mdx',
 	GroupingInteractive: 'content/docs/data-grid/grouping/interactive.mdx',
 	FilteringDateRange: 'content/docs/data-grid/filtering/date-range.mdx',
+	FilteringFields: 'content/docs/data-grid/filtering/fields.mdx',
 	FilteringGlobal: 'content/docs/data-grid/filtering/global.mdx',
 	FilteringIndex: 'content/docs/data-grid/filtering/index.mdx',
 	FilteringMultiValue: 'content/docs/data-grid/filtering/multi-value.mdx',
@@ -253,11 +254,12 @@ export const GRID_TYPE = {
 	ColumnAggregationConfig: { module: TypeModule.Core, name: 'ColumnAggregationConfig' },
 	AggregationConfig: { module: TypeModule.Core, name: 'AggregationConfig' },
 	ColumnFilteringConfig: { module: TypeModule.Core, name: 'ColumnFilteringConfig' },
+	FilterFieldDef: { module: TypeModule.Core, name: 'FilterFieldDef' },
 	ColumnOperatorsConfig: { module: TypeModule.Core, name: 'ColumnOperatorsConfig' },
 	TableOperatorsConfig: { module: TypeModule.Core, name: 'TableOperatorsConfig' },
 	BetweenOperatorConfig: { module: TypeModule.Core, name: 'BetweenOperatorConfig' },
-	UseColumnFiltersResult: { module: TypeModule.React, name: 'UseColumnFiltersResult' },
-	OperatorColumnFilterModel: { module: TypeModule.React, name: 'OperatorColumnFilterModel' },
+	UseFiltersResult: { module: TypeModule.React, name: 'UseFiltersResult' },
+	OperatorFilterModel: { module: TypeModule.React, name: 'OperatorFilterModel' },
 	DateValuePreset: { module: TypeModule.Core, name: 'DateValuePreset' },
 	FilterOperatorDef: { module: TypeModule.Core, name: 'FilterOperatorDef' },
 	DateRangePreset: { module: TypeModule.Core, name: 'DateRangePreset' },
@@ -1020,9 +1022,14 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.FilteringIndex,
 		optionTables: [
-			{ heading: '`filtering`', roots: [GRID_TYPE.ReactFilteringConfig], expectedCount: 6 },
-			{ heading: 'Per-column `filtering`', roots: [GRID_TYPE.ColumnFilteringConfig], expectedCount: 6 },
+			{ heading: '`filtering`', roots: [GRID_TYPE.ReactFilteringConfig], expectedCount: 7 },
+			{ heading: 'Per-column `filtering`', roots: [GRID_TYPE.ColumnFilteringConfig], expectedCount: 7 },
 		],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.FilteringFields,
+		optionTables: [{ heading: 'Field options', roots: [GRID_TYPE.FilterFieldDef], expectedCount: 4 }],
 		nonOptionTables: [],
 	},
 	{
@@ -1060,8 +1067,8 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		// a kit's own filter component reads: the hook's result and one column's filter model.
 		page: DocPage.FilteringVariants,
 		optionTables: [
-			{ heading: '`UseColumnFiltersResult`', roots: [GRID_TYPE.UseColumnFiltersResult], expectedCount: 4 },
-			{ heading: '`OperatorColumnFilterModel`', roots: [GRID_TYPE.OperatorColumnFilterModel], expectedCount: 18 },
+			{ heading: '`UseFiltersResult`', roots: [GRID_TYPE.UseFiltersResult], expectedCount: 4 },
+			{ heading: '`OperatorFilterModel`', roots: [GRID_TYPE.OperatorFilterModel], expectedCount: 18 },
 		],
 		nonOptionTables: [
 			{

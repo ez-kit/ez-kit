@@ -26,6 +26,7 @@ import { buildColumnMenuSections } from './column-menu-sections'
 import { HeaderCellProvider } from './composition-context'
 import { useDndEnabled } from './dnd'
 import { COLUMN_DRAGGING_SELECTOR } from './dnd/dragging-attrs'
+import { columnFilterTarget } from './filter-target'
 import { flexRender } from './flex-render'
 import { HeaderExtras, HeaderMain } from './header-slots'
 import { useCellNavigationProps } from './keyboard-navigation'
@@ -425,8 +426,7 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 		filtersRows(table) && meta?.filtering !== false && !meta?.isSystemColumn && header.column.getCanFilter()
 	const filterContent = canFilter
 		? renderFilterInput({
-				header,
-				meta,
+				target: columnFilterTarget(header.column),
 				Input,
 				cellTypes,
 				OperatorSelect,

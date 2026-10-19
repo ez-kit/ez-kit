@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-type-arguments */
-import type { ColumnDef, SortingFn, SystemColumnDef } from './column/types'
+import type { ColumnDef, FilterFieldDef, SortingFn, SystemColumnDef } from './column/types'
 import type { GridOptions } from './create-table/create-table-options'
 import type { CreatingConfig } from './features/creating'
 import type { AppliedState, DraftConfig } from './features/deferred-apply'
@@ -197,6 +197,30 @@ export type FilteringConfig = FeatureToggle & {
 	 * row models attached — keeps `@tanstack/table-core` tree-shakable).
 	 */
 	faceted?: boolean
+	/**
+	 * Filterable fields of the server query that are not columns — see {@link FilterFieldDef}.
+	 *
+	 * Each is offered beside the filterable columns by every filter surface (`FilterPanel`,
+	 * `useFilters()`, `<DataGrid.Filter id>`, the active-filters strip), and its value is stored in
+	 * `columnFilters` under its `id`, so {@link FilteringConfig.onChange} receives columns and fields
+	 * in one array.
+	 *
+	 * Server-side only: without `manual: true` the fields are not offered, and development builds
+	 * warn once. An `id` that repeats a column's (system columns included) or another field's is
+	 * an error when the table is created.
+	 *
+	 * @example
+	 * ```ts
+	 * filtering: {
+	 *   manual: true,
+	 *   onChange: fetchOrders,
+	 *   fields: [
+	 *     { id: 'warehouse', header: 'Warehouse', cell: { type: 'select', config: { items } }, filtering: { operators: true } },
+	 *   ],
+	 * }
+	 * ```
+	 */
+	fields?: FilterFieldDef[]
 	/**
 	 * Called whenever the column-filters state changes. Receives the resolved
 	 * {@link ColumnFiltersState}. Use this to mirror filter state into the URL

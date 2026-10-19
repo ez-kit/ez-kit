@@ -119,7 +119,7 @@ export const defaultMessages: GridMessages = {
 	},
 	filtering: {
 		trigger: 'Filter',
-		placeholder: ({ columnId }) => `Filter ${columnId}…`,
+		placeholder: ({ label }) => `Filter ${label}…`,
 		operator: 'Filter operator',
 		any: 'Any',
 		clear: 'Clear',

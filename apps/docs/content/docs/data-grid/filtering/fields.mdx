@@ -1,0 +1,87 @@
+---
+title: Filter Fields
+description: Filter a server query by fields that are not columns — a warehouse, a region, "has orders" — with the same controls, chips and onChange as column filters.
+---
+
+A server query often filters by something the grid does not show: the warehouse an order ships
+from, the region of its manager. `filtering.fields` declares those as **filter fields** — filters
+of the table that are not columns.
+
+<DataGridDocsExample exampleId='filter-fields' />
+
+```tsx
+<DataGrid
+	features={features}
+	data={orders}
+	columns={columns}
+	filtering={{
+		manual: true,
+		onChange: setQuery,
+		fields: [
+			{
+				id: 'warehouse',
+				header: 'Warehouse',
+				cell: { type: 'select', config: { items: warehouses } },
+				filtering: { operators: true },
+			},
+		],
+	}}
+>
+	<DataGrid.Toolbar start={<DataGrid.FilterPanel />} />
+	<DataGrid.ActiveFiltersBar />
+	<DataGrid.Table />
+</DataGrid>
+```
+
+A field is written in the column's own words — `cell` and `filtering` mean exactly what they mean
+on a column, so a field offers the operators, editor, values and presets a column with the same
+`cell` and `filtering` would. What a field does not have is everything a column has because it holds
+data: it is not in the table, the visibility menu, the column order, sorting or pinning.
+
+## Where the value goes
+
+A field's value is stored in the same `columnFilters` slice as the column filters, under the
+field's `id`. So `filtering.onChange` receives columns and fields in **one** array — the server
+gets the whole query in one request — and a `draft`, a cleared filter set and a state restored with
+`initialState.columnFilters` all treat a field like a column.
+
+## Where it shows up
+
+Every filter surface lists fields after the filterable columns, in the order they were declared:
+
+- `<DataGrid.FilterPanel />` renders a chip per field.
+- `<DataGrid.Filter id='warehouse' />` renders one field's chip wherever a layout puts it.
+- `useFilters()` and the panel's render function hand each field over as an entry with
+  `source: { kind: 'field' }` — see [your own filter component](/docs/data-grid/filtering/variants#your-own-filter-component).
+- `<DataGrid.ActiveFiltersBar />` shows a chip for a field that holds a filter, and removing it
+  clears the field.
+
+A field has no header cell, so it never renders under a column label.
+
+## Server-side only
+
+Fields are offered only under `filtering.manual: true`. The grid has no row value to compare a field
+against, so the server is what filters by it. Without `manual`, the fields are not offered anywhere
+and development builds warn once.
+
+A field `id` that repeats a column id — system columns such as the selection column included — or
+another field's id is an error when the table is created: the two would write one `columnFilters`
+entry.
+
+## Field options
+
+| Option      | Type                                    | Description                                                                                              |
+| ----------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `id`        | `string`                                | The key the value is stored and sent under. Unique across columns and fields.                            |
+| `header`    | `string`                                | The label every filter surface shows.                                                                    |
+| `cell`      | `string \| { type, config? }`           | The value type, as on a column. Picks the default operators and the editor. Default `'text'`.            |
+| `filtering` | `ColumnFilteringConfig` minus `faceted` | The filter, as on a column: `operators`, `defaultOperator`, `items`, `presets`, `debounce`, `component`. |
+
+A field is never faceted: facets count the rows' values, and a field has none. Its select values come
+from `filtering.items`, else from a `select` / `badge` cell's `config.items`.
+
+## See also
+
+- [Variants](/docs/data-grid/filtering/variants) — the filter panel, `<DataGrid.Filter>` and `useFilters()`
+- [Operators](/docs/data-grid/filtering/operators) — what a field's control offers
+- [Active filters](/docs/data-grid/filtering/active-filters) — the chips strip

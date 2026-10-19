@@ -6,8 +6,11 @@ import { createDataGrid } from '../create-data-grid'
 import { prepareDataGridTable } from '../prepare-table'
 import { TEST_FEATURES, testComponents } from '../test-utils'
 
+import { collectFilterTargets } from './filter-target'
+import { renderFilterInput } from './render-filter-input'
+
 import type { DataTable, GridFeatures } from '../types'
-import type { StructuredFilterValue } from '@ez-kit/data-grid-core'
+import type { FieldState, InputComponentProps, StructuredFilterValue } from '@ez-kit/data-grid-core'
 
 type Row = {
 	id: number
@@ -282,5 +285,244 @@ describe('renderFilterInput — clearing one column', () => {
 		fireEvent.click(screen.getByRole('button', { name: 'Clear' }))
 
 		expect(table.getColumn('joinedAt')?.getFilterValue()).toBeUndefined()
+	})
+})
+
+describe('renderFilterInput — field target', () => {
+	it("hands a field's own `filtering.component` the value, onChange and its cell config", () => {
+		const received: InputComponentProps[] = []
+		const config = { items: [{ value: 'msk', label: 'Moscow' }] }
+		function WarehouseFilter(props: InputComponentProps) {
+			received.push(props)
+			return (
+				<button
+					type='button'
+					onClick={() => {
+						props.onChange('msk')
+					}}
+				>
+					pick
+				</button>
+			)
+		}
+		const table = prepareDataGridTable(
+			createTable<GridFeatures, Row>({
+				features: TEST_FEATURES,
+				data: DATA,
+				columns: COLUMNS,
+				filtering: {
+					manual: true,
+					fields: [
+						{
+							id: 'warehouse',
+							header: 'Warehouse',
+							cell: { type: 'select', config },
+							filtering: { component: WarehouseFilter },
+						},
+					],
+				},
+			}),
+		)
+		const target = collectFilterTargets(table).find((t) => t.id === 'warehouse')
+		if (!target) throw new Error('no warehouse target')
+		const { core, filtering } = testComponents
+		render(
+			<>
+				{renderFilterInput({
+					target,
+					Input: core.Input,
+					Menu: core.Menu,
+					cellTypes: {},
+					OperatorSelect: filtering.OperatorSelect,
+					ClearFilterButton: filtering.ClearFilterButton,
+					BetweenInput: filtering.BetweenInput,
+					MultiSelectFilter: filtering.MultiSelectFilter,
+					debounce: 0,
+					messages: table.grid.messages,
+				})}
+			</>,
+		)
+
+		expect(received[0]?.value).toBeUndefined()
+		expect(received[0]?.config).toEqual(config)
+		fireEvent.click(screen.getByRole('button', { name: 'pick' }))
+		expect(table.atoms.columnFilters.get()).toEqual([{ id: 'warehouse', value: 'msk' }])
+	})
+})
+
+type HintRow = { id: number; inn: string; amount: number; status: 'open' | 'done' }
+
+const HINT_DATA: HintRow[] = [{ id: 1, inn: '7700000000', amount: 10, status: 'open' }]
+
+/** Renders one column's filter on its own, the way the header cell would. */
+function renderHinted(
+	columns: ReturnType<typeof createColumns<HintRow>>,
+	columnId: string,
+	cellTypes: Parameters<typeof renderFilterInput>[0]['cellTypes'] = {},
+) {
+	const table = prepareDataGridTable(
+		createTable<GridFeatures, HintRow>({ features: TEST_FEATURES, data: HINT_DATA, columns, filtering: true }),
+	)
+	const target = collectFilterTargets(table).find((t) => t.id === columnId)
+	if (!target) throw new Error(`no ${columnId} target`)
+	const { core, filtering } = testComponents
+	render(
+		<>
+			{renderFilterInput({
+				target,
+				Input: core.Input,
+				Menu: core.Menu,
+				cellTypes,
+				OperatorSelect: filtering.OperatorSelect,
+				ClearFilterButton: filtering.ClearFilterButton,
+				BetweenInput: filtering.BetweenInput,
+				MultiSelectFilter: filtering.MultiSelectFilter,
+				debounce: 0,
+				messages: table.grid.messages,
+			})}
+		</>,
+	)
+	return table
+}
+
+describe('renderFilterInput — placeholder', () => {
+	it('shows the hint while the name stays the dictionary one, on the plain path', () => {
+		renderHinted(
+			createColumns<HintRow>([{ accessorKey: 'inn', header: 'ИНН', filtering: { placeholder: '10 цифр' } }]),
+			'inn',
+		)
+
+		expect(screen.getByRole('textbox', { name: 'Filter ИНН…' })).toHaveAttribute('placeholder', '10 цифр')
+	})
+
+	it('shows the hint while the name stays the dictionary one, on the operator path', () => {
+		renderHinted(
+			createColumns<HintRow>([
+				{ accessorKey: 'inn', header: 'ИНН', filtering: { operators: true, placeholder: '10 цифр' } },
+			]),
+			'inn',
+		)
+
+		expect(screen.getByRole('textbox', { name: 'Filter ИНН…' })).toHaveAttribute('placeholder', '10 цифр')
+	})
+
+	it('falls back to the name when the column sets no hint', () => {
+		renderHinted(createColumns<HintRow>([{ accessorKey: 'inn', header: 'ИНН' }]), 'inn')
+
+		expect(screen.getByRole('textbox', { name: 'Filter ИНН…' })).toHaveAttribute('placeholder', 'Filter ИНН…')
+	})
+
+	it('names a column with a non-string header by its id', () => {
+		renderHinted(createColumns<HintRow>([{ accessorKey: 'inn', header: () => 'ИНН' }]), 'inn')
+
+		expect(screen.getByRole('textbox', { name: 'Filter inn…' })).toBeInTheDocument()
+	})
+
+	it('hands the multi-select the hint as its placeholder and the name as its label', () => {
+		renderHinted(
+			createColumns<HintRow>([
+				{
+					accessorKey: 'status',
+					header: 'Status',
+					cell: { type: 'select', config: { items: [{ value: 'open', label: 'Open' }] } },
+					filtering: { operators: true, placeholder: 'Любой статус' },
+				},
+			]),
+			'status',
+		)
+
+		expect(screen.getByRole('group', { name: 'Filter Status…' })).toHaveTextContent('Любой статус')
+	})
+
+	it('hands a `filtering.component` the hint', () => {
+		const received: InputComponentProps[] = []
+		function MyInput(props: InputComponentProps) {
+			received.push(props)
+			return null
+		}
+		renderHinted(
+			createColumns<HintRow>([
+				{ accessorKey: 'inn', header: 'ИНН', filtering: { component: MyInput, placeholder: 'Например, Acme' } },
+			]),
+			'inn',
+		)
+
+		expect(received[0]?.placeholder).toBe('Например, Acme')
+	})
+
+	it('hands a `filtering.component` the hint on the operator path', () => {
+		const received: InputComponentProps[] = []
+		function MyInput(props: InputComponentProps) {
+			received.push(props)
+			return null
+		}
+		renderHinted(
+			createColumns<HintRow>([
+				{
+					accessorKey: 'inn',
+					header: 'ИНН',
+					filtering: { operators: true, component: MyInput, placeholder: 'Например, Acme' },
+				},
+			]),
+			'inn',
+		)
+
+		expect(received[0]?.placeholder).toBe('Например, Acme')
+	})
+
+	it("hands a cell type's filter component the hint", () => {
+		const received: FieldState[] = []
+		function AmountFilter(props: FieldState) {
+			received.push(props)
+			return null
+		}
+		renderHinted(
+			createColumns<HintRow>([
+				{
+					accessorKey: 'amount',
+					header: 'Amount',
+					cell: { type: 'number' },
+					filtering: { operators: true, placeholder: 'Сумма' },
+				},
+			]),
+			'amount',
+			{ number: { filtering: AmountFilter } },
+		)
+
+		expect(received[0]?.placeholder).toBe('Сумма')
+	})
+
+	it("hands a cell type's filter component the hint on the plain path", () => {
+		const received: FieldState[] = []
+		function AmountFilter(props: FieldState) {
+			received.push(props)
+			return null
+		}
+		renderHinted(
+			createColumns<HintRow>([
+				{ accessorKey: 'amount', header: 'Amount', cell: { type: 'number' }, filtering: { placeholder: 'Сумма' } },
+			]),
+			'amount',
+			{ number: { filtering: AmountFilter } },
+		)
+
+		expect(received[0]?.placeholder).toBe('Сумма')
+	})
+
+	it('leaves the between range its own From / To', () => {
+		renderHinted(
+			createColumns<HintRow>([
+				{
+					accessorKey: 'amount',
+					header: 'Amount',
+					cell: { type: 'number' },
+					filtering: { operators: true, defaultOperator: 'between', placeholder: 'Сумма' },
+				},
+			]),
+			'amount',
+		)
+
+		expect(screen.getByPlaceholderText('From')).toBeInTheDocument()
+		expect(screen.queryByPlaceholderText('Сумма')).not.toBeInTheDocument()
 	})
 })

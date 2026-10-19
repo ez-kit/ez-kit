@@ -6,7 +6,7 @@ import { GridComponentsProvider } from '../components-context'
 import { prepareDataGridTable } from '../prepare-table'
 import { TEST_FEATURES, testComponents } from '../test-utils'
 
-import { ColumnFilter } from './column-filter'
+import { Filter } from './filter'
 import { TableProvider } from './table-context'
 
 import type { DataTable, GridFeatures } from '../types'
@@ -60,11 +60,11 @@ function Wrapper({ table, children }: { table: DataTable<GridFeatures, Row>; chi
 	)
 }
 
-describe('<ColumnFilter>', () => {
+describe('<Filter>', () => {
 	it('renders the named column and nothing else', () => {
 		const { container } = render(
 			<Wrapper table={makeTable()}>
-				<ColumnFilter columnId='role' />
+				<Filter id='role' />
 			</Wrapper>,
 		)
 
@@ -78,18 +78,30 @@ describe('<ColumnFilter>', () => {
 		table.getColumn('role')?.setFilterValue(['admin'])
 		const { container } = render(
 			<Wrapper table={table}>
-				<ColumnFilter columnId='role' />
+				<Filter id='role' />
 			</Wrapper>,
 		)
 
 		expect(container.querySelector('[data-slot="filter-panel-chip-value"]')?.textContent).toBe('Admin')
 	})
 
+	it('renders a field by its id, the way it renders a column', () => {
+		const { container } = render(
+			<Wrapper table={makeTable({ filtering: { manual: true, fields: [{ id: 'warehouse', header: 'Warehouse' }] } })}>
+				<Filter id='warehouse' />
+			</Wrapper>,
+		)
+
+		const chips = container.querySelectorAll('[data-slot="filter-panel-chip"]')
+		expect(chips).toHaveLength(1)
+		expect(chips[0]?.textContent).toContain('Warehouse')
+	})
+
 	// The panel keeps quiet in these states too, so neither needs a guard around it.
 	it('renders nothing for an unknown column', () => {
 		const { container } = render(
 			<Wrapper table={makeTable()}>
-				<ColumnFilter columnId='nope' />
+				<Filter id='nope' />
 			</Wrapper>,
 		)
 
@@ -99,7 +111,7 @@ describe('<ColumnFilter>', () => {
 	it('renders nothing when the grid does not filter', () => {
 		const { container } = render(
 			<Wrapper table={makeTable({ filtering: false })}>
-				<ColumnFilter columnId='role' />
+				<Filter id='role' />
 			</Wrapper>,
 		)
 
@@ -109,13 +121,13 @@ describe('<ColumnFilter>', () => {
 	it('hands the resolved column to a render function', () => {
 		render(
 			<Wrapper table={makeTable()}>
-				<ColumnFilter columnId='role'>
+				<Filter id='role'>
 					{({ label, input }) => (
 						<label>
 							{label}::render{input}
 						</label>
 					)}
-				</ColumnFilter>
+				</Filter>
 			</Wrapper>,
 		)
 

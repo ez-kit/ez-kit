@@ -24,7 +24,6 @@ import { BottomBar } from './bottom-bar'
 import { DataGridCell } from './cell'
 import { ClearFiltersButton } from './clear-filters-button'
 import { ColumnDragHandle } from './column-drag-handle'
-import { ColumnFilter } from './column-filter'
 import { ComponentGuard } from './component-guard'
 import { CreateTrigger } from './create-trigger'
 import { CreatingModal } from './creating-modal'
@@ -33,6 +32,7 @@ import { COLUMN_DROP_SCOPE } from './dnd/column-drop-scope'
 import { buildDndAnnouncements } from './dnd-announcements'
 import { EditingModal } from './editing-modal'
 import { EmptyStateRow } from './empty-state-row'
+import { Filter } from './filter'
 import { FilterPanel } from './filter-panel'
 import { Footer } from './footer'
 import { DataGridFooterCell } from './footer-cell'
@@ -751,7 +751,7 @@ export type DataGridStatics = {
 	Pagination: typeof Pagination
 	PageSizer: typeof PageSizer
 	BottomBar: typeof BottomBar
-	ColumnFilter: typeof ColumnFilter
+	Filter: typeof Filter
 	ActionBar: typeof ActionBar
 	CreateTrigger: typeof CreateTrigger
 	VisibilityTrigger: typeof VisibilityTrigger
@@ -824,7 +824,7 @@ export const DataGrid: DataGridType = /* @__PURE__ */ Object.assign(DataGridRoot
 	Pagination,
 	PageSizer,
 	BottomBar,
-	ColumnFilter,
+	Filter,
 	ActionBar,
 	CreateTrigger,
 	VisibilityTrigger,

@@ -3,11 +3,10 @@ import { localizeOperators } from '@ez-kit/data-grid-core'
 import { useGridComponents } from '../components-context'
 import { FilterChipKind, FilterChipsPosition } from '../types'
 
+import { collectFilterTargets, columnFilterTarget } from './filter-target'
 import { useDataGridState, useDataGridTable } from './table-context'
 
-import type { GridFeatures } from '../types'
 import type { FilterOperatorDef } from '@ez-kit/data-grid-core'
-import type { Column } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
 /**
@@ -80,12 +79,6 @@ function sameFilterValue(a: unknown, b: unknown): boolean {
 	return JSON.stringify(a ?? null) === JSON.stringify(b ?? null)
 }
 
-function columnLabel<TRow extends object>(column: Column<GridFeatures, TRow>): string {
-	const header = column.columnDef.header
-	if (typeof header === 'string') return header
-	return column.id
-}
-
 /**
  * Compound member: strip with removable chips for every active filter.
  *
@@ -116,14 +109,19 @@ export function ActiveFiltersBar({ position: positionProp }: DataGridActiveFilte
 
 	const chips: ChipDescriptor[] = []
 
+	// Chips are built per filter target, so a field's entry gets one too. An entry no target names is
+	// still a column's when the column exists — a filter seeded on a column the surfaces do not offer
+	// keeps the chip it always had — and is otherwise skipped, as an entry of a removed column was.
+	const targets = new Map(collectFilterTargets(table).map((target) => [target.id, target]))
+
 	for (const cf of columnFilters) {
-		const column = table.getColumn(cf.id)
-		if (!column) continue
-		const filteringMeta = column.columnDef.meta?.filtering
-		const rawOperators = filteringMeta === false ? undefined : filteringMeta?.operators
+		const column = targets.has(cf.id) ? undefined : table.getColumn(cf.id)
+		const target = targets.get(cf.id) ?? (column ? columnFilterTarget(column) : undefined)
+		if (!target) continue
+		const rawOperators = target.meta.filtering?.operators
 		// Chips name the operator, so they read it through the dictionary like the control does.
 		const operators = rawOperators
-			? localizeOperators(rawOperators, column.columnDef.meta?.cell?.type, table.grid.messages.operators)
+			? localizeOperators(rawOperators, target.meta.cell?.type, table.grid.messages.operators)
 			: undefined
 		const display = renderValueDisplay(cf.value, operators)
 		if (display == null || display === '') continue
@@ -135,11 +133,13 @@ export function ActiveFiltersBar({ position: positionProp }: DataGridActiveFilte
 		const appliedFilter = applied?.columnFilters.find((a) => a.id === cf.id)
 		chips.push({
 			key: `column:${cf.id}`,
-			label: columnLabel(column),
+			label: target.label,
 			value: display,
 			onRemove: () => {
-				column.setFilterValue(undefined)
+				target.setValue(undefined)
 			},
+			// A field's chip is a `columnFilters` entry like a column's — `kind` tells that slice from
+			// global search, which is the difference the kits style.
 			kind: FilterChipKind.Column,
 			isDraft: isDrafting && !sameFilterValue(appliedFilter?.value, cf.value),
 		})

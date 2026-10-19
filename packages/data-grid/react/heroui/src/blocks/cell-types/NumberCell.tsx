@@ -25,6 +25,7 @@ function NumberCellField({
 	onBlur,
 	label,
 	description,
+	placeholder,
 	errors,
 	withSteppers,
 }: NumberCellFieldProps) {
@@ -37,6 +38,7 @@ function NumberCellField({
 			onBlur={onBlur}
 			isInvalid={hasError}
 			withSteppers={withSteppers}
+			{...(placeholder === undefined ? {} : { placeholder })}
 			header={label === undefined ? null : <Label htmlFor={id}>{label}</Label>}
 			footer={
 				<>

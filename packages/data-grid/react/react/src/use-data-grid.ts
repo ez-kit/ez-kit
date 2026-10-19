@@ -1368,7 +1368,7 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 		},
 		visibility: visibilityEnabled,
 		sorting: sortingEnabled,
-		filtering: { debounce: filteringDebounce },
+		filtering: { debounce: filteringDebounce, fields: erasedCoreGrid.filterFields ?? [] },
 		globalFiltering: normalizedGlobalFiltering,
 		pagination: {
 			enabled: isPagedPagination,

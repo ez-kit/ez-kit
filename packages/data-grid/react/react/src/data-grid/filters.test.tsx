@@ -1,17 +1,18 @@
 import { createColumns, createTable } from '@ez-kit/data-grid-core'
-import { act, render, renderHook } from '@testing-library/react'
+import { act, render, renderHook, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { GridComponentsProvider } from '../components-context'
 import { prepareDataGridTable } from '../prepare-table'
 import { TEST_FEATURES, testComponents } from '../test-utils'
 
-import { FilterPanel, useColumnFilters } from './filter-panel'
+import { FilterPanel, useFilters } from './filter-panel'
 import { TableProvider } from './table-context'
 import { Toolbar } from './toolbar'
 
 import type { DataTable, GridFeatures } from '../types'
-import type { UseColumnFiltersResult } from './filter-panel'
+import type { UseFiltersResult } from './filter-panel'
 import type { ColumnFiltersState } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
@@ -65,7 +66,7 @@ function wrapperFor(table: DataTable<GridFeatures, Row>) {
 }
 
 function hookFor(table: DataTable<GridFeatures, Row>) {
-	return renderHook(() => useColumnFilters(), { wrapper: wrapperFor(table) })
+	return renderHook(() => useFilters(), { wrapper: wrapperFor(table) })
 }
 
 function filtersOf(table: DataTable<GridFeatures, Row>): ColumnFiltersState {
@@ -76,7 +77,7 @@ afterEach(() => {
 	vi.restoreAllMocks()
 })
 
-describe('useColumnFilters — value', () => {
+describe('useFilters — value', () => {
 	it('collects the operator columns that hold a filter, keyed by column id', () => {
 		const table = makeTable()
 		table.setColumnFilters([
@@ -92,18 +93,18 @@ describe('useColumnFilters — value', () => {
 		})
 	})
 
-	it('leaves a column without operators out of the value but keeps it in columns', () => {
+	it('leaves a column without operators out of the value but keeps it in filters', () => {
 		const table = makeTable()
 		table.getColumn('note')?.setFilterValue('a')
 
 		const { result } = hookFor(table)
 
 		expect(result.current?.value).toEqual({})
-		expect(result.current?.columns.map((c) => c.column.id)).toContain('note')
+		expect(result.current?.filters.map((c) => c.id)).toContain('note')
 	})
 })
 
-describe('useColumnFilters — setValue', () => {
+describe('useFilters — setValue', () => {
 	it('writes every column in one state change, so onChange fires once', () => {
 		const onChange = vi.fn()
 		const table = makeTable({ filtering: { onChange } })
@@ -218,12 +219,12 @@ describe('useColumnFilters — setValue', () => {
 	})
 })
 
-describe('useColumnFilters — where it works', () => {
+describe('useFilters — where it works', () => {
 	it('works in a component inside the toolbar, outside <FilterPanel>', () => {
 		const table = makeTable()
-		let seen: UseColumnFiltersResult | undefined
+		let seen: UseFiltersResult | undefined
 		function ToolbarPanel() {
-			seen = useColumnFilters()
+			seen = useFilters()
 			return null
 		}
 
@@ -232,7 +233,7 @@ describe('useColumnFilters — where it works', () => {
 			seen?.setValue({ age: { operator: 'greaterThan', value: 18 } })
 		})
 
-		expect(seen?.columns.map((c) => c.filter.columnId)).toEqual(['name', 'age', 'status', 'note'])
+		expect(seen?.filters.map((c) => c.filter.id)).toEqual(['name', 'age', 'status', 'note'])
 		expect(filtersOf(table)).toEqual([{ id: 'age', value: { operator: 'greaterThan', value: 18 } }])
 	})
 
@@ -245,7 +246,7 @@ describe('useColumnFilters — where it works', () => {
 	it('hands the same value and setValue to the <FilterPanel> render function', () => {
 		const table = makeTable()
 		table.getColumn('name')?.setFilterValue({ operator: 'contains', value: 'an' })
-		let seen: UseColumnFiltersResult | undefined
+		let seen: UseFiltersResult | undefined
 
 		render(
 			<FilterPanel>
@@ -261,5 +262,121 @@ describe('useColumnFilters — where it works', () => {
 		})
 
 		expect(filtersOf(table)).toEqual([])
+	})
+})
+
+const WAREHOUSE = {
+	id: 'warehouse',
+	header: 'Warehouse',
+	cell: { type: 'select', config: { items: [{ value: 'msk', label: 'Moscow' }] } },
+	filtering: { operators: true },
+}
+
+describe('useFilters — fields', () => {
+	it('lists a field after the columns, with a field source', () => {
+		const { result } = hookFor(makeTable({ filtering: { manual: true, fields: [WAREHOUSE] } }))
+
+		expect(result.current?.filters.map((t) => t.id)).toEqual(['name', 'age', 'status', 'note', 'warehouse'])
+		expect(result.current?.filters.at(-1)?.source).toEqual({ kind: 'field' })
+		expect(result.current?.filters[0]?.source.kind).toBe('column')
+	})
+
+	it('puts a field with a filter into the value', () => {
+		const table = makeTable({
+			filtering: { manual: true, fields: [WAREHOUSE] },
+			initialState: { columnFilters: [{ id: 'warehouse', value: { operator: 'equals', value: 'msk' } }] },
+		})
+		const { result } = hookFor(table)
+
+		expect(result.current?.value).toEqual({ warehouse: { operator: 'equals', value: 'msk' } })
+		expect(result.current?.filters.at(-1)?.hasValue).toBe(true)
+	})
+
+	it('writes columns and fields in one state change', () => {
+		const onChange = vi.fn()
+		const table = makeTable({ filtering: { manual: true, onChange, fields: [WAREHOUSE] } })
+		const { result } = hookFor(table)
+
+		act(() => {
+			result.current?.setValue({
+				status: { operator: 'in', value: ['open'] },
+				warehouse: { operator: 'in', value: ['msk'] },
+			})
+		})
+
+		expect(onChange).toHaveBeenCalledTimes(1)
+		expect(onChange).toHaveBeenCalledWith([
+			{ id: 'status', value: { operator: 'in', value: ['open'] } },
+			{ id: 'warehouse', value: { operator: 'in', value: ['msk'] } },
+		])
+	})
+
+	it('treats the key of a field that is not offered without `manual` as unknown', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+		const table = makeTable({ filtering: { fields: [WAREHOUSE] } })
+		const { result } = hookFor(table)
+
+		expect(result.current?.filters.map((t) => t.id)).not.toContain('warehouse')
+		act(() => {
+			result.current?.setValue({ warehouse: { operator: 'in', value: ['msk'] } })
+		})
+
+		expect(filtersOf(table)).toEqual([])
+		expect(warn).toHaveBeenCalledWith(expect.stringContaining('"warehouse"'))
+	})
+
+	it('returns a grid whose only target is a field', () => {
+		const table = prepareDataGridTable(
+			createTable<GridFeatures, Row>({
+				features: TEST_FEATURES,
+				data: DATA,
+				columns: createColumns<Row>([{ accessorKey: 'name', header: 'Name', filtering: false }]),
+				filtering: { manual: true, fields: [WAREHOUSE] },
+			}),
+		)
+		const { result } = hookFor(table)
+		const { container } = render(<FilterPanel />, { wrapper: wrapperFor(table) })
+
+		expect(result.current?.filters.map((t) => t.id)).toEqual(['warehouse'])
+		expect(container.textContent).toContain('Warehouse')
+	})
+
+	it('holds a field in the draft until apply', () => {
+		const onChange = vi.fn()
+		const table = makeTable({ draft: true, filtering: { manual: true, onChange, fields: [WAREHOUSE] } })
+		const { result } = hookFor(table)
+
+		act(() => {
+			result.current?.filters.at(-1)?.filter.setValue({ operator: 'in', value: ['msk'] })
+		})
+
+		expect(onChange).not.toHaveBeenCalled()
+		expect(table.draft.isDirty()).toBe(true)
+
+		act(() => {
+			table.draft.apply()
+		})
+
+		expect(onChange).toHaveBeenCalledTimes(1)
+		expect(onChange).toHaveBeenCalledWith([{ id: 'warehouse', value: { operator: 'in', value: ['msk'] } }])
+	})
+})
+
+describe('<FilterPanel> — driving a field control', () => {
+	it('re-renders the field chip as the user picks a value, and reports it', async () => {
+		const user = userEvent.setup()
+		const onChange = vi.fn()
+		const table = makeTable({ filtering: { manual: true, onChange, fields: [WAREHOUSE] } })
+		const { container } = render(<FilterPanel />, { wrapper: wrapperFor(table) })
+		const chip = () =>
+			[...container.querySelectorAll('[data-slot="filter-panel-chip"]')].find((c) =>
+				c.textContent.includes('Warehouse'),
+			)
+
+		await user.click(within(chip() as HTMLElement).getByRole('button', { name: /Warehouse/ }))
+		await user.click(within(chip() as HTMLElement).getByRole('checkbox', { name: 'Moscow' }))
+
+		expect(chip()?.querySelector('[data-slot="filter-panel-chip-value"]')?.textContent).toBe('Moscow')
+		expect(onChange).toHaveBeenLastCalledWith([{ id: 'warehouse', value: { operator: 'in', value: ['msk'] } }])
 	})
 })

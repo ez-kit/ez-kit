@@ -758,7 +758,15 @@ export type MultiSelectFilterProps = {
 	selectedValues: string[]
 	/** Called with the next array of selected values. */
 	onChange: (next: string[]) => void
-	/** Optional trigger placeholder (e.g. "Filter status"). */
+	/**
+	 * The control's accessible name — "Filter Status…". Name the control by this rather than by
+	 * {@link MultiSelectFilterProps.placeholder}, which may be an author's hint.
+	 */
+	label?: string
+	/**
+	 * What the trigger shows while nothing is selected: the column's `filtering.placeholder` hint,
+	 * else the same text as `label`.
+	 */
 	placeholder?: string
 }
 

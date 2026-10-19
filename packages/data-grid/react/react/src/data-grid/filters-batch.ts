@@ -1,14 +1,14 @@
-import type { OperatorColumnFilterModel } from './column-filter-model'
+import type { OperatorFilterModel } from './filter-model'
 import type { FilterOperatorDef, StructuredFilterValue } from '@ez-kit/data-grid-core'
 import type { ColumnFiltersState } from '@tanstack/table-core'
 
 const IS_DEV = process.env.NODE_ENV !== 'production'
 
 /**
- * A filter panel's whole value: one structured filter per operator column, keyed by column id.
- * A column the value does not name has no filter.
+ * A filter panel's whole value: one structured filter per filter target with operators — column or
+ * field — keyed by its id. A target the value does not name has no filter.
  */
-export type ColumnFiltersValue = Record<string, StructuredFilterValue | undefined>
+export type FiltersValue = Record<string, StructuredFilterValue | undefined>
 
 function isBlank(value: unknown): boolean {
 	return value === undefined || value === null || value === ''
@@ -35,23 +35,23 @@ export function isEmptyFilterValue(filter: StructuredFilterValue, operators: Fil
 	return false
 }
 
-/** The panel's value read off the grid: every operator column that currently holds a filter. */
-export function readColumnFiltersValue(models: OperatorColumnFilterModel[]): Record<string, StructuredFilterValue> {
+/** The panel's value read off the grid: every target with operators that currently holds a filter. */
+export function readFiltersValue(models: OperatorFilterModel[]): Record<string, StructuredFilterValue> {
 	const value: Record<string, StructuredFilterValue> = {}
 	for (const model of models) {
-		if (model.value !== undefined) value[model.columnId] = model.value
+		if (model.value !== undefined) value[model.id] = model.value
 	}
 	return value
 }
 
-function warnUnknownKeys(next: ColumnFiltersValue, models: ReadonlyMap<string, OperatorColumnFilterModel>): void {
+function warnUnknownKeys(next: FiltersValue, models: ReadonlyMap<string, OperatorFilterModel>): void {
 	if (!IS_DEV) return
 	for (const key of Object.keys(next)) {
 		if (models.has(key)) continue
 		console.warn(
-			`[data-grid] A filter panel wrote a filter for "${key}", which names no filterable column ` +
-				'with operators, so it was ignored. A column without operators is written through its own ' +
-				'`filter.setValue`.',
+			`[data-grid] A filter panel wrote a filter for "${key}", which names no filterable column or ` +
+				'field with operators, so it was ignored. A filter without operators is written through its own ' +
+				'`filter.setValue`, and a field is offered only under `filtering.manual: true`.',
 		)
 	}
 }
@@ -59,15 +59,15 @@ function warnUnknownKeys(next: ColumnFiltersValue, models: ReadonlyMap<string, O
 /**
  * The next `columnFilters` for a panel that writes `next` as its whole value.
  *
- * Every operator column the panel shows takes its entry from `next`, or loses it when `next` does
- * not name it; an empty value counts as not named. Entries of every other column — a plain filter
- * on a column without operators above all — are kept as they were. Existing entries keep their
+ * Every target with operators the panel shows — column or field — takes its entry from `next`, or
+ * loses it when `next` does not name it; an empty value counts as not named. Every other entry — a
+ * plain filter on a column without operators above all — is kept as it was. Existing entries keep their
  * position, so re-applying an unchanged value produces an equal array.
  */
-export function applyColumnFiltersValue(
+export function applyFiltersValue(
 	prev: ColumnFiltersState,
-	next: ColumnFiltersValue,
-	models: ReadonlyMap<string, OperatorColumnFilterModel>,
+	next: FiltersValue,
+	models: ReadonlyMap<string, OperatorFilterModel>,
 ): ColumnFiltersState {
 	warnUnknownKeys(next, models)
 	const written = new Map<string, StructuredFilterValue>()
