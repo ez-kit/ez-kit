@@ -313,6 +313,26 @@ describe('createTableOptions', () => {
 			expect(warnings()[0]).not.toContain('`columnFacetingFeature`')
 		})
 
+		it('warns once that facets count only the loaded rows under server filtering', () => {
+			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+			createTableOptions({ features: withFaceting, data: rows, columns, filtering: { manual: true, faceted: true } })
+			createTableOptions({ features: withFaceting, data: rows, columns, filtering: { manual: true, faceted: true } })
+
+			const facetWarnings = warnings().filter((message) => message.includes('`filtering.manual'))
+			expect(facetWarnings).toHaveLength(1)
+			expect(facetWarnings[0]).toContain('`filtering.faceted`')
+			expect(facetWarnings[0]).toContain('`useItems`')
+		})
+
+		it('does not warn about facets on a client-filtered grid', () => {
+			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+			createTableOptions({ features: withFaceting, data: rows, columns, filtering: { faceted: true } })
+
+			expect(warnings().filter((message) => message.includes('`filtering.manual'))).toHaveLength(0)
+		})
+
 		it('stays quiet when every faceted member is registered', () => {
 			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
 

@@ -84,6 +84,7 @@ export const DocPage = {
 	Ai: 'content/docs/data-grid/ai.mdx',
 	Architecture: 'content/docs/data-grid/architecture.mdx',
 	ClientVsServer: 'content/docs/data-grid/client-vs-server.mdx',
+	ColumnsAsyncItems: 'content/docs/data-grid/columns/async-items.mdx',
 	ColumnsCellTypes: 'content/docs/data-grid/columns/cell-types.mdx',
 	ColumnsCustomCellTypes: 'content/docs/data-grid/columns/custom-cell-types.mdx',
 	LayoutComposition: 'content/docs/data-grid/layout/composition.mdx',
@@ -266,6 +267,8 @@ export const GRID_TYPE = {
 	DateCellConfig: { module: TypeModule.Core, name: 'DateCellConfig' },
 	LinkCellConfig: { module: TypeModule.Core, name: 'LinkCellConfig' },
 	SelectCellConfig: { module: TypeModule.Core, name: 'SelectCellConfig' },
+	SelectColumnConfig: { module: TypeModule.Core, name: 'SelectColumnConfig' },
+	BadgeColumnConfig: { module: TypeModule.Core, name: 'BadgeColumnConfig' },
 	BadgeCellConfig: { module: TypeModule.Core, name: 'BadgeCellConfig' },
 	ReactFilteringConfig: { module: TypeModule.React, name: 'ReactFilteringConfig' },
 	ReactPaginationConfig: { module: TypeModule.React, name: 'ReactPaginationConfig' },
@@ -674,6 +677,23 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		nonOptionTables: [{ heading: NO_HEADING, reason: 'A list of documentation URLs.' }],
 	},
 	{
+		page: DocPage.ColumnsAsyncItems,
+		optionTables: [
+			{
+				heading: '`cell.config` (select / badge)',
+				roots: [GRID_TYPE.SelectColumnConfig, GRID_TYPE.BadgeColumnConfig],
+				expectedCount: 3,
+			},
+			{ heading: 'Per-column lists', roots: [GRID_TYPE.ColumnDef], expectedCount: 6 },
+		],
+		nonOptionTables: [
+			{
+				heading: 'Where a list comes from',
+				reason: 'Maps each control to the levels it inherits its list from — prose about a chain, not keys.',
+			},
+		],
+	},
+	{
 		page: DocPage.ColumnsCellTypes,
 		optionTables: [
 			{ heading: "`'date'`", roots: [GRID_TYPE.DateCellConfig], expectedCount: 3 },
@@ -1023,13 +1043,13 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		page: DocPage.FilteringIndex,
 		optionTables: [
 			{ heading: '`filtering`', roots: [GRID_TYPE.ReactFilteringConfig], expectedCount: 7 },
-			{ heading: 'Per-column `filtering`', roots: [GRID_TYPE.ColumnFilteringConfig], expectedCount: 7 },
+			{ heading: 'Per-column `filtering`', roots: [GRID_TYPE.ColumnFilteringConfig], expectedCount: 8 },
 		],
 		nonOptionTables: [],
 	},
 	{
 		page: DocPage.FilteringFields,
-		optionTables: [{ heading: 'Field options', roots: [GRID_TYPE.FilterFieldDef], expectedCount: 4 }],
+		optionTables: [{ heading: 'Field options', roots: [GRID_TYPE.FilterFieldDef], expectedCount: 5 }],
 		nonOptionTables: [],
 	},
 	{
@@ -1037,11 +1057,11 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		optionTables: [
 			{
 				heading: '`cell` (select / badge)',
-				roots: [GRID_TYPE.SelectCellConfig, GRID_TYPE.BadgeCellConfig],
+				roots: [GRID_TYPE.SelectColumnConfig, GRID_TYPE.BadgeColumnConfig],
 				stripPrefix: CELL_CONFIG_PREFIX,
-				expectedCount: 1,
+				expectedCount: 3,
 			},
-			{ heading: 'Per-column `filtering`', roots: [GRID_TYPE.ColumnFilteringConfig], expectedCount: 4 },
+			{ heading: 'Per-column `filtering`', roots: [GRID_TYPE.ColumnFilteringConfig], expectedCount: 5 },
 		],
 		nonOptionTables: [],
 	},

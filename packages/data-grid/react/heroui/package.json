@@ -163,7 +163,7 @@
 		},
 		{
 			"path": "dist/cell-types/index.js",
-			"limit": "3 KB",
+			"limit": "3.65 KB",
 			"ignore": [
 				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
@@ -213,7 +213,7 @@
 		},
 		{
 			"path": "dist/cell-types/select.js",
-			"limit": "800 B",
+			"limit": "1.45 KB",
 			"ignore": [
 				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
@@ -223,7 +223,7 @@
 		},
 		{
 			"path": "dist/cell-types/badge.js",
-			"limit": "940 B",
+			"limit": "1.6 KB",
 			"ignore": [
 				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",

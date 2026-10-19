@@ -61,6 +61,7 @@ export const exampleModules: Record<string, () => Promise<Record<string, Compone
 	'components/filter-date-range.tsx': () => import('./components/filter-date-range'),
 	'components/filter-fields.tsx': () => import('./components/filter-fields'),
 	'components/filter-multi-value.tsx': () => import('./components/filter-multi-value'),
+	'components/async-items.tsx': () => import('./components/async-items'),
 	'components/filter-operators-between-inputs.tsx': () => import('./components/filter-operators-between-inputs'),
 	'components/filter-operators-between-slider.tsx': () => import('./components/filter-operators-between-slider'),
 	'components/filter-operators-date-between.tsx': () => import('./components/filter-operators-date-between'),

@@ -768,6 +768,16 @@ export type MultiSelectFilterProps = {
 	 * else the same text as `label`.
 	 */
 	placeholder?: string
+	/**
+	 * `true` while `items` is not there yet — the column's list comes from a `useItems` hook that
+	 * has not answered. Show a loading state rather than an empty list.
+	 *
+	 * Named like `FieldState.itemsLoading`, not like the hook's own `isLoading`: on a component the
+	 * bare `error` already means something else, and one pair of names serves every component.
+	 */
+	itemsLoading?: boolean
+	/** What that hook failed with, when it did. Show it rather than an empty list. */
+	itemsError?: unknown
 }
 
 export type ConfirmDialogProps = {

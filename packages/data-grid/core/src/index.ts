@@ -58,12 +58,16 @@ export {
 	BuiltInSortingFn,
 	ColumnAlign,
 	ColumnPinSide,
+	ItemStatus,
 	LinkTarget,
 	ColumnSortUndefined,
 	LINK_HREF_VALUE_TOKEN,
 	SystemColumnType,
 } from './column/types'
 export type { ColumnHelper } from './column/create-column-helper'
+// Which cell types label their values from a list (`select`, `badge`) — one set, read by the
+// React layer too, so a third list-bearing type cannot be added in one place and missed in another.
+export { isItemCellType } from './column/map-columns/items-source'
 
 // Menu / row-action icon vocabulary — semantic names each UI kit maps to its own glyphs
 export { GridMenuIcon, isGridMenuIcon } from './menu-icon'
@@ -145,7 +149,12 @@ export type {
 	ImageCellConfig,
 	LinkCellConfig,
 	InputComponentProps,
+	ItemsSource,
+	ItemsSourceParams,
+	ItemsSourceResult,
 	ProgressCellConfig,
+	SelectColumnConfig,
+	BadgeColumnConfig,
 	SelectCellConfig,
 	SelectItem,
 	SortingFn,

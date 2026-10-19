@@ -1,3 +1,4 @@
+import { liftItemsSource } from '../column/map-columns/items-source'
 import { FilterSubject, resolveFiltering } from '../column/map-columns/resolve-filtering'
 
 import type { ResolveFilteringOptions } from '../column/map-columns/resolve-filtering'
@@ -47,18 +48,20 @@ function assertUniqueFieldIds(fields: readonly FilterFieldDef[], columns: readon
 	}
 }
 
-function resolveFieldCell(cell: FilterFieldDef['cell']): ColumnCellMeta {
+function resolveFieldCell(id: string, cell: FilterFieldDef['cell']): ColumnCellMeta {
 	if (cell === undefined) return { type: DEFAULT_FIELD_CELL_TYPE }
 	if (typeof cell === 'string') return { type: cell }
 	// Forwarded as written, exactly as `mapColumns` forwards a column's `cell.config`: the declared
-	// shape is the cell type's business, and the meta is row-erased.
-	return cell.config === undefined
-		? { type: cell.type }
-		: { type: cell.type, config: cell.config as Record<string, unknown> }
+	// shape is the cell type's business, and the meta is row-erased. A list hook is lifted out of
+	// it the same way, too — a field has no rows, so `getItem` never applies and is simply dropped
+	// with it by the readers.
+	if (cell.config === undefined) return { type: cell.type }
+	const cellMeta: ColumnCellMeta = { type: cell.type, config: cell.config as Record<string, unknown> }
+	return liftItemsSource(cellMeta, `${FilterSubject.Field} "${id}"`)
 }
 
 function resolveField(field: FilterFieldDef, options: ResolveFilteringOptions): ResolvedFilterField {
-	const cell = resolveFieldCell(field.cell)
+	const cell = resolveFieldCell(field.id, field.cell)
 	// `faceted` is forced off: facets count the rows' values, and a field has no column of data.
 	// The operator dispatcher is dropped — under `manual` nothing calls it.
 	const { meta } = resolveFiltering(field.id, field.filtering, cell.type, {

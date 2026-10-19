@@ -2,11 +2,14 @@ import { ColumnFormMode, CommitStatus, resolveColumnFormConfig } from '@ez-kit/d
 
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
+import { ItemsSourceSlot, useItemsListsFor } from '../items-source'
 
 import { flexRender } from './flex-render'
+import { fieldItemsProps } from './items-view'
 import { useDataGridState, useDataGridTable } from './table-context'
 
 import type { CellTypeRegistry } from '../cell-types-context'
+import type { DataTable, ErasedRow, GridFeatures } from '../types'
 import type { FormColumnMeta, FieldState, ResolvedColumnFormConfig } from '@ez-kit/data-grid-core'
 import type { ComponentType, ReactNode } from 'react'
 
@@ -52,6 +55,21 @@ export function AutoForm({ mode }: AutoFormProps): ReactNode {
 		}
 	}
 
+	const formColumns = table.getAllColumns()
+	const slot = mode === ColumnFormMode.Creating ? ItemsSourceSlot.Creating : ItemsSourceSlot.Editing
+	// One hook for every field's list — the fields are rendered in a loop. A column that renders no
+	// field reads nothing, which keeps the reads positional with the columns.
+	const lists = useItemsListsFor(
+		formColumns.map((col) => {
+			const meta = col.columnDef.meta as FormColumnMeta | undefined
+			const hasField = meta !== undefined && !meta.isSystemColumn && resolveColumnFormConfig(meta, mode) !== false
+			return { id: col.id, meta: hasField ? meta : {}, slot }
+		}),
+	)
+	// The edited row, so a column's `getItem` labels its value while the list is still loading. A
+	// create form has no row yet.
+	const editedRow = mode === ColumnFormMode.Editing ? editedRowOf(table, table.editing.getState().rowId) : undefined
+
 	const validateField = (columnId: string): void => {
 		if (mode === ColumnFormMode.Creating) {
 			void table.creating.validateField(columnId)
@@ -65,7 +83,7 @@ export function AutoForm({ mode }: AutoFormProps): ReactNode {
 		// generated fields (each composite renders its own label / input / error, and nothing
 		// between them otherwise separates one field from the next).
 		<div data-slot='auto-form'>
-			{table.getAllColumns().map((col) => {
+			{formColumns.map((col, index) => {
 				// `ColumnMeta` is declared `in out` in both its `TFeatures` and its `TData` upstream, so no
 				// concrete instantiation is assignable to any other and this cast is forced by the variance
 				// annotation rather than chosen. `FormColumnMeta` is the one name core declares for it, and
@@ -90,12 +108,13 @@ export function AutoForm({ mode }: AutoFormProps): ReactNode {
 				const fieldError = fieldErrors[0]
 				const label = resolveLabel(col.columnDef.header, col.id)
 				const description = colDef?.description
+				const fieldLists = lists[index]
 				const field: FieldState = {
 					id: `${mode}-${col.id}`,
 					value,
 					onChange,
 					onBlur,
-					...(meta?.cell?.config !== undefined ? { config: meta.cell.config } : {}),
+					...fieldItemsProps(meta ?? {}, fieldLists?.options, fieldLists?.labels, value, editedRow),
 					label,
 					...(description !== undefined ? { description } : {}),
 					error: fieldError,
@@ -157,6 +176,13 @@ export function AutoForm({ mode }: AutoFormProps): ReactNode {
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────
+
+/** The original of the row being edited, or `undefined` when there is none (or it is gone). */
+function editedRowOf(table: DataTable<GridFeatures, ErasedRow>, rowId: string | null | undefined): unknown {
+	if (rowId === null || rowId === undefined) return undefined
+	const row = table.getCoreRowModel().rowsById[rowId] as { original: unknown } | undefined
+	return row?.original
+}
 
 /**
  * Renders validation messages for a single field. UI kits can target

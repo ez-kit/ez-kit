@@ -1,14 +1,17 @@
 import { GridMenuIcon } from '@ez-kit/data-grid-core'
 
+import { ItemsSourceSlot, useItemsLists } from '../items-source'
 import { GridMenuVariant, toMenuSections } from '../menu'
 
 import { activePresetId, presetValue } from './date-presets'
 import { FilterEditor, filterName, resolveFilter } from './filter-model'
 import { FilterTextInput } from './filter-text-input'
 import { flexRender } from './flex-render'
+import { configWithItems, fieldItemsProps } from './items-view'
 import { VisuallyHiddenLabel } from './visually-hidden'
 
 import type { CellTypeRegistry } from '../cell-types-context'
+import type { ItemsLists, ItemsMeta } from '../items-source'
 import type { GridMenuProps } from '../menu'
 import type {
 	DataTable,
@@ -24,6 +27,13 @@ import type { FilterModel, OperatorFilterModel } from './filter-model'
 import type { FilterTarget, FilterTargetMeta } from './filter-target'
 import type { InputComponentProps, BetweenValue, FieldState, GridMessages } from '@ez-kit/data-grid-core'
 import type { ComponentType, ReactNode } from 'react'
+
+const NO_META: ItemsMeta = {}
+
+/** `config` spread so an absent one stays an absent key. */
+function configProp(config: Record<string, unknown> | undefined): { config?: Record<string, unknown> } {
+	return config !== undefined ? { config } : {}
+}
 
 export type RenderFilterInputArgs<TRow extends object = ErasedRow> = {
 	/** The column or field whose filter control this is. */
@@ -77,7 +87,27 @@ export type RenderFilterInputArgs<TRow extends object = ErasedRow> = {
  * The model is the same one `<DataGrid.FilterPanel>` hands a consumer, which is what keeps a
  * panel built on a kit's own filter controls in step with the header.
  */
-export function renderFilterInput<TRow extends object>({
+export function renderFilterInput<TRow extends object>(args: RenderFilterInputArgs<TRow>): ReactNode {
+	// A component rather than a call, so the target's value lists are read by a hook of its own —
+	// and only once the control is actually mounted: a header render function that leaves `filter`
+	// out, or a panel chip that is closed, starts no hook.
+	// Row-erased, like every reader of the table below `<DataGrid>` — see `ErasedRow`.
+	return <FilterInput {...(args as unknown as RenderFilterInputArgs)} />
+}
+
+function FilterInput(args: RenderFilterInputArgs) {
+	// A target that already carries its lists — the filter panel reads them for every target at
+	// once — is not subscribed a second time: its meta is withheld from the read.
+	const subscribed = useItemsLists(
+		args.target.id,
+		args.target.lists ? NO_META : args.target.meta,
+		ItemsSourceSlot.Filtering,
+	)
+	const target = args.target.lists ? args.target : { ...args.target, lists: subscribed }
+	return renderFilterControl({ ...args, target })
+}
+
+function renderFilterControl<TRow extends object>({
 	target,
 	Input,
 	cellTypes,
@@ -94,6 +124,7 @@ export function renderFilterInput<TRow extends object>({
 	const { meta } = target
 	const filteringMeta = meta.filtering
 	const model = resolvedModel ?? resolveFilter(target, { messages, tableDebounce, cellTypes })
+	const lists = target.lists ?? { options: undefined, labels: undefined }
 	// A column's own `filtering.debounce` wins over the table's, the same way `editing.debounce`
 	// and `creating.debounce` do at their two levels. One dear endpoint can wait a second while
 	// the rest of the grid stays responsive.
@@ -133,6 +164,7 @@ export function renderFilterInput<TRow extends object>({
 	if (filteringMeta && model.hasOperators) {
 		return renderOperatorFilter({
 			model,
+			lists,
 			meta,
 			filteringMeta,
 			Input,
@@ -163,7 +195,7 @@ export function renderFilterInput<TRow extends object>({
 			return flexRender(comp, {
 				value: filterValue,
 				onChange,
-				...(meta.cell?.config !== undefined ? { config: meta.cell.config } : {}),
+				...configProp(configWithItems(meta, lists.options)),
 				placeholder: fieldPlaceholder,
 			})
 	}
@@ -178,7 +210,7 @@ export function renderFilterInput<TRow extends object>({
 				value: filterValue,
 				onChange,
 				onBlur: () => {},
-				...(meta.cell?.config !== undefined ? { config: meta.cell.config } : {}),
+				...fieldItemsProps(meta, lists.options, lists.labels, filterValue),
 				placeholder: fieldPlaceholder,
 				error: undefined,
 				errors: [],
@@ -212,6 +244,7 @@ type OperatorFilterArgs = Pick<
 > & {
 	MultiSelectFilter: ComponentType<MultiSelectFilterProps> | undefined
 	model: OperatorFilterModel
+	lists: ItemsLists
 	meta: FilterTargetMeta
 	filteringMeta: NonNullable<FilterTargetMeta['filtering']>
 	fieldId: string
@@ -224,6 +257,7 @@ type OperatorFilterArgs = Pick<
 /** The operator-aware branch of {@link renderFilterInput}, dispatched on the model's `editor`. */
 function renderOperatorFilter({
 	model,
+	lists,
 	meta,
 	filteringMeta,
 	Input,
@@ -334,6 +368,8 @@ function renderOperatorFilter({
 					onChange={onValueChange}
 					label={fieldName}
 					placeholder={fieldPlaceholder}
+					{...(model.itemsLoading ? { itemsLoading: true } : {})}
+					{...(model.itemsError !== undefined ? { itemsError: model.itemsError } : {})}
 				/>
 				{operatorSelect}
 			</>
@@ -349,7 +385,7 @@ function renderOperatorFilter({
 					{flexRender(columnFilterInput, {
 						value: inputValue,
 						onChange: onValueChange,
-						...(meta.cell?.config !== undefined ? { config: meta.cell.config } : {}),
+						...configProp(configWithItems(meta, lists.options)),
 						placeholder: fieldPlaceholder,
 					})}
 					{presetMenu}
@@ -371,7 +407,7 @@ function renderOperatorFilter({
 				value: inputValue,
 				onChange: onValueChange,
 				onBlur: () => {},
-				...(meta.cell?.config !== undefined ? { config: meta.cell.config } : {}),
+				...fieldItemsProps(meta, lists.options, lists.labels, inputValue),
 				placeholder: fieldPlaceholder,
 				error: undefined,
 				errors: [],

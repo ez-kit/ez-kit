@@ -44,14 +44,18 @@ const columns = createColumns<Order>([
 
 When `filtering.faceted` is `true` on the table (or the column overrides it to `true`), each option shows the count of rows currently matching it (post-other-filters). Useful for analytics-shaped grids.
 
+A `count` the list already carries is kept: faceted counts only fill the options that have none. Once anything counts, an option no row matches shows `0` and stays selectable. Under `filtering.manual: true` faceted counts cover the loaded page only, so return server totals as `count` from a [`useItems` hook](/docs/data-grid/columns/async-items#counts-from-the-server).
+
 ## Options
 
 ### `cell` (select / badge)
 
-| Option         | Type                                              | Description                                                                   |
-| -------------- | ------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `type`         | `'select' \| 'badge'`                             | `'select'` renders plain items; `'badge'` renders colored badges.             |
-| `config.items` | `Array<{ value, label }>` (badge adds `variant?`) | The option list used both for cell display and for the `in` / `notIn` filter. |
+| Option            | Type                                              | Description                                                                                     |
+| ----------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `type`            | `'select' \| 'badge'`                             | `'select'` renders plain items; `'badge'` renders colored badges.                               |
+| `config.items`    | `Array<{ value, label }>` (badge adds `variant?`) | The option list used both for cell display and for the `in` / `notIn` filter.                   |
+| `config.useItems` | `(params) => { items, isLoading?, error? }`       | The same list from a hook — see [Value lists from a hook](/docs/data-grid/columns/async-items). |
+| `config.getItem`  | `(row) => { value, label } \| undefined`          | The label the row carries. Also labels faceted values when the column has no list.              |
 
 ### Per-column `filtering`
 
@@ -60,6 +64,7 @@ When `filtering.faceted` is `true` on the table (or the column overrides it to `
 | `operators`       | `boolean \| ColumnOperatorsConfig`          | `true` enables the default `select`/`badge` operator set (`in`, `notIn`, `isEmpty`, `isNotEmpty`). |
 | `defaultOperator` | `string`                                    | `'in'` (default) keeps selected values; `'notIn'` excludes them.                                   |
 | `items`           | `FilterItem[]` — `{ value, label, count? }` | Explicit value list — overrides `cell.config.items` and faceted values for the filter input.       |
+| `useItems`        | `(params) => { items, isLoading?, error? }` | The same list from a hook. A `count` on an item wins over the faceted one.                         |
 | `faceted`         | `boolean`                                   | Per-column override for the table-level `filtering.faceted` flag.                                  |
 
 ## Source

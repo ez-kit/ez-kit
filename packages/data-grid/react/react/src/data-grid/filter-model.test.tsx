@@ -15,8 +15,10 @@ import { FilterEditor, resolveFilter } from './filter-model'
 import { collectFilterTargets, columnFilterTarget } from './filter-target'
 
 import type { CellTypeRegistry } from '../cell-types-context'
+import type { ItemsLists, ItemsSourceSnapshot, ListItem } from '../items-source'
 import type { GridFeatures } from '../types'
 import type { FilterModel, FilterModelContext } from './filter-model'
+import type { FilterTarget } from './filter-target'
 import type { ColumnDef, GridMessages, StructuredFilterValue } from '@ez-kit/data-grid-core'
 import type { Column } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
@@ -496,5 +498,244 @@ describe('collectFilterTargets', () => {
 
 		expect(targets.map((t) => t.id)).toEqual(['name', 'status', 'warehouse', 'region'])
 		expect(targets.map((t) => t.source.kind)).toEqual(['column', 'column', 'field', 'field'])
+	})
+})
+
+describe('resolveFilter — value lists from hooks', () => {
+	type Order = { id: string; warehouse: { id: string; name: string }; status: string }
+
+	const ORDERS: Order[] = [
+		{ id: '1', warehouse: { id: 'wh_12', name: 'Berlin' }, status: 'open' },
+		{ id: '2', warehouse: { id: 'wh_12', name: 'Berlin' }, status: 'open' },
+		{ id: '3', warehouse: { id: 'wh_7', name: 'Bern' }, status: 'done' },
+	]
+	const warehouseAccessor = (row: Order) => row.warehouse.id
+	const getWarehouse = (row: Order) => ({ value: row.warehouse.id, label: row.warehouse.name })
+	const useWarehouses = () => ({ items: [] })
+
+	const loaded = (items: ListItem[]): ItemsSourceSnapshot => ({ items, isLoading: false, error: undefined })
+	const loading: ItemsSourceSnapshot = { items: [], isLoading: true, error: undefined }
+
+	function orderTable(columns: ColumnDef<Order>[], config: Record<string, unknown> = {}) {
+		return prepareDataGridTable(
+			createTable<GridFeatures, Order>({
+				features: TEST_FEATURES,
+				data: ORDERS,
+				columns: createColumns<Order>(columns),
+				filtering: true,
+				...config,
+			}),
+		)
+	}
+
+	function targetOf(table: ReturnType<typeof orderTable>, id: string, lists?: ItemsLists): FilterTarget {
+		const target = collectFilterTargets(table).find((candidate) => candidate.id === id)
+		if (!target) throw new Error(`no target ${id}`)
+		return lists ? { ...target, lists } : target
+	}
+
+	const warehouseColumn = (extra: Partial<ColumnDef<Order>> = {}): ColumnDef<Order> => ({
+		id: 'warehouse',
+		header: 'Warehouse',
+		accessorFn: warehouseAccessor,
+		cell: { type: 'select', config: { useItems: useWarehouses } },
+		filtering: { operators: true, defaultOperator: 'in' },
+		...extra,
+	})
+
+	it('offers the items the hook returned', () => {
+		const berlin = { value: 'wh_12', label: 'Berlin' }
+		const lists = { options: loaded([berlin]), labels: loaded([berlin]) }
+
+		const model = resolveFilter(targetOf(orderTable([warehouseColumn()]), 'warehouse', lists), context())
+
+		expect(model.items).toEqual([berlin])
+		expect(model.itemsLoading).toBe(false)
+	})
+
+	it('reports a list that is still loading', () => {
+		const model = resolveFilter(
+			targetOf(orderTable([warehouseColumn()]), 'warehouse', { options: loading, labels: loading }),
+			context(),
+		)
+
+		expect(model.items).toEqual([])
+		expect(model.itemsLoading).toBe(true)
+	})
+
+	it('reads a hook list as loading when nothing subscribed to it', () => {
+		expect(resolveFilter(targetOf(orderTable([warehouseColumn()]), 'warehouse'), context()).itemsLoading).toBe(true)
+	})
+
+	it('offers the filter’s own list and labels from the cell’s', () => {
+		const useRegions = () => ({ items: [] })
+		const table = orderTable(
+			[
+				warehouseColumn({
+					cell: { type: 'select', config: { items: [{ value: 'wh_12', label: 'Berlin' }] } },
+					filtering: { operators: true, defaultOperator: 'in', useItems: useRegions },
+				}),
+			],
+			{ initialState: { columnFilters: [{ id: 'warehouse', value: { operator: 'in', value: ['wh_12'] } }] } },
+		)
+		const target = targetOf(table, 'warehouse')
+		const lists = {
+			options: loaded([{ value: 'eu', label: 'Europe' }]),
+			labels: loaded([{ value: 'wh_12', label: 'Berlin' }]),
+		}
+
+		const model = resolveFilter({ ...target, lists }, context())
+
+		expect(model.items).toEqual([{ value: 'eu', label: 'Europe' }])
+		expect(model.valueDisplay).toBe('Berlin')
+	})
+
+	it('labels from the filter’s own list on a column with no base', () => {
+		const table = orderTable(
+			[
+				{
+					accessorKey: 'status',
+					header: 'Region',
+					filtering: { operators: true, defaultOperator: 'in', useItems: useWarehouses },
+				},
+			],
+			{ initialState: { columnFilters: [{ id: 'status', value: { operator: 'in', value: ['eu'] } }] } },
+		)
+		const europe = loaded([{ value: 'eu', label: 'Europe' }])
+
+		const model = resolveFilter(targetOf(table, 'status', { options: europe, labels: europe }), context())
+
+		expect(model.valueDisplay).toBe('Europe')
+	})
+
+	it('offers a field the items of its hook', () => {
+		const table = orderTable([], {
+			filtering: {
+				manual: true,
+				fields: [{ id: 'warehouse', header: 'Склад', cell: 'select', filtering: { useItems: useWarehouses } }],
+			},
+		})
+		const berlin = loaded([{ value: 'wh_12', label: 'Berlin' }])
+
+		expect(resolveFilter(targetOf(table, 'warehouse', { options: berlin, labels: berlin }), context()).items).toEqual(
+			berlin.items,
+		)
+	})
+
+	describe('counts', () => {
+		const faceted = { filtering: { faceted: true } }
+
+		it('keeps a count the source states over the faceted one', () => {
+			const server = loaded([{ value: 'wh_12', label: 'Berlin', count: 4000 }])
+
+			const model = resolveFilter(
+				targetOf(orderTable([warehouseColumn()], faceted), 'warehouse', { options: server, labels: server }),
+				context(),
+			)
+
+			expect(model.items).toEqual([{ value: 'wh_12', label: 'Berlin', count: 4000 }])
+		})
+
+		it('fills a faceted count into an item the source left uncounted', () => {
+			const plain = loaded([{ value: 'wh_7', label: 'Bern' }])
+
+			const model = resolveFilter(
+				targetOf(orderTable([warehouseColumn()], faceted), 'warehouse', { options: plain, labels: plain }),
+				context(),
+			)
+
+			expect(model.items).toEqual([{ value: 'wh_7', label: 'Bern', count: 1 }])
+		})
+
+		it('counts a value with no rows as 0 and keeps it on offer', () => {
+			const withArchived = loaded([
+				{ value: 'wh_12', label: 'Berlin' },
+				{ value: 'archived', label: 'Archived' },
+			])
+
+			const model = resolveFilter(
+				targetOf(orderTable([warehouseColumn()], faceted), 'warehouse', {
+					options: withArchived,
+					labels: withArchived,
+				}),
+				context(),
+			)
+
+			expect(model.items).toContainEqual({ value: 'archived', label: 'Archived', count: 0 })
+		})
+
+		it('counts nothing when neither facets nor the source count', () => {
+			const plain = loaded([{ value: 'wh_12', label: 'Berlin' }])
+
+			const model = resolveFilter(
+				targetOf(orderTable([warehouseColumn()]), 'warehouse', { options: plain, labels: plain }),
+				context(),
+			)
+
+			expect(model.items.every((item) => item.count === undefined)).toBe(true)
+		})
+
+		it('gives an uncounted item 0 when another item of the source carries a count', () => {
+			const partial = loaded([
+				{ value: 'wh_12', label: 'Berlin', count: 4 },
+				{ value: 'wh_7', label: 'Bern' },
+			])
+
+			const model = resolveFilter(
+				targetOf(orderTable([warehouseColumn()]), 'warehouse', { options: partial, labels: partial }),
+				context(),
+			)
+
+			expect(model.items[1]).toEqual({ value: 'wh_7', label: 'Bern', count: 0 })
+		})
+	})
+
+	describe('faceted values labelled by getItem', () => {
+		const facetedWarehouse = warehouseColumn({
+			cell: { type: 'select', config: { useItems: useWarehouses } },
+			filtering: { operators: true, defaultOperator: 'in', faceted: true },
+		})
+
+		it('names each faceted value from a row that has it', () => {
+			const table = orderTable([
+				{
+					id: 'warehouse',
+					header: 'Warehouse',
+					accessorFn: warehouseAccessor,
+					cell: { type: 'select', config: { items: [], getItem: getWarehouse } },
+					filtering: { operators: true, defaultOperator: 'in', faceted: true },
+				},
+			])
+
+			const model = resolveFilter(targetOf(table, 'warehouse'), context())
+
+			expect(model.items).toContainEqual({ value: 'wh_12', label: 'Berlin', count: 2 })
+		})
+
+		it('labels the selected faceted value in the summary', () => {
+			const table = orderTable(
+				[
+					{
+						id: 'warehouse',
+						header: 'Warehouse',
+						accessorFn: warehouseAccessor,
+						cell: { type: 'select', config: { items: [], getItem: getWarehouse } },
+						filtering: { operators: true, defaultOperator: 'in', faceted: true },
+					},
+				],
+				{ initialState: { columnFilters: [{ id: 'warehouse', value: { operator: 'in', value: ['wh_12'] } }] } },
+			)
+
+			expect(resolveFilter(targetOf(table, 'warehouse'), context()).valueDisplay).toBe('Berlin')
+		})
+
+		it('keeps the raw value as the label without getItem', () => {
+			const model = resolveFilter(
+				targetOf(orderTable([{ ...facetedWarehouse, cell: undefined } as unknown as ColumnDef<Order>]), 'warehouse'),
+				context(),
+			)
+
+			expect(model.items).toContainEqual({ value: 'wh_12', label: 'wh_12', count: 2 })
+		})
 	})
 })

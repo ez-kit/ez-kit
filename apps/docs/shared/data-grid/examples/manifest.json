@@ -280,6 +280,22 @@
 		"exportName": "FilterMultiValueNotInExample"
 	},
 	{
+		"id": "async-items",
+		"label": "Value list from a hook",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/async-items.tsx",
+		"exportName": "AsyncItemsExample"
+	},
+	{
+		"id": "async-items-get-item",
+		"label": "Value list from a hook · Labels from the row",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/async-items.tsx",
+		"exportName": "AsyncItemsGetItemExample"
+	},
+	{
 		"id": "filter-date-range-built-in",
 		"label": "Date range · Built-in presets",
 		"group": "filtering",

@@ -1,11 +1,20 @@
 import { BASE_CELL_TYPE_IDS, FilterOperator, localizeDatePresets, localizeOperators } from '@ez-kit/data-grid-core'
 
+import {
+	ItemsSourceSlot,
+	labelListOf,
+	optionsListOf,
+	PENDING_SNAPSHOT,
+	resolveItem,
+	staticSnapshot,
+} from '../items-source'
+
 import { presetsForOperator } from './date-presets'
 
 import type { CellTypeRegistry } from '../cell-types-context'
+import type { ItemsLists, ListSnapshot, ListItem, ListSpec } from '../items-source'
 import type { FilterTarget, FilterTargetMeta } from './filter-target'
 import type {
-	BadgeItem,
 	BetweenOperatorConfig,
 	BetweenValue,
 	DatePreset,
@@ -13,7 +22,6 @@ import type {
 	FilterOperatorDef,
 	FilterOperatorId,
 	GridMessages,
-	SelectItem,
 	StructuredFilterValue,
 } from '@ez-kit/data-grid-core'
 
@@ -73,8 +81,18 @@ type FilterModelBase = {
 	 * The values a select or multi-select offers: `filtering.items`, else the select / badge cell's
 	 * `cell.config.items`, else the column's unique values when faceted. Counts ride along when the
 	 * column is faceted. A field is never faceted.
+	 *
+	 * A `count` the list's own source states is kept over a faceted one; with any count source at
+	 * all, a value nobody counted carries `0`, and with none `count` is absent.
 	 */
 	items: FilterItem[]
+	/**
+	 * `true` while {@link FilterModelBase.items} is not there yet — it comes from a `useItems` hook
+	 * that has not answered. `false` for a fixed list and for faceted values.
+	 */
+	itemsLoading: boolean
+	/** What that hook failed with; `undefined` when it did not, and for any other list. */
+	itemsError: unknown
 	/** The column's date presets the current operator can take, labelled from the dictionary. */
 	presets: DatePreset[]
 	/** The `between` operator's bounds and slider flag, when the column states them. */
@@ -150,77 +168,107 @@ const EDITOR_BY_CELL_TYPE: Partial<Record<string, FilterEditor>> = {
 
 const BUILT_IN_CELL_TYPES: ReadonlySet<string> = new Set(BASE_CELL_TYPE_IDS)
 
+/** A list read off the meta alone — a fixed list as loaded, a hook list as not answered yet. */
+function snapshotOf(spec: ListSpec | undefined): ListSnapshot | undefined {
+	if (spec === undefined) return undefined
+	return spec.useItems === undefined ? staticSnapshot(spec.items) : PENDING_SNAPSHOT
+}
+
+/**
+ * The target's two lists: the ones a subscribed component put on it, else what the meta states.
+ * The fallback is what keeps the model a pure function a test can call with a hand-built target.
+ */
+function listsOf(target: FilterTarget): ItemsLists {
+	if (target.lists) return target.lists
+	return {
+		options: snapshotOf(optionsListOf(target.meta, ItemsSourceSlot.Filtering)),
+		labels: snapshotOf(labelListOf(target.meta, ItemsSourceSlot.Filtering)),
+	}
+}
+
+/** An item as the filter offers it — `icon` and `count` ride along, a badge's `variant` does not. */
+function toFilterItem({ value, label, icon, count }: ListItem): FilterItem {
+	return {
+		value,
+		label,
+		...(icon !== undefined ? { icon } : {}),
+		...(count !== undefined ? { count } : {}),
+	}
+}
+
+/**
+ * Counts merged onto a list, in the order D6 of the async-items design settles:
+ *
+ * - a `count` the list's own source states is kept — a server's total beats a page's tally;
+ * - faceted counts fill the items that carry none;
+ * - when anything counts at all (facets, or any item with a `count`), an item nobody counted gets
+ *   `0`, which a multi-select shows and keeps selectable. With nothing counting, `count` stays
+ *   `undefined` — "no count", not "none".
+ */
+function withCounts(items: readonly ListItem[], facetMap: Map<unknown, number> | undefined): FilterItem[] {
+	const counted = facetMap !== undefined || items.some((item) => item.count !== undefined)
+	// Facets are keyed by the raw cell value and an item's `value` is a string, so a number or
+	// boolean column matches only once both sides are strings.
+	const counts = facetMap ? stringKeyed(facetMap) : undefined
+	return items.map((item) => {
+		const base = toFilterItem(item)
+		if (base.count !== undefined || !counted) return base
+		return { ...base, count: counts?.get(item.value) ?? 0 }
+	})
+}
+
+/** The facet counts by `String(value)`, summing values that print the same. */
+function stringKeyed(facetMap: Map<unknown, number>): Map<string, number> {
+	const out = new Map<string, number>()
+	facetMap.forEach((count, raw) => {
+		if (raw == null) return
+		const key = String(raw)
+		out.set(key, (out.get(key) ?? 0) + count)
+	})
+	return out
+}
+
+/**
+ * The column's faceted unique values as filter items, labelled from `getItem` of a row that has
+ * each value when the column states one, else by the value itself.
+ */
+function facetedItems(facetMap: Map<unknown, number>, index: ReadonlyMap<string, ListItem> | undefined): FilterItem[] {
+	const out: FilterItem[] = []
+	facetMap.forEach((count, raw) => {
+		if (raw == null || raw === '') return
+		const value = String(raw)
+		const item = index?.get(value)
+		out.push(item ? { ...toFilterItem(item), value, count } : { value, label: value, count })
+	})
+	// Stable order: highest count first, then label asc.
+	out.sort((a, b) => (b.count ?? 0) - (a.count ?? 0) || a.label.localeCompare(b.label))
+	return out
+}
+
 /**
  * Resolves the option list for select and multi-value filters.
  *
  * Priority:
- * 1. `filtering.items` (explicit, wins over both other sources).
- * 2. `cell.config.items` for `select` / `badge` cell types.
- * 3. The column's faceted unique values when faceted is enabled and no explicit items — never
+ * 1. `filtering.useItems` / `filtering.items` (the filter's own list).
+ * 2. `cell.config.useItems` / `cell.config.items` for `select` / `badge` cell types — the base.
+ * 3. The column's faceted unique values when faceted is enabled and no list is stated — never
  *    for a field, which has no rows of its own.
  *
- * Faceted counts are always merged onto whichever option set
- * is returned when faceted is enabled.
+ * Counts are merged by {@link withCounts}.
  */
-function resolveFilterItems(target: FilterTarget): FilterItem[] {
-	const { meta } = target
-	const filteringMeta = meta.filtering
-	const facetedEnabled = filteringMeta?.faceted === true
+function resolveFilterItems(target: FilterTarget, options: ListSnapshot | undefined): FilterItem[] {
+	const facetedEnabled = target.meta.filtering?.faceted === true
 	const facetMap = facetedEnabled ? target.facetedValues?.() : undefined
-
-	const explicit = filteringMeta?.items
-	if (explicit && explicit.length > 0) {
-		return facetMap
-			? explicit.map((opt): FilterItem => {
-					const count = facetMap.get(opt.value)
-					return count !== undefined ? { ...opt, count } : opt
-				})
-			: explicit
-	}
-
-	if (meta.cell?.type === 'select' || meta.cell?.type === 'badge') {
-		const items = (meta.cell.config as { items?: (SelectItem | BadgeItem)[] } | undefined)?.items
-		if (items && items.length > 0) {
-			// `icon` rides along: one item states the glyph, and the cell and this list both draw it.
-			const asFilterItem = ({ value, label, icon }: SelectItem | BadgeItem): FilterItem =>
-				icon !== undefined ? { value, label, icon } : { value, label }
-			return facetMap
-				? items.map((item): FilterItem => {
-						const count = facetMap.get(item.value)
-						const base = asFilterItem(item)
-						return count !== undefined ? { ...base, count } : base
-					})
-				: items.map(asFilterItem)
-		}
-	}
-
-	if (facetMap) {
-		const out: FilterItem[] = []
-		facetMap.forEach((count, raw) => {
-			if (raw == null || raw === '') return
-			const value = String(raw)
-			out.push({ value, label: value, count })
-		})
-		// Stable order: highest count first, then label asc.
-		out.sort((a, b) => (b.count ?? 0) - (a.count ?? 0) || a.label.localeCompare(b.label))
-		return out
-	}
-
+	if (options !== undefined) return withCounts(options.items, facetMap)
+	if (facetMap) return facetedItems(facetMap, target.facetedIndex?.())
 	return []
 }
 
-function resolveOptionLabel(rawValue: string, meta: FilterTargetMeta): string {
-	const explicit = meta.filtering?.items
-	if (explicit) {
-		const hit = explicit.find((o) => o.value === rawValue)
-		if (hit) return hit.label
-	}
-	if (meta.cell?.type === 'select' || meta.cell?.type === 'badge') {
-		const items = (meta.cell.config as { items?: (SelectItem | BadgeItem)[] } | undefined)?.items
-		const hit = items?.find((o) => o.value === rawValue)
-		if (hit) return hit.label
-	}
-	return rawValue
+/** What labels a value in this target's summary: its labelling list, then the faceted rows. */
+type LabelSources = { labels: ListSnapshot | undefined; facetedIndex: ReadonlyMap<string, ListItem> | undefined }
+
+function resolveOptionLabel(rawValue: string, sources: LabelSources): string {
+	return resolveItem(rawValue, sources).item?.label ?? rawValue
 }
 
 type ValueSummary = { display: string; hasValue: boolean }
@@ -235,9 +283,9 @@ function formatBetweenValue(value: BetweenValue, anyLabel: string): ValueSummary
 	return { display: `≤ ${String(to)}`, hasValue: true }
 }
 
-function formatMultiValue(values: unknown[], meta: FilterTargetMeta, anyLabel: string): ValueSummary {
+function formatMultiValue(values: unknown[], sources: LabelSources, anyLabel: string): ValueSummary {
 	if (values.length === 0) return { display: anyLabel, hasValue: false }
-	const labels = values.map((v) => resolveOptionLabel(String(v), meta))
+	const labels = values.map((v) => resolveOptionLabel(String(v), sources))
 	if (labels.length <= MAX_INLINE_VALUES) return { display: labels.join(', '), hasValue: true }
 	const inline = labels.slice(0, MAX_INLINE_VALUES).join(', ')
 	return { display: `${inline} +${String(labels.length - MAX_INLINE_VALUES)}`, hasValue: true }
@@ -245,7 +293,7 @@ function formatMultiValue(values: unknown[], meta: FilterTargetMeta, anyLabel: s
 
 function formatFilterValue(
 	filterValue: unknown,
-	meta: FilterTargetMeta,
+	sources: LabelSources,
 	anyLabel: string,
 	operators: FilterOperatorDef[],
 ): ValueSummary {
@@ -268,17 +316,17 @@ function formatFilterValue(
 
 		// Multi value (in / notIn)
 		if (Array.isArray(inner)) {
-			return formatMultiValue(inner, meta, anyLabel)
+			return formatMultiValue(inner, sources, anyLabel)
 		}
 
-		// Plain inner value
+		// Plain inner value — a select's one value is labelled like a multi-select's many.
 		if (inner == null || inner === '') return { display: anyLabel, hasValue: false }
-		return { display: String(inner), hasValue: true }
+		return { display: resolveOptionLabel(String(inner), sources), hasValue: true }
 	}
 
 	// Plain (non-operator) filter value
-	if (Array.isArray(filterValue)) return formatMultiValue(filterValue, meta, anyLabel)
-	return { display: String(filterValue), hasValue: true }
+	if (Array.isArray(filterValue)) return formatMultiValue(filterValue, sources, anyLabel)
+	return { display: resolveOptionLabel(String(filterValue), sources), hasValue: true }
 }
 
 /**
@@ -371,14 +419,18 @@ export function resolveFilter(
 		: []
 	const rawValue = target.getValue()
 	const valueEditor = valueEditorOf(meta, filteringMeta?.component !== undefined, cellTypes)
-	const { display, hasValue } = formatFilterValue(rawValue, meta, messages.filtering.any, operators)
-	const items = resolveFilterItems(target)
+	const lists = listsOf(target)
+	const labelSources: LabelSources = { labels: lists.labels, facetedIndex: target.facetedIndex?.() }
+	const { display, hasValue } = formatFilterValue(rawValue, labelSources, messages.filtering.any, operators)
+	const items = resolveFilterItems(target, lists.options)
 
 	const base = {
 		id: target.id,
 		label: target.label,
 		cellType,
 		items,
+		itemsLoading: lists.options?.isLoading ?? false,
+		itemsError: lists.options?.error,
 		between: filteringMeta?.betweenOperator,
 		debounce: filteringMeta?.debounce ?? tableDebounce,
 		placeholder: filteringMeta?.placeholder ?? filterName(target, messages),

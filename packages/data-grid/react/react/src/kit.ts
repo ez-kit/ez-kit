@@ -39,7 +39,11 @@ export { ActionBarVariant, ActionsCellState, ColumnSortDirection, LoadMoreTrigge
 
 // Cell-type vocabulary a kit's own cell renderers name. From `@ez-kit/data-grid-core`, which
 // reaches the kits only through this package — and, before this entry, only through its root.
-export { LINK_HREF_VALUE_TOKEN, LinkTarget } from '@ez-kit/data-grid-core'
+export { ItemStatus, LINK_HREF_VALUE_TOKEN, LinkTarget } from '@ez-kit/data-grid-core'
+
+// A kit's own cell type that labels its values from a column's `useItems` list reads it here.
+export { ItemsSourceSlot, useItemsSource } from './items-source'
+export type { ItemsSourceSnapshot } from './items-source'
 
 // Pure helpers: content and structure the kits render but must not re-derive.
 export { buildPageWindow, PAGE_GAP, DEFAULT_PAGE_SIBLINGS, DEFAULT_PAGE_BOUNDARIES } from './data-grid/page-window'

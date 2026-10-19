@@ -356,6 +356,11 @@ export type GridMessages = {
 		search: string
 		/** Shown when a multi-select filter's search matches nothing. */
 		noResults: string
+		/**
+		 * Shown in place of a value list whose `useItems` hook failed — a filter's or an editor's
+		 * options. Loading uses `fallbacks.loading`.
+		 */
+		itemsError: string
 	}
 	/** The global search box. */
 	globalFiltering: {

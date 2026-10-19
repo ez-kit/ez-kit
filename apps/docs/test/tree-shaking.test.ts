@@ -412,6 +412,32 @@ describe('@ez-kit/data-grid-react', () => {
 
 		expect(narrow.length).toBeLessThan(everything.length / 2)
 	})
+
+	/**
+	 * The `useItems` machinery — the per-grid source store, its runners, the list hooks — reaches a
+	 * bundle with the grid, which mounts its host, and with the controls that read a list. It must
+	 * not reach an import that has nothing to do with value lists.
+	 *
+	 * The marker is a fragment of the store's own development warning, written in one literal and
+	 * nowhere else in the package.
+	 */
+	describe('the value-list store', () => {
+		const ITEMS_STORE_MARKER = 'is a new function on this render'
+
+		it('reaches a bundle through DataGrid', async () => {
+			expect(await bundledCodeOf(ADAPTER_ENTRY, ['DataGrid'])).toContain(ITEMS_STORE_MARKER)
+		})
+
+		it('does not reach a bundle that reads only the table', async () => {
+			expect(await bundledCodeOf(ADAPTER_ENTRY, ['useDataGridTable', 'useDataGridState'])).not.toContain(
+				ITEMS_STORE_MARKER,
+			)
+		})
+
+		it('does not reach a bundle through the footer', async () => {
+			expect(await bundledCodeOf(ADAPTER_ENTRY, ['DataGridFooter'])).not.toContain(ITEMS_STORE_MARKER)
+		})
+	})
 })
 
 describe.each(PACKAGES)('$name', ({ entry, shakeable, cases }) => {

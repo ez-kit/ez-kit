@@ -1,5 +1,6 @@
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
+import { ItemsSourceSlot, useItemsListsFor } from '../items-source'
 
 import { resolveFilter } from './filter-model'
 import { collectFilterTargets } from './filter-target'
@@ -7,11 +8,14 @@ import { applyFiltersValue, readFiltersValue } from './filters-batch'
 import { renderFilterInput } from './render-filter-input'
 import { useDataGridState, useDataGridTable } from './table-context'
 
+import type { ItemsLists } from '../items-source'
 import type { FilterModel, OperatorFilterModel } from './filter-model'
 import type { FilterSource } from './filter-target'
 import type { FiltersValue } from './filters-batch'
 import type { StructuredFilterValue } from '@ez-kit/data-grid-core'
 import type { ReactNode } from 'react'
+
+const NO_LISTS: ItemsLists = { options: undefined, labels: undefined }
 
 /**
  * One filter target — a filterable column or a field from `filtering.fields` — as the panel
@@ -134,7 +138,14 @@ export function useFilters(): UseFiltersResult | undefined {
 	const filteringDebounce = table.grid.filtering.debounce
 	const { messages } = table.grid
 
-	const targets = collectFilterTargets(table)
+	const collected = collectFilterTargets(table)
+	// Every target's lists, read here at once — the panel hands each target's model to a consumer,
+	// and a model whose list nobody subscribed to would stay "loading" for good. So a mounted panel
+	// keeps the hook of every filter it offers running, open or not.
+	const lists = useItemsListsFor(
+		collected.map((target) => ({ id: target.id, meta: target.meta, slot: ItemsSourceSlot.Filtering })),
+	)
+	const targets = collected.map((target, i) => ({ ...target, lists: lists[i] ?? NO_LISTS }))
 	if (targets.length === 0) return undefined
 
 	const filters: DataGridFilterTarget[] = targets.map((target) => {

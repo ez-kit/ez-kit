@@ -8,6 +8,8 @@ import {
 } from '../../features/operators'
 import { setIfDefined } from '../../utils/set-if-defined'
 
+import { warnOnBothItemSources } from './items-source'
+
 import type { ColumnOperatorsConfig, DatePreset, OperatorRegistry } from '../../features/operators'
 import type { ColumnFilteringConfig, ColumnFilteringMeta } from '../types'
 
@@ -204,6 +206,8 @@ export function resolveFiltering(
 	setIfDefined(meta, 'debounce', filteringCfg?.debounce)
 	setIfDefined(meta, 'placeholder', filteringCfg?.placeholder)
 	setIfDefined(meta, 'items', filteringCfg?.items)
+	setIfDefined(meta, 'useItems', filteringCfg?.useItems)
+	warnOnBothItemSources(who, 'filtering', filteringCfg)
 	setIfDefined(meta, 'presets', resolveDatePresets(filteringCfg?.presets, cellType, who))
 	// Same cascade as the operators: the table states a default, the filter overrides it in both
 	// directions.

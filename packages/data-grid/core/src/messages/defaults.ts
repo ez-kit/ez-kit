@@ -131,6 +131,7 @@ export const defaultMessages: GridMessages = {
 		presets: 'Quick ranges',
 		search: 'Search…',
 		noResults: 'No results',
+		itemsError: 'Couldn’t load the options.',
 	},
 	globalFiltering: {
 		placeholder: 'Search…',

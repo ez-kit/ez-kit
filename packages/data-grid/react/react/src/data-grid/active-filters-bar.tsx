@@ -1,11 +1,14 @@
 import { localizeOperators } from '@ez-kit/data-grid-core'
 
 import { useGridComponents } from '../components-context'
+import { ItemsSourceSlot, resolveItem, useItemsListsFor } from '../items-source'
 import { FilterChipKind, FilterChipsPosition } from '../types'
 
 import { collectFilterTargets, columnFilterTarget } from './filter-target'
 import { useDataGridState, useDataGridTable } from './table-context'
 
+import type { ItemsMeta, ListSnapshot } from '../items-source'
+import type { FilterTarget } from './filter-target'
 import type { FilterOperatorDef } from '@ez-kit/data-grid-core'
 import type { ReactNode } from 'react'
 
@@ -19,6 +22,8 @@ import type { ReactNode } from 'react'
  * that is now purely its own.
  */
 const DEFAULT_CHIPS_POSITION = FilterChipsPosition.Above
+
+const NO_META: ItemsMeta = {}
 
 export type DataGridActiveFiltersBarProps = {
 	/**
@@ -47,30 +52,46 @@ function formatPrimitive(v: unknown): string {
 	return String(v)
 }
 
-function renderInnerValue(v: unknown): ReactNode {
+/** Turns one filter value into the text a chip shows — its label from the column's list, or itself. */
+type LabelOf = (value: unknown) => string
+
+function renderInnerValue(v: unknown, labelOf: LabelOf): ReactNode {
 	if (Array.isArray(v)) {
 		if (v.length === 0) return null
-		if (v.length === 1) return formatPrimitive(v[0])
+		if (v.length === 1) return labelOf(v[0])
 		return `${String(v.length)} selected`
 	}
 	if (isBetweenValue(v)) {
 		const { from, to } = v
 		return `${formatPrimitive(from)} – ${formatPrimitive(to)}`
 	}
-	const s = formatPrimitive(v)
+	const s = labelOf(v)
 	return s === '' ? null : s
 }
 
-function renderValueDisplay(rawValue: unknown, operators?: FilterOperatorDef[]): ReactNode {
+function renderValueDisplay(rawValue: unknown, labelOf: LabelOf, operators?: FilterOperatorDef[]): ReactNode {
 	if (isStructuredFilterValue(rawValue)) {
 		const op = operators?.find((o) => o.id === rawValue.operator)
 		const indicator = op?.label ?? rawValue.operator
 		if (op?.requiresInput === false) return indicator
-		const inner = renderInnerValue(rawValue.value)
+		const inner = renderInnerValue(rawValue.value, labelOf)
 		if (inner == null) return indicator
 		return `${indicator} ${typeof inner === 'string' ? inner : ''}`.trim()
 	}
-	return renderInnerValue(rawValue)
+	return renderInnerValue(rawValue, labelOf)
+}
+
+/**
+ * A chip's labeller for one target: the value's label from the list that labels it (the base, else
+ * the filter's own), then from the faceted rows' `getItem`, else the value as it is.
+ */
+function labellerOf(target: FilterTarget, labels: ListSnapshot | undefined): LabelOf {
+	const facetedIndex = target.facetedIndex?.()
+	return (value) => {
+		const primitive = formatPrimitive(value)
+		if (value instanceof Date) return primitive
+		return resolveItem(value, { labels, facetedIndex }).item?.label ?? primitive
+	}
 }
 
 /** Reference-and-value comparison good enough to detect a pending filter draft. */
@@ -113,18 +134,30 @@ export function ActiveFiltersBar({ position: positionProp }: DataGridActiveFilte
 	// still a column's when the column exists — a filter seeded on a column the surfaces do not offer
 	// keeps the chip it always had — and is otherwise skipped, as an entry of a removed column was.
 	const targets = new Map(collectFilterTargets(table).map((target) => [target.id, target]))
-
-	for (const cf of columnFilters) {
+	const activeTargets = columnFilters.map((cf) => {
 		const column = targets.has(cf.id) ? undefined : table.getColumn(cf.id)
-		const target = targets.get(cf.id) ?? (column ? columnFilterTarget(column) : undefined)
-		if (!target) continue
+		return targets.get(cf.id) ?? (column ? columnFilterTarget(column) : undefined)
+	})
+	// Only the filters that are set have a chip, so only their lists are read — and only the one
+	// that labels a value: a chip offers nothing.
+	const lists = useItemsListsFor(
+		activeTargets.map((target, i) => ({
+			id: target?.id ?? columnFilters[i]?.id ?? '',
+			meta: target?.meta ?? NO_META,
+			slot: ItemsSourceSlot.Filtering,
+		})),
+	)
+
+	columnFilters.forEach((cf, index) => {
+		const target = activeTargets[index]
+		if (!target) return
 		const rawOperators = target.meta.filtering?.operators
 		// Chips name the operator, so they read it through the dictionary like the control does.
 		const operators = rawOperators
 			? localizeOperators(rawOperators, target.meta.cell?.type, table.grid.messages.operators)
 			: undefined
-		const display = renderValueDisplay(cf.value, operators)
-		if (display == null || display === '') continue
+		const display = renderValueDisplay(cf.value, labellerOf(target, lists[index]?.labels), operators)
+		if (display == null || display === '') return
 		// Optional-chained. `s.applied` is `draftFeature`'s slice, and the two *uses* below are
 		// guarded by `isDrafting` — but this dereference runs before either, so a chips strip on a
 		// grid without `draft` threw here rather than reaching the guard that was meant to cover it.
@@ -143,7 +176,7 @@ export function ActiveFiltersBar({ position: positionProp }: DataGridActiveFilte
 			kind: FilterChipKind.Column,
 			isDraft: isDrafting && !sameFilterValue(appliedFilter?.value, cf.value),
 		})
-	}
+	})
 
 	if (typeof globalFilter === 'string' && globalFilter.length > 0) {
 		chips.push({

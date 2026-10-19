@@ -12,6 +12,7 @@ import { CellTypesProvider, mergeCellTypes } from '../cell-types-context'
 import { GridComponentsProvider, useGridComponents } from '../components-context'
 import { guardComponents } from '../components-guard'
 import { GridFactoryDefaultsProvider } from '../data-grid-options-context'
+import { ItemsSourceHost, ItemsSourceProvider } from '../items-source'
 import { useDataGrid, type UseDataGridConfig } from '../use-data-grid'
 import { useGridMessages } from '../use-grid-messages'
 import { GRID_ROOT_CLASS_NAME, joinClassNames } from '../utils/class-names'
@@ -618,13 +619,18 @@ function DataGridControlled<TFeatures extends TableFeatures, TRow extends object
 								 */}
 								<RowDragRegistryProvider>
 									<GridDndProvider>
-										<GridRoot>
-											<RowCountStatus />
-											<GridBody>{children}</GridBody>
-											{writeOptions.creating?.mode === CreatingMode.Modal && <CreatingModal />}
-											{writeOptions.editing?.mode === EditingMode.Modal && <EditingModal />}
-											<ConfirmDialogRenderer />
-										</GridRoot>
+										<ItemsSourceProvider>
+											<GridRoot>
+												{/* Renders nothing: it runs the `useItems` hooks that something on screen
+											    reads, inside every provider above so a hook may read the grid. */}
+												<ItemsSourceHost />
+												<RowCountStatus />
+												<GridBody>{children}</GridBody>
+												{writeOptions.creating?.mode === CreatingMode.Modal && <CreatingModal />}
+												{writeOptions.editing?.mode === EditingMode.Modal && <EditingModal />}
+												<ConfirmDialogRenderer />
+											</GridRoot>
+										</ItemsSourceProvider>
 									</GridDndProvider>
 								</RowDragRegistryProvider>
 							</TableProvider>

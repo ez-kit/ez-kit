@@ -5,6 +5,7 @@
 		"index",
 		"column-helper",
 		"cell-types",
+		"async-items",
 		"custom-cell-types",
 		"grouped-headers",
 		"ordering",

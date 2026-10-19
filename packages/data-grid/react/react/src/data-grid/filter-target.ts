@@ -1,5 +1,7 @@
+import { rowItemOf } from '../items-source/resolve-item'
 import { filtersRows } from '../utils/filters-rows'
 
+import type { ItemsLists, ListItem } from '../items-source'
 import type { DataTable, GridFeatures } from '../types'
 import type { ColumnCellMeta, ColumnFilteringMeta, FormColumnMeta, ResolvedFilterField } from '@ez-kit/data-grid-core'
 import type { Column, ColumnFiltersState } from '@tanstack/table-core'
@@ -50,6 +52,18 @@ export type FilterTarget = {
 	setValue: (next: unknown) => void
 	/** The column's faceted unique values. A field has no rows of its own, so it has none. */
 	facetedValues?: () => Map<unknown, number> | undefined
+	/**
+	 * `value → cell.config.getItem(row)` over the column's faceted rows, for each value the first
+	 * row that has it — what labels a faceted value with no list behind it. `undefined` when the
+	 * column has no `getItem` or is not faceted, and always for a field.
+	 */
+	facetedIndex?: () => ReadonlyMap<string, ListItem> | undefined
+	/**
+	 * The target's value lists as a component already read them — the values on offer, and the one
+	 * that labels them. Set by the component that subscribed; without it, the filter model reads a
+	 * fixed list straight off the meta and a hook list as still loading.
+	 */
+	lists?: ItemsLists
 	source: FilterSource
 }
 
@@ -70,9 +84,50 @@ export function columnLabel<TRow extends object>(column: Column<GridFeatures, TR
 	return typeof header === 'string' ? header : column.id
 }
 
+type FacetedRows = readonly { original: unknown; getValue: (columnId: string) => unknown }[]
+
+type CachedIndex = { getItem: (row: unknown) => ListItem | undefined; index: Map<string, ListItem> }
+
+/**
+ * Per rows array, then per column. Not the array alone: with no filter applied TanStack hands every
+ * column the same pre-filtered rows, so an array-keyed cache would give the second column the
+ * first one's labels.
+ */
+const facetedIndexes = new WeakMap<FacetedRows, Map<string, CachedIndex>>()
+
+/**
+ * The index behind {@link FilterTarget.facetedIndex}, rebuilt with the faceted row model or a new
+ * `getItem` and only then: it is a function of those, so there is nothing else to invalidate.
+ */
+function facetedIndexOf(
+	rows: FacetedRows,
+	columnId: string,
+	getItem: (row: unknown) => ListItem | undefined,
+): Map<string, ListItem> {
+	let byColumn = facetedIndexes.get(rows)
+	if (!byColumn) {
+		byColumn = new Map()
+		facetedIndexes.set(rows, byColumn)
+	}
+	const known = byColumn.get(columnId)
+	if (known?.getItem === getItem) return known.index
+	const index = new Map<string, ListItem>()
+	for (const row of rows) {
+		const raw = row.getValue(columnId)
+		if (raw === undefined || raw === null || raw === '') continue
+		const value = String(raw)
+		if (index.has(value)) continue
+		const item = rowItemOf(getItem, row.original)
+		if (item) index.set(value, item)
+	}
+	byColumn.set(columnId, { getItem, index })
+	return index
+}
+
 /** The filter target of a column, read and written through the column itself. */
 export function columnFilterTarget<TRow extends object>(column: Column<GridFeatures, TRow>): FilterTarget {
 	const { meta, filteringMeta } = filteringMetaOf(column)
+	const getItem = meta?.cell?.getItem
 	return {
 		id: column.id,
 		label: columnLabel(column),
@@ -82,6 +137,17 @@ export function columnFilterTarget<TRow extends object>(column: Column<GridFeatu
 			column.setFilterValue(next)
 		},
 		facetedValues: () => column.getFacetedUniqueValues() as Map<unknown, number> | undefined,
+		...(getItem !== undefined && filteringMeta?.faceted === true
+			? {
+					facetedIndex: () => {
+						// Optional-called: the faceted row model is `columnFacetingFeature`'s, which a feature
+						// set may leave out — and then there is simply no index.
+						// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature API; see the FEATURE GUARDS note in types.ts
+						const rows = column.getFacetedRowModel?.().rows as FacetedRows | undefined
+						return rows ? facetedIndexOf(rows, column.id, getItem) : undefined
+					},
+				}
+			: {}),
 		// Row-erased, like every other reader of the column outside the generic grid.
 		source: { kind: FilterSourceKind.Column, column: column as unknown as Column<GridFeatures, object> },
 	}

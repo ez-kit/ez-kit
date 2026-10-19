@@ -475,7 +475,15 @@ function TestBetweenInput({ value, onChange, type, slider }: BetweenInputProps) 
 	)
 	return inputs
 }
-function TestMultiSelectFilter({ items, selectedValues, onChange, label, placeholder }: MultiSelectFilterProps) {
+function TestMultiSelectFilter({
+	items,
+	selectedValues,
+	onChange,
+	label,
+	placeholder,
+	itemsLoading,
+	itemsError,
+}: MultiSelectFilterProps) {
 	const toggle = (value: string): void => {
 		const next = selectedValues.includes(value) ? selectedValues.filter((v) => v !== value) : [...selectedValues, value]
 		onChange(next)
@@ -484,8 +492,11 @@ function TestMultiSelectFilter({ items, selectedValues, onChange, label, placeho
 		<div
 			role='group'
 			aria-label={label ?? placeholder ?? 'Filter'}
+			aria-busy={itemsLoading === true || undefined}
 		>
 			{selectedValues.length === 0 && placeholder !== undefined ? <span>{placeholder}</span> : null}
+			{itemsLoading === true && <span data-slot='multi-select-loading'>Loading…</span>}
+			{itemsError !== undefined && <span data-slot='multi-select-error'>{String(itemsError)}</span>}
 			{items.map((opt) => (
 				<label
 					key={opt.value}

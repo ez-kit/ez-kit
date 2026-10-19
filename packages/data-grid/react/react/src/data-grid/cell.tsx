@@ -11,6 +11,7 @@ import { useEffect } from 'react'
 
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
+import { ItemsSourceSlot } from '../items-source'
 import { resolveCellClassName } from '../utils/class-names'
 import { getCommonPinStyles } from '../utils/pin-styles'
 
@@ -18,6 +19,14 @@ import { ActionsCell } from './actions-cell'
 import { getAlignAttrs } from './align-attrs'
 import { CellProvider } from './composition-context'
 import { flexRender } from './flex-render'
+import {
+	isItemsColumn,
+	isStaticItemsColumn,
+	ItemsCellView,
+	plainCellViewProps,
+	renderStaticItemsCell,
+	useFieldItems,
+} from './items-view'
 import { useCellNavigationProps } from './keyboard-navigation'
 import { RowDragHandle } from './row-drag-handle'
 import { useDataGridTable, useDataGridState } from './table-context'
@@ -648,14 +657,7 @@ function BodyDataCell<TRow extends object>({ cell, row, children }: DataGridCell
 				cell,
 				row,
 				viewComp
-					? flexRender(viewComp, {
-							// `cell` is row-type-erased here, so `getValue()` and `row.original` are both
-							// `any`. The view contract says `unknown` — narrow once, at the boundary.
-							value: cell.getValue<unknown>(),
-							row: cell.row.original as unknown,
-							rowIndex: cell.row.index,
-							...(meta?.cell?.config !== undefined ? { config: meta.cell.config } : {}),
-						})
+					? renderView(viewComp, meta, columnId, cell)
 					: flexRender(cell.column.columnDef.cell, cell.getContext()),
 			)}
 		</Td>
@@ -743,6 +745,7 @@ function EditingCell<TRow extends object>({ cell, row, editMode, cellId, chrome,
 	const fieldError = fieldErrors[0]
 
 	const editComp = resolveEditComponent(meta, cellTypes)
+	const fieldItems = useFieldItems(columnId, meta ?? {}, ItemsSourceSlot.Editing, value, cell.row.original)
 
 	const onBlur = () => void table.editing.validateField(columnId)
 
@@ -815,7 +818,7 @@ function EditingCell<TRow extends object>({ cell, row, editMode, cellId, chrome,
 			table.editing.setValue(columnId, v)
 		},
 		onBlur,
-		...(meta?.cell?.config !== undefined ? { config: meta.cell.config } : {}),
+		...fieldItems,
 		error: fieldError,
 		errors: [...fieldErrors],
 		isValidating,
@@ -927,6 +930,36 @@ function renderCellContent<TRow extends object>(
 	const resolved = children === undefined ? content : typeof children !== 'function' ? children : children(args)
 
 	return <CellProvider value={args}>{resolved}</CellProvider>
+}
+
+/**
+ * A body cell's view: a `select` / `badge` column's through {@link ItemsCellView}, which labels the
+ * value from its list, and every other one with the column's config as written.
+ *
+ * `cell` is row-type-erased here, so `getValue()` and `row.original` are both `any`. The view
+ * contract says `unknown` — narrowed once, at the boundary.
+ */
+function renderView<TRow extends object>(
+	view: ComponentType<CellViewProps>,
+	meta: ColumnMeta<GridFeatures, TRow> | undefined,
+	columnId: string,
+	cell: Cell<GridFeatures, TRow>,
+): ReactNode {
+	const value = cell.getValue<unknown>()
+	const row = cell.row.original as unknown
+	const itemsMeta = meta ?? {}
+	if (!isItemsColumn(itemsMeta)) return flexRender(view, plainCellViewProps(itemsMeta, value, row, cell.row.index))
+	if (isStaticItemsColumn(itemsMeta)) return renderStaticItemsCell(view, itemsMeta, value, row, cell.row.index)
+	return (
+		<ItemsCellView
+			view={view}
+			meta={itemsMeta}
+			columnId={columnId}
+			value={value}
+			row={row}
+			rowIndex={cell.row.index}
+		/>
+	)
 }
 
 function resolveEditComponent<TRow extends object>(

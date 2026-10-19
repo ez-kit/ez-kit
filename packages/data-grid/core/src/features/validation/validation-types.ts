@@ -1,3 +1,5 @@
+import type { BadgeItem, SelectItem } from '../../column/types'
+
 /**
  * The `{ schema }` shorthand's contract, written structurally rather than as
  * `import type { ZodType } from 'zod'`.
@@ -126,6 +128,20 @@ export type FieldState<TConfig = unknown, TValue = unknown> = {
 	errors: string[]
 	/** True while async field-level validation is in flight for this column. */
 	isValidating: boolean
+	/**
+	 * `true` while the list a `select` / `badge` field offers is still loading — it comes from a
+	 * `useItems` hook that has not answered. Show a loading state rather than an empty list.
+	 * Absent on every other field.
+	 */
+	itemsLoading?: boolean
+	/** What that list's hook failed with, when it did. Absent otherwise. */
+	itemsError?: unknown
+	/**
+	 * The item the current value resolves to in the column's **base** list — the label a trigger
+	 * shows. Separate from `config.items`, which holds only what this field offers: a value the
+	 * editor no longer offers (an archived warehouse) is still labelled by it.
+	 */
+	item?: SelectItem | BadgeItem
 }
 
 /**

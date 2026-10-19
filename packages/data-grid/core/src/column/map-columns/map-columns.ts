@@ -1,6 +1,7 @@
 import { setIfDefined } from '../../utils/set-if-defined'
 import { normalizeColumnAlign, normalizeColumnPinning, normalizeColumnWidth } from '../normalize'
 
+import { liftItemsSource, warnOnBothItemSources } from './items-source'
 import { resolveFiltering } from './resolve-filtering'
 
 import type { OperatorRegistry } from '../../features/operators'
@@ -128,6 +129,7 @@ function mapColumn<TRow extends object>(
 	const cellDef = typeof cell === 'string' ? { type: cell } : cell
 
 	const meta: MappedColumnDef<TRow>['meta'] = {}
+	const who = `Column "${id ?? accessorKey ?? '?'}"`
 
 	setIfDefined(meta, 'pinning', normalizeColumnPinning(pinning))
 	setIfDefined(meta, 'align', normalizeColumnAlign(align))
@@ -139,6 +141,10 @@ function mapColumn<TRow extends object>(
 	if (grouping === false) meta.grouping = false
 	setIfDefined(meta, 'editing', editing as ColumnMetaEditing)
 	setIfDefined(meta, 'creating', creating as ColumnMetaCreating<TRow>)
+	// `editing` / `creating` reach the meta as written, so their lists — and `useItems` beside
+	// `items` — travel with them; only the double statement needs a word.
+	if (editing) warnOnBothItemSources(who, 'editing', editing)
+	if (creating) warnOnBothItemSources(who, 'creating', creating)
 	setIfDefined(meta, 'headerClassName', headerClassName)
 	setIfDefined(meta, 'cellClassName', cellClassName as ColumnMetaClassName)
 	setIfDefined(meta, 'footerClassName', footerClassName)
@@ -153,7 +159,7 @@ function mapColumn<TRow extends object>(
 	}
 	const viewFn = cellDef?.component
 	if (viewFn !== undefined) cellMeta.view = viewFn as (ctx: CellViewCtx<unknown, unknown>) => unknown
-	meta.cell = cellMeta
+	meta.cell = liftItemsSource(cellMeta, who)
 
 	// Build a plain object and cast — TanStack's ColumnDef is a discriminated union
 	// so it can't be directly constructed via spread without type assertions.

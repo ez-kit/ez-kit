@@ -12,6 +12,7 @@ import { buildColumnList, extractPinningState } from '../system-columns'
 import { ColumnResizeMode, ExpandingMode, GridDirection, GroupingMode, MultiSortEvent, PaginationMode } from '../types'
 import { featureConfig, isFeatureEnabled } from '../utils/feature-flag'
 import { setIfDefined } from '../utils/set-if-defined'
+import { warnOnce } from '../utils/warn-once'
 
 import { withGatedFilteredRowModel } from './gate-column-filters'
 import { resolveFilterFields } from './resolve-filter-fields'
@@ -707,6 +708,17 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 					`Add ${missing.length === 1 ? 'it' : 'them'} to your \`tableFeatures({ … })\` call.`,
 			)
 		}
+	}
+
+	// Facets are counted over the rows the grid holds. Under server filtering those are one page of
+	// the result, so a count reads as a total while being a page's — and nothing about the grid
+	// looks wrong. The behaviour stays; the author is told where real counts go instead.
+	if (IS_DEV && facetedNeeded && filteringCfg?.manual === true) {
+		warnOnce(
+			'[data-grid] `filtering.faceted` is on beside `filtering.manual: true`, so facets are counted over ' +
+				'the loaded rows only — a page of the result, not the whole of it. To show server-side counts, ' +
+				'return them as `count` on the items of a `useItems` hook.',
+		)
 	}
 
 	// ── map user columns → TanStack columns ──────────────────────────────────

@@ -70,15 +70,17 @@ entry.
 
 ## Field options
 
-| Option      | Type                                    | Description                                                                                              |
-| ----------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `id`        | `string`                                | The key the value is stored and sent under. Unique across columns and fields.                            |
-| `header`    | `string`                                | The label every filter surface shows.                                                                    |
-| `cell`      | `string \| { type, config? }`           | The value type, as on a column. Picks the default operators and the editor. Default `'text'`.            |
-| `filtering` | `ColumnFilteringConfig` minus `faceted` | The filter, as on a column: `operators`, `defaultOperator`, `items`, `presets`, `debounce`, `component`. |
+| Option               | Type                                        | Description                                                                                              |
+| -------------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `id`                 | `string`                                    | The key the value is stored and sent under. Unique across columns and fields.                            |
+| `header`             | `string`                                    | The label every filter surface shows.                                                                    |
+| `cell`               | `string \| { type, config? }`               | The value type, as on a column. Picks the default operators and the editor. Default `'text'`.            |
+| `filtering`          | `ColumnFilteringConfig` minus `faceted`     | The filter, as on a column: `operators`, `defaultOperator`, `items`, `presets`, `debounce`, `component`. |
+| `filtering.useItems` | `(params) => { items, isLoading?, error? }` | The field's values from a hook — see [Value lists from a hook](/docs/data-grid/columns/async-items).     |
 
 A field is never faceted: facets count the rows' values, and a field has none. Its select values come
-from `filtering.items`, else from a `select` / `badge` cell's `config.items`.
+from `filtering.items` / `filtering.useItems`, else from a `select` / `badge` cell's `config.items` /
+`config.useItems`. `getItem` does not apply either: there is no row to read a label from.
 
 ## See also
 
