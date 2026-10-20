@@ -76,6 +76,23 @@ validators: {
 
 Async validators (`onChangeAsync`, `onBlurAsync`) and `onChangeAsyncDebounceMs` work exactly as in TanStack Form.
 
+### Quiet until the first submit
+
+A schema for the whole form usually wants a fourth timing: silent while the form is being filled for the first time, then checking on every change once a submit has failed. That is `onDynamic` with `revalidateLogic()` as the form's `validationLogic`, which both kits export:
+
+```tsx
+import { revalidateLogic } from '@ez-kit/form-shadcn'
+
+const form = useForm({
+	defaultValues,
+	validationLogic: revalidateLogic(),
+	validators: { onDynamic: schema },
+	onSubmit: ({ value }) => save(value),
+})
+```
+
+Prefer it to `onSubmit` for a form whose parts come and go: after a failed submit, a part that appears reports as soon as it is edited, where an `onSubmit` schema waits for the next submit — and that submit stops on the errors still on screen before the schema runs. [Composition](/docs/form/composition#connecting-the-forms-schema) shows it on a checkout form.
+
 ## Per-field validators
 
 Every flat field takes a `validate` prop, and it carries **the same `FieldValidate` object** a schema field node carries — the same constraints, in the same order, through the same engine in `@ez-kit/form-core`:

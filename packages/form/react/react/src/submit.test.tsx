@@ -136,6 +136,32 @@ describe('form.Submit', () => {
 		})
 	})
 
+	it("leaves a step's own errors out of formErrors", async () => {
+		render(
+			<Form defaultValues={{ name: '' }}>
+				{(form) => (
+					<>
+						<button
+							type='button'
+							onClick={() => {
+								form.setErrorMap({ 'onStep:plan': 'Choose a plan', onChange: 'Form-wide' } as never)
+							}}
+						>
+							report
+						</button>
+						<form.Submit>
+							{({ formErrors }) => <output data-testid='errors'>{JSON.stringify(formErrors)}</output>}
+						</form.Submit>
+					</>
+				)}
+			</Form>,
+		)
+		await userEvent.click(screen.getByText('report'))
+		await waitFor(() => {
+			expect(screen.getByTestId('errors').textContent).toBe('["Form-wide"]')
+		})
+	})
+
 	it('types the render props', () => {
 		expectTypeOf<SubmitRenderProps>().toEqualTypeOf<{
 			canSubmit: boolean

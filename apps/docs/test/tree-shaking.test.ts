@@ -469,6 +469,9 @@ describe('@ez-kit/form-core helpers', () => {
 /** The imports of a form with one field kind and a submit button, composed through `createForm`. */
 const ONE_FIELD_FORM = ['createForm', 'FormElement', 'TextField', 'SubmitButton']
 
+/** The most of a kit root a one-field form may cost — see the case that reads it. */
+const ONE_FIELD_SHARE = 0.6
+
 /**
  * Per kit, a literal only its date block's code contains (`calendar`), and one only its searchable
  * selects' code contains (`combobox`).
@@ -532,10 +535,17 @@ describe.each(FORM_KITS)('$name root', ({ entry, calendar, combobox }) => {
 		expect(await bundledCodeOf(entry, ['Form'])).not.toContain(SCHEMA_MARKER)
 	})
 
+	/**
+	 * Under 60% rather than half: every form instance carries `form.Steps` / `form.Step`, so their code
+	 * is in each `createForm` bundle whether a form has steps or not — the members were kept on the
+	 * instance, as `form.Array` is, for their typing. Measured when they landed: a one-field form was
+	 * 0.49 of the shadcn root and 0.54 of the HeroUI one. The calendar, combobox and schema renderer
+	 * absences above are what keeps the root shaking; this ratio only catches a wholesale regression.
+	 */
 	it('a one-field form costs well under the whole root', async () => {
 		const [narrow, everything] = await Promise.all([bundledCodeOf(entry, ONE_FIELD_FORM), bundledCodeOf(entry)])
 
-		expect(narrow.length).toBeLessThan(everything.length / 2)
+		expect(narrow.length).toBeLessThan(everything.length * ONE_FIELD_SHARE)
 	})
 })
 

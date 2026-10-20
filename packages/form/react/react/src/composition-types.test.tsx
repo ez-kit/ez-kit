@@ -3,6 +3,9 @@ import { describe, expectTypeOf, it } from 'vitest'
 import { createForm } from './create-form'
 import { defineFieldType } from './field-registry'
 import { testComponents, testFields, testFormElement } from './test-kit'
+import { testSchema } from './test-schema'
+
+import { revalidateLogic } from './index'
 
 import type { KitWithFormProps } from './composition'
 import type { AllFormFieldSlots, TextFieldRenderProps } from './contract'
@@ -15,7 +18,7 @@ type Values = { email: string; address: { city: string } }
 
 const DEFAULTS: Values = { email: '', address: { city: '' } }
 
-const { useForm, withForm, withFieldGroup } = createForm({
+const { Form, useForm, withForm, withFieldGroup } = createForm({
 	FormElement: testFormElement,
 	fields: testFields,
 	components: testComponents,
@@ -290,6 +293,61 @@ describe('withForm — the form prop is optional (D7)', () => {
 		}
 		expectTypeOf(Parent).toBeFunction()
 	})
+
+	it("accepts a form whatever validators it was given, and still checks the form's shape", () => {
+		const Block = withForm({
+			defaultValues: { login: '' },
+			render: ({ form }) => (
+				<form.TextField
+					name='login'
+					label='Login'
+				/>
+			),
+		})
+		const schema = testSchema<{ login: string }>(() => [])
+		function Parent(): ReactNode {
+			const dynamic = useForm({
+				defaultValues: { login: '' },
+				validationLogic: revalidateLogic(),
+				validators: { onDynamic: schema },
+			})
+			const onChange = useForm({ defaultValues: { login: '' }, validators: { onChange: schema } })
+			const other = useForm({ defaultValues: { amount: 0 }, validators: { onChange: () => undefined } })
+			return (
+				<>
+					<Block form={dynamic} />
+					<Block form={onChange} />
+					<Block
+						// @ts-expect-error -- a form of another shape is still rejected, validators or not
+						form={other}
+					/>
+				</>
+			)
+		}
+		expectTypeOf(Parent).toBeFunction()
+	})
+
+	it("still checks the form's fields against the block's", () => {
+		const Block = withExtendedForm({
+			defaultValues: { login: '' },
+			render: ({ form }) => (
+				<form.RatingField
+					name='login'
+					max={5}
+				/>
+			),
+		})
+		function Parent(): ReactNode {
+			const plain = useForm({ defaultValues: { login: '' } })
+			return (
+				<Block
+					// @ts-expect-error -- a form whose bundle has no RatingField is rejected
+					form={plain}
+				/>
+			)
+		}
+		expectTypeOf(Parent).toBeFunction()
+	})
 })
 
 describe('group fields — types (D7)', () => {
@@ -409,5 +467,29 @@ describe('group fields — props beyond the binding come from the kit component'
 		expectTypeOf<KitFieldProps<AllFormFieldSlots, 'TextField'>>().toEqualTypeOf<Record<never, never>>()
 		expectTypeOf<KitFieldProps<AllFormFieldSlots, 'SelectField'>>().toEqualTypeOf<Record<never, never>>()
 		expectTypeOf<KitFieldProps<AllFormFieldSlots, 'DateRangeField'>>().toEqualTypeOf<Record<never, never>>()
+	})
+})
+
+describe('a form schema on onDynamic — types', () => {
+	const valuesSchema = testSchema<Values>(() => [])
+	const citySchema = testSchema<{ city: string }>(() => [])
+
+	it('takes revalidateLogic and onDynamic on the form, and no onDynamic on a block', () => {
+		void (
+			<Form
+				defaultValues={DEFAULTS}
+				validationLogic={revalidateLogic()}
+				validators={{ onDynamic: valuesSchema }}
+			>
+				{() => null}
+			</Form>
+		)
+
+		withFieldGroup({
+			defaultValues: { city: '' },
+			// @ts-expect-error -- a block takes no `onDynamic`: it needs the form's `revalidateLogic`
+			validators: { onDynamic: citySchema },
+			render: () => null,
+		})
 	})
 })

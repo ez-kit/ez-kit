@@ -230,7 +230,8 @@ export type GroupAsyncValidator<TGroup> =
  * A `withFieldGroup` block's `validators` (R65): each slot is checked against the block's own shape.
  * Issues with a path land on the real field; issues without one are the block's `group.errors`. A
  * function may also return TanStack's `{ fields, group }` to route its errors itself. A whole-form
- * submit runs them too (R62). `onDynamic*` is left out: it needs TanStack's `revalidateLogic`.
+ * submit does not run them: the block's own submit does, and a rule that must hold the form belongs
+ * in the form's validators. `onDynamic*` is left out: it needs TanStack's `revalidateLogic`.
  */
 export type GroupValidators<TGroup> = {
 	onMount?: GroupValidator<TGroup>

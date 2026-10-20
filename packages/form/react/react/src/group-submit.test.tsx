@@ -7,6 +7,8 @@ import { createForm } from './create-form'
 import { testComponents, testFields, testFormElement } from './test-kit'
 import { testSchema } from './test-schema'
 
+import { revalidateLogic } from './index'
+
 import type { FieldGroupScope } from './group-types'
 import type { testFields as TestFields } from './test-kit'
 import type { LensFieldComponent } from '@tanstack/react-form'
@@ -141,7 +143,7 @@ describe('group submit (D7, §4 scenario 2)', () => {
 		expect(onSubmit).not.toHaveBeenCalled()
 	})
 
-	it('runs the block on a whole-form submit, untouched (R62)', async () => {
+	it('a whole-form submit leaves an untouched block alone', async () => {
 		const user = userEvent.setup()
 		const onSubmit = vi.fn()
 		render(
@@ -153,9 +155,26 @@ describe('group submit (D7, §4 scenario 2)', () => {
 
 		await user.click(screen.getByRole('button', { name: 'Save profile' }))
 
-		expect(onSubmit).not.toHaveBeenCalled()
-		expect(screen.getByText(TOO_SHORT)).toBeInTheDocument()
+		expect(onSubmit).toHaveBeenCalledTimes(1)
+		expect(screen.queryByText(TOO_SHORT)).not.toBeInTheDocument()
+	})
 
+	it('an error the block already reported blocks the whole form until it is fixed', async () => {
+		const user = userEvent.setup()
+		const onSubmit = vi.fn()
+		render(
+			<ProfileCase
+				onSubmit={onSubmit}
+				onGroupSubmit={vi.fn()}
+			/>,
+		)
+
+		await fillPair(user, 'short', 'short')
+		expect(screen.getByText(TOO_SHORT)).toBeInTheDocument()
+		expect(screen.getByRole('button', { name: 'Save profile' })).toBeDisabled()
+
+		await user.clear(screen.getByLabelText('Password'))
+		await user.clear(screen.getByLabelText('Repeat'))
 		await fillPair(user, VALID_PASSWORD, VALID_PASSWORD)
 		await user.click(screen.getByRole('button', { name: 'Save profile' }))
 		expect(onSubmit).toHaveBeenCalledTimes(1)
@@ -234,13 +253,14 @@ describe('group submit (D7, §4 scenario 2)', () => {
 		expect(onSubmit).not.toHaveBeenCalled()
 	})
 
-	it('shows one message when the group and the form schema state the same rule (R62)', async () => {
+	it('shows one message when the group and the form schema state the same rule', async () => {
 		const user = userEvent.setup()
 		render(
 			<Form
 				defaultValues={PROFILE}
+				validationLogic={revalidateLogic()}
 				validators={{
-					onSubmit: testSchema<Profile>((values) =>
+					onDynamic: testSchema<Profile>((values) =>
 						values.security.password.length < MIN_PASSWORD
 							? [{ message: TOO_SHORT, path: ['security', 'password'] }]
 							: [],
@@ -257,6 +277,7 @@ describe('group submit (D7, §4 scenario 2)', () => {
 		)
 
 		await user.click(screen.getByRole('button', { name: 'Save profile' }))
+		await user.type(screen.getByLabelText('Password'), 'short')
 
 		expect(screen.getAllByText(TOO_SHORT)).toHaveLength(1)
 	})
@@ -374,9 +395,10 @@ describe('group submit (fix round 1)', () => {
 })
 
 describe('group submit under StrictMode', () => {
-	it("runs a group's onSubmitAsync exactly once per whole-form submit", async () => {
+	it("runs a group's onSubmitAsync once per group submit, and never on a whole-form submit", async () => {
 		const user = userEvent.setup()
 		const onSubmit = vi.fn()
+		const onGroupSubmit = vi.fn()
 		const onSubmitAsync = vi.fn(async () => {
 			await Promise.resolve()
 			return undefined
@@ -385,10 +407,18 @@ describe('group submit under StrictMode', () => {
 			defaultValues: { password: '', confirm: '' },
 			validators: { onSubmitAsync },
 			render: ({ group }) => (
-				<group.TextField
-					name='password'
-					label='Password'
-				/>
+				<>
+					<group.TextField
+						name='password'
+						label='Password'
+					/>
+					<button
+						type='button'
+						onClick={() => void group.handleSubmit()}
+					>
+						Change password
+					</button>
+				</>
 			),
 		})
 		render(
@@ -399,7 +429,10 @@ describe('group submit under StrictMode', () => {
 				>
 					{(form) => (
 						<>
-							<ServerChecked fields='security' />
+							<ServerChecked
+								fields='security'
+								onGroupSubmit={onGroupSubmit}
+							/>
 							<form.SubmitButton>Save profile</form.SubmitButton>
 						</>
 					)}
@@ -411,7 +444,12 @@ describe('group submit under StrictMode', () => {
 		await waitFor(() => {
 			expect(onSubmit).toHaveBeenCalledTimes(1)
 		})
+		expect(onSubmitAsync).not.toHaveBeenCalled()
 
+		await user.click(screen.getByRole('button', { name: 'Change password' }))
+		await waitFor(() => {
+			expect(onGroupSubmit).toHaveBeenCalledTimes(1)
+		})
 		expect(onSubmitAsync).toHaveBeenCalledTimes(1)
 	})
 })

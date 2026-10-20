@@ -7,9 +7,16 @@ import { scopeFieldProps } from './field-scope'
 import { createField } from './fields/field'
 import { focusesOnError, focusFirstFieldWithErrors } from './focus-first-error'
 import { scopeGroupMembers, withMembers } from './group-fields'
-import { hookGroupFields, isPathWithin, warnOnStackedGroups } from './group-registry'
+import {
+	clearUnmountedGroupErrors,
+	hookGroupFields,
+	isPathWithin,
+	warnOnPrefixClash,
+	warnOnStackedGroups,
+} from './group-registry'
 import { formatOwnErrors } from './own-errors'
 import { serverErrorsOf } from './server-errors'
+import { useStepField, useStepGroup } from './steps/steps'
 
 import type { BindableForm } from './bindable-form'
 import type { NoRegistry } from './contract'
@@ -82,11 +89,26 @@ export function useFormGroup<TFormData, const TName extends DeepKeys<TFormData>>
 			;(options as { onGroupSubmitInvalid?: (props: unknown) => void }).onGroupSubmitInvalid?.(props)
 		},
 	} as never) as unknown as object
+	// After TanStack's hook: its layout effect mounts the instance these read.
+	useStepField(options.name)
+	useStepGroup(() => (group as NativeSubmit).getInfo().instance)
 	useEffect(() => {
 		if (process.env.NODE_ENV !== 'production') {
 			warnOnStackedGroups(options.form as unknown as GroupHost, options.name)
+			warnOnPrefixClash(options.form as never, options.name)
 		}
 	}, [options.form, options.name])
+	// Deferred to a microtask: by then TanStack's unmount has dropped the instance, and a StrictMode
+	// remount — which runs in the same commit — has put it back, so a remounted group keeps the errors
+	// the form reported on its branch.
+	useEffect(
+		() => () => {
+			queueMicrotask(() => {
+				clearUnmountedGroupErrors(options.form as never, options.name)
+			})
+		},
+		[options.form, options.name],
+	)
 	const { NativeField: native, AppField: appField } = options.form as unknown as {
 		NativeField: NameScoped
 		AppField: BindableForm['AppField']

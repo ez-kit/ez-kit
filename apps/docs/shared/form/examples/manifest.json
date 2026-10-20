@@ -136,20 +136,132 @@
 		"exportName": "AsyncOptionsSchemaExample"
 	},
 	{
-		"id": "form-composition",
-		"label": "Form composition",
+		"id": "form-composition-checkout",
+		"label": "Form composition — checkout",
 		"group": "form",
 		"groupLabel": "Form",
-		"sourceFile": "components/composition.tsx",
-		"exportName": "CompositionExample"
+		"sourceFile": "components/composition-checkout.tsx",
+		"exportName": "CompositionCheckoutExample"
 	},
 	{
-		"id": "form-composition-sign-up",
-		"label": "Form composition — sign-up",
+		"id": "form-composition-checkout-rules",
+		"label": "Form composition — checkout with rules",
 		"group": "form",
 		"groupLabel": "Form",
-		"sourceFile": "components/composition.tsx",
-		"exportName": "CompositionSignUpExample"
+		"sourceFile": "components/composition-checkout-rules.tsx",
+		"exportName": "CompositionCheckoutRulesExample"
+	},
+	{
+		"id": "form-composition-with-form",
+		"label": "Form composition — withForm",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/composition-with-form.tsx",
+		"exportName": "WithFormExample"
+	},
+	{
+		"id": "form-composition-with-form-validation",
+		"label": "Form composition — withForm — with rules",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/composition-with-form.tsx",
+		"exportName": "WithFormValidationExample"
+	},
+	{
+		"id": "form-composition-with-form-order",
+		"label": "Form composition — withForm — order",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/composition-with-form.tsx",
+		"exportName": "WithFormOrderExample"
+	},
+	{
+		"id": "form-composition-field-group",
+		"label": "Form composition — withFieldGroup",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/composition-field-group.tsx",
+		"exportName": "FieldGroupExample"
+	},
+	{
+		"id": "form-composition-field-group-validation",
+		"label": "Form composition — withFieldGroup — with rules",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/composition-field-group.tsx",
+		"exportName": "FieldGroupValidationExample"
+	},
+	{
+		"id": "form-composition-field-group-address-book",
+		"label": "Form composition — withFieldGroup — address book",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/composition-field-group.tsx",
+		"exportName": "FieldGroupAddressBookExample"
+	},
+	{
+		"id": "form-composition-form-group",
+		"label": "Form composition — form.FormGroup",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/composition-form-group.tsx",
+		"exportName": "FormGroupExample"
+	},
+	{
+		"id": "form-composition-form-group-validation",
+		"label": "Form composition — form.FormGroup — with rules",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/composition-form-group.tsx",
+		"exportName": "FormGroupValidationExample"
+	},
+	{
+		"id": "form-composition-form-group-settings",
+		"label": "Form composition — form.FormGroup — settings",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/composition-form-group.tsx",
+		"exportName": "FormGroupSettingsExample"
+	},
+	{
+		"id": "form-steps",
+		"label": "Form steps",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/steps.tsx",
+		"exportName": "StepsBasicExample"
+	},
+	{
+		"id": "form-steps-conditional",
+		"label": "Form steps — a conditional step",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/steps.tsx",
+		"exportName": "StepsConditionalExample"
+	},
+	{
+		"id": "form-steps-blocks",
+		"label": "Form steps — blocks inside a step",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/steps.tsx",
+		"exportName": "StepsBlocksExample"
+	},
+	{
+		"id": "form-steps-free",
+		"label": "Form steps — free navigation",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/steps.tsx",
+		"exportName": "StepsFreeExample"
+	},
+	{
+		"id": "form-steps-stepper",
+		"label": "Form steps — a stepper of your own",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/steps.tsx",
+		"exportName": "StepsStepperExample"
 	},
 	{
 		"id": "form-creatable-schema",

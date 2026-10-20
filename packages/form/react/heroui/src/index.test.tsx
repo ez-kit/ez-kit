@@ -318,3 +318,11 @@ describe('@ez-kit/form-heroui — props beyond the contract reach the input', ()
 		expect(bio).toHaveAttribute('maxlength', '280')
 	})
 })
+
+describe('the step flow and the form-schema helpers', () => {
+	it('re-exports revalidateLogic, useStep and useSteps from the adapter', () => {
+		expect(typeof kit.revalidateLogic).toBe('function')
+		expect(typeof kit.useStep).toBe('function')
+		expect(typeof kit.useSteps).toBe('function')
+	})
+})

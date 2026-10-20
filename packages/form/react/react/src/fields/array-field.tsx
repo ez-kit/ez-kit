@@ -1,6 +1,6 @@
-import { formatFieldErrors } from '@ez-kit/form-core'
 import { createContext, useCallback, useContext, useRef } from 'react'
 
+import { shownFieldErrors } from '../field-render-props'
 import { scopeFieldProps } from '../field-scope'
 import { fieldValidators } from '../field-validate'
 
@@ -507,7 +507,7 @@ function ArrayBody({
 		scopedFieldsRef.current.delete(key)
 	}
 
-	const errors = field.state.meta.isTouched ? formatFieldErrors(field.state.meta.errors) : []
+	const errors = shownFieldErrors(field)
 	const invalid = errors.length > 0
 	const { maxLength } = validate ?? {}
 	const canAdd = maxLength === undefined || list.length < maxLength

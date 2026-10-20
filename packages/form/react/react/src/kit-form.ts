@@ -3,6 +3,7 @@ import type { FormFieldComponents, FormPrimitives } from './field-props'
 import type { FormFieldRegistry } from './field-registry'
 import type { FormGroupComponentOf } from './group-types'
 import type { ServerErrors } from './server-errors'
+import type { StepMembers } from './steps/steps'
 import type { FormAsyncValidateOrFn, FormValidateOrFn } from '@ez-kit/form-core'
 import type { AppFieldExtendedReactFormApi } from '@tanstack/react-form'
 
@@ -62,6 +63,7 @@ export type BoundForm<
 	FormGroup: FormGroupComponentOf<TFormData, TFields>
 } & NativeMembers<TForm> &
 	ServerErrorMembers<TFormData> &
+	StepMembers<TFormData> &
 	FormFieldComponents<TFormData, TFields> &
 	FormPrimitives<TFormData, TFields> &
 	TComponents

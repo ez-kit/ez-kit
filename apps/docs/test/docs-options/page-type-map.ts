@@ -149,7 +149,11 @@ export const DocPage = {
 	FormNativeApi: 'content/docs/form/native-api.mdx',
 	FormSchema: 'content/docs/form/schema.mdx',
 	FormBasicConcepts: 'content/docs/form/basic-concepts.mdx',
-	FormComposition: 'content/docs/form/composition.mdx',
+	FormComposition: 'content/docs/form/composition/index.mdx',
+	FormCompositionFormGroup: 'content/docs/form/composition/form-group.mdx',
+	FormCompositionWithFieldGroup: 'content/docs/form/composition/with-field-group.mdx',
+	FormCompositionWithForm: 'content/docs/form/composition/with-form.mdx',
+	FormSteps: 'content/docs/form/steps.mdx',
 	FormExamples: 'content/docs/form/examples.mdx',
 	FormGettingStarted: 'content/docs/form/getting-started.mdx',
 	FormInstallationHeroui: 'content/docs/form/installation/heroui.mdx',
@@ -392,6 +396,12 @@ export const FORM_TYPE = {
 	FormInstance: { module: TypeModule.FormReact, name: 'FormInstance', typeArgs: FORM_INSTANCE_TYPE_ARGS },
 	/** `withFieldGroup`'s options: `defaultValues`, `props`, `validators`, `render`. */
 	WithFieldGroupOptions: { module: TypeModule.FormReact, name: 'WithFieldGroupOptions', typeArgs: ROW_TYPE_ARGS },
+	/** `form.Steps`' props — the provider of a step flow; not generic. */
+	StepsProps: { module: TypeModule.FormReact, name: 'StepsProps' },
+	/** `form.Step`'s props — generic over the form's values, which `when` and `validators` read. */
+	StepProps: { module: TypeModule.FormReact, name: 'StepProps', typeArgs: ROW_TYPE_ARGS },
+	/** What `form.Steps.Controls` hands its render function. */
+	StepsControlsRenderProps: { module: TypeModule.FormReact, name: 'StepsControlsRenderProps' },
 	/**
 	 * Where a block is placed — the checked overload: `form`, `fields`, `onGroupSubmit`. Its
 	 * `<TFormData, TGroup>` takes the probe row and a scalar group: the group type only narrows
@@ -1334,13 +1344,33 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{ page: DocPage.FormBasicConcepts, optionTables: [], nonOptionTables: [] },
 	{
 		page: DocPage.FormComposition,
+		optionTables: [],
+		nonOptionTables: [
+			{ heading: NO_HEADING, reason: 'Maps a need to the helper that serves it — helper names, not keys.' },
+			{
+				heading: 'The same form, with its rules',
+				reason: "Maps each of the example's rules to the place that holds it — rules, not keys.",
+			},
+		],
+	},
+	{
+		page: DocPage.FormCompositionWithFieldGroup,
 		optionTables: [
 			{ heading: '`withFieldGroup` options', roots: [FORM_TYPE.WithFieldGroupOptions], expectedCount: 4 },
 			{ heading: 'Placing a block', roots: [FORM_TYPE.FieldGroupPlacementProps], expectedCount: 3 },
 		],
-		nonOptionTables: [
-			{ heading: NO_HEADING, reason: 'Maps a need to the helper that serves it — helper names, not keys.' },
+		nonOptionTables: [],
+	},
+	{ page: DocPage.FormCompositionWithForm, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.FormCompositionFormGroup, optionTables: [], nonOptionTables: [] },
+	{
+		page: DocPage.FormSteps,
+		optionTables: [
+			{ heading: '`form.Steps` props', roots: [FORM_TYPE.StepsProps], expectedCount: 4 },
+			{ heading: '`form.Step` props', roots: [FORM_TYPE.StepProps], expectedCount: 3 },
+			{ heading: '`Steps.Controls`', roots: [FORM_TYPE.StepsControlsRenderProps], expectedCount: 7 },
 		],
+		nonOptionTables: [],
 	},
 	{ page: DocPage.FormExamples, optionTables: [], nonOptionTables: [] },
 	{

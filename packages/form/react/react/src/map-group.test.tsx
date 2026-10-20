@@ -102,10 +102,38 @@ function SignUpCase({
 }
 
 describe('withFieldGroup over a field map (R67)', () => {
-	it('blocks an untouched sign-up and focuses the first error (Review Focus 1)', async () => {
+	it('a whole-form submit leaves an untouched mapped block alone', async () => {
 		const user = userEvent.setup()
 		const onSubmit = vi.fn()
 		render(<SignUpCase onSubmit={onSubmit} />)
+
+		await user.click(screen.getByRole('button', { name: 'Sign up' }))
+
+		expect(onSubmit).toHaveBeenCalledTimes(1)
+		expect(screen.queryByText(TOO_SHORT)).not.toBeInTheDocument()
+		expect(screen.getByTestId('block-errors')).toBeEmptyDOMElement()
+	})
+
+	it("blocks an untouched sign-up through the form's schema and focuses the first error (Review Focus 1)", async () => {
+		const user = userEvent.setup()
+		const onSubmit = vi.fn()
+		const signUpSchema = testSchema<SignUp>((values) => [
+			...(values.password.length < MIN_PASSWORD ? [{ message: TOO_SHORT, path: ['password'] }] : []),
+		])
+		render(
+			<Form
+				defaultValues={SIGN_UP}
+				validators={{ onSubmit: signUpSchema }}
+				onSubmit={onSubmit}
+			>
+				{(form) => (
+					<>
+						<PasswordPair fields={ROOT_MAP} />
+						<form.SubmitButton>Sign up</form.SubmitButton>
+					</>
+				)}
+			</Form>,
+		)
 
 		await user.click(screen.getByRole('button', { name: 'Sign up' }))
 
@@ -418,7 +446,7 @@ describe('map group passes (fix round 1)', () => {
 		expect(screen.getByTestId('block-errors')).toHaveTextContent(TAKEN)
 	})
 
-	it('does not let a whole-form submit skip the async check a block submit started (T6-2)', async () => {
+	it('does not make a whole-form submit wait for the async check a block submit started (T6-2)', async () => {
 		const user = userEvent.setup()
 		const { validator, settleOldest } = deferredValidator<string>()
 		const onSubmit = vi.fn()
@@ -449,7 +477,7 @@ describe('map group passes (fix round 1)', () => {
 		await settleOldest(TAKEN)
 
 		expect(onGroupSubmit).not.toHaveBeenCalled()
-		expect(onSubmit).not.toHaveBeenCalled()
+		expect(onSubmit).toHaveBeenCalledTimes(1)
 	})
 
 	type CoreLike = { reset: () => void }

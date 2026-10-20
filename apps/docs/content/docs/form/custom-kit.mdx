@@ -140,7 +140,7 @@ export const { useForm, Form, withForm } = createForm({
 	reaching them, silently and with no type error. Both kits export `FormElement` for this reason.
 </Callout>
 
-`components` is an open set. A component of your own — `{ SaveBar }` — becomes `<form.SaveBar />` with its own prop types, and is the same component whether it is rendered as `form.SaveBar` or directly as `<SaveBar />`, because it reads the form from context rather than from a closure. That context is set by `<Form>`, `<SchemaForm>` or [`FormProvider`](/docs/form/composition#components-that-know-about-the-form); a hand-written `<form>` around an instance from `useForm` is not enough.
+`components` is an open set. A component of your own — `{ SaveBar }` — becomes `<form.SaveBar />` with its own prop types, and is the same component whether it is rendered as `form.SaveBar` or directly as `<SaveBar />`, because it reads the form from context rather than from a closure. That context is set by `<Form>`, `<SchemaForm>` or [`FormProvider`](/docs/form/composition/with-form#components-that-know-about-the-form); a hand-written `<form>` around an instance from `useForm` is not enough.
 
 A key that equals a member the form instance already owns (`Subscribe`, `state`, `reset`, `handleSubmit`, and our own `Field`, `Array`, `Submit`, …), or that appears in both `fields` and `components`, is a type error and throws at `createForm`, naming the key.
 

@@ -187,3 +187,28 @@ describe('SchemaForm — value inference', () => {
 		expectTypeOf(Disagreeing).toBeFunction()
 	})
 })
+
+describe('form.Step — types', () => {
+	it("types when by the form's values", () => {
+		void (
+			<Form defaultValues={DEFAULTS}>
+				{(form) => (
+					<form.Steps>
+						<form.Step
+							name='profile'
+							when={(values) => {
+								expectTypeOf(values).toEqualTypeOf<Values>()
+								return values.age > 0
+							}}
+						/>
+						<form.Step
+							name='other'
+							// @ts-expect-error -- `phone` is not a field of these values
+							when={(values) => values.phone !== ''}
+						/>
+					</form.Steps>
+				)}
+			</Form>
+		)
+	})
+})

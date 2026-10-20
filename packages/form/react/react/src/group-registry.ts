@@ -66,7 +66,7 @@ export function groupsOf(form: GroupHost): readonly ValidatedGroup[] {
 	return [...native, ...(mapGroups.get(form) ?? [])]
 }
 
-/** Run the submit validators of the groups `accept` picks — after the fields, never before (R62). */
+/** Run the submit validators of the groups `accept` picks — after the fields, never before. */
 export async function validateGroups(form: GroupHost, accept: (group: ValidatedGroup) => boolean): Promise<void> {
 	await Promise.all(
 		groupsOf(form)
@@ -108,6 +108,114 @@ export function hookGroupFields(group: NativeGroupApi, form: GroupHost): void {
 		},
 		areRelatedFieldsValid: () => areRelatedFieldsValid() && !hasOwnErrorsIn(form, inside),
 	})
+}
+
+/**
+ * Where TanStack keeps a group's errors: the form's field meta, under the group's own name and under
+ * every path its schema reported on — and which of those paths have a mounted instance behind them.
+ */
+type GroupMetaHost = GroupHost & {
+	state: { fieldMeta: Record<string, GroupErrorMeta | undefined> }
+	fieldInfo: Record<string, { instance: unknown } | undefined>
+	setFieldMeta: (name: string, updater: (prev: GroupErrorMeta) => GroupErrorMeta) => void
+}
+
+/** The slice of a group's meta its errors live in; every other member is passed through untouched. */
+type GroupErrorMeta = {
+	errorMap: Record<string, unknown>
+	errorSourceMap: Record<string, string | undefined>
+}
+
+/**
+ * Drop the errors left on the branch `name` once its group has unmounted, unless a group is mounted
+ * on that name again — a second group on the same branch, or the same one remounted. TanStack keeps a group's meta under its name and resets only its
+ * group state on unmount; it also puts the group's issues on every path they name, mounted or not, and
+ * only a mounted field clears its own when it unmounts. Either kind would keep the form from
+ * submitting after the group is gone. So the group's meta and every path inside the branch with no
+ * mounted instance behind it lose their errors; a path still mounted — a field rendered outside the
+ * group, a nested group still alive — keeps them.
+ *
+ * Every error goes, whatever its recorded source: a second group on the name relabels the first one's
+ * errors `'form'` in its own pass, so the source cannot tell them apart. A form validator's error on
+ * those paths is not lost for good — a submit runs the form's validators before `onSubmit`, and
+ * `onDynamic` runs them on the next change. Touched, blurred and dirty stay as they were.
+ */
+export function clearUnmountedGroupErrors(form: GroupMetaHost, name: string): void {
+	const stillOwned = [...form.formGroupApis].some((group) => group.name === name)
+	if (stillOwned) return
+	const stale = Object.entries(form.state.fieldMeta)
+		.filter(([path, meta]) => isPathWithin(name, path) && hasErrors(meta) && !isMounted(form, path))
+		.map(([path]) => path)
+	for (const path of stale) {
+		form.setFieldMeta(path, (prev) => ({ ...prev, errorMap: {}, errorSourceMap: {} }))
+	}
+}
+
+function hasErrors(meta: GroupErrorMeta | undefined): boolean {
+	return meta !== undefined && Object.keys(meta.errorMap).length > 0
+}
+
+function isMounted(form: GroupMetaHost, path: string): boolean {
+	const instance = form.fieldInfo[path]?.instance
+	return instance !== null && instance !== undefined
+}
+
+/** The development message for a group whose name is a bare prefix of another path. */
+export function prefixClashMessage(name: string, other: string): string {
+	return `Form group '${name}' is a prefix of '${other}'. TanStack Form matches a group's fields with a bare startsWith (TanStack/form#2337), so changing '${other}' also runs the validators of '${name}'. Rename one of them so that neither name starts with the other.`
+}
+
+/**
+ * The first of `paths` that starts with `name` and goes on without a path separator — `billingDiffers`
+ * beside a group on `billing`. The group itself and the paths inside it (`billing.street`,
+ * `billing[0]`) are not a clash: {@link isPathWithin} is the test TanStack should be making.
+ */
+export function prefixClash(name: string, paths: Iterable<string>): string | undefined {
+	for (const path of paths) {
+		if (path.startsWith(name) && !isPathWithin(name, path)) return path
+	}
+	return undefined
+}
+
+/** What {@link warnOnPrefixClash} reads: the mounted paths, and the values the siblings live in. */
+type PrefixHost = {
+	fieldInfo: Record<string, unknown>
+	state: { values: unknown }
+	getFieldValue: (path: string) => unknown
+}
+
+/** What separates an object key from its parent in a field path. */
+const PATH_SEPARATOR = '.'
+
+/** What `lastIndexOf` returns for a name with no separator — a key at the top of the values. */
+const NO_SEPARATOR = -1
+
+/** The paths of `name`'s siblings in the form's values — the ones a field may not have mounted yet. */
+function siblingPaths(form: PrefixHost, name: string): string[] {
+	const cut = name.lastIndexOf(PATH_SEPARATOR)
+	const isTopLevel = cut === NO_SEPARATOR
+	const parentPath = name.slice(0, cut)
+	const parent = isTopLevel ? form.state.values : form.getFieldValue(parentPath)
+	if (typeof parent !== 'object' || parent === null) return []
+	const prefix = isTopLevel ? '' : `${parentPath}${PATH_SEPARATOR}`
+	return Object.keys(parent).map((key) => `${prefix}${key}`)
+}
+
+const warnedPrefixes = new WeakMap<object, Set<string>>()
+
+/**
+ * Warn, once per form and name, when the group on `name` is a bare prefix of a field's path or a
+ * sibling value's key (#2337). Called after the group mounts; the caller keeps it to development
+ * builds.
+ */
+export function warnOnPrefixClash(form: PrefixHost, name: string): void {
+	const warned = warnedPrefixes.get(form) ?? new Set<string>()
+	warnedPrefixes.set(form, warned)
+	if (warned.has(name)) return
+	const other = prefixClash(name, [...Object.keys(form.fieldInfo), ...siblingPaths(form, name)])
+	if (other === undefined) return
+	warned.add(name)
+	console.error(prefixClashMessage(name, other))
 }
 
 /** The development message for two validating native groups on one branch (R86). */

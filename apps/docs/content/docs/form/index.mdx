@@ -28,17 +28,17 @@ You install exactly one of the two flavours; it pulls the rest in and re-exports
 
 ## What's in the box
 
-| Export                                                                                          | Purpose                                                                                        |
-| ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| [`Form`](/docs/form/getting-started)                                                            | The `<form>` element. Creates the instance, or takes yours.                                    |
-| [`useForm`](/docs/form/getting-started)                                                         | The extended hook, for when you need the instance yourself.                                    |
-| [`form.TextField` and friends](/docs/form/fields)                                               | Twelve base fields: text, number, textarea, select, multi-select, checkbox, switch, date, …    |
-| `form.SubmitButton`                                                                             | Subscribed to `canSubmit` / `isSubmitting`, so it disables itself.                             |
-| [`form.Submit`](/docs/form/submission#formsubmit)                                               | The headless submit primitive: `canSubmit`, `isSubmitting`, `isDirty`, `formErrors`, `submit`. |
-| [`FormProvider` / `useFormContext`](/docs/form/composition#components-that-know-about-the-form) | The form for components below it, with or without a `<form>` element.                          |
-| [`form.ArrayField` / `form.Array`](/docs/form/arrays)                                           | A repeatable group — with the kit's own chrome, or with none at all.                           |
-| [`SchemaForm`](/docs/form/schema)                                                               | Renders a serialisable document — the schema-driven mode.                                      |
-| [`createForm` / `createSchemaForm`](/docs/form/custom-kit)                                      | The factories: assemble any subset of fields and components; the schema one adds `SchemaForm`. |
+| Export                                                                                                    | Purpose                                                                                        |
+| --------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| [`Form`](/docs/form/getting-started)                                                                      | The `<form>` element. Creates the instance, or takes yours.                                    |
+| [`useForm`](/docs/form/getting-started)                                                                   | The extended hook, for when you need the instance yourself.                                    |
+| [`form.TextField` and friends](/docs/form/fields)                                                         | Twelve base fields: text, number, textarea, select, multi-select, checkbox, switch, date, …    |
+| `form.SubmitButton`                                                                                       | Subscribed to `canSubmit` / `isSubmitting`, so it disables itself.                             |
+| [`form.Submit`](/docs/form/submission#formsubmit)                                                         | The headless submit primitive: `canSubmit`, `isSubmitting`, `isDirty`, `formErrors`, `submit`. |
+| [`FormProvider` / `useFormContext`](/docs/form/composition/with-form#components-that-know-about-the-form) | The form for components below it, with or without a `<form>` element.                          |
+| [`form.ArrayField` / `form.Array`](/docs/form/arrays)                                                     | A repeatable group — with the kit's own chrome, or with none at all.                           |
+| [`SchemaForm`](/docs/form/schema)                                                                         | Renders a serialisable document — the schema-driven mode.                                      |
+| [`createForm` / `createSchemaForm`](/docs/form/custom-kit)                                                | The factories: assemble any subset of fields and components; the schema one adds `SchemaForm`. |
 
 Validation has **no custom resolver**: it is pure pass-through of TanStack Form's native [standard-schema](https://github.com/standard-schema/standard-schema) support, so a zod, valibot or arktype schema just works. See [Validation](/docs/form/validation).
 

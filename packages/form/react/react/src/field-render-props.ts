@@ -9,6 +9,28 @@ import type { FieldValidateProps } from './field-validate'
 import type { ReactNode } from 'react'
 
 /**
+ * The errors a field displays: its own, once the user has had a go at it or the form has been
+ * submitted.
+ *
+ * Spec §7.2 attaches the schema's generated validator to the *form's* `onChange`, so the first
+ * keystroke anywhere computes an error for every empty required field in the whole document. That
+ * is right for *running* the validator — it is what keeps `canSubmit` honest — and wrong for
+ * *showing* the result: without this gate one keystroke reddens fields the user has never so much
+ * as focused. `isTouched` is the exact question to ask: TanStack sets it on a field's own first
+ * change or blur, and on every mounted field at submit. (`isBlurred` would add nothing —
+ * `handleBlur` sets `isTouched` too, so it implies this one.)
+ *
+ * A submit attempt is the other half. A field mounted after it — a hidden step, a part behind a
+ * checkbox — was not touched by it, yet the form's validators reported on it and its error blocks
+ * the next submit; hiding the error would leave the form blocked for no visible reason. Only
+ * display is gated; the validator still runs on every change and the submit gate is untouched.
+ */
+export function shownFieldErrors(field: BoundFieldApi): string[] {
+	const attempted = field.form.state.submissionAttempts > 0
+	return field.state.meta.isTouched || attempted ? formatFieldErrors(field.state.meta.errors) : []
+}
+
+/**
  * The half of a field's props that is identical for every field kind: identity, chrome
  * content, validation state and the blur handler.
  *
@@ -45,16 +67,7 @@ export function fieldRenderProps(
 		validate: FieldValidateProps | undefined
 	},
 ): FieldRenderProps {
-	// Spec §7.2 attaches the schema's generated validator to the *form's* `onChange`, so the
-	// first keystroke anywhere computes an error for every empty required field in the whole
-	// document. That is right for *running* the validator — it is what keeps `canSubmit`
-	// honest — and wrong for *showing* the result: without this gate one keystroke reddens
-	// fields the user has never so much as focused. `isTouched` is the exact question to ask:
-	// TanStack sets it on a field's own first change or blur, and on every field at submit, so
-	// a submit attempt still surfaces everything. (`isBlurred` would add nothing — `handleBlur`
-	// sets `isTouched` too, so it implies this one.) Only display is gated; the validator still
-	// runs on every change and the submit gate is untouched.
-	const errors = field.state.meta.isTouched ? formatFieldErrors(field.state.meta.errors) : []
+	const errors = shownFieldErrors(field)
 
 	return {
 		'data-field': field.name,

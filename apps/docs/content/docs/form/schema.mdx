@@ -312,6 +312,8 @@ When the document's **top-level** children are `step` nodes, it is a wizard: `Sc
 
 <KitExample exampleId='form-wizard' />
 
+A step flow written in JSX rather than a document is [`form.Steps` and `form.Step`](/docs/form/steps): the same one-form model, with a stepper and controls of your own.
+
 A step's `title` and `description` are resolved by `SchemaForm` before the kit sees them — `WizardStep` types both as `ReactNode`, so a kit never has to know what a translation key is. Mixing `step` nodes with non-`step` siblings at the same level throws, in the parser and at render time alike: the loose nodes would otherwise be silently dropped.
 
 Four behaviours `SchemaForm` settles so no kit has to:

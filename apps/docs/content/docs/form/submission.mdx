@@ -28,7 +28,7 @@ To submit from outside the element — a dialog footer, a toolbar, a keyboard sh
 
 ## Submit state
 
-Two pieces of state describe a submission, and `form.SubmitButton` is already subscribed to both. It reads the form from context, so it needs `<Form>`, `<SchemaForm>` or a [`FormProvider`](/docs/form/composition#formprovider) above it.
+Two pieces of state describe a submission, and `form.SubmitButton` is already subscribed to both. It reads the form from context, so it needs `<Form>`, `<SchemaForm>` or a [`FormProvider`](/docs/form/composition/with-form#formprovider) above it.
 
 `isSubmitting` is true from the moment validation passes until the handler settles. `canSubmit` is the form's own answer to "would submitting be meaningful right now": true while the form is pristine and has never been submitted — otherwise the very first submit could never happen — and thereafter true only when the form is valid, not validating and not already submitting.
 
@@ -69,7 +69,7 @@ Reaching for `form.Subscribe` here rather than reading `form.state.isSubmitting`
 
 ### Outside the `<form>` element
 
-`submit` is what makes a button on `form.Submit` independent of the DOM. Put the button in a dialog footer, a toolbar or a sticky bar that is not a descendant of the `<form>`, give the tree a [`FormProvider`](/docs/form/composition#formprovider) so the button can find the form, and it submits:
+`submit` is what makes a button on `form.Submit` independent of the DOM. Put the button in a dialog footer, a toolbar or a sticky bar that is not a descendant of the `<form>`, give the tree a [`FormProvider`](/docs/form/composition/with-form#formprovider) so the button can find the form, and it submits:
 
 ```tsx
 <FormProvider form={form}>
@@ -87,7 +87,7 @@ The kit's `SubmitButton` is written on `form.Submit`. Inside a `<form>` it is an
 
 After a submit that fails validation, focus moves to the first field with an error — first **in page order**, not in the order of `defaultValues`. Which element inside the field takes it: the one carrying the field's `id`, if it can take focus; otherwise the first focusable element inside the field; otherwise the field's wrapper, if that can. So a text field focuses its text box, and a radio group whose kit puts the `id` on a container focuses its first radio.
 
-It does not depend on a `<form>` element. The walk covers the whole page and keeps only the fields stamped with this form's `data-form-id`, so a form under [`FormProvider`](/docs/form/composition#formprovider) with no `<form>` behaves the same, and two forms with the same field names never reach into each other. A [custom kit](/docs/form/custom-kit#fields) has to put `data-form-id` beside `data-field` for its fields to take part.
+It does not depend on a `<form>` element. The walk covers the whole page and keeps only the fields stamped with this form's `data-form-id`, so a form under [`FormProvider`](/docs/form/composition/with-form#formprovider) with no `<form>` behaves the same, and two forms with the same field names never reach into each other. A [custom kit](/docs/form/custom-kit#fields) has to put `data-form-id` beside `data-field` for its fields to take part.
 
 A field that is hidden — in a collapsed section, on an inactive tab — ignores focus. It is skipped, and the next field with an error takes focus instead; if none can, focus stays where it was. The form does not open what hides a field: revealing it is the layout's business.
 
@@ -142,7 +142,7 @@ And when they go:
 
 - **A field's error stays while the user moves in and out of the field**, and goes the first time its value changes. It does not come back for that value — typing the rejected username again does not restore the message; only the server can say it again.
 - **Every server error goes on the next submit or reset**, whichever API starts it — `form.handleSubmit`, `form.reset`, or the `formApi` TanStack hands to `onSubmit`, listeners and validators.
-- **A group submit (`group.handleSubmit()`) clears only the server errors of the fields inside the group**; form-level messages and other fields' stay. See [Composition](/docs/form/composition#server-errors-and-group-submits).
+- **A group submit (`group.handleSubmit()`) clears only the server errors of the fields inside the group**; form-level messages and other fields' stay. See [Composition](/docs/form/composition/form-group#server-errors-and-group-submits).
 - Until it goes, a field's server error makes the form invalid, so `canSubmit` is `false` and the kit's button is disabled — the same as any field error, and the reason the error clears on the first edit. A `form` message never disables it.
 - **An error for a field that is not mounted is kept**, and shows when the field mounts, by the same rules. It does not block submitting while nothing shows it.
 

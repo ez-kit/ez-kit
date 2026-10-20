@@ -1,0 +1,113 @@
+---
+title: Overview
+description: withForm, withFieldGroup and form.FormGroup in one form — which part each one fits, and where the rules go.
+---
+
+Reusing a whole form needs no helper: it is a component, and you render it twice. The helpers are for reusing a **part** of one — and which part you have decides which helper you want:
+
+| You need                                                         | Use                                                         |
+| ---------------------------------------------------------------- | ----------------------------------------------------------- |
+| to cut **one** large form into files, a part that sees all of it | [`withForm`](/docs/form/composition/with-form)              |
+| one set of fields in **different** forms, with its own rules     | [`withFieldGroup`](/docs/form/composition/with-field-group) |
+| a branch **inside** a form with its own check and its own "Save" | [`form.FormGroup`](/docs/form/composition/form-group)       |
+
+All three come from your kit — `withForm` and `withFieldGroup` are returned by `createForm` beside `useForm` and `Form`, and `form.FormGroup` hangs off every form instance — so import them from `@ez-kit/form-shadcn` or `@ez-kit/form-heroui` like everything else.
+
+This page puts all three in one form. Each helper has a page of its own, with a basic example, the same example with rules, and a larger one that shows where the helper pays off.
+
+## One form, taken apart
+
+A checkout form uses all three, each for the part it fits:
+
+- **The address is a `withFieldGroup` block.** Shipping and billing are the same three fields, so `AddressFields` is written once in its own coordinates — `street`, `city`, `zip` — and placed twice: `fields='shipping'` and `fields='billing'`. The same block would go into a profile or an invoice form unchanged.
+- **The billing section is a `withForm` part.** It belongs to this form only and reads it as a whole: the checkbox decides whether the billing block is mounted at all, and while it is not, the part shows the shipping street it will bill to. A part that reads another part's value is what `withForm` is for.
+- **Payment is a `form.FormGroup`.** It is a branch of this form with its own _Save card_ button: `group.handleSubmit()` sends `payment` alone, while _Place order_ sends everything.
+- **The email is a plain `form.TextField`.** A single field needs no helper.
+
+<KitExample exampleId='form-composition-checkout' />
+
+## The same form, with its rules
+
+The form's schema decides whether the order goes out; the groups only answer sooner. Each rule is written once, as a constant, and used where it is needed:
+
+| Rule                                       | Lives in                                                              | Why there                                                                                                       |
+| ------------------------------------------ | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| street and city filled in, ZIP of 5 digits | `addressSchema` — `AddressFields`' `validators` and the form's schema | The block reports as soon as a field is left; the form's schema holds the rule whatever is mounted.             |
+| card of 16 digits, CVC of 3                | `cardSchema` — the `payment` `form.FormGroup` and the form's schema   | The group must pass before _Save card_, which runs no form validator; the form's schema holds it for the order. |
+| a valid email                              | the form's schema                                                     | It belongs to no group.                                                                                         |
+| billing only when it is separate           | the form's schema, a union on `separateBilling`                       | Whether the block is on screen is the part's decision; whether billing must be valid is a rule about the data.  |
+
+A whole-form submit runs the form's validators and no group's, so the schema names every rule the order must satisfy, built from the same constants the groups use:
+
+```tsx
+const checkoutSchema = z.intersection(
+	z.object({ email: z.email(), shipping: addressSchema, payment: cardSchema }),
+	z.discriminatedUnion('separateBilling', [
+		z.object({ separateBilling: z.literal(false), billing: addressShape }),
+		z.object({ separateBilling: z.literal(true), billing: addressSchema }),
+	]),
+)
+
+<Form
+	defaultValues={CHECKOUT_DEFAULTS}
+	validationLogic={revalidateLogic()}
+	validators={{ onDynamic: checkoutSchema }}
+	onSubmit={placeOrder}
+>
+```
+
+Try _Place order_ on the empty form: the email, the shipping address and the card report in one pass, and the order is not sent. From then on the schema re-checks the form on every change, so a fixed field clears at once and the rest keep their messages. Tick _Bill to a different address_ and the billing rules join in; untick it and they leave, with the block's own errors. _Save card_ checks the card alone. When a group and the form's schema report the same rule, the field shows the message once.
+
+<KitExample exampleId='form-composition-checkout-rules' />
+
+## Where a rule goes
+
+- **The form's schema is the source of truth.** Every rule the data must satisfy to be sent goes in it, whatever is on screen: a whole-form submit runs the form's validators and no group's. Build it from the blocks' schemas — they are plain constants — so a rule is written once.
+- **A group answers early.** A block's or a `form.FormGroup`'s `validators` report while the user works, and are what the group's own submit checks. An error a mounted group has reported blocks the form's submit until it is fixed; a group that unmounts takes its errors with it.
+- **A part that is there only sometimes** — billing behind a checkbox, a step skipped by a condition — is a branch of the form's schema: a `z.discriminatedUnion` on the flag, or a `superRefine` that checks the part only when it applies. Unmounting a block does not switch its rules off in the form's schema; the schema's own condition does.
+- **One validating group per branch.** A `form.FormGroup` and a block placed on the same name share one group state, so when both carry `validators`, the later pass erases the other's own errors. Keep the outer group without validators, as [_Change password_](/docs/form/composition/form-group#a-form-with-several-saves) does. In development, two validating groups on one name log an error.
+- **A group's name must not begin another field's name.** Beside a group on `billing`, call the checkbox `separateBilling`, not `billingDiffers`: TanStack Form matches a group's fields by a plain prefix, so editing `billingDiffers` would run the `billing` group's validators. In development, such a pair logs an error naming both.
+
+### Connecting the form's schema
+
+Put the form's schema on `onDynamic`, with `revalidateLogic()` as the form's `validationLogic` — both kits export it:
+
+```tsx
+import { Form, revalidateLogic } from '@ez-kit/form-shadcn'
+
+<Form
+	defaultValues={DEFAULTS}
+	validationLogic={revalidateLogic()}
+	validators={{ onDynamic: schema }}
+>
+```
+
+The schema stays quiet until the first submit and re-checks the form on every change after it: a part that appears after a failed submit reports as the user fills it, and a fixed field clears at once.
+
+`validators: { onSubmit: schema }` works too, and fits a form with no part that comes and goes. The schema then runs on a submit only, and a submit with errors still on screen stops before it — so the messages of a part that appeared after a failed submit show only once the ones already shown are fixed. Do not put one schema on both triggers: it gains nothing over `onDynamic` alone and runs twice on every submit.
+
+## Coordinates come from the object, not the tree
+
+A field's path is read from the object you called it through — never from what sits above it in the tree:
+
+- `form.X` is **absolute**, inside a group too — and so are the schemas beside it: the form's, and a step's.
+- `group.X` is **relative** to the group's branch, `form.FormGroup` and `withFieldGroup` alike — and so is the group's schema.
+
+There is no implicit prefix. `form.TextField` is created once per form and cannot know what will render above it; if it took a prefix from its ancestors, its `name` could only be typed `string`, and moving a component would silently change where its data is written.
+
+So `form.TextField name='payment.card'` inside `form.FormGroup name='payment'` works — it writes `payment.card` — but do not write it: the field and the group's schema then name the same value in two coordinates. Inside a group, write `group.TextField name='card'`.
+
+## Choosing
+
+Each helper has one role:
+
+- **[`withFieldGroup`](/docs/form/composition/with-field-group)** reuses a set of fields across forms, with its rules and, when it needs one, its submit.
+- **[`withForm`](/docs/form/composition/with-form)** cuts one form into files, and each part sees the whole form — a later part can read what an earlier one wrote.
+- **[`form.FormGroup`](/docs/form/composition/form-group)** is the validation and submit boundary of a branch inside one form.
+- **`form.Step`** says what is on screen and what to check before _Next_ — see [Steps](/docs/form/steps).
+
+<Callout>
+	A `FormSchema` has an analogue in nested `section` and `step` nodes, but it is not the same mechanism. Those group
+	fields for **layout and visibility** inside one document; they do not produce a reusable, separately typed unit that
+	several forms can render. See [Config-driven forms](/docs/form/schema).
+</Callout>

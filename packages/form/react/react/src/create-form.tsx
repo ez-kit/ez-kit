@@ -13,11 +13,11 @@ import { FormProvider, missingFormMessage, useOptionalFormContext } from './form
 import { createFormGroup } from './form-group'
 import { splitFormProps } from './form-options'
 import { FormShell } from './form-shell'
-import { validateGroups } from './group-registry'
 import { NO_INJECTED_COMPONENTS } from './kit-form'
-import { emitFieldBlur, hookInstanceReset, resetMapGroups } from './map-group'
 import { assertNoReservedKeys, assertNoSharedKeys, FormFactoryName } from './reserved-keys'
 import { attachServerErrors, serverErrorsOf } from './server-errors'
+import { createStepMembers } from './steps/steps'
+import { emitFieldBlur, hookInstanceReset, resetScopes } from './validated-scope'
 
 import type { BindableForm } from './bindable-form'
 import type { KitFormBlock, KitWithFormProps } from './composition'
@@ -29,11 +29,11 @@ import type { FormBehaviourOptions } from './form-behaviour'
 import type { AnyFormInstance } from './form-context'
 import type { FormInstance } from './form-instance'
 import type { FormControlledProps, AnyFormProps, FormUncontrolledImplProps, FormUncontrolledProps } from './form-props'
-import type { GroupHost } from './group-registry'
 import type { KitFormApi } from './kit-form'
 import type { ReservedKeyGuard, SharedKeyGuard } from './reserved-keys'
 import type { CustomFieldRenderProps } from './schema/registries'
 import type { ServerErrors, ServerErrorsHost } from './server-errors'
+import type { StepsForm } from './steps/steps'
 import type { FormAsyncValidateOrFn, FormOptions, FormValidateOrFn } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
 
@@ -357,6 +357,8 @@ export function createFormInternals<TFields extends FormFieldRegistry, TComponen
 			[form],
 		)
 
+		const stepMembers = useMemo(() => createStepMembers<TFormData>(form as unknown as StepsForm), [form])
+
 		// The binders read `form.AppField` when they render — after the assign below — so they
 		// bind through the seam without being handed it.
 		const fieldComponents = useMemo(
@@ -375,6 +377,7 @@ export function createFormInternals<TFields extends FormFieldRegistry, TComponen
 					form,
 					native,
 					{ FormGroup, setServerErrors },
+					stepMembers,
 					fieldComponents,
 					components,
 				) as unknown as KitFormApi<
@@ -393,7 +396,7 @@ export function createFormInternals<TFields extends FormFieldRegistry, TComponen
 					TFields,
 					TComponents
 				>,
-			[form, native, FormGroup, setServerErrors, fieldComponents],
+			[form, native, FormGroup, setServerErrors, stepMembers, fieldComponents],
 		)
 	}
 
@@ -648,12 +651,10 @@ export function createFormInternals<TFields extends FormFieldRegistry, TComponen
 	}
 }
 
-/** The cause TanStack passes `validateAllFields` from a submit. */
-const SUBMIT_CAUSE = 'submit'
-
 /**
- * What the core's members do for this instance: every submit and reset clears its server errors, a
- * reset is announced to the map groups, and a submit runs every mounted group after the fields (R62).
+ * What the core's members do for this instance: every submit and reset clears its server errors, and
+ * a reset is announced to the map groups. A submit runs no group's validators: the form's own
+ * validators decide whether the form submits, and a group is checked by its own submit.
  */
 function coreHooksFor(form: object): CoreHooks {
 	const clear = (): void => {
@@ -663,10 +664,7 @@ function coreHooksFor(form: object): CoreHooks {
 		beforeSubmit: clear,
 		aroundReset: (reset) => {
 			clear()
-			resetMapGroups(form, reset)
-		},
-		afterValidateAllFields: async (cause) => {
-			if (cause === SUBMIT_CAUSE) await validateGroups(form as unknown as GroupHost, () => true)
+			resetScopes(form, reset)
 		},
 	}
 }

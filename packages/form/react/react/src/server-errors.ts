@@ -1,4 +1,7 @@
+import { createStore } from '@tanstack/react-store'
+
 import type { DeepKeys } from '@tanstack/form-core'
+import type { Readable } from '@tanstack/react-store'
 
 /** One message, or several, for a field or for the form. */
 export type ServerErrorMessages = string | readonly string[]
@@ -20,10 +23,8 @@ export type ServerErrorsController = {
 	 * messages stay.
 	 */
 	clearWhere: (isCleared: (field: string) => boolean) => void
-	/** The current form-level messages; the same array until they change. */
-	formErrors: () => readonly string[]
-	/** Listen for a change of the form-level messages; returns the unsubscribe. */
-	subscribe: (listener: () => void) => () => void
+	/** The current form-level messages, as a store; the same array until they change. */
+	formErrors: Readable<readonly string[]>
 	/** Re-assert the slots on every store change; returns the disconnect. */
 	connect: () => () => void
 }
@@ -88,16 +89,11 @@ export function attachServerErrors(host: ServerErrorsHost): ServerErrorsControll
 	if (existing !== undefined) return existing
 
 	let fields: ReadonlyMap<string, FieldEntry> = new Map()
-	let formMessages: readonly string[] = NO_MESSAGES
+	const formMessages = createStore<readonly string[]>(NO_MESSAGES)
 	// The names whose `onServer` slot this controller wrote and has not cleared yet.
 	let owned: ReadonlySet<string> = new Set()
-	let listeners: ReadonlySet<() => void> = new Set()
 	let syncing = false
 	const watched = new WeakSet<FieldInfoLike>()
-
-	const notify = (): void => {
-		for (const listener of listeners) listener()
-	}
 
 	// A written error marks the field touched, or the display rule would hide it (R38).
 	const writeSlot = (name: string, messages: readonly string[] | undefined): void => {
@@ -176,10 +172,7 @@ export function attachServerErrors(host: ServerErrorsHost): ServerErrorsControll
 			fields = nextFields
 			reconcile()
 			const nextForm = toMessages(errors.form)
-			if (!sameMessages(nextForm, formMessages)) {
-				formMessages = nextForm
-				notify()
-			}
+			formMessages.setState((prev) => (sameMessages(nextForm, prev) ? prev : nextForm))
 			return nextFields.size > 0
 		},
 		clear() {
@@ -191,13 +184,7 @@ export function attachServerErrors(host: ServerErrorsHost): ServerErrorsControll
 			fields = kept
 			reconcile()
 		},
-		formErrors: () => formMessages,
-		subscribe(listener) {
-			listeners = new Set([...listeners, listener])
-			return () => {
-				listeners = new Set([...listeners].filter((entry) => entry !== listener))
-			}
-		},
+		formErrors: formMessages,
 		connect() {
 			const subscription = host.store.subscribe(sync)
 			return () => {

@@ -29,6 +29,17 @@ export type {
 export type { AnyFormInstance, FormContextApi } from './form-context'
 export type { FormBehaviourOptions } from './form-behaviour'
 export type { ServerErrorMessages, ServerErrors } from './server-errors'
+export type { StepsState } from './steps/controller'
+export type {
+	StepItemRenderProps,
+	StepMembers,
+	StepProps,
+	StepsComponent,
+	StepsControlsRenderProps,
+	StepsListRenderProps,
+	StepsProps,
+	StepSummary,
+} from './steps/steps'
 export type { FormInstance } from './form-instance'
 export type { AnyFormProps, FormControlledProps, FormProps, FormUncontrolledProps } from './form-props'
 export type {
@@ -172,7 +183,11 @@ export type {
 // with `Omit`, which TanStack's hooks no longer accept; each group carries `Field` and `NativeField`.
 export { useFieldGroup } from './field-groups'
 export { useFormGroup } from './form-group'
-// `useSelector` is re-exported so an app reads the form's store through the same TanStack copy the
-// form uses and never installs TanStack itself — a second copy would be a second store, and this
-// package owns the version.
-export { useSelector } from '@tanstack/react-form'
+// The step flow's hooks read the nearest `form.Steps`, so a stepper or a summary can sit anywhere in it.
+export { useStep, useSteps } from './steps/steps'
+// `useSelector` and `revalidateLogic` are re-exported so an app reaches the form's store and its
+// validation logic through the same TanStack copy the form uses and never installs TanStack itself —
+// a second copy would be a second store, and this package owns the version. `revalidateLogic` is what
+// `validationLogic` takes for a form schema on `onDynamic`: quiet before the first submit, checked on
+// every change after it.
+export { revalidateLogic, useSelector } from '@tanstack/react-form'

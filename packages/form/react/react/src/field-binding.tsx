@@ -1,5 +1,7 @@
 'use client'
 
+import { useStepField } from './steps/steps'
+
 import type { BindableForm, BoundFieldApi, BoundFieldValidators } from './bindable-form'
 import type { ReactNode } from 'react'
 
@@ -26,6 +28,7 @@ export type NativeFieldLike = (props: {
  */
 export function createFieldBinding(NativeField: NativeFieldLike): BindableForm['AppField'] {
 	return function FieldBinding({ children, ...options }): ReactNode {
+		useStepField(options.name)
 		return <NativeField {...options}>{children}</NativeField>
 	}
 }

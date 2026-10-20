@@ -38,11 +38,12 @@
 		{
 			"name": "everything (JSX API + config layer)",
 			"path": "dist/index.js",
-			"limit": "17 KB",
+			"limit": "19.5 KB",
 			"ignore": [
 				"@ez-kit/form-core",
 				"@tanstack/form-core",
-				"@tanstack/react-form"
+				"@tanstack/react-form",
+				"@tanstack/react-store"
 			]
 		},
 		{
@@ -53,14 +54,16 @@
 			"ignore": [
 				"@ez-kit/form-core",
 				"@tanstack/form-core",
-				"@tanstack/react-form"
+				"@tanstack/react-form",
+				"@tanstack/react-store"
 			]
 		}
 	],
 	"dependencies": {
 		"@ez-kit/form-core": "workspace:*",
 		"@tanstack/form-core": "1.33.2",
-		"@tanstack/react-form": "1.33.2"
+		"@tanstack/react-form": "1.33.2",
+		"@tanstack/react-store": "0.11.1"
 	},
 	"devDependencies": {
 		"@ez-kit/react18-env": "workspace:*",

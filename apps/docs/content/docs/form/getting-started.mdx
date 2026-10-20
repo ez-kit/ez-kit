@@ -138,7 +138,7 @@ const form = useForm({ defaultValues: { email: '' }, onSubmit })
 </Form>
 ```
 
-If you render your own `<form>` instead of `<Form>`, wrap the tree in `<FormProvider form={form}>`: `form.SubmitButton` and every other component that reads the form from context needs `<Form>`, `<SchemaForm>` or a provider above it. See [Composition](/docs/form/composition#formprovider).
+If you render your own `<form>` instead of `<Form>`, wrap the tree in `<FormProvider form={form}>`: `form.SubmitButton` and every other component that reads the form from context needs `<Form>`, `<SchemaForm>` or a provider above it. See [Composition](/docs/form/composition/with-form#formprovider).
 
 The two modes are mutually exclusive — passing `form` together with `defaultValues` is a compile error — and the mode is fixed for the lifetime of the component, since switching remounts the form. Note the trade-off you take on here: the instance now lives as long as **the component that called the hook**, so inside a dialog you own the reset.
 

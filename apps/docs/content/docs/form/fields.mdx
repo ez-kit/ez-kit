@@ -290,7 +290,7 @@ A range is a separate field rather than a flag on `form.DateField` because its v
 
 ## `form.SubmitButton`
 
-The kit's `SubmitButton`, passed in `components` and built on the [`form.Submit`](/docs/form/submission#formsubmit) primitive. It is subscribed to the form's `canSubmit` and `isSubmitting`, so it disables itself while the form is invalid or in flight. The `disabled` prop can only add to that, never override it. It reads the form from context, so it needs `<Form>`, `<SchemaForm>` or [`FormProvider`](/docs/form/composition#formprovider) above it — a hand-written `<form>` is not enough.
+The kit's `SubmitButton`, passed in `components` and built on the [`form.Submit`](/docs/form/submission#formsubmit) primitive. It is subscribed to the form's `canSubmit` and `isSubmitting`, so it disables itself while the form is invalid or in flight. The `disabled` prop can only add to that, never override it. It reads the form from context, so it needs `<Form>`, `<SchemaForm>` or [`FormProvider`](/docs/form/composition/with-form#formprovider) above it — a hand-written `<form>` is not enough.
 
 ```tsx
 <form.SubmitButton>Save</form.SubmitButton>

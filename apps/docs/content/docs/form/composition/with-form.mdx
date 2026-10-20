@@ -1,0 +1,244 @@
+---
+title: withForm
+description: Cut one large form into parts, each in its own file, each seeing the whole form.
+---
+
+`withForm` builds a part of **one** form: a block typed by the whole form's data, with the same flat fields the form has. It is a **file boundary, not a validation one** — a part has no rules and no submit of its own, and it writes to the same absolute paths the form does.
+
+Reach for it when a form has grown too large for one component. Each section moves to its own file and stays fully typed: a part can name any field of the form, read any value, and a typo in a path is a compile error. What it does not give you is reuse across forms — a part is declared against one form's data. For a set of fields that several forms share, see [`withFieldGroup`](/docs/form/composition/with-field-group).
+
+## A form in two parts
+
+A profile, cut into a _Name_ part and a _Contact_ part. Each part is declared with the form's `defaultValues`, which is where its data type comes from, and renders `form.TextField` exactly as the form itself would:
+
+```tsx
+import { withForm } from '@ez-kit/form-shadcn'
+
+const NamePart = withForm({
+	defaultValues: PROFILE_DEFAULTS,
+	render: ({ form }) => (
+		<form.Section title='Name'>
+			<form.TextField
+				name='firstName'
+				label='First name'
+			/>
+			<form.TextField
+				name='lastName'
+				label='Last name'
+			/>
+		</form.Section>
+	),
+})
+
+<Form defaultValues={PROFILE_DEFAULTS} onSubmit={saveProfile}>
+	{(form) => (
+		<>
+			<NamePart form={form} />
+			<ContactPart form={form} />
+			<form.SubmitButton>Save profile</form.SubmitButton>
+		</>
+	)}
+</Form>
+```
+
+The parts write into one form, and _Save profile_ sends it whole.
+
+<KitExample exampleId='form-composition-with-form' />
+
+## With rules
+
+A part has no `validators` of its own: the rules live where the data is sent, in the form's schema. The parts need no change at all — the schema reports on `firstName` or `email` and the message shows on that field, whichever part rendered it:
+
+```tsx
+const profileSchema = z.object({
+	firstName: z.string().min(1, 'Enter a first name'),
+	lastName: z.string().min(1, 'Enter a last name'),
+	email: z.email('Enter a valid email address'),
+	phone: z.string().regex(/^\+?\d{7,15}$/, 'Seven to fifteen digits'),
+})
+
+<Form
+	defaultValues={PROFILE_DEFAULTS}
+	validationLogic={revalidateLogic()}
+	validators={{ onDynamic: profileSchema }}
+	onSubmit={saveProfile}
+>
+	{(form) => (
+		<>
+			<NamePart form={form} />
+			<ContactPart form={form} />
+			<form.SubmitButton>Save profile</form.SubmitButton>
+		</>
+	)}
+</Form>
+```
+
+The parts were declared with `defaultValues` alone and still take this form: what a placement checks is the form's data and fields, not its validators. Try _Save profile_ on the empty form: both parts report in one pass, and fixing a field clears it at once.
+
+<KitExample exampleId='form-composition-with-form-validation' />
+
+## Where it pays off: parts that read each other
+
+An order split into three parts. _Delivery_ decides which of its fields exist — a street and a city for a courier, a store for a pickup. _Summary_ owns no field at all; it reads what the other two wrote and says it back. Neither could be written against a slice of the form: each needs the whole of it, and that is exactly what a `withForm` part has.
+
+```tsx
+const DeliveryPart = withForm({
+	defaultValues: ORDER_DEFAULTS,
+	render: ({ form }) => (
+		<form.Section title='Delivery'>
+			<form.RadioGroupField
+				name='delivery'
+				label='Delivery'
+				options={DELIVERY}
+			/>
+			<form.Subscribe selector={(state) => state.values.delivery}>
+				{(delivery) =>
+					delivery === 'courier' ? (
+						<>
+							<form.TextField
+								name='address.street'
+								label='Street'
+							/>
+							<form.TextField
+								name='address.city'
+								label='City'
+							/>
+						</>
+					) : (
+						<form.RadioGroupField
+							name='store'
+							label='Store'
+							options={STORES}
+						/>
+					)
+				}
+			</form.Subscribe>
+		</form.Section>
+	),
+})
+```
+
+The rule follows the data, not the screen. Whether the address must be filled in depends on `delivery`, so the form's schema says so with a union on it — the part only decides what is rendered:
+
+```tsx
+const orderSchema = z.intersection(
+	z.object({ item: z.string().min(1), quantity: z.number().int().min(1) }),
+	z.discriminatedUnion('delivery', [
+		z.object({ delivery: z.literal('courier'), address: addressSchema, store: z.string() }),
+		z.object({ delivery: z.literal('pickup'), address: addressShape, store: z.string().min(1) }),
+	]),
+)
+```
+
+Try _Place order_ empty: the item and the street report. Switch to _Pick up in store_ and the address leaves with its messages; the store is required from the next change on. The summary line follows every part as you type.
+
+<KitExample exampleId='form-composition-with-form-order' />
+
+## The `form` prop
+
+The `form` prop is optional:
+
+- **Passed** — `<NamePart form={form} />` — and it is checked where the part is placed: a form over another shape does not compile. The check covers the data and the fields the bundle registered, not the validators: a part declared with `defaultValues` alone accepts a form that was given `validators`, as [the example with rules](#with-rules) shows. The part's own options only type what `render` sees, so its error types follow the part's declaration rather than the form passed in.
+- **Omitted** — `<NamePart />` — and the part reads the form above it, from `<Form>`, `<SchemaForm>` or `FormProvider`. That is a **cast, not a check**, exactly like [`useFormContext<V>()`](#typing-the-values): nothing verifies that the form above has the part's data.
+- **Neither** — no prop and no form above — and the part throws ``withForm(): the block needs a form — pass `form`, or render it inside <Form>, <SchemaForm> or <FormProvider>.`` on its first render, in every environment.
+
+The form options are **required, not decorative**. `defaultValues` — or another option that pins the shape — is the only place the part's data type can be inferred from. A part written as `withForm({ render })` infers `unknown`, which collapses the set of writable field names to `never`: no `name` compiles inside it, and no real form is assignable to it from outside. Always declare a part against the form data it belongs to.
+
+Extra props go through the `props` option, which is also their inference site; they are not inferred from the render function's own parameter:
+
+```tsx
+const AddressBlock = withForm({
+	defaultValues: DEFAULT_CHECKOUT,
+	props: { path: 'billing' as AddressPath, heading: '' },
+	render: ({ form, path, heading }) => (
+		<fieldset>
+			<legend>{heading}</legend>
+			<form.TextField
+				name={`${path}.street`}
+				label='Street'
+			/>
+		</fieldset>
+	),
+})
+```
+
+The `form` the render function receives is typed as the kit's own form instance — the type `useForm` returns, with the validators the part's options declare — rather than TanStack's, which describes an instance without the flat fields; that is what makes `form.TextField` compile inside a part.
+
+### A plain component is enough once
+
+If a part is only ever rendered once, it needs no helper either. A plain component that takes the form as a prop typed `FormInstance<Values>` — exported by every kit — is less machinery for the same result, and any instance `useForm` returns for those values is accepted, whatever validators it was given. The price is that the prop's type no longer knows them: through a `FormInstance`, everything typed from a validator or the submit meta is `any`, while values and field names stay fully typed. A form built from a subset names its own shape once: `FormInstance<V, typeof fields, typeof components>`.
+
+## Components that know about the form
+
+A part is tied to the shape of one form. Many components are not: a save bar, an error summary, a "discard changes" button need the form's _state_ and _submit_, not its field names. They read the form from context.
+
+`<Form>` and `<SchemaForm>` set that context, and `useFormContext()` returns the form's **base API** — `Subscribe`, `state`, `handleSubmit`, `Submit`, `Array`, `Field`, `NativeField` — without the fields a bundle registered, and with the values typed `unknown`. It is exported by the package and by each kit, not by the bundle, so it can be used from a component the bundle itself registers.
+
+```tsx
+import { useFormContext } from '@ez-kit/form-shadcn'
+
+function ErrorSummary() {
+	const form = useFormContext()
+
+	return (
+		<form.Subscribe selector={(state) => state.errors}>
+			{(errors) => (errors.length > 0 ? <p role='alert'>{errors.length} problems</p> : null)}
+		</form.Subscribe>
+	)
+}
+```
+
+Register it in `components` and it is `<form.ErrorSummary />` with its own props; leave it out and render `<ErrorSummary />` directly. It is the same component either way, which is why `createForm` attaches components as they are rather than binding them to an instance.
+
+```tsx
+export const { useForm, Form } = createForm({
+	FormElement,
+	fields: allFormFields,
+	components: { ...allFormComponents, ErrorSummary },
+})
+```
+
+### Typing the values
+
+`useFormContext` takes an optional type argument. `useFormContext<Values>()` types the same base API over `Values`, and adds the kit's **built-in** fields with their value-typed `name` — `form.TextField name` accepts only the string paths of `Values`:
+
+```tsx
+type SignUp = { email: string; age: number }
+
+function EmailHint() {
+	const form = useFormContext<SignUp>()
+
+	return (
+		<form.Subscribe selector={(state) => state.values.email}>{(email) => <p>Signing up as {email}</p>}</form.Subscribe>
+	)
+}
+```
+
+It is **a cast, not a check**: nothing verifies that the form above has these values, or that the bundle registered the built-in field you call. Fields and components you registered yourself are not on it, since naming them would need the bundle, and a component the bundle registers cannot import it. Call it with a concrete type; a component that names paths in one form's data is better written with `withForm` or [`withFieldGroup`](/docs/form/composition/with-field-group), which are checked where they are placed.
+
+### `FormProvider`
+
+When you own the `<form>` element, or there is none, `<Form>` is not in the tree and nothing sets the context. `FormProvider` sets it without rendering a `<form>`:
+
+```tsx
+const form = useForm({ defaultValues: { email: '' }, onSubmit })
+
+return (
+	<FormProvider form={form}>
+		<form
+			onSubmit={(event) => {
+				event.preventDefault()
+				void form.handleSubmit()
+			}}
+		>
+			<form.TextField
+				name='email'
+				label='Email'
+			/>
+		</form>
+		<form.SubmitButton>Save</form.SubmitButton>
+	</FormProvider>
+)
+```
+
+A component that reads the form from context — `form.SubmitButton`, `form.ErrorSummary`, your own — throws `useFormContext() must be called inside <Form>, <SchemaForm> or <FormProvider>` without one. A hand-written `<form>` does not count. Here the submit button sits outside the `<form>` element and still works: it is built on [`form.Submit`](/docs/form/submission#formsubmit), which hands out `submit`.

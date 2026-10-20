@@ -1,12 +1,13 @@
-import { useSyncExternalStore } from 'react'
+import { useSelector } from '@tanstack/react-form'
+import { createStore } from '@tanstack/react-store'
 
-import { GROUP_ERROR_KEY_PREFIX } from '../map-group'
 import { formatOwnErrors } from '../own-errors'
 import { serverErrorsOf } from '../server-errors'
+import { isScopeErrorKey } from '../validated-scope'
 
 import type { BindableForm, SubmitState } from '../bindable-form'
 import type { SubmitProps } from '../field-props'
-import type { ServerErrorsController } from '../server-errors'
+import type { Readable } from '@tanstack/react-store'
 import type { ReactNode } from 'react'
 
 /**
@@ -22,19 +23,29 @@ function selectSubmitState(state: SubmitState): SubmitState {
 	}
 }
 
-/** The form's own errors: every `errorMap` slot but a map group's, which is that block's (R67). */
+/** The form's own errors: every `errorMap` slot but a map group's (R67) or a step's, which are theirs. */
 function formLevelErrors(errorMap: Record<string, unknown>): unknown[] {
 	return Object.entries(errorMap)
-		.filter(([key]) => !key.startsWith(GROUP_ERROR_KEY_PREFIX))
+		.filter(([key]) => !isScopeErrorKey(key))
 		.map(([, value]) => value)
 }
 
-const NO_SERVER_ERRORS: readonly string[] = []
+/** What `Submit` reads when the instance has no server-errors controller (a hand-built form). */
+const NO_SERVER_ERRORS: Readable<readonly string[]> = /* @__PURE__ */ createStore<readonly string[]>([])
 
-/** What `Submit` subscribes to when the instance has no server-errors controller (a hand-built form). */
-const NO_CONTROLLER: Pick<ServerErrorsController, 'subscribe' | 'formErrors'> = {
-	subscribe: () => () => {},
-	formErrors: () => NO_SERVER_ERRORS,
+/** The form-level messages `form.setServerErrors` put on `form`, re-rendering when they change. */
+function useServerFormErrors(form: object): readonly string[] {
+	return useSelector(serverErrorsOf(form)?.formErrors ?? NO_SERVER_ERRORS)
+}
+
+/** The form's errors with no path, as `form.Submit` hands them: its validators', then the server's. */
+export function useFormErrors(form: object): string[] {
+	const serverFormErrors = useServerFormErrors(form)
+	const errorMap = useSelector(
+		(form as { store: Parameters<typeof useSelector>[0] }).store,
+		(state) => (state as { errorMap: Record<string, unknown> }).errorMap,
+	)
+	return formatOwnErrors([...formLevelErrors(errorMap), ...serverFormErrors])
 }
 
 /**
@@ -49,8 +60,7 @@ export function createSubmit(form: BindableForm): (props: SubmitProps) => ReactN
 	const submit = (): Promise<void> => form.handleSubmit()
 
 	return function Submit({ children }: SubmitProps): ReactNode {
-		const controller = serverErrorsOf(form) ?? NO_CONTROLLER
-		const serverFormErrors = useSyncExternalStore(controller.subscribe, controller.formErrors, controller.formErrors)
+		const serverFormErrors = useServerFormErrors(form)
 		return (
 			<form.Subscribe selector={selectSubmitState}>
 				{({ canSubmit, isSubmitting, isDirty, errorMap }) =>

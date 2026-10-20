@@ -1,0 +1,126 @@
+---
+title: form.FormGroup
+description: A branch inside one form with its own check and its own submit — a "Save" for one section, without sending the form.
+---
+
+`form.FormGroup` is a branch **inside** one form with its own check and its own submit. A settings page with a _Change password_ button beside _Save settings_, a checkout whose card can be saved before the order is placed, an admin form where each section saves on its own — each is one form, with one set of values and one schema, and a few branches that can also be checked and sent alone.
+
+It is not a reuse unit: the group is written in place, in the form that owns it. When the same branch — fields, rules and submit — appears in several forms, write it once as a [`withFieldGroup`](/docs/form/composition/with-field-group) block; a `form.FormGroup` around a block is how a page adds a submit to a block that has none.
+
+## A branch with its own save
+
+A `payment` branch inside an order. Its `group` carries the bundle's flat fields, named relative to `name`: `group.TextField name='card'` writes `payment.card`. _Save card_ calls `group.handleSubmit()`, which sends `payment` alone to `onGroupSubmit`; _Place order_ is the form's submit and sends everything:
+
+```tsx
+<form.FormGroup
+	name='payment'
+	onGroupSubmit={({ value }) => api.saveCard(value)}
+>
+	{(group) => (
+		<form.Section title='Payment'>
+			<group.TextField
+				name='card'
+				label='Card number'
+			/>
+			<group.TextField
+				name='cvc'
+				label='CVC'
+			/>
+			<Button onClick={() => void group.handleSubmit()}>Save card</Button>
+		</form.Section>
+	)}
+</form.FormGroup>
+```
+
+<KitExample exampleId='form-composition-form-group' />
+
+## With rules
+
+`validators` on the group are what its own submit checks. Their schema is written relative to the branch — TanStack hands the group's validators `values[name]` — which is what puts the group's schema and its `group.X` fields in one set of coordinates:
+
+```tsx
+const cardSchema = z.object({
+	card: z.string().regex(/^\d{16}$/, 'Sixteen digits'),
+	cvc: z.string().regex(/^\d{3}$/, 'Three digits'),
+})
+
+<form.FormGroup
+	name='payment'
+	validators={{ onChange: cardSchema }}
+	onGroupSubmit={({ value }) => api.saveCard(value)}
+>
+```
+
+_Save card_ now checks the card before it sends it, and runs no form validator. _Place order_ runs the form's validators and no group's, so the form's schema names the card's rule too, from the same constant — `z.object({ email: z.email(), payment: cardSchema })`. Try _Place order_ on the empty form: the email and the card report together.
+
+<KitExample exampleId='form-composition-form-group-validation' />
+
+## A form with several saves
+
+A settings form with two branches, each saved on its own, and a _Save settings_ for everything:
+
+- **`security`** wraps the [`PasswordPair`](/docs/form/composition/with-field-group#with-rules) block in a group with **no validators of its own**: the rule comes from the block. _Change password_ checks the pair and sends `security` alone.
+- **`notifications`** has a rule over the whole branch — at least one channel — that belongs to no single field. A refine without a path is the group's own, and reaches the group as `group.errors`, which the section renders itself. _Save notifications_ is blocked while it holds.
+- **_Save settings_** runs the form's schema, built from both branches' schemas, so neither branch can be skipped by saving the whole.
+
+```tsx
+const notificationsSchema = z
+	.object({ email: z.boolean(), sms: z.boolean() })
+	.refine((channels) => channels.email || channels.sms, { message: 'Pick at least one channel' })
+
+<form.FormGroup
+	name='notifications'
+	validators={{ onChange: notificationsSchema }}
+	onGroupSubmit={({ value }) => api.saveNotifications(value)}
+>
+	{(group) => (
+		<form.Section title='Notifications'>
+			<group.CheckboxField
+				name='email'
+				label='Email me'
+			/>
+			<group.CheckboxField
+				name='sms'
+				label='Text me'
+			/>
+			{group.errors.map((message) => (
+				<p
+					key={message}
+					role='alert'
+				>
+					{message}
+				</p>
+			))}
+			<Button onClick={() => void group.handleSubmit()}>Save notifications</Button>
+		</form.Section>
+	)}
+</form.FormGroup>
+```
+
+Untick _Email me_ and the section says why it cannot be saved; tick _Text me_ and the message goes. _Save settings_ on the untouched form stops at the empty password and focuses it.
+
+<KitExample exampleId='form-composition-form-group-settings' />
+
+## Its submit and its errors
+
+`group.handleSubmit()` is a group submit: it checks the branch's fields, the blocks mounted inside it and the group's own `validators`, then calls `onGroupSubmit`; the form's `onSubmit` is not called. Invalid, it focuses the group's first field with an error, as the form's `focusOnError` says.
+
+`group.errors` holds the group's own messages — those its validators report with no path — as strings. `group.state.meta.errors` is TanStack's raw value and can hold a record of every issue by path, which is not fit to display.
+
+Keep **one validating group per branch**: a `form.FormGroup` and a block placed on the same name share one group state, so when both carry `validators`, the later pass erases the other's own errors. That is why `security` above has none. In development, two validating groups on one name log an error.
+
+### Server errors and group submits
+
+A group submit — `group.handleSubmit()` on a `form.FormGroup`, a `withFieldGroup` block or `useFormGroup` — clears the [server errors](/docs/form/submission#server-errors) of the fields inside the group, and only those: form-level messages and other fields' errors stay, because the group submit does not send the form.
+
+## `useFormGroup`
+
+`useFormGroup` is the hook behind `form.FormGroup`: it scopes a named branch of one form, with validators of its own. It does not carry the flat fields — inside, fields are written with `group.Field` (your own control, bound, `name` relative to the group) or `group.NativeField`, as [Native API](/docs/form/native-api#groups-and-array-entries) describes.
+
+It is this package's own, wrapping TanStack's: it takes the instance `useForm` returns as its `form`, not a TanStack `FormApi`. `@ez-kit/form-react` exports it, and each kit re-exports it:
+
+```ts
+import { useFormGroup } from '@ez-kit/form-shadcn'
+```
+
+It takes `form` plus TanStack's form-group options — `name`, `validators`, `onGroupSubmit` and the rest — and the [TanStack Form documentation](https://tanstack.com/form/latest/docs/framework/react/quick-start) is the reference for those. Its group also has `errors`, and its `handleSubmit` is the group submit described above.

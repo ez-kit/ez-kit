@@ -311,3 +311,11 @@ describe('@ez-kit/form-shadcn — props beyond the contract land on the control'
 		expect(input).toHaveAttribute('autocomplete', 'email')
 	})
 })
+
+describe('the step flow and the form-schema helpers', () => {
+	it('re-exports revalidateLogic, useStep and useSteps from the adapter', () => {
+		expect(typeof kit.revalidateLogic).toBe('function')
+		expect(typeof kit.useStep).toBe('function')
+		expect(typeof kit.useSteps).toBe('function')
+	})
+})

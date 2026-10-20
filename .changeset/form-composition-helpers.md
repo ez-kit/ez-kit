@@ -11,7 +11,9 @@ path show on their fields). `group.state.meta.errors` stays TanStack's raw value
 
 `withForm`'s `form` prop is optional: a block placed without one takes the form above it (`<Form>`,
 `<SchemaForm>` or `FormProvider`), typed by the block's own options — a cast, as
-`useFormContext<V>()` is. With neither, it throws a named error.
+`useFormContext<V>()` is. With neither, it throws a named error. A `form` that is passed is checked
+against the block's data and fields but no longer against its validators: a block declared with
+`defaultValues` alone used to reject every form that had been given `validators`.
 
 Groups carry the bundle's fields. Inside `form.FormGroup` and a `withFieldGroup` block, `group.TextField`,
 `group.ArrayField`, `group.Array` and every field the app registered take a `name` relative to the
@@ -30,9 +32,21 @@ placed, with `value` typed by the block. `meta` is the argument `group.handleSub
 with, `undefined` without one. **Breaking:** a block's `group.handleSubmit` used to submit
 the whole form; call `form.handleSubmit()` for that. On every group (`form.FormGroup`, `useFormGroup`,
 a block), a submit first clears the server errors of the fields inside it, runs the groups placed
-inside it, and focuses the group's first error when it fails. A whole-form submit now runs every
-mounted group's validators after the fields — before, TanStack ran none of them. Both kits also
-export `GroupValidators`, `GroupValidator`, `GroupAsyncValidator` and `OnGroupSubmit`.
+inside it, and focuses the group's first error when it fails. A whole-form submit runs the form's
+validators and no group's, as in TanStack: the form's schema decides whether the form is sent, so a
+rule that must hold the form belongs in it — build it from the blocks' schemas, and describe a part
+that is there only sometimes with `z.discriminatedUnion` or `superRefine`. An error a mounted group
+has already reported still blocks the form's submit. Both kits also export `GroupValidators`,
+`GroupValidator`, `GroupAsyncValidator` and `OnGroupSubmit`.
+
+A group that unmounts — a block behind a checkbox, a step — now takes its errors with it, including
+those it put on fields that were never mounted; before, they stayed and kept the form from submitting
+for good. A field mounted after a submit attempt shows the errors the form reported on it without
+being touched. `revalidateLogic` is re-exported from `@ez-kit/form-react` and both kits, for a form
+schema on `onDynamic` that stays quiet until the first submit and re-checks every change after it. In
+development, a group whose name begins another field's name (`billing` beside `billingDiffers`) logs
+an error: TanStack Form matches a group's fields by a plain prefix, so editing that field runs the
+group's validators.
 Two native groups on one name — a `form.FormGroup` and a block placed on its path — share one group
 state, so keep one validating group per branch: in development, two with validators log an error.
 

@@ -9,6 +9,7 @@ import { useFormGroup } from './form-group'
 import { scopeGroupMembers, withMembers } from './group-fields'
 import { createMapGroup } from './map-group'
 import { formatOwnErrors } from './own-errors'
+import { useStepGroup } from './steps/steps'
 
 import type { BindableForm } from './bindable-form'
 import type { NoRegistry } from './contract'
@@ -182,6 +183,7 @@ function MappedBlock(props: BlockProps): ReactNode {
 		[props.form, id],
 	)
 	useEffect(() => controller.connect(), [controller])
+	useStepGroup(() => controller.owner)
 	const own = useSelector(
 		(props.form as unknown as { store: ErrorMapStore }).store,
 		(state) => (state as ErrorMapState).errorMap[controller.errorKey],
