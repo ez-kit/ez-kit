@@ -797,10 +797,21 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.ColumnsOrdering,
 		optionTables: [
-			{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 6 },
+			{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 3 },
 			{ heading: 'Column options', roots: [GRID_TYPE.ColumnDef], expectedCount: 1 },
 		],
-		nonOptionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'The arrows or the drag, not both',
+				reason:
+					'The first column is a `ReorderMode` value, not a key; the other two say what it resolves to with and without a drag adapter.',
+			},
+			{
+				heading: 'Migrating from `drag` / `moveControls`',
+				reason:
+					'A migration table: the first column names options that no longer exist, by design, and the second is checked in the `Options` table above.',
+			},
+		],
 	},
 	{
 		page: DocPage.RowOrdering,
@@ -838,7 +849,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			{ heading: 'Binding', roots: [GRID_TYPE.CreateDataGridOptions], expectedCount: 1 },
 			// The `ordering` tree, resolved through its `boolean | …Config` and `false | SystemColumnDef`
 			// unions, plus `getRowId` and `direction`, which row and RTL drags read.
-			{ heading: 'Grid options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 13 },
+			{ heading: 'Grid options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 10 },
 			{ heading: 'Column def', roots: [GRID_TYPE.ColumnDef], expectedCount: 1 },
 			{ heading: 'Announcements', roots: [GRID_TYPE.GridMessages], expectedCount: 13 },
 		],
@@ -1326,7 +1337,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		page: DocPage.Sorting,
 		optionTables: [
 			{ heading: '`sorting`', roots: [GRID_TYPE.SortingConfig], expectedCount: 7 },
-			{ heading: '`MultiSortConfig`', roots: [GRID_TYPE.MultiSortConfig], expectedCount: 3 },
+			{ heading: '`MultiSortConfig`', roots: [GRID_TYPE.MultiSortConfig], expectedCount: 4 },
 			{ heading: 'Per-column `sorting`', roots: [GRID_TYPE.ColumnSortingConfig], expectedCount: 5 },
 		],
 		nonOptionTables: [],

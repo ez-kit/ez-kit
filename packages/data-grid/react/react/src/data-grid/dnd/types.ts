@@ -15,13 +15,17 @@
 import type { ComponentType, ReactNode } from 'react'
 
 /**
- * Which order an item is dragged within.
+ * Which order an item is dragged within — named for the **state slice a drop writes**.
  *
- * Two values, not three: the **visibility panel is the column axis**, because it reorders
+ * The **visibility panel is the column axis**, not an axis of its own, because it reorders
  * columns — the same `columnOrder` slice the header does, differing only in scope
  * (`ColumnMoveScope.All`, so hidden columns are valid neighbours there and not in the header).
  * Do not add a `'panel'` member for it: the surface it differs on is {@link DragSurface}, a
  * separate closed set, precisely so the axis keeps naming the slice a drop writes.
+ *
+ * The sort builder **is** an axis of its own by that same rule: its entries are written to
+ * `sorting`, a slice neither of the others touches. An adapter that switches over this set
+ * exhaustively has a third arm to write.
  *
  * Named members for internal reference; the option is typed as the plain string union, so
  * `axis: 'row'` is equally valid and needs no import.
@@ -31,6 +35,12 @@ export const DragAxis = {
 	Row: 'row',
 	/** Columns, dragged along the inline axis, writing `columnOrder`. */
 	Column: 'column',
+	/**
+	 * The entries of the sort builder, dragged vertically, writing `sorting` — an entry's position
+	 * is its priority. Always on {@link DragSurface.Panel}: the axis already separates the index
+	 * space, so a surface of its own would add nothing.
+	 */
+	Sorting: 'sorting',
 } as const
 
 export type DragAxis = (typeof DragAxis)[keyof typeof DragAxis]

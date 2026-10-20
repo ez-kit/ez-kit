@@ -283,7 +283,7 @@
 		},
 		{
 			"path": "dist/sorting/index.js",
-			"limit": "1.3 KB",
+			"limit": "1.89 KB",
 			"ignore": [
 				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",

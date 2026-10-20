@@ -48,7 +48,7 @@ import type {
 const DRAG_KEY_SEPARATOR = ':'
 
 /** The axes this adapter sets. dnd-kit's `Type` is `string | number | symbol`; these are strings. */
-const DRAG_AXES: readonly string[] = [DragAxis.Row, DragAxis.Column]
+const DRAG_AXES: readonly string[] = [DragAxis.Row, DragAxis.Column, DragAxis.Sorting]
 
 /** The surfaces this adapter sets. */
 const DRAG_SURFACES: readonly string[] = [DragSurface.Table, DragSurface.Panel]

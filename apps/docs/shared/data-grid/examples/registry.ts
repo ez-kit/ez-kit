@@ -107,6 +107,7 @@ export const exampleModules: Record<string, () => Promise<Record<string, Compone
 	'components/selection-bar.tsx': () => import('./components/selection-bar'),
 	'components/server-data.tsx': () => import('./components/server-data'),
 	'components/sort-toolbar.tsx': () => import('./components/sort-toolbar'),
+	'components/sort-builder-drag.tsx': () => import('./components/sort-builder-drag'),
 	'components/sorting.tsx': () => import('./components/sorting'),
 	'components/state-persistence.tsx': () => import('./components/state-persistence'),
 	'components/virtualized.tsx': () => import('./components/virtualized'),

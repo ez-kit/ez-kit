@@ -1,6 +1,6 @@
 import { useCallback, useRef } from 'react'
 
-import { COLUMN_DRAGGING_SELECTOR } from './dragging-attrs'
+import { COLUMN_DRAGGING_SELECTOR, SORT_DRAGGING_SELECTOR } from './dragging-attrs'
 
 /** The phase the guard listens in: on the document, ahead of every handler React dispatches. */
 const CAPTURE = true
@@ -54,25 +54,44 @@ function isNode(target: EventTarget | null): target is Node {
  * for no adapter.
  */
 export function useColumnDragKeyboardGuard(): (node: HTMLElement | null) => void {
+	return useDragKeyboardGuard(COLUMN_DRAGGING_SELECTOR)
+}
+
+/**
+ * {@link useColumnDragKeyboardGuard} for the sort builder's list of entries: keeps keys away from
+ * the controls of the builder — an entry's selects, a collection the kit renders the entries in —
+ * while one of its entries is being dragged from the keyboard. `Escape` passes, for the same reason.
+ *
+ * Returns a ref for the element that holds the entries' rows.
+ */
+export function useSortDragKeyboardGuard(): (node: HTMLElement | null) => void {
+	return useDragKeyboardGuard(SORT_DRAGGING_SELECTOR)
+}
+
+/** The guard both surfaces share, keyed on the selector that finds their dragged row. */
+function useDragKeyboardGuard(draggingSelector: string): (node: HTMLElement | null) => void {
 	/*
 	 * The detach lives in a ref rather than in a cleanup returned from the callback, because the
 	 * package supports React 18, which calls a callback ref with `null` and ignores what it returns.
 	 */
 	const detachRef = useRef<(() => void) | null>(null)
 
-	return useCallback((node: HTMLElement | null) => {
-		detachRef.current?.()
-		detachRef.current = null
-		if (node === null) return
+	return useCallback(
+		(node: HTMLElement | null) => {
+			detachRef.current?.()
+			detachRef.current = null
+			if (node === null) return
 
-		const document = node.ownerDocument
-		const onKeyDown = (event: KeyboardEvent) => {
-			if (event.key === CANCEL_KEY || !isNode(event.target) || !node.contains(event.target)) return
-			if (node.querySelector(COLUMN_DRAGGING_SELECTOR)) event.stopPropagation()
-		}
-		document.addEventListener('keydown', onKeyDown, CAPTURE)
-		detachRef.current = () => {
-			document.removeEventListener('keydown', onKeyDown, CAPTURE)
-		}
-	}, [])
+			const document = node.ownerDocument
+			const onKeyDown = (event: KeyboardEvent) => {
+				if (event.key === CANCEL_KEY || !isNode(event.target) || !node.contains(event.target)) return
+				if (node.querySelector(draggingSelector)) event.stopPropagation()
+			}
+			document.addEventListener('keydown', onKeyDown, CAPTURE)
+			detachRef.current = () => {
+				document.removeEventListener('keydown', onKeyDown, CAPTURE)
+			}
+		},
+		[draggingSelector],
+	)
 }

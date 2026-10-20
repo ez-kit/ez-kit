@@ -15,7 +15,13 @@ import type {
 	NormalizedVirtualizationConfig,
 	RowPropsResolver,
 } from './use-data-grid'
-import type { GridMessages, GridOptions, ResolvedFilterField, RowPinningConfig } from '@ez-kit/data-grid-core'
+import type {
+	GridMessages,
+	GridOptions,
+	ReorderMode,
+	ResolvedFilterField,
+	RowPinningConfig,
+} from '@ez-kit/data-grid-core'
 import type { ComponentType, ReactNode } from 'react'
 
 /**
@@ -82,36 +88,34 @@ export type ResolvedGridOptions = {
 		 * The Columns toggle as a column panel: it offers a move affordance and lists every
 		 * non-system column rather than only the hideable ones.
 		 *
-		 * **The two affordances are carried as the author wrote them, not resolved here, and
-		 * that is forced rather than chosen.** Which one a panel ends up with depends on
-		 * whether a drag adapter is bound, and this object cannot know: `useDataGrid` is a
-		 * public hook a controlled grid calls *outside* `<DataGrid>`, so the bundle's adapter
-		 * context is not above it. Resolving here would give a controlled grid arrows and the
-		 * same grid uncontrolled a grip. `resolvePanelAffordances` does it instead, in the two
-		 * components that read `useDndEnabled()`.
+		 * **The mode is carried as the author wrote it, not resolved here, and that is forced
+		 * rather than chosen.** Which affordance a panel ends up with depends on whether a drag
+		 * adapter is bound, and this object cannot know: `useDataGrid` is a public hook a
+		 * controlled grid calls *outside* `<DataGrid>`, so the bundle's adapter context is not
+		 * above it. Resolving here would give a controlled grid arrows and the same grid
+		 * uncontrolled a grip. `resolveReorderMode` does it instead, in the components that read
+		 * `useDndEnabled()`.
 		 */
 		visibilityMenu: {
 			/**
-			 * The toggle is a column panel at all: the list widens, and the affordances below
-			 * are live. Off unless `ordering.column.visibilityMenu` asked for it; always
-			 * `false` while the column axis itself is off.
+			 * The toggle is a column panel at all: the list widens, and `mode` is live. Off unless
+			 * `ordering.column.visibilityMenu` asked for it; always `false` while the column axis
+			 * itself is off.
 			 */
 			enabled: boolean
-			/** `visibilityMenu.drag` as authored. `undefined` → an adapter decides. */
-			drag: boolean | undefined
-			/** `visibilityMenu.moveControls` as authored. `undefined` → the inverse of the drag. */
-			moveControls: boolean | undefined
+			/** `visibilityMenu` as authored, `false` while the panel is off. */
+			mode: boolean | ReorderMode
 		}
 		/**
-		 * The header's two affordances, as authored, for the reason `visibilityMenu` carries its
-		 * own that way: an adapter decides the defaults, and this object cannot see one.
-		 * `resolveHeaderAffordances` finishes the job in the header cell.
+		 * The header's mode, as authored, for the reason `visibilityMenu` carries its own that way:
+		 * an adapter decides what `true` means, and this object cannot see one.
 		 */
 		header: {
-			/** `ordering.column.drag` as authored. `undefined` → an adapter decides. */
-			drag: boolean | undefined
-			/** `ordering.column.moveControls` as authored. `undefined` → the inverse of the drag. */
-			moveControls: boolean | undefined
+			/**
+			 * `ordering.column.header` as authored. `undefined` takes the header's default, `true`;
+			 * `false` while the column axis is off.
+			 */
+			mode: boolean | ReorderMode | undefined
 		}
 	}
 	/**
@@ -169,6 +173,15 @@ export type ResolvedGridOptions = {
 	 * {@link ResolvedGridOptions.visibility} and for the same reason.
 	 */
 	sorting: boolean
+	/**
+	 * How `<DataGrid.SortMenuTrigger/>` lets a user move an entry — `sorting.multi.reorderable` as
+	 * authored, with its default filled in: `true` when multi-sort is on, `false` when it is off.
+	 *
+	 * Not resolved against an adapter, for the reason `ordering.header` is not. A field of its own
+	 * rather than an object in place of {@link ResolvedGridOptions.sorting}: a kit that reads
+	 * `sorting` as a flag would see an object as always on.
+	 */
+	sortReorder: boolean | ReorderMode
 	filtering: {
 		/**
 		 * Commit debounce for text filter inputs. Always resolved, because the global search
@@ -318,8 +331,8 @@ export function defaultResolvedGridOptions(core?: GridOptions<never>): ResolvedG
 		ordering: {
 			column: false,
 			row: false,
-			visibilityMenu: { enabled: false, drag: undefined, moveControls: undefined },
-			header: { drag: undefined, moveControls: undefined },
+			visibilityMenu: { enabled: false, mode: false },
+			header: { mode: false },
 		},
 		// `column` / `row` stay off — this is the all-features-off shape — while `rowConfig`
 		// carries core's normalized settings across when it resolved any. `exactOptionalPropertyTypes`
@@ -327,6 +340,7 @@ export function defaultResolvedGridOptions(core?: GridOptions<never>): ResolvedG
 		pinning: { column: false, row: false, ...(core?.rowPinning !== undefined ? { rowConfig: core.rowPinning } : {}) },
 		visibility: false,
 		sorting: false,
+		sortReorder: false,
 		filtering: { debounce: DATA_GRID_DEFAULTS.filtering.debounce, fields: core?.filterFields ?? [] },
 		pagination: {
 			enabled: false,

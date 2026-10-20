@@ -89,6 +89,9 @@ export const defaultMessages: GridMessages = {
 		sortBy: 'sort by',
 		thenBy: 'then by',
 		add: 'Add Sort',
+		moveUp: ({ label }) => `Move sort by ${label} up`,
+		moveDown: ({ label }) => `Move sort by ${label} down`,
+		dragSort: ({ label }) => `Reorder sort by ${label}`,
 	},
 	ordering: {
 		dragRow: 'Reorder row',
@@ -110,6 +113,14 @@ export const defaultMessages: GridMessages = {
 			`Dropped column ${name} at position ${String(position)} of ${String(total)}.`,
 		columnCancelled: ({ name, position, total }) =>
 			`Cancelled, column ${name} is back at position ${String(position)} of ${String(total)}.`,
+		sortPickedUp: ({ name, position, total }) =>
+			`Picked up sort by ${name}, priority ${String(position)} of ${String(total)}.`,
+		sortMovedTo: ({ name, position, total }) =>
+			`Moved sort by ${name} to priority ${String(position)} of ${String(total)}.`,
+		sortDropped: ({ name, position, total }) =>
+			`Dropped sort by ${name} at priority ${String(position)} of ${String(total)}.`,
+		sortCancelled: ({ name, position, total }) =>
+			`Cancelled, sort by ${name} is back at priority ${String(position)} of ${String(total)}.`,
 	},
 	visibility: {
 		menu: 'Column visibility',

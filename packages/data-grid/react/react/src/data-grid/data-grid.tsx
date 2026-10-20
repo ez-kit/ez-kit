@@ -17,6 +17,7 @@ import { useDataGrid, type UseDataGridConfig } from '../use-data-grid'
 import { useGridMessages } from '../use-grid-messages'
 import { GRID_ROOT_CLASS_NAME, joinClassNames } from '../utils/class-names'
 import { getRowDropOrder } from '../utils/row-drop-order'
+import { dropSortEntry } from '../utils/sort-entry-order'
 
 import { ActionBar, buildSelectionBarArgs } from './action-bar'
 import { ActiveFiltersBar } from './active-filters-bar'
@@ -48,10 +49,12 @@ import { LoadingBody } from './loading-body'
 import { NoResultsRow } from './no-results-row'
 import { PageSizer } from './page-sizer'
 import { Pagination } from './pagination'
+import { useReorderModeWarnings } from './reorder-mode-warnings'
 import { DataGridRow } from './row'
 import { RowCountStatus } from './row-count-status'
 import { RowDragHandle } from './row-drag-handle'
 import { RowDragRegistryProvider, useDisplaceRow, useRenderedRowIdsReader } from './row-drag-registry'
+import { SortItem } from './sort-item'
 import { SortMenuTrigger } from './sort-menu-trigger'
 import { DataGridTable } from './table'
 import { TableProvider, useDataGridTable, useDataGridState } from './table-context'
@@ -325,6 +328,7 @@ function GridDndProvider({ children }: { children: ReactNode }) {
 	const adapter = useDndAdapter()
 	const table = useDataGridTable()
 	const messages = useGridMessages()
+	useReorderModeWarnings(table.grid, adapter !== null)
 	const readRenderedRowIds = useRenderedRowIdsReader()
 	const displaceRow = useDisplaceRow()
 
@@ -421,6 +425,17 @@ function GridDndProvider({ children }: { children: ReactNode }) {
 					table.setColumnOrder(dropColumn(table, event.sourceId, event.targetId, scope))
 					return
 				}
+				case DragAxis.Sorting: {
+					/*
+					 * An entry of the sort builder: the pair of ids names two entries of `sorting`, and
+					 * the source lands where the target stood, keeping its direction. `null` is a self-drop,
+					 * an id the sort no longer holds, or a column outside multi-sort pushed below the first
+					 * place — nothing to commit, so nothing reaches `onChange`.
+					 */
+					const next = dropSortEntry(table, event.sourceId, event.targetId)
+					if (next) table.setSorting(next)
+					return
+				}
 			}
 		},
 		[table],
@@ -473,6 +488,9 @@ function GridDndProvider({ children }: { children: ReactNode }) {
 					// Same scope the commit will use, from the same lookup: a step the surface's own
 					// scope allows must not be refused here, and one it forbids must not be allowed.
 					return canDropColumn(table, event.sourceId, event.targetId, COLUMN_DROP_SCOPE[event.surface])
+				case DragAxis.Sorting:
+					// The one boundary priority has: a column outside multi-sort stays first.
+					return dropSortEntry(table, event.sourceId, event.targetId) !== null
 			}
 		},
 		[table],
@@ -763,6 +781,7 @@ export type DataGridStatics = {
 	VisibilityTrigger: typeof VisibilityTrigger
 	VisibilityItem: typeof VisibilityItem
 	SortMenuTrigger: typeof SortMenuTrigger
+	SortItem: typeof SortItem
 	GlobalFilterInput: typeof GlobalFilterInput
 	ActiveFiltersBar: typeof ActiveFiltersBar
 	GroupByBar: typeof GroupByBar
@@ -836,6 +855,7 @@ export const DataGrid: DataGridType = /* @__PURE__ */ Object.assign(DataGridRoot
 	VisibilityTrigger,
 	VisibilityItem,
 	SortMenuTrigger,
+	SortItem,
 	GlobalFilterInput,
 	ActiveFiltersBar,
 	GroupByBar,

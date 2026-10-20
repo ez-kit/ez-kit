@@ -10,6 +10,7 @@ import { DefaultLayout } from './layouts'
 import { isGridMenuItemSlot } from './menu'
 import { ActionsCellState } from './types'
 import { useDataGrid } from './use-data-grid'
+import { useGridMessages } from './use-grid-messages'
 
 import type { FullGridComponents } from './contract'
 import type { GridMenuProps } from './menu'
@@ -50,6 +51,7 @@ import type {
 	TrProps,
 	ToolbarProps,
 	SortIndicatorProps,
+	SortMenuProps,
 } from './types'
 import type { UseDataGridConfig } from './use-data-grid'
 import type { RenderOptions } from '@testing-library/react'
@@ -851,7 +853,7 @@ export const testComponents: FullGridComponents = {
 		// that was broken while the affordance filtered clicks by their target. Empty, so it
 		// stays invisible to every `getByText` in the suite.
 		SortIndicator: ({ canSort }: SortIndicatorProps) => (canSort ? <span data-testid='sort-indicator' /> : null),
-		SortMenu: () => null,
+		SortMenu: TestSortMenu,
 	},
 	filtering: {
 		FilterPopover: TestFilterPopover,
@@ -916,6 +918,67 @@ export function renderWithComponents(
 }
 
 // ── shared grid harness ───────────────────────────────────────────────────
+
+/**
+ * The fixture sort builder: one row per entry through `<DataGrid.SortItem>`, with the grip and the
+ * step pair each rendered only when the builder offers it — the shape both kits draw, minus the
+ * visuals. Named from the catalogue, so a test finds a control by the name a user hears.
+ */
+function TestSortMenu({ items, canAddSort, onAddSort, onResetSorting }: SortMenuProps) {
+	const messages = useGridMessages()
+	return (
+		<div data-slot='sort-menu'>
+			{items.map((item) => (
+				<DataGrid.SortItem
+					key={item.columnId}
+					sortId={item.columnId}
+				>
+					{({ itemProps, handleProps }) => (
+						<div {...itemProps}>
+							{handleProps && (
+								<button
+									ref={handleProps.ref}
+									type='button'
+									aria-label={messages.sorting.dragSort({ label: item.label })}
+								/>
+							)}
+							<span>{item.label}</span>
+							{item.ordering && (
+								<>
+									<button
+										type='button'
+										aria-label={messages.sorting.moveUp({ label: item.label })}
+										disabled={!item.ordering.canMoveStart}
+										onClick={item.ordering.onMoveStart}
+									/>
+									<button
+										type='button'
+										aria-label={messages.sorting.moveDown({ label: item.label })}
+										disabled={!item.ordering.canMoveEnd}
+										onClick={item.ordering.onMoveEnd}
+									/>
+								</>
+							)}
+						</div>
+					)}
+				</DataGrid.SortItem>
+			))}
+			<button
+				type='button'
+				disabled={!canAddSort}
+				onClick={onAddSort}
+			>
+				{messages.sorting.add}
+			</button>
+			<button
+				type='button'
+				onClick={onResetSorting}
+			>
+				{messages.sorting.reset}
+			</button>
+		</div>
+	)
+}
 
 export type TestRow = {
 	id: number

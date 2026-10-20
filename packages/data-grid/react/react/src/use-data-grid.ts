@@ -35,9 +35,11 @@ import type {
 	FilteringConfig,
 	GlobalFilteringConfig,
 	LoadMoreDirection,
+	MultiSortConfig,
 	OrderingConfig,
 	PaginationConfig,
 	PartialGridMessages,
+	ReorderMode,
 	RowActionsConfig,
 	RowVirtualizationConfig,
 	SelectionConfig,
@@ -398,6 +400,19 @@ function normalizeFallback(
 	const enabled = fallback === undefined || isFeatureEnabled(fallback)
 	const component = featureConfig(fallback)?.component
 	return { enabled, ...(component !== undefined ? { component } : {}) }
+}
+
+/**
+ * `sorting.multi.reorderable` with its default filled in: on exactly when multi-sort is.
+ *
+ * Multi-sort counts as on only when the author wrote `multi` — `true` or an object. TanStack
+ * accepts a Shift-click on a header when `multi` is absent, but the documented default is off, and
+ * the builder follows the documentation: a grid that never asked for several entries does not get
+ * a builder that offers to rank them.
+ */
+function resolveSortReorder(multi: boolean | MultiSortConfig | undefined): boolean | ReorderMode {
+	if (multi === undefined || multi === false) return false
+	return multi === true ? true : (multi.reorderable ?? true)
 }
 
 export type ReactFilteringConfig = {
@@ -996,6 +1011,7 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 	// one `toolbar` flag until the controls became composition.
 	const visibilityEnabled = isFeatureEnabled(visibility)
 	const sortingEnabled = isFeatureEnabled(config.sorting)
+	const sortReorder = sortingEnabled ? resolveSortReorder(featureConfig(config.sorting)?.multi) : false
 
 	const filteringCfg = featureConfig(rawFiltering)
 
@@ -1310,18 +1326,15 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 	// column reordering off cannot be left offering it from the Columns toggle.
 	const columnOrderingCfg = featureConfig(orderingCfg?.column)
 	const rawVisibilityMenu = columnOrderingCfg?.visibilityMenu
-	const visibilityMenuCfg = typeof rawVisibilityMenu === 'object' ? rawVisibilityMenu : undefined
-	const orderingInVisibilityMenu =
-		columnOrderingEnabled && rawVisibilityMenu !== undefined && rawVisibilityMenu !== false
 	/*
-	 * The panel's two affordances travel **as authored**, because which one wins depends on a drag
+	 * Both surfaces' modes travel **as authored**, because what `true` means depends on a drag
 	 * adapter and this hook cannot see one: a controlled grid calls `useDataGrid` outside
-	 * `<DataGrid>`, so the bundle's adapter context is not above it. `resolvePanelAffordances`
-	 * finishes the job in the two components that do read it. Both are forced to `undefined` while
-	 * the panel is off, so nothing downstream has to re-check `enabled` to read them honestly.
+	 * `<DataGrid>`, so the bundle's adapter context is not above it. `resolveReorderMode` finishes
+	 * the job in the components that do read it. Each is forced to `false` while its surface is off,
+	 * so nothing downstream has to re-check the axis to read it honestly.
 	 */
-	const visibilityMenuDrag = orderingInVisibilityMenu ? visibilityMenuCfg?.drag : undefined
-	const visibilityMenuMoveControls = orderingInVisibilityMenu ? visibilityMenuCfg?.moveControls : undefined
+	const visibilityMenuMode = columnOrderingEnabled ? (rawVisibilityMenu ?? false) : false
+	const headerMode = columnOrderingEnabled ? columnOrderingCfg?.header : false
 
 	// Rebuilt per render, and handed out on this render's table below. It cannot be written to the
 	// instance instead: `useTable` has already spread it by the time the hook body runs, so a
@@ -1356,18 +1369,12 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 		ordering: {
 			column: columnOrderingEnabled,
 			row: rowOrderingEnabled,
-			visibilityMenu: {
-				enabled: orderingInVisibilityMenu,
-				drag: visibilityMenuDrag,
-				moveControls: visibilityMenuMoveControls,
-			},
-			header: {
-				drag: columnOrderingEnabled ? columnOrderingCfg?.drag : undefined,
-				moveControls: columnOrderingEnabled ? columnOrderingCfg?.moveControls : undefined,
-			},
+			visibilityMenu: { enabled: visibilityMenuMode !== false, mode: visibilityMenuMode },
+			header: { mode: headerMode },
 		},
 		visibility: visibilityEnabled,
 		sorting: sortingEnabled,
+		sortReorder,
 		filtering: { debounce: filteringDebounce, fields: erasedCoreGrid.filterFields ?? [] },
 		globalFiltering: normalizedGlobalFiltering,
 		pagination: {

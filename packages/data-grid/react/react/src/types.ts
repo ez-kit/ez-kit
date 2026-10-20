@@ -562,9 +562,9 @@ export type VisibilityColumnItem = {
 	/**
 	 * The two one-step moves along the column order, or absent when this menu does not offer the
 	 * pair — which is the default, and is also what a **draggable** panel does: the grip and the
-	 * arrows are the same move, so a panel offers one of them. See
-	 * `ordering.column.visibilityMenu.moveControls`, and {@link VisibilityMenuProps.isColumnPanel}
-	 * for the question this field does *not* answer.
+	 * arrows are the same move, so a panel offers one of them unless `visibilityMenu: 'both'` asked
+	 * for the two. See {@link VisibilityMenuProps.isColumnPanel} for the question this field does
+	 * *not* answer.
 	 *
 	 * The vocabulary is logical, the same `start` / `end` the core step uses, because the order
 	 * flips under RTL. What glyph stands for each is the kit's decision: both kits here draw a
@@ -645,12 +645,32 @@ export type SortColumnOption = {
 
 export type SortMenuItem = {
 	columnId: string
+	/** The sorted column's heading when it is text, and its id when the heading is an element. */
+	label: string
 	direction: SortDirection
-	/** Columns the user may pick for this row — already excludes columns used by other rows. */
+	/**
+	 * Columns the user may pick for this row — already excludes columns used by other rows, and,
+	 * below the first row, columns declared with `sorting: { multi: false }`.
+	 */
 	availableColumns: SortColumnOption[]
 	onChangeColumn: (columnId: string) => void
 	onChangeDirection: (direction: SortDirection) => void
 	onRemove: () => void
+	/**
+	 * The one-step move pair along the sort's priority, or absent when the builder does not offer
+	 * it — `sorting.multi.reorderable` resolved to the grip, or to `false`. The same shape as
+	 * {@link VisibilityColumnItem.ordering}: `start` is the higher priority, the top of the list.
+	 *
+	 * Present on every entry once offered, with `canMoveStart` `false` on the first entry and
+	 * `canMoveEnd` `false` on the last. A step swaps the entry with its neighbour and keeps both
+	 * directions.
+	 */
+	ordering?: {
+		canMoveStart: boolean
+		canMoveEnd: boolean
+		onMoveStart: () => void
+		onMoveEnd: () => void
+	}
 }
 
 export type SortMenuProps = {

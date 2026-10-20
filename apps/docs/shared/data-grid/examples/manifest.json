@@ -112,6 +112,22 @@
 		"exportName": "SortToolbarExample"
 	},
 	{
+		"id": "sort-toolbar-single",
+		"label": "Toolbar · Single column",
+		"group": "sorting",
+		"groupLabel": "Sorting",
+		"sourceFile": "components/sort-toolbar.tsx",
+		"exportName": "SortToolbarSingleExample"
+	},
+	{
+		"id": "sort-builder-drag",
+		"label": "Toolbar · Drag",
+		"group": "sorting",
+		"groupLabel": "Sorting",
+		"sourceFile": "components/sort-builder-drag.tsx",
+		"exportName": "SortBuilderDragExample"
+	},
+	{
 		"id": "filter-operators-table",
 		"label": "Operators · Whole table",
 		"group": "filtering",

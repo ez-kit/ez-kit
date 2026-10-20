@@ -81,7 +81,9 @@ export type {
 	GridMessages,
 	OrderingColumnContext,
 	OrderingPositionContext,
+	OrderingSortContext,
 	PartialGridMessages,
+	SortEntryContext,
 } from './messages'
 
 // System column IDs
@@ -300,6 +302,7 @@ export {
 	LoadMoreDirection,
 	MultiSortEvent,
 	PaginationMode,
+	ReorderMode,
 } from './types'
 export type {
 	AggregationConfig,
@@ -318,7 +321,6 @@ export type {
 	RowOrderingConfig,
 	ColumnPinningConfig,
 	VisibilityConfig,
-	VisibilityMenuOrderingConfig,
 	PaginationTotals,
 	PinningConfig,
 	RowPinningConfig,

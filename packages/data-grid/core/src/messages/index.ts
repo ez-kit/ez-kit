@@ -7,5 +7,7 @@ export type {
 	GridMessages,
 	OrderingColumnContext,
 	OrderingPositionContext,
+	OrderingSortContext,
 	PartialGridMessages,
+	SortEntryContext,
 } from './types'

@@ -58,6 +58,33 @@ export const MultiSortEvent = {
 
 export type MultiSortEvent = (typeof MultiSortEvent)[keyof typeof MultiSortEvent]
 
+/**
+ * How a list offers to move one of its entries — the vocabulary every reorderable surface shares.
+ *
+ * A surface option takes `boolean | ReorderMode`. `true` asks for the best the grid can offer: the
+ * grip when a drag adapter is bound (`createDataGrid({ dnd })`), the step pair when none is. `false`
+ * turns reordering off on that surface. A named mode asks for that affordance, except that no mode
+ * can conjure an adapter: without one, `'drag'` and `'both'` resolve to the step pair alone and the
+ * React layer warns in development.
+ *
+ * The members name the behaviour, never the glyph — the arrows a step pair is drawn with are the
+ * kit's business, the way a filter control's look is.
+ *
+ * Read by `ordering.column.header`, `ordering.column.visibilityMenu` and
+ * `sorting.multi.reorderable`. Named members for internal reference; the option is typed as the
+ * plain string union, so `header: 'step'` needs no import.
+ */
+export const ReorderMode = {
+	/** A grip the entry is dragged by. Needs a drag adapter. */
+	Drag: 'drag',
+	/** A pair of controls that move the entry one position toward the start or the end. */
+	Step: 'step',
+	/** The grip and the step pair together. Without a drag adapter, the step pair alone. */
+	Both: 'both',
+} as const
+
+export type ReorderMode = (typeof ReorderMode)[keyof typeof ReorderMode]
+
 export type MultiSortConfig = {
 	/** Cap on simultaneously sorted columns. Unlimited by default. */
 	max?: number
@@ -65,6 +92,17 @@ export type MultiSortConfig = {
 	event?: MultiSortEvent
 	/** Allow removing a single column from the multi-sort set. Default: true. */
 	removable?: boolean
+	/**
+	 * How `<DataGrid.SortMenuTrigger />` lets a user change an entry's priority. Default: `true`.
+	 *
+	 * An entry's position in the sort is its priority, so moving it changes the table. `true` takes
+	 * the grip when a drag adapter is bound and the step pair when none is; a {@link ReorderMode}
+	 * names the affordance; `false` leaves the entries where they were added.
+	 *
+	 * Only the builder reads it — a header click still appends. Under `manual: true` every move is
+	 * one `onChange`, so one request.
+	 */
+	reorderable?: boolean | ReorderMode
 }
 
 /**
@@ -683,18 +721,24 @@ export type ColumnOrderingConfig = FeatureToggle & {
 	 */
 	onChange?: (columnOrder: ColumnOrderState) => void
 	/**
-	 * Header cells are draggable, and the built-in header cell places a grip before the label.
-	 * Default: whether a drag adapter is bound (`createDataGrid({ dnd })`).
+	 * How the header offers a move. Default: `true`.
 	 *
-	 * The same rule {@link VisibilityMenuOrderingConfig.drag} follows for the panel: `true` cannot
-	 * conjure an adapter, and `false` keeps the headers still in a grid whose rows or panel drag.
+	 * `'drag'` makes header cells draggable by a grip the built-in header cell places before the
+	 * label; `'step'` puts the one-step move pair in the column menu; `'both'` does both. `true` takes
+	 * the grip when a drag adapter is bound and the menu pair when none is, so the header never
+	 * offers the same move twice; `false` offers neither, while the column stays movable from the
+	 * panel and through `Alt+Arrow`. See {@link ReorderMode} for how a mode resolves without an
+	 * adapter.
+	 *
+	 * | Written            | With an adapter | Without one |
+	 * | ------------------ | --------------- | ----------- |
+	 * | `true` / omitted   | grip            | menu pair   |
+	 * | `'drag'`           | grip            | menu pair   |
+	 * | `'step'`           | menu pair       | menu pair   |
+	 * | `'both'`           | grip, menu pair | menu pair   |
+	 * | `false`            | neither         | neither     |
 	 */
-	drag?: boolean
-	/**
-	 * The column menu carries the one-step move pair. Default: `true` exactly when the header drag
-	 * resolves **off**, so the header never offers the same move twice. `Alt+Arrow` is unaffected.
-	 */
-	moveControls?: boolean
+	header?: boolean | ReorderMode
 	/**
 	 * Offer a move affordance in the Columns toggle as well, which then becomes a column
 	 * panel: it lists **every** non-system leaf column rather than only the hideable ones, so
@@ -707,48 +751,12 @@ export type ColumnOrderingConfig = FeatureToggle & {
 	 * Opt-in, default `false`: the Columns toggle is a visibility control in every grid written
 	 * so far, and gaining a second job is a change those grids did not ask for.
 	 *
-	 * `true` takes whichever affordance the grid can actually offer — see
-	 * {@link VisibilityMenuOrderingConfig} for the two and for why the choice is a config
-	 * question at all.
+	 * The value resolves by the table on {@link ColumnOrderingConfig.header}: `true` takes the grip
+	 * when a drag adapter is bound and the step pair when none is, so a panel never offers the same
+	 * move twice, and `'both'` asks for the two together. The **wide list** is not an affordance —
+	 * it follows from the author asking for an ordering panel at all, under any mode.
 	 */
-	visibilityMenu?: boolean | VisibilityMenuOrderingConfig
-}
-
-/**
- * Which move affordances the column panel offers, chosen independently.
- *
- * **The panel's rows are a list the kit maps rather than markup an author writes**, so a kit's
- * `VisibilityMenu` renders both the grip and the move pair unconditionally and lets each one
- * self-hide, and "which one" is a config question. The header asks the same question of its own
- * built-in cell and column menu, through {@link ColumnOrderingConfig.drag} /
- * {@link ColumnOrderingConfig.moveControls}, with the same defaults.
- *
- * Both default to **the affordance the grid can offer, and only one of them**: with a drag adapter
- * bound, `visibilityMenu: true` means the grip; with none, it means the arrows. The pair is a
- * one-step simplification of the drag — same axis, same state, same refusals — so offering both at
- * once is duplication rather than choice, and the arrows no longer carry a keyboard story the drag
- * lacks (`ordering.*` announcements and the keyboard sensors cover that). Name a field to override:
- * `{ moveControls: true }` asks for both, `{ drag: false }` for the arrows alone.
- *
- * The **wide list** is not one of these. It follows from the author asking for an ordering panel at
- * all — a list that skipped a column could not be read as the order — so it is on under either
- * affordance and under both.
- */
-export type VisibilityMenuOrderingConfig = {
-	/**
-	 * Panel rows are draggable. Default: whether a drag adapter is bound
-	 * (`createDataGrid({ dnd })`).
-	 *
-	 * `true` cannot conjure one: with no adapter there are no mechanics behind a grip, so the
-	 * panel falls back to the arrows and the React layer warns in development. Writing it is
-	 * therefore only ever a way of saying "both", beside `moveControls: true`.
-	 */
-	drag?: boolean
-	/**
-	 * Panel rows carry the one-step move pair. Default: `true` exactly when the drag resolves
-	 * **off**, so a panel always offers something and never offers the same move twice.
-	 */
-	moveControls?: boolean
+	visibilityMenu?: boolean | ReorderMode
 }
 
 /**

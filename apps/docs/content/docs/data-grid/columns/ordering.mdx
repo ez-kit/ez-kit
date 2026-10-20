@@ -83,24 +83,27 @@ both would offer the same move twice, and the drag is operable from the keyboard
 used to have to itself. With no adapter bound, `true` means the arrows, which is what every grid
 written before drag existed already gets.
 
-Name a field to override it:
+Name a mode to choose for yourself. The header takes the same values through
+`ordering.column.header`:
 
 ```tsx
-ordering={{
-	column: {
-		// Both, if a one-step control beside the grip is what the screen wants.
-		visibilityMenu: { moveControls: true },
-		// The arrows alone, in a grid whose rows and headers still drag.
-		visibilityMenu: { drag: false },
-	},
-}}
+// Both, if a one-step control beside the grip is what the screen wants.
+ordering={{ column: { visibilityMenu: 'both' } }}
+
+// The arrows alone, in a grid whose rows and headers still drag.
+ordering={{ column: { visibilityMenu: 'step' } }}
 ```
 
-The panel lists every column under either affordance.
+| Value             | With an adapter     | Without one |
+| ----------------- | ------------------- | ----------- |
+| `true`            | the grip            | the arrows  |
+| `'drag'`          | the grip            | the arrows  |
+| `'step'`          | the arrows          | the arrows  |
+| `'both'`          | the grip and arrows | the arrows  |
+| `false` / omitted | no panel            | no panel    |
 
-Two combinations the grid cannot honour, and it warns in development: `{ drag: true }` with no
-adapter bound falls back to the arrows, and `{ moveControls: false }` with no adapter leaves a panel
-that shows the order and offers no way to change it.
+The panel lists every column under any mode. A grip needs an adapter, so `'drag'` and `'both'` with
+none bound fall back to the arrows, and the grid warns in development, naming the option.
 
 A grid whose panel should offer something else entirely composes it:
 `<DataGrid.VisibilityTrigger>` hands its render function the same `columns` the kits map — each item
@@ -148,14 +151,26 @@ was handed, so the handler the grid puts there is overwritten. Tracked in
 
 ## Options
 
-| Option                                        | Type                        | Description                                                                                                                  |
-| --------------------------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `ordering`                                    | `boolean \| { column?: … }` | Reordering, per axis. `true` enables the column axis; `{ column: { onChange } }` reports the new order.                      |
-| `ordering.column.drag`                        | `boolean`                   | Headers drag, with a grip before the label. Default: whether a drag adapter is bound.                                        |
-| `ordering.column.moveControls`                | `boolean`                   | The column menu carries the move pair. Default: `true` exactly when the header drag resolves off.                            |
-| `ordering.column.visibilityMenu`              | `boolean \| object`         | Turn the Columns toggle into a column panel: it lists every non-system column and offers a move affordance. Default `false`. |
-| `ordering.column.visibilityMenu.drag`         | `boolean`                   | Panel rows are draggable. Default: whether a drag adapter is bound.                                                          |
-| `ordering.column.visibilityMenu.moveControls` | `boolean`                   | Panel rows carry the one-step move pair. Default: `true` exactly when the drag resolves off, so the panel never offers both. |
+| Option                           | Type                        | Description                                                                                                                                         |
+| -------------------------------- | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ordering`                       | `boolean \| { column?: … }` | Reordering, per axis. `true` enables the column axis; `{ column: { onChange } }` reports the new order.                                             |
+| `ordering.column.header`         | `boolean \| ReorderMode`    | How the header offers a move: `'drag'` a grip, `'step'` the menu pair, `'both'`, or `false` for neither. Default `true` — the grip with an adapter. |
+| `ordering.column.visibilityMenu` | `boolean \| ReorderMode`    | Turn the Columns toggle into a column panel that lists every non-system column and offers that move affordance. Default `false`.                    |
+
+## Migrating from `drag` / `moveControls`
+
+The two flags on each surface are one option now, taking a `ReorderMode`
+(`'drag' | 'step' | 'both'`). A combination that offered nothing is `false`.
+
+| Before                                                   | After                                    |
+| -------------------------------------------------------- | ---------------------------------------- |
+| `ordering.column.drag: false`                            | `ordering.column.header: 'step'`         |
+| `ordering.column.moveControls: true`                     | `ordering.column.header: 'both'`         |
+| `ordering.column.drag: false, moveControls: false`       | `ordering.column.header: false`          |
+| `ordering.column.visibilityMenu: { drag: false }`        | `ordering.column.visibilityMenu: 'step'` |
+| `ordering.column.visibilityMenu: { moveControls: true }` | `ordering.column.visibilityMenu: 'both'` |
+| `ordering.column.visibilityMenu: { drag: true }`         | `ordering.column.visibilityMenu: 'drag'` |
+| `ordering.column.visibilityMenu: {}`                     | `ordering.column.visibilityMenu: true`   |
 
 ## Column options
 

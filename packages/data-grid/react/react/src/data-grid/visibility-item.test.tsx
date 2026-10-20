@@ -525,7 +525,7 @@ describe('the render-function form', () => {
 	it('hands no handle when the panel drag is switched off, and registers nothing', () => {
 		const { adapter, latestOn } = makeDrivableAdapter()
 		const { seen, element } = functionPanel()
-		renderPanelGrid(adapter, { ordering: { column: { visibilityMenu: { drag: false } } } }, element)
+		renderPanelGrid(adapter, { ordering: { column: { visibilityMenu: 'step' } } }, element)
 
 		expect([...seen.values()].map((props) => props.handleProps)).toEqual([null, null, null, null])
 		expect(latestOn('panel')).toHaveLength(0)

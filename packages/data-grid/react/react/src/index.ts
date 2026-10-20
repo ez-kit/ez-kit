@@ -164,7 +164,9 @@ export type {
 export { DndAdapterProvider, useDndEnabled, useSortableItem } from './data-grid/dnd'
 // For a kit whose column panel is a react-aria collection: keeps the collection's own keys out of
 // a keyboard drag. Its own module, importing no part of the drag stack — see its docblock.
-export { useColumnDragKeyboardGuard } from './data-grid/dnd/keyboard-guard'
+export { useColumnDragKeyboardGuard, useSortDragKeyboardGuard } from './data-grid/dnd/keyboard-guard'
+export { StepSide, useStepFocus } from './data-grid/use-step-focus'
+export type { StepFocus, StepSlots } from './data-grid/use-step-focus'
 // What a kit or an application needs to write a drag handle of its own, in place of
 // `<DataGrid.RowDragHandle />` / `<DataGrid.ColumnDragHandle />`: each axis publishes its
 // activator ref here. The row's read takes an id because a cell renderer sits outside the row's
@@ -260,6 +262,7 @@ export { CreateTrigger as DataGridCreateTrigger } from './data-grid/create-trigg
 export { VisibilityTrigger as DataGridVisibilityTrigger } from './data-grid/visibility-trigger'
 export { VisibilityItem as DataGridVisibilityItem } from './data-grid/visibility-item'
 export { SortMenuTrigger as DataGridSortMenuTrigger } from './data-grid/sort-menu-trigger'
+export { SortItem as DataGridSortItem, useSortItemDrag } from './data-grid/sort-item'
 export { GlobalFilterInput as DataGridGlobalFilterInput } from './data-grid/global-filter-input'
 export { ActiveFiltersBar as DataGridActiveFiltersBar } from './data-grid/active-filters-bar'
 export { GroupByBar as DataGridGroupByBar } from './data-grid/group-by-bar'
@@ -296,6 +299,12 @@ export type { DataGridColumnDragHandleProps } from './data-grid/column-drag-hand
 export type { DataGridCellProps, DataGridCellRenderArgs } from './data-grid/cell'
 export type { DataGridPaginationProps, DataGridPaginationRenderArgs } from './data-grid/pagination'
 export type { DataGridSortMenuTriggerProps, DataGridSortMenuTriggerRenderArgs } from './data-grid/sort-menu-trigger'
+export type {
+	DataGridSortItemProps,
+	SortItemDragValue,
+	SortItemElementProps,
+	SortItemRenderProps,
+} from './data-grid/sort-item'
 export type {
 	DataGridVisibilityTriggerProps,
 	DataGridVisibilityTriggerRenderArgs,

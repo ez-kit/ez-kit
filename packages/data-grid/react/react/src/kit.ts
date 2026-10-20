@@ -25,7 +25,13 @@ export { useDataGridState, useDataGridTable } from './data-grid/table-context'
 
 // A column panel built on a react-aria collection mounts this on the collection. It imports only the
 // dragging attribute's name, so a block calling it pays for no part of the drag stack.
-export { useColumnDragKeyboardGuard } from './data-grid/dnd/keyboard-guard'
+export { useColumnDragKeyboardGuard, useSortDragKeyboardGuard } from './data-grid/dnd/keyboard-guard'
+// A popover around the sort builder reads it to tell a drag's `Escape` from its own dismissal.
+export { SORT_DRAGGING_SELECTOR } from './data-grid/dnd/dragging-attrs'
+
+// A list with a step pair keeps keyboard focus on it across a step — both kits' sort builder.
+export { StepSide, useStepFocus } from './data-grid/use-step-focus'
+export type { StepFocus, StepSlots } from './data-grid/use-step-focus'
 
 // Menu model — the kits' `Menu` and every block that contributes an item read these.
 // `isGridMenuIcon` sits here beside `GridMenuIcon` on purpose: both kits' `icons.tsx` imports the

@@ -1,6 +1,6 @@
 'use client'
 
-import { resolvePanelAffordances } from '../utils/visibility-panel-affordances'
+import { resolveReorderMode } from '../utils/reorder-mode'
 import { getVisibilityPanelColumns } from '../utils/visibility-panel-columns'
 
 import { ColumnDragContext, type ColumnDragValue } from './column-drag'
@@ -110,7 +110,7 @@ type VisibilityItemChildren = DataGridVisibilityItemProps['children']
  * **Participation is decided by which component renders, because a hook cannot be skipped** — the
  * same shape `header-cell.tsx` uses for `ColumnDragShell`. A grid with no adapter, with the column
  * panel switched off, or with its drag switched off in favour of the move pair
- * (`visibilityMenu: { drag: false }`), renders {@link VisibilityItemBox} and registers nothing, so
+ * (`visibilityMenu: 'step'`), renders {@link VisibilityItemBox} and registers nothing, so
  * it pays neither the list scan nor a sortable. A column the author locked (`ordering: false`)
  * *does* register, `disabled`, because leaving it out would put a gap in the index space.
  *
@@ -143,7 +143,7 @@ export function VisibilityItem({ columnId, className, children }: DataGridVisibi
 	 * hundred columns in one.
 	 */
 	const index =
-		table !== null && isDndEnabled && resolvePanelAffordances(table.grid.ordering.visibilityMenu, isDndEnabled).drag
+		table !== null && resolveReorderMode(table.grid.ordering.visibilityMenu.mode, false, isDndEnabled).drag
 			? getVisibilityPanelColumns(table).findIndex((column) => column.id === columnId)
 			: -1
 

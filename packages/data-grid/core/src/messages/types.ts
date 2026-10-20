@@ -221,6 +221,16 @@ export type GridMessages = {
 		thenBy: string
 		/** The button that appends a sort. */
 		add: string
+		/**
+		 * Accessible name of the control that raises one entry's priority by a step — moves it one
+		 * position up the builder's list. Named for the entry, so a list of them is not read as a
+		 * run of identical buttons.
+		 */
+		moveUp: (ctx: SortEntryContext) => string
+		/** Accessible name of the control that lowers one entry's priority by a step. */
+		moveDown: (ctx: SortEntryContext) => string
+		/** Accessible name of one entry's drag handle in the builder. */
+		dragSort: (ctx: SortEntryContext) => string
 	}
 	/** The toolbar column-visibility menu. */
 	/**
@@ -306,6 +316,14 @@ export type GridMessages = {
 		columnDropped: (ctx: OrderingColumnContext) => string
 		/** Announced when a column drag is cancelled — see {@link rowCancelled} on the position. */
 		columnCancelled: (ctx: OrderingColumnContext) => string
+		/** Announced when a sort entry is picked up in the sort builder. */
+		sortPickedUp: (ctx: OrderingSortContext) => string
+		/** Announced when a held sort entry reaches a new position. */
+		sortMovedTo: (ctx: OrderingSortContext) => string
+		/** Announced when a sort entry is dropped. */
+		sortDropped: (ctx: OrderingSortContext) => string
+		/** Announced when a sort entry drag is cancelled — see {@link rowCancelled} on the position. */
+		sortCancelled: (ctx: OrderingSortContext) => string
 	}
 	visibility: {
 		/** Accessible name of the toolbar's visibility trigger. */
@@ -577,6 +595,29 @@ export type OrderingColumnContext = {
 	position: number
 	/** How many columns that surface lists — the visible leaves in the header, every leaf in the panel. */
 	total: number
+}
+
+/**
+ * What a sort-entry announcement is given — the shape of {@link OrderingColumnContext}, counted in
+ * a different list.
+ *
+ * A third type rather than a reuse of the column one, because the numbers mean something else: the
+ * position is the entry's **priority**, among the entries of the sort, and a sort entry is a column
+ * only by reference — the sentence names the sort, not the column's place in the table.
+ */
+export type OrderingSortContext = {
+	/** The sorted column's heading when it is text, and its id when the heading is an element. */
+	name: string
+	/** The entry's priority, counted from one. */
+	position: number
+	/** How many entries the sort has. */
+	total: number
+}
+
+/** What a sort builder entry's accessible names are given. */
+export type SortEntryContext = {
+	/** The sorted column's heading when it is text, and its id when the heading is an element. */
+	label: string
 }
 
 /** What {@link GridMessages.draft.summary} is given. */
