@@ -76,11 +76,11 @@ export type {
 export { DATA_GRID_DEFAULTS, DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
 
 // Grid context — what the application and the kit decided, carried alongside the grid.
-// The interface ships empty and is extended by declaration merging; the atom type is exported
-// because `table.gridContext` names it, so a consumer reaching the table has to be able to
-// name it too.
+// Typed from a value — `createDataGrid({ context })` or `useGridContext.withTypes<T>()` — never by
+// a program-wide declaration. The atom type is exported because `table.gridContext` names it, so
+// a consumer reaching the table has to be able to name it too.
 export { useGridContext } from './grid-context'
-export type { GridContext, GridContextAtom } from './grid-context'
+export type { GridContextAtom, GridContextReader, GridContextRecord } from './grid-context'
 
 // Resolved options — what the grid decided, readable by any compound child or UI kit
 export { useGridOptions } from './use-grid-options'

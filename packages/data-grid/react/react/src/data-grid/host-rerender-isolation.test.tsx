@@ -18,14 +18,10 @@ import type { GridFeatures, ThProps, TrProps } from '../types'
 import type { Store } from '@tanstack/react-store'
 import type { ReactElement, ReactNode } from 'react'
 
-// Named for this file so they cannot collide with another test's members of the same interface.
-declare module '../grid-context' {
-	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
-	interface GridContext {
-		isolationCanEdit?: boolean
-		isolationHighlight?: Store<{ highlighted: boolean }>
-	}
-}
+const useIsolationContext = useGridContext.withTypes<{
+	isolationCanEdit?: boolean
+	isolationHighlight?: Store<{ highlighted: boolean }>
+}>()
 
 // JSDOM lacks ResizeObserver; the table layout effect needs one.
 beforeAll(() => {
@@ -225,12 +221,12 @@ describe('live values through context', () => {
 
 	function makeLiveCellTypes(counters: LiveCounters): Record<string, CellTypeDefinition> {
 		function PermissionCell({ value }: CellViewProps): ReactElement {
-			const canEdit = useGridContext((context) => context.isolationCanEdit ?? false)
+			const canEdit = useIsolationContext((context) => context.isolationCanEdit ?? false)
 			useCountRender(bump(counters, 'reader'))
 			return <span data-testid='permission'>{`${String(value)}:${String(canEdit)}`}</span>
 		}
 		function HighlightCell({ value }: CellViewProps): ReactElement {
-			const store = useGridContext((context) => context.isolationHighlight)
+			const store = useIsolationContext((context) => context.isolationHighlight)
 			if (!store) throw new Error('the highlight store was not passed through context')
 			const highlighted = useSelector(store, (state) => state.highlighted)
 			useCountRender(bump(counters, 'reader'))

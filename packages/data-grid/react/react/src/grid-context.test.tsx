@@ -1,7 +1,8 @@
 import { createColumns, createTable } from '@ez-kit/data-grid-core'
+import { createStore } from '@tanstack/react-store'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { useState } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, expectTypeOf, it, vi } from 'vitest'
 
 import { createDataGrid } from './create-data-grid'
 import { DataGrid } from './data-grid/data-grid'
@@ -17,17 +18,16 @@ import type { GridFeatures } from './types'
 import type { UseDataGridConfig } from './use-data-grid'
 import type { ReactElement, ReactNode } from 'react'
 
-// The whole point of the feature: a consumer names its own members and every reader sees them.
-// Optional throughout, because each test supplies only the keys it is about.
-declare module './grid-context' {
-	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
-	interface GridContext {
-		tenant?: string
-		permissions?: { canEdit: boolean }
-		/** Stands in for a kit writing under its own key — see the ownership convention. */
-		shadcn?: { density: 'compact' | 'comfortable' }
-	}
+/** What these tests read. Optional throughout, because each test supplies only the keys it is about. */
+type TestContext = {
+	tenant?: string
+	permissions?: { canEdit: boolean; canDelete?: boolean }
+	highlight?: { value: string }
 }
+
+// A grid without a factory types its reader this way; the bundle path is covered in
+// `create-data-grid-context.test.tsx`.
+const useTestContext = useGridContext.withTypes<TestContext>()
 
 type TestRow = (typeof TEST_ROWS)[number]
 
@@ -58,6 +58,33 @@ function readWhole(): unknown {
 	return JSON.parse(screen.getByTestId('whole').textContent)
 }
 
+describe('useGridContext — types', () => {
+	it('reads unknown values from the bare hook', () => {
+		function Probe(): null {
+			const tenant = useGridContext((context) => context.tenant)
+			expectTypeOf(tenant).toEqualTypeOf<unknown>()
+			expectTypeOf(useGridContext()).toEqualTypeOf<Record<string, unknown>>()
+			return null
+		}
+		expect(Probe).toBeTypeOf('function')
+	})
+
+	it('types the selector through withTypes', () => {
+		function Probe(): null {
+			const reader = useGridContext.withTypes<{ tenant: string }>()
+			const tenant = reader((context) => context.tenant)
+			expectTypeOf(tenant).toEqualTypeOf<string>()
+			expectTypeOf<Parameters<Parameters<typeof reader>[0]>[0]>().toEqualTypeOf<{ tenant: string }>()
+			return null
+		}
+		expect(Probe).toBeTypeOf('function')
+	})
+
+	it('derives the same function at runtime', () => {
+		expect(useGridContext.withTypes<TestContext>()).toBe(useGridContext)
+	})
+})
+
 describe('useGridContext — the default', () => {
 	it('is an empty object for a grid that never sets `context`', () => {
 		renderGridWith({}, <WholeContextProbe />)
@@ -82,10 +109,8 @@ describe('useGridContext — the default', () => {
 
 describe('useGridContext — option layers', () => {
 	it('merges factory < provider < instance, with the instance winning a named key', () => {
-		const kit = createDataGrid({
-			components: testComponents,
-			defaults: { context: { shadcn: { density: 'comfortable' }, tenant: 'kit' } },
-		})
+		const kitContext: TestContext = { highlight: { value: 'kit' }, tenant: 'kit' }
+		const kit = createDataGrid({ components: testComponents, context: kitContext })
 
 		function Harness(): ReactElement {
 			const table = kit.useDataGrid<GridFeatures, TestRow>({
@@ -108,8 +133,8 @@ describe('useGridContext — option layers', () => {
 		)
 
 		expect(readWhole()).toEqual({
-			// the factory's own key survives — nothing above it named `shadcn`
-			shadcn: { density: 'comfortable' },
+			// the factory's own key survives — nothing above it named `highlight`
+			highlight: { value: 'kit' },
 			// the provider outranks the factory on the key both wrote
 			tenant: 'app',
 			// and the instance contributes its own
@@ -117,13 +142,14 @@ describe('useGridContext — option layers', () => {
 		})
 	})
 
-	it('replaces a named key rather than accumulating it', () => {
+	/** Renders a bare grid under a provider, both layers writing `context`. */
+	function renderUnderProvider(providerContext: TestContext, instanceContext: TestContext): void {
 		function Harness(): ReactElement {
 			const table = useDataGrid<GridFeatures, TestRow>({
 				features: TEST_FEATURES,
 				data: TEST_ROWS,
 				columns: TEST_COLUMNS,
-				context: { permissions: { canEdit: false } },
+				context: instanceContext,
 			})
 			return (
 				<DataGrid<GridFeatures, TestRow> table={table}>
@@ -133,12 +159,46 @@ describe('useGridContext — option layers', () => {
 		}
 
 		renderWithComponents(
-			<DataGridOptionsProvider defaults={{ context: { permissions: { canEdit: true } } }}>
+			<DataGridOptionsProvider defaults={{ context: providerContext }}>
+				<Harness />
+			</DataGridOptionsProvider>,
+		)
+	}
+
+	it('merges a nested plain object key by key', () => {
+		renderUnderProvider({ permissions: { canEdit: true, canDelete: true } }, { permissions: { canEdit: false } })
+
+		expect(readWhole()).toEqual({ permissions: { canEdit: false, canDelete: true } })
+	})
+
+	it('replaces a store instance whole', () => {
+		const providerStore = createStore({ highlighted: false })
+		const instanceStore = createStore({ highlighted: true })
+		function StoreProbe(): ReactElement {
+			const store = useGridContext((context) => context.store)
+			return <div data-testid='store'>{store === instanceStore ? 'instance' : 'other'}</div>
+		}
+		function Harness(): ReactElement {
+			const table = useDataGrid<GridFeatures, TestRow>({
+				features: TEST_FEATURES,
+				data: TEST_ROWS,
+				columns: TEST_COLUMNS,
+				context: { store: instanceStore },
+			})
+			return (
+				<DataGrid<GridFeatures, TestRow> table={table}>
+					<StoreProbe />
+				</DataGrid>
+			)
+		}
+
+		renderWithComponents(
+			<DataGridOptionsProvider defaults={{ context: { store: providerStore } }}>
 				<Harness />
 			</DataGridOptionsProvider>,
 		)
 
-		expect(readWhole()).toEqual({ permissions: { canEdit: false } })
+		expect(screen.getByTestId('store').textContent).toBe('instance')
 	})
 
 	it('never reaches the headless table — `context` is a React-layer option', () => {
@@ -162,7 +222,7 @@ describe('useGridContext — reactivity', () => {
 	/** Counts its own renders, so a test can assert what a changed context did and did not wake. */
 	function makeSliceProbe(onRender: () => void) {
 		return function SliceProbe(): ReactElement {
-			const canEdit = useGridContext((context) => context.permissions?.canEdit ?? false)
+			const canEdit = useTestContext((context) => context.permissions?.canEdit ?? false)
 			onRender()
 			return <div data-testid='slice'>{String(canEdit)}</div>
 		}
@@ -258,7 +318,7 @@ describe('useGridContext — the vanilla binding', () => {
 		table.gridContext.write({ tenant: 'acme', permissions: DENIED })
 		const onRender = vi.fn()
 		function SliceProbe(): ReactElement {
-			const canEdit = useGridContext((context) => context.permissions?.canEdit ?? false)
+			const canEdit = useTestContext((context) => context.permissions?.canEdit ?? false)
 			onRender()
 			return <div data-testid='slice'>{String(canEdit)}</div>
 		}
@@ -286,7 +346,7 @@ describe('useGridContext — the vanilla binding', () => {
 		table.gridContext.write({ tenant: 'acme', permissions: DENIED })
 		const onRender = vi.fn()
 		function ObjectProbe(): ReactElement {
-			const picked = useGridContext((context) => ({ canEdit: context.permissions?.canEdit ?? false }), {
+			const picked = useTestContext((context) => ({ canEdit: context.permissions?.canEdit ?? false }), {
 				compare: shallow,
 			})
 			onRender()

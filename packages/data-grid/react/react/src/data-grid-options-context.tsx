@@ -20,6 +20,11 @@ import type { ReactNode } from 'react'
  * Excludes the per-instance data inputs and controlled-state bindings — `data`, `columns`,
  * `state`, `onStateChange` — which are meaningless as shared application defaults.
  *
+ * `context` is a member here, typed `GridContextRecord`, and a `DataGridOptionsProvider` writes it
+ * through this type. The factory does not: `createDataGrid({ defaults })` takes this type without
+ * `context`, because `createDataGrid({ context })` is the factory's one entry point for it — the
+ * one that gives the bundle its context type.
+ *
  * `creating`, `editing` and `deleting` keep their full shape except for the callback that
  * makes them run: a defaults layer describes *how* a write looks (`mode`, `confirmation`)
  * for every grid in the app, while the grid that supplies `onSave` / `onDelete` is the one
@@ -199,7 +204,10 @@ export function mergeGridOptionLayers<TFeatures extends TableFeatures, TRow exte
 /**
  * The **factory** layer, carried through the tree rather than through an argument.
  *
- * `createDataGrid({ defaults })` binds its defaults into the `useDataGrid` it returns, which
+ * The layer is `createDataGrid`'s `defaults` with its `features` and `context` folded in — each
+ * of the two has a factory field of its own, for typing, but one layer stack at runtime.
+ *
+ * `createDataGrid({ defaults })` binds that layer into the `useDataGrid` it returns, which
  * covers the controlled form (the caller builds the table, then passes it to `<DataGrid table={…} />`).
  * The uncontrolled form runs `useDataGrid` *inside* `<DataGrid>`, where no such argument can
  * reach it — so the bound `DataGrid` also provides them here and the hook picks them up.
@@ -214,7 +222,7 @@ export function mergeGridOptionLayers<TFeatures extends TableFeatures, TRow exte
 const GridFactoryDefaultsContext = createContext<AnyDefaultOptions | undefined>(undefined)
 
 export type GridFactoryDefaultsProviderProps = {
-	/** The kit-level defaults bound by `createDataGrid({ defaults })`. */
+	/** The factory layer bound by `createDataGrid` — `defaults`, plus `features` and `context`. */
 	defaults: AnyDefaultOptions | undefined
 	children: ReactNode
 }

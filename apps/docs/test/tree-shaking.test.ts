@@ -435,6 +435,32 @@ describe('@ez-kit/data-grid-react', () => {
 	})
 
 	/**
+	 * `useGridContext` carries `withTypes`, and attaching it must not anchor the hook.
+	 *
+	 * A top-level `useGridContext.withTypes = withTypes` is the statement class the compound
+	 * namespace above was fixed for: esbuild cannot drop it, so every import that reaches the
+	 * module — `useDataGrid` does, for the context atom — would keep the hook and its imports. The
+	 * annotated `Object.assign` over a flat literal is what keeps it droppable.
+	 *
+	 * `withTypes` is the property key of that literal and is written nowhere else in the package.
+	 */
+	describe('the grid-context reader', () => {
+		const GRID_CONTEXT_READER_MARKER = 'withTypes'
+
+		it('reaches a bundle through useGridContext', async () => {
+			expect(await bundledCodeOf(ADAPTER_ENTRY, ['useGridContext'])).toContain(GRID_CONTEXT_READER_MARKER)
+		})
+
+		it('does not reach a bundle that imports only the hook building the grid', async () => {
+			expect(await bundledCodeOf(ADAPTER_ENTRY, ['useDataGrid'])).not.toContain(GRID_CONTEXT_READER_MARKER)
+		})
+
+		it('does not reach a bundle that reads only the table', async () => {
+			expect(await bundledCodeOf(ADAPTER_ENTRY, ['useDataGridTable'])).not.toContain(GRID_CONTEXT_READER_MARKER)
+		})
+	})
+
+	/**
 	 * The `useItems` machinery — the per-grid source store, its runners, the list hooks — reaches a
 	 * bundle with the grid, which mounts its host, and with the controls that read a list. It must
 	 * not reach an import that has nothing to do with value lists.

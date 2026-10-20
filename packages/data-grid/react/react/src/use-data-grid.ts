@@ -23,7 +23,7 @@ import type { CellTypeRegistry } from './cell-types-context'
 import type { DndAdapter } from './data-grid/dnd'
 import type { PaginationLabelModel } from './data-grid/pagination-label'
 import type { DataGridDefaultOptions } from './data-grid-options-context'
-import type { GridContext, GridContextAtom } from './grid-context'
+import type { GridContextAtom, GridContextRecord } from './grid-context'
 import type { ResolvedGridOptions } from './resolved-options'
 import type { ErasedRow, DataTable, GridFeatures, LoadMoreThreshold, LoadMoreTrigger, PaginationLabel } from './types'
 import type {
@@ -575,7 +575,11 @@ export type RowPropsResolver<TRow extends object> = (
  * `mergeGridOptionLayers` will merge it in, but the type still demands it at the boundary the
  * caller writes.
  */
-export type UseDataGridConfig<TFeatures extends TableFeatures, TRow extends object> = {
+export type UseDataGridConfig<
+	TFeatures extends TableFeatures,
+	TRow extends object,
+	TContext extends object = GridContextRecord,
+> = {
 	/**
 	 * Fallback states shown when the grid has no visible rows.
 	 * All three states are enabled by default when the corresponding DI component is registered.
@@ -642,22 +646,23 @@ export type UseDataGridConfig<TFeatures extends TableFeatures, TRow extends obje
 	 * like any other option and publishes it; {@link useGridContext} reads it, with a selector
 	 * form so a cell renderer re-renders only for the slice it asked for.
 	 *
-	 * Typed by declaration merging on {@link GridContext} — empty until a consumer extends it.
+	 * Typed {@link GridContextRecord} here. A bundle built with `createDataGrid({ context })` types
+	 * it from that default instead — a `Partial` of it, since the factory supplies every key — and
+	 * hands back a `useGridContext` that reads the complete type.
 	 *
 	 * @example
 	 * ```tsx
-	 * // once, anywhere in the app
-	 * declare module '@ez-kit/data-grid-react' {
-	 *   interface GridContext {
-	 *     permissions: { canEdit: boolean }
-	 *   }
-	 * }
+	 * // once, where the application builds its bundle
+	 * export const { DataGrid, useDataGrid, useGridContext } = createDataGrid({
+	 *   components: allComponents,
+	 *   context: { permissions: { canEdit: false } },
+	 * })
 	 *
-	 * useDataGrid({ data, columns, context: { permissions } })
-	 * // and in a kit component: const canEdit = useGridContext((c) => c.permissions.canEdit)
+	 * useDataGrid({ data, columns, features, context: { permissions } })
+	 * // and in a cell: const canEdit = useGridContext((c) => c.permissions.canEdit)
 	 * ```
 	 */
-	context?: GridContext
+	context?: TContext
 	/**
 	 * Per-row DOM props — see {@link RowPropsResolver}.
 	 *

@@ -18,18 +18,15 @@ import type { CellViewCtx } from '@ez-kit/data-grid-react'
 
 type Role = 'admin' | 'manager' | 'viewer'
 
-declare module '@ez-kit/data-grid-react' {
-	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
-	interface GridContext {
-		currentUser?: { name: string; role: Role; department: string }
-	}
-}
+type CurrentUser = { name: string; role: Role; department: string }
+
+const useExampleContext = useGridContext.withTypes<{ currentUser: CurrentUser }>()
 
 const USERS = {
 	admin: { name: 'Alice Johnson', role: 'admin', department: 'Engineering' },
 	manager: { name: 'Bob Smith', role: 'manager', department: 'Marketing' },
 	viewer: { name: 'Carol White', role: 'viewer', department: 'Engineering' },
-} as const satisfies Record<Role, { name: string; role: Role; department: string }>
+} as const satisfies Record<Role, CurrentUser>
 
 const features = tableFeatures({
 	columnVisibilityFeature,
@@ -40,7 +37,7 @@ const features = tableFeatures({
 const salaryFormat = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
 
 function NameCell({ row, value }: CellViewCtx<Employee, string>) {
-	const isMe = useGridContext((context) => context.currentUser?.name === row.name)
+	const isMe = useExampleContext((context) => context.currentUser.name === row.name)
 	return (
 		<span>
 			{value}
@@ -50,16 +47,15 @@ function NameCell({ row, value }: CellViewCtx<Employee, string>) {
 }
 
 function SalaryCell({ row, value }: CellViewCtx<Employee, number>) {
-	const canSee = useGridContext((context) => {
+	const canSee = useExampleContext((context) => {
 		const user = context.currentUser
-		if (!user) return false
 		return user.role === 'admin' || (user.role === 'manager' && user.department === row.department)
 	})
 	return <span className='tabular-nums'>{canSee ? salaryFormat.format(value) : '•••••'}</span>
 }
 
 function ActionsCell() {
-	const canEdit = useGridContext((context) => context.currentUser?.role === 'admin')
+	const canEdit = useExampleContext((context) => context.currentUser.role === 'admin')
 	return (
 		<button
 			type='button'

@@ -7,14 +7,21 @@ import { DndBundleProvider } from './data-grid/dnd'
 import { KeyboardNavigationProvider } from './data-grid/keyboard-navigation'
 import { useDataGridState } from './data-grid/table-context'
 import { GridFactoryDefaultsProvider } from './data-grid-options-context'
+import { useGridContext } from './grid-context'
 import { createColumnHelper } from './react-columns'
 import { useDataGrid } from './use-data-grid'
 
 import type { CellTypeRegistry } from './cell-types-context'
 import type { GridComponents } from './contract'
-import type { DataGridControlledProps, DataGridSharedProps, DataGridStatics } from './data-grid/data-grid'
+import type {
+	DataGridControlledProps,
+	DataGridProps,
+	DataGridSharedProps,
+	DataGridStatics,
+} from './data-grid/data-grid'
 import type { DndAdapter } from './data-grid/dnd'
 import type { DataGridDefaultOptions } from './data-grid-options-context'
+import type { GridContextReader, GridContextRecord } from './grid-context'
 import type { ColumnDef, ColumnHelper } from './react-columns'
 import type { DataTable, GridFeatures } from './types'
 import type { UseDataGridConfig } from './use-data-grid'
@@ -26,6 +33,7 @@ type KitCellTypeId<TCellTypes extends CellTypeRegistry> = Extract<keyof TCellTyp
 export type CreateDataGridOptions<
 	TCellTypes extends CellTypeRegistry,
 	TFeatures extends TableFeatures | undefined = undefined,
+	TContext extends object | undefined = undefined,
 > = {
 	/**
 	 * The kit's components, feature-grouped. Every group and every member is already optional
@@ -109,13 +117,37 @@ export type CreateDataGridOptions<
 	 */
 	dnd?: DndAdapter | undefined
 	/**
+	 * The grid context every grid from this bundle starts from — and the **source of its type**.
+	 *
+	 * The type is inferred from this value, so it is written once, as data: the bundle's
+	 * `useGridContext` reads it with every key present (the default guarantees each one), and the
+	 * bundle's `DataGrid` / `useDataGrid` take a `Partial` of it, so a grid overrides only the keys
+	 * it names. A key outside the type, or of the wrong type, is a compile error at the call site.
+	 * Two bundles in one program carry two unrelated contexts.
+	 *
+	 * At runtime it is the factory option layer, like {@link defaults}: factory <
+	 * `DataGridOptionsProvider` < the instance's own `context`, deep-merged — nested plain objects
+	 * key by key, anything else replaced whole.
+	 *
+	 * The same trap as {@link features}: TypeScript has no partial type-argument inference, so an
+	 * explicit `createDataGrid<MyCellTypes, MyFeatures>({ … })` leaves `TContext` at its
+	 * `undefined` default and rejects this field. Pass no type arguments, or name all three.
+	 *
+	 * The constraint is `object` rather than `Record<string, unknown>` so an `interface` without
+	 * an index signature is accepted as the type.
+	 */
+	context?: TContext
+	/**
 	 * Kit-level default grid options baked into the bundle. Merged as the **base** layer
 	 * under an app-level `DataGridOptionsProvider` and the per-call config
 	 * (factory `defaults` < provider `defaults` < instance config). Lets a kit ship
 	 * opinionated defaults (e.g. `{ sorting: true, visibility: true }`) so consumers
 	 * need not repeat them at every `useDataGrid` call site.
+	 *
+	 * `context` is not accepted here: {@link context} is the factory's one entry point for it,
+	 * because it is the one that types the bundle.
 	 */
-	defaults?: DataGridDefaultOptions<GridFeatures, object>
+	defaults?: Omit<DataGridDefaultOptions<GridFeatures, object>, 'context'>
 }
 
 /**
@@ -127,10 +159,11 @@ export type CreateDataGridOptions<
  * narrows below a bundle-wide set. Composing a set is a decision about what exists, so a merge
  * could not express "and not that one".
  */
-export type BoundUseDataGridConfig<TFeatures extends TableFeatures, TRow extends object> = Omit<
-	UseDataGridConfig<TFeatures, TRow>,
-	'features'
-> & {
+export type BoundUseDataGridConfig<
+	TFeatures extends TableFeatures,
+	TRow extends object,
+	TContext extends object = GridContextRecord,
+> = Omit<UseDataGridConfig<TFeatures, TRow, TContext>, 'features'> & {
 	/** Overrides the bundle's set for this grid alone. Omit to run on the bundle's. */
 	features?: TFeatures
 }
@@ -147,22 +180,55 @@ export type BoundUseDataGridConfig<TFeatures extends TableFeatures, TRow extends
  */
 
 /** `DataGridProps` with the uncontrolled half's `features` relaxed the same way. */
-export type BoundDataGridProps<TFeatures extends TableFeatures, TRow extends object> =
+export type BoundDataGridProps<
+	TFeatures extends TableFeatures,
+	TRow extends object,
+	TContext extends object = GridContextRecord,
+> =
 	| DataGridControlledProps<TFeatures, TRow>
-	| (DataGridSharedProps & BoundUseDataGridConfig<TFeatures, TRow> & { table?: never })
+	| (DataGridSharedProps & BoundUseDataGridConfig<TFeatures, TRow, TContext> & { table?: never })
 
 /**
  * The compound `DataGrid` a feature-bound bundle hands back: the relaxed call signature, and
  * the identical namespace — {@link DataGridStatics} rather than a second copy of twenty-eight
  * members that would then drift from the first.
  */
-export type BoundDataGrid<TFeatures extends TableFeatures> = (<
+export type BoundDataGrid<TFeatures extends TableFeatures, TContext extends object = GridContextRecord> = (<
 	TRow extends object,
 	TConfigFeatures extends TableFeatures = TFeatures,
 >(
-	props: BoundDataGridProps<TConfigFeatures, TRow>,
+	props: BoundDataGridProps<TConfigFeatures, TRow, TContext>,
 ) => ReturnType<typeof DataGrid>) &
 	DataGridStatics
+
+/**
+ * The compound `DataGrid` a bundle with a factory context but no feature set hands back: the
+ * unbound call signature — `features` still required — with `context` typed as `TContext`.
+ */
+export type ContextBoundDataGrid<TContext extends object> = (<TFeatures extends TableFeatures, TRow extends object>(
+	props: DataGridProps<TFeatures, TRow, TContext>,
+) => ReturnType<typeof DataGrid>) &
+	DataGridStatics
+
+/** The `useDataGrid` counterpart of {@link ContextBoundDataGrid}. */
+export type ContextBoundUseDataGrid<TContext extends object> = <TFeatures extends TableFeatures, TRow extends object>(
+	config: UseDataGridConfig<TFeatures, TRow, TContext>,
+) => DataTable<TFeatures, TRow>
+
+/**
+ * The context type a bundle's reader returns: the factory default's type when one was given,
+ * {@link GridContextRecord} otherwise. Tuple-wrapped so a union context is not distributed.
+ */
+type BundleContext<TContext extends object | undefined> = [TContext] extends [object] ? TContext : GridContextRecord
+
+/**
+ * The `context` a grid from the bundle accepts: a `Partial` of the factory default's type, since
+ * the default already supplies every key — and the untyped {@link GridContextRecord}, unchanged,
+ * when the factory set none.
+ */
+type InstanceContext<TContext extends object | undefined> = [TContext] extends [object]
+	? Partial<TContext>
+	: GridContextRecord
 
 /**
  * The bundle returned by {@link createDataGrid}: the bound compound `DataGrid`, the
@@ -173,17 +239,38 @@ export type BoundDataGrid<TFeatures extends TableFeatures> = (<
  * demanding one at every call site and start carrying it out in their return type; without,
  * both are exactly the unbound hook and component, `features` required as core declares it.
  * The parameter defaults to `undefined` so `DataGridBundle<KitCellTypes>` keeps its meaning.
+ *
+ * `TContext` works the same way for the factory `context`: `undefined` unless one was given,
+ * and then `DataGrid` / `useDataGrid` take `context` as a `Partial` of it and `useGridContext`
+ * reads it complete. Left at `undefined`, both members are exactly the types they were before
+ * the parameter existed, which is what keeps `DataGridBundle<KitCellTypes, KitFeatures>` meaning
+ * the same thing.
  */
 export type DataGridBundle<
 	TCellTypes extends CellTypeRegistry,
 	TFeatures extends TableFeatures | undefined = undefined,
+	TContext extends object | undefined = undefined,
 > = {
-	DataGrid: TFeatures extends TableFeatures ? BoundDataGrid<TFeatures> : typeof DataGrid
+	DataGrid: TFeatures extends TableFeatures
+		? [TContext] extends [object]
+			? BoundDataGrid<TFeatures, InstanceContext<TContext>>
+			: BoundDataGrid<TFeatures>
+		: [TContext] extends [object]
+			? ContextBoundDataGrid<InstanceContext<TContext>>
+			: typeof DataGrid
 	useDataGrid: TFeatures extends TableFeatures
 		? <TRow extends object, TConfigFeatures extends TableFeatures = TFeatures>(
-				config: BoundUseDataGridConfig<TConfigFeatures, TRow>,
+				config: BoundUseDataGridConfig<TConfigFeatures, TRow, InstanceContext<TContext>>,
 			) => DataTable<TConfigFeatures, TRow>
-		: typeof useDataGrid
+		: [TContext] extends [object]
+			? ContextBoundUseDataGrid<InstanceContext<TContext>>
+			: typeof useDataGrid
+	/**
+	 * Reads the grid context as this bundle's type — the factory default's, complete, when the
+	 * factory was given one; {@link GridContextRecord} otherwise. The package's own
+	 * `useGridContext` at runtime, typed here rather than per call.
+	 */
+	useGridContext: GridContextReader<BundleContext<TContext>>
 	useDataGridState: typeof useDataGridState
 	GridComponentsProvider: typeof GridComponentsProvider
 	createColumns: <TRow extends object>(defs: ColumnDef<TRow, TCellTypes>[]) => ColumnDef<TRow, TCellTypes>[]
@@ -214,14 +301,16 @@ export type DataGridBundle<
 export function createDataGrid<
 	TCellTypes extends CellTypeRegistry = CellTypeRegistry,
 	TFeatures extends TableFeatures | undefined = undefined,
+	TContext extends object | undefined = undefined,
 >({
 	components,
 	cellTypes,
 	features,
+	context,
 	defaults,
 	dnd,
 	keyboardNavigation = false,
-}: CreateDataGridOptions<TCellTypes, TFeatures>): DataGridBundle<TCellTypes, TFeatures> {
+}: CreateDataGridOptions<TCellTypes, TFeatures, TContext>): DataGridBundle<TCellTypes, TFeatures, TContext> {
 	/*
 	 * `features` is folded into the defaults layer rather than carried separately: the layer
 	 * merge already treats it correctly — `mergeOptionLayers` replaces `features` wholesale
@@ -229,9 +318,20 @@ export function createDataGrid<
 	 * below the bundle's set gets the narrow set rather than the union of the two. Lifting it to
 	 * its own field is a *typing* decision (it is the one option every instance config must
 	 * name); the runtime has one layer stack, not two.
+	 *
+	 * `context` is folded in the same way and for the same reason: its own field is where the
+	 * bundle's type comes from, while the merge it needs is the ordinary one. The cast is the
+	 * constraint's: `TContext extends object` admits an `interface` that `GridContextRecord`'s
+	 * index signature does not, and the layer stack is row- and context-erased throughout.
 	 */
 	const factoryDefaults: DataGridDefaultOptions<GridFeatures, object> | undefined =
-		features === undefined ? defaults : { ...defaults, features }
+		features === undefined && context === undefined
+			? defaults
+			: {
+					...defaults,
+					...(features !== undefined ? { features } : {}),
+					...(context !== undefined ? { context: context as GridContextRecord } : {}),
+				}
 
 	type BoundProps = Parameters<typeof DataGrid>[0]
 	function BoundDataGrid(props: BoundProps) {
@@ -319,8 +419,9 @@ export function createDataGrid<
 	 * in that `features` is optional.
 	 */
 	return {
-		DataGrid: BoundDataGrid as DataGridBundle<TCellTypes, TFeatures>['DataGrid'],
-		useDataGrid: useDataGridWithDefaults as DataGridBundle<TCellTypes, TFeatures>['useDataGrid'],
+		DataGrid: BoundDataGrid as DataGridBundle<TCellTypes, TFeatures, TContext>['DataGrid'],
+		useDataGrid: useDataGridWithDefaults as DataGridBundle<TCellTypes, TFeatures, TContext>['useDataGrid'],
+		useGridContext: useGridContext as DataGridBundle<TCellTypes, TFeatures, TContext>['useGridContext'],
 		useDataGridState,
 		GridComponentsProvider,
 		createColumns: boundDefineColumns,

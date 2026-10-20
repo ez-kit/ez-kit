@@ -715,7 +715,11 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 	{
 		page: DocPage.StateContext,
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 1 }],
+		optionTables: [
+			{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 1 },
+			// `createDataGrid({ context })` — the factory default the bundle's context type comes from.
+			{ heading: 'Factory option', roots: [GRID_TYPE.CreateDataGridOptions], expectedCount: 1 },
+		],
 		nonOptionTables: [
 			{
 				heading: 'Reading it',

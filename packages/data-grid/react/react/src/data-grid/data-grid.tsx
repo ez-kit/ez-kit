@@ -64,6 +64,7 @@ import { VisibilityTrigger } from './visibility-trigger'
 
 import type { CellTypeRegistry } from '../cell-types-context'
 import type { GridComponents } from '../contract'
+import type { GridContextRecord } from '../grid-context'
 import type { DataTable, ErasedRow, GridFeatures } from '../types'
 import type { DndDragOverEvent, DndDropEvent } from './dnd'
 import type {
@@ -104,8 +105,12 @@ export type DataGridControlledProps<TFeatures extends TableFeatures, TRow extend
  * Uncontrolled usage: pass the same config `useDataGrid` accepts directly and
  * the grid runs the hook for you — no separate `useDataGrid` call needed.
  */
-export type DataGridUncontrolledProps<TFeatures extends TableFeatures, TRow extends object> = DataGridSharedProps &
-	UseDataGridConfig<TFeatures, TRow> & {
+export type DataGridUncontrolledProps<
+	TFeatures extends TableFeatures,
+	TRow extends object,
+	TContext extends object = GridContextRecord,
+> = DataGridSharedProps &
+	UseDataGridConfig<TFeatures, TRow, TContext> & {
 		/** Mutually exclusive with the inline config — never pass both. */
 		table?: never
 	}
@@ -123,9 +128,11 @@ export type DataGridUncontrolledProps<TFeatures extends TableFeatures, TRow exte
  * @example — uncontrolled (no hook)
  * return <DataGrid data={data} columns={columns} sorting />
  */
-export type DataGridProps<TFeatures extends TableFeatures, TRow extends object> =
-	| DataGridControlledProps<TFeatures, TRow>
-	| DataGridUncontrolledProps<TFeatures, TRow>
+export type DataGridProps<
+	TFeatures extends TableFeatures,
+	TRow extends object,
+	TContext extends object = GridContextRecord,
+> = DataGridControlledProps<TFeatures, TRow> | DataGridUncontrolledProps<TFeatures, TRow, TContext>
 
 function resolveConfirmationText<TRow extends object>(
 	options: ConfirmationConfig<TRow>,

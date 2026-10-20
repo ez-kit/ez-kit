@@ -16,13 +16,10 @@ import type { CellViewCtx } from '@ez-kit/data-grid-react'
 import type { Store } from '@tanstack/react-store'
 import type { ReactNode } from 'react'
 
-declare module '@ez-kit/data-grid-react' {
-	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
-	interface GridContext {
-		canEditOrders?: boolean
-		highlightedOrder?: Store<{ id: number | null }>
-	}
-}
+const useExampleContext = useGridContext.withTypes<{
+	canEditOrders: boolean
+	highlightedOrder: Store<{ id: number | null }>
+}>()
 
 const features = tableFeatures({
 	columnVisibilityFeature,
@@ -40,8 +37,6 @@ const ORDERS: Order[] = [
 	{ id: 1005, customer: 'Edsger Dijkstra', total: 310 },
 ]
 
-const NO_HIGHLIGHT = createStore<{ id: number | null }>({ id: null })
-
 function useRenderCount(): number {
 	const renders = useRef(0)
 	renders.current += 1
@@ -54,8 +49,8 @@ function RenderCount() {
 }
 
 function HighlightCell({ row, value }: CellViewCtx<Order, number>) {
-	const highlightedOrder = useGridContext((context) => context.highlightedOrder)
-	const isHighlighted = useSelector(highlightedOrder ?? NO_HIGHLIGHT, (state) => state.id === row.id)
+	const highlightedOrder = useExampleContext((context) => context.highlightedOrder)
+	const isHighlighted = useSelector(highlightedOrder, (state) => state.id === row.id)
 	return (
 		<span className={isHighlighted ? 'font-semibold text-amber-600' : undefined}>
 			{isHighlighted ? '● ' : ''}#{value}
@@ -65,7 +60,7 @@ function HighlightCell({ row, value }: CellViewCtx<Order, number>) {
 }
 
 function AccessCell() {
-	const canEdit = useGridContext((context) => context.canEditOrders ?? false)
+	const canEdit = useExampleContext((context) => context.canEditOrders)
 	return (
 		<span>
 			{canEdit ? 'Editable' : 'Read-only'}
