@@ -856,6 +856,12 @@
 		"exportName": "ServerDataExample"
 	},
 	{
+		"id": "state-grid-context",
+		"label": "Grid context",
+		"sourceFile": "components/grid-context.tsx",
+		"exportName": "GridContextExample"
+	},
+	{
 		"id": "state-render-isolation",
 		"label": "Render isolation",
 		"sourceFile": "components/render-isolation.tsx",

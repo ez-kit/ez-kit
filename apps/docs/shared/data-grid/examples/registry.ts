@@ -21,6 +21,7 @@ export const exampleModules: Record<string, () => Promise<Record<string, Compone
 	'components/column-helper.tsx': () => import('./components/column-helper'),
 	'components/column-helper-registered.tsx': () => import('./components/column-helper-registered'),
 	'components/column-pinning.tsx': () => import('./components/column-pinning'),
+	'components/grid-context.tsx': () => import('./components/grid-context'),
 	'components/pinning/both-axes.tsx': () => import('./components/pinning/both-axes'),
 	'components/pinning/initial-rows.tsx': () => import('./components/pinning/initial-rows'),
 	'components/pinning/rtl-columns.tsx': () => import('./components/pinning/rtl-columns'),

@@ -10,6 +10,15 @@ Which tenant the page belongs to. What density the kit was told to use.
 `context` is where that goes. You put an object on the grid; every component inside it reads the
 object back. The grid never looks at what is in there.
 
+## Live example
+
+<DataGridDocsExample exampleId='state-grid-context' />
+
+The signed-in user goes into `context`, and three cells read it. _Name_ marks the user's own row.
+_Salary_ is visible to an admin, and to a manager for their own department only. _Edit_ is enabled
+for an admin. Switch the user and only those cells re-render; the department column, which reads
+nothing from the context, does not.
+
 ```tsx
 const table = useDataGrid({
 	features,
@@ -124,8 +133,12 @@ const columns = createColumns<Order>([{ accessorKey: 'id', cell: { component: Or
 
 The grid does not care which library the store comes from. A Zustand store, a Valtio proxy or a
 TanStack store all work the same way: put the store in `context`, read it with that library's hook.
-[Rendering](/docs/data-grid/state/rendering) walks through the whole arrangement with a live
-example.
+In the example below each cell shows how many times it has rendered. **Allow editing** passes a
+value through `context`; **Highlight next order** writes a store held in `context`, and only the two
+cells whose highlight changed re-render. [Rendering](/docs/data-grid/state/rendering) explains the
+arrangement in full.
+
+<DataGridDocsExample exampleId='state-render-isolation' />
 
 ## It merges like every other option
 
