@@ -3,6 +3,7 @@ import { createContext, useContext } from 'react'
 import { useDataGridSelector } from '../use-data-grid-selector'
 
 import type { DataTable, ErasedRow, GridFeatures } from '../types'
+import type { DataGridSelectorOptions } from '../use-data-grid-selector'
 import type { TableFeatures, TableState } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
@@ -98,7 +99,7 @@ export function useOptionalDataGridTable<TRow extends object = ErasedRow>(): Dat
 
 /**
  * Subscribe to a slice of the table state from context. Re-renders only when the selected
- * slice changes. The selector must return a referentially stable value — see
+ * slice changes, judged by `options.compare` — strict equality unless one is passed. See
  * {@link useDataGridSelector} for the full contract.
  *
  * @example Subscribe to a slice
@@ -109,9 +110,17 @@ export function useOptionalDataGridTable<TRow extends object = ErasedRow>(): Dat
  *   // when this row enters / leaves edit mode.
  *   const isEditingThisRow = useDataGridState((s) => s.editing.rowId === row.id)
  *
+ * @example A derived object — `shallow` keeps it from re-rendering on unrelated changes
+ *   const counts = useDataGridState((s) => ({ sorted: s.sorting.length, filtered: s.columnFilters.length }), {
+ *     compare: shallow,
+ *   })
+ *
  * @example Deliberately broad — the snapshot itself is stable until something changes
  *   useDataGridState((s) => s)
  */
-export function useDataGridState<TSelected>(selector: (state: TableState<GridFeatures>) => TSelected): TSelected {
-	return useDataGridSelector(useDataGridTable(), selector)
+export function useDataGridState<TSelected>(
+	selector: (state: TableState<GridFeatures>) => TSelected,
+	options?: DataGridSelectorOptions<TSelected>,
+): TSelected {
+	return useDataGridSelector(useDataGridTable(), selector, options)
 }

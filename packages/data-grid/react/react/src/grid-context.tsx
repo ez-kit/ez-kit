@@ -1,9 +1,11 @@
 'use client'
 
-import { useSyncExternalStore } from 'react'
+import { useSelector } from '@tanstack/react-store'
+import { useMemo } from 'react'
 
 import { useDataGridTable } from './data-grid/table-context'
 
+import type { DataGridSelectorOptions } from './use-data-grid-selector'
 import type { TableReactivityBindings } from '@tanstack/table-core/reactivity'
 
 /**
@@ -84,10 +86,10 @@ export type GridContextAtom = {
 
 /**
  * Builds the per-grid context atom, from the **same reactivity binding the table itself uses**
- * (`table._reactivity`) — so this is one store instance per table, not a second one, and no new
- * dependency: `@tanstack/table-core/reactivity` is a subpath of a package this one already
- * depends on, and neither binding requires naming `@tanstack/react-store` here (Task 17 Step 1
- * records why that dependency is not taken directly).
+ * (`table._reactivity`) — so this is one store instance per table, not a second one:
+ * `@tanstack/table-core/reactivity` is a subpath of a package this one already depends on.
+ * `@tanstack/react-store` is used only to **read** the atom, through {@link useGridContext}; the
+ * atom itself is the binding's own.
  *
  * The two bindings need genuinely different treatment, verified against the actual
  * `@tanstack/table-core@9.2.4` implementations rather than assumed from their docs:
@@ -184,8 +186,30 @@ export function syncGridContext(atom: GridContextAtom, next: GridContext): void 
 	atom.write(next)
 }
 
+/**
+ * The shape `useSelector` reads — `get()` plus a `subscribe()` that hands back an object with
+ * `unsubscribe`. {@link GridContextAtom}'s `subscribe` returns the teardown function itself, which
+ * is the shape this package exports, so it is adapted here rather than changed there.
+ */
+type GridContextSource = {
+	get: () => GridContext
+	subscribe: (listener: (value: GridContext) => void) => { unsubscribe: Unsubscribe }
+}
+
+function toSelectionSource(atom: GridContextAtom): GridContextSource {
+	return {
+		get: atom.get,
+		subscribe: (listener) => ({ unsubscribe: atom.subscribe(listener) }),
+	}
+}
+
+const selectWhole = (context: GridContext): GridContext => context
+
 export function useGridContext(): GridContext
-export function useGridContext<TSelected>(selector: (context: GridContext) => TSelected): TSelected
+export function useGridContext<TSelected>(
+	selector: (context: GridContext) => TSelected,
+	options?: DataGridSelectorOptions<TSelected>,
+): TSelected
 /**
  * Reads the grid's {@link GridContext} — the application and kit values carried alongside it.
  *
@@ -193,11 +217,11 @@ export function useGridContext<TSelected>(selector: (context: GridContext) => TS
  * it changes. With a selector it returns one slice and re-renders only when **that** slice
  * changes, which is what makes the hook usable from a cell renderer.
  *
- * **Selector contract**, identical to `useDataGridState`: the selector must return a
- * referentially stable value while the context has not changed. Field access
- * (`(c) => c.permissions`) and primitive computations (`(c) => c.permissions.canEdit`) satisfy
- * it; returning a fresh object or array on every call (`(c) => ({ ...c.permissions })`) does
- * not, and will re-render without end — derive such values with `useMemo` around this hook.
+ * **Selector contract**, identical to `useDataGridState`: the slice is compared with
+ * `options.compare`, strict equality unless one is passed. Field access (`(c) => c.permissions`)
+ * and primitive computations (`(c) => c.permissions.canEdit`) need nothing more. A selector that
+ * builds a fresh object (`(c) => ({ ...c.permissions })`) renders fine, but re-renders on every
+ * context change unless it is given `compare: shallow`.
  *
  * Throws outside `<DataGrid>`, like every other context-bound hook in this package.
  *
@@ -206,9 +230,24 @@ export function useGridContext<TSelected>(selector: (context: GridContext) => TS
  *
  * @example One slice — this cell re-renders when the permission flips, and not before
  *   const canEdit = useGridContext((c) => c.permissions.canEdit)
+ *
+ * @example A derived object
+ *   const { canEdit, canDelete } = useGridContext((c) => ({ ...c.permissions }), { compare: shallow })
  */
-export function useGridContext<TSelected>(selector?: (context: GridContext) => TSelected): GridContext | TSelected {
+export function useGridContext<TSelected>(
+	selector?: (context: GridContext) => TSelected,
+	options?: DataGridSelectorOptions<TSelected>,
+): GridContext | TSelected {
 	const atom = useDataGridTable().gridContext
-	const read = (): GridContext | TSelected => (selector ? selector(atom.get()) : atom.get())
-	return useSyncExternalStore(atom.subscribe, read, read)
+	// One adapter per atom, so `useSelector`'s subscription — keyed on the source's identity —
+	// is made once for the grid's life rather than on every render.
+	const source = useMemo(() => toSelectionSource(atom), [atom])
+	// The one cast: `compare` takes `TSelected`, and `strictFunctionTypes` will not widen a function
+	// parameter to the `GridContext | TSelected` the two forms share. Sound because the overloads
+	// only accept `options` beside a selector, so `compare` never sees the whole context.
+	return useSelector<GridContext, GridContext | TSelected>(
+		source,
+		selector ?? selectWhole,
+		options as DataGridSelectorOptions<GridContext | TSelected> | undefined,
+	)
 }

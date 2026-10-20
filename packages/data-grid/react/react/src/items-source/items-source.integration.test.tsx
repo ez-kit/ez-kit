@@ -235,6 +235,74 @@ describe('useItems — a cell’s list from a hook', () => {
 		expect(list.calls).toBeLessThanOrEqual(3)
 	})
 
+	it('does not run the hook again when the grid’s host re-renders', () => {
+		const list = createList()
+		const columns = warehouseColumn({ useItems: list.useList })
+		function Host() {
+			const [renders, setRenders] = useState(0)
+			return (
+				<>
+					<button
+						type='button'
+						onClick={() => {
+							setRenders((n) => n + 1)
+						}}
+					>
+						Re-render host {renders}
+					</button>
+					<DataGrid
+						features={TEST_FEATURES}
+						data={ORDERS}
+						columns={columns}
+						components={testComponents}
+						cellTypes={CELL_TYPES}
+					/>
+				</>
+			)
+		}
+		render(<Host />)
+		list.answer([BERLIN])
+		const callsBefore = list.calls
+
+		fireEvent.click(screen.getByRole('button', { name: /Re-render host/ }))
+		fireEvent.click(screen.getByRole('button', { name: /Re-render host/ }))
+
+		expect(screen.getByRole('button', { name: 'Re-render host 2' })).toBeInTheDocument()
+		expect(list.calls).toBe(callsBefore)
+	})
+
+	it('does not run a list’s hook again when another list starts being read', () => {
+		const visible = createList()
+		const hidden = createList()
+		const { table } = renderGrid<Order>({
+			data: ORDERS,
+			columns: createColumns<Order>([
+				{
+					accessorKey: 'id',
+					header: 'Id',
+					cell: { type: 'select', config: { useItems: hidden.useList } },
+				},
+				{
+					accessorKey: 'warehouse',
+					header: 'Warehouse',
+					cell: { type: 'select', config: { useItems: visible.useList } },
+				},
+			]),
+			cellTypes: CELL_TYPES,
+			initialState: { columnVisibility: { id: false } },
+		})
+		visible.answer([BERLIN])
+		const visibleCallsBefore = visible.calls
+		expect(hidden.calls).toBe(0)
+
+		act(() => {
+			table.setColumnVisibility({ id: true })
+		})
+
+		expect(hidden.calls).toBeGreaterThan(0)
+		expect(visible.calls).toBe(visibleCallsBefore)
+	})
+
 	it('does not run the hook of a hidden column nobody reads', () => {
 		const list = createList()
 		renderGrid<Order>({

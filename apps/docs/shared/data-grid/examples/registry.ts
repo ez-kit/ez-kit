@@ -78,6 +78,7 @@ export const exampleModules: Record<string, () => Promise<Record<string, Compone
 	'components/infinite-scroll/reset-on-query.tsx': () => import('./components/infinite-scroll/reset-on-query'),
 	'components/infinite-scroll/virtualized.tsx': () => import('./components/infinite-scroll/virtualized'),
 	'components/pagination-footer.tsx': () => import('./components/pagination-footer'),
+	'components/render-isolation.tsx': () => import('./components/render-isolation'),
 	'components/row-actions/action-component.tsx': () => import('./components/row-actions/action-component'),
 	'components/row-actions/custom-actions.tsx': () => import('./components/row-actions/custom-actions'),
 	'components/row-actions/placement.tsx': () => import('./components/row-actions/placement'),

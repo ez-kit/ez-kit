@@ -91,6 +91,7 @@ export const DocPage = {
 	LayoutPresets: 'content/docs/data-grid/layout/presets.mdx',
 	StateDefaults: 'content/docs/data-grid/state/defaults.mdx',
 	StateContext: 'content/docs/data-grid/state/context.mdx',
+	StateRendering: 'content/docs/data-grid/state/rendering.mdx',
 	EditingCreating: 'content/docs/data-grid/editing/creating.mdx',
 	EditingCrudClient: 'content/docs/data-grid/editing/crud-client.mdx',
 	EditingCrudServer: 'content/docs/data-grid/editing/crud-server.mdx',
@@ -719,6 +720,16 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			{
 				heading: 'Reading it',
 				reason: "Compares the hook's two call forms — the rows are call signatures, not keys of any config.",
+			},
+		],
+	},
+	{
+		page: DocPage.StateRendering,
+		optionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'What re-renders on what',
+				reason: 'Maps a kind of change to the components it re-renders, naming no keys.',
 			},
 		],
 	},

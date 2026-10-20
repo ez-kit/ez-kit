@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { prepareDataGridTable } from './prepare-table'
 import { TEST_FEATURES } from './test-utils'
 import { useDataGridSelector } from './use-data-grid-selector'
+import { shallow } from './utils/shallow-equal'
 
 import type { DataTable, GridFeatures } from './types'
 
@@ -177,5 +178,52 @@ describe('useDataGridSelector', () => {
 
 		expect(subscribeSpy.mock.calls.length).toBe(initial)
 		subscribeSpy.mockRestore()
+	})
+
+	describe('selectors returning derived objects', () => {
+		it('renders a fresh object without looping', () => {
+			const table = makeTable()
+
+			const { result } = renderHook(() => useDataGridSelector(table, (s) => ({ count: s.columnFilters.length })))
+
+			expect(result.current).toEqual({ count: 0 })
+		})
+
+		it('re-renders a fresh object with compare: shallow only when its fields change', () => {
+			const table = makeTable()
+			let renderCount = 0
+			const { result } = renderHook(() => {
+				renderCount++
+				return useDataGridSelector(table, (s) => ({ count: s.columnFilters.length }), { compare: shallow })
+			})
+			const baseline = renderCount
+
+			act(() => {
+				table.setGlobalFilter('whatever')
+			})
+			expect(renderCount).toBe(baseline)
+
+			act(() => {
+				table.setColumnFilters([{ id: 'name', value: 'a' }])
+			})
+			expect(renderCount).toBeGreaterThan(baseline)
+			expect(result.current).toEqual({ count: 1 })
+		})
+
+		it('compares by strict equality when no options are passed', () => {
+			const table = makeTable()
+			let renderCount = 0
+			renderHook(() => {
+				renderCount++
+				return useDataGridSelector(table, (s) => ({ count: s.columnFilters.length }))
+			})
+			const baseline = renderCount
+
+			act(() => {
+				table.setGlobalFilter('whatever')
+			})
+
+			expect(renderCount).toBeGreaterThan(baseline)
+		})
 	})
 })

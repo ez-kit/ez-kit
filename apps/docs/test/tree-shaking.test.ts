@@ -369,6 +369,8 @@ describe('@ez-kit/data-grid-react', () => {
 	const ADAPTER_ENTRY = entryOf('data-grid/react/react')
 	/** The slot `FilterPanel` stamps — present in a bundle exactly when that component is. */
 	const FILTER_PANEL_MARKER = 'filter-panel'
+	/** Bytes `shallow` may add over the root floor: its own body, with room for a comment. */
+	const SHALLOW_BUDGET = 2048
 
 	// The control: without it an absence below would also be satisfied by a build that resolved
 	// nothing. The compound namespace must still carry its members.
@@ -411,6 +413,25 @@ describe('@ez-kit/data-grid-react', () => {
 		])
 
 		expect(narrow.length).toBeLessThan(everything.length / 2)
+	})
+
+	/**
+	 * `shallow` is the comparison the selector hooks recommend for a derived object, and a cell that
+	 * reads its own store may import it and nothing else from the grid. It must cost no more than the
+	 * floor every root import already pays, and must not bring the compound.
+	 *
+	 * "Reaches nothing else" is not the claim, because it is not true of any root import: the root's
+	 * shared chunks — the selector hooks among them — survive a bundle of a single hook or helper,
+	 * so `useDataGridTable` is the floor `shallow` is measured against rather than zero.
+	 */
+	it('adds nothing beyond the root floor through the selector comparison', async () => {
+		const [comparison, floor] = await Promise.all([
+			bundledCodeOf(ADAPTER_ENTRY, ['shallow']),
+			bundledCodeOf(ADAPTER_ENTRY, ['useDataGridTable']),
+		])
+
+		expect(comparison).not.toContain(FILTER_PANEL_MARKER)
+		expect(comparison.length - floor.length).toBeLessThan(SHALLOW_BUDGET)
 	})
 
 	/**

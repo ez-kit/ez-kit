@@ -567,9 +567,19 @@ function DataGridControlled<TFeatures extends TableFeatures, TRow extends object
 		)
 	}
 
-	// Read cellTypes stored on the table by useDataGrid, merge with direct prop
+	// Read cellTypes stored on the table by useDataGrid, merge with direct prop. Memoised: every
+	// `useCellTypes()` reader — each cell among them — re-renders when this registry changes
+	// identity, so rebuilding it per render made a host re-render reach every cell in the grid.
 	const tableCellTypes = table.grid.cellTypes
-	const resolvedCellTypes = mergeCellTypes(tableCellTypes ?? {}, cellTypes ?? {})
+	const resolvedCellTypes = useMemo(
+		() => mergeCellTypes(tableCellTypes ?? {}, cellTypes ?? {}),
+		[tableCellTypes, cellTypes],
+	)
+
+	// Built once, so a re-render of the grid's host bails out at this element exactly as it does at
+	// `children`: the `useItems` hooks it runs must not be called again because something above the
+	// grid re-rendered. It takes no props and reads only the items-source store, whose value is stable.
+	const itemsSourceHost = useMemo(() => <ItemsSourceHost />, [])
 
 	// The two write-feature options, read at the **widest** instantiation.
 	//
@@ -641,7 +651,7 @@ function DataGridControlled<TFeatures extends TableFeatures, TRow extends object
 											<GridRoot>
 												{/* Renders nothing: it runs the `useItems` hooks that something on screen
 											    reads, inside every provider above so a hook may read the grid. */}
-												<ItemsSourceHost />
+												{itemsSourceHost}
 												<RowCountStatus />
 												<GridBody>{children}</GridBody>
 												{writeOptions.creating?.mode === CreatingMode.Modal && <CreatingModal />}

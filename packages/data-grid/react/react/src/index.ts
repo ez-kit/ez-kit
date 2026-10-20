@@ -124,6 +124,7 @@ export type { InfiniteController } from './data-grid/use-infinite-scroll'
 
 // Selector hook + store primitives
 export { useDataGridSelector } from './use-data-grid-selector'
+export type { DataGridSelectorOptions } from './use-data-grid-selector'
 export { useDataGridState, useDataGridTable } from './data-grid/table-context'
 // Value lists from `useItems`: read a column's list at one place, through the grid's own source.
 export { ItemsSourceSlot, useItemsSource } from './items-source'

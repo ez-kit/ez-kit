@@ -1,0 +1,108 @@
+---
+title: Rendering
+description: What re-renders when grid state, grid context or the component hosting the grid changes — and how to keep a live value from re-rendering the whole table.
+---
+
+A grid re-renders a component when a value **that component reads** changes, and nothing else.
+Sorting re-renders the body, not the toolbar. A permission flag in `context` re-renders the cells
+that select it, not the rows around them. This page explains how that works and the arrangement
+that keeps it true when your own component re-renders.
+
+## Live example
+
+<DataGridDocsExample exampleId='state-render-isolation' />
+
+Each cell shows how many times it has rendered. **Allow editing** changes host state that goes into
+`context`, and only the _Access_ column counts up. **Highlight next order** writes a store held in
+`context`. Only the two _Order_ cells whose highlight changed count up, and the component hosting
+the grid does not re-render at all. (In development React's Strict Mode renders every
+component twice, so the counts step by two.)
+
+## What re-renders on what
+
+| Change                                       | What re-renders                                                    |
+| -------------------------------------------- | ------------------------------------------------------------------ |
+| Grid state — a sort, a filter, a page        | components whose `useDataGridState` selection changed              |
+| Grid context — a value passed in `context`   | the host, then components whose `useGridContext` selection changed |
+| A store held in `context`                    | components subscribed to that store; not the host, not the grid    |
+| The host re-renders, configuration unchanged | nothing below the grid, when the layout is passed as `children`    |
+
+Every one of those rows comes from a **selector**: a component names the slice it reads, and the
+grid compares the new slice with the last one before re-rendering it.
+
+```tsx
+const sorting = useDataGridState((state) => state.sorting)
+const canEdit = useGridContext((context) => context.permissions.canEdit)
+```
+
+A selector that builds an object is fine too. Give it `compare: shallow` so a new object with the
+same fields is not counted as a change:
+
+```tsx
+import { shallow, useDataGridState } from '@ez-kit/data-grid-react'
+
+const counts = useDataGridState((state) => ({ sorted: state.sorting.length, filtered: state.columnFilters.length }), {
+	compare: shallow,
+})
+```
+
+## Pass the layout as `children`
+
+The component that renders `<DataGrid>` usually holds state of its own — a dialog flag, a search
+term, the permission it passes into `context`. When that state changes, the component re-renders,
+and so does everything it **creates** during that render.
+
+Create the layout somewhere else and hand it in as `children`. React skips an element it was
+given unchanged, so a host re-render stops at the grid's edge:
+
+```tsx
+function OrdersHost({ children }: { children: ReactNode }) {
+	const [canEdit, setCanEdit] = useState(false)
+	return (
+		<>
+			<button onClick={() => setCanEdit((value) => !value)}>Toggle editing</button>
+			<DataGrid
+				data={orders}
+				columns={columns}
+				context={{ canEdit }}
+			>
+				{children}
+			</DataGrid>
+		</>
+	)
+}
+
+export function OrdersPage() {
+	return (
+		<OrdersHost>
+			<DataGrid.Toolbar />
+			<DataGrid.Table />
+			<DataGrid.Pagination />
+		</OrdersHost>
+	)
+}
+```
+
+The grid keeps its side of this: every value it hands down — the cell-type registry, the
+components, the table itself — keeps its identity while its inputs are unchanged. You do not need
+`React.memo` around a cell or a row, and the grid does not use one.
+
+## Hoist what does not change
+
+The grid compares what you pass in by identity, not by contents. Anything rebuilt on every render
+of the host looks new every time:
+
+- **`columns`** — declare them at module scope, or in `useMemo` when they depend on props.
+- **`cellTypes`** and **`features`** — module scope.
+- **`context`** — an inline object literal is fine: the grid compares it key by key. But each key's
+  value should be stable. A nested object rebuilt per render (`context={{ permissions: { canEdit } }}`)
+  is a new value every render, and every cell selecting `permissions` re-renders. Pass the
+  primitives, or memoise the object.
+
+## Values that change often
+
+A value that changes many times a second — a live highlight, a cursor, a price feed — should not
+travel through host state at all. Put a **store** in `context` and read it with the store's own hook
+inside the cell. The store's identity never changes, so neither does the context. Only the cells
+subscribed to the store re-render when it does.
+[Grid context](/docs/data-grid/state/context#values-that-change-often) shows the code.

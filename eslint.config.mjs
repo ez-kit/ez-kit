@@ -12,6 +12,27 @@ import tseslint from 'typescript-eslint'
 
 const tsconfigRootDir = path.dirname(fileURLToPath(import.meta.url))
 
+const NO_MEMO_MESSAGE =
+	'No React.memo in the data grid. Isolate re-renders with a store selector, a value kept stable with useMemo / useCallback, or children composition — see AGENTS.md.'
+
+/**
+ * The `no-restricted-syntax` half of the data-grid `memo` ban: the named import.
+ *
+ * A constant because two blocks have to carry it. `no-restricted-syntax` set by a later block
+ * **replaces** the options an earlier one set for the same file, so the GridMessages block — whose
+ * files are a subset of the ban's — spreads this into its own list rather than dropping it.
+ *
+ * Not `no-restricted-imports` with `importNames: ['memo']`: that rule also reports every
+ * `import * as React from 'react'`, since a namespace import could reach `memo`, and the kits use
+ * that form throughout. `React.memo` itself is caught by `no-restricted-properties`.
+ */
+const NO_MEMO_IMPORT_SYNTAX = [
+	{
+		selector: "ImportDeclaration[source.value='react'] > ImportSpecifier[imported.name='memo']",
+		message: NO_MEMO_MESSAGE,
+	},
+]
+
 export default tseslint.config(
 	{
 		ignores: [
@@ -151,6 +172,24 @@ export default tseslint.config(
 		},
 	},
 	{
+		// No `React.memo` in the data-grid React packages or in the examples that teach them. Grid
+		// re-renders are isolated by three things instead: selector subscriptions (a component
+		// re-renders because the slice it selected changed), values kept stable with `useMemo` /
+		// `useCallback` (every value the grid publishes keeps its identity while its inputs do), and
+		// `children` composition (an element the host never recreates). A memo boundary hides an
+		// unstable value rather than fixing it — the per-render cell-type registry that re-rendered
+		// every cell would have stayed invisible behind one — and costs a props comparison per row
+		// and per cell on every render.
+		//
+		// Mounted before the GridMessages block below, which restates the import selector: see
+		// `NO_MEMO_IMPORT_SYNTAX` for why, and for why this is not `no-restricted-imports`.
+		files: ['packages/data-grid/react/*/src/**/*.{ts,tsx}', 'apps/docs/shared/data-grid/examples/**/*.tsx'],
+		rules: {
+			'no-restricted-syntax': ['error', ...NO_MEMO_IMPORT_SYNTAX],
+			'no-restricted-properties': ['error', { object: 'React', property: 'memo', message: NO_MEMO_MESSAGE }],
+		},
+	},
+	{
 		// No user-facing string literal in the data-grid packages: every one of them belongs in
 		// `GridMessages` (`packages/data-grid/core/src/messages`), which is the only place a
 		// consumer can replace it. Without this the literals come back one PR at a time, and a
@@ -190,6 +229,8 @@ export default tseslint.config(
 					message:
 						'User-facing text belongs in GridMessages (packages/data-grid/core/src/messages), not in a component. Read it with useGridMessages() / table.grid.messages.',
 				},
+				// Restated here because this block replaces the `memo` block's list for these files.
+				...NO_MEMO_IMPORT_SYNTAX,
 			],
 		},
 	},

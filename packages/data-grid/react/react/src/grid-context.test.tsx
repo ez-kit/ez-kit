@@ -1,15 +1,17 @@
 import { createColumns, createTable } from '@ez-kit/data-grid-core'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { createDataGrid } from './create-data-grid'
 import { DataGrid } from './data-grid/data-grid'
+import { TableProvider } from './data-grid/table-context'
 import { DataGridOptionsProvider } from './data-grid-options-context'
 import { useGridContext } from './grid-context'
 import { prepareDataGridTable } from './prepare-table'
 import { TEST_FEATURES, renderWithComponents, TEST_COLUMNS, TEST_ROWS, testComponents } from './test-utils'
 import { useDataGrid } from './use-data-grid'
+import { shallow } from './utils/shallow-equal'
 
 import type { GridFeatures } from './types'
 import type { UseDataGridConfig } from './use-data-grid'
@@ -236,6 +238,76 @@ describe('useGridContext — reactivity', () => {
 
 		expect(screen.getByTestId('slice').textContent).toBe('false')
 		expect(onRender.mock.calls.length).toBe(before)
+	})
+})
+
+describe('useGridContext — the vanilla binding', () => {
+	/** A table `prepareDataGridTable` built, whose context atom notifies on `write` synchronously. */
+	function makeVanillaTable() {
+		return prepareDataGridTable(
+			createTable<GridFeatures, TestRow>({
+				features: TEST_FEATURES,
+				data: TEST_ROWS,
+				columns: TEST_COLUMNS,
+			}),
+		)
+	}
+
+	it('re-renders a slice reader only when its slice changes', () => {
+		const table = makeVanillaTable()
+		table.gridContext.write({ tenant: 'acme', permissions: DENIED })
+		const onRender = vi.fn()
+		function SliceProbe(): ReactElement {
+			const canEdit = useGridContext((context) => context.permissions?.canEdit ?? false)
+			onRender()
+			return <div data-testid='slice'>{String(canEdit)}</div>
+		}
+		render(
+			<TableProvider table={table}>
+				<SliceProbe />
+			</TableProvider>,
+		)
+		const before = onRender.mock.calls.length
+
+		act(() => {
+			table.gridContext.write({ tenant: 'globex', permissions: DENIED })
+		})
+		expect(onRender.mock.calls.length).toBe(before)
+
+		act(() => {
+			table.gridContext.write({ tenant: 'globex', permissions: GRANTED })
+		})
+		expect(screen.getByTestId('slice').textContent).toBe('true')
+		expect(onRender.mock.calls.length).toBeGreaterThan(before)
+	})
+
+	it('re-renders a fresh-object selector with compare: shallow only when its fields change', () => {
+		const table = makeVanillaTable()
+		table.gridContext.write({ tenant: 'acme', permissions: DENIED })
+		const onRender = vi.fn()
+		function ObjectProbe(): ReactElement {
+			const picked = useGridContext((context) => ({ canEdit: context.permissions?.canEdit ?? false }), {
+				compare: shallow,
+			})
+			onRender()
+			return <div data-testid='object'>{String(picked.canEdit)}</div>
+		}
+		render(
+			<TableProvider table={table}>
+				<ObjectProbe />
+			</TableProvider>,
+		)
+		const before = onRender.mock.calls.length
+
+		act(() => {
+			table.gridContext.write({ tenant: 'globex', permissions: DENIED })
+		})
+		expect(onRender.mock.calls.length).toBe(before)
+
+		act(() => {
+			table.gridContext.write({ tenant: 'globex', permissions: GRANTED })
+		})
+		expect(screen.getByTestId('object').textContent).toBe('true')
 	})
 })
 

@@ -47,23 +47,85 @@ Until something extends it, `context` accepts `{}` and `useGridContext()` return
 
 ## Reading it
 
-`useGridContext` has two forms, and which one you use decides what re-renders.
+`useGridContext` reads the whole object or a slice of it, and which one you read decides what
+re-renders.
 
-| Form                                  | Returns          | Re-renders when                 |
-| ------------------------------------- | ---------------- | ------------------------------- |
-| `useGridContext()`                    | the whole object | any part of the context changes |
-| `useGridContext((c) => c.some.value)` | that value       | **that value** changes          |
+| Form                                                           | Returns          | Re-renders when                 |
+| -------------------------------------------------------------- | ---------------- | ------------------------------- |
+| `useGridContext()`                                             | the whole object | any part of the context changes |
+| `useGridContext((c) => c.some.value)`                          | that value       | **that value** changes          |
+| `useGridContext((c) => ({ ...c.some }), { compare: shallow })` | a new object     | one of **its fields** changes   |
 
 Prefer the selector form in anything the grid renders per row or per cell — a permission flag read
 that way re-renders one cell when the flag flips, and stays quiet for every other change.
 
-The selector must return a referentially stable value while the context has not changed. Field
-access and primitive computations qualify; building a fresh object or array on every call
-(`(c) => ({ ...c.permissions })`) does not, and will re-render without end — wrap such a value in
-`useMemo` around the hook instead. This is the same contract as
-[`useDataGridState`](/docs/data-grid/state/controlled).
+A selection is compared with strict equality, so field access and primitive computations need
+nothing more. A selector that builds a new object or array (`(c) => ({ ...c.permissions })`) works
+too, but a new object is never strictly equal to the last one, so on its own it re-renders on every
+context change. Pass `compare: shallow` and it re-renders only when one of the object's fields does:
+
+```tsx
+import { shallow, useGridContext } from '@ez-kit/data-grid-react'
+
+const { canEdit, canDelete } = useGridContext((context) => ({ ...context.permissions }), { compare: shallow })
+```
+
+This is the same contract as [`useDataGridState`](/docs/data-grid/state/controlled), which takes
+the same `compare` option.
 
 Like every other context-bound hook, `useGridContext` throws outside `<DataGrid>`.
+
+## Values that change often
+
+Every value in `context` lives in the host's state or props, so changing one re-renders the
+component that renders `<DataGrid>` — and then the readers that select it. For a permission that
+flips once a session that is nothing. For a value that changes many times a second — a live
+selection elsewhere on the page, a hovered id, a ticker — pass a **store** instead of the value.
+
+A store is an object whose identity never changes, so the grid's context never changes either.
+Only the cells that subscribe to the store re-render when it does; the host does not re-render at
+all.
+
+```tsx
+import { createStore } from '@tanstack/react-store'
+
+import type { Store } from '@tanstack/react-store'
+
+declare module '@ez-kit/data-grid-react' {
+	interface GridContext {
+		highlight: Store<{ id: string | null }>
+	}
+}
+
+const highlight = createStore({ id: null as string | null })
+
+const table = useDataGrid({ features, data, columns, context: { highlight } })
+
+// anywhere — an event handler, a socket callback — with no React state involved
+highlight.setState(() => ({ id: 'order_42' }))
+```
+
+The cell reads the store through the store library's own hook:
+
+```tsx
+import { useGridContext } from '@ez-kit/data-grid-react'
+import { useSelector } from '@tanstack/react-store'
+
+import type { CellViewCtx } from '@ez-kit/data-grid-react'
+
+function OrderCell({ row, value }: CellViewCtx<Order, string>) {
+	const highlight = useGridContext((context) => context.highlight)
+	const isHighlighted = useSelector(highlight, (state) => state.id === row.id)
+	return <span data-highlighted={isHighlighted}>{value}</span>
+}
+
+const columns = createColumns<Order>([{ accessorKey: 'id', cell: { component: OrderCell } }])
+```
+
+The grid does not care which library the store comes from. A Zustand store, a Valtio proxy or a
+TanStack store all work the same way: put the store in `context`, read it with that library's hook.
+[Rendering](/docs/data-grid/state/rendering) walks through the whole arrangement with a live
+example.
 
 ## It merges like every other option
 

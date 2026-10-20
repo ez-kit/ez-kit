@@ -1,11 +1,11 @@
-import { Component, memo, Suspense, useEffect, useSyncExternalStore } from 'react'
+import { Component, Suspense, useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
 
 import { useItemsSourceStore } from './context'
 
-import type { ItemsSourceStore } from './store'
+import type { ActiveSource, ItemsSourceStore } from './store'
 import type { ListSource } from './types'
 import type { ItemsSourceParams } from '@ez-kit/data-grid-core'
-import type { ReactNode } from 'react'
+import type { ReactElement, ReactNode } from 'react'
 
 /** The params every hook is called with today. Frozen and shared, so a hook may memoize on it. */
 const PARAMS: ItemsSourceParams = Object.freeze({})
@@ -25,10 +25,12 @@ type RunnerProps = {
  * by a condition. The result goes to the store in an effect — writing an external store during
  * render is not allowed — and the store drops a result that changed nothing.
  *
- * Memoized on primitive props, so a re-render of the grid around it does not call the hook again:
- * the hook re-runs when its own state changes, which is when its answer can have.
+ * Not re-rendered by the grid around it, so the hook is not called again: the elements that
+ * mount it are built once per active set (see {@link ActiveRunners}), and React bails out of an
+ * element it has already rendered. The hook re-runs when its own state changes, which is when its
+ * answer can have.
  */
-const SourceRunner = memo(function SourceRunner({ sourceKey, version, hook, store }: RunnerProps) {
+function SourceRunner({ sourceKey, version, hook, store }: RunnerProps) {
 	const useSource = hook
 	const { items, isLoading, error } = useSource(PARAMS)
 
@@ -37,7 +39,7 @@ const SourceRunner = memo(function SourceRunner({ sourceKey, version, hook, stor
 	}, [store, sourceKey, version, items, isLoading, error])
 
 	return null
-})
+}
 
 /**
  * What a suspended runner renders: nothing, after telling its readers the list is loading — a hook
@@ -85,29 +87,53 @@ class RunnerBoundary extends Component<RunnerBoundaryProps, { failed: boolean }>
  * current filters is how server-side counts follow them. A runner is keyed by its hook's identity
  * version and by its retry attempt: a new function is a new hook, and a hook that threw is run
  * again, and both can only happen by remounting.
+ *
+ * Takes no props and is mounted as an element the grid builds **once** (`DataGridControlled`
+ * memoises it), so a re-render of the grid's host stops here, the way it stops at `children`.
  */
-export const ItemsSourceHost = memo(function ItemsSourceHost() {
+export function ItemsSourceHost() {
 	const store = useItemsSourceStore()
 	if (store === null) return null
 	return <ActiveRunners store={store} />
-})
+}
 
+/**
+ * One runner element per active source, each built **once** and reused for as long as its source
+ * stays active under the same key. React bails out of an element it is handed again, so neither a
+ * re-render of the grid nor a change to the active set — another list starting or stopping being
+ * read — calls a runner's hook again. A new hook (`version`) or a retry (`attempt`) is a new key,
+ * which builds a new element and remounts the runner, as it must.
+ *
+ * The cache is keyed by the same string as the element's React key, and rebuilt from the active set
+ * each time that set changes, so an element for a source that left is dropped with it.
+ */
 function ActiveRunners({ store }: { store: ItemsSourceStore }) {
 	const active = useSyncExternalStore(store.subscribeActive, store.getActive, store.getActive)
-	return active.map((source) => {
-		const props = { sourceKey: source.key, version: source.version, store }
-		return (
-			<RunnerBoundary
-				key={`${source.key}#v${String(source.version)}.${String(source.attempt)}`}
-				{...props}
-			>
-				<Suspense fallback={<SuspendedRunner {...props} />}>
-					<SourceRunner
-						{...props}
-						hook={source.hook}
-					/>
-				</Suspense>
-			</RunnerBoundary>
-		)
-	})
+	const elementsRef = useRef<ReadonlyMap<string, ReactElement>>(new Map())
+	return useMemo(() => {
+		const next = new Map<string, ReactElement>()
+		for (const source of active) {
+			const key = `${source.key}#v${String(source.version)}.${String(source.attempt)}`
+			next.set(key, elementsRef.current.get(key) ?? buildRunner(store, source, key))
+		}
+		elementsRef.current = next
+		return [...next.values()]
+	}, [active, store])
+}
+
+function buildRunner(store: ItemsSourceStore, source: ActiveSource, key: string): ReactElement {
+	const props = { sourceKey: source.key, version: source.version, store }
+	return (
+		<RunnerBoundary
+			key={key}
+			{...props}
+		>
+			<Suspense fallback={<SuspendedRunner {...props} />}>
+				<SourceRunner
+					{...props}
+					hook={source.hook}
+				/>
+			</Suspense>
+		</RunnerBoundary>
+	)
 }
