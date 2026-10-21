@@ -136,6 +136,14 @@
 		"exportName": "FilterOperatorsTableExample"
 	},
 	{
+		"id": "filter-operators-icons",
+		"label": "Operators · Icons",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/filter-operators-icons.tsx",
+		"exportName": "FilterOperatorsIconsExample"
+	},
+	{
 		"id": "filter-operators-text",
 		"label": "Operators · Text",
 		"group": "filtering",

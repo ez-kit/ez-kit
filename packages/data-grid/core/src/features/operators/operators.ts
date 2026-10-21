@@ -65,9 +65,49 @@ export type FilterOperatorId = FilterOperator | (string & {})
 export type FilterOperatorDef<TValue = unknown> = {
 	id: FilterOperatorId
 	label: string
+	/**
+	 * Optional glyph the operator's control shows instead of its label — React: `icon: '≈'` or
+	 * `icon: <Waves />`.
+	 *
+	 * Typed `unknown` for the reason `SelectItem.icon` is: core renders nothing and must not name
+	 * a framework's node type. It outranks the grid's `icons.operators`, because it is stated on
+	 * the very definition it belongs to. Leave it out on a replacement for a built-in to keep that
+	 * operator's icon from the grid; with neither, the control shows `label`.
+	 */
+	icon?: unknown
 	/** When false, no value input is rendered (e.g. isEmpty). Default: true. */
 	requiresInput?: boolean
 	filterFn: (rowValue: unknown, filterValue: TValue) => boolean
+}
+
+/**
+ * A ready-made sign for each built-in operator — opt-in, not a default.
+ *
+ * The grid shows an operator's label until an icon is named for it, because a bare sign in a
+ * closed control is unreadable without a legend: operators rendered glyphs once and were moved
+ * to labels for exactly that reason (#63). This set is for a grid that wants the compact control
+ * anyway — pass it as `icons: { operators: DEFAULT_OPERATOR_ICONS }`, in one grid or in a
+ * bundle's `defaults`.
+ *
+ * One sign per {@link FilterOperator} member, whatever the column's cell type is: the set is one
+ * vocabulary, so `greaterThan` is `>` on a number column and on a date one alike, even though the
+ * date column labels it "After". Plain strings, so core stays free of any framework.
+ */
+export const DEFAULT_OPERATOR_ICONS: Readonly<Record<FilterOperator, string>> = {
+	[FilterOperator.Contains]: '*a*',
+	[FilterOperator.StartsWith]: 'a*',
+	[FilterOperator.EndsWith]: '*a',
+	[FilterOperator.Equals]: '=',
+	[FilterOperator.NotEquals]: '≠',
+	[FilterOperator.GreaterThan]: '>',
+	[FilterOperator.GreaterOrEqual]: '≥',
+	[FilterOperator.LessThan]: '<',
+	[FilterOperator.LessOrEqual]: '≤',
+	[FilterOperator.Between]: '↔',
+	[FilterOperator.In]: '∈',
+	[FilterOperator.NotIn]: '∉',
+	[FilterOperator.IsEmpty]: '∅',
+	[FilterOperator.IsNotEmpty]: '≠∅',
 }
 
 /** Structured filter value stored in TanStack columnFilters[n].value. */
@@ -272,13 +312,19 @@ export const DATE_VALUE_PRESETS: DateValuePreset[] = [
 /**
  * Table-level operator configuration when not using the simple `true` / `false` shorthand.
  *
- * `items` here is the **registry**: custom operator definitions (or overrides of built-ins)
- * that any column can then reference by id from its own
- * {@link ColumnOperatorsConfig.items}. It is not a column's offered list — a column narrows
- * what it offers on the column, where the cell type is known.
+ * `items` here is the **registry**: custom operator definitions that any column can then
+ * reference by id from its own {@link ColumnOperatorsConfig.items}. It is not a column's offered
+ * list — a column narrows what it offers on the column, where the cell type is known.
+ *
+ * A definition under a **built-in** id replaces that operator in every column that offers it:
+ * in each cell type's default set (`operators: true`) as well as in a column that names the id.
+ * It replaces it for **every cell type at once** — register `equals` and text, number, date and
+ * boolean columns all compare through your `filterFn`, so one that must behave per type checks
+ * the value it is given. Its `label` is kept as written: the grid's dictionary does not rename an
+ * operator someone replaced.
  */
 export type TableOperatorsConfig = {
-	/** Custom operators (or built-in overrides), addressable from column `items` by id. */
+	/** Custom operators, and replacements for built-in ones, addressable from column `items` by id. */
 	items?: FilterOperatorDef[]
 }
 
@@ -583,14 +629,50 @@ const ALL_BUILT_INS: FilterOperatorDef[] = [
 	...(TEXT_OPERATORS as FilterOperatorDef[]),
 ]
 
+/**
+ * The definitions a table registered through `filtering.operators.items`, by reference.
+ *
+ * The registry is one `Map`, so after {@link buildOperatorRegistry} a table's `contains` and the
+ * built-in one it replaced are indistinguishable by id. Two readers need the difference: the
+ * resolver, which lets a table's definition replace a cell type's own, and
+ * {@link localizeOperators}, which leaves its author's label alone. Marked by reference rather
+ * than by id so that a column's inline copy of a built-in (`{ ...op, filterFn }`) is still a
+ * built-in as far as the dictionary is concerned.
+ */
+const TABLE_OPERATORS = new WeakSet<FilterOperatorDef>()
+
+/** Whether `def` came from a table's `filtering.operators.items`. */
+function isTableOperator(def: FilterOperatorDef): boolean {
+	return TABLE_OPERATORS.has(def)
+}
+
 /** Builds the global registry from built-ins + optional table-level custom operators. */
 export function buildOperatorRegistry(tableOperators?: FilterOperatorDef[]): OperatorRegistry {
 	const registry = new Map<string, FilterOperatorDef>()
 	for (const op of ALL_BUILT_INS) registry.set(op.id, op)
 	if (tableOperators) {
-		for (const op of tableOperators) registry.set(op.id, op)
+		for (const op of tableOperators) {
+			TABLE_OPERATORS.add(op)
+			registry.set(op.id, op)
+		}
 	}
 	return registry
+}
+
+/** The table's definition for `id`, when the table registered one. */
+function tableOverride(registry: OperatorRegistry, id: string): FilterOperatorDef | undefined {
+	const def = registry.get(id)
+	return def !== undefined && isTableOperator(def) ? def : undefined
+}
+
+/**
+ * A cell type's default set with every id the table registered replaced by the table's
+ * definition. The same array when the table replaces nothing, so a grid with no overrides keeps
+ * the identity of the exported lists.
+ */
+function withTableOverrides(defs: FilterOperatorDef[], registry: OperatorRegistry): FilterOperatorDef[] {
+	const next = defs.map((def) => tableOverride(registry, def.id) ?? def)
+	return next.some((def, index) => def !== defs[index]) ? next : defs
 }
 
 const IS_DEV = process.env.NODE_ENV !== 'production'
@@ -598,9 +680,15 @@ const IS_DEV = process.env.NODE_ENV !== 'production'
 /**
  * Resolves the final operator list for a column from its config.
  *
- * Prefers cell-type-specific operators over the global registry for same-id lookups, so
- * `equals` on a number column compares numbers and `equals` on a date column compares dates.
- * That is what makes one {@link FilterOperator} vocabulary work across cell types.
+ * Prefers cell-type-specific operators over the built-ins in the global registry for same-id
+ * lookups, so `equals` on a number column compares numbers and `equals` on a date column compares
+ * dates. That is what makes one {@link FilterOperator} vocabulary work across cell types.
+ *
+ * A definition the **table** registered under a built-in id beats both, in the default set as
+ * well as in a column's `items`: an author who registers `contains` means every column that
+ * offers `contains`, whatever its cell type. The built-in registry order above cannot express
+ * that — it would let the text `equals` replace the number one — which is why a table's
+ * definitions are told apart by reference (see {@link TABLE_OPERATORS}).
  *
  * An id that resolves to nothing still yields a pass-through stub — the column keeps working
  * — but it warns in development. Silently, this was the sharpest edge in the whole filtering
@@ -616,14 +704,14 @@ export function resolveColumnOperators(
 	columnId?: string,
 ): FilterOperatorDef[] {
 	if (operatorsConfig === true || !operatorsConfig.items) {
-		return cellTypeOperators ?? []
+		return cellTypeOperators ? withTableOverrides(cellTypeOperators, registry) : []
 	}
 
 	const cellTypeById = cellTypeOperators ? new Map(cellTypeOperators.map((op) => [op.id, op])) : undefined
 
 	return operatorsConfig.items.map((item): FilterOperatorDef => {
 		if (typeof item !== 'string') return item
-		const resolved = cellTypeById?.get(item) ?? registry.get(item)
+		const resolved = tableOverride(registry, item) ?? cellTypeById?.get(item) ?? registry.get(item)
 		if (resolved) return resolved
 		if (IS_DEV) {
 			console.warn(
@@ -695,7 +783,8 @@ const OPERATOR_GROUP_BY_CELL_TYPE: Record<string, 'text' | 'number' | 'date' | '
  * The list itself is settled in core, where the ids and the comparisons live; the wording is
  * the consumer's, so it is applied here rather than baked into the exported arrays. An id the
  * dictionary does not name — a custom operator registered through `filtering.operators.items` —
- * keeps the `label` its author wrote.
+ * keeps the `label` its author wrote, and so does a built-in id the table registered a definition
+ * for: whoever replaced `contains` took on its wording along with its comparison.
  *
  * Returns the same array when nothing changed, so a grid on the English default does not
  * re-create the list on every render.
@@ -713,6 +802,7 @@ export function localizeOperators(
 	const multi = messages.multi as Record<string, string | undefined>
 
 	const next = defs.map((def) => {
+		if (isTableOperator(def)) return def
 		const label = group[def.id] ?? empty[def.id] ?? multi[def.id]
 		return label === undefined || label === def.label ? def : { ...def, label }
 	})

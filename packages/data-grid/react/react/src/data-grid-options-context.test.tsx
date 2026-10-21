@@ -250,3 +250,51 @@ describe('write features are enabled by their callback', () => {
 		expect(result.current.options.creating).toBeUndefined()
 	})
 })
+
+describe('icons.operators across the option layers', () => {
+	const config: UseDataGridConfig<GridFeatures, User> = { features: TEST_FEATURES, data: USERS, columns: COLUMNS }
+
+	it('replaces only the icons the upper layer names', () => {
+		const { result } = renderHook(
+			() =>
+				useDataGrid<GridFeatures, User>(config, {
+					icons: { operators: { equals: 'kit=', contains: 'kit*' } },
+				}),
+			{
+				wrapper: ({ children }: { children: ReactNode }) => (
+					<DataGridOptionsProvider defaults={{ icons: { operators: { contains: 'app*' } } }}>
+						{children}
+					</DataGridOptionsProvider>
+				),
+			},
+		)
+		expect(result.current.grid.icons.operators).toEqual({ equals: 'kit=', contains: 'app*' })
+	})
+
+	it('lets the instance beat the provider', () => {
+		const { result } = renderHook(
+			() => useDataGrid<GridFeatures, User>({ ...config, icons: { operators: { equals: 'mine' } } }),
+			{
+				wrapper: ({ children }: { children: ReactNode }) => (
+					<DataGridOptionsProvider defaults={{ icons: { operators: { equals: 'app' } } }}>
+						{children}
+					</DataGridOptionsProvider>
+				),
+			},
+		)
+		expect(result.current.grid.icons.operators.equals).toBe('mine')
+	})
+
+	it('switches nothing on', () => {
+		const { result } = renderHook(() =>
+			useDataGrid<GridFeatures, User>(config, { icons: { operators: { equals: '==' } } }),
+		)
+		expect(result.current.getColumn('name')?.getCanFilter()).toBe(false)
+		expect(result.current.getColumn('name')?.columnDef.meta?.filtering).toBeUndefined()
+	})
+
+	it('resolves to an empty set when no layer names one', () => {
+		const { result } = renderHook(() => useDataGrid<GridFeatures, User>(config))
+		expect(result.current.grid.icons).toEqual({ operators: {} })
+	})
+})

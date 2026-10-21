@@ -417,24 +417,49 @@ function TestPagination({
 	)
 }
 function TestOperatorSelect({ operators, currentOperatorId, onChange }: OperatorSelectProps) {
+	const messages = useGridMessages()
+	const [open, setOpen] = useState(false)
+	const current = operators.find((op) => op.id === currentOperatorId)
+	const label = current?.label ?? currentOperatorId
 	return (
-		<select
-			value={currentOperatorId}
-			onChange={(e) => {
-				onChange(e.target.value)
-			}}
-		>
-			{operators.map((op) => (
-				<option
-					key={op.id}
-					value={op.id}
+		<>
+			<button
+				type='button'
+				aria-label={messages.filtering.operatorTrigger({ label })}
+				aria-haspopup='menu'
+				aria-expanded={open}
+				onClick={() => {
+					setOpen((was) => !was)
+				}}
+			>
+				{current?.icon ?? label}
+			</button>
+			{open ? (
+				<div
+					role='menu'
+					aria-label={messages.filtering.operator}
 				>
-					{op.label}
-				</option>
-			))}
-		</select>
+					{operators.map((op) => (
+						<button
+							key={op.id}
+							type='button'
+							role='menuitemradio'
+							aria-checked={op.id === currentOperatorId}
+							onClick={() => {
+								onChange(op.id)
+								setOpen(false)
+							}}
+						>
+							{op.icon === undefined ? null : <span aria-hidden>{op.icon}</span>}
+							{op.label}
+						</button>
+					))}
+				</div>
+			) : null}
+		</>
 	)
 }
+
 function TestBetweenInput({ value, onChange, type, slider }: BetweenInputProps) {
 	const inputType = type === 'number' ? 'number' : 'date'
 	const inputs = (

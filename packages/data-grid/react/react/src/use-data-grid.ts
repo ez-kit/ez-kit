@@ -33,6 +33,7 @@ import type {
 	ExpandingConfig,
 	FeatureToggle,
 	FilteringConfig,
+	FilterOperatorId,
 	GlobalFilteringConfig,
 	LoadMoreDirection,
 	MultiSortConfig,
@@ -485,6 +486,33 @@ export type LayoutClassNames = {
 }
 
 /**
+ * Icons the grid renders, by what they stand for. Purely visual, and — unlike a feature's
+ * config object — switches nothing on: `icons: { operators }` in a kit's defaults does not give
+ * every grid of the bundle operator filters.
+ *
+ * A bag of sets rather than one flat map so that the next set of icons joins it instead of
+ * arriving as another root-level option. Each set merges per key across the option layers, like
+ * every other option: an app that names one operator's icon keeps the kit's others.
+ */
+export type GridIcons = {
+	/**
+	 * The icon of each filter operator, by operator id — what the operator button shows, and what
+	 * each entry of its menu shows beside the label.
+	 *
+	 * An `icon` written on the operator definition itself beats it. An operator with an icon from
+	 * neither shows its label — the default for every built-in, since a bare sign in a closed
+	 * control needs a legend. Core's `DEFAULT_OPERATOR_ICONS` is a ready set of signs to pass here.
+	 *
+	 * @example
+	 * ```tsx
+	 * icons: { operators: DEFAULT_OPERATOR_ICONS }
+	 * icons: { operators: { greaterOrEqual: <ArrowUpRight />, contains: <TextSearch /> } }
+	 * ```
+	 */
+	operators?: Partial<Record<FilterOperatorId, ReactNode>>
+}
+
+/**
  * Presentational layout of the grid shell. Purely visual — nothing here changes the row model.
  */
 export type LayoutConfig = {
@@ -702,6 +730,13 @@ export type UseDataGridConfig<
 	 */
 	messages?: PartialGridMessages
 	/**
+	 * Replaces any of the icons the grid renders. See {@link GridIcons}.
+	 *
+	 * Set it in `createDataGrid({ defaults })` or on {@link DataGridOptionsProvider} to change the
+	 * icons of every grid below it, here to change one grid's.
+	 */
+	icons?: GridIcons
+	/**
 	 * Pagination config. Page-based by default; set `mode: PaginationMode.Infinite` for infinite
 	 * scroll. The React layer adds `trigger` / `threshold` detection tuning on top of
 	 * the headless {@link PaginationConfig}.
@@ -903,6 +938,7 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 		onStateChange,
 		layout,
 		messages: messageOverrides,
+		icons,
 		ordering: rawOrdering,
 		rowProps,
 		context,
@@ -1347,6 +1383,7 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 	const grid: ResolvedGridOptions = {
 		cellTypes,
 		messages,
+		icons: { operators: icons?.operators ?? {} },
 		// Core's three, read straight off the bag `createTableOptions` returned rather than off the
 		// previous `table.grid`. Reading them back was only ever necessary because `createTable`
 		// wrote them onto the table before this layer overwrote it wholesale; with the resolver

@@ -352,8 +352,14 @@ export type GridMessages = {
 		 * its own `filtering.placeholder` hint.
 		 */
 		placeholder: (ctx: FilterPlaceholderContext) => string
-		/** Accessible name of the operator select. */
+		/** Accessible name of the operator menu — the list of a filter's operators. */
 		operator: string
+		/**
+		 * Accessible name of the button that opens the operator menu. It has to carry the current
+		 * operator: the button shows a sign (`≥`, `*a*`) or a clipped label, and neither reads well
+		 * aloud.
+		 */
+		operatorTrigger: (ctx: FilterOperatorTriggerContext) => string
 		/** What a filter chip reads when the column carries no value yet. */
 		any: string
 		/** Clear this column's filter. */
@@ -639,6 +645,12 @@ export type FilterPlaceholderContext = {
 	 * What a reader knows the filter by: the column's header when it is a string, else its id; a
 	 * field's `header`. The default dictionary names the filter with this, not with the id.
 	 */
+	label: string
+}
+
+/** What {@link GridMessages.filtering.operatorTrigger} is given. */
+export type FilterOperatorTriggerContext = {
+	/** The current operator's label, as its menu item reads it. */
 	label: string
 }
 

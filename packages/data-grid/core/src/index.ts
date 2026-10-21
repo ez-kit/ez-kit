@@ -77,6 +77,7 @@ export { defaultMessages, resolveMessages } from './messages'
 export type {
 	CountContext,
 	DraftSummaryContext,
+	FilterOperatorTriggerContext,
 	FilterPlaceholderContext,
 	GridMessages,
 	OrderingColumnContext,
@@ -194,6 +195,8 @@ export {
 	DATE_OPERATORS,
 	DATE_VALUE_PRESETS,
 	DATE_RANGE_PRESETS,
+	// Opt-in signs for the built-ins — a ready value for the React layer's `icons.operators`.
+	DEFAULT_OPERATOR_ICONS,
 	DEFAULT_OPERATOR_ID_BY_TYPE,
 	DEFAULT_OPERATORS_BY_TYPE,
 	EMPTY_OPERATORS,

@@ -67,6 +67,7 @@ export const exampleModules: Record<string, () => Promise<Record<string, Compone
 	'components/filter-operators-between-slider.tsx': () => import('./components/filter-operators-between-slider'),
 	'components/filter-operators-date-between.tsx': () => import('./components/filter-operators-date-between'),
 	'components/filter-operators-date.tsx': () => import('./components/filter-operators-date'),
+	'components/filter-operators-icons.tsx': () => import('./components/filter-operators-icons'),
 	'components/filter-operators-number.tsx': () => import('./components/filter-operators-number'),
 	'components/filter-operators-table.tsx': () => import('./components/filter-operators-table'),
 	'components/filter-operators-text.tsx': () => import('./components/filter-operators-text'),

@@ -3,12 +3,14 @@ import { describe, expect, it } from 'vitest'
 import { defaultMessages, resolveMessages } from '../../messages'
 
 import {
+	buildOperatorRegistry,
 	DATE_OPERATORS,
 	DATE_RANGE_PRESETS,
 	FilterOperator,
 	localizeDatePresets,
 	localizeOperators,
 	NUMBER_OPERATORS,
+	resolveColumnOperators,
 	TEXT_OPERATORS,
 } from './operators'
 
@@ -64,6 +66,21 @@ describe('localizeOperators', () => {
 		const custom: FilterOperatorDef[] = [{ id: 'fuzzy', label: 'Fuzzy', filterFn: () => true }]
 
 		expect(localizeOperators(custom, 'text', defaultMessages.operators)).toBe(custom)
+	})
+
+	it('leaves the label of a built-in the table overrode, and still localizes a column’s inline copy', () => {
+		const messages = resolveMessages({
+			operators: { text: { ...defaultMessages.operators.text, contains: 'Содержит' } },
+		})
+		const override: FilterOperatorDef = { id: FilterOperator.Contains, label: 'Похоже на', filterFn: () => true }
+		const registry = buildOperatorRegistry([override])
+		const resolved = resolveColumnOperators(true, registry, TEXT_OPERATORS as FilterOperatorDef[])
+		const inlineCopy: FilterOperatorDef = { ...(TEXT_OPERATORS[0] as FilterOperatorDef), filterFn: () => true }
+
+		expect(labelOf(localizeOperators(resolved, 'text', messages.operators), FilterOperator.Contains)).toBe('Похоже на')
+		expect(labelOf(localizeOperators([inlineCopy], 'text', messages.operators), FilterOperator.Contains)).toBe(
+			'Содержит',
+		)
 	})
 
 	it('falls back to the text group for an unknown cell type', () => {

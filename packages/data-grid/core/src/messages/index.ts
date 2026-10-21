@@ -3,6 +3,7 @@ export { resolveMessages } from './resolve'
 export type {
 	CountContext,
 	DraftSummaryContext,
+	FilterOperatorTriggerContext,
 	FilterPlaceholderContext,
 	GridMessages,
 	OrderingColumnContext,

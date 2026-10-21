@@ -1,63 +1,83 @@
 'use client'
 
 import { useGridMessages } from '@ez-kit/data-grid-react/kit'
-import { ListBox, Select } from '@heroui/react'
+import { Button, Dropdown, Label } from '@heroui/react'
 
 import { KIT_CLASS_NAME } from '../../lib/kit-class-name'
 
-import type { OperatorSelectProps } from '@ez-kit/data-grid-react'
+import type { FilterOperatorOption, OperatorSelectProps } from '@ez-kit/data-grid-react'
+import type { Selection } from '@heroui/react'
 
-/** `.select` is a stretched flex item inside `header-extras`; `w-fit` keeps the trigger
- *  compact instead of spanning the column like a second filter input. */
-const SELECT_CLASS = 'w-fit'
-/** Neutralises the HeroUI field look (`min-h-9 border bg-field shadow-field px-3 py-2`)
- *  so the operator reads as an inline affordance, matching the shadcn flavour.
- *  `items-center` is load-bearing: `.select__trigger` is a bare `inline-flex`, so its items
- *  stretch and the single line of text renders at the *top* of the box. HeroUI never sees
- *  that because `min-h-9 py-2` leaves the line no room to sit off-centre — dropping the
- *  padding here exposes it, and the text drifts above the vertically centred indicator.
- *  Gap and padding assume an in-flow indicator; see INDICATOR_CLASS. */
-const TRIGGER_CLASS = 'h-7 min-h-0 items-center gap-1 border-0 bg-transparent px-1.5 py-0 shadow-none'
-/** HeroUI positions the chevron out of flow (`absolute inset-y-0 right-2`) and reserves room
- *  for it with `pr-7` on the trigger — spacing tuned for a 36px-tall field, which leaves a
- *  visible dead zone at this size. Putting it back in flow lets the trigger's `gap` and
- *  padding do the spacing, so nothing has to be restated. The utilities layer wins over the
- *  `components`-layer rule these override. */
-const INDICATOR_CLASS = 'static size-3.5'
-/** HeroUI sets a font-size on `.select__value` itself (`text-base sm:text-sm`), so a
- *  `text-xs` on the trigger would never cascade in — it has to land on the value. */
-const VALUE_CLASS = 'text-xs'
-const ITEM_CLASS = 'text-xs'
+/** Matches the field beside it: HeroUI fields are `min-h-9`. */
+const TRIGGER_CLASS = 'h-9 min-w-9 shrink-0 text-xs font-normal'
+/** A label stands in for a missing icon, so it is clipped rather than allowed to take the row. */
+const TRIGGER_LABEL_CLASS = 'max-w-28 px-2'
+const ITEM_ICON_CLASS = 'w-6 shrink-0 text-center text-muted'
 
+/**
+ * The operator switch, first in the filter's row.
+ *
+ * It shows the current operator's icon when the grid names one and its label otherwise — clipped,
+ * because a label as long as "Greater than or equal" would take the row from the value control.
+ * The full label stays in the accessible name and in the menu.
+ *
+ * Unlike the shadcn flavour it carries no tooltip. HeroUI's `Tooltip.Trigger` wraps its child in a
+ * focusable `div`, and the trigger button has to be a direct child of `Dropdown` — wrapped, it is
+ * no longer the menu's trigger. The accessible name and the menu already hold the full label.
+ *
+ * The button is a direct child of `Dropdown` for the same reason the kit's `Menu` gives:
+ * `Dropdown.Trigger` would render a second `<button>` around it. The entries go through `items`
+ * and a render prop, per this kit's collection rule: a column's operator set can change shape, and
+ * the model hands out fresh option objects every render, which is what that cache keys on.
+ */
 export function OperatorSelect({ operators, currentOperatorId, onChange }: OperatorSelectProps) {
 	const messages = useGridMessages()
+	const current = operators.find((op) => op.id === currentOperatorId)
+	const label = current?.label ?? currentOperatorId
+	const icon = current?.icon
 	return (
-		<Select
-			className={SELECT_CLASS}
-			value={currentOperatorId}
-			aria-label={messages.filtering.operator}
-			onChange={(value) => {
-				if (value != null) onChange(String(value))
-			}}
-		>
-			<Select.Trigger className={TRIGGER_CLASS}>
-				<Select.Value className={VALUE_CLASS} />
-				<Select.Indicator className={INDICATOR_CLASS} />
-			</Select.Trigger>
-			<Select.Popover className={KIT_CLASS_NAME}>
-				<ListBox>
-					{operators.map((op) => (
-						<ListBox.Item
-							key={op.id}
+		<Dropdown>
+			<Button
+				variant='tertiary'
+				aria-label={messages.filtering.operatorTrigger({ label })}
+				className={icon === undefined ? `${TRIGGER_CLASS} ${TRIGGER_LABEL_CLASS}` : TRIGGER_CLASS}
+				{...(icon === undefined ? {} : { isIconOnly: true })}
+			>
+				{icon ?? <span className='truncate'>{label}</span>}
+			</Button>
+			<Dropdown.Popover className={KIT_CLASS_NAME}>
+				<Dropdown.Menu
+					aria-label={messages.filtering.operator}
+					items={operators}
+					selectionMode='single'
+					selectedKeys={new Set([currentOperatorId])}
+					disallowEmptySelection
+					onSelectionChange={(keys: Selection) => {
+						if (keys === 'all') return
+						const [next] = keys
+						if (next !== undefined) onChange(String(next))
+					}}
+				>
+					{(op: FilterOperatorOption) => (
+						<Dropdown.Item
 							id={op.id}
 							textValue={op.label}
-							className={ITEM_CLASS}
+							className='text-xs'
 						>
-							{op.label}
-						</ListBox.Item>
-					))}
-				</ListBox>
-			</Select.Popover>
-		</Select>
+							{op.icon === undefined ? null : (
+								<span
+									aria-hidden
+									className={ITEM_ICON_CLASS}
+								>
+									{op.icon}
+								</span>
+							)}
+							<Label>{op.label}</Label>
+							<Dropdown.ItemIndicator />
+						</Dropdown.Item>
+					)}
+				</Dropdown.Menu>
+			</Dropdown.Popover>
+		</Dropdown>
 	)
 }

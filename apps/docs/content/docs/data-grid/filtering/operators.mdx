@@ -3,7 +3,7 @@ title: Filter Operators
 description: Switch the matching strategy per filter — equals, contains, starts with, between, before, after, and custom predicates.
 ---
 
-Each column can expose a list of operators the user picks from when filtering — `contains`, `equals`, `startsWith`, `gt`, `lt`, `between`, and more. Operators are opt-in: a column gets a selector from its own `filtering.operators`, or from the table-wide switch below. The default set is picked from the column's `cell.type`.
+Each column can expose a list of operators the user picks from when filtering — `contains`, `equals`, `startsWith`, `greaterThan`, `lessThan`, `between`, and more. Operators are opt-in: a column gets a selector from its own `filtering.operators`, or from the table-wide switch below. The default set is picked from the column's `cell.type`.
 
 ## Usage
 
@@ -36,6 +36,49 @@ the examples below do.
 
 <DataGridDocsExample exampleId='filter-operators-table' />
 
+### The operator control
+
+The operator sits first in the filter's row, before the value control, and never on a row of its
+own — so a column with operators is exactly as tall as one without, and **Department** above
+lines up with the two beside it. It is a button showing the current operator's label, clipped to
+its width; pressing it opens a menu of every operator the column offers, the current one checked.
+An operator that takes no value — `isEmpty`, `isNotEmpty` — keeps the row: its label stands where
+the input would.
+
+The button's accessible name carries the operator, since a clipped label or an icon reads badly
+aloud: it comes from `messages.filtering.operatorTrigger`, `Filter operator: Contains` by default.
+The menu is named by `messages.filtering.operator`. See [Localization](/docs/data-grid/localization).
+
+### Icons
+
+By default every operator shows its label. A sign alone in a closed control needs a legend to be
+read, which is why the grid does not show one unless you ask. Ask with `icons.operators`, a map
+from operator id to anything React renders — and `DEFAULT_OPERATOR_ICONS` is a ready set of signs
+for the built-ins (`=`, `≠`, `>`, `≥`, `*a*`, `↔`, `∈`, `∅`, …):
+
+```tsx
+import { DEFAULT_OPERATOR_ICONS } from '@ez-kit/data-grid-core'
+;<DataGrid
+	features={features}
+	data={data}
+	columns={columns}
+	filtering={{ operators: true }}
+	icons={{ operators: DEFAULT_OPERATOR_ICONS }}
+/>
+```
+
+<DataGridDocsExample exampleId='filter-operators-icons' />
+
+The button then shows the icon, and each menu entry shows it beside the label. Name only the ids
+you want — the rest keep their label — and use your own icons the same way:
+`icons: { operators: { greaterOrEqual: <ArrowUpRight />, contains: <TextSearch /> } }`.
+
+`icons` is a top-level option rather than part of `filtering`, because it switches nothing on:
+written in a bundle's `createDataGrid({ defaults })` or on a `DataGridOptionsProvider`, it changes
+the icons of every grid below and gives none of them filters. The layers merge per id, so an app
+that names one icon keeps the kit's others. An `icon` written on an operator's own definition beats
+all of them.
+
 ### Text operators
 
 Enable the full text operator set with `filtering: { operators: true }`, or pass an explicit `items` list to restrict it — here **Department** offers only `contains`, `equals`, `isEmpty`, and `isNotEmpty`.
@@ -44,7 +87,7 @@ Enable the full text operator set with `filtering: { operators: true }`, or pass
 
 ### Number operators
 
-Numeric columns (`cell: { type: 'number' }`) expose comparison operators (`eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `between`). Use `defaultOperator` to pick the one selected first — **Salary** defaults to `gte`.
+Numeric columns (`cell: { type: 'number' }`) expose comparison operators (`equals`, `notEquals`, `greaterThan`, `greaterOrEqual`, `lessThan`, `lessOrEqual`, `between`). Use `defaultOperator` to pick the one selected first — **Salary** defaults to `greaterOrEqual`.
 
 <DataGridDocsExample exampleId='filter-operators-number' />
 
@@ -124,13 +167,19 @@ column addresses by id:
 
 An id listed on a column resolves against its cell type's own operators first, then the
 registry — which is why `equals` compares numbers on a number column and dates on a date one.
-A table-level definition sharing a built-in id replaces that built-in everywhere.
+
+A table-level definition sharing a built-in id **replaces that built-in in every column that
+offers it**: in each cell type's default set (`operators: true`) as well as in a column that names
+the id. It replaces it for every cell type at once — register `equals` and text, number, date and
+boolean columns all compare through your `filterFn`, so one that must behave per type checks the
+value it is given. Its `label` is kept as written: the grid's dictionary does not rename an
+operator you replaced.
 
 ## `TableOperatorsConfig`
 
-| Option  | Type                  | Description                                                                                                                                                           |
-| ------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `items` | `FilterOperatorDef[]` | Custom operators (or overrides of built-ins), addressable by id from any column's `filtering.operators.items`. Writing the object switches operators on, like `true`. |
+| Option  | Type                  | Description                                                                                                                                                                                                   |
+| ------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `items` | `FilterOperatorDef[]` | Custom operators, and replacements for built-ins in every cell type that offers them, addressable by id from any column's `filtering.operators.items`. Writing the object switches operators on, like `true`. |
 
 ## `ColumnOperatorsConfig`
 
@@ -156,8 +205,15 @@ Number-only. Date presets are configured on the column instead, through
 | --------------- | --------------------------------------------- | ----------------------------------------------------------------------------- |
 | `id`            | `FilterOperatorId`                            | Operator id, referenced from `items`. A `FilterOperator` member, or your own. |
 | `label`         | `string`                                      | Label shown in the operator selector.                                         |
+| `icon`          | `ReactNode`                                   | Shown in place of the label. Beats the grid's `icons.operators` for this id.  |
 | `requiresInput` | `boolean`                                     | When `false`, no value input is rendered (e.g. `isEmpty`). Default `true`.    |
 | `filterFn`      | `(rowValue: unknown, filterValue) => boolean` | Matching predicate.                                                           |
+
+## `GridIcons`
+
+| Option      | Type                                           | Description                                                                                         |
+| ----------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `operators` | `Partial<Record<FilterOperatorId, ReactNode>>` | Each operator's icon, by id. Unnamed ids show their label. `DEFAULT_OPERATOR_ICONS` is a ready set. |
 
 ## Source
 

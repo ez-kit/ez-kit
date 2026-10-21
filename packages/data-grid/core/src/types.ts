@@ -214,8 +214,9 @@ export type FilteringConfig = FeatureToggle & {
 	 *   `cell.type`
 	 * - `false` — no column gets one; `column.filtering.operators` is ignored, wherever it
 	 *   says otherwise
-	 * - {@link TableOperatorsConfig} — registers custom definitions (or overrides of
-	 *   built-ins) and switches the feature on, exactly as `true` does. The object form of a
+	 * - {@link TableOperatorsConfig} — registers custom definitions (or replacements for
+	 *   built-ins, in every cell type that offers them) and switches the feature on, exactly as
+	 *   `true` does. The object form of a
 	 *   feature always defaults the way its bare `true` does, so that adding a custom
 	 *   operator to a working `operators: true` cannot silently take the selectors away.
 	 *

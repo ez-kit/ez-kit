@@ -103,10 +103,11 @@ describe('renderFilterInput — multi-value (in / notIn) branch', () => {
 describe('OperatorSelect — operator options read as text labels', () => {
 	it('renders every operator option as its English label, with no symbol glyphs', () => {
 		setup()
+		fireEvent.click(screen.getByRole('button', { name: /^Filter operator:/ }))
 
 		// A `select` column resolves to IN_OPERATORS + the text empty operators.
 		for (const label of ['Is any of', 'Is none of', 'Is empty', 'Is not empty']) {
-			expect(screen.getByRole('option', { name: label })).toBeInTheDocument()
+			expect(screen.getByRole('menuitemradio', { name: label })).toBeInTheDocument()
 		}
 
 		// The glyphs these operators used to render (∈ / ∉ / ∅ / ≠∅) are gone.
@@ -153,11 +154,10 @@ function setupDate(): DataTable<GridFeatures, DateRow> {
 	return table
 }
 
-/** The operator control is an unlabelled `<select>` in the test kit — the date column has one. */
-function selectOperator(operatorId: string): void {
-	const [select] = screen.getAllByRole('combobox')
-	if (!select) throw new Error('expected an operator select')
-	fireEvent.change(select, { target: { value: operatorId } })
+/** Picks an operator by its label through the test kit's menu button — the date column has one. */
+function selectOperator(label: string): void {
+	fireEvent.click(screen.getByRole('button', { name: /^Filter operator:/ }))
+	fireEvent.click(screen.getByRole('menuitemradio', { name: label }))
 }
 
 describe('renderFilterInput — date presets', () => {
@@ -172,7 +172,7 @@ describe('renderFilterInput — date presets', () => {
 
 	it('offers the single dates to an operator that takes one value', () => {
 		setupDate()
-		selectOperator('equals')
+		selectOperator('Equals')
 
 		expect(screen.getByRole('button', { name: 'A week ago' })).toBeInTheDocument()
 		// A range means nothing to an operator that compares against one date.
@@ -181,7 +181,7 @@ describe('renderFilterInput — date presets', () => {
 
 	it('writes the date itself when a single-date preset is picked', () => {
 		const table = setupDate()
-		selectOperator('equals')
+		selectOperator('Equals')
 
 		fireEvent.click(screen.getByRole('button', { name: 'Today' }))
 
@@ -251,8 +251,8 @@ describe('renderFilterInput — cell-type filter renderer', () => {
 		const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
 
 		setupDate()
-		selectOperator('equals')
-		selectOperator('between')
+		selectOperator('Equals')
+		selectOperator('Between')
 
 		expect(error).not.toHaveBeenCalled()
 		error.mockRestore()
@@ -278,7 +278,7 @@ describe('renderFilterInput — clearing one column', () => {
 
 	it('clears a column whose operator takes a single date', () => {
 		const table = setupDate()
-		selectOperator('equals')
+		selectOperator('Equals')
 		fireEvent.click(screen.getByRole('button', { name: 'Today' }))
 		expect(table.getColumn('joinedAt')?.getFilterValue()).toBeDefined()
 

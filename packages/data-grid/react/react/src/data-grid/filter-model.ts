@@ -10,9 +10,12 @@ import {
 } from '../items-source'
 
 import { presetsForOperator } from './date-presets'
+import { withOperatorIcons } from './operator-icons'
 
 import type { CellTypeRegistry } from '../cell-types-context'
 import type { ItemsLists, ListSnapshot, ListItem, ListSpec } from '../items-source'
+import type { ResolvedGridOptions } from '../resolved-options'
+import type { FilterOperatorOption } from '../types'
 import type { FilterTarget, FilterTargetMeta } from './filter-target'
 import type {
 	BetweenOperatorConfig,
@@ -64,7 +67,15 @@ export type FilterModelContext = {
 	tableDebounce: number
 	/** The kit's cell-type registry — it decides whether a project cell type draws its own filter. */
 	cellTypes: CellTypeRegistry
+	/**
+	 * The grid's resolved `icons` — each operator's icon is settled from them. Omitted, an operator
+	 * has only the icon written on it.
+	 */
+	icons?: ResolvedGridOptions['icons']
 }
+
+/** What {@link FilterModelContext.icons} means when a caller leaves it out. */
+const NO_ICONS: ResolvedGridOptions['icons'] = { operators: {} }
 
 type FilterModelBase = {
 	/** The filter's `columnFilters` key — the column id or the field id. */
@@ -113,8 +124,11 @@ type FilterModelBase = {
 /** A filter that is an operator plus a value — what a filter panel edits as one entry. */
 export type OperatorFilterModel = FilterModelBase & {
 	hasOperators: true
-	/** The column's operators, labelled from the grid's dictionary. */
-	operators: FilterOperatorDef[]
+	/**
+	 * The column's operators, labelled from the grid's dictionary, each with the icon its control
+	 * shows — see {@link FilterOperatorOption}.
+	 */
+	operators: FilterOperatorOption[]
 	defaultOperator: FilterOperatorId | undefined
 	/** The current value's operator, else {@link OperatorFilterModel.defaultOperator}. */
 	operator: FilterOperatorId
@@ -409,13 +423,13 @@ export function filterName(target: FilterTarget, messages: GridMessages): string
  */
 export function resolveFilter(
 	target: FilterTarget,
-	{ messages, tableDebounce, cellTypes }: FilterModelContext,
+	{ messages, tableDebounce, cellTypes, icons = NO_ICONS }: FilterModelContext,
 ): FilterModel {
 	const { meta } = target
 	const filteringMeta = meta.filtering
 	const cellType = meta.cell?.type
 	const operators = filteringMeta?.operators
-		? localizeOperators(filteringMeta.operators, cellType, messages.operators)
+		? withOperatorIcons(localizeOperators(filteringMeta.operators, cellType, messages.operators), icons)
 		: []
 	const rawValue = target.getValue()
 	const valueEditor = valueEditorOf(meta, filteringMeta?.component !== undefined, cellTypes)

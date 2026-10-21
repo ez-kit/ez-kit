@@ -132,6 +132,7 @@ export const defaultMessages: GridMessages = {
 		trigger: 'Filter',
 		placeholder: ({ label }) => `Filter ${label}…`,
 		operator: 'Filter operator',
+		operatorTrigger: ({ label }) => `Filter operator: ${label}`,
 		any: 'Any',
 		clear: 'Clear',
 		clearAll: 'Clear filters',

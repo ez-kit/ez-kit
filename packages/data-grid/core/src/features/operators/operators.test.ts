@@ -1,10 +1,16 @@
 import { describe, expect, it } from 'vitest'
 
+import { DEFAULT_OPERATOR_ICONS as PackageRootIcons } from '../../index'
+
 import {
 	DATE_RANGE_PRESETS,
+	DEFAULT_OPERATOR_ICONS,
 	DEFAULT_OPERATOR_ID_BY_TYPE,
 	DEFAULT_OPERATORS_BY_TYPE,
+	FilterOperator,
 	IN_OPERATORS,
+	NUMBER_OPERATORS,
+	TEXT_OPERATORS,
 	buildOperatorRegistry,
 	createOperatorFilterFn,
 	resolveColumnOperators,
@@ -78,6 +84,89 @@ describe('buildOperatorRegistry + resolveColumnOperators', () => {
 		const selectOps = DEFAULT_OPERATORS_BY_TYPE.select
 		const resolved = resolveColumnOperators(true, registry, selectOps)
 		expect(resolved.map((o) => o.id)).toEqual(['in', 'notIn', 'isEmpty', 'isNotEmpty'])
+	})
+})
+
+describe('DEFAULT_OPERATOR_ICONS', () => {
+	it('is exported from the package root', () => {
+		expect(PackageRootIcons).toBe(DEFAULT_OPERATOR_ICONS)
+	})
+
+	it('gives every built-in operator a non-empty sign', () => {
+		for (const id of Object.values(FilterOperator)) {
+			expect(DEFAULT_OPERATOR_ICONS[id]).toMatch(/\S/)
+		}
+	})
+
+	it('uses one sign per comparison, whatever the cell type calls it', () => {
+		expect(DEFAULT_OPERATOR_ICONS).toMatchObject({
+			contains: '*a*',
+			startsWith: 'a*',
+			endsWith: '*a',
+			equals: '=',
+			notEquals: '≠',
+			greaterThan: '>',
+			greaterOrEqual: '≥',
+			lessThan: '<',
+			lessOrEqual: '≤',
+			between: '↔',
+			in: '∈',
+			notIn: '∉',
+			isEmpty: '∅',
+			isNotEmpty: '≠∅',
+		})
+	})
+})
+
+describe('table registry overrides a built-in operator', () => {
+	const accentInsensitive: FilterOperatorDef = {
+		id: FilterOperator.Contains,
+		label: 'Похоже на',
+		filterFn: () => true,
+	}
+	const sharedEquals: FilterOperatorDef = { id: FilterOperator.Equals, label: 'Same as', filterFn: () => true }
+
+	it('reaches the default set of a cell type', () => {
+		const registry = buildOperatorRegistry([accentInsensitive])
+		const resolved = resolveColumnOperators(true, registry, TEXT_OPERATORS as FilterOperatorDef[])
+		expect(resolved.find((op) => op.id === FilterOperator.Contains)).toBe(accentInsensitive)
+		expect(resolved.find((op) => op.id === FilterOperator.Equals)).toBe(TEXT_OPERATORS[1])
+	})
+
+	it('reaches a column that names the id, and leaves the ids it does not override built-in', () => {
+		const registry = buildOperatorRegistry([accentInsensitive])
+		const resolved = resolveColumnOperators(
+			{ items: [FilterOperator.Contains, FilterOperator.Equals] },
+			registry,
+			TEXT_OPERATORS as FilterOperatorDef[],
+		)
+		expect(resolved[0]).toBe(accentInsensitive)
+		expect(resolved[1]).toBe(TEXT_OPERATORS[1])
+	})
+
+	it('applies to every cell type that offers the id', () => {
+		const registry = buildOperatorRegistry([sharedEquals])
+		for (const type of ['text', 'number', 'date', 'boolean']) {
+			const resolved = resolveColumnOperators(true, registry, DEFAULT_OPERATORS_BY_TYPE[type])
+			expect(resolved.find((op) => op.id === FilterOperator.Equals)).toBe(sharedEquals)
+		}
+		const numberColumn = resolveColumnOperators(
+			{ items: [FilterOperator.Equals] },
+			registry,
+			NUMBER_OPERATORS as FilterOperatorDef[],
+		)
+		expect(numberColumn[0]).toBe(sharedEquals)
+	})
+
+	it('leaves the default sets untouched when the table overrides nothing', () => {
+		const fuzzy: FilterOperatorDef = { id: 'fuzzy', label: 'Fuzzy', filterFn: () => true }
+		const registry = buildOperatorRegistry([fuzzy])
+		const textOperators = TEXT_OPERATORS as FilterOperatorDef[]
+		expect(resolveColumnOperators(true, registry, textOperators)).toBe(textOperators)
+		expect(resolveColumnOperators({ items: ['fuzzy', FilterOperator.Equals] }, registry, textOperators)).toEqual([
+			fuzzy,
+			TEXT_OPERATORS[1],
+		])
 	})
 })
 

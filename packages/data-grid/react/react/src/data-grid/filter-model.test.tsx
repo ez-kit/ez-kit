@@ -1,6 +1,7 @@
 import {
 	DATE_RANGE_PRESETS,
 	DATE_VALUE_PRESETS,
+	DEFAULT_OPERATOR_ICONS,
 	createColumns,
 	createTable,
 	defaultMessages,
@@ -185,6 +186,47 @@ describe('resolveFilter — operators', () => {
 		const model = modelOf(makeTable(), 'id')
 
 		expect(model.operators.find((op) => op.id === 'fuzzy')?.label).toBe('Fuzzy')
+	})
+})
+
+describe('resolveFilter — operator icons', () => {
+	const EQUAL_ICON = <svg data-icon='equal' />
+
+	it('gives a built-in operator no icon until the grid names one', () => {
+		const model = modelOf(makeTable(), 'age')
+
+		expect(model.operators.find((op) => op.id === 'greaterOrEqual')).not.toHaveProperty('icon')
+	})
+
+	it('takes the ready-made signs when the grid passes them as icons.operators', () => {
+		const model = modelOf(makeTable(), 'age', context({ icons: { operators: DEFAULT_OPERATOR_ICONS } }))
+
+		expect(model.operators.find((op) => op.id === 'greaterOrEqual')?.icon).toBe('≥')
+	})
+
+	it('leaves a custom operator with no icon without one', () => {
+		const model = modelOf(makeTable(), 'id')
+
+		expect(model.operators.find((op) => op.id === 'fuzzy')).not.toHaveProperty('icon')
+	})
+
+	it('takes an element from the grid’s icons.operators, and only for the ids it names', () => {
+		const model = modelOf(makeTable(), 'name', context({ icons: { operators: { equals: EQUAL_ICON } } }))
+
+		expect(model.operators.find((op) => op.id === 'equals')?.icon).toBe(EQUAL_ICON)
+		expect(model.operators.find((op) => op.id === 'contains')).not.toHaveProperty('icon')
+	})
+
+	it('takes the icon written on the operator over the grid’s icons.operators', () => {
+		const ownContains = { id: 'contains', label: 'Contains', icon: 'A', filterFn: () => true }
+		const table = makeTable(
+			{},
+			createColumns<Row>([{ accessorKey: 'name', filtering: { operators: { items: [ownContains] } } }]),
+		)
+
+		const model = modelOf(table, 'name', context({ icons: { operators: { contains: 'B' } } }))
+
+		expect(model.operators[0]?.icon).toBe('A')
 	})
 })
 

@@ -262,6 +262,7 @@ export const GRID_TYPE = {
 	BetweenOperatorConfig: { module: TypeModule.Core, name: 'BetweenOperatorConfig' },
 	UseFiltersResult: { module: TypeModule.React, name: 'UseFiltersResult' },
 	OperatorFilterModel: { module: TypeModule.React, name: 'OperatorFilterModel' },
+	GridIcons: { module: TypeModule.React, name: 'GridIcons' },
 	DateValuePreset: { module: TypeModule.Core, name: 'DateValuePreset' },
 	FilterOperatorDef: { module: TypeModule.Core, name: 'FilterOperatorDef' },
 	DateRangePreset: { module: TypeModule.Core, name: 'DateRangePreset' },
@@ -1097,7 +1098,8 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			{ heading: '`TableOperatorsConfig`', roots: [GRID_TYPE.TableOperatorsConfig], expectedCount: 1 },
 			{ heading: '`ColumnOperatorsConfig`', roots: [GRID_TYPE.ColumnOperatorsConfig], expectedCount: 2 },
 			{ heading: '`BetweenOperatorConfig`', roots: [GRID_TYPE.BetweenOperatorConfig], expectedCount: 3 },
-			{ heading: '`FilterOperatorDef`', roots: [GRID_TYPE.FilterOperatorDef], expectedCount: 4 },
+			{ heading: '`FilterOperatorDef`', roots: [GRID_TYPE.FilterOperatorDef], expectedCount: 5 },
+			{ heading: '`GridIcons`', roots: [GRID_TYPE.GridIcons], expectedCount: 1 },
 		],
 		nonOptionTables: [
 			{

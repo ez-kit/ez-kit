@@ -53,6 +53,12 @@ export type ResolvedGridOptions = {
 	 */
 	messages: GridMessages
 	/**
+	 * The grid's `icons`, merged across the option layers. Each set is **always** an object, so a
+	 * reader indexes it without a guard; a set no layer named is empty, which is how a reader tells
+	 * "fall back to the built-in" from an icon someone wrote.
+	 */
+	icons: { operators: Partial<Record<string, ReactNode>> }
+	/**
 	 * Per-row DOM props resolver. Row-erased here, like `expanding.component` and the cell registry —
 	 * every reader of `table.grid` is a component with no `TRow` of its own.
 	 */
@@ -321,6 +327,7 @@ export function defaultResolvedGridOptions(core?: GridOptions<never>): ResolvedG
 	return {
 		cellTypes: undefined,
 		messages: defaultMessages,
+		icons: { operators: {} },
 		// Core's four, folded in under this object's names. It **merges onto** what `createTable`
 		// wrote rather than replacing it: the caller passes `table.grid`, and the defaults below
 		// cover a table that was not built by our `createTable` at all (a hand-rolled TanStack

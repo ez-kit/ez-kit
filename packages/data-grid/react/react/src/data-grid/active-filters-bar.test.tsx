@@ -133,6 +133,22 @@ describe('<ActiveFiltersBar>', () => {
 		expect(screen.getByText('Equals Alice')).toBeInTheDocument()
 	})
 
+	it('labels a built-in operator the table replaced with its author’s label, not the dictionary’s', () => {
+		const table = makeTable({
+			filtering: {
+				operators: { items: [{ id: 'contains', label: 'Похоже на', filterFn: () => true }] },
+			},
+		})
+		table.setColumnFilters([{ id: 'name', value: { operator: 'contains', value: 'ali' } }])
+
+		render(
+			<Wrapper table={table}>
+				<ActiveFiltersBar />
+			</Wrapper>,
+		)
+		expect(screen.getByText('Похоже на ali')).toBeInTheDocument()
+	})
+
 	it('formats between operator with BetweenValue as "Between from – to"', () => {
 		const table = makeTable()
 		table.setColumnFilters([{ id: 'age', value: { operator: 'between', value: { from: 20, to: 40 } } }])

@@ -753,8 +753,23 @@ export type ClearFilterButtonProps = {
 	'aria-label'?: string
 }
 
+/**
+ * A filter operator as the React layer hands it to a control: core's definition, labelled from
+ * the grid's dictionary and with its icon settled. `icon` is the operator's own, else the grid's
+ * `icons.operators` entry — and absent when neither has one, which is a control's cue to show
+ * `label` instead.
+ */
+export type FilterOperatorOption = Omit<FilterOperatorDef, 'icon'> & {
+	icon?: ReactNode
+}
+
+/**
+ * The control that switches a filter's operator. It sits first in the filter's row, before the
+ * value control, so it shows the current operator compactly: its `icon`, else its `label`
+ * clipped to the control's width — the full label staying in the accessible name and the menu.
+ */
 export type OperatorSelectProps = {
-	operators: FilterOperatorDef[]
+	operators: FilterOperatorOption[]
 	currentOperatorId: string
 	onChange: (operatorId: string) => void
 }

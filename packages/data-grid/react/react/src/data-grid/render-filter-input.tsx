@@ -13,6 +13,7 @@ import { VisuallyHiddenLabel } from './visually-hidden'
 import type { CellTypeRegistry } from '../cell-types-context'
 import type { ItemsLists, ItemsMeta } from '../items-source'
 import type { GridMenuProps } from '../menu'
+import type { ResolvedGridOptions } from '../resolved-options'
 import type {
 	DataTable,
 	ErasedRow,
@@ -61,6 +62,11 @@ export type RenderFilterInputArgs<TRow extends object = ErasedRow> = {
 	 * stub than one with no draft support.
 	 */
 	messages: GridMessages
+	/**
+	 * The grid's resolved `icons`, which settle each operator's icon. Omitted, an operator shows
+	 * only the icon written on it, else its label.
+	 */
+	icons?: ResolvedGridOptions['icons']
 	/**
 	 * The live table instance, used only to wire "Enter applies the whole draft" on the
 	 * fallback text inputs under `draft`. Optional so callers and tests that construct a target by
@@ -118,12 +124,14 @@ function renderFilterControl<TRow extends object>({
 	MultiSelectFilter,
 	debounce: tableDebounce,
 	messages,
+	icons,
 	table,
 	model: resolvedModel,
 }: RenderFilterInputArgs<TRow>): ReactNode {
 	const { meta } = target
 	const filteringMeta = meta.filtering
-	const model = resolvedModel ?? resolveFilter(target, { messages, tableDebounce, cellTypes })
+	const model =
+		resolvedModel ?? resolveFilter(target, { messages, tableDebounce, cellTypes, ...(icons ? { icons } : {}) })
 	const lists = target.lists ?? { options: undefined, labels: undefined }
 	// A column's own `filtering.debounce` wins over the table's, the same way `editing.debounce`
 	// and `creating.debounce` do at their two levels. One dear endpoint can wait a second while
@@ -281,18 +289,32 @@ function renderOperatorFilter({
 		model.setValue({ operator: currentOperatorId, value: v })
 	}
 
+	// First in the filter's row, before whatever control the operator calls for — never a row of its
+	// own under it, which cost every operator column a line of height and left the columns without
+	// operators misaligned beside them. The box exists for the kits' stylesheets: it is what keeps
+	// the control at its own width while the value control beside it takes the rest.
 	const operatorSelect = (
-		<OperatorSelect
-			operators={model.operators}
-			currentOperatorId={currentOperatorId}
-			onChange={(nextOperatorId) => {
-				model.setValue(model.nextValueForOperator(nextOperatorId))
-			}}
-		/>
+		<div data-slot='filter-operator'>
+			<OperatorSelect
+				operators={model.operators}
+				currentOperatorId={currentOperatorId}
+				onChange={(nextOperatorId) => {
+					model.setValue(model.nextValueForOperator(nextOperatorId))
+				}}
+			/>
+		</div>
 	)
 
+	// An operator that takes no value keeps the row's height: its label stands where the value
+	// control would, so switching to "is empty" and back does not make the header jump.
 	if (model.editor === FilterEditor.None) {
-		return operatorSelect
+		const label = model.operators.find((op) => op.id === currentOperatorId)?.label
+		return (
+			<div data-slot='filter-control'>
+				{operatorSelect}
+				<span data-slot='filter-operator-label'>{label}</span>
+			</div>
+		)
 	}
 
 	// The presets sit beside whichever control the current operator renders, not inside it:
@@ -340,28 +362,27 @@ function renderOperatorFilter({
 		const betweenCfg = model.between
 		const betweenType = meta.cell?.type === 'date' ? 'date' : 'number'
 		return (
-			<>
-				<div data-slot='filter-control'>
-					<BetweenInput
-						value={(inputValue as BetweenValue | undefined) ?? {}}
-						onChange={onValueChange}
-						type={betweenType}
-						{...(betweenCfg?.slider === true ? { slider: true } : {})}
-						{...(betweenCfg?.min !== undefined ? { min: betweenCfg.min } : {})}
-						{...(betweenCfg?.max !== undefined ? { max: betweenCfg.max } : {})}
-					/>
-					{presetMenu}
-					{clearButton}
-				</div>
+			<div data-slot='filter-control'>
 				{operatorSelect}
-			</>
+				<BetweenInput
+					value={(inputValue as BetweenValue | undefined) ?? {}}
+					onChange={onValueChange}
+					type={betweenType}
+					{...(betweenCfg?.slider === true ? { slider: true } : {})}
+					{...(betweenCfg?.min !== undefined ? { min: betweenCfg.min } : {})}
+					{...(betweenCfg?.max !== undefined ? { max: betweenCfg.max } : {})}
+				/>
+				{presetMenu}
+				{clearButton}
+			</div>
 		)
 	}
 
 	if (model.editor === FilterEditor.MultiSelect && MultiSelectFilter) {
 		const selectedValues = Array.isArray(inputValue) ? (inputValue as string[]) : []
 		return (
-			<>
+			<div data-slot='filter-control'>
+				{operatorSelect}
 				<MultiSelectFilter
 					items={model.items}
 					selectedValues={selectedValues}
@@ -371,8 +392,7 @@ function renderOperatorFilter({
 					{...(model.itemsLoading ? { itemsLoading: true } : {})}
 					{...(model.itemsError !== undefined ? { itemsError: model.itemsError } : {})}
 				/>
-				{operatorSelect}
-			</>
+			</div>
 		)
 	}
 
@@ -380,19 +400,17 @@ function renderOperatorFilter({
 	const columnFilterInput = filteringMeta.component as ((props: InputComponentProps) => ReactNode) | undefined
 	if (columnFilterInput) {
 		return (
-			<>
-				<div data-slot='filter-control'>
-					{flexRender(columnFilterInput, {
-						value: inputValue,
-						onChange: onValueChange,
-						...configProp(configWithItems(meta, lists.options)),
-						placeholder: fieldPlaceholder,
-					})}
-					{presetMenu}
-					{clearButton}
-				</div>
+			<div data-slot='filter-control'>
 				{operatorSelect}
-			</>
+				{flexRender(columnFilterInput, {
+					value: inputValue,
+					onChange: onValueChange,
+					...configProp(configWithItems(meta, lists.options)),
+					placeholder: fieldPlaceholder,
+				})}
+				{presetMenu}
+				{clearButton}
+			</div>
 		)
 	}
 
@@ -414,38 +432,34 @@ function renderOperatorFilter({
 				isValidating: false,
 			}
 			return (
-				<>
-					<div data-slot='filter-control'>
-						{fieldLabel}
-						{/* Mounted, not called: invoking a renderer as `Comp(props)` smuggles its hooks into
+				<div data-slot='filter-control'>
+					{fieldLabel}
+					{operatorSelect}
+					{/* Mounted, not called: invoking a renderer as `Comp(props)` smuggles its hooks into
 						    this header cell's fiber, and swapping one renderer for another — which is what
 						    changing the operator does — reorders them. */}
-						{flexRender(comp, field)}
-						{presetMenu}
-						{clearButton}
-					</div>
-					{operatorSelect}
-				</>
+					{flexRender(comp, field)}
+					{presetMenu}
+					{clearButton}
+				</div>
 			)
 		}
 	}
 
 	return (
-		<>
-			<div data-slot='filter-control'>
-				<FilterTextInput
-					Input={Input}
-					placeholder={fieldPlaceholder}
-					aria-label={fieldName}
-					value={(inputValue ?? '') as string}
-					onCommit={onValueChange}
-					debounce={model.debounce}
-					{...(onEnterApply ? { onEnterApply } : {})}
-				/>
-				{presetMenu}
-				{clearButton}
-			</div>
+		<div data-slot='filter-control'>
 			{operatorSelect}
-		</>
+			<FilterTextInput
+				Input={Input}
+				placeholder={fieldPlaceholder}
+				aria-label={fieldName}
+				value={(inputValue ?? '') as string}
+				onCommit={onValueChange}
+				debounce={model.debounce}
+				{...(onEnterApply ? { onEnterApply } : {})}
+			/>
+			{presetMenu}
+			{clearButton}
+		</div>
 	)
 }

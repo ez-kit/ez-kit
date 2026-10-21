@@ -93,6 +93,7 @@ const ru: PartialGridMessages = {
 	filtering: {
 		placeholder: ({ columnId }) => `Фильтр: ${columnId}`,
 		operator: 'Оператор фильтра',
+		operatorTrigger: ({ label }) => `Оператор фильтра: ${label}`,
 		clearAll: 'Сбросить фильтры',
 		trigger: 'Фильтр',
 	},
