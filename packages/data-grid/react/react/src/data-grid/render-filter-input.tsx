@@ -13,7 +13,6 @@ import { VisuallyHiddenLabel } from './visually-hidden'
 import type { CellTypeRegistry } from '../cell-types-context'
 import type { ItemsLists, ItemsMeta } from '../items-source'
 import type { GridMenuProps } from '../menu'
-import type { ResolvedGridOptions } from '../resolved-options'
 import type {
 	DataTable,
 	ErasedRow,
@@ -62,11 +61,6 @@ export type RenderFilterInputArgs<TRow extends object = ErasedRow> = {
 	 * stub than one with no draft support.
 	 */
 	messages: GridMessages
-	/**
-	 * The grid's resolved `icons`, which settle each operator's icon. Omitted, an operator shows
-	 * only the icon written on it, else its label.
-	 */
-	icons?: ResolvedGridOptions['icons']
 	/**
 	 * The live table instance, used only to wire "Enter applies the whole draft" on the
 	 * fallback text inputs under `draft`. Optional so callers and tests that construct a target by
@@ -124,14 +118,12 @@ function renderFilterControl<TRow extends object>({
 	MultiSelectFilter,
 	debounce: tableDebounce,
 	messages,
-	icons,
 	table,
 	model: resolvedModel,
 }: RenderFilterInputArgs<TRow>): ReactNode {
 	const { meta } = target
 	const filteringMeta = meta.filtering
-	const model =
-		resolvedModel ?? resolveFilter(target, { messages, tableDebounce, cellTypes, ...(icons ? { icons } : {}) })
+	const model = resolvedModel ?? resolveFilter(target, { messages, tableDebounce, cellTypes })
 	const lists = target.lists ?? { options: undefined, labels: undefined }
 	// A column's own `filtering.debounce` wins over the table's, the same way `editing.debounce`
 	// and `creating.debounce` do at their two levels. One dear endpoint can wait a second while
@@ -328,7 +320,7 @@ function renderOperatorFilter({
 				variant={GridMenuVariant.Filter}
 				triggerIcon={GridMenuIcon.Calendar}
 				{...(activePreset ? { triggerLabel: activePreset.label } : {})}
-				aria-label={messages.filtering.presets}
+				aria-label={messages.filtering.presetMenu}
 				sections={toMenuSections([
 					{
 						id: 'date-presets',

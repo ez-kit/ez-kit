@@ -658,7 +658,10 @@ export type ColumnFilteringConfig<TNode = unknown, TConfig = unknown> = {
 	 * — to read it without a cast.
 	 */
 	component?: ColumnInputRenderer<InputComponentProps<TConfig>, TNode>
-	/** Operator configuration. `true` = default operators for the column's cell type. */
+	/**
+	 * Operator configuration. `true` = the grid's operator set for the column's cell type
+	 * (`operators.byType`); `{ items }` narrows it.
+	 */
 	operators?: boolean | ColumnOperatorsConfig
 	/**
 	 * Date presets offered beside the filter control, on `cell: { type: 'date' }` columns.
@@ -669,13 +672,14 @@ export type ColumnFilteringConfig<TNode = unknown, TConfig = unknown> = {
 	 *
 	 * Here rather than under `operators.betweenOperator` because a preset is not a `between`
 	 * thing: the control offers whichever presets the **current** operator can take — ranges for
-	 * `between`, single dates for `equals` / `lessThan` / `greaterThan` and the rest.
+	 * an operator with `input: 'range'`, single dates for one with `input: 'single'`.
 	 */
 	presets?: boolean | DatePreset[]
 	/**
-	 * Which operator this column's filter opens with. Defaults to the one its cell type
-	 * declares (`contains` for text, `equals` for number / date / boolean, `in` for
-	 * select / badge).
+	 * Which operator this column's filter opens with. Defaults to the grid's
+	 * `operators.defaultByType` for the column's cell type when the column offers it, else to the
+	 * first operator the column offers. The ready-made set opens text, image and link with
+	 * `contains`, select and badge with `in`, and the rest with `equals`.
 	 *
 	 * Typed {@link FilterOperatorId} rather than `string`: the value has to be one of the
 	 * operators this column actually offers, and an id that is not selects nothing in the
@@ -769,13 +773,14 @@ export type ColumnFilteringMeta = {
 	faceted?: boolean
 	/** The settled operator list, resolved from `filtering.operators`. */
 	operators?: FilterOperatorDef[]
-	/** Between-operator UI config, from `filtering.operators.betweenOperator`. */
+	/** Range-control UI config, from `filtering.operators.betweenOperator`. */
 	betweenOperator?: BetweenOperatorConfig
 	/** Resolved date presets, from `filtering.presets`. */
 	presets?: DatePreset[]
 	/**
-	 * The operator this column's filter opens with — `filtering.defaultOperator`, else the one
-	 * its cell type declares, else the first of {@link ColumnFilteringMeta.operators}.
+	 * The operator this column's filter opens with — `filtering.defaultOperator`, else the grid's
+	 * `operators.defaultByType` for its cell type, else the first of
+	 * {@link ColumnFilteringMeta.operators}.
 	 */
 	defaultOperator?: FilterOperatorId
 }

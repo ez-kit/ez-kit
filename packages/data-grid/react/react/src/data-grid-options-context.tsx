@@ -204,8 +204,8 @@ export function mergeGridOptionLayers<TFeatures extends TableFeatures, TRow exte
 /**
  * The **factory** layer, carried through the tree rather than through an argument.
  *
- * The layer is `createDataGrid`'s `defaults` with its `features` and `context` folded in — each
- * of the two has a factory field of its own, for typing, but one layer stack at runtime.
+ * The layer is `createDataGrid`'s `defaults` with its `features`, `operators` and `context` folded
+ * in — each has a factory field of its own, but there is one layer stack at runtime.
  *
  * `createDataGrid({ defaults })` binds that layer into the `useDataGrid` it returns, which
  * covers the controlled form (the caller builds the table, then passes it to `<DataGrid table={…} />`).

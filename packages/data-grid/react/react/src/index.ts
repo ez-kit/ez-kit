@@ -64,7 +64,6 @@ export type {
 	ReactRowActionsConfig,
 	ReactSelectionConfig,
 	RowPropsResolver,
-	GridIcons,
 	LayoutClassNames,
 	LayoutConfig,
 	SelectionBarCallbackArgs,

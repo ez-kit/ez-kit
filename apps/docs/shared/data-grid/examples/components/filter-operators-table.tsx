@@ -16,8 +16,6 @@ import { DataGrid } from 'shared/DataGrid'
 import { EMPLOYEE_DATA, type Employee } from './_data'
 
 const features = tableFeatures({
-	// Structural: the grid shell reads column widths, visibility and pin groups to lay out
-	// the column grid. Everything below is this example's own.
 	columnVisibilityFeature,
 	columnPinningFeature,
 	columnSizingFeature,
@@ -26,8 +24,6 @@ const features = tableFeatures({
 	filteredRowModel: createFilteredRowModel(),
 })
 
-// Nothing here mentions operators: the table switches them on for every column, and each one
-// offers what its `cell.type` declares. `department` opts out — its filter is a plain input.
 const columns = createColumns<Employee>([
 	{ accessorKey: 'name', header: 'Name' },
 	{ accessorKey: 'salary', header: 'Salary', cell: { type: 'number' } },

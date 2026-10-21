@@ -81,7 +81,7 @@ test.describe('a localized grid', () => {
 
 		await expect(contains).toHaveCount(1)
 		await expect(equals).toHaveCount(1)
-		// `contains` on the text column, `equals` on the number one — both from `operators`.
+		// `contains` on the text column, `equals` on the number one — both from the translated set the example passes as `operators`.
 		await expect(contains).toContainText('Содержит')
 		await expect(equals).toContainText('Равно')
 

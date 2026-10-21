@@ -136,7 +136,7 @@ export function useFilters(): UseFiltersResult | undefined {
 	const { OperatorSelect, BetweenInput, MultiSelectFilter, ClearFilterButton } = gridComponents.filtering
 	const cellTypes = useCellTypes()
 	const filteringDebounce = table.grid.filtering.debounce
-	const { messages, icons } = table.grid
+	const { messages } = table.grid
 
 	const collected = collectFilterTargets(table)
 	// Every target's lists, read here at once — the panel hands each target's model to a consumer,
@@ -149,7 +149,7 @@ export function useFilters(): UseFiltersResult | undefined {
 	if (targets.length === 0) return undefined
 
 	const filters: DataGridFilterTarget[] = targets.map((target) => {
-		const filter = resolveFilter(target, { messages, tableDebounce: filteringDebounce, cellTypes, icons })
+		const filter = resolveFilter(target, { messages, tableDebounce: filteringDebounce, cellTypes })
 
 		const input = renderFilterInput({
 			target,
@@ -162,7 +162,6 @@ export function useFilters(): UseFiltersResult | undefined {
 			MultiSelectFilter,
 			debounce: filteringDebounce,
 			messages,
-			icons,
 			table,
 			model: filter,
 		})

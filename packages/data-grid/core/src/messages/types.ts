@@ -368,14 +368,23 @@ export type GridMessages = {
 		clearAll: string
 		/** Lower bound of a range filter: placeholder and accessible name. */
 		from: string
+		/**
+		 * The date presets offered beside a date filter. The first six are ranges, for an operator with
+		 * `input: 'range'`; the last three are single dates, for one with `input: 'single'` (`equals`,
+		 * `lessThan`, `greaterThan`, …). `today` and `yesterday` serve both — a one-day range and the day itself.
+		 */
+		presets: Record<
+			'today' | 'yesterday' | 'last7' | 'last30' | 'thisMonth' | 'lastMonth' | 'weekAgo' | 'monthAgo' | 'startOfMonth',
+			string
+		>
 		/** Upper bound of a range filter: placeholder and accessible name. */
 		to: string
 		/** Accessible name of a range filter as a whole. */
 		range: string
 		/** Accessible name of a date-range filter. */
 		dateRange: string
-		/** Accessible name of the date-range preset menu, and its trigger while none is active. */
-		presets: string
+		/** Accessible name of the date preset menu, and its trigger while none is active. */
+		presetMenu: string
 		/** Placeholder of the search box inside a multi-select filter. */
 		search: string
 		/** Shown when a multi-select filter's search matches nothing. */
@@ -496,43 +505,6 @@ export type GridMessages = {
 		pickDate: string
 		/** An empty date-range picker's trigger text. */
 		pickRange: string
-	}
-	/**
-	 * Filter-operator labels, grouped the way the built-in operator sets are.
-	 *
-	 * The same id means the same comparison whatever the column's cell type is — only the
-	 * wording changes, which is exactly what these groups hold: `greaterThan` reads "Greater
-	 * than" on a number column and "After" on a date one. A custom operator registered through
-	 * `filtering.operators.items` carries its own `label` and is not looked up here.
-	 */
-	operators: {
-		/** Text columns, and the `image` / `link` types that filter as text. */
-		text: Record<'contains' | 'equals' | 'notEquals' | 'startsWith' | 'endsWith', string>
-		/** Number columns, and `progress`. */
-		number: Record<
-			'equals' | 'notEquals' | 'greaterThan' | 'greaterOrEqual' | 'lessThan' | 'lessOrEqual' | 'between',
-			string
-		>
-		/** Date columns — the same comparisons as `number`, spoken as a calendar. */
-		date: Record<
-			'equals' | 'notEquals' | 'greaterThan' | 'greaterOrEqual' | 'lessThan' | 'lessOrEqual' | 'between',
-			string
-		>
-		/** Boolean columns. Equality only — a boolean has no ordering. */
-		boolean: Record<'equals' | 'notEquals', string>
-		/** `select` / `badge` columns, which filter by set membership. */
-		multi: Record<'in' | 'notIn', string>
-		/** The emptiness pair, shared by every cell type's default set. */
-		empty: Record<'isEmpty' | 'isNotEmpty', string>
-		/**
-		 * The date presets offered beside a date filter. The first six are ranges, for `between`;
-		 * the last three are single dates, for the operators that take one (`equals`, `lessThan`,
-		 * `greaterThan`, …). `today` and `yesterday` serve both — a one-day range and the day itself.
-		 */
-		presets: Record<
-			'today' | 'yesterday' | 'last7' | 'last30' | 'thisMonth' | 'lastMonth' | 'weekAgo' | 'monthAgo' | 'startOfMonth',
-			string
-		>
 	}
 	/** Loading / empty / no-results states and the infinite-scroll row. */
 	fallbacks: {

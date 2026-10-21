@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { GridComponentsProvider } from '../components-context'
 import { prepareDataGridTable } from '../prepare-table'
-import { TEST_FEATURES, testComponents } from '../test-utils'
+import { TEST_FEATURES, TEST_OPERATORS, testComponents } from '../test-utils'
 
 import { FilterPanel, useFilters } from './filter-panel'
 import { TableProvider } from './table-context'
@@ -47,6 +47,7 @@ function makeTable(config: Record<string, unknown> = {}) {
 	return prepareDataGridTable(
 		createTable<GridFeatures, Row>({
 			features: TEST_FEATURES,
+			operators: TEST_OPERATORS,
 			data: DATA,
 			columns: COLUMNS,
 			filtering: true,
@@ -329,6 +330,7 @@ describe('useFilters — fields', () => {
 		const table = prepareDataGridTable(
 			createTable<GridFeatures, Row>({
 				features: TEST_FEATURES,
+				operators: TEST_OPERATORS,
 				data: DATA,
 				columns: createColumns<Row>([{ accessorKey: 'name', header: 'Name', filtering: false }]),
 				filtering: { manual: true, fields: [WAREHOUSE] },

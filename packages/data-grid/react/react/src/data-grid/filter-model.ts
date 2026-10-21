@@ -1,4 +1,4 @@
-import { BASE_CELL_TYPE_IDS, FilterOperator, localizeDatePresets, localizeOperators } from '@ez-kit/data-grid-core'
+import { BASE_CELL_TYPE_IDS, OperatorInput, localizeDatePresets } from '@ez-kit/data-grid-core'
 
 import {
 	ItemsSourceSlot,
@@ -10,11 +10,10 @@ import {
 } from '../items-source'
 
 import { presetsForOperator } from './date-presets'
-import { withOperatorIcons } from './operator-icons'
+import { inputOf, toOperatorOptions } from './operator-input'
 
 import type { CellTypeRegistry } from '../cell-types-context'
 import type { ItemsLists, ListSnapshot, ListItem, ListSpec } from '../items-source'
-import type { ResolvedGridOptions } from '../resolved-options'
 import type { FilterOperatorOption } from '../types'
 import type { FilterTarget, FilterTargetMeta } from './filter-target'
 import type {
@@ -47,11 +46,11 @@ export const FilterEditor = {
 	Boolean: 'boolean',
 	/** One of {@link FilterModel.items}. Select and badge cells under a one-value operator. */
 	Select: 'select',
-	/** A {@link BetweenValue} range — the `between` operator. */
+	/** A {@link BetweenValue} range — an operator with `input: 'range'` (`between`). */
 	Between: 'between',
-	/** A set of {@link FilterModel.items} — the `in` / `notIn` operators. */
+	/** A set of {@link FilterModel.items} — an operator with `input: 'list'` (`in`, `notIn`). */
 	MultiSelect: 'multiSelect',
-	/** No value at all — an operator with `requiresInput: false` (`isEmpty`, `isNotEmpty`). */
+	/** No value at all — an operator with `input: 'none'` (`isEmpty`, `isNotEmpty`). */
 	None: 'none',
 	/** The column's own `filtering.component`, or a project cell type's own filter renderer. */
 	Custom: 'custom',
@@ -61,21 +60,13 @@ export type FilterEditor = (typeof FilterEditor)[keyof typeof FilterEditor]
 
 /** What {@link resolveFilter} reads besides the target itself. */
 export type FilterModelContext = {
-	/** The grid's resolved dictionary — operator and preset labels come from it. */
+	/** The grid's resolved dictionary — preset labels come from it; operator labels do not. */
 	messages: GridMessages
 	/** The table-level filter debounce, which a column's own `filtering.debounce` overrides. */
 	tableDebounce: number
 	/** The kit's cell-type registry — it decides whether a project cell type draws its own filter. */
 	cellTypes: CellTypeRegistry
-	/**
-	 * The grid's resolved `icons` — each operator's icon is settled from them. Omitted, an operator
-	 * has only the icon written on it.
-	 */
-	icons?: ResolvedGridOptions['icons']
 }
-
-/** What {@link FilterModelContext.icons} means when a caller leaves it out. */
-const NO_ICONS: ResolvedGridOptions['icons'] = { operators: {} }
 
 type FilterModelBase = {
 	/** The filter's `columnFilters` key — the column id or the field id. */
@@ -106,7 +97,7 @@ type FilterModelBase = {
 	itemsError: unknown
 	/** The column's date presets the current operator can take, labelled from the dictionary. */
 	presets: DatePreset[]
-	/** The `between` operator's bounds and slider flag, when the column states them. */
+	/** The range control's bounds and slider flag, when the column states them. */
 	between: BetweenOperatorConfig | undefined
 	/** Commit debounce in ms — the column's `filtering.debounce`, else the table's. */
 	debounce: number
@@ -125,8 +116,8 @@ type FilterModelBase = {
 export type OperatorFilterModel = FilterModelBase & {
 	hasOperators: true
 	/**
-	 * The column's operators, labelled from the grid's dictionary, each with the icon its control
-	 * shows — see {@link FilterOperatorOption}.
+	 * The column's operators, each with the `label` and `icon` of its definition — see
+	 * {@link FilterOperatorOption}.
 	 */
 	operators: FilterOperatorOption[]
 	defaultOperator: FilterOperatorId | undefined
@@ -135,9 +126,10 @@ export type OperatorFilterModel = FilterModelBase & {
 	/** The current filter, or `undefined` when the column is not filtered. */
 	value: StructuredFilterValue | undefined
 	/**
-	 * The value the grid's own control writes when the user picks `operator`: no value for an
-	 * operator that takes none, an empty range entering `between`, no value leaving it, the
-	 * current value otherwise. Computes only — nothing is written.
+	 * The value the grid's own control writes when the user picks `operator`, by the `input` of
+	 * the two operators: no value for one that takes none, an empty range entering a range, no
+	 * value between two different inputs, the current value between two of the same. Computes only
+	 * — nothing is written.
 	 *
 	 * `from` switches a value other than the applied one — a panel's draft, which is ahead of
 	 * the grid until the user applies it. Defaults to {@link OperatorFilterModel.value}.
@@ -165,9 +157,7 @@ export type FilterModel = OperatorFilterModel | PlainFilterModel
 
 const MAX_INLINE_VALUES = 2
 
-const MULTI_OPERATORS: ReadonlySet<string> = new Set([FilterOperator.In, FilterOperator.NotIn])
-
-/** The editor a built-in cell type calls for — the same grouping core labels its operators by. */
+/** The editor a built-in cell type calls for, when the operator's `input` does not decide one. */
 const EDITOR_BY_CELL_TYPE: Partial<Record<string, FilterEditor>> = {
 	text: FilterEditor.Text,
 	image: FilterEditor.Text,
@@ -318,8 +308,8 @@ function formatFilterValue(
 		const op = operators.find((o) => o.id === sv.operator)
 		const inner = sv.value
 
-		// `requiresInput === false` operators (e.g. isEmpty / isNotEmpty) — show operator label.
-		if (op?.requiresInput === false) {
+		// An operator that takes no value (e.g. isEmpty / isNotEmpty) — show its label.
+		if (op?.input === OperatorInput.None) {
 			return { display: op.label, hasValue: true }
 		}
 
@@ -360,30 +350,35 @@ function valueEditorOf(meta: FilterTargetMeta, hasComponent: boolean, cellTypes:
 	return EDITOR_BY_CELL_TYPE[cellType] ?? FilterEditor.Text
 }
 
+/** The editor each kind of operator value calls for, beside a single value's own editor. */
+const EDITOR_BY_INPUT: Partial<Record<OperatorInput, FilterEditor>> = {
+	[OperatorInput.None]: FilterEditor.None,
+	[OperatorInput.Range]: FilterEditor.Between,
+	[OperatorInput.List]: FilterEditor.MultiSelect,
+}
+
 /**
- * The operator-aware editor dispatch. The order is the grid's own: no-input operators, then
- * `between`, then the multi-value pair, then whatever renders a single value.
+ * The operator-aware editor dispatch, by the operator's `input`: none, a range and a list each have
+ * an editor of their own, and a single value — or an id the column does not offer — gets the
+ * column's value editor.
  */
 function editorForOperator(
 	operator: FilterOperatorId,
 	operators: FilterOperatorDef[],
 	valueEditor: FilterEditor,
 ): FilterEditor {
-	if (operators.find((op) => op.id === operator)?.requiresInput === false) return FilterEditor.None
-	if (operator === FilterOperator.Between) return FilterEditor.Between
-	if (MULTI_OPERATORS.has(operator)) return FilterEditor.MultiSelect
-	return valueEditor
+	const input = inputOf(operators, operator)
+	return (input !== undefined ? EDITOR_BY_INPUT[input] : undefined) ?? valueEditor
 }
 
-/** Presets offered beside a value control — none to an operator that takes a set or no value. */
+/** Presets offered beside a value control — the kind the current operator's `input` takes. */
 function presetsFor(
 	presets: DatePreset[] | undefined,
-	operator: FilterOperatorId,
-	editor: FilterEditor,
+	input: OperatorInput | undefined,
 	messages: GridMessages,
 ): DatePreset[] {
-	if (!presets || editor === FilterEditor.None || editor === FilterEditor.MultiSelect) return []
-	return localizeDatePresets(presetsForOperator(presets, operator), messages.operators.presets)
+	if (!presets) return []
+	return localizeDatePresets(presetsForOperator(presets, input), messages.filtering.presets)
 }
 
 /**
@@ -398,11 +393,14 @@ function nextValueFor(
 	currentValue: unknown,
 	operators: FilterOperatorDef[],
 ): StructuredFilterValue {
-	const next = operators.find((op) => op.id === nextOperator)
-	if (next?.requiresInput === false) return { operator: nextOperator, value: undefined }
-	if (nextOperator === FilterOperator.Between) return { operator: nextOperator, value: {} }
-	if (currentOperator === FilterOperator.Between) return { operator: nextOperator, value: undefined }
-	return { operator: nextOperator, value: currentValue }
+	const nextInput = inputOf(operators, nextOperator)
+	const currentInput = inputOf(operators, currentOperator)
+	if (nextInput === OperatorInput.None) return { operator: nextOperator, value: undefined }
+	// A value of the same shape carries over — between two ranges as between two single values.
+	if (nextInput === currentInput) return { operator: nextOperator, value: currentValue }
+	if (nextInput === OperatorInput.Range) return { operator: nextOperator, value: {} }
+	// A value of another shape is one the next operator cannot take.
+	return { operator: nextOperator, value: undefined }
 }
 
 /**
@@ -414,8 +412,8 @@ export function filterName(target: FilterTarget, messages: GridMessages): string
 }
 
 /**
- * Resolves one filter target's model — a column's or a field's: its operators in the grid's
- * wording, the current operator and value, the editor they call for, the values on offer, the
+ * Resolves one filter target's model — a column's or a field's: its operators as their
+ * definitions state them, the current operator and value, the editor they call for, the values on offer, the
  * presets, the debounce, the summary and the setters.
  *
  * Pure apart from `setValue`, which writes through the target. The grid's own controls render from
@@ -423,14 +421,12 @@ export function filterName(target: FilterTarget, messages: GridMessages): string
  */
 export function resolveFilter(
 	target: FilterTarget,
-	{ messages, tableDebounce, cellTypes, icons = NO_ICONS }: FilterModelContext,
+	{ messages, tableDebounce, cellTypes }: FilterModelContext,
 ): FilterModel {
 	const { meta } = target
 	const filteringMeta = meta.filtering
 	const cellType = meta.cell?.type
-	const operators = filteringMeta?.operators
-		? withOperatorIcons(localizeOperators(filteringMeta.operators, cellType, messages.operators), icons)
-		: []
+	const operators = filteringMeta?.operators ? toOperatorOptions(filteringMeta.operators) : []
 	const rawValue = target.getValue()
 	const valueEditor = valueEditorOf(meta, filteringMeta?.component !== undefined, cellTypes)
 	const lists = listsOf(target)
@@ -484,7 +480,7 @@ export function resolveFilter(
 		value,
 		editor,
 		editorFor,
-		presets: presetsFor(filteringMeta?.presets, operator, editor, messages),
+		presets: presetsFor(filteringMeta?.presets, inputOf(operators, operator), messages),
 		nextValueForOperator: (next, from) =>
 			from === undefined
 				? nextValueFor(next, operator, value?.value, operators)

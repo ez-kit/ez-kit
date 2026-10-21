@@ -1,3 +1,4 @@
+import { OperatorInput } from '@ez-kit/data-grid-core'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -6,8 +7,8 @@ import { OperatorSelect } from './OperatorSelect'
 import type { FilterOperatorOption } from '@ez-kit/data-grid-react'
 
 const OPERATORS: FilterOperatorOption[] = [
-	{ id: 'contains', label: 'Contains', filterFn: () => true },
-	{ id: 'greaterOrEqual', label: 'Greater than or equal', filterFn: () => true },
+	{ id: 'contains', label: 'Contains', input: OperatorInput.Single, filterFn: () => true },
+	{ id: 'greaterOrEqual', label: 'Greater than or equal', input: OperatorInput.Single, filterFn: () => true },
 ]
 
 describe('shadcn OperatorSelect', () => {
@@ -28,7 +29,9 @@ describe('shadcn OperatorSelect', () => {
 	it('shows the icon in place of the label once one is given', () => {
 		render(
 			<OperatorSelect
-				operators={[{ id: 'contains', label: 'Contains', icon: '*a*', filterFn: () => true }]}
+				operators={[
+					{ id: 'contains', label: 'Contains', icon: '*a*', input: OperatorInput.Single, filterFn: () => true },
+				]}
 				currentOperatorId='contains'
 				onChange={vi.fn()}
 			/>,

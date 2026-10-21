@@ -5,6 +5,7 @@ export default defineConfig({
 		index: 'src/index.ts',
 		'features/index': 'src/features/entry.ts',
 		'features/all': 'src/features/all.ts',
+		'operators/index': 'src/operators/entry.ts',
 	},
 	format: ['esm'],
 	dts: true,

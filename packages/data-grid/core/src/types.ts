@@ -5,7 +5,7 @@ import type { CreatingConfig } from './features/creating'
 import type { AppliedState, DraftConfig } from './features/deferred-apply'
 import type { DeletingConfig } from './features/deleting'
 import type { EditingConfig } from './features/editing'
-import type { TableOperatorsConfig } from './features/operators'
+import type { OperatorsConfig } from './features/operators'
 import type { RowMove } from './features/ordering'
 import type { RowActionsConfig } from './features/row-actions'
 import type { FeatureToggle } from './utils/feature-flag'
@@ -205,30 +205,20 @@ export type FilteringConfig = FeatureToggle & {
 	 */
 	manual?: boolean
 	/**
-	 * Operator selectors for the whole table — the switch, and the registry of custom
-	 * operators columns reference by id.
+	 * Operator selectors for the whole table — the switch.
 	 *
 	 * - omitted — per-column opt-in only: a column gets an operator selector iff its own
 	 *   `filtering.operators` says so
-	 * - `true` — every filterable column gets one, offering the default operators for its
-	 *   `cell.type`
+	 * - `true` — every filterable column gets one, offering its cell type's set from the grid's
+	 *   {@link TableConfig.operators}; a column whose type has no set keeps a plain filter
 	 * - `false` — no column gets one; `column.filtering.operators` is ignored, wherever it
 	 *   says otherwise
-	 * - {@link TableOperatorsConfig} — registers custom definitions (or replacements for
-	 *   built-ins, in every cell type that offers them) and switches the feature on, exactly as
-	 *   `true` does. The object form of a
-	 *   feature always defaults the way its bare `true` does, so that adding a custom
-	 *   operator to a working `operators: true` cannot silently take the selectors away.
 	 *
-	 * A column overrides the table in both directions: `operators: false` opts one column out
-	 * of a table-wide `true`, and `operators: { items }` narrows what it offers.
-	 *
-	 * @example Every column, plus one custom operator two of them reference by id
-	 * ```ts
-	 * filtering: { operators: { items: [{ id: 'fuzzy', label: 'Fuzzy', filterFn: fuzzy }] } }
-	 * ```
+	 * Which operators exist is not said here: that is the grid's `operators`, by cell type. A column
+	 * overrides the table in both directions: `operators: false` opts one column out of a
+	 * table-wide `true`, and `operators: { items }` narrows what it offers.
 	 */
-	operators?: boolean | TableOperatorsConfig
+	operators?: boolean
 	/**
 	 * Enable faceted row models (unique values + counts) for columns that opt in via
 	 * `column.filtering.faceted` or for all filterable columns when `true`. Used by
@@ -1021,6 +1011,20 @@ export type TableConfig<TFeatures extends TableFeatures, TRow extends object> = 
 	 * It is deliberately a separate piece of work, sized against that docs test.
 	 */
 	features: TFeatures
+	/**
+	 * The filter operators the grid offers, by cell type — see {@link OperatorsConfig}.
+	 *
+	 * Like `features`, a bundle decision: a kit's prebuilt `DataGrid` passes the ready-made
+	 * `defaultOperators` (`@ez-kit/data-grid-core/operators`), and a grid composed through
+	 * `createDataGrid` has the operators it was handed and no others. It switches nothing on —
+	 * `filtering.operators` does. Across option layers, a layer replaces the set of each cell type
+	 * it names and keeps the rest.
+	 *
+	 * Build the set once — at module scope, or under `useMemo` — and keep each type's list stable:
+	 * the layers are re-merged on every render, but a type's array is carried through by reference,
+	 * and that array is what a column's operators, and the controls' props, keep their identity by.
+	 */
+	operators?: OperatorsConfig
 	data: TRow[]
 	/**
 	 * Columns, from `createColumns` / `createColumnHelper` or written inline.

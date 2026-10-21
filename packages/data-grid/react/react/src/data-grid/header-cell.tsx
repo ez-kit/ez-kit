@@ -444,7 +444,6 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 				MultiSelectFilter,
 				debounce: table.grid.filtering.debounce,
 				messages: table.grid.messages,
-				icons: table.grid.icons,
 				table,
 			})
 		: null

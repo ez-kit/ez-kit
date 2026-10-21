@@ -258,11 +258,10 @@ export const GRID_TYPE = {
 	ColumnFilteringConfig: { module: TypeModule.Core, name: 'ColumnFilteringConfig' },
 	FilterFieldDef: { module: TypeModule.Core, name: 'FilterFieldDef' },
 	ColumnOperatorsConfig: { module: TypeModule.Core, name: 'ColumnOperatorsConfig' },
-	TableOperatorsConfig: { module: TypeModule.Core, name: 'TableOperatorsConfig' },
+	OperatorsConfig: { module: TypeModule.Core, name: 'OperatorsConfig' },
 	BetweenOperatorConfig: { module: TypeModule.Core, name: 'BetweenOperatorConfig' },
 	UseFiltersResult: { module: TypeModule.React, name: 'UseFiltersResult' },
 	OperatorFilterModel: { module: TypeModule.React, name: 'OperatorFilterModel' },
-	GridIcons: { module: TypeModule.React, name: 'GridIcons' },
 	DateValuePreset: { module: TypeModule.Core, name: 'DateValuePreset' },
 	FilterOperatorDef: { module: TypeModule.Core, name: 'FilterOperatorDef' },
 	DateRangePreset: { module: TypeModule.Core, name: 'DateRangePreset' },
@@ -1095,16 +1094,20 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.FilteringOperators,
 		optionTables: [
-			{ heading: '`TableOperatorsConfig`', roots: [GRID_TYPE.TableOperatorsConfig], expectedCount: 1 },
+			{ heading: '`OperatorsConfig`', roots: [GRID_TYPE.OperatorsConfig], expectedCount: 2 },
 			{ heading: '`ColumnOperatorsConfig`', roots: [GRID_TYPE.ColumnOperatorsConfig], expectedCount: 2 },
 			{ heading: '`BetweenOperatorConfig`', roots: [GRID_TYPE.BetweenOperatorConfig], expectedCount: 3 },
 			{ heading: '`FilterOperatorDef`', roots: [GRID_TYPE.FilterOperatorDef], expectedCount: 5 },
-			{ heading: '`GridIcons`', roots: [GRID_TYPE.GridIcons], expectedCount: 1 },
 		],
 		nonOptionTables: [
 			{
-				heading: 'Built-in operators',
+				heading: 'The ready-made set',
 				reason: 'Lists operator ids (`contains`, `between`, …) — filter values, not keys of any config type.',
+			},
+			{
+				heading: 'Custom operators',
+				reason:
+					'Lists the values of `input` (`none`, `single`, …) and what each one gets — not keys of any config type.',
 			},
 		],
 	},

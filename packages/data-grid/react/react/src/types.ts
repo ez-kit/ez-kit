@@ -754,12 +754,11 @@ export type ClearFilterButtonProps = {
 }
 
 /**
- * A filter operator as the React layer hands it to a control: core's definition, labelled from
- * the grid's dictionary and with its icon settled. `icon` is the operator's own, else the grid's
- * `icons.operators` entry — and absent when neither has one, which is a control's cue to show
- * `label` instead.
+ * A filter operator as the React layer hands it to a control: core's definition, with its `icon`
+ * typed as what React renders. The definition is the only source of both `label` and `icon`; an
+ * operator without an icon is a control's cue to show `label` instead.
  */
-export type FilterOperatorOption = Omit<FilterOperatorDef, 'icon'> & {
+export type FilterOperatorOption = FilterOperatorDef & {
 	icon?: ReactNode
 }
 

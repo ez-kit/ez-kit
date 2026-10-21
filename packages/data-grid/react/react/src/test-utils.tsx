@@ -1,6 +1,7 @@
 import { createColumns } from '@ez-kit/data-grid-core'
 import { tableFeatures } from '@ez-kit/data-grid-core/features'
 import { allDataGridFeatures } from '@ez-kit/data-grid-core/features/all'
+import { defaultOperators } from '@ez-kit/data-grid-core/operators'
 import { render } from '@testing-library/react'
 import { forwardRef, Fragment, useEffect, useState } from 'react'
 
@@ -1043,6 +1044,13 @@ export const TEST_FEATURES = allDataGridFeatures
  */
 export const NARROW_TEST_FEATURES = tableFeatures({})
 
+/**
+ * The operator set every fixture grid is built with — the ready-made one, as the kits' prebuilt
+ * `DataGrid` binds it. A case about a set of its own passes `operators`, which replaces it per cell
+ * type like any options layer above.
+ */
+export const TEST_OPERATORS = defaultOperators
+
 export type RenderGridResult<TRow extends object = TestRow> = ReturnType<typeof render> & {
 	/** The live table — drive state from a test with `table.setSorting(…)` etc. */
 	table: DataTable<GridFeatures, TRow>
@@ -1084,6 +1092,7 @@ export function renderGrid<TRow extends object = TestRow>(
 			// `config`, which spreads over them. The cast is that argument, made once here rather
 			// than at every call site that names its own row.
 			features: TEST_FEATURES,
+			operators: TEST_OPERATORS,
 			data: TEST_ROWS as unknown as TRow[],
 			columns: TEST_COLUMNS as unknown as UseDataGridConfig<GridFeatures, TRow>['columns'],
 			...config,

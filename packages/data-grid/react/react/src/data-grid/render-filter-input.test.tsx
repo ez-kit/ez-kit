@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { createDataGrid } from '../create-data-grid'
 import { prepareDataGridTable } from '../prepare-table'
-import { TEST_FEATURES, testComponents } from '../test-utils'
+import { TEST_FEATURES, TEST_OPERATORS, testComponents } from '../test-utils'
 
 import { collectFilterTargets } from './filter-target'
 import { renderFilterInput } from './render-filter-input'
@@ -50,6 +50,7 @@ function setup(config?: Partial<Parameters<typeof createTable<GridFeatures, Row>
 	const table = prepareDataGridTable(
 		createTable<GridFeatures, Row>({
 			features: TEST_FEATURES,
+			operators: TEST_OPERATORS,
 			data: DATA,
 			columns: COLUMNS,
 			filtering: true,
@@ -105,7 +106,7 @@ describe('OperatorSelect — operator options read as text labels', () => {
 		setup()
 		fireEvent.click(screen.getByRole('button', { name: /^Filter operator:/ }))
 
-		// A `select` column resolves to IN_OPERATORS + the text empty operators.
+		// A `select` column offers the ready-made select set: the list pair and the emptiness pair.
 		for (const label of ['Is any of', 'Is none of', 'Is empty', 'Is not empty']) {
 			expect(screen.getByRole('menuitemradio', { name: label })).toBeInTheDocument()
 		}
@@ -141,6 +142,7 @@ function setupDate(): DataTable<GridFeatures, DateRow> {
 	const table = prepareDataGridTable(
 		createTable<GridFeatures, DateRow>({
 			features: TEST_FEATURES,
+			operators: TEST_OPERATORS,
 			data: DATE_DATA,
 			columns: DATE_COLUMNS_WITH_PRESETS,
 			filtering: true,
@@ -222,7 +224,13 @@ function setupNumber(betweenOperator: { slider?: boolean; min?: number; max?: nu
 		},
 	])
 	const table = prepareDataGridTable(
-		createTable<GridFeatures, NumberRow>({ features: TEST_FEATURES, data: NUMBER_DATA, columns, filtering: true }),
+		createTable<GridFeatures, NumberRow>({
+			features: TEST_FEATURES,
+			operators: TEST_OPERATORS,
+			data: NUMBER_DATA,
+			columns,
+			filtering: true,
+		}),
 	)
 	render(
 		<GridComponentsProvider>
@@ -308,6 +316,7 @@ describe('renderFilterInput — field target', () => {
 		const table = prepareDataGridTable(
 			createTable<GridFeatures, Row>({
 				features: TEST_FEATURES,
+				operators: TEST_OPERATORS,
 				data: DATA,
 				columns: COLUMNS,
 				filtering: {
@@ -361,7 +370,13 @@ function renderHinted(
 	cellTypes: Parameters<typeof renderFilterInput>[0]['cellTypes'] = {},
 ) {
 	const table = prepareDataGridTable(
-		createTable<GridFeatures, HintRow>({ features: TEST_FEATURES, data: HINT_DATA, columns, filtering: true }),
+		createTable<GridFeatures, HintRow>({
+			features: TEST_FEATURES,
+			operators: TEST_OPERATORS,
+			data: HINT_DATA,
+			columns,
+			filtering: true,
+		}),
 	)
 	const target = collectFilterTargets(table).find((t) => t.id === columnId)
 	if (!target) throw new Error(`no ${columnId} target`)

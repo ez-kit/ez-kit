@@ -1,21 +1,24 @@
 import {
 	DATE_RANGE_PRESETS,
 	DATE_VALUE_PRESETS,
-	DEFAULT_OPERATOR_ID_BY_TYPE,
-	DEFAULT_OPERATORS_BY_TYPE,
+	OperatorInput,
 	createOperatorFilterFn,
 	resolveColumnOperators,
 } from '../../features/operators'
 import { setIfDefined } from '../../utils/set-if-defined'
+import { warnOnce } from '../../utils/warn-once'
 
 import { warnOnBothItemSources } from './items-source'
 
-import type { ColumnOperatorsConfig, DatePreset, OperatorRegistry } from '../../features/operators'
+import type { ColumnOperatorsConfig, DatePreset, FilterOperatorDef, OperatorsConfig } from '../../features/operators'
 import type { ColumnFilteringConfig, ColumnFilteringMeta } from '../types'
 
 const IS_DEV = process.env.NODE_ENV !== 'production'
 
 const DATE_CELL_TYPE = 'date'
+
+/** The cell type a column without `cell.type` has. */
+const DEFAULT_CELL_TYPE = 'text'
 
 /** What a development warning calls the filter's owner. */
 export const FilterSubject = {
@@ -30,8 +33,8 @@ export type OperatorFilterFn = ReturnType<typeof createOperatorFilterFn>
 
 /** What {@link resolveFiltering} reads besides the filter's own config. */
 export type ResolveFilteringOptions = {
-	/** The registry operator ids resolve against. Without one, no operators are resolved. */
-	registry?: OperatorRegistry | undefined
+	/** The grid's operator set, by cell type — `TableConfig.operators`. */
+	operators?: OperatorsConfig | undefined
 	/** Table-level `filtering.faceted` — the default a filter without its own `faceted` takes. */
 	tableFaceted?: boolean | undefined
 	/**
@@ -79,9 +82,9 @@ function resolveDatePresets(
 	if (configured === undefined || configured === false) return undefined
 	if (cellType !== DATE_CELL_TYPE) {
 		if (IS_DEV) {
-			console.warn(
+			warnOnce(
 				`[data-grid] ${who} sets \`filtering.presets\`, but its cell type is ` +
-					`"${cellType ?? 'text'}". Presets fill a date, so they only apply to ` +
+					`"${cellType ?? DEFAULT_CELL_TYPE}". Presets fill a date, so they only apply to ` +
 					`\`cell: { type: 'date' }\` filters and are ignored here.`,
 			)
 		}
@@ -89,6 +92,49 @@ function resolveDatePresets(
 	}
 	if (configured === true) return [...DATE_RANGE_PRESETS, ...DATE_VALUE_PRESETS]
 	return configured.length > 0 ? configured : undefined
+}
+
+const OPERATOR_INPUTS: ReadonlySet<unknown> = new Set(Object.values(OperatorInput))
+
+/** How a warning prints an `input` that may be anything a JavaScript caller wrote. */
+function describeInput(input: unknown): string {
+	return input === undefined ? 'missing' : JSON.stringify(input)
+}
+
+/**
+ * Development checks on one cell type's operator set — the mistakes that type-check (a set built in
+ * JavaScript, or by spreading a definition) and then misbehave without a word: two definitions under
+ * one id, where the menu lists both and the filter runs the last; a definition with no valid
+ * `input`, which every behaviour reads; and a `defaultByType` entry naming an id the set does not
+ * have, which a column would otherwise silently replace with the set's first operator.
+ *
+ * Each says so once, through `warnOnce`: the mapper re-runs on every React render.
+ */
+function warnOnMalformedSet(type: string, set: FilterOperatorDef[] | undefined, setDefault: string | undefined): void {
+	if (!IS_DEV || set === undefined) return
+	const seen = new Set<string>()
+	for (const op of set) {
+		if (seen.has(op.id)) {
+			warnOnce(
+				`[data-grid] The operator set of cell type "${type}" lists "${op.id}" twice. The menu offers ` +
+					`both, and the filter runs the last one.`,
+			)
+		}
+		seen.add(op.id)
+		if (!OPERATOR_INPUTS.has(op.input)) {
+			warnOnce(
+				`[data-grid] Operator "${op.id}" of cell type "${type}" has no valid \`input\` ` +
+					`(${describeInput(op.input)}). Every filter behaviour reads it — write one of ` +
+					`${[...OPERATOR_INPUTS].map((input) => `'${String(input)}'`).join(', ')}.`,
+			)
+		}
+	}
+	if (setDefault !== undefined && !seen.has(setDefault)) {
+		warnOnce(
+			`[data-grid] \`operators.defaultByType\` names "${setDefault}" for cell type "${type}", which its ` +
+				`set does not have, so its columns open with the set's first operator.`,
+		)
+	}
 }
 
 /** Whether the filter offers operators, by the cascade table → filter. */
@@ -115,31 +161,34 @@ function resolveOperators(
 	id: string,
 	filteringCfg: ColumnFilteringConfig | undefined,
 	cellType: string | undefined,
-	registry: OperatorRegistry,
+	operators: OperatorsConfig | undefined,
 	meta: ColumnFilteringMeta,
 	who: string,
 ): OperatorFilterFn | undefined {
 	const own = filteringCfg?.operators
-	const cellTypeOperators = DEFAULT_OPERATORS_BY_TYPE[cellType ?? 'text']
-	// A filter inheriting the table's `true` offers its cell type's defaults — the same thing
+	const type = cellType ?? DEFAULT_CELL_TYPE
+	const cellTypeOperators = operators?.byType?.[type]
+	// A filter inheriting the table's `true` offers its cell type's set — the same thing
 	// `operators: true` on the filter itself means.
 	const operatorsConfig: true | ColumnOperatorsConfig = typeof own === 'object' ? own : true
-	const resolved = resolveColumnOperators(operatorsConfig, registry, cellTypeOperators, id)
+	const setDefault = operators?.defaultByType?.[type]
+	warnOnMalformedSet(type, cellTypeOperators, setDefault)
+	const resolved = resolveColumnOperators(operatorsConfig, cellTypeOperators, id, type)
 
 	if (resolved.length === 0) {
-		// `operators: true` on a cell type with no default set. Every built-in has one, so this
-		// can only be a project-registered type — which has to say which operators it offers,
-		// either through `defineCellType({ operators })` or per filter.
+		// The grid has no set for this cell type: a project-registered type nobody listed, or a
+		// bundle composed without `operators` at all.
 		//
 		// Only when the filter asked: under a table-wide `operators: true` the author said
-		// "wherever they apply", and a custom cell type that declares none is a filter where they
-		// do not — falling back to a plain input is the answer, not a warning per such filter.
+		// "wherever they apply", and a cell type with no set is a filter where they do not —
+		// falling back to a plain input is the answer, not a warning per such filter. A table-wide
+		// `true` over a grid with no set at all warns once, in `createTableOptions`.
 		if (IS_DEV && own !== undefined) {
-			console.warn(
-				`[data-grid] ${who} enables \`filtering.operators\`, but cell type ` +
-					`"${cellType ?? 'text'}" declares no operators, so it falls back to a plain ` +
-					`filter input. List them in its \`filtering\` (\`operators: { items: [...] }\`) or on the cell ` +
-					`type (\`defineCellType({ operators })\`).`,
+			warnOnce(
+				`[data-grid] ${who} enables \`filtering.operators\`, but the grid has no operators for cell ` +
+					`type "${type}", so it falls back to a plain filter input. Add a set for it to ` +
+					`\`operators.byType\` (on \`createDataGrid\`, a provider or the grid), or list the ` +
+					`definitions in its \`filtering.operators.items\`.`,
 			)
 		}
 		return undefined
@@ -157,7 +206,7 @@ function resolveOperators(
 			betweenConfig.slider === true &&
 			(betweenConfig.min === undefined || betweenConfig.max === undefined)
 		) {
-			console.warn(
+			warnOnce(
 				`[data-grid] ${who} sets \`betweenOperator.slider: true\` without both ` +
 					`\`min\` and \`max\`. The filter falls back to two number fields.`,
 			)
@@ -166,14 +215,17 @@ function resolveOperators(
 		meta.betweenOperator = betweenConfig
 	}
 
-	const defaultOpId =
-		filteringCfg?.defaultOperator ?? (cellType ? DEFAULT_OPERATOR_ID_BY_TYPE[cellType] : undefined) ?? resolved[0]?.id
+	// The set's default for the type applies only where the column offers it: a column that
+	// narrowed its `items` past it opens with its own first operator instead of with an id it
+	// does not have. A `defaultOperator` the author wrote is checked below.
+	const offeredSetDefault = resolved.some((op) => op.id === setDefault) ? setDefault : undefined
+	const defaultOpId = filteringCfg?.defaultOperator ?? offeredSetDefault ?? resolved[0]?.id
 	if (defaultOpId) {
 		// An id the filter does not actually offer selects nothing in the operator control and
 		// dispatches to no `filterFn` — the filter matches every row. Cheaper to catch here than in
 		// the browser.
 		if (IS_DEV && !resolved.some((op) => op.id === defaultOpId)) {
-			console.warn(
+			warnOnce(
 				`[data-grid] ${who} sets \`filtering.defaultOperator: "${defaultOpId}"\`, ` +
 					`which is not one of its operators (${resolved.map((op) => `"${op.id}"`).join(', ')}). ` +
 					`The filter would match every row.`,
@@ -182,7 +234,7 @@ function resolveOperators(
 		meta.defaultOperator = defaultOpId
 	}
 
-	return createOperatorFilterFn(resolved)
+	return createOperatorFilterFn(resolved, id)
 }
 
 /**
@@ -214,10 +266,9 @@ export function resolveFiltering(
 	const ownFaceted = filteringCfg?.faceted
 	if (ownFaceted === true || (ownFaceted !== false && options.tableFaceted === true)) meta.faceted = true
 
-	const filterFn =
-		operatorsEnabled(filtering, options) && options.registry
-			? resolveOperators(id, filteringCfg, cellType, options.registry, meta, who)
-			: undefined
+	const filterFn = operatorsEnabled(filtering, options)
+		? resolveOperators(id, filteringCfg, cellType, options.operators, meta, who)
+		: undefined
 
 	// `false` is a distinct value, not an empty config: it is what turns the filter control off,
 	// and readers test for it. An enabled filter with nothing configured contributes no meta.

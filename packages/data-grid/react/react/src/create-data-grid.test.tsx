@@ -1,11 +1,11 @@
 import { createColumns, defaultMessages } from '@ez-kit/data-grid-core'
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { render, renderHook, screen } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
 
 import { createDataGrid } from './create-data-grid'
 import { DataGrid } from './data-grid/data-grid'
 import { DataGridOptionsProvider } from './data-grid-options-context'
-import { NARROW_TEST_FEATURES, TEST_FEATURES, testComponents } from './test-utils'
+import { NARROW_TEST_FEATURES, TEST_FEATURES, TEST_OPERATORS, testComponents } from './test-utils'
 
 import type { GridFeatures } from './types'
 
@@ -282,5 +282,58 @@ describe('createDataGrid({ features })', () => {
 			/>,
 		)
 		expect(screen.getByText('Alice')).toBeInTheDocument()
+	})
+})
+
+describe('createDataGrid({ operators })', () => {
+	type Person = { id: number; name: string; age: number }
+	const PEOPLE: Person[] = [{ id: 1, name: 'Ann', age: 30 }]
+	const PEOPLE_COLUMNS = createColumns<Person>([
+		{ accessorKey: 'name', filtering: { operators: true } },
+		{ accessorKey: 'age', cell: 'number' },
+	])
+
+	function operatorIdsOf(table: { getColumn: (id: string) => unknown }, columnId: string): string[] | undefined {
+		const column = table.getColumn(columnId) as
+			| { columnDef: { meta?: { filtering?: false | { operators?: { id: string }[] } } } }
+			| undefined
+		const filtering = column?.columnDef.meta?.filtering
+		return filtering === false ? undefined : filtering?.operators?.map((op) => op.id)
+	}
+
+	it('gives every grid of the bundle the set it names', () => {
+		const { useDataGrid } = createDataGrid({ components: testComponents, operators: TEST_OPERATORS })
+
+		const { result } = renderHook(() =>
+			useDataGrid<GridFeatures, Person>({
+				features: TEST_FEATURES,
+				data: PEOPLE,
+				columns: PEOPLE_COLUMNS,
+				filtering: true,
+			}),
+		)
+
+		expect(operatorIdsOf(result.current, 'name')).toEqual(TEST_OPERATORS.byType.text.map((op) => op.id))
+	})
+
+	it('gives a bundle built without a set no operators, and says so once', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+		const { useDataGrid } = createDataGrid({ components: testComponents })
+
+		const { result } = renderHook(() =>
+			useDataGrid<GridFeatures, Person>({
+				features: TEST_FEATURES,
+				data: PEOPLE,
+				columns: createColumns<Person>([{ accessorKey: 'name' }, { accessorKey: 'age', cell: 'number' }]),
+				filtering: { operators: true },
+			}),
+		)
+
+		expect(operatorIdsOf(result.current, 'name')).toBeUndefined()
+		expect(operatorIdsOf(result.current, 'age')).toBeUndefined()
+		expect(warn.mock.calls.filter(([message]) => String(message).includes('`filtering.operators: true`'))).toHaveLength(
+			1,
+		)
+		warn.mockRestore()
 	})
 })

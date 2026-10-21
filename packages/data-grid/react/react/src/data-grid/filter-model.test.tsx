@@ -1,16 +1,17 @@
 import {
 	DATE_RANGE_PRESETS,
 	DATE_VALUE_PRESETS,
-	DEFAULT_OPERATOR_ICONS,
+	OperatorInput,
 	createColumns,
 	createTable,
 	defaultMessages,
 	resolveMessages,
 } from '@ez-kit/data-grid-core'
+import { DEFAULT_OPERATOR_ICONS } from '@ez-kit/data-grid-core/operators'
 import { describe, expect, it, vi } from 'vitest'
 
 import { prepareDataGridTable } from '../prepare-table'
-import { TEST_FEATURES } from '../test-utils'
+import { TEST_FEATURES, TEST_OPERATORS } from '../test-utils'
 
 import { FilterEditor, resolveFilter } from './filter-model'
 import { collectFilterTargets, columnFilterTarget } from './filter-target'
@@ -20,7 +21,7 @@ import type { ItemsLists, ItemsSourceSnapshot, ListItem } from '../items-source'
 import type { GridFeatures } from '../types'
 import type { FilterModel, FilterModelContext } from './filter-model'
 import type { FilterTarget } from './filter-target'
-import type { ColumnDef, GridMessages, StructuredFilterValue } from '@ez-kit/data-grid-core'
+import type { ColumnDef, FilterOperatorDef, GridMessages, StructuredFilterValue } from '@ez-kit/data-grid-core'
 import type { Column } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
@@ -93,7 +94,39 @@ const PRIORITY_ITEMS = [
 	{ value: 'high', label: 'High', icon: 'arrow-up' },
 ]
 
-const fuzzyOperator = { id: 'fuzzy', label: 'Fuzzy', filterFn: () => true }
+const fuzzyOperator: FilterOperatorDef = {
+	id: 'fuzzy',
+	label: 'Fuzzy',
+	input: OperatorInput.Single,
+	filterFn: () => true,
+}
+
+/** A grid's own range operator — the grid must give it a range because of its `input`, not its id. */
+const notBetween: FilterOperatorDef = {
+	id: 'notBetween',
+	label: 'Not between',
+	input: OperatorInput.Range,
+	filterFn: () => true,
+}
+
+/** A grid's own list operator. */
+const excludesAny: FilterOperatorDef = {
+	id: 'excludesAny',
+	label: 'Excludes any',
+	input: OperatorInput.List,
+	filterFn: () => true,
+}
+
+/** The ready-made set with the two custom operators added to the types they belong to. */
+const WITH_CUSTOM_OPERATORS = {
+	byType: {
+		...TEST_OPERATORS.byType,
+		number: [...TEST_OPERATORS.byType.number, notBetween],
+		date: [...TEST_OPERATORS.byType.date, notBetween],
+		select: [...TEST_OPERATORS.byType.select, excludesAny],
+	},
+	defaultByType: TEST_OPERATORS.defaultByType,
+}
 
 function RatingFilter(): ReactNode {
 	return null
@@ -149,6 +182,7 @@ function makeTable(config: Record<string, unknown> = {}, columns: unknown = COLU
 	return prepareDataGridTable(
 		createTable<GridFeatures, Row>({
 			features: TEST_FEATURES,
+			operators: TEST_OPERATORS,
 			data: DATA,
 			columns,
 			filtering: true,
@@ -172,14 +206,24 @@ function modelOf(
 }
 
 describe('resolveFilter — operators', () => {
-	it('labels operators from the grid dictionary for the column cell type', () => {
-		const messages: GridMessages = resolveMessages({
-			operators: { date: { ...defaultMessages.operators.date, greaterThan: 'После' } },
-		})
+	it('labels operators from the set the grid was given', () => {
+		const after: FilterOperatorDef = {
+			id: 'greaterThan',
+			label: 'После',
+			input: OperatorInput.Single,
+			filterFn: () => true,
+		}
+		const table = makeTable({ operators: { byType: { ...TEST_OPERATORS.byType, date: [after] } } })
+
+		expect(modelOf(table, 'joinedAt').operators.find((op) => op.id === 'greaterThan')?.label).toBe('После')
+	})
+
+	it('takes no operator label from the dictionary', () => {
+		const messages: GridMessages = resolveMessages({ filtering: { any: 'Любой' } })
 
 		const model = modelOf(makeTable(), 'joinedAt', context({ messages }))
 
-		expect(model.operators.find((op) => op.id === 'greaterThan')?.label).toBe('После')
+		expect(model.operators.find((op) => op.id === 'greaterThan')?.label).toBe('After')
 	})
 
 	it('keeps the label a custom operator was written with', () => {
@@ -192,16 +236,20 @@ describe('resolveFilter — operators', () => {
 describe('resolveFilter — operator icons', () => {
 	const EQUAL_ICON = <svg data-icon='equal' />
 
-	it('gives a built-in operator no icon until the grid names one', () => {
+	it('gives a ready-made operator no icon', () => {
 		const model = modelOf(makeTable(), 'age')
 
 		expect(model.operators.find((op) => op.id === 'greaterOrEqual')).not.toHaveProperty('icon')
 	})
 
-	it('takes the ready-made signs when the grid passes them as icons.operators', () => {
-		const model = modelOf(makeTable(), 'age', context({ icons: { operators: DEFAULT_OPERATOR_ICONS } }))
+	it('takes a sign the project copied into the definition', () => {
+		const signed = TEST_OPERATORS.byType.number.map((op) => ({
+			...op,
+			icon: DEFAULT_OPERATOR_ICONS[op.id],
+		}))
+		const table = makeTable({ operators: { byType: { ...TEST_OPERATORS.byType, number: signed } } })
 
-		expect(model.operators.find((op) => op.id === 'greaterOrEqual')?.icon).toBe('≥')
+		expect(modelOf(table, 'age').operators.find((op) => op.id === 'greaterOrEqual')?.icon).toBe('≥')
 	})
 
 	it('leaves a custom operator with no icon without one', () => {
@@ -210,23 +258,29 @@ describe('resolveFilter — operator icons', () => {
 		expect(model.operators.find((op) => op.id === 'fuzzy')).not.toHaveProperty('icon')
 	})
 
-	it('takes an element from the grid’s icons.operators, and only for the ids it names', () => {
-		const model = modelOf(makeTable(), 'name', context({ icons: { operators: { equals: EQUAL_ICON } } }))
-
-		expect(model.operators.find((op) => op.id === 'equals')?.icon).toBe(EQUAL_ICON)
-		expect(model.operators.find((op) => op.id === 'contains')).not.toHaveProperty('icon')
-	})
-
-	it('takes the icon written on the operator over the grid’s icons.operators', () => {
-		const ownContains = { id: 'contains', label: 'Contains', icon: 'A', filterFn: () => true }
+	it('hands over an element written on the definition', () => {
+		const equals: FilterOperatorDef = {
+			id: 'equals',
+			label: 'Equals',
+			icon: EQUAL_ICON,
+			input: OperatorInput.Single,
+			filterFn: () => true,
+		}
 		const table = makeTable(
 			{},
-			createColumns<Row>([{ accessorKey: 'name', filtering: { operators: { items: [ownContains] } } }]),
+			createColumns<Row>([
+				{
+					accessorKey: 'status',
+					cell: { type: 'select', config: { items: STATUS_ITEMS } },
+					filtering: { operators: { items: ['in', equals] } },
+				},
+			]),
 		)
 
-		const model = modelOf(table, 'name', context({ icons: { operators: { contains: 'B' } } }))
+		const model = modelOf(table, 'status')
 
-		expect(model.operators[0]?.icon).toBe('A')
+		expect(model.operators.find((op) => op.id === 'equals')?.icon).toBe(EQUAL_ICON)
+		expect(model.operators.find((op) => op.id === 'in')).not.toHaveProperty('icon')
 	})
 })
 
@@ -282,6 +336,20 @@ describe('resolveFilter — editor', () => {
 		expect(modelOf(table, 'name').editor).toBe(FilterEditor.None)
 	})
 
+	it('is multiSelect for a custom operator that takes a list', () => {
+		const table = makeTable({ operators: WITH_CUSTOM_OPERATORS })
+		table.getColumn('status')?.setFilterValue({ operator: 'excludesAny', value: [] })
+
+		expect(modelOf(table, 'status').editor).toBe(FilterEditor.MultiSelect)
+	})
+
+	it('is between for a custom operator that takes a range', () => {
+		const table = makeTable({ operators: WITH_CUSTOM_OPERATORS })
+		table.getColumn('age')?.setFilterValue({ operator: 'notBetween', value: {} })
+
+		expect(modelOf(table, 'age').editor).toBe(FilterEditor.Between)
+	})
+
 	it('answers for another operator without changing the current one', () => {
 		const table = makeTable()
 		table.getColumn('age')?.setFilterValue({ operator: 'equals', value: 5 })
@@ -320,9 +388,9 @@ describe('resolveFilter — items', () => {
 })
 
 describe('resolveFilter — presets', () => {
-	it('offers only range presets to between, localized', () => {
+	it('offers only range presets to between, labelled from filtering.presets', () => {
 		const messages = resolveMessages({
-			operators: { presets: { ...defaultMessages.operators.presets, last7: 'Последние 7 дней' } },
+			filtering: { presets: { ...defaultMessages.filtering.presets, last7: 'Последние 7 дней' } },
 		})
 		const table = makeTable()
 		table.getColumn('joinedAt')?.setFilterValue({ operator: 'between', value: {} })
@@ -338,6 +406,13 @@ describe('resolveFilter — presets', () => {
 		table.getColumn('joinedAt')?.setFilterValue({ operator: 'greaterThan', value: undefined })
 
 		expect(modelOf(table, 'joinedAt').presets.map((p) => p.id)).toEqual(DATE_VALUE_PRESETS.map((p) => p.id))
+	})
+
+	it('offers only range presets to a custom operator that takes a range', () => {
+		const table = makeTable({ operators: WITH_CUSTOM_OPERATORS })
+		table.getColumn('joinedAt')?.setFilterValue({ operator: 'notBetween', value: {} })
+
+		expect(modelOf(table, 'joinedAt').presets.map((p) => p.id)).toEqual(DATE_RANGE_PRESETS.map((p) => p.id))
 	})
 
 	it('is empty for a column without presets', () => {
@@ -406,6 +481,29 @@ describe('resolveFilter — nextValueForOperator', () => {
 			operator: 'equals',
 			value: undefined,
 		})
+	})
+
+	it('keeps the range between two operators that both take one', () => {
+		const table = makeTable({ operators: WITH_CUSTOM_OPERATORS })
+		table.getColumn('age')?.setFilterValue({ operator: 'between', value: { from: 1, to: 9 } })
+		const model = modelOf(table, 'age')
+
+		expect(model.hasOperators && model.nextValueForOperator('notBetween')).toEqual({
+			operator: 'notBetween',
+			value: { from: 1, to: 9 },
+		})
+	})
+
+	it('drops a list when moving to an operator that takes one value', () => {
+		const singleEquals = TEST_OPERATORS.byType.text.find((op) => op.id === 'equals')
+		if (!singleEquals) throw new Error('expected the text equals')
+		const table = makeTable({
+			operators: { byType: { ...TEST_OPERATORS.byType, select: [...TEST_OPERATORS.byType.select, singleEquals] } },
+		})
+		table.getColumn('status')?.setFilterValue({ operator: 'in', value: ['open'] })
+		const model = modelOf(table, 'status')
+
+		expect(model.hasOperators && model.nextValueForOperator('equals')).toEqual({ operator: 'equals', value: undefined })
 	})
 
 	it('keeps the value across two operators that both take one', () => {
@@ -562,6 +660,7 @@ describe('resolveFilter — value lists from hooks', () => {
 		return prepareDataGridTable(
 			createTable<GridFeatures, Order>({
 				features: TEST_FEATURES,
+				operators: TEST_OPERATORS,
 				data: ORDERS,
 				columns: createColumns<Order>(columns),
 				filtering: true,

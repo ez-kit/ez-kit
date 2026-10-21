@@ -25,6 +25,7 @@ import type { GridContextReader, GridContextRecord } from './grid-context'
 import type { ColumnDef, ColumnHelper } from './react-columns'
 import type { DataTable, GridFeatures } from './types'
 import type { UseDataGridConfig } from './use-data-grid'
+import type { OperatorsConfig } from '@ez-kit/data-grid-core'
 import type { TableFeatures } from '@tanstack/table-core'
 
 /** The ids a registry actually holds, as a string union — what the runtime helper is built from. */
@@ -71,6 +72,22 @@ export type CreateDataGridOptions<
 	 * dropped by the annotation and the compiler says so at the first call site.
 	 */
 	features?: TFeatures
+	/**
+	 * The filter operators every grid from this bundle offers, by cell type — see
+	 * {@link OperatorsConfig}. A bundle decision like {@link features}, and named here for the same
+	 * reason: it is what the bundle brings, so it belongs in the factory's signature.
+	 *
+	 * Without it the bundle has **no** operators: `filtering.operators: true` then leaves every
+	 * column a plain filter, and warns once in development. The kits' prebuilt `DataGrid` passes the
+	 * ready-made `defaultOperators` from `@ez-kit/data-grid-core/operators`; a composed bundle names
+	 * it, or a set of its own, here.
+	 *
+	 * It switches nothing on, and it is not threaded through the types: a set does not narrow what a
+	 * grid's config may say. At runtime it is the factory option layer, beneath a provider's
+	 * `operators` and the grid's own — a layer replaces the set of each cell type it names and keeps
+	 * the rest.
+	 */
+	operators?: OperatorsConfig | undefined
 	/**
 	 * Whether this kit wants the package's own keyboard focus model — one tab stop for the whole
 	 * grid, arrows between cells, `Enter` into a cell's controls and `Escape` back out, with the
@@ -306,6 +323,7 @@ export function createDataGrid<
 	components,
 	cellTypes,
 	features,
+	operators,
 	context,
 	defaults,
 	dnd,
@@ -319,17 +337,19 @@ export function createDataGrid<
 	 * its own field is a *typing* decision (it is the one option every instance config must
 	 * name); the runtime has one layer stack, not two.
 	 *
-	 * `context` is folded in the same way and for the same reason: its own field is where the
-	 * bundle's type comes from, while the merge it needs is the ordinary one. The cast is the
+	 * `operators` and `context` are folded in the same way, and take the ordinary merge: a layer
+	 * above replaces the operator set of each cell type it names and keeps the rest, and the
+	 * context's own field is where the bundle's type comes from. The cast is the
 	 * constraint's: `TContext extends object` admits an `interface` that `GridContextRecord`'s
 	 * index signature does not, and the layer stack is row- and context-erased throughout.
 	 */
 	const factoryDefaults: DataGridDefaultOptions<GridFeatures, object> | undefined =
-		features === undefined && context === undefined
+		features === undefined && operators === undefined && context === undefined
 			? defaults
 			: {
 					...defaults,
 					...(features !== undefined ? { features } : {}),
+					...(operators !== undefined ? { operators } : {}),
 					...(context !== undefined ? { context: context as GridContextRecord } : {}),
 				}
 

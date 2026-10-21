@@ -180,36 +180,22 @@ export type {
 	FilterOperatorId,
 	FilterItem,
 	DateValuePreset,
-	OperatorRegistry,
+	OperatorsConfig,
 	StructuredFilterValue,
-	TableOperatorsConfig,
 } from './features/operators'
-// Every built-in operator list, so extending one reads as extending it —
-// `items: [...SELECT_BADGE_OPERATORS, myOperator]`. `SELECT_BADGE_OPERATORS` and
-// `EMPTY_OPERATORS` were the two that were not exported, which left the select / badge
-// default set nameable only as `DEFAULT_OPERATORS_BY_TYPE.select` — an index signature, so
-// `FilterOperatorDef[] | undefined`.
+// The operator *definitions* are deliberately not here — the ready-made set, and the
+// `FilterOperator` / `DEFAULT_OPERATOR_ICONS` constants named after its ids, live on
+// `@ez-kit/data-grid-core/operators`, so a grid that never imports the set never carries it.
 export {
-	BOOLEAN_OPERATORS,
 	BetweenInputType,
-	DATE_OPERATORS,
 	DATE_VALUE_PRESETS,
 	DATE_RANGE_PRESETS,
-	// Opt-in signs for the built-ins — a ready value for the React layer's `icons.operators`.
-	DEFAULT_OPERATOR_ICONS,
-	DEFAULT_OPERATOR_ID_BY_TYPE,
-	DEFAULT_OPERATORS_BY_TYPE,
-	EMPTY_OPERATORS,
-	FilterOperator,
-	IN_OPERATORS,
 	isDateRangePreset,
-	// The two label overlays: the operator lists are settled in core, their wording comes from
-	// the grid's dictionary, and the React layer applies these where the controls are rendered.
+	isEmptyOperatorValue,
+	// The preset labels' overlay: the presets are settled in core, their wording comes from the
+	// grid's dictionary, and the React layer applies it where the controls are rendered.
 	localizeDatePresets,
-	localizeOperators,
-	NUMBER_OPERATORS,
-	SELECT_BADGE_OPERATORS,
-	TEXT_OPERATORS,
+	OperatorInput,
 } from './features/operators'
 
 // Reordering: the pure helpers the UI drives it with, per axis. In core, not the React layer,

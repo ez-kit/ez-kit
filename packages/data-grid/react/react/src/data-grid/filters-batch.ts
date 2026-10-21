@@ -1,3 +1,7 @@
+import { isEmptyOperatorValue, OperatorInput } from '@ez-kit/data-grid-core'
+
+import { inputOf } from './operator-input'
+
 import type { OperatorFilterModel } from './filter-model'
 import type { FilterOperatorDef, StructuredFilterValue } from '@ez-kit/data-grid-core'
 import type { ColumnFiltersState } from '@tanstack/table-core'
@@ -10,29 +14,26 @@ const IS_DEV = process.env.NODE_ENV !== 'production'
  */
 export type FiltersValue = Record<string, StructuredFilterValue | undefined>
 
-function isBlank(value: unknown): boolean {
-	return value === undefined || value === null || value === ''
-}
-
 /**
  * Whether a structured filter states nothing to filter by — no value, an empty string, an empty
- * set, or a range with neither bound — for an operator that takes one.
+ * set, or a range with neither bound — for an operator that takes a value.
  *
  * Core's operator `autoRemove` deliberately keeps such an entry while an operator is selected,
  * which is right for a header control the user is still filling in and wrong for a panel that
  * applies a finished value: an empty pinned filter would reach `filtering.onChange` and the
  * server as a filter. So a batch write drops them itself.
+ *
+ * Read by the operator's `input`, the rule core's row filter applies. An id the target does not
+ * offer — a value restored from a link made against another set — is judged by its shape alone:
+ * blank, an empty set, or an object with neither bound is dropped; any other value is kept, as the
+ * row filter keeps it.
  */
 export function isEmptyFilterValue(filter: StructuredFilterValue, operators: FilterOperatorDef[]): boolean {
-	if (operators.find((op) => op.id === filter.operator)?.requiresInput === false) return false
+	const input = inputOf(operators, filter.operator)
+	if (input !== undefined) return isEmptyOperatorValue(input, filter.value)
 	const { value } = filter
-	if (isBlank(value)) return true
-	if (Array.isArray(value)) return value.length === 0
-	if (typeof value === 'object') {
-		const { from, to } = value as { from?: unknown; to?: unknown }
-		return isBlank(from) && isBlank(to)
-	}
-	return false
+	const isRange = typeof value === 'object' && value !== null && !Array.isArray(value)
+	return isEmptyOperatorValue(isRange ? OperatorInput.Range : OperatorInput.Single, value)
 }
 
 /** The panel's value read off the grid: every target with operators that currently holds a filter. */

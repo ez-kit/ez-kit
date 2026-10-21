@@ -1,20 +1,14 @@
-import {
-	createColumns,
-	createTable,
-	DEFAULT_OPERATOR_ICONS,
-	defaultMessages,
-	resolveMessages,
-} from '@ez-kit/data-grid-core'
+import { createColumns, createTable, OperatorInput, resolveMessages } from '@ez-kit/data-grid-core'
+import { DEFAULT_OPERATOR_ICONS } from '@ez-kit/data-grid-core/operators'
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
 import { createDataGrid } from '../create-data-grid'
 import { prepareDataGridTable } from '../prepare-table'
-import { TEST_FEATURES, testComponents } from '../test-utils'
+import { TEST_FEATURES, TEST_OPERATORS, testComponents } from '../test-utils'
 
-import type { ResolvedGridOptions } from '../resolved-options'
 import type { GridFeatures } from '../types'
-import type { GridMessages } from '@ez-kit/data-grid-core'
+import type { FilterOperatorDef, GridMessages, OperatorsConfig } from '@ez-kit/data-grid-core'
 
 type Row = { id: number; name: string; age: number; status: string; city: string; note: string; plain: string }
 
@@ -45,20 +39,22 @@ const COLUMNS = createColumns<Row>([
 	{ accessorKey: 'plain', header: 'Plain' },
 ])
 
-function setup(
-	config: Record<string, unknown> = {},
-	grid: { icons?: ResolvedGridOptions['icons']; messages?: GridMessages } = {},
-) {
+/** The ready-made set with `text` replaced — the way a project changes one type's operators. */
+function withText(text: FilterOperatorDef[]): OperatorsConfig {
+	return { ...TEST_OPERATORS, byType: { ...TEST_OPERATORS.byType, text } }
+}
+
+function setup(config: Record<string, unknown> = {}, grid: { messages?: GridMessages } = {}) {
 	const table = prepareDataGridTable(
 		createTable<GridFeatures, Row>({
 			features: TEST_FEATURES,
+			operators: TEST_OPERATORS,
 			data: DATA,
 			columns: COLUMNS,
 			filtering: true,
 			...config,
 		}),
 	)
-	if (grid.icons) table.grid.icons = grid.icons
 	if (grid.messages) table.grid.messages = grid.messages
 	const view = render(
 		<GridComponentsProvider>
@@ -128,15 +124,16 @@ describe('operator control — name, menu and switching', () => {
 		expect(within(headerOf('Name')).getByRole('button', { name: 'Filter operator: Contains' })).toBeInTheDocument()
 	})
 
-	it('names it from the grid’s dictionary', () => {
+	it('names it from the grid’s dictionary, around the label of the definition', () => {
+		const contains: FilterOperatorDef = {
+			id: 'contains',
+			label: 'Содержит',
+			input: OperatorInput.Single,
+			filterFn: () => true,
+		}
 		setup(
-			{},
-			{
-				messages: resolveMessages({
-					operators: { text: { ...defaultMessages.operators.text, contains: 'Содержит' } },
-					filtering: { operatorTrigger: ({ label }) => `Оператор: ${label}` },
-				}),
-			},
+			{ operators: withText([contains]) },
+			{ messages: resolveMessages({ filtering: { operatorTrigger: ({ label }) => `Оператор: ${label}` } }) },
 		)
 
 		expect(within(headerOf('Name')).getByRole('button', { name: 'Оператор: Содержит' })).toBeInTheDocument()
@@ -150,8 +147,12 @@ describe('operator control — name, menu and switching', () => {
 		)
 	})
 
-	it('shows the icon the grid names, in the button and beside the label in the menu', () => {
-		setup({}, { icons: { operators: DEFAULT_OPERATOR_ICONS } })
+	it('shows the icon a definition names, in the button and beside the label in the menu', () => {
+		const signed = TEST_OPERATORS.byType.text.map((op) => ({
+			...op,
+			icon: DEFAULT_OPERATOR_ICONS[op.id],
+		}))
+		setup({ operators: withText(signed) })
 
 		const button = within(headerOf('Name')).getByRole('button', { name: 'Filter operator: Contains' })
 		expect(button).toHaveTextContent('*a*')
@@ -181,9 +182,50 @@ describe('operator control — name, menu and switching', () => {
 		expect(table.store.state.columnFilters).toEqual([{ id: 'age', value: { operator: 'between', value: {} } }])
 	})
 
-	it('keeps a label a replacement for a built-in was written with', () => {
-		setup({ filtering: { operators: { items: [{ id: 'contains', label: 'Похоже на', filterFn: () => true }] } } })
+	it('shows the label a set’s own definition was written with', () => {
+		const contains: FilterOperatorDef = {
+			id: 'contains',
+			label: 'Похоже на',
+			input: OperatorInput.Single,
+			filterFn: () => true,
+		}
+		setup({ operators: withText([contains]) })
 
 		expect(within(headerOf('Name')).getByRole('button', { name: 'Filter operator: Похоже на' })).toBeInTheDocument()
+	})
+})
+
+describe('operator control — operators of a project’s own', () => {
+	it('keeps a custom range operator and both its fields in the operator’s row', () => {
+		const notBetween: FilterOperatorDef = {
+			id: 'notBetween',
+			label: 'Not between',
+			input: OperatorInput.Range,
+			filterFn: () => true,
+		}
+		const { table } = setup({
+			operators: { ...TEST_OPERATORS, byType: { ...TEST_OPERATORS.byType, number: [notBetween] } },
+		})
+		act(() => {
+			table.setColumnFilters([{ id: 'age', value: { operator: 'notBetween', value: {} } }])
+		})
+
+		const row = headerOf('Age').querySelector("[data-slot='filter-control']")
+		expect(row?.querySelector("[data-slot='filter-operator']")).not.toBeNull()
+		expect(row?.querySelectorAll('input')).toHaveLength(2)
+	})
+
+	it('shows the label of a custom operator that takes no value in place of the value control', () => {
+		const isToday: FilterOperatorDef = {
+			id: 'isToday',
+			label: 'Today',
+			input: OperatorInput.None,
+			filterFn: () => true,
+		}
+		setup({ operators: withText([isToday]) })
+
+		const row = headerOf('Name').querySelector("[data-slot='filter-control']")
+		expect(row?.querySelector("[data-slot='filter-operator-label']")?.textContent).toBe('Today')
+		expect(row?.querySelector('input')).toBeNull()
 	})
 })

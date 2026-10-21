@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo } from 'react'
 
-import type { CellViewCtx, FieldState, FilterOperatorId } from '@ez-kit/data-grid-core'
+import type { CellViewCtx, FieldState } from '@ez-kit/data-grid-core'
 import type { ComponentType, ReactNode } from 'react'
 
 // ── prop types ────────────────────────────────────────────────────────────
@@ -52,13 +52,6 @@ export type CellTypeDefinition<TConfig = unknown> = {
 	 * left empty (filters do not surface validation). Falls back to `editing` when omitted.
 	 */
 	filtering?: ComponentType<FieldState<TConfig>>
-	/**
-	 * Operator ids this cell type offers when a column sets `filtering.operators: true` and
-	 * the type is not one of the built-ins. Typed {@link FilterOperatorId}, not `string`.
-	 */
-	operators?: FilterOperatorId[]
-	/** Which of them the filter opens with. */
-	defaultOperator?: FilterOperatorId
 }
 
 /**

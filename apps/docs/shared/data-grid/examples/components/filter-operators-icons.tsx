@@ -1,6 +1,5 @@
 'use client'
 
-import { DEFAULT_OPERATOR_ICONS } from '@ez-kit/data-grid-core'
 import {
 	columnFilteringFeature,
 	columnPinningFeature,
@@ -10,11 +9,14 @@ import {
 	filterFns,
 	tableFeatures,
 } from '@ez-kit/data-grid-core/features'
+import { DEFAULT_OPERATOR_ICONS, defaultOperators } from '@ez-kit/data-grid-core/operators'
 import { createColumns } from '@ez-kit/data-grid-react'
 
 import { DataGrid } from 'shared/DataGrid'
 
 import { EMPLOYEE_DATA, type Employee } from './_data'
+
+import type { OperatorsConfig } from '@ez-kit/data-grid-core'
 
 const features = tableFeatures({
 	columnVisibilityFeature,
@@ -24,6 +26,13 @@ const features = tableFeatures({
 	filterFns,
 	filteredRowModel: createFilteredRowModel(),
 })
+
+const operators: OperatorsConfig = {
+	byType: {
+		text: defaultOperators.byType.text.map((op) => ({ ...op, icon: DEFAULT_OPERATOR_ICONS[op.id] })),
+		number: defaultOperators.byType.number.map((op) => ({ ...op, icon: DEFAULT_OPERATOR_ICONS[op.id] })),
+	},
+}
 
 const columns = createColumns<Employee>([
 	{ accessorKey: 'name', header: 'Name' },
@@ -35,10 +44,10 @@ export function FilterOperatorsIconsExample() {
 	return (
 		<DataGrid
 			features={features}
+			operators={operators}
 			data={EMPLOYEE_DATA}
 			columns={columns}
 			filtering={{ operators: true }}
-			icons={{ operators: DEFAULT_OPERATOR_ICONS }}
 		/>
 	)
 }

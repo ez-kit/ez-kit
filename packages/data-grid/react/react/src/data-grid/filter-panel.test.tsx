@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 import { GridComponentsProvider } from '../components-context'
 import { prepareDataGridTable } from '../prepare-table'
-import { TEST_FEATURES, testComponents } from '../test-utils'
+import { TEST_FEATURES, TEST_OPERATORS, testComponents } from '../test-utils'
 
 import { Filter } from './filter'
 import { FilterPanel } from './filter-panel'
@@ -48,6 +48,7 @@ const COLUMNS = createColumns<Row>([
 function makeTable(config?: Partial<Parameters<typeof createTable<GridFeatures, Row>>[0]>) {
 	const table = createTable<GridFeatures, Row>({
 		features: TEST_FEATURES,
+		operators: TEST_OPERATORS,
 		data: DATA,
 		columns: COLUMNS,
 		filtering: true,
@@ -165,6 +166,7 @@ describe('<FilterPanel>', () => {
 		const table = prepareDataGridTable(
 			createTable<GridFeatures, Row>({
 				features: TEST_FEATURES,
+				operators: TEST_OPERATORS,
 				data: DATA,
 				columns: COLUMNS_WITH_MANY,
 				filtering: true,
@@ -181,7 +183,7 @@ describe('<FilterPanel>', () => {
 		expect(valueSlot?.textContent).toBe('A, B +2')
 	})
 
-	it('formats requiresInput=false operators using the operator label', () => {
+	it('formats an operator that takes no value by its label', () => {
 		const table = makeTable()
 		table.getColumn('name')?.setFilterValue({ operator: 'isEmpty', value: undefined })
 
@@ -224,7 +226,12 @@ describe('<FilterPanel>', () => {
 
 	it('returns null when filtering is disabled at the table level', () => {
 		const table = prepareDataGridTable(
-			createTable<GridFeatures, Row>({ features: TEST_FEATURES, data: DATA, columns: COLUMNS }),
+			createTable<GridFeatures, Row>({
+				features: TEST_FEATURES,
+				operators: TEST_OPERATORS,
+				data: DATA,
+				columns: COLUMNS,
+			}),
 		)
 		const { container } = render(
 			<Wrapper table={table}>

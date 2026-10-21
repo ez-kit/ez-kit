@@ -144,6 +144,14 @@
 		"exportName": "FilterOperatorsIconsExample"
 	},
 	{
+		"id": "filter-operators-custom",
+		"label": "Operators · Custom",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/filter-operators-custom.tsx",
+		"exportName": "FilterOperatorsCustomExample"
+	},
+	{
 		"id": "filter-operators-text",
 		"label": "Operators · Text",
 		"group": "filtering",

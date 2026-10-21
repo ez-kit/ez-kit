@@ -271,6 +271,54 @@ describe('@ez-kit/data-grid-core/features', () => {
 })
 
 /**
+ * The ready-made operator set, on `@ez-kit/data-grid-core/operators`.
+ *
+ * Two promises. A grid that never imports the set never carries it: `createTable` resolves a
+ * column's operators from whatever set it is handed, so nothing on the main entry may name the
+ * ready-made one. And the constants named after its ids cost nothing beyond themselves: importing
+ * `FilterOperator` alone used to carry every built-in comparison and label, because the sets were
+ * assembled with array spreads, which a bundler cannot drop. Now each definition is its own object
+ * literal and each list names its members one by one.
+ *
+ * `.endsWith(` is written by the text `endsWith` comparison and by nothing else on the entry, so
+ * its presence is the comparisons surviving the shake.
+ */
+const OPERATORS_ENTRY = subpathEntryOf('data-grid/core', 'operators/index.js')
+/** A literal from the body of one ready-made `filterFn` — present exactly when the comparisons are. */
+const COMPARISON_MARKER = '.endsWith('
+
+describe('@ez-kit/data-grid-core/operators', () => {
+	it('is not reached by createTable', async () => {
+		expect(await entryPointsPulledBy(entryOf('data-grid/core'), ['createTable'])).not.toContain(
+			'@ez-kit/data-grid-core/operators',
+		)
+	})
+
+	// By text as well as by entry point: a definition hoisted into a shared chunk would fold onto the
+	// main entry's name, and only its body would give it away.
+	it('carries no comparison anywhere on the main entry', async () => {
+		expect(await bundledCodeOf(entryOf('data-grid/core'))).not.toContain(COMPARISON_MARKER)
+	})
+
+	// Not even the main entry: the definitions import types only, so the set is self-contained.
+	it('reaches exactly these entry points for the ready-made set', async () => {
+		expect(await entryPointsPulledBy(OPERATORS_ENTRY, ['defaultOperators'])).toEqual([
+			'@ez-kit/data-grid-core/operators',
+		])
+	})
+
+	// The control: without it the absences below would also be satisfied by a bundle that
+	// resolved nothing.
+	it('carries the comparisons with the set', async () => {
+		expect(await bundledCodeOf(OPERATORS_ENTRY, ['defaultOperators'])).toContain(COMPARISON_MARKER)
+	})
+
+	it.each(['FilterOperator', 'DEFAULT_OPERATOR_ICONS'])('carries no comparison with %s alone', async (name) => {
+		expect(await bundledCodeOf(OPERATORS_ENTRY, [name])).not.toContain(COMPARISON_MARKER)
+	})
+})
+
+/**
  * The kit root, where the prebuilt `DataGrid` binds `allDataGridFeatures` and `createDataGrid`
  * must not.
  *
@@ -334,6 +382,27 @@ describe('@ez-kit/data-grid-heroui', () => {
 		const core = subpathEntryOf('data-grid/react/heroui', 'core/index.js')
 
 		expect(await bundledCodeOf(core, ['coreComponents'])).not.toContain('filter-panel')
+	})
+})
+
+/**
+ * The kit root, where the prebuilt `DataGrid` binds `defaultOperators` and `createDataGrid` must not —
+ * the same separation as the feature set above, one option over.
+ *
+ * A composed bundle has no operators unless it names a set, so the set's entry reaching it through
+ * the kit root would be a cost it never asked for. Asked with {@link entryPointsPulledBy}: the
+ * operators entry has a name of its own, so reaching it is a fact the set records directly. Move
+ * the import into `index.ts` or a component group and the second case fails.
+ */
+describe.each(['heroui', 'shadcn'])('@ez-kit/data-grid-%s and the ready-made operators', (kit) => {
+	const KIT_ENTRY = entryOf(`data-grid/react/${kit}`)
+
+	it('reaches them through the prebuilt DataGrid', async () => {
+		expect(await entryPointsPulledBy(KIT_ENTRY, ['DataGrid'])).toContain('@ez-kit/data-grid-core/operators')
+	})
+
+	it('does not reach them through createDataGrid', async () => {
+		expect(await entryPointsPulledBy(KIT_ENTRY, ['createDataGrid'])).not.toContain('@ez-kit/data-grid-core/operators')
 	})
 })
 

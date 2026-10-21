@@ -35,6 +35,7 @@ import {
 	rowOrderingFeature,
 } from '../features/entry'
 import { RowActionsPlacement } from '../features/row-actions'
+import { defaultOperators } from '../operators/entry'
 
 import { createTable } from './create-table'
 import { createTableOptions } from './create-table-options'
@@ -364,7 +365,13 @@ describe('createTableOptions', () => {
 			// resolved and the slot is genuinely not needed. A guard that fired here would be
 			// telling the consumer to register something their table never reads.
 			const noFns = tableFeatures({ columnFilteringFeature, filteredRowModel: createFilteredRowModel() })
-			createTableOptions({ features: noFns, data: rows, columns, filtering: { operators: true } })
+			createTableOptions({
+				features: noFns,
+				operators: defaultOperators,
+				data: rows,
+				columns,
+				filtering: { operators: true },
+			})
 
 			expect(warnings()).toHaveLength(0)
 		})

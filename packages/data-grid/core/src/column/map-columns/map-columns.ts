@@ -4,7 +4,7 @@ import { normalizeColumnAlign, normalizeColumnPinning, normalizeColumnWidth } fr
 import { liftItemsSource, warnOnBothItemSources } from './items-source'
 import { resolveFiltering } from './resolve-filtering'
 
-import type { OperatorRegistry } from '../../features/operators'
+import type { OperatorsConfig } from '../../features/operators'
 import type {
 	CellViewCtx,
 	ColumnCellMeta,
@@ -70,6 +70,8 @@ export type MapColumnsOptions = {
 	 * `false` wins over any column that asks for them.
 	 */
 	tableOperators?: boolean
+	/** The grid's operator set, by cell type — `TableConfig.operators`. */
+	operators?: OperatorsConfig | undefined
 	/**
 	 * Whether the table filters by column at all. `false` gives every leaf column
 	 * {@link KEEP_EVERY_ROW} as its filter function, replacing any operator dispatcher, so a
@@ -87,15 +89,13 @@ const KEEP_EVERY_ROW = (): boolean => true
 
 export function mapColumns<TRow extends object>(
 	defs: ColumnDef<TRow, AnyCellTypes>[],
-	registry?: OperatorRegistry,
 	options?: MapColumnsOptions,
 ): MappedColumnDef<TRow>[] {
-	return defs.map((def) => mapColumn(def, registry, options))
+	return defs.map((def) => mapColumn(def, options))
 }
 
 function mapColumn<TRow extends object>(
 	def: ColumnDef<TRow, AnyCellTypes>,
-	registry?: OperatorRegistry,
 	options?: MapColumnsOptions,
 ): MappedColumnDef<TRow> {
 	const {
@@ -257,7 +257,7 @@ function mapColumn<TRow extends object>(
 	// resolved lands on `meta.filtering` under the name of the column option it came from — see
 	// `ColumnFilteringMeta`.
 	const resolvedFiltering = resolveFiltering(id ?? accessorKey ?? '?', filtering, cellDef?.type, {
-		registry,
+		operators: options?.operators,
 		tableFaceted: options?.tableFaceted,
 		tableOperators: options?.tableOperators,
 		isGroup: columns !== undefined,
@@ -273,7 +273,7 @@ function mapColumn<TRow extends object>(
 
 	// Nested columns (column groups)
 	if (columns !== undefined) {
-		result.columns = mapColumns(columns, registry, options)
+		result.columns = mapColumns(columns, options)
 	}
 
 	return result as MappedColumnDef<TRow>

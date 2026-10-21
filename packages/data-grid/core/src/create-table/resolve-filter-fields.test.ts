@@ -2,6 +2,7 @@ import { columnFilteringFeature, createFilteredRowModel, filterFns, tableFeature
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createColumns } from '../column/create-columns'
+import { defaultOperators } from '../operators/entry'
 import { SELECTION_COLUMN_ID } from '../system-columns/system-columns'
 
 import { createTableOptions } from './create-table-options'
@@ -31,7 +32,7 @@ const warehouse: FilterFieldDef = {
 }
 
 function resolve(filtering: object, extra: object = {}) {
-	return createTableOptions({ features, data: [] as Row[], columns, filtering, ...extra })
+	return createTableOptions({ features, operators: defaultOperators, data: [] as Row[], columns, filtering, ...extra })
 }
 
 afterEach(() => {

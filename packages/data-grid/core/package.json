@@ -29,6 +29,11 @@
 			"types": "./dist/features/all.d.ts",
 			"import": "./dist/features/all.js",
 			"default": "./dist/features/all.js"
+		},
+		"./operators": {
+			"types": "./dist/operators/index.d.ts",
+			"import": "./dist/operators/index.js",
+			"default": "./dist/operators/index.js"
 		}
 	},
 	"main": "./dist/index.js",
@@ -63,6 +68,14 @@
 			"name": "features/all",
 			"path": "dist/features/all.js",
 			"limit": "5.5 KB",
+			"ignore": [
+				"@tanstack/table-core"
+			]
+		},
+		{
+			"name": "operators",
+			"path": "dist/operators/index.js",
+			"limit": "1 KB",
 			"ignore": [
 				"@tanstack/table-core"
 			]

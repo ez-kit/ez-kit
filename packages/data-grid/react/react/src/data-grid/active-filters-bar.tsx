@@ -1,4 +1,4 @@
-import { localizeOperators } from '@ez-kit/data-grid-core'
+import { OperatorInput } from '@ez-kit/data-grid-core'
 
 import { useGridComponents } from '../components-context'
 import { ItemsSourceSlot, resolveItem, useItemsListsFor } from '../items-source'
@@ -73,7 +73,7 @@ function renderValueDisplay(rawValue: unknown, labelOf: LabelOf, operators?: Fil
 	if (isStructuredFilterValue(rawValue)) {
 		const op = operators?.find((o) => o.id === rawValue.operator)
 		const indicator = op?.label ?? rawValue.operator
-		if (op?.requiresInput === false) return indicator
+		if (op?.input === OperatorInput.None) return indicator
 		const inner = renderInnerValue(rawValue.value, labelOf)
 		if (inner == null) return indicator
 		return `${indicator} ${typeof inner === 'string' ? inner : ''}`.trim()
@@ -151,11 +151,9 @@ export function ActiveFiltersBar({ position: positionProp }: DataGridActiveFilte
 	columnFilters.forEach((cf, index) => {
 		const target = activeTargets[index]
 		if (!target) return
-		const rawOperators = target.meta.filtering?.operators
-		// Chips name the operator, so they read it through the dictionary like the control does.
-		const operators = rawOperators
-			? localizeOperators(rawOperators, target.meta.cell?.type, table.grid.messages.operators)
-			: undefined
+		// Chips name the operator by its definition's `label`, as the control does — or by the raw id
+		// for one the column does not offer.
+		const operators = target.meta.filtering?.operators
 		const display = renderValueDisplay(cf.value, labellerOf(target, lists[index]?.labels), operators)
 		if (display == null || display === '') return
 		// Optional-chained. `s.applied` is `draftFeature`'s slice, and the two *uses* below are

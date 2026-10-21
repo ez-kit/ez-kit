@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { buildOperatorRegistry } from '../../features/operators'
+import { defaultOperators } from '../../operators/entry'
 
 import { mapColumns } from './map-columns'
 
@@ -265,26 +265,25 @@ describe('mapColumns', () => {
 	})
 
 	it('column.filtering.faceted: true → meta.filtering.faceted = true (overrides table flag)', () => {
-		const result = mapColumns<Row>([{ accessorKey: 'name', filtering: { faceted: true } }], undefined, {
+		const result = mapColumns<Row>([{ accessorKey: 'name', filtering: { faceted: true } }], {
 			tableFaceted: false,
 		})
 		expect(filteringMeta(result[0])?.faceted).toBe(true)
 	})
 
 	it('column.filtering.faceted: false → meta.filtering.faceted is not set even when table-level is on', () => {
-		const result = mapColumns<Row>([{ accessorKey: 'name', filtering: { faceted: false } }], undefined, {
+		const result = mapColumns<Row>([{ accessorKey: 'name', filtering: { faceted: false } }], {
 			tableFaceted: true,
 		})
 		expect(filteringMeta(result[0])?.faceted).toBeUndefined()
 	})
 
 	it('table-level tableFaceted: true inherits to column meta when column does not override', () => {
-		const result = mapColumns<Row>([{ accessorKey: 'name', filtering: {} }], undefined, { tableFaceted: true })
+		const result = mapColumns<Row>([{ accessorKey: 'name', filtering: {} }], { tableFaceted: true })
 		expect(filteringMeta(result[0])?.faceted).toBe(true)
 	})
 
 	it('select cell with operators: true resolves to in/notIn defaults', () => {
-		const registry = buildOperatorRegistry()
 		const result = mapColumns<Row>(
 			[
 				{
@@ -293,7 +292,7 @@ describe('mapColumns', () => {
 					filtering: { operators: true },
 				},
 			],
-			registry,
+			{ operators: defaultOperators },
 		)
 		const resolved = filteringMeta(result[0])?.operators
 		expect(resolved?.map((o) => o.id)).toEqual(['in', 'notIn', 'isEmpty', 'isNotEmpty'])
@@ -304,10 +303,9 @@ describe('mapColumns', () => {
 // The table-level switch, cascading exactly the way `tableFaceted` above does: the table
 // states a default, the column overrides it in both directions.
 describe('mapColumns — table-level operators switch', () => {
-	const registry = buildOperatorRegistry()
-
 	it('tableOperators: true gives a column with no filtering config its cell type defaults', () => {
-		const result = mapColumns<Row>([{ accessorKey: 'age', cell: { type: 'number' } }], registry, {
+		const result = mapColumns<Row>([{ accessorKey: 'age', cell: { type: 'number' } }], {
+			operators: defaultOperators,
 			tableOperators: true,
 		})
 		expect(filteringMeta(result[0])?.operators?.map((o) => o.id)).toEqual([
@@ -325,8 +323,7 @@ describe('mapColumns — table-level operators switch', () => {
 	it('a column narrows the inherited set with its own items', () => {
 		const result = mapColumns<Row>(
 			[{ accessorKey: 'name', filtering: { operators: { items: ['contains', 'equals'] } } }],
-			registry,
-			{ tableOperators: true },
+			{ operators: defaultOperators, tableOperators: true },
 		)
 		expect(filteringMeta(result[0])?.operators?.map((o) => o.id)).toEqual(['contains', 'equals'])
 	})
@@ -337,8 +334,7 @@ describe('mapColumns — table-level operators switch', () => {
 				{ accessorKey: 'name', filtering: { operators: false } },
 				{ accessorKey: 'age', cell: { type: 'number' } },
 			],
-			registry,
-			{ tableOperators: true },
+			{ operators: defaultOperators, tableOperators: true },
 		)
 		expect(filteringMeta(result[0])?.operators).toBeUndefined()
 		expect(result[0]?.filterFn).toBeUndefined()
@@ -346,7 +342,8 @@ describe('mapColumns — table-level operators switch', () => {
 	})
 
 	it('a column that turned filtering off never inherits operators', () => {
-		const result = mapColumns<Row>([{ accessorKey: 'name', filtering: false }], registry, {
+		const result = mapColumns<Row>([{ accessorKey: 'name', filtering: false }], {
+			operators: defaultOperators,
 			tableOperators: true,
 		})
 		expect(result[0]?.meta?.filtering).toBe(false)
@@ -354,7 +351,8 @@ describe('mapColumns — table-level operators switch', () => {
 	})
 
 	it('a group header inherits nothing — it has no value of its own to compare', () => {
-		const result = mapColumns<Row>([{ id: 'group', header: 'Group', columns: [{ accessorKey: 'name' }] }], registry, {
+		const result = mapColumns<Row>([{ id: 'group', header: 'Group', columns: [{ accessorKey: 'name' }] }], {
+			operators: defaultOperators,
 			tableOperators: true,
 		})
 		expect(filteringMeta(result[0])?.operators).toBeUndefined()
@@ -362,7 +360,8 @@ describe('mapColumns — table-level operators switch', () => {
 	})
 
 	it('tableOperators: false wins over a column that asks for operators', () => {
-		const result = mapColumns<Row>([{ accessorKey: 'name', filtering: { operators: true } }], registry, {
+		const result = mapColumns<Row>([{ accessorKey: 'name', filtering: { operators: true } }], {
+			operators: defaultOperators,
 			tableOperators: false,
 		})
 		expect(filteringMeta(result[0])?.operators).toBeUndefined()
@@ -370,7 +369,7 @@ describe('mapColumns — table-level operators switch', () => {
 	})
 
 	it('no table-level word keeps the per-column opt-in', () => {
-		const result = mapColumns<Row>([{ accessorKey: 'name' }], registry)
+		const result = mapColumns<Row>([{ accessorKey: 'name' }], { operators: defaultOperators })
 		expect(filteringMeta(result[0])?.operators).toBeUndefined()
 	})
 
@@ -378,7 +377,8 @@ describe('mapColumns — table-level operators switch', () => {
 	// they apply" simply does not apply — a plain input, and no warning per such column.
 	it('inherited operators fall back to a plain input silently for a type with no defaults', () => {
 		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
-		const result = mapColumns<Row>([{ accessorKey: 'name', cell: { type: 'rating' } }], registry, {
+		const result = mapColumns<Row>([{ accessorKey: 'name', cell: { type: 'rating' } }], {
+			operators: defaultOperators,
 			tableOperators: true,
 		})
 		expect(filteringMeta(result[0])?.operators).toBeUndefined()
@@ -388,7 +388,6 @@ describe('mapColumns — table-level operators switch', () => {
 })
 
 describe('mapColumns — column filtering off', () => {
-	const registry = buildOperatorRegistry()
 	type PassFn = (row: unknown, columnId: string, filterValue: unknown) => boolean
 
 	// A seeded `columnFilters` slice must not filter a grid whose column filters are off, while
@@ -396,8 +395,7 @@ describe('mapColumns — column filtering off', () => {
 	it('gives every leaf a filterFn that keeps each row, operators or not', () => {
 		const result = mapColumns<Row>(
 			[{ accessorKey: 'name' }, { accessorKey: 'age', cell: { type: 'number' }, filtering: { operators: true } }],
-			registry,
-			{ columnFiltering: false },
+			{ operators: defaultOperators, columnFiltering: false },
 		)
 		for (const column of result) {
 			expect(column.filterFn).toBeTypeOf('function')
@@ -406,7 +404,8 @@ describe('mapColumns — column filtering off', () => {
 	})
 
 	it('leaves group columns without a filterFn and reaches their leaves', () => {
-		const result = mapColumns<Row>([{ header: 'Group', columns: [{ accessorKey: 'name' }] }], registry, {
+		const result = mapColumns<Row>([{ header: 'Group', columns: [{ accessorKey: 'name' }] }], {
+			operators: defaultOperators,
 			columnFiltering: false,
 		})
 		expect(result[0]?.filterFn).toBeUndefined()
@@ -414,7 +413,7 @@ describe('mapColumns — column filtering off', () => {
 	})
 
 	it('keeps the operator dispatcher while column filtering is on', () => {
-		const result = mapColumns<Row>([{ accessorKey: 'name' }], registry, { columnFiltering: true })
+		const result = mapColumns<Row>([{ accessorKey: 'name' }], { operators: defaultOperators, columnFiltering: true })
 		expect(result[0]?.filterFn).toBeUndefined()
 	})
 })
@@ -443,12 +442,10 @@ describe('mapColumns — header/footer renderers', () => {
 // The two arms of `BetweenOperatorConfig` cannot be checked against the column's `cell.type`,
 // so the option that landed on the wrong kind of column is caught here instead.
 describe('mapColumns — date presets', () => {
-	const registry = buildOperatorRegistry()
-
 	it('resolves `presets: true` to the built-in ranges and single dates', () => {
 		const result = mapColumns<Row>(
 			[{ accessorKey: 'name', cell: { type: 'date' }, filtering: { presets: true, operators: true } }],
-			registry,
+			{ operators: defaultOperators },
 		)
 
 		const presets = filteringMeta(result[0])?.presets
@@ -460,17 +457,16 @@ describe('mapColumns — date presets', () => {
 		const custom = [{ id: 'q1', label: 'Q1', getRange: () => ({ from: '2026-01-01', to: '2026-03-31' }) }]
 		const result = mapColumns<Row>(
 			[{ accessorKey: 'name', cell: { type: 'date' }, filtering: { presets: custom, operators: true } }],
-			registry,
+			{ operators: defaultOperators },
 		)
 
 		expect(filteringMeta(result[0])?.presets).toBe(custom)
 	})
 
 	it('resolves nothing when the column asks for no presets', () => {
-		const result = mapColumns<Row>(
-			[{ accessorKey: 'name', cell: { type: 'date' }, filtering: { operators: true } }],
-			registry,
-		)
+		const result = mapColumns<Row>([{ accessorKey: 'name', cell: { type: 'date' }, filtering: { operators: true } }], {
+			operators: defaultOperators,
+		})
 
 		expect(filteringMeta(result[0])?.presets).toBeUndefined()
 	})
@@ -480,7 +476,7 @@ describe('mapColumns — date presets', () => {
 
 		const result = mapColumns<Row>(
 			[{ accessorKey: 'age', cell: { type: 'number' }, filtering: { presets: true, operators: true } }],
-			registry,
+			{ operators: defaultOperators },
 		)
 
 		expect(warn).toHaveBeenCalledWith(expect.stringContaining('`filtering.presets`'))
@@ -490,8 +486,6 @@ describe('mapColumns — date presets', () => {
 })
 
 describe('mapColumns — betweenOperator warnings', () => {
-	const registry = buildOperatorRegistry()
-
 	it('warns when the slider is asked for without both bounds', () => {
 		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
 
@@ -506,7 +500,7 @@ describe('mapColumns — betweenOperator warnings', () => {
 					},
 				},
 			],
-			registry,
+			{ operators: defaultOperators },
 		)
 
 		expect(warn).toHaveBeenCalledWith(expect.stringContaining('`betweenOperator.slider: true`'))
@@ -536,7 +530,7 @@ describe('mapColumns — betweenOperator warnings', () => {
 					},
 				},
 			],
-			registry,
+			{ operators: defaultOperators },
 		)
 
 		expect(warn).not.toHaveBeenCalled()

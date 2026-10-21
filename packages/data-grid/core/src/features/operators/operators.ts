@@ -1,113 +1,96 @@
 import { defaultMessages } from '../../messages'
+import { warnOnce } from '../../utils/warn-once'
 
-import type { BaseCellTypes, SelectItem } from '../../column/types'
+import { OperatorInput } from './input'
+
+import type { SelectItem } from '../../column/types'
 import type { GridMessages } from '../../messages'
+import type { FilterOperator } from '../../operators/ids'
+
+export { OperatorInput } from './input'
 
 /**
- * The filter operators this package ships. A closed set, spelled **once** — the same id means
- * the same comparison whatever the column's cell type is, and only the `label` changes
- * ("Greater than" on a number column, "After" on a date one).
- *
- * That is the whole point of the set. It used to hold three vocabularies at once: text spelled
- * equality `equals` while number and date spelled it `eq`; number spelled comparison
- * `gt` / `gte` / `lt` / `lte` while date spelled it `after` / `onOrAfter` / `before` /
- * `onOrBefore`. One concept, two or three spellings, depending on which column you were
- * looking at — and since {@link createOperatorFilterFn} answers `true` for an id it does not
- * know, `defaultOperator: 'equals'` on a number column produced a filter that silently matched
- * every row.
- *
- * Named members for internal reference; the option is typed as {@link FilterOperatorId}, so
- * `defaultOperator: 'between'` is equally valid and needs no import.
- */
-export const FilterOperator = {
-	/** Substring match, case-insensitive. Text columns. */
-	Contains: 'contains',
-	/** Prefix match, case-insensitive. Text columns. */
-	StartsWith: 'startsWith',
-	/** Suffix match, case-insensitive. Text columns. */
-	EndsWith: 'endsWith',
-	/** Equality, in the column's own terms. */
-	Equals: 'equals',
-	/** Inequality, in the column's own terms. */
-	NotEquals: 'notEquals',
-	/** Strictly after / above. Labelled "Greater than" on numbers, "After" on dates. */
-	GreaterThan: 'greaterThan',
-	/** At or after / above. Labelled "Greater than or equal" on numbers, "On or after" on dates. */
-	GreaterOrEqual: 'greaterOrEqual',
-	/** Strictly before / below. Labelled "Less than" on numbers, "Before" on dates. */
-	LessThan: 'lessThan',
-	/** At or before / below. Labelled "Less than or equal" on numbers, "On or before" on dates. */
-	LessOrEqual: 'lessOrEqual',
-	/** Inclusive range — takes a {@link BetweenValue}. */
-	Between: 'between',
-	/** Row value is one of a set. Renders the multi-select filter. */
-	In: 'in',
-	/** Row value is none of a set. Renders the multi-select filter. */
-	NotIn: 'notIn',
-	/** Null / undefined / empty string. Renders no value input. */
-	IsEmpty: 'isEmpty',
-	/** Anything but null / undefined / empty string. Renders no value input. */
-	IsNotEmpty: 'isNotEmpty',
-} as const
-
-export type FilterOperator = (typeof FilterOperator)[keyof typeof FilterOperator]
-
-/**
- * An operator id: one of the built-in {@link FilterOperator} members, or the id of a custom
- * operator registered through the table-level `filtering.operators`.
+ * An operator id: one of the ready-made set's {@link FilterOperator} ids, or any id an operator
+ * set names.
  *
  * The `string & {}` tail keeps a custom id assignable while preserving autocomplete for the
- * built-ins — the same shape `column.sorting.fn` uses for {@link BuiltInSortingFn}.
+ * ready-made ones — the same shape `column.sorting.fn` uses for {@link BuiltInSortingFn}.
  */
 export type FilterOperatorId = FilterOperator | (string & {})
 
-/** Defines a filter operator with its filtering logic. */
-export type FilterOperatorDef<TValue = unknown> = {
+/** What every operator definition carries, whatever value it takes. */
+type FilterOperatorBase = {
+	/**
+	 * What a filter value names the operator by — `{ operator: 'equals', value: 5 }`. Unique within
+	 * one cell type's set; the same id in two types' sets may compare differently.
+	 */
 	id: FilterOperatorId
+	/** What the operator control, its menu, the active-filter chip and the filter model show. */
 	label: string
 	/**
 	 * Optional glyph the operator's control shows instead of its label — React: `icon: '≈'` or
-	 * `icon: <Waves />`.
+	 * `icon: <Waves />`. The definition is the only source of an operator's icon; without one, the
+	 * control shows `label`.
 	 *
 	 * Typed `unknown` for the reason `SelectItem.icon` is: core renders nothing and must not name
-	 * a framework's node type. It outranks the grid's `icons.operators`, because it is stated on
-	 * the very definition it belongs to. Leave it out on a replacement for a built-in to keep that
-	 * operator's icon from the grid; with neither, the control shows `label`.
+	 * a framework's node type.
 	 */
 	icon?: unknown
-	/** When false, no value input is rendered (e.g. isEmpty). Default: true. */
-	requiresInput?: boolean
-	filterFn: (rowValue: unknown, filterValue: TValue) => boolean
 }
 
 /**
- * A ready-made sign for each built-in operator — opt-in, not a default.
+ * Defines a filter operator: its id, its label, the kind of value it takes and the comparison.
  *
- * The grid shows an operator's label until an icon is named for it, because a bare sign in a
- * closed control is unreadable without a legend: operators rendered glyphs once and were moved
- * to labels for exactly that reason (#63). This set is for a grid that wants the compact control
- * anyway — pass it as `icons: { operators: DEFAULT_OPERATOR_ICONS }`, in one grid or in a
- * bundle's `defaults`.
+ * A union over the required {@link OperatorInput} `input`, which decides the shape `filterFn` is
+ * given — nothing for `none`, one `TValue` for `single`, a {@link BetweenValue} for `range`, an
+ * array for `list`. `input` is required because it is the discriminant: without it TypeScript does
+ * not reliably narrow the callback's contextual type, and the grid would have no way to tell a
+ * range operator from a single-value one other than by its id, which is the defect this replaced.
  *
- * One sign per {@link FilterOperator} member, whatever the column's cell type is: the set is one
- * vocabulary, so `greaterThan` is `>` on a number column and on a date one alike, even though the
- * date column labels it "After". Plain strings, so core stays free of any framework.
+ * `filterFn` is declared as a **method** on purpose. Method parameters are bivariant, so a
+ * `FilterOperatorDef<number>` is assignable to `FilterOperatorDef[]` without a cast — the grid hands
+ * every operator the row value as `unknown` anyway, and the guarantee that matters is the value's
+ * shape, which `input` fixes. The grid never calls `filterFn` with an empty value unless `input` is
+ * `none`.
  */
-export const DEFAULT_OPERATOR_ICONS: Readonly<Record<FilterOperator, string>> = {
-	[FilterOperator.Contains]: '*a*',
-	[FilterOperator.StartsWith]: 'a*',
-	[FilterOperator.EndsWith]: '*a',
-	[FilterOperator.Equals]: '=',
-	[FilterOperator.NotEquals]: '≠',
-	[FilterOperator.GreaterThan]: '>',
-	[FilterOperator.GreaterOrEqual]: '≥',
-	[FilterOperator.LessThan]: '<',
-	[FilterOperator.LessOrEqual]: '≤',
-	[FilterOperator.Between]: '↔',
-	[FilterOperator.In]: '∈',
-	[FilterOperator.NotIn]: '∉',
-	[FilterOperator.IsEmpty]: '∅',
-	[FilterOperator.IsNotEmpty]: '≠∅',
+export type FilterOperatorDef<TValue = unknown> = FilterOperatorBase &
+	(
+		| {
+				input: typeof OperatorInput.None
+				filterFn(rowValue: unknown): boolean
+		  }
+		| {
+				input: typeof OperatorInput.Single
+				filterFn(rowValue: unknown, value: TValue): boolean
+		  }
+		| {
+				input: typeof OperatorInput.Range
+				filterFn(rowValue: unknown, value: BetweenValue<TValue>): boolean
+		  }
+		| {
+				input: typeof OperatorInput.List
+				filterFn(rowValue: unknown, value: readonly TValue[]): boolean
+		  }
+	)
+
+/**
+ * The operators a grid offers, by cell type — a bundle decision, passed to `createDataGrid` the way
+ * `features` is, or set in any options layer.
+ *
+ * It switches nothing on: a column offers operators only when `filtering.operators` (its own or the
+ * table's) says so. A layer above replaces the set of each cell type it names and keeps the rest.
+ */
+export type OperatorsConfig = {
+	/**
+	 * Cell type → the operators a column of that type offers, in order. A cell type with no entry
+	 * offers none, which is what a project-registered type gets until it is listed here.
+	 */
+	byType?: Partial<Record<string, FilterOperatorDef[]>>
+	/**
+	 * Cell type → the operator a column of that type opens with. Without an entry a column opens
+	 * with the first operator of its set; a column's own `filtering.defaultOperator` beats both.
+	 */
+	defaultByType?: Partial<Record<string, FilterOperatorId>>
 }
 
 /** Structured filter value stored in TanStack columnFilters[n].value. */
@@ -116,7 +99,7 @@ export type StructuredFilterValue = {
 	value: unknown
 }
 
-/** Value shape for the between operator. */
+/** The value an operator with `input: 'range'` takes — `between`, or an author's `notBetween`. */
 export type BetweenValue<T = unknown> = {
 	from?: T
 	to?: T
@@ -138,11 +121,10 @@ export const BetweenInputType = {
 export type BetweenInputType = (typeof BetweenInputType)[keyof typeof BetweenInputType]
 
 /**
- * UI configuration for the between operator.
+ * UI configuration for the range control — what every operator with `input: 'range'` renders.
  *
- * Number-only, and that is the whole type: `between` is one operator whose comparison never
- * changes, so nothing here says how the control looks — that is the kit's business — and the date
- * side has nothing to configure here either. Date presets are not a `between` thing: they fill
+ * Number-only, and that is the whole type: nothing here says how the control looks — that is the
+ * kit's business — and the date side has nothing to configure here either. Date presets are not a `between` thing: they fill
  * whichever operator is current, so they live on the column's `filtering.presets`.
  */
 export type BetweenOperatorConfig = {
@@ -159,11 +141,11 @@ export type BetweenOperatorConfig = {
 }
 
 /**
- * A preset that fills a date **range** — the `between` operator.
+ * A preset that fills a date **range** — any operator with `input: 'range'`.
  *
  * `getRange(now)` returns ISO-8601 date-only strings (`'YYYY-MM-DD'`) so the value is
- * timezone-stable and round-trips through the existing date-as-string fast path in
- * {@link DATE_OPERATORS}.
+ * timezone-stable and round-trips through the ready-made date operators, which compare
+ * date-only strings.
  */
 export type DateRangePreset = {
 	id: string
@@ -172,7 +154,7 @@ export type DateRangePreset = {
 }
 
 /**
- * A preset that fills a **single** date — every date operator that takes one value (`equals`,
+ * A preset that fills a **single** date — every date operator with `input: 'single'` (`equals`,
  * `lessThan`, `greaterThan`, …).
  *
  * A range preset cannot serve those: "Last 7 days" has no single date to mean, and picking one of
@@ -222,7 +204,7 @@ function endOfMonthUtc(d: Date): Date {
 export const DATE_RANGE_PRESETS: DateRangePreset[] = [
 	{
 		id: 'today',
-		label: defaultMessages.operators.presets.today,
+		label: defaultMessages.filtering.presets.today,
 		getRange: (now = new Date()) => {
 			const today = toUtcMidnight(now)
 			return { from: isoDate(today), to: isoDate(today) }
@@ -230,7 +212,7 @@ export const DATE_RANGE_PRESETS: DateRangePreset[] = [
 	},
 	{
 		id: 'yesterday',
-		label: defaultMessages.operators.presets.yesterday,
+		label: defaultMessages.filtering.presets.yesterday,
 		getRange: (now = new Date()) => {
 			const y = addDaysUtc(toUtcMidnight(now), -1)
 			return { from: isoDate(y), to: isoDate(y) }
@@ -238,7 +220,7 @@ export const DATE_RANGE_PRESETS: DateRangePreset[] = [
 	},
 	{
 		id: 'last7',
-		label: defaultMessages.operators.presets.last7,
+		label: defaultMessages.filtering.presets.last7,
 		getRange: (now = new Date()) => {
 			const today = toUtcMidnight(now)
 			return { from: isoDate(addDaysUtc(today, -6)), to: isoDate(today) }
@@ -246,7 +228,7 @@ export const DATE_RANGE_PRESETS: DateRangePreset[] = [
 	},
 	{
 		id: 'last30',
-		label: defaultMessages.operators.presets.last30,
+		label: defaultMessages.filtering.presets.last30,
 		getRange: (now = new Date()) => {
 			const today = toUtcMidnight(now)
 			return { from: isoDate(addDaysUtc(today, -29)), to: isoDate(today) }
@@ -254,7 +236,7 @@ export const DATE_RANGE_PRESETS: DateRangePreset[] = [
 	},
 	{
 		id: 'thisMonth',
-		label: defaultMessages.operators.presets.thisMonth,
+		label: defaultMessages.filtering.presets.thisMonth,
 		getRange: (now = new Date()) => {
 			const today = toUtcMidnight(now)
 			return { from: isoDate(startOfMonthUtc(today)), to: isoDate(endOfMonthUtc(today)) }
@@ -262,7 +244,7 @@ export const DATE_RANGE_PRESETS: DateRangePreset[] = [
 	},
 	{
 		id: 'lastMonth',
-		label: defaultMessages.operators.presets.lastMonth,
+		label: defaultMessages.filtering.presets.lastMonth,
 		getRange: (now = new Date()) => {
 			const today = toUtcMidnight(now)
 			const lastMonthAnchor = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 1, 1))
@@ -281,22 +263,22 @@ export const DATE_RANGE_PRESETS: DateRangePreset[] = [
 export const DATE_VALUE_PRESETS: DateValuePreset[] = [
 	{
 		id: 'today',
-		label: defaultMessages.operators.presets.today,
+		label: defaultMessages.filtering.presets.today,
 		getDate: (now = new Date()) => isoDate(toUtcMidnight(now)),
 	},
 	{
 		id: 'yesterday',
-		label: defaultMessages.operators.presets.yesterday,
+		label: defaultMessages.filtering.presets.yesterday,
 		getDate: (now = new Date()) => isoDate(addDaysUtc(toUtcMidnight(now), -1)),
 	},
 	{
 		id: 'weekAgo',
-		label: defaultMessages.operators.presets.weekAgo,
+		label: defaultMessages.filtering.presets.weekAgo,
 		getDate: (now = new Date()) => isoDate(addDaysUtc(toUtcMidnight(now), -7)),
 	},
 	{
 		id: 'monthAgo',
-		label: defaultMessages.operators.presets.monthAgo,
+		label: defaultMessages.filtering.presets.monthAgo,
 		getDate: (now = new Date()) => {
 			const today = toUtcMidnight(now)
 			return isoDate(new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 1, today.getUTCDate())))
@@ -304,153 +286,24 @@ export const DATE_VALUE_PRESETS: DateValuePreset[] = [
 	},
 	{
 		id: 'startOfMonth',
-		label: defaultMessages.operators.presets.startOfMonth,
+		label: defaultMessages.filtering.presets.startOfMonth,
 		getDate: (now = new Date()) => isoDate(startOfMonthUtc(toUtcMidnight(now))),
 	},
 ]
 
-/**
- * Table-level operator configuration when not using the simple `true` / `false` shorthand.
- *
- * `items` here is the **registry**: custom operator definitions that any column can then
- * reference by id from its own {@link ColumnOperatorsConfig.items}. It is not a column's offered
- * list — a column narrows what it offers on the column, where the cell type is known.
- *
- * A definition under a **built-in** id replaces that operator in every column that offers it:
- * in each cell type's default set (`operators: true`) as well as in a column that names the id.
- * It replaces it for **every cell type at once** — register `equals` and text, number, date and
- * boolean columns all compare through your `filterFn`, so one that must behave per type checks
- * the value it is given. Its `label` is kept as written: the grid's dictionary does not rename an
- * operator someone replaced.
- */
-export type TableOperatorsConfig = {
-	/** Custom operators, and replacements for built-in ones, addressable from column `items` by id. */
-	items?: FilterOperatorDef[]
-}
-
 /** Column-level operator configuration when not using the simple `true` shorthand. */
 export type ColumnOperatorsConfig = {
 	/**
-	 * Operator ids referencing the registry, or inline operator definitions. Omit to use all
-	 * default operators for the column's cell type.
+	 * The operators this column offers, narrowing its cell type's set. A string is an id looked up
+	 * in **that** set — the grid's `operators.byType[cellType]` — and nowhere else; a definition is
+	 * used as written. Omit to offer the whole set.
 	 */
 	items?: (FilterOperatorId | FilterOperatorDef)[]
 	betweenOperator?: BetweenOperatorConfig
 }
 
-// ── Built-in text operators ────────────────────────────────────────────────
-
 /**
- * The two emptiness operators, shared verbatim by every cell type's default set.
- *
- * Declared on their own rather than filtered back out of {@link TEXT_OPERATORS} by id, which
- * is what {@link SELECT_BADGE_OPERATORS} used to do — a filter over ids silently yields an
- * empty list the moment an id is renamed.
- */
-export const EMPTY_OPERATORS: FilterOperatorDef<never>[] = [
-	{
-		id: FilterOperator.IsEmpty,
-		label: defaultMessages.operators.empty.isEmpty,
-		requiresInput: false,
-		filterFn: (rowValue) => rowValue == null || rowValue === '',
-	},
-	{
-		id: FilterOperator.IsNotEmpty,
-		label: defaultMessages.operators.empty.isNotEmpty,
-		requiresInput: false,
-		filterFn: (rowValue) => rowValue != null && rowValue !== '',
-	},
-]
-
-export const TEXT_OPERATORS: FilterOperatorDef<string>[] = [
-	{
-		id: FilterOperator.Contains,
-		label: defaultMessages.operators.text.contains,
-		filterFn: (rowValue, filterValue) => {
-			if (rowValue == null) return false
-			return String(rowValue).toLowerCase().includes(filterValue.toLowerCase())
-		},
-	},
-	{
-		id: FilterOperator.Equals,
-		label: defaultMessages.operators.text.equals,
-		filterFn: (rowValue, filterValue) => String(rowValue ?? '').toLowerCase() === filterValue.toLowerCase(),
-	},
-	{
-		id: FilterOperator.NotEquals,
-		label: defaultMessages.operators.text.notEquals,
-		filterFn: (rowValue, filterValue) => String(rowValue ?? '').toLowerCase() !== filterValue.toLowerCase(),
-	},
-	{
-		id: FilterOperator.StartsWith,
-		label: defaultMessages.operators.text.startsWith,
-		filterFn: (rowValue, filterValue) =>
-			String(rowValue ?? '')
-				.toLowerCase()
-				.startsWith(filterValue.toLowerCase()),
-	},
-	{
-		id: FilterOperator.EndsWith,
-		label: defaultMessages.operators.text.endsWith,
-		filterFn: (rowValue, filterValue) =>
-			String(rowValue ?? '')
-				.toLowerCase()
-				.endsWith(filterValue.toLowerCase()),
-	},
-	...(EMPTY_OPERATORS as FilterOperatorDef<string>[]),
-]
-
-// ── Built-in number operators ──────────────────────────────────────────────
-
-export const NUMBER_OPERATORS: FilterOperatorDef<number>[] = [
-	{
-		id: FilterOperator.Equals,
-		label: defaultMessages.operators.number.equals,
-		filterFn: (rowValue, filterValue) => Number(rowValue) === filterValue,
-	},
-	{
-		id: FilterOperator.NotEquals,
-		label: defaultMessages.operators.number.notEquals,
-		filterFn: (rowValue, filterValue) => Number(rowValue) !== filterValue,
-	},
-	{
-		id: FilterOperator.GreaterThan,
-		label: defaultMessages.operators.number.greaterThan,
-		filterFn: (rowValue, filterValue) => Number(rowValue) > filterValue,
-	},
-	{
-		id: FilterOperator.GreaterOrEqual,
-		label: defaultMessages.operators.number.greaterOrEqual,
-		filterFn: (rowValue, filterValue) => Number(rowValue) >= filterValue,
-	},
-	{
-		id: FilterOperator.LessThan,
-		label: defaultMessages.operators.number.lessThan,
-		filterFn: (rowValue, filterValue) => Number(rowValue) < filterValue,
-	},
-	{
-		id: FilterOperator.LessOrEqual,
-		label: defaultMessages.operators.number.lessOrEqual,
-		filterFn: (rowValue, filterValue) => Number(rowValue) <= filterValue,
-	},
-	{
-		id: FilterOperator.Between,
-		label: defaultMessages.operators.number.between,
-		filterFn: (rowValue, filterValue) => {
-			const val = Number(rowValue)
-			const fv = filterValue as unknown as BetweenValue<number>
-			if (fv.from !== undefined && val < fv.from) return false
-			if (fv.to !== undefined && val > fv.to) return false
-			return true
-		},
-	},
-]
-
-// ── Built-in multi-value operators (in / notIn) ────────────────────────────
-
-/** Option shape used by multi-value (`in` / `notIn`) filter inputs. */
-/**
- * One entry in a multi-value (`in` / `notIn`) filter's list.
+ * One entry in a multi-value (`input: 'list'`) filter's list.
  *
  * `SelectItem` plus the faceted count, and named `*Item` like every other "one of the values
  * this column can take" list in the API — `cell.config.items`, `filtering.items`. The word
@@ -462,287 +315,120 @@ export type FilterItem = SelectItem & {
 	count?: number
 }
 
-export const IN_OPERATORS: FilterOperatorDef<string[]>[] = [
-	{
-		id: FilterOperator.In,
-		label: defaultMessages.operators.multi.in,
-		filterFn: (rowValue, filterValue) => {
-			if (!Array.isArray(filterValue) || filterValue.length === 0) return true
-			const v = rowValue == null ? '' : String(rowValue)
-			return filterValue.includes(v)
-		},
-	},
-	{
-		id: FilterOperator.NotIn,
-		label: defaultMessages.operators.multi.notIn,
-		filterFn: (rowValue, filterValue) => {
-			if (!Array.isArray(filterValue) || filterValue.length === 0) return true
-			const v = rowValue == null ? '' : String(rowValue)
-			return !filterValue.includes(v)
-		},
-	},
-]
-
-// ── Built-in date operators ────────────────────────────────────────────────
-
-/**
- * Date operators. The ids are the shared {@link FilterOperator} members — the same comparison
- * a number column makes — and only the labels speak calendar ("After", not "Greater than").
- */
-export const DATE_OPERATORS: FilterOperatorDef<string>[] = [
-	{
-		id: FilterOperator.Equals,
-		label: defaultMessages.operators.date.equals,
-		filterFn: (rowValue, filterValue) => String(rowValue ?? '') === filterValue,
-	},
-	{
-		id: FilterOperator.NotEquals,
-		label: defaultMessages.operators.date.notEquals,
-		filterFn: (rowValue, filterValue) => String(rowValue ?? '') !== filterValue,
-	},
-	{
-		id: FilterOperator.GreaterThan,
-		label: defaultMessages.operators.date.greaterThan,
-		filterFn: (rowValue, filterValue) => String(rowValue ?? '') > filterValue,
-	},
-	{
-		id: FilterOperator.GreaterOrEqual,
-		label: defaultMessages.operators.date.greaterOrEqual,
-		filterFn: (rowValue, filterValue) => String(rowValue ?? '') >= filterValue,
-	},
-	{
-		id: FilterOperator.LessThan,
-		label: defaultMessages.operators.date.lessThan,
-		filterFn: (rowValue, filterValue) => String(rowValue ?? '') < filterValue,
-	},
-	{
-		id: FilterOperator.LessOrEqual,
-		label: defaultMessages.operators.date.lessOrEqual,
-		filterFn: (rowValue, filterValue) => String(rowValue ?? '') <= filterValue,
-	},
-	{
-		id: FilterOperator.Between,
-		label: defaultMessages.operators.date.between,
-		filterFn: (rowValue, filterValue) => {
-			const val = String(rowValue ?? '')
-			const fv = filterValue as unknown as BetweenValue<string>
-			if (fv.from !== undefined && fv.from !== '' && val < fv.from) return false
-			if (fv.to !== undefined && fv.to !== '' && val > fv.to) return false
-			return true
-		},
-	},
-]
-
-// ── Built-in boolean operators ────────────────────────────────────────────
-
-/** Coerces a filter value written as a checkbox state or as its string form. */
-function toBoolean(value: unknown): boolean {
-	return value === true || value === 'true'
-}
-
-/**
- * Boolean operators. Equality only — a boolean has no ordering — plus the shared emptiness
- * pair, which is what distinguishes "false" from "never set" on an optional field.
- *
- * The value control is the kit's registered `boolean` filter input, reached through the cell
- * type registry like every other operator-aware column.
- */
-export const BOOLEAN_OPERATORS: FilterOperatorDef<boolean>[] = [
-	{
-		id: FilterOperator.Equals,
-		label: defaultMessages.operators.boolean.equals,
-		filterFn: (rowValue, filterValue) => Boolean(rowValue) === toBoolean(filterValue),
-	},
-	{
-		id: FilterOperator.NotEquals,
-		label: defaultMessages.operators.boolean.notEquals,
-		filterFn: (rowValue, filterValue) => Boolean(rowValue) !== toBoolean(filterValue),
-	},
-	...(EMPTY_OPERATORS as FilterOperatorDef<boolean>[]),
-]
-
-// ── Lookup tables ─────────────────────────────────────────────────────────
-
-export const SELECT_BADGE_OPERATORS: FilterOperatorDef[] = [
-	...(IN_OPERATORS as FilterOperatorDef[]),
-	...(EMPTY_OPERATORS as FilterOperatorDef[]),
-]
-
-/**
- * The default operator list per cell type — what `column.filtering.operators: true` resolves to.
- *
- * Every built-in cell type has an entry. Four of them (`boolean`, `progress`, `image`, `link`)
- * had none, and since a missing entry made `resolveColumnOperators` return `[]`,
- * `operators: true` on such a column attached no `filterFn`, published no operator list and
- * warned about nothing — the option read as "give me the defaults for my type" and did
- * nothing at all. `progress` is a number and `image` / `link` hold strings, so each of them
- * had a set already; they just were not wired to it.
- *
- * Keyed by `string` rather than `BuiltInCellType` because a project-registered cell type is
- * looked up here too. The `satisfies` clause is what keeps the built-ins exhaustive: the
- * index signature alone is exactly what let four of them go missing without an error.
- */
-export const DEFAULT_OPERATORS_BY_TYPE: Record<string, FilterOperatorDef[]> = {
-	text: TEXT_OPERATORS as FilterOperatorDef[],
-	number: NUMBER_OPERATORS as FilterOperatorDef[],
-	date: DATE_OPERATORS as FilterOperatorDef[],
-	boolean: BOOLEAN_OPERATORS as FilterOperatorDef[],
-	select: SELECT_BADGE_OPERATORS,
-	badge: SELECT_BADGE_OPERATORS,
-	progress: NUMBER_OPERATORS as FilterOperatorDef[],
-	image: TEXT_OPERATORS as FilterOperatorDef[],
-	link: TEXT_OPERATORS as FilterOperatorDef[],
-} satisfies Record<keyof BaseCellTypes, FilterOperatorDef[]>
-
-/** The operator each cell type opens with. Exhaustive over the built-ins, like the map above. */
-export const DEFAULT_OPERATOR_ID_BY_TYPE: Record<string, FilterOperatorId> = {
-	text: FilterOperator.Contains,
-	number: FilterOperator.Equals,
-	date: FilterOperator.Equals,
-	boolean: FilterOperator.Equals,
-	select: FilterOperator.In,
-	badge: FilterOperator.In,
-	progress: FilterOperator.Equals,
-	image: FilterOperator.Contains,
-	link: FilterOperator.Contains,
-} satisfies Record<keyof BaseCellTypes, FilterOperatorId>
-
-// ── Registry ──────────────────────────────────────────────────────────────
-
-export type OperatorRegistry = Map<string, FilterOperatorDef>
-
-/**
- * Flattened built-ins, in registry-insertion order: later entries win an id collision.
- *
- * Collisions are now the rule rather than the exception — `equals` means equality on all four
- * of text, number, date and boolean, which is the point of {@link FilterOperator}. The
- * per-column path never reads this map for an id the column's own cell type defines
- * (`resolveColumnOperators` consults `cellTypeOperators` first), so this order only decides
- * what a **custom** cell type gets when it names a shared id. Text goes last, and therefore
- * wins: its comparisons stringify, which is the one behaviour that is defined for any value.
- */
-const ALL_BUILT_INS: FilterOperatorDef[] = [
-	...(NUMBER_OPERATORS as FilterOperatorDef[]),
-	...(DATE_OPERATORS as FilterOperatorDef[]),
-	...(BOOLEAN_OPERATORS as FilterOperatorDef[]),
-	...(IN_OPERATORS as FilterOperatorDef[]),
-	...(TEXT_OPERATORS as FilterOperatorDef[]),
-]
-
-/**
- * The definitions a table registered through `filtering.operators.items`, by reference.
- *
- * The registry is one `Map`, so after {@link buildOperatorRegistry} a table's `contains` and the
- * built-in one it replaced are indistinguishable by id. Two readers need the difference: the
- * resolver, which lets a table's definition replace a cell type's own, and
- * {@link localizeOperators}, which leaves its author's label alone. Marked by reference rather
- * than by id so that a column's inline copy of a built-in (`{ ...op, filterFn }`) is still a
- * built-in as far as the dictionary is concerned.
- */
-const TABLE_OPERATORS = new WeakSet<FilterOperatorDef>()
-
-/** Whether `def` came from a table's `filtering.operators.items`. */
-function isTableOperator(def: FilterOperatorDef): boolean {
-	return TABLE_OPERATORS.has(def)
-}
-
-/** Builds the global registry from built-ins + optional table-level custom operators. */
-export function buildOperatorRegistry(tableOperators?: FilterOperatorDef[]): OperatorRegistry {
-	const registry = new Map<string, FilterOperatorDef>()
-	for (const op of ALL_BUILT_INS) registry.set(op.id, op)
-	if (tableOperators) {
-		for (const op of tableOperators) {
-			TABLE_OPERATORS.add(op)
-			registry.set(op.id, op)
-		}
-	}
-	return registry
-}
-
-/** The table's definition for `id`, when the table registered one. */
-function tableOverride(registry: OperatorRegistry, id: string): FilterOperatorDef | undefined {
-	const def = registry.get(id)
-	return def !== undefined && isTableOperator(def) ? def : undefined
-}
-
-/**
- * A cell type's default set with every id the table registered replaced by the table's
- * definition. The same array when the table replaces nothing, so a grid with no overrides keeps
- * the identity of the exported lists.
- */
-function withTableOverrides(defs: FilterOperatorDef[], registry: OperatorRegistry): FilterOperatorDef[] {
-	const next = defs.map((def) => tableOverride(registry, def.id) ?? def)
-	return next.some((def, index) => def !== defs[index]) ? next : defs
-}
-
 const IS_DEV = process.env.NODE_ENV !== 'production'
 
 /**
- * Resolves the final operator list for a column from its config.
+ * Resolves the final operator list for a column from its config and its cell type's set.
  *
- * Prefers cell-type-specific operators over the built-ins in the global registry for same-id
- * lookups, so `equals` on a number column compares numbers and `equals` on a date column compares
- * dates. That is what makes one {@link FilterOperator} vocabulary work across cell types.
- *
- * A definition the **table** registered under a built-in id beats both, in the default set as
- * well as in a column's `items`: an author who registers `contains` means every column that
- * offers `contains`, whatever its cell type. The built-in registry order above cannot express
- * that — it would let the text `equals` replace the number one — which is why a table's
- * definitions are told apart by reference (see {@link TABLE_OPERATORS}).
+ * `cellTypeOperators` is the grid's `operators.byType[cellType]`. A string in the column's `items`
+ * is looked up there and only there: the same id may compare differently in another type's set, so
+ * borrowing one would hand a number column a string comparison under a familiar name.
  *
  * An id that resolves to nothing still yields a pass-through stub — the column keeps working
  * — but it warns in development. Silently, this was the sharpest edge in the whole filtering
- * API: {@link createOperatorFilterFn} answers `true` for an operator it does not know, so a
- * mistyped or wrong-vocabulary id produced a filter the user could type into that matched
- * every row, with no error anywhere.
+ * API: a mistyped or wrong-type id produced a filter the user could type into that matched every
+ * row, with no error anywhere.
  */
 export function resolveColumnOperators(
 	operatorsConfig: true | ColumnOperatorsConfig,
-	registry: OperatorRegistry,
-	cellTypeOperators?: FilterOperatorDef[],
-	/** Column id, for the development warnings only. */
+	cellTypeOperators: FilterOperatorDef[] | undefined,
+	/** Column id and cell type, for the development warnings only. */
 	columnId?: string,
+	cellType?: string,
 ): FilterOperatorDef[] {
-	if (operatorsConfig === true || !operatorsConfig.items) {
-		return cellTypeOperators ? withTableOverrides(cellTypeOperators, registry) : []
-	}
+	if (operatorsConfig === true || !operatorsConfig.items) return cellTypeOperators ?? []
 
-	const cellTypeById = cellTypeOperators ? new Map(cellTypeOperators.map((op) => [op.id, op])) : undefined
+	const cellTypeById = new Map((cellTypeOperators ?? []).map((op) => [op.id, op]))
 
 	return operatorsConfig.items.map((item): FilterOperatorDef => {
 		if (typeof item !== 'string') return item
-		const resolved = tableOverride(registry, item) ?? cellTypeById?.get(item) ?? registry.get(item)
+		const resolved = cellTypeById.get(item)
 		if (resolved) return resolved
 		if (IS_DEV) {
-			console.warn(
-				`[data-grid] Column "${columnId ?? '?'}" lists filter operator "${item}", which is neither a ` +
-					`built-in nor registered through the table-level \`filtering.operators\`. It will match every ` +
-					`row. Built-in ids are the \`FilterOperator\` members.`,
+			warnOnce(
+				`[data-grid] Column "${columnId ?? '?'}" lists filter operator "${item}", which is not in the ` +
+					`operator set of its cell type "${cellType ?? 'text'}". It will match every row. Add it to ` +
+					`\`operators.byType\`, or list its definition in the column's \`items\`.`,
 			)
 		}
-		return { id: item, label: item, filterFn: () => true }
+		return { id: item, label: item, input: OperatorInput.Single, filterFn: () => true }
 	})
 }
 
+/** A bound of a range that states nothing. */
+function isEmptyBound(bound: unknown): boolean {
+	return bound === undefined || bound === null || bound === ''
+}
+
+/**
+ * Whether a filter value states nothing for an operator that takes `input` — the one rule both
+ * the row filter and anything that stores filters apply. A value of a shape `input` cannot take
+ * (not an array for `list`, not an object for `range`) counts as stating nothing.
+ *
+ * An operator that takes no value (`none`) is never empty: its whole meaning is the operator.
+ */
+export function isEmptyOperatorValue(input: OperatorInput, value: unknown): boolean {
+	if (input === OperatorInput.None) return false
+	if (value === undefined || value === null || value === '') return true
+	if (Array.isArray(value) && value.length === 0) return true
+	// A value of the wrong shape — a scalar under a list operator, say, restored from a link — states
+	// nothing the operator can take, so it filters nothing rather than reaching its `filterFn`.
+	if (input === OperatorInput.List) return !Array.isArray(value) || value.length === 0
+	if (input === OperatorInput.Range) {
+		if (typeof value !== 'object' || Array.isArray(value)) return true
+		const range = value as BetweenValue
+		return isEmptyBound(range.from) && isEmptyBound(range.to)
+	}
+	return false
+}
+
+/**
+ * An operator that takes a value, seen from the one place that calls it. Every non-`none` member of
+ * {@link FilterOperatorDef} is one, by method bivariance; the value's shape is the definition's
+ * `input`, which the grid wrote the value by.
+ */
+type ValueOperator = FilterOperatorBase & { filterFn(rowValue: unknown, value: unknown): boolean }
+
 /**
  * Creates a per-column TanStack filterFn that dispatches to the resolved operator's filterFn.
- * Returns true (all rows pass) when filter value is empty or operator is not found.
+ *
+ * All rows pass when the filter value is empty for its operator's `input`, so no operator's
+ * `filterFn` has to guard against an empty value itself. All rows pass for an operator the column
+ * does not offer, too — a filter restored from a link made against another operator set — and that
+ * warns in development, once per id per column rather than once per row.
  */
-export function createOperatorFilterFn(resolvedOperators: FilterOperatorDef[]): {
+export function createOperatorFilterFn(
+	resolvedOperators: FilterOperatorDef[],
+	/** Column id, for the development warning only. */
+	columnId?: string,
+): {
 	(row: { getValue: (id: string) => unknown }, columnId: string, filterValue: unknown): boolean
 	autoRemove: (val: unknown) => boolean
 } {
 	const opById = new Map(resolvedOperators.map((op) => [op.id, op]))
 
-	const fn = (row: { getValue: (id: string) => unknown }, columnId: string, filterValue: unknown): boolean => {
+	// `warnOnce` rather than a set in this closure: the dispatcher is rebuilt whenever the column
+	// mapper re-runs, which under React is every render.
+	const warnUnknown = (id: string): void => {
+		if (!IS_DEV) return
+		warnOnce(
+			`[data-grid] Column "${columnId ?? '?'}" has a filter with operator "${id}", which it does not ` +
+				`offer, so the filter matches every row. Keep the id in the column's operator set to keep ` +
+				`such filters working.`,
+		)
+	}
+
+	const fn = (row: { getValue: (id: string) => unknown }, id: string, filterValue: unknown): boolean => {
 		if (filterValue == null || typeof filterValue !== 'object' || !('operator' in filterValue)) return true
 		const sv = filterValue as StructuredFilterValue
 		const op = opById.get(sv.operator)
-		if (!op) return true
-		if (op.requiresInput === false) return op.filterFn(row.getValue(columnId), undefined)
-		if (sv.value === undefined || sv.value === null || sv.value === '') return true
-		if (Array.isArray(sv.value) && sv.value.length === 0) return true
-		return op.filterFn(row.getValue(columnId), sv.value)
+		if (!op) {
+			warnUnknown(String(sv.operator))
+			return true
+		}
+		if (op.input === OperatorInput.None) return op.filterFn(row.getValue(id))
+		if (isEmptyOperatorValue(op.input, sv.value)) return true
+		return (op as ValueOperator).filterFn(row.getValue(id), sv.value)
 	}
 
 	fn.autoRemove = (val: unknown): boolean => {
@@ -752,69 +438,17 @@ export function createOperatorFilterFn(resolvedOperators: FilterOperatorDef[]): 
 		if (!sv.operator) return true
 		const op = opById.get(sv.operator)
 		if (!op) return true
-		// Keep entry while operator is selected; filterFn returns true for empty value.
+		// Keep entry while operator is selected; an empty value matches every row.
 		return false
 	}
 
 	return fn
 }
 
-/**
- * Which group of {@link GridMessages.operators} names a cell type's operators.
- *
- * Mirrors {@link DEFAULT_OPERATORS_BY_TYPE}: the types that share an operator set share its
- * wording too — `progress` reads as a number, `image` / `link` as text, `badge` as `select`.
- */
-const OPERATOR_GROUP_BY_CELL_TYPE: Record<string, 'text' | 'number' | 'date' | 'boolean' | 'multi'> = {
-	text: 'text',
-	number: 'number',
-	date: 'date',
-	boolean: 'boolean',
-	select: 'multi',
-	badge: 'multi',
-	progress: 'number',
-	image: 'text',
-	link: 'text',
-}
-
-/**
- * Re-labels a resolved operator list from the grid's dictionary.
- *
- * The list itself is settled in core, where the ids and the comparisons live; the wording is
- * the consumer's, so it is applied here rather than baked into the exported arrays. An id the
- * dictionary does not name — a custom operator registered through `filtering.operators.items` —
- * keeps the `label` its author wrote, and so does a built-in id the table registered a definition
- * for: whoever replaced `contains` took on its wording along with its comparison.
- *
- * Returns the same array when nothing changed, so a grid on the English default does not
- * re-create the list on every render.
- */
-export function localizeOperators(
-	defs: FilterOperatorDef[],
-	cellType: string | undefined,
-	messages: GridMessages['operators'],
-): FilterOperatorDef[] {
-	const group = messages[OPERATOR_GROUP_BY_CELL_TYPE[cellType ?? 'text'] ?? 'text'] as Record<
-		string,
-		string | undefined
-	>
-	const empty = messages.empty as Record<string, string | undefined>
-	const multi = messages.multi as Record<string, string | undefined>
-
-	const next = defs.map((def) => {
-		if (isTableOperator(def)) return def
-		const label = group[def.id] ?? empty[def.id] ?? multi[def.id]
-		return label === undefined || label === def.label ? def : { ...def, label }
-	})
-	// Reference equality per entry, rather than a flag the closure sets: a `let` assigned only
-	// inside the callback still reads as `false` to control-flow analysis at the return.
-	return next.some((def, index) => def !== defs[index]) ? next : defs
-}
-
-/** Re-labels the built-in date-range presets from the dictionary, on the same terms. */
+/** Re-labels the built-in date presets from the dictionary's `filtering.presets`. */
 export function localizeDatePresets(
 	presets: DatePreset[],
-	messages: GridMessages['operators']['presets'],
+	messages: GridMessages['filtering']['presets'],
 ): DatePreset[] {
 	const table = messages as Record<string, string | undefined>
 	const next = presets.map((preset) => {
