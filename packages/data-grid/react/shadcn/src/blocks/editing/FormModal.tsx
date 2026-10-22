@@ -8,14 +8,15 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { KIT_CLASS_NAME } from '@grid-shadcn/lib/kit-class-name'
 import { cn } from '@grid-shadcn/lib/utils'
 
-import type { FormShellProps } from '@ez-kit/data-grid-react'
+import type { FormModalProps } from '@ez-kit/data-grid-react'
 
 /**
- * Unified shell for `creating` / `editing` modal forms.
- * Renders a form-level error banner above the body when `formError` is set,
+ * The dialog `creating` and `editing` open in `mode: 'modal'`.
+ * Renders a form-level error banner above the body when `formError` is set — one message per
+ * line, since a schema joins several form-level issues with a newline —
  * and reflects `isPending` on the Save button (disabled + spinner).
  */
-export function FormShell({ open, title, formError, isPending, onSave, onCancel, children }: FormShellProps) {
+export function FormModal({ open, title, formError, isPending, onSave, onCancel, children }: FormModalProps) {
 	const messages = useGridMessages()
 	return (
 		<Dialog
@@ -32,7 +33,7 @@ export function FormShell({ open, title, formError, isPending, onSave, onCancel,
 					<div
 						role='alert'
 						className={cn(
-							'rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive',
+							'whitespace-pre-line rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive',
 						)}
 					>
 						{formError}

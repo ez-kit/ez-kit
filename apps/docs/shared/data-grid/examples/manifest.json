@@ -618,6 +618,22 @@
 		"exportName": "EditingValidationExample"
 	},
 	{
+		"id": "form-modal-own-form",
+		"label": "Own form",
+		"group": "form-modal",
+		"groupLabel": "Form modal",
+		"sourceFile": "components/editing/form-modal.tsx",
+		"exportName": "OwnFormModalExample"
+	},
+	{
+		"id": "form-modal-fields-layout",
+		"label": "Fields layout",
+		"group": "form-modal",
+		"groupLabel": "Form modal",
+		"sourceFile": "components/editing/form-modal.tsx",
+		"exportName": "FieldsLayoutModalExample"
+	},
+	{
 		"id": "expanding-sub-content",
 		"label": "Sub-content",
 		"group": "expanding",

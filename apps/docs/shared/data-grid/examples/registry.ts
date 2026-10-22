@@ -48,6 +48,7 @@ export const exampleModules: Record<string, () => Promise<Record<string, Compone
 	'components/deleting/rollback.tsx': () => import('./components/deleting/rollback'),
 	'components/editing/modes.tsx': () => import('./components/editing/modes'),
 	'components/editing/EditingValidationExample.tsx': () => import('./components/editing/EditingValidationExample'),
+	'components/editing/form-modal.tsx': () => import('./components/editing/form-modal'),
 	'components/expanding/controlled.tsx': () => import('./components/expanding/controlled'),
 	'components/expanding/sub-content.tsx': () => import('./components/expanding/sub-content'),
 	'components/expanding/tree.tsx': () => import('./components/expanding/tree'),

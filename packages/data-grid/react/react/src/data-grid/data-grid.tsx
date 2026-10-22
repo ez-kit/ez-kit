@@ -804,8 +804,6 @@ export type DataGridStatics = {
 	GroupByBar: typeof GroupByBar
 	ClearFiltersButton: typeof ClearFiltersButton
 	FilterPanel: typeof FilterPanel
-	CreatingModal: typeof CreatingModal
-	EditingModal: typeof EditingModal
 	LoadingBody: typeof LoadingBody
 	EmptyStateRow: typeof EmptyStateRow
 	NoResultsRow: typeof NoResultsRow
@@ -878,8 +876,6 @@ export const DataGrid: DataGridType = /* @__PURE__ */ Object.assign(DataGridRoot
 	GroupByBar,
 	ClearFiltersButton,
 	FilterPanel,
-	CreatingModal,
-	EditingModal,
 	LoadingBody,
 	EmptyStateRow,
 	NoResultsRow,

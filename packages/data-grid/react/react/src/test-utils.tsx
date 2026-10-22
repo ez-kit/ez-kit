@@ -841,8 +841,8 @@ function TestRefetchOverlay(_props: RefetchOverlayProps) {
 	)
 }
 
-// Minimal FormShell stub (no chrome) — UI kits provide real implementations.
-function TestFormShell({ children }: { children?: ReactNode }) {
+// Minimal FormModal stub (no chrome) — UI kits provide real implementations.
+function TestFormModal({ children }: { children?: ReactNode }) {
 	return <>{children}</>
 }
 
@@ -904,7 +904,7 @@ export const testComponents: FullGridComponents = {
 		MultiSelectFilter: TestMultiSelectFilter,
 	},
 	editing: {
-		FormShell: TestFormShell,
+		FormModal: TestFormModal,
 	},
 	deleting: {
 		ConfirmDialog: TestConfirmDialog,

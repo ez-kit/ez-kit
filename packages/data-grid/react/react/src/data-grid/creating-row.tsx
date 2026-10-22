@@ -106,7 +106,9 @@ export function CreatingRow() {
 							>
 								<ActionsCell
 									state={ActionsCellState.Creating}
-									onSave={() => table.creating.commit()}
+									onSave={async () => {
+										await table.creating.commit()
+									}}
 									onCancel={() => {
 										table.creating.cancel()
 									}}

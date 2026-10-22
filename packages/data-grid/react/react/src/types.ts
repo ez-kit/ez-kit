@@ -6,6 +6,8 @@ import type { ResolvedGridOptions } from './resolved-options'
 import type {
 	BetweenInputType,
 	BetweenValue,
+	ColumnFormMode,
+	CommitResult,
 	DataTable as CoreDataTable,
 	DatePreset,
 	DateRangePreset,
@@ -15,6 +17,8 @@ import type {
 	LoadMoreDirection,
 	FilterItem,
 	PendingCount,
+	ValidationErrors,
+	ValidationResult,
 } from '@ez-kit/data-grid-core'
 import type { Row, TableFeatures } from '@tanstack/table-core'
 import type {
@@ -823,18 +827,78 @@ export type ConfirmDialogProps = {
 }
 
 /**
- * Form shell — unified slot for `creating` / `editing` modal forms.
- * Owns the modal chrome, form-level error banner, action buttons, and pending state.
- * Body content (`children`) is the `<AutoForm>`-style field list rendered by the data-grid layer.
+ * The modal dialog — one slot for the `creating` and `editing` forms in `mode: 'modal'`.
+ *
+ * A kit's implementation owns the modal chrome, the form-level error banner, the action buttons
+ * and the pending state, and renders `children` — the generated form — as its body.
+ *
+ * It is also **the** way to put a form of one's own in the modal: register a component here, per
+ * grid with `<DataGrid components={{ editing: { FormModal } }}>` or app-wide through
+ * `createDataGrid`. Three depths, from least to most of one's own:
+ * - **the dialog** — render `children` inside a dialog of your own;
+ * - **the layout** — place the entries of `fields` in a grid, tabs or sections, and call `onSave`
+ *   or `submit()`: the fields write the grid's state, so it already holds the values;
+ * - **the whole form** — any form library, seeded from `initialValues`, saving through
+ *   `submit(values)` and checking with `validate(values)`.
  */
-export type FormShellProps = {
-	open: boolean
+export type FormModalProps = {
+	/** The slot is rendered only while the form is open. */
+	open: true
+	/** Which form is open. */
+	mode: ColumnFormMode
+	/** The localised dialog title (`messages.creating.title` / `messages.editing.title`). */
 	title: string
+	/** Form-level error from the last failed commit, or `null`. */
 	formError: string | null
+	/** Field errors from the last failed commit, keyed by column id. */
+	errors: ValidationErrors
 	/** True while validate or onSave is in flight (`commitStatus !== 'idle'`). */
 	isPending: boolean
+	/**
+	 * The values the form opened with — only the fields the generated form shows: the columns'
+	 * `creating.defaultValue`s under `creating.defaultValues` when creating, the row's values when
+	 * editing. No system column, and none opted out with `creating: false` / `editing: false`. The
+	 * same object for as long as the form stays open, so it is safe to seed a form library with.
+	 */
+	initialValues: Readonly<Record<string, unknown>>
+	/**
+	 * The row being edited, as it is in `data` — every field, including ones no column shows.
+	 * Read-only: nothing in it is saved unless passed to `submit`. `undefined` when creating.
+	 * `unknown` because a kit is not generic over the row type; cast it to your row once.
+	 */
+	row: unknown
+	/**
+	 * Save through the grid's pipeline: the grid's `validate` (when configured), then `onSave`.
+	 * Without an argument it saves what the generated fields wrote to the grid's state; with
+	 * `values` it saves those, keys no column declares included.
+	 *
+	 * Resolves to the outcome instead of throwing on a refusal — `{ ok: true }`, or `ok: false`
+	 * with a `reason`: `'rejected'` with the `errors` / `formError` the validator or a
+	 * `ValidationError` from `onSave` produced, `'cancelled'`, `'busy'` or `'closed'`. A second
+	 * call while a save is in flight resolves to the first one's outcome, and its `values` are
+	 * ignored.
+	 */
+	submit: (values?: Record<string, unknown>) => Promise<CommitResult>
+	/**
+	 * The grid's validator as a pure function: checks `values` and writes nothing to the grid's
+	 * state. Resolves `null` when valid, or when no `validate` is configured.
+	 */
+	validate: (values: Record<string, unknown>) => Promise<ValidationResult>
+	/**
+	 * `submit()` for a Save button — saves the grid's state and resolves to nothing. Like
+	 * `submit`, it rejects on an error the grid cannot interpret (anything but a
+	 * `ValidationError` from `onSave`), after writing the generic `formError`.
+	 */
 	onSave: () => Promise<void>
+	/** Close the form, abandoning any validation or save in flight. */
 	onCancel: () => void
+	/**
+	 * The generated fields one by one, keyed by column id — each the field `children` renders for
+	 * that column, with its label, errors and `validateOn` behaviour, writing the grid's state. An
+	 * entry costs nothing until it is rendered.
+	 */
+	fields: Readonly<Record<string, ReactNode>>
+	/** The generated form: every entry of `fields`, in column order, in its `auto-form` wrapper. */
 	children: ReactNode
 }
 
@@ -1142,8 +1206,8 @@ export type GridComponentRegistry = {
 	LoadMoreRow?: ComponentType<LoadMoreRowProps>
 	// row actions
 	ActionsCell?: ComponentType<ActionsCellProps>
-	// form shell (creating / editing modal)
-	FormShell?: ComponentType<FormShellProps>
+	// modal dialog (creating / editing `mode: 'modal'`)
+	FormModal?: ComponentType<FormModalProps>
 	// expand
 	Chevron?: ComponentType<ChevronProps>
 }

@@ -1,4 +1,4 @@
-import { FormShell } from './FormShell'
+import { FormModal } from './FormModal'
 
 import type { GridEditingComponents } from '@ez-kit/data-grid-react'
 
@@ -9,4 +9,4 @@ import type { GridEditingComponents } from '@ez-kit/data-grid-react'
  * `createDataGrid` can import just the groups their grid uses instead of paying for every
  * feature's UI. The default `DataGrid` is unchanged — `data-grid.tsx` composes every group.
  */
-export const editingComponents: GridEditingComponents = { FormShell }
+export const editingComponents: GridEditingComponents = { FormModal }

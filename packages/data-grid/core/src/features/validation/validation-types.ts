@@ -1,25 +1,18 @@
+import type { StandardSchemaV1, StandardSchemaV1Issue } from './standard-schema'
 import type { BadgeItem, SelectItem } from '../../column/types'
 
 /**
- * The `{ schema }` shorthand's contract, written structurally rather than as
- * `import type { ZodType } from 'zod'`.
+ * The `{ schema }` shorthand's contract: any schema that implements Standard Schema v1 —
+ * zod, valibot, arktype and the rest.
  *
- * zod is an **optional** peer dependency, but a bare `import` of it in this module ends up in
- * the package's published `index.d.ts` unconditionally — so every consumer had to have zod
- * installed for the type declarations to resolve at all, optional or not. Only `safeParse` and
- * the issue shape are ever read (see `zodSafeParseToResult`), and every zod schema satisfies
- * this by structure, so `validate: { schema }` keeps type-checking against a real zod schema
- * with no import.
+ * It used to be a structural `{ safeParse }`, which only zod satisfied. The interface is copied
+ * into `./standard-schema` rather than imported, so the published `index.d.ts` names no schema
+ * library and no consumer needs one installed for the declarations to resolve.
  */
-export type ValidationSchema = {
-	safeParse(input: unknown): { success: true } | { success: false; error: { issues: readonly ValidationIssue[] } }
-}
+export type ValidationSchema = StandardSchemaV1
 
-/** One problem reported by a {@link ValidationSchema}. The zod issue shape, structurally. */
-export type ValidationIssue = {
-	path: readonly PropertyKey[]
-	message: string
-}
+/** One problem reported by a {@link ValidationSchema}. An issue without a `path` is a form error. */
+export type ValidationIssue = StandardSchemaV1Issue
 
 /**
  * Validation error map keyed by columnId.
@@ -145,14 +138,14 @@ export type FieldState<TConfig = unknown, TValue = unknown> = {
 }
 
 /**
- * `validate` config — a function, or the `{ schema }` shorthand for zod.
+ * `validate` config — a function, or the `{ schema }` shorthand for any Standard Schema.
  *
  * **When** validation runs is not settable here. It is `editing.validateOn` /
  * `creating.validateOn` (and the per-column override under `column.editing` /
  * `column.creating`), full stop. The shorthand used to carry its own `validateOn` /
  * `debounce` that silently won over the feature-level ones — so the same setting had
  * two spellings, only one of which existed when `validate` was written as a function, and
- * adopting a zod schema from another example quietly re-timed the whole form.
+ * adopting a schema from another example quietly re-timed the whole form.
  */
 export type ValidateConfig<TData> =
 	| ((values: Partial<TData>, ctx: ValidateContext) => ValidationResult | Promise<ValidationResult>)

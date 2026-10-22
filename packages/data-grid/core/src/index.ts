@@ -268,8 +268,12 @@ export type { EditingApi, EditingConfig, EditingSaveContext, EditingState } from
 export type { InfiniteState } from './features/infinite'
 export type { LoadingState } from './features/loading'
 
+// Form commit API
+export { CommitFailure } from './features/form'
+export type { CommitOptions, CommitResult } from './features/form'
+
 // Validation API
-export { CommitStatus, ValidateOn, ValidationError, isValidationError, zodResolver } from './features/validation'
+export { CommitStatus, ValidateOn, ValidationError, isValidationError, schemaResolver } from './features/validation'
 
 export type {
 	FieldState,
@@ -277,6 +281,7 @@ export type {
 	ValidateContext,
 	ValidationIssue,
 	ValidationSchema,
+	StandardSchemaV1,
 	ValidationErrors,
 	ValidationProblems,
 	ValidationResult,

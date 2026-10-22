@@ -1,13 +1,16 @@
 ---
 title: Validation
-description: One validator per form — a function or a zod schema — plus when it runs and how server errors get back into the fields.
+description: One validator per form — a function or any Standard Schema — plus when it runs and how server errors get back into the fields.
 ---
 
 Validation belongs to the form, not to the field. `editing.validate` and `creating.validate`
 each take **one** validator for the whole row, because cross-field rules ("end after start") are
 the ones that have nowhere else to live, and per-field rules express fine inside a schema.
 
-## A zod schema
+## A schema
+
+`{ schema }` takes any schema that implements [Standard Schema](https://standardschema.dev) —
+zod, valibot, arktype and the rest. The grid depends on none of them; bring the one you use.
 
 <DataGridDocsExample exampleId='editing-validation' />
 
@@ -32,7 +35,25 @@ const userSchema = z.object({
 
 Issues are mapped onto the fields by path, so each message lands under its own input. A field
 with several failing rules keeps all of them: `FieldState.error` is the first, `FieldState.errors`
-the full list.
+the full list. A nested path is keyed by its first segment — an issue at `['address', 'street']`
+belongs to the `address` field.
+
+An issue **without** a path is about the row as a whole — a `refine` comparing two fields, for
+example — and goes to `formError`, the banner above the form. Several of them are joined, one per
+line. Any library behaves the same way — here a form-level check in valibot:
+
+```ts
+import * as v from 'valibot'
+
+const userSchema = v.pipe(
+	v.object({ password: v.string(), confirm: v.string() }),
+	v.check((user) => user.password === user.confirm, 'Passwords do not match'),
+)
+
+editing: { validate: { schema: userSchema }, onSave }
+```
+
+A schema may validate asynchronously; the grid awaits it either way.
 
 ## A function
 
@@ -57,14 +78,21 @@ The return type is `ValidationResult`: `null`, or `{ errors?, formError? }` — 
 column id, `formError` for a message about the form as a whole. `signal` aborts when the user
 cancels or types again, so an in-flight request never lands on a form that moved on.
 
-Prefer `zodResolver` when you have a schema but want a function anyway (to compose it with
-something else):
+Use `schemaResolver` when you have a schema but want a function anyway, to compose it with
+something else. It turns any Standard Schema into a validator with the same result `{ schema }`
+gives, and resolves asynchronously:
 
 ```ts
-import { zodResolver } from '@ez-kit/data-grid-react'
+import { schemaResolver } from '@ez-kit/data-grid-react'
+
+const checkSchema = schemaResolver(userSchema)
 
 const config = {
-	validate: zodResolver(userSchema),
+	validate: async (values, { signal }) => {
+		const result = await checkSchema(values)
+		if (result) return result
+		return (await api.isEmailTaken(values.email, { signal })) ? { errors: { email: ['already in use'] } } : null
+	},
 	onSave,
 }
 ```

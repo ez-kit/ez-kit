@@ -272,8 +272,6 @@ export { FilterPanel as DataGridFilterPanel } from './data-grid/filter-panel'
 export { useFilters } from './data-grid/filter-panel'
 export { FilterEditor } from './data-grid/filter-model'
 export { FilterSourceKind } from './data-grid/filter-target'
-export { CreatingModal as DataGridCreatingModal } from './data-grid/creating-modal'
-export { EditingModal as DataGridEditingModal } from './data-grid/editing-modal'
 export { LoadingBody as DataGridLoadingBody } from './data-grid/loading-body'
 export { EmptyStateRow as DataGridEmptyStateRow } from './data-grid/empty-state-row'
 export { NoResultsRow as DataGridNoResultsRow } from './data-grid/no-results-row'
@@ -328,9 +326,6 @@ export type { DataGridFilterProps } from './data-grid/filter'
 export type { DataGridPageSizerProps, DataGridPageSizerRenderArgs } from './data-grid/page-sizer'
 export type { DataGridBottomBarProps } from './data-grid/bottom-bar'
 export type { DataGridActionBarProps, DataGridActionBarRenderArgs } from './data-grid/action-bar'
-export type { DataGridFormModalProps, DataGridFormModalRenderArgs } from './data-grid/form-modal'
-export type { DataGridCreatingModalProps } from './data-grid/creating-modal'
-export type { DataGridEditingModalProps } from './data-grid/editing-modal'
 export type { DataGridLoadingBodyProps, DataGridLoadingBodyRenderArgs } from './data-grid/loading-body'
 export type { DataGridEmptyStateRowProps, DataGridEmptyStateRowRenderArgs } from './data-grid/empty-state-row'
 export type { DataGridNoResultsRowProps, DataGridNoResultsRowRenderArgs } from './data-grid/no-results-row'
@@ -385,7 +380,7 @@ export type {
 	 */
 	GridFeatures,
 	ActionsCellProps,
-	FormShellProps,
+	FormModalProps,
 	BetweenInputProps,
 	ChevronProps,
 	SortIndicatorProps,
