@@ -153,11 +153,16 @@ describe('a FormModal of one’s own — the whole form', () => {
 		renderModal({ feature: 'creating', onSave, render: capture(captured) })
 		open()
 
+		// The first submit gets an `act` of its own: React 18 flushes the pending render only when
+		// an `act` ends, so a `waitFor` inside the same one would never see `isPending`.
+		let first: Promise<CommitResult> | undefined
+		act(() => {
+			first = captured.current?.submit({ name: 'B' })
+		})
+		await waitFor(() => {
+			expect(captured.current?.isPending).toBe(true)
+		})
 		await act(async () => {
-			const first = captured.current?.submit({ name: 'B' })
-			await waitFor(() => {
-				expect(captured.current?.isPending).toBe(true)
-			})
 			const second = captured.current?.submit({ name: 'B' })
 			release()
 			await Promise.all([first, second])

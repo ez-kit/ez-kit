@@ -1,6 +1,6 @@
 import { createColumns } from '@ez-kit/data-grid-core'
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
-import { use, useState, useSyncExternalStore } from 'react'
+import { useState, useSyncExternalStore } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { DataGrid } from '../data-grid/data-grid'
@@ -169,11 +169,17 @@ describe('useItems — a cell’s list from a hook', () => {
 
 	it('waits for a hook that suspends inside its own list, the grid still rendered', async () => {
 		let resolve: (items: SelectItem[]) => void = () => undefined
+		let settled: SelectItem[] | undefined
 		const pending = new Promise<SelectItem[]>((done) => {
 			resolve = done
-		})
-		const useSuspending = (): ItemsSourceResult<SelectItem> => ({ items: use(pending) })
-		// Rendered inside an async `act`: React only retries a suspended `use()` when it was rendered
+		}).then((items) => (settled = items))
+		// Suspends by throwing the promise rather than through `use()`, which React 18 does not have.
+		const useSuspending = (): ItemsSourceResult<SelectItem> => {
+			// eslint-disable-next-line @typescript-eslint/only-throw-error -- a thrown promise is how a render suspends
+			if (settled === undefined) throw pending
+			return { items: settled }
+		}
+		// Rendered inside an async `act`: React only retries a suspended render when it was rendered
 		// in one, which a synchronous render is not.
 		await act(async () => {
 			render(
