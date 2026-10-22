@@ -3,7 +3,7 @@ title: Filter Operators
 description: Switch the matching strategy per filter — equals, contains, starts with, between, before, after, and custom predicates.
 ---
 
-Each column can expose a list of operators the user picks from when filtering — `contains`, `equals`, `startsWith`, `gt`, `lt`, `between`, and more. Operators are opt-in: a column gets a selector from its own `filtering.operators`, or from the table-wide switch below. The default set is picked from the column's `cell.type`.
+Each column can expose a list of operators the user picks from when filtering — `contains`, `equals`, `startsWith`, `greaterThan`, `lessThan`, `between`, and more. Operators are opt-in: a column gets a selector from its own `filtering.operators`, or from the table-wide switch below. Which operators it offers comes from the grid's operator set for the column's `cell.type` — see [The operator set](#the-operator-set).
 
 ## Usage
 
@@ -22,7 +22,7 @@ const columns = createColumns<Employee>([
 `filtering.operators` on the grid is the same switch one level up:
 
 ```tsx
-// every filterable column gets the operators its cell type declares
+// every filterable column gets the operators of its cell type
 <DataGrid features={features} data={data} columns={columns} filtering={{ operators: true }} />
 
 // no column gets one, whatever the columns say
@@ -36,6 +36,53 @@ the examples below do.
 
 <DataGridDocsExample exampleId='filter-operators-table' />
 
+### The operator control
+
+The operator sits first in the filter's row, before the value control, and never on a row of its
+own — so a column with operators is exactly as tall as one without, and **Department** above
+lines up with the two beside it. It is a button showing the current operator's label, clipped to
+its width; pressing it opens a menu of every operator the column offers, the current one checked.
+An operator that takes no value — `isEmpty`, `isNotEmpty` — keeps the row: its label stands where
+the input would.
+
+The button's accessible name carries the operator, since a clipped label or an icon reads badly
+aloud: it comes from `messages.filtering.operatorTrigger`, `Filter operator: Contains` by default.
+The menu is named by `messages.filtering.operator`. See [Localization](/docs/data-grid/localization).
+
+### Icons
+
+By default every operator shows its label. A sign alone in a closed control needs a legend to be
+read, which is why the grid does not show one unless a definition asks. An operator's `icon` is
+written on its definition — anything React renders — and the definition is its only source.
+`DEFAULT_OPERATOR_ICONS` from `@ez-kit/data-grid-core/operators` is a map of ready signs for the
+ready-made ids (`=`, `≠`, `>`, `≥`, `*a*`, `↔`, `∈`, `∅`, …); it changes nothing by itself, so copy
+the signs into the set you pass:
+
+```tsx
+import { DEFAULT_OPERATOR_ICONS, defaultOperators, type FilterOperator } from '@ez-kit/data-grid-core/operators'
+import type { FilterOperatorDef } from '@ez-kit/data-grid-core'
+
+const withSigns = (set: FilterOperatorDef[]) =>
+	set.map((op) => ({ ...op, icon: DEFAULT_OPERATOR_ICONS[op.id as FilterOperator] }))
+
+const operators = {
+	byType: { text: withSigns(defaultOperators.byType.text), number: withSigns(defaultOperators.byType.number) },
+}
+;<DataGrid
+	features={features}
+	operators={operators}
+	data={data}
+	columns={columns}
+	filtering={{ operators: true }}
+/>
+```
+
+<DataGridDocsExample exampleId='filter-operators-icons' />
+
+The button then shows the icon, and each menu entry shows it beside the label. Give an icon to the
+definitions you want and leave the rest — they keep their label — and use your own icons the same
+way: `{ ...defaultOperators.byType.text[0], icon: <TextSearch /> }`.
+
 ### Text operators
 
 Enable the full text operator set with `filtering: { operators: true }`, or pass an explicit `items` list to restrict it — here **Department** offers only `contains`, `equals`, `isEmpty`, and `isNotEmpty`.
@@ -44,7 +91,7 @@ Enable the full text operator set with `filtering: { operators: true }`, or pass
 
 ### Number operators
 
-Numeric columns (`cell: { type: 'number' }`) expose comparison operators (`eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `between`). Use `defaultOperator` to pick the one selected first — **Salary** defaults to `gte`.
+With the ready-made set, numeric columns (`cell: { type: 'number' }`) expose comparison operators (`equals`, `notEquals`, `greaterThan`, `greaterOrEqual`, `lessThan`, `lessOrEqual`, `between`). Use `defaultOperator` to pick the one selected first — **Salary** defaults to `greaterOrEqual`.
 
 <DataGridDocsExample exampleId='filter-operators-number' />
 
@@ -62,7 +109,7 @@ Set `betweenOperator: { slider: true, min, max }` for a draggable range control 
 
 ### Date operators
 
-Date columns (`cell: { type: 'date' }`) get date-aware operators (`equals`, `lessThan`, `lessOrEqual`, `greaterThan`, `greaterOrEqual`, `between`) with a calendar picker. Enable them with `filtering: { operators: true }`.
+With the ready-made set, date columns (`cell: { type: 'date' }`) get date-aware operators (`equals`, `notEquals`, `lessThan`, `lessOrEqual`, `greaterThan`, `greaterOrEqual`, `between`) with a calendar picker. Enable them with `filtering: { operators: true }`.
 
 <DataGridDocsExample exampleId='filter-operators-date' />
 
@@ -75,11 +122,78 @@ range calendar. Every date operator — not just `between` — can be filled fro
 
 <DataGridDocsExample exampleId='filter-operators-date-between' />
 
-## Built-in operators
+## The operator set
 
-One vocabulary across cell types: the same id always means the same comparison, and only the
-label changes — `greaterThan` reads "Greater than" on a number column and "After" on a date
-one. The ids are the `FilterOperator` members; the bare string is equally valid.
+Which operators exist is a decision about the bundle, the way [`features`](/docs/data-grid/feature-set)
+is: `operators` is `{ byType, defaultByType }` — `byType` maps each cell type to the definitions its
+columns offer, and `defaultByType` names the operator each opens with. It
+switches nothing on — `filtering.operators` does — and a cell type with no entry offers none.
+
+```ts
+import { defaultOperators } from '@ez-kit/data-grid-core/operators'
+
+export const { DataGrid, useDataGrid } = createDataGrid({
+	components,
+	features,
+	operators: defaultOperators,
+})
+```
+
+Both kits' prebuilt `DataGrid` passes `defaultOperators`, the ready-made set, so it is what every
+example on this page runs on. A grid composed through `createDataGrid` has the operators it was
+handed and no others: without `operators`, `filtering.operators: true` leaves every column a plain
+filter and warns once in development.
+
+### Changing one type's operators
+
+`operators` is set in `createDataGrid`, on a `DataGridOptionsProvider` and on a grid, and a layer
+**replaces the set of each cell type it names** and keeps the others from the layer below:
+
+```tsx
+const dateOperators = { byType: { date: [onDay, beforeDay, afterDay] } }
+
+<DataGridOptionsProvider defaults={{ operators: dateOperators }}>
+	{/* date columns offer the three above; text and number keep the bundle's sets */}
+</DataGridOptionsProvider>
+```
+
+Build the set once — at module scope, or under `useMemo` when it depends on something in a
+component. A set rebuilt on every render re-resolves every column's operators on every render.
+
+`defaultByType` names the operator a column of each type opens with. Without an entry a column
+opens with the first operator of its set; its own `filtering.defaultOperator` beats both.
+
+### A column narrows its type's set
+
+```ts
+filtering: {
+	operators: {
+		items: ['contains', 'equals']
+	}
+}
+```
+
+A string in a column's `items` is looked up in **its own cell type's set** and nowhere else — the
+same id may compare differently in another type's set. A definition in `items` is used as written,
+beside the ids:
+
+```ts
+filtering: {
+	operators: {
+		items: ['contains', { id: 'fuzzy', label: 'Fuzzy match', input: 'single', filterFn: fuzzyMatch }],
+	},
+}
+```
+
+An id the column's set does not have selects nothing and filters nothing. `createTable` warns
+about that in development, for both `defaultOperator` and `operators.items`.
+
+### The ready-made set
+
+`defaultOperators` speaks one vocabulary across cell types: within it the same id always means the
+same comparison, and only the label changes — `greaterThan` reads "Greater than" on a number column
+and "After" on a date one. The ids are the `FilterOperator` members, also on
+`@ez-kit/data-grid-core/operators`; the bare string is equally valid.
 
 | Operator                         | Cell types                                         | Behavior                                                                             |
 | -------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------ |
@@ -91,53 +205,61 @@ one. The ids are the `FilterOperator` members; the bare string is equally valid.
 | `between`                        | number, progress, date                             | inclusive range                                                                      |
 | `in`                             | select, badge                                      | row value is one of a set (see [Multi-value](/docs/data-grid/filtering/multi-value)) |
 | `notIn`                          | select, badge                                      | inverse of `in`                                                                      |
-| `isEmpty` / `isNotEmpty`         | every built-in except number and progress          | null / undefined / empty string — renders no value input                             |
+| `isEmpty` / `isNotEmpty`         | text, boolean, select, badge, image, link          | null / undefined / empty string — takes no value                                     |
 
-An id the column does not offer selects nothing in the operator control and dispatches to no
-`filterFn`, so the filter would match every row. `createTable` warns about that in development,
-for both `defaultOperator` and `operators.items`.
+Text, image and link open with `contains`, select and badge with `in`, and every other type with
+`equals`.
+
+A translated set is the same move as any other: copy the definitions with new `label`s, and pass
+the result — see [Localization](/docs/data-grid/localization#filter-operators).
 
 ## Custom operators
 
-Inline on the column, when one column needs it:
+An operator is a definition: an `id`, a `label`, the `input` it takes and a `filterFn`. **The grid
+reads everything about an operator from its `input`, never from its id** — the editor its filter
+shows, what switching to it keeps, which date presets apply, and whether an empty value is a filter
+at all (the active-filter chip reads it to show a `none` operator by its label alone):
 
-```ts
-filtering: {
-	operators: {
-		items: ['contains', { id: 'fuzzy', label: 'Fuzzy match', filterFn: fuzzyMatch }],
-	},
-}
-```
+| `input`  | Value `filterFn` receives | Editor                                 |
+| -------- | ------------------------- | -------------------------------------- |
+| `none`   | nothing                   | the operator's label, no value control |
+| `single` | one value                 | the column's own control               |
+| `range`  | `{ from?, to? }`          | the range control (`between`)          |
+| `list`   | an array of values        | the multi-select (`in` / `notIn`)      |
 
-Or once on the table, when several do — `filtering.operators.items` is the registry every
-column addresses by id:
+So an operator of your own with `input: 'range'` gets the range control exactly as `between` does,
+and one with `input: 'list'` gets the multi-select. `filterFn` is never called with an empty value
+— no value, `''`, `[]`, or a range with neither bound — unless `input` is `none`; such a filter
+keeps every row.
 
-```tsx
-<DataGrid
-	features={features}
-	data={data}
-	columns={columns}
-	filtering={{ operators: { items: [{ id: 'fuzzy', label: 'Fuzzy match', filterFn: fuzzyMatch }] } }}
-/>
-// …and in a column: filtering: { operators: { items: ['contains', 'fuzzy'] } }
-```
+<DataGridDocsExample exampleId='filter-operators-custom' />
 
-An id listed on a column resolves against its cell type's own operators first, then the
-registry — which is why `equals` compares numbers on a number column and dates on a date one.
-A table-level definition sharing a built-in id replaces that built-in everywhere.
+Switching operators keeps the value when the two take the same `input` — `between` to
+`notBetween` keeps the range, `contains` to `startsWith` keeps the text — and drops it otherwise,
+since a value of another shape is one the next operator cannot take. Moving into a range starts an
+empty one.
 
-## `TableOperatorsConfig`
+### Changing a set without breaking links
 
-| Option  | Type                  | Description                                                                                                                                                           |
-| ------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `items` | `FilterOperatorDef[]` | Custom operators (or overrides of built-ins), addressable by id from any column's `filtering.operators.items`. Writing the object switches operators on, like `true`. |
+A filter value names its operator by id — `{ operator: 'between', value: { from: 1 } }` — so a
+filter stored in a URL or a saved view keeps that id. When a set drops an id, such a filter stops
+filtering: it keeps every row, the operator control and the chip show the raw id, and the grid warns
+once per column in development. To retire an id without breaking stored filters, keep a definition
+under the old id in the set beside the new one.
+
+## `OperatorsConfig`
+
+| Option          | Type                                           | Description                                                                                                                    |
+| --------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `byType`        | `Partial<Record<string, FilterOperatorDef[]>>` | Cell type → the operators a column of that type offers, in order. A layer replaces the set of each type it names.              |
+| `defaultByType` | `Partial<Record<string, FilterOperatorId>>`    | Cell type → the operator a column of that type opens with, when the column offers it. Otherwise the first operator of its set. |
 
 ## `ColumnOperatorsConfig`
 
-| Option            | Type                                        | Description                                                                                                                           |
-| ----------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `items`           | `(FilterOperatorId \| FilterOperatorDef)[]` | Operator ids referencing the registry, or inline operator definitions. Omit to use every default operator for the column's cell type. |
-| `betweenOperator` | `BetweenOperatorConfig`                     | UI configuration for the `between` operator — see below.                                                                              |
+| Option            | Type                                        | Description                                                                                                                          |
+| ----------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `items`           | `(FilterOperatorId \| FilterOperatorDef)[]` | Ids looked up in the column's own cell type's set, or definitions used as written. Omit to offer the whole set of the column's type. |
+| `betweenOperator` | `BetweenOperatorConfig`                     | UI configuration for the range control — see below.                                                                                  |
 
 ### `BetweenOperatorConfig`
 
@@ -152,13 +274,15 @@ Number-only. Date presets are configured on the column instead, through
 
 ### `FilterOperatorDef`
 
-| Field           | Type                                          | Description                                                                   |
-| --------------- | --------------------------------------------- | ----------------------------------------------------------------------------- |
-| `id`            | `FilterOperatorId`                            | Operator id, referenced from `items`. A `FilterOperator` member, or your own. |
-| `label`         | `string`                                      | Label shown in the operator selector.                                         |
-| `requiresInput` | `boolean`                                     | When `false`, no value input is rendered (e.g. `isEmpty`). Default `true`.    |
-| `filterFn`      | `(rowValue: unknown, filterValue) => boolean` | Matching predicate.                                                           |
+| Field      | Type                                      | Description                                                                                 |
+| ---------- | ----------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `id`       | `FilterOperatorId`                        | What a filter value names the operator by. Unique within one cell type's set.               |
+| `label`    | `string`                                  | Shown by the operator control, its menu, the active-filter chip and the filter model.       |
+| `icon`     | `ReactNode`                               | Shown in place of the label in the control, and beside it in the menu.                      |
+| `input`    | `'none' \| 'single' \| 'range' \| 'list'` | The kind of value the operator takes — `OperatorInput`. Required; every behaviour reads it. |
+| `filterFn` | `(rowValue, value) => boolean`            | Matching predicate. `value` has the shape of `input`; for `none` there is none.             |
 
 ## Source
 
 - `@ez-kit/data-grid-core` — [`packages/data-grid/core/src/features/operators/operators.ts`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/core/src/features/operators/operators.ts)
+- `@ez-kit/data-grid-core/operators` — [`packages/data-grid/core/src/operators/default-operators.ts`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/core/src/operators/default-operators.ts)

@@ -97,10 +97,11 @@ export const FEATURE_COMPONENTS = {
 		'BetweenInput',
 		'MultiSelectFilter',
 	] as const,
-	// `FormShell` is shared by editing **and** creating — one shell serves both forms
-	// (`DataGridFormModalProps` is one type), so it stays in the one group rather than being
-	// duplicated into a `creating` one. The dialog it renders into is `core.Modal`.
-	[GridFeature.Editing]: ['FormShell'] as const,
+	// `FormModal` is shared by editing **and** creating — one dialog serves both forms
+	// (`FormModalProps` is one type, with `mode` saying which), so it stays in the one group
+	// rather than being duplicated into a `creating` one. It is also where an application puts a
+	// form of its own: the slot is the only way to replace the modal.
+	[GridFeature.Editing]: ['FormModal'] as const,
 	[GridFeature.Deleting]: ['ConfirmDialog'] as const,
 	[GridFeature.RowActions]: ['ActionsCell'] as const,
 	[GridFeature.Resizing]: ['Resizer'] as const,

@@ -41,7 +41,8 @@ export type DataGridColumnDragHandleProps = {
  * panel row is a third door and a different arrangement — a `div` inside a portalled popover — and it
  * needs no id for a plainer reason: the shell that publishes the context *is* the row element, so the
  * context is again directly above. What was measured for the panel is the drag working end to end in
- * both kits, which is `column-panel-drag.spec.ts`, not a context probe.
+ * the shadcn kit, which is `column-panel-drag.spec.ts`, not a context probe — the HeroUI panel no
+ * longer reaches this component at all.
  *
  * Place it from any of three doors:
  *
@@ -54,9 +55,10 @@ export type DataGridColumnDragHandleProps = {
  * ```
  *
  * …or this component inside a header cell body that reads `useDataGridHeaderCell()`; or inside a
- * `<DataGrid.VisibilityItem>`, which is how both kits' `VisibilityMenu` place it and the door a kit
- * writing its own column panel uses. All three are the same handle on the same sortable — a shell
- * owns it, and this reads it.
+ * `<DataGrid.VisibilityItem>` with JSX children, which is how the shadcn panel places it. All three
+ * are the same handle on the same sortable — a shell owns it, and this reads it. A panel whose rows
+ * a react-aria collection renders (the HeroUI one) uses the item's render function instead, which
+ * publishes no context and hands the activator over as `handleProps`.
  *
  * **Not inside `column.header`.** That content renders within the `sort-trigger` `<button>`, and a
  * nested button is invalid HTML — the parser closes the outer one and the header comes apart. A

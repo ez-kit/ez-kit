@@ -186,12 +186,17 @@ so that composing a header cell never means hand-writing the element the stylesh
 
 ### `editing`
 
-| Component   | Props                                             |
-| ----------- | ------------------------------------------------- |
-| `FormShell` | `FormShellProps` (creating / editing modal shell) |
+| Component   | Props                                              |
+| ----------- | -------------------------------------------------- |
+| `FormModal` | `FormModalProps` (creating / editing modal dialog) |
 
-One shell serves both write forms — creating and editing are one `DataGridFormModalProps` — and
-the dialog it renders into is `core.Modal`.
+One dialog serves both write forms — creating and editing are one `FormModalProps`, with `mode`
+saying which. Beside the chrome (`title`, `formError`, `isPending`, `onSave`, `onCancel`) and the
+generated form (`children`), it receives the whole form contract — `fields`, `initialValues`,
+`row`, `errors`, `submit(values?)` and `validate(values)` — because the slot is also the one way an
+application replaces the form: a component registered here per grid or app-wide may render the
+generated fields in its own layout, or a form of its own entirely. A kit implementation renders
+`children` and may ignore the rest.
 
 ### `deleting`
 

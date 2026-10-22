@@ -1,53 +1,51 @@
 'use client'
 
-import { useSyncExternalStore } from 'react'
+import { useSelector } from '@tanstack/react-store'
+import { useMemo } from 'react'
 
 import { useDataGridTable } from './data-grid/table-context'
 
+import type { DataGridSelectorOptions } from './use-data-grid-selector'
 import type { TableReactivityBindings } from '@tanstack/table-core/reactivity'
 
 /**
- * Application- and kit-supplied values carried alongside a grid, for components that need to
- * agree with their surroundings rather than receive everything as a prop.
+ * The context a grid carries when nothing has given it a type: a string-keyed record of unknown
+ * values. This is what the kits' prebuilt `DataGrid`, a bare `useDataGrid`, a
+ * `DataGridOptionsProvider` and the package-level {@link useGridContext} see.
  *
- * **Empty by design.** The package declares no members; a consumer adds them by declaration
- * merging, exactly as TanStack's `TableMeta` is extended:
+ * ## Where a type comes from
  *
- * ```ts
- * declare module '@ez-kit/data-grid-react' {
- *   interface GridContext {
- *     currentUser: { id: string; role: 'admin' | 'viewer' }
- *     permissions: { canEdit: boolean }
- *   }
- * }
- * ```
+ * There is no program-wide declaration to extend. A context gets its type from a **value**:
  *
- * Until something extends it, the `context` option accepts `{}`, {@link useGridContext} returns
- * `{}`, and nothing about a grid changes.
+ * - `createDataGrid({ context })` — the factory default. Its type becomes the bundle's context
+ *   type, the bundle's own `useGridContext` reads it with every key present, and the bundle's
+ *   `DataGrid` / `useDataGrid` take a `Partial` of it. This is the main path.
+ * - `useGridContext.withTypes<T>()` — for a grid with no factory of its own. An unchecked
+ *   assertion: nothing compares `T` with what the grid actually carries.
  *
- * ## Who owns which key
- *
- * The interface is one flat namespace shared by the application and whichever UI kit it renders
- * through, and nothing in the types keeps the two apart. The convention is that **a kit writes
- * only under its own key** — `context.shadcn`, `context.heroui` — and leaves the rest to the
- * application, so a kit shipping a new setting cannot collide with a name an app already uses.
+ * So two bundles in one program can carry different contexts, and neither affects untyped grids.
  *
  * ## How a value gets here
  *
- * `context` is an option like any other, so it arrives through the same three layers and merges
- * the same way — `createDataGrid({ defaults })` < `DataGridOptionsProvider` < the instance's own
- * config, deep-merged, instance wins. That is what lets a kit state its own settings once at the
- * factory while an application refines a single key at one call site.
- *
- * Merging **replaces** a named key rather than accumulating it, like every option except
- * `layout.classNames`: writing `permissions` at the call site means those permissions, not a
- * union with the ones a provider declared.
+ * `context` is an option like any other, so it arrives through the same three layers —
+ * `createDataGrid({ context })` < `DataGridOptionsProvider` < the instance's own config, instance
+ * wins — through the same `deepMerge`: nested plain objects merge key by key, while anything else
+ * (an array, a class instance, a store, a primitive) is replaced whole.
  */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/consistent-type-definitions
-export interface GridContext {}
+export type GridContextRecord = Record<string, unknown>
+
+/**
+ * A context reader: the whole object without an argument, one slice with a selector. Both
+ * {@link useGridContext} and the reader a `createDataGrid({ context })` bundle hands back have
+ * this shape, differing only in `TContext`.
+ */
+export type GridContextReader<TContext> = {
+	(): TContext
+	<TSelected>(selector: (context: TContext) => TSelected, options?: DataGridSelectorOptions<TSelected>): TSelected
+}
 
 /** The value every grid starts from, and the one a grid that never sets `context` keeps. */
-export const EMPTY_GRID_CONTEXT: GridContext = {}
+export const EMPTY_GRID_CONTEXT: GridContextRecord = {}
 
 /** Cancels a subscription made with {@link GridContextAtom.subscribe}. */
 type Unsubscribe = () => void
@@ -60,7 +58,7 @@ type Unsubscribe = () => void
  * whole point is that components re-render when it changes. Holding it in both places would
  * put one copy where nothing wakes it, which is the failure `ResolvedGridOptions` replaced.
  *
- * Deliberately not `Atom<GridContext>` itself, for two reasons. First, naming `@tanstack/store`'s
+ * Deliberately not `Atom<GridContextRecord>` itself, for two reasons. First, naming `@tanstack/store`'s
  * `Atom` in an exported type would write an `import('@tanstack/store')` into this package's
  * `.d.ts` for a package it does not depend on directly — the same `TS2742` `DraftAtoms` avoids in
  * `@ez-kit/data-grid-core` (see that type's docblock). Second, the two bindings below need
@@ -69,8 +67,8 @@ type Unsubscribe = () => void
  * the one shape both can satisfy.
  */
 export type GridContextAtom = {
-	get: () => GridContext
-	subscribe: (onChange: (value: GridContext) => void) => Unsubscribe
+	get: () => GridContextRecord
+	subscribe: (onChange: (value: GridContextRecord) => void) => Unsubscribe
 	/**
 	 * Replaces the value. Safe to call during render: under a binding with a `commit` hook
 	 * (`useTable`'s render-phase reactivity) the write lands invisibly and subscribers wake at
@@ -79,15 +77,15 @@ export type GridContextAtom = {
 	 * (the vanilla one `prepareDataGridTable` sees) it notifies synchronously, which is correct
 	 * there: that path has no render to protect and no commit step to wait for.
 	 */
-	write: (next: GridContext) => void
+	write: (next: GridContextRecord) => void
 }
 
 /**
  * Builds the per-grid context atom, from the **same reactivity binding the table itself uses**
- * (`table._reactivity`) — so this is one store instance per table, not a second one, and no new
- * dependency: `@tanstack/table-core/reactivity` is a subpath of a package this one already
- * depends on, and neither binding requires naming `@tanstack/react-store` here (Task 17 Step 1
- * records why that dependency is not taken directly).
+ * (`table._reactivity`) — so this is one store instance per table, not a second one:
+ * `@tanstack/table-core/reactivity` is a subpath of a package this one already depends on.
+ * `@tanstack/react-store` is used only to **read** the atom, through {@link useGridContext}; the
+ * atom itself is the binding's own.
  *
  * The two bindings need genuinely different treatment, verified against the actual
  * `@tanstack/table-core@9.2.4` implementations rather than assumed from their docs:
@@ -114,7 +112,7 @@ export type GridContextAtom = {
  */
 export function createGridContextAtom(
 	reactivity: TableReactivityBindings,
-	initial: GridContext = EMPTY_GRID_CONTEXT,
+	initial: GridContextRecord = EMPTY_GRID_CONTEXT,
 ): GridContextAtom {
 	const toUnsubscribe =
 		(subscription: { unsubscribe: () => void }): Unsubscribe =>
@@ -162,12 +160,12 @@ export function createGridContextAtom(
  * data — arrays, class instances, closures — on every render of every grid, to decide something
  * the selector form of {@link useGridContext} already decides for free.
  */
-function isSameContext(a: GridContext, b: GridContext): boolean {
+function isSameContext(a: GridContextRecord, b: GridContextRecord): boolean {
 	if (a === b) return true
 	const aKeys = Object.keys(a)
 	const bKeys = Object.keys(b)
 	if (aKeys.length !== bKeys.length) return false
-	return aKeys.every((key) => (a as Record<string, unknown>)[key] === (b as Record<string, unknown>)[key])
+	return aKeys.every((key) => a[key] === b[key])
 }
 
 /**
@@ -179,36 +177,98 @@ function isSameContext(a: GridContext, b: GridContext): boolean {
  * (see {@link createGridContextAtom}) and waking every whole-object reader on every render of the
  * grid, exactly the failure this guard always existed to prevent.
  */
-export function syncGridContext(atom: GridContextAtom, next: GridContext): void {
+export function syncGridContext(atom: GridContextAtom, next: GridContextRecord): void {
 	if (isSameContext(atom.get(), next)) return
 	atom.write(next)
 }
 
-export function useGridContext(): GridContext
-export function useGridContext<TSelected>(selector: (context: GridContext) => TSelected): TSelected
 /**
- * Reads the grid's {@link GridContext} — the application and kit values carried alongside it.
+ * The shape `useSelector` reads — `get()` plus a `subscribe()` that hands back an object with
+ * `unsubscribe`. {@link GridContextAtom}'s `subscribe` returns the teardown function itself, which
+ * is the shape this package exports, so it is adapted here rather than changed there.
+ */
+type GridContextSource = {
+	get: () => GridContextRecord
+	subscribe: (listener: (value: GridContextRecord) => void) => { unsubscribe: Unsubscribe }
+}
+
+function toSelectionSource(atom: GridContextAtom): GridContextSource {
+	return {
+		get: atom.get,
+		subscribe: (listener) => ({ unsubscribe: atom.subscribe(listener) }),
+	}
+}
+
+const selectWhole = (context: GridContextRecord): GridContextRecord => context
+
+function useGridContextImpl(): GridContextRecord
+function useGridContextImpl<TSelected>(
+	selector: (context: GridContextRecord) => TSelected,
+	options?: DataGridSelectorOptions<TSelected>,
+): TSelected
+function useGridContextImpl<TSelected>(
+	selector?: (context: GridContextRecord) => TSelected,
+	options?: DataGridSelectorOptions<TSelected>,
+): GridContextRecord | TSelected {
+	const atom = useDataGridTable().gridContext
+	// One adapter per atom, so `useSelector`'s subscription — keyed on the source's identity —
+	// is made once for the grid's life rather than on every render.
+	const source = useMemo(() => toSelectionSource(atom), [atom])
+	// The one cast: `compare` takes `TSelected`, and `strictFunctionTypes` will not widen a function
+	// parameter to the `GridContextRecord | TSelected` the two forms share. Sound because the
+	// overloads only accept `options` beside a selector, so `compare` never sees the whole context.
+	return useSelector<GridContextRecord, GridContextRecord | TSelected>(
+		source,
+		selector ?? selectWhole,
+		options as DataGridSelectorOptions<GridContextRecord | TSelected> | undefined,
+	)
+}
+
+/**
+ * The same reader, typed for `T`. The one place the context's type is asserted rather than
+ * inferred, and it is not checked: a grid carrying a different context still compiles. Reach for
+ * it only for a grid with no factory of its own — `createDataGrid({ context })` types the bundle's
+ * reader from a value instead. Same shape as Redux's `useSelector.withTypes`.
+ */
+function withTypes<T extends object>(): GridContextReader<T> {
+	return useGridContextImpl as GridContextReader<T>
+}
+
+/**
+ * Reads the grid's context — the application and kit values carried alongside it — typed as a
+ * {@link GridContextRecord}. A bundle built with `createDataGrid({ context })` hands back its own
+ * `useGridContext`, typed from that default; `useGridContext.withTypes<T>()` types this one for a
+ * grid without a factory.
  *
  * Two forms. Without an argument it returns the whole object and re-renders whenever any part of
  * it changes. With a selector it returns one slice and re-renders only when **that** slice
  * changes, which is what makes the hook usable from a cell renderer.
  *
- * **Selector contract**, identical to `useDataGridState`: the selector must return a
- * referentially stable value while the context has not changed. Field access
- * (`(c) => c.permissions`) and primitive computations (`(c) => c.permissions.canEdit`) satisfy
- * it; returning a fresh object or array on every call (`(c) => ({ ...c.permissions })`) does
- * not, and will re-render without end — derive such values with `useMemo` around this hook.
+ * **Selector contract**, identical to `useDataGridState`: the slice is compared with
+ * `options.compare`, strict equality unless one is passed. Field access (`(c) => c.permissions`)
+ * and primitive computations (`(c) => c.permissions.canEdit`) need nothing more. A selector that
+ * builds a fresh object (`(c) => ({ ...c.permissions })`) renders fine, but re-renders on every
+ * context change unless it is given `compare: shallow`.
  *
  * Throws outside `<DataGrid>`, like every other context-bound hook in this package.
  *
+ * Assembled with one annotated `Object.assign` over a flat literal rather than a top-level
+ * `useGridContext.withTypes = …`: an assignment is a statement esbuild cannot drop, and it would
+ * anchor this hook into every partial import of the package — the defect the compound
+ * `DataGrid` namespace once had. Never spread into the literal either; see AGENTS.md.
+ *
+ * @example A typed reader, once per module
+ *   const useAppGridContext = useGridContext.withTypes<{ permissions: { canEdit: boolean; canDelete: boolean } }>()
+ *
  * @example Whole object
- *   const { currentUser } = useGridContext()
+ *   const { permissions } = useAppGridContext()
  *
  * @example One slice — this cell re-renders when the permission flips, and not before
- *   const canEdit = useGridContext((c) => c.permissions.canEdit)
+ *   const canEdit = useAppGridContext((c) => c.permissions.canEdit)
+ *
+ * @example A derived object
+ *   const { canEdit, canDelete } = useAppGridContext((c) => ({ ...c.permissions }), { compare: shallow })
  */
-export function useGridContext<TSelected>(selector?: (context: GridContext) => TSelected): GridContext | TSelected {
-	const atom = useDataGridTable().gridContext
-	const read = (): GridContext | TSelected => (selector ? selector(atom.get()) : atom.get())
-	return useSyncExternalStore(atom.subscribe, read, read)
-}
+export const useGridContext: GridContextReader<GridContextRecord> & {
+	withTypes: typeof withTypes
+} = /* @__PURE__ */ Object.assign(useGridContextImpl, { withTypes })

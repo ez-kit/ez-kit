@@ -1,6 +1,6 @@
 {
 	"name": "@ez-kit/data-grid-react",
-	"version": "0.12.0",
+	"version": "0.13.0",
 	"description": "Framework-agnostic React adapter for @ez-kit/data-grid — headless render layer with zero visual styling.",
 	"license": "MIT",
 	"repository": {
@@ -64,9 +64,10 @@
 	"size-limit": [
 		{
 			"path": "dist/index.js",
-			"limit": "35.5 KB",
+			"limit": "43.5 KB",
 			"ignore": [
 				"@ez-kit/data-grid-core",
+				"@tanstack/react-store",
 				"@tanstack/react-table",
 				"@tanstack/react-virtual",
 				"@tanstack/table-core"
@@ -77,6 +78,7 @@
 			"limit": "940 B",
 			"ignore": [
 				"@ez-kit/data-grid-core",
+				"@tanstack/react-store",
 				"@tanstack/react-table",
 				"@tanstack/react-virtual",
 				"@tanstack/table-core"
@@ -87,6 +89,7 @@
 			"limit": "840 B",
 			"ignore": [
 				"@ez-kit/data-grid-core",
+				"@tanstack/react-store",
 				"@tanstack/react-table",
 				"@tanstack/react-virtual",
 				"@tanstack/table-core"
@@ -97,6 +100,7 @@
 			"limit": "610 B",
 			"ignore": [
 				"@ez-kit/data-grid-core",
+				"@tanstack/react-store",
 				"@tanstack/react-table",
 				"@tanstack/react-virtual",
 				"@tanstack/table-core"
@@ -107,6 +111,7 @@
 			"limit": "260 B",
 			"ignore": [
 				"@ez-kit/data-grid-core",
+				"@tanstack/react-store",
 				"@tanstack/react-table",
 				"@tanstack/react-virtual",
 				"@tanstack/table-core"
@@ -115,6 +120,7 @@
 	],
 	"dependencies": {
 		"@ez-kit/data-grid-core": "workspace:^",
+		"@tanstack/react-store": "^0.11.1",
 		"@tanstack/react-table": "^9.2.4",
 		"@tanstack/react-virtual": "^3.13.23",
 		"@tanstack/table-core": "^9.2.4"

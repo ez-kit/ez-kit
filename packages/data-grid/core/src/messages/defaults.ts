@@ -89,6 +89,9 @@ export const defaultMessages: GridMessages = {
 		sortBy: 'sort by',
 		thenBy: 'then by',
 		add: 'Add Sort',
+		moveUp: ({ label }) => `Move sort by ${label} up`,
+		moveDown: ({ label }) => `Move sort by ${label} down`,
+		dragSort: ({ label }) => `Reorder sort by ${label}`,
 	},
 	ordering: {
 		dragRow: 'Reorder row',
@@ -110,6 +113,14 @@ export const defaultMessages: GridMessages = {
 			`Dropped column ${name} at position ${String(position)} of ${String(total)}.`,
 		columnCancelled: ({ name, position, total }) =>
 			`Cancelled, column ${name} is back at position ${String(position)} of ${String(total)}.`,
+		sortPickedUp: ({ name, position, total }) =>
+			`Picked up sort by ${name}, priority ${String(position)} of ${String(total)}.`,
+		sortMovedTo: ({ name, position, total }) =>
+			`Moved sort by ${name} to priority ${String(position)} of ${String(total)}.`,
+		sortDropped: ({ name, position, total }) =>
+			`Dropped sort by ${name} at priority ${String(position)} of ${String(total)}.`,
+		sortCancelled: ({ name, position, total }) =>
+			`Cancelled, sort by ${name} is back at priority ${String(position)} of ${String(total)}.`,
 	},
 	visibility: {
 		menu: 'Column visibility',
@@ -119,18 +130,31 @@ export const defaultMessages: GridMessages = {
 	},
 	filtering: {
 		trigger: 'Filter',
-		placeholder: ({ columnId }) => `Filter ${columnId}…`,
+		placeholder: ({ label }) => `Filter ${label}…`,
 		operator: 'Filter operator',
+		operatorTrigger: ({ label }) => `Filter operator: ${label}`,
 		any: 'Any',
 		clear: 'Clear',
 		clearAll: 'Clear filters',
 		from: 'From',
+		presets: {
+			today: 'Today',
+			yesterday: 'Yesterday',
+			last7: 'Last 7 days',
+			last30: 'Last 30 days',
+			thisMonth: 'This month',
+			lastMonth: 'Last month',
+			weekAgo: 'A week ago',
+			monthAgo: 'A month ago',
+			startOfMonth: 'Start of month',
+		},
 		to: 'To',
 		range: 'Range',
 		dateRange: 'Date range',
-		presets: 'Quick ranges',
+		presetMenu: 'Quick ranges',
 		search: 'Search…',
 		noResults: 'No results',
+		itemsError: 'Couldn’t load the options.',
 	},
 	globalFiltering: {
 		placeholder: 'Search…',
@@ -182,56 +206,6 @@ export const defaultMessages: GridMessages = {
 		no: 'No',
 		pickDate: 'Pick a date',
 		pickRange: 'Pick a range',
-	},
-	operators: {
-		text: {
-			contains: 'Contains',
-			equals: 'Equals',
-			notEquals: 'Not equals',
-			startsWith: 'Starts with',
-			endsWith: 'Ends with',
-		},
-		number: {
-			equals: 'Equals',
-			notEquals: 'Not equals',
-			greaterThan: 'Greater than',
-			greaterOrEqual: 'Greater than or equal',
-			lessThan: 'Less than',
-			lessOrEqual: 'Less than or equal',
-			between: 'Between',
-		},
-		date: {
-			equals: 'Equals',
-			notEquals: 'Not equals',
-			greaterThan: 'After',
-			greaterOrEqual: 'On or after',
-			lessThan: 'Before',
-			lessOrEqual: 'On or before',
-			between: 'Between',
-		},
-		boolean: {
-			equals: 'Is',
-			notEquals: 'Is not',
-		},
-		multi: {
-			in: 'Is any of',
-			notIn: 'Is none of',
-		},
-		empty: {
-			isEmpty: 'Is empty',
-			isNotEmpty: 'Is not empty',
-		},
-		presets: {
-			today: 'Today',
-			yesterday: 'Yesterday',
-			last7: 'Last 7 days',
-			last30: 'Last 30 days',
-			thisMonth: 'This month',
-			lastMonth: 'Last month',
-			weekAgo: 'A week ago',
-			monthAgo: 'A month ago',
-			startOfMonth: 'Start of month',
-		},
 	},
 	fallbacks: {
 		loading: 'Loading',

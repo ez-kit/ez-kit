@@ -41,7 +41,23 @@ describe('resolveMessages', () => {
 			filtering: { placeholder: ({ columnId }) => `Фильтр по ${columnId}` },
 		})
 
-		expect(messages.filtering.placeholder({ columnId: 'email' })).toBe('Фильтр по email')
+		expect(messages.filtering.placeholder({ columnId: 'email', label: 'Email' })).toBe('Фильтр по email')
+	})
+
+	it('names a column filter by its label, not its id, by default', () => {
+		const messages = resolveMessages()
+
+		expect(messages.filtering.placeholder({ columnId: 'firstName', label: 'First name' })).toBe('Filter First name…')
+	})
+
+	it('names the operator trigger by the current operator’s label', () => {
+		expect(resolveMessages().filtering.operatorTrigger({ label: 'Contains' })).toBe('Filter operator: Contains')
+	})
+
+	it('keeps the default operator trigger name for a dictionary that does not set it', () => {
+		const messages = resolveMessages({ filtering: { operator: 'Оператор фильтра' } })
+
+		expect(messages.filtering.operatorTrigger({ label: 'Содержит' })).toBe('Filter operator: Содержит')
 	})
 
 	it('does not mutate the default dictionary', () => {

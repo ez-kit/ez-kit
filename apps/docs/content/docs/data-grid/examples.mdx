@@ -21,7 +21,7 @@ controls.
 | Surface                                    | Option                                                                                         |
 | ------------------------------------------ | ---------------------------------------------------------------------------------------------- |
 | Search box, before the filters             | `globalFiltering: { placeholder }` + `<DataGrid.GlobalFilterInput />` first in `Toolbar.start` |
-| Status and Priority filters in the toolbar | `filtering: { faceted: true }` + `<DataGrid.ColumnFilter columnId />` in `Toolbar.start`       |
+| Status and Priority filters in the toolbar | `filtering: { faceted: true }` + `<DataGrid.Filter id />` in `Toolbar.start`                   |
 | Est. Hours and Created At filters          | `filterPopover` in `<DataGrid.HeaderCell>` for every column not in the toolbar                 |
 | Which columns get a filter                 | `filtering: false` on the columns that should not (Task and Title here)                        |
 | Sort menu with its active-sort count       | `sorting` + `<DataGrid.SortMenuTrigger />`                                                     |
@@ -108,7 +108,7 @@ a footer row:
 		{/* `margin-inline-end: auto` on the title is what sends the rest to the other end. */}
 		<span className='frame-title'>Team members</span>
 		<DataGrid.GlobalFilterInput />
-		<DataGrid.ColumnFilter columnId='status' />
+		<DataGrid.Filter id='status' />
 		<DataGrid.VisibilityTrigger />
 		<DataGrid.CreateTrigger>Add new</DataGrid.CreateTrigger>
 	</DataGrid.Toolbar>
@@ -124,8 +124,8 @@ the table, the footer — is a compound member, so the whole card is a class and
 
 The header bar **is** the kit's toolbar, given `children` rather than its two slots — so these four
 controls come in the order they are written. Each is a compound member that reads the table from
-context, so it works wherever it is placed: `<DataGrid.ColumnFilter columnId='status' />` is the
-filter panel's chip for one column, mounted beside the search box rather than in a panel with the
+context, so it works wherever it is placed: `<DataGrid.Filter id='status' />` is the
+filter panel's chip for one filter, mounted beside the search box rather than in a panel with the
 rest.
 
 The bottom bar needs the mirror image of that reset — `marginTop: 0` — for the same reason: the kits
@@ -147,7 +147,7 @@ those instead, and both kits' stylesheets lay its contents out on one line eithe
 | Flag beside the country               | `cell: { type: 'select', config: { items } }` — the emoji is in the `label`       |
 | "Mar 2023"                            | `cell: { type: 'date', config: { format: { month: 'short', year: 'numeric' } } }` |
 | Status pill                           | `cell: { type: 'badge', config: { items } }`                                      |
-| `Status: Any` chip in the header      | `<DataGrid.ColumnFilter columnId='status' />` in the header bar                   |
+| `Status: Any` chip in the header      | `<DataGrid.Filter id='status' />` in the header bar                               |
 | Search box                            | `globalFiltering: { placeholder }`                                                |
 | **Add new**                           | `creating: { mode: 'modal', onSave }` — the label is the trigger's children       |
 | **Edit** / **Delete** in the row menu | `rowActions: { placement: 'menu' }` + `editing` / `deleting`                      |

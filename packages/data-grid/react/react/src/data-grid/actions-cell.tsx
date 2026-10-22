@@ -237,7 +237,9 @@ export function ActionsCell({ row }: ActionsCellProps) {
 			<Renderer
 				state={ActionsCellState.Editing}
 				row={row}
-				onSave={() => table.editing.commit()}
+				onSave={async () => {
+					await table.editing.commit()
+				}}
 				onCancel={() => {
 					table.editing.cancel()
 				}}

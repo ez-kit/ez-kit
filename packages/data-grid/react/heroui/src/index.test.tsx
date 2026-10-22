@@ -1,6 +1,6 @@
 import { allDataGridFeatures } from '@ez-kit/data-grid-core/features/all'
 import { prepareDataGridTable, createTable, createColumns } from '@ez-kit/data-grid-react'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { BetweenInput } from './blocks/filtering/BetweenInput'
@@ -269,13 +269,15 @@ describe('@ez-kit/data-grid-heroui', () => {
 	})
 
 	/**
-	 * The column-panel mode leaves the selection menu behind: a react-aria menu item owns the
-	 * press that lands on it, so a move button inside one would toggle the column on its way to
-	 * moving it. This asserts the branch actually happened — the rows are checkboxes with their
-	 * own buttons beside them, not `menuitemcheckbox` entries.
+	 * The column-panel mode leaves the selection menu behind: a react-aria menu item owns the press
+	 * that lands on it, and a menu item may hold no control of its own, so the panel is a grid
+	 * collection instead — the one react-aria collection whose rows may carry buttons. Each row is
+	 * the collection's own element, carrying the item slot directly, with nothing wrapped around it;
+	 * visibility is the row's selection.
 	 */
-	it('draws a dialog of checkboxes once a column carries moves', () => {
+	it('draws the column panel as a grid whose rows are the items, once a column carries moves', () => {
 		const onMoveEnd = vi.fn()
+		const onToggleAge = vi.fn()
 		const columns = [
 			{
 				id: 'name',
@@ -284,6 +286,14 @@ describe('@ez-kit/data-grid-heroui', () => {
 				canHide: false,
 				onToggle: vi.fn(),
 				ordering: { canMoveStart: false, canMoveEnd: true, onMoveStart: vi.fn(), onMoveEnd },
+			},
+			{
+				id: 'age',
+				label: 'Age',
+				isVisible: false,
+				canHide: true,
+				onToggle: onToggleAge,
+				ordering: { canMoveStart: true, canMoveEnd: false, onMoveStart: vi.fn(), onMoveEnd: vi.fn() },
 			},
 		]
 
@@ -298,21 +308,30 @@ describe('@ez-kit/data-grid-heroui', () => {
 		fireEvent.click(columnsButton)
 
 		expect(screen.queryByRole('menuitemcheckbox')).toBeNull()
+		const grid = screen.getByRole('grid')
+		const rows = within(grid).getAllByRole('row')
+		expect(rows.map((row) => row.getAttribute('data-column-id'))).toEqual(['name', 'age'])
+		for (const row of rows) {
+			expect(row).toHaveAttribute('data-slot', 'column-visibility-item')
+			expect(row.parentElement).toBe(grid)
+		}
+		const [nameRow, ageRow] = rows
+		if (!nameRow || !ageRow) throw new Error('expected two rows')
+
 		// `visibility: false` reaches the kit as `canHide: false` — listed, but not offered.
-		expect(screen.getByRole('checkbox', { name: 'Name' })).toBeDisabled()
-
-		const moveUp = screen.getByRole('button', { name: /move up/i })
-		const moveDown = screen.getByRole('button', { name: /move down/i })
-		expect(moveUp).toBeDisabled()
-		fireEvent.click(moveDown)
-
+		expect(within(nameRow).getByRole('checkbox')).toBeDisabled()
+		expect(within(nameRow).getByRole('button', { name: /move up/i })).toBeDisabled()
+		fireEvent.click(within(nameRow).getByRole('button', { name: /move down/i }))
 		expect(onMoveEnd).toHaveBeenCalledTimes(1)
+
+		fireEvent.click(within(ageRow).getByRole('checkbox'))
+		expect(onToggleAge).toHaveBeenCalledTimes(1)
 	})
 
 	/**
 	 * The **drag-only** panel, which is what `visibilityMenu: true` resolves to once an adapter is
 	 * bound: the rows carry a grip and no move pair, so nothing on an item says "this is a panel".
-	 * Branching the shape on `col.ordering` sent this case down the react-aria list-box path, which
+	 * Branching the shape on `col.ordering` sent this case down the react-aria menu path, which
 	 * renders no `<DataGridVisibilityItem>` and therefore registered no row with the drag — the
 	 * panel looked like a plain Columns toggle and dragging was gone. Five browser specs caught it;
 	 * this is the same regression one layer down.
@@ -329,8 +348,70 @@ describe('@ez-kit/data-grid-heroui', () => {
 		fireEvent.click(columnsButton)
 
 		expect(screen.queryByRole('menuitemcheckbox')).toBeNull()
-		expect(screen.getByRole('checkbox', { name: 'Name' })).toBeInTheDocument()
+		const row = within(screen.getByRole('grid')).getByRole('row')
+		expect(within(row).getByRole('checkbox')).toBeChecked()
 		expect(screen.queryByRole('button', { name: /move/i })).toBeNull()
+	})
+})
+
+describe('@ez-kit/data-grid-heroui — column panel collection', () => {
+	const openPanel = (columns: Parameters<typeof VisibilityMenu>[0]['columns']) => {
+		render(
+			<VisibilityMenu
+				columns={columns}
+				isColumnPanel
+			/>,
+		)
+		const [columnsButton] = screen.getAllByRole('button', { name: /columns/i })
+		if (!columnsButton) throw new Error('expected columns button')
+		fireEvent.click(columnsButton)
+	}
+
+	/*
+	 * A react-aria collection with multiple selection clears it on `Escape` by default, and the
+	 * selection here is the columns' visibility: one `Escape` meant to close the panel hid every
+	 * column. With an empty selection disallowed the key is not the collection's, and it reaches the
+	 * popover, which closes.
+	 */
+	it('hides nothing on Escape, and closes', async () => {
+		const onToggleName = vi.fn()
+		const onToggleAge = vi.fn()
+		openPanel([
+			{ id: 'name', label: 'Name', isVisible: true, canHide: true, onToggle: onToggleName },
+			{ id: 'age', label: 'Age', isVisible: true, canHide: true, onToggle: onToggleAge },
+		])
+		const [firstRow] = within(screen.getByRole('grid')).getAllByRole('row')
+		if (!firstRow) throw new Error('expected a row')
+
+		fireEvent.keyDown(firstRow, { key: 'Escape' })
+
+		expect(onToggleName).not.toHaveBeenCalled()
+		expect(onToggleAge).not.toHaveBeenCalled()
+		// A grid row stops `Escape` whatever the collection does with it, so the panel closes itself.
+		await waitFor(() => {
+			expect(screen.queryByRole('grid')).toBeNull()
+		})
+	})
+
+	it('keeps the last visible column visible', () => {
+		const onToggle = vi.fn()
+		openPanel([
+			{ id: 'name', label: 'Name', isVisible: true, canHide: true, onToggle },
+			{ id: 'age', label: 'Age', isVisible: false, canHide: true, onToggle: vi.fn() },
+		])
+		const [nameRow] = within(screen.getByRole('grid')).getAllByRole('row')
+		if (!nameRow) throw new Error('expected a row')
+
+		fireEvent.click(within(nameRow).getByRole('checkbox'))
+
+		expect(onToggle).not.toHaveBeenCalled()
+	})
+
+	it('names the dialog after its trigger and the list after what it controls', () => {
+		openPanel([{ id: 'name', label: 'Name', isVisible: true, canHide: true, onToggle: vi.fn() }])
+
+		expect(screen.getByRole('dialog', { name: 'Columns' })).toBeInTheDocument()
+		expect(screen.getByRole('grid', { name: 'Column visibility' })).toBeInTheDocument()
 	})
 })
 

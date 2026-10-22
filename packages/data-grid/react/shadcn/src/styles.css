@@ -35,8 +35,15 @@
 	& [data-slot='filter-control'] {
 		@apply flex min-w-0 items-center gap-2;
 	}
-	& [data-slot='filter-control'] > *:first-child {
+	/* The operator keeps its own width; the control after it takes the rest of the row. */
+	& [data-slot='filter-control'] > [data-slot='filter-operator'] {
+		@apply flex-none;
+	}
+	& [data-slot='filter-control'] > [data-slot='filter-operator'] + * {
 		@apply min-w-0 flex-auto;
+	}
+	& [data-slot='filter-operator-label'] {
+		@apply min-w-0 flex-auto truncate text-xs text-muted-foreground;
 	}
 
 	& [data-slot='table-scroll'] {

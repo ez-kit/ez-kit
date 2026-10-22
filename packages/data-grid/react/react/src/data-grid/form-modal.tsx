@@ -1,132 +1,100 @@
-import { CommitStatus } from '@ez-kit/data-grid-core'
+import { ColumnFormMode, CommitStatus } from '@ez-kit/data-grid-core'
+import { useCallback } from 'react'
 
 import { useGridComponents } from '../components-context'
 
-import { AutoForm } from './auto-form'
+import { AutoForm, AutoFormField, editedRowOf, formFieldIds } from './auto-form'
+import { useDataGridTable } from './table-context'
 
-import type { ColumnFormMode } from '@ez-kit/data-grid-core'
-import type { ReactNode } from 'react'
+import type { CommitResult, ValidationErrors, ValidationResult } from '@ez-kit/data-grid-core'
 
-/**
- * What a `<DataGrid.CreatingModal>` / `<DataGrid.EditingModal>` render function receives.
- *
- * One shape for both: the two modals differ only in which feature they read, and a consumer
- * that styles one almost always styles the other the same way.
- */
-export type DataGridFormModalRenderArgs = {
-	/** Always `true` — the render function is not called while the form is closed. */
-	open: boolean
-	/** The kit's default dialog title (`'Create'` / `'Edit'`). */
-	title: string
-	/** Form-level error from the last failed commit, or `null`. */
-	formError: string | null
-	/** True while a commit is validating or in flight — disable Save. */
-	isPending: boolean
-	/**
-	 * The generated field set, already wired to the feature's state. Render it to keep the
-	 * inputs the columns describe while replacing everything around them.
-	 */
-	form: ReactNode
-	/** Validates and commits. Rejects nothing — read `formError` for the failure. */
-	onSave: () => Promise<void>
-	onCancel: () => void
-}
-
-export type DataGridFormModalProps = {
-	/**
-	 * Custom dialog, replacing the kit's `FormShell` / `Modal`.
-	 *
-	 * Nothing is rendered — `children` included — while the form is closed.
-	 *
-	 * @example
-	 * ```tsx
-	 * <DataGrid.EditingModal>
-	 *   {({ form, isPending, onSave, onCancel }) => (
-	 *     <MyDialog onClose={onCancel}>
-	 *       {form}
-	 *       <button disabled={isPending} onClick={() => void onSave()}>Save</button>
-	 *     </MyDialog>
-	 *   )}
-	 * </DataGrid.EditingModal>
-	 * ```
-	 */
-	children?: ReactNode | ((args: DataGridFormModalRenderArgs) => ReactNode)
-}
-
-type FormModalHostProps = DataGridFormModalProps & {
-	mode: ColumnFormMode
-	title: string
+/** The slice fields the host reads — common to `creating` and `editing`. */
+type FormModalState = {
+	initialValues: Record<string, unknown>
+	errors: ValidationErrors
 	formError: string | null
 	commitStatus: CommitStatus
-	onSave: () => Promise<void>
-	onCancel: () => void
-	/** Names the feature in the "no component registered" error. */
-	feature: 'creating' | 'editing'
+}
+
+type FormModalHostProps = {
+	mode: ColumnFormMode
+	title: string
+	state: FormModalState
+	/** The row being edited — `null` when creating. */
+	rowId: string | null
 }
 
 /**
- * The dialog shell shared by the creating and editing modals.
+ * The dialog shared by the creating and editing modals: the `FormModal` slot, handed the whole
+ * form contract — see `FormModalProps`.
  *
- * Prefers `<FormShell>` (which renders the form-level error banner and the pending Save)
- * when the kit registers one; falls back to the generic `<Modal>`. Throws when neither is
- * available and no `children` took over.
+ * The slot is the one way to replace the modal. A kit registers its dialog there, and an
+ * application registers a form of its own the same way, per grid or app-wide. A kit that
+ * registers none is caught at mount by `ComponentGuard` in development.
  */
-export function FormModalHost({
-	children,
-	mode,
-	title,
-	formError,
-	commitStatus,
-	onSave,
-	onCancel,
-	feature,
-}: FormModalHostProps) {
-	const components = useGridComponents()
-	const { Modal } = components.core
-	const { FormShell } = components.editing
-	const isPending = commitStatus !== CommitStatus.Idle
-	const form = <AutoForm mode={mode} />
+export function FormModalHost({ mode, title, state, rowId }: FormModalHostProps) {
+	const table = useDataGridTable()
+	const { FormModal } = useGridComponents().editing
+	const isCreating = mode === ColumnFormMode.Creating
 
-	if (children !== undefined) {
-		return typeof children === 'function'
-			? children({ open: true, title, formError, isPending, form, onSave, onCancel })
-			: children
-	}
+	const submit = useCallback(
+		(values?: Record<string, unknown>): Promise<CommitResult> => {
+			const options = values === undefined ? undefined : { values }
+			return isCreating ? table.creating.commit(options) : table.editing.commit(options)
+		},
+		[table, isCreating],
+	)
+	const onCancel = useCallback((): void => {
+		if (isCreating) table.creating.cancel()
+		else table.editing.cancel()
+	}, [table, isCreating])
+	const validate = useCallback(
+		(values: Record<string, unknown>): Promise<ValidationResult> =>
+			isCreating ? table.creating.validateValues(values) : table.editing.validateValues(values),
+		[table, isCreating],
+	)
+	const onSave = useCallback(async (): Promise<void> => {
+		await submit()
+	}, [submit])
 
-	// FormShell may be overridden to undefined/null via components prop at runtime
-	const ShellComponent = FormShell as typeof FormShell | undefined
-	if (ShellComponent) {
-		return (
-			<ShellComponent
-				open
-				title={title}
-				formError={formError}
-				isPending={isPending}
-				onSave={onSave}
-				onCancel={onCancel}
-			>
-				{form}
-			</ShellComponent>
-		)
-	}
-
-	const ModalComponent = Modal as typeof Modal | undefined
+	// A partial kit can leave the slot out; `ComponentGuard` names it in development, and this is
+	// the production half of the same message.
+	const ModalComponent = FormModal as typeof FormModal | undefined
 	if (!ModalComponent) {
 		throw new Error(
-			`[@ez-kit/data-grid] ${feature}.mode is "modal" but no Modal or FormShell component was provided. ` +
-				'Pass a FormShell (preferred) or Modal via <DataGrid components={{ FormShell }}>.',
+			`[@ez-kit/data-grid] ${mode}.mode is "modal" but no FormModal component was provided. ` +
+				'Register one via <DataGrid components={{ editing: { FormModal } }}>.',
 		)
 	}
 
 	return (
 		<ModalComponent
 			open
-			onClose={onCancel}
-			onSave={() => void onSave()}
-			onCancel={onCancel}
+			mode={mode}
 			title={title}
+			formError={state.formError}
+			errors={state.errors}
+			isPending={state.commitStatus !== CommitStatus.Idle}
+			initialValues={state.initialValues}
+			row={isCreating ? undefined : editedRowOf(table, rowId)}
+			submit={submit}
+			validate={validate}
+			onSave={onSave}
+			onCancel={onCancel}
+			// Elements of components that resolve their own field, so a slot that renders none of them
+			// pays for none of them.
+			fields={Object.fromEntries(
+				formFieldIds(table, mode).map((columnId) => [
+					columnId,
+					<AutoFormField
+						key={columnId}
+						mode={mode}
+						columnId={columnId}
+					/>,
+				]),
+			)}
 		>
-			{form}
+			<AutoForm mode={mode} />
 		</ModalComponent>
 	)
 }

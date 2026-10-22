@@ -28,11 +28,14 @@ import { creatingFeature } from '../features/creating'
 import { deletingFeature } from '../features/deleting'
 import { editingFeature } from '../features/editing'
 import { loadingFeature } from '../features/loading'
+import { OperatorInput } from '../features/operators'
 import { createTable, createColumns } from '../index'
+import { defaultOperators } from '../operators/entry'
 import { ACTIONS_COLUMN_ID, EXPAND_COLUMN_ID, SELECTION_COLUMN_ID } from '../system-columns'
 
 import { createTableOptions } from './create-table-options'
 
+import type { FilterOperatorDef } from '../features/operators'
 import type { RowSelectionState, SortingState, TableFeatures, TableOptions_All, TableState } from '@tanstack/table-core'
 
 type Row = {
@@ -416,7 +419,13 @@ describe('createTable — filtering.operators', () => {
 	}
 
 	it('filtering: { operators: true } gives every column its cell type defaults', () => {
-		const table = createTable({ features: FILTERING, data: DATA, columns: COLUMNS, filtering: { operators: true } })
+		const table = createTable({
+			features: FILTERING,
+			operators: defaultOperators,
+			data: DATA,
+			columns: COLUMNS,
+			filtering: { operators: true },
+		})
 		expect(operatorIds(table, 'name')).toContain('contains')
 		expect(operatorIds(table, 'age')).toContain('contains')
 	})
@@ -426,7 +435,13 @@ describe('createTable — filtering.operators', () => {
 			{ accessorKey: 'name', filtering: { operators: true } },
 			{ accessorKey: 'age' },
 		])
-		const table = createTable({ features: FILTERING, data: DATA, columns, filtering: { operators: false } })
+		const table = createTable({
+			features: FILTERING,
+			operators: defaultOperators,
+			data: DATA,
+			columns,
+			filtering: { operators: false },
+		})
 		expect(operatorIds(table, 'name')).toBeUndefined()
 	})
 
@@ -435,25 +450,31 @@ describe('createTable — filtering.operators', () => {
 			{ accessorKey: 'name', filtering: { operators: true } },
 			{ accessorKey: 'age' },
 		])
-		const table = createTable({ features: FILTERING, data: DATA, columns, filtering: true })
+		const table = createTable({
+			features: FILTERING,
+			operators: defaultOperators,
+			data: DATA,
+			columns,
+			filtering: true,
+		})
 		expect(operatorIds(table, 'name')).toContain('contains')
 		expect(operatorIds(table, 'age')).toBeUndefined()
 	})
 
-	it('registers custom operators from `items` and resolves them by id from a column', () => {
+	it('resolves a column’s ids in its cell type’s set, beside a definition it writes itself', () => {
+		const fuzzy: FilterOperatorDef = { id: 'fuzzy', label: 'Fuzzy', input: OperatorInput.Single, filterFn: () => true }
 		const columns = createColumns<Row>([
-			{ accessorKey: 'name', filtering: { operators: { items: ['contains', 'fuzzy'] } } },
+			{ accessorKey: 'name', filtering: { operators: { items: ['contains', fuzzy] } } },
 			{ accessorKey: 'age' },
 		])
 		const table = createTable({
 			features: FILTERING,
+			operators: defaultOperators,
 			data: DATA,
 			columns,
-			filtering: { operators: { items: [{ id: 'fuzzy', label: 'Fuzzy', filterFn: () => true }] } },
+			filtering: { operators: true },
 		})
 		expect(operatorIds(table, 'name')).toEqual(['contains', 'fuzzy'])
-		// The object form switches the feature on like `true` does, so the column that said
-		// nothing gets its defaults too.
 		expect(operatorIds(table, 'age')).toContain('contains')
 	})
 })

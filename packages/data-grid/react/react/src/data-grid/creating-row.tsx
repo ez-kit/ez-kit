@@ -9,15 +9,18 @@ import { useEffect } from 'react'
 
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
+import { ItemsSourceSlot, useItemsListsFor } from '../items-source'
 import { ActionsCellState } from '../types'
 import { getCommonPinStyles } from '../utils/pin-styles'
 import { getVisualLeafColumns } from '../utils/visual-column-order'
 
 import { flexRender } from './flex-render'
+import { fieldItemsProps } from './items-view'
 import { useDataGridState, useDataGridTable } from './table-context'
 import { columnNameOf, VisuallyHiddenLabel } from './visually-hidden'
 
 import type { CellTypeRegistry } from '../cell-types-context'
+import type { ListRead } from '../items-source'
 import type { InputProps } from '../types'
 import type { FormColumnMeta, FieldState } from '@ez-kit/data-grid-core'
 import type { ChangeEvent, ComponentType, ReactNode } from 'react'
@@ -47,6 +50,10 @@ export function CreatingRow() {
 	const isPending = state.commitStatus !== CommitStatus.Idle
 	const creatingConfig = table.options.creating
 	const isPinRow = creatingConfig?.mode === 'pin-row'
+	const columns = getVisualLeafColumns(table)
+	// Every field's list, read in one hook: the row renders its fields in a loop, which cannot call
+	// one per field.
+	const lists = useItemsListsFor(columns.map(creatingListRead))
 
 	// Enter commits the draft, Escape abandons it — the same pair a cell edit answers to
 	// (`cell.tsx`), and the only way to finish the row when its save / cancel buttons live in the
@@ -77,7 +84,7 @@ export function CreatingRow() {
 			data-slot='tr'
 			{...{ [CREATING_ROW_ATTR]: '' }}
 		>
-			{getVisualLeafColumns(table).map((col) => {
+			{columns.map((col, index) => {
 				// `ColumnMeta` is declared `in out` in both its `TFeatures` and its `TData` upstream, so no
 				// concrete instantiation is assignable to any other and this cast is forced by the variance
 				// annotation rather than chosen. `FormColumnMeta` is the one name core declares for it, and
@@ -99,7 +106,9 @@ export function CreatingRow() {
 							>
 								<ActionsCell
 									state={ActionsCellState.Creating}
-									onSave={() => table.creating.commit()}
+									onSave={async () => {
+										await table.creating.commit()
+									}}
 									onCancel={() => {
 										table.creating.cancel()
 									}}
@@ -158,12 +167,13 @@ export function CreatingRow() {
 				}
 				const fieldErrors = errors[col.id] ?? []
 				const fieldError = fieldErrors[0]
+				const fieldLists = lists[index]
 				const fieldState: FieldState = {
 					id: `creating-${col.id}`,
 					value,
 					onChange,
 					onBlur,
-					...(meta?.cell?.config !== undefined ? { config: meta.cell.config } : {}),
+					...fieldItemsProps(meta ?? {}, fieldLists?.options, fieldLists?.labels, value),
 					error: fieldError,
 					errors: fieldErrors,
 					isValidating,
@@ -196,6 +206,17 @@ export function CreatingRow() {
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────
+
+/**
+ * The list read of one column of the draft row. A system column or one with `creating: false`
+ * renders no field, so it reads nothing — its meta is left out rather than its read, which keeps
+ * the reads positional with the columns.
+ */
+function creatingListRead(col: { id: string; columnDef: { meta?: unknown } }): ListRead {
+	const meta = col.columnDef.meta as FormColumnMeta | undefined
+	const hasField = meta !== undefined && meta.isSystemColumn !== true && meta.creating !== false
+	return { id: col.id, meta: hasField ? meta : {}, slot: ItemsSourceSlot.Creating }
+}
 
 type CreatingInputArgs = {
 	meta: FormColumnMeta | undefined

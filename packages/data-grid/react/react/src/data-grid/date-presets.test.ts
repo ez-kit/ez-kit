@@ -1,3 +1,4 @@
+import { OperatorInput } from '@ez-kit/data-grid-core'
 import { describe, expect, it } from 'vitest'
 
 import { activePresetId, presetValue, presetsForOperator } from './date-presets'
@@ -19,13 +20,17 @@ const YESTERDAY: DatePreset = {
 const PRESETS = [LAST_7, YESTERDAY]
 
 describe('presetsForOperator', () => {
-	it('offers only ranges to between', () => {
-		expect(presetsForOperator(PRESETS, 'between')).toEqual([LAST_7])
+	it('offers only ranges to an operator that takes a range', () => {
+		expect(presetsForOperator(PRESETS, OperatorInput.Range)).toEqual([LAST_7])
 	})
 
-	it('offers only single dates to the operators that take one value', () => {
-		for (const operator of ['equals', 'notEquals', 'lessThan', 'greaterThan', 'lessOrEqual', 'greaterOrEqual']) {
-			expect(presetsForOperator(PRESETS, operator)).toEqual([YESTERDAY])
+	it('offers only single dates to an operator that takes one value', () => {
+		expect(presetsForOperator(PRESETS, OperatorInput.Single)).toEqual([YESTERDAY])
+	})
+
+	it('offers nothing to an operator that takes a list or no value, or one the column does not offer', () => {
+		for (const input of [OperatorInput.List, OperatorInput.None, undefined]) {
+			expect(presetsForOperator(PRESETS, input)).toEqual([])
 		}
 	})
 })

@@ -39,7 +39,7 @@ describe('CellTypesContext', () => {
 		const childView = () => 'child-view'
 		let captured: CellTypeRegistry | undefined
 		renderWithComponents(
-			<CellTypesProvider cellTypes={{ date: { editing: parentEdit, operators: ['equals'] } }}>
+			<CellTypesProvider cellTypes={{ date: { editing: parentEdit } }}>
 				<CellTypesProvider cellTypes={{ date: { view: childView } }}>
 					<Probe onMount={(r) => (captured = r)} />
 				</CellTypesProvider>
@@ -47,7 +47,6 @@ describe('CellTypesContext', () => {
 		)
 		expect(captured?.date?.view).toBe(childView)
 		expect(captured?.date?.editing).toBe(parentEdit)
-		expect(captured?.date?.operators).toEqual(['equals'])
 	})
 })
 

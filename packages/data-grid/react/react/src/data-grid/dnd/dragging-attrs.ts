@@ -28,5 +28,17 @@ export const COLUMN_DRAGGING_ATTR = 'data-column-dragging'
 /** Matches the `<th>` of the column being dragged. */
 export const COLUMN_DRAGGING_SELECTOR = `[${COLUMN_DRAGGING_ATTR}]`
 
-/** Matches a dragged item on either axis — for a reader that stands down for any drag at all. */
+/** On the row of the sort builder whose entry is being dragged. */
+export const SORT_DRAGGING_ATTR = 'data-sort-dragging'
+
+/** Matches the sort builder row being dragged. */
+export const SORT_DRAGGING_SELECTOR = `[${SORT_DRAGGING_ATTR}]`
+
+/**
+ * Matches a dragged row or column — for a reader inside the grid that stands down for any drag there.
+ *
+ * Leaves the sort builder's entries out on purpose: the builder renders in a popover outside the grid
+ * root, so no reader of this selector can contain one. A reader that can should add
+ * {@link SORT_DRAGGING_SELECTOR} itself.
+ */
 export const ANY_DRAGGING_SELECTOR = `[${ROW_DRAGGING_ATTR}], [${COLUMN_DRAGGING_ATTR}]`

@@ -1,7 +1,7 @@
 import { Accessibility, AutoScroller, Cursor, defaultPreset, Feedback, PreventSelection } from '@dnd-kit/dom'
 import { KeyboardSensor, PointerSensor } from '@dnd-kit/react'
 import { useSortable } from '@dnd-kit/react/sortable'
-import { render } from '@testing-library/react'
+import { render, waitFor } from '@testing-library/react'
 import { createElement } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -290,6 +290,153 @@ describe('the adapter satisfies the port', () => {
 		renderItem({ id: 'row-1', index: 0, axis: 'row', surface: 'table' })
 
 		expect(useSortableSpy.mock.calls[0]?.[0]).not.toHaveProperty('disabled')
+	})
+})
+
+/**
+ * The accessibility plugin marks **every** registered draggable's activator — `handle ?? element` —
+ * with `role`, `tabindex`, `aria-roledescription`, `aria-describedby` and the live `aria-pressed` /
+ * `aria-grabbed` / `aria-disabled`, disabled ones included (`@dnd-kit/dom@0.1.21`). An item the
+ * author locked renders no handle, so without the adapter stepping in the plugin marked the row or
+ * header cell itself: a `role="row"` carrying `aria-pressed` is an axe violation, and a plain `div`
+ * became a `button` and a tab stop that promises a gesture nothing will perform.
+ */
+describe('an item registered disabled', () => {
+	const ACTIVATOR_ATTRIBUTES = [
+		'role',
+		'tabindex',
+		'aria-roledescription',
+		'aria-describedby',
+		'aria-pressed',
+		'aria-grabbed',
+		'aria-disabled',
+	]
+
+	function renderElement(disabled: boolean, withGrip = false): { element: HTMLElement; grip: HTMLElement | null } {
+		const id = `col-${String(disabled)}-${String(withGrip)}`
+		function Item() {
+			const handle = adapter.useSortableItem({ id, index: 0, axis: 'column', surface: 'panel', disabled })
+			return (
+				<div
+					ref={handle.ref}
+					data-testid={`item-${id}`}
+				>
+					{withGrip && (
+						<button
+							ref={handle.handleRef}
+							data-testid={`grip-${id}`}
+							type='button'
+						/>
+					)}
+				</div>
+			)
+		}
+		const { getByTestId, queryByTestId } = render(
+			<adapter.Provider
+				onDrop={() => {}}
+				canDrop={() => true}
+			>
+				<Item />
+			</adapter.Provider>,
+		)
+		return { element: getByTestId(`item-${id}`), grip: queryByTestId(`grip-${id}`) }
+	}
+
+	const markedOn = (element: HTMLElement | null) => {
+		if (element === null) throw new Error('the item was rendered without the element this case reads')
+		return ACTIVATOR_ATTRIBUTES.filter((name) => element.hasAttribute(name))
+	}
+
+	// The control: without it the cases below would pass in any environment the plugin never ran in.
+	it('leaves an enabled item with no handle marked as its own activator', async () => {
+		const { element } = renderElement(false)
+
+		await waitFor(() => {
+			expect(markedOn(element)).toContain('aria-pressed')
+		})
+	})
+
+	it('marks nothing on the element of a disabled item', async () => {
+		const enabled = renderElement(false)
+		const disabled = renderElement(true)
+
+		await waitFor(() => {
+			expect(markedOn(enabled.element)).toContain('aria-pressed')
+		})
+		expect(markedOn(disabled.element)).toEqual([])
+	})
+
+	it('marks nothing on a grip a disabled item was handed, while an enabled one marks its grip', async () => {
+		const enabled = renderElement(false, true)
+		const disabled = renderElement(true, true)
+
+		await waitFor(() => {
+			expect(markedOn(enabled.grip)).toContain('aria-pressed')
+		})
+		expect(markedOn(enabled.element)).toEqual([])
+		expect(markedOn(disabled.grip)).toEqual([])
+		expect(markedOn(disabled.element)).toEqual([])
+	})
+	it('gives the grip back its activator when the item is unlocked at runtime', async () => {
+		function Item({ disabled }: { disabled: boolean }) {
+			const handle = adapter.useSortableItem({ id: 'col-unlock', index: 0, axis: 'column', surface: 'panel', disabled })
+			return (
+				<div
+					ref={handle.ref}
+					data-testid='item'
+				>
+					{!disabled && (
+						<button
+							ref={handle.handleRef}
+							data-testid='grip'
+							type='button'
+						/>
+					)}
+				</div>
+			)
+		}
+		const tree = (disabled: boolean) => (
+			<adapter.Provider
+				onDrop={() => {}}
+				canDrop={() => true}
+			>
+				<Item disabled={disabled} />
+			</adapter.Provider>
+		)
+		const { getByTestId, rerender } = render(tree(true))
+
+		rerender(tree(false))
+
+		await waitFor(() => {
+			expect(markedOn(getByTestId('grip'))).toContain('aria-pressed')
+		})
+		expect(markedOn(getByTestId('item'))).toEqual([])
+	})
+	it('makes an element its own activator again when it is unlocked without a grip', async () => {
+		function Item({ disabled }: { disabled: boolean }) {
+			const handle = adapter.useSortableItem({ id: 'col-bare', index: 0, axis: 'column', surface: 'panel', disabled })
+			return (
+				<div
+					ref={handle.ref}
+					data-testid='bare'
+				/>
+			)
+		}
+		const tree = (disabled: boolean) => (
+			<adapter.Provider
+				onDrop={() => {}}
+				canDrop={() => true}
+			>
+				<Item disabled={disabled} />
+			</adapter.Provider>
+		)
+		const { getByTestId, rerender } = render(tree(true))
+
+		rerender(tree(false))
+
+		await waitFor(() => {
+			expect(markedOn(getByTestId('bare'))).toContain('aria-pressed')
+		})
 	})
 })
 

@@ -41,8 +41,10 @@ column to sit in, since the row is always there.
 </DataGrid>
 ```
 
-The modal itself is mounted by the grid when `creating.mode` is `'modal'` — `DataGrid.CreatingModal`
-takes no props, and everything about the form comes from `creating` and the column defs.
+The modal itself is mounted by the grid when `creating.mode` is `'modal'` — there is nothing to
+place in a layout, and everything about the form comes from `creating` and the column defs. To
+replace the dialog or the form, register a `FormModal` — see
+[a form of your own](#a-form-of-your-own).
 
 ## Default values
 
@@ -106,7 +108,9 @@ Seeding the create form through `initialState.creating` is a **type error** — 
 ## Validation
 
 One validator for the whole form, exactly as in [editing](/docs/data-grid/editing/validation) — a
-function, or `{ schema }` for zod. The modal stays open until it passes.
+function, or `{ schema }` for any Standard Schema (zod, valibot, arktype, …). The modal stays open
+until it passes, and a schema issue without a path — the example's "name and email must be
+different" — shows in the form's banner rather than under a field.
 
 <DataGridDocsExample exampleId='creating-validation' />
 
@@ -122,17 +126,136 @@ creating: {
 Throw `ValidationError` from `onSave` to put a server's rejection back into the fields. Full
 details in [Validation](/docs/data-grid/editing/validation).
 
+## What `onSave` receives
+
+`values` holds the create form's fields — the seed from `defaultValue` / `defaultValues`, as the
+user left it. A form of your own that saves through `submit(values)` sends exactly what it passes,
+keys no column declares included, so a field the grid does not show still reaches `onSave`. There
+is no `row`: a row that is being created does not exist yet.
+
+## A form of your own
+
+The modal is the kit's `FormModal` component, and replacing that component is how the form is
+replaced too — there is no second way. Register your own for one grid through `components`, or
+for every grid through `createDataGrid({ components })`. One component serves both forms; `mode`
+says which is open:
+
+```tsx
+<DataGrid
+	columns={columns}
+	data={data}
+	creating={{ mode: 'modal', onSave: create }}
+	editing={{ mode: 'modal', onSave: update }}
+	components={{ editing: { FormModal: UserFormModal } }}
+/>
+```
+
+Beside the dialog's own props — `title`, `formError`, `isPending`, `onSave`, `onCancel` and the
+generated form as `children` — it receives the whole form contract:
+
+- `fields` — the generated fields one by one, keyed by column id, each with its label, errors and
+  `validateOn` behaviour, writing to the grid's state;
+- `initialValues` — what the form opened with, for the fields the generated form shows only, and
+  the same object for as long as it stays open;
+- `row` — the row being edited as it is in `data`, read-only; `undefined` when creating;
+- `submit(values?)` — saves through the grid: its `validate`, when one is configured, then
+  `onSave`. It resolves rather than throwing on a refusal: `{ ok: true }`, or `ok: false` with a
+  `reason` — `'rejected'` with the `errors` and `formError` the form now shows, `'cancelled'` when
+  the form was closed mid-save, `'busy'` while the grid's own `validate()` runs, `'closed'` when no
+  form is open. A second call while a save is in flight gets the first one's outcome;
+- `validate(values)` — the grid's validator as a pure function, for a check on blur; it writes
+  nothing to the grid's state. `null` means valid, or that the form has closed;
+- `errors` — field errors from the last failed save.
+
+### The generated fields in a layout of your own
+
+Place the entries of `fields` wherever the dialog wants them and save with `onSave` — the fields
+have already written their values into the grid's state:
+
+<DataGridDocsExample exampleId='form-modal-fields-layout' />
+
+```tsx
+function UserFormModal({ title, fields, formError, isPending, onSave, onCancel }: FormModalProps) {
+	return (
+		<MyDialog
+			title={title}
+			onClose={onCancel}
+		>
+			{formError ? <p role='alert'>{formError}</p> : null}
+			<div className='grid grid-cols-2 gap-4'>
+				<div className='col-span-2'>{fields.name}</div>
+				{fields.email}
+				{fields.age}
+			</div>
+			<button
+				disabled={isPending}
+				onClick={() => void onSave()}
+			>
+				Save
+			</button>
+		</MyDialog>
+	)
+}
+```
+
+### A form library
+
+Seed the library from `initialValues`, hand its values to `submit` and map a failed result back
+onto its fields. The grid still owns opening, closing and the save — here with `@ez-kit/form`,
+whose `onSubmitAsync` result is exactly that mapping:
+
+<DataGridDocsExample exampleId='form-modal-own-form' />
+
+The same with react-hook-form:
+
+```tsx
+import { useForm } from 'react-hook-form'
+
+import type { FormModalProps } from '@ez-kit/data-grid-react'
+
+function UserFormModal({ title, initialValues, submit, onCancel }: FormModalProps) {
+	const { register, handleSubmit, setError, formState } = useForm({ defaultValues: initialValues })
+
+	const onSubmit = handleSubmit(async (values) => {
+		const result = await submit(values)
+		if (result.ok || result.reason !== 'rejected') return
+		for (const [field, messages] of Object.entries(result.errors)) {
+			setError(field, { message: messages.join(', ') })
+		}
+		if (result.formError) setError('root', { message: result.formError })
+	})
+
+	return (
+		<MyDialog
+			title={title}
+			onClose={onCancel}
+		>
+			<form onSubmit={onSubmit}>
+				<input {...register('name')} />
+				<input {...register('email')} />
+				<button disabled={formState.isSubmitting}>Save</button>
+			</form>
+		</MyDialog>
+	)
+}
+```
+
+`submit(values)` saves exactly what it is given: keys no column declares reach `onSave` unchanged,
+and nothing from `row` is added. If the grid has a `validate`, it runs on every `submit` as well —
+so a form that validates itself and a grid that validates too check twice only when both were
+configured to.
+
 ## Options
 
-| `creating` key  | Type                                            | Description                                                          |
-| --------------- | ----------------------------------------------- | -------------------------------------------------------------------- |
-| `onSave`        | `({ values, signal }) => void \| Promise<void>` | Required. Persist the new row.                                       |
-| `mode`          | `'row' \| 'modal' \| 'pin-row'`                 | Where the draft appears. Default `'row'`.                            |
-| `defaultValues` | `Partial<TRow> \| ((ctx) => Partial<TRow>)`     | Seeds that span columns. Merged over the per-column `defaultValue`s. |
-| `validate`      | `ValidateConfig`                                | The form's validator.                                                |
-| `validateOn`    | `'submit' \| 'blur' \| 'change'`                | When a field validates. Default `'submit'`.                          |
-| `debounce`      | `number`                                        | Debounce for `'change'`. Default `200`.                              |
-| `enabled`       | `boolean`                                       | Explicit off-switch for a config that came from a defaults layer.    |
+| `creating` key  | Type                                            | Description                                                                         |
+| --------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `onSave`        | `({ values, signal }) => void \| Promise<void>` | Required. Persist the new row. See [What `onSave` receives](#what-onsave-receives). |
+| `mode`          | `'row' \| 'modal' \| 'pin-row'`                 | Where the draft appears. Default `'row'`.                                           |
+| `defaultValues` | `Partial<TRow> \| ((ctx) => Partial<TRow>)`     | Seeds that span columns. Merged over the per-column `defaultValue`s.                |
+| `validate`      | `ValidateConfig`                                | The form's validator.                                                               |
+| `validateOn`    | `'submit' \| 'blur' \| 'change'`                | When a field validates. Default `'submit'`.                                         |
+| `debounce`      | `number`                                        | Debounce for `'change'`. Default `200`.                                             |
+| `enabled`       | `boolean`                                       | Explicit off-switch for a config that came from a defaults layer.                   |
 
 ## See also
 

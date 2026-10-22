@@ -86,6 +86,25 @@ translates with everything else.
 
 Full contract: [Drag and drop](https://ez-kit-docs.vercel.app/docs/data-grid/drag-and-drop).
 
+## Filters and filter fields
+
+A filter belongs to a **filter target**: a filterable column, or a field from `filtering.fields` —
+a filter of the server query that is not a column (a warehouse, a region). Fields are written in the
+column's vocabulary (`id`, `header`, `cell`, `filtering`), are offered only under
+`filtering.manual: true`, and store their value in the same `columnFilters` slice, so
+`filtering.onChange` receives columns and fields in one array.
+
+Every filter surface works over the same list of targets — columns in column order, then fields:
+
+- `<DataGrid.FilterPanel />` renders a chip per target; its render function receives `filters`.
+- `<DataGrid.Filter id='status' />` renders one target's chip — a column id or a field id.
+- `useFilters()` returns what the panel's render function receives — each entry's `filter` model
+  (`FilterModel`), `source` (`{ kind: 'column', column }` or `{ kind: 'field' }`), and the panel's
+  whole `value` (`FiltersValue`) with a `setValue` that writes it in one state change.
+- `<DataGrid.ActiveFiltersBar />` shows a removable chip for a field as for a column.
+
+Full guide: [Filter fields](https://ez-kit-docs.vercel.app/docs/data-grid/filtering/fields).
+
 ## State persistence
 
 `extractState` / `parseState` (Layer 1 utilities) and `useExtractedState` (Layer 2 reactive hook) let you serialize grid state to the URL or storage and rehydrate it. `parseState` is defensive against malformed/untrusted input and never throws.

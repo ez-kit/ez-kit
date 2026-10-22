@@ -7,13 +7,19 @@ Click a column header to sort by it. Shift-click to add another column to the so
 
 ## Usage
 
+### Click to sort
+
 Base behavior — single column click-to-sort:
 
 <DataGridDocsExample exampleId='base-sorting' />
 
-Initial sort, multi-column, and custom sort functions:
+### Initial, multi-column and custom sort
+
+An initial sort, multi-column sorting and custom sort functions in one grid:
 
 <DataGridDocsExample exampleId='sorting' />
+
+### Multi-sort builder
 
 A multi-sort builder for selecting sort field + direction. It is a component, not an option:
 mount `<DataGrid.SortMenuTrigger />` where you want it. No layout preset mounts it — `sorting`
@@ -21,6 +27,34 @@ alone means click-to-sort in the header, and the builder earns its place mostly 
 sorting or more columns than the header shows.
 
 <DataGridDocsExample exampleId='sort-toolbar' />
+
+An entry's place in the builder is its **priority**: the sort above orders by department, then by
+salary within each department. Each entry carries a pair of steps that moves it one place up or
+down, so priority changes without removing an entry and adding it back. A step keeps the direction
+of both entries it swaps.
+
+With a [drag adapter](/docs/data-grid/drag-and-drop) bound, the steps give way to a grip, and an
+entry is dragged straight to its new place — by pointer, or from the keyboard with `Space`, the
+arrow keys and `Space` again. A screen reader hears the entry and its new priority:
+
+<DataGridDocsExample exampleId='sort-builder-drag' />
+
+`sorting.multi.reorderable` chooses the affordance with the same values the column surfaces take
+(see [Ordering](/docs/data-grid/columns/ordering#the-arrows-or-the-drag-not-both)): `true`, the
+default, means the grip with an adapter and the steps without one; `'step'`, `'drag'` and `'both'`
+name it; `false` leaves the entries in the order they were added.
+
+Under `manual: true` every step and every drop is one `onChange`, and so one request to the server.
+
+**Add Sort** follows `multi`. Without multi-sort the builder holds one entry — the header click
+replaces the sort rather than extending it, and so does the builder — and with `multi.max` it stops
+at the cap. A column declared with `sorting: { multi: false }` is offered for the first entry only.
+
+<DataGridDocsExample exampleId='sort-toolbar-single' />
+
+The builder counts multi-sort as on only when `multi` is written. A Shift-click on a header still
+extends the sort when it is not, as TanStack Table does by default — the builder then lists those
+entries without steps or a grip, and **Add Sort** stays unavailable. Write `multi` to rank them.
 
 ## Options
 
@@ -38,11 +72,12 @@ sorting or more columns than the header shows.
 
 ### `MultiSortConfig`
 
-| Option      | Type                            | Description                                                             |
-| ----------- | ------------------------------- | ----------------------------------------------------------------------- |
-| `max`       | `number`                        | Cap on simultaneously sorted columns. Unlimited by default.             |
-| `event`     | `'shift' \| 'ctrl' \| 'always'` | Gesture that engages multi-sort. Default `'shift'`.                     |
-| `removable` | `boolean`                       | Allow removing a single column from the multi-sort set. Default `true`. |
+| Option        | Type                            | Description                                                                                                                                      |
+| ------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `max`         | `number`                        | Cap on simultaneously sorted columns. Unlimited by default.                                                                                      |
+| `event`       | `'shift' \| 'ctrl' \| 'always'` | Gesture that engages multi-sort. Default `'shift'`.                                                                                              |
+| `removable`   | `boolean`                       | Allow removing a single column from the multi-sort set. Default `true`.                                                                          |
+| `reorderable` | `boolean \| ReorderMode`        | How the sort builder moves an entry: `'drag'`, `'step'`, `'both'`, or `false`. Default `true` — the grip with a drag adapter, the steps without. |
 
 ### Per-column `sorting`
 

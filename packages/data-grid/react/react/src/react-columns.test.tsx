@@ -1,3 +1,4 @@
+// eslint-disable-next-line no-restricted-syntax -- a consumer may pass a memo-wrapped renderer, and this test is what holds the grid to accepting one
 import { memo } from 'react'
 import { describe, expect, it } from 'vitest'
 

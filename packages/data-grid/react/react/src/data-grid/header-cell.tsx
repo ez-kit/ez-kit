@@ -14,8 +14,8 @@ import { ColumnSortDirection, SortDirection } from '../types'
 import { filtersRows } from '../utils/filters-rows'
 import { freezeRenderedWidths, releaseUnmovedWidths } from '../utils/freeze-rendered-widths'
 import { getCommonPinStyles } from '../utils/pin-styles'
+import { resolveReorderMode } from '../utils/reorder-mode'
 import { isTextEntryTarget } from '../utils/text-entry-target'
-import { resolveHeaderAffordances } from '../utils/visibility-panel-affordances'
 import { getVisualLeafColumns } from '../utils/visual-column-order'
 
 import { getAlignAttrs } from './align-attrs'
@@ -26,6 +26,7 @@ import { buildColumnMenuSections } from './column-menu-sections'
 import { HeaderCellProvider } from './composition-context'
 import { useDndEnabled } from './dnd'
 import { COLUMN_DRAGGING_SELECTOR } from './dnd/dragging-attrs'
+import { columnFilterTarget } from './filter-target'
 import { flexRender } from './flex-render'
 import { HeaderExtras, HeaderMain } from './header-slots'
 import { useCellNavigationProps } from './keyboard-navigation'
@@ -195,7 +196,7 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
 	const canResize = header.column.getCanResize?.() ?? false
 	const isDndEnabled = useDndEnabled()
-	const headerAffordances = resolveHeaderAffordances(table.grid.ordering, isDndEnabled)
+	const headerAffordances = resolveReorderMode(table.grid.ordering.header.mode, true, isDndEnabled)
 
 	const colPinDef = meta?.pinning
 	const isStaticPin = typeof colPinDef === 'object' && colPinDef.side !== undefined
@@ -227,14 +228,22 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 	 */
 	const isLeafHeader = header.subHeaders.length === 0 && !header.isPlaceholder
 	/*
-	 * Gated on `isDndEnabled` first, and that is a performance requirement rather than tidiness:
+	 * With the column axis on, the header drags exactly when its mode resolved to the grip — a
+	 * `'step'` header stays still in a grid whose rows drag. With the axis off every header still
+	 * registers under an adapter, as it did before modes existed, and `canMove` keeps each one
+	 * disabled — `column-drag.test.tsx` pins that.
+	 */
+	const takesPartInDrag = table.grid.ordering.column ? headerAffordances.drag : isDndEnabled
+	/*
+	 * Gated on the resolved drag first — which is off without an adapter — and that is a performance
+	 * requirement rather than tidiness:
 	 * `getVisualLeafColumns` builds a fresh three-part array and this scans it, once per header
 	 * cell — O(n²) per header render. A grid with no drag adapter must not pay that, which is most
 	 * grids. Skipping it also skips mounting the shell below, so such a grid renders the bare `Th`
 	 * it rendered before this phase; the phase-2 identical-DOM test compares against exactly that.
 	 */
 	const visualIndex =
-		isDndEnabled && table.grid.ordering.header.drag !== false && isLeafHeader
+		takesPartInDrag && isLeafHeader
 			? getVisualLeafColumns(table).findIndex((column) => column.id === header.column.id)
 			: -1
 	const isDragParticipant = visualIndex >= 0
@@ -425,8 +434,7 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 		filtersRows(table) && meta?.filtering !== false && !meta?.isSystemColumn && header.column.getCanFilter()
 	const filterContent = canFilter
 		? renderFilterInput({
-				header,
-				meta,
+				target: columnFilterTarget(header.column),
 				Input,
 				cellTypes,
 				OperatorSelect,

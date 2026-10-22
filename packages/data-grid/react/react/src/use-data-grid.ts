@@ -23,7 +23,7 @@ import type { CellTypeRegistry } from './cell-types-context'
 import type { DndAdapter } from './data-grid/dnd'
 import type { PaginationLabelModel } from './data-grid/pagination-label'
 import type { DataGridDefaultOptions } from './data-grid-options-context'
-import type { GridContext, GridContextAtom } from './grid-context'
+import type { GridContextAtom, GridContextRecord } from './grid-context'
 import type { ResolvedGridOptions } from './resolved-options'
 import type { ErasedRow, DataTable, GridFeatures, LoadMoreThreshold, LoadMoreTrigger, PaginationLabel } from './types'
 import type {
@@ -35,9 +35,11 @@ import type {
 	FilteringConfig,
 	GlobalFilteringConfig,
 	LoadMoreDirection,
+	MultiSortConfig,
 	OrderingConfig,
 	PaginationConfig,
 	PartialGridMessages,
+	ReorderMode,
 	RowActionsConfig,
 	RowVirtualizationConfig,
 	SelectionConfig,
@@ -400,6 +402,19 @@ function normalizeFallback(
 	return { enabled, ...(component !== undefined ? { component } : {}) }
 }
 
+/**
+ * `sorting.multi.reorderable` with its default filled in: on exactly when multi-sort is.
+ *
+ * Multi-sort counts as on only when the author wrote `multi` — `true` or an object. TanStack
+ * accepts a Shift-click on a header when `multi` is absent, but the documented default is off, and
+ * the builder follows the documentation: a grid that never asked for several entries does not get
+ * a builder that offers to rank them.
+ */
+function resolveSortReorder(multi: boolean | MultiSortConfig | undefined): boolean | ReorderMode {
+	if (multi === undefined || multi === false) return false
+	return multi === true ? true : (multi.reorderable ?? true)
+}
+
 export type ReactFilteringConfig = {
 	/**
 	 * Commit debounce in milliseconds for text filter inputs. Default: 250.
@@ -560,7 +575,11 @@ export type RowPropsResolver<TRow extends object> = (
  * `mergeGridOptionLayers` will merge it in, but the type still demands it at the boundary the
  * caller writes.
  */
-export type UseDataGridConfig<TFeatures extends TableFeatures, TRow extends object> = {
+export type UseDataGridConfig<
+	TFeatures extends TableFeatures,
+	TRow extends object,
+	TContext extends object = GridContextRecord,
+> = {
 	/**
 	 * Fallback states shown when the grid has no visible rows.
 	 * All three states are enabled by default when the corresponding DI component is registered.
@@ -627,22 +646,23 @@ export type UseDataGridConfig<TFeatures extends TableFeatures, TRow extends obje
 	 * like any other option and publishes it; {@link useGridContext} reads it, with a selector
 	 * form so a cell renderer re-renders only for the slice it asked for.
 	 *
-	 * Typed by declaration merging on {@link GridContext} — empty until a consumer extends it.
+	 * Typed {@link GridContextRecord} here. A bundle built with `createDataGrid({ context })` types
+	 * it from that default instead — a `Partial` of it, since the factory supplies every key — and
+	 * hands back a `useGridContext` that reads the complete type.
 	 *
 	 * @example
 	 * ```tsx
-	 * // once, anywhere in the app
-	 * declare module '@ez-kit/data-grid-react' {
-	 *   interface GridContext {
-	 *     permissions: { canEdit: boolean }
-	 *   }
-	 * }
+	 * // once, where the application builds its bundle
+	 * export const { DataGrid, useDataGrid, useGridContext } = createDataGrid({
+	 *   components: allComponents,
+	 *   context: { permissions: { canEdit: false } },
+	 * })
 	 *
-	 * useDataGrid({ data, columns, context: { permissions } })
-	 * // and in a kit component: const canEdit = useGridContext((c) => c.permissions.canEdit)
+	 * useDataGrid({ data, columns, features, context: { permissions } })
+	 * // and in a cell: const canEdit = useGridContext((c) => c.permissions.canEdit)
 	 * ```
 	 */
-	context?: GridContext
+	context?: TContext
 	/**
 	 * Per-row DOM props — see {@link RowPropsResolver}.
 	 *
@@ -996,6 +1016,7 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 	// one `toolbar` flag until the controls became composition.
 	const visibilityEnabled = isFeatureEnabled(visibility)
 	const sortingEnabled = isFeatureEnabled(config.sorting)
+	const sortReorder = sortingEnabled ? resolveSortReorder(featureConfig(config.sorting)?.multi) : false
 
 	const filteringCfg = featureConfig(rawFiltering)
 
@@ -1310,18 +1331,15 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 	// column reordering off cannot be left offering it from the Columns toggle.
 	const columnOrderingCfg = featureConfig(orderingCfg?.column)
 	const rawVisibilityMenu = columnOrderingCfg?.visibilityMenu
-	const visibilityMenuCfg = typeof rawVisibilityMenu === 'object' ? rawVisibilityMenu : undefined
-	const orderingInVisibilityMenu =
-		columnOrderingEnabled && rawVisibilityMenu !== undefined && rawVisibilityMenu !== false
 	/*
-	 * The panel's two affordances travel **as authored**, because which one wins depends on a drag
+	 * Both surfaces' modes travel **as authored**, because what `true` means depends on a drag
 	 * adapter and this hook cannot see one: a controlled grid calls `useDataGrid` outside
-	 * `<DataGrid>`, so the bundle's adapter context is not above it. `resolvePanelAffordances`
-	 * finishes the job in the two components that do read it. Both are forced to `undefined` while
-	 * the panel is off, so nothing downstream has to re-check `enabled` to read them honestly.
+	 * `<DataGrid>`, so the bundle's adapter context is not above it. `resolveReorderMode` finishes
+	 * the job in the components that do read it. Each is forced to `false` while its surface is off,
+	 * so nothing downstream has to re-check the axis to read it honestly.
 	 */
-	const visibilityMenuDrag = orderingInVisibilityMenu ? visibilityMenuCfg?.drag : undefined
-	const visibilityMenuMoveControls = orderingInVisibilityMenu ? visibilityMenuCfg?.moveControls : undefined
+	const visibilityMenuMode = columnOrderingEnabled ? (rawVisibilityMenu ?? false) : false
+	const headerMode = columnOrderingEnabled ? columnOrderingCfg?.header : false
 
 	// Rebuilt per render, and handed out on this render's table below. It cannot be written to the
 	// instance instead: `useTable` has already spread it by the time the hook body runs, so a
@@ -1356,19 +1374,13 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 		ordering: {
 			column: columnOrderingEnabled,
 			row: rowOrderingEnabled,
-			visibilityMenu: {
-				enabled: orderingInVisibilityMenu,
-				drag: visibilityMenuDrag,
-				moveControls: visibilityMenuMoveControls,
-			},
-			header: {
-				drag: columnOrderingEnabled ? columnOrderingCfg?.drag : undefined,
-				moveControls: columnOrderingEnabled ? columnOrderingCfg?.moveControls : undefined,
-			},
+			visibilityMenu: { enabled: visibilityMenuMode !== false, mode: visibilityMenuMode },
+			header: { mode: headerMode },
 		},
 		visibility: visibilityEnabled,
 		sorting: sortingEnabled,
-		filtering: { debounce: filteringDebounce },
+		sortReorder,
+		filtering: { debounce: filteringDebounce, fields: erasedCoreGrid.filterFields ?? [] },
 		globalFiltering: normalizedGlobalFiltering,
 		pagination: {
 			enabled: isPagedPagination,

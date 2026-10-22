@@ -1,4 +1,5 @@
 import { render, fireEvent } from '@testing-library/react'
+// eslint-disable-next-line no-restricted-syntax -- a consumer may pass a memo-wrapped renderer, and this test is what holds the grid to accepting one
 import { forwardRef, memo, useState } from 'react'
 import { describe, expect, it } from 'vitest'
 
