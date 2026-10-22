@@ -48,7 +48,7 @@ describe('column-level filtering.debounce', () => {
 
 	it("waits the column's own debounce before committing, not the table's", () => {
 		setup()
-		const noteFilter = screen.getByPlaceholderText('Filter note…')
+		const noteFilter = screen.getByPlaceholderText('Filter Note…')
 
 		fireEvent.change(noteFilter, { target: { value: 'first' } })
 
@@ -67,7 +67,7 @@ describe('column-level filtering.debounce', () => {
 
 	it('leaves a column without its own debounce on the table-level one', () => {
 		setup()
-		const nameFilter = screen.getByPlaceholderText('Filter name…')
+		const nameFilter = screen.getByPlaceholderText('Filter Name…')
 
 		fireEvent.change(nameFilter, { target: { value: 'Alice' } })
 

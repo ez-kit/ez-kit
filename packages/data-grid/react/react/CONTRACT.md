@@ -186,12 +186,17 @@ so that composing a header cell never means hand-writing the element the stylesh
 
 ### `editing`
 
-| Component   | Props                                             |
-| ----------- | ------------------------------------------------- |
-| `FormShell` | `FormShellProps` (creating / editing modal shell) |
+| Component   | Props                                              |
+| ----------- | -------------------------------------------------- |
+| `FormModal` | `FormModalProps` (creating / editing modal dialog) |
 
-One shell serves both write forms — creating and editing are one `DataGridFormModalProps` — and
-the dialog it renders into is `core.Modal`.
+One dialog serves both write forms — creating and editing are one `FormModalProps`, with `mode`
+saying which. Beside the chrome (`title`, `formError`, `isPending`, `onSave`, `onCancel`) and the
+generated form (`children`), it receives the whole form contract — `fields`, `initialValues`,
+`row`, `errors`, `submit(values?)` and `validate(values)` — because the slot is also the one way an
+application replaces the form: a component registered here per grid or app-wide may render the
+generated fields in its own layout, or a form of its own entirely. A kit implementation renders
+`children` and may ignore the rest.
 
 ### `deleting`
 
@@ -274,9 +279,16 @@ action-bar-draft-part    action-bar-action         action-bar-close
 action-bar-reset         action-bar-apply          count
 bottom-bar
 loading-body-cell        empty-state-cell          no-results-cell
-refetch-overlay          refetch-overlay-inner     load-more-row
-load-more-button         load-more-spinner         load-more-error
+fallback-content         refetch-overlay           refetch-overlay-inner
+load-more-row            load-more-button          load-more-spinner
+load-more-error
 ```
+
+`fallback-content` wraps whatever an `empty-state-cell` or `no-results-cell` shows. The
+structural stylesheet holds it to the scrollport's visible width and sticks it to the start
+edge, so on a grid that scrolls sideways the fallback stays centred in view rather than in the
+full-width cell. For that to work it resets the two cells' padding, clipping and content
+alignment — a kit should style the fallback inside `fallback-content`, not on those cells.
 
 Kits may add their own `data-slot`/`data-*` attributes inside their components; the
 react package only owns the structural ones above.

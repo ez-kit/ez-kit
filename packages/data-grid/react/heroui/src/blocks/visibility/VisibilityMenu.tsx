@@ -1,11 +1,14 @@
 'use client'
 
 import { DataGridVisibilityItem } from '@ez-kit/data-grid-react'
-import { useGridMessages } from '@ez-kit/data-grid-react/kit'
+import { useColumnDragKeyboardGuard, useGridMessages } from '@ez-kit/data-grid-react/kit'
 import { Button, buttonVariants, Checkbox, Dropdown, Label, Popover } from '@heroui/react'
 import { ArrowDown, ArrowUp, Columns2 } from 'lucide-react'
+import { useCallback, useState } from 'react'
+import { GridList, GridListItem } from 'react-aria-components'
 
-import { ColumnDragHandle } from '../ordering/ColumnDragHandle'
+import { KIT_CLASS_NAME } from '../../lib/kit-class-name'
+import { ColumnGrip } from '../ordering/ColumnDragHandle'
 
 import type { GridMessages, VisibilityMenuProps, VisibilityColumnItem } from '@ez-kit/data-grid-react'
 import type { Selection } from '@heroui/react'
@@ -56,95 +59,177 @@ function Trigger({ label }: { label: string }) {
 }
 
 /**
- * The column panel: a checkbox list rather than a selection menu.
+ * The column panel: a grid collection rather than a selection menu.
  *
- * A react-aria menu item owns the press that lands on it — which is exactly what makes the
- * selection form below right for a plain visibility toggle, and wrong the moment a row also
- * carries buttons, since pressing one would toggle the column on its way to moving it. So the
- * mode that has moves is drawn as a dialog of checkboxes instead.
+ * A react-aria menu item owns the press that lands on it, and a menu item may hold no control of
+ * its own — which is exactly what makes the selection form below right for a plain visibility
+ * toggle, and wrong the moment a row also carries a grip or a move pair. A `GridList` is the one
+ * react-aria collection whose rows may: each row is focusable, the controls inside it are reachable
+ * and announced, and the row's selection is the column's visibility, exactly as the menu's is.
+ *
+ * Every row is the collection's own element. `<DataGridVisibilityItem>`'s render function hands it
+ * the item slot, the column id and the drag's ref to spread, so no wrapper sits around a row — a
+ * wrapper could not, since the collection renders the row itself — and the grip gets its activator
+ * as `handleProps`. A column whose visibility the author fixed (`canHide: false`) stays listed with
+ * its checkbox disabled: `disabledBehavior='selection'` takes it out of the selection without taking
+ * it out of focus, the drag or the move pair.
+ *
+ * `disallowEmptySelection` is what keeps `Escape` closing the panel. A collection with multiple
+ * selection clears it on `Escape` by default, and the selection here is the columns' visibility, so
+ * one `Escape` meant for the popover hid every column while the panel stayed open. With an empty
+ * selection disallowed the key is not the collection's and reaches the popover. The cost is that the
+ * last visible column cannot be hidden from here, which leaves no grid worth showing anyway.
+ *
+ * That alone does not close the panel, though, and the panel closes itself on `Escape` for it. A
+ * react-aria grid row stops `Escape` whatever the collection makes of it — its shortcut handler lets
+ * a key go on only when the action asks for that explicitly, and the selection's `Escape` action
+ * does not — so the popover's own dismissal never sees the key while focus is in a row. Hence the
+ * controlled popover and an `Escape` listener on the collection.
+ *
+ * The dialog is named after the trigger that opens it and the collection after what it controls, so
+ * entering the panel does not read one name twice.
+ *
+ * The collection carries `useColumnDragKeyboardGuard`. During a keyboard drag the same keys mean two
+ * things here — the collection moves focus on an arrow and toggles a row on `Space` — so without it
+ * one `ArrowDown` moved the row two places, and the `Space` that drops it could hide a column.
+ *
+ * Keyboard, as measured in a browser: the collection is one tab stop, the arrows walk its rows and
+ * `ArrowRight` steps into a row's controls, the grip first. While a row is being dragged, focus
+ * leaves the grip — the collection recovers it onto another row when the moving row is re-rendered
+ * — and the drop returns it to the grip of the row that moved. The guard is what makes the
+ * stray focus harmless: no key reaches the row it landed on until the drag is over.
  *
  * The arrows point up and down: the contract names the two moves logically (`start` / `end`,
  * because the column order flips under RTL) and leaves the glyph to the kit, and this list runs
  * top to bottom in either writing direction.
  */
 function ColumnPanel({ columns, messages }: { columns: VisibilityColumnItem[]; messages: GridMessages }) {
+	const [isOpen, setIsOpen] = useState(false)
+	const guardRef = useColumnDragKeyboardGuard()
+	/*
+	 * One ref for the collection: the guard's, plus a native `Escape` listener that closes the panel.
+	 * Native because a key aimed inside the collection reaches it before React dispatches the row's
+	 * handlers, which stop the key. During a drag the same key also cancels the drag — the guard lets
+	 * `Escape` through, and the drag library reads it on the document, after this.
+	 */
+	const collectionRef = useCallback(
+		(node: HTMLDivElement | null) => {
+			guardRef(node)
+			if (node === null) return undefined
+			const onKeyDown = (event: KeyboardEvent) => {
+				if (event.key === ESCAPE_KEY) setIsOpen(false)
+			}
+			node.addEventListener('keydown', onKeyDown)
+			return () => {
+				node.removeEventListener('keydown', onKeyDown)
+				guardRef(null)
+			}
+		},
+		[guardRef],
+	)
+	const selectedKeys = new Set(columns.filter((col) => col.isVisible).map((col) => col.id))
+	const disabledKeys = columns.filter((col) => !col.canHide).map((col) => col.id)
+
 	return (
-		<Popover>
+		<Popover
+			isOpen={isOpen}
+			onOpenChange={setIsOpen}
+		>
 			<Popover.Trigger
 				data-slot='column-visibility-trigger'
 				className={`${buttonVariants({ size: 'sm', variant: 'outline' })} inline-flex`}
 			>
 				<TriggerContent label={messages.visibility.trigger} />
 			</Popover.Trigger>
-			<Popover.Content>
+			<Popover.Content className={KIT_CLASS_NAME}>
 				<Popover.Dialog
-					aria-label={messages.visibility.menu}
+					aria-label={messages.visibility.trigger}
 					className='p-2'
 				>
-					<div className='grid min-w-60 gap-1'>
-						{columns.map((col) => (
-							/*
-							 * The row is `<DataGridVisibilityItem>` rather than a plain `div`: it carries
-							 * the `column-visibility-item` slot as before and takes this kit's class, and
-							 * it is what registers the row with the drag adapter when one is bound. Every
-							 * decision behind that — the index space, which columns take part, the
-							 * `ColumnMoveScope` the drop commits under — stays in
-							 * `@ez-kit/data-grid-react`; this kit renders the markup and the grip. A grid
-							 * with no adapter gets the same `div` it got before.
-							 */
-							<DataGridVisibilityItem
-								key={col.id}
-								className='flex items-center gap-1 rounded pe-1'
-								columnId={col.id}
-							>
-								{/*
-								 * Renders nothing unless this row is draggable — no adapter, the panel's
-								 * moves switched off, or a column whose place the author fixed. First in
-								 * the row, where a grip belongs, and before the label so a pointer looking
-								 * for it does not have to cross the checkbox.
-								 *
-								 * The name carries the column, which the header's handle does not need:
-								 * there each grip sits in its own `<th>` beside the column name, while here
-								 * a screen reader would otherwise read N identical "Drag column" buttons in
-								 * one list. Same shape the move pair below already uses.
-								 */}
-								<ColumnDragHandle aria-label={`${messages.ordering.dragColumn}: ${col.label}`} />
-								<Checkbox
-									className='min-w-0 flex-1 px-2 py-1.5'
-									isDisabled={!col.canHide}
-									isSelected={col.isVisible}
-									onChange={() => {
-										col.onToggle()
-									}}
-								>
-									{/*
-									 * The control goes inside `Checkbox.Content`, not beside it. The root is the
-									 * field — a column, so description and error text stack under the box — and
-									 * `Checkbox.Content` is the clickable `<label>` that lays the box and its text
-									 * out in a row. A control placed beside it lands on its own line.
-									 *
-									 * A plain span, not `Label`: `Checkbox.Content` already *is* the `<label>`,
-									 * and nesting a second one inside it is invalid markup. The name still
-									 * resolves — an implicit label names the control it wraps.
-									 */}
-									<Checkbox.Content>
-										<Checkbox.Control>
-											<Checkbox.Indicator />
-										</Checkbox.Control>
-										<span className='truncate'>{col.label}</span>
-									</Checkbox.Content>
-								</Checkbox>
-								<MoveControls
-									column={col}
-									labels={{ start: messages.visibility.moveStart, end: messages.visibility.moveEnd }}
-								/>
+					<GridList
+						ref={collectionRef}
+						aria-label={messages.visibility.menu}
+						className='grid min-w-60 gap-1 outline-hidden'
+						disabledBehavior='selection'
+						disallowEmptySelection
+						disabledKeys={disabledKeys}
+						items={columns}
+						selectedKeys={selectedKeys}
+						selectionMode='multiple'
+						onSelectionChange={(keys) => {
+							toggleChanged(columns, keys)
+						}}
+					>
+						{(col: VisibilityColumnItem) => (
+							<DataGridVisibilityItem columnId={col.id}>
+								{({ itemProps, handleProps }) => (
+									<GridListItem
+										{...itemProps}
+										id={col.id}
+										className='flex items-center gap-1 rounded pe-1 outline-hidden'
+										textValue={col.label}
+									>
+										{/*
+										 * Absent unless this row is draggable — no adapter, the panel's moves
+										 * switched off, or a column whose place the author fixed. First in the row,
+										 * where a grip belongs, and before the label so a pointer looking for it
+										 * does not have to cross the checkbox.
+										 *
+										 * The name carries the column, which the header's handle does not need:
+										 * there each grip sits in its own `<th>` beside the column name, while here
+										 * a screen reader would otherwise read N identical "Drag column" buttons in
+										 * one list. Same shape the move pair below already uses.
+										 */}
+										{handleProps && (
+											<ColumnGrip
+												aria-label={`${messages.ordering.dragColumn}: ${col.label}`}
+												handleRef={handleProps.ref}
+											/>
+										)}
+										{/*
+										 * The row's selection checkbox: react-aria wires `slot='selection'` to the
+										 * row's selected state, so this is the visibility toggle without a handler of
+										 * its own. The label is a plain span inside `Checkbox.Content`, which is
+										 * already the `<label>`; nesting a `Label` there would be invalid markup.
+										 */}
+										<Checkbox
+											className='min-w-0 flex-1 px-2 py-1.5'
+											slot='selection'
+										>
+											<Checkbox.Content>
+												<Checkbox.Control>
+													<Checkbox.Indicator />
+												</Checkbox.Control>
+												<span className='truncate'>{col.label}</span>
+											</Checkbox.Content>
+										</Checkbox>
+										<MoveControls
+											column={col}
+											labels={{ start: messages.visibility.moveStart, end: messages.visibility.moveEnd }}
+										/>
+									</GridListItem>
+								)}
 							</DataGridVisibilityItem>
-						))}
-					</div>
+						)}
+					</GridList>
 				</Popover.Dialog>
 			</Popover.Content>
 		</Popover>
 	)
+}
+
+/** The key that dismisses the panel. */
+const ESCAPE_KEY = 'Escape'
+
+/**
+ * react-aria reports the whole next selection rather than the item that was pressed, so toggle
+ * exactly the columns whose visibility flipped. `'all'` means every key is selected.
+ */
+function toggleChanged(columns: VisibilityColumnItem[], keys: Selection): void {
+	for (const col of columns) {
+		const willBeVisible = keys === 'all' || keys.has(col.id)
+		if (willBeVisible !== col.isVisible) col.onToggle()
+	}
 }
 
 /**
@@ -207,27 +292,21 @@ export function VisibilityMenu({ columns, isColumnPanel }: VisibilityMenuProps) 
 
 	const selectedKeys = new Set(columns.filter((col) => col.isVisible).map((col) => col.id))
 
-	/**
-	 * react-aria reports the whole next selection rather than the item that was pressed, so toggle
-	 * exactly the columns whose visibility flipped. `'all'` means every key is selected.
-	 */
-	const onSelectionChange = (keys: Selection) => {
-		for (const col of columns) {
-			const willBeVisible = keys === 'all' || keys.has(col.id)
-			if (willBeVisible !== col.isVisible) col.onToggle()
-		}
-	}
-
 	return (
 		<Dropdown>
 			<Trigger label={messages.visibility.trigger} />
-			<Dropdown.Popover placement='bottom end'>
+			<Dropdown.Popover
+				className={KIT_CLASS_NAME}
+				placement='bottom end'
+			>
 				<Dropdown.Menu
 					aria-label={messages.visibility.menu}
 					items={columns}
 					selectedKeys={selectedKeys}
 					selectionMode='multiple'
-					onSelectionChange={onSelectionChange}
+					onSelectionChange={(keys) => {
+						toggleChanged(columns, keys)
+					}}
 				>
 					{(col: VisibilityColumnItem) => (
 						<Dropdown.Item

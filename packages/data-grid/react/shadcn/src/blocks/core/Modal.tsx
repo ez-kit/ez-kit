@@ -4,6 +4,7 @@ import { useGridMessages } from '@ez-kit/data-grid-react/kit'
 
 import { Button } from '@grid-shadcn/components/ui/button'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@grid-shadcn/components/ui/dialog'
+import { KIT_CLASS_NAME } from '@grid-shadcn/lib/kit-class-name'
 
 import type { ModalProps } from '@ez-kit/data-grid-react'
 
@@ -16,7 +17,7 @@ export function Modal({ open, onClose, onSave, onCancel, title, children }: Moda
 				if (!isOpen) onClose()
 			}}
 		>
-			<DialogContent>
+			<DialogContent className={KIT_CLASS_NAME}>
 				{title ? (
 					<DialogHeader>
 						<DialogTitle>{title}</DialogTitle>

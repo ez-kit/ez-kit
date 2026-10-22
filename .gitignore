@@ -32,7 +32,6 @@ test-results/
 .claude/commands
 .claude/scheduled_tasks.lock
 
-openspec
 .specify
 
 .playwright-mcp

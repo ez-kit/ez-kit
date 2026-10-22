@@ -1,6 +1,6 @@
 {
 	"name": "@ez-kit/data-grid-core",
-	"version": "0.8.0",
+	"version": "0.12.0",
 	"description": "Headless, UI-framework-agnostic data-grid core for @ez-kit/data-grid (built on TanStack Table core).",
 	"license": "MIT",
 	"repository": {
@@ -29,6 +29,11 @@
 			"types": "./dist/features/all.d.ts",
 			"import": "./dist/features/all.js",
 			"default": "./dist/features/all.js"
+		},
+		"./operators": {
+			"types": "./dist/operators/index.d.ts",
+			"import": "./dist/operators/index.js",
+			"default": "./dist/operators/index.js"
 		}
 	},
 	"main": "./dist/index.js",
@@ -54,7 +59,7 @@
 		{
 			"name": "features",
 			"path": "dist/features/index.js",
-			"limit": "5.5 KB",
+			"limit": "6.6 KB",
 			"ignore": [
 				"@tanstack/table-core"
 			]
@@ -62,7 +67,15 @@
 		{
 			"name": "features/all",
 			"path": "dist/features/all.js",
-			"limit": "5.5 KB",
+			"limit": "6 KB",
+			"ignore": [
+				"@tanstack/table-core"
+			]
+		},
+		{
+			"name": "operators",
+			"path": "dist/operators/index.js",
+			"limit": "1 KB",
 			"ignore": [
 				"@tanstack/table-core"
 			]
@@ -75,17 +88,14 @@
 		"@types/react": "^19.2.14",
 		"@types/react-dom": "^19.2.3",
 		"react": "^19.2.4",
-		"react-dom": "^19.2.4"
+		"react-dom": "^19.2.4",
+		"zod": "^4.3.6"
 	},
 	"peerDependencies": {
-		"react": ">=18.0.0",
-		"zod": ">=3"
+		"react": ">=18.0.0"
 	},
 	"peerDependenciesMeta": {
 		"react": {
-			"optional": true
-		},
-		"zod": {
 			"optional": true
 		}
 	}

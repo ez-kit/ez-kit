@@ -64,11 +64,26 @@ export function ariaExpandedAttrs(canExpand: boolean, isExpanded: boolean): { 'a
  * `aria-rowcount` / `aria-rowindex` exist for the case where it does not — paginated, virtualized
  * or infinitely scrolled — and ARIA is explicit that they are unnecessary when every row is
  * present. So a plain grid gets neither, and a reader counts the rows it can see.
+ *
+ * Read by mode first, never by `manualPagination` alone: the core sets that flag for every grid
+ * that does not page client-side — an unpaged one included — only to keep the rows from being
+ * sliced, so it means "server pages" only once pagination is known to be on.
  */
 export function hasPartialRowSet<TRow extends object = ErasedRow>(table: DataTable<GridFeatures, TRow>): boolean {
+	const infinite = table.grid.pagination.infinite
+	if (infinite !== undefined) return hasMoreToLoad(infinite)
+	if (!table.grid.pagination.enabled) return false
 	if (table.options.manualPagination === true) return true
 	const total = rowTotalOf(table)
 	return total !== undefined && total > table.getRowModel().rows.length
+}
+
+/**
+ * Whether an infinite grid can still load rows at either end — the feed is bidirectional, so
+ * an earlier page counts as much as a later one.
+ */
+function hasMoreToLoad(infinite: { hasNextPage: boolean; hasPreviousPage: boolean }): boolean {
+	return infinite.hasNextPage || infinite.hasPreviousPage
 }
 
 /**
@@ -84,8 +99,10 @@ export function rowTotalOf<TRow extends object = ErasedRow>(table: DataTable<Gri
 }
 
 /**
- * ARIA's own "the total is not known" sentinel, which is what an infinite grid honestly has:
- * `hasNextPage` says another page exists without saying how many rows are behind it.
+ * ARIA's own "the total is not known" sentinel, which is what an infinite grid honestly has
+ * while it can load more: `hasNextPage` / `hasPreviousPage` say another page exists without
+ * saying how many rows are behind it. Once neither holds, the grid has every row and writes no
+ * count at all.
  */
 export const UNKNOWN_ROW_COUNT = -1
 
@@ -107,8 +124,17 @@ export function resolveAriaRowCount<TRow extends object = ErasedRow>(table: Data
  * Whether the grid's row total means anything. This is the same test `pagination.tsx` makes
  * before it prints "of N": client-side pagination counts the model it holds, and a manual grid
  * knows only what the consumer told it.
+ *
+ * An infinite grid is read by its mode, not by `manualPagination`: the core sets that flag in
+ * infinite mode only to stop the rows being sliced to one page, so it says nothing about a
+ * server here. What it accumulated is the total exactly when nothing is left to load. An unpaged
+ * grid is read the same way, for the same reason: the flag is on there too, and the model it holds
+ * is the whole set.
  */
 export function hasTrustedRowTotal<TRow extends object = ErasedRow>(table: DataTable<GridFeatures, TRow>): boolean {
+	const infinite = table.grid.pagination.infinite
+	if (infinite !== undefined) return !hasMoreToLoad(infinite)
+	if (!table.grid.pagination.enabled) return true
 	return table.options.manualPagination !== true || table.options.rowCount !== undefined
 }
 
@@ -119,9 +145,14 @@ export function hasTrustedRowTotal<TRow extends object = ErasedRow>(table: DataT
  * The same expression covers both pagination modes: client-side, the model holds every row and
  * the page is a window onto it; manual, the model holds the server's slice for that page. In
  * both, the first row of page *n* is the `n · pageSize`-th row of the set. A grid with no
- * pagination slice starts at zero.
+ * pagination slice starts at zero, and so does an infinite one: its model is the whole
+ * accumulated set, so a `pageIndex` written into its state — the core starts it at 0, but
+ * `table.setPageIndex` can still move it — must not shift a single index.
  */
-export function resolvePageStartIndex(pagination: { pageIndex: number; pageSize: number } | undefined): number {
-	if (pagination === undefined) return 0
+export function resolvePageStartIndex(
+	pagination: { pageIndex: number; pageSize: number } | undefined,
+	isInfinite = false,
+): number {
+	if (pagination === undefined || isInfinite) return 0
 	return pagination.pageIndex * pagination.pageSize
 }

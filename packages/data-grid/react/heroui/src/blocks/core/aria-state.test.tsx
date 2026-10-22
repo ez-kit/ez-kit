@@ -74,4 +74,15 @@ describe('ARIA state survives React Aria', () => {
 			expect(container.querySelector('[data-slot="table"]')?.getAttribute('aria-rowcount')).toBe('13')
 		})
 	})
+
+	// The prebuilt grid binds the all-in feature set, `paginatedRowModel` included, and this grid
+	// never mentions `pagination`: every row is shown and none of them needs an index or a count.
+	it('shows every row of an unpaged grid and puts no aria-rowcount on it', async () => {
+		const { container } = renderGrid()
+
+		await waitFor(() => {
+			expect(container.querySelectorAll('[data-slot="tbody"] [data-slot="tr"]')).toHaveLength(12)
+		})
+		expect(container.querySelector('[data-slot="table"]')?.hasAttribute('aria-rowcount')).toBe(false)
+	})
 })

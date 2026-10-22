@@ -1,13 +1,17 @@
-import { FilterOperator, GridMenuIcon, localizeDatePresets, localizeOperators } from '@ez-kit/data-grid-core'
+import { GridMenuIcon } from '@ez-kit/data-grid-core'
 
+import { ItemsSourceSlot, useItemsLists } from '../items-source'
 import { GridMenuVariant, toMenuSections } from '../menu'
 
-import { activePresetId, presetValue, presetsForOperator } from './date-presets'
+import { activePresetId, presetValue } from './date-presets'
+import { FilterEditor, filterName, resolveFilter } from './filter-model'
 import { FilterTextInput } from './filter-text-input'
 import { flexRender } from './flex-render'
+import { configWithItems, fieldItemsProps } from './items-view'
 import { VisuallyHiddenLabel } from './visually-hidden'
 
 import type { CellTypeRegistry } from '../cell-types-context'
+import type { ItemsLists, ItemsMeta } from '../items-source'
 import type { GridMenuProps } from '../menu'
 import type {
 	DataTable,
@@ -19,24 +23,21 @@ import type {
 	MultiSelectFilterProps,
 	OperatorSelectProps,
 } from '../types'
-import type {
-	FormColumnMeta,
-	InputComponentProps,
-	BadgeItem,
-	BetweenValue,
-	DatePreset,
-	FieldState,
-	FilterItem,
-	SelectItem,
-	StructuredFilterValue,
-	GridMessages,
-} from '@ez-kit/data-grid-core'
-import type { Column, Header } from '@tanstack/table-core'
+import type { FilterModel, OperatorFilterModel } from './filter-model'
+import type { FilterTarget, FilterTargetMeta } from './filter-target'
+import type { InputComponentProps, BetweenValue, FieldState, GridMessages } from '@ez-kit/data-grid-core'
 import type { ComponentType, ReactNode } from 'react'
 
+const NO_META: ItemsMeta = {}
+
+/** `config` spread so an absent one stays an absent key. */
+function configProp(config: Record<string, unknown> | undefined): { config?: Record<string, unknown> } {
+	return config !== undefined ? { config } : {}
+}
+
 export type RenderFilterInputArgs<TRow extends object = ErasedRow> = {
-	header: Header<GridFeatures, TRow>
-	meta: FormColumnMeta | undefined
+	/** The column or field whose filter control this is. */
+	target: FilterTarget
 	Input: ComponentType<InputProps>
 	cellTypes: CellTypeRegistry
 	OperatorSelect: ComponentType<OperatorSelectProps>
@@ -62,90 +63,52 @@ export type RenderFilterInputArgs<TRow extends object = ErasedRow> = {
 	messages: GridMessages
 	/**
 	 * The live table instance, used only to wire "Enter applies the whole draft" on the
-	 * fallback text inputs under `draft`. Optional so existing callers/tests that
-	 * construct a minimal `header` stub need not also fabricate a table.
+	 * fallback text inputs under `draft`. Optional so callers and tests that construct a target by
+	 * hand need not also fabricate a table.
 	 */
 	table?: DataTable<GridFeatures, TRow>
+	/**
+	 * The target's filter model, when the caller already resolved it — the filter panel does, to
+	 * hand the same model to a consumer. Resolved here otherwise.
+	 */
+	model?: FilterModel
 }
 
 /**
- * Resolves the option list for multi-value (`in` / `notIn`) filters.
+ * Renders the input(s) for a filter target — a column or a field — from its resolved filter model.
+ * Two paths:
  *
- * Priority:
- * 1. `column.filtering.items` (explicit, wins over both other sources).
- * 2. `cell.config.items` for `select` / `badge` cell types.
- * 3. `column.getFacetedUniqueValues()` when faceted is enabled and no explicit items.
- *
- * Counts from `getFacetedUniqueValues()` are always merged onto whichever option set
- * is returned when faceted is enabled.
- */
-function resolveFilterItems<TRow extends object>(
-	column: Column<GridFeatures, TRow>,
-	meta: FormColumnMeta | undefined,
-): FilterItem[] {
-	const filteringMeta = meta?.filtering === false ? undefined : meta?.filtering
-	const facetedEnabled = filteringMeta?.faceted === true
-	const facetMap = facetedEnabled ? (column.getFacetedUniqueValues() as Map<unknown, number> | undefined) : undefined
-
-	const explicit = filteringMeta?.items
-	if (explicit && explicit.length > 0) {
-		return facetMap
-			? explicit.map((opt): FilterItem => {
-					const count = facetMap.get(opt.value)
-					return count !== undefined ? { ...opt, count } : opt
-				})
-			: explicit
-	}
-
-	if (meta?.cell?.type === 'select' || meta?.cell?.type === 'badge') {
-		const items = (meta.cell.config as { items?: (SelectItem | BadgeItem)[] } | undefined)?.items
-		if (items && items.length > 0) {
-			// `icon` rides along: one item states the glyph, and the cell and this list both draw it.
-			const asFilterItem = ({ value, label, icon }: SelectItem | BadgeItem): FilterItem =>
-				icon !== undefined ? { value, label, icon } : { value, label }
-			return facetMap
-				? items.map((item): FilterItem => {
-						const count = facetMap.get(item.value)
-						const base = asFilterItem(item)
-						return count !== undefined ? { ...base, count } : base
-					})
-				: items.map(asFilterItem)
-		}
-	}
-
-	if (facetMap) {
-		const out: FilterItem[] = []
-		facetMap.forEach((count, raw) => {
-			if (raw == null || raw === '') return
-			const value = String(raw)
-			out.push({ value, label: value, count })
-		})
-		// Stable order: highest count first, then label asc.
-		out.sort((a, b) => (b.count ?? 0) - (a.count ?? 0) || a.label.localeCompare(b.label))
-		return out
-	}
-
-	return []
-}
-
-/** A preset's label in the table's own wording — the dictionary keys the built-ins by id. */
-function localizePresetLabel(preset: DatePreset, messages: GridMessages): string {
-	const [localized] = localizeDatePresets([preset], messages.operators.presets)
-	return localized?.label ?? preset.label
-}
-
-/**
- * Renders the input(s) for a column filter. Handles three layers, in order:
- *
- * 1. Operator-aware path — when `meta.filtering.operators` is set, dispatches based
- *    on the current operator id (between → BetweenInput, no-input operators →
- *    only the OperatorSelect, otherwise the column / cell-type / fallback input).
- * 2. Plain path — when there are no operators, uses `column.filtering.component`,
+ * 1. Operator-aware path — when the target has operators, dispatches on the model's `editor`
+ *    (`none` → only the OperatorSelect, `between` → BetweenInput, `multiSelect` → the kit's
+ *    multi-select, otherwise the column / cell-type / fallback input).
+ * 2. Plain path — when there are no operators, uses `filtering.component`,
  *    then the cell-type registry, then a plain text Input.
+ *
+ * The model is the same one `<DataGrid.FilterPanel>` hands a consumer, which is what keeps a
+ * panel built on a kit's own filter controls in step with the header.
  */
-export function renderFilterInput<TRow extends object>({
-	header,
-	meta,
+export function renderFilterInput<TRow extends object>(args: RenderFilterInputArgs<TRow>): ReactNode {
+	// A component rather than a call, so the target's value lists are read by a hook of its own —
+	// and only once the control is actually mounted: a header render function that leaves `filter`
+	// out, or a panel chip that is closed, starts no hook.
+	// Row-erased, like every reader of the table below `<DataGrid>` — see `ErasedRow`.
+	return <FilterInput {...(args as unknown as RenderFilterInputArgs)} />
+}
+
+function FilterInput(args: RenderFilterInputArgs) {
+	// A target that already carries its lists — the filter panel reads them for every target at
+	// once — is not subscribed a second time: its meta is withheld from the read.
+	const subscribed = useItemsLists(
+		args.target.id,
+		args.target.lists ? NO_META : args.target.meta,
+		ItemsSourceSlot.Filtering,
+	)
+	const target = args.target.lists ? args.target : { ...args.target, lists: subscribed }
+	return renderFilterControl({ ...args, target })
+}
+
+function renderFilterControl<TRow extends object>({
+	target,
 	Input,
 	cellTypes,
 	OperatorSelect,
@@ -156,19 +119,16 @@ export function renderFilterInput<TRow extends object>({
 	debounce: tableDebounce,
 	messages,
 	table,
+	model: resolvedModel,
 }: RenderFilterInputArgs<TRow>): ReactNode {
-	const filteringMeta = meta?.filtering === false ? undefined : meta?.filtering
-	// Core settled *which* operators the column offers; the dictionary says what they are
-	// called. Applied here, where they reach the control, so the exported operator lists stay
-	// the plain data they are.
-	const resolvedOperators = filteringMeta?.operators
-		? localizeOperators(filteringMeta.operators, meta?.cell?.type, messages.operators)
-		: undefined
+	const { meta } = target
+	const filteringMeta = meta.filtering
+	const model = resolvedModel ?? resolveFilter(target, { messages, tableDebounce, cellTypes })
+	const lists = target.lists ?? { options: undefined, labels: undefined }
 	// A column's own `filtering.debounce` wins over the table's, the same way `editing.debounce`
 	// and `creating.debounce` do at their two levels. One dear endpoint can wait a second while
 	// the rest of the grid stays responsive.
-	const columnDebounce = filteringMeta?.debounce
-	const debounce = columnDebounce ?? tableDebounce
+	const { debounce } = model
 	// Enter in a fallback text input applies the whole pending draft — sorting, filters and
 	// search commit together in one request. `undefined` under non-deferred tables so Enter
 	// keeps whatever meaning it has today (e.g. form submission).
@@ -182,8 +142,8 @@ export function renderFilterInput<TRow extends object>({
 	/**
 	 * The control's accessible name, and the id a `<label htmlFor>` binds it by.
 	 *
-	 * One name for every branch below, taken from the same dictionary entry the placeholder uses:
-	 * "Filter <column>" is what the control is, whichever operator is current. Without it the
+	 * One name for every branch below, from `messages.filtering.placeholder`: "Filter <column>" is
+	 * what the control is, whichever operator is current. Without it the
 	 * filter inputs are anonymous — axe reports `label` (critical) on every filtered column, in
 	 * both kits.
 	 *
@@ -193,210 +153,40 @@ export function renderFilterInput<TRow extends object>({
 	 * goes through the kit's `core.Input`, which is `InputHTMLAttributes<HTMLInputElement>`, so
 	 * that one takes the attribute directly and needs no label element.
 	 */
-	const fieldId = `filter-${header.column.id}`
-	const fieldName = messages.filtering.placeholder({ columnId: header.column.id })
+	const fieldId = `filter-${target.id}`
+	const fieldName = filterName(target, messages)
+	// What an empty control shows: the target's `filtering.placeholder` hint, else the name. Never
+	// the name itself — an author's "10 digits" is not what a screen reader should call the field.
+	const fieldPlaceholder = model.placeholder
 	const fieldLabel = <VisuallyHiddenLabel htmlFor={fieldId}>{fieldName}</VisuallyHiddenLabel>
 
 	// ── operator-aware path ────────────────────────────────────────────────
-	if (filteringMeta && resolvedOperators && resolvedOperators.length > 0) {
-		const sv = header.column.getFilterValue() as StructuredFilterValue | undefined
-		const currentOperatorId =
-			sv !== undefined ? sv.operator : (filteringMeta.defaultOperator ?? resolvedOperators.at(0)?.id ?? '')
-		const currentOperator = resolvedOperators.find((op) => op.id === currentOperatorId)
-		const inputValue = sv?.value
-
-		const onOperatorChange = (newOpId: string): void => {
-			const newOp = resolvedOperators.find((op) => op.id === newOpId)
-			let newValue: unknown
-			if (newOp?.requiresInput === false) {
-				newValue = undefined
-			} else if (newOpId === 'between') {
-				newValue = {}
-			} else if (currentOperatorId === 'between') {
-				newValue = undefined
-			} else {
-				newValue = inputValue
-			}
-			header.column.setFilterValue({ operator: newOpId, value: newValue })
-		}
-
-		const onValueChange = (v: unknown): void => {
-			header.column.setFilterValue({ operator: currentOperatorId, value: v })
-		}
-
-		const operatorSelect = (
-			<OperatorSelect
-				operators={resolvedOperators}
-				currentOperatorId={currentOperatorId}
-				onChange={onOperatorChange}
-			/>
-		)
-
-		if (currentOperator?.requiresInput === false) {
-			return operatorSelect
-		}
-
-		// The presets sit beside whichever control the current operator renders, not inside it:
-		// every branch below that takes a value gets them. `in` / `notIn` is the exception — a
-		// multi-select takes a set of column values, which no date preset names.
-		// `between` draws a range picker and the rest draw a single date input, and both take a
-		// preset. The menu offers only the kind the operator can accept.
-		const offeredPresets = filteringMeta.presets ? presetsForOperator(filteringMeta.presets, currentOperatorId) : []
-		const activeId = activePresetId(offeredPresets, inputValue)
-		const activePreset = offeredPresets.find((preset) => preset.id === activeId)
-		const presetMenu =
-			offeredPresets.length > 0 ? (
-				<Menu
-					variant={GridMenuVariant.Filter}
-					triggerIcon={GridMenuIcon.Calendar}
-					{...(activePreset ? { triggerLabel: localizePresetLabel(activePreset, messages) } : {})}
-					aria-label={messages.filtering.presets}
-					sections={toMenuSections([
-						{
-							id: 'date-presets',
-							items: offeredPresets.map((preset) => ({
-								id: preset.id,
-								label: localizePresetLabel(preset, messages),
-								onAction: () => {
-									header.column.setFilterValue({
-										operator: currentOperatorId,
-										value: presetValue(preset),
-									})
-								},
-							})),
-						},
-					])}
-				/>
-			) : null
-
-		// Shown only with something to clear. A text or number filter can be emptied by hand, but a
-		// date picker and a multi-select cannot — the filter could be changed and never taken off,
-		// which on a narrow range leaves the grid empty with no way out of it.
-		const clearButton =
-			inputValue === undefined || inputValue === '' ? null : (
-				<ClearFilterButton
-					disabled={false}
-					onClick={() => {
-						header.column.setFilterValue(undefined)
-					}}
-					aria-label={messages.filtering.clear}
-				/>
-			)
-
-		if (currentOperatorId === FilterOperator.Between) {
-			const betweenCfg = filteringMeta.betweenOperator
-			const betweenType = meta?.cell?.type === 'date' ? 'date' : 'number'
-			return (
-				<>
-					<div data-slot='filter-control'>
-						<BetweenInput
-							value={(inputValue as BetweenValue | undefined) ?? {}}
-							onChange={onValueChange}
-							type={betweenType}
-							{...(betweenCfg?.slider === true ? { slider: true } : {})}
-							{...(betweenCfg?.min !== undefined ? { min: betweenCfg.min } : {})}
-							{...(betweenCfg?.max !== undefined ? { max: betweenCfg.max } : {})}
-						/>
-						{presetMenu}
-						{clearButton}
-					</div>
-					{operatorSelect}
-				</>
-			)
-		}
-
-		if ((currentOperatorId === 'in' || currentOperatorId === 'notIn') && MultiSelectFilter) {
-			const items = resolveFilterItems(header.column, meta)
-			const selectedValues = Array.isArray(inputValue) ? (inputValue as string[]) : []
-			return (
-				<>
-					<MultiSelectFilter
-						items={items}
-						selectedValues={selectedValues}
-						onChange={onValueChange}
-						placeholder={messages.filtering.placeholder({ columnId: header.column.id })}
-					/>
-					{operatorSelect}
-				</>
-			)
-		}
-
-		// column-level filtering.component
-		const columnFilterInput = filteringMeta.component as ((props: InputComponentProps) => ReactNode) | undefined
-		if (columnFilterInput) {
-			return (
-				<>
-					<div data-slot='filter-control'>
-						{flexRender(columnFilterInput, {
-							value: inputValue,
-							onChange: onValueChange,
-							...(meta?.cell?.config !== undefined ? { config: meta.cell.config } : {}),
-						})}
-						{presetMenu}
-						{clearButton}
-					</div>
-					{operatorSelect}
-				</>
-			)
-		}
-
-		// registry by cell type
-		const cellTypeId = meta?.cell?.type
-		if (cellTypeId) {
-			const def = cellTypes[cellTypeId]
-			const comp = def?.filtering ?? def?.editing
-			if (comp) {
-				const field: FieldState = {
-					id: fieldId,
-					value: inputValue,
-					onChange: onValueChange,
-					onBlur: () => {},
-					...(meta.cell?.config !== undefined ? { config: meta.cell.config } : {}),
-					error: undefined,
-					errors: [],
-					isValidating: false,
-				}
-				return (
-					<>
-						<div data-slot='filter-control'>
-							{fieldLabel}
-							{/* Mounted, not called: invoking a renderer as `Comp(props)` smuggles its hooks into
-							    this header cell's fiber, and swapping one renderer for another — which is what
-							    changing the operator does — reorders them. */}
-							{flexRender(comp, field)}
-							{presetMenu}
-							{clearButton}
-						</div>
-						{operatorSelect}
-					</>
-				)
-			}
-		}
-
-		return (
-			<>
-				<div data-slot='filter-control'>
-					<FilterTextInput
-						Input={Input}
-						placeholder={fieldName}
-						aria-label={fieldName}
-						value={(inputValue ?? '') as string}
-						onCommit={onValueChange}
-						debounce={debounce}
-						{...(onEnterApply ? { onEnterApply } : {})}
-					/>
-					{presetMenu}
-					{clearButton}
-				</div>
-				{operatorSelect}
-			</>
-		)
+	if (filteringMeta && model.hasOperators) {
+		return renderOperatorFilter({
+			model,
+			lists,
+			meta,
+			filteringMeta,
+			Input,
+			cellTypes,
+			OperatorSelect,
+			Menu,
+			ClearFilterButton,
+			BetweenInput,
+			MultiSelectFilter,
+			messages,
+			fieldId,
+			fieldName,
+			fieldPlaceholder,
+			fieldLabel,
+			onEnterApply,
+		})
 	}
 
 	// ── plain filter path (no operators) ──────────────────────────────────
-	const filterValue = header.column.getFilterValue()
+	const filterValue = target.getValue()
 	const onChange = (v: unknown) => {
-		header.column.setFilterValue(v)
+		target.setValue(v)
 	}
 
 	if (filteringMeta !== undefined) {
@@ -405,11 +195,12 @@ export function renderFilterInput<TRow extends object>({
 			return flexRender(comp, {
 				value: filterValue,
 				onChange,
-				...(meta?.cell?.config !== undefined ? { config: meta.cell.config } : {}),
+				...configProp(configWithItems(meta, lists.options)),
+				placeholder: fieldPlaceholder,
 			})
 	}
 
-	const plainCellTypeId = meta?.cell?.type
+	const plainCellTypeId = meta.cell?.type
 	if (plainCellTypeId) {
 		const def = cellTypes[plainCellTypeId]
 		const comp = def?.filtering ?? def?.editing
@@ -419,7 +210,8 @@ export function renderFilterInput<TRow extends object>({
 				value: filterValue,
 				onChange,
 				onBlur: () => {},
-				...(meta.cell?.config !== undefined ? { config: meta.cell.config } : {}),
+				...fieldItemsProps(meta, lists.options, lists.labels, filterValue),
+				placeholder: fieldPlaceholder,
 				error: undefined,
 				errors: [],
 				isValidating: false,
@@ -436,12 +228,230 @@ export function renderFilterInput<TRow extends object>({
 	return (
 		<FilterTextInput
 			Input={Input}
-			placeholder={fieldName}
+			placeholder={fieldPlaceholder}
 			aria-label={fieldName}
 			value={(filterValue ?? '') as string}
 			onCommit={onChange}
 			debounce={debounce}
 			{...(onEnterApply ? { onEnterApply } : {})}
 		/>
+	)
+}
+
+type OperatorFilterArgs = Pick<
+	RenderFilterInputArgs,
+	'Input' | 'cellTypes' | 'OperatorSelect' | 'Menu' | 'ClearFilterButton' | 'BetweenInput' | 'messages'
+> & {
+	MultiSelectFilter: ComponentType<MultiSelectFilterProps> | undefined
+	model: OperatorFilterModel
+	lists: ItemsLists
+	meta: FilterTargetMeta
+	filteringMeta: NonNullable<FilterTargetMeta['filtering']>
+	fieldId: string
+	fieldName: string
+	fieldPlaceholder: string
+	fieldLabel: ReactNode
+	onEnterApply: (() => void) | undefined
+}
+
+/** The operator-aware branch of {@link renderFilterInput}, dispatched on the model's `editor`. */
+function renderOperatorFilter({
+	model,
+	lists,
+	meta,
+	filteringMeta,
+	Input,
+	cellTypes,
+	OperatorSelect,
+	Menu,
+	ClearFilterButton,
+	BetweenInput,
+	MultiSelectFilter,
+	messages,
+	fieldId,
+	fieldName,
+	fieldPlaceholder,
+	fieldLabel,
+	onEnterApply,
+}: OperatorFilterArgs): ReactNode {
+	const inputValue = model.value?.value
+	const currentOperatorId = model.operator
+
+	const onValueChange = (v: unknown): void => {
+		model.setValue({ operator: currentOperatorId, value: v })
+	}
+
+	// First in the filter's row, before whatever control the operator calls for — never a row of its
+	// own under it, which cost every operator column a line of height and left the columns without
+	// operators misaligned beside them. The box exists for the kits' stylesheets: it is what keeps
+	// the control at its own width while the value control beside it takes the rest.
+	const operatorSelect = (
+		<div data-slot='filter-operator'>
+			<OperatorSelect
+				operators={model.operators}
+				currentOperatorId={currentOperatorId}
+				onChange={(nextOperatorId) => {
+					model.setValue(model.nextValueForOperator(nextOperatorId))
+				}}
+			/>
+		</div>
+	)
+
+	// An operator that takes no value keeps the row's height: its label stands where the value
+	// control would, so switching to "is empty" and back does not make the header jump.
+	if (model.editor === FilterEditor.None) {
+		const label = model.operators.find((op) => op.id === currentOperatorId)?.label
+		return (
+			<div data-slot='filter-control'>
+				{operatorSelect}
+				<span data-slot='filter-operator-label'>{label}</span>
+			</div>
+		)
+	}
+
+	// The presets sit beside whichever control the current operator renders, not inside it:
+	// every branch below that takes a value gets them. The model already left out the ones the
+	// operator cannot take — a range for a one-date operator, anything for a multi-select.
+	const activeId = activePresetId(model.presets, inputValue)
+	const activePreset = model.presets.find((preset) => preset.id === activeId)
+	const presetMenu =
+		model.presets.length > 0 ? (
+			<Menu
+				variant={GridMenuVariant.Filter}
+				triggerIcon={GridMenuIcon.Calendar}
+				{...(activePreset ? { triggerLabel: activePreset.label } : {})}
+				aria-label={messages.filtering.presetMenu}
+				sections={toMenuSections([
+					{
+						id: 'date-presets',
+						items: model.presets.map((preset) => ({
+							id: preset.id,
+							label: preset.label,
+							onAction: () => {
+								model.setValue({ operator: currentOperatorId, value: presetValue(preset) })
+							},
+						})),
+					},
+				])}
+			/>
+		) : null
+
+	// Shown only with something to clear. A text or number filter can be emptied by hand, but a
+	// date picker and a multi-select cannot — the filter could be changed and never taken off,
+	// which on a narrow range leaves the grid empty with no way out of it.
+	const clearButton =
+		inputValue === undefined || inputValue === '' ? null : (
+			<ClearFilterButton
+				disabled={false}
+				onClick={() => {
+					model.setValue(undefined)
+				}}
+				aria-label={messages.filtering.clear}
+			/>
+		)
+
+	if (model.editor === FilterEditor.Between) {
+		const betweenCfg = model.between
+		const betweenType = meta.cell?.type === 'date' ? 'date' : 'number'
+		return (
+			<div data-slot='filter-control'>
+				{operatorSelect}
+				<BetweenInput
+					value={(inputValue as BetweenValue | undefined) ?? {}}
+					onChange={onValueChange}
+					type={betweenType}
+					{...(betweenCfg?.slider === true ? { slider: true } : {})}
+					{...(betweenCfg?.min !== undefined ? { min: betweenCfg.min } : {})}
+					{...(betweenCfg?.max !== undefined ? { max: betweenCfg.max } : {})}
+				/>
+				{presetMenu}
+				{clearButton}
+			</div>
+		)
+	}
+
+	if (model.editor === FilterEditor.MultiSelect && MultiSelectFilter) {
+		const selectedValues = Array.isArray(inputValue) ? (inputValue as string[]) : []
+		return (
+			<div data-slot='filter-control'>
+				{operatorSelect}
+				<MultiSelectFilter
+					items={model.items}
+					selectedValues={selectedValues}
+					onChange={onValueChange}
+					label={fieldName}
+					placeholder={fieldPlaceholder}
+					{...(model.itemsLoading ? { itemsLoading: true } : {})}
+					{...(model.itemsError !== undefined ? { itemsError: model.itemsError } : {})}
+				/>
+			</div>
+		)
+	}
+
+	// column-level filtering.component
+	const columnFilterInput = filteringMeta.component as ((props: InputComponentProps) => ReactNode) | undefined
+	if (columnFilterInput) {
+		return (
+			<div data-slot='filter-control'>
+				{operatorSelect}
+				{flexRender(columnFilterInput, {
+					value: inputValue,
+					onChange: onValueChange,
+					...configProp(configWithItems(meta, lists.options)),
+					placeholder: fieldPlaceholder,
+				})}
+				{presetMenu}
+				{clearButton}
+			</div>
+		)
+	}
+
+	// registry by cell type
+	const cellTypeId = meta.cell?.type
+	if (cellTypeId) {
+		const def = cellTypes[cellTypeId]
+		const comp = def?.filtering ?? def?.editing
+		if (comp) {
+			const field: FieldState = {
+				id: fieldId,
+				value: inputValue,
+				onChange: onValueChange,
+				onBlur: () => {},
+				...fieldItemsProps(meta, lists.options, lists.labels, inputValue),
+				placeholder: fieldPlaceholder,
+				error: undefined,
+				errors: [],
+				isValidating: false,
+			}
+			return (
+				<div data-slot='filter-control'>
+					{fieldLabel}
+					{operatorSelect}
+					{/* Mounted, not called: invoking a renderer as `Comp(props)` smuggles its hooks into
+						    this header cell's fiber, and swapping one renderer for another — which is what
+						    changing the operator does — reorders them. */}
+					{flexRender(comp, field)}
+					{presetMenu}
+					{clearButton}
+				</div>
+			)
+		}
+	}
+
+	return (
+		<div data-slot='filter-control'>
+			{operatorSelect}
+			<FilterTextInput
+				Input={Input}
+				placeholder={fieldPlaceholder}
+				aria-label={fieldName}
+				value={(inputValue ?? '') as string}
+				onCommit={onValueChange}
+				debounce={model.debounce}
+				{...(onEnterApply ? { onEnterApply } : {})}
+			/>
+			{presetMenu}
+			{clearButton}
+		</div>
 	)
 }

@@ -1,4 +1,5 @@
-import { render } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createDataGrid } from '../create-data-grid'
@@ -12,14 +13,12 @@ import type { VisibilityColumnItem } from '../types'
 import type { DndAdapter, DragSpec, SortableItemHandle } from './dnd'
 
 /**
- * The column panel's two affordances, switched on **independently**.
+ * The column panel's affordances, chosen by `ordering.column.visibilityMenu: boolean | ReorderMode`.
  *
  * The panel is the one surface of either axis whose controls a call site does not compose: a kit's
  * `VisibilityMenu` renders the grip and the move pair unconditionally and each one self-hides, so
  * "which of the two does this panel offer" is a question only the config can answer — unlike a row
- * handle or a header handle, which are there iff someone wrote them into the JSX. One flag used to
- * answer it for both, which is how a grid with a drag adapter ended up offering a grip *and* a pair
- * of arrows doing the same job.
+ * handle or a header handle, which are there iff someone wrote them into the JSX.
  *
  * Every case here reads the two through the signals a kit reads: `col.ordering` on the trigger's
  * render args is the move pair, and a registered panel spec is the drag.
@@ -123,35 +122,36 @@ describe('`visibilityMenu: true`', () => {
 	})
 })
 
-describe('the two switches, written out', () => {
-	it('`drag: false` leaves the arrows as the whole affordance', () => {
-		const { items, draggedIds } = renderPanel({
-			withAdapter: true,
-			ordering: { column: { visibilityMenu: { drag: false } } },
-		})
+describe('a mode, written out', () => {
+	it("`'step'` leaves the arrows as the whole affordance", () => {
+		const { items, draggedIds } = renderPanel({ withAdapter: true, ordering: { column: { visibilityMenu: 'step' } } })
 
 		expect(draggedIds).toEqual([])
 		expect(hasMoveControls(items)).toBe(true)
 	})
 
-	it('`moveControls: true` asks for both, which is a thing an author may want', () => {
-		const { items, draggedIds } = renderPanel({
-			withAdapter: true,
-			ordering: { column: { visibilityMenu: { moveControls: true } } },
-		})
+	it("`'both'` asks for the grip and the arrows together", () => {
+		const { items, draggedIds } = renderPanel({ withAdapter: true, ordering: { column: { visibilityMenu: 'both' } } })
 
 		expect(draggedIds).toEqual(['name', 'age'])
 		expect(hasMoveControls(items)).toBe(true)
 	})
 
-	it('`moveControls: false` is what `true` already resolves to under an adapter', () => {
-		const { items, draggedIds } = renderPanel({
-			withAdapter: true,
-			ordering: { column: { visibilityMenu: { moveControls: false } } },
-		})
+	it("`'drag'` is what `true` already resolves to under an adapter", () => {
+		const { items, draggedIds } = renderPanel({ withAdapter: true, ordering: { column: { visibilityMenu: 'drag' } } })
 
 		expect(draggedIds).toEqual(['name', 'age'])
 		expect(hasMoveControls(items)).toBe(false)
+	})
+})
+
+describe('the default', () => {
+	it('keeps the Columns toggle a visibility list when `visibilityMenu` is not written', () => {
+		const { items, draggedIds } = renderPanel({ withAdapter: true, ordering: { column: {} } })
+
+		expect(items.map((item) => item.id)).toEqual(['name'])
+		expect(hasMoveControls(items)).toBe(false)
+		expect(draggedIds).toEqual([])
 	})
 })
 
@@ -161,8 +161,8 @@ describe('the wide list', () => {
 		// column could not be read as the order — and that is one question, not two.
 		for (const ordering of [
 			{ column: { visibilityMenu: true } },
-			{ column: { visibilityMenu: { drag: false } } },
-			{ column: { visibilityMenu: { moveControls: false } } },
+			{ column: { visibilityMenu: 'step' } },
+			{ column: { visibilityMenu: 'both' } },
 		]) {
 			const { items } = renderPanel({ withAdapter: true, ordering })
 			expect(items.map((item) => item.id)).toEqual(['name', 'age'])
@@ -192,27 +192,58 @@ describe('a panel asked for something it cannot offer', () => {
 		warn.mockRestore()
 	})
 
-	it('falls back to the arrows and says so when `drag: true` has no adapter', () => {
-		const { items, draggedIds } = renderPanel({
-			withAdapter: false,
-			ordering: { column: { visibilityMenu: { drag: true } } },
-		})
+	it.each(['drag', 'both'])("falls back to the arrows and says so when `'%s'` has no adapter", (mode) => {
+		const { items, draggedIds } = renderPanel({ withAdapter: false, ordering: { column: { visibilityMenu: mode } } })
 
 		expect(draggedIds).toEqual([])
 		expect(hasMoveControls(items)).toBe(true)
-		expect(warn).toHaveBeenCalledWith(expect.stringContaining('`ordering.column.visibilityMenu.drag`'))
+		expect(warn).toHaveBeenCalledTimes(1)
+		expect(warn).toHaveBeenCalledWith(expect.stringContaining('`ordering.column.visibilityMenu`'))
 	})
 
-	it('warns rather than going quiet when neither affordance resolves on', () => {
-		// A wide panel offering nothing at all — the one combination that is certainly a mistake.
-		const { items, draggedIds } = renderPanel({
-			withAdapter: false,
-			ordering: { column: { visibilityMenu: { moveControls: false } } },
-		})
+	it("says nothing for `'step'` or `true` without an adapter", () => {
+		renderPanel({ withAdapter: false, ordering: { column: { visibilityMenu: 'step' } } })
+		renderPanel({ withAdapter: false, ordering: { column: { visibilityMenu: true } } })
 
-		expect(draggedIds).toEqual([])
-		expect(hasMoveControls(items)).toBe(false)
-		expect(warn).toHaveBeenCalledWith(expect.stringContaining('offers neither'))
+		expect(warn).not.toHaveBeenCalled()
+	})
+
+	it('names the header option once, however many header cells ask', () => {
+		renderPanel({ withAdapter: false, ordering: { column: { header: 'drag' } } })
+
+		expect(warn).toHaveBeenCalledTimes(1)
+		expect(warn).toHaveBeenCalledWith(expect.stringContaining('`ordering.column.header`'))
+	})
+
+	it('does not repeat on a re-render driven by another slice', async () => {
+		const { DataGrid: BoundDataGrid } = createDataGrid({ components: testComponents })
+		render(
+			<BoundDataGrid
+				columns={COLUMNS}
+				data={TEST_ROWS as unknown as Row[]}
+				features={TEST_FEATURES}
+				ordering={{ column: { visibilityMenu: 'both' } }}
+				visibility
+			>
+				<DataGrid.VisibilityTrigger>
+					{({ columns }) =>
+						columns.map((col) => (
+							<button
+								key={col.id}
+								type='button'
+								onClick={col.onToggle}
+							>
+								{col.label}
+							</button>
+						))
+					}
+				</DataGrid.VisibilityTrigger>
+			</BoundDataGrid>,
+		)
+
+		await userEvent.click(screen.getByRole('button', { name: 'Name' }))
+
+		expect(warn).toHaveBeenCalledTimes(1)
 	})
 
 	it('says nothing when the panel offers something', () => {

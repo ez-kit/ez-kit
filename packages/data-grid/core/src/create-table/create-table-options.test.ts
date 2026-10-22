@@ -35,6 +35,7 @@ import {
 	rowOrderingFeature,
 } from '../features/entry'
 import { RowActionsPlacement } from '../features/row-actions'
+import { defaultOperators } from '../operators/entry'
 
 import { createTable } from './create-table'
 import { createTableOptions } from './create-table-options'
@@ -313,6 +314,26 @@ describe('createTableOptions', () => {
 			expect(warnings()[0]).not.toContain('`columnFacetingFeature`')
 		})
 
+		it('warns once that facets count only the loaded rows under server filtering', () => {
+			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+			createTableOptions({ features: withFaceting, data: rows, columns, filtering: { manual: true, faceted: true } })
+			createTableOptions({ features: withFaceting, data: rows, columns, filtering: { manual: true, faceted: true } })
+
+			const facetWarnings = warnings().filter((message) => message.includes('`filtering.manual'))
+			expect(facetWarnings).toHaveLength(1)
+			expect(facetWarnings[0]).toContain('`filtering.faceted`')
+			expect(facetWarnings[0]).toContain('`useItems`')
+		})
+
+		it('does not warn about facets on a client-filtered grid', () => {
+			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+			createTableOptions({ features: withFaceting, data: rows, columns, filtering: { faceted: true } })
+
+			expect(warnings().filter((message) => message.includes('`filtering.manual'))).toHaveLength(0)
+		})
+
 		it('stays quiet when every faceted member is registered', () => {
 			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
 
@@ -344,7 +365,13 @@ describe('createTableOptions', () => {
 			// resolved and the slot is genuinely not needed. A guard that fired here would be
 			// telling the consumer to register something their table never reads.
 			const noFns = tableFeatures({ columnFilteringFeature, filteredRowModel: createFilteredRowModel() })
-			createTableOptions({ features: noFns, data: rows, columns, filtering: { operators: true } })
+			createTableOptions({
+				features: noFns,
+				operators: defaultOperators,
+				data: rows,
+				columns,
+				filtering: { operators: true },
+			})
 
 			expect(warnings()).toHaveLength(0)
 		})
@@ -648,10 +675,9 @@ describe('createTableOptions', () => {
 				rowPaginationFeature,
 				sortedRowModel: createSortedRowModel(),
 				sortFns,
-				// No `paginatedRowModel`: infinite mode shows every accumulated row, and
-				// registering the slice-to-one-page model beside it trips a different,
-				// pre-existing warning. Leaving it out is both correct for the mode and what lets
-				// this case assert that **nothing at all** was logged.
+				// Registered beside infinite mode on purpose: the mode turns slicing off with
+				// `manualPagination`, so the model is legal here and must not be warned about.
+				paginatedRowModel: createPaginatedRowModel(),
 				creatingFeature,
 				editingFeature,
 				deletingFeature,

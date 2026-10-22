@@ -7,7 +7,42 @@ Guidance for coding agents working in this repository. This file is the single s
 
 ### No styles in `packages/data-grid/react/react`
 
-The shared React package (`data-grid/react/react`) must contain **zero visual styling** — no inline `style={{}}`, no Tailwind/className-based styles. All visual styling belongs exclusively in the UI kit packages (`shadcn`, `heroui`). The react package may add semantic `data-*` attributes to elements so that UI kit CSS can target them, and may pass through a class it was **given** — `column.headerClassName` / `cellClassName`, `rowProps().className`, `layout.classNames` — without authoring one. The test is authorship, not the attribute: a literal class name written in this package is the violation.
+The shared React package (`data-grid/react/react`) must contain **zero visual styling** — no inline `style={{}}`, no Tailwind/className-based styles. All visual styling belongs exclusively in the UI kit packages (`shadcn`, `heroui`). The react package may add semantic `data-*` attributes to elements so that UI kit CSS can target them, and may pass through a class it was **given** — `column.headerClassName` / `cellClassName`, `rowProps().className`, `layout.classNames` — without authoring one. The test is authorship, not the attribute: a literal class name written in this package is the violation. The one exception is `ez-data-grid`, which the grid root always carries: it is the scope every rule in `@ez-kit/data-grid-react/styles.css` sits under, so the structural stylesheet reaches nothing outside a grid. It marks a boundary and styles nothing itself; do not add a second class beside it.
+
+### No `React.memo` in the data grid
+
+The three data-grid React packages and the data-grid docs examples use **no `memo` / `React.memo`**,
+and adding one to a row, a cell or any other component is rejected. Re-renders are isolated by
+three mechanisms instead:
+
+- **selector subscriptions**: a component re-renders because the slice it selected changed —
+  `useDataGridState`, `useDataGridSelector` and `useGridContext`, all on `@tanstack/react-store`'s
+  `useSelector`, each taking `{ compare }` (`shallow` for a derived object);
+- **stable values**: every value the grid publishes or passes on keeps its identity while its
+  inputs are unchanged, with `useMemo` / `useCallback` on **values** as the tool;
+- **composition**: a layout passed as `children`, or an element the grid builds once, is not
+  re-rendered by its host.
+
+The reason is the defect this replaced. `DataGridControlled` merged the cell-type registry inline,
+so every render of the component hosting `<DataGrid>` handed every cell a new registry and
+re-rendered all of them. A memo boundary around a cell would have hidden that rather than fixed it,
+while costing a props comparison per row and per cell on every render. The two `memo`s
+`items-source/host.tsx` used to carry are now element identity: `DataGridControlled` builds
+`<ItemsSourceHost />` once, and `ActiveRunners` builds its runner elements once per active set.
+`data-grid/host-rerender-isolation.test.tsx` holds the guarantee. It asserts that a host
+re-render reaches no cell, header cell or row, and that a live value in `context` reaches only
+the cells that select it. Its header comment records which providers rebuild their value per
+render on purpose (`VirtualProvider`, whose rebuild **is** the virtualizer's scroll notification)
+and why.
+
+ESLint enforces it (`eslint.config.mjs`): `no-restricted-syntax` for `import { memo } from 'react'`
+and `no-restricted-properties` for `React.memo`. The import half is a `no-restricted-syntax`
+selector, not `no-restricted-imports`, because the latter reports every `import * as React` once
+`importNames` is set. Since a later block's `no-restricted-syntax` replaces an earlier one's, the
+GridMessages block spreads `NO_MEMO_IMPORT_SYNTAX` into its own list. Keep it there. Two tests
+disable the rule on one import line each, because they hold the grid to **accepting** a
+consumer's memo-wrapped renderer. That is the only legitimate use: a consumer may pass one, and
+the package must not write one.
 
 ### Vendored shadcn primitives are immutable
 
@@ -183,11 +218,36 @@ and move on.
   `'Pin Left'` / `'Pin Right'` and both kits' glyphs stay `ArrowLeft` / `ArrowRight`, by the
   `moveStart: 'Move left'` rule already established — the key names the axis, the wording names
   what an LTR reader sees.
-- **One filter-operator vocabulary across cell types.** `FilterOperator` is a single closed set:
-  the same id means the same comparison whatever the column's cell type is, and only the `label`
-  changes (`greaterThan` reads "Greater than" on a number column and "After" on a date one).
-  Adding a type-specific spelling of an existing comparison — a second `eq` beside `equals`, an
-  `after` beside `greaterThan` — is the defect this replaced, not an improvement on it.
+- **One filter-operator vocabulary across cell types — a property of the ready-made set, not of
+  the package.** Operators are bundle config, by cell type: `createDataGrid({ operators: { byType,
+defaultByType } })`, overridable per type in any options layer, with the ready-made
+  `defaultOperators` on `@ez-kit/data-grid-core/operators` and bound only in each kit's
+  `data-grid.tsx`, exactly as `allDataGridFeatures` is. Within that set `FilterOperator` is a single
+  closed vocabulary: the same id means the same comparison whatever the column's cell type is, and
+  only the `label` changes (`greaterThan` reads "Greater than" on a number column and "After" on a
+  date one). Adding a type-specific spelling of an existing comparison to it — a second `eq` beside
+  `equals`, an `after` beside `greaterThan` — is the defect this replaced, not an improvement on it.
+  A project's own set may name its operators anything; the grid reads no behaviour off an id, using
+  one only to find the definition a filter value names. There is no table-level
+  operator registry and no `messages.operators`: a label is the definition's `label`, an icon its
+  `icon`, and a translated grid passes a translated set. Two measured facts hold the subpath
+  together and neither should be re-argued: the definitions are object literals of **literals**,
+  because esbuild keeps an object that reads a property (`FilterOperator.Contains`,
+  `OperatorInput.Single`) and everything it names, so `{ FilterOperator }` alone carried every
+  comparison; and the lists name their members one by one, because a spread is kept the same way.
+  `apps/docs/test/tree-shaking.test.ts` pins both, and that `createTable` never reaches the entry.
+- **The grid reads an operator's behaviour from its `input`, never from its id.** `input` —
+  `none | single | range | list`, the `OperatorInput` closed set — is required on every
+  `FilterOperatorDef`, which is a union over it, and it alone decides the editor, what switching
+  operators keeps (the same `input` keeps the value, another drops it, entering a range starts
+  `{}`), which date presets apply, whether an empty value is a filter, and whether the
+  active-filter chip shows a value at all (it shows other values by their shape).
+  The one lookup is `inputOf` in `data-grid/operator-input.ts`; core's dispatcher never calls a
+  non-`none` `filterFn` with an empty value. An `=== 'between'` or a set of ids in a package is the
+  regression, whatever it is guarding: an author's `notBetween` with `input: 'range'` must get the
+  range control because of its `input`. `filterFn` is declared as a **method** so that a
+  `FilterOperatorDef<number>` assigns into `FilterOperatorDef[]` without a cast; do not "fix" it
+  into a property.
 - **Renderer slots are named for the feature they serve, at every level.** A cell type registers
   `view` / `editing` / `creating` / `filtering`; a column writes `cell.component` /
   `editing.component` / `creating.component` / `filtering.component`; the DI contract groups
@@ -333,20 +393,28 @@ and move on.
   in a kit or in an application, is the intended way to get a new arrangement; adding an option is
   not.
 
-  **A layout places `ActionBar` itself, and `selection.bar.variant` does not.**
-  A `GridShell` wrapper briefly did — it read the variant and put the bar above the grid for
-  `inline`, below it for `floating`, and all four presets wrapped themselves in it. That is a
-  config value deciding where an element renders, i.e. the ninth placement option, arrived at by
-  accident while removing the other eight; it never shipped. All four presets now write the bar
-  **last**, which is right for the default `floating`: shadcn positions that bar out of a
-  zero-height sticky anchor that has to follow the rows it overlays, heroui portals its own to a
-  fixed overlay where tree position changes nothing, and in both kits coming last keeps it out of
-  the tab order until there is something to act on. The variant survives as what the bar _looks
-  like_ — an in-flow strip against an overlay, stamped `data-variant` and branched on by both
-  kits — so it is a behaviour option and stays in the config. **The accepted cost is that
-  `selection: { bar: 'inline' }` on a preset renders that in-flow strip below the table**; an
-  `inline` grid writes a layout of its own with the bar first, and `presets.test.tsx` covers
-  both halves so the split is pinned rather than implied. Moving the variant onto the
+  **A preset places `ActionBar` by its variant; a layout of one's own places it where it writes
+  it.** The rule the placement options broke is narrower than "a preset never reads config": what
+  is forbidden is an option that exists **only** to say where something goes. A preset may read a
+  mode the config already carries for behaviour, to put an enabled feature where that kind of
+  element belongs — `useToolbarControls` already reads `creating.mode` to decide whether
+  `CreateTrigger` mounts at all. So all four presets take the bar from `useActionBarSlots`
+  (`layouts/action-bar-slots.tsx`): `floating`, the default, goes **last**, because both kits
+  position that bar out of a zero-height sticky anchor that has to follow the rows it overlays, and
+  coming last keeps it out of the tab order until there is something to act on; `inline` goes **between the toolbar and the table** —
+  in `FilterPanelLayout` after the chips, which belong to the toolbar that writes them — because an
+  in-flow strip below the pagination is out of sight of the rows it acts on. One keyed element in
+  one of two slots, so there is never a second bar and a runtime flip moves it rather than
+  remounting it. A grid whose body is `children` or its own `core.Layout` gets no say from the
+  variant at all.
+
+  This reverses an earlier revision of this entry, which made the presets write the bar last
+  whatever the variant and called the inline strip below the table an accepted cost. That shipped
+  in 0.9.0 and is reversed, as a breaking change, in the minor after 0.10.0. Do not restore it: a preset that renders an
+  enabled feature wrongly is not neutral, it is wrong. Do not restore the `GridShell` wrapper that
+  came before it either — it did the same thing but took the order of children away from each
+  preset, where the slots leave it in every preset's JSX. The variant is still what the bar _looks
+  like_ too — stamped `data-variant` and branched on by both kits. Moving the variant onto the
   component as a prop was considered and not taken — it is the more consistent answer by the
   surviving-enum rule above, and it was judged not worth the config break here.
 
@@ -363,6 +431,20 @@ and move on.
   tree. HeroUI's is below its `.table-root`, which is why the kit hoists `Table.Root` +
   `Table.ScrollContainer` into `TableScroll` and its `Table` slot renders `Table.Content` — so
   `data-slot='table'` lands on the real `<table>` and the root takes `data-slot='table-root'`.
+
+- **A preset mounts a feature's control only when the grid has no other way into — or back out
+  of — that feature.** That is the one rule `useToolbarControls` encodes, and it is why the presets
+  carry `GlobalFilterInput`, `VisibilityTrigger` (the only way back to a hidden column) and
+  `CreateTrigger` (except under `CreatingMode.PinRow`, whose pinned form is already a way in) — and
+  carry neither `SortMenuTrigger` (the header click sorts) nor `ClearFiltersButton` (each filter
+  clears in its own input). Both of those were opt-in before the placement options went; gating
+  every control on "the feature is on" turned them on in 0.9.0 by accident, and that was reverted.
+  Two alternatives were considered and **rejected**: a `sorting: { menu: true }` flag is
+  `sorting.toolbar` under a new name, i.e. the placement option this section forbids; and mounting
+  the builder iff `sorting.multi` is a mount decision inferred from config — the `pagination.items`
+  gate `DefaultLayout` refused — on a value whose absence does not even mean "off" (TanStack enables
+  Shift-click multi-sort by default). `presets.test.tsx` pins the split, so a new control added to
+  `useToolbarEnd` has to pass the rule rather than slip in.
 
 - **There is exactly one action bar, with a live section per concern — do not split it again.**
   `<DataGrid.ActionBar />` / `core.ActionBar` owns the chrome for both the current selection and

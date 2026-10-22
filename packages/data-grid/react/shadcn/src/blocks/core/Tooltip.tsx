@@ -6,6 +6,7 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from '@grid-shadcn/components/ui/tooltip'
+import { KIT_CLASS_NAME } from '@grid-shadcn/lib/kit-class-name'
 
 import type { TooltipProps } from '@ez-kit/data-grid-react'
 
@@ -25,7 +26,7 @@ export function Tooltip({ content, children }: TooltipProps) {
 		<TooltipProvider>
 			<TooltipRoot>
 				<TooltipTrigger asChild>{children}</TooltipTrigger>
-				<TooltipContent>{content}</TooltipContent>
+				<TooltipContent className={KIT_CLASS_NAME}>{content}</TooltipContent>
 			</TooltipRoot>
 		</TooltipProvider>
 	)

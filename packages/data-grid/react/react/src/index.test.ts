@@ -22,7 +22,9 @@ describe('@ez-kit/data-grid-react', () => {
 		expect(DataGrid.Cell).toBeTypeOf('function')
 		expect(DataGrid.Pagination).toBeTypeOf('function')
 		expect(DataGrid.CreateTrigger).toBeTypeOf('function')
-		expect(DataGrid.CreatingModal).toBeTypeOf('function')
-		expect(DataGrid.EditingModal).toBeTypeOf('function')
+		// The two form modals are mounted by the grid itself and are not members: a layout that wrote
+		// one rendered a second dialog. A form of one's own is a registered `FormModal`.
+		expect(DataGrid).not.toHaveProperty('CreatingModal')
+		expect(DataGrid).not.toHaveProperty('EditingModal')
 	})
 })

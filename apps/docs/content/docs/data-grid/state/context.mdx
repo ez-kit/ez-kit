@@ -5,23 +5,56 @@ description: Carry application and kit values alongside a grid — the current u
 
 A component the grid renders for you — a cell view, a custom toolbar control, a row-action menu —
 sometimes needs to know something the grid has no opinion about. Whether the current user may edit.
-Which tenant the page belongs to. What density the kit was told to use.
+Which tenant the page belongs to. Which row the user has highlighted elsewhere on the page.
 
 `context` is where that goes. You put an object on the grid; every component inside it reads the
 object back. The grid never looks at what is in there.
 
+## Live example
+
+<DataGridDocsExample exampleId='state-grid-context' />
+
+The signed-in user goes into `context`, and three cells read it. _Name_ marks the user's own row.
+_Salary_ is visible to an admin, and to a manager for their own department only. _Edit_ is enabled
+for an admin. Switch the user and only those cells re-render; the department column, which reads
+nothing from the context, does not. The example renders a kit's prebuilt grid, which has no
+factory of its own, so its cells read through a `withTypes` reader — see
+[Without a factory](#without-a-factory).
+
 ```tsx
-const table = useDataGrid({
+<DataGrid
+	features={features}
+	data={users}
+	columns={columns}
+	context={{ currentUser }}
+/>
+```
+
+## Type it at the factory
+
+The context gets its type from a value: the default you hand to
+[`createDataGrid`](/docs/data-grid/advanced/react). Write the default once, where your application
+builds its grid, and the type is inferred from it — there is no interface to declare and no
+generic to write:
+
+```tsx
+import { createDataGrid } from '@ez-kit/data-grid-react'
+
+export const { DataGrid, useDataGrid, useGridContext } = createDataGrid({
+	components: allComponents,
 	features,
-	data: users,
-	columns,
-	context: { permissions },
+	context: {
+		currentUser: null as User | null,
+		permissions: { canEdit: false, canDelete: false },
+	},
 })
 ```
 
-```tsx
-import { useGridContext } from '@ez-kit/data-grid-react'
+The bundle hands back its own `useGridContext`, typed from that default. Every key is present —
+the default guarantees it — so a reader needs no optional chaining, and a key the default does not
+declare is a compile error:
 
+```tsx
 function DeleteAction() {
 	const canDelete = useGridContext((context) => context.permissions.canDelete)
 	if (!canDelete) return null
@@ -29,67 +62,170 @@ function DeleteAction() {
 }
 ```
 
-## Type it once
+A grid from the bundle takes `context` as a **partial** of that type. It names only the keys it
+changes, and the rest come from the default. A key of the wrong type, or one outside the type, is a
+compile error at the call site:
 
-`GridContext` ships **empty**. Declare its members once, anywhere in your app, and every call site
-and every reader is typed from that declaration — there is no generic to thread through:
+```tsx
+<DataGrid
+	data={orders}
+	columns={columns}
+	context={{ currentUser }}
+/>
+```
 
-```ts
-declare module '@ez-kit/data-grid-react' {
-	interface GridContext {
-		currentUser: { id: string; role: 'admin' | 'viewer' }
-		permissions: { canEdit: boolean; canDelete: boolean }
-	}
+Each bundle carries its own type, so two bundles in one program can carry two unrelated contexts.
+
+Note one TypeScript limit, the same one [`features`](/docs/data-grid/feature-set) has: a call that
+writes type arguments, `createDataGrid<MyCellTypes, MyFeatures>({ … })`, leaves the context type
+unset and rejects `context`. Pass no type arguments, or name all three.
+
+## Without a factory
+
+A grid with no factory of its own — the kits' prebuilt `DataGrid`, a bare `useDataGrid` — still
+takes a context, typed `Record<string, unknown>`. Any object literal is accepted, and the
+package-level `useGridContext` reads its values as `unknown`.
+
+To read it typed, derive a reader once with `withTypes`:
+
+```tsx
+import { useGridContext } from '@ez-kit/data-grid-react'
+
+const useAppGridContext = useGridContext.withTypes<{ currentUser: User }>()
+
+function NameCell({ row, value }: CellViewCtx<Employee, string>) {
+	const isMe = useAppGridContext((context) => context.currentUser.name === row.name)
+	return <span>{isMe ? `${value} (you)` : value}</span>
 }
 ```
 
-Until something extends it, `context` accepts `{}` and `useGridContext()` returns `{}`.
+`withTypes` is an **assertion**, not a check: nothing compares the type you name with what the grid
+actually carries, and a grid passing something else still compiles. At runtime it is the same hook.
+That is why the factory is the path to prefer — there the type and the value are one thing.
+
+One case does not compile on a prebuilt grid: a variable typed with an `interface`, passed as the
+whole context. An interface has no index signature, so it is not a `Record<string, unknown>`. Write
+the object literal at the call site (`context={{ currentUser }}`), or move to a factory or
+`withTypes`.
 
 ## Reading it
 
-`useGridContext` has two forms, and which one you use decides what re-renders.
+`useGridContext` reads the whole object or a slice of it, and which one you read decides what
+re-renders.
 
-| Form                                  | Returns          | Re-renders when                 |
-| ------------------------------------- | ---------------- | ------------------------------- |
-| `useGridContext()`                    | the whole object | any part of the context changes |
-| `useGridContext((c) => c.some.value)` | that value       | **that value** changes          |
+| Form                                                           | Returns          | Re-renders when                 |
+| -------------------------------------------------------------- | ---------------- | ------------------------------- |
+| `useGridContext()`                                             | the whole object | any part of the context changes |
+| `useGridContext((c) => c.some.value)`                          | that value       | **that value** changes          |
+| `useGridContext((c) => ({ ...c.some }), { compare: shallow })` | a new object     | one of **its fields** changes   |
 
 Prefer the selector form in anything the grid renders per row or per cell — a permission flag read
 that way re-renders one cell when the flag flips, and stays quiet for every other change.
 
-The selector must return a referentially stable value while the context has not changed. Field
-access and primitive computations qualify; building a fresh object or array on every call
-(`(c) => ({ ...c.permissions })`) does not, and will re-render without end — wrap such a value in
-`useMemo` around the hook instead. This is the same contract as
-[`useDataGridState`](/docs/data-grid/state/controlled).
+A selection is compared with strict equality, so field access and primitive computations need
+nothing more. A selector that builds a new object or array (`(c) => ({ ...c.permissions })`) works
+too, but a new object is never strictly equal to the last one, so on its own it re-renders on every
+context change. Pass `compare: shallow` and it re-renders only when one of the object's fields does:
+
+```tsx
+import { shallow, useGridContext } from '@ez-kit/data-grid-react'
+
+const { canEdit, canDelete } = useGridContext((context) => ({ ...context.permissions }), { compare: shallow })
+```
+
+This is the same contract as [`useDataGridState`](/docs/data-grid/state/controlled), which takes
+the same `compare` option.
 
 Like every other context-bound hook, `useGridContext` throws outside `<DataGrid>`.
 
-## It merges like every other option
+## Values that change often
 
-`context` travels the [three option layers](/docs/data-grid/state/defaults) unchanged — kit factory
-under provider under instance, deep-merged, nearest to the grid wins:
+Every value in `context` lives in the host's state or props, so changing one re-renders the
+component that renders `<DataGrid>` — and then the readers that select it. For a permission that
+flips once a session that is nothing. For a value that changes many times a second — a live
+selection elsewhere on the page, a hovered id, a ticker — pass a **store** instead of the value.
+
+A store is an object whose identity never changes, so the grid's context never changes either.
+Only the cells that subscribe to the store re-render when it does; the host does not re-render at
+all.
 
 ```tsx
-// in the kit
-createDataGrid({ components, defaults: { context: { shadcn: { density: 'comfortable' } } } })
+import { createStore } from '@tanstack/react-store'
+
+const highlight = createStore({ id: null as string | null })
+
+export const { DataGrid, useGridContext } = createDataGrid({
+	components: allComponents,
+	features,
+	context: { highlight },
+})
+
+// anywhere — an event handler, a socket callback — with no React state involved
+highlight.setState(() => ({ id: 'order_42' }))
+```
+
+The cell reads the store through the store library's own hook:
+
+```tsx
+import { useSelector } from '@tanstack/react-store'
+
+import type { CellViewCtx } from '@ez-kit/data-grid-react'
+
+function OrderCell({ row, value }: CellViewCtx<Order, string>) {
+	const highlight = useGridContext((context) => context.highlight)
+	const isHighlighted = useSelector(highlight, (state) => state.id === row.id)
+	return <span data-highlighted={isHighlighted}>{value}</span>
+}
+
+const columns = createColumns<Order>([{ accessorKey: 'id', cell: { component: OrderCell } }])
+```
+
+The grid does not care which library the store comes from. A Zustand store, a Valtio proxy or a
+TanStack store all work the same way: put the store in `context`, read it with that library's hook.
+In the example below each cell shows how many times it has rendered. **Allow editing** passes a
+value through `context`; **Highlight next order** writes a store held in `context`, and only the two
+cells whose highlight changed re-render. [Rendering](/docs/data-grid/state/rendering) explains the
+arrangement in full.
+
+<DataGridDocsExample exampleId='state-render-isolation' />
+
+## It merges like every other option
+
+`context` travels the [three option layers](/docs/data-grid/state/defaults) — factory under
+provider under instance, nearest to the grid wins:
+
+```tsx
+// where the bundle is built
+createDataGrid({ components, features, context: { currentUser: null, permissions: DENIED } })
 
 // in the app, over a subtree
 <DataGridOptionsProvider defaults={{ context: { currentUser } }}>
 
 // on one grid
-useDataGrid({ features, data, columns, context: { permissions } })
+<DataGrid data={data} columns={columns} context={{ permissions }} />
 ```
 
-That grid sees all three. Naming a key **replaces** it rather than adding to it: `permissions` at
-the call site means those permissions, not a union with a provider's.
+That grid sees all three. The merge is the same deep merge every option goes through: a nested
+plain object merges **key by key**, so `permissions: { canEdit: false }` over
+`permissions: { canEdit: true, canDelete: true }` reads `{ canEdit: false, canDelete: true }`.
+Anything that is not a plain object — an array, a class instance, a store, a primitive — is
+replaced whole, so a store at the call site is that store, not a blend with the default's.
 
-## Who owns which key
+A merged object is a new object on every render of the host, because the grid rebuilds it. Select
+a primitive out of it (`(c) => c.permissions.canEdit`), or pass `compare: shallow`, rather than
+selecting the merged object itself — otherwise the reader re-renders with the host.
 
-The interface is one namespace shared by your application and the UI kit you render through, and
-nothing in the types keeps them apart. The convention is that **a kit writes only under its own
-key** — `context.shadcn`, `context.heroui` — and leaves everything else to the application. Follow
-it and a kit shipping a new setting cannot collide with a name you already use.
+The instance's type is stricter than the merge: it is a partial of the factory type one level
+deep, so a grid that names `permissions` passes the whole object, even though the missing nested
+keys would come from the default at runtime.
+
+## A provider above several bundles
+
+Each bundle's context is its own type, so two bundles never collide in the types. The one place
+they share is a `DataGridOptionsProvider` mounted above grids from different bundles: whatever it
+puts in `context` reaches all of them. If a kit or a library writes into a shared provider, keeping
+its values under one key of its own — `context.shadcn`, `context.heroui` — keeps them out of the
+application's way. That is a convention, not a mechanism.
 
 ## When not to use it
 
@@ -103,6 +239,12 @@ over directly, should be a prop. `context` earns its place when the reader is a 
 
 ## Options
 
-| Option    | Type          | Default | Description                                                                          |
-| --------- | ------------- | ------- | ------------------------------------------------------------------------------------ |
-| `context` | `GridContext` | `{}`    | Application and kit values carried alongside the grid, read with `useGridContext()`. |
+| Option    | Type                                                   | Default | Description                                                                          |
+| --------- | ------------------------------------------------------ | ------- | ------------------------------------------------------------------------------------ |
+| `context` | `Record<string, unknown>`, or the bundle's, as partial | `{}`    | Application and kit values carried alongside the grid, read with `useGridContext()`. |
+
+## Factory option
+
+| Option    | Type     | Default | Description                                                                                     |
+| --------- | -------- | ------- | ----------------------------------------------------------------------------------------------- |
+| `context` | `object` | —       | The context every grid from the bundle starts from. Its type becomes the bundle's context type. |

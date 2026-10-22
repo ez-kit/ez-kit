@@ -3,10 +3,12 @@
 import { baseCellTypes } from '@ez-kit/data-grid-react/cell-types'
 import { Chip } from '@heroui/react'
 
-import { SelectCellInput } from './SelectCell'
+import { itemOf, PendingLabel, SelectCellInput, UnlabelledValue } from './SelectCell'
 
 import type {
 	BadgeCellConfig,
+	BadgeColumnConfig,
+	BadgeItem,
 	BadgeVariant,
 	CellTypeDefinition,
 	CellViewProps,
@@ -20,13 +22,22 @@ function mapBadgeVariant(variant: BadgeVariant | undefined): 'primary' | 'second
 	return 'primary'
 }
 
-function BadgeCellView({ value, config }: CellViewProps<BadgeCellConfig>) {
-	const items = config?.items ?? []
-	const match = items.find((item) => item.value === String(value ?? ''))
+function BadgeCellView({ value, config, item, itemStatus }: CellViewProps<BadgeCellConfig>) {
+	if (itemStatus === 'pending') return <PendingLabel data-slot='badge-cell-skeleton' />
+	const match = itemOf(value, item, config) as BadgeItem | undefined
 	return (
 		<Chip variant={mapBadgeVariant(match?.variant)}>
 			{(match?.icon as ReactNode) ?? null}
-			<Chip.Label>{match ? match.label : String(value ?? '')}</Chip.Label>
+			<Chip.Label>
+				{match ? (
+					match.label
+				) : (
+					<UnlabelledValue
+						value={value}
+						failed={itemStatus === 'error'}
+					/>
+				)}
+			</Chip.Label>
 		</Chip>
 	)
 }
@@ -44,7 +55,7 @@ function BadgeCellInput(props: FieldState<BadgeCellConfig>) {
  * the note on `KitCellTypes` in `../cell-types.ts` for what an inferred type does to the
  * bundled declarations.
  */
-const badgeCellType: CellTypeDefinition<BadgeCellConfig> & { __config?: BadgeCellConfig } = {
+const badgeCellType: CellTypeDefinition<BadgeCellConfig> & { __config?: BadgeColumnConfig } = {
 	...baseCellTypes.badge,
 	view: BadgeCellView,
 	editing: BadgeCellInput,

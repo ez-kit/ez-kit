@@ -16,6 +16,7 @@ import {
 	sortFns,
 	tableFeatures,
 } from '@ez-kit/data-grid-core/features'
+import { defaultOperators } from '@ez-kit/data-grid-core/operators'
 import { createColumns } from '@ez-kit/data-grid-react'
 import { useMemo } from 'react'
 
@@ -24,11 +25,10 @@ import { DataGrid } from 'shared/DataGrid'
 import { makeUsers } from './_data'
 
 import type { User } from './_data'
+import type { FilterOperatorDef, OperatorsConfig } from '@ez-kit/data-grid-core'
 import type { PartialGridMessages } from '@ez-kit/data-grid-react'
 
 const features = tableFeatures({
-	// Structural: the grid shell reads column widths, visibility and pin groups to lay out
-	// the column grid. Everything below is this example's own.
 	columnVisibilityFeature,
 	columnPinningFeature,
 	columnSizingFeature,
@@ -50,9 +50,34 @@ const columns = createColumns<User>([
 	{ accessorKey: 'age', header: 'Возраст', align: 'end', cell: { type: 'number' }, filtering: { operators: true } },
 ])
 
+const RU_OPERATOR_LABELS: Partial<Record<string, string>> = {
+	contains: 'Содержит',
+	equals: 'Равно',
+	notEquals: 'Не равно',
+	startsWith: 'Начинается с',
+	endsWith: 'Заканчивается на',
+	greaterThan: 'Больше',
+	greaterOrEqual: 'Больше или равно',
+	lessThan: 'Меньше',
+	lessOrEqual: 'Меньше или равно',
+	between: 'В диапазоне',
+	isEmpty: 'Пусто',
+	isNotEmpty: 'Не пусто',
+}
+
+function translated(set: FilterOperatorDef[]): FilterOperatorDef[] {
+	return set.map((op) => ({ ...op, label: RU_OPERATOR_LABELS[op.id] ?? op.label }))
+}
+
+const ruOperators: OperatorsConfig = {
+	byType: {
+		text: translated(defaultOperators.byType.text),
+		number: translated(defaultOperators.byType.number),
+	},
+}
+
 const PLURAL_RULES = new Intl.PluralRules('ru-RU')
 
-/** `1 строка` / `2 строки` / `5 строк` — the rule is the language's, so the dictionary owns it. */
 function rows(count: number): string {
 	const forms: Record<Intl.LDMLPluralRule, string> = {
 		one: 'строка',
@@ -65,11 +90,6 @@ function rows(count: number): string {
 	return `${String(count)} ${forms[PLURAL_RULES.select(count)]}`
 }
 
-/**
- * A dictionary is a plain object: state the entries this grid shows, leave the rest English.
- * Nothing here is a special syntax — the parameterized entries are ordinary functions, which is
- * why `Intl.PluralRules` plugs straight in.
- */
 const ru: PartialGridMessages = {
 	grid: { label: 'Таблица пользователей' },
 	selection: {
@@ -93,27 +113,9 @@ const ru: PartialGridMessages = {
 	filtering: {
 		placeholder: ({ columnId }) => `Фильтр: ${columnId}`,
 		operator: 'Оператор фильтра',
+		operatorTrigger: ({ label }) => `Оператор фильтра: ${label}`,
 		clearAll: 'Сбросить фильтры',
 		trigger: 'Фильтр',
-	},
-	operators: {
-		text: {
-			contains: 'Содержит',
-			equals: 'Равно',
-			notEquals: 'Не равно',
-			startsWith: 'Начинается с',
-			endsWith: 'Заканчивается на',
-		},
-		number: {
-			equals: 'Равно',
-			notEquals: 'Не равно',
-			greaterThan: 'Больше',
-			greaterOrEqual: 'Больше или равно',
-			lessThan: 'Меньше',
-			lessOrEqual: 'Меньше или равно',
-			between: 'В диапазоне',
-		},
-		empty: { isEmpty: 'Пусто', isNotEmpty: 'Не пусто' },
 	},
 	globalFiltering: { placeholder: 'Поиск…', label: 'Поиск' },
 	pagination: {
@@ -140,6 +142,7 @@ export function LocalizationExample() {
 			data={data}
 			columns={columns}
 			messages={ru}
+			operators={ruOperators}
 			selection
 			filtering
 			globalFiltering

@@ -24,15 +24,19 @@ const features = tableFeatures({
 	creatingFeature,
 })
 
-const userSchema = z.object({
-	name: z.string().min(2, 'must be at least 2 chars'),
-	email: z.email('must be a valid email'),
-	age: z
-		.number({ message: 'age is required' })
-		.int('must be a whole number')
-		.min(18, 'must be 18 or older')
-		.max(120, 'must be ≤120'),
-})
+const userSchema = z
+	.object({
+		name: z.string().min(2, 'must be at least 2 chars'),
+		email: z.email('must be a valid email'),
+		age: z
+			.number({ message: 'age is required' })
+			.int('must be a whole number')
+			.min(18, 'must be 18 or older')
+			.max(120, 'must be ≤120'),
+	})
+	.refine((user) => user.name.trim().toLowerCase() !== user.email.trim().toLowerCase(), {
+		message: 'Name and email must be different',
+	})
 
 export function CreatingValidationExample() {
 	const [data, setData] = useState(INITIAL_DATA)

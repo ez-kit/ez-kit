@@ -40,7 +40,7 @@ export function AriaRowIndexProvider<TRow extends object = ErasedRow>({
 	// rebuilds the map, and `pagination` is absent altogether without `rowPaginationFeature`.
 
 	const pagination = useDataGridState((s) => s.pagination as { pageIndex: number; pageSize: number } | undefined)
-	const pageStart = resolvePageStartIndex(pagination)
+	const pageStart = resolvePageStartIndex(pagination, table.grid.pagination.infinite !== undefined)
 
 	/**
 	 * One pass over the rendered model, not a lookup per row: a virtualized grid asks for ~30

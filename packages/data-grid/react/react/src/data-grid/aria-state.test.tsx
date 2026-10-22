@@ -1,8 +1,15 @@
-import { createColumns } from '@ez-kit/data-grid-core'
-import { render } from '@testing-library/react'
+import { createColumns, PaginationMode } from '@ez-kit/data-grid-core'
+import {
+	columnPinningFeature,
+	columnSizingFeature,
+	columnVisibilityFeature,
+	tableFeatures,
+} from '@ez-kit/data-grid-core/features'
+import { act, render } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
-import { TEST_FEATURES, testComponents } from '../test-utils'
+import { renderGrid as renderTestGrid, TEST_FEATURES, testComponents } from '../test-utils'
+import { LoadMoreTrigger } from '../types'
 
 import { DataGrid } from './data-grid'
 
@@ -10,6 +17,8 @@ type Row = { id: number; name: string }
 
 const ROWS: Row[] = Array.from({ length: 12 }, (_, index) => ({ id: index + 1, name: `Row ${String(index + 1)}` }))
 const COLUMNS = createColumns<Row>([{ accessorKey: 'name', header: 'Name' }])
+/** The three structural features and nothing else — no `paginatedRowModel` to slice with. */
+const UNPAGED_FEATURES = tableFeatures({ columnVisibilityFeature, columnPinningFeature, columnSizingFeature })
 
 function renderGrid(config: Record<string, unknown> = {}) {
 	return render(
@@ -104,26 +113,166 @@ describe('aria-rowcount / aria-rowindex', () => {
 		expect(bodyRowsOf(container)[0]?.getAttribute('aria-rowindex')).toBe('7')
 	})
 
+	// An unpaged grid holds the whole set in the DOM, so ARIA says a reader may count what it sees.
+	// More rows than a page on purpose: with three, a grid sliced to its first page by a registered
+	// `paginatedRowModel` looked exactly like this one, which is how that regression went unseen.
 	it('writes neither when the DOM already holds every row', () => {
-		// Short enough to fit one page: the DOM holds the whole set, so ARIA says a reader may
-		// count what it sees.
+		const { container } = renderGrid()
+
+		expect(bodyRowsOf(container)).toHaveLength(12)
+		expect(tableOf(container)?.hasAttribute('aria-rowcount')).toBe(false)
+		expect(bodyRowsOf(container)[0]?.hasAttribute('aria-rowindex')).toBe(false)
+	})
+
+	it('writes neither for an unpaged grid whose set has no paginated row model', () => {
 		const { container } = render(
 			<DataGrid
-				features={TEST_FEATURES}
-				data={ROWS.slice(0, 3)}
+				features={UNPAGED_FEATURES}
+				data={ROWS}
 				columns={COLUMNS}
 				components={testComponents}
 			/>,
 		)
 
+		expect(bodyRowsOf(container)).toHaveLength(12)
+		expect(tableOf(container)?.hasAttribute('aria-rowcount')).toBe(false)
+	})
+
+	// The seed waits in state for pagination to be switched on; it must not offset a single index.
+	it('writes neither for an unpaged grid seeded with a page', () => {
+		const { container } = renderGrid({ initialState: { pagination: { pageIndex: 2 } } })
+
+		expect(bodyRowsOf(container)).toHaveLength(12)
 		expect(tableOf(container)?.hasAttribute('aria-rowcount')).toBe(false)
 		expect(bodyRowsOf(container)[0]?.hasAttribute('aria-rowindex')).toBe(false)
+		expect(container.querySelector('[role="status"]')?.textContent).toBe('12 rows')
 	})
 
 	it("reports ARIA's unknown sentinel for a manual grid given no total", () => {
 		const { container } = renderGrid({ pagination: { manual: true, pageSize: 5 } })
 
 		expect(tableOf(container)?.getAttribute('aria-rowcount')).toBe('-1')
+	})
+})
+
+// `TEST_FEATURES` is the all-in set, so `paginatedRowModel` is registered in every case below —
+// the configuration infinite mode used to slice to one page.
+describe('aria-rowcount / aria-rowindex — infinite mode', () => {
+	const infinite = (flags: { hasNextPage?: boolean; hasPreviousPage?: boolean }) => ({
+		pagination: { mode: PaginationMode.Infinite, pageSize: 5, onLoadMore: () => undefined, ...flags },
+	})
+
+	it('renders every accumulated row', () => {
+		const { container } = renderGrid(infinite({ hasNextPage: true }))
+
+		expect(bodyRowsOf(container)).toHaveLength(12)
+	})
+
+	it('renders every accumulated row with the manual load trigger', () => {
+		const { container } = renderGrid({
+			pagination: {
+				mode: PaginationMode.Infinite,
+				pageSize: 5,
+				trigger: LoadMoreTrigger.Manual,
+				hasNextPage: true,
+				onLoadMore: () => undefined,
+			},
+		})
+
+		expect(bodyRowsOf(container)).toHaveLength(12)
+	})
+
+	it("reports ARIA's unknown sentinel while another page can load", () => {
+		const { container } = renderGrid(infinite({ hasNextPage: true }))
+
+		expect(tableOf(container)?.getAttribute('aria-rowcount')).toBe('-1')
+	})
+
+	it("reports ARIA's unknown sentinel while an earlier page can load", () => {
+		const { container } = renderGrid(infinite({ hasNextPage: false, hasPreviousPage: true }))
+
+		expect(tableOf(container)?.getAttribute('aria-rowcount')).toBe('-1')
+	})
+
+	it('writes no row count once everything is loaded', () => {
+		const { container } = renderGrid(infinite({ hasNextPage: false, hasPreviousPage: false }))
+
+		expect(tableOf(container)?.hasAttribute('aria-rowcount')).toBe(false)
+	})
+
+	it('indexes the first accumulated row right after the header', () => {
+		const { container } = renderGrid(infinite({ hasNextPage: true }))
+
+		expect(bodyRowsOf(container)[0]?.getAttribute('aria-rowindex')).toBe('2')
+	})
+
+	it('does not offset the indices by a pageIndex set later', () => {
+		const { container, table } = renderTestGrid<Row>({
+			data: ROWS,
+			columns: COLUMNS,
+			...infinite({ hasNextPage: true }),
+		})
+
+		act(() => {
+			table.setPageIndex(2)
+		})
+
+		expect(bodyRowsOf(container)[0]?.getAttribute('aria-rowindex')).toBe('2')
+	})
+
+	// The adapter rebuilds the options every render, so the mode follows the prop on one instance —
+	// and switching back has to drop `manualPagination` again, or a paged grid never slices.
+	it('follows a mode switch in both directions without remounting', () => {
+		const grid = (pagination: Record<string, unknown>) => (
+			<DataGrid
+				features={TEST_FEATURES}
+				data={ROWS}
+				columns={COLUMNS}
+				components={testComponents}
+				pagination={pagination}
+			/>
+		)
+		const { container, rerender } = render(grid({ pageSize: 5 }))
+		expect(bodyRowsOf(container)).toHaveLength(5)
+
+		rerender(grid(infinite({ hasNextPage: true }).pagination))
+		expect(bodyRowsOf(container)).toHaveLength(12)
+
+		rerender(grid({ pageSize: 5 }))
+		expect(bodyRowsOf(container)).toHaveLength(5)
+	})
+
+	// `hasNextPage` is a config prop, not state, so nothing subscribes to it: the attribute and the
+	// live region follow it only because the consumer's re-render reaches them.
+	it('drops the unknown sentinel and announces the count when the last page arrives', () => {
+		const grid = (hasNextPage: boolean) => (
+			<DataGrid
+				features={TEST_FEATURES}
+				data={ROWS}
+				columns={COLUMNS}
+				components={testComponents}
+				{...infinite({ hasNextPage })}
+			/>
+		)
+		const { container, rerender } = render(grid(true))
+		expect(tableOf(container)?.getAttribute('aria-rowcount')).toBe('-1')
+		expect(container.querySelector('[role="status"]')).toBeNull()
+
+		rerender(grid(false))
+
+		expect(tableOf(container)?.hasAttribute('aria-rowcount')).toBe(false)
+		expect(container.querySelector('[role="status"]')?.textContent).toBe('12 rows')
+	})
+
+	// The live region announces how many rows the query matches. While more can load, the rows in
+	// the DOM are not that number, and the component's rule is silence over an invented total.
+	it('announces no count while more rows can load, and the count once all have', () => {
+		const more = renderGrid(infinite({ hasNextPage: true }))
+		expect(more.container.querySelector('[role="status"]')).toBeNull()
+		more.unmount()
+
+		const all = renderGrid(infinite({ hasNextPage: false }))
+		expect(all.container.querySelector('[role="status"]')?.textContent).toBe('12 rows')
 	})
 })
 

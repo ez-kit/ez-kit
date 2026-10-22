@@ -1,23 +1,18 @@
-/**
- * The `{ schema }` shorthand's contract, written structurally rather than as
- * `import type { ZodType } from 'zod'`.
- *
- * zod is an **optional** peer dependency, but a bare `import` of it in this module ends up in
- * the package's published `index.d.ts` unconditionally — so every consumer had to have zod
- * installed for the type declarations to resolve at all, optional or not. Only `safeParse` and
- * the issue shape are ever read (see `zodSafeParseToResult`), and every zod schema satisfies
- * this by structure, so `validate: { schema }` keeps type-checking against a real zod schema
- * with no import.
- */
-export type ValidationSchema = {
-	safeParse(input: unknown): { success: true } | { success: false; error: { issues: readonly ValidationIssue[] } }
-}
+import type { StandardSchemaV1, StandardSchemaV1Issue } from './standard-schema'
+import type { BadgeItem, SelectItem } from '../../column/types'
 
-/** One problem reported by a {@link ValidationSchema}. The zod issue shape, structurally. */
-export type ValidationIssue = {
-	path: readonly PropertyKey[]
-	message: string
-}
+/**
+ * The `{ schema }` shorthand's contract: any schema that implements Standard Schema v1 —
+ * zod, valibot, arktype and the rest.
+ *
+ * It used to be a structural `{ safeParse }`, which only zod satisfied. The interface is copied
+ * into `./standard-schema` rather than imported, so the published `index.d.ts` names no schema
+ * library and no consumer needs one installed for the declarations to resolve.
+ */
+export type ValidationSchema = StandardSchemaV1
+
+/** One problem reported by a {@link ValidationSchema}. An issue without a `path` is a form error. */
+export type ValidationIssue = StandardSchemaV1Issue
 
 /**
  * Validation error map keyed by columnId.
@@ -113,23 +108,44 @@ export type FieldState<TConfig = unknown, TValue = unknown> = {
 	 * `<FieldDescription>` / `<Description>` only when this is defined.
 	 */
 	description?: string
+	/**
+	 * Visible hint for an empty input (filter-context only) — the column's
+	 * `filtering.placeholder`, else the filter's accessible name. Never the
+	 * accessible name itself: a filter names this component through a
+	 * visually hidden `<label htmlFor={id}>`.
+	 */
+	placeholder?: string
 	/** First message for the field, or `undefined` if no error. Convenience accessor over `errors[0]`. */
 	error: string | undefined
 	/** All messages for the field — empty when no error. */
 	errors: string[]
 	/** True while async field-level validation is in flight for this column. */
 	isValidating: boolean
+	/**
+	 * `true` while the list a `select` / `badge` field offers is still loading — it comes from a
+	 * `useItems` hook that has not answered. Show a loading state rather than an empty list.
+	 * Absent on every other field.
+	 */
+	itemsLoading?: boolean
+	/** What that list's hook failed with, when it did. Absent otherwise. */
+	itemsError?: unknown
+	/**
+	 * The item the current value resolves to in the column's **base** list — the label a trigger
+	 * shows. Separate from `config.items`, which holds only what this field offers: a value the
+	 * editor no longer offers (an archived warehouse) is still labelled by it.
+	 */
+	item?: SelectItem | BadgeItem
 }
 
 /**
- * `validate` config — a function, or the `{ schema }` shorthand for zod.
+ * `validate` config — a function, or the `{ schema }` shorthand for any Standard Schema.
  *
  * **When** validation runs is not settable here. It is `editing.validateOn` /
  * `creating.validateOn` (and the per-column override under `column.editing` /
  * `column.creating`), full stop. The shorthand used to carry its own `validateOn` /
  * `debounce` that silently won over the feature-level ones — so the same setting had
  * two spellings, only one of which existed when `validate` was written as a function, and
- * adopting a zod schema from another example quietly re-timed the whole form.
+ * adopting a schema from another example quietly re-timed the whole form.
  */
 export type ValidateConfig<TData> =
 	| ((values: Partial<TData>, ctx: ValidateContext) => ValidationResult | Promise<ValidationResult>)

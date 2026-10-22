@@ -8,8 +8,10 @@ trigger showing the committed range, opening a two-month range calendar. The fil
 both ends are chosen, so a half-drawn range never reaches the table or a server-driven query.
 
 Presets sit beside the control, and not only beside `between`: the menu offers whichever presets the
-**current** operator can take. A range fills `between`; a single date fills `equals`, `lessThan`,
-`greaterThan` and the rest. The two kinds are separate because a range has no single date to mean —
+**current** operator can take, by the operator's `input`. A range fills an operator with
+`input: 'range'` — `between`, or one of your own; a single date fills one with `input: 'single'` —
+`equals`, `lessThan`, `greaterThan` and the rest. An operator that takes a list or no value gets no
+presets. The two kinds are separate because a range has no single date to mean —
 offering "Last 7 days" to `equals` would have to pick one of its ends and silently turn "the last
 week" into "on last Tuesday".
 
@@ -22,7 +24,7 @@ trigger then names that preset, and stops naming it as soon as the value is edit
 
 <DataGridDocsExample exampleId='filter-date-range-built-in' />
 
-Supply your own `presets` array — quarterly ranges, year-long windows, a single anchor date, or anything else that fits your domain. A preset with `getRange` fills `between`; one with `getDate` fills the operators that take a single date.
+Supply your own `presets` array — quarterly ranges, year-long windows, a single anchor date, or anything else that fits your domain. A preset with `getRange` fills a range operator; one with `getDate` fills the operators that take a single date.
 
 <DataGridDocsExample exampleId='filter-date-range-custom' />
 
@@ -51,7 +53,7 @@ const columns = createColumns<Release>([
 
 ### `DateRangePreset`
 
-Fills `between`.
+Fills an operator with `input: 'range'`.
 
 | Field      | Type                                             | Description                                                                      |
 | ---------- | ------------------------------------------------ | -------------------------------------------------------------------------------- |
@@ -63,7 +65,7 @@ Built-in range ids: `'today'`, `'yesterday'`, `'last7'`, `'last30'`, `'thisMonth
 
 ### `DateValuePreset`
 
-Fills every date operator that takes a single value.
+Fills every date operator with `input: 'single'`.
 
 | Field     | Type                     | Description                                        |
 | --------- | ------------------------ | -------------------------------------------------- |
@@ -72,6 +74,10 @@ Fills every date operator that takes a single value.
 | `getDate` | `(now?: Date) => string` | Returns the date, as an ISO-8601 date-only string. |
 
 Built-in single-date ids: `'today'`, `'yesterday'`, `'weekAgo'`, `'monthAgo'`, `'startOfMonth'`.
+
+The built-in presets' labels come from the grid's dictionary, under `messages.filtering.presets` by
+preset id; the preset menu itself is named by `messages.filtering.presetMenu`. See
+[Localization](/docs/data-grid/localization#filter-operators).
 
 ### `cell` (date)
 

@@ -1,3 +1,6 @@
+/** Stamped on the grid root; `styles.css` scopes every structural rule under it. */
+export const GRID_ROOT_CLASS_NAME = 'ez-data-grid'
+
 /**
  * Joins class fragments, dropping the empty ones — `undefined` when nothing is left.
  *

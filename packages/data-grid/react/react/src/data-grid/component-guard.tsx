@@ -36,7 +36,7 @@ const REQUIRED_STRUCTURAL = [
  * always-rendered structural primitives, plus the ones a definitively present config
  * calls for — so it can never fire a false positive.
  *
- * Its value over the lazy half is *when* it fires. `ConfirmDialog` and `FormShell`
+ * Its value over the lazy half is *when* it fires. `ConfirmDialog` and `FormModal`
  * render on an interaction that may be a dozen clicks into a flow; a config that asks
  * for them says so at mount, so that is where the error belongs.
  *
@@ -56,7 +56,7 @@ export function ComponentGuard(): null {
 	const required = new Set<keyof GridComponentRegistry>(REQUIRED_STRUCTURAL)
 
 	if (isFeatureEnabled(table.options.deleting?.confirmation)) required.add('ConfirmDialog')
-	if (table.options.creating?.mode === 'modal' || table.options.editing?.mode === 'modal') required.add('FormShell')
+	if (table.options.creating?.mode === 'modal' || table.options.editing?.mode === 'modal') required.add('FormModal')
 
 	// Either feature is enough: the one bar is what both the selection and a pending draft
 	// render into, so a grid with `draft` and no selection still needs it registered.

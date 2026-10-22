@@ -4,6 +4,8 @@ import { baseCellTypes } from '@ez-kit/data-grid-react/cell-types'
 import { Calendar, DateField, DatePicker, Description, FieldError, Label } from '@heroui/react'
 import { parseDate } from '@internationalized/date'
 
+import { KIT_CLASS_NAME } from '../../lib/kit-class-name'
+
 import type { CellTypeDefinition, CellViewProps, DateCellConfig, FieldState } from '@ez-kit/data-grid-react'
 import type { CalendarDate } from '@internationalized/date'
 
@@ -68,7 +70,7 @@ function DateCellInput({
 			</DateField.Group>
 			{description !== undefined && <Description>{description}</Description>}
 			{hasError && <FieldError>{errors[0]}</FieldError>}
-			<DatePicker.Popover>
+			<DatePicker.Popover className={KIT_CLASS_NAME}>
 				<Calendar aria-label={label ?? 'Date'}>
 					<Calendar.Header>
 						<Calendar.YearPickerTrigger>

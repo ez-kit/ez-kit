@@ -27,12 +27,13 @@ too — no children, no extra components:
 
 With a grip on the header, the column menu drops **Move left** / **Move right** — they are the same
 move one step at a time, and the drag is keyboard-operable too. The panel does the same with its
-arrows. Each surface takes two overrides:
+arrows. Each surface takes a [`ReorderMode`](/docs/data-grid/columns/ordering#the-arrows-or-the-drag-not-both)
+to choose otherwise:
 
-| You want                     | Header                               | Panel                                               |
-| ---------------------------- | ------------------------------------ | --------------------------------------------------- |
-| The grip and the move pair   | `ordering.column.moveControls: true` | `ordering.column.visibilityMenu.moveControls: true` |
-| The move pair alone, no drag | `ordering.column.drag: false`        | `ordering.column.visibilityMenu.drag: false`        |
+| You want                     | Header                           | Panel                                    |
+| ---------------------------- | -------------------------------- | ---------------------------------------- |
+| The grip and the move pair   | `ordering.column.header: 'both'` | `ordering.column.visibilityMenu: 'both'` |
+| The move pair alone, no drag | `ordering.column.header: 'step'` | `ordering.column.visibilityMenu: 'step'` |
 
 ## Hidden columns
 
@@ -45,6 +46,31 @@ locked with `ordering: false` and offers no grip on either surface:
 A kit rendering its own panel composes each row from `<DataGrid.VisibilityItem>`. Render one item per
 listed column, all of them: filtering the list — a search box over a long panel — stops panel
 dragging with no error. Filter what a row renders, not which rows exist.
+
+### A panel that is a collection
+
+A collection such as react-aria's `GridList` renders each row element itself, so a row cannot be
+wrapped. Pass `<DataGrid.VisibilityItem>` a function instead: it renders nothing and hands back
+`itemProps` for the row and `handleProps` for the grip, which is `null` whenever the row cannot be
+dragged. Put `useColumnDragKeyboardGuard()` on the collection: a keyboard drag uses the arrows and
+`Space`, which the collection would otherwise also act on.
+
+```tsx
+const guardRef = useColumnDragKeyboardGuard()
+
+<GridList ref={guardRef} items={columns} aria-label='Columns'>
+	{(col) => (
+		<DataGrid.VisibilityItem columnId={col.id}>
+			{({ itemProps, handleProps }) => (
+				<GridListItem {...itemProps} id={col.id} textValue={col.label}>
+					{handleProps && <Button ref={handleProps.ref} aria-label={`Reorder ${col.label}`}>⠿</Button>}
+					{col.label}
+				</GridListItem>
+			)}
+		</DataGrid.VisibilityItem>
+	)}
+</GridList>
+```
 
 ## A header you compose
 

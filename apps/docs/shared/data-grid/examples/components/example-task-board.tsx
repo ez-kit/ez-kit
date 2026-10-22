@@ -162,7 +162,7 @@ const columns = createColumns<Task>([
 	{
 		accessorKey: 'title',
 		header: 'Title',
-		width: 360,
+		width: { min: 360 },
 		// The one cell no config can express: a label chip beside truncated text. Everything
 		// else on this table is an option, which is the point of the example.
 		filtering: false,
@@ -258,10 +258,10 @@ export function ExampleTaskBoardExample() {
 				start={
 					<>
 						<DataGrid.GlobalFilterInput />
-						{TOOLBAR_FILTERS.map((columnId) => (
-							<DataGrid.ColumnFilter
-								key={columnId}
-								columnId={columnId}
+						{TOOLBAR_FILTERS.map((id) => (
+							<DataGrid.Filter
+								key={id}
+								id={id}
 							/>
 						))}
 					</>

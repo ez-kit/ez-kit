@@ -4,6 +4,7 @@ import { GridMenuVariant, isGridMenuItemSlot } from '@ez-kit/data-grid-react/kit
 import { Button, Dropdown, Header, Label, Separator } from '@heroui/react'
 import { EllipsisVertical, MoreHorizontal } from 'lucide-react'
 
+import { KIT_CLASS_NAME } from '../../lib/kit-class-name'
 import { renderGridMenuIcon } from '../icons'
 
 import type { GridMenuItem, GridMenuProps, GridMenuSection } from '@ez-kit/data-grid-react'
@@ -76,7 +77,7 @@ export function Menu({ variant, sections, triggerLabel, triggerIcon, 'aria-label
 					<MoreHorizontal className='size-4' />
 				</Button>
 			)}
-			<Dropdown.Popover>
+			<Dropdown.Popover className={KIT_CLASS_NAME}>
 				<Dropdown.Menu
 					aria-label={ariaLabel}
 					items={sections}

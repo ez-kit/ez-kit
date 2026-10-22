@@ -112,12 +112,44 @@
 		"exportName": "SortToolbarExample"
 	},
 	{
+		"id": "sort-toolbar-single",
+		"label": "Toolbar · Single column",
+		"group": "sorting",
+		"groupLabel": "Sorting",
+		"sourceFile": "components/sort-toolbar.tsx",
+		"exportName": "SortToolbarSingleExample"
+	},
+	{
+		"id": "sort-builder-drag",
+		"label": "Toolbar · Drag",
+		"group": "sorting",
+		"groupLabel": "Sorting",
+		"sourceFile": "components/sort-builder-drag.tsx",
+		"exportName": "SortBuilderDragExample"
+	},
+	{
 		"id": "filter-operators-table",
 		"label": "Operators · Whole table",
 		"group": "filtering",
 		"groupLabel": "Filtering",
 		"sourceFile": "components/filter-operators-table.tsx",
 		"exportName": "FilterOperatorsTableExample"
+	},
+	{
+		"id": "filter-operators-icons",
+		"label": "Operators · Icons",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/filter-operators-icons.tsx",
+		"exportName": "FilterOperatorsIconsExample"
+	},
+	{
+		"id": "filter-operators-custom",
+		"label": "Operators · Custom",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/filter-operators-custom.tsx",
+		"exportName": "FilterOperatorsCustomExample"
 	},
 	{
 		"id": "filter-operators-text",
@@ -280,6 +312,22 @@
 		"exportName": "FilterMultiValueNotInExample"
 	},
 	{
+		"id": "async-items",
+		"label": "Value list from a hook",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/async-items.tsx",
+		"exportName": "AsyncItemsExample"
+	},
+	{
+		"id": "async-items-get-item",
+		"label": "Value list from a hook · Labels from the row",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/async-items.tsx",
+		"exportName": "AsyncItemsGetItemExample"
+	},
+	{
 		"id": "filter-date-range-built-in",
 		"label": "Date range · Built-in presets",
 		"group": "filtering",
@@ -310,6 +358,22 @@
 		"groupLabel": "Filtering",
 		"sourceFile": "components/filter-panel.tsx",
 		"exportName": "FilterPanelAndHeaderExample"
+	},
+	{
+		"id": "custom-filter-panel",
+		"label": "Custom filter panel",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/custom-filter-panel.tsx",
+		"exportName": "CustomFilterPanelExample"
+	},
+	{
+		"id": "filter-fields",
+		"label": "Filter fields",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/filter-fields.tsx",
+		"exportName": "FilterFieldsExample"
 	},
 	{
 		"id": "selection-bar",
@@ -552,6 +616,22 @@
 		"groupLabel": "Validation",
 		"sourceFile": "components/editing/EditingValidationExample.tsx",
 		"exportName": "EditingValidationExample"
+	},
+	{
+		"id": "form-modal-own-form",
+		"label": "Own form",
+		"group": "form-modal",
+		"groupLabel": "Form modal",
+		"sourceFile": "components/editing/form-modal.tsx",
+		"exportName": "OwnFormModalExample"
+	},
+	{
+		"id": "form-modal-fields-layout",
+		"label": "Fields layout",
+		"group": "form-modal",
+		"groupLabel": "Form modal",
+		"sourceFile": "components/editing/form-modal.tsx",
+		"exportName": "FieldsLayoutModalExample"
 	},
 	{
 		"id": "expanding-sub-content",
@@ -806,6 +886,18 @@
 		"groupLabel": "Server-side",
 		"sourceFile": "components/server-data.tsx",
 		"exportName": "ServerDataExample"
+	},
+	{
+		"id": "state-grid-context",
+		"label": "Grid context",
+		"sourceFile": "components/grid-context.tsx",
+		"exportName": "GridContextExample"
+	},
+	{
+		"id": "state-render-isolation",
+		"label": "Render isolation",
+		"sourceFile": "components/render-isolation.tsx",
+		"exportName": "RenderIsolationExample"
 	},
 	{
 		"id": "state-persistence",

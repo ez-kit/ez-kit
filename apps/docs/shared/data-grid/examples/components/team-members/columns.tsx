@@ -46,7 +46,7 @@ export const columns = createColumns<Member>([
 	{
 		accessorKey: 'name',
 		header: 'User',
-		width: 260,
+		width: { min: 260 },
 		// Avatar beside a two-line label: one column's editorial decision, which is what
 		// `cell.component` is for. The edit and create forms still get a plain text field for
 		// `name`, because the slot replaces the *view*, not the editor.

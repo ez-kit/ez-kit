@@ -90,7 +90,10 @@ const PACKAGES: readonly Package[] = [
 		name: '@ez-kit/data-grid-react',
 		entry: entryOf('data-grid/react/react'),
 		shakeable: [],
-		cases: [{ imports: ['DataGrid'], pulls: ['@ez-kit/data-grid-core', '@ez-kit/data-grid-react'] }],
+		cases: [
+			{ imports: ['DataGrid'], pulls: ['@ez-kit/data-grid-core', '@ez-kit/data-grid-react'] },
+			{ imports: ['useFilters', 'FilterEditor'], pulls: ['@ez-kit/data-grid-core', '@ez-kit/data-grid-react'] },
+		],
 	},
 	{
 		name: '@ez-kit/data-grid-react/state',
@@ -133,6 +136,14 @@ const PACKAGES: readonly Package[] = [
 		cases: [
 			{
 				imports: ['useGridMessages', 'PAGE_GAP', 'ActionBarVariant'],
+				pulls: ['@ez-kit/data-grid-core', '@ez-kit/data-grid-react'],
+			},
+			{
+				// The column panel's keyboard guard imports one attribute name and nothing else. It
+				// still lands beside code that reaches the headless layer, so the set matches the case
+				// above; what it must not bring — the compound and the drag stack — is asked of the
+				// bundle's text below, since an entry-point set cannot see either.
+				imports: ['useColumnDragKeyboardGuard'],
 				pulls: ['@ez-kit/data-grid-core', '@ez-kit/data-grid-react'],
 			},
 		],
@@ -260,6 +271,54 @@ describe('@ez-kit/data-grid-core/features', () => {
 })
 
 /**
+ * The ready-made operator set, on `@ez-kit/data-grid-core/operators`.
+ *
+ * Two promises. A grid that never imports the set never carries it: `createTable` resolves a
+ * column's operators from whatever set it is handed, so nothing on the main entry may name the
+ * ready-made one. And the constants named after its ids cost nothing beyond themselves: importing
+ * `FilterOperator` alone used to carry every built-in comparison and label, because the sets were
+ * assembled with array spreads, which a bundler cannot drop. Now each definition is its own object
+ * literal and each list names its members one by one.
+ *
+ * `.endsWith(` is written by the text `endsWith` comparison and by nothing else on the entry, so
+ * its presence is the comparisons surviving the shake.
+ */
+const OPERATORS_ENTRY = subpathEntryOf('data-grid/core', 'operators/index.js')
+/** A literal from the body of one ready-made `filterFn` — present exactly when the comparisons are. */
+const COMPARISON_MARKER = '.endsWith('
+
+describe('@ez-kit/data-grid-core/operators', () => {
+	it('is not reached by createTable', async () => {
+		expect(await entryPointsPulledBy(entryOf('data-grid/core'), ['createTable'])).not.toContain(
+			'@ez-kit/data-grid-core/operators',
+		)
+	})
+
+	// By text as well as by entry point: a definition hoisted into a shared chunk would fold onto the
+	// main entry's name, and only its body would give it away.
+	it('carries no comparison anywhere on the main entry', async () => {
+		expect(await bundledCodeOf(entryOf('data-grid/core'))).not.toContain(COMPARISON_MARKER)
+	})
+
+	// Not even the main entry: the definitions import types only, so the set is self-contained.
+	it('reaches exactly these entry points for the ready-made set', async () => {
+		expect(await entryPointsPulledBy(OPERATORS_ENTRY, ['defaultOperators'])).toEqual([
+			'@ez-kit/data-grid-core/operators',
+		])
+	})
+
+	// The control: without it the absences below would also be satisfied by a bundle that
+	// resolved nothing.
+	it('carries the comparisons with the set', async () => {
+		expect(await bundledCodeOf(OPERATORS_ENTRY, ['defaultOperators'])).toContain(COMPARISON_MARKER)
+	})
+
+	it.each(['FilterOperator', 'DEFAULT_OPERATOR_ICONS'])('carries no comparison with %s alone', async (name) => {
+		expect(await bundledCodeOf(OPERATORS_ENTRY, [name])).not.toContain(COMPARISON_MARKER)
+	})
+})
+
+/**
  * The kit root, where the prebuilt `DataGrid` binds `allDataGridFeatures` and `createDataGrid`
  * must not.
  *
@@ -305,10 +364,45 @@ describe('@ez-kit/data-grid-heroui', () => {
 	 * surviving the shake. Note the marker is only unambiguous *here* — the kits' own
 	 * `./filtering` group authors that same literal.
 	 */
+	/**
+	 * The column panel's keyboard guard, asked of its text for the same reason: `./kit` reaches
+	 * `@ez-kit/data-grid-react` whatever it imports. `filter-panel` is the compound surviving, as
+	 * above, and the adapter-mismatch warning is written by the drag port's context and nothing
+	 * else, so its presence is the drag stack coming along with a hook that only reads an attribute.
+	 */
+	it('keeps the panel keyboard guard clear of the compound and of the drag stack', async () => {
+		const code = await bundledCodeOf(subpathEntryOf('data-grid/react/react', 'kit.js'), ['useColumnDragKeyboardGuard'])
+
+		expect(code).not.toContain('filter-panel')
+		expect(code).not.toContain('different drag-and-drop adapter')
+		expect(code).toContain('data-column-dragging')
+	})
+
 	it('does not reach the compound namespace through a component group', async () => {
 		const core = subpathEntryOf('data-grid/react/heroui', 'core/index.js')
 
 		expect(await bundledCodeOf(core, ['coreComponents'])).not.toContain('filter-panel')
+	})
+})
+
+/**
+ * The kit root, where the prebuilt `DataGrid` binds `defaultOperators` and `createDataGrid` must not —
+ * the same separation as the feature set above, one option over.
+ *
+ * A composed bundle has no operators unless it names a set, so the set's entry reaching it through
+ * the kit root would be a cost it never asked for. Asked with {@link entryPointsPulledBy}: the
+ * operators entry has a name of its own, so reaching it is a fact the set records directly. Move
+ * the import into `index.ts` or a component group and the second case fails.
+ */
+describe.each(['heroui', 'shadcn'])('@ez-kit/data-grid-%s and the ready-made operators', (kit) => {
+	const KIT_ENTRY = entryOf(`data-grid/react/${kit}`)
+
+	it('reaches them through the prebuilt DataGrid', async () => {
+		expect(await entryPointsPulledBy(KIT_ENTRY, ['DataGrid'])).toContain('@ez-kit/data-grid-core/operators')
+	})
+
+	it('does not reach them through createDataGrid', async () => {
+		expect(await entryPointsPulledBy(KIT_ENTRY, ['createDataGrid'])).not.toContain('@ez-kit/data-grid-core/operators')
 	})
 })
 
@@ -344,6 +438,8 @@ describe('@ez-kit/data-grid-react', () => {
 	const ADAPTER_ENTRY = entryOf('data-grid/react/react')
 	/** The slot `FilterPanel` stamps — present in a bundle exactly when that component is. */
 	const FILTER_PANEL_MARKER = 'filter-panel'
+	/** Bytes `shallow` may add over the root floor: its own body, with room for a comment. */
+	const SHALLOW_BUDGET = 2048
 
 	// The control: without it an absence below would also be satisfied by a build that resolved
 	// nothing. The compound namespace must still carry its members.
@@ -366,6 +462,14 @@ describe('@ez-kit/data-grid-react', () => {
 		expect(await bundledCodeOf(ADAPTER_ENTRY, ['DataGridFooter'])).not.toContain(FILTER_PANEL_MARKER)
 	})
 
+	/**
+	 * The filter-panel hook shares its module with `FilterPanel`; a panel built on a kit's own
+	 * filter component reads the hook and must not pay for the chips it replaces.
+	 */
+	it('does not reach one through the filter-panel hook', async () => {
+		expect(await bundledCodeOf(ADAPTER_ENTRY, ['useFilters'])).not.toContain(FILTER_PANEL_MARKER)
+	})
+
 	/** And the bare root must stay bare — `<DataGrid>` as a host would hand the saving back. */
 	it('does not reach one through DataGridRoot', async () => {
 		expect(await bundledCodeOf(ADAPTER_ENTRY, ['DataGridRoot'])).not.toContain(FILTER_PANEL_MARKER)
@@ -378,6 +482,77 @@ describe('@ez-kit/data-grid-react', () => {
 		])
 
 		expect(narrow.length).toBeLessThan(everything.length / 2)
+	})
+
+	/**
+	 * `shallow` is the comparison the selector hooks recommend for a derived object, and a cell that
+	 * reads its own store may import it and nothing else from the grid. It must cost no more than the
+	 * floor every root import already pays, and must not bring the compound.
+	 *
+	 * "Reaches nothing else" is not the claim, because it is not true of any root import: the root's
+	 * shared chunks — the selector hooks among them — survive a bundle of a single hook or helper,
+	 * so `useDataGridTable` is the floor `shallow` is measured against rather than zero.
+	 */
+	it('adds nothing beyond the root floor through the selector comparison', async () => {
+		const [comparison, floor] = await Promise.all([
+			bundledCodeOf(ADAPTER_ENTRY, ['shallow']),
+			bundledCodeOf(ADAPTER_ENTRY, ['useDataGridTable']),
+		])
+
+		expect(comparison).not.toContain(FILTER_PANEL_MARKER)
+		expect(comparison.length - floor.length).toBeLessThan(SHALLOW_BUDGET)
+	})
+
+	/**
+	 * `useGridContext` carries `withTypes`, and attaching it must not anchor the hook.
+	 *
+	 * A top-level `useGridContext.withTypes = withTypes` is the statement class the compound
+	 * namespace above was fixed for: esbuild cannot drop it, so every import that reaches the
+	 * module — `useDataGrid` does, for the context atom — would keep the hook and its imports. The
+	 * annotated `Object.assign` over a flat literal is what keeps it droppable.
+	 *
+	 * `withTypes` is the property key of that literal and is written nowhere else in the package.
+	 */
+	describe('the grid-context reader', () => {
+		const GRID_CONTEXT_READER_MARKER = 'withTypes'
+
+		it('reaches a bundle through useGridContext', async () => {
+			expect(await bundledCodeOf(ADAPTER_ENTRY, ['useGridContext'])).toContain(GRID_CONTEXT_READER_MARKER)
+		})
+
+		it('does not reach a bundle that imports only the hook building the grid', async () => {
+			expect(await bundledCodeOf(ADAPTER_ENTRY, ['useDataGrid'])).not.toContain(GRID_CONTEXT_READER_MARKER)
+		})
+
+		it('does not reach a bundle that reads only the table', async () => {
+			expect(await bundledCodeOf(ADAPTER_ENTRY, ['useDataGridTable'])).not.toContain(GRID_CONTEXT_READER_MARKER)
+		})
+	})
+
+	/**
+	 * The `useItems` machinery — the per-grid source store, its runners, the list hooks — reaches a
+	 * bundle with the grid, which mounts its host, and with the controls that read a list. It must
+	 * not reach an import that has nothing to do with value lists.
+	 *
+	 * The marker is a fragment of the store's own development warning, written in one literal and
+	 * nowhere else in the package.
+	 */
+	describe('the value-list store', () => {
+		const ITEMS_STORE_MARKER = 'is a new function on this render'
+
+		it('reaches a bundle through DataGrid', async () => {
+			expect(await bundledCodeOf(ADAPTER_ENTRY, ['DataGrid'])).toContain(ITEMS_STORE_MARKER)
+		})
+
+		it('does not reach a bundle that reads only the table', async () => {
+			expect(await bundledCodeOf(ADAPTER_ENTRY, ['useDataGridTable', 'useDataGridState'])).not.toContain(
+				ITEMS_STORE_MARKER,
+			)
+		})
+
+		it('does not reach a bundle through the footer', async () => {
+			expect(await bundledCodeOf(ADAPTER_ENTRY, ['DataGridFooter'])).not.toContain(ITEMS_STORE_MARKER)
+		})
 	})
 })
 

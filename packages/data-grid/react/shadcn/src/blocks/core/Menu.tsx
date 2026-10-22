@@ -12,6 +12,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from '@grid-shadcn/components/ui/dropdown-menu'
+import { KIT_CLASS_NAME } from '@grid-shadcn/lib/kit-class-name'
 
 import { renderGridMenuIcon } from '../icons'
 
@@ -56,7 +57,10 @@ export function Menu({ variant, sections, triggerLabel, triggerIcon, 'aria-label
 					</Button>
 				)}
 			</DropdownMenuTrigger>
-			<DropdownMenuContent align={isColumn || isFilter ? 'start' : 'end'}>
+			<DropdownMenuContent
+				className={KIT_CLASS_NAME}
+				align={isColumn || isFilter ? 'start' : 'end'}
+			>
 				{sections.map((section, index) => (
 					<div key={section.id}>
 						{index > 0 && <DropdownMenuSeparator />}

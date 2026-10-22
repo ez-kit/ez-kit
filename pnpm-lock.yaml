@@ -170,6 +170,9 @@ importers:
       '@react-three/fiber':
         specifier: ^9.6.1
         version: 9.6.1(@types/react@19.2.14)(immer@11.1.8)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(three@0.184.0)
+      '@tanstack/react-store':
+        specifier: ^0.11.1
+        version: 0.11.1(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -333,9 +336,6 @@ importers:
       '@tanstack/table-core':
         specifier: ^9.2.4
         version: 9.2.4
-      zod:
-        specifier: '>=3'
-        version: 4.3.6
     devDependencies:
       '@types/react':
         specifier: ^19.2.14
@@ -349,6 +349,9 @@ importers:
       react-dom:
         specifier: ^19.2.4
         version: 19.2.5(react@19.2.5)
+      zod:
+        specifier: ^4.3.6
+        version: 4.3.6
 
   packages/data-grid/react/heroui:
     dependencies:
@@ -407,6 +410,9 @@ importers:
       '@ez-kit/data-grid-core':
         specifier: workspace:^
         version: link:../../core
+      '@tanstack/react-store':
+        specifier: ^0.11.1
+        version: 0.11.1(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@tanstack/react-table':
         specifier: ^9.2.4
         version: 9.2.4(react-dom@19.2.5(react@19.2.5))(react@19.2.5)

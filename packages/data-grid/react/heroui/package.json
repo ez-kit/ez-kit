@@ -1,6 +1,6 @@
 {
 	"name": "@ez-kit/data-grid-heroui",
-	"version": "0.9.0",
+	"version": "0.12.0",
 	"description": "HeroUI flavour of @ez-kit/data-grid.",
 	"license": "MIT",
 	"repository": {
@@ -163,7 +163,7 @@
 		},
 		{
 			"path": "dist/cell-types/index.js",
-			"limit": "3 KB",
+			"limit": "3.65 KB",
 			"ignore": [
 				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
@@ -213,7 +213,7 @@
 		},
 		{
 			"path": "dist/cell-types/select.js",
-			"limit": "800 B",
+			"limit": "1.45 KB",
 			"ignore": [
 				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
@@ -223,7 +223,7 @@
 		},
 		{
 			"path": "dist/cell-types/badge.js",
-			"limit": "940 B",
+			"limit": "1.6 KB",
 			"ignore": [
 				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
@@ -283,7 +283,7 @@
 		},
 		{
 			"path": "dist/sorting/index.js",
-			"limit": "1.3 KB",
+			"limit": "1.89 KB",
 			"ignore": [
 				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
@@ -343,7 +343,7 @@
 		},
 		{
 			"path": "dist/visibility/index.js",
-			"limit": "1.15 kB",
+			"limit": "1.65 kB",
 			"ignore": [
 				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",

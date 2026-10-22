@@ -73,8 +73,9 @@ const outPath = generateRegistryManifest({
 			// Only packages the copied files import directly (verify with:
 			// grep -rho "from '[a-z][a-z0-9@/-]*'" src/{blocks,hooks,lib} src/data-grid.tsx | sort -u).
 			// @ez-kit/data-grid-core is imported by a copied file: `data-grid.tsx` names
-			// `allDataGridFeatures` from @ez-kit/data-grid-core/features/all, so the grid registers every
-			// feature the moment it lands and the consumer writes no `features` to render one. Narrowing
+			// `allDataGridFeatures` from @ez-kit/data-grid-core/features/all and `defaultOperators` from
+			// @ez-kit/data-grid-core/operators, so the grid registers every feature and offers the
+			// ready-made operators the moment it lands, and the consumer writes neither to render one. Narrowing
 			// that set — replacing the import with their own `tableFeatures({ … })` — is an edit to a file
 			// they now own, and the helpers for it live on core too. It was listed here even before that
 			// import existed, because relying on it being transitive through @ez-kit/data-grid-react was
@@ -164,7 +165,7 @@ const outPath = generateRegistryManifest({
 	],
 	/*
 	 * `index.ts` is the npm barrel, relevant only to this repo's own `workspace:*` consumption
-	 * (`apps/docs`) and not to a consumer copying source into their project. The two `.test` entries
+	 * (`apps/docs`) and not to a consumer copying source into their project. The three `.test` entries
 	 * are filtered out of the payload by the generator anyway; they are named here because
 	 * `assertTopLevelCoverage` reads the directory raw and fails on any top-level entry it cannot
 	 * account for — which is what stops a new file from being dropped silently.
@@ -174,7 +175,7 @@ const outPath = generateRegistryManifest({
 	 * to switch drag on at all, since this package is not published to npm and a file that is not
 	 * copied cannot be imported. Its own item is what resolves that both ways.
 	 */
-	excludeTopLevel: ['index.ts', 'index.test.ts', 'dnd.test.tsx'],
+	excludeTopLevel: ['index.ts', 'index.test.ts', 'dnd.test.tsx', 'data-grid.test.tsx'],
 })
 
 console.log(`Wrote ${outPath}`)

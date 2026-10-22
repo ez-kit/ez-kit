@@ -6,11 +6,13 @@ import { textCellType } from './text'
 
 import type {
 	BadgeCellConfig,
+	BadgeColumnConfig,
 	DateCellConfig,
 	ImageCellConfig,
 	LinkCellConfig,
 	ProgressCellConfig,
 	SelectCellConfig,
+	SelectColumnConfig,
 } from '@ez-kit/data-grid-core'
 
 export { numberCellType, formatNumber } from './number'
@@ -23,6 +25,7 @@ export { booleanCellType } from './boolean'
  */
 export type {
 	BadgeCellConfig,
+	BadgeColumnConfig,
 	BooleanCellConfig,
 	DateCellConfig,
 	ImageCellConfig,
@@ -30,6 +33,7 @@ export type {
 	NumberCellConfig,
 	ProgressCellConfig,
 	SelectCellConfig,
+	SelectColumnConfig,
 	TextCellConfig,
 } from '@ez-kit/data-grid-core'
 
@@ -56,8 +60,8 @@ export const baseCellTypes = {
 	number: numberCellType,
 	boolean: booleanCellType,
 	date: defineCellType<DateCellConfig>()({}),
-	select: defineCellType<SelectCellConfig>()({}),
-	badge: defineCellType<BadgeCellConfig>()({}),
+	select: defineCellType<SelectCellConfig, SelectColumnConfig>()({}),
+	badge: defineCellType<BadgeCellConfig, BadgeColumnConfig>()({}),
 	image: defineCellType<ImageCellConfig>()({}),
 	link: defineCellType<LinkCellConfig>()({}),
 	progress: defineCellType<ProgressCellConfig>()({}),

@@ -74,15 +74,21 @@ test.describe('a localized grid', () => {
 	})
 
 	test('translates the filter operators and names the control', async ({ page }) => {
-		// The trigger shows the current operator; its accessible name says what the control is.
-		const operator = page
-			.getByRole('combobox', { name: 'Оператор фильтра' })
-			.or(page.getByRole('button', { name: /Оператор фильтра/ }))
+		// The button shows the current operator's label, and its accessible name — from
+		// `filtering.operatorTrigger` — carries it too, since a clipped label or an icon reads badly.
+		const contains = page.getByRole('button', { name: 'Оператор фильтра: Содержит' })
+		const equals = page.getByRole('button', { name: 'Оператор фильтра: Равно' })
 
-		await expect(operator).toHaveCount(2)
-		// `contains` on the text column, `equals` on the number one — both from `operators`.
-		await expect(operator.first()).toContainText('Содержит')
-		await expect(operator.last()).toContainText('Равно')
+		await expect(contains).toHaveCount(1)
+		await expect(equals).toHaveCount(1)
+		// `contains` on the text column, `equals` on the number one — both from the translated set the example passes as `operators`.
+		await expect(contains).toContainText('Содержит')
+		await expect(equals).toContainText('Равно')
+
+		// The menu is named by `filtering.operator`, and its entries are the translated labels.
+		await contains.click()
+		await expect(page.getByRole('menu', { name: 'Оператор фильтра' })).toHaveCount(1)
+		await expect(page.getByRole('menuitemradio', { name: 'Содержит' })).toHaveAttribute('aria-checked', 'true')
 	})
 
 	test('translates the toolbar controls', async ({ page }) => {

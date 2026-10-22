@@ -6,6 +6,7 @@ import { useGridMessages } from '@ez-kit/data-grid-react/kit'
 import { Field, FieldDescription, FieldError, FieldLabel } from '@grid-shadcn/components/ui/field'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@grid-shadcn/components/ui/select'
 import { Switch } from '@grid-shadcn/components/ui/switch'
+import { KIT_CLASS_NAME } from '@grid-shadcn/lib/kit-class-name'
 
 import type { BooleanCellConfig, CellTypeDefinition, CellViewProps, FieldState } from '@ez-kit/data-grid-react'
 
@@ -67,7 +68,7 @@ function BooleanFilterInput({ id, value, onChange, onBlur, label, description, e
 				>
 					<SelectValue placeholder={messages.cells.all} />
 				</SelectTrigger>
-				<SelectContent>
+				<SelectContent className={KIT_CLASS_NAME}>
 					<SelectItem value={ALL_SENTINEL}>{messages.cells.all}</SelectItem>
 					<SelectItem value={TRUE_KEY}>{messages.cells.yes}</SelectItem>
 					<SelectItem value={FALSE_KEY}>{messages.cells.no}</SelectItem>

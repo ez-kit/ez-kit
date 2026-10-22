@@ -1,5 +1,1017 @@
 # @ez-kit/data-grid-heroui
 
+## 0.12.0
+
+### Minor Changes
+
+- 1477f42: Feed a `select` / `badge` column's values from a hook. `cell.config.useItems` takes a stable hook
+  returning `{ items, isLoading, error }`, which the grid calls itself — once per list, not once per
+  cell, and only while a cell, filter, chip or editor on screen reads it (a mounted filter panel
+  reads every list it offers) — so a backend dictionary no
+  longer means rebuilding the columns on every response. The hook runs inside the grid and may read
+  it (`useDataGridState` for the current filters); fetching and caching stay with the hook, usually a
+  query library. It receives a parameters object, empty today, that later options extend.
+  - `filtering`, `editing` and `creating` take their own `items` / `useItems`, inherited
+    `creating → editing → cell` and `filtering → cell`. An override changes what is offered; labels
+    always come from the base list.
+  - `cell.config.getItem(row)` labels a value from the row it belongs to, before or without a list,
+    and labels faceted filter values and their chips when the column has no list.
+  - A kit's view receives `itemStatus` (`resolved` / `pending` / `error` / `missing`) and `item`;
+    `FieldState` gains `itemsLoading`, `itemsError` and `item`; `MultiSelectFilterProps` gains
+    `itemsLoading` and `itemsError`. All optional, so an external kit keeps compiling. Both kits draw a
+    skeleton for a pending label and loading / error states in their selects and multi-select.
+  - A hook that throws is caught per list and reads as that list's `error`, then is run again (up to
+    three times with a growing delay, and whenever a control starts reading the list). The rerun cannot
+    clear an error a query library keeps itself — TanStack Query rethrows a `throwOnError` or suspense
+    error until a `QueryErrorResetBoundary` resets it — so the docs recommend returning `error`. A hook that
+    suspends is waited for inside the grid while the list reads as loading. The grid stays up.
+  - `useItemsSource(columnId, slot)` reads a column's list through the grid's own source.
+  - `messages.filtering.itemsError` is the text for a list whose hook failed.
+  - Development builds warn when one level sets both `items` and `useItems` (the hook wins), when a
+    `useItems` reference changes between renders, and when `filtering.faceted` meets
+    `filtering.manual: true` (facets then count the loaded page only).
+  - `filtering.fields` take `filtering.useItems` (and a `select` cell's `config.useItems`).
+
+  **Behaviour fixes** to the filter's counts: a `count` an item's own source states is now kept
+  under `faceted` — it used to be overwritten by a count of the loaded rows — and, once anything
+  counts, a value nobody counted reads `count: 0` instead of `undefined`, which the kits show and keep
+  selectable. The active-filters chips now show a selected value's label rather than its raw value.
+
+  **Types**: a column writes the new `SelectColumnConfig` / `BadgeColumnConfig` (`items` or
+  `useItems`, plus `getItem`) — what `BaseCellTypes` and both kits' registries now declare as the
+  `select` / `badge` column config. `SelectCellConfig` / `BadgeCellConfig` stay what a component
+  receives, with `items` required as before. `defineCellType` takes an optional second type
+  parameter for a column config that differs from its renderers' one.
+
+  **Size budgets**, measured with `size-limit` (minified + brotli, dependencies ignored):
+  `@ez-kit/data-grid-react` `dist/index.js` went from 34.34 kB to 37.66 kB, so its budget moves from
+  35.5 kB to 43.5 kB. In `@ez-kit/data-grid-heroui` the new list states take `dist/cell-types/select.js`
+  to 1.24 kB (budget 800 B → 1.45 kB), `badge.js` to 1.37 kB (940 B → 1.6 kB) and the `cell-types`
+  barrel to 3.15 kB (3 kB → 3.65 kB).
+
+- 3ae915d: Put a form of your own in the create and edit modals. The kit's `FormModal` component is the one
+  way to replace the modal, and it now receives the whole form contract beside the dialog's props:
+  `mode`, `fields` (the generated fields one by one, keyed by column id), `initialValues`, `row`,
+  `errors`, `submit(values?)` and `validate(values)`. Register your own per grid with
+  `components={{ editing: { FormModal } }}`, or app-wide through `createDataGrid`, and either lay out
+  the generated `fields` and save with `onSave`, or render any form library seeded from
+  `initialValues` and save through `submit(values)`.
+  - `creating.commit` and `editing.commit` take `{ values }`, which replace the form's values before
+    the save, and resolve to a `CommitResult`: `{ ok: true }`, or `ok: false` with a `reason` from
+    `CommitFailure` — `'rejected'` (with the `errors` / `formError` the validator or a
+    `ValidationError` from `onSave` produced), `'cancelled'`, `'busy'` (the grid's own `validate()`
+    was running) or `'closed'` (no form open). Only an error the grid cannot interpret still
+    rejects. A second call while a save is in flight resolves to the first one's outcome and ignores
+    its `values`, and `cancel()` settles a save as cancelled even when `onSave` ignores its signal.
+    `editing.commitCell` resolves the same way.
+  - `validate()` no longer cancels a commit in flight: it resolves `null` without running, since
+    the commit validates anyway. It used to abandon a save that may already have reached the server.
+  - `validateValues(values)` on both features runs the validator and writes nothing. It resolves
+    `null` when valid and also when no form is open, without running.
+  - The `creating` and `editing` slices carry `initialValues`, the seed `start()` wrote, which keeps
+    its identity while the form is open.
+  - `editing.onSave` receives `row`, the edited row as it is in `data`, beside `rowId` and `values`.
+  - Validation takes any [Standard Schema](https://standardschema.dev): `validate: { schema }` accepts
+    zod, valibot, arktype and the rest, and a schema may validate asynchronously. An issue without a
+    path — a `refine` comparing two fields — now reaches `formError` instead of being dropped, several
+    of them one per line; both kits render the banner with `white-space: pre-line`. A nested path is
+    keyed by its first segment, as before.
+
+  **Breaking:**
+  - `zodResolver(schema)` is renamed `schemaResolver(schema)` and resolves asynchronously.
+    `validate: { schema }` needs a schema that implements Standard Schema — zod 3.24 or later; an
+    older zod fails with an error that says so. zod is no longer a peer dependency of
+    `@ez-kit/data-grid-core`.
+  - The slot `editing.FormShell` is renamed `editing.FormModal`, and `FormShellProps` `FormModalProps`.
+    An external kit declared `satisfies FullGridComponents` fails to compile until it renames the
+    key; its component renders `children` as before and may ignore the new props. The fallback to `core.Modal` when no slot was registered is removed — `ComponentGuard`
+    already required the slot in `mode: 'modal'`.
+  - `DataGrid.CreatingModal` and `DataGrid.EditingModal` are removed, with the named exports
+    `DataGridCreatingModal` / `DataGridEditingModal` and their prop types. The grid mounts the modal
+    itself, so one written in a layout rendered a second dialog beside the kit's, and its render
+    function never replaced anything. Register a `FormModal` instead: the render function's
+    arguments are its props, with `form` as `children`. `DataGridFormModalProps` and
+    `DataGridFormModalRenderArgs` are removed too.
+  - The edit form, and the `values` that reach `editing.validate` and `editing.onSave`, hold only the
+    fields of the edit form: no column with `editing: false`. Read such a value from `row`.
+  - `creating.commit`, `editing.commit` and `editing.commitCell` resolve to a `CommitResult` instead of
+    `undefined`.
+
+- a8ed5f1: Give a column's filter a hint of its own. `filtering.placeholder: '10 digits'` replaces the text an
+  empty filter shows, on a column and on a `filtering.fields` entry alike, and leaves the control's
+  accessible name on `messages.filtering.placeholder`, so a screen reader never announces the hint as
+  the field's name. A multi-select trigger is named by both the filter name and what it shows — the
+  hint, or the picked values — so its visible text stays part of its name. The hint reaches the text
+  input, the multi-select trigger, a cell type's filter component as `FieldState.placeholder` and a
+  `filtering.component` as `props.placeholder`; the `between` range keeps its own "From" / "To". The filter model carries the resolved value as `placeholder`, so a panel
+  built on `useFilters()` shows the same hint as the header.
+
+  The default filter name now reads the column's header instead of its id: `Filter First name…` where
+  it was `Filter firstName…`, with the id as the fallback for a header that is not a string.
+  `messages.filtering.placeholder` receives `label` beside `columnId`; a dictionary that reads only
+  `columnId` keeps working. Tests that find a filter by its old text need the header in it.
+
+  A kit implementing `MultiSelectFilter` should name the control by the new `label` prop rather than
+  by `placeholder`, which may now be an author's hint. The HeroUI kit does, and shows the hint in its
+  text and number filters.
+
+- a51c741: The filter operator moves into the filter's row. It used to sit on a row of its own under the
+  input, which made every column with operators a line taller and left the columns without them
+  misaligned beside it. Now it is the first control in the row, before the input, the range, the
+  multi-select or the column's own component, and an operator that takes no value (`isEmpty`) shows
+  its label where the input would be, so the row keeps its height.
+  - **Breaking (kit slot, behaviour):** `OperatorSelect` is a button that opens a menu, not a
+    select. Both kits show the current operator's icon when its definition has one, else its label, clipped
+    to the button's width, and the menu
+    lists every operator with the current one checked. Tests that looked for a `combobox` named
+    `Filter operator` look for a button instead.
+  - The button's accessible name carries the operator: the new `messages.filtering.operatorTrigger`
+    gives it, `Filter operator: Contains` by default. A dictionary without it keeps the English
+    default. `messages.filtering.operator` now names the menu.
+  - Operators can show an icon instead of their label: `FilterOperatorDef.icon` sets one on the
+    definition, which is its only source. Labels stay the default, as decided in #63.
+    `DEFAULT_OPERATOR_ICONS` is a map of ready signs for the built-in ids, to copy into the `icon` of
+    the definitions a grid is given.
+  - `FilterModel.operators` and `OperatorSelectProps.operators` are `FilterOperatorOption[]`, the
+    definition with its icon typed for React. An external kit keeps compiling.
+
+- 0d2319a: Filter operators become bundle config, by cell type, the way `features` is. `operators: { byType,
+defaultByType }` maps each cell type to the definitions its columns offer and to the one they open
+  with. Set it in `createDataGrid({ operators })`, on a `DataGridOptionsProvider` or on a grid: a
+  layer replaces the set of each cell type it names and keeps the others. It switches nothing on —
+  `filtering.operators` still does. Both kits' prebuilt `DataGrid` passes the ready-made set, so a
+  grid built from a kit root offers the same operators as before; a grid composed through
+  `createDataGrid` has the operators it names and no others, and `filtering.operators: true` without
+  a set warns once in development.
+  - The ready-made set, `defaultOperators`, moves to a new subpath, `@ez-kit/data-grid-core/operators`,
+    with `FilterOperator` and `DEFAULT_OPERATOR_ICONS`. Importing the constants no longer carries the
+    comparisons, and `createTable` no longer reaches any of them.
+  - **Breaking:** `FilterOperatorDef` takes a required `input: 'none' | 'single' | 'range' | 'list'`
+    (`OperatorInput`), which types the value `filterFn` receives. `requiresInput` is removed — write
+    `input: 'none'`. `filterFn` is never called with an empty value unless `input` is `none`.
+  - **Breaking:** the grid reads an operator's behaviour from its `input`, never from its id: the
+    editor, empty values in a batch write, which date presets apply, and whether the active-filter
+    chip shows a value. An operator of your own with `input: 'range'` gets the range control, one
+    with `input: 'list'` the multi-select.
+  - **Breaking (behaviour):** switching between operators that take a different `input` now drops
+    the value — `in` to `equals` used to keep the array, `contains` to `in` the string. Between two
+    operators with the same `input` the value is kept, so `between` to a custom `notBetween` keeps the
+    range.
+  - **Breaking:** an operator's label is its definition's `label`, and nothing else.
+    `messages.operators` is removed with `localizeOperators`; a translated grid passes a translated
+    set — copy the definitions with new labels. The date presets' labels move from
+    `messages.operators.presets` to `messages.filtering.presets`, and the preset menu's own name from
+    `messages.filtering.presets` to `messages.filtering.presetMenu`.
+  - **Breaking:** the table-level `filtering.operators.items` registry is removed, with
+    `TableOperatorsConfig`; the table-level `filtering.operators` is a `boolean`. Replace an operator in
+    the set of each cell type that should get it. A string in a column's `filtering.operators.items`
+    is looked up in that column's own cell type's set only.
+  - **Breaking:** `defineCellType({ operators, defaultOperator })` is removed — it was never read. A
+    project cell type gets operators from `operators.byType[itsType]`.
+  - **Breaking:** the main entry no longer exports `FilterOperator`, `DEFAULT_OPERATOR_ICONS`,
+    `DEFAULT_OPERATORS_BY_TYPE`, `DEFAULT_OPERATOR_ID_BY_TYPE`, `TEXT_OPERATORS`, `NUMBER_OPERATORS`,
+    `DATE_OPERATORS`, `BOOLEAN_OPERATORS`, `IN_OPERATORS`, `SELECT_BADGE_OPERATORS`,
+    `EMPTY_OPERATORS`, `buildOperatorRegistry` or `OperatorRegistry`. Take the first two from
+    `@ez-kit/data-grid-core/operators`, and the sets from `defaultOperators.byType`.
+  - A filter restored with an operator its column does not offer — a link made against another set —
+    still keeps every row, and now warns once per column in development. A value of the wrong shape
+    for its operator (a scalar under a list operator) keeps every row too, instead of reaching the
+    comparison. A set listing an id twice, a definition without a valid `input`, and a
+    `defaultByType` entry its set does not have each warn once in development.
+  - `isEmptyOperatorValue(input, value)` is exported from the main entry: the rule the row filter and
+    the filter panel use for whether a value states anything.
+
+- f8933f0: Reorder the entries of the multi-sort builder. An entry's place in `<DataGrid.SortMenuTrigger />` is
+  its priority, and each entry now carries a pair of steps that moves it one place up or down — or,
+  with a drag adapter bound, a grip it is dragged by, from the pointer or the keyboard. A step or a drop
+  keeps every entry's direction and is one `sorting.onChange`. `sorting.multi.reorderable` chooses the
+  affordance and defaults to `true` whenever multi-sort is on.
+
+  The choice is spelled with a new closed set, `ReorderMode` (`'drag' | 'step' | 'both'`), which every
+  reorderable surface now takes as `boolean | ReorderMode`: `true` means the grip with an adapter and
+  the steps without one, `false` turns the surface's reordering off, and `'drag'` / `'both'` without an
+  adapter fall back to the steps with a development warning naming the option.
+
+  **Breaking:** the column surfaces move to the same vocabulary. `ordering.column.drag` and
+  `ordering.column.moveControls` are replaced by `ordering.column.header`, the object form of
+  `ordering.column.visibilityMenu` by `boolean | ReorderMode`, and `VisibilityMenuOrderingConfig` is
+  removed. A combination that offered nothing is now written `false`, so the "offers neither"
+  warning is gone.
+
+  | Before                                                   | After                                    |
+  | -------------------------------------------------------- | ---------------------------------------- |
+  | `ordering.column.drag: false`                            | `ordering.column.header: 'step'`         |
+  | `ordering.column.moveControls: true`                     | `ordering.column.header: 'both'`         |
+  | `ordering.column.drag: false, moveControls: false`       | `ordering.column.header: false`          |
+  | `ordering.column.visibilityMenu: { drag: false }`        | `ordering.column.visibilityMenu: 'step'` |
+  | `ordering.column.visibilityMenu: { moveControls: true }` | `ordering.column.visibilityMenu: 'both'` |
+  | `ordering.column.visibilityMenu: { drag: true }`         | `ordering.column.visibilityMenu: 'drag'` |
+  | `ordering.column.visibilityMenu: {}`                     | `ordering.column.visibilityMenu: true`   |
+
+  **Behaviour change:** **Add Sort** in the builder now follows `sorting.multi`. With multi-sort off —
+  including `multi` left unwritten — it is unavailable once one entry exists, it stops at
+  `multi.max`, and a column declared with `sorting: { multi: false }` is offered for the first entry
+  only — and no step or drop moves it below the first place. A Shift-click on a header is unchanged. Write `sorting: { multi: true }` to keep building
+  several entries.
+  - `SortMenuItem` gains `label` and an optional `ordering` pair, the same shape as
+    `VisibilityColumnItem.ordering`.
+  - `<DataGrid.SortItem sortId>` (also `DataGridSortItem`) is the builder's row, with an element form
+    and a render-function form handing over `itemProps` (`data-slot="sort-row"`), `handleProps` and
+    `isDragging`, as `<DataGrid.VisibilityItem>` does for the column panel. `useSortItemDrag()` reads
+    its drag state from the element form, and `useSortDragKeyboardGuard()` keeps keys away from the
+    builder's controls during a keyboard drag.
+  - `useStepFocus` (with `StepSide`) keeps keyboard focus on a list's step pair across the step it
+    triggers, landing on the other button when the pressed one reaches an end; both kits' builders use
+    it. `SORT_DRAGGING_SELECTOR` lets a popover tell a drag's `Escape` from its own dismissal — both
+    kits' builders stay open when `Escape` cancels a keyboard drag.
+  - The drag port gains a third axis, `DragAxis.Sorting`, whose drops write `sorting`. An adapter of
+    your own that switches over `DragAxis` exhaustively needs a `sorting` arm, and one that lists the
+    axes it accepts needs the new value.
+  - New messages: `sorting.moveUp` / `moveDown` / `dragSort` and `ordering.sortPickedUp` /
+    `sortMovedTo` / `sortDropped` / `sortCancelled`. A partial dictionary is unaffected; a complete
+    `GridMessages` object has to add them.
+
+- 34c93fe: **`<DataGrid.VisibilityItem>` takes a render function, for a column panel whose rows a collection
+  renders.** A panel built on react-aria's `GridList` or `ListBox` cannot put a wrapper around a row,
+  because the collection renders the row element itself, so the only way to make its rows draggable
+  was to call `useSortableItem` directly and copy the item's internals. With a function child the
+  item renders nothing and hands back `itemProps` — the drag's ref, `data-slot`, `data-column-id` and,
+  while dragging, `data-column-dragging` — to spread onto the row, and `handleProps` for the grip,
+  which is `null` whenever the row cannot be dragged. Which rows take part, at which index and whether
+  a column is locked are still decided by the item. JSX children keep today's behaviour.
+
+  **`useColumnDragKeyboardGuard()`** (from the package root and `@ez-kit/data-grid-react/kit`) returns
+  a ref for such a collection. A keyboard drag uses the arrows and `Space`, which the collection also
+  acts on: without the guard one `ArrowDown` moved a row two places, and the `Space` that drops it
+  could toggle a column's visibility.
+
+  **A locked column is no longer marked as a drag activator.** The drag library's accessibility
+  plugin marked every registered item that has no grip — including a column declared
+  `ordering: false` — with `role`, `tabindex`, `aria-roledescription`, `aria-describedby`,
+  `aria-pressed`, `aria-grabbed` and `aria-disabled`. A locked header cell and a locked panel row
+  became a `button` and a tab stop for a drag that cannot happen. Both kits' drag adapters now give a
+  locked item an inert handle, so none of it reaches the page; its place in the order is unchanged.
+
+  **The HeroUI column panel is a `GridList`.** Its rows are grid rows whose selection is the column's
+  visibility, with the grip, the checkbox and the move pair inside the row, and no wrapper elements
+  around it. The panel is one tab stop: the arrows move between rows and `ArrowRight` steps into a
+  row's controls. The `column-visibility-item`, `column-drag-handle` and `column-visibility-move-*`
+  slots are unchanged; styles written against the previous dialog-of-checkboxes markup rather than
+  against those slots need updating. The plain Columns toggle stays a menu.
+
+### Patch Changes
+
+- Updated dependencies [1477f42]
+- Updated dependencies [47fe2ec]
+- Updated dependencies [3ae915d]
+- Updated dependencies [a8ed5f1]
+- Updated dependencies [a8ed5f1]
+- Updated dependencies [a51c741]
+- Updated dependencies [0d2319a]
+- Updated dependencies [f8933f0]
+- Updated dependencies [2a1c815]
+- Updated dependencies [34c93fe]
+  - @ez-kit/data-grid-core@0.12.0
+  - @ez-kit/data-grid-react@0.13.0
+
+## 0.11.1
+
+### Patch Changes
+
+- Updated dependencies [197ce6f]
+- Updated dependencies [bb14a78]
+  - @ez-kit/data-grid-core@0.11.0
+  - @ez-kit/data-grid-react@0.12.0
+
+## 0.11.0
+
+### Minor Changes
+
+- 589a883: **Breaking: the layout presets put an `inline` action bar above the table.**
+
+  With `selection: { bar: 'inline' }`, `DefaultLayout`, `BottomBarLayout`, `FilterPanelLayout` and
+  `PopoverFiltersLayout` now render the action bar between the toolbar and the table. In
+  `FilterPanelLayout` it goes after the active-filters strip, directly above the table. Before, every
+  preset rendered the bar last, so an inline bar sat below the pagination, away from the rows it acts
+  on. The `floating` bar, which is the default, still renders last. Every kit's prebuilt `DataGrid`
+  binds `DefaultLayout`, so it changes too.
+
+  Each preset still renders exactly one bar. When a controlled `selection.bar` switches variant, the
+  bar moves without losing the selection. A grid whose body is `children` or its own `core.Layout`
+  is unaffected: the bar stays where that layout writes it.
+
+  The inline bar renders nothing until a row is selected or a draft is pending, so above the table it
+  now pushes the rows down when it appears. To keep it below the table, write a layout of your own with the bar last:
+
+  ```tsx
+  <DataGrid selection={{ bar: 'inline' }}>
+  	<DataGrid.Toolbar />
+  	<DataGrid.Table />
+  	<DataGrid.Pagination />
+  	<DataGrid.ActionBar />
+  </DataGrid>
+  ```
+
+- 86caca6: **Breaking: the layout presets no longer mount `SortMenuTrigger` or `ClearFiltersButton`.**
+
+  A preset now mounts a feature's control only when the grid has no other way into — or back out of —
+  that feature. Search, the column-visibility toggle and "+ Add" stay. The sort builder goes, because
+  sorting already has the header click, and Clear-filters goes, because every filter clears in its own
+  input. `sorting: true` again means click-to-sort and nothing more.
+
+  This restores the defaults from before 0.9.0, where `sorting.toolbar` and `filtering.toolbar` were
+  opt-in. Moving placement into JSX gated every preset control on "the feature is on", which turned
+  both on by accident. `DefaultLayout`, `BottomBarLayout`, `FilterPanelLayout` and
+  `PopoverFiltersLayout` all change, and so does every kit's prebuilt `DataGrid`, which binds
+  `DefaultLayout`.
+
+  To keep either control, write it into a layout of your own:
+
+  ```tsx
+  <DataGrid.Toolbar
+  	end={
+  		<>
+  			<DataGrid.ClearFiltersButton />
+  			<DataGrid.SortMenuTrigger />
+  			<DataGrid.VisibilityTrigger />
+  		</>
+  	}
+  />
+  ```
+
+### Patch Changes
+
+- Updated dependencies [86caca6]
+- Updated dependencies [ad4ae90]
+- Updated dependencies [589a883]
+- Updated dependencies [86caca6]
+  - @ez-kit/data-grid-react@0.11.0
+  - @ez-kit/data-grid-core@0.10.0
+
+## 0.10.0
+
+### Minor Changes
+
+- e859429: Render group rows, column aggregates and a footer grand total.
+
+  The `__group__` column's cell carries a group's label, how many rows it holds and its chevron. It
+  is **composed, not a new contract slot** — `core.Td`, the existing `expanding.Chevron` and text —
+  so `FEATURE_COMPONENTS` and `FEATURE_OPTIONAL_COMPONENTS` are unchanged and a kit styles it
+  through `data-slot='group-cell'` + `data-system-column='group'`. A group row is stamped
+  `data-group-row='true'` and announces `aria-expanded`; its nesting shows through the `data-depth`
+  the indentation rules already read.
+
+  A column with an `aggregation` renders its subtotal on each group row, through
+  `aggregation.component` when one is supplied and otherwise through the column's **existing**
+  cell-type view — so a `number` column's subtotal is formatted the way its values are. The cell is
+  marked `data-aggregated-cell='true'`.
+
+  **A footer cell now falls back to the column's grand total.** A column that wrote `aggregation`
+  and no `footer` renders `column.getAggregationValue()` there, which needs no grouping at all:
+  `rowAggregationFeature` alone is enough. A column's own `footer` still wins, so no existing
+  grid's footer changes.
+
+  A group row is not a record, so it offers no row actions, and row-move controls are refused
+  outright while a grouping is applied — the same rule that already refuses them under a sort, and
+  for the same reason: the order is computed, so a manual move would spring back.
+
+  Two controls ship with it. The column menu gains a **Grouping** section — `Group by this column`,
+  gated on `column.getCanGroup()`, so it is absent on a column that wrote `grouping: false` and on a
+  grid that does not group. And `<DataGrid.GroupByBar />` (also exported as `DataGridGroupByBar`)
+  renders one chip per active level, outermost first, each with a menu that moves the level in or
+  out of the nesting or drops it; it renders `null` when nothing is grouped. Mounted by
+  composition, never by an option: `<DataGrid.Toolbar start={<DataGrid.GroupByBar />} />`.
+
+  Note that **dropping a level is the bar's job, not the column menu's**: `groupedColumnMode:
+'remove'` takes a grouped column out of the list, so it has no header cell to hang a menu on.
+
+  Both kits gained `GridMenuIcon.Group` / `.Ungroup` glyphs, and each styles the seven new slots —
+  `group-cell`, `group-label`, `group-count`, `group-by-bar`, `group-by-bar-label`, `group-by-chip`
+  and `group-by-chip-label`. `renderGrid` in the package's test
+  utilities is now generic over the row type.
+
+  The grid's body, header and table now re-derive on the `grouping` slice. Without that a grouping
+  applied **after** the first render moved the state without re-rendering either — the group-by bar
+  updated while the table stayed flat and kept showing the grouped column.
+
+- 7d999e6: Narrate a keyboard drag from the message catalogue instead of letting the drag library do it in English
+
+  The drag was already being announced, badly, and nobody asked for it. `@dnd-kit/dom`'s accessibility
+  plugin is in the default preset and neither kit opted out, so both have been writing a
+  `role="status" aria-live="polite"` region into `document.body` all along — with sentences built from
+  the only thing its callbacks receive, a record id: _"Picked up draggable item 7."_ A user reordering a
+  column heard the column's internal id, and heard it in English whatever the app's locale. So this is
+  not new output; it is taking ownership of output that was already there.
+
+  The sentences now come from `messages.ordering`, the group whose docblock had reserved itself for
+  exactly this. `draggable` is what a screen reader calls a handle in place of its role, `instructions`
+  is how to drive one from the keyboard, and eight keys — `rowPickedUp` / `rowMovedTo` / `rowDropped` /
+  `rowCancelled` and their `column*` counterparts — are the announcements. Each is a **whole sentence
+  from a named context**, never a stem the grid completes: word order differs between languages, and
+  "row 3" is itself a phrase, which is why the row and column forms are separate keys rather than one key
+  taking a name assembled above the catalogue.
+
+  They name what a user can follow. A column by its header text, or by its column id when the header is
+  a React element — stated rather than silently flattened, because turning arbitrary JSX into a string
+  means rendering it out of tree. A row by its place among the rows the body is rendering. Both count
+  from one, since the number is read aloud.
+
+  **A move is announced as the position you settle on.** The library coalesces its move announcements —
+  each arrow press records the latest sentence and the region is written once the keys go quiet for a
+  moment — so four quick taps of `ArrowDown` read as the fourth position rather than as all four. The
+  callback fires every time; the region does not. That is the right output rather than a gap, since a
+  region narrating each intermediate step of a key repeat would cut every sentence off with the next.
+  The pick-up, the drop and the cancellation are not coalesced.
+
+  **Announcements are the keyboard path's.** A pointer drag is already visible to whoever is making it,
+  and narrating every move of a mouse would talk over the gesture. A callback returning nothing is how
+  the grid says so.
+
+  The grid builds the sentences and the port carries them: `DndProviderProps` gains an optional
+  `announcements` bag, typed in the port's own event vocabulary, and each kit hands it to whatever its
+  library announces through. **Optional, and an existing custom adapter that ignores it still compiles
+  and still commits exactly what it did** — the cost of not forwarding it is paid in silence. A kit's
+  adapter learns nothing about tables, which is the whole reason the seam is in the port: resolving an id
+  to a heading or a position needs the table and the dictionary, and an adapter has neither.
+
+  Three things to know before upgrading.
+
+  **`ordering.instructions` is read once, at mount, and does not follow a later language change.** The
+  library builds that node from the string it was handed at construction and never rewrites it, so an app
+  that switches locale without a reload re-translates the handle's name and all eight announcements and
+  leaves the keyboard instructions in the language the page started in; remounting the grid picks the new
+  sentence up. **Localization** says so where the group is listed.
+
+  **The HeroUI kit does not get `aria-roledescription` on its handles.** React Aria's button forwards an
+  allow-list of ARIA attributes and that one is not on it, so there a reader says the library's English
+  `draggable` rather than the dictionary's value; the shadcn kit's does carry it. Forcing it would mean an
+  imperative `ref` write in a slot every button in that kit renders, which is out of proportion to one
+  attribute. Both halves are pinned by tests rather than asserted here, and the difference is in
+  **Kit parity**.
+
+  **The shadcn registry's drag item declares `@dnd-kit/dom` beside `@dnd-kit/react`.** The plugin
+  classes live only there — `@dnd-kit/react` re-exports the manager and the sensors and nothing else —
+  and pnpm's isolated layout cannot resolve a transitive dependency a package has not declared, so it
+  is named rather than inherited. It downloads nothing new, being already in every tree that has
+  `@dnd-kit/react`. The plain grid item carries neither name, and on the npm path both stay
+  **optional** peers.
+
+  The new keys are additive and `PartialGridMessages` types any subset, so an existing dictionary keeps
+  working; one that replaces `ordering` wholesale rather than per entry will want them. The grid's own
+  `grid.rowCount` region is untouched and remains the only thing the grid announces about its contents —
+  the drag's region is a sibling of it, created per grid, so several grids on a page never announce each
+  other's drags.
+
+  **A real screen reader was not run.** What is verified, in both kits, is that the right sentence
+  reaches a correctly shaped live region at the right moment. Whether it reads well through NVDA or
+  VoiceOver is untested, and the **Drag and drop** page says so rather than implying a check that did not
+  happen.
+
+- df96bef: A completed drop names the item it landed on by **id**. `DndDropEvent` carries `targetId: string`
+  where it carried `targetIndex: number`, and nothing on the drag port is a position any more.
+
+  An index is only meaningful while the list it counts in holds still, and a virtualized body's does
+  not. There the index space is the rendered window, and a drag's own auto-scroll changes it mid-gesture
+  — rows unmount, rows mount, and every survivor is renumbered — so the same number denotes a different
+  row from one frame to the next. Instrumented on a 10 000-row grid, dragging one row far down with the
+  library's auto-scroll: across three runs the index the drop carried was 3–4 higher than the row the
+  pointer was actually over, because the library's space had grown by however many rows had scrolled
+  past, and the grid committed a row three or four places beyond the one released on. The id was right
+  in all three runs, and the drift is unbounded in the length of the scroll rather than off by a fixed
+  amount.
+
+  The grid therefore resolves nothing: both ends of a drop go straight to `dropRow` / `dropColumn`,
+  which take ids and resolve them against the table's own model. The rendered-row list a row registers
+  its index in now has exactly one reader, the registration side, so there is no second reader for it to
+  fall out of step with. The step that stood between a drop and those calls — turning the landing
+  index back into the row at that place — is gone with the index it served.
+
+  The id cannot simply be read off the drag library at release, and an adapter is where that is dealt
+  with. A sortable displaces its neighbours optimistically while the drag is in flight, and
+  `@dnd-kit/dom`'s `OptimisticSortingPlugin` finishes every displacement by setting the operation's drop
+  target to the **source** — so after anything has moved, the library reports the dragged item as its own
+  target. Each kit's adapter instead remembers the last target the pointer was over that the grid
+  allowed, which it already computes on every frame to answer `canDrop`, and reports that.
+
+  "Did the item move at all" is answered by an id too. An adapter records the source's **neighbour** when
+  the drag starts — the item before it, or the item after it when the source is first, plus which of the
+  two it is — and compares that with the neighbour it has at release: same neighbour, no move, no commit.
+  This replaced comparing the sortable's current index with its index at pickup, which was unsound for
+  the same reason the landing index was. Those two numbers are measured against different lists once a
+  window has scrolled: one is frozen at drag start, while React rewrites the other from the current
+  window on every frame, with no guard for a drag in flight. It silently refused real drops — dragging
+  the first visible row far down, or the last one far up, lands it back at the position it started from
+  while the row has moved hundreds of places. The neighbour's id does not coincide that way.
+
+  Writing an adapter against this is less work than against the old contract, not more: the drag library
+  hands over the ids, where a landing index had to be derived and then matched against a list the
+  adapter could not see. Nothing released carried the index form; the port and both kits' adapters are
+  unreleased, so no consumer has an adapter to update.
+
+- 48c0028: With a drag adapter bound, the built-in header cell places a column drag handle before the label
+
+  The header now behaves the way the column panel already did. With column ordering on and an adapter
+  bound through `createDataGrid({ dnd })`, every movable header carries a grip, and the column menu
+  drops **Move left** / **Move right** — the same move one step at a time, beside a drag that is
+  keyboard-operable too. `Alt+Arrow` is unaffected. A header composed with `<DataGrid.HeaderCell>`
+  still places its grip itself, through `dragHandle` or `<ColumnDragHandle />`.
+  - **`ordering.column.drag`** — headers drag. Default: whether an adapter is bound. `false` keeps the
+    headers still, with the menu's move pair back, in a grid whose rows or panel drag.
+  - **`ordering.column.moveControls`** — the column menu carries the move pair. Default: `true` exactly
+    when the header drag resolves off. `true` offers both.
+  - **`core.ColumnDragHandle`** is a new optional component slot, the twin of `core.RowDragHandle`:
+    what the built-in header cell and the `dragHandle` render arg place. Both kits register their own,
+    so the grip wears the kit's glyph; a kit that registers none gets the shared, glyph-less handle.
+    Additive — an external kit that wrote `satisfies FullGridComponents` keeps compiling.
+
+  **Migrating:** a grid with an adapter bound and column ordering on that composed a header cell only
+  to place a grip can drop the composition. One that relied on the menu's move pair writes
+  `ordering: { column: { moveControls: true } }`.
+
+- ede6b9c: Column drag and drop — a column moves by its header handle.
+
+  The column axis' twin of row dragging, over the same `columnOrder` the column menu and `Alt+Arrow`
+  already write. A leaf header cell registers itself with the adapter bound through
+  `createDataGrid({ dnd })`, and the grid commits a drop through the core drop helper — one gesture,
+  one change, with the neighbours parting by transform and nothing written until release.
+
+  The handle is reachable two ways, and both are the same handle on the same column. Ready-made from
+  the header cell's render arguments, beside `sortTrigger`, `menu` and `resizer`:
+
+  ```tsx
+  <DataGrid.HeaderCell header={header}>
+  	{({ dragHandle, sortTrigger, menu }) => (
+  		<DataGrid.HeaderMain>
+  			{dragHandle}
+  			{sortTrigger}
+  			{menu}
+  		</DataGrid.HeaderMain>
+  	)}
+  </DataGrid.HeaderCell>
+  ```
+
+  or as a component inside a header cell body that reads `useDataGridHeaderCell()`, which is how a
+  kit's own grip-wearing version is placed — `<ColumnDragHandle />` from `@ez-kit/data-grid-heroui`.
+  It takes no `columnId`, unlike the row's handle: a header cell's body renders inside the cell that
+  publishes the drag, so there is nothing to look up.
+
+  The dragged header carries `data-column-dragging`, matching `data-row-dragging` and the
+  `data-column-*` namespace `data-column-id` already established.
+
+  A column that cannot be dragged — no adapter bound, column ordering off, a system column, an
+  `ordering: false` column, or a header that is not a leaf — renders no handle at all rather than one
+  that does nothing. A grid with no adapter renders exactly the DOM it did before. The resize handle
+  is untouched: a drag starts from the drag handle element and nothing else.
+
+  Boundaries are enforced where the one-step affordances enforce them, and now **before** the step
+  rather than after it. A leaf dragged at a column in another header group, across a pin band, or onto
+  a locked column does not move there: it travels as far as its own group allows and lands at that
+  edge, which is also what the user watched happen. The commit path's own guards stay where they were.
+
+  That is what the port's new `DndProviderProps.canDrop` is for, and it applies to **both** axes. An
+  adapter is handed the same question the commit asks, early enough to decline the hover — with
+  `@dnd-kit/react` that is `event.preventDefault()` in `onDragOver`, which the library documents by
+  construction: its `setDropTarget` returns `defaultPrevented`.
+
+  It is not a nicety. Refusing only at release left the drag library's own indices permuted with
+  nothing to put them back — a refusal writes no state, so no re-render restores them — which left the
+  header visibly reordered and made the **next** drag on that axis commit nothing. Measured in
+  `@dnd-kit/dom@0.1.21`, whose restore path runs only for a _cancelled_ operation, and a refused drop
+  is not a cancelled one. The port's docblock states this, so a kit writing its own adapter knows that
+  ignoring `canDrop` is incorrect rather than merely less helpful.
+
+  **Two more fixes ride along, both required for this surface to work at all.**
+
+  The kits' `Th` now forwards its ref. `ThProps` has declared it since the drag port landed, for
+  exactly this reason — a drag library is handed the element it moves through a ref — and both kits
+  were plain function components, which silently drop `ref` on React 18. `useColumnDrag()` is exported
+  beside `useRowDrag()` for a kit or an application writing a handle of its own.
+
+  The drag adapters now partition the sortable's `group` instead of letting every sortable in a grid
+  share one index space. Without that a grid with both rows and columns draggable would have had
+  **both** axes stop working: the drag library's optimistic sorting requires each group's indices to be
+  contiguous, and two interleaved axes are not. The key is `<axis>:<surface>` — the surface half, and
+  the measurement behind it, arrive with the column panel in this same release. This is a prerequisite
+  rather than a refinement, and it is not the composite group key an earlier design considered and
+  dropped: it carries two closed sets of literals and nothing about a column's data.
+
+  For the shadcn registry, the vendored `components/ui/table.tsx` gains a `forwardRef` on
+  `TableHead`, alongside the two the file already carries on `TableHeader` and `TableRow` and for the
+  same class of reason. It reaches consumers through `npx shadcn add`, so it is named here rather than
+  left to a diff.
+
+- 845ad09: Add `@ez-kit/data-grid-heroui/dnd`, exporting `adapter` — the kit's drag-and-drop adapter, built on
+  `@dnd-kit/react`. Pass it to `createDataGrid({ dnd: adapter })` to give a composed grid drag
+  mechanics.
+
+  `@dnd-kit/react` is an **optional** peer: a consumer who never imports the subpath installs nothing
+  new, and nothing the kit root exports reaches the drag library — the root's bundle size is
+  unchanged, and a test asserts both halves rather than assuming them.
+
+  A bound adapter is driven rather than merely carried: the grid mounts its provider and commits
+  drops on all three drag surfaces — rows, header cells and the column panel — which ship in this
+  same release.
+
+- 14ba3d6: Column panel drag and drop — a column moves by dragging it in the Columns panel.
+
+  The third drag surface, and the second one on the column axis. `ordering.column.visibilityMenu`
+  already turns the Columns toggle into a panel that lists **every** column and offers the one-step
+  move pair; with an adapter bound through `createDataGrid({ dnd })`, each row of that panel is now
+  draggable instead, and the kits' panels render it with no work at the call site:
+
+  ```tsx
+  <DataGrid.Toolbar end={<DataGrid.VisibilityTrigger />} />
+  ```
+
+  **The arrows step aside for the drag, and `visibilityMenu` grew the two switches that say so.** It
+  now takes `boolean | { drag?: boolean; moveControls?: boolean }`, where `true` means the grip when
+  an adapter is bound and the arrows when none is — one affordance, never both. The pair moves a
+  column by the same rules as the drag, over the same state, with the same refusals, and the drag is
+  operable from the keyboard too, so a panel offering both offers the same move twice. Write
+  `{ moveControls: true }` for both, or `{ drag: false }` for the arrows alone in a grid whose rows
+  and headers still drag.
+
+  The **wide list** is not one of the switches: it follows from asking for an ordering panel at all,
+  since a list that skipped a column could not be read as the order, so it is on under either
+  affordance. Two combinations the grid cannot honour now warn in development instead of going quiet
+  — `{ drag: true }` with no adapter falls back to the arrows, and `{ moveControls: false }` with no
+  adapter leaves a panel that reads as the order and offers no way to change it.
+
+  **This is the only surface where that choice is an option at all, and the asymmetry is the point.**
+  A row drags iff a call site rendered `<RowDragHandle />` and a header iff it placed `dragHandle`, so
+  for those two the JSX is already the switch and an option would be the duplication this config
+  avoids. A kit's panel maps its rows rather than having them written, so nobody has JSX to leave
+  out — which is why the question lands in the config here and nowhere else. A panel that wants
+  something else entirely still composes it from `<DataGrid.VisibilityTrigger>`'s render function and
+  `<DataGrid.VisibilityItem>`.
+
+  **`VisibilityMenuProps` gains `isColumnPanel`, and a kit must branch its panel's shape on that
+  rather than on `col.ordering`.** The two were the same question while a panel always carried the
+  move pair, and are not once the pair can be absent: the HeroUI kit read "some item carries moves"
+  as "render the column panel", so a drag-only panel fell back to its react-aria list box — which
+  mounts no `<DataGridVisibilityItem>`, and therefore registered no row with the drag. The panel
+  looked like a plain Columns toggle and dragging was silently gone; five browser specs caught it.
+  `<DataGrid.VisibilityTrigger>`'s render function receives the same field. Each _control_ still
+  follows the item — `col.ordering` for the pair, `<ColumnDragHandle />`, which self-hides, for the
+  grip.
+
+  HeroUI's move pair is now absent rather than disabled when an item carries no `ordering`, matching
+  the shadcn kit: it used to render unconditionally with `col.ordering?.canMoveStart !== true`
+  covering both "this column is at the end" and "this panel has no moves", which would have left two
+  dead buttons beside every grip. The shadcn panel's popover takes its width from `isColumnPanel` for
+  the same reason — a grip needs the room the arrows used to.
+
+  What makes the panel a surface of its own rather than more of the header is the list its indices
+  count in. The header registers the **visible** leaves, so a hidden column has no place in it at all;
+  the panel lists the hidden ones precisely so they can be reordered, and commits under
+  `ColumnMoveScope.All` — the same scope its move pair already used. So a column can be dropped onto a
+  hidden neighbour in the panel and cannot in the header, in one grid, and both are correct.
+
+  That distinction is now in the port. `DragSpec` takes a `surface` beside its `axis`, and both
+  `DndDropEvent` and `DndDragOverEvent` report it. The pair is what an item registers under, and what
+  decides the scope a drop is judged and committed under; no index is resolved from it, because a drop
+  names the item it landed on by id. **An adapter must partition its library's index space by
+  the pair, not by the axis alone** — the two surfaces' lists have different lengths, and the drag
+  library requires each space to be contiguous, so sharing one would silently kill dragging on both.
+  Both in-repo adapters now register `type` / `accept` / `group` as `<axis>:<surface>`, **and the id they
+  register under as `<axis>:<surface>:<id>`** — the second half being a fix rather than tidiness. dnd-kit
+  keys its registry by id across the whole manager, so the panel and the header, which list the same
+  columns, replaced each other's registration: from the first time the column panel was opened, a header
+  handle stopped starting a drag at all. The port's ids stay the grid's own, and an id containing the
+  separator survives untouched. Neither prefix is the composite group key an earlier design considered
+  and dropped: that one encoded a column's pin band and parent to enforce boundaries mid-drag, which
+  `canDrop` and the core drop helpers do instead.
+
+  **A kit writing its own adapter has to do the same.** The port hands you the axis, the surface and the
+  id; the library underneath almost certainly wants a unique registration per surface, and the failure if
+  it does not get one is silent and total.
+
+  A kit that renders its own column panel composes it from `<DataGrid.VisibilityItem>`, which is the
+  row element the drag moves — it carries the `column-visibility-item` slot, takes the kit's class, and
+  works out its own index and scope, so both stay in `@ez-kit/data-grid-react`. Also exported as
+  `DataGrid.VisibilityItem`.
+
+  **One obligation comes with it: render one item per column the panel lists, and each one once.** The
+  index a row registers is its position in that list, so a panel that renders a subset — a search box
+  filtering the rows, a collapsed section — leaves gaps in the index space, and a gap stops panel
+  dragging entirely with no error. Filter what a row _renders_, not which rows exist. Both kits simply
+  map `<DataGrid.VisibilityTrigger>`'s `columns`, which is that list.
+
+  Each panel grip is named for its own column — `Drag column: Salary` — because unlike the header, where
+  every handle sits in its own cell beside the column name, a panel is a list of otherwise identical
+  buttons. Both kits also style the dragged panel row the way they already styled a dragged header cell.
+
+  A grid with no adapter, one whose panel offers no moves, or one whose panel takes the move pair
+  instead, renders exactly the markup it rendered before and registers nothing. A column whose place the author fixed with `ordering: false` keeps its
+  index — it must, or the space has a hole and nothing commits anywhere — and offers no grip.
+
+- 57def5d: Give the row drag handle a system column of its own, `__drag__`
+
+  With `ordering.row` on and a drag adapter bound through `createDataGrid({ dnd })`, the grid now puts
+  the row's grip in a `__drag__` system column: first in the row, ahead of the selection checkbox,
+  pinned at the start edge and fixed at `44` px. A grid with no adapter gets no such column — its rows
+  still move through the actions menu.
+
+  The handle used to live in a column the consumer wrote, and that column was an ordinary one: its
+  track was `minmax(size, 1fr)`, so it took a share of the free width like any data column, and a
+  `48` px drag column rendered several times as wide with the grip floating in the middle of it.
+  - **`ordering.row.column`** configures the column like every other system column (`width`,
+    `pinning`, `align`, `header`, `headerClassName`, `cellClassName`), or turns it off with `false`
+    for a grid that places `<DataGrid.RowDragHandle />` itself — in a column's `cell.component`, or
+    through a row's render function.
+  - **`core.RowDragHandle`** is a new optional component slot: what the column and a row's
+    `dragHandle` render arg place. Both kits register their own, so the grip wears the kit's glyph; a
+    kit that registers none gets the shared, glyph-less handle. Additive — an external kit that wrote
+    `satisfies FullGridComponents` keeps compiling.
+  - **`messages.ordering.columnHeader`** (`'Row order'`) names the column's header cell for assistive
+    technology, rendered visually hidden like the expand and actions columns'.
+  - **`DRAG_COLUMN_ID`** (`'__drag__'`) and `SystemColumnType.Drag` are exported beside the other
+    system column ids.
+
+  **Migrating:** a grid that already renders `<RowDragHandle />` in a column of its own now shows two
+  grips per row. Drop that column, or keep it and write `ordering: { row: { column: false } }`.
+
+  Both kits' drag handles also drop from a filled primary button to a quiet, icon-sized ghost: no fill
+  at rest, a muted glyph, and the kit's hover surface.
+
+- cc18261: Row drag and drop — the first drag affordance, end to end.
+
+  A row now registers itself with the drag adapter bound through `createDataGrid({ dnd })`, and the
+  grid mounts that adapter's provider and commits a drop through the ordering API. One gesture
+  produces exactly one change; the neighbours part by transform while the drag is in flight and no
+  order is written until release.
+
+  The handle is reachable two ways, and both are the same handle on the same row. Inside a column's
+  own cell renderer:
+
+  ```tsx
+  { id: 'drag', cell: { component: () => <DataGrid.RowDragHandle /> } }
+  ```
+
+  or ready-made from the row's render arguments, beside `content` and the new `isDragging`:
+
+  ```tsx
+  <DataGrid.Row row={row}>
+  	{({ dragHandle, content }) => (
+  		<>
+  			<td>{dragHandle}</td>
+  			{content}
+  		</>
+  	)}
+  </DataGrid.Row>
+  ```
+
+  The dragged row carries `data-row-dragging`. The name is namespaced deliberately: React Aria's row
+  supports dragging natively and owns the plain `data-dragging`, overwriting anything passed to it.
+
+  A row that cannot be dragged — no adapter bound, row ordering off, a group row — renders no handle
+  at all rather than one that does nothing. A grid with no adapter renders exactly the DOM it did
+  before.
+
+  `@ez-kit/data-grid-core` gains one message key, `ordering.dragRow`, for the handle's accessible
+  name. `@ez-kit/data-grid-heroui` gains `RowDragHandle`, the shared control wearing the kit's grip.
+
+  A row's drag index is its position in the rows the body **renders** — the pinned top band, the
+  centre, then the pinned bottom band — rather than TanStack's `row.index`, which counts a row among
+  its _parent's_ children and so coincides with a rendered position only on page one of a flat,
+  unfiltered grid. That is why dragging works on page two, under a column filter and with tree rows:
+  the drag library requires each index space to be exactly `0..n-1` with no gap and no duplicate, and
+  bails out of the whole space otherwise — silently, the handle working and the pointer moving while
+  nothing displaces and nothing commits. Reading the rendered rows is also what keeps a row pinned
+  under `keepPinnedRows` draggable after a page change or a filter has taken it out of the row model.
+  A **virtualized** body is the one case this derivation cannot serve, and declares its own list
+  instead — see the note on dragging a row in a virtualized grid.
+
+- 5d0bd8b: Name the drag sensors instead of inheriting them, and stop `Alt+Arrow` moving a held item twice
+
+  A keyboard drag has worked since the pointer drag did — `@dnd-kit/dom`'s default preset already
+  mounted a keyboard sensor, so the gesture was there and undocumented. What changes is that both
+  sensors are now named and passed explicitly: listing them at all is opting out of that preset, so the
+  keyboard path no longer rests on an upstream default a minor release is free to move. Nothing about
+  the keyboard sensor is configured; omitting it from the array would have deleted it, which is the one
+  hazard in this block and is what the kits' unit tests now assert against.
+
+  The keys are the library's, verified against its frozen defaults and now documented: focus the handle,
+  `Space` or `Enter` to pick up, the arrows to move, `Space` or `Enter` to drop, `Escape` to cancel.
+  `Tab` ends the drag and **commits** at the position the arrows reached — the library's documented
+  behaviour, deliberately not overridden. Activation is handle-only in both paths, because the library
+  compares the event target to the handle, which is what structurally keeps a pick-up away from the sort
+  trigger and the selection checkbox beside it.
+
+  Two behaviour changes come with the explicit sensors.
+
+  **A mouse drag from a handle now needs a small movement before it starts.** Upstream left the mouse
+  entirely unconstrained when the target is the handle — no distance and no delay — and since the
+  activator here is always a handle, that branch covered every mouse drag this grid has ever started: a
+  plain click that twitched a pixel was a drag. The mouse now takes the same distance the library
+  applies to every pointer it does constrain, and still no delay. Touch keeps its press-and-hold delay
+  and tolerance verbatim, as does the pen branch. Every threshold is a named constant in each kit's
+  `dnd.tsx` rather than a figure retuned here.
+
+  **A fix:** `Alt+Arrow` used to move a row — or a column — **twice** per press while that same item was
+  being dragged with the keyboard, once through the grid's own reorder shortcut and once through the
+  drag. Both handlers now stand down for the item being held, and a different row's `Alt+Arrow` still
+  works meanwhile.
+
+  Nothing is removed and no option is added. Two kit differences are documented rather than fixed, both
+  React Aria's: `Alt+Arrow` row reordering does not reach the HeroUI kit ([#223](https://github.com/ez-kit/ez-kit/issues/223)),
+  and on `Tab` mid-drag the shadcn kit keeps focus on the handle while HeroUI's focus leaves the table.
+  A keyboard drag is narrated from the message catalogue, which ships in this same release; the
+  **Drag and drop** page documents the keys and the announcements together.
+
+- a3c4aba: Move to HeroUI 3.2
+
+  `@heroui/react` and `@heroui/styles` are now `^3.2.6` (peer range `^3.2.0`). From 3.2.3 HeroUI
+  declares `react-aria`, `react-aria-components`, `@react-aria/ssr`, `@react-aria/utils` and
+  `@internationalized/date` as **peer** dependencies rather than its own, so an application installs
+  them alongside `@heroui/react`.
+
+  Two things had to change with it. The selection checkbox now renders `Checkbox.Content` around its
+  control: since 3.2 HeroUI's checkbox root is React Aria's `CheckboxField` and `Content` is its
+  `CheckboxButton`, which is the element that carries `role="checkbox"` — without it a grid rendered
+  no checkbox at all. And the form kit's calendar body casts its root, because 3.2 made `Calendar`
+  generic over its value and selection mode while `RangeCalendar` stayed a plain component.
+
+- 1abedfe: Render the column footer as a React Aria collection section
+
+  `TableFooter` arrived in react-aria-components 1.18 and HeroUI made that package a peer, so
+  `<tfoot>` is finally a node the collection understands. That removes the workaround it needed
+  before: the kit lifted `<DataGrid.Footer>` out of the table's children, portalled it back into the
+  real `<table>`, and rendered footer rows and cells as plain DOM through a context. Four parts, all
+  gone. Footer cells are ordinary collection cells now, so they take part in keyboard navigation
+  like body cells.
+
+  The kit's `./core` entry drops from 40 658 to 10 522 gzipped bytes with it, because the split
+  named `DataGrid.Footer` and reading one key off the compound namespace kept all 29 components.
+  `Tfoot` imports `TableFooter` from `react-aria-components` directly — HeroUI does not re-export
+  it, since their own `Table.Footer` is a `<div>` outside the table for pagination.
+
+- 6827856: Remove `extendDataGrid`
+
+  Registering a custom cell type is now the `cellTypes` argument to `createDataGrid` and nothing
+  else. `extendDataGrid` re-invoked that same factory with the same `components`, `features` and
+  `defaults` while merging its argument into the registry — sugar for one call, on the one path the
+  docs do not recommend.
+
+  ```diff
+  -import { extendDataGrid } from '@ez-kit/data-grid-heroui'
+  +import { allDataGridFeatures } from '@ez-kit/data-grid-core/features/all'
+  +import { allComponents, cellTypes } from '@ez-kit/data-grid-heroui'
+  +import { createDataGrid } from '@ez-kit/data-grid-react'
+
+  -export const { DataGrid, createColumns } = extendDataGrid({ rating: ratingCellType })
+  +export const { DataGrid, createColumns } = createDataGrid({
+  +	components: allComponents,
+  +	cellTypes: { ...cellTypes, rating: ratingCellType },
+  +	features: allDataGridFeatures,
+  +})
+  ```
+
+  The replacement gives up nothing in typing: `createColumns` off the hand-built bundle rejects an
+  unregistered `type`, and checks a custom type's `config`, exactly as the extended bundle did —
+  verified against the built `.d.ts` rather than the source tree, which is where that guarantee had
+  been lost before. What it costs is three imports, and what it buys is that the two other axes are
+  visible at the same call: naming only the component groups and features a grid renders is where
+  the bundle saving actually lives, and `extendDataGrid` could express neither.
+
+  A project that already builds its own bundle never needed it — the custom type is a key in the
+  `cellTypes` literal it is already writing. A project on the kit root's prebuilt `DataGrid` writes
+  the three aggregates above, which is that same grid with a wider registry.
+
+  `DataGridBundle` loses the member, so an external kit that names the type sheds a field it did not
+  implement. The shadcn registry item drops the export too; a consumer who ran `shadcn add` before
+  this owns that file and keeps whatever they have until they re-run it.
+
+### Patch Changes
+
+- 0c06604: Name every control and header cell the grid renders without a visible label
+
+  Four of the grid's own elements reached the accessibility tree anonymous, in **both** UI kits —
+  axe reported `label` (critical) and `empty-table-header` on every grid that had them:
+  - **Column filters.** The control carried a placeholder and nothing else, and a placeholder is not
+    an accessible name: it disappears on the first keystroke.
+  - **The draft creating row**, and **a cell being edited in place.** Both render a bare control,
+    because the column header above it is the label a sighted user reads. `FieldState.label` is set
+    only in the modal form, where a kit composite draws a visible `<label>` from it.
+  - **The `__expand__` and `__actions__` system columns**, whose `<th>` holds chevrons or a menu and
+    no text at all — and the `__selection__` one under `selection: { multi: false }`, where there is
+    no select-all checkbox to name it.
+
+  All four are named now. Where the grid renders the control itself it takes an `aria-label`; where
+  the control is the kit's own component it gets a visually hidden `<label htmlFor>` bound by
+  `FieldState.id`, which every kit component honours. The text comes from the dictionary or from the
+  column's own header, never from a literal — `messages.filtering.placeholder` names a filter, and
+  three new keys name the system columns: `selection.columnHeader`, `expanding.columnHeader` and
+  `rowActions.columnHeader`.
+
+  Additive, so nothing has to change. A dictionary that replaces `selection` / `expanding` /
+  `rowActions` wholesale rather than per entry will want the new key; `PartialGridMessages` types any
+  subset, so the usual per-entry override is unaffected.
+
+  The shadcn kit's page-size `Select` was also unnamed (`button-name`): the text beside it is a
+  `<span>`, not a `<label>`, so it named nothing. It now carries the same `aria-label` the heroui
+  kit's already did.
+
+  The heroui kit's sort and column-visibility triggers put a real `<Button>` inside a
+  `Popover.Trigger`, which renders a `div[role="button"]` of its own — a button inside a button
+  (`nested-interactive`, serious). The trigger is now the button, with the kit's own styling applied
+  through `buttonVariants`, which is HeroUI's documented way to put a component's styles on an
+  element that is not that component. The `Dropdown` form of the visibility menu is unchanged: that
+  one follows react-aria's menu-trigger pattern and takes the button itself.
+
+  The heroui kit's **loading skeleton** had the same `empty-table-header` defect one layer down, and
+  it is fixed here too. `Th` marks the first visible non-system column as react-aria's row header, so
+  that column's body cell is a `rowheader` in every row of the collection — the skeleton rows
+  included — and the `<tr>` takes its name from it. A `<Skeleton>` contributes no text, so each
+  skeleton row shipped an unnamed `rowheader` and an unnamed row, on every heroui grid that ever
+  showed a loading state. Each skeleton cell now carries `messages.fallbacks.loading` as visually
+  hidden text — the first use of a key that was already in the dictionary, documented as "accessible
+  name of the loading state". Text rather than an `aria-label`, because `Table.Cell` does not forward
+  that attribute and a cell's name is its content. The shadcn kit needs no counterpart: its table is
+  plain DOM and no cell carries `rowheader`.
+
+  `apps/docs/e2e/packages/data-grid/a11y/names.spec.ts` runs axe over four examples in both kits for
+  exactly these rules, so a regression fails in a browser rather than in a screen reader.
+
+- 94a0c4d: Tell the accessibility tree what the grid's state is
+
+  Layer B of the #227 audit. The grid sorted, selected, expanded and paged without saying so:
+  `aria-sort`, `aria-selected`, `aria-expanded`, `aria-rowcount`, `aria-rowindex`, `aria-busy` and
+  live regions were absent from **both** kits, which made it a hole in the shared react layer rather than a shadcn gap. A screen
+  reader was told a paginated or virtualized grid holds exactly the rows in the DOM, a sort or a
+  selection changed nothing it could hear, and a tree row's open state was carried by the chevron's
+  label alone.
+
+  All of it is written by `@ez-kit/data-grid-react`, for the reason `aria-label` on the table is:
+  a reader's account of a sort or a row total is a property of the grid, not of how one kit draws it.
+  Both kits gained the lot at once, and so does any kit built on the contract.
+  - **`aria-sort`** on a header cell that can sort. An unsortable column gets no attribute rather
+    than `'none'`, which means "sortable, not sorted" and would otherwise announce every grid as
+    sortable.
+  - **`aria-selected`** on a row that can be selected, gated on `enableRowSelection` so a grid with
+    no selection stays quiet. **`aria-multiselectable`** on the table — only where the package owns
+    `role="grid"`, since it is not an allowed attribute on `role="table"` and a React Aria kit
+    answers for its own collection.
+  - **`aria-expanded`** on a row that can expand — a tree parent, or a row with a sub-content
+    panel. It belongs on the row rather than on the chevron: a reader arriving at the row is told it
+    can be opened before finding the control that opens it, and a kit that draws no chevron still
+    announces the state. The chevron keeps its own label, which is not redundant — the button says
+    what activating it _does_, the row says what it currently _is_. A row that never opens gets no
+    attribute rather than `false`, for the reason `aria-sort` is not written as `'none'`.
+  - **`aria-rowcount` / `aria-rowindex`**, and only when the DOM holds less than the whole row set:
+    ARIA is explicit that a complete table needs neither. A manual grid given neither `rowCount` nor
+    `pageCount` reports `-1`, ARIA's own sentinel, rather than a number invented from the page.
+  - **`aria-busy`** while pending or refetching. This costs `DataGridTable` a subscription it did not
+    have, so a refetch now re-renders the table element twice per request — the attribute belongs on
+    the table and nothing below it can put it there.
+  - **One live region**: a polite `role="status"` reporting how many rows the current query matches,
+    from the new `messages.grid.rowCount` key. Deliberately the only announcement — a region that
+    narrated sorting and pagination as well would talk over the control still being operated.
+
+  The heroui kit needed one addition of its own, and it is not a workaround for a mistake here:
+  React Aria builds its DOM props with `filterDOMProps`, which keeps only `aria-label`,
+  `aria-labelledby`, `aria-describedby` and `aria-details` of the aria family, so every attribute
+  above was discarded before the element existed. A `ref` is no way round it either — `Column` and
+  `Row` are collection elements, rendered once to build the collection and again as DOM, and a ref
+  handed to one never reaches the node (measured: the table's does, theirs do not). The values now
+  travel as `data-aria-*`, which React Aria forwards, and one `MutationObserver` on the `<table>`
+  copies them onto the real attributes.
+
+  The new message key is additive; `PartialGridMessages` types any subset, so an existing dictionary
+  keeps working, and a dictionary that replaces `grid` wholesale will want it.
+  `aria-state.test.tsx` covers what the shared layer writes, and
+  `apps/docs/e2e/packages/data-grid/a11y/state-semantics.spec.ts` covers what survives each kit —
+  which axe cannot, since it checks that an attribute is _allowed_, never that it is _there_. A new
+  `accessibility.mdx` documents the lot.
+
+- Updated dependencies [0c06604]
+- Updated dependencies [94a0c4d]
+- Updated dependencies [00e6169]
+- Updated dependencies [0e3f40c]
+- Updated dependencies [e6d0171]
+- Updated dependencies [22912f2]
+- Updated dependencies [e859429]
+- Updated dependencies [e859429]
+- Updated dependencies [07111b7]
+- Updated dependencies [7d999e6]
+- Updated dependencies [df96bef]
+- Updated dependencies [48c0028]
+- Updated dependencies [ede6b9c]
+- Updated dependencies [14ba3d6]
+- Updated dependencies [fd8f55d]
+- Updated dependencies [57def5d]
+- Updated dependencies [cc18261]
+- Updated dependencies [5d0bd8b]
+- Updated dependencies [df96bef]
+- Updated dependencies [9e8a879]
+- Updated dependencies [16d63fa]
+- Updated dependencies [0c06604]
+- Updated dependencies [e39e8c2]
+- Updated dependencies [fbfc9b9]
+- Updated dependencies [6827856]
+  - @ez-kit/data-grid-core@0.9.0
+  - @ez-kit/data-grid-react@0.10.0
+
 ## 0.9.0
 
 ### Minor Changes

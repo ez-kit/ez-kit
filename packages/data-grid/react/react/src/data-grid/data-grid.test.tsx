@@ -1,5 +1,5 @@
 import { createTable, createColumns } from '@ez-kit/data-grid-core'
-import { act, screen, within } from '@testing-library/react'
+import { act, fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -18,6 +18,9 @@ type User = {
 	name: string
 	age: number
 }
+
+const RENDERED_NAME = 420
+const RENDERED_AGE = 300
 
 const USERS: User[] = [
 	{ id: 1, name: 'Alice', age: 30 },
@@ -285,6 +288,26 @@ describe('<DataGrid>', () => {
 	})
 
 	describe('column sizing / resizing', () => {
+		/**
+		 * A resizable grid whose two columns fill it: `name` renders at 420px and `age` at 300px,
+		 * both wider than the 150px they start at. Returns the `name` resize handle.
+		 */
+		function renderFillingGrid() {
+			const table = makeTable({ resizing: true })
+			renderWithComponents(<DataGrid table={table} />)
+			for (const [id, width] of [
+				['name', RENDERED_NAME],
+				['age', RENDERED_AGE],
+			] as const) {
+				const th = document.querySelector(`th[data-column-id="${id}"]`)
+				if (!(th instanceof HTMLElement)) throw new Error(`expected the ${id} header`)
+				vi.spyOn(th, 'getBoundingClientRect').mockReturnValue(DOMRect.fromRect({ width }))
+			}
+			const resizer = document.querySelector('th[data-column-id="name"] [data-slot="column-resizer"]')
+			if (!(resizer instanceof HTMLElement)) throw new Error('expected the name resizer')
+			return { table, resizer }
+		}
+
 		it('does not render column-resizer when resizing is not set', () => {
 			const table = makeTable()
 			renderWithComponents(<DataGrid table={table} />)
@@ -352,6 +375,53 @@ describe('<DataGrid>', () => {
 			expect(resizers[0]).toHaveAttribute('data-is-resizing', 'false')
 		})
 
+		// A filling column renders wider than its starting width. TanStack starts a drag from the
+		// width in state, so without this the column would snap back to it on the first move. Every
+		// other filling column is fixed where it stands too, so the drag moves one column only —
+		// otherwise the width it gives up would flow into its neighbours.
+		it('starts a drag from the rendered width and fixes the other filling columns there', () => {
+			const { table, resizer } = renderFillingGrid()
+
+			act(() => {
+				fireEvent.mouseDown(resizer, { clientX: 0 })
+			})
+			act(() => {
+				fireEvent.mouseMove(document, { clientX: 10 })
+				fireEvent.mouseUp(document, { clientX: 10 })
+			})
+
+			expect(table.store.state.columnSizing).toEqual({ name: RENDERED_NAME + 10, age: RENDERED_AGE })
+		})
+
+		// Pressing the handle measures the column so a drag can start from it. A press that never
+		// moves is not a resize, and must not leave the column fixed at that measurement.
+		it('leaves a filling column filling after a press on its handle that never drags', () => {
+			const { table, resizer } = renderFillingGrid()
+
+			act(() => {
+				fireEvent.mouseDown(resizer, { clientX: 0 })
+			})
+			act(() => {
+				fireEvent.mouseUp(document, { clientX: 0 })
+			})
+
+			expect(table.store.state.columnSizing).toEqual({})
+		})
+
+		it('does not resize, or fix the column, on a secondary-button press', () => {
+			const { table, resizer } = renderFillingGrid()
+
+			act(() => {
+				fireEvent.mouseDown(resizer, { button: 2, clientX: 0 })
+			})
+			act(() => {
+				fireEvent.mouseMove(document, { clientX: 10 })
+				fireEvent.mouseUp(document, { clientX: 10 })
+			})
+
+			expect(table.store.state.columnSizing).toEqual({})
+		})
+
 		it('always sets CSS size variables and grid-template-columns on <table>', () => {
 			const table = makeTable()
 			renderWithComponents(<DataGrid table={table} />)
@@ -390,20 +460,17 @@ describe('<DataGrid>', () => {
 		}
 
 		/**
-		 * Where the bar renders is the layout's decision, not `selection.bar.variant`'s — so the
-		 * bound preset puts it after the toolbar under **both** variants. It used to branch, through
-		 * a `GridShell` wrapper that read the variant and placed the bars for you; that was the
-		 * last placement option left standing, and it is gone.
-		 *
-		 * The variant still decides what the kit *renders* (an in-flow strip against an overlay),
-		 * which is why `inline` wants the bar written first — the arrangement `presets.test.tsx`
-		 * covers, since it takes a layout of its own.
+		 * The bound preset puts the bar after the toolbar under **both** variants: an `inline` bar
+		 * between the toolbar and the table, a `floating` one last. Where exactly is pinned in
+		 * `presets.test.tsx`; this case checks that the kit-bound grid renders the bar in the variant
+		 * asked for, after the toolbar.
 		 */
 		it.each([ActionBarVariant.Inline, ActionBarVariant.Floating])(
 			'renders the %s ActionBar after the Toolbar, as the bound layout writes it',
 			(variant) => {
 				const { actionBar, toolbar } = renderWithVariant(variant)
 
+				expect(actionBar).toHaveAttribute('data-variant', variant)
 				expect(toolbar.compareDocumentPosition(actionBar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 			},
 		)

@@ -22,9 +22,8 @@ const INFINITE = tableFeatures({ infiniteFeature })
 /**
  * Infinite scrolling is a `pagination` mode, so a config literal naming `pagination` registers
  * `rowPaginationFeature` too — `createTable` warns otherwise, and rightly: the option would
- * reach nothing. `paginatedRowModel` is deliberately **absent**: infinite mode shows every
- * accumulated row, and registering the model would slice them back to one page. `createTable`
- * warns about that too.
+ * reach nothing. `paginatedRowModel` is absent only because nothing here pages: registering it
+ * beside infinite mode is legal, and `create-table.test.ts` covers that case.
  */
 const INFINITE_PAGINATION = tableFeatures({ infiniteFeature, rowPaginationFeature })
 

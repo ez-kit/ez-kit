@@ -1,6 +1,7 @@
 import { createColumns } from '@ez-kit/data-grid-core'
 import { tableFeatures } from '@ez-kit/data-grid-core/features'
 import { allDataGridFeatures } from '@ez-kit/data-grid-core/features/all'
+import { defaultOperators } from '@ez-kit/data-grid-core/operators'
 import { render } from '@testing-library/react'
 import { forwardRef, Fragment, useEffect, useState } from 'react'
 
@@ -10,6 +11,7 @@ import { DefaultLayout } from './layouts'
 import { isGridMenuItemSlot } from './menu'
 import { ActionsCellState } from './types'
 import { useDataGrid } from './use-data-grid'
+import { useGridMessages } from './use-grid-messages'
 
 import type { FullGridComponents } from './contract'
 import type { GridMenuProps } from './menu'
@@ -50,6 +52,7 @@ import type {
 	TrProps,
 	ToolbarProps,
 	SortIndicatorProps,
+	SortMenuProps,
 } from './types'
 import type { UseDataGridConfig } from './use-data-grid'
 import type { RenderOptions } from '@testing-library/react'
@@ -415,24 +418,49 @@ function TestPagination({
 	)
 }
 function TestOperatorSelect({ operators, currentOperatorId, onChange }: OperatorSelectProps) {
+	const messages = useGridMessages()
+	const [open, setOpen] = useState(false)
+	const current = operators.find((op) => op.id === currentOperatorId)
+	const label = current?.label ?? currentOperatorId
 	return (
-		<select
-			value={currentOperatorId}
-			onChange={(e) => {
-				onChange(e.target.value)
-			}}
-		>
-			{operators.map((op) => (
-				<option
-					key={op.id}
-					value={op.id}
+		<>
+			<button
+				type='button'
+				aria-label={messages.filtering.operatorTrigger({ label })}
+				aria-haspopup='menu'
+				aria-expanded={open}
+				onClick={() => {
+					setOpen((was) => !was)
+				}}
+			>
+				{current?.icon ?? label}
+			</button>
+			{open ? (
+				<div
+					role='menu'
+					aria-label={messages.filtering.operator}
 				>
-					{op.label}
-				</option>
-			))}
-		</select>
+					{operators.map((op) => (
+						<button
+							key={op.id}
+							type='button'
+							role='menuitemradio'
+							aria-checked={op.id === currentOperatorId}
+							onClick={() => {
+								onChange(op.id)
+								setOpen(false)
+							}}
+						>
+							{op.icon === undefined ? null : <span aria-hidden>{op.icon}</span>}
+							{op.label}
+						</button>
+					))}
+				</div>
+			) : null}
+		</>
 	)
 }
+
 function TestBetweenInput({ value, onChange, type, slider }: BetweenInputProps) {
 	const inputType = type === 'number' ? 'number' : 'date'
 	const inputs = (
@@ -475,7 +503,15 @@ function TestBetweenInput({ value, onChange, type, slider }: BetweenInputProps) 
 	)
 	return inputs
 }
-function TestMultiSelectFilter({ items, selectedValues, onChange, placeholder }: MultiSelectFilterProps) {
+function TestMultiSelectFilter({
+	items,
+	selectedValues,
+	onChange,
+	label,
+	placeholder,
+	itemsLoading,
+	itemsError,
+}: MultiSelectFilterProps) {
 	const toggle = (value: string): void => {
 		const next = selectedValues.includes(value) ? selectedValues.filter((v) => v !== value) : [...selectedValues, value]
 		onChange(next)
@@ -483,8 +519,12 @@ function TestMultiSelectFilter({ items, selectedValues, onChange, placeholder }:
 	return (
 		<div
 			role='group'
-			aria-label={placeholder ?? 'Filter'}
+			aria-label={label ?? placeholder ?? 'Filter'}
+			aria-busy={itemsLoading === true || undefined}
 		>
+			{selectedValues.length === 0 && placeholder !== undefined ? <span>{placeholder}</span> : null}
+			{itemsLoading === true && <span data-slot='multi-select-loading'>Loading…</span>}
+			{itemsError !== undefined && <span data-slot='multi-select-error'>{String(itemsError)}</span>}
 			{items.map((opt) => (
 				<label
 					key={opt.value}
@@ -801,8 +841,8 @@ function TestRefetchOverlay(_props: RefetchOverlayProps) {
 	)
 }
 
-// Minimal FormShell stub (no chrome) — UI kits provide real implementations.
-function TestFormShell({ children }: { children?: ReactNode }) {
+// Minimal FormModal stub (no chrome) — UI kits provide real implementations.
+function TestFormModal({ children }: { children?: ReactNode }) {
 	return <>{children}</>
 }
 
@@ -839,7 +879,7 @@ export const testComponents: FullGridComponents = {
 		// that was broken while the affordance filtered clicks by their target. Empty, so it
 		// stays invisible to every `getByText` in the suite.
 		SortIndicator: ({ canSort }: SortIndicatorProps) => (canSort ? <span data-testid='sort-indicator' /> : null),
-		SortMenu: () => null,
+		SortMenu: TestSortMenu,
 	},
 	filtering: {
 		FilterPopover: TestFilterPopover,
@@ -864,7 +904,7 @@ export const testComponents: FullGridComponents = {
 		MultiSelectFilter: TestMultiSelectFilter,
 	},
 	editing: {
-		FormShell: TestFormShell,
+		FormModal: TestFormModal,
 	},
 	deleting: {
 		ConfirmDialog: TestConfirmDialog,
@@ -905,6 +945,67 @@ export function renderWithComponents(
 
 // ── shared grid harness ───────────────────────────────────────────────────
 
+/**
+ * The fixture sort builder: one row per entry through `<DataGrid.SortItem>`, with the grip and the
+ * step pair each rendered only when the builder offers it — the shape both kits draw, minus the
+ * visuals. Named from the catalogue, so a test finds a control by the name a user hears.
+ */
+function TestSortMenu({ items, canAddSort, onAddSort, onResetSorting }: SortMenuProps) {
+	const messages = useGridMessages()
+	return (
+		<div data-slot='sort-menu'>
+			{items.map((item) => (
+				<DataGrid.SortItem
+					key={item.columnId}
+					sortId={item.columnId}
+				>
+					{({ itemProps, handleProps }) => (
+						<div {...itemProps}>
+							{handleProps && (
+								<button
+									ref={handleProps.ref}
+									type='button'
+									aria-label={messages.sorting.dragSort({ label: item.label })}
+								/>
+							)}
+							<span>{item.label}</span>
+							{item.ordering && (
+								<>
+									<button
+										type='button'
+										aria-label={messages.sorting.moveUp({ label: item.label })}
+										disabled={!item.ordering.canMoveStart}
+										onClick={item.ordering.onMoveStart}
+									/>
+									<button
+										type='button'
+										aria-label={messages.sorting.moveDown({ label: item.label })}
+										disabled={!item.ordering.canMoveEnd}
+										onClick={item.ordering.onMoveEnd}
+									/>
+								</>
+							)}
+						</div>
+					)}
+				</DataGrid.SortItem>
+			))}
+			<button
+				type='button'
+				disabled={!canAddSort}
+				onClick={onAddSort}
+			>
+				{messages.sorting.add}
+			</button>
+			<button
+				type='button'
+				onClick={onResetSorting}
+			>
+				{messages.sorting.reset}
+			</button>
+		</div>
+	)
+}
+
 export type TestRow = {
 	id: number
 	name: string
@@ -942,6 +1043,13 @@ export const TEST_FEATURES = allDataGridFeatures
  * per-file literal.
  */
 export const NARROW_TEST_FEATURES = tableFeatures({})
+
+/**
+ * The operator set every fixture grid is built with — the ready-made one, as the kits' prebuilt
+ * `DataGrid` binds it. A case about a set of its own passes `operators`, which replaces it per cell
+ * type like any options layer above.
+ */
+export const TEST_OPERATORS = defaultOperators
 
 export type RenderGridResult<TRow extends object = TestRow> = ReturnType<typeof render> & {
 	/** The live table — drive state from a test with `table.setSorting(…)` etc. */
@@ -984,6 +1092,7 @@ export function renderGrid<TRow extends object = TestRow>(
 			// `config`, which spreads over them. The cast is that argument, made once here rather
 			// than at every call site that names its own row.
 			features: TEST_FEATURES,
+			operators: TEST_OPERATORS,
 			data: TEST_ROWS as unknown as TRow[],
 			columns: TEST_COLUMNS as unknown as UseDataGridConfig<GridFeatures, TRow>['columns'],
 			...config,

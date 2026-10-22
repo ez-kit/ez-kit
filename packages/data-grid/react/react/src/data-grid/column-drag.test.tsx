@@ -747,21 +747,37 @@ describe('the default header cell', () => {
 		expect(screen.getAllByRole('button', { name: 'Move left' }).length).toBeGreaterThan(0)
 	})
 
-	it('takes the move pair alone under `drag: false`, with no handle and no registration', () => {
+	it("takes the move pair alone under `header: 'step'`, with no handle and no registration", () => {
 		const drivable = makeDrivableAdapter()
-		const { container } = renderDndGrid(drivable.adapter, { ordering: { column: { drag: false } } })
+		const { container } = renderDndGrid(drivable.adapter, { ordering: { column: { header: 'step' } } })
 
 		expect(handlesIn(container)).toHaveLength(0)
 		expect(drivable.columnSpecs()).toHaveLength(0)
 		expect(screen.getAllByRole('button', { name: 'Move left' }).length).toBeGreaterThan(0)
 	})
 
-	it('offers both under `moveControls: true`', () => {
+	it("offers both under `header: 'both'`", () => {
 		const { adapter } = makeDrivableAdapter()
-		const { container } = renderDndGrid(adapter, { ordering: { column: { moveControls: true } } })
+		const { container } = renderDndGrid(adapter, { ordering: { column: { header: 'both' } } })
 
 		expect(handlesIn(container)).toHaveLength(TEST_COLUMNS.length)
 		expect(screen.getAllByRole('button', { name: 'Move left' }).length).toBeGreaterThan(0)
+	})
+
+	it('offers neither under `header: false`', () => {
+		const drivable = makeDrivableAdapter()
+		const { container } = renderDndGrid(drivable.adapter, { ordering: { column: { header: false } } })
+
+		expect(handlesIn(container)).toHaveLength(0)
+		expect(drivable.columnSpecs()).toHaveLength(0)
+		expect(screen.queryByRole('button', { name: 'Move left' })).toBeNull()
+	})
+
+	it('drags by default under `ordering: { column: {} }`', () => {
+		const { adapter } = makeDrivableAdapter()
+		const { container } = renderDndGrid(adapter, { ordering: { column: {} } })
+
+		expect(handlesIn(container)).toHaveLength(TEST_COLUMNS.length)
 	})
 
 	it("renders the kit's registered `core.ColumnDragHandle` in place of the shared one", () => {

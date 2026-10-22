@@ -23,15 +23,15 @@ import { OrdersHeaderCell } from './OrdersHeaderCell'
  *
  * The action bar comes last, which is where the default `floating` variant belongs: it overlays
  * the rows, and document order keeps it out of the tab order until there is something to act on.
- * A grid that asks for `selection: { bar: 'inline' }` writes it first instead — nothing places
- * it for you.
+ * This is a layout of its own, so the bar stays where it is written whatever the variant — the
+ * shipped presets are what move an `inline` bar above the table.
  *
  * One control is **gated**, and the rest are not, for a reason worth knowing before writing a
  * layout of your own: a control reads its feature's API, and a grid that never registered that
  * feature does not have one — so mounting it is a render-time `TypeError`, not a no-op. Four
  * examples share this layout and only `creating` varies between their sets, so only
- * `CreateTrigger` needs the check. The shipped presets do the same thing for all five of their
- * controls (`useToolbarControls`), because they serve every grid rather than four known ones.
+ * `CreateTrigger` needs the check. The shipped presets do the same thing for every control they
+ * mount (`useToolbarControls`), because they serve every grid rather than four known ones.
  */
 export function OrdersLayout() {
 	// Config refs only, no state read — a layout that re-rendered on every keystroke would

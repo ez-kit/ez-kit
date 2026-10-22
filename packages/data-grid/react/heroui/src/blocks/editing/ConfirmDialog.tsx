@@ -3,6 +3,8 @@
 import { useGridMessages } from '@ez-kit/data-grid-react/kit'
 import { AlertDialog, Button } from '@heroui/react'
 
+import { KIT_CLASS_NAME } from '../../lib/kit-class-name'
+
 import type { ConfirmDialogProps } from '@ez-kit/data-grid-react'
 
 /**
@@ -25,6 +27,7 @@ export function ConfirmDialog({ open, title, description, onConfirm, onCancel }:
 	const messages = useGridMessages()
 	return (
 		<AlertDialog.Backdrop
+			className={KIT_CLASS_NAME}
 			isOpen={open}
 			isKeyboardDismissDisabled={false}
 			onOpenChange={(isOpen) => {

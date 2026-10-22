@@ -1,2 +1,3 @@
+export * from './standard-schema'
 export * from './validation-types'
-export * from './zod-resolver'
+export * from './schema-resolver'

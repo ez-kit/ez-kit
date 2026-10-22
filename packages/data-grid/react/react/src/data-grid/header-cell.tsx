@@ -12,9 +12,10 @@ import { useGridComponents } from '../components-context'
 import { GridMenuVariant } from '../menu'
 import { ColumnSortDirection, SortDirection } from '../types'
 import { filtersRows } from '../utils/filters-rows'
+import { freezeRenderedWidths, releaseUnmovedWidths } from '../utils/freeze-rendered-widths'
 import { getCommonPinStyles } from '../utils/pin-styles'
+import { resolveReorderMode } from '../utils/reorder-mode'
 import { isTextEntryTarget } from '../utils/text-entry-target'
-import { resolveHeaderAffordances } from '../utils/visibility-panel-affordances'
 import { getVisualLeafColumns } from '../utils/visual-column-order'
 
 import { getAlignAttrs } from './align-attrs'
@@ -25,6 +26,7 @@ import { buildColumnMenuSections } from './column-menu-sections'
 import { HeaderCellProvider } from './composition-context'
 import { useDndEnabled } from './dnd'
 import { COLUMN_DRAGGING_SELECTOR } from './dnd/dragging-attrs'
+import { columnFilterTarget } from './filter-target'
 import { flexRender } from './flex-render'
 import { HeaderExtras, HeaderMain } from './header-slots'
 import { useCellNavigationProps } from './keyboard-navigation'
@@ -36,7 +38,10 @@ import type { HeaderThProps } from './column-drag'
 import type { ErasedRow, DataTable, GridFeatures } from '../types'
 import type { FormColumnMeta } from '@ez-kit/data-grid-core'
 import type { Column, Header } from '@tanstack/table-core'
-import type { KeyboardEvent, ReactElement, ReactNode } from 'react'
+import type { KeyboardEvent, MouseEvent, ReactElement, ReactNode, TouchEvent } from 'react'
+
+/** `MouseEvent.button` for the main button — a left click for a right-handed mouse. */
+const PRIMARY_BUTTON = 0
 
 /**
  * What a `<DataGrid.HeaderCell>` render function receives.
@@ -191,7 +196,7 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
 	const canResize = header.column.getCanResize?.() ?? false
 	const isDndEnabled = useDndEnabled()
-	const headerAffordances = resolveHeaderAffordances(table.grid.ordering, isDndEnabled)
+	const headerAffordances = resolveReorderMode(table.grid.ordering.header.mode, true, isDndEnabled)
 
 	const colPinDef = meta?.pinning
 	const isStaticPin = typeof colPinDef === 'object' && colPinDef.side !== undefined
@@ -223,14 +228,22 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 	 */
 	const isLeafHeader = header.subHeaders.length === 0 && !header.isPlaceholder
 	/*
-	 * Gated on `isDndEnabled` first, and that is a performance requirement rather than tidiness:
+	 * With the column axis on, the header drags exactly when its mode resolved to the grip — a
+	 * `'step'` header stays still in a grid whose rows drag. With the axis off every header still
+	 * registers under an adapter, as it did before modes existed, and `canMove` keeps each one
+	 * disabled — `column-drag.test.tsx` pins that.
+	 */
+	const takesPartInDrag = table.grid.ordering.column ? headerAffordances.drag : isDndEnabled
+	/*
+	 * Gated on the resolved drag first — which is off without an adapter — and that is a performance
+	 * requirement rather than tidiness:
 	 * `getVisualLeafColumns` builds a fresh three-part array and this scans it, once per header
 	 * cell — O(n²) per header render. A grid with no drag adapter must not pay that, which is most
 	 * grids. Skipping it also skips mounting the shell below, so such a grid renders the bare `Th`
 	 * it rendered before this phase; the phase-2 identical-DOM test compares against exactly that.
 	 */
 	const visualIndex =
-		isDndEnabled && table.grid.ordering.header.drag !== false && isLeafHeader
+		takesPartInDrag && isLeafHeader
 			? getVisualLeafColumns(table).findIndex((column) => column.id === header.column.id)
 			: -1
 	const isDragParticipant = visualIndex >= 0
@@ -421,8 +434,7 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 		filtersRows(table) && meta?.filtering !== false && !meta?.isSystemColumn && header.column.getCanFilter()
 	const filterContent = canFilter
 		? renderFilterInput({
-				header,
-				meta,
+				target: columnFilterTarget(header.column),
 				Input,
 				cellTypes,
 				OperatorSelect,
@@ -516,10 +528,23 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 			/>
 		) : null
 
-	const resizer = canResize ? (
+	const startResize = canResize ? header.getResizeHandler() : null
+	const beginResize = (event: MouseEvent<HTMLElement> | TouchEvent<HTMLElement>): void => {
+		if (!startResize) return
+		const frozen = freezeRenderedWidths(table, event.currentTarget)
+		startResize(event)
+		releaseUnmovedWidths(table, header, frozen, event.currentTarget.ownerDocument)
+	}
+	const resizer = startResize ? (
 		<Resizer
-			onMouseDown={header.getResizeHandler()}
-			onTouchStart={header.getResizeHandler()}
+			onMouseDown={(event) => {
+				// Only the primary button resizes; a context-menu press must not fix the column.
+				if (event.button === PRIMARY_BUTTON) beginResize(event)
+			}}
+			onTouchStart={(event) => {
+				// A pinch is not a resize — the same guard TanStack applies inside its handler.
+				if (event.touches.length === 1) beginResize(event)
+			}}
 			onDoubleClick={() => {
 				header.column.resetSize()
 			}}

@@ -9,6 +9,7 @@ import type {
 	ColumnDefCommon,
 	ColumnRenderer,
 	ConfigOf,
+	RowBoundConfig,
 } from '../types'
 
 /**
@@ -49,11 +50,11 @@ type BaseOptions<TRow extends object, TCellTypes extends CellTypeRegistryShape, 
  * derives: required when the declared config has a required field, optional when every field
  * is optional, absent when the type declared no config.
  */
-type ConfigArg<TDefinition> = [ConfigOf<TDefinition>] extends [never]
+type ConfigArg<TDefinition, TRow> = [ConfigOf<TDefinition>] extends [never]
 	? { config?: undefined }
 	: object extends ConfigOf<TDefinition>
-		? { config?: ConfigOf<TDefinition> }
-		: { config: ConfigOf<TDefinition> }
+		? { config?: RowBoundConfig<ConfigOf<TDefinition>, TRow> }
+		: { config: RowBoundConfig<ConfigOf<TDefinition>, TRow> }
 
 /**
  * One builder method per registered cell type, each carrying that type's own config.
@@ -65,7 +66,7 @@ type ConfigArg<TDefinition> = [ConfigOf<TDefinition>] extends [never]
  */
 type TypeHelpers<TRow extends object, TCellTypes extends CellTypeRegistryShape, TNode> = {
 	[TKey in keyof TCellTypes & string]: (
-		opts: BaseOptions<TRow, TCellTypes, TNode> & ConfigArg<TCellTypes[TKey]>,
+		opts: BaseOptions<TRow, TCellTypes, TNode> & ConfigArg<TCellTypes[TKey], TRow>,
 	) => ColumnDef<TRow, TCellTypes, TNode>
 }
 

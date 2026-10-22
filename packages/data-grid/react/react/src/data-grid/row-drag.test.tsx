@@ -111,9 +111,10 @@ describe('the row registers itself with the adapter', () => {
 	it('counts from zero on a later page, where row.index does not', () => {
 		const { adapter, specs } = makeDrivableAdapter()
 		const data = Array.from({ length: 6 }, (_, i) => ({ id: i + 1, name: `Row ${String(i + 1)}`, age: 20 + i }))
-		// `initialState.pagination` alone: writing `pagination.pageSize` beside it is the mistake
-		// `createTable` warns about in development.
-		renderDndGrid(adapter, { data, initialState: { pagination: { pageIndex: 2, pageSize: 2 } } })
+		// The size from `initialState.pagination` only: writing `pagination.pageSize` beside it is the
+		// mistake `createTable` warns about in development. `pagination` itself still has to be on —
+		// a seed for a feature that is off waits in state and slices nothing.
+		renderDndGrid(adapter, { data, pagination: true, initialState: { pagination: { pageIndex: 2, pageSize: 2 } } })
 
 		expect(specs.filter((spec) => spec.axis === 'row').map((spec) => [spec.id, spec.index])).toEqual([
 			['5', 0],
@@ -132,7 +133,7 @@ describe('the row registers itself with the adapter', () => {
 			{ id: 2, name: 'Bob', age: 24 },
 			{ id: 3, name: 'Alfred', age: 41 },
 		]
-		renderDndGrid(adapter, { data, initialState: { columnFilters: [{ id: 'name', value: 'Al' }] } })
+		renderDndGrid(adapter, { data, filtering: true, initialState: { columnFilters: [{ id: 'name', value: 'Al' }] } })
 
 		expect(specs.filter((spec) => spec.axis === 'row').map((spec) => [spec.id, spec.index])).toEqual([
 			['1', 0],

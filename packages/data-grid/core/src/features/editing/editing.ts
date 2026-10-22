@@ -1,12 +1,15 @@
 import { assignPrototypeAPIs } from '@tanstack/table-core'
 
+import { ColumnFormMode, resolveColumnFormConfig } from '../../column/resolve-form-config'
 import { DEFAULT_VALIDATE_DEBOUNCE_MS } from '../../defaults'
 import { assignTableInstanceData, readOwnSlice, writeOwnSlice } from '../../feature-state'
-import { CommitStatus, isValidationError, ValidateOn, zodSafeParseToResult } from '../validation'
+import { abortChecks, checkValues, commitClosed, commitInFlight, runCommit, trackCommit } from '../form'
+import { CommitStatus, runValidator, ValidateOn } from '../validation'
 
 import type { ColumnEditingConfig } from '../../column/types'
 import type { AnyTable } from '../../feature-state'
 import type { FeatureToggle } from '../../utils/feature-flag'
+import type { CommitOptions, CommitResult, FormWorkBox } from '../form'
 import type { ValidateConfig, ValidateContext, ValidationErrors, ValidationResult } from '../validation'
 import type { RowData, TableFeature, TableFeatures } from '@tanstack/table-core'
 
@@ -18,20 +21,35 @@ import type { RowData, TableFeature, TableFeatures } from '@tanstack/table-core'
 export type EditingSaveContext<TData> = {
 	/** ID of the row being edited (TanStack row.id). */
 	rowId: string
-	/** Field values currently in the form. In cell mode contains only the edited column. */
+	/**
+	 * The row being edited, as it is in `data` (`row.original`) — every field, including the
+	 * ones no column shows, such as a `version` for optimistic locking. Read-only: what is saved
+	 * is `values`. `undefined` only when the row left `data` while the form was open.
+	 */
+	row: TData | undefined
+	/**
+	 * Field values currently in the form: only the fields of the edit form — no system column and
+	 * no column with `editing: false`; read anything else from `row`. In cell mode, only the
+	 * edited column. A form of one's own that passes `values` to `commit` sends exactly those.
+	 */
 	values: Partial<TData>
 	/** Aborted when the user cancels edit, calls cancel(), or the table unmounts. */
 	signal: AbortSignal
 }
 
 const DEFAULT_VALIDATE_ON: ValidateOn = ValidateOn.Submit
-const GENERIC_FORM_ERROR = 'Unexpected error'
 
 export type EditingState = {
 	rowId: string | null
 	/** Populated only in cell mode (`<rowId>_<columnId>`). */
 	cellId: string | null
 	values: Record<string, unknown>
+	/**
+	 * The values the form opened with — the row's, for the fields of the edit form. Written once
+	 * by `start()` / `startCell()` and never by an edit, so its identity is stable for as long as
+	 * the form stays open.
+	 */
+	initialValues: Readonly<Record<string, unknown>>
 	errors: ValidationErrors
 	formError: string | null
 	commitStatus: CommitStatus
@@ -85,13 +103,33 @@ export type EditingApi<TData = unknown> = {
 	start: (rowId: string) => void
 	startCell: (rowId: string, columnId: string) => void
 	cancel: () => void
-	commit: () => Promise<void>
-	commitCell: () => Promise<void>
+	/**
+	 * Validate and save the row. With `values`, those replace the form's values first — the path
+	 * a form of one's own takes. Resolves to a {@link CommitResult}; a second call while one is
+	 * in flight resolves to the same promise.
+	 */
+	commit: (options?: CommitOptions) => Promise<CommitResult>
+	/** Validate and save the one open cell. Resolves like {@link EditingApi.commit}. */
+	commitCell: () => Promise<CommitResult>
 	setValue: (key: string, value: unknown) => void
 	setValues: (patch: Partial<TData>) => void
 	setErrors: (errors: ValidationErrors | null) => void
 	setFormError: (msg: string | null) => void
+	/**
+	 * Validate the form's values and write the result into the slice. Resolves `null`, running
+	 * nothing, while a commit is in flight — the commit validates anyway.
+	 */
 	validate: () => Promise<ValidationResult>
+	/**
+	 * Run the configured validator over `values` and return its result, writing nothing — no
+	 * values, no errors, no status. Cancelled only by the form closing, never by a save, so a form
+	 * of one's own can check a field on blur freely.
+	 *
+	 * `null` means valid **or** that there is nothing to validate for: no validator configured, no
+	 * form open, or the form closed while the check ran. Checks are not ordered against each other,
+	 * so a form that runs several at once keeps the latest one's result itself.
+	 */
+	validateValues: (values: Record<string, unknown>) => Promise<ValidationResult>
 	/** Internal — called by FieldState.onBlur in the react adapter. */
 	validateField: (columnId: string) => Promise<void>
 	getState: () => EditingState
@@ -111,13 +149,8 @@ export type EditingApi<TData = unknown> = {
  * cancelled a save: see {@link resetFormController}.
  */
 // `| undefined` explicitly: under `exactOptionalPropertyTypes` a bare `form?:` could not be
-// cleared by assignment, and clearing both is what `cancel` and `resetTableInstanceData` do.
-export type EditingAbortBox = {
-	/** `commit`, `commitCell` and `validate` — whatever owns the form as a whole. */
-	form?: AbortController | undefined
-	/** `validateField` and the debounced change validation — one field, one blur, one keystroke. */
-	field?: AbortController | undefined
-}
+// cleared by assignment, and clearing them is what `cancel` and `resetTableInstanceData` do.
+export type EditingAbortBox = FormWorkBox
 
 declare module '@tanstack/table-core' {
 	// Declaration merging needs interfaces; these are the shapes upstream declares as such.
@@ -180,6 +213,7 @@ const INITIAL_STATE: EditingState = Object.freeze({
 	rowId: null,
 	cellId: null,
 	values: Object.freeze({}),
+	initialValues: Object.freeze({}),
 	errors: Object.freeze({}),
 	formError: null,
 	commitStatus: CommitStatus.Idle,
@@ -216,6 +250,7 @@ type EditingTable = AnyTable & {
 	getAllColumns: () => EditingColumn[]
 	getColumn: (columnId: string) => EditingColumn | undefined
 	getRowModel: () => { rows: EditingRow[] }
+	getCoreRowModel: () => { rowsById: Record<string, { original: unknown } | undefined> }
 }
 
 /** The row instance an `assignPrototypeAPIs` `fn` receives as its first argument. */
@@ -311,12 +346,8 @@ async function runValidate(
 	values: Record<string, unknown>,
 	ctx: ValidateContext,
 ): Promise<ValidationResult> {
-	const config = editingOption(table)
-	if (!config?.validate) return null
-	if (typeof config.validate === 'function') {
-		return await config.validate(values, ctx)
-	}
-	return zodSafeParseToResult(config.validate.schema, values)
+	const validate = editingOption(table)?.validate
+	return validate ? await runValidator(validate, values, ctx) : null
 }
 
 /**
@@ -363,13 +394,15 @@ function resetFieldController(table: EditingTable): AbortController | undefined 
 	return c
 }
 
-/** Tear both down — a new form opens, the user cancels, or the table resets. */
+/** Tear everything down — a new form opens, the user cancels, or the table resets. */
 function abortAll(table: AnyTable): void {
 	const box = abortBox(table)
 	box.form?.abort()
 	box.field?.abort()
+	abortChecks(box)
 	box.form = undefined
 	box.field = undefined
+	box.commit = undefined
 }
 
 /**
@@ -429,16 +462,35 @@ function scheduleChangeValidation(table: EditingTable, columnId: string): void {
 	})()
 }
 
+/**
+ * The row's values for the fields of the edit form — what `start()` seeds the form with.
+ *
+ * A field is in the form under the rule the generated form applies, through the same helper: not a
+ * system column, and not opted out with `editing: false`. Seeding such a column too sent its value
+ * to `onSave` as if the user had edited it; `row` in the save context is where it is read from now.
+ */
 function snapshotRow(table: EditingTable, rowId: string): Record<string, unknown> {
 	const row = table.getRowModel().rows.find((r) => r.id === rowId)
 	const initial: Record<string, unknown> = {}
 	if (!row) return initial
 	for (const col of table.getAllColumns()) {
-		if (col.id && col.columnDef.meta?.isSystemColumn !== true) {
-			initial[col.id] = row.getValue(col.id)
-		}
+		const meta = col.columnDef.meta
+		if (!col.id || meta?.isSystemColumn === true) continue
+		if (resolveColumnFormConfig(meta, ColumnFormMode.Editing) === false) continue
+		initial[col.id] = row.getValue(col.id)
 	}
 	return initial
+}
+
+/** The edited row's original, looked up in the core row model so filtering and paging never hide it. */
+function originalOf(table: EditingTable, rowId: string): RowData | undefined {
+	return table.getCoreRowModel().rowsById[rowId]?.original as RowData | undefined
+}
+
+/** A save went through: end the open form's checks and write the closed, empty form back. */
+function closeForm(table: AnyTable): void {
+	abortChecks(abortBox(table))
+	writeEditing(table, { ...INITIAL_STATE })
 }
 
 /** The one table member this feature installs — a namespace object, not a method. */
@@ -446,10 +498,12 @@ function createEditingApi(table: EditingTable): EditingApi<RowData> {
 	return {
 		start: (rowId) => {
 			abortAll(table)
+			const seed = snapshotRow(table, rowId)
 			writeEditing(table, {
 				rowId,
 				cellId: null,
-				values: snapshotRow(table, rowId),
+				values: seed,
+				initialValues: seed,
 				errors: {},
 				formError: null,
 				commitStatus: CommitStatus.Idle,
@@ -463,11 +517,12 @@ function createEditingApi(table: EditingTable): EditingApi<RowData> {
 			if (table.getColumn(columnId)?.columnDef.meta?.editing === false) return
 			abortAll(table)
 			const row = table.getRowModel().rows.find((r) => r.id === rowId)
-			const initialValue = row?.getValue(columnId)
+			const seed = { [columnId]: row?.getValue(columnId) }
 			writeEditing(table, {
 				rowId,
 				cellId: `${rowId}_${columnId}`,
-				values: { [columnId]: initialValue },
+				values: seed,
+				initialValues: seed,
 				errors: {},
 				formError: null,
 				commitStatus: CommitStatus.Idle,
@@ -479,126 +534,87 @@ function createEditingApi(table: EditingTable): EditingApi<RowData> {
 			writeEditing(table, { ...INITIAL_STATE })
 		},
 
-		commit: async () => {
+		commit: (options) => {
 			const config = editingOption(table)
-			if (!config) return
-			const { rowId, commitStatus, values } = readEditing(table)
-			if (!rowId) return
-			if (commitStatus !== CommitStatus.Idle) return // UI invariant
+			const state = readEditing(table)
+			const { rowId } = state
+			if (!config || !rowId) return commitClosed()
+			// UI invariant — a second click is a no-op, and gets the first click's outcome.
+			if (state.commitStatus !== CommitStatus.Idle) {
+				return commitInFlight(abortBox(table))
+			}
 
 			const c = resetFormController(table)
-
+			const values = options?.values ?? state.values
 			writeEditing(table, {
+				values,
 				errors: {},
 				formError: null,
 				commitStatus: CommitStatus.Validating,
 			})
 
-			if (config.validate) {
-				let result: ValidationResult
-				try {
-					result = await runValidate(table, values, { signal: c.signal })
-				} catch (e) {
-					if (c.signal.aborted) return
-					writeEditing(table, { commitStatus: CommitStatus.Idle })
-					throw e
-				}
-				if (c.signal.aborted) return
-				if (result !== null) {
-					writeEditing(table, {
-						errors: result.errors ?? {},
-						formError: result.formError ?? null,
-						commitStatus: CommitStatus.Idle,
-					})
-					return
-				}
-			}
-
-			writeEditing(table, { commitStatus: CommitStatus.Saving })
-			try {
-				await config.onSave({ rowId, values, signal: c.signal })
-				if (c.signal.aborted) return
-				writeEditing(table, { ...INITIAL_STATE })
-			} catch (e) {
-				if (c.signal.aborted) return
-				if (isValidationError(e)) {
-					writeEditing(table, {
-						errors: e.errors,
-						formError: e.formError ?? null,
-						commitStatus: CommitStatus.Idle,
-					})
-					return
-				}
-				writeEditing(table, {
-					formError: GENERIC_FORM_ERROR,
-					commitStatus: CommitStatus.Idle,
-				})
-				throw e
-			}
+			return trackCommit(
+				abortBox(table),
+				runCommit({
+					signal: c.signal,
+					values,
+					validate: config.validate,
+					validateContext: { signal: c.signal },
+					save: (signal) => config.onSave({ rowId, row: originalOf(table, rowId), values, signal }),
+					write: (patch) => {
+						writeEditing(table, patch)
+					},
+					close: () => {
+						closeForm(table)
+					},
+				}),
+			)
 		},
 
-		commitCell: async () => {
+		commitCell: () => {
 			const config = editingOption(table)
-			if (!config) return
-			const { rowId, cellId, commitStatus, values } = readEditing(table)
-			if (!rowId || !cellId) return
-			if (commitStatus !== CommitStatus.Idle) return
+			const state = readEditing(table)
+			const { rowId, cellId } = state
+			if (!config || !rowId || !cellId) return commitClosed()
+			if (state.commitStatus !== CommitStatus.Idle) {
+				return commitInFlight(abortBox(table))
+			}
 
 			const columnId = extractColumnId(rowId, cellId)
-			const cellValues: Record<string, unknown> = { [columnId]: values[columnId] }
+			const cellValues: Record<string, unknown> = { [columnId]: state.values[columnId] }
 
 			const c = resetFormController(table)
-
 			writeEditing(table, {
 				errors: {},
 				formError: null,
 				commitStatus: CommitStatus.Validating,
 			})
 
-			if (config.validate) {
-				let result: ValidationResult
-				try {
-					result = await runValidate(table, cellValues, { signal: c.signal, cell: { columnId } })
-				} catch (e) {
-					if (c.signal.aborted) return
-					writeEditing(table, { commitStatus: CommitStatus.Idle })
-					throw e
-				}
-				if (c.signal.aborted) return
-				if (result !== null) {
-					const fieldErrs = result.errors?.[columnId]
-					writeEditing(table, {
-						// In cell mode only the edited column's error is surfaced;
-						// cross-field refine errors land in `formError`-free zone (ignored).
-						errors: fieldErrs && fieldErrs.length > 0 ? { [columnId]: fieldErrs } : {},
-						formError: null,
-						commitStatus: CommitStatus.Idle,
-					})
-					return
-				}
-			}
-
-			writeEditing(table, { commitStatus: CommitStatus.Saving })
-			try {
-				await config.onSave({ rowId, values: cellValues, signal: c.signal })
-				if (c.signal.aborted) return
-				writeEditing(table, { ...INITIAL_STATE })
-			} catch (e) {
-				if (c.signal.aborted) return
-				if (isValidationError(e)) {
-					writeEditing(table, {
-						errors: e.errors,
-						formError: e.formError ?? null,
-						commitStatus: CommitStatus.Idle,
-					})
-					return
-				}
-				writeEditing(table, {
-					formError: GENERIC_FORM_ERROR,
-					commitStatus: CommitStatus.Idle,
-				})
-				throw e
-			}
+			return trackCommit(
+				abortBox(table),
+				runCommit({
+					signal: c.signal,
+					values: cellValues,
+					validate: config.validate,
+					validateContext: { signal: c.signal, cell: { columnId } },
+					// In cell mode only the edited column's error is surfaced; cross-field refine
+					// errors and a form-level message have nowhere to show, so they are dropped.
+					toProblems: (result) => {
+						const fieldErrs = result.errors?.[columnId]
+						return {
+							errors: fieldErrs && fieldErrs.length > 0 ? { [columnId]: fieldErrs } : {},
+							formError: null,
+						}
+					},
+					save: (signal) => config.onSave({ rowId, row: originalOf(table, rowId), values: cellValues, signal }),
+					write: (patch) => {
+						writeEditing(table, patch)
+					},
+					close: () => {
+						closeForm(table)
+					},
+				}),
+			)
 		},
 
 		setValue: (key, value) => {
@@ -633,6 +649,9 @@ function createEditingApi(table: EditingTable): EditingApi<RowData> {
 		validate: async () => {
 			const config = editingOption(table)
 			if (!config?.validate) return null
+			// A commit in flight already validates; superseding it would abandon a save that may have
+			// reached the server, and report it as cancelled.
+			if (readEditing(table).commitStatus !== CommitStatus.Idle) return null
 			const c = resetFormController(table)
 			const values = readEditing(table).values
 			writeEditing(table, { commitStatus: CommitStatus.Validating })
@@ -652,6 +671,9 @@ function createEditingApi(table: EditingTable): EditingApi<RowData> {
 			})
 			return result
 		},
+
+		validateValues: (values) =>
+			checkValues(abortBox(table), readEditing(table).rowId !== null, editingOption(table)?.validate, values),
 
 		validateField: async (columnId) => {
 			const c = resetFieldController(table)

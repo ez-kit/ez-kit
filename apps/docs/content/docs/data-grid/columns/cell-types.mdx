@@ -23,7 +23,7 @@ A cell type with nothing else to say can be written as the bare string — `cell
 same column as `cell: { type: 'date' }`. The object is for the exception that carries a `config`
 or a `component`, the same scalar-or-object shape `align`, `width` and `pinning` use.
 
-`config` is required where the type declares required fields (`select` needs `items`), and optional otherwise.
+`config` is required where the type declares required fields (`select` needs `items` or `useItems`), and optional otherwise.
 
 ## Usage
 
@@ -34,17 +34,17 @@ filtering enabled.
 
 ## Built-in cell types
 
-| `cell.type`  | Value          | `cell.config`                                                                                                |
-| ------------ | -------------- | ------------------------------------------------------------------------------------------------------------ |
-| `'text'`     | `string`       | `maxLength`, `ellipsis` — truncation for the rendered view.                                                  |
-| `'number'`   | `number`       | `decimals`, `thousandsSeparator`, `decimalSeparator`, `prefix`, `suffix`, `locale`.                          |
-| `'date'`     | `string`       | `min`, `max` (ISO 8601, for the picker), `format` (`Intl.DateTimeFormatOptions`).                            |
-| `'boolean'`  | `boolean`      | `trueLabel`, `falseLabel`.                                                                                   |
-| `'select'`   | `string`       | `items: { value, label, icon? }[]` — **required**.                                                           |
-| `'badge'`    | `string`       | `items: { value, label, variant?, icon? }[]` — **required**. `variant` is the kits' shared badge vocabulary. |
-| `'image'`    | `string` (src) | `alt`, `width`, `height`.                                                                                    |
-| `'link'`     | `string`       | `label`, `href`, `target` — see below. All optional.                                                         |
-| `'progress'` | `number`       | `max`.                                                                                                       |
+| `cell.type`  | Value          | `cell.config`                                                                                                                                                                       |
+| ------------ | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `'text'`     | `string`       | `maxLength`, `ellipsis` — truncation for the rendered view.                                                                                                                         |
+| `'number'`   | `number`       | `decimals`, `thousandsSeparator`, `decimalSeparator`, `prefix`, `suffix`, `locale`.                                                                                                 |
+| `'date'`     | `string`       | `min`, `max` (ISO 8601, for the picker), `format` (`Intl.DateTimeFormatOptions`).                                                                                                   |
+| `'boolean'`  | `boolean`      | `trueLabel`, `falseLabel`.                                                                                                                                                          |
+| `'select'`   | `string`       | `items: { value, label, icon? }[]`, or `useItems` — a hook, see [Value lists from a hook](/docs/data-grid/columns/async-items). One is **required**. `getItem` labels from the row. |
+| `'badge'`    | `string`       | As `select`, with `variant?` on each item — the kits' shared badge vocabulary.                                                                                                      |
+| `'image'`    | `string` (src) | `alt`, `width`, `height`.                                                                                                                                                           |
+| `'link'`     | `string`       | `label`, `href`, `target` — see below. All optional.                                                                                                                                |
+| `'progress'` | `number`       | `max`.                                                                                                                                                                              |
 
 ### Item icons
 

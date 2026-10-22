@@ -176,17 +176,21 @@ bottom bar — is the `FilterPanelLayout` preset; see
 [Presets](/docs/data-grid/layout/presets#filterpanellayout). The
 [task board](/docs/data-grid/examples#task-board) is it in full.
 
-The panel renders nothing when the grid has no filtered row model or no filterable column, so a
-hand-placed panel is safe on a grid whose filtering a defaults layer switched off.
+The panel renders nothing when the grid has nothing to filter — no filtered row model, no
+filterable column and no [filter field](/docs/data-grid/filtering/fields) — so a hand-placed panel
+is safe on a grid whose filtering a defaults layer switched off. Fields get a chip after the
+columns, in the order they were declared.
 
-### One column at a time
+### One filter at a time
 
-`<DataGrid.ColumnFilter columnId='status' />` renders a single column's chip — same control, same
-popover — wherever the layout wants it, so a grid can place two filters in its toolbar and leave
-the rest out. Its children take a render function over the same per-column shape the panel hands
-over (`label`, `valueDisplay`, `hasValue`, `input`, `onClear`).
+`<DataGrid.Filter id='status' />` renders a single filter's chip — same control, same popover —
+wherever the layout wants it, so a grid can place two filters in its toolbar and leave the rest
+out. `id` names a column or a [filter field](/docs/data-grid/filtering/fields) alike. Its children
+take a render function over the same per-filter shape the panel hands over (`id`, `label`,
+`valueDisplay`, `hasValue`, `input`, `onClear`, `filter`, `source`).
 
-It renders nothing for a column that is not filterable, so no guard is needed around it.
+It renders nothing for an id that names no filterable column and no offered field, so no guard is
+needed around it.
 
 ## Both at once
 
@@ -207,6 +211,113 @@ Mount the panel **and** keep rendering `filter`, and the grid has a filter contr
 ```
 
 A column's two controls are two inputs bound to one value: type in either and the other follows.
+
+## Your own filter component
+
+A design system often ships a filter component of its own — chips, an "add filter" menu, a draft
+with **Apply** and **Reset**. The panel can be built on it without rebuilding what the grid
+already knows about each filter: `useFilters()`, or the `<DataGrid.FilterPanel>` render function,
+hands over every filterable column's and field's **filter model** and the panel's whole value.
+
+<DataGridDocsExample exampleId='custom-filter-panel' />
+
+```tsx
+function OrderFilters() {
+	const filters = useFilters()
+	if (!filters) return null
+
+	return (
+		<Filters
+			value={filters.value}
+			onChange={filters.setValue}
+			mode='confirm'
+		>
+			{filters.filters.map(({ filter }) =>
+				filter.hasOperators ? (
+					<Filters.Item
+						key={filter.id}
+						id={filter.id}
+						label={filter.label}
+						operators={filter.operators}
+						defaultOperator={filter.defaultOperator}
+					>
+						<EditorFor
+							editor={filter.editor}
+							items={filter.items}
+						/>
+					</Filters.Item>
+				) : null,
+			)}
+		</Filters>
+	)
+}
+```
+
+`Filters`, `Filters.Item` and `EditorFor` stand for your design system's components; the grid knows
+nothing about them. The hook works anywhere under `<DataGrid>` — in the toolbar, in a sidebar —
+and returns `undefined` when the grid filters nothing.
+
+### `UseFiltersResult`
+
+| Option            | Type                                    | Description                                                                                                                   |
+| ----------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `filters`         | `DataGridFilterTarget[]`                | Every filterable column, then every field: `id`, `label`, `valueDisplay`, `hasValue`, `input`, `onClear`, `filter`, `source`. |
+| `hasActiveFilter` | `boolean`                               | `true` while any column or field holds a filter.                                                                              |
+| `value`           | `Record<string, StructuredFilterValue>` | Every filter with operators that holds one, keyed by its id. A new object each render — compare by value.                     |
+| `setValue`        | `(next: FiltersValue) => void`          | Writes the whole value in one state change. See the rules below.                                                              |
+
+`setValue` is what **Apply** calls. It writes every filter at once, so `filtering.onChange` fires
+**once** — the counter in the example above moves by one per Apply, however many fields changed.
+
+- A column or field with operators that `next` does not name loses its filter.
+- An empty value — no value, `''`, `[]`, a range with neither bound — counts as not named, so an
+  empty pinned field never reaches `onChange` or the server as a filter. `isEmpty` and
+  `isNotEmpty` take no value and are kept.
+- A column **without** operators keeps its plain filter: its value is not `{ operator, value }`,
+  so it is not part of the panel's value and is written through its own `filter.setValue`. For a
+  grid driven by a panel like this, turn operators on for every column with
+  `filtering: { operators: true }`.
+- A key that names no column or offered field with operators is ignored, with a warning in
+  development — a field outside `filtering.manual: true` included.
+- Under [`draft`](/docs/data-grid/production#or-let-the-user-compose-the-query-then-send-it-once) the write lands in the grid's draft and
+  `onChange` waits for `table.draft.apply()`. A panel that keeps its own draft does not need the
+  grid's as well — leave `draft` off rather than running two.
+
+`source` says where an entry comes from — `{ kind: 'column', column }` or `{ kind: 'field' }`. A
+panel that only reads `filter` and `id` never needs it.
+
+### `OperatorFilterModel`
+
+`filter` on each entry. A filter without operators carries the same fields with
+`hasOperators: false`, no operators, and its raw value.
+
+| Option                 | Type                                                 | Description                                                                                                                                                                |
+| ---------------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                   | `string`                                             | The column's or field's id — the key in the panel's value.                                                                                                                 |
+| `label`                | `string`                                             | The column's string header (else its id), or the field's `header`.                                                                                                         |
+| `cellType`             | `string \| undefined`                                | The column's cell type, for project types `editor` cannot name.                                                                                                            |
+| `hasOperators`         | `true`                                               | Tells this model from a column without operators.                                                                                                                          |
+| `operators`            | `FilterOperatorOption[]`                             | The column's operators, each with the `label` and `icon` of its definition — see [Operators](/docs/data-grid/filtering/operators).                                         |
+| `defaultOperator`      | `FilterOperatorId \| undefined`                      | What the column's filter opens with.                                                                                                                                       |
+| `operator`             | `FilterOperatorId`                                   | The current operator, else the default.                                                                                                                                    |
+| `value`                | `StructuredFilterValue \| undefined`                 | The current filter, or `undefined` while unset.                                                                                                                            |
+| `editor`               | `FilterEditor`                                       | The value editor the current operator calls for — see below.                                                                                                               |
+| `editorFor`            | `(operator) => FilterEditor`                         | The editor another operator would call for — for a draft operator the grid has not seen yet.                                                                               |
+| `items`                | `FilterItem[]`                                       | What a select or multi-select offers: `filtering.items`, else the cell's `config.items`, else faceted values (never for a field) — with counts.                            |
+| `presets`              | `DatePreset[]`                                       | The date presets the current operator's `input` can take, labelled from `messages.filtering.presets`.                                                                      |
+| `between`              | `BetweenOperatorConfig \| undefined`                 | `min`, `max` and `slider` for `between`.                                                                                                                                   |
+| `debounce`             | `number`                                             | The column's `filtering.debounce`, else the table's. Matters for a panel that applies as the user types.                                                                   |
+| `valueDisplay`         | `string`                                             | The current value as the chips show it, or "Any".                                                                                                                          |
+| `hasValue`             | `boolean`                                            | `true` while the column holds a value.                                                                                                                                     |
+| `nextValueForOperator` | `(operator, from?) => StructuredFilterValue`         | The value the grid writes on an operator switch, by `input`: none for `none`, kept between two of the same, `{}` entering a range, none otherwise. Pass a draft as `from`. |
+| `setValue`             | `(next: StructuredFilterValue \| undefined) => void` | Writes this one filter.                                                                                                                                                    |
+
+`FilterEditor` names the **value**, not a control, so a design system maps it onto its own:
+`text`, `number`, `date`, `boolean`, `select` (one of `items`), `between` (an operator with
+`input: 'range'`), `multiSelect` (one with `input: 'list'`), `none` (one with `input: 'none'`) and
+`custom` (the column's
+own `filtering.component`, or a project cell type that draws its own filter — render the
+column's ready-made `input` there).
 
 ## See also
 

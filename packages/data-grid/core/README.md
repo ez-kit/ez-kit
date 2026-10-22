@@ -15,7 +15,8 @@ Use this package directly only when building your own adapter.
 pnpm add @ez-kit/data-grid-core @tanstack/table-core
 ```
 
-`react` and `zod` are optional peer dependencies (needed only for the React adapters and for `zodResolver` validation, respectively).
+`react` is an optional peer dependency, needed only for the React adapters. Validation takes any
+[Standard Schema](https://standardschema.dev) (zod, valibot, arktype, …) and depends on none of them.
 
 ## Usage
 

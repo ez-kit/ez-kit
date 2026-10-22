@@ -1,0 +1,517 @@
+# data-grid-filter-model Specification
+
+## Purpose
+
+Даёт потребителю data-grid готовую модель фильтра каждой колонки и пачечную запись фильтров,
+чтобы панель фильтров над гридом можно было собрать на собственном компоненте, не повторяя
+логику, по которой грид строит свои встроенные фильтры.
+
+## Requirements
+
+### Requirement: Модель фильтра для каждой цели фильтра
+
+Грид MUST отдавать для каждой цели фильтра — фильтруемой колонки или поля из `filtering.fields` —
+модель фильтра в поле `filter` у элементов `filters`, которые получают render-функции
+`<DataGrid.FilterPanel>` и `<DataGrid.Filter>`. Поля модели MUST быть данными и функциями, без
+React-элементов (кроме заданных автором иконок в `operators` и `items`), и модель MUST отдавать
+`id` цели. Системные колонки, колонки с `filtering: false` и нефильтруемые колонки модели не
+получают.
+
+#### Scenario: Колонка с операторами получает модель
+
+- **WHEN** грид рендерит `<DataGrid.FilterPanel>` с render-функцией, а колонка `status`
+  объявлена с `filtering: { operators: true }`
+- **THEN** элемент `filters` для `status` содержит `filter` с `id: 'status'`, непустым
+  `operators` и `setValue`
+
+#### Scenario: Поле получает модель
+
+- **WHEN** грид объявлен с `filtering: { manual: true, fields: [{ id: 'warehouse', header: 'Склад', filtering: { operators: true } }] }`
+- **THEN** элемент `filters` для `warehouse` содержит `filter` с `id: 'warehouse'` и непустым `operators`
+
+#### Scenario: Системная колонка не попадает в модель
+
+- **WHEN** в гриде включён выбор строк и render-функция панели перебирает `filters`
+- **THEN** колонки выбора среди них нет
+
+#### Scenario: Модель не содержит React-элементов
+
+- **WHEN** потребитель читает `filter` любой цели
+- **THEN** ни одно поле модели не является React-элементом
+
+#### Scenario: Иконка оператора может быть элементом
+
+- **WHEN** у оператора `equals` в наборе колонки `status` задан `icon: <Equal/>`
+- **THEN** у `equals` в `operators` модели `status` поле `icon` — элемент `<Equal/>`
+
+### Requirement: Текущий оператор и значение
+
+Модель MUST отдавать `value` — текущее структурированное значение фильтра колонки или
+`undefined`, если фильтр не задан, — и `operator`: оператор из `value`, иначе оператор по
+умолчанию колонки. Поле `defaultOperator` MUST совпадать с тем, с которого открывается
+встроенный фильтр колонки.
+
+#### Scenario: Фильтр не задан
+
+- **WHEN** у колонки с `defaultOperator: 'in'` нет значения фильтра
+- **THEN** в модели `value` равно `undefined`, а `operator` равно `'in'`
+
+#### Scenario: Фильтр задан
+
+- **WHEN** значение фильтра колонки равно `{ operator: 'contains', value: 'an' }`
+- **THEN** в модели `value` равно этому значению, а `operator` равно `'contains'`
+
+#### Scenario: Колонка без операторов
+
+- **WHEN** у колонки без операторов задан простой фильтр `'an'`
+- **THEN** в модели `hasOperators` равно `false`, `operators` пуст, `operator` равен
+  `undefined`, а `value` равно `'an'`
+
+### Requirement: Вид редактора выводится из оператора и типа ячейки
+
+Модель MUST отдавать `editor` для текущего оператора и `editorFor(operator)` для любого
+оператора колонки, выводя его из `input` определения оператора, а не из его id. Значения: `none`
+для `input: 'none'`; `between` для `input: 'range'`; `multiSelect` для `input: 'list'`; для
+`input: 'single'` — `custom`, если у колонки есть `filtering.component` или фильтр собственного
+типа ячейки проекта, иначе по типу ячейки: `number` (`number`, `progress`), `date`, `boolean`,
+`select` (`select`, `badge`), `text` (остальные).
+
+#### Scenario: Оператор без значения
+
+- **WHEN** текущий оператор колонки — `isEmpty`
+- **THEN** `editor` равен `'none'`
+
+#### Scenario: Мультивыбор
+
+- **WHEN** у колонки с типом ячейки `select` текущий оператор — `in`
+- **THEN** `editor` равен `'multiSelect'`
+
+#### Scenario: Свой оператор-список
+
+- **WHEN** у колонки с типом ячейки `select` текущий оператор — свой `excludesAny` с `input: 'list'`
+- **THEN** `editor` равен `'multiSelect'`
+
+#### Scenario: Свой оператор-диапазон
+
+- **WHEN** у числовой колонки текущий оператор — свой `notBetween` с `input: 'range'`
+- **THEN** `editor` равен `'between'`
+
+#### Scenario: Одиночный выбор
+
+- **WHEN** у колонки с типом ячейки `badge` текущий оператор — `equals`
+- **THEN** `editor` равен `'select'`, а `items` содержит варианты колонки
+
+#### Scenario: Редактор для другого оператора
+
+- **WHEN** у числовой колонки текущий оператор — `equals`, и потребитель вызывает `editorFor('between')`
+- **THEN** результат равен `'between'`, а `editor` по-прежнему `'number'`
+
+#### Scenario: Собственный компонент фильтра
+
+- **WHEN** колонка задаёт `filtering.component`
+- **THEN** `editor` для оператора с `input: 'single'` равен `'custom'`
+
+### Requirement: Варианты значений совпадают со встроенным мультивыбором
+
+Поле `items` модели MUST содержать тот же список, что получает встроенный мультивыбор этой
+колонки: список фильтра (`filtering.items` / `filtering.useItems`), иначе базовый список
+`cell.config.items` / `cell.config.useItems` для `select` / `badge`, иначе уникальные значения
+колонки при включённом `faceted`. При включённом `faceted` у вариантов MUST быть счётчики. Модель
+MUST отдавать `itemsLoading` и `itemsError` этого списка: у статического списка `false` и
+`undefined`.
+
+#### Scenario: Варианты из конфигурации ячейки
+
+- **WHEN** колонка типа `badge` объявляет `cell.config.items` и не задаёт `filtering.items`
+- **THEN** `items` содержит эти варианты с их `label` и `icon`
+
+#### Scenario: Счётчики при faceted
+
+- **WHEN** у колонки включён `filtering.faceted`, и в данных значение `open` встречается 3 раза
+- **THEN** у варианта `open` в `items` поле `count` равно 3
+
+#### Scenario: Варианты из хука
+
+- **WHEN** колонка задаёт `cell.config.useItems`, и хук вернул `{ items: [{ value: 'wh_12', label: 'Berlin' }], isLoading: false }`
+- **THEN** `items` модели содержит `{ value: 'wh_12', label: 'Berlin' }`, а `itemsLoading` равно `false`
+
+#### Scenario: Список ещё грузится
+
+- **WHEN** хук списка фильтра возвращает `{ items: [], isLoading: true }`
+- **THEN** `items` модели пустой, а `itemsLoading` равно `true`
+
+### Requirement: Пресеты дат для текущего оператора
+
+Поле `presets` модели MUST содержать только те пресеты колонки, которые принимает текущий
+оператор: диапазонные для `input: 'range'`, одиночные для `input: 'single'`. Метки встроенных
+пресетов MUST браться из `messages.filtering.presets`. Для `input: 'list'` и `input: 'none'` и для
+колонок без пресетов список MUST быть пустым.
+
+#### Scenario: Диапазонные пресеты для between
+
+- **WHEN** у колонки дат есть и диапазонные, и одиночные пресеты, а текущий оператор — `between`
+- **THEN** `presets` содержит только диапазонные
+
+#### Scenario: Диапазонные пресеты для своего оператора-диапазона
+
+- **WHEN** у колонки дат есть пресеты, а текущий оператор — свой `notBetween` с `input: 'range'`
+- **THEN** `presets` содержит только диапазонные
+
+#### Scenario: Метка пресета из словаря
+
+- **WHEN** у грида задан словарь, где `messages.filtering.presets.last7` равен `Последние 7 дней`, а колонка дат объявлена с `filtering: { presets: true }`
+- **THEN** у пресета `last7` в модели метка `Последние 7 дней`
+
+#### Scenario: Колонка без пресетов
+
+- **WHEN** колонка не задаёт `filtering.presets`
+- **THEN** `presets` пуст
+
+### Requirement: Итоговый debounce колонки
+
+Поле `debounce` модели MUST равняться `filtering.debounce` колонки, а если она его не задаёт —
+debounce фильтрации уровня таблицы.
+
+#### Scenario: Колонка переопределяет debounce таблицы
+
+- **WHEN** debounce таблицы равен 300, а колонка задаёт `filtering.debounce: 1000`
+- **THEN** `debounce` в модели колонки равен 1000
+
+#### Scenario: Колонка наследует debounce таблицы
+
+- **WHEN** debounce таблицы равен 300, а колонка свой не задаёт
+- **THEN** `debounce` в модели равен 300
+
+### Requirement: Итоговая подсказка фильтра
+
+Модель фильтра MUST отдавать `placeholder`: `filtering.placeholder` цели, а если она не задана,
+имя фильтра из `messages.filtering.placeholder`. Это MUST быть то же значение, которое показывает
+встроенный фильтр этой цели.
+
+#### Scenario: Цель с подсказкой
+
+- **WHEN** колонка `inn` объявлена с `filtering: { placeholder: '10 цифр', operators: true }`
+- **THEN** модель её фильтра отдаёт `placeholder: '10 цифр'`
+
+#### Scenario: Цель без подсказки
+
+- **WHEN** колонка `email` с заголовком `Email` объявлена с `filtering: { operators: true }`, а
+  словарь дефолтный
+- **THEN** модель её фильтра отдаёт `placeholder: 'Filter Email…'`
+
+### Requirement: Правила смены оператора
+
+`nextValueForOperator(operator)` MUST возвращать значение, которое встроенный фильтр записал бы
+при выборе этого оператора, по `input` определений: для `none` — без значения; при переходе в
+`range` — пустой диапазон; при переходе между разными `input` — без значения; при том же
+`input` — с сохранённым значением. С аргументом `from` правила MUST применяться к нему. Функция
+MUST ничего не записывать в грид.
+
+#### Scenario: Переход в between
+
+- **WHEN** текущее значение `{ operator: 'equals', value: 5 }`, и вызывается `nextValueForOperator('between')`
+- **THEN** результат равен `{ operator: 'between', value: {} }`, а фильтр колонки в гриде не меняется
+
+#### Scenario: Смена оператора от значения черновика
+
+- **WHEN** применённое значение `{ operator: 'equals', value: 5 }`, а панель вызывает
+  `nextValueForOperator('equals', { operator: 'between', value: { from: 1, to: 9 } })`
+- **THEN** результат равен `{ operator: 'equals', value: undefined }`
+
+#### Scenario: Смена оператора с сохранением значения
+
+- **WHEN** текущее значение `{ operator: 'contains', value: 'an' }`, и вызывается `nextValueForOperator('startsWith')`
+- **THEN** результат равен `{ operator: 'startsWith', value: 'an' }`
+
+#### Scenario: Между двумя диапазонами значение сохраняется
+
+- **WHEN** текущее значение `{ operator: 'between', value: { from: 1, to: 9 } }`, и вызывается `nextValueForOperator('notBetween')` для своего оператора с `input: 'range'`
+- **THEN** результат равен `{ operator: 'notBetween', value: { from: 1, to: 9 } }`
+
+#### Scenario: Из списка в одно значение
+
+- **WHEN** текущее значение `{ operator: 'in', value: ['a'] }`, и вызывается `nextValueForOperator('equals')`
+- **THEN** результат равен `{ operator: 'equals', value: undefined }`
+
+### Requirement: Запись фильтра одной колонки
+
+`setValue(next)` модели MUST записывать `next` как значение фильтра колонки, а
+`setValue(undefined)` MUST снимать этот фильтр.
+
+#### Scenario: Снятие фильтра
+
+- **WHEN** у колонки задан фильтр, и вызывается `filter.setValue(undefined)`
+- **THEN** в состоянии грида у этой колонки фильтра нет
+
+### Requirement: Пачечное значение фильтров панели
+
+Грид MUST отдавать `value` — объект `id → StructuredFilterValue` по целям фильтра с операторами и
+заданным фильтром — через аргументы render-функции `<DataGrid.FilterPanel>` и через хук
+`useFilters()`. Цели без операторов в этот объект MUST не попадать.
+
+#### Scenario: Значение панели собирается из состояния
+
+- **WHEN** в гриде заданы фильтры `status: { operator: 'in', value: ['open'] }` и
+  `total: { operator: 'between', value: { from: 1 } }`
+- **THEN** `value` равен `{ status: {…}, total: {…} }` с этими же значениями
+
+#### Scenario: Поле в значении панели
+
+- **WHEN** у поля с операторами `warehouse` задан фильтр `{ operator: 'equals', value: 'msk' }`
+- **THEN** `value` содержит ключ `warehouse` с этим значением
+
+#### Scenario: Колонка без операторов не попадает в значение панели
+
+- **WHEN** у колонки без операторов задан простой фильтр `'an'`
+- **THEN** в `value` ключа этой колонки нет, а сама колонка есть в `filters`
+
+### Requirement: Пачечная запись одним изменением состояния
+
+`setValue(next)` уровня панели MUST записывать фильтры всех целей с операторами одним изменением
+состояния, так что `filtering.onChange` срабатывает ровно один раз. Цели из `next` получают
+значение из `next`; цели с операторами, которых нет в `next`, теряют фильтр; фильтры остальных
+целей MUST остаться как были.
+
+#### Scenario: Применение черновика внешней панели
+
+- **WHEN** у грида задан `filtering.onChange`, и панель вызывает `setValue` с новыми значениями
+  для трёх колонок
+- **THEN** `filtering.onChange` вызывается один раз с итоговым массивом фильтров
+
+#### Scenario: Колонки и поля одной записью
+
+- **WHEN** панель вызывает `setValue({ status: {…}, warehouse: {…} })`, где `warehouse` — поле
+- **THEN** `filtering.onChange` вызывается один раз, и массив содержит обе записи
+
+#### Scenario: Отсутствующий ключ снимает фильтр
+
+- **WHEN** у колонки `status` задан фильтр, и вызывается `setValue({ total: {…} })`
+- **THEN** фильтра `status` больше нет, а `total` задан
+
+#### Scenario: Простой фильтр колонки без операторов сохраняется
+
+- **WHEN** у колонки без операторов задан простой фильтр, и вызывается `setValue({})`
+- **THEN** её фильтр остаётся прежним
+
+### Requirement: Пустые значения не становятся фильтрами
+
+При пачечной записи грид MUST не сохранять фильтр колонки, у которого значение пустое (нет
+значения, пустая строка, пустой массив, диапазон без обеих границ), если оператор этого
+значения принимает значение (`input` не `none`). Фильтр с оператором `input: 'none'` MUST
+сохраняться.
+
+#### Scenario: Закреплённый пустой фильтр
+
+- **WHEN** вызывается `setValue({ status: { operator: 'in', value: [] } })`
+- **THEN** у колонки `status` фильтра нет, и в `filtering.onChange` её записи тоже нет
+
+#### Scenario: Оператор без значения сохраняется
+
+- **WHEN** вызывается `setValue({ email: { operator: 'isEmpty', value: undefined } })`
+- **THEN** у колонки `email` фильтр `{ operator: 'isEmpty' }` задан
+
+### Requirement: Ключи пачки, которые панель не знает
+
+`setValue(next)` уровня панели MUST игнорировать ключи, которые не называют цель фильтра с
+операторами, и в режиме разработки MUST предупреждать о каждом таком ключе. Поле, которое грид не
+предлагает (нет `filtering.manual: true`), MUST считаться неизвестным ключом.
+
+#### Scenario: Ключ неизвестной колонки
+
+- **WHEN** в режиме разработки вызывается `setValue({ nope: { operator: 'equals', value: 1 } })`
+- **THEN** состояние фильтров не меняется, и в консоль выводится предупреждение с именем `nope`
+
+#### Scenario: Ключ поля без manual
+
+- **WHEN** у грида объявлено поле `warehouse` без `filtering.manual`, и вызывается `setValue({ warehouse: {…} })`
+- **THEN** состояние фильтров не меняется, и в консоль выводится предупреждение с именем `warehouse`
+
+### Requirement: Пачечная запись под отложенным применением
+
+Если у грида включён `draft`, пачечная запись MUST попадать в черновик так же, как запись по
+одной колонке: `filtering.onChange` MUST срабатывать только на `table.draft.apply()`.
+
+#### Scenario: Запись в черновик
+
+- **WHEN** у грида включены `draft` и `filtering: { manual: true, onChange }`, и панель вызывает `setValue`
+- **THEN** `onChange` не вызывается, `table.draft.isDirty()` равно `true`, а после
+  `table.draft.apply()` `onChange` вызывается один раз
+
+### Requirement: Хук useFilters доступен вне FilterPanel
+
+`useFilters()` MUST работать в любом компоненте под `<DataGrid>` и возвращать те же `filters`,
+`value`, `setValue` и `hasActiveFilter`, что получает render-функция `<DataGrid.FilterPanel>`. Если
+у грида нет ни одной цели фильтра (нет модели отфильтрованных строк, ни одной фильтруемой колонки
+и ни одного предлагаемого поля), хук MUST возвращать `undefined`.
+
+#### Scenario: Панель в тулбаре
+
+- **WHEN** компонент внутри `<DataGrid.Toolbar>` вызывает `useFilters()`
+- **THEN** он получает модели всех целей фильтра и может записать их через `setValue`
+
+#### Scenario: Грид, где фильтруются только поля
+
+- **WHEN** у грида ни одна колонка не фильтруется, но объявлено поле при `filtering.manual: true`
+- **THEN** `useFilters()` возвращает объект с одной целью — этим полем, а `<DataGrid.FilterPanel />` рендерит её чип
+
+#### Scenario: Грид без фильтрации
+
+- **WHEN** у грида фильтрация выключена, и компонент под `<DataGrid>` вызывает `useFilters()`
+- **THEN** хук возвращает `undefined`
+
+### Requirement: Совместимость со встроенной панелью
+
+`<DataGrid.FilterPanel />` и `<DataGrid.Filter />` без `children` MUST рендерить те же чипы кита
+через те же пропсы `FilterPanel` и `FilterPanelChip`, что и до изменения, а встроенные контролы
+фильтра MUST вести себя как раньше. Поле элемента `filters` MUST отдавать `label`, `valueDisplay`,
+`hasValue`, `input`, `onClear` и `filter` с прежними значениями для колонки.
+
+#### Scenario: Встроенная панель
+
+- **WHEN** layout рендерит `<DataGrid.FilterPanel />` без `children`
+- **THEN** кит получает те же пропсы `FilterPanel` и `FilterPanelChip`, что и до изменения
+
+#### Scenario: Сводка значения не меняется
+
+- **WHEN** у колонки задан фильтр `{ operator: 'in', value: ['a', 'b', 'c'] }` с метками вариантов
+- **THEN** `valueDisplay` совпадает с тем, что выводилось до изменения
+
+### Requirement: Счётчик источника важнее faceted
+
+Если вариант пришёл из `items` / `useItems` с полем `count`, модель MUST отдавать этот `count`,
+даже если у колонки включён `faceted`. Клиентский faceted MUST проставлять счётчик только тем
+вариантам, у которых источник `count` не задал.
+
+#### Scenario: Серверные счётчики не перезаписываются
+
+- **WHEN** хук возвращает `{ value: 'wh_12', label: 'Berlin', count: 4000 }`, у колонки включён `faceted`, и в загруженных строках `wh_12` встречается 12 раз
+- **THEN** у варианта `wh_12` в `items` поле `count` равно 4000
+
+#### Scenario: Faceted дополняет варианты без счётчика
+
+- **WHEN** хук возвращает `{ value: 'wh_7', label: 'Bern' }` без `count`, у колонки включён `faceted`, и в строках `wh_7` встречается 3 раза
+- **THEN** у варианта `wh_7` в `items` поле `count` равно 3
+
+### Requirement: Ноль и отсутствие счётчика различаются
+
+Если у колонки есть источник счётчиков (включён `faceted` или хотя бы один вариант списка несёт
+`count`), вариант, для которого источник ничего не насчитал, MUST получать `count: 0`. Если
+источника счётчиков нет, `count` MUST оставаться `undefined`. Встроенный мультивыбор обоих китов
+MUST показывать `0` как число и MUST не делать такой вариант недоступным.
+
+#### Scenario: Значение без строк при faceted
+
+- **WHEN** у колонки включён `faceted`, её список содержит `archived`, а в данных нет ни одной строки с `archived`
+- **THEN** у варианта `archived` в `items` поле `count` равно 0, и его можно выбрать
+
+#### Scenario: Без faceted счётчика нет
+
+- **WHEN** у колонки не включён `faceted`, и ни один вариант списка не несёт `count`
+- **THEN** у всех вариантов `count` равно `undefined`
+
+### Requirement: Подписи faceted-значений из строки
+
+Если варианты фильтра колонки берутся из уникальных значений faceted, а колонка задаёт
+`cell.config.getItem`, каждый вариант MUST получать `label`, `icon` (у `badge` ещё `variant`)
+из `getItem` строки, в которой встречается это значение. Без `getItem` `label` MUST совпадать с
+`String(value)`, как сейчас. Подпись выбранного значения в чипе MUST браться оттуда же.
+
+#### Scenario: Фильтр с названиями без справочника
+
+- **WHEN** колонка `warehouse` с `accessorFn: (r) => r.warehouse.id` задаёт `filtering: { faceted: true }` и `cell.config.getItem: (r) => ({ value: r.warehouse.id, label: r.warehouse.name })`, а в данных две строки склада `wh_12` с названием `Berlin`
+- **THEN** `items` модели содержит `{ value: 'wh_12', label: 'Berlin', count: 2 }`
+
+#### Scenario: Чип выбранного faceted-значения
+
+- **WHEN** в той же колонке выбран фильтр `['wh_12']`
+- **THEN** чип фильтра показывает `Berlin`
+
+### Requirement: Faceted при серверной фильтрации
+
+Если у грида `filtering.manual: true`, а faceted включён на уровне таблицы или колонки, грид MUST
+в режиме разработки один раз предупредить, что facets считаются только по загруженным строкам,
+и предложить передавать счётчики через `count` в `useItems`. Поведение faceted при этом MUST
+оставаться прежним.
+
+#### Scenario: Предупреждение при manual
+
+- **WHEN** грид объявлен с `filtering: { manual: true, faceted: true }` в режиме разработки
+- **THEN** в консоль выводится одно предупреждение, которое называет `filtering.faceted` и `filtering.manual`
+
+### Requirement: Источник цели фильтра
+
+Каждый элемент `filters` MUST отдавать `source`: `{ kind: 'column', column }` для колонки и
+`{ kind: 'field' }` для поля. Порядок `filters` MUST быть таким: фильтруемые колонки в порядке
+колонок грида, затем поля в порядке объявления.
+
+#### Scenario: Источник колонки
+
+- **WHEN** render-функция панели читает элемент `filters` для колонки `status`
+- **THEN** `source.kind` равен `'column'`, а `source.column.id` равен `'status'`
+
+#### Scenario: Порядок целей
+
+- **WHEN** у грида фильтруемые колонки `name`, `status` и поля `warehouse`, `region`
+- **THEN** id элементов `filters` идут в порядке `name`, `status`, `warehouse`, `region`
+
+### Requirement: Одиночный фильтр по id цели
+
+`<DataGrid.Filter id>` MUST рендерить фильтр цели с этим id — колонки или поля — и MUST рендерить
+ничего, если цели с таким id нет.
+
+#### Scenario: Фильтр колонки по id
+
+- **WHEN** layout рендерит `<DataGrid.Filter id='status' />` для фильтруемой колонки `status`
+- **THEN** рендерится чип кита с меткой колонки и её контролом
+
+#### Scenario: Неизвестный id
+
+- **WHEN** layout рендерит `<DataGrid.Filter id='nope' />`
+- **THEN** ничего не рендерится
+
+### Requirement: У поля нет фасетных значений
+
+Модель фильтра поля MUST NOT содержать фасетных значений и счётчиков: `items` поля MUST браться из
+`filtering.items`, иначе из `cell.config.items` для `select` / `badge`, иначе быть пустым, даже если
+у таблицы включён `filtering.faceted`.
+
+#### Scenario: faceted таблицы не влияет на поле
+
+- **WHEN** у таблицы `filtering.faceted: true`, а поле `region` типа `text` не задаёт `filtering.items`
+- **THEN** `items` модели поля пуст
+
+### Requirement: Метки операторов модели берутся из определений
+
+Поле `operators` модели MUST содержать операторы цели с `label` из их определений, без поиска в
+словаре грида, — тот же `label`, что показывают переключатель и меню встроенного фильтра.
+
+#### Scenario: Метка из переведённого набора
+
+- **WHEN** проект передал набор, где у `greaterThan` типа `date` подпись `После`, а колонка имеет тип ячейки `date` и операторы
+- **THEN** у оператора `greaterThan` в модели этой колонки метка `После`
+
+#### Scenario: Пользовательский оператор сохраняет свою метку
+
+- **WHEN** колонка предлагает пользовательский оператор `fuzzy` с меткой `Fuzzy`
+- **THEN** у `fuzzy` в модели метка `Fuzzy`
+
+### Requirement: Операторы модели несут иконку из определения
+
+Каждый оператор в `operators` модели MUST отдавать `icon` из своего определения — ту же иконку,
+которую показывает переключатель оператора встроенного фильтра этой цели. Если в определении
+иконки нет, `icon` MUST отсутствовать.
+
+#### Scenario: Встроенный оператор без настройки иконки не имеет
+
+- **WHEN** у колонки `amount` типа `number` операторы из готового набора
+- **THEN** у `greaterOrEqual` в модели `amount` нет поля `icon`
+
+#### Scenario: Знак из определения в модели
+
+- **WHEN** проект передал числовой набор, где у `greaterOrEqual` `icon: DEFAULT_OPERATOR_ICONS.greaterOrEqual`, а у колонки `amount` типа `number` есть операторы
+- **THEN** у `greaterOrEqual` в модели `amount` поле `icon` равно `≥`
+
+#### Scenario: Пользовательский оператор без иконки
+
+- **WHEN** колонка предлагает оператор `fuzzy` без `icon`
+- **THEN** у `fuzzy` в модели нет поля `icon`

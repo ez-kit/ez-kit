@@ -97,34 +97,41 @@ not what the features of the same name do.
 Register the row model beside the feature that consumes it. The feature gives a grid the API; the
 row model is what actually sorts, filters or slices the rows.
 
-| You write                                | Register                                                                                                          |
-| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `sorting`                                | `rowSortingFeature` + `sortedRowModel: createSortedRowModel()` + `sortFns`                                        |
-| `filtering`                              | `columnFilteringFeature` + `filteredRowModel: createFilteredRowModel()` + `filterFns`                             |
-| `globalFiltering`                        | `globalFilteringFeature` + `filteredRowModel` + `filterFns`                                                       |
-| `filtering.faceted`                      | `columnFacetingFeature` + `facetedRowModel` + `facetedUniqueValues`                                               |
-| `pagination`                             | `rowPaginationFeature` + `paginatedRowModel: createPaginatedRowModel()`                                           |
-| `pagination.mode: 'infinite'`            | `rowPaginationFeature`, and **no** `paginatedRowModel` (see below) — `infiniteFeature` is already in the base set |
-| `selection`                              | `rowSelectionFeature`                                                                                             |
-| `visibility`                             | `columnVisibilityFeature` (already in the base three)                                                             |
-| `pinning.column`                         | `columnPinningFeature` (already in the base three)                                                                |
-| `pinning.row`                            | `rowPinningFeature`                                                                                               |
-| `expanding`                              | `rowExpandingFeature` + `expandedRowModel: createExpandedRowModel()`                                              |
-| `resizing`                               | `columnResizingFeature`                                                                                           |
-| `ordering` (columns)                     | `columnOrderingFeature`                                                                                           |
-| `ordering.row`                           | `rowOrderingFeature`                                                                                              |
-| `editing`                                | `editingFeature`                                                                                                  |
-| `creating`                               | `creatingFeature`                                                                                                 |
-| `deleting`                               | `deletingFeature`                                                                                                 |
-| `draft`                                  | `draftFeature`                                                                                                    |
-| `state.loading` / `initialState.loading` | `loadingFeature`                                                                                                  |
+| You write                                | Register                                                                                              |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `sorting`                                | `rowSortingFeature` + `sortedRowModel: createSortedRowModel()` + `sortFns`                            |
+| `filtering`                              | `columnFilteringFeature` + `filteredRowModel: createFilteredRowModel()` + `filterFns`                 |
+| `globalFiltering`                        | `globalFilteringFeature` + `filteredRowModel` + `filterFns`                                           |
+| `filtering.faceted`                      | `columnFacetingFeature` + `facetedRowModel` + `facetedUniqueValues`                                   |
+| `pagination`                             | `rowPaginationFeature` + `paginatedRowModel: createPaginatedRowModel()`                               |
+| `pagination.mode: 'infinite'`            | `rowPaginationFeature` + `paginatedRowModel`, as above — `infiniteFeature` is already in the base set |
+| `selection`                              | `rowSelectionFeature`                                                                                 |
+| `visibility`                             | `columnVisibilityFeature` (already in the base three)                                                 |
+| `pinning.column`                         | `columnPinningFeature` (already in the base three)                                                    |
+| `pinning.row`                            | `rowPinningFeature`                                                                                   |
+| `expanding`                              | `rowExpandingFeature` + `expandedRowModel: createExpandedRowModel()`                                  |
+| `resizing`                               | `columnResizingFeature`                                                                               |
+| `ordering` (columns)                     | `columnOrderingFeature`                                                                               |
+| `ordering.row`                           | `rowOrderingFeature`                                                                                  |
+| `editing`                                | `editingFeature`                                                                                      |
+| `creating`                               | `creatingFeature`                                                                                     |
+| `deleting`                               | `deletingFeature`                                                                                     |
+| `draft`                                  | `draftFeature`                                                                                        |
+| `state.loading` / `initialState.loading` | `loadingFeature`                                                                                      |
 
 `virtualization`, `toolbar`, `messages`, `direction` and `layout` hold no table state and are not
 features — they are config, and always available.
 
-Infinite scroll is the one case where a feature's row model is wrong: `pagination.mode: 'infinite'`
-shows every accumulated row, so registering `paginatedRowModel` would slice them back to one page.
-Register `rowPaginationFeature` without it; `createTable` warns if you do not.
+One set covers every pagination mode, including none. The slice to one page applies only while
+the grid paginates client-side: a grid without `pagination`, an infinite feed and a server-paged
+grid all show the rows they have even with `paginatedRowModel` registered. So a shared grid can
+render a paged table on one screen, an infinite feed on another and an unpaged list on a third
+without a second set.
+
+The same holds for the other row models. A feature that is registered but not switched on in the
+config changes no rows: a seeded `initialState.grouping` or `initialState.columnFilters` waits in
+state until `grouping` or `filtering` is turned on, and createTable warns about the seed in
+development.
 
 ## The failures that are silent
 

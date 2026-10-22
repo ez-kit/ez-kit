@@ -23,13 +23,19 @@ import {
 } from '@tanstack/table-core'
 import { describe, expect, it, vi } from 'vitest'
 
+import { allDataGridFeatures } from '../features/all'
 import { creatingFeature } from '../features/creating'
 import { deletingFeature } from '../features/deleting'
 import { editingFeature } from '../features/editing'
 import { loadingFeature } from '../features/loading'
+import { OperatorInput } from '../features/operators'
 import { createTable, createColumns } from '../index'
+import { defaultOperators } from '../operators/entry'
 import { ACTIONS_COLUMN_ID, EXPAND_COLUMN_ID, SELECTION_COLUMN_ID } from '../system-columns'
 
+import { createTableOptions } from './create-table-options'
+
+import type { FilterOperatorDef } from '../features/operators'
 import type { RowSelectionState, SortingState, TableFeatures, TableOptions_All, TableState } from '@tanstack/table-core'
 
 type Row = {
@@ -413,7 +419,13 @@ describe('createTable — filtering.operators', () => {
 	}
 
 	it('filtering: { operators: true } gives every column its cell type defaults', () => {
-		const table = createTable({ features: FILTERING, data: DATA, columns: COLUMNS, filtering: { operators: true } })
+		const table = createTable({
+			features: FILTERING,
+			operators: defaultOperators,
+			data: DATA,
+			columns: COLUMNS,
+			filtering: { operators: true },
+		})
 		expect(operatorIds(table, 'name')).toContain('contains')
 		expect(operatorIds(table, 'age')).toContain('contains')
 	})
@@ -423,7 +435,13 @@ describe('createTable — filtering.operators', () => {
 			{ accessorKey: 'name', filtering: { operators: true } },
 			{ accessorKey: 'age' },
 		])
-		const table = createTable({ features: FILTERING, data: DATA, columns, filtering: { operators: false } })
+		const table = createTable({
+			features: FILTERING,
+			operators: defaultOperators,
+			data: DATA,
+			columns,
+			filtering: { operators: false },
+		})
 		expect(operatorIds(table, 'name')).toBeUndefined()
 	})
 
@@ -432,25 +450,31 @@ describe('createTable — filtering.operators', () => {
 			{ accessorKey: 'name', filtering: { operators: true } },
 			{ accessorKey: 'age' },
 		])
-		const table = createTable({ features: FILTERING, data: DATA, columns, filtering: true })
+		const table = createTable({
+			features: FILTERING,
+			operators: defaultOperators,
+			data: DATA,
+			columns,
+			filtering: true,
+		})
 		expect(operatorIds(table, 'name')).toContain('contains')
 		expect(operatorIds(table, 'age')).toBeUndefined()
 	})
 
-	it('registers custom operators from `items` and resolves them by id from a column', () => {
+	it('resolves a column’s ids in its cell type’s set, beside a definition it writes itself', () => {
+		const fuzzy: FilterOperatorDef = { id: 'fuzzy', label: 'Fuzzy', input: OperatorInput.Single, filterFn: () => true }
 		const columns = createColumns<Row>([
-			{ accessorKey: 'name', filtering: { operators: { items: ['contains', 'fuzzy'] } } },
+			{ accessorKey: 'name', filtering: { operators: { items: ['contains', fuzzy] } } },
 			{ accessorKey: 'age' },
 		])
 		const table = createTable({
 			features: FILTERING,
+			operators: defaultOperators,
 			data: DATA,
 			columns,
-			filtering: { operators: { items: [{ id: 'fuzzy', label: 'Fuzzy', filterFn: () => true }] } },
+			filtering: { operators: true },
 		})
 		expect(operatorIds(table, 'name')).toEqual(['contains', 'fuzzy'])
-		// The object form switches the feature on like `true` does, so the column that said
-		// nothing gets its defaults too.
 		expect(operatorIds(table, 'age')).toContain('contains')
 	})
 })
@@ -482,7 +506,7 @@ describe('createTable — globalFiltering', () => {
 			filtering: true,
 			globalFiltering: true,
 		})
-		expect(table.options.enableColumnFilters).toBeUndefined()
+		expect(table.options.enableColumnFilters).toBe(true)
 		expect(table.options.enableGlobalFilter).toBeUndefined()
 	})
 
@@ -689,6 +713,386 @@ describe('createTable — pagination', () => {
 	})
 })
 
+// ── infinite pagination ───────────────────────────────────────────────────────
+
+// More rows than a page, so a slice to one page is visible as a short row model. Unique names
+// make `grouping.by: ['name']` yield one group per row, so a grouped model is still 25 rows long.
+const MANY: Row[] = Array.from({ length: 25 }, (_, i) => ({
+	id: i + 1,
+	name: `Row ${String(i + 1).padStart(2, '0')}`,
+	age: i,
+}))
+
+describe('createTable — infinite pagination', () => {
+	// `allDataGridFeatures` registers `paginatedRowModel`. Infinite mode must not slice through it:
+	// regressed in #246, when the model became a slot of the feature set instead of something the
+	// core attached only for paged grids.
+	it('shows every accumulated row with the all-in feature set', () => {
+		const table = createTable({
+			features: allDataGridFeatures,
+			data: MANY,
+			columns: COLUMNS,
+			pagination: { mode: 'infinite', pageSize: 10 },
+		})
+		expect(table.getRowModel().rows).toHaveLength(25)
+	})
+
+	it('shows every accumulated row after sorting, filtering and grouping', () => {
+		const table = createTable({
+			features: allDataGridFeatures,
+			data: MANY,
+			columns: COLUMNS,
+			pagination: { mode: 'infinite', pageSize: 10 },
+			sorting: true,
+			filtering: true,
+			grouping: { by: ['name'] },
+			initialState: {
+				sorting: [{ id: 'age', desc: true }],
+				columnFilters: [{ id: 'name', value: 'Row' }],
+			},
+		})
+		const rows = table.getRowModel().rows
+		expect(rows).toHaveLength(25)
+		expect(rows[0]?.getIsGrouped()).toBe(true)
+	})
+
+	it('picks up data appended by a load', () => {
+		const table = createTable({
+			features: allDataGridFeatures,
+			data: MANY.slice(0, 20),
+			columns: COLUMNS,
+			pagination: { mode: 'infinite', pageSize: 10 },
+		})
+		table.setData([...MANY, ...MANY.slice(0, 15).map((r) => ({ ...r, id: r.id + 100 }))])
+		expect(table.getRowModel().rows).toHaveLength(40)
+	})
+
+	it('says nothing about paginatedRowModel when the set registers it', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+		createTable({
+			features: allDataGridFeatures,
+			data: MANY,
+			columns: COLUMNS,
+			pagination: { mode: 'infinite' },
+		})
+		const messages = warn.mock.calls.map((args) => String(args[0]))
+		expect(messages.filter((m) => m.includes('paginatedRowModel'))).toEqual([])
+		warn.mockRestore()
+	})
+
+	// An infinite grid has no page to be on: rows always start at the first one. A seeded index
+	// would otherwise reach `onStateChange`, a persisted URL and the ARIA row offsets.
+	it('starts at pageIndex 0 whatever the seed says, keeping the seeded pageSize', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+		const table = createTable({
+			features: allDataGridFeatures,
+			data: MANY,
+			columns: COLUMNS,
+			pagination: { mode: 'infinite' },
+			initialState: { pagination: { pageIndex: 2, pageSize: 20 } },
+		})
+		expect(table.store.state.pagination).toEqual({ pageIndex: 0, pageSize: 20 })
+		expect(table.getRowModel().rows).toHaveLength(25)
+		const messages = warn.mock.calls.map((args) => String(args[0]))
+		expect(messages.filter((m) => m.includes('initialState.pagination.pageIndex'))).toHaveLength(1)
+		expect(messages.find((m) => m.includes('initialState.pagination.pageIndex'))).toContain('infinite')
+		warn.mockRestore()
+	})
+
+	it('does not warn when the seed leaves pageIndex at 0', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+		createTable({
+			features: allDataGridFeatures,
+			data: MANY,
+			columns: COLUMNS,
+			pagination: { mode: 'infinite' },
+			initialState: { pagination: { pageIndex: 0, pageSize: 20 } },
+		})
+		expect(warn).not.toHaveBeenCalled()
+		warn.mockRestore()
+	})
+
+	// The same set, read by the other two modes: the fix is keyed on the mode, not on the set.
+	it('still slices client-side pages with the all-in feature set', () => {
+		const table = createTable({
+			features: allDataGridFeatures,
+			data: MANY,
+			columns: COLUMNS,
+			pagination: { pageSize: 10 },
+		})
+		expect(table.getRowModel().rows).toHaveLength(10)
+		expect(table.options.manualPagination).toBe(false)
+	})
+
+	it('still passes server pages through as they are with the all-in feature set', () => {
+		const table = createTable({
+			features: allDataGridFeatures,
+			data: MANY.slice(0, 10),
+			columns: COLUMNS,
+			pagination: { manual: true, pageSize: 10, rowCount: 100 },
+		})
+		expect(table.getRowModel().rows).toHaveLength(10)
+		expect(table.getPageCount()).toBe(10)
+		expect(table.getRowCount()).toBe(100)
+	})
+
+	// The React adapter rebuilds the options in its render body and `useTable` merges them over
+	// the previous ones, on the same instance. A mode switch has to take effect that way — which is
+	// why the fix is a per-call flag rather than leaving the model out, since the instance caches
+	// the paginated row model on first use.
+	it('switches from paged to infinite on a live instance', () => {
+		const base = { features: allDataGridFeatures, data: MANY, columns: COLUMNS }
+		const table = createTable({ ...base, pagination: { pageSize: 10 } })
+		expect(table.getRowModel().rows).toHaveLength(10)
+
+		const { options } = createTableOptions({ ...base, pagination: { mode: 'infinite', pageSize: 10 } })
+		// `createTableOptions` returns options typed at the widest set, not at this table's; the
+		// adapter merges them through the same loosened signature.
+		const setOptions = table.setOptions as unknown as (updater: (prev: object) => object) => void
+		setOptions((prev) => ({ ...prev, ...options }))
+
+		expect(table.getRowModel().rows).toHaveLength(25)
+	})
+})
+
+// ── pagination off ────────────────────────────────────────────────────────────
+
+describe('createTable — pagination off', () => {
+	// `allDataGridFeatures` registers `paginatedRowModel`, and the core seeds a `pagination` slice on
+	// every grid. Without a per-call gate that slice cut a grid nobody paginated to its first page —
+	// regressed in #246, the same way infinite mode did.
+	it.each([
+		['absent', {}],
+		['false', { pagination: false }],
+		['enabled: false, with settings', { pagination: { enabled: false, pageSize: 5 } }],
+	] as const)('shows every row when pagination is %s', (_label, config) => {
+		const table = createTable({ features: allDataGridFeatures, data: MANY, columns: COLUMNS, ...config })
+		expect(table.getRowModel().rows).toHaveLength(25)
+		expect(table.getRowCount()).toBe(25)
+		expect(table.options.manualPagination).toBe(true)
+	})
+
+	// The seed is kept for the moment pagination is switched on, and affects no row until then.
+	it('keeps a seeded page in state without slicing to it', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+		const table = createTable({
+			features: allDataGridFeatures,
+			data: MANY,
+			columns: COLUMNS,
+			initialState: { pagination: { pageIndex: 2, pageSize: 10 } },
+		})
+		expect(table.getRowModel().rows).toHaveLength(25)
+		expect(table.getRowModel().rows[0]?.original.name).toBe('Row 01')
+		expect(table.store.state.pagination).toEqual({ pageIndex: 2, pageSize: 10 })
+		warn.mockRestore()
+	})
+
+	it('reports manualPagination: false for client-side pages', () => {
+		const table = createTable({
+			features: allDataGridFeatures,
+			data: MANY,
+			columns: COLUMNS,
+			pagination: { pageSize: 10 },
+		})
+		expect(table.options.manualPagination).toBe(false)
+	})
+})
+
+// `useTable` merges the options it is given over the previous ones, so a key the resolver stops
+// writing would keep its old value. The React adapter clears such keys itself; these cases pin
+// that the core does not depend on it.
+describe('createTable — pagination mode on a live instance', () => {
+	const base = { features: allDataGridFeatures, data: MANY, columns: COLUMNS }
+	const apply = (table: { setOptions: unknown }, config: object): void => {
+		const { options } = createTableOptions({ ...base, ...config })
+		const setOptions = table.setOptions as (updater: (prev: object) => object) => void
+		setOptions((prev) => ({ ...prev, ...options }))
+	}
+
+	it('follows pagination switched on and back off', () => {
+		const table = createTable(base)
+		expect(table.getRowModel().rows).toHaveLength(25)
+		apply(table, { pagination: { pageSize: 10 } })
+		expect(table.getRowModel().rows).toHaveLength(10)
+		apply(table, {})
+		expect(table.getRowModel().rows).toHaveLength(25)
+	})
+
+	it.each([
+		['infinite', { mode: 'infinite', pageSize: 10 }],
+		['manual', { manual: true, pageSize: 10, rowCount: 100 }],
+	] as const)('returns from %s to client-side pages', (_label, pagination) => {
+		const table = createTable({ ...base, pagination })
+		apply(table, { pagination: { pageSize: 10 } })
+		expect(table.getRowModel().rows).toHaveLength(10)
+		expect(table.getRowCount()).toBe(25)
+		expect(table.getPageCount()).toBe(3)
+	})
+
+	it('applies a seeded page once pagination is switched on', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+		const seeded = { ...base, initialState: { pagination: { pageIndex: 2, pageSize: 10 } } }
+		const table = createTable(seeded)
+		const { options } = createTableOptions({ ...seeded, pagination: true })
+		const setOptions = table.setOptions as unknown as (updater: (prev: object) => object) => void
+		setOptions((prev) => ({ ...prev, ...options }))
+		expect(table.getRowModel().rows.map((row) => row.original.id)).toEqual([21, 22, 23, 24, 25])
+		warn.mockRestore()
+	})
+})
+
+// ── grouping and column filters off ───────────────────────────────────────────
+
+// Upstream applies a registered grouped or filtered row model to whatever state it is handed, and
+// `enableGrouping: false` / `enableColumnFilters: false` only hide the UI. So a seed written for a
+// feature the config left off still grouped or filtered the rows, with no control to undo it.
+describe('createTable — grouping and column filters off', () => {
+	// `Row 01` … `Row 09`
+	const NAME_FILTER = [{ id: 'name', value: 'Row 0' }]
+
+	it('keeps a seeded grouping in state without grouping the rows', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+		const table = createTable({
+			features: allDataGridFeatures,
+			data: MANY,
+			columns: COLUMNS,
+			initialState: { grouping: ['age'] },
+		})
+		const rows = table.getRowModel().rows
+		expect(rows).toHaveLength(25)
+		expect(rows.some((row) => row.getIsGrouped())).toBe(false)
+		expect(table.store.state.grouping).toEqual(['age'])
+		warn.mockRestore()
+	})
+
+	it('groups by the seed when grouping is on', () => {
+		const table = createTable({
+			features: allDataGridFeatures,
+			data: MANY,
+			columns: COLUMNS,
+			grouping: true,
+			initialState: { grouping: ['age'] },
+		})
+		expect(table.getRowModel().rows[0]?.getIsGrouped()).toBe(true)
+	})
+
+	it('keeps seeded column filters in state without filtering the rows', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+		const table = createTable({
+			features: allDataGridFeatures,
+			data: MANY,
+			columns: COLUMNS,
+			initialState: { columnFilters: NAME_FILTER },
+		})
+		expect(table.getRowModel().rows).toHaveLength(25)
+		expect(table.store.state.columnFilters).toEqual(NAME_FILTER)
+		warn.mockRestore()
+	})
+
+	// The two filter axes share one upstream switch, `manualFiltering`, so turning column filters
+	// off must not take global search down with them.
+	it('still searches globally while column filters are off', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+		const table = createTable({
+			features: allDataGridFeatures,
+			data: MANY,
+			columns: COLUMNS,
+			globalFiltering: true,
+			initialState: { columnFilters: NAME_FILTER, globalFilter: 'Row 2' },
+		})
+		expect(table.getRowModel().rows.map((row) => row.original.id)).toEqual([20, 21, 22, 23, 24, 25])
+		warn.mockRestore()
+	})
+
+	it('filters by the seed when filtering is on', () => {
+		const table = createTable({
+			features: allDataGridFeatures,
+			data: MANY,
+			columns: COLUMNS,
+			filtering: true,
+			initialState: { columnFilters: NAME_FILTER },
+		})
+		expect(table.getRowModel().rows).toHaveLength(9)
+	})
+
+	it('applies the kept state once both features are switched on a live instance', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+		const seeded = {
+			features: allDataGridFeatures,
+			data: MANY,
+			columns: COLUMNS,
+			initialState: { grouping: ['age'], columnFilters: NAME_FILTER },
+		}
+		const table = createTable(seeded)
+		expect(table.getRowModel().rows).toHaveLength(25)
+
+		const { options } = createTableOptions({ ...seeded, grouping: true, filtering: true })
+		const setOptions = table.setOptions as unknown as (updater: (prev: object) => object) => void
+		setOptions((prev) => ({ ...prev, ...options }))
+
+		const rows = table.getRowModel().rows
+		expect(rows).toHaveLength(9)
+		expect(rows.every((row) => row.getIsGrouped())).toBe(true)
+
+		const { options: offAgain } = createTableOptions(seeded)
+		setOptions((prev) => ({ ...prev, ...offAgain }))
+		expect(table.getRowModel().rows).toHaveLength(25)
+		warn.mockRestore()
+	})
+
+	// A changed filter result rewinds the page — upstream does it after each recompute but the
+	// first — so a grid on page 5 does not land on an empty page when filtering comes on.
+	it('rewinds a client-side page when column filtering is switched on', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+		const seeded = {
+			features: allDataGridFeatures,
+			data: MANY,
+			columns: COLUMNS,
+			pagination: { pageSize: 5 },
+			initialState: { columnFilters: NAME_FILTER },
+		}
+		const table = createTable(seeded)
+		table.setPageIndex(4)
+		expect(table.getRowModel().rows).toHaveLength(5)
+
+		const { options } = createTableOptions({ ...seeded, filtering: true })
+		const setOptions = table.setOptions as unknown as (updater: (prev: object) => object) => void
+		setOptions((prev) => ({ ...prev, ...options }))
+
+		expect(table.getRowModel().rows).toHaveLength(5)
+		expect(table.store.state.pagination.pageIndex).toBe(0)
+		warn.mockRestore()
+	})
+
+	// An unpaged grid keeps its dormant page seed: there is no page to rewind.
+	it('keeps a seeded page of an unpaged grid when column filtering is switched on', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+		const seeded = {
+			features: allDataGridFeatures,
+			data: MANY,
+			columns: COLUMNS,
+			initialState: { columnFilters: NAME_FILTER, pagination: { pageIndex: 2, pageSize: 10 } },
+		}
+		const table = createTable(seeded)
+		table.getRowModel()
+
+		const { options } = createTableOptions({ ...seeded, filtering: true })
+		const setOptions = table.setOptions as unknown as (updater: (prev: object) => object) => void
+		setOptions((prev) => ({ ...prev, ...options }))
+
+		expect(table.getRowModel().rows).toHaveLength(9)
+		expect(table.store.state.pagination.pageIndex).toBe(2)
+		warn.mockRestore()
+	})
+
+	// The filtered row model is wrapped so it can follow the switch; the wrapped set must still be
+	// one object per consumer set, or every render would hand the table a new `features`.
+	it('hands the table the same feature set on every call for the same config', () => {
+		const config = { features: allDataGridFeatures, data: MANY, columns: COLUMNS }
+		expect(createTableOptions(config).options.features).toBe(createTableOptions(config).options.features)
+	})
+})
+
 // ── unreachable seeds ─────────────────────────────────────────────────────────
 
 describe('createTable — unreachable seeds', () => {
@@ -771,6 +1175,57 @@ describe('createTable — unreachable seeds', () => {
 		})
 		expect(warn).not.toHaveBeenCalled()
 		warn.mockRestore()
+	})
+})
+
+// ── seeds for a feature the config left off ──────────────────────────────────
+
+// The seed is kept for the moment its feature is switched on and changes no row until then, so the
+// grid says so in development rather than leaving a seed that silently does nothing.
+describe('createTable — seeds for a feature that is off', () => {
+	const seedWarnings = (config: object): string[] => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+		createTable({ features: allDataGridFeatures, data: MANY, columns: COLUMNS, ...config })
+		const messages = warn.mock.calls.map((args) => String(args[0])).filter((m) => m.includes('initialState.'))
+		warn.mockRestore()
+		return messages
+	}
+
+	it.each([
+		['pagination', 'pagination', { pagination: { pageIndex: 2 } }],
+		['columnFilters', 'filtering', { columnFilters: [{ id: 'name', value: 'Row 0' }] }],
+		['grouping', 'grouping', { grouping: ['age'] }],
+		['sorting', 'sorting', { sorting: [{ id: 'age', desc: true }] }],
+		['globalFilter', 'globalFiltering', { globalFilter: 'Row' }],
+		['expanded', 'expanding', { expanded: true }],
+		['rowPinning', 'pinning.row', { rowPinning: { top: ['1'], bottom: [] } }],
+	] as const)('warns once about initialState.%s while `%s` is off', (slice, feature, initialState) => {
+		const messages = seedWarnings({ initialState })
+		expect(messages).toHaveLength(1)
+		expect(messages[0]).toContain(`initialState.${slice}`)
+		expect(messages[0]).toContain(`\`${feature}\``)
+	})
+
+	it.each([
+		['pagination', { pagination: true, initialState: { pagination: { pageIndex: 2 } } }],
+		['filtering', { filtering: true, initialState: { columnFilters: [{ id: 'name', value: 'Row 0' }] } }],
+		['grouping', { grouping: true, initialState: { grouping: ['age'] } }],
+		['sorting', { sorting: true, initialState: { sorting: [{ id: 'age', desc: true }] } }],
+		['globalFiltering', { globalFiltering: true, initialState: { globalFilter: 'Row' } }],
+		['expanding', { expanding: true, initialState: { expanded: true } }],
+		['pinning.row', { pinning: { row: true }, initialState: { rowPinning: { top: ['1'], bottom: [] } } }],
+	] as const)('says nothing while `%s` is on', (_feature, config) => {
+		expect(seedWarnings(config)).toEqual([])
+	})
+
+	// The core seeds `pagination` on every grid itself; only the author's seed is worth a word.
+	it('says nothing about a pagination slice nobody seeded', () => {
+		expect(seedWarnings({})).toEqual([])
+	})
+
+	// Expansion is what opens a group row, so a grouped grid uses the seed without `expanding`.
+	it('says nothing about initialState.expanded while grouping is on', () => {
+		expect(seedWarnings({ grouping: true, initialState: { expanded: true } })).toEqual([])
 	})
 })
 
@@ -947,6 +1402,28 @@ describe('createTable — pinning', () => {
 			pinning: { row: { bottom: true } },
 		})
 		expect(table.options.enableRowPinning).toBe(true)
+	})
+
+	// One side switched off explicitly must not switch the other off with it: the gate read
+	// `top ?? bottom`, and `false ?? true` is `false`.
+	it('pinning: { row: { top: false, bottom: true } } enables enableRowPinning', () => {
+		const table = createTable({
+			features: ROW_PINNING,
+			data: DATA,
+			columns: COLUMNS,
+			pinning: { row: { top: false, bottom: true } },
+		})
+		expect(table.options.enableRowPinning).toBe(true)
+	})
+
+	it('pinning: { row: { top: false, bottom: false } } leaves row pinning off', () => {
+		const table = createTable({
+			features: ROW_PINNING,
+			data: DATA,
+			columns: COLUMNS,
+			pinning: { row: { top: false, bottom: false } },
+		})
+		expect(table.options.enableRowPinning).toBeUndefined()
 	})
 
 	it('pinning: { row: { top: true, bottom: true } } sets keepPinnedRows to false', () => {
@@ -1452,9 +1929,9 @@ describe('createTable — table-level off: filtering', () => {
 		expect(table.options.enableColumnFilters).toBe(false)
 	})
 
-	it('filtering: true → enableColumnFilters untouched, user columns can filter', () => {
+	it('filtering: true → enableColumnFilters: true, user columns can filter', () => {
 		const table = createTable({ features: FILTERING, data: DATA, columns: COLUMNS, filtering: true })
-		expect(table.options.enableColumnFilters).toBeUndefined()
+		expect(table.options.enableColumnFilters).toBe(true)
 		expect(userColumns(table).every((c) => c.getCanFilter())).toBe(true)
 	})
 })

@@ -76,11 +76,11 @@ export type {
 export { DATA_GRID_DEFAULTS, DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
 
 // Grid context — what the application and the kit decided, carried alongside the grid.
-// The interface ships empty and is extended by declaration merging; the atom type is exported
-// because `table.gridContext` names it, so a consumer reaching the table has to be able to
-// name it too.
+// Typed from a value — `createDataGrid({ context })` or `useGridContext.withTypes<T>()` — never by
+// a program-wide declaration. The atom type is exported because `table.gridContext` names it, so
+// a consumer reaching the table has to be able to name it too.
 export { useGridContext } from './grid-context'
-export type { GridContext, GridContextAtom } from './grid-context'
+export type { GridContextAtom, GridContextReader, GridContextRecord } from './grid-context'
 
 // Resolved options — what the grid decided, readable by any compound child or UI kit
 export { useGridOptions } from './use-grid-options'
@@ -124,7 +124,11 @@ export type { InfiniteController } from './data-grid/use-infinite-scroll'
 
 // Selector hook + store primitives
 export { useDataGridSelector } from './use-data-grid-selector'
+export type { DataGridSelectorOptions } from './use-data-grid-selector'
 export { useDataGridState, useDataGridTable } from './data-grid/table-context'
+// Value lists from `useItems`: read a column's list at one place, through the grid's own source.
+export { ItemsSourceSlot, useItemsSource } from './items-source'
+export type { ItemsSourceSnapshot } from './items-source'
 export { useDataGridCell, useDataGridHeaderCell, useDataGridRow } from './data-grid/composition-context'
 export { prepareDataGridTable } from './prepare-table'
 export { shallow } from './utils/shallow-equal'
@@ -159,6 +163,11 @@ export type {
 // no-op as `dnd` would report DnD as *on* and render a handle behind every inert item — the exact
 // affordance-that-does-nothing the gate exists to prevent. Switching drag off is `dnd: undefined`.
 export { DndAdapterProvider, useDndEnabled, useSortableItem } from './data-grid/dnd'
+// For a kit whose column panel is a react-aria collection: keeps the collection's own keys out of
+// a keyboard drag. Its own module, importing no part of the drag stack — see its docblock.
+export { useColumnDragKeyboardGuard, useSortDragKeyboardGuard } from './data-grid/dnd/keyboard-guard'
+export { StepSide, useStepFocus } from './data-grid/use-step-focus'
+export type { StepFocus, StepSlots } from './data-grid/use-step-focus'
 // What a kit or an application needs to write a drag handle of its own, in place of
 // `<DataGrid.RowDragHandle />` / `<DataGrid.ColumnDragHandle />`: each axis publishes its
 // activator ref here. The row's read takes an id because a cell renderer sits outside the row's
@@ -248,19 +257,21 @@ export { DataGridFooterCell } from './data-grid/footer-cell'
 export { Pagination as DataGridPagination } from './data-grid/pagination'
 export { PageSizer as DataGridPageSizer } from './data-grid/page-sizer'
 export { BottomBar as DataGridBottomBar } from './data-grid/bottom-bar'
-export { ColumnFilter as DataGridColumnFilter } from './data-grid/column-filter'
+export { Filter as DataGridFilter } from './data-grid/filter'
 export { ActionBar as DataGridActionBar } from './data-grid/action-bar'
 export { CreateTrigger as DataGridCreateTrigger } from './data-grid/create-trigger'
 export { VisibilityTrigger as DataGridVisibilityTrigger } from './data-grid/visibility-trigger'
 export { VisibilityItem as DataGridVisibilityItem } from './data-grid/visibility-item'
 export { SortMenuTrigger as DataGridSortMenuTrigger } from './data-grid/sort-menu-trigger'
+export { SortItem as DataGridSortItem, useSortItemDrag } from './data-grid/sort-item'
 export { GlobalFilterInput as DataGridGlobalFilterInput } from './data-grid/global-filter-input'
 export { ActiveFiltersBar as DataGridActiveFiltersBar } from './data-grid/active-filters-bar'
 export { GroupByBar as DataGridGroupByBar } from './data-grid/group-by-bar'
 export { ClearFiltersButton as DataGridClearFiltersButton } from './data-grid/clear-filters-button'
 export { FilterPanel as DataGridFilterPanel } from './data-grid/filter-panel'
-export { CreatingModal as DataGridCreatingModal } from './data-grid/creating-modal'
-export { EditingModal as DataGridEditingModal } from './data-grid/editing-modal'
+export { useFilters } from './data-grid/filter-panel'
+export { FilterEditor } from './data-grid/filter-model'
+export { FilterSourceKind } from './data-grid/filter-target'
 export { LoadingBody as DataGridLoadingBody } from './data-grid/loading-body'
 export { EmptyStateRow as DataGridEmptyStateRow } from './data-grid/empty-state-row'
 export { NoResultsRow as DataGridNoResultsRow } from './data-grid/no-results-row'
@@ -288,22 +299,33 @@ export type { DataGridCellProps, DataGridCellRenderArgs } from './data-grid/cell
 export type { DataGridPaginationProps, DataGridPaginationRenderArgs } from './data-grid/pagination'
 export type { DataGridSortMenuTriggerProps, DataGridSortMenuTriggerRenderArgs } from './data-grid/sort-menu-trigger'
 export type {
+	DataGridSortItemProps,
+	SortItemDragValue,
+	SortItemElementProps,
+	SortItemRenderProps,
+} from './data-grid/sort-item'
+export type {
 	DataGridVisibilityTriggerProps,
 	DataGridVisibilityTriggerRenderArgs,
 } from './data-grid/visibility-trigger'
-export type { DataGridVisibilityItemProps } from './data-grid/visibility-item'
 export type {
-	DataGridFilterPanelColumn,
+	DataGridVisibilityItemProps,
+	VisibilityItemElementProps,
+	VisibilityItemRenderProps,
+} from './data-grid/visibility-item'
+export type {
 	DataGridFilterPanelProps,
 	DataGridFilterPanelRenderArgs,
+	DataGridFilterTarget,
+	UseFiltersResult,
 } from './data-grid/filter-panel'
-export type { DataGridColumnFilterProps } from './data-grid/column-filter'
+export type { FilterModel, OperatorFilterModel, PlainFilterModel } from './data-grid/filter-model'
+export type { FilterSource } from './data-grid/filter-target'
+export type { FiltersValue } from './data-grid/filters-batch'
+export type { DataGridFilterProps } from './data-grid/filter'
 export type { DataGridPageSizerProps, DataGridPageSizerRenderArgs } from './data-grid/page-sizer'
 export type { DataGridBottomBarProps } from './data-grid/bottom-bar'
 export type { DataGridActionBarProps, DataGridActionBarRenderArgs } from './data-grid/action-bar'
-export type { DataGridFormModalProps, DataGridFormModalRenderArgs } from './data-grid/form-modal'
-export type { DataGridCreatingModalProps } from './data-grid/creating-modal'
-export type { DataGridEditingModalProps } from './data-grid/editing-modal'
 export type { DataGridLoadingBodyProps, DataGridLoadingBodyRenderArgs } from './data-grid/loading-body'
 export type { DataGridEmptyStateRowProps, DataGridEmptyStateRowRenderArgs } from './data-grid/empty-state-row'
 export type { DataGridNoResultsRowProps, DataGridNoResultsRowRenderArgs } from './data-grid/no-results-row'
@@ -358,7 +380,7 @@ export type {
 	 */
 	GridFeatures,
 	ActionsCellProps,
-	FormShellProps,
+	FormModalProps,
 	BetweenInputProps,
 	ChevronProps,
 	SortIndicatorProps,
@@ -381,6 +403,7 @@ export type {
 	MultiSelectFilterProps,
 	NoResultsStateProps,
 	RefetchOverlayProps,
+	FilterOperatorOption,
 	OperatorSelectProps,
 	ResizerProps,
 	SortColumnOption,

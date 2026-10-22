@@ -57,7 +57,7 @@ export function EmptyStateRow({ children }: DataGridEmptyStateRowProps = {}) {
 					data-slot='empty-state-cell'
 					colSpan={columnCount}
 				>
-					{content}
+					<div data-slot='fallback-content'>{content}</div>
 				</Td>
 			</Tr>
 		</Tbody>
