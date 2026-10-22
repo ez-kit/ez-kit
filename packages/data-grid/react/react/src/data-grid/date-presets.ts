@@ -1,18 +1,20 @@
-import { FilterOperator, isDateRangePreset } from '@ez-kit/data-grid-core'
+import { OperatorInput, isDateRangePreset } from '@ez-kit/data-grid-core'
 
 import type { BetweenValue, DatePreset } from '@ez-kit/data-grid-core'
 
 /**
- * Which of a column's presets the current operator can actually take.
+ * Which of a column's presets an operator taking `input` can actually take.
  *
- * A preset fills the operator's value, and the two kinds fill different shapes: `between` takes a
- * range, every other date operator takes one date. Offering a range to `equals` would mean picking
- * one of its ends, which turns "the last week" into "on last Tuesday" — so the mismatched half is
- * not bent, it is left out.
+ * A preset fills the operator's value, and the two kinds fill different shapes: an operator with
+ * `input: 'range'` takes a range, one with `input: 'single'` takes one date, and one that takes a
+ * list or no value takes neither. Offering a range to `equals` would mean picking one of its ends,
+ * which turns "the last week" into "on last Tuesday" — so the mismatched half is not bent, it is
+ * left out.
  */
-export function presetsForOperator(presets: DatePreset[], operatorId: string): DatePreset[] {
-	const wantsRange = operatorId === FilterOperator.Between
-	return presets.filter((preset) => isDateRangePreset(preset) === wantsRange)
+export function presetsForOperator(presets: DatePreset[], input: OperatorInput | undefined): DatePreset[] {
+	if (input === OperatorInput.Range) return presets.filter(isDateRangePreset)
+	if (input === OperatorInput.Single) return presets.filter((preset) => !isDateRangePreset(preset))
+	return []
 }
 
 /** The value a preset writes into the filter: both ends for a range, the date itself otherwise. */

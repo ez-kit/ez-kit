@@ -153,7 +153,7 @@ export function ExampleTeamMembersExample() {
 			<DataGrid.Toolbar className={FRAME_BAR}>
 				<span style={FRAME_TITLE_STYLE}>Team members</span>
 				<DataGrid.GlobalFilterInput />
-				<DataGrid.ColumnFilter columnId='status' />
+				<DataGrid.Filter id='status' />
 				<DataGrid.VisibilityTrigger />
 				<DataGrid.CreateTrigger>Add new</DataGrid.CreateTrigger>
 			</DataGrid.Toolbar>

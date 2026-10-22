@@ -272,17 +272,19 @@ describe('grid.ordering — the two axes resolve independently', () => {
 		return result.current.grid.ordering
 	}
 
-	/** The panel off, with both affordances left for the two components to resolve. */
-	const PANEL_OFF = { enabled: false, drag: undefined, moveControls: undefined }
-	/** The header's two affordances, unauthored — an adapter decides them. */
-	const HEADER_UNSET = { drag: undefined, moveControls: undefined }
+	/** The panel off: no wide list, and no mode for a component to act on. */
+	const PANEL_OFF = { enabled: false, mode: false }
+	/** The header's mode, unauthored — `resolveReorderMode` fills in the default with the adapter. */
+	const HEADER_UNSET = { mode: undefined }
+	/** The header with the column axis off. */
+	const HEADER_OFF = { mode: false }
 
 	it('names the row axis to turn it on', () => {
 		expect(gridOrdering({ row: true })).toEqual({
 			column: false,
 			row: true,
 			visibilityMenu: PANEL_OFF,
-			header: HEADER_UNSET,
+			header: HEADER_OFF,
 		})
 	})
 
@@ -296,7 +298,7 @@ describe('grid.ordering — the two axes resolve independently', () => {
 			column: false,
 			row: false,
 			visibilityMenu: PANEL_OFF,
-			header: HEADER_UNSET,
+			header: HEADER_OFF,
 		})
 	})
 
@@ -305,43 +307,72 @@ describe('grid.ordering — the two axes resolve independently', () => {
 			column: false,
 			row: false,
 			visibilityMenu: PANEL_OFF,
-			header: HEADER_UNSET,
+			header: HEADER_OFF,
 		})
 	})
 
-	it('carries the panel affordances as authored rather than resolving them', () => {
-		// Which one a panel ends up with depends on a drag adapter, and this hook cannot see one —
-		// a controlled grid calls it outside `<DataGrid>`. `resolvePanelAffordances` finishes it.
-		expect(gridOrdering({ column: { visibilityMenu: { drag: false } } })).toEqual({
+	it('carries the panel mode as authored rather than resolving it', () => {
+		// What `true` means depends on a drag adapter, and this hook cannot see one — a controlled
+		// grid calls it outside `<DataGrid>`. `resolveReorderMode` finishes it.
+		expect(gridOrdering({ column: { visibilityMenu: 'step' } })).toEqual({
 			column: true,
 			row: false,
-			visibilityMenu: { enabled: true, drag: false, moveControls: undefined },
+			visibilityMenu: { enabled: true, mode: 'step' },
 			header: HEADER_UNSET,
 		})
 	})
 
-	it('turns the panel on for either form, and `false` keeps the plain toggle', () => {
-		expect(gridOrdering({ column: { visibilityMenu: true } }).visibilityMenu.enabled).toBe(true)
-		expect(gridOrdering({ column: { visibilityMenu: {} } }).visibilityMenu.enabled).toBe(true)
+	it('turns the panel on for `true` or a mode, and `false` keeps the plain toggle', () => {
+		expect(gridOrdering({ column: { visibilityMenu: true } }).visibilityMenu).toEqual({ enabled: true, mode: true })
+		expect(gridOrdering({ column: { visibilityMenu: 'both' } }).visibilityMenu.enabled).toBe(true)
 		expect(gridOrdering({ column: { visibilityMenu: false } }).visibilityMenu).toEqual(PANEL_OFF)
+		expect(gridOrdering({ column: {} }).visibilityMenu).toEqual(PANEL_OFF)
 	})
 
-	it('forces both affordances off with the panel, so neither reads as authored', () => {
-		// The column axis off is the real off-switch; an object that survived a defaults layer
-		// whose feature did not must not leave a `drag` behind for a component to act on.
-		expect(gridOrdering({ column: { enabled: false, visibilityMenu: { drag: true } } })).toEqual({
+	it('forces the panel off with the column axis, so its mode does not read as authored', () => {
+		// The column axis off is the real off-switch; a mode that survived a defaults layer whose
+		// feature did not must not leave a grip behind for a component to act on.
+		expect(gridOrdering({ column: { enabled: false, visibilityMenu: 'drag' } })).toEqual({
 			column: false,
 			row: false,
 			visibilityMenu: PANEL_OFF,
-			header: HEADER_UNSET,
+			header: HEADER_OFF,
 		})
 	})
 
-	it('carries the header affordances as authored, and drops them with the column axis', () => {
-		expect(gridOrdering({ column: { drag: false, moveControls: true } }).header).toEqual({
-			drag: false,
-			moveControls: true,
-		})
-		expect(gridOrdering({ column: { enabled: false, drag: true } }).header).toEqual(HEADER_UNSET)
+	it('carries the header mode as authored, and drops it with the column axis', () => {
+		expect(gridOrdering({ column: { header: 'both' } }).header).toEqual({ mode: 'both' })
+		expect(gridOrdering({ column: { enabled: false, header: 'drag' } }).header).toEqual(HEADER_OFF)
+	})
+})
+
+describe('grid.sortReorder — the builder follows `sorting.multi`', () => {
+	const sortReorder = (sorting: DataGridCore.SortingConfig | boolean | undefined) => {
+		const { result } = renderHook(() =>
+			useDataGrid({
+				features: TEST_FEATURES,
+				data: USERS,
+				columns: COLUMNS,
+				...(sorting === undefined ? {} : { sorting }),
+			}),
+		)
+		return result.current.grid.sortReorder
+	}
+
+	it('is on by default once multi-sort is', () => {
+		expect(sortReorder({ multi: true })).toBe(true)
+		expect(sortReorder({ multi: { max: 3 } })).toBe(true)
+	})
+
+	it('carries a written mode as authored', () => {
+		expect(sortReorder({ multi: { reorderable: 'step' } })).toBe('step')
+		expect(sortReorder({ multi: { reorderable: false } })).toBe(false)
+	})
+
+	it('is off while multi-sort or sorting is', () => {
+		expect(sortReorder({})).toBe(false)
+		expect(sortReorder({ multi: false })).toBe(false)
+		expect(sortReorder(undefined)).toBe(false)
+		expect(sortReorder({ enabled: false, multi: true })).toBe(false)
 	})
 })

@@ -3,17 +3,13 @@ import { ColumnFormMode } from '@ez-kit/data-grid-core'
 import { FormModalHost } from './form-modal'
 import { useDataGridState, useDataGridTable } from './table-context'
 
-import type { DataGridFormModalProps } from './form-modal'
-
-export type DataGridCreatingModalProps = DataGridFormModalProps
-
 /**
- * Modal for creating a new row (`creating.mode: 'modal'`).
+ * Modal for creating a new row (`creating.mode: 'modal'`), mounted by the grid itself.
  *
- * Renders nothing while the create form is closed. See {@link DataGridFormModalProps} for
- * replacing the dialog while keeping the generated fields.
+ * Renders nothing while the create form is closed. To replace the dialog — or the form inside it — register a
+ * `FormModal` component; see `FormModalProps`.
  */
-export function CreatingModal({ children }: DataGridCreatingModalProps = {}) {
+export function CreatingModal() {
 	const table = useDataGridTable()
 	useDataGridState((s) => s.creating)
 	const state = table.creating.getState()
@@ -22,16 +18,10 @@ export function CreatingModal({ children }: DataGridCreatingModalProps = {}) {
 
 	return (
 		<FormModalHost
-			{...(children !== undefined ? { children } : {})}
 			mode={ColumnFormMode.Creating}
-			feature='creating'
 			title={table.grid.messages.creating.title}
-			formError={state.formError}
-			commitStatus={state.commitStatus}
-			onSave={() => table.creating.commit()}
-			onCancel={() => {
-				table.creating.cancel()
-			}}
+			state={state}
+			rowId={null}
 		/>
 	)
 }

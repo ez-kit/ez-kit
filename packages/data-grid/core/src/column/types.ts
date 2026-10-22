@@ -158,6 +158,19 @@ export type CellViewCtx<TRow, TValue, TConfig = never> = {
 	 * the type it declared.
 	 */
 	config?: TConfig
+	/**
+	 * How the value of a `select` / `badge` cell was labelled — see {@link ItemStatus}. Set on those
+	 * two cell types only; `undefined` on every other.
+	 *
+	 * `pending` is the one state a static `items` list never produces: it means the label comes
+	 * from a `useItems` hook that has not answered yet, and is the cue for a skeleton.
+	 */
+	itemStatus?: ItemStatus
+	/**
+	 * The item the value resolved to, when {@link CellViewCtx.itemStatus} is `resolved` — from the
+	 * column's base list, else from `cell.config.getItem` of this row.
+	 */
+	item?: SelectItem | BadgeItem
 }
 
 /**
@@ -175,6 +188,17 @@ export type ColumnCellMeta = {
 	config?: Record<string, unknown>
 	/** The column's own view renderer, from `cell.component`. */
 	view?: (ctx: CellViewCtx<unknown, unknown>) => unknown
+	/**
+	 * The base list's hook, from `cell.config.useItems` of a `select` / `badge` cell. Lifted out of
+	 * `config`, which therefore never carries it, so a kit's component is never handed a hook it
+	 * must not call.
+	 */
+	useItems?: ItemsSource<SelectItem | BadgeItem>
+	/**
+	 * The row's own item, from `cell.config.getItem`. Lifted out of `config` like `useItems`, and
+	 * row-erased like `view`.
+	 */
+	getItem?: (row: unknown) => SelectItem | BadgeItem | undefined
 }
 
 /**
@@ -198,6 +222,11 @@ export type InputComponentProps<TConfig = unknown> = {
 	onChange: (value: unknown) => void
 	/** The column's `cell.config`, when it declared one. */
 	config?: TConfig
+	/**
+	 * The filter's visible hint — the column's `filtering.placeholder`, else its accessible name.
+	 * A hint only: an input that needs a name should not take it from here.
+	 */
+	placeholder?: string
 }
 
 // ── cell config types ─────────────────────────────────────────────────────
@@ -250,12 +279,137 @@ export type BadgeItem = {
 	icon?: unknown
 }
 
+// ── value lists from a hook ───────────────────────────────────────────────
+
+/**
+ * What the grid hands an items hook ({@link ItemsSource}) on every call.
+ *
+ * An object, and empty today, so that the parameters the next feature needs — `search` for a
+ * dropdown that queries as you type, `values` for the labels of the values on screen, `filters`
+ * for server-side cross-filter counts — arrive as new keys rather than as a new signature. A hook
+ * written against this shape keeps compiling when they do.
+ */
+export type ItemsSourceParams = Record<never, never>
+
+/**
+ * What an items hook returns: the list, and whether it is still loading or failed.
+ *
+ * The shape a query hook already has, so a TanStack Query result maps onto it field for field —
+ * `{ items: query.data ?? [], isLoading: query.isLoading, error: query.error }`. `error` is any
+ * non-nullish value; `null` reads as "no error", which is what a query reports.
+ */
+export type ItemsSourceResult<TItem> = {
+	items: readonly TItem[]
+	/** `true` while the list is not there yet. Omitted is `false`. */
+	isLoading?: boolean
+	/** What the hook failed with. `undefined` and `null` both mean it did not fail. */
+	error?: unknown
+}
+
+/**
+ * A value list that comes from a hook — `cell.config.useItems`, `filtering.useItems`,
+ * `editing.useItems`, `creating.useItems`.
+ *
+ * The grid calls it, once per column and list, inside its own tree, and only while something on
+ * screen reads that list: a cell, a filter, a chip, an editor. So it may call any hook, the grid's
+ * own included (`useDataGridState` to read the current filters), and a hidden column with a closed
+ * filter costs no request.
+ *
+ * **The grid caches nothing.** Fetching, caching, deduplication, `staleTime` and invalidation are
+ * the hook's — usually a query library's. The grid only hands the result to whoever reads it.
+ *
+ * **Keep the reference stable**: declare the hook at module level, or the columns that carry it.
+ * A new function on every render is a new hook, which the grid can only switch to by remounting
+ * the component that calls it — and development builds warn about it.
+ */
+export type ItemsSource<TItem> = (params: ItemsSourceParams) => ItemsSourceResult<TItem>
+
+/**
+ * How the value of a `select` / `badge` cell was found, as its view component receives it in
+ * `itemStatus`.
+ *
+ * Named members for internal reference; the field is typed as the plain string union, so a kit
+ * compares with `itemStatus === 'pending'` and needs no import.
+ */
+export const ItemStatus = {
+	/** A label was found — `item` carries it. */
+	Resolved: 'resolved',
+	/** No label yet, and the list it would come from is still loading. */
+	Pending: 'pending',
+	/** No label, and the hook that supplies the list failed. Show the raw value. */
+	Error: 'error',
+	/** The list is there and does not contain the value. Show the raw value. */
+	Missing: 'missing',
+} as const
+
+export type ItemStatus = (typeof ItemStatus)[keyof typeof ItemStatus]
+
+/**
+ * The item a row already carries for its own value — `cell.config.getItem`.
+ *
+ * `TRow` is `never` where the config is declared, so any row type's function fits the cell type's
+ * contract, and a column rebinds it to its own row type (see {@link RowBoundConfig}) — which is
+ * what types the `row` a column author's `getItem` receives.
+ */
+export type ItemGetter<TItem, TRow = never> = (row: TRow) => TItem | undefined
+
+/**
+ * A value list stated once: as a fixed array, or as a hook. One of the two is required.
+ *
+ * Both together type-check — the grid then uses `useItems` and warns in development, rather than
+ * the type rejecting a column halfway through a migration from one to the other.
+ */
+type ItemsListConfig<TItem> =
+	| { items: readonly TItem[]; useItems?: ItemsSource<TItem> }
+	| { items?: readonly TItem[]; useItems: ItemsSource<TItem> }
+
+/**
+ * What a `select` cell's components receive as `config`: the list the place they render in
+ * resolved to — the base list in a cell, the filter's own in a filter, and so on — already loaded.
+ *
+ * A column writes {@link SelectColumnConfig}, which may state the list as a hook; the grid resolves
+ * it and hands every component this, so `config.items` is always there to read.
+ */
 export type SelectCellConfig = {
 	items: SelectItem[]
 }
+/** What a `badge` cell's components receive as `config` — {@link SelectCellConfig} with {@link BadgeItem}s. */
 export type BadgeCellConfig = {
 	items: BadgeItem[]
 }
+
+/**
+ * What a column writes as the `cell.config` of a `select` cell.
+ *
+ * `items` / `useItems` is the column's **base** list: what labels its values everywhere — the
+ * cell, the filter's chips, the editor's trigger — and what the filter, the editor and the create
+ * form offer unless `filtering`, `editing` or `creating` state a list of their own.
+ *
+ * `getItem` is the label the row already carries for its value — `(r) => ({ value: r.warehouse.id,
+ * label: r.warehouse.name })` — so the cell is labelled before a list arrives, or with no list at
+ * all. The column's value stays what its accessor returns.
+ *
+ * Its components never see `useItems` or `getItem`: they receive {@link SelectCellConfig}.
+ */
+export type SelectColumnConfig = ItemsListConfig<SelectItem> & { getItem?: ItemGetter<SelectItem> }
+
+/** What a column writes as the `cell.config` of a `badge` cell — {@link SelectColumnConfig} with {@link BadgeItem}s. */
+export type BadgeColumnConfig = ItemsListConfig<BadgeItem> & { getItem?: ItemGetter<BadgeItem> }
+
+/**
+ * A cell type's config with its `getItem` rebound to the column's own row type.
+ *
+ * A registry entry is row-agnostic, so a config declares `getItem` over `never`; on a column the
+ * row type is known, and this is what hands it to the author's function. Distributes over a config
+ * union arm by arm, and leaves a config without `getItem` exactly as it was.
+ */
+export type RowBoundConfig<TConfig, TRow> = TConfig extends unknown
+	? 'getItem' extends keyof TConfig
+		? TConfig extends { getItem?: (row: never) => infer TResult }
+			? Omit<TConfig, 'getItem'> & { getItem?: (row: TRow) => TResult }
+			: TConfig
+		: TConfig
+	: never
 export type ImageCellConfig = {
 	alt?: string
 	width?: number
@@ -379,8 +533,8 @@ export type BaseCellTypes = {
 	number: { __config?: NumberCellConfig }
 	boolean: { __config?: BooleanCellConfig }
 	date: { __config?: DateCellConfig }
-	select: { __config?: SelectCellConfig }
-	badge: { __config?: BadgeCellConfig }
+	select: { __config?: SelectColumnConfig }
+	badge: { __config?: BadgeColumnConfig }
 	image: { __config?: ImageCellConfig }
 	link: { __config?: LinkCellConfig }
 	progress: { __config?: ProgressCellConfig }
@@ -466,8 +620,8 @@ type CellArm<TKey extends string, TDefinition, TRow, TValue, TNode> = {
 } & ([ConfigOf<TDefinition>] extends [never]
 	? { type: TKey; config?: undefined }
 	: object extends ConfigOf<TDefinition>
-		? { type: TKey; config?: ConfigOf<TDefinition> }
-		: { type: TKey; config: ConfigOf<TDefinition> })
+		? { type: TKey; config?: RowBoundConfig<ConfigOf<TDefinition>, TRow> }
+		: { type: TKey; config: RowBoundConfig<ConfigOf<TDefinition>, TRow> })
 
 /**
  * A column's `cell` slot: either no type at all (just a `component`), or one of the types the
@@ -504,7 +658,10 @@ export type ColumnFilteringConfig<TNode = unknown, TConfig = unknown> = {
 	 * — to read it without a cast.
 	 */
 	component?: ColumnInputRenderer<InputComponentProps<TConfig>, TNode>
-	/** Operator configuration. `true` = default operators for the column's cell type. */
+	/**
+	 * Operator configuration. `true` = the grid's operator set for the column's cell type
+	 * (`operators.byType`); `{ items }` narrows it.
+	 */
 	operators?: boolean | ColumnOperatorsConfig
 	/**
 	 * Date presets offered beside the filter control, on `cell: { type: 'date' }` columns.
@@ -515,13 +672,14 @@ export type ColumnFilteringConfig<TNode = unknown, TConfig = unknown> = {
 	 *
 	 * Here rather than under `operators.betweenOperator` because a preset is not a `between`
 	 * thing: the control offers whichever presets the **current** operator can take — ranges for
-	 * `between`, single dates for `equals` / `lessThan` / `greaterThan` and the rest.
+	 * an operator with `input: 'range'`, single dates for one with `input: 'single'`.
 	 */
 	presets?: boolean | DatePreset[]
 	/**
-	 * Which operator this column's filter opens with. Defaults to the one its cell type
-	 * declares (`contains` for text, `equals` for number / date / boolean, `in` for
-	 * select / badge).
+	 * Which operator this column's filter opens with. Defaults to the grid's
+	 * `operators.defaultByType` for the column's cell type when the column offers it, else to the
+	 * first operator the column offers. The ready-made set opens text, image and link with
+	 * `contains`, select and badge with `in`, and the rest with `equals`.
 	 *
 	 * Typed {@link FilterOperatorId} rather than `string`: the value has to be one of the
 	 * operators this column actually offers, and an id that is not selects nothing in the
@@ -542,6 +700,19 @@ export type ColumnFilteringConfig<TNode = unknown, TConfig = unknown> = {
 	 */
 	debounce?: number
 	/**
+	 * A short hint the column's filter shows while it is empty — `'10 digits'`, `'e.g. Acme'`.
+	 *
+	 * A hint, not a name: the control's accessible name stays `messages.filtering.placeholder`
+	 * whatever this says, so a screen reader never announces "10 digits" as what the field is.
+	 * Without it the visible placeholder is that same name, as before.
+	 *
+	 * Shown by the text input, the multi-select trigger, a cell type's filter component that
+	 * renders `FieldState.placeholder` (both kits' text and number filters do) and a
+	 * `component`, which receives it as `placeholder`. The `between` range keeps its own
+	 * "From" / "To" and ignores it.
+	 */
+	placeholder?: string
+	/**
 	 * Explicit value list for multi-value (`in` / `notIn`) filters. Wins over both
 	 * `cell.config.items` (for `select` / `badge` cell types) and faceted values.
 	 *
@@ -551,6 +722,15 @@ export type ColumnFilteringConfig<TNode = unknown, TConfig = unknown> = {
 	 * config already spends on everything you configure.
 	 */
 	items?: FilterItem[]
+	/**
+	 * The filter's value list from a hook — {@link ItemsSource}. Same priority as `items`, which it
+	 * wins over when both are set.
+	 *
+	 * Offers values only: a value's label still comes from the column's base list
+	 * (`cell.config.items` / `cell.config.useItems`) when it has one. A `count` on an item is kept
+	 * as it is, faceted or not — that is how server-side counts reach the multi-select.
+	 */
+	useItems?: ItemsSource<FilterItem>
 	/**
 	 * Per-column override for faceted unique values / counts. When `true`, this
 	 * column reads `column.getFacetedUniqueValues()` regardless of the table-level
@@ -580,8 +760,12 @@ export type ColumnFilteringMeta = {
 	component?: ColumnInputRenderer<InputComponentProps, unknown>
 	/** Commit debounce in ms, from `filtering.debounce`. */
 	debounce?: number
+	/** The filter's visible hint, from `filtering.placeholder`. Never its accessible name. */
+	placeholder?: string
 	/** Explicit multi-select value list, from `filtering.items`. */
 	items?: FilterItem[]
+	/** The filter's list hook, from `filtering.useItems`. */
+	useItems?: ItemsSource<FilterItem>
 	/**
 	 * Whether this column reads faceted unique values — resolved from `filtering.faceted` and
 	 * the table-level `filtering.faceted`.
@@ -589,15 +773,67 @@ export type ColumnFilteringMeta = {
 	faceted?: boolean
 	/** The settled operator list, resolved from `filtering.operators`. */
 	operators?: FilterOperatorDef[]
-	/** Between-operator UI config, from `filtering.operators.betweenOperator`. */
+	/** Range-control UI config, from `filtering.operators.betweenOperator`. */
 	betweenOperator?: BetweenOperatorConfig
 	/** Resolved date presets, from `filtering.presets`. */
 	presets?: DatePreset[]
 	/**
-	 * The operator this column's filter opens with — `filtering.defaultOperator`, else the one
-	 * its cell type declares, else the first of {@link ColumnFilteringMeta.operators}.
+	 * The operator this column's filter opens with — `filtering.defaultOperator`, else the grid's
+	 * `operators.defaultByType` for its cell type, else the first of
+	 * {@link ColumnFilteringMeta.operators}.
 	 */
 	defaultOperator?: FilterOperatorId
+}
+
+/**
+ * A field of the server query that the grid filters by without showing it as a column — a
+ * warehouse, "has orders", a manager's region. Declared once per table in `filtering.fields`.
+ *
+ * Written in the column's own vocabulary — `id`, `header`, `cell`, `filtering` — so a field and a
+ * column with the same `cell` and `filtering` offer exactly the same operators, editor, values and
+ * presets. What a field does **not** have is everything a column has because it holds data: no
+ * accessor, and no part in visibility, ordering, sizing, pinning or sorting.
+ *
+ * Its value lives in the same `columnFilters` slice as a column's, under the field's `id`, so it
+ * reaches `filtering.onChange`, the draft and a restored state beside the column filters. Fields
+ * are offered only under `filtering.manual: true`: the server is what filters by them.
+ */
+export type FilterFieldDef<TNode = unknown> = {
+	/**
+	 * The key the field's value is stored and sent under. Unique across the table — a column id,
+	 * a system column id or another field's id here is an error when the table is created.
+	 */
+	id: string
+	/** The label filter surfaces show for the field. A string: a field has no header cell to render. */
+	header: string
+	/**
+	 * The field's value type, as on a column — the scalar `'select'` or `{ type, config }`. It picks
+	 * the default operators and the editor, and `config.items` of a `select` / `badge` type are the
+	 * values a select offers. Default: `'text'`.
+	 */
+	cell?: string | { type: string; config?: unknown }
+	/**
+	 * The field's filter, as on a column. `faceted` is absent: facets are counted over the rows'
+	 * values, and a field has none, so `items` come from `filtering.items` or `cell.config.items`.
+	 */
+	filtering?: Omit<ColumnFilteringConfig<TNode>, 'faceted'>
+}
+
+/**
+ * A {@link FilterFieldDef} as `createTable` resolved it — what the React layer reads off
+ * `table.grid` to build the field's filter.
+ *
+ * The same pieces a column carries on its meta, under the same names: `cell` is the
+ * {@link ColumnCellMeta} and `filtering` the {@link ColumnFilteringMeta}, resolved by the very rule
+ * columns are resolved by.
+ */
+export type ResolvedFilterField = {
+	id: string
+	/** The field's `header`. */
+	label: string
+	cell: ColumnCellMeta
+	/** The resolved filter, `undefined` when the field configured nothing. Never faceted. */
+	filtering: ColumnFilteringMeta | undefined
 }
 
 export type ColumnEditingConfig<TNode = unknown, TValue = unknown, TConfig = unknown> = {
@@ -609,6 +845,14 @@ export type ColumnEditingConfig<TNode = unknown, TValue = unknown, TConfig = unk
 	 * the component — `(props: FieldState<SelectCellConfig>)` — to name the `cell.config` it reads.
 	 */
 	component?: ColumnInputRenderer<FieldState<TConfig, TValue>, TNode>
+	/**
+	 * The values this column's editor offers — a fixed list, overriding the base `cell.config.items` /
+	 * `cell.config.useItems` of a `select` / `badge` column. Labels still come from the base: a
+	 * value missing here keeps its label, it is only no longer offered.
+	 */
+	items?: readonly (SelectItem | BadgeItem)[]
+	/** The same list from a hook — {@link ItemsSource}. Wins over `items` when both are set. */
+	useItems?: ItemsSource<SelectItem | BadgeItem>
 	/**
 	 * Help text rendered under the input in the edit form.
 	 * Forwarded to `FieldState.description` so composite cell types can show it
@@ -639,6 +883,15 @@ export type ColumnCreatingConfig<TRow = unknown, TValue = unknown, TNode = unkno
 	 * Receives a {@link FieldState} with the same shape as {@link ColumnEditingConfig.component}.
 	 */
 	component?: ColumnInputRenderer<FieldState<TConfig, TValue>, TNode>
+	/**
+	 * The values this column's create field offers — a fixed list, overriding the base `cell.config.items` /
+	 * `cell.config.useItems` of a `select` / `badge` column and the editor's
+	 * `editing.items` / `editing.useItems`. Labels still come from the base: a
+	 * value missing here keeps its label, it is only no longer offered.
+	 */
+	items?: readonly (SelectItem | BadgeItem)[]
+	/** The same list from a hook — {@link ItemsSource}. Wins over `items` when both are set. */
+	useItems?: ItemsSource<SelectItem | BadgeItem>
 	/**
 	 * Help text rendered under the input in the create form.
 	 * Forwarded to `FieldState.description`.

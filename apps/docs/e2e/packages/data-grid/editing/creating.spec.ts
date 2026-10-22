@@ -222,6 +222,20 @@ test.describe('creating.validate', () => {
 		await expect(grid.rows()).toHaveCount(INITIAL_ROWS)
 	})
 
+	// The example's schema ends in a `refine` with no path, which is a message about the row as a
+	// whole: it belongs in the form's banner, not under any one field.
+	test('a schema issue without a path reaches the form banner', async ({ grid, page }) => {
+		await addButton(page).click()
+		const dialog = page.getByRole('dialog')
+		await field(dialog, 'Name').fill('frank@example.com')
+		await field(dialog, 'Email').fill('frank@example.com')
+		await field(dialog, 'Age').fill('40')
+		await saveButton(dialog).click()
+
+		await expect(dialog.getByRole('alert').filter({ hasText: 'Name and email must be different' })).toHaveCount(1)
+		await expect(grid.rows()).toHaveCount(INITIAL_ROWS)
+	})
+
 	// The example's checkbox makes `onSave` throw a `ValidationError` carrying both a field
 	// error and a form-level one — the second is what the shell's `role="alert"` banner is for.
 	test('a rejection from onSave reaches the form as well as the field', async ({ grid, page }) => {

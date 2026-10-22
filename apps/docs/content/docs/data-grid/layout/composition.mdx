@@ -213,7 +213,7 @@ order you write:
 <DataGrid.Toolbar>
 	<span>Team members</span>
 	<DataGrid.GlobalFilterInput />
-	<DataGrid.ColumnFilter columnId='status' />
+	<DataGrid.Filter id='status' />
 	<DataGrid.VisibilityTrigger />
 	<DataGrid.CreateTrigger>Add new</DataGrid.CreateTrigger>
 </DataGrid.Toolbar>
@@ -544,42 +544,23 @@ offsets and `cellClassName`, and lets you replace only what goes inside.
 ## Fallbacks, modals and bars
 
 The remaining slots take `children` for the same reason as everything above: replace the content,
-keep the conditions under which it appears. A modal and a fallback row are mounted by their feature
-rather than by a layout — neither has a position a layout could give it. `<DataGrid.ActionBar>` does:
+keep the conditions under which it appears. A fallback row is mounted by its feature rather than by
+a layout — it has no position a layout could give it. The create and edit modals are mounted by the
+grid too, and are replaced through the `FormModal` component slot instead — see
+[a form of your own](/docs/data-grid/editing/creating#a-form-of-your-own). `<DataGrid.ActionBar>` does:
 a layout writes it where it wants it, and the four presets place it by its variant.
 
-| Slot                                                   | Renders when                             | `children` receives                                             |
-| ------------------------------------------------------ | ---------------------------------------- | --------------------------------------------------------------- |
-| `<DataGrid.LoadingBody>`                               | `loading.isPending`                      | `{ columnCount }`                                               |
-| `<DataGrid.EmptyStateRow>`                             | the data array is empty                  | `{ columnCount }`                                               |
-| `<DataGrid.NoResultsRow>`                              | filters match nothing                    | `{ columnCount }`                                               |
-| `<DataGrid.CreatingModal>` / `<DataGrid.EditingModal>` | `mode: 'modal'` and the form is open     | `{ open, form, title, formError, isPending, onSave, onCancel }` |
-| `<DataGrid.ActionBar>`                                 | a row is selected, or the draft is dirty | `{ open, variant, selection, draft }`                           |
-| `<DataGrid.PageSizer>`                                 | page-based pagination is on              | `{ pageSize, items, onPageSizeChange }`                         |
+| Slot                       | Renders when                             | `children` receives                     |
+| -------------------------- | ---------------------------------------- | --------------------------------------- |
+| `<DataGrid.LoadingBody>`   | `loading.isPending`                      | `{ columnCount }`                       |
+| `<DataGrid.EmptyStateRow>` | the data array is empty                  | `{ columnCount }`                       |
+| `<DataGrid.NoResultsRow>`  | filters match nothing                    | `{ columnCount }`                       |
+| `<DataGrid.ActionBar>`     | a row is selected, or the draft is dirty | `{ open, variant, selection, draft }`   |
+| `<DataGrid.PageSizer>`     | page-based pagination is on              | `{ pageSize, items, onPageSizeChange }` |
 
 The three row-level fallbacks render their `children` **inside** the kit's
 `<Tbody><Tr><Td colSpan>` scaffold, so the table markup stays valid and you supply only the
-cell's content. The modals hand you `form` — the field set the columns already describe — so a
-custom dialog does not have to rebuild the inputs:
-
-```tsx
-<DataGrid.EditingModal>
-	{({ form, isPending, onSave, onCancel }) => (
-		<MyDialog
-			title='Edit order'
-			onClose={onCancel}
-		>
-			{form}
-			<button
-				disabled={isPending}
-				onClick={() => void onSave()}
-			>
-				Save
-			</button>
-		</MyDialog>
-	)}
-</DataGrid.EditingModal>
-```
+cell's content.
 
 ## Column headers
 

@@ -3,17 +3,13 @@ import { ColumnFormMode } from '@ez-kit/data-grid-core'
 import { FormModalHost } from './form-modal'
 import { useDataGridState, useDataGridTable } from './table-context'
 
-import type { DataGridFormModalProps } from './form-modal'
-
-export type DataGridEditingModalProps = DataGridFormModalProps
-
 /**
- * Modal for editing a row (`editing.mode: 'modal'`).
+ * Modal for editing a row (`editing.mode: 'modal'`), mounted by the grid itself.
  *
- * Renders nothing while no row is being edited. See {@link DataGridFormModalProps} for
- * replacing the dialog while keeping the generated fields.
+ * Renders nothing while no row is being edited. To replace the dialog — or the form inside it — register a
+ * `FormModal` component; see `FormModalProps`.
  */
-export function EditingModal({ children }: DataGridEditingModalProps = {}) {
+export function EditingModal() {
 	const table = useDataGridTable()
 	useDataGridState((s) => s.editing)
 	const state = table.editing.getState()
@@ -22,16 +18,10 @@ export function EditingModal({ children }: DataGridEditingModalProps = {}) {
 
 	return (
 		<FormModalHost
-			{...(children !== undefined ? { children } : {})}
 			mode={ColumnFormMode.Editing}
-			feature='editing'
 			title={table.grid.messages.editing.title}
-			formError={state.formError}
-			commitStatus={state.commitStatus}
-			onSave={() => table.editing.commit()}
-			onCancel={() => {
-				table.editing.cancel()
-			}}
+			state={state}
+			rowId={state.rowId}
 		/>
 	)
 }

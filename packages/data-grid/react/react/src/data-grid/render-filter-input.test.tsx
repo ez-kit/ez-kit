@@ -4,10 +4,13 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { createDataGrid } from '../create-data-grid'
 import { prepareDataGridTable } from '../prepare-table'
-import { TEST_FEATURES, testComponents } from '../test-utils'
+import { TEST_FEATURES, TEST_OPERATORS, testComponents } from '../test-utils'
+
+import { collectFilterTargets } from './filter-target'
+import { renderFilterInput } from './render-filter-input'
 
 import type { DataTable, GridFeatures } from '../types'
-import type { StructuredFilterValue } from '@ez-kit/data-grid-core'
+import type { FieldState, InputComponentProps, StructuredFilterValue } from '@ez-kit/data-grid-core'
 
 type Row = {
 	id: number
@@ -47,6 +50,7 @@ function setup(config?: Partial<Parameters<typeof createTable<GridFeatures, Row>
 	const table = prepareDataGridTable(
 		createTable<GridFeatures, Row>({
 			features: TEST_FEATURES,
+			operators: TEST_OPERATORS,
 			data: DATA,
 			columns: COLUMNS,
 			filtering: true,
@@ -100,10 +104,11 @@ describe('renderFilterInput — multi-value (in / notIn) branch', () => {
 describe('OperatorSelect — operator options read as text labels', () => {
 	it('renders every operator option as its English label, with no symbol glyphs', () => {
 		setup()
+		fireEvent.click(screen.getByRole('button', { name: /^Filter operator:/ }))
 
-		// A `select` column resolves to IN_OPERATORS + the text empty operators.
+		// A `select` column offers the ready-made select set: the list pair and the emptiness pair.
 		for (const label of ['Is any of', 'Is none of', 'Is empty', 'Is not empty']) {
-			expect(screen.getByRole('option', { name: label })).toBeInTheDocument()
+			expect(screen.getByRole('menuitemradio', { name: label })).toBeInTheDocument()
 		}
 
 		// The glyphs these operators used to render (∈ / ∉ / ∅ / ≠∅) are gone.
@@ -137,6 +142,7 @@ function setupDate(): DataTable<GridFeatures, DateRow> {
 	const table = prepareDataGridTable(
 		createTable<GridFeatures, DateRow>({
 			features: TEST_FEATURES,
+			operators: TEST_OPERATORS,
 			data: DATE_DATA,
 			columns: DATE_COLUMNS_WITH_PRESETS,
 			filtering: true,
@@ -150,11 +156,10 @@ function setupDate(): DataTable<GridFeatures, DateRow> {
 	return table
 }
 
-/** The operator control is an unlabelled `<select>` in the test kit — the date column has one. */
-function selectOperator(operatorId: string): void {
-	const [select] = screen.getAllByRole('combobox')
-	if (!select) throw new Error('expected an operator select')
-	fireEvent.change(select, { target: { value: operatorId } })
+/** Picks an operator by its label through the test kit's menu button — the date column has one. */
+function selectOperator(label: string): void {
+	fireEvent.click(screen.getByRole('button', { name: /^Filter operator:/ }))
+	fireEvent.click(screen.getByRole('menuitemradio', { name: label }))
 }
 
 describe('renderFilterInput — date presets', () => {
@@ -169,7 +174,7 @@ describe('renderFilterInput — date presets', () => {
 
 	it('offers the single dates to an operator that takes one value', () => {
 		setupDate()
-		selectOperator('equals')
+		selectOperator('Equals')
 
 		expect(screen.getByRole('button', { name: 'A week ago' })).toBeInTheDocument()
 		// A range means nothing to an operator that compares against one date.
@@ -178,7 +183,7 @@ describe('renderFilterInput — date presets', () => {
 
 	it('writes the date itself when a single-date preset is picked', () => {
 		const table = setupDate()
-		selectOperator('equals')
+		selectOperator('Equals')
 
 		fireEvent.click(screen.getByRole('button', { name: 'Today' }))
 
@@ -219,7 +224,13 @@ function setupNumber(betweenOperator: { slider?: boolean; min?: number; max?: nu
 		},
 	])
 	const table = prepareDataGridTable(
-		createTable<GridFeatures, NumberRow>({ features: TEST_FEATURES, data: NUMBER_DATA, columns, filtering: true }),
+		createTable<GridFeatures, NumberRow>({
+			features: TEST_FEATURES,
+			operators: TEST_OPERATORS,
+			data: NUMBER_DATA,
+			columns,
+			filtering: true,
+		}),
 	)
 	render(
 		<GridComponentsProvider>
@@ -248,8 +259,8 @@ describe('renderFilterInput — cell-type filter renderer', () => {
 		const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
 
 		setupDate()
-		selectOperator('equals')
-		selectOperator('between')
+		selectOperator('Equals')
+		selectOperator('Between')
 
 		expect(error).not.toHaveBeenCalled()
 		error.mockRestore()
@@ -275,12 +286,258 @@ describe('renderFilterInput — clearing one column', () => {
 
 	it('clears a column whose operator takes a single date', () => {
 		const table = setupDate()
-		selectOperator('equals')
+		selectOperator('Equals')
 		fireEvent.click(screen.getByRole('button', { name: 'Today' }))
 		expect(table.getColumn('joinedAt')?.getFilterValue()).toBeDefined()
 
 		fireEvent.click(screen.getByRole('button', { name: 'Clear' }))
 
 		expect(table.getColumn('joinedAt')?.getFilterValue()).toBeUndefined()
+	})
+})
+
+describe('renderFilterInput — field target', () => {
+	it("hands a field's own `filtering.component` the value, onChange and its cell config", () => {
+		const received: InputComponentProps[] = []
+		const config = { items: [{ value: 'msk', label: 'Moscow' }] }
+		function WarehouseFilter(props: InputComponentProps) {
+			received.push(props)
+			return (
+				<button
+					type='button'
+					onClick={() => {
+						props.onChange('msk')
+					}}
+				>
+					pick
+				</button>
+			)
+		}
+		const table = prepareDataGridTable(
+			createTable<GridFeatures, Row>({
+				features: TEST_FEATURES,
+				operators: TEST_OPERATORS,
+				data: DATA,
+				columns: COLUMNS,
+				filtering: {
+					manual: true,
+					fields: [
+						{
+							id: 'warehouse',
+							header: 'Warehouse',
+							cell: { type: 'select', config },
+							filtering: { component: WarehouseFilter },
+						},
+					],
+				},
+			}),
+		)
+		const target = collectFilterTargets(table).find((t) => t.id === 'warehouse')
+		if (!target) throw new Error('no warehouse target')
+		const { core, filtering } = testComponents
+		render(
+			<>
+				{renderFilterInput({
+					target,
+					Input: core.Input,
+					Menu: core.Menu,
+					cellTypes: {},
+					OperatorSelect: filtering.OperatorSelect,
+					ClearFilterButton: filtering.ClearFilterButton,
+					BetweenInput: filtering.BetweenInput,
+					MultiSelectFilter: filtering.MultiSelectFilter,
+					debounce: 0,
+					messages: table.grid.messages,
+				})}
+			</>,
+		)
+
+		expect(received[0]?.value).toBeUndefined()
+		expect(received[0]?.config).toEqual(config)
+		fireEvent.click(screen.getByRole('button', { name: 'pick' }))
+		expect(table.atoms.columnFilters.get()).toEqual([{ id: 'warehouse', value: 'msk' }])
+	})
+})
+
+type HintRow = { id: number; inn: string; amount: number; status: 'open' | 'done' }
+
+const HINT_DATA: HintRow[] = [{ id: 1, inn: '7700000000', amount: 10, status: 'open' }]
+
+/** Renders one column's filter on its own, the way the header cell would. */
+function renderHinted(
+	columns: ReturnType<typeof createColumns<HintRow>>,
+	columnId: string,
+	cellTypes: Parameters<typeof renderFilterInput>[0]['cellTypes'] = {},
+) {
+	const table = prepareDataGridTable(
+		createTable<GridFeatures, HintRow>({
+			features: TEST_FEATURES,
+			operators: TEST_OPERATORS,
+			data: HINT_DATA,
+			columns,
+			filtering: true,
+		}),
+	)
+	const target = collectFilterTargets(table).find((t) => t.id === columnId)
+	if (!target) throw new Error(`no ${columnId} target`)
+	const { core, filtering } = testComponents
+	render(
+		<>
+			{renderFilterInput({
+				target,
+				Input: core.Input,
+				Menu: core.Menu,
+				cellTypes,
+				OperatorSelect: filtering.OperatorSelect,
+				ClearFilterButton: filtering.ClearFilterButton,
+				BetweenInput: filtering.BetweenInput,
+				MultiSelectFilter: filtering.MultiSelectFilter,
+				debounce: 0,
+				messages: table.grid.messages,
+			})}
+		</>,
+	)
+	return table
+}
+
+describe('renderFilterInput — placeholder', () => {
+	it('shows the hint while the name stays the dictionary one, on the plain path', () => {
+		renderHinted(
+			createColumns<HintRow>([{ accessorKey: 'inn', header: 'ИНН', filtering: { placeholder: '10 цифр' } }]),
+			'inn',
+		)
+
+		expect(screen.getByRole('textbox', { name: 'Filter ИНН…' })).toHaveAttribute('placeholder', '10 цифр')
+	})
+
+	it('shows the hint while the name stays the dictionary one, on the operator path', () => {
+		renderHinted(
+			createColumns<HintRow>([
+				{ accessorKey: 'inn', header: 'ИНН', filtering: { operators: true, placeholder: '10 цифр' } },
+			]),
+			'inn',
+		)
+
+		expect(screen.getByRole('textbox', { name: 'Filter ИНН…' })).toHaveAttribute('placeholder', '10 цифр')
+	})
+
+	it('falls back to the name when the column sets no hint', () => {
+		renderHinted(createColumns<HintRow>([{ accessorKey: 'inn', header: 'ИНН' }]), 'inn')
+
+		expect(screen.getByRole('textbox', { name: 'Filter ИНН…' })).toHaveAttribute('placeholder', 'Filter ИНН…')
+	})
+
+	it('names a column with a non-string header by its id', () => {
+		renderHinted(createColumns<HintRow>([{ accessorKey: 'inn', header: () => 'ИНН' }]), 'inn')
+
+		expect(screen.getByRole('textbox', { name: 'Filter inn…' })).toBeInTheDocument()
+	})
+
+	it('hands the multi-select the hint as its placeholder and the name as its label', () => {
+		renderHinted(
+			createColumns<HintRow>([
+				{
+					accessorKey: 'status',
+					header: 'Status',
+					cell: { type: 'select', config: { items: [{ value: 'open', label: 'Open' }] } },
+					filtering: { operators: true, placeholder: 'Любой статус' },
+				},
+			]),
+			'status',
+		)
+
+		expect(screen.getByRole('group', { name: 'Filter Status…' })).toHaveTextContent('Любой статус')
+	})
+
+	it('hands a `filtering.component` the hint', () => {
+		const received: InputComponentProps[] = []
+		function MyInput(props: InputComponentProps) {
+			received.push(props)
+			return null
+		}
+		renderHinted(
+			createColumns<HintRow>([
+				{ accessorKey: 'inn', header: 'ИНН', filtering: { component: MyInput, placeholder: 'Например, Acme' } },
+			]),
+			'inn',
+		)
+
+		expect(received[0]?.placeholder).toBe('Например, Acme')
+	})
+
+	it('hands a `filtering.component` the hint on the operator path', () => {
+		const received: InputComponentProps[] = []
+		function MyInput(props: InputComponentProps) {
+			received.push(props)
+			return null
+		}
+		renderHinted(
+			createColumns<HintRow>([
+				{
+					accessorKey: 'inn',
+					header: 'ИНН',
+					filtering: { operators: true, component: MyInput, placeholder: 'Например, Acme' },
+				},
+			]),
+			'inn',
+		)
+
+		expect(received[0]?.placeholder).toBe('Например, Acme')
+	})
+
+	it("hands a cell type's filter component the hint", () => {
+		const received: FieldState[] = []
+		function AmountFilter(props: FieldState) {
+			received.push(props)
+			return null
+		}
+		renderHinted(
+			createColumns<HintRow>([
+				{
+					accessorKey: 'amount',
+					header: 'Amount',
+					cell: { type: 'number' },
+					filtering: { operators: true, placeholder: 'Сумма' },
+				},
+			]),
+			'amount',
+			{ number: { filtering: AmountFilter } },
+		)
+
+		expect(received[0]?.placeholder).toBe('Сумма')
+	})
+
+	it("hands a cell type's filter component the hint on the plain path", () => {
+		const received: FieldState[] = []
+		function AmountFilter(props: FieldState) {
+			received.push(props)
+			return null
+		}
+		renderHinted(
+			createColumns<HintRow>([
+				{ accessorKey: 'amount', header: 'Amount', cell: { type: 'number' }, filtering: { placeholder: 'Сумма' } },
+			]),
+			'amount',
+			{ number: { filtering: AmountFilter } },
+		)
+
+		expect(received[0]?.placeholder).toBe('Сумма')
+	})
+
+	it('leaves the between range its own From / To', () => {
+		renderHinted(
+			createColumns<HintRow>([
+				{
+					accessorKey: 'amount',
+					header: 'Amount',
+					cell: { type: 'number' },
+					filtering: { operators: true, defaultOperator: 'between', placeholder: 'Сумма' },
+				},
+			]),
+			'amount',
+		)
+
+		expect(screen.getByPlaceholderText('From')).toBeInTheDocument()
+		expect(screen.queryByPlaceholderText('Сумма')).not.toBeInTheDocument()
 	})
 })

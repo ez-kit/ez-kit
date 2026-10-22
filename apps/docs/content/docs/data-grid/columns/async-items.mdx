@@ -1,0 +1,229 @@
+---
+title: Value Lists from a Hook
+description: Feed a select or badge column's values from your backend with useItems — labels, filter options, editor options and server-side counts, with columns declared once.
+---
+
+A `select` or `badge` column labels its values from a list, and its filter, editor and create field
+offer the values of that list. When the list comes from your backend — warehouses, tags, users —
+hand the column a **hook** instead of an array:
+
+```ts
+const columns = createColumns<Shipment>([
+	{
+		id: 'warehouse',
+		header: 'Warehouse',
+		accessorFn: (row) => row.warehouse.id,
+		cell: { type: 'select', config: { useItems: useWarehouses } },
+		filtering: { operators: true, defaultOperator: 'in' },
+	},
+])
+```
+
+The columns are declared once, at module level. The grid calls `useWarehouses` itself and passes
+the result to every place that reads the list. You don't rebuild the columns in a `useMemo` every
+time a response arrives.
+
+<DataGridDocsExample exampleId='async-items' />
+
+The cells show a skeleton until the list arrives, and the filter shows a loading state instead of
+an empty list.
+
+## The hook
+
+`useItems` is an ordinary React hook that returns `{ items, isLoading, error }`:
+
+```ts
+function useWarehouses(): ItemsSourceResult<SelectItem> {
+	const query = useQuery(warehousesQuery())
+	return { items: query.data ?? [], isLoading: query.isPending, error: query.error }
+}
+```
+
+- **The grid caches nothing.** Fetching, caching, deduplication, `staleTime` and invalidation stay
+  with your hook, usually a query library. With TanStack Query, keep the query in a `queryOptions`
+  factory so the page, a prefetch and the hook all share one key:
+
+  ```ts
+  const warehousesQuery = () =>
+  	queryOptions({ queryKey: ['warehouses'], queryFn: fetchWarehouses, staleTime: 5 * 60_000 })
+  ```
+
+- **The hook runs once per list, not once per cell.** A hundred rows of the column still make one
+  call per render. The hook also runs only while something on screen reads the list: a visible
+  cell, a mounted filter, a chip, an open editor. A hidden column with a closed filter makes no
+  request.
+- **A mounted filter panel reads every list it offers.** `<DataGrid.FilterPanel />` and
+  `useFilters()` hand every filter's model out at once, open or not, so while one is mounted the hook
+  of every filter it lists runs. A filter in a header popover reads its list only once it is open.
+- **Return the same `items` array while nothing changed.** A new array on every render is a new
+  list, and every cell that reads it renders again. A query result already keeps its identity; an
+  empty fallback is safe too, since a new empty list compares equal to the last one.
+- **It runs inside the grid**, so it can call the grid's own hooks. That is how server-side counts
+  follow the current filters (see [Counts from the server](#counts-from-the-server)).
+- **It takes a parameters object**, which is empty today. Search, the values on screen and the
+  current filters will arrive as new keys of that object, and a hook written now keeps compiling.
+- **Keep its identity stable.** A new function on every render is a new hook, and the grid can
+  only switch to it by remounting the component that calls it, so its state starts over.
+  Development builds warn about it. Declare the columns outside the component, or memoize them.
+- **Return a failure, don't throw it.** Return `error` and the hook keeps running: your query
+  library retries the request, and the next answer replaces the error. A hook that **throws** is
+  caught, so the list reads as failed and the rest of the grid stays on screen. The grid then runs
+  the hook again, up to three times with a growing delay, and again whenever a control starts
+  reading the list. That rerun only helps a hook that keeps no error of its own. A TanStack Query
+  query with `throwOnError`, or a `useSuspenseQuery` that failed, rethrows its cached error on
+  every mount until a
+  [`QueryErrorResetBoundary`](https://tanstack.com/query/latest/docs/framework/react/guides/suspense#resetting-error-boundaries)
+  resets it, so the reruns fail the same way. If a shared `queryOptions` factory sets
+  `throwOnError`, override it with `throwOnError: false` inside the hook.
+- **A hook may suspend.** A hook that suspends (`use(promise)`, `useSuspenseQuery`) is waited for
+  inside the grid, and the list reads as loading meanwhile. A suspense query throws its errors,
+  though, so for a list that can fail prefer `useQuery`, which returns them.
+
+## Where a list comes from
+
+The base list lives in `cell.config` and is what labels the column's values everywhere.
+`filtering`, `editing` and `creating` can each offer a list of their own. They follow the same
+chain `component` does:
+
+| The control | Offers the values of                      |
+| ----------- | ----------------------------------------- |
+| a cell      | `cell.config` (the base)                  |
+| the filter  | `filtering`, else the base                |
+| the editor  | `editing`, else the base                  |
+| a new row   | `creating`, else `editing`, else the base |
+
+An override changes **what is offered, never what a value is called.** Labels always come from the
+base. A typical case is an editor that offers only active warehouses, while a row that points at an
+archived one still reads "Old Depot" in its cell and in the editor's trigger:
+
+```ts
+{
+	id: 'warehouse',
+	accessorFn: (row) => row.warehouse.id,
+	cell: { type: 'select', config: { useItems: useAllWarehouses } },
+	editing: { useItems: useActiveWarehouses },
+}
+```
+
+A create form that states no list of its own shares the editor's list, and calls the editor's
+hook, not a second one. Only a column with no base list labels values from the list of the control
+that shows them.
+
+Setting both `items` and `useItems` at one level makes the grid use `useItems`, and development
+builds warn about it.
+
+## Labels from the row
+
+Often the row already carries the label: the API returns `{ warehouse: { id, name } }`, and the
+column filters by the id. `cell.config.getItem` reads it:
+
+```ts
+cell: {
+	type: 'select',
+	config: {
+		useItems: useWarehouses,
+		getItem: (row) => ({ value: row.warehouse.id, label: row.warehouse.name }),
+	},
+},
+```
+
+The column's value stays what the accessor returns. A value is labelled in this order: the base
+list, then `getItem` of its row, then a skeleton while the list loads, then the raw value. So
+the cell is readable on the first frame, and a label from the list (with its icon) replaces it once
+the list arrives. `getItem` labels only the value its own item names: an editor that switches the
+row to another warehouse does not keep calling it by the old one's name.
+
+In the example below the row calls warehouse `wh_12` "Berlin" while the list calls it "Berlin HQ",
+so you can watch the list's label take over from the row's once it arrives.
+
+<DataGridDocsExample exampleId='async-items-get-item' />
+
+`getItem` works without any list, too: with `filtering: { faceted: true }`, each faceted value is
+labelled from `getItem` of a row that has it. The filter then shows names and counts with no
+dictionary request at all, and so does the chip of a selected value.
+
+## What a component receives
+
+A kit's `select` / `badge` view gets `config.items` already resolved, so a component that reads it
+needs no change. Beside it:
+
+- `itemStatus` is `'resolved'`, `'pending'` (the list is loading and nothing else labels the value),
+  `'error'` (the hook failed) or `'missing'` (the list is there and doesn't hold the value). Both
+  kits draw a skeleton for `pending` and the raw value for `error` and `missing` — muted, with the
+  failure in its tooltip, for `error`.
+- `item` is the item the value resolved to.
+
+Edit and create fields get `itemsLoading`, `itemsError` and `item` (the current value's item from
+the base) on their `FieldState`, and the multi-select filter gets the same `itemsLoading` and
+`itemsError`. Only `select` / `badge` configs gain `items`: a column of another cell type keeps
+its config as written, whatever lists its levels state.
+
+A column writes its config as `SelectColumnConfig` / `BadgeColumnConfig` — `items` or `useItems`,
+and `getItem`. A component is handed `SelectCellConfig` / `BadgeCellConfig`, where `items` is always
+there and the hook is not.
+
+`useItemsSource(columnId, 'cell' | 'filtering' | 'editing' | 'creating')` reads a column's list
+through the grid's own source — from a kit, import it from `@ez-kit/data-grid-react/kit`. Only a
+`select` / `badge` column has a base list, so on another cell type the `'cell'` slot is
+`undefined`, and the other slots answer with the list that level states itself.
+
+## Counts from the server
+
+A `count` on an item reaches the multi-select as it is. It wins over a faceted count, which only
+fills in the items that carry none. Once anything counts, an item nobody counted shows `0`, and an
+absent `count` means no count at all. Faceted counts are computed from the loaded rows, so under
+`filtering.manual: true` they count one page of the result, and development builds warn about it.
+Return real totals from the hook instead, and read the current filters through the grid:
+
+```ts
+function useWarehouseCounts(): ItemsSourceResult<FilterItem> {
+	const filters = useDataGridState((s) => s.columnFilters)
+	const query = useQuery({
+		queryKey: ['warehouses', 'counts', filters],
+		queryFn: () => fetchWarehouseCounts(filters),
+		placeholderData: keepPreviousData,
+	})
+	return { items: query.data ?? [], isLoading: query.isPending, error: query.error }
+}
+
+// …
+filtering: { operators: true, defaultOperator: 'in', useItems: useWarehouseCounts },
+```
+
+A field from `filtering.fields` takes `filtering.useItems` the same way. A field has no rows, so
+`getItem` and faceted values don't apply to it.
+
+## Options
+
+### `cell.config` (select / badge)
+
+| Option     | Type                                        | Description                                                                                  |
+| ---------- | ------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `items`    | `SelectItem[]` (badge: `BadgeItem[]`)       | The base list as a fixed array. One of `items` / `useItems` is required.                     |
+| `useItems` | `(params) => { items, isLoading?, error? }` | The base list from a hook. Wins over `items`.                                                |
+| `getItem`  | `(row) => SelectItem \| undefined`          | The label the row already carries for its value. Labels the cell before, or without, a list. |
+
+### Per-column lists
+
+| Option               | Type                                        | Description                                                                     |
+| -------------------- | ------------------------------------------- | ------------------------------------------------------------------------------- |
+| `filtering.items`    | `FilterItem[]`                              | What the filter offers, as a fixed array.                                       |
+| `filtering.useItems` | `(params) => { items, isLoading?, error? }` | What the filter offers, from a hook. An item's `count` is kept as the server's. |
+| `editing.items`      | `SelectItem[]`                              | What the editor offers, as a fixed array.                                       |
+| `editing.useItems`   | `(params) => { items, isLoading?, error? }` | What the editor offers, from a hook.                                            |
+| `creating.items`     | `SelectItem[]`                              | What a new row's field offers. Falls back to `editing`, then to the base.       |
+| `creating.useItems`  | `(params) => { items, isLoading?, error? }` | The same, from a hook.                                                          |
+
+## What comes next
+
+Search as you type in the dropdown (`useItems({ search })`) and paging through a long list, labels
+for just the values on screen (`useItemLabels({ values })`), and server-side cross-filter counts
+(`useItems({ filters })`) are the next step, along with guides for the two usual backend shapes:
+one `/dictionary` endpoint, and a `?search=` plus `?ids=` pair. A cell that holds several values,
+such as tags, is out of scope for now: `badge` holds one value per cell.
+
+## See also
+
+- [Cell types](/docs/data-grid/columns/cell-types) — the `select` and `badge` types
+- [Multi-value filter](/docs/data-grid/filtering/multi-value) — the `in` / `notIn` filter these lists feed
+- [Filter fields](/docs/data-grid/filtering/fields) — filtering by fields that are not columns

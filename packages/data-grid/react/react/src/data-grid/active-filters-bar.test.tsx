@@ -1,16 +1,17 @@
-import { createTable, createColumns } from '@ez-kit/data-grid-core'
+import { OperatorInput, createTable, createColumns } from '@ez-kit/data-grid-core'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { GridComponentsProvider } from '../components-context'
 import { prepareDataGridTable } from '../prepare-table'
-import { TEST_FEATURES, testComponents } from '../test-utils'
+import { TEST_FEATURES, TEST_OPERATORS, testComponents } from '../test-utils'
 
 import { ActiveFiltersBar } from './active-filters-bar'
 import { TableProvider } from './table-context'
 
 import type { DataTable, GridFeatures } from '../types'
+import type { FilterOperatorDef } from '@ez-kit/data-grid-core'
 import type { ReactNode } from 'react'
 
 type User = {
@@ -32,6 +33,7 @@ const COLUMNS = createColumns<User>([
 function makeTable(config?: Partial<Parameters<typeof createTable<GridFeatures, User>>[0]>) {
 	const table = createTable<GridFeatures, User>({
 		features: TEST_FEATURES,
+		operators: TEST_OPERATORS,
 		data: USERS,
 		columns: COLUMNS,
 		filtering: true,
@@ -133,6 +135,39 @@ describe('<ActiveFiltersBar>', () => {
 		expect(screen.getByText('Equals Alice')).toBeInTheDocument()
 	})
 
+	it('labels an operator by its definition, whatever the dictionary says', () => {
+		const contains: FilterOperatorDef = {
+			id: 'contains',
+			label: 'Похоже на',
+			input: OperatorInput.Single,
+			filterFn: () => true,
+		}
+		const table = makeTable({ operators: { byType: { text: [contains] } } })
+		table.setColumnFilters([{ id: 'name', value: { operator: 'contains', value: 'ali' } }])
+
+		render(
+			<Wrapper table={table}>
+				<ActiveFiltersBar />
+			</Wrapper>,
+		)
+		expect(screen.getByText('Похоже на ali')).toBeInTheDocument()
+	})
+
+	it('shows the raw id of an operator the column does not offer', () => {
+		vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+		// Restored, as from a link — an entry `setColumnFilters` would auto-remove for naming no operator.
+		const table = makeTable({
+			initialState: { columnFilters: [{ id: 'age', value: { operator: 'notBetween', value: { from: 1, to: 2 } } }] },
+		})
+
+		render(
+			<Wrapper table={table}>
+				<ActiveFiltersBar />
+			</Wrapper>,
+		)
+		expect(screen.getByText(/^notBetween/)).toBeInTheDocument()
+	})
+
 	it('formats between operator with BetweenValue as "Between from – to"', () => {
 		const table = makeTable()
 		table.setColumnFilters([{ id: 'age', value: { operator: 'between', value: { from: 20, to: 40 } } }])
@@ -146,7 +181,7 @@ describe('<ActiveFiltersBar>', () => {
 		expect(screen.getByText('Between 20 – 40')).toBeInTheDocument()
 	})
 
-	it('renders operator-only chip when op.requiresInput is false (isEmpty)', () => {
+	it('renders an operator-only chip for an operator that takes no value (isEmpty)', () => {
 		const table = makeTable()
 		table.setColumnFilters([{ id: 'name', value: { operator: 'isEmpty' } }])
 
@@ -187,5 +222,64 @@ describe('<ActiveFiltersBar>', () => {
 		expect(container.querySelector('[data-slot="active-filters-bar"]')?.getAttribute('data-chip-position')).toBe(
 			'above',
 		)
+	})
+})
+
+describe('<ActiveFiltersBar> — fields', () => {
+	const fields = [{ id: 'warehouse', header: 'Warehouse', filtering: { operators: true } }]
+
+	it('renders a chip for a field filter, labelled with the field header', () => {
+		const table = makeTable({ filtering: { manual: true, fields } })
+		table.setColumnFilters([{ id: 'warehouse', value: { operator: 'contains', value: 'msk' } }])
+
+		render(
+			<Wrapper table={table}>
+				<ActiveFiltersBar />
+			</Wrapper>,
+		)
+
+		expect(screen.getByText('Warehouse')).toBeInTheDocument()
+		expect(screen.getByText('Contains msk')).toBeInTheDocument()
+	})
+
+	it('removing the chip of a field clears its entry and reports it', async () => {
+		const user = userEvent.setup()
+		const onChange = vi.fn()
+		const table = makeTable({ filtering: { manual: true, onChange, fields } })
+		table.setColumnFilters([
+			{ id: 'name', value: { operator: 'contains', value: 'ali' } },
+			{ id: 'warehouse', value: { operator: 'contains', value: 'msk' } },
+		])
+
+		render(
+			<Wrapper table={table}>
+				<ActiveFiltersBar />
+			</Wrapper>,
+		)
+		await user.click(screen.getByRole('button', { name: /remove warehouse filter/i }))
+
+		expect(table.store.state.columnFilters).toEqual([{ id: 'name', value: { operator: 'contains', value: 'ali' } }])
+		expect(onChange).toHaveBeenLastCalledWith([{ id: 'name', value: { operator: 'contains', value: 'ali' } }])
+	})
+})
+
+describe('<ActiveFiltersBar> — columns the filter surfaces do not offer', () => {
+	it('keeps the chip of a seeded filter on a column with `filtering: false`', () => {
+		const table = makeTable({
+			columns: createColumns<User>([
+				{ accessorKey: 'name', header: 'Name', filtering: false },
+				{ accessorKey: 'age', header: 'Age', cell: { type: 'number' } },
+			]),
+		})
+		table.setColumnFilters([{ id: 'name', value: 'ali' }])
+
+		render(
+			<Wrapper table={table}>
+				<ActiveFiltersBar />
+			</Wrapper>,
+		)
+
+		expect(screen.getByRole('button', { name: /remove name filter/i })).toBeInTheDocument()
+		expect(screen.getByText('ali')).toBeInTheDocument()
 	})
 })

@@ -12,10 +12,12 @@ import { CellTypesProvider, mergeCellTypes } from '../cell-types-context'
 import { GridComponentsProvider, useGridComponents } from '../components-context'
 import { guardComponents } from '../components-guard'
 import { GridFactoryDefaultsProvider } from '../data-grid-options-context'
+import { ItemsSourceHost, ItemsSourceProvider } from '../items-source'
 import { useDataGrid, type UseDataGridConfig } from '../use-data-grid'
 import { useGridMessages } from '../use-grid-messages'
 import { GRID_ROOT_CLASS_NAME, joinClassNames } from '../utils/class-names'
 import { getRowDropOrder } from '../utils/row-drop-order'
+import { dropSortEntry } from '../utils/sort-entry-order'
 
 import { ActionBar, buildSelectionBarArgs } from './action-bar'
 import { ActiveFiltersBar } from './active-filters-bar'
@@ -24,7 +26,6 @@ import { BottomBar } from './bottom-bar'
 import { DataGridCell } from './cell'
 import { ClearFiltersButton } from './clear-filters-button'
 import { ColumnDragHandle } from './column-drag-handle'
-import { ColumnFilter } from './column-filter'
 import { ComponentGuard } from './component-guard'
 import { CreateTrigger } from './create-trigger'
 import { CreatingModal } from './creating-modal'
@@ -33,6 +34,7 @@ import { COLUMN_DROP_SCOPE } from './dnd/column-drop-scope'
 import { buildDndAnnouncements } from './dnd-announcements'
 import { EditingModal } from './editing-modal'
 import { EmptyStateRow } from './empty-state-row'
+import { Filter } from './filter'
 import { FilterPanel } from './filter-panel'
 import { Footer } from './footer'
 import { DataGridFooterCell } from './footer-cell'
@@ -47,10 +49,12 @@ import { LoadingBody } from './loading-body'
 import { NoResultsRow } from './no-results-row'
 import { PageSizer } from './page-sizer'
 import { Pagination } from './pagination'
+import { useReorderModeWarnings } from './reorder-mode-warnings'
 import { DataGridRow } from './row'
 import { RowCountStatus } from './row-count-status'
 import { RowDragHandle } from './row-drag-handle'
 import { RowDragRegistryProvider, useDisplaceRow, useRenderedRowIdsReader } from './row-drag-registry'
+import { SortItem } from './sort-item'
 import { SortMenuTrigger } from './sort-menu-trigger'
 import { DataGridTable } from './table'
 import { TableProvider, useDataGridTable, useDataGridState } from './table-context'
@@ -60,6 +64,7 @@ import { VisibilityTrigger } from './visibility-trigger'
 
 import type { CellTypeRegistry } from '../cell-types-context'
 import type { GridComponents } from '../contract'
+import type { GridContextRecord } from '../grid-context'
 import type { DataTable, ErasedRow, GridFeatures } from '../types'
 import type { DndDragOverEvent, DndDropEvent } from './dnd'
 import type {
@@ -100,8 +105,12 @@ export type DataGridControlledProps<TFeatures extends TableFeatures, TRow extend
  * Uncontrolled usage: pass the same config `useDataGrid` accepts directly and
  * the grid runs the hook for you — no separate `useDataGrid` call needed.
  */
-export type DataGridUncontrolledProps<TFeatures extends TableFeatures, TRow extends object> = DataGridSharedProps &
-	UseDataGridConfig<TFeatures, TRow> & {
+export type DataGridUncontrolledProps<
+	TFeatures extends TableFeatures,
+	TRow extends object,
+	TContext extends object = GridContextRecord,
+> = DataGridSharedProps &
+	UseDataGridConfig<TFeatures, TRow, TContext> & {
 		/** Mutually exclusive with the inline config — never pass both. */
 		table?: never
 	}
@@ -119,9 +128,11 @@ export type DataGridUncontrolledProps<TFeatures extends TableFeatures, TRow exte
  * @example — uncontrolled (no hook)
  * return <DataGrid data={data} columns={columns} sorting />
  */
-export type DataGridProps<TFeatures extends TableFeatures, TRow extends object> =
-	| DataGridControlledProps<TFeatures, TRow>
-	| DataGridUncontrolledProps<TFeatures, TRow>
+export type DataGridProps<
+	TFeatures extends TableFeatures,
+	TRow extends object,
+	TContext extends object = GridContextRecord,
+> = DataGridControlledProps<TFeatures, TRow> | DataGridUncontrolledProps<TFeatures, TRow, TContext>
 
 function resolveConfirmationText<TRow extends object>(
 	options: ConfirmationConfig<TRow>,
@@ -324,6 +335,7 @@ function GridDndProvider({ children }: { children: ReactNode }) {
 	const adapter = useDndAdapter()
 	const table = useDataGridTable()
 	const messages = useGridMessages()
+	useReorderModeWarnings(table.grid, adapter !== null)
 	const readRenderedRowIds = useRenderedRowIdsReader()
 	const displaceRow = useDisplaceRow()
 
@@ -420,6 +432,17 @@ function GridDndProvider({ children }: { children: ReactNode }) {
 					table.setColumnOrder(dropColumn(table, event.sourceId, event.targetId, scope))
 					return
 				}
+				case DragAxis.Sorting: {
+					/*
+					 * An entry of the sort builder: the pair of ids names two entries of `sorting`, and
+					 * the source lands where the target stood, keeping its direction. `null` is a self-drop,
+					 * an id the sort no longer holds, or a column outside multi-sort pushed below the first
+					 * place — nothing to commit, so nothing reaches `onChange`.
+					 */
+					const next = dropSortEntry(table, event.sourceId, event.targetId)
+					if (next) table.setSorting(next)
+					return
+				}
 			}
 		},
 		[table],
@@ -472,6 +495,9 @@ function GridDndProvider({ children }: { children: ReactNode }) {
 					// Same scope the commit will use, from the same lookup: a step the surface's own
 					// scope allows must not be refused here, and one it forbids must not be allowed.
 					return canDropColumn(table, event.sourceId, event.targetId, COLUMN_DROP_SCOPE[event.surface])
+				case DragAxis.Sorting:
+					// The one boundary priority has: a column outside multi-sort stays first.
+					return dropSortEntry(table, event.sourceId, event.targetId) !== null
 			}
 		},
 		[table],
@@ -548,9 +574,19 @@ function DataGridControlled<TFeatures extends TableFeatures, TRow extends object
 		)
 	}
 
-	// Read cellTypes stored on the table by useDataGrid, merge with direct prop
+	// Read cellTypes stored on the table by useDataGrid, merge with direct prop. Memoised: every
+	// `useCellTypes()` reader — each cell among them — re-renders when this registry changes
+	// identity, so rebuilding it per render made a host re-render reach every cell in the grid.
 	const tableCellTypes = table.grid.cellTypes
-	const resolvedCellTypes = mergeCellTypes(tableCellTypes ?? {}, cellTypes ?? {})
+	const resolvedCellTypes = useMemo(
+		() => mergeCellTypes(tableCellTypes ?? {}, cellTypes ?? {}),
+		[tableCellTypes, cellTypes],
+	)
+
+	// Built once, so a re-render of the grid's host bails out at this element exactly as it does at
+	// `children`: the `useItems` hooks it runs must not be called again because something above the
+	// grid re-rendered. It takes no props and reads only the items-source store, whose value is stable.
+	const itemsSourceHost = useMemo(() => <ItemsSourceHost />, [])
 
 	// The two write-feature options, read at the **widest** instantiation.
 	//
@@ -618,13 +654,18 @@ function DataGridControlled<TFeatures extends TableFeatures, TRow extends object
 								 */}
 								<RowDragRegistryProvider>
 									<GridDndProvider>
-										<GridRoot>
-											<RowCountStatus />
-											<GridBody>{children}</GridBody>
-											{writeOptions.creating?.mode === CreatingMode.Modal && <CreatingModal />}
-											{writeOptions.editing?.mode === EditingMode.Modal && <EditingModal />}
-											<ConfirmDialogRenderer />
-										</GridRoot>
+										<ItemsSourceProvider>
+											<GridRoot>
+												{/* Renders nothing: it runs the `useItems` hooks that something on screen
+											    reads, inside every provider above so a hook may read the grid. */}
+												{itemsSourceHost}
+												<RowCountStatus />
+												<GridBody>{children}</GridBody>
+												{writeOptions.creating?.mode === CreatingMode.Modal && <CreatingModal />}
+												{writeOptions.editing?.mode === EditingMode.Modal && <EditingModal />}
+												<ConfirmDialogRenderer />
+											</GridRoot>
+										</ItemsSourceProvider>
 									</GridDndProvider>
 								</RowDragRegistryProvider>
 							</TableProvider>
@@ -751,19 +792,18 @@ export type DataGridStatics = {
 	Pagination: typeof Pagination
 	PageSizer: typeof PageSizer
 	BottomBar: typeof BottomBar
-	ColumnFilter: typeof ColumnFilter
+	Filter: typeof Filter
 	ActionBar: typeof ActionBar
 	CreateTrigger: typeof CreateTrigger
 	VisibilityTrigger: typeof VisibilityTrigger
 	VisibilityItem: typeof VisibilityItem
 	SortMenuTrigger: typeof SortMenuTrigger
+	SortItem: typeof SortItem
 	GlobalFilterInput: typeof GlobalFilterInput
 	ActiveFiltersBar: typeof ActiveFiltersBar
 	GroupByBar: typeof GroupByBar
 	ClearFiltersButton: typeof ClearFiltersButton
 	FilterPanel: typeof FilterPanel
-	CreatingModal: typeof CreatingModal
-	EditingModal: typeof EditingModal
 	LoadingBody: typeof LoadingBody
 	EmptyStateRow: typeof EmptyStateRow
 	NoResultsRow: typeof NoResultsRow
@@ -824,19 +864,18 @@ export const DataGrid: DataGridType = /* @__PURE__ */ Object.assign(DataGridRoot
 	Pagination,
 	PageSizer,
 	BottomBar,
-	ColumnFilter,
+	Filter,
 	ActionBar,
 	CreateTrigger,
 	VisibilityTrigger,
 	VisibilityItem,
 	SortMenuTrigger,
+	SortItem,
 	GlobalFilterInput,
 	ActiveFiltersBar,
 	GroupByBar,
 	ClearFiltersButton,
 	FilterPanel,
-	CreatingModal,
-	EditingModal,
 	LoadingBody,
 	EmptyStateRow,
 	NoResultsRow,

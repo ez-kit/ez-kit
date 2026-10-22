@@ -221,6 +221,16 @@ export type GridMessages = {
 		thenBy: string
 		/** The button that appends a sort. */
 		add: string
+		/**
+		 * Accessible name of the control that raises one entry's priority by a step — moves it one
+		 * position up the builder's list. Named for the entry, so a list of them is not read as a
+		 * run of identical buttons.
+		 */
+		moveUp: (ctx: SortEntryContext) => string
+		/** Accessible name of the control that lowers one entry's priority by a step. */
+		moveDown: (ctx: SortEntryContext) => string
+		/** Accessible name of one entry's drag handle in the builder. */
+		dragSort: (ctx: SortEntryContext) => string
 	}
 	/** The toolbar column-visibility menu. */
 	/**
@@ -306,6 +316,14 @@ export type GridMessages = {
 		columnDropped: (ctx: OrderingColumnContext) => string
 		/** Announced when a column drag is cancelled — see {@link rowCancelled} on the position. */
 		columnCancelled: (ctx: OrderingColumnContext) => string
+		/** Announced when a sort entry is picked up in the sort builder. */
+		sortPickedUp: (ctx: OrderingSortContext) => string
+		/** Announced when a held sort entry reaches a new position. */
+		sortMovedTo: (ctx: OrderingSortContext) => string
+		/** Announced when a sort entry is dropped. */
+		sortDropped: (ctx: OrderingSortContext) => string
+		/** Announced when a sort entry drag is cancelled — see {@link rowCancelled} on the position. */
+		sortCancelled: (ctx: OrderingSortContext) => string
 	}
 	visibility: {
 		/** Accessible name of the toolbar's visibility trigger. */
@@ -329,10 +347,19 @@ export type GridMessages = {
 	filtering: {
 		/** Accessible name of a header's filter trigger. */
 		trigger: string
-		/** Placeholder of a column's text filter input. */
+		/**
+		 * A filter's accessible name, and its visible placeholder unless the column or field sets
+		 * its own `filtering.placeholder` hint.
+		 */
 		placeholder: (ctx: FilterPlaceholderContext) => string
-		/** Accessible name of the operator select. */
+		/** Accessible name of the operator menu — the list of a filter's operators. */
 		operator: string
+		/**
+		 * Accessible name of the button that opens the operator menu. It has to carry the current
+		 * operator: the button shows a sign (`≥`, `*a*`) or a clipped label, and neither reads well
+		 * aloud.
+		 */
+		operatorTrigger: (ctx: FilterOperatorTriggerContext) => string
 		/** What a filter chip reads when the column carries no value yet. */
 		any: string
 		/** Clear this column's filter. */
@@ -341,18 +368,32 @@ export type GridMessages = {
 		clearAll: string
 		/** Lower bound of a range filter: placeholder and accessible name. */
 		from: string
+		/**
+		 * The date presets offered beside a date filter. The first six are ranges, for an operator with
+		 * `input: 'range'`; the last three are single dates, for one with `input: 'single'` (`equals`,
+		 * `lessThan`, `greaterThan`, …). `today` and `yesterday` serve both — a one-day range and the day itself.
+		 */
+		presets: Record<
+			'today' | 'yesterday' | 'last7' | 'last30' | 'thisMonth' | 'lastMonth' | 'weekAgo' | 'monthAgo' | 'startOfMonth',
+			string
+		>
 		/** Upper bound of a range filter: placeholder and accessible name. */
 		to: string
 		/** Accessible name of a range filter as a whole. */
 		range: string
 		/** Accessible name of a date-range filter. */
 		dateRange: string
-		/** Accessible name of the date-range preset menu, and its trigger while none is active. */
-		presets: string
+		/** Accessible name of the date preset menu, and its trigger while none is active. */
+		presetMenu: string
 		/** Placeholder of the search box inside a multi-select filter. */
 		search: string
 		/** Shown when a multi-select filter's search matches nothing. */
 		noResults: string
+		/**
+		 * Shown in place of a value list whose `useItems` hook failed — a filter's or an editor's
+		 * options. Loading uses `fallbacks.loading`.
+		 */
+		itemsError: string
 	}
 	/** The global search box. */
 	globalFiltering: {
@@ -465,43 +506,6 @@ export type GridMessages = {
 		/** An empty date-range picker's trigger text. */
 		pickRange: string
 	}
-	/**
-	 * Filter-operator labels, grouped the way the built-in operator sets are.
-	 *
-	 * The same id means the same comparison whatever the column's cell type is — only the
-	 * wording changes, which is exactly what these groups hold: `greaterThan` reads "Greater
-	 * than" on a number column and "After" on a date one. A custom operator registered through
-	 * `filtering.operators.items` carries its own `label` and is not looked up here.
-	 */
-	operators: {
-		/** Text columns, and the `image` / `link` types that filter as text. */
-		text: Record<'contains' | 'equals' | 'notEquals' | 'startsWith' | 'endsWith', string>
-		/** Number columns, and `progress`. */
-		number: Record<
-			'equals' | 'notEquals' | 'greaterThan' | 'greaterOrEqual' | 'lessThan' | 'lessOrEqual' | 'between',
-			string
-		>
-		/** Date columns — the same comparisons as `number`, spoken as a calendar. */
-		date: Record<
-			'equals' | 'notEquals' | 'greaterThan' | 'greaterOrEqual' | 'lessThan' | 'lessOrEqual' | 'between',
-			string
-		>
-		/** Boolean columns. Equality only — a boolean has no ordering. */
-		boolean: Record<'equals' | 'notEquals', string>
-		/** `select` / `badge` columns, which filter by set membership. */
-		multi: Record<'in' | 'notIn', string>
-		/** The emptiness pair, shared by every cell type's default set. */
-		empty: Record<'isEmpty' | 'isNotEmpty', string>
-		/**
-		 * The date presets offered beside a date filter. The first six are ranges, for `between`;
-		 * the last three are single dates, for the operators that take one (`equals`, `lessThan`,
-		 * `greaterThan`, …). `today` and `yesterday` serve both — a one-day range and the day itself.
-		 */
-		presets: Record<
-			'today' | 'yesterday' | 'last7' | 'last30' | 'thisMonth' | 'lastMonth' | 'weekAgo' | 'monthAgo' | 'startOfMonth',
-			string
-		>
-	}
 	/** Loading / empty / no-results states and the infinite-scroll row. */
 	fallbacks: {
 		/** Accessible name of the loading state. */
@@ -571,6 +575,29 @@ export type OrderingColumnContext = {
 	total: number
 }
 
+/**
+ * What a sort-entry announcement is given — the shape of {@link OrderingColumnContext}, counted in
+ * a different list.
+ *
+ * A third type rather than a reuse of the column one, because the numbers mean something else: the
+ * position is the entry's **priority**, among the entries of the sort, and a sort entry is a column
+ * only by reference — the sentence names the sort, not the column's place in the table.
+ */
+export type OrderingSortContext = {
+	/** The sorted column's heading when it is text, and its id when the heading is an element. */
+	name: string
+	/** The entry's priority, counted from one. */
+	position: number
+	/** How many entries the sort has. */
+	total: number
+}
+
+/** What a sort builder entry's accessible names are given. */
+export type SortEntryContext = {
+	/** The sorted column's heading when it is text, and its id when the heading is an element. */
+	label: string
+}
+
 /** What {@link GridMessages.draft.summary} is given. */
 export type DraftSummaryContext = {
 	/** The bar's own short label — `draft.label`, passed through so an override of it carries. */
@@ -584,8 +611,19 @@ export type DraftSummaryContext = {
 
 /** What {@link GridMessages.filtering.placeholder} is given. */
 export type FilterPlaceholderContext = {
-	/** The column's id — its `accessorKey` unless an explicit `id` was set. */
+	/** The column's id — its `accessorKey` unless an explicit `id` was set — or the field's `id`. */
 	columnId: string
+	/**
+	 * What a reader knows the filter by: the column's header when it is a string, else its id; a
+	 * field's `header`. The default dictionary names the filter with this, not with the id.
+	 */
+	label: string
+}
+
+/** What {@link GridMessages.filtering.operatorTrigger} is given. */
+export type FilterOperatorTriggerContext = {
+	/** The current operator's label, as its menu item reads it. */
+	label: string
 }
 
 /**

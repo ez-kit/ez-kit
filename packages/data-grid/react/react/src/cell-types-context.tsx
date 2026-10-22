@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo } from 'react'
 
-import type { CellViewCtx, FieldState, FilterOperatorId } from '@ez-kit/data-grid-core'
+import type { CellViewCtx, FieldState } from '@ez-kit/data-grid-core'
 import type { ComponentType, ReactNode } from 'react'
 
 // ── prop types ────────────────────────────────────────────────────────────
@@ -52,13 +52,6 @@ export type CellTypeDefinition<TConfig = unknown> = {
 	 * left empty (filters do not surface validation). Falls back to `editing` when omitted.
 	 */
 	filtering?: ComponentType<FieldState<TConfig>>
-	/**
-	 * Operator ids this cell type offers when a column sets `filtering.operators: true` and
-	 * the type is not one of the built-ins. Typed {@link FilterOperatorId}, not `string`.
-	 */
-	operators?: FilterOperatorId[]
-	/** Which of them the filter opens with. */
-	defaultOperator?: FilterOperatorId
 }
 
 /**
@@ -83,11 +76,18 @@ export type CellTypeDefinition<TConfig = unknown> = {
  *   editing: RatingCellInput,
  * })
  * // → its columns require `cell: { type: 'rating', config: { max } }`
+ *
+ * The second parameter is for a type whose columns write a different config than its renderers
+ * read — `select` / `badge`, whose columns may state their list as a hook the grid resolves before
+ * any renderer runs. It defaults to the first, which is every other type.
  */
-export function defineCellType<TConfig = never>() {
+// `TColumnConfig` appears once on purpose: it is only the phantom `__config`, the type a column is
+// checked against, and has nothing to infer from.
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
+export function defineCellType<TConfig = never, TColumnConfig = TConfig>() {
 	return <TDefinition extends CellTypeDefinition<TConfig>>(
 		definition: TDefinition,
-	): TDefinition & { __config?: TConfig } => definition
+	): TDefinition & { __config?: TColumnConfig } => definition
 }
 
 /**

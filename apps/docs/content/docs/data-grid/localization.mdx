@@ -87,28 +87,38 @@ const ru: PartialGridMessages = {
 
 ## Filter operators
 
-Operator labels are in the dictionary too, grouped the way the built-in operator sets are. The same
-id means the same comparison whatever the column's cell type is, and only the wording changes —
-which is exactly what the groups hold:
+Operator labels are **not** in the dictionary. An operator's `label` is written on its definition,
+and the control, its menu, the active-filter chip and the filter model all show that — so a
+translated grid passes a translated operator set. Copy the ready-made definitions with new labels
+and pass the result as `operators`, in `createDataGrid`, on a `DataGridOptionsProvider` or on a grid:
 
 ```ts
-const ru: PartialGridMessages = {
-	operators: {
-		text: {
-			contains: 'Содержит',
-			equals: 'Равно',
-			notEquals: 'Не равно',
-			startsWith: 'Начинается с',
-			endsWith: 'Заканчивается на',
-		},
-		date: { greaterThan: 'После', lessThan: 'До' /* … */ },
-		empty: { isEmpty: 'Пусто', isNotEmpty: 'Не пусто' },
-	},
+import { defaultOperators } from '@ez-kit/data-grid-core/operators'
+
+const RU: Partial<Record<string, string>> = { contains: 'Содержит', equals: 'Равно', isEmpty: 'Пусто' /* … */ }
+const translated = (set: FilterOperatorDef[]) => set.map((op) => ({ ...op, label: RU[op.id] ?? op.label }))
+
+const ruOperators = {
+	byType: { text: translated(defaultOperators.byType.text), date: translated(defaultOperators.byType.date) },
 }
 ```
 
-A custom operator registered through `filtering.operators.items` carries its own `label` and is
-never looked up here.
+A layer replaces only the cell types it names, so the sets you leave out keep their English labels.
+The same id can be worded per type — the date set's `greaterThan` is "After" where the number set's
+is "Greater than" — which is why the translation goes per set rather than per id. See
+[Filter operators](/docs/data-grid/filtering/operators#the-operator-set).
+
+The date presets are still the dictionary's, under `filtering.presets`, and the preset menu's own
+name is `filtering.presetMenu`:
+
+```ts
+const ru: PartialGridMessages = {
+	filtering: {
+		presetMenu: 'Быстрый выбор',
+		presets: { today: 'Сегодня', yesterday: 'Вчера', last7: 'Последние 7 дней' /* … */ },
+	},
+}
+```
 
 ## Reading the dictionary yourself
 

@@ -3,8 +3,8 @@ title: Editing
 description: Row, modal and cell editing — one handler, typed values, validation before commit.
 ---
 
-Editing is one option and one handler. `editing.onSave` receives the row id and the edited
-values; supply it and the grid mounts the edit affordance, the form inputs and the commit
+Editing is one option and one handler. `editing.onSave` receives the row id, the row and the
+edited values; supply it and the grid mounts the edit affordance, the form inputs and the commit
 pipeline.
 
 ## Usage
@@ -32,11 +32,11 @@ a [defaults layer](/docs/data-grid/state/defaults) describe how editing should _
 
 `mode` is what editing _does_, not how it looks.
 
-| `mode`    | Behaviour                                                                                             |
-| --------- | ----------------------------------------------------------------------------------------------------- |
-| `'row'`   | The default. The row turns into inputs in place; the actions cell offers Save / Cancel.               |
-| `'modal'` | A dialog collects the whole row. `<DataGrid.EditingModal />` is mounted for you when this mode is on. |
-| `'cell'`  | One cell at a time. Double-click a cell to open it; Enter or leaving it commits, Escape cancels.      |
+| `mode`    | Behaviour                                                                                        |
+| --------- | ------------------------------------------------------------------------------------------------ |
+| `'row'`   | The default. The row turns into inputs in place; the actions cell offers Save / Cancel.          |
+| `'modal'` | A dialog collects the whole row. The grid mounts it for you when this mode is on.                |
+| `'cell'`  | One cell at a time. Double-click a cell to open it; Enter or leaving it commits, Escape cancels. |
 
 ### Row
 
@@ -55,8 +55,9 @@ The row you picked turns into inputs in place, and the actions cell swaps Edit f
 
 ### Modal
 
-The same form, collected in a dialog instead of in the row. `<DataGrid.EditingModal />` is mounted
-for you — nothing to place by hand.
+The same form, collected in a dialog instead of in the row. The grid mounts the dialog itself —
+nothing to place by hand. To replace it, or the form inside it, register a `FormModal`; see
+[a form of your own](/docs/data-grid/editing/creating#a-form-of-your-own).
 
 <DataGridDocsExample exampleId='editing-mode-modal' />
 
@@ -125,16 +126,38 @@ const columns = createColumns<User>([
 `editing.component` receives a `FieldState` — `value`, `onChange`, `onBlur`, `error`, `errors`,
 `isValidating`, plus the column's `config`, `label` and `description` in form contexts.
 
+## What `onSave` receives
+
+`values` holds the fields of the edit form and nothing else: every column the form shows, but no
+system column and no column with `editing: false`. In cell mode it holds the one edited column.
+Everything else about the row — its id field, a column left read-only, a `version` no column
+shows — is on `row`, the row as it is in `data`:
+
+```ts
+editing: {
+	onSave: async ({ rowId, row, values, signal }) => {
+		// Optimistic locking: the version is not a column, so it is not in `values`.
+		await api.update(rowId, { ...values, version: row?.version }, { signal })
+	},
+}
+```
+
+`row` is read-only context: nothing in it is saved unless you put it in the request yourself. It
+is `undefined` only when the row left `data` while the form was open.
+
+Earlier versions seeded the form with every non-system column, `editing: false` ones included, so
+those values reached `onSave` unchanged. Read them from `row` now.
+
 ## Options
 
-| `editing` key | Type                                                   | Description                                                                                           |
-| ------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
-| `onSave`      | `({ rowId, values, signal }) => void \| Promise<void>` | Required. Commit the edit. `signal` aborts when the user cancels or the table unmounts.               |
-| `mode`        | `'row' \| 'modal' \| 'cell'`                           | What editing does. Default `'row'`.                                                                   |
-| `validate`    | `ValidateConfig`                                       | A function, or `{ schema }` for zod. See [Validation](/docs/data-grid/editing/validation).            |
-| `validateOn`  | `'submit' \| 'blur' \| 'change'`                       | When a field validates. Default `'submit'`. A column overrides it under its own `editing.validateOn`. |
-| `debounce`    | `number`                                               | Debounce for `validateOn: 'change'`. Default `200`.                                                   |
-| `enabled`     | `boolean`                                              | Explicit off-switch for a config that came from a defaults layer.                                     |
+| `editing` key | Type                                                        | Description                                                                                                |
+| ------------- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `onSave`      | `({ rowId, row, values, signal }) => void \| Promise<void>` | Required. Commit the edit. `signal` aborts when the user cancels or the table unmounts.                    |
+| `mode`        | `'row' \| 'modal' \| 'cell'`                                | What editing does. Default `'row'`.                                                                        |
+| `validate`    | `ValidateConfig`                                            | A function, or `{ schema }` for any Standard Schema. See [Validation](/docs/data-grid/editing/validation). |
+| `validateOn`  | `'submit' \| 'blur' \| 'change'`                            | When a field validates. Default `'submit'`. A column overrides it under its own `editing.validateOn`.      |
+| `debounce`    | `number`                                                    | Debounce for `validateOn: 'change'`. Default `200`.                                                        |
+| `enabled`     | `boolean`                                                   | Explicit off-switch for a config that came from a defaults layer.                                          |
 
 ## Reading and driving it yourself
 
@@ -143,10 +166,16 @@ const columns = createColumns<User>([
 ```ts
 table.editing.start(rowId)
 table.editing.setValue('email', next)
-await table.editing.commit()
+const result = await table.editing.commit() // { ok: true } | { ok: false, reason, … }
 table.editing.cancel()
-table.editing.getState() // { rowId, cellId, values, errors, formError, commitStatus }
+table.editing.getState() // { rowId, cellId, values, initialValues, errors, formError, commitStatus }
 ```
+
+`commit({ values })` saves values collected elsewhere instead of the ones in the grid's state, and
+`validateValues(values)` runs the validator without writing anything — the two halves a form of
+your own needs. A rejected save resolves as `{ ok: false }` rather than throwing; only an error the
+grid cannot interpret rejects the promise. See
+[a form of your own](/docs/data-grid/editing/creating#a-form-of-your-own).
 
 `row.getIsEditing()` answers whether a given row is the one being edited.
 

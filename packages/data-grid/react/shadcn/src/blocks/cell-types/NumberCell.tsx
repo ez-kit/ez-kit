@@ -14,7 +14,7 @@ import type { CellTypeDefinition, FieldState, NumberCellConfig } from '@ez-kit/d
  * View rendering for `number` is provided by the shared react package
  * (`toLocaleString`) — UI-kit specific styling is unnecessary here.
  */
-function NumberCellInput({ id, value, onChange, onBlur, label, description, errors }: FieldState) {
+function NumberCellInput({ id, value, onChange, onBlur, label, description, placeholder, errors }: FieldState) {
 	const hasError = errors.length > 0
 	const numericValue = typeof value === 'number' && !Number.isNaN(value) ? value : ''
 	return (
@@ -29,6 +29,7 @@ function NumberCellInput({ id, value, onChange, onBlur, label, description, erro
 					onChange(Number.isNaN(n) ? undefined : n)
 				}}
 				onBlur={onBlur}
+				placeholder={placeholder}
 				aria-invalid={hasError || undefined}
 			/>
 			{description !== undefined && <FieldDescription>{description}</FieldDescription>}

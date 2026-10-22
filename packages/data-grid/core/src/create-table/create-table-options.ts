@@ -6,18 +6,20 @@ import { DEFAULT_PAGE_SIZE, UNKNOWN_PAGE_COUNT } from '../defaults'
 import { CreatingMode } from '../features/creating'
 import { EditingMode } from '../features/editing'
 import { MANUAL_GROUPED_ROW_MODEL } from '../features/grouping/create-manual-grouped-row-model'
-import { buildOperatorRegistry } from '../features/operators'
 import { RowActionsPlacement } from '../features/row-actions'
 import { buildColumnList, extractPinningState } from '../system-columns'
 import { ColumnResizeMode, ExpandingMode, GridDirection, GroupingMode, MultiSortEvent, PaginationMode } from '../types'
 import { featureConfig, isFeatureEnabled } from '../utils/feature-flag'
 import { setIfDefined } from '../utils/set-if-defined'
+import { warnOnce } from '../utils/warn-once'
 
 import { withGatedFilteredRowModel } from './gate-column-filters'
+import { resolveFilterFields } from './resolve-filter-fields'
 
-import type { ColumnDef, SystemColumnDef } from '../column/types'
+import type { ColumnDef, ResolvedFilterField, SystemColumnDef } from '../column/types'
 import type { ColumnInvariants } from '../column-state'
 import type { DraftApplyHandlers } from '../features/deferred-apply'
+import type { OperatorsConfig } from '../features/operators'
 import type { RowActionsConfig } from '../features/row-actions'
 import type {
 	GlobalFilterFn,
@@ -350,6 +352,11 @@ function hasSeedContent(value: unknown): boolean {
 	return true
 }
 
+/** Whether an operator set offers anything for at least one cell type. */
+function hasAnyOperatorSet(operators: OperatorsConfig | undefined): boolean {
+	return Object.values(operators?.byType ?? {}).some((set) => set !== undefined && set.length > 0)
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function collectInitialHidden<TRow extends object>(defs: ColumnDef<TRow, any>[]): Record<string, boolean> {
 	const acc: Record<string, boolean> = {}
@@ -434,6 +441,11 @@ export type GridOptions<TRow extends object> = {
 	groupingMode?: GroupingModeValue
 	/** The grid's text direction, declared once at the root. */
 	direction: GridDirectionValue
+	/**
+	 * `filtering.fields`, checked and resolved by the rule columns are resolved by. Absent when the
+	 * table declares none, or when they are not offered because `filtering.manual` is not `true`.
+	 */
+	filterFields?: ResolvedFilterField[]
 }
 
 /**
@@ -665,15 +677,24 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 			return id != null ? String(id) : String(index)
 		})
 
-	// ── operator registry ────────────────────────────────────────────────────
-	// One option, two jobs: `items` seeds the registry, and the option's presence is the
-	// table-wide switch every column falls back to. `undefined` is a third state — neither on
-	// nor off — so a table that never mentions operators keeps the per-column opt-in.
+	// ── operators ────────────────────────────────────────────────────────────
+	// The table-wide switch every column falls back to. `undefined` is a third state — neither on
+	// nor off — so a table that never mentions operators keeps the per-column opt-in. Which
+	// operators exist is the grid's `operators` set, by cell type.
 	const tableOperatorsCfg = filteringCfg?.operators
-	const operatorRegistry = buildOperatorRegistry(
-		typeof tableOperatorsCfg === 'object' ? tableOperatorsCfg.items : undefined,
-	)
-	const tableOperators: boolean | undefined = tableOperatorsCfg === undefined ? undefined : tableOperatorsCfg !== false
+	const tableOperators: boolean | undefined = tableOperatorsCfg
+	const operators = config.operators
+
+	// A table-wide `true` over a grid with no set at all turns nothing on: every column falls back
+	// to a plain filter, and each stays silent about it (it did not ask). Said once, here, rather
+	// than not at all — this is a bundle composed without `operators`.
+	if (IS_DEV && tableOperators === true && !hasAnyOperatorSet(operators)) {
+		warnOnce(
+			'[data-grid] `filtering.operators: true` is set, but the grid has no operators for any cell type, so ' +
+				'every column keeps a plain filter. Pass a set as `operators` — the ready-made one is ' +
+				'`defaultOperators` from `@ez-kit/data-grid-core/operators`.',
+		)
+	}
 
 	// ── faceted opt-in ───────────────────────────────────────────────────────
 	// The table-level flag, which the mapper reads. In v9 a faceted row model is a slot in the
@@ -703,8 +724,20 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 		}
 	}
 
+	// Facets are counted over the rows the grid holds. Under server filtering those are one page of
+	// the result, so a count reads as a total while being a page's — and nothing about the grid
+	// looks wrong. The behaviour stays; the author is told where real counts go instead.
+	if (IS_DEV && facetedNeeded && filteringCfg?.manual === true) {
+		warnOnce(
+			'[data-grid] `filtering.faceted` is on beside `filtering.manual: true`, so facets are counted over ' +
+				'the loaded rows only — a page of the result, not the whole of it. To show server-side counts, ' +
+				'return them as `count` on the items of a `useItems` hook.',
+		)
+	}
+
 	// ── map user columns → TanStack columns ──────────────────────────────────
-	const mappedUserColumns = mapColumns(config.columns, operatorRegistry, {
+	const mappedUserColumns = mapColumns(config.columns, {
+		operators,
 		tableFaceted,
 		columnFiltering: hasColumnFiltering,
 		...(tableOperators !== undefined ? { tableOperators } : {}),
@@ -1020,6 +1053,12 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 	})
 
 	const { start: pinnedStart, end: pinnedEnd } = extractPinningState(allColumns)
+
+	// After the system columns are in, so a field cannot take `__select__` or `__drag__` either.
+	const filterFields = resolveFilterFields(filteringCfg?.fields, allColumns, filteringCfg?.manual === true, {
+		operators,
+		tableOperators,
+	})
 
 	// ── build TanStack options ────────────────────────────────────────────────
 	const defaultPageSize = paginationCfg?.pageSize ?? DEFAULT_PAGE_SIZE
@@ -1470,6 +1509,7 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 		// on — unlike `columnResizeDirection`, which is an option of the resizing feature.
 		...(hasGrouping ? { groupingMode: groupingCfg?.mode ?? GroupingMode.Single } : {}),
 		direction: config.direction ?? GridDirection.Ltr,
+		...(filterFields.length > 0 ? { filterFields } : {}),
 	}
 
 	return { options, deferred, grid, bindStateHandlers }

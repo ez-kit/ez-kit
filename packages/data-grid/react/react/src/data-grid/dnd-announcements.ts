@@ -1,6 +1,7 @@
 import { canDropColumn } from '@ez-kit/data-grid-core'
 
 import { getRowDropIndex, getRowDropOrder } from '../utils/row-drop-order'
+import { dropSortEntry } from '../utils/sort-entry-order'
 import { getVisibilityPanelColumns } from '../utils/visibility-panel-columns'
 import { getVisualLeafColumns } from '../utils/visual-column-order'
 
@@ -10,14 +11,19 @@ import { columnNameOf } from './visually-hidden'
 
 import type { DataTable, GridFeatures } from '../types'
 import type { DndAnnouncement, DndAnnouncements, DndDragOverEvent, DndDragSourceEvent, DndDropEvent } from './dnd'
-import type { GridMessages, OrderingColumnContext, OrderingPositionContext } from '@ez-kit/data-grid-core'
+import type {
+	GridMessages,
+	OrderingColumnContext,
+	OrderingPositionContext,
+	OrderingSortContext,
+} from '@ez-kit/data-grid-core'
 import type { Column } from '@tanstack/table-core'
 
 /** The `ordering` group of the resolved catalogue, read live on every announcement. */
 type OrderingMessages = GridMessages['ordering']
 
 /**
- * The two sentences one moment of a drag has — one per axis.
+ * The sentences one moment of a drag has — one per axis.
  *
  * A row and a column are announced by **different catalogue keys**, not by one key taking a name the
  * grid built: a row has no heading, only a place, so its sentence has to be able to say "row 3 of
@@ -30,6 +36,7 @@ type OrderingMessages = GridMessages['ordering']
 type OrderingSentences = {
 	row: (ctx: OrderingPositionContext) => string
 	column: (ctx: OrderingColumnContext) => string
+	sort: (ctx: OrderingSortContext) => string
 }
 
 /**
@@ -103,8 +110,8 @@ type LandingSnapshot =
 			ids: readonly string[]
 	  }
 	| {
-			axis: typeof DragAxis.Column
-			/** Column ids of the drag's surface, as that surface listed them at pickup. */
+			axis: typeof DragAxis.Column | typeof DragAxis.Sorting
+			/** Column ids of the drag's surface — or of the sort's entries — as listed at pickup. */
 			ids: readonly string[]
 			/** The held column's name, resolved at pickup by {@link columnNameOf}. */
 			name: string
@@ -217,6 +224,21 @@ export function buildDndAnnouncements<TRow extends object>(
 	}
 
 	/**
+	 * A sort entry's name and 1-based priority — or `null` if either id is not in the sort.
+	 *
+	 * Counted in the sort itself, which is the list the builder renders and the drag's index space:
+	 * an entry's position there is its priority, which is what the sentence is about.
+	 */
+	const sortContext = (subject: SentenceSubject): OrderingSortContext | null => {
+		const table = readTable()
+		const ids = table.store.state.sorting.map((entry) => entry.id)
+		const position = ids.indexOf(subject.positionId)
+		if (position < 0 || !ids.includes(subject.nameId)) return null
+
+		return { name: sortEntryName(table, subject.nameId), position: position + 1, total: ids.length }
+	}
+
+	/**
 	 * One sentence, or silence.
 	 *
 	 * **The keyboard gate is here rather than at each call site** so no later moment can forget it.
@@ -243,6 +265,11 @@ export function buildDndAnnouncements<TRow extends object>(
 				const ctx = columnContext(event.surface, subject)
 
 				return ctx ? sentences.column(ctx) : undefined
+			}
+			case DragAxis.Sorting: {
+				const ctx = sortContext(subject)
+
+				return ctx ? sentences.sort(ctx) : undefined
 			}
 		}
 	}
@@ -271,6 +298,12 @@ export function buildDndAnnouncements<TRow extends object>(
 					: null
 				return
 			}
+			case DragAxis.Sorting: {
+				const table = readTable()
+				const ids = table.store.state.sorting.map((entry) => entry.id)
+				held = ids.includes(sourceId) ? { axis: DragAxis.Sorting, ids, name: sortEntryName(table, sourceId) } : null
+				return
+			}
 		}
 	}
 
@@ -296,6 +329,8 @@ export function buildDndAnnouncements<TRow extends object>(
 				return table.ordering?.canDropRow?.(event.sourceId, event.targetId) ?? false
 			case DragAxis.Column:
 				return canDropColumn(table, event.sourceId, event.targetId, COLUMN_DROP_SCOPE[event.surface])
+			case DragAxis.Sorting:
+				return dropSortEntry(table, event.sourceId, event.targetId) !== null
 		}
 	}
 
@@ -358,8 +393,10 @@ export function buildDndAnnouncements<TRow extends object>(
 		const ordering = readMessages().ordering
 		const place = { position: position + 1, total: snapshot.ids.length }
 
-		return snapshot.axis === DragAxis.Row
-			? ordering.rowDropped(place)
+		if (snapshot.axis === DragAxis.Row) return ordering.rowDropped(place)
+
+		return snapshot.axis === DragAxis.Sorting
+			? ordering.sortDropped({ name: snapshot.name, ...place })
 			: ordering.columnDropped({ name: snapshot.name, ...place })
 	}
 
@@ -377,6 +414,7 @@ export function buildDndAnnouncements<TRow extends object>(
 			return sentence(event, { nameId: event.sourceId, positionId: event.sourceId }, RowPositionSource.Window, (o) => ({
 				row: o.rowPickedUp,
 				column: o.columnPickedUp,
+				sort: o.sortPickedUp,
 			}))
 		},
 		/*
@@ -394,6 +432,7 @@ export function buildDndAnnouncements<TRow extends object>(
 				: sentence(event, { nameId: event.sourceId, positionId: event.targetId }, RowPositionSource.Window, (o) => ({
 						row: o.rowMovedTo,
 						column: o.columnMovedTo,
+						sort: o.sortMovedTo,
 					})),
 		dragEnd: landing,
 		/*
@@ -408,7 +447,13 @@ export function buildDndAnnouncements<TRow extends object>(
 			return sentence(event, { nameId: event.sourceId, positionId: event.sourceId }, RowPositionSource.Table, (o) => ({
 				row: o.rowCancelled,
 				column: o.columnCancelled,
+				sort: o.sortCancelled,
 			}))
 		},
 	}
+}
+
+/** A sorted column's name: its heading when it is text, its id when the heading is an element. */
+function sortEntryName<TRow extends object>(table: DataTable<GridFeatures, TRow>, columnId: string): string {
+	return columnNameOf(table.getColumn(columnId)?.columnDef.header, columnId)
 }

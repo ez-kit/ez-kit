@@ -4,17 +4,31 @@ import { baseCellTypes } from '@ez-kit/data-grid-react/cell-types'
 
 import { Badge } from '@grid-shadcn/components/ui/badge'
 
-import { SelectCellInput } from './SelectCell'
+import { itemOf, PendingLabel, SelectCellInput, UnlabelledValue } from './SelectCell'
 
-import type { BadgeCellConfig, CellTypeDefinition, CellViewProps, FieldState } from '@ez-kit/data-grid-react'
+import type {
+	BadgeCellConfig,
+	BadgeColumnConfig,
+	BadgeItem,
+	CellTypeDefinition,
+	CellViewProps,
+	FieldState,
+} from '@ez-kit/data-grid-react'
 import type { ReactNode } from 'react'
 
-function BadgeCellView({ value, config }: CellViewProps<BadgeCellConfig>) {
-	const items = config?.items ?? []
-	const match = items.find((item) => item.value === String(value ?? ''))
+function BadgeCellView({ value, config, item, itemStatus }: CellViewProps<BadgeCellConfig>) {
+	if (itemStatus === 'pending') return <PendingLabel data-slot='badge-cell-skeleton' />
+	const match = itemOf(value, item, config) as BadgeItem | undefined
 
 	if (!match) {
-		return <Badge>{String(value ?? '')}</Badge>
+		return (
+			<Badge>
+				<UnlabelledValue
+					value={value}
+					failed={itemStatus === 'error'}
+				/>
+			</Badge>
+		)
 	}
 
 	return (
@@ -38,7 +52,7 @@ function BadgeCellInput(props: FieldState<BadgeCellConfig>) {
  * the note on `KitCellTypes` in `../cell-types.ts` for what an inferred type does to the
  * bundled declarations.
  */
-const badgeCellType: CellTypeDefinition<BadgeCellConfig> & { __config?: BadgeCellConfig } = {
+const badgeCellType: CellTypeDefinition<BadgeCellConfig> & { __config?: BadgeColumnConfig } = {
 	...baseCellTypes.badge,
 	view: BadgeCellView,
 	editing: BadgeCellInput,

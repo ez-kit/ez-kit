@@ -1,6 +1,7 @@
 'use client'
 
 import { allDataGridFeatures } from '@ez-kit/data-grid-core/features/all'
+import { defaultOperators } from '@ez-kit/data-grid-core/operators'
 import { createDataGrid, DefaultLayout } from '@ez-kit/data-grid-react'
 
 import { cellTypes } from './blocks/cell-types'
@@ -117,6 +118,19 @@ const bundle: DataGridBundle<KitCellTypes, KitFeatures> = createDataGrid<KitCell
 	components,
 	cellTypes,
 	features: allDataGridFeatures,
+	/**
+	 * The ready-made operator set, bound here for the reason `features` is: the prebuilt grid means
+	 * everything, and a column with `filtering.operators: true` should offer its type's operators
+	 * without the call site naming a set. A set named in a provider or on a grid replaces this one
+	 * per cell type.
+	 *
+	 * Load-bearing in the same way: the `@ez-kit/data-grid-core/operators` import lives in this
+	 * module only. Lifted into `index.ts` or a component group, it would hand the set — and its
+	 * comparisons — to every grid composed through `createDataGrid`, which has no operators unless it
+	 * names them. `apps/docs/test/tree-shaking.test.ts` pins that `DataGrid` reaches the entry and
+	 * `createDataGrid` does not.
+	 */
+	operators: defaultOperators,
 })
 
 const { DataGrid, GridComponentsProvider, useDataGrid } = bundle

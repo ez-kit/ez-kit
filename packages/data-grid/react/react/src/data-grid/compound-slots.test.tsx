@@ -227,7 +227,14 @@ describe('compound render-prop slots', () => {
 
 	it('<DataGrid.SortMenuTrigger> excludes already-used columns from each entry', () => {
 		const table = prepareDataGridTable(
-			createTable<GridFeatures, User>({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, sorting: true }),
+			createTable<GridFeatures, User>({
+				features: TEST_FEATURES,
+				data: USERS,
+				columns: COLUMNS,
+				// Multi-sort on, or a second entry could not be added at all and `canAddSort` would
+				// answer that rather than whether a column is still free.
+				sorting: { multi: true },
+			}),
 		)
 		// v9 has no `table.setState`; the per-slice setters are what remains.
 		table.setSorting([{ id: 'name', desc: false }])
@@ -268,10 +275,10 @@ describe('compound render-prop slots', () => {
 		const { container } = renderWithComponents(
 			<DataGrid table={table}>
 				<DataGrid.FilterPanel>
-					{({ columns, hasActiveFilter }) => (
+					{({ filters, hasActiveFilter }) => (
 						<div data-active={String(hasActiveFilter)}>
-							{columns.map(({ column, label, input }) => (
-								<label key={column.id}>
+							{filters.map(({ id, label, input }) => (
+								<label key={id}>
 									{label}
 									{input}
 								</label>

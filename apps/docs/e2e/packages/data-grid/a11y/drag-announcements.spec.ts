@@ -207,16 +207,21 @@ test.describe('drag announcements', () => {
 		const handle = rowHandle(page, '1')
 		await expect(handle).toBeVisible()
 
-		const described = await handle.evaluate((element) => {
-			const id = element.getAttribute('aria-describedby')
-			return id === null ? null : (document.getElementById(id)?.textContent ?? null)
-		})
+		// Polled: the library writes `aria-describedby` from an effect after the handle is on the page,
+		// so a single read straight after `toBeVisible` races it and reads `null` under load.
+		const described = () =>
+			handle.evaluate((element) => {
+				const id = element.getAttribute('aria-describedby')
+				return id === null ? null : (document.getElementById(id)?.textContent ?? null)
+			})
 
 		// The catalogue's `ordering.instructions`. The library's own paragraph begins "To pick up a
 		// draggable item, press the space bar." — asserting the whole string is what distinguishes them.
-		expect(described).toBe(
-			'Press Space to pick this item up, then the arrow keys to move it. Press Space again to drop it, or Escape to cancel.',
-		)
+		await expect
+			.poll(described)
+			.toBe(
+				'Press Space to pick this item up, then the arrow keys to move it. Press Space again to drop it, or Escape to cancel.',
+			)
 	})
 
 	/**

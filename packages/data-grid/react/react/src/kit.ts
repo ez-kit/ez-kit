@@ -23,6 +23,16 @@ export { useGridOptions } from './use-grid-options'
 export { useGridComponents } from './components-context'
 export { useDataGridState, useDataGridTable } from './data-grid/table-context'
 
+// A column panel built on a react-aria collection mounts this on the collection. It imports only the
+// dragging attribute's name, so a block calling it pays for no part of the drag stack.
+export { useColumnDragKeyboardGuard, useSortDragKeyboardGuard } from './data-grid/dnd/keyboard-guard'
+// A popover around the sort builder reads it to tell a drag's `Escape` from its own dismissal.
+export { SORT_DRAGGING_SELECTOR } from './data-grid/dnd/dragging-attrs'
+
+// A list with a step pair keeps keyboard focus on it across a step — both kits' sort builder.
+export { StepSide, useStepFocus } from './data-grid/use-step-focus'
+export type { StepFocus, StepSlots } from './data-grid/use-step-focus'
+
 // Menu model — the kits' `Menu` and every block that contributes an item read these.
 // `isGridMenuIcon` sits here beside `GridMenuIcon` on purpose: both kits' `icons.tsx` imports the
 // pair, and leaving one of them off would have kept that file importing from the root, i.e. the
@@ -35,7 +45,11 @@ export { ActionBarVariant, ActionsCellState, ColumnSortDirection, LoadMoreTrigge
 
 // Cell-type vocabulary a kit's own cell renderers name. From `@ez-kit/data-grid-core`, which
 // reaches the kits only through this package — and, before this entry, only through its root.
-export { LINK_HREF_VALUE_TOKEN, LinkTarget } from '@ez-kit/data-grid-core'
+export { ItemStatus, LINK_HREF_VALUE_TOKEN, LinkTarget } from '@ez-kit/data-grid-core'
+
+// A kit's own cell type that labels its values from a column's `useItems` list reads it here.
+export { ItemsSourceSlot, useItemsSource } from './items-source'
+export type { ItemsSourceSnapshot } from './items-source'
 
 // Pure helpers: content and structure the kits render but must not re-derive.
 export { buildPageWindow, PAGE_GAP, DEFAULT_PAGE_SIBLINGS, DEFAULT_PAGE_BOUNDARIES } from './data-grid/page-window'

@@ -22,8 +22,16 @@
 	& [data-slot='filter-control'] {
 		@apply flex min-w-0 items-center gap-2;
 	}
-	& [data-slot='filter-control'] > *:first-child {
+	/* The operator keeps its own width; the control after it takes the rest of the row. */
+	& [data-slot='filter-control'] > [data-slot='filter-operator'] {
+		@apply flex-none;
+	}
+	& [data-slot='filter-control'] > [data-slot='filter-operator'] + * {
 		@apply min-w-0 flex-auto;
+	}
+	& [data-slot='filter-operator-label'] {
+		@apply min-w-0 flex-auto truncate text-xs;
+		color: var(--muted);
 	}
 	& [data-slot='td'] > [data-slot='input'],
 	& [data-slot='td'] > [data-slot='textarea'] {
@@ -258,6 +266,11 @@
 	& [data-slot='th'][data-column-dragging],
 	& [data-slot='column-visibility-item'][data-column-dragging] {
 		@apply relative z-[2] opacity-60;
+	}
+
+	/* A panel row is a react-aria grid row: it takes focus itself, and marks keyboard focus here. */
+	& [data-slot='column-visibility-item'][data-focus-visible] {
+		@apply ring-2 ring-focus;
 	}
 
 	& button[data-slot='row-drag-handle'],

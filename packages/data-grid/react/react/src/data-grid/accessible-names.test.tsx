@@ -33,8 +33,8 @@ describe('accessible names', () => {
 
 		// `name` takes the plain fallback input (named by `aria-label`), `age` the cell type's own
 		// number control behind an operator select (named by the visually-hidden `<label>`).
-		expect(screen.getByLabelText('Filter name…')).toBeTruthy()
-		expect(screen.getByLabelText('Filter age…')).toBeTruthy()
+		expect(screen.getByLabelText('Filter Name…')).toBeTruthy()
+		expect(screen.getByLabelText('Filter Age…')).toBeTruthy()
 	})
 
 	it('names the row-actions column header', () => {

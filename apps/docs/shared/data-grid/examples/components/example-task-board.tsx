@@ -258,10 +258,10 @@ export function ExampleTaskBoardExample() {
 				start={
 					<>
 						<DataGrid.GlobalFilterInput />
-						{TOOLBAR_FILTERS.map((columnId) => (
-							<DataGrid.ColumnFilter
-								key={columnId}
-								columnId={columnId}
+						{TOOLBAR_FILTERS.map((id) => (
+							<DataGrid.Filter
+								key={id}
+								id={id}
 							/>
 						))}
 					</>

@@ -9,6 +9,7 @@ import {
 	sortFns,
 	tableFeatures,
 } from '@ez-kit/data-grid-core/features'
+import { createColumns } from '@ez-kit/data-grid-react'
 
 import { DataGrid } from 'shared/DataGrid'
 
@@ -45,28 +46,43 @@ const DATA: Employee[] = [
 	{ id: 10, name: 'Jack Wilson', department: 'Engineering', role: 'Engineer', salary: 88000, startDate: '2022-01-15' },
 ]
 
+const columns = createColumns<Employee>([
+	{ accessorKey: 'name', header: 'Name' },
+	{ accessorKey: 'department', header: 'Department' },
+	{ accessorKey: 'role', header: 'Role' },
+	{ accessorKey: 'salary', header: 'Salary', cell: { type: 'number' } },
+	{ accessorKey: 'startDate', header: 'Start Date', cell: { type: 'date' } },
+])
+
 export function SortToolbarExample() {
 	return (
 		<DataGrid
 			features={features}
 			data={DATA}
-			columns={[
-				{ accessorKey: 'name', header: 'Name' },
-				{ accessorKey: 'department', header: 'Department' },
-				{ accessorKey: 'role', header: 'Role' },
-				{ accessorKey: 'salary', header: 'Salary', cell: { type: 'number' } },
-				{ accessorKey: 'startDate', header: 'Start Date', cell: { type: 'date' } },
-			]}
+			columns={columns}
+			initialState={{
+				sorting: [
+					{ id: 'department', desc: false },
+					{ id: 'salary', desc: true },
+				],
+			}}
+			sorting={{ multi: true }}
+		>
+			<DataGrid.Toolbar end={<DataGrid.SortMenuTrigger />} />
+			<DataGrid.Table />
+		</DataGrid>
+	)
+}
+
+export function SortToolbarSingleExample() {
+	return (
+		<DataGrid
+			features={features}
+			data={DATA}
+			columns={columns}
+			initialState={{ sorting: [{ id: 'department', desc: false }] }}
 			sorting
 		>
-			{/*
-			 * The multi-sort builder, placed explicitly. It used to be `sorting: { toolbar: true }`
-			 * — an option whose only job was to tell the default toolbar to mount this one
-			 * component, which is what writing the component says instead.
-			 *
-			 * Naming `children` at all means composing the rest of the grid too, so the table is
-			 * written out below — this grid registers no pagination, so there is nothing else.
-			 */}
 			<DataGrid.Toolbar end={<DataGrid.SortMenuTrigger />} />
 			<DataGrid.Table />
 		</DataGrid>

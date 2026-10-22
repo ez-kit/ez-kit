@@ -1,5 +1,7 @@
 /**
- * Shallow equality check used as the default `isEqual` for {@link useDataGridSelector}.
+ * Shallow equality, for the `compare` option of the selector hooks — `useDataGridSelector`,
+ * `useDataGridState` and `useGridContext` — when a selector builds an object or array, and for
+ * the providers that keep a rebuilt value's identity while its contents are unchanged.
  *
  * Returns `true` when `a` and `b` are:
  * - Object.is-equal (primitives, same reference)

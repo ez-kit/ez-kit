@@ -236,9 +236,9 @@ describe('creatingFeature — basic flow', () => {
 		expect(table.creating.getState().formError).toBe('rate limited')
 	})
 
-	it('commit() resolves without error when no validate and no creating config absent', async () => {
+	it('commit() resolves as closed, without error, when no creating config is set', async () => {
 		const table = createTable({ features: CREATING, data: DATA, columns: COLUMNS })
-		await expect(table.creating.commit()).resolves.toBeUndefined()
+		await expect(table.creating.commit()).resolves.toEqual({ ok: false, reason: 'closed' })
 	})
 })
 
@@ -744,5 +744,192 @@ describe('creatingFeature — default values', () => {
 		expect(s.formError).toBe(null)
 		expect(s.commitStatus).toBe('idle')
 		expect(s.values).toEqual({ name: 'Anonymous' })
+	})
+})
+
+describe('creatingFeature — commit with values and a result', () => {
+	it('writes the passed values into the slice and sends them, unknown keys included, to onSave', async () => {
+		const onSave = vi.fn().mockResolvedValue(undefined)
+		const table = createTable({ features: CREATING, data: DATA, columns: COLUMNS, creating: { onSave } })
+		table.creating.start()
+
+		const pending = table.creating.commit({ values: { name: 'B', note: 'fixed typo' } })
+		expect(creatingOf(table).values).toEqual({ name: 'B', note: 'fixed typo' })
+
+		await expect(pending).resolves.toEqual({ ok: true })
+		expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ values: { name: 'B', note: 'fixed typo' } }))
+		expect(creatingOf(table).isOpen).toBe(false)
+	})
+
+	it('resolves the validator problems as a result and keeps the form open', async () => {
+		const onSave = vi.fn()
+		const table = createTable({
+			features: CREATING,
+			data: DATA,
+			columns: COLUMNS,
+			creating: { validate: () => ({ formError: 'Passwords do not match' }), onSave },
+		})
+		table.creating.start()
+
+		await expect(table.creating.commit({ values: {} })).resolves.toEqual({
+			ok: false,
+			reason: 'rejected',
+			errors: {},
+			formError: 'Passwords do not match',
+		})
+		expect(onSave).not.toHaveBeenCalled()
+		expect(creatingOf(table).formError).toBe('Passwords do not match')
+	})
+
+	it('resolves a ValidationError thrown by onSave as a result', async () => {
+		const table = createTable({
+			features: CREATING,
+			data: DATA,
+			columns: COLUMNS,
+			creating: { onSave: () => Promise.reject(new ValidationError({ errors: { email: ['taken'] } })) },
+		})
+		table.creating.start()
+
+		await expect(table.creating.commit()).resolves.toEqual({
+			ok: false,
+			reason: 'rejected',
+			errors: { email: ['taken'] },
+			formError: null,
+		})
+		expect(creatingOf(table).isOpen).toBe(true)
+	})
+
+	it('rejects on an unexpected error from onSave, after writing the generic form error', async () => {
+		const boom = new Error('network')
+		const table = createTable({
+			features: CREATING,
+			data: DATA,
+			columns: COLUMNS,
+			creating: { onSave: () => Promise.reject(boom) },
+		})
+		table.creating.start()
+
+		await expect(table.creating.commit()).rejects.toBe(boom)
+		expect(creatingOf(table).formError).toBe('Unexpected error')
+	})
+
+	it('hands a second call made while saving the same promise, and saves once', async () => {
+		let release = (): void => undefined
+		const onSave = vi.fn(
+			() =>
+				new Promise<void>((resolve) => {
+					release = resolve
+				}),
+		)
+		const table = createTable({ features: CREATING, data: DATA, columns: COLUMNS, creating: { onSave } })
+		table.creating.start()
+
+		const first = table.creating.commit({ values: { name: 'A' } })
+		await vi.waitFor(() => {
+			expect(creatingOf(table).commitStatus).toBe('saving')
+		})
+		const second = table.creating.commit({ values: { name: 'other' } })
+
+		expect(second).toBe(first)
+		release()
+		await expect(first).resolves.toEqual({ ok: true })
+		expect(onSave).toHaveBeenCalledTimes(1)
+	})
+
+	it('resolves as cancelled when cancel() abandons the save', async () => {
+		const table = createTable({
+			features: CREATING,
+			data: DATA,
+			columns: COLUMNS,
+			creating: { onSave: () => new Promise<void>(noop) },
+		})
+		table.creating.start()
+
+		const pending = table.creating.commit({ values: { name: 'A' } })
+		await vi.waitFor(() => {
+			expect(creatingOf(table).commitStatus).toBe('saving')
+		})
+		table.creating.cancel()
+
+		await expect(pending).resolves.toEqual({ ok: false, reason: 'cancelled' })
+		expect(creatingOf(table).isOpen).toBe(false)
+	})
+})
+
+describe('creatingFeature — validateValues', () => {
+	it('returns the validator result and writes nothing to the slice', async () => {
+		const table = createTable({
+			features: CREATING,
+			data: DATA,
+			columns: COLUMNS,
+			creating: {
+				validate: (values) => (values.email === 'x' ? { errors: { email: ['invalid'] } } : null),
+				onSave: noop,
+			},
+		})
+		table.creating.start()
+		const before = creatingOf(table)
+
+		await expect(table.creating.validateValues({ email: 'x' })).resolves.toEqual({ errors: { email: ['invalid'] } })
+		expect(creatingOf(table)).toBe(before)
+	})
+
+	it('resolves null when no validator is configured', async () => {
+		const table = createTable({ features: CREATING, data: DATA, columns: COLUMNS, creating: { onSave: noop } })
+		table.creating.start()
+
+		await expect(table.creating.validateValues({ email: 'x' })).resolves.toBeNull()
+	})
+
+	it('does not cancel a commit in flight, and a commit does not cancel it', async () => {
+		let releaseSave = (): void => undefined
+		const signals: AbortSignal[] = []
+		const table = createTable({
+			features: CREATING,
+			data: DATA,
+			columns: COLUMNS,
+			creating: {
+				validate: (_values, ctx) => {
+					signals.push(ctx.signal)
+					return null
+				},
+				onSave: () =>
+					new Promise<void>((resolve) => {
+						releaseSave = resolve
+					}),
+			},
+		})
+		table.creating.start()
+
+		const committed = table.creating.commit()
+		await vi.waitFor(() => {
+			expect(creatingOf(table).commitStatus).toBe('saving')
+		})
+		await table.creating.validateValues({ name: 'x' })
+		const [commitSignal, checkSignal] = signals
+
+		expect(commitSignal?.aborted).toBe(false)
+		expect(checkSignal?.aborted).toBe(false)
+		releaseSave()
+		await expect(committed).resolves.toEqual({ ok: true })
+		expect(checkSignal?.aborted).toBe(true)
+	})
+})
+
+describe('creatingFeature — initialValues', () => {
+	it('holds the seed start() wrote, and keeps its identity through setValue', () => {
+		const columns = createColumns<Row>([
+			{ accessorKey: 'name', creating: { defaultValue: 'draft' } },
+			{ accessorKey: 'email' },
+		])
+		const table = createTable({ features: CREATING, data: DATA, columns, creating: { onSave: noop } })
+		table.creating.start()
+		const seed = creatingOf(table).initialValues
+
+		table.creating.setValue('name', 'typed')
+
+		expect(seed).toEqual({ name: 'draft' })
+		expect(creatingOf(table).initialValues).toBe(seed)
+		expect(creatingOf(table).values).toEqual({ name: 'typed' })
 	})
 })

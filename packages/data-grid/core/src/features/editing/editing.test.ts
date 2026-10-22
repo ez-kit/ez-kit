@@ -241,6 +241,11 @@ describe('editingFeature — a field event during a save', () => {
 
 		table.editing.start(rowOf(table))
 		const committed = table.editing.commit()
+		// The schema answers through `~standard.validate`, which may be async, so the save phase
+		// starts a few ticks later; wait for it rather than counting ticks.
+		await vi.waitFor(() => {
+			expect(editingOf(table).commitStatus).toBe('saving')
+		})
 		await table.editing.validateField('name')
 
 		expect(editingOf(table).commitStatus).toBe('saving')
@@ -650,6 +655,307 @@ describe('editingFeature — per-column validateOn', () => {
 		await new Promise<void>((r) => {
 			setTimeout(r, 30)
 		})
+		expect(validate).not.toHaveBeenCalled()
+	})
+})
+
+describe('editingFeature — commit with values and a result', () => {
+	it('writes the passed values into the slice and sends them, unknown keys included, to onSave', async () => {
+		const onSave = vi.fn().mockResolvedValue(undefined)
+		const table = createTable({ features: EDITING, data: DATA, columns: COLUMNS, editing: { onSave } })
+		table.editing.start('1')
+
+		const pending = table.editing.commit({ values: { name: 'B', note: 'fixed typo' } })
+		expect(editingOf(table).values).toEqual({ name: 'B', note: 'fixed typo' })
+
+		await expect(pending).resolves.toEqual({ ok: true })
+		expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ values: { name: 'B', note: 'fixed typo' } }))
+		expect(editingOf(table).rowId).toBe(null)
+	})
+
+	it('resolves the validator problems as a result and keeps the form open', async () => {
+		const table = createTable({
+			features: EDITING,
+			data: DATA,
+			columns: COLUMNS,
+			editing: { validate: () => ({ errors: { name: ['too short'] } }), onSave: noopSave },
+		})
+		table.editing.start('1')
+
+		await expect(table.editing.commit()).resolves.toEqual({
+			ok: false,
+			reason: 'rejected',
+			errors: { name: ['too short'] },
+			formError: null,
+		})
+		expect(editingOf(table).rowId).toBe('1')
+	})
+
+	it('resolves a ValidationError thrown by onSave as a result', async () => {
+		const table = createTable({
+			features: EDITING,
+			data: DATA,
+			columns: COLUMNS,
+			editing: {
+				onSave: () =>
+					Promise.reject(new ValidationError({ errors: { name: ['taken'] }, formError: 'Fix the fields below' })),
+			},
+		})
+		table.editing.start('1')
+
+		await expect(table.editing.commit()).resolves.toEqual({
+			ok: false,
+			reason: 'rejected',
+			errors: { name: ['taken'] },
+			formError: 'Fix the fields below',
+		})
+	})
+
+	it('rejects on an unexpected error from onSave', async () => {
+		const boom = new Error('network')
+		const table = createTable({
+			features: EDITING,
+			data: DATA,
+			columns: COLUMNS,
+			editing: { onSave: () => Promise.reject(boom) },
+		})
+		table.editing.start('1')
+
+		await expect(table.editing.commit()).rejects.toBe(boom)
+	})
+
+	it('hands a second call made while saving the same promise, and saves once', async () => {
+		let release = (): void => undefined
+		const onSave = vi.fn(
+			() =>
+				new Promise<void>((resolve) => {
+					release = resolve
+				}),
+		)
+		const table = createTable({ features: EDITING, data: DATA, columns: COLUMNS, editing: { onSave } })
+		table.editing.start('1')
+
+		const first = table.editing.commit()
+		await vi.waitFor(() => {
+			expect(editingOf(table).commitStatus).toBe('saving')
+		})
+
+		expect(table.editing.commit()).toBe(first)
+		release()
+		await expect(first).resolves.toEqual({ ok: true })
+		expect(onSave).toHaveBeenCalledTimes(1)
+	})
+
+	it('resolves as cancelled when cancel() abandons the save, even if onSave never settles', async () => {
+		const table = createTable({
+			features: EDITING,
+			data: DATA,
+			columns: COLUMNS,
+			editing: { onSave: () => new Promise<void>(() => undefined) },
+		})
+		table.editing.start('1')
+
+		const pending = table.editing.commit()
+		await vi.waitFor(() => {
+			expect(editingOf(table).commitStatus).toBe('saving')
+		})
+		table.editing.cancel()
+
+		await expect(pending).resolves.toEqual({ ok: false, reason: 'cancelled' })
+	})
+
+	it('commitCell resolves to a result too', async () => {
+		const table = createTable({ features: EDITING, data: DATA, columns: COLUMNS, editing: { onSave: noopSave } })
+		table.editing.startCell('1', 'name')
+
+		await expect(table.editing.commitCell()).resolves.toEqual({ ok: true })
+	})
+})
+
+describe('editingFeature — validateValues', () => {
+	it('returns the validator result and writes nothing to the slice', async () => {
+		const table = createTable({
+			features: EDITING,
+			data: DATA,
+			columns: COLUMNS,
+			editing: { validate: () => ({ errors: { name: ['too short'] } }), onSave: noopSave },
+		})
+		table.editing.start('1')
+		const before = editingOf(table)
+
+		await expect(table.editing.validateValues({ name: 'A' })).resolves.toEqual({ errors: { name: ['too short'] } })
+		expect(editingOf(table)).toBe(before)
+	})
+
+	it('resolves null when no validator is configured', async () => {
+		const table = createTable({ features: EDITING, data: DATA, columns: COLUMNS, editing: { onSave: noopSave } })
+		table.editing.start('1')
+
+		await expect(table.editing.validateValues({ name: 'A' })).resolves.toBeNull()
+	})
+
+	it('is cancelled by closing the form', async () => {
+		const signals: AbortSignal[] = []
+		const table = createTable({
+			features: EDITING,
+			data: DATA,
+			columns: COLUMNS,
+			editing: {
+				validate: (_values, ctx) => {
+					signals.push(ctx.signal)
+					return null
+				},
+				onSave: noopSave,
+			},
+		})
+		table.editing.start('1')
+		await table.editing.validateValues({ name: 'A' })
+
+		table.editing.cancel()
+
+		expect(signals[0]?.aborted).toBe(true)
+	})
+})
+
+describe('editingFeature — what the form holds and what onSave receives', () => {
+	type Versioned = { id: number; name: string; createdAt: string; version: number }
+	const ROWS: Versioned[] = [{ id: 7, name: 'A', createdAt: '2026-01-01', version: 3 }]
+	const VERSIONED_COLUMNS = createColumns<Versioned>([
+		{ accessorKey: 'name' },
+		{ accessorKey: 'createdAt', editing: false },
+	])
+	const BY_ID = { getRowId: (row: Versioned) => String(row.id) }
+
+	it('start() seeds only the fields of the edit form, and initialValues with them', () => {
+		const table = createTable({
+			features: EDITING,
+			data: ROWS,
+			columns: VERSIONED_COLUMNS,
+			...BY_ID,
+			editing: { onSave: noopSave },
+		})
+		table.editing.start('7')
+
+		expect(editingOf(table).values).toEqual({ name: 'A' })
+		expect(editingOf(table).initialValues).toBe(editingOf(table).values)
+	})
+
+	it('keeps initialValues by identity through setValue', () => {
+		const table = createTable({
+			features: EDITING,
+			data: ROWS,
+			columns: VERSIONED_COLUMNS,
+			...BY_ID,
+			editing: { onSave: noopSave },
+		})
+		table.editing.start('7')
+		const seed = editingOf(table).initialValues
+
+		table.editing.setValue('name', 'B')
+
+		expect(editingOf(table).initialValues).toBe(seed)
+		expect(seed).toEqual({ name: 'A' })
+	})
+
+	it('sends no editing: false column to onSave, and the whole row beside the values', async () => {
+		const onSave = vi.fn().mockResolvedValue(undefined)
+		const table = createTable({
+			features: EDITING,
+			data: ROWS,
+			columns: VERSIONED_COLUMNS,
+			...BY_ID,
+			editing: { onSave },
+		})
+		table.editing.start('7')
+		await table.editing.commit()
+
+		expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ rowId: '7', row: ROWS[0], values: { name: 'A' } }))
+	})
+
+	it('hands commitCell the row as well', async () => {
+		const onSave = vi.fn().mockResolvedValue(undefined)
+		const table = createTable({
+			features: EDITING,
+			data: ROWS,
+			columns: VERSIONED_COLUMNS,
+			...BY_ID,
+			editing: { onSave },
+		})
+		table.editing.startCell('7', 'name')
+		await table.editing.commitCell()
+
+		const [ctx] = onSave.mock.calls[0] as [{ row: Versioned; values: Partial<Versioned> }]
+		expect(ctx.row.version).toBe(3)
+		expect(ctx.values).toEqual({ name: 'A' })
+	})
+})
+
+describe('editingFeature — commit and validate() do not cancel each other', () => {
+	it('a commit while validate() runs resolves as busy and saves nothing', async () => {
+		let release = (): void => undefined
+		const onSave = vi.fn()
+		const table = createTable({
+			features: EDITING,
+			data: DATA,
+			columns: COLUMNS,
+			editing: {
+				validate: () =>
+					new Promise<null>((resolve) => {
+						release = () => {
+							resolve(null)
+						}
+					}),
+				onSave,
+			},
+		})
+		table.editing.start('1')
+
+		const validating = table.editing.validate()
+		await expect(table.editing.commit()).resolves.toEqual({ ok: false, reason: 'busy' })
+		release()
+		await validating
+
+		expect(onSave).not.toHaveBeenCalled()
+	})
+
+	it('validate() during a save runs nothing and leaves the save to finish', async () => {
+		let release = (): void => undefined
+		const validate = vi.fn().mockReturnValue(null)
+		const table = createTable({
+			features: EDITING,
+			data: DATA,
+			columns: COLUMNS,
+			editing: {
+				validate,
+				onSave: () =>
+					new Promise<void>((resolve) => {
+						release = resolve
+					}),
+			},
+		})
+		table.editing.start('1')
+		const committed = table.editing.commit()
+		await vi.waitFor(() => {
+			expect(editingOf(table).commitStatus).toBe('saving')
+		})
+
+		await expect(table.editing.validate()).resolves.toBeNull()
+		release()
+
+		await expect(committed).resolves.toEqual({ ok: true })
+		expect(validate).toHaveBeenCalledTimes(1)
+	})
+
+	it('validateValues resolves null without running when no form is open', async () => {
+		const validate = vi.fn().mockReturnValue({ errors: { name: ['x'] } })
+		const table = createTable({
+			features: EDITING,
+			data: DATA,
+			columns: COLUMNS,
+			editing: { validate, onSave: noopSave },
+		})
+
+		await expect(table.editing.validateValues({ name: '' })).resolves.toBeNull()
 		expect(validate).not.toHaveBeenCalled()
 	})
 })

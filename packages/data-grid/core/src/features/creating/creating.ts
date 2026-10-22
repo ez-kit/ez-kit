@@ -1,11 +1,13 @@
 import { ColumnFormMode, resolveColumnFormConfig } from '../../column/resolve-form-config'
 import { DEFAULT_VALIDATE_DEBOUNCE_MS } from '../../defaults'
 import { assignTableInstanceData, readOwnSlice, writeOwnSlice } from '../../feature-state'
-import { CommitStatus, isValidationError, ValidateOn, zodSafeParseToResult } from '../validation'
+import { abortChecks, checkValues, commitClosed, commitInFlight, runCommit, trackCommit } from '../form'
+import { CommitStatus, runValidator, ValidateOn } from '../validation'
 
 import type { FormColumnMeta, ResolvedColumnFormConfig } from '../../column/resolve-form-config'
 import type { AnyTable } from '../../feature-state'
 import type { FeatureToggle } from '../../utils/feature-flag'
+import type { CommitOptions, CommitResult, FormWorkBox } from '../form'
 import type { ValidateConfig, ValidateContext, ValidationErrors, ValidationResult } from '../validation'
 import type { RowData, Table, TableFeature, TableFeatures } from '@tanstack/table-core'
 
@@ -62,11 +64,16 @@ export type CreateDefaultValuesContext<TRow> = {
 }
 
 const DEFAULT_VALIDATE_ON: ValidateOn = ValidateOn.Submit
-const GENERIC_FORM_ERROR = 'Unexpected error'
 
 export type CreatingState = {
 	isOpen: boolean
 	values: Record<string, unknown>
+	/**
+	 * The seed the form opened with — column `creating.defaultValue`s under the table's
+	 * `creating.defaultValues`. Written once by `start()` and never by an edit, so its identity is
+	 * stable for as long as the form stays open.
+	 */
+	initialValues: Readonly<Record<string, unknown>>
 	errors: ValidationErrors
 	formError: string | null
 	commitStatus: CommitStatus
@@ -127,12 +134,31 @@ export type CreatingConfig<TData> = FeatureToggle & {
 export type CreatingApi<TData = unknown> = {
 	start: () => void
 	cancel: () => void
-	commit: () => Promise<void>
+	/**
+	 * Validate and save. With `values`, those replace the form's values first — the path a form
+	 * of one's own takes. Resolves to a {@link CommitResult}; a second call while one is in
+	 * flight resolves to the same promise.
+	 */
+	commit: (options?: CommitOptions) => Promise<CommitResult>
 	setValue: (key: string, value: unknown) => void
 	setValues: (patch: Partial<TData>) => void
 	setErrors: (errors: ValidationErrors | null) => void
 	setFormError: (msg: string | null) => void
+	/**
+	 * Validate the form's values and write the result into the slice. Resolves `null`, running
+	 * nothing, while a commit is in flight — the commit validates anyway.
+	 */
 	validate: () => Promise<ValidationResult>
+	/**
+	 * Run the configured validator over `values` and return its result, writing nothing — no
+	 * values, no errors, no status. Cancelled only by the form closing, never by a save, so a form
+	 * of one's own can check a field on blur freely.
+	 *
+	 * `null` means valid **or** that there is nothing to validate for: no validator configured, no
+	 * form open, or the form closed while the check ran. Checks are not ordered against each other,
+	 * so a form that runs several at once keeps the latest one's result itself.
+	 */
+	validateValues: (values: Record<string, unknown>) => Promise<ValidationResult>
 	/** Internal — called by FieldState.onBlur in the react adapter. */
 	validateField: (columnId: string) => Promise<void>
 	getState: () => CreatingState
@@ -152,13 +178,8 @@ export type CreatingApi<TData = unknown> = {
  * cancelled a save: see {@link resetFormController}.
  */
 // `| undefined` explicitly: under `exactOptionalPropertyTypes` a bare `form?:` could not be
-// cleared by assignment, and clearing both is what `cancel` and `resetTableInstanceData` do.
-export type CreatingAbortBox = {
-	/** `commit`, `commitCell` and `validate` — whatever owns the form as a whole. */
-	form?: AbortController | undefined
-	/** `validateField` and the debounced change validation — one field, one blur, one keystroke. */
-	field?: AbortController | undefined
-}
+// cleared by assignment, and clearing them is what `cancel` and `resetTableInstanceData` do.
+export type CreatingAbortBox = FormWorkBox
 
 declare module '@tanstack/table-core' {
 	// Declaration merging needs interfaces; these are the shapes upstream declares as such.
@@ -210,6 +231,7 @@ declare module '@tanstack/table-core' {
 const INITIAL_STATE: CreatingState = Object.freeze({
 	isOpen: false,
 	values: Object.freeze({}),
+	initialValues: Object.freeze({}),
 	errors: Object.freeze({}),
 	formError: null,
 	commitStatus: CommitStatus.Idle,
@@ -342,12 +364,8 @@ async function runValidate(
 	values: Record<string, unknown>,
 	ctx: ValidateContext,
 ): Promise<ValidationResult> {
-	const config = creatingOption(table)
-	if (!config?.validate) return null
-	if (typeof config.validate === 'function') {
-		return await config.validate(values, ctx)
-	}
-	return zodSafeParseToResult(config.validate.schema, values)
+	const validate = creatingOption(table)?.validate
+	return validate ? await runValidator(validate, values, ctx) : null
 }
 
 /**
@@ -394,13 +412,15 @@ function resetFieldController(table: CreatingTable): AbortController | undefined
 	return c
 }
 
-/** Tear both down — a new form opens, the user cancels, or the table resets. */
+/** Tear everything down — a new form opens, the user cancels, or the table resets. */
 function abortAll(table: AnyTable): void {
 	const box = abortBox(table)
 	box.form?.abort()
 	box.field?.abort()
+	abortChecks(box)
 	box.form = undefined
 	box.field = undefined
+	box.commit = undefined
 }
 
 async function validateAndApplyField(table: CreatingTable, columnId: string, signal: AbortSignal): Promise<void> {
@@ -493,9 +513,11 @@ function createCreatingApi(table: CreatingTable): CreatingApi<RowData> {
 	return {
 		start: () => {
 			abortAll(table)
+			const seed = resolveDefaultValues(table)
 			writeCreating(table, {
 				isOpen: true,
-				values: resolveDefaultValues(table),
+				values: seed,
+				initialValues: seed,
 				errors: {},
 				formError: null,
 				commitStatus: CommitStatus.Idle,
@@ -509,65 +531,42 @@ function createCreatingApi(table: CreatingTable): CreatingApi<RowData> {
 			writeCreating(table, { ...INITIAL_STATE })
 		},
 
-		commit: async () => {
+		commit: (options) => {
 			const config = creatingOption(table)
-			if (!config) return
-			if (readCreating(table).commitStatus !== CommitStatus.Idle) return // UI invariant — second click is no-op
+			const state = readCreating(table)
+			if (!config) return commitClosed()
+			// UI invariant — a second click is a no-op, and gets the first click's outcome.
+			if (state.commitStatus !== CommitStatus.Idle) {
+				return commitInFlight(abortBox(table))
+			}
 
 			const c = resetFormController(table)
-
+			const values = options?.values ?? state.values
 			writeCreating(table, {
+				values,
 				errors: {},
 				formError: null,
 				commitStatus: CommitStatus.Validating,
 			})
 
-			const values = readCreating(table).values
-
-			// ── validate phase ───────────────────────────────────────────
-			if (config.validate) {
-				let result: ValidationResult
-				try {
-					result = await runValidate(table, values, { signal: c.signal })
-				} catch (e) {
-					if (c.signal.aborted) return
-					writeCreating(table, { commitStatus: CommitStatus.Idle })
-					throw e
-				}
-				if (c.signal.aborted) return
-				if (result !== null) {
-					writeCreating(table, {
-						errors: result.errors ?? {},
-						formError: result.formError ?? null,
-						commitStatus: CommitStatus.Idle,
-					})
-					return
-				}
-			}
-
-			// ── save phase ───────────────────────────────────────────────
-			writeCreating(table, { commitStatus: CommitStatus.Saving })
-			try {
-				await config.onSave({ values, signal: c.signal })
-				if (c.signal.aborted) return
-				// Reset to closed/empty state on success
-				writeCreating(table, { ...INITIAL_STATE })
-			} catch (e) {
-				if (c.signal.aborted) return
-				if (isValidationError(e)) {
-					writeCreating(table, {
-						errors: e.errors,
-						formError: e.formError ?? null,
-						commitStatus: CommitStatus.Idle,
-					})
-					return
-				}
-				writeCreating(table, {
-					formError: GENERIC_FORM_ERROR,
-					commitStatus: CommitStatus.Idle,
-				})
-				throw e
-			}
+			return trackCommit(
+				abortBox(table),
+				runCommit({
+					signal: c.signal,
+					values,
+					validate: config.validate,
+					validateContext: { signal: c.signal },
+					save: (signal) => config.onSave({ values, signal }),
+					write: (patch) => {
+						writeCreating(table, patch)
+					},
+					close: () => {
+						abortChecks(abortBox(table))
+						// Reset to closed/empty state on success
+						writeCreating(table, { ...INITIAL_STATE })
+					},
+				}),
+			)
 		},
 
 		setValue: (key, value) => {
@@ -603,6 +602,9 @@ function createCreatingApi(table: CreatingTable): CreatingApi<RowData> {
 		validate: async () => {
 			const config = creatingOption(table)
 			if (!config?.validate) return null
+			// A commit in flight already validates; superseding it would abandon a save that may have
+			// reached the server, and report it as cancelled.
+			if (readCreating(table).commitStatus !== CommitStatus.Idle) return null
 			const c = resetFormController(table)
 			const values = readCreating(table).values
 			writeCreating(table, { commitStatus: CommitStatus.Validating })
@@ -621,6 +623,13 @@ function createCreatingApi(table: CreatingTable): CreatingApi<RowData> {
 				commitStatus: CommitStatus.Idle,
 			})
 			return result
+		},
+
+		validateValues: (values) => {
+			const config = creatingOption(table)
+			// A pinned draft row is open without `start()` ever having run.
+			const isOpen = readCreating(table).isOpen || config?.mode === CreatingMode.PinRow
+			return checkValues(abortBox(table), isOpen, config?.validate, values)
 		},
 
 		validateField: async (columnId) => {

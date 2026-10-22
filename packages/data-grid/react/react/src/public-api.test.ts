@@ -18,6 +18,7 @@ import type {
 	ColumnFilteringConfig,
 	ColumnSortingConfig,
 	CreatingMode,
+	DataGridSelectorOptions,
 	EditingMode,
 	ExpandingConfig,
 	ExpandingMode,
@@ -71,6 +72,12 @@ describe('public API surface', () => {
 		const reactFiltering: ReactFilteringConfig = { manual: true, debounce: 100 }
 		expect(sorting.manual).toBe(true)
 		expect(reactFiltering.debounce).toBe(100)
+	})
+
+	it('exports the comparison the selector hooks take, typed by the package itself', () => {
+		const options: DataGridSelectorOptions<{ count: number }> = { compare: publicApi.shallow }
+		expect(options.compare?.({ count: 1 }, { count: 1 })).toBe(true)
+		expect(options.compare?.({ count: 1 }, { count: 2 })).toBe(false)
 	})
 
 	it('type-only imports resolve (compile-time assertion)', () => {

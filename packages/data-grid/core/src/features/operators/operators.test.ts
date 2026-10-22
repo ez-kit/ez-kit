@@ -1,104 +1,180 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import {
 	DATE_RANGE_PRESETS,
-	DEFAULT_OPERATOR_ID_BY_TYPE,
-	DEFAULT_OPERATORS_BY_TYPE,
-	IN_OPERATORS,
-	buildOperatorRegistry,
+	OperatorInput,
 	createOperatorFilterFn,
+	isEmptyOperatorValue,
 	resolveColumnOperators,
 } from './operators'
 
-import type { FilterOperatorDef } from './operators'
+import type { BetweenValue, FilterOperatorDef } from './operators'
 
-describe('IN_OPERATORS', () => {
-	it('"in" matches when row value is included in the filter array', () => {
-		const op = IN_OPERATORS.find((o) => o.id === 'in')
-		if (!op) throw new Error('expected `in` operator')
-		expect(op.filterFn('a', ['a', 'b'])).toBe(true)
-		expect(op.filterFn('c', ['a', 'b'])).toBe(false)
+const contains: FilterOperatorDef<string> = {
+	id: 'contains',
+	label: 'Contains',
+	input: OperatorInput.Single,
+	filterFn: (rowValue, value) => String(rowValue).includes(value),
+}
+const equals: FilterOperatorDef<string> = {
+	id: 'equals',
+	label: 'Equals',
+	input: OperatorInput.Single,
+	filterFn: (rowValue, value) => rowValue === value,
+}
+const TEXT_SET: FilterOperatorDef[] = [contains, equals]
+
+const row = (value: unknown) => ({ getValue: () => value })
+
+describe('resolveColumnOperators', () => {
+	it('returns the cell type’s set by reference for `true`', () => {
+		expect(resolveColumnOperators(true, TEXT_SET)).toBe(TEXT_SET)
 	})
 
-	it('"in" coerces non-string row values via String()', () => {
-		const op = IN_OPERATORS.find((o) => o.id === 'in')
-		if (!op) throw new Error('expected `in` operator')
-		expect(op.filterFn(1, ['1', '2'])).toBe(true)
-		expect(op.filterFn(true, ['true'])).toBe(true)
+	it('returns nothing for `true` when the cell type has no set', () => {
+		expect(resolveColumnOperators(true, undefined)).toEqual([])
 	})
 
-	it('"in" treats null/undefined row values as empty string (no match)', () => {
-		const op = IN_OPERATORS.find((o) => o.id === 'in')
-		if (!op) throw new Error('expected `in` operator')
-		expect(op.filterFn(null, ['a'])).toBe(false)
-		expect(op.filterFn(undefined, ['a'])).toBe(false)
+	it('narrows the set to the ids a column lists, in the column’s order', () => {
+		expect(resolveColumnOperators({ items: ['equals', 'contains'] }, TEXT_SET)).toEqual([equals, contains])
 	})
 
-	it('"notIn" inverts "in"', () => {
-		const op = IN_OPERATORS.find((o) => o.id === 'notIn')
-		if (!op) throw new Error('expected `notIn` operator')
-		expect(op.filterFn('a', ['a', 'b'])).toBe(false)
-		expect(op.filterFn('c', ['a', 'b'])).toBe(true)
+	it('uses a definition in `items` as written, beside ids from the set', () => {
+		const fuzzy: FilterOperatorDef = { id: 'fuzzy', label: 'Fuzzy', input: OperatorInput.Single, filterFn: () => true }
+
+		expect(resolveColumnOperators({ items: ['contains', fuzzy] }, TEXT_SET)).toEqual([contains, fuzzy])
 	})
 
-	it('returns true (no-op) for empty filter arrays — both `in` and `notIn`', () => {
-		const inOp = IN_OPERATORS.find((o) => o.id === 'in')
-		const notInOp = IN_OPERATORS.find((o) => o.id === 'notIn')
-		if (!inOp || !notInOp) throw new Error('expected operators')
-		expect(inOp.filterFn('a', [])).toBe(true)
-		expect(notInOp.filterFn('a', [])).toBe(true)
+	it('looks a string up only in the column’s own set, and warns with the column and the id', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+		const [stub] = resolveColumnOperators({ items: ['between'] }, TEXT_SET, 'name', 'text')
+
+		expect(warn).toHaveBeenCalledWith(expect.stringMatching(/"name".*"between"/))
+		expect(stub?.id).toBe('between')
+		expect(stub && createOperatorFilterFn([stub])(row('x'), 'name', { operator: 'between', value: 'y' })).toBe(true)
+		warn.mockRestore()
 	})
 })
 
-describe('DEFAULT_OPERATORS_BY_TYPE for select / badge', () => {
-	it('includes `in` and `notIn` plus isEmpty variants', () => {
-		for (const type of ['select', 'badge']) {
-			const ops = DEFAULT_OPERATORS_BY_TYPE[type]
-			if (!ops) throw new Error(`expected operators for ${type}`)
-			const ids = ops.map((o) => o.id)
-			expect(ids).toEqual(['in', 'notIn', 'isEmpty', 'isNotEmpty'])
+describe('createOperatorFilterFn', () => {
+	it('never calls a value-taking operator with an empty value', () => {
+		const filterFn = vi.fn(() => false)
+		const notBetween: FilterOperatorDef<number> = {
+			id: 'notBetween',
+			label: 'Not between',
+			input: OperatorInput.Range,
+			filterFn,
 		}
+		const fn = createOperatorFilterFn([notBetween])
+
+		for (const value of [undefined, null, '', [], {}, { from: '', to: undefined }]) {
+			expect(fn(row(5), 'amount', { operator: 'notBetween', value })).toBe(true)
+		}
+		expect(filterFn).not.toHaveBeenCalled()
 	})
 
-	it('defaults operator id to "in" for select and badge', () => {
-		expect(DEFAULT_OPERATOR_ID_BY_TYPE.select).toBe('in')
-		expect(DEFAULT_OPERATOR_ID_BY_TYPE.badge).toBe('in')
+	it('calls an operator with no value for every row', () => {
+		const filterFn = vi.fn((rowValue: unknown) => rowValue == null)
+		const isEmpty: FilterOperatorDef = { id: 'isEmpty', label: 'Is empty', input: OperatorInput.None, filterFn }
+		const fn = createOperatorFilterFn([isEmpty])
+
+		expect(fn(row(null), 'email', { operator: 'isEmpty' })).toBe(true)
+		expect(fn(row('a@b.c'), 'email', { operator: 'isEmpty' })).toBe(false)
+		expect(filterFn).toHaveBeenCalledTimes(2)
+	})
+
+	it('hands a range operator the range as written', () => {
+		const filterFn = vi.fn((rowValue: unknown, { from, to }: BetweenValue<number>) => {
+			const n = Number(rowValue)
+			return (from !== undefined && n < from) || (to !== undefined && n > to)
+		})
+		const notBetween: FilterOperatorDef<number> = {
+			id: 'notBetween',
+			label: 'Not between',
+			input: OperatorInput.Range,
+			filterFn,
+		}
+		const fn = createOperatorFilterFn([notBetween])
+
+		expect(fn(row(5), 'amount', { operator: 'notBetween', value: { from: 10, to: 20 } })).toBe(true)
+		expect(fn(row(15), 'amount', { operator: 'notBetween', value: { from: 10, to: 20 } })).toBe(false)
+		expect(filterFn).toHaveBeenCalledWith(5, { from: 10, to: 20 })
+	})
+
+	it('hands a list operator the array as written', () => {
+		const filterFn = vi.fn((rowValue: unknown, values: readonly string[]) => !values.includes(String(rowValue)))
+		const excludesAny: FilterOperatorDef<string> = {
+			id: 'excludesAny',
+			label: 'Excludes any',
+			input: OperatorInput.List,
+			filterFn,
+		}
+		const fn = createOperatorFilterFn([excludesAny])
+
+		expect(fn(row('c'), 'status', { operator: 'excludesAny', value: ['a', 'b'] })).toBe(true)
+		expect(filterFn).toHaveBeenCalledWith('c', ['a', 'b'])
+	})
+
+	it('never hands a value of the wrong shape to an operator', () => {
+		const list = vi.fn(() => false)
+		const range = vi.fn(() => false)
+		const fn = createOperatorFilterFn([
+			{ id: 'in', label: 'In', input: OperatorInput.List, filterFn: list },
+			{ id: 'between', label: 'Between', input: OperatorInput.Range, filterFn: range },
+		])
+
+		expect(fn(row('abc'), 'status', { operator: 'in', value: 'a' })).toBe(true)
+		expect(fn(row(5), 'amount', { operator: 'between', value: 7 })).toBe(true)
+		expect(list).not.toHaveBeenCalled()
+		expect(range).not.toHaveBeenCalled()
+	})
+
+	it('passes every row for an operator the column does not offer, warning once for many rows', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+		// Rebuilt between the rows, as the column mapper rebuilds it on every React render.
+		for (const value of [1, 2, 3, 4]) {
+			const fn = createOperatorFilterFn(TEXT_SET, 'amount')
+			expect(fn(row(value), 'amount', { operator: 'notBetween', value: { from: 1 } })).toBe(true)
+		}
+
+		expect(warn).toHaveBeenCalledTimes(1)
+		expect(warn).toHaveBeenCalledWith(expect.stringMatching(/"amount".*"notBetween"/))
+		warn.mockRestore()
 	})
 })
 
-describe('buildOperatorRegistry + resolveColumnOperators', () => {
-	it('includes built-in `in` / `notIn` in the global registry', () => {
-		const registry = buildOperatorRegistry()
-		expect(registry.get('in')).toBeDefined()
-		expect(registry.get('notIn')).toBeDefined()
+describe('isEmptyOperatorValue', () => {
+	it('never calls a value of an operator with no input empty', () => {
+		expect(isEmptyOperatorValue(OperatorInput.None, undefined)).toBe(false)
 	})
 
-	it('resolveColumnOperators returns cell-type operators when config is `true`', () => {
-		const registry = buildOperatorRegistry()
-		const selectOps = DEFAULT_OPERATORS_BY_TYPE.select
-		const resolved = resolveColumnOperators(true, registry, selectOps)
-		expect(resolved.map((o) => o.id)).toEqual(['in', 'notIn', 'isEmpty', 'isNotEmpty'])
-	})
-})
-
-describe('createOperatorFilterFn — empty-array guard', () => {
-	it('returns true when filter value is an empty array', () => {
-		const registry = buildOperatorRegistry()
-		const inOp = registry.get('in')
-		if (!inOp) throw new Error('expected `in` operator')
-		const fn = createOperatorFilterFn([inOp] as FilterOperatorDef[])
-		const row = { getValue: () => 'a' }
-		expect(fn(row, 'col', { operator: 'in', value: [] })).toBe(true)
+	it('calls a range with one bound set non-empty', () => {
+		expect(isEmptyOperatorValue(OperatorInput.Range, { from: 1 })).toBe(false)
+		expect(isEmptyOperatorValue(OperatorInput.Range, { from: '', to: null })).toBe(true)
 	})
 
-	it('applies the operator filterFn when array has entries', () => {
-		const registry = buildOperatorRegistry()
-		const inOp = registry.get('in')
-		if (!inOp) throw new Error('expected `in` operator')
-		const fn = createOperatorFilterFn([inOp] as FilterOperatorDef[])
-		const row = { getValue: () => 'a' }
-		expect(fn(row, 'col', { operator: 'in', value: ['a'] })).toBe(true)
-		expect(fn(row, 'col', { operator: 'in', value: ['b'] })).toBe(false)
+	it('treats 0 and false as values, not as empty', () => {
+		expect(isEmptyOperatorValue(OperatorInput.Single, 0)).toBe(false)
+		expect(isEmptyOperatorValue(OperatorInput.Single, false)).toBe(false)
+		expect(isEmptyOperatorValue(OperatorInput.Range, { from: 0 })).toBe(false)
+	})
+
+	it('hands 0 and false to the operator', () => {
+		const filterFn = vi.fn((rowValue: unknown, value: unknown) => rowValue === value)
+		const fn = createOperatorFilterFn([{ id: 'equals', label: 'Equals', input: OperatorInput.Single, filterFn }])
+
+		expect(fn(row(0), 'amount', { operator: 'equals', value: 0 })).toBe(true)
+		expect(fn(row(false), 'active', { operator: 'equals', value: false })).toBe(true)
+		expect(filterFn).toHaveBeenCalledWith(0, 0)
+		expect(filterFn).toHaveBeenCalledWith(false, false)
+	})
+
+	it('calls a value of a shape the input cannot take empty', () => {
+		expect(isEmptyOperatorValue(OperatorInput.List, 'a')).toBe(true)
+		expect(isEmptyOperatorValue(OperatorInput.Range, 7)).toBe(true)
+		expect(isEmptyOperatorValue(OperatorInput.Range, [1, 2])).toBe(true)
 	})
 })
 

@@ -1,14 +1,15 @@
-import { createColumns } from '@ez-kit/data-grid-core'
+import { OperatorInput, createColumns } from '@ez-kit/data-grid-core'
 import { renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { DataGridOptionsProvider, mergeGridOptionLayers, useDataGridOptions } from './data-grid-options-context'
-import { TEST_FEATURES } from './test-utils'
+import { TEST_FEATURES, TEST_OPERATORS } from './test-utils'
 import { useDataGrid } from './use-data-grid'
 
 import type { DataGridDefaultOptions } from './data-grid-options-context'
 import type { GridFeatures } from './types'
 import type { UseDataGridConfig } from './use-data-grid'
+import type { FilterOperatorDef } from '@ez-kit/data-grid-core'
 import type { ReactNode } from 'react'
 
 type User = { id: number; name: string }
@@ -20,7 +21,12 @@ const USERS: User[] = [
 const COLUMNS = createColumns<User>([{ accessorKey: 'name' }])
 
 describe('mergeGridOptionLayers', () => {
-	const config: UseDataGridConfig<GridFeatures, User> = { features: TEST_FEATURES, data: USERS, columns: COLUMNS }
+	const config: UseDataGridConfig<GridFeatures, User> = {
+		features: TEST_FEATURES,
+		operators: TEST_OPERATORS,
+		data: USERS,
+		columns: COLUMNS,
+	}
 
 	it('applies provider defaults when table omits them', () => {
 		const merged = mergeGridOptionLayers<GridFeatures, User>(undefined, { sorting: true }, config)
@@ -90,7 +96,13 @@ describe('DataGridOptionsProvider', () => {
 
 	it('feeds provider defaults into a descendant useDataGrid', () => {
 		const { result } = renderHook(
-			() => useDataGrid<GridFeatures, User>({ features: TEST_FEATURES, data: USERS, columns: COLUMNS }),
+			() =>
+				useDataGrid<GridFeatures, User>({
+					features: TEST_FEATURES,
+					operators: TEST_OPERATORS,
+					data: USERS,
+					columns: COLUMNS,
+				}),
 			{
 				wrapper: makeWrapper({ sorting: true, visibility: true }),
 			},
@@ -105,6 +117,7 @@ describe('DataGridOptionsProvider', () => {
 			() =>
 				useDataGrid<GridFeatures, User>({
 					features: TEST_FEATURES,
+					operators: TEST_OPERATORS,
 					data: USERS,
 					columns: COLUMNS,
 					selection: { bar: false },
@@ -118,7 +131,12 @@ describe('DataGridOptionsProvider', () => {
 describe('useDataGrid without a provider', () => {
 	it('behaves identically to bare config (no defaults injected)', () => {
 		const { result } = renderHook(() =>
-			useDataGrid<GridFeatures, User>({ features: TEST_FEATURES, data: USERS, columns: COLUMNS }),
+			useDataGrid<GridFeatures, User>({
+				features: TEST_FEATURES,
+				operators: TEST_OPERATORS,
+				data: USERS,
+				columns: COLUMNS,
+			}),
 		)
 		expect(result.current.grid.sorting).toBe(false)
 		expect(result.current.getRowModel().rows).toHaveLength(2)
@@ -126,7 +144,10 @@ describe('useDataGrid without a provider', () => {
 
 	it('applies factory defaults passed as the base layer', () => {
 		const { result } = renderHook(() =>
-			useDataGrid<GridFeatures, User>({ features: TEST_FEATURES, data: USERS, columns: COLUMNS }, { sorting: true }),
+			useDataGrid<GridFeatures, User>(
+				{ features: TEST_FEATURES, operators: TEST_OPERATORS, data: USERS, columns: COLUMNS },
+				{ sorting: true },
+			),
 		)
 		expect(result.current.grid.sorting).toBe(true)
 	})
@@ -144,6 +165,7 @@ describe('write features are enabled by their callback', () => {
 			() =>
 				useDataGrid<GridFeatures, User>({
 					features: TEST_FEATURES,
+					operators: TEST_OPERATORS,
 					data: USERS,
 					columns: COLUMNS,
 					creating: { onSave },
@@ -157,7 +179,13 @@ describe('write features are enabled by their callback', () => {
 
 	it('leaves creating off for a grid that supplies no onSave', () => {
 		const { result } = renderHook(
-			() => useDataGrid<GridFeatures, User>({ features: TEST_FEATURES, data: USERS, columns: COLUMNS }),
+			() =>
+				useDataGrid<GridFeatures, User>({
+					features: TEST_FEATURES,
+					operators: TEST_OPERATORS,
+					data: USERS,
+					columns: COLUMNS,
+				}),
 			{
 				wrapper: makeWrapper({ creating: { mode: 'modal' } }),
 			},
@@ -171,6 +199,7 @@ describe('write features are enabled by their callback', () => {
 			() =>
 				useDataGrid<GridFeatures, User>({
 					features: TEST_FEATURES,
+					operators: TEST_OPERATORS,
 					data: USERS,
 					columns: COLUMNS,
 					editing: { onSave },
@@ -184,7 +213,13 @@ describe('write features are enabled by their callback', () => {
 
 	it('leaves editing off for a grid that supplies no onSave', () => {
 		const { result } = renderHook(
-			() => useDataGrid<GridFeatures, User>({ features: TEST_FEATURES, data: USERS, columns: COLUMNS }),
+			() =>
+				useDataGrid<GridFeatures, User>({
+					features: TEST_FEATURES,
+					operators: TEST_OPERATORS,
+					data: USERS,
+					columns: COLUMNS,
+				}),
 			{
 				wrapper: makeWrapper({ editing: { mode: 'modal' } }),
 			},
@@ -198,6 +233,7 @@ describe('write features are enabled by their callback', () => {
 			() =>
 				useDataGrid<GridFeatures, User>({
 					features: TEST_FEATURES,
+					operators: TEST_OPERATORS,
 					data: USERS,
 					columns: COLUMNS,
 					deleting: { onDelete },
@@ -211,7 +247,13 @@ describe('write features are enabled by their callback', () => {
 
 	it('leaves deleting off for a grid that supplies no onDelete', () => {
 		const { result } = renderHook(
-			() => useDataGrid<GridFeatures, User>({ features: TEST_FEATURES, data: USERS, columns: COLUMNS }),
+			() =>
+				useDataGrid<GridFeatures, User>({
+					features: TEST_FEATURES,
+					operators: TEST_OPERATORS,
+					data: USERS,
+					columns: COLUMNS,
+				}),
 			{
 				wrapper: makeWrapper({ deleting: { confirmation: true } }),
 			},
@@ -224,6 +266,7 @@ describe('write features are enabled by their callback', () => {
 		const { result } = renderHook(() =>
 			useDataGrid<GridFeatures, User>({
 				features: TEST_FEATURES,
+				operators: TEST_OPERATORS,
 				data: USERS,
 				columns: COLUMNS,
 				deleting: { onDelete },
@@ -238,6 +281,7 @@ describe('write features are enabled by their callback', () => {
 			({ withHandler }: { withHandler: boolean }) =>
 				useDataGrid<GridFeatures, User>({
 					features: TEST_FEATURES,
+					operators: TEST_OPERATORS,
 					data: USERS,
 					columns: COLUMNS,
 					...(withHandler ? { creating: { onSave } } : {}),
@@ -248,5 +292,94 @@ describe('write features are enabled by their callback', () => {
 
 		rerender({ withHandler: false })
 		expect(result.current.options.creating).toBeUndefined()
+	})
+})
+
+describe('operators across the option layers', () => {
+	type Row = { id: number; name: string; amount: number; createdAt: string }
+
+	const onDay: FilterOperatorDef = { id: 'onDay', label: 'On day', input: OperatorInput.Single, filterFn: () => true }
+	const appContains: FilterOperatorDef = {
+		id: 'contains',
+		label: 'App contains',
+		input: OperatorInput.Single,
+		filterFn: () => true,
+	}
+	const mineContains: FilterOperatorDef = {
+		id: 'contains',
+		label: 'My contains',
+		input: OperatorInput.Single,
+		filterFn: () => true,
+	}
+
+	// No `operators` of its own: the set comes from the bundle, the factory layer below.
+	const config: UseDataGridConfig<GridFeatures, Row> = {
+		features: TEST_FEATURES,
+		data: [{ id: 1, name: 'Ann', amount: 1, createdAt: '2026-01-01' }],
+		columns: createColumns<Row>([
+			{ accessorKey: 'name', filtering: { operators: true } },
+			{ accessorKey: 'amount', cell: 'number', filtering: { operators: true } },
+			{ accessorKey: 'createdAt', cell: 'date', filtering: { operators: true } },
+		]),
+		filtering: true,
+	}
+
+	function idsOf(table: { getColumn: (id: string) => unknown }, columnId: string): string[] | undefined {
+		const column = table.getColumn(columnId) as
+			| { columnDef: { meta?: { filtering?: false | { operators?: FilterOperatorDef[] } } } }
+			| undefined
+		const filtering = column?.columnDef.meta?.filtering
+		return filtering === false ? undefined : filtering?.operators?.map((op) => op.id)
+	}
+
+	function labelsOf(table: { getColumn: (id: string) => unknown }, columnId: string): string[] | undefined {
+		const column = table.getColumn(columnId) as
+			| { columnDef: { meta?: { filtering?: false | { operators?: FilterOperatorDef[] } } } }
+			| undefined
+		const filtering = column?.columnDef.meta?.filtering
+		return filtering === false ? undefined : filtering?.operators?.map((op) => op.label)
+	}
+
+	it('replaces the set of each cell type a provider names, and keeps the bundle’s others', () => {
+		const { result } = renderHook(() => useDataGrid<GridFeatures, Row>(config, { operators: TEST_OPERATORS }), {
+			wrapper: ({ children }: { children: ReactNode }) => (
+				<DataGridOptionsProvider defaults={{ operators: { byType: { date: [onDay] } } }}>
+					{children}
+				</DataGridOptionsProvider>
+			),
+		})
+
+		expect(idsOf(result.current, 'createdAt')).toEqual(['onDay'])
+		expect(idsOf(result.current, 'name')).toEqual(TEST_OPERATORS.byType.text.map((op) => op.id))
+		expect(idsOf(result.current, 'amount')).toEqual(TEST_OPERATORS.byType.number.map((op) => op.id))
+	})
+
+	it('lets the instance beat the provider', () => {
+		const { result } = renderHook(
+			() => useDataGrid<GridFeatures, Row>({ ...config, operators: { byType: { text: [mineContains] } } }),
+			{
+				wrapper: ({ children }: { children: ReactNode }) => (
+					<DataGridOptionsProvider defaults={{ operators: { byType: { text: [appContains] } } }}>
+						{children}
+					</DataGridOptionsProvider>
+				),
+			},
+		)
+
+		expect(labelsOf(result.current, 'name')).toEqual(['My contains'])
+	})
+
+	it('switches nothing on', () => {
+		const { result } = renderHook(() =>
+			useDataGrid<GridFeatures, User>({
+				features: TEST_FEATURES,
+				operators: TEST_OPERATORS,
+				data: USERS,
+				columns: COLUMNS,
+			}),
+		)
+
+		expect(result.current.getColumn('name')?.getCanFilter()).toBe(false)
+		expect(result.current.getColumn('name')?.columnDef.meta?.filtering).toBeUndefined()
 	})
 })

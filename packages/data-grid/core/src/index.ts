@@ -58,12 +58,16 @@ export {
 	BuiltInSortingFn,
 	ColumnAlign,
 	ColumnPinSide,
+	ItemStatus,
 	LinkTarget,
 	ColumnSortUndefined,
 	LINK_HREF_VALUE_TOKEN,
 	SystemColumnType,
 } from './column/types'
 export type { ColumnHelper } from './column/create-column-helper'
+// Which cell types label their values from a list (`select`, `badge`) — one set, read by the
+// React layer too, so a third list-bearing type cannot be added in one place and missed in another.
+export { isItemCellType } from './column/map-columns/items-source'
 
 // Menu / row-action icon vocabulary — semantic names each UI kit maps to its own glyphs
 export { GridMenuIcon, isGridMenuIcon } from './menu-icon'
@@ -73,11 +77,14 @@ export { defaultMessages, resolveMessages } from './messages'
 export type {
 	CountContext,
 	DraftSummaryContext,
+	FilterOperatorTriggerContext,
 	FilterPlaceholderContext,
 	GridMessages,
 	OrderingColumnContext,
 	OrderingPositionContext,
+	OrderingSortContext,
 	PartialGridMessages,
+	SortEntryContext,
 } from './messages'
 
 // System column IDs
@@ -118,6 +125,8 @@ export type {
 	ColumnAggregationMeta,
 	ColumnCellMeta,
 	ColumnFilteringMeta,
+	FilterFieldDef,
+	ResolvedFilterField,
 	ColumnCreatingConfig,
 	ColumnDef,
 	ColumnEditingConfig,
@@ -143,7 +152,12 @@ export type {
 	ImageCellConfig,
 	LinkCellConfig,
 	InputComponentProps,
+	ItemsSource,
+	ItemsSourceParams,
+	ItemsSourceResult,
 	ProgressCellConfig,
+	SelectColumnConfig,
+	BadgeColumnConfig,
 	SelectCellConfig,
 	SelectItem,
 	SortingFn,
@@ -166,34 +180,22 @@ export type {
 	FilterOperatorId,
 	FilterItem,
 	DateValuePreset,
-	OperatorRegistry,
+	OperatorsConfig,
 	StructuredFilterValue,
-	TableOperatorsConfig,
 } from './features/operators'
-// Every built-in operator list, so extending one reads as extending it —
-// `items: [...SELECT_BADGE_OPERATORS, myOperator]`. `SELECT_BADGE_OPERATORS` and
-// `EMPTY_OPERATORS` were the two that were not exported, which left the select / badge
-// default set nameable only as `DEFAULT_OPERATORS_BY_TYPE.select` — an index signature, so
-// `FilterOperatorDef[] | undefined`.
+// The operator *definitions* are deliberately not here — the ready-made set, and the
+// `FilterOperator` / `DEFAULT_OPERATOR_ICONS` constants named after its ids, live on
+// `@ez-kit/data-grid-core/operators`, so a grid that never imports the set never carries it.
 export {
-	BOOLEAN_OPERATORS,
 	BetweenInputType,
-	DATE_OPERATORS,
 	DATE_VALUE_PRESETS,
 	DATE_RANGE_PRESETS,
-	DEFAULT_OPERATOR_ID_BY_TYPE,
-	DEFAULT_OPERATORS_BY_TYPE,
-	EMPTY_OPERATORS,
-	FilterOperator,
-	IN_OPERATORS,
 	isDateRangePreset,
-	// The two label overlays: the operator lists are settled in core, their wording comes from
-	// the grid's dictionary, and the React layer applies these where the controls are rendered.
+	isEmptyOperatorValue,
+	// The preset labels' overlay: the presets are settled in core, their wording comes from the
+	// grid's dictionary, and the React layer applies it where the controls are rendered.
 	localizeDatePresets,
-	localizeOperators,
-	NUMBER_OPERATORS,
-	SELECT_BADGE_OPERATORS,
-	TEXT_OPERATORS,
+	OperatorInput,
 } from './features/operators'
 
 // Reordering: the pure helpers the UI drives it with, per axis. In core, not the React layer,
@@ -266,8 +268,12 @@ export type { EditingApi, EditingConfig, EditingSaveContext, EditingState } from
 export type { InfiniteState } from './features/infinite'
 export type { LoadingState } from './features/loading'
 
+// Form commit API
+export { CommitFailure } from './features/form'
+export type { CommitOptions, CommitResult } from './features/form'
+
 // Validation API
-export { CommitStatus, ValidateOn, ValidationError, isValidationError, zodResolver } from './features/validation'
+export { CommitStatus, ValidateOn, ValidationError, isValidationError, schemaResolver } from './features/validation'
 
 export type {
 	FieldState,
@@ -275,6 +281,7 @@ export type {
 	ValidateContext,
 	ValidationIssue,
 	ValidationSchema,
+	StandardSchemaV1,
 	ValidationErrors,
 	ValidationProblems,
 	ValidationResult,
@@ -289,6 +296,7 @@ export {
 	LoadMoreDirection,
 	MultiSortEvent,
 	PaginationMode,
+	ReorderMode,
 } from './types'
 export type {
 	AggregationConfig,
@@ -307,7 +315,6 @@ export type {
 	RowOrderingConfig,
 	ColumnPinningConfig,
 	VisibilityConfig,
-	VisibilityMenuOrderingConfig,
 	PaginationTotals,
 	PinningConfig,
 	RowPinningConfig,

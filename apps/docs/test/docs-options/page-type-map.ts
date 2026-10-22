@@ -84,12 +84,14 @@ export const DocPage = {
 	Ai: 'content/docs/data-grid/ai.mdx',
 	Architecture: 'content/docs/data-grid/architecture.mdx',
 	ClientVsServer: 'content/docs/data-grid/client-vs-server.mdx',
+	ColumnsAsyncItems: 'content/docs/data-grid/columns/async-items.mdx',
 	ColumnsCellTypes: 'content/docs/data-grid/columns/cell-types.mdx',
 	ColumnsCustomCellTypes: 'content/docs/data-grid/columns/custom-cell-types.mdx',
 	LayoutComposition: 'content/docs/data-grid/layout/composition.mdx',
 	LayoutPresets: 'content/docs/data-grid/layout/presets.mdx',
 	StateDefaults: 'content/docs/data-grid/state/defaults.mdx',
 	StateContext: 'content/docs/data-grid/state/context.mdx',
+	StateRendering: 'content/docs/data-grid/state/rendering.mdx',
 	EditingCreating: 'content/docs/data-grid/editing/creating.mdx',
 	EditingCrudClient: 'content/docs/data-grid/editing/crud-client.mdx',
 	EditingCrudServer: 'content/docs/data-grid/editing/crud-server.mdx',
@@ -133,6 +135,7 @@ export const DocPage = {
 	GroupingAggregation: 'content/docs/data-grid/grouping/aggregation.mdx',
 	GroupingInteractive: 'content/docs/data-grid/grouping/interactive.mdx',
 	FilteringDateRange: 'content/docs/data-grid/filtering/date-range.mdx',
+	FilteringFields: 'content/docs/data-grid/filtering/fields.mdx',
 	FilteringGlobal: 'content/docs/data-grid/filtering/global.mdx',
 	FilteringIndex: 'content/docs/data-grid/filtering/index.mdx',
 	FilteringMultiValue: 'content/docs/data-grid/filtering/multi-value.mdx',
@@ -253,17 +256,20 @@ export const GRID_TYPE = {
 	ColumnAggregationConfig: { module: TypeModule.Core, name: 'ColumnAggregationConfig' },
 	AggregationConfig: { module: TypeModule.Core, name: 'AggregationConfig' },
 	ColumnFilteringConfig: { module: TypeModule.Core, name: 'ColumnFilteringConfig' },
+	FilterFieldDef: { module: TypeModule.Core, name: 'FilterFieldDef' },
 	ColumnOperatorsConfig: { module: TypeModule.Core, name: 'ColumnOperatorsConfig' },
-	TableOperatorsConfig: { module: TypeModule.Core, name: 'TableOperatorsConfig' },
+	OperatorsConfig: { module: TypeModule.Core, name: 'OperatorsConfig' },
 	BetweenOperatorConfig: { module: TypeModule.Core, name: 'BetweenOperatorConfig' },
-	UseColumnFiltersResult: { module: TypeModule.React, name: 'UseColumnFiltersResult' },
-	OperatorColumnFilterModel: { module: TypeModule.React, name: 'OperatorColumnFilterModel' },
+	UseFiltersResult: { module: TypeModule.React, name: 'UseFiltersResult' },
+	OperatorFilterModel: { module: TypeModule.React, name: 'OperatorFilterModel' },
 	DateValuePreset: { module: TypeModule.Core, name: 'DateValuePreset' },
 	FilterOperatorDef: { module: TypeModule.Core, name: 'FilterOperatorDef' },
 	DateRangePreset: { module: TypeModule.Core, name: 'DateRangePreset' },
 	DateCellConfig: { module: TypeModule.Core, name: 'DateCellConfig' },
 	LinkCellConfig: { module: TypeModule.Core, name: 'LinkCellConfig' },
 	SelectCellConfig: { module: TypeModule.Core, name: 'SelectCellConfig' },
+	SelectColumnConfig: { module: TypeModule.Core, name: 'SelectColumnConfig' },
+	BadgeColumnConfig: { module: TypeModule.Core, name: 'BadgeColumnConfig' },
 	BadgeCellConfig: { module: TypeModule.Core, name: 'BadgeCellConfig' },
 	ReactFilteringConfig: { module: TypeModule.React, name: 'ReactFilteringConfig' },
 	ReactPaginationConfig: { module: TypeModule.React, name: 'ReactPaginationConfig' },
@@ -672,6 +678,23 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		nonOptionTables: [{ heading: NO_HEADING, reason: 'A list of documentation URLs.' }],
 	},
 	{
+		page: DocPage.ColumnsAsyncItems,
+		optionTables: [
+			{
+				heading: '`cell.config` (select / badge)',
+				roots: [GRID_TYPE.SelectColumnConfig, GRID_TYPE.BadgeColumnConfig],
+				expectedCount: 3,
+			},
+			{ heading: 'Per-column lists', roots: [GRID_TYPE.ColumnDef], expectedCount: 6 },
+		],
+		nonOptionTables: [
+			{
+				heading: 'Where a list comes from',
+				reason: 'Maps each control to the levels it inherits its list from — prose about a chain, not keys.',
+			},
+		],
+	},
+	{
 		page: DocPage.ColumnsCellTypes,
 		optionTables: [
 			{ heading: "`'date'`", roots: [GRID_TYPE.DateCellConfig], expectedCount: 3 },
@@ -692,11 +715,25 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 	{
 		page: DocPage.StateContext,
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 1 }],
+		optionTables: [
+			{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 1 },
+			// `createDataGrid({ context })` — the factory default the bundle's context type comes from.
+			{ heading: 'Factory option', roots: [GRID_TYPE.CreateDataGridOptions], expectedCount: 1 },
+		],
 		nonOptionTables: [
 			{
 				heading: 'Reading it',
 				reason: "Compares the hook's two call forms — the rows are call signatures, not keys of any config.",
+			},
+		],
+	},
+	{
+		page: DocPage.StateRendering,
+		optionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'What re-renders on what',
+				reason: 'Maps a kind of change to the components it re-renders, naming no keys.',
 			},
 		],
 	},
@@ -775,10 +812,21 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.ColumnsOrdering,
 		optionTables: [
-			{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 6 },
+			{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 3 },
 			{ heading: 'Column options', roots: [GRID_TYPE.ColumnDef], expectedCount: 1 },
 		],
-		nonOptionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'The arrows or the drag, not both',
+				reason:
+					'The first column is a `ReorderMode` value, not a key; the other two say what it resolves to with and without a drag adapter.',
+			},
+			{
+				heading: 'Migrating from `drag` / `moveControls`',
+				reason:
+					'A migration table: the first column names options that no longer exist, by design, and the second is checked in the `Options` table above.',
+			},
+		],
 	},
 	{
 		page: DocPage.RowOrdering,
@@ -816,7 +864,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			{ heading: 'Binding', roots: [GRID_TYPE.CreateDataGridOptions], expectedCount: 1 },
 			// The `ordering` tree, resolved through its `boolean | …Config` and `false | SystemColumnDef`
 			// unions, plus `getRowId` and `direction`, which row and RTL drags read.
-			{ heading: 'Grid options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 13 },
+			{ heading: 'Grid options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 10 },
 			{ heading: 'Column def', roots: [GRID_TYPE.ColumnDef], expectedCount: 1 },
 			{ heading: 'Announcements', roots: [GRID_TYPE.GridMessages], expectedCount: 13 },
 		],
@@ -1020,9 +1068,14 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.FilteringIndex,
 		optionTables: [
-			{ heading: '`filtering`', roots: [GRID_TYPE.ReactFilteringConfig], expectedCount: 6 },
-			{ heading: 'Per-column `filtering`', roots: [GRID_TYPE.ColumnFilteringConfig], expectedCount: 6 },
+			{ heading: '`filtering`', roots: [GRID_TYPE.ReactFilteringConfig], expectedCount: 7 },
+			{ heading: 'Per-column `filtering`', roots: [GRID_TYPE.ColumnFilteringConfig], expectedCount: 8 },
 		],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.FilteringFields,
+		optionTables: [{ heading: 'Field options', roots: [GRID_TYPE.FilterFieldDef], expectedCount: 5 }],
 		nonOptionTables: [],
 	},
 	{
@@ -1030,26 +1083,31 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		optionTables: [
 			{
 				heading: '`cell` (select / badge)',
-				roots: [GRID_TYPE.SelectCellConfig, GRID_TYPE.BadgeCellConfig],
+				roots: [GRID_TYPE.SelectColumnConfig, GRID_TYPE.BadgeColumnConfig],
 				stripPrefix: CELL_CONFIG_PREFIX,
-				expectedCount: 1,
+				expectedCount: 3,
 			},
-			{ heading: 'Per-column `filtering`', roots: [GRID_TYPE.ColumnFilteringConfig], expectedCount: 4 },
+			{ heading: 'Per-column `filtering`', roots: [GRID_TYPE.ColumnFilteringConfig], expectedCount: 5 },
 		],
 		nonOptionTables: [],
 	},
 	{
 		page: DocPage.FilteringOperators,
 		optionTables: [
-			{ heading: '`TableOperatorsConfig`', roots: [GRID_TYPE.TableOperatorsConfig], expectedCount: 1 },
+			{ heading: '`OperatorsConfig`', roots: [GRID_TYPE.OperatorsConfig], expectedCount: 2 },
 			{ heading: '`ColumnOperatorsConfig`', roots: [GRID_TYPE.ColumnOperatorsConfig], expectedCount: 2 },
 			{ heading: '`BetweenOperatorConfig`', roots: [GRID_TYPE.BetweenOperatorConfig], expectedCount: 3 },
-			{ heading: '`FilterOperatorDef`', roots: [GRID_TYPE.FilterOperatorDef], expectedCount: 4 },
+			{ heading: '`FilterOperatorDef`', roots: [GRID_TYPE.FilterOperatorDef], expectedCount: 5 },
 		],
 		nonOptionTables: [
 			{
-				heading: 'Built-in operators',
+				heading: 'The ready-made set',
 				reason: 'Lists operator ids (`contains`, `between`, …) — filter values, not keys of any config type.',
+			},
+			{
+				heading: 'Custom operators',
+				reason:
+					'Lists the values of `input` (`none`, `single`, …) and what each one gets — not keys of any config type.',
 			},
 		],
 	},
@@ -1060,8 +1118,8 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		// a kit's own filter component reads: the hook's result and one column's filter model.
 		page: DocPage.FilteringVariants,
 		optionTables: [
-			{ heading: '`UseColumnFiltersResult`', roots: [GRID_TYPE.UseColumnFiltersResult], expectedCount: 4 },
-			{ heading: '`OperatorColumnFilterModel`', roots: [GRID_TYPE.OperatorColumnFilterModel], expectedCount: 18 },
+			{ heading: '`UseFiltersResult`', roots: [GRID_TYPE.UseFiltersResult], expectedCount: 4 },
+			{ heading: '`OperatorFilterModel`', roots: [GRID_TYPE.OperatorFilterModel], expectedCount: 18 },
 		],
 		nonOptionTables: [
 			{
@@ -1299,7 +1357,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		page: DocPage.Sorting,
 		optionTables: [
 			{ heading: '`sorting`', roots: [GRID_TYPE.SortingConfig], expectedCount: 7 },
-			{ heading: '`MultiSortConfig`', roots: [GRID_TYPE.MultiSortConfig], expectedCount: 3 },
+			{ heading: '`MultiSortConfig`', roots: [GRID_TYPE.MultiSortConfig], expectedCount: 4 },
 			{ heading: 'Per-column `sorting`', roots: [GRID_TYPE.ColumnSortingConfig], expectedCount: 5 },
 		],
 		nonOptionTables: [],
