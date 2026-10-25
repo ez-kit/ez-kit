@@ -34,8 +34,9 @@ const schema = defineFormSchema<Client>()({
 	version: 1,
 	children: [
 		{
-			type: 'section',
-			title: 'Client',
+			type: 'block',
+			component: 'Section',
+			props: { title: 'Client' },
 			columns: 2,
 			children: [
 				{ type: FormFieldType.Text, name: 'firstName', label: 'First name', defaultValue: '' },
@@ -59,8 +60,9 @@ const schema = defineFormSchema<Client>()({
 			],
 		},
 		{
-			type: 'section',
-			title: 'Company details',
+			type: 'block',
+			component: 'Section',
+			props: { title: 'Company details' },
 			// The whole section appears only for a company.
 			when: { field: 'clientType', eq: 'business' },
 			columns: 2,
@@ -86,7 +88,7 @@ const schema = defineFormSchema<Client>()({
 				},
 			],
 		},
-		{ type: 'submit', label: 'Save' },
+		{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 	],
 })
 

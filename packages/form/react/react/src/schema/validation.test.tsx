@@ -22,7 +22,7 @@ test('constraints in the schema produce field errors', async () => {
 		version: 1,
 		children: [
 			{ type: FormFieldType.Text, name: 'email', label: 'Email', validate: { required: true } },
-			{ type: 'submit', label: 'Save' },
+			{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 		],
 	}
 
@@ -45,7 +45,7 @@ test('the same message from onChange and onSubmit renders exactly once', async (
 		version: 1,
 		children: [
 			{ type: FormFieldType.Text, name: 'email', label: 'Email', validate: { required: true } },
-			{ type: 'submit', label: 'Save' },
+			{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 		],
 	}
 
@@ -72,7 +72,7 @@ const twoRequiredFields: FormSchema<TwoFieldValues> = {
 	children: [
 		{ type: FormFieldType.Text, name: 'a', label: 'A', validate: { required: true } },
 		{ type: FormFieldType.Text, name: 'b', label: 'B', validate: { required: true } },
-		{ type: 'submit', label: 'Save' },
+		{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 	],
 }
 
@@ -172,7 +172,7 @@ test('a hidden required field does not block submission', async () => {
 				validate: { required: true },
 				when: { field: 'showExtra', eq: true },
 			},
-			{ type: 'submit', label: 'Save' },
+			{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 		],
 	}
 

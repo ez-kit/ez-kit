@@ -157,8 +157,7 @@ export const BESPOKE_FIELD_KEYS = {
  *
  * Run **once, at `createForm` time** — the registry is static, authored config, so the
  * answer cannot change between renders and paying a per-node cost for it would be wasted
- * work (the principle `assertNoReservedFieldKeyCollision` already states for the other
- * registry).
+ * work.
  *
  * It throws when two keys derive one id, and when an id collides with a reserved container
  * node type — without which a slot named `SectionField` would silently shadow `section`.

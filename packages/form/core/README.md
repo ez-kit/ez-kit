@@ -35,7 +35,7 @@ import type { LocalizedSelectOption, SelectOption } from '@ez-kit/form-core'
 - **`FormFieldType`** / **`FORM_FIELD_TYPES`** — the built-in field kinds: `text`, `number`,
   `textarea`, `select`, `multiselect`, `checkbox`, `checkboxgroup`, `switch`, `radiogroup`,
   `slider`, `date`, `daterange`. A repeatable group is **not** one of these: it is the `array`
-  container node, whose `type` is reserved like `section` and `step`.
+  container node, whose `type` is reserved like `block`.
 - **`TextInputType`** — the `inputType` a text field may ask for (`email`, `tel`, …). A const object, so a document may name a member (`TextInputType.Email`) or write its string (`'email'`).
 - **`SelectOption<TValue>`** — `{ label, value, disabled? }` with `label` already resolved
   to a string, the option shape every select-like field consumes.
@@ -68,7 +68,7 @@ const schema = defineFormSchema<Values>()({
 	version: 1,
 	children: [
 		{ type: FormFieldType.Text, name: 'email', label: 'Email', validate: { required: true, format: 'email' } },
-		{ type: 'submit', label: 'Save' },
+		{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 	],
 })
 ```
@@ -78,12 +78,14 @@ const schema = defineFormSchema<Values>()({
   inferred, which is what makes `name` checkable per field kind. `TCustom` is the closed
   set of custom field-type keys the document may use.
 - Types: **`FormSchema`**, **`AnyFormSchema`**, **`FormNode`**, **`FieldNode`**,
-  **`SectionNode`**, **`StepNode`**, **`SubmitNode`**, **`BlockNode`**,
-  **`CustomFieldNode`**.
+  **`BlockNode`**, **`ArrayNode`**, **`CustomFieldNode`**. A block is a component from the
+  bundle's `components` written as data — `component`, flat `props`, and optional `children`
+  that make it a container.
 - **`GRID_MIN`** / **`GRID_MAX`** / **`clampToGridRange(n)`** — the `1..4` range a
-  section's `columns` and a node's `colSpan` share.
-- **`RESERVED_NODE_TYPES`** — `section`, `step`, `submit`, `block`; never usable as a
-  registry key.
+  container's `columns` and a node's `colSpan` share.
+- **`RESERVED_NODE_TYPES`** — `section`, `step`, `submit`, `block`, `array`; never usable
+  as a field type. `section`, `submit` and `step` are no longer nodes, and the parser names
+  what replaces each.
 
 ### Parsing an untrusted document
 
@@ -92,7 +94,7 @@ import { FormSchemaError, parseFormSchema } from '@ez-kit/form-core'
 
 const schema = parseFormSchema<Values>(await res.json(), {
 	fieldTypes: Object.keys(fields),
-	blocks: Object.keys(blocks),
+	components: Object.keys(components),
 	rules: Object.keys(rules),
 	hasTranslate: true,
 })
@@ -154,7 +156,7 @@ import { stripHiddenValues, visibleFieldNames } from '@ez-kit/form-core'
 
 - **`walkNodes(schema, visitor)`** / **`isFieldNode(node)`** — depth-first traversal, with
   the ancestor chain.
-- **`LocalizedText`** — a finished string, or `{ key, params }`. **`Translate`** is
+- **`LocalizedText`** — a finished string, or `{ i18n, params }`. **`Translate`** is
   `(key, params) => string`. **`resolveText(text, translate)`** resolves one.
 
 ## License

@@ -21,7 +21,7 @@ import type { FieldConstraintKey, FieldValidate } from '@ez-kit/form-core'
  * reaches runtime past a cast.
  *
  * **`messages` takes plain strings here, not `LocalizedText`.** Resolving a
- * `{ key, params }` message needs a `translate`, and `translate` is a prop of
+ * `{ i18n, params }` message needs a `translate`, and `translate` is a prop of
  * `<SchemaForm>` — the schema-driven component — not of `<Form>` or `useForm`. Rather
  * than invent a second translate channel for the JSX API, or accept a key that could only
  * ever throw when the constraint finally fails, the type asks for the finished copy the

@@ -416,22 +416,6 @@
 		"exportName": "ValidationSchemaExample"
 	},
 	{
-		"id": "form-wizard-jsx",
-		"label": "Wizard: hand-rolled in JSX",
-		"group": "form",
-		"groupLabel": "Form",
-		"sourceFile": "components/wizard-jsx.tsx",
-		"exportName": "WizardJsxExample"
-	},
-	{
-		"id": "form-wizard",
-		"label": "Wizard: document",
-		"group": "form",
-		"groupLabel": "Form",
-		"sourceFile": "components/wizard.tsx",
-		"exportName": "WizardExample"
-	},
-	{
 		"id": "form-arrays",
 		"label": "Arrays",
 		"group": "form",

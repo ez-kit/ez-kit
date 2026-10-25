@@ -8,13 +8,12 @@ import { Form, SchemaForm } from './form'
 import type { DateRangeValue, FormSchema } from '@ez-kit/form-react'
 
 /**
- * The kit's remaining field kinds, and its wizard.
+ * The kit's remaining field kinds, and its sections.
  *
  * `index.test.tsx` renders every kind once; this file *drives* the ones where the kit does
  * real translation work between the contract and React Aria — a number onto a range input, a
- * `YYYY-MM-DD` string onto `@internationalized/date`'s `CalendarDate`, a two-ended range, and
- * a wizard whose steps exist only in a schema. Those conversions are where a silent break
- * survives a smoke test.
+ * `YYYY-MM-DD` string onto `@internationalized/date`'s `CalendarDate`, and a two-ended range.
+ * Those conversions are where a silent break survives a smoke test.
  */
 
 type Values = {
@@ -147,46 +146,15 @@ describe('@ez-kit/form-heroui date fields', () => {
 	})
 })
 
-type StepValues = { name: string; age: string }
+type SectionValues = { name: string; age: string }
 
-const WIZARD: FormSchema<StepValues> = {
-	version: 1,
-	children: [
-		{ type: 'step', title: 'Who', children: [{ type: FormFieldType.Text, name: 'name', label: 'Name' }] },
-		{ type: 'step', title: 'Details', children: [{ type: FormFieldType.Text, name: 'age', label: 'Age' }] },
-	],
-}
-
-describe('@ez-kit/form-heroui wizard', () => {
-	it('shows one step at a time and walks forward and back', async () => {
-		const user = userEvent.setup()
-		render(
-			<SchemaForm
-				schema={WIZARD}
-				defaultValues={{ name: '', age: '' }}
-			/>,
-		)
-
-		expect(screen.getByLabelText('Name')).toBeInTheDocument()
-		expect(screen.queryByLabelText('Age')).toBeNull()
-
-		await user.click(screen.getByRole('button', { name: /next/i }))
-
-		expect(screen.getByLabelText('Age')).toBeInTheDocument()
-		expect(screen.queryByLabelText('Name')).toBeNull()
-
-		await user.click(screen.getByRole('button', { name: /back/i }))
-		expect(screen.getByLabelText('Name')).toBeInTheDocument()
-	})
-})
-
-const SECTIONED: FormSchema<StepValues> = {
+const SECTIONED: FormSchema<SectionValues> = {
 	version: 1,
 	children: [
 		{
-			type: 'section',
-			title: 'About you',
-			description: 'Two columns wide.',
+			type: 'block',
+			component: 'Section',
+			props: { title: 'About you', description: 'Two columns wide.' },
 			columns: 2,
 			children: [
 				{ type: FormFieldType.Text, name: 'name', label: 'Name' },
@@ -220,7 +188,10 @@ describe('@ez-kit/form-heroui sections and grid', () => {
 		)
 
 		// The grid itself is a kit concern — the adapter owns no styling — so what is asserted
-		// here is that every child got its own wrapper, one per field, not how wide it draws.
-		expect(container.querySelectorAll('[data-slot="form-grid-item"]')).toHaveLength(2)
+		// here is that the section holds one grid and every child got its own cell, not how wide
+		// it draws.
+		const grid = container.querySelector('[data-slot="form-section"] [data-slot="form-grid"]')
+		expect(grid).not.toBeNull()
+		expect(grid?.querySelectorAll('[data-slot="form-grid-item"]')).toHaveLength(2)
 	})
 })

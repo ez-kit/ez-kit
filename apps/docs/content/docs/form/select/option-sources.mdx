@@ -30,7 +30,7 @@ The gap is the **JSON document**, which has no place to put a `useQuery` call. `
 
 A document names a **source**. It never carries a URL, and there is deliberately no escape hatch that lets it.
 
-`parseFormSchema` is the trust boundary for a delivered document, and it works by checking every extension point against _this app's_ registered capabilities — `fieldTypes`, `blocks`, `rules`, and now `optionSources`. A URL is unverifiable: nothing on the client can say whether a document that asks for `https://…/internal/dictionary` was supposed to. It is also an SSRF-shaped surface, and — as Form.io and SurveyJS both demonstrate — a URL in the document does not stay a URL: it grows an auth flag, then a templating mini-language for the query string, then an executable-JS hook for the response mapping. A name grows none of that.
+`parseFormSchema` is the trust boundary for a delivered document, and it works by checking every extension point against _this app's_ registered capabilities — `fieldTypes`, `components`, `rules`, and now `optionSources`. A URL is unverifiable: nothing on the client can say whether a document that asks for `https://…/internal/dictionary` was supposed to. It is also an SSRF-shaped surface, and — as Form.io and SurveyJS both demonstrate — a URL in the document does not stay a URL: it grows an auth flag, then a templating mini-language for the query string, then an executable-JS hook for the response mapping. A name grows none of that.
 
 The cost is stated plainly further down: the parser can only confirm the name is registered, so how much a typo costs you is a choice you make when you design the registry.
 
@@ -83,9 +83,9 @@ const optionSources = { cities: useCitiesSource }
 
 The registry key is the name the document uses; the function's own name is for React's benefit, and the two need not match.
 
-### Why a provider, when `fields` and `blocks` are props
+### Why a provider, when `rules` is a prop
 
-`fields`, `blocks` and `rules` are props on `SchemaForm` because they are schema-only concepts: nothing outside a document can refer to a block component or a named rule. An option source is not schema-only — `<form.SelectField optionsFrom='cities' />` is plain TSX with no document in sight, and it needs the same registry. One mechanism serves both authoring paths, so there is intentionally **no** `optionSources` prop to drift from the provider.
+`rules` is a prop on `SchemaForm` because it is a schema-only concept: nothing outside a document can refer to a named rule. An option source is not schema-only — `<form.SelectField optionsFrom='cities' />` is plain TSX with no document in sight, and it needs the same registry. One mechanism serves both authoring paths, so there is intentionally **no** `optionSources` prop to drift from the provider.
 
 ## Parameters, and the cascade
 
@@ -245,7 +245,7 @@ A source returns `LocalizedSelectOption`s, so it may hand back translation keys 
 
 ```tsx
 const optionSources = {
-	cities: () => ({ options: [{ label: { key: 'city.berlin' }, value: 'ber' }], loading: false }),
+	cities: () => ({ options: [{ label: { i18n: 'city.berlin' }, value: 'ber' }], loading: false }),
 }
 ```
 

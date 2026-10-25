@@ -102,7 +102,7 @@ test('a nested field name gets its default at the nested path, not under a dotte
 		version: 1,
 		children: [
 			{ type: FormFieldType.Text, name: 'company.inn', label: 'INN', defaultValue: 'DEFAULT-42' },
-			{ type: 'submit', label: 'Save' },
+			{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 		],
 	}
 
@@ -168,9 +168,9 @@ test('resolves a select option label through `translate`', () => {
 			{
 				type: FormFieldType.Select,
 				name: 'country',
-				label: { key: 'country.label' },
+				label: { i18n: 'country.label' },
 				options: [
-					{ value: 'RU', label: { key: 'country.ru' } },
+					{ value: 'RU', label: { i18n: 'country.ru' } },
 					// A plain string stays finished copy — `LocalizedText` is either spelling.
 					{ value: 'DE', label: 'Germany' },
 				],
@@ -199,7 +199,7 @@ test('binds a date node to the kit input and submits the picked day', async () =
 		version: 1,
 		children: [
 			{ type: FormFieldType.Date, name: 'startsOn', label: 'Starts on', min: '2026-01-01', max: '2026-12-31' },
-			{ type: 'submit', label: 'Save' },
+			{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 		],
 	}
 
@@ -229,7 +229,7 @@ test('a date range is one field holding one { start, end } value', async () => {
 		version: 1,
 		children: [
 			{ type: FormFieldType.DateRange, name: 'stay', label: 'Stay' },
-			{ type: 'submit', label: 'Save' },
+			{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 		],
 	}
 
@@ -288,7 +288,7 @@ test('a checkbox group holds one list under one name', async () => {
 				],
 				defaultValue: ['code'],
 			},
-			{ type: 'submit', label: 'Save' },
+			{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 		],
 	}
 
@@ -321,7 +321,7 @@ test('a required multi-select is not satisfied by an empty selection', async () 
 				defaultValue: [],
 				validate: { required: true },
 			},
-			{ type: 'submit', label: 'Save' },
+			{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 		],
 	}
 

@@ -191,7 +191,7 @@ test('a schema-driven numeric select round-trips through SchemaForm', async () =
 		version: 1,
 		children: [
 			{ type: FormFieldType.Select, name: 'countryId', label: 'Country', options: COUNTRY_OPTIONS, defaultValue: 33 },
-			{ type: 'submit', label: 'Save' },
+			{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 		],
 	}
 

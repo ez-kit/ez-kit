@@ -147,7 +147,7 @@ describe('option sources', () => {
 
 	it('resolves a source label that is a translation key', () => {
 		const localized: OptionSource = () => ({
-			options: [{ label: { key: 'city.berlin' }, value: 'ber' }],
+			options: [{ label: { i18n: 'city.berlin' }, value: 'ber' }],
 			loading: false,
 		})
 		const schema: FormSchema<Values> = {

@@ -16,13 +16,12 @@ any object with a `handleSubmit`; every `useForm` result is accepted, and `FormP
 accepts one whose values hold an array.
 
 Breaking: the `Button` and `Form` slots are gone. Pass the kit's `FormElement` as `FormElement`, and
-its `SubmitButton`, `Section`, `GridItem` and `Wizard` in `components`; `form.SubmitButton` is now
+its `SubmitButton`, `Section` and `GridItem` in `components`; `form.SubmitButton` is now
 the `SubmitButton` you passed. `ArrayScope.Button` is removed — a custom array layout renders its
 own buttons. `ButtonProps`, `SectionRenderProps` and `GridItemRenderProps` are no longer exported;
 a kit's `Section` and `GridItem` take `SectionProps` and `GridItemProps`. `createForm` no longer
 warns about missing slots; `SchemaForm` throws a named error, before it renders anything, when a
-document needs a component or a field kind that was not passed — a hidden node or one in a later
-wizard step included, so a built-in kind with no slot (`DateField`) or an unregistered custom type
+document needs a component or a field kind that was not passed — a hidden node included, so a built-in kind with no slot (`DateField`) or an unregistered custom type
 no longer throws `Unknown node type` mid-flow.
 
 Every key of `FormFieldSlots` and `FormComponents` is now optional, so a third-party kit checks

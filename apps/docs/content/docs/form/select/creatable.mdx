@@ -78,10 +78,10 @@ The offered row reads `Add "<query>"` by default. `createLabel` replaces it:
 />
 ```
 
-A plain string is used verbatim. In the `{ key, params }` form the typed text is merged in under `query`, so a translation can place it wherever its language wants:
+A plain string is used verbatim. In the `{ i18n, params }` form the typed text is merged in under `query`, so a translation can place it wherever its language wants:
 
 ```json
-{ "createLabel": { "key": "tags.create" } }
+{ "createLabel": { "i18n": "tags.create" } }
 ```
 
 ```ts

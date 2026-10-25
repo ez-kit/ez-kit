@@ -31,8 +31,8 @@ type Registration = {
  * `placeholder`, `rows`, `min`, `max`, `step`, `options` — so the two files read as the same
  * form written twice.
  *
- * Two things are spelled differently rather than dropped. Layout is a `section` node with
- * `columns`, and the kit draws the heading and the grid; in JSX that markup is yours to
+ * Two things are spelled differently rather than dropped. Layout is a `Section` block with
+ * `columns`, and the renderer puts the kit's grid inside it; in JSX that grid is yours to
  * write. Validation is **named rules** — `required`, `format: 'email'`, `min` — instead of a
  * validator function, because a document has to stay data: arbitrary JS could not be
  * delivered over the wire, so the format names the constraints it knows and `SchemaForm`
@@ -42,9 +42,9 @@ const schema = defineFormSchema<Registration>()({
 	version: 1,
 	children: [
 		{
-			type: 'section',
-			title: 'Your details',
-			description: 'Two columns on the grid; the notes span both.',
+			type: 'block',
+			component: 'Section',
+			props: { title: 'Your details', description: 'Two columns on the grid; the notes span both.' },
 			columns: 2,
 			children: [
 				{
@@ -78,8 +78,9 @@ const schema = defineFormSchema<Registration>()({
 			],
 		},
 		{
-			type: 'section',
-			title: 'Plan',
+			type: 'block',
+			component: 'Section',
+			props: { title: 'Plan' },
 			columns: 2,
 			children: [
 				{
@@ -140,8 +141,9 @@ const schema = defineFormSchema<Registration>()({
 			],
 		},
 		{
-			type: 'section',
-			title: 'Schedule and preferences',
+			type: 'block',
+			component: 'Section',
+			props: { title: 'Schedule and preferences' },
 			columns: 2,
 			children: [
 				{
@@ -186,7 +188,7 @@ const schema = defineFormSchema<Registration>()({
 				},
 			],
 		},
-		{ type: 'submit', label: 'Create account' },
+		{ type: 'block', component: 'SubmitButton', props: { children: 'Create account' } },
 	],
 })
 

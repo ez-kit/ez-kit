@@ -170,7 +170,7 @@ const schema = defineFormSchema<Trip>()({
 			optionsFrom: { source: 'cities', dependsOn: { country: 'country' } },
 			defaultValue: INITIAL_CITY_IDS,
 		},
-		{ type: 'submit', label: 'Save' },
+		{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 	],
 })
 

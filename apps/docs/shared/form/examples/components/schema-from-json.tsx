@@ -27,8 +27,9 @@ const RESPONSE_BODY = `{
 	"version": 1,
 	"children": [
 		{
-			"type": "section",
-			"title": "Contact",
+			"type": "block",
+			"component": "Section",
+			"props": { "title": "Contact" },
 			"columns": 2,
 			"children": [
 				{ "type": "text", "name": "firstName", "label": "First name", "defaultValue": "", "validate": { "required": true } },
@@ -49,8 +50,8 @@ const RESPONSE_BODY = `{
 					"colSpan": 2,
 					"defaultValue": "free",
 					"options": [
-						{ "value": "free", "label": { "key": "plan.free" } },
-						{ "value": "pro", "label": { "key": "plan.pro" } }
+						{ "value": "free", "label": { "i18n": "plan.free" } },
+						{ "value": "pro", "label": { "i18n": "plan.pro" } }
 					]
 				},
 				{
@@ -63,7 +64,7 @@ const RESPONSE_BODY = `{
 				}
 			]
 		},
-		{ "type": "submit", "label": "Save" }
+		{ "type": "block", "component": "SubmitButton", "props": { "children": "Save" } }
 	]
 }`
 
@@ -102,7 +103,7 @@ export function SchemaFromJsonExample() {
 				// translation key when `SchemaForm` will actually be given a `translate`.
 				const parsed = parseFormSchema<Contact>(document, {
 					fieldTypes: [],
-					blocks: [],
+					components: ['Section', 'SubmitButton'],
 					rules: [],
 					hasTranslate: true,
 				})

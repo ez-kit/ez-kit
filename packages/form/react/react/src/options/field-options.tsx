@@ -466,13 +466,13 @@ function defaultCreateLabel(query: string): string {
  * The creation row's caption.
  *
  * A plain-string `createLabel` is used verbatim — a static "Add a new tag" reads fine and
- * needs nothing interpolated. The `{ key, params }` form gets the typed text merged in under
+ * needs nothing interpolated. The `{ i18n, params }` form gets the typed text merged in under
  * `query`, so a translation may place it wherever its language wants it.
  */
 function createRowLabel(query: string, label: LocalizedText | undefined, translate: Translate | undefined): string {
 	if (label === undefined) return defaultCreateLabel(query)
 	if (typeof label === 'string') return label
-	return resolveText({ key: label.key, params: { ...label.params, query } }, translate)
+	return resolveText({ i18n: label.i18n, params: { ...label.params, query } }, translate)
 }
 
 /**

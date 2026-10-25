@@ -35,8 +35,9 @@ const schema = defineFormSchema<Order>()({
 	version: 1,
 	children: [
 		{
-			type: 'section',
-			title: 'Shipping',
+			type: 'block',
+			component: 'Section',
+			props: { title: 'Shipping' },
 			columns: 2,
 			children: [
 				{
@@ -65,7 +66,7 @@ const schema = defineFormSchema<Order>()({
 				},
 			],
 		},
-		{ type: 'submit', label: 'Save' },
+		{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 	],
 })
 

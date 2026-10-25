@@ -74,7 +74,7 @@ const schema = defineFormSchema<Booking>()({
 			remove: { label: 'Remove' },
 			children: attendeeFields,
 		},
-		{ type: 'submit', label: 'Book' },
+		{ type: 'block', component: 'SubmitButton', props: { children: 'Book' } },
 	],
 })
 

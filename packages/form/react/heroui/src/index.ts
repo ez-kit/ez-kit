@@ -13,10 +13,9 @@ export {
 	TextField,
 } from './blocks/fields'
 export { FormElement, SubmitButton } from './blocks/form-parts'
-export { GridItem, Section } from './blocks/layout'
+export { Grid, Section } from './blocks/layout'
 export { CheckboxGroupField, MultiSelectField } from './blocks/multi-value'
 export { SelectField } from './blocks/select'
-export { Wizard } from './blocks/wizard'
 
 // What each field takes beyond the contract — its React Aria root's props, plus the few an input
 // takes directly — which reach it flat from `form.<Field>`. `KitProps`, not `Props`: the
@@ -76,7 +75,6 @@ export type {
 	ArrayFieldScope,
 	ArrayItemScope,
 	BaseFieldProps,
-	BlockRegistry,
 	BoundFieldComponent,
 	CheckboxFieldProps,
 	CheckboxGroupFieldProps,
@@ -112,6 +110,8 @@ export type {
 	SchemaFormUncontrolledProps,
 	FormUncontrolledProps,
 	GridItemProps,
+	GridProps,
+	GridSlot,
 	JsonValue,
 	KitFormBlock,
 	KitWithFormProps,
@@ -193,7 +193,4 @@ export type {
 	ParseOptions,
 	Rule,
 	RuleIssue,
-	SectionNode,
-	StepNode,
-	SubmitNode,
 } from '@ez-kit/form-react'

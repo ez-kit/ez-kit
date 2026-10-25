@@ -27,7 +27,7 @@ const schema = defineFormSchema<Profile>()({
 			placeholder: 'Mathematician',
 			defaultValue: '',
 		},
-		{ type: 'submit', label: 'Save' },
+		{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 	],
 })
 

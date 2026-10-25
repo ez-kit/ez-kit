@@ -95,7 +95,7 @@ const schema = defineFormSchema<Profile>()({
 			step: 5,
 			defaultValue: 50,
 		},
-		{ type: 'submit', label: 'Save' },
+		{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 	],
 })
 

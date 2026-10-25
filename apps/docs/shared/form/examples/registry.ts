@@ -52,6 +52,4 @@ export const exampleModules: Record<string, () => Promise<Record<string, Compone
 	'components/submit.tsx': () => import('./components/submit'),
 	'components/validation-schema.tsx': () => import('./components/validation-schema'),
 	'components/validation.tsx': () => import('./components/validation'),
-	'components/wizard-jsx.tsx': () => import('./components/wizard-jsx'),
-	'components/wizard.tsx': () => import('./components/wizard'),
 }

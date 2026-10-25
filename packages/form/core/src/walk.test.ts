@@ -8,7 +8,8 @@ import type { AnyFormSchema, FormNode, FormSchema } from './schema'
 const schema: FormSchema<{ a: string; b: string }> = {
 	version: 1,
 	children: [
-		{ type: 'section', title: 'S', children: [{ type: FormFieldType.Text, name: 'a' }] },
+		{ type: 'block', component: 'Section', children: [{ type: FormFieldType.Text, name: 'a' }] },
+		{ type: 'block', component: 'Divider' },
 		{ type: FormFieldType.Text, name: 'b' },
 	],
 }
@@ -16,7 +17,7 @@ const schema: FormSchema<{ a: string; b: string }> = {
 test('visits every node depth-first, containers included', () => {
 	const seen: string[] = []
 	walkNodes(schema, (node) => seen.push(node.type))
-	expect(seen).toEqual(['section', 'text', 'text'])
+	expect(seen).toEqual(['block', 'text', 'block', 'text'])
 })
 
 test('reports the ancestor chain', () => {
@@ -26,6 +27,12 @@ test('reports the ancestor chain', () => {
 	})
 	expect(ancestorsByName.get('a')).toBe(1)
 	expect(ancestorsByName.get('b')).toBe(0)
+})
+
+test('a block is a container only when it has children', () => {
+	const [section, divider] = schema.children as FormNode<unknown, string>[]
+	expect(section !== undefined && hasChildren(section)).toBe(true)
+	expect(divider !== undefined && hasChildren(divider)).toBe(false)
 })
 
 describe('array-aware traversal', () => {

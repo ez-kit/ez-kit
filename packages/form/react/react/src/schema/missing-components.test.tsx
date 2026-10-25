@@ -48,10 +48,10 @@ describe('SchemaForm without the component a document needs', () => {
 		)
 	})
 
-	it('throws naming Section when the document has a section', () => {
+	it('throws naming the component a block needs', () => {
 		const schema: FormSchema<Values> = {
 			version: 1,
-			children: [{ type: 'section', children: [{ type: FormFieldType.Text, name: 'name' }] }],
+			children: [{ type: 'block', component: 'Section', children: [{ type: FormFieldType.Text, name: 'name' }] }],
 		}
 		expect(() => {
 			render(
@@ -60,13 +60,15 @@ describe('SchemaForm without the component a document needs', () => {
 					{...COMMON}
 				/>,
 			)
-		}).toThrow('SchemaForm: the document has a section, but no Section component was passed in components.')
+		}).toThrow('SchemaForm: the document has a block "Section", but no Section component was passed in components.')
 	})
 
-	it('throws naming GridItem when a section has a grid', () => {
+	it('throws naming Grid when a container sets columns', () => {
 		const schema: FormSchema<Values> = {
 			version: 1,
-			children: [{ type: 'section', columns: 2, children: [{ type: FormFieldType.Text, name: 'name' }] }],
+			children: [
+				{ type: 'block', component: 'Section', columns: 2, children: [{ type: FormFieldType.Text, name: 'name' }] },
+			],
 		}
 		const { SchemaForm } = createSchemaForm({ fields: testFields, components: { Section: testComponents.Section } })
 		expect(() => {
@@ -76,15 +78,48 @@ describe('SchemaForm without the component a document needs', () => {
 					{...COMMON}
 				/>,
 			)
-		}).toThrow('SchemaForm: a section has a grid, but no GridItem component was passed in components.')
+		}).toThrow('SchemaForm: the document sets columns, but no Grid component was passed in components.')
 	})
 
-	it('throws naming SubmitButton when the document has a submit node', () => {
+	it('throws naming Grid when the document itself sets columns', () => {
+		const schema: FormSchema<Values> = {
+			version: 1,
+			columns: 2,
+			children: [{ type: FormFieldType.Text, name: 'name' }],
+		}
+		const { SchemaForm } = createSchemaForm({ fields: testFields })
+		expect(() => {
+			render(
+				<SchemaForm
+					schema={schema}
+					{...COMMON}
+				/>,
+			)
+		}).toThrow('SchemaForm: the document sets columns, but no Grid component was passed in components.')
+	})
+
+	it('rejects Grid named as a block', () => {
+		const schema: FormSchema<Values> = {
+			version: 1,
+			children: [{ type: 'block', component: 'Grid', children: [{ type: FormFieldType.Text, name: 'name' }] }],
+		}
+		const { SchemaForm } = createSchemaForm({ fields: testFields, components: testComponents })
+		expect(() => {
+			render(
+				<SchemaForm
+					schema={schema}
+					{...COMMON}
+				/>,
+			)
+		}).toThrow('SchemaForm: "Grid" is not a block; set "columns" on the container instead.')
+	})
+
+	it('throws naming SubmitButton when the document has a SubmitButton block', () => {
 		const schema: FormSchema<Values> = {
 			version: 1,
 			children: [
 				{ type: FormFieldType.Text, name: 'name' },
-				{ type: 'submit', label: 'Save' },
+				{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 			],
 		}
 		expect(() => {
@@ -94,22 +129,9 @@ describe('SchemaForm without the component a document needs', () => {
 					{...COMMON}
 				/>,
 			)
-		}).toThrow('SchemaForm: the document has a submit node, but no SubmitButton component was passed in components.')
-	})
-
-	it('throws naming Wizard when the document has steps', () => {
-		const schema: FormSchema<Values> = {
-			version: 1,
-			children: [{ type: 'step', title: 'One', children: [{ type: FormFieldType.Text, name: 'name' }] }],
-		}
-		expect(() => {
-			render(
-				<FieldsOnly
-					schema={schema}
-					{...COMMON}
-				/>,
-			)
-		}).toThrow('SchemaForm: the document has steps, but no Wizard component was passed in components.')
+		}).toThrow(
+			'SchemaForm: the document has a block "SubmitButton", but no SubmitButton component was passed in components.',
+		)
 	})
 
 	it('throws naming ArrayField when the document has an array', () => {
@@ -150,7 +172,8 @@ describe('SchemaForm without the component a document needs', () => {
 			children: [
 				{ type: FormFieldType.Text, name: 'name' },
 				{
-					type: 'section',
+					type: 'block',
+					component: 'Section',
 					when: { field: 'name', eq: 'show' },
 					children: [{ type: FormFieldType.Text, name: 'name' }],
 				},
@@ -163,7 +186,7 @@ describe('SchemaForm without the component a document needs', () => {
 					{...COMMON}
 				/>,
 			)
-		}).toThrow('SchemaForm: the document has a section, but no Section component was passed in components.')
+		}).toThrow('SchemaForm: the document has a block "Section", but no Section component was passed in components.')
 	})
 
 	it('throws on the first render when a built-in field kind nobody registered is hidden by when', () => {
@@ -205,24 +228,5 @@ describe('SchemaForm without the component a document needs', () => {
 		}).toThrow(
 			'SchemaForm: the document has a field of type "rating", but no component registered in fields derives that type id.',
 		)
-	})
-
-	it('throws on the first render when the node needing the component is in a later wizard step', () => {
-		const schema: FormSchema<Values> = {
-			version: 1,
-			children: [
-				{ type: 'step', title: 'One', children: [{ type: FormFieldType.Text, name: 'name' }] },
-				{ type: 'step', title: 'Two', children: [{ type: 'submit', label: 'Save' }] },
-			],
-		}
-		const { SchemaForm } = createSchemaForm({ fields: testFields, components: { Wizard: testComponents.Wizard } })
-		expect(() => {
-			render(
-				<SchemaForm
-					schema={schema}
-					{...COMMON}
-				/>,
-			)
-		}).toThrow('SchemaForm: the document has a submit node, but no SubmitButton component was passed in components.')
 	})
 })

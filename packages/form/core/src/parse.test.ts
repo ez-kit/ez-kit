@@ -1,6 +1,8 @@
-import { expect, test } from 'vitest'
+import { describe, expect, it, test } from 'vitest'
 
 import { FormSchemaError, parseFormSchema } from './parse'
+
+import type { ParseOptions } from './parse'
 
 const base = { version: 1, children: [] }
 
@@ -25,13 +27,16 @@ test('accepts a registered custom field type', () => {
 
 test('rejects a duplicate field name', () => {
 	expect(() =>
-		parseFormSchema({
-			version: 1,
-			children: [
-				{ type: 'text', name: 'a' },
-				{ type: 'section', children: [{ type: 'text', name: 'a' }] },
-			],
-		}),
+		parseFormSchema(
+			{
+				version: 1,
+				children: [
+					{ type: 'text', name: 'a' },
+					{ type: 'block', component: 'Section', children: [{ type: 'text', name: 'a' }] },
+				],
+			},
+			{ components: ['Section'] },
+		),
 	).toThrow(/duplicate field name "a"/i)
 })
 
@@ -104,9 +109,18 @@ test("an array's own condition is read in its parent's scope, not in its items'"
 })
 
 test('rejects a translation key when no translate is available', () => {
-	expect(() => parseFormSchema({ version: 1, children: [{ type: 'text', name: 'a', label: { key: 'x' } }] })).toThrow(
+	expect(() => parseFormSchema({ version: 1, children: [{ type: 'text', name: 'a', label: { i18n: 'x' } }] })).toThrow(
 		/translate/i,
 	)
+})
+
+test('rejects the old key spelling of a translation key', () => {
+	expect(() =>
+		parseFormSchema(
+			{ version: 1, children: [{ type: 'text', name: 'a', label: { key: 'x' } }] },
+			{ hasTranslate: true },
+		),
+	).toThrow(/"i18n"/)
 })
 
 test('rejects a function condition in an external document', () => {
@@ -115,20 +129,14 @@ test('rejects a function condition in an external document', () => {
 	)
 })
 
-test('rejects step nodes mixed with non-step siblings', () => {
-	expect(() =>
-		parseFormSchema({
-			version: 1,
-			children: [
-				{ type: 'step', children: [] },
-				{ type: 'text', name: 'a' },
-			],
-		}),
-	).toThrow(/step/i)
+test('rejects a step node', () => {
+	expect(() => parseFormSchema({ version: 1, children: [{ type: 'step', children: [] }] })).toThrow(
+		/step nodes are not supported/i,
+	)
 })
 
-test('rejects a registry key that collides with a reserved node type', () => {
-	expect(() => parseFormSchema({ version: 1, children: [] }, { fieldTypes: ['section'] })).toThrow(/reserved/i)
+test.each(['section', 'submit', 'step'])('keeps %s reserved for field kinds', (type) => {
+	expect(() => parseFormSchema({ version: 1, children: [] }, { fieldTypes: [type] })).toThrow(/reserved/i)
 })
 
 test('rejects a block naming a component that is not registered', () => {
@@ -139,7 +147,7 @@ test('rejects a block naming a component that is not registered', () => {
 
 test('accepts a block naming a registered component', () => {
 	const schema = { version: 1, children: [{ type: 'block', component: 'promo-banner' }] }
-	expect(parseFormSchema(schema, { blocks: ['promo-banner'] })).toEqual(schema)
+	expect(parseFormSchema(schema, { components: ['promo-banner'] })).toEqual(schema)
 })
 
 test('rejects a null condition instead of crashing on the "in" operator check', () => {
@@ -184,27 +192,24 @@ test('rejects a localized text object with no string "key"', () => {
 	)
 })
 
-test('rejects a section "columns" outside the supported 1..4 range', () => {
-	expect(() => parseFormSchema({ version: 1, children: [{ type: 'section', columns: 6, children: [] }] })).toThrow(
-		FormSchemaError,
-	)
-	expect(() => parseFormSchema({ version: 1, children: [{ type: 'section', columns: 6, children: [] }] })).toThrow(
-		/columns/i,
-	)
+test('rejects "columns" outside the supported 1..4 range', () => {
+	const schema = { version: 1, children: [{ type: 'block', component: 'Section', columns: 6, children: [] }] }
+	expect(() => parseFormSchema(schema, { components: ['Section'] })).toThrow(FormSchemaError)
+	expect(() => parseFormSchema(schema, { components: ['Section'] })).toThrow(/columns/i)
 })
 
 test('rejects a non-integer "colSpan"', () => {
-	expect(() => parseFormSchema({ version: 1, children: [{ type: 'text', name: 'a', colSpan: 1.5 }] })).toThrow(
-		FormSchemaError,
-	)
-	expect(() => parseFormSchema({ version: 1, children: [{ type: 'text', name: 'a', colSpan: 1.5 }] })).toThrow(
-		/colSpan/i,
-	)
+	const schema = { version: 1, columns: 2, children: [{ type: 'text', name: 'a', colSpan: 1.5 }] }
+	expect(() => parseFormSchema(schema)).toThrow(FormSchemaError)
+	expect(() => parseFormSchema(schema)).toThrow(/colSpan/i)
 })
 
 test('the error names the offending node location', () => {
 	try {
-		parseFormSchema({ version: 1, children: [{ type: 'section', children: [{ type: 'zzz' }] }] })
+		parseFormSchema(
+			{ version: 1, children: [{ type: 'block', component: 'Section', children: [{ type: 'zzz' }] }] },
+			{ components: ['Section'] },
+		)
 		expect.unreachable()
 	} catch (error) {
 		expect(error).toBeInstanceOf(FormSchemaError)
@@ -219,7 +224,7 @@ test('accepts a select whose option labels are translation keys when a translato
 			{
 				type: 'select',
 				name: 'country',
-				options: [{ value: 'RU', label: { key: 'country.ru' } }],
+				options: [{ value: 'RU', label: { i18n: 'country.ru' } }],
 			},
 		],
 	}
@@ -359,4 +364,151 @@ test('rejects a multi-value defaultValue whose entries disagree with the option 
 			],
 		}),
 	).toThrow(/must all be number option values/i)
+})
+
+describe('layout', () => {
+	const COMPONENTS: ParseOptions = { components: ['Section', 'SubmitButton', 'Card', 'Grid'] }
+
+	function failure(schema: Record<string, unknown>, options: ParseOptions = COMPONENTS): FormSchemaError {
+		try {
+			parseFormSchema(schema, options)
+		} catch (error) {
+			if (error instanceof FormSchemaError) return error
+			throw error
+		}
+		throw new Error('Expected parseFormSchema to throw a FormSchemaError')
+	}
+
+	it('accepts a block container with columns, spans inside it, and a leaf block', () => {
+		const schema = {
+			version: 1,
+			columns: 2,
+			children: [
+				{
+					type: 'block',
+					component: 'Section',
+					props: { title: 'Contact' },
+					columns: 2,
+					colSpan: 2,
+					children: [{ type: 'text', name: 'email', colSpan: 2 }],
+				},
+				{ type: 'block', component: 'SubmitButton', props: { children: 'Send' } },
+			],
+		}
+		expect(parseFormSchema(schema, COMPONENTS)).toEqual(schema)
+	})
+
+	it('accepts columns on an array, with spans inside its entries', () => {
+		const schema = {
+			version: 1,
+			children: [
+				{ type: 'array', name: 'people', columns: 2, children: [{ type: 'text', name: 'first', colSpan: 2 }] },
+			],
+		}
+		expect(parseFormSchema(schema, COMPONENTS)).toEqual(schema)
+	})
+
+	it.each([
+		['section', "{ type: 'block', component: 'Section'"],
+		['submit', "{ type: 'block', component: 'SubmitButton'"],
+		['step', 'form.Steps'],
+	])('rejects a %s node, naming what replaces it', (type, replacement) => {
+		const error = failure({ version: 1, children: [{ type, children: [] }] })
+		expect(error.message).toContain(replacement)
+		expect(error.path).toBe('children[0]')
+	})
+
+	it('rejects a component that is not registered, naming it', () => {
+		const error = failure({ version: 1, children: [{ type: 'block', component: 'Tabs' }] })
+		expect(error.message).toContain('"Tabs"')
+	})
+
+	it('rejects Grid as a block, pointing at columns', () => {
+		const error = failure({ version: 1, children: [{ type: 'block', component: 'Grid', children: [] }] })
+		expect(error.message).toMatch(/columns/)
+	})
+
+	it.each(['label', 'description', 'disabledWhen'])('rejects %s on a block, pointing at props', (key) => {
+		const value = key === 'disabledWhen' ? { field: 'a', eq: 1 } : 'Contact'
+		const error = failure({ version: 1, children: [{ type: 'block', component: 'Card', [key]: value }] })
+		expect(error.message).toContain(key)
+		expect(error.message).toMatch(/props/)
+	})
+
+	it('rejects props.children beside node children', () => {
+		const error = failure({
+			version: 1,
+			children: [{ type: 'block', component: 'Card', props: { children: 'x' }, children: [] }],
+		})
+		expect(error.message).toMatch(/children/)
+		expect(error.path).toBe('children[0]')
+	})
+
+	it('rejects columns on a field', () => {
+		const error = failure({ version: 1, children: [{ type: 'text', name: 'a', columns: 2 }] })
+		expect(error.message).toMatch(/columns/)
+		expect(error.path).toBe('children[0]')
+	})
+
+	it('rejects columns on a block without children', () => {
+		const error = failure({ version: 1, children: [{ type: 'block', component: 'Card', columns: 2 }] })
+		expect(error.message).toMatch(/columns/)
+	})
+
+	it('rejects colSpan when the nearest container sets no columns', () => {
+		const error = failure({
+			version: 1,
+			columns: 2,
+			children: [{ type: 'block', component: 'Card', children: [{ type: 'text', name: 'a', colSpan: 2 }] }],
+		})
+		expect(error.message).toMatch(/colSpan/)
+		expect(error.path).toBe('children[0].children[0]')
+	})
+
+	it('rejects colSpan at the root of a document without columns', () => {
+		const error = failure({ version: 1, children: [{ type: 'text', name: 'a', colSpan: 2 }] })
+		expect(error.path).toBe('children[0]')
+	})
+
+	it('rejects colSpan inside an array entry when the array sets no columns', () => {
+		const error = failure({
+			version: 1,
+			columns: 2,
+			children: [{ type: 'array', name: 'people', children: [{ type: 'text', name: 'first', colSpan: 2 }] }],
+		})
+		expect(error.path).toBe('children[0].children[0]')
+	})
+
+	it('rejects a colSpan wider than its container', () => {
+		const error = failure({ version: 1, columns: 2, children: [{ type: 'text', name: 'a', colSpan: 3 }] })
+		expect(error.message).toMatch(/colSpan/)
+		expect(error.path).toBe('children[0]')
+	})
+
+	it('rejects block props JSON cannot carry', () => {
+		const schema = { version: 1, children: [{ type: 'block', component: 'Card', props: { onClick: () => undefined } }] }
+		expect(failure(schema).message).toMatch(/props/)
+	})
+
+	it.each(['constructor', 'toString', '__proto__'])(
+		'reports an unknown type %s as unknown, not as a removed node',
+		(type) => {
+			expect(failure({ version: 1, children: [{ type, name: 'a' }] }).message).toContain(`Unknown node type "${type}"`)
+		},
+	)
+
+	it('rejects root columns outside 1..4', () => {
+		expect(failure({ version: 1, columns: 5, children: [] }).message).toMatch(/columns/)
+	})
+
+	it('checks an { i18n } value in props as a translation key', () => {
+		const schema = { version: 1, children: [{ type: 'block', component: 'Card', props: { title: { i18n: 'card' } } }] }
+		expect(failure(schema).message).toMatch(/translate/)
+		expect(parseFormSchema(schema, { ...COMPONENTS, hasTranslate: true })).toEqual(schema)
+	})
+
+	it('rejects a malformed { i18n } value in props', () => {
+		const schema = { version: 1, children: [{ type: 'block', component: 'Card', props: { title: { i18n: 3 } } }] }
+		expect(failure(schema, { ...COMPONENTS, hasTranslate: true }).message).toMatch(/i18n/)
+	})
 })

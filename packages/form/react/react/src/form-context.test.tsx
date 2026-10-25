@@ -182,16 +182,15 @@ describe('useFormContext', () => {
 		const { SchemaForm } = createSchemaForm({
 			FormElement: testFormElement,
 			fields: testFields,
-			components: testComponents,
+			components: { ...testComponents, Probe: () => <ValueProbe testId='probe' /> },
 		})
 		const schema: FormSchema<{ name: string }> = {
 			version: 1,
-			children: [{ type: 'block', component: 'probe' }],
+			children: [{ type: 'block', component: 'Probe' }],
 		}
 		render(
 			<SchemaForm
 				schema={schema}
-				blocks={{ probe: () => <ValueProbe testId='probe' /> }}
 				defaultValues={{ name: 'Ann' }}
 				onSubmit={() => {}}
 			/>,

@@ -24,8 +24,9 @@ const schema = defineFormSchema<Booking>()({
 	version: 1,
 	children: [
 		{
-			type: 'section',
-			title: 'Booking',
+			type: 'block',
+			component: 'Section',
+			props: { title: 'Booking' },
 			columns: 2,
 			children: [
 				{
@@ -48,7 +49,7 @@ const schema = defineFormSchema<Booking>()({
 				},
 			],
 		},
-		{ type: 'submit', label: 'Book' },
+		{ type: 'block', component: 'SubmitButton', props: { children: 'Book' } },
 	],
 })
 

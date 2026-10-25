@@ -177,7 +177,7 @@ describe('@ez-kit/form-heroui package root', () => {
 		expect(typeof kit.defineFieldType).toBe('function')
 		expect(Object.keys(kit.allFormFields)).toHaveLength(13)
 		expect(kit.allFormFields.ArrayField.Item).toBeTypeOf('function')
-		expect(Object.keys(kit.allFormComponents).sort()).toEqual(['GridItem', 'Section', 'SubmitButton', 'Wizard'])
+		expect(Object.keys(kit.allFormComponents).sort()).toEqual(['Grid', 'Section', 'SubmitButton'])
 		expect(kit.allFormComponents.SubmitButton).toBe(kit.SubmitButton)
 		expect(kit.FormElement).toBeTypeOf('function')
 		for (const name of Object.keys(kit.allFormFields)) {
@@ -226,7 +226,7 @@ const CONTACT: kit.FormSchema<{ email: string }> = {
 	version: 1,
 	children: [
 		{ type: kit.FormFieldType.Text, name: 'email', label: 'Email' },
-		{ type: 'submit', label: 'Save' },
+		{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 	],
 }
 

@@ -57,7 +57,7 @@ const schema = defineFormSchema<Issue>()({
 			options: TAGS,
 			defaultValue: ['docs'],
 		},
-		{ type: 'submit', label: 'Save' },
+		{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 	],
 })
 

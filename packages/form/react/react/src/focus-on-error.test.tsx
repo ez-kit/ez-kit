@@ -327,7 +327,7 @@ describe('focus on the first error', () => {
 			version: 1,
 			children: [
 				{ type: FormFieldType.Text, name: 'email', label: 'Email', validate: { required: true } },
-				{ type: 'submit', label: 'Save' },
+				{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 			],
 		}
 
@@ -352,7 +352,7 @@ describe('focus on the first error', () => {
 			version: 1,
 			children: [
 				{ type: FormFieldType.Text, name: 'email', label: 'Email', validate: { required: true } },
-				{ type: 'submit', label: 'Save' },
+				{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 			],
 		}
 		const onSubmit = vi.fn()

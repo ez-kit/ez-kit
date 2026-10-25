@@ -39,7 +39,7 @@ const schema: FormSchema<Values> = {
 				{ type: FormFieldType.Text, name: 'kind', label: 'Kind' },
 			],
 		},
-		{ type: 'submit', label: 'Save' },
+		{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 	],
 }
 

@@ -1,4 +1,4 @@
-import type { GridItemProps, SectionProps, SubmitButtonProps } from './field-props'
+import type { GridItemProps, GridProps, SectionProps, SubmitButtonProps } from './field-props'
 import type { DateRangeValue, SelectOption } from '@ez-kit/form-core'
 import type { ComponentPropsWithoutRef, ReactNode } from 'react'
 
@@ -23,8 +23,8 @@ import type { ComponentPropsWithoutRef, ReactNode } from 'react'
  *   components, each routed to its own binder. `createForm({ fields })` accepts *additional*
  *   keys too, which is how an app adds `RatingField` to the instance and `{ type: 'rating' }` to
  *   a schema document.
- * - {@link FormComponents} names the four other components a kit ships — `SubmitButton`,
- *   `Section`, `GridItem`, `Wizard`. They are ordinary components that read the form from
+ * - {@link FormComponents} names the three other components a kit ships — `SubmitButton`,
+ *   `Section`, `Grid`. They are ordinary components that read the form from
  *   context; `createForm({ components })` is open beyond them.
  *
  * A field's render props are only what the binding **computes** — identity, value, `onChange`,
@@ -45,7 +45,7 @@ import type { ComponentPropsWithoutRef, ReactNode } from 'react'
  *
  * ```ts
  * export const allFormFields = { TextField, NumberField, …, ArrayField } satisfies FormFieldSlots
- * export const allFormComponents = { SubmitButton, Section, GridItem, Wizard } satisfies FormComponents
+ * export const allFormComponents = { SubmitButton, Section, Grid } satisfies FormComponents
  * createForm({ FormElement, fields: allFormFields, components: allFormComponents })
  * ```
  */
@@ -348,34 +348,21 @@ export type ArrayFieldSlot = ((props: ArrayFieldRenderProps) => ReactNode) & {
 	Item: (props: ArrayItemRenderProps) => ReactNode
 }
 
-// ── wizard ───────────────────────────────────────────────────────────────────
+// ── layout ───────────────────────────────────────────────────────────────────
 
-export type WizardStep = {
-	index: number
-	/** Already resolved by the adapter (`resolveText(step.title, translate)`) — same rule as `FieldRenderProps.label`. */
-	title: ReactNode
-	/** Already resolved by the adapter — same rule as `FieldRenderProps.description`. */
-	description: ReactNode
-	status: 'complete' | 'current' | 'upcoming'
-	/** Visited and failing validation. Never true for an unvisited step. */
-	invalid: boolean
-	/** Cannot be navigated to right now. */
-	disabled: boolean
-	goTo: () => void
-}
-
-export type WizardRenderProps = {
-	steps: WizardStep[]
-	currentIndex: number
-	canGoBack: boolean
-	canGoNext: boolean
-	isLastStep: boolean
-	/** Validates the current step's fields, advances only if they pass. */
-	goNext: () => void
-	goBack: () => void
-	submitting: boolean
-	/** The current step's fields. */
-	children: ReactNode
+/**
+ * The column grid and its cell, as **one** slot — the same shape as {@link ArrayFieldSlot}.
+ *
+ * A grid and its cell mean nothing apart: a kit that replaced one half would draw cells that do
+ * not match their grid. Under one key, `form.Grid` and `form.Grid.Item` come from the same kit,
+ * and the document renderer, which inserts the grid for a container's `columns`, reaches both
+ * through it.
+ *
+ * @example
+ * export const Grid = Object.assign(GridView, { Item: GridItemView })
+ */
+export type GridSlot = ((props: GridProps) => ReactNode) & {
+	Item: (props: GridItemProps) => ReactNode
 }
 
 // ── form level ───────────────────────────────────────────────────────────────
@@ -430,9 +417,9 @@ export type AllFormFieldSlots = Required<FormFieldSlots>
  *
  * These are ordinary components: each becomes `form.<Key>` with its own props, and each reads
  * the form from context (`useFormContext`), so `<form.SubmitButton>` and a plain
- * `<SubmitButton>` are the same component. The keys are named here only because the schema
- * renderer draws them — a `section` node through `Section`, a grid cell through `GridItem`, a
- * stepped document through `Wizard`, a `submit` node through `SubmitButton` — and because
+ * `<SubmitButton>` are the same component. The keys are named here because a kit ships them
+ * and because the document renderer leans on one of them — it inserts `Grid` / `Grid.Item` for a
+ * container's `columns` — and because
  * `createForm({ components })` re-asserts these props on exactly these keys.
  *
  * `components` is open beyond them: `{ SaveBar }` gives `<form.SaveBar />`.
@@ -440,8 +427,7 @@ export type AllFormFieldSlots = Required<FormFieldSlots>
 export type FormComponents = {
 	SubmitButton?: (props: SubmitButtonProps) => ReactNode
 	Section?: (props: SectionProps) => ReactNode
-	GridItem?: (props: GridItemProps) => ReactNode
-	Wizard?: (props: WizardRenderProps) => ReactNode
+	Grid?: GridSlot
 }
 
 /**

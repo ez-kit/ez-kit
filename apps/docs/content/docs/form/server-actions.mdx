@@ -3,7 +3,7 @@ title: Server actions
 description: Submitting a form to a React server action, with the errors it returns put back on the fields through serverErrors.
 ---
 
-**The form needs JavaScript.** These are not plain HTML forms: the kits' fields are controlled components, and validation, arrays, conditions and the wizard all live in JavaScript, so a server action here is the endpoint the form calls, not a no-JavaScript fallback.
+**The form needs JavaScript.** These are not plain HTML forms: the kits' fields are controlled components, and validation, arrays, conditions and steps all live in JavaScript, so a server action here is the endpoint the form calls, not a no-JavaScript fallback.
 
 What a press does **before** the page has hydrated is the browser's own submit. By default the kits render a `<form>` with no `method`, and their inputs carry `name`, so that submit is a **GET** to the current URL with every field's value in the query string — and from there in the browser history and the server's logs. A password field makes that a credential in a URL. Give the form `method='post'` — `<Form>` and `<SchemaForm>` pass it through to the `<form>` element in both kits — so an early press sends the values in a request body, which nothing on the page reads; or keep the submit control disabled until the page has hydrated.
 
@@ -102,7 +102,7 @@ export const signUpSchema = defineFormSchema<SignUpValues>()({
 			defaultValue: '',
 			validate: { required: true, maxLength: 254, format: 'email' },
 		},
-		{ type: 'submit', label: 'Sign up' },
+		{ type: 'block', component: 'SubmitButton', props: { children: 'Sign up' } },
 	],
 })
 ```
@@ -165,7 +165,7 @@ export function SignUp() {
 
 <KitExample exampleId='form-server-action-schema' />
 
-The document is the one the action validates against, imported by both. Its submit node renders the kit's button, which cannot read `isPending`, so the twin shows the pending state beside the form instead; render the form controlled if the button itself has to wait.
+The document is the one the action validates against, imported by both. Its `SubmitButton` block renders the kit's button, which cannot read `isPending`, so the twin shows the pending state beside the form instead; render the form controlled if the button itself has to wait.
 
 ## What `serverErrors` does
 

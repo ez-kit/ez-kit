@@ -191,7 +191,7 @@ const schema = defineFormSchema<Address>()({
 			optionsFrom: { source: 'cities', dependsOn: { country: 'country' } },
 			defaultValue: INITIAL_CITY_ID,
 		},
-		{ type: 'submit', label: 'Save' },
+		{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 	],
 })
 

@@ -47,31 +47,18 @@ describe('withForm without a form prop (D7)', () => {
 
 	it('takes the form of the <SchemaForm> above it', async () => {
 		const user = userEvent.setup()
-		const { SchemaForm, withForm: withSchemaForm } = createSchemaForm({
+		// The part is registered as a component and reached from the document as a block; it
+		// finds the form through the context `SchemaForm` provides, exactly as under `<Form>`.
+		const { SchemaForm } = createSchemaForm({
 			FormElement: testFormElement,
 			fields: testFields,
-			components: testComponents,
+			components: { ...testComponents, LoginPart: () => <LoginPart /> },
 		})
-		const SchemaLoginPart = withSchemaForm({
-			defaultValues: SIGN_UP,
-			render: ({ form }) => (
-				<>
-					<form.TextField
-						name='login'
-						label='Login'
-					/>
-					<form.Subscribe selector={(state) => state.values.login}>
-						{(login) => <output>{login}</output>}
-					</form.Subscribe>
-				</>
-			),
-		})
-		const schema: FormSchema<SignUp> = { version: 1, children: [{ type: 'block', component: 'login' }] }
+		const schema: FormSchema<SignUp> = { version: 1, children: [{ type: 'block', component: 'LoginPart' }] }
 		render(
 			<SchemaForm
 				schema={schema}
 				defaultValues={SIGN_UP}
-				blocks={{ login: () => <SchemaLoginPart /> }}
 			/>,
 		)
 

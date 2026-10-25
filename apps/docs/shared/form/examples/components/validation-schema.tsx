@@ -74,7 +74,7 @@ const schema = defineFormSchema<Signup>()({
 				messages: { required: 'You have to accept the terms' },
 			},
 		},
-		{ type: 'submit', label: 'Submit' },
+		{ type: 'block', component: 'SubmitButton', props: { children: 'Submit' } },
 	],
 })
 

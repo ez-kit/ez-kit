@@ -12,7 +12,8 @@ const schema: FormSchema<Values> = {
 	children: [
 		{ type: FormFieldType.Text, name: 'clientType' },
 		{
-			type: 'section',
+			type: 'block',
+			component: 'Section',
 			when: { field: 'clientType', eq: 'business' },
 			children: [{ type: FormFieldType.Text, name: 'inn' }],
 		},

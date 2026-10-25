@@ -34,8 +34,9 @@ const schema = defineFormSchema<Profile>()({
 	version: 1,
 	children: [
 		{
-			type: 'section',
-			title: 'Profile',
+			type: 'block',
+			component: 'Section',
+			props: { title: 'Profile' },
 			columns: 2,
 			children: [
 				{
@@ -58,7 +59,7 @@ const schema = defineFormSchema<Profile>()({
 				},
 			],
 		},
-		{ type: 'submit', label: 'Save' },
+		{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 	],
 })
 

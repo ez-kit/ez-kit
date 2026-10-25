@@ -126,7 +126,7 @@ type OptionsProps<TValue> = {
  * and a numeric-valued field would have to invent an id no backend issued.
  *
  * `createLabel` captions the offered row. It defaults to `Add "<query>"`; a plain string is
- * used verbatim, and the `{ key, params }` form gets the typed text merged in under `query`
+ * used verbatim, and the `{ i18n, params }` form gets the typed text merged in under `query`
  * so a translation may place it.
  */
 type CreatableProps<TValue> = [TValue] extends [string]
@@ -613,46 +613,64 @@ export type FormFieldComponents<TFormData, TFields extends FormFieldRegistry = A
 } & CustomFieldComponentsOf<TFormData, Omit<TFields, BuiltInFieldKey>>
 
 /**
- * A headed group of fields on a column grid — the JSX spelling of a `section` node.
+ * A headed group of fields — the `Section` a kit ships.
  *
- * The two entry points render the same kit component and therefore the same DOM: a document
- * says `{ type: 'section', title, columns }`, JSX writes `<form.Section title columns>`, and
- * both reach the `Section` passed in `createForm({ components })` — which is also what a kit's
- * `Section` takes, so these are the props a kit implements. Sections are pure layout — nesting a field inside
- * one changes neither its `name`, nor the path its value lives at, nor its validation.
+ * JSX writes `<form.Section title>`, and a document writes the same component as a block:
+ * `{ type: 'block', component: 'Section', props: { title }, children }`. Both reach the `Section`
+ * passed in `createForm({ components })`, so these are the props a kit implements. A section is
+ * pure layout — nesting a field inside one changes neither its `name`, nor the path its value
+ * lives at, nor its validation.
  *
- * `columns` is the same 1..4 range the v1 format allows (`GRID_MIN`/`GRID_MAX`); the kit
- * clamps anything outside it. Nest a section inside a section to build a different grid
- * inside a grid.
+ * It knows nothing of columns: a section on a grid wraps a {@link GridProps | `Grid`}, and in a
+ * document the renderer inserts that grid itself when the block sets `columns`.
  *
  * @example
- * <form.Section title='Contact' columns={2}>
- *   <form.TextField name='firstName' label='First name' />
- *   <form.TextField name='lastName' label='Last name' />
- *   <form.GridItem colSpan={2}>
- *     <form.TextField name='email' label='Email' />
- *   </form.GridItem>
+ * <form.Section title='Contact'>
+ *   <form.Grid columns={2}>
+ *     <form.TextField name='firstName' label='First name' />
+ *     <form.TextField name='lastName' label='Last name' />
+ *   </form.Grid>
  * </form.Section>
  */
 export type SectionProps = {
 	title?: ReactNode | undefined
 	description?: ReactNode | undefined
+	children: ReactNode
+}
+
+/**
+ * A column grid — the JSX spelling of a container's `columns`.
+ *
+ * `columns` is the same 1..4 range the v1 format allows (`GRID_MIN`/`GRID_MAX`); the kit clamps
+ * anything outside it. Every child is a cell of its own and takes one column; `Grid.Item` spans
+ * more. Nest a grid inside a cell to build a different grid inside a grid.
+ *
+ * @example
+ * <form.Grid columns={2}>
+ *   <form.TextField name='firstName' label='First name' />
+ *   <form.TextField name='lastName' label='Last name' />
+ *   <form.Grid.Item colSpan={2}>
+ *     <form.TextField name='email' label='Email' />
+ *   </form.Grid.Item>
+ * </form.Grid>
+ */
+export type GridProps = {
 	/** Grid columns for the direct children. Default 1. Must be an integer 1..4. */
 	columns?: number | undefined
 	children: ReactNode
 }
 
 /**
- * One cell of a section's grid — the JSX spelling of a node's `colSpan`.
+ * One cell of a grid — the JSX spelling of a node's `colSpan`.
  *
- * Only needed to span more than one column: a child written straight into a `Section` is
- * already a grid item of its own and occupies a single column. It wraps *anything*, a nested
- * `Section` included, and carries no field binding — `colSpan` is geometry, not state.
+ * Only needed to span more than one column: a child written straight into a `Grid` is already a
+ * cell of its own. It wraps *anything*, a nested grid included, and carries no field binding —
+ * `colSpan` is geometry, not state.
  *
  * @example
- * <form.GridItem colSpan={2}>
+ * <form.Grid.Item colSpan={2}>
  *   <form.TextareaField name='notes' label='Notes' />
- * </form.GridItem>
+ * </form.Grid.Item>
  */
 export type GridItemProps = {
 	/** Columns this item spans. Default 1. Must be an integer 1..4. */

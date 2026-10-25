@@ -29,28 +29,28 @@ import { defineFormSchema, FormFieldType, SchemaForm, parseFormSchema } from '@e
 
 `children` is a flat array of **nodes**, each discriminated by `type`:
 
-| `type`                                                                                                                         | kind      | what it is                                          |
-| ------------------------------------------------------------------------------------------------------------------------------ | --------- | --------------------------------------------------- |
-| `text` `number` `textarea` `select` `multiselect` `checkbox` `checkboxgroup` `switch` `radiogroup` `slider` `date` `daterange` | field     | one bound input; carries `name`                     |
-| `section`                                                                                                                      | container | optional heading plus a column grid                 |
-| `step`                                                                                                                         | container | one wizard step                                     |
-| `submit`                                                                                                                       | leaf      | the submit button                                   |
-| `block`                                                                                                                        | leaf      | value-less markup, resolved from the block registry |
-| any other string                                                                                                               | field     | a custom field, resolved from the field registry    |
+| `type`                                                                                                                         | kind      | what it is                                                 |
+| ------------------------------------------------------------------------------------------------------------------------------ | --------- | ---------------------------------------------------------- |
+| `text` `number` `textarea` `select` `multiselect` `checkbox` `checkboxgroup` `switch` `radiogroup` `slider` `date` `daterange` | field     | one bound input; carries `name`                            |
+| `block`                                                                                                                        | either    | a component from `components`, with `children` a container |
+| `array`                                                                                                                        | container | a repeatable group of fields bound to a list               |
+| any other string                                                                                                               | field     | a custom field, resolved from the field registry           |
 
 Those twelve field strings are exactly the members of the `FormFieldType` enum, so `FormFieldType.Text` and `'text'` are the same value.
 
 ### Common node properties
 
-Every node may carry:
+A field node may carry:
 
-| property       | meaning                                                             |
-| -------------- | ------------------------------------------------------------------- |
-| `label`        | `LocalizedText` — finished copy, or `{ key, params }`               |
-| `description`  | `LocalizedText`                                                     |
-| `when`         | rendered only when this condition holds                             |
-| `disabledWhen` | rendered disabled when this condition holds                         |
-| `colSpan`      | grid columns the node spans inside its section — an integer **1–4** |
+| property       | meaning                                                              |
+| -------------- | -------------------------------------------------------------------- |
+| `label`        | `LocalizedText` — finished copy, or `{ i18n, params }`               |
+| `description`  | `LocalizedText`                                                      |
+| `when`         | rendered only when this condition holds                              |
+| `disabledWhen` | rendered disabled when this condition holds                          |
+| `colSpan`      | grid columns the node spans in its container's grid — an integer 1–4 |
+
+A block carries only `when` and `colSpan` of these: what its component shows is in its `props`.
 
 A `date` node carries `min`, `max` and `defaultValue` as `YYYY-MM-DD` strings; a `daterange` node's `defaultValue` is `{ start, end }` of two such strings, and its value reaches `onSubmit` in that same shape under one `name`. Dates are strings on purpose — a `Date` does not survive `JSON.stringify`, and a calendar date has no time zone to lose. See [Fields](./form/fields) for what each kit renders.
 
@@ -58,11 +58,29 @@ A `select`, `multiselect`, `radiogroup` or `checkboxgroup` node adds `options`: 
 
 An option `value` is a **string or a number**, and the node's `name` is checked against it: a `number`-valued path takes numeric options (a `number[]` one for `multiselect` / `checkboxgroup`), a string-valued path string ones. That is what makes a backend-authored document over integer entity ids expressible — the id stays a number all the way into form state and back out of `onSubmit`. One list carries one scalar type; see [Numeric option values](/docs/form/select#numeric-option-values).
 
-A field node adds `name` (the full path from the root of the form values — never affected by which section or step it sits in), its kind-specific options, an optional `defaultValue` and an optional `validate` block. It may also carry `required`, which is the _marker_ the kit renders next to the label — enforcement is `validate.required`, and the two are deliberately separate so a field can be marked without being checked, or checked without being marked.
+A field node adds `name` (the full path from the root of the form values — never affected by which block it sits in), its kind-specific options, an optional `defaultValue` and an optional `validate` block. It may also carry `required`, which is the _marker_ the kit renders next to the label — enforcement is `validate.required`, and the two are deliberately separate so a field can be marked without being checked, or checked without being marked.
 
-A `section` adds `title`, `description`, `columns` (an integer **1–4**, default 1) and `children`. A `step` adds `title`, `description`, `children` and an optional `path`. A `submit` node takes `label` and `disabled`.
+### Blocks
 
-`columns` and `colSpan` outside 1–4 are a parse error rather than a silent fallback: a document that asked for six columns and got one is a layout nobody can explain. Nest sections to build a different grid.
+A **block** is a component from the bundle's `components`, written as data — the same component JSX reaches as `form.<Name>`:
+
+```ts
+{ type: 'block', component: 'Section', props: { title: 'Client' }, children: [ … ] }
+{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } }
+```
+
+- `component` names a key of `components`: the kit's `Section` and `SubmitButton`, or any component you registered yourself.
+- `props` reach the component flat, under the names JSX uses — `title` for `Section`, `children` for `SubmitButton`. A `{ i18n }` value among them is translated first; see [Localisation](#localisation).
+- `children` makes the block a container: they are document nodes, rendered and handed to the component as its `children`. A block without them is a leaf, and its `children`, if any, come from `props`.
+- `when` hides the block and everything inside it.
+
+A delivered document chooses a block's props, so a component a document can name should treat them as untrusted input — the same way it would treat any value from a server. `parseFormSchema` holds them to what JSON can carry, so no function or class instance gets through, but it cannot know which strings a component would be unwise to render as markup or as a link.
+
+### Columns
+
+`columns` (an integer **1–4**) lays out a container's children on a grid. It goes on any node with children — a block, an `array` (where it lays out the fields of each entry) or the document itself — and the renderer puts the kit's `Grid` **inside** the container, with each child in a `Grid.Item`. A child takes one column unless it sets `colSpan`.
+
+`columns` and `colSpan` outside 1–4 are a parse error rather than a silent fallback: a document that asked for six columns and got one is a layout nobody can explain. So is a `colSpan` whose container sets no `columns`, which would otherwise do nothing. Nest a container to build a different grid inside a cell.
 
 ### `defaultValue`
 
@@ -79,15 +97,16 @@ const schema = defineFormSchema<Values>()({
 	version: 1,
 	children: [
 		{
-			type: 'section',
-			title: 'Client',
+			type: 'block',
+			component: 'Section',
+			props: { title: 'Client' },
 			columns: 2,
 			children: [
 				{ type: FormFieldType.Text, name: 'firstName', label: 'First name' },
 				{ type: FormFieldType.Text, name: 'lastName', label: 'Last name' },
 			],
 		},
-		{ type: 'submit', label: 'Save' },
+		{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 	],
 })
 ```
@@ -101,15 +120,16 @@ The same document as JSON is character-for-character the same data — no functi
 	"version": 1,
 	"children": [
 		{
-			"type": "section",
-			"title": "Client",
+			"type": "block",
+			"component": "Section",
+			"props": { "title": "Client" },
 			"columns": 2,
 			"children": [
 				{ "type": "text", "name": "firstName", "label": "First name" },
 				{ "type": "text", "name": "lastName", "label": "Last name" }
 			]
 		},
-		{ "type": "submit", "label": "Save" }
+		{ "type": "block", "component": "SubmitButton", "props": { "children": "Save" } }
 	]
 }
 ```
@@ -152,15 +172,16 @@ The operator set is closed on purpose — every operator added is one backends w
 
 ### A predicate instead of a rule
 
-A TypeScript-authored schema may write the condition as a plain function, because that function comes from your own bundle. Anywhere a rule object is accepted — `when` and `disabledWhen`, on a field, a `section` or a `step` — a `(values) => boolean` is accepted too:
+A TypeScript-authored schema may write the condition as a plain function, because that function comes from your own bundle. Anywhere a rule object is accepted — `when` and `disabledWhen`, on a field or a block — a `(values) => boolean` is accepted too:
 
 ```ts
 const schema = defineFormSchema<Values>()({
 	version: 1,
 	children: [
 		{
-			type: 'section',
-			title: 'Company details',
+			type: 'block',
+			component: 'Section',
+			props: { title: 'Company details' },
 			// The rule spelling — serialisable, and what a backend would send:
 			// when: { and: [{ field: 'clientType', eq: 'business' }, { field: 'revenue', gt: 1_000_000 }] },
 			// The predicate spelling — `values` is typed as `Values`:
@@ -270,20 +291,19 @@ v1 strips top-level keys only: a hidden field addressed by a dotted path (`compa
 
 ## Registries
 
-Three registries, in two places. **Custom fields are registered once, on `createSchemaForm`** — the same registration that makes `form.RatingField` available in JSX — while blocks and rules are props on `SchemaForm`:
+Three registries, in two places. **Fields and components are registered once, on `createSchemaForm`** — the same registration that makes `form.RatingField` and `form.PromoBanner` available in JSX — while rules are a prop on `SchemaForm`:
 
 ```ts
 export const { SchemaForm } = createSchemaForm({
 	FormElement,
 	fields: { ...allFormFields, RatingField }, // custom FIELD — has a name, bound to a value
-	components: allFormComponents,
+	components: { ...allFormComponents, PromoBanner }, // a block — no name, no binding
 })
 ```
 
 ```tsx
 <SchemaForm
 	schema={schema}
-	blocks={{ 'promo-banner': PromoBanner }} // custom BLOCK — no name, no binding
 	rules={{ 'ru-inn': isValidInn }} // named validation rules
 />
 ```
@@ -292,11 +312,11 @@ A **custom field** is referenced from a document by its `type`, which its compon
 
 There is **one** registration site, deliberately: a field registered on the factory is reachable from JSX _and_ from a document, so the two can never disagree about what `rating` means. `SchemaForm` took a per-form `fields` prop in earlier versions; it is gone, and passing one is now a type error.
 
-A **block** is a `{ type: 'block', component: 'promo-banner' }` node; it holds no value and receives only its `props`.
+A **block** is a `{ type: 'block', component: 'PromoBanner' }` node; it holds no value and receives only its `props`, and its component is found by the same key JSX uses. `Grid` is the one key a block cannot name: the renderer inserts it for `columns`, so the document says `columns` instead.
 
-Registering a key that collides with a reserved node type — `section`, `step`, `submit`, `block` or any of the eight field types — throws: a block key when `SchemaForm` mounts, a field key when the factory (`createForm` or `createSchemaForm`) runs, so a `SectionField` that would shadow `section` is rejected at startup rather than on the first document that uses it. A node whose `type` is neither built-in nor registered is an error too, never a silently skipped hole: a backend sending a field the frontend cannot render must fail loudly.
+Registering a field whose type id collides with a reserved node type — `section`, `step`, `submit`, `block`, `array` or any of the twelve field types — throws when the factory (`createForm` or `createSchemaForm`) runs, so a `SectionField` that would shadow `section` is rejected at startup rather than on the first document that uses it. A node whose `type` is neither built-in nor registered is an error too, never a silently skipped hole: a backend sending a field the frontend cannot render must fail loudly.
 
-A document also needs the **components** it draws with, and `createSchemaForm` does not require them: a `section` needs `Section` (and `GridItem` when it has `columns`), a `submit` node needs `SubmitButton`, a `step` needs `Wizard`, an `array` needs `ArrayField` in `fields`. The same holds for every field kind: a `date` node needs `DateField` in `fields`, and a custom `rating` node needs a registered component that derives the `rating` id. When one is missing, `SchemaForm` throws a named error — "the document has a submit node, but no SubmitButton component was passed in components", "the document has a date field, but no DateField was passed in fields" — before it renders anything. It walks the whole document first, so a section or a field hidden by `when`, or one in a step the user has not reached yet, fails at mount instead of mid-flow.
+A document also needs the **components** it draws with, and `createSchemaForm` does not require them: a block needs the component it names, `columns` needs `Grid`, an `array` needs `ArrayField` in `fields`. The same holds for every field kind: a `date` node needs `DateField` in `fields`, and a custom `rating` node needs a registered component that derives the `rating` id. When one is missing, `SchemaForm` throws a named error — "the document has a block "SubmitButton", but no SubmitButton component was passed in components", "the document has a date field, but no DateField was passed in fields" — before it renders anything. It walks the whole document first, so a block or a field hidden by `when` fails at mount instead of mid-flow.
 
 Custom types are declared to the type system as the second parameter of `defineFormSchema`:
 
@@ -306,22 +326,9 @@ const schema = defineFormSchema<Values, 'rating'>()({ version: 1, children: [{ t
 
 Keeping that set closed is what preserves the checking on built-in nodes — an open `type: string` member would swallow every mistyped built-in.
 
-## Wizards
+## Steps
 
-When the document's **top-level** children are `step` nodes, it is a wizard: `SchemaForm` shows one step at a time and asks your kit for the chrome (`Wizard` in the kit contract — neither shadcn nor HeroUI ships a stepper, so each kit draws its own). Steps live in the same tree as everything else, so a step can carry `when` — "skip the company step for an individual" is a first-class case.
-
-<KitExample exampleId='form-wizard' />
-
-A step flow written in JSX rather than a document is [`form.Steps` and `form.Step`](/docs/form/steps): the same one-form model, with a stepper and controls of your own.
-
-A step's `title` and `description` are resolved by `SchemaForm` before the kit sees them — `WizardStep` types both as `ReactNode`, so a kit never has to know what a translation key is. Mixing `step` nodes with non-`step` siblings at the same level throws, in the parser and at render time alike: the loose nodes would otherwise be silently dropped.
-
-Four behaviours `SchemaForm` settles so no kit has to:
-
-- **Which fields a step owns is decided by layout, never by a data path.** `goNext` collects the field names in the step's own subtree and runs the form-level validators scoped to exactly those, so a step's "next" can never write errors onto fields further along. A step's optional `path` does not change that scope: it mounts a `useFormGroup` binding for the step and nothing more.
-- **A step never opens red on arrival.** The schema's constraints compile into a _form-level_ `onChange` validator, which sees every field in the document — including ones the user has not reached. A step is marked `invalid` only once the user has tried to _leave_ it, and arriving on a step the user has never left clears the errors its fields were carrying.
-- **A step hidden by `when` is removed from the list and the remaining steps are renumbered**, so a stepper never reports "3 of 5" for a form with four reachable steps. If the step on screen hides itself, the wizard falls back to the nearest earlier visible step rather than to the start.
-- **The final submit is not wizard chrome.** Put a `submit` node in the last step; it renders like any other node.
+A document has no steps. `step` stays a reserved node type, and `parseFormSchema` rejects a node that uses it. A form split into steps is written in JSX, with [`form.Steps` and `form.Step`](/docs/form/steps).
 
 ## Backend-driven UI
 
@@ -333,7 +340,7 @@ import { FormSchemaError, parseFormSchema } from '@ez-kit/form-shadcn'
 try {
 	const schema = parseFormSchema<Values>(await res.json(), {
 		fieldTypes: Object.keys(fields),
-		blocks: Object.keys(blocks),
+		components: Object.keys(components),
 		rules: Object.keys(rules),
 		optionSources: Object.keys(optionSources),
 		hasTranslate: true,
@@ -351,17 +358,19 @@ The parser is the trust boundary. It rejects, throwing `FormSchemaError` with th
 
 - a non-object document, a missing `children` array, an unsupported `version`;
 - a node with no `type`, an unknown `type`, a container with no `children`;
+- a `section` or `submit` node — the error names the block that replaced it;
 - a field with no `name`, or a `name` used twice in the tree (a duplicate is an error, not a supported "render twice");
 - a `validate.rule`, a block `component` or an `optionsFrom` source that is not registered;
-- a registry key colliding with a reserved node type;
+- a field type colliding with a reserved node type;
+- a block naming `Grid`, carrying `label`, `description` or `disabledWhen`, taking `children` both as nodes and in `props`, or carrying `props` that JSON cannot represent;
 - a malformed rule, a `./` field reference, or a **function** condition — which cannot survive `JSON.parse` anyway, but a hand-built object must still be told it is not a serialisable document;
-- a `LocalizedText` that is neither a string nor `{ key }`, or a translation key with no `translate` registered;
+- a `LocalizedText` that is neither a string nor `{ i18n }`, or a translation key with no `translate` registered;
 - an options-bearing node carrying neither `options` nor [`optionsFrom`](/docs/form/select/option-sources) — or both — an option missing its `value` or `label`, an option `value` that is neither a string nor a number, or one list mixing the two;
 - an `optionsFrom` whose `dependsOn` names a relative (`./`) field reference, or whose `params` carry something `JSON.stringify` would not survive (a function, `undefined`, `NaN`, a `Date`);
 - a `multiselect` / `checkboxgroup` `defaultValue` that is not an array of option values, or whose entries disagree with the option value type;
 - a date `min` / `max` / `defaultValue` that is not a real `YYYY-MM-DD` day, or a `daterange` default missing an end;
-- `columns` / `colSpan` outside 1–4;
-- `step` nodes mixed with non-`step` siblings.
+- `columns` / `colSpan` outside 1–4, `columns` on a node with no children, or a `colSpan` whose container sets no `columns` or fewer columns than it spans;
+- a `step` node.
 
 Passing the registries' keys in the options is what lets the parser check a delivered document against _this_ app's capabilities, which is the check that matters: the backend can only send what the frontend can actually render.
 
@@ -369,7 +378,7 @@ Passing the registries' keys in the options is what lets the parser check a deli
 
 ## Localisation
 
-`label`, `description`, `title`, `validate.messages` and a select's **option labels** all take `LocalizedText`: a plain string is finished copy, an object `{ key, params }` is a translation key resolved by the `translate` prop.
+`label`, `description`, `validate.messages`, a select's **option labels** and a block's **props** all take `LocalizedText`: a plain string is finished copy, an object `{ i18n, params }` is a translation key resolved by the `translate` prop. A block translates only its top-level props — a `{ i18n }` nested deeper is passed through as data.
 
 ```tsx
 <SchemaForm
@@ -382,15 +391,14 @@ A key with no `translate` supplied is a parse-time error, not a blank label.
 
 ## SchemaForm props
 
-| prop                                         | mode         | purpose                                                           |
-| -------------------------------------------- | ------------ | ----------------------------------------------------------------- |
-| `schema`                                     | both         | the document to render                                            |
-| `form`                                       | controlled   | your own instance; `SchemaForm` binds into it                     |
-| `blocks`                                     | both         | the block registry above — custom fields go on `createSchemaForm` |
-| `rules`                                      | uncontrolled | named validation rules — see below                                |
-| `translate`                                  | both         | resolves `LocalizedText` keys                                     |
-| `keepHiddenValues`                           | uncontrolled | keep hidden fields in the submitted value (default: strip)        |
-| `defaultValues`, `onSubmit`, `validators`, … | uncontrolled | everything `useForm` takes — `SchemaForm` owns the instance       |
+| prop                                         | mode         | purpose                                                     |
+| -------------------------------------------- | ------------ | ----------------------------------------------------------- |
+| `schema`                                     | both         | the document to render                                      |
+| `form`                                       | controlled   | your own instance; `SchemaForm` binds into it               |
+| `rules`                                      | uncontrolled | named validation rules — see below                          |
+| `translate`                                  | both         | resolves `LocalizedText` keys                               |
+| `keepHiddenValues`                           | uncontrolled | keep hidden fields in the submitted value (default: strip)  |
+| `defaultValues`, `onSubmit`, `validators`, … | uncontrolled | everything `useForm` takes — `SchemaForm` owns the instance |
 
 Anything else you pass lands on the `<form>` element.
 

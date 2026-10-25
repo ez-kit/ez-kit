@@ -77,9 +77,10 @@ to the paths in your form data whose value type fits the field, so
 
 ### Layout
 
-`form.Section` groups fields under an optional heading on a `columns`-wide grid (1–4), and
-`form.GridItem` gives one child a wider `colSpan`. They are the JSX spelling of the schema's
-`section` node and its `colSpan` — pure layout, binding no value.
+`form.Section` groups fields under an optional heading, `form.Grid` lays children out on a
+`columns`-wide grid (1–4), and `form.Grid.Item` gives one child a wider `colSpan`. They are the
+JSX spelling of a document's `Section` block, its `columns` and a node's `colSpan` — pure layout,
+binding no value.
 
 ## Composition
 
@@ -131,15 +132,16 @@ hand-written one produce identical DOM.
 ```tsx
 <SchemaForm
 	schema={schema}
-	blocks={{ 'promo-banner': Promo }} // value-less markup, by node `component`
 	rules={{ 'ru-inn': isValidInn }} // named validation rules
 	onSubmit={({ value }) => save(value)}
 />
 ```
 
-Custom field kinds are not a prop: register them once on `createSchemaForm({ FormElement, fields, components })`
-and a node's `type` reaches them (`RatingField` answers to `{ type: 'rating' }`), from JSX and from
-a document alike.
+Custom field kinds and blocks are not props: register them once on
+`createSchemaForm({ FormElement, fields, components })`. A node's `type` reaches a field
+(`RatingField` answers to `{ type: 'rating' }`) and a block's `component` reaches a component
+(`{ type: 'block', component: 'PromoBanner' }` is `form.PromoBanner`), from JSX and from a
+document alike.
 
 It takes the same two modes as `<Form>`: pass `form` and it binds into an instance you own;
 pass `useForm`'s options and it owns the instance. Only in that second mode can it own the
@@ -175,7 +177,7 @@ export const allFormFields = {
 	ArrayField: Object.assign(ArrayFieldView, { Item: ArrayItemView }),
 } satisfies AllFormFieldSlots
 
-export const allFormComponents = { SubmitButton, Section, GridItem, Wizard } satisfies AllFormComponents
+export const allFormComponents = { SubmitButton, Section, Grid } satisfies AllFormComponents
 
 // In an app, one call is enough:
 export const { useForm, Form, SchemaForm, withForm, withFieldGroup } = createSchemaForm({

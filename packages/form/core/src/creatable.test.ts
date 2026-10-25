@@ -17,12 +17,12 @@ import { FormSchemaError, parseFormSchema } from './parse'
 const NODE_PATH = 'children[0].children[0]'
 
 function schemaWith(node: Record<string, unknown>): Record<string, unknown> {
-	return { version: 1, children: [{ type: 'section', children: [node] }] }
+	return { version: 1, children: [{ type: 'block', component: 'Section', children: [node] }] }
 }
 
 function parseFailure(node: Record<string, unknown>): FormSchemaError {
 	try {
-		parseFormSchema(schemaWith(node), { optionSources: ['tags'] })
+		parseFormSchema(schemaWith(node), { optionSources: ['tags'], components: ['Section'] })
 	} catch (error) {
 		if (error instanceof FormSchemaError) return error
 		throw error
@@ -39,7 +39,7 @@ describe('creatable', () => {
 	it('accepts a creatable searchable select over a string list', () => {
 		const node = { type: FormFieldType.Select, name: 'tag', searchable: true, creatable: true, options: TAGS }
 
-		expect(() => parseFormSchema(schemaWith(node), { optionSources: ['tags'] })).not.toThrow()
+		expect(() => parseFormSchema(schemaWith(node), { optionSources: ['tags'], components: ['Section'] })).not.toThrow()
 	})
 
 	it('accepts a creatable searchable multiselect wired to a source', () => {
@@ -48,11 +48,11 @@ describe('creatable', () => {
 			name: 'tags',
 			searchable: true,
 			creatable: true,
-			createLabel: { key: 'tags.create' },
+			createLabel: { i18n: 'tags.create' },
 			optionsFrom: 'tags',
 		}
 
-		expect(() => parseFormSchema(schemaWith(node), { optionSources: ['tags'] })).not.toThrow()
+		expect(() => parseFormSchema(schemaWith(node), { optionSources: ['tags'], components: ['Section'] })).not.toThrow()
 	})
 
 	it('rejects creatable without searchable, saying where the text would be typed', () => {
@@ -118,6 +118,6 @@ describe('creatable', () => {
 	it('accepts a select that does not mention creatable at all', () => {
 		const node = { type: FormFieldType.Select, name: 'tag', options: TAGS }
 
-		expect(() => parseFormSchema(schemaWith(node), { optionSources: ['tags'] })).not.toThrow()
+		expect(() => parseFormSchema(schemaWith(node), { optionSources: ['tags'], components: ['Section'] })).not.toThrow()
 	})
 })

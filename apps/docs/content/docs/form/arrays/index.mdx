@@ -316,7 +316,7 @@ const schema = defineFormSchema<Booking>()({
 })
 ```
 
-It is curried for the same reason `defineFormSchema` is — TypeScript has no partial generic inference — and it is **array-item-only** by construction. The names in the block are item-relative, so dropping it into a `section` is a compile error, not a runtime surprise. Mounting a shared field set at a nested non-array path (`address.city`) is a different feature and does not exist.
+It is curried for the same reason `defineFormSchema` is — TypeScript has no partial generic inference — and it is **array-item-only** by construction. The names in the block are item-relative, so dropping it into a block at the form root is a compile error, not a runtime surprise. Mounting a shared field set at a nested non-array path (`address.city`) is a different feature and does not exist.
 
 ## Styling hooks
 

@@ -191,7 +191,7 @@ test('creatable is a string-list feature, rejected on a numeric one', () => {
 				name: 'tag',
 				searchable: true,
 				creatable: true,
-				createLabel: { key: 'tags.create' },
+				createLabel: { i18n: 'tags.create' },
 				options: [{ label: 'Bug', value: 'bug' }],
 			},
 		],
@@ -288,4 +288,76 @@ test('the marker is type-only — it never reaches the returned object', () => {
 	expect(schema).toBe(literal)
 	expect(Object.keys(schema)).toStrictEqual(['version', 'children'])
 	expect('__values' in schema).toBe(false)
+})
+
+test('a block is a container with columns, and carries no caption of its own', () => {
+	const define = defineFormSchema<Values>()
+
+	define({
+		version: 1,
+		columns: 2,
+		children: [
+			{
+				type: 'block',
+				component: 'Section',
+				props: { title: { i18n: 'contact' } },
+				columns: 2,
+				when: { field: 'age', gt: 17 },
+				children: [{ type: FormFieldType.Text, name: 'email', colSpan: 2 }],
+			},
+			{ type: 'block', component: 'SubmitButton', props: { children: 'Send' }, colSpan: 2 },
+		],
+	})
+
+	// An excess property is only caught against an annotated target — `define`'s `const S`
+	// parameter infers the literal and never checks it for extra keys.
+	const captioned: FormSchema<Values> = {
+		version: 1,
+		// @ts-expect-error a block's caption goes in `props`
+		children: [{ type: 'block', component: 'Section', label: 'Contact' }],
+	}
+
+	const disabled: FormSchema<Values> = {
+		version: 1,
+		// @ts-expect-error `disabledWhen` reaches fields only
+		children: [{ type: 'block', component: 'Card', disabledWhen: { field: 'age', gt: 1 } }],
+	}
+
+	expectTypeOf(define).toBeFunction()
+	expectTypeOf(captioned).toEqualTypeOf<FormSchema<Values>>()
+	expectTypeOf(disabled).toEqualTypeOf<FormSchema<Values>>()
+})
+
+test('section and submit are no longer nodes', () => {
+	const define = defineFormSchema<Values>()
+
+	// @ts-expect-error `section` is a `Section` block now
+	define({ version: 1, children: [{ type: 'section', children: [] }] })
+
+	// @ts-expect-error `submit` is a `SubmitButton` block now
+	define({ version: 1, children: [{ type: 'submit', label: 'Send' }] })
+
+	expectTypeOf(define).toBeFunction()
+})
+
+test('an array lays its entries out in columns', () => {
+	type WithPeople = { people: { first: string; last: string }[] }
+	const define = defineFormSchema<WithPeople>()
+
+	define({
+		version: 1,
+		children: [
+			{
+				type: 'array',
+				name: 'people',
+				columns: 2,
+				children: [
+					{ type: FormFieldType.Text, name: 'first' },
+					{ type: FormFieldType.Text, name: 'last' },
+				],
+			},
+		],
+	})
+
+	expectTypeOf(define).toBeFunction()
 })

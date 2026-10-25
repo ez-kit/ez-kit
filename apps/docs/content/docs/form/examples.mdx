@@ -1,9 +1,9 @@
 ---
 title: Examples
-description: Four complete forms — a full field showcase, a wizard, a dependent cascade and a form in a dialog — each shown as TSX and as a document.
+description: Four complete forms — a full field showcase, a step flow, a dependent cascade and a form in a dialog — shown as TSX and, where the format allows, as a document.
 ---
 
-Four forms, each one a whole feature rather than a fragment, and each shown twice: once written in
+Four forms, each one a whole feature rather than a fragment, and most shown twice: once written in
 TSX, once as a `FormSchema` document rendered by `SchemaForm`. Both versions are live — the
 document is a real `<SchemaForm schema={…} />`, not a code block — because the two are the same
 machinery entered from different sides, and the only convincing way to say so is to run both.
@@ -18,8 +18,8 @@ select, multiselect, checkbox, checkbox group, switch, radio group, slider, date
 with validation on the fields where it matters. It is the page to skim when you want to know what a
 field actually looks like in your kit before deciding to use it.
 
-Sections are the layout unit in both spellings: a `section` carries `columns` (1–4) and each child
-may claim a `colSpan`. [Fields](/docs/form/fields) covers what each kind accepts, and
+Sections are the layout unit in both spellings: a `Section` block or `form.Section` holds a grid of
+`columns` (1–4), and each child may claim a `colSpan`. [Fields](/docs/form/fields) covers what each kind accepts, and
 [Validation](/docs/form/validation) the constraints used here.
 
 ### In TSX
@@ -30,38 +30,22 @@ may claim a `colSpan`. [Fields](/docs/form/fields) covers what each kind accepts
 
 <KitExample exampleId='form-showcase-schema' />
 
-## A wizard
+## A step flow
 
-The document version comes first here, because the wizard exists **only** on the document side. When
-a schema's top-level children are `step` nodes, `SchemaForm` shows one step at a time and asks
-your kit for the stepper chrome. There is no `<Step>` component in the JSX API.
+A form split into steps is still one form — one set of values, one submit — with
+[`form.Steps` and `form.Step`](/docs/form/steps) deciding which step is on screen and what "Next"
+checks before it lets the user leave. This one is written in TSX only: a document has no step node.
 
-Three behaviours of the real wizard are worth watching in the example rather than taking on trust:
+Two behaviours are worth watching in the example rather than taking on trust:
 
-- **A step never opens red.** The schema's constraints compile into one form-level `onChange`
-  validator that sees every field in the document, including ones on steps the user has not reached.
-  A step is marked invalid only once the user has tried to _leave_ it.
-- **A step hidden by `when` is removed from the list and the rest are renumbered**, so the stepper
-  never claims "3 of 5" for a form with four reachable steps. If the step on screen hides itself,
-  the wizard falls back to the nearest earlier visible step rather than to the start.
-- **The final submit is not wizard chrome.** It is a `submit` node placed in the last step, rendered
-  like any other node — so "Next" and "Submit" are not two spellings of the same button.
+- **"Next" checks the step, not the form.** It marks the step's own fields touched and validates
+  them, so the user hears about an empty email before reaching the end, and never about a field
+  further along.
+- **A step hidden by `when` drops out of the flow.** Pick the other account type and the company
+  step disappears from the stepper; its values stay in the form state until `schema.parse` drops
+  them in `onSubmit`.
 
-[Config-driven forms](/docs/form/schema#wizards) has the rest, including why which fields a step
-owns is decided by its subtree and never by a data path.
-
-### As a document
-
-<KitExample exampleId='form-wizard' />
-
-### The nearest thing in TSX
-
-The version below is **not** a translation of the document above: with no step node to lean on, it
-is a hand-rolled state machine — a `step` piece of React state, your own Back/Next buttons, and your
-own decision about what to validate before advancing. That is the honest comparison, and it is the
-argument for describing a wizard as data.
-
-<KitExample exampleId='form-wizard-jsx' />
+<KitExample exampleId='form-steps-conditional' />
 
 ## A dependent cascade
 

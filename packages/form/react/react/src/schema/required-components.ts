@@ -1,9 +1,9 @@
-import { FormFieldType, RESERVED_NODE_TYPES, walkNodes } from '@ez-kit/form-core'
+import { FormFieldType, hasChildren, isBlockNode, RESERVED_NODE_TYPES, walkNodes } from '@ez-kit/form-core'
 
-import type { FormFieldSlots } from '../contract'
+import type { FormFieldSlots, GridSlot } from '../contract'
 import type { CustomFieldRegistry } from './registries'
 import type { LayoutComponents } from './render-node'
-import type { AnyFormSchema, SectionNode } from '@ez-kit/form-core'
+import type { AnyFormSchema, FormNode } from '@ez-kit/form-core'
 
 /**
  * The slot each built-in field kind renders through. The bound field set holds exactly what the
@@ -40,6 +40,11 @@ export function missingCustomFieldMessage(type: string): string {
 	return `SchemaForm: the document has a field of type "${type}", but no component registered in fields derives that type id.`
 }
 
+/** What `SchemaForm` says when a block names a component that was not passed in `components`. */
+export function missingBlockMessage(component: string): string {
+	return `SchemaForm: the document has a block "${component}", but no ${component} component was passed in components.`
+}
+
 /** What the up-front walk needs to know about the fields the form registered. */
 export type RegisteredFields = {
 	/** The bound instance — it carries exactly the built-in slots (and `ArrayField`) its bundle registered. */
@@ -59,10 +64,8 @@ function hasSlot(instance: object, slot: string): boolean {
  * component, each naming the option it belongs in.
  */
 export const MissingComponentMessage = {
-	Section: 'SchemaForm: the document has a section, but no Section component was passed in components.',
-	GridItem: 'SchemaForm: a section has a grid, but no GridItem component was passed in components.',
-	Wizard: 'SchemaForm: the document has steps, but no Wizard component was passed in components.',
-	SubmitButton: 'SchemaForm: the document has a submit node, but no SubmitButton component was passed in components.',
+	Grid: 'SchemaForm: the document sets columns, but no Grid component was passed in components.',
+	GridBlock: 'SchemaForm: "Grid" is not a block; set "columns" on the container instead.',
 	ArrayField: 'SchemaForm: the document has an array, but no ArrayField was passed in fields.',
 } as const
 
@@ -76,43 +79,59 @@ export function assertComponent<TComponent>(
 	if (component === undefined) throw new Error(message)
 }
 
+/** The component a renderer inserts for `columns` — never a block of its own. */
+const GRID_COMPONENT = 'Grid'
+
+/** The grid slot, or the named error when a document sets `columns` and none was passed. */
+export function assertGrid(layout: LayoutComponents): GridSlot {
+	assertComponent(layout.Grid, MissingComponentMessage.Grid)
+	return layout.Grid
+}
+
+/**
+ * A block's component must be an own key of the bundle's `components`, so a document string
+ * such as "toString" cannot resolve an `Object.prototype` member; `Grid` is refused because the
+ * renderer inserts it for `columns`, and a block of it would be a grid in a grid.
+ */
+function assertBlockComponent(layout: LayoutComponents, component: string): void {
+	if (component === GRID_COMPONENT) throw new Error(MissingComponentMessage.GridBlock)
+	if (!Object.hasOwn(layout, component) || layout[component] === undefined) {
+		throw new Error(missingBlockMessage(component))
+	}
+}
+
+/** A container's own `columns`: a block with children, an array — never a leaf. */
+function columnsOf(node: FormNode<unknown, string>): number | undefined {
+	return hasChildren(node) ? (node as { columns?: number }).columns : undefined
+}
+
 /**
  * Asserts, once and up front, every component the document can ever need.
  *
- * Per-node checks alone fire only when the node renders: a `section` hidden by `when`, or a
- * `date` field in a wizard step not reached yet, would pass the first render and throw mid-flow —
- * after the user has typed into the form. So the whole document is walked before anything
- * renders, whatever is currently visible: every container against `layout`, every built-in field
+ * Per-node checks alone fire only when the node renders: a block hidden by `when`, or a `date`
+ * field inside it, would pass the first render and throw mid-flow — after the user has typed into
+ * the form. So the whole document is walked before anything renders, whatever is currently
+ * visible: every block against `components`, every `columns` against `Grid`, every built-in field
  * kind against the slots the instance carries, every other field kind against the custom-field
  * registry.
- *
- * A `block` is not checked here: its registry is a per-form prop, resolved where it renders.
  */
 export function assertDocumentComponents(
 	schema: AnyFormSchema<unknown>,
 	layout: LayoutComponents,
 	registered: RegisteredFields,
 ): void {
+	if (schema.columns !== undefined) assertGrid(layout)
 	walkNodes(schema, (node) => {
-		switch (node.type) {
-			case 'section':
-				assertComponent(layout.Section, MissingComponentMessage.Section)
-				if ((node as SectionNode<unknown, string>).columns !== undefined)
-					assertComponent(layout.GridItem, MissingComponentMessage.GridItem)
-				break
-			case 'submit':
-				assertComponent(layout.SubmitButton, MissingComponentMessage.SubmitButton)
-				break
-			case 'step':
-				assertComponent(layout.Wizard, MissingComponentMessage.Wizard)
-				break
-			case 'array':
-				if (!hasSlot(registered.instance, 'ArrayField')) throw new Error(MissingComponentMessage.ArrayField)
-				break
-			default:
-				assertFieldKind(node.type, registered)
-				break
+		if (columnsOf(node) !== undefined) assertGrid(layout)
+		if (isBlockNode(node)) {
+			assertBlockComponent(layout, node.component)
+			return
 		}
+		if (node.type === 'array') {
+			if (!hasSlot(registered.instance, 'ArrayField')) throw new Error(MissingComponentMessage.ArrayField)
+			return
+		}
+		assertFieldKind(node.type, registered)
 	})
 }
 

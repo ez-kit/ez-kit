@@ -39,7 +39,7 @@ The full surface of the feature. What each one is for, and when to reach for it,
 | `index` | `number`                               | Its zero-based position. Fine for display; never for `key`.                                                         |
 | `Item`  | `(props: ArrayItemProps) => ReactNode` | The entry's chrome — heading, remove control, reorder controls. Wrap the entry's fields.                            |
 
-A kit registers the frame under `fields.ArrayField`, and the entry view travels with it as `ArrayField.Item` (`Object.assign(ArrayFieldView, { Item: ArrayItemView })`), so `item.Item` is the kit's own row wherever it is rendered. Inside an entry, only field components are scoped to it: `item.TextField` and its siblings exist, while `Section`, `GridItem` and `SubmitButton` are not on the entry's scope — use them from the form (`form.Section`) around the array, and give a custom layout its own buttons.
+A kit registers the frame under `fields.ArrayField`, and the entry view travels with it as `ArrayField.Item` (`Object.assign(ArrayFieldView, { Item: ArrayItemView })`), so `item.Item` is the kit's own row wherever it is rendered. Inside an entry, only field components are scoped to it: `item.TextField` and its siblings exist, while `Section`, `Grid` and `SubmitButton` are not on the entry's scope — use them from the form (`form.Section`) around the array, and give a custom layout its own buttons.
 
 ## `form.Array`
 
@@ -100,18 +100,18 @@ A kit registers the frame under `fields.ArrayField`, and the entry view travels 
 
 ## The `array` node
 
-| Property      | Type                      | Notes                                                                            |
-| ------------- | ------------------------- | -------------------------------------------------------------------------------- |
-| `type`        | `'array'`                 | **Required.**                                                                    |
-| `name`        | array path                | **Required.** Absolute, even inside a step — nesting never rewrites it.          |
-| `children`    | `FormNode[]`              | **Required.** The item's fields, named **relative to the item**.                 |
-| `label`       | `LocalizedText`           | A plain string, or a map of locale → string.                                     |
-| `description` | `LocalizedText`           |                                                                                  |
-| `validate`    | `FieldValidate`           | Constraints on the list — `minLength`, `maxLength`, `rule`.                      |
-| `reorderable` | `boolean \| { up, down }` | Offer the move controls; the object form captions them.                          |
-| `item`        | `{ label }`               | Caption for one entry. `{{index}}` is merged in for a `{ key, params }` message. |
-| `add`         | `{ label }`               | Caption for the control that appends an entry.                                   |
-| `remove`      | `{ label }`               | Caption for the control that removes one.                                        |
+| Property      | Type                      | Notes                                                                              |
+| ------------- | ------------------------- | ---------------------------------------------------------------------------------- |
+| `type`        | `'array'`                 | **Required.**                                                                      |
+| `name`        | array path                | **Required.** Absolute, even inside a step — nesting never rewrites it.            |
+| `children`    | `FormNode[]`              | **Required.** The item's fields, named **relative to the item**.                   |
+| `label`       | `LocalizedText`           | A plain string, or a map of locale → string.                                       |
+| `description` | `LocalizedText`           |                                                                                    |
+| `validate`    | `FieldValidate`           | Constraints on the list — `minLength`, `maxLength`, `rule`.                        |
+| `reorderable` | `boolean \| { up, down }` | Offer the move controls; the object form captions them.                            |
+| `item`        | `{ label }`               | Caption for one entry. `{{index}}` is merged in for an `{ i18n, params }` message. |
+| `add`         | `{ label }`               | Caption for the control that appends an entry.                                     |
+| `remove`      | `{ label }`               | Caption for the control that removes one.                                          |
 
 ## See also
 

@@ -115,7 +115,7 @@ The submit button sits in the footer and is still a native `type='submit'` insid
 	instance.
 </Callout>
 
-`<SchemaForm>` calls `useForm` itself, so the lifetime argument above holds unchanged. The one arrangement that does not carry over is the split body/footer: the `submit` node is part of the document and renders where the document puts it, so `SchemaForm` goes in the dialog's body and only the dismiss button stays in the footer. Both versions run live in [Examples](/docs/form/examples#a-form-in-a-dialog).
+`<SchemaForm>` calls `useForm` itself, so the lifetime argument above holds unchanged. The one arrangement that does not carry over is the split body/footer: the `SubmitButton` block is part of the document and renders where the document puts it, so `SchemaForm` goes in the dialog's body and only the dismiss button stays in the footer. Both versions run live in [Examples](/docs/form/examples#a-form-in-a-dialog).
 
 ## Controlled: when the instance is needed outside
 
@@ -195,4 +195,4 @@ The `data-*` attributes are the styling hooks; the visible elements all come fro
 - [Fields](/docs/form/fields) — the twelve base fields and their props.
 - [Validation](/docs/form/validation) — zod / valibot / arktype, straight through.
 - [Submission](/docs/form/submission) — submit state, server errors, async initial values.
-- [Examples](/docs/form/examples) — a full form, a wizard, cascading selects, a dialog.
+- [Examples](/docs/form/examples) — a full form, a step flow, cascading selects, a dialog.

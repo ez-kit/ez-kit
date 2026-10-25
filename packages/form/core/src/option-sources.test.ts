@@ -15,11 +15,11 @@ import type { ParseOptions } from './parse'
  * serialisability and absolute-path rules the rest of the format already is.
  */
 
-const OPTIONS: ParseOptions = { optionSources: ['dictionary', 'cities'] }
+const OPTIONS: ParseOptions = { optionSources: ['dictionary', 'cities'], components: ['Section'] }
 
 /** One select node, wrapped in the smallest document that reaches `validateNode`. */
 function schemaWith(node: Record<string, unknown>): Record<string, unknown> {
-	return { version: 1, children: [{ type: 'section', children: [node] }] }
+	return { version: 1, children: [{ type: 'block', component: 'Section', children: [node] }] }
 }
 
 function selectNode(extra: Record<string, unknown>): Record<string, unknown> {
@@ -64,7 +64,7 @@ describe('optionsFrom', () => {
 	})
 
 	it('rejects a source name when no sources are registered at all', () => {
-		const error = parseFailure(selectNode({ optionsFrom: 'cities' }), {})
+		const error = parseFailure(selectNode({ optionsFrom: 'cities' }), { components: ['Section'] })
 
 		expect(error.message).toContain('Unknown option source "cities"')
 	})

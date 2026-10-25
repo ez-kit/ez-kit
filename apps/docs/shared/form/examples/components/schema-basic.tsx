@@ -22,9 +22,9 @@ const schema = defineFormSchema<Contact>()({
 	version: 1,
 	children: [
 		{
-			type: 'section',
-			title: 'Contact',
-			description: 'Two columns on the grid; the email spans both.',
+			type: 'block',
+			component: 'Section',
+			props: { title: 'Contact', description: 'Two columns on the grid; the email spans both.' },
 			columns: 2,
 			children: [
 				{
@@ -52,7 +52,7 @@ const schema = defineFormSchema<Contact>()({
 				},
 			],
 		},
-		{ type: 'submit', label: 'Save' },
+		{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 	],
 })
 

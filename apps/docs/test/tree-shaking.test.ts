@@ -558,7 +558,7 @@ describe('@ez-kit/data-grid-react', () => {
 
 const FORM_REACT_ENTRY = entryOf('form/react/react')
 /** A message only the schema renderer contains — present in a bundle exactly when it is. */
-const SCHEMA_MARKER = 'may not mix `step` nodes'
+const SCHEMA_MARKER = 'is not a block; set "columns" on the container instead'
 
 /**
  * `createForm` must not carry the schema renderer; `createSchemaForm` is the door to it.

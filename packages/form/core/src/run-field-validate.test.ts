@@ -44,7 +44,7 @@ test('a `{ key }` message is resolved through the supplied translate', () => {
 		runFieldValidate(
 			['a', 'b'],
 			{},
-			{ maxLength: 1, messages: { maxLength: { key: 'form.tooMany', params: { limit: 1 } } } },
+			{ maxLength: 1, messages: { maxLength: { i18n: 'form.tooMany', params: { limit: 1 } } } },
 			{ translate },
 		),
 	).toBe('form.tooMany:1')

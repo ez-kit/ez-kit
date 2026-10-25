@@ -42,7 +42,7 @@ const schema = defineFormSchema<Account>()({
 			defaultValue: '',
 			validate: { required: true, minLength: 8 },
 		},
-		{ type: 'submit', label: 'Create account' },
+		{ type: 'block', component: 'SubmitButton', props: { children: 'Create account' } },
 	],
 })
 

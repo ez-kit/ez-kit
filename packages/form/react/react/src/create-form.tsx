@@ -109,10 +109,10 @@ export type CreateFormOptions<
 	 * instance on purpose: binding them would make `form.SaveBar` and `<SaveBar />` two different
 	 * components.
 	 *
-	 * The `& Pick<FormComponents, …>` re-asserts the props of the four keys the kit contract
-	 * names, for the reason — and in the shape — `fields` re-asserts the built-ins. `SubmitButton`,
-	 * `Section`, `GridItem` and `Wizard` are also what `SchemaForm` draws a `submit`, `section`,
-	 * grid cell and stepped document with.
+	 * The `& Pick<FormComponents, …>` re-asserts the props of the three keys the kit contract
+	 * names, for the reason — and in the shape — `fields` re-asserts the built-ins. `Grid` is
+	 * also what `SchemaForm` inserts for a container's `columns`; `Section` and `SubmitButton` reach
+	 * a document as ordinary blocks.
 	 *
 	 * Both registries also reject, at the key, a name the instance already owns (`Subscribe`,
 	 * `state`, `Field`, `Submit`, … — {@link ReservedKeyGuard}) and a name used in both registries

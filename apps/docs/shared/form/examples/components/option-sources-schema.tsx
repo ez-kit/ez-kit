@@ -112,7 +112,7 @@ const schema = defineFormSchema<Address>()({
 			optionsFrom: { source: 'dictionary', params: { domain: 'cities' }, dependsOn: { country: 'country' } },
 			defaultValue: '',
 		},
-		{ type: 'submit', label: 'Save' },
+		{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 	],
 })
 

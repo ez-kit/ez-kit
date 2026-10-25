@@ -311,7 +311,7 @@ export const GRID_TYPE = {
  * Types that govern the mapped `form/` tables.
  *
  * The split mirrors the packages: `@ez-kit/form-core` owns the serialisable
- * document (`SubmitNode`, `FieldValidate`), `@ez-kit/form-react` owns both
+ * document (`CustomFieldNode`, `FieldValidate`), `@ez-kit/form-react` owns both
  * halves of the React surface — the *consumer* props a caller writes
  * (`BaseFieldProps`, …) and the *kit contract* props a kit receives
  * (`FieldRenderProps`, `FormComponents`). A field's input attributes belong to
@@ -319,15 +319,15 @@ export const GRID_TYPE = {
  */
 export const FORM_TYPE = {
 	/**
-	 * Governs "what every node may carry". `CommonProps` — the type that actually
+	 * Governs "what a field node may carry". `CommonProps` — the type that actually
 	 * declares those five keys — is internal to `@ez-kit/form-core`, so the
-	 * tightest exported stand-in is the leanest node built on it: `SubmitNode` is
-	 * `CommonProps` plus `type` and `disabled` and nothing else, so a name that
-	 * resolves here really is common to every node. A laxer choice such as
-	 * `FormNode` would also accept `columns`, `path` and `component`, which are
-	 * exactly the per-kind keys this table must not bless.
+	 * tightest exported stand-in is the leanest field node built on it:
+	 * `CustomFieldNode` adds only the keys every field has (`type`, `name`,
+	 * `required`, `validate`, `defaultValue`, `props`). A laxer choice such as
+	 * `FormNode` would also accept `columns` and `component`, which are exactly
+	 * the per-kind keys this table must not bless.
 	 */
-	SubmitNode: { module: TypeModule.FormCore, name: 'SubmitNode', typeArgs: ROW_TYPE_ARGS },
+	CustomFieldNode: { module: TypeModule.FormCore, name: 'CustomFieldNode', typeArgs: ROW_TYPE_ARGS },
 	FieldValidate: { module: TypeModule.FormCore, name: 'FieldValidate' },
 	/**
 	 * The props every flat field shares. Written once as
@@ -342,17 +342,16 @@ export const FORM_TYPE = {
 	 * kits declare; the shadcn kit's types stand for them, since HeroUI declares the same names.
 	 */
 	SliderFieldKitProps: { module: TypeModule.FormShadcn, name: 'SliderFieldKitProps' },
-	/** The JSX layout pair — neither is generic, both are pure presentation. */
+	/** The JSX layout parts — none is generic, all are pure presentation. */
 	SectionProps: { module: TypeModule.FormReact, name: 'SectionProps' },
+	GridProps: { module: TypeModule.FormReact, name: 'GridProps' },
 	GridItemProps: { module: TypeModule.FormReact, name: 'GridItemProps' },
-	/** The `section` node — `CommonProps` (so `colSpan`) plus the grid's own keys. */
-	SectionNode: { module: TypeModule.FormCore, name: 'SectionNode', typeArgs: ROW_TYPE_ARGS },
 	DateFieldKitProps: { module: TypeModule.FormShadcn, name: 'DateFieldKitProps' },
 	/** What a kit's field component receives — the base half of the field-slot contract. */
 	FieldRenderProps: { module: TypeModule.FormReact, name: 'FieldRenderProps' },
 	/**
-	 * The `components` half of the kit contract: the four named components that are not field
-	 * kinds — `SubmitButton`, `Section`, `GridItem` and `Wizard`.
+	 * The `components` half of the kit contract: the three named components that are not field
+	 * kinds — `SubmitButton`, `Section` and `Grid`.
 	 */
 	FormComponents: { module: TypeModule.FormReact, name: 'FormComponents' },
 	/**
@@ -1206,7 +1205,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			{ heading: 'Fields', roots: [FORM_TYPE.FieldRenderProps], expectedCount: 12 },
 			{ heading: 'Per-kind props', roots: [FORM_TYPE.FormFieldSlots], expectedCount: 12 },
 			{ heading: 'Form level', roots: [FORM_TYPE.FormComponents], expectedCount: 1 },
-			{ heading: 'Layout and wizard', roots: [FORM_TYPE.FormComponents], expectedCount: 3 },
+			{ heading: 'Layout', roots: [FORM_TYPE.FormComponents], expectedCount: 2 },
 		],
 		nonOptionTables: [],
 	},
@@ -1232,9 +1231,9 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.FormLayout,
 		optionTables: [
-			{ heading: '`form.Section`', roots: [FORM_TYPE.SectionProps], expectedCount: 4 },
-			{ heading: '`form.GridItem`', roots: [FORM_TYPE.GridItemProps], expectedCount: 2 },
-			{ heading: 'The `section` node', roots: [FORM_TYPE.SectionNode], expectedCount: 6 },
+			{ heading: '`form.Section`', roots: [FORM_TYPE.SectionProps], expectedCount: 3 },
+			{ heading: '`form.Grid`', roots: [FORM_TYPE.GridProps], expectedCount: 2 },
+			{ heading: '`form.Grid.Item`', roots: [FORM_TYPE.GridItemProps], expectedCount: 2 },
 		],
 		nonOptionTables: [
 			{
@@ -1263,25 +1262,26 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.FormSchema,
 		optionTables: [
-			{ heading: 'Common node properties', roots: [FORM_TYPE.SubmitNode], expectedCount: 5 },
+			{ heading: 'Common node properties', roots: [FORM_TYPE.CustomFieldNode], expectedCount: 5 },
 			{ heading: 'Validation', roots: [FORM_TYPE.FieldValidate], expectedCount: 8 },
 			// Two roots because the table documents both modes in one place and marks
 			// each row with the mode it belongs to: `form` exists only on the
 			// controlled props, `keepHiddenValues` and the `useForm` options only on
 			// the uncontrolled ones.
 			//
-			// Nine, not ten: the per-form `fields` registry was removed in favour of
-			// `createForm({ fields })`, the single registration site. `blocks` stays.
+			// Eight: the per-form `fields` and `blocks` registries were removed in
+			// favour of the factory's `fields` and `components`, the single
+			// registration site for both.
 			{
 				heading: 'SchemaForm props',
 				roots: [FORM_TYPE.SchemaFormControlledProps, FORM_TYPE.SchemaFormUncontrolledProps],
-				expectedCount: 9,
+				expectedCount: 8,
 			},
 		],
 		nonOptionTables: [
 			{
 				heading: 'The document',
-				reason: 'Lists the node `type` discriminant values (`text`, `section`, `submit`, …) — values, not keys.',
+				reason: 'Lists the node `type` discriminant values (`text`, `block`, `array`, …) — values, not keys.',
 			},
 			{
 				heading: 'Conditions',

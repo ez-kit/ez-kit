@@ -126,7 +126,7 @@ It **layers on** the form's own `validators` rather than replacing them: both ru
 
 **`rule`** names an entry in a registry because JSON cannot carry code. JSX can, so there is no registry on this side to look a name up in, and a string indirection would be the worst of the spellings available to you — write the check as a TanStack field validator, or as a standard-schema validator on the form. A `rule` that arrives past a cast throws, naming the field.
 
-**`messages`** takes plain strings here. Resolving a `{ key, params }` message needs a `translate`, and `translate` is a prop of `<SchemaForm>`, not of `<Form>` or `useForm`; rather than invent a second translate channel for the JSX API, the type asks for the finished copy you already hold.
+**`messages`** takes plain strings here. Resolving an `{ i18n, params }` message needs a `translate`, and `translate` is a prop of `<SchemaForm>`, not of `<Form>` or `useForm`; rather than invent a second translate channel for the JSX API, the type asks for the finished copy you already hold.
 
 ### When a form-level validator is the right answer instead
 

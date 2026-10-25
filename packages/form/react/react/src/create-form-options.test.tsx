@@ -183,7 +183,7 @@ describe('createForm options — what the instance carries', () => {
 			expectTypeOf(fieldsOnly.useForm(v)).toHaveProperty('TextField')
 			expectTypeOf(componentsOnly.useForm(v)).toHaveProperty('SubmitButton')
 			expectTypeOf(both.useForm(v)).toHaveProperty('DateRangeField')
-			expectTypeOf(both.useForm(v)).toHaveProperty('Wizard')
+			expectTypeOf(both.useForm(v)).toHaveProperty('Grid')
 			expectTypeOf(override.useForm(v)).toHaveProperty('ArrayField')
 			expectTypeOf(fromAnnotated.useForm(v)).toHaveProperty('Section')
 			expectTypeOf(bare.useForm(v)).toHaveProperty('Submit')

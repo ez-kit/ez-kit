@@ -17,10 +17,8 @@ import type {
 	SliderFieldRenderProps,
 	TextareaFieldRenderProps,
 	TextFieldRenderProps,
-	WizardRenderProps,
-	WizardStep,
 } from './contract'
-import type { GridItemProps, SectionProps, SubmitButtonProps } from './field-props'
+import type { GridItemProps, GridProps, SectionProps, SubmitButtonProps } from './field-props'
 import type { HTMLInputTypeAttribute, ReactNode } from 'react'
 
 /**
@@ -110,16 +108,24 @@ function Shell({ id, label, description, errors, invalid, children, controlFirst
 }
 
 /** The layout half of the test kit — unstyled, marker attributes only. */
-function Section({ title, description, columns, children }: SectionProps): ReactNode {
+function Section({ title, description, children }: SectionProps): ReactNode {
 	return (
-		<section
-			data-testid='section'
-			data-columns={columns}
-		>
+		<section data-testid='section'>
 			{title !== undefined && <h3>{title}</h3>}
 			{description !== undefined && <p>{description}</p>}
 			{children}
 		</section>
+	)
+}
+
+function GridView({ columns, children }: GridProps): ReactNode {
+	return (
+		<div
+			data-testid='grid'
+			data-columns={columns}
+		>
+			{children}
+		</div>
 	)
 }
 
@@ -134,73 +140,7 @@ function GridItem({ colSpan, children }: GridItemProps): ReactNode {
 	)
 }
 
-function WizardStepTrigger({ index, title, description, status, invalid, disabled, goTo }: WizardStep): ReactNode {
-	return (
-		<li
-			data-testid='wizard-step'
-			data-status={status}
-			data-invalid={invalid || undefined}
-			aria-current={status === 'current' ? 'step' : undefined}
-		>
-			<button
-				data-testkit='wizard-step-trigger'
-				type='button'
-				disabled={disabled}
-				onClick={goTo}
-			>
-				{title ?? `Step ${String(index + 1)}`}
-			</button>
-			{description !== undefined && <p data-testkit='wizard-step-description'>{description}</p>}
-		</li>
-	)
-}
-
-function Wizard({
-	steps,
-	currentIndex,
-	canGoBack,
-	canGoNext,
-	isLastStep,
-	goNext,
-	goBack,
-	submitting,
-	children,
-}: WizardRenderProps): ReactNode {
-	return (
-		<div
-			data-testkit='wizard'
-			data-current-index={currentIndex}
-		>
-			<ol data-testkit='wizard-steps'>
-				{steps.map((step) => (
-					<WizardStepTrigger
-						key={step.index}
-						{...step}
-					/>
-				))}
-			</ol>
-			<div data-testkit='wizard-body'>{children}</div>
-			<div data-testkit='wizard-nav'>
-				<button
-					data-testkit='wizard-back'
-					type='button'
-					disabled={!canGoBack || submitting}
-					onClick={goBack}
-				>
-					Back
-				</button>
-				<button
-					data-testkit='wizard-next'
-					type='button'
-					disabled={!canGoNext || submitting}
-					onClick={goNext}
-				>
-					{isLastStep ? 'Review' : 'Next'}
-				</button>
-			</div>
-		</div>
-	)
-}
+const Grid = Object.assign(GridView, { Item: GridItem })
 
 /**
  * The range stand-in keeps its own half-picked state, exactly as the real kits do: the
@@ -879,8 +819,7 @@ function SubmitButton({ children, disabled }: SubmitButtonProps): ReactNode {
 export const testComponents = {
 	SubmitButton,
 	Section,
-	GridItem,
-	Wizard,
+	Grid,
 } satisfies FormComponents
 
 /**

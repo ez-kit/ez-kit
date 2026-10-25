@@ -108,7 +108,7 @@ The boundary between them is worth stating plainly rather than discovering later
 
 - **Validation is named rules only.** `validate: { required: true, format: 'email' }`, plus rules you register yourself. An arbitrary JavaScript predicate is deliberately not expressible — a document that carried executable code would not be safe to accept over the wire.
 - **Conditions are declarative.** `when` and `disabledWhen` cover showing, hiding and disabling against other field values. There is no `form.Subscribe` in a document; `SchemaForm` handles re-rendering itself.
-- **Some things exist only on the document side.** Wizards are the notable case: `step` nodes and the step chrome are a `SchemaForm` feature, and there is no `<Step>` component in the JSX API.
+- **Some things exist only on the JSX side.** Steps are the notable case: [`form.Steps` and `form.Step`](/docs/form/steps) have no node in a document.
 
 Neither entry point is the fallback for the other. Reach for the document when the form's shape is data — long forms, backend-delivered forms, forms a non-developer edits. Reach for JSX when the form's shape is code. The format is described in full in [Config-driven forms](/docs/form/schema).
 

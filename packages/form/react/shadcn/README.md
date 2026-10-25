@@ -89,9 +89,10 @@ sets.
 
 ### Layout
 
-`form.Section` groups fields under an optional heading on a `columns`-wide grid (1–4), and
-`form.GridItem` gives one child a wider `colSpan`. They are the JSX spelling of the schema's
-`section` node and its `colSpan` — pure layout, binding no value.
+`form.Section` groups fields under an optional heading, `form.Grid` lays children out on a
+`columns`-wide grid (1–4), and `form.Grid.Item` gives one child a wider `colSpan`. They are the
+JSX spelling of a document's `Section` block, its `columns` and a node's `colSpan` — pure layout,
+binding no value.
 
 ### Native API
 

@@ -729,7 +729,7 @@ describe('the array slot', () => {
 			</Form>,
 		)
 		expect(scopeKeys).toEqual(expect.arrayContaining(['TextField', 'ArrayField', 'Array', 'Item']))
-		for (const layoutKey of ['SubmitButton', 'Submit', 'Section', 'GridItem']) {
+		for (const layoutKey of ['SubmitButton', 'Submit', 'Section', 'Grid']) {
 			expect(scopeKeys).not.toContain(layoutKey)
 		}
 	})

@@ -6,7 +6,6 @@ import { createFormInternals } from './create-form'
 import { splitFormProps } from './form-options'
 import { FormShell } from './form-shell'
 import { FormFactoryName } from './reserved-keys'
-import { assertNoReservedFieldKeyCollision } from './schema/registries'
 import {
 	isSchemaFormControlled,
 	renderSchemaFields,
@@ -44,7 +43,7 @@ import type { ReactNode } from 'react'
  * export const { useForm, Form, SchemaForm } = createSchemaForm({
  *   FormElement,
  *   fields: { TextField, NumberField, RatingField },
- *   components: { SubmitButton, Section },
+ *   components: { SubmitButton, Section, Grid },
  * })
  *
  * <SchemaForm schema={schema} onSubmit={({ value }) => save(value)} />
@@ -103,8 +102,7 @@ export function createSchemaForm<
 			TSubmitMeta
 		>,
 	): ReactNode {
-		const { schema, translate, keepHiddenValues, blocks, rules, form: _ignored, ...rest } = props
-		assertNoReservedFieldKeyCollision(blocks)
+		const { schema, translate, keepHiddenValues, rules, form: _ignored, ...rest } = props
 		const { options, elementProps } = splitFormProps(rest)
 		// Spec §4.6: the schema's own `defaultValue` entries seed the form when the caller
 		// supplies none — theirs wins whenever they do.
@@ -157,7 +155,7 @@ export function createSchemaForm<
 				FormElement={FormElement}
 				elementProps={elementProps}
 			>
-				{renderSchemaFields(schema, instance, components, translate, customFieldsById, blocks)}
+				{renderSchemaFields(schema, instance, components, translate, customFieldsById)}
 			</FormShell>
 		)
 	}
@@ -203,15 +201,14 @@ export function createSchemaForm<
 	): ReactNode
 	function SchemaForm(props: AnySchemaFormProps): ReactNode {
 		if (isSchemaFormControlled<unknown, TFields>(props)) {
-			const { form, schema, translate, blocks, rules: _rules, ...elementProps } = props
-			assertNoReservedFieldKeyCollision(blocks)
+			const { form, schema, translate, rules: _rules, ...elementProps } = props
 			return (
 				<FormShell
 					form={form}
 					FormElement={FormElement}
 					elementProps={elementProps}
 				>
-					{renderSchemaFields(schema, form, components, translate, customFieldsById, blocks)}
+					{renderSchemaFields(schema, form, components, translate, customFieldsById)}
 				</FormShell>
 			)
 		}

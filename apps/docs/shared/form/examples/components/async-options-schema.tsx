@@ -83,7 +83,7 @@ const schema = defineFormSchema<Assignment>()({
 			optionsFrom: 'teams',
 			defaultValue: ['engineering'],
 		},
-		{ type: 'submit', label: 'Save' },
+		{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 	],
 })
 

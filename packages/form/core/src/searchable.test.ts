@@ -14,10 +14,10 @@ import type { ParseOptions } from './parse'
  * nothing to search. The rejection carries the node path, like every other parse failure.
  */
 
-const OPTIONS: ParseOptions = { optionSources: ['cities'] }
+const OPTIONS: ParseOptions = { optionSources: ['cities'], components: ['Section'] }
 
 function schemaWith(node: Record<string, unknown>): Record<string, unknown> {
-	return { version: 1, children: [{ type: 'section', children: [node] }] }
+	return { version: 1, children: [{ type: 'block', component: 'Section', children: [node] }] }
 }
 
 /** The path the single node above sits at — asserted, not spelled inline, in every case. */

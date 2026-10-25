@@ -1,9 +1,12 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { expect, test } from 'vitest'
+import { expect, expectTypeOf, test } from 'vitest'
 
 import { createForm } from './create-form'
 import { testComponents, testFields, testFormElement } from './test-kit'
+
+import type { FormComponents } from './contract'
+import type { ReactNode } from 'react'
 
 const { Form } = createForm({ FormElement: testFormElement, fields: testFields, components: testComponents })
 
@@ -11,7 +14,7 @@ type Values = { email: string; notes: string }
 
 const DEFAULTS: Values = { email: '', notes: '' }
 
-test('a section renders through the kit with its heading and column count', () => {
+test('a section renders through the kit with its heading and description', () => {
 	render(
 		<Form
 			defaultValues={DEFAULTS}
@@ -21,7 +24,6 @@ test('a section renders through the kit with its heading and column count', () =
 				<form.Section
 					title='Client'
 					description='Who to bill'
-					columns={2}
 				>
 					<form.TextField
 						name='email'
@@ -32,7 +34,6 @@ test('a section renders through the kit with its heading and column count', () =
 		</Form>,
 	)
 
-	expect(screen.getByTestId('section')).toHaveAttribute('data-columns', '2')
 	expect(screen.getByRole('heading', { name: 'Client' })).toBeInTheDocument()
 	expect(screen.getByText('Who to bill')).toBeInTheDocument()
 })
@@ -44,7 +45,7 @@ test('a section without a title renders no heading', () => {
 			onSubmit={() => {}}
 		>
 			{(form) => (
-				<form.Section columns={2}>
+				<form.Section>
 					<form.TextField
 						name='email'
 						label='Email'
@@ -57,27 +58,29 @@ test('a section without a title renders no heading', () => {
 	expect(screen.queryByRole('heading')).not.toBeInTheDocument()
 })
 
-test('a grid item carries its colSpan to the kit and wraps anything, a nested section included', () => {
+test('a grid carries its columns and each item its colSpan, and an item wraps anything', () => {
 	render(
 		<Form
 			defaultValues={DEFAULTS}
 			onSubmit={() => {}}
 		>
 			{(form) => (
-				<form.Section columns={3}>
+				<form.Grid columns={3}>
 					<form.TextField
 						name='email'
 						label='Email'
 					/>
-					<form.GridItem colSpan={2}>
-						<form.Section columns={2}>
-							<form.TextField
-								name='notes'
-								label='Notes'
-							/>
+					<form.Grid.Item colSpan={2}>
+						<form.Section title='Notes'>
+							<form.Grid columns={2}>
+								<form.TextField
+									name='notes'
+									label='Notes'
+								/>
+							</form.Grid>
 						</form.Section>
-					</form.GridItem>
-				</form.Section>
+					</form.Grid.Item>
+				</form.Grid>
 			)}
 		</Form>,
 	)
@@ -87,12 +90,12 @@ test('a grid item carries its colSpan to the kit and wraps anything, a nested se
 	expect(items).toHaveLength(1)
 	expect(items[0]).toHaveAttribute('data-col-span', '2')
 
-	const sections = screen.getAllByTestId('section')
-	expect(sections[0]).toHaveAttribute('data-columns', '3')
-	expect(sections[1]).toHaveAttribute('data-columns', '2')
+	const grids = screen.getAllByTestId('grid')
+	expect(grids[0]).toHaveAttribute('data-columns', '3')
+	expect(grids[1]).toHaveAttribute('data-columns', '2')
 })
 
-test('a field keeps its name and value inside a section — layout binds nothing', async () => {
+test('a field keeps its name and value inside a section and a grid — layout binds nothing', async () => {
 	const user = userEvent.setup()
 	const submitted: Values[] = []
 
@@ -105,16 +108,15 @@ test('a field keeps its name and value inside a section — layout binds nothing
 		>
 			{(form) => (
 				<>
-					<form.Section
-						title='Client'
-						columns={2}
-					>
-						<form.GridItem colSpan={2}>
-							<form.TextField
-								name='email'
-								label='Email'
-							/>
-						</form.GridItem>
+					<form.Section title='Client'>
+						<form.Grid columns={2}>
+							<form.Grid.Item colSpan={2}>
+								<form.TextField
+									name='email'
+									label='Email'
+								/>
+							</form.Grid.Item>
+						</form.Grid>
 					</form.Section>
 					<form.SubmitButton>Save</form.SubmitButton>
 				</>
@@ -128,4 +130,18 @@ test('a field keeps its name and value inside a section — layout binds nothing
 	await waitFor(() => {
 		expect(submitted).toEqual([{ email: 'a@b.c', notes: '' }])
 	})
+})
+
+test('the grid is one slot with its cell, and a section knows nothing of columns', () => {
+	const GridView = ({ children }: { children: ReactNode }): ReactNode => children
+
+	// @ts-expect-error a grid without its `Item` is half a slot
+	const halfGrid: FormComponents = { Grid: GridView }
+
+	const SectionView = ({ children }: { children: ReactNode; columns: number }): ReactNode => children
+	// @ts-expect-error `columns` belongs to the grid, not to the section
+	const columnedSection: FormComponents = { Section: SectionView }
+
+	expectTypeOf(halfGrid).toEqualTypeOf<FormComponents>()
+	expectTypeOf(columnedSection).toEqualTypeOf<FormComponents>()
 })

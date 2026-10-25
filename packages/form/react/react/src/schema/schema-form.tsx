@@ -10,11 +10,10 @@ import { useMemo } from 'react'
 
 import { SchemaTranslate } from '../options/source-context'
 
-import { FormWizard, isStepNode } from './form-wizard'
 import { renderChildren } from './render-children'
 import { assertDocumentComponents } from './required-components'
 
-import type { BlockRegistry, CustomFieldRegistry } from './registries'
+import type { CustomFieldRegistry } from './registries'
 import type { LayoutComponents } from './render-node'
 import type { AllFormFieldSlots, FormElementProps, NoRegistry } from '../contract'
 import type { FormFieldComponents } from '../field-props'
@@ -54,16 +53,6 @@ export type SharedSchemaFormProps<TValues> = {
 	schema: AnyFormSchema<TValues>
 	/** Resolves a `LocalizedText` translation key. Required only if the schema uses one. */
 	translate?: Translate
-	/**
-	 * Block components referenced from the schema by `component` (spec §4.7, §8) — markup
-	 * with no `name` and no value binding, rendered from its own `props` only.
-	 *
-	 * The only registry still passed per form. Custom **fields** are registered once, on
-	 * `createForm({ fields })`, and reach a document through the id their component name
-	 * derives; a `block` carries no binding and no field kind, so nothing about it was in
-	 * question when the per-form `fields` prop went.
-	 */
-	blocks?: BlockRegistry
 	/**
 	 * Named validation rules a `validate.rule` reference resolves against — the same shape
 	 * `@ez-kit/form-core`'s `buildValidator` consumes. Only meaningful in uncontrolled mode,
@@ -315,50 +304,21 @@ export function resolveSchemaValidators<TValues>(
 }
 
 /**
- * Whether the document is a wizard — its top-level children are `step` nodes.
+ * Render the schema's top-level children — one already-bound field component per field node,
+ * one component from `components` per block, recursively — via `renderChildren`, on a `Grid`
+ * when the document sets `columns`.
  *
- * Spec §4.5 makes mixing `step` with non-`step` siblings a parse error, which `parseFormSchema`
- * enforces for a delivered document. A TS-authored schema never goes through the parser, so
- * the same rule is enforced here: a half-wizard would otherwise silently drop the loose nodes
- * (they would never be rendered by any step) instead of telling the author.
- */
-export function isWizardSchema<TValues>(schema: AnyFormSchema<TValues>): boolean {
-	const stepCount = schema.children.filter((node) => isStepNode(node)).length
-	if (stepCount === 0) return false
-	if (stepCount !== schema.children.length) {
-		throw new Error(
-			'A form schema may not mix `step` nodes with non-`step` siblings at the same level. ' +
-				'Move the loose nodes into a step, or drop the steps.',
-		)
-	}
-	return true
-}
-
-/**
- * Render the schema's top-level children — one already-bound field component per field
- * node, a headed, column-gridded block per `section`, recursively — via `renderChildren`.
- *
- * `layout` carries `Section`/`GridItem`/`Wizard` straight from the kit's raw `components`,
- * separate from `form`'s bound field components: unlike a field, a container has no form state
- * of its own. There is no enclosing grid at the top level, so `parentColumns` starts
- * `undefined`. `fields` and `blocks` resolve `type: '<custom>'` and `type: 'block'` nodes
- * respectively (spec §4.7, §8).
- *
- * `fields` is **required** while `blocks` is optional, and the asymmetry is not arbitrary: it is
- * the factory's own registry, keyed by the document id each component name derives
- * (`deriveFieldTypeIds`), so `createForm` always has one to pass — there is no per-form `fields`
- * prop any more. `blocks` is still something a caller may simply not have. Do not make `fields`
- * optional to match: a call site that passes `{}` instead compiles, and turns every custom field
- * in every document into a missing-field error.
+ * `layout` is the kit's raw `components`, separate from `form`'s bound field components: a block
+ * resolves its `component` there, and unlike a field it has no form state of its own. `fields`
+ * resolves `type: '<custom>'` nodes (spec §4.7, §8). It is **required**: it is the factory's own
+ * registry, keyed by the document id each component name derives (`deriveFieldTypeIds`), so the
+ * factory always has one to pass. Do not make it optional: a call site that passes `{}` instead
+ * compiles, and turns every custom field in every document into a missing-field error.
  *
  * Every component the document can need is asserted first, visible or not — see
  * `assertDocumentComponents`. The walk is memoised on the schema and the registries, so it runs
  * once per document rather than on every render; that is why the body is a component
  * (`SchemaFields`) rather than inline in this function.
- *
- * A document whose top level is `step` nodes is a wizard and goes to `FormWizard` instead,
- * which renders one step at a time through the kit's `Wizard` (spec §4.5, §10). A `step` found
- * anywhere else still throws via `renderChildren`, exactly as a genuinely unknown `type` does.
  */
 export function renderSchemaFields<TValues>(
 	schema: AnyFormSchema<TValues>,
@@ -366,7 +326,6 @@ export function renderSchemaFields<TValues>(
 	layout: LayoutComponents,
 	translate: Translate | undefined,
 	fields: CustomFieldRegistry,
-	blocks: BlockRegistry | undefined,
 ): ReactNode {
 	return (
 		<SchemaFields
@@ -375,7 +334,6 @@ export function renderSchemaFields<TValues>(
 			layout={layout}
 			translate={translate}
 			fields={fields}
-			blocks={blocks}
 		/>
 	)
 }
@@ -386,11 +344,10 @@ type SchemaFieldsProps = {
 	layout: LayoutComponents
 	translate: Translate | undefined
 	fields: CustomFieldRegistry
-	blocks: BlockRegistry | undefined
 }
 
 /** The body of {@link renderSchemaFields}. */
-function SchemaFields({ schema, instance, layout, translate, fields, blocks }: SchemaFieldsProps): ReactNode {
+function SchemaFields({ schema, instance, layout, translate, fields }: SchemaFieldsProps): ReactNode {
 	// The instance carries exactly what its bundle registered; the renderer reads every member as
 	// possibly absent and names what a document needed and did not get.
 	const form = instance as FormFieldComponents<unknown>
@@ -400,23 +357,14 @@ function SchemaFields({ schema, instance, layout, translate, fields, blocks }: S
 
 	// `itemPath` starts undefined: the schema root sits in no array entry, and each array node
 	// replaces it for the subtree of every entry it renders.
-	const context = { translate, fields, blocks, itemPath: undefined }
+	const context = { translate, fields, itemPath: undefined }
 
 	// `SchemaTranslate` is the one thing the renderer publishes through context rather than
 	// through `RenderNode`'s props: an option source's labels are `LocalizedText` too, and the
 	// source is resolved inside the *field* component, which sees only the field's own props.
 	return (
 		<SchemaTranslate translate={translate}>
-			{isWizardSchema(schema) ? (
-				<FormWizard
-					schema={schema}
-					form={form}
-					layout={layout}
-					context={context}
-				/>
-			) : (
-				renderChildren(schema.children, { form, layout, context, parentColumns: undefined })
-			)}
+			{renderChildren(schema.children, { form, layout, context, columns: schema.columns })}
 		</SchemaTranslate>
 	)
 }

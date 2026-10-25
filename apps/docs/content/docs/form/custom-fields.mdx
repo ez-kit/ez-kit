@@ -120,4 +120,4 @@ A kit's own `Form` / `useForm` / `SchemaForm` exports come from the kit's own fa
 
 ## Blocks are not fields
 
-A **custom field** has a `name` and is bound to a value. A [**block**](/docs/form/schema#registries) has neither: it is a `{ type: 'block', component: 'promo-banner' }` node that receives only its `props`, and it is registered as a `blocks` prop on `SchemaForm`, not on the factory. If what you are adding renders a value the user edits, it is a field; if it is markup the document wants to place, it is a block.
+A **custom field** has a `name` and is bound to a value. A [**block**](/docs/form/schema#registries) has neither: it is a `{ type: 'block', component: 'PromoBanner' }` node that receives only its `props`, and its component is registered in the factory's `components`, the same one JSX reaches as `form.PromoBanner`. If what you are adding renders a value the user edits, it is a field; if it is markup the document wants to place, it is a block.

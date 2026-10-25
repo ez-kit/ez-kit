@@ -241,7 +241,7 @@ describe('form.Array / form.ArrayField — types', () => {
 									// @ts-expect-error — not scoped to an entry
 									expectTypeOf(item.Section).toBeFunction()
 									// @ts-expect-error — not scoped to an entry
-									expectTypeOf(item.GridItem).toBeFunction()
+									expectTypeOf(item.Grid).toBeFunction()
 									return <item.Item key={item.key}>{item.index}</item.Item>
 								})
 							}

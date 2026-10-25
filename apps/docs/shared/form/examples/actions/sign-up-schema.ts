@@ -24,6 +24,6 @@ export const signUpSchema = defineFormSchema<SignUpValues>()({
 			defaultValue: '',
 			validate: { required: true, maxLength: 254, format: 'email' },
 		},
-		{ type: 'submit', label: 'Sign up' },
+		{ type: 'block', component: 'SubmitButton', props: { children: 'Sign up' } },
 	],
 })

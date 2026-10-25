@@ -95,9 +95,9 @@ const validator = z.object({
  * fields carry the same props under the same names in both, and what changes is only whether
  * they are written as elements or as data.
  *
- * The grouping has a counterpart too: a document says `section` with `columns` and a node
- * carries `colSpan`, JSX writes `<form.Section columns>` and wraps a wide child in
- * `<form.GridItem colSpan>`, and both reach the same kit components — see
+ * The grouping has a counterpart too: a document writes a `Section` block with `columns` and a
+ * node carries `colSpan`, JSX writes `<form.Section>` around a `<form.Grid columns>` and wraps a
+ * wide child in `<form.Grid.Item colSpan>`, and both reach the same kit components — see
  * [Layout](/docs/form/layout).
  */
 export function ShowcaseExample() {
@@ -117,102 +117,101 @@ export function ShowcaseExample() {
 						<form.Section
 							title='Your details'
 							description='Two columns on the grid; the notes span both.'
-							columns={2}
 						>
-							<form.TextField
-								name='fullName'
-								label='Full name'
-								placeholder='Ada Lovelace'
-								required
-							/>
-							<form.TextField
-								name='email'
-								label='Email'
-								placeholder='you@example.com'
-								type='email'
-								required
-							/>
-							<form.GridItem colSpan={2}>
-								<form.TextareaField
-									name='notes'
-									label='Anything we should know?'
-									rows={3}
-									placeholder='Optional.'
+							<form.Grid columns={2}>
+								<form.TextField
+									name='fullName'
+									label='Full name'
+									placeholder='Ada Lovelace'
+									required
 								/>
-							</form.GridItem>
+								<form.TextField
+									name='email'
+									label='Email'
+									placeholder='you@example.com'
+									type='email'
+									required
+								/>
+								<form.Grid.Item colSpan={2}>
+									<form.TextareaField
+										name='notes'
+										label='Anything we should know?'
+										rows={3}
+										placeholder='Optional.'
+									/>
+								</form.Grid.Item>
+							</form.Grid>
 						</form.Section>
 
-						<form.Section
-							title='Plan'
-							columns={2}
-						>
-							<form.SelectField
-								name='plan'
-								label='Plan'
-								options={PLANS}
-								placeholder='Pick a plan'
-							/>
-							<form.NumberField
-								name='teamSize'
-								label='Team size'
-								min={1}
-								max={500}
-								required
-							/>
-							<form.RadioGroupField
-								name='billing'
-								label='Billing'
-								options={BILLING}
-							/>
-							<form.SliderField
-								name='seats'
-								label='Seats'
-								description='How many of them get an account on day one.'
-								min={1}
-								max={50}
-								step={1}
-							/>
-							<form.GridItem colSpan={2}>
-								<form.MultiSelectField
-									name='integrations'
-									label='Integrations'
-									options={INTEGRATIONS}
-									placeholder='Pick as many as you like'
+						<form.Section title='Plan'>
+							<form.Grid columns={2}>
+								<form.SelectField
+									name='plan'
+									label='Plan'
+									options={PLANS}
+									placeholder='Pick a plan'
 								/>
-							</form.GridItem>
+								<form.NumberField
+									name='teamSize'
+									label='Team size'
+									min={1}
+									max={500}
+									required
+								/>
+								<form.RadioGroupField
+									name='billing'
+									label='Billing'
+									options={BILLING}
+								/>
+								<form.SliderField
+									name='seats'
+									label='Seats'
+									description='How many of them get an account on day one.'
+									min={1}
+									max={50}
+									step={1}
+								/>
+								<form.Grid.Item colSpan={2}>
+									<form.MultiSelectField
+										name='integrations'
+										label='Integrations'
+										options={INTEGRATIONS}
+										placeholder='Pick as many as you like'
+									/>
+								</form.Grid.Item>
+							</form.Grid>
 						</form.Section>
 
-						<form.Section
-							title='Schedule and preferences'
-							columns={2}
-						>
-							<form.DateField
-								name='startOn'
-								label='Start on'
-								min='2026-01-01'
-								max='2026-12-31'
-							/>
-							<form.DateRangeField
-								name='trial'
-								label='Trial window'
-								min='2026-01-01'
-								max='2026-12-31'
-							/>
-							<form.GridItem colSpan={2}>
-								<form.CheckboxGroupField
-									name='topics'
-									label='Email me about'
-									options={TOPICS}
+						<form.Section title='Schedule and preferences'>
+							<form.Grid columns={2}>
+								<form.DateField
+									name='startOn'
+									label='Start on'
+									min='2026-01-01'
+									max='2026-12-31'
 								/>
-							</form.GridItem>
-							<form.SwitchField
-								name='notifications'
-								label='In-app notifications'
-							/>
-							<form.CheckboxField
-								name='terms'
-								label='I accept the terms'
-							/>
+								<form.DateRangeField
+									name='trial'
+									label='Trial window'
+									min='2026-01-01'
+									max='2026-12-31'
+								/>
+								<form.Grid.Item colSpan={2}>
+									<form.CheckboxGroupField
+										name='topics'
+										label='Email me about'
+										options={TOPICS}
+									/>
+								</form.Grid.Item>
+								<form.SwitchField
+									name='notifications'
+									label='In-app notifications'
+								/>
+								<form.CheckboxField
+									name='terms'
+									label='I accept the terms'
+								/>
+							</form.Grid>
 						</form.Section>
 
 						<form.SubmitButton>Create account</form.SubmitButton>

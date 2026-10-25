@@ -47,7 +47,7 @@ export type {
 	SchemaFormUncontrolledProps,
 	SharedSchemaFormProps,
 } from './schema/schema-form'
-export type { BlockRegistry, CustomFieldRegistry, CustomFieldRenderProps } from './schema/registries'
+export type { CustomFieldRegistry, CustomFieldRenderProps } from './schema/registries'
 export type {
 	OptionSource,
 	OptionSourceRegistry,
@@ -59,6 +59,7 @@ export type {
 	AllFormFieldSlots,
 	ArrayFieldRenderProps,
 	ArrayFieldSlot,
+	GridSlot,
 	ArrayItemRenderProps,
 	CheckboxFieldRenderProps,
 	CheckboxGroupFieldRenderProps,
@@ -78,8 +79,6 @@ export type {
 	SwitchFieldRenderProps,
 	TextareaFieldRenderProps,
 	TextFieldRenderProps,
-	WizardRenderProps,
-	WizardStep,
 } from './contract'
 export type {
 	ArrayFieldProps,
@@ -97,6 +96,7 @@ export type {
 	FieldControlProps,
 	FieldProps,
 	GridItemProps,
+	GridProps,
 	MultiSelectFieldProps,
 	FormFieldComponents,
 	FormPrimitives,
@@ -174,9 +174,6 @@ export type {
 	ParseOptions,
 	Rule,
 	RuleIssue,
-	SectionNode,
-	StepNode,
-	SubmitNode,
 } from '@ez-kit/form-core'
 
 // The group hooks are the package's own since the instance's `FormGroup` and `Field` are retyped
