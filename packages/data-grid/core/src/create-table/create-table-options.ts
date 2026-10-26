@@ -15,6 +15,7 @@ import { warnOnce } from '../utils/warn-once'
 
 import { withGatedFilteredRowModel } from './gate-column-filters'
 import { resolveFilterFields } from './resolve-filter-fields'
+import { withScalarRangeFilters } from './scalar-range-filters'
 
 import type { ColumnDef, ResolvedFilterField, SystemColumnDef } from '../column/types'
 import type { ColumnInvariants } from '../column-state'
@@ -1241,7 +1242,10 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 	// switched on a live instance — see `gate-column-filters.ts`. The wrapped set is cached per
 	// consumer set, so without `sorting.fns` the table still gets one stable object across calls;
 	// it is no longer the consumer's own object.
-	const gatedFeatures = withGatedFilteredRowModel(config.features)
+	//
+	// Its `filterFns` range entries are wrapped too, so the one value a plain number or date filter
+	// hands back is read as a range rather than thrown on — see `scalar-range-filters.ts`.
+	const gatedFeatures = withScalarRangeFilters(withGatedFilteredRowModel(config.features))
 	const sortFns = sortingCfg?.fns
 	const features =
 		sortFns === undefined
