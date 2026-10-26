@@ -15,6 +15,7 @@ import { useDndBundleAdapter } from './data-grid/dnd'
 import { mergeGridOptionLayers, useDataGridOptions, useGridFactoryDefaults } from './data-grid-options-context'
 import { DATA_GRID_DEFAULTS, DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
 import { createGridContextAtom, EMPTY_GRID_CONTEXT, syncGridContext } from './grid-context'
+import { describeUnrecognisedLoading, normalizeControlledState } from './normalize-controlled-state'
 import { ActionBarVariant } from './types'
 import { useOrderedData } from './use-ordered-data'
 import { useSafeLayoutEffect } from './utils/use-safe-layout-effect'
@@ -35,6 +36,7 @@ import type {
 	FilteringConfig,
 	GlobalFilteringConfig,
 	LoadMoreDirection,
+	LoadingState,
 	MultiSortConfig,
 	OrderingConfig,
 	PaginationConfig,
@@ -563,6 +565,23 @@ export type RowPropsResolver<TRow extends object> = (
 ) => HTMLAttributes<HTMLTableRowElement> | undefined
 
 /**
+ * The controlled `state` option: any slice the grid's feature set registers, each optional.
+ *
+ * `Partial<TableState<TFeatures>>` with one difference — `loading` takes a **partial**
+ * {@link LoadingState}. A list loaded once writes `{ loading: { isPending } }` instead of restating
+ * `isFetching: false, isError: false, error: null`; the grid completes the slice on its way into
+ * the store, so selectors and `onStateChange` still see all four fields.
+ *
+ * `loading` is a key only when `loadingFeature` is in the set, so the option does not loosen for a
+ * set that omits it. `Partial<TableState<TFeatures>>` is assignable here — for a concrete set and
+ * for a wrapper still generic over `TFeatures`. That last case is why this is an `Omit` plus a
+ * gated member rather than a mapped type with a per-key conditional: the conditional stays
+ * deferred while `TFeatures` is a parameter, and a deferred member accepts nothing.
+ */
+export type ControlledTableState<TFeatures extends TableFeatures> = Omit<Partial<TableState<TFeatures>>, 'loading'> &
+	('loading' extends keyof TableState<TFeatures> ? { loading?: Partial<LoadingState> } : unknown)
+
+/**
  * What a call site writes. Generic over `TFeatures` because the caller composes the feature
  * set and `useDataGrid`'s return type carries it back out; everything reached through
  * `useDataGridTable()` pins to {@link GridFeatures} instead.
@@ -632,11 +651,14 @@ export type UseDataGridConfig<
 	 */
 	ordering?: boolean | OrderingConfig
 	/**
-	 * Controlled table state. Pass a partial `TableState` to control specific portions
-	 * (e.g. only sorting) while leaving the rest internally managed.
-	 * Must be used together with `onStateChange` to reflect state updates back.
+	 * Controlled table state. Pass the slices you control (e.g. only sorting) while leaving the
+	 * rest internally managed. Must be used together with `onStateChange` to reflect state
+	 * updates back.
+	 *
+	 * `loading` may be partial — `{ loading: { isPending } }` — and a TanStack Query result
+	 * passes through whole; see {@link ControlledTableState}.
 	 */
-	state?: Partial<TableState<TFeatures>>
+	state?: ControlledTableState<TFeatures>
 	/**
 	 * Application and kit values carried alongside the grid, for components that need to agree
 	 * with their surroundings rather than receive everything as a prop — the current user, a
@@ -1058,8 +1080,20 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 	// without having to be torn down and rebuilt when one of them changes identity.
 	const onStateChangeRef = useRef(onStateChange)
 	onStateChangeRef.current = onStateChange
-	const controlledStateRef = useRef(state)
-	controlledStateRef.current = state
+	// Holds the controlled `state` with `state.loading` completed — what both publishes write and
+	// what the echo filter compares against, so the filter recognises the value the store actually
+	// holds. Normalized against its own previous value, which is what keeps `loading`'s identity
+	// across renders that pass an equal object; see `normalizeControlledState`.
+	const controlledStateRef = useRef<Record<string, unknown> | undefined>(undefined)
+	controlledStateRef.current = normalizeControlledState(controlledStateRef.current, state)
+	if (IS_DEV) {
+		// Read off the prop rather than the ref: normalizing has already dropped the foreign keys
+		// this warning is about. Erased for the reason the ref is — no slice name is provable here.
+		const rawLoading = (state as Record<string, unknown> | undefined)?.loading
+		const unrecognised =
+			typeof rawLoading === 'object' && rawLoading !== null ? describeUnrecognisedLoading(rawLoading) : undefined
+		if (unrecognised !== undefined) warnOnce(unrecognised)
+	}
 
 	// ── the data the table is built on ────────────────────────────────────────
 	// `useTable` re-applies its options argument on **every** render

@@ -418,10 +418,16 @@ export type InfiniteState = {
 
 /**
  * Loading-status slice, held in `state.loading`. **User-owned / fully controlled** —
- * the consumer feeds every field through the controlled `options.state.loading`, which v9
- * mirrors into the atoms itself. The grid **never writes** this slice;
+ * the consumer feeds it through the controlled `state.loading` option or seeds it through
+ * `initialState.loading`. The grid **never writes** this slice;
  * there is no single-writer setter and no grid-owned derived alias. Typically fed
  * straight from a data library's query status (React Query / SWR) or local `useState`.
+ *
+ * Both inputs take a **partial** object: name only the fields you have — `{ isPending }` for a
+ * list loaded once — and the rest default to `false`, with `error` defaulting to `null`. The
+ * slice the table holds, and every selector and `onStateChange` reads, always carries all four
+ * fields and only those, so a TanStack Query result passes through whole. A status object with
+ * none of the three flags (an SWR response) is not recognised, and warns in development.
  *
  * Rendering intent per field (the grid derives what to show from these):
  * - `isPending` — no data yet (first load) → full-body **skeleton**.
@@ -906,10 +912,10 @@ export type ResizingConfig = FeatureToggle & {
  */
 export type InitialTableState<TFeatures extends TableFeatures> = Omit<
 	Partial<TableState<TFeatures>>,
-	'editing' | 'creating' | 'deleting' | 'pagination'
+	'editing' | 'creating' | 'deleting' | 'pagination' | 'loading'
 > & {
 	/**
-	 * Seeded per key, unlike every other slice. `Partial<TableState>` only makes the slice
+	 * Seeded per key, unlike every other slice but `loading`. `Partial<TableState>` only makes the slice
 	 * itself optional — TanStack's `PaginationState` still requires **both** `pageIndex` and
 	 * `pageSize`, so a deep link that only wants to open on page 3 had to restate a `pageSize`
 	 * it has no opinion about, and restating it wrong silently overrode
@@ -928,6 +934,15 @@ export type InitialTableState<TFeatures extends TableFeatures> = Omit<
 	 * takes effect once pagination is switched on.
 	 */
 	pagination?: Partial<PaginationState>
+	/**
+	 * Seeded per field, for the same reason as {@link InitialTableState.pagination}: the slice
+	 * requires all four of `isPending` / `isFetching` / `isError` / `error`, and a grid that only
+	 * opens in the pending state had to restate three fields it has no opinion about.
+	 *
+	 * Whichever field is omitted keeps its default — `false` for a flag, `null` for `error` — and
+	 * the slice the table holds always carries all four. Keys outside those four are dropped.
+	 */
+	loading?: Partial<LoadingState>
 	/**
 	 * A restored draft — the pending query the user had composed when the page was last left.
 	 *
@@ -1198,7 +1213,7 @@ export type TableConfig<TFeatures extends TableFeatures, TRow extends object> = 
 	/**
 	 * Seed values for table state at construction (TanStack-style). Merged over the
 	 * grid's computed defaults; consumer values win. Use for uncontrolled initial
-	 * state, e.g. `initialState: { loading: { isPending: true, isFetching: false, isError: false, error: null } }`
+	 * state, e.g. `initialState: { loading: { isPending: true } }`
 	 * or a default sort.
 	 *
 	 * Cannot seed `editing`, `creating` or `deleting` — see

@@ -219,7 +219,7 @@ export function FallbacksExample() {
 				filtering
 				pagination={{ pageSize: 5 }}
 				state={{
-					loading: { isPending: mode === 'loading', isFetching: false, isError: false, error: null },
+					loading: { isPending: mode === 'loading' },
 					// Reset column filters when leaving 'no-results' mode
 					...(mode !== 'no-results' ? { columnFilters: [] } : {}),
 				}}
