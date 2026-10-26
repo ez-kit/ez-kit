@@ -138,6 +138,10 @@ function buildSystemColumn<TRow extends object>({
 		size: widthDef.default ?? defaultWidth,
 		enableSorting: false,
 		enableColumnFilter: false,
+		// A system column's width is the one its `SystemColumnDef` states, and it offers no
+		// `resizing` option of its own. Without this a grid with `resizing` on drew a resize handle
+		// on the grip, the checkbox, the expander and the actions column alike.
+		enableResizing: false,
 		meta,
 	}
 	setIfDefined(column, 'minSize', widthDef.min)

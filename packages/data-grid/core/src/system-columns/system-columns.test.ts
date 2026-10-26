@@ -349,6 +349,20 @@ describe('buildColumnList — the __drag__ column', () => {
 		expect(drag?.enableSorting).toBe(false)
 	})
 
+	it('builds every system column without a resize handle', () => {
+		const cols = buildColumnList([USER_COL], {
+			...NONE,
+			rowDrag: true,
+			selection: true,
+			expanding: true,
+			deleting: true,
+		})
+		const system = cols.filter((c) => c.meta?.isSystemColumn)
+		expect(system.map((c) => c.id)).toEqual([DRAG_COLUMN_ID, SELECTION_COLUMN_ID, EXPAND_COLUMN_ID, ACTIONS_COLUMN_ID])
+		expect(system.map((c) => c.enableResizing)).toEqual([false, false, false, false])
+		expect(cols.find((c) => c.id === 'name')?.enableResizing).toBeUndefined()
+	})
+
 	it('honours its SystemColumnDef like every other system column', () => {
 		const [drag] = buildColumnList([USER_COL], {
 			...NONE,
