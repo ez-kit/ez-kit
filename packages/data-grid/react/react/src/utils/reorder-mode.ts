@@ -16,14 +16,16 @@ const NONE: ReorderAffordances = { drag: false, moveControls: false }
 /**
  * Resolve one surface's {@link ReorderMode} into the pair of affordances it renders.
  *
- * **One function for the three surfaces** — the header, the column panel and the sort builder —
- * so that they cannot drift apart on what a value means. Only the default differs between them,
- * which is why it is an argument: `true` for the header, `false` for the panel, and whether
- * multi-sort is on for the builder.
+ * **One function for the four surfaces** — the header, the column panel, the sort builder and a
+ * row — so that they cannot drift apart on what a value means. Only the default differs between them,
+ * which is why it is an argument: `true` for the header, `false` for the panel, whether
+ * multi-sort is on for the builder, and `'both'` for a row.
  *
  * `hasAdapter` is `useDndEnabled()`, which is why this is a plain function the components call
  * rather than a member of the resolved options: a controlled grid builds those outside
- * `<DataGrid>`, where that context does not reach. `resolved-options.ts` has the account.
+ * `<DataGrid>`, where that context does not reach. `resolved-options.ts` has the account. The row
+ * is the exception: `useDataGrid` resolves it, against the adapter it already reads to decide the
+ * `__drag__` column, so that the column and the menu pair answer from the same fact.
  *
  * A grip needs an adapter, and nothing written in the config conjures one: without it, `'drag'`
  * and `'both'` resolve to the step pair alone — a grip with no mechanics behind it would promise
@@ -31,7 +33,7 @@ const NONE: ReorderAffordances = { drag: false, moveControls: false }
  */
 export function resolveReorderMode(
 	mode: AuthoredReorderMode,
-	fallback: boolean,
+	fallback: boolean | ReorderMode,
 	hasAdapter: boolean,
 ): ReorderAffordances {
 	const value = mode ?? fallback

@@ -566,12 +566,20 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 	externals?: {
 		atoms?: ExternalAtoms<TFeatures>
 		/**
-		 * Whether this grid can drag rows — a drag adapter is bound. Core cannot see the adapter,
-		 * which lives in the React layer, so that layer says so here. With row ordering on it puts
-		 * the `__drag__` handle column in; absent, there is none, which is right for a table built
+		 * Whether rows are offered a grip — a drag adapter is bound **and** `ordering.row.controls`
+		 * resolved to a mode with one. Core cannot see the adapter, which lives in the React layer,
+		 * so that layer resolves the mode and says so here. With row ordering on it puts the
+		 * `__drag__` handle column in; absent, there is none, which is right for a table built
 		 * outside React, where nothing could render the handle anyway.
 		 */
 		rowDrag?: boolean
+		/**
+		 * Whether the row menu carries the one-step move pair — `ordering.row.controls` resolved by
+		 * the React layer, for the reason `rowDrag` is. `false` stops row ordering alone from
+		 * mounting the actions column, which would otherwise sit empty. Absent means `true`, the
+		 * pair a table built outside React has always been given.
+		 */
+		rowStepControls?: boolean
 	},
 ) {
 	/**
@@ -1020,6 +1028,9 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 	const rowActionsColumn = rowActionsCfg?.column as SystemColumnDef<TableFeatures> | undefined
 	const rowDragColumnDef = rowOrderingCfg?.column
 	const rowDragColumn = rowDragColumnDef === false ? undefined : rowDragColumnDef
+	// The step pair is the only thing row ordering puts in the actions cell, so a mode without it
+	// (`'drag'` beside an adapter, or `false`) is not a reason to mount that column.
+	const hasRowStepControls = rowOrderingCfg !== undefined && externals?.rowStepControls !== false
 
 	// Where an inline draft row puts its save / cancel pair. It shares the actions cell with the
 	// row actions — but only when that column is there anyway, or when the draft row itself is
@@ -1031,7 +1042,7 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 	// so nothing reflows. `mode: 'modal'` needs neither: the dialog has its own footer.
 	const hasOtherRowActions =
 		rowActionsEnabled &&
-		(hasRowEditAction || hasDeleting || hasPinning || rowOrderingCfg !== undefined || customRowActions !== undefined)
+		(hasRowEditAction || hasDeleting || hasPinning || hasRowStepControls || customRowActions !== undefined)
 	const creatingInActionsColumn = hasPinRowCreating || (hasInlineCreating && hasOtherRowActions)
 
 	const allColumns = buildColumnList(mappedUserColumns, {
@@ -1042,7 +1053,7 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 		editing: rowActionsEnabled && hasRowEditAction,
 		deleting: rowActionsEnabled && hasDeleting,
 		pinning: rowActionsEnabled && hasPinning,
-		ordering: rowActionsEnabled && rowOrderingCfg !== undefined,
+		ordering: rowActionsEnabled && hasRowStepControls,
 		creating: creatingInActionsColumn,
 		rowActionsPlacement,
 		customRowActions: rowActionsEnabled && customRowActions !== undefined,

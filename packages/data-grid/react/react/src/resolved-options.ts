@@ -15,6 +15,7 @@ import type {
 	NormalizedVirtualizationConfig,
 	RowPropsResolver,
 } from './use-data-grid'
+import type { ReorderAffordances } from './utils/reorder-mode'
 import type {
 	GridMessages,
 	GridOptions,
@@ -117,6 +118,19 @@ export type ResolvedGridOptions = {
 			 */
 			mode: boolean | ReorderMode | undefined
 		}
+		/**
+		 * What a row offers to move it by — `ordering.row.controls` resolved, unlike `header`.
+		 *
+		 * Resolved because `useDataGrid` already has the adapter in hand for the `__drag__` column,
+		 * which core builds once: a component resolving the menu pair against `useDndEnabled()`
+		 * could disagree with the column it sits beside. `drag` is whether rows carry a grip,
+		 * `moveControls` whether the row menu carries the step pair; both `false` while the row axis
+		 * is off. `mode` is the option as authored, for the missing-adapter warning.
+		 *
+		 * `Alt+ArrowUp` / `Alt+ArrowDown` read {@link ResolvedGridOptions.ordering.row}, not this:
+		 * the keyboard path stays whenever the axis is on, whatever the mode.
+		 */
+		rowControls: ReorderAffordances & { mode: boolean | ReorderMode | undefined }
 	}
 	/**
 	 * Pinning, resolved per axis — the two halves of the `pinning` option under the two names
@@ -333,6 +347,7 @@ export function defaultResolvedGridOptions(core?: GridOptions<never>): ResolvedG
 			row: false,
 			visibilityMenu: { enabled: false, mode: false },
 			header: { mode: false },
+			rowControls: { mode: false, drag: false, moveControls: false },
 		},
 		// `column` / `row` stay off — this is the all-features-off shape — while `rowConfig`
 		// carries core's normalized settings across when it resolved any. `exactOptionalPropertyTypes`

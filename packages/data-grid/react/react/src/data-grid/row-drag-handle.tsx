@@ -27,8 +27,8 @@ export type DataGridRowDragHandleProps = {
  * Compound member: the grip that starts a row drag.
  *
  * **Renders nothing unless the row it sits in is draggable** — no adapter bound with
- * `createDataGrid({ dnd })`, row ordering off, or a synthetic group row, and there is no handle at
- * all. A control that promises a gesture the grid cannot perform is worse than no control, which
+ * `createDataGrid({ dnd })`, row ordering off, an `ordering.row.controls` mode without a grip
+ * (`'step'`, `false`), or a synthetic group row, and there is no handle at all. A control that promises a gesture the grid cannot perform is worse than no control, which
  * is why the check is the adapter's presence rather than anything about the current drag.
  *
  * Ordinarily nobody places it: with row ordering on and an adapter bound, the grid renders it in the
