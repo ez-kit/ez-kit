@@ -26,6 +26,7 @@ import type {
 	GridDirection as GridDirectionValue,
 	GroupingMode as GroupingModeValue,
 	InitialTableState,
+	LoadingState,
 	MultiSortConfig,
 	PinningConfig,
 	RowPinningConfig,
@@ -1191,7 +1192,7 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 	// base atom, a `draft` entry in `table.atoms` and a `draft` member of every store snapshot.
 	// `draftFeature.getInitialState` drops it as well, for the construction paths that do not come
 	// through this function.
-	const { draft: _draftSeed, ...seededSlices } = userInitialState ?? {}
+	const { draft: _draftSeed, loading: loadingSeed, ...seededSlices } = userInitialState ?? {}
 
 	// Assembled at the all-features instantiation for the reason {@link userInitialState} gives,
 	// then widened to this table's. The `unknown` hop is not a shrug: the source names every slice
@@ -1208,6 +1209,11 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 			columnPinning: seededPinning,
 			...(seededGrouping !== undefined ? { grouping: seededGrouping } : {}),
 			...(Object.keys(mergedVisibility).length > 0 ? { columnVisibility: mergedVisibility } : {}),
+			// A consumer's loading seed may be partial (`InitialTableState.loading`). It crosses
+			// into upstream's `initialState` under the slice's own type and is completed by
+			// `loadingFeature.getInitialState` — the one place that knows the defaults, and the
+			// one every construction path reaches.
+			...(loadingSeed !== undefined ? { loading: loadingSeed as LoadingState } : {}),
 		},
 		columnInvariants,
 	) as unknown as Partial<TableState<TFeatures>>

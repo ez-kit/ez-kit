@@ -37,11 +37,12 @@ model](/docs/data-grid/state) lays out which one wins.
 - Server-side anything (sort, filter, pagination) needs controlled state so you can translate the user's input into your query.
 - URL state — keep sort/filter/page in `?` params so reload preserves view and links are shareable.
 - Cross-component coordination — e.g., a "clear all" button outside the grid that resets every controllable surface at once.
-- **Loading state** — `state.loading: { isPending, isFetching, isError, error }` lets the grid render its loading fallback while your data is fetching. Feed it from any data source — TanStack Query's `isPending`/`isFetching`, SWR's `isValidating`, or your own hook.
+- **Loading state** — `state.loading: { isPending, isFetching, isError, error }` lets the grid render its loading fallback while your data is fetching. Every field is optional — `{ isPending }` is enough for a list loaded once — and a TanStack Query result passes through whole. Feed it from any data source: TanStack Query, SWR's `isLoading` / `isValidating` mapped onto `isPending` / `isFetching`, or your own hook.
 
 ## One state, one subscription
 
-There is exactly one controlled-state mechanism: pass a partial `TableState` to `state`, and read every
+There is exactly one controlled-state mechanism: pass the slices you control to `state` (typed
+`ControlledTableState` — a partial `TableState` whose `loading` may be partial too), and read every
 update back through the single `onStateChange` callback. `onStateChange` receives the resolved
 **whole** table state, not a per-slot value — apply it to your own state as shown above.
 

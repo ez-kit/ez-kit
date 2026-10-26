@@ -29,21 +29,18 @@ Fallbacks render automatically whenever the grid has no visible rows. Switch bet
 
 Pass `state.loading` (see [Controlled State](/docs/data-grid/state/controlled)) — the grid renders `<LoadingBody />` instead of rows. The slot is a `LoadingState` object, not a boolean: `isPending` is the initial load, `isFetching` a refetch, and `isError` / `error` the last failure.
 
+Name only the fields you have. A list loaded once needs nothing but `isPending`; the flags you leave out read as `false` and `error` as `null`:
+
 ```tsx
 <DataGrid
 	features={features}
 	data={data}
 	columns={columns}
-	state={{
-		loading: {
-			isPending: query.isPending,
-			isFetching: query.isFetching,
-			isError: query.isError,
-			error: query.error,
-		},
-	}}
+	state={{ loading: { isPending } }}
 />
 ```
+
+A TanStack Query result carries all four fields, so it passes through whole — `state={{ loading: query }}`. The grid keeps only those four. An SWR response does not: it has `isLoading` and `isValidating` instead, so map them onto `isPending` / `isFetching`. Passed whole, it would never show a loading state, and the grid warns about it in development.
 
 The loading fallback is **centered** in the body area.
 

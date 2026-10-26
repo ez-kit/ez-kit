@@ -49,15 +49,15 @@ Enable `manual: true` on each feature you want to delegate. The grid will update
 
 ## Loading status
 
-Pass loading status via `state.loading`. The grid reads this controlled slice to drive the skeleton and refetch overlay — the consumer is the single owner.
+Pass loading status via `state.loading`. The grid reads this controlled slice to drive the skeleton and refetch overlay — the consumer is the single owner. Every field is optional: one you leave out reads as `false`, and `error` as `null`.
 
 ```ts
 state: {
 	loading: {
-		isPending: boolean // true on the very first load (no rows yet) → shows skeleton
-		isFetching: boolean // true while any fetch is in flight → drives refetch overlay
-		isError: boolean // available via useDataGridState for custom error UI
-		error: unknown // last fetch error, or null
+		isPending?: boolean // true on the very first load (no rows yet) → shows skeleton
+		isFetching?: boolean // true while any fetch is in flight → drives refetch overlay
+		isError?: boolean // available via useDataGridState for custom error UI
+		error?: unknown // last fetch error, or null
 	}
 }
 ```
@@ -72,7 +72,7 @@ What each field drives:
 
 ### React Query (recommended)
 
-React Query mirrors the exact shape. Wire `q.isPending`, `q.isFetching`, `q.isError`, and `q.error` directly:
+React Query mirrors the exact shape, so the query result passes through whole — the grid keeps `isPending`, `isFetching`, `isError` and `error`, and ignores the rest:
 
 ```tsx
 const q = useQuery({
@@ -87,12 +87,7 @@ return (
 		data={q.data?.rows ?? []}
 		columns={columns}
 		state={{
-			loading: {
-				isPending: q.isPending,
-				isFetching: q.isFetching,
-				isError: q.isError,
-				error: q.error,
-			},
+			loading: q,
 			pagination: { pageIndex, pageSize },
 			sorting,
 			columnFilters,
@@ -208,9 +203,9 @@ Global search has no `manual` flag of its own — setting `filtering.manual: tru
 
 ### `state.loading`
 
-| Field        | Type      | Description                                                                                    |
-| ------------ | --------- | ---------------------------------------------------------------------------------------------- |
-| `isPending`  | `boolean` | `true` on the very first load (no rows yet). Drives the full-body skeleton.                    |
-| `isFetching` | `boolean` | `true` while any fetch is in flight. Drives the refetch overlay when rows are already present. |
-| `isError`    | `boolean` | Fetch ended in an error.                                                                       |
-| `error`      | `unknown` | Last fetch error, or `null`.                                                                   |
+| Field        | Type      | Description                                                                                                     |
+| ------------ | --------- | --------------------------------------------------------------------------------------------------------------- |
+| `isPending`  | `boolean` | `true` on the very first load (no rows yet). Drives the full-body skeleton. Default `false`.                    |
+| `isFetching` | `boolean` | `true` while any fetch is in flight. Drives the refetch overlay when rows are already present. Default `false`. |
+| `isError`    | `boolean` | Fetch ended in an error. Default `false`.                                                                       |
+| `error`      | `unknown` | Last fetch error. Default `null`.                                                                               |

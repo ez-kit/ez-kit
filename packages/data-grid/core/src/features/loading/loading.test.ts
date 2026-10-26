@@ -1,6 +1,6 @@
 import { constructTable, tableFeatures } from '@tanstack/table-core'
 import { storeReactivityBindings } from '@tanstack/table-core/store-reactivity-bindings'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createColumns } from '../../column/create-columns'
 import { createTable, createTableOptions } from '../../create-table'
@@ -68,6 +68,40 @@ describe('loadingFeature — seeding and control', () => {
 		expect(loadingOf(table).isPending).toBe(true)
 	})
 
+	it('fills the fields a partial seed leaves out from the defaults', () => {
+		// Built through the typed config rather than `makeTable`, so the partial seed is checked
+		// against `InitialTableState` too.
+		const table = createTable({
+			features: LOADING,
+			data: DATA,
+			columns: COLUMNS,
+			initialState: { loading: { isPending: true } },
+		})
+
+		expect(loadingOf(table)).toEqual({ isPending: true, isFetching: false, isError: false, error: null })
+	})
+
+	it('keeps every field of a full seed as given', () => {
+		const boom = new Error('boom')
+		const table = makeTable({
+			initialState: { loading: { isPending: false, isFetching: true, isError: true, error: boom } },
+		})
+
+		expect(loadingOf(table)).toEqual({ isPending: false, isFetching: true, isError: true, error: boom })
+	})
+
+	it('treats a non-object seed from an untyped caller as no seed', () => {
+		const table = makeTable({ initialState: { loading: null } })
+
+		expect(loadingOf(table)).toEqual(INITIAL_LOADING_STATE)
+	})
+
+	it('keeps an explicit undefined error rather than replacing it with null', () => {
+		const table = makeTable({ initialState: { loading: { isPending: true, error: undefined } } })
+
+		expect(loadingOf(table)).toHaveProperty('error', undefined)
+	})
+
 	it('lets the consumer own the slice through an external atom', () => {
 		// The successor to the deleted `syncControlledState` mirror: v9's own ownership model.
 		// An atom the application supplies for `loading` takes precedence over the base atom, so
@@ -95,6 +129,36 @@ describe('loadingFeature — seeding and control', () => {
 			isError: true,
 			error: boom,
 		})
+	})
+})
+
+describe('loadingFeature — unrecognised seed', () => {
+	afterEach(() => {
+		vi.restoreAllMocks()
+	})
+
+	it('warns about an object with foreign keys and none of the flags, naming the foreign keys', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+		const swrLike = { isLoading: true, isValidating: false, error: undefined, data: undefined }
+
+		const table = makeTable({ initialState: { loading: swrLike } })
+
+		expect(warn).toHaveBeenCalledTimes(1)
+		expect(warn).toHaveBeenCalledWith(expect.stringMatching(/initialState\.loading.*"isLoading".*isPending/s))
+		expect(loadingOf(table)).toEqual({ isPending: false, isFetching: false, isError: false, error: undefined })
+	})
+
+	it.each([
+		['an empty object', {}],
+		['an error alone', { error: new Error('boom') }],
+		['a single flag', { isPending: true }],
+		['a query-shaped result', { isPending: true, isFetching: false, isError: false, error: null, data: [] }],
+	])('stays silent for %s', (_name, loading) => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+		makeTable({ initialState: { loading } })
+
+		expect(warn).not.toHaveBeenCalled()
 	})
 })
 
