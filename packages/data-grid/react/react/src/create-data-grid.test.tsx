@@ -68,7 +68,7 @@ describe('createDataGrid({ cellTypes })', () => {
 			<bundle.DataGrid
 				features={TEST_FEATURES}
 				data={ROWS}
-				columns={ROW_COLUMNS}
+				columns={bundle.createColumns<Row>([{ accessorKey: 'name', header: 'Name' }])}
 			/>,
 		)
 		expect(screen.getByText('Alice')).toBeInTheDocument()

@@ -1076,12 +1076,16 @@ export type TableConfig<TFeatures extends TableFeatures, TRow extends object> = 
 	/**
 	 * Columns, from `createColumns` / `createColumnHelper` or written inline.
 	 *
-	 * The cell-type parameter is deliberately widened to `string` here rather than threaded
-	 * through `TableConfig`: a second type parameter on this type destroys `TRow` inference
-	 * at every `useDataGrid({ data, columns })` call site, which is far more costly than what
-	 * it would buy. Nothing is lost — a custom `cell: { type: … }` is checked against the
-	 * kit's registry by the **bound** `createColumns` / `createColumnHelper` that produced the
-	 * array, which is where the author writes it. This slot only has to accept the result.
+	 * This slot does **not** check `cell.type` or `cell.config`: the registry is left open here
+	 * rather than threaded through `TableConfig`, because a second type parameter that a call site
+	 * has to *infer* destroys `TRow` inference at every `createTable({ data, columns })`.
+	 *
+	 * The check happens one level up, where the registry is already known instead of inferred. A
+	 * `createDataGrid` bundle — the kits' prebuilt `DataGrid` among them — types this slot with its
+	 * own registry, widened by the grid's own `cellTypes`, so an inline `cell: { type: 'nosuch' }`
+	 * is a compile error there and `TRow` is still inferred from `data`. The bare React
+	 * `useDataGrid` / `DataGrid` take their registry from a provider at runtime, so they keep this
+	 * slot as it is. See `openspec/decisions/0016-bundle-types-inline-columns.md`.
 	 */
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	columns: ColumnDef<TRow, any, unknown>[]
