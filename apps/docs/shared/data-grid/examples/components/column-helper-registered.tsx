@@ -99,14 +99,14 @@ function StarRatingInput({ value, onChange }: FieldState) {
 // ── the registered cell type ─────────────────────────────────────────────────
 
 // Step 1 — the registry. A cell type is an id mapped to its renderers: `view`
-// for display, `edit` for the editing input. This one is registered on the grid
+// for display, `editing` for the editing input. This one is registered on the grid
 // itself via the `cellTypes` prop below, so everything the example needs is in
 // this file. An app registers the same shape once for the whole grid module
 // instead — see the `createDataGrid({ cellTypes })` bundle on the docs page.
 // `defineCellType` is what records the config this type accepts. It takes none, so a column
 // of type 'rating' rejects `config` outright.
 const RATING_CELL_TYPES = {
-	rating: defineCellType()({ view: StarRatingView, edit: StarRatingInput }),
+	rating: defineCellType()({ view: StarRatingView, editing: StarRatingInput }),
 }
 
 // Step 2 — the column builder. It is typed against the registry the *columns* may use, which
@@ -135,7 +135,7 @@ export function ColumnHelperRegisteredExample() {
 		<DataGrid
 			features={features}
 			data={data}
-			// Editing is on so the registry's `edit` renderer is reachable: click Edit on a
+			// Editing is on so the registry's `editing` renderer is reachable: click Edit on a
 			// row and the Rating cell becomes the star input.
 			editing={{
 				mode: 'row',

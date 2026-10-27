@@ -7,6 +7,10 @@ Persist sort, filters, pagination, and column layout to the URL or `localStorage
 preserves the view and links are shareable. The library gives you two pure utilities and one
 reactive hook; **you own the actual read/write** — that keeps your URL and routing logic yours.
 
+These utilities are the way to persist grid state. `onStateChange` and the per-feature `onChange`
+callbacks report the table's state as it is, which includes what the column config decides on its
+own; `extractState` reports only what the user chose.
+
 ## Live example
 
 <DataGridDocsExample exampleId='state-persistence' />
@@ -41,8 +45,8 @@ The URL variant is the same shape — swap the effect body for your router's `se
 ## Which slices persist
 
 `keys` is an allowlist. The default (`DEFAULT_STATE_KEYS`) is the shareable **view**: `sorting`,
-`columnFilters`, `globalFilter`, `pagination`, `columnVisibility`, `columnPinning`, `rowPinning`,
-`columnSizing`. It intentionally **excludes** `rowSelection` and `expanded` (they key off row ids
+`columnFilters`, `globalFilter`, `pagination`, `columnVisibility`, `columnOrder`, `columnPinning`,
+`rowPinning`, `columnSizing`. It intentionally **excludes** `rowSelection` and `expanded` (they key off row ids
 that may not survive a data reload) and `draft` (a query the user has not applied yet — session
 state, not a shareable link). Opt into anything from `PERSISTABLE_STATE_KEYS` explicitly.
 
@@ -50,6 +54,18 @@ state, not a shareable link). Opt into anything from `PERSISTABLE_STATE_KEYS` ex
 the live axes carry the pending query, so `extractState` reports it under the name
 `initialState.draft` reads it back under. Persist it — `keys: [...DEFAULT_STATE_KEYS, 'draft']` —
 and a restored grid comes back with the draft still pending instead of silently applied.
+
+## Columns the config places
+
+A column whose place the config fixes is left out of `columnPinning`, `columnOrder` and
+`columnVisibility`: the system columns (`__drag__`, `__selection__`, `__expand__`, `__actions__`)
+and any column declared with `pinning: 'start'` / `{ side }` or `visibility: false`. Restoring puts
+them back where they belong, so a grid nobody touched persists `columnPinning: { start: [], end: [] }`
+and a value saved without them restores the same view. A stored value does not change when a
+feature is switched on or off, and an older value that still lists them restores as before.
+
+A system column the config only seeds — `pinning: { initialSide }` — is the user's to move, so it is
+persisted like any other column.
 
 ## What you own
 

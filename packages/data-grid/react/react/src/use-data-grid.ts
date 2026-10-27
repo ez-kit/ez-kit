@@ -5,6 +5,7 @@ import {
 	featureConfig,
 	isFeatureEnabled,
 	PaginationMode,
+	ReorderMode,
 	resolveMessages,
 } from '@ez-kit/data-grid-core'
 import { useTable } from '@tanstack/react-table'
@@ -14,15 +15,19 @@ import { useEffect, useRef, useState } from 'react'
 import { useDndBundleAdapter } from './data-grid/dnd'
 import { mergeGridOptionLayers, useDataGridOptions, useGridFactoryDefaults } from './data-grid-options-context'
 import { DATA_GRID_DEFAULTS, DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
+import { enforceControlledColumns } from './enforce-controlled-columns'
 import { createGridContextAtom, EMPTY_GRID_CONTEXT, syncGridContext } from './grid-context'
+import { describeUnrecognisedLoading, normalizeControlledState } from './normalize-controlled-state'
 import { ActionBarVariant } from './types'
 import { useOrderedData } from './use-ordered-data'
+import { resolveReorderMode } from './utils/reorder-mode'
 import { useSafeLayoutEffect } from './utils/use-safe-layout-effect'
 
 import type { CellTypeRegistry } from './cell-types-context'
 import type { DndAdapter } from './data-grid/dnd'
 import type { PaginationLabelModel } from './data-grid/pagination-label'
 import type { DataGridDefaultOptions } from './data-grid-options-context'
+import type { ColumnSliceCache } from './enforce-controlled-columns'
 import type { GridContextAtom, GridContextRecord } from './grid-context'
 import type { ResolvedGridOptions } from './resolved-options'
 import type { ErasedRow, DataTable, GridFeatures, LoadMoreThreshold, LoadMoreTrigger, PaginationLabel } from './types'
@@ -35,11 +40,11 @@ import type {
 	FilteringConfig,
 	GlobalFilteringConfig,
 	LoadMoreDirection,
+	LoadingState,
 	MultiSortConfig,
 	OrderingConfig,
 	PaginationConfig,
 	PartialGridMessages,
-	ReorderMode,
 	RowActionsConfig,
 	RowVirtualizationConfig,
 	SelectionConfig,
@@ -563,6 +568,23 @@ export type RowPropsResolver<TRow extends object> = (
 ) => HTMLAttributes<HTMLTableRowElement> | undefined
 
 /**
+ * The controlled `state` option: any slice the grid's feature set registers, each optional.
+ *
+ * `Partial<TableState<TFeatures>>` with one difference — `loading` takes a **partial**
+ * {@link LoadingState}. A list loaded once writes `{ loading: { isPending } }` instead of restating
+ * `isFetching: false, isError: false, error: null`; the grid completes the slice on its way into
+ * the store, so selectors and `onStateChange` still see all four fields.
+ *
+ * `loading` is a key only when `loadingFeature` is in the set, so the option does not loosen for a
+ * set that omits it. `Partial<TableState<TFeatures>>` is assignable here — for a concrete set and
+ * for a wrapper still generic over `TFeatures`. That last case is why this is an `Omit` plus a
+ * gated member rather than a mapped type with a per-key conditional: the conditional stays
+ * deferred while `TFeatures` is a parameter, and a deferred member accepts nothing.
+ */
+export type ControlledTableState<TFeatures extends TableFeatures> = Omit<Partial<TableState<TFeatures>>, 'loading'> &
+	('loading' extends keyof TableState<TFeatures> ? { loading?: Partial<LoadingState> } : unknown)
+
+/**
  * What a call site writes. Generic over `TFeatures` because the caller composes the feature
  * set and `useDataGrid`'s return type carries it back out; everything reached through
  * `useDataGridTable()` pins to {@link GridFeatures} instead.
@@ -632,11 +654,14 @@ export type UseDataGridConfig<
 	 */
 	ordering?: boolean | OrderingConfig
 	/**
-	 * Controlled table state. Pass a partial `TableState` to control specific portions
-	 * (e.g. only sorting) while leaving the rest internally managed.
-	 * Must be used together with `onStateChange` to reflect state updates back.
+	 * Controlled table state. Pass the slices you control (e.g. only sorting) while leaving the
+	 * rest internally managed. Must be used together with `onStateChange` to reflect state
+	 * updates back.
+	 *
+	 * `loading` may be partial — `{ loading: { isPending } }` — and a TanStack Query result
+	 * passes through whole; see {@link ControlledTableState}.
 	 */
-	state?: Partial<TableState<TFeatures>>
+	state?: ControlledTableState<TFeatures>
 	/**
 	 * Application and kit values carried alongside the grid, for components that need to agree
 	 * with their surroundings rather than receive everything as a prop — the current user, a
@@ -1058,8 +1083,20 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 	// without having to be torn down and rebuilt when one of them changes identity.
 	const onStateChangeRef = useRef(onStateChange)
 	onStateChangeRef.current = onStateChange
-	const controlledStateRef = useRef(state)
-	controlledStateRef.current = state
+	// Holds the controlled `state` with `state.loading` completed — what both publishes write and
+	// what the echo filter compares against, so the filter recognises the value the store actually
+	// holds. Normalized against its own previous value, which is what keeps `loading`'s identity
+	// across renders that pass an equal object; see `normalizeControlledState`.
+	const controlledStateRef = useRef<Record<string, unknown> | undefined>(undefined)
+	controlledStateRef.current = normalizeControlledState(controlledStateRef.current, state)
+	if (IS_DEV) {
+		// Read off the prop rather than the ref: normalizing has already dropped the foreign keys
+		// this warning is about. Erased for the reason the ref is — no slice name is provable here.
+		const rawLoading = (state as Record<string, unknown> | undefined)?.loading
+		const unrecognised =
+			typeof rawLoading === 'object' && rawLoading !== null ? describeUnrecognisedLoading(rawLoading) : undefined
+		if (unrecognised !== undefined) warnOnce(unrecognised)
+	}
 
 	// ── the data the table is built on ────────────────────────────────────────
 	// `useTable` re-applies its options argument on **every** render
@@ -1103,6 +1140,15 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 			: undefined
 	})
 
+	// What a row offers to move it by, settled here rather than in a component because this hook
+	// is where the adapter question is already answered for the `__drag__` column: resolving the
+	// menu pair against the same `canDragRows` is what keeps the two from disagreeing — a grid
+	// built outside its bound `<DataGrid>` would otherwise lose both the grip and the menu pair.
+	// Off (`NONE`) while the row axis is; `Alt+Arrow` reads `grid.ordering.row`, not this.
+	const rawRowOrdering = featureConfig(rawOrdering)?.row
+	const rowControlsMode = isFeatureEnabled(rawRowOrdering) ? featureConfig(rawRowOrdering)?.controls : false
+	const rowControls = resolveReorderMode(rowControlsMode, ReorderMode.Both, canDragRows)
+
 	// The options, built in the render body. `useTable` calls `table_setOptions` on every render,
 	// so this object must be cheap to build but need **not** be referentially stable.
 	const {
@@ -1136,8 +1182,20 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 		// atom set is provably assignable to it.
 		{
 			...(draftAtoms !== undefined ? { atoms: draftAtoms as unknown as ExternalAtoms<TFeatures> } : {}),
-			rowDrag: canDragRows,
+			rowDrag: rowControls.drag,
+			rowStepControls: rowControls.moveControls,
 		},
+	)
+
+	// The controlled value with the column invariants applied — see `enforceControlledColumns`.
+	// Here rather than beside `normalizeControlledState` above because the invariants come from
+	// this render's resolved columns, and before both publishes so each writes the corrected value
+	// and the echo filter compares against it.
+	const columnSliceCacheRef = useRef<ColumnSliceCache>({})
+	controlledStateRef.current = enforceControlledColumns(
+		columnSliceCacheRef.current,
+		controlledStateRef.current,
+		coreGrid.columnState,
 	)
 
 	// A key the resolver **stops** writing must still be written, as `undefined`. `useTable`
@@ -1253,6 +1311,9 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 	// state and reaches the consumer, and the echo filter on the subscription above stops the
 	// consumer's own value being reported back to them.
 	//
+	// Publishing bypasses the `on<Slice>Change` handlers, and with them the column invariants,
+	// which is why the value published is the one `enforceControlledColumns` corrected above.
+	//
 	// After the first render (which seeds it during render, above) every publish waits for the
 	// commit, because by then a subscribed child's `useSyncExternalStore` callback is live and
 	// waking it mid-render is React's "Cannot update a component while rendering a different
@@ -1347,13 +1408,16 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 	const grid: ResolvedGridOptions = {
 		cellTypes,
 		messages,
-		// Core's three, read straight off the bag `createTableOptions` returned rather than off the
+		// Core's members, read straight off the bag `createTableOptions` returned rather than off the
 		// previous `table.grid`. Reading them back was only ever necessary because `createTable`
 		// wrote them onto the table before this layer overwrote it wholesale; with the resolver
 		// called here, the values are in hand and the read-back — which was not idempotent, since
 		// `rowPinning` is `pinning.rowConfig` by the time it lands — is gone.
 		rowActions: erasedCoreGrid.rowActions,
 		direction: erasedCoreGrid.direction,
+		// Core's column invariants, bound to this render's columns. Read by `extractState` /
+		// `useExtractedState`, which persist without the columns the config places.
+		columnState: erasedCoreGrid.columnState,
 		...(rowProps !== undefined ? { rowProps: rowProps as unknown as RowPropsResolver<never> } : {}),
 		layout: {
 			stickyHeader: layout?.stickyHeader ?? false,
@@ -1376,6 +1440,7 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 			row: rowOrderingEnabled,
 			visibilityMenu: { enabled: visibilityMenuMode !== false, mode: visibilityMenuMode },
 			header: { mode: headerMode },
+			rowControls: { mode: rowControlsMode, ...rowControls },
 		},
 		visibility: visibilityEnabled,
 		sorting: sortingEnabled,

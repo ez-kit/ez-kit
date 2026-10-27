@@ -296,7 +296,9 @@ function DataGridRowImpl<TRow extends object = ErasedRow>(
 				'A virtualized body must publish the window plus the row being dragged.',
 		)
 	}
-	const isDraggable = isDndEnabled && canMove && !isGroupRow
+	// The grip follows `ordering.row.controls`, the keyboard below does not: a `'step'` row is not
+	// picked up, and still answers `Alt+Arrow`.
+	const isDraggable = isDndEnabled && table.grid.ordering.rowControls.drag && !isGroupRow
 	const sortable = useSortableItem({
 		id: row.id,
 		index: Math.max(dropIndex, 0),

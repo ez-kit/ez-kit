@@ -43,6 +43,7 @@ export { useDataGrid } from './use-data-grid'
 export type { DataTable } from './types'
 export type {
 	UseDataGridConfig,
+	ControlledTableState,
 	EmptyFallbackConfig,
 	ExpandedRowProps,
 	FallbacksConfig,

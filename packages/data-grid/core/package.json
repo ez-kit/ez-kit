@@ -1,6 +1,6 @@
 {
 	"name": "@ez-kit/data-grid-core",
-	"version": "0.12.0",
+	"version": "0.13.0",
 	"description": "Headless, UI-framework-agnostic data-grid core for @ez-kit/data-grid (built on TanStack Table core).",
 	"license": "MIT",
 	"repository": {
@@ -51,7 +51,7 @@
 		{
 			"name": "index",
 			"path": "dist/index.js",
-			"limit": "14.4 KB",
+			"limit": "14.5 KB",
 			"ignore": [
 				"@tanstack/table-core"
 			]

@@ -536,6 +536,14 @@
 		"exportName": "CustomCellUserExample"
 	},
 	{
+		"id": "custom-cell-badge-size",
+		"label": "Custom · Badge size",
+		"group": "cells",
+		"groupLabel": "Cells",
+		"sourceFile": "components/custom-cell-badge-size.tsx",
+		"exportName": "CustomCellBadgeSizeExample"
+	},
+	{
 		"id": "date-cell-view",
 		"label": "Date Cell · View + formatting",
 		"group": "cells",
@@ -794,6 +802,12 @@
 		"label": "Controlled State",
 		"sourceFile": "components/controlled-state.tsx",
 		"exportName": "ControlledStateExample"
+	},
+	{
+		"id": "controlled-state-full",
+		"label": "Controlled State: every feature",
+		"sourceFile": "components/controlled-state-full.tsx",
+		"exportName": "ControlledStateFullExample"
 	},
 	{
 		"id": "default-options",
@@ -1130,6 +1144,14 @@
 		"exportName": "RowDragHandleColumnExample"
 	},
 	{
+		"id": "row-drag-step-only",
+		"label": "Row drag: menu pair only, no handle",
+		"group": "ordering",
+		"groupLabel": "Ordering",
+		"sourceFile": "components/row-drag-handle.tsx",
+		"exportName": "RowDragStepOnlyExample"
+	},
+	{
 		"id": "row-drag-cell-handle",
 		"label": "Row drag: handle inside a cell",
 		"group": "ordering",
@@ -1160,6 +1182,14 @@
 		"groupLabel": "Ordering",
 		"sourceFile": "components/row-drag-sorting-selection.tsx",
 		"exportName": "RowDragSortingSelectionExample"
+	},
+	{
+		"id": "row-drag-server",
+		"label": "Row drag over server-side data",
+		"group": "ordering",
+		"groupLabel": "Ordering",
+		"sourceFile": "components/row-drag-server.tsx",
+		"exportName": "RowDragServerExample"
 	},
 	{
 		"id": "column-panel-drag-basic",

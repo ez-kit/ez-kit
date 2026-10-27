@@ -15,7 +15,9 @@ import type {
 	NormalizedVirtualizationConfig,
 	RowPropsResolver,
 } from './use-data-grid'
+import type { ReorderAffordances } from './utils/reorder-mode'
 import type {
+	ColumnStateApi,
 	GridMessages,
 	GridOptions,
 	ReorderMode,
@@ -44,6 +46,12 @@ import type { ComponentType, ReactNode } from 'react'
  * and one explicitly set to `undefined` mean the same thing here.
  */
 export type ResolvedGridOptions = {
+	/**
+	 * The column invariants of this grid as `enforce` / `strip`, passed through from core's
+	 * `GridOptions.columnState`. Absent on a table our `createTable` did not build, which has no
+	 * column config to derive them from.
+	 */
+	columnState?: ColumnStateApi | undefined
 	/** Cell-type renderers contributed via `useDataGrid({ cellTypes })`. */
 	cellTypes: CellTypeRegistry | undefined
 	/**
@@ -117,6 +125,19 @@ export type ResolvedGridOptions = {
 			 */
 			mode: boolean | ReorderMode | undefined
 		}
+		/**
+		 * What a row offers to move it by — `ordering.row.controls` resolved, unlike `header`.
+		 *
+		 * Resolved because `useDataGrid` already has the adapter in hand for the `__drag__` column,
+		 * which core builds once: a component resolving the menu pair against `useDndEnabled()`
+		 * could disagree with the column it sits beside. `drag` is whether rows carry a grip,
+		 * `moveControls` whether the row menu carries the step pair; both `false` while the row axis
+		 * is off. `mode` is the option as authored, for the missing-adapter warning.
+		 *
+		 * `Alt+ArrowUp` / `Alt+ArrowDown` read {@link ResolvedGridOptions.ordering.row}, not this:
+		 * the keyboard path stays whenever the axis is on, whatever the mode.
+		 */
+		rowControls: ReorderAffordances & { mode: boolean | ReorderMode | undefined }
 	}
 	/**
 	 * Pinning, resolved per axis — the two halves of the `pinning` option under the two names
@@ -314,25 +335,27 @@ export type ResolvedGridOptions = {
  * which would otherwise crash the first component that read a nested field.
  *
  * @param core The bag `createTable` already wrote to `table.grid` ({@link GridOptions}), whose
- *   four members are folded in rather than overwritten. Omit it only for a table that never went
+ *   members are folded in rather than overwritten. Omit it only for a table that never went
  *   through our `createTable`.
  */
 export function defaultResolvedGridOptions(core?: GridOptions<never>): ResolvedGridOptions {
 	return {
 		cellTypes: undefined,
 		messages: defaultMessages,
-		// Core's four, folded in under this object's names. It **merges onto** what `createTable`
+		// Core's members, folded in under this object's names. It **merges onto** what `createTable`
 		// wrote rather than replacing it: the caller passes `table.grid`, and the defaults below
 		// cover a table that was not built by our `createTable` at all (a hand-rolled TanStack
 		// table driven through the compound components, or a test double).
 		rowActions: core?.rowActions ?? { placement: RowActionsPlacement.Inline },
 		direction: core?.direction ?? GridDirection.Ltr,
+		...(core?.columnState !== undefined ? { columnState: core.columnState } : {}),
 		layout: { stickyHeader: false, footer: false, stickyFooter: false },
 		ordering: {
 			column: false,
 			row: false,
 			visibilityMenu: { enabled: false, mode: false },
 			header: { mode: false },
+			rowControls: { mode: false, drag: false, moveControls: false },
 		},
 		// `column` / `row` stay off — this is the all-features-off shape — while `rowConfig`
 		// carries core's normalized settings across when it resolved any. `exactOptionalPropertyTypes`

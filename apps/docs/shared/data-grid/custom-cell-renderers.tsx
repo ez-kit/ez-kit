@@ -1,6 +1,6 @@
 'use client'
 
-import type { CellViewProps, FieldState } from '@ez-kit/data-grid-react'
+import type { BadgeCellConfig, BadgeItem, BadgeVariant, CellViewProps, FieldState } from '@ez-kit/data-grid-react'
 
 // ── rating ────────────────────────────────────────────────────────────────────
 
@@ -265,5 +265,40 @@ export function UserCellInput({ value, onChange }: FieldState) {
 			}}
 			style={{ width: '10rem' }}
 		/>
+	)
+}
+
+// ── sized badge ───────────────────────────────────────────────────────────────
+
+export type BadgeSize = { size?: 'sm' | 'md' }
+
+const BADGE_SIZE_STYLES = {
+	sm: { fontSize: '0.6875rem', padding: '0 0.375rem' },
+	md: { fontSize: '0.875rem', padding: '0.125rem 0.625rem' },
+} as const
+
+const BADGE_VARIANT_STYLES: Record<BadgeVariant, { background: string; color: string; border: string }> = {
+	default: { background: '#111827', color: '#ffffff', border: '1px solid #111827' },
+	secondary: { background: '#f3f4f6', color: '#374151', border: '1px solid #f3f4f6' },
+	destructive: { background: '#fee2e2', color: '#b91c1c', border: '1px solid #fee2e2' },
+	outline: { background: 'transparent', color: '#374151', border: '1px solid #d1d5db' },
+}
+
+export function SizedBadgeView({ value, config, item }: CellViewProps<BadgeCellConfig & BadgeSize>) {
+	const match = (item ?? config?.items.find((candidate) => candidate.value === value)) as BadgeItem | undefined
+	return (
+		<span
+			style={{
+				display: 'inline-flex',
+				alignItems: 'center',
+				borderRadius: '9999px',
+				fontWeight: 500,
+				lineHeight: 1.5,
+				...BADGE_SIZE_STYLES[config?.size ?? 'md'],
+				...BADGE_VARIANT_STYLES[match?.variant ?? 'default'],
+			}}
+		>
+			{match?.label ?? String(value ?? '')}
+		</span>
 	)
 }

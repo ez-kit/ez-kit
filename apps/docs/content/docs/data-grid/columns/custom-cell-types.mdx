@@ -1,6 +1,6 @@
 ---
 title: Custom Cell Types
-description: Define and register your own cell types — typed renderers for view, edit, create and filter, reused across many columns and grids.
+description: Define, register and extend cell types — typed renderers for view, editing, creating and filtering, reused across many columns and grids.
 ---
 
 When the built-in cell types don't cover your needs, register your own. A custom cell type is an **id mapped to its renderers**; you write it once, then opt columns in with `cell: { type: '<id>' }`.
@@ -73,7 +73,7 @@ The type parameter is explicit rather than inferred from the renderers because `
 
 A registered cell type's inputs all receive `FieldState` — one shape for the three of them, carrying the `config` this definition declared. A **column's** own `filtering.component` is the smaller `InputComponentProps` instead: it renders a filter and nothing else, so validation state would be dead weight. The two used to be documented as the same type under two names; they are not.
 
-The fallbacks run one way only — `creating → edit` and `filter → edit`, never `edit → creating`. A definition with just `creating` leaves edit mode on the default input.
+The fallbacks run one way only — `creating → editing` and `filtering → editing`, never `editing → creating`. A definition with just `creating` leaves edit mode on the default input.
 
 `CellTypeDefinition` also takes optional `operators` / `defaultOperator`, which seed the filter UI for columns of that type.
 
@@ -97,20 +97,115 @@ wider registry. A bundle that composes only the component groups and features it
 kit import is the copy the registry put in your project (`@/components/data-grid/data-grid`), since
 that flavor ships as source you own rather than as a package.
 
-…or per grid, with the `cellTypes` prop — registries nest, so this merges over the ones the kit already provides instead of replacing them:
+…or per grid, with the `cellTypes` prop — registries nest, so this merges over the ones the kit already provides instead of replacing them. The ids it adds are valid `cell.type`s for that grid's own columns, written inline beside it:
 
 ```tsx
 <DataGrid
-	features={features}
 	data={data}
-	columns={createColumns<Order>([{ accessorKey: 'status', header: 'Status', cell: { type: 'status' } }])}
 	cellTypes={CELL_TYPES}
+	columns={[{ accessorKey: 'status', header: 'Status', cell: { type: 'status' } }]}
 />
 ```
 
+A column array built elsewhere with a builder does not see this grid's `cellTypes`: a builder checks
+against its own registry, and the bundle's `createColumns` rejects `status` here. Write those
+columns inline, or register the type in the bundle.
+
 The merge runs **entry by entry**, not id by id: naming an id the kit already registered overrides
 only the keys you give it. `cellTypes={{ date: { view: MyDate } }}` swaps the date cell's view and
-keeps the kit's `editing`, `filtering` and the config the type declared.
+keeps the kit's `editing`, `filtering` and the config the type declared. A view-only override like
+that leaves what a column may write alone. A definition that declares a config of its own does not
+replace the bundle's: the two configs **intersect**, so the grid's columns must satisfy both — see
+the next section.
+
+## Where cell types come from
+
+Every id a column can name comes from one registry, assembled in layers:
+
+```
+@ez-kit/data-grid-core   BaseCellTypes                   the contract: nine ids, the config each accepts
+        |
+UI kit                   cellTypes                       renderers for those ids
+                         KitCellTypes                    what the kit's own columns are checked against
+        |
+your bundle              createDataGrid({ cellTypes })   the registry your columns are typed against
+        |
+one grid                 <DataGrid cellTypes>            ids this grid's columns may add; renderers merged over the bundle's
+```
+
+The bundle is the layer that types columns: its `createColumns`, `createColumnHelper`, `DataGrid`
+and `useDataGrid` check `cell.type` and `cell.config` against the registry you passed to
+`createDataGrid`. The `cellTypes` prop on a single grid adds the ids it names to what that grid's
+columns may write, and merges its renderers over the bundle's. For an id the bundle already has,
+a config declared there is intersected with the bundle's rather than replacing it: to give a type
+a new config key, change the type in the bundle.
+
+## Extending a built-in type
+
+A built-in type's config widens the same way a new type declares one. This bundle adds `size` to
+`badge`:
+
+```tsx title="src/lib/data-grid.ts"
+import { allDataGridFeatures } from '@ez-kit/data-grid-core/features/all'
+import { allComponents, cellTypes } from '@ez-kit/data-grid-heroui'
+import { createDataGrid, defineCellType } from '@ez-kit/data-grid-react'
+
+import type { BadgeCellConfig, BadgeColumnConfig, BadgeItem, CellViewProps } from '@ez-kit/data-grid-react'
+
+type BadgeSize = { size?: 'sm' | 'md' }
+
+function SizedBadge({ value, config, item }: CellViewProps<BadgeCellConfig & BadgeSize>) {
+	const match = (item ?? config?.items.find((candidate) => candidate.value === value)) as BadgeItem | undefined
+	return (
+		<span
+			data-size={config?.size ?? 'md'}
+			data-variant={match?.variant ?? 'default'}
+		>
+			{match?.label ?? String(value ?? '')}
+		</span>
+	)
+}
+
+export const { DataGrid, useDataGrid, createColumns, createColumnHelper } = createDataGrid({
+	components: allComponents,
+	cellTypes: {
+		...cellTypes,
+		badge: defineCellType<BadgeCellConfig & BadgeSize, BadgeColumnConfig & BadgeSize>()({
+			...cellTypes.badge,
+			view: SizedBadge,
+		}),
+	},
+	features: allDataGridFeatures,
+})
+
+createColumns<Ticket>([
+	{ accessorKey: 'status', cell: { type: 'badge', config: { items: STATUS_ITEMS, size: 'sm' } } }, // ✅
+	{ accessorKey: 'status', cell: { type: 'badge', config: { items: STATUS_ITEMS, size: 'xl' } } }, // ❌ not 'sm' | 'md'
+])
+```
+
+Three things make this work:
+
+- **`...cellTypes.badge` keeps the kit's inputs.** The spread in `createDataGrid` replaces an entry
+  whole, so an entry with only `view` would drop the kit's editor and filter, and badge columns
+  would fall back to the grid's default inputs. Spreading the kit's entry first keeps its
+  `editing` and `filtering`, and the new `view` replaces only the display.
+- **Extend the config, don't reshape it.** The kit's editor and filter still read `items`, so the
+  new config is the kit's config plus your keys — `BadgeCellConfig & BadgeSize`, never a shape of
+  your own. The spread carries the kit's declared config along, so a narrower one does not compile.
+- **`select` and `badge` take two type parameters.** The first is what the renderers receive, the
+  second is what a column writes. A column may state its list as a `useItems` hook or a `getItem`
+  function; the grid resolves both and removes them before any renderer runs, so renderers see
+  `BadgeCellConfig` while columns write `BadgeColumnConfig`. With the first parameter alone, a
+  column would have to supply `items` and could no longer use `useItems`. Every other built-in
+  type takes one: `defineCellType<NumberCellConfig & { unit?: string }>()`.
+
+On shadcn the kit import is the copy the registry put in your project
+(`@/components/data-grid/data-grid`). The view is yours to write either way — the grid below
+renders the same one in both kits, while the editor and the header filters are each kit's own
+select:
+
+<DataGridDocsExample exampleId='custom-cell-badge-size' />
 
 ## More examples
 
@@ -136,9 +231,67 @@ A composite view that derives an initials avatar (color hashed from the name) ne
 
 ## Type-safety
 
-The registry's **keys** are the source of truth. `createDataGrid({ cellTypes })` returns a bundle whose `createColumnHelper` is typed to those keys, so the builder gains a matching `createColumn.status({ … })` method and a typo in the method name is a TS error.
+A column is checked when it is written through a column builder — the bundle's `createColumns` /
+`createColumnHelper`, or the package's `createColumns<Row, Registry>` with the registry named. The
+builder checks `cell.type` against the registry's ids and `cell.config` against the config that id
+declared: an unknown id, a missing required config and a misspelled config key are all compile
+errors. `createColumnHelper` also gains one method per id, so `createColumn.status({ … })` exists
+exactly when `status` is registered.
 
-Hand-written `cell: { type: '…' }` is **not** id-checked — `CellType` keeps a `string & {}` tail so custom ids stay assignable. A typo there silently falls through to the raw, unstyled value instead of your renderer: no compile error, and no visibly broken cell to tip you off. One more reason to go through the helper.
+A `columns` array written inline — `<DataGrid columns={[…]}>` or `useDataGrid({ columns: […] })` —
+is checked the same way when the grid comes from a bundle: the kit's prebuilt `DataGrid` and
+`useDataGrid`, or the ones your own `createDataGrid` returned. The registry is the bundle's, plus
+the ids that grid's own `cellTypes` prop adds — and only those: a column cannot make its `type`
+valid by naming it. The row type is still inferred from `data`, so `accessorKey` is checked against
+it and a `cell.component`'s `value` is typed by its field.
+
+Columns from a builder are accepted when every type they use is in the grid's registry, and
+rejected when they were built against one the grid does not have. So are columns typed
+`ColumnDef<Row, any>` or as the bare `UseDataGridConfig['columns']`: their `cell.type` is any
+string, which is wider than the registry. Build those with the bundle's builder instead.
+
+The `DataGrid` and `useDataGrid` imported straight from `@ez-kit/data-grid-react` do **not** check
+`type` or `config`: their registry arrives at runtime, through a provider, where the types cannot
+see it. At runtime, on any grid, an id nobody registered falls through to the raw, unstyled value
+instead of your renderer.
+
+Per-grid `cellTypes` widen the registry only when the row type is inferred. Writing it explicitly
+— `<DataGrid<Order> …>` or `useDataGrid<Order>({ … })` — leaves the grid's registry type at its
+default, since TypeScript cannot infer some type arguments once others are given, so an id added
+through `cellTypes` is rejected there. Let `data` carry the row type, or register the type in the
+bundle.
+
+This checking needs TypeScript 5.4 or later.
+
+## For kit authors
+
+A UI kit exports two things for its cell types: `cellTypes`, the registry its renderers live in,
+and `KitCellTypes`, the type its columns are checked against. The kit's `data-grid.tsx` binds both
+into its prebuilt bundle.
+
+`KitCellTypes` is **declared**, not written as `typeof cellTypes`. The registry's inferred type
+carries every renderer's `ComponentType`, and the declaration emitter re-prints all of it
+structurally into the bundled `.d.ts`. Over that type the column definition degenerates, and a
+consumer of the built package loses every check — an unknown `type`, a missing config and a typo
+inside a config all compile — while the kit's own source tree keeps checking correctly, which is
+what makes the gap easy to miss.
+
+The declaration is written in the contract's vocabulary:
+
+| The kit…                      | `KitCellTypes`                                                                      |
+| ----------------------------- | ----------------------------------------------------------------------------------- |
+| registers the nine base types | `BaseCellTypes`                                                                     |
+| adds a type                   | `BaseCellTypes & { rating: { __config?: RatingConfig } }`                           |
+| drops a type                  | `Omit<BaseCellTypes, 'progress'>`                                                   |
+| widens a type's config        | `Omit<BaseCellTypes, 'badge'> & { badge: { __config?: BadgeColumnConfig & Size } }` |
+
+`__config` is the type-only marker `defineCellType` records; nothing reaches the bundle.
+
+A hand-written declaration can drift from the registry, so each kit holds a compile-time check,
+`_KitCellTypesMatchRegistry`, beside `cellTypes` in `src/blocks/cell-types.ts`. It compares the ids
+and configs of the two **in both directions** — either direction alone passes a registry with an
+extra id, or a declaration that dropped one — and it runs on the kit's source, the one place the
+registry's type is still intact. Copy it when you write a kit.
 
 ## See also
 
@@ -148,3 +301,4 @@ Hand-written `cell: { type: '…' }` is **not** id-checked — `CellType` keeps 
 ## Source
 
 - `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/cell-types-context.tsx`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/react/react/src/cell-types-context.tsx)
+- `@ez-kit/data-grid-heroui` — [`packages/data-grid/react/heroui/src/blocks/cell-types.ts`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/react/heroui/src/blocks/cell-types.ts)

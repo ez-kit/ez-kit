@@ -11,10 +11,9 @@ export type PagedUsers = {
 	/**
 	 * Memoised controlled `state` slice carrying `loading` — pass straight to
 	 * `useDataGrid({ state })`. `isPending` is true while the initial page 1 load
-	 * is in flight (no rows yet → skeleton); `isFetching` could be used for
-	 * subsequent loads but infinite-scroll uses `onLoadMore` instead.
+	 * is in flight (no rows yet → skeleton); later pages go through `onLoadMore`.
 	 */
-	state: { loading: { isPending: boolean; isFetching: boolean; isError: boolean; error: unknown } }
+	state: { loading: { isPending: boolean } }
 	hasNextPage: boolean
 	/** Append the next page (pass to `pagination.onLoadMore`). */
 	onLoadMore: () => Promise<void>
@@ -69,10 +68,7 @@ export function usePagedUsers(): PagedUsers {
 		}
 	}, [])
 
-	const state = useMemo(
-		() => ({ loading: { isPending: loading, isFetching: false, isError: false, error: null } }),
-		[loading],
-	)
+	const state = useMemo(() => ({ loading: { isPending: loading } }), [loading])
 
 	return { data, state, hasNextPage, onLoadMore, reset }
 }

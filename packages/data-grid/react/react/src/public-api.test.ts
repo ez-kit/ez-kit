@@ -1,4 +1,5 @@
 import * as core from '@ez-kit/data-grid-core'
+import { rowSortingFeature, tableFeatures } from '@ez-kit/data-grid-core/features'
 import { describe, expect, it } from 'vitest'
 
 import * as publicApi from './index'
@@ -17,6 +18,7 @@ import type {
 	ColumnEditingConfig,
 	ColumnFilteringConfig,
 	ColumnSortingConfig,
+	ControlledTableState,
 	CreatingMode,
 	DataGridSelectorOptions,
 	EditingMode,
@@ -34,6 +36,8 @@ import type {
 	ReactFilteringConfig,
 	SelectionConfig,
 	SortingConfig,
+	TableFeatures,
+	TableState,
 } from './index'
 
 describe('public API surface', () => {
@@ -72,6 +76,29 @@ describe('public API surface', () => {
 		const reactFiltering: ReactFilteringConfig = { manual: true, debounce: 100 }
 		expect(sorting.manual).toBe(true)
 		expect(reactFiltering.debounce).toBe(100)
+	})
+
+	it('types the controlled state with a partial `loading`, still accepting a full TableState', () => {
+		const partial: ControlledTableState<GridFeatures> = { loading: { isPending: true } }
+		const full: Partial<TableState<GridFeatures>> = {
+			loading: { isPending: false, isFetching: false, isError: false, error: null },
+		}
+		const widened: ControlledTableState<GridFeatures> = full
+		// One registered feature rather than none: with none, every slice key is gone and the type
+		// is `{}`, which accepts any object literal — as `Partial<TableState>` always did.
+		const _sortingOnly = tableFeatures({ rowSortingFeature })
+		// @ts-expect-error — `loading` is not a slice of a set without `loadingFeature`
+		const narrow: ControlledTableState<typeof _sortingOnly> = { loading: { isPending: true } }
+		expect([partial, widened, narrow]).toHaveLength(3)
+	})
+
+	it('accepts a `Partial<TableState>` from a wrapper still generic over the feature set', () => {
+		// The case a per-key conditional mapped type got wrong: deferred while `F` is a parameter,
+		// it rejected the very type the option used to be.
+		function forward<F extends TableFeatures>(state: Partial<TableState<F>>): ControlledTableState<F> {
+			return state
+		}
+		expect(forward<GridFeatures>({})).toEqual({})
 	})
 
 	it('exports the comparison the selector hooks take, typed by the package itself', () => {

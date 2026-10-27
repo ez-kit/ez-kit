@@ -49,7 +49,9 @@ other columns still offer the section:
 
 <DataGridDocsExample exampleId='column-pinning-static' />
 
-The same holds for the system columns (`__selection__`, `__expand__`, `__actions__`).
+The same holds for the system columns (`__drag__`, `__selection__`, `__expand__`, `__actions__`).
+They stay on the outer edge of their side: a column the user pins to the end lands inside the
+actions column, not beyond it.
 
 `initialState.columnPinning` (`{ start, end }`) **merges** with the pins derived from the column
 defs rather than replacing them. A column you list in either array is yours; a column you leave out

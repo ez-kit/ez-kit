@@ -51,7 +51,7 @@ function useOrdersFeed() {
 		}
 	}, [loadPage])
 
-	const state = useMemo(() => ({ loading: { isPending, isFetching: false, isError: false, error: null } }), [isPending])
+	const state = useMemo(() => ({ loading: { isPending } }), [isPending])
 
 	return { rows, state, hasNextPage, onLoadMore: loadPage }
 }

@@ -13,19 +13,14 @@ import { useDataGrid } from './use-data-grid'
 
 import type { CellTypeRegistry } from './cell-types-context'
 import type { GridComponents } from './contract'
-import type {
-	DataGridControlledProps,
-	DataGridProps,
-	DataGridSharedProps,
-	DataGridStatics,
-} from './data-grid/data-grid'
+import type { DataGridControlledProps, DataGridSharedProps, DataGridStatics } from './data-grid/data-grid'
 import type { DndAdapter } from './data-grid/dnd'
 import type { DataGridDefaultOptions } from './data-grid-options-context'
 import type { GridContextReader, GridContextRecord } from './grid-context'
 import type { ColumnDef, ColumnHelper } from './react-columns'
 import type { DataTable, GridFeatures } from './types'
 import type { UseDataGridConfig } from './use-data-grid'
-import type { OperatorsConfig } from '@ez-kit/data-grid-core'
+import type { ColumnDef as CoreColumnDef, OperatorsConfig } from '@ez-kit/data-grid-core'
 import type { TableFeatures } from '@tanstack/table-core'
 
 /** The ids a registry actually holds, as a string union — what the runtime helper is built from. */
@@ -168,6 +163,45 @@ export type CreateDataGridOptions<
 }
 
 /**
+ * The registry a public bundle type checks `cell` against when none is named: one that accepts
+ * any `cell`, which is what `TableConfig.columns` itself does. It keeps a wrapper written as
+ * `BoundDataGridProps<F, Row>` — one that does not know the registry it forwards to — exactly as
+ * permissive as it was before the parameter existed. A bundle names its own registry explicitly.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type UncheckedCellTypes = any
+
+/** The registry a grid adds when it passes no `cellTypes` of its own: nothing. */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- an empty registry, by definition
+export type NoExtraCellTypes = {}
+
+/**
+ * {@link UseDataGridConfig} with `columns` checked against a registry: the bundle's `TCellTypes`,
+ * widened by the `cellTypes` this grid passes itself.
+ *
+ * `NoInfer` is what makes the per-grid registry the only way to widen it. Without it TypeScript
+ * infers `TExtra` from the columns as well as from `cellTypes`, so a column naming an id nobody
+ * registered would register it — and compile. With it, `TExtra` comes from `cellTypes` alone and
+ * defaults to {@link NoExtraCellTypes} when the grid passes none. See ADR 0016.
+ */
+export type RegistryUseDataGridConfig<
+	TFeatures extends TableFeatures,
+	TRow extends object,
+	TContext extends object = GridContextRecord,
+	TCellTypes extends CellTypeRegistry = UncheckedCellTypes,
+	TExtra extends CellTypeRegistry = NoExtraCellTypes,
+> = Omit<UseDataGridConfig<TFeatures, TRow, TContext>, 'columns' | 'cellTypes'> & {
+	/**
+	 * Columns, checked against the bundle's registry and this grid's `cellTypes`. The node type
+	 * stays `unknown`, as on `TableConfig.columns`, so columns from core's own `createColumns`
+	 * keep fitting.
+	 */
+	columns: CoreColumnDef<TRow, TCellTypes & NoInfer<TExtra>>[]
+	/** Custom cell types for this grid alone, merged over the bundle's. Their ids become valid `cell.type`s here. */
+	cellTypes?: TExtra
+}
+
+/**
  * {@link UseDataGridConfig} with `features` relaxed to optional — what a bundle built with a
  * factory-level set accepts.
  *
@@ -180,7 +214,9 @@ export type BoundUseDataGridConfig<
 	TFeatures extends TableFeatures,
 	TRow extends object,
 	TContext extends object = GridContextRecord,
-> = Omit<UseDataGridConfig<TFeatures, TRow, TContext>, 'features'> & {
+	TCellTypes extends CellTypeRegistry = UncheckedCellTypes,
+	TExtra extends CellTypeRegistry = NoExtraCellTypes,
+> = Omit<RegistryUseDataGridConfig<TFeatures, TRow, TContext, TCellTypes, TExtra>, 'features'> & {
 	/** Overrides the bundle's set for this grid alone. Omit to run on the bundle's. */
 	features?: TFeatures
 }
@@ -201,35 +237,75 @@ export type BoundDataGridProps<
 	TFeatures extends TableFeatures,
 	TRow extends object,
 	TContext extends object = GridContextRecord,
+	TCellTypes extends CellTypeRegistry = UncheckedCellTypes,
+	TExtra extends CellTypeRegistry = NoExtraCellTypes,
 > =
 	| DataGridControlledProps<TFeatures, TRow>
-	| (DataGridSharedProps & BoundUseDataGridConfig<TFeatures, TRow, TContext> & { table?: never })
+	| (DataGridSharedProps & BoundUseDataGridConfig<TFeatures, TRow, TContext, TCellTypes, TExtra> & { table?: never })
+
+/** `DataGridProps` with `columns` checked the same way as {@link RegistryUseDataGridConfig}. */
+export type RegistryDataGridProps<
+	TFeatures extends TableFeatures,
+	TRow extends object,
+	TContext extends object = GridContextRecord,
+	TCellTypes extends CellTypeRegistry = UncheckedCellTypes,
+	TExtra extends CellTypeRegistry = NoExtraCellTypes,
+> =
+	| DataGridControlledProps<TFeatures, TRow>
+	| (DataGridSharedProps & RegistryUseDataGridConfig<TFeatures, TRow, TContext, TCellTypes, TExtra> & { table?: never })
 
 /**
  * The compound `DataGrid` a feature-bound bundle hands back: the relaxed call signature, and
  * the identical namespace — {@link DataGridStatics} rather than a second copy of twenty-eight
  * members that would then drift from the first.
  */
-export type BoundDataGrid<TFeatures extends TableFeatures, TContext extends object = GridContextRecord> = (<
+export type BoundDataGrid<
+	TFeatures extends TableFeatures,
+	TContext extends object = GridContextRecord,
+	TCellTypes extends CellTypeRegistry = UncheckedCellTypes,
+> = (<
 	TRow extends object,
 	TConfigFeatures extends TableFeatures = TFeatures,
+	TExtra extends CellTypeRegistry = NoExtraCellTypes,
 >(
-	props: BoundDataGridProps<TConfigFeatures, TRow, TContext>,
+	props: BoundDataGridProps<TConfigFeatures, TRow, TContext, TCellTypes, TExtra>,
 ) => ReturnType<typeof DataGrid>) &
 	DataGridStatics
 
+/** The `useDataGrid` counterpart of {@link BoundDataGrid}. */
+export type BoundUseDataGrid<
+	TFeatures extends TableFeatures,
+	TContext extends object = GridContextRecord,
+	TCellTypes extends CellTypeRegistry = UncheckedCellTypes,
+> = <
+	TRow extends object,
+	TConfigFeatures extends TableFeatures = TFeatures,
+	TExtra extends CellTypeRegistry = NoExtraCellTypes,
+>(
+	config: BoundUseDataGridConfig<TConfigFeatures, TRow, TContext, TCellTypes, TExtra>,
+) => DataTable<TConfigFeatures, TRow>
+
 /**
- * The compound `DataGrid` a bundle with a factory context but no feature set hands back: the
- * unbound call signature — `features` still required — with `context` typed as `TContext`.
+ * The compound `DataGrid` a bundle with no feature set hands back: the unbound call signature —
+ * `features` still required — with `context` typed as `TContext` and `columns` checked against
+ * the bundle's registry. A bundle with neither a set nor a context gets it too, at
+ * {@link GridContextRecord}: the registry is the one thing every bundle carries.
  */
-export type ContextBoundDataGrid<TContext extends object> = (<TFeatures extends TableFeatures, TRow extends object>(
-	props: DataGridProps<TFeatures, TRow, TContext>,
+export type ContextBoundDataGrid<TContext extends object, TCellTypes extends CellTypeRegistry = UncheckedCellTypes> = (<
+	TFeatures extends TableFeatures,
+	TRow extends object,
+	TExtra extends CellTypeRegistry = NoExtraCellTypes,
+>(
+	props: RegistryDataGridProps<TFeatures, TRow, TContext, TCellTypes, TExtra>,
 ) => ReturnType<typeof DataGrid>) &
 	DataGridStatics
 
 /** The `useDataGrid` counterpart of {@link ContextBoundDataGrid}. */
-export type ContextBoundUseDataGrid<TContext extends object> = <TFeatures extends TableFeatures, TRow extends object>(
-	config: UseDataGridConfig<TFeatures, TRow, TContext>,
+export type ContextBoundUseDataGrid<
+	TContext extends object,
+	TCellTypes extends CellTypeRegistry = UncheckedCellTypes,
+> = <TFeatures extends TableFeatures, TRow extends object, TExtra extends CellTypeRegistry = NoExtraCellTypes>(
+	config: RegistryUseDataGridConfig<TFeatures, TRow, TContext, TCellTypes, TExtra>,
 ) => DataTable<TFeatures, TRow>
 
 /**
@@ -269,19 +345,11 @@ export type DataGridBundle<
 	TContext extends object | undefined = undefined,
 > = {
 	DataGrid: TFeatures extends TableFeatures
-		? [TContext] extends [object]
-			? BoundDataGrid<TFeatures, InstanceContext<TContext>>
-			: BoundDataGrid<TFeatures>
-		: [TContext] extends [object]
-			? ContextBoundDataGrid<InstanceContext<TContext>>
-			: typeof DataGrid
+		? BoundDataGrid<TFeatures, InstanceContext<TContext>, TCellTypes>
+		: ContextBoundDataGrid<InstanceContext<TContext>, TCellTypes>
 	useDataGrid: TFeatures extends TableFeatures
-		? <TRow extends object, TConfigFeatures extends TableFeatures = TFeatures>(
-				config: BoundUseDataGridConfig<TConfigFeatures, TRow, InstanceContext<TContext>>,
-			) => DataTable<TConfigFeatures, TRow>
-		: [TContext] extends [object]
-			? ContextBoundUseDataGrid<InstanceContext<TContext>>
-			: typeof useDataGrid
+		? BoundUseDataGrid<TFeatures, InstanceContext<TContext>, TCellTypes>
+		: ContextBoundUseDataGrid<InstanceContext<TContext>, TCellTypes>
 	/**
 	 * Reads the grid context as this bundle's type — the factory default's, complete, when the
 	 * factory was given one; {@link GridContextRecord} otherwise. The package's own

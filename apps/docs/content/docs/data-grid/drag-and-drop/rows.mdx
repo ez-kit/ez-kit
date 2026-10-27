@@ -43,6 +43,25 @@ at the end, wider, with a header:
 
 Without an adapter there is no column at all, and rows move through the actions menu.
 
+### No handle, the menu pair only
+
+`ordering.row.controls` decides what a row offers to move it by. `'step'` keeps the adapter bound
+but leaves the handle column out: rows move only through **Move up** / **Move down** in the
+actions menu, and through `Alt+ArrowUp` / `Alt+ArrowDown`:
+
+<DataGridDocsExample exampleId='row-drag-step-only' />
+
+```tsx
+<DataGrid
+	// …
+	ordering={{ row: { controls: 'step' } }}
+/>
+```
+
+The default is `'both'` — the handle and the menu pair. `'drag'` is the opposite of this example:
+the handle alone, with the menu pair taken out. See [Row ordering](/docs/data-grid/row-ordering#the-menu-pair-the-handle-or-both)
+for every value.
+
 ### A handle inside a cell
 
 Turn the column off with `column: false` and put the handle where you want it — here, in front of
@@ -92,6 +111,48 @@ recomputed away. Clear the sort and rows move again.
 
 `ordering={{ row: true }}` keeps the order inside the grid; pass `onChange` instead, as in
 [Installation](/docs/data-grid/drag-and-drop#your-first-drag), to keep it in your own data.
+
+### Over server-side data
+
+A grid that pages, sorts, filters and searches on the server holds one page of rows and cannot name
+the order of the rest. So drag goes through `onChange` here: the grid reports the move and
+reorders nothing itself. The move is two row ids and a direction. Apply it to the page you hold so
+the row stays where it was dropped, and send it to the server, which applies the same move to the
+full list. Everything else on the grid works as it does without drag: selection, bulk delete,
+the move pair in the row menu and the page controls. The request log above the grid shows what
+each gesture sends.
+
+<DataGridDocsExample exampleId='row-drag-server' />
+
+```tsx
+<DataGrid
+	features={features}
+	data={rows}
+	columns={columns}
+	getRowId={getRowId}
+	selection
+	sorting={{ manual: true, onChange: setSorting }}
+	filtering={{ manual: true, onChange: setColumnFilters }}
+	globalFiltering={{ onChange: setGlobalFilter }}
+	pagination={{ manual: true, rowCount, onChange: setPagination }}
+	ordering={{
+		row: {
+			onChange: (move) => {
+				setRows((current) => applyRowMove(current, move, getRowId))
+				void api.moveEmployee(move)
+			},
+		},
+	}}
+	deleting={{ onDelete: ({ rowId }) => api.deleteEmployees([rowId]) }}
+	state={{ pagination, sorting, columnFilters, globalFilter, loading: { isPending, isFetching } }}
+/>
+```
+
+The [usual limits](#what-a-row-drag-will-not-do) are what make this safe against a server. While a
+column is sorted no row moves, so the server never receives a move that contradicts its own sort
+order. A drag also stops at the edge of the page, so a move only ever names two rows that are both
+on screen. Under a filter those two rows can be far apart in the full list. `applyRowMove` handles
+that, because it puts the row at its target's index rather than one step away.
 
 ## With virtualization
 

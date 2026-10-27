@@ -32,16 +32,83 @@ const table = useDataGrid({
 config, column-level seeds) are uncontrolled and only set a starting point. [State
 model](/docs/data-grid/state) lays out which one wins.
 
+## Every feature, controlled
+
+The same two props drive a grid with every feature on except aggregation: row and column drag,
+resizing, sorting, column filters, search, pagination, selection, row and column pinning, a detail
+panel, row editing, creating and deleting. The block below the grid prints the `state` it is
+handed, so you can watch each gesture land in its slice.
+
+<DataGridDocsExample exampleId='controlled-state-full' />
+
+```tsx
+const [state, setState] = useState<Partial<TableState<GridFeatures>>>({
+	pagination: { pageIndex: 0, pageSize: 5 },
+})
+
+<DataGrid
+	features={features}
+	data={data}
+	columns={columns}
+	getRowId={getRowId}
+	state={state}
+	onStateChange={setState}
+	sorting
+	filtering
+	globalFiltering
+	pagination={{ items: [5, 10, 20] }}
+	selection
+	visibility
+	resizing
+	pinning={{ column: true, row: true }}
+	ordering={{ column: true, row: true }}
+	expanding={{ component: EmployeeDetail }}
+	editing={{ mode: 'row', onSave }}
+	creating={{ mode: 'modal', onSave }}
+	deleting={{ onDelete, bulk: true }}
+/>
+```
+
+The block starts with the seed alone: `onStateChange` does not fire on mount. The first change
+hands back the whole state, every slice included, and the block shows all of it from then on.
+
+What the block shows, slice by slice:
+
+- **Ids, not rows.** `rowSelection`, `expanded`, `rowPinning` and `rowOrder` name rows by the id
+  `getRowId` returns. `columnOrder`, `columnPinning`, `columnSizing` and `columnVisibility` name
+  columns by their id.
+- **A filter value has two shapes.** _Name_ and _Salary_ have
+  [operators](/docs/data-grid/filtering/operators), so their entries carry the operator next to
+  the value: `{ id: 'salary', value: { operator: 'greaterOrEqual', value: 90000 } }`.
+  _Department_ and _Active_ have none and keep the bare value: `{ id: 'department', value: 'Eng' }`.
+- **An empty value means the default.** `columnOrder: []` is the declared order, and
+  `columnVisibility: {}` means every column is shown. A slice records only what the user changed.
+- **`rowOrder` is the uncontrolled row order.** It fills in on the first move. Pass
+  `ordering.row.onChange` instead and the order lives in your `data`, and this slice stays empty.
+- **The system columns are in `columnPinning`.** `__drag__`, `__selection__`, `__expand__` and
+  `__actions__` are pinned like any column, and `onStateChange` reports them. You do not have to
+  pass them back: a controlled `columnPinning` without them, `{ start: [], end: [] }` included, is
+  completed by the grid, and that correction is not reported as a change.
+- **`columnResizing` is the gesture in progress**, and `columnSizing` is its result. Drag a column
+  edge to watch the first update on every move and the second update on release.
+- **`editing`, `creating` and `deleting` are the open form and the pending confirmation**, with
+  their values, errors and `commitStatus`. You can read them here, but `initialState` cannot seed
+  them.
+- **`loading` is read-only here.** Set it through `state.loading` from your data source.
+
+`globalFilter` is `undefined` until something is typed, so `JSON.stringify` leaves it out.
+
 ## Why this matters
 
 - Server-side anything (sort, filter, pagination) needs controlled state so you can translate the user's input into your query.
 - URL state — keep sort/filter/page in `?` params so reload preserves view and links are shareable.
 - Cross-component coordination — e.g., a "clear all" button outside the grid that resets every controllable surface at once.
-- **Loading state** — `state.loading: { isPending, isFetching, isError, error }` lets the grid render its loading fallback while your data is fetching. Feed it from any data source — TanStack Query's `isPending`/`isFetching`, SWR's `isValidating`, or your own hook.
+- **Loading state** — `state.loading: { isPending, isFetching, isError, error }` lets the grid render its loading fallback while your data is fetching. Every field is optional — `{ isPending }` is enough for a list loaded once — and a TanStack Query result passes through whole. Feed it from any data source: TanStack Query, SWR's `isLoading` / `isValidating` mapped onto `isPending` / `isFetching`, or your own hook.
 
 ## One state, one subscription
 
-There is exactly one controlled-state mechanism: pass a partial `TableState` to `state`, and read every
+There is exactly one controlled-state mechanism: pass the slices you control to `state` (typed
+`ControlledTableState` — a partial `TableState` whose `loading` may be partial too), and read every
 update back through the single `onStateChange` callback. `onStateChange` receives the resolved
 **whole** table state, not a per-slot value — apply it to your own state as shown above.
 
