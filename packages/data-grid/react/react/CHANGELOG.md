@@ -1,5 +1,110 @@
 # @ez-kit/data-grid-react
 
+## 0.14.0
+
+### Minor Changes
+
+- 8e3e38f: **Breaking (types only).** Inline columns are now checked against the grid's cell-type registry.
+  The `DataGrid` and `useDataGrid` a `createDataGrid` bundle returns — and the prebuilt ones each kit
+  exports — type `columns` with the bundle's registry, widened by the ids that grid's own `cellTypes`
+  prop adds. An unknown `cell.type`, a missing required `cell.config` and a config key the type does
+  not declare are compile errors where they used to render the raw value silently. The row type is
+  still inferred from `data`. Runtime behaviour is unchanged, and the `DataGrid` / `useDataGrid`
+  imported straight from `@ez-kit/data-grid-react` stay unchecked, since their registry arrives
+  through a provider.
+
+  Code that now fails to compile passes the grid columns of a type it does not register:
+  - a type registered on one grid only — pass it through that grid's `cellTypes` and write the
+    columns inline beside it, or register it in the bundle;
+  - columns built with another bundle's `createColumns`, or typed `ColumnDef<Row, any>` /
+    `UseDataGridConfig['columns']` — build them with this bundle's `createColumns` /
+    `createColumnHelper`.
+
+  `BoundDataGridProps`, `BoundUseDataGridConfig` and `BoundDataGrid` take the registry as a new
+  trailing type parameter that defaults to accepting any `cell`, so a wrapper written as
+  `BoundDataGridProps<F, Row>` keeps compiling. The bundle types need TypeScript 5.4 or later.
+
+- 183f49e: `state.loading` and `initialState.loading` take a partial object. Name only the fields you have —
+  `state={{ loading: { isPending } }}` for a list loaded once — and the rest default: the flags to
+  `false`, `error` to `null`. The slice the grid holds is unchanged: the store, every selector and
+  `onStateChange` still see all four fields of `LoadingState`, so nothing that reads it changes.
+  - A full object behaves exactly as before, and a TanStack Query result still passes through whole
+    (`state={{ loading: query }}`). The grid now keeps only `isPending`, `isFetching`, `isError` and
+    `error` from it rather than storing the object as given; `LoadingState` never declared any other
+    field.
+  - An equal `state.loading` no longer rewrites the slice on every commit. A new object with the same
+    four values keeps the previous slice, so a query result that changed only its `data` no longer
+    republishes loading status.
+  - In development, a `loading` object that carries keys the slice does not know and none of
+    `isPending` / `isFetching` / `isError` warns. That is the shape of an SWR response passed whole:
+    the partial type accepts it through its shared `error` key, and the grid would never show a
+    loading state. Map `isLoading` / `isValidating` onto `isPending` / `isFetching` instead.
+  - New type `ControlledTableState<TFeatures>`, exported from `@ez-kit/data-grid-react`: the type of
+    the `state` option. It is `Partial<TableState<TFeatures>>` with a partial `loading`, and state
+    typed as `Partial<TableState<TFeatures>>` keeps assigning to it. `InitialTableState` gains the
+    same partial `loading`.
+
+- 14a19c8: `extractState` and `useExtractedState` no longer persist the columns the config places. The system
+  columns (`__drag__`, `__selection__`, `__expand__`, `__actions__`) and any column declared with
+  `pinning: 'start'` / `{ side }` or `visibility: false` are left out of `columnPinning`,
+  `columnOrder` and `columnVisibility`, and restoring puts them back. A grid nobody touched now
+  persists `columnPinning: { start: [], end: [] }`, and a stored value no longer changes when a
+  feature is switched on or off.
+  - A value saved before this release, with the system columns in it, restores the same view. An id
+    the grid does not have, such as `__drag__` after `ordering.row` is turned off, is ignored.
+  - A system column the config only seeds (`pinning: { initialSide }`) is the user's to move, so it is
+    still persisted.
+  - `onStateChange`, the per-feature `onChange` callbacks, `useDataGridState` and `table.store.state`
+    are unchanged: they report the table's state as it is, system columns included.
+  - A controlled `state` now keeps the column rules every other write path already kept. A
+    `columnPinning: { start: [], end: [] }`, a `columnVisibility` that hides `__actions__` or a
+    `columnOrder` without the system columns no longer unpins, hides or reorders them. The grid
+    completes the value without reporting it back through `onStateChange`, since the user changed
+    nothing.
+  - The columns the config pins stay on the outer edge of their side. A column the user pins to the
+    end now lands inside the actions column instead of beyond it. A non-empty `columnOrder` gets the
+    forced start columns back at its start, through `initialState`, `table.setColumnOrder` or a
+    controlled `state`, and no longer lists the forced end columns. Because they are declared last,
+    they stay after every column, including one a saved order does not mention.
+  - New `table.grid.columnState` with `enforce(state)` and `strip(state)` — the grid's column rules,
+    bound to its columns — and a `signature` that changes exactly when those rules do. Its type
+    `ColumnStateApi` is exported from `@ez-kit/data-grid-core`.
+    `ResolvedGridOptions` in `@ez-kit/data-grid-react` carries it as `columnState`.
+
+- 6e949bf: `ordering.row.controls` chooses how a row offers a move: `'drag'` a handle in the `__drag__`
+  column, `'step'` the _Move up_ / _Move down_ pair in the row's actions menu, `'both'`, or `false`
+  for neither. It takes the same `boolean | ReorderMode` values as `ordering.column.header` and
+  resolves them the same way, so a grid with a drag adapter can now drop the menu pair and keep
+  the handle: `ordering={{ row: { controls: 'drag' } }}`.
+  - **The default is `'both'`, so no grid changes.** A grid with an adapter keeps the handle and the
+    menu pair, a grid without one keeps the menu pair. This differs from `ordering.column.header`,
+    whose default `true` gives the grip alone, on purpose: the menu pair is a row's only way to move
+    with a single click instead of a drag (WCAG 2.2, 2.5.7 Dragging Movements), while a column can
+    also be moved from the column panel. `Alt+Arrow` does not replace it — it is a keyboard path,
+    and the HeroUI kit's rows do not receive it.
+  - `Alt+ArrowUp` / `Alt+ArrowDown` keep working under every value, `false` included. Only
+    `ordering.row` itself turns them off.
+  - `'step'` and `false` leave the `__drag__` column out, and rows are no longer picked up by the
+    adapter. A `<DataGrid.RowDragHandle />` placed by hand under `column: false` renders nothing
+    under them.
+  - A mode without the menu pair takes it out of the row menu, and the overflow trigger is named for
+    what is left in it. When nothing is left the menu button is not drawn, and row ordering alone no
+    longer mounts the actions column.
+  - `'drag'` or `'both'` written without an adapter falls back to the menu pair and warns in
+    development, as the column surfaces do.
+  - `ResolvedGridOptions.ordering` gains `rowControls` — the resolved `{ drag, moveControls }` and
+    the authored `mode`. `useDataGrid` resolves it, against the same adapter that decides the
+    `__drag__` column, so the handle column and the menu pair cannot disagree.
+
+### Patch Changes
+
+- Updated dependencies [183f49e]
+- Updated dependencies [14a19c8]
+- Updated dependencies [6e949bf]
+- Updated dependencies [4769b43]
+- Updated dependencies [9c89712]
+  - @ez-kit/data-grid-core@0.13.0
+
 ## 0.13.0
 
 ### Minor Changes

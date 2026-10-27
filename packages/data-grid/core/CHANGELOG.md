@@ -1,5 +1,101 @@
 # @ez-kit/data-grid-core
 
+## 0.13.0
+
+### Minor Changes
+
+- 183f49e: `state.loading` and `initialState.loading` take a partial object. Name only the fields you have —
+  `state={{ loading: { isPending } }}` for a list loaded once — and the rest default: the flags to
+  `false`, `error` to `null`. The slice the grid holds is unchanged: the store, every selector and
+  `onStateChange` still see all four fields of `LoadingState`, so nothing that reads it changes.
+  - A full object behaves exactly as before, and a TanStack Query result still passes through whole
+    (`state={{ loading: query }}`). The grid now keeps only `isPending`, `isFetching`, `isError` and
+    `error` from it rather than storing the object as given; `LoadingState` never declared any other
+    field.
+  - An equal `state.loading` no longer rewrites the slice on every commit. A new object with the same
+    four values keeps the previous slice, so a query result that changed only its `data` no longer
+    republishes loading status.
+  - In development, a `loading` object that carries keys the slice does not know and none of
+    `isPending` / `isFetching` / `isError` warns. That is the shape of an SWR response passed whole:
+    the partial type accepts it through its shared `error` key, and the grid would never show a
+    loading state. Map `isLoading` / `isValidating` onto `isPending` / `isFetching` instead.
+  - New type `ControlledTableState<TFeatures>`, exported from `@ez-kit/data-grid-react`: the type of
+    the `state` option. It is `Partial<TableState<TFeatures>>` with a partial `loading`, and state
+    typed as `Partial<TableState<TFeatures>>` keeps assigning to it. `InitialTableState` gains the
+    same partial `loading`.
+
+- 14a19c8: `extractState` and `useExtractedState` no longer persist the columns the config places. The system
+  columns (`__drag__`, `__selection__`, `__expand__`, `__actions__`) and any column declared with
+  `pinning: 'start'` / `{ side }` or `visibility: false` are left out of `columnPinning`,
+  `columnOrder` and `columnVisibility`, and restoring puts them back. A grid nobody touched now
+  persists `columnPinning: { start: [], end: [] }`, and a stored value no longer changes when a
+  feature is switched on or off.
+  - A value saved before this release, with the system columns in it, restores the same view. An id
+    the grid does not have, such as `__drag__` after `ordering.row` is turned off, is ignored.
+  - A system column the config only seeds (`pinning: { initialSide }`) is the user's to move, so it is
+    still persisted.
+  - `onStateChange`, the per-feature `onChange` callbacks, `useDataGridState` and `table.store.state`
+    are unchanged: they report the table's state as it is, system columns included.
+  - A controlled `state` now keeps the column rules every other write path already kept. A
+    `columnPinning: { start: [], end: [] }`, a `columnVisibility` that hides `__actions__` or a
+    `columnOrder` without the system columns no longer unpins, hides or reorders them. The grid
+    completes the value without reporting it back through `onStateChange`, since the user changed
+    nothing.
+  - The columns the config pins stay on the outer edge of their side. A column the user pins to the
+    end now lands inside the actions column instead of beyond it. A non-empty `columnOrder` gets the
+    forced start columns back at its start, through `initialState`, `table.setColumnOrder` or a
+    controlled `state`, and no longer lists the forced end columns. Because they are declared last,
+    they stay after every column, including one a saved order does not mention.
+  - New `table.grid.columnState` with `enforce(state)` and `strip(state)` — the grid's column rules,
+    bound to its columns — and a `signature` that changes exactly when those rules do. Its type
+    `ColumnStateApi` is exported from `@ez-kit/data-grid-core`.
+    `ResolvedGridOptions` in `@ez-kit/data-grid-react` carries it as `columnState`.
+
+- 6e949bf: `ordering.row.controls` chooses how a row offers a move: `'drag'` a handle in the `__drag__`
+  column, `'step'` the _Move up_ / _Move down_ pair in the row's actions menu, `'both'`, or `false`
+  for neither. It takes the same `boolean | ReorderMode` values as `ordering.column.header` and
+  resolves them the same way, so a grid with a drag adapter can now drop the menu pair and keep
+  the handle: `ordering={{ row: { controls: 'drag' } }}`.
+  - **The default is `'both'`, so no grid changes.** A grid with an adapter keeps the handle and the
+    menu pair, a grid without one keeps the menu pair. This differs from `ordering.column.header`,
+    whose default `true` gives the grip alone, on purpose: the menu pair is a row's only way to move
+    with a single click instead of a drag (WCAG 2.2, 2.5.7 Dragging Movements), while a column can
+    also be moved from the column panel. `Alt+Arrow` does not replace it — it is a keyboard path,
+    and the HeroUI kit's rows do not receive it.
+  - `Alt+ArrowUp` / `Alt+ArrowDown` keep working under every value, `false` included. Only
+    `ordering.row` itself turns them off.
+  - `'step'` and `false` leave the `__drag__` column out, and rows are no longer picked up by the
+    adapter. A `<DataGrid.RowDragHandle />` placed by hand under `column: false` renders nothing
+    under them.
+  - A mode without the menu pair takes it out of the row menu, and the overflow trigger is named for
+    what is left in it. When nothing is left the menu button is not drawn, and row ordering alone no
+    longer mounts the actions column.
+  - `'drag'` or `'both'` written without an adapter falls back to the menu pair and warns in
+    development, as the column surfaces do.
+  - `ResolvedGridOptions.ordering` gains `rowControls` — the resolved `{ drag, moveControls }` and
+    the authored `mode`. `useDataGrid` resolves it, against the same adapter that decides the
+    `__drag__` column, so the handle column and the menu pair cannot disagree.
+
+### Patch Changes
+
+- 4769b43: A plain number or date filter no longer throws `TypeError: val is not iterable`. A column without
+  operators keeps TanStack's `'auto'` filter function, which picks `inNumberRange` for numbers and
+  `inDateRange` for `Date`s. Both expect a `[min, max]` tuple, but the plain filter control hands
+  back a single value. Typing into such a filter used to crash the filtered row model, and the grid
+  stopped rendering rows.
+
+  The two registered range functions now read a single value as the range `[value, value]`. A
+  number column matches that number, a numeric string matches it too, and a date column matches the
+  instant it names. A tuple still filters as a range, and every other registered filter function is
+  untouched.
+
+- 9c89712: System columns no longer show a resize handle. With `resizing` on, the drag grip column
+  (`__drag__`), the expander (`__expand__`) and the row actions column (`__actions__`) each drew a
+  handle that let a user drag them wider. A system column takes its width from its
+  `SystemColumnDef.width` and has no `resizing` option of its own, so the handle offered something
+  the column was never meant to do. All four system columns are now built with
+  `enableResizing: false`, which also covers the selection column.
+
 ## 0.12.0
 
 ### Minor Changes
