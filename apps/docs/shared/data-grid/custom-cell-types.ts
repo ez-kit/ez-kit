@@ -9,26 +9,33 @@ import {
 	CurrencyCellView,
 	RatingCellInput,
 	RatingCellView,
+	SizedBadgeView,
 	UserCellInput,
 	UserCellView,
 } from './custom-cell-renderers'
 
-import type { baseCellTypes } from '@ez-kit/data-grid-react'
+import type { BadgeSize } from './custom-cell-renderers'
+import type { BadgeCellConfig, BadgeColumnConfig, baseCellTypes } from '@ez-kit/data-grid-react'
 
 /**
  * The custom cell types the docs register, in one place — both kit bundles extend from this
  * object rather than restating it, so the two can no longer disagree.
  *
- * Each goes through `defineCellType`, which is what records the config the type accepts. None
- * of these take one, so `cell: { type: 'rating', config: … }` is a compile error rather than
+ * Each goes through `defineCellType`, which is what records the config the type accepts. The
+ * first five take none, so `cell: { type: 'rating', config: … }` is a compile error rather than
  * an unchecked bag.
+ *
+ * `badge` extends the built-in type rather than adding one: its config is the kit's plus `size`,
+ * and it carries only a `view`. Each kit bundle merges it over its own `badge` entry, so the
+ * kit's `editing` and `filtering` stay in place.
  */
 export const customCellTypes = {
-	rating: defineCellType()({ view: RatingCellView, edit: RatingCellInput }),
-	color: defineCellType()({ view: ColorCellView, edit: ColorCellInput }),
-	completion: defineCellType()({ view: CompletionCellView, edit: CompletionCellInput }),
-	currency: defineCellType()({ view: CurrencyCellView, edit: CurrencyCellInput }),
-	user: defineCellType()({ view: UserCellView, edit: UserCellInput }),
+	rating: defineCellType()({ view: RatingCellView, editing: RatingCellInput }),
+	color: defineCellType()({ view: ColorCellView, editing: ColorCellInput }),
+	completion: defineCellType()({ view: CompletionCellView, editing: CompletionCellInput }),
+	currency: defineCellType()({ view: CurrencyCellView, editing: CurrencyCellInput }),
+	user: defineCellType()({ view: UserCellView, editing: UserCellInput }),
+	badge: defineCellType<BadgeCellConfig & BadgeSize, BadgeColumnConfig & BadgeSize>()({ view: SizedBadgeView }),
 }
 
 /**

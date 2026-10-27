@@ -179,6 +179,58 @@ grid cannot interpret rejects the promise. See
 
 `row.getIsEditing()` answers whether a given row is the one being edited.
 
+## Passing your own props to an input
+
+An input has no separate props channel. Whatever it receives besides its `FieldState` comes from
+one of three places.
+
+**The column's `cell.config`.** One config serves every renderer of the column:
+
+```
+cell.config --+--> view        CellViewProps.config
+              +--> editing     FieldState.config
+              +--> creating    FieldState.config
+              +--> filtering   FieldState.config / InputComponentProps.config
+```
+
+There is no `editing.config`. Put a setting here when it describes the column — a range, a step, a
+list — and holds for display and editing alike. A key the column's type does not declare is a
+compile error; to add one, [extend the type](/docs/data-grid/columns/custom-cell-types#extending-a-built-in-type).
+
+**A closure in `editing.component`.** For a value only the input needs, and one that does not
+change:
+
+```tsx
+{
+	accessorKey: 'rating',
+	header: 'Rating',
+	editing: { component: (field: FieldState) => <RatingInput {...field} allowHalf /> },
+}
+```
+
+The grid mounts `editing.component` as a component, by identity. A closure is a new component every
+time the columns are rebuilt, and rebuilding them during an edit remounts the input — focus and the
+half-typed value go with it. Keep the columns at module scope or under `useMemo` (see
+[Hoist what does not change](/docs/data-grid/state/rendering#hoist-what-does-not-change)), and keep
+anything that changes out of the closure.
+
+**The grid context.** For values that change — a permission, the current locale, a callback that
+closes over state — read the [grid context](/docs/data-grid/state/context) inside the input. A
+selector re-renders the input when its slice changes and never remounts it:
+
+```tsx
+function RatingInput(field: FieldState) {
+	const allowHalf = useGridContext((c) => c.ratings.allowHalf)
+	return (
+		<Stars
+			value={Number(field.value)}
+			onChange={field.onChange}
+			allowHalf={allowHalf}
+		/>
+	)
+}
+```
+
 ## See also
 
 - [Validation](/docs/data-grid/editing/validation) — schemas, async checks, server errors

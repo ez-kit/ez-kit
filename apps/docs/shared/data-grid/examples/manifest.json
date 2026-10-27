@@ -536,6 +536,14 @@
 		"exportName": "CustomCellUserExample"
 	},
 	{
+		"id": "custom-cell-badge-size",
+		"label": "Custom · Badge size",
+		"group": "cells",
+		"groupLabel": "Cells",
+		"sourceFile": "components/custom-cell-badge-size.tsx",
+		"exportName": "CustomCellBadgeSizeExample"
+	},
+	{
 		"id": "date-cell-view",
 		"label": "Date Cell · View + formatting",
 		"group": "cells",

@@ -38,6 +38,7 @@ export const exampleModules: Record<string, () => Promise<Record<string, Compone
 	'components/creating/CreatingValidationExample.tsx': () => import('./components/creating/CreatingValidationExample'),
 	'components/crud/CrudClientExample.tsx': () => import('./components/crud/CrudClientExample'),
 	'components/crud/CrudServerExample.tsx': () => import('./components/crud/CrudServerExample'),
+	'components/custom-cell-badge-size.tsx': () => import('./components/custom-cell-badge-size'),
 	'components/custom-cell-currency.tsx': () => import('./components/custom-cell-currency'),
 	'components/custom-cell-progress.tsx': () => import('./components/custom-cell-progress'),
 	'components/custom-cell-types.tsx': () => import('./components/custom-cell-types'),

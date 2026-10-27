@@ -711,7 +711,13 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		page: DocPage.ColumnsCustomCellTypes,
 		// The four renderer slots a `defineCellType` definition may carry.
 		optionTables: [{ heading: 'Declaring a config', roots: [GRID_TYPE.CellTypeDefinition], expectedCount: 4 }],
-		nonOptionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'For kit authors',
+				reason:
+					'First column describes what a kit does; second holds `KitCellTypes` type expressions, not option keys.',
+			},
+		],
 	},
 	{
 		page: DocPage.StateContext,
