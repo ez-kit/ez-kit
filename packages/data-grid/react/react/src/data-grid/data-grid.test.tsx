@@ -333,6 +333,16 @@ describe('<DataGrid>', () => {
 			expect(document.querySelectorAll('[data-slot="column-resizer"]')).toHaveLength(1)
 		})
 
+		it('does not render column-resizer on a system column', () => {
+			const table = makeTable({ resizing: true, expanding: true, deleting: { onDelete: () => {} } })
+			renderWithComponents(<DataGrid table={table} />)
+			for (const id of ['__expand__', '__actions__']) {
+				expect(document.querySelector(`th[data-column-id="${id}"]`)).not.toBeNull()
+				expect(document.querySelector(`th[data-column-id="${id}"] [data-slot="column-resizer"]`)).toBeNull()
+			}
+			expect(document.querySelector('th[data-column-id="name"] [data-slot="column-resizer"]')).not.toBeNull()
+		})
+
 		it('sets CSS variables on <table> when resizing is enabled', () => {
 			const table = makeTable({ resizing: true })
 			renderWithComponents(<DataGrid table={table} />)

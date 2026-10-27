@@ -86,6 +86,19 @@ export function RowDragHandleColumnExample() {
 	)
 }
 
+export function RowDragStepOnlyExample() {
+	return (
+		<DataGridDnd
+			features={features}
+			data={makeEmployees(ROW_COUNT)}
+			columns={columns}
+			getRowId={getRowId}
+			layout={SCROLLING_LAYOUT}
+			ordering={{ row: { controls: 'step' } }}
+		/>
+	)
+}
+
 export function RowDragCellHandleExample() {
 	return (
 		<DataGridDnd

@@ -278,6 +278,10 @@ describe('grid.ordering — the two axes resolve independently', () => {
 	const HEADER_UNSET = { mode: undefined }
 	/** The header with the column axis off. */
 	const HEADER_OFF = { mode: false }
+	/** The row axis off: no grip, no menu pair. */
+	const ROW_OFF = { mode: false, drag: false, moveControls: false }
+	/** The row axis on and unauthored, without an adapter (`renderHook` binds none): the menu pair. */
+	const ROW_UNSET = { mode: undefined, drag: false, moveControls: true }
 
 	it('names the row axis to turn it on', () => {
 		expect(gridOrdering({ row: true })).toEqual({
@@ -285,12 +289,19 @@ describe('grid.ordering — the two axes resolve independently', () => {
 			row: true,
 			visibilityMenu: PANEL_OFF,
 			header: HEADER_OFF,
+			rowControls: ROW_UNSET,
 		})
 	})
 
 	it('keeps a bare `true` columns-only', () => {
 		// An upgrade must not hand a grid written against `ordering: true` a second affordance.
-		expect(gridOrdering(true)).toEqual({ column: true, row: false, visibilityMenu: PANEL_OFF, header: HEADER_UNSET })
+		expect(gridOrdering(true)).toEqual({
+			column: true,
+			row: false,
+			visibilityMenu: PANEL_OFF,
+			header: HEADER_UNSET,
+			rowControls: ROW_OFF,
+		})
 	})
 
 	it('honours `enabled: false` on the row axis', () => {
@@ -299,6 +310,7 @@ describe('grid.ordering — the two axes resolve independently', () => {
 			row: false,
 			visibilityMenu: PANEL_OFF,
 			header: HEADER_OFF,
+			rowControls: ROW_OFF,
 		})
 	})
 
@@ -308,6 +320,7 @@ describe('grid.ordering — the two axes resolve independently', () => {
 			row: false,
 			visibilityMenu: PANEL_OFF,
 			header: HEADER_OFF,
+			rowControls: ROW_OFF,
 		})
 	})
 
@@ -319,6 +332,7 @@ describe('grid.ordering — the two axes resolve independently', () => {
 			row: false,
 			visibilityMenu: { enabled: true, mode: 'step' },
 			header: HEADER_UNSET,
+			rowControls: ROW_OFF,
 		})
 	})
 
@@ -337,12 +351,28 @@ describe('grid.ordering — the two axes resolve independently', () => {
 			row: false,
 			visibilityMenu: PANEL_OFF,
 			header: HEADER_OFF,
+			rowControls: ROW_OFF,
 		})
 	})
 
 	it('carries the header mode as authored, and drops it with the column axis', () => {
 		expect(gridOrdering({ column: { header: 'both' } }).header).toEqual({ mode: 'both' })
 		expect(gridOrdering({ column: { enabled: false, header: 'drag' } }).header).toEqual(HEADER_OFF)
+	})
+
+	it('resolves the row controls against the adapter, and drops them with the row axis', () => {
+		// No adapter here, so every mode with a grip falls back to the menu pair.
+		expect(gridOrdering({ row: { controls: 'drag' } }).rowControls).toEqual({
+			mode: 'drag',
+			drag: false,
+			moveControls: true,
+		})
+		expect(gridOrdering({ row: { controls: false } }).rowControls).toEqual({
+			mode: false,
+			drag: false,
+			moveControls: false,
+		})
+		expect(gridOrdering({ row: { enabled: false, controls: 'step' } }).rowControls).toEqual(ROW_OFF)
 	})
 })
 

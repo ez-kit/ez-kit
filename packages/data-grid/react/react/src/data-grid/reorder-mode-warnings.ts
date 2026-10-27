@@ -22,6 +22,7 @@ export function useReorderModeWarnings(grid: ResolvedGridOptions, hasAdapter: bo
 	const header = !hasAdapter && wantsDrag(grid.ordering.header.mode)
 	const panel = !hasAdapter && wantsDrag(grid.ordering.visibilityMenu.mode)
 	const sort = !hasAdapter && wantsDrag(grid.sortReorder)
+	const row = !hasAdapter && wantsDrag(grid.ordering.rowControls.mode)
 
 	useEffect(() => {
 		if (IS_DEV && header) warnDragWithoutAdapter('ordering.column.header', 'the header')
@@ -32,6 +33,9 @@ export function useReorderModeWarnings(grid: ResolvedGridOptions, hasAdapter: bo
 	useEffect(() => {
 		if (IS_DEV && sort) warnDragWithoutAdapter('sorting.multi.reorderable', 'the sort builder')
 	}, [sort])
+	useEffect(() => {
+		if (IS_DEV && row) warnDragWithoutAdapter('ordering.row.controls', 'each row')
+	}, [row])
 }
 
 function warnDragWithoutAdapter(option: string, surface: string): void {

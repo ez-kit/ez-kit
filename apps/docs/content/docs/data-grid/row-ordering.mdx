@@ -42,6 +42,34 @@ and the problem never arises.
 
 Turning it on adds move controls to the row's action menu.
 
+## The menu pair, the handle, or both
+
+`ordering.row.controls` chooses which of the two a row offers. It takes the same values as
+[`ordering.column.header`](/docs/data-grid/columns/ordering#the-arrows-or-the-drag-not-both), and
+`Alt+Arrow` keeps working under every one of them, `false` included — only `ordering.row` itself
+turns the keyboard off.
+
+```tsx
+ordering={{ row: { controls: 'drag' } }}
+```
+
+| Value              | With an adapter          | Without one   |
+| ------------------ | ------------------------ | ------------- |
+| `'both'` / omitted | the handle and menu pair | the menu pair |
+| `true`             | the handle               | the menu pair |
+| `'drag'`           | the handle               | the menu pair |
+| `'step'`           | the menu pair            | the menu pair |
+| `false`            | neither                  | neither       |
+
+The default differs from the column header's on purpose. The menu pair is the way to move a row
+with a single click instead of a drag, and a row has nowhere else to put one — a column also has
+the column panel. So the grid keeps the pair unless you take it out. Write `'drag'` once your grid
+offers its own click alternative, or once a handle is all the row should carry. A row whose menu
+then holds nothing else draws no menu button at all.
+
+A handle needs an adapter, so `'drag'` and `'both'` without one fall back to the menu pair, and
+the grid warns in development when you wrote one by name.
+
 ## The two modes
 
 `onChange` selects the mode rather than gating the feature.
@@ -129,6 +157,7 @@ order should use controlled mode, which hands it every move.
 
 ## Options
 
-| Option     | Type                                 | Description                                                                                                                               |
-| ---------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `ordering` | `boolean \| { row?: …, column?: … }` | Reordering, per axis. `{ row: true }` keeps the order in the grid; `{ row: { onChange } }` reports each move and leaves the order to you. |
+| Option                  | Type                                 | Description                                                                                                                                                      |
+| ----------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ordering`              | `boolean \| { row?: …, column?: … }` | Reordering, per axis. `{ row: true }` keeps the order in the grid; `{ row: { onChange } }` reports each move and leaves the order to you.                        |
+| `ordering.row.controls` | `boolean \| ReorderMode`             | Which of the handle and the menu pair a row offers: `'drag'`, `'step'`, `'both'`, or `false` for neither. Default `'both'`. `Alt+Arrow` works under every value. |

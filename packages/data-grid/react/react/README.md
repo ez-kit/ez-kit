@@ -15,6 +15,10 @@ Install it directly only when building your own UI flavour with `createDataGrid`
 pnpm add @ez-kit/data-grid-react @ez-kit/data-grid-core react
 ```
 
+TypeScript consumers need **TypeScript 5.4 or later**: the types a `createDataGrid` bundle hands
+back use `NoInfer`, so that a grid's own `cellTypes` — not its columns — decide which `cell.type`
+ids its columns may name.
+
 ## Building a flavour
 
 ```tsx

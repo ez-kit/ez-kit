@@ -45,11 +45,16 @@ export function useExtractedState<TFeatures extends TableFeatures, TRow extends 
 		// `draft` is not a slice: it is derived from the three deferred axes and the applied
 		// snapshot, so all four go in as inputs — see `DRAFT_STATE_KEY`. The list stays
 		// position-stable for a given `keys`, which is all `sameList` needs.
-		const inputs: readonly unknown[] = keys.flatMap((key): unknown[] =>
-			key === DRAFT_STATE_KEY
-				? [state.sorting, state.columnFilters, state.globalFilter, state.applied]
-				: [state[key] as unknown],
-		)
+		// The column invariants are an input too: `strip` drops what the config forces, and the
+		// config can change what it forces while every slice keeps its reference.
+		const inputs: readonly unknown[] = [
+			table.grid.columnState?.signature,
+			...keys.flatMap((key): unknown[] =>
+				key === DRAFT_STATE_KEY
+					? [state.sorting, state.columnFilters, state.globalFilter, state.applied]
+					: [state[key] as unknown],
+			),
+		]
 		const cache = cacheRef.current
 		if (cache && sameList(cache.keys, keys) && sameList(cache.inputs, inputs)) {
 			return cache.output
@@ -57,7 +62,7 @@ export function useExtractedState<TFeatures extends TableFeatures, TRow extends 
 		// `isDirty()` is derived from exactly the four inputs above plus the deferral option, so
 		// the cache above still gates every rebuild — see `pickDraft` for why the comparison
 		// moved out of `pickState`.
-		const output = pickState(state, keys, readDraftDirty(table))
+		const output = pickState(state, keys, readDraftDirty(table), table.grid.columnState)
 		cacheRef.current = { keys, inputs, output }
 		return output
 	}

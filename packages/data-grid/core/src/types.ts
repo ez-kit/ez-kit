@@ -70,7 +70,7 @@ export type MultiSortEvent = (typeof MultiSortEvent)[keyof typeof MultiSortEvent
  * The members name the behaviour, never the glyph — the arrows a step pair is drawn with are the
  * kit's business, the way a filter control's look is.
  *
- * Read by `ordering.column.header`, `ordering.column.visibilityMenu` and
+ * Read by `ordering.column.header`, `ordering.column.visibilityMenu`, `ordering.row.controls` and
  * `sorting.multi.reorderable`. Named members for internal reference; the option is typed as the
  * plain string union, so `header: 'step'` needs no import.
  */
@@ -779,12 +779,44 @@ export type RowOrderingConfig = FeatureToggle & {
 	 */
 	onChange?: (move: RowMove) => void
 	/**
+	 * How a row offers a move. Default: `'both'`.
+	 *
+	 * `'drag'` gives the row a grip, in the `__drag__` column; `'step'` puts the one-step move pair
+	 * in the row's actions menu; `'both'` does both. `true` takes the grip when a drag adapter is
+	 * bound and the menu pair when none is, so a row never offers the same move twice; `false`
+	 * offers neither, while the row stays movable through `Alt+ArrowUp` / `Alt+ArrowDown`. See
+	 * {@link ReorderMode} for how a mode resolves without an adapter.
+	 *
+	 * | Written            | With an adapter | Without one |
+	 * | ------------------ | --------------- | ----------- |
+	 * | `'both'` / omitted | grip, menu pair | menu pair   |
+	 * | `true`             | grip            | menu pair   |
+	 * | `'drag'`           | grip            | menu pair   |
+	 * | `'step'`           | menu pair       | menu pair   |
+	 * | `false`            | neither         | neither     |
+	 *
+	 * **The default is `'both'`, not the `true` {@link ColumnOrderingConfig.header} defaults to, and
+	 * the difference is deliberate.** The menu pair is the single-pointer alternative to dragging
+	 * that WCAG 2.2 2.5.7 (Dragging Movements) asks for, and a row has nowhere else to put one: a
+	 * column can also be moved from the column panel, a row cannot. `Alt+Arrow` does not stand in
+	 * for it — it is a keyboard path, not a pointer one, and the heroui kit's rows do not receive it
+	 * at all (React Aria's `Row` does not forward `onKeyDown`). So the grid keeps the pair unless an
+	 * author takes it out, and it is also what every grid with an adapter already rendered. Write
+	 * `true` or `'drag'` for the grip alone — having provided a pointer alternative of one's own.
+	 *
+	 * The grip is drawn by the grid only in its own column: with `column: false` a mode with a grip
+	 * leaves `<DataGrid.RowDragHandle />` working wherever the author placed it, and `'step'` or
+	 * `false` makes that handle render nothing.
+	 */
+	controls?: boolean | ReorderMode
+	/**
 	 * Presentation of the auto-injected `__drag__` column — the drag handle's own column, first in
 	 * the row, pinned at the start edge and fixed in width. See {@link SystemColumnDef}.
 	 *
-	 * The column exists only when the grid can actually drag: row ordering on **and** a drag
-	 * adapter bound with `createDataGrid({ dnd })`. Without an adapter rows move through the
-	 * actions menu, and an empty column would only take width.
+	 * The column exists only when the grid can actually drag: row ordering on, a drag adapter
+	 * bound with `createDataGrid({ dnd })`, **and** a {@link RowOrderingConfig.controls} mode with a
+	 * grip. Without an adapter rows move through the actions menu, and an empty column would only
+	 * take width.
 	 *
 	 * `false` leaves the column out, for a grid that places `<DataGrid.RowDragHandle />` itself —
 	 * in a column's `cell.component`, or through a row's render function.
@@ -1044,12 +1076,16 @@ export type TableConfig<TFeatures extends TableFeatures, TRow extends object> = 
 	/**
 	 * Columns, from `createColumns` / `createColumnHelper` or written inline.
 	 *
-	 * The cell-type parameter is deliberately widened to `string` here rather than threaded
-	 * through `TableConfig`: a second type parameter on this type destroys `TRow` inference
-	 * at every `useDataGrid({ data, columns })` call site, which is far more costly than what
-	 * it would buy. Nothing is lost — a custom `cell: { type: … }` is checked against the
-	 * kit's registry by the **bound** `createColumns` / `createColumnHelper` that produced the
-	 * array, which is where the author writes it. This slot only has to accept the result.
+	 * This slot does **not** check `cell.type` or `cell.config`: the registry is left open here
+	 * rather than threaded through `TableConfig`, because a second type parameter that a call site
+	 * has to *infer* destroys `TRow` inference at every `createTable({ data, columns })`.
+	 *
+	 * The check happens one level up, where the registry is already known instead of inferred. A
+	 * `createDataGrid` bundle — the kits' prebuilt `DataGrid` among them — types this slot with its
+	 * own registry, widened by the grid's own `cellTypes`, so an inline `cell: { type: 'nosuch' }`
+	 * is a compile error there and `TRow` is still inferred from `data`. The bare React
+	 * `useDataGrid` / `DataGrid` take their registry from a provider at runtime, so they keep this
+	 * slot as it is. See `openspec/decisions/0016-bundle-types-inline-columns.md`.
 	 */
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	columns: ColumnDef<TRow, any, unknown>[]

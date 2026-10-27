@@ -711,7 +711,13 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		page: DocPage.ColumnsCustomCellTypes,
 		// The four renderer slots a `defineCellType` definition may carry.
 		optionTables: [{ heading: 'Declaring a config', roots: [GRID_TYPE.CellTypeDefinition], expectedCount: 4 }],
-		nonOptionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'For kit authors',
+				reason:
+					'First column describes what a kit does; second holds `KitCellTypes` type expressions, not option keys.',
+			},
+		],
 	},
 	{
 		page: DocPage.StateContext,
@@ -830,8 +836,14 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 	{
 		page: DocPage.RowOrdering,
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 1 }],
-		nonOptionTables: [],
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 2 }],
+		nonOptionTables: [
+			{
+				heading: 'The menu pair, the handle, or both',
+				reason:
+					'The first column is a `ReorderMode` value, not a key; the other two say what it resolves to with and without a drag adapter.',
+			},
+		],
 	},
 	{
 		// The narrative pages of the split: prose and live examples, every table moved to
@@ -864,7 +876,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			{ heading: 'Binding', roots: [GRID_TYPE.CreateDataGridOptions], expectedCount: 1 },
 			// The `ordering` tree, resolved through its `boolean | …Config` and `false | SystemColumnDef`
 			// unions, plus `getRowId` and `direction`, which row and RTL drags read.
-			{ heading: 'Grid options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 10 },
+			{ heading: 'Grid options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 11 },
 			{ heading: 'Column def', roots: [GRID_TYPE.ColumnDef], expectedCount: 1 },
 			{ heading: 'Announcements', roots: [GRID_TYPE.GridMessages], expectedCount: 13 },
 		],

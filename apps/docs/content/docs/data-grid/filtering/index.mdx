@@ -84,6 +84,18 @@ The hint reaches the text input, the multi-select trigger, a cell type's own fil
 and the date, select and boolean controls have no free-text field to show it in. A
 [filter field](/docs/data-grid/filtering/fields) takes the same option.
 
+## Passing your own props to a filter
+
+A column's `filtering.component` receives `InputComponentProps` — `value`, `onChange`,
+`placeholder`, and the column's `cell.config` as `props.config`, the same config its cell and its
+editor read. There is no filter-only config: a setting only the filter needs goes in a closure, and
+a value that changes comes from the grid context, under the same rules as an
+[edit input](/docs/data-grid/editing#passing-your-own-props-to-an-input) — the component is mounted
+by identity, so a closure rebuilt with the columns remounts it.
+
+A registered cell type's own `filtering` renderer receives the richer `FieldState` instead — see
+[Custom cell types](/docs/data-grid/columns/custom-cell-types#declaring-a-config).
+
 ## See also
 
 - [Where filters live](/docs/data-grid/filtering/variants) — header, popover, panel, or two at once
