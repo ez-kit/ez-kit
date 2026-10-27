@@ -4,7 +4,7 @@
 //
 // Changesets rejects that combination outright ("Mixed changesets that contain both ignored and
 // not ignored packages are not allowed"), and nothing in the PR gate notices: the failure surfaces
-// in the `version` job after the merge, where it silently stops the release PR from being written.
+// in the `version` job after the merge, where it silently stops the version PR from being written.
 // `@ez-kit/data-grid-shadcn` left the npm release contour when the kit became a shadcn registry
 // item, and it has been written back into changeset frontmatter twice since.
 //

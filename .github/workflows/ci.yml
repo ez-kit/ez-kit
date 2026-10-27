@@ -3,8 +3,10 @@ name: CI
 on:
   pull_request:
     # `integration/**` are per-feature holding branches: epic-flow slice PRs target them,
-    # so they must get the same `verify` gate as PRs into develop/main.
-    branches: [develop, main, 'integration/**']
+    # so they must get the same `verify` gate as PRs into develop. `main` is absent on
+    # purpose: it takes no PRs — release.yml fast-forwards it — and a PR into it never gets
+    # the `verify` its branch protection requires, so it cannot be merged by accident.
+    branches: [develop, 'integration/**']
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -63,19 +65,17 @@ jobs:
     # those measurements disagree with themselves. Three jobs side by side keep the wall clock
     # down without putting two browsers on one CPU.
     #
-    # Not run on the two PRs that carry no source change:
+    # Not run on the version PR (`changeset-release/develop -> develop`), the one PR that
+    # carries no source change: it touches only `version` fields, CHANGELOGs and the consumed
+    # changeset files. Every internal dependency is declared `workspace:^` / `workspace:*`, so
+    # changesets rewrites no range and the lockfile does not move — nothing this suite renders
+    # or measures differs from the commit it branched from.
     #
-    # - the release PR (`develop -> main`) carries the tree `develop` just gated, and `main`
-    #   receives nothing else;
-    # - the version PR (`changeset-release/develop -> develop`) touches only `version` fields,
-    #   CHANGELOGs and the consumed changeset files. Every internal dependency is declared
-    #   `workspace:^` / `workspace:*`, so changesets rewrites no range and the lockfile does not
-    #   move — nothing this suite renders or measures differs from the commit it branched from.
-    #
-    # `verify` still runs on both: on the release PR it is the gate in front of `changeset
-    # publish`, and on the version PR `pnpm lint` runs `check-site-url.mjs` over the CHANGELOGs
-    # it has just written from changeset summaries, where a stale origin would otherwise ship.
-    if: github.base_ref != 'main' && github.head_ref != 'changeset-release/develop'
+    # `verify` still runs on it, and it is the last gate in front of `changeset publish`:
+    # merging the version PR is the release. Its `pnpm lint` also runs `check-site-url.mjs`
+    # over the CHANGELOGs just written from changeset summaries, where a stale origin would
+    # otherwise ship.
+    if: github.head_ref != 'changeset-release/develop'
     name: e2e (${{ matrix.project }})
     runs-on: ubuntu-latest
     strategy:
@@ -126,7 +126,7 @@ jobs:
     # When the matrix job is skipped by the `if:` above, GitHub reports a single check named
     # `e2e (${{ matrix.project }})`, unexpanded, because the matrix never expanded (see the
     # version PR #232). Requiring `e2e (shadcn)` and its siblings would therefore leave three
-    # checks that are never reported — permanently pending — on exactly the two PRs that are
+    # checks that are never reported — permanently pending — on exactly the PR that is
     # meant to skip the suite. This job's name never varies, and it reads the matrix's aggregate
     # result instead.
     name: e2e gate
@@ -137,7 +137,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Require the browser suite
-        # `skipped` is a pass: the release and version PRs do not run the suite on purpose.
+        # `skipped` is a pass: the version PR does not run the suite on purpose.
         # Anything else — a failing kit, a cancelled run — fails the merge gate.
         run: |
           echo "e2e: ${{ needs.e2e.result }}"
