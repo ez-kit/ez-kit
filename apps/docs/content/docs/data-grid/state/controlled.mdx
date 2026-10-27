@@ -86,8 +86,9 @@ What the block shows, slice by slice:
 - **`rowOrder` is the uncontrolled row order.** It fills in on the first move. Pass
   `ordering.row.onChange` instead and the order lives in your `data`, and this slice stays empty.
 - **The system columns are in `columnPinning`.** `__drag__`, `__selection__`, `__expand__` and
-  `__actions__` are pinned like any column. Do not seed `columnPinning` with empty arrays, or they
-  lose their place.
+  `__actions__` are pinned like any column, and `onStateChange` reports them. You do not have to
+  pass them back: a controlled `columnPinning` without them, `{ start: [], end: [] }` included, is
+  completed by the grid, and that correction is not reported as a change.
 - **`columnResizing` is the gesture in progress**, and `columnSizing` is its result. Drag a column
   edge to watch the first update on every move and the second update on release.
 - **`editing`, `creating` and `deleting` are the open form and the pending confirmation**, with

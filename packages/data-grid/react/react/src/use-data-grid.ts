@@ -15,6 +15,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useDndBundleAdapter } from './data-grid/dnd'
 import { mergeGridOptionLayers, useDataGridOptions, useGridFactoryDefaults } from './data-grid-options-context'
 import { DATA_GRID_DEFAULTS, DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
+import { enforceControlledColumns } from './enforce-controlled-columns'
 import { createGridContextAtom, EMPTY_GRID_CONTEXT, syncGridContext } from './grid-context'
 import { describeUnrecognisedLoading, normalizeControlledState } from './normalize-controlled-state'
 import { ActionBarVariant } from './types'
@@ -26,6 +27,7 @@ import type { CellTypeRegistry } from './cell-types-context'
 import type { DndAdapter } from './data-grid/dnd'
 import type { PaginationLabelModel } from './data-grid/pagination-label'
 import type { DataGridDefaultOptions } from './data-grid-options-context'
+import type { ColumnSliceCache } from './enforce-controlled-columns'
 import type { GridContextAtom, GridContextRecord } from './grid-context'
 import type { ResolvedGridOptions } from './resolved-options'
 import type { ErasedRow, DataTable, GridFeatures, LoadMoreThreshold, LoadMoreTrigger, PaginationLabel } from './types'
@@ -1185,6 +1187,17 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 		},
 	)
 
+	// The controlled value with the column invariants applied — see `enforceControlledColumns`.
+	// Here rather than beside `normalizeControlledState` above because the invariants come from
+	// this render's resolved columns, and before both publishes so each writes the corrected value
+	// and the echo filter compares against it.
+	const columnSliceCacheRef = useRef<ColumnSliceCache>({})
+	controlledStateRef.current = enforceControlledColumns(
+		columnSliceCacheRef.current,
+		controlledStateRef.current,
+		coreGrid.columnState,
+	)
+
 	// A key the resolver **stops** writing must still be written, as `undefined`. `useTable`
 	// merges `{ ...prev, ...tableOptions }`, so an omitted key keeps the value the previous render
 	// left behind — a grid that stops supplying `creating.onSave`, or turns `pagination.manual`
@@ -1298,6 +1311,9 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 	// state and reaches the consumer, and the echo filter on the subscription above stops the
 	// consumer's own value being reported back to them.
 	//
+	// Publishing bypasses the `on<Slice>Change` handlers, and with them the column invariants,
+	// which is why the value published is the one `enforceControlledColumns` corrected above.
+	//
 	// After the first render (which seeds it during render, above) every publish waits for the
 	// commit, because by then a subscribed child's `useSyncExternalStore` callback is live and
 	// waking it mid-render is React's "Cannot update a component while rendering a different
@@ -1392,13 +1408,16 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 	const grid: ResolvedGridOptions = {
 		cellTypes,
 		messages,
-		// Core's three, read straight off the bag `createTableOptions` returned rather than off the
+		// Core's members, read straight off the bag `createTableOptions` returned rather than off the
 		// previous `table.grid`. Reading them back was only ever necessary because `createTable`
 		// wrote them onto the table before this layer overwrote it wholesale; with the resolver
 		// called here, the values are in hand and the read-back — which was not idempotent, since
 		// `rowPinning` is `pinning.rowConfig` by the time it lands — is gone.
 		rowActions: erasedCoreGrid.rowActions,
 		direction: erasedCoreGrid.direction,
+		// Core's column invariants, bound to this render's columns. Read by `extractState` /
+		// `useExtractedState`, which persist without the columns the config places.
+		columnState: erasedCoreGrid.columnState,
 		...(rowProps !== undefined ? { rowProps: rowProps as unknown as RowPropsResolver<never> } : {}),
 		layout: {
 			stickyHeader: layout?.stickyHeader ?? false,

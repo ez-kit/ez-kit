@@ -1,4 +1,4 @@
-import { createColumns } from '@ez-kit/data-grid-core'
+import { createColumns, SELECTION_COLUMN_ID } from '@ez-kit/data-grid-core'
 import { act, renderHook } from '@testing-library/react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
@@ -85,5 +85,64 @@ describe('useExtractedState', () => {
 		const markup = renderToStaticMarkup(<Seeded />)
 		expect(markup).toContain('&quot;name&quot;')
 		expect(markup).toContain('&quot;desc&quot;:true')
+	})
+})
+
+describe('useExtractedState — without the columns the config places', () => {
+	function useSelectableGrid() {
+		const grid = useDataGrid({
+			features: TEST_FEATURES,
+			data,
+			columns,
+			selection: true,
+			pinning: { column: true },
+		})
+		return { grid, state: useExtractedState(grid) }
+	}
+
+	it('keeps its identity across re-renders although the stripped value is rebuilt', () => {
+		const { result, rerender } = renderHook(useSelectableGrid)
+		const first = result.current.state
+
+		rerender()
+
+		expect(first.columnPinning).toEqual({ start: [], end: [] })
+		expect(result.current.state).toBe(first)
+	})
+
+	it('strips again when the config starts forcing a column the store already holds', () => {
+		const { result, rerender } = renderHook(
+			({ forced }: { forced: boolean }) => {
+				const grid = useDataGrid({
+					features: TEST_FEATURES,
+					data,
+					columns: createColumns<Row>([{ accessorKey: 'name', ...(forced ? { pinning: 'start' as const } : {}) }]),
+					pinning: { column: true },
+				})
+				return { grid, state: useExtractedState(grid) }
+			},
+			{ initialProps: { forced: false } },
+		)
+		act(() => {
+			result.current.grid.getColumn('name')?.pin('start')
+		})
+		expect(result.current.state.columnPinning?.start).toEqual(['name'])
+
+		rerender({ forced: true })
+
+		expect(result.current.state.columnPinning?.start).toEqual([])
+	})
+
+	it('reports a pin the user made, without the forced columns', () => {
+		const { result } = renderHook(useSelectableGrid)
+		const before = result.current.state
+
+		act(() => {
+			result.current.grid.getColumn('name')?.pin('start')
+		})
+
+		expect(result.current.state).not.toBe(before)
+		expect(result.current.state.columnPinning).toEqual({ start: ['name'], end: [] })
+		expect(result.current.grid.store.state.columnPinning.start).toEqual([SELECTION_COLUMN_ID, 'name'])
 	})
 })

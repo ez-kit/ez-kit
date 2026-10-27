@@ -1,7 +1,7 @@
 import { functionalUpdate, makeStateUpdater } from '@tanstack/table-core'
 
 import { mapColumns } from '../column/map-columns'
-import { buildColumnInvariants, enforceColumnInvariants, mergePinningSeed } from '../column-state'
+import { buildColumnInvariants, createColumnStateApi, enforceColumnInvariants, mergePinningSeed } from '../column-state'
 import { DEFAULT_PAGE_SIZE, UNKNOWN_PAGE_COUNT } from '../defaults'
 import { CreatingMode } from '../features/creating'
 import { EditingMode } from '../features/editing'
@@ -18,7 +18,7 @@ import { resolveFilterFields } from './resolve-filter-fields'
 import { withScalarRangeFilters } from './scalar-range-filters'
 
 import type { ColumnDef, ResolvedFilterField, SystemColumnDef } from '../column/types'
-import type { ColumnInvariants } from '../column-state'
+import type { ColumnInvariants, ColumnStateApi } from '../column-state'
 import type { DraftApplyHandlers } from '../features/deferred-apply'
 import type { OperatorsConfig } from '../features/operators'
 import type { RowActionsConfig } from '../features/row-actions'
@@ -448,6 +448,12 @@ export type GridOptions<TRow extends object> = {
 	 * table declares none, or when they are not offered because `filtering.manual` is not `true`.
 	 */
 	filterFields?: ResolvedFilterField[]
+	/**
+	 * The column invariants of this table — which columns the config pins or keeps visible — as
+	 * `enforce` / `strip` over a state. Every input path runs `enforce`; `extractState` runs
+	 * `strip`, so a persisted state holds only what the user chose.
+	 */
+	columnState: ColumnStateApi
 }
 
 /**
@@ -1480,7 +1486,18 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 		),
 		...named('onPaginationChange', buildSliceHandler<PaginationState>(table, 'pagination', onChange.pagination)),
 		...named('onRowSelectionChange', buildSliceHandler<RowSelectionState>(table, 'rowSelection', notifySelection)),
-		...named('onColumnOrderChange', buildSliceHandler<ColumnOrderState>(table, 'columnOrder', onChange.columnOrdering)),
+		// Constrained like the two slices below: a column order written without the forced columns
+		// would otherwise move them to its end, which the rendered pin region would hide and every
+		// move index would not.
+		...named(
+			'onColumnOrderChange',
+			buildSliceHandler<ColumnOrderState>(
+				table,
+				'columnOrder',
+				onChange.columnOrdering,
+				(next) => enforceColumnInvariants({ columnOrder: next }, columnInvariants).columnOrder,
+			),
+		),
 		...named('onRowPinningChange', buildSliceHandler<RowPinningState>(table, 'rowPinning', onChange.rowPinning)),
 		// `columnSizing` only — `columnResizing` (v8's `columnSizingInfo`) churns on every
 		// pointer move mid-drag, so its built-in writer is left alone.
@@ -1531,6 +1548,7 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 		...(hasGrouping ? { groupingMode: groupingCfg?.mode ?? GroupingMode.Single } : {}),
 		direction: config.direction ?? GridDirection.Ltr,
 		...(filterFields.length > 0 ? { filterFields } : {}),
+		columnState: createColumnStateApi(columnInvariants),
 	}
 
 	return { options, deferred, grid, bindStateHandlers }

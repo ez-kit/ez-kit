@@ -17,6 +17,7 @@ import type {
 } from './use-data-grid'
 import type { ReorderAffordances } from './utils/reorder-mode'
 import type {
+	ColumnStateApi,
 	GridMessages,
 	GridOptions,
 	ReorderMode,
@@ -45,6 +46,12 @@ import type { ComponentType, ReactNode } from 'react'
  * and one explicitly set to `undefined` mean the same thing here.
  */
 export type ResolvedGridOptions = {
+	/**
+	 * The column invariants of this grid as `enforce` / `strip`, passed through from core's
+	 * `GridOptions.columnState`. Absent on a table our `createTable` did not build, which has no
+	 * column config to derive them from.
+	 */
+	columnState?: ColumnStateApi | undefined
 	/** Cell-type renderers contributed via `useDataGrid({ cellTypes })`. */
 	cellTypes: CellTypeRegistry | undefined
 	/**
@@ -328,19 +335,20 @@ export type ResolvedGridOptions = {
  * which would otherwise crash the first component that read a nested field.
  *
  * @param core The bag `createTable` already wrote to `table.grid` ({@link GridOptions}), whose
- *   four members are folded in rather than overwritten. Omit it only for a table that never went
+ *   members are folded in rather than overwritten. Omit it only for a table that never went
  *   through our `createTable`.
  */
 export function defaultResolvedGridOptions(core?: GridOptions<never>): ResolvedGridOptions {
 	return {
 		cellTypes: undefined,
 		messages: defaultMessages,
-		// Core's four, folded in under this object's names. It **merges onto** what `createTable`
+		// Core's members, folded in under this object's names. It **merges onto** what `createTable`
 		// wrote rather than replacing it: the caller passes `table.grid`, and the defaults below
 		// cover a table that was not built by our `createTable` at all (a hand-rolled TanStack
 		// table driven through the compound components, or a test double).
 		rowActions: core?.rowActions ?? { placement: RowActionsPlacement.Inline },
 		direction: core?.direction ?? GridDirection.Ltr,
+		...(core?.columnState !== undefined ? { columnState: core.columnState } : {}),
 		layout: { stickyHeader: false, footer: false, stickyFooter: false },
 		ordering: {
 			column: false,
