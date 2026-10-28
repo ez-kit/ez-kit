@@ -10,6 +10,7 @@ import {
 } from '../items-source'
 
 import { presetsForOperator } from './date-presets'
+import { configWithItems } from './items-view'
 import { inputOf, toOperatorOptions } from './operator-input'
 
 import type { CellTypeRegistry } from '../cell-types-context'
@@ -95,6 +96,13 @@ type FilterModelBase = {
 	itemsLoading: boolean
 	/** What that hook failed with; `undefined` when it did not, and for any other list. */
 	itemsError: unknown
+	/**
+	 * The `config` the filter's renderers get: `cell.config` with `filtering.config` laid over it,
+	 * `items` replaced by {@link FilterModelBase.items}' source list for a `select` / `badge`.
+	 * Exactly as written otherwise — the grid reads none of it. `undefined` when the target states
+	 * no config, no layer and no list.
+	 */
+	config: Readonly<Record<string, unknown>> | undefined
 	/** The column's date presets the current operator can take, labelled from the dictionary. */
 	presets: DatePreset[]
 	/** The range control's bounds and slider flag, when the column states them. */
@@ -441,6 +449,7 @@ export function resolveFilter(
 		items,
 		itemsLoading: lists.options?.isLoading ?? false,
 		itemsError: lists.options?.error,
+		config: configWithItems(meta, ItemsSourceSlot.Filtering, lists.options),
 		between: filteringMeta?.betweenOperator,
 		debounce: filteringMeta?.debounce ?? tableDebounce,
 		placeholder: filteringMeta?.placeholder ?? filterName(target, messages),

@@ -1,6 +1,6 @@
 export { ItemsSourceProvider, useItemsSourceStore } from './context'
 export { ItemsSourceHost } from './host'
-export { baseListOf, hasItemCellType, labelListOf, optionsListOf, staticSnapshot } from './lists'
+export { baseListOf, configLayersOf, hasItemCellType, labelListOf, optionsListOf, staticSnapshot } from './lists'
 export type { ItemsMeta, ListSpec } from './lists'
 export { createItemsSourceStore, PENDING_SNAPSHOT } from './store'
 export type { ActiveSource, ItemsSourceStore, SourceRequest } from './store'

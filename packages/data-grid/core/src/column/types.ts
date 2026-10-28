@@ -649,7 +649,70 @@ export type CellDef<
 			[TKey in keyof TCellTypes & string]: CellArm<TKey, TCellTypes[TKey], TRow, TValue, TNode>
 	  }[keyof TCellTypes & string]
 
-export type ColumnFilteringConfig<TNode = unknown, TConfig = unknown> = {
+/** The surfaces of a column that take a config layer over its `cell.config`. */
+export type ColumnConfigSurface = 'filtering' | 'editing' | 'creating'
+
+/**
+ * The config layers a bundle declares, one type per surface — what `defineColumnConfig<T>()`
+ * carries. A surface left out is not declared, and its layer stays unchecked.
+ */
+export type ColumnConfigShape = { [TSurface in ColumnConfigSurface]?: object | undefined }
+
+/**
+ * No layer declared on any surface — the default wherever no bundle states one: core's own
+ * columns, the bare package grid and the public bundle types.
+ */
+export type UncheckedColumnConfig = { [TSurface in ColumnConfigSurface]?: undefined }
+
+/**
+ * The layer of a surface nobody declared: any keys, except the two a surface states its value list
+ * with. Those have options of their own — `filtering.items` / `filtering.useItems` and their
+ * `editing` / `creating` twins — and a second spelling of one list is not one this API offers.
+ */
+export type UncheckedConfigLayer = {
+	readonly [key: string]: unknown
+	items?: never
+	useItems?: never
+}
+
+/**
+ * The type a column's `<surface>.config` is checked against: the bundle's declared layer for that
+ * surface minus the list keys, else {@link UncheckedConfigLayer}.
+ *
+ * Typed per bundle, never per cell type: `filtering` and `cell` are sibling fields, so the layer
+ * has no way to see the column's `cell.type` (see the `ColumnInputRenderer` note above).
+ */
+export type ConfigLayerOf<TColumnConfig extends ColumnConfigShape, TSurface extends ColumnConfigSurface> = [
+	DeclaredLayer<TColumnConfig, TSurface>,
+] extends [never]
+	? UncheckedConfigLayer
+	: WithoutListKeys<DeclaredLayer<TColumnConfig, TSurface>>
+
+/**
+ * A declared layer minus the list keys, member by member: `Omit` is not distributive, so over a
+ * union layer (`{ mode: 'tags'; creatable?: boolean } | { mode: 'single' }`) it would keep only the
+ * keys every member shares and reject the rest.
+ */
+type WithoutListKeys<TLayer> = TLayer extends unknown ? Omit<TLayer, keyof NoListKeys> & NoListKeys : never
+
+/**
+ * The layer a shape declares for one surface, `never` when it declares none. The key is tested
+ * before it is read: indexing a shape that lacks it yields `{}` rather than `never`, which would
+ * turn an undeclared surface into one that accepts no key at all.
+ */
+type DeclaredLayer<TColumnConfig, TSurface extends ColumnConfigSurface> = TSurface extends keyof TColumnConfig
+	? NonNullable<TColumnConfig[TSurface]>
+	: never
+
+/**
+ * The two keys no layer may hold, spelled out on the declared layer as well as the unchecked one.
+ * Besides rejecting a list, this is what keeps columns with an unchecked layer — from core's own
+ * `createColumns` — assignable to a bundle's declared one: a declared layer of optional keys is a
+ * weak type, which TypeScript only accepts a type sharing one of its keys for.
+ */
+type NoListKeys = { items?: never; useItems?: never }
+
+export type ColumnFilteringConfig<TNode = unknown, TConfig = unknown, TLayer = UncheckedConfigLayer> = {
 	/**
 	 * Custom filter input component for this column.
 	 *
@@ -663,6 +726,17 @@ export type ColumnFilteringConfig<TNode = unknown, TConfig = unknown> = {
 	 * (`operators.byType`); `{ items }` narrows it.
 	 */
 	operators?: boolean | ColumnOperatorsConfig
+	/**
+	 * The filter's layer over `cell.config`. Every renderer of this column's filter — `component`,
+	 * a cell type's `filtering` renderer, the kit's `MultiSelectFilter` and `BetweenInput` — gets
+	 * one `config`: `cell.config` with these keys laid over it, each replacing the base's whole.
+	 * The cell and the editors never see it.
+	 *
+	 * The grid hands it on and reads none of it. Its type is the one the bundle declared with
+	 * `columnConfig`, unchecked where none was. A value list is not part of it: that is
+	 * {@link ColumnFilteringConfig.items}, which wins over both.
+	 */
+	config?: TLayer
 	/**
 	 * Date presets offered beside the filter control, on `cell: { type: 'date' }` columns.
 	 *
@@ -762,6 +836,12 @@ export type ColumnFilteringMeta = {
 	debounce?: number
 	/** The filter's visible hint, from `filtering.placeholder`. Never its accessible name. */
 	placeholder?: string
+	/**
+	 * The filter's layer over `cell.config`, from `filtering.config`, exactly as written —
+	 * row-erased, and never read by the grid. The React layer lays it over `cell.config` for the
+	 * filter's renderers.
+	 */
+	config?: Readonly<Record<string, unknown>>
 	/** Explicit multi-select value list, from `filtering.items`. */
 	items?: FilterItem[]
 	/** The filter's list hook, from `filtering.useItems`. */
@@ -836,7 +916,7 @@ export type ResolvedFilterField = {
 	filtering: ColumnFilteringMeta | undefined
 }
 
-export type ColumnEditingConfig<TNode = unknown, TValue = unknown, TConfig = unknown> = {
+export type ColumnEditingConfig<TNode = unknown, TValue = unknown, TConfig = unknown, TLayer = UncheckedConfigLayer> = {
 	/**
 	 * Custom edit input component for this column.
 	 *
@@ -845,6 +925,14 @@ export type ColumnEditingConfig<TNode = unknown, TValue = unknown, TConfig = unk
 	 * the component — `(props: FieldState<SelectCellConfig>)` — to name the `cell.config` it reads.
 	 */
 	component?: ColumnInputRenderer<FieldState<TConfig, TValue>, TNode>
+	/**
+	 * The editor's layer over `cell.config`: the edit input — `component` or the cell type's
+	 * `editing` renderer — gets `cell.config` with these keys laid over it, each replacing the
+	 * base's whole. The create field inherits it beneath its own `creating.config`; the cell and
+	 * the filter never see it. Typed by the bundle's `columnConfig`, unchecked where none was, and
+	 * never a value list — that is {@link ColumnEditingConfig.items}.
+	 */
+	config?: TLayer
 	/**
 	 * The values this column's editor offers — a fixed list, overriding the base `cell.config.items` /
 	 * `cell.config.useItems` of a `select` / `badge` column. Labels still come from the base: a
@@ -877,12 +965,25 @@ export type ColumnEditingConfig<TNode = unknown, TValue = unknown, TConfig = unk
 	debounce?: number
 }
 
-export type ColumnCreatingConfig<TRow = unknown, TValue = unknown, TNode = unknown, TConfig = unknown> = {
+export type ColumnCreatingConfig<
+	TRow = unknown,
+	TValue = unknown,
+	TNode = unknown,
+	TConfig = unknown,
+	TLayer = UncheckedConfigLayer,
+> = {
 	/**
 	 * Custom create input component for this column. Falls back to `editing.component` when omitted.
 	 * Receives a {@link FieldState} with the same shape as {@link ColumnEditingConfig.component}.
 	 */
 	component?: ColumnInputRenderer<FieldState<TConfig, TValue>, TNode>
+	/**
+	 * The create field's layer, laid over `cell.config` and `editing.config` in that order, each
+	 * key replacing what is beneath it whole — so a create field that states nothing has the
+	 * editor's layer. Typed by the bundle's `columnConfig`, unchecked where none was, and never a
+	 * value list — that is {@link ColumnCreatingConfig.items}.
+	 */
+	config?: TLayer
 	/**
 	 * The values this column's create field offers — a fixed list, overriding the base `cell.config.items` /
 	 * `cell.config.useItems` of a `select` / `badge` column and the editor's
@@ -1239,6 +1340,7 @@ export type ColumnDefCommon<
 	TValue,
 	TCellTypes extends CellTypeRegistryShape = BaseCellTypes,
 	TNode = unknown,
+	TColumnConfig extends ColumnConfigShape = UncheckedColumnConfig,
 > = {
 	id?: string
 	/**
@@ -1330,7 +1432,7 @@ export type ColumnDefCommon<
 	 * ] }
 	 * ```
 	 */
-	columns?: ColumnDef<TRow, TCellTypes, TNode>[]
+	columns?: ColumnDef<TRow, TCellTypes, TNode, TColumnConfig>[]
 
 	/**
 	 * Column pinning.
@@ -1411,7 +1513,7 @@ export type ColumnDefCommon<
 	ordering?: false
 
 	/** Column-level filtering config. Set to false to disable. */
-	filtering?: false | ColumnFilteringConfig<TNode>
+	filtering?: false | ColumnFilteringConfig<TNode, unknown, ConfigLayerOf<TColumnConfig, 'filtering'>>
 	/**
 	 * Whether this column participates in table-level global search.
 	 * - `false` — column is excluded from global search results
@@ -1424,9 +1526,9 @@ export type ColumnDefCommon<
 	 */
 	globalFiltering?: false
 	/** Column-level editing config. Set to false to disable. */
-	editing?: false | ColumnEditingConfig<TNode, TValue>
+	editing?: false | ColumnEditingConfig<TNode, TValue, unknown, ConfigLayerOf<TColumnConfig, 'editing'>>
 	/** Column-level creating config. Set to false to disable. */
-	creating?: false | ColumnCreatingConfig<TRow, TValue, TNode>
+	creating?: false | ColumnCreatingConfig<TRow, TValue, TNode, unknown, ConfigLayerOf<TColumnConfig, 'creating'>>
 
 	/**
 	 * Column-level resizing. `false` pins the column's width — the resize handle is not
@@ -1541,13 +1643,18 @@ export type ColumnDefCommon<
  * result collapses to the few properties every arm shares. Distribute over the arms instead —
  * `create-column-helper.ts`'s `BaseOptions` is the worked example.
  */
-export type ColumnDef<TRow extends object, TCellTypes extends CellTypeRegistryShape = BaseCellTypes, TNode = unknown> =
+export type ColumnDef<
+	TRow extends object,
+	TCellTypes extends CellTypeRegistryShape = BaseCellTypes,
+	TNode = unknown,
+	TColumnConfig extends ColumnConfigShape = UncheckedColumnConfig,
+> =
 	| {
-			[TKey in keyof TRow & string]: ColumnDefCommon<TRow, TRow[TKey], TCellTypes, TNode> & {
+			[TKey in keyof TRow & string]: ColumnDefCommon<TRow, TRow[TKey], TCellTypes, TNode, TColumnConfig> & {
 				accessorKey: TKey
 			}
 	  }[keyof TRow & string]
-	| (ColumnDefCommon<TRow, unknown, TCellTypes, TNode> & { accessorKey?: undefined })
+	| (ColumnDefCommon<TRow, unknown, TCellTypes, TNode, TColumnConfig> & { accessorKey?: undefined })
 
 export type ColumnWidthDef = {
 	/**

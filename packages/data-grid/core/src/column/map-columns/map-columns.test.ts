@@ -551,3 +551,31 @@ describe('mapColumns — aggregation', () => {
 		})
 	})
 })
+
+describe('mapColumns — config layers', () => {
+	it('filtering.config goes into meta.filtering as written', () => {
+		const config = { creatable: true }
+		const result = mapColumns<Row>([{ accessorKey: 'name', filtering: { config } }])
+		expect(filteringMeta(result[0])?.config).toBe(config)
+	})
+
+	it('no filtering.config leaves the key out of meta.filtering', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', filtering: { debounce: 0 } }])
+		expect(filteringMeta(result[0])).not.toHaveProperty('config')
+	})
+
+	// The types forbid a list in a layer; a column written in JavaScript can still carry one.
+	it.each(['filtering', 'editing', 'creating'] as const)(
+		'warns that a list in the %s layer belongs in its own `items`',
+		(surface) => {
+			const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+			const column = { id: `listed-${surface}`, accessorKey: 'name', [surface]: { config: { items: [] } } }
+
+			mapColumns<Row>([column as never])
+
+			expect(warn).toHaveBeenCalledWith(expect.stringContaining(`Column "listed-${surface}"`))
+			expect(warn).toHaveBeenCalledWith(expect.stringContaining(`\`${surface}.items\``))
+			warn.mockRestore()
+		},
+	)
+})

@@ -355,6 +355,10 @@ export type { GridComponentsProviderProps } from './components-context'
 export { CellTypesProvider, defineCellType, useCellTypes } from './cell-types-context'
 export type { CellTypeDefinition, CellTypeRegistry, CellTypesProviderProps, CellViewProps } from './cell-types-context'
 
+// Config layers — the type a bundle's `filtering` / `editing` / `creating.config` are checked against
+export { defineColumnConfig } from './column-config'
+export type { ColumnConfigMarker } from './column-config'
+
 // The nine base cell types a kit extends, and the two formatters their renderers use.
 //
 // Previously a `./cell-types` sub-export. Folded into the root so there is one entry point

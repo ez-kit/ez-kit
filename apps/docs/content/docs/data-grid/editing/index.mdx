@@ -184,21 +184,40 @@ grid cannot interpret rejects the promise. See
 An input has no separate props channel. Whatever it receives besides its `FieldState` comes from
 one of three places.
 
-**The column's `cell.config`.** One config serves every renderer of the column:
+**The column's `cell.config`, and a layer over it per surface.** `cell.config` is the base every
+renderer of the column reads. The filter, the editor and the create field each lay a layer of their
+own over it, key by key:
 
 ```
-cell.config --+--> view        CellViewProps.config
-              +--> editing     FieldState.config
-              +--> creating    FieldState.config
-              +--> filtering   FieldState.config / InputComponentProps.config
+cell.config ------------------------------------------> view        CellViewProps.config
+cell.config < editing.config -------------------------> editing     FieldState.config
+cell.config < editing.config < creating.config -------> creating    FieldState.config
+cell.config < filtering.config -----------------------> filtering   FieldState.config / InputComponentProps.config
 ```
 
-There is no `editing.config`. Put a setting here when it describes the column — a range, a step, a
-list — and holds for display and editing alike. A key the column's type does not declare is a
-compile error; to add one, [extend the type](/docs/data-grid/columns/custom-cell-types#extending-a-built-in-type).
+Put a setting in `cell.config` when it describes the column — a range, a step, a list — and holds
+for display and editing alike; a key the column's type does not declare is a compile error, and to
+add one, [extend the type](/docs/data-grid/columns/custom-cell-types#extending-a-built-in-type).
+Put it in `editing.config` when only the editor reads it:
 
-**A closure in `editing.component`.** For a value only the input needs, and one that does not
-change:
+```tsx
+{
+	accessorKey: 'phone',
+	header: 'Phone',
+	cell: { type: 'text' },
+	editing: { component: PhoneInput, config: { mask: '+7 (999) 999-99-99' } },
+}
+```
+
+A layer key replaces the base's whole rather than merging into it. The create field inherits the
+editor's layer under its own `creating.config` — see
+[Creating](/docs/data-grid/editing/creating#a-config-of-its-own). Neither layer states a list: that
+is `editing.items` / `creating.items`, which win over both. The grid reads none of a layer; a kit
+that declares its layers has their keys checked — see
+[Column config layers](/docs/data-grid/advanced/react#column-config-layers).
+
+**A closure in `editing.component`.** For an input written for one column alone, a closure works
+as well:
 
 ```tsx
 {

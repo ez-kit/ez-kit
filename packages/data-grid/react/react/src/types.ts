@@ -777,7 +777,7 @@ export type OperatorSelectProps = {
 	onChange: (operatorId: string) => void
 }
 
-export type BetweenInputProps = {
+export type BetweenInputProps<TConfig = Record<string, unknown>> = {
 	value: BetweenValue
 	onChange: (value: BetweenValue) => void
 	type: BetweenInputType
@@ -785,11 +785,19 @@ export type BetweenInputProps = {
 	slider?: boolean | undefined
 	min?: number
 	max?: number
+	/**
+	 * The column's `cell.config` with its `filtering.config` laid over it — the kit's own settings
+	 * for this column's range, which the grid hands on and never reads. Absent when the column
+	 * states neither. The bounds and the slider flag stay props of their own: those the grid reads.
+	 *
+	 * Annotate the slot with the layer type the bundle declared in `columnConfig`.
+	 */
+	config?: TConfig
 }
 
 export type { DatePreset, DateRangePreset, DateValuePreset, FilterItem }
 
-export type MultiSelectFilterProps = {
+export type MultiSelectFilterProps<TConfig = Record<string, unknown>> = {
 	/** The values on offer. Counts (when present) come from faceted unique values. */
 	items: FilterItem[]
 	/** Currently selected values. Empty array = no filter. */
@@ -816,6 +824,15 @@ export type MultiSelectFilterProps = {
 	itemsLoading?: boolean
 	/** What that hook failed with, when it did. Show it rather than an empty list. */
 	itemsError?: unknown
+	/**
+	 * The column's `cell.config` with its `filtering.config` laid over it, `items` replaced by the
+	 * filter's list — the same object a `filtering.component` gets. It is where a kit reads its own
+	 * per-column settings, a creatable mode say; the grid hands it on and never reads it, so what a
+	 * value matches stays the operator's `filterFn`. Absent when the column states neither.
+	 *
+	 * Annotate the slot with the layer type the bundle declared in `columnConfig`.
+	 */
+	config?: TConfig
 }
 
 export type ConfirmDialogProps = {

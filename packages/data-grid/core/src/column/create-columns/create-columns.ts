@@ -1,4 +1,10 @@
-import type { BaseCellTypes, CellTypeRegistryShape, ColumnDef } from '../types'
+import type {
+	BaseCellTypes,
+	CellTypeRegistryShape,
+	ColumnConfigShape,
+	ColumnDef,
+	UncheckedColumnConfig,
+} from '../types'
 
 /**
  * Typed identity helper — infers TRow from the array, returns the same array unchanged.
@@ -12,6 +18,7 @@ export function createColumns<
 	TRow extends object,
 	TCellTypes extends CellTypeRegistryShape = BaseCellTypes,
 	TNode = unknown,
->(defs: ColumnDef<TRow, TCellTypes, TNode>[]): ColumnDef<TRow, TCellTypes, TNode>[] {
+	TColumnConfig extends ColumnConfigShape = UncheckedColumnConfig,
+>(defs: ColumnDef<TRow, TCellTypes, TNode, TColumnConfig>[]): ColumnDef<TRow, TCellTypes, TNode, TColumnConfig>[] {
 	return defs
 }

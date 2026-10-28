@@ -12,6 +12,7 @@ import { createColumnHelper } from './react-columns'
 import { useDataGrid } from './use-data-grid'
 
 import type { CellTypeRegistry } from './cell-types-context'
+import type { ColumnConfigMarker } from './column-config'
 import type { GridComponents } from './contract'
 import type { DataGridControlledProps, DataGridSharedProps, DataGridStatics } from './data-grid/data-grid'
 import type { DndAdapter } from './data-grid/dnd'
@@ -20,7 +21,12 @@ import type { GridContextReader, GridContextRecord } from './grid-context'
 import type { ColumnDef, ColumnHelper } from './react-columns'
 import type { DataTable, GridFeatures } from './types'
 import type { UseDataGridConfig } from './use-data-grid'
-import type { ColumnDef as CoreColumnDef, OperatorsConfig } from '@ez-kit/data-grid-core'
+import type {
+	ColumnConfigShape,
+	ColumnDef as CoreColumnDef,
+	OperatorsConfig,
+	UncheckedColumnConfig,
+} from '@ez-kit/data-grid-core'
 import type { TableFeatures } from '@tanstack/table-core'
 
 /** The ids a registry actually holds, as a string union — what the runtime helper is built from. */
@@ -30,6 +36,7 @@ export type CreateDataGridOptions<
 	TCellTypes extends CellTypeRegistry,
 	TFeatures extends TableFeatures | undefined = undefined,
 	TContext extends object | undefined = undefined,
+	TColumnConfig extends ColumnConfigShape = UncheckedColumnConfig,
 > = {
 	/**
 	 * The kit's components, feature-grouped. Every group and every member is already optional
@@ -160,6 +167,16 @@ export type CreateDataGridOptions<
 	 * because it is the one that types the bundle.
 	 */
 	defaults?: Omit<DataGridDefaultOptions<GridFeatures, object>, 'context'>
+	/**
+	 * The config layers this bundle's columns write, from {@link defineColumnConfig}: the type of
+	 * `filtering.config`, `editing.config` and `creating.config`, per surface. Type-only — the
+	 * value is never read. A surface it leaves out, and every surface of a bundle without it, is
+	 * unchecked.
+	 *
+	 * Declare a layer only for the renderers this bundle ships that read it — the kit's
+	 * `MultiSelectFilter`, say. A column's own `component` reads whatever it annotates.
+	 */
+	columnConfig?: ColumnConfigMarker<TColumnConfig>
 }
 
 /**
@@ -190,13 +207,14 @@ export type RegistryUseDataGridConfig<
 	TContext extends object = GridContextRecord,
 	TCellTypes extends CellTypeRegistry = UncheckedCellTypes,
 	TExtra extends CellTypeRegistry = NoExtraCellTypes,
+	TColumnConfig extends ColumnConfigShape = UncheckedColumnConfig,
 > = Omit<UseDataGridConfig<TFeatures, TRow, TContext>, 'columns' | 'cellTypes'> & {
 	/**
 	 * Columns, checked against the bundle's registry and this grid's `cellTypes`. The node type
 	 * stays `unknown`, as on `TableConfig.columns`, so columns from core's own `createColumns`
 	 * keep fitting.
 	 */
-	columns: CoreColumnDef<TRow, TCellTypes & NoInfer<TExtra>>[]
+	columns: CoreColumnDef<TRow, TCellTypes & NoInfer<TExtra>, unknown, TColumnConfig>[]
 	/** Custom cell types for this grid alone, merged over the bundle's. Their ids become valid `cell.type`s here. */
 	cellTypes?: TExtra
 }
@@ -216,7 +234,8 @@ export type BoundUseDataGridConfig<
 	TContext extends object = GridContextRecord,
 	TCellTypes extends CellTypeRegistry = UncheckedCellTypes,
 	TExtra extends CellTypeRegistry = NoExtraCellTypes,
-> = Omit<RegistryUseDataGridConfig<TFeatures, TRow, TContext, TCellTypes, TExtra>, 'features'> & {
+	TColumnConfig extends ColumnConfigShape = UncheckedColumnConfig,
+> = Omit<RegistryUseDataGridConfig<TFeatures, TRow, TContext, TCellTypes, TExtra, TColumnConfig>, 'features'> & {
 	/** Overrides the bundle's set for this grid alone. Omit to run on the bundle's. */
 	features?: TFeatures
 }
@@ -239,9 +258,11 @@ export type BoundDataGridProps<
 	TContext extends object = GridContextRecord,
 	TCellTypes extends CellTypeRegistry = UncheckedCellTypes,
 	TExtra extends CellTypeRegistry = NoExtraCellTypes,
+	TColumnConfig extends ColumnConfigShape = UncheckedColumnConfig,
 > =
 	| DataGridControlledProps<TFeatures, TRow>
-	| (DataGridSharedProps & BoundUseDataGridConfig<TFeatures, TRow, TContext, TCellTypes, TExtra> & { table?: never })
+	| (DataGridSharedProps &
+			BoundUseDataGridConfig<TFeatures, TRow, TContext, TCellTypes, TExtra, TColumnConfig> & { table?: never })
 
 /** `DataGridProps` with `columns` checked the same way as {@link RegistryUseDataGridConfig}. */
 export type RegistryDataGridProps<
@@ -250,9 +271,13 @@ export type RegistryDataGridProps<
 	TContext extends object = GridContextRecord,
 	TCellTypes extends CellTypeRegistry = UncheckedCellTypes,
 	TExtra extends CellTypeRegistry = NoExtraCellTypes,
+	TColumnConfig extends ColumnConfigShape = UncheckedColumnConfig,
 > =
 	| DataGridControlledProps<TFeatures, TRow>
-	| (DataGridSharedProps & RegistryUseDataGridConfig<TFeatures, TRow, TContext, TCellTypes, TExtra> & { table?: never })
+	| (DataGridSharedProps &
+			RegistryUseDataGridConfig<TFeatures, TRow, TContext, TCellTypes, TExtra, TColumnConfig> & {
+				table?: never
+			})
 
 /**
  * The compound `DataGrid` a feature-bound bundle hands back: the relaxed call signature, and
@@ -263,12 +288,13 @@ export type BoundDataGrid<
 	TFeatures extends TableFeatures,
 	TContext extends object = GridContextRecord,
 	TCellTypes extends CellTypeRegistry = UncheckedCellTypes,
+	TColumnConfig extends ColumnConfigShape = UncheckedColumnConfig,
 > = (<
 	TRow extends object,
 	TConfigFeatures extends TableFeatures = TFeatures,
 	TExtra extends CellTypeRegistry = NoExtraCellTypes,
 >(
-	props: BoundDataGridProps<TConfigFeatures, TRow, TContext, TCellTypes, TExtra>,
+	props: BoundDataGridProps<TConfigFeatures, TRow, TContext, TCellTypes, TExtra, TColumnConfig>,
 ) => ReturnType<typeof DataGrid>) &
 	DataGridStatics
 
@@ -277,12 +303,13 @@ export type BoundUseDataGrid<
 	TFeatures extends TableFeatures,
 	TContext extends object = GridContextRecord,
 	TCellTypes extends CellTypeRegistry = UncheckedCellTypes,
+	TColumnConfig extends ColumnConfigShape = UncheckedColumnConfig,
 > = <
 	TRow extends object,
 	TConfigFeatures extends TableFeatures = TFeatures,
 	TExtra extends CellTypeRegistry = NoExtraCellTypes,
 >(
-	config: BoundUseDataGridConfig<TConfigFeatures, TRow, TContext, TCellTypes, TExtra>,
+	config: BoundUseDataGridConfig<TConfigFeatures, TRow, TContext, TCellTypes, TExtra, TColumnConfig>,
 ) => DataTable<TConfigFeatures, TRow>
 
 /**
@@ -291,12 +318,12 @@ export type BoundUseDataGrid<
  * the bundle's registry. A bundle with neither a set nor a context gets it too, at
  * {@link GridContextRecord}: the registry is the one thing every bundle carries.
  */
-export type ContextBoundDataGrid<TContext extends object, TCellTypes extends CellTypeRegistry = UncheckedCellTypes> = (<
-	TFeatures extends TableFeatures,
-	TRow extends object,
-	TExtra extends CellTypeRegistry = NoExtraCellTypes,
->(
-	props: RegistryDataGridProps<TFeatures, TRow, TContext, TCellTypes, TExtra>,
+export type ContextBoundDataGrid<
+	TContext extends object,
+	TCellTypes extends CellTypeRegistry = UncheckedCellTypes,
+	TColumnConfig extends ColumnConfigShape = UncheckedColumnConfig,
+> = (<TFeatures extends TableFeatures, TRow extends object, TExtra extends CellTypeRegistry = NoExtraCellTypes>(
+	props: RegistryDataGridProps<TFeatures, TRow, TContext, TCellTypes, TExtra, TColumnConfig>,
 ) => ReturnType<typeof DataGrid>) &
 	DataGridStatics
 
@@ -304,8 +331,9 @@ export type ContextBoundDataGrid<TContext extends object, TCellTypes extends Cel
 export type ContextBoundUseDataGrid<
 	TContext extends object,
 	TCellTypes extends CellTypeRegistry = UncheckedCellTypes,
+	TColumnConfig extends ColumnConfigShape = UncheckedColumnConfig,
 > = <TFeatures extends TableFeatures, TRow extends object, TExtra extends CellTypeRegistry = NoExtraCellTypes>(
-	config: RegistryUseDataGridConfig<TFeatures, TRow, TContext, TCellTypes, TExtra>,
+	config: RegistryUseDataGridConfig<TFeatures, TRow, TContext, TCellTypes, TExtra, TColumnConfig>,
 ) => DataTable<TFeatures, TRow>
 
 /**
@@ -343,13 +371,14 @@ export type DataGridBundle<
 	TCellTypes extends CellTypeRegistry,
 	TFeatures extends TableFeatures | undefined = undefined,
 	TContext extends object | undefined = undefined,
+	TColumnConfig extends ColumnConfigShape = UncheckedColumnConfig,
 > = {
 	DataGrid: TFeatures extends TableFeatures
-		? BoundDataGrid<TFeatures, InstanceContext<TContext>, TCellTypes>
-		: ContextBoundDataGrid<InstanceContext<TContext>, TCellTypes>
+		? BoundDataGrid<TFeatures, InstanceContext<TContext>, TCellTypes, TColumnConfig>
+		: ContextBoundDataGrid<InstanceContext<TContext>, TCellTypes, TColumnConfig>
 	useDataGrid: TFeatures extends TableFeatures
-		? BoundUseDataGrid<TFeatures, InstanceContext<TContext>, TCellTypes>
-		: ContextBoundUseDataGrid<InstanceContext<TContext>, TCellTypes>
+		? BoundUseDataGrid<TFeatures, InstanceContext<TContext>, TCellTypes, TColumnConfig>
+		: ContextBoundUseDataGrid<InstanceContext<TContext>, TCellTypes, TColumnConfig>
 	/**
 	 * Reads the grid context as this bundle's type — the factory default's, complete, when the
 	 * factory was given one; {@link GridContextRecord} otherwise. The package's own
@@ -358,8 +387,10 @@ export type DataGridBundle<
 	useGridContext: GridContextReader<BundleContext<TContext>>
 	useDataGridState: typeof useDataGridState
 	GridComponentsProvider: typeof GridComponentsProvider
-	createColumns: <TRow extends object>(defs: ColumnDef<TRow, TCellTypes>[]) => ColumnDef<TRow, TCellTypes>[]
-	createColumnHelper: <TRow extends object>() => ColumnHelper<TRow, TCellTypes>
+	createColumns: <TRow extends object>(
+		defs: ColumnDef<TRow, TCellTypes, TColumnConfig>[],
+	) => ColumnDef<TRow, TCellTypes, TColumnConfig>[]
+	createColumnHelper: <TRow extends object>() => ColumnHelper<TRow, TCellTypes, TColumnConfig>
 }
 
 /**
@@ -387,6 +418,7 @@ export function createDataGrid<
 	TCellTypes extends CellTypeRegistry = CellTypeRegistry,
 	TFeatures extends TableFeatures | undefined = undefined,
 	TContext extends object | undefined = undefined,
+	TColumnConfig extends ColumnConfigShape = UncheckedColumnConfig,
 >({
 	components,
 	cellTypes,
@@ -396,7 +428,12 @@ export function createDataGrid<
 	defaults,
 	dnd,
 	keyboardNavigation = false,
-}: CreateDataGridOptions<TCellTypes, TFeatures, TContext>): DataGridBundle<TCellTypes, TFeatures, TContext> {
+}: CreateDataGridOptions<TCellTypes, TFeatures, TContext, TColumnConfig>): DataGridBundle<
+	TCellTypes,
+	TFeatures,
+	TContext,
+	TColumnConfig
+> {
 	/*
 	 * `features` is folded into the defaults layer rather than carried separately: the layer
 	 * merge already treats it correctly — `mergeOptionLayers` replaces `features` wholesale
@@ -459,17 +496,19 @@ export function createDataGrid<
 	// that class of drift impossible.
 	Object.assign(BoundDataGrid, DataGrid)
 
-	function boundDefineColumns<TRow extends object>(defs: ColumnDef<TRow, TCellTypes>[]): ColumnDef<TRow, TCellTypes>[] {
+	function boundDefineColumns<TRow extends object>(
+		defs: ColumnDef<TRow, TCellTypes, TColumnConfig>[],
+	): ColumnDef<TRow, TCellTypes, TColumnConfig>[] {
 		return defs
 	}
 
-	function boundCreateColumnHelper<TRow extends object>(): ColumnHelper<TRow, TCellTypes> {
+	function boundCreateColumnHelper<TRow extends object>(): ColumnHelper<TRow, TCellTypes, TColumnConfig> {
 		const ids = Object.keys(cellTypes ?? {}) as KitCellTypeId<TCellTypes>[]
 		// No registry at all: fall back to the base contract's ids, so a bundle built without
 		// `cellTypes` still answers to `.text()` / `.select()` rather than to nothing.
 		return ids.length > 0
-			? createColumnHelper<TRow, TCellTypes>(ids)
-			: (createColumnHelper<TRow>() as unknown as ColumnHelper<TRow, TCellTypes>)
+			? createColumnHelper<TRow, TCellTypes, TColumnConfig>(ids)
+			: (createColumnHelper<TRow>() as unknown as ColumnHelper<TRow, TCellTypes, TColumnConfig>)
 	}
 
 	// Bind the kit-level `defaults` as the base option layer for every call. `BoundDataGrid`
@@ -507,9 +546,14 @@ export function createDataGrid<
 	 * in that `features` is optional.
 	 */
 	return {
-		DataGrid: BoundDataGrid as DataGridBundle<TCellTypes, TFeatures, TContext>['DataGrid'],
-		useDataGrid: useDataGridWithDefaults as DataGridBundle<TCellTypes, TFeatures, TContext>['useDataGrid'],
-		useGridContext: useGridContext as DataGridBundle<TCellTypes, TFeatures, TContext>['useGridContext'],
+		DataGrid: BoundDataGrid as DataGridBundle<TCellTypes, TFeatures, TContext, TColumnConfig>['DataGrid'],
+		useDataGrid: useDataGridWithDefaults as DataGridBundle<
+			TCellTypes,
+			TFeatures,
+			TContext,
+			TColumnConfig
+		>['useDataGrid'],
+		useGridContext: useGridContext as DataGridBundle<TCellTypes, TFeatures, TContext, TColumnConfig>['useGridContext'],
 		useDataGridState,
 		GridComponentsProvider,
 		createColumns: boundDefineColumns,
