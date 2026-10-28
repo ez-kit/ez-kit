@@ -77,7 +77,8 @@ jobs:
     # otherwise ship.
     if: github.head_ref != 'changeset-release/develop'
     name: e2e (${{ matrix.project }})
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest moved to 26.04, where Playwright 1.59 cannot install Chromium.
+    runs-on: ubuntu-24.04
     strategy:
       # One kit failing is a fact worth having about the other; don't cancel its sibling.
       fail-fast: false
