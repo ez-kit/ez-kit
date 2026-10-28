@@ -6,10 +6,12 @@ import type {
 	CellTypeRegistryShape,
 	CellViewCtx,
 	ColumnDef,
+	ColumnConfigShape,
 	ColumnDefCommon,
 	ColumnRenderer,
 	ConfigOf,
 	RowBoundConfig,
+	UncheckedColumnConfig,
 } from '../types'
 
 /**
@@ -35,13 +37,21 @@ type CellViewOptions<TRow extends object, TValue, TNode> = {
  * members' keys, so that omit silently collapses the column def to the handful of properties
  * every arm shares. It compiles; it just quietly stops accepting most of the column.
  */
-type BaseOptions<TRow extends object, TCellTypes extends CellTypeRegistryShape, TNode> =
+type BaseOptions<
+	TRow extends object,
+	TCellTypes extends CellTypeRegistryShape,
+	TNode,
+	TColumnConfig extends ColumnConfigShape,
+> =
 	| {
-			[TKey in keyof TRow & string]: Omit<ColumnDefCommon<TRow, TRow[TKey], TCellTypes, TNode>, 'cell'> & {
+			[TKey in keyof TRow & string]: Omit<
+				ColumnDefCommon<TRow, TRow[TKey], TCellTypes, TNode, TColumnConfig>,
+				'cell'
+			> & {
 				accessorKey: TKey
 			} & CellViewOptions<TRow, TRow[TKey], TNode>
 	  }[keyof TRow & string]
-	| (Omit<ColumnDefCommon<TRow, unknown, TCellTypes, TNode>, 'cell'> & {
+	| (Omit<ColumnDefCommon<TRow, unknown, TCellTypes, TNode, TColumnConfig>, 'cell'> & {
 			accessorKey?: undefined
 	  } & CellViewOptions<TRow, unknown, TNode>)
 
@@ -64,10 +74,15 @@ type ConfigArg<TDefinition, TRow> = [ConfigOf<TDefinition>] extends [never]
  * *custom* type a method whose `config` was an untyped `Record<string, unknown>` — so the
  * built-ins were checked and the project's own types were not, which is backwards.
  */
-type TypeHelpers<TRow extends object, TCellTypes extends CellTypeRegistryShape, TNode> = {
+type TypeHelpers<
+	TRow extends object,
+	TCellTypes extends CellTypeRegistryShape,
+	TNode,
+	TColumnConfig extends ColumnConfigShape,
+> = {
 	[TKey in keyof TCellTypes & string]: (
-		opts: BaseOptions<TRow, TCellTypes, TNode> & ConfigArg<TCellTypes[TKey], TRow>,
-	) => ColumnDef<TRow, TCellTypes, TNode>
+		opts: BaseOptions<TRow, TCellTypes, TNode, TColumnConfig> & ConfigArg<TCellTypes[TKey], TRow>,
+	) => ColumnDef<TRow, TCellTypes, TNode, TColumnConfig>
 }
 
 /**
@@ -85,11 +100,12 @@ type TypeHelpers<TRow extends object, TCellTypes extends CellTypeRegistryShape, 
  * a second name for each of those slots, and the bare functions were typed against props they
  * never actually received.
  */
-type CustomOptions<TRow extends object, TCellTypes extends CellTypeRegistryShape, TNode> = BaseOptions<
-	TRow,
-	TCellTypes,
-	TNode
-> & {
+type CustomOptions<
+	TRow extends object,
+	TCellTypes extends CellTypeRegistryShape,
+	TNode,
+	TColumnConfig extends ColumnConfigShape,
+> = BaseOptions<TRow, TCellTypes, TNode, TColumnConfig> & {
 	type?: string
 	config?: Record<string, unknown>
 }
@@ -120,10 +136,13 @@ type CustomOptions<TRow extends object, TCellTypes extends CellTypeRegistryShape
  * may still want a built-in renderer, and the method cannot be generated per cell type without
  * a second type parameter on every one of them.
  */
-type ComputedOptions<TRow extends object, TValue, TCellTypes extends CellTypeRegistryShape, TNode> = Omit<
-	ColumnDefCommon<TRow, TValue, TCellTypes, TNode>,
-	'cell' | 'accessorFn' | 'id'
-> &
+type ComputedOptions<
+	TRow extends object,
+	TValue,
+	TCellTypes extends CellTypeRegistryShape,
+	TNode,
+	TColumnConfig extends ColumnConfigShape,
+> = Omit<ColumnDefCommon<TRow, TValue, TCellTypes, TNode, TColumnConfig>, 'cell' | 'accessorFn' | 'id'> &
 	CellViewOptions<TRow, TValue, TNode> & {
 		id: string
 		accessorFn: (row: TRow, index: number) => TValue
@@ -135,9 +154,12 @@ export type ColumnHelper<
 	TRow extends object,
 	TCellTypes extends CellTypeRegistryShape = BaseCellTypes,
 	TNode = unknown,
-> = TypeHelpers<TRow, TCellTypes, TNode> & {
-	custom(opts: CustomOptions<TRow, TCellTypes, TNode>): ColumnDef<TRow, TCellTypes, TNode>
-	computed<TValue>(opts: ComputedOptions<TRow, TValue, TCellTypes, TNode>): ColumnDef<TRow, TCellTypes, TNode>
+	TColumnConfig extends ColumnConfigShape = UncheckedColumnConfig,
+> = TypeHelpers<TRow, TCellTypes, TNode, TColumnConfig> & {
+	custom(opts: CustomOptions<TRow, TCellTypes, TNode, TColumnConfig>): ColumnDef<TRow, TCellTypes, TNode, TColumnConfig>
+	computed<TValue>(
+		opts: ComputedOptions<TRow, TValue, TCellTypes, TNode, TColumnConfig>,
+	): ColumnDef<TRow, TCellTypes, TNode, TColumnConfig>
 }
 
 /**
@@ -164,16 +186,18 @@ export function createColumnHelper<
 	TRow extends object,
 	TCellTypes extends CellTypeRegistryShape = BaseCellTypes,
 	TNode = unknown,
->(cellTypeIds?: readonly (keyof TCellTypes & string)[]): ColumnHelper<TRow, TCellTypes, TNode> {
+	TColumnConfig extends ColumnConfigShape = UncheckedColumnConfig,
+>(cellTypeIds?: readonly (keyof TCellTypes & string)[]): ColumnHelper<TRow, TCellTypes, TNode, TColumnConfig> {
 	const ids: readonly string[] = cellTypeIds ?? BASE_CELL_TYPE_IDS
 
-	const byType: Record<string, (opts: Record<string, unknown>) => ColumnDef<TRow, TCellTypes, TNode>> = {}
+	const byType: Record<string, (opts: Record<string, unknown>) => ColumnDef<TRow, TCellTypes, TNode, TColumnConfig>> =
+		{}
 	for (const id of ids) {
 		byType[id] = ({ config, cell, ...opts }) =>
 			({
 				...opts,
 				cell: { type: id, ...withConfig(config), ...(cell as object | undefined) },
-			}) as ColumnDef<TRow, TCellTypes, TNode>
+			}) as ColumnDef<TRow, TCellTypes, TNode, TColumnConfig>
 	}
 
 	/**
@@ -191,7 +215,7 @@ export function createColumnHelper<
 		config?: Record<string, unknown> | undefined
 		cell?: object | undefined
 	}) => {
-		const result = { ...rest } as ColumnDef<TRow, TCellTypes, TNode>
+		const result = { ...rest } as ColumnDef<TRow, TCellTypes, TNode, TColumnConfig>
 
 		if (type != null || config != null || cell != null) {
 			result.cell = {
@@ -204,5 +228,5 @@ export function createColumnHelper<
 		return result
 	}
 
-	return { ...byType, custom: build, computed: build } as ColumnHelper<TRow, TCellTypes, TNode>
+	return { ...byType, custom: build, computed: build } as ColumnHelper<TRow, TCellTypes, TNode, TColumnConfig>
 }

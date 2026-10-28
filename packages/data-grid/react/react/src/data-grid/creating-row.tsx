@@ -173,7 +173,7 @@ export function CreatingRow() {
 					value,
 					onChange,
 					onBlur,
-					...fieldItemsProps(meta ?? {}, fieldLists?.options, fieldLists?.labels, value),
+					...fieldItemsProps(meta ?? {}, ItemsSourceSlot.Creating, fieldLists?.options, fieldLists?.labels, value),
 					error: fieldError,
 					errors: fieldErrors,
 					isValidating,

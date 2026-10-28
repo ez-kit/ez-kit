@@ -1,7 +1,7 @@
 import { setIfDefined } from '../../utils/set-if-defined'
 import { normalizeColumnAlign, normalizeColumnPinning, normalizeColumnWidth } from '../normalize'
 
-import { liftItemsSource, warnOnBothItemSources } from './items-source'
+import { liftItemsSource, warnOnBothItemSources, warnOnListInLayer } from './items-source'
 import { resolveFiltering } from './resolve-filtering'
 
 import type { OperatorsConfig } from '../../features/operators'
@@ -143,8 +143,14 @@ function mapColumn<TRow extends object>(
 	setIfDefined(meta, 'creating', creating as ColumnMetaCreating<TRow>)
 	// `editing` / `creating` reach the meta as written, so their lists — and `useItems` beside
 	// `items` — travel with them; only the double statement needs a word.
-	if (editing) warnOnBothItemSources(who, 'editing', editing)
-	if (creating) warnOnBothItemSources(who, 'creating', creating)
+	if (editing) {
+		warnOnBothItemSources(who, 'editing', editing)
+		warnOnListInLayer(who, 'editing', editing.config)
+	}
+	if (creating) {
+		warnOnBothItemSources(who, 'creating', creating)
+		warnOnListInLayer(who, 'creating', creating.config)
+	}
 	setIfDefined(meta, 'headerClassName', headerClassName)
 	setIfDefined(meta, 'cellClassName', cellClassName as ColumnMetaClassName)
 	setIfDefined(meta, 'footerClassName', footerClassName)

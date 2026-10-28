@@ -105,6 +105,26 @@ Both accept a plain value as well as a function. Rules:
 Seeding the create form through `initialState.creating` is a **type error** — see
 [State model](/docs/data-grid/state).
 
+## A config of its own
+
+The create field's `config` is the column's `cell.config` with `editing.config` and then
+`creating.config` laid over it, key by key — so a field that states nothing has the editor's
+layer, and one that states a key overrides that key and keeps the rest:
+
+```tsx
+{
+	accessorKey: 'phone',
+	header: 'Phone',
+	editing: { component: PhoneInput, config: { mask: '+7 (999) 999-99-99', hint: 'Work phone' } },
+	creating: { config: { hint: 'Main contact phone' } },
+}
+// create field: { mask: '+7 (999) 999-99-99', hint: 'Main contact phone' }
+```
+
+It is the same inheritance as the field's list, which falls back to `editing.items` when
+`creating.items` states none — with one difference: a list is one value and falls back whole, a
+layer is a set of keys and merges.
+
 ## Validation
 
 One validator for the whole form, exactly as in [editing](/docs/data-grid/editing/validation) — a

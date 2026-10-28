@@ -2,7 +2,7 @@ import { DEFAULT_STATE_KEYS, DRAFT_STATE_KEY } from './state-keys'
 
 import type { DataGridState, DataGridStateOptions, PersistableSliceKey, PersistableStateKey } from './state-keys'
 import type { GridFeatures } from '../types'
-import type { AppliedState, DataTable as CoreDataTable, DraftApi } from '@ez-kit/data-grid-core'
+import type { AppliedState, ColumnStateApi, DataTable as CoreDataTable, DraftApi } from '@ez-kit/data-grid-core'
 import type { TableFeatures, TableState } from '@tanstack/table-core'
 
 /**
@@ -27,6 +27,7 @@ export function pickState(
 	state: TableState<GridFeatures>,
 	keys: readonly PersistableStateKey[],
 	isDraftDirty: boolean,
+	columnState?: ColumnStateApi,
 ): DataGridState {
 	const out: DataGridState = {}
 	for (const key of keys) {
@@ -36,7 +37,10 @@ export function pickState(
 		}
 		copySlice(out, state, key)
 	}
-	return out
+	// The columns the config pins or keeps visible are dropped: every input path puts them back
+	// (`initialState`, a slice write, a controlled `state`), so what is persisted is what the user
+	// chose, and it does not change with the features a grid has on.
+	return columnState === undefined ? out : columnState.strip(out)
 }
 
 /**
@@ -89,6 +93,11 @@ export type ExtractableTable<TFeatures extends TableFeatures, TRow extends objec
 > & {
 	/** Present only with `draftFeature` registered — see {@link readDraftDirty}. */
 	draft?: DraftApi | undefined
+	/**
+	 * The grid options, when the table has them — both `useDataGrid` and `createTable` set them.
+	 * Optional so anything with a `store` still extracts; without them nothing is stripped.
+	 */
+	grid?: { columnState?: ColumnStateApi | undefined } | undefined
 }
 
 /**
@@ -124,5 +133,6 @@ export function extractState<TFeatures extends TableFeatures, TRow extends objec
 		table.store.state as TableState<GridFeatures>,
 		options?.keys ?? DEFAULT_STATE_KEYS,
 		readDraftDirty(table),
+		table.grid?.columnState,
 	)
 }

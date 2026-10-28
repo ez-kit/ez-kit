@@ -72,11 +72,7 @@ context: |
   - Dragging rows/columns change only opacity and z-index, never layout: the drag library moves them.
 
 # Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+rules:
+  design:
+    - Before deciding, read the ADRs in openspec/decisions/ that cover the area, and do not contradict an accepted one without superseding it.
+    - Mark each decision that should outlive this change as "Durable"; it becomes a new ADR in openspec/decisions/ (format in its README.md) before the change is archived, with its one-paragraph rule and a link added to AGENTS.md.

@@ -9,6 +9,8 @@ import type {
 	ColumnDef as CoreColumnDef,
 	ColumnHelper as CoreColumnHelper,
 	CellDef as CoreCellDef,
+	ColumnConfigShape,
+	UncheckedColumnConfig,
 } from '@ez-kit/data-grid-core'
 import type { ReactNode } from 'react'
 
@@ -25,11 +27,11 @@ import type { ReactNode } from 'react'
  * A React column stays assignable to `TableConfig['columns']`, since a renderer returning
  * `ReactNode` is a renderer returning `unknown`.
  */
-export type ColumnDef<TRow extends object, TCellTypes extends CellTypeRegistry = BaseCellTypes> = CoreColumnDef<
-	TRow,
-	TCellTypes,
-	ReactNode
->
+export type ColumnDef<
+	TRow extends object,
+	TCellTypes extends CellTypeRegistry = BaseCellTypes,
+	TColumnConfig extends ColumnConfigShape = UncheckedColumnConfig,
+> = CoreColumnDef<TRow, TCellTypes, ReactNode, TColumnConfig>
 
 /** {@link ColumnDef}'s cell slot, bound to React. */
 export type CellDef<
@@ -39,25 +41,29 @@ export type CellDef<
 > = CoreCellDef<TRow, TValue, TCellTypes, ReactNode>
 
 /** The builder returned by {@link createColumnHelper}, bound to React. */
-export type ColumnHelper<TRow extends object, TCellTypes extends CellTypeRegistry = BaseCellTypes> = CoreColumnHelper<
-	TRow,
-	TCellTypes,
-	ReactNode
->
+export type ColumnHelper<
+	TRow extends object,
+	TCellTypes extends CellTypeRegistry = BaseCellTypes,
+	TColumnConfig extends ColumnConfigShape = UncheckedColumnConfig,
+> = CoreColumnHelper<TRow, TCellTypes, ReactNode, TColumnConfig>
 
 /**
  * Typed identity helper for React columns — the core one with `TNode` bound, so a `header` or
  * `cell.component` returning the wrong thing is a compile error rather than an `unknown`.
  */
-export function createColumns<TRow extends object, TCellTypes extends CellTypeRegistry = BaseCellTypes>(
-	defs: ColumnDef<TRow, TCellTypes>[],
-): ColumnDef<TRow, TCellTypes>[] {
-	return createCoreColumns<TRow, TCellTypes, ReactNode>(defs)
+export function createColumns<
+	TRow extends object,
+	TCellTypes extends CellTypeRegistry = BaseCellTypes,
+	TColumnConfig extends ColumnConfigShape = UncheckedColumnConfig,
+>(defs: ColumnDef<TRow, TCellTypes, TColumnConfig>[]): ColumnDef<TRow, TCellTypes, TColumnConfig>[] {
+	return createCoreColumns<TRow, TCellTypes, ReactNode, TColumnConfig>(defs)
 }
 
 /** {@link createColumnHelper} with `TNode` bound to React. */
-export function createColumnHelper<TRow extends object, TCellTypes extends CellTypeRegistry = BaseCellTypes>(
-	cellTypeIds?: readonly (keyof TCellTypes & string)[],
-): ColumnHelper<TRow, TCellTypes> {
-	return createCoreColumnHelper<TRow, TCellTypes, ReactNode>(cellTypeIds)
+export function createColumnHelper<
+	TRow extends object,
+	TCellTypes extends CellTypeRegistry = BaseCellTypes,
+	TColumnConfig extends ColumnConfigShape = UncheckedColumnConfig,
+>(cellTypeIds?: readonly (keyof TCellTypes & string)[]): ColumnHelper<TRow, TCellTypes, TColumnConfig> {
+	return createCoreColumnHelper<TRow, TCellTypes, ReactNode, TColumnConfig>(cellTypeIds)
 }

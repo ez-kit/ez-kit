@@ -61,6 +61,7 @@ separate — `globalFiltering` keeps searching with column filters off.
 | `useItems`        | `(params) => { items, isLoading?, error? }` | The same list from a hook — see [Value lists from a hook](/docs/data-grid/columns/async-items).                                                                                                              |
 | `faceted`         | `boolean`                                   | Per-column override for the table-level `filtering.faceted` flag.                                                                                                                                            |
 | `debounce`        | `number`                                    | Commit debounce (ms) for this column's text filter, overriding the table-level `filtering.debounce`. Discrete controls commit instantly and ignore it.                                                       |
+| `config`          | `object`                                    | The filter's layer over `cell.config`: every renderer of the filter gets the two merged, key by key. Never a list — see [Passing your own props to a filter](#passing-your-own-props-to-a-filter).           |
 | `placeholder`     | `string`                                    | A short hint the filter shows while empty. The control's accessible name stays `messages.filtering.placeholder` — see [Filter hints](#filter-hints).                                                         |
 
 A column with operators offers the grid's operator set for its `cell.type` — the kits' prebuilt `DataGrid` carries one for every built-in type — see [Operators](/docs/data-grid/filtering/operators).
@@ -83,6 +84,34 @@ The hint reaches the text input, the multi-select trigger, a cell type's own fil
 `filtering.component` (as `props.placeholder`). The `between` range keeps its own "From" / "To",
 and the date, select and boolean controls have no free-text field to show it in. A
 [filter field](/docs/data-grid/filtering/fields) takes the same option.
+
+## Passing your own props to a filter
+
+A column's `filtering.component` receives `InputComponentProps` — `value`, `onChange`,
+`placeholder`, and `props.config`. That `config` is the column's `cell.config` with
+`filtering.config` laid over it: a setting only the filter needs goes in `filtering.config`, and
+the cell and the editors never see it.
+
+```tsx
+const columns = createColumns<Ticket>([
+	{ accessorKey: 'tags', header: 'Tags', filtering: { component: TagFilter, config: { creatable: true } } },
+	{ accessorKey: 'labels', header: 'Labels', filtering: { component: TagFilter, config: { creatable: false } } },
+])
+```
+
+One `TagFilter` serves both columns and reads `props.config.creatable`. Each key of the layer
+replaces the base's whole — `{ format: { unit: 't' } }` over `{ format: { unit: 'kg', digits: 1 } }`
+is `{ unit: 't' }`, not a merge of the two. A value list is not part of it: `filtering.items` states
+the filter's list, and wins over both.
+
+The same `config` reaches every renderer of the filter: a registered cell type's own `filtering`
+renderer (in its richer `FieldState` — see
+[Custom cell types](/docs/data-grid/columns/custom-cell-types#declaring-a-config)), and the kit's
+multi-select and range controls. The grid reads none of it. On a kit that declares its layers, the
+keys are checked — see [Column config layers](/docs/data-grid/advanced/react#column-config-layers).
+
+A value that changes still comes from the grid context, under the same rules as an
+[edit input](/docs/data-grid/editing#passing-your-own-props-to-an-input).
 
 ## See also
 

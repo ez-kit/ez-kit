@@ -30,6 +30,22 @@ export function warnOnBothItemSources(who: string, level: string, config: ItemsL
 }
 
 /**
+ * Warns that a config layer holds a value list, which a layer never does: the surface states its
+ * list with `<surface>.items` / `<surface>.useItems`, which the React layer resolves, loads and
+ * puts on top of the layer. The key is dropped there, so it reaches no renderer. The types already
+ * forbid it; this is for a column written in JavaScript.
+ */
+export function warnOnListInLayer(who: string, surface: string, layer: object | null | undefined): void {
+	// `null` only reaches here from JavaScript; it is no layer, and `'items' in null` would throw.
+	if (!IS_DEV || layer == null) return
+	if (!('items' in layer) && !('useItems' in layer)) return
+	warnOnce(
+		`[data-grid] ${who} puts a value list in \`${surface}.config\`, which is ignored there. ` +
+			`State it with \`${surface}.items\` or \`${surface}.useItems\` instead.`,
+	)
+}
+
+/**
  * The resolved `cell` meta of a `select` / `badge` cell with its `useItems` and `getItem` lifted
  * out of `config` and onto the meta itself.
  *

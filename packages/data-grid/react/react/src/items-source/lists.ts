@@ -14,10 +14,10 @@ import type {
 export type ItemsMeta = {
 	cell?: ColumnCellMeta | undefined
 	filtering?: false | ColumnFilteringMeta | undefined
-	// Only the two list fields: the rest of these configs is generic over the row, and a list
-	// reader has no row type to name.
-	editing?: false | Pick<ColumnEditingConfig, 'items' | 'useItems'> | undefined
-	creating?: false | Pick<ColumnCreatingConfig, 'items' | 'useItems'> | undefined
+	// Only the two list fields and the config layer: the rest of these configs is generic over
+	// the row, and a list reader has no row type to name.
+	editing?: false | Pick<ColumnEditingConfig, 'items' | 'useItems' | 'config'> | undefined
+	creating?: false | Pick<ColumnCreatingConfig, 'items' | 'useItems' | 'config'> | undefined
 }
 
 /** The list one level states: a hook, or a fixed array. */
@@ -61,6 +61,34 @@ const OPTIONS_BY_SLOT: Record<ItemsSourceSlot, (meta: ItemsMeta) => ListSpec | u
 	[ItemsSourceSlot.Editing]: (meta) => listOf(ItemsOwner.Editing, meta.editing) ?? baseListOf(meta),
 	[ItemsSourceSlot.Creating]: (meta) =>
 		listOf(ItemsOwner.Creating, meta.creating) ?? listOf(ItemsOwner.Editing, meta.editing) ?? baseListOf(meta),
+}
+
+/** One level's config layer, as written. */
+export type ConfigLayer = Readonly<Record<string, unknown>>
+
+function layerOf(level: { config?: ConfigLayer | undefined } | false | undefined): ConfigLayer | undefined {
+	// Read as nullable: the types forbid a `null` layer, but a JavaScript column can still write one,
+	// and spreading it would throw where an absent layer is simply skipped.
+	const layer: ConfigLayer | null | undefined = level ? level.config : undefined
+	return layer ?? undefined
+}
+
+/**
+ * The config layers a slot lays over `cell.config`, nearest last — the same inheritance as
+ * {@link OPTIONS_BY_SLOT}, kept beside it so the two cannot drift: a create field takes the
+ * editor's layer beneath its own, as it takes the editor's list when it states none. The cell is
+ * the base itself and has no layer.
+ */
+const CONFIG_LAYERS_BY_SLOT: Record<ItemsSourceSlot, (meta: ItemsMeta) => readonly (ConfigLayer | undefined)[]> = {
+	[ItemsSourceSlot.Cell]: () => [],
+	[ItemsSourceSlot.Filtering]: (meta) => [layerOf(meta.filtering)],
+	[ItemsSourceSlot.Editing]: (meta) => [layerOf(meta.editing)],
+	[ItemsSourceSlot.Creating]: (meta) => [layerOf(meta.editing), layerOf(meta.creating)],
+}
+
+/** The config layers a slot lays over `cell.config`, nearest last; absent ones included. */
+export function configLayersOf(meta: ItemsMeta, slot: ItemsSourceSlot): readonly (ConfigLayer | undefined)[] {
+	return CONFIG_LAYERS_BY_SLOT[slot](meta)
 }
 
 /**

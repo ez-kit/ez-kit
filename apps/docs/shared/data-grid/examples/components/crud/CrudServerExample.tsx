@@ -174,7 +174,7 @@ export function CrudServerExample() {
 				visibility
 				pinning={{ column: true }}
 				selection
-				state={{ loading: { isPending, isFetching, isError: false, error: null } }}
+				state={{ loading: { isPending, isFetching } }}
 				creating={{
 					mode: 'modal',
 					onSave: async ({ values, signal }) => {

@@ -60,6 +60,26 @@ describe('filtering.fields', () => {
 		expect(grid.filterFields?.[0]?.filtering?.placeholder).toBe('Warehouse code')
 	})
 
+	it('keeps its `filtering.config` as written', () => {
+		const config = { creatable: true }
+		const { grid } = resolve({
+			manual: true,
+			fields: [{ ...warehouse, filtering: { operators: true, config } }],
+		})
+
+		expect(grid.filterFields?.[0]?.filtering?.config).toBe(config)
+	})
+
+	it('names a field that puts a value list in its layer as a field', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+		const listed = { id: 'listed', header: 'Listed', filtering: { config: { items: [] } } }
+
+		resolve({ manual: true, fields: [listed as never] })
+
+		expect(warn).toHaveBeenCalledWith(expect.stringContaining('Filter field "listed"'))
+		expect(warn).toHaveBeenCalledWith(expect.stringContaining('`filtering.items`'))
+	})
+
 	it('is never faceted, even under a table-wide `faceted: true`', () => {
 		vi.spyOn(console, 'warn').mockImplementation(() => undefined)
 		const { grid } = resolve({ manual: true, faceted: true, fields: [warehouse] })

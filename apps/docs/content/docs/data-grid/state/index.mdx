@@ -166,8 +166,10 @@ Some column-level settings are enforced on **every** write path — `initialStat
 `state`, and the per-slice setters (`table.setColumnPinning(…)`, `table.setColumnVisibility(…)`, …) alike. A state that violates one is corrected before it reaches the
 table:
 
-- **System columns** (`__selection__`, `__expand__`, `__actions__`) are always visible, and keep the
-  pins they were built with.
+- **System columns** (`__drag__`, `__selection__`, `__expand__`, `__actions__`) are always visible,
+  and keep the pins they were built with — on the outer edge of their side, so a column pinned to
+  the end sits inside the actions column. A non-empty `columnOrder` gets the start ones back at its
+  start and does not list the end ones, so they stay after every other column.
 - **`visibility: false`** columns are always visible — hiding is disabled for them.
 - **`pinning: 'start'` / `pinning: { side }`** columns keep that pin.
 

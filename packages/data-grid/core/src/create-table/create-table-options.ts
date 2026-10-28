@@ -1,7 +1,7 @@
 import { functionalUpdate, makeStateUpdater } from '@tanstack/table-core'
 
 import { mapColumns } from '../column/map-columns'
-import { buildColumnInvariants, enforceColumnInvariants, mergePinningSeed } from '../column-state'
+import { buildColumnInvariants, createColumnStateApi, enforceColumnInvariants, mergePinningSeed } from '../column-state'
 import { DEFAULT_PAGE_SIZE, UNKNOWN_PAGE_COUNT } from '../defaults'
 import { CreatingMode } from '../features/creating'
 import { EditingMode } from '../features/editing'
@@ -15,9 +15,10 @@ import { warnOnce } from '../utils/warn-once'
 
 import { withGatedFilteredRowModel } from './gate-column-filters'
 import { resolveFilterFields } from './resolve-filter-fields'
+import { withScalarRangeFilters } from './scalar-range-filters'
 
 import type { ColumnDef, ResolvedFilterField, SystemColumnDef } from '../column/types'
-import type { ColumnInvariants } from '../column-state'
+import type { ColumnInvariants, ColumnStateApi } from '../column-state'
 import type { DraftApplyHandlers } from '../features/deferred-apply'
 import type { OperatorsConfig } from '../features/operators'
 import type { RowActionsConfig } from '../features/row-actions'
@@ -26,6 +27,7 @@ import type {
 	GridDirection as GridDirectionValue,
 	GroupingMode as GroupingModeValue,
 	InitialTableState,
+	LoadingState,
 	MultiSortConfig,
 	PinningConfig,
 	RowPinningConfig,
@@ -446,6 +448,12 @@ export type GridOptions<TRow extends object> = {
 	 * table declares none, or when they are not offered because `filtering.manual` is not `true`.
 	 */
 	filterFields?: ResolvedFilterField[]
+	/**
+	 * The column invariants of this table — which columns the config pins or keeps visible — as
+	 * `enforce` / `strip` over a state. Every input path runs `enforce`; `extractState` runs
+	 * `strip`, so a persisted state holds only what the user chose.
+	 */
+	columnState: ColumnStateApi
 }
 
 /**
@@ -565,12 +573,20 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 	externals?: {
 		atoms?: ExternalAtoms<TFeatures>
 		/**
-		 * Whether this grid can drag rows — a drag adapter is bound. Core cannot see the adapter,
-		 * which lives in the React layer, so that layer says so here. With row ordering on it puts
-		 * the `__drag__` handle column in; absent, there is none, which is right for a table built
+		 * Whether rows are offered a grip — a drag adapter is bound **and** `ordering.row.controls`
+		 * resolved to a mode with one. Core cannot see the adapter, which lives in the React layer,
+		 * so that layer resolves the mode and says so here. With row ordering on it puts the
+		 * `__drag__` handle column in; absent, there is none, which is right for a table built
 		 * outside React, where nothing could render the handle anyway.
 		 */
 		rowDrag?: boolean
+		/**
+		 * Whether the row menu carries the one-step move pair — `ordering.row.controls` resolved by
+		 * the React layer, for the reason `rowDrag` is. `false` stops row ordering alone from
+		 * mounting the actions column, which would otherwise sit empty. Absent means `true`, the
+		 * pair a table built outside React has always been given.
+		 */
+		rowStepControls?: boolean
 	},
 ) {
 	/**
@@ -1019,6 +1035,9 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 	const rowActionsColumn = rowActionsCfg?.column as SystemColumnDef<TableFeatures> | undefined
 	const rowDragColumnDef = rowOrderingCfg?.column
 	const rowDragColumn = rowDragColumnDef === false ? undefined : rowDragColumnDef
+	// The step pair is the only thing row ordering puts in the actions cell, so a mode without it
+	// (`'drag'` beside an adapter, or `false`) is not a reason to mount that column.
+	const hasRowStepControls = rowOrderingCfg !== undefined && externals?.rowStepControls !== false
 
 	// Where an inline draft row puts its save / cancel pair. It shares the actions cell with the
 	// row actions — but only when that column is there anyway, or when the draft row itself is
@@ -1030,7 +1049,7 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 	// so nothing reflows. `mode: 'modal'` needs neither: the dialog has its own footer.
 	const hasOtherRowActions =
 		rowActionsEnabled &&
-		(hasRowEditAction || hasDeleting || hasPinning || rowOrderingCfg !== undefined || customRowActions !== undefined)
+		(hasRowEditAction || hasDeleting || hasPinning || hasRowStepControls || customRowActions !== undefined)
 	const creatingInActionsColumn = hasPinRowCreating || (hasInlineCreating && hasOtherRowActions)
 
 	const allColumns = buildColumnList(mappedUserColumns, {
@@ -1041,7 +1060,7 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 		editing: rowActionsEnabled && hasRowEditAction,
 		deleting: rowActionsEnabled && hasDeleting,
 		pinning: rowActionsEnabled && hasPinning,
-		ordering: rowActionsEnabled && rowOrderingCfg !== undefined,
+		ordering: rowActionsEnabled && hasRowStepControls,
 		creating: creatingInActionsColumn,
 		rowActionsPlacement,
 		customRowActions: rowActionsEnabled && customRowActions !== undefined,
@@ -1191,7 +1210,7 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 	// base atom, a `draft` entry in `table.atoms` and a `draft` member of every store snapshot.
 	// `draftFeature.getInitialState` drops it as well, for the construction paths that do not come
 	// through this function.
-	const { draft: _draftSeed, ...seededSlices } = userInitialState ?? {}
+	const { draft: _draftSeed, loading: loadingSeed, ...seededSlices } = userInitialState ?? {}
 
 	// Assembled at the all-features instantiation for the reason {@link userInitialState} gives,
 	// then widened to this table's. The `unknown` hop is not a shrug: the source names every slice
@@ -1208,6 +1227,11 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 			columnPinning: seededPinning,
 			...(seededGrouping !== undefined ? { grouping: seededGrouping } : {}),
 			...(Object.keys(mergedVisibility).length > 0 ? { columnVisibility: mergedVisibility } : {}),
+			// A consumer's loading seed may be partial (`InitialTableState.loading`). It crosses
+			// into upstream's `initialState` under the slice's own type and is completed by
+			// `loadingFeature.getInitialState` — the one place that knows the defaults, and the
+			// one every construction path reaches.
+			...(loadingSeed !== undefined ? { loading: loadingSeed as LoadingState } : {}),
 		},
 		columnInvariants,
 	) as unknown as Partial<TableState<TFeatures>>
@@ -1224,7 +1248,10 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 	// switched on a live instance — see `gate-column-filters.ts`. The wrapped set is cached per
 	// consumer set, so without `sorting.fns` the table still gets one stable object across calls;
 	// it is no longer the consumer's own object.
-	const gatedFeatures = withGatedFilteredRowModel(config.features)
+	//
+	// Its `filterFns` range entries are wrapped too, so the one value a plain number or date filter
+	// hands back is read as a range rather than thrown on — see `scalar-range-filters.ts`.
+	const gatedFeatures = withScalarRangeFilters(withGatedFilteredRowModel(config.features))
 	const sortFns = sortingCfg?.fns
 	const features =
 		sortFns === undefined
@@ -1459,7 +1486,18 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 		),
 		...named('onPaginationChange', buildSliceHandler<PaginationState>(table, 'pagination', onChange.pagination)),
 		...named('onRowSelectionChange', buildSliceHandler<RowSelectionState>(table, 'rowSelection', notifySelection)),
-		...named('onColumnOrderChange', buildSliceHandler<ColumnOrderState>(table, 'columnOrder', onChange.columnOrdering)),
+		// Constrained like the two slices below: a column order written without the forced columns
+		// would otherwise move them to its end, which the rendered pin region would hide and every
+		// move index would not.
+		...named(
+			'onColumnOrderChange',
+			buildSliceHandler<ColumnOrderState>(
+				table,
+				'columnOrder',
+				onChange.columnOrdering,
+				(next) => enforceColumnInvariants({ columnOrder: next }, columnInvariants).columnOrder,
+			),
+		),
 		...named('onRowPinningChange', buildSliceHandler<RowPinningState>(table, 'rowPinning', onChange.rowPinning)),
 		// `columnSizing` only — `columnResizing` (v8's `columnSizingInfo`) churns on every
 		// pointer move mid-drag, so its built-in writer is left alone.
@@ -1510,6 +1548,7 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 		...(hasGrouping ? { groupingMode: groupingCfg?.mode ?? GroupingMode.Single } : {}),
 		direction: config.direction ?? GridDirection.Ltr,
 		...(filterFields.length > 0 ? { filterFields } : {}),
+		columnState: createColumnStateApi(columnInvariants),
 	}
 
 	return { options, deferred, grid, bindStateHandlers }

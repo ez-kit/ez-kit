@@ -43,6 +43,7 @@ export { useDataGrid } from './use-data-grid'
 export type { DataTable } from './types'
 export type {
 	UseDataGridConfig,
+	ControlledTableState,
 	EmptyFallbackConfig,
 	ExpandedRowProps,
 	FallbacksConfig,
@@ -353,6 +354,10 @@ export type { GridComponentsProviderProps } from './components-context'
 // Cell type registry
 export { CellTypesProvider, defineCellType, useCellTypes } from './cell-types-context'
 export type { CellTypeDefinition, CellTypeRegistry, CellTypesProviderProps, CellViewProps } from './cell-types-context'
+
+// Config layers — the type a bundle's `filtering` / `editing` / `creating.config` are checked against
+export { defineColumnConfig } from './column-config'
+export type { ColumnConfigMarker } from './column-config'
 
 // The nine base cell types a kit extends, and the two formatters their renderers use.
 //

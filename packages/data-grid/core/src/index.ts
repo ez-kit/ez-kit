@@ -29,6 +29,7 @@ export { createTableOptions } from './create-table/create-table-options'
  * named here for the same reason — it sits in that function's public signature.
  */
 export type { GridOptions, StateHandlerTable } from './create-table/create-table-options'
+export type { ColumnStateApi } from './column-state'
 
 // Default option values (single source; referenced by the React adapter + UI kits)
 export {
@@ -131,6 +132,11 @@ export type {
 	ColumnDef,
 	ColumnEditingConfig,
 	ColumnFilteringConfig,
+	ColumnConfigShape,
+	ColumnConfigSurface,
+	ConfigLayerOf,
+	UncheckedColumnConfig,
+	UncheckedConfigLayer,
 	ColumnAlignDef,
 	ColumnPinningDef,
 	ColumnWidthDef,

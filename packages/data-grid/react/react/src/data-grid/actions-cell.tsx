@@ -249,7 +249,9 @@ export function ActionsCell({ row }: ActionsCellProps) {
 	}
 
 	const pinItems = pinConfig ? buildPinItems(row, pinConfig, messages) : []
-	const orderItems = table.grid.ordering.row ? buildRowOrderItems(row, table, messages) : []
+	// `moveControls` is `ordering.row.controls` resolved: `false` under `'drag'` beside an adapter,
+	// where the grip already offers the move. Already `false` while row ordering is off.
+	const orderItems = table.grid.ordering.rowControls.moveControls ? buildRowOrderItems(row, table, messages) : []
 	const buildActions = table.grid.rowActions.actions
 	// The augmented option is `RowActionsConfig<object, unknown>` — the row type and the node
 	// type are both erased at the `table.options` boundary — so the row/table this cell holds
@@ -318,6 +320,8 @@ export function ActionsCell({ row }: ActionsCellProps) {
 			{ id: PIN_SECTION, items: pinItems },
 			{ id: ORDER_SECTION, items: orderItems },
 		])
+		// A trigger that opens onto nothing is worse than no trigger.
+		if (sections.length === 0) return null
 		return (
 			<Menu
 				variant={GridMenuVariant.Row}
