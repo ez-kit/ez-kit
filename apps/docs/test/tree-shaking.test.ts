@@ -226,6 +226,8 @@ const PACKAGES: readonly Package[] = [
 const FEATURES_ENTRY = subpathEntryOf('data-grid/core', 'features/index.js')
 /** The row-API key `editingFeature` installs — present in a bundle exactly when its code is. */
 const EDITING_MARKER = 'row_getIsEditing'
+/** The table member `cellFlashingFeature` installs — present in a bundle exactly when its code is. */
+const FLASHING_MARKER = '_flashRequests'
 /** A set that registers sorting and nothing else. */
 const SORTING_ONLY = ['tableFeatures', 'rowSortingFeature', 'createSortedRowModel']
 
@@ -258,6 +260,19 @@ describe('@ez-kit/data-grid-core/features', () => {
 		const code = await bundledCodeOf(FEATURES_ENTRY, SORTING_ONLY)
 
 		expect(code).not.toContain(EDITING_MARKER)
+	})
+
+	// The same promise for cell flashing, whose request atom is the one thing it installs.
+	it('reaches the flashing implementation when the set registers it', async () => {
+		const code = await bundledCodeOf(FEATURES_ENTRY, [...SORTING_ONLY, 'cellFlashingFeature'])
+
+		expect(code).toContain(FLASHING_MARKER)
+	})
+
+	it('does not reach the flashing implementation when the set omits it', async () => {
+		const code = await bundledCodeOf(FEATURES_ENTRY, SORTING_ONLY)
+
+		expect(code).not.toContain(FLASHING_MARKER)
 	})
 
 	it('costs meaningfully less than the whole surface', async () => {

@@ -4,9 +4,11 @@
 .ez-heroui-data-grid {
 	--dg-pin-shadow-color: oklch(0 0 0 / 0.14);
 	--dg-pin-cell-background: var(--surface);
+	--dg-flash-background: color-mix(in oklab, var(--accent) 16%, transparent);
 
 	.dark & {
 		--dg-pin-shadow-color: oklch(0 0 0 / 0.35);
+		--dg-flash-background: color-mix(in oklab, var(--accent) 28%, transparent);
 	}
 
 	& [data-slot='th'] {
@@ -238,6 +240,24 @@
 		@apply border border-dashed;
 		border-color: var(--separator);
 		color: var(--muted);
+	}
+
+	/*
+	 * A changed cell: an overlay the structural sheet positions, filled here and faded out. The
+	 * fade animates the overlay, not the cell, so it leaves pinned cells — which take no
+	 * transition here — as they are.
+	 */
+	& [data-slot='td'][data-flash]::after {
+		background-color: var(--dg-flash-background);
+	}
+	& [data-slot='td'][data-flash='fade']::after {
+		opacity: 0;
+		transition: opacity var(--dg-flash-fade-duration, 1000ms) ease-out;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		& [data-slot='td'][data-flash='fade']::after {
+			transition: none;
+		}
 	}
 
 	& [data-slot='th'][data-draft-sorting] {

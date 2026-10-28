@@ -118,5 +118,6 @@ export const exampleModules: Record<string, () => Promise<Record<string, Compone
 	'components/sort-builder-drag.tsx': () => import('./components/sort-builder-drag'),
 	'components/sorting.tsx': () => import('./components/sorting'),
 	'components/state-persistence.tsx': () => import('./components/state-persistence'),
+	'components/cell-flashing.tsx': () => import('./components/cell-flashing'),
 	'components/virtualized.tsx': () => import('./components/virtualized'),
 }

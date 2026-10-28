@@ -3,7 +3,9 @@ import { normalizeColumnAlign, normalizeColumnPinning, normalizeColumnWidth } fr
 
 import { liftItemsSource, warnOnBothItemSources, warnOnListInLayer } from './items-source'
 import { resolveFiltering } from './resolve-filtering'
+import { resolveFlashing } from './resolve-flashing'
 
+import type { FlashingConfig } from '../../features/flashing/types'
 import type { OperatorsConfig } from '../../features/operators'
 import type {
 	CellViewCtx,
@@ -64,6 +66,8 @@ type ColumnMetaCreating<TRow> = false | ColumnCreatingConfig<TRow>
 export type MapColumnsOptions = {
 	/** Table-level faceted flag — used as default when column has no `filtering.faceted` override. */
 	tableFaceted?: boolean
+	/** Table-level `flashing` — the default a column without its own `flashing` takes. */
+	tableFlashing?: boolean | FlashingConfig | undefined
 	/**
 	 * Table-level operator switch — the default when a column has no `filtering.operators` of
 	 * its own. `undefined` (the table never mentioned operators) keeps the per-column opt-in;
@@ -122,6 +126,7 @@ function mapColumn<TRow extends object>(
 		headerClassName,
 		cellClassName,
 		footerClassName,
+		flashing,
 	} = def
 
 	// The scalar `cell: 'number'` is the same thing as `cell: { type: 'number' }`; normalize once
@@ -154,6 +159,8 @@ function mapColumn<TRow extends object>(
 	setIfDefined(meta, 'headerClassName', headerClassName)
 	setIfDefined(meta, 'cellClassName', cellClassName as ColumnMetaClassName)
 	setIfDefined(meta, 'footerClassName', footerClassName)
+	// A group column holds no value of its own; its leaves resolve through the recursion below.
+	if (columns === undefined) setIfDefined(meta, 'flashing', resolveFlashing(flashing, options?.tableFlashing))
 	// Implicit type='text' when not provided so registry-driven form rendering
 	// always has a target. Built-in view rendering (cell.tsx builtInView) treats
 	// 'text' as the no-op default, so this does not change view output.

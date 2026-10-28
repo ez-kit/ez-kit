@@ -52,6 +52,14 @@
 		@apply relative;
 	}
 
+	& [data-slot='td'][data-flash]:not([data-pinned]) {
+		@apply relative;
+	}
+	& [data-slot='td'][data-flash]::after {
+		content: '';
+		@apply pointer-events-none absolute inset-0;
+	}
+
 	& [data-slot='td'][data-align='start'],
 	& [data-slot='th'][data-align='start'] {
 		@apply justify-start text-start;

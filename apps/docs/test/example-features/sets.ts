@@ -58,6 +58,7 @@ export const REQUIRED_BY_OPTION: Readonly<Record<string, readonly string[]>> = {
 	creating: ['creatingFeature'],
 	deleting: ['deletingFeature'],
 	draft: ['draftFeature'],
+	flashing: ['cellFlashingFeature'],
 	// Grouping needs four members, and the two it is easiest to forget are the ones that make a
 	// group row openable: a group row is a row with `subRows`, so `rowExpandingFeature` +
 	// `expandedRowModel` are what its chevron drives. Without them the groups build and nothing

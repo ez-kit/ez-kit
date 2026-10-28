@@ -770,6 +770,12 @@
 		"exportName": "RowPinningInitialExample"
 	},
 	{
+		"id": "cell-flashing",
+		"label": "Cell flashing",
+		"sourceFile": "components/cell-flashing.tsx",
+		"exportName": "CellFlashingExample"
+	},
+	{
 		"id": "virtualized",
 		"label": "Virtualized",
 		"sourceFile": "components/virtualized.tsx",

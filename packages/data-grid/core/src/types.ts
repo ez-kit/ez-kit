@@ -5,6 +5,7 @@ import type { CreatingConfig } from './features/creating'
 import type { AppliedState, DraftConfig } from './features/deferred-apply'
 import type { DeletingConfig } from './features/deleting'
 import type { EditingConfig } from './features/editing'
+import type { FlashingConfig } from './features/flashing/types'
 import type { OperatorsConfig } from './features/operators'
 import type { RowMove } from './features/ordering'
 import type { RowActionsConfig } from './features/row-actions'
@@ -1115,6 +1116,18 @@ export type TableConfig<TFeatures extends TableFeatures, TRow extends object> = 
 	sorting?: boolean | SortingConfig
 	/** Server-supplied aggregates. See {@link AggregationConfig}. */
 	aggregation?: AggregationConfig
+	/**
+	 * Highlight a cell when its value changes — for data that arrives by polling or a socket, where
+	 * the user has to notice what moved. `true` turns it on in every data column with the default
+	 * durations; the object sets them. A column's own `flashing` overrides this either way.
+	 *
+	 * Compared per row id, so give the grid a `getRowId` (or rows with an `id`): with index-based
+	 * ids, a sort compares each cell with another row's value. A cell flashes only while it is
+	 * rendered — one that changes off screen shows its new value when it scrolls in, without a
+	 * flash. Needs `cellFlashingFeature` in `features`; `table.flashCells()` flashes cells on
+	 * demand whether or not this is on.
+	 */
+	flashing?: boolean | FlashingConfig
 	/**
 	 * Column-level filtering configuration. Falsy fully disables column filters
 	 * (per-column inputs / operator popovers); truthy enables them. Independent

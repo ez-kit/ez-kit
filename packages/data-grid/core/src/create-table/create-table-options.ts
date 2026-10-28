@@ -169,6 +169,9 @@ const REQUIRED_FEATURE = {
 	// and a second feature, which this map's one-key-to-one-feature shape cannot carry. They are
 	// guarded on the docs side by `apps/docs/test/example-features/sets.ts`.
 	grouping: 'columnGroupingFeature',
+	// A bare `flashing: true` is the whole feature: without it no cell has a request source and
+	// `table.flashCells` does not exist, so the key does nothing.
+	flashing: 'cellFlashingFeature',
 } as const satisfies Partial<Record<keyof TableConfig<TableFeatures, object>, string>>
 
 /**
@@ -208,9 +211,18 @@ const CONDITIONAL_REQUIRED_FEATURES = {
 	paginationInfinite: { option: "pagination.mode: 'infinite'", feature: 'infiniteFeature' },
 	initialLoading: { option: 'initialState.loading', feature: 'loadingFeature' },
 	loadingAtom: { option: 'atoms.loading', feature: 'loadingFeature' },
+	columnFlashing: { option: "a column's `flashing`", feature: 'cellFlashingFeature' },
 } as const satisfies Record<string, { option: string; feature: string }>
 
 type ConditionalFeatureKey = keyof typeof CONDITIONAL_REQUIRED_FEATURES
+
+/** Whether any column — a nested one included — turns flashing on for itself. */
+function columnAsksForFlashing(columns: readonly { flashing?: unknown; columns?: unknown }[]): boolean {
+	return columns.some((column) => {
+		if (column.flashing === true || (typeof column.flashing === 'object' && column.flashing !== null)) return true
+		return Array.isArray(column.columns) && columnAsksForFlashing(column.columns as { flashing?: unknown }[])
+	})
+}
 
 /**
  * What faceted filtering needs in the feature set, on top of `columnFilteringFeature`.
@@ -672,6 +684,7 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 	 * unreachable — which is the very assumption this line exists to stop trusting.
 	 */
 	const registeredFeatures = (config.features as Record<string, unknown> | undefined) ?? {}
+	const gridFlashing = isFeatureEnabled(config.flashing)
 
 	if (IS_DEV) {
 		for (const [option, feature] of Object.entries(REQUIRED_FEATURE)) {
@@ -755,6 +768,7 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 	const mappedUserColumns = mapColumns(config.columns, {
 		operators,
 		tableFaceted,
+		tableFlashing: config.flashing,
 		columnFiltering: hasColumnFiltering,
 		...(tableOperators !== undefined ? { tableOperators } : {}),
 	})
@@ -827,6 +841,8 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 			paginationInfinite: paginationCfg?.mode === PaginationMode.Infinite,
 			initialLoading: initialStateBag?.loading !== undefined,
 			loadingAtom: externalAtomsBag?.loading !== undefined,
+			// Only when the grid is off: a grid that is on already named the feature above.
+			columnFlashing: !gridFlashing && columnAsksForFlashing(config.columns),
 		} satisfies Record<ConditionalFeatureKey, boolean>
 
 		for (const key of Object.keys(CONDITIONAL_REQUIRED_FEATURES) as ConditionalFeatureKey[]) {
@@ -837,6 +853,20 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 						`the option has no effect. Add it to your \`tableFeatures({ … })\` call.`,
 				)
 			}
+		}
+	}
+
+	// Flashing compares a cell with the value its row held before, by row id. With no `getRowId`
+	// and rows without an `id`, the id is the row's index, so a sort or an insert hands each cell
+	// another row's value and the grid flashes cells that did not change.
+	if (IS_DEV && config.getRowId === undefined && (gridFlashing || columnAsksForFlashing(config.columns))) {
+		const first = config.data[0] as Record<string, unknown> | undefined
+		if (first !== undefined && first.id == null) {
+			warnOnce(
+				'[data-grid] `flashing` is on, but the grid has no `getRowId` and its rows have no `id`, so row ids ' +
+					"are indexes: after a sort or an insert a cell is compared with another row's value and flashes " +
+					'without a change. Give the grid a `getRowId`.',
+			)
 		}
 	}
 
@@ -1384,6 +1414,9 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 		...(creatingCfg ? { creating: creatingCfg } : {}),
 		...(editingCfg ? { editing: editingCfg } : {}),
 		...(deletingCfg ? { deleting: deletingCfg } : {}),
+		// As written, not resolved: a cell resolves it against its own column, and a manual flash on
+		// a column without automatic flashing still takes the grid's durations from here.
+		...(config.flashing !== undefined ? { flashing: config.flashing } : {}),
 		// Column resizing. `columnResizeDirection` is an option of `columnResizingFeature` and
 		// does not exist without it, so it is set only when resizing is on — the grid's own
 		// direction reaches the React layer through `grid.direction` regardless.

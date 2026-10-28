@@ -578,4 +578,67 @@ describe('mapColumns — config layers', () => {
 			warn.mockRestore()
 		},
 	)
+
+	describe('flashing', () => {
+		const equals = (a: unknown, b: unknown): boolean => a === b
+
+		it('grid true and a column without the option → the column flashes with the defaults', () => {
+			const result = mapColumns<Row>([{ accessorKey: 'name' }], { tableFlashing: true })
+			expect(result[0]?.meta?.flashing).toEqual({ flashDuration: 500, fadeDuration: 1000 })
+		})
+
+		it('no option anywhere → no meta.flashing', () => {
+			const result = mapColumns<Row>([{ accessorKey: 'name' }])
+			expect(result[0]?.meta).not.toHaveProperty('flashing')
+		})
+
+		it('column false beats a grid that is on', () => {
+			const result = mapColumns<Row>([{ accessorKey: 'name', flashing: false }], { tableFlashing: true })
+			expect(result[0]?.meta).not.toHaveProperty('flashing')
+		})
+
+		it('column true turns the column on under a grid that is off', () => {
+			const result = mapColumns<Row>([{ accessorKey: 'name', flashing: true }, { accessorKey: 'age' }], {
+				tableFlashing: false,
+			})
+			expect(result[0]?.meta?.flashing).toEqual({ flashDuration: 500, fadeDuration: 1000 })
+			expect(result[1]?.meta).not.toHaveProperty('flashing')
+		})
+
+		it('the column object lies over the grid object key by key', () => {
+			const result = mapColumns<Row>([{ accessorKey: 'name', flashing: { flashDuration: 100 } }], {
+				tableFlashing: { flashDuration: 300, fadeDuration: 2000 },
+			})
+			expect(result[0]?.meta?.flashing).toEqual({ flashDuration: 100, fadeDuration: 2000 })
+		})
+
+		it('column true keeps the grid durations', () => {
+			const result = mapColumns<Row>([{ accessorKey: 'name', flashing: true }], {
+				tableFlashing: { fadeDuration: 2000 },
+			})
+			expect(result[0]?.meta?.flashing).toEqual({ flashDuration: 500, fadeDuration: 2000 })
+		})
+
+		it('a grid object switched off with enabled: false turns nothing on and lends no durations', () => {
+			const result = mapColumns<Row>([{ accessorKey: 'name' }, { accessorKey: 'age', flashing: true }], {
+				tableFlashing: { enabled: false, fadeDuration: 2000 },
+			})
+			expect(result[0]?.meta).not.toHaveProperty('flashing')
+			expect(result[1]?.meta?.flashing).toEqual({ flashDuration: 500, fadeDuration: 1000 })
+		})
+
+		it('carries the column equals', () => {
+			const result = mapColumns<Row>([{ accessorKey: 'name', flashing: { equals } }])
+			expect(result[0]?.meta?.flashing?.equals).toBe(equals)
+		})
+
+		it('a group column carries nothing, its leaves resolve on their own', () => {
+			const result = mapColumns<Row>([{ id: 'group', header: 'Group', columns: [{ accessorKey: 'name' }] }], {
+				tableFlashing: true,
+			})
+			expect(result[0]?.meta).not.toHaveProperty('flashing')
+			const leaves = (result[0] as { columns?: MappedColumnDef<Row>[] }).columns
+			expect(leaves?.[0]?.meta?.flashing).toEqual({ flashDuration: 500, fadeDuration: 1000 })
+		})
+	})
 })

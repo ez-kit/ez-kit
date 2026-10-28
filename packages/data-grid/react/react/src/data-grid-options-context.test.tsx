@@ -63,6 +63,26 @@ describe('mergeGridOptionLayers', () => {
 		expect(merged.visibility).toBe(true) // factory-only survives
 	})
 
+	it('lets a table-level flashing: false switch off the flashing a defaults layer turned on', () => {
+		const merged = mergeGridOptionLayers<GridFeatures, User>({ flashing: true }, {}, { ...config, flashing: false })
+		expect(merged.flashing).toBe(false)
+	})
+
+	it('merges flashing objects key by key and keeps a lower object under true', () => {
+		const byKey = mergeGridOptionLayers<GridFeatures, User>(
+			{ flashing: { flashDuration: 300, fadeDuration: 2000 } },
+			{ flashing: { flashDuration: 100 } },
+			config,
+		)
+		const underTrue = mergeGridOptionLayers<GridFeatures, User>(
+			{ flashing: { fadeDuration: 2000 } },
+			{},
+			{ ...config, flashing: true },
+		)
+		expect(byKey.flashing).toEqual({ flashDuration: 100, fadeDuration: 2000 })
+		expect(underTrue.flashing).toEqual({ fadeDuration: 2000 })
+	})
+
 	it('leaves table config untouched when no defaults exist', () => {
 		const merged = mergeGridOptionLayers<GridFeatures, User>(undefined, {}, config)
 		expect(merged).toEqual(config)

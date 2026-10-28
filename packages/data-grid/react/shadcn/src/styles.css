@@ -6,9 +6,11 @@
 .ez-shadcn-data-grid {
 	--dg-pin-shadow-color: oklch(0 0 0 / 0.14);
 	--dg-pin-cell-background: var(--background);
+	--dg-flash-background: color-mix(in oklab, var(--primary) 16%, transparent);
 
 	.dark & {
 		--dg-pin-shadow-color: oklch(0 0 0 / 0.35);
+		--dg-flash-background: color-mix(in oklab, var(--primary) 28%, transparent);
 	}
 
 	& [data-slot='auto-form'] {
@@ -185,6 +187,20 @@
 	}
 	& [data-slot='group-by-chip'] button {
 		@apply size-5;
+	}
+
+	/* A changed cell: an overlay the structural sheet positions, filled here and faded out. */
+	& [data-slot='td'][data-flash]::after {
+		background-color: var(--dg-flash-background);
+	}
+	& [data-slot='td'][data-flash='fade']::after {
+		opacity: 0;
+		transition: opacity var(--dg-flash-fade-duration, 1000ms) ease-out;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		& [data-slot='td'][data-flash='fade']::after {
+			transition: none;
+		}
 	}
 
 	& [data-slot='th'][data-draft-sorting] {

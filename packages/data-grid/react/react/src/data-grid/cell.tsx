@@ -30,9 +30,11 @@ import {
 import { useCellNavigationProps } from './keyboard-navigation'
 import { RowDragHandle } from './row-drag-handle'
 import { useDataGridTable, useDataGridState } from './table-context'
+import { useCellFlash } from './use-cell-flash'
 import { columnNameOf, VisuallyHiddenLabel } from './visually-hidden'
 
 import type { CellTypeRegistry, CellViewProps } from '../cell-types-context'
+import type { CellFlash } from './use-cell-flash'
 import type { ErasedRow, GridFeatures } from '../types'
 import type { FormColumnMeta, ColumnAlign, ColumnPinSide, FieldState } from '@ez-kit/data-grid-core'
 import type { ColumnMeta, Cell, Row } from '@tanstack/table-core'
@@ -118,6 +120,12 @@ type CellChrome = {
 	 * column's class for as long as it stayed open.
 	 */
 	classNameAttr: { className?: string }
+	/**
+	 * `data-flash` while the cell flashes. Only a body data cell ever sets it — {@link useCellFlash}
+	 * runs there and nowhere else — so system cells cannot flash; its CSS variable rides on
+	 * `pinVars`, the one `style` object every `Td` already takes.
+	 */
+	flashAttrs?: CellFlash['attrs']
 }
 
 const EMPTY_ERRORS: readonly string[] = Object.freeze([])
@@ -525,8 +533,17 @@ function BodyDataCell<TRow extends object>({ cell, row, children }: DataGridCell
 	 * column with no editing configured, which is the overwhelmingly common case.
 	 */
 	const isStaticContent = children !== undefined && typeof children !== 'function'
+	const isEditorOpen = isEditing && isColumnEditable && !isStaticContent
 
-	if (isEditing && isColumnEditable && !isStaticContent) {
+	// Called before the editor branch returns, so the cell keeps recording its value while the
+	// editor is open — an update that lands under a cancelled edit then shows without a flash.
+	const flash = useCellFlash(table, cell, isEditorOpen)
+	const flashChrome: CellChrome =
+		flash.vars === undefined
+			? chrome
+			: { ...chrome, pinVars: { ...chrome.pinVars, ...flash.vars }, flashAttrs: flash.attrs }
+
+	if (isEditorOpen) {
 		return (
 			<EditingCell
 				cell={cell}
@@ -586,7 +603,7 @@ function BodyDataCell<TRow extends object>({ cell, row, children }: DataGridCell
 			<AggregatedCell
 				cell={cell}
 				row={row}
-				chrome={chrome}
+				chrome={flashChrome}
 			>
 				{children}
 			</AggregatedCell>
@@ -643,13 +660,14 @@ function BodyDataCell<TRow extends object>({ cell, row, children }: DataGridCell
 
 	return (
 		<Td
-			{...chrome.navigation}
+			{...flashChrome.navigation}
 			data-slot='td'
-			style={chrome.pinVars}
-			pinned={chrome.pinned}
-			{...chrome.pinnedAttrs}
-			{...chrome.alignAttrs}
-			{...chrome.classNameAttr}
+			style={flashChrome.pinVars}
+			pinned={flashChrome.pinned}
+			{...flashChrome.pinnedAttrs}
+			{...flashChrome.alignAttrs}
+			{...flashChrome.classNameAttr}
+			{...flashChrome.flashAttrs}
 			onDoubleClick={handleDoubleClick}
 		>
 			{renderCellContent(
@@ -692,6 +710,7 @@ function AggregatedCell<TRow extends object>({ cell, row, chrome, children }: Sy
 			{...chrome.pinnedAttrs}
 			{...chrome.alignAttrs}
 			{...chrome.classNameAttr}
+			{...chrome.flashAttrs}
 			data-aggregated-cell='true'
 		>
 			{renderCellContent(
