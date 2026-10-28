@@ -326,10 +326,6 @@ const schema = defineFormSchema<Values, 'rating'>()({ version: 1, children: [{ t
 
 Keeping that set closed is what preserves the checking on built-in nodes — an open `type: string` member would swallow every mistyped built-in.
 
-## Steps
-
-A document has no steps. `step` stays a reserved node type, and `parseFormSchema` rejects a node that uses it. A form split into steps is written in JSX, with [`form.Steps` and `form.Step`](/docs/form/steps).
-
 ## Backend-driven UI
 
 A schema from your own bundle is trusted. A schema from anywhere else — a database, an API, an LLM — goes through `parseFormSchema` **first**:
@@ -369,8 +365,7 @@ The parser is the trust boundary. It rejects, throwing `FormSchemaError` with th
 - an `optionsFrom` whose `dependsOn` names a relative (`./`) field reference, or whose `params` carry something `JSON.stringify` would not survive (a function, `undefined`, `NaN`, a `Date`);
 - a `multiselect` / `checkboxgroup` `defaultValue` that is not an array of option values, or whose entries disagree with the option value type;
 - a date `min` / `max` / `defaultValue` that is not a real `YYYY-MM-DD` day, or a `daterange` default missing an end;
-- `columns` / `colSpan` outside 1–4, `columns` on a node with no children, or a `colSpan` whose container sets no `columns` or fewer columns than it spans;
-- a `step` node.
+- `columns` / `colSpan` outside 1–4, `columns` on a node with no children, or a `colSpan` whose container sets no `columns` or fewer columns than it spans.
 
 Passing the registries' keys in the options is what lets the parser check a delivered document against _this_ app's capabilities, which is the check that matters: the backend can only send what the frontend can actually render.
 

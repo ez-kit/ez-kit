@@ -125,7 +125,7 @@
 
 ### Requirement: Парсер отклоняет удалённые узлы
 
-`parseFormSchema` SHALL отклонять узлы `section`, `submit` и `step` с `FormSchemaError`, путём к
+`parseFormSchema` SHALL отклонять узлы `section` и `submit` с `FormSchemaError`, путём к
 узлу и подсказкой, чем его заменить. Эти имена MUST оставаться зарезервированными для типов полей.
 
 #### Scenario: Удалённый узел section

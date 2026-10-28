@@ -82,7 +82,6 @@ const ROOT_PATH = 'root'
 const REMOVED_NODE_HINTS: Partial<Record<string, string>> = {
 	section: "Section nodes are now blocks; use { type: 'block', component: 'Section', props: { title }, children }",
 	submit: "Submit nodes are now blocks; use { type: 'block', component: 'SubmitButton', props: { children } }",
-	step: 'Step nodes are not supported; build a stepped form with form.Steps',
 }
 
 /**
@@ -126,8 +125,8 @@ function declaredOptionValueType(node: FormNode<unknown, string>): OptionValueTy
 }
 
 /**
- * Registering a custom field type under a reserved node type (`section` / `step` / `submit` /
- * `block` / `array`) would make it structurally unreachable — `isFieldNode` never classifies
+ * Registering a custom field type under a reserved node type (`section` / `submit` / `block` /
+ * `array`) would make it structurally unreachable — `isFieldNode` never classifies
  * those names as fields. Caught once, up front, rather than as a confusing "unknown node type"
  * on every node that tries to use it. Component names are not checked: a block finds its
  * component by `component`, never by `type`, so no name of one can shadow a node.

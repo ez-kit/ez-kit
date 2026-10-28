@@ -12,11 +12,10 @@ import type { DeepKeys, DeepKeysOfType, DeepValue } from '@tanstack/form-core'
  * Node `type` values that are not field kinds. Never usable as registry keys.
  *
  * Only `block` and `array` are nodes. `section` and `submit` became the `Section` and
- * `SubmitButton` blocks, and `step` waits for steps to be rebuilt on `form.Steps` (spec 010). All
- * three stay reserved so no field kind can claim a name an old document still uses, and
- * `parseFormSchema` rejects each by name with its replacement.
+ * `SubmitButton` blocks. Both stay reserved so no field kind can claim a name an old document
+ * still uses, and `parseFormSchema` rejects each by name with its replacement.
  */
-export const RESERVED_NODE_TYPES = ['section', 'step', 'submit', 'block', 'array'] as const
+export const RESERVED_NODE_TYPES = ['section', 'submit', 'block', 'array'] as const
 
 /**
  * The supported range for a container's `columns` and any node's `colSpan` — part of the v1

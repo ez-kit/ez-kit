@@ -2,8 +2,8 @@
 
 **Дата:** 2026-10-12
 **Статус:** D19–D22 реализованы change `openspec/changes/form-schema-blocks` с поправками ниже
-(«Как реализовано»). D23 и шаги в документе ждут отдельного change поверх `form.Steps`: схемный
-визард удалён до него. Вынесено из `specs/009-form-composition/design.md`: `SchemaForm` ложится
+(«Как реализовано»). Шаги в документе (D23) отложены, пока у китов нет своего UI степпера:
+схемный визард удалён, имя `step` больше не зарезервировано, и в конфиг-схеме шагов нет. Вынесено из `specs/009-form-composition/design.md`: `SchemaForm` ложится
 поверх headless-слоя, шагов и реестра из 009, поэтому решается после неё.
 **Пакеты:** `@ez-kit/form-core`, `@ez-kit/form-react`, `@ez-kit/form-shadcn`, `@ez-kit/form-heroui`
 

@@ -129,13 +129,7 @@ test('rejects a function condition in an external document', () => {
 	)
 })
 
-test('rejects a step node', () => {
-	expect(() => parseFormSchema({ version: 1, children: [{ type: 'step', children: [] }] })).toThrow(
-		/step nodes are not supported/i,
-	)
-})
-
-test.each(['section', 'submit', 'step'])('keeps %s reserved for field kinds', (type) => {
+test.each(['section', 'submit'])('keeps %s reserved for field kinds', (type) => {
 	expect(() => parseFormSchema({ version: 1, children: [] }, { fieldTypes: [type] })).toThrow(/reserved/i)
 })
 
@@ -411,7 +405,6 @@ describe('layout', () => {
 	it.each([
 		['section', "{ type: 'block', component: 'Section'"],
 		['submit', "{ type: 'block', component: 'SubmitButton'"],
-		['step', 'form.Steps'],
 	])('rejects a %s node, naming what replaces it', (type, replacement) => {
 		const error = failure({ version: 1, children: [{ type, children: [] }] })
 		expect(error.message).toContain(replacement)

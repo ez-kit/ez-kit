@@ -83,9 +83,9 @@ const schema = defineFormSchema<Values>()({
   that make it a container.
 - **`GRID_MIN`** / **`GRID_MAX`** / **`clampToGridRange(n)`** — the `1..4` range a
   container's `columns` and a node's `colSpan` share.
-- **`RESERVED_NODE_TYPES`** — `section`, `step`, `submit`, `block`, `array`; never usable
-  as a field type. `section`, `submit` and `step` are no longer nodes, and the parser names
-  what replaces each.
+- **`RESERVED_NODE_TYPES`** — `section`, `submit`, `block`, `array`; never usable as a
+  field type. `section` and `submit` are no longer nodes, and the parser names what replaces
+  each.
 
 ### Parsing an untrusted document
 
@@ -103,8 +103,8 @@ const schema = parseFormSchema<Values>(await res.json(), {
 **`parseFormSchema(input, options?)`** is the trust boundary for a document that did not
 come from your own bundle. It throws **`FormSchemaError`** (carrying `path`, the offending
 node's location) on the first violation — unknown node type, duplicate field name,
-unregistered rule or block, malformed condition, a `columns`/`colSpan` outside `1..4`,
-`step` mixed with non-`step` siblings, a translation key with no `translate` available.
+unregistered rule or block, malformed condition, a `columns`/`colSpan` outside `1..4`, a
+translation key with no `translate` available.
 Passing the registries' keys via **`ParseOptions`** is what lets it check the document
 against _this_ app's capabilities. Nothing calls it for you.
 
