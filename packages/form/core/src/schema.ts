@@ -1,17 +1,24 @@
 import type { DateRangeValue } from './date-value'
 import type { FormFieldType } from './field-types'
 import type { LocalizedText } from './localized-text'
-import type { OptionsSource } from './options-source'
+import type { OptionSourceRef } from './options-source'
 import type { Condition } from './rules'
+import type { Searchable } from './search-settings'
 import type { LocalizedSelectOption } from './select-option'
 import type { TextInputType } from './text-input-type'
 import type { DeepKeys, DeepKeysOfType, DeepValue } from '@tanstack/form-core'
 
-/** Container `type` values, plus the two value-less leaves. Never usable as registry keys. */
-export const RESERVED_NODE_TYPES = ['section', 'step', 'submit', 'block', 'array'] as const
+/**
+ * Node `type` values that are not field kinds. Never usable as registry keys.
+ *
+ * Only `block` and `array` are nodes. `section` and `submit` became the `Section` and
+ * `SubmitButton` blocks. Both stay reserved so no field kind can claim a name an old document
+ * still uses, and `parseFormSchema` rejects each by name with its replacement.
+ */
+export const RESERVED_NODE_TYPES = ['section', 'submit', 'block', 'array'] as const
 
 /**
- * The supported range for `SectionNode.columns` and any node's `colSpan` — part of the v1
+ * The supported range for a container's `columns` and any node's `colSpan` — part of the v1
  * format, not a kit detail, so it is defined once here and consumed by both `parseFormSchema`
  * (which rejects a document outside this range) and the kits (which clamp into it for a
  * TS-authored schema that bypassed `parseFormSchema`).
@@ -24,13 +31,21 @@ export function clampToGridRange(value: number): number {
 	return Math.min(GRID_MAX, Math.max(GRID_MIN, Math.round(value)))
 }
 
-type CommonProps<TValues> = {
+/** What every node may carry: whether it shows, and how many grid columns it takes. */
+type LayoutProps<TValues> = {
+	when?: Condition<TValues>
+	/**
+	 * Grid columns this node spans in its container's grid. Default 1. Must be an integer 1..4,
+	 * and only meaningful under a container that sets `columns`.
+	 */
+	colSpan?: number
+}
+
+/** What a node that names a value carries on top of {@link LayoutProps}. */
+type CommonProps<TValues> = LayoutProps<TValues> & {
 	label?: LocalizedText
 	description?: LocalizedText
-	when?: Condition<TValues>
 	disabledWhen?: Condition<TValues>
-	/** Grid columns this node spans inside its section. Default 1. Must be an integer 1..4. */
-	colSpan?: number
 }
 
 /**
@@ -86,14 +101,14 @@ type FieldCommon<TValues> = CommonProps<TValues> & {
  * A two-arm union, not two optional keys, so "exactly one of the two" is a compile error
  * rather than a runtime discovery — `parseFormSchema` enforces the same rule for a document
  * that never went through TypeScript. The `?: never` arms are what make each side reject the
- * other's key; the same spelling `FormRendererUncontrolledProps` uses for its `form?: never`.
+ * other's key; the same spelling `SchemaFormUncontrolledProps` uses for its `form?: never`.
  *
  * `optionsFrom: 'cities'` is sugar for `optionsFrom: { source: 'cities' }` — the bare-string
  * spelling is the common case (no parameters, no dependencies) and reads better in JSON.
  */
 type OptionsProvision<TValue> =
 	| { options: readonly LocalizedSelectOption<TValue>[]; optionsFrom?: never }
-	| { options?: never; optionsFrom: string | OptionsSource }
+	| { options?: never; optionsFrom: string | OptionSourceRef }
 
 /**
  * Whether the field accepts a value its option list does not contain — the text the user
@@ -111,7 +126,7 @@ type OptionsProvision<TValue> =
  * The offer is a **row in the list**, not a silent commit on blur: with `creatable` on, a
  * query matching no option puts one extra option at the end of the list, and picking it is
  * what writes the text into form state. `createLabel` is that row's caption; it defaults to
- * `Add "<query>"`, and in its `{ key, params }` form the typed text is merged in under
+ * `Add "<query>"`, and in its `{ i18n, params }` form the typed text is merged in under
  * `query`, so a translation may place it (`'Добавить «{{query}}»'`).
  */
 type CreatableProvision<TValue> = [TValue] extends [string]
@@ -141,8 +156,11 @@ type SelectMember<TValues, TValue> = FieldCommon<TValues> &
 		 *
 		 * Deliberately absent from `radiogroup` and `checkboxgroup` — they render every option
 		 * inline, so there is nothing to search. `parseFormSchema` rejects it on both.
+		 *
+		 * The object form, `{ debounce?, minLength? }`, is also "on" and tunes how the typed text
+		 * reaches the source — see {@link Searchable}.
 		 */
-		searchable?: boolean
+		searchable?: Searchable
 	}
 
 type MultiSelectMember<TValues, TValue> = FieldCommon<TValues> &
@@ -163,7 +181,7 @@ type MultiSelectMember<TValues, TValue> = FieldCommon<TValues> &
 		 * value array** and needs no change from a source already written for a searchable
 		 * `select`. Without it the chips would read as raw ids.
 		 */
-		searchable?: boolean
+		searchable?: Searchable
 	}
 
 type CheckboxGroupMember<TValues, TValue> = FieldCommon<TValues> &
@@ -250,24 +268,6 @@ export type FieldNode<TValues> =
 			step?: number
 	  })
 
-export type SectionNode<TValues, TCustom extends string = never> = CommonProps<TValues> & {
-	type: 'section'
-	title?: LocalizedText
-	description?: LocalizedText
-	/** Grid columns for direct children. Default 1. Must be an integer 1..4. */
-	columns?: number
-	children: FormNode<TValues, TCustom>[]
-}
-
-export type StepNode<TValues, TCustom extends string = never> = CommonProps<TValues> & {
-	type: 'step'
-	title?: LocalizedText
-	description?: LocalizedText
-	/** Opt-in data path; enables TanStack's `useFormGroup` for this step (spec §4.5). */
-	path?: string
-	children: FormNode<TValues, TCustom>[]
-}
-
 /**
  * Every path in `TValues` whose value is an array — the only paths an `array` node may name,
  * and the only paths `form.ArrayField` / `form.Array` accept as `name`.
@@ -297,6 +297,8 @@ export type ArrayItemOf<TValues, N extends ArrayKeys<TValues>> =
 type ArrayNodeBody<TValues, TName, TChildren> = CommonProps<TValues> & {
 	type: 'array'
 	name: TName
+	/** Grid columns for the fields of each entry. Default 1. Must be an integer 1..4. */
+	columns?: number
 	/**
 	 * The item's fields, named **relative to the item** — `'firstName'`, not
 	 * `'people[0].firstName'`. The index is not knowable when the schema is written, so the
@@ -321,7 +323,7 @@ type ArrayNodeBody<TValues, TName, TChildren> = CommonProps<TValues> & {
 	 */
 	validate?: FieldValidate
 	/**
-	 * Caption for one item, e.g. a card heading. In its `{ key, params }` form the item's
+	 * Caption for one item, e.g. a card heading. In its `{ i18n, params }` form the item's
 	 * zero-based position is merged in under `index`, so a translation may place it
 	 * (`'Person {{index}}'`).
 	 */
@@ -360,7 +362,7 @@ export type AnyArrayNode = ArrayNodeBody<unknown, string, FormNode<unknown, stri
  * A repeatable group of fields, bound to an array in the form values.
  *
  * Grouped captions, flat `children`: the three labels are three spellings of one concern, while
- * `children` is what makes this structurally the same kind of node as `section` and `step`, so
+ * `children` is what makes this structurally the same kind of node as a `block` with children, so
  * traversal needs no special case for it.
  *
  * The `unknown` arm is what keeps this usable at runtime. `ArrayKeys<unknown>` is empty, so the
@@ -372,12 +374,21 @@ export type ArrayNode<TValues, TCustom extends string = never> = unknown extends
 	? AnyArrayNode
 	: ArrayNodeFor<TValues, ArrayKeys<TValues>, TCustom>
 
-export type SubmitNode<TValues> = CommonProps<TValues> & { type: 'submit'; disabled?: boolean }
-
-export type BlockNode<TValues> = CommonProps<TValues> & {
+/**
+ * A component from the bundle's `components`, written as data: `component` names the key,
+ * `props` are its props under the names JSX uses, and `children` — when present — are document
+ * nodes rendered into it. A block with `children` is a container; one without is a leaf.
+ *
+ * It has no `label` / `description` / `disabledWhen` of its own: what the component shows is in
+ * `props`, where a `{ i18n }` value is translated before it arrives.
+ */
+export type BlockNode<TValues, TCustom extends string = never> = LayoutProps<TValues> & {
 	type: 'block'
 	component: string
 	props?: Record<string, unknown>
+	children?: FormNode<TValues, TCustom>[]
+	/** Grid columns for `children`. Default 1. Must be an integer 1..4. */
+	columns?: number
 }
 
 /**
@@ -401,15 +412,14 @@ export type CustomFieldNode<TValues, TCustom extends string = never> = FieldComm
 export type FormNode<TValues, TCustom extends string = never> =
 	| FieldNode<TValues>
 	| ArrayNode<TValues, TCustom>
-	| SectionNode<TValues, TCustom>
-	| StepNode<TValues, TCustom>
-	| SubmitNode<TValues>
-	| BlockNode<TValues>
+	| BlockNode<TValues, TCustom>
 	| CustomFieldNode<TValues, TCustom>
 
 export type FormSchema<TValues, TCustom extends string = never> = {
 	version: 1
 	children: FormNode<TValues, TCustom>[]
+	/** Grid columns for the top-level `children`. Default 1. Must be an integer 1..4. */
+	columns?: number
 	/**
 	 * Type-only marker, never written and never read at runtime — the one position from which
 	 * `TValues` can be **inferred back out of a schema value**.
@@ -417,7 +427,7 @@ export type FormSchema<TValues, TCustom extends string = never> = {
 	 * Without it `TValues` appears in a node only inside `DeepKeysOfType<TValues, …>`
 	 * (`FieldNode`), a conditional type: given `name: 'email'` TypeScript cannot run the
 	 * computation backwards to ask which object produces that union, so inference from a
-	 * schema literal falls back to `unknown`. That is what made `FormRenderer`'s `onSubmit`
+	 * schema literal falls back to `unknown`. That is what made `SchemaForm`'s `onSubmit`
 	 * hand back an `unknown` `value` unless `defaultValues` — the only ordinary-position
 	 * occurrence anywhere nearby — pinned the type at the call site.
 	 *
@@ -446,7 +456,7 @@ export type AnyFormSchema<TValues> = FormSchema<TValues, string>
  * The return type re-attaches `TValues` through the `__values` marker. Returning the bare `S`
  * would keep every `name` checked and still lose the value type on the way out: `S` is the
  * literal's own type, in which `TValues` survives nowhere inference can reach it. Consumers
- * that declare `schema: AnyFormSchema<TValues>` — `FormRenderer` above all — read it here.
+ * that declare `schema: AnyFormSchema<TValues>` — `SchemaForm` above all — read it here.
  */
 export function defineFormSchema<TValues, TCustom extends string = never>() {
 	return <const S extends FormSchema<TValues, TCustom>>(schema: S): S & { readonly __values?: TValues } => schema

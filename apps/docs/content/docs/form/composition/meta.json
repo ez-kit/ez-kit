@@ -1,0 +1,5 @@
+{
+	"title": "Composition",
+	"description": "withForm, withFieldGroup and form.FormGroup — which one a part of a form needs, and what each brings.",
+	"pages": ["index", "with-form", "with-field-group", "form-group"]
+}

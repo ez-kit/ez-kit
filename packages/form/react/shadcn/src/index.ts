@@ -1,24 +1,44 @@
-export { useForm, Form, FormRenderer, withForm, withFieldGroup } from './form'
-
-// The factory and the two bags it takes, so an app can call `createForm` itself with the
-// kit's twelve field slots spread beside a field kind of its own. The ready-made bundle
-// above stays the zero-config path; this is the extension one.
+// Every component straight from its block, never through `./form`: the module that assembles the
+// prebuilt bundle names all of them, so an import routed through it is what used to drag the date
+// picker, the comboboxes and the schema renderer into a one-field form.
+export { ArrayField } from './blocks/array'
+export { DateField, DateRangeField } from './blocks/date'
 export {
 	CheckboxField,
-	CheckboxGroupField,
-	DateField,
-	DateRangeField,
-	formComponents,
-	formFieldSlots,
-	MultiSelectField,
 	NumberField,
 	RadioGroupField,
-	SelectField,
 	SliderField,
 	SwitchField,
 	TextareaField,
 	TextField,
-} from './form'
+} from './blocks/fields'
+export { FormElement, SubmitButton } from './blocks/form-parts'
+export { Grid, Section } from './blocks/layout'
+export { CheckboxGroupField, MultiSelectField } from './blocks/multi-value'
+export { SelectField } from './blocks/select'
+
+// What each field takes beyond the contract — the props of the control it renders, which reach it
+// flat from `form.<Field>`. `KitProps`, not `Props`: the `<Field>Props` names below are the adapter's
+// consumer types, re-exported as they are.
+export type { DateFieldKitProps, DateRangeFieldKitProps } from './blocks/date'
+export type {
+	CheckboxFieldKitProps,
+	NumberFieldKitProps,
+	RadioGroupFieldKitProps,
+	SliderFieldKitProps,
+	SwitchFieldKitProps,
+	TextareaFieldKitProps,
+	TextFieldKitProps,
+} from './blocks/fields'
+export type { CheckboxGroupFieldKitProps, MultiSelectFieldKitProps } from './blocks/multi-value'
+export type { SelectFieldKitProps } from './blocks/select'
+
+// Every component at once, in the two bags `createForm` takes — a deliberate "everything", for an
+// app that spreads the kit beside a field kind of its own.
+export { allFormComponents, allFormFields } from './sets'
+
+// The prebuilt bundle: the zero-config path. Its binding lives in `./form`, never here.
+export { Form, SchemaForm, useForm, withFieldGroup, withForm } from './form'
 
 // Curated re-export of the consumer surface from the adapter, so a kit consumer never has
 // to add `@ez-kit/form-react` as a second dependency. Deliberately not `export *`: the star
@@ -31,26 +51,31 @@ export {
 export {
 	clampToGridRange,
 	createForm,
+	createSchemaForm,
 	defineFieldType,
 	FormFieldType,
 	FormOptionSources,
 	formatFieldErrors,
+	FormProvider,
 	GRID_MAX,
 	GRID_MIN,
 	hasFieldErrors,
+	revalidateLogic,
 	stripHiddenValues,
-	TextInputType,
 	useFieldGroup,
+	useFormContext,
 	useFormGroup,
+	useStep,
+	useSteps,
 } from '@ez-kit/form-react'
 export type {
+	AnyFormInstance,
 	AnyFormProps,
 	ArrayFieldProps,
 	ArrayFieldScope,
 	ArrayItemScope,
 	BaseFieldProps,
-	BlockRegistry,
-	BoundForm,
+	BoundFieldComponent,
 	CheckboxFieldProps,
 	CheckboxGroupFieldProps,
 	CustomFieldRegistry,
@@ -59,49 +84,86 @@ export type {
 	DateFieldProps,
 	DateRangeFieldProps,
 	DateRangeValue,
+	FieldControlProps,
+	FieldGroupBlock,
+	FieldGroupInstance,
+	FieldGroupPlacementProps,
+	FieldGroupScope,
+	FieldGroupOptions,
+	FieldProps,
+	FormBehaviourOptions,
+	FormContextApi,
 	FormControlledProps,
 	FormFieldComponents,
 	FormFieldRegistry,
 	FormFieldSlots,
+	FormGroupInstance,
+	FormGroupProps,
+	FormGroupScope,
+	GroupAsyncValidator,
+	GroupFields,
+	GroupValidator,
+	GroupValidators,
+	FormInstance,
 	FormProps,
-	FormRendererControlledProps,
-	FormRendererUncontrolledProps,
+	SchemaFormControlledProps,
+	SchemaFormUncontrolledProps,
 	FormUncontrolledProps,
 	GridItemProps,
+	GridProps,
+	GridSlot,
 	JsonValue,
-	KitFormApi,
 	KitFormBlock,
 	KitWithFormProps,
 	LocalizedSelectOption,
 	LocalizedText,
 	MultiSelectFieldProps,
+	NoRegistry,
 	NumberFieldProps,
+	OnGroupSubmit,
 	OptionSource,
 	OptionSourceInput,
 	OptionSourceRegistry,
 	OptionSourceResult,
-	OptionsSource,
+	OptionSourceRef,
 	RadioGroupFieldProps,
-	RendererForm,
+	Searchable,
 	SearchableOptionSource,
+	SearchSettings,
 	SectionProps,
 	SelectFieldProps,
 	SelectOption,
-	SharedRendererProps,
+	ServerErrorMessages,
+	ServerErrors,
+	SharedSchemaFormProps,
 	SimpleOptionSource,
 	SliderFieldProps,
+	StepItemRenderProps,
+	StepMembers,
+	StepProps,
+	StepsComponent,
+	StepsControlsRenderProps,
+	StepsListRenderProps,
+	StepsProps,
+	StepsState,
+	StepSummary,
 	SubmitButtonProps,
+	SubmitProps,
+	SubmitRenderProps,
 	SwitchFieldProps,
 	TextareaFieldProps,
 	TextFieldProps,
 	Translate,
+	UncheckedFieldGroupPlacementProps,
+	WithFieldGroupOptions,
 } from '@ez-kit/form-react'
 
-// The schema-authoring half of the same surface. It lives in `@ez-kit/form-core` and is not
-// re-exported by `@ez-kit/form-react`, so the kit takes a direct dependency on core to keep
-// the "one dependency" claim above true for config-driven forms as well: under pnpm's strict
-// `node_modules` layout a transitive dependency is not importable, so every import the docs
-// tell a reader to copy has to resolve from the kit itself.
+// The schema-authoring half of the same surface. It originates in `@ez-kit/form-core` and arrives
+// through `@ez-kit/form-react`, which re-exports it, so the kit has no direct dependency on core:
+// under pnpm's strict `node_modules` layout a transitive dependency is not importable, so every
+// import the docs tell a reader to copy has to resolve from the kit itself. `useSelector` comes the
+// same way, from the one TanStack copy `@ez-kit/form-react` owns — reading the form's store through
+// a second copy would read a different store.
 export {
 	buildValidator,
 	defineFormItem,
@@ -112,8 +174,9 @@ export {
 	RESERVED_NODE_TYPES,
 	resolveText,
 	visibleFieldNames,
+	useSelector,
 	walkNodes,
-} from '@ez-kit/form-core'
+} from '@ez-kit/form-react'
 export type {
 	AnyFormSchema,
 	ArrayNode,
@@ -126,9 +189,8 @@ export type {
 	FormNode,
 	FormSchema,
 	NamedRule,
+	OptionValue,
 	ParseOptions,
 	Rule,
-	SectionNode,
-	StepNode,
-	SubmitNode,
-} from '@ez-kit/form-core'
+	RuleIssue,
+} from '@ez-kit/form-react'

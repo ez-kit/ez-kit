@@ -3,13 +3,17 @@ import { useReducer } from 'react'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { createForm } from './create-form'
+import { createSchemaForm } from './create-schema-form'
 import { defineFieldType } from './field-registry'
-import { testComponents, testFields } from './test-kit'
+import { testComponents, testFields, testFormElement } from './test-kit'
 
 import type { FormFieldSlots, TextFieldRenderProps } from './contract'
 import type { CustomFieldRenderProps } from './schema/registries'
 import type { FormSchema } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
+
+/** How many forms the document-mounted `data-form-id` case renders side by side. */
+const FORM_COUNT = 2
 
 // ── a custom field bound to a string, so it can sit on the *same* path as a built-in ──────
 
@@ -22,6 +26,8 @@ const NoteField = defineFieldType<NoteProps, string>()(function Note(props): Rea
 	return (
 		<input
 			data-testkit='note'
+			data-field={props['data-field']}
+			data-form-id={props['data-form-id']}
 			id={props.id}
 			name={props.name}
 			value={props.value}
@@ -52,9 +58,10 @@ const CapturingTextField: FormFieldSlots['TextField'] = (props) => {
 	)
 }
 
-const { Form, FormRenderer } = createForm({
-	components: testComponents,
+const { Form, SchemaForm } = createSchemaForm({
+	FormElement: testFormElement,
 	fields: { ...testFields, TextField: CapturingTextField, NoteField },
+	components: testComponents,
 })
 
 beforeEach(() => {
@@ -116,7 +123,7 @@ describe('a custom field on the form instance', () => {
 		// so a seventh member of `FieldRenderProps` is covered the day it lands. `onBlur` is
 		// excluded only because the two fields hold two `FieldApi` instances and therefore two
 		// distinct bound handlers — its presence is asserted separately.
-		const { value: _v, onChange: _oc, type: _t, placeholder: _p, onBlur: _ob, ...builtInBinding } = text
+		const { value: _v, onChange: _oc, onBlur: _ob, ...builtInBinding } = text
 		const { value: _cv, onChange: _coc, props: _cp, onBlur: customBlur, ...customBinding } = note
 
 		expect(typeof customBlur).toBe('function')
@@ -178,8 +185,9 @@ describe('replacing a built-in field at its own key', () => {
 	}
 
 	const { Form: ReplacedForm } = createForm({
-		components: testComponents,
+		FormElement: testFormElement,
 		fields: { ...testFields, TextField: ReplacementTextField },
+		components: testComponents,
 	})
 
 	it('renders the replacement and still routes through the bespoke text binder', () => {
@@ -224,8 +232,9 @@ describe('a custom field inside an array entry', () => {
 	})
 
 	const { Form: ArrayForm } = createForm({
-		components: testComponents,
+		FormElement: testFormElement,
 		fields: { ...testFields, RatingField },
+		components: testComponents,
 	})
 
 	it('binds to the entry path with no extra work', () => {
@@ -270,8 +279,9 @@ describe('author props named after Object.prototype members', () => {
 	})
 
 	const { Form: ShadowForm } = createForm({
-		components: testComponents,
+		FormElement: testFormElement,
 		fields: { ...testFields, ShadowField },
+		components: testComponents,
 	})
 
 	it('reach the component instead of being swallowed by the prototype chain', () => {
@@ -311,6 +321,11 @@ describe('the two entry points meet the same component', () => {
 	 * the binder collects it back into `props`, while a document authors it under `props`
 	 * already — so a component written for one path works unchanged on the other.
 	 */
+	const NOTE_DOCUMENT = {
+		version: 1,
+		children: [{ type: 'note', name: 'note', label: 'Note', description: 'D', required: true, props: { hint: 'x' } }],
+	} as FormSchema<{ note: string }, 'note'>
+
 	it('hands a document-mounted field the same props a JSX-mounted one gets', () => {
 		render(
 			<Form defaultValues={{ note: 'hi' }}>
@@ -333,14 +348,9 @@ describe('the two entry points meet the same component', () => {
 			</Form>,
 		)
 
-		const schema = {
-			version: 1,
-			children: [{ type: 'note', name: 'note', label: 'Note', description: 'D', required: true, props: { hint: 'x' } }],
-		} as FormSchema<{ note: string }, 'note'>
-
 		render(
-			<FormRenderer
-				schema={schema}
+			<SchemaForm
+				schema={NOTE_DOCUMENT}
 				defaultValues={{ note: 'hi' }}
 				onSubmit={() => {}}
 			/>,
@@ -356,16 +366,43 @@ describe('the two entry points meet the same component', () => {
 		// excludes `onBlur`: the two mounts hold two `FieldApi` instances, so their bound
 		// handlers are distinct functions by construction. Everything else — `id`,
 		// `data-field`, `data-field-type`, the normalised `errors`, `invalid`, `disabled`, and
-		// the whole `props` bag — is compared verbatim.
-		const { onBlur: jsxBlur, onChange: jsxChange, ...jsxRest } = jsx
-		const { onBlur: docBlur, onChange: docChange, ...docRest } = document_
+		// the whole `props` bag — is compared verbatim. `data-form-id` is excluded too: the two
+		// mounts are two forms, and each field carries its own form's id.
+		const { onBlur: jsxBlur, onChange: jsxChange, 'data-form-id': jsxFormId, ...jsxRest } = jsx
+		const { onBlur: docBlur, onChange: docChange, 'data-form-id': docFormId, ...docRest } = document_
 
 		expect(typeof jsxBlur).toBe('function')
 		expect(typeof docBlur).toBe('function')
 		expect(typeof jsxChange).toBe('function')
 		expect(typeof docChange).toBe('function')
+		expect(jsxFormId).toBeTypeOf('string')
+		expect(docFormId).toBeTypeOf('string')
+		expect(docFormId).not.toBe(jsxFormId)
 		expect(docRest).toEqual(jsxRest)
 		expect(docRest.props).toEqual({ hint: 'x' })
+	})
+
+	it('stamps a document-mounted field with its own form id, beside a second form', () => {
+		render(
+			<>
+				<SchemaForm
+					schema={NOTE_DOCUMENT}
+					formId='first'
+					defaultValues={{ note: 'hi' }}
+					onSubmit={() => {}}
+				/>
+				<SchemaForm
+					schema={NOTE_DOCUMENT}
+					formId='second'
+					defaultValues={{ note: 'hi' }}
+					onSubmit={() => {}}
+				/>
+			</>,
+		)
+
+		const wrappers = [...document.querySelectorAll('[data-field]')]
+		expect(wrappers).toHaveLength(FORM_COUNT)
+		expect(wrappers.map((wrapper) => wrapper.getAttribute('data-form-id'))).toEqual(['first', 'second'])
 	})
 })
 
@@ -379,9 +416,13 @@ describe('the factory runs the registry checks', () => {
 	 * checked again. This is the test that goes red instead.
 	 */
 	it('rejects a key whose derived id shadows a reserved node type', () => {
-		expect(() => createForm({ components: testComponents, fields: { ...testFields, SectionField: Noop } })).toThrow(
-			/section/i,
-		)
+		expect(() =>
+			createForm({
+				FormElement: testFormElement,
+				fields: { ...testFields, SectionField: Noop },
+				components: testComponents,
+			}),
+		).toThrow(/section/i)
 	})
 
 	/**
@@ -392,8 +433,9 @@ describe('the factory runs the registry checks', () => {
 	 */
 	it('binds a key named after an Object.prototype member as a custom field, not a built-in', () => {
 		const { Form: ProtoForm } = createForm({
-			components: testComponents,
+			FormElement: testFormElement,
 			fields: { ...testFields, toString: Noop },
+			components: testComponents,
 		})
 
 		expect(() =>
@@ -411,20 +453,23 @@ describe('the factory runs the registry checks', () => {
 	})
 
 	/**
-	 * The builder writes five of its own keys over the registry's output, so a field registered
-	 * under one of them was accepted everywhere and then silently overwritten — `form.GridItem`
-	 * rendered the layout component and the author's field never appeared. `Section` and `Array`
-	 * were caught only by accident, their ids happening to be reserved node types.
+	 * The builder writes its two primitives over the registry's output, so a field registered
+	 * under one of them would be accepted and then silently overwritten. Both are reserved keys
+	 * of the instance, and the reserved-key check runs first.
 	 */
-	it.each(['GridItem', 'SubmitButton'])('rejects %s, which the builder would overwrite', (key) => {
-		expect(() => createForm({ components: testComponents, fields: { ...testFields, [key]: Noop } })).toThrow(
-			new RegExp(key),
-		)
+	it.each(['Submit', 'Array'])('rejects %s, which the builder would overwrite', (key) => {
+		expect(() =>
+			createForm({ FormElement: testFormElement, fields: { ...testFields, [key]: Noop }, components: testComponents }),
+		).toThrow(`createForm: "${key}" is reserved by the form instance and cannot be registered in fields.`)
 	})
 
 	it('rejects two keys deriving one id', () => {
 		expect(() =>
-			createForm({ components: testComponents, fields: { ...testFields, Rating: Noop, RatingField: Noop } }),
+			createForm({
+				FormElement: testFormElement,
+				fields: { ...testFields, Rating: Noop, RatingField: Noop },
+				components: testComponents,
+			}),
 		).toThrow(/rating/i)
 	})
 })
@@ -439,7 +484,11 @@ describe('the authored props bag', () => {
 		return null
 	})
 
-	const { Form: BagForm } = createForm({ components: testComponents, fields: { ...testFields, BagField } })
+	const { Form: BagForm } = createForm({
+		FormElement: testFormElement,
+		fields: { ...testFields, BagField },
+		components: testComponents,
+	})
 
 	function Harness(): ReactNode {
 		const [, force] = useReducer((n: number) => n + 1, 0)

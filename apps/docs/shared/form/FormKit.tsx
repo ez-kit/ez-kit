@@ -5,12 +5,14 @@ import { createContext, useContext } from 'react'
 import type {
 	AnyFormProps,
 	FormControlledProps,
-	FormRendererControlledProps,
+	SchemaFormControlledProps,
 	Form as ShadcnForm,
-	FormRenderer as ShadcnFormRenderer,
+	SchemaForm as ShadcnSchemaForm,
 	useForm as useShadcnForm,
+	withFieldGroup as shadcnWithFieldGroup,
+	withForm as shadcnWithForm,
 } from '@ez-kit/form-shadcn'
-import type { ReactNode } from 'react'
+import type { ComponentType, ReactNode } from 'react'
 
 /**
  * The docs-only runtime switcher for the form kits — the `shared/DataGrid.tsx` analogue.
@@ -27,8 +29,14 @@ import type { ReactNode } from 'react'
  */
 // Re-exported so an example imports everything from this one specifier: the source panel
 // rewrites it to the kit package, and both kits re-export these from `@ez-kit/form-react`.
-export { FormFieldType, TextInputType } from '@ez-kit/form-react'
-export type { SelectOption } from '@ez-kit/form-react'
+export { FormFieldType, revalidateLogic, useStep, useSteps } from '@ez-kit/form-react'
+export type {
+	FormInstance,
+	SelectOption,
+	ServerErrors,
+	StepsControlsRenderProps,
+	StepsListRenderProps,
+} from '@ez-kit/form-react'
 
 // The schema-authoring API, re-exported for the same reason — both kits re-export these
 // verbatim from `@ez-kit/form-core`, so an example that imports them from here displays
@@ -39,7 +47,9 @@ export type { AnyFormSchema, FormSchema, NamedRule, RuleIssue } from '@ez-kit/fo
 export type FormKit = {
 	useForm: typeof useShadcnForm
 	Form: typeof ShadcnForm
-	FormRenderer: typeof ShadcnFormRenderer
+	SchemaForm: typeof ShadcnSchemaForm
+	withForm: typeof shadcnWithForm
+	withFieldGroup: typeof shadcnWithFieldGroup
 }
 
 const FormKitContext = createContext<FormKit | null>(null)
@@ -76,14 +86,49 @@ export const Form = ((props: AnyFormProps) => {
 }) as typeof ShadcnForm
 
 /**
- * The kit's `<FormRenderer>` — the config-driven entry point — resolved the same way as
+ * The kit's `<SchemaForm>` — the config-driven entry point — resolved the same way as
  * `Form` above, and cast for the same reason: the two overloads (controlled / uncontrolled)
  * would otherwise flatten and an example would lose the inferred value type of `onSubmit`.
  */
-export const FormRenderer = ((props: FormRendererControlledProps<unknown>) => {
-	const { FormRenderer: KitFormRenderer } = useFormKit()
+export const SchemaForm = ((props: SchemaFormControlledProps<unknown>) => {
+	const { SchemaForm: KitSchemaForm } = useFormKit()
 
 	// Which overload the props satisfy was settled at the call site; at runtime the two
 	// modes are one component, so forwarding through either signature is equivalent.
-	return <KitFormRenderer {...props} />
-}) as typeof ShadcnFormRenderer
+	return <KitSchemaForm {...props} />
+}) as typeof ShadcnSchemaForm
+
+/**
+ * A block helper of the kit, resolved at render time. A block is declared at module scope in an
+ * example, while the kit is only known inside the embed route, so the real block is built on the
+ * first render under each kit and cached per kit.
+ */
+function delegateBlock<TOptions>(
+	build: (kit: FormKit, options: TOptions) => unknown,
+): (options: TOptions) => ComponentType<object> {
+	return (options) => {
+		const blocks = new WeakMap<FormKit, ComponentType<object>>()
+
+		return function KitBlock(props: object) {
+			const kit = useFormKit()
+			let Block = blocks.get(kit)
+
+			if (Block === undefined) {
+				Block = build(kit, options) as ComponentType<object>
+				blocks.set(kit, Block)
+			}
+
+			return <Block {...props} />
+		}
+	}
+}
+
+/** The kit's `withForm`, resolved at render time ({@link delegateBlock}). */
+export const withForm = delegateBlock((kit, options: Parameters<FormKit['withForm']>[0]) =>
+	kit.withForm(options),
+) as unknown as FormKit['withForm']
+
+/** The kit's `withFieldGroup`, resolved at render time ({@link delegateBlock}). */
+export const withFieldGroup = delegateBlock((kit, options: Parameters<FormKit['withFieldGroup']>[0]) =>
+	kit.withFieldGroup(options),
+) as unknown as FormKit['withFieldGroup']

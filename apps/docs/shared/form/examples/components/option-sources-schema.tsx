@@ -3,7 +3,7 @@
 import { FormOptionSources } from '@ez-kit/form-react'
 import { useEffect, useState } from 'react'
 
-import { defineFormSchema, FormFieldType, FormRenderer } from 'shared/form/FormKit'
+import { defineFormSchema, FormFieldType, SchemaForm } from 'shared/form/FormKit'
 
 import type { OptionSourceRegistry } from '@ez-kit/form-react'
 
@@ -106,13 +106,13 @@ const schema = defineFormSchema<Address>()({
 			description: 'Reloads when the country changes — and the old city is cleared.',
 			placeholder: 'Pick a city',
 			// `dependsOn` is keyed by the source's parameter name, not by the field it reads —
-			// see `OptionsSource` in `packages/form/core/src/options-source.ts`. There is no live
+			// see `OptionSourceRef`, exported by the kit. There is no live
 			// value to pass here, unlike the JSX `optionsParams={{ domain: 'cities', country }}`:
 			// a document cannot hold one, so it names the path to read instead.
 			optionsFrom: { source: 'dictionary', params: { domain: 'cities' }, dependsOn: { country: 'country' } },
 			defaultValue: '',
 		},
-		{ type: 'submit', label: 'Save' },
+		{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 	],
 })
 
@@ -127,7 +127,7 @@ export function OptionSourcesSchemaExample() {
 	return (
 		<FormOptionSources value={optionSources}>
 			<div className='flex flex-col gap-4'>
-				<FormRenderer
+				<SchemaForm
 					schema={schema}
 					onSubmit={({ value }) => {
 						setSaved(JSON.stringify(value, null, 2))

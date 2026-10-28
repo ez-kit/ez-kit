@@ -3,12 +3,16 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
 
-import { createForm } from '../create-form'
-import { testComponents, testFields } from '../test-kit'
+import { createSchemaForm } from '../create-schema-form'
+import { testComponents, testFields, testFormElement } from '../test-kit'
 
 import type { FormSchema } from '@ez-kit/form-core'
 
-const { FormRenderer } = createForm({ components: testComponents, fields: testFields })
+const { SchemaForm } = createSchemaForm({
+	FormElement: testFormElement,
+	fields: testFields,
+	components: testComponents,
+})
 
 type EmailValues = { email: string }
 
@@ -18,12 +22,12 @@ test('constraints in the schema produce field errors', async () => {
 		version: 1,
 		children: [
 			{ type: FormFieldType.Text, name: 'email', label: 'Email', validate: { required: true } },
-			{ type: 'submit', label: 'Save' },
+			{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 		],
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			defaultValues={{ email: '' }}
 			onSubmit={() => {}}
@@ -41,12 +45,12 @@ test('the same message from onChange and onSubmit renders exactly once', async (
 		version: 1,
 		children: [
 			{ type: FormFieldType.Text, name: 'email', label: 'Email', validate: { required: true } },
-			{ type: 'submit', label: 'Save' },
+			{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 		],
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			defaultValues={{ email: '' }}
 			onSubmit={() => {}}
@@ -68,7 +72,7 @@ const twoRequiredFields: FormSchema<TwoFieldValues> = {
 	children: [
 		{ type: FormFieldType.Text, name: 'a', label: 'A', validate: { required: true } },
 		{ type: FormFieldType.Text, name: 'b', label: 'B', validate: { required: true } },
-		{ type: 'submit', label: 'Save' },
+		{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 	],
 }
 
@@ -76,7 +80,7 @@ test('typing in one field does not redden the other required fields', async () =
 	const user = userEvent.setup()
 
 	const { container } = render(
-		<FormRenderer
+		<SchemaForm
 			schema={twoRequiredFields}
 			defaultValues={{ a: '', b: '' }}
 			onSubmit={() => {}}
@@ -98,7 +102,7 @@ test('a submit attempt still shows every untouched field its error', async () =>
 	const user = userEvent.setup()
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={twoRequiredFields}
 			defaultValues={{ a: '', b: '' }}
 			onSubmit={() => {}}
@@ -120,7 +124,7 @@ test('supplying both schema constraints and validators throws a descriptive erro
 
 	expect(() =>
 		render(
-			<FormRenderer
+			<SchemaForm
 				schema={schema}
 				defaultValues={{ email: '' }}
 				onSubmit={() => {}}
@@ -138,7 +142,7 @@ test('caller-supplied validators are used verbatim when the schema has no constr
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			defaultValues={{ email: '' }}
 			onSubmit={() => {}}
@@ -168,12 +172,12 @@ test('a hidden required field does not block submission', async () => {
 				validate: { required: true },
 				when: { field: 'showExtra', eq: true },
 			},
-			{ type: 'submit', label: 'Save' },
+			{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 		],
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			defaultValues={{ showExtra: false, extra: '' }}
 			onSubmit={onSubmit}

@@ -9,6 +9,20 @@ import type { CalendarDate } from '@internationalized/date'
 import type { ReactNode } from 'react'
 
 /**
+ * A date field's kit props: the `YYYY-MM-DD` bounds on what the picker offers (not validation), and
+ * `placeholder` — accepted so a call site written for either kit compiles under both, and unused:
+ * React Aria's picker renders editable date segments, which carry no placeholder text.
+ */
+export type DateFieldKitProps = {
+	placeholder?: string | undefined
+	min?: string | undefined
+	max?: string | undefined
+}
+
+/** A date-range field's kit props — the same three as {@link DateFieldKitProps}. */
+export type DateRangeFieldKitProps = DateFieldKitProps
+
+/**
  * The date fields of the HeroUI kit, built on React Aria's `DatePicker` and — because a range
  * is a separate component there, not a mode — `DateRangePicker`.
  *
@@ -59,6 +73,7 @@ function CalendarBody({ Root }: { Root: typeof Calendar | typeof RangeCalendar }
 export function DateField({
 	value,
 	onChange,
+	placeholder: _placeholder,
 	min,
 	max,
 	id,
@@ -68,7 +83,7 @@ export function DateField({
 	description,
 	errors,
 	...field
-}: DateFieldRenderProps): ReactNode {
+}: DateFieldRenderProps & DateFieldKitProps): ReactNode {
 	return (
 		<DatePicker
 			id={id}
@@ -111,6 +126,7 @@ function toRangeValue(range: { start: CalendarDate; end: CalendarDate } | null):
 export function DateRangeField({
 	value,
 	onChange,
+	placeholder: _placeholder,
 	min,
 	max,
 	id,
@@ -120,7 +136,7 @@ export function DateRangeField({
 	description,
 	errors,
 	...field
-}: DateRangeFieldRenderProps): ReactNode {
+}: DateRangeFieldRenderProps & DateRangeFieldKitProps): ReactNode {
 	const range = value === undefined ? null : { start: parseDate(value.start), end: parseDate(value.end) }
 
 	return (

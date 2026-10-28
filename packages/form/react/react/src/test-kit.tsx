@@ -1,16 +1,25 @@
 import { useState } from 'react'
 
+import { useFormContext } from './form-context'
+
 import type {
+	ArrayFieldRenderProps,
+	ArrayItemRenderProps,
+	DateFieldRenderProps,
 	DateRangeFieldRenderProps,
+	AllFormFieldSlots,
 	FieldRenderProps,
 	FormComponents,
-	FormFieldSlots,
-	GridItemRenderProps,
-	SectionRenderProps,
-	WizardRenderProps,
-	WizardStep,
+	FormElementProps,
+	MultiSelectFieldRenderProps,
+	NumberFieldRenderProps,
+	SelectFieldRenderProps,
+	SliderFieldRenderProps,
+	TextareaFieldRenderProps,
+	TextFieldRenderProps,
 } from './contract'
-import type { ReactNode } from 'react'
+import type { GridItemProps, GridProps, SectionProps, SubmitButtonProps } from './field-props'
+import type { HTMLInputTypeAttribute, ReactNode } from 'react'
 
 /**
  * A minimal, deliberately unstyled kit used by this package's own tests.
@@ -21,9 +30,24 @@ import type { ReactNode } from 'react'
  * visible elements of its own.
  */
 
+/**
+ * The props this kit takes beyond the contract — the input attributes it renders. A kit declares
+ * these itself; `form.<Field>` picks them up from the component's own parameter.
+ */
+type PlaceholderProps = { placeholder?: string | undefined }
+type NumericBoundsProps = { min?: number | undefined; max?: number | undefined; step?: number | undefined }
+type DateBoundsProps = PlaceholderProps & { min?: string | undefined; max?: string | undefined }
+
 /** Suffixes the kit appends to the field id to build the ids `aria-describedby` points at. */
 const DESCRIPTION_ID_SUFFIX = '-description'
 const ERROR_ID_SUFFIX = '-error'
+
+/** The one minimum that reads in the singular. */
+const SINGULAR_MIN_LENGTH = 1
+
+/** What a searchable field shows while the typed text is shorter than its `minLength`. */
+const searchHint = (minLength: number): string =>
+	`Type at least ${String(minLength)} ${minLength === SINGULAR_MIN_LENGTH ? 'character' : 'characters'}`
 
 /** Only the chrome half of the field — the control half is handled by `children`. */
 type ShellProps = Omit<FieldRenderProps, 'name' | 'onBlur' | 'disabled' | 'required'> & {
@@ -84,12 +108,9 @@ function Shell({ id, label, description, errors, invalid, children, controlFirst
 }
 
 /** The layout half of the test kit — unstyled, marker attributes only. */
-function Section({ title, description, columns, children }: SectionRenderProps): ReactNode {
+function Section({ title, description, children }: SectionProps): ReactNode {
 	return (
-		<section
-			data-testid='section'
-			data-columns={columns}
-		>
+		<section data-testid='section'>
 			{title !== undefined && <h3>{title}</h3>}
 			{description !== undefined && <p>{description}</p>}
 			{children}
@@ -97,7 +118,18 @@ function Section({ title, description, columns, children }: SectionRenderProps):
 	)
 }
 
-function GridItem({ colSpan, children }: GridItemRenderProps): ReactNode {
+function GridView({ columns, children }: GridProps): ReactNode {
+	return (
+		<div
+			data-testid='grid'
+			data-columns={columns}
+		>
+			{children}
+		</div>
+	)
+}
+
+function GridItem({ colSpan, children }: GridItemProps): ReactNode {
 	return (
 		<div
 			data-testid='grid-item'
@@ -108,73 +140,7 @@ function GridItem({ colSpan, children }: GridItemRenderProps): ReactNode {
 	)
 }
 
-function WizardStepTrigger({ index, title, description, status, invalid, disabled, goTo }: WizardStep): ReactNode {
-	return (
-		<li
-			data-testid='wizard-step'
-			data-status={status}
-			data-invalid={invalid || undefined}
-			aria-current={status === 'current' ? 'step' : undefined}
-		>
-			<button
-				data-testkit='wizard-step-trigger'
-				type='button'
-				disabled={disabled}
-				onClick={goTo}
-			>
-				{title ?? `Step ${String(index + 1)}`}
-			</button>
-			{description !== undefined && <p data-testkit='wizard-step-description'>{description}</p>}
-		</li>
-	)
-}
-
-function Wizard({
-	steps,
-	currentIndex,
-	canGoBack,
-	canGoNext,
-	isLastStep,
-	goNext,
-	goBack,
-	submitting,
-	children,
-}: WizardRenderProps): ReactNode {
-	return (
-		<div
-			data-testkit='wizard'
-			data-current-index={currentIndex}
-		>
-			<ol data-testkit='wizard-steps'>
-				{steps.map((step) => (
-					<WizardStepTrigger
-						key={step.index}
-						{...step}
-					/>
-				))}
-			</ol>
-			<div data-testkit='wizard-body'>{children}</div>
-			<div data-testkit='wizard-nav'>
-				<button
-					data-testkit='wizard-back'
-					type='button'
-					disabled={!canGoBack || submitting}
-					onClick={goBack}
-				>
-					Back
-				</button>
-				<button
-					data-testkit='wizard-next'
-					type='button'
-					disabled={!canGoNext || submitting}
-					onClick={goNext}
-				>
-					{isLastStep ? 'Review' : 'Next'}
-				</button>
-			</div>
-		</div>
-	)
-}
+const Grid = Object.assign(GridView, { Item: GridItem })
 
 /**
  * The range stand-in keeps its own half-picked state, exactly as the real kits do: the
@@ -184,6 +150,7 @@ function Wizard({
 function TestDateRangeField({
 	value,
 	onChange,
+	placeholder,
 	min,
 	max,
 	id,
@@ -192,7 +159,7 @@ function TestDateRangeField({
 	disabled,
 	required,
 	...field
-}: DateRangeFieldRenderProps): ReactNode {
+}: DateRangeFieldRenderProps & DateBoundsProps): ReactNode {
 	const [draft, setDraft] = useState<{ start: string; end: string }>({ start: '', end: '' })
 	const current = value ?? draft
 
@@ -213,6 +180,7 @@ function TestDateRangeField({
 						name={`${name}.start`}
 						type='date'
 						aria-label='start'
+						placeholder={placeholder}
 						min={min}
 						max={max}
 						disabled={disabled}
@@ -245,7 +213,7 @@ function TestDateRangeField({
 }
 
 /** Minimal array chrome: enough surface for a test to drive, no styling of any kind. */
-const TestArrayField: FormComponents['ArrayField'] = ({
+const TestArrayFrame = ({
 	label,
 	description,
 	errors,
@@ -255,7 +223,7 @@ const TestArrayField: FormComponents['ArrayField'] = ({
 	onAdd,
 	canAdd,
 	...field
-}) => (
+}: ArrayFieldRenderProps): ReactNode => (
 	<div
 		data-testkit='array'
 		{...field}
@@ -274,7 +242,7 @@ const TestArrayField: FormComponents['ArrayField'] = ({
 	</div>
 )
 
-const TestArrayItem: FormComponents['ArrayItem'] = ({
+const TestArrayItem = ({
 	index,
 	label,
 	removeLabel,
@@ -286,7 +254,7 @@ const TestArrayItem: FormComponents['ArrayItem'] = ({
 	onMoveDown,
 	children,
 	...item
-}) => (
+}: ArrayItemRenderProps): ReactNode => (
 	<div
 		data-testkit='array-item'
 		{...item}
@@ -331,13 +299,23 @@ const TestArrayItem: FormComponents['ArrayItem'] = ({
 	</div>
 )
 
-/**
- * The twelve field kinds. Split from `testComponents` when the contract did: a kit's field
- * set is open and reaches `createForm` as `fields`, its chrome is closed and reaches it as
- * `components`.
- */
-export const testFields: FormFieldSlots = {
-	TextField: ({ value, onChange, type, placeholder, id, name, onBlur, disabled, required, ...field }) => (
+/** The array frame, carrying its entry view — the shape a kit's `ArrayField` export has. */
+const TestArrayField = Object.assign(TestArrayFrame, { Item: TestArrayItem })
+
+/** The twelve field kinds and the array frame — the test kit's `fields`. */
+export const testFields = {
+	TextField: ({
+		value,
+		onChange,
+		type,
+		placeholder,
+		id,
+		name,
+		onBlur,
+		disabled,
+		required,
+		...field
+	}: TextFieldRenderProps & PlaceholderProps & { type?: HTMLInputTypeAttribute | undefined }) => (
 		<Shell
 			id={id}
 			{...field}
@@ -362,7 +340,20 @@ export const testFields: FormFieldSlots = {
 			)}
 		</Shell>
 	),
-	NumberField: ({ value, onChange, placeholder, min, max, step, id, name, onBlur, disabled, required, ...field }) => (
+	NumberField: ({
+		value,
+		onChange,
+		placeholder,
+		min,
+		max,
+		step,
+		id,
+		name,
+		onBlur,
+		disabled,
+		required,
+		...field
+	}: NumberFieldRenderProps & PlaceholderProps & NumericBoundsProps) => (
 		<Shell
 			id={id}
 			{...field}
@@ -392,7 +383,18 @@ export const testFields: FormFieldSlots = {
 			)}
 		</Shell>
 	),
-	TextareaField: ({ value, onChange, placeholder, rows, id, name, onBlur, disabled, required, ...field }) => (
+	TextareaField: ({
+		value,
+		onChange,
+		placeholder,
+		rows,
+		id,
+		name,
+		onBlur,
+		disabled,
+		required,
+		...field
+	}: TextareaFieldRenderProps & PlaceholderProps & { rows?: number | undefined }) => (
 		<Shell
 			id={id}
 			{...field}
@@ -430,7 +432,7 @@ export const testFields: FormFieldSlots = {
 		disabled,
 		required,
 		...field
-	}) => (
+	}: SelectFieldRenderProps & PlaceholderProps) => (
 		<Shell
 			id={id}
 			{...field}
@@ -451,12 +453,15 @@ export const testFields: FormFieldSlots = {
 							}}
 						/>
 					)}
+					{search?.belowMinLength === true && <p data-testkit='search-hint'>{searchHint(search.minLength)}</p>}
 					<select
 						data-testkit='select'
 						data-loading={loading || undefined}
 						id={id}
 						name={name}
-						disabled={disabled === true || loading}
+						// Both real kits keep a searchable control enabled while it loads — it loads on
+						// nearly every pause in typing — so the stand-in does too.
+						disabled={disabled === true || (loading && search === undefined)}
 						required={required}
 						aria-invalid={field.invalid}
 						value={value}
@@ -570,7 +575,19 @@ export const testFields: FormFieldSlots = {
 			)}
 		</Shell>
 	),
-	SliderField: ({ value, onChange, min, max, step, id, name, onBlur, disabled, required, ...field }) => (
+	SliderField: ({
+		value,
+		onChange,
+		min,
+		max,
+		step,
+		id,
+		name,
+		onBlur,
+		disabled,
+		required,
+		...field
+	}: SliderFieldRenderProps & NumericBoundsProps) => (
 		<Shell
 			id={id}
 			{...field}
@@ -597,7 +614,19 @@ export const testFields: FormFieldSlots = {
 			)}
 		</Shell>
 	),
-	DateField: ({ value, onChange, placeholder, min, max, id, name, onBlur, disabled, required, ...field }) => (
+	DateField: ({
+		value,
+		onChange,
+		placeholder,
+		min,
+		max,
+		id,
+		name,
+		onBlur,
+		disabled,
+		required,
+		...field
+	}: DateFieldRenderProps & DateBoundsProps) => (
 		<Shell
 			id={id}
 			{...field}
@@ -637,7 +666,7 @@ export const testFields: FormFieldSlots = {
 		disabled,
 		required,
 		...field
-	}) => (
+	}: MultiSelectFieldRenderProps & PlaceholderProps) => (
 		<Shell
 			id={id}
 			{...field}
@@ -659,6 +688,7 @@ export const testFields: FormFieldSlots = {
 									search.onQueryChange(event.target.value)
 								}}
 							/>
+							{search.belowMinLength && <p data-testkit='search-hint'>{searchHint(search.minLength)}</p>}
 							<ul data-testkit='multiselect-chips'>
 								{value.map((entry) => (
 									<li
@@ -678,7 +708,8 @@ export const testFields: FormFieldSlots = {
 						multiple
 						id={id}
 						name={name}
-						disabled={disabled === true || loading}
+						// Enabled while a search loads, as in both real kits — see the select above.
+						disabled={disabled === true || (loading && search === undefined)}
 						required={required}
 						aria-invalid={field.invalid}
 						// A native multiple select has no placeholder slot, and `aria-placeholder` is
@@ -747,32 +778,69 @@ export const testFields: FormFieldSlots = {
 	),
 	// Two native inputs rather than a calendar: this kit exists so the adapter's own tests
 	// never depend on a real picker.
-	DateRangeField: (props) => <TestDateRangeField {...props} />,
-}
-
-/** The chrome half — the seven slots that are not field kinds. */
-export const testComponents: FormComponents = {
+	DateRangeField: TestDateRangeField,
 	ArrayField: TestArrayField,
-	ArrayItem: TestArrayItem,
-	Button: ({ type, disabled, onClick, children }) => (
-		<button
-			data-testkit='button'
-			type={type === 'submit' ? 'submit' : 'button'}
-			disabled={disabled}
-			onClick={onClick}
-		>
-			{children}
-		</button>
-	),
-	Form: ({ children, ...rest }) => (
+} satisfies AllFormFieldSlots
+
+/** The test kit's `<form>` element — the `FormElement` option. */
+export function testFormElement({ children, ...rest }: FormElementProps): ReactNode {
+	return (
 		<form
 			data-testkit='form'
 			{...rest}
 		>
 			{children}
 		</form>
-	),
+	)
+}
+
+/**
+ * The submit button, built the way a kit builds one: on `form.Submit`, reading the form from
+ * context, so it works as `form.SubmitButton` and as a plain component alike.
+ */
+function SubmitButton({ children, disabled }: SubmitButtonProps): ReactNode {
+	const form = useFormContext()
+	return (
+		<form.Submit>
+			{({ canSubmit, isSubmitting }) => (
+				<button
+					data-testkit='button'
+					type='submit'
+					disabled={disabled === true || !canSubmit || isSubmitting}
+				>
+					{children}
+				</button>
+			)}
+		</form.Submit>
+	)
+}
+
+/** The test kit's `components`. */
+export const testComponents = {
+	SubmitButton,
 	Section,
-	GridItem,
-	Wizard,
+	Grid,
+} satisfies FormComponents
+
+/**
+ * A field component that renders nothing and records every props object it receives — for the
+ * tests that assert what reaches a kit, prop by prop, rather than what a kit made of it.
+ *
+ * Its parameter is an open bag, so it fits every built-in slot and `form.<Field>` accepts any prop
+ * beside the binding: exactly the stand-in for "a kit that declares whatever the test writes".
+ */
+export function captureField(): {
+	calls: Record<string, unknown>[]
+	last: () => Record<string, unknown> | undefined
+	Capture: (props: Record<string, unknown>) => ReactNode
+} {
+	const calls: Record<string, unknown>[] = []
+	return {
+		calls,
+		last: () => calls.at(-1),
+		Capture: (props) => {
+			calls.push(props)
+			return null
+		},
+	}
 }

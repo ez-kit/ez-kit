@@ -30,6 +30,7 @@ test-results/
 .agents/skills/
 .claude/skills/
 .claude/commands
+.claude/scheduled_tasks.lock
 
 .specify
 

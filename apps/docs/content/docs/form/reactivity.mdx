@@ -27,7 +27,7 @@ The example is an order line. Two number fields feed one `Subscribe` that multip
 
 ## Do not wrap a field in `Subscribe`
 
-Every flat field is already its own subscriber. `form.TextField` renders through `form.AppField`, which subscribes to that one field's value and meta and re-renders only that field. This is why a large form stays cheap without you doing anything.
+Every flat field is already its own subscriber. `form.TextField` subscribes to that one field's value and meta and re-renders only that field. This is why a large form stays cheap without you doing anything.
 
 Wrapping a field in `Subscribe` therefore does not add reactivity — it adds a **second** subscription over a **wider** slice of state, and makes the field re-render for edits elsewhere in the form. It is a strict loss.
 
@@ -53,24 +53,18 @@ The other everyday use is the submit button's label, since the button subscribes
 
 ## The hook form
 
-The same subscription exists as a hook, `useStore(form.store, selector)`, for when the value is needed in the component body rather than in the JSX.
+The same subscription exists as a hook, `useSelector(form.store, selector)`, for when the value is needed in the component body rather than in the JSX.
 
-Two things to know before reaching for it. It subscribes the **whole component**, so used inside a component that renders fields it costs precisely what `Subscribe` exists to avoid; it earns its keep one level up, in a component that renders no fields of its own. And it is not part of this package's surface: `useStore` comes from `@tanstack/react-store` and is re-exported by `@tanstack/react-form`, but the kits re-export neither, so
-
-```ts
-import { useStore } from '@ez-kit/form-shadcn' // ✗ does not resolve
-```
-
-does not compile. Using it means importing from TanStack directly and taking that dependency on purpose:
+Two things to know before reaching for it. It subscribes the **whole component**, so used inside a component that renders fields it costs precisely what `Subscribe` exists to avoid; it earns its keep one level up, in a component that renders no fields of its own. And it comes from your kit, not from TanStack: `useSelector` is TanStack's own hook, re-exported by `@ez-kit/form-react` and from there by each kit, so it resolves to the same TanStack copy the form is built on, and there is no TanStack package of your own to keep in step with it.
 
 ```ts
-import { useStore } from '@tanstack/react-form'
+import { useSelector } from '@ez-kit/form-shadcn'
 ```
 
 Prefer `form.Subscribe`, which is already on the instance you have.
 
 <Callout>
 	This has no equivalent in a document. Choosing what to re-render on is arbitrary JavaScript, and a `FormSchema`
-	carries no code — inside a [config-driven form](/docs/form/schema) the renderer subscribes for you, narrowly, and the
+	carries no code — inside a [config-driven form](/docs/form/schema) `SchemaForm` subscribes for you, narrowly, and the
 	declarative cases are covered by a node's `when` and `disabledWhen` conditions.
 </Callout>

@@ -3,8 +3,8 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
 
-import { createForm } from '../create-form'
-import { testComponents, testFields } from '../test-kit'
+import { createSchemaForm } from '../create-schema-form'
+import { testComponents, testFields, testFormElement } from '../test-kit'
 
 import type { FormSchema } from '@ez-kit/form-core'
 
@@ -15,7 +15,11 @@ function first<T>(items: readonly T[]): T {
 	return head
 }
 
-const { FormRenderer } = createForm({ components: testComponents, fields: testFields })
+const { SchemaForm } = createSchemaForm({
+	FormElement: testFormElement,
+	fields: testFields,
+	components: testComponents,
+})
 
 type Person = { firstName: string; kind: string }
 type Values = { people: Person[] }
@@ -35,7 +39,7 @@ const schema: FormSchema<Values> = {
 				{ type: FormFieldType.Text, name: 'kind', label: 'Kind' },
 			],
 		},
-		{ type: 'submit', label: 'Save' },
+		{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 	],
 }
 
@@ -44,7 +48,7 @@ test('renders an array node and appends an entry built from the item defaults', 
 	const onSubmit = vi.fn()
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			defaultValues={{ people: [] }}
 			onSubmit={({ value }) => {
@@ -65,7 +69,7 @@ test('renders an array node and appends an entry built from the item defaults', 
 test('binds each entry to its own path', async () => {
 	const user = userEvent.setup()
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			defaultValues={{ people: [] }}
 			onSubmit={() => {}}
@@ -104,7 +108,7 @@ test('hides a field inside one entry without touching its neighbours', async () 
 
 	const user = userEvent.setup()
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={conditional}
 			defaultValues={{
 				people: [
@@ -129,7 +133,7 @@ test('hides a field inside one entry without touching its neighbours', async () 
 
 test('gives each entry its position in the caption', () => {
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			defaultValues={{
 				people: [

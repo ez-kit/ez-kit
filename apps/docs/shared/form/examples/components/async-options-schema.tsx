@@ -3,7 +3,7 @@
 import { FormOptionSources } from '@ez-kit/form-react'
 import { useEffect, useState } from 'react'
 
-import { defineFormSchema, FormFieldType, FormRenderer } from 'shared/form/FormKit'
+import { defineFormSchema, FormFieldType, SchemaForm } from 'shared/form/FormKit'
 
 import type { OptionSourceRegistry } from '@ez-kit/form-react'
 
@@ -83,7 +83,7 @@ const schema = defineFormSchema<Assignment>()({
 			optionsFrom: 'teams',
 			defaultValue: ['engineering'],
 		},
-		{ type: 'submit', label: 'Save' },
+		{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 	],
 })
 
@@ -96,7 +96,7 @@ const schema = defineFormSchema<Assignment>()({
  * `packages/form/core/src/schema.ts` — a document has no field-level "this is fetching" flag
  * to set by hand. Here the pending state comes from `optionsFrom` instead: `useRolesSource`
  * and `useTeamsSource` are ordinary sources that happen to report `loading: true` while their
- * delayed data has not arrived, and the renderer forwards that straight through — the same
+ * delayed data has not arrived, and `SchemaForm` forwards that straight through — the same
  * mechanism `components/option-sources.tsx` uses for its cascade, just with no `dependsOn`
  * because neither list needs one.
  */
@@ -106,7 +106,7 @@ export function AsyncOptionsSchemaExample() {
 	return (
 		<FormOptionSources value={optionSources}>
 			<div className='flex flex-col gap-4'>
-				<FormRenderer
+				<SchemaForm
 					schema={schema}
 					onSubmit={({ value }) => {
 						setSaved(JSON.stringify(value, null, 2))

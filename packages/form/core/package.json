@@ -36,13 +36,16 @@
 	"size-limit": [
 		{
 			"path": "dist/index.js",
-			"limit": "5 KB",
+			"limit": "6 KB",
 			"ignore": [
 				"@tanstack/form-core"
 			]
 		}
 	],
-	"dependencies": {
+	"devDependencies": {
+		"@tanstack/form-core": "^1.33.2"
+	},
+	"peerDependencies": {
 		"@tanstack/form-core": "^1.33.2"
 	}
 }

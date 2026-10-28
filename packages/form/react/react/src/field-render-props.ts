@@ -2,10 +2,33 @@ import { formatFieldErrors } from '@ez-kit/form-core'
 
 import { resolveRequired } from './field-validate'
 
-import type { BoundFieldApi } from './bindable-form'
+import type { BoundFieldApi, FieldValue } from './bindable-form'
 import type { FieldRenderProps } from './contract'
+import type { FieldControlProps } from './field-props'
 import type { FieldValidateProps } from './field-validate'
 import type { ReactNode } from 'react'
+
+/**
+ * The errors a field displays: its own, once the user has had a go at it or the form has been
+ * submitted.
+ *
+ * Spec §7.2 attaches the schema's generated validator to the *form's* `onChange`, so the first
+ * keystroke anywhere computes an error for every empty required field in the whole document. That
+ * is right for *running* the validator — it is what keeps `canSubmit` honest — and wrong for
+ * *showing* the result: without this gate one keystroke reddens fields the user has never so much
+ * as focused. `isTouched` is the exact question to ask: TanStack sets it on a field's own first
+ * change or blur, and on every mounted field at submit. (`isBlurred` would add nothing —
+ * `handleBlur` sets `isTouched` too, so it implies this one.)
+ *
+ * A submit attempt is the other half. A field mounted after it — a hidden step, a part behind a
+ * checkbox — was not touched by it, yet the form's validators reported on it and its error blocks
+ * the next submit; hiding the error would leave the form blocked for no visible reason. Only
+ * display is gated; the validator still runs on every change and the submit gate is untouched.
+ */
+export function shownFieldErrors(field: BoundFieldApi): string[] {
+	const attempted = field.form.state.submissionAttempts > 0
+	return field.state.meta.isTouched || attempted ? formatFieldErrors(field.state.meta.errors) : []
+}
 
 /**
  * The half of a field's props that is identical for every field kind: identity, chrome
@@ -44,20 +67,12 @@ export function fieldRenderProps(
 		validate: FieldValidateProps | undefined
 	},
 ): FieldRenderProps {
-	// Spec §7.2 attaches the schema's generated validator to the *form's* `onChange`, so the
-	// first keystroke anywhere computes an error for every empty required field in the whole
-	// document. That is right for *running* the validator — it is what keeps `canSubmit`
-	// honest — and wrong for *showing* the result: without this gate one keystroke reddens
-	// fields the user has never so much as focused. `isTouched` is the exact question to ask:
-	// TanStack sets it on a field's own first change or blur, and on every field at submit, so
-	// a submit attempt still surfaces everything. (`isBlurred` would add nothing — `handleBlur`
-	// sets `isTouched` too, so it implies this one.) Only display is gated; the validator still
-	// runs on every change and the submit gate is untouched.
-	const errors = field.state.meta.isTouched ? formatFieldErrors(field.state.meta.errors) : []
+	const errors = shownFieldErrors(field)
 
 	return {
 		'data-field': field.name,
 		'data-field-type': fieldType,
+		'data-form-id': field.form.formId,
 		id: field.name,
 		name: field.name,
 		label,
@@ -67,5 +82,26 @@ export function fieldRenderProps(
 		onBlur: field.handleBlur,
 		disabled,
 		required: resolveRequired(required, validate),
+	}
+}
+
+/**
+ * Everything a bound control receives: {@link fieldRenderProps} plus the value and a value-taking
+ * `onChange`. The generic binder of a registered field adds the author's `props` bag to it;
+ * `form.Field` hands it as is — which is what makes `form.Field` a one-off `defineFieldType` field.
+ */
+export function fieldControlProps(
+	field: BoundFieldApi,
+	fieldType: string,
+	chrome: Parameters<typeof fieldRenderProps>[2],
+): FieldControlProps<unknown> {
+	return {
+		...fieldRenderProps(field, fieldType, chrome),
+		value: field.state.value,
+		onChange: (value: unknown) => {
+			// A control's value type is the author's, and `FieldValue` enumerates the built-in ones —
+			// the same cast `RenderNode`'s custom branch makes, for the same reason.
+			field.handleChange(value as FieldValue)
+		},
 	}
 }

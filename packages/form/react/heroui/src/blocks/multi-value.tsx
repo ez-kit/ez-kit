@@ -1,10 +1,11 @@
 import { Checkbox, CheckboxGroup, ListBox, Select as HeroSelect } from '@heroui/react'
 
 import { FieldDescription, FieldErrorText, FieldLabel } from './field-chrome'
-import { fieldRoot } from './field-state'
+import { fieldRoot, splitRootState } from './field-state'
 import { OptionListSkeleton, OptionSkeleton } from './option-skeleton'
 import { SearchableMultiSelectField } from './searchable-multi-select'
 
+import type { RootProps } from './field-state'
 import type { CheckboxGroupFieldRenderProps, MultiSelectFieldRenderProps } from '@ez-kit/form-react'
 import type { Key } from '@heroui/react'
 import type { ReactNode } from 'react'
@@ -24,7 +25,13 @@ function toValues(keys: Key | Key[] | null): string[] {
 	return (Array.isArray(keys) ? keys : [keys]).map(String)
 }
 
-export function MultiSelectField(props: MultiSelectFieldRenderProps): ReactNode {
+/** A multi-select field's kit props: the `placeholder` its trigger shows while nothing is chosen. */
+export type MultiSelectFieldKitProps = { placeholder?: string | undefined }
+
+/** A checkbox-group field's kit props: the React Aria `CheckboxGroup` root's. */
+export type CheckboxGroupFieldKitProps = RootProps<typeof CheckboxGroup, CheckboxGroupFieldRenderProps>
+
+export function MultiSelectField(props: MultiSelectFieldRenderProps & MultiSelectFieldKitProps): ReactNode {
 	// `search` present *is* the mode switch — see `MultiSelectFieldRenderProps`. The two are
 	// different React Aria widgets (`Select` vs `ComboBox`) with different anatomy, so they
 	// are separate components rather than one with branches inside it.
@@ -54,7 +61,7 @@ function PlainMultiSelectField({
 	description,
 	errors,
 	...field
-}: MultiSelectFieldRenderProps): ReactNode {
+}: MultiSelectFieldRenderProps & MultiSelectFieldKitProps): ReactNode {
 	return (
 		<HeroSelect
 			selectionMode='multiple'
@@ -101,21 +108,15 @@ function PlainMultiSelectField({
 	)
 }
 
-export function CheckboxGroupField({
-	value,
-	onChange,
-	options,
-	loading,
-	id,
-	name,
-	onBlur,
-	label,
-	description,
-	errors,
-	...field
-}: CheckboxGroupFieldRenderProps): ReactNode {
+export function CheckboxGroupField(props: CheckboxGroupFieldRenderProps & CheckboxGroupFieldKitProps): ReactNode {
+	const {
+		state: field,
+		rest: { value, onChange, options, loading, id, name, onBlur, label, description, errors, ...root },
+	} = splitRootState(props)
+
 	return (
 		<CheckboxGroup
+			{...root}
 			id={id}
 			name={name}
 			value={[...value]}

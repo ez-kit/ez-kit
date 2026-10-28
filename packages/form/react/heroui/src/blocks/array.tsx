@@ -1,11 +1,12 @@
 import { Button, Description, ErrorMessage, Fieldset } from '@heroui/react'
 
-import type { ArrayFieldRenderProps, ArrayItemRenderProps } from '@ez-kit/form-react'
+import type { ArrayFieldRenderProps, ArrayFieldSlot, ArrayItemRenderProps } from '@ez-kit/form-react'
 import type { ReactNode } from 'react'
 
 /**
- * The repeatable-group pair of the HeroUI v3 kit: `ArrayField` draws the list, `ArrayItem`
- * draws one entry of it.
+ * The repeatable-group pair of the HeroUI v3 kit: `ArrayFieldView` draws the list, `ArrayItem`
+ * draws one entry of it, and `ArrayField` is the pair as the contract registers it — the frame
+ * carrying the entry as `ArrayField.Item`.
  *
  * `Fieldset` is HeroUI's own grouping primitive and maps onto the contract one-for-one —
  * `Fieldset.Legend` takes the list's label, `Description` its description, `Fieldset.Group`
@@ -29,7 +30,7 @@ import type { ReactNode } from 'react'
 const MOVE_UP_GLYPH = '↑'
 const MOVE_DOWN_GLYPH = '↓'
 
-export function ArrayField({
+function ArrayFieldView({
 	label,
 	description,
 	errors,
@@ -42,11 +43,13 @@ export function ArrayField({
 	canAdd,
 	'data-field': dataField,
 	'data-field-type': dataFieldType,
+	'data-form-id': dataFormId,
 }: ArrayFieldRenderProps): ReactNode {
 	return (
 		<Fieldset
 			data-field={dataField}
 			data-field-type={dataFieldType}
+			data-form-id={dataFormId}
 			className='flex flex-col gap-4'
 			// React rejects neither, but "not disabled" has to mean the attribute is absent —
 			// `disabled={undefined}` and `data-invalid={false}` both read as a stale `false` in a
@@ -195,3 +198,10 @@ function MoveButton({ label, glyph, disabled, onMove }: MoveButtonProps): ReactN
 		</Button>
 	)
 }
+
+/**
+ * The kit's array slot: the frame, carrying its entry view as `ArrayField.Item`, registered with
+ * the fields as one key. Annotated through `@ez-kit/form-react` so the declaration names the
+ * contract type rather than spelling out the two components.
+ */
+export const ArrayField: ArrayFieldSlot = /* @__PURE__ */ Object.assign(ArrayFieldView, { Item: ArrayItem })

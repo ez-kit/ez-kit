@@ -1,12 +1,14 @@
-import type { SubmittableForm } from './bindable-form'
-import type { FormComponents, FormElementProps } from './contract'
+import { FormProvider } from './form-context'
+
+import type { FormElementProps } from './contract'
+import type { AnyFormInstance } from './form-context'
 import type { ReactNode } from 'react'
 
 type FormShellProps = {
-	/** The instance whose `handleSubmit` the `<form>` is wired to. */
-	form: SubmittableForm
-	/** The kit's `<form>` primitive. */
-	FormElement: FormComponents['Form']
+	/** The instance whose `handleSubmit` the `<form>` is wired to, and which the context serves. */
+	form: AnyFormInstance
+	/** The kit's `<form>` element, or the intrinsic `'form'` when none was passed. */
+	FormElement: ((props: FormElementProps) => ReactNode) | 'form'
 	children: ReactNode
 	elementProps: Omit<FormElementProps, 'onSubmit' | 'children'>
 }
@@ -19,19 +21,21 @@ type FormShellProps = {
  */
 export function FormShell({ form, FormElement, children, elementProps }: FormShellProps): ReactNode {
 	return (
-		<FormElement
-			data-form=''
-			noValidate
-			{...elementProps}
-			onSubmit={(event) => {
-				// The browser must not navigate, and a nested form's submit must not bubble
-				// out to an enclosing one.
-				event.preventDefault()
-				event.stopPropagation()
-				void form.handleSubmit()
-			}}
-		>
-			{children}
-		</FormElement>
+		<FormProvider form={form}>
+			<FormElement
+				data-form=''
+				noValidate
+				{...elementProps}
+				onSubmit={(event) => {
+					// The browser must not navigate, and a nested form's submit must not bubble
+					// out to an enclosing one.
+					event.preventDefault()
+					event.stopPropagation()
+					void form.handleSubmit()
+				}}
+			>
+				{children}
+			</FormElement>
+		</FormProvider>
 	)
 }

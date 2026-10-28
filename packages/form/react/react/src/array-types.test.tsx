@@ -1,9 +1,11 @@
 import { describe, expectTypeOf, it } from 'vitest'
 
 import { createForm } from './create-form'
-import { testComponents, testFields } from './test-kit'
+import { testComponents, testFields, testFormElement } from './test-kit'
 
-import type { ReactNode } from 'react'
+import type { TextFieldRenderProps } from './contract'
+import type { ArrayItemScope } from './field-props'
+import type { ComponentPropsWithoutRef, ReactNode } from 'react'
 
 type Member = { name: string }
 type Line = { name: string; members: Member[] }
@@ -11,7 +13,13 @@ type Values = { title: string; lines: Line[] }
 
 const DEFAULTS: Values = { title: '', lines: [] }
 
-const { Form } = createForm({ components: testComponents, fields: testFields })
+const { Form } = createForm({ FormElement: testFormElement, fields: testFields, components: testComponents })
+
+/** A text field taking every native `<input>` attribute the contract does not already compute. */
+const InputTextField = (
+	_props: TextFieldRenderProps & Omit<ComponentPropsWithoutRef<'input'>, keyof TextFieldRenderProps>,
+): ReactNode => null
+const { Form: InputForm } = createForm({ fields: { ...testFields, TextField: InputTextField } })
 
 /**
  * Type-level guarantees of `form.Array` / `form.ArrayField`. Nothing here renders — every
@@ -213,5 +221,75 @@ describe('form.Array / form.ArrayField — types', () => {
 		}
 
 		expectTypeOf(WrongFieldItem).toBeFunction()
+	})
+
+	it('scopes only field components to an entry', () => {
+		function EntryScope(): ReactNode {
+			return (
+				<Form defaultValues={DEFAULTS}>
+					{(form) => (
+						<form.Array
+							name='lines'
+							newItem={{ name: '', members: [] }}
+						>
+							{({ items }) =>
+								items.map((item) => {
+									expectTypeOf(item.TextField).toBeFunction()
+									expectTypeOf(item.ArrayField).toBeFunction()
+									// @ts-expect-error — not scoped to an entry
+									expectTypeOf(item.SubmitButton).toBeFunction()
+									// @ts-expect-error — not scoped to an entry
+									expectTypeOf(item.Section).toBeFunction()
+									// @ts-expect-error — not scoped to an entry
+									expectTypeOf(item.Grid).toBeFunction()
+									return <item.Item key={item.key}>{item.index}</item.Item>
+								})
+							}
+						</form.Array>
+					)}
+				</Form>
+			)
+		}
+
+		expectTypeOf(EntryScope).toBeFunction()
+	})
+})
+
+describe('array entries — props beyond the binding come from the kit component', () => {
+	it('passes a native attribute on an entry field when the kit accepts it', () => {
+		function Entries(): ReactNode {
+			return (
+				<InputForm defaultValues={DEFAULTS}>
+					{(form) => (
+						<form.Array
+							name='lines'
+							newItem={{ name: '', members: [] }}
+						>
+							{({ items }) =>
+								items.map((item) => (
+									<item.TextField
+										key={item.key}
+										name='name'
+										autoComplete='address-level2'
+									/>
+								))
+							}
+						</form.Array>
+					)}
+				</InputForm>
+			)
+		}
+		expectTypeOf(Entries).toBeFunction()
+	})
+
+	it('takes nothing beyond the binding under the default field set', () => {
+		const Entry = ({ item }: { item: ArrayItemScope<Line> }): ReactNode => (
+			<item.TextField
+				name='name'
+				// @ts-expect-error -- `AllFormFieldSlots` is the contract itself, which declares no extra props
+				autoComplete='address-level2'
+			/>
+		)
+		expectTypeOf(Entry).toBeFunction()
 	})
 })

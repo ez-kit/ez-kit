@@ -39,7 +39,6 @@
 			"limit": "13 KB",
 			"ignore": [
 				"@base-ui/react",
-				"@ez-kit/form-core",
 				"@ez-kit/form-react",
 				"class-variance-authority",
 				"clsx",
@@ -55,7 +54,6 @@
 	],
 	"dependencies": {
 		"@base-ui/react": "^1.4.1",
-		"@ez-kit/form-core": "workspace:*",
 		"@ez-kit/form-react": "workspace:*",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
@@ -68,16 +66,12 @@
 		"tw-animate-css": "^1.4.0"
 	},
 	"devDependencies": {
-		"@tanstack/form-core": "^1.33.2",
-		"@tanstack/react-form": "^1.33.2",
 		"@types/react": "^19.2.14",
 		"@types/react-dom": "^19.2.3",
 		"react": "^19.2.4",
 		"react-dom": "^19.2.4"
 	},
 	"peerDependencies": {
-		"@tanstack/form-core": "^1.33.2",
-		"@tanstack/react-form": "^1.33.2",
 		"react": ">=18.0.0",
 		"react-dom": ">=18.0.0"
 	}

@@ -1,0 +1,140 @@
+---
+title: Steps
+description: form.Steps and form.Step — a headless step flow in JSX, with a check before every step is left.
+---
+
+A form split into steps is still **one** form: one set of values, one submit, one schema. `form.Steps` and `form.Step` add what a step flow needs on top of it — which step is on screen, what "Next" checks, and what a stepper shows — and draw nothing themselves: the stepper, the buttons and the layout are yours.
+
+<KitExample exampleId='form-steps' />
+
+## Anatomy
+
+```tsx
+<form.Steps>
+	<form.Steps.List>{({ steps, current, goTo }) => <MyStepper … />}</form.Steps.List>
+
+	<form.Step name='account'>
+		<form.TextField name='email' />
+	</form.Step>
+	<form.Step name='profile'>
+		<form.TextField name='name' />
+	</form.Step>
+
+	<form.Steps.Controls>
+		{({ canGoBack, isLast, goBack, goNext }) => (
+			<footer>
+				{canGoBack && <Button onClick={goBack}>Back</Button>}
+				{isLast ? <form.SubmitButton>Sign up</form.SubmitButton> : <Button onClick={goNext}>Next</Button>}
+			</footer>
+		)}
+	</form.Steps.Controls>
+</form.Steps>
+```
+
+- **`form.Steps`** holds the flow's state outside the form's values — it never reaches `onSubmit`, `isDirty` or `reset`'s defaults. Its children are ordinary nodes.
+- **`form.Step`** renders its children only while it is the step on screen. `name` identifies it for navigation, the stepper and `onStepChange`; it is not a path, and the fields inside are written from the root, as anywhere else in the form.
+- **`Steps.List`**, **`Steps.Item`**, **`Steps.Controls`** and **`Steps.Subscribe`** hand state to your markup through a render function; `useStep(name)` and `useSteps(selector)` are the same as hooks.
+
+The steps are listed in JSX order. A step that applies only sometimes takes `when`, and stays in its place: write `<form.Step name='company' when={(values) => values.type === 'company'}>`, never `{isCompany && <form.Step />}` — a step that mounts later would join the list at its end. The step on screen is kept by name; `initial` picks the first one, and renders it on the server too.
+
+## What a step knows about
+
+A step learns its fields by rendering them: every bound field inside it — `form.X`, `group.X` in a `form.FormGroup` or a `withFieldGroup` block, an array entry's fields, `form.Field` — registers its full path, and every group registers itself. The step remembers the list while it is off screen, so it still knows its fields when another step is shown. `form.NativeField` does not register; inside a step, write `form.X` or `form.Field`.
+
+## "Next" checks the step
+
+`goNext` is a submit of the step on screen, as `group.handleSubmit()` is of its branch:
+
+1. The step's fields are marked touched, so their errors show.
+2. Every sync check runs at once: each field's own validators, the form's validators limited to the step's fields, the groups inside the step — untouched or not — and the step's own `validators`.
+3. Only if all of those passed do the async ones run, so a server is never asked about data already known to be wrong.
+4. The step is left only if its fields have no errors and the step has none of its own. What the form's schema reports on the fields of other steps neither blocks the move nor shows.
+
+When the check fails, the first field with an error takes focus, and the step becomes **visited**: from then on the stepper marks it `invalid` while it has errors. A step the user has merely looked at is never marked.
+
+Blocks keep their own rules inside a step — the address block below checks on blur, the card group on change and has its own _Save card_:
+
+<KitExample exampleId='form-steps-blocks' />
+
+## What holds the submit
+
+The last step's submit button submits the form, and the form's schema decides whether it goes — as on any form, a whole-form submit runs the form's validators and no group's or step's. A step's `validators` answer early, on "Next"; a rule the data must satisfy to be sent belongs in the form's schema, built from the same constants. An error the schema reports on a field of another step blocks the submit and turns that step `invalid` in the stepper; the user goes back to it — the flow does not jump on its own.
+
+A step skipped by `when` keeps its values: switch the account back to a company and the company fields are still filled in. So the schema describes when they count — a union on the flag — and its output is what you send:
+
+```tsx
+const registrationSchema = z.intersection(
+	z.object({ email: z.email(), card: cardNumber }),
+	z.discriminatedUnion('type', [
+		z.object({ type: z.literal('person'), company: companyShape.transform(() => undefined) }),
+		z.object({ type: z.literal('company'), company: companySchema }),
+	]),
+)
+
+<Form
+	validationLogic={revalidateLogic()}
+	validators={{ onDynamic: registrationSchema }}
+	onSubmit={({ value }) => api.register(registrationSchema.parse(value))}
+>
+```
+
+TanStack Form hands `onSubmit` the values as they are; `parse` returns the schema's output, where the person branch drops the company.
+
+<KitExample exampleId='form-steps-conditional' />
+
+## Moving between steps
+
+`goBack` and a `goTo` to an earlier step move without a check. Forward, it depends on `linear`:
+
+- **`linear`** (the default) — `goTo` forward first checks the step on screen, as `goNext` does, and reaches its target only if every step in between passed its last check and has no error now. Going back to the first step, emptying a field and jumping to the last does not get past the first.
+- **`linear={false}`** — `goTo` reaches any step at once. "Next" still checks the step on screen and does not move past an error; the form's schema still holds the submit.
+
+<KitExample exampleId='form-steps-free' />
+
+`step` and `onStepChange` make the step on screen controlled — for a step kept in the URL. A move then only asks: every "Next" or `goTo` that would move calls `onStepChange` with its target, and the step changes when `step` does — a parent that declines simply keeps `step` as it is, and the next request asks again. A step that stops applying while it is on screen hands over to the nearest step before it that still applies, or to the first one that does.
+
+## Errors with no field
+
+`Steps.Controls` hands two lists of messages that belong to no field:
+
+- **`stepErrors`** — what the step's own `validators` report with no path, such as a check across the whole step. Only the step's: a block inside it shows its own in `group.errors`, wherever it renders them.
+- **`formErrors`** — what the form's validators report with no path, as `form.Submit` hands them; on the last step they sit next to the submit button.
+
+## A stepper of your own
+
+`Steps.List` hands every step at once, which re-renders the whole list on every move — right for three to seven steps. For a stepper that re-renders only what changed, render one `Steps.Item` per step, or call `useStep(name)`: a move re-renders the step it leaves and the step it enters.
+
+<KitExample exampleId='form-steps-stepper' />
+
+`useSteps(selector)` and `Steps.Subscribe` read any slice of the state — `names` (the steps that apply), `order` (every step, applying or not), `current`, `visited`, `passed`, `fields`, `validating`. The selection is compared with `Object.is`, so a selector that builds an object or an array re-renders on every change; pass an equality function — the second argument of `useSteps`, the `equal` prop of `Steps.Subscribe` — such as `(a, b) => a.current === b.current && a.names === b.names`, or select each value separately.
+
+## Reference
+
+### `form.Steps` props
+
+| Prop           | Type                     | Notes                                                                                               |
+| -------------- | ------------------------ | --------------------------------------------------------------------------------------------------- |
+| `initial`      | `string`                 | The step shown first, by name; rendered on the server too. Without it, the first step that applies. |
+| `step`         | `string`                 | The step on screen, controlled.                                                                     |
+| `onStepChange` | `(name: string) => void` | Called with the step to show on every move; in a controlled flow, on every request for one.         |
+| `linear`       | `boolean`                | `true` by default: a forward `goTo` checks the steps it would pass. `false` lets it go anywhere.    |
+
+### `form.Step` props
+
+| Prop         | Type                             | Notes                                                                                                                                                                                    |
+| ------------ | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`       | `string`                         | The step's id for navigation and the stepper.                                                                                                                                            |
+| `when`       | `(values: TFormData) => boolean` | The condition the step applies under, read from the form's values; a step that does not apply is skipped, in place.                                                                      |
+| `validators` | `GroupValidators<TFormData>`     | The step's own rules over the whole form, written from the root; run on their triggers — `onMount` each time the step comes on screen, `onChange` on any value's change — and on "Next". |
+
+### `Steps.Controls`
+
+| Render prop    | Type         | Notes                                                       |
+| -------------- | ------------ | ----------------------------------------------------------- |
+| `canGoBack`    | `boolean`    | A step that applies comes before the one on screen.         |
+| `isLast`       | `boolean`    | No step that applies comes after it.                        |
+| `isValidating` | `boolean`    | A check is in flight; a second "Next" is ignored meanwhile. |
+| `stepErrors`   | `string[]`   | The step's own messages with no path.                       |
+| `formErrors`   | `string[]`   | The form's messages with no path.                           |
+| `goBack`       | `() => void` | The step before, without a check.                           |
+| `goNext`       | `() => void` | Check the step, and move on if it passed.                   |

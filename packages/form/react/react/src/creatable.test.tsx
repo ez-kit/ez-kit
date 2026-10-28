@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { createForm } from './create-form'
 import { FormOptionSources } from './options/source-context'
-import { testComponents, testFields } from './test-kit'
+import { testComponents, testFields, testFormElement } from './test-kit'
 
 import type { OptionSourceRegistry } from './options/source-types'
 import type { SelectOption } from '@ez-kit/form-core'
@@ -33,7 +33,7 @@ const TAGS: readonly SelectOption[] = [
 	{ label: 'Chore', value: 'chore' },
 ]
 
-const { useForm, Form } = createForm({ components: testComponents, fields: testFields })
+const { useForm, Form } = createForm({ FormElement: testFormElement, fields: testFields, components: testComponents })
 
 function selectFor(name: string): HTMLSelectElement {
 	const element = document.querySelector(`select[name="${name}"]`)
@@ -213,6 +213,7 @@ describe('creatable over a source', () => {
 		const user = userEvent.setup()
 		const sources: OptionSourceRegistry = {
 			tags: {
+				debounce: 0,
 				useOptions: ({ query }) => ({
 					options: query === '' ? [] : TAGS.filter((tag) => tag.label.toLowerCase().startsWith(String(query))),
 					loading: false,

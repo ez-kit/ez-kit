@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-import { defineFormSchema, FormFieldType, FormRenderer, TextInputType } from 'shared/form/FormKit'
+import { defineFormSchema, FormFieldType, SchemaForm } from 'shared/form/FormKit'
 
 type Contact = {
 	firstName: string
@@ -22,9 +22,9 @@ const schema = defineFormSchema<Contact>()({
 	version: 1,
 	children: [
 		{
-			type: 'section',
-			title: 'Contact',
-			description: 'Two columns on the grid; the email spans both.',
+			type: 'block',
+			component: 'Section',
+			props: { title: 'Contact', description: 'Two columns on the grid; the email spans both.' },
 			columns: 2,
 			children: [
 				{
@@ -45,14 +45,14 @@ const schema = defineFormSchema<Contact>()({
 					name: 'email',
 					label: 'Email',
 					placeholder: 'you@example.com',
-					inputType: TextInputType.Email,
+					inputType: 'email',
 					colSpan: 2,
 					defaultValue: '',
 					validate: { required: true, format: 'email' },
 				},
 			],
 		},
-		{ type: 'submit', label: 'Save' },
+		{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 	],
 })
 
@@ -64,7 +64,7 @@ export function SchemaBasicExample() {
 
 	return (
 		<div className='flex flex-col gap-4'>
-			<FormRenderer
+			<SchemaForm
 				schema={schema}
 				onSubmit={({ value }) => {
 					setSaved(JSON.stringify(value, null, 2))

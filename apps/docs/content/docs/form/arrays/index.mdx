@@ -67,7 +67,7 @@ The component takes the array's `name`, a `newItem` to append, and a render prop
 </form.ArrayField>
 ```
 
-`newItem` is required here and has no counterpart in a document. A document declares each field's `defaultValue`, so the renderer can build a fresh entry by reading the item's subtree; a render prop declares nothing the package can read, so you state the starting value yourself. It must carry every key of the item — a missing one would be an uncontrolled input on the new row, so the type requires the whole item rather than a partial.
+`newItem` is required here and has no counterpart in a document. A document declares each field's `defaultValue`, so `SchemaForm` can build a fresh entry by reading the item's subtree; a render prop declares nothing the package can read, so you state the starting value yourself. It must carry every key of the item — a missing one would be an uncontrolled input on the new row, so the type requires the whole item rather than a partial.
 
 Every prop `form.ArrayField` takes — `name`, `newItem`, `label`, `validate` and the rest — is in the [API reference](/docs/form/arrays/api#formarrayfield).
 
@@ -152,8 +152,8 @@ do with; the rest sit unused behind its own add control and its own `item.Item` 
 no chrome using them up, so the full scope is worth documenting — see the
 [API reference](/docs/form/arrays/api#the-scope) for all of it.
 
-`field` is **not** the raw TanStack field API. It is `BoundFieldApi`, the narrowed shape the rest of
-this package binds against: `name`, `state` — the whole list as one value, plus its `errors` and
+`field` is **not** the raw TanStack field API. It is the narrowed shape the rest of this package
+binds against: `name`, `state` — the whole list as one value, plus its `errors` and
 `isTouched` — and `handleChange` / `handleBlur`. That is enough to read the list as a whole (`errors`
 and `invalid` above are computed from exactly this) or to write it wholesale, and it is not an escape
 hatch onto TanStack's own array helpers: `pushValue`, `removeValue` and `moveValue` are not on it.
@@ -251,7 +251,7 @@ const uniqueEmails: NamedRule = (value) => {
 ```
 
 ```tsx
-<FormRenderer
+<SchemaForm
 	schema={schema}
 	rules={{ 'unique-emails': uniqueEmails }}
 />
@@ -316,7 +316,7 @@ const schema = defineFormSchema<Booking>()({
 })
 ```
 
-It is curried for the same reason `defineFormSchema` is — TypeScript has no partial generic inference — and it is **array-item-only** by construction. The names in the block are item-relative, so dropping it into a `section` is a compile error, not a runtime surprise. Mounting a shared field set at a nested non-array path (`address.city`) is a different feature and does not exist.
+It is curried for the same reason `defineFormSchema` is — TypeScript has no partial generic inference — and it is **array-item-only** by construction. The names in the block are item-relative, so dropping it into a block at the form root is a compile error, not a runtime surprise. Mounting a shared field set at a nested non-array path (`address.city`) is a different feature and does not exist.
 
 ## Styling hooks
 

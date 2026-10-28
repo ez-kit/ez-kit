@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-import { Form, TextInputType } from 'shared/form/FormKit'
+import { Form } from 'shared/form/FormKit'
 
 const ROLES = [
 	{ label: 'Owner', value: 'owner' },
@@ -72,7 +72,7 @@ export function ArraysExample() {
 										<item.TextField
 											name='email'
 											label='Email'
-											type={TextInputType.Email}
+											type='email'
 											validate={{ required: true, format: 'email' }}
 										/>
 										<item.SelectField

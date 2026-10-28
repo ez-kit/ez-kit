@@ -1,36 +1,17 @@
 import { useRef } from 'react'
 
 import { BASE_FIELD_PROP_KEYS } from '../field-registry'
-import { fieldRenderProps } from '../field-render-props'
+import { fieldControlProps } from '../field-render-props'
 import { fieldValidators } from '../field-validate'
+import { propsOutside } from '../kit-props'
 
-import type { BindableForm, FieldValue } from '../bindable-form'
+import type { BindableForm } from '../bindable-form'
 import type { BaseFieldProps } from '../field-props'
 import type { CustomFieldRenderProps } from '../schema/registries'
 import type { ReactNode } from 'react'
 
 /** The flat props a custom field's JSX call site writes: the binding, plus the author's own. */
 type FlatCustomFieldProps = BaseFieldProps<unknown, unknown> & Record<string, unknown>
-
-/**
- * Split a flat call site's props into the binding half and the author's half.
- *
- * The author's keys are whatever is **not** in `BASE_FIELD_PROP_KEYS`, which is the list
- * `satisfies Record<keyof BaseFieldProps<never, never>, true>` keeps in step with the type —
- * so a seventh base prop cannot quietly start arriving in the component's `props` bag.
- *
- * `Object.hasOwn`, not `in`: `BASE_FIELD_PROP_KEYS` is an object literal, so `in` walks
- * `Object.prototype` too and would silently swallow an author prop named `toString`,
- * `constructor`, `valueOf` or any other member of it. The prop would vanish between the call
- * site and the component with nothing reported anywhere.
- */
-function authoredProps(props: Record<string, unknown>): Record<string, unknown> {
-	const authored: Record<string, unknown> = {}
-	for (const [key, value] of Object.entries(props)) {
-		if (!Object.hasOwn(BASE_FIELD_PROP_KEYS, key)) authored[key] = value
-	}
-	return authored
-}
 
 function shallowEqual(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
 	const keys = Object.keys(a)
@@ -53,7 +34,7 @@ function shallowEqual(a: Record<string, unknown>, b: Record<string, unknown>): b
  * bag this hook calls unchanged is exactly a bag those two would also treat as unchanged.
  */
 function useStableAuthoredProps(props: Record<string, unknown>): Record<string, unknown> {
-	const next = authoredProps(props)
+	const next = propsOutside(props, BASE_FIELD_PROP_KEYS)
 	const previous = useRef(next)
 
 	if (previous.current !== next && !shallowEqual(previous.current, next)) previous.current = next
@@ -67,8 +48,9 @@ function useStableAuthoredProps(props: Record<string, unknown>): Record<string, 
  *
  * It is the JSX counterpart of the `AppField` block `RenderNode` already hand-writes for a
  * schema document's custom field node, and hands the component the same values in the same
- * {@link CustomFieldRenderProps} shape: same binding through `fieldRenderProps`, same `value` /
- * `onChange`, same nested `props`. One component therefore serves both entry points.
+ * {@link CustomFieldRenderProps} shape: the same binding, `value` and `onChange` — assembled by
+ * `fieldControlProps`, which `form.Field` hands its own control too — and the same nested `props`.
+ * One component therefore serves both entry points.
  *
  * `disabled` is the one prop the two paths do not spell identically: `RenderNode` always
  * computes a boolean — `false` when the node declares no `disabledWhen` — while a call site
@@ -98,14 +80,7 @@ export function createCustomField(
 			>
 				{(field) => (
 					<Component
-						{...fieldRenderProps(field, typeId, { label, description, disabled, required, validate })}
-						value={field.state.value}
-						onChange={(value: unknown) => {
-							// A custom field's value type is the author's, and `FieldValue` enumerates the
-							// built-in ones — the same cast `RenderNode`'s custom branch makes, for the
-							// same reason.
-							field.handleChange(value as FieldValue)
-						}}
+						{...fieldControlProps(field, typeId, { label, description, disabled, required, validate })}
 						props={authored}
 					/>
 				)}

@@ -3,7 +3,7 @@ import { useSelector } from '@tanstack/react-form'
 import { useCallback, useMemo } from 'react'
 
 import type { ConditionSubscribableForm } from '../schema/use-condition'
-import type { OptionsSource } from '@ez-kit/form-core'
+import type { OptionSourceRef } from '@ez-kit/form-core'
 
 /** Every entry equal by `Object.is` — enough for a flat map of field values. */
 function shallowEqualRecords(left: Record<string, unknown>, right: Record<string, unknown>): boolean {
@@ -34,7 +34,7 @@ const NO_DEPENDENCIES: Record<string, string> = {}
  */
 export function useOptionSourceParams<TValues>(
 	form: ConditionSubscribableForm<TValues>,
-	optionsFrom: string | OptionsSource | undefined,
+	optionsFrom: string | OptionSourceRef | undefined,
 ): Record<string, unknown> | undefined {
 	const spec = typeof optionsFrom === 'string' ? undefined : optionsFrom
 	const dependsOn = spec?.dependsOn ?? NO_DEPENDENCIES

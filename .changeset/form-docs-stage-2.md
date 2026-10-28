@@ -1,0 +1,36 @@
+---
+'@ez-kit/docs': minor
+---
+
+Document the form factory's new shape. The kit contract page now describes `FormElement`, the open
+`fields` and `components` registries, the kit's `sets.ts` / `form.tsx` split and the `/* @__PURE__ */`
+delegating-export rule; `createSchemaForm` is documented where a schema document reaches a custom
+field, and a document that needs a component nobody passed is documented as a named error before the
+first render. Submission documents `form.Submit` and its five render props, Composition gains
+`FormProvider` / `useFormContext` and the `FormInstance<V, typeof fields, typeof components>`
+spelling for a subset, and the arrays API notes that a kit's `ArrayField` carries `ArrayField.Item`.
+
+Native API now documents `form.Field`, which binds a control of your own, and `form.NativeField`,
+TanStack's field, on the form, on groups and on array entries; Composition documents the optional
+type argument of `useFormContext`.
+
+Submission documents the dirty-state recipes: resetting after a save, late initial values and a
+`beforeunload` warning while the form is dirty.
+
+The kit contract, Native API, Fields and Custom fields pages document `data-form-id`, the form id
+every field wrapper carries beside `data-field`.
+
+A new Server actions page shows a form submitting to a real server action, with `serverErrors` from
+`useActionState`, and states that the form needs JavaScript; an end-to-end test checks that a
+server-rendered form hydrates without errors in both kits.
+
+Submission documents focus on the first error and server errors (`serverErrors`,
+`form.setServerErrors`); Searchable selects documents the source's debounce and minimum length.
+
+Submission no longer warns that `formApi.reset()` keeps server errors: every submit and reset
+clears them.
+
+Composition is rewritten around the three helpers' roles: `withForm` (a part of one form, form from
+context), `withFieldGroup` (a block with its own fields, rules and submit, placed by path or map) and
+`form.FormGroup` (a branch with its own check and submit), with live examples of a profile form and a
+sign-up form, the coordinates rule and where to put a rule.

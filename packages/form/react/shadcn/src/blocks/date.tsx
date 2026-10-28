@@ -22,6 +22,19 @@ import type { DateRange, Matcher } from 'react-day-picker'
  * therefore go through the local-noon construction below.
  */
 
+/**
+ * A date field's kit props: what the picker renders beyond the contract — the trigger's
+ * `placeholder`, and the `YYYY-MM-DD` bounds on what the calendar offers (not validation).
+ */
+export type DateFieldKitProps = {
+	placeholder?: string | undefined
+	min?: string | undefined
+	max?: string | undefined
+}
+
+/** A date-range field's kit props — the same three as {@link DateFieldKitProps}. */
+export type DateRangeFieldKitProps = DateFieldKitProps
+
 /** The separator between the two ends of a rendered range. */
 const RANGE_SEPARATOR = ' – '
 
@@ -102,7 +115,7 @@ export function DateField({
 	disabled,
 	required,
 	...field
-}: DateFieldRenderProps): ReactNode {
+}: DateFieldRenderProps & DateFieldKitProps): ReactNode {
 	const [open, setOpen] = useState(false)
 	const bounds = calendarBounds(min, max)
 
@@ -180,7 +193,7 @@ export function DateRangeField({
 	disabled,
 	required,
 	...field
-}: DateRangeFieldRenderProps): ReactNode {
+}: DateRangeFieldRenderProps & DateRangeFieldKitProps): ReactNode {
 	const [open, setOpen] = useState(false)
 	/**
 	 * The half-picked range lives here, not in form state: the contract reports a range only

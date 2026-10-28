@@ -5,9 +5,14 @@ import { fieldRenderProps } from './field-render-props'
 
 import type { BoundFieldApi } from './bindable-form'
 
-function boundField(overrides: { isTouched: boolean; errors?: readonly unknown[] }): BoundFieldApi {
+function boundField(overrides: {
+	isTouched: boolean
+	errors?: readonly unknown[]
+	submissionAttempts?: number
+}): BoundFieldApi {
 	return {
 		name: 'email',
+		form: { formId: 'profile', state: { submissionAttempts: overrides.submissionAttempts ?? 0 } },
 		handleBlur: () => {},
 		handleChange: () => {},
 		state: {
@@ -29,6 +34,17 @@ describe('fieldRenderProps — error display gate', () => {
 
 		expect(props.errors).toEqual([])
 		expect(props.invalid).toBe(false)
+	})
+
+	test('shows the errors of an untouched field once the form has been submitted', () => {
+		const props = fieldRenderProps(
+			boundField({ isTouched: false, errors: ['Enter a name'], submissionAttempts: 1 }),
+			FormFieldType.Text,
+			CHROME,
+		)
+
+		expect(props.errors).toEqual(['Enter a name'])
+		expect(props.invalid).toBe(true)
 	})
 
 	test('shows them once the field has been touched', () => {

@@ -73,6 +73,7 @@ function List({
 		<ArrayField
 			data-field={FIELD_NAME}
 			data-field-type='array'
+			data-form-id='harness'
 			name={FIELD_NAME}
 			label={LIST_LABEL}
 			description={LIST_DESCRIPTION}
@@ -390,18 +391,19 @@ describe('the bare primitive through this kit', () => {
 							name='people'
 							newItem={{ name: '' }}
 						>
-							{({ items, add, canAdd, Button }) => (
+							{({ items, add, canAdd }) => (
 								<section>
 									<header aria-label={CUSTOM_LAYOUT_HEADER_LABEL}>
 										<h3>{CUSTOM_LAYOUT_HEADER_LABEL}</h3>
-										<Button
+										<button
+											type='button'
 											onClick={() => {
 												add()
 											}}
 											disabled={!canAdd}
 										>
 											{ADD_LABEL}
-										</Button>
+										</button>
 									</header>
 									{items.map((item) => (
 										<item.Item
@@ -435,38 +437,5 @@ describe('the bare primitive through this kit', () => {
 		await waitFor(() => {
 			expect(onSubmit).toHaveBeenCalledWith({ people: [{ name: 'Grace' }, { name: '' }] })
 		})
-	})
-
-	it('marks a scope button as a plain form button, leaving the submit marker to the submit', () => {
-		render(
-			<Form defaultValues={{ people: [{ name: 'Ada' }] }}>
-				{(form) => (
-					<>
-						<form.Array
-							name='people'
-							newItem={{ name: '' }}
-						>
-							{({ add, Button }) => (
-								<Button
-									onClick={() => {
-										add()
-									}}
-								>
-									{ADD_LABEL}
-								</Button>
-							)}
-						</form.Array>
-						<form.SubmitButton>Save</form.SubmitButton>
-					</>
-				)}
-			</Form>,
-		)
-
-		// `data-form-submit` is this kit's spelling of the submit marker (HeroUI owns `data-slot`
-		// here), and it must not land on every add, remove, duplicate and reorder control the
-		// array scope draws.
-		expect(screen.getByRole('button', { name: ADD_LABEL })).toHaveAttribute('data-form-button')
-		expect(screen.getByRole('button', { name: 'Save' })).toHaveAttribute('data-form-submit')
-		expect(document.querySelectorAll('[data-form-submit]')).toHaveLength(1)
 	})
 })

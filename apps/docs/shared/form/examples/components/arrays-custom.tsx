@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 
+import { Button } from 'shared/form/Button'
 import { Form } from 'shared/form/FormKit'
 
 type Line = { sku: string; qty: number }
@@ -47,7 +48,7 @@ export function ArraysCustomExample() {
 							newItem={NEW_LINE}
 							validate={{ minLength: 1, maxLength: 5 }}
 						>
-							{({ items, add, insert, canAdd, errors, invalid, Button }) => (
+							{({ items, add, insert, canAdd, errors, invalid }) => (
 								<section className='flex flex-col gap-2'>
 									<header className='flex items-center justify-between'>
 										<h3 className='text-sm font-medium'>Lines</h3>

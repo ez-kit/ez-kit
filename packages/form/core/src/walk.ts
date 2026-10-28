@@ -1,10 +1,10 @@
 import { getValueAtPath } from './rules'
 import { RESERVED_NODE_TYPES } from './schema'
 
-import type { AnyArrayNode, AnyFormSchema, CustomFieldNode, FieldNode, FormNode } from './schema'
+import type { AnyArrayNode, AnyFormSchema, BlockNode, CustomFieldNode, FieldNode, FormNode } from './schema'
 
 const ARRAY_NODE_TYPE = 'array'
-const CONTAINER_TYPES = new Set(['section', 'step', ARRAY_NODE_TYPE])
+const BLOCK_NODE_TYPE = 'block'
 
 /**
  * A node that holds a value and has no children — every built-in field kind, plus a custom one.
@@ -18,6 +18,10 @@ export function isFieldNode<TValues>(
 	node: FormNode<TValues, string>,
 ): node is FieldNode<TValues> | CustomFieldNode<TValues, string> {
 	return !RESERVED_NODE_TYPES.includes(node.type as (typeof RESERVED_NODE_TYPES)[number])
+}
+
+export function isBlockNode<TValues>(node: FormNode<TValues, string>): node is BlockNode<TValues, string> {
+	return node.type === BLOCK_NODE_TYPE
 }
 
 export function isArrayNode<TValues>(node: FormNode<TValues, string>): node is AnyArrayNode {
@@ -37,7 +41,10 @@ export function hasValue<TValues>(
 export function hasChildren<TValues>(node: FormNode<TValues, string>): node is FormNode<TValues, string> & {
 	children: FormNode<TValues, string>[]
 } {
-	return CONTAINER_TYPES.has(node.type)
+	// A block is a container only when it was given children — a leaf block (a divider, a
+	// submit button) has none — so the check reads the array rather than the type alone.
+	if (isBlockNode(node)) return Array.isArray(node.children)
+	return node.type === ARRAY_NODE_TYPE
 }
 
 /** Depth-first traversal over every node in the schema, containers included. */
@@ -70,7 +77,7 @@ export type NodeInstance = {
 	node: FormNode<unknown, string>
 	/**
 	 * The node's absolute path in the form values, or `undefined` for a node that names none
-	 * (a section, a step, a submit button, a block).
+	 * (a block).
 	 */
 	path: string | undefined
 	/**

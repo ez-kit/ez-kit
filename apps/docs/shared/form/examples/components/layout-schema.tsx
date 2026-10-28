@@ -1,6 +1,6 @@
 'use client'
 
-import { defineFormSchema, FormFieldType, FormRenderer } from 'shared/form/FormKit'
+import { defineFormSchema, FormFieldType, SchemaForm } from 'shared/form/FormKit'
 
 type Order = {
 	company: string
@@ -23,17 +23,18 @@ const COUNTRIES = [
 /**
  * The same layout as `layout`, expressed as data.
  *
- * The one structural difference between the two spellings is where the span is written: a
- * document puts `colSpan` on the node itself, because a node cannot wrap itself, while JSX
- * wraps the child in a `GridItem`. Both end at the kit's `GridItem`, so the DOM matches.
+ * The two structural differences between the spellings are where the grid and the span are
+ * written: a document sets `columns` on the block and `colSpan` on the node, because a node
+ * cannot wrap itself, while JSX writes the `Grid` and wraps the child in a `Grid.Item`. Both
+ * end at the kit's `Grid` and `Grid.Item`, so the DOM matches.
  */
 const schema = defineFormSchema<Order>()({
 	version: 1,
 	children: [
 		{
-			type: 'section',
-			title: 'Company',
-			description: 'Three columns — the name takes two of them.',
+			type: 'block',
+			component: 'Section',
+			props: { title: 'Company', description: 'Three columns — the name takes two of them.' },
 			columns: 3,
 			children: [
 				{
@@ -52,8 +53,9 @@ const schema = defineFormSchema<Order>()({
 					defaultValue: '',
 				},
 				{
-					type: 'section',
-					title: 'Billing address',
+					type: 'block',
+					component: 'Section',
+					props: { title: 'Billing address' },
 					columns: 4,
 					colSpan: 3,
 					children: [
@@ -81,18 +83,19 @@ const schema = defineFormSchema<Order>()({
 			],
 		},
 		{
-			type: 'section',
-			title: 'Contact',
+			type: 'block',
+			component: 'Section',
+			props: { title: 'Contact' },
 			columns: 2,
 			children: [
 				{ type: FormFieldType.Text, name: 'contactName', label: 'Name', defaultValue: '' },
 				{ type: FormFieldType.Text, name: 'contactEmail', label: 'Email', defaultValue: '' },
 			],
 		},
-		{ type: 'submit', label: 'Save' },
+		{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 	],
 })
 
 export function LayoutSchemaExample() {
-	return <FormRenderer schema={schema} />
+	return <SchemaForm schema={schema} />
 }

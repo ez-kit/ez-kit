@@ -10,9 +10,10 @@ injects, plus `data-*` attributes for that kit's CSS to target. Install a kit pa
 
 ## The idea
 
-`createForm({ components })` returns `{ useForm, Form, FormRenderer, withForm, withFieldGroup }`. `<Form>` is the `<form>` element:
+`createForm({ FormElement?, fields?, components? })` returns `{ useForm, Form, FormProvider, withForm, withFieldGroup }`; `createSchemaForm` takes the same options and adds `SchemaForm`. Every option is optional and `form.X` exists for exactly what was passed. `<Form>` is the `<form>` element:
 give it the options TanStack's `useForm` takes and it hands you an instance that is a
-**superset** of TanStack's — flat fields on top, the whole native API untouched underneath.
+**superset** of TanStack's — flat fields on top, the native API underneath, with TanStack's
+render-prop field as `form.NativeField`.
 
 ```tsx
 <Form
@@ -42,8 +43,17 @@ give it the options TanStack's `useForm` takes and it hands you an instance that
 			/>
 			<form.SubmitButton>Save</form.SubmitButton>
 
-			{/* the native TanStack API is untouched on the same instance */}
-			<form.Field name='email'>{(field) => <input value={field.state.value} />}</form.Field>
+			{/* TanStack's own field, with its FieldApi, on the same instance */}
+			<form.NativeField name='email'>
+				{(field) => (
+					<input
+						value={field.state.value}
+						onChange={(event) => {
+							field.handleChange(event.target.value)
+						}}
+					/>
+				)}
+			</form.NativeField>
 			<form.Subscribe selector={(s) => s.errors}>{(errors) => <pre>{errors.length}</pre>}</form.Subscribe>
 		</>
 	)}
@@ -54,21 +64,29 @@ The form is created by mounting the element, so unmounting it — closing a dial
 state with it. When the instance is needed outside the markup, call `useForm` yourself and
 pass it in: `<Form form={form}>` with plain JSX children.
 
+`form.SubmitButton` is the kit's submit button, passed in `components`; the primitive under it,
+`form.Submit`, is a render prop handing out `{ canSubmit, isSubmitting, isDirty, formErrors, submit }`,
+so a control built on it works outside a `<form>`. Components read the form from context, which
+`<Form>`, `<SchemaForm>` or `<FormProvider form={form}>` sets — a hand-written `<form>` is not
+enough — and `useFormContext()` returns the form's base API for a component of your own;
+`useFormContext<Values>()` types it over `Values`, as a cast rather than a check.
+
 Each `*Field` renders label + input + description + error text itself. `name` is narrowed
 to the paths in your form data whose value type fits the field, so
 `<form.NumberField name='email' />` is a compile error.
 
 ### Layout
 
-`form.Section` groups fields under an optional heading on a `columns`-wide grid (1–4), and
-`form.GridItem` gives one child a wider `colSpan`. They are the JSX spelling of the schema's
-`section` node and its `colSpan` — pure layout, binding no value.
+`form.Section` groups fields under an optional heading, `form.Grid` lays children out on a
+`columns`-wide grid (1–4), and `form.Grid.Item` gives one child a wider `colSpan`. They are the
+JSX spelling of a document's `Section` block, its `columns` and a node's `colSpan` — pure layout,
+binding no value.
 
 ## Composition
 
-`withForm` extracts part of a form into its own component. It is TanStack's helper, retyped
-so the flat fields compile inside the block — the `form` a block receives is exactly the
-instance `useForm` returns.
+`withForm` extracts part of a form into its own component. The `form` it receives is the
+instance `useForm` returns, so the flat fields compile inside the block; omit the prop and it
+reads the form above it.
 
 ```tsx
 const AddressBlock = withForm({
@@ -93,26 +111,37 @@ shape) is the only inference site for the block's form data: `withForm({ render 
 as `unknown`, which collapses the legal field names to `never` — nothing is writable inside
 such a block, and no real form is assignable to it from outside.
 
-`withFieldGroup`, and the re-exported `useFormGroup` / `useFieldGroup`, yield a **group** API,
-which correctly carries no flat field components — inside a group, fields are written with the
-native `form.Field` / `form.AppField`.
+`withFieldGroup` builds a block typed by its own shape and placed into any form through
+`fields` — a path (`fields='security'`) or a map of its keys to paths. Its `group` carries the
+bundle's flat fields, named relative to the block (`group.TextField name='password'`), and it
+takes `validators` in the block's coordinates. `group.handleSubmit()` submits the block alone
+and calls the `onGroupSubmit` it was placed with; it does not submit the form. `form.FormGroup`
+does the same for a named branch of one form.
+
+`useFieldGroup` and `useFormGroup` are the hooks behind them: they take the instance `useForm`
+returns, not a TanStack `FormApi`, and their group carries `group.Field` (your own control,
+bound, `name` relative to the group) and `group.NativeField` (TanStack's field).
 
 ## Config-driven forms
 
-`<FormRenderer schema={…} />` renders a plain-data
+`<SchemaForm schema={…} />` renders a plain-data
 [`FormSchema`](https://ez-kit-docs.vercel.app/docs/form/schema) — the same document a backend can deliver
 as JSON — through the very same bound field components, so a config-driven form and a
 hand-written one produce identical DOM.
 
 ```tsx
-<FormRenderer
+<SchemaForm
 	schema={schema}
-	fields={{ rating: RatingField }} // custom field kinds, by node `type`
-	blocks={{ 'promo-banner': Promo }} // value-less markup, by node `component`
 	rules={{ 'ru-inn': isValidInn }} // named validation rules
 	onSubmit={({ value }) => save(value)}
 />
 ```
+
+Custom field kinds and blocks are not props: register them once on
+`createSchemaForm({ FormElement, fields, components })`. A node's `type` reaches a field
+(`RatingField` answers to `{ type: 'rating' }`) and a block's `component` reaches a component
+(`{ type: 'block', component: 'PromoBanner' }` is `form.PromoBanner`), from JSX and from a
+document alike.
 
 It takes the same two modes as `<Form>`: pass `form` and it binds into an instance you own;
 pass `useForm`'s options and it owns the instance. Only in that second mode can it own the
@@ -125,13 +154,14 @@ The format itself, `defineFormSchema` and the `parseFormSchema` trust boundary l
 
 ## Building a kit
 
-Implement `FormComponents` and hand it to `createForm`:
+Implement each slot's props type, check the sets with `satisfies`, and hand them to the factory
+together with the kit's `FormElement`:
 
 ```tsx
-import { createForm } from '@ez-kit/form-react'
-import type { FormComponents } from '@ez-kit/form-react'
+import { createSchemaForm } from '@ez-kit/form-react'
+import type { AllFormComponents, AllFormFieldSlots } from '@ez-kit/form-react'
 
-const components = {
+export const allFormFields = {
 	TextField,
 	NumberField,
 	TextareaField,
@@ -144,21 +174,26 @@ const components = {
 	CheckboxGroupField,
 	DateField,
 	DateRangeField,
-	ArrayField,
-	ArrayItem,
-	Button,
-	Form,
-	Section,
-	GridItem,
-	Wizard,
-} satisfies FormComponents
+	ArrayField: Object.assign(ArrayFieldView, { Item: ArrayItemView }),
+} satisfies AllFormFieldSlots
 
-export const { useForm, FormRenderer, withForm, withFieldGroup } = createForm({ components })
+export const allFormComponents = { SubmitButton, Section, Grid } satisfies AllFormComponents
+
+// In an app, one call is enough:
+export const { useForm, Form, SchemaForm, withForm, withFieldGroup } = createSchemaForm({
+	FormElement,
+	fields: allFormFields,
+	components: allFormComponents,
+})
 ```
 
-`satisfies FormComponents` turns a forgotten field into a compile error rather than a
-runtime crash. Components are bound by closure at `createForm` time — no runtime provider
-is involved.
+Nothing is required at any level: every key of `FormFieldSlots` and `FormComponents` is
+optional, and `AllFormFieldSlots` / `AllFormComponents` are the variants that require them all,
+which is how a kit checks its own completeness. An app assembles any subset. A kit's own
+`form.tsx` does not destructure the result at the top level: it calls
+`/* @__PURE__ */ createForm({ … })` and `/* @__PURE__ */ createSchemaForm({ … })` once, and each
+export delegates inside a function body (`export const useForm = (o) => kit.useForm(o)`), so importing one field keeps neither bundle. Field kinds close over the form
+instance; components read it from context.
 
 This package renders **no elements at all** — not even a field wrapper. It hands each kit
 one flat props object per field (identity, `label`, `description`, `errors`, `invalid`,
@@ -169,13 +204,15 @@ siblings.
 
 ## Styling hooks
 
-Two attributes travel with every field for the kit to spread onto its root, plus one on the
-form:
+Three attributes travel with every field for the kit to spread onto its root, plus one on the
+form. `data-form-id` is what focus-on-error scopes its walk by, so a kit that picks its props
+rather than spreading them must pass it on, or its fields are skipped:
 
 | Attribute         | Where          | Value                                                                                                                                                                                                |
 | ----------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `data-field`      | the kit's root | the field's `name`                                                                                                                                                                                   |
 | `data-field-type` | the kit's root | the node's `type` — `text`, `number`, `textarea`, `select`, `multiselect`, `checkbox`, `checkboxgroup`, `switch`, `radiogroup`, `slider`, `date`, `daterange`, `array`, or a custom field's own kind |
+| `data-form-id`    | the kit's root | the id of the form the field belongs to                                                                                                                                                              |
 | `data-form`       | the `<form>`   | always present                                                                                                                                                                                       |
 
 Accessibility is the kit's to wire, because only the kit knows its markup. The shared layer

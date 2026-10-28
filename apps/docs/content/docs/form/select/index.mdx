@@ -25,7 +25,7 @@ Each entry is a `SelectOption`: `{ label, value, disabled? }`. The `label` is wh
 
 A field bound to a single value holds the chosen option's `value`; an empty string means nothing is selected, so the placeholder shows. A multi-value field holds a list, `[]` when nothing is chosen and never `undefined`.
 
-The same list, in a [document](/docs/form/schema), is the node's `options` key with the same entries — labels there may additionally be `{ key }` translation keys, resolved by `FormRenderer`'s `translate`.
+The same list, in a [document](/docs/form/schema), is the node's `options` key with the same entries — labels there may additionally be `{ i18n }` translation keys, resolved by `SchemaForm`'s `translate`.
 
 ## Numeric option values
 

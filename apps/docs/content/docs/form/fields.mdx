@@ -38,21 +38,41 @@ The last two are a pair, not two spellings of one thing: `required` draws the as
 
 [Validation](./form/validation#per-field-validators) covers the whole constraint set, how it composes with a validator on the form, and the two keys the JSX spelling leaves to a document.
 
+## Kit props
+
+Those six are everything a field keeps for itself (an option-bearing field adds `options`, `optionsFrom` and the rest of [Options](/docs/form/select)). **Every other prop you write goes to the kit's component, unchanged** — so what a field accepts beyond the shared six is decided by the kit you installed, not by this list:
+
+- **shadcn** forwards the props of the control it renders: the native `<input>` / `<textarea>` attributes for the text fields, the Radix primitive's for the checkbox, switch, radio group and slider.
+- **HeroUI** forwards the props of the field's React Aria root, which is where React Aria takes an input's attributes, plus `placeholder` and `rows`, which it puts on the input itself.
+
+```tsx
+<form.TextField
+	name='password'
+	label='Password'
+	type='password'
+	autoComplete='current-password'
+	maxLength={64}
+/>
+```
+
+Both kits accept every prop this page names per field — `placeholder`, `type`, `rows`, `min`, `max`, `step` — so an example written for one compiles under the other. Each kit exports the type of what its fields take as `<Field>KitProps` (`TextFieldKitProps`, `SliderFieldKitProps`, …), for an app that wraps a field.
+
+What the binding computes for the control — `value`, `onChange`, `onBlur`, `id`, `name`, `errors`, the `data-field` attributes — cannot be passed: it is a compile error, and if it arrives anyway the binding's value wins. A kit you [write yourself](/docs/form/custom-kit#kit-props) gets the same treatment: whatever its components declare is what `form.<Field>` accepts.
+
 ## `form.TextField`
 
 Single-line text. Accepts `placeholder` and `type`.
 
 ```tsx
-import { TextInputType } from '@ez-kit/form-shadcn'
-;<form.TextField
+<form.TextField
 	name='email'
 	label='Email'
 	placeholder='you@example.com'
-	type={TextInputType.Email}
+	type='email'
 />
 ```
 
-`type` is the `TextInputType` enum — `Text`, `Email`, `Password`, `Tel`, `Url`, `Search` — rather than a bare string, so a typo cannot slip through.
+`type` is the input's own attribute, a plain string — like `autoComplete` or `inputMode`, it is a [kit prop](#kit-props) that both kits put on the `<input>`.
 
 ## `form.NumberField`
 
@@ -270,7 +290,7 @@ A range is a separate field rather than a flag on `form.DateField` because its v
 
 ## `form.SubmitButton`
 
-Subscribed to the form's `canSubmit` and `isSubmitting`, so it disables itself while the form is invalid or in flight. The `disabled` prop can only add to that, never override it.
+The kit's `SubmitButton`, passed in `components` and built on the [`form.Submit`](/docs/form/submission#formsubmit) primitive. It is subscribed to the form's `canSubmit` and `isSubmitting`, so it disables itself while the form is invalid or in flight. The `disabled` prop can only add to that, never override it. It reads the form from context, so it needs `<Form>`, `<SchemaForm>` or [`FormProvider`](/docs/form/composition/with-form#formprovider) above it — a hand-written `<form>` is not enough.
 
 ```tsx
 <form.SubmitButton>Save</form.SubmitButton>
@@ -304,6 +324,7 @@ The field layer emits these and styles none of them — that is the kit's job:
 | ----------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `data-field`      | field root   | the field's `name`                                                                                                                                   |
 | `data-field-type` | field root   | `text` / `number` / `textarea` / `select` / `multiselect` / `checkbox` / `checkboxgroup` / `switch` / `radiogroup` / `slider` / `date` / `daterange` |
+| `data-form-id`    | field root   | the id of the form the field belongs to                                                                                                              |
 | `data-invalid`    | field root   | `true` while the field has errors, absent otherwise                                                                                                  |
 | `data-form`       | the `<form>` | always present                                                                                                                                       |
 
@@ -324,6 +345,6 @@ So targeting one field, or every field of a kind, is plain CSS:
 
 ## Fields we do not ship yet
 
-The list above is the whole catalogue: there is no file upload, rich text or colour field. Build one with [the native API](./form/native-api), which composes with the flat fields in the same form, or register it as a custom field type for a [document](/docs/form/schema).
+The list above is the whole catalogue: there is no file upload, rich text or colour field. Build one with [the native API](/docs/form/native-api), which composes with the flat fields in the same form, or register it as a custom field type for a [document](/docs/form/schema).
 
 A date picker and a combobox are **not** on that list of gaps: `form.DateField` is the picker, and a [`searchable`](/docs/form/select/searchable) select is the combobox.

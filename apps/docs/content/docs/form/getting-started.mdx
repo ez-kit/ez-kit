@@ -5,7 +5,7 @@ description: Install a flavour, render a Form, fill in fields — the whole loop
 
 ## 1. Install a flavour
 
-Pick the UI kit you already use. It is the only package you install: it depends on `@ez-kit/form-react` and `@ez-kit/form-core`, and re-exports the whole consumer surface of both — the field prop types, the error helpers, and the schema-authoring API (`defineFormSchema`, `parseFormSchema`, `buildValidator`, `stripHiddenValues`).
+Pick the UI kit you already use. It is the only package you install: it depends on `@ez-kit/form-react`, which brings `@ez-kit/form-core` and TanStack Form with it, and re-exports the whole consumer surface of both — the field prop types, the error helpers, and the schema-authoring API (`defineFormSchema`, `parseFormSchema`, `buildValidator`, `stripHiddenValues`).
 
 ```bash
 # shadcn
@@ -49,7 +49,7 @@ import { Form } from '@ez-kit/form-shadcn'
 			<form.TextField
 				name='password'
 				label='Password'
-				type={TextInputType.Password}
+				type='password'
 			/>
 			<form.SubmitButton>Create account</form.SubmitButton>
 		</>
@@ -58,6 +58,16 @@ import { Form } from '@ez-kit/form-shadcn'
 ```
 
 `children` is a function, not plain JSX, and that is load-bearing: React context cannot carry the `TFormData` generic, so an instance passed down through context would degrade every `name` to a bare `string`. The render prop is what keeps the type checking below.
+
+### In TSX
+
+<KitExample exampleId='form-basic' />
+
+### The same form as a document
+
+The same form described as data and handed to `<SchemaForm>` — the second entry point, covered in [Config-driven forms](/docs/form/schema).
+
+<KitExample exampleId='form-schema-basic' />
 
 ## 3. Mind the lifetime
 
@@ -105,15 +115,7 @@ The submit button sits in the footer and is still a native `type='submit'` insid
 	instance.
 </Callout>
 
-### In TSX
-
-<KitExample exampleId='form-dialog' />
-
-### The same form as a document
-
-`<FormRenderer>` calls `useForm` itself, so the lifetime argument above holds unchanged. The one arrangement that does not carry over is the split body/footer: the `submit` node is part of the document and renders where the document puts it, so the renderer goes in the dialog's body and only the dismiss button stays in the footer.
-
-<KitExample exampleId='form-dialog-schema' />
+`<SchemaForm>` calls `useForm` itself, so the lifetime argument above holds unchanged. The one arrangement that does not carry over is the split body/footer: the `SubmitButton` block is part of the document and renders where the document puts it, so `SchemaForm` goes in the dialog's body and only the dismiss button stays in the footer. Both versions run live in [Examples](/docs/form/examples#a-form-in-a-dialog).
 
 ## Controlled: when the instance is needed outside
 
@@ -136,19 +138,9 @@ const form = useForm({ defaultValues: { email: '' }, onSubmit })
 </Form>
 ```
 
+If you render your own `<form>` instead of `<Form>`, wrap the tree in `<FormProvider form={form}>`: `form.SubmitButton` and every other component that reads the form from context needs `<Form>`, `<SchemaForm>` or a provider above it. See [Composition](/docs/form/composition/with-form#formprovider).
+
 The two modes are mutually exclusive — passing `form` together with `defaultValues` is a compile error — and the mode is fixed for the lifetime of the component, since switching remounts the form. Note the trade-off you take on here: the instance now lives as long as **the component that called the hook**, so inside a dialog you own the reset.
-
-## The whole loop, live
-
-### In TSX
-
-<KitExample exampleId='form-basic' />
-
-### The same form as a document
-
-The same form described as data and handed to `<FormRenderer>` — the second entry point, covered in [Config-driven forms](/docs/form/schema).
-
-<KitExample exampleId='form-schema-basic' />
 
 ## Type safety
 
@@ -203,4 +195,4 @@ The `data-*` attributes are the styling hooks; the visible elements all come fro
 - [Fields](/docs/form/fields) — the twelve base fields and their props.
 - [Validation](/docs/form/validation) — zod / valibot / arktype, straight through.
 - [Submission](/docs/form/submission) — submit state, server errors, async initial values.
-- [Examples](/docs/form/examples) — a full form, a wizard, cascading selects, a dialog.
+- [Examples](/docs/form/examples) — a full form, a step flow, cascading selects, a dialog.

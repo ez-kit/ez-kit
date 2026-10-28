@@ -495,16 +495,13 @@ importers:
         version: 19.2.5(react@19.2.5)
 
   packages/form/core:
-    dependencies:
+    devDependencies:
       '@tanstack/form-core':
         specifier: ^1.33.2
         version: 1.33.2
 
   packages/form/react/heroui:
     dependencies:
-      '@ez-kit/form-core':
-        specifier: workspace:*
-        version: link:../../core
       '@ez-kit/form-react':
         specifier: workspace:*
         version: link:../react
@@ -524,12 +521,6 @@ importers:
       '@react-aria/utils':
         specifier: ^3.34.1
         version: 3.34.1(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
-      '@tanstack/form-core':
-        specifier: ^1.33.2
-        version: 1.33.2
-      '@tanstack/react-form':
-        specifier: ^1.33.2
-        version: 1.33.2(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.14
@@ -554,16 +545,19 @@ importers:
       '@ez-kit/form-core':
         specifier: workspace:*
         version: link:../../core
+      '@tanstack/form-core':
+        specifier: 1.33.2
+        version: 1.33.2
+      '@tanstack/react-form':
+        specifier: 1.33.2
+        version: 1.33.2(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+      '@tanstack/react-store':
+        specifier: 0.11.1
+        version: 0.11.1(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
     devDependencies:
       '@ez-kit/react18-env':
         specifier: workspace:*
         version: link:../../../../tools/react18-env
-      '@tanstack/form-core':
-        specifier: ^1.33.2
-        version: 1.33.2
-      '@tanstack/react-form':
-        specifier: ^1.33.2
-        version: 1.33.2(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.14
@@ -582,9 +576,6 @@ importers:
       '@base-ui/react':
         specifier: ^1.4.1
         version: 1.4.1(@date-fns/tz@1.4.1)(@types/react@19.2.14)(date-fns@4.1.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
-      '@ez-kit/form-core':
-        specifier: workspace:*
-        version: link:../../core
       '@ez-kit/form-react':
         specifier: workspace:*
         version: link:../react
@@ -616,12 +607,6 @@ importers:
         specifier: ^1.4.0
         version: 1.4.0
     devDependencies:
-      '@tanstack/form-core':
-        specifier: ^1.33.2
-        version: 1.33.2
-      '@tanstack/react-form':
-        specifier: ^1.33.2
-        version: 1.33.2(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.14
@@ -3842,9 +3827,6 @@ packages:
     peerDependencies:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
       react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
-
-  '@tanstack/store@0.11.0':
-    resolution: {integrity: sha512-WlzzCt3xi0G6pCAJu1U+2jiECwabETDpQDi3hfkFZvJii9AuZqEKbOiVarX1/bWhTNjU486yQtJCCasi/0q+Cw==}
 
   '@tanstack/store@0.11.1':
     resolution: {integrity: sha512-mzTOBhypOuDJAy/D8n2MfUZ1HFkXnmSETviRyhqEC8LUE7/IZQExOTxMANj3KjTofYTkFNpBY67qaVrT41YccA==}
@@ -11113,7 +11095,7 @@ snapshots:
     dependencies:
       '@tanstack/devtools-event-client': 0.4.4
       '@tanstack/pacer-lite': 0.1.1
-      '@tanstack/store': 0.11.0
+      '@tanstack/store': 0.11.1
 
   '@tanstack/pacer-lite@0.1.1': {}
 
@@ -11145,8 +11127,6 @@ snapshots:
       '@tanstack/virtual-core': 3.14.0
       react: 19.2.5
       react-dom: 19.2.5(react@19.2.5)
-
-  '@tanstack/store@0.11.0': {}
 
   '@tanstack/store@0.11.1': {}
 

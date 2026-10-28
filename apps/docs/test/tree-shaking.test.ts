@@ -556,6 +556,174 @@ describe('@ez-kit/data-grid-react', () => {
 	})
 })
 
+const FORM_REACT_ENTRY = entryOf('form/react/react')
+/** A message only the schema renderer contains — present in a bundle exactly when it is. */
+const SCHEMA_MARKER = 'is not a block; set "columns" on the container instead'
+
+/**
+ * `createForm` must not carry the schema renderer; `createSchemaForm` is the door to it.
+ *
+ * Asked with {@link bundledCodeOf} rather than through the `PACKAGES` table: every form package
+ * ships as one dist file, so an entry-point set cannot tell the two factories apart — the renderer
+ * either survived the shake or it did not.
+ */
+describe('@ez-kit/form-react schema renderer', () => {
+	// The control: without it the absence below would also be satisfied by a build that resolved
+	// nothing, or by a marker that no longer exists.
+	it('is reached through createSchemaForm', async () => {
+		expect(await bundledCodeOf(FORM_REACT_ENTRY, ['createSchemaForm'])).toContain(SCHEMA_MARKER)
+	})
+
+	it('is not reached through createForm', async () => {
+		expect(await bundledCodeOf(FORM_REACT_ENTRY, ['createForm'])).not.toContain(SCHEMA_MARKER)
+	})
+})
+
+/** The size-limit entry "config-layer helpers alone": everything it imports, and nothing else. */
+const FORM_HELPERS = ['stripHiddenValues', 'clampToGridRange', 'GRID_MIN', 'GRID_MAX', 'FormFieldType']
+/** Literals only the focus walk and the `<Form>` prop split contain. */
+const FOCUS_WALK_MARKER = 'contenteditable'
+const OPTION_SPLIT_MARKER = 'focusOnError'
+
+/**
+ * The config-layer helpers must carry none of the form's runtime. A top-level expression esbuild
+ * cannot prove pure — a `.join()` on a literal array, an object built by spreading two others —
+ * stays in every bundle of the entry whether or not anything reads it, and `size-limit` only shows
+ * that as bytes on an entry nobody connects to the module that grew.
+ */
+describe('@ez-kit/form-react config-layer helpers', () => {
+	it('reach the focus walk and the option split through createForm (control)', async () => {
+		const code = await bundledCodeOf(FORM_REACT_ENTRY, ['createForm'])
+
+		expect(code).toContain(FOCUS_WALK_MARKER)
+		expect(code).toContain(OPTION_SPLIT_MARKER)
+	})
+
+	it('carry neither on their own', async () => {
+		const code = await bundledCodeOf(FORM_REACT_ENTRY, FORM_HELPERS)
+
+		expect(code).not.toContain(FOCUS_WALK_MARKER)
+		expect(code).not.toContain(OPTION_SPLIT_MARKER)
+	})
+
+	/**
+	 * A property only the map-group controller reads (its blur debounce). Not the `onGroup:` key
+	 * prefix, which `form.Submit` imports too and would reach a `createForm` bundle on its own.
+	 */
+	const MAP_GROUP_MARKER = 'onBlurAsyncDebounceMs'
+
+	it('reach the map-group controller through createForm (control)', async () => {
+		expect(await bundledCodeOf(FORM_REACT_ENTRY, ['createForm'])).toContain(MAP_GROUP_MARKER)
+	})
+
+	it('do not carry the map-group controller on their own', async () => {
+		expect(await bundledCodeOf(FORM_REACT_ENTRY, FORM_HELPERS)).not.toContain(MAP_GROUP_MARKER)
+	})
+})
+
+/** A literal only the remote search defaults contain. */
+const SEARCH_DEFAULTS_MARKER = 'debounce: 300'
+
+/**
+ * The same helpers come from `@ez-kit/form-core`, and an app that bundles it pays for every
+ * top-level call there too: an unannotated `Object.freeze({…})` survives whether or not anything
+ * reads the frozen object.
+ */
+describe('@ez-kit/form-core helpers', () => {
+	const entry = entryOf('form/core')
+
+	it('reach the search defaults through REMOTE_SEARCH_DEFAULTS (control)', async () => {
+		expect(await bundledCodeOf(entry, ['REMOTE_SEARCH_DEFAULTS'])).toContain(SEARCH_DEFAULTS_MARKER)
+	})
+
+	it('do not carry them on their own', async () => {
+		expect(await bundledCodeOf(entry, FORM_HELPERS)).not.toContain(SEARCH_DEFAULTS_MARKER)
+	})
+})
+
+/** The imports of a form with one field kind and a submit button, composed through `createForm`. */
+const ONE_FIELD_FORM = ['createForm', 'FormElement', 'TextField', 'SubmitButton']
+
+/** The most of a kit root a one-field form may cost — see the case that reads it. */
+const ONE_FIELD_SHARE = 0.6
+
+/**
+ * Per kit, a literal only its date block's code contains (`calendar`), and one only its searchable
+ * selects' code contains (`combobox`).
+ *
+ * Literals rather than the module specifiers those blocks import (`react-day-picker`,
+ * `@internationalized/date`, `@base-ui/react`): the harness leaves every non-workspace package
+ * external, and esbuild keeps an external import statement whether or not anything still reads
+ * its bindings, so a specifier stays in the text after the code that used it was dropped. A string
+ * written in the block's own body is present exactly when that body is.
+ */
+const FORM_KITS = [
+	{
+		name: '@ez-kit/form-shadcn',
+		entry: entryOf('form/react/shadcn'),
+		/** `DateField`'s placeholder. */
+		calendar: 'Pick a date',
+		/** The searchable select's empty state. */
+		combobox: 'No matches',
+	},
+	{
+		name: '@ez-kit/form-heroui',
+		entry: entryOf('form/react/heroui'),
+		/** The date block's conversion into React Aria's value — a call, so the import line does not match. */
+		calendar: 'parseDate(',
+		/** The searchable selects' empty state. */
+		combobox: 'No matches',
+	},
+] as const
+
+/**
+ * A kit root must tree-shake: a component is exported from its own block, never through the module
+ * that assembles the prebuilt bundle, and that bundle is built so a bundler can drop it. Each
+ * absence is read against a control that shows the same marker present when the import does reach
+ * it — without one, a marker that no longer exists would satisfy the absence.
+ */
+describe.each(FORM_KITS)('$name root', ({ entry, calendar, combobox }) => {
+	it('reaches the calendar through DateField (control)', async () => {
+		expect(await bundledCodeOf(entry, ['DateField'])).toContain(calendar)
+	})
+
+	it('reaches the schema renderer through SchemaForm (control)', async () => {
+		expect(await bundledCodeOf(entry, ['SchemaForm'])).toContain(SCHEMA_MARKER)
+	})
+
+	it('a one-field form pulls no calendar and no schema renderer', async () => {
+		const code = await bundledCodeOf(entry, ONE_FIELD_FORM)
+
+		expect(code).not.toContain(calendar)
+		expect(code).not.toContain(SCHEMA_MARKER)
+	})
+
+	it('reaches the combobox through SelectField (control)', async () => {
+		expect(await bundledCodeOf(entry, ['SelectField'])).toContain(combobox)
+	})
+
+	it('a one-field form pulls no combobox', async () => {
+		expect(await bundledCodeOf(entry, ONE_FIELD_FORM)).not.toContain(combobox)
+	})
+
+	it('the prebuilt Form pulls no schema renderer', async () => {
+		expect(await bundledCodeOf(entry, ['Form'])).not.toContain(SCHEMA_MARKER)
+	})
+
+	/**
+	 * Under 60% rather than half: every form instance carries `form.Steps` / `form.Step`, so their code
+	 * is in each `createForm` bundle whether a form has steps or not — the members were kept on the
+	 * instance, as `form.Array` is, for their typing. Measured when they landed: a one-field form was
+	 * 0.49 of the shadcn root and 0.54 of the HeroUI one. The calendar, combobox and schema renderer
+	 * absences above are what keeps the root shaking; this ratio only catches a wholesale regression.
+	 */
+	it('a one-field form costs well under the whole root', async () => {
+		const [narrow, everything] = await Promise.all([bundledCodeOf(entry, ONE_FIELD_FORM), bundledCodeOf(entry)])
+
+		expect(narrow.length).toBeLessThan(everything.length * ONE_FIELD_SHARE)
+	})
+})
+
 describe.each(PACKAGES)('$name', ({ entry, shakeable, cases }) => {
 	it.each(cases)('importing $imports pulls in $pulls', async ({ imports, pulls }) => {
 		expect(await entryPointsPulledBy(entry, imports)).toEqual([...pulls].sort())

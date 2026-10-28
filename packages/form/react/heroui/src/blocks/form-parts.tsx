@@ -1,30 +1,11 @@
+import { useFormContext } from '@ez-kit/form-react'
 import { Button as HeroButton, Form as HeroForm } from '@heroui/react'
+import { useRef } from 'react'
 
-import type { ButtonProps, FormElementProps } from '@ez-kit/form-react'
+import type { FormElementProps, SubmitButtonProps } from '@ez-kit/form-react'
 import type { ReactNode } from 'react'
 
-/** The form-level primitives for the HeroUI kit: the submit button and the `<form>` shell. */
-
-export function Button({ type, disabled, onClick, children }: ButtonProps): ReactNode {
-	return (
-		<HeroButton
-			// Not `data-slot`: HeroUI stamps its own before spreading props, so ours would win
-			// and detach the element from `@heroui/styles`.
-			//
-			// The marker says what the button *is*. `Button` was the submit button and nothing
-			// else until the array scope started handing it out for add / remove / duplicate /
-			// reorder controls; stamping `data-form-submit` unconditionally tagged four
-			// non-submitting controls per row as the form's submit.
-			{...(type === 'submit' ? { 'data-form-submit': '' } : { 'data-form-button': '' })}
-			type={type ?? 'button'}
-			variant='primary'
-			{...(disabled !== undefined ? { isDisabled: disabled } : {})}
-			{...(onClick !== undefined ? { onPress: onClick } : {})}
-		>
-			{children}
-		</HeroButton>
-	)
-}
+/** The form-level parts of the HeroUI kit: the `<form>` element and the submit button. */
 
 /**
  * HeroUI's `Form` — the same React Aria `Form` the kit's fields already expect.
@@ -46,7 +27,7 @@ export function Button({ type, disabled, onClick, children }: ButtonProps): Reac
  * on the real `<form>`. Contract props win by design — a caller's explicit `noValidate` or
  * `onSubmit` should not be silently dropped.
  */
-export function Form({ className, children, ...props }: FormElementProps): ReactNode {
+export function FormElement({ className, children, ...props }: FormElementProps): ReactNode {
 	return (
 		<HeroForm
 			className={['flex flex-col gap-4', className].filter(Boolean).join(' ')}
@@ -60,5 +41,42 @@ export function Form({ className, children, ...props }: FormElementProps): React
 		>
 			{children}
 		</HeroForm>
+	)
+}
+
+/**
+ * The kit's submit button, built on `form.Submit` and reading the form from context, so the same
+ * component works as `form.SubmitButton` and as a plain `<SubmitButton />`.
+ *
+ * Inside a `<form>` it is an ordinary submit button and the `<form>`'s own submit handler runs.
+ * Under a `FormProvider` with no `<form>` the browser has nothing to submit, so the click submits
+ * the form itself; checking the button's form owner is what keeps the two paths from both firing.
+ *
+ * The owner wins over the context. A button whose owner is a different `<form>` than the context
+ * form — `<Form A>` around `<FormProvider B>` around this button — submits its owner, A; the
+ * context form, B, is submitted only when the button has no form owner at all.
+ */
+export function SubmitButton({ children, disabled }: SubmitButtonProps): ReactNode {
+	const form = useFormContext()
+	// The owner check reads the DOM button through a ref: React Aria's `PressEvent.target` is typed
+	// as a plain `Element`, which carries no `form`.
+	const buttonRef = useRef<HTMLButtonElement>(null)
+	return (
+		<form.Submit>
+			{({ canSubmit, isSubmitting, submit }) => (
+				<HeroButton
+					data-form-submit=''
+					type='submit'
+					variant='primary'
+					ref={buttonRef}
+					isDisabled={disabled === true || !canSubmit || isSubmitting}
+					onPress={() => {
+						if (buttonRef.current?.form === null) void submit()
+					}}
+				>
+					{children}
+				</HeroButton>
+			)}
+		</form.Submit>
 	)
 }

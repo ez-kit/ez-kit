@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { createForm } from './create-form'
 import { FormOptionSources } from './options/source-context'
-import { testComponents, testFields } from './test-kit'
+import { testComponents, testFields, testFormElement } from './test-kit'
 
 import type { OptionSourceRegistry, SearchableOptionSource } from './options/source-types'
 import type { OptionValue, SelectOption } from '@ez-kit/form-core'
@@ -36,7 +36,7 @@ function searchCities(query: string): readonly SelectOption<OptionValue>[] {
 	return CITIES.filter((city) => city.label.toLowerCase().startsWith(query.toLowerCase()))
 }
 
-const { useForm, Form } = createForm({ components: testComponents, fields: testFields })
+const { useForm, Form } = createForm({ FormElement: testFormElement, fields: testFields, components: testComponents })
 
 function withSources(sources: OptionSourceRegistry, children: ReactNode): ReactNode {
 	return <FormOptionSources value={sources}>{children}</FormOptionSources>
@@ -71,7 +71,11 @@ type SearchSpy = {
  * Both members are declared as named `use…` functions and referenced, never written inline:
  * they *are* hooks, and React and the lint rule alike identify one by its name.
  */
-function searchableCitySource(options?: { listLoading?: boolean; selectedLoading?: boolean }): SearchSpy {
+function searchableCitySource(options?: {
+	listLoading?: boolean
+	selectedLoading?: boolean
+	debounce?: number
+}): SearchSpy {
 	const queries: (string | undefined)[] = []
 	const selectedCalls: { values: readonly OptionValue[]; query: string | undefined }[] = []
 
@@ -88,7 +92,12 @@ function searchableCitySource(options?: { listLoading?: boolean; selectedLoading
 		}
 	}
 
-	return { source: { useOptions: useCitySearch, useSelectedOptions: useCitiesByValue }, queries, selectedCalls }
+	const settings = options?.debounce === undefined ? {} : { debounce: options.debounce }
+	return {
+		source: { ...settings, useOptions: useCitySearch, useSelectedOptions: useCitiesByValue },
+		queries,
+		selectedCalls,
+	}
 }
 
 /** The searchable city field under test. Hoisted, so its identity is stable across renders. */
@@ -172,14 +181,13 @@ describe('searchable select', () => {
 		expect(spy.selectedCalls.at(-1)?.values).toEqual([])
 	})
 
-	it('passes the raw query straight to `useOptions`, with no debounce of its own', async () => {
+	it('hands a source with `debounce: 0` every keystroke, from the first character', async () => {
 		const user = userEvent.setup()
-		const spy = searchableCitySource()
+		const spy = searchableCitySource({ debounce: 0 })
 		renderSearchable({ cities: spy.source }, { country: 'de', city: '' })
 
 		await user.type(searchInput(), 'ber')
 
-		// Every keystroke, from the first character — debouncing is the source's job for now.
 		expect(spy.queries).toContain('b')
 		expect(spy.queries).toContain('be')
 		expect(spy.queries.at(-1)).toBe('ber')

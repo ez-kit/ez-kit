@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-import { defineFormSchema, FormFieldType, FormRenderer } from 'shared/form/FormKit'
+import { defineFormSchema, FormFieldType, SchemaForm } from 'shared/form/FormKit'
 
 type Order = {
 	countryId: number
@@ -35,8 +35,9 @@ const schema = defineFormSchema<Order>()({
 	version: 1,
 	children: [
 		{
-			type: 'section',
-			title: 'Shipping',
+			type: 'block',
+			component: 'Section',
+			props: { title: 'Shipping' },
 			columns: 2,
 			children: [
 				{
@@ -65,7 +66,7 @@ const schema = defineFormSchema<Order>()({
 				},
 			],
 		},
-		{ type: 'submit', label: 'Save' },
+		{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 	],
 })
 
@@ -74,7 +75,7 @@ export function NumericOptionsExample() {
 
 	return (
 		<div className='flex flex-col gap-4'>
-			<FormRenderer
+			<SchemaForm
 				schema={schema}
 				onSubmit={({ value }) => {
 					setSaved(JSON.stringify(value, null, 2))

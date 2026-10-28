@@ -80,27 +80,37 @@ The API is identical to `@ez-kit/form-shadcn` — the same example renders under
 ### v1 field set
 
 `TextField`, `NumberField`, `TextareaField`, `SelectField`, `CheckboxField`, plus
-`SubmitButton` (subscribed to `canSubmit` / `isSubmitting`) and `Form`.
+`SubmitButton` (built on `form.Submit`, subscribed to `canSubmit` / `isSubmitting`) and `Form`.
+
+### Assembling your own
+
+`createForm` and `createSchemaForm` are re-exported with the kit's sets beside them — `FormElement`,
+`allFormFields`, `allFormComponents` and every component by name — so an app registers a field kind
+of its own, or only the fields it renders, without forking the kit. Pass `FormElement` when you do.
+`FormProvider` and `useFormContext` are exported too: `form.SubmitButton` and any component you
+register read the form from context, which `<Form>`, `<SchemaForm>` or `<FormProvider form={form}>`
+sets.
 
 ### Layout
 
-`form.Section` groups fields under an optional heading on a `columns`-wide grid (1–4), and
-`form.GridItem` gives one child a wider `colSpan`. They are the JSX spelling of the schema's
-`section` node and its `colSpan` — pure layout, binding no value.
+`form.Section` groups fields under an optional heading, `form.Grid` lays children out on a
+`columns`-wide grid (1–4), and `form.Grid.Item` gives one child a wider `colSpan`. They are the
+JSX spelling of a document's `Section` block, its `columns` and a node's `colSpan` — pure layout,
+binding no value.
 
 ## Notes on the HeroUI v3 mapping
 
 HeroUI v3 fields are React Aria **compositions**: a state-owning root wraps the control,
-and label / description / error are normally its children. The shared field layer instead
-renders chrome as siblings of the input, so the adapters in `src/blocks/`:
+and label / description / error are its children. The adapters in `src/blocks/` follow that
+anatomy, so:
 
-- pass `aria-labelledby` and `aria-describedby` explicitly, because React Aria cannot see a
-  label that is not its child (composite widgets such as the select trigger and the
-  number-field group would otherwise go unlabelled);
-- render error text as a plain danger-token element rather than HeroUI's `FieldError`,
-  which requires the enclosing field context;
-- use a plain `<form>` rather than HeroUI's `Form`, since TanStack Form owns submission and
-  validation reporting.
+- label, description and error sit **inside** the field root, and React Aria derives the
+  control's `id`, `aria-labelledby` and `aria-describedby` itself (`blocks/field-state.ts`);
+- error text is HeroUI's own `<FieldError>`, fed by the root's validation state
+  (`blocks/field-chrome.tsx`);
+- render HeroUI's `Form` as the `<form>` element (the kit's `FormElement`, with
+  `validationBehavior='aria'`), so the fields sit inside React Aria's form context while TanStack
+  Form still owns submission and validation reporting.
 
 ## License
 

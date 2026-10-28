@@ -26,7 +26,10 @@ function toStringValue(key: Key | Key[] | null): string {
  * follows HeroUI's anatomy: label above the trigger, description and error below the
  * popover, all inside the root so React Aria owns the wiring.
  */
-export function SelectField(props: SelectFieldRenderProps): ReactNode {
+/** A select field's kit props: the `placeholder` its trigger shows while nothing is chosen. */
+export type SelectFieldKitProps = { placeholder?: string | undefined }
+
+export function SelectField(props: SelectFieldRenderProps & SelectFieldKitProps): ReactNode {
 	// `search` present *is* the mode switch — see `SelectFieldRenderProps`. The two are
 	// different React Aria widgets (`Select` vs `ComboBox`) with different anatomy, so they
 	// are separate components rather than one with branches inside it.
@@ -56,7 +59,7 @@ function PlainSelectField({
 	description,
 	errors,
 	...field
-}: SelectFieldRenderProps): ReactNode {
+}: SelectFieldRenderProps & SelectFieldKitProps): ReactNode {
 	return (
 		<HeroSelect
 			value={value === '' ? null : value}

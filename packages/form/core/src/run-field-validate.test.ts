@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest'
+import { describe, expect, test } from 'vitest'
 
 import { runFieldValidate } from './validate'
 
@@ -44,7 +44,7 @@ test('a `{ key }` message is resolved through the supplied translate', () => {
 		runFieldValidate(
 			['a', 'b'],
 			{},
-			{ maxLength: 1, messages: { maxLength: { key: 'form.tooMany', params: { limit: 1 } } } },
+			{ maxLength: 1, messages: { maxLength: { i18n: 'form.tooMany', params: { limit: 1 } } } },
 			{ translate },
 		),
 	).toBe('form.tooMany:1')
@@ -61,4 +61,30 @@ test('a named rule runs against the whole form values, and an unregistered one t
 		'Does not match',
 	)
 	expect(() => runFieldValidate('abc', {}, { rule: 'nope' }, { rules })).toThrow(/nope/)
+})
+
+describe('the email format', () => {
+	const EMAIL = { format: 'email' } as const
+	const INVALID = 'Must be a valid email'
+
+	test.each(['a@b.co', 'first.last@example.com', 'x+tag@sub.domain.org', 'a@b.c'])('accepts %s', (address) => {
+		expect(runFieldValidate(address, {}, EMAIL)).toBeUndefined()
+	})
+
+	test.each(['nope', 'a@b', 'a@@b.co', 'a b@c.co', '@b.co', 'a@.co', 'a@b.', 'a@b.co@'])('rejects %s', (address) => {
+		expect(runFieldValidate(address, {}, EMAIL)).toBe(INVALID)
+	})
+
+	test('rejects an adversarial address in linear time', () => {
+		const ADVERSARIAL_REPEATS = 50_000
+		const TIME_BOUND_MS = 250
+		const adversarial = `a@${'x.'.repeat(ADVERSARIAL_REPEATS)}@`
+
+		const started = performance.now()
+		const message = runFieldValidate(adversarial, {}, EMAIL)
+		const elapsed = performance.now() - started
+
+		expect(message).toBe(INVALID)
+		expect(elapsed).toBeLessThan(TIME_BOUND_MS)
+	})
 })

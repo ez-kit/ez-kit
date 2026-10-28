@@ -5,8 +5,9 @@ import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { createForm } from './create-form'
+import { createSchemaForm } from './create-schema-form'
 import { FormOptionSources } from './options/source-context'
-import { testComponents, testFields } from './test-kit'
+import { captureField, testComponents, testFields, testFormElement } from './test-kit'
 
 import type { OptionSource, OptionSourceRegistry } from './options/source-types'
 import type { FormSchema } from '@ez-kit/form-core'
@@ -39,7 +40,11 @@ const COUNTRIES = [
 	{ label: 'Russia', value: 'ru' },
 ]
 
-const { useForm, Form, FormRenderer } = createForm({ components: testComponents, fields: testFields })
+const { useForm, Form, SchemaForm } = createSchemaForm({
+	FormElement: testFormElement,
+	fields: testFields,
+	components: testComponents,
+})
 
 /** Renders `children` under a stable registry — sources are hooks, so identity must not churn. */
 function withSources(sources: OptionSourceRegistry, children: ReactNode): ReactNode {
@@ -105,7 +110,7 @@ describe('option sources', () => {
 		render(
 			withSources(
 				{ cities: recordingCitySource(seen) },
-				<FormRenderer
+				<SchemaForm
 					schema={schema}
 					defaultValues={{ ...DEFAULTS, country: 'de' }}
 				/>,
@@ -142,7 +147,7 @@ describe('option sources', () => {
 
 	it('resolves a source label that is a translation key', () => {
 		const localized: OptionSource = () => ({
-			options: [{ label: { key: 'city.berlin' }, value: 'ber' }],
+			options: [{ label: { i18n: 'city.berlin' }, value: 'ber' }],
 			loading: false,
 		})
 		const schema: FormSchema<Values> = {
@@ -153,7 +158,7 @@ describe('option sources', () => {
 		render(
 			withSources(
 				{ cities: localized },
-				<FormRenderer
+				<SchemaForm
 					schema={schema}
 					defaultValues={DEFAULTS}
 					translate={(key) => (key === 'city.berlin' ? 'Berlin (translated)' : key)}
@@ -255,7 +260,7 @@ describe('option sources', () => {
 
 			return withSources(
 				sources,
-				<FormRenderer
+				<SchemaForm
 					schema={schema}
 					defaultValues={{ ...DEFAULTS, country: 'ru', city: 'msk' }}
 				/>,
@@ -322,4 +327,78 @@ describe('option sources', () => {
 			expect(seen.at(-1)).toBe(seen[0])
 		})
 	})
+})
+
+describe('option-bearing fields — what reaches the kit', () => {
+	const OPTION_KINDS = [
+		{ key: 'SelectField', name: 'city', searchable: true },
+		{ key: 'MultiSelectField', name: 'tags', searchable: true },
+		{ key: 'RadioGroupField', name: 'city', searchable: false },
+		{ key: 'CheckboxGroupField', name: 'tags', searchable: false },
+	] as const
+
+	/** Render `form.<key>` with arbitrary props under a city source, past the per-kind types. */
+	function renderOptionKind(key: string, props: Record<string, unknown>): ReturnType<typeof captureField> {
+		const capture = captureField()
+		const kit = createForm({ fields: { [key]: capture.Capture } })
+		function Case(): ReactNode {
+			const form = kit.useForm({ defaultValues: DEFAULTS })
+			const Field = (form as unknown as Record<string, (props: Record<string, unknown>) => ReactNode>)[key]
+			return Field === undefined ? null : <Field {...props} />
+		}
+		render(withSources({ cities: recordingCitySource([]) }, <Case />))
+		return capture
+	}
+
+	it.each(OPTION_KINDS)('$key keeps the option provision and hands the rest to the kit', ({ key, name }) => {
+		const capture = renderOptionKind(key, {
+			name,
+			optionsFrom: 'cities',
+			optionsParams: { country: 'de' },
+			placeholder: 'Pick one',
+			variant: 'bordered',
+		})
+
+		const received = capture.last()
+		expect(received).toMatchObject({ placeholder: 'Pick one', variant: 'bordered', loading: false })
+		expect(received?.options).toEqual(CITIES.de)
+		expect(received).not.toHaveProperty('optionsFrom')
+		expect(received).not.toHaveProperty('optionsParams')
+	})
+
+	it.each(OPTION_KINDS)('$key reports the source’s own loading state, not one written beside it', ({ key, name }) => {
+		const capture = renderOptionKind(key, { name, optionsFrom: 'cities', loading: true })
+
+		expect(capture.last()).toMatchObject({ loading: false })
+	})
+
+	it.each(OPTION_KINDS.filter((kind) => kind.searchable))(
+		'$key keeps searchable and the creatable pair to itself',
+		({ key, name }) => {
+			const capture = renderOptionKind(key, {
+				name,
+				options: COUNTRIES,
+				searchable: true,
+				creatable: true,
+				createLabel: 'Add it',
+			})
+
+			const received = capture.last()
+			expect(received).not.toHaveProperty('searchable')
+			expect(received).not.toHaveProperty('creatable')
+			expect(received).not.toHaveProperty('createLabel')
+			expect(received?.search).toBeDefined()
+		},
+	)
+
+	// `search` is computed only by the two kinds that can be searchable; on the inline kinds it is
+	// not a contract key, so a kit may declare one of its own.
+	it.each(OPTION_KINDS.filter((kind) => kind.searchable))(
+		'$key lets its computed search state win over one written past the types',
+		({ key, name }) => {
+			const capture = renderOptionKind(key, { name, options: COUNTRIES, search: 'author' })
+
+			expect(capture.last()?.search).toBeUndefined()
+		},
+	)
 })

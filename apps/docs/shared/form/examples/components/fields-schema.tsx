@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-import { defineFormSchema, FormFieldType, FormRenderer } from 'shared/form/FormKit'
+import { defineFormSchema, FormFieldType, SchemaForm } from 'shared/form/FormKit'
 
 type Profile = {
 	name: string
@@ -95,7 +95,7 @@ const schema = defineFormSchema<Profile>()({
 			step: 5,
 			defaultValue: 50,
 		},
-		{ type: 'submit', label: 'Save' },
+		{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 	],
 })
 
@@ -104,7 +104,7 @@ export function FieldsSchemaExample() {
 
 	return (
 		<div className='flex flex-col gap-4'>
-			<FormRenderer
+			<SchemaForm
 				schema={schema}
 				onSubmit={({ value }) => {
 					setSaved(JSON.stringify(value, null, 2))

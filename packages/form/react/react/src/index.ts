@@ -1,53 +1,84 @@
 export { createForm } from './create-form'
+export { createSchemaForm } from './create-schema-form'
 export { defineFieldType } from './field-registry'
+export { FormProvider, useFormContext } from './form-context'
 export { FormOptionSources } from './options/source-context'
 
 export type { CreateFormOptions, FormBundle } from './create-form'
+export type { SchemaFormBundle } from './create-schema-form'
 export type { FieldTypeDefinition, FormFieldRegistry } from './field-registry'
-export type { BoundFieldApi } from './bindable-form'
 export type { KitFormBlock, KitWithFormProps } from './composition'
 export type { FieldValidateProps } from './field-validate'
-export type { BoundForm, KitFormApi } from './kit-form'
+export type { FieldGroupOptions } from './field-groups'
+export type {
+	FieldGroupBlock,
+	FieldGroupInstance,
+	FieldGroupPlacementProps,
+	FieldGroupScope,
+	FormGroupInstance,
+	FormGroupProps,
+	FormGroupScope,
+	GroupAsyncValidator,
+	GroupFields,
+	GroupValidator,
+	GroupValidators,
+	OnGroupSubmit,
+	UncheckedFieldGroupPlacementProps,
+	WithFieldGroupOptions,
+} from './group-types'
+export type { AnyFormInstance, FormContextApi } from './form-context'
+export type { FormBehaviourOptions } from './form-behaviour'
+export type { ServerErrorMessages, ServerErrors } from './server-errors'
+export type { StepsState } from './steps/controller'
+export type {
+	StepItemRenderProps,
+	StepMembers,
+	StepProps,
+	StepsComponent,
+	StepsControlsRenderProps,
+	StepsListRenderProps,
+	StepsProps,
+	StepSummary,
+} from './steps/steps'
+export type { FormInstance } from './form-instance'
 export type { AnyFormProps, FormControlledProps, FormProps, FormUncontrolledProps } from './form-props'
 export type {
-	FormRendererControlledProps,
-	FormRendererUncontrolledProps,
-	RendererForm,
-	SharedRendererProps,
-} from './schema/form-renderer'
-export type { BlockRegistry, CustomFieldRegistry, CustomFieldRenderProps } from './schema/registries'
+	SchemaFormControlledProps,
+	SchemaFormUncontrolledProps,
+	SharedSchemaFormProps,
+} from './schema/schema-form'
+export type { CustomFieldRegistry, CustomFieldRenderProps } from './schema/registries'
 export type {
 	OptionSource,
-	OptionSourceInput,
 	OptionSourceRegistry,
-	OptionSourceResult,
 	SearchableOptionSource,
 	SimpleOptionSource,
 } from './options/source-types'
 export type {
+	AllFormComponents,
+	AllFormFieldSlots,
 	ArrayFieldRenderProps,
+	ArrayFieldSlot,
+	GridSlot,
 	ArrayItemRenderProps,
-	ButtonProps,
 	CheckboxFieldRenderProps,
 	CheckboxGroupFieldRenderProps,
 	DateFieldRenderProps,
 	DateRangeFieldRenderProps,
 	FieldRenderProps,
+	FormComponentRegistry,
 	FormComponents,
 	FormElementProps,
 	FormFieldSlots,
-	GridItemRenderProps,
 	MultiSelectFieldRenderProps,
+	NoRegistry,
 	NumberFieldRenderProps,
 	RadioGroupFieldRenderProps,
-	SectionRenderProps,
 	SelectFieldRenderProps,
 	SliderFieldRenderProps,
 	SwitchFieldRenderProps,
 	TextareaFieldRenderProps,
 	TextFieldRenderProps,
-	WizardRenderProps,
-	WizardStep,
 } from './contract'
 export type {
 	ArrayFieldProps,
@@ -57,19 +88,26 @@ export type {
 	ArrayProps,
 	ArrayScope,
 	BaseFieldProps,
+	BoundFieldComponent,
 	CheckboxFieldProps,
 	CheckboxGroupFieldProps,
 	DateFieldProps,
 	DateRangeFieldProps,
+	FieldControlProps,
+	FieldProps,
 	GridItemProps,
+	GridProps,
 	MultiSelectFieldProps,
 	FormFieldComponents,
+	FormPrimitives,
 	NumberFieldProps,
 	RadioGroupFieldProps,
 	SectionProps,
 	SelectFieldProps,
 	SliderFieldProps,
 	SubmitButtonProps,
+	SubmitProps,
+	SubmitRenderProps,
 	SwitchFieldProps,
 	TextareaFieldProps,
 	TextFieldProps,
@@ -79,8 +117,8 @@ export type {
 // `@ez-kit/form-core` for the option shape its `Select` renders, or — for `GRID_MIN`/`GRID_MAX`/
 // `clampToGridRange` — for the numeric range `columns`/`colSpan` share with `parseFormSchema`.
 // `stripHiddenValues` is here for the same reason, aimed at one specific caller: a controlled
-// `FormRenderer` cannot strip hidden values on a caller's behalf (see the doc comment on
-// `FormRendererControlledProps`), so the caller applies it themselves inside their own
+// `SchemaForm` cannot strip hidden values on a caller's behalf (see the doc comment on
+// `SchemaFormControlledProps`), so the caller applies it themselves inside their own
 // `onSubmit` — that only works without a second dependency if it is reachable from here.
 export {
 	clampToGridRange,
@@ -90,19 +128,63 @@ export {
 	GRID_MIN,
 	hasFieldErrors,
 	stripHiddenValues,
-	TextInputType,
 } from '@ez-kit/form-core'
 export type {
 	DateRangeValue,
 	JsonValue,
 	LocalizedSelectOption,
 	LocalizedText,
-	OptionsSource,
+	OptionSourceInput,
+	OptionSourceRef,
+	OptionSourceResult,
+	Searchable,
+	SearchSettings,
 	SelectOption,
 	Translate,
 } from '@ez-kit/form-core'
 
-// Spec §12: the group hooks are re-exported verbatim — they yield a group API, which
-// correctly carries no injected field components, so unlike `withForm` they need no
-// retyping. Inside a group the fields are written with the native `form.Field` / `AppField`.
-export { useFieldGroup, useFormGroup } from '@tanstack/react-form'
+// The schema-authoring half of the surface, so a kit depends on `@ez-kit/form-react` alone (spec
+// 009, D9). Under pnpm's strict layout a transitive dependency is not importable, so every name the
+// docs tell a reader to import from their kit has to be re-exported on this path.
+export {
+	buildValidator,
+	defineFormItem,
+	defineFormSchema,
+	FormSchemaError,
+	isFieldNode,
+	parseFormSchema,
+	RESERVED_NODE_TYPES,
+	resolveText,
+	visibleFieldNames,
+	walkNodes,
+} from '@ez-kit/form-core'
+export type {
+	AnyFormSchema,
+	ArrayNode,
+	BlockNode,
+	Condition,
+	CustomFieldNode,
+	FieldNode,
+	FieldRef,
+	FieldValidate,
+	FormNode,
+	FormSchema,
+	NamedRule,
+	OptionValue,
+	ParseOptions,
+	Rule,
+	RuleIssue,
+} from '@ez-kit/form-core'
+
+// The group hooks are the package's own since the instance's `FormGroup` and `Field` are retyped
+// with `Omit`, which TanStack's hooks no longer accept; each group carries `Field` and `NativeField`.
+export { useFieldGroup } from './field-groups'
+export { useFormGroup } from './form-group'
+// The step flow's hooks read the nearest `form.Steps`, so a stepper or a summary can sit anywhere in it.
+export { useStep, useSteps } from './steps/steps'
+// `useSelector` and `revalidateLogic` are re-exported so an app reaches the form's store and its
+// validation logic through the same TanStack copy the form uses and never installs TanStack itself —
+// a second copy would be a second store, and this package owns the version. `revalidateLogic` is what
+// `validationLogic` takes for a form schema on `onDynamic`: quiet before the first submit, checked on
+// every change after it.
+export { revalidateLogic, useSelector } from '@tanstack/react-form'

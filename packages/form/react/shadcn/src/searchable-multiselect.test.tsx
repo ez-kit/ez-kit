@@ -5,8 +5,7 @@ import { describe, expect, it } from 'vitest'
 
 import { Form } from './form'
 
-import type { OptionValue } from '@ez-kit/form-core'
-import type { OptionSourceRegistry, OptionSourceResult, SearchableOptionSource } from '@ez-kit/form-react'
+import type { OptionSourceRegistry, OptionSourceResult, OptionValue, SearchableOptionSource } from '@ez-kit/form-react'
 
 /**
  * A searchable multiselect, end to end through this kit.
@@ -37,12 +36,22 @@ function useCitiesByValue({ values }: { values: readonly OptionValue[] }): Optio
 	return { options: CITIES.filter((city) => values.includes(city.value)), loading: false }
 }
 
-const CITY_SOURCE: SearchableOptionSource = { useOptions: useCitySearch, useSelectedOptions: useCitiesByValue }
+/** Every keystroke reaches the source at once, so no test waits out a real debounce. */
+const CITY_SOURCE: SearchableOptionSource = {
+	useOptions: useCitySearch,
+	useSelectedOptions: useCitiesByValue,
+	debounce: 0,
+}
 const SOURCES: OptionSourceRegistry = { cities: CITY_SOURCE }
 
-function SearchableCase({ cities }: { cities: string[] }) {
+/** A search whose answer never lands. */
+const IN_FLIGHT_SOURCES: OptionSourceRegistry = {
+	cities: { ...CITY_SOURCE, useOptions: () => ({ options: [], loading: true }) },
+}
+
+function SearchableCase({ cities, sources = SOURCES }: { cities: string[]; sources?: OptionSourceRegistry }) {
 	return (
-		<FormOptionSources value={SOURCES}>
+		<FormOptionSources value={sources}>
 			<Form defaultValues={{ cities } satisfies Values}>
 				{(form) => (
 					<form.MultiSelectField
@@ -104,7 +113,12 @@ describe('@ez-kit/form-shadcn searchable multiselect', () => {
 
 	it('stays interactive while a query is in flight', async () => {
 		const user = userEvent.setup()
-		render(<SearchableCase cities={[]} />)
+		render(
+			<SearchableCase
+				cities={[]}
+				sources={IN_FLIGHT_SOURCES}
+			/>,
+		)
 
 		const input = screen.getByRole('combobox')
 		await user.type(input, 'b')
@@ -132,5 +146,45 @@ describe('@ez-kit/form-shadcn searchable multiselect', () => {
 		const { container } = render(<PlainCase />)
 
 		expect(container.querySelector('[data-slot="combobox-chips"]')).toBeNull()
+	})
+})
+
+/** The same source, asking for two characters before it searches and taking every keystroke. */
+const GATED_SOURCES: OptionSourceRegistry = { cities: { ...CITY_SOURCE, debounce: 0, minLength: 2 } }
+
+const NO_CITIES: Values = { cities: [] }
+
+function GatedCase() {
+	return (
+		<FormOptionSources value={GATED_SOURCES}>
+			<Form defaultValues={NO_CITIES}>
+				{(form) => (
+					<form.MultiSelectField
+						name='cities'
+						label='Cities'
+						searchable
+						optionsFrom='cities'
+					/>
+				)}
+			</Form>
+		</FormOptionSources>
+	)
+}
+
+describe('@ez-kit/form-shadcn searchable multiselect below its minimum length', () => {
+	it('says how much more to type where it would say there are no matches', async () => {
+		const user = userEvent.setup()
+		render(<GatedCase />)
+		const input = screen.getByRole('combobox', { name: 'Cities' })
+
+		await user.type(input, 'b')
+
+		expect(await screen.findByText('Type at least 2 characters')).toBeInTheDocument()
+		expect(screen.queryByText('No matches')).toBeNull()
+
+		await user.type(input, 'e')
+
+		expect(await screen.findByText('Berlin')).toBeInTheDocument()
+		expect(screen.queryByText('Type at least 2 characters')).toBeNull()
 	})
 })

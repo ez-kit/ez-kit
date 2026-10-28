@@ -14,8 +14,10 @@ export default defineConfig({
 	 * from a React Server Component fails with an unrelated-looking hook error.
 	 *
 	 * Pure, server-safe helpers (`stripHiddenValues`, `parseFormSchema`, `clampToGridRange`, …)
-	 * are re-exported here for convenience but originate in `@ez-kit/form-core`, which carries
-	 * no directive — import them from there in a server component or a server action.
+	 * originate in `@ez-kit/form-core` and reach this kit through `@ez-kit/form-react`, whose
+	 * bundle carries the same banner. Only `@ez-kit/form-core` carries no directive, so a server
+	 * component or a server action imports them from there — and the app installs
+	 * `@ez-kit/form-core` itself for that, since the kit no longer depends on it directly.
 	 */
 	banner: { js: `'use client'` },
 })

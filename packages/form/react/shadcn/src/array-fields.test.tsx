@@ -69,6 +69,7 @@ function Harness({
 		<ArrayField
 			data-field='people'
 			data-field-type='array'
+			data-form-id='harness'
 			name='people'
 			label='People'
 			description='Everyone travelling'
@@ -182,6 +183,7 @@ describe('@ez-kit/form-shadcn ArrayField', () => {
 			<ArrayField
 				data-field='people'
 				data-field-type='array'
+				data-form-id='harness'
 				name='people'
 				label='People'
 				description={null}
@@ -439,18 +441,19 @@ describe('the bare primitive through this kit', () => {
 							name='people'
 							newItem={{ name: '' }}
 						>
-							{({ items, add, canAdd, Button }) => (
+							{({ items, add, canAdd }) => (
 								<section>
 									<header aria-label={CUSTOM_LAYOUT_HEADER_LABEL}>
 										<h3>{CUSTOM_LAYOUT_HEADER_LABEL}</h3>
-										<Button
+										<button
+											type='button'
 											onClick={() => {
 												add()
 											}}
 											disabled={!canAdd}
 										>
 											{ADD_LABEL}
-										</Button>
+										</button>
 									</header>
 									{items.map((item) => (
 										<item.Item
@@ -484,38 +487,5 @@ describe('the bare primitive through this kit', () => {
 		await waitFor(() => {
 			expect(onSubmit).toHaveBeenCalledWith({ people: [{ name: 'Grace' }, { name: '' }] })
 		})
-	})
-
-	it('marks a scope button as a plain form button, leaving the submit marker to the submit', () => {
-		render(
-			<Form defaultValues={{ people: [{ name: 'Ada' }] }}>
-				{(form) => (
-					<>
-						<form.Array
-							name='people'
-							newItem={{ name: '' }}
-						>
-							{({ add, Button }) => (
-								<Button
-									onClick={() => {
-										add()
-									}}
-								>
-									{ADD_LABEL}
-								</Button>
-							)}
-						</form.Array>
-						<form.SubmitButton>Save</form.SubmitButton>
-					</>
-				)}
-			</Form>,
-		)
-
-		// These files are the shadcn registry payload — `npx shadcn add` copies them verbatim,
-		// so a consumer styling `[data-slot='form-submit']` must not be handed every add,
-		// remove, duplicate and reorder control the array scope draws.
-		expect(screen.getByRole('button', { name: ADD_LABEL })).toHaveAttribute('data-slot', 'form-button')
-		expect(screen.getByRole('button', { name: 'Save' })).toHaveAttribute('data-slot', 'form-submit')
-		expect(document.querySelectorAll('[data-slot="form-submit"]')).toHaveLength(1)
 	})
 })

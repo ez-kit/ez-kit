@@ -13,12 +13,12 @@ const OptionSourceContext = createContext<OptionSourceRegistry>(NO_SOURCES)
 /**
  * Registers the app's option sources for every form beneath it.
  *
- * **A provider, unlike `fields` / `blocks` / `rules`, which are props on `FormRenderer`.**
+ * **A provider, unlike `fields` / `blocks` / `rules`, which are props on `SchemaForm`.**
  * Those three are schema-only concepts — nothing outside a document can refer to a block
  * component or a named rule — so they belong to the one component that renders a document.
  * An option source is not: `<form.SelectField optionsFrom='cities' />` is plain TSX with no
  * schema anywhere in sight, and it needs the same registry. One mechanism serves both paths;
- * there is deliberately **no** `optionSources` prop on `FormRenderer` to drift from it.
+ * there is deliberately **no** `optionSources` prop on `SchemaForm` to drift from it.
  *
  * Mount it once, near the provider that owns the data layer the sources query:
  *
@@ -52,7 +52,7 @@ export function useOptionSourceRegistry(): OptionSourceRegistry {
 const SchemaTranslateContext = createContext<Translate | undefined>(undefined)
 
 /**
- * Internal: carries `FormRenderer`'s `translate` down to the option-source plumbing.
+ * Internal: carries `SchemaForm`'s `translate` down to the option-source plumbing.
  *
  * A source may return `LocalizedSelectOption`s with translation keys (spec-wise it is the
  * same list a document could have written inline), and the resolution happens inside the

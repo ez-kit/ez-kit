@@ -13,6 +13,9 @@ import { SearchableSelectField } from './searchable-select'
 import type { SelectFieldRenderProps } from '@ez-kit/form-react'
 import type { ReactNode } from 'react'
 
+/** A select field's kit props: the `placeholder` its trigger shows while nothing is chosen. */
+export type SelectFieldKitProps = { placeholder?: string | undefined }
+
 /**
  * Adapts the contract's flat `options` list onto shadcn's compound Radix select.
  *
@@ -20,7 +23,7 @@ import type { ReactNode } from 'react'
  * root would be read as "no selection". So an empty form value maps to `undefined`, and the
  * placeholder is rendered by `SelectValue` rather than as an option.
  */
-export function SelectField(props: SelectFieldRenderProps): ReactNode {
+export function SelectField(props: SelectFieldRenderProps & SelectFieldKitProps): ReactNode {
 	// `search` present *is* the mode switch — see `SelectFieldRenderProps`. The two are
 	// different primitives with different anatomy (Radix `Select` vs the Base UI combobox), so
 	// they are separate components rather than one with branches inside it.
@@ -49,7 +52,7 @@ function PlainSelectField({
 	disabled,
 	required,
 	...field
-}: SelectFieldRenderProps): ReactNode {
+}: SelectFieldRenderProps & SelectFieldKitProps): ReactNode {
 	// A list that is still arriving cannot be chosen from, and the trigger has no option to
 	// draw a label from — so the field is disabled and shows a skeleton until it lands.
 	const controlDisabled = loading ? true : disabled

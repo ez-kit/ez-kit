@@ -2,10 +2,12 @@ import { isDateRangeValue, isIsoDate } from './date-value'
 import { FORM_FIELD_TYPES, FormFieldType } from './field-types'
 import { collectRuleFields } from './rules'
 import { GRID_MAX, GRID_MIN, RESERVED_NODE_TYPES } from './schema'
-import { hasChildren, isArrayNode, isFieldNode, walkNodes } from './walk'
+import { isSearchable } from './search-settings'
+import { hasChildren, isArrayNode, isBlockNode, isFieldNode, walkNodes } from './walk'
 
 import type { Condition } from './rules'
 import type { AnyFormSchema, FieldValidate, FormNode } from './schema'
+import type { Searchable, SearchSettings } from './search-settings'
 
 /**
  * Options that widen what `parseFormSchema` accepts: custom field kinds, block components
@@ -14,7 +16,11 @@ import type { AnyFormSchema, FieldValidate, FormNode } from './schema'
  */
 export type ParseOptions = {
 	fieldTypes?: readonly string[]
-	blocks?: readonly string[]
+	/**
+	 * The names a `block` node may give as `component` — the keys of the bundle's `components`,
+	 * the same ones JSX reaches as `form.<Key>`. Without it every block is rejected.
+	 */
+	components?: readonly string[]
 	rules?: readonly string[]
 	/**
 	 * Option-source keys the app registered on `<FormOptionSources>`. A node's `optionsFrom`
@@ -59,6 +65,9 @@ const DATE_FIELD_TYPES: readonly string[] = [FormFieldType.Date, FormFieldType.D
 /** Widened for the same reason as `DATE_FIELD_TYPES`: a node's `type` is a bare `string`. */
 const DATE_RANGE_TYPE: string = FormFieldType.DateRange
 
+/** The keys a `searchable` settings object may carry — the runtime face of `SearchSettings`. */
+const SEARCH_SETTING_KEYS: Record<keyof SearchSettings, true> = { debounce: true, minLength: true }
+
 /** The same widening, for the two kinds `searchable` has to tell apart. */
 const SELECT_TYPE: string = FormFieldType.Select
 const MULTI_SELECT_TYPE: string = FormFieldType.MultiSelect
@@ -66,6 +75,26 @@ const MULTI_SELECT_TYPE: string = FormFieldType.MultiSelect
 const SUPPORTED_VERSION = 1
 const RELATIVE_FIELD_PREFIX = './'
 const ROOT_PATH = 'root'
+/**
+ * Reserved node types that are not nodes any more, each with what replaces it — the message a
+ * document written for the old format gets instead of "unknown node type".
+ */
+const REMOVED_NODE_HINTS: Partial<Record<string, string>> = {
+	section: "Section nodes are now blocks; use { type: 'block', component: 'Section', props: { title }, children }",
+	submit: "Submit nodes are now blocks; use { type: 'block', component: 'SubmitButton', props: { children } }",
+}
+
+/**
+ * The grid a renderer inserts for `columns`. Naming it as a block would put a grid inside that
+ * grid and leave `colSpan` with no columns to count against, so the document says `columns`.
+ */
+const GRID_COMPONENT = 'Grid'
+
+/** Node-level keys a block does not have: what its component shows lives in `props`. */
+const NON_BLOCK_KEYS = ['label', 'description', 'disabledWhen'] as const
+
+const CHILDREN_KEY = 'children'
+const I18N_KEY = 'i18n'
 
 type UnknownRecord = Record<string, unknown>
 
@@ -96,13 +125,14 @@ function declaredOptionValueType(node: FormNode<unknown, string>): OptionValueTy
 }
 
 /**
- * Registering a custom field type or block component under a name reserved for a container
- * (`section` / `step` / `submit` / `block`) would make it structurally unreachable — `isFieldNode`
- * always classifies those names as containers, never as fields. Caught once, up front, rather
- * than as a confusing "unknown node type" on every node that tries to use it.
+ * Registering a custom field type under a reserved node type (`section` / `submit` / `block` /
+ * `array`) would make it structurally unreachable — `isFieldNode` never classifies
+ * those names as fields. Caught once, up front, rather than as a confusing "unknown node type"
+ * on every node that tries to use it. Component names are not checked: a block finds its
+ * component by `component`, never by `type`, so no name of one can shadow a node.
  */
 function assertNoReservedCollision(options: ParseOptions): void {
-	const registered = [...(options.fieldTypes ?? []), ...(options.blocks ?? [])]
+	const registered = options.fieldTypes ?? []
 	const collision = registered.find((name) => (RESERVED_NODE_TYPES as readonly string[]).includes(name))
 	if (collision !== undefined) {
 		throw new FormSchemaError(`"${collision}" is a reserved node type and cannot be registered`, ROOT_PATH)
@@ -118,14 +148,6 @@ function assertVersion(version: unknown): void {
 	}
 }
 
-/** A `step` node cannot share a children array with a non-`step` sibling (spec §9.3). */
-function assertStepHomogeneity(children: readonly FormNode<unknown, string>[], path: string): void {
-	const stepCount = children.filter((child) => child.type === 'step').length
-	if (stepCount > 0 && stepCount !== children.length) {
-		throw new FormSchemaError('Step nodes cannot be mixed with non-step siblings', path)
-	}
-}
-
 /**
  * Structural pass: confirms every node down the tree is an object with a string `type`, and
  * that every container carries a `children` array — the minimum a node needs before it is
@@ -138,13 +160,19 @@ function assertNodeShape(raw: unknown, path: string): FormNode<unknown, string> 
 	if (typeof raw.type !== 'string') {
 		throw new FormSchemaError('Form node is missing a "type" string', path)
 	}
+	// Own keys only: a `type` such as "constructor" must reach "unknown node type", not the
+	// object's prototype.
+	const removedHint = Object.hasOwn(REMOVED_NODE_HINTS, raw.type) ? REMOVED_NODE_HINTS[raw.type] : undefined
+	if (removedHint !== undefined) throw new FormSchemaError(removedHint, path)
+	if (raw.type === 'block' && raw.children !== undefined && !Array.isArray(raw.children)) {
+		throw new FormSchemaError('A block\'s "children" must be an array of nodes', path)
+	}
 
 	const node = raw as unknown as FormNode<unknown, string>
 	if (hasChildren(node)) {
 		if (!Array.isArray(node.children)) {
 			throw new FormSchemaError(`Container node "${node.type}" is missing a "children" array`, path)
 		}
-		assertStepHomogeneity(node.children, `${path}.children`)
 		node.children.forEach((child, index) => assertNodeShape(child, `${path}.children[${String(index)}]`))
 	}
 	return node
@@ -200,8 +228,36 @@ function assertKnownBlock(component: unknown, path: string, options: ParseOption
 	if (typeof component !== 'string' || component.length === 0) {
 		throw new FormSchemaError('Block node is missing a "component" string', path)
 	}
-	if (!options.blocks?.includes(component)) {
+	if (component === GRID_COMPONENT) {
+		throw new FormSchemaError('"Grid" is not a block; set "columns" on the container instead', path)
+	}
+	if (!options.components?.includes(component)) {
 		throw new FormSchemaError(`Unknown block component "${component}"`, path)
+	}
+}
+
+/**
+ * A block is its component written as data: no caption of its own, one source of children, and
+ * `props` that are a plain object whose `{ i18n }` values are translation keys like any other.
+ */
+function assertBlockShape(node: UnknownRecord, path: string, options: ParseOptions): void {
+	const misplaced = NON_BLOCK_KEYS.find((key) => node[key] !== undefined)
+	if (misplaced !== undefined) {
+		throw new FormSchemaError(`A block has no "${misplaced}"; move it into the component's "props"`, path)
+	}
+	if (node.props === undefined) return
+	if (!isPlainObject(node.props)) {
+		throw new FormSchemaError('A block\'s "props" must be an object', path)
+	}
+	if (node.children !== undefined && node.props[CHILDREN_KEY] !== undefined) {
+		throw new FormSchemaError('A block takes "children" as nodes or in "props", not both', path)
+	}
+	// A delivered document reaches the component through these, so they are held to what JSON
+	// can carry — no functions, no `undefined`, no class instances — exactly like a source's
+	// `params`.
+	assertJsonValue(node.props, 'props', path)
+	for (const value of Object.values(node.props)) {
+		if (isPlainObject(value) && I18N_KEY in value) assertLocalizedText(value, path, options)
 	}
 }
 
@@ -293,18 +349,18 @@ function assertKnownCondition(condition: Condition<unknown> | undefined, path: s
 }
 
 /**
- * A `LocalizedText` must be a string, or an object carrying a string `key` — anything else
- * (a number, `{}`, an object whose `key` isn't a string) is garbage that would otherwise pass
+ * A `LocalizedText` must be a string, or an object carrying a string `i18n` — anything else
+ * (a number, `{}`, the old `{ key }` spelling, an object whose `i18n` isn't a string) is garbage that would otherwise pass
  * silently whenever `options.hasTranslate` happens to be true.
  */
 function assertLocalizedText(text: unknown, path: string, options: ParseOptions): void {
 	if (text === undefined || typeof text === 'string') return
-	if (!isPlainObject(text) || typeof text.key !== 'string') {
-		throw new FormSchemaError('LocalizedText must be a string or an object with a string "key"', path)
+	if (!isPlainObject(text) || typeof text.i18n !== 'string') {
+		throw new FormSchemaError('LocalizedText must be a string or an object with a string "i18n"', path)
 	}
 	if (!options.hasTranslate) {
 		throw new FormSchemaError(
-			`FormSchema uses the translation key "${text.key}" but no translate function is registered`,
+			`FormSchema uses the translation key "${text.i18n}" but no translate function is registered`,
 			path,
 		)
 	}
@@ -488,6 +544,9 @@ function assertOptions(
  * labels resolved through the source's `useSelectedOptions`. A `radiogroup` or a
  * `checkboxgroup` renders every option inline instead; there is nothing to type into and no
  * page of results to narrow, so the flag is meaningless there and always will be.
+ *
+ * Its object form, `{ debounce?, minLength? }`, carries only those two keys, each a
+ * non-negative integer — milliseconds and characters, neither of which has a fraction.
  */
 function assertSearchable(node: FormNode<unknown, string>, path: string): void {
 	const value = (node as unknown as UnknownRecord).searchable
@@ -500,8 +559,20 @@ function assertSearchable(node: FormNode<unknown, string>, path: string): void {
 			path,
 		)
 	}
-	if (typeof value !== 'boolean') {
-		throw new FormSchemaError(`"searchable" must be a boolean, got ${describeValue(value)}`, path)
+	if (typeof value === 'boolean') return
+	if (!isPlainObject(value)) {
+		throw new FormSchemaError(`"searchable" must be a boolean or an object, got ${describeValue(value)}`, path)
+	}
+	for (const [key, setting] of Object.entries(value)) {
+		if (!Object.hasOwn(SEARCH_SETTING_KEYS, key)) {
+			throw new FormSchemaError(`"searchable" has an unknown key "${key}"`, path)
+		}
+		if (typeof setting !== 'number' || !Number.isSafeInteger(setting) || setting < 0) {
+			throw new FormSchemaError(
+				`"searchable.${key}" must be a non-negative integer, got ${describeValue(setting)}`,
+				path,
+			)
+		}
 	}
 }
 
@@ -535,7 +606,8 @@ function assertCreatable(node: FormNode<unknown, string>, path: string): void {
 	if (typeof value !== 'boolean') {
 		throw new FormSchemaError(`"creatable" must be a boolean, got ${describeValue(value)}`, path)
 	}
-	if (value && record.searchable !== true) {
+	// `assertSearchable` has already run on this node, so `searchable` is a valid `Searchable`.
+	if (value && !isSearchable(record.searchable as Searchable | undefined)) {
 		throw new FormSchemaError(
 			'"creatable" requires "searchable": true — a value is created by typing it, and only a ' +
 				'searchable field has somewhere to type',
@@ -613,7 +685,7 @@ function assertDateValues(node: FormNode<unknown, string>, path: string): void {
 }
 
 /**
- * `columns` (section) and `colSpan` (any node) are part of the v1 format's supported range,
+ * `columns` (a container) and `colSpan` (any node) are part of the v1 format's supported range,
  * not an undocumented kit detail — a document authored outside this codebase (BDUI, spec
  * I2/I3) has no other way to learn that 6 columns silently becomes 1.
  */
@@ -650,12 +722,38 @@ function computeNodePath(
 	return segments.join('.')
 }
 
+/**
+ * `columns` lays out a container's children, so it means nothing on a field or a leaf block; and
+ * `colSpan` counts against the columns of the nearest container, so without them it would
+ * silently do nothing.
+ */
+function assertGridPlacement(node: FormNode<unknown, string>, path: string, parentColumns: unknown): void {
+	const raw = node as unknown as UnknownRecord
+	if (raw.columns !== undefined && !hasChildren(node)) {
+		throw new FormSchemaError('"columns" applies only to a block with children, an array or the document', path)
+	}
+	assertGridValue(raw.columns, 'columns', path)
+	assertGridValue(raw.colSpan, 'colSpan', path)
+	if (raw.colSpan === undefined) return
+	if (parentColumns === undefined) {
+		throw new FormSchemaError('"colSpan" needs "columns" on the container it sits in', path)
+	}
+	// A wider span than the grid has columns would make the browser add implicit tracks.
+	if (typeof raw.colSpan === 'number' && typeof parentColumns === 'number' && raw.colSpan > parentColumns) {
+		throw new FormSchemaError(
+			`"colSpan" ${String(raw.colSpan)} is wider than the ${String(parentColumns)} columns of its container`,
+			path,
+		)
+	}
+}
+
 function validateNode(
 	node: FormNode<unknown, string>,
 	path: string,
 	options: ParseOptions,
 	seenNames: Set<string>,
 	insideArray: boolean,
+	parentColumns: unknown,
 ): void {
 	if (isFieldNode(node)) {
 		assertKnownFieldType(node.type, path, options)
@@ -677,21 +775,19 @@ function validateNode(
 		assertLocalizedText(node.item?.label, path, options)
 		assertLocalizedText(node.add?.label, path, options)
 		assertLocalizedText(node.remove?.label, path, options)
-	} else if (node.type === 'block') {
+	} else if (isBlockNode(node)) {
 		assertKnownBlock(node.component, path, options)
-	} else if (node.type === 'section' || node.type === 'step') {
-		assertLocalizedText(node.title, path, options)
+		assertBlockShape(node, path, options)
 	}
 
-	if (node.type === 'section') {
-		assertGridValue((node as unknown as UnknownRecord).columns, 'columns', path)
-	}
-	assertGridValue((node as unknown as UnknownRecord).colSpan, 'colSpan', path)
+	assertGridPlacement(node, path, parentColumns)
 
 	assertKnownCondition(node.when, path, insideArray)
-	assertKnownCondition(node.disabledWhen, path, insideArray)
-	assertLocalizedText(node.label, path, options)
-	assertLocalizedText(node.description, path, options)
+	if (!isBlockNode(node)) {
+		assertKnownCondition(node.disabledWhen, path, insideArray)
+		assertLocalizedText(node.label, path, options)
+		assertLocalizedText(node.description, path, options)
+	}
 }
 
 /**
@@ -714,7 +810,7 @@ export function parseFormSchema<TValues>(input: unknown, options: ParseOptions =
 		throw new FormSchemaError('FormSchema is missing a "children" array', ROOT_PATH)
 	}
 
-	assertStepHomogeneity(input.children as FormNode<unknown, string>[], 'children')
+	assertGridValue(input.columns, 'columns', ROOT_PATH)
 	;(input.children as unknown[]).forEach((child, index) => assertNodeShape(child, `children[${String(index)}]`))
 
 	const schema = input as unknown as AnyFormSchema<TValues>
@@ -731,7 +827,11 @@ export function parseFormSchema<TValues>(input: unknown, options: ParseOptions =
 			seenNames = new Set<string>()
 			seenNamesByScope.set(key, seenNames)
 		}
-		validateNode(untypedNode, path, options, seenNames, untypedAncestors.some(isArrayNode))
+		// Every ancestor is a container, so the nearest one is the last; the document is the
+		// container of a top-level node.
+		const parent = untypedAncestors.at(-1)
+		const parentColumns = parent === undefined ? input.columns : (parent as unknown as UnknownRecord).columns
+		validateNode(untypedNode, path, options, seenNames, untypedAncestors.some(isArrayNode), parentColumns)
 	})
 
 	return schema

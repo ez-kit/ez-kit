@@ -148,19 +148,26 @@ describe('@ez-kit/form-shadcn package root', () => {
 	it('exports the factory, both contract bags and every field component', () => {
 		expect(typeof kit.createForm).toBe('function')
 		expect(typeof kit.defineFieldType).toBe('function')
-		expect(Object.keys(kit.formFieldSlots)).toHaveLength(12)
-		expect(Object.keys(kit.formComponents)).toEqual(
-			expect.arrayContaining(['ArrayField', 'ArrayItem', 'Button', 'Form', 'Section', 'GridItem', 'Wizard']),
-		)
-		for (const name of Object.keys(kit.formFieldSlots)) {
-			expect(kit[name as keyof typeof kit]).toBe(kit.formFieldSlots[name as keyof typeof kit.formFieldSlots])
+		expect(Object.keys(kit.allFormFields)).toHaveLength(13)
+		expect(kit.allFormFields.ArrayField.Item).toBeTypeOf('function')
+		expect(Object.keys(kit.allFormComponents).sort()).toEqual(['Grid', 'Section', 'SubmitButton'])
+		expect(kit.allFormComponents.SubmitButton).toBe(kit.SubmitButton)
+		expect(kit.FormElement).toBeTypeOf('function')
+		for (const name of Object.keys(kit.allFormFields)) {
+			expect(kit[name as keyof typeof kit]).toBe(kit.allFormFields[name as keyof typeof kit.allFormFields])
 		}
+		for (const name of Object.keys(kit.allFormComponents)) {
+			expect(kit[name as keyof typeof kit]).toBe(kit.allFormComponents[name as keyof typeof kit.allFormComponents])
+		}
+		expect(kit).not.toHaveProperty('formFieldSlots')
+		expect(kit).not.toHaveProperty('formComponents')
 	})
 
 	it('recomposes a bundle from the exported bags that renders the real shadcn input', () => {
 		const { Form: Rebuilt } = kit.createForm({
-			components: kit.formComponents,
-			fields: { ...kit.formFieldSlots, RatingField },
+			FormElement: kit.FormElement,
+			fields: { ...kit.allFormFields, RatingField },
+			components: kit.allFormComponents,
 		})
 
 		const { container } = render(
@@ -181,9 +188,134 @@ describe('@ez-kit/form-shadcn package root', () => {
 			</Rebuilt>,
 		)
 
-		// The kit's own vendored primitive, not the guard placeholder a missing slot renders.
+		// The kit's own vendored primitive.
 		expect(container.querySelector('[data-slot="input"]')).toBeInTheDocument()
 		expect(screen.getByLabelText('Email')).toBeInTheDocument()
 		expect(screen.getByTestId('rating')).toHaveTextContent('0 / 5')
+	})
+})
+
+const CONTACT: kit.FormSchema<{ email: string }> = {
+	version: 1,
+	children: [
+		{ type: kit.FormFieldType.Text, name: 'email', label: 'Email' },
+		{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
+	],
+}
+
+/**
+ * The prebuilt `useForm` / `Form` and the prebuilt `SchemaForm` come from two separate factory
+ * calls — `createForm` and `createSchemaForm` — so an instance from one rendered by the other is
+ * the case that would break if the two bundles stopped agreeing.
+ */
+describe('@ez-kit/form-shadcn prebuilt bundles together', () => {
+	it('renders a prebuilt useForm instance through the controlled SchemaForm and submits it', async () => {
+		const user = userEvent.setup()
+		const onSubmit = vi.fn()
+
+		function Controlled() {
+			const form = kit.useForm({
+				defaultValues: { email: '' },
+				onSubmit: ({ value }) => {
+					onSubmit(value)
+				},
+			})
+
+			return (
+				<kit.SchemaForm
+					form={form}
+					schema={CONTACT}
+				/>
+			)
+		}
+
+		render(<Controlled />)
+
+		await user.type(screen.getByLabelText('Email'), 'a@b.c')
+		await user.click(screen.getByRole('button', { name: 'Save' }))
+
+		await waitFor(() => {
+			expect(onSubmit).toHaveBeenCalledWith({ email: 'a@b.c' })
+		})
+	})
+})
+
+describe('@ez-kit/form-shadcn — props beyond the contract land on the control', () => {
+	it('puts native input attributes on the <input>, `type` included, with no import', () => {
+		render(
+			<Form defaultValues={DEFAULTS}>
+				{(form) => (
+					<>
+						<form.TextField
+							name='email'
+							label='Password'
+							type='password'
+							autoComplete='current-password'
+							inputMode='text'
+							maxLength={64}
+							placeholder='••••'
+						/>
+						<form.NumberField
+							name='age'
+							label='Age'
+							placeholder='18'
+							min={1}
+							max={120}
+							step={1}
+						/>
+						<form.TextareaField
+							name='bio'
+							label='Bio'
+							rows={5}
+							maxLength={280}
+						/>
+					</>
+				)}
+			</Form>,
+		)
+
+		const password = screen.getByLabelText('Password')
+		expect(password).toHaveAttribute('type', 'password')
+		expect(password).toHaveAttribute('autocomplete', 'current-password')
+		expect(password).toHaveAttribute('inputmode', 'text')
+		expect(password).toHaveAttribute('maxlength', '64')
+		expect(password).toHaveAttribute('placeholder', '••••')
+
+		const age = screen.getByLabelText('Age')
+		expect(age).toHaveAttribute('type', 'number')
+		expect(age).toHaveAttribute('placeholder', '18')
+		expect(age).toHaveAttribute('min', '1')
+		expect(age).toHaveAttribute('max', '120')
+
+		const bio = screen.getByLabelText('Bio')
+		expect(bio).toHaveAttribute('rows', '5')
+		expect(bio).toHaveAttribute('maxlength', '280')
+	})
+
+	it('keeps the binding’s own id and name on the control', () => {
+		render(
+			<Form defaultValues={DEFAULTS}>
+				{(form) => (
+					<form.TextField
+						name='email'
+						label='Email'
+						autoComplete='email'
+					/>
+				)}
+			</Form>,
+		)
+
+		const input = screen.getByLabelText('Email')
+		expect(input).toHaveAttribute('id', 'email')
+		expect(input).toHaveAttribute('name', 'email')
+		expect(input).toHaveAttribute('autocomplete', 'email')
+	})
+})
+
+describe('the step flow and the form-schema helpers', () => {
+	it('re-exports revalidateLogic, useStep and useSteps from the adapter', () => {
+		expect(typeof kit.revalidateLogic).toBe('function')
+		expect(typeof kit.useStep).toBe('function')
+		expect(typeof kit.useSteps).toBe('function')
 	})
 })

@@ -6,7 +6,7 @@ Framework-agnostic core for the `@ez-kit/form-*` packages, built on
 It holds what neither React nor a specific UI kit owns: the closed set of built-in
 field kinds, the shared `SelectOption` shape, the normalisation of raw validator errors
 into display strings — and the whole **`FormSchema`** format, the plain-data description
-of a form that `<FormRenderer>` walks.
+of a form that `<SchemaForm>` walks.
 
 ## Install
 
@@ -15,7 +15,15 @@ pnpm add @ez-kit/form-core
 ```
 
 Most consumers do not install this directly — they use a UI-kit package
-(`@ez-kit/form-shadcn`, `@ez-kit/form-heroui`), which depends on it transitively.
+(`@ez-kit/form-shadcn`, `@ez-kit/form-heroui`), which reaches it through `@ez-kit/form-react`.
+
+`@tanstack/form-core` (v1) is a peer dependency: this package takes only types from it, and in a
+kit's tree `@ez-kit/form-react` supplies the one copy. Installed on its own — to import the
+schema helpers in a server component, say — add it beside this package:
+
+```bash
+pnpm add @ez-kit/form-core @tanstack/form-core
+```
 
 ## Field kinds and error normalisation
 
@@ -27,14 +35,14 @@ import type { LocalizedSelectOption, SelectOption } from '@ez-kit/form-core'
 - **`FormFieldType`** / **`FORM_FIELD_TYPES`** — the built-in field kinds: `text`, `number`,
   `textarea`, `select`, `multiselect`, `checkbox`, `checkboxgroup`, `switch`, `radiogroup`,
   `slider`, `date`, `daterange`. A repeatable group is **not** one of these: it is the `array`
-  container node, whose `type` is reserved like `section` and `step`.
-- **`TextInputType`** — the `inputType` a text field may ask for (`email`, `tel`, …).
+  container node, whose `type` is reserved like `block`.
+- **`TextInputType`** — the `inputType` a text field may ask for (`email`, `tel`, …). A const object, so a document may name a member (`TextInputType.Email`) or write its string (`'email'`).
 - **`SelectOption<TValue>`** — `{ label, value, disabled? }` with `label` already resolved
   to a string, the option shape every select-like field consumes.
 - **`LocalizedSelectOption<TValue>`** — the same shape with `label: LocalizedText`, which is
   what a `select` / `radiogroup` **node in a schema** carries, so a delivered document can
   name a translation key. `resolveSelectOptions(options, translate)` turns one into the
-  other; `FormRenderer` calls it for you.
+  other; `SchemaForm` calls it for you.
 - **`formatFieldErrors(errors)`** — normalises `field.state.meta.errors` (standard-schema
   issues, `Error` instances, plain strings) into `string[]`, dropping empty slots.
 - **`hasFieldErrors(errors)`** — the `invalid` / `aria-invalid` predicate.
@@ -46,7 +54,7 @@ standard-schema validators (zod / valibot / arktype). There is no custom resolve
 
 A `FormSchema` is `{ version: 1, children: FormNode[] }` — a form written as data. It is
 JSON, with no functions anywhere, so the same document can be authored in TypeScript,
-stored in a database, or delivered by a backend. `<FormRenderer>` (from a kit package)
+stored in a database, or delivered by a backend. `<SchemaForm>` (from a kit package)
 renders it through the same bound field components the JSX API uses.
 
 The full guide lives at [ez-kit-docs.vercel.app/docs/form/schema](https://ez-kit-docs.vercel.app/docs/form/schema).
@@ -60,7 +68,7 @@ const schema = defineFormSchema<Values>()({
 	version: 1,
 	children: [
 		{ type: FormFieldType.Text, name: 'email', label: 'Email', validate: { required: true, format: 'email' } },
-		{ type: 'submit', label: 'Save' },
+		{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 	],
 })
 ```
@@ -70,12 +78,14 @@ const schema = defineFormSchema<Values>()({
   inferred, which is what makes `name` checkable per field kind. `TCustom` is the closed
   set of custom field-type keys the document may use.
 - Types: **`FormSchema`**, **`AnyFormSchema`**, **`FormNode`**, **`FieldNode`**,
-  **`SectionNode`**, **`StepNode`**, **`SubmitNode`**, **`BlockNode`**,
-  **`CustomFieldNode`**.
+  **`BlockNode`**, **`ArrayNode`**, **`CustomFieldNode`**. A block is a component from the
+  bundle's `components` written as data — `component`, flat `props`, and optional `children`
+  that make it a container.
 - **`GRID_MIN`** / **`GRID_MAX`** / **`clampToGridRange(n)`** — the `1..4` range a
-  section's `columns` and a node's `colSpan` share.
-- **`RESERVED_NODE_TYPES`** — `section`, `step`, `submit`, `block`; never usable as a
-  registry key.
+  container's `columns` and a node's `colSpan` share.
+- **`RESERVED_NODE_TYPES`** — `section`, `submit`, `block`, `array`; never usable as a
+  field type. `section` and `submit` are no longer nodes, and the parser names what replaces
+  each.
 
 ### Parsing an untrusted document
 
@@ -84,7 +94,7 @@ import { FormSchemaError, parseFormSchema } from '@ez-kit/form-core'
 
 const schema = parseFormSchema<Values>(await res.json(), {
 	fieldTypes: Object.keys(fields),
-	blocks: Object.keys(blocks),
+	components: Object.keys(components),
 	rules: Object.keys(rules),
 	hasTranslate: true,
 })
@@ -93,8 +103,8 @@ const schema = parseFormSchema<Values>(await res.json(), {
 **`parseFormSchema(input, options?)`** is the trust boundary for a document that did not
 come from your own bundle. It throws **`FormSchemaError`** (carrying `path`, the offending
 node's location) on the first violation — unknown node type, duplicate field name,
-unregistered rule or block, malformed condition, a `columns`/`colSpan` outside `1..4`,
-`step` mixed with non-`step` siblings, a translation key with no `translate` available.
+unregistered rule or block, malformed condition, a `columns`/`colSpan` outside `1..4`, a
+translation key with no `translate` available.
 Passing the registries' keys via **`ParseOptions`** is what lets it check the document
 against _this_ app's capabilities. Nothing calls it for you.
 
@@ -138,7 +148,7 @@ import { stripHiddenValues, visibleFieldNames } from '@ez-kit/form-core'
 - **`visibleFieldNames(schema, values)`** — the names whose `when` conditions currently
   hold, all the way up the tree.
 - **`stripHiddenValues(schema, values)`** — the submitted payload with hidden fields
-  removed. An uncontrolled `<FormRenderer>` applies this for you unless you pass
+  removed. An uncontrolled `<SchemaForm>` applies this for you unless you pass
   `keepHiddenValues`; a controlled caller owns `onSubmit` and calls it themselves. v1
   strips top-level keys only.
 
@@ -146,7 +156,7 @@ import { stripHiddenValues, visibleFieldNames } from '@ez-kit/form-core'
 
 - **`walkNodes(schema, visitor)`** / **`isFieldNode(node)`** — depth-first traversal, with
   the ancestor chain.
-- **`LocalizedText`** — a finished string, or `{ key, params }`. **`Translate`** is
+- **`LocalizedText`** — a finished string, or `{ i18n, params }`. **`Translate`** is
   `(key, params) => string`. **`resolveText(text, translate)`** resolves one.
 
 ## License

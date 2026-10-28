@@ -13,7 +13,7 @@ The package is split across three layers, and the split is not bookkeeping — i
 
 `@ez-kit/form-react` is the behaviour: binding a field to form state, tracking submit state, wiring `id` / `aria-labelledby` / `aria-describedby`, deciding when an error is shown. It contains **zero visual styling** — no inline styles, no class names. What it emits are `data-*` attributes and a call into the kit.
 
-The kit — `@ez-kit/form-shadcn` or `@ez-kit/form-heroui` — owns every pixel. A field's entire element tree comes from the kit through a two-part contract — `FormComponents` for the form's own chrome, `FormFieldSlots` for the field kinds — which is why a React Aria kit can nest its label and error _inside_ the field root while a plain-DOM kit keeps them as siblings, and why neither arrangement is hard-coded anywhere in the react layer.
+The kit — `@ez-kit/form-shadcn` or `@ez-kit/form-heroui` — owns every pixel. A field's entire element tree comes from the kit through a contract of slots — `FormFieldSlots` for the field kinds, `FormComponents` for the components around them, and a `FormElement` for the `<form>` itself — which is why a React Aria kit can nest its label and error _inside_ the field root while a plain-DOM kit keeps them as siblings, and why neither arrangement is hard-coded anywhere in the react layer.
 
 Two consequences worth carrying forward. First, you install exactly one kit and it pulls the other two in; the kit re-exports the whole consumer surface, so it is the only import specifier you ever write. Second — and this trips people up — **a field's props are not a kit component's props**. `label`, `description`, `required` and the rest are the react layer's vocabulary; the kit decides what markup they become. That boundary is the whole subject of [Custom kit](/docs/form/custom-kit).
 
@@ -23,34 +23,41 @@ Two consequences worth carrying forward. First, you install exactly one kit and 
 
 ```tsx
 form.TextField // added by this package
-form.Field // TanStack's, untouched
+form.Field // added by this package: your own control, bound
+form.NativeField // TanStack's field
 form.handleSubmit // TanStack's, untouched
 form.state // TanStack's, untouched
 ```
 
-There is no adapter and no escape hatch to reach for, because you never left. Any TanStack Form documentation, recipe or plugin applies to this object as written. [Native API](/docs/form/native-api) is the mapping.
+There is no adapter and no escape hatch to reach for, because you never left. TanStack Form's documentation for the instance's own API — `handleSubmit`, `state`, `Subscribe`, `setFieldValue` and the rest — applies as written, with three differences. TanStack's render-prop field is `form.NativeField` here, because `form.Field` is the bound one. And the group helpers — `withFieldGroup`, `useFieldGroup`, `useFormGroup` — come from your kit, not from `@tanstack/react-form`: TanStack's own take a TanStack `FormApi` and reject this instance. And a group's `handleSubmit` submits the group alone — TanStack's field group submits the whole form. [Native API](/docs/form/native-api) is the mapping.
 
 ## A field is complete
 
 `<form.TextField name='email' label='Email' />` is not an input. It renders the label, the input, the description, the error message once validation fails, and the accessibility wiring that ties them together — `id`, `for`, `aria-invalid`, `aria-labelledby`, `aria-describedby`, `role='alert'`. There is no `value`, no `onChange`, no `onBlur` to pass: the field reads and writes form state itself.
 
-TanStack's own `form.Field` render prop is still there and still works. The difference is what you own:
+A render prop is still there for a control the package does not ship. The difference is what you own:
 
 ```tsx
 // the flat field: name + label, and the chrome is done
 <form.TextField name='email' label='Email' />
 
-// form.Field: you render everything, including label and error
-<form.Field name='email'>
-	{(field) => (
-		<input
-			value={field.state.value}
-			onChange={(e) => field.handleChange(e.target.value)}
-			onBlur={field.handleBlur}
-		/>
+// form.Field: bound and validated like a flat field; you render everything, including label and error
+<form.Field name='email' validate={{ required: true }}>
+	{({ value, onChange, onBlur, errors, invalid, id }) => (
+		<>
+			<input
+				id={id}
+				value={value}
+				onChange={(e) => onChange(e.target.value)}
+				onBlur={onBlur}
+			/>
+			{invalid && <p role='alert'>{errors.join(', ')}</p>}
+		</>
 	)}
 </form.Field>
 ```
+
+TanStack's own render-prop field, with its whole `FieldApi`, is `form.NativeField`.
 
 Reach for `form.Field` when you need a control the package does not ship. If you want the flat fields' layout and error handling _around_ your own control, the answer is a kit, not a render prop.
 
@@ -87,7 +94,7 @@ There are two ways in, and they run the same code underneath.
 
 **JSX** — `<Form>` plus flat fields. Everything JavaScript can express is available: inline validators, arbitrary conditions, `form.Subscribe`, your own components between the fields.
 
-**The document** — a `FormSchema` handed to `<FormRenderer>`. The renderer walks the document and renders it through the _same_ bound field components the JSX API exposes, so both produce the same DOM. There is one implementation, not two.
+**The document** — a `FormSchema` handed to `<SchemaForm>`. `SchemaForm` walks the document and renders it through the _same_ bound field components the JSX API exposes, so both produce the same DOM. There is one implementation, not two.
 
 ### In TSX
 
@@ -100,8 +107,7 @@ There are two ways in, and they run the same code underneath.
 The boundary between them is worth stating plainly rather than discovering later. A document is data — it survives `JSON.stringify`, which means it can be delivered by a backend, stored in a table, or produced by a visual builder. That is also its limit:
 
 - **Validation is named rules only.** `validate: { required: true, format: 'email' }`, plus rules you register yourself. An arbitrary JavaScript predicate is deliberately not expressible — a document that carried executable code would not be safe to accept over the wire.
-- **Conditions are declarative.** `when` and `disabledWhen` cover showing, hiding and disabling against other field values. There is no `form.Subscribe` in a document; the renderer handles re-rendering itself.
-- **Some things exist only on the document side.** Wizards are the notable case: `step` nodes and the step chrome are a renderer feature, and there is no `<Step>` component in the JSX API.
+- **Conditions are declarative.** `when` and `disabledWhen` cover showing, hiding and disabling against other field values. There is no `form.Subscribe` in a document; `SchemaForm` handles re-rendering itself.
 
 Neither entry point is the fallback for the other. Reach for the document when the form's shape is data — long forms, backend-delivered forms, forms a non-developer edits. Reach for JSX when the form's shape is code. The format is described in full in [Config-driven forms](/docs/form/schema).
 

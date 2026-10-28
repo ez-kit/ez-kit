@@ -75,25 +75,37 @@ compile.
 ### v1 field set
 
 `TextField`, `NumberField`, `TextareaField`, `SelectField`, `CheckboxField`, plus
-`SubmitButton` (subscribed to `canSubmit` / `isSubmitting`), plus the standalone `Form`
+`SubmitButton` (built on `form.Submit`, subscribed to `canSubmit` / `isSubmitting`), plus the standalone `Form`
 element wired to `handleSubmit`.
+
+### Assembling your own
+
+`createForm` and `createSchemaForm` are re-exported with the kit's sets beside them — `FormElement`,
+`allFormFields`, `allFormComponents` and every component by name — so an app registers a field kind
+of its own, or only the fields it renders, without forking the kit. Pass `FormElement` when you do.
+`FormProvider` and `useFormContext` are exported too: `form.SubmitButton` and any component you
+register read the form from context, which `<Form>`, `<SchemaForm>` or `<FormProvider form={form}>`
+sets.
 
 ### Layout
 
-`form.Section` groups fields under an optional heading on a `columns`-wide grid (1–4), and
-`form.GridItem` gives one child a wider `colSpan`. They are the JSX spelling of the schema's
-`section` node and its `colSpan` — pure layout, binding no value.
+`form.Section` groups fields under an optional heading, `form.Grid` lays children out on a
+`columns`-wide grid (1–4), and `form.Grid.Item` gives one child a wider `colSpan`. They are the
+JSX spelling of a document's `Section` block, its `columns` and a node's `colSpan` — pure layout,
+binding no value.
 
 ### Native API
 
-`form.Field`, `form.Subscribe`, `form.handleSubmit`, `form.state` and `form.AppField` are
-untouched — reach for them whenever a field needs bespoke markup.
+`form.Field` binds a control of your own like a registered field — `value`, a value-taking
+`onChange`, `errors`, `invalid`, `id` — and `form.NativeField` is TanStack's render-prop field.
+`form.Subscribe`, `form.handleSubmit` and `form.state` are TanStack's, untouched.
 
 ## Package layout
 
 - `src/components/ui/**` — vendored shadcn primitives, **immutable** (see `CLAUDE.md`).
 - `src/blocks/**` — the adapters that implement the `@ez-kit/form-react` contract.
-- `src/form.tsx` — `createForm({ components })`, where the two meet.
+- `src/sets.ts` — `allFormFields` / `allFormComponents`, every block in the two bags `createForm` takes.
+- `src/form.tsx` — the prebuilt bundle (`useForm`, `Form`, `SchemaForm`, …) built from those sets.
 
 ## License
 

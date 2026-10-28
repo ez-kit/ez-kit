@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { FormFieldType } from './field-types'
 import { FormSchemaError, parseFormSchema } from './parse'
+import { isSearchable, LOCAL_SEARCH_DEFAULTS, REMOTE_SEARCH_DEFAULTS } from './search-settings'
 
 import type { ParseOptions } from './parse'
 
@@ -13,10 +14,10 @@ import type { ParseOptions } from './parse'
  * nothing to search. The rejection carries the node path, like every other parse failure.
  */
 
-const OPTIONS: ParseOptions = { optionSources: ['cities'] }
+const OPTIONS: ParseOptions = { optionSources: ['cities'], components: ['Section'] }
 
 function schemaWith(node: Record<string, unknown>): Record<string, unknown> {
-	return { version: 1, children: [{ type: 'section', children: [node] }] }
+	return { version: 1, children: [{ type: 'block', component: 'Section', children: [node] }] }
 }
 
 /** The path the single node above sits at — asserted, not spelled inline, in every case. */
@@ -92,7 +93,7 @@ describe('searchable', () => {
 		const error = parseFailure({ type: FormFieldType.Select, name: 'city', searchable: 'yes', optionsFrom: 'cities' })
 
 		expect(error.path).toBe(NODE_PATH)
-		expect(error.message).toContain('"searchable" must be a boolean')
+		expect(error.message).toContain('"searchable" must be a boolean or an object, got "yes"')
 	})
 
 	it('accepts an explicit `searchable: false` on a select', () => {
@@ -121,6 +122,79 @@ describe('searchable', () => {
 		})
 
 		expect(error.path).toBe(NODE_PATH)
-		expect(error.message).toContain('"searchable" must be a boolean')
+		expect(error.message).toContain('"searchable" must be a boolean or an object, got "yes"')
+	})
+})
+
+describe('searchable settings object', () => {
+	const ACCEPTED: readonly unknown[] = [{ debounce: 150, minLength: 2 }, {}, true, false]
+
+	for (const type of [FormFieldType.Select, FormFieldType.MultiSelect]) {
+		for (const searchable of ACCEPTED) {
+			it(`accepts searchable: ${JSON.stringify(searchable)} on a ${type}`, () => {
+				const node = { type, name: 'city', searchable, optionsFrom: 'cities' }
+
+				expect(() => parseFormSchema(schemaWith(node), OPTIONS)).not.toThrow()
+			})
+		}
+	}
+
+	const REJECTED: readonly (readonly [unknown, string])[] = [
+		[{ debounce: -1 }, '"searchable.debounce" must be a non-negative integer, got -1'],
+		[{ minLength: 1.5 }, '"searchable.minLength" must be a non-negative integer, got 1.5'],
+		[{ debounce: '300' }, '"searchable.debounce" must be a non-negative integer, got "300"'],
+		[{ wait: 3 }, '"searchable" has an unknown key "wait"'],
+		[null, '"searchable" must be a boolean or an object, got null'],
+		['yes', '"searchable" must be a boolean or an object, got "yes"'],
+	]
+
+	for (const type of [FormFieldType.Select, FormFieldType.MultiSelect]) {
+		for (const [searchable, message] of REJECTED) {
+			it(`rejects searchable: ${JSON.stringify(searchable)} on a ${type}`, () => {
+				const error = parseFailure({ type, name: 'city', searchable, optionsFrom: 'cities' })
+
+				expect(error.path).toBe(NODE_PATH)
+				expect(error.message).toContain(message)
+			})
+		}
+	}
+
+	it('lets creatable ride on a settings object', () => {
+		const node = {
+			type: FormFieldType.Select,
+			name: 'tag',
+			searchable: { minLength: 1 },
+			creatable: true,
+			optionsFrom: 'cities',
+		}
+
+		expect(() => parseFormSchema(schemaWith(node), OPTIONS)).not.toThrow()
+	})
+
+	it('still rejects creatable beside searchable: false', () => {
+		const error = parseFailure({
+			type: FormFieldType.Select,
+			name: 'tag',
+			searchable: false,
+			creatable: true,
+			optionsFrom: 'cities',
+		})
+
+		expect(error.message).toContain('"creatable" requires "searchable"')
+	})
+
+	it('isSearchable reads a settings object as on and an absent or false flag as off', () => {
+		expect(isSearchable(undefined)).toBe(false)
+		expect(isSearchable(false)).toBe(false)
+		expect(isSearchable(true)).toBe(true)
+		expect(isSearchable({})).toBe(true)
+
+		// @ts-expect-error -- it reads a typed `Searchable`; validating an unknown is the parser's job
+		isSearchable('yes')
+	})
+
+	it('exports default sets no consumer can rewrite for every form', () => {
+		expect(Object.isFrozen(REMOTE_SEARCH_DEFAULTS)).toBe(true)
+		expect(Object.isFrozen(LOCAL_SEARCH_DEFAULTS)).toBe(true)
 	})
 })

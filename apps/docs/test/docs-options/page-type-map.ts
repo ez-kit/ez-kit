@@ -2,6 +2,7 @@ import { NO_HEADING } from './mdx-tables'
 import {
 	FORM_API_TYPE_ARGS,
 	FORM_ARRAY_TYPE_ARGS,
+	FORM_INSTANCE_TYPE_ARGS,
 	FORM_VALUE_TYPE_ARGS,
 	FEATURES_ROW_TYPE_ARGS,
 	FEATURES_TYPE_ARGS,
@@ -151,7 +152,11 @@ export const DocPage = {
 	FormNativeApi: 'content/docs/form/native-api.mdx',
 	FormSchema: 'content/docs/form/schema.mdx',
 	FormBasicConcepts: 'content/docs/form/basic-concepts.mdx',
-	FormComposition: 'content/docs/form/composition.mdx',
+	FormComposition: 'content/docs/form/composition/index.mdx',
+	FormCompositionFormGroup: 'content/docs/form/composition/form-group.mdx',
+	FormCompositionWithFieldGroup: 'content/docs/form/composition/with-field-group.mdx',
+	FormCompositionWithForm: 'content/docs/form/composition/with-form.mdx',
+	FormSteps: 'content/docs/form/steps.mdx',
 	FormExamples: 'content/docs/form/examples.mdx',
 	FormGettingStarted: 'content/docs/form/getting-started.mdx',
 	FormInstallationHeroui: 'content/docs/form/installation/heroui.mdx',
@@ -161,6 +166,7 @@ export const DocPage = {
 	FormSelectIndex: 'content/docs/form/select/index.mdx',
 	FormSelectOptionSources: 'content/docs/form/select/option-sources.mdx',
 	FormSelectSearchable: 'content/docs/form/select/searchable.mdx',
+	FormServerActions: 'content/docs/form/server-actions.mdx',
 	FormSubmission: 'content/docs/form/submission.mdx',
 	FormValidation: 'content/docs/form/validation.mdx',
 	PaginationInfiniteScroll: 'content/docs/data-grid/pagination/infinite-scroll.mdx',
@@ -305,42 +311,47 @@ export const GRID_TYPE = {
  * Types that govern the mapped `form/` tables.
  *
  * The split mirrors the packages: `@ez-kit/form-core` owns the serialisable
- * document (`SubmitNode`, `FieldValidate`), `@ez-kit/form-react` owns both
+ * document (`CustomFieldNode`, `FieldValidate`), `@ez-kit/form-react` owns both
  * halves of the React surface — the *consumer* props a caller writes
- * (`BaseFieldProps`, `SliderFieldProps`, …) and the *kit contract* props a kit
- * receives (`FieldRenderProps`, `FormComponents`).
+ * (`BaseFieldProps`, …) and the *kit contract* props a kit receives
+ * (`FieldRenderProps`, `FormComponents`). A field's input attributes belong to
+ * neither: each UI kit declares them (`@ez-kit/form-shadcn`'s `<Field>KitProps`).
  */
 export const FORM_TYPE = {
 	/**
-	 * Governs "what every node may carry". `CommonProps` — the type that actually
+	 * Governs "what a field node may carry". `CommonProps` — the type that actually
 	 * declares those five keys — is internal to `@ez-kit/form-core`, so the
-	 * tightest exported stand-in is the leanest node built on it: `SubmitNode` is
-	 * `CommonProps` plus `type` and `disabled` and nothing else, so a name that
-	 * resolves here really is common to every node. A laxer choice such as
-	 * `FormNode` would also accept `columns`, `path` and `component`, which are
-	 * exactly the per-kind keys this table must not bless.
+	 * tightest exported stand-in is the leanest field node built on it:
+	 * `CustomFieldNode` adds only the keys every field has (`type`, `name`,
+	 * `required`, `validate`, `defaultValue`, `props`). A laxer choice such as
+	 * `FormNode` would also accept `columns` and `component`, which are exactly
+	 * the per-kind keys this table must not bless.
 	 */
-	SubmitNode: { module: TypeModule.FormCore, name: 'SubmitNode', typeArgs: ROW_TYPE_ARGS },
+	CustomFieldNode: { module: TypeModule.FormCore, name: 'CustomFieldNode', typeArgs: ROW_TYPE_ARGS },
 	FieldValidate: { module: TypeModule.FormCore, name: 'FieldValidate' },
 	/**
 	 * The props every flat field shares. Written once as
 	 * `BaseFieldProps<TFormData, TValue>` and intersected into each field's own
-	 * props, so it is the exact governing type for the "Shared props" table —
-	 * `TextFieldProps` would additionally bless `placeholder` and `type`.
+	 * props, so it is the exact governing type for the "Shared props" table — an
+	 * option-bearing field's props would additionally bless `options` and the rest.
 	 */
 	BaseFieldProps: { module: TypeModule.FormReact, name: 'BaseFieldProps', typeArgs: FORM_VALUE_TYPE_ARGS },
-	SliderFieldProps: { module: TypeModule.FormReact, name: 'SliderFieldProps', typeArgs: ROW_TYPE_ARGS },
-	/** The JSX layout pair — neither is generic, both are pure presentation. */
+	/**
+	 * A field's input attributes are the kit's, not the adapter's: `form.<Field>` accepts whatever the
+	 * registered component declares beyond the contract. `fields.mdx` documents the props both shipped
+	 * kits declare; the shadcn kit's types stand for them, since HeroUI declares the same names.
+	 */
+	SliderFieldKitProps: { module: TypeModule.FormShadcn, name: 'SliderFieldKitProps' },
+	/** The JSX layout parts — none is generic, all are pure presentation. */
 	SectionProps: { module: TypeModule.FormReact, name: 'SectionProps' },
+	GridProps: { module: TypeModule.FormReact, name: 'GridProps' },
 	GridItemProps: { module: TypeModule.FormReact, name: 'GridItemProps' },
-	/** The `section` node — `CommonProps` (so `colSpan`) plus the grid's own keys. */
-	SectionNode: { module: TypeModule.FormCore, name: 'SectionNode', typeArgs: ROW_TYPE_ARGS },
-	DateFieldProps: { module: TypeModule.FormReact, name: 'DateFieldProps', typeArgs: ROW_TYPE_ARGS },
+	DateFieldKitProps: { module: TypeModule.FormShadcn, name: 'DateFieldKitProps' },
 	/** What a kit's field component receives — the base half of the field-slot contract. */
 	FieldRenderProps: { module: TypeModule.FormReact, name: 'FieldRenderProps' },
 	/**
-	 * The chrome half of the kit contract: the seven slots that are not field kinds —
-	 * `Form`, `Button`, `Section`, `GridItem`, `Wizard` and the two array slots.
+	 * The `components` half of the kit contract: the three named components that are not field
+	 * kinds — `SubmitButton`, `Section` and `Grid`.
 	 */
 	FormComponents: { module: TypeModule.FormReact, name: 'FormComponents' },
 	/**
@@ -349,20 +360,28 @@ export const FORM_TYPE = {
 	 * and because this one is an open registry, so a kit or an app may add keys to it.
 	 */
 	FormFieldSlots: { module: TypeModule.FormReact, name: 'FormFieldSlots' },
+	/** The factory's options: `FormElement`, `fields` and `components`. Both type parameters default. */
+	CreateFormOptions: { module: TypeModule.FormReact, name: 'CreateFormOptions' },
+	/** What `form.Submit` hands its render function. */
+	SubmitRenderProps: { module: TypeModule.FormReact, name: 'SubmitRenderProps' },
+	/** What this package adds to a form beside TanStack's options: `focusOnError` and `serverErrors`. */
+	FormBehaviourOptions: { module: TypeModule.FormReact, name: 'FormBehaviourOptions', typeArgs: ROW_TYPE_ARGS },
 	/**
 	 * What a *custom* field's component receives: everything `FieldRenderProps` carries plus
 	 * the three the registry adds — `value`, `onChange` and the nested `props` bag. Both type
 	 * parameters default, so it instantiates bare.
 	 */
 	CustomFieldRenderProps: { module: TypeModule.FormReact, name: 'CustomFieldRenderProps' },
-	FormRendererControlledProps: {
+	/** What `form.Field` hands its render prop: `FieldRenderProps` plus `value` and a value-taking `onChange`. */
+	FieldControlProps: { module: TypeModule.FormReact, name: 'FieldControlProps', typeArgs: '<string>' },
+	SchemaFormControlledProps: {
 		module: TypeModule.FormReact,
-		name: 'FormRendererControlledProps',
+		name: 'SchemaFormControlledProps',
 		typeArgs: ROW_TYPE_ARGS,
 	},
-	FormRendererUncontrolledProps: {
+	SchemaFormUncontrolledProps: {
 		module: TypeModule.FormReact,
-		name: 'FormRendererUncontrolledProps',
+		name: 'SchemaFormUncontrolledProps',
 		typeArgs: FORM_API_TYPE_ARGS,
 	},
 	/** The JSX array trio: the component's props, the render prop's scope, and one entry of it. */
@@ -381,7 +400,25 @@ export const FORM_TYPE = {
 	 */
 	AnyArrayNode: { module: TypeModule.FormCore, name: 'AnyArrayNode' },
 	/** The instance `useForm` returns: TanStack's own API plus the flat field components. */
-	KitFormApi: { module: TypeModule.FormReact, name: 'KitFormApi', typeArgs: FORM_API_TYPE_ARGS },
+	FormInstance: { module: TypeModule.FormReact, name: 'FormInstance', typeArgs: FORM_INSTANCE_TYPE_ARGS },
+	/** `withFieldGroup`'s options: `defaultValues`, `props`, `validators`, `render`. */
+	WithFieldGroupOptions: { module: TypeModule.FormReact, name: 'WithFieldGroupOptions', typeArgs: ROW_TYPE_ARGS },
+	/** `form.Steps`' props — the provider of a step flow; not generic. */
+	StepsProps: { module: TypeModule.FormReact, name: 'StepsProps' },
+	/** `form.Step`'s props — generic over the form's values, which `when` and `validators` read. */
+	StepProps: { module: TypeModule.FormReact, name: 'StepProps', typeArgs: ROW_TYPE_ARGS },
+	/** What `form.Steps.Controls` hands its render function. */
+	StepsControlsRenderProps: { module: TypeModule.FormReact, name: 'StepsControlsRenderProps' },
+	/**
+	 * Where a block is placed — the checked overload: `form`, `fields`, `onGroupSubmit`. Its
+	 * `<TFormData, TGroup>` takes the probe row and a scalar group: the group type only narrows
+	 * `fields`, never the key set.
+	 */
+	FieldGroupPlacementProps: {
+		module: TypeModule.FormReact,
+		name: 'FieldGroupPlacementProps',
+		typeArgs: FORM_VALUE_TYPE_ARGS,
+	},
 } as const satisfies Record<string, TypeRef>
 
 /**
@@ -1179,10 +1216,11 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			// The base-props table sits under "Fields"; the per-kind table under the
 			// "#### Per-kind props" subheading added for exactly this reason — a
 			// heading addresses at most one table.
-			{ heading: 'Fields', roots: [FORM_TYPE.FieldRenderProps], expectedCount: 11 },
+			{ heading: 'The options', roots: [FORM_TYPE.CreateFormOptions], expectedCount: 3 },
+			{ heading: 'Fields', roots: [FORM_TYPE.FieldRenderProps], expectedCount: 12 },
 			{ heading: 'Per-kind props', roots: [FORM_TYPE.FormFieldSlots], expectedCount: 12 },
-			{ heading: 'Form level', roots: [FORM_TYPE.FormComponents], expectedCount: 2 },
-			{ heading: 'Layout and wizard', roots: [FORM_TYPE.FormComponents], expectedCount: 3 },
+			{ heading: 'Form level', roots: [FORM_TYPE.FormComponents], expectedCount: 1 },
+			{ heading: 'Layout', roots: [FORM_TYPE.FormComponents], expectedCount: 2 },
 		],
 		nonOptionTables: [],
 	},
@@ -1190,8 +1228,8 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		page: DocPage.FormFields,
 		optionTables: [
 			{ heading: 'Shared props', roots: [FORM_TYPE.BaseFieldProps], expectedCount: 6 },
-			{ heading: '`form.SliderField`', roots: [FORM_TYPE.SliderFieldProps], expectedCount: 3 },
-			{ heading: '`form.DateField`', roots: [FORM_TYPE.DateFieldProps], expectedCount: 3 },
+			{ heading: '`form.SliderField`', roots: [FORM_TYPE.SliderFieldKitProps], expectedCount: 3 },
+			{ heading: '`form.DateField`', roots: [FORM_TYPE.DateFieldKitProps], expectedCount: 3 },
 		],
 		nonOptionTables: [
 			{
@@ -1208,9 +1246,9 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.FormLayout,
 		optionTables: [
-			{ heading: '`form.Section`', roots: [FORM_TYPE.SectionProps], expectedCount: 4 },
-			{ heading: '`form.GridItem`', roots: [FORM_TYPE.GridItemProps], expectedCount: 2 },
-			{ heading: 'The `section` node', roots: [FORM_TYPE.SectionNode], expectedCount: 6 },
+			{ heading: '`form.Section`', roots: [FORM_TYPE.SectionProps], expectedCount: 3 },
+			{ heading: '`form.Grid`', roots: [FORM_TYPE.GridProps], expectedCount: 2 },
+			{ heading: '`form.Grid.Item`', roots: [FORM_TYPE.GridItemProps], expectedCount: 2 },
 		],
 		nonOptionTables: [
 			{
@@ -1226,35 +1264,39 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			// the remainder resolved against the instance `useForm` returns.
 			{
 				heading: NO_HEADING,
-				roots: [FORM_TYPE.KitFormApi],
+				roots: [FORM_TYPE.FormInstance],
 				stripPrefix: FORM_RECEIVER_PREFIX,
 				expectedCount: 6,
 			},
+			// The fourteen keys of `form.Field`'s render prop: the twelve a registered field
+			// receives, plus `value` and `onChange`.
+			{ heading: '`form.Field`', roots: [FORM_TYPE.FieldControlProps], expectedCount: 14 },
 		],
 		nonOptionTables: [],
 	},
 	{
 		page: DocPage.FormSchema,
 		optionTables: [
-			{ heading: 'Common node properties', roots: [FORM_TYPE.SubmitNode], expectedCount: 5 },
+			{ heading: 'Common node properties', roots: [FORM_TYPE.CustomFieldNode], expectedCount: 5 },
 			{ heading: 'Validation', roots: [FORM_TYPE.FieldValidate], expectedCount: 8 },
 			// Two roots because the table documents both modes in one place and marks
 			// each row with the mode it belongs to: `form` exists only on the
 			// controlled props, `keepHiddenValues` and the `useForm` options only on
 			// the uncontrolled ones.
 			//
-			// Nine, not ten: the per-form `fields` registry was removed in favour of
-			// `createForm({ fields })`, the single registration site. `blocks` stays.
+			// Eight: the per-form `fields` and `blocks` registries were removed in
+			// favour of the factory's `fields` and `components`, the single
+			// registration site for both.
 			{
-				heading: 'Renderer props',
-				roots: [FORM_TYPE.FormRendererControlledProps, FORM_TYPE.FormRendererUncontrolledProps],
-				expectedCount: 9,
+				heading: 'SchemaForm props',
+				roots: [FORM_TYPE.SchemaFormControlledProps, FORM_TYPE.SchemaFormUncontrolledProps],
+				expectedCount: 8,
 			},
 		],
 		nonOptionTables: [
 			{
 				heading: 'The document',
-				reason: 'Lists the node `type` discriminant values (`text`, `section`, `submit`, …) — values, not keys.',
+				reason: 'Lists the node `type` discriminant values (`text`, `block`, `array`, …) — values, not keys.',
 			},
 			{
 				heading: 'Conditions',
@@ -1379,7 +1421,36 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 
 	{ page: DocPage.FormBasicConcepts, optionTables: [], nonOptionTables: [] },
-	{ page: DocPage.FormComposition, optionTables: [], nonOptionTables: [] },
+	{
+		page: DocPage.FormComposition,
+		optionTables: [],
+		nonOptionTables: [
+			{ heading: NO_HEADING, reason: 'Maps a need to the helper that serves it — helper names, not keys.' },
+			{
+				heading: 'The same form, with its rules',
+				reason: "Maps each of the example's rules to the place that holds it — rules, not keys.",
+			},
+		],
+	},
+	{
+		page: DocPage.FormCompositionWithFieldGroup,
+		optionTables: [
+			{ heading: '`withFieldGroup` options', roots: [FORM_TYPE.WithFieldGroupOptions], expectedCount: 4 },
+			{ heading: 'Placing a block', roots: [FORM_TYPE.FieldGroupPlacementProps], expectedCount: 3 },
+		],
+		nonOptionTables: [],
+	},
+	{ page: DocPage.FormCompositionWithForm, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.FormCompositionFormGroup, optionTables: [], nonOptionTables: [] },
+	{
+		page: DocPage.FormSteps,
+		optionTables: [
+			{ heading: '`form.Steps` props', roots: [FORM_TYPE.StepsProps], expectedCount: 4 },
+			{ heading: '`form.Step` props', roots: [FORM_TYPE.StepProps], expectedCount: 3 },
+			{ heading: '`Steps.Controls`', roots: [FORM_TYPE.StepsControlsRenderProps], expectedCount: 7 },
+		],
+		nonOptionTables: [],
+	},
 	{ page: DocPage.FormExamples, optionTables: [], nonOptionTables: [] },
 	{
 		// The narrative half of the split: prose and live examples, every table moved to
@@ -1402,7 +1473,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			{ heading: 'The render prop', roots: [FORM_TYPE.ArrayFieldScope], expectedCount: 3 },
 			{ heading: 'One entry', roots: [FORM_TYPE.ArrayItemScope], expectedCount: 3 },
 			{ heading: '`form.Array`', roots: [FORM_TYPE.ArrayProps], expectedCount: 6 },
-			{ heading: 'The scope', roots: [FORM_TYPE.ArrayScope], expectedCount: 12 },
+			{ heading: 'The scope', roots: [FORM_TYPE.ArrayScope], expectedCount: 11 },
 			{ heading: 'One entry, from the primitive', roots: [FORM_TYPE.ArrayItemScope], expectedCount: 8 },
 			{ heading: "`item.Item`'s own props", roots: [FORM_TYPE.ArrayItemProps], expectedCount: 4 },
 			{ heading: 'Validating the list', roots: [FORM_TYPE.FieldValidate], expectedCount: 3 },
@@ -1418,7 +1489,15 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{ page: DocPage.FormSelectIndex, optionTables: [], nonOptionTables: [] },
 	{ page: DocPage.FormSelectOptionSources, optionTables: [], nonOptionTables: [] },
 	{ page: DocPage.FormSelectSearchable, optionTables: [], nonOptionTables: [] },
-	{ page: DocPage.FormSubmission, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.FormServerActions, optionTables: [], nonOptionTables: [] },
+	{
+		page: DocPage.FormSubmission,
+		optionTables: [
+			{ heading: '`form.Submit`', roots: [FORM_TYPE.SubmitRenderProps], expectedCount: 5 },
+			{ heading: 'The two options', roots: [FORM_TYPE.FormBehaviourOptions], expectedCount: 2 },
+		],
+		nonOptionTables: [],
+	},
 	{ page: DocPage.FormValidation, optionTables: [], nonOptionTables: [] },
 	// --- @ez-kit/zu-store ---------------------------------------------------
 	{

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-import { defineFormSchema, FormFieldType, FormRenderer } from 'shared/form/FormKit'
+import { defineFormSchema, FormFieldType, SchemaForm } from 'shared/form/FormKit'
 
 type Booking = {
 	arriveOn: string
@@ -24,8 +24,9 @@ const schema = defineFormSchema<Booking>()({
 	version: 1,
 	children: [
 		{
-			type: 'section',
-			title: 'Booking',
+			type: 'block',
+			component: 'Section',
+			props: { title: 'Booking' },
 			columns: 2,
 			children: [
 				{
@@ -48,7 +49,7 @@ const schema = defineFormSchema<Booking>()({
 				},
 			],
 		},
-		{ type: 'submit', label: 'Book' },
+		{ type: 'block', component: 'SubmitButton', props: { children: 'Book' } },
 	],
 })
 
@@ -57,7 +58,7 @@ export function DatesExample() {
 
 	return (
 		<div className='flex flex-col gap-4'>
-			<FormRenderer
+			<SchemaForm
 				schema={schema}
 				onSubmit={({ value }) => {
 					setSaved(JSON.stringify(value, null, 2))

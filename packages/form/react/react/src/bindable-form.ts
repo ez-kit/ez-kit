@@ -25,15 +25,21 @@ export type FieldValue = string | number | boolean | OptionValue[] | DateRangeVa
  */
 export type BoundFieldApi = {
 	name: string
+	/**
+	 * The form the field belongs to — TanStack's core `FormApi`, of which only `formId` and the
+	 * submit count are read. The count is the second half of the error-display gate: a field mounted
+	 * after a submit attempt was never touched by it, and still shows what the form reported.
+	 */
+	form: { formId: string; state: { submissionAttempts: number } }
 	handleBlur: () => void
 	handleChange: (value: FieldValue) => void
 	state: {
 		value: unknown
 		/**
 		 * `isTouched` gates whether the field's errors are *displayed* — see
-		 * `fieldRenderProps`. TanStack sets it on the field's first change (`setFieldValue`)
-		 * or blur, and on every field at submit, which is exactly the "has the user had a go
-		 * at this yet?" question error display has to ask.
+		 * `shownFieldErrors`. TanStack sets it on the field's first change (`setFieldValue`)
+		 * or blur, and on every mounted field at submit, which is exactly the "has the user had a
+		 * go at this yet?" question error display has to ask.
 		 */
 		meta: { errors: readonly unknown[]; isTouched: boolean }
 	}
@@ -93,8 +99,11 @@ export type BindableForm = SubmittableForm & {
 	}) => ReactNode
 }
 
-/** The form-state members `SubmitButton` subscribes to. */
+/** The form-state members `form.Submit` subscribes to. */
 export type SubmitState = {
 	canSubmit: boolean
 	isSubmitting: boolean
+	isDirty: boolean
+	/** TanStack's form-level errors by slot, raw; `form.Submit` normalises them. */
+	errorMap: Record<string, unknown>
 }

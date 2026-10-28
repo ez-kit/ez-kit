@@ -31,8 +31,8 @@ export type SelectOption<TValue = string> = {
  * copy in one language — the same freedom every other label in the format already has.
  *
  * Separate from `SelectOption` on purpose. The kit contract stays a resolved-strings
- * contract (a kit never learns what a translation key is, exactly as with `WizardStep`'s
- * title), and the JSX API — which has no `translate` — keeps taking plain strings. The
+ * contract (a kit never learns what a translation key is, exactly as with a field's
+ * `label`), and the JSX API — which has no `translate` — keeps taking plain strings. The
  * renderer bridges the two with `resolveSelectOptions`.
  */
 export type LocalizedSelectOption<TValue = string> = {

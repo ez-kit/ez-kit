@@ -1,9 +1,17 @@
 import { FORM_FIELD_TYPES, RESERVED_NODE_TYPES } from '@ez-kit/form-core'
 import { describe, expect, expectTypeOf, it } from 'vitest'
 
-import { FIELD_KEYS } from './component-guard'
-import { defineFieldType, deriveFieldTypeIds, fieldTypeIdFor } from './field-registry'
+import {
+	BASE_FIELD_PROP_KEYS,
+	BESPOKE_FIELD_KEYS,
+	defineFieldType,
+	deriveFieldTypeIds,
+	FIELD_KEYS,
+	fieldTypeIdFor,
+	OPTION_FIELD_PROP_KEYS,
+} from './field-registry'
 
+import type { BaseFieldProps, OptionFieldBindingProps } from './field-props'
 import type { DeepKeysOfType } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
 
@@ -11,7 +19,7 @@ function Noop(): ReactNode {
 	return null
 }
 
-/** A registry holding all twelve built-in slots, each pointing at the same inert component. */
+/** A registry holding every built-in slot, each pointing at the same inert component. */
 function builtInRegistry(): Record<string, () => ReactNode> {
 	return Object.fromEntries(Object.keys(FIELD_KEYS).map((key) => [key, Noop]))
 }
@@ -21,7 +29,10 @@ describe('fieldTypeIdFor', () => {
 	// cannot land with a derivation nobody checked: the slot names and the document ids are
 	// each declared exactly once, and this asserts they still line up.
 	it('derives every built-in document id from its slot name', () => {
-		const derived = Object.keys(FIELD_KEYS).map(fieldTypeIdFor).sort()
+		const derived = Object.keys(FIELD_KEYS)
+			.filter((key) => !Object.hasOwn(BESPOKE_FIELD_KEYS, key))
+			.map(fieldTypeIdFor)
+			.sort()
 
 		expect(derived).toEqual([...FORM_FIELD_TYPES].sort())
 	})
@@ -54,6 +65,15 @@ describe('deriveFieldTypeIds', () => {
 		expect(() => deriveFieldTypeIds(builtInRegistry())).not.toThrow()
 	})
 
+	it('derives no document id for the bespoke ArrayField key', () => {
+		// `ArrayField` would derive `array` — a reserved node type — and throw, but it is the
+		// array frame, not a field kind a document names by `type`.
+		const ids = deriveFieldTypeIds({ ...builtInRegistry(), ArrayField: Noop, RatingField: Noop })
+
+		expect(Object.values(ids)).not.toContain('ArrayField')
+		expect(ids).not.toHaveProperty('array')
+	})
+
 	it('throws when two keys derive the same id', () => {
 		expect(() => deriveFieldTypeIds({ RatingField: Noop, Rating: Noop })).toThrow(/rating/)
 	})
@@ -65,9 +85,45 @@ describe('deriveFieldTypeIds', () => {
 
 	it('names every reserved node type as a collision', () => {
 		for (const reserved of RESERVED_NODE_TYPES) {
-			const key = `${reserved.charAt(0).toUpperCase()}${reserved.slice(1)}Field`
+			const base = `${reserved.charAt(0).toUpperCase()}${reserved.slice(1)}`
+			// `ArrayField` is the bespoke array frame and derives no id, so `array` is reached through
+			// the bare key instead — which derives the same reserved id.
+			const key = Object.hasOwn(BESPOKE_FIELD_KEYS, `${base}Field`) ? base : `${base}Field`
 			expect(() => deriveFieldTypeIds({ [key]: Noop })).toThrow(new RegExp(reserved))
 		}
+	})
+})
+
+describe('OPTION_FIELD_PROP_KEYS', () => {
+	it('lists the base keys and every option-binding key, and nothing else', () => {
+		expect(Object.keys(OPTION_FIELD_PROP_KEYS).sort()).toEqual(
+			[
+				...Object.keys(BASE_FIELD_PROP_KEYS),
+				'options',
+				'optionsFrom',
+				'optionsParams',
+				'loading',
+				'searchable',
+				'creatable',
+				'createLabel',
+			].sort(),
+		)
+		expectTypeOf<keyof typeof OPTION_FIELD_PROP_KEYS>().toEqualTypeOf<
+			keyof BaseFieldProps<never, never> | keyof OptionFieldBindingProps
+		>()
+	})
+
+	it('cannot fall behind the type — the check it is declared with rejects a missing key', () => {
+		const incomplete = {
+			options: true,
+			optionsFrom: true,
+			optionsParams: true,
+			loading: true,
+			searchable: true,
+			creatable: true,
+			// @ts-expect-error -- `createLabel` is missing, so the set no longer covers the binding props
+		} satisfies Record<keyof OptionFieldBindingProps, true>
+		expect(incomplete).not.toHaveProperty('createLabel')
 	})
 })
 

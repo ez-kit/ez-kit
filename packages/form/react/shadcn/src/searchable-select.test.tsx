@@ -5,8 +5,7 @@ import { describe, expect, it } from 'vitest'
 
 import { Form } from './form'
 
-import type { OptionValue } from '@ez-kit/form-core'
-import type { OptionSourceRegistry, OptionSourceResult, SearchableOptionSource } from '@ez-kit/form-react'
+import type { OptionSourceRegistry, OptionSourceResult, OptionValue, SearchableOptionSource } from '@ez-kit/form-react'
 
 /**
  * A searchable select, end to end through this kit.
@@ -37,12 +36,22 @@ function useCitiesByValue({ values }: { values: readonly OptionValue[] }): Optio
 	return { options: CITIES.filter((city) => values.includes(city.value)), loading: false }
 }
 
-const CITY_SOURCE: SearchableOptionSource = { useOptions: useCitySearch, useSelectedOptions: useCitiesByValue }
+/** Every keystroke reaches the source at once, so no test waits out a real debounce. */
+const CITY_SOURCE: SearchableOptionSource = {
+	useOptions: useCitySearch,
+	useSelectedOptions: useCitiesByValue,
+	debounce: 0,
+}
 const SOURCES: OptionSourceRegistry = { cities: CITY_SOURCE }
 
-function SearchableCase({ city }: { city: string }) {
+/** A search whose answer never lands. */
+const IN_FLIGHT_SOURCES: OptionSourceRegistry = {
+	cities: { ...CITY_SOURCE, useOptions: () => ({ options: [], loading: true }) },
+}
+
+function SearchableCase({ city, sources = SOURCES }: { city: string; sources?: OptionSourceRegistry }) {
 	return (
-		<FormOptionSources value={SOURCES}>
+		<FormOptionSources value={sources}>
 			<Form defaultValues={{ city } satisfies Values}>
 				{(form) => (
 					<form.SelectField
@@ -88,7 +97,12 @@ describe('@ez-kit/form-shadcn searchable select', () => {
 
 	it('stays interactive while a query is in flight', async () => {
 		const user = userEvent.setup()
-		render(<SearchableCase city='' />)
+		render(
+			<SearchableCase
+				city=''
+				sources={IN_FLIGHT_SOURCES}
+			/>,
+		)
 
 		const input = screen.getByRole('combobox', { name: 'City' })
 		await user.type(input, 'b')
@@ -115,7 +129,9 @@ describe('@ez-kit/form-shadcn searchable select', () => {
 
 		function ChurningCase() {
 			return (
-				<FormOptionSources value={{ cities: { useOptions: useChurningSearch, useSelectedOptions: useCitiesByValue } }}>
+				<FormOptionSources
+					value={{ cities: { useOptions: useChurningSearch, useSelectedOptions: useCitiesByValue, debounce: 0 } }}
+				>
 					<Form defaultValues={{ city: 'lis' } satisfies Values}>
 						{(form) => (
 							<form.SelectField
@@ -160,5 +176,57 @@ describe('@ez-kit/form-shadcn searchable select', () => {
 		const { container } = render(<PlainCase />)
 
 		expect(container.querySelector('[data-slot="select-trigger"]')).not.toBeNull()
+	})
+})
+
+/** The same source, asking for two characters before it searches and taking every keystroke. */
+const GATED_SOURCES: OptionSourceRegistry = { cities: { ...CITY_SOURCE, debounce: 0, minLength: 2 } }
+
+/** One character is enough here — the hint must read in the singular. */
+const ONE_CHARACTER_SOURCES: OptionSourceRegistry = { cities: { ...CITY_SOURCE, debounce: 0, minLength: 1 } }
+
+function GatedCase({ sources = GATED_SOURCES }: { sources?: OptionSourceRegistry }) {
+	return (
+		<FormOptionSources value={sources}>
+			<Form defaultValues={{ city: '' } satisfies Values}>
+				{(form) => (
+					<form.SelectField
+						name='city'
+						label='City'
+						searchable
+						optionsFrom='cities'
+					/>
+				)}
+			</Form>
+		</FormOptionSources>
+	)
+}
+
+describe('@ez-kit/form-shadcn searchable select below its minimum length', () => {
+	it('says how much more to type where it would say there are no matches', async () => {
+		const user = userEvent.setup()
+		render(<GatedCase />)
+		const input = screen.getByRole('combobox', { name: 'City' })
+
+		await user.type(input, 'b')
+
+		expect(await screen.findByText('Type at least 2 characters')).toBeInTheDocument()
+		expect(screen.queryByText('No matches')).toBeNull()
+
+		await user.type(input, 'e')
+
+		expect(await screen.findByText('Berlin')).toBeInTheDocument()
+		expect(screen.queryByText('Type at least 2 characters')).toBeNull()
+	})
+
+	it('reads in the singular when one character is the minimum', async () => {
+		const user = userEvent.setup()
+		render(<GatedCase sources={ONE_CHARACTER_SOURCES} />)
+		const input = screen.getByRole('combobox', { name: 'City' })
+
+		await user.type(input, 'b')
+		await user.type(input, '{Backspace}')
+
+		expect(await screen.findByText('Type at least 1 character')).toBeInTheDocument()
 	})
 })

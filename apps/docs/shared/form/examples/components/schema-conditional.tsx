@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-import { defineFormSchema, FormFieldType, FormRenderer } from 'shared/form/FormKit'
+import { defineFormSchema, FormFieldType, SchemaForm } from 'shared/form/FormKit'
 
 type Client = {
 	firstName: string
@@ -34,8 +34,9 @@ const schema = defineFormSchema<Client>()({
 	version: 1,
 	children: [
 		{
-			type: 'section',
-			title: 'Client',
+			type: 'block',
+			component: 'Section',
+			props: { title: 'Client' },
 			columns: 2,
 			children: [
 				{ type: FormFieldType.Text, name: 'firstName', label: 'First name', defaultValue: '' },
@@ -59,8 +60,9 @@ const schema = defineFormSchema<Client>()({
 			],
 		},
 		{
-			type: 'section',
-			title: 'Company details',
+			type: 'block',
+			component: 'Section',
+			props: { title: 'Company details' },
 			// The whole section appears only for a company.
 			when: { field: 'clientType', eq: 'business' },
 			columns: 2,
@@ -86,7 +88,7 @@ const schema = defineFormSchema<Client>()({
 				},
 			],
 		},
-		{ type: 'submit', label: 'Save' },
+		{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 	],
 })
 
@@ -102,7 +104,7 @@ export function SchemaConditionalExample() {
 
 	return (
 		<div className='flex flex-col gap-4'>
-			<FormRenderer
+			<SchemaForm
 				schema={schema}
 				rules={{ 'ru-inn': isValidInn }}
 				onSubmit={({ value }) => {

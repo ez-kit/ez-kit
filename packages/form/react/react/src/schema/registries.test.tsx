@@ -3,8 +3,8 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
 
-import { createForm } from '../create-form'
-import { testComponents, testFields } from '../test-kit'
+import { createSchemaForm } from '../create-schema-form'
+import { testComponents, testFields, testFormElement } from '../test-kit'
 
 import type { CustomFieldRenderProps } from './registries'
 import type { FormSchema } from '@ez-kit/form-core'
@@ -35,12 +35,18 @@ const RatingField = ({ id, label, value, onChange, props, invalid }: CustomField
 )
 
 /**
- * Registered on the **factory**, which is the only registration site there is — `FormRenderer`
+ * Registered on the **factory**, which is the only registration site there is — `SchemaForm`
  * has no `fields` prop. `RatingField` derives the document id `rating` by dropping the trailing
  * `Field`, so every `{ type: 'rating' }` node below resolves against this one registration, and
  * the same component is reachable from JSX as `form.RatingField`.
  */
-const { FormRenderer } = createForm({ components: testComponents, fields: { ...testFields, RatingField } })
+const Banner = ({ text }: { text?: string }) => <div data-testid='banner'>{text}</div>
+
+const { SchemaForm } = createSchemaForm({
+	FormElement: testFormElement,
+	fields: { ...testFields, RatingField },
+	components: { ...testComponents, Banner },
+})
 
 test('a custom field receives the full binding, not just its own props', async () => {
 	const user = userEvent.setup()
@@ -51,7 +57,7 @@ test('a custom field receives the full binding, not just its own props', async (
 	} as FormSchema<RatingValues, 'rating'>
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			defaultValues={{ score: 0 }}
 			onSubmit={() => {}}
@@ -78,7 +84,7 @@ test('a custom field receives `invalid`, distinct from its own `props`', () => {
 	} as FormSchema<RatingValues, 'rating'>
 
 	const { container } = render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			defaultValues={{ score: 0 }}
 			onSubmit={() => {}}
@@ -95,20 +101,17 @@ test('a custom field receives `invalid`, distinct from its own `props`', () => {
 type BlockValues = { name: string }
 
 test('a block renders without binding to any value', () => {
-	const Banner = ({ props }: { props: Record<string, unknown> }) => <div data-testid='banner'>{String(props.text)}</div>
-
 	const schema: FormSchema<BlockValues> = {
 		version: 1,
 		children: [
 			{ type: FormFieldType.Text, name: 'name', label: 'Name' },
-			{ type: 'block', component: 'banner', props: { text: 'Heads up' } },
+			{ type: 'block', component: 'Banner', props: { text: 'Heads up' } },
 		],
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
-			blocks={{ banner: Banner }}
 			defaultValues={{ name: '' }}
 			onSubmit={() => {}}
 		/>,
@@ -122,11 +125,34 @@ test('a block renders without binding to any value', () => {
 	expect(screen.getByLabelText('Name')).toBeInTheDocument()
 })
 
+test('does not resolve a block component from Object.prototype', () => {
+	const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+	const schema: FormSchema<BlockValues> = {
+		version: 1,
+		children: [{ type: 'block', component: 'toString' }],
+	}
+
+	expect(() => {
+		render(
+			<SchemaForm
+				schema={schema}
+				defaultValues={{ name: '' }}
+				onSubmit={() => {}}
+			/>,
+		)
+	}).toThrow('SchemaForm: the document has a block "toString", but no toString component was passed in components.')
+	consoleError.mockRestore()
+})
+
 test('an unknown node type throws with the type named', () => {
-	// A bundle whose factory registered nothing beyond the kit's twelve — `rating` is
+	// A bundle whose factory registered nothing beyond the kit's own slots — `rating` is
 	// neither a built-in kind nor registered, and there is no per-form prop left that could
 	// have supplied it after the fact.
-	const { FormRenderer: BareRenderer } = createForm({ components: testComponents, fields: testFields })
+	const { SchemaForm: BareSchemaForm } = createSchemaForm({
+		FormElement: testFormElement,
+		fields: testFields,
+		components: testComponents,
+	})
 
 	const schema = {
 		version: 1,
@@ -135,7 +161,7 @@ test('an unknown node type throws with the type named', () => {
 
 	expect(() =>
 		render(
-			<BareRenderer
+			<BareSchemaForm
 				schema={schema}
 				defaultValues={{ score: 0 }}
 				onSubmit={() => {}}
@@ -144,28 +170,9 @@ test('an unknown node type throws with the type named', () => {
 	).toThrow(/rating/)
 })
 
-test('registering a reserved block key throws', () => {
-	const emptySchema: FormSchema<RatingValues> = { version: 1, children: [] }
-	const Custom = (_props: { props: Record<string, unknown> }) => null
-
-	// `blocks` is the one registry still passed per form, so it is the one
-	// `assertNoReservedFieldKeyCollision` still guards. The field registry's equivalent
-	// rejection moved to `createForm` — see `custom-field.test.tsx`.
-	expect(() =>
-		render(
-			<FormRenderer
-				schema={emptySchema}
-				blocks={{ section: Custom }}
-				defaultValues={{ score: 0 }}
-				onSubmit={() => {}}
-			/>,
-		),
-	).toThrow(/reserved/i)
-})
-
 type SubmitValues = { name: string }
 
-test('the submit node renders the kit button and submits the form', async () => {
+test('a SubmitButton block renders the kit button and submits the form', async () => {
 	const user = userEvent.setup()
 	const onSubmit = vi.fn()
 
@@ -173,12 +180,12 @@ test('the submit node renders the kit button and submits the form', async () => 
 		version: 1,
 		children: [
 			{ type: FormFieldType.Text, name: 'name', label: 'Name' },
-			{ type: 'submit', label: 'Save' },
+			{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 		],
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			defaultValues={{ name: '' }}
 			onSubmit={onSubmit}

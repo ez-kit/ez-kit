@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-import { Form, TextInputType } from 'shared/form/FormKit'
+import { Form } from 'shared/form/FormKit'
 
 type Signup = {
 	email: string
@@ -31,7 +31,7 @@ export function BasicExample() {
 						<form.TextField
 							name='password'
 							label='Password'
-							type={TextInputType.Password}
+							type='password'
 						/>
 						<form.SubmitButton>Create account</form.SubmitButton>
 					</>

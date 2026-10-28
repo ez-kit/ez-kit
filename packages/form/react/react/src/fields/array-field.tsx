@@ -1,10 +1,11 @@
-import { formatFieldErrors } from '@ez-kit/form-core'
 import { createContext, useCallback, useContext, useRef } from 'react'
 
+import { shownFieldErrors } from '../field-render-props'
+import { scopeFieldProps } from '../field-scope'
 import { fieldValidators } from '../field-validate'
 
 import type { BindableForm, BoundFieldApi } from '../bindable-form'
-import type { ArrayFieldRenderProps, FormComponents } from '../contract'
+import type { ArrayFieldRenderProps, ArrayFieldSlot, ArrayItemRenderProps } from '../contract'
 import type {
 	ArrayFieldProps,
 	ArrayItemProps,
@@ -12,9 +13,11 @@ import type {
 	ArrayReorderable,
 	ArrayScope,
 	FormFieldComponents,
+	FormPrimitives,
 } from '../field-props'
 import type { FieldValidateProps } from '../field-validate'
 import type { ArrayKeys } from '@ez-kit/form-core'
+import type { LensFieldComponent } from '@tanstack/react-form'
 import type { ReactNode } from 'react'
 
 const ARRAY_FIELD_TYPE = 'array'
@@ -39,8 +42,9 @@ const ARRAY_FIELD_TYPE = 'array'
 const ArrayKeyOrderContext = createContext<string>('')
 
 /**
- * Wraps one field component so its `name` prop is read as **item-relative** and handed on
- * resolved.
+ * Wraps one field component so its `name` prop — and, on `NativeField`, the validators'
+ * `onChangeListenTo` / `onBlurListenTo` — is read as **item-relative** and handed on resolved
+ * ({@link scopeFieldProps}).
  *
  * `getPath` is read during render rather than closed over as a plain string, so a single
  * `Scoped` instance stays valid across a reorder that renumbers its entry — the entry's own
@@ -60,13 +64,7 @@ function scopeComponent<TProps extends { name: string }>(
 	return function Scoped(props: TProps): ReactNode {
 		useContext(ArrayKeyOrderContext)
 		const prefix = getPath()
-		const name = prefix === undefined ? props.name : `${prefix}.${props.name}`
-		return (
-			<Inner
-				{...props}
-				name={name}
-			/>
-		)
+		return <Inner {...(prefix === undefined ? props : scopeFieldProps(props, prefix))} />
 	}
 }
 
@@ -115,13 +113,20 @@ function useItemKeys(length: number): {
 	return { keys: keysRef.current, onAdd, onInsert, onRemove, onMove }
 }
 
-/** Build the `ArrayField` component bound to one form instance. */
+/**
+ * Build the `ArrayField` component bound to one form instance.
+ *
+ * `slot` is the kit's frame, carrying its entry view as `slot.Item`. `entryKeys` names the
+ * members of `fieldComponents` an entry scopes to its own path — the field components only; see
+ * `scopedFieldsFor`.
+ */
 export function createArrayField<TFormData>(
 	form: BindableForm,
-	components: FormComponents,
+	slot: ArrayFieldSlot,
 	fieldComponents: FormFieldComponents<TFormData>,
+	entryKeys: readonly string[],
 ): FormFieldComponents<TFormData>['ArrayField'] {
-	const { ArrayField: KitArrayField } = components
+	const KitArrayField = slot
 
 	// The record is the same object the form already exposes; only its *type* is reinterpreted
 	// per entry, because inside an entry the same components address the item's paths rather
@@ -151,8 +156,9 @@ export function createArrayField<TFormData>(
 					<ArrayBody
 						field={field}
 						fieldName={name}
-						components={components}
+						Entry={slot.Item}
 						fieldComponents={unscoped}
+						entryKeys={entryKeys}
 						label={label}
 						description={description}
 						disabled={disabled}
@@ -176,6 +182,11 @@ export function createArrayField<TFormData>(
 	} as FormFieldComponents<TFormData>['ArrayField']
 }
 
+/** `item.Item` in a form with no `ArrayField`: no chrome to draw, so the entry is its children. */
+function BareEntry({ children }: ArrayItemRenderProps): ReactNode {
+	return children
+}
+
 /**
  * Build the `Array` component bound to one form instance — the headless counterpart of
  * `ArrayField`.
@@ -185,13 +196,18 @@ export function createArrayField<TFormData>(
  * straight to the author's `children`, so the only DOM `form.Array` produces is whatever the
  * children themselves render. Scoping the entries' fields is `ArrayBody`'s job, not this one's —
  * see the module doc comment on `scopeComponent`.
+ *
+ * `slot` is `undefined` when the form registered no `ArrayField`. The headless array still works
+ * then: `item.Item` has no kit view to draw, so it renders the entry's children unchanged.
  */
 export function createArray<TFormData>(
 	form: BindableForm,
-	components: FormComponents,
+	slot: ArrayFieldSlot | undefined,
 	fieldComponents: FormFieldComponents<TFormData>,
-): FormFieldComponents<TFormData>['Array'] {
+	entryKeys: readonly string[],
+): FormPrimitives<TFormData>['Array'] {
 	const unscoped = fieldComponents as unknown as FormFieldComponents<unknown>
+	const Entry = slot?.Item ?? BareEntry
 
 	return function ArrayPrimitive<TName extends ArrayKeys<TFormData>>({
 		name,
@@ -210,8 +226,9 @@ export function createArray<TFormData>(
 					<ArrayBody
 						field={field}
 						fieldName={name}
-						components={components}
+						Entry={Entry}
 						fieldComponents={unscoped}
+						entryKeys={entryKeys}
 						label={null}
 						description={null}
 						disabled={disabled}
@@ -227,7 +244,7 @@ export function createArray<TFormData>(
 				)}
 			</form.AppField>
 		)
-	} as FormFieldComponents<TFormData>['Array']
+	} as FormPrimitives<TFormData>['Array']
 }
 
 const DEFAULT_ADD_LABEL = 'Add'
@@ -256,14 +273,24 @@ type ItemData = {
 	onMoveDown: (() => void) | undefined
 }
 
+/**
+ * The members an entry scopes to its own path: the field components, the nested `Array`, the
+ * headless `Field` and TanStack's `NativeField`.
+ */
+type EntryFields = FormFieldComponents<unknown> &
+	Pick<FormPrimitives<unknown>, 'Array' | 'Field'> & { NativeField: LensFieldComponent<unknown, unknown> }
+
 /** The frame `ArrayField` renders around the entries — everything but the entries themselves. */
 type ArrayFrameProps = Omit<ArrayFieldRenderProps, 'children'>
 
 type ArrayBodyProps = {
 	field: BoundFieldApi
 	fieldName: string
-	components: FormComponents
+	/** The kit's entry view, `ArrayField.Item`. */
+	Entry: ArrayFieldSlot['Item']
 	fieldComponents: FormFieldComponents<unknown>
+	/** The members of `fieldComponents` scoped to each entry's path — see `scopedFieldsFor`. */
+	entryKeys: readonly string[]
 	label: ReactNode
 	description: ReactNode
 	disabled: boolean | undefined
@@ -285,8 +312,9 @@ type ArrayBodyProps = {
 function ArrayBody({
 	field,
 	fieldName,
-	components,
+	Entry: KitArrayItem,
 	fieldComponents,
+	entryKeys,
 	label,
 	description,
 	disabled,
@@ -299,7 +327,6 @@ function ArrayBody({
 	validate,
 	render,
 }: ArrayBodyProps): ReactNode {
-	const { ArrayItem: KitArrayItem } = components
 	const list = Array.isArray(field.state.value) ? (field.state.value as readonly unknown[]) : []
 	const keys = useItemKeys(list.length)
 
@@ -308,7 +335,7 @@ function ArrayBody({
 	// without giving them a new identity.
 	const itemDataRef = useRef(new Map<string, ItemData>())
 	const itemComponentsRef = useRef(new Map<string, (props: ArrayItemProps) => ReactNode>())
-	const scopedFieldsRef = useRef(new Map<string, FormFieldComponents<unknown>>())
+	const scopedFieldsRef = useRef(new Map<string, EntryFields>())
 
 	const write = (next: readonly unknown[]): void => {
 		field.handleChange(next)
@@ -391,17 +418,25 @@ function ArrayBody({
 	 * reorder. It is read directly off `itemDataRef` rather than through context, so it resolves
 	 * correctly whether or not the author wraps the entry's fields in `<item.Item>` — the two are
 	 * independent, and the fields do not depend on the entry's chrome to find their own path.
+	 *
+	 * Only `entryKeys` are copied in — the field components, nested arrays included. `Submit` has
+	 * no `name` to prefix, and scoping it would only hand it a bogus one; it is reached through the
+	 * form, not the entry, as the registered components are.
 	 */
-	const scopedFieldsFor = (key: string): FormFieldComponents<unknown> => {
+	const scopedFieldsFor = (key: string): EntryFields => {
 		const existing = scopedFieldsRef.current.get(key)
 		if (existing !== undefined) return existing
 
+		const unscopedRecord = fieldComponents as unknown as Record<string, (props: { name: string }) => ReactNode>
 		const record = Object.fromEntries(
-			Object.entries(fieldComponents).map(([name, Component]) => [
+			entryKeys.map((name) => [
 				name,
-				scopeComponent(Component as (props: { name: string }) => ReactNode, () => itemDataRef.current.get(key)?.path),
+				scopeComponent(
+					unscopedRecord[name] as (props: { name: string }) => ReactNode,
+					() => itemDataRef.current.get(key)?.path,
+				),
 			]),
-		) as unknown as FormFieldComponents<unknown>
+		) as unknown as EntryFields
 		scopedFieldsRef.current.set(key, record)
 		return record
 	}
@@ -472,7 +507,7 @@ function ArrayBody({
 		scopedFieldsRef.current.delete(key)
 	}
 
-	const errors = field.state.meta.isTouched ? formatFieldErrors(field.state.meta.errors) : []
+	const errors = shownFieldErrors(field)
 	const invalid = errors.length > 0
 	const { maxLength } = validate ?? {}
 	const canAdd = maxLength === undefined || list.length < maxLength
@@ -480,6 +515,7 @@ function ArrayBody({
 	const frame: ArrayFrameProps = {
 		'data-field': field.name,
 		'data-field-type': ARRAY_FIELD_TYPE,
+		'data-form-id': field.form.formId,
 		name: field.name,
 		label,
 		description,
@@ -508,7 +544,6 @@ function ArrayBody({
 					// props — see the doc comment on `ArrayScope`.
 					disabled: disabled ?? false,
 					required: required ?? false,
-					Button: components.Button,
 					field,
 				},
 				frame,

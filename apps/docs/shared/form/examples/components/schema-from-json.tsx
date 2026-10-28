@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 
-import { FormRenderer, FormSchemaError, parseFormSchema } from 'shared/form/FormKit'
+import { SchemaForm, FormSchemaError, parseFormSchema } from 'shared/form/FormKit'
 
 import type { AnyFormSchema } from 'shared/form/FormKit'
 
@@ -27,8 +27,9 @@ const RESPONSE_BODY = `{
 	"version": 1,
 	"children": [
 		{
-			"type": "section",
-			"title": "Contact",
+			"type": "block",
+			"component": "Section",
+			"props": { "title": "Contact" },
 			"columns": 2,
 			"children": [
 				{ "type": "text", "name": "firstName", "label": "First name", "defaultValue": "", "validate": { "required": true } },
@@ -49,8 +50,8 @@ const RESPONSE_BODY = `{
 					"colSpan": 2,
 					"defaultValue": "free",
 					"options": [
-						{ "value": "free", "label": { "key": "plan.free" } },
-						{ "value": "pro", "label": { "key": "plan.pro" } }
+						{ "value": "free", "label": { "i18n": "plan.free" } },
+						{ "value": "pro", "label": { "i18n": "plan.pro" } }
 					]
 				},
 				{
@@ -63,7 +64,7 @@ const RESPONSE_BODY = `{
 				}
 			]
 		},
-		{ "type": "submit", "label": "Save" }
+		{ "type": "block", "component": "SubmitButton", "props": { "children": "Save" } }
 	]
 }`
 
@@ -96,13 +97,13 @@ export function SchemaFromJsonExample() {
 			.then((document) => {
 				// The trust boundary: a document from the network is validated **once**, here,
 				// where it can be logged and fallen back from — not on every render, and never
-				// inside `FormRenderer`. Passing the registries' keys is what makes the parser
+				// inside `SchemaForm`. Passing the registries' keys is what makes the parser
 				// check the document against *this* app's capabilities.
 				// `hasTranslate` is part of the same check: a document may only name a
-				// translation key when the renderer will actually be given a `translate`.
+				// translation key when `SchemaForm` will actually be given a `translate`.
 				const parsed = parseFormSchema<Contact>(document, {
 					fieldTypes: [],
-					blocks: [],
+					components: ['Section', 'SubmitButton'],
 					rules: [],
 					hasTranslate: true,
 				})
@@ -135,7 +136,7 @@ export function SchemaFromJsonExample() {
 
 	return (
 		<div className='flex flex-col gap-4'>
-			<FormRenderer
+			<SchemaForm
 				schema={schema}
 				translate={(key) => COPY[key] ?? key}
 				onSubmit={({ value }) => {

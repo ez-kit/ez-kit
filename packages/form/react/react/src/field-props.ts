@@ -1,6 +1,6 @@
 import type { BoundFieldApi } from './bindable-form'
-import type { FormComponents, FormFieldSlots } from './contract'
-import type { FormFieldRegistry } from './field-registry'
+import type { AllFormFieldSlots, FieldRenderProps, FormFieldSlots } from './contract'
+import type { FormFieldRegistry, PRIMITIVE_KEYS } from './field-registry'
 import type { FieldValidateProps } from './field-validate'
 import type {
 	ArrayItemOf,
@@ -8,10 +8,16 @@ import type {
 	DateRangeValue,
 	DeepKeysOfType,
 	LocalizedText,
+	OptionValue,
+	Searchable,
 	SelectOption,
-	TextInputType,
 } from '@ez-kit/form-core'
+import type { DeepKeys, DeepValue } from '@tanstack/form-core'
+import type { LensFieldComponent } from '@tanstack/react-form'
 import type { ReactNode } from 'react'
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- the root form's submit meta an entry's NativeField leaves open, as FormInstance does
+type Open = any
 
 /**
  * Consumer-facing props of the flat field components (`form.TextField`, …).
@@ -55,22 +61,11 @@ export type BaseFieldProps<TFormData, TValue> = {
 	validate?: FieldValidateProps
 }
 
-export type TextFieldProps<TFormData> = BaseFieldProps<TFormData, string> & {
-	placeholder?: string
-	type?: TextInputType
-}
+export type TextFieldProps<TFormData> = BaseFieldProps<TFormData, string>
 
-export type NumberFieldProps<TFormData> = BaseFieldProps<TFormData, number> & {
-	placeholder?: string
-	min?: number
-	max?: number
-	step?: number
-}
+export type NumberFieldProps<TFormData> = BaseFieldProps<TFormData, number>
 
-export type TextareaFieldProps<TFormData> = BaseFieldProps<TFormData, string> & {
-	placeholder?: string
-	rows?: number
-}
+export type TextareaFieldProps<TFormData> = BaseFieldProps<TFormData, string>
 
 /**
  * The select-like props, generated once per option-value scalar and unioned — the same split
@@ -131,29 +126,46 @@ type OptionsProps<TValue> = {
  * and a numeric-valued field would have to invent an id no backend issued.
  *
  * `createLabel` captions the offered row. It defaults to `Add "<query>"`; a plain string is
- * used verbatim, and the `{ key, params }` form gets the typed text merged in under `query`
+ * used verbatim, and the `{ i18n, params }` form gets the typed text merged in under `query`
  * so a translation may place it.
  */
 type CreatableProps<TValue> = [TValue] extends [string]
 	? { creatable?: boolean; createLabel?: LocalizedText }
 	: { creatable?: false; createLabel?: never }
 
+/**
+ * Every key an option-bearing field binds beyond {@link BaseFieldProps}, at its widest: the option
+ * provision, `searchable`, and the `creatable` pair. Not a consumer type — the per-kind props above
+ * and below are, and keep `name` correlated with `options`. It exists so `OPTION_FIELD_PROP_KEYS`
+ * can be checked against one key set, which is what stops a later binding prop of these fields
+ * from silently arriving at the kit instead.
+ */
+export type OptionFieldBindingProps = OptionsProps<OptionValue> & {
+	searchable?: Searchable
+	creatable?: boolean
+	createLabel?: LocalizedText
+}
+
 type SelectFieldPropsFor<TFormData, TValue> = BaseFieldProps<TFormData, TValue> &
 	OptionsProps<TValue> & {
-		placeholder?: string
 		/**
 		 * Render as a search over the options rather than a plain dropdown — the JSX spelling of
 		 * the schema's `searchable`.
 		 *
-		 * Requires `optionsFrom`, and a source in the two-hook form (`useOptions` +
-		 * `useSelectedOptions`); both are runtime throws naming the field, for the same reason
-		 * the `options`/`optionsFrom` exclusion is. A server-side search returns only the page
-		 * matching the last query, so the option for the value already in form state has to be
-		 * fetched separately — see {@link SearchableOptionSource}.
+		 * With `optionsFrom`, the source must be in the two-hook form (`useOptions` +
+		 * `useSelectedOptions`) — a runtime throw names the field otherwise. A server-side search
+		 * returns only the page matching the last query, so the option for the value already in
+		 * form state has to be fetched separately — see {@link SearchableOptionSource}. Over an
+		 * in-memory `options` list the field filters locally, by a case-insensitive substring of
+		 * the label.
 		 *
 		 * `select` and `multiselect` only; the two inline kinds do not have the prop at all.
+		 *
+		 * The object form, `{ debounce?, minLength? }`, is also "on" and tunes how the typed text
+		 * reaches the source, key by key over the source's own settings (defaults 300 ms / 0 for a
+		 * source, 0 / 0 for an in-memory list).
 		 */
-		searchable?: boolean
+		searchable?: Searchable
 	} & CreatableProps<TValue>
 
 export type SelectFieldProps<TFormData> =
@@ -162,17 +174,16 @@ export type SelectFieldProps<TFormData> =
 
 type MultiSelectFieldPropsFor<TFormData, TValue> = BaseFieldProps<TFormData, TValue[]> &
 	OptionsProps<TValue> & {
-		placeholder?: string
 		/**
 		 * Render as a search over the options, with the selection shown as chips — the
-		 * multi-value spelling of {@link SelectFieldPropsFor.searchable}, with the same two
-		 * runtime requirements (an `optionsFrom` source, in the two-hook form) and the same
-		 * two throws naming the field when either is missing.
+		 * multi-value spelling of {@link SelectFieldPropsFor.searchable}, with the same rules:
+		 * with `optionsFrom` the source must be in the two-hook form (a runtime throw names the
+		 * field otherwise), and an in-memory `options` list is filtered locally.
 		 *
 		 * The source needs no change to serve both: `useSelectedOptions` already takes the
 		 * values to resolve as an **array**, and here it simply receives more than one.
 		 */
-		searchable?: boolean
+		searchable?: Searchable
 	} & CreatableProps<TValue>
 
 export type MultiSelectFieldProps<TFormData> =
@@ -195,24 +206,20 @@ export type RadioGroupFieldProps<TFormData> =
 	| RadioGroupFieldPropsFor<TFormData, string>
 	| RadioGroupFieldPropsFor<TFormData, number>
 
-/** `min` / `max` are `YYYY-MM-DD` bounds on what the picker offers, not validation. */
-export type DateFieldProps<TFormData> = BaseFieldProps<TFormData, string> & {
-	placeholder?: string
-	min?: string
-	max?: string
-}
+export type DateFieldProps<TFormData> = BaseFieldProps<TFormData, string>
 
-export type DateRangeFieldProps<TFormData> = BaseFieldProps<TFormData, DateRangeValue> & {
-	placeholder?: string
-	min?: string
-	max?: string
-}
+export type DateRangeFieldProps<TFormData> = BaseFieldProps<TFormData, DateRangeValue>
 
-export type SliderFieldProps<TFormData> = BaseFieldProps<TFormData, number> & {
-	min?: number
-	max?: number
-	step?: number
-}
+export type SliderFieldProps<TFormData> = BaseFieldProps<TFormData, number>
+
+/**
+ * The primitives an array entry does **not** carry: `Submit` has no `name` to address relative
+ * to the entry, so it is reached through the form instead. `Array` and `Field` stay — a nested
+ * array and an own control are addressed relative to the entry like any field, and the entry
+ * carries `NativeField` beside `Field`, item-relative too. The registered `components` are not on
+ * an entry either; they read the form from context and have no path of their own.
+ */
+type EntryUnscopedKey = Exclude<keyof typeof PRIMITIVE_KEYS, 'Array' | 'Field'>
 
 /**
  * What one entry of a repeatable group hands the author.
@@ -220,12 +227,18 @@ export type SliderFieldProps<TFormData> = BaseFieldProps<TFormData, number> & {
  * It **is** the form's own field set, retyped over the item: inside an entry `name` addresses
  * the item's paths, so `<item.TextField name='firstName' />` is checked against the item type
  * and a root-level name is a compile error there. No path is composed at the call site — the
- * prefix is joined on at render.
+ * prefix is joined on at render. `form.Submit` and the registered components are not part of
+ * it — see {@link EntryUnscopedKey}.
+ *
+ * An entry carries `NativeField` too — TanStack's render-prop field, item-relative like the rest.
+ * It is typed as TanStack's own `LensFieldComponent`, as a field group's is: `name` (and the
+ * validators' listen-to lists) relative to the entry, while the `field` its render prop receives is
+ * the root form's — `field.name` is the absolute path, typed `string`.
  */
-export type ArrayItemScope<TItem, TFields extends FormFieldRegistry = FormFieldSlots> = FormFieldComponents<
-	TItem,
-	TFields
-> & {
+export type ArrayItemScope<TItem, TFields extends FormFieldRegistry = AllFormFieldSlots> = Omit<
+	FormFieldComponents<TItem, TFields> & FormPrimitives<TItem, TFields>,
+	EntryUnscopedKey
+> & { NativeField: LensFieldComponent<TItem, Open> } & {
 	/**
 	 * A stable id for this entry, for React's `key`. **Never the index**: removing an entry from
 	 * the middle renumbers everything after it, and a keyed-by-index list would then reuse the
@@ -280,7 +293,7 @@ export type ArrayItemProps = {
  */
 export type ArrayReorderable = boolean | { up?: { label?: ReactNode }; down?: { label?: ReactNode } }
 
-export type ArrayScope<TItem, TFields extends FormFieldRegistry = FormFieldSlots> = {
+export type ArrayScope<TItem, TFields extends FormFieldRegistry = AllFormFieldSlots> = {
 	items: readonly ArrayItemScope<TItem, TFields>[]
 	/**
 	 * Append a fresh entry, built from the field's own `newItem`. Deliberately no parameter: an
@@ -314,14 +327,12 @@ export type ArrayScope<TItem, TFields extends FormFieldRegistry = FormFieldSlots
 	 */
 	disabled: boolean
 	required: boolean
-	/** The kit's generic button, for a control an author draws themselves outside `Item`. */
-	Button: FormComponents['Button']
 	/** The array field's own bound field — for a `Subscribe`-style read the scope does not cover. */
 	field: BoundFieldApi
 }
 
 /** One scope serves both `form.ArrayField` and the headless `form.Array`. */
-export type ArrayFieldScope<TItem, TFields extends FormFieldRegistry = FormFieldSlots> = ArrayScope<TItem, TFields>
+export type ArrayFieldScope<TItem, TFields extends FormFieldRegistry = AllFormFieldSlots> = ArrayScope<TItem, TFields>
 
 /**
  * A repeatable group of fields — the JSX spelling of an `array` node.
@@ -333,7 +344,7 @@ export type ArrayFieldScope<TItem, TFields extends FormFieldRegistry = FormField
 export type ArrayFieldProps<
 	TFormData,
 	TName extends ArrayKeys<TFormData>,
-	TFields extends FormFieldRegistry = FormFieldSlots,
+	TFields extends FormFieldRegistry = AllFormFieldSlots,
 > = {
 	name: TName
 	label?: ReactNode
@@ -368,7 +379,7 @@ export type ArrayFieldProps<
 export type ArrayProps<
 	TFormData,
 	TName extends ArrayKeys<TFormData>,
-	TFields extends FormFieldRegistry = FormFieldSlots,
+	TFields extends FormFieldRegistry = AllFormFieldSlots,
 > = {
 	name: TName
 	disabled?: boolean
@@ -385,46 +396,174 @@ export type SubmitButtonProps = {
 	disabled?: boolean
 }
 
+/** What `form.Submit` hands its render function. */
+export type SubmitRenderProps = {
+	canSubmit: boolean
+	isSubmitting: boolean
+	/**
+	 * Whether the user has modified at least one field — TanStack's `isDirty`. It stays `true` after
+	 * a value is changed back to its default; whether the values equal the defaults is
+	 * `form.state.isDefaultValue`.
+	 */
+	isDirty: boolean
+	/**
+	 * The form-level errors as display strings: the form validators' errors, then the messages a
+	 * server reported for the form as a whole (`serverErrors.form`), de-duplicated. Field-level
+	 * issues are not among them. The server's messages do not affect `canSubmit`; the next
+	 * `form.handleSubmit` clears them.
+	 */
+	formErrors: string[]
+	/** `form.handleSubmit`, so a control built on it works outside a `<form>` element too. */
+	submit: () => Promise<void>
+}
+
+export type SubmitProps = {
+	children: (state: SubmitRenderProps) => ReactNode
+}
+
+/** What a component typed by the contract itself adds to its field: nothing. */
+type NoKitProps = Record<never, never>
+
+/** `Omit` applied to each member of a union, so a kit whose props are a union keeps every arm. */
+type DistributiveOmit<T, TKeys extends PropertyKey> = T extends unknown ? Omit<T, TKeys> : never
+
+/** The built-in kinds whose binder also resolves options — the ones that own {@link OptionFieldBindingProps}. */
+type OptionFieldKey = 'SelectField' | 'MultiSelectField' | 'RadioGroupField' | 'CheckboxGroupField'
+
+/** Every built-in field kind, without the array frame — which has no binder of this shape. */
+type FieldKindKey = Exclude<BuiltInFieldKey, 'ArrayField'>
+
 /**
- * The flat components attached to the form instance by `createForm`. They sit alongside —
- * never in place of — the native TanStack Form API (`Field`, `Subscribe`, `handleSubmit`,
- * `state`, `AppField`, …), which stays fully available on the same object.
- *
- * The `<form>` element is not among them: it lives in the standalone `<Form>` component,
- * which is the single place that renders it in either mode.
+ * The keys a kit component cannot receive from an author: everything its slot's render props
+ * carry (computed by the binding, which wins), and everything the binding itself takes.
  */
-export type BuiltInFormFieldComponents<TFormData, TFields extends FormFieldRegistry = FormFieldSlots> = {
-	TextField: (props: TextFieldProps<TFormData>) => ReactNode
-	NumberField: (props: NumberFieldProps<TFormData>) => ReactNode
-	TextareaField: (props: TextareaFieldProps<TFormData>) => ReactNode
-	SelectField: (props: SelectFieldProps<TFormData>) => ReactNode
-	CheckboxField: (props: CheckboxFieldProps<TFormData>) => ReactNode
-	SwitchField: (props: SwitchFieldProps<TFormData>) => ReactNode
-	RadioGroupField: (props: RadioGroupFieldProps<TFormData>) => ReactNode
-	SliderField: (props: SliderFieldProps<TFormData>) => ReactNode
-	MultiSelectField: (props: MultiSelectFieldProps<TFormData>) => ReactNode
-	CheckboxGroupField: (props: CheckboxGroupFieldProps<TFormData>) => ReactNode
-	DateField: (props: DateFieldProps<TFormData>) => ReactNode
-	DateRangeField: (props: DateRangeFieldProps<TFormData>) => ReactNode
+type OwnedKeysOf<TKey extends FieldKindKey> =
+	| keyof Parameters<NonNullable<FormFieldSlots[TKey]>>[0]
+	| keyof BaseFieldProps<never, never>
+	| (TKey extends OptionFieldKey ? keyof OptionFieldBindingProps : never)
+
+/**
+ * The props a kit component takes beyond what its field computes and binds — read straight off
+ * the component's parameter, so a kit declares them by typing its component and nothing else.
+ *
+ * `NonNullable` first because a set typed with optional keys reads `Component | undefined`, and
+ * the `undefined` arm would otherwise add an empty member to the union and switch every check
+ * off. An `any` parameter — a component registered through the open registry's own bound — adds
+ * nothing rather than everything.
+ */
+type KitPropsOfComponent<TComponent, TOwned extends PropertyKey> = [NonNullable<TComponent>] extends [
+	(props: infer TProps) => ReactNode,
+]
+	? 0 extends 1 & TProps
+		? NoKitProps
+		: DistributiveOmit<TProps, TOwned>
+	: NoKitProps
+
+/**
+ * What `form.<TKey>` accepts beyond its binding props, for the field set `TFields`: the extra props
+ * of the component registered under that key. Under `AllFormFieldSlots` — the contract's own
+ * signatures — that is nothing.
+ */
+export type KitFieldProps<TFields, TKey extends FieldKindKey> = TKey extends keyof TFields
+	? KitPropsOfComponent<TFields[TKey], OwnedKeysOf<TKey>>
+	: NoKitProps
+
+/**
+ * The bound component for each built-in field kind, keyed like {@link FormFieldSlots}.
+ *
+ * Each takes its kind's binding props **and** {@link KitFieldProps} — whatever the component
+ * registered under the key accepts beyond its render props. The binder reads only the binding
+ * half and hands the rest to the component flat, so `autoComplete`, a kit's `variant` or `type`
+ * reach it as written, while a computed prop (`value`, `onChange`, `id`, …) can be neither written
+ * here nor overridden at runtime.
+ *
+ * Only the keys a form registered reach its instance — see {@link FormFieldComponents}. They sit
+ * alongside, never in place of, the native TanStack Form API (`Field`, `Subscribe`,
+ * `handleSubmit`, `state`, `AppField`, …), which stays fully available on the same object.
+ */
+export type BuiltInFieldComponents<TFormData, TFields extends FormFieldRegistry = AllFormFieldSlots> = {
+	TextField: (props: TextFieldProps<TFormData> & KitFieldProps<TFields, 'TextField'>) => ReactNode
+	NumberField: (props: NumberFieldProps<TFormData> & KitFieldProps<TFields, 'NumberField'>) => ReactNode
+	TextareaField: (props: TextareaFieldProps<TFormData> & KitFieldProps<TFields, 'TextareaField'>) => ReactNode
+	SelectField: (props: SelectFieldProps<TFormData> & KitFieldProps<TFields, 'SelectField'>) => ReactNode
+	CheckboxField: (props: CheckboxFieldProps<TFormData> & KitFieldProps<TFields, 'CheckboxField'>) => ReactNode
+	SwitchField: (props: SwitchFieldProps<TFormData> & KitFieldProps<TFields, 'SwitchField'>) => ReactNode
+	RadioGroupField: (props: RadioGroupFieldProps<TFormData> & KitFieldProps<TFields, 'RadioGroupField'>) => ReactNode
+	SliderField: (props: SliderFieldProps<TFormData> & KitFieldProps<TFields, 'SliderField'>) => ReactNode
+	MultiSelectField: (props: MultiSelectFieldProps<TFormData> & KitFieldProps<TFields, 'MultiSelectField'>) => ReactNode
+	CheckboxGroupField: (
+		props: CheckboxGroupFieldProps<TFormData> & KitFieldProps<TFields, 'CheckboxGroupField'>,
+	) => ReactNode
+	DateField: (props: DateFieldProps<TFormData> & KitFieldProps<TFields, 'DateField'>) => ReactNode
+	DateRangeField: (props: DateRangeFieldProps<TFormData> & KitFieldProps<TFields, 'DateRangeField'>) => ReactNode
 	/**
 	 * Generic per call, not per form: the item type is inferred from `name`, which is what lets
 	 * one member cover every array in `TFormData` — and what makes a nested array inside an
 	 * entry work with no extra machinery.
 	 */
 	ArrayField: <TName extends ArrayKeys<TFormData>>(props: ArrayFieldProps<TFormData, TName, TFields>) => ReactNode
+}
+
+/** The key of every built-in field kind and of the array frame. */
+export type BuiltInFieldKey = keyof FormFieldSlots
+
+/**
+ * What `form.Field`'s render prop receives: what a `defineFieldType` field gets, minus its
+ * `props` bag — the identity, chrome and validation state of {@link FieldRenderProps}, plus the
+ * value and an `onChange` that takes the value itself rather than an event.
+ */
+export type FieldControlProps<TValue> = FieldRenderProps & {
+	value: TValue
+	onChange: (value: TValue) => void
+}
+
+/**
+ * `form.Field`'s props: an author's own control, bound like a registered field.
+ *
+ * `name` is any path of the form (TanStack's own key set), and the render prop's `value` is typed
+ * from it. Validation goes through `validate` — the vocabulary every field of this package takes
+ * — never TanStack's `validators`, which stay on `form.NativeField`. `required` is visual only,
+ * as on {@link BaseFieldProps}; `validate.required` implies it.
+ */
+export type FieldProps<TFormData, TName extends DeepKeys<TFormData>> = {
+	name: TName
+	validate?: FieldValidateProps
+	label?: ReactNode
+	description?: ReactNode
+	disabled?: boolean
+	required?: boolean
+	children: (field: FieldControlProps<DeepValue<TFormData, TName>>) => ReactNode
+}
+
+/** `form.Field`, `item.Field` and `group.Field`: `name` is inferred per call, and the render prop is typed from it. */
+export type BoundFieldComponent<TFormData> = <const TName extends DeepKeys<TFormData>>(
+	props: FieldProps<TFormData, TName>,
+) => ReactNode
+
+/**
+ * The three primitives every form instance carries, whatever it registered: the headless array,
+ * the headless submit and the headless field. None draws anything, so none needs a kit component.
+ */
+export type FormPrimitives<TFormData, TFields extends FormFieldRegistry = AllFormFieldSlots> = {
 	/**
 	 * Generic per call, for the same reason `ArrayField` is — see its doc comment.
 	 */
 	Array: <TName extends ArrayKeys<TFormData>>(props: ArrayProps<TFormData, TName, TFields>) => ReactNode
-	SubmitButton: (props: SubmitButtonProps) => ReactNode
-	Section: (props: SectionProps) => ReactNode
-	GridItem: (props: GridItemProps) => ReactNode
+	/** An author's own control, bound like a registered field — see {@link FieldProps}. */
+	Field: BoundFieldComponent<TFormData>
+	Submit: (props: SubmitProps) => ReactNode
 }
 
 /**
- * Reads the phantom `__props` that `defineFieldType` attaches. An entry registered without
- * it — a bare component the author wrote by hand — falls to an untyped bag rather than to a
- * compile error: graceful degradation is the point, since the registry is open.
+ * Reads the phantom `__props` that `defineFieldType` attaches. An entry without it falls to an
+ * untyped bag.
+ *
+ * That fallback is the **instance** side only: `form.<Key>` for a bare hand-written component
+ * takes untyped props. Registration is stricter — `createForm({ fields })` checks every custom
+ * entry against what the generic binder hands it, so a component either comes from
+ * `defineFieldType` or takes the untyped default `CustomFieldRenderProps`. A bare
+ * `(p: CustomFieldRenderProps<number>) => …` is rejected: without the phantom the binder can
+ * only promise `unknown`, and typing the value is what `defineFieldType` is for.
  */
 export type PropsOf<TDefinition> = TDefinition extends { __props?: infer TProps }
 	? unknown extends TProps
@@ -450,62 +589,91 @@ export type CustomFieldComponentsOf<TFormData, TFields> = {
 }
 
 /**
- * The flat components attached to the form instance by `createForm` — the twelve built-ins
- * and the layout pieces, plus one per field kind the app registered.
+ * The bound field components a form instance carries — **only the keys `TFields` has**.
  *
- * `TFields` is **defaulted**, and the default is load-bearing: every internal spelling of
- * `FormFieldComponents<T>` with one argument keeps compiling and keeps meaning exactly what
- * it meant before the registry existed.
+ * A built-in key gets its bespoke props ({@link BuiltInFieldComponents}); any other key is a
+ * field kind the app registered and gets the generic binding, typed from the phantoms
+ * `defineFieldType` wrote. A key that was not registered is not on the instance, so
+ * `form.NumberField` on a form that registered only `TextField` is a compile error.
+ *
+ * The member keeps the key's optionality: a set typed `FormFieldSlots` — or built with a
+ * conditional spread — may lack any of its keys at runtime, so `form.TextField` is then possibly
+ * `undefined` and has to be narrowed before it is rendered. A `satisfies`-checked or literal set
+ * names its keys as required and gets required members. The `as` clause is what keeps the remap
+ * homomorphic, which is what carries the `?` across.
+ *
+ * `TFields` is **defaulted** to every built-in, which is what keeps every one-argument spelling of
+ * this type meaning what it meant when the field set was closed.
  */
-export type FormFieldComponents<
-	TFormData,
-	TFields extends FormFieldRegistry = FormFieldSlots,
-> = BuiltInFormFieldComponents<TFormData, TFields> &
-	CustomFieldComponentsOf<TFormData, Omit<TFields, keyof FormFieldSlots>>
+export type FormFieldComponents<TFormData, TFields extends FormFieldRegistry = AllFormFieldSlots> = {
+	[TKey in keyof TFields as TKey extends BuiltInFieldKey ? TKey : never]: BuiltInFieldComponents<
+		TFormData,
+		TFields
+	>[TKey & BuiltInFieldKey]
+} & CustomFieldComponentsOf<TFormData, Omit<TFields, BuiltInFieldKey>>
 
 /**
- * A headed group of fields on a column grid — the JSX spelling of a `section` node.
+ * A headed group of fields — the `Section` a kit ships.
  *
- * The two entry points render the same kit component and therefore the same DOM: a document
- * says `{ type: 'section', title, columns }`, JSX writes `<form.Section title columns>`, and
- * both reach `FormComponents['Section']`. Sections are pure layout — nesting a field inside
- * one changes neither its `name`, nor the path its value lives at, nor its validation.
+ * JSX writes `<form.Section title>`, and a document writes the same component as a block:
+ * `{ type: 'block', component: 'Section', props: { title }, children }`. Both reach the `Section`
+ * passed in `createForm({ components })`, so these are the props a kit implements. A section is
+ * pure layout — nesting a field inside one changes neither its `name`, nor the path its value
+ * lives at, nor its validation.
  *
- * `columns` is the same 1..4 range the v1 format allows (`GRID_MIN`/`GRID_MAX`); the kit
- * clamps anything outside it. Nest a section inside a section to build a different grid
- * inside a grid.
+ * It knows nothing of columns: a section on a grid wraps a {@link GridProps | `Grid`}, and in a
+ * document the renderer inserts that grid itself when the block sets `columns`.
  *
  * @example
- * <form.Section title='Contact' columns={2}>
- *   <form.TextField name='firstName' label='First name' />
- *   <form.TextField name='lastName' label='Last name' />
- *   <form.GridItem colSpan={2}>
- *     <form.TextField name='email' label='Email' />
- *   </form.GridItem>
+ * <form.Section title='Contact'>
+ *   <form.Grid columns={2}>
+ *     <form.TextField name='firstName' label='First name' />
+ *     <form.TextField name='lastName' label='Last name' />
+ *   </form.Grid>
  * </form.Section>
  */
 export type SectionProps = {
-	title?: ReactNode
-	description?: ReactNode
-	/** Grid columns for the direct children. Default 1. Must be an integer 1..4. */
-	columns?: number
+	title?: ReactNode | undefined
+	description?: ReactNode | undefined
 	children: ReactNode
 }
 
 /**
- * One cell of a section's grid — the JSX spelling of a node's `colSpan`.
+ * A column grid — the JSX spelling of a container's `columns`.
  *
- * Only needed to span more than one column: a child written straight into a `Section` is
- * already a grid item of its own and occupies a single column. It wraps *anything*, a nested
- * `Section` included, and carries no field binding — `colSpan` is geometry, not state.
+ * `columns` is the same 1..4 range the v1 format allows (`GRID_MIN`/`GRID_MAX`); the kit clamps
+ * anything outside it. Every child is a cell of its own and takes one column; `Grid.Item` spans
+ * more. Nest a grid inside a cell to build a different grid inside a grid.
  *
  * @example
- * <form.GridItem colSpan={2}>
+ * <form.Grid columns={2}>
+ *   <form.TextField name='firstName' label='First name' />
+ *   <form.TextField name='lastName' label='Last name' />
+ *   <form.Grid.Item colSpan={2}>
+ *     <form.TextField name='email' label='Email' />
+ *   </form.Grid.Item>
+ * </form.Grid>
+ */
+export type GridProps = {
+	/** Grid columns for the direct children. Default 1. Must be an integer 1..4. */
+	columns?: number | undefined
+	children: ReactNode
+}
+
+/**
+ * One cell of a grid — the JSX spelling of a node's `colSpan`.
+ *
+ * Only needed to span more than one column: a child written straight into a `Grid` is already a
+ * cell of its own. It wraps *anything*, a nested grid included, and carries no field binding —
+ * `colSpan` is geometry, not state.
+ *
+ * @example
+ * <form.Grid.Item colSpan={2}>
  *   <form.TextareaField name='notes' label='Notes' />
- * </form.GridItem>
+ * </form.Grid.Item>
  */
 export type GridItemProps = {
 	/** Columns this item spans. Default 1. Must be an integer 1..4. */
-	colSpan?: number
+	colSpan?: number | undefined
 	children: ReactNode
 }

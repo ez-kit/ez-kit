@@ -92,13 +92,6 @@ const INITIAL_CITY_ID = 4821
 /** Long enough to see the pending state, short enough not to feel broken. */
 const RESPONSE_DELAY_MS = 400
 
-/**
- * The gate that keeps a one-character search from asking for half the catalogue.
- *
- * It lives **here, in the source**, not in the form package — as does debouncing, which this
- * demo skips only because a 400 ms fake request is already its own throttle. A real source
- * would wrap `query` in a `useDebouncedValue` before building the key below.
- */
 const MIN_QUERY_LENGTH = 2
 
 type CityOption = { label: string; value: number }
@@ -160,7 +153,7 @@ function useRequest(key: string | undefined): { options: readonly CityOption[]; 
 function useCitySearch({ params, query }: { params: Record<string, unknown>; query?: string }) {
 	const country = typeof params.country === 'string' ? params.country : ''
 	const text = (query ?? '').trim().toLowerCase()
-	const key = country === '' || text.length < MIN_QUERY_LENGTH ? undefined : `${SEARCH_PREFIX}${country}:${text}`
+	const key = query === undefined || country === '' ? undefined : `${SEARCH_PREFIX}${country}:${text}`
 
 	return useRequest(key)
 }
@@ -178,20 +171,9 @@ function useCitiesByValue({ values }: { values: readonly (string | number)[] }) 
 
 /** Hoisted to a module constant: a registry rebuilt each render would swap hook identities. */
 const optionSources: OptionSourceRegistry = {
-	cities: { useOptions: useCitySearch, useSelectedOptions: useCitiesByValue },
+	cities: { useOptions: useCitySearch, useSelectedOptions: useCitiesByValue, minLength: MIN_QUERY_LENGTH },
 }
 
-/**
- * A city search over a catalogue the form never receives whole.
- *
- * It **starts with Lisbon already chosen** — that is the point of the demo. Nothing has been
- * typed, so the search has returned nothing at all, and the field still shows "Lisbon" rather
- * than `4821` or an empty box, because the source's second hook resolved that one value.
- *
- * Then: type two or more characters to search (the minimum is the *source's* rule, not the
- * package's), and change the country to watch the city clear — the same `optionsFrom`
- * behaviour a non-searchable dependent field has.
- */
 export function SearchableSelectExample() {
 	return (
 		<FormOptionSources value={optionSources}>

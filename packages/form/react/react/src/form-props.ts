@@ -1,6 +1,14 @@
 import type { SubmittableForm } from './bindable-form'
-import type { FormElementProps, FormFieldSlots } from './contract'
+import type {
+	AllFormComponents,
+	AllFormFieldSlots,
+	FormComponentRegistry,
+	FormElementProps,
+	NoRegistry,
+} from './contract'
 import type { FormFieldRegistry } from './field-registry'
+import type { FormBehaviourOptions } from './form-behaviour'
+import type { FormInstance } from './form-instance'
 import type { KitFormApi } from './kit-form'
 import type { FormAsyncValidateOrFn, FormOptions, FormValidateOrFn } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
@@ -16,14 +24,14 @@ type FormElementRest = Omit<FormElementProps, 'onSubmit' | 'children'>
 /**
  * Controlled mode: the caller owns the instance and passes it in.
  *
- * The instance is typed by what this component actually needs — a `handleSubmit` — rather
- * than by the full generic form API. Nothing here has to know the form's data type: the
- * typed field components travel on the caller's own instance, so `name` stays checked
- * without a single generic reaching this component.
+ * The instance is typed as a whole form — what `FormProvider` takes — because `<Form>` puts it in
+ * context, where `form.SubmitButton` and `useFormContext()` read the full base API, not just
+ * `handleSubmit`. `TValues` is inferred from the instance and checks nothing else: the typed field
+ * components travel on the caller's own instance, so `name` stays checked there.
  */
-export type FormControlledProps = FormElementRest & {
+export type FormControlledProps<TValues = unknown> = FormElementRest & {
 	/** Instance returned by `useForm`. */
-	form: SubmittableForm
+	form: FormInstance<TValues, NoRegistry, NoRegistry>
 	children: ReactNode
 }
 
@@ -48,7 +56,8 @@ export type FormUncontrolledProps<
 	TOnServer extends undefined | FormAsyncValidateOrFn<TFormData>,
 	TSubmitMeta,
 	/** The registry `createForm` was given, so a field the app added is typed on `form`. */
-	TFields extends FormFieldRegistry = FormFieldSlots,
+	TFields extends FormFieldRegistry = AllFormFieldSlots,
+	TComponents extends FormComponentRegistry = AllFormComponents,
 > = FormElementRest &
 	FormOptions<
 		TFormData,
@@ -63,7 +72,8 @@ export type FormUncontrolledProps<
 		TOnDynamicAsync,
 		TOnServer,
 		TSubmitMeta
-	> & {
+	> &
+	FormBehaviourOptions<TFormData> & {
 		/** Mutually exclusive with the inline options — never pass both. */
 		form?: never
 		children: (
@@ -80,7 +90,8 @@ export type FormUncontrolledProps<
 				TOnDynamicAsync,
 				TOnServer,
 				TSubmitMeta,
-				TFields
+				TFields,
+				TComponents
 			>,
 		) => ReactNode
 	}
@@ -92,6 +103,10 @@ export type FormUncontrolledProps<
  * implementation, overload resolution has already picked the mode — and what a wrapper
  * that forwards props on to `<Form>` without choosing a mode should accept. It is not the
  * API: a call site should always land on one of the two overloads.
+ *
+ * `form` asks only for `handleSubmit`, not for an `AnyFormInstance`: a form whose values hold an
+ * array does not assign to `FormInstance<any, …>` (see `FormProvider`), and no non-generic instance
+ * type takes every `useForm` result. The controlled overload is what checks for a whole instance.
  */
 export type AnyFormProps = FormElementRest & {
 	form?: SubmittableForm
@@ -102,7 +117,10 @@ export type AnyFormProps = FormElementRest & {
  * The uncontrolled shape at its least specific — what the implementation hands to the
  * inner component once the overloads have already validated the caller's props.
  */
-export type FormUncontrolledImplProps<TFields extends FormFieldRegistry = FormFieldSlots> = FormUncontrolledProps<
+export type FormUncontrolledImplProps<
+	TFields extends FormFieldRegistry = AllFormFieldSlots,
+	TComponents extends FormComponentRegistry = AllFormComponents,
+> = FormUncontrolledProps<
 	unknown,
 	undefined,
 	undefined,
@@ -115,7 +133,8 @@ export type FormUncontrolledImplProps<TFields extends FormFieldRegistry = FormFi
 	undefined,
 	undefined,
 	never,
-	TFields
+	TFields,
+	TComponents
 >
 
 /**
@@ -147,9 +166,10 @@ export type FormProps<
 	TOnDynamicAsync extends undefined | FormAsyncValidateOrFn<TFormData>,
 	TOnServer extends undefined | FormAsyncValidateOrFn<TFormData>,
 	TSubmitMeta,
-	TFields extends FormFieldRegistry = FormFieldSlots,
+	TFields extends FormFieldRegistry = AllFormFieldSlots,
+	TComponents extends FormComponentRegistry = AllFormComponents,
 > =
-	| FormControlledProps
+	| FormControlledProps<TFormData>
 	| FormUncontrolledProps<
 			TFormData,
 			TOnMount,
@@ -163,5 +183,6 @@ export type FormProps<
 			TOnDynamicAsync,
 			TOnServer,
 			TSubmitMeta,
-			TFields
+			TFields,
+			TComponents
 	  >

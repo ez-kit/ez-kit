@@ -2,14 +2,7 @@
 
 import { useState } from 'react'
 
-import {
-	buildValidator,
-	defineFormSchema,
-	FormFieldType,
-	FormRenderer,
-	TextInputType,
-	useForm,
-} from 'shared/form/FormKit'
+import { buildValidator, defineFormSchema, FormFieldType, SchemaForm, useForm } from 'shared/form/FormKit'
 
 type Account = {
 	email: string
@@ -36,7 +29,7 @@ const schema = defineFormSchema<Account>()({
 			name: 'email',
 			label: 'Email',
 			placeholder: 'you@example.com',
-			inputType: TextInputType.Email,
+			inputType: 'email',
 			description: `Try ${TAKEN_EMAIL} to see the server reject it.`,
 			defaultValue: '',
 			validate: { required: true, format: 'email' },
@@ -45,11 +38,11 @@ const schema = defineFormSchema<Account>()({
 			type: FormFieldType.Text,
 			name: 'password',
 			label: 'Password',
-			inputType: TextInputType.Password,
+			inputType: 'password',
 			defaultValue: '',
 			validate: { required: true, minLength: 8 },
 		},
-		{ type: 'submit', label: 'Create account' },
+		{ type: 'block', component: 'SubmitButton', props: { children: 'Create account' } },
 	],
 })
 
@@ -63,7 +56,7 @@ const validator = buildValidator<Account>(schema)
  * The document twin of the JSX submission example — and the one case where the document is
  * rendered **controlled**.
  *
- * Uncontrolled `FormRenderer` compiles the schema's `validate` blocks itself, and it refuses
+ * Uncontrolled `SchemaForm` compiles the schema's `validate` blocks itself, and it refuses
  * to do that while a `validators` prop is also present: TanStack Form takes exactly one
  * validator per trigger, so merging two issue sets onto one path has no defined precedence.
  * Since the server round trip *is* a validator (`onSubmitAsync` is where a rejection can
@@ -93,7 +86,7 @@ export function SubmitSchemaExample() {
 
 	return (
 		<div className='flex flex-col gap-4'>
-			<FormRenderer
+			<SchemaForm
 				form={form}
 				schema={schema}
 			/>

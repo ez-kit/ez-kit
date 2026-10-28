@@ -3,9 +3,9 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, test, vi } from 'vitest'
 
-import { createForm } from './create-form'
+import { createSchemaForm } from './create-schema-form'
 import { fromKitValue, fromKitValues, toKitOptions } from './option-values'
-import { testComponents, testFields } from './test-kit'
+import { testComponents, testFields, testFormElement } from './test-kit'
 
 import type { FormSchema } from '@ez-kit/form-core'
 
@@ -42,7 +42,11 @@ const ROLE_ID_OPTIONS = [
 	{ label: 'Viewer', value: 8 },
 ]
 
-const { useForm, Form, FormRenderer } = createForm({ components: testComponents, fields: testFields })
+const { useForm, Form, SchemaForm } = createSchemaForm({
+	FormElement: testFormElement,
+	fields: testFields,
+	components: testComponents,
+})
 
 /** `typeof value` alongside the value, so a stringified `7` cannot pass for the number. */
 function describeValue(value: unknown): string {
@@ -179,7 +183,7 @@ describe('option-values helpers', () => {
 	})
 })
 
-test('a schema-driven numeric select round-trips through FormRenderer', async () => {
+test('a schema-driven numeric select round-trips through SchemaForm', async () => {
 	const user = userEvent.setup()
 	const onSubmit = vi.fn()
 
@@ -187,12 +191,12 @@ test('a schema-driven numeric select round-trips through FormRenderer', async ()
 		version: 1,
 		children: [
 			{ type: FormFieldType.Select, name: 'countryId', label: 'Country', options: COUNTRY_OPTIONS, defaultValue: 33 },
-			{ type: 'submit', label: 'Save' },
+			{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 		],
 	}
 
 	render(
-		<FormRenderer
+		<SchemaForm
 			schema={schema}
 			onSubmit={onSubmit}
 		/>,

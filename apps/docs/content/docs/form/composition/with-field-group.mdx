@@ -1,0 +1,194 @@
+---
+title: withFieldGroup
+description: One set of fields, written once in its own coordinates, placed into any form that has that shape — with its own rules and its own submit.
+---
+
+`withFieldGroup` builds a block written in **its own** coordinates — typed by its own shape, not by any form's — and placed into any form that has that shape somewhere. An address, a password and its confirmation, a date range: the fields are written once, the rules are written once, and each form decides only **where** the block lies.
+
+That is the difference from [`withForm`](/docs/form/composition/with-form), whose part is written against one form's paths. A block knows nothing about the form it lands in, and in exchange it can land in any of them — at a branch, twice in the same form, or with its keys spread across the root.
+
+Its `render` receives a `group` carrying every field your bundle registered, with names relative to the block: `group.TextField name='street'`, `group.ArrayField`, your own registered fields, `group.Field` and `group.NativeField`.
+
+## A block on a branch
+
+An address block, placed in a contact form on the `address` branch. Inside, the block names `street`, `city` and `zip`; placed with `fields='address'`, they are written to `address.street`, `address.city` and `address.zip`:
+
+```tsx
+import { withFieldGroup } from '@ez-kit/form-shadcn'
+
+const AddressFields = withFieldGroup({
+	defaultValues: { street: '', city: '', zip: '' },
+	render: ({ group }) => (
+		<>
+			<group.TextField
+				name='street'
+				label='Street'
+			/>
+			<group.TextField
+				name='city'
+				label='City'
+			/>
+			<group.TextField
+				name='zip'
+				label='ZIP'
+			/>
+		</>
+	),
+})
+
+<Form defaultValues={CONTACT_DEFAULTS} onSubmit={saveContact}>
+	{(form) => (
+		<>
+			<form.TextField
+				name='name'
+				label='Name'
+			/>
+			<form.Section title='Address'>
+				<AddressFields fields='address' />
+			</form.Section>
+			<form.SubmitButton>Save contact</form.SubmitButton>
+		</>
+	)}
+</Form>
+```
+
+<KitExample exampleId='form-composition-field-group' />
+
+## With rules
+
+A block carries its rules with it: `validators` take a schema over the block's own shape, written in the block's coordinates whatever placement it gets. Here a password pair, placed in a sign-up through a **map** — each of the block's keys gets a path of its own, so its fields sit at the form's root:
+
+```tsx
+const passwordPairSchema = z
+	.object({ password: z.string().min(8), confirm: z.string() })
+	.refine((pair) => pair.password === pair.confirm, { path: ['confirm'], message: 'Passwords do not match' })
+
+const PasswordPair = withFieldGroup({
+	defaultValues: { password: '', confirm: '' },
+	validators: { onChange: passwordPairSchema },
+	render: ({ group }) => (
+		<>
+			<group.TextField
+				name='password'
+				type='password'
+				label='Password'
+			/>
+			<group.TextField
+				name='confirm'
+				type='password'
+				label='Repeat password'
+			/>
+		</>
+	),
+})
+
+<PasswordPair fields={{ password: 'password', confirm: 'confirm' }} />
+```
+
+The block's schema reports as the user types; the form's schema holds the rule for the submit, since a whole-form submit runs no group's validators. The map keeps the block's key names, so the form's schema reuses the block's as it is — `z.intersection(z.object({ login }), passwordPairSchema)`. A mismatch shows on `confirm`, the real path, and blocks _Sign up_ until it is fixed. A map that renames the keys — `{ password: 'newPassword', confirm: 'repeat' }` — cannot reuse the schema like this; write the rule again in the form's coordinates.
+
+<KitExample exampleId='form-composition-field-group-validation' />
+
+## Where it pays off: one block, placed twice
+
+A customer has a shipping and a billing address: the same fields, the same rules, the same "Save this address" button. `AddressCard` holds all three — fields, schema and submit — and the form places it twice. Each placement says only where it lies and what its save does:
+
+```tsx
+const AddressCard = withFieldGroup({
+	defaultValues: { street: '', city: '', zip: '' },
+	validators: { onChange: addressSchema },
+	props: { title: '' },
+	render: ({ group, title }) => (
+		<fieldset>
+			<legend>{title}</legend>
+			<group.TextField
+				name='street'
+				label='Street'
+			/>
+			<group.TextField
+				name='city'
+				label='City'
+			/>
+			<group.TextField
+				name='zip'
+				label='ZIP'
+			/>
+			<Button onClick={() => void group.handleSubmit()}>{`Save ${title.toLowerCase()}`}</Button>
+		</fieldset>
+	),
+})
+
+<AddressCard
+	fields='shipping'
+	title='Shipping'
+	onGroupSubmit={({ value }) => api.saveShipping(value)}
+/>
+<AddressCard
+	fields='billing'
+	title='Billing'
+	onGroupSubmit={({ value }) => api.saveBilling(value)}
+/>
+```
+
+The form's schema is built from the same `addressSchema` constant — `z.object({ email, shipping: addressSchema, billing: addressSchema })` — so the rule exists once and holds in three places: each card's own save, and the customer's.
+
+Each placement keeps its errors on its own branch: a bad ZIP in _Shipping_ leaves _Billing_ alone. _Save shipping_ checks and sends the shipping address alone; _Save customer_ holds both addresses to the rule.
+
+<KitExample exampleId='form-composition-field-group-address-book' />
+
+## Placing it
+
+Where the block lies is said by `fields`, at the place:
+
+- **A path** — `<PasswordPair fields='security' />` — puts it on a branch: `password` is `security.password`.
+- **A map** — `<PasswordPair fields={{ password: 'password', confirm: 'confirm' }} />` — names a path for each of the block's keys, so its fields can sit anywhere in the form, the root included.
+
+The form is the one above the block, as for `withForm`, or the one you pass as `form`. With `form`, `fields` is checked against it: a path to a branch of another shape, or a map naming a path whose value does not fit, does not compile. Without it, `fields` is a cast — any path, or a map that names every key of the block.
+
+## Its own rules
+
+`validators` take the TanStack slots — `onMount`, `onChange`, `onBlur`, `onSubmit`, their async variants and debounces — each either a Standard Schema over the block's own shape, one per object, or a function of `{ value }`. The schema is written in the block's coordinates whatever placement it gets:
+
+- an issue **with a path** — `confirm` — lands on the real field: `security.confirm` under a path, `confirm` under the map above;
+- an issue **without one** — a refine over the whole object — is the block's own, and reaches `render` as `group.errors`, a `string[]`.
+
+## Its own submit
+
+`group.handleSubmit()`, called inside the block, submits the block: it checks the block's fields and its `validators`, then calls the `onGroupSubmit` the block was placed with, with `value` typed by the block. It does **not** submit the form. Invalid, it focuses the block's first field with an error, as the form's `focusOnError` says. The other way round holds too: a whole-form submit does not run the block's `validators` — see [where a rule goes](/docs/form/composition#where-a-rule-goes).
+
+So a section that needs a "Save this section" button wherever it goes keeps the button inside itself, and each page decides only where the section lies and what its submit does. A group submit clears the [server errors](/docs/form/composition/form-group#server-errors-and-group-submits) inside the block, and only those.
+
+<Callout type='warn'>
+	**Breaking:** `group.handleSubmit()` inside a `withFieldGroup` block used to submit the whole form, as TanStack's
+	field group does. It now submits the block only. To submit the form from inside a block, call
+	`group.form.handleSubmit()`.
+</Callout>
+
+### `withFieldGroup` options
+
+| Option          | Type                                      | Notes                                                               |
+| --------------- | ----------------------------------------- | ------------------------------------------------------------------- |
+| `defaultValues` | `TGroup`                                  | The block's own shape — the inference site for its type.            |
+| `props`         | `object`                                  | The block's extra props, inferred from here. Required at the place. |
+| `validators`    | `GroupValidators<TGroup>`                 | The block's own rules, in its coordinates.                          |
+| `render`        | `(props: { group } & props) => ReactNode` | The block's body.                                                   |
+
+### Placing a block
+
+| Prop            | Type                                       | Notes                                                                                                                                |
+| --------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `form`          | `FormInstance<TFormData>`                  | Optional. Passed, `fields` is checked against it; omitted, the form above.                                                           |
+| `fields`        | path, or `{ [key in keyof TGroup]: path }` | Where the block lies: a branch, or a path per key.                                                                                   |
+| `onGroupSubmit` | `({ value, meta }) => unknown`             | Called when `group.handleSubmit()` finds the block valid. `meta` is `undefined` when `handleSubmit()` is called without an argument. |
+
+## `useFieldGroup`
+
+`useFieldGroup` is the hook behind `withFieldGroup`: it takes the parent form and a `fields` path or map and returns the field group, for when you want a group inside a component you are already writing rather than a standalone block. It does not carry the flat fields — inside, fields are written with `group.Field` (your own control, bound, `name` relative to the group) or `group.NativeField`, as [Native API](/docs/form/native-api#groups-and-array-entries) describes.
+
+It is this package's own, wrapping TanStack's: it takes the instance `useForm` returns as its `form`, not a TanStack `FormApi`, and a group cannot be another group's `form`. `@ez-kit/form-react` exports it, and each kit re-exports it:
+
+```ts
+import { useFieldGroup } from '@ez-kit/form-shadcn'
+```
+
+It takes `form`, `fields` and an optional `defaultValues`.

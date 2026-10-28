@@ -1,7 +1,7 @@
 import { RESERVED_NODE_TYPES } from '@ez-kit/form-core'
 
 import type { FormFieldSlots } from './contract'
-import type { BaseFieldProps, BuiltInFormFieldComponents } from './field-props'
+import type { BaseFieldProps, FormPrimitives, OptionFieldBindingProps } from './field-props'
 import type { CustomFieldRenderProps } from './schema/registries'
 import type { ReactNode } from 'react'
 
@@ -9,7 +9,7 @@ import type { ReactNode } from 'react'
  * The suffix a field slot's name may end in, and which the document id drops.
  *
  * Declared once because two things depend on it agreeing with itself: `fieldTypeIdFor`
- * strips it, and `FormFieldSlots`' twelve keys all carry it.
+ * strips it, and every `FormFieldSlots` key carries it.
  */
 export const FIELD_NAME_SUFFIX = 'Field'
 
@@ -27,8 +27,8 @@ export type FieldTypeDefinition<TProps = Record<string, unknown>, TValue = unkno
 }
 
 /**
- * What `createForm({ fields })` accepts: the kit's twelve slots spread beside whatever the
- * app registers, keyed by component name.
+ * What `createForm({ fields })` accepts: the kit's slots (`AllFormFieldSlots` — the twelve field
+ * kinds and `ArrayField`) spread beside whatever the app registers, keyed by component name.
  *
  * The `any` is the same trade `CellTypeRegistry` makes in `@ez-kit/data-grid-react`, and for
  * the same reason: `FormFieldSlots`' twelve members take twelve different, mutually
@@ -36,8 +36,9 @@ export type FieldTypeDefinition<TProps = Record<string, unknown>, TValue = unkno
  * single non-`any` parameter type accepts all of them, because a function parameter is
  * contravariant and `unknown` would reject every one. The real check is not here: it is the
  * kit's own `satisfies FormFieldSlots` on the twelve, `defineFieldType`'s phantoms on the
- * rest, and — for a built-in key — `CreateFormOptions.fields`' `& Partial<FormFieldSlots>`,
- * which re-asserts the twelve at the option where a spread-and-override is written.
+ * rest, and `CreateFormOptions.fields`' own intersection, which re-asserts every key at the
+ * option where a spread-and-override is written — a built-in against its `FormFieldSlots` slot,
+ * any other key against the generic binder's `CustomFieldRenderProps`.
  * Narrowing this bound would not buy safety, it would only make a correct kit uncompilable.
  *
  * It cannot be spelled `FieldTypeDefinition<any, any>`, which looks like the same shape and is
@@ -97,56 +98,86 @@ export function fieldTypeIdFor(key: string): string {
 }
 
 /**
+ * The members of the bound field set that are **not** registry keys — the primitives the
+ * builder writes over the registry's own output after the loop.
+ *
+ * A registry key equal to one of these is rejected by `createForm`, together with every other key
+ * the instance owns (`RESERVED_FORM_KEYS` in `reserved-keys.ts`), before the registry reaches the
+ * builder. This list is what the builder and the entry types anchor the primitives to.
+ *
+ * `satisfies Record<keyof FormPrimitives<unknown>, true>` is what stops this becoming a
+ * hand-written list that drifts from the builder: adding a primitive there is a compile error
+ * here. `ArrayField` is not among them: it is a registry key ({@link BESPOKE_FIELD_KEYS}).
+ */
+export const PRIMITIVE_KEYS = {
+	Submit: true,
+	Array: true,
+	Field: true,
+} satisfies Record<keyof FormPrimitives<unknown>, true>
+
+/**
+ * Every key of {@link FormFieldSlots}, as a runtime list.
+ *
+ * `satisfies Record<keyof FormFieldSlots, true>` keeps it honest: a fourteenth slot in the
+ * contract is a compile error here. It is the only enumeration of the built-ins that cannot drift
+ * from the contract, which is why `field-registry.test.ts` drives the id derivation from it.
+ */
+export const FIELD_KEYS = {
+	TextField: true,
+	NumberField: true,
+	TextareaField: true,
+	SelectField: true,
+	CheckboxField: true,
+	SwitchField: true,
+	RadioGroupField: true,
+	SliderField: true,
+	MultiSelectField: true,
+	CheckboxGroupField: true,
+	DateField: true,
+	DateRangeField: true,
+	ArrayField: true,
+} satisfies Record<keyof FormFieldSlots, true>
+
+/**
+ * The registry keys that are **not** field kinds a document can name — they route to a binder of
+ * their own and derive no document id.
+ *
+ * `ArrayField` is the one: its frame is registered with the fields (it carries its entry view as
+ * `ArrayField.Item`), but an array in a document is the reserved `array` node type, not a
+ * registered `type`. Without this exclusion its derived id would be exactly that reserved type,
+ * and every form would throw at `createForm`.
+ */
+export const BESPOKE_FIELD_KEYS = {
+	ArrayField: true,
+} as const satisfies Partial<Record<keyof FormFieldSlots, true>>
+
+/**
  * Every registry key mapped to the document id it derives, checked for the two ways the
  * derivation can go wrong.
  *
  * Run **once, at `createForm` time** — the registry is static, authored config, so the
  * answer cannot change between renders and paying a per-node cost for it would be wasted
- * work (the principle `assertNoReservedFieldKeyCollision` already states for the other
- * registry).
+ * work.
  *
  * It throws when two keys derive one id, and when an id collides with a reserved container
  * node type — without which a slot named `SectionField` would silently shadow `section`.
  * It deliberately does **not** throw when a built-in key derives its own built-in id:
  * replacing a kit's `TextField` at its own key is the whole point of an open registry.
- */
-/**
- * The members of the bound field set that are **not** field kinds — the five the builder writes
- * over the registry's own output after the loop.
  *
- * A registry key that collides with one of these is accepted by every other check and then
- * silently overwritten: `form.GridItem` renders the layout component and the author's field
- * never appears, with no error anywhere. Three of the five used to be caught only *by accident*,
- * because their derived ids (`section`, `array`) happen to be reserved node types;
- * `submitbutton` and `griditem` are not, and were not caught at all.
- *
- * `satisfies Record<Exclude<keyof BuiltInFormFieldComponents<unknown>, keyof FormFieldSlots>, true>`
- * is what stops this becoming a hand-written list that drifts from the builder: the five are
- * derived from the bound type, so adding a sixth member there is a compile error here.
+ * A key the form instance already owns (`Submit`, `Array`, `Field`, …) is not checked here:
+ * `createForm` rejects it before calling this — see `reserved-keys.ts`.
  */
-export const LAYOUT_COMPONENT_KEYS = {
-	SubmitButton: true,
-	Section: true,
-	GridItem: true,
-	ArrayField: true,
-	Array: true,
-} satisfies Record<Exclude<keyof BuiltInFormFieldComponents<unknown>, keyof FormFieldSlots>, true>
-
 export function deriveFieldTypeIds(fields: FormFieldRegistry): Record<string, string> {
 	const ids: Record<string, string> = {}
 
 	for (const key of Object.keys(fields)) {
+		if (Object.hasOwn(BESPOKE_FIELD_KEYS, key)) continue
+
 		const id = fieldTypeIdFor(key)
 
 		if ((RESERVED_NODE_TYPES as readonly string[]).includes(id)) {
 			throw new Error(
 				`Field "${key}" derives the type id "${id}", which is a reserved node type and would shadow it in a schema document.`,
-			)
-		}
-
-		if (Object.hasOwn(LAYOUT_COMPONENT_KEYS, key)) {
-			throw new Error(
-				`Field "${key}" collides with the form's own "${key}" component and would be silently overwritten. Rename it.`,
 			)
 		}
 
@@ -168,7 +199,7 @@ export function deriveFieldTypeIds(fields: FormFieldRegistry): Record<string, st
  * `satisfies Record<keyof BaseFieldProps<never, never>, true>` is what keeps it honest: a
  * seventh base prop added later is a compile error here rather than a prop that silently
  * stops reaching the component and starts turning up in its `props` bag instead. (The same
- * technique `COMPONENT_KEYS` uses in `component-guard.tsx`.)
+ * technique {@link FIELD_KEYS} uses.)
  */
 export const BASE_FIELD_PROP_KEYS = {
 	name: true,
@@ -178,3 +209,31 @@ export const BASE_FIELD_PROP_KEYS = {
 	required: true,
 	validate: true,
 } satisfies Record<keyof BaseFieldProps<never, never>, true>
+
+/**
+ * Every key an option-bearing built-in binds — {@link BASE_FIELD_PROP_KEYS} plus the option
+ * provision, `searchable` and the `creatable` pair. A select-like binder keeps these and hands
+ * everything else to the kit, flat.
+ *
+ * Checked against the type the same way the base set is, so a binding prop added to these fields
+ * later is a compile error here rather than a prop that starts reaching the kit unread.
+ *
+ * The base keys are written out rather than spread from {@link BASE_FIELD_PROP_KEYS}: a top-level
+ * object that spreads cannot be dropped by a bundler — a spread may run getters — so the spread
+ * form landed in every bundle of this entry, the helpers-only import included.
+ */
+export const OPTION_FIELD_PROP_KEYS = {
+	name: true,
+	label: true,
+	description: true,
+	disabled: true,
+	required: true,
+	validate: true,
+	options: true,
+	optionsFrom: true,
+	optionsParams: true,
+	loading: true,
+	searchable: true,
+	creatable: true,
+	createLabel: true,
+} satisfies Record<keyof BaseFieldProps<never, never> | keyof OptionFieldBindingProps, true>

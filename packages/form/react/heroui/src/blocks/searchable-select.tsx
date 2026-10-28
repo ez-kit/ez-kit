@@ -2,7 +2,9 @@ import { Collection, ComboBox, Input, ListBox, Spinner } from '@heroui/react'
 
 import { FieldDescription, FieldErrorText, FieldLabel } from './field-chrome'
 import { fieldRoot } from './field-state'
+import { minLengthHint } from './search-hint'
 
+import type { SelectFieldKitProps } from './select'
 import type { SelectFieldRenderProps } from '@ez-kit/form-react'
 import type { Key } from '@heroui/react'
 import type { ReactNode } from 'react'
@@ -52,7 +54,8 @@ export function SearchableSelectField({
 	description,
 	errors,
 	...field
-}: SelectFieldRenderProps & { search: NonNullable<SelectFieldRenderProps['search']> }): ReactNode {
+}: SelectFieldRenderProps &
+	SelectFieldKitProps & { search: NonNullable<SelectFieldRenderProps['search']> }): ReactNode {
 	const items: ComboItem[] = options.map((option) => ({
 		id: option.value,
 		label: option.label,
@@ -86,16 +89,25 @@ export function SearchableSelectField({
 			<ComboBox.Popover>
 				<ListBox
 					data-loading={loading || undefined}
-					renderEmptyState={() =>
-						loading ? (
-							<div className='flex items-center justify-center gap-2 p-3'>
-								<Spinner size='sm' />
-								<span className='text-muted text-sm'>Searching…</span>
-							</div>
-						) : (
-							<div className='text-muted p-3 text-sm'>No matches</div>
-						)
-					}
+					renderEmptyState={() => (
+						// React Aria puts the empty state in a bare `role="option"` and announces none of
+						// it, unlike Base UI's `role="status"` one in the shadcn kit. One polite region
+						// around all three texts stays mounted while the list is empty, so a switch between
+						// "Searching…", the hint and "No matches" is announced; the first text arrives with
+						// the region itself, which not every screen reader announces.
+						<div aria-live='polite'>
+							{loading ? (
+								<div className='flex items-center justify-center gap-2 p-3'>
+									<Spinner size='sm' />
+									<span className='text-muted text-sm'>Searching…</span>
+								</div>
+							) : (
+								<div className='text-muted p-3 text-sm'>
+									{search.belowMinLength ? minLengthHint(search.minLength) : 'No matches'}
+								</div>
+							)}
+						</div>
+					)}
 					{...(disabledKeys.length > 0 ? { disabledKeys } : {})}
 				>
 					<Collection items={items}>

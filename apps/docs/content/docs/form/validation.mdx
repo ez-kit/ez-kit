@@ -5,7 +5,7 @@ description: Standard-schema validators passed straight through to TanStack Form
 
 There is **no resolver here**. `@ez-kit/form` does not wrap or rewrite your validators — it passes them through untouched, then renders whatever errors come back through the kit's error component.
 
-That means everything in the [TanStack Form validation guide](https://tanstack.com/form/latest/docs/framework/react/guides/validation) applies verbatim. What the package adds sits beside that rather than in front of it: the [`validate` prop](#per-field-validators) on a field, and the constraints a [document](#named-rules-validation-without-javascript) declares — two spellings of one small constraint vocabulary, both compiled into ordinary TanStack validators.
+That means the [TanStack Form validation guide](https://tanstack.com/form/latest/docs/framework/react/guides/validation) applies to the form, to groups and to `form.NativeField`; on `form.Field` and the registered fields, whose `validators` are spelled `validate`, it applies once you rename that prop. What the package adds sits beside that rather than in front of it: the [`validate` prop](#per-field-validators) on a field, and the constraints a [document](#named-rules-validation-without-javascript) declares — two spellings of one small constraint vocabulary, both compiled into ordinary TanStack validators.
 
 ## Schema validation
 
@@ -52,7 +52,7 @@ There is no `pattern`. A regular expression arriving from a source you do not co
 What replaces both is indirection: the document _names_ a rule and the application supplies it.
 
 ```tsx
-<FormRenderer
+<SchemaForm
 	schema={schema}
 	rules={{ 'ru-inn': (value, values) => isValidInn(value) || 'Invalid tax ID' }}
 />
@@ -75,6 +75,23 @@ validators: {
 ```
 
 Async validators (`onChangeAsync`, `onBlurAsync`) and `onChangeAsyncDebounceMs` work exactly as in TanStack Form.
+
+### Quiet until the first submit
+
+A schema for the whole form usually wants a fourth timing: silent while the form is being filled for the first time, then checking on every change once a submit has failed. That is `onDynamic` with `revalidateLogic()` as the form's `validationLogic`, which both kits export:
+
+```tsx
+import { revalidateLogic } from '@ez-kit/form-shadcn'
+
+const form = useForm({
+	defaultValues,
+	validationLogic: revalidateLogic(),
+	validators: { onDynamic: schema },
+	onSubmit: ({ value }) => save(value),
+})
+```
+
+Prefer it to `onSubmit` for a form whose parts come and go: after a failed submit, a part that appears reports as soon as it is edited, where an `onSubmit` schema waits for the next submit — and that submit stops on the errors still on screen before the schema runs. [Composition](/docs/form/composition#connecting-the-forms-schema) shows it on a checkout form.
 
 ## Per-field validators
 
@@ -109,7 +126,7 @@ It **layers on** the form's own `validators` rather than replacing them: both ru
 
 **`rule`** names an entry in a registry because JSON cannot carry code. JSX can, so there is no registry on this side to look a name up in, and a string indirection would be the worst of the spellings available to you — write the check as a TanStack field validator, or as a standard-schema validator on the form. A `rule` that arrives past a cast throws, naming the field.
 
-**`messages`** takes plain strings here. Resolving a `{ key, params }` message needs a `translate`, and `translate` is a prop of `<FormRenderer>`, not of `<Form>` or `useForm`; rather than invent a second translate channel for the JSX API, the type asks for the finished copy you already hold.
+**`messages`** takes plain strings here. Resolving an `{ i18n, params }` message needs a `translate`, and `translate` is a prop of `<SchemaForm>`, not of `<Form>` or `useForm`; rather than invent a second translate channel for the JSX API, the type asks for the finished copy you already hold.
 
 ### When a form-level validator is the right answer instead
 
@@ -127,7 +144,7 @@ const form = useForm({
 })
 ```
 
-…or drop to [the native `form.Field`](./form/native-api), which accepts its own `validators`.
+…or drop to [`form.NativeField`](/docs/form/native-api#formnativefield), which accepts TanStack's own `validators`.
 
 ## How errors are rendered
 

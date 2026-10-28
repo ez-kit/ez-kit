@@ -1,12 +1,12 @@
 ---
 title: Custom fields
-description: defineFieldType and the open fields registry — add a field kind the kit does not ship, reachable from JSX and from a schema document alike.
+description: defineFieldType and the open fields registry — add a field kind the kit does not ship, reachable from JSX and, through createSchemaForm, from a schema document.
 ---
 
-The twelve field kinds a kit ships are the floor of `createForm({ fields })`, not its ceiling. `fields` is an **open registry**: spread the kit's own slots beside a component of your own, and the bundle that comes back has a thirteenth field on it — bound to form state, validated, and addressable from a schema document — without forking the kit.
+The twelve field kinds a kit ships are the floor of `createForm({ fields })`, not its ceiling. `fields` is an **open registry**: spread the kit's own slots beside a component of your own, and the bundle that comes back has a thirteenth field on it — bound to form state, validated, and addressable from a schema document when the factory is `createSchemaForm` — without forking the kit.
 
 ```tsx
-import { createForm, defineFieldType, formComponents, formFieldSlots } from '@ez-kit/form-shadcn'
+import { allFormComponents, allFormFields, createSchemaForm, defineFieldType, FormElement } from '@ez-kit/form-shadcn'
 
 const RatingField = defineFieldType<{ max: number }, number>()(({ value, onChange, props, ...field }) => (
 	<Stars
@@ -17,13 +17,16 @@ const RatingField = defineFieldType<{ max: number }, number>()(({ value, onChang
 	/>
 ))
 
-export const { useForm, Form, FormRenderer, withForm, withFieldGroup } = createForm({
-	components: formComponents,
-	fields: { ...formFieldSlots, RatingField },
+export const { useForm, Form, SchemaForm, withForm, withFieldGroup } = createSchemaForm({
+	FormElement,
+	fields: { ...allFormFields, RatingField },
+	components: allFormComponents,
 })
 ```
 
 `<form.RatingField name='score' max={5} />` now compiles, `name` is narrowed to the paths whose value is a `number`, and `max` is required.
+
+Pass the kit's `FormElement` whenever you call the factory yourself: without it the form renders a bare `<form>`, and on HeroUI that silently drops React Aria's form context (see [Custom kit](/docs/form/custom-kit#the-options)). A schema document reaches the field only through `createSchemaForm`; `createForm` registers it for JSX and leaves `SchemaForm` out of the bundle.
 
 ## `defineFieldType`
 
@@ -40,7 +43,7 @@ Both markers are **type-only**. `defineFieldType` returns its argument untouched
 
 ### What the component receives
 
-Everything a built-in field receives — `id`, `name`, `label`, `description`, `errors`, `invalid`, `onBlur`, `disabled`, `required`, `data-field`, `data-field-type`, all computed by the binding layer (see [the kit contract](/docs/form/custom-kit#fields)) — plus three more:
+Everything a built-in field receives — `id`, `name`, `label`, `description`, `errors`, `invalid`, `onBlur`, `disabled`, `required`, `data-field`, `data-field-type`, `data-form-id`, all computed by the binding layer (see [the kit contract](/docs/form/custom-kit#fields)) — plus three more:
 
 | Prop       | Meaning                                                                                                      |
 | ---------- | ------------------------------------------------------------------------------------------------------------ |
@@ -48,9 +51,11 @@ Everything a built-in field receives — `id`, `name`, `label`, `description`, `
 | `onChange` | `(value: TValue) => void`. Receives **the value**, never a DOM event — the same rule every kit slot follows. |
 | `props`    | The author's own props, typed as `TProps`, in a **nested** bag rather than spread flat beside the binding.   |
 
-The nesting is deliberate. A schema document's node carries its author props under `node.props`, and a delivered document must never be able to overwrite `label`, `disabled`, `name` or `validate` by naming them — a flat bag would let a backend-driven payload silently break the binding. The JSX call site still writes them flat, and the binder collects every key outside the base props back into `props`.
+The nesting is deliberate. A schema document's node carries its author props under `node.props`, and a delivered document must never be able to overwrite `label`, `disabled`, `name` or `validate` by naming them — a flat bag would let a backend-driven payload silently break the binding. The JSX call site still writes them flat, and the binder collects every key outside the base props back into `props`. A **built-in** field replaced in a kit is different on this one point: its extra props arrive flat, beside the render props — see [Kit props](/docs/form/custom-kit#kit-props).
 
-Getting that binding for free, rather than wiring `form.AppField` by hand, is the entire reason a custom field goes through the registry instead of being written inline.
+Getting that binding for free, rather than writing a `form.Field` at every call site, is the entire reason a custom field goes through the registry instead of being written inline.
+
+A component registered **without** `defineFieldType` receives the default `CustomFieldRenderProps` — `value` is `unknown` and `props` is an untyped bag. Typing the value is what `defineFieldType` is for: a hand-written `(p: CustomFieldRenderProps<number>) => …` is a compile error, because without the type-only markers the binder can promise nothing narrower than `unknown`. A misspelt built-in key (`TextFeild`) is a compile error rather than a custom field.
 
 ## The name derives the document type id
 
@@ -65,7 +70,7 @@ const schema = defineFormSchema<Values, 'rating'>()({
 })
 ```
 
-There is **one** registration site, deliberately: a field registered on the factory is reachable from JSX _and_ from a document, so the two can never disagree about what `rating` means. See [Schema-driven forms](/docs/form/schema#registries) for the document side.
+There is **one** registration site, deliberately: a field registered on the factory is reachable from JSX _and_, through `createSchemaForm`, from a document, so the two can never disagree about what `rating` means. See [Schema-driven forms](/docs/form/schema#registries) for the document side.
 
 ### Why the derivation runs this way and not the other
 
@@ -74,36 +79,45 @@ The rule maps a component name to an id, never an id back to a component name. T
 Two ways the derivation can go wrong, both of which throw at `createForm` rather than on the first document that hits them:
 
 - **Two keys deriving one id.** `RatingField` and `Rating` both derive `rating`.
-- **An id that collides with a reserved node type.** A slot named `SectionField` derives `section` and would silently shadow the container node; so would `StepField`, `SubmitField` or `BlockField`. A key that collides with one of the form's own non-field components — `SubmitButton`, `Section`, `GridItem`, `ArrayField`, `Array` — throws for the same reason.
+- **An id that collides with a reserved node type.** A slot named `SectionField` derives `section` and would silently shadow the container node; so would `StepField`, `SubmitField` or `BlockField`. A key that the form instance already owns (`Subscribe`, `state`, `Field`, `Submit`, `Array`, …), or that is also a key of `components`, is rejected for the same reason: a type error, and a throw by name at the factory. `ArrayField` is not a field kind either, but it is a `fields` key of its own: the kit's array frame, which derives no document id.
 
 Replacing a built-in _at its own key_ is not an error: handing `fields` your own `TextField` beside the other eleven is the point of an open registry.
 
 ## One bundle per `createForm` call
 
 <Callout type='warn'>
-	Every `createForm` call builds its **own** bundle, with its own internal context. Mixing pieces across two calls —
-	`<Form>` from one bundle, `form.TextField` from another — breaks **at runtime, with no type error**, because each
-	call makes its own `createFormHookContexts()` and a field from one cannot find the provider from the other.
+	Every `createForm` call builds its **own** bundle, and each bundle's `useForm`, `Form` and `withForm` are typed for
+	the fields **that** call registered. Take `Form` or `withForm` from the kit and the instance it hands you is the
+	kit's, so `form.RatingField` is a **compile error** there — the kit never registered `RatingField`.
 </Callout>
 
-So call it once, in one module, and export the result from there. The failure mode is easy to reach by accident:
+Nothing breaks at runtime when instances cross bundles: a field component closes over the instance it was built for,
+and the form context is shared by every bundle, so an instance from your `useForm` renders through the kit's
+controlled `<Form form>` or `<SchemaForm form>` as well. The hazard is the types, and it is easy to reach by accident:
 
 ```tsx
-// ❌ two calls — `form.RatingField` below belongs to a different context than `<Form>`
+// ❌ two bundles — the kit's `Form` hands its children the kit's instance, which has no `RatingField`
 import { Form } from '@ez-kit/form-shadcn' // the kit's ready-made bundle
-const { useForm } = createForm({ components: formComponents, fields: { ...formFieldSlots, RatingField } })
-```
-
-```tsx
-// ✅ one call, one module, one bundle
-export const { useForm, Form, FormRenderer, withForm, withFieldGroup } = createForm({
-	components: formComponents,
-	fields: { ...formFieldSlots, RatingField },
+const { useForm } = createForm({
+	FormElement,
+	fields: { ...allFormFields, RatingField },
+	components: allFormComponents,
 })
 ```
 
-A kit's own `Form` / `useForm` / `FormRenderer` exports come from the kit's single `createForm` call. The moment you make your own bundle, that one becomes the bundle your app uses — import `Form` from your module, not from the kit.
+So call it once, in one module, and export everything from there:
+
+```tsx
+// ✅ one call, one module, one bundle
+export const { useForm, Form, SchemaForm, withForm, withFieldGroup } = createSchemaForm({
+	FormElement,
+	fields: { ...allFormFields, RatingField },
+	components: allFormComponents,
+})
+```
+
+A kit's own `Form` / `useForm` / `SchemaForm` exports come from the kit's own factory calls. The moment you make your own bundle, that one becomes the bundle your app uses — import `Form` from your module, not from the kit.
 
 ## Blocks are not fields
 
-A **custom field** has a `name` and is bound to a value. A [**block**](/docs/form/schema#registries) has neither: it is a `{ type: 'block', component: 'promo-banner' }` node that receives only its `props`, and it is registered as a `blocks` prop on `FormRenderer`, not on the factory. If what you are adding renders a value the user edits, it is a field; if it is markup the document wants to place, it is a block.
+A **custom field** has a `name` and is bound to a value. A [**block**](/docs/form/schema#registries) has neither: it is a `{ type: 'block', component: 'PromoBanner' }` node that receives only its `props`, and its component is registered in the factory's `components`, the same one JSX reaches as `form.PromoBanner`. If what you are adding renders a value the user edits, it is a field; if it is markup the document wants to place, it is a block.

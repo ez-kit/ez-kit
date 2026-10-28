@@ -1,11 +1,12 @@
 import { clampToGridRange, GRID_MIN } from '@ez-kit/form-react'
 
-import type { GridItemRenderProps, SectionRenderProps } from '@ez-kit/form-react'
+import type { GridItemProps, GridProps, SectionProps } from '@ez-kit/form-react'
 import type { ReactNode } from 'react'
 
 /**
- * The layout primitives of the HeroUI kit: a headed `Section` grouping a column grid of
- * `GridItem`s.
+ * The layout primitives of the HeroUI kit: a headed `Section`, and a column `Grid` with its
+ * `Grid.Item` cell. A section knows nothing of columns — a section on a grid wraps a `Grid`, and
+ * a document's renderer inserts that grid itself when a block sets `columns`.
  *
  * HeroUI v3 ships no `Grid`/`Section` component, so — unlike the value-carrying fields in
  * `fields.tsx`, which wrap real `@heroui/react` primitives — this is hand-written from plain
@@ -18,8 +19,8 @@ import type { ReactNode } from 'react'
  * template string would drop the utility from the build — these map the supported column
  * counts to literal class names instead.
  *
- * `GRID_MIN`/`clampToGridRange` come from `@ez-kit/form-core` (re-exported through
- * `@ez-kit/form-react`) rather than being redefined here: the 1..4 range is part of the v1
+ * `GRID_MIN`/`clampToGridRange` originate in `@ez-kit/form-core` and reach this kit through
+ * `@ez-kit/form-react` rather than being redefined here: the 1..4 range is part of the v1
  * format — `parseFormSchema` rejects a document outside it — so the format's own package owns
  * the numbers. Only the Tailwind class strings below are kit-owned, since they're visual.
  */
@@ -56,7 +57,7 @@ function colSpanClassName(colSpan: number | undefined): string {
 	return COL_SPAN_CLASS[resolved] ?? 'col-span-1'
 }
 
-export function Section({ title, description, columns, children }: SectionRenderProps): ReactNode {
+export function Section({ title, description, children }: SectionProps): ReactNode {
 	return (
 		<fieldset
 			data-slot='form-section'
@@ -78,17 +79,23 @@ export function Section({ title, description, columns, children }: SectionRender
 					{description}
 				</p>
 			)}
-			<div
-				data-slot='form-section-grid'
-				className={cx('grid gap-4', columnsClassName(columns))}
-			>
-				{children}
-			</div>
+			{children}
 		</fieldset>
 	)
 }
 
-export function GridItem({ colSpan, children }: GridItemRenderProps): ReactNode {
+function GridView({ columns, children }: GridProps): ReactNode {
+	return (
+		<div
+			data-slot='form-grid'
+			className={cx('grid gap-4', columnsClassName(columns))}
+		>
+			{children}
+		</div>
+	)
+}
+
+function GridItem({ colSpan, children }: GridItemProps): ReactNode {
 	return (
 		<div
 			data-slot='form-grid-item'
@@ -98,3 +105,6 @@ export function GridItem({ colSpan, children }: GridItemRenderProps): ReactNode 
 		</div>
 	)
 }
+
+/** The grid and its cell as one slot — `form.Grid` / `form.Grid.Item`. */
+export const Grid = Object.assign(GridView, { Item: GridItem })

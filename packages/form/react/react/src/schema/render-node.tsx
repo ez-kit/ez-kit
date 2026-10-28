@@ -1,6 +1,7 @@
 import {
 	FORM_FIELD_TYPES,
 	FormFieldType,
+	isBlockNode,
 	isFieldNode,
 	resolveSelectOptions,
 	resolveText,
@@ -11,14 +12,24 @@ import {
 import { fieldRenderProps } from '../field-render-props'
 import { useOptionSourceParams } from '../options/use-source-params'
 
+import { resolveBlockProps } from './block-props'
 import { renderChildren } from './render-children'
+import {
+	assertComponent,
+	BUILT_IN_SLOT_BY_TYPE,
+	isBuiltInFieldType,
+	missingBlockMessage,
+	missingBuiltInFieldMessage,
+	missingCustomFieldMessage,
+	MissingComponentMessage,
+} from './required-components'
 import { useConditionValue } from './use-condition'
 
 import type { ConditionSubscribableForm } from './use-condition'
 import type { BindableForm, FieldValue } from '../bindable-form'
-import type { FormComponents } from '../contract'
-import type { ArrayFieldProps, ArrayReorderable, FormFieldComponents } from '../field-props'
-import type { BlockRegistry, CustomFieldRegistry } from './registries'
+import type { FormComponentRegistry, FormComponents, GridSlot } from '../contract'
+import type { ArrayFieldProps, ArrayReorderable, BuiltInFieldComponents, FormFieldComponents } from '../field-props'
+import type { CustomFieldRegistry } from './registries'
 import type {
 	AnyArrayNode,
 	BlockNode,
@@ -27,11 +38,9 @@ import type {
 	FormNode,
 	LocalizedSelectOption,
 	LocalizedText,
-	OptionsSource,
+	OptionSourceRef,
 	OptionValue,
-	SectionNode,
 	SelectOption,
-	SubmitNode,
 	Translate,
 } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
@@ -42,14 +51,12 @@ import type { ReactNode } from 'react'
  * `translate` is a required key typed `Translate | undefined` — not `translate?:` — so a
  * caller who has no translator can still pass `{ translate: undefined }` without tripping
  * `exactOptionalPropertyTypes`; same reason the kit contract types its optional fields the
- * same way (see `FieldRenderProps` in `contract.ts`). `fields` and `blocks` are the same
- * shape: `undefined` when the caller registered none, rather than an empty object forced on
- * every caller.
+ * same way (see `FieldRenderProps` in `contract.ts`). `fields` is the same shape: `undefined`
+ * when the caller registered none, rather than an empty object forced on every caller.
  */
 export type RenderNodeContext = {
 	translate: Translate | undefined
 	fields: CustomFieldRegistry | undefined
-	blocks: BlockRegistry | undefined
 	/**
 	 * The array entry the nodes below are being rendered for, as an absolute path. `undefined`
 	 * at the form root. It is what gives a `./`-prefixed condition its meaning, and it travels
@@ -60,52 +67,41 @@ export type RenderNodeContext = {
 }
 
 /**
- * The container primitives from the raw kit contract — separate from `form` (the bound,
- * per-field components attached to the form instance) because `Section`, `GridItem` and
- * `Wizard` carry no field state; they are wired straight from `createForm`'s `components`.
+ * The bundle's `components`, as the renderer reads them: every block resolves its `component`
+ * here, and `columns` reaches the kit's `Grid` through its contract key. Separate from `form`
+ * (the bound, per-field components attached to the form instance) because none of them carries
+ * field state. Every one is optional: a document that needs one nobody passed throws, naming it.
  */
-export type LayoutComponents = Pick<FormComponents, 'Section' | 'GridItem' | 'Wizard'>
+export type LayoutComponents = FormComponents & FormComponentRegistry
 
 export type RenderNodeArgs<TValues> = {
-	node:
-		| FieldNode<TValues>
-		| SectionNode<TValues, string>
-		| CustomFieldNode<TValues, string>
-		| BlockNode<TValues>
-		| SubmitNode<TValues>
-		| AnyArrayNode
+	node: FieldNode<TValues> | CustomFieldNode<TValues, string> | BlockNode<TValues, string> | AnyArrayNode
 	/** The bound field components already attached to the form instance — see `createForm`. */
 	form: FormFieldComponents<TValues>
 	layout: LayoutComponents
 	context: RenderNodeContext
+	/**
+	 * The `Grid.Item` to put a visible node in — set when the parent container lays its children
+	 * out on a grid. A hidden node gets no cell at all, so it leaves no hole in the grid.
+	 */
+	cell?: GridSlot['Item'] | undefined
 }
 
 /** Every `type` the `switch` below handles by name, for narrowing a custom field kind away. */
 const ARRAY_NODE_TYPE = 'array'
-const BUILT_IN_OR_CONTAINER_TYPES: readonly string[] = [
-	...FORM_FIELD_TYPES,
-	'section',
-	'block',
-	'submit',
-	ARRAY_NODE_TYPE,
-]
+const BLOCK_NODE_TYPE = 'block'
+const BUILT_IN_OR_CONTAINER_TYPES: readonly string[] = [...FORM_FIELD_TYPES, BLOCK_NODE_TYPE, ARRAY_NODE_TYPE]
 
 /**
  * `CustomFieldNode<TValues, string>`'s own `type` is a bare `string`, not a literal — a
  * registry key can be anything — so `switch (node.type)` below can never exclude it from any
- * one case the way it excludes `SectionNode`/`BlockNode`/`SubmitNode` by their literal `type`.
+ * one case the way it excludes `BlockNode` and the array node by their literal `type`.
  * This runtime check does what the discriminant alone cannot: pull a custom (or genuinely
  * unknown) node out of the union *before* the switch, so every case inside it keeps its own
  * node's real shape instead of the whole five-member union.
  */
 function isCustomFieldNode<TValues>(
-	node:
-		| FieldNode<TValues>
-		| SectionNode<TValues, string>
-		| CustomFieldNode<TValues, string>
-		| BlockNode<TValues>
-		| SubmitNode<TValues>
-		| AnyArrayNode,
+	node: FieldNode<TValues> | CustomFieldNode<TValues, string> | BlockNode<TValues, string> | AnyArrayNode,
 ): node is CustomFieldNode<TValues, string> {
 	return !BUILT_IN_OR_CONTAINER_TYPES.includes(node.type)
 }
@@ -133,7 +129,7 @@ function correlatedOptions(
 /** The two shapes a select-like node's options can arrive in, as one node type to read. */
 type OptionBearingNode = {
 	options?: readonly LocalizedSelectOption<OptionValue>[] | undefined
-	optionsFrom?: string | OptionsSource | undefined
+	optionsFrom?: string | OptionSourceRef | undefined
 }
 
 /**
@@ -156,6 +152,40 @@ function nodeOptionsProps(
 		}
 	}
 	return { options: correlatedOptions(node.options ?? [], translate) }
+}
+
+/** The input attributes a document's field node may carry, as one node type to read. */
+type NodeInputAttributes = {
+	placeholder?: string | undefined
+	inputType?: string | undefined
+	rows?: number | undefined
+	min?: number | string | undefined
+	max?: number | string | undefined
+	step?: number | undefined
+}
+
+/**
+ * The node's input attributes as the kit props they become — `placeholder`, `rows`, `min`, `max`
+ * and `step` under their own names, `inputType` as `type` — in the one bag the renderer spreads
+ * onto a built-in field.
+ *
+ * **Typed as nothing, deliberately — a hole in the types until `SchemaForm` is reworked.** The
+ * contract no longer names these attributes; each kit declares them on its own components, so no
+ * type here can know which of them the registered component accepts. A document has always set
+ * exactly these keys, and every kit this package ships declares them, so the renderer keeps
+ * handing them over unchecked rather than dropping them. A kit that does not declare one receives
+ * it anyway, as it would from any call site that went around the types.
+ */
+function nodeKitProps(node: NodeInputAttributes): Record<never, never> {
+	// The declared return type is the cast: it widens the bag to "no known props" on the way out.
+	return {
+		...(node.placeholder !== undefined && { placeholder: node.placeholder }),
+		...(node.inputType !== undefined && { type: node.inputType }),
+		...(node.rows !== undefined && { rows: node.rows }),
+		...(node.min !== undefined && { min: node.min }),
+		...(node.max !== undefined && { max: node.max }),
+		...(node.step !== undefined && { step: node.step }),
+	}
 }
 
 /**
@@ -236,47 +266,61 @@ type ErasedArrayField = (
  * props, and an option the node genuinely omits stays omitted rather than becoming an
  * explicit `undefined`, which React Aria and Radix reject under `exactOptionalPropertyTypes`.
  *
- * A section contributes nothing to a field's `name` — it only groups children into a headed,
- * column-gridded block via `layout.Section` and recurses into them via `renderChildren`,
- * which is what wraps each child in `layout.GridItem` when the section declares `columns`.
+ * A block renders the component it names from `components`, with its `props` flat and every
+ * `{ i18n }` value among them translated. Given `children`, it is a container: they render
+ * through `renderChildren` — on a `Grid` when the block sets `columns` — and arrive as the
+ * component's `children`. A container contributes nothing to a field's `name`.
  *
  * `node.when` false hides the node entirely (returns `null`, after both hooks have still
  * run); `node.disabledWhen` true only disables it — spec §5 draws that line deliberately, so
  * a disabled field's already-typed value stays visible and submitted rather than vanishing.
- * `disabledWhen` only reaches built-in and custom field kinds: a `section` has no `disabled`
- * slot in the kit contract (`SectionRenderProps`), and neither does a `block`, so those only
- * ever hide via `when`, never disable.
+ * `disabledWhen` only reaches built-in and custom field kinds: a block has none, so it only
+ * ever hides via `when`, never disables.
  *
- * Resolution order for a node past the built-in kinds and `section` (spec §4.7, §8):
- * `blocks[node.component]` for `type: 'block'` → `submit` → `fields[node.type]` for a custom
- * field kind → throw naming the type. A custom field goes through `form.AppField` directly,
+ * Resolution order for a node past the built-in kinds (spec §4.7, §8): `components[component]`
+ * for `type: 'block'` → `fields[node.type]` for a custom field kind → throw naming the type. A custom field goes through `form.AppField` directly,
  * the same TanStack primitive the built-in `create*Field` wrappers close over — see
  * `fieldRenderProps`, reused here so a custom field gets byte-for-byte the same binding shape
  * a built-in one does, not a hand-rolled subset of it. A block gets none of that: it has no
  * `name` and holds no value, so it renders from `props` alone.
  */
-export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeArgs<TValues>): ReactNode {
+export function RenderNode<TValues>({ cell: Cell, ...args }: RenderNodeArgs<TValues>): ReactNode {
 	// `form` carries far more than `FormFieldComponents` at runtime — the real bound instance
 	// — so this narrows it to just the store shape `useConditionValue` needs, the same
 	// `as unknown` pattern `buildFieldComponents` uses for `BindableForm`.
+	const conditionForm = args.form as unknown as ConditionSubscribableForm<TValues>
+	const visible = useConditionValue(conditionForm, args.node.when, true, args.context.itemPath)
+	if (!visible) return null
+	// Visibility is decided here, above the grid cell, so a hidden node takes no column; the
+	// content below mounts only while the node shows.
+	const content = <NodeContent {...args} />
+	if (Cell === undefined) return content
+	return <Cell colSpan={args.node.colSpan}>{content}</Cell>
+}
+
+/** The visible node, as the kit component for its kind — see {@link RenderNode}. */
+function NodeContent<TValues>({ node, form, layout, context }: RenderNodeArgs<TValues>): ReactNode {
 	const conditionForm = form as unknown as ConditionSubscribableForm<TValues>
-	const visible = useConditionValue(conditionForm, node.when, true, context.itemPath)
-	const disabledByCondition = useConditionValue(conditionForm, node.disabledWhen, false, context.itemPath)
+	// A block carries no `disabledWhen`, `label` or `description` — what it shows is in `props`.
+	const caption = isBlockNode(node) ? undefined : node
+	const disabledByCondition = useConditionValue(conditionForm, caption?.disabledWhen, false, context.itemPath)
 	// Unconditional, exactly like the two above: only the four select-like kinds can carry
 	// `optionsFrom`, but every node has to have called this for the hook order to stay stable.
 	// `undefined` for every node that does not.
 	const optionsFrom = (node as OptionBearingNode).optionsFrom
 	const sourceParams = useOptionSourceParams(conditionForm, optionsFrom)
 
-	const label = resolveText(node.label, context.translate)
-	const description = resolveText(node.description, context.translate)
-
-	if (!visible) return null
+	const label = resolveText(caption?.label, context.translate)
+	const description = resolveText(caption?.description, context.translate)
 
 	if (isCustomFieldNode(node)) {
-		const CustomField = context.fields?.[node.type]
+		// `assertDocumentComponents` has already rejected an unregistered kind up front, before any
+		// node rendered; this check only narrows the lookup.
+		// Own keys only: a document string such as "toString" must not resolve an Object.prototype member.
+		const CustomField =
+			context.fields !== undefined && Object.hasOwn(context.fields, node.type) ? context.fields[node.type] : undefined
 		if (CustomField === undefined) {
-			throw new Error(`Unknown node type "${node.type}".`)
+			throw new Error(missingCustomFieldMessage(node.type))
 		}
 
 		// A custom field has no `create*Field` wrapper (see `buildFieldComponents`), so it
@@ -311,6 +355,14 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 		)
 	}
 
+	// The bound field set holds exactly what the form registered, so a built-in kind can be absent.
+	// `assertDocumentComponents` has already rejected that up front; this only keeps the narrowing.
+	if (isBuiltInFieldType(node.type)) {
+		if ((form as Partial<BuiltInFieldComponents<TValues>>)[BUILT_IN_SLOT_BY_TYPE[node.type]] === undefined) {
+			throw new Error(missingBuiltInFieldMessage(node.type))
+		}
+	}
+
 	switch (node.type) {
 		case FormFieldType.Text:
 			return (
@@ -320,8 +372,7 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					description={description}
 					disabled={disabledByCondition}
 					{...(node.required !== undefined && { required: node.required })}
-					{...(node.placeholder !== undefined && { placeholder: node.placeholder })}
-					{...(node.inputType !== undefined && { type: node.inputType })}
+					{...nodeKitProps(node)}
 				/>
 			)
 		case FormFieldType.Number:
@@ -332,10 +383,7 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					description={description}
 					disabled={disabledByCondition}
 					{...(node.required !== undefined && { required: node.required })}
-					{...(node.placeholder !== undefined && { placeholder: node.placeholder })}
-					{...(node.min !== undefined && { min: node.min })}
-					{...(node.max !== undefined && { max: node.max })}
-					{...(node.step !== undefined && { step: node.step })}
+					{...nodeKitProps(node)}
 				/>
 			)
 		case FormFieldType.Textarea:
@@ -346,8 +394,7 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					description={description}
 					disabled={disabledByCondition}
 					{...(node.required !== undefined && { required: node.required })}
-					{...(node.placeholder !== undefined && { placeholder: node.placeholder })}
-					{...(node.rows !== undefined && { rows: node.rows })}
+					{...nodeKitProps(node)}
 				/>
 			)
 		case FormFieldType.Select:
@@ -359,7 +406,7 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					disabled={disabledByCondition}
 					{...nodeOptionsProps(node, sourceParams, context.translate)}
 					{...(node.required !== undefined && { required: node.required })}
-					{...(node.placeholder !== undefined && { placeholder: node.placeholder })}
+					{...nodeKitProps(node)}
 					{...(node.searchable !== undefined && { searchable: node.searchable })}
 					{...(node.creatable !== undefined && { creatable: node.creatable })}
 					{...(node.createLabel !== undefined && { createLabel: node.createLabel })}
@@ -405,7 +452,7 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					disabled={disabledByCondition}
 					{...nodeOptionsProps(node, sourceParams, context.translate)}
 					{...(node.required !== undefined && { required: node.required })}
-					{...(node.placeholder !== undefined && { placeholder: node.placeholder })}
+					{...nodeKitProps(node)}
 					{...(node.searchable !== undefined && { searchable: node.searchable })}
 					{...(node.creatable !== undefined && { creatable: node.creatable })}
 					{...(node.createLabel !== undefined && { createLabel: node.createLabel })}
@@ -430,9 +477,7 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					description={description}
 					disabled={disabledByCondition}
 					{...(node.required !== undefined && { required: node.required })}
-					{...(node.placeholder !== undefined && { placeholder: node.placeholder })}
-					{...(node.min !== undefined && { min: node.min })}
-					{...(node.max !== undefined && { max: node.max })}
+					{...nodeKitProps(node)}
 				/>
 			)
 		case FormFieldType.DateRange:
@@ -443,9 +488,7 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					description={description}
 					disabled={disabledByCondition}
 					{...(node.required !== undefined && { required: node.required })}
-					{...(node.placeholder !== undefined && { placeholder: node.placeholder })}
-					{...(node.min !== undefined && { min: node.min })}
-					{...(node.max !== undefined && { max: node.max })}
+					{...nodeKitProps(node)}
 				/>
 			)
 		case FormFieldType.Slider:
@@ -456,9 +499,7 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					description={description}
 					disabled={disabledByCondition}
 					{...(node.required !== undefined && { required: node.required })}
-					{...(node.min !== undefined && { min: node.min })}
-					{...(node.max !== undefined && { max: node.max })}
-					{...(node.step !== undefined && { step: node.step })}
+					{...nodeKitProps(node)}
 				/>
 			)
 		case ARRAY_NODE_TYPE: {
@@ -469,7 +510,9 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 			// The item type is a property of the *node*, which the switch cannot express as a type
 			// parameter — the correlation is enforced where the schema is authored, and recovered at
 			// runtime by the path the field resolves to. See {@link ErasedArrayField}.
-			const ArrayField = form.ArrayField as ErasedArrayField
+			const bound: Partial<BuiltInFieldComponents<TValues>> = form
+			assertComponent(bound.ArrayField, MissingComponentMessage.ArrayField)
+			const ArrayField = bound.ArrayField as ErasedArrayField
 			return (
 				<ArrayField
 					name={node.name}
@@ -504,7 +547,7 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 									form: { ...form, ...item },
 									layout,
 									context: { ...context, itemPath: `${arrayPath}[${String(item.index)}]` },
-									parentColumns: undefined,
+									columns: node.columns,
 								})}
 							</item.Item>
 						))
@@ -512,32 +555,17 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 				</ArrayField>
 			)
 		}
-		case 'section': {
-			const title = resolveText(node.title, context.translate)
-			return (
-				<layout.Section
-					title={title}
-					description={description}
-					columns={node.columns}
-				>
-					{renderChildren(node.children, { form, layout, context, parentColumns: node.columns })}
-				</layout.Section>
-			)
-		}
 		case 'block': {
-			const Block = context.blocks?.[node.component]
-			if (Block === undefined) {
-				throw new Error(`Unknown block component "${node.component}".`)
-			}
-			return <Block props={node.props ?? {}} />
-		}
-		case 'submit': {
-			return (
-				<form.SubmitButton {...(node.disabled !== undefined && { disabled: node.disabled })}>{label}</form.SubmitButton>
-			)
+			// `assertDocumentComponents` has already rejected a missing component and `Grid` up front;
+			// this lookup only narrows. Own keys only, exactly as for a custom field kind.
+			const Block = Object.hasOwn(layout, node.component) ? layout[node.component] : undefined
+			if (Block === undefined) throw new Error(missingBlockMessage(node.component))
+			const props = resolveBlockProps(node.props, context.translate)
+			if (node.children === undefined) return <Block {...props} />
+			return <Block {...props}>{renderChildren(node.children, { form, layout, context, columns: node.columns })}</Block>
 		}
 		default: {
-			// Every FormFieldType plus `section`, `block` and `submit` is handled above, and
+			// Every FormFieldType plus `block` and `array` is handled above, and
 			// `isCustomFieldNode` has already pulled out anything else — this only fires for a
 			// node type that grows a member without a matching case, which is exactly what
 			// should throw.

@@ -7,7 +7,7 @@ import { Form } from 'shared/form/FormKit'
  *
  * Written out inline, with no option source anywhere — which is the second half of what this
  * example shows. A `searchable` field used to require `optionsFrom`; a static list is now
- * filtered in the renderer instead, by one fixed rule (a case-insensitive substring of the
+ * filtered in `SchemaForm` instead, by one fixed rule (a case-insensitive substring of the
  * label) and with no configuration. Anything more particular than that is what an option
  * source is for.
  */

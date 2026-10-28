@@ -1,18 +1,18 @@
 ---
 title: Native API
-description: The flat fields are additive — form.Field, form.handleSubmit and form.state are all still there, on the same TanStack Form instance.
+description: The flat fields are additive — form.Field binds a control of your own, form.NativeField is TanStack's field, and form.handleSubmit and form.state are still there.
 ---
 
-The flat fields are **added to** the TanStack Form instance, not layered over it. Everything the native API gives you is on the same object, unchanged:
+The flat fields are **added to** the TanStack Form instance, not layered over it. Next to them sit a field for a control of your own and TanStack's field itself, and the rest of the native API is on the same object, unchanged:
 
-| Member               | Still there                                                            |
-| -------------------- | ---------------------------------------------------------------------- |
-| `form.Field`         | The render-prop field, for markup the flat fields do not cover.        |
-| `form.Subscribe`     | Selector-based subscription — see [Reactivity](/docs/form/reactivity). |
-| `form.handleSubmit`  | Submit programmatically.                                               |
-| `form.state`         | The current snapshot (not reactive on its own).                        |
-| `form.setFieldValue` | …and the rest of the imperative API.                                   |
-| `form.AppField`      | TanStack's own component-bound field.                                  |
+| Member               | What it is                                                                                           |
+| -------------------- | ---------------------------------------------------------------------------------------------------- |
+| `form.Field`         | Binds a control of your own like a registered field: `value`, `onChange`, `errors`, `invalid`, `id`. |
+| `form.NativeField`   | TanStack's render-prop field, with its `FieldApi`.                                                   |
+| `form.Subscribe`     | Selector-based subscription — see [Reactivity](/docs/form/reactivity).                               |
+| `form.handleSubmit`  | Submit programmatically.                                                                             |
+| `form.state`         | The current snapshot (not reactive on its own).                                                      |
+| `form.setFieldValue` | …and the rest of the imperative API.                                                                 |
 
 So reaching for a custom control never means abandoning the fields you already wrote:
 
@@ -20,29 +20,79 @@ So reaching for a custom control never means abandoning the fields you already w
 
 <Callout>
 	This is the one part of the API with no counterpart in a document. Reading form state and re-rendering on it is
-	arbitrary JavaScript, and a `FormSchema` carries no code — the renderer handles its own re-rendering, and the
+	arbitrary JavaScript, and a `FormSchema` carries no code — `SchemaForm` handles its own re-rendering, and the
 	declarative cases are covered by a node's `when` and `disabledWhen` conditions. See [Config-driven
 	forms](/docs/form/schema).
 </Callout>
 
 ## `form.Field`
 
-Use it whenever you need a control we do not ship — a segmented picker, a slider, a colour input:
+Use it whenever you need a control we do not ship — a segmented picker, a slider, a colour input. It is bound exactly like a registered field, and its render prop gets what a [custom field](/docs/form/custom-fields) gets, minus the `props` bag:
 
 ```tsx
-<form.Field name='seats'>
-	{(field) => (
-		<MySegmentedControl
-			value={field.state.value}
-			onChange={field.handleChange}
-			onBlur={field.handleBlur}
-			invalid={field.state.meta.errors.length > 0}
-		/>
+<form.Field
+	name='seats'
+	label='Seats'
+	validate={{ min: 1 }}
+>
+	{({ value, onChange, onBlur, errors, invalid, label, description, ...field }) => (
+		<div>
+			<span>{label}</span>
+			<MySegmentedControl
+				{...field}
+				value={value}
+				onChange={onChange}
+				onBlur={onBlur}
+				invalid={invalid}
+			/>
+			{invalid && <p role='alert'>{errors.join(', ')}</p>}
+		</div>
 	)}
 </form.Field>
 ```
 
-You own the chrome here — label, description and error rendering are up to you. If you want the flat fields' layout and error handling around your own control, [write a kit](/docs/form/custom-kit) instead.
+| Render prop                     | What it carries                                                                        |
+| ------------------------------- | -------------------------------------------------------------------------------------- |
+| `value`, `onChange`             | The field's value, and a setter that takes the value itself rather than an event.      |
+| `onBlur`                        | Marks the field touched.                                                               |
+| `errors`, `invalid`             | Display strings and `errors.length > 0`.                                               |
+| `id`, `name`                    | The id for the focusable control, and the field's path.                                |
+| `data-field`, `data-field-type` | The field's `name`, and `'field'` — the same styling hooks a registered field carries. |
+| `data-form-id`                  | The form's id; spread it with `data-field` so focus-on-error can find this control.    |
+| `label`, `description`          | What you passed, handed back for you to render.                                        |
+| `disabled`, `required`          | What you passed; `validate.required` implies `required`.                               |
+
+`label` and `description` are content for you to render, not DOM attributes — take them out before spreading the rest onto an element, as above, or they land on it as attributes.
+
+It validates through `validate`, like every field of this package: `required`, `min`, `max`, `minLength`, `maxLength`, `format` and `messages`. A rule that needs a standard schema or a function belongs on the form or on a group, or on [`form.NativeField`](#formnativefield). `errors` arrive filtered by the same display rule every field follows: empty until the field is touched or a submit was attempted.
+
+You own the chrome here — label, description and error rendering are up to you. A control you need in several places is a field type of its own: [`defineFieldType`](/docs/form/custom-fields).
+
+## `form.NativeField`
+
+TanStack's own render-prop field, with the whole `FieldApi` in the render prop — reach for it when you need what `form.Field` does not hand out: the field's meta, `pushValue` and the rest of the `FieldApi`, or TanStack's own `validators`:
+
+```tsx
+<form.NativeField name='notes'>
+	{(field) => (
+		<textarea
+			value={field.state.value}
+			onChange={(event) => {
+				field.handleChange(event.target.value)
+			}}
+			onBlur={field.handleBlur}
+		/>
+	)}
+</form.NativeField>
+```
+
+It is a level below this package: what this package does around fields does not see it. It takes no part in assembling the render props — no `errors` filtered by the display rule, no `data-field`, no `id` — so all of that is yours. TanStack's own examples write `form.Field` with a `FieldApi` render prop; paste them into `form.NativeField`, not `form.Field`, where they fail to compile.
+
+## Groups and array entries
+
+The pair exists wherever a form hands you a scope. A [group](/docs/form/composition) carries `group.Field` and `group.NativeField`, and an [array entry](/docs/form/arrays) carries `item.Field` and `item.NativeField`, with the same meaning as on the form. Their `name` is relative to the group or the entry.
+
+`group.NativeField` and `item.NativeField` hand over the root form's `FieldApi`, so `field.name` is the absolute path — `address.city`, `tags[0].label` — not the relative one you wrote. The names in `onChangeListenTo` / `onBlurListenTo` are relative too, and are mapped the same way.
 
 ## Reading state
 
@@ -78,8 +128,8 @@ And if you would rather own the `<form>` element entirely, skip `<Form>` — tak
 </form>
 ```
 
-The flat fields do not care which element they sit in — they bind to the form instance, not to the DOM node.
+The flat fields do not care which element they sit in — they bind to the form instance, not to the DOM node. Components that read the form from context — `form.SubmitButton` and any component you registered in `components` — are different: they need `<Form>`, `<SchemaForm>` or a [`FormProvider`](/docs/form/composition/with-form#formprovider) above them, and a hand-written `<form>` is not one.
 
 ## Composition helpers
 
-All four of TanStack's composition helpers — `withForm`, `withFieldGroup`, `useFormGroup` and `useFieldGroup` — are shipped by your kit package, with `withForm` retyped so the flat fields compile inside a block. They have a page of their own: [Composition](/docs/form/composition).
+Your kit ships `withForm`, `withFieldGroup` and `form.FormGroup` for a part of a form, and the hooks `useFieldGroup` and `useFormGroup` behind the last two. A `withForm` or `withFieldGroup` block placed without a `form` prop takes the form above it. The groups — a `withFieldGroup` block and `form.FormGroup` — carry the bundle's flat fields as well as `group.Field` and `group.NativeField`, all named relative to the group. They have a page of their own: [Composition](/docs/form/composition).

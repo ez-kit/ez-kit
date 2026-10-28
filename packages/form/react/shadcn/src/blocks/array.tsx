@@ -3,12 +3,13 @@ import { ChevronDownIcon, ChevronUpIcon, PlusIcon, Trash2Icon } from 'lucide-rea
 import { Button as ButtonPrimitive } from '@form-shadcn/components/ui/button'
 import { FieldDescription, FieldError, FieldLegend, FieldSet } from '@form-shadcn/components/ui/field'
 
-import type { ArrayFieldRenderProps, ArrayItemRenderProps } from '@ez-kit/form-react'
+import type { ArrayFieldRenderProps, ArrayFieldSlot, ArrayItemRenderProps } from '@ez-kit/form-react'
 import type { ReactNode } from 'react'
 
 /**
- * The repeatable group of the shadcn kit: `ArrayField` draws the list, `ArrayItem` draws one
- * entry of it.
+ * The repeatable group of the shadcn kit: `ArrayFieldView` draws the list, `ArrayItem` draws one
+ * entry of it, and `ArrayField` is the pair as the contract registers it — the frame carrying
+ * the entry as `ArrayField.Item`.
  *
  * Two adapters rather than one for the reason the contract gives — only the entry can place its
  * own remove control, because only it knows where its row ends. Both are `blocks/` adapters over
@@ -54,7 +55,7 @@ function ariaLabel(caption: ReactNode, fallback: string): string {
 	return typeof caption === 'string' ? caption : fallback
 }
 
-export function ArrayField({
+function ArrayFieldView({
 	label,
 	description,
 	errors,
@@ -218,3 +219,10 @@ export function ArrayItem({
 		</div>
 	)
 }
+
+/**
+ * The kit's array slot: the frame, carrying its entry view as `ArrayField.Item`, registered with
+ * the fields as one key. Annotated through `@ez-kit/form-react` so the declaration names the
+ * contract type rather than spelling out the two components.
+ */
+export const ArrayField: ArrayFieldSlot = /* @__PURE__ */ Object.assign(ArrayFieldView, { Item: ArrayItem })

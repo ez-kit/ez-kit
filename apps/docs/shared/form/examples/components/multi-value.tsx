@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-import { defineFormSchema, FormFieldType, FormRenderer } from 'shared/form/FormKit'
+import { defineFormSchema, FormFieldType, SchemaForm } from 'shared/form/FormKit'
 
 type Profile = {
 	tags: string[]
@@ -34,8 +34,9 @@ const schema = defineFormSchema<Profile>()({
 	version: 1,
 	children: [
 		{
-			type: 'section',
-			title: 'Profile',
+			type: 'block',
+			component: 'Section',
+			props: { title: 'Profile' },
 			columns: 2,
 			children: [
 				{
@@ -58,7 +59,7 @@ const schema = defineFormSchema<Profile>()({
 				},
 			],
 		},
-		{ type: 'submit', label: 'Save' },
+		{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } },
 	],
 })
 
@@ -67,7 +68,7 @@ export function MultiValueExample() {
 
 	return (
 		<div className='flex flex-col gap-4'>
-			<FormRenderer
+			<SchemaForm
 				schema={schema}
 				onSubmit={({ value }) => {
 					setSaved(JSON.stringify(value, null, 2))
