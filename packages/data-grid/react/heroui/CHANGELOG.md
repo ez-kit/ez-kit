@@ -1,5 +1,13 @@
 # @ez-kit/data-grid-heroui
 
+## 0.13.1
+
+### Patch Changes
+
+- Updated dependencies [b744e27]
+  - @ez-kit/data-grid-core@0.14.0
+  - @ez-kit/data-grid-react@0.15.0
+
 ## 0.13.0
 
 ### Minor Changes
