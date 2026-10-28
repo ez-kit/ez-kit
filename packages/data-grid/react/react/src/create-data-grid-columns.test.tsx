@@ -402,6 +402,31 @@ describe('bundle columns: a union config layer', () => {
 	})
 })
 
+describe('bundle columns: a config layer with an index signature', () => {
+	const indexed = createDataGrid({
+		components: testComponents,
+		features: TEST_FEATURES,
+		cellTypes: bundleCellTypes,
+		columnConfig: defineColumnConfig<{ filtering: { mode?: 'tags' | 'single'; [key: string]: unknown } }>(),
+	})
+
+	it('still checks the keys it names', () => {
+		const grid = (
+			<indexed.DataGrid
+				data={ROWS}
+				columns={[
+					{ accessorKey: 'name', filtering: { config: { mode: 'tags', anything: 1 } } },
+					// @ts-expect-error `mode` is `'tags' | 'single'`, which the index signature does not widen
+					{ accessorKey: 'name', filtering: { config: { mode: 5 } } },
+					// @ts-expect-error a layer never states a list
+					{ accessorKey: 'name', filtering: { config: { items: [] } } },
+				]}
+			/>
+		)
+		expect(grid).toBeTruthy()
+	})
+})
+
 describe('bare package grid: config layers', () => {
 	it('does not check config layers', () => {
 		const grid = (

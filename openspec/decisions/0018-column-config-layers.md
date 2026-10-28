@@ -61,6 +61,18 @@ Known consequences. A declared layer and the unchecked one both spell out `items
 `useItems?: never`; besides rejecting a list, that keeps unchecked columns (from core's own
 `createColumns`) assignable to a declared layer, which TypeScript treats as a weak type. A kit that
 declares a layer closes it: a consumer cannot add a key of their own to it on that kit's grids.
+A declared layer is rebuilt as a key-remapped mapped type, not with `Omit`: `Omit` goes through
+`keyof`, which for a layer with an index signature is `string`, and would drop every key the layer
+names. A bundle that declares `columnConfig` must name it as `DataGridBundle`'s fourth type argument;
+a default-argument annotation no longer fits it. The create field inherits the editing layer at
+runtime, but the two surfaces are declared independently, so a key both read is given one type in
+both by the kit. Columns from an unchecked builder (core's `createColumns`, or a bundle without
+`columnConfig`) pass into a declared bundle unchecked — the price of keeping them assignable.
+
+The merged object is cached on what it is built from — the base, each layer and the list's
+`items`, held weakly — so a renderer gets the same `config` while its column and list are
+unchanged, as the cell's own `cell.config` always was. Not on the meta: a filter target rebuilds
+its `{ cell, filtering }` on every render, and a cache keyed on it would never hit.
 
 The type-check cost was measured with `tsc --extendedDiagnostics --incremental false` on `apps/docs`
 before and after; the change stayed inside run-to-run noise. Guards:

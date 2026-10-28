@@ -147,6 +147,33 @@ describe('config layers — the filter', () => {
 		expect(received.at(-1)?.config).toEqual({ items: [{ value: 'b', label: 'B' }], creatable: true })
 	})
 
+	it('puts a hook-loaded list on top of its layer', () => {
+		const received: InputComponentProps[] = []
+		function Filter(props: InputComponentProps) {
+			received.push(props)
+			return null
+		}
+		const loaded = [{ value: 'h', label: 'H' }]
+		renderGrid<Row>({
+			data: ROWS,
+			filtering: true,
+			columns: createColumns<Row, ProbeRegistry>([
+				{
+					accessorKey: 'status',
+					header: 'Status',
+					cell: { type: 'select', config: { items: [] } },
+					filtering: {
+						component: Filter,
+						useItems: () => ({ items: loaded, isLoading: false, error: undefined }),
+						config: { creatable: true },
+					},
+				},
+			]),
+		})
+
+		expect(received.at(-1)?.config).toEqual({ items: loaded, creatable: true })
+	})
+
 	it('drops a list a layer holds, keeping the column’s own', () => {
 		vi.spyOn(console, 'warn').mockImplementation(() => undefined)
 		const received: InputComponentProps[] = []
@@ -212,6 +239,83 @@ describe('config layers — the editor', () => {
 		expect(seen.view.at(-1)).toEqual({ base: 1 })
 	})
 
+	it('does not see the create field’s layer', () => {
+		const { seen, table } = probeGrid({
+			cell: { type: 'probe', config: { base: 1 } },
+			editing: { config: { mask: 'phone' } },
+			creating: { config: { hint: 'new' } },
+		})
+
+		act(() => {
+			table.editing.start('1')
+		})
+
+		expect(seen.editing.at(-1)).toEqual({ base: 1, mask: 'phone' })
+	})
+
+	it('reaches the editor of the modal form, without the create field’s layer', () => {
+		const { seen, table } = probeGrid(
+			{
+				cell: { type: 'probe', config: { base: 1 } },
+				editing: { config: { mask: 'phone' } },
+				creating: { config: { hint: 'new' } },
+			},
+			{ editing: { mode: 'modal', onSave: () => undefined } },
+		)
+		seen.editing.length = 0
+
+		act(() => {
+			table.editing.start('1')
+		})
+
+		expect(seen.editing.length).toBeGreaterThan(0)
+		expect(seen.editing.at(-1)).toEqual({ base: 1, mask: 'phone' })
+	})
+
+	it('drops a list the editor’s layer holds', () => {
+		vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+		const { seen, table } = probeGrid({
+			cell: { type: 'probe', config: { base: 1 } },
+			editing: { config: { items: [{ value: 'x', label: 'X' }], useItems: () => undefined, mask: 'phone' } },
+		})
+
+		act(() => {
+			table.editing.start('1')
+		})
+
+		expect(seen.editing.at(-1)).toEqual({ base: 1, mask: 'phone' })
+	})
+
+	it('hands the same config object to every render while the column stays the same', () => {
+		const { seen, table } = probeGrid({
+			cell: { type: 'probe', config: { base: 1 } },
+			editing: { config: { mask: 'phone' } },
+		})
+
+		act(() => {
+			table.editing.start('1')
+		})
+		act(() => {
+			table.editing.setValue('name', 'Bob')
+		})
+
+		expect(seen.editing.length).toBeGreaterThan(1)
+		expect(new Set(seen.editing).size).toBe(1)
+	})
+
+	it('treats a null layer as none rather than throwing', () => {
+		const { seen, table } = probeGrid({
+			cell: { type: 'probe', config: { base: 1 } },
+			editing: { config: null as never },
+		})
+
+		act(() => {
+			table.editing.start('1')
+		})
+
+		expect(seen.editing.at(-1)).toEqual({ base: 1 })
+	})
+
 	it('hands an editing.component the merged config', () => {
 		const received: FieldState[] = []
 		function Editor(props: FieldState) {
@@ -275,5 +379,36 @@ describe.each(['row', 'modal'] as const)('config layers — the create form (%s)
 		)
 
 		expect(seen.creating.at(-1)).toEqual({ base: 1 })
+	})
+
+	it('takes its own layer when the column is not editable', () => {
+		const seen = emptySeen()
+		openCreateForm(
+			createColumns<Row, ProbeRegistry>([
+				{
+					accessorKey: 'name',
+					cell: { type: 'probe', config: { base: 1 } },
+					editing: false,
+					creating: { config: { hint: 'new' } },
+				},
+			]),
+			seen,
+			mode,
+		)
+
+		expect(seen.creating.at(-1)).toEqual({ base: 1, hint: 'new' })
+	})
+
+	it('drops a list its layer holds', () => {
+		vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+		const seen = emptySeen()
+		const column = {
+			accessorKey: 'name',
+			cell: { type: 'probe', config: { base: 1 } },
+			creating: { config: { items: [{ value: 'x', label: 'X' }], hint: 'new' } },
+		}
+		openCreateForm([column as never], seen, mode)
+
+		expect(seen.creating.at(-1)).toEqual({ base: 1, hint: 'new' })
 	})
 })

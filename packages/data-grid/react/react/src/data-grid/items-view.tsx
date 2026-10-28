@@ -18,6 +18,34 @@ import type { ComponentType, ReactNode } from 'react'
 type CellConfig = Record<string, unknown>
 
 /**
+ * The merged configs already handed out, so a renderer gets the same object on every render while
+ * its column and list stay the same — a component that keys a `useMemo` or `useEffect` on `config`
+ * must not recompute on every keystroke because a layer is set. Keyed weakly on the objects the
+ * result is built from — the base, each layer, the list's `items` — rather than on the meta, which
+ * a filter target rebuilds on every render.
+ */
+type MemoNode = { next: WeakMap<object, MemoNode>; value?: CellConfig }
+
+const MERGED: MemoNode = { next: new WeakMap() }
+
+/** Stands in for an absent base: the chain is keyed by objects only. */
+const NO_CONFIG = {}
+
+function memoized(keys: readonly object[], build: () => CellConfig): CellConfig {
+	let node = MERGED
+	for (const key of keys) {
+		let child = node.next.get(key)
+		if (child === undefined) {
+			child = { next: new WeakMap() }
+			node.next.set(key, child)
+		}
+		node = child
+	}
+	node.value ??= build()
+	return node.value
+}
+
+/**
  * `cell.config` with the slot's layers laid over it, nearest last, each key replacing the one
  * beneath it whole. A layer's `items` / `useItems` are dropped: a layer never states a list (core
  * warns when one does), and the slot's own list goes on top in {@link configWithItems}.
@@ -29,10 +57,12 @@ function layeredConfig(meta: ItemsMeta, slot: ItemsSourceSlot): CellConfig | und
 	const base = meta.cell?.config
 	const layers = configLayersOf(meta, slot).filter((layer) => layer !== undefined)
 	if (layers.length === 0) return base
-	return layers.reduce<CellConfig>((merged, layer) => {
-		const { items: _items, useItems: _useItems, ...keys } = layer
-		return { ...merged, ...keys }
-	}, base ?? {})
+	return memoized([base ?? NO_CONFIG, ...layers], () =>
+		layers.reduce<CellConfig>((merged, layer) => {
+			const { items: _items, useItems: _useItems, ...keys } = layer
+			return { ...merged, ...keys }
+		}, base ?? {}),
+	)
 }
 
 /**
@@ -42,7 +72,7 @@ function layeredConfig(meta: ItemsMeta, slot: ItemsSourceSlot): CellConfig | und
  * knows nothing about hooks.
  *
  * `undefined` exactly when the column wrote no config, sets no layer for the slot and states no
- * list, as before.
+ * list, as before. The same object comes back while the column and its list stay the same.
  */
 export function configWithItems(
 	meta: ItemsMeta,
@@ -54,7 +84,7 @@ export function configWithItems(
 	// handed over as written even when a level of the column states a list — a `text` column with
 	// `editing.items` must not grow a config it never declared.
 	if (options === undefined || !hasItemCellType(meta)) return config
-	return { ...config, items: options.items }
+	return memoized([config ?? NO_CONFIG, options.items], () => ({ ...config, items: options.items }))
 }
 
 /** The props `config` arrives under, spread so an absent config stays an absent key. */

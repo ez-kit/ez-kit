@@ -19,6 +19,9 @@ also the kit's `MultiSelectFilter` and `BetweenInput`, as `config`. The filter m
   declares the layers' type, and the bundle's columns — inline and from its builders — are checked
   against it. A surface it leaves out, every surface of a bundle without it, and the bare grid stay
   unchecked. The new type parameter is last everywhere and defaults to unchecked, so existing
-  `DataGridBundle<…>` annotations keep compiling.
+  `DataGridBundle<…>` annotations keep compiling; a bundle that declares `columnConfig` names it as
+  the fourth type argument.
+- A renderer gets the same `config` object on every render while its column and list stay the
+  same, layered or not.
 
 A column that sets no layer hands its renderers exactly the `config` it did before.

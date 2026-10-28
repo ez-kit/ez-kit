@@ -160,6 +160,18 @@ describe('filtering.config — MultiSelectFilter', () => {
 		expect(lastFor(received.multiSelect, 'Filter Tag…')?.config).toEqual({ items: TAG_ITEMS, creatable: true })
 	})
 
+	it('hands the same config object to every render while the column and its list stay the same', () => {
+		const { received, table } = renderWithLayout(DefaultLayout)
+
+		act(() => {
+			table().setColumnFilters([{ id: 'status', value: { operator: 'in', value: ['open'] } }])
+		})
+
+		const configs = received.multiSelect.filter((props) => props.label === 'Filter Tag…').map((props) => props.config)
+		expect(configs.length).toBeGreaterThan(1)
+		expect(new Set(configs).size).toBe(1)
+	})
+
 	it('carries only the base for a column without a layer', () => {
 		const { received } = renderWithLayout(DefaultLayout)
 
@@ -215,6 +227,23 @@ describe('filtering.config — the other filter controls', () => {
 		expect(between?.min).toBe(0)
 		expect(between?.max).toBe(10)
 		expect(between?.config).toEqual({ unit: '%' })
+	})
+
+	it('reaches a date column’s BetweenInput', () => {
+		type Dated = Row & { due: string }
+		const columns = createColumns<Dated>([
+			{
+				accessorKey: 'due',
+				header: 'Due',
+				cell: { type: 'date', config: { format: { month: 'short' } } },
+				filtering: { operators: true, defaultOperator: 'between', config: { weekStartsOn: 1 } },
+			},
+		])
+		const { received } = renderWithLayout(DefaultLayout, { columns: columns as never })
+
+		const between = received.between.at(-1)
+		expect(between?.type).toBe('date')
+		expect(between?.config).toEqual({ format: { month: 'short' }, weekStartsOn: 1 })
 	})
 
 	it('does not reach core.Input or OperatorSelect', () => {

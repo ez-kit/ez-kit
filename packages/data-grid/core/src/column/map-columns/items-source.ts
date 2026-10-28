@@ -35,8 +35,9 @@ export function warnOnBothItemSources(who: string, level: string, config: ItemsL
  * puts on top of the layer. The key is dropped there, so it reaches no renderer. The types already
  * forbid it; this is for a column written in JavaScript.
  */
-export function warnOnListInLayer(who: string, surface: string, layer: object | undefined): void {
-	if (!IS_DEV || layer === undefined) return
+export function warnOnListInLayer(who: string, surface: string, layer: object | null | undefined): void {
+	// `null` only reaches here from JavaScript; it is no layer, and `'items' in null` would throw.
+	if (!IS_DEV || layer == null) return
 	if (!('items' in layer) && !('useItems' in layer)) return
 	warnOnce(
 		`[data-grid] ${who} puts a value list in \`${surface}.config\`, which is ignored there. ` +

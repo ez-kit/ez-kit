@@ -67,7 +67,10 @@ const OPTIONS_BY_SLOT: Record<ItemsSourceSlot, (meta: ItemsMeta) => ListSpec | u
 export type ConfigLayer = Readonly<Record<string, unknown>>
 
 function layerOf(level: { config?: ConfigLayer | undefined } | false | undefined): ConfigLayer | undefined {
-	return level ? level.config : undefined
+	// Read as nullable: the types forbid a `null` layer, but a JavaScript column can still write one,
+	// and spreading it would throw where an absent layer is simply skipped.
+	const layer: ConfigLayer | null | undefined = level ? level.config : undefined
+	return layer ?? undefined
 }
 
 /**

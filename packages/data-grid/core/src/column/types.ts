@@ -689,11 +689,16 @@ export type ConfigLayerOf<TColumnConfig extends ColumnConfigShape, TSurface exte
 	: WithoutListKeys<DeclaredLayer<TColumnConfig, TSurface>>
 
 /**
- * A declared layer minus the list keys, member by member: `Omit` is not distributive, so over a
- * union layer (`{ mode: 'tags'; creatable?: boolean } | { mode: 'single' }`) it would keep only the
- * keys every member shares and reject the rest.
+ * A declared layer minus the list keys, member by member, with its own keys remapped rather than
+ * `Omit`-ted. `Omit` is not distributive, so over a union layer
+ * (`{ mode: 'tags'; creatable?: boolean } | { mode: 'single' }`) it would keep only the keys every
+ * member shares; and it rebuilds the layer from `keyof`, which for a layer with an index signature
+ * is `string`, so `{ mode?: 'tags'; [key: string]: unknown }` would lose `mode` and check nothing.
+ * A homomorphic mapped type keeps every key with its own modifiers.
  */
-type WithoutListKeys<TLayer> = TLayer extends unknown ? Omit<TLayer, keyof NoListKeys> & NoListKeys : never
+type WithoutListKeys<TLayer> = TLayer extends unknown
+	? { [K in keyof TLayer as K extends keyof NoListKeys ? never : K]: TLayer[K] } & NoListKeys
+	: never
 
 /**
  * The layer a shape declares for one surface, `never` when it declares none. The key is tested

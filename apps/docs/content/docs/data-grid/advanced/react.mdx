@@ -143,7 +143,16 @@ so a column's own `component` can still read a layer under the type it annotates
 `items` nor `useItems` belongs in a layer: a surface states its list with its own `items`.
 
 The layer is typed for the whole bundle, not per cell type — a key your kit's multi-select reads is
-accepted on a number column too, where nothing reads it.
+accepted on a number column too, where nothing reads it. The create field takes the editor's layer
+beneath its own, but the two are declared apart: give a key both surfaces read one type in both.
+
+A renderer gets the same `config` object on every render while its column and list stay the same,
+so a `useMemo` or `useEffect` keyed on it runs again only when the column does.
+
+A bundle that declares `columnConfig` has a type parameter of its own to match: a
+`DataGridBundle<CellTypes, Features>` annotation becomes
+`DataGridBundle<CellTypes, Features, Context, ColumnConfig>`, with `ColumnConfig` the type you
+passed to `defineColumnConfig`. A bundle that declares none keeps its annotation as it is.
 
 | Option         | Type                                                      | Default | Description                                                                                                              |
 | -------------- | --------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------ |
