@@ -8,7 +8,7 @@ import {
 import { setIfDefined } from '../../utils/set-if-defined'
 import { warnOnce } from '../../utils/warn-once'
 
-import { warnOnBothItemSources } from './items-source'
+import { warnOnBothItemSources, warnOnListInLayer } from './items-source'
 
 import type { ColumnOperatorsConfig, DatePreset, FilterOperatorDef, OperatorsConfig } from '../../features/operators'
 import type { ColumnFilteringConfig, ColumnFilteringMeta } from '../types'
@@ -257,6 +257,8 @@ export function resolveFiltering(
 	setIfDefined(meta, 'component', filteringCfg?.component)
 	setIfDefined(meta, 'debounce', filteringCfg?.debounce)
 	setIfDefined(meta, 'placeholder', filteringCfg?.placeholder)
+	setIfDefined(meta, 'config', filteringCfg?.config)
+	warnOnListInLayer(who, 'filtering', filteringCfg?.config)
 	setIfDefined(meta, 'items', filteringCfg?.items)
 	setIfDefined(meta, 'useItems', filteringCfg?.useItems)
 	warnOnBothItemSources(who, 'filtering', filteringCfg)

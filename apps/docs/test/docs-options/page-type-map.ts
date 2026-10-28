@@ -937,7 +937,10 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 	{
 		page: DocPage.AdvancedReact,
-		optionTables: [],
+		optionTables: [
+			// `createDataGrid({ columnConfig })` — the type the bundle's config layers are checked against.
+			{ heading: 'Column config layers', roots: [GRID_TYPE.CreateDataGridOptions], expectedCount: 1 },
+		],
 		nonOptionTables: [
 			{
 				heading: 'Public surface (overview)',
@@ -1081,7 +1084,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		page: DocPage.FilteringIndex,
 		optionTables: [
 			{ heading: '`filtering`', roots: [GRID_TYPE.ReactFilteringConfig], expectedCount: 7 },
-			{ heading: 'Per-column `filtering`', roots: [GRID_TYPE.ColumnFilteringConfig], expectedCount: 8 },
+			{ heading: 'Per-column `filtering`', roots: [GRID_TYPE.ColumnFilteringConfig], expectedCount: 9 },
 		],
 		nonOptionTables: [],
 	},
@@ -1131,7 +1134,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		page: DocPage.FilteringVariants,
 		optionTables: [
 			{ heading: '`UseFiltersResult`', roots: [GRID_TYPE.UseFiltersResult], expectedCount: 4 },
-			{ heading: '`OperatorFilterModel`', roots: [GRID_TYPE.OperatorFilterModel], expectedCount: 18 },
+			{ heading: '`OperatorFilterModel`', roots: [GRID_TYPE.OperatorFilterModel], expectedCount: 19 },
 		],
 		nonOptionTables: [
 			{

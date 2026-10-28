@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 import { baseCellTypes } from './cell-types'
 import { defineCellType } from './cell-types-context'
+import { defineColumnConfig } from './column-config'
 import { createDataGrid } from './create-data-grid'
 import { DataGrid as BareDataGrid } from './data-grid/data-grid'
 import { createColumns as createReactColumns } from './react-columns'
@@ -232,5 +233,209 @@ describe('runtime', () => {
 			/>,
 		)
 		expect(screen.getByText('Alice')).toBeInTheDocument()
+	})
+})
+
+// Config layers: the bundle declares the shape of `filtering` / `editing` / `creating.config`
+// once, through a type-only marker, and its columns are checked against it. A surface it does not
+// declare stays unchecked, as on a bundle that declares none.
+type LayeredConfig = {
+	filtering: { creatable?: boolean }
+	editing: { mask?: string }
+}
+const layered = createDataGrid({
+	components: testComponents,
+	features: TEST_FEATURES,
+	cellTypes: bundleCellTypes,
+	columnConfig: defineColumnConfig<LayeredConfig>(),
+})
+const otherLayered = createDataGrid({
+	components: testComponents,
+	features: TEST_FEATURES,
+	cellTypes: bundleCellTypes,
+	columnConfig: defineColumnConfig<{ filtering: { mode?: 'tags' } }>(),
+})
+
+describe('bundle columns: config layers', () => {
+	it('accepts a declared layer inline', () => {
+		render(
+			<layered.DataGrid
+				data={ROWS}
+				columns={[{ accessorKey: 'name', filtering: { operators: true, config: { creatable: true } } }]}
+			/>,
+		)
+		expect(screen.getByText('Bob')).toBeInTheDocument()
+	})
+
+	it('rejects a key the declared layer does not have, and a misspelled filtering option', () => {
+		const grid = (
+			<layered.DataGrid
+				data={ROWS}
+				columns={[
+					// @ts-expect-error the declared filtering layer has no `creatabel`
+					{ accessorKey: 'name', filtering: { config: { creatabel: true } } },
+					// @ts-expect-error `ColumnFilteringConfig` has no `confg`
+					{ accessorKey: 'name', filtering: { operators: true, confg: {} } },
+					// @ts-expect-error `mask` is a string
+					{ accessorKey: 'name', editing: { config: { mask: 1 } } },
+				]}
+			/>
+		)
+		expect(grid).toBeTruthy()
+	})
+
+	it('rejects a value list inside a layer, declared or not', () => {
+		const grid = (
+			<layered.DataGrid
+				data={ROWS}
+				columns={[
+					// @ts-expect-error a surface states its list with `editing.items`, never in its layer
+					{ accessorKey: 'name', editing: { config: { items: [] } } },
+					// @ts-expect-error the same holds for a surface the bundle leaves unchecked
+					{ accessorKey: 'name', creating: { config: { useItems: () => ({ items: [] }) } } },
+				]}
+			/>
+		)
+		expect(grid).toBeTruthy()
+	})
+
+	it('leaves a surface the bundle does not declare unchecked', () => {
+		const grid = (
+			<layered.DataGrid
+				data={ROWS}
+				columns={[{ accessorKey: 'name', creating: { config: { anything: 1 } } }]}
+			/>
+		)
+		expect(grid).toBeTruthy()
+	})
+
+	it('leaves every layer unchecked on a bundle that declares none', () => {
+		const grid = (
+			<bundle.DataGrid
+				data={ROWS}
+				columns={[{ accessorKey: 'name', filtering: { config: { creatable: true, mode: 'tags' } } }]}
+			/>
+		)
+		expect(grid).toBeTruthy()
+	})
+
+	it('checks each bundle against its own layers', () => {
+		const grids = [
+			<layered.DataGrid
+				key='a'
+				data={ROWS}
+				// @ts-expect-error this bundle's filtering layer has no `mode`
+				columns={[{ accessorKey: 'name', filtering: { config: { mode: 'tags' } } }]}
+			/>,
+			<otherLayered.DataGrid
+				key='b'
+				data={ROWS}
+				columns={[{ accessorKey: 'name', filtering: { config: { mode: 'tags' } } }]}
+			/>,
+		]
+		expect(grids).toHaveLength(2)
+	})
+
+	it('checks the layer in the bundle’s builder, and its output reaches the grid', () => {
+		// @ts-expect-error `creatable` is a boolean
+		layered.createColumns<Row>([{ accessorKey: 'name', filtering: { config: { creatable: 'yes' } } }])
+		const columns = layered.createColumns<Row>([{ accessorKey: 'name', filtering: { config: { creatable: true } } }])
+		const helper = layered.createColumnHelper<Row>()
+		const helped = [helper.text({ accessorKey: 'name', filtering: { config: { creatable: false } } })]
+		render(
+			<layered.DataGrid
+				data={ROWS}
+				columns={[...columns, ...helped]}
+			/>,
+		)
+		expect(screen.getAllByText('Bob')).toHaveLength(2)
+	})
+
+	it('accepts columns from the unbound builder, whose layers are unchecked', () => {
+		const grid = (
+			<layered.DataGrid
+				data={ROWS}
+				columns={createColumns<Row>([{ accessorKey: 'name', filtering: { config: { other: 1 } } }])}
+			/>
+		)
+		expect(grid).toBeTruthy()
+	})
+
+	it('still infers the row type from data', () => {
+		const { result } = renderHook(() =>
+			layered.useDataGrid({
+				data: ROWS,
+				columns: [
+					{ accessorKey: 'name', filtering: { config: { creatable: true } } },
+					// @ts-expect-error `Row` has no `nosuch`
+					{ accessorKey: 'nosuch' },
+				],
+			}),
+		)
+		expect(result.current.getAllLeafColumns()).toHaveLength(2)
+	})
+})
+
+describe('bundle columns: a union config layer', () => {
+	const unionLayered = createDataGrid({
+		components: testComponents,
+		features: TEST_FEATURES,
+		cellTypes: bundleCellTypes,
+		columnConfig: defineColumnConfig<{ filtering: { mode: 'tags'; creatable?: boolean } | { mode: 'single' } }>(),
+	})
+
+	it('accepts each member’s own keys and still rejects a list and a stray key', () => {
+		const grid = (
+			<unionLayered.DataGrid
+				data={ROWS}
+				columns={[
+					{ accessorKey: 'name', filtering: { config: { mode: 'tags', creatable: true } } },
+					{ accessorKey: 'name', filtering: { config: { mode: 'single' } } },
+					// @ts-expect-error no member of the layer has `nope`
+					{ accessorKey: 'name', filtering: { config: { mode: 'single', nope: 1 } } },
+					// @ts-expect-error a layer never states a list
+					{ accessorKey: 'name', filtering: { config: { mode: 'tags', items: [] } } },
+				]}
+			/>
+		)
+		expect(grid).toBeTruthy()
+	})
+})
+
+describe('bundle columns: a config layer with an index signature', () => {
+	const indexed = createDataGrid({
+		components: testComponents,
+		features: TEST_FEATURES,
+		cellTypes: bundleCellTypes,
+		columnConfig: defineColumnConfig<{ filtering: { mode?: 'tags' | 'single'; [key: string]: unknown } }>(),
+	})
+
+	it('still checks the keys it names', () => {
+		const grid = (
+			<indexed.DataGrid
+				data={ROWS}
+				columns={[
+					{ accessorKey: 'name', filtering: { config: { mode: 'tags', anything: 1 } } },
+					// @ts-expect-error `mode` is `'tags' | 'single'`, which the index signature does not widen
+					{ accessorKey: 'name', filtering: { config: { mode: 5 } } },
+					// @ts-expect-error a layer never states a list
+					{ accessorKey: 'name', filtering: { config: { items: [] } } },
+				]}
+			/>
+		)
+		expect(grid).toBeTruthy()
+	})
+})
+
+describe('bare package grid: config layers', () => {
+	it('does not check config layers', () => {
+		const grid = (
+			<BareDataGrid
+				features={TEST_FEATURES}
+				data={ROWS}
+				columns={[{ accessorKey: 'name', filtering: { config: { anything: 1 } } }]}
+			/>
+		)
+		expect(grid).toBeTruthy()
 	})
 })

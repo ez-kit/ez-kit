@@ -195,7 +195,7 @@ function renderFilterControl<TRow extends object>({
 			return flexRender(comp, {
 				value: filterValue,
 				onChange,
-				...configProp(configWithItems(meta, lists.options)),
+				...configProp(configWithItems(meta, ItemsSourceSlot.Filtering, lists.options)),
 				placeholder: fieldPlaceholder,
 			})
 	}
@@ -210,7 +210,7 @@ function renderFilterControl<TRow extends object>({
 				value: filterValue,
 				onChange,
 				onBlur: () => {},
-				...fieldItemsProps(meta, lists.options, lists.labels, filterValue),
+				...fieldItemsProps(meta, ItemsSourceSlot.Filtering, lists.options, lists.labels, filterValue),
 				placeholder: fieldPlaceholder,
 				error: undefined,
 				errors: [],
@@ -363,6 +363,7 @@ function renderOperatorFilter({
 					{...(betweenCfg?.slider === true ? { slider: true } : {})}
 					{...(betweenCfg?.min !== undefined ? { min: betweenCfg.min } : {})}
 					{...(betweenCfg?.max !== undefined ? { max: betweenCfg.max } : {})}
+					{...(model.config !== undefined ? { config: model.config } : {})}
 				/>
 				{presetMenu}
 				{clearButton}
@@ -383,6 +384,7 @@ function renderOperatorFilter({
 					placeholder={fieldPlaceholder}
 					{...(model.itemsLoading ? { itemsLoading: true } : {})}
 					{...(model.itemsError !== undefined ? { itemsError: model.itemsError } : {})}
+					{...(model.config !== undefined ? { config: model.config } : {})}
 				/>
 			</div>
 		)
@@ -397,7 +399,7 @@ function renderOperatorFilter({
 				{flexRender(columnFilterInput, {
 					value: inputValue,
 					onChange: onValueChange,
-					...configProp(configWithItems(meta, lists.options)),
+					...configProp(configWithItems(meta, ItemsSourceSlot.Filtering, lists.options)),
 					placeholder: fieldPlaceholder,
 				})}
 				{presetMenu}
@@ -417,7 +419,7 @@ function renderOperatorFilter({
 				value: inputValue,
 				onChange: onValueChange,
 				onBlur: () => {},
-				...fieldItemsProps(meta, lists.options, lists.labels, inputValue),
+				...fieldItemsProps(meta, ItemsSourceSlot.Filtering, lists.options, lists.labels, inputValue),
 				placeholder: fieldPlaceholder,
 				error: undefined,
 				errors: [],

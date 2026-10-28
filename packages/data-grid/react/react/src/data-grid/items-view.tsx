@@ -1,4 +1,5 @@
 import {
+	configLayersOf,
 	hasItemCellType,
 	ItemsSourceSlot,
 	labelListOf,
@@ -17,19 +18,73 @@ import type { ComponentType, ReactNode } from 'react'
 type CellConfig = Record<string, unknown>
 
 /**
- * The `config` a kit's component is handed: the column's own, with `items` replaced by the list
- * this place resolved to. `useItems` and `getItem` were never in it — the mapper lifts them out —
- * so a component that reads `config.items` gets the right list and knows nothing about hooks.
- *
- * `undefined` exactly when the column wrote no config and states no list, as before.
+ * The merged configs already handed out, so a renderer gets the same object on every render while
+ * its column and list stay the same — a component that keys a `useMemo` or `useEffect` on `config`
+ * must not recompute on every keystroke because a layer is set. Keyed weakly on the objects the
+ * result is built from — the base, each layer, the list's `items` — rather than on the meta, which
+ * a filter target rebuilds on every render.
  */
-export function configWithItems(meta: ItemsMeta, options: ListSnapshot | undefined): CellConfig | undefined {
-	const config = meta.cell?.config
+type MemoNode = { next: WeakMap<object, MemoNode>; value?: CellConfig }
+
+const MERGED: MemoNode = { next: new WeakMap() }
+
+/** Stands in for an absent base: the chain is keyed by objects only. */
+const NO_CONFIG = {}
+
+function memoized(keys: readonly object[], build: () => CellConfig): CellConfig {
+	let node = MERGED
+	for (const key of keys) {
+		let child = node.next.get(key)
+		if (child === undefined) {
+			child = { next: new WeakMap() }
+			node.next.set(key, child)
+		}
+		node = child
+	}
+	node.value ??= build()
+	return node.value
+}
+
+/**
+ * `cell.config` with the slot's layers laid over it, nearest last, each key replacing the one
+ * beneath it whole. A layer's `items` / `useItems` are dropped: a layer never states a list (core
+ * warns when one does), and the slot's own list goes on top in {@link configWithItems}.
+ *
+ * The base comes back as it is — same object — when no layer is set, so a column without layers
+ * hands its renderers exactly what it did before layers existed.
+ */
+function layeredConfig(meta: ItemsMeta, slot: ItemsSourceSlot): CellConfig | undefined {
+	const base = meta.cell?.config
+	const layers = configLayersOf(meta, slot).filter((layer) => layer !== undefined)
+	if (layers.length === 0) return base
+	return memoized([base ?? NO_CONFIG, ...layers], () =>
+		layers.reduce<CellConfig>((merged, layer) => {
+			const { items: _items, useItems: _useItems, ...keys } = layer
+			return { ...merged, ...keys }
+		}, base ?? {}),
+	)
+}
+
+/**
+ * The `config` a kit's component is handed: the column's own with the slot's layers over it, and
+ * `items` replaced by the list this place resolved to. `useItems` and `getItem` were never in it —
+ * the mapper lifts them out — so a component that reads `config.items` gets the right list and
+ * knows nothing about hooks.
+ *
+ * `undefined` exactly when the column wrote no config, sets no layer for the slot and states no
+ * list, as before. The same object comes back while the column and its list stay the same.
+ */
+export function configWithItems(
+	meta: ItemsMeta,
+	slot: ItemsSourceSlot,
+	options: ListSnapshot | undefined,
+): CellConfig | undefined {
+	const config = layeredConfig(meta, slot)
 	// Only a `select` / `badge` config holds `items`. Any other cell type's config is its own shape,
 	// handed over as written even when a level of the column states a list — a `text` column with
 	// `editing.items` must not grow a config it never declared.
 	if (options === undefined || !hasItemCellType(meta)) return config
-	return { ...config, items: options.items }
+	return memoized([config ?? NO_CONFIG, options.items], () => ({ ...config, items: options.items }))
 }
 
 /** The props `config` arrives under, spread so an absent config stays an absent key. */
@@ -69,7 +124,7 @@ function itemsCellView(
 		value,
 		row,
 		rowIndex,
-		...configProp(configWithItems(meta, options)),
+		...configProp(configWithItems(meta, ItemsSourceSlot.Cell, options)),
 		itemStatus: status,
 		...(item !== undefined ? { item } : {}),
 	})
@@ -123,18 +178,19 @@ export function useFieldItems(
 	row?: unknown,
 ): FieldItemsProps {
 	const { options, labels } = useItemsLists(columnId, meta, slot)
-	return fieldItemsProps(meta, options, labels, value, row)
+	return fieldItemsProps(meta, slot, options, labels, value, row)
 }
 
 /** {@link useFieldItems} as a pure function, for a caller that already holds the lists. */
 export function fieldItemsProps(
 	meta: ItemsMeta,
+	slot: ItemsSourceSlot,
 	options: ListSnapshot | undefined,
 	labels: ListSnapshot | undefined,
 	value: unknown,
 	row?: unknown,
 ): FieldItemsProps {
-	const config = configWithItems(meta, options)
+	const config = configWithItems(meta, slot, options)
 	if (!hasItemCellType(meta) || options === undefined) return configProp(config)
 	const { item } = resolveItem(value, { labels, row, getItem: row === undefined ? undefined : meta.cell?.getItem })
 	return {

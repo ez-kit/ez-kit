@@ -1,11 +1,14 @@
 name: Release
 
+# One job, driven by pushes to `develop`. `main` is never a PR target: it is the
+# "published" pointer, fast-forwarded here once nothing on `develop` is waiting to be
+# released. Rationale: openspec/decisions/0017-release-from-develop.md.
 on:
   push:
-    branches: [develop, main]
+    branches: [develop]
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release
   cancel-in-progress: false
 
 # Don't run local git hooks (husky) in CI — the changesets action pushes
@@ -14,50 +17,21 @@ env:
   HUSKY: 0
 
 jobs:
-  # On develop: open/update the "version packages" PR. Never publishes.
-  version:
-    name: version (develop)
-    if: github.ref == 'refs/heads/develop'
+  release:
+    name: release
     runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write
+      id-token: write
     steps:
-      # Use a PAT so the "version packages" PR can be created (the org blocks
-      # the default GITHUB_TOKEN from creating PRs) and so that PR triggers CI.
+      # The CHANGESETS_TOKEN PAT, not GITHUB_TOKEN, for three reasons: the org blocks the
+      # default token from creating PRs; a PR it opens does trigger CI; and its owner is a
+      # repo admin, which is what lets the promote step below push to the protected `main`.
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.CHANGESETS_TOKEN }}
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-
-      - name: Install
-        run: pnpm install --frozen-lockfile
-
-      - name: Create or update Version Packages PR
-        uses: changesets/action@v1
-        with:
-          version: pnpm run version-packages
-          title: 'chore: version packages'
-          commit: 'chore: version packages'
-        env:
-          GITHUB_TOKEN: ${{ secrets.CHANGESETS_TOKEN }}
-
-  # On main: publish bumped versions to npm (with provenance) + GitHub Releases.
-  publish:
-    name: publish (main)
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      id-token: write
-    steps:
-      - uses: actions/checkout@v4
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
 
@@ -75,12 +49,27 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      # Tokenless publish via npm trusted publishing (OIDC). Requires a
-      # trusted publisher configured per @ez-kit/* package on npmjs.com
-      # (repo ez-kit/ez-kit, workflow release.yml). Provenance is automatic.
-      - name: Publish to npm (trusted publishing / OIDC)
+      # Pending changesets → open/update the "version packages" PR into develop.
+      # None pending (the version PR was just merged, or nothing was ever queued) →
+      # `pnpm release`, which publishes every package whose version is ahead of npm and
+      # is a no-op otherwise. Tokenless via npm trusted publishing (OIDC): each
+      # @ez-kit/* package trusts repo ez-kit/ez-kit, workflow release.yml, no
+      # environment — so publishing from `develop` needs no npm-side change.
+      - name: Version or publish
+        id: changesets
         uses: changesets/action@v1
         with:
+          version: pnpm run version-packages
           publish: pnpm release
+          title: 'chore: version packages'
+          commit: 'chore: version packages'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CHANGESETS_TOKEN }}
+
+      # `main` follows `develop` only while the release queue is empty, so the production
+      # docs never describe an unpublished API. Skipped when changesets are pending, and
+      # unreachable when the publish above failed. No `--force`: git refuses anything but
+      # a fast-forward, so `main` can never be rewritten from here.
+      - name: Promote develop to main
+        if: steps.changesets.outputs.hasChangesets == 'false'
+        run: git push origin HEAD:main

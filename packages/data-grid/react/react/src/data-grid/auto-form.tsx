@@ -161,7 +161,7 @@ export function useFormFields(mode: ColumnFormMode, onlyColumnId?: string): read
 			value,
 			onChange,
 			onBlur,
-			...fieldItemsProps(meta ?? {}, fieldLists?.options, fieldLists?.labels, value, editedRow),
+			...fieldItemsProps(meta ?? {}, slot, fieldLists?.options, fieldLists?.labels, value, editedRow),
 			label,
 			...(description !== undefined ? { description } : {}),
 			error: fieldError,

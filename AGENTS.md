@@ -70,6 +70,7 @@ and move on.
   the shared, glyph-less handle — is correct, which is what lets it sit outside `FullGridComponents`.
 - **Only the persist utilities strip the columns the config places.** `table.grid.columnState { enforce, strip, signature }` is the one place the column rules live. `extractState` / `useExtractedState` drop forced columns (forced pinning — system columns and `pinning: 'start'` / `{ side }` — and `alwaysVisible`) from `columnPinning`, `columnOrder` and `columnVisibility`; `enforce` puts them back on every input, controlled `state` included, without reporting the correction. `onChange.*`, `onStateChange`, `useDataGridState` and `table.store.state` keep them — do not strip there. The criterion is forced, not system: an `initialSide` column is persisted. Forced columns sit on the outer edge of their side; forced end columns are never listed in `columnOrder`. Rationale: [ADR 0015](openspec/decisions/0015-persist-excludes-config-derived-column-state.md).
 - **A bundle types its columns with its own registry.** `createDataGrid`'s `DataGrid` / `useDataGrid` (and the kits' prebuilt ones) take `columns: ColumnDef<TRow, TCellTypes & NoInfer<TExtra>>[]` (core's `ColumnDef`, node `unknown`) beside `cellTypes?: TExtra` — the bundle's registry, widened only by that grid's `cellTypes`. Keep the `NoInfer`: without it a column registers its own `cell.type`. Core's `TableConfig.columns` and the bare package grid stay unchecked; the public bundle types default the registry parameter to `UncheckedCellTypes`. Type-only — runtime unchanged. Rationale: [ADR 0016](openspec/decisions/0016-bundle-types-inline-columns.md).
+- **Each column surface lays its own config over `cell.config` — there is no other per-surface props channel.** `filtering.config` / `editing.config` / `creating.config` merge over `cell.config` key by key, shallowly (create: cell < editing < creating, the list's inheritance), and each surface's renderers get the one merged `config` — `*.component`, cell-type renderers, the kit's `MultiSelectFilter` / `BetweenInput` and `FilterModel.config`; never `core.Input` or `OperatorSelect`, never a second prop like `filterConfig`. A layer holds no `items` / `useItems`, and the grid reads none of it. The type comes from `createDataGrid({ columnConfig: defineColumnConfig<…>() })`, a trailing parameter defaulting to unchecked; undeclared surfaces and filter fields stay unchecked. No flag a kit reads (`allowsCustomValues`) goes into ez-kit. Rationale: [ADR 0018](openspec/decisions/0018-column-config-layers.md).
 - **New UI is composed from `core` primitives; the component contract grows only by generic ones.** Any new key in `FullGridComponents` breaks external kits (a major after 1.0). Rejected generics: `Popover`, `Chip`, `Select`, `Dialog` — re-proposing one needs a second real consumer. New cell types go through the kit's cell-type registry, not the contract. Rationale: [ADR 0007](openspec/decisions/0007-core-primitives-contract.md).
 - **Optional shell slots, `core.Layout` and the presets.** `core.TableWrapper` / `TableScroll` / `Layout` are `FEATURE_OPTIONAL_COMPONENTS`: spread every prop, land `ref` on the element that actually scrolls — no DOM sniffing. The body is `children ?? core.Layout ?? <DataGrid.Table />`; kits bind `DefaultLayout` in `data-grid.tsx`, never `index.ts`. Presets place `ActionBar` by variant through `useActionBarSlots` (floating last, inline between toolbar and table) — restore neither earlier form. A preset mounts a control only when the grid has no other way into or out of that feature (`presets.test.tsx`). A layout is named for the API member that distinguishes it or the screen it belongs to — never a tier word. Rationale: [ADR 0008](openspec/decisions/0008-layouts-and-optional-slots.md).
 - **Exactly one action bar, with a live section per concern — do not split it again.** `DataGrid.ActionBar` / `core.ActionBar` is required and in `GridFeature.Core`; selection and draft sections are live at once and bulk actions stay enabled beside a dirty draft. Guard: `apps/docs/e2e/packages/data-grid/selection/action-bar.spec.ts`. Rationale: [ADR 0009](openspec/decisions/0009-single-action-bar.md).
@@ -79,27 +80,20 @@ and move on.
 ## Branching & Release Flow
 
 - `develop` is the default integration branch — all feature branches fork from and merge into `develop`.
-- `main` is release-only: a `develop → main` PR **is** a release. `main` is the Vercel **production** branch (docs deploy on release) and the npm release point. `develop` and feature branches get Vercel **preview** URLs.
-- CI (`.github/workflows/ci.yml`) gates every PR into `develop` and `main` with `build → lint → typecheck → test → size`
+- **Merging the "version packages" PR into `develop` is the release; `main` is fast-forwarded, never merged into.** On every push to `develop`, `release.yml` either opens/updates that PR (changesets pending) or runs `pnpm release` and then pushes the same commit to `main` (none pending) — no `--force`, so only a fast-forward can land. `main` takes no PRs, is always an ancestor of `develop`, and is the Vercel **production** branch, so production docs never describe an unpublished API. `develop` and feature branches get Vercel **preview** URLs. Do not reintroduce a `develop → main` PR, a release branch into `main`, or a back-merge. Rationale: [ADR 0017](openspec/decisions/0017-release-from-develop.md).
+- CI (`.github/workflows/ci.yml`) gates every PR into `develop` (and `integration/**`) with `build → lint → typecheck → test → size`
   (job name `verify`). A PR into `develop` is additionally gated on the browser suite, through the
   `e2e gate` job. That indirection is not decoration: the `e2e` matrix jobs cannot be required
   checks themselves, because when the matrix is skipped by its `if:` GitHub reports one check
   named `e2e (${{ matrix.project }})` — unexpanded, the matrix never having expanded — so
-  `e2e (shadcn)` and its siblings would sit pending forever on precisely the two PRs that skip the
-  suite. `e2e gate` has a fixed name, runs `if: always()`, and passes on `success` or `skipped`
-  and on nothing else. `main` is **not** gated on it: a release PR carries the tree `develop` just
-  gated. Before this, `e2e` ran on every PR, cost ~6 minutes per kit and changed nothing — #233
+  `e2e (shadcn)` and its siblings would sit pending forever on precisely the version PR, which
+  skips the suite. `e2e gate` has a fixed name, runs `if: always()`, and passes on `success` or
+  `skipped` and on nothing else. Before this, `e2e` ran on every PR, cost ~6 minutes per kit and changed nothing — #233
   merged with both kits red, and the failure then hid on `develop`, where the suite does not run,
   until the next PR happened to surface it (#237).
-- **The release PR `develop → main` is merged with a merge commit — never squash, never rebase.** The
-  two branches are long-lived and keep merging into each other, so the merge has to record `develop`
-  as a parent of `main`. A squash writes a commit whose _only_ parent is `main`'s previous tip: the
-  released content lands, but git no longer knows `develop` produced it. The next release PR then
-  takes the pre-release commit as its merge base, sees every file that release touched as changed
-  independently on both sides, and conflicts on all of them — with identical content. That is what
-  #234 did to #238: `main` and `develop` had byte-identical trees and ~30 conflicting files.
-  Recovering costs a `git merge -s ours origin/main` on `develop` to re-link the two histories.
-  Feature PRs into `develop` are unaffected — squash those freely; this rule is about `main` only.
+- The promote push to `main` passes its branch protection only because `CHANGESETS_TOKEN` belongs
+  to a repo admin and `enforce_admins` is off. If the PAT is reissued for a non-admin, publishing
+  still works but `main` stops moving — give that actor a bypass rather than loosening protection.
 - Issues close on merge into `develop`, not on release. GitHub itself only honours `Closes #N` when a PR merges into the **default** branch (`main`), so every PR into `develop` would otherwise leave its issue open — and strand its project-board card in **In review**, since the board moves items to Done on the _issue closed_ event. `.github/workflows/close-linked-issues.yml` restores the expected behaviour: on merge into `develop` or `integration/**` it parses closing keywords from the PR body **and its commit messages**, then closes those issues. It authenticates with the `CHANGESETS_TOKEN` PAT because the repo keeps `default_workflow_permissions: read`, which caps `GITHUB_TOKEN` below the required `issues: write`. That PAT therefore needs **`Issues: Read and write`** on top of the permissions the version-PR bot uses — if it is rotated or reissued without it, the job fails with `403 Resource not accessible by personal access token` and issues silently pile up open.
 - Git hooks (husky): pre-commit runs `lint-staged` (Prettier + ESLint on staged files only), commit-msg enforces Conventional Commits via commitlint, pre-push runs `pnpm ci:fast`.
 - **Everything written on GitHub is in English.** Issue titles and bodies, PR titles and
@@ -196,43 +190,43 @@ Release flow (automated — changesets, `.github/workflows/release.yml`):
 
 1. In a feature PR into `develop`, run `pnpm changeset` and commit the generated
    `.changeset/*.md` (pick the packages + bump type + summary).
-2. Once changesets land on `develop`, the `version` job opens/updates a
+2. Once changesets land on `develop`, the `release` job opens/updates a
    **"version packages"** PR into `develop` (bumps versions, writes CHANGELOG,
-   consumes the changeset files). Merge it when ready to cut a release.
-3. Open the release PR `develop → main` — it already carries the bumped versions.
-   Merging it runs the `publish` job on `main`: `pnpm release`
-   (`turbo run build && changeset publish`) → publishes to npm **with provenance**,
-   creates git tags and GitHub Releases.
+   consumes the changeset files).
+3. Merging it is the release: the next `release` run finds no pending changesets,
+   runs `pnpm release` (`turbo run build && changeset publish`) → npm **with
+   provenance**, git tags, GitHub Releases — and then fast-forwards `main`, which
+   deploys the production docs.
 
 `changesets` `baseBranch` is `develop`. Publishing uses **npm trusted publishing
 (OIDC)** — no long-lived npm token. Each `@ez-kit/*` package must have a trusted
-publisher configured on npmjs.com (repo `ez-kit/ez-kit`, workflow `release.yml`);
-the publish job upgrades npm to ≥ 11.5.1 and relies on `id-token: write`.
+publisher configured on npmjs.com (repo `ez-kit/ez-kit`, workflow `release.yml`,
+no environment — it trusts the workflow file, not a branch); the job upgrades npm
+to ≥ 11.5.1 and relies on `id-token: write`.
 A brand-new package's first version must be bootstrapped once from a local
 `pnpm release` (the trusted publisher can only be set after the package exists).
-The `version` job's PR bot uses the `CHANGESETS_TOKEN` PAT because the org blocks
+The version-PR bot uses the `CHANGESETS_TOKEN` PAT because the org blocks
 the default token from creating PRs. Local manual release stays possible with
 `pnpm changeset` / `pnpm version-packages` / `pnpm release`.
 
 **`@ez-kit/data-grid-shadcn` never goes in a changeset.** The kit ships as a shadcn registry item,
 not an npm package, so it is `private` and listed in `.changeset/config.json`'s `ignore` — and
 changesets refuses a changeset that names an ignored package beside a released one, failing the
-`version` job _after_ the merge, where it quietly stops the release PR from being written. A
+`release` job _after_ the merge, where it quietly stops the version PR from being written. A
 changeset naming only ignored packages is the mirror image: `version` neither consumes nor reports
 it, so it sits in `.changeset/` forever. `scripts/check-changesets.mjs` (first steps of `pnpm lint`,
 beside `check-site-url.mjs`) fails on both, so the PR that writes one finds out. A change to the
 shadcn kit that is worth a release note belongs on the package it is visible through — usually
 `@ez-kit/data-grid-react`, or `@ez-kit/docs`, which serves the registry JSON.
 
-The two PRs that carry no source change re-run `verify` but **not** `e2e` (the job's `if:` in
-`ci.yml` excludes both; `e2e gate` still reports, and passes, because a skipped suite is a pass). The release PR (`develop → main`) carries exactly the tree `develop` just
-gated, and `main` receives nothing else. The version PR (`changeset-release/develop → develop`)
-touches only `version` fields, CHANGELOGs and the changeset files it consumes — every internal
-dependency is declared `workspace:^` / `workspace:*`, so changesets rewrites no range and the
-lockfile does not move. In both cases a second three-job browser suite re-measures the same commit.
+The version PR (`changeset-release/develop → develop`) re-runs `verify` but **not** `e2e` (the
+job's `if:` in `ci.yml` excludes it; `e2e gate` still reports, and passes, because a skipped suite
+is a pass). It touches only `version` fields, CHANGELOGs and the changeset files it consumes —
+every internal dependency is declared `workspace:^` / `workspace:*`, so changesets rewrites no
+range and the lockfile does not move, and a second three-job browser suite would re-measure the
+same commit.
 
-`verify` stays on both. On the release PR it is the last gate in front of `changeset publish`, and
-the only check `main`'s branch protection requires. On the version PR it is the one run where
+`verify` stays on it: it is the last gate in front of `changeset publish`, and the one run where
 `pnpm lint` sees the CHANGELOGs that were just written from changeset summaries, so a stale
 `ez-kit*` origin in a changeset body is caught by `check-site-url.mjs` before it ships.
 
