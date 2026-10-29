@@ -1,6 +1,6 @@
 {
 	"name": "@ez-kit/query-react",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"description": "Declarative TanStack Query gate for React: render loading, idle, error or data with the subscription isolated inside the gate.",
 	"keywords": [
 		"tanstack-query",
