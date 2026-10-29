@@ -1,0 +1,114 @@
+---
+title: '@ez-kit/query-react'
+description: A declarative gate for TanStack Query — render loading, idle, error or data, with the subscription isolated inside the gate.
+---
+
+When a component shows the data of several [TanStack Query](https://tanstack.com/query) queries,
+the `useQuery` calls usually sit in a shared parent:
+
+```tsx
+function Dashboard() {
+	const devices = useQuery(deviceQueries.list())
+	const stats = useQuery(statsQueries.summary())
+	return (
+		<>
+			<DevicesCard devices={devices} />
+			<StatsCard stats={stats} />
+		</>
+	)
+}
+```
+
+Every change to one query — a load starting, data arriving, a background refetch — re-renders the
+parent and the neighbouring card with it. The usual fix is a wrapper component per query that
+exists only to hold the subscription, and each of those wrappers writes the same
+loading / error / data branch again and narrows `data` from `TData | undefined` by hand.
+
+`<Query>` is that wrapper, written once:
+
+```tsx
+import { Query } from '@ez-kit/query-react'
+
+function Dashboard() {
+	return (
+		<>
+			<Query
+				query={deviceQueries.list()}
+				loading={<CardSkeleton />}
+			>
+				{(devices) => <DevicesCard devices={devices} />}
+			</Query>
+			<Query
+				query={statsQueries.summary()}
+				loading={<CardSkeleton />}
+			>
+				{(stats) => <StatsCard stats={stats} />}
+			</Query>
+		</>
+	)
+}
+```
+
+The gate calls `useQuery` itself, so only the gate is subscribed: when the devices query changes,
+the devices gate re-renders and nothing else does. The render counters below show it — refetch one
+card and watch which counters move.
+
+<LivePreview
+	path='query-react/isolation'
+	title='Two gates, two independent subscriptions'
+/>
+
+The isolation comes from where the subscription lives, not from memoization: the dashboard renders
+once and never hears from either query again.
+
+## Install
+
+```bash
+pnpm add @ez-kit/query-react @tanstack/react-query
+```
+
+`react >= 18` and `@tanstack/react-query` v5 are peer dependencies. The gate runs under your own
+`QueryClientProvider` — the package brings no client and changes no query option.
+
+## Quick start
+
+```tsx
+import { Query } from '@ez-kit/query-react'
+import { queryOptions } from '@tanstack/react-query'
+
+const deviceQueries = {
+	list: () => queryOptions({ queryKey: ['devices'], queryFn: fetchDevices }),
+}
+
+export function Devices() {
+	return (
+		<Query
+			query={deviceQueries.list()}
+			loading={<Spinner />}
+			error={(error, q) => (
+				<Retry
+					message={error.message}
+					onRetry={() => q.refetch()}
+				/>
+			)}
+		>
+			{(devices, q) => (
+				<DeviceList
+					devices={devices}
+					refreshing={q.isFetching}
+				/>
+			)}
+		</Query>
+	)
+}
+```
+
+- `query` takes the same options `useQuery` does — pass the result of `queryOptions(...)` as is.
+  `select` goes inside it, and every type is inferred from it.
+- `children(data, q)` gets `data` without `undefined` and `q`, the `useQuery` result unchanged.
+- `error(error, q)` has the same shape. Fields keep their TanStack names: `q.refetch`,
+  `q.isFetching`, `q.failureCount`.
+
+What the gate renders in each state, and where its fallbacks come from, is on
+[States and fallbacks](./query-react/states). Reading the same data further down the tree, without
+passing it through props, is the [Data under the gate](./query-react/data-under-gate) recipe.

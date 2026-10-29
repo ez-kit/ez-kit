@@ -39,6 +39,8 @@ export enum TypeModule {
 	VaStore = '@ez-kit/va-store',
 	/** `@ez-kit/va-store/persist` — the Valtio-bound persist front. */
 	VaStorePersist = '@ez-kit/va-store/persist',
+	/** `@ez-kit/query-react` — the TanStack Query gate; owns the `<Query>` and `<QueryProvider>` props. */
+	QueryReact = '@ez-kit/query-react',
 }
 
 /** A named exported type, plus the type arguments it needs to be instantiated. */

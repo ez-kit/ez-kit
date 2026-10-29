@@ -1,0 +1,85 @@
+---
+title: Data under the gate
+description: Read a gate's data anywhere below it with TanStack's own useSuspenseQuery and the same queryOptions — no context and no API of this package.
+---
+
+`children(data, q)` hands the data to the code written right inside the gate. Components further
+down often need it too, and threading it through props for three levels is the thing the gate was
+supposed to save you from.
+
+There is no `useData()` in this package. Below a gate, the data is already in TanStack's cache
+under the query's key, so a descendant reads it with TanStack's own `useSuspenseQuery` and the
+**same `queryOptions`** the gate was given:
+
+```tsx
+import { Query } from '@ez-kit/query-react'
+import { queryOptions, useSuspenseQuery } from '@tanstack/react-query'
+
+const deviceQueries = {
+	list: () => queryOptions({ queryKey: ['devices'], queryFn: fetchDevices }),
+}
+
+function DeviceCount() {
+	const { data: devices } = useSuspenseQuery(deviceQueries.list())
+	return <Badge>{devices.length} devices</Badge>
+}
+
+export function Devices() {
+	return (
+		<Query
+			query={deviceQueries.list()}
+			loading={<Skeleton />}
+		>
+			{() => (
+				<>
+					<DeviceCount />
+					<DeviceList />
+				</>
+			)}
+		</Query>
+	)
+}
+```
+
+<LivePreview
+	path='query-react/data-under-gate'
+	title='Three descendants reading the gate’s query'
+/>
+
+For a descendant that mounts together with the gate's `children`, `useSuspenseQuery`:
+
+- **does not suspend** — the data is already in the cache under that key;
+- types `data` as `TData`, without `undefined`, inferred from `queryOptions`;
+- **does not throw** when a background refetch fails: it throws only when there is no data, and
+  under the gate there is;
+- **does not fire a second request** — Suspense mode raises `staleTime` to at least one second,
+  so the data the gate has just loaded counts as fresh.
+
+Each descendant subscribes on its own, so it re-renders when its query changes and not when its
+parent does. A descendant can pass its own `select` — `useSuspenseQuery({ ...deviceQueries.list(),
+select: (d) => d.filter(…) })` — and get its own shape without changing anyone else's.
+
+## Why not a context
+
+A context-based `useData<T>()` reads the nearest gate's data, and that is where its trouble
+starts: the type rests on an explicit generic nobody checks, a nested gate silently shadows the
+outer one, and a `select` on the gate changes the data's shape for every descendant without a
+single compile error. `queryOptions` already is a typed handle on a cached query — the recipe uses
+it instead of building a second one.
+
+## Where the recipe stops
+
+`useSuspenseQuery` is safe **below a gate for the same query**, or below a `<Suspense>` boundary.
+Anywhere else it suspends with no boundary to catch it. Use the same `queryOptions` factory for the
+gate and the descendant — a different key is a different query, and that one is not loaded yet.
+
+Two cases break the guarantee even under a gate:
+
+- **Placeholder data.** The gate renders `children` for `placeholderData` — including
+  `keepPreviousData` while a new key loads — but a placeholder is not in the cache under the
+  current key, so a descendant's `useSuspenseQuery` suspends. Put a `<Suspense>` boundary inside
+  `children`, or read `q.isPlaceholderData` and render the descendants only once it is `false`.
+- **A descendant that mounts later.** The one-second floor covers a descendant that mounts with the
+  gate. One that mounts afterwards — a tab, a dialog, an expanded row — finds the data stale under
+  the default `staleTime: 0` and refetches in the background. It still does not suspend or throw,
+  since the data is there; give the query a real `staleTime` if the extra request matters.

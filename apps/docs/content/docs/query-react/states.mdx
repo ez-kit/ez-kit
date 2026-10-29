@@ -1,0 +1,145 @@
+---
+title: States and fallbacks
+description: What <Query> renders in each state of a query, where its loading, idle and error fallbacks come from, and what happens to an error with nowhere to go.
+---
+
+## What the gate renders
+
+`<Query>` reads the query's state and renders exactly one thing:
+
+| State      | Condition                                                             | Renders                       |
+| ---------- | --------------------------------------------------------------------- | ----------------------------- |
+| Data       | the query has data — whatever `status` and `fetchStatus` say          | `children(data, q)`           |
+| First load | no data, `status: 'pending'`, `fetchStatus: 'fetching'` or `'paused'` | `loading`                     |
+| Disabled   | no data, `status: 'pending'`, `fetchStatus: 'idle'`                   | `idle`                        |
+| Error      | no data, `status: 'error'`                                            | `error(error, q)`, or a throw |
+
+Data is checked first. A background refetch, placeholder data and a background refetch that
+failed all keep rendering `children` with the data the query has: the gate never swaps loaded
+content for a spinner or an error card. `null` counts as data; `undefined` never does, because a
+v5 `queryFn` cannot resolve to it. The same goes for `select`: one that returns `undefined` leaves
+the gate showing `idle` as if the query had never run, so map "nothing" to `null` instead.
+
+`enabled: false` and `skipToken` land in **Disabled**, not **First load** — a query that is not
+going to fetch is not loading. Offline before the first load (`fetchStatus: 'paused'`) is still
+**First load**: the request is waiting to be sent.
+
+Toggle the switches to walk through every row of the table:
+
+<LivePreview
+	path='query-react/states'
+	title='Every state of one gate'
+/>
+
+### An error that keeps its data
+
+When a background refetch fails, the error sits in `q.error` while `children` keeps showing the
+last data. That is deliberate — a failed refresh should not wipe what the user is reading — but a
+render function that never looks at `q` shows stale data with no sign of it. Read `q.isError` to
+flag it, as the example above does:
+
+```tsx
+<Query query={deviceQueries.list()}>
+	{(devices, q) => (
+		<>
+			{q.isError && <Badge variant='destructive'>Last refresh failed</Badge>}
+			<DeviceList devices={devices} />
+		</>
+	)}
+</Query>
+```
+
+### Retrying from the error fallback
+
+`error` gets the same `q` as `children`. Calling `q.refetch()` from it puts the gate back into
+**First load** — the query has no data, so its status returns to `pending` — and then into
+`children` on success or `error` again on failure.
+
+## Where a fallback comes from
+
+Each of `loading`, `idle` and `error` is looked up on its own:
+
+1. the prop on `<Query>`, if it is set;
+2. otherwise the nearest `<QueryProvider>` that sets it;
+3. otherwise the default — nothing for `loading` and `idle`, a throw for `error`.
+
+A prop set to `null` counts as set: `loading={null}` renders nothing even under a provider that
+has a spinner.
+
+### Shared fallbacks with `QueryProvider`
+
+```tsx
+import { QueryProvider } from '@ez-kit/query-react'
+
+const loading = <Spinner />
+
+<QueryProvider
+	loading={loading}
+	error={(error, q) => <ErrorCard error={error} onRetry={() => q.refetch()} />}
+>
+	<App />
+</QueryProvider>
+```
+
+A nested provider overrides only the keys it sets and inherits the rest, so an inner
+`<QueryProvider loading={<Skeleton />}>` changes the loading state of its subtree and keeps the
+outer error card. The provider is optional — without one every gate runs on the defaults.
+
+The provider's error fallback cannot know each query's error type, so it receives TanStack's
+default error type (`Error`, or whatever you registered through `Register`). A gate's own `error`
+prop is typed from its query — so a query that declares an error type of its own, as in
+`queryOptions<Device[], ApiError>(…)`, should set `error` on its gate rather than rely on the
+provider's, which would receive that error typed as the default one.
+
+In the example, the first two panels set no fallbacks and use the provider's; the third sets its
+own `loading` and still takes the provider's `error`:
+
+<LivePreview
+	path='query-react/provider'
+	title='One provider, three gates'
+/>
+
+A JSX fallback is a new object on every render, so a provider whose parent re-renders hands every
+gate below it a new context value. A provider at the root of the app rarely re-renders; anywhere
+else, hoist the fallbacks into module-level constants, as `loading` is above.
+
+## An error with no fallback is thrown
+
+If the query failed without data and there is no `error` fallback — neither on the gate nor on a
+provider — the gate throws the query's error while rendering, so the nearest error boundary
+catches it. The error is never swallowed.
+
+<LivePreview
+	path='query-react/error-boundary'
+	title='Thrown to the error boundary, refetched on reset'
+/>
+
+Resetting the boundary remounts the gate, and TanStack's default `retryOnMount: true` refetches a
+query that has no data: the gate shows `loading`, then `children` or — if the request fails again
+— throws again. The gate does not turn on `throwOnError`, so no `QueryErrorResetBoundary` is
+needed beside the boundary. If you set `retryOnMount: false` yourself, a reset boundary gets the
+same error straight back; that is the option doing what it says.
+
+## API
+
+### `Query`
+
+| Prop       | Type                                                             | Default                | Description                                                                                      |
+| ---------- | ---------------------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------ |
+| `query`    | `UseQueryOptions<TQueryFnData, TError, TData, TQueryKey>`        | —                      | The options `useQuery` takes, usually from `queryOptions(...)`. `select` goes inside it.         |
+| `children` | `(data: TData, q: UseQueryResult<TData, TError>) => ReactNode`   | —                      | Rendered whenever the query has data. `data` is never `undefined`; `q` is the `useQuery` result. |
+| `loading`  | `ReactNode`                                                      | provider, then nothing | Rendered during the first load.                                                                  |
+| `idle`     | `ReactNode`                                                      | provider, then nothing | Rendered while the query is disabled and has no data.                                            |
+| `error`    | `(error: TError, q: UseQueryResult<TData, TError>) => ReactNode` | provider, then a throw | Rendered when the query failed without data.                                                     |
+
+All four type parameters are the ones `useQuery` has, and all are inferred from `query` — a gate
+never needs an explicit generic.
+
+### `QueryProvider`
+
+| Prop       | Type                                                                           | Default        | Description                             |
+| ---------- | ------------------------------------------------------------------------------ | -------------- | --------------------------------------- |
+| `loading`  | `ReactNode`                                                                    | outer provider | Default `loading` for every gate below. |
+| `idle`     | `ReactNode`                                                                    | outer provider | Default `idle` for every gate below.    |
+| `error`    | `(error: DefaultError, q: UseQueryResult<unknown, DefaultError>) => ReactNode` | outer provider | Default `error` for every gate below.   |
+| `children` | `ReactNode`                                                                    | —              | The subtree the fallbacks apply to.     |

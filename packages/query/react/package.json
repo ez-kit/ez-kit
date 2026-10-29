@@ -1,0 +1,69 @@
+{
+	"name": "@ez-kit/query-react",
+	"version": "0.0.0",
+	"description": "Declarative TanStack Query gate for React: render loading, idle, error or data with the subscription isolated inside the gate.",
+	"keywords": [
+		"tanstack-query",
+		"react-query",
+		"react",
+		"query",
+		"loading-state",
+		"typescript"
+	],
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/ez-kit/ez-kit",
+		"directory": "packages/query/react"
+	},
+	"homepage": "https://github.com/ez-kit/ez-kit/tree/main/packages/query/react#readme",
+	"bugs": {
+		"url": "https://github.com/ez-kit/ez-kit/issues"
+	},
+	"type": "module",
+	"sideEffects": false,
+	"files": [
+		"dist"
+	],
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"default": "./dist/index.js"
+		}
+	},
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"scripts": {
+		"build": "tsup",
+		"lint": "eslint . --max-warnings=0",
+		"lint:fix": "eslint . --max-warnings=0 --fix",
+		"typecheck": "tsc --project tsconfig.json --noEmit && tsc --project type-tests/registered-error/tsconfig.json",
+		"test": "vitest run",
+		"test:coverage": "vitest run --coverage",
+		"size": "size-limit",
+		"clean": "rimraf dist coverage",
+		"test:react18": "vitest run --config vitest.react18.config.ts"
+	},
+	"size-limit": [
+		{
+			"path": "dist/index.js",
+			"limit": "550 B"
+		}
+	],
+	"devDependencies": {
+		"@ez-kit/react18-env": "workspace:*",
+		"@tanstack/react-query": "^5.105.0",
+		"@types/react": "^19.2.14",
+		"@types/react-dom": "^19.2.3",
+		"react": "^19.2.4",
+		"react-dom": "^19.2.4"
+	},
+	"peerDependencies": {
+		"@tanstack/react-query": "^5.0.0",
+		"react": ">=18.0.0"
+	},
+	"engines": {
+		"node": ">=20"
+	}
+}

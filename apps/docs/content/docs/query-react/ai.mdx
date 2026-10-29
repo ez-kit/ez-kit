@@ -1,0 +1,29 @@
+---
+title: Use with AI
+description: Feed the query-react documentation to an LLM or coding agent — scoped llms.txt, full-text dump, and per-page Markdown.
+---
+
+The `@ez-kit/query-react` documentation is served as plain Markdown, so an LLM or a coding agent can
+read it directly instead of scraping rendered HTML. These endpoints are scoped to this package —
+use them instead of the site-wide ones so the agent is not handed the whole documentation.
+
+| URL                                                        | What it is                                                     |
+| ---------------------------------------------------------- | -------------------------------------------------------------- |
+| [`/llms.txt/query-react`](/llms.txt/query-react)           | Index of every query-react page — title, link and description. |
+| [`/llms-full.txt/query-react`](/llms-full.txt/query-react) | Every query-react page as one Markdown file.                   |
+| `/llms.mdx/docs/query-react/<slug>`                        | A single page as raw Markdown.                                 |
+
+The per-page route mirrors the docs URL: this section's [overview](./) is served as Markdown at
+[`/llms.mdx/docs/query-react`](/llms.mdx/docs/query-react).
+Every page also carries **Copy Markdown** and **View options** controls under its title.
+
+```text
+Read https://ez-kit-docs.vercel.app/llms-full.txt/query-react, then wrap the useQuery calls in
+this component in <Query> gates.
+```
+
+```bash
+curl -O https://ez-kit-docs.vercel.app/llms-full.txt/query-react
+```
+
+For the whole site — every package at once — see [Use with AI](/docs/ai).

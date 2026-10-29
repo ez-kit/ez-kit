@@ -17,7 +17,7 @@
 		"typecheck": "turbo run typecheck",
 		"test": "turbo run test",
 		"verify:affected": "turbo run lint typecheck test --filter=...[HEAD]",
-		"test:react18": "pnpm --filter @ez-kit/data-grid-react --filter @ez-kit/form-react run test:react18",
+		"test:react18": "pnpm --filter @ez-kit/data-grid-react --filter @ez-kit/form-react --filter @ez-kit/query-react run test:react18",
 		"size": "turbo run size",
 		"clean": "turbo run clean",
 		"changeset": "changeset",
