@@ -275,8 +275,10 @@ export type {
 	FlashingConfig,
 	FlashingDurations,
 	FlashingEquals,
+	FlashingStatus,
 	FlashRequest,
 	FlashRequestSource,
+	FlashStatus,
 } from './features/flashing'
 export { EditingMode } from './features/editing'
 export type { EditingApi, EditingConfig, EditingSaveContext, EditingState } from './features/editing'

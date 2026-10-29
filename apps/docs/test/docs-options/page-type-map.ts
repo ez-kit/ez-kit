@@ -1407,10 +1407,10 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		page: DocPage.CellFlashing,
 		optionTables: [
 			{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 4 },
-			{ heading: 'Column options', roots: [GRID_TYPE.ColumnDef], expectedCount: 4 },
-			{ heading: 'Flashing on demand', roots: [GRID_TYPE.FlashCellsParams], expectedCount: 4 },
+			{ heading: 'Column options', roots: [GRID_TYPE.ColumnDef], expectedCount: 5 },
+			{ heading: 'Flashing on demand', roots: [GRID_TYPE.FlashCellsParams], expectedCount: 5 },
 		],
-		nonOptionTables: [],
+		nonOptionTables: [{ heading: 'Styling', reason: 'Maps each status *value* to its kit CSS token.' }],
 	},
 	{
 		page: DocPage.Virtualization,

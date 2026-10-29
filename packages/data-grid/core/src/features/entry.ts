@@ -109,6 +109,8 @@ export {
 	type FlashingConfig,
 	type FlashingDurations,
 	type FlashingEquals,
+	type FlashingStatus,
+	type FlashStatus,
 } from './flashing'
 export { infiniteFeature, type InfiniteState } from './infinite'
 export { rowOrderingFeature, type RowOrderState, type RowOrderingApi } from './ordering'

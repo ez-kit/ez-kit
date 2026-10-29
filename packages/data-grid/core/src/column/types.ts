@@ -1603,9 +1603,10 @@ export type ColumnDefCommon<
 	 * ```ts
 	 * { accessorKey: 'updatedAt', flashing: false }
 	 * { accessorKey: 'tags', flashing: { equals: (a, b) => String(a) === String(b) } }
+	 * { accessorKey: 'price', flashing: { status: (previous, next) => (next > previous ? 'success' : 'error') } }
 	 * ```
 	 */
-	flashing?: boolean | ColumnFlashingConfig
+	flashing?: boolean | ColumnFlashingConfig<TRow, TValue>
 
 	/**
 	 * Column width, in pixels.

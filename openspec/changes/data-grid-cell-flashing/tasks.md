@@ -41,6 +41,18 @@
 
 - [x] 7.1 Полный гейт последовательно: `pnpm build`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm size` — каждый отдельным `turbo run`; размеры `@ez-kit/data-grid-core` и `@ez-kit/data-grid-react` в пределах бюджета (если вышли — поднять бюджет по правилу ~15% и объяснить в PR)
 
+## 8. Статусы флэша
+
+- [x] 8.1 Тесты резолва в `map-columns.test.ts`: `flashing.status` колонки переносится в `ColumnMeta.flashing.status`; у грида `status` нет (тип); проверить RED
+- [x] 8.2 Тип `FlashStatus`, `status?` в `ColumnFlashingConfig` / `ColumnFlashingMeta` и в `FlashCellsParams` с докблоками; перенос в `resolve-flashing.ts`; экспорт `FlashStatus` с `@ez-kit/data-grid-core/features` и из `index.ts`; тесты 8.1 зелёные
+- [x] 8.3 Тесты в `cell-flash.test.tsx` по требованию «Статус флэша задаёт его цвет»: ручной со статусом и без; авто из функции колонки (рост → `success`, падение → `error`); без функции и при `undefined` — `default`; функция не вызывается при равных значениях; повторное изменение во время флэша меняет статус; атрибут снимается вместе с `data-flash`; проверить RED
+- [x] 8.4 `useCellFlash`: статус в `trigger`, `data-flash-status` в `attrs` (design D9); тесты 8.3 зелёные, `pnpm --filter @ez-kit/data-grid-react test` и `lint` зелёные
+- [x] 8.5 shadcn и heroui `styles.css`: токены `--dg-flash-{success,warning,error}-background` (светлая и тёмная тема) и правила по `data-flash-status`; `registry-payload` и тесты китов зелёные; визуальная проверка трёх статусов в обоих китах
+- [x] 8.6 Docs: раздел «Статусы» на `cell-flashing.mdx` (набор, `flashCells({ status })`, `flashing.status` с примером цены, токены статусов), строки в таблицах опций и параметров; основной пример — цена с `success` / `error` по направлению; пример ручного флэша — кнопка со статусом; `docs-option-names`, `page-type-map` (`FlashStatus`) зелёные
+- [x] 8.7 e2e: в `cell-flashing.spec.ts` проверить `data-flash-status` у изменившейся цены; оба кита
+- [x] 8.8 ADR 0020 и правило в `AGENTS.md`: кит красит оверлей токеном по `data-flash-status`; changeset — описание дополнить статусами
+- [x] 8.9 Полный гейт последовательно (как 7.1), `pnpm size` в бюджете
+
 ## Workflow follow-up
 
 - Архивировать change после ревью; ADR из 6.1 должны существовать до архива.

@@ -6,6 +6,7 @@ import type {
 	ColumnFlashingMeta,
 	FlashingConfig,
 	FlashingDurations,
+	FlashingStatus,
 } from '../../features/flashing/types'
 
 /** The durations an object form names, without the keys it leaves out. */
@@ -25,7 +26,7 @@ function durationsOf(config: FlashingDurations): FlashingDurations {
  * option layers apply, where `true` over a config object keeps the object.
  */
 export function resolveFlashing(
-	column: boolean | ColumnFlashingConfig | undefined,
+	column: boolean | ColumnFlashingConfig<never, never> | undefined,
 	table: boolean | FlashingConfig | undefined,
 ): ColumnFlashingMeta | undefined {
 	if (column === false) return undefined
@@ -42,5 +43,7 @@ export function resolveFlashing(
 		...(columnObject ? durationsOf(columnObject) : {}),
 	}
 	if (columnObject?.equals !== undefined) resolved.equals = columnObject.equals
+	// Erased like `cellClassName`: the cell hands it the column's own value and row.
+	if (columnObject?.status !== undefined) resolved.status = columnObject.status as FlashingStatus
 	return resolved
 }

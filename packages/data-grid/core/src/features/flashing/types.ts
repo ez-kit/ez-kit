@@ -24,13 +24,41 @@ export type FlashingConfig = FeatureToggle & FlashingDurations
  */
 export type FlashingEquals = (previous: unknown, next: unknown) => boolean
 
+/**
+ * The colour a flash is painted in. `'default'` is the kit's plain highlight; the other three are
+ * for a change that reads as good, worth a look, or bad. A closed set: a different colour for one
+ * of them is a kit token, not a fifth status.
+ */
+export type FlashStatus = 'default' | 'success' | 'warning' | 'error'
+
+/**
+ * The status of an automatic flash, from the value before and after the change.
+ *
+ * Called only for a value that changed — whether a cell flashes is `equals`' decision, never this
+ * one's. `undefined` is `'default'`, not "no flash". `row` is the row's original data.
+ */
+export type FlashingStatus<TRow = unknown, TValue = unknown> = (
+	previous: TValue,
+	next: TValue,
+	row: TRow,
+) => FlashStatus | undefined
+
 /** A column's `flashing` object: the grid's durations, overridable, and how to compare values. */
-export type ColumnFlashingConfig = FlashingDurations & {
+export type ColumnFlashingConfig<TRow = unknown, TValue = unknown> = FlashingDurations & {
 	/**
 	 * Whether two values of this column are equal. Default: `Object.is`, except that two `Date`s
 	 * are equal when their times are.
 	 */
 	equals?: FlashingEquals
+	/**
+	 * The colour of this column's automatic flash. Default: `'default'` for every change.
+	 *
+	 * @example
+	 * ```ts
+	 * { accessorKey: 'price', flashing: { status: (previous, next) => (next > previous ? 'success' : 'error') } }
+	 * ```
+	 */
+	status?: FlashingStatus<TRow, TValue>
 }
 
 /** Resolved `column.flashing` — present only when the column flashes on its own changes. */
@@ -38,6 +66,8 @@ export type ColumnFlashingMeta = {
 	flashDuration: number
 	fadeDuration: number
 	equals?: FlashingEquals
+	/** The column's `status`, its row and value types erased. */
+	status?: FlashingStatus
 }
 
 /** The durations a flash runs with when neither the grid nor the column names one. */

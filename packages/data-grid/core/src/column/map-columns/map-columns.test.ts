@@ -632,6 +632,32 @@ describe('mapColumns — config layers', () => {
 			expect(result[0]?.meta?.flashing?.equals).toBe(equals)
 		})
 
+		it('carries the column status function', () => {
+			const status = (): 'success' => 'success'
+			const result = mapColumns<Row>([{ accessorKey: 'name', flashing: { status } }])
+			expect(result[0]?.meta?.flashing?.status).toBe(status)
+		})
+
+		it('types status with the column value and row', () => {
+			const result = mapColumns<Row>([
+				{
+					accessorKey: 'age',
+					flashing: { status: (previous, next, row) => (next > previous && row.name !== '' ? 'success' : 'error') },
+				},
+			])
+			expect(result[0]?.meta?.flashing?.status?.(1, 2, { id: 1, name: 'a', age: 2 })).toBe('success')
+		})
+
+		it('a column without status carries none, under a grid that is on', () => {
+			const result = mapColumns<Row>([{ accessorKey: 'name' }], { tableFlashing: true })
+			expect(result[0]?.meta?.flashing).not.toHaveProperty('status')
+		})
+
+		it('the grid option takes no status', () => {
+			// @ts-expect-error -- `status` is a column option only
+			mapColumns<Row>([{ accessorKey: 'name' }], { tableFlashing: { status: () => 'success' } })
+		})
+
 		it('a group column carries nothing, its leaves resolve on their own', () => {
 			const result = mapColumns<Row>([{ id: 'group', header: 'Group', columns: [{ accessorKey: 'name' }] }], {
 				tableFlashing: true,

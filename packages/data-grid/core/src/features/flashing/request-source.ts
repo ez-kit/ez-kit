@@ -3,17 +3,22 @@
  * the request source — the React layer's cells — does not import the feature itself.
  */
 
+import type { FlashStatus } from './types'
+
 /**
  * Which rendered cells `table.flashCells` flashes, and for how long.
  *
  * An axis left out means every cell along it: `{ rowIds: ['r1'] }` is the whole row, `{}` every
  * rendered cell. Durations left out fall back to the column's, then the grid's, then the defaults.
+ * `status` left out is `'default'`: a manual flash has no previous value to hand a column's `status`.
  */
 export type FlashCellsParams = {
 	rowIds?: readonly string[]
 	columnIds?: readonly string[]
 	flashDuration?: number
 	fadeDuration?: number
+	/** The colour of this flash. Default: `'default'` — a column's `status` is not consulted. */
+	status?: FlashStatus
 }
 
 /** One `flashCells` call as cells read it: the params, numbered so each call is a new value. */

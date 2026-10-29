@@ -24,6 +24,10 @@
 - Ячейка получает атрибут `data-flash="flash" | "fade"` и CSS-переменную
   `--dg-flash-fade-duration`; структурный stylesheet `@ez-kit/data-grid-react/styles.css`
   позиционирует оверлей `::after`, киты (shadcn, heroui) задают его цвет и затухание.
+- Статус флэша `'default' | 'success' | 'warning' | 'error'` задаёт его цвет. Ручной флэш принимает
+  `status` в `flashCells`; автоматический берёт его из функции колонки
+  `flashing.status(previous, next, row)`. Без статуса флэш — `default`, как сейчас. Ячейка несёт
+  `data-flash-status`, киты красят каждый статус своим токеном.
 - Флэш срабатывает на любое изменение значения, включая успешную инлайн-правку. Различение
   источника (`edit` / `refresh`) в этот change не входит; форма опции оставляет для него место без
   breaking change.
@@ -37,8 +41,8 @@
 ### New Capabilities
 
 - `data-grid-cell-flashing`: подсветка изменившихся ячеек — включение по иерархии грид → колонка,
-  правила сравнения значений, автоматический и ручной флэш, фазы и их длительности, что флэшит и что
-  нет, атрибутный контракт для китов.
+  правила сравнения значений, автоматический и ручной флэш, фазы и их длительности, статусы флэша,
+  что флэшит и что нет, атрибутный контракт для китов.
 
 ### Modified Capabilities
 
@@ -53,8 +57,9 @@
 - **React** (`@ez-kit/data-grid-react`): хук `useCellFlash` в `BodyDataCell`
   (`data-grid/cell.tsx`); `flashing` в `UseDataGridConfig` и в слоях `defaults`;
   структурные правила оверлея в `src/styles/global.css`.
-- **Kits** (`shadcn`, `heroui`): `styles.css` — цвет оверлея (`--dg-flash-background` на классе
-  кита), затухание, `prefers-reduced-motion`. В shadcn это payload registry (ADR 0002) — публичный
+- **Kits** (`shadcn`, `heroui`): `styles.css` — цвет оверлея (`--dg-flash-background` и токены
+  статусов `--dg-flash-{success,warning,error}-background` на классе кита), затухание,
+  `prefers-reduced-motion`. В shadcn это payload registry (ADR 0002) — публичный
   контракт для всех `shadcn add` consumer'ов.
 - **Docs** (`@ez-kit/docs`): страница, пример в `manifest.json` / `registry.ts`, `page-type-map.ts`
   для `docs-option-names.test.ts`; `tree-shaking.test.ts` для новой фичи.

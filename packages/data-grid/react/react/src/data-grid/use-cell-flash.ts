@@ -8,6 +8,7 @@ import type {
 	FlashingEquals,
 	FlashRequest,
 	FlashRequestSource,
+	FlashStatus,
 } from '@ez-kit/data-grid-core'
 import type { Cell } from '@tanstack/table-core'
 import type { CSSProperties } from 'react'
@@ -19,7 +20,7 @@ type FlashDurations = Pick<ColumnFlashingMeta, 'flashDuration' | 'fadeDuration'>
 
 /** What a body cell spreads onto its `Td` while it flashes. Empty outside a flash. */
 export type CellFlash = {
-	attrs: { 'data-flash'?: FlashPhase }
+	attrs: { 'data-flash'?: FlashPhase; 'data-flash-status'?: FlashStatus }
 	/** `--dg-flash-fade-duration`, which the kit's fade transition reads. */
 	vars: CSSProperties | undefined
 }
@@ -59,6 +60,9 @@ function addresses(request: FlashRequest, rowId: string, columnId: string): bool
  * The last value is recorded on every commit, including while the editor is open, so an update
  * that lands under an editor the user then cancels shows without a flash.
  *
+ * Each flash carries a status — the request's, or the column's `status` function's for an automatic
+ * one — and sets `data-flash-status` beside `data-flash` for its whole run.
+ *
  * A manual request reaches the cell through a subscription to the table's request atom, set up
  * in an effect: the listener checks the address and sets state only in the cells the request
  * names. The atom holds the last request, but its subscription reports changes only, so a cell
@@ -79,15 +83,15 @@ export function useCellFlash<TRow extends object>(
 	const columnFlashing = cell.column.columnDef.meta?.flashing
 	const requests = flashRequestsOf(table) ?? NO_REQUESTS
 
-	const [flash, setFlash] = useState<{ phase: FlashPhase; fadeDuration: number } | null>(null)
+	const [flash, setFlash] = useState<{ phase: FlashPhase; fadeDuration: number; status: FlashStatus } | null>(null)
 	const timers = useRef<ReturnType<typeof setTimeout>[]>([])
 
-	const trigger = useCallback((durations: FlashDurations) => {
+	const trigger = useCallback((durations: FlashDurations, status: FlashStatus) => {
 		for (const timer of timers.current) clearTimeout(timer)
-		setFlash({ phase: 'flash', fadeDuration: durations.fadeDuration })
+		setFlash({ phase: 'flash', fadeDuration: durations.fadeDuration, status })
 		timers.current = [
 			setTimeout(() => {
-				setFlash({ phase: 'fade', fadeDuration: durations.fadeDuration })
+				setFlash({ phase: 'fade', fadeDuration: durations.fadeDuration, status })
 			}, durations.flashDuration),
 			setTimeout(() => {
 				setFlash(null)
@@ -103,14 +107,18 @@ export function useCellFlash<TRow extends object>(
 	)
 
 	// ── automatic: a value change ───────────────────────────────────────────
+	// The status function is asked only once the value is known to have changed: whether a cell
+	// flashes is `equals`' call alone.
 	const value = cell.getValue<unknown>()
+	const original = cell.row.original
 	const lastValue = useRef<{ value: unknown } | null>(null)
 	useEffect(() => {
 		const last = lastValue.current
 		lastValue.current = { value }
 		if (last === null || columnFlashing === undefined || !isActive) return
-		if (!sameValue(last.value, value, columnFlashing.equals)) trigger(columnFlashing)
-	}, [value, columnFlashing, isActive, trigger])
+		if (sameValue(last.value, value, columnFlashing.equals)) return
+		trigger(columnFlashing, columnFlashing.status?.(last.value, value, original) ?? 'default')
+	}, [value, original, columnFlashing, isActive, trigger])
 
 	// ── manual: a `flashCells` request ──────────────────────────────────────
 	// The atom's `subscribe` reports changes only, never the value it holds when called, so a cell
@@ -122,10 +130,13 @@ export function useCellFlash<TRow extends object>(
 			if (request === null || !addresses(request, rowId, columnId)) return
 			const tableFlashing = (table.options as { flashing?: boolean | FlashingConfig }).flashing
 			const base = columnFlashing ?? resolveFlashing(true, tableFlashing) ?? DEFAULT_FLASH_DURATIONS
-			trigger({
-				flashDuration: request.flashDuration ?? base.flashDuration,
-				fadeDuration: request.fadeDuration ?? base.fadeDuration,
-			})
+			trigger(
+				{
+					flashDuration: request.flashDuration ?? base.flashDuration,
+					fadeDuration: request.fadeDuration ?? base.fadeDuration,
+				},
+				request.status ?? 'default',
+			)
 		})
 		return () => {
 			subscription.unsubscribe()
@@ -134,7 +145,7 @@ export function useCellFlash<TRow extends object>(
 
 	if (flash === null || !isActive) return NO_FLASH
 	return {
-		attrs: { 'data-flash': flash.phase },
+		attrs: { 'data-flash': flash.phase, 'data-flash-status': flash.status },
 		vars: { ['--dg-flash-fade-duration' as string]: `${String(flash.fadeDuration)}ms` },
 	}
 }

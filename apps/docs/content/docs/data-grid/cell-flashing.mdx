@@ -25,7 +25,12 @@ const features = tableFeatures({
 	flashing
 	columns={[
 		{ accessorKey: 'symbol', header: 'Symbol' },
-		{ accessorKey: 'price', header: 'Price', cell: 'number' },
+		{
+			accessorKey: 'price',
+			header: 'Price',
+			cell: 'number',
+			flashing: { status: (previous, next) => (next > previous ? 'success' : 'error') },
+		},
 		{ accessorKey: 'updatedAt', header: 'Updated', flashing: false },
 	]}
 />
@@ -86,26 +91,60 @@ own. Use `flashCells` for it.
 
 `table.flashCells()` flashes the rendered cells it names, whether or not `flashing` is on:
 
+<DataGridDocsExample exampleId='cell-flashing-on-demand' />
+
 ```tsx
 const table = useDataGrid({ features, data, columns, getRowId })
 
 table.flashCells({ rowIds: ['acme'] }) // every cell of one row
 table.flashCells({ columnIds: ['price'] }) // one column
 table.flashCells({ rowIds: ['acme'], columnIds: ['price'], flashDuration: 100 })
+table.flashCells({ rowIds: ['acme'], status: 'error' }) // in the error colour
 table.flashCells() // every rendered cell
 ```
 
-| Parameter       | Type                | Description                                                                  |
-| --------------- | ------------------- | ---------------------------------------------------------------------------- |
-| `rowIds`        | `readonly string[]` | The rows to flash. Left out: every row.                                      |
-| `columnIds`     | `readonly string[]` | The columns to flash. Left out: every column.                                |
-| `flashDuration` | `number`            | How long the highlight holds, in ms. Default: the column's, then the grid's. |
-| `fadeDuration`  | `number`            | How long it fades out, in ms. Default: the column's, then the grid's.        |
+| Parameter       | Type                | Description                                                                     |
+| --------------- | ------------------- | ------------------------------------------------------------------------------- |
+| `rowIds`        | `readonly string[]` | The rows to flash. Left out: every row.                                         |
+| `columnIds`     | `readonly string[]` | The columns to flash. Left out: every column.                                   |
+| `flashDuration` | `number`            | How long the highlight holds, in ms. Default: the column's, then the grid's.    |
+| `fadeDuration`  | `number`            | How long it fades out, in ms. Default: the column's, then the grid's.           |
+| `status`        | `FlashStatus`       | The colour of the flash. Default `'default'`; a column's `status` is not asked. |
+
+## Status
+
+A flash has a status that sets its colour: `'default'`, `'success'`, `'warning'` or `'error'`. The
+status only colours a flash. Whether a cell flashes is still decided by comparing values.
+
+A column's `flashing.status` gives the automatic flash its status from the value before and after the
+change, and the row. It is called only for a value that changed, and `undefined` means `'default'`:
+
+```tsx
+{
+	accessorKey: 'price',
+	header: 'Price',
+	flashing: { status: (previous, next) => (next > previous ? 'success' : 'error') },
+}
+```
+
+<DataGridDocsExample exampleId='cell-flashing-status' />
+
+Here the price flashes green when it rises and red when it falls. The volume flashes amber on a jump
+of 400 or more and in `'default'` otherwise, because its function returns `undefined`. The
+`updatedAt` column has no `status` and flashes in `'default'` on every poll.
+
+There is no built-in "up is good" rule and no grid-level `status`: a rising price is good news and a
+rising response time is not, so each column says which is which. A column without `status` flashes
+in `'default'`.
+
+`table.flashCells` takes its own `status`, `'default'` when left out. It does not ask the column's
+function: a call has no previous value to compare.
 
 ## What does not flash
 
 - **Cells as they appear.** The first render, a page change, a new filter, a row added to `data`, and
-  a row scrolled into a virtualized window all render without a flash. A cell that changed while it
+  a row scrolled into a virtualized window all render without a flash (see
+  [virtualization](/docs/data-grid/virtualization#with-cell-flashing)). A cell that changed while it
   was not rendered shows its new value without a flash, and a `flashCells` call made before a cell
   mounted does not reach it.
 - **System cells.** The selection, expand, group, drag and actions columns never flash. On a group
@@ -128,24 +167,39 @@ utilities, and it re-renders only the cells that flash.
 
 ## Column options
 
-| Option                   | Type                              | Description                                                                         |
-| ------------------------ | --------------------------------- | ----------------------------------------------------------------------------------- |
-| `flashing`               | `boolean \| ColumnFlashingConfig` | Overrides the grid: `false` keeps the column dark, `true` or an object turns it on. |
-| `flashing.flashDuration` | `number`                          | Overrides the grid's hold duration for this column.                                 |
-| `flashing.fadeDuration`  | `number`                          | Overrides the grid's fade duration for this column.                                 |
-| `flashing.equals`        | `(previous, next) => boolean`     | Whether two values are equal. Default: `Object.is`, with dates compared by time.    |
+| Option                   | Type                                                | Description                                                                             |
+| ------------------------ | --------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `flashing`               | `boolean \| ColumnFlashingConfig`                   | Overrides the grid: `false` keeps the column dark, `true` or an object turns it on.     |
+| `flashing.flashDuration` | `number`                                            | Overrides the grid's hold duration for this column.                                     |
+| `flashing.fadeDuration`  | `number`                                            | Overrides the grid's fade duration for this column.                                     |
+| `flashing.equals`        | `(previous, next) => boolean`                       | Whether two values are equal. Default: `Object.is`, with dates compared by time.        |
+| `flashing.status`        | `(previous, next, row) => FlashStatus \| undefined` | The status of an automatic flash. Called only for a changed value. Default `'default'`. |
 
 ## Styling
 
 A flashing cell carries `data-flash="flash"` while the highlight holds and `data-flash="fade"` while
-it fades, plus `--dg-flash-fade-duration` set to the fade time. The grid's structural stylesheet lays
-an overlay (`::after`) over the cell, so the highlight works on pinned cells too, and the kit fills
-it with `--dg-flash-background`. Override that token on the kit class to change the colour:
+it fades, `data-flash-status` with its status for the whole flash, and `--dg-flash-fade-duration` set
+to the fade time. The grid's structural stylesheet lays an overlay (`::after`) over the cell, so the
+highlight works on pinned cells too, and the kit fills it with one token per status:
+
+| Status    | Token                           |
+| --------- | ------------------------------- |
+| `default` | `--dg-flash-background`         |
+| `success` | `--dg-flash-success-background` |
+| `warning` | `--dg-flash-warning-background` |
+| `error`   | `--dg-flash-error-background`   |
+
+Override a token on the kit class to change the colour:
 
 ```css
 .ez-shadcn-data-grid {
 	--dg-flash-background: color-mix(in oklab, var(--chart-2) 25%, transparent);
+	--dg-flash-success-background: color-mix(in oklab, var(--chart-1) 25%, transparent);
 }
 ```
+
+shadcn's theme has no success or warning colour, so the shadcn kit sets its own green and amber; the
+error colour comes from `--destructive`. The heroui kit uses `--color-success`, `--color-warning` and
+`--color-danger`.
 
 With `prefers-reduced-motion: reduce`, the highlight still appears but disappears without a fade.

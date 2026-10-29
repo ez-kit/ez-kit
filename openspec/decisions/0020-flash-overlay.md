@@ -6,11 +6,14 @@
 
 ## Decision
 
-**A flashing cell carries `data-flash="flash" | "fade"` and `--dg-flash-fade-duration`; the
+**A flashing cell carries `data-flash="flash" | "fade"`, `data-flash-status` and
+`--dg-flash-fade-duration`; the
 highlight is a `::after` overlay on the `td`, never the cell's own background.** The structural
 stylesheet (`@ez-kit/data-grid-react/styles.css`) positions it — `absolute inset-0
-pointer-events-none`, and `relative` on the `td` only when it is not pinned. Each kit paints it with
-`--dg-flash-background`, declared on the kit class, fades its `opacity` over
+pointer-events-none`, and `relative` on the `td` only when it is not pinned. Each kit paints it by
+the cell's `data-flash-status` — `--dg-flash-background` for `default`, and
+`--dg-flash-success-background`, `--dg-flash-warning-background`, `--dg-flash-error-background` for
+the other three — all declared on the kit class, fades its `opacity` over
 `--dg-flash-fade-duration` in the `fade` phase, and drops the transition under
 `prefers-reduced-motion`. The React package writes the attribute and the variable, nothing else.
 
@@ -24,6 +27,11 @@ already wears a `box-shadow` for the pin edge.
   and back.
 - **An inset `box-shadow`** collides with the pin-edge shadow.
 - **`element.animate()` from the React package** would author style in the one package that may not.
+
+A status is a token, not a mechanism: one overlay, its colour picked by an attribute selector, so a
+kit adds a status by declaring one more colour, and a consumer recolours one by overriding its token.
+The status set is closed (`default | success | warning | error`); a fifth colour is a token
+override, not a fifth status.
 
 The overlay sits over any background and animates only its own opacity. `relative` is skipped on
 pinned cells for the reason the resizable `th` skips it: it would cancel `sticky`. The positioning is
