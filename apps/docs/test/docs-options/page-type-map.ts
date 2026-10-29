@@ -27,7 +27,7 @@ const PERSIST_VALUE_TYPE_ARGS = '<string>'
  * skipped, which is the only way coverage stays an honest number.
  *
  * Scope: **every** page under the {@link SCANNED_ROOTS} subtrees —
- * `data-grid/**`, `form/**`, `zu-store/**` and `va-store/**`. A page with no
+ * `data-grid/**`, `form/**`, `zu-store/**`, `va-store/**` and `query-react/**`. A page with no
  * option table still gets an entry with two empty arrays — that is the point.
  * While coverage was partial, an unmapped page was checked by nothing, and the
  * two worst pages in the docs were unmapped ones: `columns/resizing.mdx`
@@ -59,6 +59,7 @@ export const SCANNED_ROOTS: readonly string[] = [
 	'content/docs/form',
 	'content/docs/zu-store',
 	'content/docs/va-store',
+	'content/docs/query-react',
 ]
 
 /** A page under a scanned root that is deliberately not classified, with the reason it checks nothing. */
@@ -230,6 +231,11 @@ export const DocPage = {
 	VaPersistQuickStartUrl: 'content/docs/va-store/persist/quick-start-url.mdx',
 	VaPersistTypescript: 'content/docs/va-store/persist/typescript.mdx',
 	VaStability: 'content/docs/va-store/stability.mdx',
+	// --- @ez-kit/query-react ---
+	QueryAi: 'content/docs/query-react/ai.mdx',
+	QueryDataUnderGate: 'content/docs/query-react/data-under-gate.mdx',
+	QueryIndex: 'content/docs/query-react/index.mdx',
+	QueryStates: 'content/docs/query-react/states.mdx',
 } as const
 
 export type DocPage = (typeof DocPage)[keyof typeof DocPage]
@@ -489,6 +495,15 @@ export const STORE_TYPE = {
 		name: 'PersistFieldOptions',
 		typeArgs: PERSIST_VALUE_TYPE_ARGS,
 	},
+} as const satisfies Record<string, TypeRef>
+
+/**
+ * Types that govern the mapped `query-react/` tables. Every type parameter of both props types has
+ * a default, so the bare names instantiate them — and the type parameters never change the key set.
+ */
+export const QUERY_TYPE = {
+	QueryProps: { module: TypeModule.QueryReact, name: 'QueryProps' },
+	QueryProviderProps: { module: TypeModule.QueryReact, name: 'QueryProviderProps' },
 } as const satisfies Record<string, TypeRef>
 
 /** Zero-based index of the table column that names the option. */
@@ -1813,6 +1828,27 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		page: DocPage.VaPersistTypescript,
 		optionTables: [],
 		nonOptionTables: [{ heading: 'Toolchain notes', reason: 'Lists toolchains and their decorator support.' }],
+	},
+	// --- @ez-kit/query-react ------------------------------------------------
+	{
+		page: DocPage.QueryAi,
+		optionTables: [],
+		nonOptionTables: [{ heading: NO_HEADING, reason: 'Lists the llms.txt endpoints — URLs, not config keys.' }],
+	},
+	{ page: DocPage.QueryDataUnderGate, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.QueryIndex, optionTables: [], nonOptionTables: [] },
+	{
+		page: DocPage.QueryStates,
+		optionTables: [
+			{ heading: '`Query`', roots: [QUERY_TYPE.QueryProps], expectedCount: 5 },
+			{ heading: '`QueryProvider`', roots: [QUERY_TYPE.QueryProviderProps], expectedCount: 4 },
+		],
+		nonOptionTables: [
+			{
+				heading: 'What the gate renders',
+				reason: 'Maps query states to what the gate renders; the first column names states, not keys.',
+			},
+		],
 	},
 ]
 

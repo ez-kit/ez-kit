@@ -79,6 +79,10 @@ and move on.
 - **`layout.classNames` is a nested bag, and its keys join across option layers** — the only option that does. No flat `wrapperClassName` / `scrollClassName`. Rationale: [ADR 0010](openspec/decisions/0010-layout-classnames-bag.md).
 - **Date presets belong to the column.** `betweenOperator` is number-only (`slider` / `min` / `max`, no `variant`); `filtering.presets` fills whichever operator is current; the preset menu is `core.Menu`, not a slot; column-level and a future table-level `presets` do not collide. Rationale: [ADR 0011](openspec/decisions/0011-date-filter-presets.md).
 
+### The query gate keeps TanStack's names and has no data channel
+
+`@ez-kit/query-react`'s `<Query>` hands render functions TanStack's `useQuery` result unchanged — `children(data, q)`, `error(error, q)`, no renamed or filtered fields. Descendants read the gate's data with TanStack's own `useSuspenseQuery` and the same `queryOptions`; that is a docs recipe (`query-react/data-under-gate.mdx`), not API. There is no `useData()`, no `createQueryScope` and no context carrying data — re-proposing one needs a concrete case the recipe cannot cover. Guard: `packages/query/react/src/data-under-gate.test.tsx`. Rationale: [ADR 0022](openspec/decisions/0022-query-gate-native-tanstack.md).
+
 ## Branching & Release Flow
 
 - `develop` is the default integration branch — all feature branches fork from and merge into `develop`.
@@ -317,6 +321,10 @@ Two consequences worth keeping:
 - **Store packages are named `<first two letters of the backing library>-store`** — `zu-store`
   (Zustand), `va-store` (Valtio). A future Redux binding is `re-store`, MobX is `mo-store`. The
   directory name, the npm name (`@ez-kit/<name>`), and the docs route (`/docs/<name>`) all match.
+- **Every other adapter is named `<feature>-<framework>`** — `data-grid-react`, `form-react`,
+  `query-react` (`packages/query/react`, over TanStack Query). No library prefix (`ta-query`) and
+  no `react-query`, which collides with `@tanstack/react-query`. A `<feature>-core` package appears
+  only once two adapters share code. Rationale: [ADR 0021](openspec/decisions/0021-query-package-name.md).
 - Public API exported exclusively from `src/index.ts`
 - Built with `tsup` → ESM output + `.d.ts` declarations into `dist/`
 - Each package extends `tsconfig.base.json` and uses `@/*` → `src/*` path alias

@@ -69,6 +69,12 @@ const PACKAGES: readonly Package[] = [
 			},
 		],
 	},
+	{
+		name: '@ez-kit/query-react',
+		entry: entryOf('query/react'),
+		shakeable: [],
+		cases: [{ imports: ['Query', 'QueryProvider'], pulls: ['@ez-kit/query-react'] }],
+	},
 	/**
 	 * The data-grid subpath entries.
 	 *

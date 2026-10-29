@@ -1,0 +1,7 @@
+{
+	"title": "query-react",
+	"description": "Declarative TanStack Query gate for React",
+	"icon": "DatabaseZap",
+	"root": true,
+	"pages": ["index", "states", "data-under-gate", "ai"]
+}
