@@ -1,5 +1,311 @@
 # @ez-kit/form-react
 
+## 0.5.0
+
+### Minor Changes
+
+- 3f778c2: `ArrayField` is now registered with the fields, not the components, and carries its entry view as
+  `ArrayField.Item`: `fields: { ArrayField: Object.assign(Frame, { Item: Entry }) }`. A kit's
+  `ArrayField` is a new root export of both `@ez-kit/form-shadcn` and `@ez-kit/form-heroui`, and it
+  already has its `Item`. Inside an array entry, only field components are scoped to the entry:
+  `item.Section`, `item.SubmitButton` and `item.GridItem` are gone from the entry scope, which is a
+  compile break for anyone who wrote them — use `form.Section` and the like around the array
+  instead.
+- 3bdd24c: **Kit contract:** every field's render props carry `data-form-id`, the id of the form the field
+  belongs to, and a kit spreads it onto the same element as `data-field`. Both kits do; a custom kit
+  that picks its props rather than spreading them must add it, or focus-on-error skips its fields.
+  `form.Field` hands it over too.
+
+  **Focus on the first error.** After a submit that fails validation, the first field in DOM order
+  that has an error takes focus — its control by `id`, or the first focusable element inside it. It
+  works in a `<form>`, under `FormProvider` alone, and with several forms on one page. `focusOnError:
+false` (an option of `useForm`, a prop of the uncontrolled `<Form>` / `<SchemaForm>`) turns it off;
+  `onSubmitInvalid` still runs, after the focus.
+
+  **Server errors.** `form.setServerErrors({ fields, form })` puts errors a server reported onto the
+  form: `fields` maps a field path to a message or a list of them, `form` holds messages for the form
+  as a whole. A field's error shows at once, stays when the field is focused and left, and goes the
+  first time its value changes — it does not come back if the value is changed back. Every server error
+  goes on a whole-form submit or reset, whichever API starts it — the instance `useForm` returns, or the
+  `formApi` TanStack passes to `onSubmit`, listeners and validators. When the errors name a field,
+  the first field with an error takes focus, unless `focusOnError` is `false`.
+  Field errors live in TanStack's `errorMap.onServer`, so every kit renders them unchanged.
+
+  `serverErrors` is the declarative form of the same: an option of `useForm` and a prop of the
+  uncontrolled `<Form>` and `<SchemaForm>`, applied whenever its value changes by reference — the shape
+  `useActionState` hands back. Messages for the form as a whole arrive in `form.Submit`'s `formErrors`
+  and do not disable submitting; the next whole-form submit clears them.
+
+  **Searchable sources wait for the user.** A searchable field over an option source hands the source
+  its query after 300 ms without typing, not on every keystroke; `debounce` and `minLength` on the
+  source, or `searchable={{ debounce, minLength }}` on the field (and in a schema node), tune it. Below
+  `minLength` the source receives `query: undefined` and the kit shows a hint. An in-memory searchable
+  list still filters at once. **Kit contract:** `search` gains `minLength` and `belowMinLength`, and
+  `loading` is now also `true` while a debounce is pending — on an in-memory list too, once a field sets
+  `debounce` above 0. A kit that blanks or disables its control on `loading` does so on every pause.
+
+  **Migration:** a source that already debounces its query internally now waits twice — drop its own
+  debounce, or set `debounce: 0` on the source.
+
+- a394b7e: `form.Submit`'s `formErrors` lists the issues a form-level standard schema reports without a path;
+  it used to print the whole issue record as `[object Object]`. A group from `form.FormGroup` or
+  `useFormGroup` gains `errors`: the messages its own validators report with no path (issues with a
+  path show on their fields). `group.state.meta.errors` stays TanStack's raw value.
+
+  `withForm`'s `form` prop is optional: a block placed without one takes the form above it (`<Form>`,
+  `<SchemaForm>` or `FormProvider`), typed by the block's own options — a cast, as
+  `useFormContext<V>()` is. With neither, it throws a named error. A `form` that is passed is checked
+  against the block's data and fields but no longer against its validators: a block declared with
+  `defaultValues` alone used to reject every form that had been given `validators`.
+
+  Groups carry the bundle's fields. Inside `form.FormGroup` and a `withFieldGroup` block, `group.TextField`,
+  `group.ArrayField`, `group.Array` and every field the app registered take a `name` relative to the
+  group — a path for `form.FormGroup` and `fields='…'`, the map's own key for a field map. `form.X`
+  inside a group stays absolute: the coordinates come from the object a field is called through.
+  `withFieldGroup` is now built per bundle, and a block placed without `form` takes the form above it,
+  with `fields` then unchecked; with neither, it throws a named error. Both kits export the new types
+  `GroupFields`, `FieldGroupScope`, `FormGroupScope`, `FieldGroupPlacementProps`,
+  `UncheckedFieldGroupPlacementProps`, `WithFieldGroupOptions` and `FieldGroupBlock`.
+
+  **Groups validate and submit.** `withFieldGroup` takes `validators` — a Standard Schema or a function
+  over the block's own shape, on `onMount`, `onChange`, `onBlur`, `onSubmit` and their async forms.
+  Issues with a path land on the real fields; issues without one are the block's `group.errors`.
+  `group.handleSubmit()` checks the block and calls the `onGroupSubmit` passed where the block is
+  placed, with `value` typed by the block. `meta` is the argument `group.handleSubmit(meta)` was called
+  with, `undefined` without one. **Breaking:** a block's `group.handleSubmit` used to submit
+  the whole form; call `form.handleSubmit()` for that. On every group (`form.FormGroup`, `useFormGroup`,
+  a block), a submit first clears the server errors of the fields inside it, runs the groups placed
+  inside it, and focuses the group's first error when it fails. A whole-form submit runs the form's
+  validators and no group's, as in TanStack: the form's schema decides whether the form is sent, so a
+  rule that must hold the form belongs in it — build it from the blocks' schemas, and describe a part
+  that is there only sometimes with `z.discriminatedUnion` or `superRefine`. An error a mounted group
+  has already reported still blocks the form's submit. Both kits also export `GroupValidators`,
+  `GroupValidator`, `GroupAsyncValidator` and `OnGroupSubmit`.
+
+  A group that unmounts — a block behind a checkbox, a step — now takes its errors with it, including
+  those it put on fields that were never mounted; before, they stayed and kept the form from submitting
+  for good. A field mounted after a submit attempt shows the errors the form reported on it without
+  being touched. `revalidateLogic` is re-exported from `@ez-kit/form-react` and both kits, for a form
+  schema on `onDynamic` that stays quiet until the first submit and re-checks every change after it. In
+  development, a group whose name begins another field's name (`billing` beside `billingDiffers`) logs
+  an error: TanStack Form matches a group's fields by a plain prefix, so editing that field runs the
+  group's validators.
+  Two native groups on one name — a `form.FormGroup` and a block placed on its path — share one group
+  state, so keep one validating group per branch: in development, two with validators log an error.
+
+  A block placed with a field map — `fields={{ password: 'newPassword', confirm: 'newPasswordRepeat' }}`
+  — validates and submits the same way: its value is assembled from the mapped fields, issues with a
+  path land on the mapped field, and its own issues are `group.errors`. Those are kept under an
+  `errorMap` key of the form `onGroup:<id>`, which `form.Submit`'s `formErrors` leaves out.
+
+- dda2e5b: Add a form context. `<Form>` and `<SchemaForm>` provide it, `FormProvider` provides it without
+  rendering a `<form>` (a form whose `<form>` element sits lower in the tree, or none at all), and
+  `useFormContext()` reads it — the base form API, for components that do not depend on a particular
+  form, such as a save bar. `createForm` also returns `FormProvider`.
+
+  `useFormContext<Values>()` takes an optional type argument: it types the values, the base API and
+  the kit's built-in fields by `name` over `Values`. It is a cast, not a check — nothing verifies that
+  the form above holds `Values` — so a component that names paths in one form's data is better written
+  with `withForm` or `withFieldGroup`.
+
+- 5c8b8fa: Add `createSchemaForm`: the same options as `createForm`, returning the same bundle plus
+  `SchemaForm`. `createForm` no longer returns `SchemaForm` and no longer pulls in the schema
+  renderer, so an app that writes its forms in JSX does not ship it. Replace
+  `const { SchemaForm } = createForm(options)` with `createSchemaForm(options)`; fields registered
+  there resolve from JSX and from a document exactly as before.
+- 1290e36: Every form instance gains `form.NativeField`: TanStack's render-prop field, with its `FieldApi`, under
+  a new name. It is also on every array entry (`item.NativeField`, item-relative).
+
+  Every group gains `NativeField` too: `withFieldGroup` and `useFieldGroup` groups (names mapped
+  through `fields`), and `form.FormGroup` and `useFormGroup` groups (names relative to the group's
+  `name`). `useFieldGroup`, `useFormGroup` and the bundle's `withFieldGroup` are now this package's own,
+  taking the form instance `useForm` returns; they no longer accept a TanStack `FormApi` built
+  elsewhere, nor a group as another group's `form`.
+
+  On a group and on an array entry, `NativeField`'s `name` and its validators' `onChangeListenTo` /
+  `onBlurListenTo` are relative; the `field` its render prop receives is the root form's, so
+  `field.name` is the absolute path (`address.city`).
+
+  **Breaking:** `form.Field` is no longer TanStack's field. It binds a control of your own the way a
+  registered field is bound: its render prop receives `id`, `name`, `value`, a value-taking `onChange`,
+  `onBlur`, `errors` (already filtered by the display rule), `invalid`, `data-field`, … — the props a
+  `defineFieldType` field gets — and it validates through `validate`, like every field of this package
+  (TanStack's `validators` stay on `form.NativeField`). It is also on every array entry
+  (`item.Field`) and every group (`group.Field`), with names relative to them. Code written against
+  TanStack's `form.Field` (`field.state.value`, `field.handleChange`) moves to `form.NativeField` and
+  no longer compiles in `form.Field`. Three more compile breaks follow from retyping `Field` and `FormGroup`: a group's submit meta now defaults to `never` (TanStack resolved an unspecified one to the form's) and `useFieldGroup` no longer takes `onSubmitMeta`; `useFieldGroup` no longer takes TanStack's `formComponents` option, so an existing `formComponents: {}` is an excess-property error; and the instance `useForm` returns is no longer assignable to a TanStack API whose parameter is typed `FormApi`, such as `useField({ form })` from `@tanstack/react-form`, which needs a cast. Both kits export the new types `FieldProps`, `FieldControlProps`,
+  `BoundFieldComponent`, `FieldGroupInstance`, `FieldGroupOptions`, `FormGroupInstance` and
+  `FormGroupProps`.
+
+  `form.AppField` is now this package's binding seam — the component every bound field renders
+  through — and no longer provides TanStack's field context.
+
+- 5545349: Add `FormInstance<TValues>`, the one public type for a form instance. `KitFormApi`, `BoundForm`,
+  `RendererForm` and `BoundFieldApi` are no longer exported: write `FormInstance<Values>` where you
+  wrote `KitFormApi<Values, …twelve parameters…>`.
+
+  An app with custom fields writes `FormInstance<Values, Fields>` where it wrote
+  `KitFormApi<Values, …twelve parameters…, Fields>`.
+
+  `BoundFieldApi` has no new name: to name an array scope's `field`, write
+  `ArrayFieldScope<Item>['field']`. The controlled `SchemaForm`'s `form` prop is now a `FormInstance` rather than a structural slice of
+  one: every instance `useForm` returns is still accepted, but a hand-built object carrying only
+  `handleSubmit` and the field components no longer is.
+
+- c143f83: A built-in field passes every prop it does not bind to the kit's component, flat. `form.<Field>`
+  keeps `name`, `label`, `description`, `disabled`, `required` and `validate` — plus `options`,
+  `optionsFrom`, `optionsParams`, `loading`, `searchable`, `creatable` and `createLabel` on the four
+  option-bearing fields — and everything else reaches the component under its own name:
+  `<form.TextField name='password' type='password' autoComplete='current-password' maxLength={64} />`.
+  What a field accepts beyond the binding is read off the parameter of the component registered under
+  its key, so a kit or an app declares a prop by typing its component and nothing else: under a
+  `TextField` that declares `variant?: 'flat' | 'bordered'`, `variant='bordered'` compiles and
+  `variant='outlined'` does not. The props the binding computes — `value`, `onChange`, `onBlur`, `id`,
+  `name`, `errors`, `invalid`, `required`, the `data-field` attributes, and `options` / `loading` /
+  `search` on the option-bearing fields — are a compile error on `form.<Field>` and win at runtime when
+  they arrive anyway. The same holds for an array entry's fields and a group's.
+
+  The kits declare what they forward and export it as `<Field>KitProps` (`TextFieldKitProps`,
+  `SliderFieldKitProps`, …). shadcn forwards the native `<input>` / `<textarea>` attributes of its text
+  fields and the Radix primitive's props of the checkbox, switch, radio group and slider. HeroUI
+  forwards the React Aria root's props, which is where React Aria takes an input's attributes, and
+  puts `placeholder` and `rows` on the input itself. Both declare `placeholder`, `type`, `rows`, `min`,
+  `max` and `step` wherever they did before, so existing JSX is unchanged.
+
+  Breaking: the kit contract no longer carries input attributes. `placeholder`, `type`, `rows`, `min`,
+  `max` and `step` are gone from the render props (`TextFieldRenderProps` … `DateRangeFieldRenderProps`)
+  and from the consumer props (`TextFieldProps` … `DateRangeFieldProps`, now the binding props alone).
+  A third-party kit that read them declares them on its own components —
+  `(props: TextFieldRenderProps & { placeholder?: string; type?: string }) => …` — and a component that
+  requires a prop beyond the contract no longer satisfies `FormFieldSlots`. `TextInputType` is no
+  longer exported from `@ez-kit/form-react` or either kit: write the string, `type='password'` rather
+  than `type={TextInputType.Password}`. A schema document is unaffected — the renderer still passes a
+  node's `placeholder`, `rows`, `min`, `max`, `step`, and `inputType` as `type` — but those reach the
+  kit unchecked. A hand-written `FormInstance<V>` defaults to the contract's own field signatures and so
+  carries no kit props; name the field set, `FormInstance<V, typeof fields>`, to keep them.
+
+- 8aee311: TanStack Form is now a dependency of `@ez-kit/form-react` rather than a peer of every form package,
+  so an app gets exactly one copy and no longer installs `@tanstack/react-form` or
+  `@tanstack/form-core` itself — remove them from your `package.json` unless you use TanStack
+  elsewhere. The kits depend on `@ez-kit/form-react` alone; the schema-authoring API and `useSelector`
+  are re-exported from it and from each kit.
+
+  `@tanstack/form-core` is now a peer of `@ez-kit/form-core`: if you install `@ez-kit/form-core` on its
+  own (for example to use it in a server component), add `@tanstack/form-core` beside it.
+
+- ad434e0: `createForm` takes `{ FormElement?, fields?, components? }`, all optional. `form.X` exists in the
+  types for exactly what was passed: a field kind under its key, and any component under its key with
+  its own props — `components: { SaveBar }` gives `<form.SaveBar />`. Without `FormElement` the form
+  renders a plain `<form>`. A component reads the form from context, so it needs `<Form>`,
+  `<SchemaForm>` or `<FormProvider>` above it: an instance from `useForm` rendered under a
+  hand-written `<form>` is wrapped in `<FormProvider form={form}>`, or `form.SubmitButton` throws.
+  Because `<Form form>` puts its instance in that context, the controlled `form` prop now takes a
+  whole form instance (`FormInstance<V, NoRegistry, NoRegistry>`, generic over the values) rather than
+  any object with a `handleSubmit`; every `useForm` result is accepted, and `FormProvider` now also
+  accepts one whose values hold an array.
+
+  Breaking: the `Button` and `Form` slots are gone. Pass the kit's `FormElement` as `FormElement`, and
+  its `SubmitButton`, `Section` and `GridItem` in `components`; `form.SubmitButton` is now
+  the `SubmitButton` you passed. `ArrayScope.Button` is removed — a custom array layout renders its
+  own buttons. `ButtonProps`, `SectionRenderProps` and `GridItemRenderProps` are no longer exported;
+  a kit's `Section` and `GridItem` take `SectionProps` and `GridItemProps`. `createForm` no longer
+  warns about missing slots; `SchemaForm` throws a named error, before it renders anything, when a
+  document needs a component or a field kind that was not passed — a hidden node included, so a built-in kind with no slot (`DateField`) or an unregistered custom type
+  no longer throws `Unknown node type` mid-flow.
+
+  Every key of `FormFieldSlots` and `FormComponents` is now optional, so a third-party kit checks
+  that it ships all of them with `satisfies AllFormFieldSlots` / `satisfies AllFormComponents`. A
+  field set typed `FormFieldSlots` gives possibly-`undefined` members; a `satisfies`-checked one gives
+  required members. A misspelt built-in key in `fields` is a type error, and every custom entry is checked against
+  what the generic binder passes: a hand-written field that types its value
+  (`(p: CustomFieldRenderProps<number>) => …`) is declared with `defineFieldType` instead. The exported
+  `FormFieldComponents` holds only the field kinds — `Array` and `Submit` are `FormPrimitives`, and
+  `SubmitButton`, `Section` and `GridItem` are the components you pass. `FormInstance<V>` defaults to
+  every field kind and all four components, the shape a kit's bundle has; name `NoRegistry` for an
+  empty set, as in `FormInstance<V, typeof fields, NoRegistry>`.
+
+- 299f1d3: Rename `OptionsSource` to `OptionSourceRef` — it is the document's reference to a source, not the
+  source. `OptionSourceInput` and `OptionSourceResult` move to `@ez-kit/form-core` and are still
+  re-exported from `@ez-kit/form-react` and both kits.
+- 1bda12e: Breaking: the document wizard is removed. A `FormSchema` no longer has a `step` node:
+  `StepNode` is gone from `@ez-kit/form-core` and from the kits' re-exports, and `parseFormSchema`
+  rejects a node of type `step` as an unknown node type. The `Wizard` member of `FormComponents`, `WizardRenderProps` and
+  `WizardStep` are removed from `@ez-kit/form-react`, and both kits stop shipping `Wizard` and drop
+  it from `allFormComponents`. A form split into steps is written in JSX with `form.Steps` and
+  `form.Step`.
+- 15c6d9c: `createForm` rejects a field or component registered under a name the form instance already owns
+  (`Subscribe`, `state`, `reset`, `Field`, `Submit`, …) or under a name used in both `fields` and
+  `components` — a type error at the key, and an error thrown by `createForm`. Previously such a key
+  silently replaced the instance's own member.
+- 1bda12e: Breaking: a form document is now JSX written as data. A block names a component from the bundle's
+  `components` — the same one JSX reaches as `form.<Name>` — takes its `props` flat under the names
+  JSX uses, and with `children` is a container. `columns` goes on any container: a block with
+  children, an `array` (laying out each entry) or the document itself, and the renderer puts the
+  kit's grid inside it.
+
+  | Before                                          | After                                                                          |
+  | ----------------------------------------------- | ------------------------------------------------------------------------------ |
+  | `{ type: 'section', title, columns, children }` | `{ type: 'block', component: 'Section', props: { title }, columns, children }` |
+  | `{ type: 'submit', label: 'Save' }`             | `{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } }`    |
+  | `<SchemaForm blocks={{ Banner }} />`            | `createSchemaForm({ components: { Banner } })`                                 |
+  | block component takes `{ props }`               | block component takes its props flat                                           |
+  | `{ key: 'x', params }`                          | `{ i18n: 'x', params }`                                                        |
+  | `parseFormSchema(doc, { blocks })`              | `parseFormSchema(doc, { components })`                                         |
+  | `components.GridItem`, `form.GridItem`          | `components.Grid` with `Grid.Item`, `form.Grid` / `form.Grid.Item`             |
+  | `<form.Section columns={2}>`                    | `<form.Section><form.Grid columns={2}>…</form.Grid></form.Section>`            |
+
+  `SectionNode`, `SubmitNode`, `BlockRegistry` and `SectionProps.columns` are removed;
+  `GridProps`, `GridSlot`, `isBlockNode` and `hasChildren` are added. `parseFormSchema` rejects a
+  `section` or `submit` node naming the block that replaces it, a block naming `Grid` or carrying
+  `label` / `description` / `disabledWhen`, a `colSpan` whose container sets no `columns` or fewer than it spans, and block `props` that JSON
+  cannot carry. A
+  block's top-level `{ i18n }` props are translated through `translate`.
+
+- a27cd8c: Rename `FormRenderer` to `SchemaForm`, and its prop types to `SchemaFormControlledProps`,
+  `SchemaFormUncontrolledProps` and `SharedSchemaFormProps`. It is a form whose children come from a
+  schema document; the name now pairs with `Form` and with `defineFormSchema`. Behaviour is unchanged.
+- 576593e: **Step flows in JSX.** Every form instance gains `form.Steps` and `form.Step`: a headless step flow
+  over one form, with nothing drawn by the package. `form.Steps` holds which step is on screen, which
+  the user has tried to leave and which passed — outside the form's values, so none of it reaches
+  `onSubmit`, `isDirty` or `reset`. `form.Step` renders its children while it is on screen; steps are
+  listed in JSX order, and one that applies only sometimes takes `when` and is skipped in place.
+  `initial` renders a step on the server, and `step` / `onStepChange` make the step controlled.
+
+  A step learns its fields by rendering them — every bound field, group and array entry inside it — and
+  remembers them while it is off screen. "Next" (`goNext`) is a submit of the step: it marks the step's
+  fields touched, runs their validators, the form's validators limited to them, the groups inside the
+  step and the step's own `validators`, runs async validators only once the sync ones passed, and moves
+  on only if the step is clean; otherwise it focuses the first error. A whole-form submit runs no step's
+  validators — the form's schema holds the submit. `linear` (on by default) lets a forward `goTo` pass
+  only steps that passed and are still valid; `linear={false}` jumps anywhere, while "Next" still checks.
+
+  The parts hand state to your own markup: `form.Steps.List` (`steps` with `name`, `visited`, `invalid`,
+  plus `current` and `goTo`), `form.Steps.Item` and `useStep(name)` for one step, `form.Steps.Controls`
+  (`canGoBack`, `isLast`, `isValidating`, `stepErrors`, `formErrors`, `goBack`, `goNext`), and
+  `form.Steps.Subscribe` / `useSteps(selector, equal?)` for any slice. `useStep`, `useSteps` and the step
+  types are exported from `@ez-kit/form-react` and both kits.
+
+  A step's values survive the step being left or skipped; send the schema's output —
+  `schema.parse(value)` — to leave a skipped step out. Every form now carries the step code, which raises
+  `@ez-kit/form-react`'s size budget to 19.5 kB.
+
+- bfe01fe: Add `form.Submit`, a headless render-prop on every form instance:
+  `{ canSubmit, isSubmitting, isDirty, formErrors, submit }`. `submit` is `form.handleSubmit`, so a
+  button built on it works outside a `<form>` element too.
+
+### Patch Changes
+
+- bf06e11: `SchemaForm` no longer resolves a custom field kind or a block component named after an
+  `Object.prototype` member (`toString`, `constructor`, …). Such a document now fails with the same
+  error as any unregistered kind instead of rendering the prototype function.
+- Updated dependencies [c53a0af]
+- Updated dependencies [c143f83]
+- Updated dependencies [8aee311]
+- Updated dependencies [299f1d3]
+- Updated dependencies [1bda12e]
+- Updated dependencies [1bda12e]
+  - @ez-kit/form-core@0.5.0
+
 ## 0.4.0
 
 ### Minor Changes

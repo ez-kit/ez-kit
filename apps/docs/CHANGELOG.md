@@ -1,5 +1,80 @@
 # @ez-kit/docs
 
+## 0.3.0
+
+### Minor Changes
+
+- 7a74c6c: Cell flashing: a cell whose value changes gets a short highlight that fades out, for grids fed by polling or a socket. Register `cellFlashingFeature` and turn it on with `flashing` on the grid; a column's own `flashing` overrides it either way (`false` keeps a column such as an `updatedAt` stamp dark), and its object form sets `flashDuration` / `fadeDuration` and an `equals` for values that are fresh objects on every update. `table.flashCells({ rowIds, columnIds, status })` flashes rendered cells on demand. A flash has a status — `'default' | 'success' | 'warning' | 'error'` — that sets its colour: a column's `flashing.status(previous, next, row)` picks it for automatic flashes (a price that rose in green, one that fell in red), and `flashCells` takes one directly. A flash is not table state: it never reaches `onStateChange` or persistence, and re-renders only the cells that flash. Cells carry `data-flash="flash" | "fade"` and `data-flash-status`; both kits paint the highlight with one token per status, `--dg-flash-background` and `--dg-flash-{success,warning,error}-background`.
+- ec74db5: Document the form factory's new shape. The kit contract page now describes `FormElement`, the open
+  `fields` and `components` registries, the kit's `sets.ts` / `form.tsx` split and the `/* @__PURE__ */`
+  delegating-export rule; `createSchemaForm` is documented where a schema document reaches a custom
+  field, and a document that needs a component nobody passed is documented as a named error before the
+  first render. Submission documents `form.Submit` and its five render props, Composition gains
+  `FormProvider` / `useFormContext` and the `FormInstance<V, typeof fields, typeof components>`
+  spelling for a subset, and the arrays API notes that a kit's `ArrayField` carries `ArrayField.Item`.
+
+  Native API now documents `form.Field`, which binds a control of your own, and `form.NativeField`,
+  TanStack's field, on the form, on groups and on array entries; Composition documents the optional
+  type argument of `useFormContext`.
+
+  Submission documents the dirty-state recipes: resetting after a save, late initial values and a
+  `beforeunload` warning while the form is dirty.
+
+  The kit contract, Native API, Fields and Custom fields pages document `data-form-id`, the form id
+  every field wrapper carries beside `data-field`.
+
+  A new Server actions page shows a form submitting to a real server action, with `serverErrors` from
+  `useActionState`, and states that the form needs JavaScript; an end-to-end test checks that a
+  server-rendered form hydrates without errors in both kits.
+
+  Submission documents focus on the first error and server errors (`serverErrors`,
+  `form.setServerErrors`); Searchable selects documents the source's debounce and minimum length.
+
+  Submission no longer warns that `formApi.reset()` keeps server errors: every submit and reset
+  clears them.
+
+  Composition is rewritten around the three helpers' roles: `withForm` (a part of one form, form from
+  context), `withFieldGroup` (a block with its own fields, rules and submit, placed by path or map) and
+  `form.FormGroup` (a branch with its own check and submit), with live examples of a profile form and a
+  sign-up form, the coordinates rule and where to put a rule.
+
+### Patch Changes
+
+- Updated dependencies [7a74c6c]
+- Updated dependencies [3f778c2]
+- Updated dependencies [3bdd24c]
+- Updated dependencies [a394b7e]
+- Updated dependencies [dda2e5b]
+- Updated dependencies [c53a0af]
+- Updated dependencies [c143f83]
+- Updated dependencies [5c8b8fa]
+- Updated dependencies [1290e36]
+- Updated dependencies [f24e405]
+- Updated dependencies [5545349]
+- Updated dependencies [c143f83]
+- Updated dependencies [0aaba69]
+- Updated dependencies [b50eb0b]
+- Updated dependencies [8aee311]
+- Updated dependencies [ad434e0]
+- Updated dependencies [299f1d3]
+- Updated dependencies [1bda12e]
+- Updated dependencies [15c6d9c]
+- Updated dependencies [1bda12e]
+- Updated dependencies [a27cd8c]
+- Updated dependencies [bf06e11]
+- Updated dependencies [576593e]
+- Updated dependencies [bfe01fe]
+- Updated dependencies [0151ca6]
+  - @ez-kit/data-grid-core@0.15.0
+  - @ez-kit/data-grid-react@0.16.0
+  - @ez-kit/form-react@0.5.0
+  - @ez-kit/form-shadcn@0.5.0
+  - @ez-kit/form-heroui@0.6.0
+  - @ez-kit/form-core@0.5.0
+  - @ez-kit/query-react@0.1.0
+  - @ez-kit/data-grid-heroui@0.13.2
+  - @ez-kit/data-grid-shadcn@0.2.0
+
 ## 0.2.5
 
 ### Patch Changes

@@ -1,5 +1,62 @@
 # @ez-kit/form-core
 
+## 0.5.0
+
+### Minor Changes
+
+- c53a0af: A `select` or `multiselect` node's `searchable` also takes an object, `{ debounce?, minLength? }`,
+  tuning how the typed text reaches the option source; `parseFormSchema` validates both as non-negative
+  integers. `SearchSettings`, `Searchable`, `isSearchable` and the two default sets are exported.
+
+  `format: 'email'` now runs in linear time. Its pattern backtracked quadratically on a long input
+  with many dots, which made a validator on a public endpoint a denial-of-service target; an address
+  with an empty domain label (`a@b..c`, `a@.b.c`, `a@b.c.`) is now rejected.
+
+- c143f83: `TextInputType` is a const object with a union type of the same name rather than an `enum`, so a
+  schema document may write the string itself — `inputType: 'email'` — with no import.
+  `TextInputType.Email` still works and is the same value.
+- 8aee311: TanStack Form is now a dependency of `@ez-kit/form-react` rather than a peer of every form package,
+  so an app gets exactly one copy and no longer installs `@tanstack/react-form` or
+  `@tanstack/form-core` itself — remove them from your `package.json` unless you use TanStack
+  elsewhere. The kits depend on `@ez-kit/form-react` alone; the schema-authoring API and `useSelector`
+  are re-exported from it and from each kit.
+
+  `@tanstack/form-core` is now a peer of `@ez-kit/form-core`: if you install `@ez-kit/form-core` on its
+  own (for example to use it in a server component), add `@tanstack/form-core` beside it.
+
+- 299f1d3: Rename `OptionsSource` to `OptionSourceRef` — it is the document's reference to a source, not the
+  source. `OptionSourceInput` and `OptionSourceResult` move to `@ez-kit/form-core` and are still
+  re-exported from `@ez-kit/form-react` and both kits.
+- 1bda12e: Breaking: the document wizard is removed. A `FormSchema` no longer has a `step` node:
+  `StepNode` is gone from `@ez-kit/form-core` and from the kits' re-exports, and `parseFormSchema`
+  rejects a node of type `step` as an unknown node type. The `Wizard` member of `FormComponents`, `WizardRenderProps` and
+  `WizardStep` are removed from `@ez-kit/form-react`, and both kits stop shipping `Wizard` and drop
+  it from `allFormComponents`. A form split into steps is written in JSX with `form.Steps` and
+  `form.Step`.
+- 1bda12e: Breaking: a form document is now JSX written as data. A block names a component from the bundle's
+  `components` — the same one JSX reaches as `form.<Name>` — takes its `props` flat under the names
+  JSX uses, and with `children` is a container. `columns` goes on any container: a block with
+  children, an `array` (laying out each entry) or the document itself, and the renderer puts the
+  kit's grid inside it.
+
+  | Before                                          | After                                                                          |
+  | ----------------------------------------------- | ------------------------------------------------------------------------------ |
+  | `{ type: 'section', title, columns, children }` | `{ type: 'block', component: 'Section', props: { title }, columns, children }` |
+  | `{ type: 'submit', label: 'Save' }`             | `{ type: 'block', component: 'SubmitButton', props: { children: 'Save' } }`    |
+  | `<SchemaForm blocks={{ Banner }} />`            | `createSchemaForm({ components: { Banner } })`                                 |
+  | block component takes `{ props }`               | block component takes its props flat                                           |
+  | `{ key: 'x', params }`                          | `{ i18n: 'x', params }`                                                        |
+  | `parseFormSchema(doc, { blocks })`              | `parseFormSchema(doc, { components })`                                         |
+  | `components.GridItem`, `form.GridItem`          | `components.Grid` with `Grid.Item`, `form.Grid` / `form.Grid.Item`             |
+  | `<form.Section columns={2}>`                    | `<form.Section><form.Grid columns={2}>…</form.Grid></form.Section>`            |
+
+  `SectionNode`, `SubmitNode`, `BlockRegistry` and `SectionProps.columns` are removed;
+  `GridProps`, `GridSlot`, `isBlockNode` and `hasChildren` are added. `parseFormSchema` rejects a
+  `section` or `submit` node naming the block that replaces it, a block naming `Grid` or carrying
+  `label` / `description` / `disabledWhen`, a `colSpan` whose container sets no `columns` or fewer than it spans, and block `props` that JSON
+  cannot carry. A
+  block's top-level `{ i18n }` props are translated through `translate`.
+
 ## 0.4.0
 
 ### Minor Changes

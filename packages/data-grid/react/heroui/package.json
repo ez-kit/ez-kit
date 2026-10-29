@@ -1,6 +1,6 @@
 {
 	"name": "@ez-kit/data-grid-heroui",
-	"version": "0.13.1",
+	"version": "0.13.2",
 	"description": "HeroUI flavour of @ez-kit/data-grid.",
 	"license": "MIT",
 	"repository": {
