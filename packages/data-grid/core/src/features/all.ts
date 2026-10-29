@@ -43,6 +43,7 @@ import { creatingFeature } from './creating'
 import { draftFeature } from './deferred-apply'
 import { deletingFeature } from './deleting'
 import { editingFeature } from './editing'
+import { cellFlashingFeature } from './flashing'
 import { infiniteFeature } from './infinite'
 import { loadingFeature } from './loading'
 import { rowOrderingFeature } from './ordering'
@@ -91,6 +92,7 @@ export const allDataGridFeatures = tableFeatures({
 	facetedRowModel: createFacetedRowModel(),
 	facetedUniqueValues: createFacetedUniqueValues(),
 	facetedMinMaxValues: createFacetedMinMaxValues(),
+	cellFlashingFeature,
 	creatingFeature,
 	deletingFeature,
 	draftFeature,

@@ -102,6 +102,16 @@ export {
 // table APIs under its own key in the corresponding `*_FeatureMap`, so a feature left out of a
 // table's set contributes neither behaviour nor types.
 export { loadingFeature, type LoadingState } from './loading'
+export {
+	cellFlashingFeature,
+	type ColumnFlashingConfig,
+	type FlashCellsParams,
+	type FlashingConfig,
+	type FlashingDurations,
+	type FlashingEquals,
+	type FlashingStatus,
+	type FlashStatus,
+} from './flashing'
 export { infiniteFeature, type InfiniteState } from './infinite'
 export { rowOrderingFeature, type RowOrderState, type RowOrderingApi } from './ordering'
 export {

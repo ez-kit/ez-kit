@@ -34,6 +34,7 @@ const CUSTOM = [
 	'creatingFeature',
 	'deletingFeature',
 	'draftFeature',
+	'cellFlashingFeature',
 ] as const
 
 const ROW_MODEL_FACTORIES = [
@@ -65,7 +66,7 @@ describe('@ez-kit/data-grid-core/features', () => {
 		for (const name of STOCK) expect(features[name], name).toBeDefined()
 	})
 
-	it("exports the grid's own seven features, and nothing else ending in Feature", () => {
+	it("exports the grid's own eight features, and nothing else ending in Feature", () => {
 		for (const name of CUSTOM) expect(features[name], name).toBeDefined()
 		expect(Object.keys(features).filter((k) => k.endsWith('Feature'))).toHaveLength(STOCK.length + CUSTOM.length)
 	})
@@ -81,6 +82,7 @@ describe('@ez-kit/data-grid-core/features', () => {
 			creatingFeature: features.creatingFeature,
 			deletingFeature: features.deletingFeature,
 			draftFeature: features.draftFeature,
+			cellFlashingFeature: features.cellFlashingFeature,
 		})
 
 		for (const name of CUSTOM) expect(set[name], name).toBe(features[name])
@@ -131,7 +133,7 @@ describe('@ez-kit/data-grid-core/features', () => {
 // file anyway: what they assert is that the set registers the very objects the entry re-exports,
 // so the two modules have to be read against each other or the assertion says nothing.
 describe('allDataGridFeatures', () => {
-	it('registers every stock feature and all seven of the grid own ones', () => {
+	it('registers every stock feature and all eight of the grid own ones', () => {
 		for (const name of [...STOCK, ...CUSTOM]) expect(allDataGridFeatures[name], name).toBe(features[name])
 	})
 

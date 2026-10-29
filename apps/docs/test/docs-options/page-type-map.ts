@@ -180,6 +180,7 @@ export const DocPage = {
 	SelectionActionBar: 'content/docs/data-grid/selection/action-bar.mdx',
 	Sorting: 'content/docs/data-grid/sorting.mdx',
 	StateIndex: 'content/docs/data-grid/state/index.mdx',
+	CellFlashing: 'content/docs/data-grid/cell-flashing.mdx',
 	Virtualization: 'content/docs/data-grid/virtualization.mdx',
 
 	// --- @ez-kit/zu-store ---
@@ -285,6 +286,7 @@ export const GRID_TYPE = {
 		typeArgs: FEATURES_TYPE_ARGS,
 	},
 	VirtualizationConfig: { module: TypeModule.Core, name: 'VirtualizationConfig' },
+	FlashCellsParams: { module: TypeModule.Core, name: 'FlashCellsParams' },
 	SelectionBarConfig: { module: TypeModule.React, name: 'SelectionBarConfig', typeArgs: ROW_TYPE_ARGS },
 	ActionItemDef: { module: TypeModule.Core, name: 'ActionItemDef' },
 	ActionItemSlot: { module: TypeModule.Core, name: 'ActionItemSlot' },
@@ -1400,6 +1402,15 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			},
 		],
 		nonOptionTables: [],
+	},
+	{
+		page: DocPage.CellFlashing,
+		optionTables: [
+			{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 4 },
+			{ heading: 'Column options', roots: [GRID_TYPE.ColumnDef], expectedCount: 5 },
+			{ heading: 'Flashing on demand', roots: [GRID_TYPE.FlashCellsParams], expectedCount: 5 },
+		],
+		nonOptionTables: [{ heading: 'Styling', reason: 'Maps each status *value* to its kit CSS token.' }],
 	},
 	{
 		page: DocPage.Virtualization,

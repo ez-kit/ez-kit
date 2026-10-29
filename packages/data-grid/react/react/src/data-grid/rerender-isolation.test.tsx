@@ -300,4 +300,45 @@ describe('rerender isolation', () => {
 
 		expect(counters.tbody).toBeGreaterThan(tbodyBefore)
 	})
+
+	describe('flashing', () => {
+		it('flashCells re-renders only the cells it addresses, not the body', () => {
+			vi.useFakeTimers()
+			try {
+				const { counters, table } = renderGrid()
+				const before = { ...counters }
+
+				act(() => {
+					table.flashCells({ rowIds: ['1'] })
+				})
+
+				// Row 1 has two data cells; nothing else moved.
+				expect(counters.td - before.td).toBe(2)
+				expect(counters.tbody).toBe(before.tbody)
+				expect(counters.thead).toBe(before.thead)
+			} finally {
+				vi.useRealTimers()
+			}
+		})
+
+		it('a phase change re-renders only the flashing cell', () => {
+			vi.useFakeTimers()
+			try {
+				const { counters, table } = renderGrid()
+				act(() => {
+					table.flashCells({ rowIds: ['1'], columnIds: ['name'] })
+				})
+				const before = { ...counters }
+
+				act(() => {
+					vi.advanceTimersByTime(500)
+				})
+
+				expect(counters.td - before.td).toBe(1)
+				expect(counters.tbody).toBe(before.tbody)
+			} finally {
+				vi.useRealTimers()
+			}
+		})
+	})
 })

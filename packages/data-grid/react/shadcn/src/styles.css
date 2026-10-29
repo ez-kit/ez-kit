@@ -6,9 +6,18 @@
 .ez-shadcn-data-grid {
 	--dg-pin-shadow-color: oklch(0 0 0 / 0.14);
 	--dg-pin-cell-background: var(--background);
+	--dg-flash-background: color-mix(in oklab, var(--primary) 16%, transparent);
+	/* shadcn's theme has no success or warning colour, so the kit names its own. */
+	--dg-flash-success-background: color-mix(in oklab, oklch(0.72 0.17 150) 22%, transparent);
+	--dg-flash-warning-background: color-mix(in oklab, oklch(0.8 0.16 80) 26%, transparent);
+	--dg-flash-error-background: color-mix(in oklab, var(--destructive) 18%, transparent);
 
 	.dark & {
 		--dg-pin-shadow-color: oklch(0 0 0 / 0.35);
+		--dg-flash-background: color-mix(in oklab, var(--primary) 28%, transparent);
+		--dg-flash-success-background: color-mix(in oklab, oklch(0.7 0.17 150) 30%, transparent);
+		--dg-flash-warning-background: color-mix(in oklab, oklch(0.78 0.16 80) 30%, transparent);
+		--dg-flash-error-background: color-mix(in oklab, var(--destructive) 32%, transparent);
 	}
 
 	& [data-slot='auto-form'] {
@@ -185,6 +194,29 @@
 	}
 	& [data-slot='group-by-chip'] button {
 		@apply size-5;
+	}
+
+	/* A changed cell: an overlay the structural sheet positions, filled here and faded out. */
+	& [data-slot='td'][data-flash]::after {
+		background-color: var(--dg-flash-background);
+	}
+	& [data-slot='td'][data-flash-status='success']::after {
+		background-color: var(--dg-flash-success-background);
+	}
+	& [data-slot='td'][data-flash-status='warning']::after {
+		background-color: var(--dg-flash-warning-background);
+	}
+	& [data-slot='td'][data-flash-status='error']::after {
+		background-color: var(--dg-flash-error-background);
+	}
+	& [data-slot='td'][data-flash='fade']::after {
+		opacity: 0;
+		transition: opacity var(--dg-flash-fade-duration, 1000ms) ease-out;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		& [data-slot='td'][data-flash='fade']::after {
+			transition: none;
+		}
 	}
 
 	& [data-slot='th'][data-draft-sorting] {

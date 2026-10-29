@@ -42,6 +42,33 @@ When the defaults suit you, a bare `virtualization` prop is shorthand for `virtu
 
 With `layout.stickyHeader`, pinned rows stack below the header rather than under it, in this mode as in the non-virtualized one. Virtualized, `layout.stickyHeader` is **required** for pinned rows to render correctly.
 
+## With cell flashing
+
+[Cell flashing](/docs/data-grid/cell-flashing) works virtualized and needs nothing extra. Only
+rendered cells flash: a row that changed while it was outside the window shows its new value when you
+scroll to it, without a flash. Every third quote below moves on each tick, so every row has changed
+within three ticks; scroll and only the rows already on screen flash.
+
+<DataGridDocsExample exampleId='cell-flashing-virtualized' />
+
+```tsx
+<DataGrid
+	features={features} // includes cellFlashingFeature
+	data={quotes} // replaced on every poll
+	getRowId={(quote) => quote.id}
+	columns={[
+		{ accessorKey: 'symbol', header: 'Symbol' },
+		{
+			accessorKey: 'price',
+			header: 'Price',
+			flashing: { status: (previous, next) => (next > previous ? 'success' : 'error') },
+		},
+	]}
+	layout={{ stickyHeader: true }}
+	virtualization={{ row: { estimateSize: 49, overscan: 10 } }}
+/>
+```
+
 ## Options
 
 | Option                   | Type                                 | Description                                                                                                                    |

@@ -51,7 +51,7 @@
 		{
 			"name": "index",
 			"path": "dist/index.js",
-			"limit": "14.5 KB",
+			"limit": "17 KB",
 			"ignore": [
 				"@tanstack/table-core"
 			]

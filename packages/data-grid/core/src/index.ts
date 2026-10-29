@@ -265,6 +265,21 @@ export type {
 	DeletingContext,
 	DeletingState,
 } from './features/deleting'
+export { flashRequestsOf } from './features/flashing/request-source'
+export { DEFAULT_FLASH_DURATIONS } from './features/flashing/types'
+export { resolveFlashing } from './column/map-columns/resolve-flashing'
+export type {
+	ColumnFlashingConfig,
+	ColumnFlashingMeta,
+	FlashCellsParams,
+	FlashingConfig,
+	FlashingDurations,
+	FlashingEquals,
+	FlashingStatus,
+	FlashRequest,
+	FlashRequestSource,
+	FlashStatus,
+} from './features/flashing'
 export { EditingMode } from './features/editing'
 export type { EditingApi, EditingConfig, EditingSaveContext, EditingState } from './features/editing'
 // Sourced from the feature modules (not `./types`) so each state type is re-exported from the

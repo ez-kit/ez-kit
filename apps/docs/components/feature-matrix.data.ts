@@ -95,6 +95,13 @@ export const FEATURE_MATRIX: readonly FeatureRow[] = [
 	},
 	{
 		category: 'Data & Display',
+		feature: 'Cell flashing',
+		description: 'Highlight a cell when its value changes, for polled or streamed data.',
+		status: FeatureStatus.Done,
+		doc: 'cell-flashing',
+	},
+	{
+		category: 'Data & Display',
 		feature: 'Sticky header',
 		description: 'Keep the column header row visible while scrolling through data.',
 		status: FeatureStatus.Done,

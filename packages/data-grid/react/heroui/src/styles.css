@@ -4,9 +4,17 @@
 .ez-heroui-data-grid {
 	--dg-pin-shadow-color: oklch(0 0 0 / 0.14);
 	--dg-pin-cell-background: var(--surface);
+	--dg-flash-background: color-mix(in oklab, var(--accent) 16%, transparent);
+	--dg-flash-success-background: color-mix(in oklab, var(--color-success) 20%, transparent);
+	--dg-flash-warning-background: color-mix(in oklab, var(--color-warning) 24%, transparent);
+	--dg-flash-error-background: color-mix(in oklab, var(--color-danger) 18%, transparent);
 
 	.dark & {
 		--dg-pin-shadow-color: oklch(0 0 0 / 0.35);
+		--dg-flash-background: color-mix(in oklab, var(--accent) 28%, transparent);
+		--dg-flash-success-background: color-mix(in oklab, var(--color-success) 30%, transparent);
+		--dg-flash-warning-background: color-mix(in oklab, var(--color-warning) 30%, transparent);
+		--dg-flash-error-background: color-mix(in oklab, var(--color-danger) 32%, transparent);
 	}
 
 	& [data-slot='th'] {
@@ -238,6 +246,33 @@
 		@apply border border-dashed;
 		border-color: var(--separator);
 		color: var(--muted);
+	}
+
+	/*
+	 * A changed cell: an overlay the structural sheet positions, filled here and faded out. The
+	 * fade animates the overlay, not the cell, so it leaves pinned cells — which take no
+	 * transition here — as they are.
+	 */
+	& [data-slot='td'][data-flash]::after {
+		background-color: var(--dg-flash-background);
+	}
+	& [data-slot='td'][data-flash-status='success']::after {
+		background-color: var(--dg-flash-success-background);
+	}
+	& [data-slot='td'][data-flash-status='warning']::after {
+		background-color: var(--dg-flash-warning-background);
+	}
+	& [data-slot='td'][data-flash-status='error']::after {
+		background-color: var(--dg-flash-error-background);
+	}
+	& [data-slot='td'][data-flash='fade']::after {
+		opacity: 0;
+		transition: opacity var(--dg-flash-fade-duration, 1000ms) ease-out;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		& [data-slot='td'][data-flash='fade']::after {
+			transition: none;
+		}
 	}
 
 	& [data-slot='th'][data-draft-sorting] {

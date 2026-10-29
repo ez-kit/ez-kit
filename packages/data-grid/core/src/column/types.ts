@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-type-arguments */
 import type { CreateDefaultValueContext } from '../features/creating'
+import type { ColumnFlashingConfig, ColumnFlashingMeta } from '../features/flashing/types'
 import type {
 	BetweenOperatorConfig,
 	ColumnOperatorsConfig,
@@ -1591,6 +1592,23 @@ export type ColumnDefCommon<
 	footerClassName?: string
 
 	/**
+	 * Highlight this column's cell when its value changes, overriding the table-level `flashing`.
+	 *
+	 * `true` or an object turns the column on under a grid that is off; `false` turns it off under
+	 * a grid that is on — for a column that changes on every update and means nothing by it, such
+	 * as an `updatedAt` stamp. The object's durations lie over the grid's key by key, and `true`
+	 * keeps them. Needs `cellFlashingFeature` in `features`.
+	 *
+	 * @example
+	 * ```ts
+	 * { accessorKey: 'updatedAt', flashing: false }
+	 * { accessorKey: 'tags', flashing: { equals: (a, b) => String(a) === String(b) } }
+	 * { accessorKey: 'price', flashing: { status: (previous, next) => (next > previous ? 'success' : 'error') } }
+	 * ```
+	 */
+	flashing?: boolean | ColumnFlashingConfig<TRow, TValue>
+
+	/**
 	 * Column width, in pixels.
 	 *
 	 * The scalar is the starting width: `width: 200` is the whole story for most columns.
@@ -1800,6 +1818,11 @@ declare module '@tanstack/table-core' {
 		footerClassName?: string
 		/** Resolved filtering config from `column.filtering`, normalized. */
 		filtering?: false | ColumnFilteringMeta
+		/**
+		 * Resolved from `column.flashing` and the table-level `flashing`: present only when the
+		 * column flashes on its own value changes, with the durations it flashes for.
+		 */
+		flashing?: ColumnFlashingMeta
 		editing?: false | ColumnEditingConfig
 		creating?: false | ColumnCreatingConfig<TData, TValue>
 		visibility?: false | ColumnVisibilityDef

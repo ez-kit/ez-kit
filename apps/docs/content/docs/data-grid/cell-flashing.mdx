@@ -1,0 +1,205 @@
+---
+title: Cell flashing
+description: Highlight a cell when its value changes, so users notice what moved in polled or streamed data.
+---
+
+When rows arrive by polling or over a socket, values change in place and nothing tells the user which
+ones moved. Cell flashing gives a changed cell a short highlight that fades out.
+
+## Usage
+
+<DataGridDocsExample exampleId='cell-flashing' />
+
+```tsx
+const features = tableFeatures({
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	cellFlashingFeature,
+})
+
+<DataGrid
+	features={features}
+	data={quotes} // replaced on every poll
+	getRowId={(quote) => quote.id}
+	flashing
+	columns={[
+		{ accessorKey: 'symbol', header: 'Symbol' },
+		{
+			accessorKey: 'price',
+			header: 'Price',
+			cell: 'number',
+			flashing: { status: (previous, next) => (next > previous ? 'success' : 'error') },
+		},
+		{ accessorKey: 'updatedAt', header: 'Updated', flashing: false },
+	]}
+/>
+```
+
+Register `cellFlashingFeature`, then turn flashing on with `flashing`. Every time `data` changes, each
+rendered cell compares its value with the one it showed before and flashes if they differ. Nothing
+needs to tell the grid what changed: replacing the whole array is fine.
+
+Give the grid a `getRowId`, or rows with an `id`. A cell is compared with **the same row**, found by id.
+With index-based ids, sorting or inserting a row hands each cell another row's value, and cells flash
+without changing. In development, the grid warns when flashing is on and row ids are indexes.
+
+## Grid and column
+
+`flashing` on the grid turns flashing on for every data column. A column's own `flashing` overrides it
+either way:
+
+- `flashing: false` on a column keeps it dark under a grid that flashes, for a column that changes on
+  every update and means nothing by it, such as a "last updated" stamp.
+- `flashing: true` (or an object) on a column makes that column flash under a grid that does not.
+
+The object form sets the durations. A column's object lies over the grid's key by key, and `true`
+keeps the grid's durations. Grid-level `flashing` also goes through the `defaults` of
+`createDataGrid` and `DataGridOptionsProvider`, like every other option.
+
+```tsx
+<DataGrid
+	flashing={{ flashDuration: 300, fadeDuration: 1500 }}
+	columns={[
+		{ accessorKey: 'price', header: 'Price' }, // 300 / 1500
+		{ accessorKey: 'volume', header: 'Volume', flashing: { fadeDuration: 600 } }, // 300 / 600
+		{ accessorKey: 'updatedAt', header: 'Updated', flashing: false },
+	]}
+/>
+```
+
+## Comparing values
+
+A value changed when it is not `Object.is` the value before, with one exception: two `Date`s with the
+same time are the same value. A column whose value is a fresh object or array on every update, such as
+a `tags: string[]` field in polled JSON or an `accessorFn` that builds an object, flashes on every
+tick. Give that column an `equals`:
+
+```tsx
+{
+	accessorKey: 'tags',
+	header: 'Tags',
+	flashing: { equals: (previous, next) => String(previous) === String(next) },
+}
+```
+
+The value compared is the column's value (its `accessorKey` or `accessorFn`), not the text the cell
+renders. A column with no value, which renders only through `cell.component`, never flashes on its
+own. Use `flashCells` for it.
+
+## Flashing on demand
+
+`table.flashCells()` flashes the rendered cells it names, whether or not `flashing` is on:
+
+<DataGridDocsExample exampleId='cell-flashing-on-demand' />
+
+```tsx
+const table = useDataGrid({ features, data, columns, getRowId })
+
+table.flashCells({ rowIds: ['acme'] }) // every cell of one row
+table.flashCells({ columnIds: ['price'] }) // one column
+table.flashCells({ rowIds: ['acme'], columnIds: ['price'], flashDuration: 100 })
+table.flashCells({ rowIds: ['acme'], status: 'error' }) // in the error colour
+table.flashCells() // every rendered cell
+```
+
+| Parameter       | Type                | Description                                                                     |
+| --------------- | ------------------- | ------------------------------------------------------------------------------- |
+| `rowIds`        | `readonly string[]` | The rows to flash. Left out: every row.                                         |
+| `columnIds`     | `readonly string[]` | The columns to flash. Left out: every column.                                   |
+| `flashDuration` | `number`            | How long the highlight holds, in ms. Default: the column's, then the grid's.    |
+| `fadeDuration`  | `number`            | How long it fades out, in ms. Default: the column's, then the grid's.           |
+| `status`        | `FlashStatus`       | The colour of the flash. Default `'default'`; a column's `status` is not asked. |
+
+## Status
+
+A flash has a status that sets its colour: `'default'`, `'success'`, `'warning'` or `'error'`. The
+status only colours a flash. Whether a cell flashes is still decided by comparing values.
+
+A column's `flashing.status` gives the automatic flash its status from the value before and after the
+change, and the row. It is called only for a value that changed, and `undefined` means `'default'`:
+
+```tsx
+{
+	accessorKey: 'price',
+	header: 'Price',
+	flashing: { status: (previous, next) => (next > previous ? 'success' : 'error') },
+}
+```
+
+<DataGridDocsExample exampleId='cell-flashing-status' />
+
+Here the price flashes green when it rises and red when it falls. The volume flashes amber on a jump
+of 400 or more and in `'default'` otherwise, because its function returns `undefined`. The
+`updatedAt` column has no `status` and flashes in `'default'` on every poll.
+
+There is no built-in "up is good" rule and no grid-level `status`: a rising price is good news and a
+rising response time is not, so each column says which is which. A column without `status` flashes
+in `'default'`.
+
+`table.flashCells` takes its own `status`, `'default'` when left out. It does not ask the column's
+function: a call has no previous value to compare.
+
+## What does not flash
+
+- **Cells as they appear.** The first render, a page change, a new filter, a row added to `data`, and
+  a row scrolled into a virtualized window all render without a flash (see
+  [virtualization](/docs/data-grid/virtualization#with-cell-flashing)). A cell that changed while it
+  was not rendered shows its new value without a flash, and a `flashCells` call made before a cell
+  mounted does not reach it.
+- **System cells.** The selection, expand, group, drag and actions columns never flash. On a group
+  row, an aggregated value flashes like any other value when the group's total changes.
+- **An open editor.** A cell does not flash while it is being edited. If the value changes under the
+  editor and the user cancels, the cell shows the new value without a flash. A value the user saves
+  flashes when it comes back in `data`, like any other change.
+
+A flash is not table state. It does not reach `onStateChange`, `useDataGridState` or the persistence
+utilities, and it re-renders only the cells that flash.
+
+## Options
+
+| Option                   | Type                        | Description                                                                                                                    |
+| ------------------------ | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `flashing`               | `boolean \| FlashingConfig` | Flash every data column on a value change. Default off.                                                                        |
+| `flashing.flashDuration` | `number`                    | How long the highlight holds, in ms. Default `500`.                                                                            |
+| `flashing.fadeDuration`  | `number`                    | How long the highlight fades out, in ms. Default `1000`.                                                                       |
+| `flashing.enabled`       | `boolean`                   | Explicit off-switch for a config that came from a defaults layer — the settings survive, the feature does not. Default `true`. |
+
+## Column options
+
+| Option                   | Type                                                | Description                                                                             |
+| ------------------------ | --------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `flashing`               | `boolean \| ColumnFlashingConfig`                   | Overrides the grid: `false` keeps the column dark, `true` or an object turns it on.     |
+| `flashing.flashDuration` | `number`                                            | Overrides the grid's hold duration for this column.                                     |
+| `flashing.fadeDuration`  | `number`                                            | Overrides the grid's fade duration for this column.                                     |
+| `flashing.equals`        | `(previous, next) => boolean`                       | Whether two values are equal. Default: `Object.is`, with dates compared by time.        |
+| `flashing.status`        | `(previous, next, row) => FlashStatus \| undefined` | The status of an automatic flash. Called only for a changed value. Default `'default'`. |
+
+## Styling
+
+A flashing cell carries `data-flash="flash"` while the highlight holds and `data-flash="fade"` while
+it fades, `data-flash-status` with its status for the whole flash, and `--dg-flash-fade-duration` set
+to the fade time. The grid's structural stylesheet lays an overlay (`::after`) over the cell, so the
+highlight works on pinned cells too, and the kit fills it with one token per status:
+
+| Status    | Token                           |
+| --------- | ------------------------------- |
+| `default` | `--dg-flash-background`         |
+| `success` | `--dg-flash-success-background` |
+| `warning` | `--dg-flash-warning-background` |
+| `error`   | `--dg-flash-error-background`   |
+
+Override a token on the kit class to change the colour:
+
+```css
+.ez-shadcn-data-grid {
+	--dg-flash-background: color-mix(in oklab, var(--chart-2) 25%, transparent);
+	--dg-flash-success-background: color-mix(in oklab, var(--chart-1) 25%, transparent);
+}
+```
+
+shadcn's theme has no success or warning colour, so the shadcn kit sets its own green and amber; the
+error colour comes from `--destructive`. The heroui kit uses `--color-success`, `--color-warning` and
+`--color-danger`.
+
+With `prefers-reduced-motion: reduce`, the highlight still appears but disappears without a fade.

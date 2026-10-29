@@ -770,6 +770,30 @@
 		"exportName": "RowPinningInitialExample"
 	},
 	{
+		"id": "cell-flashing",
+		"label": "Cell flashing",
+		"sourceFile": "components/cell-flashing.tsx",
+		"exportName": "CellFlashingExample"
+	},
+	{
+		"id": "cell-flashing-on-demand",
+		"label": "Flashing on demand",
+		"sourceFile": "components/cell-flashing.tsx",
+		"exportName": "FlashCellsExample"
+	},
+	{
+		"id": "cell-flashing-status",
+		"label": "Flash status",
+		"sourceFile": "components/cell-flashing.tsx",
+		"exportName": "FlashStatusExample"
+	},
+	{
+		"id": "cell-flashing-virtualized",
+		"label": "Cell flashing, virtualized",
+		"sourceFile": "components/cell-flashing.tsx",
+		"exportName": "VirtualizedFlashingExample"
+	},
+	{
 		"id": "virtualized",
 		"label": "Virtualized",
 		"sourceFile": "components/virtualized.tsx",
