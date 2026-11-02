@@ -21,7 +21,7 @@ import type { ItemsLists, ItemsSourceSnapshot, ListItem } from '../items-source'
 import type { GridFeatures } from '../types'
 import type { FilterModel, FilterModelContext } from './filter-model'
 import type { FilterTarget } from './filter-target'
-import type { ColumnDef, FilterOperatorDef, GridMessages, StructuredFilterValue } from '@ez-kit/data-grid-core'
+import type { ColumnDef, FilterOperatorDef, StructuredFilterValue } from '@ez-kit/data-grid-core'
 import type { Column } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
@@ -218,12 +218,85 @@ describe('resolveFilter — operators', () => {
 		expect(modelOf(table, 'joinedAt').operators.find((op) => op.id === 'greaterThan')?.label).toBe('После')
 	})
 
-	it('takes no operator label from the dictionary', () => {
-		const messages: GridMessages = resolveMessages({ filtering: { any: 'Любой' } })
+	it('labels the ready-made set from the dictionary by default', () => {
+		const table = makeTable()
+
+		expect(modelOf(table, 'joinedAt').operators.find((op) => op.id === 'greaterThan')?.label).toBe('After')
+		expect(modelOf(table, 'age').operators.find((op) => op.id === 'greaterThan')?.label).toBe('Greater than')
+		expect(modelOf(table, 'active').operators.map((op) => op.label)).toEqual([
+			'Is',
+			'Is not',
+			'Is empty',
+			'Is not empty',
+		])
+	})
+
+	it('reads a translated label from `messages.operators`', () => {
+		const messages = resolveMessages({ operators: { common: { contains: 'Содержит' } } })
+
+		const model = modelOf(makeTable(), 'name', context({ messages }))
+
+		expect(model.operators.find((op) => op.id === 'contains')?.label).toBe('Содержит')
+		expect(model.operators.find((op) => op.id === 'equals')?.label).toBe('Equals')
+	})
+
+	it('keeps the rest of a group when one of its labels is overridden', () => {
+		const messages = resolveMessages({ operators: { date: { greaterThan: 'Позже' } } })
 
 		const model = modelOf(makeTable(), 'joinedAt', context({ messages }))
 
-		expect(model.operators.find((op) => op.id === 'greaterThan')?.label).toBe('After')
+		expect(model.operators.find((op) => op.id === 'greaterThan')?.label).toBe('Позже')
+		expect(model.operators.find((op) => op.id === 'lessThan')?.label).toBe('Before')
+	})
+
+	it('lets a definition’s own label win over the dictionary', () => {
+		const after: FilterOperatorDef = {
+			id: 'greaterThan',
+			label: 'После',
+			input: OperatorInput.Single,
+			filterFn: () => true,
+		}
+		const table = makeTable({ operators: { byType: { ...TEST_OPERATORS.byType, date: [after] } } })
+		const messages = resolveMessages({ operators: { date: { greaterThan: 'Позже' } } })
+
+		expect(modelOf(table, 'joinedAt', context({ messages })).operators[0]?.label).toBe('После')
+	})
+
+	it('labels a project type built from the date set the way a date column is labelled', () => {
+		const columns = createColumns<Row>([
+			{ accessorKey: 'joinedAt', header: 'Joined', cell: { type: 'datetime' }, filtering: { operators: true } },
+		] as never)
+		const table = makeTable(
+			{ operators: { byType: { ...TEST_OPERATORS.byType, datetime: TEST_OPERATORS.byType.date } } },
+			columns,
+		)
+
+		expect(modelOf(table, 'joinedAt').operators.find((op) => op.id === 'greaterThan')?.label).toBe('After')
+	})
+
+	it('shows the dictionary’s label for an operator that takes no value', () => {
+		const messages = resolveMessages({ operators: { common: { isEmpty: 'Пусто' } } })
+		const table = makeTable({ initialState: { columnFilters: [{ id: 'name', value: { operator: 'isEmpty' } }] } })
+
+		expect(modelOf(table, 'name', context({ messages })).valueDisplay).toBe('Пусто')
+	})
+
+	it('keeps each language’s list by reference while two dictionaries share the set', () => {
+		const table = makeTable()
+		const english = context()
+		const russian = context({ messages: resolveMessages({ operators: { common: { contains: 'Содержит' } } }) })
+
+		const first = modelOf(table, 'name', english).operators
+		modelOf(table, 'name', russian)
+
+		expect(modelOf(table, 'name', english).operators).toBe(first)
+	})
+
+	it('keeps the operator list by reference across resolutions with the same dictionary', () => {
+		const table = makeTable()
+		const ctx = context()
+
+		expect(modelOf(table, 'joinedAt', ctx).operators).toBe(modelOf(table, 'joinedAt', ctx).operators)
 	})
 
 	it('keeps the label a custom operator was written with', () => {

@@ -34,6 +34,16 @@
 			"types": "./dist/operators/index.d.ts",
 			"import": "./dist/operators/index.js",
 			"default": "./dist/operators/index.js"
+		},
+		"./messages/en": {
+			"types": "./dist/messages/en.d.ts",
+			"import": "./dist/messages/en.js",
+			"default": "./dist/messages/en.js"
+		},
+		"./messages/ru": {
+			"types": "./dist/messages/ru.d.ts",
+			"import": "./dist/messages/ru.js",
+			"default": "./dist/messages/ru.js"
 		}
 	},
 	"main": "./dist/index.js",
@@ -75,7 +85,23 @@
 		{
 			"name": "operators",
 			"path": "dist/operators/index.js",
-			"limit": "1 KB",
+			"limit": "850 B",
+			"ignore": [
+				"@tanstack/table-core"
+			]
+		},
+		{
+			"name": "messages/en",
+			"path": "dist/messages/en.js",
+			"limit": "1.9 KB",
+			"ignore": [
+				"@tanstack/table-core"
+			]
+		},
+		{
+			"name": "messages/ru",
+			"path": "dist/messages/ru.js",
+			"limit": "2.95 KB",
 			"ignore": [
 				"@tanstack/table-core"
 			]

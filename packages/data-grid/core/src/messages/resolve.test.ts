@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { defaultMessages } from './defaults'
 import { resolveMessages } from './resolve'
 
+import type { PartialGridMessages } from './types'
+
 describe('resolveMessages', () => {
 	it('returns the English dictionary when nothing overrides it', () => {
 		expect(resolveMessages()).toEqual(defaultMessages)
@@ -58,6 +60,46 @@ describe('resolveMessages', () => {
 		const messages = resolveMessages({ filtering: { operator: 'Оператор фильтра' } })
 
 		expect(messages.filtering.operatorTrigger({ label: 'Содержит' })).toBe('Filter operator: Содержит')
+	})
+
+	it('keeps a nested record’s other entries when one of them is overridden', () => {
+		const messages = resolveMessages({ filtering: { presets: { today: 'Сегодня' } } })
+
+		expect(messages.filtering.presets.today).toBe('Сегодня')
+		expect(messages.filtering.presets.yesterday).toBe(defaultMessages.filtering.presets.yesterday)
+		expect(messages.filtering.from).toBe(defaultMessages.filtering.from)
+	})
+
+	it('merges a nested record across layers, entry by entry', () => {
+		const messages = resolveMessages(
+			{ filtering: { presets: { today: 'Сегодня', yesterday: 'Вчера' } } },
+			{ filtering: { presets: { today: 'Сейчас' } } },
+		)
+
+		expect(messages.filtering.presets.today).toBe('Сейчас')
+		expect(messages.filtering.presets.yesterday).toBe('Вчера')
+	})
+
+	it('replaces a parameterized entry whole rather than merging into it', () => {
+		const count = ({ count }: { count: number }) => `Выбрано: ${String(count)}`
+		const messages = resolveMessages({ selection: { count } })
+
+		expect(messages.selection.count).toBe(count)
+	})
+
+	it('ignores a nested record written as undefined', () => {
+		// The type forbids it; a layer assembled at runtime (a spread of an optional value) does not.
+		const layer = { filtering: { presets: undefined } } as unknown as PartialGridMessages
+		const messages = resolveMessages(layer)
+
+		expect(messages.filtering.presets).toEqual(defaultMessages.filtering.presets)
+	})
+
+	it('ignores an entry of a nested record written as undefined', () => {
+		const layer = { filtering: { presets: { today: undefined } } } as unknown as PartialGridMessages
+		const messages = resolveMessages(layer)
+
+		expect(messages.filtering.presets.today).toBe(defaultMessages.filtering.presets.today)
 	})
 
 	it('does not mutate the default dictionary', () => {

@@ -13,8 +13,8 @@ import type {
 	DateRangePreset,
 	DateValuePreset,
 	ColumnPinSide,
-	FilterOperatorDef,
 	LoadMoreDirection,
+	ResolvedOperatorDef,
 	FilterItem,
 	PendingCount,
 	ValidationErrors,
@@ -758,11 +758,12 @@ export type ClearFilterButtonProps = {
 }
 
 /**
- * A filter operator as the React layer hands it to a control: core's definition, with its `icon`
- * typed as what React renders. The definition is the only source of both `label` and `icon`; an
- * operator without an icon is a control's cue to show `label` instead.
+ * A filter operator as the React layer hands it to a control: core's definition with its `label`
+ * settled — its own, else the grid's `messages.operators` — and its `icon` typed as what React
+ * renders. The definition is the only source of `icon`; an operator without one is a control's cue
+ * to show `label` instead.
  */
-export type FilterOperatorOption = FilterOperatorDef & {
+export type FilterOperatorOption = ResolvedOperatorDef & {
 	icon?: ReactNode
 }
 

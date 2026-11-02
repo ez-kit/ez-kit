@@ -1166,7 +1166,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			{ heading: '`OperatorsConfig`', roots: [GRID_TYPE.OperatorsConfig], expectedCount: 2 },
 			{ heading: '`ColumnOperatorsConfig`', roots: [GRID_TYPE.ColumnOperatorsConfig], expectedCount: 2 },
 			{ heading: '`BetweenOperatorConfig`', roots: [GRID_TYPE.BetweenOperatorConfig], expectedCount: 3 },
-			{ heading: '`FilterOperatorDef`', roots: [GRID_TYPE.FilterOperatorDef], expectedCount: 5 },
+			{ heading: '`FilterOperatorDef`', roots: [GRID_TYPE.FilterOperatorDef], expectedCount: 6 },
 		],
 		nonOptionTables: [
 			{

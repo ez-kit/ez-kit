@@ -2,10 +2,11 @@
 
 - Status: Accepted
 - Recorded: 2026-10-26 (moved from `AGENTS.md`; the decision itself predates this record)
+- Amended by: [0023-operator-labels-in-messages](./0023-operator-labels-in-messages.md) — the "no `messages.operators`" clause
 
 ## Decision
 
-**One filter-operator vocabulary; behaviour is read from `input`, never from the id.** Operators are bundle config (`createDataGrid({ operators })`; `defaultOperators` bound only in each kit's `data-grid.tsx`). No type-specific spelling of an existing comparison, no table-level registry, no `messages.operators`. `inputOf` (`data-grid/operator-input.ts`) is the one lookup — an `=== 'between'` in a package is the regression. `filterFn` stays a method.
+**One filter-operator vocabulary; behaviour is read from `input`, never from the id.** Operators are bundle config (`createDataGrid({ operators })`; `defaultOperators` bound only in each kit's `data-grid.tsx`). No type-specific spelling of an existing comparison, no table-level registry. (The clause "no `messages.operators`" that stood here is superseded by [ADR 0023](./0023-operator-labels-in-messages.md).) `inputOf` (`data-grid/operator-input.ts`) is the one lookup — an `=== 'between'` in a package is the regression. `filterFn` stays a method.
 
 ## Context, rationale and rejected alternatives
 
@@ -20,8 +21,10 @@ defaultByType } })`, overridable per type in any options layer, with the ready-m
   `equals`, an `after` beside `greaterThan` — is the defect this replaced, not an improvement on it.
   A project's own set may name its operators anything; the grid reads no behaviour off an id, using
   one only to find the definition a filter value names. There is no table-level
-  operator registry and no `messages.operators`: a label is the definition's `label`, an icon its
-  `icon`, and a translated grid passes a translated set. Two measured facts hold the subpath
+  operator registry. An icon is the definition's `icon`; a label is the definition's `label` when it
+  has one and the dictionary's otherwise — the original rule here, "no `messages.operators` … a
+  translated grid passes a translated set", is superseded by
+  [ADR 0023](./0023-operator-labels-in-messages.md). Two measured facts hold the subpath
   together and neither should be re-argued: the definitions are object literals of **literals**,
   because esbuild keeps an object that reads a property (`FilterOperator.Contains`,
   `OperatorInput.Single`) and everything it names, so `{ FilterOperator }` alone carried every
