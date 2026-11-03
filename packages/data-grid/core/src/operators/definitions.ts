@@ -18,8 +18,12 @@ type ReadyMadeOperator<TValue = unknown> = FilterOperatorDef<TValue> & { id: Fil
  * `id: FilterOperator.Contains, input: OperatorInput.Single` survived a bundle that imported only
  * `FilterOperator`, and carried every comparison below along. So the ids and inputs are written
  * as literals — checked against {@link FilterOperator} and `OperatorInput` by the types, which is
- * what the named members were for — and the English labels are written here rather than read
- * from the grid's dictionary.
+ * what the named members were for.
+ *
+ * No definition carries a `label`: the wording is the grid's dictionary, `messages.operators`, read
+ * at render. Reading it here would be the property read this entry cannot afford, and would also fix
+ * the label to the English one. Where the wording differs from the id's common one — the date set's
+ * "After", the boolean set's "Is" — the definition says which group to read with a literal `labels`.
  *
  * Where one id compares differently per cell type — equality on text ignores case, on a date it
  * compares date-only strings — each type gets a constant of its own under the shared id. They are
@@ -33,14 +37,12 @@ type ReadyMadeOperator<TValue = unknown> = FilterOperatorDef<TValue> & { id: Fil
 
 export const isEmpty: ReadyMadeOperator = {
 	id: 'isEmpty',
-	label: 'Is empty',
 	input: 'none',
 	filterFn: (rowValue) => rowValue == null || rowValue === '',
 }
 
 export const isNotEmpty: ReadyMadeOperator = {
 	id: 'isNotEmpty',
-	label: 'Is not empty',
 	input: 'none',
 	filterFn: (rowValue) => rowValue != null && rowValue !== '',
 }
@@ -58,35 +60,30 @@ function lowerText(value: unknown): string {
 
 export const textContains: ReadyMadeOperator<string> = {
 	id: 'contains',
-	label: 'Contains',
 	input: 'single',
 	filterFn: (rowValue, value) => rowValue != null && lowerText(rowValue).includes(lowerText(value)),
 }
 
 export const textEquals: ReadyMadeOperator<string> = {
 	id: 'equals',
-	label: 'Equals',
 	input: 'single',
 	filterFn: (rowValue, value) => lowerText(rowValue) === lowerText(value),
 }
 
 export const textNotEquals: ReadyMadeOperator<string> = {
 	id: 'notEquals',
-	label: 'Not equals',
 	input: 'single',
 	filterFn: (rowValue, value) => lowerText(rowValue) !== lowerText(value),
 }
 
 export const textStartsWith: ReadyMadeOperator<string> = {
 	id: 'startsWith',
-	label: 'Starts with',
 	input: 'single',
 	filterFn: (rowValue, value) => lowerText(rowValue).startsWith(lowerText(value)),
 }
 
 export const textEndsWith: ReadyMadeOperator<string> = {
 	id: 'endsWith',
-	label: 'Ends with',
 	input: 'single',
 	filterFn: (rowValue, value) => lowerText(rowValue).endsWith(lowerText(value)),
 }
@@ -103,49 +100,42 @@ function hasNumberBound(bound: unknown): bound is number {
 
 export const numberEquals: ReadyMadeOperator<number> = {
 	id: 'equals',
-	label: 'Equals',
 	input: 'single',
 	filterFn: (rowValue, value) => Number(rowValue) === value,
 }
 
 export const numberNotEquals: ReadyMadeOperator<number> = {
 	id: 'notEquals',
-	label: 'Not equals',
 	input: 'single',
 	filterFn: (rowValue, value) => Number(rowValue) !== value,
 }
 
 export const numberGreaterThan: ReadyMadeOperator<number> = {
 	id: 'greaterThan',
-	label: 'Greater than',
 	input: 'single',
 	filterFn: (rowValue, value) => Number(rowValue) > value,
 }
 
 export const numberGreaterOrEqual: ReadyMadeOperator<number> = {
 	id: 'greaterOrEqual',
-	label: 'Greater than or equal',
 	input: 'single',
 	filterFn: (rowValue, value) => Number(rowValue) >= value,
 }
 
 export const numberLessThan: ReadyMadeOperator<number> = {
 	id: 'lessThan',
-	label: 'Less than',
 	input: 'single',
 	filterFn: (rowValue, value) => Number(rowValue) < value,
 }
 
 export const numberLessOrEqual: ReadyMadeOperator<number> = {
 	id: 'lessOrEqual',
-	label: 'Less than or equal',
 	input: 'single',
 	filterFn: (rowValue, value) => Number(rowValue) <= value,
 }
 
 export const numberBetween: ReadyMadeOperator<number> = {
 	id: 'between',
-	label: 'Between',
 	input: 'range',
 	filterFn: (rowValue, { from, to }) => {
 		const n = Number(rowValue)
@@ -171,49 +161,46 @@ function hasBound(bound: unknown): bound is string {
 
 export const dateEquals: ReadyMadeOperator<string> = {
 	id: 'equals',
-	label: 'Equals',
 	input: 'single',
 	filterFn: (rowValue, value) => dateText(rowValue) === value,
 }
 
 export const dateNotEquals: ReadyMadeOperator<string> = {
 	id: 'notEquals',
-	label: 'Not equals',
 	input: 'single',
 	filterFn: (rowValue, value) => dateText(rowValue) !== value,
 }
 
 export const dateGreaterThan: ReadyMadeOperator<string> = {
 	id: 'greaterThan',
-	label: 'After',
+	labels: 'date',
 	input: 'single',
 	filterFn: (rowValue, value) => dateText(rowValue) > value,
 }
 
 export const dateGreaterOrEqual: ReadyMadeOperator<string> = {
 	id: 'greaterOrEqual',
-	label: 'On or after',
+	labels: 'date',
 	input: 'single',
 	filterFn: (rowValue, value) => dateText(rowValue) >= value,
 }
 
 export const dateLessThan: ReadyMadeOperator<string> = {
 	id: 'lessThan',
-	label: 'Before',
+	labels: 'date',
 	input: 'single',
 	filterFn: (rowValue, value) => dateText(rowValue) < value,
 }
 
 export const dateLessOrEqual: ReadyMadeOperator<string> = {
 	id: 'lessOrEqual',
-	label: 'On or before',
+	labels: 'date',
 	input: 'single',
 	filterFn: (rowValue, value) => dateText(rowValue) <= value,
 }
 
 export const dateBetween: ReadyMadeOperator<string> = {
 	id: 'between',
-	label: 'Between',
 	input: 'range',
 	filterFn: (rowValue, { from, to }) => {
 		const date = dateText(rowValue)
@@ -231,14 +218,14 @@ function toBoolean(value: unknown): boolean {
 
 export const booleanEquals: ReadyMadeOperator<boolean> = {
 	id: 'equals',
-	label: 'Is',
+	labels: 'boolean',
 	input: 'single',
 	filterFn: (rowValue, value) => Boolean(rowValue) === toBoolean(value),
 }
 
 export const booleanNotEquals: ReadyMadeOperator<boolean> = {
 	id: 'notEquals',
-	label: 'Is not',
+	labels: 'boolean',
 	input: 'single',
 	filterFn: (rowValue, value) => Boolean(rowValue) !== toBoolean(value),
 }
@@ -252,14 +239,12 @@ function itemValue(rowValue: unknown): string {
 
 export const isAnyOf: ReadyMadeOperator<string> = {
 	id: 'in',
-	label: 'Is any of',
 	input: 'list',
 	filterFn: (rowValue, values) => values.includes(itemValue(rowValue)),
 }
 
 export const isNoneOf: ReadyMadeOperator<string> = {
 	id: 'notIn',
-	label: 'Is none of',
 	input: 'list',
 	filterFn: (rowValue, values) => !values.includes(itemValue(rowValue)),
 }

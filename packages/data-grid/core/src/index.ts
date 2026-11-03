@@ -81,6 +81,7 @@ export type {
 	FilterOperatorTriggerContext,
 	FilterPlaceholderContext,
 	GridMessages,
+	OperatorLabelGroup,
 	OrderingColumnContext,
 	OrderingPositionContext,
 	OrderingSortContext,
@@ -187,6 +188,7 @@ export type {
 	FilterItem,
 	DateValuePreset,
 	OperatorsConfig,
+	ResolvedOperatorDef,
 	StructuredFilterValue,
 } from './features/operators'
 // The operator *definitions* are deliberately not here — the ready-made set, and the
@@ -201,7 +203,11 @@ export {
 	// The preset labels' overlay: the presets are settled in core, their wording comes from the
 	// grid's dictionary, and the React layer applies it where the controls are rendered.
 	localizeDatePresets,
+	// The same move for operator labels: a definition may leave its label to the dictionary, and
+	// the React layer settles it once per column for every surface that shows the operator.
+	resolveOperatorLabels,
 	OperatorInput,
+	resolveOperatorLabel,
 } from './features/operators'
 
 // Reordering: the pure helpers the UI drives it with, per axis. In core, not the React layer,

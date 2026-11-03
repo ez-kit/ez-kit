@@ -6,6 +6,7 @@ export type {
 	FilterOperatorTriggerContext,
 	FilterPlaceholderContext,
 	GridMessages,
+	OperatorLabelGroup,
 	OrderingColumnContext,
 	OrderingPositionContext,
 	OrderingSortContext,

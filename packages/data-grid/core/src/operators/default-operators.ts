@@ -51,8 +51,8 @@ type DefaultOperatorsByType = Record<keyof BaseCellTypes, FilterOperatorDef[]>
  * `equals`.
  *
  * To change one type's operators, pass a set for that type in any options layer — it replaces the
- * ready-made one for that type and keeps the rest. A translated set is the same move: copy the
- * definitions with new `label`s.
+ * ready-made one for that type and keeps the rest. A translated grid needs no set of its own: the
+ * definitions carry no `label`, so their wording is `messages.operators`.
  */
 export const defaultOperators = {
 	byType: {

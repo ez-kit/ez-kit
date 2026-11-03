@@ -124,8 +124,8 @@ type FilterModelBase = {
 export type OperatorFilterModel = FilterModelBase & {
 	hasOperators: true
 	/**
-	 * The column's operators, each with the `label` and `icon` of its definition — see
-	 * {@link FilterOperatorOption}.
+	 * The column's operators, each with its label settled from the dictionary and the `icon` of its
+	 * definition — see {@link FilterOperatorOption}.
 	 */
 	operators: FilterOperatorOption[]
 	defaultOperator: FilterOperatorId | undefined
@@ -307,7 +307,7 @@ function formatFilterValue(
 	filterValue: unknown,
 	sources: LabelSources,
 	anyLabel: string,
-	operators: FilterOperatorDef[],
+	operators: FilterOperatorOption[],
 ): ValueSummary {
 	if (filterValue == null || filterValue === '') return { display: anyLabel, hasValue: false }
 
@@ -434,7 +434,7 @@ export function resolveFilter(
 	const { meta } = target
 	const filteringMeta = meta.filtering
 	const cellType = meta.cell?.type
-	const operators = filteringMeta?.operators ? toOperatorOptions(filteringMeta.operators) : []
+	const operators = filteringMeta?.operators ? toOperatorOptions(filteringMeta.operators, messages.operators) : []
 	const rawValue = target.getValue()
 	const valueEditor = valueEditorOf(meta, filteringMeta?.component !== undefined, cellTypes)
 	const lists = listsOf(target)

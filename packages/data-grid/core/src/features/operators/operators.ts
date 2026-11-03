@@ -4,7 +4,7 @@ import { warnOnce } from '../../utils/warn-once'
 import { OperatorInput } from './input'
 
 import type { SelectItem } from '../../column/types'
-import type { GridMessages } from '../../messages'
+import type { GridMessages, OperatorLabelGroup } from '../../messages'
 import type { FilterOperator } from '../../operators/ids'
 
 export { OperatorInput } from './input'
@@ -25,8 +25,23 @@ type FilterOperatorBase = {
 	 * one cell type's set; the same id in two types' sets may compare differently.
 	 */
 	id: FilterOperatorId
-	/** What the operator control, its menu, the active-filter chip and the filter model show. */
-	label: string
+	/**
+	 * What the operator control, its menu, the active-filter chip and the filter model show.
+	 *
+	 * Optional: without one the grid reads the label from its dictionary — the group `labels` names
+	 * in `messages.operators`, then `messages.operators.common` by id, then the id itself with a
+	 * development warning. The ready-made set carries none, so its wording is the dictionary's and a
+	 * translated grid needs no translated set. Written here, it always wins over the dictionary.
+	 */
+	label?: string
+	/**
+	 * Which group of `messages.operators` beside `common` holds this operator's label — `'date'`
+	 * for the date set's "After" / "Before", `'boolean'` for "Is" / "Is not".
+	 *
+	 * A property of the definition rather than of the column's cell type, so a project's own
+	 * `datetime` type built from the date set reads "After" as well. Ignored when `label` is set.
+	 */
+	labels?: OperatorLabelGroup
 	/**
 	 * Optional glyph the operator's control shows instead of its label — React: `icon: '≈'` or
 	 * `icon: <Waves />`. The definition is the only source of an operator's icon; without one, the
@@ -456,4 +471,57 @@ export function localizeDatePresets(
 		return label === undefined || label === preset.label ? preset : { ...preset, label }
 	})
 	return next.some((preset, index) => preset !== presets[index]) ? next : presets
+}
+
+/**
+ * An operator definition with its label settled — what every surface that shows an operator reads,
+ * so none of them repeats the lookup or falls back on its own.
+ */
+export type ResolvedOperatorDef<TValue = unknown> = FilterOperatorDef<TValue> & { label: string }
+
+/**
+ * A dictionary group's label for `id` — its own string entry only, so an operator named after an
+ * `Object.prototype` member (`toString`) does not read the inherited function as its label.
+ */
+function ownLabel(group: object, id: string): string | undefined {
+	if (!Object.hasOwn(group, id)) return undefined
+	const label: unknown = (group as Record<string, unknown>)[id]
+	return typeof label === 'string' ? label : undefined
+}
+
+/**
+ * The label an operator shows: the definition's own `label`, else its `labels` group in the
+ * dictionary, else `common` by id, else the id itself — with a development warning, because an
+ * operator nothing names reads as a bug in the control.
+ */
+export function resolveOperatorLabel(op: FilterOperatorDef, messages: GridMessages['operators']): string {
+	if (op.label !== undefined) return op.label
+	const group = op.labels === undefined ? undefined : messages[op.labels]
+	const label = (group && ownLabel(group, op.id)) ?? ownLabel(messages.common, op.id)
+	if (label !== undefined) return label
+	if (IS_DEV) {
+		warnOnce(
+			`[data-grid] Filter operator "${op.id}" has no \`label\`, and \`messages.operators\` names no ` +
+				`operator by that id. The control shows the id. Give the definition a \`label\`, or add the id ` +
+				`to \`messages.operators.common\`.`,
+		)
+	}
+	return op.id
+}
+
+/**
+ * Settles the label of every operator in a list from the dictionary — {@link resolveOperatorLabel}
+ * per entry. An operator whose label is already the resolved one is kept by reference, and so is the
+ * list when none changes, so a column's operators stay stable across renders.
+ */
+export function resolveOperatorLabels<TValue>(
+	operators: FilterOperatorDef<TValue>[],
+	messages: GridMessages['operators'],
+): ResolvedOperatorDef<TValue>[] {
+	const next = operators.map((op) => {
+		const label = resolveOperatorLabel(op, messages)
+		return label === op.label ? op : { ...op, label }
+	})
+	const unchanged = next.every((op, index) => op === operators[index])
+	return (unchanged ? operators : next) as ResolvedOperatorDef<TValue>[]
 }

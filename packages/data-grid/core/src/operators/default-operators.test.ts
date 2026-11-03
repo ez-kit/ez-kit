@@ -2,7 +2,8 @@ import { columnFilteringFeature, createFilteredRowModel, filterFns, tableFeature
 import { describe, expect, it, vi } from 'vitest'
 
 import { createTable } from '../create-table'
-import { OperatorInput } from '../features/operators'
+import { OperatorInput, resolveOperatorLabel } from '../features/operators'
+import { defaultMessages } from '../messages'
 
 import { DEFAULT_OPERATOR_ICONS, FilterOperator, defaultOperators } from './entry'
 
@@ -44,8 +45,10 @@ describe('defaultOperators — one vocabulary across cell types', () => {
 	})
 
 	it('spells comparison the same way for number and date, and only the labels differ', () => {
-		expect(operatorOf('number', FilterOperator.GreaterThan).label).toBe('Greater than')
-		expect(operatorOf('date', FilterOperator.GreaterThan).label).toBe('After')
+		const english = defaultMessages.operators
+
+		expect(resolveOperatorLabel(operatorOf('number', FilterOperator.GreaterThan), english)).toBe('Greater than')
+		expect(resolveOperatorLabel(operatorOf('date', FilterOperator.GreaterThan), english)).toBe('After')
 	})
 
 	it('opens text with contains, a list type with in, and every other type with its first operator', () => {
@@ -66,6 +69,27 @@ describe('defaultOperators — one vocabulary across cell types', () => {
 		expect(operatorOf('select', FilterOperator.In).input).toBe(OperatorInput.List)
 		expect(operatorOf('text', FilterOperator.IsEmpty).input).toBe(OperatorInput.None)
 		expect(operatorOf('text', FilterOperator.Contains).input).toBe(OperatorInput.Single)
+	})
+
+	it('carries no label — the wording is the dictionary’s', () => {
+		for (const type of BUILT_IN_TYPES) {
+			for (const op of defaultOperators.byType[type]) expect(op.label).toBeUndefined()
+		}
+	})
+
+	it.each([
+		['text', ['Contains', 'Equals', 'Not equals', 'Starts with', 'Ends with', 'Is empty', 'Is not empty']],
+		[
+			'number',
+			['Equals', 'Not equals', 'Greater than', 'Greater than or equal', 'Less than', 'Less than or equal', 'Between'],
+		],
+		['date', ['Equals', 'Not equals', 'After', 'On or after', 'Before', 'On or before', 'Between']],
+		['boolean', ['Is', 'Is not', 'Is empty', 'Is not empty']],
+		['select', ['Is any of', 'Is none of', 'Is empty', 'Is not empty']],
+	] as const)('reads the %s set’s English labels from the default dictionary', (type, labels) => {
+		const english = defaultMessages.operators
+
+		expect(defaultOperators.byType[type].map((op) => resolveOperatorLabel(op, english))).toEqual(labels)
 	})
 
 	it('ships no icons — the control shows the label until a definition names one', () => {

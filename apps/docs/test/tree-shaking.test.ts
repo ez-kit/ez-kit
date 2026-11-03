@@ -337,6 +337,46 @@ describe('@ez-kit/data-grid-core/operators', () => {
 	it.each(['FilterOperator', 'DEFAULT_OPERATOR_ICONS'])('carries no comparison with %s alone', async (name) => {
 		expect(await bundledCodeOf(OPERATORS_ENTRY, [name])).not.toContain(COMPARISON_MARKER)
 	})
+	// The labels are the dictionary's: the set carries none, so a translated grid does not ship the
+	// English beside its own.
+	it('carries no English label with the set', async () => {
+		expect(await bundledCodeOf(OPERATORS_ENTRY, ['defaultOperators'])).not.toContain('Greater than')
+	})
+})
+
+/**
+ * The shipped dictionaries, one subpath each under `@ez-kit/data-grid-core/messages/` — reported
+ * here as their shared directory, `@ez-kit/data-grid-core/messages`.
+ *
+ * A grid pays for a translation only by importing it: nothing on the main entry names one, and the
+ * Russian dictionary imports types only, so it reaches no entry but its own.
+ */
+const RU_MESSAGES_ENTRY = subpathEntryOf('data-grid/core', 'messages/ru.js')
+/**
+ * Code only the Russian dictionary holds. ASCII on purpose: esbuild escapes the dictionary's own
+ * text as `\uXXXX` in the bundle it hands back.
+ */
+const RU_MARKER = 'PluralRules("ru")'
+
+describe('@ez-kit/data-grid-core/messages/ru', () => {
+	it('is not reached by createTable', async () => {
+		expect(await entryPointsPulledBy(entryOf('data-grid/core'), ['createTable'])).not.toContain(
+			'@ez-kit/data-grid-core/messages',
+		)
+	})
+
+	it('carries no Russian anywhere on the main entry', async () => {
+		expect(await bundledCodeOf(entryOf('data-grid/core'))).not.toContain(RU_MARKER)
+	})
+
+	it('reaches no entry point but its own', async () => {
+		expect(await entryPointsPulledBy(RU_MESSAGES_ENTRY, ['messages'])).toEqual(['@ez-kit/data-grid-core/messages'])
+	})
+
+	// The control for the absences above.
+	it('carries the Russian with the dictionary', async () => {
+		expect(await bundledCodeOf(RU_MESSAGES_ENTRY, ['messages'])).toContain(RU_MARKER)
+	})
 })
 
 /**

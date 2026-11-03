@@ -1,3 +1,5 @@
+import type { FilterOperator } from '../operators/ids'
+
 /**
  * Every user-facing string the grid can render, in one place.
  *
@@ -395,6 +397,27 @@ export type GridMessages = {
 		 */
 		itemsError: string
 	}
+	/**
+	 * The labels of the ready-made operator set — what the operator control, its menu, the
+	 * active-filter chip and the filter model show for an operator whose definition carries no
+	 * `label` of its own.
+	 *
+	 * `common` names every operator by its id. The other groups hold only the wordings that differ
+	 * from it, and an operator reaches one through its definition's `labels` — the date set's
+	 * `greaterThan` reads "After" where the number set's reads "Greater than". The group follows the
+	 * definition, not the column's cell type, so a project's own `datetime` type built from the date
+	 * set reads "After" too.
+	 *
+	 * A definition's own `label` always wins, so a project's own operator is never renamed here.
+	 */
+	operators: {
+		/** Every operator of the ready-made set, by id. */
+		common: Record<FilterOperator, string>
+		/** The date set's comparisons, which read as positions in time. */
+		date: Record<'greaterThan' | 'greaterOrEqual' | 'lessThan' | 'lessOrEqual', string>
+		/** The boolean set's equality, which reads as a statement — "Is", "Is not". */
+		boolean: Record<'equals' | 'notEquals', string>
+	}
 	/** The global search box. */
 	globalFiltering: {
 		/** Placeholder of the search input, and the default of `globalFiltering.placeholder`. */
@@ -527,6 +550,12 @@ export type GridMessages = {
 	}
 }
 
+/**
+ * A group of {@link GridMessages.operators} beside `common` — what an operator definition's
+ * `labels` names.
+ */
+export type OperatorLabelGroup = Exclude<keyof GridMessages['operators'], 'common'>
+
 /** What an entry that reports a quantity is given. */
 export type CountContext = {
 	/** How many of the thing there are. Always ≥ 1 — a zero segment is not rendered. */
@@ -627,12 +656,25 @@ export type FilterOperatorTriggerContext = {
 }
 
 /**
- * A partial dictionary: any subset of {@link GridMessages}, group by group.
+ * One group of a partial dictionary: any subset of its entries, and any subset of a record entry
+ * (`filtering.presets`) inside it. A function entry stays whole — an override replaces it.
+ */
+type PartialGroup<TGroup> = {
+	[L in keyof TGroup]?: TGroup[L] extends (...args: never[]) => unknown
+		? TGroup[L]
+		: TGroup[L] extends object
+			? Partial<TGroup[L]>
+			: TGroup[L]
+}
+
+/**
+ * A partial dictionary: any subset of {@link GridMessages}, group by group, and entry by entry
+ * inside a record entry.
  *
- * Two levels deep is the whole shape, so this is spelled out rather than reached for with a
- * recursive `DeepPartial`, which would also make every leaf function optional-and-partial and
- * hide a typo inside a group.
+ * Two levels deep is the whole shape — a group, then a record inside it — so this is spelled out
+ * rather than reached for with a recursive `DeepPartial`, which would also make every leaf function
+ * optional-and-partial and hide a typo inside a group.
  */
 export type PartialGridMessages = {
-	[K in keyof GridMessages]?: Partial<GridMessages[K]>
+	[K in keyof GridMessages]?: PartialGroup<GridMessages[K]>
 }

@@ -5,11 +5,12 @@ import { ItemsSourceSlot, resolveItem, useItemsListsFor } from '../items-source'
 import { FilterChipKind, FilterChipsPosition } from '../types'
 
 import { collectFilterTargets, columnFilterTarget } from './filter-target'
+import { toOperatorOptions } from './operator-input'
 import { useDataGridState, useDataGridTable } from './table-context'
 
 import type { ItemsMeta, ListSnapshot } from '../items-source'
+import type { FilterOperatorOption } from '../types'
 import type { FilterTarget } from './filter-target'
-import type { FilterOperatorDef } from '@ez-kit/data-grid-core'
 import type { ReactNode } from 'react'
 
 /**
@@ -69,7 +70,7 @@ function renderInnerValue(v: unknown, labelOf: LabelOf): ReactNode {
 	return s === '' ? null : s
 }
 
-function renderValueDisplay(rawValue: unknown, labelOf: LabelOf, operators?: FilterOperatorDef[]): ReactNode {
+function renderValueDisplay(rawValue: unknown, labelOf: LabelOf, operators?: FilterOperatorOption[]): ReactNode {
 	if (isStructuredFilterValue(rawValue)) {
 		const op = operators?.find((o) => o.id === rawValue.operator)
 		const indicator = op?.label ?? rawValue.operator
@@ -151,9 +152,10 @@ export function ActiveFiltersBar({ position: positionProp }: DataGridActiveFilte
 	columnFilters.forEach((cf, index) => {
 		const target = activeTargets[index]
 		if (!target) return
-		// Chips name the operator by its definition's `label`, as the control does — or by the raw id
-		// for one the column does not offer.
-		const operators = target.meta.filtering?.operators
+		// Chips name the operator by the label the control shows — the definition's, else the
+		// dictionary's — or by the raw id for one the column does not offer.
+		const defs = target.meta.filtering?.operators
+		const operators = defs ? toOperatorOptions(defs, table.grid.messages.operators) : undefined
 		const display = renderValueDisplay(cf.value, labellerOf(target, lists[index]?.labels), operators)
 		if (display == null || display === '') return
 		// Optional-chained. `s.applied` is `draftFeature`'s slice, and the two *uses* below are
