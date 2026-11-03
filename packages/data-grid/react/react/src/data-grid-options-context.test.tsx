@@ -352,7 +352,10 @@ describe('operators across the option layers', () => {
 		return filtering === false ? undefined : filtering?.operators?.map((op) => op.id)
 	}
 
-	function labelsOf(table: { getColumn: (id: string) => unknown }, columnId: string): string[] | undefined {
+	function labelsOf(
+		table: { getColumn: (id: string) => unknown },
+		columnId: string,
+	): (string | undefined)[] | undefined {
 		const column = table.getColumn(columnId) as
 			| { columnDef: { meta?: { filtering?: false | { operators?: FilterOperatorDef[] } } } }
 			| undefined

@@ -210,12 +210,13 @@ and "After" on a date one. The ids are the `FilterOperator` members, also on
 Text, image and link open with `contains`, select and badge with `in`, and every other type with
 `equals`.
 
-A translated set is the same move as any other: copy the definitions with new `label`s, and pass
-the result — see [Localization](/docs/data-grid/localization#filter-operators).
+The ready-made definitions carry no `label`: their wording is the grid's dictionary, so a
+translated grid passes a translated `messages`, not a translated set — see
+[Localization](/docs/data-grid/localization#filter-operators).
 
 ## Custom operators
 
-An operator is a definition: an `id`, a `label`, the `input` it takes and a `filterFn`. **The grid
+An operator is a definition: an `id`, the `input` it takes, a `filterFn` and, usually, a `label`. **The grid
 reads everything about an operator from its `input`, never from its id** — the editor its filter
 shows, what switching to it keeps, which date presets apply, and whether an empty value is a filter
 at all (the active-filter chip reads it to show a `none` operator by its label alone):
@@ -238,6 +239,30 @@ Switching operators keeps the value when the two take the same `input` — `betw
 `notBetween` keeps the range, `contains` to `startsWith` keeps the text — and drops it otherwise,
 since a value of another shape is one the next operator cannot take. Moving into a range starts an
 empty one.
+
+### Labels
+
+The label an operator shows is settled once per column, for the control, its menu, the active-filter
+chip and the filter model alike:
+
+1. the definition's own `label`, when it has one — always, whatever the dictionary says;
+2. else the group of `messages.operators` its `labels` names — `'date'` or `'boolean'`;
+3. else `messages.operators.common`, by id;
+4. else the id itself, with a warning in development.
+
+So an operator of your own names itself with `label`. Leave `label` off only for an id the
+dictionary already names — a copy of a ready-made definition with another `filterFn`, say, which
+then reads the ready-made wording in every language:
+
+```ts
+import { defaultOperators } from '@ez-kit/data-grid-core/operators'
+
+const [textContains] = defaultOperators.byType.text
+const accentInsensitiveContains = { ...textContains, filterFn: (row, value) => fold(row).includes(fold(value)) }
+```
+
+`labels` picks a group by the definition, not by the column's cell type, so a cell type of your own
+built from the date set reads "After" for `greaterThan` exactly as a date column does.
 
 ### Changing a set without breaking links
 
@@ -274,13 +299,14 @@ Number-only. Date presets are configured on the column instead, through
 
 ### `FilterOperatorDef`
 
-| Field      | Type                                      | Description                                                                                 |
-| ---------- | ----------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `id`       | `FilterOperatorId`                        | What a filter value names the operator by. Unique within one cell type's set.               |
-| `label`    | `string`                                  | Shown by the operator control, its menu, the active-filter chip and the filter model.       |
-| `icon`     | `ReactNode`                               | Shown in place of the label in the control, and beside it in the menu.                      |
-| `input`    | `'none' \| 'single' \| 'range' \| 'list'` | The kind of value the operator takes — `OperatorInput`. Required; every behaviour reads it. |
-| `filterFn` | `(rowValue, value) => boolean`            | Matching predicate. `value` has the shape of `input`; for `none` there is none.             |
+| Field      | Type                                      | Description                                                                                                                                           |
+| ---------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`       | `FilterOperatorId`                        | What a filter value names the operator by. Unique within one cell type's set.                                                                         |
+| `label`    | `string`                                  | Shown by the operator control, its menu, the active-filter chip and the filter model. Optional: without it the label comes from `messages.operators`. |
+| `labels`   | `'date' \| 'boolean'`                     | The group of `messages.operators` beside `common` that holds this operator's label.                                                                   |
+| `icon`     | `ReactNode`                               | Shown in place of the label in the control, and beside it in the menu.                                                                                |
+| `input`    | `'none' \| 'single' \| 'range' \| 'list'` | The kind of value the operator takes — `OperatorInput`. Required; every behaviour reads it.                                                           |
+| `filterFn` | `(rowValue, value) => boolean`            | Matching predicate. `value` has the shape of `input`; for `none` there is none.                                                                       |
 
 ## Source
 

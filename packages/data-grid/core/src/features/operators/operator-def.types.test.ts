@@ -3,8 +3,32 @@ import { describe, expectTypeOf, it } from 'vitest'
 import { OperatorInput } from './operators'
 
 import type { BetweenValue, FilterOperatorDef } from './operators'
+import type { OperatorLabelGroup } from '../../messages'
 
 describe('FilterOperatorDef', () => {
+	it('accepts a definition that leaves its label to the dictionary', () => {
+		const unlabelled: FilterOperatorDef = { id: 'contains', input: OperatorInput.Single, filterFn: () => true }
+		expectTypeOf(unlabelled.label).toEqualTypeOf<string | undefined>()
+	})
+
+	it('names only a group the dictionary has in `labels`', () => {
+		const dated: FilterOperatorDef = {
+			id: 'greaterThan',
+			labels: 'date',
+			input: OperatorInput.Single,
+			filterFn: () => true,
+		}
+		expectTypeOf(dated.labels).toEqualTypeOf<OperatorLabelGroup | undefined>()
+		const wrong: FilterOperatorDef = {
+			id: 'contains',
+			// @ts-expect-error `text` is not a label group — its wording is `common`
+			labels: 'text',
+			input: OperatorInput.Single,
+			filterFn: () => true,
+		}
+		expectTypeOf(wrong.labels).toEqualTypeOf<OperatorLabelGroup | undefined>()
+	})
+
 	it('rejects a definition without `input`', () => {
 		// @ts-expect-error `input` is the discriminant every definition states
 		const missing: FilterOperatorDef = { id: 'fuzzy', label: 'Fuzzy', filterFn: () => true }

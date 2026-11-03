@@ -8,9 +8,10 @@ import type { GridMessages } from './types'
  * `aria-label` it has: the grid would be inaccessible until someone typed out sixty strings.
  * English is the fallback, `messages` is the replacement.
  *
- * No other locales ship with the package while the key set is still moving — a bundled `ru` or
- * `de` would have to be corrected in lockstep with every key added here, and a half-translated
- * dictionary is worse than an English one, because the gaps are invisible until they render.
+ * One other language ships beside it as `messages` on `@ez-kit/data-grid-core/messages/ru`. It is
+ * typed as the whole {@link GridMessages}, so a key added here without its translation there is a
+ * type error rather than a half-translated dictionary whose gaps only show when they render — which
+ * is also why a key added here is translated in the same change.
  */
 export const defaultMessages: GridMessages = {
 	grid: {
@@ -155,6 +156,34 @@ export const defaultMessages: GridMessages = {
 		search: 'Search…',
 		noResults: 'No results',
 		itemsError: 'Couldn’t load the options.',
+	},
+	operators: {
+		common: {
+			contains: 'Contains',
+			startsWith: 'Starts with',
+			endsWith: 'Ends with',
+			equals: 'Equals',
+			notEquals: 'Not equals',
+			greaterThan: 'Greater than',
+			greaterOrEqual: 'Greater than or equal',
+			lessThan: 'Less than',
+			lessOrEqual: 'Less than or equal',
+			between: 'Between',
+			in: 'Is any of',
+			notIn: 'Is none of',
+			isEmpty: 'Is empty',
+			isNotEmpty: 'Is not empty',
+		},
+		date: {
+			greaterThan: 'After',
+			greaterOrEqual: 'On or after',
+			lessThan: 'Before',
+			lessOrEqual: 'On or before',
+		},
+		boolean: {
+			equals: 'Is',
+			notEquals: 'Is not',
+		},
 	},
 	globalFiltering: {
 		placeholder: 'Search…',

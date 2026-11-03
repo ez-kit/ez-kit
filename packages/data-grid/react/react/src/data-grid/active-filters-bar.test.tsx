@@ -1,4 +1,4 @@
-import { OperatorInput, createTable, createColumns } from '@ez-kit/data-grid-core'
+import { OperatorInput, createTable, createColumns, resolveMessages } from '@ez-kit/data-grid-core'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
@@ -135,7 +135,7 @@ describe('<ActiveFiltersBar>', () => {
 		expect(screen.getByText('Equals Alice')).toBeInTheDocument()
 	})
 
-	it('labels an operator by its definition, whatever the dictionary says', () => {
+	it('labels an operator by its own definition over the dictionary', () => {
 		const contains: FilterOperatorDef = {
 			id: 'contains',
 			label: 'Похоже на',
@@ -143,6 +143,7 @@ describe('<ActiveFiltersBar>', () => {
 			filterFn: () => true,
 		}
 		const table = makeTable({ operators: { byType: { text: [contains] } } })
+		table.grid.messages = resolveMessages({ operators: { common: { contains: 'Содержит' } } })
 		table.setColumnFilters([{ id: 'name', value: { operator: 'contains', value: 'ali' } }])
 
 		render(
@@ -151,6 +152,19 @@ describe('<ActiveFiltersBar>', () => {
 			</Wrapper>,
 		)
 		expect(screen.getByText('Похоже на ali')).toBeInTheDocument()
+	})
+
+	it('labels a ready-made operator from the grid’s dictionary', () => {
+		const table = makeTable()
+		table.grid.messages = resolveMessages({ operators: { common: { contains: 'Содержит' } } })
+		table.setColumnFilters([{ id: 'name', value: { operator: 'contains', value: 'ali' } }])
+
+		render(
+			<Wrapper table={table}>
+				<ActiveFiltersBar />
+			</Wrapper>,
+		)
+		expect(screen.getByText('Содержит ali')).toBeInTheDocument()
 	})
 
 	it('shows the raw id of an operator the column does not offer', () => {

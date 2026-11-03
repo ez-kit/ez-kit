@@ -12,6 +12,19 @@ stayed English is not localized; it just hides the English where only a screen r
 
 <DataGridDocsExample exampleId='localization' />
 
+## Available languages
+
+The grid currently ships two complete dictionaries:
+
+| Language          | Code | Export     | Import path                          |
+| ----------------- | ---- | ---------- | ------------------------------------ |
+| English (default) | `en` | `messages` | `@ez-kit/data-grid-core/messages/en` |
+| Russian           | `ru` | `messages` | `@ez-kit/data-grid-core/messages/ru` |
+
+Both include every grid label, placeholder, accessible name and filter-operator label. Each is
+typed as `GridMessages`, so a new string must be translated in both dictionaries. For other
+languages, provide your own `PartialGridMessages`.
+
 ## One string
 
 ```tsx
@@ -32,29 +45,46 @@ Set it once on `DataGridOptionsProvider` and every grid below it inherits the di
 grid can still override one string of it — the provider, factory defaults and the instance are the
 same three option layers everything else uses.
 
+The package ships two complete dictionaries, English and Russian, one subpath each:
+
 ```tsx
+import { messages } from '@ez-kit/data-grid-core/messages/ru'
 import { DataGridOptionsProvider } from '@ez-kit/data-grid-react'
 
-import { ru } from './grid-messages.ru'
-
 export function Providers({ children }: { children: ReactNode }) {
-	return <DataGridOptionsProvider defaults={{ messages: ru }}>{children}</DataGridOptionsProvider>
+	return <DataGridOptionsProvider defaults={{ messages }}>{children}</DataGridOptionsProvider>
 }
 ```
 
+Each language subpath exports `messages`. The English one is also `defaultMessages`. When using
+both languages, give the imports distinct local names:
+
 ```ts
-// grid-messages.ru.ts
+import { messages as enMessages } from '@ez-kit/data-grid-core/messages/en'
+import { messages as ruMessages } from '@ez-kit/data-grid-core/messages/ru'
+
+const messages = lang === 'ru' ? ruMessages : enMessages
+```
+
+A dictionary you do not import costs nothing.
+
+For any other language, write your own — the whole dictionary or any part of it:
+
+```ts
+// grid-messages.de.ts
 import type { PartialGridMessages } from '@ez-kit/data-grid-react'
 
-export const ru: PartialGridMessages = {
-	selection: { selectRow: 'Выбрать строку', selectAll: 'Выбрать все строки', clear: 'Снять выделение' },
-	pagination: { rowsPerPage: 'Строк на странице', page: 'Страница', of: 'из' },
-	fallbacks: { empty: 'Нет данных', noResults: 'Ничего не найдено' },
+export const de: PartialGridMessages = {
+	selection: { selectRow: 'Zeile auswählen', selectAll: 'Alle Zeilen auswählen', clear: 'Auswahl aufheben' },
+	pagination: { rowsPerPage: 'Zeilen pro Seite', page: 'Seite', of: 'von' },
+	fallbacks: { empty: 'Keine Daten', noResults: 'Keine Treffer' },
 }
 ```
 
 `PartialGridMessages` types any subset, group by group, so a typo in a key is a compile error
-rather than a string that silently stays English.
+rather than a string that silently stays English. A record inside a group — `filtering.presets`,
+`operators.common` — merges entry by entry as well, so `presets: { today: 'Heute' }` keeps the
+other presets.
 
 ## Strings that depend on the render
 
@@ -87,35 +117,33 @@ const ru: PartialGridMessages = {
 
 ## Filter operators
 
-Operator labels are **not** in the dictionary. An operator's `label` is written on its definition,
-and the control, its menu, the active-filter chip and the filter model all show that — so a
-translated grid passes a translated operator set. Copy the ready-made definitions with new labels
-and pass the result as `operators`, in `createDataGrid`, on a `DataGridOptionsProvider` or on a grid:
+The ready-made operators are labelled from the dictionary, under `operators`. `common` names every
+operator by its id; `date` and `boolean` hold only the wordings that differ from it — the date
+set's `greaterThan` reads "After" where the number set's reads "Greater than", and the boolean set's
+`equals` reads "Is":
 
 ```ts
-import { defaultOperators } from '@ez-kit/data-grid-core/operators'
-
-const RU: Partial<Record<string, string>> = { contains: 'Содержит', equals: 'Равно', isEmpty: 'Пусто' /* … */ }
-const translated = (set: FilterOperatorDef[]) => set.map((op) => ({ ...op, label: RU[op.id] ?? op.label }))
-
-const ruOperators = {
-	byType: { text: translated(defaultOperators.byType.text), date: translated(defaultOperators.byType.date) },
+const de: PartialGridMessages = {
+	operators: {
+		common: { contains: 'Enthält', equals: 'Gleich', greaterThan: 'Größer als' /* … */ },
+		date: { greaterThan: 'Nach', lessThan: 'Vor' /* … */ },
+	},
 }
 ```
 
-A layer replaces only the cell types it names, so the sets you leave out keep their English labels.
-The same id can be worded per type — the date set's `greaterThan` is "After" where the number set's
-is "Greater than" — which is why the translation goes per set rather than per id. See
-[Filter operators](/docs/data-grid/filtering/operators#the-operator-set).
+The group belongs to the definition, not to the column: a cell type of your own built from
+`defaultOperators.byType.date` reads "After" too. An operator you wrote yourself is labelled by its
+own `label`, which always wins over the dictionary — see
+[Filter operators](/docs/data-grid/filtering/operators#labels).
 
-The date presets are still the dictionary's, under `filtering.presets`, and the preset menu's own
+The date presets are the dictionary's as well, under `filtering.presets`, and the preset menu's own
 name is `filtering.presetMenu`:
 
 ```ts
-const ru: PartialGridMessages = {
+const de: PartialGridMessages = {
 	filtering: {
-		presetMenu: 'Быстрый выбор',
-		presets: { today: 'Сегодня', yesterday: 'Вчера', last7: 'Последние 7 дней' /* … */ },
+		presetMenu: 'Schnellauswahl',
+		presets: { today: 'Heute', yesterday: 'Gestern', last7: 'Letzte 7 Tage' },
 	},
 }
 ```
@@ -171,12 +199,10 @@ accessible names (`Search icon`, `Chevron down icon`) that come from `@heroui/re
 grid. Everything the grid itself renders — including every `aria-label` it writes — is in the
 dictionary.
 
-## What ships
-
-**English only.** No `ru` / `de` bundles and no separate locales package: the key set is still
-moving before 1.0, and a bundled translation that lags the keys is worse than no translation —
-the gaps are invisible until they render. Write the dictionary your app needs; it is a plain
-object.
+The calendar is the kit's too. Month and weekday names in a date filter come from the kit's own
+locale, not from `messages`: on HeroUI wrap the app in React Aria's `I18nProvider` with
+`locale="ru-RU"`; on shadcn the calendar is react-day-picker, which takes its `locale` from
+`react-day-picker/locale`.
 
 ## Options
 
