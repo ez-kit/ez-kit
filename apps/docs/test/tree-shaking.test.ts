@@ -370,12 +370,12 @@ describe('@ez-kit/data-grid-core/messages/ru', () => {
 	})
 
 	it('reaches no entry point but its own', async () => {
-		expect(await entryPointsPulledBy(RU_MESSAGES_ENTRY, ['ruMessages'])).toEqual(['@ez-kit/data-grid-core/messages'])
+		expect(await entryPointsPulledBy(RU_MESSAGES_ENTRY, ['messages'])).toEqual(['@ez-kit/data-grid-core/messages'])
 	})
 
 	// The control for the absences above.
 	it('carries the Russian with the dictionary', async () => {
-		expect(await bundledCodeOf(RU_MESSAGES_ENTRY, ['ruMessages'])).toContain(RU_MARKER)
+		expect(await bundledCodeOf(RU_MESSAGES_ENTRY, ['messages'])).toContain(RU_MARKER)
 	})
 })
 

@@ -16,7 +16,7 @@ import {
 	sortFns,
 	tableFeatures,
 } from '@ez-kit/data-grid-core/features'
-import { ruMessages } from '@ez-kit/data-grid-core/messages/ru'
+import { messages as ruMessages } from '@ez-kit/data-grid-core/messages/ru'
 import { DataGridOptionsProvider, createColumns } from '@ez-kit/data-grid-react'
 import { useMemo } from 'react'
 

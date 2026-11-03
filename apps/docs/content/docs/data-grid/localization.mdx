@@ -12,6 +12,19 @@ stayed English is not localized; it just hides the English where only a screen r
 
 <DataGridDocsExample exampleId='localization' />
 
+## Available languages
+
+The grid currently ships two complete dictionaries:
+
+| Language          | Code | Export     | Import path                          |
+| ----------------- | ---- | ---------- | ------------------------------------ |
+| English (default) | `en` | `messages` | `@ez-kit/data-grid-core/messages/en` |
+| Russian           | `ru` | `messages` | `@ez-kit/data-grid-core/messages/ru` |
+
+Both include every grid label, placeholder, accessible name and filter-operator label. Each is
+typed as `GridMessages`, so a new string must be translated in both dictionaries. For other
+languages, provide your own `PartialGridMessages`.
+
 ## One string
 
 ```tsx
@@ -35,17 +48,25 @@ same three option layers everything else uses.
 The package ships two complete dictionaries, English and Russian, one subpath each:
 
 ```tsx
-import { ruMessages } from '@ez-kit/data-grid-core/messages/ru'
+import { messages } from '@ez-kit/data-grid-core/messages/ru'
 import { DataGridOptionsProvider } from '@ez-kit/data-grid-react'
 
 export function Providers({ children }: { children: ReactNode }) {
-	return <DataGridOptionsProvider defaults={{ messages: ruMessages }}>{children}</DataGridOptionsProvider>
+	return <DataGridOptionsProvider defaults={{ messages }}>{children}</DataGridOptionsProvider>
 }
 ```
 
-`enMessages` (`@ez-kit/data-grid-core/messages/en`) is the default dictionary under the same kind
-of name, so switching language reads `lang === 'ru' ? ruMessages : enMessages`. A dictionary you
-do not import costs nothing.
+Each language subpath exports `messages`. The English one is also `defaultMessages`. When using
+both languages, give the imports distinct local names:
+
+```ts
+import { messages as enMessages } from '@ez-kit/data-grid-core/messages/en'
+import { messages as ruMessages } from '@ez-kit/data-grid-core/messages/ru'
+
+const messages = lang === 'ru' ? ruMessages : enMessages
+```
+
+A dictionary you do not import costs nothing.
 
 For any other language, write your own — the whole dictionary or any part of it:
 
@@ -182,13 +203,6 @@ The calendar is the kit's too. Month and weekday names in a date filter come fro
 locale, not from `messages`: on HeroUI wrap the app in React Aria's `I18nProvider` with
 `locale="ru-RU"`; on shadcn the calendar is react-day-picker, which takes its `locale` from
 `react-day-picker/locale`.
-
-## What ships
-
-**English and Russian**, as `enMessages` and `ruMessages`. Each is the whole dictionary, typed as
-`GridMessages` rather than as a partial one, so a string added to the grid without its translation
-fails the package's own type check — a shipped dictionary is never quietly half-translated. Other
-languages are a `PartialGridMessages` of your own.
 
 ## Options
 

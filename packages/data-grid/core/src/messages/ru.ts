@@ -20,7 +20,7 @@ const ROWS_ACCUSATIVE = ['строку', 'строки', 'строк'] as const
  * English one — so a key added to the dictionary without a translation here is a type error in this
  * repository rather than an English string in a Russian grid.
  */
-export const ruMessages: GridMessages = {
+export const messages: GridMessages = {
 	grid: {
 		label: 'Таблица данных',
 		rowCount: ({ count }) => `${String(count)} ${plural(count, ROWS)}`,

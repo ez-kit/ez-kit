@@ -1,8 +1,8 @@
 import { describe, expect, expectTypeOf, it } from 'vitest'
 
 import { defaultMessages } from './defaults'
-import { enMessages } from './en'
-import { ruMessages } from './ru'
+import { messages as enMessages } from './en'
+import { messages as ruMessages } from './ru'
 
 import type { GridMessages } from './types'
 

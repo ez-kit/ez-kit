@@ -1,6 +1,6 @@
 # 0023. Ready-made operator labels live in the dictionary; two full dictionaries ship
 
-- Status: Accepted
+- Status: Superseded by [0024](./0024-language-dictionary-exports.md) for dictionary export names; all other decisions remain in force
 - Recorded: 2026-10-30
 - Related: [0005-filter-operator-vocabulary](./0005-filter-operator-vocabulary.md), [0014-tree-shaking-guarantees](./0014-tree-shaking-guarantees.md)
 

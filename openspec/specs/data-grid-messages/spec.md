@@ -51,9 +51,10 @@ accessible name, как проект заменяет часть строк ил
 
 ### Requirement: Пакет поставляет полные словари en и ru
 
-Пакет MUST экспортировать `enMessages` из `@ez-kit/data-grid-core/messages/en` и `ruMessages` из
-`@ez-kit/data-grid-core/messages/ru`. Оба MUST иметь тип полного `GridMessages`; `enMessages` MUST
-совпадать с `defaultMessages`.
+Каждый из subpath'ов `@ez-kit/data-grid-core/messages/en` и `@ez-kit/data-grid-core/messages/ru`
+MUST экспортировать словарь под именем `messages`. Оба MUST иметь тип полного `GridMessages`;
+английский словарь MUST совпадать с `defaultMessages`. В сценариях ниже `enMessages` и `ruMessages`
+обозначают локальные имена этих импортов.
 
 #### Scenario: Русский грид одним импортом
 

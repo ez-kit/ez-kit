@@ -8,7 +8,7 @@ import type { GridMessages } from './types'
  * `aria-label` it has: the grid would be inaccessible until someone typed out sixty strings.
  * English is the fallback, `messages` is the replacement.
  *
- * One other language ships beside it, `ruMessages` on `@ez-kit/data-grid-core/messages/ru`. It is
+ * One other language ships beside it as `messages` on `@ez-kit/data-grid-core/messages/ru`. It is
  * typed as the whole {@link GridMessages}, so a key added here without its translation there is a
  * type error rather than a half-translated dictionary whose gaps only show when they render — which
  * is also why a key added here is translated in the same change.

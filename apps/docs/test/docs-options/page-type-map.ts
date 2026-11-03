@@ -960,7 +960,12 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.Localization,
 		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 1 }],
-		nonOptionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'Available languages',
+				reason: 'Lists shipped dictionaries and their import paths, not config options.',
+			},
+		],
 	},
 	{
 		page: DocPage.Accessibility,
