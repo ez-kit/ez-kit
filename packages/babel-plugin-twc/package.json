@@ -39,8 +39,8 @@
 		}
 	],
 	"devDependencies": {
-		"@babel/core": "^7.29.0",
-		"@babel/types": "^7.29.0",
+		"@babel/core": "^7.29.7",
+		"@babel/types": "^7.29.11",
 		"@types/babel__core": "^7.20.5"
 	},
 	"peerDependencies": {

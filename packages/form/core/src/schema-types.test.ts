@@ -52,6 +52,7 @@ test('a registered custom type is accepted; an unregistered one is not', () => {
 	define({ version: 1, children: [{ type: 'rating', name: 'age' }] })
 
 	// @ts-expect-error `zzz` was never registered via defineFormSchema<Values, 'rating'>()
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-enum-assignment -- This negative type test deliberately uses an invalid field type.
 	define({ version: 1, children: [{ type: 'zzz', name: 'age' }] })
 
 	expectTypeOf(define).toBeFunction()
@@ -332,9 +333,11 @@ test('section and submit are no longer nodes', () => {
 	const define = defineFormSchema<Values>()
 
 	// @ts-expect-error `section` is a `Section` block now
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-enum-assignment -- This negative type test deliberately uses an invalid field type.
 	define({ version: 1, children: [{ type: 'section', children: [] }] })
 
 	// @ts-expect-error `submit` is a `SubmitButton` block now
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-enum-assignment -- This negative type test deliberately uses an invalid field type.
 	define({ version: 1, children: [{ type: 'submit', label: 'Send' }] })
 
 	expectTypeOf(define).toBeFunction()

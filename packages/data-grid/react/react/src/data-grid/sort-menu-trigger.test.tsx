@@ -12,6 +12,7 @@ import { DragAxis, DragInput, DragSurface } from './dnd'
 import type { DndAdapter, DndAnnouncements, DndDropEvent, DragSpec, SortableItemHandle } from './dnd'
 import type { DataGridSortMenuTriggerRenderArgs } from './sort-menu-trigger'
 import type { SortingConfig, SortingState } from '@ez-kit/data-grid-core'
+import type { MockInstance } from 'vitest'
 
 type Row = { a: string; b: number; c: string; notes: string }
 
@@ -433,7 +434,7 @@ describe('`<DataGrid.SortItem>`', () => {
 })
 
 describe('a grip asked for without an adapter', () => {
-	let warn: ReturnType<typeof vi.spyOn>
+	let warn: MockInstance<typeof console.warn>
 
 	beforeEach(() => {
 		warn = vi.spyOn(console, 'warn').mockImplementation(() => {})

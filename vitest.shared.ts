@@ -1,9 +1,30 @@
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { transform } from 'esbuild'
+
 import type { ViteUserConfig } from 'vitest/config'
 
 export const vitestSharedConfig: ViteUserConfig = {
+	plugins: [
+		{
+			name: 'standard-decorators',
+			enforce: 'pre',
+			// Vite 8's Oxc transformer does not lower standard decorators yet.
+			// Keep the persistence decorator suites on the same semantics as the package build.
+			async transform(code, id) {
+				if (!/\.[cm]?tsx?$/.test(id) || !/(?:^|\n|[;{}])\s*@[$\w]+/.test(code)) return
+				const result = await transform(code, {
+					loader: id.endsWith('tsx') ? 'tsx' : 'ts',
+					sourcefile: id,
+					sourcemap: 'external',
+					target: 'es2022',
+					jsx: 'automatic',
+				})
+				return { code: result.code, map: result.map }
+			},
+		},
+	],
 	test: {
 		include: ['src/**/*.{test,spec}.{ts,tsx}', 'test/**/*.{test,spec}.{ts,tsx}'],
 		setupFiles: [fileURLToPath(new URL('./vitest.setup.ts', import.meta.url))],
@@ -26,11 +47,7 @@ export const vitestSharedConfig: ViteUserConfig = {
 		 * cannot see. Between them the total stays near the core count, and the timeout below
 		 * covers what neither can — another process on the machine that turbo knows nothing about.
 		 */
-		poolOptions: {
-			threads: {
-				maxThreads: 4,
-			},
-		},
+		maxWorkers: 4,
 		/**
 		 * Three times vitest's 5 s default, because 5 s is not a statement about these tests — it
 		 * is a statement about how quickly the machine happens to schedule them.

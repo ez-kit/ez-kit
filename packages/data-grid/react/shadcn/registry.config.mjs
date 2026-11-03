@@ -19,10 +19,10 @@ const corePkgVersion = JSON.parse(readFileSync(`${corePkgDir}/package.json`, 'ut
 /*
  * The drag library's range is read from **this kit's own `peerDependencies`**, never written out
  * here, so the range a registry consumer installs and the range an npm consumer is checked against
- * can never disagree. That range is deliberately narrow — `^0.1.21` on a `0.x` version resolves to
- * `>=0.1.21 <0.2.0` — because `src/dnd.tsx` reads shapes of the library that are declared
+ * can never disagree. That range is deliberately narrow — `^0.5.3` on a `0.x` version resolves to
+ * `>=0.5.3 <0.6.0` — because `src/dnd.tsx` reads shapes of the library that are declared
  * structurally rather than imported (`source.sortable.initialIndex`, `setDropTarget`'s
- * `defaultPrevented`), each measured against 0.1.21. A minor release before 1.0 is free to rename
+ * `defaultPrevented`), each checked against 0.5.3. A minor release before 1.0 is free to rename
  * them, and the failure would be silent; a narrow peer range turns it into a message at install.
  */
 const dndPeers = JSON.parse(readFileSync(`${pkgDir}/package.json`, 'utf8')).peerDependencies

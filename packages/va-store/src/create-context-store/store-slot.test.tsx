@@ -84,6 +84,6 @@ describe('createContextStore — Store', () => {
 
 	it('names the store in the missing-Provider error raised by Store', () => {
 		const store = createContextStore(counterFactory)
-		expect(() => render(<store.Store>{() => <span />}</store.Store>)).toThrowError('Missing Provider for store')
+		expect(() => render(<store.Store>{() => <span />}</store.Store>)).toThrow('Missing Provider for store')
 	})
 })

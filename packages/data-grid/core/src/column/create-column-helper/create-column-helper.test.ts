@@ -227,9 +227,9 @@ describe('createColumnHelper', () => {
 				accessorKey: 'name',
 				type: 'rating',
 				config: { foo: 'bar' },
-				cell: { component: vi.fn() },
-				editing: { component: vi.fn() },
-				creating: { component: vi.fn() },
+				cell: { component: vi.fn<() => null>() },
+				editing: { component: vi.fn<() => null>() },
+				creating: { component: vi.fn<() => null>() },
 			})
 			expect((col as { type?: unknown }).type).toBeUndefined()
 			expect((col as { config?: unknown }).config).toBeUndefined()
@@ -405,9 +405,9 @@ describe('createColumnHelper', () => {
 				accessorKey: 'name' as const,
 				type: 'rating',
 				config: { foo: 'bar' },
-				cell: { component: vi.fn() },
-				editing: { component: vi.fn() },
-				creating: { component: vi.fn() },
+				cell: { component: vi.fn<() => null>() },
+				editing: { component: vi.fn<() => null>() },
+				creating: { component: vi.fn<() => null>() },
 			}
 			const keys = Object.keys(opts).sort()
 			column.custom(opts)

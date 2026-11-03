@@ -151,14 +151,10 @@ describe('allDataGridFeatures', () => {
 		// the very objects a consumer composing their own set would reach for from here, so the
 		// two cannot drift apart.
 		//
-		// The rule follows the `@deprecated` through the re-export, so there is no spelling of this
-		// assertion that does not trip it — and the deprecation is precisely what the case is
-		// about, so suppressing it here is the accurate thing rather than a dodge.
-		/* eslint-disable @typescript-eslint/no-deprecated */
+		// ESLint allows these aggregate registries explicitly; this is their all-in consumer.
 		expect(allDataGridFeatures.filterFns).toBe(features.filterFns)
 		expect(allDataGridFeatures.sortFns).toBe(features.sortFns)
 		expect(allDataGridFeatures.aggregationFns).toBe(features.aggregationFns)
-		/* eslint-enable @typescript-eslint/no-deprecated */
 	})
 
 	it('never names coreReactivityFeature — useTable would lose to it', () => {

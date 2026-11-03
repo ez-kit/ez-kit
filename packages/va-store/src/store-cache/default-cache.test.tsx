@@ -94,7 +94,7 @@ describe('default cache — top-level exports', () => {
 					</table.Provider>
 				</custom.Provider>,
 			),
-		).toThrowError(MISSING_CACHE_PROVIDER)
+		).toThrow(MISSING_CACHE_PROVIDER)
 	})
 })
 
