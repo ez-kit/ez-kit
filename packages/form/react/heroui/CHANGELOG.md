@@ -1,5 +1,12 @@
 # @ez-kit/form-heroui
 
+## 0.6.1
+
+### Patch Changes
+
+- Updated dependencies [53c2de3]
+  - @ez-kit/form-react@0.5.1
+
 ## 0.6.0
 
 ### Minor Changes

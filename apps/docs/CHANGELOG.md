@@ -1,5 +1,24 @@
 # @ez-kit/docs
 
+## 0.3.1
+
+### Patch Changes
+
+- 53c2de3: Update the TanStack, React, UI and documentation dependencies and refresh build and test tooling. Fix vulnerable transitive dependencies where compatible patched releases are available.
+
+  The optional data-grid drag adapters now require `@dnd-kit/react` and `@dnd-kit/dom` ^0.5.3. Update both packages when using the HeroUI `/dnd` entry or the shadcn drag registry item.
+
+- Updated dependencies [dc39509]
+- Updated dependencies [53c2de3]
+  - @ez-kit/data-grid-core@0.16.0
+  - @ez-kit/data-grid-react@0.17.0
+  - @ez-kit/data-grid-heroui@0.14.0
+  - @ez-kit/form-react@0.5.1
+  - @ez-kit/form-shadcn@0.5.1
+  - @ez-kit/twc@0.1.1
+  - @ez-kit/data-grid-shadcn@0.2.0
+  - @ez-kit/form-heroui@0.6.1
+
 ## 0.3.0
 
 ### Minor Changes
