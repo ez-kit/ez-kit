@@ -3,9 +3,8 @@ import { expect, test, toggle } from '../../../fixtures'
 /**
  * `messages` replaces the grid's strings — all of them, in both kits.
  *
- * The example's dictionary is Russian and **partial**, which is the interesting case: a
- * dictionary is a plain object, so an entry that is written wins and an entry that is left out
- * falls back to English. The assertions below therefore read what a *user* reads — visible text
+ * The example uses the complete Russian dictionary from the provider and overrides a few
+ * entries on the grid. The assertions below therefore read what a *user* reads — visible text
  * and accessible names — rather than checking that some string reached some prop.
  *
  * Accessible names are the point of most of this file. A grid whose buttons were translated
@@ -24,7 +23,7 @@ const EXAMPLE = 'localization'
 /** `pagination.pageSize: 5` over `makeUsers(24)`. */
 const PAGE_SIZE = 5
 
-const GRID_LABEL = 'Таблица пользователей'
+const GRID_LABEL = 'Пользователи'
 
 test.describe('a localized grid', () => {
 	test.beforeEach(async ({ grid }) => {
@@ -46,42 +45,37 @@ test.describe('a localized grid', () => {
 		await expect(page.getByRole('checkbox', { name: /^Выбрать строку/ })).toHaveCount(PAGE_SIZE)
 	})
 
-	test('counts the selection with the language’s own plural rule', async ({ page }) => {
+	test('counts the selection with the Russian dictionary', async ({ page }) => {
 		const rowCheckbox = (index: number) => page.getByRole('checkbox', { name: /^Выбрать строку/ }).nth(index)
 		const counter = page.getByLabel(/^Выбрано/)
 
-		// `Intl.PluralRules('ru-RU')` — one / few / many are three different words, which is
-		// exactly why `selection.count` is a function and not a template with an `s` on the end.
 		await toggle(rowCheckbox(0))
-		await expect(counter).toHaveAttribute('aria-label', 'Выбрано 1 строка')
+		await expect(counter).toHaveAttribute('aria-label', 'Выбрано: 1')
 
 		await toggle(rowCheckbox(1))
-		await expect(counter).toHaveAttribute('aria-label', 'Выбрано 2 строки')
+		await expect(counter).toHaveAttribute('aria-label', 'Выбрано: 2')
 
 		for (const index of [2, 3, 4]) await toggle(rowCheckbox(index))
-		await expect(counter).toHaveAttribute('aria-label', 'Выбрано 5 строк')
+		await expect(counter).toHaveAttribute('aria-label', 'Выбрано: 5')
 	})
 
 	test('translates the column menu, its name and its entries', async ({ grid, page }) => {
-		await grid.header('name').getByRole('button', { name: 'Меню столбца' }).click()
+		await grid.header('name').getByRole('button', { name: 'Параметры колонки' }).click()
 
 		// The menu is named by the same entry as the button that opens it.
-		await expect(page.getByRole('menu', { name: 'Меню столбца' })).toHaveCount(1)
-		// Hide is the only entry this example offers: the grid runs without `sorting`, and the
-		// ordering and pinning sections are likewise off, so their translated entries have
-		// nothing to render into. Asserting them here would assert the example, not the grid.
+		await expect(page.getByRole('menu', { name: 'Параметры колонки' })).toHaveCount(1)
 		await expect(page.getByRole('menuitem', { name: 'Скрыть' })).toHaveCount(1)
 	})
 
-	test('translates the filter operators and names the control', async ({ page }) => {
+	test('translates the filter operators and names the control', async ({ grid, page }) => {
 		// The button shows the current operator's label, and its accessible name — from
 		// `filtering.operatorTrigger` — carries it too, since a clipped label or an icon reads badly.
 		const contains = page.getByRole('button', { name: 'Оператор фильтра: Содержит' })
-		const equals = page.getByRole('button', { name: 'Оператор фильтра: Равно' })
+		const equals = grid.header('age').getByRole('button', { name: 'Оператор фильтра: Равно' })
 
 		await expect(contains).toHaveCount(1)
 		await expect(equals).toHaveCount(1)
-		// `contains` on the text column, `equals` on the number one — both from the translated set the example passes as `operators`.
+		// `contains` on the text column, `equals` on the number one — both from the Russian dictionary.
 		await expect(contains).toContainText('Содержит')
 		await expect(equals).toContainText('Равно')
 
@@ -93,11 +87,11 @@ test.describe('a localized grid', () => {
 
 	test('translates the toolbar controls', async ({ page }) => {
 		await expect(page.getByRole('searchbox', { name: 'Поиск…' })).toHaveCount(1)
-		await expect(page.getByRole('button', { name: 'Столбцы' })).toHaveCount(1)
+		await expect(page.getByRole('button', { name: 'Колонки', exact: true })).toHaveCount(1)
 	})
 
 	test('translates the pager, including the parameterized summary', async ({ page }) => {
-		await expect(page.getByRole('navigation', { name: 'Навигация по страницам' })).toContainText('1–5 из 24')
+		await expect(page.getByRole('navigation', { name: 'Пагинация' })).toContainText('1–5 из 24')
 		await expect(page.getByRole('button', { name: 'Вперёд' })).toHaveCount(1)
 		await expect(page.getByRole('button', { name: 'Назад' })).toHaveCount(1)
 	})
