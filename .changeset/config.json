@@ -7,5 +7,9 @@
 	"access": "public",
 	"baseBranch": "develop",
 	"updateInternalDependencies": "patch",
-	"ignore": ["@ez-kit/data-grid-shadcn"]
+	"ignore": ["@ez-kit/data-grid-shadcn"],
+	"privatePackages": {
+		"version": true,
+		"tag": false
+	}
 }

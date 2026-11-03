@@ -115,6 +115,19 @@ export default tseslint.config(
 			],
 			'no-empty-function': 'off',
 			'@typescript-eslint/no-empty-function': 'off',
+			// Generic registries intentionally use empty mapped types as identity/default types.
+			'@typescript-eslint/no-generated-empty-object-type': 'off',
+			// Type-only probes use `void` to consume values without emitting a call.
+			'@typescript-eslint/no-meaningless-void-operator': 'off',
+			'@typescript-eslint/no-deprecated': [
+				'error',
+				{
+					// The all-in bundle and its fixtures deliberately register every stock function.
+					allow: [
+						{ from: 'package', name: ['aggregationFns', 'filterFns', 'sortFns'], package: '@tanstack/table-core' },
+					],
+				},
+			],
 			'@typescript-eslint/consistent-indexed-object-style': 'off',
 			'@typescript-eslint/consistent-type-definitions': ['error', 'type'],
 			'@typescript-eslint/consistent-type-imports': [
@@ -150,6 +163,16 @@ export default tseslint.config(
 			'@typescript-eslint/no-explicit-any': 'off',
 			'react/no-children-prop': 'off',
 		},
+	},
+	{
+		// Vendored primitives stay byte-for-byte unchanged when upstream typings improve.
+		files: ['packages/data-grid/react/shadcn/src/components/ui/**/*.tsx'],
+		rules: { '@typescript-eslint/no-unnecessary-type-assertion': 'off' },
+	},
+	{
+		// The vendored chart adapter still supports Recharts' legacy legend placement prop.
+		files: ['apps/docs/components/ui/chart.tsx'],
+		rules: { '@typescript-eslint/no-deprecated': 'off' },
 	},
 	{
 		// Playwright specs are not React: a fixture's second argument is `use` by convention,

@@ -380,7 +380,7 @@ describe('valtio createStoreCache — useFromCache', () => {
 			return null
 		}
 
-		expect(() => render(<Badge />)).toThrowError(MISSING_CACHE_PROVIDER)
+		expect(() => render(<Badge />)).toThrow(MISSING_CACHE_PROVIDER)
 	})
 
 	it('passively reflects creation, mutation, and eviction of an entry at an address', async () => {

@@ -11,6 +11,7 @@ import { DataGrid } from './data-grid'
 
 import type { VisibilityColumnItem } from '../types'
 import type { DndAdapter, DragSpec, SortableItemHandle } from './dnd'
+import type { MockInstance } from 'vitest'
 
 /**
  * The column panel's affordances, chosen by `ordering.column.visibilityMenu: boolean | ReorderMode`.
@@ -182,7 +183,7 @@ describe('the wide list', () => {
 })
 
 describe('a panel asked for something it cannot offer', () => {
-	let warn: ReturnType<typeof vi.spyOn>
+	let warn: MockInstance<typeof console.warn>
 
 	beforeEach(() => {
 		warn = vi.spyOn(console, 'warn').mockImplementation(() => {})

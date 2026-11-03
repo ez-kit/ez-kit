@@ -566,25 +566,25 @@
 		"@ez-kit/data-grid-react": "workspace:^",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
-		"date-fns": "^4.1.0",
-		"lucide-react": "^0.577.0",
-		"radix-ui": "^1.6.7",
-		"react-day-picker": "^10.0.0",
-		"shadcn": "^4.1.1",
-		"tailwind-merge": "^3.5.0",
-		"tailwindcss": "^4.1.18"
+		"date-fns": "^4.4.0",
+		"lucide-react": "^1.67.0",
+		"radix-ui": "^1.8.1",
+		"react-day-picker": "^10.0.2",
+		"shadcn": "^4.23.0",
+		"tailwind-merge": "^3.7.0",
+		"tailwindcss": "^4.3.4"
 	},
 	"devDependencies": {
-		"@dnd-kit/dom": "^0.1.21",
-		"@dnd-kit/react": "^0.1.21",
-		"@types/react": "^19.2.14",
-		"@types/react-dom": "^19.2.3",
-		"react": "^19.2.4",
-		"react-dom": "^19.2.4"
+		"@dnd-kit/dom": "^0.5.3",
+		"@dnd-kit/react": "^0.5.3",
+		"@types/react": "^19.3.0",
+		"@types/react-dom": "^19.3.0",
+		"react": "^19.3.1",
+		"react-dom": "^19.3.1"
 	},
 	"peerDependencies": {
-		"@dnd-kit/dom": "^0.1.21",
-		"@dnd-kit/react": "^0.1.21",
+		"@dnd-kit/dom": "^0.5.3",
+		"@dnd-kit/react": "^0.5.3",
 		"react": ">=18.0.0",
 		"react-dom": ">=18.0.0"
 	},

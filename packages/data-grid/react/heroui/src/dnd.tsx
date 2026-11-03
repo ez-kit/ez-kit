@@ -1,6 +1,13 @@
 'use client'
 
-import { Accessibility, AutoScroller, Cursor, Feedback, PreventSelection } from '@dnd-kit/dom'
+import {
+	Accessibility,
+	AutoScroller,
+	Cursor,
+	Feedback,
+	PointerActivationConstraints,
+	PreventSelection,
+} from '@dnd-kit/dom'
 import { DragDropProvider, KeyboardSensor, PointerSensor } from '@dnd-kit/react'
 import { useSortable } from '@dnd-kit/react/sortable'
 import { DragAxis, DragInput, DragSurface } from '@ez-kit/data-grid-react'
@@ -157,9 +164,8 @@ function isTextInputTarget(target: EventTarget | null): boolean {
  * pointer has travelled `distance.value`, or once it has rested for `delay.value` without straying
  * further than `delay.tolerance` (`index.js:1689-1703`).
  *
- * Declared structurally for the reason {@link SortableDragEndEvent} is — the library's own
- * `ActivationConstraints` is exported from `@dnd-kit/dom`, a transitive dependency this package does
- * not declare.
+ * A normalized activation policy. `pointerActivationConstraints` turns these values into the
+ * constraint instances dnd-kit 0.5 expects at the sensor boundary.
  */
 export type DragActivationConstraints = {
 	delay?: { value: number; tolerance: number }
@@ -247,7 +253,16 @@ export function dragActivationConstraints(
  * (`@dnd-kit/react@0.1.21/index.js:163-164`), so a fresh one per render re-instantiates the sensors
  * — including in the middle of a gesture one of them is driving.
  */
-const DRAG_SENSORS = [PointerSensor.configure({ activationConstraints: dragActivationConstraints }), KeyboardSensor]
+/** Translate the adapter's activation policy into dnd-kit 0.5 constraint instances. */
+function pointerActivationConstraints(event: DragActivationEvent, source: DragActivationSource) {
+	const { delay, distance } = dragActivationConstraints(event, source)
+	return [
+		...(delay ? [new PointerActivationConstraints.Delay(delay)] : []),
+		...(distance ? [new PointerActivationConstraints.Distance(distance)] : []),
+	]
+}
+
+const DRAG_SENSORS = [PointerSensor.configure({ activationConstraints: pointerActivationConstraints }), KeyboardSensor]
 
 /**
  * The plugins this adapter mounts — and **listing them at all is opting out of the library's

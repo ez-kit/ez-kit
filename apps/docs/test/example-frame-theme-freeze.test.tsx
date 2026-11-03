@@ -23,6 +23,7 @@ vi.mock('next-themes', () => ({
 class ImmediateIntersectionObserver implements IntersectionObserver {
 	readonly root: Element | Document | null = null
 	readonly rootMargin: string = ''
+	readonly scrollMargin: string = ''
 	readonly thresholds: readonly number[] = []
 	private readonly callback: IntersectionObserverCallback
 

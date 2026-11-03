@@ -11,7 +11,7 @@ const ENGINES = serviceKey<Engines>('persist.engines')
 describe('service registry', () => {
 	it('throws a named error from get when the service is not mounted', () => {
 		const registry = createServiceRegistry()
-		expect(() => registry.get(ENGINES)).toThrowError('persist.engines')
+		expect(() => registry.get(ENGINES)).toThrow('persist.engines')
 	})
 
 	it('returns undefined from safeGet when the service is not mounted', () => {

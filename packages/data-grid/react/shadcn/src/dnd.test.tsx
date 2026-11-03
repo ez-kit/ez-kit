@@ -1,4 +1,12 @@
-import { Accessibility, AutoScroller, Cursor, defaultPreset, Feedback, PreventSelection } from '@dnd-kit/dom'
+import {
+	Accessibility,
+	AutoScroller,
+	Cursor,
+	defaultPreset,
+	Feedback,
+	PointerActivationConstraints,
+	PreventSelection,
+} from '@dnd-kit/dom'
 import { KeyboardSensor, PointerSensor } from '@dnd-kit/react'
 import { useSortable } from '@dnd-kit/react/sortable'
 import { render, waitFor } from '@testing-library/react'
@@ -1282,25 +1290,41 @@ describe('the sensors the adapter mounts', () => {
 		const handle = document.createElement('button')
 		const row = document.createElement('div')
 		row.append(handle)
-		// Through `unknown`: `shouldActivate` takes the library's own `Draggable`, which lives in
+		// Through `unknown`: `preventActivation` takes the library's own `Draggable`, which lives in
 		// `@dnd-kit/abstract`. The two fields it reads are the two given here.
-		const shouldActivate = KeyboardSensor.defaults.shouldActivate as unknown as (args: {
-			event: { target: Element }
-			source: { handle?: Element; element: Element }
-		}) => boolean
+		const preventActivation = KeyboardSensor.defaults.preventActivation as unknown as (
+			event: { target: Element },
+			source: { handle?: Element; element: Element },
+		) => boolean
 
-		expect(shouldActivate({ event: { target: handle }, source: { handle, element: row } })).toBe(true)
-		expect(shouldActivate({ event: { target: row }, source: { handle, element: row } })).toBe(false)
+		expect(preventActivation({ target: handle }, { handle, element: row })).toBe(false)
+		expect(preventActivation({ target: row }, { handle, element: row })).toBe(true)
 	})
 
 	it('configures the pointer sensor with this module’s constraints', () => {
 		const descriptor = mountedSensors().find(
-			(sensor): sensor is { plugin: unknown; options?: { activationConstraints?: unknown } } =>
-				typeof sensor === 'object' && sensor !== null && 'plugin' in sensor,
+			(
+				sensor,
+			): sensor is {
+				plugin: unknown
+				options?: { activationConstraints?: (event: DragActivationEvent, source: { handle?: Element }) => unknown[] }
+			} => typeof sensor === 'object' && sensor !== null && 'plugin' in sensor,
 		)
 
 		expect(descriptor?.plugin).toBe(PointerSensor)
-		expect(descriptor?.options?.activationConstraints).toBe(dragActivationConstraints)
+		const activate = descriptor?.options?.activationConstraints
+		if (!activate) throw new Error('the pointer sensor has no activation policy')
+		const handle = document.createElement('button')
+		expect(activate({ pointerType: 'mouse', target: handle, defaultPrevented: false }, { handle })).toEqual([
+			expect.any(PointerActivationConstraints.Distance),
+		])
+		expect(activate({ pointerType: 'touch', target: handle, defaultPrevented: false }, { handle })).toEqual([
+			expect.any(PointerActivationConstraints.Delay),
+		])
+		expect(activate({ pointerType: 'pen', target: handle, defaultPrevented: false }, {})).toEqual([
+			expect.any(PointerActivationConstraints.Delay),
+			expect.any(PointerActivationConstraints.Distance),
+		])
 	})
 
 	/*

@@ -8,8 +8,8 @@ const base = vitestPackageConfig(import.meta.url)
 
 export default defineConfig({
 	...base,
-	esbuild: {
-		jsx: 'automatic',
+	oxc: {
+		jsx: { runtime: 'automatic' },
 	},
 	resolve: {
 		// This app has no `src/` directory — `@/*` maps to the app root (see

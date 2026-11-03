@@ -8,6 +8,7 @@ import { createStore } from 'zustand/vanilla'
 import { createStoreCache, MISSING_CACHE_PROVIDER } from './create-store-cache'
 
 import type { ContextStoreInit } from '../create-context-store'
+import type { MockInstance } from 'vitest'
 
 type TableState = {
 	filter: string
@@ -88,7 +89,7 @@ describe('createStoreCache — provider & context', () => {
 			table.useSelector((s) => s.filter)
 			return null
 		}
-		expect(() => render(<table.Provider id='x'>{<Consumer />}</table.Provider>)).toThrowError(MISSING_CACHE_PROVIDER)
+		expect(() => render(<table.Provider id='x'>{<Consumer />}</table.Provider>)).toThrow(MISSING_CACHE_PROVIDER)
 	})
 
 	it('throws when useFromCache is used without a cache Provider', () => {
@@ -98,7 +99,7 @@ describe('createStoreCache — provider & context', () => {
 			table.useFromCache({ id: 'x' }, (s) => s?.filter)
 			return null
 		}
-		expect(() => render(<Badge />)).toThrowError(MISSING_CACHE_PROVIDER)
+		expect(() => render(<Badge />)).toThrow(MISSING_CACHE_PROVIDER)
 	})
 })
 
@@ -1078,7 +1079,7 @@ describe('createStoreCache — reactive inspection (useCacheKeys + toTree)', () 
 })
 
 describe('createStoreCache — dev-mode warnings', () => {
-	let warnSpy: ReturnType<typeof vi.spyOn>
+	let warnSpy: MockInstance<typeof console.warn>
 
 	beforeEach(() => {
 		warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})

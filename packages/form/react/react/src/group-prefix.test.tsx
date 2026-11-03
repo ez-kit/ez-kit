@@ -6,6 +6,7 @@ import { prefixClash, prefixClashMessage } from './group-registry'
 import { testComponents, testFields, testFormElement } from './test-kit'
 
 import type { ReactNode } from 'react'
+import type { MockInstance } from 'vitest'
 
 const { Form, withFieldGroup } = createForm({
 	FormElement: testFormElement,
@@ -45,7 +46,7 @@ function Case({ flag = true }: { flag?: boolean }): ReactNode {
 	)
 }
 
-function clashWarnings(error: ReturnType<typeof vi.spyOn>): unknown[][] {
+function clashWarnings(error: MockInstance<typeof console.error>): unknown[][] {
 	const message = prefixClashMessage('billing', 'billingDiffers')
 	return error.mock.calls.filter(([logged]) => logged === message)
 }

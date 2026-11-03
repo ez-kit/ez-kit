@@ -1,0 +1,3435 @@
+{
+	"date": "2026-11-03",
+	"base": "origin/develop",
+	"branch": "chore/update-dependencies",
+	"status": "validated",
+	"auditBefore": {
+		"vulnerabilities": {
+			"info": 0,
+			"low": 6,
+			"moderate": 29,
+			"high": 18,
+			"critical": 6
+		},
+		"dependencies": 1516,
+		"devDependencies": 0,
+		"optionalDependencies": 0,
+		"totalDependencies": 1516
+	},
+	"compatibilityConstraints": [
+		{
+			"package": "eslint / @eslint/js",
+			"target": "9.39.5",
+			"latest": "10.x",
+			"reason": "eslint-plugin-react, eslint-plugin-import and eslint-plugin-jsx-a11y do not declare ESLint 10 support."
+		},
+		{
+			"package": "typescript",
+			"target": "6.0.3",
+			"latest": "7.0.2",
+			"reason": "typescript-eslint requires TypeScript <6.1.0; docs checks use the TypeScript compiler API."
+		},
+		{
+			"package": "@babel/core / @babel/types",
+			"target": "7.x",
+			"latest": "8.1.0",
+			"reason": "The published Babel plugin declares Babel 7 support. Keep that contract while upgrading its development environment within 7.x."
+		},
+		{
+			"package": "react / react-dom in tools/react18-env",
+			"target": "18.3.1",
+			"latest": "19.3.1",
+			"reason": "Dedicated React 18 compatibility fixture; intentionally stays on React 18."
+		},
+		{
+			"package": "@types/node",
+			"target": "22.x",
+			"latest": "26.x",
+			"reason": "Match the pinned Node 22 runtime."
+		},
+		{
+			"package": "pnpm",
+			"target": "10.34.9",
+			"latest": "12.16.1",
+			"reason": "Upgrade within the existing package-manager major to preserve the workspace and release workflow."
+		},
+		{
+			"package": "vitest / @vitest/coverage-v8",
+			"target": "4.1.12",
+			"latest": "5.1.0",
+			"reason": "Vitest 5 changed Assertion generic parameters; the current jest-dom 7 augmentation still targets the prior assertion interface. Vitest 4.1.12 contains the security fixes."
+		}
+	],
+	"dependencies": [
+		{
+			"name": "@internationalized/date",
+			"latest": "3.12.4",
+			"changes": [],
+			"wantedBefore": "3.12.4"
+		},
+		{
+			"name": "@react-aria/ssr",
+			"latest": "3.10.1",
+			"changes": [],
+			"wantedBefore": "3.10.1"
+		},
+		{
+			"name": "@react-aria/utils",
+			"latest": "3.34.1",
+			"changes": [],
+			"wantedBefore": "3.34.1"
+		},
+		{
+			"name": "@types/babel__core",
+			"latest": "7.20.5",
+			"changes": [],
+			"wantedBefore": "7.20.5"
+		},
+		{
+			"name": "@types/qs",
+			"latest": "6.15.1",
+			"changes": [
+				{
+					"file": "apps/docs/package.json",
+					"section": "devDependencies",
+					"name": "@types/qs",
+					"before": "^6.9.18",
+					"after": "^6.15.1"
+				}
+			],
+			"wantedBefore": "6.15.1"
+		},
+		{
+			"name": "class-variance-authority",
+			"latest": "0.7.1",
+			"changes": [],
+			"wantedBefore": "0.7.1"
+		},
+		{
+			"name": "clsx",
+			"latest": "2.1.1",
+			"changes": [],
+			"wantedBefore": "2.1.1"
+		},
+		{
+			"name": "cmdk",
+			"latest": "1.1.1",
+			"changes": [],
+			"wantedBefore": "1.1.1"
+		},
+		{
+			"name": "embla-carousel-react",
+			"latest": "8.6.0",
+			"changes": [],
+			"wantedBefore": "8.6.0"
+		},
+		{
+			"name": "esbuild",
+			"latest": "0.28.2",
+			"changes": [
+				{
+					"file": "package.json",
+					"section": "devDependencies",
+					"name": "esbuild",
+					"before": null,
+					"after": "^0.28.2"
+				}
+			],
+			"wantedBefore": "0.28.2"
+		},
+		{
+			"name": "eslint-config-prettier",
+			"latest": "10.1.8",
+			"changes": [],
+			"wantedBefore": "10.1.8"
+		},
+		{
+			"name": "eslint-plugin-import",
+			"latest": "2.32.0",
+			"changes": [],
+			"wantedBefore": "2.32.0"
+		},
+		{
+			"name": "eslint-plugin-jsx-a11y",
+			"latest": "6.10.2",
+			"changes": [],
+			"wantedBefore": "6.10.2"
+		},
+		{
+			"name": "eslint-plugin-react",
+			"latest": "7.37.5",
+			"changes": [],
+			"wantedBefore": "7.37.5"
+		},
+		{
+			"name": "eslint-plugin-react-hooks",
+			"latest": "7.1.1",
+			"changes": [
+				{
+					"file": "package.json",
+					"section": "devDependencies",
+					"name": "eslint-plugin-react-hooks",
+					"before": "^7.0.1",
+					"after": "^7.1.1"
+				}
+			],
+			"wantedBefore": "7.1.1"
+		},
+		{
+			"name": "husky",
+			"latest": "9.1.7",
+			"changes": [],
+			"wantedBefore": "9.1.7"
+		},
+		{
+			"name": "next-themes",
+			"latest": "0.4.6",
+			"changes": [],
+			"wantedBefore": "0.4.6"
+		},
+		{
+			"name": "rimraf",
+			"latest": "6.1.3",
+			"changes": [],
+			"wantedBefore": "6.1.3"
+		},
+		{
+			"name": "server-only",
+			"latest": "0.0.1",
+			"changes": [],
+			"wantedBefore": "0.0.1"
+		},
+		{
+			"name": "tw-animate-css",
+			"latest": "1.4.0",
+			"changes": [],
+			"wantedBefore": "1.4.0"
+		},
+		{
+			"name": "valtio",
+			"latest": "2.3.2",
+			"changes": [],
+			"wantedBefore": "2.3.2"
+		},
+		{
+			"name": "vaul",
+			"latest": "1.1.2",
+			"changes": [],
+			"wantedBefore": "1.1.2"
+		},
+		{
+			"name": "@commitlint/cli",
+			"latest": "21.2.4",
+			"changes": [
+				{
+					"file": "package.json",
+					"section": "devDependencies",
+					"name": "@commitlint/cli",
+					"before": "^21.2.1",
+					"after": "^21.2.4"
+				}
+			],
+			"wantedBefore": "21.2.1"
+		},
+		{
+			"name": "@commitlint/config-conventional",
+			"latest": "21.2.4",
+			"changes": [
+				{
+					"file": "package.json",
+					"section": "devDependencies",
+					"name": "@commitlint/config-conventional",
+					"before": "^21.2.0",
+					"after": "^21.2.4"
+				}
+			],
+			"wantedBefore": "21.2.0"
+		},
+		{
+			"name": "@heroui/react",
+			"latest": "3.2.7",
+			"changes": [
+				{
+					"file": "packages/data-grid/react/heroui/package.json",
+					"section": "devDependencies",
+					"name": "@heroui/react",
+					"before": "^3.2.6",
+					"after": "^3.2.7"
+				},
+				{
+					"file": "apps/docs/package.json",
+					"section": "dependencies",
+					"name": "@heroui/react",
+					"before": "^3.2.6",
+					"after": "^3.2.7"
+				},
+				{
+					"file": "packages/form/react/heroui/package.json",
+					"section": "devDependencies",
+					"name": "@heroui/react",
+					"before": "^3.2.6",
+					"after": "^3.2.7"
+				}
+			],
+			"wantedBefore": "3.2.6"
+		},
+		{
+			"name": "@heroui/styles",
+			"latest": "3.2.7",
+			"changes": [
+				{
+					"file": "packages/data-grid/react/heroui/package.json",
+					"section": "devDependencies",
+					"name": "@heroui/styles",
+					"before": "^3.2.6",
+					"after": "^3.2.7"
+				},
+				{
+					"file": "apps/docs/package.json",
+					"section": "dependencies",
+					"name": "@heroui/styles",
+					"before": "^3.2.6",
+					"after": "^3.2.7"
+				},
+				{
+					"file": "packages/form/react/heroui/package.json",
+					"section": "devDependencies",
+					"name": "@heroui/styles",
+					"before": "^3.2.6",
+					"after": "^3.2.7"
+				}
+			],
+			"wantedBefore": "3.2.6"
+		},
+		{
+			"name": "@tanstack/form-core",
+			"latest": "1.33.5",
+			"changes": [
+				{
+					"file": "packages/form/react/react/package.json",
+					"section": "dependencies",
+					"name": "@tanstack/form-core",
+					"before": "1.33.2",
+					"after": "1.33.5"
+				},
+				{
+					"file": "packages/form/core/package.json",
+					"section": "devDependencies",
+					"name": "@tanstack/form-core",
+					"before": "^1.33.2",
+					"after": "^1.33.5"
+				}
+			],
+			"wantedBefore": "1.33.2"
+		},
+		{
+			"name": "@tanstack/react-form",
+			"latest": "1.33.5",
+			"changes": [
+				{
+					"file": "packages/form/react/react/package.json",
+					"section": "dependencies",
+					"name": "@tanstack/react-form",
+					"before": "1.33.2",
+					"after": "1.33.5"
+				}
+			],
+			"wantedBefore": "1.33.2"
+		},
+		{
+			"name": "@tanstack/react-query",
+			"latest": "5.105.3",
+			"changes": [
+				{
+					"file": "apps/docs/package.json",
+					"section": "dependencies",
+					"name": "@tanstack/react-query",
+					"before": "^5.105.0",
+					"after": "^5.105.3"
+				},
+				{
+					"file": "packages/query/react/package.json",
+					"section": "devDependencies",
+					"name": "@tanstack/react-query",
+					"before": "^5.105.0",
+					"after": "^5.105.3"
+				}
+			],
+			"wantedBefore": "5.105.0"
+		},
+		{
+			"name": "@testing-library/dom",
+			"latest": "10.4.2",
+			"changes": [
+				{
+					"file": "tools/react18-env/package.json",
+					"section": "dependencies",
+					"name": "@testing-library/dom",
+					"before": "^10.4.1",
+					"after": "^10.4.2"
+				}
+			],
+			"wantedBefore": "10.4.1"
+		},
+		{
+			"name": "@testing-library/react",
+			"latest": "16.3.3",
+			"changes": [
+				{
+					"file": "package.json",
+					"section": "devDependencies",
+					"name": "@testing-library/react",
+					"before": "^16.3.2",
+					"after": "^16.3.3"
+				},
+				{
+					"file": "tools/react18-env/package.json",
+					"section": "dependencies",
+					"name": "@testing-library/react",
+					"before": "^16.3.2",
+					"after": "^16.3.3"
+				}
+			],
+			"wantedBefore": "16.3.2"
+		},
+		{
+			"name": "@testing-library/user-event",
+			"latest": "14.6.8",
+			"changes": [
+				{
+					"file": "package.json",
+					"section": "devDependencies",
+					"name": "@testing-library/user-event",
+					"before": "^14.6.1",
+					"after": "^14.6.8"
+				},
+				{
+					"file": "tools/react18-env/package.json",
+					"section": "dependencies",
+					"name": "@testing-library/user-event",
+					"before": "^14.6.1",
+					"after": "^14.6.8"
+				}
+			],
+			"wantedBefore": "14.6.1"
+		},
+		{
+			"name": "@types/mdx",
+			"latest": "2.0.14",
+			"changes": [
+				{
+					"file": "apps/docs/package.json",
+					"section": "devDependencies",
+					"name": "@types/mdx",
+					"before": "^2.0.13",
+					"after": "^2.0.14"
+				}
+			],
+			"wantedBefore": "2.0.13"
+		},
+		{
+			"name": "eslint-import-resolver-typescript",
+			"latest": "4.4.5",
+			"changes": [
+				{
+					"file": "package.json",
+					"section": "devDependencies",
+					"name": "eslint-import-resolver-typescript",
+					"before": "^4.4.4",
+					"after": "^4.4.5"
+				}
+			],
+			"wantedBefore": "4.4.4"
+		},
+		{
+			"name": "fake-indexeddb",
+			"latest": "6.2.7",
+			"changes": [
+				{
+					"file": "packages/store-persist/package.json",
+					"section": "devDependencies",
+					"name": "fake-indexeddb",
+					"before": "^6.2.5",
+					"after": "^6.2.7"
+				},
+				{
+					"file": "packages/va-store/package.json",
+					"section": "devDependencies",
+					"name": "fake-indexeddb",
+					"before": "^6.2.5",
+					"after": "^6.2.7"
+				}
+			],
+			"wantedBefore": "6.2.5"
+		},
+		{
+			"name": "react-aria",
+			"latest": "3.53.1",
+			"changes": [
+				{
+					"file": "packages/data-grid/react/heroui/package.json",
+					"section": "devDependencies",
+					"name": "react-aria",
+					"before": "^3.52.1",
+					"after": "^3.53.1"
+				},
+				{
+					"file": "apps/docs/package.json",
+					"section": "devDependencies",
+					"name": "react-aria",
+					"before": "^3.52.1",
+					"after": "^3.53.1"
+				},
+				{
+					"file": "packages/form/react/heroui/package.json",
+					"section": "devDependencies",
+					"name": "react-aria",
+					"before": "^3.52.1",
+					"after": "^3.53.1"
+				}
+			],
+			"wantedBefore": "3.53.0"
+		},
+		{
+			"name": "react-aria-components",
+			"latest": "1.22.1",
+			"changes": [
+				{
+					"file": "packages/data-grid/react/heroui/package.json",
+					"section": "devDependencies",
+					"name": "react-aria-components",
+					"before": "^1.21.1",
+					"after": "^1.22.1"
+				},
+				{
+					"file": "apps/docs/package.json",
+					"section": "devDependencies",
+					"name": "react-aria-components",
+					"before": "^1.21.1",
+					"after": "^1.22.1"
+				},
+				{
+					"file": "packages/form/react/heroui/package.json",
+					"section": "devDependencies",
+					"name": "react-aria-components",
+					"before": "^1.21.1",
+					"after": "^1.22.1"
+				}
+			],
+			"wantedBefore": "1.22.0"
+		},
+		{
+			"name": "react-day-picker",
+			"latest": "10.0.2",
+			"changes": [
+				{
+					"file": "apps/docs/package.json",
+					"section": "dependencies",
+					"name": "react-day-picker",
+					"before": "^10.0.0",
+					"after": "^10.0.2"
+				},
+				{
+					"file": "packages/form/react/shadcn/package.json",
+					"section": "dependencies",
+					"name": "react-day-picker",
+					"before": "^10.0.1",
+					"after": "^10.0.2"
+				},
+				{
+					"file": "packages/data-grid/react/shadcn/package.json",
+					"section": "dependencies",
+					"name": "react-day-picker",
+					"before": "^10.0.0",
+					"after": "^10.0.2"
+				}
+			],
+			"wantedBefore": "10.0.0"
+		},
+		{
+			"name": "sonner",
+			"latest": "2.0.8",
+			"changes": [
+				{
+					"file": "apps/docs/package.json",
+					"section": "dependencies",
+					"name": "sonner",
+					"before": "^2.0.7",
+					"after": "^2.0.8"
+				}
+			],
+			"wantedBefore": "2.0.7"
+		},
+		{
+			"name": "zustand",
+			"latest": "5.0.16",
+			"changes": [
+				{
+					"file": "apps/docs/package.json",
+					"section": "dependencies",
+					"name": "zustand",
+					"before": "^5.0.12",
+					"after": "^5.0.16"
+				},
+				{
+					"file": "packages/zu-store/package.json",
+					"section": "devDependencies",
+					"name": "zustand",
+					"before": "^5.0.12",
+					"after": "^5.0.16"
+				}
+			],
+			"wantedBefore": "5.0.12"
+		},
+		{
+			"name": "@axe-core/playwright",
+			"latest": "4.14.0",
+			"changes": [
+				{
+					"file": "apps/docs/package.json",
+					"section": "devDependencies",
+					"name": "@axe-core/playwright",
+					"before": "^4.13.0",
+					"after": "^4.14.0"
+				}
+			],
+			"wantedBefore": "4.13.0"
+		},
+		{
+			"name": "@base-ui/react",
+			"latest": "1.9.0",
+			"changes": [
+				{
+					"file": "apps/docs/package.json",
+					"section": "dependencies",
+					"name": "@base-ui/react",
+					"before": "^1.4.1",
+					"after": "^1.9.0"
+				},
+				{
+					"file": "packages/form/react/shadcn/package.json",
+					"section": "dependencies",
+					"name": "@base-ui/react",
+					"before": "^1.4.1",
+					"after": "^1.9.0"
+				}
+			],
+			"wantedBefore": "1.4.1"
+		},
+		{
+			"name": "@next/eslint-plugin-next",
+			"latest": "16.4.4",
+			"changes": [
+				{
+					"file": "package.json",
+					"section": "devDependencies",
+					"name": "@next/eslint-plugin-next",
+					"before": "^16.2.1",
+					"after": "^16.4.4"
+				}
+			],
+			"wantedBefore": "16.2.4"
+		},
+		{
+			"name": "@playwright/test",
+			"latest": "1.64.1",
+			"changes": [
+				{
+					"file": "apps/docs/package.json",
+					"section": "devDependencies",
+					"name": "@playwright/test",
+					"before": "^1.59.1",
+					"after": "^1.64.1"
+				}
+			],
+			"wantedBefore": "1.59.1"
+		},
+		{
+			"name": "@react-three/fiber",
+			"latest": "9.8.2",
+			"changes": [
+				{
+					"file": "apps/docs/package.json",
+					"section": "dependencies",
+					"name": "@react-three/fiber",
+					"before": "^9.6.1",
+					"after": "^9.8.2"
+				}
+			],
+			"wantedBefore": "9.6.1"
+		},
+		{
+			"name": "@tailwindcss/postcss",
+			"latest": "4.3.4",
+			"changes": [
+				{
+					"file": "apps/docs/package.json",
+					"section": "devDependencies",
+					"name": "@tailwindcss/postcss",
+					"before": "^4.1.18",
+					"after": "^4.3.4"
+				}
+			],
+			"wantedBefore": "4.2.4"
+		},
+		{
+			"name": "@tanstack/react-table",
+			"latest": "9.3.1",
+			"changes": [
+				{
+					"file": "packages/data-grid/react/react/package.json",
+					"section": "dependencies",
+					"name": "@tanstack/react-table",
+					"before": "^9.2.4",
+					"after": "^9.3.1"
+				}
+			],
+			"wantedBefore": "9.2.4"
+		},
+		{
+			"name": "@tanstack/react-virtual",
+			"latest": "3.14.25",
+			"changes": [
+				{
+					"file": "packages/data-grid/react/react/package.json",
+					"section": "dependencies",
+					"name": "@tanstack/react-virtual",
+					"before": "^3.13.23",
+					"after": "^3.14.25"
+				}
+			],
+			"wantedBefore": "3.13.24"
+		},
+		{
+			"name": "@tanstack/table-core",
+			"latest": "9.3.1",
+			"changes": [
+				{
+					"file": "packages/data-grid/react/react/package.json",
+					"section": "dependencies",
+					"name": "@tanstack/table-core",
+					"before": "^9.2.4",
+					"after": "^9.3.1"
+				},
+				{
+					"file": "packages/data-grid/core/package.json",
+					"section": "dependencies",
+					"name": "@tanstack/table-core",
+					"before": "^9.2.4",
+					"after": "^9.3.1"
+				}
+			],
+			"wantedBefore": "9.2.4"
+		},
+		{
+			"name": "@types/react",
+			"latest": "19.3.0",
+			"changes": [
+				{
+					"file": "packages/data-grid/react/react/package.json",
+					"section": "devDependencies",
+					"name": "@types/react",
+					"before": "^19.2.14",
+					"after": "^19.3.0"
+				},
+				{
+					"file": "packages/data-grid/react/heroui/package.json",
+					"section": "devDependencies",
+					"name": "@types/react",
+					"before": "^19.2.14",
+					"after": "^19.3.0"
+				},
+				{
+					"file": "packages/store-core/package.json",
+					"section": "devDependencies",
+					"name": "@types/react",
+					"before": "^19.2.14",
+					"after": "^19.3.0"
+				},
+				{
+					"file": "apps/docs/package.json",
+					"section": "devDependencies",
+					"name": "@types/react",
+					"before": "^19.2.14",
+					"after": "^19.3.0"
+				},
+				{
+					"file": "packages/twc/package.json",
+					"section": "devDependencies",
+					"name": "@types/react",
+					"before": "^19.2.14",
+					"after": "^19.3.0"
+				},
+				{
+					"file": "packages/query/react/package.json",
+					"section": "devDependencies",
+					"name": "@types/react",
+					"before": "^19.2.14",
+					"after": "^19.3.0"
+				},
+				{
+					"file": "packages/form/react/react/package.json",
+					"section": "devDependencies",
+					"name": "@types/react",
+					"before": "^19.2.14",
+					"after": "^19.3.0"
+				},
+				{
+					"file": "packages/form/react/heroui/package.json",
+					"section": "devDependencies",
+					"name": "@types/react",
+					"before": "^19.2.14",
+					"after": "^19.3.0"
+				},
+				{
+					"file": "packages/store-persist/package.json",
+					"section": "devDependencies",
+					"name": "@types/react",
+					"before": "^19.2.14",
+					"after": "^19.3.0"
+				},
+				{
+					"file": "packages/form/react/shadcn/package.json",
+					"section": "devDependencies",
+					"name": "@types/react",
+					"before": "^19.2.14",
+					"after": "^19.3.0"
+				},
+				{
+					"file": "packages/data-grid/react/shadcn/package.json",
+					"section": "devDependencies",
+					"name": "@types/react",
+					"before": "^19.2.14",
+					"after": "^19.3.0"
+				},
+				{
+					"file": "packages/zu-store/package.json",
+					"section": "devDependencies",
+					"name": "@types/react",
+					"before": "^19.2.14",
+					"after": "^19.3.0"
+				},
+				{
+					"file": "packages/data-grid/core/package.json",
+					"section": "devDependencies",
+					"name": "@types/react",
+					"before": "^19.2.14",
+					"after": "^19.3.0"
+				},
+				{
+					"file": "packages/va-store/package.json",
+					"section": "devDependencies",
+					"name": "@types/react",
+					"before": "^19.2.14",
+					"after": "^19.3.0"
+				}
+			],
+			"wantedBefore": "19.2.14"
+		},
+		{
+			"name": "@types/react-dom",
+			"latest": "19.3.0",
+			"changes": [
+				{
+					"file": "packages/data-grid/react/react/package.json",
+					"section": "devDependencies",
+					"name": "@types/react-dom",
+					"before": "^19.2.3",
+					"after": "^19.3.0"
+				},
+				{
+					"file": "packages/data-grid/react/heroui/package.json",
+					"section": "devDependencies",
+					"name": "@types/react-dom",
+					"before": "^19.2.3",
+					"after": "^19.3.0"
+				},
+				{
+					"file": "packages/store-core/package.json",
+					"section": "devDependencies",
+					"name": "@types/react-dom",
+					"before": "^19.2.3",
+					"after": "^19.3.0"
+				},
+				{
+					"file": "apps/docs/package.json",
+					"section": "devDependencies",
+					"name": "@types/react-dom",
+					"before": "^19.2.3",
+					"after": "^19.3.0"
+				},
+				{
+					"file": "packages/twc/package.json",
+					"section": "devDependencies",
+					"name": "@types/react-dom",
+					"before": "^19.2.3",
+					"after": "^19.3.0"
+				},
+				{
+					"file": "packages/query/react/package.json",
+					"section": "devDependencies",
+					"name": "@types/react-dom",
+					"before": "^19.2.3",
+					"after": "^19.3.0"
+				},
+				{
+					"file": "packages/form/react/react/package.json",
+					"section": "devDependencies",
+					"name": "@types/react-dom",
+					"before": "^19.2.3",
+					"after": "^19.3.0"
+				},
+				{
+					"file": "packages/form/react/heroui/package.json",
+					"section": "devDependencies",
+					"name": "@types/react-dom",
+					"before": "^19.2.3",
+					"after": "^19.3.0"
+				},
+				{
+					"file": "packages/store-persist/package.json",
+					"section": "devDependencies",
+					"name": "@types/react-dom",
+					"before": "^19.2.3",
+					"after": "^19.3.0"
+				},
+				{
+					"file": "packages/form/react/shadcn/package.json",
+					"section": "devDependencies",
+					"name": "@types/react-dom",
+					"before": "^19.2.3",
+					"after": "^19.3.0"
+				},
+				{
+					"file": "packages/data-grid/react/shadcn/package.json",
+					"section": "devDependencies",
+					"name": "@types/react-dom",
+					"before": "^19.2.3",
+					"after": "^19.3.0"
+				},
+				{
+					"file": "packages/zu-store/package.json",
+					"section": "devDependencies",
+					"name": "@types/react-dom",
+					"before": "^19.2.3",
+					"after": "^19.3.0"
+				},
+				{
+					"file": "packages/data-grid/core/package.json",
+					"section": "devDependencies",
+					"name": "@types/react-dom",
+					"before": "^19.2.3",
+					"after": "^19.3.0"
+				},
+				{
+					"file": "packages/va-store/package.json",
+					"section": "devDependencies",
+					"name": "@types/react-dom",
+					"before": "^19.2.3",
+					"after": "^19.3.0"
+				}
+			],
+			"wantedBefore": "19.2.3"
+		},
+		{
+			"name": "date-fns",
+			"latest": "4.4.0",
+			"changes": [
+				{
+					"file": "apps/docs/package.json",
+					"section": "dependencies",
+					"name": "date-fns",
+					"before": "^4.1.0",
+					"after": "^4.4.0"
+				},
+				{
+					"file": "packages/form/react/shadcn/package.json",
+					"section": "dependencies",
+					"name": "date-fns",
+					"before": "^4.1.0",
+					"after": "^4.4.0"
+				},
+				{
+					"file": "packages/data-grid/react/shadcn/package.json",
+					"section": "dependencies",
+					"name": "date-fns",
+					"before": "^4.1.0",
+					"after": "^4.4.0"
+				}
+			],
+			"wantedBefore": "4.1.0"
+		},
+		{
+			"name": "fumadocs-core",
+			"latest": "16.17.10",
+			"changes": [
+				{
+					"file": "apps/docs/package.json",
+					"section": "dependencies",
+					"name": "fumadocs-core",
+					"before": "16.8.5",
+					"after": "16.17.10"
+				}
+			],
+			"wantedBefore": "16.8.5"
+		},
+		{
+			"name": "fumadocs-ui",
+			"latest": "16.17.10",
+			"changes": [
+				{
+					"file": "apps/docs/package.json",
+					"section": "dependencies",
+					"name": "fumadocs-ui",
+					"before": "16.8.5",
+					"after": "16.17.10"
+				}
+			],
+			"wantedBefore": "16.8.5"
+		},
+		{
+			"name": "globals",
+			"latest": "17.14.0",
+			"changes": [
+				{
+					"file": "package.json",
+					"section": "devDependencies",
+					"name": "globals",
+					"before": "^17.4.0",
+					"after": "^17.14.0"
+				}
+			],
+			"wantedBefore": "17.5.0"
+		},
+		{
+			"name": "input-otp",
+			"latest": "1.5.0",
+			"changes": [
+				{
+					"file": "apps/docs/package.json",
+					"section": "dependencies",
+					"name": "input-otp",
+					"before": "^1.4.2",
+					"after": "^1.5.0"
+				}
+			],
+			"wantedBefore": "1.4.2"
+		},
+		{
+			"name": "lint-staged",
+			"latest": "17.6.0",
+			"changes": [
+				{
+					"file": "package.json",
+					"section": "devDependencies",
+					"name": "lint-staged",
+					"before": "^17.0.8",
+					"after": "^17.6.0"
+				}
+			],
+			"wantedBefore": "17.0.8"
+		},
+		{
+			"name": "next",
+			"latest": "16.4.4",
+			"changes": [
+				{
+					"file": "apps/docs/package.json",
+					"section": "dependencies",
+					"name": "next",
+					"before": "16.3.5",
+					"after": "16.4.4"
+				},
+				{
+					"file": "packages/store-persist/package.json",
+					"section": "devDependencies",
+					"name": "next",
+					"before": "16.3.5",
+					"after": "16.4.4"
+				},
+				{
+					"file": "packages/zu-store/package.json",
+					"section": "devDependencies",
+					"name": "next",
+					"before": "16.3.5",
+					"after": "16.4.4"
+				},
+				{
+					"file": "packages/va-store/package.json",
+					"section": "devDependencies",
+					"name": "next",
+					"before": "16.3.5",
+					"after": "16.4.4"
+				}
+			],
+			"wantedBefore": "16.3.5"
+		},
+		{
+			"name": "prettier",
+			"latest": "3.9.10",
+			"changes": [
+				{
+					"file": "package.json",
+					"section": "devDependencies",
+					"name": "prettier",
+					"before": "^3.8.1",
+					"after": "^3.9.10"
+				}
+			],
+			"wantedBefore": "3.8.3"
+		},
+		{
+			"name": "qs",
+			"latest": "6.17.1",
+			"changes": [
+				{
+					"file": "apps/docs/package.json",
+					"section": "dependencies",
+					"name": "qs",
+					"before": "^6.14.0",
+					"after": "^6.17.1"
+				}
+			],
+			"wantedBefore": "6.16.0"
+		},
+		{
+			"name": "radix-ui",
+			"latest": "1.8.1",
+			"changes": [
+				{
+					"file": "apps/docs/package.json",
+					"section": "dependencies",
+					"name": "radix-ui",
+					"before": "^1.6.7",
+					"after": "^1.8.1"
+				},
+				{
+					"file": "packages/form/react/shadcn/package.json",
+					"section": "dependencies",
+					"name": "radix-ui",
+					"before": "^1.6.7",
+					"after": "^1.8.1"
+				},
+				{
+					"file": "packages/data-grid/react/shadcn/package.json",
+					"section": "dependencies",
+					"name": "radix-ui",
+					"before": "^1.6.7",
+					"after": "^1.8.1"
+				}
+			],
+			"wantedBefore": "1.6.7"
+		},
+		{
+			"name": "react",
+			"latest": "19.3.1",
+			"changes": [
+				{
+					"file": "packages/data-grid/react/react/package.json",
+					"section": "devDependencies",
+					"name": "react",
+					"before": "^19.2.4",
+					"after": "^19.3.1"
+				},
+				{
+					"file": "packages/data-grid/react/heroui/package.json",
+					"section": "devDependencies",
+					"name": "react",
+					"before": "^19.2.4",
+					"after": "^19.3.1"
+				},
+				{
+					"file": "packages/store-core/package.json",
+					"section": "devDependencies",
+					"name": "react",
+					"before": "^19.2.4",
+					"after": "^19.3.1"
+				},
+				{
+					"file": "apps/docs/package.json",
+					"section": "dependencies",
+					"name": "react",
+					"before": "^19.2.5",
+					"after": "^19.3.1"
+				},
+				{
+					"file": "packages/twc/package.json",
+					"section": "devDependencies",
+					"name": "react",
+					"before": "^19.2.4",
+					"after": "^19.3.1"
+				},
+				{
+					"file": "packages/query/react/package.json",
+					"section": "devDependencies",
+					"name": "react",
+					"before": "^19.2.4",
+					"after": "^19.3.1"
+				},
+				{
+					"file": "packages/form/react/react/package.json",
+					"section": "devDependencies",
+					"name": "react",
+					"before": "^19.2.4",
+					"after": "^19.3.1"
+				},
+				{
+					"file": "packages/form/react/heroui/package.json",
+					"section": "devDependencies",
+					"name": "react",
+					"before": "^19.2.4",
+					"after": "^19.3.1"
+				},
+				{
+					"file": "packages/store-persist/package.json",
+					"section": "devDependencies",
+					"name": "react",
+					"before": "^19.2.4",
+					"after": "^19.3.1"
+				},
+				{
+					"file": "packages/form/react/shadcn/package.json",
+					"section": "devDependencies",
+					"name": "react",
+					"before": "^19.2.4",
+					"after": "^19.3.1"
+				},
+				{
+					"file": "packages/data-grid/react/shadcn/package.json",
+					"section": "devDependencies",
+					"name": "react",
+					"before": "^19.2.4",
+					"after": "^19.3.1"
+				},
+				{
+					"file": "packages/zu-store/package.json",
+					"section": "devDependencies",
+					"name": "react",
+					"before": "^19.2.4",
+					"after": "^19.3.1"
+				},
+				{
+					"file": "packages/data-grid/core/package.json",
+					"section": "devDependencies",
+					"name": "react",
+					"before": "^19.2.4",
+					"after": "^19.3.1"
+				},
+				{
+					"file": "packages/va-store/package.json",
+					"section": "devDependencies",
+					"name": "react",
+					"before": "^19.2.4",
+					"after": "^19.3.1"
+				}
+			],
+			"wantedBefore": "19.2.5"
+		},
+		{
+			"name": "react-dom",
+			"latest": "19.3.1",
+			"changes": [
+				{
+					"file": "packages/data-grid/react/react/package.json",
+					"section": "devDependencies",
+					"name": "react-dom",
+					"before": "^19.2.4",
+					"after": "^19.3.1"
+				},
+				{
+					"file": "packages/data-grid/react/heroui/package.json",
+					"section": "devDependencies",
+					"name": "react-dom",
+					"before": "^19.2.4",
+					"after": "^19.3.1"
+				},
+				{
+					"file": "packages/store-core/package.json",
+					"section": "devDependencies",
+					"name": "react-dom",
+					"before": "^19.2.4",
+					"after": "^19.3.1"
+				},
+				{
+					"file": "apps/docs/package.json",
+					"section": "dependencies",
+					"name": "react-dom",
+					"before": "^19.2.5",
+					"after": "^19.3.1"
+				},
+				{
+					"file": "packages/twc/package.json",
+					"section": "devDependencies",
+					"name": "react-dom",
+					"before": "^19.2.4",
+					"after": "^19.3.1"
+				},
+				{
+					"file": "packages/query/react/package.json",
+					"section": "devDependencies",
+					"name": "react-dom",
+					"before": "^19.2.4",
+					"after": "^19.3.1"
+				},
+				{
+					"file": "packages/form/react/react/package.json",
+					"section": "devDependencies",
+					"name": "react-dom",
+					"before": "^19.2.4",
+					"after": "^19.3.1"
+				},
+				{
+					"file": "packages/form/react/heroui/package.json",
+					"section": "devDependencies",
+					"name": "react-dom",
+					"before": "^19.2.4",
+					"after": "^19.3.1"
+				},
+				{
+					"file": "packages/store-persist/package.json",
+					"section": "devDependencies",
+					"name": "react-dom",
+					"before": "^19.2.4",
+					"after": "^19.3.1"
+				},
+				{
+					"file": "packages/form/react/shadcn/package.json",
+					"section": "devDependencies",
+					"name": "react-dom",
+					"before": "^19.2.4",
+					"after": "^19.3.1"
+				},
+				{
+					"file": "packages/data-grid/react/shadcn/package.json",
+					"section": "devDependencies",
+					"name": "react-dom",
+					"before": "^19.2.4",
+					"after": "^19.3.1"
+				},
+				{
+					"file": "packages/zu-store/package.json",
+					"section": "devDependencies",
+					"name": "react-dom",
+					"before": "^19.2.4",
+					"after": "^19.3.1"
+				},
+				{
+					"file": "packages/data-grid/core/package.json",
+					"section": "devDependencies",
+					"name": "react-dom",
+					"before": "^19.2.4",
+					"after": "^19.3.1"
+				},
+				{
+					"file": "packages/va-store/package.json",
+					"section": "devDependencies",
+					"name": "react-dom",
+					"before": "^19.2.4",
+					"after": "^19.3.1"
+				}
+			],
+			"wantedBefore": "19.2.5"
+		},
+		{
+			"name": "react-resizable-panels",
+			"latest": "4.17.0",
+			"changes": [
+				{
+					"file": "apps/docs/package.json",
+					"section": "dependencies",
+					"name": "react-resizable-panels",
+					"before": "^4.11.1",
+					"after": "^4.17.0"
+				}
+			],
+			"wantedBefore": "4.11.1"
+		},
+		{
+			"name": "recharts",
+			"latest": "3.10.1",
+			"changes": [
+				{
+					"file": "apps/docs/package.json",
+					"section": "dependencies",
+					"name": "recharts",
+					"before": "3.8.0",
+					"after": "3.10.1"
+				}
+			],
+			"wantedBefore": "3.8.0"
+		},
+		{
+			"name": "sass",
+			"latest": "1.107.1",
+			"changes": [
+				{
+					"file": "apps/docs/package.json",
+					"section": "dependencies",
+					"name": "sass",
+					"before": "^1.101.0",
+					"after": "^1.107.1"
+				}
+			],
+			"wantedBefore": "1.101.0"
+		},
+		{
+			"name": "shadcn",
+			"latest": "4.23.0",
+			"changes": [
+				{
+					"file": "package.json",
+					"section": "devDependencies",
+					"name": "shadcn",
+					"before": "^4.12.0",
+					"after": "^4.23.0"
+				},
+				{
+					"file": "apps/docs/package.json",
+					"section": "dependencies",
+					"name": "shadcn",
+					"before": "^4.7.0",
+					"after": "^4.23.0"
+				},
+				{
+					"file": "packages/data-grid/react/shadcn/package.json",
+					"section": "dependencies",
+					"name": "shadcn",
+					"before": "^4.1.1",
+					"after": "^4.23.0"
+				}
+			],
+			"wantedBefore": "4.12.0"
+		},
+		{
+			"name": "tailwind-merge",
+			"latest": "3.7.0",
+			"changes": [
+				{
+					"file": "apps/docs/package.json",
+					"section": "dependencies",
+					"name": "tailwind-merge",
+					"before": "^3.5.0",
+					"after": "^3.7.0"
+				},
+				{
+					"file": "packages/twc/package.json",
+					"section": "dependencies",
+					"name": "tailwind-merge",
+					"before": "^3.5.0",
+					"after": "^3.7.0"
+				},
+				{
+					"file": "packages/form/react/shadcn/package.json",
+					"section": "dependencies",
+					"name": "tailwind-merge",
+					"before": "^3.5.0",
+					"after": "^3.7.0"
+				},
+				{
+					"file": "packages/data-grid/react/shadcn/package.json",
+					"section": "dependencies",
+					"name": "tailwind-merge",
+					"before": "^3.5.0",
+					"after": "^3.7.0"
+				}
+			],
+			"wantedBefore": "3.5.0"
+		},
+		{
+			"name": "tailwindcss",
+			"latest": "4.3.4",
+			"changes": [
+				{
+					"file": "apps/docs/package.json",
+					"section": "devDependencies",
+					"name": "tailwindcss",
+					"before": "^4.1.18",
+					"after": "^4.3.4"
+				},
+				{
+					"file": "packages/form/react/shadcn/package.json",
+					"section": "dependencies",
+					"name": "tailwindcss",
+					"before": "^4.1.18",
+					"after": "^4.3.4"
+				},
+				{
+					"file": "packages/data-grid/react/shadcn/package.json",
+					"section": "dependencies",
+					"name": "tailwindcss",
+					"before": "^4.1.18",
+					"after": "^4.3.4"
+				}
+			],
+			"wantedBefore": "4.2.4"
+		},
+		{
+			"name": "turbo",
+			"latest": "2.11.10",
+			"changes": [
+				{
+					"file": "package.json",
+					"section": "devDependencies",
+					"name": "turbo",
+					"before": "^2.8.20",
+					"after": "^2.11.10"
+				}
+			],
+			"wantedBefore": "2.10.13"
+		},
+		{
+			"name": "typescript-eslint",
+			"latest": "8.72.1",
+			"changes": [
+				{
+					"file": "package.json",
+					"section": "devDependencies",
+					"name": "typescript-eslint",
+					"before": "^8.57.2",
+					"after": "^8.72.1"
+				}
+			],
+			"wantedBefore": "8.59.1"
+		},
+		{
+			"name": "use-sync-external-store",
+			"latest": "1.7.0",
+			"changes": [
+				{
+					"file": "tools/react18-env/package.json",
+					"section": "dependencies",
+					"name": "use-sync-external-store",
+					"before": "^1.6.0",
+					"after": "^1.7.0"
+				}
+			],
+			"wantedBefore": "1.6.0"
+		},
+		{
+			"name": "zod",
+			"latest": "4.6.7",
+			"changes": [
+				{
+					"file": "apps/docs/package.json",
+					"section": "dependencies",
+					"name": "zod",
+					"before": "^4.3.6",
+					"after": "^4.6.7"
+				},
+				{
+					"file": "packages/store-persist/package.json",
+					"section": "devDependencies",
+					"name": "zod",
+					"before": "^4.3.6",
+					"after": "^4.6.7"
+				},
+				{
+					"file": "packages/zu-store/package.json",
+					"section": "devDependencies",
+					"name": "zod",
+					"before": "^4.3.6",
+					"after": "^4.6.7"
+				},
+				{
+					"file": "packages/data-grid/core/package.json",
+					"section": "devDependencies",
+					"name": "zod",
+					"before": "^4.3.6",
+					"after": "^4.6.7"
+				},
+				{
+					"file": "packages/va-store/package.json",
+					"section": "devDependencies",
+					"name": "zod",
+					"before": "^4.3.6",
+					"after": "^4.6.7"
+				}
+			],
+			"wantedBefore": "4.3.6"
+		},
+		{
+			"name": "@babel/core",
+			"latest": "8.1.0",
+			"changes": [
+				{
+					"file": "packages/babel-plugin-twc/package.json",
+					"section": "devDependencies",
+					"name": "@babel/core",
+					"before": "^7.29.0",
+					"after": "^7.29.7"
+				}
+			],
+			"wantedBefore": "7.29.7"
+		},
+		{
+			"name": "@babel/types",
+			"latest": "8.1.0",
+			"changes": [
+				{
+					"file": "packages/babel-plugin-twc/package.json",
+					"section": "devDependencies",
+					"name": "@babel/types",
+					"before": "^7.29.0",
+					"after": "^7.29.11"
+				}
+			],
+			"wantedBefore": "7.29.0"
+		},
+		{
+			"name": "@changesets/cli",
+			"latest": "3.0.3",
+			"changes": [
+				{
+					"file": "package.json",
+					"section": "devDependencies",
+					"name": "@changesets/cli",
+					"before": "^2.30.0",
+					"after": "^3.0.3"
+				}
+			],
+			"wantedBefore": "2.31.0"
+		},
+		{
+			"name": "@eslint/js",
+			"latest": "10.0.1",
+			"changes": [
+				{
+					"file": "package.json",
+					"section": "devDependencies",
+					"name": "@eslint/js",
+					"before": "^9.39.4",
+					"after": "^9.39.5"
+				}
+			],
+			"wantedBefore": "9.39.4"
+		},
+		{
+			"name": "@size-limit/preset-small-lib",
+			"latest": "14.3.0",
+			"changes": [
+				{
+					"file": "package.json",
+					"section": "devDependencies",
+					"name": "@size-limit/preset-small-lib",
+					"before": "^11.2.0",
+					"after": "^14.3.0"
+				}
+			],
+			"wantedBefore": "11.2.0"
+		},
+		{
+			"name": "@testing-library/jest-dom",
+			"latest": "7.0.1",
+			"changes": [
+				{
+					"file": "package.json",
+					"section": "devDependencies",
+					"name": "@testing-library/jest-dom",
+					"before": "^6.9.1",
+					"after": "^7.0.1"
+				},
+				{
+					"file": "tools/react18-env/package.json",
+					"section": "dependencies",
+					"name": "@testing-library/jest-dom",
+					"before": "^6.9.1",
+					"after": "^7.0.1"
+				}
+			],
+			"wantedBefore": "6.9.1"
+		},
+		{
+			"name": "@types/node",
+			"latest": "26.6.6",
+			"changes": [
+				{
+					"file": "package.json",
+					"section": "devDependencies",
+					"name": "@types/node",
+					"before": null,
+					"after": "^22.20.5"
+				},
+				{
+					"file": "apps/docs/package.json",
+					"section": "devDependencies",
+					"name": "@types/node",
+					"before": "^25.6.0",
+					"after": "^22.20.5"
+				}
+			],
+			"wantedBefore": "25.6.0"
+		},
+		{
+			"name": "@vitest/coverage-v8",
+			"latest": "5.1.0",
+			"changes": [
+				{
+					"file": "package.json",
+					"section": "devDependencies",
+					"name": "@vitest/coverage-v8",
+					"before": "^3.2.7",
+					"after": "4.1.12"
+				}
+			],
+			"wantedBefore": "3.2.7"
+		},
+		{
+			"name": "eslint",
+			"latest": "10.14.0",
+			"changes": [
+				{
+					"file": "package.json",
+					"section": "devDependencies",
+					"name": "eslint",
+					"before": "^9.39.4",
+					"after": "^9.39.5"
+				}
+			],
+			"wantedBefore": "9.39.4"
+		},
+		{
+			"name": "framer-motion",
+			"latest": "14.9.0",
+			"changes": [
+				{
+					"file": "apps/docs/package.json",
+					"section": "dependencies",
+					"name": "framer-motion",
+					"before": "^12.38.0",
+					"after": "^14.9.0"
+				}
+			],
+			"wantedBefore": "12.38.0"
+		},
+		{
+			"name": "fumadocs-mdx",
+			"latest": "15.4.10",
+			"changes": [
+				{
+					"file": "apps/docs/package.json",
+					"section": "dependencies",
+					"name": "fumadocs-mdx",
+					"before": "14.3.2",
+					"after": "15.4.10"
+				}
+			],
+			"wantedBefore": "14.3.2"
+		},
+		{
+			"name": "jsdom",
+			"latest": "30.1.3",
+			"changes": [
+				{
+					"file": "package.json",
+					"section": "devDependencies",
+					"name": "jsdom",
+					"before": "^29.0.1",
+					"after": "^30.1.3"
+				}
+			],
+			"wantedBefore": "29.1.0"
+		},
+		{
+			"name": "react-router",
+			"latest": "8.5.1",
+			"changes": [
+				{
+					"file": "packages/store-persist/package.json",
+					"section": "devDependencies",
+					"name": "react-router",
+					"before": "^7.9.0",
+					"after": "^8.5.1"
+				},
+				{
+					"file": "packages/zu-store/package.json",
+					"section": "devDependencies",
+					"name": "react-router",
+					"before": "^7.9.0",
+					"after": "^8.5.1"
+				},
+				{
+					"file": "packages/va-store/package.json",
+					"section": "devDependencies",
+					"name": "react-router",
+					"before": "^7.9.0",
+					"after": "^8.5.1"
+				}
+			],
+			"wantedBefore": "7.18.4"
+		},
+		{
+			"name": "size-limit",
+			"latest": "14.3.0",
+			"changes": [
+				{
+					"file": "package.json",
+					"section": "devDependencies",
+					"name": "size-limit",
+					"before": "^11.2.0",
+					"after": "^14.3.0"
+				}
+			],
+			"wantedBefore": "11.2.0"
+		},
+		{
+			"name": "tsup",
+			"latest": "9.0.0",
+			"changes": [
+				{
+					"file": "package.json",
+					"section": "devDependencies",
+					"name": "tsup",
+					"before": "^8.5.1",
+					"after": "^9.0.0"
+				}
+			],
+			"wantedBefore": "8.5.1"
+		},
+		{
+			"name": "typescript",
+			"latest": "7.0.2",
+			"changes": [
+				{
+					"file": "package.json",
+					"section": "devDependencies",
+					"name": "typescript",
+					"before": "^5.9.3",
+					"after": "^6.0.3"
+				},
+				{
+					"file": "apps/docs/package.json",
+					"section": "devDependencies",
+					"name": "typescript",
+					"before": "^5.9.3",
+					"after": "^6.0.3"
+				}
+			],
+			"wantedBefore": "5.9.3"
+		},
+		{
+			"name": "vitest",
+			"latest": "5.1.0",
+			"changes": [
+				{
+					"file": "package.json",
+					"section": "devDependencies",
+					"name": "vitest",
+					"before": "3.2.6",
+					"after": "4.1.12"
+				}
+			],
+			"wantedBefore": "3.2.6"
+		},
+		{
+			"name": "@dnd-kit/dom",
+			"latest": "0.5.3",
+			"changes": [
+				{
+					"file": "packages/data-grid/react/heroui/package.json",
+					"section": "devDependencies",
+					"name": "@dnd-kit/dom",
+					"before": "^0.1.21",
+					"after": "^0.5.3"
+				},
+				{
+					"file": "packages/data-grid/react/heroui/package.json",
+					"section": "peerDependencies",
+					"name": "@dnd-kit/dom",
+					"before": "^0.1.21",
+					"after": "^0.5.3"
+				},
+				{
+					"file": "packages/data-grid/react/shadcn/package.json",
+					"section": "devDependencies",
+					"name": "@dnd-kit/dom",
+					"before": "^0.1.21",
+					"after": "^0.5.3"
+				},
+				{
+					"file": "packages/data-grid/react/shadcn/package.json",
+					"section": "peerDependencies",
+					"name": "@dnd-kit/dom",
+					"before": "^0.1.21",
+					"after": "^0.5.3"
+				}
+			],
+			"wantedBefore": "0.1.21"
+		},
+		{
+			"name": "@dnd-kit/react",
+			"latest": "0.5.3",
+			"changes": [
+				{
+					"file": "packages/data-grid/react/heroui/package.json",
+					"section": "devDependencies",
+					"name": "@dnd-kit/react",
+					"before": "^0.1.21",
+					"after": "^0.5.3"
+				},
+				{
+					"file": "packages/data-grid/react/heroui/package.json",
+					"section": "peerDependencies",
+					"name": "@dnd-kit/react",
+					"before": "^0.1.21",
+					"after": "^0.5.3"
+				},
+				{
+					"file": "apps/docs/package.json",
+					"section": "dependencies",
+					"name": "@dnd-kit/react",
+					"before": "^0.5.0",
+					"after": "^0.5.3"
+				},
+				{
+					"file": "packages/data-grid/react/shadcn/package.json",
+					"section": "devDependencies",
+					"name": "@dnd-kit/react",
+					"before": "^0.1.21",
+					"after": "^0.5.3"
+				},
+				{
+					"file": "packages/data-grid/react/shadcn/package.json",
+					"section": "peerDependencies",
+					"name": "@dnd-kit/react",
+					"before": "^0.1.21",
+					"after": "^0.5.3"
+				}
+			],
+			"wantedBefore": "0.1.21"
+		},
+		{
+			"name": "@tanstack/react-store",
+			"latest": "0.11.2",
+			"changes": [
+				{
+					"file": "packages/data-grid/react/react/package.json",
+					"section": "dependencies",
+					"name": "@tanstack/react-store",
+					"before": "^0.11.1",
+					"after": "^0.11.2"
+				},
+				{
+					"file": "apps/docs/package.json",
+					"section": "dependencies",
+					"name": "@tanstack/react-store",
+					"before": "^0.11.1",
+					"after": "^0.11.2"
+				},
+				{
+					"file": "packages/form/react/react/package.json",
+					"section": "dependencies",
+					"name": "@tanstack/react-store",
+					"before": "0.11.1",
+					"after": "0.11.2"
+				}
+			],
+			"wantedBefore": "0.11.1"
+		},
+		{
+			"name": "@types/three",
+			"latest": "0.187.0",
+			"changes": [
+				{
+					"file": "apps/docs/package.json",
+					"section": "devDependencies",
+					"name": "@types/three",
+					"before": "^0.184.0",
+					"after": "^0.187.0"
+				}
+			],
+			"wantedBefore": "0.184.0"
+		},
+		{
+			"name": "lucide-react",
+			"latest": "1.67.0",
+			"changes": [
+				{
+					"file": "packages/data-grid/react/heroui/package.json",
+					"section": "dependencies",
+					"name": "lucide-react",
+					"before": "^0.577.0",
+					"after": "^1.67.0"
+				},
+				{
+					"file": "apps/docs/package.json",
+					"section": "dependencies",
+					"name": "lucide-react",
+					"before": "^0.577.0",
+					"after": "^1.67.0"
+				},
+				{
+					"file": "packages/form/react/shadcn/package.json",
+					"section": "dependencies",
+					"name": "lucide-react",
+					"before": "^0.577.0",
+					"after": "^1.67.0"
+				},
+				{
+					"file": "packages/data-grid/react/shadcn/package.json",
+					"section": "dependencies",
+					"name": "lucide-react",
+					"before": "^0.577.0",
+					"after": "^1.67.0"
+				}
+			],
+			"wantedBefore": "0.577.0"
+		},
+		{
+			"name": "three",
+			"latest": "0.187.0",
+			"changes": [
+				{
+					"file": "apps/docs/package.json",
+					"section": "dependencies",
+					"name": "three",
+					"before": "^0.184.0",
+					"after": "^0.187.0"
+				}
+			],
+			"wantedBefore": "0.184.0"
+		}
+	],
+	"manifestChanges": [
+		{
+			"file": "package.json",
+			"section": "devDependencies",
+			"name": "@changesets/cli",
+			"before": "^2.30.0",
+			"after": "^3.0.3"
+		},
+		{
+			"file": "package.json",
+			"section": "devDependencies",
+			"name": "@commitlint/cli",
+			"before": "^21.2.1",
+			"after": "^21.2.4"
+		},
+		{
+			"file": "package.json",
+			"section": "devDependencies",
+			"name": "@commitlint/config-conventional",
+			"before": "^21.2.0",
+			"after": "^21.2.4"
+		},
+		{
+			"file": "package.json",
+			"section": "devDependencies",
+			"name": "@eslint/js",
+			"before": "^9.39.4",
+			"after": "^9.39.5"
+		},
+		{
+			"file": "package.json",
+			"section": "devDependencies",
+			"name": "@next/eslint-plugin-next",
+			"before": "^16.2.1",
+			"after": "^16.4.4"
+		},
+		{
+			"file": "package.json",
+			"section": "devDependencies",
+			"name": "@size-limit/preset-small-lib",
+			"before": "^11.2.0",
+			"after": "^14.3.0"
+		},
+		{
+			"file": "package.json",
+			"section": "devDependencies",
+			"name": "@testing-library/jest-dom",
+			"before": "^6.9.1",
+			"after": "^7.0.1"
+		},
+		{
+			"file": "package.json",
+			"section": "devDependencies",
+			"name": "@testing-library/react",
+			"before": "^16.3.2",
+			"after": "^16.3.3"
+		},
+		{
+			"file": "package.json",
+			"section": "devDependencies",
+			"name": "@testing-library/user-event",
+			"before": "^14.6.1",
+			"after": "^14.6.8"
+		},
+		{
+			"file": "package.json",
+			"section": "devDependencies",
+			"name": "@types/node",
+			"before": null,
+			"after": "^22.20.5"
+		},
+		{
+			"file": "package.json",
+			"section": "devDependencies",
+			"name": "@vitest/coverage-v8",
+			"before": "^3.2.7",
+			"after": "4.1.12"
+		},
+		{
+			"file": "package.json",
+			"section": "devDependencies",
+			"name": "esbuild",
+			"before": null,
+			"after": "^0.28.2"
+		},
+		{
+			"file": "package.json",
+			"section": "devDependencies",
+			"name": "eslint",
+			"before": "^9.39.4",
+			"after": "^9.39.5"
+		},
+		{
+			"file": "package.json",
+			"section": "devDependencies",
+			"name": "eslint-import-resolver-typescript",
+			"before": "^4.4.4",
+			"after": "^4.4.5"
+		},
+		{
+			"file": "package.json",
+			"section": "devDependencies",
+			"name": "eslint-plugin-react-hooks",
+			"before": "^7.0.1",
+			"after": "^7.1.1"
+		},
+		{
+			"file": "package.json",
+			"section": "devDependencies",
+			"name": "globals",
+			"before": "^17.4.0",
+			"after": "^17.14.0"
+		},
+		{
+			"file": "package.json",
+			"section": "devDependencies",
+			"name": "jsdom",
+			"before": "^29.0.1",
+			"after": "^30.1.3"
+		},
+		{
+			"file": "package.json",
+			"section": "devDependencies",
+			"name": "lint-staged",
+			"before": "^17.0.8",
+			"after": "^17.6.0"
+		},
+		{
+			"file": "package.json",
+			"section": "devDependencies",
+			"name": "prettier",
+			"before": "^3.8.1",
+			"after": "^3.9.10"
+		},
+		{
+			"file": "package.json",
+			"section": "devDependencies",
+			"name": "shadcn",
+			"before": "^4.12.0",
+			"after": "^4.23.0"
+		},
+		{
+			"file": "package.json",
+			"section": "devDependencies",
+			"name": "size-limit",
+			"before": "^11.2.0",
+			"after": "^14.3.0"
+		},
+		{
+			"file": "package.json",
+			"section": "devDependencies",
+			"name": "tsup",
+			"before": "^8.5.1",
+			"after": "^9.0.0"
+		},
+		{
+			"file": "package.json",
+			"section": "devDependencies",
+			"name": "turbo",
+			"before": "^2.8.20",
+			"after": "^2.11.10"
+		},
+		{
+			"file": "package.json",
+			"section": "devDependencies",
+			"name": "typescript",
+			"before": "^5.9.3",
+			"after": "^6.0.3"
+		},
+		{
+			"file": "package.json",
+			"section": "devDependencies",
+			"name": "typescript-eslint",
+			"before": "^8.57.2",
+			"after": "^8.72.1"
+		},
+		{
+			"file": "package.json",
+			"section": "devDependencies",
+			"name": "vite",
+			"before": null,
+			"after": "^8.3.5"
+		},
+		{
+			"file": "package.json",
+			"section": "devDependencies",
+			"name": "vitest",
+			"before": "3.2.6",
+			"after": "4.1.12"
+		},
+		{
+			"file": "packages/data-grid/react/react/package.json",
+			"section": "dependencies",
+			"name": "@tanstack/react-store",
+			"before": "^0.11.1",
+			"after": "^0.11.2"
+		},
+		{
+			"file": "packages/data-grid/react/react/package.json",
+			"section": "dependencies",
+			"name": "@tanstack/react-table",
+			"before": "^9.2.4",
+			"after": "^9.3.1"
+		},
+		{
+			"file": "packages/data-grid/react/react/package.json",
+			"section": "dependencies",
+			"name": "@tanstack/react-virtual",
+			"before": "^3.13.23",
+			"after": "^3.14.25"
+		},
+		{
+			"file": "packages/data-grid/react/react/package.json",
+			"section": "dependencies",
+			"name": "@tanstack/table-core",
+			"before": "^9.2.4",
+			"after": "^9.3.1"
+		},
+		{
+			"file": "packages/data-grid/react/react/package.json",
+			"section": "devDependencies",
+			"name": "@types/react",
+			"before": "^19.2.14",
+			"after": "^19.3.0"
+		},
+		{
+			"file": "packages/data-grid/react/react/package.json",
+			"section": "devDependencies",
+			"name": "@types/react-dom",
+			"before": "^19.2.3",
+			"after": "^19.3.0"
+		},
+		{
+			"file": "packages/data-grid/react/react/package.json",
+			"section": "devDependencies",
+			"name": "react",
+			"before": "^19.2.4",
+			"after": "^19.3.1"
+		},
+		{
+			"file": "packages/data-grid/react/react/package.json",
+			"section": "devDependencies",
+			"name": "react-dom",
+			"before": "^19.2.4",
+			"after": "^19.3.1"
+		},
+		{
+			"file": "tools/react18-env/package.json",
+			"section": "dependencies",
+			"name": "@testing-library/dom",
+			"before": "^10.4.1",
+			"after": "^10.4.2"
+		},
+		{
+			"file": "tools/react18-env/package.json",
+			"section": "dependencies",
+			"name": "@testing-library/jest-dom",
+			"before": "^6.9.1",
+			"after": "^7.0.1"
+		},
+		{
+			"file": "tools/react18-env/package.json",
+			"section": "dependencies",
+			"name": "@testing-library/react",
+			"before": "^16.3.2",
+			"after": "^16.3.3"
+		},
+		{
+			"file": "tools/react18-env/package.json",
+			"section": "dependencies",
+			"name": "@testing-library/user-event",
+			"before": "^14.6.1",
+			"after": "^14.6.8"
+		},
+		{
+			"file": "tools/react18-env/package.json",
+			"section": "dependencies",
+			"name": "use-sync-external-store",
+			"before": "^1.6.0",
+			"after": "^1.7.0"
+		},
+		{
+			"file": "packages/data-grid/react/heroui/package.json",
+			"section": "dependencies",
+			"name": "lucide-react",
+			"before": "^0.577.0",
+			"after": "^1.67.0"
+		},
+		{
+			"file": "packages/data-grid/react/heroui/package.json",
+			"section": "devDependencies",
+			"name": "@dnd-kit/dom",
+			"before": "^0.1.21",
+			"after": "^0.5.3"
+		},
+		{
+			"file": "packages/data-grid/react/heroui/package.json",
+			"section": "devDependencies",
+			"name": "@dnd-kit/react",
+			"before": "^0.1.21",
+			"after": "^0.5.3"
+		},
+		{
+			"file": "packages/data-grid/react/heroui/package.json",
+			"section": "devDependencies",
+			"name": "@heroui/react",
+			"before": "^3.2.6",
+			"after": "^3.2.7"
+		},
+		{
+			"file": "packages/data-grid/react/heroui/package.json",
+			"section": "devDependencies",
+			"name": "@heroui/styles",
+			"before": "^3.2.6",
+			"after": "^3.2.7"
+		},
+		{
+			"file": "packages/data-grid/react/heroui/package.json",
+			"section": "devDependencies",
+			"name": "@types/react",
+			"before": "^19.2.14",
+			"after": "^19.3.0"
+		},
+		{
+			"file": "packages/data-grid/react/heroui/package.json",
+			"section": "devDependencies",
+			"name": "@types/react-dom",
+			"before": "^19.2.3",
+			"after": "^19.3.0"
+		},
+		{
+			"file": "packages/data-grid/react/heroui/package.json",
+			"section": "devDependencies",
+			"name": "react",
+			"before": "^19.2.4",
+			"after": "^19.3.1"
+		},
+		{
+			"file": "packages/data-grid/react/heroui/package.json",
+			"section": "devDependencies",
+			"name": "react-aria",
+			"before": "^3.52.1",
+			"after": "^3.53.1"
+		},
+		{
+			"file": "packages/data-grid/react/heroui/package.json",
+			"section": "devDependencies",
+			"name": "react-aria-components",
+			"before": "^1.21.1",
+			"after": "^1.22.1"
+		},
+		{
+			"file": "packages/data-grid/react/heroui/package.json",
+			"section": "devDependencies",
+			"name": "react-dom",
+			"before": "^19.2.4",
+			"after": "^19.3.1"
+		},
+		{
+			"file": "packages/data-grid/react/heroui/package.json",
+			"section": "peerDependencies",
+			"name": "@dnd-kit/dom",
+			"before": "^0.1.21",
+			"after": "^0.5.3"
+		},
+		{
+			"file": "packages/data-grid/react/heroui/package.json",
+			"section": "peerDependencies",
+			"name": "@dnd-kit/react",
+			"before": "^0.1.21",
+			"after": "^0.5.3"
+		},
+		{
+			"file": "packages/store-core/package.json",
+			"section": "devDependencies",
+			"name": "@types/react",
+			"before": "^19.2.14",
+			"after": "^19.3.0"
+		},
+		{
+			"file": "packages/store-core/package.json",
+			"section": "devDependencies",
+			"name": "@types/react-dom",
+			"before": "^19.2.3",
+			"after": "^19.3.0"
+		},
+		{
+			"file": "packages/store-core/package.json",
+			"section": "devDependencies",
+			"name": "react",
+			"before": "^19.2.4",
+			"after": "^19.3.1"
+		},
+		{
+			"file": "packages/store-core/package.json",
+			"section": "devDependencies",
+			"name": "react-dom",
+			"before": "^19.2.4",
+			"after": "^19.3.1"
+		},
+		{
+			"file": "packages/babel-plugin-twc/package.json",
+			"section": "devDependencies",
+			"name": "@babel/core",
+			"before": "^7.29.0",
+			"after": "^7.29.7"
+		},
+		{
+			"file": "packages/babel-plugin-twc/package.json",
+			"section": "devDependencies",
+			"name": "@babel/types",
+			"before": "^7.29.0",
+			"after": "^7.29.11"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "dependencies",
+			"name": "@base-ui/react",
+			"before": "^1.4.1",
+			"after": "^1.9.0"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "dependencies",
+			"name": "@dnd-kit/react",
+			"before": "^0.5.0",
+			"after": "^0.5.3"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "dependencies",
+			"name": "@heroui/react",
+			"before": "^3.2.6",
+			"after": "^3.2.7"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "dependencies",
+			"name": "@heroui/styles",
+			"before": "^3.2.6",
+			"after": "^3.2.7"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "dependencies",
+			"name": "@react-three/fiber",
+			"before": "^9.6.1",
+			"after": "^9.8.2"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "dependencies",
+			"name": "@tanstack/react-query",
+			"before": "^5.105.0",
+			"after": "^5.105.3"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "dependencies",
+			"name": "@tanstack/react-store",
+			"before": "^0.11.1",
+			"after": "^0.11.2"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "dependencies",
+			"name": "date-fns",
+			"before": "^4.1.0",
+			"after": "^4.4.0"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "dependencies",
+			"name": "framer-motion",
+			"before": "^12.38.0",
+			"after": "^14.9.0"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "dependencies",
+			"name": "fumadocs-core",
+			"before": "16.8.5",
+			"after": "16.17.10"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "dependencies",
+			"name": "fumadocs-mdx",
+			"before": "14.3.2",
+			"after": "15.4.10"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "dependencies",
+			"name": "fumadocs-ui",
+			"before": "16.8.5",
+			"after": "16.17.10"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "dependencies",
+			"name": "input-otp",
+			"before": "^1.4.2",
+			"after": "^1.5.0"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "dependencies",
+			"name": "lucide-react",
+			"before": "^0.577.0",
+			"after": "^1.67.0"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "dependencies",
+			"name": "next",
+			"before": "16.3.5",
+			"after": "16.4.4"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "dependencies",
+			"name": "qs",
+			"before": "^6.14.0",
+			"after": "^6.17.1"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "dependencies",
+			"name": "radix-ui",
+			"before": "^1.6.7",
+			"after": "^1.8.1"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "dependencies",
+			"name": "react",
+			"before": "^19.2.5",
+			"after": "^19.3.1"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "dependencies",
+			"name": "react-day-picker",
+			"before": "^10.0.0",
+			"after": "^10.0.2"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "dependencies",
+			"name": "react-dom",
+			"before": "^19.2.5",
+			"after": "^19.3.1"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "dependencies",
+			"name": "react-resizable-panels",
+			"before": "^4.11.1",
+			"after": "^4.17.0"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "dependencies",
+			"name": "recharts",
+			"before": "3.8.0",
+			"after": "3.10.1"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "dependencies",
+			"name": "sass",
+			"before": "^1.101.0",
+			"after": "^1.107.1"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "dependencies",
+			"name": "shadcn",
+			"before": "^4.7.0",
+			"after": "^4.23.0"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "dependencies",
+			"name": "sonner",
+			"before": "^2.0.7",
+			"after": "^2.0.8"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "dependencies",
+			"name": "tailwind-merge",
+			"before": "^3.5.0",
+			"after": "^3.7.0"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "dependencies",
+			"name": "three",
+			"before": "^0.184.0",
+			"after": "^0.187.0"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "dependencies",
+			"name": "zod",
+			"before": "^4.3.6",
+			"after": "^4.6.7"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "dependencies",
+			"name": "zustand",
+			"before": "^5.0.12",
+			"after": "^5.0.16"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "devDependencies",
+			"name": "@axe-core/playwright",
+			"before": "^4.13.0",
+			"after": "^4.14.0"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "devDependencies",
+			"name": "@playwright/test",
+			"before": "^1.59.1",
+			"after": "^1.64.1"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "devDependencies",
+			"name": "@tailwindcss/postcss",
+			"before": "^4.1.18",
+			"after": "^4.3.4"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "devDependencies",
+			"name": "@types/mdx",
+			"before": "^2.0.13",
+			"after": "^2.0.14"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "devDependencies",
+			"name": "@types/node",
+			"before": "^25.6.0",
+			"after": "^22.20.5"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "devDependencies",
+			"name": "@types/qs",
+			"before": "^6.9.18",
+			"after": "^6.15.1"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "devDependencies",
+			"name": "@types/react",
+			"before": "^19.2.14",
+			"after": "^19.3.0"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "devDependencies",
+			"name": "@types/react-dom",
+			"before": "^19.2.3",
+			"after": "^19.3.0"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "devDependencies",
+			"name": "@types/three",
+			"before": "^0.184.0",
+			"after": "^0.187.0"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "devDependencies",
+			"name": "react-aria",
+			"before": "^3.52.1",
+			"after": "^3.53.1"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "devDependencies",
+			"name": "react-aria-components",
+			"before": "^1.21.1",
+			"after": "^1.22.1"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "devDependencies",
+			"name": "tailwindcss",
+			"before": "^4.1.18",
+			"after": "^4.3.4"
+		},
+		{
+			"file": "apps/docs/package.json",
+			"section": "devDependencies",
+			"name": "typescript",
+			"before": "^5.9.3",
+			"after": "^6.0.3"
+		},
+		{
+			"file": "packages/twc/package.json",
+			"section": "dependencies",
+			"name": "tailwind-merge",
+			"before": "^3.5.0",
+			"after": "^3.7.0"
+		},
+		{
+			"file": "packages/twc/package.json",
+			"section": "devDependencies",
+			"name": "@types/react",
+			"before": "^19.2.14",
+			"after": "^19.3.0"
+		},
+		{
+			"file": "packages/twc/package.json",
+			"section": "devDependencies",
+			"name": "@types/react-dom",
+			"before": "^19.2.3",
+			"after": "^19.3.0"
+		},
+		{
+			"file": "packages/twc/package.json",
+			"section": "devDependencies",
+			"name": "react",
+			"before": "^19.2.4",
+			"after": "^19.3.1"
+		},
+		{
+			"file": "packages/twc/package.json",
+			"section": "devDependencies",
+			"name": "react-dom",
+			"before": "^19.2.4",
+			"after": "^19.3.1"
+		},
+		{
+			"file": "packages/query/react/package.json",
+			"section": "devDependencies",
+			"name": "@tanstack/react-query",
+			"before": "^5.105.0",
+			"after": "^5.105.3"
+		},
+		{
+			"file": "packages/query/react/package.json",
+			"section": "devDependencies",
+			"name": "@types/react",
+			"before": "^19.2.14",
+			"after": "^19.3.0"
+		},
+		{
+			"file": "packages/query/react/package.json",
+			"section": "devDependencies",
+			"name": "@types/react-dom",
+			"before": "^19.2.3",
+			"after": "^19.3.0"
+		},
+		{
+			"file": "packages/query/react/package.json",
+			"section": "devDependencies",
+			"name": "react",
+			"before": "^19.2.4",
+			"after": "^19.3.1"
+		},
+		{
+			"file": "packages/query/react/package.json",
+			"section": "devDependencies",
+			"name": "react-dom",
+			"before": "^19.2.4",
+			"after": "^19.3.1"
+		},
+		{
+			"file": "packages/form/react/react/package.json",
+			"section": "dependencies",
+			"name": "@tanstack/form-core",
+			"before": "1.33.2",
+			"after": "1.33.5"
+		},
+		{
+			"file": "packages/form/react/react/package.json",
+			"section": "dependencies",
+			"name": "@tanstack/react-form",
+			"before": "1.33.2",
+			"after": "1.33.5"
+		},
+		{
+			"file": "packages/form/react/react/package.json",
+			"section": "dependencies",
+			"name": "@tanstack/react-store",
+			"before": "0.11.1",
+			"after": "0.11.2"
+		},
+		{
+			"file": "packages/form/react/react/package.json",
+			"section": "devDependencies",
+			"name": "@types/react",
+			"before": "^19.2.14",
+			"after": "^19.3.0"
+		},
+		{
+			"file": "packages/form/react/react/package.json",
+			"section": "devDependencies",
+			"name": "@types/react-dom",
+			"before": "^19.2.3",
+			"after": "^19.3.0"
+		},
+		{
+			"file": "packages/form/react/react/package.json",
+			"section": "devDependencies",
+			"name": "react",
+			"before": "^19.2.4",
+			"after": "^19.3.1"
+		},
+		{
+			"file": "packages/form/react/react/package.json",
+			"section": "devDependencies",
+			"name": "react-dom",
+			"before": "^19.2.4",
+			"after": "^19.3.1"
+		},
+		{
+			"file": "packages/form/react/heroui/package.json",
+			"section": "devDependencies",
+			"name": "@heroui/react",
+			"before": "^3.2.6",
+			"after": "^3.2.7"
+		},
+		{
+			"file": "packages/form/react/heroui/package.json",
+			"section": "devDependencies",
+			"name": "@heroui/styles",
+			"before": "^3.2.6",
+			"after": "^3.2.7"
+		},
+		{
+			"file": "packages/form/react/heroui/package.json",
+			"section": "devDependencies",
+			"name": "@types/react",
+			"before": "^19.2.14",
+			"after": "^19.3.0"
+		},
+		{
+			"file": "packages/form/react/heroui/package.json",
+			"section": "devDependencies",
+			"name": "@types/react-dom",
+			"before": "^19.2.3",
+			"after": "^19.3.0"
+		},
+		{
+			"file": "packages/form/react/heroui/package.json",
+			"section": "devDependencies",
+			"name": "react",
+			"before": "^19.2.4",
+			"after": "^19.3.1"
+		},
+		{
+			"file": "packages/form/react/heroui/package.json",
+			"section": "devDependencies",
+			"name": "react-aria",
+			"before": "^3.52.1",
+			"after": "^3.53.1"
+		},
+		{
+			"file": "packages/form/react/heroui/package.json",
+			"section": "devDependencies",
+			"name": "react-aria-components",
+			"before": "^1.21.1",
+			"after": "^1.22.1"
+		},
+		{
+			"file": "packages/form/react/heroui/package.json",
+			"section": "devDependencies",
+			"name": "react-dom",
+			"before": "^19.2.4",
+			"after": "^19.3.1"
+		},
+		{
+			"file": "packages/store-persist/package.json",
+			"section": "devDependencies",
+			"name": "@types/react",
+			"before": "^19.2.14",
+			"after": "^19.3.0"
+		},
+		{
+			"file": "packages/store-persist/package.json",
+			"section": "devDependencies",
+			"name": "@types/react-dom",
+			"before": "^19.2.3",
+			"after": "^19.3.0"
+		},
+		{
+			"file": "packages/store-persist/package.json",
+			"section": "devDependencies",
+			"name": "fake-indexeddb",
+			"before": "^6.2.5",
+			"after": "^6.2.7"
+		},
+		{
+			"file": "packages/store-persist/package.json",
+			"section": "devDependencies",
+			"name": "next",
+			"before": "16.3.5",
+			"after": "16.4.4"
+		},
+		{
+			"file": "packages/store-persist/package.json",
+			"section": "devDependencies",
+			"name": "react",
+			"before": "^19.2.4",
+			"after": "^19.3.1"
+		},
+		{
+			"file": "packages/store-persist/package.json",
+			"section": "devDependencies",
+			"name": "react-dom",
+			"before": "^19.2.4",
+			"after": "^19.3.1"
+		},
+		{
+			"file": "packages/store-persist/package.json",
+			"section": "devDependencies",
+			"name": "react-router",
+			"before": "^7.9.0",
+			"after": "^8.5.1"
+		},
+		{
+			"file": "packages/store-persist/package.json",
+			"section": "devDependencies",
+			"name": "zod",
+			"before": "^4.3.6",
+			"after": "^4.6.7"
+		},
+		{
+			"file": "packages/form/react/shadcn/package.json",
+			"section": "dependencies",
+			"name": "@base-ui/react",
+			"before": "^1.4.1",
+			"after": "^1.9.0"
+		},
+		{
+			"file": "packages/form/react/shadcn/package.json",
+			"section": "dependencies",
+			"name": "date-fns",
+			"before": "^4.1.0",
+			"after": "^4.4.0"
+		},
+		{
+			"file": "packages/form/react/shadcn/package.json",
+			"section": "dependencies",
+			"name": "lucide-react",
+			"before": "^0.577.0",
+			"after": "^1.67.0"
+		},
+		{
+			"file": "packages/form/react/shadcn/package.json",
+			"section": "dependencies",
+			"name": "radix-ui",
+			"before": "^1.6.7",
+			"after": "^1.8.1"
+		},
+		{
+			"file": "packages/form/react/shadcn/package.json",
+			"section": "dependencies",
+			"name": "react-day-picker",
+			"before": "^10.0.1",
+			"after": "^10.0.2"
+		},
+		{
+			"file": "packages/form/react/shadcn/package.json",
+			"section": "dependencies",
+			"name": "tailwind-merge",
+			"before": "^3.5.0",
+			"after": "^3.7.0"
+		},
+		{
+			"file": "packages/form/react/shadcn/package.json",
+			"section": "dependencies",
+			"name": "tailwindcss",
+			"before": "^4.1.18",
+			"after": "^4.3.4"
+		},
+		{
+			"file": "packages/form/react/shadcn/package.json",
+			"section": "devDependencies",
+			"name": "@types/react",
+			"before": "^19.2.14",
+			"after": "^19.3.0"
+		},
+		{
+			"file": "packages/form/react/shadcn/package.json",
+			"section": "devDependencies",
+			"name": "@types/react-dom",
+			"before": "^19.2.3",
+			"after": "^19.3.0"
+		},
+		{
+			"file": "packages/form/react/shadcn/package.json",
+			"section": "devDependencies",
+			"name": "react",
+			"before": "^19.2.4",
+			"after": "^19.3.1"
+		},
+		{
+			"file": "packages/form/react/shadcn/package.json",
+			"section": "devDependencies",
+			"name": "react-dom",
+			"before": "^19.2.4",
+			"after": "^19.3.1"
+		},
+		{
+			"file": "packages/data-grid/react/shadcn/package.json",
+			"section": "dependencies",
+			"name": "date-fns",
+			"before": "^4.1.0",
+			"after": "^4.4.0"
+		},
+		{
+			"file": "packages/data-grid/react/shadcn/package.json",
+			"section": "dependencies",
+			"name": "lucide-react",
+			"before": "^0.577.0",
+			"after": "^1.67.0"
+		},
+		{
+			"file": "packages/data-grid/react/shadcn/package.json",
+			"section": "dependencies",
+			"name": "radix-ui",
+			"before": "^1.6.7",
+			"after": "^1.8.1"
+		},
+		{
+			"file": "packages/data-grid/react/shadcn/package.json",
+			"section": "dependencies",
+			"name": "react-day-picker",
+			"before": "^10.0.0",
+			"after": "^10.0.2"
+		},
+		{
+			"file": "packages/data-grid/react/shadcn/package.json",
+			"section": "dependencies",
+			"name": "shadcn",
+			"before": "^4.1.1",
+			"after": "^4.23.0"
+		},
+		{
+			"file": "packages/data-grid/react/shadcn/package.json",
+			"section": "dependencies",
+			"name": "tailwind-merge",
+			"before": "^3.5.0",
+			"after": "^3.7.0"
+		},
+		{
+			"file": "packages/data-grid/react/shadcn/package.json",
+			"section": "dependencies",
+			"name": "tailwindcss",
+			"before": "^4.1.18",
+			"after": "^4.3.4"
+		},
+		{
+			"file": "packages/data-grid/react/shadcn/package.json",
+			"section": "devDependencies",
+			"name": "@dnd-kit/dom",
+			"before": "^0.1.21",
+			"after": "^0.5.3"
+		},
+		{
+			"file": "packages/data-grid/react/shadcn/package.json",
+			"section": "devDependencies",
+			"name": "@dnd-kit/react",
+			"before": "^0.1.21",
+			"after": "^0.5.3"
+		},
+		{
+			"file": "packages/data-grid/react/shadcn/package.json",
+			"section": "devDependencies",
+			"name": "@types/react",
+			"before": "^19.2.14",
+			"after": "^19.3.0"
+		},
+		{
+			"file": "packages/data-grid/react/shadcn/package.json",
+			"section": "devDependencies",
+			"name": "@types/react-dom",
+			"before": "^19.2.3",
+			"after": "^19.3.0"
+		},
+		{
+			"file": "packages/data-grid/react/shadcn/package.json",
+			"section": "devDependencies",
+			"name": "react",
+			"before": "^19.2.4",
+			"after": "^19.3.1"
+		},
+		{
+			"file": "packages/data-grid/react/shadcn/package.json",
+			"section": "devDependencies",
+			"name": "react-dom",
+			"before": "^19.2.4",
+			"after": "^19.3.1"
+		},
+		{
+			"file": "packages/data-grid/react/shadcn/package.json",
+			"section": "peerDependencies",
+			"name": "@dnd-kit/dom",
+			"before": "^0.1.21",
+			"after": "^0.5.3"
+		},
+		{
+			"file": "packages/data-grid/react/shadcn/package.json",
+			"section": "peerDependencies",
+			"name": "@dnd-kit/react",
+			"before": "^0.1.21",
+			"after": "^0.5.3"
+		},
+		{
+			"file": "packages/zu-store/package.json",
+			"section": "devDependencies",
+			"name": "@types/react",
+			"before": "^19.2.14",
+			"after": "^19.3.0"
+		},
+		{
+			"file": "packages/zu-store/package.json",
+			"section": "devDependencies",
+			"name": "@types/react-dom",
+			"before": "^19.2.3",
+			"after": "^19.3.0"
+		},
+		{
+			"file": "packages/zu-store/package.json",
+			"section": "devDependencies",
+			"name": "next",
+			"before": "16.3.5",
+			"after": "16.4.4"
+		},
+		{
+			"file": "packages/zu-store/package.json",
+			"section": "devDependencies",
+			"name": "react",
+			"before": "^19.2.4",
+			"after": "^19.3.1"
+		},
+		{
+			"file": "packages/zu-store/package.json",
+			"section": "devDependencies",
+			"name": "react-dom",
+			"before": "^19.2.4",
+			"after": "^19.3.1"
+		},
+		{
+			"file": "packages/zu-store/package.json",
+			"section": "devDependencies",
+			"name": "react-router",
+			"before": "^7.9.0",
+			"after": "^8.5.1"
+		},
+		{
+			"file": "packages/zu-store/package.json",
+			"section": "devDependencies",
+			"name": "zod",
+			"before": "^4.3.6",
+			"after": "^4.6.7"
+		},
+		{
+			"file": "packages/zu-store/package.json",
+			"section": "devDependencies",
+			"name": "zustand",
+			"before": "^5.0.12",
+			"after": "^5.0.16"
+		},
+		{
+			"file": "packages/data-grid/core/package.json",
+			"section": "dependencies",
+			"name": "@tanstack/table-core",
+			"before": "^9.2.4",
+			"after": "^9.3.1"
+		},
+		{
+			"file": "packages/data-grid/core/package.json",
+			"section": "devDependencies",
+			"name": "@types/react",
+			"before": "^19.2.14",
+			"after": "^19.3.0"
+		},
+		{
+			"file": "packages/data-grid/core/package.json",
+			"section": "devDependencies",
+			"name": "@types/react-dom",
+			"before": "^19.2.3",
+			"after": "^19.3.0"
+		},
+		{
+			"file": "packages/data-grid/core/package.json",
+			"section": "devDependencies",
+			"name": "react",
+			"before": "^19.2.4",
+			"after": "^19.3.1"
+		},
+		{
+			"file": "packages/data-grid/core/package.json",
+			"section": "devDependencies",
+			"name": "react-dom",
+			"before": "^19.2.4",
+			"after": "^19.3.1"
+		},
+		{
+			"file": "packages/data-grid/core/package.json",
+			"section": "devDependencies",
+			"name": "zod",
+			"before": "^4.3.6",
+			"after": "^4.6.7"
+		},
+		{
+			"file": "packages/va-store/package.json",
+			"section": "devDependencies",
+			"name": "@types/react",
+			"before": "^19.2.14",
+			"after": "^19.3.0"
+		},
+		{
+			"file": "packages/va-store/package.json",
+			"section": "devDependencies",
+			"name": "@types/react-dom",
+			"before": "^19.2.3",
+			"after": "^19.3.0"
+		},
+		{
+			"file": "packages/va-store/package.json",
+			"section": "devDependencies",
+			"name": "fake-indexeddb",
+			"before": "^6.2.5",
+			"after": "^6.2.7"
+		},
+		{
+			"file": "packages/va-store/package.json",
+			"section": "devDependencies",
+			"name": "next",
+			"before": "16.3.5",
+			"after": "16.4.4"
+		},
+		{
+			"file": "packages/va-store/package.json",
+			"section": "devDependencies",
+			"name": "react",
+			"before": "^19.2.4",
+			"after": "^19.3.1"
+		},
+		{
+			"file": "packages/va-store/package.json",
+			"section": "devDependencies",
+			"name": "react-dom",
+			"before": "^19.2.4",
+			"after": "^19.3.1"
+		},
+		{
+			"file": "packages/va-store/package.json",
+			"section": "devDependencies",
+			"name": "react-router",
+			"before": "^7.9.0",
+			"after": "^8.5.1"
+		},
+		{
+			"file": "packages/va-store/package.json",
+			"section": "devDependencies",
+			"name": "zod",
+			"before": "^4.3.6",
+			"after": "^4.6.7"
+		},
+		{
+			"file": "packages/form/core/package.json",
+			"section": "devDependencies",
+			"name": "@tanstack/form-core",
+			"before": "^1.33.2",
+			"after": "^1.33.5"
+		}
+	],
+	"changedDependencyCount": 78,
+	"auditAfter": {
+		"vulnerabilities": {
+			"info": 0,
+			"low": 1,
+			"moderate": 1,
+			"high": 0,
+			"critical": 0
+		},
+		"dependencies": 1357,
+		"devDependencies": 0,
+		"optionalDependencies": 0,
+		"totalDependencies": 1357
+	},
+	"remainingAdvisories": [
+		{
+			"package": "deepmerge",
+			"severity": "low",
+			"title": "deepmerge mergeObject() allows prototype poisoning of returned objects",
+			"url": "https://github.com/advisories/GHSA-gcqx-w48m-w2h4",
+			"patchedVersions": "<0.0.0",
+			"paths": [".>shadcn>deepmerge"],
+			"resolution": "No patched release is available."
+		},
+		{
+			"package": "minimatch",
+			"severity": "moderate",
+			"title": "minimatch has potential denial of service via globparts amplification",
+			"url": "https://github.com/advisories/GHSA-g3hv-75wg-m249",
+			"patchedVersions": ">=11.0.1",
+			"paths": [".>eslint>minimatch"],
+			"resolution": "ESLint 9 uses the function-exporting minimatch 3 API; forcing minimatch 11 would break it. ESLint 10 is outside the supported peer ranges of the current lint plugins."
+		}
+	],
+	"sources": [
+		"https://vitest.dev/guide/migration/",
+		"https://v4.vitest.dev/guide/migration.html",
+		"https://www.typescriptlang.org/docs/handbook/release-notes/typescript-6-0.html",
+		"https://vite.dev/guide/migration.html"
+	],
+	"toolchain": {
+		"node": {
+			"before": "22.18.0",
+			"after": "22.23.4"
+		},
+		"pnpm": {
+			"before": "10.18.0",
+			"after": "10.34.9"
+		}
+	},
+	"migrations": [
+		"TypeScript 6: remove baseUrl, make paths relative, preserve docs absolute imports with an explicit mapping, enable esModuleInterop and declare Node/Vitest DOM types.",
+		"Vitest 4: use maxWorkers, type console spies explicitly, update deprecated assertions.",
+		"Vite 8: use Oxc JSX options and pre-transform standard decorators with esbuild until Oxc can lower them.",
+		"dnd-kit 0.5: pass constraint instances to PointerSensor and use preventActivation in keyboard sensor tests.",
+		"Keep immutable shadcn primitives intact through scoped lint configuration.",
+		"Changesets 3: explicitly retain versioning of private packages and disable their tags, preserving the Changesets 2 defaults."
+	],
+	"validation": {
+		"packageBuild": "passed: 15 tasks",
+		"registryBuild": "passed",
+		"lint": "passed",
+		"typecheck": "passed: 30 tasks",
+		"tests": {
+			"status": "passed",
+			"files": 389,
+			"tests": 4904
+		},
+		"react18": {
+			"status": "passed",
+			"files": 189,
+			"tests": 2256
+		},
+		"size": {
+			"status": "passed",
+			"command": "pnpm size",
+			"tasks": 32
+		},
+		"frozenInstall": "passed with pnpm 10.34.9",
+		"changesetStatus": "passed",
+		"docsProductionBuild": {
+			"status": "passed",
+			"command": "pnpm build",
+			"tasks": 16
+		},
+		"browserSuite": {
+			"status": "passed",
+			"command": "CI=1 PW_PORT=3388 pnpm --filter @ez-kit/docs exec playwright test --grep-invert @smoke",
+			"projects": {
+				"docs": {
+					"passed": 13,
+					"skipped": 0,
+					"failed": 0,
+					"flaky": 0
+				},
+				"shadcn": {
+					"passed": 398,
+					"skipped": 3,
+					"failed": 0,
+					"flaky": 0
+				},
+				"heroui": {
+					"passed": 396,
+					"skipped": 5,
+					"failed": 0,
+					"flaky": 0
+				}
+			},
+			"passed": 807,
+			"skipped": 8,
+			"failed": 0,
+			"flaky": 0,
+			"durationMs": 740309,
+			"retriesUsed": 0,
+			"excluded": "@smoke (same suite as the CI gate)",
+			"skippedTests": [
+				{
+					"project": "heroui",
+					"test": "the caret stays in the grid at the first row",
+					"reasons": ["heroui's edge behaviour is React Aria's"]
+				},
+				{
+					"project": "heroui",
+					"test": "the grid is one tab stop, whatever the row count",
+					"reasons": ["heroui brings React Aria's own focus manager"]
+				},
+				{
+					"project": "shadcn",
+					"test": "arrows move focus between rows when nothing is being dragged",
+					"reasons": ["only the HeroUI panel is a react-aria collection with row navigation"]
+				},
+				{
+					"project": "shadcn",
+					"test": "reaches the grip with the keyboard alone and drags from it",
+					"reasons": ["only the HeroUI panel is a react-aria collection with row navigation"]
+				},
+				{
+					"project": "shadcn",
+					"test": "Escape closes the panel and hides nothing",
+					"reasons": ["only the HeroUI panel is a react-aria collection with a selection"]
+				},
+				{
+					"project": "heroui",
+					"test": "Alt+Arrow during a keyboard drag moves the row exactly once",
+					"reasons": ["Alt+Arrow row reordering does not reach heroui — React Aria's Row forwards no onKeyDown (#223)"]
+				},
+				{
+					"project": "heroui",
+					"test": "arrows move the caret, and stand down while a drag is in flight",
+					"reasons": ["heroui brings React Aria's own focus manager, not the package's"]
+				},
+				{
+					"project": "heroui",
+					"test": "RECORDED: two Enters on a drag cell start a drag",
+					"reasons": ["heroui brings React Aria's own focus manager, not the package's"]
+				}
+			],
+			"htmlReport": "apps/docs/playwright-report/index.html"
+		}
+	}
+}

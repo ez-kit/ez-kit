@@ -72,8 +72,6 @@ export {
  * Re-exporting the members individually is the real answer and is a decision for the PR that
  * documents feature composition, not for the one that makes core compile.
  */
-// The re-export is what the rule fires on; the reasoning is the docblock directly above.
-// eslint-disable-next-line @typescript-eslint/no-deprecated
 export { aggregationFns, filterFns, sortFns } from '@tanstack/table-core'
 
 // The row-model factories. Each belongs in the feature set beside the feature that consumes it.

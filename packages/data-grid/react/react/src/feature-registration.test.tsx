@@ -6,13 +6,14 @@ import { NARROW_TEST_FEATURES, TEST_FEATURES } from './test-utils'
 import { useDataGrid } from './use-data-grid'
 
 import type { GridFeatures } from './types'
+import type { MockInstance } from 'vitest'
 
 type User = { id: number; name: string }
 
 const USERS: User[] = [{ id: 1, name: 'Alice' }]
 const COLUMNS = createColumns<User>([{ accessorKey: 'name', header: 'Name' }])
 
-let warn: ReturnType<typeof vi.spyOn>
+let warn: MockInstance<typeof console.warn>
 
 beforeEach(() => {
 	warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)

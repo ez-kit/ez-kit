@@ -1,5 +1,5 @@
 /// <reference types="@testing-library/jest-dom" />
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { useState } from 'react'
 import { expect, test, vi } from 'vitest'
 
@@ -43,7 +43,7 @@ test('locked flavor renders that kit and hides the tab switcher', () => {
 	expect(screen.queryByRole('tab')).not.toBeInTheDocument()
 })
 
-test('switching tabs drives the ExampleFrame kit', () => {
+test('switching tabs drives the ExampleFrame kit', async () => {
 	render(
 		<KitExampleClient
 			exampleId='base-sorting'
@@ -57,6 +57,8 @@ test('switching tabs drives the ExampleFrame kit', () => {
 
 	fireEvent.click(screen.getByRole('tab', { name: /heroui/i }))
 
-	expect(screen.getByTestId('frame').getAttribute('data-kit')).toBe('heroui')
+	await waitFor(() => {
+		expect(screen.getByTestId('frame').getAttribute('data-kit')).toBe('heroui')
+	})
 	expect(screen.getByTestId('frame').getAttribute('data-slug')).toBe('base-sorting')
 })
