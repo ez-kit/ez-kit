@@ -1,6 +1,23 @@
 html,
 body {
 	margin: 0;
+}
+
+/* The browser paints a transparent iframe document white, even in dark mode.
+   Match the documentation's inset surface so example text remains readable. */
+html {
+	background: #fff;
+}
+
+html.dark {
+	background: #171717;
+}
+
+html.dark[data-surface='landing'] {
+	background: #09090b;
+}
+
+body {
 	background: transparent;
 }
 

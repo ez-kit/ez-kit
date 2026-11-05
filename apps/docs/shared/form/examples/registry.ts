@@ -28,6 +28,7 @@ export const exampleModules: Record<string, () => Promise<Record<string, Compone
 	'components/fields-schema.tsx': () => import('./components/fields-schema'),
 	'components/fields.tsx': () => import('./components/fields'),
 	'components/layout-schema.tsx': () => import('./components/layout-schema'),
+	'components/landing.tsx': () => import('./components/landing'),
 	'components/layout.tsx': () => import('./components/layout'),
 	'components/multi-value-jsx.tsx': () => import('./components/multi-value-jsx'),
 	'components/multi-value.tsx': () => import('./components/multi-value'),
