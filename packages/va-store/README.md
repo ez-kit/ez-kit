@@ -12,9 +12,9 @@ pnpm add @ez-kit/va-store valtio
 
 ### `createContextStore(factory)`
 
-Wraps a Valtio proxy in React context. Returns `Provider`, `useSnapshot`, `useStore`, `Subscribe`, and `Store`. Multiple `Provider` instances are fully independent.
+Wraps a Valtio proxy in React context. Returns `Provider`, `useSnapshot`, `useSelector`, `useStore`, `Subscribe`, and `Store`. Multiple `Provider` instances are fully independent.
 
-Unlike `@ez-kit/zu-store`, there are no selectors — Valtio tracks accessed properties automatically. Read from `useSnapshot()`, mutate the raw proxy from `useStore()`.
+Read from `useSnapshot()` for automatic property tracking, or `useSelector()` to re-render only when a selected result changes. Mutate the raw proxy from `useStore()`.
 
 The two components mirror the two hooks: `Subscribe` is the render-prop form of `useSnapshot()` (`(snap, store)`), `Store` the render-prop form of `useStore()` — it hands over the raw proxy without subscribing, so store mutations never re-render it.
 
@@ -36,6 +36,31 @@ const state = counter.useStore() // write → state.count += 1
 ```
 
 → [Full docs](https://ez-kit-docs.vercel.app/docs/va-store/create-context-store)
+
+### Selectors
+
+```tsx
+import { shallowEqual, useSelector } from '@ez-kit/va-store'
+
+// Any Valtio proxy, including a nested proxy:
+const positive = useSelector(state, s => s.count > 0)
+
+// The proxy from the nearest counter.Provider:
+const count = counter.useSelector(s => s.count)
+const summary = counter.useSelector(s => ({ count: s.count }), { isEqual: shallowEqual })
+
+<counter.Subscribe selector={s => s.count > 0}>
+  {(positive, store) => <button onClick={() => { store.count++ }}>{String(positive)}</button>}
+</counter.Subscribe>
+```
+
+Selectors receive a readonly snapshot and support inline functions, including closures over props.
+Results use `Object.is` by default. Fresh objects and arrays are cached per snapshot; pass
+`{ isEqual: shallowEqual }` to also skip equivalent results across store changes. Equal results keep
+the previous reference. Selectors must be pure; write through the raw proxy instead.
+`Subscribe` accepts `selector` and an optional `isEqual` prop; without `selector`, it keeps Valtio's
+automatic property tracking. Parent renders can still render selector consumers.
+The same `useSelector` and `Subscribe` API is available on cached stores.
 
 ### `createCachedStore(factory, options)` / `createStoreCache(options?)`
 

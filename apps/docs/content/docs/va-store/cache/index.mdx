@@ -68,7 +68,7 @@ function UsersTable() {
 }
 ```
 
-`useSnapshot()`, `useStore()`, `Subscribe`, and `Store` behave exactly like [`createContextStore`](./create-context-store): read from the snapshot, mutate the proxy. There are no selectors — reading is `useSnapshot()`, writing is `useStore()`, and `Store` is the write-only slot that never subscribes.
+`useSnapshot()`, `useStore()`, `Subscribe`, and `Store` behave exactly like [`createContextStore`](./create-context-store): read from the snapshot, mutate the proxy. For result-based subscriptions, use `useSelector(selector, options?)` or `<Subscribe selector={selector} isEqual={shallowEqual}>`. Writing is `useStore()`, and `Store` is the write-only slot that never subscribes.
 
 ## How it stays alive
 

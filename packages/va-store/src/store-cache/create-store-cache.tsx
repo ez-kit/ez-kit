@@ -3,6 +3,8 @@ import { type ReactElement } from 'react'
 import { proxy, type Snapshot } from 'valtio'
 
 import { PACKAGE_TAG } from '../package-tag'
+import { useSelector as useProxySelector, type UseSelectorOptions } from '../use-selector'
+import { ProxySubscribe, type SubscribeComponent, type SubscribeProps } from '../use-selector/subscribe'
 
 import { useRead } from './use-read'
 
@@ -27,10 +29,10 @@ const MULTIPLE_PROVIDERS_WARNING =
 	`${PACKAGE_TAG} Multiple <cache.Provider> instances are mounted concurrently for the same createStoreCache. ` +
 	'Imperative access via getFromCache/remove targets the most recently activated cache and is ambiguous in this state.'
 
-export type CachedSubscribeProps<TState extends object> = {
-	/** Receives the auto-tracked snapshot for reads and, second, the raw proxy for writes. */
-	children: (snap: Snapshot<TState>, store: TState) => ReactElement
-}
+export type CachedSubscribeProps<TState extends object, TSelected = Snapshot<TState>> = SubscribeProps<
+	TState,
+	TSelected
+>
 
 export type CachedStoreProps<TState extends object> = {
 	children: (store: TState) => ReactElement
@@ -47,8 +49,13 @@ export type CachedStoreGroup<TState extends object, TDefaultValue extends object
 	useSnapshot: () => Snapshot<TState>
 	/** Returns the raw, mutable Valtio proxy for this group's entry. Mutate it directly; never re-renders. */
 	useStore: () => TState
-	/** Render-prop receiving `(snap, store)`, mirroring `createContextStore`'s `Subscribe`. */
-	Subscribe: (props: CachedSubscribeProps<TState>) => ReactElement
+	/** Selects from this entry snapshot with result equality (Object.is by default). */
+	useSelector: <TSelected>(
+		selector: (snap: Snapshot<TState>) => TSelected,
+		options?: UseSelectorOptions<TSelected>,
+	) => TSelected
+	/** Render-prop receiving `(snapshotOrSelection, store)`, mirroring the context store. */
+	Subscribe: SubscribeComponent<TState>
 	/**
 	 * Write-only render-prop receiving the raw proxy, mirroring `createContextStore`'s `Store`.
 	 * Does not subscribe, so store mutations never re-render its children.
@@ -108,8 +115,20 @@ export function createStoreCache(options: Parameters<typeof createCacheReact>[1]
 			return group.useInstance() as TState
 		}
 
-		function Subscribe({ children }: CachedSubscribeProps<TState>): ReactElement {
-			return children(useSnapshot(), useStore())
+		function useSelector<TSelected>(
+			selector: (snap: Snapshot<TState>) => TSelected,
+			selectorOptions?: UseSelectorOptions<TSelected>,
+		): TSelected {
+			return useProxySelector(useStore(), selector, selectorOptions)
+		}
+
+		function Subscribe<TSelected>(props: CachedSubscribeProps<TState, TSelected>): ReactElement {
+			return (
+				<ProxySubscribe
+					{...props}
+					store={useStore()}
+				/>
+			)
 		}
 
 		function Store({ children }: CachedStoreProps<TState>): ReactElement {
@@ -135,6 +154,7 @@ export function createStoreCache(options: Parameters<typeof createCacheReact>[1]
 			Provider: group.Provider,
 			useSnapshot,
 			useStore,
+			useSelector,
 			Subscribe,
 			Store,
 			getFromCache,
