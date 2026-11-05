@@ -1,5 +1,23 @@
 # @ez-kit/data-grid-core
 
+## 0.16.0
+
+### Minor Changes
+
+- dc39509: Translate the whole grid with one dictionary, and ship English and Russian ones.
+
+  - The ready-made filter operators are labelled from `messages.operators`: `common` by id, plus `date` and `boolean` for the wordings that differ ("After", "Is"). A definition's own `label` always wins, and the group is named on the definition (`labels: 'date'`), so a cell type built from the date set reads "After" too.
+  - `messages` is exported from each of `@ez-kit/data-grid-core/messages/en` and `/ru`, each the whole `GridMessages`.
+  - A record inside a dictionary group (`filtering.presets`, `operators.common`) now merges entry by entry, so overriding one preset keeps the others.
+
+  **Breaking:** `FilterOperatorDef.label` is optional and the definitions in `defaultOperators` carry none — read a ready-made operator's label with `resolveOperatorLabel(def, messages.operators)`. A translated copy of `defaultOperators` keeps working, since an explicit `label` wins; `messages.operators` replaces it.
+
+### Patch Changes
+
+- 53c2de3: Update the TanStack, React, UI and documentation dependencies and refresh build and test tooling. Fix vulnerable transitive dependencies where compatible patched releases are available.
+
+  The optional data-grid drag adapters now require `@dnd-kit/react` and `@dnd-kit/dom` ^0.5.3. Update both packages when using the HeroUI `/dnd` entry or the shadcn drag registry item.
+
 ## 0.15.0
 
 ### Minor Changes
