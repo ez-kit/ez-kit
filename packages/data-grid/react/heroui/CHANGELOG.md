@@ -1,5 +1,15 @@
 # @ez-kit/data-grid-heroui
 
+## 0.14.1
+
+### Patch Changes
+
+- f6619f9: Add the optional `@ez-kit/data-grid-react/dnd-kit` entry and share its adapter between UI kits. Preserve existing kit adapter exports and the shadcn drag registry item while keeping drag peers optional for ordinary grids.
+- Updated dependencies [f6619f9]
+- Updated dependencies [f6619f9]
+  - @ez-kit/data-grid-core@0.16.1
+  - @ez-kit/data-grid-react@0.18.0
+
 ## 0.14.0
 
 ### Minor Changes
