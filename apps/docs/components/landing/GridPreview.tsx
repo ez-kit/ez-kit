@@ -14,7 +14,7 @@ export function GridPreview() {
 			<div className='flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800'>
 				<div>
 					<p className='text-sm font-semibold text-zinc-900 dark:text-white'>One grid, your UI</p>
-					<p className='text-xs text-zinc-500 dark:text-zinc-400'>Try sorting a column</p>
+					<p className='text-xs text-zinc-500 dark:text-zinc-400'>Interactive preview · try sorting a column</p>
 				</div>
 				<div
 					aria-label='Choose a UI kit'
