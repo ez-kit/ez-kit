@@ -828,8 +828,8 @@ describe.each(PACKAGES)('$name', ({ entry, shakeable, cases }) => {
  * Reachability from the root's full surface is the property that actually differs, so that is what
  * is asserted.
  */
-describe.each(['heroui', 'shadcn'])('@ez-kit/data-grid-%s and the optional drag peer', (kit) => {
-	const DND_ENTRY = subpathEntryOf(`data-grid/react/${kit}`, 'dnd.js')
+describe.each(['react', 'heroui', 'shadcn'])('@ez-kit/data-grid-%s and the optional drag peer', (kit) => {
+	const DND_ENTRY = subpathEntryOf(`data-grid/react/${kit}`, kit === 'react' ? 'dnd-kit/index.js' : 'dnd.js')
 	const DRAG_LIBRARY = '@dnd-kit'
 
 	/*
@@ -841,17 +841,20 @@ describe.each(['heroui', 'shadcn'])('@ez-kit/data-grid-%s and the optional drag 
 	 */
 	const KIT_ENTRIES = Object.entries(
 		(
-			JSON.parse(readFileSync(resolve(REPO_ROOT, 'packages/data-grid/react/heroui/package.json'), 'utf8')) as {
+			JSON.parse(readFileSync(resolve(REPO_ROOT, `packages/data-grid/react/${kit}/package.json`), 'utf8')) as {
 				exports: Record<string, { import?: string } | string>
 			}
 		).exports,
 	)
-		.filter(([subpath, target]) => subpath !== './dnd' && typeof target === 'object' && target.import)
+		.filter(
+			([subpath, target]) =>
+				subpath !== './dnd' && subpath !== './dnd-kit' && typeof target === 'object' && target.import,
+		)
 		.map(
 			([subpath, target]) =>
 				[
 					subpath,
-					resolve(REPO_ROOT, 'packages/data-grid/react/heroui', (target as { import: string }).import),
+					resolve(REPO_ROOT, `packages/data-grid/react/${kit}`, (target as { import: string }).import),
 				] as const,
 		)
 
@@ -869,6 +872,10 @@ describe.each(['heroui', 'shadcn'])('@ez-kit/data-grid-%s and the optional drag 
 		const code = await bundledCodeOf(DND_ENTRY, ['adapter'])
 
 		expect(code).toContain(DRAG_LIBRARY)
+		expect(code).not.toContain('allDataGridFeatures')
+		expect(code).not.toContain('filter-panel')
+		expect(code).not.toContain('@heroui/react')
+		expect(code).not.toContain('lucide-react')
 	})
 
 	/*
@@ -885,4 +892,12 @@ describe.each(['heroui', 'shadcn'])('@ez-kit/data-grid-%s and the optional drag 
 		// pattern would never match and this assertion would pass on an inlined library too.
 		expect(code).not.toMatch(/(?:var|const|let)\s+Sortable\s*=\s*class|class\s+Sortable\b/)
 	})
+})
+
+it('classifies the dedicated shared adapter entry without the grid compound', async () => {
+	const entry = subpathEntryOf('data-grid/react/react', 'dnd-kit/index.js')
+	expect(await entryPointsPulledBy(entry, ['adapter'])).toEqual([
+		'@ez-kit/data-grid-react',
+		'@ez-kit/data-grid-react/dnd-kit',
+	])
 })

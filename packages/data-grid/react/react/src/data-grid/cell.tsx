@@ -31,6 +31,7 @@ import { useCellNavigationProps } from './keyboard-navigation'
 import { RowDragHandle } from './row-drag-handle'
 import { useDataGridTable, useDataGridState } from './table-context'
 import { useCellFlash } from './use-cell-flash'
+import { useGridEventListener, useGridEventRoot } from './use-grid-event-listener'
 import { columnNameOf, VisuallyHiddenLabel } from './visually-hidden'
 
 import type { CellTypeRegistry, CellViewProps } from '../cell-types-context'
@@ -777,27 +778,10 @@ function EditingCell<TRow extends object>({ cell, row, editMode, cellId, chrome,
 	// custom `editing.component` inherits the behaviour without wiring anything. Only ever one cell
 	// edit is open, and this effect lives exactly as long as it does.
 	const isCellEdit = editMode === EditingMode.Cell
-	useEffect(() => {
-		if (!isCellEdit) return undefined
-
-		// `blur` is deliberately NOT the commit trigger. React-aria's grid moves DOM focus from the
-		// input to the cell itself on pointer-down, so a blur fires *inside* the cell before the
-		// press completes: the switch of a boolean column committed and closed without ever
-		// toggling. What ends the edit is the pointer or focus landing somewhere else entirely.
-		const isInsideEdit = (target: EventTarget | null): boolean => {
-			if (!(target instanceof Element)) return false
-			// An overlay belonging to the editor — a select's listbox, a date picker's dialog —
-			// renders in a portal outside the cell, so it has to count as inside.
-			return target.closest(`[${EDITING_CELL_ATTR}], ${OVERLAY_SELECTOR}`) !== null
-		}
-
-		const commitOnLeave = (event: Event): void => {
-			if (isInsideEdit(event.target)) return
-			void table.editing.commitCell()
-		}
-
-		const onKeyDown = (event: globalThis.KeyboardEvent): void => {
-			// Already handled by something nearer the user — a select popover closing on Escape.
+	const getGridRoot = useGridEventRoot()
+	useGridEventListener(
+		'keydown',
+		(event) => {
 			if (event.defaultPrevented) return
 			if (event.key === 'Enter') {
 				event.preventDefault()
@@ -806,26 +790,27 @@ function EditingCell<TRow extends object>({ cell, row, editMode, cellId, chrome,
 				event.preventDefault()
 				table.editing.cancel()
 			}
+		},
+		{ enabled: isCellEdit },
+	)
+
+	const commitOnLeave = (event: Event): void => {
+		const target = event.target
+		if (target instanceof Element) {
+			const editCell = getGridRoot()?.querySelector(`[${EDITING_CELL_ATTR}]`)
+			if (editCell?.contains(target) || target.closest(OVERLAY_SELECTOR) !== null) return
 		}
-
-		document.addEventListener('keydown', onKeyDown)
-		document.addEventListener('pointerdown', commitOnLeave, true)
-		document.addEventListener('focusin', commitOnLeave, true)
-
-		// The opened cell takes the caret, so Enter and Escape reach it without a click first. The
-		// kit's own edit component is focused here rather than given an `autoFocus` prop, which the
-		// cell-type contract does not carry — only the fallback `Input` below ever had one.
-		const cellEl = document.querySelector(`[${EDITING_CELL_ATTR}]`)
+		void table.editing.commitCell()
+	}
+	useGridEventListener('pointerdown', commitOnLeave, { enabled: isCellEdit, capture: true, outside: true })
+	useGridEventListener('focusin', commitOnLeave, { enabled: isCellEdit, capture: true, outside: true })
+	useEffect(() => {
+		if (!isCellEdit) return
+		const cellEl = getGridRoot()?.querySelector(`[${EDITING_CELL_ATTR}]`)
 		if (cellEl && !cellEl.contains(document.activeElement)) {
 			cellEl.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)?.focus()
 		}
-
-		return () => {
-			document.removeEventListener('keydown', onKeyDown)
-			document.removeEventListener('pointerdown', commitOnLeave, true)
-			document.removeEventListener('focusin', commitOnLeave, true)
-		}
-	}, [isCellEdit, table])
+	}, [isCellEdit, getGridRoot])
 
 	/** The column's header text — this control's accessible name while the cell is being edited. */
 	const fieldName = columnNameOf(cell.column.columnDef.header, columnId)

@@ -11,6 +11,9 @@ step at a time**, which nobody uses to move a column six places. Drag is the fou
 It is **opt-in and composed** — there is no `<DataGrid dnd>` prop and neither kit's prebuilt grid
 carries it, so a grid that does not name it pays nothing.
 
+Both kit entries re-export the optional `@ez-kit/data-grid-react/dnd-kit` implementation.
+Custom mechanics continue to use the library-independent `DndAdapter` contract.
+
 ## shadcn
 
 The adapter is a [registry item of its own](/docs/data-grid/installation/shadcn), so the plain
@@ -50,7 +53,7 @@ is installed. Unused, the adapter costs no bundle bytes either way.
 `@dnd-kit/react` is an **optional peer** — install it only if you want drag:
 
 ```bash
-pnpm add @dnd-kit/react
+pnpm add @dnd-kit/react@^0.5.3 @dnd-kit/dom@^0.5.3
 ```
 
 ```tsx title="src/lib/data-grid.tsx"
@@ -67,7 +70,7 @@ export const { DataGrid } = createDataGrid({
 })
 ```
 
-The peer range is pinned to `0.1.x` on purpose: a minor release of that library before its own 1.0
+The peer range is pinned to `^0.5.3` on purpose: a minor release of that library before its own 1.0
 is free to rename what the adapter reads, and a mismatch would otherwise fail silently rather than at
 install.
 

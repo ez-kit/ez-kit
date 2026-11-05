@@ -2,9 +2,9 @@
  * The drag-and-drop **port**: what a UI kit's adapter implements, and the only vocabulary this
  * package uses to talk about dragging.
  *
- * This package ships no implementation and names no drag library. The mechanics arrive from a
- * kit subpath (`@ez-kit/data-grid-<kit>/dnd`) with the drag library as an *optional* peer, and
- * reach a grid through `createDataGrid({ dnd: adapter })` — see {@link DndAdapter}.
+ * The root entry exports the library-independent contract. The optional
+ * `@ez-kit/data-grid-react/dnd-kit` entry supplies the implementation re-exported by both kits.
+ * It reaches a grid through `createDataGrid({ dnd: adapter })` — see {@link DndAdapter}.
  *
  * **On the no-styles rule.** A drag library applies its own transforms as inline styles on the
  * elements the refs below land on. That is not a violation of the rule AGENTS.md states for this

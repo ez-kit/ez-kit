@@ -231,3 +231,23 @@ describe('the data-grid-dnd registry payload', () => {
 		expect(new URL(registryDependencies[0] ?? '').pathname).toBe(`/r/${GRID_ITEM}.json`)
 	})
 })
+
+describe('shared adapter delivery', () => {
+	it('aligns both optional peers across React and the two kits', () => {
+		for (const kit of ['react', 'heroui', 'shadcn']) {
+			const pkg = JSON.parse(
+				readFileSync(resolve(__dirname, `../../../packages/data-grid/react/${kit}/package.json`), 'utf8'),
+			) as { peerDependencies: Record<string, string>; peerDependenciesMeta: Record<string, { optional: boolean }> }
+			for (const name of ['@dnd-kit/react', '@dnd-kit/dom']) {
+				expect(pkg.peerDependencies[name]).toBe(peerRange(name))
+				expect(pkg.peerDependenciesMeta[name]?.optional).toBe(true)
+			}
+		}
+	})
+	it('ships a compatibility wrapper targeting the optional shared entry', () => {
+		const payload = readPayload(DND_ITEM)
+		expect(payload.files).toHaveLength(1)
+		expect(payload.files[0]?.content).toContain("from '@ez-kit/data-grid-react/dnd-kit'")
+		expect(payload.files[0]?.content).not.toContain('useSortable(')
+	})
+})

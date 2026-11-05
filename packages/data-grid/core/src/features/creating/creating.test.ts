@@ -748,6 +748,38 @@ describe('creatingFeature — default values', () => {
 })
 
 describe('creatingFeature — commit with values and a result', () => {
+	it('allows the persistent creating row to commit without start', async () => {
+		const onSave = vi.fn()
+		const table = createTable({
+			features: CREATING,
+			data: DATA,
+			columns: COLUMNS,
+			creating: { mode: 'pin-row', onSave },
+		})
+		table.creating.setValue('name', 'B')
+		await expect(table.creating.commit()).resolves.toEqual({ ok: true })
+		expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ values: { name: 'B' } }))
+	})
+
+	it('does not save a closed modal, including after cancel and after a successful save', async () => {
+		const onSave = vi.fn()
+		const table = createTable({
+			features: CREATING,
+			data: DATA,
+			columns: COLUMNS,
+			creating: { mode: 'modal', onSave },
+		})
+		await expect(table.creating.commit()).resolves.toEqual({ ok: false, reason: 'closed' })
+		table.creating.start()
+		table.creating.cancel()
+		await expect(table.creating.commit({ values: { name: 'B' } })).resolves.toEqual({ ok: false, reason: 'closed' })
+		expect(onSave).not.toHaveBeenCalled()
+		table.creating.start()
+		await expect(table.creating.commit()).resolves.toEqual({ ok: true })
+		await expect(table.creating.commit()).resolves.toEqual({ ok: false, reason: 'closed' })
+		expect(onSave).toHaveBeenCalledTimes(1)
+	})
+
 	it('writes the passed values into the slice and sends them, unknown keys included, to onSave', async () => {
 		const onSave = vi.fn().mockResolvedValue(undefined)
 		const table = createTable({ features: CREATING, data: DATA, columns: COLUMNS, creating: { onSave } })
