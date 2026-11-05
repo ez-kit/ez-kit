@@ -6,7 +6,7 @@ import { PackageCards } from '@/components/landing/PackageCards'
 
 export default function LandingPage() {
 	return (
-		<main>
+		<div>
 			<Hero />
 			<FormShowcase />
 			<PackageCards />
@@ -62,6 +62,6 @@ export default function LandingPage() {
 					</Link>
 				</div>
 			</section>
-		</main>
+		</div>
 	)
 }

@@ -65,6 +65,16 @@ const INITIAL: Quote[] = [
 	},
 ]
 
+// Seed each sparkline with plausible prices that end at the displayed quote. Subsequent
+// points are the actual simulated prices, so the line and the price always move together.
+const INITIAL_QUOTES = INITIAL.map((quote) => ({
+	...quote,
+	trend: quote.trend.map(
+		(point) => Math.round((quote.price + (point - (quote.trend.at(-1) ?? point)) * 0.2) * 100) / 100,
+	),
+}))
+const REFERENCE_PRICES = new Map(INITIAL.map((quote) => [quote.id, quote.price / (1 + quote.change / 100)]))
+
 function SymbolCell({ row }: CellViewCtx<Quote, string>) {
 	return (
 		<span className='flex flex-col'>
@@ -82,7 +92,11 @@ function ChangeCell({ value }: CellViewCtx<Quote, number>) {
 	)
 }
 function TrendCell({ value }: CellViewCtx<Quote, number[]>) {
-	const points = value.map((point, index) => `${String(index * 10)},${String(40 - point)}`).join(' ')
+	const min = Math.min(...value)
+	const range = Math.max(Math.max(...value) - min, 0.01)
+	const points = value
+		.map((point, index) => `${String(index * 10)},${String(36 - ((point - min) / range) * 32)}`)
+		.join(' ')
 	return (
 		<svg
 			viewBox='0 0 70 40'
@@ -123,25 +137,27 @@ const columns = createColumns<Quote>([
 ])
 
 export function LandingQuotesExample() {
-	const [quotes, setQuotes] = useState(INITIAL)
+	const [quotes, setQuotes] = useState(INITIAL_QUOTES)
 
 	useEffect(() => {
 		const timer = window.setInterval(() => {
+			// Draw random values outside the state updater, which React may replay.
+			const movements = INITIAL.map(() => ({
+				delta: (Math.random() < 0.5 ? -1 : 1) * (0.3 + Math.random() * 1.2),
+				volume: 1 + Math.floor(Math.random() * 100),
+			}))
 			setQuotes((previous) => {
-				return previous.map((quote) => {
-					const lastPoint = quote.trend.at(-1) ?? 20
-					const direction = lastPoint >= 34 ? -1 : lastPoint <= 6 ? 1 : Math.random() < 0.5 ? -1 : 1
-					const delta = direction * (0.3 + Math.random() * 1.2)
-					const nextPoint = Math.max(5, Math.min(35, lastPoint + Math.round(delta * 4)))
+				return previous.map((quote, index) => {
+					const movement = movements[index]
+					const reference = REFERENCE_PRICES.get(quote.id)
+					if (!movement || reference === undefined) return quote
+					const price = Math.max(0.01, Math.round((quote.price + movement.delta) * 100) / 100)
 					return {
 						...quote,
-						price: Math.round((quote.price + delta) * 100) / 100,
-						change: Math.round((quote.change + delta / 10) * 100) / 100,
-						volume: quote.volume + 1 + Math.floor(Math.random() * 100),
-						trend: [
-							...quote.trend.slice(1),
-							nextPoint,
-						],
+						price,
+						change: Math.round((price / reference - 1) * 10000) / 100,
+						volume: quote.volume + movement.volume,
+						trend: [...quote.trend.slice(1), price],
 					}
 				})
 			})

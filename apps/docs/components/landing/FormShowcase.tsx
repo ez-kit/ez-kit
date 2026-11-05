@@ -64,6 +64,7 @@ export function FormShowcase() {
 					<div className='flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 bg-zinc-50 px-5 py-3 dark:border-zinc-800 dark:bg-zinc-900'>
 						<span className='text-sm font-semibold'>Create your workspace</span>
 						<div
+							role='group'
 							aria-label='Form representation'
 							className='flex gap-1 rounded-lg bg-zinc-200/70 p-1 dark:bg-zinc-800'
 						>
@@ -87,20 +88,31 @@ export function FormShowcase() {
 						</div>
 					</div>
 					<div className='grid lg:grid-cols-2'>
-						<div className='p-5 sm:p-7'>
+						<div className='bg-white p-5 dark:bg-zinc-950 sm:p-7'>
 							<ExampleFrame
 								key={mode}
 								kit='shadcn'
+								surface='landing'
 								slug={mode === 'jsx' ? 'form-landing' : 'form-landing-schema'}
 							/>
 						</div>
 						<div className='min-w-0 border-t border-zinc-200 bg-[#181522] p-5 text-violet-100 lg:border-t-0 lg:border-l dark:border-zinc-800'>
 							<p className='mb-4 text-xs text-violet-300'>
-								{mode === 'jsx' ? 'workspace-form.tsx' : 'workspace-form.json'} · abbreviated
+								{mode === 'jsx' ? 'workspace-form.tsx' : 'workspace-form.json'} · excerpt; some defaults and props
+								omitted
 							</p>
-							<pre className='max-h-[560px] overflow-auto text-xs leading-6'>
-								<code>{mode === 'jsx' ? JSX_CODE : JSON_CODE}</code>
-							</pre>
+							<div
+								role='region'
+								// A scrollable code region must be reachable for keyboard scrolling.
+								// eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+								tabIndex={0}
+								aria-label={mode === 'jsx' ? 'JSX form code excerpt' : 'JSON schema code excerpt'}
+								className='max-h-[560px] overflow-auto rounded text-xs leading-6 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-violet-300'
+							>
+								<pre>
+									<code>{mode === 'jsx' ? JSX_CODE : JSON_CODE}</code>
+								</pre>
+							</div>
 						</div>
 					</div>
 				</div>

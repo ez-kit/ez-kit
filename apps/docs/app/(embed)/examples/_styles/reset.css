@@ -4,6 +4,14 @@ body {
 	background: transparent;
 }
 
+html[data-surface='landing'] {
+	background: #fff;
+}
+
+html.dark[data-surface='landing'] {
+	background: #09090b;
+}
+
 body {
 	font-family: Inter, ui-sans-serif, system-ui, sans-serif;
 }

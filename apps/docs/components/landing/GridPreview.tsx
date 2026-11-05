@@ -57,11 +57,12 @@ export function GridPreview() {
 					))}
 				</div>
 			</div>
-			<div className='p-2 sm:p-4'>
+			<div className='bg-white p-2 dark:bg-zinc-950 sm:p-4'>
 				<ExampleFrame
 					key={kit}
 					kit={kit}
 					slug='landing-grid'
+					surface='landing'
 				/>
 			</div>
 			<details
@@ -71,9 +72,18 @@ export function GridPreview() {
 				<summary className='cursor-pointer px-5 py-3 text-xs font-medium text-violet-200'>
 					View grid configuration · data simulation and cell renderers omitted
 				</summary>
-				<pre className='max-h-80 overflow-auto px-5 pb-5 text-xs leading-6'>
-					<code>{GRID_CODE}</code>
-				</pre>
+				{/* eslint-disable jsx-a11y/no-noninteractive-tabindex -- This scrollable code region needs keyboard access. */}
+				<div
+					role='region'
+					tabIndex={0}
+					aria-label='Data grid configuration code'
+					className='max-h-80 overflow-auto px-5 pb-5 text-xs leading-6 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-violet-300'
+				>
+					<pre>
+						<code>{GRID_CODE}</code>
+					</pre>
+				</div>
+				{/* eslint-enable jsx-a11y/no-noninteractive-tabindex */}
 			</details>
 		</div>
 	)

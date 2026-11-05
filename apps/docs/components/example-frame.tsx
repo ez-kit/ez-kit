@@ -13,9 +13,10 @@ export type ExampleFrameProps = {
 	kit: 'shadcn' | 'heroui'
 	slug: string
 	action?: ReactNode
+	surface?: 'landing'
 }
 
-export function ExampleFrame({ kit, slug, action }: ExampleFrameProps) {
+export function ExampleFrame({ kit, slug, action, surface }: ExampleFrameProps) {
 	const { resolvedTheme } = useTheme()
 	const theme = resolvedTheme === 'dark' ? 'dark' : 'light'
 	const containerRef = useRef<HTMLDivElement>(null)
@@ -72,7 +73,9 @@ export function ExampleFrame({ kit, slug, action }: ExampleFrameProps) {
 		frozenThemeRef.current = theme
 	}
 	const initialTheme = frozenThemeRef.current ?? theme
-	const src = visible ? `/examples/${kit}/${slug}?theme=${initialTheme}` : undefined
+	const src = visible
+		? `/examples/${kit}/${slug}?theme=${initialTheme}${surface ? `&surface=${surface}` : ''}`
+		: undefined
 
 	return (
 		<div
