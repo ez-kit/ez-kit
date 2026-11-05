@@ -19,6 +19,7 @@ test('package navigation is present on the landing page and documentation', asyn
 		if (path.startsWith('/docs')) {
 			await expect(header.getByRole('link', { name: 'Data Grid', exact: true })).toHaveAttribute('data-active', 'true')
 			await expect(page.locator('#nd-sidebar')).toBeVisible()
+			await expect(page.locator('#nd-sidebar > div:first-child > button[aria-haspopup="dialog"]')).toBeHidden()
 			const lastPackage = await header.getByRole('link', { name: 'twc', exact: true }).boundingBox()
 			const search = await header.locator('button[data-search-full]').boundingBox()
 			expect(lastPackage).not.toBeNull()
@@ -36,6 +37,11 @@ test('package navigation remains available on mobile', async ({ page }) => {
 	await expect(page.getByRole('link', { name: 'Form', exact: true })).toBeVisible()
 
 	await page.goto('/docs/data-grid/getting-started')
-	await page.getByRole('button', { name: 'Open Sidebar' }).click()
+	await page.locator('#nd-subnav').getByRole('button', { name: 'Open Sidebar' }).click()
 	await expect(page.getByRole('link', { name: 'Form', exact: true })).toBeVisible()
+	await expect(page.locator('#nd-sidebar-mobile > div:first-child > button[aria-haspopup="dialog"]')).toBeHidden()
+	await page.getByRole('link', { name: 'Form', exact: true }).click()
+	await expect(page).toHaveURL(/\/docs\/form$/)
+	await page.locator('#nd-subnav').getByRole('button', { name: 'Open Sidebar' }).click()
+	await expect(page.locator('#nd-sidebar-mobile').getByRole('link', { name: 'Basic concepts' })).toBeVisible()
 })

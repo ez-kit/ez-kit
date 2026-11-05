@@ -3,6 +3,16 @@
 .container {
 }
 
+/* Notebook uses the same package tabs to scope the page tree and to render a
+   dropdown. Keep the tree scoping, but use the package navigation instead. */
+.container :global(#nd-sidebar > div:first-child:has(> button[aria-haspopup='dialog'])) {
+	display: none;
+}
+
+.container :global(#nd-sidebar-mobile > div:first-child > button[aria-haspopup='dialog']) {
+	display: none;
+}
+
 /* Notebook groups the package links and actions after search. On wide screens,
    make that group transparent to flex layout so search can follow the links. */
 @media (min-width: 1024px) {
