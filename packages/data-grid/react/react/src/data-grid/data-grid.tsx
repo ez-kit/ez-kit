@@ -6,7 +6,7 @@ import {
 	featureConfig,
 	isFeatureEnabled,
 } from '@ez-kit/data-grid-core'
-import { useCallback, useMemo, useRef } from 'react'
+import { useCallback, useId, useMemo, useRef } from 'react'
 
 import { CellTypesProvider, mergeCellTypes } from '../cell-types-context'
 import { GridComponentsProvider, useGridComponents } from '../components-context'
@@ -59,6 +59,7 @@ import { SortMenuTrigger } from './sort-menu-trigger'
 import { DataGridTable } from './table'
 import { TableProvider, useDataGridTable, useDataGridState } from './table-context'
 import { Toolbar } from './toolbar'
+import { GridEventScopeContext, markGridEvent } from './use-grid-event-listener'
 import { VisibilityItem } from './visibility-item'
 import { VisibilityTrigger } from './visibility-trigger'
 
@@ -274,18 +275,25 @@ function ConfirmDialogRenderer() {
  * *providing* the components context, and cannot consume it.
  */
 function GridRoot({ children }: { children: ReactNode }) {
+	const eventScope = useId()
 	// `core.Root` is the slot; `GridRoot` is this component around it, named for what it renders
 	// rather than for the slot so the two do not collide in one scope.
 	const { Root = 'div' } = useGridComponents().core
 	const table = useDataGridTable()
 
 	return (
-		<Root
-			data-slot='grid-root'
-			className={joinClassNames(GRID_ROOT_CLASS_NAME, table.grid.layout.classNames?.root)}
-		>
-			{children}
-		</Root>
+		<GridEventScopeContext.Provider value={eventScope}>
+			<Root
+				data-slot='grid-root'
+				data-grid-event-scope={eventScope}
+				onKeyDownCapture={(event) => {
+					markGridEvent(event.nativeEvent, eventScope)
+				}}
+				className={joinClassNames(GRID_ROOT_CLASS_NAME, table.grid.layout.classNames?.root)}
+			>
+				{children}
+			</Root>
+		</GridEventScopeContext.Provider>
 	)
 }
 

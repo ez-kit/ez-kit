@@ -1149,6 +1149,9 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 	const rowControlsMode = isFeatureEnabled(rawRowOrdering) ? featureConfig(rawRowOrdering)?.controls : false
 	const rowControls = resolveReorderMode(rowControlsMode, ReorderMode.Both, canDragRows)
 
+	// Data, callbacks and controlled state remain live; only column structure is cached.
+	const [columnCache] = useState(() => new Map<string, unknown>())
+
 	// The options, built in the render body. `useTable` calls `table_setOptions` on every render,
 	// so this object must be cheap to build but need **not** be referentially stable.
 	const {
@@ -1182,6 +1185,7 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 		// atom set is provably assignable to it.
 		{
 			...(draftAtoms !== undefined ? { atoms: draftAtoms as unknown as ExternalAtoms<TFeatures> } : {}),
+			columnCache,
 			rowDrag: rowControls.drag,
 			rowStepControls: rowControls.moveControls,
 		},
@@ -1230,29 +1234,37 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 	// replaces this object.
 	const [view] = useState<DataTable<TFeatures, TRow>>(() => ({}) as DataTable<TFeatures, TRow>)
 
-	// ── jobs 2 and 3: bind the state handlers, and subscribe `config.onStateChange` ──
-	// Both are done exactly once, in the render that first sees the table, because both close over
-	// it and so cannot be passed to the `constructTable` call `useTable` makes inside its own
-	// `useState`.
-	//
-	// The handlers **survive** every later render for a checkable reason rather than by luck:
-	// `useTable` re-applies `{ ...prev, ...tableOptions }`, and `tableOptions` — everything
-	// `createTableOptions` returns — carries no `on<Slice>Change` key at all, so the merge cannot
-	// overwrite what is bound here. `use-data-grid-lifecycle.test.tsx` fires an `on<Slice>Change`
-	// *after* a re-render, which is the case a mount-only test would miss.
-	//
-	// The guard is set **last**, after the work it guards. Setting it first would mean a throw
-	// anywhere in this block — from `bindStateHandlers`, or from the first controlled publish —
-	// left the flag raised and the wiring permanently absent: no `on<Slice>Change` handler and no
-	// `onStateChange` subscriber, on a grid that otherwise renders. That is this migration's
-	// signature defect wearing a different hat, so the flag records that the block *finished*
-	// rather than that it started.
+	// Install the slice delegates and whole-state subscription once per table. Each delegate
+	// reads the current binding below, so callbacks and column constraints follow rerenders.
+	// `tableOptions` contains no on<Slice>Change keys, leaving the delegates installed when
+	// useTable merges the next render's options. Set the guard only after wiring succeeds.
+	// Keep the installed writers stable, but refresh their callbacks and column rules.
+	// A missing override must delegate to the original TanStack writer again.
+	const stateHandlers = bindStateHandlers(table)
+	const stateHandlersRef = useRef(stateHandlers)
+	// A suspended render must not replace the visible grid's handlers. Publish only after commit.
+	useSafeLayoutEffect(() => {
+		stateHandlersRef.current = stateHandlers
+	}, [stateHandlers])
 	const instanceWiringRef = useRef(false)
 	if (!instanceWiringRef.current) {
 		// The updater is retyped rather than cast per-property: `TableOptions` is a mapped type
 		// over an unresolved `TFeatures`, so a spread of it is not assignable back to itself.
 		const setOptions = table.setOptions as unknown as (updater: (prev: Record<string, unknown>) => unknown) => void
-		setOptions((prev) => ({ ...prev, ...bindStateHandlers(table) }))
+		setOptions((prev) => {
+			const handlers = Object.fromEntries(
+				Object.entries(prev)
+					.filter(([key, value]) => /^on[A-Z].*Change$/.test(key) && typeof value === 'function')
+					.map(([key, fallback]) => [
+						key,
+						(updater: unknown): void => {
+							const handler = (stateHandlersRef.current[key] ?? fallback) as (updater: unknown) => void
+							handler(updater)
+						},
+					]),
+			)
+			return { ...prev, ...handlers }
+		})
 
 		// The controlled `state` prop's **first** landing, during render rather than at commit.
 		// The write notifies, and notifying mid-render is React's "Cannot update a component while
@@ -1647,7 +1659,7 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 	//
 	// **What is invisible in it** is anything written only through `setOptions` and never restated
 	// in that object. Today that is exactly two things: the `on<Slice>Change` handlers
-	// `bindStateHandlers` binds once — deliberately absent, since their absence from the argument is
+	// the stable delegates install once — deliberately absent, since their absence from the argument is
 	// what stops the per-render merge overwriting them — and the `autoResetPageIndex: false` the
 	// row-order write sets. Neither is read by anything in this package. A third would be a defect,
 	// so **an option this package needs to read back must be written into the options object, not

@@ -47,7 +47,12 @@
 			"import": "./dist/menu.js",
 			"default": "./dist/menu.js"
 		},
-		"./styles.css": "./dist/styles.css"
+		"./styles.css": "./dist/styles.css",
+		"./dnd-kit": {
+			"types": "./dist/dnd-kit/index.d.ts",
+			"import": "./dist/dnd-kit/index.js",
+			"default": "./dist/dnd-kit/index.js"
+		}
 	},
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
@@ -116,6 +121,17 @@
 				"@tanstack/react-virtual",
 				"@tanstack/table-core"
 			]
+		},
+		{
+			"path": "dist/dnd-kit/index.js",
+			"limit": "2.2 kB",
+			"ignore": [
+				"@ez-kit/data-grid-core",
+				"@tanstack/react-store",
+				"@tanstack/react-table",
+				"@tanstack/react-virtual",
+				"@tanstack/table-core"
+			]
 		}
 	],
 	"dependencies": {
@@ -126,6 +142,8 @@
 		"@tanstack/table-core": "^9.3.1"
 	},
 	"devDependencies": {
+		"@dnd-kit/dom": "^0.5.3",
+		"@dnd-kit/react": "^0.5.3",
 		"@ez-kit/react18-env": "workspace:*",
 		"@types/react": "^19.3.0",
 		"@types/react-dom": "^19.3.0",
@@ -133,6 +151,16 @@
 		"react-dom": "^19.3.1"
 	},
 	"peerDependencies": {
+		"@dnd-kit/dom": "^0.5.3",
+		"@dnd-kit/react": "^0.5.3",
 		"react": ">=18.0.0"
+	},
+	"peerDependenciesMeta": {
+		"@dnd-kit/dom": {
+			"optional": true
+		},
+		"@dnd-kit/react": {
+			"optional": true
+		}
 	}
 }

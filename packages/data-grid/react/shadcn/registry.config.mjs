@@ -20,7 +20,7 @@ const corePkgVersion = JSON.parse(readFileSync(`${corePkgDir}/package.json`, 'ut
  * The drag library's range is read from **this kit's own `peerDependencies`**, never written out
  * here, so the range a registry consumer installs and the range an npm consumer is checked against
  * can never disagree. That range is deliberately narrow — `^0.5.3` on a `0.x` version resolves to
- * `>=0.5.3 <0.6.0` — because `src/dnd.tsx` reads shapes of the library that are declared
+ * `>=0.5.3 <0.6.0` — because the shared adapter reads shapes of the library that are declared
  * structurally rather than imported (`source.sortable.initialIndex`, `setDropTarget`'s
  * `defaultPrevented`), each checked against 0.5.3. A minor release before 1.0 is free to rename
  * them, and the failure would be silent; a narrow peer range turns it into a message at install.
@@ -29,7 +29,7 @@ const dndPeers = JSON.parse(readFileSync(`${pkgDir}/package.json`, 'utf8')).peer
 const dndPeerRange = dndPeers['@dnd-kit/react']
 /*
  * The second half of the same install, and necessary rather than sloppy: the five plugins
- * `src/dnd.tsx` passes as `plugins` live only on `@dnd-kit/dom`'s own root, because `@dnd-kit/react`
+ * the shared adapter passes as `plugins` live only on `@dnd-kit/dom`'s own root, because `@dnd-kit/react`
  * re-exports exactly three names from it — `DragDropManager`, `KeyboardSensor`, `PointerSensor` — and
  * no plugin among them. It is already in every tree as `@dnd-kit/react`'s own dependency, so naming
  * it downloads nothing new; what makes the declaration unavoidable is pnpm's isolated layout, under
@@ -83,6 +83,8 @@ const outPath = generateRegistryManifest({
 			// @tanstack/react-table isn't imported at all (data-grid-react
 			// depends on @tanstack/table-core + @tanstack/react-virtual instead), so it's correctly absent too.
 			//
+			// The drag wrapper re-exports ./dnd-kit from this React release. The release workflow
+			// rebuilds the production registry only alongside that published release.
 			// @ez-kit/data-grid-react is pinned to this repo's *current* published version, not a bare
 			// name: a bare name resolves to npm `latest`, which lags behind whatever this registry item's
 			// blocks were built against on unreleased HEAD (verified: installing unpinned pulled published

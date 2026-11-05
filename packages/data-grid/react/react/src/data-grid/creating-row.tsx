@@ -5,7 +5,6 @@ import {
 	resolveColumnFormConfig,
 	SELECTION_COLUMN_ID,
 } from '@ez-kit/data-grid-core'
-import { useEffect } from 'react'
 
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
@@ -17,6 +16,7 @@ import { getVisualLeafColumns } from '../utils/visual-column-order'
 import { flexRender } from './flex-render'
 import { fieldItemsProps } from './items-view'
 import { useDataGridState, useDataGridTable } from './table-context'
+import { useGridEventListener } from './use-grid-event-listener'
 import { columnNameOf, VisuallyHiddenLabel } from './visually-hidden'
 
 import type { CellTypeRegistry } from '../cell-types-context'
@@ -59,25 +59,18 @@ export function CreatingRow() {
 	// (`cell.tsx`), and the only way to finish the row when its save / cancel buttons live in the
 	// toolbar rather than in an actions cell. A pinned draft row is never cancelled: it has no
 	// closed state to return to.
-	useEffect(() => {
-		const onKeyDown = (event: globalThis.KeyboardEvent): void => {
-			// Already handled by something nearer the user — a select popover closing on Escape.
-			if (event.defaultPrevented) return
-			if (!(event.target instanceof Element) || event.target.closest(`[${CREATING_ROW_ATTR}]`) === null) return
-			if (event.key === 'Enter') {
-				event.preventDefault()
-				void table.creating.commit()
-			} else if (event.key === 'Escape' && !isPinRow) {
-				event.preventDefault()
-				table.creating.cancel()
-			}
+	useGridEventListener('keydown', (event) => {
+		// Already handled by something nearer the user — a select popover closing on Escape.
+		if (event.defaultPrevented) return
+		if (!(event.target instanceof Element) || event.target.closest(`[${CREATING_ROW_ATTR}]`) === null) return
+		if (event.key === 'Enter') {
+			event.preventDefault()
+			void table.creating.commit()
+		} else if (event.key === 'Escape' && !isPinRow) {
+			event.preventDefault()
+			table.creating.cancel()
 		}
-
-		document.addEventListener('keydown', onKeyDown)
-		return () => {
-			document.removeEventListener('keydown', onKeyDown)
-		}
-	}, [table, isPinRow])
+	})
 
 	return (
 		<Tr

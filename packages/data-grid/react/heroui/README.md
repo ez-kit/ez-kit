@@ -72,6 +72,9 @@ Composing a set governs **behaviour** — an unregistered feature contributes no
 
 ## Drag and drop
 
+This kit's `/dnd` entry re-exports `@ez-kit/data-grid-react/dnd-kit` while preserving
+existing imports and the `DndAdapter` contract for custom mechanics.
+
 Three surfaces drag — table rows, column headers, and the column panel (the visibility menu with
 `ordering.column.visibilityMenu` on) — and a row drags in a virtualized body too. Drag is **opt-in
 and costs nothing unused**: `@dnd-kit/react` and `@dnd-kit/dom` are **optional peer dependencies**,
@@ -79,10 +82,10 @@ this kit's adapter sits on its own `./dnd` subpath, and a tree-shaking test asse
 `@dnd-kit` specifier reaches any published entry but that one. A consumer who never names it installs
 nothing and ships nothing.
 
-Install the peer, then bind the adapter once, where you compose the bundle:
+Install both peers, then bind the adapter once, where you compose the bundle:
 
 ```bash
-pnpm add @dnd-kit/react
+pnpm add @dnd-kit/react@^0.5.3 @dnd-kit/dom@^0.5.3
 ```
 
 ```tsx

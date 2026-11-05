@@ -2,6 +2,14 @@ import { ColumnFormMode, resolveColumnFormConfig } from '../../column/resolve-fo
 import { DEFAULT_VALIDATE_DEBOUNCE_MS } from '../../defaults'
 import { assignTableInstanceData, readOwnSlice, writeOwnSlice } from '../../feature-state'
 import { abortChecks, checkValues, commitClosed, commitInFlight, runCommit, trackCommit } from '../form'
+import {
+	abortFormWork,
+	beginFieldValidation,
+	beginFormWork,
+	isAbortError,
+	runFieldValidation,
+	scheduleFieldValidation,
+} from '../form/form-work'
 import { CommitStatus, runValidator, ValidateOn } from '../validation'
 
 import type { FormColumnMeta, ResolvedColumnFormConfig } from '../../column/resolve-form-config'
@@ -287,30 +295,6 @@ const creatingOption = (table: { readonly options: object }): CreatingConfig<Row
 const abortBox = (table: AnyTable): CreatingAbortBox =>
 	(table as unknown as { _creatingAbort: CreatingAbortBox })._creatingAbort
 
-function isAbortError(e: unknown): boolean {
-	return typeof e === 'object' && e !== null && (e as { name?: string }).name === 'AbortError'
-}
-
-function abortableSleep(ms: number, signal: AbortSignal): Promise<void> {
-	return new Promise<void>((resolve, reject) => {
-		if (signal.aborted) {
-			reject(new DOMException('Aborted', 'AbortError'))
-			return
-		}
-		const onAbort = (): void => {
-			clearTimeout(timer)
-			signal.removeEventListener('abort', onAbort)
-			reject(new DOMException('Aborted', 'AbortError'))
-		}
-		const timer = setTimeout(() => {
-			signal.removeEventListener('abort', onAbort)
-			resolve()
-		}, ms)
-		signal.addEventListener('abort', onAbort)
-	})
-}
-
-/** The current slice. `creating` is this feature's own, so the read is not optional. */
 function readCreating(table: AnyTable): CreatingState {
 	return readOwnSlice(table, 'creating')
 }
@@ -368,102 +352,25 @@ async function runValidate(
 	return validate ? await runValidator(validate, values, ctx) : null
 }
 
-/**
- * Begin a form-level operation: supersede the previous one **and** any pending field validation.
- *
- * Field work and form work are cancelled by different events, so they cannot share a controller.
- * While they did, clicking Save with the caret still in an editor was a race between the click and
- * the blur that click causes: whichever reached the box second aborted the first. With a UI kit
- * whose button takes focus on press, the blur landed before `commit` started and everything worked.
- * With one that leaves focus where it is, the blur arrived **during** the save's `await` and
- * aborted it — so `onSave` resolved straight into `if (signal.aborted) return`, and the row sat in
- * its editor for ever, showing neither the saved value nor the rejection it should have. The
- * asymmetry was HeroUI 3.2 against 3.0; the defect was here. A field event must not cancel a form
- * operation, whatever a kit does with focus.
- *
- * The reverse **is** wanted, which is why this aborts `field` too: a save validates the whole form,
- * so a half-finished field check is not worth keeping, and letting it finish would write
- * `commitStatus: Idle` over the `Saving` this operation is about to set.
- */
-function resetFormController(table: AnyTable): AbortController {
-	const box = abortBox(table)
-	box.form?.abort()
-	box.field?.abort()
-	box.field = undefined
-	const c = new AbortController()
-	box.form = c
-	return c
-}
-
-/**
- * Begin a field-level validation, cancelling only the previous one — never the form's.
- *
- * Returns `undefined` while a form operation is in flight, and the caller then does nothing: the
- * commit validates every field anyway, and a blur that resolved afterwards would write
- * `commitStatus: Idle` over the commit's own status, re-enabling the save button mid-save.
- */
-function resetFieldController(table: CreatingTable): AbortController | undefined {
-	if (readCreating(table).commitStatus !== CommitStatus.Idle) return undefined
-
-	const box = abortBox(table)
-	box.field?.abort()
-	const c = new AbortController()
-	box.field = c
-	return c
-}
-
-/** Tear everything down — a new form opens, the user cancels, or the table resets. */
-function abortAll(table: AnyTable): void {
-	const box = abortBox(table)
-	box.form?.abort()
-	box.field?.abort()
-	abortChecks(box)
-	box.form = undefined
-	box.field = undefined
-	box.commit = undefined
-}
-
-async function validateAndApplyField(table: CreatingTable, columnId: string, signal: AbortSignal): Promise<void> {
-	if (signal.aborted) return
-	const config = creatingOption(table)
-	if (!config?.validate) return
-
-	const values = readCreating(table).values
-	let result: ValidationResult
-	try {
-		result = await runValidate(table, values, { signal, cell: { columnId } })
-	} catch (e) {
-		if (isAbortError(e)) return
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-		if (signal.aborted) return
-		throw e
-	}
-	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-	if (signal.aborted) return
-
-	writeOwnSlice(table, 'creating', (prev) => {
-		// Drop previous error for this column, then re-apply if present in result.
-		const { [columnId]: _removed, ...rest } = prev.errors
-		const fieldErrs = result?.errors?.[columnId]
-		const nextErrors = fieldErrs && fieldErrs.length > 0 ? { ...rest, [columnId]: fieldErrs } : rest
-		return { ...prev, errors: nextErrors }
+function validateAndApplyField(table: CreatingTable, columnId: string, signal: AbortSignal): Promise<void> {
+	return runFieldValidation({
+		signal,
+		columnId,
+		validate: creatingOption(table)?.validate,
+		values: readCreating(table).values,
+		writeErrors: (update) => {
+			writeOwnSlice(table, 'creating', (prev) => ({ ...prev, errors: update(prev.errors) }))
+		},
 	})
 }
 
 function scheduleChangeValidation(table: CreatingTable, columnId: string): void {
-	const c = resetFieldController(table)
-	if (!c) return
-	const ms = resolveDebounceMs(table, columnId)
-	void (async () => {
-		try {
-			await abortableSleep(ms, c.signal)
-			if (c.signal.aborted) return
-			await validateAndApplyField(table, columnId, c.signal)
-		} catch (e) {
-			if (isAbortError(e)) return
-			throw e
-		}
-	})()
+	scheduleFieldValidation(
+		abortBox(table),
+		readCreating(table).commitStatus,
+		resolveDebounceMs(table, columnId),
+		(signal) => validateAndApplyField(table, columnId, signal),
+	)
 }
 
 /**
@@ -512,7 +419,7 @@ function resolveDefaultValues(table: CreatingTable): Record<string, unknown> {
 function createCreatingApi(table: CreatingTable): CreatingApi<RowData> {
 	return {
 		start: () => {
-			abortAll(table)
+			abortFormWork(abortBox(table))
 			const seed = resolveDefaultValues(table)
 			writeCreating(table, {
 				isOpen: true,
@@ -525,7 +432,7 @@ function createCreatingApi(table: CreatingTable): CreatingApi<RowData> {
 		},
 
 		cancel: () => {
-			abortAll(table)
+			abortFormWork(abortBox(table))
 			// Values reset to empty, not to the defaults: the form is closed at this point
 			// and the next start() re-applies them.
 			writeCreating(table, { ...INITIAL_STATE })
@@ -534,13 +441,13 @@ function createCreatingApi(table: CreatingTable): CreatingApi<RowData> {
 		commit: (options) => {
 			const config = creatingOption(table)
 			const state = readCreating(table)
-			if (!config) return commitClosed()
+			if (!config || (!state.isOpen && config.mode !== CreatingMode.PinRow)) return commitClosed()
 			// UI invariant — a second click is a no-op, and gets the first click's outcome.
 			if (state.commitStatus !== CommitStatus.Idle) {
 				return commitInFlight(abortBox(table))
 			}
 
-			const c = resetFormController(table)
+			const c = beginFormWork(abortBox(table))
 			const values = options?.values ?? state.values
 			writeCreating(table, {
 				values,
@@ -605,7 +512,7 @@ function createCreatingApi(table: CreatingTable): CreatingApi<RowData> {
 			// A commit in flight already validates; superseding it would abandon a save that may have
 			// reached the server, and report it as cancelled.
 			if (readCreating(table).commitStatus !== CommitStatus.Idle) return null
-			const c = resetFormController(table)
+			const c = beginFormWork(abortBox(table))
 			const values = readCreating(table).values
 			writeCreating(table, { commitStatus: CommitStatus.Validating })
 			let result: ValidationResult
@@ -633,7 +540,7 @@ function createCreatingApi(table: CreatingTable): CreatingApi<RowData> {
 		},
 
 		validateField: async (columnId) => {
-			const c = resetFieldController(table)
+			const c = beginFieldValidation(abortBox(table), readCreating(table).commitStatus)
 			if (!c) return
 			try {
 				await validateAndApplyField(table, columnId, c.signal)
@@ -687,6 +594,6 @@ export const creatingFeature: TableFeature = {
 	//
 	// Behaviour v8 did not have — the controller lived in a closure with no reset hook to reach it.
 	resetTableInstanceData: (table) => {
-		abortAll(table)
+		abortFormWork(abortBox(table))
 	},
 }

@@ -88,3 +88,19 @@ re-render when the store's contents change.
 
 - **WHEN** the application updates a store that the grid context holds by reference
 - **THEN** only components subscribed to that store re-render, and the grid itself does not
+
+### Requirement: Флэш перерисовывает только флэшащие ячейки
+
+Вызов `table.flashCells` и смена фаз флэша MUST перерисовывать только ячейки, которые флэшат.
+Другие ячейки, строки, заголовки и компоненты, подписанные на состояние таблицы, MUST NOT
+перерисовываться.
+
+#### Scenario: Ручной флэш одной строки
+
+- **WHEN** приложение вызывает `table.flashCells({ rowIds: ['r1'] })` в гриде без изменения данных
+- **THEN** перерисовываются только ячейки данных строки `r1`, а ячейки других строк и строка `r1` целиком — нет
+
+#### Scenario: Смена фазы
+
+- **WHEN** флэшащая ячейка переходит из фазы заливки в фазу затухания
+- **THEN** перерисовывается только эта ячейка
