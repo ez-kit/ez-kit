@@ -60,8 +60,8 @@ function walkAll(dir: string): string[] {
 }
 
 /**
- * The names of the drag libraries this package must never reach for. The port is the insulation;
- * the implementation lives on a kit's own `/dnd` subpath.
+ * Drag libraries are isolated behind the optional dnd-kit entry. Ordinary sources
+ * depend only on the library-independent port.
  */
 const DRAG_PACKAGES = ['@dnd-kit', 'react-dnd', '@hello-pangea/dnd', 'react-beautiful-dnd', 'sortablejs']
 
@@ -98,9 +98,9 @@ function stripComments(source: string): string {
 describe('headless contract', () => {
 	const dataGridFiles = walk(join(SRC_DIR, 'data-grid'), ['.tsx'])
 	const cellTypeFiles = walk(join(SRC_DIR, 'cell-types'), ['.tsx'])
-	const allFiles = [...dataGridFiles, ...cellTypeFiles]
+	const allFiles = [...dataGridFiles, ...cellTypeFiles, ...walk(join(SRC_DIR, 'dnd-kit'), ['.tsx'])]
 
-	it('emits no literal `className=` strings in data-grid/* or cell-types/*', () => {
+	it('emits no literal `className=` strings in grid components or the adapter', () => {
 		const offenders: { file: string; match: string }[] = []
 		const re = /className=['"][^'"\n]+['"]/g
 		for (const file of allFiles) {
@@ -126,20 +126,16 @@ describe('headless contract', () => {
 		expect(offenders).toEqual([])
 	})
 
-	/*
-	 * The drag-and-drop **port** lives here; no implementation ever does.
-	 *
-	 * The mechanics ship from a kit's own `/dnd` subpath with the drag library as an *optional*
-	 * peer, so naming it in this package would make that peer a required install for every
-	 * consumer of every kit — the thing the whole delivery shape exists to avoid. A well-meant
-	 * refactor moving an import here is the failure mode, and it would not otherwise fail anything
-	 * until a consumer's fresh install broke.
+	/* Ordinary entries stay library-independent; only the canonical implementation imports peers.
+	 * Built consumer tests in docs additionally prove that emitted runtime/declaration graphs
+	 * cannot reach the optional adapter from an ordinary entry.
 	 */
-	it('imports no drag library anywhere in this package', () => {
+	it('imports drag libraries only from the canonical optional adapter', () => {
 		const offenders: { file: string; reason: string }[] = []
 		for (const file of walkAll(SRC_DIR)) {
 			const source = readFileSync(file, 'utf8')
 			const rel = relative(SRC_DIR, file)
+			if (rel === 'dnd-kit/adapter.tsx') continue
 			// Raw source: an import cannot hide behind a comment-stripping mistake.
 			if (DRAG_IMPORT_RE.test(source)) offenders.push({ file: rel, reason: 'imports a drag library' })
 			// Stripped source: catches a type reference, a string, a lazy specifier built by hand.
@@ -150,23 +146,37 @@ describe('headless contract', () => {
 		expect(offenders).toEqual([])
 	})
 
-	/*
-	 * The other half of the same rule: a dependency declared but not yet imported is the state a
-	 * refactor passes through, and it is already a required install for every consumer of every
-	 * kit. The source scan above cannot see it.
-	 */
-	it('declares no drag library as a dependency', () => {
+	it('keeps the optional adapter unreachable from ordinary source imports', () => {
+		const offenders: string[] = []
+		const adapterImport = /(?:from|import|require)\s*\(?\s*['"][^'"]*dnd-kit(?:\/[^'"]*)?['"]/
+		for (const file of walkAll(SRC_DIR)) {
+			const rel = relative(SRC_DIR, file)
+			if (rel.startsWith('dnd-kit/')) continue
+			if (adapterImport.test(stripComments(readFileSync(file, 'utf8')))) offenders.push(rel)
+		}
+		expect(offenders).toEqual([])
+	})
+
+	it('declares drag libraries only as optional peers and development dependencies', () => {
 		const manifest = JSON.parse(readFileSync(join(SRC_DIR, '..', 'package.json'), 'utf8')) as {
 			dependencies?: Record<string, string>
 			peerDependencies?: Record<string, string>
+			peerDependenciesMeta?: Record<string, { optional?: boolean }>
 			devDependencies?: Record<string, string>
 		}
-		const declared = [
-			...Object.keys(manifest.dependencies ?? {}),
-			...Object.keys(manifest.peerDependencies ?? {}),
-			...Object.keys(manifest.devDependencies ?? {}),
-		]
-		const offenders = declared.filter((name) => DRAG_PACKAGES.some((drag) => name.startsWith(drag)))
-		expect(offenders).toEqual([])
+		const isDrag = (name: string) => DRAG_PACKAGES.some((drag) => name.startsWith(drag))
+		expect(Object.keys(manifest.dependencies ?? {}).filter(isDrag)).toEqual([])
+		const supported = ['@dnd-kit/dom', '@dnd-kit/react']
+		expect(
+			Object.keys(manifest.peerDependencies ?? {})
+				.filter(isDrag)
+				.sort(),
+		).toEqual(supported)
+		expect(
+			Object.keys(manifest.devDependencies ?? {})
+				.filter(isDrag)
+				.sort(),
+		).toEqual(supported)
+		for (const name of supported) expect(manifest.peerDependenciesMeta?.[name]?.optional).toBe(true)
 	})
 })

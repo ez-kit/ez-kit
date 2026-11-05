@@ -13,6 +13,7 @@ import { featureConfig, isFeatureEnabled } from '../utils/feature-flag'
 import { setIfDefined } from '../utils/set-if-defined'
 import { warnOnce } from '../utils/warn-once'
 
+import { memoizeColumnValue } from './column-cache'
 import { withGatedFilteredRowModel } from './gate-column-filters'
 import { resolveFilterFields } from './resolve-filter-fields'
 import { withScalarRangeFilters } from './scalar-range-filters'
@@ -583,6 +584,8 @@ function named(option: string, handler: StateChangeHandler | undefined): Record<
 export function createTableOptions<TFeatures extends TableFeatures, TRow extends object>(
 	config: TableConfig<TFeatures, TRow>,
 	externals?: {
+		/** Adapter-owned, per-table cache of immutable column definitions and their derived structure. */
+		columnCache?: Map<string, unknown>
 		atoms?: ExternalAtoms<TFeatures>
 		/**
 		 * Whether rows are offered a grip — a drag adapter is bound **and** `ordering.row.controls`
@@ -765,13 +768,19 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 	}
 
 	// ── map user columns → TanStack columns ──────────────────────────────────
-	const mappedUserColumns = mapColumns(config.columns, {
+	const mapOptions = {
 		operators,
 		tableFaceted,
 		tableFlashing: config.flashing,
 		columnFiltering: hasColumnFiltering,
 		...(tableOperators !== undefined ? { tableOperators } : {}),
-	})
+	}
+	const mappedUserColumns = memoizeColumnValue(
+		externals?.columnCache,
+		'mapped',
+		[config.columns, ...Object.entries(mapOptions).flat()],
+		() => mapColumns(config.columns, mapOptions),
+	)
 
 	const expandMode = expandingCfg?.mode ?? ExpandingMode.SubContent
 	const normalizedPinning = normalizePinning(config.pinning)
@@ -882,9 +891,7 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 	// - omitted → 'includesString' (overrides TanStack's 'auto' default so global
 	//   search behaves as a predictable cross-column substring match)
 	const resolvedGlobalFilterFn: GlobalFilterFn<TFeatures> | string | undefined = (():
-		| GlobalFilterFn<TFeatures>
-		| string
-		| undefined => {
+		GlobalFilterFn<TFeatures> | string | undefined => {
 		if (!hasGlobalFiltering) return undefined
 		const fn = globalFilteringCfg?.fn
 		if (fn === undefined) return 'includesString'
@@ -1082,7 +1089,7 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 		(hasRowEditAction || hasDeleting || hasPinning || hasRowStepControls || customRowActions !== undefined)
 	const creatingInActionsColumn = hasPinRowCreating || (hasInlineCreating && hasOtherRowActions)
 
-	const allColumns = buildColumnList(mappedUserColumns, {
+	const systemOptions = {
 		rowDrag: externals?.rowDrag === true && rowOrderingCfg !== undefined && rowDragColumnDef !== false,
 		selection: hasSelection,
 		expanding: hasExpanding,
@@ -1099,20 +1106,38 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 		...(expandingColumn !== undefined ? { expandingColumn } : {}),
 		...(groupingColumn !== undefined ? { groupingColumn } : {}),
 		...(rowActionsColumn !== undefined ? { rowActionsColumn } : {}),
-	})
-
-	const { start: pinnedStart, end: pinnedEnd } = extractPinningState(allColumns)
+	}
+	const allColumns = memoizeColumnValue(
+		externals?.columnCache,
+		'system',
+		[mappedUserColumns, ...Object.entries(systemOptions).flat()],
+		() => buildColumnList(mappedUserColumns, systemOptions),
+	)
+	const { start: pinnedStart, end: pinnedEnd } = memoizeColumnValue(
+		externals?.columnCache,
+		'pinning',
+		[allColumns],
+		() => extractPinningState(allColumns),
+	)
 
 	// After the system columns are in, so a field cannot take `__select__` or `__drag__` either.
-	const filterFields = resolveFilterFields(filteringCfg?.fields, allColumns, filteringCfg?.manual === true, {
-		operators,
-		tableOperators,
-	})
+	const filterFields = memoizeColumnValue(
+		externals?.columnCache,
+		'fields',
+		[filteringCfg?.fields, allColumns, filteringCfg?.manual === true, operators, tableOperators],
+		() =>
+			resolveFilterFields(filteringCfg?.fields, allColumns, filteringCfg?.manual === true, {
+				operators,
+				tableOperators,
+			}),
+	)
 
 	// ── build TanStack options ────────────────────────────────────────────────
 	const defaultPageSize = paginationCfg?.pageSize ?? DEFAULT_PAGE_SIZE
 
-	const initialHidden = collectInitialHidden(config.columns)
+	const initialHidden = memoizeColumnValue(externals?.columnCache, 'hidden', [config.columns], () =>
+		collectInitialHidden(config.columns),
+	)
 
 	// The seeds still apply with their feature off — see `warnUnreachableSeed` — but say so.
 	if (IS_DEV) {
@@ -1129,7 +1154,12 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 	}
 
 	// Column-derived rules that no state input may violate — see `../column-state`.
-	const columnInvariants: ColumnInvariants = buildColumnInvariants(allColumns)
+	const columnInvariants: ColumnInvariants = memoizeColumnValue(
+		externals?.columnCache,
+		'invariants',
+		[allColumns],
+		() => buildColumnInvariants(allColumns),
+	)
 
 	/**
 	 * The consumer's seed, read at the widest feature set rather than at this table's.
@@ -1581,7 +1611,9 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 		...(hasGrouping ? { groupingMode: groupingCfg?.mode ?? GroupingMode.Single } : {}),
 		direction: config.direction ?? GridDirection.Ltr,
 		...(filterFields.length > 0 ? { filterFields } : {}),
-		columnState: createColumnStateApi(columnInvariants),
+		columnState: memoizeColumnValue(externals?.columnCache, 'state', [columnInvariants], () =>
+			createColumnStateApi(columnInvariants),
+		),
 	}
 
 	return { options, deferred, grid, bindStateHandlers }

@@ -45,6 +45,14 @@ describe('the no-op adapter', () => {
 
 describe('a grid whose bundle brought no adapter', () => {
 	it('renders exactly the DOM a grid with no factory at all renders', () => {
+		// Each mount owns a unique event scope; compare the markup with that value normalized.
+		const markup = (container: HTMLElement): string => {
+			const copy = container.cloneNode(true) as HTMLElement
+			for (const root of copy.querySelectorAll('[data-grid-event-scope]')) {
+				root.setAttribute('data-grid-event-scope', 'grid')
+			}
+			return copy.innerHTML
+		}
 		const baseline = render(
 			<DataGrid
 				components={testComponents}
@@ -53,7 +61,7 @@ describe('a grid whose bundle brought no adapter', () => {
 				columns={TEST_COLUMNS}
 			/>,
 		)
-		const baselineHtml = baseline.container.innerHTML
+		const baselineHtml = markup(baseline.container)
 		baseline.unmount()
 
 		const { DataGrid: BoundDataGrid } = createDataGrid({ components: testComponents })
@@ -64,7 +72,7 @@ describe('a grid whose bundle brought no adapter', () => {
 				columns={TEST_COLUMNS}
 			/>,
 		)
-		const boundHtml = bound.container.innerHTML
+		const boundHtml = markup(bound.container)
 		bound.unmount()
 
 		/*
@@ -84,7 +92,7 @@ describe('a grid whose bundle brought no adapter', () => {
 		)
 
 		expect(boundHtml).toBe(baselineHtml)
-		expect(withDnd.container.innerHTML).toBe(baselineHtml)
+		expect(markup(withDnd.container)).toBe(baselineHtml)
 	})
 
 	it('reports DnD as disabled below the root', () => {

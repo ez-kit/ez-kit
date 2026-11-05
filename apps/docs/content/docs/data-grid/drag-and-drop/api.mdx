@@ -8,6 +8,23 @@ The full surface of drag and drop. How each piece is used is on [Installation](/
 
 ## Binding
 
+Both kits re-export the implementation from `@ez-kit/data-grid-react/dnd-kit`.
+Custom bundles can import it directly after installing both optional peers:
+
+```bash
+pnpm add @dnd-kit/react@^0.5.3 @dnd-kit/dom@^0.5.3
+```
+
+```tsx
+import { adapter } from '@ez-kit/data-grid-react/dnd-kit'
+
+const { DataGrid } = createDataGrid({ components, features, dnd: adapter })
+```
+
+The root and other ordinary entries require neither drag peer. The existing kit `/dnd`
+and installed shadcn `@/components/data-grid/dnd` imports remain supported.
+Custom mechanics still implement the root's `DndAdapter` contract.
+
 | Option | Type         | Description                                                                                                                      |
 | ------ | ------------ | -------------------------------------------------------------------------------------------------------------------------------- |
 | `dnd`  | `DndAdapter` | An option of `createDataGrid`, not of `<DataGrid>`. Pass the kit's `adapter`; without it no handle drags and no column is added. |

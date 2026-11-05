@@ -77,6 +77,15 @@ Composing a set governs **behaviour** — an unregistered feature contributes no
 
 Full documentation: [ez-kit-docs.vercel.app/docs/data-grid](https://ez-kit-docs.vercel.app/docs/data-grid).
 
+## Drag and drop
+
+The separate drag registry item installs `@/components/data-grid/dnd`, a compatibility
+re-export of `@ez-kit/data-grid-react/dnd-kit`, and both supported drag libraries:
+`@dnd-kit/react@^0.5.3` and `@dnd-kit/dom@^0.5.3`.
+Pass its `adapter` to `createDataGrid({ components, features, dnd: adapter })`.
+Ordinary grid installs require neither peer. Custom mechanics use the existing
+`DndAdapter` contract.
+
 ## License
 
 MIT

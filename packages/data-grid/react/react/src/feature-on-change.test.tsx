@@ -1,5 +1,6 @@
 import { createColumns } from '@ez-kit/data-grid-core'
-import { act, renderHook } from '@testing-library/react'
+import { act, fireEvent, render, renderHook, screen } from '@testing-library/react'
+import { startTransition, Suspense, useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { TEST_FEATURES } from './test-utils'
@@ -26,6 +27,139 @@ const COLUMNS = createColumns<User>([{ accessorKey: 'name' }, { accessorKey: 'em
  * a future split that goes back to picking by name fails immediately instead of silently.
  */
 describe('every feature onChange survives useDataGrid', () => {
+	it('keeps committed callbacks while a transition suspends and publishes them after commit', async () => {
+		const first = vi.fn()
+		const second = vi.fn()
+		const suspended = vi.fn()
+		let loaded = false
+		let release = (): void => {}
+		const pending = new Promise<void>((resolve) => {
+			release = () => {
+				loaded = true
+				resolve()
+			}
+		})
+
+		function Grid({ next }: { next: boolean }) {
+			const table = useDataGrid({
+				features: TEST_FEATURES,
+				data: USERS,
+				columns: COLUMNS,
+				sorting: { onChange: next ? second : first },
+			})
+			if (next && !loaded) {
+				suspended()
+				// Suspense consumes the pending resource promise rather than an Error.
+				// eslint-disable-next-line @typescript-eslint/only-throw-error
+				throw pending
+			}
+			return (
+				<button
+					onClick={() => {
+						table.setSorting((prev) => [{ id: 'name', desc: !prev[0]?.desc }])
+					}}
+				>
+					{next ? 'Sort B' : 'Sort A'}
+				</button>
+			)
+		}
+
+		function Host() {
+			const [next, setNext] = useState(false)
+			return (
+				<>
+					<button
+						onClick={() => {
+							startTransition(() => {
+								setNext(true)
+							})
+						}}
+					>
+						Change callback
+					</button>
+					<Suspense fallback='Loading'>
+						<Grid next={next} />
+					</Suspense>
+				</>
+			)
+		}
+
+		render(<Host />)
+		await act(async () => {
+			fireEvent.click(screen.getByRole('button', { name: 'Change callback' }))
+			await Promise.resolve()
+		})
+		expect(suspended).toHaveBeenCalled()
+		expect(screen.queryByText('Loading')).toBeNull()
+		fireEvent.click(screen.getByRole('button', { name: 'Sort A' }))
+		expect(first).toHaveBeenCalledTimes(1)
+		expect(second).not.toHaveBeenCalled()
+
+		await act(async () => {
+			release()
+			await pending
+		})
+		fireEvent.click(screen.getByRole('button', { name: 'Sort B' }))
+		expect(first).toHaveBeenCalledTimes(1)
+		expect(second).toHaveBeenCalledTimes(1)
+	})
+
+	it('enforces the current column rules after columns change', () => {
+		const { result, rerender } = renderHook(
+			({ forced }: { forced: boolean }) =>
+				useDataGrid({
+					features: TEST_FEATURES,
+					data: USERS,
+					columns: [{ accessorKey: 'name', pinning: forced ? 'start' : false }, { accessorKey: 'email' }],
+					pinning: { column: true },
+				}),
+			{ initialProps: { forced: false } },
+		)
+		rerender({ forced: true })
+		act(() => {
+			result.current.setColumnPinning({ start: [], end: [] })
+		})
+		expect(result.current.store.state.columnPinning.start).toEqual(['name'])
+		rerender({ forced: false })
+		act(() => {
+			result.current.setColumnPinning({ start: [], end: [] })
+		})
+		expect(result.current.store.state.columnPinning.start).toEqual([])
+	})
+
+	it('uses the latest callback and restores the default writer when the callback is removed', () => {
+		const first = vi.fn()
+		const second = vi.fn()
+		const initialProps: { onChange?: (next: { id: string; desc: boolean }[]) => void } = { onChange: first }
+		const { result, rerender } = renderHook(
+			({ onChange }: { onChange?: (next: { id: string; desc: boolean }[]) => void }) =>
+				useDataGrid({
+					features: TEST_FEATURES,
+					data: USERS,
+					columns: COLUMNS,
+					sorting: onChange === undefined ? true : { onChange },
+				}),
+			{ initialProps },
+		)
+		rerender({ onChange: second })
+		act(() => {
+			result.current.setSorting([{ id: 'name', desc: false }])
+		})
+		expect(first).not.toHaveBeenCalled()
+		expect(second).toHaveBeenCalledTimes(1)
+		rerender({})
+		act(() => {
+			result.current.setSorting([{ id: 'name', desc: true }])
+		})
+		expect(second).toHaveBeenCalledTimes(1)
+		expect(result.current.store.state.sorting).toEqual([{ id: 'name', desc: true }])
+		rerender({ onChange: first })
+		act(() => {
+			result.current.setSorting([])
+		})
+		expect(first).toHaveBeenCalledWith([])
+	})
+
 	function grid(config: Partial<Parameters<typeof useDataGrid<GridFeatures, User>>[0]>): DataTable<GridFeatures, User> {
 		const { result } = renderHook(() =>
 			useDataGrid<GridFeatures, User>({ features: TEST_FEATURES, data: USERS, columns: COLUMNS, ...config }),

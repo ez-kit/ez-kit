@@ -4,6 +4,14 @@ import { ColumnFormMode, resolveColumnFormConfig } from '../../column/resolve-fo
 import { DEFAULT_VALIDATE_DEBOUNCE_MS } from '../../defaults'
 import { assignTableInstanceData, readOwnSlice, writeOwnSlice } from '../../feature-state'
 import { abortChecks, checkValues, commitClosed, commitInFlight, runCommit, trackCommit } from '../form'
+import {
+	abortFormWork,
+	beginFieldValidation,
+	beginFormWork,
+	isAbortError,
+	runFieldValidation,
+	scheduleFieldValidation,
+} from '../form/form-work'
 import { CommitStatus, runValidator, ValidateOn } from '../validation'
 
 import type { ColumnEditingConfig } from '../../column/types'
@@ -279,29 +287,6 @@ const editingOption = (table: { readonly options: object }): EditingConfig<RowDa
 const abortBox = (table: AnyTable): EditingAbortBox =>
 	(table as unknown as { _editingAbort: EditingAbortBox })._editingAbort
 
-function isAbortError(e: unknown): boolean {
-	return typeof e === 'object' && e !== null && (e as { name?: string }).name === 'AbortError'
-}
-
-function abortableSleep(ms: number, signal: AbortSignal): Promise<void> {
-	return new Promise<void>((resolve, reject) => {
-		if (signal.aborted) {
-			reject(new DOMException('Aborted', 'AbortError'))
-			return
-		}
-		const onAbort = (): void => {
-			clearTimeout(timer)
-			signal.removeEventListener('abort', onAbort)
-			reject(new DOMException('Aborted', 'AbortError'))
-		}
-		const timer = setTimeout(() => {
-			signal.removeEventListener('abort', onAbort)
-			resolve()
-		}, ms)
-		signal.addEventListener('abort', onAbort)
-	})
-}
-
 function extractColumnId(rowId: string, cellId: string): string {
 	return cellId.startsWith(`${rowId}_`) ? cellId.slice(rowId.length + 1) : cellId
 }
@@ -350,116 +335,25 @@ async function runValidate(
 	return validate ? await runValidator(validate, values, ctx) : null
 }
 
-/**
- * Begin a form-level operation: supersede the previous one **and** any pending field validation.
- *
- * Field work and form work are cancelled by different events, so they cannot share a controller.
- * While they did, clicking Save with the caret still in an editor was a race between the click and
- * the blur that click causes: whichever reached the box second aborted the first. With a UI kit
- * whose button takes focus on press, the blur landed before `commit` started and everything worked.
- * With one that leaves focus where it is, the blur arrived **during** the save's `await` and
- * aborted it — so `onSave` resolved straight into `if (signal.aborted) return`, and the row sat in
- * its editor for ever, showing neither the saved value nor the rejection it should have. The
- * asymmetry was HeroUI 3.2 against 3.0; the defect was here. A field event must not cancel a form
- * operation, whatever a kit does with focus.
- *
- * The reverse **is** wanted, which is why this aborts `field` too: a save validates the whole form,
- * so a half-finished field check is not worth keeping, and letting it finish would write
- * `commitStatus: Idle` over the `Saving` this operation is about to set.
- */
-function resetFormController(table: AnyTable): AbortController {
-	const box = abortBox(table)
-	box.form?.abort()
-	box.field?.abort()
-	box.field = undefined
-	const c = new AbortController()
-	box.form = c
-	return c
-}
-
-/**
- * Begin a field-level validation, cancelling only the previous one — never the form's.
- *
- * Returns `undefined` while a form operation is in flight, and the caller then does nothing: the
- * commit validates every field anyway, and a blur that resolved afterwards would write
- * `commitStatus: Idle` over the commit's own status, re-enabling the save button mid-save.
- */
-function resetFieldController(table: EditingTable): AbortController | undefined {
-	if (readEditing(table).commitStatus !== CommitStatus.Idle) return undefined
-
-	const box = abortBox(table)
-	box.field?.abort()
-	const c = new AbortController()
-	box.field = c
-	return c
-}
-
-/** Tear everything down — a new form opens, the user cancels, or the table resets. */
-function abortAll(table: AnyTable): void {
-	const box = abortBox(table)
-	box.form?.abort()
-	box.field?.abort()
-	abortChecks(box)
-	box.form = undefined
-	box.field = undefined
-	box.commit = undefined
-}
-
-/**
- * Validate one field and write only that field's errors.
- *
- * **It must not touch `commitStatus`.** That status describes the *form* — `isPending` in the
- * actions cell is `commitStatus !== Idle`, and the kits bind it to the save button's disabled
- * state. A field validation runs on blur, and the blur that matters is the one the save click
- * itself causes: pointer down on Save, focus leaves the editor, this ran, the button went disabled
- * for the length of an `await`, and React Aria cancelled the press it was in the middle of. The
- * click never became a press, `commit` was never called, and the row sat in its editor with no
- * error and no saved value. Whether the disable landed inside the press window depended on the
- * kit's focus timing, which is why it looked like a HeroUI 3.2 regression and was not one — shadcn
- * and HeroUI 3.0 simply got lucky with the ordering.
- *
- * The field's own errors are the whole output; anything wider belongs to `commit` and `validate`.
- */
-async function validateAndApplyField(table: EditingTable, columnId: string, signal: AbortSignal): Promise<void> {
-	if (signal.aborted) return
-	const config = editingOption(table)
-	if (!config?.validate) return
-
-	const values = readEditing(table).values
-	let result: ValidationResult
-	try {
-		result = await runValidate(table, values, { signal, cell: { columnId } })
-	} catch (e) {
-		if (isAbortError(e)) return
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-		if (signal.aborted) return
-		throw e
-	}
-	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-	if (signal.aborted) return
-
-	writeOwnSlice(table, 'editing', (prev) => {
-		const { [columnId]: _removed, ...rest } = prev.errors
-		const fieldErrs = result?.errors?.[columnId]
-		const nextErrors = fieldErrs && fieldErrs.length > 0 ? { ...rest, [columnId]: fieldErrs } : rest
-		return { ...prev, errors: nextErrors }
+function validateAndApplyField(table: EditingTable, columnId: string, signal: AbortSignal): Promise<void> {
+	return runFieldValidation({
+		signal,
+		columnId,
+		validate: editingOption(table)?.validate,
+		values: readEditing(table).values,
+		writeErrors: (update) => {
+			writeOwnSlice(table, 'editing', (prev) => ({ ...prev, errors: update(prev.errors) }))
+		},
 	})
 }
 
 function scheduleChangeValidation(table: EditingTable, columnId: string): void {
-	const c = resetFieldController(table)
-	if (!c) return
-	const ms = resolveDebounceMs(table, columnId)
-	void (async () => {
-		try {
-			await abortableSleep(ms, c.signal)
-			if (c.signal.aborted) return
-			await validateAndApplyField(table, columnId, c.signal)
-		} catch (e) {
-			if (isAbortError(e)) return
-			throw e
-		}
-	})()
+	scheduleFieldValidation(
+		abortBox(table),
+		readEditing(table).commitStatus,
+		resolveDebounceMs(table, columnId),
+		(signal) => validateAndApplyField(table, columnId, signal),
+	)
 }
 
 /**
@@ -497,7 +391,7 @@ function closeForm(table: AnyTable): void {
 function createEditingApi(table: EditingTable): EditingApi<RowData> {
 	return {
 		start: (rowId) => {
-			abortAll(table)
+			abortFormWork(abortBox(table))
 			const seed = snapshotRow(table, rowId)
 			writeEditing(table, {
 				rowId,
@@ -515,7 +409,7 @@ function createEditingApi(table: EditingTable): EditingApi<RowData> {
 			// The React layer already renders no double-click affordance for it; this
 			// makes the programmatic path agree rather than quietly opening an input.
 			if (table.getColumn(columnId)?.columnDef.meta?.editing === false) return
-			abortAll(table)
+			abortFormWork(abortBox(table))
 			const row = table.getRowModel().rows.find((r) => r.id === rowId)
 			const seed = { [columnId]: row?.getValue(columnId) }
 			writeEditing(table, {
@@ -530,7 +424,7 @@ function createEditingApi(table: EditingTable): EditingApi<RowData> {
 		},
 
 		cancel: () => {
-			abortAll(table)
+			abortFormWork(abortBox(table))
 			writeEditing(table, { ...INITIAL_STATE })
 		},
 
@@ -544,7 +438,7 @@ function createEditingApi(table: EditingTable): EditingApi<RowData> {
 				return commitInFlight(abortBox(table))
 			}
 
-			const c = resetFormController(table)
+			const c = beginFormWork(abortBox(table))
 			const values = options?.values ?? state.values
 			writeEditing(table, {
 				values,
@@ -583,7 +477,7 @@ function createEditingApi(table: EditingTable): EditingApi<RowData> {
 			const columnId = extractColumnId(rowId, cellId)
 			const cellValues: Record<string, unknown> = { [columnId]: state.values[columnId] }
 
-			const c = resetFormController(table)
+			const c = beginFormWork(abortBox(table))
 			writeEditing(table, {
 				errors: {},
 				formError: null,
@@ -652,7 +546,7 @@ function createEditingApi(table: EditingTable): EditingApi<RowData> {
 			// A commit in flight already validates; superseding it would abandon a save that may have
 			// reached the server, and report it as cancelled.
 			if (readEditing(table).commitStatus !== CommitStatus.Idle) return null
-			const c = resetFormController(table)
+			const c = beginFormWork(abortBox(table))
 			const values = readEditing(table).values
 			writeEditing(table, { commitStatus: CommitStatus.Validating })
 			let result: ValidationResult
@@ -676,7 +570,7 @@ function createEditingApi(table: EditingTable): EditingApi<RowData> {
 			checkValues(abortBox(table), readEditing(table).rowId !== null, editingOption(table)?.validate, values),
 
 		validateField: async (columnId) => {
-			const c = resetFieldController(table)
+			const c = beginFieldValidation(abortBox(table), readEditing(table).commitStatus)
 			if (!c) return
 			try {
 				await validateAndApplyField(table, columnId, c.signal)
@@ -729,7 +623,7 @@ export const editingFeature: TableFeature = {
 	//
 	// Behaviour v8 did not have — the controller lived in a closure with no reset hook to reach it.
 	resetTableInstanceData: (table) => {
-		abortAll(table)
+		abortFormWork(abortBox(table))
 	},
 
 	assignRowPrototype: (prototype, table) => {
