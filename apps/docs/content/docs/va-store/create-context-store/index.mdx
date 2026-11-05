@@ -3,7 +3,7 @@ title: createContextStore
 description: Wrap a Valtio proxy in React context so every Provider gets its own isolated instance — read from snapshots, mutate the proxy.
 ---
 
-Wraps a Valtio proxy in React context. Each `<Provider>` creates its own isolated proxy instance, so the same factory can power multiple independent subtrees. There are no selectors — `useSnapshot` tracks the properties you actually read.
+Wraps a Valtio proxy in React context. Each `<Provider>` creates its own isolated proxy instance, so the same factory can power multiple independent subtrees. `useSnapshot` tracks the properties you actually read; `useSelector` compares the result of a selector.
 
 This page is the guide — what the pieces are for and how they behave. Every signature, prop and option is listed on [API reference](./create-context-store/api).
 
@@ -30,7 +30,7 @@ The factory runs **once per mount**, so changing `defaultValue` after the first 
 
 ## Reading and writing
 
-Four ways in, for four different jobs. The rule underneath all of them: **read from snapshots, mutate the source proxy.**
+Choose the read or write surface for the job. The rule underneath all of them: **read from snapshots, mutate the source proxy.**
 
 | You want                                           | Use           |
 | -------------------------------------------------- | ------------- |
@@ -57,6 +57,22 @@ There is no selector to get right here: Valtio tracks the properties a component
 </Callout>
 
 `Subscribe` subscribes, `Store` does not — that is the whole difference between the two render props. Reach for `Store` when a subtree writes but renders nothing from the store, so a counter ticking elsewhere no longer drags it through a re-render.
+
+## Selecting derived results
+
+`useSnapshot` re-renders when an accessed property changes. `useSelector` re-renders on store updates only when the **selected result** changes. For example, a positive count can change from 1 to 2 while `s.count > 0` remains `true`:
+
+```tsx
+const positive = counterStore.useSelector(s => s.count > 0)
+
+<counterStore.Subscribe selector={s => s.count > 0}>
+  {(positive, store) => <button onClick={() => { store.count++ }}>{String(positive)}</button>}
+</counterStore.Subscribe>
+```
+
+The selector receives a readonly snapshot, and inline selectors can capture current props without `useCallback`. Results compare with `Object.is` by default. For a selector creating an object or array, pass `{ isEqual: shallowEqual }` to the hook, or `isEqual={shallowEqual}` to `Subscribe`; `shallowEqual` is exported by this package. Equal results preserve their previous reference. Parent renders may still render consumers.
+
+For a proxy passed explicitly, import the base hook: `useSelector(proxy, selector, options?)`. See the [API reference](./create-context-store/api#useselectorselector-options).
 
 ## Multiple independent instances
 
@@ -275,7 +291,7 @@ A key that disappears from `value` simply stops being controlled. It keeps whate
 
 ### Consuming outside a `Provider`
 
-Using `useSnapshot`, `useStore`, `Subscribe`, or `Store` outside a `Provider` throws:
+Using `useSnapshot`, `useSelector`, `useStore`, `Subscribe`, or `Store` outside a `Provider` throws:
 
 ```
 Error: [va-store] Missing Provider for store

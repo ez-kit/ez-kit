@@ -88,6 +88,10 @@ and move on.
 
 `@ez-kit/query-react`'s `<Query>` hands render functions TanStack's `useQuery` result unchanged — `children(data, q)`, `error(error, q)`, no renamed or filtered fields. Descendants read the gate's data with TanStack's own `useSuspenseQuery` and the same `queryOptions`; that is a docs recipe (`query-react/data-under-gate.mdx`), not API. There is no `useData()`, no `createQueryScope` and no context carrying data — re-proposing one needs a concrete case the recipe cannot cover. Guard: `packages/query/react/src/data-under-gate.test.tsx`. Rationale: [ADR 0022](openspec/decisions/0022-query-gate-native-tanstack.md).
 
+### Valtio selectors compare snapshot results
+
+`@ez-kit/va-store` offers standalone `useSelector(proxy, selector, options?)` and the same hook bound to context and cached stores. Selectors read readonly snapshots and compare results with `Object.is`, overridable through `isEqual`. `Subscribe` accepts `selector` and `isEqual`, passing `(selected, rawProxy)` to children; without a selector it retains Valtio's automatic property tracking. `Store` and `useStore` remain subscription-free write surfaces. Rationale: [ADR 0025](openspec/decisions/0025-valtio-result-selectors.md).
+
 ## Branching & Release Flow
 
 - `develop` is the default integration branch — all feature branches fork from and merge into `develop`.

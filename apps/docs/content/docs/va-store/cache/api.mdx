@@ -127,13 +127,13 @@ A capability is attached inside the `factory` here too, exactly as with [`create
 
 ### The returned group
 
-| Member                                             | Purpose                                                                                 |
-| -------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `Provider`                                         | Keyed observer: `id` (required), `path?`, `defaultValue`, `gcTime?`, `alwaysCache?`.    |
-| `useSnapshot` / `useStore` / `Subscribe` / `Store` | Read and write the entry under the `Provider` — same semantics as `createContextStore`. |
-| `getFromCache({ path?, id })`                      | Imperative get-if-alive → the raw proxy or `undefined`.                                 |
-| `useFromCache({ path?, id }, selector)`            | Reactive, passive cross-tree read.                                                      |
-| `remove({ path?, id })`                            | Drop one entry immediately.                                                             |
+| Member                                                             | Purpose                                                                                 |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| `Provider`                                                         | Keyed observer: `id` (required), `path?`, `defaultValue`, `gcTime?`, `alwaysCache?`.    |
+| `useSnapshot` / `useSelector` / `useStore` / `Subscribe` / `Store` | Read and write the entry under the `Provider` — same semantics as `createContextStore`. |
+| `getFromCache({ path?, id })`                                      | Imperative get-if-alive → the raw proxy or `undefined`.                                 |
+| `useFromCache({ path?, id }, selector)`                            | Reactive, passive cross-tree read.                                                      |
+| `remove({ path?, id })`                                            | Drop one entry immediately.                                                             |
 
 ## `Provider`
 
@@ -169,6 +169,14 @@ const snap = usersTable.useSnapshot()
 
 Returns `Snapshot<TState>`. Unlike [`createContextStore`'s](../create-context-store/api#usesnapshotoptions), it takes **no options** — there is no `sync` on a cached group.
 
+## `useSelector(selector, options?)`
+
+Selects from the nearest group Provider's readonly snapshot. It has the same [selector API](../create-context-store/api#useselectorselector-options) as `createContextStore`: `Object.is` by default, optional `{ isEqual }`, inline selectors, and inferred result types. Equal results retain their reference.
+
+```tsx
+const active = usersTable.useSelector((s) => s.filter === 'active')
+```
+
 ## `useStore()`
 
 Returns the raw, mutable proxy for the entry, without subscribing. Mutate it directly:
@@ -184,11 +192,13 @@ Returns `TState`. It reads the group instance from context rather than through a
 
 Render-prop receiving `(snap, store)`, mirroring [`createContextStore`'s](../create-context-store/api#subscribe).
 
-| Prop       | Type                                                      | Required | Description                                          |
-| ---------- | --------------------------------------------------------- | -------- | ---------------------------------------------------- |
-| `children` | `(snap: Snapshot<TState>, store: TState) => ReactElement` | yes      | Render prop, called with the snapshot and the proxy. |
+| Prop       | Type                                           | Required | Description                                                      |
+| ---------- | ---------------------------------------------- | -------- | ---------------------------------------------------------------- |
+| `children` | `(selected: T, store: TState) => ReactElement` | yes      | Without a selector, `T` is `Snapshot<TState>`.                   |
+| `selector` | `(snap: Snapshot<TState>) => T`                | no       | Selects the result passed to children.                           |
+| `isEqual`  | `(previous: T, next: T) => boolean`            | no       | Result comparison; defaults to `Object.is`. Requires `selector`. |
 
-There is no `selector` and no `shallow` prop — the zu-store group's selector API has no counterpart here.
+Without `selector`, the snapshot is auto-tracked. With `selector`, children receive `(selected, store)` and re-render on store updates only when the selected result changes, compared with `Object.is` or `isEqual`. `isEqual` requires `selector`.
 
 ## `Store`
 
@@ -274,10 +284,10 @@ All are re-exported from `@ez-kit/va-store`; none require reaching for `@ez-kit/
 
 ## Errors
 
-| Message                                | Cause                                                                                                                   |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `[va-store] Missing <CacheProvider>`   | A group `Provider`, `useCache`, `useCacheKeys` or `useFromCache` used without the owning cache's `Provider` above it.   |
-| `[store-core] Missing <name.Provider>` | `useSnapshot` / `useStore` / `Subscribe` / `Store` used outside that group's own `Provider` (`name` is the group name). |
+| Message                                | Cause                                                                                                                                   |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `[va-store] Missing <CacheProvider>`   | A group `Provider`, `useCache`, `useCacheKeys` or `useFromCache` used without the owning cache's `Provider` above it.                   |
+| `[store-core] Missing <name.Provider>` | `useSnapshot` / `useSelector` / `useStore` / `Subscribe` / `Store` used outside that group's own `Provider` (`name` is the group name). |
 
 `getFromCache` and `remove` throw nothing: they resolve through the most recently activated `CacheProvider` and are a no-op — `undefined` — when none is mounted.
 
