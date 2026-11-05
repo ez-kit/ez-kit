@@ -68,18 +68,25 @@ Composing a set governs **behaviour** — an unregistered feature contributes no
 
 ## Drag and drop
 
-This package defines **what a drag adapter is**. It authors none and names no drag library: the port
-is `DndAdapter` / `DragSpec` and the event shapes around them, plus `DndAdapterProvider`,
-`useDndEnabled` and `useSortableItem` for a surface to consume. The mechanics arrive from a kit's own
-`/dnd` subpath — `@ez-kit/data-grid-shadcn/dnd`, `@ez-kit/data-grid-heroui/dnd`, where the drag
-library is an optional peer — or from an adapter you write against the same port while building a
-flavour.
+The root exports the library-independent `DndAdapter` contract. The optional
+`@ez-kit/data-grid-react/dnd-kit` entry supplies the shared implementation used by both kits.
+Install its supported peers only when using that entry:
 
-An adapter is bound once, where the bundle is composed:
+```bash
+pnpm add @dnd-kit/react@^0.5.3 @dnd-kit/dom@^0.5.3
+```
+
+Bind the adapter explicitly when composing a bundle:
 
 ```tsx
-const { DataGrid } = createDataGrid({ components, dnd: adapter })
+import { adapter } from '@ez-kit/data-grid-react/dnd-kit'
+
+const { DataGrid } = createDataGrid({ components, features, dnd: adapter })
 ```
+
+Existing kit `/dnd` imports and the installed shadcn `components/data-grid/dnd` path
+re-export this adapter. A custom adapter can still implement the same `DndAdapter` contract.
+Ordinary entries do not import the drag libraries, including in their declarations.
 
 With none bound, `useDndEnabled()` is `false` and no surface renders a handle, so drag is opt-in and
 costs nothing when unused. Bind one and three surfaces drag: table rows — including in a virtualized

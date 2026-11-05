@@ -1,4 +1,6 @@
-import { DocsLayout } from 'fumadocs-ui/layouts/docs'
+import { DocsLayout } from 'fumadocs-ui/layouts/notebook'
+
+import { SidebarHighlight } from '@/components/sidebar-highlight'
 
 import { baseOptions } from '../../../lib/layout.shared'
 import { source } from '../../../lib/source'
@@ -12,10 +14,12 @@ type DocsGroupLayoutProps = {
 }
 
 export default function DocsGroupLayout({ children }: DocsGroupLayoutProps) {
+	const options = baseOptions()
 	return (
 		<DocsLayout
 			tree={source.pageTree}
-			{...baseOptions()}
+			{...options}
+			nav={{ ...options.nav, mode: 'top' }}
 			sidebar={{
 				className: '',
 			}}
@@ -23,6 +27,7 @@ export default function DocsGroupLayout({ children }: DocsGroupLayoutProps) {
 				className: styles.container,
 			}}
 		>
+			<SidebarHighlight />
 			{children}
 		</DocsLayout>
 	)

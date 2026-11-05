@@ -20,7 +20,7 @@ test.describe('Data-Grid docs section', () => {
 
 	test('sidebar lists the Data Grid section', async ({ page }) => {
 		await page.goto('/docs/data-grid')
-		const sidebarLinks = page.locator('aside a, nav a').filter({ hasText: /data grid/i })
+		const sidebarLinks = page.locator('#nd-sidebar a:visible').filter({ hasText: /data grid/i })
 		await expect(sidebarLinks.first()).toBeVisible()
 	})
 })

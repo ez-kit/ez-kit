@@ -33,6 +33,7 @@ export default defineConfig({
 		contract: 'src/contract.ts',
 		kit: 'src/kit.ts',
 		menu: 'src/menu.ts',
+		'dnd-kit/index': 'src/dnd-kit/index.ts',
 	},
 	format: ['esm'],
 	dts: true,
@@ -40,5 +41,5 @@ export default defineConfig({
 	// Shared code lands in hash-named chunks rather than being duplicated into every entry that
 	// reaches it — without this, five entries would each carry their own copy of what they share.
 	splitting: true,
-	external: ['react', 'react-dom'],
+	external: ['react', 'react-dom', /^@dnd-kit\//],
 })
