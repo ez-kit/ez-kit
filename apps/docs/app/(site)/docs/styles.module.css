@@ -1,6 +1,51 @@
 @reference "../../globals.css";
 
 .container {
+	--docs-inset-surface: #fff;
+	background: #f5f5f5;
+}
+
+:global(.dark) .container {
+	--docs-inset-surface: #171717;
+	background: #101010;
+}
+
+/* One surface spans the page, its table of contents and the mobile TOC bar,
+   while Fumadocs keeps those elements in their own grid areas. */
+.container::before {
+	content: '';
+	grid-area: 2 / 3 / 4 / 6;
+	margin: 8px 12px 12px 0;
+	border: 1px solid var(--color-fd-border);
+	border-radius: 16px;
+	background: var(--docs-inset-surface);
+	box-shadow: 0 1px 4px rgb(0 0 0 / 0.05);
+	pointer-events: none;
+}
+
+.container:global([data-sidebar-collapsed='true'])::before {
+	margin-inline-start: 12px;
+}
+
+.container :global([data-layout-main]),
+.container :global(#nd-toc),
+.container :global([data-toc-popover]) {
+	--color-fd-background: var(--docs-inset-surface);
+	z-index: 1;
+}
+
+.container :global([data-toc-popover]) {
+	margin: 8px 12px 0 0;
+}
+
+@media (max-width: 767px) {
+	.container::before {
+		margin: 8px 8px 8px;
+	}
+
+	.container :global([data-toc-popover]) {
+		margin-inline: 8px;
+	}
 }
 
 /* Notebook uses the same package tabs to scope the page tree and to render a
