@@ -45,3 +45,17 @@ test('package navigation remains available on mobile', async ({ page }) => {
 	await page.locator('#nd-subnav').getByRole('button', { name: 'Open Sidebar' }).click()
 	await expect(page.locator('#nd-sidebar-mobile').getByRole('link', { name: 'Basic concepts' })).toBeVisible()
 })
+
+test('wide docs header reaches the inset content edge', async ({ page }) => {
+	await page.setViewportSize({ width: 1809, height: 900 })
+	await page.goto('/docs/data-grid/features')
+	const header = page.locator('#nd-subnav')
+	const rightEdge = async () => {
+		const box = await header.boundingBox()
+		if (!box) throw new Error('Documentation header is not visible')
+		return box.x + box.width
+	}
+	await expect.poll(rightEdge).toBeCloseTo(1797, 0)
+	await header.getByRole('button', { name: 'Collapse Sidebar' }).click()
+	await expect.poll(rightEdge).toBeCloseTo(1797, 0)
+})

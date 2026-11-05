@@ -61,6 +61,13 @@
 /* Notebook groups the package links and actions after search. On wide screens,
    make that group transparent to flex layout so search can follow the links. */
 @media (min-width: 1024px) {
+	/* Notebook caps its header at the layout width, while the inset surface
+	   extends to the viewport edge. Keep their right edges aligned. */
+	.container :global(#nd-subnav) {
+		grid-column: 2 / -1;
+		margin-inline-end: 12px;
+	}
+
 	.container :global([data-header-body] > div:first-child) {
 		flex: none;
 	}
