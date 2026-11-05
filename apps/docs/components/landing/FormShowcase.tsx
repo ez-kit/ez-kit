@@ -10,8 +10,10 @@ const JSX_CODE = `<Form defaultValues={defaults}>
   {(form) => <>
     <form.TextField name="name" label="Project name" />
     <form.TextField name="email" label="Work email" />
-    <form.SelectField name="plan" label="Plan" options={plans} />
-    <form.NumberField name="seats" label="Team members" />
+    <form.Grid columns={2}>
+      <form.SelectField name="plan" label="Plan" options={plans} />
+      <form.NumberField name="seats" label="Team members" />
+    </form.Grid>
     <form.SwitchField name="updates" label="Send product updates" />
     <form.SubmitButton>Create workspace</form.SubmitButton>
   </>}
@@ -21,8 +23,16 @@ const JSON_CODE = `{
   "children": [
     { "type": "text", "name": "name", "label": "Project name" },
     { "type": "text", "name": "email", "label": "Work email" },
-    { "type": "select", "name": "plan", "label": "Plan" },
-    { "type": "number", "name": "seats", "label": "Team members" },
+    { "type": "block", "component": "Section", "columns": 2,
+      "children": [
+        { "type": "select", "name": "plan", "label": "Plan",
+          "defaultValue": "team", "options": [
+            { "label": "Starter", "value": "starter" },
+            { "label": "Team", "value": "team" },
+            { "label": "Business", "value": "business" }
+          ] },
+        { "type": "number", "name": "seats", "label": "Team members" }
+      ] },
     { "type": "switch", "name": "updates", "label": "Send product updates" },
     { "type": "block", "component": "SubmitButton" }
   ]
@@ -88,7 +98,7 @@ export function FormShowcase() {
 							<p className='mb-4 text-xs text-violet-300'>
 								{mode === 'jsx' ? 'workspace-form.tsx' : 'workspace-form.json'} · abbreviated
 							</p>
-							<pre className='overflow-x-auto text-xs leading-6'>
+							<pre className='max-h-[560px] overflow-auto text-xs leading-6'>
 								<code>{mode === 'jsx' ? JSX_CODE : JSON_CODE}</code>
 							</pre>
 						</div>

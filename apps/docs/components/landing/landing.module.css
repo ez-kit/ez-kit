@@ -1,38 +1,70 @@
 .aurora {
 	position: absolute;
-	inset: -25% -10% 20% 25%;
+	inset: -25% -10% 20% 10%;
 	pointer-events: none;
 	background:
-		radial-gradient(ellipse at 70% 20%, rgb(167 139 250 / 0.3), transparent 48%),
-		radial-gradient(ellipse at 30% 60%, rgb(251 191 165 / 0.2), transparent 50%);
-	filter: blur(45px);
-	animation: drift 16s ease-in-out infinite alternate;
+		radial-gradient(ellipse at 70% 20%, rgb(167 139 250 / 0.45), transparent 48%),
+		radial-gradient(ellipse at 30% 60%, rgb(251 146 100 / 0.25), transparent 50%);
+	filter: blur(48px);
+	animation: drift 9s ease-in-out infinite alternate;
 }
 .techText {
+	position: relative;
+	display: inline-block;
 	color: #7c3aed;
-	transition:
-		color 300ms ease,
-		-webkit-text-stroke 300ms ease;
+}
+.techFill {
+	transition: opacity 250ms ease;
+}
+.techOutline {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	opacity: 0;
+	overflow: visible;
+	transition: opacity 250ms ease;
+}
+.techOutline text {
+	font-family: inherit;
+	font-size: 72px;
+	font-weight: 700;
+	fill: transparent;
+	stroke: #7c3aed;
+	stroke-width: 1.5px;
+	stroke-dasharray: 5 3;
 }
 @media (hover: hover) {
-	.techText:hover {
-		color: transparent;
-		-webkit-text-stroke: 1.5px #7c3aed;
+	.techText:hover .techFill {
+		opacity: 0;
+	}
+	.techText:hover .techOutline {
+		opacity: 1;
+	}
+	.techText:hover .techOutline text {
+		animation: dash 2s linear infinite;
+	}
+}
+@keyframes dash {
+	to {
+		stroke-dashoffset: -32;
 	}
 }
 @keyframes drift {
 	from {
-		transform: translate3d(-2%, 0, 0) scale(1);
+		transform: translate3d(-7%, -3%, 0) scale(0.95);
 	}
 	to {
-		transform: translate3d(3%, 3%, 0) scale(1.1);
+		transform: translate3d(7%, 5%, 0) scale(1.12);
 	}
 }
 @media (prefers-reduced-motion: reduce) {
-	.aurora {
+	.aurora,
+	.techText:hover .techOutline text {
 		animation: none;
 	}
-	.techText {
+	.techFill,
+	.techOutline {
 		transition: none;
 	}
 }

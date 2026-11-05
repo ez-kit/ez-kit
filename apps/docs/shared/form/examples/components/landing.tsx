@@ -23,8 +23,15 @@ const schema = defineFormSchema<Project>()({
 			inputType: 'email',
 			defaultValue: '',
 		},
-		{ type: FormFieldType.Select, name: 'plan', label: 'Plan', defaultValue: 'team', options: plans },
-		{ type: FormFieldType.Number, name: 'seats', label: 'Team members', defaultValue: 5, min: 1 },
+		{
+			type: 'block',
+			component: 'Section',
+			columns: 2,
+			children: [
+				{ type: FormFieldType.Select, name: 'plan', label: 'Plan', defaultValue: 'team', options: plans },
+				{ type: FormFieldType.Number, name: 'seats', label: 'Team members', defaultValue: 5, min: 1 },
+			],
+		},
 		{ type: FormFieldType.Switch, name: 'updates', label: 'Send product updates', defaultValue: true },
 		{ type: 'block', component: 'SubmitButton', props: { children: 'Create workspace' } },
 	],
@@ -53,16 +60,18 @@ export function LandingFormExample() {
 							placeholder='you@company.com'
 							type='email'
 						/>
-						<form.SelectField
-							name='plan'
-							label='Plan'
-							options={plans}
-						/>
-						<form.NumberField
-							name='seats'
-							label='Team members'
-							min={1}
-						/>
+						<form.Grid columns={2}>
+							<form.SelectField
+								name='plan'
+								label='Plan'
+								options={plans}
+							/>
+							<form.NumberField
+								name='seats'
+								label='Team members'
+								min={1}
+							/>
+						</form.Grid>
 						<form.SwitchField
 							name='updates'
 							label='Send product updates'

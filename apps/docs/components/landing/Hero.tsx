@@ -16,7 +16,25 @@ export function Hero() {
 						<span className='h-1.5 w-1.5 rounded-full bg-violet-500' /> Open source tools for React
 					</p>
 					<h1 className='max-w-xl text-5xl font-bold leading-[1.06] tracking-[-0.055em] text-zinc-950 sm:text-6xl dark:text-white'>
-						Build more. <span className={styles.techText}>Wire less.</span>
+						Build more.{' '}
+						<span className={styles.techText}>
+							<span className={styles.techFill}>Wire less.</span>
+							<svg
+								className={styles.techOutline}
+								aria-hidden='true'
+								viewBox='0 0 340 85'
+								preserveAspectRatio='none'
+							>
+								<text
+									x='0'
+									y='68'
+									textLength='330'
+									lengthAdjust='spacingAndGlyphs'
+								>
+									Wire less.
+								</text>
+							</svg>
+						</span>
 					</h1>
 					<p className='mt-6 max-w-lg text-lg leading-8 text-zinc-600 dark:text-zinc-400'>
 						Composable data grids, forms, and state tools that fit your React stack — and the UI kit you already use.

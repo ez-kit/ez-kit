@@ -4,6 +4,24 @@ import { useState } from 'react'
 
 import { ExampleFrame } from '@/components/example-frame'
 
+const GRID_CODE = `const columns = createColumns<Quote>([
+  { accessorKey: 'symbol', header: 'Asset', width: 150,
+    cell: { component: SymbolCell } },
+  { accessorKey: 'price', header: 'Price',
+    cell: { type: 'number', config: { decimals: 2 } },
+    flashing: { status: (previous, next) =>
+      next > previous ? 'success' : 'error' } },
+  { accessorKey: 'change', header: 'Change', cell: { component: ChangeCell } },
+  { accessorKey: 'volume', header: 'Volume', cell: { type: 'number' } },
+  { accessorKey: 'trend', header: 'Trend', cell: { component: TrendCell },
+    flashing: false, filtering: false, sorting: false },
+])
+
+<DataGrid
+  data={quotes} columns={columns} getRowId={(quote) => quote.id}
+  sorting filtering selection flashing
+/>`
+
 type Kit = 'shadcn' | 'heroui'
 
 export function GridPreview() {
@@ -46,14 +64,17 @@ export function GridPreview() {
 					slug='landing-grid'
 				/>
 			</div>
-			<div className='border-t border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900/60'>
-				<p className='mb-2 text-xs font-medium text-zinc-500 dark:text-zinc-400'>
-					Same grid configuration, different UI kit · simulated data
-				</p>
-				<code className='block overflow-x-auto whitespace-nowrap font-mono text-xs leading-6 text-violet-800 dark:text-violet-300'>
-					&lt;DataGrid data={'{quotes}'} columns={'{columns}'} sorting filtering selection flashing /&gt;
-				</code>
-			</div>
+			<details
+				open
+				className='border-t border-zinc-200 bg-[#181522] text-violet-100 dark:border-zinc-800'
+			>
+				<summary className='cursor-pointer px-5 py-3 text-xs font-medium text-violet-200'>
+					View grid configuration · data simulation and cell renderers omitted
+				</summary>
+				<pre className='max-h-80 overflow-auto px-5 pb-5 text-xs leading-6'>
+					<code>{GRID_CODE}</code>
+				</pre>
+			</details>
 		</div>
 	)
 }

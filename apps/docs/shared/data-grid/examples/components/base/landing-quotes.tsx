@@ -124,10 +124,8 @@ const columns = createColumns<Quote>([
 
 export function LandingQuotesExample() {
 	const [quotes, setQuotes] = useState(INITIAL)
-	const [running, setRunning] = useState(false)
 
 	useEffect(() => {
-		if (!running) return
 		const timer = window.setInterval(() => {
 			setQuotes((previous) => {
 				const selected = Math.floor(Math.random() * previous.length)
@@ -150,22 +148,13 @@ export function LandingQuotesExample() {
 		return () => {
 			window.clearInterval(timer)
 		}
-	}, [running])
+	}, [])
 
 	return (
 		<div className='space-y-3'>
-			<div className='flex items-center justify-between gap-3 text-xs'>
-				<span className='text-zinc-500'>Simulated market data · select, sort, or filter</span>
-				<button
-					type='button'
-					onClick={() => {
-						setRunning(!running)
-					}}
-					aria-pressed={running}
-					className='rounded-md border border-violet-200 px-3 py-1.5 font-medium text-violet-700 dark:border-violet-800 dark:text-violet-300'
-				>
-					{running ? 'Pause updates' : 'Start live updates'}
-				</button>
+			<div className='flex items-center gap-2 text-xs text-zinc-500'>
+				<span className='h-2 w-2 rounded-full bg-emerald-500' />
+				Live simulation · select, sort, or filter
 			</div>
 			<DataGrid
 				data={quotes}

@@ -1,8 +1,11 @@
 import Link from 'next/link'
 
+import { UtilityArt } from './UtilityArt'
+
 const PRODUCTS = [
 	{
 		number: '01',
+		art: 'state',
 		name: 'State',
 		description: 'Create scoped stores and keep application state close to where it belongs.',
 		href: '/docs/zu-store',
@@ -10,6 +13,7 @@ const PRODUCTS = [
 	},
 	{
 		number: '02',
+		art: 'query',
 		name: 'Data fetching',
 		description: 'Handle query loading and error states with a declarative React API.',
 		href: '/docs/query-react',
@@ -17,12 +21,13 @@ const PRODUCTS = [
 	},
 	{
 		number: '03',
+		art: 'styling',
 		name: 'Styling',
 		description: 'Compose Tailwind classes and variants with a small, typed API.',
 		href: '/docs/twc',
 		tag: 'TAILWIND CSS',
 	},
-]
+] as const
 
 export function PackageCards() {
 	return (
@@ -47,11 +52,14 @@ export function PackageCards() {
 						<Link
 							key={product.name}
 							href={product.href}
-							className='group flex min-h-52 flex-col rounded-2xl border border-zinc-200 bg-white p-6 transition-colors hover:border-violet-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-violet-500'
+							className='group flex min-h-52 flex-col rounded-2xl border border-zinc-200 bg-white p-6 transition-all duration-300 hover:-translate-y-1 hover:border-violet-400 hover:shadow-xl hover:shadow-violet-950/10 motion-reduce:transform-none motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-violet-500'
 						>
 							<div className='flex justify-between text-xs font-semibold tracking-wider text-violet-700 dark:text-violet-400'>
 								<span>{product.tag}</span>
 								<span className='text-zinc-400'>{product.number}</span>
+							</div>
+							<div className='mt-5 overflow-hidden rounded-2xl transition-transform duration-500 group-hover:scale-[1.025] motion-reduce:transform-none motion-reduce:transition-none'>
+								<UtilityArt kind={product.art} />
 							</div>
 							<h3 className='mt-6 text-xl font-semibold tracking-tight text-zinc-950 dark:text-white'>
 								{product.name}
