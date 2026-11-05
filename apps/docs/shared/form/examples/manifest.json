@@ -1,5 +1,21 @@
 [
 	{
+		"id": "form-landing-schema",
+		"label": "Landing form schema",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/landing.tsx",
+		"exportName": "LandingSchemaExample"
+	},
+	{
+		"id": "form-landing",
+		"label": "Landing form",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/landing.tsx",
+		"exportName": "LandingFormExample"
+	},
+	{
 		"id": "form-basic",
 		"label": "Basic",
 		"group": "form",

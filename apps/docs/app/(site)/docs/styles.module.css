@@ -1,4 +1,128 @@
 @reference "../../globals.css";
 
 .container {
+	--docs-inset-surface: #fff;
+	background: #f5f5f5;
+}
+
+:global(.dark) .container {
+	--docs-inset-surface: #171717;
+	background: #101010;
+}
+
+/* One surface spans the page, its table of contents and the mobile TOC bar,
+   while Fumadocs keeps those elements in their own grid areas. */
+.container::before {
+	content: '';
+	grid-area: 2 / 3 / 4 / 6;
+	margin: 8px 12px 12px 0;
+	border: 1px solid var(--color-fd-border);
+	border-radius: 16px;
+	background: var(--docs-inset-surface);
+	box-shadow: 0 1px 4px rgb(0 0 0 / 0.05);
+	pointer-events: none;
+}
+
+.container:global([data-sidebar-collapsed='true'])::before {
+	margin-inline-start: 12px;
+}
+
+.container :global([data-layout-main]),
+.container :global(#nd-toc),
+.container :global([data-toc-popover]) {
+	--color-fd-background: var(--docs-inset-surface);
+	z-index: 1;
+}
+
+.container :global([data-toc-popover]) {
+	margin: 8px 12px 0 0;
+}
+
+@media (max-width: 767px) {
+	.container::before {
+		margin: 8px 8px 8px;
+	}
+
+	.container :global([data-toc-popover]) {
+		margin-inline: 8px;
+	}
+}
+
+/* Notebook uses the same package tabs to scope the page tree and to render a
+   dropdown. Keep the tree scoping, but use the package navigation instead. */
+.container :global(#nd-sidebar > div:first-child:has(> button[aria-haspopup='dialog'])) {
+	display: none;
+}
+
+.container :global(#nd-sidebar-mobile > div:first-child > button[aria-haspopup='dialog']) {
+	display: none;
+}
+
+/* Notebook groups the package links and actions after search. On wide screens,
+   make that group transparent to flex layout so search can follow the links. */
+@media (min-width: 1024px) {
+	/* Notebook caps its header at the layout width, while the inset surface
+	   extends to the viewport edge. Keep their right edges aligned. */
+	.container :global(#nd-subnav) {
+		grid-column: 2 / -1;
+		margin-inline-end: 12px;
+	}
+
+	.container :global([data-header-body] > div:first-child) {
+		flex: none;
+	}
+
+	.container :global([data-header-body] > div:last-child) {
+		display: contents;
+	}
+
+	.container :global([data-header-body] > div:last-child > div:first-child) {
+		order: 1;
+		margin-inline-start: 1.5rem;
+	}
+
+	.container :global([data-header-body] > button[data-search-full]) {
+		order: 2;
+		width: min(100%, 15rem);
+		margin-inline-start: auto;
+	}
+
+	.container :global([data-header-body] > div:last-child > a),
+	.container :global([data-header-body] > div:last-child > div:not(:first-child)) {
+		order: 3;
+	}
+}
+
+/* Keep Fumadocs' tree and active-page styles; the shared hover surface lives
+   behind its links and folder triggers inside the scroll area's clip. */
+.container :global(:is(#nd-sidebar, #nd-sidebar-mobile) [data-radix-scroll-area-viewport] :is(a, button)) {
+	z-index: 1;
+}
+
+@media (hover: hover) {
+	.container
+		:global(
+			:is(#nd-sidebar, #nd-sidebar-mobile)
+				[data-radix-scroll-area-viewport]
+				:is(a, button):hover:not([data-active='true'])
+		) {
+		background-color: transparent;
+	}
+}
+
+@media (hover: none) {
+	.container
+		:global(
+			:is(#nd-sidebar, #nd-sidebar-mobile)
+				[data-radix-scroll-area-viewport]
+				:is(a, button):hover:not([data-active='true'])
+		) {
+		background-color: transparent;
+	}
+}
+
+.container
+	:global(:is(#nd-sidebar, #nd-sidebar-mobile) [data-radix-scroll-area-viewport] :is(a, button):focus-visible) {
+	outline: 2px solid var(--color-fd-ring);
+	outline-offset: -2px;
 }

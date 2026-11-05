@@ -1,5 +1,13 @@
 [
 	{
+		"id": "landing-grid",
+		"label": "Landing grid",
+		"group": "base",
+		"groupLabel": "Base",
+		"sourceFile": "components/base/landing-quotes.tsx",
+		"exportName": "LandingQuotesExample"
+	},
+	{
 		"id": "base-plain",
 		"label": "Plain",
 		"group": "base",

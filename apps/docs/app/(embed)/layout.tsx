@@ -6,7 +6,7 @@ import type { ReactNode } from 'react'
 
 // Blocking script: read ?theme before first paint so the iframe never flashes
 // the wrong theme. Sets `.dark` (shadcn/tailwind custom-variant) and data-theme.
-const themeBootstrap = `(function(){try{var t=new URLSearchParams(location.search).get('theme');var d=t==='dark';document.documentElement.classList.toggle('dark',d);document.documentElement.setAttribute('data-theme',d?'dark':'light');}catch(e){}})();`
+const themeBootstrap = `(function(){try{var p=new URLSearchParams(location.search);var d=p.get('theme')==='dark';document.documentElement.classList.toggle('dark',d);document.documentElement.setAttribute('data-theme',d?'dark':'light');if(p.get('surface')==='landing')document.documentElement.setAttribute('data-surface','landing');}catch(e){}})();`
 
 export default function EmbedLayout({ children }: { children: ReactNode }) {
 	return (
