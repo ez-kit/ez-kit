@@ -4,6 +4,8 @@ import { createContext, type PropsWithChildren, type ReactElement, useContext, u
 import { snapshot, subscribe as subscribeValtio, useSnapshot as useValtioSnapshot, type Snapshot } from 'valtio'
 
 import { PACKAGE_TAG } from '../package-tag'
+import { useSelector as useProxySelector, type UseSelectorOptions } from '../use-selector'
+import { ProxySubscribe, type SubscribeComponent, type SubscribeProps } from '../use-selector/subscribe'
 
 import type { ControlledConfig, StoreId } from '@ez-kit/store-core'
 
@@ -45,15 +47,6 @@ type ProviderProps<TDefaultValue, TState extends object> = (undefined extends TD
 	onValueChange?: (value: Partial<TState>) => void
 }
 
-type SubscribeProps<TState extends object> = {
-	/**
-	 * Receives the auto-tracked snapshot for reads and, second, the raw proxy — the same one
-	 * `useStore()` returns — so a render prop that also writes needs no hook beside it. Positional,
-	 * as in `zu-store`'s `Subscribe`.
-	 */
-	children: (snap: Snapshot<TState>, store: TState) => ReactElement
-}
-
 type StoreProps<TState extends object> = {
 	children: (store: TState) => ReactElement
 }
@@ -67,8 +60,13 @@ export type CreateContextStoreResult<TState extends object, TDefaultValue> = {
 	 * It does **not** subscribe the calling component — pair it with `useSnapshot()` to render.
 	 */
 	useStore: () => TState
-	/** Reading slot: subscribes through `useSnapshot()`, so tracked mutations re-render its children. */
-	Subscribe: (props: SubscribeProps<TState>) => ReactElement
+	/** Selects from the context proxy snapshot, comparing results with Object.is by default. */
+	useSelector: <TSelected>(
+		selector: (snap: Snapshot<TState>) => TSelected,
+		options?: UseSelectorOptions<TSelected>,
+	) => TSelected
+	/** Reading slot: auto-tracks a snapshot, or compares the result when `selector` is provided. */
+	Subscribe: SubscribeComponent<TState>
 	/**
 	 * Write-only slot: hands the raw proxy from `useStore()` to its children without subscribing, so
 	 * store mutations never re-render them. It is **not** memoised — it still renders whenever its
@@ -224,13 +222,25 @@ export function createContextStore<TState extends object, TDefaultValue = undefi
 		return useValtioSnapshot(useStore(), snapshotOptions)
 	}
 
-	function Subscribe({ children }: SubscribeProps<TState>): ReactElement {
-		return children(useSnapshot(), useStore())
+	function useSelector<TSelected>(
+		selector: (snap: Snapshot<TState>) => TSelected,
+		selectorOptions?: UseSelectorOptions<TSelected>,
+	): TSelected {
+		return useProxySelector(useStore(), selector, selectorOptions)
+	}
+
+	function Subscribe<TSelected>(props: SubscribeProps<TState, TSelected>): ReactElement {
+		return (
+			<ProxySubscribe
+				{...props}
+				store={useStore()}
+			/>
+		)
 	}
 
 	function Store({ children }: StoreProps<TState>): ReactElement {
 		return children(useStore())
 	}
 
-	return { Provider, useSnapshot, useStore, Subscribe, Store }
+	return { Provider, useSnapshot, useStore, useSelector, Subscribe, Store }
 }
