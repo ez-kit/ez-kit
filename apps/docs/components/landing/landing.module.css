@@ -1,12 +1,24 @@
 .aurora {
 	position: absolute;
-	inset: -25% -10% 20% 10%;
+	inset: -25% -15% 5% 0;
 	pointer-events: none;
 	background:
-		radial-gradient(ellipse at 70% 20%, rgb(167 139 250 / 0.45), transparent 48%),
-		radial-gradient(ellipse at 30% 60%, rgb(251 146 100 / 0.25), transparent 50%);
-	filter: blur(48px);
-	animation: drift 9s ease-in-out infinite alternate;
+		radial-gradient(ellipse at 75% 18%, rgb(139 92 246 / 0.36), transparent 38%),
+		radial-gradient(ellipse at 28% 50%, rgb(251 146 100 / 0.25), transparent 39%),
+		radial-gradient(ellipse at 80% 80%, rgb(192 132 252 / 0.3), transparent 38%);
+	filter: blur(56px);
+	animation: drift 12s ease-in-out infinite alternate;
+}
+.gridGlow {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	background-image:
+		linear-gradient(rgb(124 58 237 / 0.11) 1px, transparent 1px),
+		linear-gradient(90deg, rgb(124 58 237 / 0.11) 1px, transparent 1px);
+	background-size: 48px 48px;
+	mask-image: radial-gradient(ellipse at 76% 20%, #000 0%, transparent 67%);
+	animation: grid-drift 12s linear infinite;
 }
 .techText {
 	position: relative;
@@ -58,8 +70,14 @@
 		transform: translate3d(7%, 5%, 0) scale(1.12);
 	}
 }
+@keyframes grid-drift {
+	to {
+		background-position: 48px 48px;
+	}
+}
 @media (prefers-reduced-motion: reduce) {
 	.aurora,
+	.gridGlow,
 	.techText:hover .techOutline text {
 		animation: none;
 	}

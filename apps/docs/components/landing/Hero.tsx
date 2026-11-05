@@ -10,6 +10,10 @@ export function Hero() {
 				aria-hidden='true'
 				className={styles.aurora}
 			/>
+			<div
+				aria-hidden='true'
+				className={styles.gridGlow}
+			/>
 			<div className='relative mx-auto grid max-w-[1200px] items-center gap-12 py-20 lg:py-24'>
 				<div className='max-w-3xl'>
 					<p className='mb-5 inline-flex items-center gap-2 rounded-full border border-violet-200 bg-white/70 px-3 py-1 text-xs font-semibold text-violet-700 dark:border-violet-400/20 dark:bg-violet-400/10 dark:text-violet-300'>
