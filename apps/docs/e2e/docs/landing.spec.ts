@@ -20,6 +20,7 @@ test('landing demos update data and switch implementations', async ({ page }) =>
 	const jsx = page.frameLocator('iframe[title="shadcn example: form-landing"]')
 	await expect(jsx.getByLabel('Project name')).toBeVisible()
 	await page.getByRole('button', { name: 'JSON schema' }).click()
+	await page.locator('iframe[title="shadcn example: form-landing-schema"]').scrollIntoViewIfNeeded()
 	const schema = page.frameLocator('iframe[title="shadcn example: form-landing-schema"]')
 	await expect(schema.getByLabel('Project name')).toBeVisible()
 	await expect(schema.getByLabel('Team members')).toBeVisible()
