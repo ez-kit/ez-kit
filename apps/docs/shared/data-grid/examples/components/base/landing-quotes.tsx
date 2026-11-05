@@ -128,23 +128,24 @@ export function LandingQuotesExample() {
 	useEffect(() => {
 		const timer = window.setInterval(() => {
 			setQuotes((previous) => {
-				const selected = Math.floor(Math.random() * previous.length)
-				return previous.map((quote, index) => {
-					if (index !== selected) return quote
-					const delta = (Math.random() - 0.5) * 2
+				return previous.map((quote) => {
+					const lastPoint = quote.trend.at(-1) ?? 20
+					const direction = lastPoint >= 34 ? -1 : lastPoint <= 6 ? 1 : Math.random() < 0.5 ? -1 : 1
+					const delta = direction * (0.3 + Math.random() * 1.2)
+					const nextPoint = Math.max(5, Math.min(35, lastPoint + Math.round(delta * 4)))
 					return {
 						...quote,
 						price: Math.round((quote.price + delta) * 100) / 100,
 						change: Math.round((quote.change + delta / 10) * 100) / 100,
-						volume: quote.volume + Math.floor(Math.random() * 100),
+						volume: quote.volume + 1 + Math.floor(Math.random() * 100),
 						trend: [
 							...quote.trend.slice(1),
-							Math.max(5, Math.min(35, (quote.trend.at(-1) ?? 20) + Math.round(delta * 4))),
+							nextPoint,
 						],
 					}
 				})
 			})
-		}, 1800)
+		}, 1500)
 		return () => {
 			window.clearInterval(timer)
 		}
