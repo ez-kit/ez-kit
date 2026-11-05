@@ -1,21 +1,22 @@
 import Link from 'next/link'
 
 import { GridPreview } from './GridPreview'
+import styles from './landing.module.css'
 
 export function Hero() {
 	return (
 		<section className='relative overflow-hidden border-b border-violet-100 bg-[#faf9ff] px-6 dark:border-white/10 dark:bg-[#11101a]'>
 			<div
 				aria-hidden='true'
-				className='pointer-events-none absolute -top-48 right-0 h-96 w-96 rounded-full bg-violet-300/25 blur-3xl dark:bg-violet-600/15'
+				className={styles.aurora}
 			/>
-			<div className='relative mx-auto grid max-w-[1200px] items-center gap-12 py-20 lg:grid-cols-[0.85fr_1.15fr] lg:gap-14 lg:py-28'>
-				<div>
+			<div className='relative mx-auto grid max-w-[1200px] items-center gap-12 py-20 lg:py-24'>
+				<div className='max-w-3xl'>
 					<p className='mb-5 inline-flex items-center gap-2 rounded-full border border-violet-200 bg-white/70 px-3 py-1 text-xs font-semibold text-violet-700 dark:border-violet-400/20 dark:bg-violet-400/10 dark:text-violet-300'>
 						<span className='h-1.5 w-1.5 rounded-full bg-violet-500' /> Open source tools for React
 					</p>
 					<h1 className='max-w-xl text-5xl font-bold leading-[1.06] tracking-[-0.055em] text-zinc-950 sm:text-6xl dark:text-white'>
-						Build more. <span className='text-violet-600 dark:text-violet-400'>Wire less.</span>
+						Build more. <span className={styles.techText}>Wire less.</span>
 					</h1>
 					<p className='mt-6 max-w-lg text-lg leading-8 text-zinc-600 dark:text-zinc-400'>
 						Composable data grids, forms, and state tools that fit your React stack — and the UI kit you already use.

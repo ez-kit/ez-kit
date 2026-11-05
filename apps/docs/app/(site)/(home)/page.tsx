@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { FormShowcase } from '@/components/landing/FormShowcase'
 import { Hero } from '@/components/landing/Hero'
 import { PackageCards } from '@/components/landing/PackageCards'
 
@@ -7,6 +8,7 @@ export default function LandingPage() {
 	return (
 		<main>
 			<Hero />
+			<FormShowcase />
 			<PackageCards />
 			<section className='border-t border-zinc-200 bg-zinc-50 px-6 py-20 dark:border-zinc-800 dark:bg-zinc-900/30'>
 				<div className='mx-auto grid max-w-[1200px] gap-10 md:grid-cols-2'>

@@ -13,8 +13,8 @@ export function GridPreview() {
 		<div className='min-w-0 overflow-hidden rounded-2xl border border-violet-200/80 bg-white shadow-[0_20px_70px_-25px_rgba(72,45,130,0.25)] dark:border-white/10 dark:bg-zinc-950'>
 			<div className='flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800'>
 				<div>
-					<p className='text-sm font-semibold text-zinc-900 dark:text-white'>One grid, your UI</p>
-					<p className='text-xs text-zinc-500 dark:text-zinc-400'>Interactive preview · try sorting a column</p>
+					<p className='text-sm font-semibold text-zinc-900 dark:text-white'>Market watch · Data Grid</p>
+					<p className='text-xs text-zinc-500 dark:text-zinc-400'>One grid, two UI kits</p>
 				</div>
 				<div
 					aria-label='Choose a UI kit'
@@ -48,10 +48,10 @@ export function GridPreview() {
 			</div>
 			<div className='border-t border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900/60'>
 				<p className='mb-2 text-xs font-medium text-zinc-500 dark:text-zinc-400'>
-					Same grid configuration, different UI kit
+					Same grid configuration, different UI kit · simulated data
 				</p>
 				<code className='block overflow-x-auto whitespace-nowrap font-mono text-xs leading-6 text-violet-800 dark:text-violet-300'>
-					&lt;DataGrid data={'{users}'} columns={'{columns}'} sorting /&gt;
+					&lt;DataGrid data={'{quotes}'} columns={'{columns}'} sorting filtering selection flashing /&gt;
 				</code>
 			</div>
 		</div>

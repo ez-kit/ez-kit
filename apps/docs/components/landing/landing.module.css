@@ -1,0 +1,38 @@
+.aurora {
+	position: absolute;
+	inset: -25% -10% 20% 25%;
+	pointer-events: none;
+	background:
+		radial-gradient(ellipse at 70% 20%, rgb(167 139 250 / 0.3), transparent 48%),
+		radial-gradient(ellipse at 30% 60%, rgb(251 191 165 / 0.2), transparent 50%);
+	filter: blur(45px);
+	animation: drift 16s ease-in-out infinite alternate;
+}
+.techText {
+	color: #7c3aed;
+	transition:
+		color 300ms ease,
+		-webkit-text-stroke 300ms ease;
+}
+@media (hover: hover) {
+	.techText:hover {
+		color: transparent;
+		-webkit-text-stroke: 1.5px #7c3aed;
+	}
+}
+@keyframes drift {
+	from {
+		transform: translate3d(-2%, 0, 0) scale(1);
+	}
+	to {
+		transform: translate3d(3%, 3%, 0) scale(1.1);
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.aurora {
+		animation: none;
+	}
+	.techText {
+		transition: none;
+	}
+}

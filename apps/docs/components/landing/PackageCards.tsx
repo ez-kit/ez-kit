@@ -3,34 +3,20 @@ import Link from 'next/link'
 const PRODUCTS = [
 	{
 		number: '01',
-		name: 'Data Grid',
-		description: 'Build powerful tables with sorting, filtering, editing, and more.',
-		href: '/docs/data-grid',
-		tag: 'TABLES',
-	},
-	{
-		number: '02',
-		name: 'Forms',
-		description: 'Compose typed forms with ready-to-use fields and validation.',
-		href: '/docs/form',
-		tag: 'FORMS',
-	},
-	{
-		number: '03',
 		name: 'State',
 		description: 'Create scoped stores and keep application state close to where it belongs.',
 		href: '/docs/zu-store',
 		tag: 'ZUSTAND + VALTIO',
 	},
 	{
-		number: '04',
+		number: '02',
 		name: 'Data fetching',
 		description: 'Handle query loading and error states with a declarative React API.',
 		href: '/docs/query-react',
 		tag: 'TANSTACK QUERY',
 	},
 	{
-		number: '05',
+		number: '03',
 		name: 'Styling',
 		description: 'Compose Tailwind classes and variants with a small, typed API.',
 		href: '/docs/twc',
@@ -46,14 +32,14 @@ export function PackageCards() {
 		>
 			<div className='mx-auto max-w-[1200px]'>
 				<p className='text-xs font-bold tracking-[0.16em] text-violet-700 uppercase dark:text-violet-400'>
-					The toolkit
+					More from ez-kit
 				</p>
 				<div className='mt-4 flex flex-wrap items-end justify-between gap-4'>
 					<h2 className='max-w-2xl text-3xl font-bold tracking-[-0.04em] text-zinc-950 sm:text-4xl dark:text-white'>
-						The building blocks for your next application.
+						Small tools. A smoother workflow.
 					</h2>
 					<p className='max-w-xs text-sm leading-6 text-zinc-500 dark:text-zinc-400'>
-						Pick the pieces you need. Each one is designed to fit into your existing stack.
+						State, data fetching, and styling utilities that fit into the stack you already use.
 					</p>
 				</div>
 				<div className='mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3'>

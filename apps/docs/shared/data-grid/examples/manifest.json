@@ -4,8 +4,8 @@
 		"label": "Landing grid",
 		"group": "base",
 		"groupLabel": "Base",
-		"sourceFile": "components/base/sorting.tsx",
-		"exportName": "LandingGridExample"
+		"sourceFile": "components/base/landing-quotes.tsx",
+		"exportName": "LandingQuotesExample"
 	},
 	{
 		"id": "base-plain",

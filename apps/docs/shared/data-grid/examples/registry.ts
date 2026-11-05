@@ -10,6 +10,7 @@ export const exampleModules: Record<string, () => Promise<Record<string, Compone
 	'components/base/editing.tsx': () => import('./components/base/editing'),
 	'components/base/filtering.tsx': () => import('./components/base/filtering'),
 	'components/base/full.tsx': () => import('./components/base/full'),
+	'components/base/landing-quotes.tsx': () => import('./components/base/landing-quotes'),
 	'components/base/inline.tsx': () => import('./components/base/inline'),
 	'components/base/plain.tsx': () => import('./components/base/plain'),
 	'components/base/selection-bar-basics.tsx': () => import('./components/base/selection-bar-basics'),
