@@ -2,3 +2,31 @@
 
 .container {
 }
+
+/* Notebook groups the package links and actions after search. On wide screens,
+   make that group transparent to flex layout so search can follow the links. */
+@media (min-width: 1024px) {
+	.container :global([data-header-body] > div:first-child) {
+		flex: none;
+	}
+
+	.container :global([data-header-body] > div:last-child) {
+		display: contents;
+	}
+
+	.container :global([data-header-body] > div:last-child > div:first-child) {
+		order: 1;
+		margin-inline-start: 1.5rem;
+	}
+
+	.container :global([data-header-body] > button[data-search-full]) {
+		order: 2;
+		width: min(100%, 15rem);
+		margin-inline-start: auto;
+	}
+
+	.container :global([data-header-body] > div:last-child > a),
+	.container :global([data-header-body] > div:last-child > div:not(:first-child)) {
+		order: 3;
+	}
+}

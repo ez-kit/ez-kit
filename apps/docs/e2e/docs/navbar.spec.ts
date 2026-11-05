@@ -19,6 +19,12 @@ test('package navigation is present on the landing page and documentation', asyn
 		if (path.startsWith('/docs')) {
 			await expect(header.getByRole('link', { name: 'Data Grid', exact: true })).toHaveAttribute('data-active', 'true')
 			await expect(page.locator('#nd-sidebar')).toBeVisible()
+			const lastPackage = await header.getByRole('link', { name: 'twc', exact: true }).boundingBox()
+			const search = await header.locator('button[data-search-full]').boundingBox()
+			expect(lastPackage).not.toBeNull()
+			expect(search).not.toBeNull()
+			if (!lastPackage || !search) throw new Error('Package navigation or search is not visible')
+			expect(lastPackage.x + lastPackage.width).toBeLessThan(search.x)
 		}
 	}
 })
