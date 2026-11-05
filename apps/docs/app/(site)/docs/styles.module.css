@@ -85,3 +85,37 @@
 		order: 3;
 	}
 }
+
+/* Keep Fumadocs' tree and active-page styles; the shared hover surface lives
+   behind its links and folder triggers inside the scroll area's clip. */
+.container :global(:is(#nd-sidebar, #nd-sidebar-mobile) [data-radix-scroll-area-viewport] :is(a, button)) {
+	z-index: 1;
+}
+
+@media (hover: hover) {
+	.container
+		:global(
+			:is(#nd-sidebar, #nd-sidebar-mobile)
+				[data-radix-scroll-area-viewport]
+				:is(a, button):hover:not([data-active='true'])
+		) {
+		background-color: transparent;
+	}
+}
+
+@media (hover: none) {
+	.container
+		:global(
+			:is(#nd-sidebar, #nd-sidebar-mobile)
+				[data-radix-scroll-area-viewport]
+				:is(a, button):hover:not([data-active='true'])
+		) {
+		background-color: transparent;
+	}
+}
+
+.container
+	:global(:is(#nd-sidebar, #nd-sidebar-mobile) [data-radix-scroll-area-viewport] :is(a, button):focus-visible) {
+	outline: 2px solid var(--color-fd-ring);
+	outline-offset: -2px;
+}

@@ -1,5 +1,7 @@
 import { DocsLayout } from 'fumadocs-ui/layouts/notebook'
 
+import { SidebarHighlight } from '@/components/sidebar-highlight'
+
 import { baseOptions } from '../../../lib/layout.shared'
 import { source } from '../../../lib/source'
 
@@ -25,6 +27,7 @@ export default function DocsGroupLayout({ children }: DocsGroupLayoutProps) {
 				className: styles.container,
 			}}
 		>
+			<SidebarHighlight />
 			{children}
 		</DocsLayout>
 	)
