@@ -1,5 +1,11 @@
 # @ez-kit/va-store
 
+## 1.3.0
+
+### Minor Changes
+
+- 41bd1b9: Add snapshot-based useSelector for standalone Valtio proxies and context/cached stores, with Object.is equality by default and optional isEqual. Subscribe now supports selector and isEqual props while retaining automatic property tracking when no selector is provided.
+
 ## 1.2.0
 
 ### Minor Changes
