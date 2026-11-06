@@ -1,0 +1,68 @@
+---
+title: Mutation
+description: Keep a mutation subscription next to its action with the native useMutation result and options.
+---
+
+`<Mutation>` calls TanStack's `useMutation` and passes its full result to `children(m)`.
+Only the component subscribes: mutation state changes do not re-render its parent or siblings.
+It adds no markup or styles and runs under your existing `QueryClientProvider`.
+
+```tsx
+import { Mutation } from '@ez-kit/query-react'
+import { mutationOptions } from '@tanstack/react-query'
+
+const deviceMutations = {
+	remove: () =>
+		mutationOptions({
+			mutationFn: async ({ id }: { id: number }) => {
+				const response = await fetch(`/api/devices/${id}`, { method: 'DELETE' })
+				if (!response.ok) throw new Error('Could not delete device')
+			},
+		}),
+}
+
+function RemoveDevice({ id }: { id: number }) {
+	return (
+		<Mutation mutation={deviceMutations.remove()}>
+			{(m) => (
+				<>
+					<button
+						disabled={m.isPending}
+						onClick={() => m.mutate({ id })}
+					>
+						{m.isPending ? 'Deleting…' : 'Delete'}
+					</button>
+					{m.isError && <p role='alert'>{m.error.message}</p>}
+				</>
+			)}
+		</Mutation>
+	)
+}
+```
+
+## Rendering and errors
+
+See [Mutation workflows](/docs/query-react/mutation-workflows) for live examples of invalidation,
+server field errors, optimistic updates and rollback.
+
+`children(m)` renders in every state: idle, pending, success and error. Unlike a query gate,
+a mutation does not replace its children with fallbacks. A button or form can stay mounted
+while you render its progress and errors alongside it. Returning the same elements in the same
+positions preserves their React state; conditional rendering inside `children` is yours to control.
+
+`m` is the native result, including `mutate`, `mutateAsync`, `reset`, `variables`, `data`,
+`error`, `isPending` and the other TanStack fields. `mutateAsync` returns the original promise;
+handle its rejection when using it in an event handler.
+
+Errors stay in `m.error` by default. Native `throwOnError` options and QueryClient defaults are
+honored. `QueryProvider` supplies fallbacks only for `Query` and does not change mutation behavior.
+
+## Options and types
+
+Pass native `UseMutationOptions` as `mutation`, either inline or from `mutationOptions(...)`.
+Data, variables, error and the value returned by `onMutate` are inferred from those options.
+The default error type respects TanStack's `Register.defaultError`.
+
+Keep callbacks, cache invalidation, optimistic updates, retries and mutation keys in those options,
+just as with `useMutation`. Per-call callbacks remain available as the second argument to
+`m.mutate` and `m.mutateAsync`. No mutation starts until you call one of them.

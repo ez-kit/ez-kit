@@ -1,3 +1,7 @@
+export { InfiniteQuery } from './infinite-query'
+export type { InfiniteQueryErrorFallback, InfiniteQueryProps } from './infinite-query'
+export { Mutation } from './mutation'
+export type { MutationProps } from './mutation'
 export { Query } from './query'
 export type { QueryProps } from './query'
 export { QueryProvider } from './query-provider'

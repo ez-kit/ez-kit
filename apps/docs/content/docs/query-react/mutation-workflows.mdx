@@ -1,0 +1,52 @@
+---
+title: Mutation workflows
+description: Live Query and Mutation examples for cache invalidation, server field errors, optimistic updates and rollback.
+---
+
+These examples use a simulated server with a short delay. Each mounted example owns its server
+data and `QueryClient`; changes disappear when you leave the page. The source panel beneath
+each example includes the component and its local API implementation; use **Show all** to expand it.
+
+## Invalidation and form errors
+
+<LivePreview
+	path='query-react/mutation-workflow'
+	title='Create a device and refresh its query'
+/>
+
+Try a name shorter than three characters or a name already in the list. The server returns a
+field error, and the form stays mounted with its input intact. A valid name is saved, the list is
+invalidated, and the input is reset after the refreshed data arrives.
+
+The mutation's `onSuccess` returns `client.invalidateQueries(...)`. TanStack awaits that promise,
+so `m.isPending` covers both the write and the list refresh. The local `onSuccess` passed to
+`m.mutate` resets only this form. The package adds no callback or invalidation policy.
+
+Field errors stay in the application's error type. This example uses `ValidationError` and
+checks it with `instanceof` before reading `fieldErrors`. A general failure still renders an
+alert. `aria-invalid` and `aria-describedby` connect the field to its server error.
+
+## Optimistic updates and rollback
+
+<LivePreview
+	path='query-react/optimistic-update'
+	title='Favorite immediately, then confirm or roll back'
+/>
+
+Toggle a favorite to update the query cache immediately. Enable **Reject changes on the server**
+and toggle again to see the previous list restored after the failed write.
+
+The native callbacks do the work:
+
+1. `onMutate` cancels an in-flight list query, snapshots its cached data, and writes the optimistic value.
+2. `onError` restores that snapshot when the write fails.
+3. `onSettled` invalidates the list after success or failure to reconcile it with the server.
+
+The example uses one mutation observer and disables every favorite button until the mutation and
+refresh settle. This keeps writes sequential, so rolling back a whole-list snapshot cannot
+overwrite another pending optimistic change. For concurrent writes, use a conflict-aware strategy
+such as per-item updates, invalidation after the last relevant mutation, or TanStack's
+`useMutationState` to display pending changes alongside server data.
+
+The gate only controls rendering and the subscription boundary. Cancellation, cache writes,
+rollback and invalidation remain ordinary TanStack APIs.

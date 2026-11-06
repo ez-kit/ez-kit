@@ -3,5 +3,14 @@
 	"description": "Declarative TanStack Query gate for React",
 	"icon": "DatabaseZap",
 	"root": true,
-	"pages": ["index", "states", "data-under-gate", "ai"]
+	"pages": [
+		"index",
+		"states",
+		"data-under-gate",
+		"infinite-query",
+		"mutation",
+		"mutation-workflows",
+		"ssr-prefetch",
+		"ai"
+	]
 }
