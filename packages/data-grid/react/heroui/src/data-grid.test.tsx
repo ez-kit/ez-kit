@@ -1,5 +1,5 @@
 import { defaultOperators } from '@ez-kit/data-grid-core/operators'
-import { render, renderHook, screen } from '@testing-library/react'
+import { render, renderHook, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
 import { createColumns, DataGrid, useDataGrid } from './data-grid'
@@ -39,4 +39,21 @@ describe('the prebuilt grid', () => {
 		)
 		expect(grid).toBeTruthy()
 	})
+})
+
+it('passes resolved editability through the kit header to the DOM', async () => {
+	const { container } = render(
+		<DataGrid
+			data={[{ id: 1, name: 'Ada' }]}
+			columns={createColumns<Person>([{ accessorKey: 'id', editing: false }, { accessorKey: 'name' }])}
+			editing={{ onSave: async () => {} }}
+			selection
+		/>,
+	)
+	await waitFor(() => {
+		const editable = container.querySelectorAll('th[data-editable="true"]')
+		expect(editable).toHaveLength(1)
+		expect(editable[0]?.getAttribute('data-column-id')).toBe('name')
+	})
+	expect(container.querySelector('th[data-column-id="id"]')?.hasAttribute('data-editable')).toBe(false)
 })
