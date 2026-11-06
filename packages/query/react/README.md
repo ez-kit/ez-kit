@@ -76,6 +76,73 @@ const spinner = <Spinner />
 it, a nested provider overrides the keys it sets and inherits the rest, and each fallback is
 picked on its own. The provider is optional.
 
+## Mutations
+
+`Mutation` keeps a `useMutation` subscription next to its action. It takes native options and
+passes the unchanged result to `children(m)` in every state; it adds no markup or fallbacks.
+
+```tsx
+import { Mutation } from '@ez-kit/query-react'
+
+;<Mutation mutation={{ mutationFn: deleteDevice }}>
+	{(m) => (
+		<>
+			<button
+				disabled={m.isPending}
+				onClick={() => m.mutate({ id: device.id })}
+			>
+				{m.isPending ? 'Deleting…' : 'Delete'}
+			</button>
+			{m.isError && <p role='alert'>{m.error.message}</p>}
+		</>
+	)}
+</Mutation>
+```
+
+Types are inferred from `mutation`, including options from TanStack's `mutationOptions(...)`.
+Use native callbacks for invalidation or optimistic updates. `mutateAsync`, `reset` and all other
+result fields keep their native behavior. Errors stay in `m.error` unless native `throwOnError`
+options or client defaults request an error boundary. `QueryProvider` does not affect mutations.
+
+## Infinite queries
+
+`InfiniteQuery` accepts `useInfiniteQuery` options, including options from
+`infiniteQueryOptions(...)`, and uses the same `loading`, `idle` and `error` fallbacks as `Query`.
+`QueryProvider` supplies shared fallbacks to both gates.
+
+```tsx
+import { InfiniteQuery } from '@ez-kit/query-react'
+
+;<InfiniteQuery
+	query={deviceQueries.infinite()}
+	loading={<Spinner />}
+>
+	{(data, q) => (
+		<>
+			{data.pages.flatMap((page) => page.items.map((device) => <p key={device.id}>{device.name}</p>))}
+			{q.isFetchNextPageError && <p role='alert'>{q.error.message}</p>}
+			<button
+				disabled={!q.hasNextPage || q.isFetching}
+				onClick={() => void q.fetchNextPage()}
+			>
+				Load more
+			</button>
+		</>
+	)}
+</InfiniteQuery>
+```
+
+The data argument is never `undefined` and follows `select` if one is set. The native infinite
+query result, including previous/next page methods, is passed unchanged. Loaded data stays on
+screen while another page loads or fails. Use a distinct cache key from a regular query.
+
+## Recipes
+
+- [Mutation workflows](https://ez-kit-docs.vercel.app/docs/query-react/mutation-workflows): live
+  invalidation, server field errors, optimistic updates and rollback examples.
+- [SSR and prefetch](https://ez-kit-docs.vercel.app/docs/query-react/ssr-prefetch): request-scoped
+  server clients, dehydration/hydration and warming the browser cache before navigation.
+
 ## Documentation
 
 https://ez-kit-docs.vercel.app/docs/query-react

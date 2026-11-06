@@ -5,6 +5,9 @@ description: What <Query> renders in each state of a query, where its loading, i
 
 ## What the gate renders
 
+`InfiniteQuery` uses these same state rules and inherits the same `QueryProvider` fallbacks.
+Its local render callbacks receive the native infinite-query result, including pagination methods.
+
 `<Query>` reads the query's state and renders exactly one thing:
 
 | State      | Condition                                                             | Renders                       |

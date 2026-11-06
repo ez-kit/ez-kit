@@ -12,7 +12,7 @@ export type QueryProviderProps = QueryFallbacks & {
 }
 
 /**
- * Sets the default `loading`, `idle` and `error` fallbacks for every `<Query>` below it. Each key
+ * Sets the default `loading`, `idle` and `error` fallbacks for every `<Query>` and `<InfiniteQuery>` below it. Each key
  * it sets overrides the enclosing provider's; a key it leaves out is inherited. A `<Query>` prop
  * overrides both. Optional: without a provider, `loading` and `idle` render nothing and an error
  * is thrown to the nearest error boundary.

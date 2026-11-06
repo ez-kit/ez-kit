@@ -3,6 +3,13 @@ title: '@ez-kit/query-react'
 description: A declarative gate for TanStack Query — render loading, idle, error or data, with the subscription isolated inside the gate.
 ---
 
+For create, update and delete actions, [Mutation](/docs/query-react/mutation) isolates a
+`useMutation` subscription and gives your render function its native result in every state.
+
+- [InfiniteQuery](/docs/query-react/infinite-query) — load pages with the same fallbacks and native pagination methods.
+- [Mutation workflows](/docs/query-react/mutation-workflows) — try invalidation, server field errors and optimistic rollback.
+- [SSR and prefetch](/docs/query-react/ssr-prefetch) — server rendering, hydration and warming the browser cache.
+
 When a component shows the data of several [TanStack Query](https://tanstack.com/query) queries,
 the `useQuery` calls usually sit in a shared parent:
 

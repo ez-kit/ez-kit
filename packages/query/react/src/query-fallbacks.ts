@@ -9,7 +9,7 @@ export type QueryErrorFallback<TData = unknown, TError = DefaultError> = (
 	q: UseQueryResult<TData, TError>,
 ) => ReactNode
 
-/** The fallbacks a `<QueryProvider>` hands to every `<Query>` below it. */
+/** The fallbacks a `<QueryProvider>` hands to every `<Query>` and `<InfiniteQuery>` below it. */
 export type QueryFallbacks = {
 	/** Rendered during the first load, while there is no data yet. */
 	loading?: ReactNode
