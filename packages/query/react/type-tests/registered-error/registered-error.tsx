@@ -1,9 +1,9 @@
 import { queryOptions } from '@tanstack/react-query'
 import { expectTypeOf } from 'vitest'
 
-import { Query, QueryProvider } from '../../src'
+import { InfiniteQuery, Mutation, Query, QueryProvider } from '../../src'
 
-import type { UseQueryResult } from '@tanstack/react-query'
+import type { InfiniteData, UseInfiniteQueryResult, UseMutationResult, UseQueryResult } from '@tanstack/react-query'
 
 /**
  * Registering an error type is program-wide, so it lives in its own project: in the package's
@@ -43,4 +43,31 @@ export const provider = (
 			return error.code
 		}}
 	/>
+)
+
+export const mutation = (
+	<Mutation mutation={{ mutationFn: () => Promise.resolve('saved') }}>
+		{(m) => {
+			expectTypeOf(m).toEqualTypeOf<UseMutationResult<string, ApiError, void>>()
+			return m.error?.code
+		}}
+	</Mutation>
+)
+
+export const infinite = (
+	<InfiniteQuery
+		query={{
+			queryKey: ['registered-pages'],
+			queryFn: () => Promise.resolve('page'),
+			initialPageParam: 0,
+			getNextPageParam: () => undefined,
+		}}
+		error={(error, q) => {
+			expectTypeOf(error).toEqualTypeOf<ApiError>()
+			expectTypeOf(q).toEqualTypeOf<UseInfiniteQueryResult<InfiniteData<string>>>()
+			return error.code
+		}}
+	>
+		{() => null}
+	</InfiniteQuery>
 )

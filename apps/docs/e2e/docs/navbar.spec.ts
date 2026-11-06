@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test'
 const packages = [
 	{ name: 'Data Grid', href: '/docs/data-grid' },
 	{ name: 'Form', href: '/docs/form' },
+	{ name: 'Query', href: '/docs/query-react' },
 	{ name: 'zu-store', href: '/docs/zu-store' },
 	{ name: 'va-store', href: '/docs/va-store' },
 	{ name: 'twc', href: '/docs/twc' },
