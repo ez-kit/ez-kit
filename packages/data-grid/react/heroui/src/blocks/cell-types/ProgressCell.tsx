@@ -3,6 +3,8 @@
 import { baseCellTypes } from '@ez-kit/data-grid-react/cell-types'
 import { Description, FieldError, Input, Label, NumberField, ProgressBar } from '@heroui/react'
 
+import { NumberFilterInput } from './NumberCell'
+
 import type { CellTypeDefinition, CellViewProps, FieldState, ProgressCellConfig } from '@ez-kit/data-grid-react'
 
 function ProgressCellView({ value, config }: CellViewProps<ProgressCellConfig>) {
@@ -59,6 +61,7 @@ const progressCellType: CellTypeDefinition<ProgressCellConfig> & { __config?: Pr
 	...baseCellTypes.progress,
 	view: ProgressCellView,
 	editing: ProgressCellInput,
+	filtering: NumberFilterInput,
 }
 
 export { ProgressCellInput, progressCellType, ProgressCellView }

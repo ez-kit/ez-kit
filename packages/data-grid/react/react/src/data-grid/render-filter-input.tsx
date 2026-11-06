@@ -1,4 +1,5 @@
 import { GridMenuIcon } from '@ez-kit/data-grid-core'
+import { Fragment, useMemo } from 'react'
 
 import { ItemsSourceSlot, useItemsLists } from '../items-source'
 import { GridMenuVariant, toMenuSections } from '../menu'
@@ -8,6 +9,7 @@ import { FilterEditor, filterName, resolveFilter } from './filter-model'
 import { FilterTextInput } from './filter-text-input'
 import { flexRender } from './flex-render'
 import { configWithItems, fieldItemsProps } from './items-view'
+import { useFilterInput } from './use-filter-input'
 import { VisuallyHiddenLabel } from './visually-hidden'
 
 import type { CellTypeRegistry } from '../cell-types-context'
@@ -25,7 +27,13 @@ import type {
 } from '../types'
 import type { FilterModel, OperatorFilterModel } from './filter-model'
 import type { FilterTarget, FilterTargetMeta } from './filter-target'
-import type { InputComponentProps, BetweenValue, FieldState, GridMessages } from '@ez-kit/data-grid-core'
+import type {
+	InputComponentProps,
+	BetweenValue,
+	FieldState,
+	GridMessages,
+	StructuredFilterValue,
+} from '@ez-kit/data-grid-core'
 import type { ComponentType, ReactNode } from 'react'
 
 const NO_META: ItemsMeta = {}
@@ -51,7 +59,7 @@ export type RenderFilterInputArgs<TRow extends object = ErasedRow> = {
 	BetweenInput: ComponentType<BetweenInputProps>
 	MultiSelectFilter?: ComponentType<MultiSelectFilterProps>
 	/**
-	 * Table-level commit debounce (ms) for the fallback text inputs. `0` = commit on every
+	 * Table-level configured commit debounce (ms) for text and single-number inputs. `0` = commit on every
 	 * keystroke. A column's own `filtering.debounce` overrides it.
 	 */
 	debounce: number
@@ -62,9 +70,8 @@ export type RenderFilterInputArgs<TRow extends object = ErasedRow> = {
 	 */
 	messages: GridMessages
 	/**
-	 * The live table instance, used only to wire "Enter applies the whole draft" on the
-	 * fallback text inputs under `draft`. Optional so callers and tests that construct a target by
-	 * hand need not also fabricate a table.
+	 * The live table instance for scalar timing and command cancellation.
+	 * Optional so callers and tests that construct a target by hand need not fabricate a table.
 	 */
 	table?: DataTable<GridFeatures, TRow>
 	/**
@@ -104,8 +111,53 @@ function FilterInput(args: RenderFilterInputArgs) {
 		ItemsSourceSlot.Filtering,
 	)
 	const target = args.target.lists ? args.target : { ...args.target, lists: subscribed }
-	return renderFilterControl({ ...args, target })
+	const model =
+		args.model ??
+		resolveFilter(target, { messages: args.messages, tableDebounce: args.debounce, cellTypes: args.cellTypes })
+	if (model.editor === FilterEditor.Text || model.editor === FilterEditor.Number) {
+		return (
+			<ScalarFilterInput
+				{...args}
+				target={target}
+				model={model}
+			/>
+		)
+	}
+	return renderFilterControl({ ...args, target, model })
 }
+
+/** Standard registry renderers and fallback controls use the same scalar commit boundary. */
+function ScalarFilterInput(args: RenderFilterInputArgs & { model: FilterModel }) {
+	const { target, table, model } = args
+	const definition = args.cellTypes[target.meta.cell?.type ?? '']
+	const renderer = definition?.filtering ?? definition?.editing ?? args.Input
+	const operator = model.hasOperators ? model.operator : undefined
+	const context = useMemo(
+		() => ({ id: target.id, editor: model.editor, renderer, operator }),
+		[target.id, model.editor, renderer, operator],
+	)
+	const input = useFilterInput({
+		value: model.hasOperators ? model.value?.value : target.getValue(),
+		onCommit: (value: unknown) => {
+			target.setValue(model.hasOperators ? { operator: model.operator, value } : value)
+		},
+		debounce: table?.options.draft === true ? 0 : model.debounce,
+		context,
+		table,
+		scope: { axis: 'columnFilters', id: target.id },
+		read: () => {
+			const value = target.getValue()
+			return model.hasOperators ? (value as StructuredFilterValue | undefined)?.value : value
+		},
+	})
+	return (
+		<Fragment key={model.editor === FilterEditor.Number ? input.version : target.id}>
+			{renderFilterControl({ ...args, input })}
+		</Fragment>
+	)
+}
+
+type ScalarInput = { value: unknown; onChange: (value: unknown) => void }
 
 function renderFilterControl<TRow extends object>({
 	target,
@@ -116,28 +168,13 @@ function renderFilterControl<TRow extends object>({
 	ClearFilterButton,
 	BetweenInput,
 	MultiSelectFilter,
-	debounce: tableDebounce,
 	messages,
-	table,
-	model: resolvedModel,
-}: RenderFilterInputArgs<TRow>): ReactNode {
+	model,
+	input,
+}: RenderFilterInputArgs<TRow> & { model: FilterModel; input?: ScalarInput }): ReactNode {
 	const { meta } = target
 	const filteringMeta = meta.filtering
-	const model = resolvedModel ?? resolveFilter(target, { messages, tableDebounce, cellTypes })
 	const lists = target.lists ?? { options: undefined, labels: undefined }
-	// A column's own `filtering.debounce` wins over the table's, the same way `editing.debounce`
-	// and `creating.debounce` do at their two levels. One dear endpoint can wait a second while
-	// the rest of the grid stays responsive.
-	const { debounce } = model
-	// Enter in a fallback text input applies the whole pending draft — sorting, filters and
-	// search commit together in one request. `undefined` under non-deferred tables so Enter
-	// keeps whatever meaning it has today (e.g. form submission).
-	const onEnterApply =
-		table?.options.draft === true
-			? () => {
-					table.draft.apply()
-				}
-			: undefined
 
 	/**
 	 * The control's accessible name, and the id a `<label htmlFor>` binds it by.
@@ -179,15 +216,13 @@ function renderFilterControl<TRow extends object>({
 			fieldName,
 			fieldPlaceholder,
 			fieldLabel,
-			onEnterApply,
+			input,
 		})
 	}
 
 	// ── plain filter path (no operators) ──────────────────────────────────
-	const filterValue = target.getValue()
-	const onChange = (v: unknown) => {
-		target.setValue(v)
-	}
+	const filterValue = input ? input.value : target.getValue()
+	const onChange = input?.onChange ?? target.setValue
 
 	if (filteringMeta !== undefined) {
 		const comp = filteringMeta.component as ((props: InputComponentProps) => ReactNode) | undefined
@@ -232,8 +267,7 @@ function renderFilterControl<TRow extends object>({
 			aria-label={fieldName}
 			value={(filterValue ?? '') as string}
 			onCommit={onChange}
-			debounce={debounce}
-			{...(onEnterApply ? { onEnterApply } : {})}
+			debounce={0}
 		/>
 	)
 }
@@ -251,7 +285,7 @@ type OperatorFilterArgs = Pick<
 	fieldName: string
 	fieldPlaceholder: string
 	fieldLabel: ReactNode
-	onEnterApply: (() => void) | undefined
+	input: ScalarInput | undefined
 }
 
 /** The operator-aware branch of {@link renderFilterInput}, dispatched on the model's `editor`. */
@@ -272,13 +306,14 @@ function renderOperatorFilter({
 	fieldName,
 	fieldPlaceholder,
 	fieldLabel,
-	onEnterApply,
+	input,
 }: OperatorFilterArgs): ReactNode {
-	const inputValue = model.value?.value
+	const inputValue = input ? input.value : model.value?.value
 	const currentOperatorId = model.operator
 
-	const onValueChange = (v: unknown): void => {
-		model.setValue({ operator: currentOperatorId, value: v })
+	const onValueChange = (value: unknown): void => {
+		if (input) input.onChange(value)
+		else model.setValue({ operator: currentOperatorId, value })
 	}
 
 	// First in the filter's row, before whatever control the operator calls for — never a row of its
@@ -449,8 +484,7 @@ function renderOperatorFilter({
 				aria-label={fieldName}
 				value={(inputValue ?? '') as string}
 				onCommit={onValueChange}
-				debounce={model.debounce}
-				{...(onEnterApply ? { onEnterApply } : {})}
+				debounce={0}
 			/>
 			{presetMenu}
 			{clearButton}

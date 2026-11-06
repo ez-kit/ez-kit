@@ -1,6 +1,7 @@
 'use client'
 
 import { NumberField } from '@heroui/react'
+import { useLayoutEffect, useRef } from 'react'
 
 import type { ReactNode } from 'react'
 
@@ -18,6 +19,8 @@ type NumberFieldControlProps = {
 	value: number | undefined
 	onChange: (next: number | undefined) => void
 	onBlur?: () => void
+	/** Filter-only: emit the number already parsed by React Aria while retaining raw input. */
+	live?: boolean
 	isInvalid?: boolean
 	minValue?: number | undefined
 	maxValue?: number | undefined
@@ -52,6 +55,7 @@ export function NumberFieldControl({
 	placeholder,
 	'aria-label': ariaLabel,
 	withSteppers = false,
+	live = false,
 	header,
 	footer,
 }: NumberFieldControlProps) {
@@ -60,25 +64,77 @@ export function NumberFieldControl({
 			{...(className === undefined ? {} : { className })}
 			value={value ?? NaN}
 			onChange={(next) => {
-				onChange(Number.isNaN(next) ? undefined : next)
+				if (!live || !Object.is(Number.isNaN(next) ? undefined : next, value))
+					onChange(Number.isNaN(next) ? undefined : next)
 			}}
 			{...(isInvalid === undefined ? {} : { isInvalid })}
 			{...(minValue === undefined ? {} : { minValue })}
 			{...(maxValue === undefined ? {} : { maxValue })}
 			{...(ariaLabel === undefined ? {} : { 'aria-label': ariaLabel })}
 		>
-			{header}
-			<NumberField.Group>
-				{withSteppers && <NumberField.DecrementButton />}
-				<NumberField.Input
-					className={withSteppers ? INPUT_CLASS : INPUT_NO_STEPPERS_CLASS}
-					{...(id === undefined ? {} : { id })}
-					{...(placeholder === undefined ? {} : { placeholder })}
-					{...(onBlur === undefined ? {} : { onBlur })}
-				/>
-				{withSteppers && <NumberField.IncrementButton />}
-			</NumberField.Group>
-			{footer}
+			{({ state }) => (
+				<>
+					{live && (
+						<LiveNumberValue
+							state={state}
+							value={value}
+							onChange={onChange}
+						/>
+					)}
+
+					{header}
+					<NumberField.Group>
+						{withSteppers && <NumberField.DecrementButton />}
+						<NumberField.Input
+							className={withSteppers ? INPUT_CLASS : INPUT_NO_STEPPERS_CLASS}
+							{...(id === undefined ? {} : { id })}
+							{...(placeholder === undefined ? {} : { placeholder })}
+							{...(onBlur === undefined ? {} : { onBlur })}
+						/>
+						{withSteppers && <NumberField.IncrementButton />}
+					</NumberField.Group>
+					{footer}
+				</>
+			)}
 		</NumberField>
 	)
+}
+
+/** Reads React Aria's parsed value; never parses or commits/formats the user's raw text. */
+function LiveNumberValue({
+	state,
+	value,
+	onChange,
+}: {
+	state: { inputValue: string; numberValue: number; setInputValue: (value: string) => void }
+	value: number | undefined
+	onChange: (value: number | undefined) => void
+}) {
+	const previous = useRef({ value, text: state.inputValue })
+	const emitted = useRef<{ value: number | undefined; text: string } | undefined>(undefined)
+	useLayoutEffect(() => {
+		const old = previous.current
+		previous.current = { value, text: state.inputValue }
+		if (!Object.is(old.value, value)) {
+			if (emitted.current && Object.is(value, emitted.current.value)) {
+				// A controlled echo must not format an unfinished decimal or remove leading zeroes.
+				if (state.inputValue !== emitted.current.text) {
+					previous.current.text = emitted.current.text
+					state.setInputValue(emitted.current.text)
+				}
+			} else emitted.current = undefined
+			return
+		}
+		if (old.text === state.inputValue) return
+		if (state.inputValue !== '' && Number.isNaN(state.numberValue)) return
+		const next = state.inputValue === '' ? undefined : state.numberValue
+		if (emitted.current && Object.is(emitted.current.value, next)) {
+			// Formatting on blur (or another spelling of the same number) is not a new scalar edit.
+			emitted.current.text = state.inputValue
+			return
+		}
+		emitted.current = { value: next, text: state.inputValue }
+		onChange(next)
+	}, [state, value, onChange])
+	return null
 }

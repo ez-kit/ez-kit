@@ -18,7 +18,7 @@ import type { ResolvedGridOptions } from './resolved-options'
  *
  * @example
  * const { filtering } = useGridOptions()
- * const debounced = useDebouncedValue(draft, filtering.debounce)
+ * const configuredDelay = filtering.debounce // Built-in draft inputs bypass this delay.
  */
 export function useGridOptions(): ResolvedGridOptions {
 	return useDataGridTable().grid

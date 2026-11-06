@@ -13,6 +13,7 @@ import { table_publishExternalState } from '@tanstack/table-core/static-function
 import { useEffect, useRef, useState } from 'react'
 
 import { useDndBundleAdapter } from './data-grid/dnd'
+import { wireFilterInputCommands } from './data-grid/filter-input-commands'
 import { mergeGridOptionLayers, useDataGridOptions, useGridFactoryDefaults } from './data-grid-options-context'
 import { DATA_GRID_DEFAULTS, DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
 import { enforceControlledColumns } from './enforce-controlled-columns'
@@ -422,11 +423,12 @@ function resolveSortReorder(multi: boolean | MultiSortConfig | undefined): boole
 
 export type ReactFilteringConfig = {
 	/**
-	 * Commit debounce in milliseconds for text filter inputs. Default: 250.
+	 * Commit debounce in milliseconds for text and single-number filter inputs. Default: 250.
 	 *
 	 * This is the grid's **shared** filter debounce: the global search box falls back to it
-	 * too, so setting it here retimes every text filter at once. `globalFiltering.debounce`
-	 * overrides it for the search box alone. `0` commits on every keystroke.
+	 * too, so setting it here retimes every eligible scalar filter at once. `globalFiltering.debounce`
+	 * overrides it for the search box alone. `0` commits on every keystroke, including keyboard deletion.
+	 * With `draft: true`, built-in inputs write immediately into the draft.
 	 *
 	 * Discrete controls (between, multi-select, select/badge, custom components)
 	 * always commit instantly and are unaffected by this option.
@@ -1665,5 +1667,6 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 	// so **an option this package needs to read back must be written into the options object, not
 	// through `setOptions`.**
 	Object.assign(view, table, { grid, gridContext, setData })
+	wireFilterInputCommands(view)
 	return view
 }

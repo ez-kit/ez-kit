@@ -6,6 +6,8 @@ import { useGridComponents } from '@ez-kit/data-grid-react/kit'
 import { Field, FieldDescription, FieldError, FieldLabel } from '@grid-shadcn/components/ui/field'
 import { Progress } from '@grid-shadcn/components/ui/progress'
 
+import { NumberCellInput } from './NumberCell'
+
 import type { CellTypeDefinition, CellViewProps, FieldState, ProgressCellConfig } from '@ez-kit/data-grid-react'
 
 function ProgressCellView({ value, config }: CellViewProps<ProgressCellConfig>) {
@@ -54,6 +56,7 @@ const progressCellType: CellTypeDefinition<ProgressCellConfig> & { __config?: Pr
 	...baseCellTypes.progress,
 	view: ProgressCellView,
 	editing: ProgressCellInput,
+	filtering: NumberCellInput,
 }
 
 export { ProgressCellInput, progressCellType, ProgressCellView }
