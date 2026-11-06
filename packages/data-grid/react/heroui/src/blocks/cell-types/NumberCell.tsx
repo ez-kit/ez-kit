@@ -9,6 +9,7 @@ import type { CellTypeDefinition, FieldState, NumberCellConfig } from '@ez-kit/d
 
 type NumberCellFieldProps = FieldState & {
 	withSteppers: boolean
+	live?: boolean
 }
 
 /**
@@ -28,6 +29,7 @@ function NumberCellField({
 	placeholder,
 	errors,
 	withSteppers,
+	live,
 }: NumberCellFieldProps) {
 	const hasError = errors.length > 0
 	return (
@@ -38,6 +40,7 @@ function NumberCellField({
 			onBlur={onBlur}
 			isInvalid={hasError}
 			withSteppers={withSteppers}
+			{...(live ? { live: true } : {})}
 			{...(placeholder === undefined ? {} : { placeholder })}
 			header={label === undefined ? null : <Label htmlFor={id}>{label}</Label>}
 			footer={
@@ -66,6 +69,7 @@ function NumberFilterInput(props: FieldState) {
 		<NumberCellField
 			{...props}
 			withSteppers={false}
+			live
 		/>
 	)
 }

@@ -7,40 +7,48 @@ import { renderGrid } from '../test-utils'
 import { DataGrid } from './data-grid'
 
 /**
- * Draft behaviour that is not the action bar's: the keyboard shortcut that commits a whole
- * draft, and the DOM marks a pending draft leaves on the controls it came from. They moved
+ * Draft filter inputs and the DOM marks a pending draft leaves on its controls. They moved
  * here when `draft-bar.tsx` became a section of `action-bar.tsx` — the bar's own cases live
  * in `action-bar.test.tsx`.
  */
-describe('applying a draft from a filter input', () => {
-	it('applies the whole draft when Enter is pressed in a filter input', async () => {
+describe('draft filter input behavior', () => {
+	it('renders the fallback input directly inside the existing header extras', () => {
+		renderGrid({ filtering: { manual: true } })
+		const input = screen.getByRole('textbox', { name: /filter name/i })
+		expect(input.parentElement).toHaveAttribute('data-slot', 'header-extras')
+	})
+	it('leaves the draft pending when Enter is pressed in a filter input', async () => {
 		const { table } = renderGrid({
 			draft: true,
 			sorting: { manual: true },
-			filtering: { manual: true },
+			filtering: { manual: true, debounce: 800 },
 		})
 		table.setSorting([{ id: 'age', desc: true }])
 
 		const input = await screen.findByRole('textbox', { name: /filter name/i })
 		await userEvent.type(input, 'An{Enter}')
 
-		expect(table.draft.isDirty()).toBe(false)
-		expect(table.store.state.applied.sorting).toEqual([{ id: 'age', desc: true }])
+		expect(table.draft.isDirty()).toBe(true)
+		expect(table.store.state.applied.sorting).toEqual([])
+		expect(table.store.state.applied.columnFilters).toEqual([])
+		expect(table.draft.get().columnFilters).toEqual([{ id: 'name', value: 'An' }])
 	})
 
-	it('applies the whole draft when Enter is pressed in the global search input', async () => {
+	it('leaves the draft pending when Enter is pressed in the global search input', async () => {
 		const { table } = renderGrid({
 			draft: true,
 			sorting: { manual: true },
-			globalFiltering: true,
+			globalFiltering: { debounce: 800 },
 		})
 		table.setSorting([{ id: 'age', desc: true }])
 
 		const search = await screen.findByRole('textbox', { name: /search/i })
 		await userEvent.type(search, 'An{Enter}')
 
-		expect(table.draft.isDirty()).toBe(false)
-		expect(table.store.state.applied.sorting).toEqual([{ id: 'age', desc: true }])
+		expect(table.draft.isDirty()).toBe(true)
+		expect(table.store.state.applied.sorting).toEqual([])
+		expect(table.store.state.applied.globalFilter).toBeUndefined()
+		expect(table.draft.get().globalFilter).toBe('An')
 	})
 
 	it('does nothing on Enter in a filter input when draft is off', async () => {

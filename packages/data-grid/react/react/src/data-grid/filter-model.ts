@@ -107,7 +107,7 @@ type FilterModelBase = {
 	presets: DatePreset[]
 	/** The range control's bounds and slider flag, when the column states them. */
 	between: BetweenOperatorConfig | undefined
-	/** Commit debounce in ms — the column's `filtering.debounce`, else the table's. */
+	/** Configured text/number commit delay in ms. Draft inputs bypass it; setters stay synchronous. */
 	debounce: number
 	/**
 	 * The hint an empty control shows — the target's `filtering.placeholder`, else the filter's

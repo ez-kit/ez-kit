@@ -1,10 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
-
 import { useGridComponents } from '../components-context'
 import { DATA_GRID_DEFAULTS } from '../defaults'
-import { useDebouncedValue } from '../utils/use-debounced-value'
 
 import { useDataGridState, useDataGridTable } from './table-context'
+import { useFilterInput } from './use-filter-input'
 
 export type DataGridGlobalFilterInputProps = {
 	/** Override the placeholder configured via `globalFiltering.placeholder`. */
@@ -33,59 +31,24 @@ export function GlobalFilterInput({ placeholder: placeholderProp }: DataGridGlob
 	const debounce = cfg?.debounce ?? DATA_GRID_DEFAULTS.filtering.debounce
 	const placeholder = placeholderProp ?? cfg?.placeholder ?? table.grid.messages.globalFiltering.placeholder
 
-	const committed = String(globalFilter ?? '')
-	const [draft, setDraft] = useState(committed)
-	const debouncedDraft = useDebouncedValue(draft, debounce)
-
-	// React state-during-render pattern: detect external mutations of
-	// `state.globalFilter` (programmatic reset, controlled mode) and pull the new
-	// value into our draft without an effect.
-	const [prevCommitted, setPrevCommitted] = useState(committed)
-	if (committed !== prevCommitted) {
-		setPrevCommitted(committed)
-		if (committed !== draft && committed !== debouncedDraft) {
-			setDraft(committed)
-		}
-	}
-
-	const isFirstRunRef = useRef(true)
-	useEffect(() => {
-		if (isFirstRunRef.current) {
-			isFirstRunRef.current = false
-			return
-		}
-		table.setGlobalFilter(debouncedDraft === '' ? undefined : debouncedDraft)
-		// `table` is a stable ref — intentionally omitted from deps to avoid
-		// resubscribing every render.
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [debouncedDraft])
-
-	// Enter applies the whole pending draft — sorting, filters and search commit together in
-	// one request — mirroring the column filter path. `undefined` under non-deferred tables
-	// so Enter keeps its default meaning (e.g. form submission).
-	const onEnterApply =
-		table.options.draft === true
-			? () => {
-					table.draft.apply()
-				}
-			: undefined
+	const input = useFilterInput({
+		value: String(globalFilter ?? ''),
+		onCommit: (value: string) => {
+			table.setGlobalFilter(value === '' ? undefined : value)
+		},
+		debounce: table.options.draft === true ? 0 : debounce,
+		table,
+		scope: { axis: 'globalFilter' },
+		read: () => String(table.store.state.globalFilter ?? ''),
+	})
 
 	return (
 		<Component
-			value={draft}
-			onChange={setDraft}
+			value={input.value}
+			onChange={input.onChange}
 			placeholder={placeholder}
 			debounce={debounce}
 			data-slot='global-filter-input'
-			{...(onEnterApply
-				? {
-						onKeyDown: (e) => {
-							if (e.key !== 'Enter') return
-							e.preventDefault()
-							onEnterApply()
-						},
-					}
-				: {})}
 		/>
 	)
 }

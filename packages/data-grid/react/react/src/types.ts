@@ -221,9 +221,7 @@ type ActionsCellCreatingProps = {
  * unchecked default, and `any` stays mutually assignable so the registry accepts both.
  */
 export type ActionsCellProps<TRow extends object = ErasedRow> =
-	| ActionsCellIdleProps<TRow>
-	| ActionsCellEditingProps<TRow>
-	| ActionsCellCreatingProps
+	ActionsCellIdleProps<TRow> | ActionsCellEditingProps<TRow> | ActionsCellCreatingProps
 
 // ── primitive component props ─────────────────────────────────────────────
 
@@ -414,14 +412,12 @@ export type ToolbarProps = {
  * Props for the UI-kit Global Filter input (search field).
  * - `value` / `onChange` are wired by the headless wrapper to the table's
  *   `state.globalFilter`. When the user types, the wrapper applies the optional
- *   debounce before calling `onChange`.
+ *   debounce before committing the search. Draft mode commits into the draft immediately.
  * - `placeholder` is forwarded from `globalFiltering.placeholder`.
  * - `debounce` is informational — the wrapper has already applied debounce; the
  *   UI-kit input does not need to debounce again. Exposed so kits can show
- *   pending state if desired.
- * - `onKeyDown`, when present, must be forwarded to the underlying `<input>` verbatim —
- *   the headless wrapper uses it to apply the whole pending draft on Enter under
- *   `draft`. `undefined` when there is nothing to wire (e.g. `draft` off).
+ *   timing hints if desired; this remains the configured value in draft mode.
+ * - `onKeyDown`, when present, is forwarded to the underlying `<input>` verbatim.
  */
 export type GlobalFilterInputProps = {
 	value: string

@@ -1,3 +1,4 @@
+import { wireFilterInputCommands } from './data-grid/filter-input-commands'
 import { createGridContextAtom } from './grid-context'
 import { defaultResolvedGridOptions } from './resolved-options'
 
@@ -48,5 +49,6 @@ export function prepareDataGridTable<TFeatures extends TableFeatures, TRow exten
 	const prepared = table as unknown as DataTable<TFeatures, TRow>
 	prepared.grid = defaultResolvedGridOptions(table.grid as unknown as GridOptions<never>)
 	prepared.gridContext = createGridContextAtom(table._reactivity)
+	wireFilterInputCommands(prepared)
 	return prepared
 }

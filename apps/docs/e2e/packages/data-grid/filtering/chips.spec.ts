@@ -62,6 +62,8 @@ async function openFilter(page: Page, header: Locator): Promise<Locator> {
 async function filterColumn(page: Page, header: Locator, value: string): Promise<void> {
 	const dialog = await openFilter(page, header)
 	await dialog.getByRole('textbox').fill(value)
+	// Closing an unmounted input cancels pending typing; wait for the committed chip first.
+	await expect(page.locator('[data-chip-kind="column"]')).toContainText(value)
 	await page.keyboard.press('Escape')
 	await expect(dialog).toBeHidden()
 }

@@ -132,8 +132,7 @@ export type ColumnRenderer<TProps, TNode> = ((props: TProps) => TNode) | ExoticC
  * author writes here is a claim about their own column, not something the grid can check.
  */
 export type ColumnInputRenderer<TProps, TNode> =
-	| { bivariantRender(props: TProps): TNode }['bivariantRender']
-	| ExoticComponentLike
+	{ bivariantRender(props: TProps): TNode }['bivariantRender'] | ExoticComponentLike
 
 /**
  * What every view-mode cell renderer is handed — a column's own `cell.component` and a
@@ -768,8 +767,9 @@ export type ColumnFilteringConfig<TNode = unknown, TConfig = unknown, TLayer = U
 	 */
 	defaultOperator?: FilterOperatorId
 	/**
-	 * Commit debounce (ms) for this column's text filter input, overriding the table-level
-	 * {@link ReactFilteringConfig.debounce}. `0` commits on every keystroke.
+	 * Commit debounce (ms) for this column's text or single-number filter input, overriding the table-level
+	 * {@link ReactFilteringConfig.debounce}. `0` commits on every keystroke, including deletion.
+	 * Built-in inputs bypass this delay with `draft: true`; programmatic setters stay synchronous.
 	 *
 	 * One word for "how long we wait before acting on typing", the same one
 	 * `editing.debounce` and `creating.debounce` use at both the table and the column level.

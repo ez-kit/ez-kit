@@ -341,8 +341,9 @@ pending, and the whole query reaches you as **one** state change when the user p
 <DataGridDocsExample exampleId='production-deferred-apply' />
 
 Add two sorts and a filter in the preview above and watch the network panel: nothing goes out until
-Apply, and then exactly one request does. Pressing <kbd>Enter</kbd> in a column filter or in the
-search box applies the whole draft, not just the field you are in.
+Apply, and then exactly one request does. Built-in text and single-number
+inputs write into the draft immediately, bypassing their configured debounce, so Apply includes the
+latest typed values. Reset restores the applied values without a pending timer bringing them back.
 
 ```tsx
 <DataGrid
