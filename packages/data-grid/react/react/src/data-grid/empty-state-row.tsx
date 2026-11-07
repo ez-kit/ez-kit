@@ -29,12 +29,11 @@ export type DataGridEmptyStateRowProps = {
 
 export function EmptyStateRow({ children }: DataGridEmptyStateRowProps = {}) {
 	const table = useDataGridTable()
-	useDataGridState((s) => s.columnVisibility)
 	const gridComponents = useGridComponents()
 	const { Tbody, Tr, Td } = gridComponents.core
 	const { EmptyState } = gridComponents.fallbacks
 
-	const columnCount = table.getVisibleLeafColumns().length
+	const columnCount = useDataGridState(() => table.getVisibleLeafColumns().length)
 	const customContent = table.grid.fallbacks.empty.component
 
 	const content =

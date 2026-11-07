@@ -35,14 +35,8 @@ export function ClearFiltersButton({
 	'aria-label': ariaLabel,
 }: DataGridClearFiltersButtonProps = {}) {
 	const table = useDataGridTable()
-	// The subscription is the read — see `active-filters-bar.tsx` for the note.
-	const columnFilters = useDataGridState((s) => s.columnFilters)
-	const globalFilter = useDataGridState((s) => s.globalFilter as unknown)
+	const hasAnyFilter = useDataGridState((s) => s.columnFilters.length > 0 || Boolean(s.globalFilter))
 	const { ClearFilterButton: Component } = useGridComponents().filtering
-
-	const hasColumnFilters = columnFilters.length > 0
-	const hasGlobalFilter = Boolean(globalFilter)
-	const hasAnyFilter = hasColumnFilters || hasGlobalFilter
 
 	if (!hasAnyFilter && !alwaysShow) return null
 

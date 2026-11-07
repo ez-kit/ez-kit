@@ -37,32 +37,37 @@ const CREATING_ROW_ATTR = 'data-creating-row'
  */
 export function CreatingRow() {
 	const table = useDataGridTable()
-	useDataGridState((s) => s.creating)
+	const state = useDataGridState((s) => s.creating)
 	// A creation row renders both the visual column order and each pinned field's offset.
-	useDataGridState(
+	const columnModels = useDataGridState(
 		() =>
-			getVisualLeafColumns(table).flatMap((column) => {
-				const pinned = column.getIsPinned()
-				return [
-					column.id,
-					pinned,
-					pinned === 'start' ? column.getStart('start') : pinned === 'end' ? column.getAfter('end') : null,
-				]
-			}),
-		{ compare: shallow },
+			getVisualLeafColumns(table).map((column) => ({
+				column,
+				pinned: column.getIsPinned(),
+				pinVars: getCommonPinStyles(column),
+			})),
+		{
+			compare: (a, b) =>
+				a.length === b.length &&
+				a.every((entry, index) => {
+					const other = b[index]
+					return (
+						entry.column === other?.column && entry.pinned === other.pinned && shallow(entry.pinVars, other.pinVars)
+					)
+				}),
+		},
 	)
 	const gridComponents = useGridComponents()
 	const { Tr, Td, Input, Checkbox } = gridComponents.core
 	const { ActionsCell } = gridComponents.rowActions
 	const cellTypes = useCellTypes()
-	const state = table.creating.getState()
 	const values = state.values
 	const errors = state.errors
 	const isValidating = state.commitStatus === CommitStatus.Validating
 	const isPending = state.commitStatus !== CommitStatus.Idle
 	const creatingConfig = table.options.creating
 	const isPinRow = creatingConfig?.mode === 'pin-row'
-	const columns = getVisualLeafColumns(table)
+	const columns = columnModels.map(({ column }) => column)
 	// Every field's list, read in one hook: the row renders its fields in a loop, which cannot call
 	// one per field.
 	const lists = useItemsListsFor(columns.map(creatingListRead))
@@ -89,14 +94,12 @@ export function CreatingRow() {
 			data-slot='tr'
 			{...{ [CREATING_ROW_ATTR]: '' }}
 		>
-			{columns.map((col, index) => {
+			{columnModels.map(({ column: col, pinned, pinVars }, index) => {
 				// `ColumnMeta` is declared `in out` in both its `TFeatures` and its `TData` upstream, so no
 				// concrete instantiation is assignable to any other and this cast is forced by the variance
 				// annotation rather than chosen. `FormColumnMeta` is the one name core declares for it, and
 				// this is the same cast core's own `creating.ts` makes at its boundary.
 				const meta = col.columnDef.meta as FormColumnMeta | undefined
-				const pinVars = getCommonPinStyles(col)
-				const pinned = col.getIsPinned()
 				const pinnedAttrs = pinned ? { 'data-pinned': pinned } : {}
 
 				if (meta?.isSystemColumn) {

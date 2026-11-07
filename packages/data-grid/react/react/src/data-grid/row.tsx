@@ -263,7 +263,7 @@ function DataGridRowImpl<TRow extends object = ErasedRow>(
 	 * list.
 	 *
 	 * Gated on the adapter first, which is a performance requirement rather than tidiness: the lookup
-	 * scans the list once per row, so a grid with no drag — which is most grids — must not pay for it.
+	 * shares a cached index map across rows, so a grid with no drag — which is most grids — must not pay for it.
 	 * The same *performance* gate `header-cell.tsx` puts in front of its own; what that file does with
 	 * a `-1` is deliberately not the same, and the note below says why.
 	 *
@@ -280,7 +280,7 @@ function DataGridRowImpl<TRow extends object = ErasedRow>(
 	const isDndEnabled = useDndEnabled()
 	const publishedRowIds = useRenderedRowIds()
 	const shouldReportUnpublishedRow = useShouldReportUnpublishedRow()
-	const dropIndex = isDndEnabled ? getRowDropIndex(table, publishedRowIds, row.id) : 0
+	const dropIndex = useDataGridState(() => (isDndEnabled ? getRowDropIndex(table, publishedRowIds, row.id) : 0))
 	/*
 	 * A published list that does not contain this row is a **defect**, not a fallback case: a
 	 * virtualized body publishes the window plus the row it is holding through a drag, so every row

@@ -6,7 +6,7 @@ import { useColumnPin } from '../utils/use-column-pin'
 import { getAlignAttrs } from './align-attrs'
 import { resolveViewComponent } from './cell'
 import { flexRender } from './flex-render'
-import { useDataGridState } from './table-context'
+import { useRenderCallbackState, useDataGridState } from './table-context'
 
 import type { CellTypeRegistry, CellViewProps } from '../cell-types-context'
 import type { ResolvedGridOptions } from '../resolved-options'
@@ -136,6 +136,7 @@ export function DataGridFooterCell<TRow extends object = ErasedRow>({
 	header,
 	children,
 }: DataGridFooterCellProps<TRow>) {
+	useRenderCallbackState(typeof header.column.columnDef.footer === 'function')
 	const { Td } = useGridComponents().core
 	const { pinned } = useColumnPin(header.column)
 	// `ColumnMeta` is declared `in out` in both its `TFeatures` and its `TData` upstream, so no

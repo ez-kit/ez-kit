@@ -1,6 +1,7 @@
 import { useGridComponents } from '../components-context'
 import { SortDirection } from '../types'
 import { resolveReorderMode } from '../utils/reorder-mode'
+import { shallow } from '../utils/shallow-equal'
 import { isAllowedReorder, swapSortEntries } from '../utils/sort-entry-order'
 
 import { useDndEnabled } from './dnd'
@@ -69,12 +70,21 @@ export type DataGridSortMenuTriggerProps = {
 
 export function SortMenuTrigger({ children }: DataGridSortMenuTriggerProps = {}) {
 	const table = useDataGridTable()
-	// The subscription is the read — see `active-filters-bar.tsx` for the note.
-	const sorting = useDataGridState((s) => s.sorting)
+	const { sorting, sortable, multiSortable } = useDataGridState(
+		(state) => {
+			const sortable = table
+				.getAllLeafColumns()
+				.filter((col) => !col.columnDef.meta?.isSystemColumn && col.getCanSort())
+			return { sorting: state.sorting, sortable, multiSortable: sortable.filter((col) => col.getCanMultiSort()) }
+		},
+		{
+			compare: (a, b) =>
+				a.sorting === b.sorting && shallow(a.sortable, b.sortable) && shallow(a.multiSortable, b.multiSortable),
+		},
+	)
 	const { SortMenu } = useGridComponents().sorting
 	const isDndEnabled = useDndEnabled()
 
-	const sortable = table.getAllLeafColumns().filter((col) => !col.columnDef.meta?.isSystemColumn && col.getCanSort())
 	// `columnNameOf` names the entry everywhere — here and in the drag announcements — so the step and
 	// grip names cannot drift from the sentences a screen reader hears.
 	const sortableColumns: SortColumnOption[] = sortable.map((col) => ({
@@ -85,7 +95,7 @@ export function SortMenuTrigger({ children }: DataGridSortMenuTriggerProps = {})
 	 * Only the first entry may name a column declared with `sorting: { multi: false }`: that is what
 	 * a header click allows — such a column replaces the sort rather than joining it.
 	 */
-	const multiSortableIds = new Set(sortable.filter((col) => col.getCanMultiSort()).map((col) => col.id))
+	const multiSortableIds = new Set(multiSortable.map((col) => col.id))
 	const labelOf = (id: string) => columnNameOf(table.getColumn(id)?.columnDef.header, id)
 
 	const withSteps = resolveReorderMode(table.grid.sortReorder, false, isDndEnabled).moveControls

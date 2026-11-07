@@ -1,6 +1,8 @@
 import { Fragment, useRef } from 'react'
 
 import { useGridComponents } from '../components-context'
+import { shallow } from '../utils/shallow-equal'
+import { getVisualLeafColumns } from '../utils/visual-column-order'
 
 import { CreatingRow } from './creating-row'
 import { EmptyStateRow } from './empty-state-row'
@@ -143,24 +145,16 @@ export function Body<TRow extends object = ErasedRow>({ children }: DataGridBody
 	const isFetching = useDataGridState((s) => s.loading?.isFetching ?? false)
 	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
 	const isCreatingOpen = useDataGridState((s) => s.creating?.isOpen ?? false)
-	// Slices that affect getRowModel() / getTopRows() / getBottomRows() output:
-	useDataGridState((s) => s.sorting)
-	useDataGridState((s) => s.columnFilters)
-	useDataGridState<unknown>((s) => s.globalFilter)
-	useDataGridState((s) => s.pagination)
-	useDataGridState((s) => s.expanded)
-	useDataGridState((s) => s.rowPinning)
-	// Every change to the visible cell list must repaint rows independently of Table.
-	// This also reaches VirtualBody and custom body render functions without remounting rows.
-	useDataGridState((s) => s.columnOrder)
-	useDataGridState((s) => s.columnVisibility)
-	useDataGridState((s) => s.columnPinning)
-	// Grouping rebuilds the row model **and** the column list — `groupedColumnMode: 'remove'`
-	// takes a grouped column out while it is a level — so every component that reads either has
-	// to re-derive on it. Optional-chained because the slice exists only with
-	// `columnGroupingFeature` registered; see `feature-optionality.test.tsx`.
-	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
-	useDataGridState((s) => s.grouping ?? null)
+	// Custom render functions may read arbitrary table answers; the built-in path selects
+	// rows and composition separately so selection/editing leave it alone.
+	useDataGridState((state) => (typeof children === 'function' ? state : null))
+	const allRows = useDataGridState(() => table.getRowModel().rows)
+	const hasPinning = Boolean(table.options.enableRowPinning)
+	const topRows = useDataGridState(() => (hasPinning ? table.getTopRows() : []), { compare: shallow })
+	const bottomRows = useDataGridState(() => (hasPinning ? table.getBottomRows() : []), { compare: shallow })
+	const centerModelRows = useDataGridState(() => (hasPinning ? table.getCenterRows() : table.getRowModel().rows))
+	useDataGridState((state) => (table.grid.expanding.component !== undefined ? state.expanded : null))
+	const visibleColumns = useDataGridState(() => getVisualLeafColumns(table), { compare: shallow })
 
 	/*
 	 * This body publishes nothing, and that is the decision rather than an omission.
@@ -175,9 +169,6 @@ export function Body<TRow extends object = ErasedRow>({ children }: DataGridBody
 	usePublishRenderedRows(null)
 
 	// Read before the early returns below: the offset hooks must run on every render.
-	const hasPinning = Boolean(table.options.enableRowPinning)
-	const topRows = hasPinning ? table.getTopRows() : []
-	const bottomRows = hasPinning ? table.getBottomRows() : []
 	const registerTopRow = usePinnedRowOffsets(
 		'top',
 		topRows.map((row) => row.id),
@@ -207,8 +198,7 @@ export function Body<TRow extends object = ErasedRow>({ children }: DataGridBody
 	 */
 	function buildParts(): BodyParts<TRow> {
 		const expandedComponent = table.grid.expanding.component as ComponentType<ExpandedRowProps<object>> | undefined
-		const centerModelRows = hasPinning ? table.getCenterRows() : table.getRowModel().rows
-		const showRefetchOverlay = isFetching && !isPending && table.getRowModel().rows.length > 0
+		const showRefetchOverlay = isFetching && !isPending && allRows.length > 0
 
 		/** One row plus the expanded panel that belongs under it — the unit every group repeats. */
 		const renderRow = (row: Row<GridFeatures, TRow>, extra?: Partial<DataGridRowProps<TRow>>) => (
@@ -229,9 +219,7 @@ export function Body<TRow extends object = ErasedRow>({ children }: DataGridBody
 				renderRow(row, { 'data-pinned': 'bottom', ref: registerBottomRow(index) }),
 			),
 			loadMoreFooter: <LoadMoreFooter />,
-			refetchOverlay: showRefetchOverlay ? (
-				<RefetchOverlayHost columnCount={table.getVisibleLeafColumns().length} />
-			) : null,
+			refetchOverlay: showRefetchOverlay ? <RefetchOverlayHost columnCount={visibleColumns.length} /> : null,
 		}
 	}
 
@@ -260,7 +248,7 @@ export function Body<TRow extends object = ErasedRow>({ children }: DataGridBody
 		return {
 			table,
 			get rows() {
-				return table.getRowModel().rows
+				return allRows
 			},
 			get content() {
 				return composeParts(resolve())
@@ -324,7 +312,6 @@ export function Body<TRow extends object = ErasedRow>({ children }: DataGridBody
 		return <LoadingBody />
 	}
 
-	const allRows = table.getRowModel().rows
 	const rawDataLength = (table.options.data as unknown[]).length
 
 	if (!showCreatingRow && allRows.length === 0) {

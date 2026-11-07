@@ -2,6 +2,7 @@ import { isFeatureEnabled } from '@ez-kit/data-grid-core'
 
 import { useGridComponents } from '../components-context'
 import { type SelectionBarCallbackArgs } from '../use-data-grid'
+import { shallow } from '../utils/shallow-equal'
 
 import { resolveActionBarVariant } from './action-bar-variant'
 import { buildActionItems } from './build-action-items'
@@ -20,8 +21,8 @@ import type { ReactNode } from 'react'
 
 /**
  * Build the `{ table, clearSelection, selectedRows }` argument passed to every selection
- * callback. Shared with the bulk `ConfirmDialog` renderer so the prompt describes the exact
- * set the handler will receive.
+ * callback. The selected model belongs to the selection bar; delete confirmation separately
+ * resolves its current executable targets through the deleting feature's row-model rules.
  */
 export function buildSelectionBarArgs<TRow extends object>(
 	table: Table<GridFeatures, TRow>,
@@ -112,9 +113,9 @@ export type DataGridActionBarProps = {
  * one bar can only stay consistent while every gate that hides one of them re-runs in lockstep
  * with the other, so a subscription fix would only have postponed the next instance of it.
  *
- * Hence the deliberately broad `useDataGridState((s) => s)`: the bar re-renders on any state
- * change, which is what a single surface over two independent concerns costs, and the bar is
- * one small subtree. A narrow subscription is exactly what caused the bug.
+ * The built-in sections select their displayed selection and draft answers. Opaque action
+ * callbacks retain their whole-state compatibility subscription because they may read any
+ * table answer.
  *
  * Both sections are live at once: the selection is valid against the **applied** query, which
  * is what the user is looking at, and the set only goes stale after Apply — which
@@ -122,14 +123,29 @@ export type DataGridActionBarProps = {
  */
 export function ActionBar({ children, start, end }: DataGridActionBarProps = {}) {
 	const table = useDataGridTable()
-	// Deliberately broad, and it is also the read: `draft.isDirty()` spans sorting, column
-	// filters, global search and `applied`, the selection section reads `rowSelection`, and v9's
-	// whole-snapshot `getState()` is gone — this snapshot is the object the selector returned.
-	useDataGridState((s) => s)
+	const hasCustomActions = table.grid.selection.bar?.actions !== undefined || typeof children === 'function'
+	const model = useDataGridState(
+		(state) => ({
+			callbackState: hasCustomActions ? state : null,
+			selectedRows:
+				table.grid.selection.bar !== undefined && table.options.enableRowSelection
+					? buildSelectionBarArgs(table).selectedRows
+					: [],
+			dirty: table.options.draft === true && table.draft.isDirty(),
+			pendingCount: table.options.draft === true ? table.draft.getPendingCount() : undefined,
+		}),
+		{
+			compare: (a, b) =>
+				a.callbackState === b.callbackState &&
+				a.dirty === b.dirty &&
+				shallow(a.pendingCount, b.pendingCount) &&
+				shallow(a.selectedRows, b.selectedRows),
+		},
+	)
 	const { ActionBar: ActionBarComponent } = useGridComponents().core
 
-	const selection = buildSelectionSection(table, start, end)
-	const draft = buildDraftSection(table)
+	const selection = buildSelectionSection(table, start, end, model.selectedRows)
+	const draft = buildDraftSection(table, model.dirty, model.pendingCount)
 	const variant = resolveActionBarVariant(table)
 	// A `selection` section with `count: 0` is normal while a floating bar animates out, so
 	// `open` asks what there is to act on rather than which sections exist.
@@ -165,12 +181,13 @@ function buildSelectionSection(
 	table: DataTable<GridFeatures, ErasedRow>,
 	start: ReactNode,
 	end: ReactNode,
+	selectedRows: SelectionBarCallbackArgs['selectedRows'],
 ): (ActionBarSelectionSection & SelectionBarCallbackArgs) | undefined {
 	const config = table.grid.selection.bar
 	if (config === undefined || !table.options.enableRowSelection) return undefined
 
 	const callbackArgs = buildSelectionBarArgs(table)
-	const { selectedRows } = callbackArgs
+	callbackArgs.selectedRows = selectedRows
 	const { onClear: onClearHandler } = config
 
 	// One entry point for both paths: `deleting.bulk.request` stages a pending delete when
@@ -205,11 +222,15 @@ function buildSelectionSection(
 }
 
 /** The pending-draft half, or `undefined` when `draft` is off or the draft is clean. */
-function buildDraftSection(table: DataTable<GridFeatures, ErasedRow>): ActionBarDraftSection | undefined {
-	if (table.options.draft !== true || !table.draft.isDirty()) return undefined
+function buildDraftSection(
+	table: DataTable<GridFeatures, ErasedRow>,
+	dirty: boolean,
+	pending: ActionBarDraftSection['pending'] | undefined,
+): ActionBarDraftSection | undefined {
+	if (table.options.draft !== true || !dirty || pending === undefined) return undefined
 
 	return {
-		pending: table.draft.getPendingCount(),
+		pending,
 		onApply: () => {
 			table.draft.apply()
 		},

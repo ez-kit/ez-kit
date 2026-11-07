@@ -42,12 +42,7 @@ export function GroupByBar() {
 	const { Menu } = useGridComponents().core
 	const messages = table.grid.messages.groupBar
 	/*
-	 * Read as its own slice, never stitched together with another.
-	 *
-	 * A selector returning a fresh object every call is the documented infinite-loop case — the
-	 * store compares by reference, so an object literal never compares equal and the component
-	 * re-renders forever. `s.grouping` is the array the table already holds, so this is stable
-	 * between changes.
+	 * The grouping array keeps its identity between changes; no comparison is needed for it.
 	 *
 	 * Optional-chained: the slice exists only with `columnGroupingFeature` registered, and a
 	 * layout may mount this bar on a grid that never groups. See `feature-optionality.test.tsx`.

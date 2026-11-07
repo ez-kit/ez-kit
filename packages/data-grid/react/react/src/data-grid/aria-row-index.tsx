@@ -34,8 +34,8 @@ export function AriaRowIndexProvider<TRow extends object = ErasedRow>({
 	enabled,
 	children,
 }: AriaRowIndexProviderProps<TRow>) {
-	const rows = table.getRowModel().rows
-	const headerRowCount = table.getHeaderGroups().length
+	const rows = useDataGridState(() => table.getRowModel().rows)
+	const headerRowCount = useDataGridState(() => table.getHeaderGroups().length)
 	// Read through the store rather than off the table: this is a subscription, so a page change
 	// rebuilds the map, and `pagination` is absent altogether without `rowPaginationFeature`.
 

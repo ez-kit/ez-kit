@@ -63,3 +63,28 @@ counts, supplied aggregates, locale and layout changes. It does not make arbitra
 is the supported imperative data operation. `useGridMessages` participates in publication while
 preserving its grid-less English fallback. A retained immutable row/header prop must still be
 replaced by its owner when data/columns produce a new model.
+
+The remaining selector audit covers confirmation targets, row move capabilities, drag registration
+indices, sorting/visibility panel models, pagination answers and fallback spans. A pending bulk
+confirmation follows selected IDs resolved against the current row model, matching core's
+confirm-time targets even when filtering or pagination changes while the prompt is open. A retained
+sortable item observes its own current index, even when its parent moves cached JSX into a new
+order. Row indices share an index map keyed by the current bands or published virtual window;
+row move predicates cache core's answers while their row-model and ordering inputs are unchanged.
+These caches keep unrelated editing notifications from adding quadratic list scans.
+
+Header and footer structure select their memoized groups. Ordinary leaves own their displayed
+answers, so selecting a row leaves ordinary header cells alone. Opaque header/footer templates, configured row actions
+and compound render functions retain live state updates through an explicit compatibility
+subscription: a callback can read mutable model answers inline, and its dependencies cannot be
+inferred from stable model identity. Table and Body render functions likewise retain compatibility;
+their default paths select rows, bands, column composition and geometry without constructing JSX
+for all virtual rows. The ARIA row-index provider independently observes rows and header count.
+
+A single Filter builds only its target's model and subscribes only that target's lists and value;
+faceted filters additionally observe their faceted answers. A single form field compares its own
+value/errors, validation phase and edited row identity. Full forms keep their full state because
+all fields and their validation remain live. Modal and creation-row renderers consume the selected
+state directly; creation-row geometry and column order are selected together. The grid's options
+publication remains separate and unchanged. `selector-model-reactivity.test.tsx` covers these
+retained boundaries, callback compatibility and target isolation.

@@ -29,12 +29,11 @@ export type DataGridNoResultsRowProps = {
 
 export function NoResultsRow({ children }: DataGridNoResultsRowProps = {}) {
 	const table = useDataGridTable()
-	useDataGridState((s) => s.columnVisibility)
 	const gridComponents = useGridComponents()
 	const { Tbody, Tr, Td } = gridComponents.core
 	const { NoResultsState } = gridComponents.fallbacks
 
-	const columnCount = table.getVisibleLeafColumns().length
+	const columnCount = useDataGridState(() => table.getVisibleLeafColumns().length)
 	const customContent = table.grid.fallbacks.noResults.component
 
 	const content =

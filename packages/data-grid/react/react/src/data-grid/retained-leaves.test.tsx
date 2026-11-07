@@ -248,7 +248,7 @@ describe('retained leaf composition', () => {
 		expect(cell).toHaveAttribute('colspan', String(original - 1))
 	})
 
-	it('leaves retained ordinary headers and the unchanged row count alone on selection and editing', () => {
+	it('keeps opaque header templates live while leaving unchanged row counts alone', () => {
 		const name = vi.fn(() => 'Name')
 		const rowCount = vi.fn(({ count }: { count: number }) => `${String(count)} rows`)
 		const columns = createColumns<(typeof DATA)[number]>([
@@ -264,10 +264,11 @@ describe('retained leaf composition', () => {
 		act(() => {
 			table.setRowSelection({ '1': true })
 		})
+		expect(name).toHaveBeenCalledTimes(nameRenders + 1)
 		act(() => {
 			table.editing.start('2')
 		})
-		expect(name).toHaveBeenCalledTimes(nameRenders)
+		expect(name).toHaveBeenCalledTimes(nameRenders + 2)
 		expect(rowCount).toHaveBeenCalledTimes(countRenders)
 	})
 

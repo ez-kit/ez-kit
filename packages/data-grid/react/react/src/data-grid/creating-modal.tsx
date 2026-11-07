@@ -11,8 +11,7 @@ import { useDataGridState, useDataGridTable } from './table-context'
  */
 export function CreatingModal() {
 	const table = useDataGridTable()
-	useDataGridState((s) => s.creating)
-	const state = table.creating.getState()
+	const state = useDataGridState((s) => s.creating)
 
 	if (!state.isOpen) return null
 

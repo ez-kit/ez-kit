@@ -140,3 +140,10 @@ export function useDataGridState<TSelected>(
 ): TSelected {
 	return useDataGridSelector(useDataGridTable(), selector, options)
 }
+
+/** Opaque render functions can read any mutable model answer; ordinary components select only
+ * what they display. This compatibility path is enabled only for a supplied callback/template.
+ */
+export function useRenderCallbackState(enabled: boolean) {
+	useDataGridState((state) => (enabled ? state : null))
+}

@@ -32,7 +32,7 @@ import { flexRender } from './flex-render'
 import { HeaderExtras, HeaderMain } from './header-slots'
 import { useCellNavigationProps } from './keyboard-navigation'
 import { renderFilterInput } from './render-filter-input'
-import { useDataGridState, useDataGridTable } from './table-context'
+import { useRenderCallbackState, useDataGridState, useDataGridTable } from './table-context'
 import { VisuallyHidden } from './visually-hidden'
 
 import type { HeaderThProps } from './column-drag'
@@ -157,6 +157,9 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 	children,
 }: DataGridHeaderCellProps<TRow>) {
 	const table = useDataGridTable<TRow>()
+	// User templates may read arbitrary mutable model answers. Only those leaves keep
+	// the compatibility subscription; ordinary columns stay isolated.
+	useRenderCallbackState(typeof header.column.columnDef.header === 'function')
 	const gridComponents = useGridComponents()
 	const { Th, Input, Checkbox, Menu, ColumnDragHandle: KitColumnDragHandle } = gridComponents.core
 	const { Resizer } = gridComponents.resizing

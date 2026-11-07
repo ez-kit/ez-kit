@@ -2,6 +2,7 @@ import { ColumnMoveDirection, ColumnMoveScope, canMoveColumn, moveColumn } from 
 
 import { useGridComponents } from '../components-context'
 import { resolveReorderMode } from '../utils/reorder-mode'
+import { shallow } from '../utils/shallow-equal'
 import { getVisibilityPanelColumns } from '../utils/visibility-panel-columns'
 
 import { useDndEnabled } from './dnd'
@@ -59,10 +60,6 @@ export type DataGridVisibilityTriggerProps = {
 
 export function VisibilityTrigger({ children }: DataGridVisibilityTriggerProps = {}) {
 	const table = useDataGridTable()
-	useDataGridState((s) => s.columnVisibility)
-	useDataGridState((s) => s.columnPinning)
-	// The list *is* the order once moves are offered, so a reorder has to re-render it.
-	useDataGridState((s) => s.columnOrder)
 	const { VisibilityMenu } = useGridComponents().visibility
 	const isDndEnabled = useDndEnabled()
 
@@ -82,19 +79,30 @@ export function VisibilityTrigger({ children }: DataGridVisibilityTriggerProps =
 	 * target from it. A drag's index space is those positions, and a disagreement puts a gap in it —
 	 * which kills the surface's drag silently. That helper's docblock has the rest.
 	 */
-	const columns: VisibilityColumnItem[] = getVisibilityPanelColumns(table).map((col) => ({
+	const model = useDataGridState(
+		() =>
+			getVisibilityPanelColumns(table).map((col) => ({
+				col,
+				isVisible: col.getIsVisible(),
+				canHide: col.getCanHide(),
+				canMoveStart: withOrdering && canMoveColumn(table, col.id, ColumnMoveDirection.Start, ColumnMoveScope.All),
+				canMoveEnd: withOrdering && canMoveColumn(table, col.id, ColumnMoveDirection.End, ColumnMoveScope.All),
+			})),
+		{ compare: (a, b) => a.length === b.length && a.every((entry, index) => shallow(entry, b[index])) },
+	)
+	const columns: VisibilityColumnItem[] = model.map(({ col, isVisible, canHide, canMoveStart, canMoveEnd }) => ({
 		id: col.id,
 		label: typeof col.columnDef.header === 'string' ? col.columnDef.header : col.id,
-		isVisible: col.getIsVisible(),
-		canHide: col.getCanHide(),
+		isVisible,
+		canHide,
 		onToggle: () => {
 			col.toggleVisibility()
 		},
 		...(withOrdering
 			? {
 					ordering: {
-						canMoveStart: canMoveColumn(table, col.id, ColumnMoveDirection.Start, ColumnMoveScope.All),
-						canMoveEnd: canMoveColumn(table, col.id, ColumnMoveDirection.End, ColumnMoveScope.All),
+						canMoveStart,
+						canMoveEnd,
 						onMoveStart: () => {
 							table.setColumnOrder(moveColumn(table, col.id, ColumnMoveDirection.Start, ColumnMoveScope.All))
 						},

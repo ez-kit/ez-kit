@@ -1,7 +1,7 @@
 import { useGridComponents } from '../components-context'
 
 import { DataGridFooterRow } from './footer-row'
-import { useDataGridTable, useDataGridState } from './table-context'
+import { useRenderCallbackState, useDataGridTable, useDataGridState } from './table-context'
 
 import type { ErasedRow, DataTable, GridFeatures } from '../types'
 import type { HeaderGroup } from '@tanstack/table-core'
@@ -77,23 +77,10 @@ export function Footer<TRow extends object = ErasedRow>({ sticky, children }: Da
 	const isSticky = sticky ?? table.grid.layout.stickyFooter
 	const { Tfoot } = useGridComponents().core
 
-	// Narrow subscriptions: a footer reflects column layout and the rows it aggregates over,
-	// nothing else. Editing or selection mutations leave all of these stable.
-	useDataGridState((s) => s.columnVisibility)
-	useDataGridState((s) => s.columnPinning)
-	useDataGridState((s) => s.columnOrder)
-	// Totals use the filtered model; custom footers may also read the current page's rows.
-	useDataGridState((s) => s.sorting)
-	useDataGridState((s) => s.columnFilters)
-	useDataGridState<unknown>((s) => s.globalFilter)
-	useDataGridState((s) => s.pagination)
-	useDataGridState((s) => s.expanded)
-	useDataGridState((s) => s.rowPinning)
-	// Grouping also removes grouped columns from the footer's visible column list.
-	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
-	useDataGridState((s) => s.grouping ?? null)
-
-	const footerGroups = table.getFooterGroups()
+	// A render callback may inspect mutable table answers inline. Keep its existing live
+	// behaviour while the default structure observes only its memoized group model.
+	useRenderCallbackState(typeof children === 'function')
+	const footerGroups = useDataGridState(() => table.getFooterGroups())
 
 	const stickyAttr = isSticky ? { 'data-sticky': 'true' as const } : {}
 
