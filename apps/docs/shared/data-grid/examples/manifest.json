@@ -854,6 +854,12 @@
 		"exportName": "FallbacksExample"
 	},
 	{
+		"id": "fallbacks-pagination",
+		"label": "Pagination refetch overlay",
+		"sourceFile": "components/fallbacks-pagination.tsx",
+		"exportName": "FallbacksPaginationExample"
+	},
+	{
 		"id": "pagination-links",
 		"label": "Page links (default)",
 		"group": "pagination",

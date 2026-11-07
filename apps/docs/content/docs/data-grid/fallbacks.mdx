@@ -5,7 +5,7 @@ description: Loading, empty, and no-results states — three slots the grid rend
 
 The grid distinguishes three "nothing to show" states and gives each its own slot:
 
-- **Loading** — initial fetch, refresh, or while controlled `state.loading` reports a pending or in-flight request.
+- **Loading** — while controlled `state.loading.isPending` reports a pending request. A refetch over existing rows uses an overlay instead.
 - **Empty** — the data set is genuinely empty (no rows at all).
 - **No results** — the data set has rows, but filters/search excluded them all.
 
@@ -42,7 +42,45 @@ Name only the fields you have. A list loaded once needs nothing but `isPending`;
 
 A TanStack Query result carries all four fields, so it passes through whole — `state={{ loading: query }}`. The grid keeps only those four. An SWR response does not: it has `isLoading` and `isValidating` instead, so map them onto `isPending` / `isFetching`. Passed whole, it would never show a loading state, and the grid warns about it in development.
 
-The loading fallback is **centered** in the body area.
+The default loading fallback renders five skeleton rows. Replace it with `fallbacks.loading.component` to supply your own content.
+
+## Pagination refetch overlay
+
+Switch pages below to see the refetch overlay. Each simulated server request takes **1.2 seconds**:
+the first load shows skeleton rows, and subsequent page changes keep the previous rows visible
+under a semi-transparent overlay with a centered spinner. The new rows replace them when the request finishes.
+
+<DataGridDocsExample exampleId='fallbacks-pagination' />
+
+The grid shows this overlay when `isFetching` is `true`, `isPending` is `false`, and there are
+rendered rows. Changing the page does not set loading flags itself: pass your request status through
+`state.loading` and retain the previous data while the next page loads. With React Query,
+`placeholderData: keepPreviousData` does that:
+
+```tsx
+const query = useQuery({
+	queryKey: ['orders', pagination.pageIndex, pagination.pageSize],
+	queryFn: () => fetchPage(pagination.pageIndex, pagination.pageSize),
+	placeholderData: keepPreviousData,
+})
+
+<DataGrid
+	features={features}
+	data={query.data?.rows ?? []}
+	columns={columns}
+	state={{ pagination, loading: query }}
+	pagination={{
+		manual: true,
+		rowCount: query.data?.rowCount ?? 0,
+		onChange: setPagination,
+	}}
+/>
+```
+
+Register `loadingFeature` and `rowPaginationFeature` alongside the structural features when
+composing your feature set. The same overlay appears for server-side sorting, filtering, or a
+background refresh with existing rows. Client-side pagination switches rows immediately without a request.
+See [Server-side Data](/docs/data-grid/state/server-side) for the complete fetching setup.
 
 ## Empty vs No results
 
