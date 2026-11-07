@@ -1,6 +1,7 @@
-import { ColumnMoveDirection, ColumnMoveScope, canMoveColumn, moveColumn } from '@ez-kit/data-grid-core'
+import { ColumnMoveDirection, ColumnMoveScope, moveColumn } from '@ez-kit/data-grid-core'
 
 import { useGridComponents } from '../components-context'
+import { getColumnMoveCapabilities } from '../utils/column-order-model'
 import { resolveReorderMode } from '../utils/reorder-mode'
 import { shallow } from '../utils/shallow-equal'
 import { getVisibilityPanelColumns } from '../utils/visibility-panel-columns'
@@ -85,8 +86,8 @@ export function VisibilityTrigger({ children }: DataGridVisibilityTriggerProps =
 				col,
 				isVisible: col.getIsVisible(),
 				canHide: col.getCanHide(),
-				canMoveStart: withOrdering && canMoveColumn(table, col.id, ColumnMoveDirection.Start, ColumnMoveScope.All),
-				canMoveEnd: withOrdering && canMoveColumn(table, col.id, ColumnMoveDirection.End, ColumnMoveScope.All),
+				canMoveStart: withOrdering && getColumnMoveCapabilities(table, col.id, ColumnMoveScope.All).start,
+				canMoveEnd: withOrdering && getColumnMoveCapabilities(table, col.id, ColumnMoveScope.All).end,
 			})),
 		{ compare: (a, b) => a.length === b.length && a.every((entry, index) => shallow(entry, b[index])) },
 	)

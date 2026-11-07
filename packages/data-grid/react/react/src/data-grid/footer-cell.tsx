@@ -136,7 +136,7 @@ export function DataGridFooterCell<TRow extends object = ErasedRow>({
 	header,
 	children,
 }: DataGridFooterCellProps<TRow>) {
-	useRenderCallbackState(typeof header.column.columnDef.footer === 'function')
+	useRenderCallbackState(typeof children === 'function' || typeof header.column.columnDef.footer === 'function')
 	const { Td } = useGridComponents().core
 	const { pinned } = useColumnPin(header.column)
 	// `ColumnMeta` is declared `in out` in both its `TFeatures` and its `TData` upstream, so no

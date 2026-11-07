@@ -11,13 +11,13 @@ import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
 import { GridMenuVariant } from '../menu'
 import { ColumnSortDirection, SortDirection } from '../types'
+import { getColumnMoveCapabilities, getColumnVisualIndex } from '../utils/column-order-model'
 import { filtersRows } from '../utils/filters-rows'
 import { freezeRenderedWidths, releaseUnmovedWidths } from '../utils/freeze-rendered-widths'
 import { resolveReorderMode } from '../utils/reorder-mode'
 import { shallow } from '../utils/shallow-equal'
 import { isTextEntryTarget } from '../utils/text-entry-target'
 import { useColumnPin } from '../utils/use-column-pin'
-import { getVisualLeafColumns } from '../utils/visual-column-order'
 
 import { getAlignAttrs } from './align-attrs'
 import { ariaSortAttrs } from './aria-state'
@@ -159,7 +159,7 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 	const table = useDataGridTable<TRow>()
 	// User templates may read arbitrary mutable model answers. Only those leaves keep
 	// the compatibility subscription; ordinary columns stay isolated.
-	useRenderCallbackState(typeof header.column.columnDef.header === 'function')
+	useRenderCallbackState(typeof children === 'function' || typeof header.column.columnDef.header === 'function')
 	const gridComponents = useGridComponents()
 	const { Th, Input, Checkbox, Menu, ColumnDragHandle: KitColumnDragHandle } = gridComponents.core
 	const { Resizer } = gridComponents.resizing
@@ -231,9 +231,8 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 	/*
 	 * Gated on the resolved drag first — which is off without an adapter — and that is a performance
 	 * requirement rather than tidiness:
-	 * `getVisualLeafColumns` builds a fresh three-part array and this scans it, once per header
-	 * cell — O(n²) per header render. A grid with no drag adapter must not pay that, which is most
-	 * grids. Skipping it also skips mounting the shell below, so such a grid renders the bare `Th`
+	 * the shared visual index map is built only for drag participants. A grid with no drag
+	 * adapter must not pay for it. Skipping it also skips mounting the shell below, so such a grid renders the bare `Th`
 	 * it rendered before this phase; the phase-2 identical-DOM test compares against exactly that.
 	 */
 	// Model objects stay stable while their answers change. Select the displayed answers rather
@@ -245,6 +244,8 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 		filter: filterValue,
 		allSelected: isAllSelected,
 		someSelected: isSomeSelected,
+		moveStart,
+		moveEnd,
 		visualIndex,
 	} = useDataGridState(
 		() => ({
@@ -259,12 +260,9 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 			grouped: header.column.getIsGrouped?.() ?? false,
 			allSelected: header.column.id === SELECTION_COLUMN_ID && table.getIsAllRowsSelected(),
 			someSelected: header.column.id === SELECTION_COLUMN_ID && table.getIsSomeRowsSelected(),
-			moveStart: canMove && canMoveColumn(table, header.column.id, ColumnMoveDirection.Start),
-			moveEnd: canMove && canMoveColumn(table, header.column.id, ColumnMoveDirection.End),
-			visualIndex:
-				takesPartInDrag && isLeafHeader
-					? getVisualLeafColumns(table).findIndex((column) => column.id === header.column.id)
-					: -1,
+			moveStart: canMove && getColumnMoveCapabilities(table, header.column.id).start,
+			moveEnd: canMove && getColumnMoveCapabilities(table, header.column.id).end,
+			visualIndex: takesPartInDrag && isLeafHeader ? getColumnVisualIndex(table, header.column.id) : -1,
 		}),
 		{ compare: shallow },
 	)
@@ -435,6 +433,7 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 			canHide: isMenuEligible && header.column.getCanHide(),
 			// The menu's pair steps aside while the header itself drags — the same move twice.
 			canMove: canMove && headerAffordances.moveControls,
+			movement: { start: moveStart, end: moveEnd },
 			// `getCanGroup()` answers both halves at once — the table-level `grouping` gate that
 			// core resolves to `enableGrouping`, and the column's own `grouping: false`. Absent
 			// without `columnGroupingFeature`, so optional-called like every other feature read on

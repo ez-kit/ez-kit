@@ -21,7 +21,7 @@ import {
 	useReportActiveDraggingRow,
 	useShouldReportUnpublishedRow,
 } from './row-drag-registry'
-import { useDataGridState, useDataGridTable } from './table-context'
+import { useDataGridState, useDataGridTable, useRenderCallbackState } from './table-context'
 
 import type { DataGridRowDragHandleProps } from './row-drag-handle'
 import type { RowDragValue } from './row-drag-registry'
@@ -181,6 +181,7 @@ function DataGridRowImpl<TRow extends object = ErasedRow>(
 	// resolver is typed against `never`; the row we hold here is the very one the consumer wrote
 	// it against, so re-instantiating it at `TRow` restores the type it had before erasure.
 	const resolveRowProps = table.grid.rowProps as RowPropsResolver<TRow> | undefined
+	useRenderCallbackState(typeof children === 'function' || resolveRowProps !== undefined)
 	// Selection state is derived, not read: a parent row counts as selected through its
 	// children, which only TanStack knows. The selector therefore ignores its argument and
 	// re-derives on every store change — it returns a boolean, so `useSyncExternalStore` bails

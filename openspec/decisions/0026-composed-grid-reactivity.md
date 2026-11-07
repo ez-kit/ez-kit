@@ -88,3 +88,16 @@ all fields and their validation remain live. Modal and creation-row renderers co
 state directly; creation-row geometry and column order are selected together. The grid's options
 publication remains separate and unchanged. `selector-model-reactivity.test.tsx` covers these
 retained boundaries, callback compatibility and target isolation.
+
+That callback compatibility also applies to `HeaderCell`, `FooterCell`, `Cell` and `Row`
+render-function children, and to `rowProps`: a partial child selection can change the row
+props without changing the parent's own selectedness. Header filter controls without a supplied
+model subscribe to their own value and faceted answers; the panel remains the owner of the
+models it supplies. This keeps a retained header live when another column changes its counts.
+
+A stable selector function can reuse its previous result when options change without a store
+write. Cached row-capability calculations therefore run through a fresh selector on render;
+their own input cache still skips unrelated work. Column movement answers share a cache over
+the leaf model, visibility, pinning and published options, with a separate result per move scope.
+The cache delegates move rules to Core and builds one visual index map for header drag readers.
+This removes repeated column scans on editing notifications without changing move semantics.

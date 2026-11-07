@@ -30,7 +30,7 @@ import {
 } from './items-view'
 import { useCellNavigationProps } from './keyboard-navigation'
 import { RowDragHandle } from './row-drag-handle'
-import { useDataGridTable, useDataGridState } from './table-context'
+import { useDataGridTable, useDataGridState, useRenderCallbackState } from './table-context'
 import { useCellFlash } from './use-cell-flash'
 import { useGridEventListener, useGridEventRoot } from './use-grid-event-listener'
 import { columnNameOf, VisuallyHiddenLabel } from './visually-hidden'
@@ -160,6 +160,7 @@ const FOCUSABLE_SELECTOR = 'input, select, textarea, button, [contenteditable="t
  */
 
 export function DataGridCell<TRow extends object = ErasedRow>({ cell, row, children }: DataGridCellProps<TRow>) {
+	useRenderCallbackState(typeof children === 'function')
 	const meta = cell.column.columnDef.meta
 	// `children` is forwarded rather than diverted to a branch of its own. A cell's content is
 	// decided by which branch renders it — system control, inline editor, view renderer — and

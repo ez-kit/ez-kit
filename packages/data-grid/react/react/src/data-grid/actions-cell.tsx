@@ -219,7 +219,9 @@ export function ActionsCell({ row }: ActionsCellProps) {
 	// Core's move predicate scans the ordered model. Cache each row's answers across
 	// unrelated store writes instead of repeating that scan on every editing keystroke.
 	const selectCapabilities = useMemo(() => createCapabilitiesSelector(table, row), [table, row])
-	const capabilities = useDataGridState(selectCapabilities, { compare: shallow })
+	// Re-evaluate after an options publication too: the memoized selector alone would reuse
+	// its last selection while the store snapshot is unchanged. Its own cache still skips scans.
+	const capabilities = useDataGridState((state) => selectCapabilities(state), { compare: shallow })
 
 	const editingMode = table.options.editing?.mode ?? EditingMode.Row
 	// Cell mode owns no affordance in this column: its edit is opened by double-clicking the
