@@ -803,3 +803,13 @@ describe('the default header cell', () => {
 		expect(screen.getAllByTestId('kit-grip')).toHaveLength(TEST_COLUMNS.length)
 	})
 })
+
+it('preserves editable header attributes through the column drag shell', () => {
+	const { adapter, nodes } = makeDrivableAdapter()
+	const { container } = renderDndGrid(adapter, {
+		columns: createColumns<TestRow>([{ accessorKey: 'name' }, { accessorKey: 'age', editing: false }]),
+		editing: { onSave: async () => {} },
+	})
+	expect(nodes.get('name')).toHaveAttribute('data-editable', 'true')
+	expect(container.querySelector('th[data-column-id="age"]')).not.toHaveAttribute('data-editable')
+})

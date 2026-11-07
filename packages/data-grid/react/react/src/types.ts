@@ -337,7 +337,11 @@ export type TrProps = HTMLAttributes<HTMLTableRowElement> & RefAttributes<HTMLTa
  * affordance just never attaches.
  */
 export type ThProps = ThHTMLAttributes<HTMLTableCellElement> &
-	RefAttributes<HTMLTableCellElement> & { pinned?: ColumnPinSide | false }
+	RefAttributes<HTMLTableCellElement> & {
+		pinned?: ColumnPinSide | false
+		/** Present when this leaf column participates in editing; supplied by HeaderCell. */
+		'data-editable'?: 'true'
+	}
 export type TdProps = TdHTMLAttributes<HTMLTableCellElement> & { pinned?: ColumnPinSide | false }
 /** The ref must reach the rendered button — a drag handle is a button a drag library holds by ref. */
 export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & RefAttributes<HTMLButtonElement>
