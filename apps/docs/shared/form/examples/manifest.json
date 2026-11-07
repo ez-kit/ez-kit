@@ -1,5 +1,13 @@
 [
 	{
+		"id": "form-page-editor",
+		"label": "Page editor",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/page-editor.tsx",
+		"exportName": "PageEditorExample"
+	},
+	{
 		"id": "form-landing-schema",
 		"label": "Landing form schema",
 		"group": "form",

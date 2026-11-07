@@ -1,5 +1,8 @@
 'use client'
 
+export { useSelector } from './use-selector'
+export type { UseSelectorOptions } from './use-selector'
+
 export { createContextStore } from './create-context-store'
 export type {
 	ContextStoreInit,

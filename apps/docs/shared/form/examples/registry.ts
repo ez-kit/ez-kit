@@ -35,6 +35,7 @@ export const exampleModules: Record<string, () => Promise<Record<string, Compone
 	'components/native-api.tsx': () => import('./components/native-api'),
 	'components/numeric-options-jsx.tsx': () => import('./components/numeric-options-jsx'),
 	'components/numeric-options.tsx': () => import('./components/numeric-options'),
+	'components/page-editor.tsx': () => import('./components/page-editor'),
 	'components/option-sources-schema.tsx': () => import('./components/option-sources-schema'),
 	'components/option-sources.tsx': () => import('./components/option-sources'),
 	'components/reactivity.tsx': () => import('./components/reactivity'),

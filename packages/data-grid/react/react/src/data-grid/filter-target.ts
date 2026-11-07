@@ -1,6 +1,8 @@
 import { rowItemOf } from '../items-source/resolve-item'
 import { filtersRows } from '../utils/filters-rows'
 
+import { filterInputCommands } from './filter-input-commands'
+
 import type { ItemsLists, ListItem } from '../items-source'
 import type { DataTable, GridFeatures } from '../types'
 import type { ColumnCellMeta, ColumnFilteringMeta, FormColumnMeta, ResolvedFilterField } from '@ez-kit/data-grid-core'
@@ -195,8 +197,10 @@ export function fieldFilterTarget<TRow extends object>(
 		// Optional-called for the same reason as the read: without `columnFilteringFeature` the write
 		// is a no-op, which core's development warning for `filtering` already reports.
 		setValue: (next) => {
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature API; see the FEATURE GUARDS note in types.ts
-			table.setColumnFilters?.((prev) => withFilterEntry(prev, field.id, next))
+			filterInputCommands(table).run({ axis: 'columnFilters', id: field.id }, undefined, () => {
+				// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature API
+				table.setColumnFilters?.((prev) => withFilterEntry(prev, field.id, next))
+			})
 		},
 		source: { kind: FilterSourceKind.Field },
 	}

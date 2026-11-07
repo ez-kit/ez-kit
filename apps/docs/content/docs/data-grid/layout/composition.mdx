@@ -466,7 +466,16 @@ it behind an icon. Those two decisions replaced the `filtering.variant` enum —
 | `filterPopover`            | The same control behind the kit's popover trigger. Render this **or** `filter`.                  |
 | `resizer`                  | The resize handle, or `null` when the column cannot be resized.                                  |
 | `canSort`, `sortDirection` | The column's sort capability and current direction (`'asc' \| 'desc' \| 'none'`).                |
+| `canEdit`                  | Whether this leaf column participates in editing, after resolving table and column settings.     |
 | `header`, `column`         | The underlying TanStack objects, for anything the above does not cover.                          |
+
+`canEdit` is available in both the render function and `useDataGridHeaderCell()`. It applies to
+cell, row and modal editing. Disabled editing, columns with `editing: false`, system columns,
+group headers and placeholder headers return `false`.
+
+Editable headers carry `data-editable="true"` on the `<th>`. UI kits can style this attribute or
+read it from their `Th` adapter's props. The `Th` adapter itself is outside the header-cell context;
+use the hook in a component rendered inside the header cell.
 
 ### The same, as a component
 

@@ -235,6 +235,10 @@ export const DocPage = {
 	QueryAi: 'content/docs/query-react/ai.mdx',
 	QueryDataUnderGate: 'content/docs/query-react/data-under-gate.mdx',
 	QueryIndex: 'content/docs/query-react/index.mdx',
+	QueryInfinite: 'content/docs/query-react/infinite-query.mdx',
+	QueryMutation: 'content/docs/query-react/mutation.mdx',
+	QueryMutationWorkflows: 'content/docs/query-react/mutation-workflows.mdx',
+	QuerySsrPrefetch: 'content/docs/query-react/ssr-prefetch.mdx',
 	QueryStates: 'content/docs/query-react/states.mdx',
 } as const
 
@@ -1683,9 +1687,9 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			{ heading: '`CacheScope`', roots: [STORE_TYPE.VaScopeProps], expectedCount: 2 },
 			{ heading: '`useCache()`', roots: [STORE_TYPE.VaStoreCacheController], expectedCount: 2 },
 			{ heading: '`options`', roots: [STORE_TYPE.VaCachedStoreOptions], expectedCount: 2 },
-			{ heading: 'The returned group', roots: [STORE_TYPE.VaCachedStoreGroup], expectedCount: 5 },
+			{ heading: 'The returned group', roots: [STORE_TYPE.VaCachedStoreGroup], expectedCount: 6 },
 			{ heading: '`Provider`', roots: [STORE_TYPE.VaCachedProviderProps], expectedCount: 6 },
-			{ heading: '`Subscribe`', roots: [STORE_TYPE.VaCachedSubscribeProps], expectedCount: 1 },
+			{ heading: '`Subscribe`', roots: [STORE_TYPE.VaCachedSubscribeProps], expectedCount: 3 },
 			{ heading: '`Store`', roots: [STORE_TYPE.VaCachedStoreProps], expectedCount: 1 },
 			{ heading: '`createStoreCache(options?)`', roots: [STORE_TYPE.VaStoreCacheOptions], expectedCount: 1 },
 		],
@@ -1842,6 +1846,10 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 	{ page: DocPage.QueryDataUnderGate, optionTables: [], nonOptionTables: [] },
 	{ page: DocPage.QueryIndex, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.QueryInfinite, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.QueryMutation, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.QueryMutationWorkflows, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.QuerySsrPrefetch, optionTables: [], nonOptionTables: [] },
 	{
 		page: DocPage.QueryStates,
 		optionTables: [

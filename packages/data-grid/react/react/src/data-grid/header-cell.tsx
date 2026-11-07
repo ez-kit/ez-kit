@@ -60,6 +60,8 @@ export type DataGridHeaderCellRenderArgs<TRow extends object = ErasedRow> = {
 	header: Header<GridFeatures, TRow>
 	column: Column<GridFeatures, TRow>
 	canSort: boolean
+	/** Whether this leaf column participates in editing (cell, row or modal mode). */
+	canEdit: boolean
 	sortDirection: ColumnSortDirection
 	/** The column's own `header` content, with no sorting behaviour attached. */
 	label: ReactNode
@@ -221,6 +223,12 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 	 * registering a negative index.
 	 */
 	const isLeafHeader = header.subHeaders.length === 0 && !header.isPlaceholder
+	const canEdit =
+		isLeafHeader &&
+		Boolean(table.options.editing) &&
+		Boolean(table.editing) &&
+		!meta?.isSystemColumn &&
+		meta?.editing !== false
 	/*
 	 * With the column axis on, the header drags exactly when its mode resolved to the grip — a
 	 * `'step'` header stays still in a grid whose rows drag. With the axis off every header still
@@ -603,6 +611,7 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 		header,
 		column: header.column,
 		canSort,
+		canEdit,
 		sortDirection,
 		label,
 		sortTrigger,
@@ -629,6 +638,7 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 			...(pinned ? { 'data-pinned': pinned } : {}),
 			...getAlignAttrs(meta, 'header'),
 			...(canResize ? { 'data-resizable': 'true' } : {}),
+			...(canEdit ? { 'data-editable': 'true' } : {}),
 			...ariaSortAttrs(canSort, sortDirection),
 			...draftSortAttrs,
 		},

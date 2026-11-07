@@ -1,5 +1,20 @@
 # @ez-kit/docs
 
+## 0.3.2
+
+### Patch Changes
+
+- f6619f9: Add the optional `@ez-kit/data-grid-react/dnd-kit` entry and share its adapter between UI kits. Preserve existing kit adapter exports and the shadcn drag registry item while keeping drag peers optional for ordinary grids.
+- 41bd1b9: Add snapshot-based useSelector for standalone Valtio proxies and context/cached stores, with Object.is equality by default and optional isEqual. Subscribe now supports selector and isEqual props while retaining automatic property tracking when no selector is provided.
+- Updated dependencies [f6619f9]
+- Updated dependencies [f6619f9]
+- Updated dependencies [41bd1b9]
+  - @ez-kit/data-grid-core@0.16.1
+  - @ez-kit/data-grid-react@0.18.0
+  - @ez-kit/data-grid-heroui@0.14.1
+  - @ez-kit/va-store@1.3.0
+  - @ez-kit/data-grid-shadcn@0.2.0
+
 ## 0.3.1
 
 ### Patch Changes

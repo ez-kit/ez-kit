@@ -1,0 +1,86 @@
+---
+title: InfiniteQuery
+description: Render paginated data with native infiniteQueryOptions, shared fallbacks, and the full useInfiniteQuery result.
+---
+
+`<InfiniteQuery>` is the query gate for TanStack's `useInfiniteQuery`. It isolates the subscription
+and follows the same [states and fallbacks](/docs/query-react/states) as `Query`.
+
+<LivePreview
+	path='query-react/infinite-list'
+	title='Load pages and recover from a page error'
+/>
+
+Click **Fail next page** to see a later request fail without removing the pages already on screen.
+Click **Load more** to retry the same page.
+
+## Options and result
+
+```tsx
+import { InfiniteQuery } from '@ez-kit/query-react'
+import { infiniteQueryOptions } from '@tanstack/react-query'
+
+const devices = infiniteQueryOptions({
+	queryKey: ['devices', 'infinite'],
+	queryFn: async ({ pageParam, signal }) => {
+		const response = await fetch(`/api/devices?cursor=${pageParam}`, { signal })
+		if (!response.ok) throw new Error('Could not load devices')
+		return response.json() as Promise<{
+			items: { id: string; name: string }[]
+			next: number | null
+		}>
+	},
+	initialPageParam: 0,
+	getNextPageParam: (page) => page.next,
+})
+
+<InfiniteQuery query={devices} loading={<p>Loading devices…</p>}>
+	{(data, q) => (
+		<>
+			<ul>
+				{data.pages.flatMap((page) =>
+					page.items.map((device) => <li key={device.id}>{device.name}</li>),
+				)}
+			</ul>
+			{q.isFetchNextPageError && <p role='alert'>{q.error.message}</p>}
+			<button
+				disabled={!q.hasNextPage || q.isFetching}
+				onClick={() => void q.fetchNextPage()}
+			>
+				{q.isFetchingNextPage ? 'Loading more…' : 'Load more'}
+			</button>
+		</>
+	)}
+</InfiniteQuery>
+```
+
+`query` accepts native `UseInfiniteQueryOptions`, including `initialPageParam`, `getNextPageParam`,
+`getPreviousPageParam`, `maxPages` and `select`. Types are inferred from it; use
+`infiniteQueryOptions(...)` to share options with other consumers. Use a different key from a
+regular query, because the cached data shapes differ.
+
+`children(data, q)` receives non-undefined data and the unchanged `UseInfiniteQueryResult`.
+Without `select`, the data has TanStack's `pages` and `pageParams` shape. If you use `select`,
+the first argument has the shape it returns. No pages are flattened or copied by the gate.
+
+`fetchNextPage`, `fetchPreviousPage`, `hasNextPage`, `hasPreviousPage` and all fetching/error flags
+remain available on `q`. The gate does not install an intersection observer or trigger pagination
+automatically. Guard a load-more action with `!q.isFetching` to avoid interfering with another fetch.
+
+## States and shared fallbacks
+
+The optional `loading`, `idle` and `error(error, q)` props override `QueryProvider` just as they do
+for `Query`. A nested provider inherits keys it does not set. The local error callback receives
+the full infinite-query result, so it can call `q.refetch()`.
+
+The first fetch without data shows `loading`. A disabled query without data shows `idle`.
+An initial failure shows `error`, or throws to an error boundary if there is no error fallback.
+Paused requests without data follow Query's loading branch.
+
+Once data exists, `children` keeps rendering during the next/previous page request, a background
+refetch, or a failed request. Display later errors beside the list using `q.error`,
+`q.isFetchNextPageError`, `q.isFetchPreviousPageError` or `q.isRefetchError`. Native `throwOnError`
+options can still send errors to a boundary.
+
+Shared error fallbacks have the common query-result type. Put pagination-specific error UI in
+the local `error` prop or in `children`, where `q` has its full infinite-query type.

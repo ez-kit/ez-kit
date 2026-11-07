@@ -1,15 +1,33 @@
 ---
 title: Examples
-description: Four complete forms — a full field showcase, a step flow, a dependent cascade and a form in a dialog — shown as TSX and, where the format allows, as a document.
+description: Complete forms, from individual fields to a page editor with a nested draft.
 ---
 
-Four forms, each one a whole feature rather than a fragment, and most shown twice: once written in
+These forms are each a whole feature rather than a fragment, and most shown twice: once written in
 TSX, once as a `FormSchema` document rendered by `SchemaForm`. Both versions are live — the
 document is a real `<SchemaForm schema={…} />`, not a code block — because the two are the same
 machinery entered from different sides, and the only convincing way to say so is to run both.
 
 Scroll for the shape closest to your problem. Each case names the guide that explains it properly;
 this page is deliberately short on prose and long on working forms.
+
+## A page editor
+
+An entire page can be one form, even when its interface is made of cards, a query builder,
+and sortable accordion rows. Edit the details or audience conditions, drag a step, and watch
+Save become available. Discard restores the last saved page. Saving here is simulated in local
+state; a real application would replace that step with a server request.
+
+The query builder is a custom field bound to an array of conditions. The step list uses the
+headless [`form.Array`](/docs/form/arrays#formarray), with `move` called on drag end. The
+modal owns a separate form: Cancel discards only that step's draft, while Apply writes it into
+the page draft. Saving the page updates both its baseline and `defaultValues`. The open dialog
+and expanded rows are UI state, not part of the saved document.
+
+Try changing a value and changing it back: Save disables again because it compares the current
+values to the baseline via `isDefaultValue`, rather than tracking whether the form was ever dirty.
+
+<KitExample exampleId='form-page-editor' />
 
 ## A complete form
 

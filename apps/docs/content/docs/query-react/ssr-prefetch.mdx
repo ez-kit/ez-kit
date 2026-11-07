@@ -1,0 +1,161 @@
+---
+title: SSR and prefetch
+description: Prefetch on the server, hydrate Query and InfiniteQuery, and warm the cache before navigation using native TanStack APIs.
+---
+
+`Query` and `InfiniteQuery` read the same cache as TanStack's hooks. Use TanStack's `dehydrate`
+and `HydrationBoundary` to supply server data; the package needs no SSR adapter.
+
+## Next.js App Router
+
+Keep render callbacks in a Client Component: functions cannot be passed from a Server Component
+through a client boundary. A Client Component can still render HTML on the server.
+
+Start with shared browser-safe options:
+
+```tsx title='lib/device-queries.ts'
+import { queryOptions } from '@tanstack/react-query'
+
+export type Device = { id: string; name: string }
+
+export const deviceQueries = {
+	list: () =>
+		queryOptions({
+			queryKey: ['devices'],
+			queryFn: async ({ signal }): Promise<Device[]> => {
+				const response = await fetch('/api/devices', { signal })
+				if (!response.ok) throw new Error('Could not load devices')
+				return response.json() as Promise<Device[]>
+			},
+			staleTime: 60_000,
+		}),
+}
+```
+
+Create a fresh client when rendering on the server and reuse one client in the browser:
+
+```tsx title='app/providers.tsx'
+'use client'
+
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
+
+let browserClient: QueryClient | undefined
+
+function getQueryClient() {
+	if (typeof window === 'undefined') return new QueryClient()
+	return (browserClient ??= new QueryClient())
+}
+
+export function Providers({ children }: { children: ReactNode }) {
+	return <QueryClientProvider client={getQueryClient()}>{children}</QueryClientProvider>
+}
+```
+
+Mount this provider in your root layout around `children`. The browser instance survives a
+suspended initial render. Never put a shared server `QueryClient` at module scope: its cache
+could mix data between requests or users.
+
+The page creates its own request-scoped client and preloads the query. Here
+`getDevicesForCurrentUser` is your application's server-only database/auth function, returning
+the same `Device[]` shape as `/api/devices`. Override the query function on the server so the
+relative browser URL is never fetched from Node:
+
+```tsx title='app/devices/page.tsx'
+import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query'
+
+import { deviceQueries } from '@/lib/device-queries'
+import { getDevicesForCurrentUser } from '@/lib/server/devices'
+import { DeviceList } from './device-list'
+
+export default async function Page() {
+	const client = new QueryClient()
+	await client.query({
+		...deviceQueries.list(),
+		queryFn: () => getDevicesForCurrentUser(),
+	})
+
+	return (
+		<HydrationBoundary state={dehydrate(client)}>
+			<DeviceList />
+		</HydrationBoundary>
+	)
+}
+```
+
+```tsx title='app/devices/device-list.tsx'
+'use client'
+
+import { Query } from '@ez-kit/query-react'
+import { deviceQueries } from '@/lib/device-queries'
+
+export function DeviceList() {
+	return (
+		<Query
+			query={deviceQueries.list()}
+			loading={<p>Loading devices…</p>}
+		>
+			{(devices) => (
+				<ul>
+					{devices.map((device) => (
+						<li key={device.id}>{device.name}</li>
+					))}
+				</ul>
+			)}
+		</Query>
+	)
+}
+```
+
+The prefetched data renders immediately. A nonzero `staleTime` avoids an immediate background
+refetch after hydration; use the value that fits your data's freshness requirements. Dehydrated
+data is sent to the browser, so preload only fields the current user is allowed to see and use
+values supported by your framework's serialization.
+
+The current TanStack v5 API uses `client.query(options)` to fetch or read fresh cached data and
+`client.infiniteQuery(options)` for infinite queries. Older v5 versions expose `fetchQuery` and
+`fetchInfiniteQuery`, or the error-swallowing `prefetchQuery` and `prefetchInfiniteQuery` methods.
+
+## Infinite queries
+
+Use `infiniteQueryOptions` with a separate key, `initialPageParam` and `getNextPageParam`, and
+preload it with `await client.infiniteQuery(options)`. Apply the same server-only `queryFn`
+override when necessary. Dehydrate the client and render `InfiniteQuery` under the hydration
+boundary. Its first argument contains the prefetched `pages` and `pageParams`; a later
+`fetchNextPage()` continues from those cached parameters.
+
+For independent server queries, start them together with `await Promise.all([...])` to avoid a
+request waterfall. Awaiting a fetch makes failure propagate to the server's error handling;
+if prefetching is optional, catch the error and let the client gate load/retry it instead.
+
+## Prefetch before navigation
+
+Use the same options and key to warm the browser cache on hover or keyboard focus:
+
+```tsx
+'use client'
+
+import Link from 'next/link'
+import { useQueryClient } from '@tanstack/react-query'
+import { deviceQueries } from '@/lib/device-queries'
+
+export function DevicesLink() {
+	const client = useQueryClient()
+	const prefetch = () => {
+		// This is speculative: the destination gate handles failures when it mounts.
+		void client.query(deviceQueries.list()).catch(() => undefined)
+	}
+	return (
+		<Link
+			href='/devices'
+			onMouseEnter={prefetch}
+			onFocus={prefetch}
+		>
+			Devices
+		</Link>
+	)
+}
+```
+
+The mounted gate reuses cached data under that key. With `staleTime: 0` it can still refetch in
+the background; prefetching does not change your freshness policy.

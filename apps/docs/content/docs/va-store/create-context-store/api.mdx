@@ -28,7 +28,8 @@ function createContextStore<TState extends object, TDefaultValue = undefined>(
 	) => ReactElement
 	useSnapshot: (options?: { sync?: boolean }) => Snapshot<TState>
 	useStore: () => TState
-	Subscribe: (props: { children: (arg: { snap: Snapshot<TState>; store: TState }) => ReactElement }) => ReactElement
+	useSelector: <T>(selector: (snap: Snapshot<TState>) => T, options?: UseSelectorOptions<T>) => T
+	Subscribe: SubscribeComponent<TState>
 	Store: (props: { children: (store: TState) => ReactElement }) => ReactElement
 }
 ```
@@ -80,6 +81,27 @@ The options object passes straight through to Valtio's `useSnapshot`. Returns `S
 	The snapshot is **readonly**, and deeply so at the type level. Writes go through the proxy from `useStore()`; a
 	snapshot is never the write path.
 </Callout>
+
+## `useSelector(selector, options?)`
+
+Selects from the nearest Provider's readonly `Snapshot<TState>`. The result type is inferred from the selector. Store updates trigger a render only when the result changes; parent renders still run normally.
+
+```tsx
+const positive = counterStore.useSelector((s) => s.count > 0)
+const summary = counterStore.useSelector((s) => ({ count: s.count }), { isEqual: shallowEqual })
+```
+
+`UseSelectorOptions<T>` has one optional field, `isEqual: (previous: T, next: T) => boolean`, defaulting to `Object.is`. Equal results retain the previous reference. Fresh objects/arrays are cached per snapshot; without a custom comparator they change on every new root snapshot. Inline selectors can capture current props without `useCallback`. Selectors must be pure and synchronous; mutate through the raw proxy instead.
+
+The standalone export accepts any Valtio proxy, including a nested proxy:
+
+```tsx
+import { useSelector } from '@ez-kit/va-store'
+
+const positive = useSelector(state, (s) => s.count > 0)
+```
+
+Its signature is `useSelector<TState extends object, T>(store: TState, selector: (snap: Snapshot<TState>) => T, options?: UseSelectorOptions<T>): T`. It requires no Provider. The context method throws outside its Provider, just like `useSnapshot()`.
 
 ## `useStore()`
 
@@ -133,11 +155,30 @@ Render-prop alternative to `useSnapshot`. Its child receives two arguments — `
 </counterStore.Subscribe>
 ```
 
-| Prop       | Type                                                      | Required | Description                                          |
-| ---------- | --------------------------------------------------------- | -------- | ---------------------------------------------------- |
-| `children` | `(snap: Snapshot<TState>, store: TState) => ReactElement` | yes      | Render prop, called with the snapshot and the proxy. |
+| Prop       | Type                                           | Required | Description                                                      |
+| ---------- | ---------------------------------------------- | -------- | ---------------------------------------------------------------- |
+| `children` | `(selected: T, store: TState) => ReactElement` | yes      | Render prop; without a selector, `T` is `Snapshot<TState>`.      |
+| `selector` | `(snap: Snapshot<TState>) => T`                | no       | Selects the result passed to children.                           |
+| `isEqual`  | `(previous: T, next: T) => boolean`            | no       | Result comparison; defaults to `Object.is`. Requires `selector`. |
 
-The arguments are positional, as in [zu-store's `Subscribe`](../../zu-store/create-context-store/api#subscribe). There is no `selector` and no `shallow` prop — Valtio tracks the properties the render prop actually reads, so the [zu-store selector rules](../../zu-store/create-context-store#selecting-more-than-one-value) have no counterpart here.
+The arguments are positional, as in [zu-store's `Subscribe`](../../zu-store/create-context-store/api#subscribe). Without `selector`, Valtio tracks the properties the render prop reads. With `selector`, the child receives `(selected, store)`, and the result uses `Object.is` or the supplied `isEqual`. `isEqual` requires `selector`.
+
+```tsx
+<counterStore.Subscribe
+	selector={(s) => ({ count: s.count })}
+	isEqual={shallowEqual}
+>
+	{(selected, store) => (
+		<button
+			onClick={() => {
+				store.count++
+			}}
+		>
+			{selected.count}
+		</button>
+	)}
+</counterStore.Subscribe>
+```
 
 ## `Store`
 
@@ -228,11 +269,13 @@ On [`createCachedStore`](../cache) the same option carries real weight — there
 | Export                                             | Kind  | Purpose                                                        |
 | -------------------------------------------------- | ----- | -------------------------------------------------------------- |
 | `createContextStore`                               | value | The factory itself.                                            |
-| `shallowEqual`                                     | value | Shallow comparator for `controlled.<key>.equals`.              |
+| `shallowEqual`                                     | value | Shallow comparator for selector results and controlled fields. |
 | `ContextStoreInit<TDefaultValue>`                  | type  | The envelope your factory's parameter should be typed with.    |
 | `CreateContextStoreOptions<TState>`                | type  | The second argument's type.                                    |
 | `CreateContextStoreFactory<TState, TDefaultValue>` | type  | The factory argument's type.                                   |
 | `CreateContextStoreResult<TState, TDefaultValue>`  | type  | The returned bundle — `Provider`, hooks, `Subscribe`, `Store`. |
+| `useSelector`                                      | value | Standalone selector hook for a Valtio proxy.                   |
+| `UseSelectorOptions<T>`                            | type  | Selector options — `{ isEqual? }`.                             |
 | `UseSnapshotOptions`                               | type  | `useSnapshot`'s options — `{ sync? }`.                         |
 | `ControlledConfig<TState>`                         | type  | The `controlled` option's type.                                |
 | `ControlledFieldConfig<TState, K>`                 | type  | One field's entry in `controlled`.                             |
@@ -241,8 +284,8 @@ These are re-exported from `@ez-kit/va-store`, so you can name the `controlled` 
 
 ## Errors
 
-| Message                                  | Cause                                                                                                                                                           |
-| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `[va-store] Missing Provider for <name>` | `useSnapshot` / `useStore` / `Subscribe` / `Store` used outside a `Provider`. `<name>` is the [`name` option](#the-name-option), or `store` when it is not set. |
+| Message                                  | Cause                                                                                                                                                                           |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `[va-store] Missing Provider for <name>` | `useSnapshot` / `useSelector` / `useStore` / `Subscribe` / `Store` used outside a `Provider`. `<name>` is the [`name` option](#the-name-option), or `store` when it is not set. |
 
 There is no implicit module-level fallback, because the whole point of `createContextStore` is per-tree isolation. A store given a [`name`](#the-name-option) reports it instead — `[va-store] Missing Provider for filters`.

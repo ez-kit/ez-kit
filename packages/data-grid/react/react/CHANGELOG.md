@@ -1,5 +1,22 @@
 # @ez-kit/data-grid-react
 
+## 0.18.0
+
+### Minor Changes
+
+- f6619f9: Add the optional `@ez-kit/data-grid-react/dnd-kit` entry and share its adapter between UI kits. Preserve existing kit adapter exports and the shadcn drag registry item while keeping drag peers optional for ordinary grids.
+
+### Patch Changes
+
+- f6619f9: Keep feature callbacks and column constraints current after rerenders. Scope editing and creating keyboard events to their owning grid, including nested grids and portalled editors. Prevent closed creating forms from saving while preserving persistent draft rows, and share form cancellation and field validation between creating and editing.
+
+  Publish refreshed feature handlers only after a render commits, so suspended transitions cannot replace the visible grid's callbacks.
+
+  Preserve resolved column definitions and TanStack column instances across unrelated rerenders with a per-table structural cache, refreshing them when column definitions or structural feature settings change.
+
+- Updated dependencies [f6619f9]
+  - @ez-kit/data-grid-core@0.16.1
+
 ## 0.17.0
 
 ### Minor Changes

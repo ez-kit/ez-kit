@@ -61,6 +61,7 @@ test.describe('the filter panel', () => {
 
 		const dialog = await openChip(page, 'Customer')
 		await dialog.getByRole('textbox').fill(CUSTOMER)
+		await expect(panelChip(page, 'Customer')).toHaveAttribute('data-has-value', 'true')
 		await page.keyboard.press('Escape')
 
 		await expect(grid.rows()).toHaveCount(1)
@@ -72,6 +73,7 @@ test.describe('the filter panel', () => {
 	test('the chip X clears its own filter', async ({ grid, page }) => {
 		const dialog = await openChip(page, 'Customer')
 		await dialog.getByRole('textbox').fill(CUSTOMER)
+		await expect(panelChip(page, 'Customer')).toHaveAttribute('data-has-value', 'true')
 		await page.keyboard.press('Escape')
 		await expect(grid.rows()).toHaveCount(1)
 
