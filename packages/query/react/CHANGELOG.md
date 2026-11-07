@@ -1,5 +1,12 @@
 # @ez-kit/query-react
 
+## 0.2.0
+
+### Minor Changes
+
+- f46a151: Add a headless Mutation component that passes the native useMutation result to a render function and isolates its subscription from its parent.
+- f46a151: Add InfiniteQuery with native pagination results and shared QueryProvider fallbacks. Document pagination, Query and Mutation workflows, optimistic updates, form errors, server prefetching and hydration.
+
 ## 0.1.0
 
 ### Minor Changes
