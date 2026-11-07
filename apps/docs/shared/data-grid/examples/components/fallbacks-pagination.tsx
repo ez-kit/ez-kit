@@ -24,7 +24,7 @@ const features = tableFeatures({
 	rowPaginationFeature,
 })
 
-const users = makeUsers(30)
+const users = makeUsers(300)
 const columns = createColumns<User>([
 	{ accessorKey: 'name', header: 'Name' },
 	{ accessorKey: 'email', header: 'Email' },
@@ -40,8 +40,8 @@ async function fetchPage(pageIndex: number, pageSize: number) {
 	}
 }
 
-function PaginationGrid() {
-	const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 5 })
+function PaginationGrid({ virtualized }: { virtualized: boolean }) {
+	const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: virtualized ? 100 : 5 })
 	const query = useQuery({
 		queryKey: ['fallbacks-pagination', pagination.pageIndex, pagination.pageSize],
 		queryFn: () => fetchPage(pagination.pageIndex, pagination.pageSize),
@@ -53,6 +53,8 @@ function PaginationGrid() {
 			features={features}
 			data={query.data?.rows ?? []}
 			columns={columns}
+			virtualization={virtualized ? { row: { estimateSize: 40, overscan: 3 } } : false}
+			layout={virtualized ? { maxHeight: '280px', stickyHeader: true } : {}}
 			state={{ pagination, loading: query }}
 			pagination={{
 				manual: true,
@@ -63,11 +65,15 @@ function PaginationGrid() {
 	)
 }
 
-export function FallbacksPaginationExample() {
+export function FallbacksPaginationExample({ virtualized = false }: { virtualized?: boolean } = {}) {
 	const [queryClient] = useState(() => new QueryClient())
 	return (
 		<QueryClientProvider client={queryClient}>
-			<PaginationGrid />
+			<PaginationGrid virtualized={virtualized} />
 		</QueryClientProvider>
 	)
+}
+
+export function FallbacksPaginationVirtualizedExample() {
+	return <FallbacksPaginationExample virtualized />
 }

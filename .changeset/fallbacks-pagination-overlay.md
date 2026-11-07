@@ -2,4 +2,4 @@
 '@ez-kit/docs': patch
 ---
 
-Add an interactive pagination refetch overlay example to the data-grid Fallbacks documentation, with React Query setup and initial loading guidance.
+Add interactive pagination refetch overlay examples to the data-grid Fallbacks documentation, with React Query setup, initial loading guidance, and virtualized fallback and pagination demos.

@@ -101,6 +101,36 @@ What you can configure is each slot, via `fallbacks`. Pass `false` to disable on
 />
 ```
 
+## Virtualized fallbacks
+
+The same loading, empty, and no-results states work with `virtualization`. Switch between the
+states below; choosing Normal restores the virtualized rows inside the same scroll container.
+Custom `fallbacks.*.component` overrides and `false` switches work in both modes.
+
+<DataGridDocsExample exampleId='fallbacks-virtualized' />
+
+## Virtualized pagination refetch overlay
+
+This example loads **100 rows per page**, with a 1.2-second simulated request. Scroll down within
+the grid, then switch pages: the previous rows stay mounted and the spinner remains centered in
+the visible body area, below the sticky header. The overlay does not move with the virtual scroll range.
+
+<DataGridDocsExample exampleId='fallbacks-pagination-virtualized' />
+
+Use the same `state.loading` and `keepPreviousData` setup as above, then enable virtualization:
+
+```tsx
+<DataGrid
+	features={features}
+	data={query.data?.rows ?? []}
+	columns={columns}
+	virtualization={{ row: { estimateSize: 40, overscan: 3 } }}
+	layout={{ maxHeight: '280px', stickyHeader: true }}
+	state={{ pagination, loading: query }}
+	pagination={{ manual: true, rowCount: query.data?.rowCount ?? 0, onChange: setPagination }}
+/>
+```
+
 ## Source
 
 - `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/loading-body.tsx`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/loading-body.tsx)

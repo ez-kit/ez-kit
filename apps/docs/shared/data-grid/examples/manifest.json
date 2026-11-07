@@ -860,6 +860,18 @@
 		"exportName": "FallbacksPaginationExample"
 	},
 	{
+		"id": "fallbacks-virtualized",
+		"label": "Virtualized fallbacks",
+		"sourceFile": "components/fallbacks.tsx",
+		"exportName": "FallbacksVirtualizedExample"
+	},
+	{
+		"id": "fallbacks-pagination-virtualized",
+		"label": "Virtualized pagination refetch overlay",
+		"sourceFile": "components/fallbacks-pagination.tsx",
+		"exportName": "FallbacksPaginationVirtualizedExample"
+	},
+	{
 		"id": "pagination-links",
 		"label": "Page links (default)",
 		"group": "pagination",

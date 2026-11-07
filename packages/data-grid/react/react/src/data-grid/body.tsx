@@ -303,7 +303,6 @@ export function Body<TRow extends object = ErasedRow>({ children }: DataGridBody
 					'virtualization option for this grid, or compose further down at <DataGrid.Row>.',
 			)
 		}
-		return <VirtualBody />
 	}
 
 	const fallbacks = table.grid.fallbacks
@@ -322,6 +321,10 @@ export function Body<TRow extends object = ErasedRow>({ children }: DataGridBody
 			return <NoResultsRow />
 		}
 	}
+
+	// Fallbacks replace the whole body in either rendering mode. Choose virtualization only
+	// once there are rows to window (or the consumer has explicitly disabled the fallback).
+	if (rowVirtualizer) return <VirtualBody />
 
 	// Custom body: the consumer owns what goes inside the `<tbody>`, and is handed everything
 	// the built-in one would have put there.

@@ -186,7 +186,7 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
 	)
 }
 
-export function FallbacksExample() {
+export function FallbacksExample({ virtualized = false }: { virtualized?: boolean } = {}) {
 	const [mode, setMode] = useState<Mode>('loading')
 
 	return (
@@ -217,7 +217,9 @@ export function FallbacksExample() {
 				columns={columns}
 				sorting
 				filtering
-				pagination={{ pageSize: 5 }}
+				pagination={virtualized ? false : { pageSize: 5 }}
+				virtualization={virtualized ? { row: { estimateSize: 40, overscan: 5 } } : false}
+				layout={virtualized ? { maxHeight: '420px', stickyHeader: true } : {}}
 				state={{
 					loading: { isPending: mode === 'loading' },
 					// Reset column filters when leaving 'no-results' mode
@@ -226,4 +228,8 @@ export function FallbacksExample() {
 			/>
 		</div>
 	)
+}
+
+export function FallbacksVirtualizedExample() {
+	return <FallbacksExample virtualized />
 }

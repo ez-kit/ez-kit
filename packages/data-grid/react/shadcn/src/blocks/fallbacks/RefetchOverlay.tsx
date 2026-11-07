@@ -25,7 +25,7 @@ export function RefetchOverlay(_props: RefetchOverlayProps) {
 				display: 'flex',
 				alignItems: 'center',
 				justifyContent: 'center',
-				backgroundColor: 'hsl(var(--background) / 0.6)',
+				backgroundColor: 'color-mix(in oklab, var(--background) 60%, transparent)',
 				zIndex: 10,
 				pointerEvents: 'none',
 			}}

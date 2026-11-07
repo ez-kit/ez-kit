@@ -14,10 +14,10 @@ import type { Page } from '@playwright/test'
  * and no `data-row-id`, so `grid.rows()` stays a count of the data throughout.
  */
 
-const EXAMPLE = 'fallbacks'
-
-/** The example's six customers, under its `pageSize: 5`. */
-const DATA_ROWS = 5
+const EXAMPLES = [
+	{ id: 'fallbacks', dataRows: 5 },
+	{ id: 'fallbacks-virtualized', dataRows: 6 },
+] as const
 
 /** Wider than the visible area on purpose, so the grid scrolls sideways. */
 const SCROLLPORT = '[data-scrollport]'
@@ -32,110 +32,112 @@ const NO_RESULTS_CELL = '[data-slot="no-results-cell"]'
 /** The example's own tabs, not the grid's. */
 const mode = (page: Page, label: string) => page.getByRole('button', { name: label, exact: true })
 
-test.describe('fallbacks', () => {
-	test.beforeEach(async ({ grid }) => {
-		await grid.open(EXAMPLE)
-	})
-
-	test('shows skeleton rows while the data is pending, and no data rows', async ({ grid, page }) => {
-		// The example opens on this tab.
-		await expect(page.locator(LOADING_ROW)).not.toHaveCount(0)
-		await expect(grid.rows()).toHaveCount(0)
-
-		// A skeleton is not a row of the data: it has no id and claims none.
-		await expect(page.locator(`${LOADING_ROW}[data-row-id]`)).toHaveCount(0)
-		// And it is not one of the other two states.
-		await expect(page.locator(EMPTY_CELL)).toHaveCount(0)
-		await expect(page.locator(NO_RESULTS_CELL)).toHaveCount(0)
-	})
-
-	test('the header stays up while the body is pending', async ({ grid }) => {
-		// A skeleton that took the header with it would make the grid jump on every fetch.
-		await expect(grid.header('name')).toBeVisible()
-		await expect(grid.header('email')).toBeVisible()
-	})
-
-	test('swaps the skeleton for the data when the load finishes', async ({ grid, page }) => {
-		await mode(page, 'Normal').click()
-
-		await expect(page.locator(LOADING_ROW)).toHaveCount(0)
-		await expect(grid.rows()).toHaveCount(DATA_ROWS)
-	})
-
-	test('says the data is empty when there is none', async ({ grid, page }) => {
-		await mode(page, 'Empty data').click()
-
-		const cell = page.locator(EMPTY_CELL)
-		await expect(cell).toHaveCount(1)
-		await expect(cell).toContainText('No data')
-		await expect(grid.rows()).toHaveCount(0)
-		// Not the other message: nothing was filtered away.
-		await expect(page.locator(NO_RESULTS_CELL)).toHaveCount(0)
-	})
-
-	test('the empty row spans the full width of the table', async ({ grid, page }) => {
-		await mode(page, 'Empty data').click()
-
-		const table = await grid.header('name').evaluate((th) => th.closest('table')?.getBoundingClientRect().width ?? 0)
-		const cellWidth = await page.locator(EMPTY_CELL).evaluate((td) => td.getBoundingClientRect().width)
-		expect(Math.abs(cellWidth - table)).toBeLessThan(4)
-	})
-
-	// The fallback row spans every column, so on a grid wider than its scrollport a message centred
-	// in the row would sit off-screen. It is centred in what the reader can see instead, and stays
-	// there while they scroll.
-	for (const scrollTo of ['start', 'end'] as const) {
-		test(`the empty message is centred in the visible area, scrolled to the ${scrollTo}`, async ({ page }) => {
-			await mode(page, 'Empty data').click()
-			const scrollport = page.locator(SCROLLPORT)
-			await expect(page.locator(EMPTY_CELL)).toHaveCount(1)
-			await scrollport.evaluate((el, edge) => {
-				el.scrollLeft = edge === 'end' ? el.scrollWidth : 0
-			}, scrollTo)
-
-			const overflows = await scrollport.evaluate((el) => el.scrollWidth > el.clientWidth)
-			expect(overflows).toBe(true)
-			const message = page.locator(EMPTY_CELL).getByText('No data')
-			await expect(message).toBeInViewport()
-			const [messageBox, portBox] = await Promise.all([
-				message.boundingBox(),
-				scrollport.evaluate((el) => {
-					const rect = el.getBoundingClientRect()
-					return { x: rect.x + el.clientLeft, width: el.clientWidth }
-				}),
-			])
-			if (!messageBox) throw new Error('the empty message has no box')
-			const messageCentre = messageBox.x + messageBox.width / 2
-			const portCentre = portBox.x + portBox.width / 2
-			expect(Math.abs(messageCentre - portCentre)).toBeLessThan(CENTRE_TOLERANCE)
+for (const { id, dataRows } of EXAMPLES) {
+	test.describe(id, () => {
+		test.beforeEach(async ({ grid }) => {
+			await grid.open(id)
 		})
-	}
 
-	// The opposite state: there *is* data, a filter just matched none of it.
-	test('says there are no results when a filter matched nothing', async ({ grid, page }) => {
-		await mode(page, 'Normal').click()
-		await expect(grid.rows()).toHaveCount(DATA_ROWS)
+		test('shows skeleton rows while the data is pending, and no data rows', async ({ grid, page }) => {
+			// The example opens on this tab.
+			await expect(page.locator(LOADING_ROW)).not.toHaveCount(0)
+			await expect(grid.rows()).toHaveCount(0)
 
-		await mode(page, 'No results').click()
-		await grid.header('name').getByRole('textbox').fill('zzzzzz')
+			// A skeleton is not a row of the data: it has no id and claims none.
+			await expect(page.locator(`${LOADING_ROW}[data-row-id]`)).toHaveCount(0)
+			// And it is not one of the other two states.
+			await expect(page.locator(EMPTY_CELL)).toHaveCount(0)
+			await expect(page.locator(NO_RESULTS_CELL)).toHaveCount(0)
+		})
 
-		const cell = page.locator(NO_RESULTS_CELL)
-		await expect(cell).toHaveCount(1)
-		await expect(cell).toContainText('No results')
-		await expect(grid.rows()).toHaveCount(0)
-		// Not "No data" — the data is still there, behind the filter.
-		await expect(page.locator(EMPTY_CELL)).toHaveCount(0)
+		test('the header stays up while the body is pending', async ({ grid }) => {
+			// A skeleton that took the header with it would make the grid jump on every fetch.
+			await expect(grid.header('name')).toBeVisible()
+			await expect(grid.header('email')).toBeVisible()
+		})
+
+		test('swaps the skeleton for the data when the load finishes', async ({ grid, page }) => {
+			await mode(page, 'Normal').click()
+
+			await expect(page.locator(LOADING_ROW)).toHaveCount(0)
+			await expect(grid.rows()).toHaveCount(dataRows)
+		})
+
+		test('says the data is empty when there is none', async ({ grid, page }) => {
+			await mode(page, 'Empty data').click()
+
+			const cell = page.locator(EMPTY_CELL)
+			await expect(cell).toHaveCount(1)
+			await expect(cell).toContainText('No data')
+			await expect(grid.rows()).toHaveCount(0)
+			// Not the other message: nothing was filtered away.
+			await expect(page.locator(NO_RESULTS_CELL)).toHaveCount(0)
+		})
+
+		test('the empty row spans the full width of the table', async ({ grid, page }) => {
+			await mode(page, 'Empty data').click()
+
+			const table = await grid.header('name').evaluate((th) => th.closest('table')?.getBoundingClientRect().width ?? 0)
+			const cellWidth = await page.locator(EMPTY_CELL).evaluate((td) => td.getBoundingClientRect().width)
+			expect(Math.abs(cellWidth - table)).toBeLessThan(4)
+		})
+
+		// The fallback row spans every column, so on a grid wider than its scrollport a message centred
+		// in the row would sit off-screen. It is centred in what the reader can see instead, and stays
+		// there while they scroll.
+		for (const scrollTo of ['start', 'end'] as const) {
+			test(`the empty message is centred in the visible area, scrolled to the ${scrollTo}`, async ({ page }) => {
+				await mode(page, 'Empty data').click()
+				const scrollport = page.locator(SCROLLPORT)
+				await expect(page.locator(EMPTY_CELL)).toHaveCount(1)
+				await scrollport.evaluate((el, edge) => {
+					el.scrollLeft = edge === 'end' ? el.scrollWidth : 0
+				}, scrollTo)
+
+				const overflows = await scrollport.evaluate((el) => el.scrollWidth > el.clientWidth)
+				expect(overflows).toBe(true)
+				const message = page.locator(EMPTY_CELL).getByText('No data')
+				await expect(message).toBeInViewport()
+				const [messageBox, portBox] = await Promise.all([
+					message.boundingBox(),
+					scrollport.evaluate((el) => {
+						const rect = el.getBoundingClientRect()
+						return { x: rect.x + el.clientLeft, width: el.clientWidth }
+					}),
+				])
+				if (!messageBox) throw new Error('the empty message has no box')
+				const messageCentre = messageBox.x + messageBox.width / 2
+				const portCentre = portBox.x + portBox.width / 2
+				expect(Math.abs(messageCentre - portCentre)).toBeLessThan(CENTRE_TOLERANCE)
+			})
+		}
+
+		// The opposite state: there *is* data, a filter just matched none of it.
+		test('says there are no results when a filter matched nothing', async ({ grid, page }) => {
+			await mode(page, 'Normal').click()
+			await expect(grid.rows()).toHaveCount(dataRows)
+
+			await mode(page, 'No results').click()
+			await grid.header('name').getByRole('textbox').fill('zzzzzz')
+
+			const cell = page.locator(NO_RESULTS_CELL)
+			await expect(cell).toHaveCount(1)
+			await expect(cell).toContainText('No results')
+			await expect(grid.rows()).toHaveCount(0)
+			// Not "No data" — the data is still there, behind the filter.
+			await expect(page.locator(EMPTY_CELL)).toHaveCount(0)
+		})
+
+		test('clearing the filter brings the rows back', async ({ grid, page }) => {
+			await mode(page, 'No results').click()
+			const filter = grid.header('name').getByRole('textbox')
+			await filter.fill('zzzzzz')
+			await expect(page.locator(NO_RESULTS_CELL)).toHaveCount(1)
+
+			await filter.fill('')
+
+			await expect(page.locator(NO_RESULTS_CELL)).toHaveCount(0)
+			await expect(grid.rows()).toHaveCount(dataRows)
+		})
 	})
-
-	test('clearing the filter brings the rows back', async ({ grid, page }) => {
-		await mode(page, 'No results').click()
-		const filter = grid.header('name').getByRole('textbox')
-		await filter.fill('zzzzzz')
-		await expect(page.locator(NO_RESULTS_CELL)).toHaveCount(1)
-
-		await filter.fill('')
-
-		await expect(page.locator(NO_RESULTS_CELL)).toHaveCount(0)
-		await expect(grid.rows()).toHaveCount(DATA_ROWS)
-	})
-})
+}
