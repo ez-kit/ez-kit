@@ -40,14 +40,14 @@ export type DataGridPageSizerProps = {
  * Page size selector. Renders whenever page-based pagination is enabled, wherever a layout
  * puts it — the toolbar, or a `<DataGrid.BottomBar/>` beside the page controls.
  *
- * Subscribes only to `state.pagination` — other state mutations leave it stable.
+ * Subscribes only to `state.pagination.pageSize` — other state mutations leave it stable.
  */
 export function PageSizer({ children }: DataGridPageSizerProps = {}) {
 	const table = useDataGridTable()
 	const { PageSizer: PageSizerComponent } = useGridComponents().pagination
 	const options = table.grid.pagination.items
 
-	const pagination = useDataGridState((s) => s.pagination)
+	const pageSize = useDataGridState((s) => s.pagination.pageSize)
 
 	if (!options) return null
 
@@ -57,13 +57,13 @@ export function PageSizer({ children }: DataGridPageSizerProps = {}) {
 
 	if (children !== undefined) {
 		return typeof children === 'function'
-			? children({ pageSize: pagination.pageSize, items: options, onPageSizeChange })
+			? children({ pageSize: pageSize, items: options, onPageSizeChange })
 			: children
 	}
 
 	return (
 		<PageSizerComponent
-			pageSize={pagination.pageSize}
+			pageSize={pageSize}
 			items={options}
 			onPageSizeChange={onPageSizeChange}
 		/>

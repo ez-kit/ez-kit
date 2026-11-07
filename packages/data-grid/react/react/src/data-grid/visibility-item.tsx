@@ -6,7 +6,7 @@ import { getVisibilityPanelColumns } from '../utils/visibility-panel-columns'
 import { ColumnDragContext, type ColumnDragValue } from './column-drag'
 import { DragAxis, DragSurface, useDndEnabled, useSortableItem } from './dnd'
 import { COLUMN_DRAGGING_ATTR } from './dnd/dragging-attrs'
-import { useDataGridTable, useOptionalDataGridTable } from './table-context'
+import { useDataGridTable, useOptionalDataGridTable, useDataGridState } from './table-context'
 
 import type { ReactNode } from 'react'
 
@@ -133,19 +133,39 @@ export function VisibilityItem({ columnId, className, children }: DataGridVisibi
 	 * exception rather than an escape hatch.
 	 */
 	const table = useOptionalDataGridTable()
-	const isDndEnabled = useDndEnabled()
+	return table === null ? (
+		<VisibilityItemBox
+			columnId={columnId}
+			className={className}
+		>
+			{children}
+		</VisibilityItemBox>
+	) : (
+		<ConnectedVisibilityItem
+			columnId={columnId}
+			{...(className !== undefined ? { className } : {})}
+		>
+			{children}
+		</ConnectedVisibilityItem>
+	)
+}
 
-	/*
-	 * Gated on the adapter first, for the reason `header-cell.tsx` gates its own lookup: the scan is
-	 * `O(n)` per row and therefore `O(n²)` per open panel in leaf columns, so the gate **confines**
-	 * that cost to a grid that has a drag adapter *and* a panel offering moves — it does not remove
-	 * it. Fine at any column count a panel is readable at; worth knowing before someone puts a
-	 * hundred columns in one.
-	 */
-	const index =
-		table !== null && resolveReorderMode(table.grid.ordering.visibilityMenu.mode, false, isDndEnabled).drag
+function ConnectedVisibilityItem({
+	columnId,
+	className,
+	children,
+}: {
+	columnId: string
+	className?: string
+	children: VisibilityItemChildren
+}) {
+	const table = useDataGridTable()
+	const isDndEnabled = useDndEnabled()
+	const index = useDataGridState(() =>
+		resolveReorderMode(table.grid.ordering.visibilityMenu.mode, false, isDndEnabled).drag
 			? getVisibilityPanelColumns(table).findIndex((column) => column.id === columnId)
-			: -1
+			: -1,
+	)
 
 	if (index < 0) {
 		return (
@@ -219,15 +239,6 @@ function VisibilityItemDragShell({
 }) {
 	const table = useDataGridTable()
 
-	/*
-	 * No state subscription here, deliberately. An earlier revision read `columnOrder` with the
-	 * comment "the list *is* the order, so a committed reorder has to re-render the row it moved" —
-	 * which is true of the *list* and false about this component: the index arrives as a prop, and
-	 * `<DataGrid.VisibilityTrigger>` already subscribes to `columnOrder`, `columnVisibility` and
-	 * `columnPinning` and rebuilds its `columns` array, so every row re-renders on a commit whatever
-	 * this one does. The subscription was redundant and its comment credited it with the trigger's
-	 * job.
-	 */
 	/*
 	 * `disabled` carries only what is knowable about this column on its own — the author locking its
 	 * place. Everything else a drop can be refused for (the pin band, the header group, the target's

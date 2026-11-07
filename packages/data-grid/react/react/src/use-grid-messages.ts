@@ -1,9 +1,8 @@
 'use client'
 
 import { defaultMessages } from '@ez-kit/data-grid-core'
-import { useContext } from 'react'
 
-import { TableContext } from './data-grid/table-context'
+import { useOptionalDataGridTable } from './data-grid/table-context'
 
 import type { GridMessages } from '@ez-kit/data-grid-core'
 
@@ -21,5 +20,5 @@ import type { GridMessages } from '@ez-kit/data-grid-core'
  * return <span>{messages.pagination.rowsPerPage}</span>
  */
 export function useGridMessages(): GridMessages {
-	return useContext(TableContext)?.grid.messages ?? defaultMessages
+	return useOptionalDataGridTable()?.grid.messages ?? defaultMessages
 }

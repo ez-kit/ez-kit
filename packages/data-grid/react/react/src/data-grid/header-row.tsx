@@ -3,6 +3,7 @@ import { useGridComponents } from '../components-context'
 import { useAriaHeaderRowIndexAttrs } from './aria-row-index'
 import { DataGridHeaderCell } from './header-cell'
 import { useRowNavigationProps } from './keyboard-navigation'
+import { useRenderCallbackState } from './table-context'
 
 import type { ErasedRow, GridFeatures } from '../types'
 import type { Header, HeaderGroup } from '@tanstack/table-core'
@@ -50,6 +51,7 @@ export function DataGridHeaderRow<TRow extends object = ErasedRow>({
 	children,
 }: DataGridHeaderRowProps<TRow>) {
 	const { Tr } = useGridComponents().core
+	useRenderCallbackState(typeof children === 'function')
 	const headers = headerGroup.headers
 	const navigationProps = useRowNavigationProps()
 	// `depth` is the group's 0-based position from the top of the header, which is exactly the

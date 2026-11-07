@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useGridComponents } from '../components-context'
 
 import { DataGridHeaderRow } from './header-row'
-import { useDataGridTable, useDataGridState } from './table-context'
+import { useRenderCallbackState, useDataGridTable, useDataGridState } from './table-context'
 
 import type { ErasedRow, DataTable, GridFeatures } from '../types'
 import type { HeaderGroup } from '@tanstack/table-core'
@@ -113,28 +113,12 @@ export function Header<TRow extends object = ErasedRow>({ sticky, children }: Da
 	const isSticky = sticky ?? table.grid.layout.stickyHeader
 	const theadRef = useHeaderHeightVar(isSticky)
 
-	// Narrow subscriptions: re-render only when slices the header actually reflects change.
-	// Editing, expanded, pagination and rowPinning touch none of these, so clicking Edit on a
-	// row leaves the header untouched. They live here rather than in `DataGridHeaderCell`
-	// because one subscription per header beats one per column, and every cell re-renders with
-	// this component anyway.
-	useDataGridState((s) => s.sorting)
-	useDataGridState((s) => s.columnFilters)
-	useDataGridState((s) => s.columnVisibility)
-	useDataGridState((s) => s.columnOrder)
-	useDataGridState((s) => s.columnPinning)
-	useDataGridState((s) => s.columnSizing)
-	useDataGridState((s) => s.columnResizing)
-	useDataGridState((s) => s.rowSelection)
-	// Grouping rebuilds the row model **and** the column list — `groupedColumnMode: 'remove'`
-	// takes a grouped column out while it is a level — so every component that reads either has
-	// to re-derive on it. Optional-chained because the slice exists only with
-	// `columnGroupingFeature` registered; see `feature-optionality.test.tsx`.
-	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
-	useDataGridState((s) => s.grouping ?? null)
+	// A render callback may inspect mutable table answers inline. Keep its existing live
+	// behaviour while the default structure observes only its memoized group model.
+	useRenderCallbackState(typeof children === 'function')
+	const headerGroups = useDataGridState(() => table.getHeaderGroups())
 
 	const { Thead } = useGridComponents().core
-	const headerGroups = table.getHeaderGroups()
 
 	return (
 		<Thead

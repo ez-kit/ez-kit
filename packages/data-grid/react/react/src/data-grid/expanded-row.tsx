@@ -22,13 +22,11 @@ type ExpandConfig = {
  */
 export function ExpandedRow<TRow extends object>({ row }: ExpandedRowComponentProps<TRow>) {
 	const table = useDataGridTable()
-	useDataGridState((s) => s.columnVisibility)
+	const colSpan = useDataGridState(() => row.getVisibleCells().length)
 	const { Tr, Td } = useGridComponents().core
 
 	const expandedComponent = table.grid.expanding.component as ExpandConfig['component']
 	if (!expandedComponent) return null
-
-	const colSpan = row.getVisibleCells().length
 
 	// `data-slot` is passed explicitly, as every other row and cell in the body does. Without it
 	// the kit's own default wins — shadcn's `Tr` stamps `data-slot="table-row"` — and the panel

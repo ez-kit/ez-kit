@@ -31,12 +31,11 @@ export type DataGridLoadingBodyProps = {
 
 export function LoadingBody({ children }: DataGridLoadingBodyProps = {}) {
 	const table = useDataGridTable()
-	useDataGridState((s) => s.columnVisibility)
 	const gridComponents = useGridComponents()
 	const { Tbody, Tr, Td } = gridComponents.core
 	const { LoadingRow } = gridComponents.fallbacks
 
-	const columnCount = table.getVisibleLeafColumns().length
+	const columnCount = useDataGridState(() => table.getVisibleLeafColumns().length)
 	const customContent = table.grid.fallbacks.loading.component
 
 	const content =

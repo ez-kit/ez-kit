@@ -17,9 +17,10 @@ import { useDataGrid, type UseDataGridConfig } from '../use-data-grid'
 import { useGridMessages } from '../use-grid-messages'
 import { GRID_ROOT_CLASS_NAME, joinClassNames } from '../utils/class-names'
 import { getRowDropOrder } from '../utils/row-drop-order'
+import { shallow } from '../utils/shallow-equal'
 import { dropSortEntry } from '../utils/sort-entry-order'
 
-import { ActionBar, buildSelectionBarArgs } from './action-bar'
+import { ActionBar } from './action-bar'
 import { ActiveFiltersBar } from './active-filters-bar'
 import { Body } from './body'
 import { BottomBar } from './bottom-bar'
@@ -188,15 +189,43 @@ function hasConfirmDialog<TRow extends object>(table: Table<GridFeatures, TRow>)
 function ConfirmDialogRenderer() {
 	const table = useDataGridTable()
 	const { ConfirmDialog } = useGridComponents().deleting
-	// Narrow: re-render only when a pending delete target changes. Other
-	// state mutations (editing, sorting, etc.) leave these stable.
-	// Optional-chained because these two hooks run **before** the `hasConfirmDialog` gate below —
-	// a hook cannot sit after an early return — so they execute on every grid, including one with
-	// no deleting feature registered. See `feature-optionality.test.tsx`.
-	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
-	const pendingId = useDataGridState((s) => s.deleting?.pendingRowId ?? null)
-	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
-	const pendingBulk = useDataGridState((s) => s.deleting?.pendingBulk ?? false)
+	// Prompt targets stay live, matching core's confirm-time selection semantics.
+	const { pendingId, pendingBulk, pendingRow, selectedRows } = useDataGridState(
+		(state) => {
+			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional deleting feature
+			const pendingId = state.deleting?.pendingRowId ?? null
+			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional deleting feature
+			const pendingBulk = state.deleting?.pendingBulk ?? false
+			// Core resolves selected IDs against the current row model at confirm time.
+			// Preserve selection-key order and omit off-page/filtered-out targets exactly as it does.
+			const byId = pendingBulk ? new Map(table.getRowModel().rows.map((row) => [row.id, row])) : undefined
+			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional selection feature
+			const selection = state.rowSelection ?? {}
+			const selectedRows = pendingBulk
+				? Object.entries(selection)
+						// Consumer-owned selection atoms can contain false at runtime, as in Core deleting.
+						// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+						.filter(([, selected]) => selected)
+						.flatMap(([id]) => {
+							const row = byId?.get(id)
+							return row ? [row] : []
+						})
+				: []
+			return {
+				pendingId,
+				pendingBulk,
+				pendingRow: pendingId === null ? undefined : table.getRowModel().rows.find((row) => row.id === pendingId),
+				selectedRows,
+			}
+		},
+		{
+			compare: (a, b) =>
+				a.pendingId === b.pendingId &&
+				a.pendingBulk === b.pendingBulk &&
+				a.pendingRow === b.pendingRow &&
+				shallow(a.selectedRows, b.selectedRows),
+		},
+	)
 	// Confirming clears the pending target, which closes the dialog, which fires the kit's
 	// close handler — the same `onCancel` a dismissal uses. Without this flag that close would
 	// abort the delete request the confirm just started.
@@ -211,7 +240,6 @@ function ConfirmDialogRenderer() {
 	// both the staging and the run, so this only renders the prompt and reports the answer.
 	const bulkOptions = bulkConfirmationOptions(table)
 	if (pendingBulk && bulkOptions) {
-		const { selectedRows } = buildSelectionBarArgs(table)
 		const { title, description } = resolveBulkConfirmationText(bulkOptions, selectedRows, table.grid.messages.deleting)
 		return (
 			<ConfirmDialog
@@ -236,7 +264,6 @@ function ConfirmDialogRenderer() {
 	const confirmation = table.options.deleting?.confirmation
 	if (!isFeatureEnabled(confirmation)) return null
 	const options: ConfirmationConfig<ErasedRow> = featureConfig(confirmation) ?? {}
-	const pendingRow = pendingId !== null ? table.getRowModel().rows.find((r) => r.id === pendingId) : undefined
 	const { title, description } =
 		pendingId !== null
 			? resolveConfirmationText(options, pendingRow, table.grid.messages.deleting)

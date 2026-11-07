@@ -5,6 +5,7 @@ import { SortDirection } from '../types'
 
 import type { GridMenuSection } from '../menu'
 import type { GridFeatures } from '../types'
+import type { ColumnMoveCapabilities } from '../utils/column-order-model'
 import type { GridMessages } from '@ez-kit/data-grid-core'
 import type { Header } from '@tanstack/table-core'
 
@@ -39,6 +40,7 @@ export type ColumnMenuCapabilities = {
 	canHide: boolean
 	canMove: boolean
 	canGroup: boolean
+	movement?: ColumnMoveCapabilities
 }
 
 /**
@@ -54,7 +56,7 @@ export type ColumnMenuCapabilities = {
  */
 export function buildColumnMenuSections<TRow extends object>(
 	header: Header<GridFeatures, TRow>,
-	{ canSort, canPin, canHide, canMove, canGroup }: ColumnMenuCapabilities,
+	{ canSort, canPin, canHide, canMove, canGroup, movement }: ColumnMenuCapabilities,
 	messages: GridMessages['columnMenu'],
 ): GridMenuSection[] {
 	const column = header.column
@@ -112,7 +114,7 @@ export function buildColumnMenuSections<TRow extends object>(
 				id,
 				label,
 				icon,
-				disabled: !canMoveColumn(table, column.id, direction),
+				disabled: !(movement?.[direction] ?? canMoveColumn(table, column.id, direction)),
 				onAction: () => {
 					table.setColumnOrder(moveColumn(table, column.id, direction))
 				},

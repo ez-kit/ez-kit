@@ -87,6 +87,27 @@ The grid keeps its side of this: every value it hands down — the cell-type reg
 components, the table itself — keeps its identity while its inputs are unchanged. You do not need
 `React.memo` around a cell or a row, and the grid does not use one.
 
+## Retained composed children stay live
+
+Grid components observe the mutable model answers they render. You can retain a `Row`,
+`HeaderCell`, `SortItem` or `VisibilityItem` element while its parent maps the current model into
+order; its selection, geometry or drag index still updates. Replace the element's row or column
+prop when replacing data or column definitions produces a new model.
+
+The built-in header and footer structures observe their groups, while ordinary cells subscribe
+to their own displayed answers. A custom header/footer template or render function may inspect
+other table answers inline, so it retains broad state updates. For precise
+isolation in your own components, select the answers you display with `useDataGridSelector` or
+`useDataGridState`, supplying a comparison when returning a derived object.
+
+This also covers render-function children of `HeaderCell`, `FooterCell`, `Cell` and `Row`,
+and the `rowProps` callback. Their model reads stay live even when the element is retained.
+Ordinary labels and cells without these callbacks keep their narrow subscriptions.
+
+A standalone `Filter` subscribes to its own value and item sources. Faceted filters also update
+when other filters change their choices. A standalone form field observes its own value, errors
+and validation status; a full generated form keeps every field live.
+
 ## Hoist what does not change
 
 The grid compares what you pass in by identity, not by contents. Anything rebuilt on every render

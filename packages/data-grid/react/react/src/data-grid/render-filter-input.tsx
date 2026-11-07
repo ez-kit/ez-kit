@@ -3,6 +3,8 @@ import { Fragment, useMemo } from 'react'
 
 import { ItemsSourceSlot, useItemsLists } from '../items-source'
 import { GridMenuVariant, toMenuSections } from '../menu'
+import { useDataGridSelector } from '../use-data-grid-selector'
+import { shallow } from '../utils/shallow-equal'
 
 import { activePresetId, presetValue } from './date-presets'
 import { FilterEditor, filterName, resolveFilter } from './filter-model'
@@ -103,6 +105,43 @@ export function renderFilterInput<TRow extends object>(args: RenderFilterInputAr
 }
 
 function FilterInput(args: RenderFilterInputArgs) {
+	// A supplied model is owned by its producer (the filter panel). Otherwise the mounted
+	// control observes its target, including facets changed by another column's filter.
+	return args.table !== undefined && args.model === undefined ? (
+		<LiveFilterInput
+			{...args}
+			table={args.table}
+		/>
+	) : (
+		<FilterInputWithLists {...args} />
+	)
+}
+
+function LiveFilterInput(args: RenderFilterInputArgs & { table: DataTable<GridFeatures, ErasedRow> }) {
+	const { target } = args
+	const { value, facets, index } = useDataGridSelector(
+		args.table,
+		() => ({
+			value: target.getValue(),
+			facets: target.meta.filtering?.faceted === true ? target.facetedValues?.() : undefined,
+			index: target.facetedIndex?.(),
+		}),
+		{ compare: shallow },
+	)
+	return (
+		<FilterInputWithLists
+			{...args}
+			target={{
+				...target,
+				getValue: () => value,
+				facetedValues: () => facets,
+				facetedIndex: () => index,
+			}}
+		/>
+	)
+}
+
+function FilterInputWithLists(args: RenderFilterInputArgs) {
 	// A target that already carries its lists — the filter panel reads them for every target at
 	// once — is not subscribed a second time: its meta is withheld from the read.
 	const subscribed = useItemsLists(

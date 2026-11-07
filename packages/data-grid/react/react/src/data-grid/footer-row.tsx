@@ -1,6 +1,7 @@
 import { useGridComponents } from '../components-context'
 
 import { DataGridFooterCell } from './footer-cell'
+import { useRenderCallbackState } from './table-context'
 
 import type { ErasedRow, GridFeatures } from '../types'
 import type { Header, HeaderGroup } from '@tanstack/table-core'
@@ -54,6 +55,7 @@ export function DataGridFooterRow<TRow extends object = ErasedRow>({
 	children,
 }: DataGridFooterRowProps<TRow>) {
 	const { Tr } = useGridComponents().core
+	useRenderCallbackState(typeof children === 'function')
 	const headers = footerGroup.headers
 
 	return (

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useGridComponents } from '../components-context'
 import { DATA_GRID_DEFAULTS } from '../defaults'
 import { getColumnSizeVars, getGridTemplateColumns } from '../utils/column-size-vars'
+import { shallow } from '../utils/shallow-equal'
 
 import { AriaRowIndexProvider } from './aria-row-index'
 import { hasPartialRowSet, resolveAriaRowCount } from './aria-state'
@@ -131,32 +132,37 @@ export function DataGridTable<TRow extends object = ErasedRow>({ children }: Dat
 	// `TableWrapperProps` / `TableScrollProps`.
 	const { Table, TableWrapper: Wrapper = 'div', TableScroll: Scroll = 'div' } = useGridComponents().core
 	const table = useDataGridTable<TRow>()
+	// Function children may read mutable answers beyond the default shell model.
+	useDataGridState((state) => (typeof children === 'function' ? state : null))
 
-	// Narrow subscriptions: re-render only when slices that actually affect
-	// the table layout or row composition change. Editing / rowSelection /
-	// per-row state changes do NOT touch any of these.
-	useDataGridState((s) => s.columnSizing)
-	useDataGridState((s) => s.columnResizing)
-	useDataGridState((s) => s.columnVisibility)
-	useDataGridState((s) => s.columnPinning)
-	// `--grid-template-columns` is built from the visual leaf order, which a reorder changes.
-	useDataGridState((s) => s.columnOrder)
-	// Row-model affecting slices (used when virtualized to size the virtualizer).
-	const sorting = useDataGridState((s) => s.sorting)
-	const columnFilters = useDataGridState((s) => s.columnFilters)
-	const globalFilter = useDataGridState<unknown>((s) => s.globalFilter)
-	const pagination = useDataGridState((s) => s.pagination)
-	useDataGridState((s) => s.expanded)
-	useDataGridState((s) => s.rowPinning)
-	// Grouping rebuilds the row model **and** the column list — `groupedColumnMode: 'remove'`
-	// takes a grouped column out while it is a level — so every component that reads either has
-	// to re-derive on it. Optional-chained because the slice exists only with
-	// `columnGroupingFeature` registered; see `feature-optionality.test.tsx`.
-	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
-	useDataGridState((s) => s.grouping ?? null)
-
-	const sizeVars = getColumnSizeVars(table)
-	const gridTemplateColumns = getGridTemplateColumns(table)
+	const { sizeVars, gridTemplateColumns, rows, querySignature, partialRowSet, ariaRowCount } = useDataGridState(
+		(state) => ({
+			sizeVars: getColumnSizeVars(table),
+			gridTemplateColumns: getGridTemplateColumns(table),
+			rows: table.grid.virtualization
+				? table.options.enableRowPinning
+					? table.getCenterRows()
+					: table.getRowModel().rows
+				: NO_ROWS,
+			querySignature: JSON.stringify([
+				state.sorting,
+				state.columnFilters,
+				state.globalFilter,
+				state.pagination.pageSize,
+			]),
+			partialRowSet: hasPartialRowSet(table),
+			ariaRowCount: hasPartialRowSet(table) ? resolveAriaRowCount(table) : undefined,
+		}),
+		{
+			compare: (a, b) =>
+				shallow(a.sizeVars, b.sizeVars) &&
+				a.gridTemplateColumns === b.gridTemplateColumns &&
+				a.rows === b.rows &&
+				a.querySignature === b.querySignature &&
+				a.partialRowSet === b.partialRowSet &&
+				a.ariaRowCount === b.ariaRowCount,
+		},
+	)
 
 	const virtualizationConfig = table.grid.virtualization
 
@@ -182,12 +188,6 @@ export function DataGridTable<TRow extends object = ErasedRow>({ children }: Dat
 	const containerRef = useRef<HTMLDivElement>(null)
 	// scrollRef — the `data-slot="table-scroll"` div (non-virtualized mode); see getScrollElement
 	const scrollRef = useRef<HTMLDivElement>(null)
-
-	const rows = isVirtualized
-		? table.options.enableRowPinning
-			? table.getCenterRows()
-			: table.getRowModel().rows
-		: NO_ROWS
 
 	/**
 	 * Keyed by row id, not by window position, so a row keeps its identity across a reorder — the
@@ -267,7 +267,6 @@ export function DataGridTable<TRow extends object = ErasedRow>({ children }: Dat
 	// change in infinite mode, clear any error, re-arm detection (handled by the loader
 	// re-mounting at the top) and scroll back to top so the observer doesn't immediately
 	// refire at the stale bottom. The consumer drops accumulated rows in its own onChange.
-	const querySignature = JSON.stringify([sorting, columnFilters, globalFilter, pagination.pageSize])
 	const prevQuerySignature = useRef<string | null>(null)
 	useEffect(() => {
 		if (!infiniteEnabled) return
@@ -298,7 +297,6 @@ export function DataGridTable<TRow extends object = ErasedRow>({ children }: Dat
 	 */
 	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
 	const isBusy = useDataGridState((s) => (s.loading?.isPending ?? false) || (s.loading?.isFetching ?? false))
-	const partialRowSet = hasPartialRowSet(table)
 	// Only a grid that owns its own `role="grid"` writes this: on a `role="table"` element
 	// `aria-multiselectable` is not an allowed attribute, and the kits that bring their own focus
 	// manager bring their own role with it. See `keyboard-navigation/context.tsx`.
@@ -357,7 +355,7 @@ export function DataGridTable<TRow extends object = ErasedRow>({ children }: Dat
 				// Written only when the DOM holds less than the whole row set, which is the case
 				// `aria-rowcount` exists for: a paginated, virtualized or infinite grid otherwise
 				// reads to a screen reader as a table of exactly the rows it can see.
-				{...(partialRowSet ? { 'aria-rowcount': resolveAriaRowCount(table) } : {})}
+				{...(partialRowSet ? { 'aria-rowcount': ariaRowCount } : {})}
 				{...(isVirtualized ? { 'data-virtualized': 'true' } : {})}
 				style={
 					{

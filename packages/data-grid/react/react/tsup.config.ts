@@ -28,6 +28,11 @@ import { defineConfig } from 'tsup'
 export default defineConfig({
 	entry: {
 		index: 'src/index.ts',
+		'features/index': 'src/features/index.ts',
+		'features/all': 'src/features/all.ts',
+		'operators/index': 'src/operators/index.ts',
+		'messages/en': 'src/messages/en.ts',
+		'messages/ru': 'src/messages/ru.ts',
 		'state/index': 'src/state/index.ts',
 		'cell-types/index': 'src/cell-types/index.ts',
 		contract: 'src/contract.ts',

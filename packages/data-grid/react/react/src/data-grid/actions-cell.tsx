@@ -5,21 +5,24 @@ import {
 	EditingMode,
 	getActionsCellWidth,
 	RowActionsPlacement,
+	RowMoveDirection,
 } from '@ez-kit/data-grid-core'
+import { useMemo } from 'react'
 
 import { useGridComponents } from '../components-context'
 import { GridMenuIcon, GridMenuVariant, toMenuSections } from '../menu'
 import { ActionsCellState, RowActionId } from '../types'
+import { shallow } from '../utils/shallow-equal'
 
 import { splitRowActionItems } from './build-action-items'
 import { buildRowOrderItems } from './build-row-order-items'
-import { useDataGridTable, useDataGridState } from './table-context'
+import { useRenderCallbackState, useDataGridTable, useDataGridState } from './table-context'
 
 import type { DataTable, ErasedRow, GridFeatures } from '../types'
 import type { RowActionGroups } from './build-action-items'
 import type { GridMenuItem, GridMenuSection } from '../menu'
 import type { RowActionItem, RowActionsContext, RowPinningConfig, GridMessages } from '@ez-kit/data-grid-core'
-import type { Row } from '@tanstack/table-core'
+import type { Row, TableState } from '@tanstack/table-core'
 import type { ReactElement } from 'react'
 
 type ActionsCellProps = {
@@ -99,8 +102,8 @@ function buildPinItems<TRow extends object>(
 	row: Row<GridFeatures, TRow>,
 	config: RowPinningConfig,
 	messages: GridMessages['rowActions'],
+	isPinned: false | 'top' | 'bottom',
 ): GridMenuItem[] {
-	const isPinned = row.getIsPinned()
 	const items: GridMenuItem[] = []
 
 	if (config.top) {
@@ -180,6 +183,7 @@ function overflowLabel(
  */
 export function ActionsCell({ row }: ActionsCellProps) {
 	const table = useDataGridTable()
+	useRenderCallbackState(table.grid.rowActions.actions !== undefined)
 	const { ActionsCell: Renderer } = useGridComponents().rowActions
 	const { Menu } = useGridComponents().core
 	const messages = table.grid.messages.rowActions
@@ -212,9 +216,12 @@ export function ActionsCell({ row }: ActionsCellProps) {
 	// absent, so it is only reached once `s.editing` is known to be there.
 	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
 	const isPending = useDataGridState((s) => s.editing?.rowId === row.id && s.editing.commitStatus !== CommitStatus.Idle)
-	// Row pinning is derived state; subscribe so the menu re-derives on pin/unpin.
-	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
-	useDataGridState((s) => s.rowPinning ?? null)
+	// Core's move predicate scans the ordered model. Cache each row's answers across
+	// unrelated store writes instead of repeating that scan on every editing keystroke.
+	const selectCapabilities = useMemo(() => createCapabilitiesSelector(table, row), [table, row])
+	// Re-evaluate after an options publication too: the memoized selector alone would reuse
+	// its last selection while the store snapshot is unchanged. Its own cache still skips scans.
+	const capabilities = useDataGridState((state) => selectCapabilities(state), { compare: shallow })
 
 	const editingMode = table.options.editing?.mode ?? EditingMode.Row
 	// Cell mode owns no affordance in this column: its edit is opened by double-clicking the
@@ -248,10 +255,12 @@ export function ActionsCell({ row }: ActionsCellProps) {
 		)
 	}
 
-	const pinItems = pinConfig ? buildPinItems(row, pinConfig, messages) : []
+	const pinItems = pinConfig ? buildPinItems(row, pinConfig, messages, capabilities.pinned) : []
 	// `moveControls` is `ordering.row.controls` resolved: `false` under `'drag'` beside an adapter,
 	// where the grip already offers the move. Already `false` while row ordering is off.
-	const orderItems = table.grid.ordering.rowControls.moveControls ? buildRowOrderItems(row, table, messages) : []
+	const orderItems = table.grid.ordering.rowControls.moveControls
+		? buildRowOrderItems(row, table, messages, capabilities)
+		: []
 	const buildActions = table.grid.rowActions.actions
 	// The augmented option is `RowActionsConfig<object, unknown>` — the row type and the node
 	// type are both erased at the `table.options` boundary — so the row/table this cell holds
@@ -378,4 +387,31 @@ export function ActionsCell({ row }: ActionsCellProps) {
 			)}
 		</>
 	)
+}
+
+/** Cache Core's row move answers by their actual model inputs, shared by render and notification. */
+function createCapabilitiesSelector(table: DataTable<GridFeatures, ErasedRow>, row: Row<GridFeatures, ErasedRow>) {
+	let previousInputs: readonly unknown[] | undefined
+	let previous: { pinned: false | 'top' | 'bottom'; canMoveUp: boolean; canMoveDown: boolean } | undefined
+	return (state: TableState<GridFeatures>) => {
+		const enabled = table.grid.ordering.rowControls.moveControls
+		const inputs = [
+			enabled,
+			table.grid.pinning.rowConfig,
+			table.getRowModel().rows,
+			state.sorting,
+			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice
+			state.grouping ?? null,
+			state.rowOrder,
+			state.rowPinning,
+		]
+		if (previous && previousInputs && shallow(previousInputs, inputs)) return previous
+		previousInputs = inputs
+		previous = {
+			pinned: table.grid.pinning.rowConfig ? row.getIsPinned() : false,
+			canMoveUp: enabled && table.ordering.canMoveRow(row.id, RowMoveDirection.Up),
+			canMoveDown: enabled && table.ordering.canMoveRow(row.id, RowMoveDirection.Down),
+		}
+		return previous
+	}
 }

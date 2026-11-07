@@ -6,7 +6,7 @@ import { resolveReorderMode } from '../utils/reorder-mode'
 
 import { DragAxis, DragSurface, useDndEnabled, useSortableItem } from './dnd'
 import { SORT_DRAGGING_ATTR } from './dnd/dragging-attrs'
-import { useOptionalDataGridTable } from './table-context'
+import { useDataGridTable, useOptionalDataGridTable, useDataGridState } from './table-context'
 
 import type { SortableItemHandle } from './dnd'
 import type { ReactNode } from 'react'
@@ -66,8 +66,7 @@ type SortItemBaseProps = {
 	 * `<DataGrid.VisibilityItem>` states for the column panel, for the same reason: the index an entry
 	 * registers is its position in the sort, and a gap or a duplicate in that index space stops the
 	 * builder's drag silently. `<DataGrid.SortMenuTrigger>`'s `items` is that list, which is why both
-	 * kits simply map it. The rows must also re-render with `items`: the index is read from the sort
-	 * on render, so a row memoized past a reorder registers a stale place.
+	 * kits simply map it. Each row subscribes to its own current index, including when its JSX is retained.
 	 */
 	sortId: string
 }
@@ -111,12 +110,39 @@ export function SortItem({ sortId, className, children }: DataGridSortItemProps)
 	 * component taking an `items` array, and is renderable — and unit-tested — outside a grid.
 	 */
 	const table = useOptionalDataGridTable()
-	const isDndEnabled = useDndEnabled()
+	return table === null ? (
+		<SortItemBox
+			sortId={sortId}
+			className={className}
+		>
+			{children}
+		</SortItemBox>
+	) : (
+		<ConnectedSortItem
+			sortId={sortId}
+			{...(className !== undefined ? { className } : {})}
+		>
+			{children}
+		</ConnectedSortItem>
+	)
+}
 
-	const index =
-		table !== null && resolveReorderMode(table.grid.sortReorder, false, isDndEnabled).drag
+function ConnectedSortItem({
+	sortId,
+	className,
+	children,
+}: {
+	sortId: string
+	className?: string
+	children: SortItemChildren
+}) {
+	const table = useDataGridTable()
+	const isDndEnabled = useDndEnabled()
+	const index = useDataGridState(() =>
+		resolveReorderMode(table.grid.sortReorder, false, isDndEnabled).drag
 			? table.store.state.sorting.findIndex((entry) => entry.id === sortId)
-			: -1
+			: -1,
+	)
 
 	if (index < 0) {
 		return (

@@ -25,8 +25,9 @@ export function RefetchOverlayHost({ columnCount }: { columnCount: number }) {
 	const { Tr, Td } = gridComponents.core
 	const { RefetchOverlay } = gridComponents.fallbacks
 	const table = useDataGridTable()
-	useDataGridState((s) => s.columnVisibility)
-	const visibleColumnCount = columnCount > 0 ? columnCount : table.getVisibleLeafColumns().length
+	const visibleColumnCount = useDataGridState(() =>
+		columnCount > 0 ? columnCount : table.getVisibleLeafColumns().length,
+	)
 
 	return (
 		<Tr data-slot={REFETCH_OVERLAY_SLOT}>
