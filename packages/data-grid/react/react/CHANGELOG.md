@@ -1,5 +1,28 @@
 # @ez-kit/data-grid-react
 
+## 0.19.0
+
+### Minor Changes
+
+- 2e4eaa3: Expose resolved header editability as `canEdit` in HeaderCell render arguments and useDataGridHeaderCell, and as `data-editable="true"` on editable leaf headers. UI kits can use the typed Th attribute to style editable columns.
+- 5a88fc2: Apply the configured filter debounce consistently to built-in text and single-number editors, including standard UI-kit renderers. These inputs now wait 250 ms by default outside draft mode; use `filtering.debounce: 0` for immediate commits. Global search retains its own override and otherwise inherits the table delay.
+
+  With `draft: true`, typing updates the internal draft immediately so Apply and programmatic apply include the latest values. Enter in filter inputs or search no longer applies the query. Explicit clear/reset and operator changes cancel pending input, including same-value clears. Keyboard deletion follows typing timing. Programmatic setters, batch panel writes, discrete controls, and custom editors remain synchronous. HeroUI number filters use the control's native parsed value while preserving intermediate text; editing and creating keep their existing behavior.
+
+- 05f0ede: Keep headers and row cells synchronized when a table is composed with static Header and Body children. Body now subscribes to column visibility and pinning, including its custom-content and virtualized branches. Visibility changes, start/end pinning and unpinning preserve row identity, focus and local cell state.
+
+  Expose Core through the React adapter's `features`, `features/all`, `operators`, `messages/en` and `messages/ru` subpaths, with runtime and type exports. React consumers can import feature sets, default operators and dictionaries without declaring Core as a direct dependency. The all-in feature set remains isolated from the root and individual-feature entries for tree shaking.
+
+  Make the other composition boundaries reactive as well: retained Row elements observe their visible cell list; Footer observes filtering, grouping and the row model; Pagination observes grouping; Header observes applied draft sorting and global search so select-all reflects the filtered rows. Publish data and column replacements to static descendants without changing table identity or rerendering them on unrelated host updates. Imperative `setData` also refreshes the React owner.
+
+  Retained HeaderCell, FooterCell and Cell elements now observe their displayed state, including sorting, selection, totals and pinned offsets. CreatingRow and ExpandedRow follow column order/grouping, and HeroUI updates its designated row header. Publish configuration changes such as manual pagination totals, supplied aggregates, messages and layout without changing the table identity; equivalent option wrappers and state-handler replacements retain host render isolation.
+
+### Patch Changes
+
+- d323459: Keep composed cell and row render functions, row props and header facet counts reactive. Refresh row move controls after options-only updates, and reuse column move calculations and drag indices across unrelated state changes.
+- 3ea0a80: Keep retained grid controls, drag registrations, confirmation targets and fallback spans reactive to their displayed models. Isolate default header/footer structure and individual filter/form fields while preserving custom callback updates.
+- 47c8f82: Render loading, empty and no-results fallbacks before choosing the virtualized body. Keep the refetch overlay inside the visible virtualized table shell so its spinner stays visible while scrolling. Fix the shadcn overlay backdrop for CSS color tokens.
+
 ## 0.18.0
 
 ### Minor Changes
