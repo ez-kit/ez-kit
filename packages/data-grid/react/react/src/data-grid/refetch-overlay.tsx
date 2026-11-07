@@ -40,3 +40,27 @@ export function RefetchOverlayHost({ columnCount }: { columnCount: number }) {
 		</Tr>
 	)
 }
+
+/**
+ * The virtualized scroll range can be thousands of rows tall. Keep its overlay in the
+ * fixed-height shell instead of centering a spinner halfway down that scrolling range.
+ */
+export function VirtualRefetchOverlay() {
+	const table = useDataGridTable()
+	const { RefetchOverlay } = useGridComponents().fallbacks
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice
+	const showOverlay = useDataGridState((s) => (s.loading?.isFetching ?? false) && !(s.loading?.isPending ?? false))
+	const rowCount = useDataGridState(() => table.getRowModel().rows.length)
+	const columnCount = useDataGridState(() => table.getVisibleLeafColumns().length)
+	if (!showOverlay || rowCount === 0) return null
+
+	return (
+		<div
+			data-slot={REFETCH_OVERLAY_SLOT}
+			data-virtualized='true'
+			data-sticky-header={table.grid.layout.stickyHeader ? 'true' : undefined}
+		>
+			<RefetchOverlay columnCount={columnCount} />
+		</div>
+	)
+}

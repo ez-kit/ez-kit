@@ -122,6 +122,12 @@
 	& [data-slot='tbody'][data-virtualized='true'] {
 		@apply relative grid;
 	}
+	& [data-slot='refetch-overlay'][data-virtualized='true'] {
+		@apply absolute inset-0 z-10 pointer-events-none;
+	}
+	& [data-slot='refetch-overlay'][data-virtualized='true'][data-sticky-header='true'] {
+		top: var(--dg-header-height, 0px);
+	}
 	& [data-slot='tr'][data-virtual='row'],
 	& [data-slot='tbody'][data-virtualized='true'] [data-slot='load-more-row'][data-virtual='load-more'] {
 		@apply w-full;

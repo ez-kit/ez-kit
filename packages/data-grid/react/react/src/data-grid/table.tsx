@@ -14,6 +14,7 @@ import { Header } from './header'
 import { InfiniteProvider } from './infinite-context'
 import { useGridKeyboardNavigation, useKeyboardNavigationEnabled } from './keyboard-navigation'
 import { PinShadowOverlay } from './pin-shadow-overlay'
+import { VirtualRefetchOverlay } from './refetch-overlay'
 import { useDataGridTable, useDataGridState } from './table-context'
 import { VirtualProvider } from './virtual-context'
 
@@ -400,6 +401,7 @@ export function DataGridTable<TRow extends object = ErasedRow>({ children }: Dat
 							{tableEl}
 						</Scroll>
 						<PinShadowOverlay />
+						<VirtualRefetchOverlay />
 					</Wrapper>
 				</VirtualProvider>
 			</InfiniteProvider>
