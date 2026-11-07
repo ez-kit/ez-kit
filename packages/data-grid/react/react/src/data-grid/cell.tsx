@@ -13,7 +13,8 @@ import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
 import { ItemsSourceSlot } from '../items-source'
 import { resolveCellClassName } from '../utils/class-names'
-import { getCommonPinStyles } from '../utils/pin-styles'
+import { shallow } from '../utils/shallow-equal'
+import { useColumnPin } from '../utils/use-column-pin'
 
 import { ActionsCell } from './actions-cell'
 import { getAlignAttrs } from './align-attrs'
@@ -276,12 +277,14 @@ type SystemSubProps<TRow extends object> = DataGridCellProps<TRow> & {
 function SelectionCell<TRow extends object>({ cell, row, chrome, children }: SystemSubProps<TRow>) {
 	const { Td, Checkbox } = useGridComponents().core
 	const { messages } = useDataGridTable().grid
-	// Subscribe broadly to rowSelection so row.getIsSelected() / getIsSomeSelected()
-	// re-derive correctly. Refining this to per-row keys breaks indeterminate
-	// state for parent rows (which depends on children).
-	useDataGridState((s) => s.rowSelection)
-	const isSelected = row.getIsSelected()
-	const isIndeterminate = typeof row.getIsSomeSelected === 'function' ? row.getIsSomeSelected() : undefined
+	const { isSelected, isIndeterminate } = useDataGridState(
+		() => ({
+			isSelected: row.getIsSelected(),
+			// Parent rows derive this from their children; selecting the displayed answer covers both.
+			isIndeterminate: typeof row.getIsSomeSelected === 'function' ? row.getIsSomeSelected() : undefined,
+		}),
+		{ compare: shallow },
+	)
 	return (
 		<Td
 			{...chrome.navigation}
@@ -339,10 +342,13 @@ function ExpandCell<TRow extends object>({ cell, row, chrome, children }: System
 	const gridComponents = useGridComponents()
 	const { Td } = gridComponents.core
 	const { Chevron } = gridComponents.expanding
-	// Subscribe broadly to expanded so derived row.getIsExpanded() re-renders.
-	useDataGridState((s) => s.expanded)
-	const canExpand = row.getCanExpand()
-	const isExpanded = row.getIsExpanded()
+	const { canExpand, isExpanded } = useDataGridState(
+		() => ({
+			canExpand: row.getCanExpand(),
+			isExpanded: row.getIsExpanded(),
+		}),
+		{ compare: shallow },
+	)
 	return (
 		<Td
 			{...chrome.navigation}
@@ -394,10 +400,8 @@ function GroupCell<TRow extends object>({ cell, row, chrome, children }: SystemS
 	const { Td } = gridComponents.core
 	const { Chevron } = gridComponents.expanding
 	const { messages } = useDataGridTable().grid
-	// Subscribed for the reason `ExpandCell` subscribes: `getIsExpanded` answers from the
-	// `expanded` slice, and a group opened from anywhere but its own chevron re-renders only
-	// because of this read.
-	useDataGridState((s) => s.expanded)
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature API
+	const isExpanded = useDataGridState(() => row.getIsExpanded?.() ?? false)
 	// Every read below is optional-called. This runs for **every row of every grid** that has a
 	// `__group__` column, and `columnGroupingFeature` is not structural — see the FEATURE GUARDS
 	// note in `types.ts`. Do not "tidy up" the disables: they read as unnecessary only because
@@ -423,8 +427,6 @@ function GroupCell<TRow extends object>({ cell, row, chrome, children }: SystemS
 
 	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
 	const canExpand = row.getCanExpand?.() ?? false
-	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
-	const isExpanded = row.getIsExpanded?.() ?? false
 	// Counted through `subRows`, never off the render model: `getRowModel().rows` is render order
 	// and mixes group rows with leaf rows, which upstream flags as the commonest grouping mistake.
 	// `getLeafRows` is `flattenBy(row.subRows, d => d.subRows)` (upstream's own
@@ -875,13 +877,15 @@ function EditingCell<TRow extends object>({ cell, row, editMode, cellId, chrome,
  * receive it as a prop are unchanged.
  */
 function useCellChrome<TRow extends object>(cell: Cell<GridFeatures, TRow>): CellChrome {
+	const pin = useColumnPin(cell.column)
 	const navigation = useCellNavigationProps('gridcell')
-	return { ...getCellChrome(cell), navigation }
+	return { ...getCellChrome(cell, pin), navigation }
 }
 
-function getCellChrome<TRow extends object>(cell: Cell<GridFeatures, TRow>): Omit<CellChrome, 'navigation'> {
-	const pinVars = getCommonPinStyles(cell.column)
-	const pinned = cell.column.getIsPinned()
+function getCellChrome<TRow extends object>(
+	cell: Cell<GridFeatures, TRow>,
+	{ pinned, pinVars }: ReturnType<typeof useColumnPin>,
+): Omit<CellChrome, 'navigation'> {
 	const pinnedAttrs: CellChrome['pinnedAttrs'] = pinned ? { 'data-pinned': pinned } : {}
 	// Guarded rather than delegated to `resolveCellClassName`: this runs for every cell of every
 	// grid on every render, and the argument object below reads `getValue()`, which most columns

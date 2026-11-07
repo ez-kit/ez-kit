@@ -388,7 +388,9 @@ function DataGridRowImpl<TRow extends object = ErasedRow>(
 		: undefined
 	const navigationProps = useRowNavigationProps()
 	const { className: consumerClassName, style: consumerStyle, ...consumerProps } = resolveRowProps?.(row) ?? {}
-	const cells = row.getVisibleCells()
+	// A custom Body can retain its Row elements. Subscribe to the memoized cell list here,
+	// so visibility, pinning and order do not depend on the parent creating a fresh element.
+	const cells = useDataGridState(() => row.getVisibleCells())
 
 	return (
 		<Tr

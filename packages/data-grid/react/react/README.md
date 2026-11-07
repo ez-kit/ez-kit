@@ -12,7 +12,7 @@ Install it directly only when building your own UI flavour with `createDataGrid`
 ## Install
 
 ```bash
-pnpm add @ez-kit/data-grid-react @ez-kit/data-grid-core react
+pnpm add @ez-kit/data-grid-react react
 ```
 
 TypeScript consumers need **TypeScript 5.4 or later**: the types a `createDataGrid` bundle hands
@@ -34,9 +34,46 @@ const { DataGrid, useDataGrid } = createDataGrid({
 
 `createDataGrid({ components })` injects your UI components into the shared headless render layer and returns `DataGrid`, `useDataGrid`, and the re-exported column helpers.
 
+## Composing a table
+
+Static children are supported and stay reactive; a render function is optional:
+
+```tsx
+<DataGrid.Table>
+	<DataGrid.Header />
+	<DataGrid.Body />
+	<DataGrid.Footer />
+</DataGrid.Table>
+```
+
+Visibility, pinning, column order, filtering, grouping and pagination update the components
+that read them. Replacing `data`, `columns`, or configuration (including server totals, messages
+and layout), or calling `table.setData`, also refreshes composed children. Updates preserve
+keyed rows and cells; an unrelated host render with unchanged inputs leaves them alone.
+Custom components should select the values they render, for example
+`useDataGridState(() => row.getVisibleCells())`; `useDataGridTable` does not subscribe to
+state slices. Keep data, columns, renderer functions and configuration payloads stable until
+they change, and replace them immutably. A retained Row or HeaderCell still needs a new
+`row` or `header` prop when replacing data or column definitions creates a new model.
+
+## Core API subpaths
+
+The adapter re-exports Core's root API and these separate entries, so a React consumer needs
+only `@ez-kit/data-grid-react` as a direct data-grid dependency:
+
+```tsx
+import { allDataGridFeatures } from '@ez-kit/data-grid-react/features/all'
+import { defaultOperators } from '@ez-kit/data-grid-react/operators'
+import { messages as enMessages } from '@ez-kit/data-grid-react/messages/en'
+import { messages as ruMessages } from '@ez-kit/data-grid-react/messages/ru'
+```
+
+`features/all` loads the complete feature set. It stays separate from both the root and
+`features` entries so a composed grid can import only the features it needs.
+
 ## Feature composition
 
-On TanStack Table v9 a table has only the features it was handed, so **`features` is a required field of `useDataGrid`** (and of `<DataGrid>` used without the hook). Build the set with `tableFeatures` from [`@ez-kit/data-grid-core/features`](../../core) — that entry point is the single import path for the stock features, the row-model factories, the named-function registries and the grid's own features, and it is deliberately **not** re-exported from this package's root.
+On TanStack Table v9 a table has only the features it was handed, so **`features` is a required field of `useDataGrid`** (and of `<DataGrid>` used without the hook). Build the set with `tableFeatures` from [`@ez-kit/data-grid-react/features`](../../core) — that entry point is the single import path for the stock features, the row-model factories, the named-function registries and the grid's own features, and it is deliberately **not** re-exported from this package's root.
 
 ```tsx
 import {
@@ -46,7 +83,7 @@ import {
 	createSortedRowModel,
 	rowSortingFeature,
 	tableFeatures,
-} from '@ez-kit/data-grid-core/features'
+} from '@ez-kit/data-grid-react/features'
 
 // The first three are mandatory — see below. Add what this grid actually does after them.
 const features = tableFeatures({
@@ -64,7 +101,7 @@ Registering a feature does not switch it on: `features` decides what exists, the
 
 `columnVisibilityFeature`, `columnPinningFeature` and `columnSizingFeature` are **structural**, so open every set with them: the shell lays out a column grid, and it needs visibility, pin groups and widths to lay one out with. Omitting any of the three is a render-time `TypeError` — not a limitation waiting to be lifted, but the consequence of asking for a grid while withholding what a grid is made of. Everything else is genuinely optional: leave out `rowSortingFeature` or `editingFeature` and you get a grid that does not sort or edit. `feature-optionality.test.tsx` renders a grid missing each optional feature and asserts these three still throw, so that boundary is executable rather than asserted.
 
-Composing a set governs **behaviour** — an unregistered feature contributes no state slice, no API and no work at runtime — **and it governs your bundle**. Measured against the built entry: `tableFeatures` alone costs 994 bytes, `rowSortingFeature` 998, a sorting-only set 1 035, and `editingFeature` 17 163, which is what a feature with a real implementation behind it weighs. The all-in set lives on its own subpath, `@ez-kit/data-grid-core/features/all`, precisely so that reaching it is a choice: while it sat on the main entry, each of those imports cost ~46 kB, because a top-level `tableFeatures({ …stockFeatures, … })` call is not something a bundler can drop.
+Composing a set governs **behaviour** — an unregistered feature contributes no state slice, no API and no work at runtime — **and it governs your bundle**. Measured against the built entry: `tableFeatures` alone costs 994 bytes, `rowSortingFeature` 998, a sorting-only set 1 035, and `editingFeature` 17 163, which is what a feature with a real implementation behind it weighs. The all-in set lives on its own subpath, `@ez-kit/data-grid-react/features/all`, precisely so that reaching it is a choice: while it sat on the main entry, each of those imports cost ~46 kB, because a top-level `tableFeatures({ …stockFeatures, … })` call is not something a bundler can drop.
 
 ## Drag and drop
 

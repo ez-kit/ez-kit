@@ -131,6 +131,8 @@ export function useFilters(): UseFiltersResult | undefined {
 	useDataGridState((s) => s.columnFilters)
 	useDataGridState((s) => s.columnVisibility)
 	useDataGridState((s) => s.columnPinning)
+	// collectFilterTargets follows the model's ordered leaf columns.
+	useDataGridState(() => table.getAllLeafColumns())
 	const gridComponents = useGridComponents()
 	const { Input, Menu } = gridComponents.core
 	const { OperatorSelect, BetweenInput, MultiSelectFilter, ClearFilterButton } = gridComponents.filtering

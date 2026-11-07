@@ -52,6 +52,31 @@
 			"types": "./dist/dnd-kit/index.d.ts",
 			"import": "./dist/dnd-kit/index.js",
 			"default": "./dist/dnd-kit/index.js"
+		},
+		"./features": {
+			"types": "./dist/features/index.d.ts",
+			"import": "./dist/features/index.js",
+			"default": "./dist/features/index.js"
+		},
+		"./features/all": {
+			"types": "./dist/features/all.d.ts",
+			"import": "./dist/features/all.js",
+			"default": "./dist/features/all.js"
+		},
+		"./operators": {
+			"types": "./dist/operators/index.d.ts",
+			"import": "./dist/operators/index.js",
+			"default": "./dist/operators/index.js"
+		},
+		"./messages/en": {
+			"types": "./dist/messages/en.d.ts",
+			"import": "./dist/messages/en.js",
+			"default": "./dist/messages/en.js"
+		},
+		"./messages/ru": {
+			"types": "./dist/messages/ru.d.ts",
+			"import": "./dist/messages/ru.js",
+			"default": "./dist/messages/ru.js"
 		}
 	},
 	"main": "./dist/index.js",

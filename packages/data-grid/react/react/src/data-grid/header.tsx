@@ -119,7 +119,12 @@ export function Header<TRow extends object = ErasedRow>({ sticky, children }: Da
 	// because one subscription per header beats one per column, and every cell re-renders with
 	// this component anyway.
 	useDataGridState((s) => s.sorting)
+	// Apply changes the committed snapshot without changing the live sorting array.
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	useDataGridState((s) => s.applied?.sorting ?? null)
 	useDataGridState((s) => s.columnFilters)
+	// Select-all derives its value from the filtered row model, including global search.
+	useDataGridState<unknown>((s) => s.globalFilter)
 	useDataGridState((s) => s.columnVisibility)
 	useDataGridState((s) => s.columnOrder)
 	useDataGridState((s) => s.columnPinning)

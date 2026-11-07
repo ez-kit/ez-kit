@@ -246,11 +246,7 @@ export function Td({ pinned, className, style, ...props }: TdProps) {
  */
 function useRowHeaderId(): string | undefined {
 	const table = useDataGridTable()
-	useDataGridState((s) => s.columnVisibility)
-	useDataGridState((s) => s.columnPinning)
-	for (const column of getVisualLeafColumns(table)) {
-		if (column.columnDef.meta?.isSystemColumn === true) continue
-		return column.id
-	}
-	return undefined
+	return useDataGridState(
+		() => getVisualLeafColumns(table).find((column) => column.columnDef.meta?.isSystemColumn !== true)?.id,
+	)
 }

@@ -1,5 +1,6 @@
-import { createContext, useContext } from 'react'
+import { createContext, useContext, useMemo } from 'react'
 
+import { tableOptionInputs } from '../table-option-inputs'
 import { useDataGridSelector } from '../use-data-grid-selector'
 
 import type { DataTable, ErasedRow, GridFeatures } from '../types'
@@ -14,6 +15,10 @@ import type { ReactNode } from 'react'
 type ErasedTable = DataTable<GridFeatures, ErasedRow>
 
 const TableContext = createContext<ErasedTable | null>(null)
+
+// Table identity deliberately stays stable. Options have a separate notification:
+// unlike state slices, new data, column definitions and config do not write to table.store.
+const TableInputsContext = createContext<unknown>(null)
 
 export { TableContext }
 
@@ -35,11 +40,20 @@ export function TableProvider<TFeatures extends TableFeatures, TRow extends obje
 	table: DataTable<TFeatures, TRow>
 	children: ReactNode
 }) {
-	return <TableContext.Provider value={table as unknown as ErasedTable}>{children}</TableContext.Provider>
+	const data = table.options.data
+	const columns = table.options.columns
+	const options = tableOptionInputs(table)
+	const inputs = useMemo(() => ({ data, columns, options }), [data, columns, options])
+	return (
+		<TableContext.Provider value={table as unknown as ErasedTable}>
+			<TableInputsContext.Provider value={inputs}>{children}</TableInputsContext.Provider>
+		</TableContext.Provider>
+	)
 }
 
 /**
- * The live `DataTable` from context. **Does not subscribe**: reading the table is not the same
+ * The live `DataTable` from context. Tracks replacement of its data, column definitions and config,
+ * but does not subscribe to table state: reading the table is not the same
  * as depending on its state, and the two used to be welded together — the old `useTable()`
  * subscribed to the entire `TableState` by default, so every component that merely wanted
  * `getVisibleLeafColumns()` re-rendered on every keystroke in a filter box.
@@ -58,6 +72,7 @@ export function TableProvider<TFeatures extends TableFeatures, TRow extends obje
  * const colSpan = table.getVisibleLeafColumns().length
  */
 export function useDataGridTable<TRow extends object = ErasedRow>(): DataTable<GridFeatures, TRow> {
+	useContext(TableInputsContext)
 	const table = useContext(TableContext)
 	if (!table) {
 		throw new Error('This component must be rendered inside <DataGrid>.')
@@ -77,7 +92,7 @@ export function useDataGridTable<TRow extends object = ErasedRow>(): DataTable<G
  * behaviour left. What this serves is the opposite case — a component whose grid-less rendering is
  * a supported arrangement and needs no table at all.
  *
- * The one member of that set today is `<DataGrid.VisibilityItem>`, which a kit's `VisibilityMenu`
+ * One member of that set is `<DataGrid.VisibilityItem>`, which a kit's `VisibilityMenu`
  * renders per row. That menu is a DI component taking a `columns` array, so it can be — and in both
  * kits is — rendered standalone in a unit test; the item then has no drag to register and falls back
  * to the plain markup it replaced, which is exactly what a grid with no adapter gets.
@@ -88,11 +103,12 @@ export function useDataGridTable<TRow extends object = ErasedRow>(): DataTable<G
  * point: making the kits wrap their tests in a grid, or handing them a participation flag, both put
  * the decision back in the kits.
  *
- * Internal to this package: it is not exported from `index.ts`, and `VisibilityItem` is its only
- * caller. Nothing enforces that — there is no test for it — so a second caller is the moment to ask
- * whether the throw was the wrong default rather than to add a third.
+ * `useGridMessages` also reads here: standalone kit blocks keep their English fallback, while
+ * blocks inside a grid observe replacement messages through the same options notification.
+ * Internal to this package; not exported from `index.ts`.
  */
 export function useOptionalDataGridTable<TRow extends object = ErasedRow>(): DataTable<GridFeatures, TRow> | null {
+	useContext(TableInputsContext)
 	// The same cast {@link useDataGridTable} makes, for the reason recorded there.
 	return useContext(TableContext) as unknown as DataTable<GridFeatures, TRow> | null
 }

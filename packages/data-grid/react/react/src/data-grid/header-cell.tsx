@@ -13,9 +13,10 @@ import { GridMenuVariant } from '../menu'
 import { ColumnSortDirection, SortDirection } from '../types'
 import { filtersRows } from '../utils/filters-rows'
 import { freezeRenderedWidths, releaseUnmovedWidths } from '../utils/freeze-rendered-widths'
-import { getCommonPinStyles } from '../utils/pin-styles'
 import { resolveReorderMode } from '../utils/reorder-mode'
+import { shallow } from '../utils/shallow-equal'
 import { isTextEntryTarget } from '../utils/text-entry-target'
+import { useColumnPin } from '../utils/use-column-pin'
 import { getVisualLeafColumns } from '../utils/visual-column-order'
 
 import { getAlignAttrs } from './align-attrs'
@@ -31,7 +32,7 @@ import { flexRender } from './flex-render'
 import { HeaderExtras, HeaderMain } from './header-slots'
 import { useCellNavigationProps } from './keyboard-navigation'
 import { renderFilterInput } from './render-filter-input'
-import { useDataGridTable } from './table-context'
+import { useDataGridState, useDataGridTable } from './table-context'
 import { VisuallyHidden } from './visually-hidden'
 
 import type { HeaderThProps } from './column-drag'
@@ -133,12 +134,6 @@ export type DataGridHeaderCellProps<TRow extends object = ErasedRow> = {
 function computeDraftSortIndex<TRow extends object>(table: DataTable<GridFeatures, TRow>, columnId: string): number {
 	if (table.options.draft !== true) return -1
 	const draftSorting = table.draft.get().sorting
-	// A snapshot read, not a subscription — the v8 line read `applied.sorting` off the whole snapshot
-	// and this is the same read against v9's store. `<DataGrid.Header>` owns the subscriptions
-	// these cells re-render through, and `applied` is not among them: what actually drives this
-	// marker is `state.sorting`, which the header does subscribe to and which moves on every
-	// draft edit. Making this a subscription would add one subscriber per column and is a
-	// render-behaviour change, so it is deliberately not done here.
 	const appliedSorting = table.store.state.applied.sorting
 	const draftIndex = draftSorting.findIndex((s) => s.id === columnId)
 	if (draftIndex < 0) return -1
@@ -154,8 +149,7 @@ function computeDraftSortIndex<TRow extends object>(table: DataTable<GridFeature
  *
  * Split out of `Header` so a custom header can replace a single column's cell and keep the
  * default for every other — the same ladder `DataGrid.Row` / `DataGrid.Cell` give the body.
- * Rendering it requires the surrounding `<DataGrid.Header>`, which owns the state subscriptions
- * these cells read through.
+ * Each cell observes the values it renders, including when a composed header retains its JSX.
  */
 
 export function DataGridHeaderCell<TRow extends object = ErasedRow>({
@@ -182,10 +176,7 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 	// rather than throw. See `feature-optionality.test.tsx`, which builds a grid without each one.
 	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
 	const canSort = header.column.getCanSort?.() ?? false
-	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
-	const rawSortDir = header.column.getIsSorted?.() ?? false
-	const pinVars = getCommonPinStyles(header.column)
-	const pinned = header.column.getIsPinned()
+	const { pinned, pinVars } = useColumnPin(header.column)
 	// One check, not two: `createTable` now emits `enableColumnResizing: false` when the feature
 	// is off, so `getCanResize()` accounts for the table-level gate as well as the column's own
 	// `resizing: false`. Anything composing its own header can rely on the same single call.
@@ -242,10 +233,38 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 	 * grids. Skipping it also skips mounting the shell below, so such a grid renders the bare `Th`
 	 * it rendered before this phase; the phase-2 identical-DOM test compares against exactly that.
 	 */
-	const visualIndex =
-		takesPartInDrag && isLeafHeader
-			? getVisualLeafColumns(table).findIndex((column) => column.id === header.column.id)
-			: -1
+	// Model objects stay stable while their answers change. Select the displayed answers rather
+	// than relying on Header to recreate this element or subscribing each leaf to whole slices.
+	const {
+		sort: rawSortDir,
+		draftSort: draftSortIndex,
+		resizing: isResizing,
+		filter: filterValue,
+		allSelected: isAllSelected,
+		someSelected: isSomeSelected,
+		visualIndex,
+	} = useDataGridState(
+		() => ({
+			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature API
+			sort: header.column.getIsSorted?.() ?? false,
+			draftSort: computeDraftSortIndex(table, header.column.id),
+			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature API
+			resizing: header.column.getIsResizing?.() ?? false,
+			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature API
+			filter: header.column.getFilterValue?.(),
+			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature API
+			grouped: header.column.getIsGrouped?.() ?? false,
+			allSelected: header.column.id === SELECTION_COLUMN_ID && table.getIsAllRowsSelected(),
+			someSelected: header.column.id === SELECTION_COLUMN_ID && table.getIsSomeRowsSelected(),
+			moveStart: canMove && canMoveColumn(table, header.column.id, ColumnMoveDirection.Start),
+			moveEnd: canMove && canMoveColumn(table, header.column.id, ColumnMoveDirection.End),
+			visualIndex:
+				takesPartInDrag && isLeafHeader
+					? getVisualLeafColumns(table).findIndex((column) => column.id === header.column.id)
+					: -1,
+		}),
+		{ compare: shallow },
+	)
 	const isDragParticipant = visualIndex >= 0
 
 	/**
@@ -270,8 +289,6 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 
 	// Selection column: a select-all checkbox, and none of the rest.
 	if (header.column.id === SELECTION_COLUMN_ID) {
-		const isAllSelected = table.getIsAllRowsSelected()
-		const isSomeSelected = table.getIsSomeRowsSelected()
 		// Under `selection.multi: false` only one row can be selected at a time, so a select-all
 		// control has nothing to select — the header cell stays empty but keeps its width.
 		const canSelectAll = table.options.enableMultiRowSelection !== false
@@ -347,7 +364,6 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 			}
 		: undefined
 
-	const draftSortIndex = computeDraftSortIndex(table, header.column.id)
 	const draftSortAttrs = draftSortIndex >= 0 ? { 'data-draft-sorting': String(draftSortIndex) } : {}
 
 	/**
@@ -548,12 +564,12 @@ export function DataGridHeaderCell<TRow extends object = ErasedRow>({
 			onDoubleClick={() => {
 				header.column.resetSize()
 			}}
-			isResizing={header.column.getIsResizing()}
+			isResizing={isResizing}
 		/>
 	) : null
 
 	const filterPopover = canFilter ? (
-		<FilterPopover hasActiveFilter={Boolean(header.column.getFilterValue())}>{filterContent}</FilterPopover>
+		<FilterPopover hasActiveFilter={Boolean(filterValue)}>{filterContent}</FilterPopover>
 	) : null
 
 	// The built-in cell renders the control inline. The popover presentation is one render

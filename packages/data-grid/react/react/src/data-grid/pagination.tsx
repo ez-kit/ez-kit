@@ -83,6 +83,9 @@ export function Pagination({ children }: DataGridPaginationProps = {}) {
 	useDataGridState((s) => s.columnFilters)
 	useDataGridState<unknown>((s) => s.globalFilter)
 	useDataGridState((s) => s.expanded)
+	// Collapsed groups replace leaf rows in the model being paginated.
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	useDataGridState((s) => s.grouping ?? null)
 
 	// Hide only during the initial-load skeleton path (`isPending`); a background
 	// refetch (`isFetching`) keeps the footer mounted (the overlay dims rows instead).

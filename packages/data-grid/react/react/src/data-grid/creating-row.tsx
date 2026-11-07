@@ -11,6 +11,7 @@ import { useGridComponents } from '../components-context'
 import { ItemsSourceSlot, useItemsListsFor } from '../items-source'
 import { ActionsCellState } from '../types'
 import { getCommonPinStyles } from '../utils/pin-styles'
+import { shallow } from '../utils/shallow-equal'
 import { getVisualLeafColumns } from '../utils/visual-column-order'
 
 import { flexRender } from './flex-render'
@@ -37,8 +38,19 @@ const CREATING_ROW_ATTR = 'data-creating-row'
 export function CreatingRow() {
 	const table = useDataGridTable()
 	useDataGridState((s) => s.creating)
-	useDataGridState((s) => s.columnVisibility)
-	useDataGridState((s) => s.columnPinning)
+	// A creation row renders both the visual column order and each pinned field's offset.
+	useDataGridState(
+		() =>
+			getVisualLeafColumns(table).flatMap((column) => {
+				const pinned = column.getIsPinned()
+				return [
+					column.id,
+					pinned,
+					pinned === 'start' ? column.getStart('start') : pinned === 'end' ? column.getAfter('end') : null,
+				]
+			}),
+		{ compare: shallow },
+	)
 	const gridComponents = useGridComponents()
 	const { Tr, Td, Input, Checkbox } = gridComponents.core
 	const { ActionsCell } = gridComponents.rowActions

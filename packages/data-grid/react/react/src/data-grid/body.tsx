@@ -110,9 +110,10 @@ export type DataGridBodyProps<TRow extends object = ErasedRow> = {
  *
  * Subscribes only to the slices that actually change row composition or
  * top-level branching (loading skeleton, creating row, pinned rows). Editing,
- * column visibility, column sizing, row selection mutations do NOT re-render
- * Body — those are handled by leaf components with their own narrow
- * subscriptions.
+ * column sizing and row selection mutations do NOT re-render Body — those
+ * are handled by leaf components with their own narrow subscriptions. Column
+ * visibility and pinning change the cells rendered in every row, including
+ * when Table receives stable, static children.
  *
  * Pinned rows (top / bottom) get `data-pinned="top" | "bottom"` plus a
  * `--dg-row-pin-offset` CSS variable carrying the computed offset; the
@@ -130,7 +131,7 @@ export function Body<TRow extends object = ErasedRow>({ children }: DataGridBody
 
 	// Narrow subscriptions: each returns a referentially stable slice. Body
 	// re-renders only when one of these slices actually changes. Editing,
-	// columnVisibility, columnSizing, columnPinning, rowSelection updates do
+	// columnSizing and rowSelection updates do
 	// NOT touch any of these → no Body re-render.
 	// Optional-chained, not chained for tidiness: these three read state slices that do not exist
 	// unless `loadingFeature` / `creatingFeature` are registered, and they run before any branch
@@ -149,8 +150,11 @@ export function Body<TRow extends object = ErasedRow>({ children }: DataGridBody
 	useDataGridState((s) => s.pagination)
 	useDataGridState((s) => s.expanded)
 	useDataGridState((s) => s.rowPinning)
-	// Cells come out of `row.getVisibleCells()` in column order, so a reorder repaints rows.
+	// Every change to the visible cell list must repaint rows independently of Table.
+	// This also reaches VirtualBody and custom body render functions without remounting rows.
 	useDataGridState((s) => s.columnOrder)
+	useDataGridState((s) => s.columnVisibility)
+	useDataGridState((s) => s.columnPinning)
 	// Grouping rebuilds the row model **and** the column list — `groupedColumnMode: 'remove'`
 	// takes a grouped column out while it is a level — so every component that reads either has
 	// to re-derive on it. Optional-chained because the slice exists only with

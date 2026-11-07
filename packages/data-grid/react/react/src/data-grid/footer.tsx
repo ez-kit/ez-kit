@@ -82,6 +82,16 @@ export function Footer<TRow extends object = ErasedRow>({ sticky, children }: Da
 	useDataGridState((s) => s.columnVisibility)
 	useDataGridState((s) => s.columnPinning)
 	useDataGridState((s) => s.columnOrder)
+	// Totals use the filtered model; custom footers may also read the current page's rows.
+	useDataGridState((s) => s.sorting)
+	useDataGridState((s) => s.columnFilters)
+	useDataGridState<unknown>((s) => s.globalFilter)
+	useDataGridState((s) => s.pagination)
+	useDataGridState((s) => s.expanded)
+	useDataGridState((s) => s.rowPinning)
+	// Grouping also removes grouped columns from the footer's visible column list.
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+	useDataGridState((s) => s.grouping ?? null)
 
 	const footerGroups = table.getFooterGroups()
 

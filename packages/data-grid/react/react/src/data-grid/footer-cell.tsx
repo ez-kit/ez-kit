@@ -1,10 +1,12 @@
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
 import { useGridOptions } from '../use-grid-options'
+import { useColumnPin } from '../utils/use-column-pin'
 
 import { getAlignAttrs } from './align-attrs'
 import { resolveViewComponent } from './cell'
 import { flexRender } from './flex-render'
+import { useDataGridState } from './table-context'
 
 import type { CellTypeRegistry, CellViewProps } from '../cell-types-context'
 import type { ResolvedGridOptions } from '../resolved-options'
@@ -74,35 +76,15 @@ function footerContentOf<TRow extends object>(
 	header: Header<GridFeatures, TRow>,
 	meta: FormColumnMeta | undefined,
 	cellTypes: CellTypeRegistry,
-	aggregation: ResolvedGridOptions['aggregation'],
+	total: unknown,
 ): ReactNode {
 	const { column } = header
 	if (column.columnDef.footer !== undefined) return flexRender(column.columnDef.footer, header.getContext())
 
-	// A supplied total wins over computing one, and is looked up **before** the feature is
-	// consulted: a grid whose totals all come from the server registers neither
-	// `rowAggregationFeature` nor `aggregationFns`, so there is nothing to ask. `Object.hasOwn`
-	// rather than `!== undefined` — `0` and `null` are real totals, and `0` is the right answer
-	// for an empty result set.
-	const supplied = aggregation.totals
-	const total: unknown =
-		supplied !== undefined && Object.hasOwn(supplied, column.id)
-			? supplied[column.id]
-			: aggregation.manual
-				? undefined
-				: // Optional-called: this runs for every footer cell of every grid, and
-					// `rowAggregationFeature` is not structural — see the FEATURE GUARDS note in
-					// `types.ts`. A column with no `aggregation` has no aggregation function either, so it
-					// answers `undefined` and the cell stays empty, which is what a footer cell has
-					// always been without a `footer`.
-					// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
-					column.getAggregationValue?.()
-
 	if (total === undefined) return null
 
 	const aggregatedComp = (meta as { aggregation?: { component?: unknown } } | undefined)?.aggregation?.component as
-		| ComponentType<CellViewProps>
-		| undefined
+		ComponentType<CellViewProps> | undefined
 	const viewComp = aggregatedComp ?? resolveViewComponent(column.columnDef.meta, cellTypes)
 	if (!viewComp) return String(total)
 
@@ -114,6 +96,32 @@ function footerContentOf<TRow extends object>(
 		rowIndex: -1,
 		...(meta?.cell?.config !== undefined ? { config: meta.cell.config } : {}),
 	})
+}
+
+/** The actual total this cell displays; supplied/manual values take precedence over the model. */
+function footerTotalOf<TRow extends object>(
+	header: Header<GridFeatures, TRow>,
+	aggregation: ResolvedGridOptions['aggregation'],
+): unknown {
+	const { column } = header
+	if (column.columnDef.footer !== undefined || header.isPlaceholder) return undefined
+	// A supplied total wins over computing one, and is looked up **before** the feature is
+	// consulted: a grid whose totals all come from the server registers neither
+	// `rowAggregationFeature` nor `aggregationFns`, so there is nothing to ask. `Object.hasOwn`
+	// rather than `!== undefined` — `0` and `null` are real totals, and `0` is the right answer
+	// for an empty result set.
+	const supplied = aggregation.totals
+	return supplied !== undefined && Object.hasOwn(supplied, column.id)
+		? supplied[column.id]
+		: aggregation.manual
+			? undefined
+			: // Optional-called: this runs for every footer cell of every grid, and
+				// `rowAggregationFeature` is not structural — see the FEATURE GUARDS note in
+				// `types.ts`. A column with no `aggregation` has no aggregation function either, so it
+				// answers `undefined` and the cell stays empty, which is what a footer cell has
+				// always been without a `footer`.
+				// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+				column.getAggregationValue?.()
 }
 
 /**
@@ -129,7 +137,7 @@ export function DataGridFooterCell<TRow extends object = ErasedRow>({
 	children,
 }: DataGridFooterCellProps<TRow>) {
 	const { Td } = useGridComponents().core
-	const pinned = header.column.getIsPinned()
+	const { pinned } = useColumnPin(header.column)
 	// `ColumnMeta` is declared `in out` in both its `TFeatures` and its `TData` upstream, so no
 	// concrete instantiation is assignable to any other and this cast is forced by the variance
 	// annotation rather than chosen. `FormColumnMeta` is the one name core declares for it, and
@@ -137,7 +145,8 @@ export function DataGridFooterCell<TRow extends object = ErasedRow>({
 	const meta = header.column.columnDef.meta as FormColumnMeta | undefined
 	const cellTypes = useCellTypes()
 	const { aggregation } = useGridOptions()
-	const content = header.isPlaceholder ? null : (footerContentOf(header, meta, cellTypes, aggregation) ?? null)
+	const total = useDataGridState(() => footerTotalOf(header, aggregation))
+	const content = header.isPlaceholder ? null : (footerContentOf(header, meta, cellTypes, total) ?? null)
 
 	return (
 		<Td

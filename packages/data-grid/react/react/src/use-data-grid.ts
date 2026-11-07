@@ -18,6 +18,7 @@ import { DATA_GRID_DEFAULTS, DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
 import { enforceControlledColumns } from './enforce-controlled-columns'
 import { createGridContextAtom, EMPTY_GRID_CONTEXT, syncGridContext } from './grid-context'
 import { describeUnrecognisedLoading, normalizeControlledState } from './normalize-controlled-state'
+import { publishTableOptionInputs } from './table-option-inputs'
 import { ActionBarVariant } from './types'
 import { useOrderedData } from './use-ordered-data'
 import { resolveReorderMode } from './utils/reorder-mode'
@@ -1365,12 +1366,16 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 	// It writes the two data refs as well as the options, because the options bag carries
 	// `projectedDataRef.current`: without that, the next render would re-apply the prop and
 	// silently undo the call.
+	const [, invalidateData] = useState(0)
 	const setDataRef = useRef<((data: TRow[]) => void) | null>(null)
 	setDataRef.current ??= (data: TRow[]): void => {
 		baseDataRef.current = data
 		projectedDataRef.current = data
 		const setOptions = table.setOptions as unknown as (updater: (prev: Record<string, unknown>) => unknown) => void
 		setOptions((prev) => ({ ...prev, data }))
+		// Options are not table state. Re-render the owner so TableProvider can publish the new
+		// data input to composed children even when no pagination feature resets a state slice.
+		invalidateData((revision) => revision + 1)
 	}
 	const setData = setDataRef.current
 
@@ -1665,5 +1670,6 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 	// so **an option this package needs to read back must be written into the options object, not
 	// through `setOptions`.**
 	Object.assign(view, table, { grid, gridContext, setData })
+	publishTableOptionInputs(view, config)
 	return view
 }
