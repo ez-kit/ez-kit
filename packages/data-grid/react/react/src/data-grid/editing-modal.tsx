@@ -11,8 +11,7 @@ import { useDataGridState, useDataGridTable } from './table-context'
  */
 export function EditingModal() {
 	const table = useDataGridTable()
-	useDataGridState((s) => s.editing)
-	const state = table.editing.getState()
+	const state = useDataGridState((s) => s.editing)
 
 	if (!state.rowId) return null
 

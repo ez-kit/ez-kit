@@ -1,6 +1,7 @@
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
 import { ItemsSourceSlot, useItemsListsFor } from '../items-source'
+import { shallow } from '../utils/shallow-equal'
 
 import { resolveFilter } from './filter-model'
 import { collectFilterTargets } from './filter-target'
@@ -127,10 +128,34 @@ export type DataGridFilterPanelProps = {
  * ```
  */
 export function useFilters(): UseFiltersResult | undefined {
+	return useResolvedFilters()
+}
+
+/** Internal single-target path; the public panel hook retains its full model. */
+export function useResolvedFilters(onlyId?: string): UseFiltersResult | undefined {
 	const table = useDataGridTable()
-	useDataGridState((s) => s.columnFilters)
-	useDataGridState((s) => s.columnVisibility)
-	useDataGridState((s) => s.columnPinning)
+	const columnFilters = useDataGridState(
+		(state) => {
+			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional filtering feature
+			const filters = state.columnFilters ?? []
+			return onlyId === undefined ? filters : filters.filter((filter) => filter.id === onlyId)
+		},
+		{ compare: shallow },
+	)
+	useDataGridState(() => table.getAllLeafColumns())
+	// A faceted target depends on the other filters too; preserve its live choices.
+	useDataGridState(
+		() => {
+			const targets = collectFilterTargets(table).filter((target) => onlyId === undefined || target.id === onlyId)
+			return targets.flatMap((target) => [
+				target.id,
+				target.source.kind === 'column' ? target.source.column.getIsVisible() : true,
+				target.meta.filtering?.faceted === true ? target.facetedValues?.() : undefined,
+				target.facetedIndex?.(),
+			])
+		},
+		{ compare: shallow },
+	)
 	const gridComponents = useGridComponents()
 	const { Input, Menu } = gridComponents.core
 	const { OperatorSelect, BetweenInput, MultiSelectFilter, ClearFilterButton } = gridComponents.filtering
@@ -138,14 +163,18 @@ export function useFilters(): UseFiltersResult | undefined {
 	const filteringDebounce = table.grid.filtering.debounce
 	const { messages } = table.grid
 
-	const collected = collectFilterTargets(table)
+	const collected = collectFilterTargets(table).filter((target) => onlyId === undefined || target.id === onlyId)
 	// Every target's lists, read here at once — the panel hands each target's model to a consumer,
 	// and a model whose list nobody subscribed to would stay "loading" for good. So a mounted panel
 	// keeps the hook of every filter it offers running, open or not.
 	const lists = useItemsListsFor(
 		collected.map((target) => ({ id: target.id, meta: target.meta, slot: ItemsSourceSlot.Filtering })),
 	)
-	const targets = collected.map((target, i) => ({ ...target, lists: lists[i] ?? NO_LISTS }))
+	const targets = collected.map((target, i) => ({
+		...target,
+		getValue: () => columnFilters.find((filter) => filter.id === target.id)?.value,
+		lists: lists[i] ?? NO_LISTS,
+	}))
 	if (targets.length === 0) return undefined
 
 	const filters: DataGridFilterTarget[] = targets.map((target) => {

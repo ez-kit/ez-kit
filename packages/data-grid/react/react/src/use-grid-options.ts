@@ -13,8 +13,9 @@ import type { ResolvedGridOptions } from './resolved-options'
  * features are on. Before this existed, that information sat behind private `Symbol()` keys and
  * a kit could only re-derive it from its own constants.
  *
- * Reads a ref, not state — it never triggers a re-render on its own. Subscribe to table state
- * with `useDataGridState` when you need that.
+ * Refreshes when the grid's configuration, data or column definitions change. This is separate
+ * from table state: subscribe to that with `useDataGridState`
+ * when you need that.
  *
  * @example
  * const { filtering } = useGridOptions()

@@ -4,6 +4,7 @@ import { useGridComponents } from '../components-context'
 import { DATA_GRID_DEFAULTS } from '../defaults'
 import { LoadMoreTrigger } from '../types'
 import { projectDragOrder } from '../utils/project-drag-order'
+import { shallow } from '../utils/shallow-equal'
 import { resolveVirtualWindowPads } from '../utils/virtual-window-pads'
 
 import { DataGridRow } from './row'
@@ -58,6 +59,7 @@ import type { VirtualItem } from '@tanstack/react-virtual'
  */
 export function VirtualBody() {
 	const table = useDataGridTable()
+	const columnCount = useDataGridState(() => table.getVisibleLeafColumns().length)
 	const gridComponents = useGridComponents()
 	const { Tbody, Tr, Td } = gridComponents.core
 	const { LoadMoreRow } = gridComponents.infinite
@@ -75,9 +77,9 @@ export function VirtualBody() {
 	const lastIndex = virtualItems.length > 0 ? (virtualItems[virtualItems.length - 1]?.index ?? -1) : -1
 
 	const hasPinning = Boolean(table.options.enableRowPinning)
-	const topRows = hasPinning ? table.getTopRows() : []
-	const centerRows = hasPinning ? table.getCenterRows() : table.getRowModel().rows
-	const bottomRows = hasPinning ? table.getBottomRows() : []
+	const topRows = useDataGridState(() => (hasPinning ? table.getTopRows() : []), { compare: shallow })
+	const centerRows = useDataGridState(() => (hasPinning ? table.getCenterRows() : table.getRowModel().rows))
+	const bottomRows = useDataGridState(() => (hasPinning ? table.getBottomRows() : []), { compare: shallow })
 	const registerTopRow = usePinnedRowOffsets(
 		'top',
 		topRows.map((row) => row.id),
@@ -206,7 +208,6 @@ export function VirtualBody() {
 
 	const totalSize = rowVirtualizer.getTotalSize()
 	const showLoadMore = enabled && (hasNextPage || controller.isFetching || controller.error != null)
-	const columnCount = table.getVisibleLeafColumns().length
 	/*
 	 * Computed from the **window**, never from `centerEntries`: that list also carries the row being
 	 * dragged once the window has scrolled past it, at its model index — so a held row near the top

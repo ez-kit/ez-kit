@@ -89,11 +89,18 @@ function isFormColumn(meta: FormColumnMeta | undefined, mode: ColumnFormMode): b
  */
 export function useFormFields(mode: ColumnFormMode, onlyColumnId?: string): readonly FormField[] {
 	const table = useDataGridTable()
-	useDataGridState((s) => (mode === ColumnFormMode.Creating ? s.creating : s.editing))
+	const state = useDataGridState((s) => (mode === ColumnFormMode.Creating ? s.creating : s.editing), {
+		compare: (a, b) =>
+			onlyColumnId === undefined
+				? Object.is(a, b)
+				: a.values[onlyColumnId] === b.values[onlyColumnId] &&
+					a.errors[onlyColumnId] === b.errors[onlyColumnId] &&
+					(a.commitStatus === CommitStatus.Validating) === (b.commitStatus === CommitStatus.Validating) &&
+					('rowId' in a ? a.rowId : null) === ('rowId' in b ? b.rowId : null),
+	})
 	const { Input } = useGridComponents().core
 	const cellTypes = useCellTypes()
 
-	const state = mode === ColumnFormMode.Creating ? table.creating.getState() : table.editing.getState()
 	const values = state.values
 	const errors = state.errors
 	const isValidating = state.commitStatus === CommitStatus.Validating
@@ -120,7 +127,8 @@ export function useFormFields(mode: ColumnFormMode, onlyColumnId?: string): read
 	)
 	// The edited row, so a column's `getItem` labels its value while the list is still loading. A
 	// create form has no row yet.
-	const editedRow = mode === ColumnFormMode.Editing ? editedRowOf(table, table.editing.getState().rowId) : undefined
+	const editedRow =
+		mode === ColumnFormMode.Editing ? editedRowOf(table, 'rowId' in state ? state.rowId : null) : undefined
 
 	const validateField = (columnId: string): void => {
 		if (mode === ColumnFormMode.Creating) {

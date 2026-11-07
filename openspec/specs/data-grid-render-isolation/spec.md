@@ -104,3 +104,30 @@ re-render when the store's contents change.
 
 - **WHEN** флэшащая ячейка переходит из фазы заливки в фазу затухания
 - **THEN** перерисовывается только эта ячейка
+
+### Requirement: Retained composed controls observe their displayed models
+
+Each composed control SHALL update its displayed values and drag registration when the mutable
+model answers change, even if its parent reuses the same JSX element while mapping the current
+model order. Opaque custom render callbacks SHALL retain their established state notifications.
+
+#### Scenario: Pending bulk confirmation changes selection
+
+- **WHEN** selection changes while a bulk delete confirmation is open
+- **THEN** the prompt describes the current targets that confirmation will delete
+
+#### Scenario: Retained drag item changes position
+
+- **WHEN** a parent reorders retained row, sort or visibility item elements
+- **THEN** each item registers its current index in its surface's dense index space
+
+#### Scenario: Default header selection isolation
+
+- **WHEN** selection changes with ordinary header labels
+- **THEN** the selection header updates and ordinary header cells do not re-render
+
+#### Scenario: Isolated single-target controls
+
+- **WHEN** another nonfaceted filter or form field changes
+- **THEN** a standalone control for an unchanged target does not re-render
+- **AND** a faceted filter still updates when its available choices change

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { getRowDropIndex, getRowDropOrder } from './row-drop-order'
 
@@ -61,6 +61,27 @@ describe('getRowDropOrder', () => {
 })
 
 describe('getRowDropIndex', () => {
+	it('shares the index scan across rows until the model order changes', () => {
+		const readId = vi.fn((id: string) => id)
+		let rows = ['a', 'b', 'c'].map((id) => ({
+			get id() {
+				return readId(id)
+			},
+		})) as unknown as Row<GridFeatures, object>[]
+		const table = { options: { enableRowPinning: false }, getRowModel: () => ({ rows }) } as unknown as DataTable<
+			GridFeatures,
+			object
+		>
+		expect(getRowDropIndex(table, null, 'a')).toBe(0)
+		expect(readId).toHaveBeenCalledTimes(3)
+		expect(getRowDropIndex(table, null, 'b')).toBe(1)
+		expect(getRowDropIndex(table, null, 'c')).toBe(2)
+		expect(readId).toHaveBeenCalledTimes(3)
+		rows = [...rows].reverse()
+		expect(getRowDropIndex(table, null, 'a')).toBe(2)
+		expect(readId).toHaveBeenCalledTimes(6)
+	})
+
 	it('prefers a published list over the derivation', () => {
 		// Arrange — the published list is a *window*, so the same row has different positions in the
 		// two. Whichever this returns is observable, which is what makes the preference testable.

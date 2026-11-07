@@ -21,7 +21,7 @@ import {
 	useReportActiveDraggingRow,
 	useShouldReportUnpublishedRow,
 } from './row-drag-registry'
-import { useDataGridState, useDataGridTable } from './table-context'
+import { useDataGridState, useDataGridTable, useRenderCallbackState } from './table-context'
 
 import type { DataGridRowDragHandleProps } from './row-drag-handle'
 import type { RowDragValue } from './row-drag-registry'
@@ -181,6 +181,7 @@ function DataGridRowImpl<TRow extends object = ErasedRow>(
 	// resolver is typed against `never`; the row we hold here is the very one the consumer wrote
 	// it against, so re-instantiating it at `TRow` restores the type it had before erasure.
 	const resolveRowProps = table.grid.rowProps as RowPropsResolver<TRow> | undefined
+	useRenderCallbackState(typeof children === 'function' || resolveRowProps !== undefined)
 	// Selection state is derived, not read: a parent row counts as selected through its
 	// children, which only TanStack knows. The selector therefore ignores its argument and
 	// re-derives on every store change — it returns a boolean, so `useSyncExternalStore` bails
@@ -263,7 +264,7 @@ function DataGridRowImpl<TRow extends object = ErasedRow>(
 	 * list.
 	 *
 	 * Gated on the adapter first, which is a performance requirement rather than tidiness: the lookup
-	 * scans the list once per row, so a grid with no drag — which is most grids — must not pay for it.
+	 * shares a cached index map across rows, so a grid with no drag — which is most grids — must not pay for it.
 	 * The same *performance* gate `header-cell.tsx` puts in front of its own; what that file does with
 	 * a `-1` is deliberately not the same, and the note below says why.
 	 *
@@ -280,7 +281,7 @@ function DataGridRowImpl<TRow extends object = ErasedRow>(
 	const isDndEnabled = useDndEnabled()
 	const publishedRowIds = useRenderedRowIds()
 	const shouldReportUnpublishedRow = useShouldReportUnpublishedRow()
-	const dropIndex = isDndEnabled ? getRowDropIndex(table, publishedRowIds, row.id) : 0
+	const dropIndex = useDataGridState(() => (isDndEnabled ? getRowDropIndex(table, publishedRowIds, row.id) : 0))
 	/*
 	 * A published list that does not contain this row is a **defect**, not a fallback case: a
 	 * virtualized body publishes the window plus the row it is holding through a drag, so every row
@@ -388,7 +389,9 @@ function DataGridRowImpl<TRow extends object = ErasedRow>(
 		: undefined
 	const navigationProps = useRowNavigationProps()
 	const { className: consumerClassName, style: consumerStyle, ...consumerProps } = resolveRowProps?.(row) ?? {}
-	const cells = row.getVisibleCells()
+	// A custom Body can retain its Row elements. Subscribe to the memoized cell list here,
+	// so visibility, pinning and order do not depend on the parent creating a fresh element.
+	const cells = useDataGridState(() => row.getVisibleCells())
 
 	return (
 		<Tr

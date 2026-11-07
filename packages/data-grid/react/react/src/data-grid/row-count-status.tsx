@@ -23,18 +23,12 @@ import { VisuallyHiddenStatus } from './visually-hidden'
 export function RowCountStatus() {
 	const table = useDataGridTable()
 
-	// A whole-state subscription, for the reason `ActionBar` has one: the count follows the
-	// **applied** query, which is `columnFilters` and `globalFilter` under a plain grid and the
-	// draft's applied snapshot under a deferred one — and a selector stitching those together
-	// would return a fresh object every time, which is the infinite-loop case the store contract
-	// forbids. The cost is a re-render of one `<span>` on every state change; announcing nothing
-	// is free, because an unchanged string is not an update a live region reports.
-	useDataGridState((s) => s)
-
-	// A manual grid that was given no `rowCount` does not know the total, and a number invented
-	// from the page in the DOM would be worse than silence. A grid with no pagination feature at
-	// all has no `getRowCount` at all, which is what `rowTotalOf` keeps from being a crash.
-	const total = hasTrustedRowTotal(table) ? (rowTotalOf(table) ?? table.getRowModel().rows.length) : undefined
+	// Observe the displayed count, including the applied row model under draft mode. A sorting,
+	// selection or editing update that keeps the count unchanged must not render this live region.
+	// Manual pagination without a trusted total stays silent rather than announcing the page size.
+	const total = useDataGridState(() =>
+		hasTrustedRowTotal(table) ? (rowTotalOf(table) ?? table.getRowModel().rows.length) : undefined,
+	)
 	if (total === undefined) return null
 
 	return <VisuallyHiddenStatus>{table.grid.messages.grid.rowCount({ count: total })}</VisuallyHiddenStatus>

@@ -24,13 +24,14 @@ export function buildRowOrderItems<TRow extends object>(
 	row: Row<GridFeatures, TRow>,
 	table: Table<GridFeatures, TRow>,
 	messages: GridMessages['rowActions'],
+	capabilities?: { canMoveUp: boolean; canMoveDown: boolean },
 ): GridMenuItem[] {
 	return [
 		{
 			id: RowActionId.MoveUp,
 			label: messages.moveUp,
 			icon: GridMenuIcon.MoveUp,
-			disabled: !table.ordering.canMoveRow(row.id, RowMoveDirection.Up),
+			disabled: !(capabilities?.canMoveUp ?? table.ordering.canMoveRow(row.id, RowMoveDirection.Up)),
 			onAction: () => {
 				table.ordering.moveRow(row.id, RowMoveDirection.Up)
 			},
@@ -39,7 +40,7 @@ export function buildRowOrderItems<TRow extends object>(
 			id: RowActionId.MoveDown,
 			label: messages.moveDown,
 			icon: GridMenuIcon.MoveDown,
-			disabled: !table.ordering.canMoveRow(row.id, RowMoveDirection.Down),
+			disabled: !(capabilities?.canMoveDown ?? table.ordering.canMoveRow(row.id, RowMoveDirection.Down)),
 			onAction: () => {
 				table.ordering.moveRow(row.id, RowMoveDirection.Down)
 			},

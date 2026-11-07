@@ -47,9 +47,8 @@ import type { Row } from '@tanstack/table-core'
  * {@link getRowDropIndex} prefers the declaration. This one stays the answer for the two bodies whose
  * rendered set *is* derivable.
  *
- * Read on the row's own render path, so it is `O(n)` per row and `O(n²)` per body — which is why every
- * caller gates it on the drag adapter being present first, the way `header-cell.tsx` gates its own
- * lookup. A grid with no drag must not pay for it, and most grids have none.
+ * Index maps are shared across row subscriptions and rebuilt only when their input bands change.
+ * A grid without a drag adapter never asks for them.
  */
 export function getRowDropOrder<TRow extends object>(table: DataTable<GridFeatures, TRow>): Row<GridFeatures, TRow>[] {
 	// `enableRowPinning` rather than a feature guard: this mirrors exactly what `body.tsx` and
@@ -78,7 +77,37 @@ export function getRowDropIndex<TRow extends object>(
 	published: readonly string[] | null,
 	rowId: string,
 ): number {
-	if (published) return published.indexOf(rowId)
-
-	return getRowDropOrder(table).findIndex((candidate) => candidate.id === rowId)
+	if (published) {
+		let indices = publishedIndices.get(published)
+		if (!indices) {
+			indices = new Map(published.map((id, index) => [id, index]))
+			publishedIndices.set(published, indices)
+		}
+		return indices.get(rowId) ?? -1
+	}
+	const pinned = table.options.enableRowPinning === true
+	const top = pinned ? table.getTopRows() : NO_BAND
+	const center = pinned ? table.getCenterRows() : table.getRowModel().rows
+	const bottom = pinned ? table.getBottomRows() : NO_BAND
+	let cached = tableIndices.get(table)
+	if (cached?.top !== top || cached.center !== center || cached.bottom !== bottom) {
+		const indices = new Map<string, number>()
+		let index = 0
+		for (const band of [top, center, bottom]) for (const row of band) indices.set(row.id, index++)
+		cached = { top, center, bottom, indices }
+		tableIndices.set(table, cached)
+	}
+	return cached.indices.get(rowId) ?? -1
 }
+
+const NO_BAND: readonly { id: string }[] = []
+const publishedIndices = new WeakMap<readonly string[], Map<string, number>>()
+const tableIndices = new WeakMap<
+	object,
+	{
+		top: readonly { id: string }[]
+		center: readonly { id: string }[]
+		bottom: readonly { id: string }[]
+		indices: Map<string, number>
+	}
+>()

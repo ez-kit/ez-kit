@@ -1,6 +1,6 @@
 import { useGridComponents } from '../components-context'
 
-import { useFilters } from './filter-panel'
+import { useResolvedFilters } from './filter-panel'
 
 import type { DataGridFilterTarget } from './filter-panel'
 import type { ReactNode } from 'react'
@@ -44,7 +44,7 @@ export type DataGridFilterProps = {
  */
 export function Filter({ id, children }: DataGridFilterProps) {
 	const { FilterPanelChip } = useGridComponents().filtering
-	const resolved = useFilters()
+	const resolved = useResolvedFilters(id)
 
 	const entry = resolved?.filters.find((target) => target.id === id)
 	if (entry === undefined) return null

@@ -21,6 +21,16 @@ The shared React package (`data-grid/react/react`) must contain **zero visual st
 
 The three data-grid React packages and the data-grid docs examples use **no `memo` / `React.memo`**. Re-renders are isolated by selector subscriptions (`useDataGridState`, `useDataGridSelector`, `useGridContext`, each with `{ compare }`), by stable values (`useMemo` / `useCallback` on **values**) and by composition. ESLint enforces it (`no-restricted-syntax` + `no-restricted-properties`; the GridMessages block spreads `NO_MEMO_IMPORT_SYNTAX` into its own list — keep it there), and `data-grid/host-rerender-isolation.test.tsx` holds the guarantee. The only legitimate disable is a test proving the grid **accepts** a consumer's memo-wrapped renderer. Rationale: [ADR 0001](openspec/decisions/0001-no-react-memo.md).
 
+### Composed grid children own their reactive dependencies
+
+A grid component must observe the mutable model values it renders without relying on a parent
+creating fresh JSX. State dependencies use selector subscriptions; replacing data, column
+definitions or configuration is published separately by `TableProvider`, while the table's own identity stays
+stable. `setData` refreshes the React owner so that publication also covers imperative updates.
+Regression tests retain JSX elements across updates and check the DOM after each transition;
+unrelated host renders must still leave cells, headers and rows alone.
+Rationale: [ADR 0026](openspec/decisions/0026-composed-grid-reactivity.md).
+
 ### Filter input commit timing
 
 Built-in filter editors classified as text or single-number, and global search, debounce user edits

@@ -1,4 +1,5 @@
 import { useGridComponents } from '../components-context'
+import { shallow } from '../utils/shallow-equal'
 
 import { buildPaginationLabel } from './pagination-label'
 import { useDataGridTable, useDataGridState } from './table-context'
@@ -72,17 +73,23 @@ export function Pagination({ children }: DataGridPaginationProps = {}) {
 	const table = useDataGridTable()
 	const { Pagination: PaginationComponent } = useGridComponents().pagination
 
-	// The subscription is the read — see `active-filters-bar.tsx` for the note.
-	const { pageIndex, pageSize } = useDataGridState((s) => s.pagination)
-	// Optional-chained: `Pagination` mounts on any grid whose footer renders, before anything
-	// establishes that `loadingFeature` is registered. See `feature-optionality.test.tsx`.
-	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
-	const isPending = useDataGridState((s) => s.loading?.isPending ?? false)
-	// Row-model affecting slices (pageCount is derived from rowModel.length).
-	useDataGridState((s) => s.sorting)
-	useDataGridState((s) => s.columnFilters)
-	useDataGridState<unknown>((s) => s.globalFilter)
-	useDataGridState((s) => s.expanded)
+	const { pageIndex, pageSize, isPending, rawPageCount, rowCount, canPrevious, canNext } = useDataGridState(
+		(state) => ({
+			pageIndex: state.pagination.pageIndex,
+			pageSize: state.pagination.pageSize,
+			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional loading feature
+			isPending: state.loading?.isPending ?? false,
+			rawPageCount: table.grid.pagination.enabled ? table.getPageCount() : -1,
+			rowCount:
+				table.grid.pagination.enabled &&
+				(table.options.manualPagination !== true || table.options.rowCount !== undefined)
+					? table.getRowCount()
+					: undefined,
+			canPrevious: table.grid.pagination.enabled && table.getCanPreviousPage(),
+			canNext: table.grid.pagination.enabled && table.getCanNextPage(),
+		}),
+		{ compare: shallow },
+	)
 
 	// Hide only during the initial-load skeleton path (`isPending`); a background
 	// refetch (`isFetching`) keeps the footer mounted (the overlay dims rows instead).
@@ -98,14 +105,11 @@ export function Pagination({ children }: DataGridPaginationProps = {}) {
 	//
 	// `getPageCount()` returns `options.pageCount` verbatim when set, and core sets it to
 	// UNKNOWN_PAGE_COUNT (-1) for a manual grid given neither `rowCount` nor `pageCount`.
-	const rawPageCount = table.getPageCount()
 	const pageCount = rawPageCount >= 0 ? rawPageCount : undefined
 	// `getRowCount()` is `options.rowCount ?? prePaginationRowModel.rows.length`. Client-side
 	// that fallback is the true total; under `manualPagination` `data` is only the current
 	// page, so it is the page length — a total we must not report. The count is therefore
 	// trustworthy iff the grid paginates client-side or the consumer supplied `rowCount`.
-	const hasTrustedRowCount = table.options.manualPagination !== true || table.options.rowCount !== undefined
-	const rowCount = hasTrustedRowCount ? table.getRowCount() : undefined
 
 	// Known-empty grid: a *trusted* total of zero means there is nothing to paginate, so the
 	// whole footer is hidden and the empty/no-results state stands alone. This unifies the
@@ -120,8 +124,6 @@ export function Pagination({ children }: DataGridPaginationProps = {}) {
 	// would add an arm no reachable config can trigger on its own.
 	if (pageCount === EMPTY_TOTAL) return null
 
-	const canPrevious = table.getCanPreviousPage()
-	const canNext = table.getCanNextPage()
 	const { siblings, boundaries } = table.grid.pagination
 
 	const previousPage = () => {
