@@ -36,6 +36,12 @@ export function makeSource<Row extends { id: string }>() {
 			getRows: (page) => page.items,
 		},
 		mutations: {
+			update: {
+				prepareArgs: ({ row, values }) => {
+					if (!row) throw new Error('The edited row is no longer available')
+					return { id: row.id, body: values }
+				},
+			},
 			delete: { prepareArgs: ({ row }) => row.id },
 			deleteMany: { prepareArgs: ({ rows }) => ({ ids: rows.map((row) => row.id) }) },
 		},

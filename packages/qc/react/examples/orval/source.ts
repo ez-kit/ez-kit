@@ -12,13 +12,7 @@ export const usersSource = makeSource<User>()({
 	getAll: (args, { signal }) => getUsers(args, { signal }),
 	getInfinite: (args, { signal }) => getUsersFeed(args, { signal }),
 	create: { fetcher: createUser, prepareArgs: ({ values }) => prepareValues(values) },
-	update: {
-		fetcher: ({ id, body }: { id: string; body: UserValues }) => updateUser(id, body),
-		prepareArgs: ({ row, values }) => {
-			if (!row) throw new Error('The edited user is no longer available')
-			return { id: row.id, body: prepareValues(values) }
-		},
-	},
+	update: ({ id, body }: { id: string; body: Partial<User> }) => updateUser(id, prepareValues(body)),
 	delete: deleteUser,
 	deleteMany: deleteUsers,
 })

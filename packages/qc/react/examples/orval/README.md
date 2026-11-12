@@ -29,8 +29,9 @@ checks. The handwritten adapter, transport and component examples are linted.
   Generated response types are not runtime validation.
 - `convention.ts`: reusable offset/limit, search and sort convention plus cursor
   preparation and response projection. Call `makeSource<Row>()` once per entity.
-- `source.ts`: generated endpoint functions bound to the convention; specific
-  create/update preparation stays here because editable fields are entity-specific.
+- `source.ts`: generated endpoint functions bound to the convention; field
+  preparation stays here because editable fields are entity-specific. The shared
+  factory checks the update row and prepares its API ID once.
 - `grid.tsx`: component and hook entry paths under `QueryClientProvider`.
 
 The API in this example accepts global search and sorting. Column filtering is
@@ -55,7 +56,7 @@ not part of the cache key or business DTO. Mutations do not receive a modal's
 cancellation signal, so closing a pending form does not abort persistence.
 
 `prepareArgs` produces the argument expected by the fetcher, irrespective of its
-HTTP destination. For update, the entity source creates `{ id, body }`, then a
+HTTP destination. For update, the shared factory creates `{ id, body }`, then a
 small wrapper calls Orval's positional `updateUser(id, body)`. Orval places `id`
 in the URL and serializes the body. Bulk deletion calls one generated endpoint
 with `{ ids }`; it does not fall back to separate delete requests.

@@ -289,6 +289,14 @@ export function makeSource<Row extends { id: string }>() {
 			getRows: (page: Page<Row>) => page.items,
 			getRowCount: (page) => page.total,
 		},
+		mutations: {
+			update: {
+				prepareArgs: ({ row, values }) => {
+					if (!row) throw new Error('The edited row is no longer available')
+					return { id: row.id, body: values }
+				},
+			},
+		},
 	})
 }
 ```
@@ -304,23 +312,29 @@ import { makeSource } from './convention'
 import { getUsers, updateUser } from './generated/users'
 import type { User, UserValues } from './generated/users'
 
+function prepareValues(values: Partial<User>): UserValues {
+	if (!values.name?.trim()) throw new Error('Name is required')
+	return { name: values.name }
+}
+
 export const usersSource = makeSource<User>()({
 	key: ['users'],
 	getAll: (args, { signal }) => getUsers(args, { signal }),
-	update: {
-		prepareArgs: ({ row, values }) => {
-			if (!row) throw new Error('User is no longer available')
-			if (!values.name?.trim()) throw new Error('Name is required')
-			return { id: row.id, body: { name: values.name } }
-		},
-		fetcher: ({ id, body }: { id: string; body: UserValues }) => updateUser(id, body),
-	},
+	update: ({ id, body }: { id: string; body: Partial<User> }) => updateUser(id, prepareValues(body)),
 })
 ```
 
 The read wrapper forwards Query's signal separately from business arguments.
-Update preparation produces one typed argument, and its wrapper adapts to Orval's
-positional signature. The generated update function places id/body in HTTP.
+The shared factory owns this project's update convention: require the original
+row, take its API id, and pass the edited values as body. Entity sources inherit
+that preparation, so they do not repeat the row check or ID mapping. This is a
+project policy, not a mandatory connector check: a different convention can use
+rowId directly when it is the API ID.
+
+The entity wrapper adapts to Orval's positional signature. Its `prepareValues` still
+turns `Partial<User>` into the required `UserValues` DTO explicitly; this example does
+not introduce a schema or pretend that form validation narrows the callback type.
+The generated update function places id/body in HTTP.
 The source generates list keys and invalidates its list families after success;
 there is no separate generated-query cache to synchronize.
 
