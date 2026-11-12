@@ -98,17 +98,8 @@ export type BulkDeletingContext<TData> = {
  * confirmation copy under a presentational option.
  */
 export type BulkDeletingConfig<TData> = FeatureToggle & {
-	/**
-	 * One call for the whole selection — the shape a server API for "delete these ids" wants.
-	 *
-	 * Omit it and the grid falls back to {@link DeletingConfig.onDelete}, once per selected row,
-	 * which is what a client-side store needs and means `bulk: true` is the whole config for it.
-	 *
-	 * Either way the deleted ids leave `state.rowSelection` once the handler resolves — a bar
-	 * counting rows that no longer exist is never what anyone wanted, and clearing it by hand
-	 * from every handler was the previous shape's parting gift.
-	 */
-	onDelete?: (ctx: BulkDeletingContext<TData>) => void | Promise<void>
+	/** One call for the resolved selection. Success clears its IDs; rejection preserves them. */
+	onDelete: (ctx: BulkDeletingContext<TData>) => void | Promise<void>
 	/**
 	 * Prompt before deleting. `true` uses count-aware default copy;
 	 * {@link BulkConfirmationConfig} overrides it. Independent of
@@ -125,13 +116,27 @@ export type DeletingConfig<TData> = FeatureToggle & {
 	confirmation?: boolean | ConfirmationConfig<TData>
 	/**
 	 * Delete the current selection in one gesture. `false` / omitted — no bulk affordance;
-	 * `true` — enabled, looping {@link DeletingConfig.onDelete} over the selected rows;
-	 * {@link BulkDeletingConfig} — a single handler for the whole set, its own prompt, or both.
+	 * {@link BulkDeletingConfig} requires a handler for the whole set, with optional confirmation.
+	 * There is no fallback to the single-row handler.
 	 *
 	 * The selection bar renders the Delete button iff this resolves to on and row selection is
 	 * enabled — there is nothing to bulk-delete without a selection.
 	 */
-	bulk?: boolean | BulkDeletingConfig<TData>
+	bulk?: false | BulkDeletingConfig<TData>
+}
+
+/** Validate dynamic configuration as well as statically typed callers. */
+export function bulkDeletingOption<TData>(
+	config: DeletingConfig<TData> | undefined,
+): BulkDeletingConfig<TData> | undefined {
+	if (!config || !isFeatureEnabled(config.bulk)) return undefined
+	const bulk = featureConfig(config.bulk)
+	if (typeof bulk?.onDelete !== 'function') {
+		throw new Error(
+			'[data-grid] Bulk deletion requires deleting.bulk.onDelete; single-row onDelete is not a bulk executor.',
+		)
+	}
+	return bulk
 }
 
 /**
@@ -385,11 +390,8 @@ function selectedRowIds(table: AnyTable): string[] {
 function deselect(table: AnyTable, rowIds: string[]): void {
 	if (rowIds.length === 0) return
 	const removed = new Set(rowIds)
-	writeForeignSlice(
-		table,
-		'rowSelection',
-		(prev: RowSelectionState): RowSelectionState =>
-			Object.fromEntries(Object.entries(prev).filter(([id]) => !removed.has(id))),
+	writeForeignSlice(table, 'rowSelection', (prev: RowSelectionState): RowSelectionState =>
+		Object.fromEntries(Object.entries(prev).filter(([id]) => !removed.has(id))),
 	)
 }
 
@@ -405,24 +407,15 @@ async function deleteRow(table: DeletingTable, rowId: string): Promise<void> {
 async function deleteRows(table: DeletingTable, rowIds: string[]): Promise<void> {
 	const config = deletingOption(table)
 	if (!config) return
-	const bulk = featureConfig(config.bulk)
+	const bulk = bulkDeletingOption(config)
+	if (!bulk) return
 	const rows = rowIds
 		.map((id) => table.getRowModel().rows.find((r) => r.id === id))
 		.filter((r): r is Row<TableFeatures, RowData> => r !== undefined)
 	if (rows.length === 0) return
 	const c = resetController(table)
 	const ids = rows.map((r) => r.id)
-	if (bulk?.onDelete) {
-		await bulk.onDelete({ rowIds: ids, rows, signal: c.signal })
-		deselect(table, ids)
-		return
-	}
-	// No single-call handler: the per-row one, once per row. Sequential rather than
-	// `Promise.all` so a store that mutates an array per call sees each write land, and
-	// so a failure stops the run instead of leaving a partial set half-applied.
-	for (const row of rows) {
-		await config.onDelete({ rowId: row.id, row, signal: c.signal })
-	}
+	await bulk.onDelete({ rowIds: ids, rows, signal: c.signal })
 	deselect(table, ids)
 }
 
@@ -458,8 +451,9 @@ function createDeletingApi(table: DeletingTable): DeletingApi {
 
 			request: () => {
 				const config = deletingOption(table)
-				if (!config || !isFeatureEnabled(config.bulk)) return
-				if (isFeatureEnabled(featureConfig(config.bulk)?.confirmation)) {
+				const bulk = bulkDeletingOption(config)
+				if (!bulk) return
+				if (isFeatureEnabled(bulk.confirmation)) {
 					writeDeleting(table, { pendingBulk: true })
 					return
 				}

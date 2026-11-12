@@ -36,6 +36,7 @@ const NO_MEMO_IMPORT_SYNTAX = [
 export default tseslint.config(
 	{
 		ignores: [
+			'packages/qc/react/examples/orval/generated/**',
 			'**/node_modules/**',
 			'**/dist/**',
 			'**/.next/**',

@@ -1,0 +1,7 @@
+{
+	"title": "qc-react",
+	"description": "Query connectors for React UI",
+	"icon": "Cable",
+	"root": true,
+	"pages": ["index", "api"]
+}

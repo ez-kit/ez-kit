@@ -864,6 +864,11 @@ function isControlledEcho(
 	return true
 }
 
+/** A framework-neutral connection can augment the fully merged instance configuration. */
+export type DataGridConfigTransform<TFeatures extends TableFeatures, TRow extends object> = (
+	config: UseDataGridConfig<TFeatures, TRow>,
+) => UseDataGridConfig<TFeatures, TRow>
+
 /**
  * React hook that constructs the grid's `DataTable` once and returns it on every render.
  *
@@ -907,6 +912,7 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 	instanceConfig: UseDataGridConfig<TFeatures, TRow>,
 	factoryDefaults?: DataGridDefaultOptions<TFeatures, TRow>,
 	bundleDnd?: DndAdapter | null,
+	transformConfig?: DataGridConfigTransform<TFeatures, TRow>,
 ): DataTable<TFeatures, TRow> {
 	const providerDefaults = useDataGridOptions<TFeatures, TRow>()
 	const contextDnd = useDndBundleAdapter()
@@ -914,7 +920,12 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 	// The uncontrolled `<DataGrid data columns />` runs this hook itself, so the kit factory has
 	// no argument to bind its defaults to — the bound `DataGrid` publishes them as context instead.
 	const contextFactoryDefaults = useGridFactoryDefaults<TFeatures, TRow>()
-	const config = mergeGridOptionLayers(factoryDefaults ?? contextFactoryDefaults, providerDefaults, instanceConfig)
+	const mergedConfig = mergeGridOptionLayers(
+		factoryDefaults ?? contextFactoryDefaults,
+		providerDefaults,
+		instanceConfig,
+	)
+	const config = transformConfig?.(mergedConfig) ?? mergedConfig
 	const creating = enabledByHandler(config.creating, 'creating', 'onSave')
 	const editing = enabledByHandler(config.editing, 'editing', 'onSave')
 	const deleting = enabledByHandler(config.deleting, 'deleting', 'onDelete')

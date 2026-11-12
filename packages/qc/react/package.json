@@ -1,0 +1,78 @@
+{
+	"name": "@ez-kit/qc-react",
+	"version": "0.1.0",
+	"description": "Typed Query Connectors for React data grids.",
+	"keywords": [
+		"tanstack-query",
+		"react-query",
+		"react",
+		"query",
+		"loading-state",
+		"typescript"
+	],
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/ez-kit/ez-kit",
+		"directory": "packages/qc/react"
+	},
+	"homepage": "https://github.com/ez-kit/ez-kit/tree/main/packages/qc/react#readme",
+	"bugs": {
+		"url": "https://github.com/ez-kit/ez-kit/issues"
+	},
+	"type": "module",
+	"sideEffects": false,
+	"files": [
+		"dist"
+	],
+	"exports": {
+		"./data-grid": {
+			"types": "./dist/data-grid.d.ts",
+			"import": "./dist/data-grid.js",
+			"default": "./dist/data-grid.js"
+		}
+	},
+	"scripts": {
+		"build": "tsup",
+		"lint": "eslint . --max-warnings=0",
+		"lint:fix": "eslint . --max-warnings=0 --fix",
+		"typecheck": "tsc --project tsconfig.json --noEmit",
+		"test": "vitest run",
+		"test:coverage": "vitest run --coverage",
+		"size": "size-limit",
+		"clean": "rimraf dist coverage",
+		"test:react18": "vitest run --config vitest.react18.config.ts",
+		"example:generate": "node examples/orval/generate.mjs",
+		"example:check": "node examples/orval/generate.mjs --check"
+	},
+	"size-limit": [
+		{
+			"path": "dist/data-grid.js",
+			"limit": "3 kB"
+		}
+	],
+	"devDependencies": {
+		"@ez-kit/react18-env": "workspace:*",
+		"@tanstack/react-query": "^5.105.3",
+		"@types/react": "^19.3.0",
+		"@types/react-dom": "^19.3.0",
+		"react": "^19.3.1",
+		"react-dom": "^19.3.1",
+		"@ez-kit/data-grid-react": "workspace:*",
+		"@ez-kit/data-grid-shadcn": "workspace:*",
+		"@ez-kit/data-grid-heroui": "workspace:*"
+	},
+	"peerDependencies": {
+		"@tanstack/react-query": "^5.0.0",
+		"react": ">=18.0.0",
+		"@ez-kit/data-grid-react": "^0.20.0"
+	},
+	"engines": {
+		"node": ">=20"
+	},
+	"peerDependenciesMeta": {
+		"@ez-kit/data-grid-react": {
+			"optional": true
+		}
+	}
+}

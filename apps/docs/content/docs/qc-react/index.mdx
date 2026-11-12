@@ -1,0 +1,173 @@
+---
+title: '@ez-kit/qc-react'
+description: Connect an existing DataGrid bundle to TanStack Query with reusable API conventions.
+---
+
+`@ez-kit/qc-react/data-grid` connects your grid to TanStack Query v5. The grid owns
+pagination, applied filters and sorting; Query owns server data and the cache.
+The base grid has no Query dependency. Form connectors and SWR/RTK Query adapters
+are outside this release.
+
+## Install
+
+```sh
+pnpm add @ez-kit/qc-react @tanstack/react-query @ez-kit/data-grid-react
+```
+
+React 18 or newer and Query v5 are peers. The shared grid must be **0.20 or newer**
+for its connection bridge. Use the matching grid kit release; HeroUI has its own
+React version requirement. The connector imports neither visual kit.
+
+## Connect a bundle
+
+Build the source and connected bundle outside rendering, and mount them beneath
+your application's `QueryClientProvider`:
+
+```tsx
+import { createDataGrid } from '@ez-kit/data-grid-react'
+import { allDataGridFeatures } from '@ez-kit/data-grid-react/features/all'
+import { allComponents, cellTypes } from '@ez-kit/data-grid-shadcn'
+import { createGridSourceFactory, withQuery } from '@ez-kit/qc-react/data-grid'
+
+type User = { id: string; name: string }
+type Page = { items: User[]; total: number }
+const makeSource = createGridSourceFactory({
+	list: {
+		prepareArgs: ({ pagination }) => ({
+			offset: pagination.pageIndex * pagination.pageSize,
+			limit: pagination.pageSize,
+		}),
+		getRows: (page: Page) => page.items,
+		getRowCount: (page) => page.total,
+	},
+})
+const source = makeSource({
+	key: ['users'],
+	getAll: async ({ offset, limit }, { signal }): Promise<Page> => {
+		const response = await fetch(`/users?offset=${offset}&limit=${limit}`, { signal })
+		if (!response.ok) throw new Error('Could not load users')
+		return response.json()
+	},
+})
+const { DataGrid, useDataGrid } = withQuery(
+	createDataGrid({ components: allComponents, cellTypes, features: allDataGridFeatures }),
+)
+const columns = [{ accessorKey: 'name' as const, header: 'Name' }]
+
+export function Users() {
+	return (
+		<DataGrid
+			dataSource={source}
+			columns={columns}
+			pagination={{ pageSize: 20 }}
+		/>
+	)
+}
+
+export function UsersWithTable() {
+	const table = useDataGrid({ dataSource: source, columns, pagination: { pageSize: 20 } })
+	return <DataGrid table={table} />
+}
+```
+
+Use your kit's `allComponents` and `cellTypes`. `withQuery` preserves bundle
+helpers, custom cell types, context, column configuration and compound components.
+A supplied table is already connected and is not bound a second time. Do not pass
+`data` alongside `dataSource`.
+
+## Pages and infinite reads
+
+This example uses the connected hook and an in-memory API with the same contract
+as a remote endpoint. Change search, sort, page or mode: the table remains the
+owner of query parameters. Both kit tabs execute the same example.
+
+<DataGridDocsExample exampleId='query-source' />
+
+For infinite mode, the factory's `prepareArgs` receives collection criteria and
+`pageSize`. `preparePageArgs({ args, pageParam })` adds the current cursor to the
+request DTO. The cursor is not part of the collection cache key. Cached pages are
+projected into rows; do not additionally call `appendData`.
+
+Sources enable server processing for the connected axes. Map every enabled
+filter/sort axis into request arguments. Draft changes do not fetch until Apply;
+existing input debounce is retained. Changed applied criteria reset pages to zero.
+Only fresh successful totals can correct an out-of-range page. Without a known
+total the connector does not invent a last page.
+
+## Mutations and handlers
+
+Add `create`, `update`, `delete` or `deleteMany` to the source, then explicitly
+enable the matching grid feature. Having an update fetcher does not enable editing.
+An explicit `onSave` or `onDelete` replaces automatic execution **and** automatic
+invalidation for that action. Put lifecycle work in native mutation `options`.
+
+```ts
+const source = makeSource({
+	key: ['users'],
+	getAll: fetchUsers,
+	update: {
+		prepareArgs: ({ row, values }) => {
+			if (!row) throw new Error('User is no longer available')
+			return { id: row.id, body: values }
+		},
+		fetcher: updateUser,
+		options: { onSuccess: () => showSavedMessage() },
+	},
+})
+// <DataGrid dataSource={source} editing={true} ... />
+```
+
+This mutation sketch assumes application functions `fetchUsers`, `updateUser` and
+`showSavedMessage`. The [Orval recipe](#generated-fetchers) has concrete generated
+types and implementations. Preparation is synchronous and produces the fetcher's
+whole argument; the HTTP client decides which fields go to path, query or body.
+Update receives `row`, `rowId`, `values`; `row` can be missing. Delete receives an
+original entity, and deleteMany receives original `rows` plus grid `rowIds`.
+Grid row IDs are not assumed to be API IDs.
+
+Bulk deletion requires one explicit executor: source `deleteMany` or a grid
+`deleting.bulk.onDelete` handler. There is no single-delete fallback. APIs with
+partial-success responses need an application adapter that decides how to report
+failure and refresh data; the connector does not infer per-row success.
+
+## Cache and invalidation
+
+Factory sources use `[...key, 'list', preparedArgs]` and
+`[...key, 'infinite', collectionArgs]`. Include tenant and all request-affecting
+arguments. Functions are not hashed: the same key means interchangeable data,
+regardless of the current fetcher reference.
+
+Successful automatic mutations invalidate both source list families. Add other
+families with `invalidate: { additional: [{ queryKey: ['users-count'] }] }`.
+Each object is a separate filter; `['users-count', 'dashboard']` is one composite
+key, not two keys. `false` disables invalidation; `replace` supplies the entire
+policy. Operation `additional` extends the resolved source policy; operation
+`replace` or `false` replaces it. Native query filter/refetch semantics apply.
+
+Automatic refetch does not delay successful form closing. Native user callbacks
+retain their awaited semantics, optimistic context and original errors.
+`transformError` affects only the error delivered to the grid; it can produce
+`ValidationError` for fields. Unknown errors pass through by default. A refetch
+failure leaves persistence successful and appears in the grid's loading state.
+
+## Pending forms
+
+Save and Cancel disable during validation/submission. Close, Escape or backdrop
+(where allowed by the kit's modal configuration) can dismiss the form; a dispatched
+connected mutation continues and invalidates on success even after unmount.
+Its result cannot modify a newly opened form. Explicit custom handlers retain
+their own cancellation-signal contract.
+
+<DataGridDocsExample exampleId='query-modal' />
+
+## Generated fetchers
+
+The [Orval 8.47.0 example](https://github.com/ez-kit/ez-kit/tree/develop/packages/qc/react/examples/orval)
+contains the OpenAPI schema, pinned generation scripts, generated fetchers without
+hooks, signal wrapper, reusable `makeSource<Row>()`, entity source and both grid
+entry paths. Run `pnpm --filter @ez-kit/qc-react example:check` in the repository
+to regenerate and compare the client. The example is part of package type checking.
+Orval is a generation tool, not a runtime dependency of the connector.
+
+Already have native `queryOptions` / `infiniteQueryOptions`? Use
+[the native source contract](/docs/qc-react/api#native-sources) and keep your keys.

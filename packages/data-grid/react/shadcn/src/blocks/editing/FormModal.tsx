@@ -14,7 +14,7 @@ import type { FormModalProps } from '@ez-kit/data-grid-react'
  * The dialog `creating` and `editing` open in `mode: 'modal'`.
  * Renders a form-level error banner above the body when `formError` is set — one message per
  * line, since a schema joins several form-level issues with a newline —
- * and reflects `isPending` on the Save button (disabled + spinner).
+ * and disables Save/Cancel while form work is pending. Dismissal remains available.
  */
 export function FormModal({ open, title, formError, isPending, onSave, onCancel, children }: FormModalProps) {
 	const messages = useGridMessages()
@@ -43,6 +43,7 @@ export function FormModal({ open, title, formError, isPending, onSave, onCancel,
 				<DialogFooter>
 					<Button
 						variant='outline'
+						disabled={isPending}
 						onClick={onCancel}
 					>
 						{messages.form.cancel}

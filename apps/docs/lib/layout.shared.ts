@@ -7,6 +7,7 @@ export function baseOptions(): BaseLayoutProps {
 		links: [
 			{ text: 'Data Grid', url: '/docs/data-grid', active: 'nested-url' },
 			{ text: 'Form', url: '/docs/form', active: 'nested-url' },
+			{ text: 'qc-react', url: '/docs/qc-react', active: 'nested-url' },
 			{ text: 'Query', url: '/docs/query-react', active: 'nested-url' },
 			{ text: 'zu-store', url: '/docs/zu-store', active: 'nested-url' },
 			{ text: 'va-store', url: '/docs/va-store', active: 'nested-url' },

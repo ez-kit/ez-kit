@@ -1,0 +1,21 @@
+import { expect, test } from '../../fixtures'
+
+test('query source paginates, accumulates infinite pages and changes collection', async ({ page, grid }) => {
+	await grid.open('query-source')
+	await expect(grid.rows()).toHaveCount(3)
+	await expect(page.getByText('Ada', { exact: true })).toBeVisible()
+	await page.getByRole('button', { name: 'Next', exact: true }).click()
+	await expect(page.getByText('Dorothy', { exact: true })).toBeVisible()
+	await expect(page.getByText('Ada', { exact: true })).toHaveCount(0)
+	await page.getByLabel('Pagination mode').selectOption('infinite')
+	await expect(page.getByText('Ada', { exact: true })).toBeVisible()
+	await expect(grid.rows()).toHaveCount(3)
+	await page.getByRole('button', { name: /load more/i }).click()
+	await expect(grid.rows()).toHaveCount(6)
+	await page.getByRole('searchbox', { name: /search/i }).fill('Grace')
+	await expect(page.getByText('Grace', { exact: true })).toBeVisible()
+	await expect(grid.rows()).toHaveCount(1)
+	await page.getByLabel('Pagination mode').selectOption('pages')
+	await expect(grid.rows()).toHaveCount(1)
+	await expect(page.getByText('Grace', { exact: true })).toBeVisible()
+})

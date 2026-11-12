@@ -34,8 +34,12 @@ export function BaseFullExample() {
 				onDelete: ({ row }) => {
 					setData((prev) => prev.filter((r) => r.id !== row.original.id))
 				},
-				// One word: with no handler of its own, bulk delete loops `onDelete` over the selection.
-				bulk: true,
+				bulk: {
+					onDelete: ({ rows }) => {
+						const ids = new Set(rows.map((row) => row.original.id))
+						setData((prev) => prev.filter((row) => !ids.has(row.id)))
+					},
+				},
 			}}
 		/>
 	)

@@ -156,8 +156,7 @@ whenever `deleting.bulk` resolves to on.
 ```tsx
 deleting: {
 	onDelete: ({ row }) => remove(row.original.id),
-	// One word: with no handler of its own, bulk delete loops `onDelete` over the selection.
-	bulk: true,
+	bulk: { onDelete: ({ rows }) => removeMany(rows.map(row => row.original.id)) },
 }
 ```
 

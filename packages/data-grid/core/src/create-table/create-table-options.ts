@@ -4,6 +4,7 @@ import { mapColumns } from '../column/map-columns'
 import { buildColumnInvariants, createColumnStateApi, enforceColumnInvariants, mergePinningSeed } from '../column-state'
 import { DEFAULT_PAGE_SIZE, UNKNOWN_PAGE_COUNT } from '../defaults'
 import { CreatingMode } from '../features/creating'
+import { bulkDeletingOption } from '../features/deleting/deleting'
 import { EditingMode } from '../features/editing'
 import { MANUAL_GROUPED_ROW_MODEL } from '../features/grouping/create-manual-grouped-row-model'
 import { RowActionsPlacement } from '../features/row-actions'
@@ -636,6 +637,7 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 	const creatingCfg = featureConfig(config.creating)
 	const editingCfg = featureConfig(config.editing)
 	const deletingCfg = featureConfig(config.deleting)
+	bulkDeletingOption(deletingCfg)
 
 	const hasSorting = isFeatureEnabled(config.sorting)
 	const hasColumnFiltering = isFeatureEnabled(config.filtering)

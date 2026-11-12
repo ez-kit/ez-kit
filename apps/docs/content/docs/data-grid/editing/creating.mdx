@@ -187,6 +187,25 @@ generated form as `children` — it receives the whole form contract:
   nothing to the grid's state. `null` means valid, or that the form has closed;
 - `errors` — field errors from the last failed save.
 
+### Pending saves and dismissal
+
+Both built-in modals disable Save and Cancel during validation or submission. The close
+control remains available; Escape and backdrop dismissal follow the modal's configured
+behavior. Dismissal resets the form session, and a late success or validation error cannot
+change a newly opened form.
+
+With `withQuery` from `@ez-kit/qc-react/data-grid`, a dispatched mutation continues after
+closing the form or unmounting the grid. Native mutation callbacks and cache invalidation
+still run. Explicit custom `onSave` handlers keep their existing `signal`; aborting that
+signal does not guarantee server rollback.
+
+After the mutation and its user callbacks finish, the modal closes without waiting for
+automatic list refresh. The grid keeps existing rows and reports background fetching;
+a failed refresh does not reopen the saved form. This example uses delayed in-memory
+requests so the two stages can be observed independently:
+
+<DataGridDocsExample exampleId='query-modal' />
+
 ### The generated fields in a layout of your own
 
 Place the entries of `fields` wherever the dialog wants them and save with `onSave` — the fields
