@@ -1,7 +1,7 @@
 import { infiniteQueryOptions, queryOptions, QueryClient, QueryObserver } from '@tanstack/react-query'
 import { expect, expectTypeOf, it } from 'vitest'
 
-import { defineGridDataSource } from './index'
+import { createGridDataSource } from './index'
 
 import type { GridQueryParams } from './types'
 
@@ -15,7 +15,7 @@ const params: GridQueryParams = {
 type User = { id: string; name: string }
 
 it('retains native keys, selected rows and explicit invalidation scope', async () => {
-	const source = defineGridDataSource({
+	const source = createGridDataSource({
 		getAll: {
 			query: () =>
 				queryOptions({
@@ -43,7 +43,7 @@ it('retains native keys, selected rows and explicit invalidation scope', async (
 
 function missingInvalidationPolicy() {
 	// @ts-expect-error External query keys need an explicit invalidation decision, including false.
-	defineGridDataSource({
+	createGridDataSource({
 		getAll: {
 			query: () => queryOptions({ queryKey: ['external'], queryFn: () => Promise.resolve([] as User[]) }),
 			getRows: (rows: User[]) => rows,
@@ -64,7 +64,7 @@ it('preserves independently owned infinite keys without appending generated segm
 			initialPageParam: null as string | null,
 			getNextPageParam: () => null,
 		})
-	const source = defineGridDataSource({
+	const source = createGridDataSource({
 		getAll: { query: list, getRows: (rows: User[]) => rows },
 		getInfinite: { query: infinite, getRows: (rows: User[]) => rows },
 		invalidate: false,

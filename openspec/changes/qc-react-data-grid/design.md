@@ -26,9 +26,9 @@ The base grid consumes rows, totals, loading and operation callbacks. Query opti
 
 ### D2 — Durable: options are the execution contract, fetchers are the convenience API
 
-Expose a low-level `defineGridDataSource` for existing native option factories and `createGridSourceFactory` for reusable API conventions. Public spelling follows the accepted sketch: `getAll`, `getInfinite`, `create`, `update`, `delete`, `deleteMany`; `prepareArgs`, `preparePageArgs`, `getRows`, `getRowCount`, `getNextPageParam`, native `options`, and `transformError`.
+Expose a low-level `createGridDataSource` for existing native option factories and `createGridSourceFactory` for reusable API conventions. Public spelling follows the accepted sketch: `getAll`, `getInfinite`, `create`, `update`, `delete`, `deleteMany`; `prepareArgs`, `preparePageArgs`, `getRows`, `getRowCount`, `getNextPageParam`, native `options`, and `transformError`.
 
-A shared factory returns an entity-source constructor. Entity operations accept a bare fetcher using inherited conventions or an expanded descriptor with operation-specific overrides. This normalizes to the same typed options-based source consumed by the React connector. No implicit deep merging of callbacks; operation configuration overrides factory configuration, with lifecycle composition owned explicitly by the connector. Read overrides retain the API convention’s declared request/response contract. Public `createListSource` and `createInfiniteSource` helpers normalize exceptional endpoint DTOs and selected response shapes for `defineGridDataSource`, inferring their own fetcher types. An operation-level `options` object replaces the factory options object as a whole.
+A shared factory returns an entity-source constructor. Entity operations accept a bare fetcher using inherited conventions or an expanded descriptor with operation-specific overrides. This normalizes to the same typed options-based source consumed by the React connector. No implicit deep merging of callbacks; operation configuration overrides factory configuration, with lifecycle composition owned explicitly by the connector. Read overrides retain the API convention’s declared request/response contract. Public `createListSource` and `createInfiniteSource` helpers normalize exceptional endpoint DTOs and selected response shapes for `createGridDataSource`, inferring their own fetcher types. An operation-level `options` object replaces the factory options object as a whole.
 
 `prepareArgs` transforms grid parameters or operation context into the fetcher's business argument. No mandatory `{path, query, body}` envelope: a generated client owns HTTP layout. Use a normalized transport call `fetcher(args, { signal })` for reads, with one wrapper at the project adapter boundary for generators with different signatures. Mutation dismissal signals are not forwarded automatically. Prepared business arguments, not signals, participate in keys. Defaults reading `row.id` require a declared row constraint; never hide incompatible fetchers with public `any`.
 
@@ -338,9 +338,9 @@ Source additional rules extend defaults; operation additional rules extend the r
 ### 8. Native options integration preserves existing cache keys
 
 ```tsx
-import { defineGridDataSource } from '@ez-kit/qc-react/data-grid'
+import { createGridDataSource } from '@ez-kit/qc-react/data-grid'
 
-const usersSource = defineGridDataSource({
+const usersSource = createGridDataSource({
   getAll: {
     query: params => usersQueries.list(prepareUsersRequest(params)),
     getRows: response => response.items,

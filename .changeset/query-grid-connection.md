@@ -12,3 +12,5 @@ Keep successful persistence independent of background invalidation failures, inc
 Accept native `infiniteQueryOptions` descriptors whose stored page parameters are unknown without weakening the typed cursor callbacks.
 
 Expose typed `createListSource` and `createInfiniteSource` helpers for endpoints outside a shared API convention. Allow unknown totals via `getRowCount` returning `undefined`, and wait for background refetch before correcting a restored page from cached totals.
+
+Expose `createGridDataSource` for adapting existing native TanStack options while preserving their keys and explicit invalidation scope.

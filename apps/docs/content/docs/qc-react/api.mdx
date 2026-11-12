@@ -13,7 +13,7 @@ All exports below come from `@ez-kit/qc-react/data-grid`.
 | `createGridSourceFactory` | Define shared API conventions, then bind per-entity operations.   |
 | `createListSource`        | Normalize a fetcher with its own request/selected response types. |
 | `createInfiniteSource`    | Normalize a cursor fetcher and collection key.                    |
-| `defineGridDataSource`    | Combine native option factories or normalized sources.            |
+| `createGridDataSource`    | Combine native option factories or normalized sources.            |
 
 ## Applied parameters
 
@@ -68,7 +68,7 @@ object. Callbacks are not deep-merged.
 
 Shared read overrides keep the convention's request/response types. For an
 exceptional endpoint DTO or selected response shape, use `createListSource` or
-`createInfiniteSource` and combine them with `defineGridDataSource`. An explicit
+`createInfiniteSource` and combine them with `createGridDataSource`. An explicit
 row generic on an application factory such as `makeSource<User>()` is supported.
 
 ## Invalidation policy
@@ -86,11 +86,11 @@ for operation/source precedence and non-blocking refresh behavior.
 ## Native sources
 
 ```ts
-import { defineGridDataSource } from '@ez-kit/qc-react/data-grid'
+import { createGridDataSource } from '@ez-kit/qc-react/data-grid'
 import { queryOptions } from '@tanstack/react-query'
 
 type User = { id: string; name: string }
-const source = defineGridDataSource({
+const source = createGridDataSource({
 	getAll: {
 		query: ({ pagination }) =>
 			queryOptions({

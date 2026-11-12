@@ -47,8 +47,8 @@ export type GridSourceOperations<
 	deleteMany?: GridMutationSource<GridDeleteManyContext<TRow>, TDeleteMany, TDeleteManyResult, TError, TContext>
 }
 
-/** Declare native options without re-keying an existing application's queries. */
-export function defineGridDataSource<
+/** Adapt native options without re-keying an existing application's queries. */
+export function createGridDataSource<
 	TResponse,
 	TRow extends object,
 	TSelected = TResponse,

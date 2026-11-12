@@ -162,12 +162,230 @@ their own cancellation-signal contract.
 
 ## Generated fetchers
 
-The [Orval 8.47.0 example](https://github.com/ez-kit/ez-kit/tree/develop/packages/qc/react/examples/orval)
-contains the OpenAPI schema, pinned generation scripts, generated fetchers without
-hooks, signal wrapper, reusable `makeSource<Row>()`, entity source and both grid
-entry paths. Run `pnpm --filter @ez-kit/qc-react example:check` in the repository
-to regenerate and compare the client. The example is part of package type checking.
-Orval is a generation tool, not a runtime dependency of the connector.
+The complete flow is **OpenAPI → Orval fetchers → API convention → entity source →
+connected grid**. Orval generates HTTP functions and DTOs; qc-react supplies the
+Query hooks, cache keys and grid connection. Generated React hooks are unnecessary.
+
+### 1. Describe the API
+
+For example, `openapi.yaml` describes offset pagination and a single-user update:
+
+```yaml title="openapi.yaml"
+openapi: 3.0.3
+info: { title: Users, version: 1.0.0 }
+paths:
+  /users:
+    get:
+      operationId: getUsers
+      parameters:
+        - { name: offset, in: query, required: true, schema: { type: integer } }
+        - { name: limit, in: query, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: Users page
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UsersPage' }
+  /users/{id}:
+    patch:
+      operationId: updateUser
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UserValues' }
+      responses:
+        '200':
+          description: Updated user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+components:
+  schemas:
+    User:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string }
+        name: { type: string }
+    UserValues:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+    UsersPage:
+      type: object
+      required: [items, total]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/User' } }
+        total: { type: integer }
+```
+
+The schema decides HTTP placement: offset/limit go in the query string, id in the
+path, and UserValues in the PATCH body. `prepareArgs` does not make that decision.
+
+### 2. Generate fetchers, without hooks
+
+```ts title="orval.config.ts"
+export default {
+	users: {
+		input: './openapi.yaml',
+		output: {
+			target: './generated/users.ts',
+			client: 'fetch',
+			mode: 'single',
+			override: {
+				fetch: { includeHttpResponseReturnType: false },
+				mutator: { path: './transport.ts', name: 'apiFetch' },
+			},
+		},
+	},
+}
+```
+
+One project-wide transport makes non-success responses reject, so Query can report
+errors. Add your API origin or authentication here when required:
+
+```ts title="transport.ts"
+export async function apiFetch<T>(url: string, options: RequestInit): Promise<T> {
+	const response = await fetch(url, options)
+	if (!response.ok) throw new Error(`HTTP ${response.status}`)
+	if (response.status === 204) return undefined as T
+	return response.json() as Promise<T>
+}
+```
+
+```sh
+npm exec --yes --package=orval@8.47.0 -- orval --config orval.config.ts
+```
+
+Orval emits functions with these signatures (this is a summary of generated
+output, not code to implement manually):
+
+```ts
+getUsers(params: GetUsersParams, options?: RequestInit): Promise<UsersPage>
+updateUser(id: string, values: UserValues, options?: RequestInit): Promise<User>
+```
+
+It also generates User, UserValues, UsersPage and GetUsersParams. The transport's
+generic type describes the server contract; it is not runtime response validation.
+
+### 3. Define the API convention once
+
+```ts title="convention.ts"
+import { createGridSourceFactory } from '@ez-kit/qc-react/data-grid'
+
+type Page<Row> = { items: Row[]; total: number }
+
+export function makeSource<Row extends { id: string }>() {
+	return createGridSourceFactory({
+		list: {
+			prepareArgs: ({ pagination }) => ({
+				offset: pagination.pageIndex * pagination.pageSize,
+				limit: pagination.pageSize,
+			}),
+			getRows: (page: Page<Row>) => page.items,
+			getRowCount: (page) => page.total,
+		},
+	})
+}
+```
+
+Reuse this convention for endpoints with the same pagination and response envelope.
+An API supporting search, sorting or column filters adds their serialization here;
+those grid features are left disabled in this minimal recipe.
+
+### 4. Connect one entity
+
+```ts title="users-source.ts"
+import { makeSource } from './convention'
+import { getUsers, updateUser } from './generated/users'
+import type { User, UserValues } from './generated/users'
+
+export const usersSource = makeSource<User>()({
+	key: ['users'],
+	getAll: (args, { signal }) => getUsers(args, { signal }),
+	update: {
+		prepareArgs: ({ row, values }) => {
+			if (!row) throw new Error('User is no longer available')
+			if (!values.name?.trim()) throw new Error('Name is required')
+			return { id: row.id, body: { name: values.name } }
+		},
+		fetcher: ({ id, body }: { id: string; body: UserValues }) => updateUser(id, body),
+	},
+})
+```
+
+The read wrapper forwards Query's signal separately from business arguments.
+Update preparation produces one typed argument, and its wrapper adapts to Orval's
+positional signature. The generated update function places id/body in HTTP.
+The source generates list keys and invalidates its list families after success;
+there is no separate generated-query cache to synchronize.
+
+### 5. Mount the grid
+
+```tsx title="users-grid.tsx"
+'use client'
+
+import { createDataGrid } from '@ez-kit/data-grid-react'
+import { allDataGridFeatures } from '@ez-kit/data-grid-react/features/all'
+import { allComponents, cellTypes } from '@ez-kit/data-grid-shadcn'
+import { withQuery } from '@ez-kit/qc-react/data-grid'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { useState } from 'react'
+import { usersSource } from './users-source'
+
+const { DataGrid, useDataGrid } = withQuery(
+	createDataGrid({ components: allComponents, cellTypes, features: allDataGridFeatures }),
+)
+const columns = [{ accessorKey: 'name' as const, header: 'Name', cell: { type: 'text' as const } }]
+
+export function UsersGrid() {
+	const [client] = useState(() => new QueryClient())
+	return (
+		<QueryClientProvider client={client}>
+			<DataGrid
+				dataSource={usersSource}
+				columns={columns}
+				getRowId={(user) => user.id}
+				pagination={{ pageSize: 20 }}
+				editing={true}
+			/>
+		</QueryClientProvider>
+	)
+}
+```
+
+Use your application's existing QueryClientProvider if it already has one. For
+HeroUI, replace the kit import with `@ez-kit/data-grid-heroui`; include your kit's
+normal styles. Editing stays explicit even though the source has update capability.
+
+If you need the table instance, under the same provider use the connected hook:
+
+```tsx
+function UsersTable() {
+	const table = useDataGrid({
+		dataSource: usersSource,
+		columns,
+		getRowId: (user) => user.id,
+		pagination: { pageSize: 20 },
+		editing: true,
+	})
+	return <DataGrid table={table} />
+}
+```
+
+For an infinite endpoint, the same generated-fetcher wrapper applies:
+`getInfinite: (args, { signal }) => getUsersFeed(args, { signal })`. Add the
+factory's collection `prepareArgs`, cursor `preparePageArgs`, page projection and
+`getNextPageParam`, then enable `pagination: { mode: 'infinite' }`.
+
+The checked repository example at `packages/qc/react/examples/orval` also includes
+infinite reads, create, single deletion and bulk deletion. Run
+`pnpm --filter @ez-kit/qc-react example:check` to regenerate and compare its client.
+Orval is a generation tool, not a runtime dependency of qc-react.
 
 Already have native `queryOptions` / `infiniteQueryOptions`? Use
 [the native source contract](/docs/qc-react/api#native-sources) and keep your keys.

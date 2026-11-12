@@ -50,3 +50,16 @@ production build and root size command in an
 environment permitting Google Fonts (`fonts.googleapis.com` and its font-asset
 host `fonts.gstatic.com`). No font replacement, mocked production-font result or
 network-policy bypass is included in this change.
+
+## PR documentation refinements
+
+The native-options helper is named `createGridDataSource`. The two connected
+examples now use the shared displayed-import rewrite for kit components, with
+runtime kit selection isolated in the registry loader. Both examples remain
+copyable standalone with their default bundle; the embed loader injects the
+selected kit.
+
+The Orval section now contains the complete OpenAPI/config/transport/convention/
+source/grid recipe. Its titled code blocks were extracted from the actual MDX,
+generated with Orval 8.47.0 and successfully type-checked together. Browser coverage
+for both connected examples and the documentation's live kit tabs passed 11/11.

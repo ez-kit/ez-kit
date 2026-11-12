@@ -1,6 +1,6 @@
 import { expectTypeOf, it } from 'vitest'
 
-import { createListSource, createInfiniteSource, defineGridDataSource } from './index'
+import { createListSource, createInfiniteSource, createGridDataSource } from './index'
 
 it('specializes a shared generic projection from the entity fetcher', () => {
 	const getRows = <T extends object>(response: { items: T[] }) => response.items
@@ -31,7 +31,7 @@ it('preserves an explicitly typed API convention in the public factory', async (
 
 it('normalizes exceptional endpoint DTOs through the public helpers without losing row or cursor types', () => {
 	type User = { id: number; name: string }
-	const source = defineGridDataSource({
+	const source = createGridDataSource({
 		getAll: createListSource({
 			key: ['special-users'],
 			fetcher: (_args: { body: { skip: number } }) => Promise.resolve({ records: [{ id: 1, name: 'Ada' }] }),

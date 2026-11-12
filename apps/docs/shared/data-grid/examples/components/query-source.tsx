@@ -2,21 +2,13 @@
 
 import { createDataGrid } from '@ez-kit/data-grid-react'
 import { allDataGridFeatures } from '@ez-kit/data-grid-react/features/all'
-import { allComponents, cellTypes } from '@ez-kit/data-grid-shadcn'
 import { createGridSourceFactory, withQuery } from '@ez-kit/qc-react/data-grid'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { lazy, Suspense, useState } from 'react'
+import { useState } from 'react'
 
-import { useDataGridType } from 'shared/DataGrid'
+import { allComponents, cellTypes } from 'shared/GridKit'
 
-const shadcn = withQuery(createDataGrid({ components: allComponents, cellTypes, features: allDataGridFeatures }))
-const HeroExample = lazy(async () => {
-	const hero = await import('@ez-kit/data-grid-heroui')
-	const kit = withQuery(
-		createDataGrid({ components: hero.allComponents, cellTypes: hero.cellTypes, features: allDataGridFeatures }),
-	)
-	return { default: () => <ExampleRoot kit={kit} /> }
-})
+const defaultKit = withQuery(createDataGrid({ components: allComponents, cellTypes, features: allDataGridFeatures }))
 type User = { id: string; name: string }
 type Criteria = { search: string; descending: boolean; limit: number }
 type Page = { items: User[]; total: number; next: number | null }
@@ -59,7 +51,7 @@ const source = createGridSourceFactory({
 	},
 })({ key: ['query-example-users'], getAll: fetchUsers, getInfinite: fetchUsers })
 const columns = [{ accessorKey: 'name' as const, header: 'Name', cell: { type: 'text' as const } }]
-function ConnectedExample({ kit }: { kit: typeof shadcn }) {
+function ConnectedExample({ kit }: { kit: typeof defaultKit }) {
 	const [mode, setMode] = useState<'pages' | 'infinite'>('pages')
 	const table = kit.useDataGrid({
 		dataSource: source,
@@ -87,7 +79,7 @@ function ConnectedExample({ kit }: { kit: typeof shadcn }) {
 		</>
 	)
 }
-function ExampleRoot({ kit }: { kit: typeof shadcn }) {
+function ExampleRoot({ kit }: { kit: typeof defaultKit }) {
 	const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }))
 	return (
 		<QueryClientProvider client={client}>
@@ -95,11 +87,6 @@ function ExampleRoot({ kit }: { kit: typeof shadcn }) {
 		</QueryClientProvider>
 	)
 }
-export function QuerySourceExample() {
-	const { type } = useDataGridType()
-	return (
-		<Suspense fallback={<p>Loading example…</p>}>
-			{type === 'heroui' ? <HeroExample /> : <ExampleRoot kit={shadcn} />}
-		</Suspense>
-	)
+export function QuerySourceExample({ kit = defaultKit }: { kit?: typeof defaultKit } = {}) {
+	return <ExampleRoot kit={kit} />
 }

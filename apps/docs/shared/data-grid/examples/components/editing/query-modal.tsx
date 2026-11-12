@@ -2,21 +2,13 @@
 
 import { createDataGrid, useDataGridState } from '@ez-kit/data-grid-react'
 import { allDataGridFeatures } from '@ez-kit/data-grid-react/features/all'
-import { allComponents, cellTypes } from '@ez-kit/data-grid-shadcn'
 import { createGridSourceFactory, withQuery } from '@ez-kit/qc-react/data-grid'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { lazy, Suspense, useState } from 'react'
+import { useState } from 'react'
 
-import { useDataGridType } from 'shared/DataGrid'
+import { allComponents, cellTypes } from 'shared/GridKit'
 
-const shadcn = withQuery(createDataGrid({ components: allComponents, cellTypes, features: allDataGridFeatures }))
-const HeroExample = lazy(async () => {
-	const hero = await import('@ez-kit/data-grid-heroui')
-	const kit = withQuery(
-		createDataGrid({ components: hero.allComponents, cellTypes: hero.cellTypes, features: allDataGridFeatures }),
-	)
-	return { default: () => <ConnectedExample kit={kit} /> }
-})
+const defaultKit = withQuery(createDataGrid({ components: allComponents, cellTypes, features: allDataGridFeatures }))
 type User = { id: string; name: string }
 const makeSource = createGridSourceFactory({
 	list: { prepareArgs: (params) => params, getRows: (rows: User[]) => rows },
@@ -64,7 +56,7 @@ function createDemoApi() {
 		},
 	}
 }
-function ConnectedExample({ kit }: { kit: typeof shadcn }) {
+function ConnectedExample({ kit }: { kit: typeof defaultKit }) {
 	const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }))
 	const [failRefresh, setFailRefresh] = useState(false)
 	const [api] = useState(createDemoApi)
@@ -97,11 +89,6 @@ function ConnectedExample({ kit }: { kit: typeof shadcn }) {
 		</QueryClientProvider>
 	)
 }
-export function QueryModalExample() {
-	const { type } = useDataGridType()
-	return (
-		<Suspense fallback={<p>Loading example…</p>}>
-			{type === 'heroui' ? <HeroExample /> : <ConnectedExample kit={shadcn} />}
-		</Suspense>
-	)
+export function QueryModalExample({ kit = defaultKit }: { kit?: typeof defaultKit } = {}) {
+	return <ConnectedExample kit={kit} />
 }

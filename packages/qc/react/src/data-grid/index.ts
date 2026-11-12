@@ -1,5 +1,5 @@
 export { createGridSourceFactory } from './factory'
-export { defineGridDataSource } from './source'
+export { createGridDataSource } from './source'
 export type { InvalidationPolicy } from './invalidation'
 export type {
 	GridQueryParams,

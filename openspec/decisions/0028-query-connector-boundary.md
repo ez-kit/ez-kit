@@ -33,7 +33,7 @@ supply its row type once in `makeSource<User>()`. Bare fetchers inherit defaults
 expanded operations replace supplied properties, and `options` replaces the whole
 options object without deep-merging callbacks. Independent endpoint request or
 selected-result types use `createListSource` / `createInfiniteSource` with
-`defineGridDataSource`. Public inference must not hide mismatches behind `any`.
+`createGridDataSource`. Public inference must not hide mismatches behind `any`.
 
 `prepareArgs` is synchronous and constructs the fetcher's argument, not a mandated
 HTTP envelope. Generated clients own path/query/body placement; read wrappers

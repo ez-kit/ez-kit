@@ -170,7 +170,7 @@ is one composite key, not a request to invalidate both top-level keys.
 
 Source policies apply to the default list families. Operation policies then apply
 to the resolved source policy: omitted inherits, `false` disables, `additional`
-appends and `replace` replaces everything. `defineGridDataSource` preserves native
+appends and `replace` replaces everything. `createGridDataSource` preserves native
 keys and requires an explicit `invalidate` policy (use `false` to opt out).
 
 Mutation failures do not launch automatic invalidation. User lifecycle retains
@@ -236,15 +236,15 @@ const source = makeSource<User>()({
 The read request and response types still belong to the declared convention.
 For an endpoint with a different DTO/envelope or a `select` returning a different
 shape, use the public `createListSource` / `createInfiniteSource` helpers and
-assemble a `defineGridDataSource`. These helpers infer from that endpoint's fetcher
+assemble a `createGridDataSource`. These helpers infer from that endpoint's fetcher
 and keep Query's raw cached response separate from its selected projection:
 
 ```ts
-import { createListSource, defineGridDataSource } from '@ez-kit/qc-react/data-grid'
+import { createListSource, createGridDataSource } from '@ez-kit/qc-react/data-grid'
 
 // searchUsers accepts { body: { skip: number; take: number } } plus { signal },
 // returning Promise<{ records: User[] }>.
-const source = defineGridDataSource({
+const source = createGridDataSource({
 	getAll: createListSource({
 		key: ['user-search'],
 		fetcher: searchUsers,
