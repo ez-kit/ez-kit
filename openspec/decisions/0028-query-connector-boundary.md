@@ -1,6 +1,6 @@
 # 0028. Query connectors extend existing grid bundles
 
-- Status: Accepted
+- Status: Superseded by [0031](./0031-query-collections-and-ui-connectors.md) for generic execution ownership; existing grid and cache guarantees retained
 - Recorded: 2026-11-12
 - Related: [0003](./0003-consumer-composed-features.md), [0016](./0016-bundle-types-inline-columns.md), [0026](./0026-composed-grid-reactivity.md)
 

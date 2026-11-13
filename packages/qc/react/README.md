@@ -310,3 +310,37 @@ See the [reproducible Orval example](examples/orval/README.md) for a pinned
 generator, OpenAPI schema, generated fetch-only client, shared API convention,
 entity source and component/hook entry paths. Regeneration and the example
 are covered by package scripts and TypeScript checks.
+
+## Reuse an ordinary collection source
+
+`adaptCollectionToGrid(source, mapping)` connects a source from
+`@ez-kit/query-react/collection` to the existing `withQuery(bundle)` API. `mapping.params`
+converts applied grid parameters to ordinary read parameters; `mapping.infiniteParams` does
+that for infinite reads. The `create`, `update`, `delete` and `deleteMany` mappings convert
+grid action contexts to the corresponding collection mutation input. Incompatible inputs
+require explicit mappings. Keys and invalidation remain owned by the collection source.
+
+```tsx
+const dataSource = adaptCollectionToGrid(usersSource, {
+	params: ({ pagination, globalFilter }) => ({
+		search: typeof globalFilter === 'string' ? globalFilter : '',
+		offset: pagination.pageIndex * pagination.pageSize,
+		limit: pagination.pageSize,
+	}),
+	update: ({ row, values }) => {
+		if (!row) throw new Error('User is no longer available')
+		return { id: row.id, name: values.name ?? row.name }
+	},
+})
+const { DataGrid } = withQuery(gridBundle)
+// <DataGrid dataSource={dataSource} columns={columns} editing />
+```
+
+The grid still owns applied/draft parameters, atomic page resets and fresh-total bounds correction.
+Actions require explicit enablement; explicit handlers replace automatic execution. Original native
+errors remain in Query and its callbacks; `mapping.transformError` adapts failures only for grid forms.
+
+Existing grid source factories and native sources retain their previous lifecycle: preparation
+happens before dispatch and callbacks receive the prepared variables. New collection fetcher
+sources prepare inside mutationFn and callbacks receive the original collection input. Both use
+the shared collection runtime; adopting the new source API is explicit, not a silent callback change.

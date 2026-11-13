@@ -1,8 +1,7 @@
 import { useDataGridSelector } from '@ez-kit/data-grid-react'
-import { hashKey, replaceEqualDeep, useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import { useCollectionQuery } from '@ez-kit/query-react/collection'
+import { hashKey, replaceEqualDeep } from '@tanstack/react-query'
 import { createElement, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-
-import { useGridMutation } from './mutation-source'
 
 import type { GridMutationSource } from './mutation-source'
 import type {
@@ -39,12 +38,14 @@ import type {
 	InvalidateQueryFilters,
 	UseInfiniteQueryOptions,
 	UseQueryOptions,
+	UseQueryResult,
+	UseInfiniteQueryResult,
 } from '@tanstack/react-query'
 import type { ReactElement } from 'react'
 
 /** Sources retain their concrete options types; the connection only needs their row contract. */
 export type GridDataSource<TRow extends object> = {
-	getAll: {
+	getAll?: {
 		query: (params: GridQueryParams) => unknown
 		getRows: (data: never) => readonly TRow[]
 		getRowCount?: (data: never) => number | undefined
@@ -111,7 +112,7 @@ type RuntimeSource<R extends object> = {
 	deleteMany?: GridMutationSource<GridDeleteManyContext<R>, unknown, unknown, unknown>
 	invalidation?: readonly InvalidateQueryFilters[]
 	transformError?: (error: unknown) => unknown
-	getAll: {
+	getAll?: {
 		query: (params: GridQueryParams) => UseQueryOptions<unknown, unknown>
 		getRows: (data: unknown) => readonly R[]
 		getRowCount?: (data: unknown) => number | undefined
@@ -124,10 +125,6 @@ type RuntimeSource<R extends object> = {
 type Projection<R> = { data: R[]; loading: LoadingState; rowCount: number | undefined; hasNextPage: boolean }
 const useCommitEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 const EMPTY: never[] = []
-const MISSING_MUTATION = {
-	mutation: { mutationFn: () => Promise.reject(new Error('Missing grid mutation executor')) },
-	prepareArgs: () => undefined,
-}
 function enabled(value: unknown): boolean {
 	return (
 		value !== undefined &&
@@ -168,11 +165,26 @@ export function withQuery<
 		// Query options and their projections cross this boundary together. Their response
 		// type is opaque to the connector; only the projection consumes the selected value.
 		const source = dataSource as unknown as RuntimeSource<object>
-		const rules = source.invalidation ?? EMPTY
-		const create = useGridMutation(source.create ?? MISSING_MUTATION, rules, source.transformError)
-		const update = useGridMutation(source.update ?? MISSING_MUTATION, rules, source.transformError)
-		const remove = useGridMutation(source.delete ?? MISSING_MUTATION, rules, source.transformError)
-		const removeMany = useGridMutation(source.deleteMany ?? MISSING_MUTATION, rules, source.transformError)
+		const mutations = useRef<Record<string, { mutateAsync: (input: unknown) => Promise<unknown> }>>({})
+		function action(name: 'create' | 'update' | 'delete' | 'deleteMany') {
+			return {
+				execute: async (input: never) => {
+					const operation = source[name]
+					if (!operation) throw new Error(`Missing grid ${name} executor`)
+					try {
+						const mutation = mutations.current[name]
+						if (!mutation) throw new Error(`Missing grid ${name} mutation`)
+						await mutation.mutateAsync(operation.prepareArgs(input))
+					} catch (error) {
+						throw (operation.transformError ?? source.transformError)?.(error) ?? error
+					}
+				},
+			}
+		}
+		const create = action('create') as { execute: (input: GridCreateContext<object>) => Promise<void> }
+		const update = action('update') as { execute: (input: GridUpdateContext<object>) => Promise<void> }
+		const remove = action('delete') as { execute: (input: GridDeleteContext<object>) => Promise<void> }
+		const removeMany = action('deleteMany') as { execute: (input: GridDeleteManyContext<object>) => Promise<void> }
 
 		const [projection, setProjection] = useState<Projection<object>>({
 			data: EMPTY,
@@ -292,32 +304,58 @@ export function withQuery<
 			previousCriteria.current = criteria
 			if (reset && axes.pagination.pageIndex !== 0) table.setPageIndex(0)
 		}, [criteria, reset, axes.pagination.pageIndex, table])
-		const listOptions = source.getAll.query(params)
-		const pageOptions = source.getInfinite?.query({
-			sorting: params.sorting,
-			columnFilters: params.columnFilters,
-			globalFilter: params.globalFilter,
-			pageSize: params.pagination.pageSize,
-		})
-		const list = useQuery({ ...listOptions, ...(infiniteMode ? { enabled: false } : {}) })
-		const pages = useInfiniteQuery({
-			...(pageOptions ?? {
-				queryKey: ['qc', 'inactive-infinite'],
-				initialPageParam: null,
-				getNextPageParam: () => undefined,
-				queryFn: () => Promise.resolve(null),
+		const collectionSource = useMemo(
+			() => ({
+				...(source.getAll
+					? {
+							getAll: {
+								query: source.getAll.query,
+								getItems: source.getAll.getRows,
+								...(source.getAll.getRowCount ? { getTotal: source.getAll.getRowCount } : {}),
+							},
+						}
+					: {}),
+				...(source.getInfinite
+					? { getInfinite: { query: source.getInfinite.query, getItems: source.getInfinite.getRows } }
+					: {}),
+				...(source.create ? { create: source.create } : {}),
+				...(source.update ? { update: source.update } : {}),
+				...(source.delete ? { delete: source.delete } : {}),
+				...(source.deleteMany ? { deleteMany: source.deleteMany } : {}),
+				invalidation: source.invalidation ?? EMPTY,
 			}),
-			...(!infiniteMode || !pageOptions ? { enabled: false } : {}),
+			[source],
+		)
+		// The runtime source crosses one opaque response boundary; modes are checked below.
+		const collection = useCollectionQuery(
+			infiniteMode
+				? {
+						source: collectionSource,
+						mode: 'infinite',
+						params: {
+							sorting: params.sorting,
+							columnFilters: params.columnFilters,
+							globalFilter: params.globalFilter,
+							pageSize: params.pagination.pageSize,
+						},
+					}
+				: { source: collectionSource, mode: 'pages', params },
+		)
+
+		useCommitEffect(() => {
+			mutations.current = {
+				...(collection.create ? { create: collection.create } : {}),
+				...(collection.update ? { update: collection.update } : {}),
+				...(collection.delete ? { delete: collection.delete } : {}),
+				...(collection.deleteMany ? { deleteMany: collection.deleteMany } : {}),
+			}
 		})
-		const current = infiniteMode ? pages : list
-		const data = useMemo(() => {
-			if (infiniteMode) return pages.data?.pages.flatMap((page) => source.getInfinite?.getRows(page) ?? EMPTY) ?? EMPTY
-			return list.data === undefined ? EMPTY : [...source.getAll.getRows(list.data)]
-		}, [infiniteMode, pages.data, list.data, source])
-		const rowCount =
-			!infiniteMode && !list.isPlaceholderData && list.data !== undefined
-				? source.getAll.getRowCount?.(list.data)
-				: undefined
+		const current = collection.query
+		const list = current as UseQueryResult<unknown, unknown>
+		const pages = current as UseInfiniteQueryResult<InfiniteData<unknown>, unknown>
+		const data = collection.items as object[]
+		const rowCount = !infiniteMode && !list.isPlaceholderData ? collection.total : undefined
+
 		const next = {
 			data: replaceEqualDeep(projection.data, data),
 			rowCount,

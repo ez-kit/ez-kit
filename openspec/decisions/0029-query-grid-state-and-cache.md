@@ -1,6 +1,6 @@
 # 0029. Tables own query parameters; Query owns cached responses
 
-- Status: Accepted
+- Status: Superseded by [0031](./0031-query-collections-and-ui-connectors.md) for generic execution ownership; existing grid and cache guarantees retained
 - Recorded: 2026-11-12
 - Related: [0028](./0028-query-connector-boundary.md), [0026](./0026-filter-input-commit-policy.md)
 

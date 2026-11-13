@@ -236,6 +236,7 @@ export const DocPage = {
 	VaStability: 'content/docs/va-store/stability.mdx',
 	// --- @ez-kit/query-react ---
 	QueryAi: 'content/docs/query-react/ai.mdx',
+	QueryCollection: 'content/docs/query-react/collection.mdx',
 	QueryDataUnderGate: 'content/docs/query-react/data-under-gate.mdx',
 	QueryIndex: 'content/docs/query-react/index.mdx',
 	QueryInfinite: 'content/docs/query-react/infinite-query.mdx',
@@ -1892,6 +1893,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{ page: DocPage.QueryInfinite, optionTables: [], nonOptionTables: [] },
 	{ page: DocPage.QueryMutation, optionTables: [], nonOptionTables: [] },
 	{ page: DocPage.QueryMutationWorkflows, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.QueryCollection, optionTables: [], nonOptionTables: [] },
 	{ page: DocPage.QuerySsrPrefetch, optionTables: [], nonOptionTables: [] },
 	{
 		page: DocPage.QueryStates,

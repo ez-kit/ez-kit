@@ -88,3 +88,12 @@ authentication and response validation. IDs in this schema are URL-safe IDs.
 `test/orval.test.ts` exercises the actual generated functions through a mocked
 HTTP boundary, including query encoding, cursor pagination, Query signals,
 path/body placement, bulk deletion, 204 responses and HTTP failures.
+
+## Reuse outside the grid
+
+`collection.ts` uses `createCollectionSourceFactory` from `@ez-kit/query-react/collection`.
+Its generic application convention supplies the page envelope once, and Orval fetchers remain
+ordinary functions. `usersCollection` can be passed directly to `useCollectionQuery` with
+`{ offset, limit, search }` parameters. `collectionGridSource` adapts that same source to the
+existing connected grid, without changing keys or duplicating CRUD execution. The generated
+client remains responsible for path/query/body placement; the adapter only translates UI state.

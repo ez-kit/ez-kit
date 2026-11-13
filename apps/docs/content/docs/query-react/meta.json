@@ -8,6 +8,7 @@
 		"states",
 		"data-under-gate",
 		"infinite-query",
+		"collection",
 		"mutation",
 		"mutation-workflows",
 		"ssr-prefetch",

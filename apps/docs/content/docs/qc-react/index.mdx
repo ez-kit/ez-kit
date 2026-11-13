@@ -444,3 +444,37 @@ Orval is a generation tool, not a runtime dependency of qc-react.
 
 Already have native `queryOptions` / `infiniteQueryOptions`? Use
 [the native source contract](/docs/qc-react/api#native-sources) and keep your keys.
+
+## Share a collection with an ordinary list
+
+`@ez-kit/query-react/collection` owns reusable collection reads and mutations. Use
+`adaptCollectionToGrid` when the same business source also powers an ItemGroup or another list.
+The adapter maps applied table parameters and action contexts; it preserves the collection's keys.
+
+```tsx
+import { adaptCollectionToGrid, withQuery } from '@ez-kit/qc-react/data-grid'
+
+const dataSource = adaptCollectionToGrid(usersSource, {
+	params: ({ pagination, globalFilter }) => ({
+		offset: pagination.pageIndex * pagination.pageSize,
+		limit: pagination.pageSize,
+		search: typeof globalFilter === 'string' ? globalFilter : '',
+	}),
+	update: ({ row, values }) => {
+		if (!row) throw new Error('User is no longer available')
+		return { id: row.id, name: values.name ?? row.name }
+	},
+})
+const { DataGrid } = withQuery(gridBundle)
+// <DataGrid dataSource={dataSource} columns={columns} editing />
+```
+
+Here `usersSource` is a collection source whose update input is `{ id, name }`, not an existing
+grid source. Its `prepareArgs` runs inside mutationFn and its callbacks receive that original input.
+Existing `createGridSourceFactory` and native grid sources retain their prepared-variable callbacks.
+The connector still owns page resets, applied draft criteria and form error conversion. Explicit
+handlers still replace automatic actions, and editing still requires explicit enablement.
+
+See [Collections](/docs/query-react/collection) for the complete ordinary CRUD list, arbitrary
+parameters, infinite reads and the new source contract. The checked Orval recipe includes both
+`usersCollection` and `collectionGridSource` in `packages/qc/react/examples/orval/collection.ts`.

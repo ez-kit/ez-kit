@@ -648,6 +648,10 @@ importers:
         version: 19.3.1(react@19.3.1)
 
   packages/qc/react:
+    dependencies:
+      '@ez-kit/query-react':
+        specifier: workspace:*
+        version: link:../../query/react
     devDependencies:
       '@ez-kit/data-grid-heroui':
         specifier: workspace:*

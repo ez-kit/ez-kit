@@ -88,3 +88,26 @@ it('rejects HTTP failures and preserves JSON or text payloads for error mapping'
 	await expect(createUser({ name: 'Ada' })).rejects.toMatchObject({ status: 422, payload: { name: 'Already exists' } })
 	await expect(deleteUser('1')).rejects.toEqual(new ApiError(503, 'Unavailable'))
 })
+
+it('shares the generated collection request with its grid adapter', async () => {
+	const { usersCollection, collectionGridSource } = await import('../examples/orval/collection')
+	const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ items: [], total: 0 })))
+	vi.stubGlobal('fetch', fetcher)
+	const client = new QueryClient()
+	try {
+		const options = usersCollection.queries.list({ offset: 20, limit: 10, search: 'Ada' })
+		await client.fetchQuery(options)
+		expect(
+			collectionGridSource.getAll?.query({
+				pagination: { pageIndex: 2, pageSize: 10 },
+				globalFilter: 'Ada',
+				sorting: [],
+				columnFilters: [],
+			}),
+		).toMatchObject({ queryKey: options.queryKey })
+		const url = new URL(String(fetcher.mock.calls[0]?.[0]), 'https://example.test')
+		expect(Object.fromEntries(url.searchParams)).toEqual({ offset: '20', limit: '10', search: 'Ada' })
+	} finally {
+		client.clear()
+	}
+})

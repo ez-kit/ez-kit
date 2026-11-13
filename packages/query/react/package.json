@@ -30,6 +30,11 @@
 			"types": "./dist/index.d.ts",
 			"import": "./dist/index.js",
 			"default": "./dist/index.js"
+		},
+		"./collection": {
+			"types": "./dist/collection.d.ts",
+			"import": "./dist/collection.js",
+			"default": "./dist/collection.js"
 		}
 	},
 	"main": "./dist/index.js",
@@ -49,6 +54,10 @@
 		{
 			"path": "dist/index.js",
 			"limit": "550 B"
+		},
+		{
+			"path": "dist/collection.js",
+			"limit": "1.6 kB"
 		}
 	],
 	"devDependencies": {

@@ -1,0 +1,127 @@
+---
+title: Collections
+description: Typed server collections and CRUD operations for ordinary lists and data-grid connectors.
+---
+
+`useCollectionQuery` executes a collection source under your existing `QueryClientProvider`.
+It does not own list state or render UI. Import it from `@ez-kit/query-react/collection`.
+
+## A complete CRUD list
+
+<LivePreview
+	path='query-react/collection-list'
+	title='One collection source, ordinary shadcn items'
+/>
+
+Search and pagination belong to this component. Changing search resets offset in the same state
+update, so no request uses the new search with the previous offset. After deletion, the component
+corrects an out-of-range offset only after receiving a fresh successful total.
+
+## Sources and arbitrary parameters
+
+```tsx
+import { createCollectionSource, useCollectionQuery } from '@ez-kit/query-react/collection'
+
+const source = createCollectionSource({
+	key: ['users'],
+	getAll: {
+		prepareArgs: (params: { teamId: string; offset: number; limit: number }) => ({
+			path: { teamId: params.teamId },
+			query: { offset: params.offset, limit: params.limit },
+		}),
+		fetcher: fetchUsers,
+		getItems: (response) => response.items,
+		getTotal: (response) => response.total,
+	},
+})
+const users = useCollectionQuery({
+	source,
+	mode: 'pages',
+	params: { teamId, offset: 0, limit: 20 },
+})
+```
+
+`params` is inferred from the source. It can use your own filter, sort and pagination shape.
+The hook forwards it without modifying it. Include every response-affecting input, including
+tenant identity, in prepared arguments or the base key. Fetchers receive a separate `{ signal }`
+transport argument; generated clients remain responsible for URL, query and body placement.
+
+`items` is the projected collection and `total` is optional. `query` is the native active query
+result, including loading, disabled, placeholder, refetch and error states. Projections consume
+selected observer data; they do not replace the original cached response.
+
+## Mutations
+
+```tsx
+update: {
+  prepareArgs: (input: { id: string; name: string }) => ({
+    path: { id: input.id }, body: { name: input.name },
+  }),
+  fetcher: updateUser,
+  options: {
+    onSuccess: (saved, input) => console.log(saved.id, input.id),
+  },
+}
+// In a consumer:
+await users.update.mutateAsync({ id: '42', name: 'Alice' })
+```
+
+Only configured `create`, `update`, `delete` and `deleteMany` operations are available. Each is a
+native mutation result: use `mutate`, `mutateAsync`, `isPending`, `error`, `data`, `variables` and
+`reset`. There is no `execute` method. Each operation has its own input, fetcher argument, result,
+error and optimistic-context types. The error default respects TanStack's registered default error.
+
+Preparation runs inside `mutationFn`, after `onMutate`. Lifecycle callbacks receive the original
+input. Preparation failures enter the native error lifecycle, and enabled retries repeat preparation.
+Keep preparation pure; put stable operation IDs in the input rather than generating them on retry.
+Handle `mutateAsync` rejections in event handlers. Bulk deletion requires an explicit fetcher;
+the hook does not loop over single deletion or infer partial success.
+
+## Invalidation and native options
+
+Generated keys use separate `list` and `infinite` families beneath the base key. Successful
+mutations invalidate both families without waiting for background refresh. Slow or failed refreshes
+do not turn successful persistence into failed persistence. User lifecycle promises are still awaited.
+
+Use `invalidate: false`, `{ additional: [{ queryKey: ['users-count'] }] }`, or
+`{ replace: [...] }` at source or operation level. Operation policies override or extend source rules.
+Each additional filter selects a separate family; one queryKey array remains one composite key.
+
+Native read descriptors provide `query(params)`, `getItems` and optional `getTotal`; native mutation
+descriptors provide `mutation` options. These preserve external keys and variable types. Supply an
+explicit invalidation policy for native sources. Fetcher and native mutation descriptors are distinct:
+a native mutation already defines its input and does not take another `prepareArgs`.
+
+Automatic invalidation is attached at hook scope and survives observer unmount. Per-call callbacks
+retain TanStack's observer-dependent lifetime. Mutation errors are not converted into form errors here;
+a UI connector can adapt them at its own boundary.
+
+## Infinite-only collections
+
+A source can define only `getInfinite`; `getAll` is not required. Use `mode: 'infinite'` and the
+parameters inferred for that operation. `prepareArgs` creates collection arguments, while
+`preparePageArgs({ args, pageParam })` creates each request. `initialPageParam` and `getNextPageParam`
+retain native cursor types. Cursors do not change collection identity.
+
+The hook projects loaded pages into `items`; call `query.fetchNextPage()` and observe
+`query.hasNextPage`, `query.isFetchingNextPage` and `query.isFetchNextPageError`. Existing items remain
+on next-page failure. `total` is undefined for infinite reads; custom metadata remains in native page
+data. The hook adds no scroll observer. A source supporting both modes can switch without remounting.
+
+## Reuse conventions and connect a grid
+
+`createCollectionSourceFactory` defines shared `list`, `infinite` and `mutations` defaults. Supply
+entity fetchers to the returned factory; expanded operations override supplied properties. An
+operation's `options` replaces the options object rather than deep-merging callbacks. An application
+factory can specialize an entity type once when a generic response envelope needs it.
+
+Use `adaptCollectionToGrid` from `@ez-kit/qc-react/data-grid` to map table parameters and action
+contexts to a collection source. `withQuery(bundle)` then consumes that dataSource. The collection
+has no grid dependency; tables still own applied filters, page resets and form sessions.
+See [the connector guide](/docs/qc-react) for grid integration.
+
+Fetcher mutations default `mutationKey` to `[...baseKey, operationName]`. Include tenant ownership
+in the base key when switching between tenant-specific sources: a mutation already dispatched for
+one tenant keeps that scope when the hook switches to a differently keyed source. Explicit mutation
+keys override this default. Native mutation descriptors preserve supplied keys and TanStack's normal
+observer behavior; changing callbacks under the same key does not create an isolated operation scope.
