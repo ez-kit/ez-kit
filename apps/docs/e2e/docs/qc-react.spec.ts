@@ -5,12 +5,25 @@ test('connector guide resolves its registered grid previews and API page', async
 	expect(response?.status()).toBe(200)
 	await expect(page.getByRole('heading', { level: 1, name: '@ez-kit/qc-react' })).toBeVisible()
 	for (const kit of ['shadcn', 'heroui']) {
-		if (kit === 'heroui') await page.getByRole('tab', { name: 'HeroUI', exact: true }).first().click()
+		if (kit === 'heroui') {
+			await page.getByRole('tab', { name: 'HeroUI', exact: true }).first().click()
+			await expect(page).toHaveURL(/\?kit=heroui/)
+			await expect(page.getByRole('tab', { name: 'HeroUI', exact: true }).first()).toHaveAttribute(
+				'aria-selected',
+				'true',
+			)
+		}
 		for (const id of ['query-source', 'query-modal']) {
 			const frame = page.getByTitle(`${kit} example: ${id}`, { exact: true })
-			await frame.scrollIntoViewIfNeeded()
-			await expect(frame).toHaveAttribute('src', new RegExp(`/examples/${kit}/${id}`))
-			await expect(frame.contentFrame().getByRole('table')).toBeVisible()
+			// Hydration can replace the fallback iframe, and earlier previews resizing can
+			// move this lazy iframe out of view. Retry the scroll together with readiness.
+			await expect(async () => {
+				await frame.scrollIntoViewIfNeeded({ timeout: 1_000 })
+				await expect(frame).toHaveAttribute('src', new RegExp(`/examples/${kit}/${id}`), { timeout: 1_000 })
+				await expect(frame.contentFrame().getByRole(kit === 'heroui' ? 'grid' : 'table')).toBeVisible({
+					timeout: 1_000,
+				})
+			}).toPass({ timeout: 15_000 })
 		}
 	}
 	await expect(page.getByRole('heading', { name: /Generate fetchers, without hooks/ })).toBeVisible()
