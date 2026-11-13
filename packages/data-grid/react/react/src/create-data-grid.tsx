@@ -20,7 +20,7 @@ import type { DataGridDefaultOptions } from './data-grid-options-context'
 import type { GridContextReader, GridContextRecord } from './grid-context'
 import type { ColumnDef, ColumnHelper } from './react-columns'
 import type { DataTable, GridFeatures } from './types'
-import type { UseDataGridConfig } from './use-data-grid'
+import type { DataGridConfigTransform, UseDataGridConfig } from './use-data-grid'
 import type {
 	ColumnConfigShape,
 	ColumnDef as CoreColumnDef,
@@ -310,6 +310,7 @@ export type BoundUseDataGrid<
 	TExtra extends CellTypeRegistry = NoExtraCellTypes,
 >(
 	config: BoundUseDataGridConfig<TConfigFeatures, TRow, TContext, TCellTypes, TExtra, TColumnConfig>,
+	transformConfig?: DataGridConfigTransform<TConfigFeatures, TRow>,
 ) => DataTable<TConfigFeatures, TRow>
 
 /**
@@ -334,6 +335,7 @@ export type ContextBoundUseDataGrid<
 	TColumnConfig extends ColumnConfigShape = UncheckedColumnConfig,
 > = <TFeatures extends TableFeatures, TRow extends object, TExtra extends CellTypeRegistry = NoExtraCellTypes>(
 	config: RegistryUseDataGridConfig<TFeatures, TRow, TContext, TCellTypes, TExtra, TColumnConfig>,
+	transformConfig?: DataGridConfigTransform<TFeatures, TRow>,
 ) => DataTable<TFeatures, TRow>
 
 /**
@@ -522,6 +524,7 @@ export function createDataGrid<
 	// that layer off before any child renders, so the fallback never picks up a foreign kit's.
 	function useDataGridWithDefaults<TConfigFeatures extends TableFeatures, TRow extends object>(
 		config: UseDataGridConfig<TConfigFeatures, TRow>,
+		transformConfig?: DataGridConfigTransform<TConfigFeatures, TRow>,
 	): DataTable<TConfigFeatures, TRow> {
 		return useDataGrid<TConfigFeatures, TRow>(
 			config,
@@ -529,6 +532,7 @@ export function createDataGrid<
 			// The controlled form runs this in the consumer's tree, outside `DndBundleProvider`, so
 			// the adapter is handed over the way the defaults are.
 			dnd ?? null,
+			transformConfig,
 		)
 	}
 

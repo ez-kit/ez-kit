@@ -60,6 +60,7 @@ export const SCANNED_ROOTS: readonly string[] = [
 	'content/docs/zu-store',
 	'content/docs/va-store',
 	'content/docs/query-react',
+	'content/docs/qc-react',
 ]
 
 /** A page under a scanned root that is deliberately not classified, with the reason it checks nothing. */
@@ -81,6 +82,8 @@ export const DELIBERATELY_UNMAPPED: readonly UnmappedPage[] = [
 
 /** In-scope documentation pages, relative to `apps/docs/`. */
 export const DocPage = {
+	QcIndex: 'content/docs/qc-react/index.mdx',
+	QcApi: 'content/docs/qc-react/api.mdx',
 	AdvancedReact: 'content/docs/data-grid/advanced/react.mdx',
 	AdvancedCore: 'content/docs/data-grid/advanced/core.mdx',
 	Ai: 'content/docs/data-grid/ai.mdx',
@@ -233,6 +236,7 @@ export const DocPage = {
 	VaStability: 'content/docs/va-store/stability.mdx',
 	// --- @ez-kit/query-react ---
 	QueryAi: 'content/docs/query-react/ai.mdx',
+	QueryCollection: 'content/docs/query-react/collection.mdx',
 	QueryDataUnderGate: 'content/docs/query-react/data-under-gate.mdx',
 	QueryIndex: 'content/docs/query-react/index.mdx',
 	QueryInfinite: 'content/docs/query-react/infinite-query.mdx',
@@ -1838,6 +1842,46 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		optionTables: [],
 		nonOptionTables: [{ heading: 'Toolchain notes', reason: 'Lists toolchains and their decorator support.' }],
 	},
+
+	{ page: DocPage.QcIndex, optionTables: [], nonOptionTables: [] },
+	{
+		page: DocPage.QcApi,
+		optionTables: [
+			{
+				heading: 'Applied parameters',
+				roots: [{ module: TypeModule.QcReact, name: 'GridQueryParams' }],
+				expectedCount: 4,
+			},
+			{
+				heading: 'List fetcher options',
+				roots: [
+					{
+						module: TypeModule.QcReact,
+						name: 'GridListFetcherOptions',
+						typeArgs: '<unknown, unknown, unknown, object, Error>',
+					},
+				],
+				expectedCount: 6,
+			},
+			{
+				heading: 'Infinite fetcher options',
+				roots: [
+					{
+						module: TypeModule.QcReact,
+						name: 'GridInfiniteFetcherOptions',
+						typeArgs: '<unknown, unknown, unknown, unknown, unknown, object, Error>',
+					},
+				],
+				expectedCount: 8,
+			},
+			{
+				heading: 'Invalidation policy',
+				roots: [{ module: TypeModule.QcReact, name: 'InvalidationPolicy' }],
+				expectedCount: 2,
+			},
+		],
+		nonOptionTables: [{ heading: 'Exports', reason: 'Exported functions, not configuration keys.' }],
+	},
 	// --- @ez-kit/query-react ------------------------------------------------
 	{
 		page: DocPage.QueryAi,
@@ -1849,6 +1893,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{ page: DocPage.QueryInfinite, optionTables: [], nonOptionTables: [] },
 	{ page: DocPage.QueryMutation, optionTables: [], nonOptionTables: [] },
 	{ page: DocPage.QueryMutationWorkflows, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.QueryCollection, optionTables: [], nonOptionTables: [] },
 	{ page: DocPage.QuerySsrPrefetch, optionTables: [], nonOptionTables: [] },
 	{
 		page: DocPage.QueryStates,

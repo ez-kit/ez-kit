@@ -51,6 +51,26 @@ export function DeletingRollbackExample() {
 	const [calls, setCalls] = useState<Call[]>([])
 	const [selectedIds, setSelectedIds] = useState<string[]>([])
 
+	const remove = async (row: Product): Promise<void> => {
+		const name = row.name
+		await new Promise<void>((resolve) => {
+			setTimeout(resolve, SERVER_LATENCY_MS)
+		})
+
+		if (name === FAILING_ROW) {
+			if (shouldRethrow) {
+				setCalls((prev) => [...prev, { name, outcome: 'rejected' }])
+				throw new Error('500 Internal Server Error')
+			}
+			// Swallowed: the grid is told this delete succeeded.
+			setCalls((prev) => [...prev, { name, outcome: 'swallowed' }])
+			return
+		}
+
+		setCalls((prev) => [...prev, { name, outcome: 'deleted' }])
+		setData((prev) => prev.filter((item) => item.id !== row.id))
+	}
+
 	const reset = (): void => {
 		setData(ROWS)
 		setCalls([])
@@ -81,7 +101,7 @@ export function DeletingRollbackExample() {
 
 			<div className='rounded-md border p-3 text-sm'>
 				<p className='mb-1 font-semibold'>
-					What the grid called <span className='font-normal'>(select every row, then press Delete)</span>
+					API calls made by the handler <span className='font-normal'>(select every row, then press Delete)</span>
 				</p>
 				{calls.length === 0 ? (
 					<p className='text-muted-foreground'>onDelete has not run yet.</p>
@@ -111,28 +131,13 @@ export function DeletingRollbackExample() {
 					},
 				}}
 				deleting={{
-					// `bulk: true` — no single-call handler, so the grid loops this one over the
-					// selection, in order, awaiting each call.
-					bulk: true,
-					onDelete: async ({ row }) => {
-						const name = row.original.name
-						await new Promise<void>((resolve) => {
-							setTimeout(resolve, SERVER_LATENCY_MS)
-						})
-
-						if (name === FAILING_ROW) {
-							if (shouldRethrow) {
-								setCalls((prev) => [...prev, { name, outcome: 'rejected' }])
-								throw new Error('500 Internal Server Error')
-							}
-							// Swallowed: the grid is told this delete succeeded.
-							setCalls((prev) => [...prev, { name, outcome: 'swallowed' }])
-							return
-						}
-
-						setCalls((prev) => [...prev, { name, outcome: 'deleted' }])
-						setData((prev) => prev.filter((item) => item.id !== row.original.id))
+					bulk: {
+						onDelete: async ({ rows }) => {
+							// This application's explicit sequence stops on the first rejected API call.
+							for (const row of rows) await remove(row.original)
+						},
 					},
+					onDelete: ({ row }) => remove(row.original),
 				}}
 			/>
 		</div>

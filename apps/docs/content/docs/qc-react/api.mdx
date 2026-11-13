@@ -1,0 +1,118 @@
+---
+title: API
+description: Source helpers, prepared arguments and invalidation policy.
+---
+
+All exports below come from `@ez-kit/qc-react/data-grid`.
+
+## Exports
+
+| Export                    | Purpose                                                           |
+| ------------------------- | ----------------------------------------------------------------- |
+| `withQuery`               | Extend a grid bundle with connected DataGrid and useDataGrid.     |
+| `createGridSourceFactory` | Define shared API conventions, then bind per-entity operations.   |
+| `createListSource`        | Normalize a fetcher with its own request/selected response types. |
+| `createInfiniteSource`    | Normalize a cursor fetcher and collection key.                    |
+| `createGridDataSource`    | Combine native option factories or normalized sources.            |
+
+## Applied parameters
+
+`GridQueryParams` is read from the table, not from a parallel component state.
+
+| Option          | Meaning                                                        |
+| --------------- | -------------------------------------------------------------- |
+| `pagination`    | Applied page index and page size.                              |
+| `sorting`       | Applied ordered sort rules.                                    |
+| `columnFilters` | Applied column filters.                                        |
+| `globalFilter`  | Applied search value; narrow its unknown type in your adapter. |
+
+`GridInfiniteParams` replaces pagination with `pageSize`. The next cursor belongs
+to Query's page parameter, not the table's page index.
+
+## List fetcher options
+
+`GridListFetcherOptions` is accepted by `createListSource`.
+
+| Option        | Meaning                                                                 |
+| ------------- | ----------------------------------------------------------------------- |
+| `key`         | Base cache family.                                                      |
+| `fetcher`     | Async function receiving business args and a separate signal transport. |
+| `prepareArgs` | Synchronously translate applied table parameters to fetcher args.       |
+| `getRows`     | Extract readonly rows from the selected response.                       |
+| `getRowCount` | Optional authoritative total; undefined means unknown.                  |
+| `options`     | Native Query options except generated query key and function.           |
+
+## Infinite fetcher options
+
+`GridInfiniteFetcherOptions` is accepted by `createInfiniteSource`.
+
+| Option             | Meaning                                                                 |
+| ------------------ | ----------------------------------------------------------------------- |
+| `key`              | Base cache family.                                                      |
+| `fetcher`          | Fetch one page with prepared args and signal.                           |
+| `prepareArgs`      | Prepare collection criteria for the key.                                |
+| `preparePageArgs`  | Add the current page parameter to the request args.                     |
+| `initialPageParam` | Native initial cursor/page parameter.                                   |
+| `getNextPageParam` | Native callback returning the next cursor or null/undefined to stop.    |
+| `getRows`          | Extract rows from each selected page.                                   |
+| `options`          | Native options except generated key, function and pagination callbacks. |
+
+## Factory overrides
+
+The factory defines `list`, optional `infinite`, optional mutation preparation
+and `transformError`. Its returned constructor accepts `key`, `getAll`, optional
+`getInfinite`, `create`, `update`, `delete`, `deleteMany`, `invalidate` and
+`transformError`. A bare fetcher inherits conventions. An expanded operation
+replaces only supplied properties; its `options` replaces the whole defaults
+object. Callbacks are not deep-merged.
+
+Shared read overrides keep the convention's request/response types. For an
+exceptional endpoint DTO or selected response shape, use `createListSource` or
+`createInfiniteSource` and combine them with `createGridDataSource`. An explicit
+row generic on an application factory such as `makeSource<User>()` is supported.
+
+## Invalidation policy
+
+`InvalidationPolicy` is `false` or one of the following mutually exclusive forms:
+
+| Option       | Meaning                                                       |
+| ------------ | ------------------------------------------------------------- |
+| `additional` | Independent native filters appended to the resolved defaults. |
+| `replace`    | Independent native filters replacing the resolved policy.     |
+
+Omission retains defaults. See [cache and invalidation](/docs/qc-react#cache-and-invalidation)
+for operation/source precedence and non-blocking refresh behavior.
+
+## Native sources
+
+```ts
+import { createGridDataSource } from '@ez-kit/qc-react/data-grid'
+import { queryOptions } from '@tanstack/react-query'
+
+type User = { id: string; name: string }
+const source = createGridDataSource({
+	getAll: {
+		query: ({ pagination }) =>
+			queryOptions({
+				queryKey: ['existing-users', pagination],
+				queryFn: async ({ signal }): Promise<User[]> => {
+					const response = await fetch(`/users?page=${pagination.pageIndex}`, { signal })
+					if (!response.ok) throw new Error('Could not load users')
+					return response.json()
+				},
+			}),
+		getRows: (users) => users,
+	},
+	invalidate: { replace: [{ queryKey: ['existing-users'] }] },
+})
+```
+
+Native operations provide `mutation` options and `prepareArgs`, with optional
+operation `invalidate` and `transformError`. Native query keys are preserved;
+an explicit source invalidation policy is required, even if it is `false`.
+Selected result types are retained; infinite selection must preserve the typed
+page structure. Raw API responses remain in the cache.
+
+Reuse `source.queries.list(params)` with `prefetchQuery` or `useQuery`, and
+`source.queries.infinite(params)` when an infinite source is supplied. Consumers
+share the same cache entries; the grid adds no second server-data store.

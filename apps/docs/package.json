@@ -33,6 +33,7 @@
 		"@ez-kit/form-heroui": "workspace:*",
 		"@ez-kit/form-react": "workspace:*",
 		"@ez-kit/form-shadcn": "workspace:*",
+		"@ez-kit/qc-react": "workspace:*",
 		"@ez-kit/query-react": "workspace:*",
 		"@ez-kit/twc": "workspace:*",
 		"@ez-kit/va-store": "workspace:*",

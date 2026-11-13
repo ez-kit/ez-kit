@@ -70,3 +70,21 @@ To mirror state into your own store, pass `onStateChange` — it receives the re
 ## License
 
 MIT
+
+## Explicit bulk deletion
+
+`deleting.bulk` accepts `false` or a configuration with a required `onDelete` handler.
+The grid calls it once with the resolved selected rows and IDs. It clears their selection
+only after success; rejection keeps selection. There is no automatic per-row fallback.
+
+```ts
+deleting: {
+  onDelete: ({ row }) => api.remove(row.original.id),
+  bulk: {
+    onDelete: ({ rows }) => api.removeMany(rows.map(row => row.original.id)),
+  },
+}
+```
+
+To keep a sequential API workflow, write the loop inside `bulk.onDelete`. The application
+owns partial-success reconciliation; the grid does not interpret response envelopes.

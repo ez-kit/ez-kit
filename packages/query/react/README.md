@@ -146,3 +146,69 @@ screen while another page loads or fails. Use a distinct cache key from a regula
 ## Documentation
 
 https://ez-kit-docs.vercel.app/docs/query-react
+
+## Collection queries
+
+Import `createCollectionSource`, `createCollectionSourceFactory` and `useCollectionQuery` from
+`@ez-kit/query-react/collection` for ordinary CRUD lists or UI connectors. This entry has no
+DataGrid dependency and uses the existing `QueryClientProvider`.
+
+```tsx
+const source = createCollectionSource({
+	key: ['users'],
+	getAll: {
+		prepareArgs: (params: { search: string; offset: number; limit: number }) => params,
+		fetcher: fetchUsers,
+		getItems: (response) => response.items,
+		getTotal: (response) => response.total,
+	},
+	update: {
+		prepareArgs: (input: { id: string; name: string }) => ({
+			path: { id: input.id },
+			body: { name: input.name },
+		}),
+		fetcher: updateUser,
+	},
+})
+const users = useCollectionQuery({ source, mode: 'pages', params })
+await users.update.mutateAsync({ id: '42', name: 'Alice' })
+```
+
+Parameters are arbitrary and externally owned. Changing filters and resetting pagination should
+be one state update in the owning component/store. The hook never changes params. It returns
+`items`, optional `total`, the native active `query`, and native results for configured `create`,
+`update`, `delete` and `deleteMany` operations. There is no `execute`, no implicit bulk loop and no
+automatic optimistic update. Each operation has independent input, DTO, result and error types.
+
+Fetcher mutation preparation runs inside `mutationFn`: lifecycle callbacks receive the original
+input, `onMutate` runs first, and preparation failures/retries use the native mutation lifecycle.
+Keep preparation pure because retry repeats it. `mutateAsync` returns the fetcher's result;
+handle its rejection in application event handlers. Native option descriptors preserve their
+original variables: reads use `query`/`getItems`/`getTotal`, mutations use `mutation`.
+
+Sources require at least one read. Infinite-only sources define `getInfinite`, with collection
+`prepareArgs`, `preparePageArgs({ args, pageParam })`, `initialPageParam`, `getNextPageParam` and
+`getItems`. Use `mode: 'infinite'` and native `query.fetchNextPage()`/pagination flags. Loaded pages
+project into items without replacing cache data; infinite total is undefined. Read fetchers
+receive `{ signal }` separately from business arguments.
+
+Generated sources key ordinary and infinite reads separately and invalidate both families on
+successful mutations. Refresh is not awaited; user lifecycle promises are. `invalidate` supports
+`false`, `additional` or `replace` at source and operation levels. Native keys are not rewritten;
+native sources require explicit invalidation scope. The source's `queries.list` and
+`queries.infinite` expose options for native prefetch/read consumers. Include tenant and other
+response-affecting inputs in the base key or prepared arguments.
+
+`createCollectionSourceFactory` shares list/infinite preparation and projections and mutation
+preparation across entity sources. Bare fetchers inherit defaults; expanded descriptors override
+them. Supplied options replace the options object. Explicit entity specialization in an
+application factory is supported when generic inference needs it.
+
+See the docs Collections page for a complete ItemGroup CRUD example and the qc-react connector
+for adapting the same source to a DataGrid.
+
+Fetcher mutations default `mutationKey` to `[...baseKey, operationName]`. Include tenant ownership
+in the base key when switching between tenant-specific sources: a mutation already dispatched for
+one tenant keeps that scope when the hook switches to a differently keyed source. Explicit mutation
+keys override this default. Native mutation descriptors preserve supplied keys and TanStack's normal
+observer behavior; changing callbacks under the same key does not create an isolated operation scope.
