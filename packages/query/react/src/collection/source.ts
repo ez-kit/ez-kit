@@ -11,7 +11,7 @@ import type {
 } from './types'
 import type { DefaultError, QueryKey } from '@tanstack/react-query'
 
-function list<P, A, D, S, I, E, K extends QueryKey>(
+function normalizeListSource<P, A, D, S, I, E, K extends QueryKey>(
 	value: ListFetcher<P, A, D, S, I, E> | CollectionRead<P, D, S, I, E, K>,
 	key: QueryKey,
 ): CollectionRead<P, D, S, I, E, K> {
@@ -31,7 +31,7 @@ function list<P, A, D, S, I, E, K extends QueryKey>(
 	return generated as unknown as CollectionRead<P, D, S, I, E, K>
 }
 
-function infinite<P, A, B, D, S, I, C, E, IK extends QueryKey>(
+function normalizeInfiniteSource<P, A, B, D, S, I, C, E, IK extends QueryKey>(
 	value: InfiniteFetcher<P, A, B, D, S, I, C, E> | CollectionInfiniteRead<P, D, S, I, C, E, IK>,
 	key: QueryKey,
 ): CollectionInfiniteRead<P, D, S, I, C, E, IK> {
@@ -53,7 +53,7 @@ function infinite<P, A, B, D, S, I, C, E, IK extends QueryKey>(
 	return generated as unknown as CollectionInfiniteRead<P, D, S, I, C, E, IK>
 }
 
-function mutation<V, A, D, E, O>(
+function normalizeMutationSource<V, A, D, E, O>(
 	value: MutationFetcher<V, A, D, E, O> | CollectionMutation<V, D, E, O>,
 	key: QueryKey,
 	name: string,
@@ -145,17 +145,17 @@ export function createCollectionSource<
 	if (hasNative && config.invalidate === undefined)
 		throw new Error('Native sources require an explicit invalidation policy')
 	const key = config.key ?? []
-	const getAll = config.getAll ? list(config.getAll, key) : undefined
-	const getInfinite = config.getInfinite ? infinite(config.getInfinite, key) : undefined
+	const getAll = config.getAll ? normalizeListSource(config.getAll, key) : undefined
+	const getInfinite = config.getInfinite ? normalizeInfiniteSource(config.getInfinite, key) : undefined
 	const result = {
 		...(getAll ? { getAll } : {}),
 		...(getInfinite ? { getInfinite } : {}),
 		invalidation: resolveInvalidation(hasGenerated ? listInvalidation(key) : [], config.invalidate),
 		queries: { ...(getAll ? { list: getAll.query } : {}), ...(getInfinite ? { infinite: getInfinite.query } : {}) },
-		...(config.create ? { create: mutation(config.create, key, 'create') } : {}),
-		...(config.update ? { update: mutation(config.update, key, 'update') } : {}),
-		...(config.delete ? { delete: mutation(config.delete, key, 'delete') } : {}),
-		...(config.deleteMany ? { deleteMany: mutation(config.deleteMany, key, 'deleteMany') } : {}),
+		...(config.create ? { create: normalizeMutationSource(config.create, key, 'create') } : {}),
+		...(config.update ? { update: normalizeMutationSource(config.update, key, 'update') } : {}),
+		...(config.delete ? { delete: normalizeMutationSource(config.delete, key, 'delete') } : {}),
+		...(config.deleteMany ? { deleteMany: normalizeMutationSource(config.deleteMany, key, 'deleteMany') } : {}),
 	}
 	type Operations = {
 		getAll: CollectionRead<P, D, S, I, E, K>

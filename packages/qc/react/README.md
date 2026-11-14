@@ -313,7 +313,7 @@ are covered by package scripts and TypeScript checks.
 
 ## Reuse an ordinary collection source
 
-`adaptCollectionToGrid(source, mapping)` connects a source from
+`createGridSourceFromCollection(source, mapping)` connects a source from
 `@ez-kit/query-react/collection` to the existing `withQuery(bundle)` API. `mapping.params`
 converts applied grid parameters to ordinary read parameters; `mapping.infiniteParams` does
 that for infinite reads. The `create`, `update`, `delete` and `deleteMany` mappings convert
@@ -321,7 +321,7 @@ grid action contexts to the corresponding collection mutation input. Incompatibl
 require explicit mappings. Keys and invalidation remain owned by the collection source.
 
 ```tsx
-const dataSource = adaptCollectionToGrid(usersSource, {
+const dataSource = createGridSourceFromCollection(usersSource, {
 	params: ({ pagination, globalFilter }) => ({
 		search: typeof globalFilter === 'string' ? globalFilter : '',
 		offset: pagination.pageIndex * pagination.pageSize,

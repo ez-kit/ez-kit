@@ -1,6 +1,6 @@
 import { createCollectionSourceFactory } from '@ez-kit/query-react/collection'
 
-import { adaptCollectionToGrid } from '../../src/data-grid'
+import { createGridSourceFromCollection } from '../../src/data-grid'
 
 import { createUser, deleteUser, deleteUsers, getUsers, updateUser } from './generated/users'
 
@@ -36,7 +36,7 @@ function prepareValues(values: Partial<User>): UserValues {
 	if (!values.name?.trim()) throw new Error('Name is required')
 	return { name: values.name }
 }
-export const collectionGridSource = adaptCollectionToGrid(usersCollection, {
+export const collectionGridSource = createGridSourceFromCollection(usersCollection, {
 	params: ({ pagination, globalFilter }) => ({
 		offset: pagination.pageIndex * pagination.pageSize,
 		limit: pagination.pageSize,

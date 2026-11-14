@@ -125,8 +125,8 @@ export type DeletingConfig<TData> = FeatureToggle & {
 	bulk?: false | BulkDeletingConfig<TData>
 }
 
-/** Validate dynamic configuration as well as statically typed callers. */
-export function bulkDeletingOption<TData>(
+/** Read enabled bulk settings, rejecting a missing executor without changing the config. */
+export function getBulkDeletingConfig<TData>(
 	config: DeletingConfig<TData> | undefined,
 ): BulkDeletingConfig<TData> | undefined {
 	if (!config || !isFeatureEnabled(config.bulk)) return undefined
@@ -137,6 +137,11 @@ export function bulkDeletingOption<TData>(
 		)
 	}
 	return bulk
+}
+
+/** Reject invalid bulk configuration early, without changing the supplied settings. */
+export function validateBulkDeletingConfig<TData>(config: DeletingConfig<TData> | undefined): void {
+	getBulkDeletingConfig(config)
 }
 
 /**
@@ -407,7 +412,7 @@ async function deleteRow(table: DeletingTable, rowId: string): Promise<void> {
 async function deleteRows(table: DeletingTable, rowIds: string[]): Promise<void> {
 	const config = deletingOption(table)
 	if (!config) return
-	const bulk = bulkDeletingOption(config)
+	const bulk = getBulkDeletingConfig(config)
 	if (!bulk) return
 	const rows = rowIds
 		.map((id) => table.getRowModel().rows.find((r) => r.id === id))
@@ -451,7 +456,7 @@ function createDeletingApi(table: DeletingTable): DeletingApi {
 
 			request: () => {
 				const config = deletingOption(table)
-				const bulk = bulkDeletingOption(config)
+				const bulk = getBulkDeletingConfig(config)
 				if (!bulk) return
 				if (isFeatureEnabled(bulk.confirmation)) {
 					writeDeleting(table, { pendingBulk: true })

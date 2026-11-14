@@ -462,13 +462,13 @@ Already have native `queryOptions` / `infiniteQueryOptions`? Use
 ## Share a collection with an ordinary list
 
 `@ez-kit/query-react/collection` owns reusable collection reads and mutations. Use
-`adaptCollectionToGrid` when the same business source also powers an ItemGroup or another list.
+`createGridSourceFromCollection` when the same business source also powers an ItemGroup or another list.
 The adapter maps applied table parameters and action contexts; it preserves the collection's keys.
 
 ```tsx
-import { adaptCollectionToGrid, withQuery } from '@ez-kit/qc-react/data-grid'
+import { createGridSourceFromCollection, withQuery } from '@ez-kit/qc-react/data-grid'
 
-const dataSource = adaptCollectionToGrid(usersSource, {
+const dataSource = createGridSourceFromCollection(usersSource, {
 	params: ({ pagination, globalFilter }) => ({
 		offset: pagination.pageIndex * pagination.pageSize,
 		limit: pagination.pageSize,

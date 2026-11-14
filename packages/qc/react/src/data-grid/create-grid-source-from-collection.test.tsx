@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, expectTypeOf, it } from 'vitest'
 
-import { adaptCollectionToGrid } from './adapt-collection'
+import { createGridSourceFromCollection } from './create-grid-source-from-collection'
 import { withQuery } from './with-query'
 
 import type { ReactNode } from 'react'
@@ -28,7 +28,7 @@ const source = createCollectionSource({
 		fetcher: (args: { ids: number[] }) => Promise.resolve(args.ids.length),
 	},
 })
-const adapted = adaptCollectionToGrid(source, {
+const adapted = createGridSourceFromCollection(source, {
 	params: ({ pagination }) => ({ team: 'one', offset: pagination.pageIndex * pagination.pageSize }),
 	update: ({ row, values }) => {
 		if (!row) throw new Error('missing')
@@ -57,7 +57,7 @@ describe('collection grid mapping', () => {
 })
 function InvalidMapping() {
 	// @ts-expect-error source operations need compatible grid input mappings
-	adaptCollectionToGrid(source, { params: () => ({ team: 'one', offset: 0 }) })
+	createGridSourceFromCollection(source, { params: () => ({ team: 'one', offset: 0 }) })
 }
 void InvalidMapping
 
@@ -74,7 +74,9 @@ it('renders an infinite-only collection through the connected grid hook', async 
 			getItems: (page) => page.items,
 		},
 	})
-	const dataSource = adaptCollectionToGrid(infiniteSource, { infiniteParams: ({ pageSize }) => ({ limit: pageSize }) })
+	const dataSource = createGridSourceFromCollection(infiniteSource, {
+		infiniteParams: ({ pageSize }) => ({ limit: pageSize }),
+	})
 	const connected = withQuery(createDataGrid({ components: {}, features: allDataGridFeatures }))
 	const { result, unmount } = renderHook(
 		() => connected.useDataGrid({ dataSource, columns: [{ accessorKey: 'name' }], pagination: { mode: 'infinite' } }),

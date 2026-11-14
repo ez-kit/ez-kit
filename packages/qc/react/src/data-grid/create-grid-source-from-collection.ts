@@ -48,7 +48,7 @@ type AdaptedOperations<S> = {
 }
 
 /** Map table state and action contexts without changing collection cache identity. */
-export function adaptCollectionToGrid<S extends CollectionShape>(
+export function createGridSourceFromCollection<S extends CollectionShape>(
 	source: S,
 	mapping: CollectionGridMapping<S>,
 ): GridDataSource<Item<S>> & AdaptedOperations<S> & Pick<S, 'invalidation'> {

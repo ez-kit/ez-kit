@@ -27,7 +27,7 @@
 
 ## 5. Grid integration and compatibility
 
-- [x] 5.1 Implement adaptCollectionToGrid parameter/action mappings with typed operation capability checks; verify custom params, original entity versus table ID, missing-row handling, shared key identity and both component/hook entry points. Add a compiled same-source list/grid recipe.
+- [x] 5.1 Implement createGridSourceFromCollection parameter/action mappings with typed operation capability checks; verify custom params, original entity versus table ID, missing-row handling, shared key identity and both component/hook entry points. Add a compiled same-source list/grid recipe.
 - [x] 5.2 Replace grid-local Query observers and mutation execution with shared collection execution plus compatibility descriptors; verify existing source factories/native callbacks still receive prepared variables and preparation is not duplicated. Document existing versus new lifecycle semantics.
 - [x] 5.3 Preserve table-owned applied state, atomic resets, fresh-total bounds correction and stable publication; run pagination, draft, mode-switch and retained-table tests, including sources with only the selected read mode. Update relevant connector API documentation.
 - [x] 5.4 Preserve explicit action enablement/overrides, form-only transformError, pending save/dismiss behavior and load-more deduplication; run mutation/modal tests and both kit browser flows with original-error and late-session assertions.

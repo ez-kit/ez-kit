@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { createColumns } from '../../column/create-columns'
 import { createTable, createTableOptions } from '../../create-table'
 
-import { deletingFeature } from './deleting'
+import { deletingFeature, getBulkDeletingConfig, validateBulkDeletingConfig } from './deleting'
 
 import type { DeletingConfig, DeletingState } from './deleting'
 import type { ExternalAtoms, RowSelectionState, TableFeatures, TableOptions } from '@tanstack/table-core'
@@ -531,6 +531,20 @@ describe('deletingFeature — confirmation flow', () => {
 })
 
 describe('explicit bulk execution', () => {
+	it('validates frozen settings without changing them or calling an executor', () => {
+		const onDelete = vi.fn()
+		const bulk = Object.freeze({ onDelete })
+		const deleting = Object.freeze({ onDelete, bulk })
+		const config = Object.freeze({ features: DELETING_SEL, data: DATA, columns: COLUMNS, deleting })
+		expect(() => {
+			validateBulkDeletingConfig(deleting)
+		}).not.toThrow()
+		expect(getBulkDeletingConfig(deleting)).toBe(bulk)
+		expect(() => createTableOptions(config)).not.toThrow()
+		expect(config.deleting).toBe(deleting)
+		expect(deleting.bulk).toBe(bulk)
+		expect(onDelete).not.toHaveBeenCalled()
+	})
 	it('rejects missing executors before running any single deletion', () => {
 		const onDelete = vi.fn()
 		const invalid: DeletingConfig<Row> = {

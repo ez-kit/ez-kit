@@ -130,11 +130,11 @@ retries execute it again. Form schemas and field-error presentation belong to th
 
 ## Reuse the same source in DataGrid
 
-`adaptCollectionToGrid` translates table state and action contexts into the inputs
+`createGridSourceFromCollection` translates table state and action contexts into the inputs
 above. It preserves the source's query keys and mutation definitions:
 
 ```tsx
-const dataSource = adaptCollectionToGrid(source, {
+const dataSource = createGridSourceFromCollection(source, {
   params: ({ pagination, globalFilter }) => ({
     search: typeof globalFilter === 'string' ? globalFilter : '',
     offset: pagination.pageIndex * pagination.pageSize,

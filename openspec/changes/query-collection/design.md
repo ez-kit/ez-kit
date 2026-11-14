@@ -58,7 +58,7 @@ Derive items from selected ordinary data or selected infinite pages, keeping nat
 
 withQuery(bundle) remains source-independent and keeps both DataGrid and useDataGrid entry points. Extract generic observers from useConnectedGrid, retaining table selector subscription, render-time projection publication, manual flags and the stable table instance. The existing load-more deduplication belongs to the grid scroll bridge; ordinary consumers receive native fetchNextPage semantics.
 
-Proposed adapter helper `adaptCollectionToGrid(source, mapping)` creates a grid-compatible dataSource. `mapping.params` maps applied GridQueryParams to ordinary params; `mapping.infiniteParams` maps GridInfiniteParams when supported. Optional create/update/delete/deleteMany mappings convert existing grid contexts into source inputs. Require mappings for configured operations whose inputs are not directly compatible; do not infer API identity from a table row ID. The helper preserves collection keys and invalidation rather than building a new source family. It does not call hooks.
+Proposed adapter helper `createGridSourceFromCollection(source, mapping)` creates a grid-compatible dataSource. `mapping.params` maps applied GridQueryParams to ordinary params; `mapping.infiniteParams` maps GridInfiniteParams when supported. Optional create/update/delete/deleteMany mappings convert existing grid contexts into source inputs. Require mappings for configured operations whose inputs are not directly compatible; do not infer API identity from a table row ID. The helper preserves collection keys and invalidation rather than building a new source family. It does not call hooks.
 
 The grid still atomically resets criteria to page zero before requesting, corrects bounds only from fresh successful non-placeholder totals, requires explicit editing/creating/deleting enablement and honors explicit handler overrides. It catches original mutation errors and applies grid transformError only for the form caller. Modal session protection remains in existing grid/form machinery.
 
@@ -198,7 +198,7 @@ feed.query.isFetchNextPageError
 ### Adapt the same source to DataGrid
 
 ```tsx
-const dataSource = adaptCollectionToGrid(usersSource, {
+const dataSource = createGridSourceFromCollection(usersSource, {
   params: ({ pagination, globalFilter }) => ({
     teamId,
     search: typeof globalFilter === 'string' ? globalFilter : '',

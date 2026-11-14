@@ -37,7 +37,7 @@ type MutationInput<TInput, TDefaultArgs, TArgs, TResult, TError, TContext> =
 			transformError?: (error: unknown) => unknown
 	  } & Preparation<TInput, TDefaultArgs, TArgs>)
 
-function mutationSource<TInput, TDefaultArgs, TArgs, TResult, TError, TContext>(
+function createMutationSource<TInput, TDefaultArgs, TArgs, TResult, TError, TContext>(
 	input: MutationInput<TInput, TDefaultArgs, TArgs, TResult, TError, TContext> | undefined,
 	defaults: MutationDefaults<TInput, TDefaultArgs> | undefined,
 ): GridMutationSource<TInput, TArgs, TResult, TError, TContext> | undefined {
@@ -179,10 +179,10 @@ export function createGridSourceFactory<
 				initialPageParam: combined.initialPageParam,
 			})
 		}
-		const create = mutationSource(config.create, defaults.mutations?.create)
-		const update = mutationSource(config.update, defaults.mutations?.update)
-		const remove = mutationSource(config.delete, defaults.mutations?.delete)
-		const deleteMany = mutationSource(config.deleteMany, defaults.mutations?.deleteMany)
+		const create = createMutationSource(config.create, defaults.mutations?.create)
+		const update = createMutationSource(config.update, defaults.mutations?.update)
+		const remove = createMutationSource(config.delete, defaults.mutations?.delete)
+		const deleteMany = createMutationSource(config.deleteMany, defaults.mutations?.deleteMany)
 		const transformError = config.transformError ?? defaults.transformError
 		return {
 			getAll,

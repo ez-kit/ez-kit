@@ -118,7 +118,7 @@ entity fetchers to the returned factory; expanded operations override supplied p
 operation's `options` replaces the options object rather than deep-merging callbacks. An application
 factory can specialize an entity type once when a generic response envelope needs it.
 
-Use `adaptCollectionToGrid` from `@ez-kit/qc-react/data-grid` to map table parameters and action
+Use `createGridSourceFromCollection` from `@ez-kit/qc-react/data-grid` to map table parameters and action
 contexts to a collection source. `withQuery(bundle)` then consumes that dataSource. The collection
 has no grid dependency; tables still own applied filters, page resets and form sessions.
 See [the connector guide](/docs/qc-react) for grid integration.
