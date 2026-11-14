@@ -34,10 +34,10 @@ export { zustandPort } from './port'
  */
 export function withPersist<TStore extends StoreApi<object>>(
 	options: PersistPluginOptions<NoInfer<ExtractState<TStore>>> = {},
-): StoreEnhancer<TStore, TStore & PersistHandles> {
+): StoreEnhancer<TStore, TStore & PersistHandles<ExtractState<TStore>>> {
 	return (target: TStore) => {
 		applyPersist(target, zustandPort, options)
-		return target as TStore & PersistHandles
+		return target as TStore & PersistHandles<ExtractState<TStore>>
 	}
 }
 
@@ -72,6 +72,7 @@ export {
 // --- Per-source control handles: typed accessors ($url / $persist) ---
 export {
 	persistHandle,
+	type PersistFieldPath,
 	type PersistHandle,
 	type PersistHandles,
 	type UrlHandle,
@@ -79,7 +80,16 @@ export {
 } from '@ez-kit/store-persist'
 
 // --- Accessor front (field declaration) ---
-export type { AccessorFieldOptions, FieldBuilder, FieldSpec, FieldsBuilder } from '@ez-kit/store-persist'
+export type { PersistFieldDecorator } from '@ez-kit/store-persist'
+export type {
+	AccessorFieldOptions,
+	FieldBuilder,
+	FieldSpec,
+	FieldsBuilder,
+	FieldValueOptions,
+	ValidatedAccessorFieldOptions,
+	ValidatedValueOptions,
+} from '@ez-kit/store-persist'
 
 // --- Codecs ---
 export type { AnyCodec, Codec } from '@ez-kit/store-persist'
@@ -113,6 +123,7 @@ export type {
 	PersistSchema,
 	PersistRecordStatus,
 	PersistStatus,
+	PersistRestoreOptions,
 	RestoreOptions,
 	RestoreResult,
 	RestoreState,

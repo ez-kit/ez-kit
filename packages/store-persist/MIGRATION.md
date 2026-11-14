@@ -54,6 +54,12 @@ An ordinary context Provider may receive a full stable `address`. Without one it
 singleton address; independent instances colliding within one source are rejected. Changing address
 recreates the instance. Never use random values, mount order or React useId as persistence IDs.
 
+Helpers/decorators can select aliases explicitly, for example localStorageField({ source: 'browser' }).
+Their default source names remain unchanged; plain fields without source use defaultSource. A JSON
+decoder returning unknown can be combined with a typed schema.validate through either helper front.
+Explicit source handles validate the selected source; $persist/$url named sources do not collide with
+legacy shorthand. Reset paths refer to persisted state paths and reject typos before mutations.
+
 URL fields retain readable physical query keys and key/absolute/prefix projection, with collision
 checks. They preserve unrelated parameters and push/replace/Back/Forward. URL does not advertise
 version metadata or full reset of unmounted scoped records; unsupported operations fail explicitly.
@@ -99,6 +105,19 @@ function WorkspaceGate() {
 	return status.restore === 'pending' ? <Loader /> : <Workspace />
 }
 ```
+
+Shared restore settings can be overridden with effective provider aliases:
+
+```ts
+restore: {
+  timeoutMs: 2000,
+  externalChanges: 'ignore',
+  sources: { draftsApi: { timeoutMs: 10000, externalChanges: 'apply' } },
+}
+```
+
+An unspecified source inherits the shared defaults. Overrides are resolved before the initial read;
+unknown source names fail before I/O. A pending handle.restore still joins the original deadline.
 
 No effect calling restore is needed. The core does not impose a two-second default: omit timeoutMs
 to wait without a finite deadline. A timeout/read failure uses defaults for untouched fields and
@@ -158,12 +177,23 @@ with addressed fields and AbortSignal. Set receives diff, addresses and maximum 
 - Resolve a mutation Promise only after acknowledgment. Do not treat a lost response as proof the
   server did not commit. If commits may finish after network failures, use server revisions/generations.
 - Subscribe reports external changes only; it must not echo its own writes into a pull.
-- Container read migrations stage their rewrite through ReadCtx rather than writing from get.
+- Container read migrations stage their rewrite through ReadCtx rather than writing from get; provide
+  rewriteContainer(values) for the engine to execute/acknowledge this separate operation. Opaque
+  application meta cannot request container replacement or bypass patch/version guards.
 
 Sync throws and async rejections now reach onError/onPersistError with source, operation and
 address/addresses or scope. Built-in Web Storage failures are no longer hidden behind a warning,
 and IndexedDB read failures no longer look like missing data. Automatic failures are handled;
 awaited flush/reset still reject so the caller can report unsuccessful durability.
+
+Each binding keeps its own throttle; a slow idle panel does not delay another binding. Observed dirty
+edits survive context disconnection, and failed scope barriers do not stall independent scope writes.
+Flush includes applicable container rewrites and full-scope deletion acknowledgements even when no
+live record entries exist. Superseding reset cannot acknowledge deletion merely by emptying a job.
+
+IndexedDB can provision multiple storeName values in the same dbName without erasing existing stores.
+Owned connections cooperate with versionchange; an externally blocked upgrade must be retried after
+competing connections are released. Adapter container version/migrate remains a separate concern.
 
 The queue coordinates one source owner. It is not a cross-tab lock, device synchronization protocol
 or substitute for backend conditions. Independent built-in engines targeting one physical namespace

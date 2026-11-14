@@ -377,3 +377,49 @@ UI models with I/O diagnostics.
 
 None are blocking. The exact internal key prefix/envelope tag can be chosen during implementation
 and pinned by fixtures without changing logical addressing, scenarios or public API.
+
+## Audit hardening approved on 2026-11-14
+
+The audit exposed missing interleavings despite the original green suite. The user authorized
+all reported correctness and flexibility fixes. After discussing a concrete layout/draft example,
+the user also approved source-specific initial restoration settings while retaining shared defaults.
+
+- Queue jobs have explicit operation identity/type and acknowledgement ownership, including container
+  rewrites and namespace deletion. Superseding a reset transfers its waiters to acknowledged deletion
+  rather than reporting success for an empty job. Flush captures the applicable operation fence;
+  operations without live RecordState entries still contribute to durability/status/errors.
+- Failed scope barriers block their own records, not independent scopes. A binding flush retries only
+  applicable failures. Each binding's throttle controls its own ready patches; an idle slow binding
+  cannot delay unrelated edits. Disconnect preserves already-observed dirty intent before detaching.
+- A valid retry invalidates obsolete pending invalidation/deletion intent. User edits and future-version
+  protection retain precedence. Reset remains a barrier rather than cache eviction.
+- A dedicated optional SourcePort.rewriteContainer method handles staged container migrations. Opaque
+  application meta never authorizes replacement or bypasses patch/version guards. This is an explicit
+  source operation, not another persistence mode. Built-in IndexedDB ports provision missing object
+  stores by safe schema upgrade, release/reopen owned connections on versionchange, and preserve others.
+- URL adapters retain optimistic pending patches until location acknowledgement, merging new patches
+  without losing previous unrendered edits and reconciling actual navigation/Back/Forward and foreign keys.
+- Persistence registry identity depends on source engines/defaultSource, independently of surrounding
+  dependency injection. Returned usePort identities are checked even when the hook function is stable.
+  Fresh React render candidates remain outside the retained cache until commit. Abandoned render cannot
+  reserve defaults or context; commit adopts the current context and converges concurrent owners on one
+  canonical instance without ambient render I/O.
+- Field helpers preserve separate decoder and validated output types and accept source aliases. Explicit
+  named handles cannot collide with shorthand selectors or silently resolve unknown names. Reset validates
+  all requested fields before changes, with typed paths where state is available through either binding.
+
+These are refinements of the accepted single-engine architecture. They add no public mode, live
+backend switching, distributed atomicity, implicit legacy transfer or automatic source fallback.
+
+### Source-specific restore overrides
+
+`PersistOptions.restore` accepts shared timeoutMs/externalChanges defaults and optional `sources`
+overrides indexed by the effective registered source alias. For example, timeoutMs 2000 applies to
+settingsApi while sources.draftsApi.timeoutMs 10000 gives draft loading more time; its externalChanges
+can independently be apply. The plugin resolves these options before initial reads and merges only
+that source's override, without mutating application configuration or creating fan-out/fallback.
+Source-specific handle.restore still takes RestoreOptions rather than a whole multi-source map.
+A pending restore keeps its original deadline; terminal explicit retries use the effective source
+default unless their own timeout is supplied. Unknown override names are configuration errors before
+I/O, while registered sources unused by a particular store are allowed. Cache hits retain their
+committed instance lifecycle and effective policy.

@@ -150,3 +150,26 @@ Server rendering MUST NOT read localStorage/backend or start their writes. Rende
 
 - **WHEN** a persisted store renders on the server with an ambient backend
 - **THEN** the server uses defaults, useHydrated is false, and no ambient I/O occurs
+
+### Requirement: Uncommitted renders do not own retained cache lifetimes
+
+Cached React instances created by an abandoned render MUST NOT establish committed defaults, birth services or retained cache lifetime. Commit activation MUST use the committed owner context; legitimate duplicate observers MUST converge on the canonical committed instance. Render MUST perform no ambient I/O.
+
+#### Scenario: Suspended render is replaced before garbage collection
+
+- **WHEN** one render with old defaults/services suspends without committing and another owner commits the same address with new initialization
+- **THEN** the committed owner does not inherit the abandoned render's defaults or setup context
+
+#### Scenario: Abandoned render never mounts
+
+- **WHEN** a render creates an instance but React never commits its Provider
+- **THEN** it leaves no indefinitely retained cache entry or active persistence subscription
+
+### Requirement: Pending URL patches survive router acknowledgement delay
+
+Multiple URL patches MUST preserve previous unacknowledged edits while the router still exposes an older location snapshot. Location acknowledgement and actual external navigation MUST reconcile pending intent without suppressing Back/Forward or discarding foreign query parameters.
+
+#### Scenario: Search and page change before the router renders
+
+- **WHEN** q becomes boots then page becomes 2 before the first navigation reaches the rendered router snapshot
+- **THEN** the final URL retains both q=boots and page=2 with foreign parameters preserved

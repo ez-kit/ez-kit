@@ -91,7 +91,7 @@ Composition and inheritance compose freely:
 
 ## Key placement
 
-By default a field's key is its **joined path** (`price.min → price.min`) — collision-free across nested shapes. The source-agnostic naming options override that:
+For URL projection, a field's default query key is its **joined path** (`price.min → price.min`). The following URL naming options override it. Storage uses a canonical StoreId + field address; prefix/absolute cannot escape that address and are rejected for storage.
 
 | Option     | Effect                                                  | Example                                             |
 | ---------- | ------------------------------------------------------- | --------------------------------------------------- |
@@ -106,7 +106,9 @@ class Search {
 // wherever Search is nested, it always writes ?q=…
 ```
 
-These let a deeply-nested field own a short, shareable key regardless of where its class sits. The same options exist on the [accessor API](./fields).
+For URL fields these options provide a short, shareable query key regardless of nesting. The same URL projection options exist on the [accessor API](./fields). Storage key renames only the field inside its scoped address.
+
+Decorators also accept an explicit source alias, for example `@persistLocalStorage({ source: 'browser' })` when the provider map registers localStorageAdapter under browser; the existing built-in source name remains the default.
 
 ## Imperative control
 

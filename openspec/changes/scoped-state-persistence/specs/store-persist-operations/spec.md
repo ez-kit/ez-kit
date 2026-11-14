@@ -154,3 +154,54 @@ Consumer components MUST be able to omit built-in persistence in controlled mode
 
 - **WHEN** a dashboard receives controlled layout from the application without attaching internal persistence
 - **THEN** the engine creates no hidden read/write for that panel
+
+### Requirement: Every mutation has acknowledgement ownership
+
+All queued mutation kinds MUST retain their identity and acknowledgement state, including container rewrites and scope deletions without live records. Applicable mutations MUST participate in flush fences and diagnostics. Superseding a reset MUST NOT resolve it successfully before actual deletion acknowledgement.
+
+#### Scenario: A repeated reset still awaits deletion
+
+- **WHEN** a write is in flight and two resets are queued before it completes
+- **THEN** neither reset reports durable deletion merely because an earlier queued job lost its entries
+
+#### Scenario: Container rewrite is still pending
+
+- **WHEN** restore stages a container migration whose write remains unacknowledged and flush is called
+- **THEN** flush waits for that applicable rewrite and exposes its failure as a write failure
+
+#### Scenario: Scope contains only closed records
+
+- **WHEN** a full scope deletion has no live record entries and source flush is requested
+- **THEN** source flush still waits for the captured deletion operation
+
+### Requirement: Scheduling and failed barriers are isolated
+
+A binding's throttle MUST NOT delay unrelated ready bindings. A failed scope deletion MUST block its own records while allowing independent source jobs to proceed serially. Binding flush MUST NOT retry unrelated failed scopes.
+
+#### Scenario: An idle slow panel shares a source with a fast form
+
+- **WHEN** an idle panel has a 5000 ms throttle and another binding with no throttle changes
+- **THEN** the fast binding does not wait for the slow panel's window
+
+#### Scenario: Scope A fails while scope B remains writable
+
+- **WHEN** scope A deletion fails, A has a blocked edit, and independent scope B changes
+- **THEN** B can persist without completing or retrying A's deletion
+
+### Requirement: Observed edits survive view disconnection
+
+Disconnect MUST preserve already-observed dirty write intent before removing a binding from scheduled collection. This MUST NOT authorize applying a disconnected restore response or saving untouched defaults.
+
+#### Scenario: Edit immediately before closing a panel
+
+- **WHEN** a user changes a persisted value then the context disconnects before its throttle expires
+- **THEN** the edit remains queued for persistence rather than disappearing with the binding
+
+### Requirement: User metadata cannot authorize container replacement
+
+Opaque application commit metadata MUST NOT change a patch into whole-container replacement or bypass version guards. Staged container migrations MUST use a distinct source operation.
+
+#### Scenario: Application metadata has a containerRewrite property
+
+- **WHEN** runWithMeta supplies containerRewrite true during a normal field edit
+- **THEN** untouched records remain and ordinary future-version guards still apply

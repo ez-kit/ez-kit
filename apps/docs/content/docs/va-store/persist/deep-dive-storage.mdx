@@ -37,6 +37,32 @@ useHydrated is false on the server and while initial sources wait. It becomes tr
 sources finish ready/error/timeout; inspect status for their actual outcomes and write errors.
 Explicit handle.restore joins pending or starts a fresh retry after a terminal result, preserving edits.
 
+## Restore policy per source
+
+A store can use independent sources for settings and drafts while keeping shared defaults:
+
+```ts
+withPersist({
+	restore: {
+		timeoutMs: 2000,
+		externalChanges: 'ignore',
+		sources: {
+			draftsApi: { timeoutMs: 10000, externalChanges: 'apply' },
+		},
+	},
+	fields: (field) => [
+		field((state) => state.layout, { source: 'settingsApi' }),
+		field((state) => state.draft, { source: 'draftsApi' }),
+	],
+})
+```
+
+Both names must be registered. settingsApi inherits two seconds/ignore, while draftsApi waits ten
+seconds and accepts external updates. These can be two endpoints of the same server. Map keys are
+the effective names used by sources overrides. Overrides merge with shared defaults; omitted
+settings retain existing behavior. Unknown override names fail before reading. Calling a handle's
+restore while it is pending joins that source's existing deadline rather than extending it.
+
 ## Independent schema versions
 
 ```ts
@@ -92,9 +118,13 @@ nested areas and persisted entries of closed/evicted components. Adapter capabil
 unsupported full deletion before partial work. Outcomes distinguish source failures; memory stays reset
 if deletion fails and the pending deletion can be retried. Cache clear/remove remains eviction.
 
-Writes and deletes are serialized per source. A sent old write precedes reset deletion, queued old
+Writes and deletes are serialized per source. Each binding keeps its own throttle window, so an idle
+slow panel does not delay a fast form sharing the source. Already-observed edits remain queued when
+a context view disconnects. A sent old write precedes reset deletion, queued old
 writes are dropped, and later user edits follow deletion. Flush waits for its revision fence and rejects
-on failed/blocked persistence. Dirty state and current memory survive errors.
+on failed/blocked persistence. Dirty state and current memory survive errors. Flush also waits for applicable container rewrites
+and namespace deletions captured at its call. Repeated reset Promises do not acknowledge deletion
+until the relevant delete succeeds; a failed scope blocks that scope rather than unrelated records.
 
 ## External changes and errors
 
@@ -110,7 +140,11 @@ missing data. Built-in adapters no longer hide quota failures behind a one-time 
 
 indexedDbAdapter has the same addressed values, schemas and lifecycle. Patches and version checks use
 one transaction; removeScope inspects the whole persistent namespace. All source mutations are ordered
-by the engine, not an IndexedDB-only last-value queue.
+by the engine, not an IndexedDB-only last-value queue. Multiple storeName values can share one
+dbName: missing object stores are provisioned through schema upgrades without deleting existing
+stores. Owned connections close/reopen on versionchange. Other tabs can block an upgrade; close
+competing connections and retry. Adapter version/migrate still versions the stored container, not
+the IndexedDB database schema.
 
 For a backend, implement full removeScope and conditional version checks. A mutation Promise must mean
 acknowledgment. A lost response does not prove cancellation; server revisions/generations are needed

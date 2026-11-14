@@ -76,49 +76,49 @@
 	"size-limit": [
 		{
 			"path": "dist/index.js",
-			"limit": "10600 B",
+			"limit": "11950 B",
 			"ignore": [
 				"@ez-kit/store-core"
 			]
 		},
 		{
 			"path": "dist/storage/index.js",
-			"limit": "2450 B",
+			"limit": "2700 B",
 			"ignore": [
 				"@ez-kit/store-core"
 			]
 		},
 		{
 			"path": "dist/url/index.js",
-			"limit": "925 B",
+			"limit": "1175 B",
 			"ignore": [
 				"@ez-kit/store-core"
 			]
 		},
 		{
 			"path": "dist/url/react-router.js",
-			"limit": "725 B",
+			"limit": "1175 B",
 			"ignore": [
 				"@ez-kit/store-core"
 			]
 		},
 		{
 			"path": "dist/url/next.js",
-			"limit": "800 B",
+			"limit": "1125 B",
 			"ignore": [
 				"@ez-kit/store-core"
 			]
 		},
 		{
 			"path": "dist/testing/index.js",
-			"limit": "750 B",
+			"limit": "1000 B",
 			"ignore": [
 				"@ez-kit/store-core"
 			]
 		},
 		{
 			"path": "dist/internals.js",
-			"limit": "8850 B",
+			"limit": "10150 B",
 			"ignore": [
 				"@ez-kit/store-core"
 			]

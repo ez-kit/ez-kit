@@ -72,12 +72,15 @@ function Publish({
 	children,
 }: Pick<ChainProps, 'mounts' | 'defaultSource' | 'children'>): ReactElement {
 	const inherited = useServices()
-	const registry = useMemo(() => {
+	const persistence = useMemo(() => {
 		const engines = new Map([...mounts].map(([name, mount]) => [name, mount.engine]))
 		if (defaultSource !== null && !engines.has(defaultSource))
 			throw new Error(`[ez-kit/store-persist] Unknown defaultSource "${defaultSource}"`)
-		return extendServiceRegistry(inherited, [[PERSIST_ENGINES, createPersistEngines(engines, defaultSource)]])
-	}, [mounts, inherited, defaultSource])
+		return createPersistEngines(engines, defaultSource)
+	}, [mounts, defaultSource])
+	const registry = useMemo(() => {
+		return extendServiceRegistry(inherited, [[PERSIST_ENGINES, persistence]])
+	}, [inherited, persistence])
 	return (
 		<EnginesContext.Provider value={mounts}>
 			<ServicesProvider registry={registry}>{children}</ServicesProvider>
@@ -138,6 +141,9 @@ function Mount({
 	changeKey,
 	...props
 }: ChainProps & { entry: Registration; port: SourcePort; ambient: boolean; changeKey?: string }): ReactElement {
+	const initialPort = useRef(port)
+	if (initialPort.current !== port)
+		throw new Error('[ez-kit/store-persist] Registration changed; remount PersistProvider and its cache')
 	const owned = useRef<PersistMount | null>(null)
 	owned.current ??= {
 		seedSync: !ambient,

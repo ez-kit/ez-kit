@@ -51,9 +51,15 @@ type Entry = {
 	revision: number
 	value: string | null
 	reset: boolean
+	meta: unknown
 }
 type Barrier = { path: readonly string[]; pending: boolean; failed: boolean; entries: Map<string, Entry> }
 type Job = {
+	id: number
+	kind: 'patch' | 'reset' | 'scope-reset' | 'container-rewrite'
+	state: 'pending' | 'acknowledged' | 'failed' | 'cancelled'
+	error: unknown
+	owner?: PersistBinding
 	entries: Map<string, Entry>
 	barrier?: Barrier
 	meta: unknown
@@ -63,7 +69,12 @@ type Job = {
 	rewrite?: Keyed
 	valid?: () => boolean
 }
-type Fence = { targets: Map<RecordState, number>; resolve: () => void; reject: (error: unknown) => void }
+type Fence = {
+	targets: Map<RecordState, number>
+	operations: Set<Job>
+	resolve: () => void
+	reject: (error: unknown) => void
+}
 
 function bindingKey(binding: PersistBinding, field: FieldDescriptor): string {
 	const key = binding.keyOf.get(field)
@@ -79,6 +90,11 @@ const defaultMerge: MetaMerge = (previous, next) => ({
 /** One source owns one mutation queue. A read can acquire apply authority, never write authority. */
 export function createPersistEngine(port: SourcePort, options: CreateEngineOptions = {}): PersistEngine {
 	const bindings = new Set<PersistBinding>()
+	const detached = new Set<PersistBinding>()
+	const operations = new Set<Job>()
+	const writeErrors = new WeakMap<PersistBinding, unknown>()
+	const deadlines = new Map<PersistBinding, number>()
+	let nextOperationId = 0
 	const subscriptions = new Map<PersistBinding, () => void>()
 	const owners = new Map<string, PersistBinding>()
 	const physicalOwners = new Map<string, { binding: PersistBinding; key: string }>()
@@ -89,9 +105,11 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 	const barriers: Barrier[] = []
 	let running: Job | null = null
 	let disposed = false
-	let scheduled = false
+	let scheduleGeneration = 0
+	let scheduledAt: number | undefined
 	let timer: ReturnType<typeof setTimeout> | undefined
-	let pendingMeta: unknown = null
+	let activeMeta: unknown = null
+	const pendingMetas = new Map<RecordState, unknown>()
 	let revision = 0
 	let externalGeneration = 0
 	const versioned = port.capabilities?.recordVersions === true
@@ -136,27 +154,88 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 		return { fields, addresses, ...(stage ? { stageContainerRewrite: stage } : {}), ...(signal ? { signal } : {}) }
 	}
 
+	function allBindings(): Set<PersistBinding> {
+		return new Set([...bindings, ...detached])
+	}
+
+	function applies(job: Job, binding: PersistBinding): boolean {
+		if (job.kind === 'container-rewrite') return true
+		return (
+			job.owner === binding ||
+			[...job.entries.values()].some((entry) => entry.binding === binding) ||
+			(job.barrier !== undefined && isWithinScope(binding.fields[0]?.address?.store.path ?? [], job.barrier.path))
+		)
+	}
+
+	function affectedBy(job: Job): Set<PersistBinding> {
+		return new Set(
+			[
+				...allBindings(),
+				...[...job.entries.values()].map((entry) => entry.binding),
+				...(job.owner ? [job.owner] : []),
+			].filter((binding) => applies(job, binding)),
+		)
+	}
+
 	function refresh(binding: PersistBinding, error?: unknown): void {
-		const records = [...binding.records.values()]
-		const blocked = records.some((record) => record.blocked)
-		const pending = records.some((record) => queued.has(record))
+		if (error !== undefined) writeErrors.set(binding, error)
+		const related = [...operations].filter((job) => applies(job, binding))
+		const failure = related.find((job) => job.state === 'failed')?.error ?? writeErrors.get(binding)
+		const blocked = [...binding.records.values()].some((record) => record.blocked)
+		const pending = related.some((job) => job.state === 'pending') || deadlines.has(binding)
 		updateBindingStatus(binding, {
-			write: blocked ? 'blocked' : error !== undefined ? 'error' : pending ? 'pending' : 'idle',
-			error: error ?? null,
+			write: blocked ? 'blocked' : failure !== undefined ? 'error' : pending ? 'pending' : 'idle',
+			error: failure ?? null,
 		})
+		if (
+			!bindings.has(binding) &&
+			![...binding.records.values()].some((record) => record.dirty) &&
+			!pending &&
+			failure === undefined
+		)
+			detached.delete(binding)
 	}
 
 	function settleFences(error?: unknown, entries: Iterable<Entry> = []): void {
 		const failed = new Map([...entries].map((entry) => [entry.record, entry.reset ? Infinity : entry.revision]))
 		for (const fence of fences) {
-			if (error !== undefined && [...fence.targets].some(([record, target]) => (failed.get(record) ?? -1) >= target)) {
+			const operationError = [...fence.operations].find((job) => job.state === 'failed')
+			if (
+				operationError ||
+				(error !== undefined && [...fence.targets].some(([record, target]) => (failed.get(record) ?? -1) >= target))
+			) {
 				fences.delete(fence)
-				fence.reject(error)
-			} else if ([...fence.targets].every(([record, target]) => record.acknowledged >= target)) {
+				fence.reject(operationError?.error ?? error)
+			} else if (
+				[...fence.targets].every(([record, target]) => record.acknowledged >= target) &&
+				[...fence.operations].every((job) => job.state === 'acknowledged' || job.state === 'cancelled')
+			) {
 				fences.delete(fence)
 				fence.resolve()
 			}
 		}
+	}
+
+	function entryBlocked(entry: Entry): boolean {
+		return (
+			barriers.some(
+				(barrier) =>
+					(barrier.pending || barrier.failed) && isWithinScope(entry.field.address?.store.path ?? [], barrier.path),
+			) ||
+			(!entry.reset && pendingResets.has(entry.record))
+		)
+	}
+
+	function entryMeta(entries: Iterable<Entry>, fallback: unknown = options.defaultMeta ?? {}): unknown {
+		let meta: unknown = fallback
+		let first = true
+		for (const entry of entries) {
+			if (first) {
+				meta = entry.meta
+				first = false
+			} else if (!Object.is(meta, entry.meta)) meta = (options.mergeMeta ?? defaultMerge)(meta, entry.meta)
+		}
+		return meta
 	}
 
 	function contextFor(job: Job): CommitCtx {
@@ -167,7 +246,7 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 				set: entries.filter((entry) => entry.value !== null).map((entry) => entry.key),
 				removed: entries.filter((entry) => entry.value === null).map((entry) => entry.key),
 			},
-			meta: job.meta,
+			meta: entryMeta(entries, job.meta),
 			addresses: new Map(
 				entries.flatMap((entry) => (entry.field.address ? [[entry.key, entry.field.address] as const] : [])),
 			),
@@ -178,40 +257,23 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 
 	function drain(): void {
 		if (disposed || running) return
-		let index = 0
-		const first = jobs[0]
-		if (
-			first &&
-			!first.barrier &&
-			[...first.entries.values()].some((entry) =>
-				barriers.some(
-					(barrier) =>
-						(barrier.pending || barrier.failed) && isWithinScope(entry.field.address?.store.path ?? [], barrier.path),
-				),
-			)
-		) {
-			index = jobs.findIndex((candidate) => candidate.barrier !== undefined)
-			if (index < 0) return
-		}
-		if (
-			index === 0 &&
-			first &&
-			!first.barrier &&
-			[...first.entries.values()].some((entry) => !entry.reset && pendingResets.has(entry.record))
-		) {
-			index = jobs.findIndex(
-				(candidate) =>
-					candidate.barrier !== undefined ||
-					[...candidate.entries.values()].some((entry) => entry.reset && pendingResets.get(entry.record) === entry),
-			)
-			if (index < 0) return
-		}
+		const index = jobs.findIndex(
+			(job) =>
+				job.kind === 'scope-reset' ||
+				job.kind === 'container-rewrite' ||
+				[...job.entries.values()].every((entry) => !entryBlocked(entry)),
+		)
+		if (index < 0) return
 		const job = jobs.splice(index, 1)[0]
 		if (!job) return
 		running = job
 		const finish = (error?: unknown): void => {
 			if (running === job) running = null
-			const affected = new Set<PersistBinding>()
+			job.state = error === undefined ? 'acknowledged' : 'failed'
+			job.error = error
+			if (error === undefined || (job.kind !== 'container-rewrite' && job.kind !== 'scope-reset'))
+				operations.delete(job)
+			const affected = affectedBy(job)
 			for (const entry of job.entries.values()) {
 				affected.add(entry.binding)
 				if (queued.get(entry.record) === entry) queued.delete(entry.record)
@@ -220,7 +282,7 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 					if (pendingResets.get(entry.record) === entry) pendingResets.delete(entry.record)
 					if (entry.reset || job.barrier) {
 						entry.record.blocked = false
-						entry.record.resetPending = false
+						entry.record.resetPending = pendingResets.has(entry.record)
 					}
 					if (entry.record.revision === entry.revision) {
 						entry.record.dirty = false
@@ -236,47 +298,49 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 					if (index >= 0) barriers.splice(index, 1)
 				}
 			}
-			for (const binding of affected) refresh(binding, error)
+			for (const binding of affected) {
+				if (error === undefined) writeErrors.delete(binding)
+				refresh(binding, error)
+			}
 			settleFences(error, job.entries.values())
 			if (error === undefined) job.resolve()
 			else {
 				report(
 					error,
-					job.barrier
+					job.kind === 'scope-reset'
 						? 'removeScope'
-						: [...job.entries.values()].every((entry) => entry.value === null)
-							? 'remove'
-							: 'write',
-					[...job.entries.values()].map((entry) => entry.field),
+						: job.kind === 'container-rewrite'
+							? 'write'
+							: [...job.entries.values()].every((entry) => entry.value === null)
+								? 'remove'
+								: 'write',
+					job.kind === 'container-rewrite'
+						? (job.owner?.fields ?? [])
+						: [...job.entries.values()].map((entry) => entry.field),
 					job.barrier?.path,
 				)
 				job.reject(error)
 			}
 			drain()
-			if (
-				(error === undefined || error instanceof FutureVersionError) &&
-				[...affected].some((binding) =>
-					[...binding.records.values()].some((record) => record.dirty && !queued.has(record) && !record.blocked),
-				)
-			)
-				schedule()
+			if (error === undefined || error instanceof FutureVersionError) for (const binding of affected) schedule(binding)
 		}
 		try {
 			let result: void | Promise<void> = undefined
 			if (job.valid && !job.valid()) {
+				job.state = 'cancelled'
+				operations.delete(job)
 				job.resolve()
+				for (const binding of affectedBy(job)) refresh(binding)
+				settleFences()
 				running = null
 				drain()
 				return
 			}
 			if (job.barrier) result = port.removeScope?.(job.barrier.path)
-			else if (job.rewrite)
-				result = port.set(job.rewrite, {
-					fields: [],
-					diff: { set: [...job.rewrite.keys()], removed: [] },
-					meta: { containerRewrite: true },
-				})
-			else if (job.entries.size > 0)
+			else if (job.rewrite) {
+				if (!port.rewriteContainer) throw new Error('[ez-kit/store-persist] Source does not support container rewrites')
+				result = port.rewriteContainer(job.rewrite)
+			} else if (job.entries.size > 0)
 				result = port.set(
 					new Map(
 						[...job.entries.values()].flatMap((entry) =>
@@ -306,6 +370,7 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 		barrier?: Barrier,
 		rewrite?: Keyed,
 		valid?: () => boolean,
+		owner?: PersistBinding,
 	): Job {
 		let resolve!: () => void
 		let reject!: (error: unknown) => void
@@ -315,6 +380,17 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 		})
 		void promise.catch(() => undefined)
 		const job: Job = {
+			id: ++nextOperationId,
+			kind: barrier
+				? 'scope-reset'
+				: rewrite
+					? 'container-rewrite'
+					: entries.size > 0 && [...entries.values()].every((entry) => entry.reset)
+						? 'reset'
+						: 'patch',
+			state: 'pending',
+			error: null,
+			...(owner ? { owner } : {}),
 			entries,
 			meta,
 			resolve,
@@ -329,18 +405,23 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 			if (!existing || existing.revision <= entry.revision) queued.set(entry.record, entry)
 		}
 		jobs.push(job)
-		for (const binding of new Set([...entries.values()].map((entry) => entry.binding))) refresh(binding)
+		operations.add(job)
+		for (const binding of affectedBy(job)) {
+			writeErrors.delete(binding)
+			refresh(binding)
+		}
 		drain()
 		return job
 	}
 
-	function collect(target?: PersistBinding): unknown {
+	function collect(target?: PersistBinding, ready?: ReadonlySet<PersistBinding>): unknown {
 		const entries = new Map<string, Entry>()
 		const resets = new Map(
 			[...pendingResets.values()]
 				.filter(
 					(entry) =>
 						(!target || entry.binding === target) &&
+						(!ready || ready.has(entry.binding)) &&
 						!barriers.some((barrier) => barrier.entries.get(entry.key) === entry) &&
 						running?.entries.get(entry.key) !== entry &&
 						!jobs.some((job) => job.entries.get(entry.key) === entry),
@@ -349,7 +430,7 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 		)
 		if (resets.size) enqueue(resets, {})
 		let failure: unknown
-		for (const binding of target ? [target] : bindings)
+		for (const binding of target ? [target] : (ready ?? allBindings()))
 			for (const [field, record] of binding.records) {
 				if (
 					!record.dirty ||
@@ -364,6 +445,14 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 							? null
 							: stringifyField(field, value)
 					const key = bindingKey(binding, field)
+					let meta: unknown = options.defaultMeta ?? {}
+					for (const job of jobs) {
+						const previous = job.kind === 'patch' ? job.entries.get(key) : undefined
+						if (previous) meta = (options.mergeMeta ?? defaultMerge)(meta, previous.meta)
+					}
+					const override = pendingMetas.get(record)
+					if (override !== undefined) meta = (options.mergeMeta ?? defaultMerge)(meta, override)
+					pendingMetas.delete(record)
 					const entry: Entry = {
 						binding,
 						field,
@@ -372,6 +461,7 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 						revision: record.revision,
 						value: payload === null ? null : versioned ? encodeRecord(payload, field.schema?.version ?? 0) : payload,
 						reset: record.resetPending && record.forceDelete,
+						meta,
 					}
 					for (const job of jobs)
 						if (!job.barrier && !job.rewrite && !job.entries.get(key)?.reset) job.entries.delete(key)
@@ -383,27 +473,63 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 				}
 			}
 		if (entries.size > 0) {
-			const meta = pendingMeta ?? options.defaultMeta ?? {}
-			pendingMeta = null
 			for (const reset of [false, true]) {
 				const group = new Map([...entries].filter(([, entry]) => entry.reset === reset))
-				if (group.size) enqueue(group, meta)
+				if (group.size) {
+					const readyEntries = new Map([...group].filter(([, entry]) => !entryBlocked(entry)))
+					if (readyEntries.size) enqueue(readyEntries, entryMeta(readyEntries.values()))
+					for (const [key, entry] of group) if (entryBlocked(entry)) enqueue(new Map([[key, entry]]), entry.meta)
+				}
 			}
 		}
 		return failure
 	}
 
-	function schedule(): void {
-		if (scheduled || disposed) return
-		scheduled = true
-		const delay = Math.max(0, ...[...bindings].map((binding) => binding.throttleMs))
-		const run = (): void => {
-			scheduled = false
+	function planSchedule(): void {
+		const next = deadlines.size ? Math.min(...deadlines.values()) : undefined
+		if (next === undefined) {
+			if (timer) clearTimeout(timer)
 			timer = undefined
-			if (!disposed) collect()
+			scheduledAt = undefined
+			scheduleGeneration++
+			return
 		}
+		if (scheduledAt !== undefined && scheduledAt <= next) return
+		if (timer) clearTimeout(timer)
+		timer = undefined
+		scheduledAt = next
+		const generation = ++scheduleGeneration
+		const run = (): void => {
+			if (disposed || generation !== scheduleGeneration) return
+			timer = undefined
+			scheduledAt = undefined
+			const ready = new Set([...deadlines].filter(([, deadline]) => deadline <= Date.now()).map(([binding]) => binding))
+			for (const binding of ready) deadlines.delete(binding)
+			collect(undefined, ready)
+			for (const binding of ready) refresh(binding)
+			planSchedule()
+		}
+		const delay = Math.max(0, next - Date.now())
 		if (delay > 0) timer = setTimeout(run, delay)
 		else queueMicrotask(run)
+	}
+
+	function schedule(binding: PersistBinding): void {
+		if (
+			disposed ||
+			(!bindings.has(binding) && !detached.has(binding)) ||
+			![...binding.records.values()].some(
+				(record) =>
+					record.dirty && (!record.blocked || record.resetPending) && queued.get(record)?.revision !== record.revision,
+			)
+		)
+			return
+		if (!deadlines.has(binding)) {
+			const delay = Number.isFinite(binding.throttleMs) ? Math.max(0, binding.throttleMs) : 0
+			deadlines.set(binding, Date.now() + delay)
+		}
+		refresh(binding)
+		planSchedule()
 	}
 
 	function observe(binding: PersistBinding): void {
@@ -413,6 +539,8 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 				if (encoded === record.observed) continue
 				record.observed = encoded
 				if (systemWrites.has(binding.store)) continue
+				if (activeMeta !== null)
+					pendingMetas.set(record, (options.mergeMeta ?? defaultMerge)(pendingMetas.get(record), activeMeta))
 				record.revision++
 				revision++
 				record.dirty = true
@@ -421,6 +549,8 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 				record.outcome = 'edited'
 				record.error = null
 			} catch (error) {
+				if (activeMeta !== null)
+					pendingMetas.set(record, (options.mergeMeta ?? defaultMerge)(pendingMetas.get(record), activeMeta))
 				record.revision++
 				revision++
 				record.dirty = true
@@ -430,7 +560,32 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 			}
 		}
 		updateBindingStatus(binding)
-		if (!systemWrites.has(binding.store)) schedule()
+		if (!systemWrites.has(binding.store)) schedule(binding)
+	}
+
+	function supersedeWithExternal(binding: PersistBinding, field: FieldDescriptor, record: RecordState): void {
+		const key = bindingKey(binding, field)
+		const inFlight = running?.entries.get(key)
+		const previousRevision = record.revision
+		for (const job of jobs) if (job.kind === 'patch' && job.entries.get(key)?.record === record) job.entries.delete(key)
+		queued.delete(record)
+		pendingMetas.delete(record)
+		for (const fence of fences) {
+			const target = fence.targets.get(record)
+			// Unsent intent is cancelled, not acknowledged. Already-sent revisions retain their fence.
+			if (
+				target !== undefined &&
+				target <= previousRevision &&
+				!(inFlight?.record === record && inFlight.revision >= target)
+			)
+				fence.targets.delete(record)
+		}
+		record.revision++
+		revision++
+		record.forceDelete = false
+		record.error = null
+		// A genuinely sent async write cannot be cancelled; serialize a corrective value behind it.
+		record.dirty = inFlight?.record === record
 	}
 
 	function processRead(
@@ -442,12 +597,16 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 		const writes: PathWrite[] = []
 		for (const [field, record] of binding.records) {
 			const key = bindingKey(binding, field)
-			if (record.revision !== expected.get(record) || (!external && record.edited)) continue
+			if (record.revision !== expected.get(record) || (!external && record.edited) || record.resetPending) continue
 			let operation: PersistErrorContext['operation'] = 'decode'
 			try {
 				const raw = keyed.get(key)
 				if (raw === undefined) {
-					if (external) writes.push({ path: field.path, value: cloneDefault(binding.defaults.get(field)) })
+					if (external) {
+						supersedeWithExternal(binding, field, record)
+						record.outcome = 'default'
+						writes.push({ path: field.path, value: cloneDefault(binding.defaults.get(field)) })
+					}
 					continue
 				}
 				const stored = versioned ? decodeRecord(raw) : { version: 0, value: raw }
@@ -474,6 +633,15 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 					value = field.schema.validate(value)
 				}
 				if (value instanceof Promise) throw new Error('[ez-kit/store-persist] Schema callbacks must be synchronous')
+				if (external) supersedeWithExternal(binding, field, record)
+				if (record.forceDelete) {
+					record.forceDelete = false
+					record.revision++
+					revision++
+					for (const job of jobs) if (job.kind === 'patch') job.entries.delete(key)
+					if (queued.get(record)?.value === null) queued.delete(record)
+				}
+				record.blocked = false
 				const present = readPath(binding.port.getState(binding.store), field.path)
 				if (external || fieldEquals(field, present, binding.defaults.get(field))) {
 					writes.push({ path: field.path, value })
@@ -501,8 +669,16 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 				/* Reported on the next write. */
 			}
 		}
+		if (![...binding.records.values()].some((record) => record.dirty)) {
+			deadlines.delete(binding)
+			planSchedule()
+		}
 		refresh(binding)
-		if ([...binding.records.values()].some((record) => record.dirty)) schedule()
+		if ([...binding.records.values()].some((record) => record.dirty)) schedule(binding)
+		if (external) {
+			drain()
+			settleFences()
+		}
 	}
 
 	function restore(binding: PersistBinding, supplied: RestoreOptions = {}): Promise<RestoreResult> {
@@ -530,7 +706,10 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 			closed = true
 			if (deadline) clearTimeout(deadline)
 			binding.cancelRestore = null
-			updateBindingStatus(binding, { restore: status, error: error ?? null })
+			updateBindingStatus(binding, {
+				restore: status,
+				error: error ?? (binding.status.write === 'error' ? binding.status.error : null),
+			})
 			resolve({
 				status,
 				...(error !== undefined ? { error } : {}),
@@ -549,7 +728,7 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 				finish('error', binding.seedError)
 			} else {
 				finish('ready')
-				if ([...binding.records.values()].some((record) => record.dirty)) schedule()
+				if ([...binding.records.values()].some((record) => record.dirty)) schedule(binding)
 			}
 			return promise
 		}
@@ -570,6 +749,7 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 					undefined,
 					rewrite,
 					() => !disposed && bindings.has(binding) && binding.generation === generation && epoch === revision,
+					binding,
 				)
 			finish('ready')
 		}
@@ -619,10 +799,20 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 			record.resetPending = true
 			record.outcome = 'default'
 			record.error = null
-			for (const job of jobs) if (!job.barrier) job.entries.delete(key)
+			for (const job of jobs) if (job.kind === 'patch') job.entries.delete(key)
 			queued.delete(record)
 			writes.push({ path: field.path, value: cloneDefault(binding.defaults.get(field)) })
-			const entry: Entry = { binding, field, record, key, revision: record.revision, value: null, reset: true }
+			pendingMetas.delete(record)
+			const entry: Entry = {
+				binding,
+				field,
+				record,
+				key,
+				revision: record.revision,
+				value: null,
+				reset: true,
+				meta: activeMeta ?? options.defaultMeta ?? {},
+			}
 			pendingResets.set(record, entry)
 			entries.push(entry)
 		}
@@ -688,6 +878,7 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 				owners.set(key, binding)
 			}
 			bindings.add(binding)
+			detached.delete(binding)
 			binding.controller = api
 			subscriptions.set(
 				binding,
@@ -696,7 +887,16 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 				}),
 			)
 			if (!binding.started || binding.status.restore === 'idle') void restore(binding)
+			if ([...operations].some((job) => applies(job, binding))) refresh(binding)
 			return () => {
+				deadlines.delete(binding)
+				collect(binding)
+				if (
+					[...binding.records.values()].some((record) => record.dirty) ||
+					[...operations].some((job) => applies(job, binding))
+				)
+					detached.add(binding)
+				planSchedule()
 				subscriptions.get(binding)?.()
 				subscriptions.delete(binding)
 				bindings.delete(binding)
@@ -756,52 +956,77 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 			}
 		},
 		runWithMeta(meta, mutate) {
-			pendingMeta = (options.mergeMeta ?? defaultMerge)(pendingMeta, meta)
-			mutate()
+			const previous = activeMeta
+			activeMeta = (options.mergeMeta ?? defaultMerge)(previous, meta)
+			try {
+				mutate()
+			} finally {
+				activeMeta = previous
+			}
 		},
 		flushNow() {
 			void api.flush().catch(() => undefined)
 		},
 		flush(binding) {
-			if (timer) clearTimeout(timer)
-			timer = undefined
-			scheduled = false
+			if (disposed) return Promise.reject(new Error('[ez-kit/store-persist] Engine disposed'))
+			if (binding) deadlines.delete(binding)
+			else deadlines.clear()
+			planSchedule()
 			const retries: Promise<void>[] = []
-			for (const barrier of barriers)
-				if (barrier.failed && !barrier.pending) {
-					barrier.failed = false
-					barrier.pending = true
-					retries.push(enqueue(barrier.entries, {}, barrier).promise)
+			for (const job of [...operations]) {
+				if (job.state !== 'failed' || (binding && !applies(job, binding))) continue
+				job.state = 'cancelled'
+				operations.delete(job)
+				if (job.valid && !job.valid()) {
+					for (const item of affectedBy(job)) {
+						writeErrors.delete(item)
+						refresh(item)
+					}
+					continue
 				}
+				if (job.barrier) {
+					job.barrier.failed = false
+					job.barrier.pending = true
+				}
+				retries.push(enqueue(job.entries, job.meta, job.barrier, job.rewrite, job.valid, job.owner).promise)
+			}
 			const targets = new Map<RecordState, number>()
 			const blocked: string[] = []
-			for (const item of binding ? [binding] : bindings)
+			for (const item of binding ? [binding] : allBindings())
 				for (const [field, record] of item.records) {
 					if (record.dirty) targets.set(record, record.revision)
 					if (record.blocked && !record.resetPending) blocked.push(bindingKey(item, field))
 				}
+			if (blocked.length) {
+				collect(binding)
+				return Promise.reject(new FutureVersionError(blocked))
+			}
+			const captured = new Set(
+				[...operations].filter(
+					(job) =>
+						(job.kind === 'container-rewrite' || job.kind === 'scope-reset') && (!binding || applies(job, binding)),
+				),
+			)
 			const fencePromise = new Promise<void>((resolve, reject) => {
-				const fence: Fence = { targets, resolve, reject }
+				const fence: Fence = { targets, operations: captured, resolve, reject }
 				fences.add(fence)
 				const failure = collect(binding)
-				if (blocked.length || failure !== undefined) {
+				if (failure !== undefined) {
 					fences.delete(fence)
-					reject(
-						failure instanceof Error
-							? failure
-							: blocked.length
-								? new FutureVersionError(blocked)
-								: new Error('Cannot encode persistent value', { cause: failure }),
-					)
+					reject(failure instanceof Error ? failure : new Error('Cannot encode persistent value', { cause: failure }))
 				} else settleFences()
 			})
 			return Promise.all([fencePromise, ...retries]).then(() => undefined)
 		},
 		restore,
 		reset(binding, fields) {
+			for (const path of fields ?? [])
+				if (!binding.fields.some((field) => JSON.stringify(path) === JSON.stringify(field.path)))
+					return Promise.reject(new Error(`[ez-kit/store-persist] Unknown reset field: ${JSON.stringify(path)}`))
 			const selected = binding.fields.filter(
 				(field) => !fields || fields.some((path) => JSON.stringify(path) === JSON.stringify(field.path)),
 			)
+			if (selected.length === 0) return Promise.resolve()
 			const entries = resetMemory(binding, selected)
 			return enqueue(new Map(entries.map((entry) => [entry.key, entry])), {}).promise
 		},
@@ -811,14 +1036,21 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 			// A new full delete also retries failed subtrees covered by this scope.
 			for (let index = barriers.length - 1; index >= 0; index--) {
 				const previous = barriers[index]
-				if (previous?.failed && isWithinScope(previous.path, path)) barriers.splice(index, 1)
+				if (previous?.failed && isWithinScope(previous.path, path)) {
+					barriers.splice(index, 1)
+					for (const job of operations)
+						if (job.barrier === previous) {
+							job.state = 'cancelled'
+							operations.delete(job)
+						}
+				}
 			}
 			revision++
 			externalGeneration++
 			const barrier: Barrier = { path: [...path], pending: true, failed: false, entries: new Map() }
 			barriers.push(barrier)
 			const entries: Entry[] = []
-			for (const binding of bindings)
+			for (const binding of allBindings())
 				if (isWithinScope(binding.fields[0]?.address?.store.path ?? [], path))
 					entries.push(...resetMemory(binding, binding.fields))
 			barrier.entries = new Map(entries.map((entry) => [entry.key, entry]))
@@ -828,7 +1060,9 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 			disposed = true
 			externalGeneration++
 			if (timer) clearTimeout(timer)
-			for (const binding of bindings) {
+			deadlines.clear()
+			scheduleGeneration++
+			for (const binding of allBindings()) {
 				binding.cancelRestore?.()
 				binding.controller = null
 			}
@@ -839,10 +1073,13 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 			fences.clear()
 			subscriptions.clear()
 			bindings.clear()
+			detached.clear()
+			operations.clear()
 			owners.clear()
 			physicalOwners.clear()
 			queued.clear()
 			pendingResets.clear()
+			pendingMetas.clear()
 		},
 	}
 	return api

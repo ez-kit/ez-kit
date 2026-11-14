@@ -141,3 +141,21 @@ Existing adapter version/migrate MUST remain a separate layer with their previou
 
 - **WHEN** container migrate throws an exception
 - **THEN** the previous container fallback result is preserved rather than replaced by new per-record rules
+
+### Requirement: New valid reads supersede stale invalidation intent
+
+A successful current restore MUST cancel obsolete pending invalidation/deletion from an earlier read before it can erase the newly validated value. This MUST retain the priority of user edits, explicit reset barriers and future-version guards.
+
+#### Scenario: A valid retry precedes pending invalidation
+
+- **WHEN** an invalid read queues deletion and a retry obtains a valid value before that deletion is sent
+- **THEN** subsequent flush does not delete the value restored by the newer operation
+
+### Requirement: Helper types preserve decoder and validator independence
+
+Public field helpers MUST accept an unknown-output decoder with a validator returning the current field type without widening away the required validator. Wrong validator output MUST remain a type error through both bindings.
+
+#### Scenario: JSON decoder and typed validator use a helper
+
+- **WHEN** localStorageField or urlField combines paramJson with schema.validate returning Layout
+- **THEN** the Layout field declaration typechecks without casts, and an incompatible validator remains rejected

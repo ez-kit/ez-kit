@@ -40,10 +40,10 @@ export { valtioPort } from './port'
  */
 export function withPersist<T extends object>(
 	options: PersistPluginOptions<NoInfer<T>> = {},
-): StoreEnhancer<T, T & PersistHandles> {
+): StoreEnhancer<T, T & PersistHandles<T>> {
 	return (target: T) => {
 		applyPersist(target, valtioPort, options)
-		return target as T & PersistHandles
+		return target as T & PersistHandles<T>
 	}
 }
 
@@ -76,6 +76,7 @@ export {
 // --- Per-source control handles: typed accessors ($url / $persist) ---
 export {
 	persistHandle,
+	type PersistFieldPath,
 	type PersistHandle,
 	type PersistHandles,
 	type UrlHandle,
@@ -83,8 +84,16 @@ export {
 } from '@ez-kit/store-persist'
 
 // --- Decorator + accessor fronts (field declaration) ---
-export { persistField, type PersistFieldOptions } from '@ez-kit/store-persist'
-export type { AccessorFieldOptions, FieldBuilder, FieldSpec, FieldsBuilder } from '@ez-kit/store-persist'
+export { persistField, type PersistFieldDecorator, type PersistFieldOptions } from '@ez-kit/store-persist'
+export type {
+	AccessorFieldOptions,
+	FieldBuilder,
+	FieldSpec,
+	FieldsBuilder,
+	FieldValueOptions,
+	ValidatedAccessorFieldOptions,
+	ValidatedValueOptions,
+} from '@ez-kit/store-persist'
 
 // --- Codecs ---
 export type { AnyCodec, Codec } from '@ez-kit/store-persist'
@@ -118,6 +127,7 @@ export type {
 	PersistSchema,
 	PersistRecordStatus,
 	PersistStatus,
+	PersistRestoreOptions,
 	RestoreOptions,
 	RestoreResult,
 	RestoreState,

@@ -7,3 +7,7 @@
  */
 export { createUrlPort, URL_SOURCE, UrlHistory, type UrlDriver, type UrlMeta, urlMetaMerge } from './adapter'
 export { persistUrl, type PersistUrlOptions, urlField, type UrlFieldOptions } from './decorator'
+
+// Named public types keep inferred helper/decorator declarations portable for consumers.
+export type { FieldValueOptions, ValidatedAccessorFieldOptions, ValidatedValueOptions } from '../accessor'
+export type { PersistFieldDecorator } from '../decorators'

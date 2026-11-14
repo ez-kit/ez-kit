@@ -29,8 +29,15 @@ export type StoreCacheOptions = {
 export type CreateOptions = {
 	gcTime: number
 	context: PluginContext
-	/** React owns activation after commit; pure imperative caches keep immediate setup. */
+	/** Return an uncached render candidate; addObserver adopts it after commit. */
 	deferSetup?: boolean
+}
+
+/** Candidate and committed context supplied when a React owner first attaches. */
+export type ObserveOptions = {
+	instance: object
+	gcTime: number
+	context: PluginContext
 }
 
 export type CachedStoreOptions = {

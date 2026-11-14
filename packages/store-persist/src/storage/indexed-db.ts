@@ -36,8 +36,94 @@ function complete(tx: IDBTransaction): Promise<void> {
 	})
 }
 
+type DatabaseManager = {
+	run<T>(storeName: string, operation: (db: IDBDatabase) => Promise<T>): Promise<T>
+}
+
+// Schema upgrades must coordinate all ports using the database, not just one storageKey.
+const managers = new WeakMap<IDBFactory, Map<string, DatabaseManager>>()
 const factoryIds = new WeakMap<IDBFactory, number>()
 let nextFactoryId = 0
+
+function databaseManager(factory: IDBFactory, dbName: string): DatabaseManager {
+	let databases = managers.get(factory)
+	if (!databases) {
+		databases = new Map()
+		managers.set(factory, databases)
+	}
+	const existing = databases.get(dbName)
+	if (existing) return existing
+	let connection: IDBDatabase | null = null
+	let tail: Promise<unknown> = Promise.resolve()
+
+	function open(storeName: string, version?: number): Promise<IDBDatabase> {
+		return new Promise((resolve, reject) => {
+			const opening = version === undefined ? factory.open(dbName) : factory.open(dbName, version)
+			let settled = false
+			opening.onupgradeneeded = () => {
+				if (settled) {
+					opening.transaction?.abort()
+					return
+				}
+				if (!opening.result.objectStoreNames.contains(storeName)) opening.result.createObjectStore(storeName)
+			}
+			opening.onblocked = () => {
+				settled = true
+				reject(new Error(`IndexedDB upgrade blocked for database "${dbName}"`))
+			}
+			opening.onerror = () => {
+				if (settled) return
+				settled = true
+				reject(opening.error ?? new Error('IndexedDB open failed'))
+			}
+			opening.onsuccess = () => {
+				const db = opening.result
+				if (settled) {
+					db.close()
+					return
+				}
+				settled = true
+				db.onversionchange = () => {
+					db.close()
+					if (connection === db) connection = null
+				}
+				db.onclose = () => {
+					if (connection === db) connection = null
+				}
+				resolve(db)
+			}
+		})
+	}
+
+	async function ensureStore(storeName: string): Promise<IDBDatabase> {
+		connection ??= await open(storeName)
+		while (!connection.objectStoreNames.contains(storeName)) {
+			const nextVersion = connection.version + 1
+			connection.close()
+			connection = null
+			try {
+				connection = await open(storeName, nextVersion)
+			} catch (error) {
+				// An external schema upgrade may win between discovering and requesting the version.
+				if (!(error instanceof Error) || error.name !== 'VersionError') throw error
+				connection = await open(storeName)
+			}
+		}
+		return connection
+	}
+
+	const manager: DatabaseManager = {
+		run<T>(storeName: string, operation: (db: IDBDatabase) => Promise<T>): Promise<T> {
+			// Keep creation of the transaction inside this critical section: no other port can close
+			// the connection for an upgrade between awaiting a database and starting a transaction.
+			const result = tail.then(async () => operation(await ensureStore(storeName)))
+			tail = result.catch(() => undefined)
+			return result
+		},
+	}
+	databases.set(dbName, manager)
+	return manager
+}
 
 export function createIndexedDbPort(options: IndexedDbAdapterOptions = {}): SourcePort {
 	const dbName = options.dbName ?? 'ez-kit'
@@ -46,56 +132,54 @@ export function createIndexedDbPort(options: IndexedDbAdapterOptions = {}): Sour
 	const version = options.version ?? STORAGE_VERSION
 	const factory = options.factory ?? (typeof indexedDB === 'undefined' ? null : indexedDB)
 	if (factory && !factoryIds.has(factory)) factoryIds.set(factory, ++nextFactoryId)
-	let pending: Promise<IDBDatabase> | null = null
-	function database(): Promise<IDBDatabase> {
-		if (!factory) return Promise.reject(new Error('IndexedDB is unavailable'))
-		pending ??= new Promise<IDBDatabase>((resolve, reject) => {
-			const open = factory.open(dbName, 1)
-			open.onupgradeneeded = () => {
-				if (!open.result.objectStoreNames.contains(storeName)) open.result.createObjectStore(storeName)
-			}
-			open.onsuccess = () => {
-				resolve(open.result)
-			}
-			open.onerror = () => {
-				reject(open.error ?? new Error('IndexedDB open failed'))
-			}
-		}).catch((error: unknown) => {
-			pending = null
-			throw error
-		})
-		return pending
+	const manager = factory ? databaseManager(factory, dbName) : null
+
+	function unavailable(): void {
+		if (typeof window !== 'undefined') throw new Error('IndexedDB is unavailable')
 	}
+
 	async function mutate(transform: (current: Keyed) => Keyed): Promise<void> {
-		if (!factory) return
-		const db = await database()
-		const tx = db.transaction(storeName, 'readwrite')
-		const done = complete(tx)
-		void done.catch(() => undefined)
-		try {
-			const store = tx.objectStore(storeName)
-			const stored = await request<unknown>(store.get(storageKey))
-			const next = transform(runMigration(stored, options).keyed)
-			if (next.size) store.put(packBlob(next, version), storageKey)
-			else store.delete(storageKey)
-			await done
-		} catch (error) {
-			try {
-				tx.abort()
-			} catch {
-				/* The failed transaction may already be closed. */
-			}
-			throw error
+		if (!manager) {
+			unavailable()
+			return
 		}
+		await manager.run(storeName, async (db) => {
+			const tx = db.transaction(storeName, 'readwrite')
+			const done = complete(tx)
+			void done.catch(() => undefined)
+			try {
+				const store = tx.objectStore(storeName)
+				const stored = await request<unknown>(store.get(storageKey))
+				const next = transform(runMigration(stored, options).keyed)
+				if (next.size) store.put(packBlob(next, version), storageKey)
+				else store.delete(storageKey)
+				await done
+			} catch (error) {
+				try {
+					tx.abort()
+				} catch {
+					/* The failed transaction may already be closed. */
+				}
+				throw error
+			}
+		})
 	}
 	return {
 		capabilities: { recordVersions: true },
 		identity: `indexedDB:${factory ? String(factoryIds.get(factory)) : 'server'}:${JSON.stringify([dbName, storeName, storageKey])}`,
 		async get(context): Promise<Keyed> {
-			if (!factory) return new Map()
-			const db = await database()
-			const tx = db.transaction(storeName, 'readonly')
-			const stored = await request<unknown>(tx.objectStore(storeName).get(storageKey))
+			if (!manager) {
+				unavailable()
+				return new Map()
+			}
+			const stored = await manager.run(storeName, async (db) => {
+				const tx = db.transaction(storeName, 'readonly')
+				const done = complete(tx)
+				void done.catch(() => undefined)
+				const value = await request<unknown>(tx.objectStore(storeName).get(storageKey))
+				await done
+				return value
+			})
 			const { keyed, rewrite } = runMigration(stored, options)
 			if (rewrite) {
 				if (context) context.stageContainerRewrite?.(keyed)
@@ -104,11 +188,10 @@ export function createIndexedDbPort(options: IndexedDbAdapterOptions = {}): Sour
 			return keyed
 		},
 		set(desired, context) {
-			return mutate((current) =>
-				(context.meta as { containerRewrite?: unknown } | null)?.containerRewrite === true
-					? desired
-					: patchKeyed(current, desired, context),
-			)
+			return mutate((current) => patchKeyed(current, desired, context))
+		},
+		rewriteContainer(values) {
+			return mutate(() => values)
 		},
 		removeScope(path) {
 			return mutate((current) => removeKeyedScope(current, path))

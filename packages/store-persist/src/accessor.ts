@@ -6,7 +6,7 @@ import type { PersistSpec } from './spec'
 import type { FieldDescriptor, Parser, PersistSchema } from './types'
 
 /** Per-field options for the accessor front — mirrors the base decorator's options. */
-type AccessorOptions<M> = {
+export type AccessorOptions<M> = {
 	/** Which source engine this field syncs to (e.g. `'url'`, `'localStorage'`). */
 	source?: string
 	/** Override the leaf segment of the substrate key (relative) — defaults to the last path segment. */
@@ -20,11 +20,14 @@ type AccessorOptions<M> = {
 	meta?: M
 }
 
-export type AccessorFieldOptions<V, M = unknown> = AccessorOptions<M> &
-	(
-		| { parser?: Parser<V>; schema?: PersistSchema<V> }
-		| { parser?: Parser<unknown>; schema: PersistSchema<V> & { validate(value: unknown): V } }
-	)
+/** An unknown transport decoder becomes typed only through its required validator. */
+export type ValidatedValueOptions<V> = {
+	parser?: Parser<unknown>
+	schema: PersistSchema<V> & { validate(value: unknown): V }
+}
+export type FieldValueOptions<V> = { parser?: Parser<V>; schema?: PersistSchema<V> } | ValidatedValueOptions<V>
+export type AccessorFieldOptions<V, M = unknown> = AccessorOptions<M> & FieldValueOptions<V>
+export type ValidatedAccessorFieldOptions<V, M = unknown> = AccessorOptions<M> & ValidatedValueOptions<V>
 
 /** A field declaration produced by the builder: a path plus its options. */
 export type FieldSpec = {

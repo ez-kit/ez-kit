@@ -95,3 +95,59 @@ Render-scoped adapter registration MUST preserve valid hook ordering. Duplicate 
 
 - **WHEN** a child Provider inheriting `browser` unmounts
 - **THEN** parent stores continue using their original engine
+
+### Requirement: Persistence identity excludes unrelated services
+
+Changing unrelated dependency-injection services MUST NOT replace the effective persistence registry when its engines/defaultSource are unchanged. Render-scoped returned port identity MUST be validated even when the usePort function itself stays stable.
+
+#### Scenario: Locale changes without changing sources
+
+- **WHEN** an outer service registry changes locale but all persistence engines and defaultSource stay the same
+- **THEN** existing stores remain connected without a birth-registry replacement error
+
+#### Scenario: A stable hook returns a different port
+
+- **WHEN** the same usePort hook returns another port without remount
+- **THEN** the Provider diagnoses replacement rather than splitting reads/writes and subscriptions across ports
+
+### Requirement: Source selectors are unambiguous
+
+Explicit named control handles MUST select that exact registered source, independently of shorthand control names. Unknown explicit sources MUST be diagnosed rather than returning a handle that falsely confirms flush success.
+
+#### Scenario: A source is named dollar persist
+
+- **WHEN** a store has sources first and $persist and reset selects the literal $persist source
+- **THEN** only that named source resets and the shorthand cannot redirect the operation
+
+#### Scenario: A source selector contains a typo
+
+- **WHEN** a consumer selects sevrer while the source binding is named server
+- **THEN** selection reports a diagnostic with available names instead of an inert successful flush
+
+### Requirement: Source-specific restore policy overrides shared defaults
+
+PersistOptions.restore MUST support source-keyed timeout/externalChanges overrides using the effective registered source alias. Global options remain defaults. Resolution MUST happen before initial reading without mutating caller configuration or enabling fallback/fan-out. Unknown override names MUST be diagnosed before I/O; registered unused sources remain valid. Existing pending restore deadlines MUST remain unchanged by joining calls.
+
+#### Scenario: Layout and drafts have different deadlines
+
+- **WHEN** shared timeout is 2000 ms and draftsApi overrides it to 10000 ms
+- **THEN** settingsApi can time out after 2000 ms while draftsApi keeps waiting for its own deadline
+
+#### Scenario: Sources use different external-change policies
+
+- **WHEN** one source inherits ignore and another overrides externalChanges to apply
+- **THEN** external events affect only the binding whose effective policy permits them
+
+#### Scenario: An override references an unknown alias
+
+- **WHEN** restore.sources contains a name absent from the effective registry
+- **THEN** setup reports a configuration error before any source read
+
+### Requirement: Field helpers support source aliases
+
+Storage/URL accessor helpers and decorators MUST accept explicit source aliases while retaining their existing default source names. Unknown decoders plus typed schema validators MUST remain composable through helpers.
+
+#### Scenario: Browser is an alias for local storage
+
+- **WHEN** local storage is registered as browser and a storage helper selects source browser
+- **THEN** its fields resolve through browser without requiring a hand-written replacement descriptor

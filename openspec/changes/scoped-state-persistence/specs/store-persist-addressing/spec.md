@@ -104,3 +104,21 @@ The new contract MUST operate without a public mode/legacy switch. On a format c
 
 - **WHEN** the application explicitly maps a legacy key to a new address
 - **THEN** the imported value follows ordinary version checks, migration and validation
+
+### Requirement: Reset validates selected persisted fields
+
+Reset MUST validate all explicit requested paths before memory or storage mutations. Unknown paths MUST fail rather than silently succeeding as an empty reset. Public control types SHOULD infer supported state paths through either binding, including nested objects/arrays; runtime membership remains authoritative for the selected persisted fields.
+
+#### Scenario: Reset contains a misspelled field
+
+- **WHEN** a reset selects layout and unknown layuot together
+- **THEN** the operation fails before resetting layout or deleting either override
+
+### Requirement: IndexedDB supports configured object-store provisioning
+
+Built-in IndexedDB adapters MUST provision a missing configured object store in an existing database without deleting other stores. Owned connections MUST cooperate with version upgrades, and blocked/unavailable provisioning MUST surface as observable failure rather than false acknowledgement.
+
+#### Scenario: Two sources share a database with different stores
+
+- **WHEN** adapters select the same dbName and different storeName values
+- **THEN** both can persist independently and provisioning the second store preserves the first

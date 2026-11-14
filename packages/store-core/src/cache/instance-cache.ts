@@ -4,7 +4,7 @@ import { serializeStoreId } from '../store-id'
 import { createMembershipView, startsWithPrefix, toRecords, updateMembership } from './cache-utils'
 
 import type { InstanceMeta, MembershipView } from './cache-types'
-import type { CacheRecord, CreateOptions } from './types'
+import type { CacheRecord, CreateOptions, ObserveOptions } from './types'
 import type { PluginCleanup } from '../plugin'
 import type { StoreId } from '../store-id'
 
@@ -18,9 +18,9 @@ export type InstanceCache = {
 	/** Miss: create + run plugin setups; hit: return the existing instance with NO re-run. */
 	getOrCreate: <T extends object>(id: StoreId, create: () => T, opts: CreateOptions) => T
 	/** Register a mounted observer; keeps the entry alive and cancels any pending eviction. */
-	addObserver: (id: StoreId) => void
+	addObserver: (id: StoreId, options?: ObserveOptions) => object | undefined
 	/** Unregister an observer; when the last one leaves, schedule eviction after the entry's `gcTime`. */
-	removeObserver: (id: StoreId) => void
+	removeObserver: (id: StoreId, instance?: object) => void
 	/** Flat coordinates of live entries, optionally filtered to a path subtree. Non-reactive snapshot. */
 	keys: (prefix?: readonly string[]) => CacheRecord[]
 	/** Remove every entry, or — with `prefix` — every entry under that path subtree. Runs cleanups. */
@@ -117,6 +117,9 @@ export function createInstanceCache(options: CacheConfig = {}): InstanceCache {
 		const instance = create()
 		const plugins = capabilitiesOf(instance)
 		for (const plugin of plugins) plugin.validateContext?.(instance, opts.context)
+		// Render candidates belong to their React owner until it commits. Publishing them here
+		// would retain abandoned Suspense defaults and services without an observer or GC deadline.
+		if (opts.deferSetup) return instance
 		const cleanups: PluginCleanup[] = []
 		const meta: InstanceMeta = {
 			instance,
@@ -127,32 +130,27 @@ export function createInstanceCache(options: CacheConfig = {}): InstanceCache {
 			cleanups,
 			cleared: false,
 		}
-		const activate = (): void => {
-			for (const plugin of plugins) cleanups.push(plugin.setup(instance, opts.context))
-		}
-		if (opts.deferSetup) meta.activate = activate
-		else activate()
+		for (const plugin of plugins) cleanups.push(plugin.setup(instance, opts.context))
 		metaByKey.set(key, meta)
 		return instance
 	}
 
-	function addObserver(id: StoreId): void {
+	function addObserver(id: StoreId, options?: ObserveOptions): object | undefined {
+		if (options) getOrCreate(id, () => options.instance, { gcTime: options.gcTime, context: options.context })
 		const meta = metaByKey.get(serializeStoreId(id))
 		if (!meta) return
-		const activate = meta.activate
-		delete meta.activate
-		activate?.()
 		meta.observerCount += 1
 		if (meta.evictionTimer) {
 			clearTimeout(meta.evictionTimer)
 			meta.evictionTimer = undefined
 		}
 		setMembership(id, meta.instance)
+		return meta.instance
 	}
 
-	function removeObserver(id: StoreId): void {
+	function removeObserver(id: StoreId, instance?: object): void {
 		const meta = metaByKey.get(serializeStoreId(id))
-		if (!meta) return
+		if (!meta || (instance !== undefined && meta.instance !== instance)) return
 		meta.observerCount = Math.max(0, meta.observerCount - 1)
 		if (meta.observerCount === 0) {
 			scheduleEviction(id)

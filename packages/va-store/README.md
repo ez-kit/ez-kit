@@ -212,3 +212,8 @@ an entire scope, including unmounted records. URL adapters do not offer full per
 
 This release intentionally includes breaking changes in a minor. See the
 [migration guide](../store-persist/MIGRATION.md) before upgrading persisted applications.
+
+Persistence restore options accept a source map for independent policies while retaining shared defaults:
+`restore: { timeoutMs: 2000, sources: { draftsApi: { timeoutMs: 10000 } } }`. Source-specific helpers
+accept aliases such as `source: 'browser'`; explicit handles/reset paths diagnose unknown selections.
+Each binding owns its throttle window, while one acknowledged queue still serializes each source.

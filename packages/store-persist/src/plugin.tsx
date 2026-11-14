@@ -10,7 +10,7 @@ import { groupBySource } from './spec'
 import type { FieldsBuilder } from './accessor'
 import type { SourceBinding } from './handle'
 import type { PersistEngines } from './service'
-import type { PersistOptions, PersistStatus } from './types'
+import type { PersistOptions, PersistRestoreOptions, PersistStatus } from './types'
 import type { PluginContext, StorePlugin, StorePort } from '@ez-kit/store-core'
 
 export type PersistPluginOptions<T extends object = object> = PersistOptions & { fields?: FieldsBuilder<T> }
@@ -44,7 +44,18 @@ function validateRegistry(store: object, context: PluginContext): PersistEngines
 	return registry
 }
 
-function resolveSources(entries: SourceBinding[], registry: PersistEngines, context: PluginContext) {
+function resolveSources(
+	entries: SourceBinding[],
+	registry: PersistEngines,
+	context: PluginContext,
+	restore: PersistRestoreOptions = {},
+) {
+	const { sources, ...defaults } = restore
+	for (const source of Object.keys(sources ?? {}))
+		if (!registry.safeGet(source))
+			throw new Error(
+				`[ez-kit/store-persist] Unknown restore source "${source}"; available: ${registry.sources().join(', ')}`,
+			)
 	const resolved = entries.map((entry) => {
 		const source = entry.source || registry.defaultSource
 		if (!source) throw new Error('[ez-kit/store-persist] Specify source or defaultSource')
@@ -75,6 +86,7 @@ function resolveSources(entries: SourceBinding[], registry: PersistEngines, cont
 		})
 	}
 	const connections = [...merged.values()]
+	for (const { entry, source } of connections) entry.binding.restoreOptions = { ...defaults, ...sources?.[source] }
 	entries.splice(0, entries.length, ...connections.map((connection) => connection.entry))
 	return connections
 }
@@ -93,7 +105,7 @@ export function persist<TStore extends object, TState extends object = object>(
 			const entries = bindPersist(store, port, options)
 			const disconnects: (() => void)[] = []
 			// Resolve everything before connecting anything: bad config cannot produce partial I/O.
-			const connections = resolveSources(entries, registry, context)
+			const connections = resolveSources(entries, registry, context, options.restore)
 			registryByStore.set(store, registry)
 			for (const { entry, source, engine } of connections) {
 				entry.source = source
@@ -110,7 +122,12 @@ export function persist<TStore extends object, TState extends object = object>(
 	}
 	plugin.seedRender = (store, context) => {
 		const registry = validateRegistry(store, context)
-		for (const { entry, engine } of resolveSources(bindPersist(store, port, options), registry, context)) {
+		for (const { entry, engine } of resolveSources(
+			bindPersist(store, port, options),
+			registry,
+			context,
+			options.restore,
+		)) {
 			captureDefaults(entry.binding)
 			addressBinding(entry.binding, context.id)
 			engine.seed(entry.binding)
@@ -204,6 +221,15 @@ function aggregateFor(store: object, source?: string): Aggregate {
 }
 
 export function usePersistStatus(store: object, source?: string): PersistStatus {
+	if (source !== undefined) {
+		const entries = bindingsByStore.get(store) ?? []
+		// A default-source declaration cannot resolve until its Provider supplies the registry.
+		// Validate only once effective aliases are known, without throwing from queue notifications.
+		if (!entries.some((entry) => entry.source === '' || entry.source === source))
+			throw new Error(
+				`[ez-kit/store-persist] Unknown persistence source "${source}"; available: ${entries.map((entry) => entry.source).join(', ') || '(none)'}`,
+			)
+	}
 	const aggregate = aggregateFor(store, source)
 	return useSyncExternalStore(aggregate.subscribe, aggregate.getSnapshot, () => SERVER_STATUS)
 }

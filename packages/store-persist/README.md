@@ -1,8 +1,8 @@
 # @ez-kit/store-persist
 
 The persist engine behind [`@ez-kit/va-store`](../va-store) and [`@ez-kit/zu-store`](../zu-store):
-URL, `localStorage` / `sessionStorage` and IndexedDB as state, with one coalesced commit per flush
-and an equality guard that breaks the write → read → write loop.
+URL, `localStorage` / `sessionStorage` and IndexedDB as state, with scoped records, automatic
+restoration, acknowledged mutation ordering and guards against write → read → write loops.
 
 **You normally do not install this package directly.** Each binding package re-exports the whole
 surface with its own store port already bound, so an app writes one import path:
@@ -80,3 +80,27 @@ resolution — are on the `@ez-kit/store-persist/internals` subpath.
 ## License
 
 MIT
+
+## Source policy and control
+
+Shared restoration options can be overridden by effective source name:
+
+```ts
+withPersist({
+	restore: {
+		timeoutMs: 2000,
+		sources: { draftsApi: { timeoutMs: 10000, externalChanges: 'apply' } },
+	},
+	fields,
+})
+```
+
+Each source starts automatically with its effective policy; joining a pending restore keeps its
+existing deadline. Field helpers/decorators accept source aliases and preserve unknown decoder plus
+typed-validator composition. Explicit handle names and reset paths are validated before mutation.
+Bindings keep independent throttle windows. Flush acknowledges applicable record and namespace
+operations, including staged container rewrites; source errors retain independent scope boundaries.
+
+Custom adapters that stage container migration implement optional `rewriteContainer(values)`;
+public mutation metadata never authorizes whole-container replacement. Built-in IndexedDB adapters
+provision multiple object stores within one database and cooperate with versionchange upgrades.

@@ -1,7 +1,7 @@
 import { serializePersistAddress } from '@ez-kit/store-core'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { encodeRecord } from '../record'
+import { encodeRecord, FutureVersionError } from '../record'
 
 import { createStoragePort } from './adapter'
 
@@ -81,6 +81,40 @@ describe('@ez-kit/store-persist createStoragePort', () => {
 
 	afterEach(() => {
 		vi.restoreAllMocks()
+	})
+
+	it('treats mutation metadata as opaque and keeps patch/version guards enabled', () => {
+		const port = createStoragePort(() => storage as unknown as Storage, KEY)
+		const future = encodeRecord('900', 9)
+		storage.setItem(KEY, JSON.stringify({ v: 0, s: { foreign: 'keep', q: future } }))
+		const guarded = {
+			...ctx,
+			meta: { containerRewrite: true },
+			diff: { set: ['q'], removed: [] },
+			maxVersions: new Map([['q', 0]]),
+		}
+		expect(() => {
+			port.set(new Map([['q', encodeRecord('500')]]), guarded)
+		}).toThrow(FutureVersionError)
+		port.set(new Map([['page', '2']]), {
+			...ctx,
+			meta: { containerRewrite: true },
+			diff: { set: ['page'], removed: [] },
+		})
+		expect(port.get()).toEqual(
+			new Map([
+				['foreign', 'keep'],
+				['q', future],
+				['page', '2'],
+			]),
+		)
+	})
+
+	it('exposes an explicit container rewrite operation independently of user metadata', () => {
+		const port = createStoragePort(() => storage as unknown as Storage, KEY)
+		port.set(new Map([['q', 'old']]), ctx)
+		port.rewriteContainer?.(new Map([['renamed', 'current']]))
+		expect(port.get()).toEqual(new Map([['renamed', 'current']]))
 	})
 
 	it('round-trips values as a single { v, s } blob', () => {

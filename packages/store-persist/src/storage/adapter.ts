@@ -48,8 +48,11 @@ export function createStoragePort(
 		set(desired: Keyed, context: CommitCtx): void {
 			const storage = area()
 			if (!storage) return
-			const rewrite = (context.meta as { containerRewrite?: unknown } | null)?.containerRewrite === true
-			write(storage, rewrite ? desired : patchKeyed(read(storage).keyed, desired, context))
+			write(storage, patchKeyed(read(storage).keyed, desired, context))
+		},
+		rewriteContainer(values): void {
+			const storage = area()
+			if (storage) write(storage, values)
 		},
 		removeScope(path): void {
 			const storage = area()

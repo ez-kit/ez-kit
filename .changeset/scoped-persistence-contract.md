@@ -21,3 +21,10 @@ to the new core/persistence releases. No fixed/linked group or public mode is in
 
 Use a new storageKey to retain the old namespace for rollback. Transfer old keys explicitly;
 the new release does not automatically import or erase them. See packages/store-persist/MIGRATION.md.
+
+Audit hardening preserves pending URL edits across delayed navigation, acknowledges reset/container
+operations correctly, isolates scope failures and per-binding throttle windows, and adopts React cache
+instances only on commit. Source-specific restore overrides, alias-aware typed helpers and validated
+control selectors cover multiple backend policies. Custom staged container migrations use the separate
+optional rewriteContainer operation; opaque application metadata cannot authorize replacement.
+IndexedDB supports provisioning multiple object stores in an existing database.

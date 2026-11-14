@@ -1,74 +1,44 @@
-import { persistField, type PersistFieldOptions } from '../decorators'
+import { persistField, type PersistFieldDecorator } from '../decorators'
 
 import { URL_SOURCE, type UrlHistory, type UrlMeta } from './adapter'
 
-import type { AccessorFieldOptions } from '../accessor'
-import type { Parser, PersistSchema } from '../types'
+import type {
+	AccessorFieldOptions,
+	FieldValueOptions,
+	ValidatedAccessorFieldOptions,
+	ValidatedValueOptions,
+} from '../accessor'
 
-/** Options for the `persistUrl` field decorator. `prefix`/`history` are packed into the URL `meta`. */
-export type PersistUrlOptions<V> = {
-	/** Override the leaf segment of the URL key (relative) — defaults to the property name. */
+/** URL projection options. Source defaults to `url`; aliases select a mapped registration. */
+type UrlOptions = {
+	source?: string
 	key?: string
-	/** Pin to an exact top-level URL key, ignoring ancestor segments. */
 	absolute?: boolean
-	/** Explicit parser. Omit to auto-resolve from the field's runtime value. */
-	parser?: Parser<V>
-	schema?: PersistSchema<V>
-	/** Key prefix prepended to this field's URL key. */
 	prefix?: string
-	/** Default history mode for commits driven by this field. */
 	history?: UrlHistory
 }
+export type PersistUrlOptions<V> = UrlOptions & FieldValueOptions<V>
+export type UrlFieldOptions<V> = PersistUrlOptions<V>
 
-function urlMeta(options: { history?: UrlHistory }): UrlMeta {
-	const meta: UrlMeta = {}
-	if (options.history !== undefined) {
-		meta.history = options.history
-	}
-	return meta
+function urlMeta(options: UrlOptions): UrlMeta {
+	return options.history === undefined ? {} : { history: options.history }
 }
 
-/**
- * URL field decorator — a thin wrapper over {@link persistField} that targets the URL source. `key`,
- * `absolute`, and `prefix` are source-agnostic key naming (on the descriptor); only `history` is URL
- * `meta` for the adapter to read.
- */
-export function persistUrl<V>(options: PersistUrlOptions<V> = {}) {
-	const fieldOptions: PersistFieldOptions<V, UrlMeta> = { source: URL_SOURCE, meta: urlMeta(options) }
-	if (options.key !== undefined) {
-		fieldOptions.key = options.key
-	}
-	if (options.absolute !== undefined) {
-		fieldOptions.absolute = options.absolute
-	}
-	if (options.prefix !== undefined) {
-		fieldOptions.prefix = options.prefix
-	}
-	if (options.parser !== undefined) {
-		fieldOptions.parser = options.parser
-	}
-	if (options.schema !== undefined) fieldOptions.schema = options.schema
-	return persistField<V, UrlMeta>(fieldOptions)
+function urlAccessor<V>(options: PersistUrlOptions<V>): AccessorFieldOptions<V, UrlMeta> {
+	const { history: _history, ...values } = options
+	return { ...values, source: options.source ?? URL_SOURCE, meta: urlMeta(options) }
 }
 
-/** Accessor-front options for a URL field (parity with `persistUrl` for non-decorator toolchains). */
-export type UrlFieldOptions<V> = Omit<PersistUrlOptions<V>, never>
+/** URL field decorator, optionally selecting an adapter alias instead of `url`. */
+export function persistUrl<V>(options: UrlOptions & ValidatedValueOptions<V>): PersistFieldDecorator<V>
+export function persistUrl<V>(options?: PersistUrlOptions<V>): PersistFieldDecorator<V>
+export function persistUrl<V>(options: PersistUrlOptions<V> = {}): PersistFieldDecorator<V> {
+	return persistField<V, UrlMeta>(urlAccessor<V>(options))
+}
 
-/** Build accessor options for a URL field — for use with the `field(select, …)` builder. */
-export function urlField<V = never>(options: UrlFieldOptions<V> = {}): AccessorFieldOptions<V, UrlMeta> {
-	const accessor: AccessorFieldOptions<V, UrlMeta> = { source: URL_SOURCE, meta: urlMeta(options) }
-	if (options.key !== undefined) {
-		accessor.key = options.key
-	}
-	if (options.absolute !== undefined) {
-		accessor.absolute = options.absolute
-	}
-	if (options.prefix !== undefined) {
-		accessor.prefix = options.prefix
-	}
-	if (options.parser !== undefined) {
-		accessor.parser = options.parser
-	}
-	if (options.schema !== undefined) accessor.schema = options.schema
-	return accessor
+/** Preserve the validator output when an unknown decoder is supplied. */
+export function urlField<V>(options: UrlOptions & ValidatedValueOptions<V>): ValidatedAccessorFieldOptions<V, UrlMeta>
+export function urlField<V = never>(options?: UrlFieldOptions<V>): AccessorFieldOptions<V, UrlMeta>
+export function urlField<V>(options: UrlFieldOptions<V> = {}): AccessorFieldOptions<V, UrlMeta> {
+	return urlAccessor<V>(options)
 }

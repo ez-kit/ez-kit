@@ -30,6 +30,11 @@ export type RestoreOptions = {
 	externalChanges?: 'apply' | 'ignore'
 }
 
+/** Shared restore defaults with overrides keyed by the effective registered source name. */
+export type PersistRestoreOptions = RestoreOptions & {
+	sources?: Readonly<Record<string, RestoreOptions>>
+}
+
 export type RestoreState = 'idle' | 'pending' | 'ready' | 'error' | 'timeout'
 export type PersistRecordStatus = {
 	field: readonly string[]
@@ -149,6 +154,8 @@ export type SourcePort = {
 	get: (context?: ReadCtx) => Keyed | Promise<Keyed>
 	/** Commit the desired {@link Keyed} to the substrate, given the {@link CommitCtx}. */
 	set: (desired: Keyed, ctx: CommitCtx) => void | Promise<void>
+	/** A staged container migration, kept separate from opaque application mutation metadata. */
+	rewriteContainer?: (values: Keyed) => void | Promise<void>
 	/**
 	 * Subscribe to external changes (e.g. cross-tab `storage` events). Ambient sources only.
 	 * The provider — not the engine — wires this to `pull`, so eventing stays per-source.
@@ -170,6 +177,7 @@ export type SourcePort = {
 export type SyncSourcePort = {
 	get: (context?: ReadCtx) => Keyed
 	set: (desired: Keyed, ctx: CommitCtx) => void
+	rewriteContainer?: (values: Keyed) => void
 	subscribe?: (onChange: () => void) => () => void
 	capabilities?: { recordVersions: boolean }
 	identity?: string
@@ -190,5 +198,5 @@ export type PersistOptions = {
 	throttleMs?: number
 	/** Omit a key when its value equals the field default. Defaults to `true`. */
 	clearOnDefault?: boolean
-	restore?: RestoreOptions
+	restore?: PersistRestoreOptions
 }

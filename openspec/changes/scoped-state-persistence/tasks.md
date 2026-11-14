@@ -62,6 +62,17 @@
 - [x] 7.3 Run affected verification, then the full sequential build/lint/typecheck/test/size gate from AGENTS.md; record results and separately confirm docs guards, URL routing adapters and both bindings.
 - [x] 7.4 Run OpenSpec strict validation and verify separate old/new storageKey migration/rollback; confirm legacy namespaces remain untouched and runtime has no mode/legacy engine.
 
+## 8. Audit hardening approved on 2026-11-14
+
+- [x] 8.1 Give every queued mutation explicit acknowledgement ownership; make superseded reset waiters and flush/status include container rewrites and scope deletions with no live records.
+- [x] 8.2 Preserve dirty edits on disconnect, cancel stale invalidation after a valid retry, isolate failed scope barriers/retries, and schedule throttles independently per binding; add permanent regressions.
+- [x] 8.3 Stabilize persistence registry independently of unrelated services, diagnose returned render-scoped port replacement, and distinguish provisional React cache entries from committed retained instances; test Suspense abandonment, defaults and committed context.
+- [x] 8.4 Preserve multiple URL patches while router navigation is pending; reconcile optimistic intent with location acknowledgement, foreign params and Back/Forward in both routing adapters.
+- [x] 8.5 Separate staged container rewrites from public mutation metadata and provision multiple IndexedDB object stores safely; test arbitrary metadata, version guards, upgrades and existing connections.
+- [x] 8.6 Preserve unknown decoder/typed validator inference through all field helpers, support explicit source aliases, disambiguate shorthand/named handles, reject unknown sources/fields before mutation, and improve typed reset paths through both bindings.
+- [x] 8.7 Add source-keyed initial timeout/external-change overrides with inherited shared defaults, and update helpers, decorators, custom-adapter, cache, flush/reset and migration docs plus the scenario evidence matrix.
+- [x] 8.8 Run focused regressions and affected verification, then the full sequential gate and browser flow; repeat strict OpenSpec validation, record limits, and update PR 299 with the fixes.
+
 ## Workflow follow-up
 
 - After implementation and review, archive this change using the standard OpenSpec workflow. Archiving is not an implementation task and does not automatically release packages.

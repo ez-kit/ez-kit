@@ -28,6 +28,9 @@ export type UrlDriver = {
 	read(): URLSearchParams
 	/** Commit a fully-merged params object, choosing push vs replace navigation. */
 	commit(next: URLSearchParams, history: UrlHistory): void
+	/** Notify explicit external navigation (for example Back/Forward), after read reflects it.
+	 * This disambiguates a POP to an old pending target from an acknowledgement of our own commit. */
+	subscribe?: (onNavigate: () => void) => () => void
 }
 
 const DEFAULT_HISTORY = UrlHistory.Replace
@@ -60,18 +63,46 @@ function urlToKeyed(params: URLSearchParams): Keyed {
 	return keyed
 }
 
-/**
- * Build a {@link SourcePort} over a {@link UrlDriver}. Stateless: because key naming (incl. `prefix`)
- * lives on the descriptor, the engine's {@link Keyed} keys already equal the URL substrate keys, so
- * the port maps verbatim — `get()` reads every param, `set()` merges the desired keys and deletes the
- * removed ones, preserving foreign params. The engine ignores keys that match no connected field.
- */
+/** Project canonical record keys to readable query keys while retaining pending navigation edits. */
 export function createUrlPort(driver: UrlDriver): SyncSourcePort {
+	type Navigation = { signature: string; patch: Map<string, string | null> }
+	let observed: string | null = null
+	const pending: Navigation[] = []
+	function signature(params: URLSearchParams): string {
+		const sorted = new URLSearchParams(params)
+		sorted.sort()
+		return sorted.toString()
+	}
+	function applyPatch(params: URLSearchParams, patch: ReadonlyMap<string, string | null>): void {
+		for (const [key, value] of patch) {
+			if (value === null) params.delete(key)
+			else params.set(key, value)
+		}
+	}
+	function read(): URLSearchParams {
+		const actual = new URLSearchParams(driver.read())
+		const nextObserved = signature(actual)
+		if (observed !== null && nextObserved !== observed) {
+			// An intermediate own acknowledgement must not erase edits submitted after it.
+			let acknowledged = -1
+			for (let index = pending.length - 1; index >= 0; index--) {
+				if (pending[index]?.signature === nextObserved) {
+					acknowledged = index
+					break
+				}
+			}
+			if (acknowledged < 0) pending.length = 0
+			else pending.splice(0, acknowledged + 1)
+		}
+		observed = nextObserved
+		for (const navigation of pending) applyPatch(actual, navigation.patch)
+		return actual
+	}
 	return {
 		capabilities: { recordVersions: false },
 		keyForField: fieldKey,
 		get(context) {
-			const params = urlToKeyed(driver.read())
+			const params = urlToKeyed(read())
 			if (!context) return params
 			const values: Keyed = new Map()
 			for (const field of context.fields) {
@@ -81,23 +112,43 @@ export function createUrlPort(driver: UrlDriver): SyncSourcePort {
 			}
 			return values
 		},
-
 		set(desired: Keyed, ctx: CommitCtx): void {
-			const params = new URLSearchParams(driver.read())
+			const params = read()
 			const physical = new Map(
 				ctx.fields.map((field) => [
 					field.address ? serializePersistAddress(field.address) : fieldKey(field),
 					fieldKey(field),
 				]),
 			)
+			const patch = new Map<string, string | null>()
 			for (const key of ctx.diff.set) {
 				const value = desired.get(key)
-				if (value !== undefined) params.set(physical.get(key) ?? key, value)
+				if (value !== undefined) patch.set(physical.get(key) ?? key, value)
 			}
-			for (const key of ctx.diff.removed) {
-				params.delete(physical.get(key) ?? key)
+			for (const key of ctx.diff.removed) patch.set(physical.get(key) ?? key, null)
+			applyPatch(params, patch)
+			const navigation: Navigation = { signature: signature(params), patch }
+			pending.push(navigation)
+			try {
+				driver.commit(params, historyOf(ctx.meta))
+			} catch (error) {
+				const index = pending.indexOf(navigation)
+				if (index >= 0) pending.splice(index, 1)
+				throw error
 			}
-			driver.commit(params, historyOf(ctx.meta))
 		},
+		...(driver.subscribe
+			? {
+					subscribe(onChange: () => void): () => void {
+						return (
+							driver.subscribe?.(() => {
+								pending.length = 0
+								observed = null
+								onChange()
+							}) ?? (() => undefined)
+						)
+					},
+				}
+			: {}),
 	}
 }

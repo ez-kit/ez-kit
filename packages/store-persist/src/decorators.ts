@@ -1,5 +1,6 @@
 import { resolveParser } from './codecs/auto'
 
+import type { FieldValueOptions, ValidatedValueOptions } from './accessor'
 import type { PersistSpec } from './spec'
 import type { FieldDescriptor, Parser, PersistSchema } from './types'
 
@@ -21,7 +22,7 @@ type FieldMeta = {
 }
 
 /** Options for the base `persistField` decorator. Source-specific wrappers pack their args into `meta`. */
-export type PersistFieldOptions<V, M = unknown> = {
+type FieldNamingOptions<M> = {
 	/** Which source engine this field syncs to (e.g. `'url'`, `'localStorage'`). */
 	source?: string
 	/** Override the leaf segment of the substrate key (relative) — defaults to the property name. */
@@ -30,12 +31,11 @@ export type PersistFieldOptions<V, M = unknown> = {
 	absolute?: boolean
 	/** Prefix prepended to the substrate key (e.g. a per-store namespace). */
 	prefix?: string
-	/** Explicit parser. Omit to auto-resolve from the field's runtime value at bind time. */
-	parser?: Parser<V>
 	/** Opaque per-field metadata forwarded to the adapter (e.g. `{ history }` for URL). */
 	meta?: M
-	schema?: PersistSchema<V>
 }
+export type PersistFieldOptions<V, M = unknown> = FieldNamingOptions<M> & FieldValueOptions<V>
+export type PersistFieldDecorator<V> = (_value: undefined, context: ClassFieldDecoratorContext<unknown, V>) => void
 
 type MetadataObject = Record<PropertyKey, unknown>
 
@@ -57,7 +57,13 @@ function ownFields(metadata: MetadataObject): FieldMeta[] {
  * the class's `Symbol.metadata` for discovery. A property may carry several `persistField` annotations
  * (one per source). Source-specific wrappers (e.g. `persistUrl`) build on this.
  */
-export function persistField<V, M = unknown>(options: PersistFieldOptions<V, M>) {
+export function persistField<V, M = unknown>(
+	options: FieldNamingOptions<M> & ValidatedValueOptions<V>,
+): PersistFieldDecorator<V>
+// Keep validator-output inference separate from the fallback that infers a typed decoder.
+// eslint-disable-next-line @typescript-eslint/unified-signatures
+export function persistField<V, M = unknown>(options: PersistFieldOptions<V, M>): PersistFieldDecorator<V>
+export function persistField<V, M = unknown>(options: PersistFieldOptions<V, M>): PersistFieldDecorator<V> {
 	return (_value: undefined, context: ClassFieldDecoratorContext<unknown, V>): void => {
 		const meta: FieldMeta = { name: String(context.name), source: options.source }
 		if (options.key !== undefined) {

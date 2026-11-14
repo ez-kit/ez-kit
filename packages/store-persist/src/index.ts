@@ -38,11 +38,26 @@ export {
 } from './provider'
 
 // --- Per-source control handles: typed accessors ($url / $persist) ---
-export { persistHandle, type PersistHandle, type PersistHandles, type UrlHandle, urlHandle } from './handle'
+export {
+	persistHandle,
+	type PersistFieldPath,
+	type PersistHandle,
+	type PersistHandles,
+	type UrlHandle,
+	urlHandle,
+} from './handle'
 
 // --- Decorator + accessor fronts (field declaration) ---
-export { persistField, type PersistFieldOptions } from './decorators'
-export { type AccessorFieldOptions, type FieldBuilder, type FieldSpec, type FieldsBuilder } from './accessor'
+export { persistField, type PersistFieldDecorator, type PersistFieldOptions } from './decorators'
+export {
+	type AccessorFieldOptions,
+	type FieldBuilder,
+	type FieldSpec,
+	type FieldsBuilder,
+	type FieldValueOptions,
+	type ValidatedAccessorFieldOptions,
+	type ValidatedValueOptions,
+} from './accessor'
 
 // --- Codecs ---
 export { type AnyCodec, type Codec } from './codecs/codec'
@@ -76,6 +91,7 @@ export type {
 	PersistSchema,
 	PersistRecordStatus,
 	PersistStatus,
+	PersistRestoreOptions,
 	RestoreOptions,
 	RestoreResult,
 	RestoreState,

@@ -265,7 +265,7 @@ export function createCacheReact<TInstance extends object>(
 
 			// Lazy: resolve the instance once per fresh mount. On the server there is no shared cache —
 			// build an ephemeral instance per render and skip plugin/observer wiring.
-			const [instance] = useState<TInstance>(() => {
+			const [candidate] = useState<TInstance>(() => {
 				if (typeof window === 'undefined') {
 					const ephemeral = factory({ defaultValue })
 					for (const plugin of capabilitiesOf(ephemeral))
@@ -281,14 +281,23 @@ export function createCacheReact<TInstance extends object>(
 				for (const plugin of capabilitiesOf(instance)) plugin.seedRender?.(instance, context)
 				return instance
 			})
+			// A concurrent sibling may commit this address before our candidate does. Subscribe to
+			// committed membership so every owner converges on the same canonical instance.
+			const instance = useSyncExternalStore(
+				cache.subscribe,
+				() => (cache.getInstance(storeId) as TInstance | undefined) ?? candidate,
+				() => candidate,
+			)
+			const context: PluginContext = { services, id: storeId, isServer: typeof window === 'undefined' }
+			for (const plugin of capabilitiesOf(instance)) plugin.validateContext?.(instance, context)
 
 			useEffect(() => {
-				cache.addObserver(storeId)
+				const observed = cache.addObserver(storeId, { instance, gcTime, context })
 				return () => {
-					cache.removeObserver(storeId)
+					cache.removeObserver(storeId, observed)
 				}
 				// eslint-disable-next-line react-hooks/exhaustive-deps
-			}, [cache])
+			}, [cache, instance])
 
 			return <StoreContext.Provider value={instance}>{children}</StoreContext.Provider>
 		}

@@ -29,7 +29,7 @@ The root entry is deliberately free of React, so it stays importable from a serv
 
 **Plugin contract** — `StorePlugin`, `PluginContext`, `PluginCleanup`. A plugin's `setup(instance, ctx)` runs when the store's Provider mounts and its returned cleanup on unmount; `ctx` carries the resolved services, the store's id, and whether it is running on the server.
 
-**Render seeding and cache setup** — a plugin may provide pure synchronous `seedRender` for request-scoped seeding, and `validateContext` to reject changed birth services on cache hits. Neither performs ambient I/O during render. React cache setup waits for observer attachment after commit; imperative cache creation keeps immediate setup by default (`deferSetup` is an internal lifecycle option).
+**Render seeding and cache setup** — a plugin may provide pure synchronous `seedRender` for request-scoped seeding, and `validateContext` to reject changed birth services on cache hits. Neither performs ambient I/O during render. React cache setup waits for observer attachment after commit. A deferred render miss returns an uncached owner-local candidate; `addObserver(id, { instance, gcTime, context })` adopts that candidate or the canonical committed instance using committed services. An abandoned candidate never enters retained cache metadata. Imperative cache creation keeps immediate setup by default.
 
 **Enhancer pipeline** — `pipe(base, ...enhancers)` and the `StoreEnhancer<In, Out>` type every `with*` wrapper returns: the wrappers are curried, so `pipe` applies them left to right in attachment order and each one's options are typed against the state accumulated so far.
 

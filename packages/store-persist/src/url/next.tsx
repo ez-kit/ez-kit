@@ -33,6 +33,17 @@ export const nextAdapter: RenderScopedAdapter = {
 		const portRef = useRef<SyncSourcePort | null>(null)
 		portRef.current ??= createUrlPort({
 			read: () => new URLSearchParams(searchRef.current),
+			subscribe: (onNavigate) => {
+				const onPopState = (): void => {
+					searchRef.current = window.location.search.slice(1)
+					pathnameRef.current = window.location.pathname
+					onNavigate()
+				}
+				window.addEventListener('popstate', onPopState)
+				return () => {
+					window.removeEventListener('popstate', onPopState)
+				}
+			},
 			commit: (next, history) => {
 				const query = next.toString()
 				const url = query ? `${pathnameRef.current}?${query}` : pathnameRef.current

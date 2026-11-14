@@ -17,6 +17,7 @@ import type { CommitCtx, Keyed, ReadCtx } from '@ez-kit/va-store/persist'
 type SourcePort = {
 	get(context?: ReadCtx): Keyed | Promise<Keyed> // addressed read; context includes AbortSignal
 	set(desired: Keyed, ctx: CommitCtx): void | Promise<void> // apply only ctx.diff keys
+	rewriteContainer?(values: Keyed): void | Promise<void> // only for a staged container migration
 	subscribe?(onChange: () => void): () => void // external changes only
 	capabilities?: { recordVersions: boolean }
 	removeScope?(path: readonly string[]): void | Promise<void> // full persisted subtree
@@ -93,10 +94,12 @@ const myRouterAdapter: RenderScopedAdapter = {
 	defaultMeta: { history: UrlHistory.Replace },
 	usePort() {
 		const router = useMyRouter()
+		const routerRef = useRef(router)
+		routerRef.current = router
 		const portRef = useRef<SyncSourcePort | null>(null)
 		portRef.current ??= createUrlPort({
-			read: () => new URLSearchParams(router.search),
-			commit: (next, history) => router.navigate(`?${next}`, { replace: history === UrlHistory.Replace }),
+			read: () => new URLSearchParams(routerRef.current.search),
+			commit: (next, history) => routerRef.current.navigate(`?${next}`, { replace: history === UrlHistory.Replace }),
 		})
 		return { port: portRef.current, changeKey: router.search }
 	},
@@ -127,6 +130,11 @@ Mounting `PersistProvider` directly, the same handler is its `onError` prop; on 
 Automatic operations handle rejections even without a callback. Awaited flush/reset still reject so
 callers can distinguish memory changes from confirmed persistence. The engine owns the source queue;
 adapters resolve writes only after their backend acknowledges them.
+
+If get calls ReadCtx.stageContainerRewrite, also implement rewriteContainer. The engine queues this
+dedicated operation and includes its acknowledgement in flush. It never signals whole-container
+replacement through public meta: arbitrary application metadata must not bypass partial commits or
+future-version guards. A plain adapter that does no container migration does not need this method.
 
 Full scope reset requires removeScope over the persistent namespace, including unmounted records.
 A mounted-store loop is insufficient. Version-capable adapters guard ctx.maxVersions before changing

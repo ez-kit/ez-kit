@@ -68,6 +68,29 @@ Each scenario below is linked to regression/integration evidence or an explicit 
 | Stable registration and instance ownership — Fresh object with the same registration; Replacing a port under the same name; Cache outlives its registry | packages/store-persist/src/scoped-sources.test.tsx (stable map, replaced port); packages/zu-store/src/persist/scoped-store.test.tsx (birth registry) |
 | Registration respects React lifecycle — Reordered map properties; Duplicate names in an array; Unmounting a child Provider                              | packages/store-persist/src/scoped-sources.test.tsx (router hooks isolation, reorder, duplicate names, child unmount)                                 |
 
+## Audit hardening trace (2026-11-14)
+
+These rows extend the original scenario matrix above. Each audit requirement is covered by permanent regressions; helper declarations are also consumed outside the workspace implementation.
+
+| Spec / requirement                                                                      | Scenarios and evidence                                                                                                                                                                                                                                                                               |
+| --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operations — Every mutation has acknowledgement ownership                               | `engine-operations.test.ts`: repeated reset promises wait for deletion ACKs; container rewrite failure/ACK participates in status and flush; namespace deletion is awaited without connected records.                                                                                                |
+| operations — Scheduling and failed barriers are isolated                                | `engine-operations.test.ts`: failed scope A does not block or get retried by B; independent throttle deadlines, flush isolation, nonfinite throttle normalization, per-record metadata and coalesced metadata recomputation.                                                                         |
+| operations — Observed edits survive disconnection                                       | `engine-operations.test.ts`: edit is collected before throttled disconnect and retained across failure for retry.                                                                                                                                                                                    |
+| operations — User metadata cannot authorize replacement                                 | `storage/{adapter,indexed-db}.test.ts`: arbitrary metadata cannot replace containers or bypass future-version protection; explicit `rewriteContainer` is the separate capability.                                                                                                                    |
+| addressing — Reset validates selected paths                                             | `handle.test.tsx`, `engine-operations.test.ts`: unknown paths reject atomically before a valid selected field changes. `handle-types.test.ts` and both binding `consumer-types.test.ts` check nested, optional, array and method paths.                                                              |
+| addressing — IndexedDB provisions separate object stores                                | `storage/indexed-db.test.ts`: simultaneous stores in one database, versionchange/reopen, blocked external connection and subsequent retry; unavailable browser IndexedDB rejects rather than acknowledging a write.                                                                                  |
+| restoration — Uncommitted render does not retain ownership                              | `packages/store-core/src/cache/react-lifecycle.test.tsx`: abandoned Suspense candidates cannot pin defaults/context before or after GC; simultaneous committed owners converge. `engine-operations.test.ts`: invalid/normalized render seeds schedule no I/O until connection.                       |
+| restoration — Pending URL patches survive navigation acknowledgement                    | `url/adapter.test.ts`, `url/navigation.test.tsx`: successive patches, intermediate acknowledgements, foreign params, failed commits and external Back/POP to identical queries; `engine-operations.test.ts` checks external navigation cancels unsent throttled intent without echoing a push.       |
+| schema — New valid read supersedes invalidation                                         | `engine-operations.test.ts`: valid retry cancels old deletion authority.                                                                                                                                                                                                                             |
+| schema — Helper types preserve independent decoder and validator contracts              | `schema-helpers.test.ts`, both bindings' `consumer-types.test.ts`: unknown JSON decoder with typed validation, accessor/decorator aliases and negative inference cases. `apps/docs/test/persist-public-declarations.test.ts` emits and consumes declarations using public package entry points only. |
+| sources — Registry identity excludes unrelated services; actual returned port is stable | `provider-lifecycle.test.tsx`: unrelated service changes retain the registry; replacement port fails before read/subscribe.                                                                                                                                                                          |
+| sources — Selectors are unambiguous                                                     | `handle.test.tsx`, `provider-lifecycle.test.tsx`: literal `$persist`/`$url` names, shorthand, URL aliases, unknown handle/status sources with available-name diagnostics.                                                                                                                            |
+| sources — Per-source restoration overrides                                              | `provider-lifecycle.test.tsx`: effective aliases select separate deadlines/policies, shared defaults are inherited, pending restore joins keep the original deadline, unknown aliases fail before I/O.                                                                                               |
+| sources — Field helpers accept source aliases                                           | `schema-helpers.test.ts`, both bindings' `consumer-types.test.ts`, public declaration test; both docs fronts and the Valtio decorators page include examples.                                                                                                                                        |
+
+Test paths without a package prefix in this audit table are relative to `packages/store-persist/src/`. The queue guarantees local ordering and acknowledged port completion; it does not guarantee distributed atomicity, cancellation of a sent remote request, or forced closure of a foreign IndexedDB connection.
+
 ## Release and rollback
 
 The Changesets release planner resolves independent minors: store-core 1.3.0, store-persist 1.1.0, zu-store 1.3.0 and va-store 1.4.0. The private docs dependency update is a patch. `workspace:^` expands to the new dependency version when published; new bindings therefore require core ^1.3.0 and persist ^1.1.0. An isolated package-manifest fixture was packed with pnpm for both bindings and its tarball manifests confirmed these exact floors; the workspace manifests were not versioned or published. Existing published caret ranges remain an explicitly accepted risk (ADR 0029). No fixed/linked group is configured.
@@ -76,7 +99,7 @@ The old/new storageKey regression proves the old blob survives new writes and sc
 
 ## Validation results
 
-Verified on 2026-11-13 with Node 22.23.4 and pnpm 10.34.9.
+Verified on 2026-11-14 with Node 22.23.4 and pnpm 10.34.9.
 
 | Check                                             | Result                                                                                                                                                                                                                                                                                                                            |
 | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -85,13 +108,14 @@ Verified on 2026-11-13 with Node 22.23.4 and pnpm 10.34.9.
 | Offline `pnpm build --env-mode=loose`             | 16/16 tasks passed, including production compilation and static prerender of docs. Used Next's `NEXT_FONT_GOOGLE_MOCKED_RESPONSES` test hook with temporary CSS-only responses for the existing Inter/Figtree URLs; no product source or font configuration changed. Real font download/appearance is not verified by this build. |
 | `pnpm lint --env-mode=loose --concurrency=2`      | 30/30 tasks passed.                                                                                                                                                                                                                                                                                                               |
 | `pnpm typecheck --env-mode=loose --concurrency=2` | 30/30 tasks passed, including docs/runnable snippets and custom adapter consumer types.                                                                                                                                                                                                                                           |
-| `pnpm test --env-mode=loose --concurrency=2`      | 30/30 tasks passed; **5147 tests** across 16 packages/apps.                                                                                                                                                                                                                                                                       |
+| `pnpm test --env-mode=loose --concurrency=2`      | 30/30 tasks passed; **5201 tests** across 16 packages/apps.                                                                                                                                                                                                                                                                       |
 | `pnpm size --env-mode=loose --concurrency=2`      | 32/32 tasks passed after budgets were adjusted to measured changed entry points plus approximately 15%; dependency builds used the same temporary font responses.                                                                                                                                                                 |
 | Playwright Chromium                               | Actual `/docs/zu-store/persist` flow passed: pending → timeout without saving defaults → resize to 500 → acknowledge write → deliver obsolete 720 response → width/storage remain 500 → reload restores browser width → scope reset returns both panels to 320. No page errors.                                                   |
 | OpenSpec strict validation                        | `openspec validate scoped-state-persistence --strict` passed.                                                                                                                                                                                                                                                                     |
 | Rollout/rollback and release metadata             | Separate old/new storageKey test passed; `pnpm pack` manifest fixtures verified both new binding dependency floors. No versions were changed or published.                                                                                                                                                                        |
 
-Relevant final package counts: store-core 106, store-persist 166, zu-store 204, va-store 166, docs 313.
+Relevant final package counts: store-core 109, store-persist 214, zu-store 205, va-store 167, docs 314.
+The audit added 54 regression tests to the original 5147-test baseline.
 The full gate includes existing Next/React Router URL navigation tests in both bindings, the mixed
 Zustand/Valtio writer test, docs option/type guards and tree-shaking checks. The temporary offline
 font fixture was confined to `/tmp`; the ordinary network-backed docs build remains subject to the
@@ -105,13 +129,13 @@ existing budgets; no new dependency exclusion was added to hide growth.
 | Package / entry            | Measured bytes | Budget bytes |
 | -------------------------- | -------------: | -----------: |
 | store-core root            |           1323 |         1550 |
-| store-persist root         |           9188 |        10600 |
-| store-persist storage      |           2095 |         2450 |
-| store-persist URL          |            790 |          925 |
-| store-persist React Router |            620 |          725 |
-| store-persist Next         |            677 |          800 |
-| store-persist testing      |            634 |          750 |
-| store-persist internals    |           7681 |         8850 |
+| store-persist root         |          10380 |        11950 |
+| store-persist storage      |           2337 |         2700 |
+| store-persist URL          |           1012 |         1175 |
+| store-persist React Router |           1008 |         1175 |
+| store-persist Next         |            960 |         1125 |
+| store-persist testing      |            851 |         1000 |
+| store-persist internals    |           8815 |        10150 |
 | zu-store persist           |            489 |          575 |
 | va-store root              |           2328 |         2700 |
 | va-store persist           |            482 |          575 |
