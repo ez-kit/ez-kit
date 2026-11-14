@@ -334,3 +334,74 @@ it('applies shared conventions and replaces supplied options as a whole', async 
 	unmount()
 	client.clear()
 })
+
+it.each(['global', 'key', 'local'] as const)(
+	'preserves %s mutation success defaults and awaits the effective callback',
+	async (level) => {
+		const { client, wrapper } = harness()
+		const callback = deferred<undefined>()
+		const events: string[] = []
+		const globalSuccess = vi.fn(async () => {
+			events.push('global')
+			await callback.promise
+		})
+		const keySuccess = vi.fn(async () => {
+			events.push('key')
+			await callback.promise
+		})
+		const localSuccess = vi.fn(async () => {
+			events.push('local')
+			await callback.promise
+		})
+		client.setDefaultOptions({ mutations: { onSuccess: globalSuccess } })
+		if (level !== 'global') client.setMutationDefaults(['numbers'], { onSuccess: keySuccess })
+		const invalidate = vi.spyOn(client, 'invalidateQueries').mockImplementation(() => {
+			events.push('invalidate')
+			return Promise.resolve()
+		})
+		const source = createCollectionSource({
+			key: ['numbers'],
+			getAll,
+			update: {
+				prepareArgs: (input: number) => input,
+				fetcher: (input: number) => Promise.resolve(input),
+				...(level === 'local' ? { options: { onSuccess: localSuccess } } : {}),
+			},
+		})
+		const { result, unmount } = renderHook(() => useCollectionQuery({ source, mode: 'pages', params: { offset: 0 } }), {
+			wrapper,
+		})
+		let completion!: Promise<number>
+		act(() => {
+			completion = result.current.update.mutateAsync(2)
+		})
+		await waitFor(() => {
+			expect(events).toEqual([level])
+		})
+		expect(invalidate).not.toHaveBeenCalled()
+		callback.resolve(undefined)
+		await act(async () => {
+			await completion
+		})
+		expect(events).toEqual([level, 'invalidate', 'invalidate'])
+		expect(globalSuccess).toHaveBeenCalledTimes(level === 'global' ? 1 : 0)
+		expect(keySuccess).toHaveBeenCalledTimes(level === 'key' ? 1 : 0)
+		expect(localSuccess).toHaveBeenCalledTimes(level === 'local' ? 1 : 0)
+		unmount()
+		client.clear()
+	},
+)
+
+it('executes complete reads supplied without shared factory conventions', async () => {
+	const { client, wrapper } = harness()
+	const source = createCollectionSourceFactory({})({ key: ['standalone'], getAll })
+	const { result, unmount } = renderHook(() => useCollectionQuery({ source, mode: 'pages', params: { offset: 2 } }), {
+		wrapper,
+	})
+	await waitFor(() => {
+		expect(result.current.items).toEqual([2])
+	})
+	expect(result.current.total).toBe(4)
+	unmount()
+	client.clear()
+})

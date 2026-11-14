@@ -344,3 +344,13 @@ Existing grid source factories and native sources retain their previous lifecycl
 happens before dispatch and callbacks receive the prepared variables. New collection fetcher
 sources prepare inside mutationFn and callbacks receive the original collection input. Both use
 the shared collection runtime; adopting the new source API is explicit, not a silent callback change.
+
+Fetcher grid factories default each mutation key to `[...key, operationName]`, just like
+collection factories. Include tenant identity in the base key so pending writes and retries
+retain their original tenant when the source changes. Explicit mutation keys remain
+application-owned. QueryClient mutation success defaults are preserved unless locally overridden.
+
+When adapting a source with both reads, infinite items must satisfy the ordinary read's row
+type. Normalize different endpoint projections with their `getItems` functions before
+calling `createGridSourceFromCollection`; the adapter does not invent missing row fields.
+Conditionally available mutations remain optional after adaptation.

@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
+import { createGridSourceFactory } from './factory'
 import { useGridMutation } from './mutation-source'
 
 import type { ReactNode } from 'react'
@@ -296,3 +297,75 @@ it('lets operation error mapping replace inherited mapping and preserves unknown
 	unmount()
 	client.clear()
 })
+
+it.each(['success', 'error', 'retry'] as const)(
+	'keeps grid factory mutation %s in the original tenant',
+	async (outcome) => {
+		const { client, wrapper } = harness()
+		const firstRequest = deferred<string>()
+		const events: string[] = []
+		const firstFetcher = vi.fn((_id: string) => firstRequest.promise)
+		if (outcome === 'retry')
+			firstFetcher.mockImplementationOnce(() => firstRequest.promise).mockResolvedValue('retried')
+		const secondFetcher = vi.fn((id: string) => Promise.resolve(id))
+		const makeSource = createGridSourceFactory({
+			list: { prepareArgs: () => ({}), getRows: (rows: { id: string }[]) => rows },
+		})
+		const makeTenant = (tenant: string, fetcher: (id: string) => Promise<string>) =>
+			makeSource({
+				key: ['users', tenant],
+				getAll: () => Promise.resolve([{ id: 'one' }]),
+				update: {
+					prepareArgs: ({ rowId }) => rowId,
+					fetcher,
+					options: {
+						retry: outcome === 'retry' ? 1 : false,
+						retryDelay: 0,
+						onSuccess: () => {
+							events.push(`success-${tenant}`)
+						},
+						onError: () => {
+							events.push(`error-${tenant}`)
+						},
+					},
+				},
+			})
+		const first = makeTenant('a', firstFetcher)
+		const second = makeTenant('b', secondFetcher)
+		expect(first.update?.mutation.mutationKey).toEqual(['users', 'a', 'update'])
+		const invalidate = vi.spyOn(client, 'invalidateQueries').mockResolvedValue()
+		const { result, rerender, unmount } = renderHook(
+			({ source }) => {
+				if (!source.update) throw new Error('Missing update')
+				return useGridMutation(source.update, source.invalidation)
+			},
+			{ wrapper, initialProps: { source: first } },
+		)
+		let completion!: Promise<void>
+		act(() => {
+			completion = result.current.execute({ rowId: 'a-user', row: { id: 'a-user' }, values: {} })
+		})
+		// Attach the rejection handler before settling the deferred request.
+		const settled = completion.then(
+			() => 'success',
+			() => 'error',
+		)
+		await waitFor(() => {
+			expect(firstFetcher).toHaveBeenCalledTimes(1)
+		})
+		rerender({ source: second })
+		await act(async () => {
+			if (outcome === 'success') firstRequest.resolve('saved')
+			else firstRequest.reject(new Error('network'))
+			expect(await settled).toBe(outcome === 'error' ? 'error' : 'success')
+		})
+		expect(secondFetcher).not.toHaveBeenCalled()
+		expect(firstFetcher).toHaveBeenCalledTimes(outcome === 'retry' ? 2 : 1)
+		expect(events).toEqual([outcome === 'error' ? 'error-a' : 'success-a'])
+		if (outcome === 'error') expect(invalidate).not.toHaveBeenCalled()
+		else expect(invalidate).toHaveBeenCalledWith({ queryKey: ['users', 'a', 'list'] })
+		expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['users', 'b', 'list'] })
+		unmount()
+		client.clear()
+	},
+)

@@ -1,5 +1,6 @@
 import { listInvalidation, resolveInvalidation } from './invalidation'
 
+import type { ConfiguredOperations, ConfiguredQueries, SourceIdentity } from './contracts'
 import type { InvalidationPolicy } from './invalidation'
 import type {
 	CollectionRead,
@@ -133,7 +134,8 @@ export function createCollectionSource<
 		deleteMany?:
 			| MutationFetcher<DeleteManyV, DeleteManyA, DeleteManyD, DeleteManyE, DeleteManyO>
 			| CollectionMutation<DeleteManyV, DeleteManyD, DeleteManyE, DeleteManyO>
-	} & ({ getAll: unknown } | { getInfinite: unknown }),
+	} & SourceIdentity<NoInfer<Enabled>> &
+		({ getAll: unknown } | { getInfinite: unknown }),
 ) {
 	const hasGenerated =
 		(config.getAll !== undefined && !('query' in config.getAll)) ||
@@ -165,9 +167,8 @@ export function createCollectionSource<
 		delete: CollectionMutation<DeleteV, DeleteD, DeleteE, DeleteO>
 		deleteMany: CollectionMutation<DeleteManyV, DeleteManyD, DeleteManyE, DeleteManyO>
 	}
-	return result as unknown as Pick<Operations, Extract<keyof Enabled, keyof Operations>> & {
+	return result as unknown as ConfiguredOperations<Enabled, Operations> & {
 		invalidation: typeof result.invalidation
-		queries: ('getAll' extends keyof Enabled ? { list: Operations['getAll']['query'] } : Record<never, never>) &
-			('getInfinite' extends keyof Enabled ? { infinite: Operations['getInfinite']['query'] } : Record<never, never>)
+		queries: ConfiguredQueries<Enabled, Operations>
 	}
 }

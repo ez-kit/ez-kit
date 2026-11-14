@@ -212,3 +212,11 @@ in the base key when switching between tenant-specific sources: a mutation alrea
 one tenant keeps that scope when the hook switches to a differently keyed source. Explicit mutation
 keys override this default. Native mutation descriptors preserve supplied keys and TanStack's normal
 observer behavior; changing callbacks under the same key does not create an isolated operation scope.
+
+Collection configuration is checked before execution: generated reads require a base key,
+native reads require an explicit invalidation policy, and a factory operation must supply
+required preparation/projection fields when no shared read convention provides them.
+Conditionally configured mutations stay optional in the returned type. Check an optional
+operation before using it; narrow an optional read descriptor before selecting that mode.
+Mutation callbacks inherit QueryClient global and keyed defaults with native override
+precedence. Automatic invalidation runs after the effective success callback settles.

@@ -61,7 +61,9 @@ export type CollectionResult<S, M extends CollectionMode<S>> =
 			} & MutationResults<S>
 		: never
 export type CollectionQueryConfig<S, M extends CollectionMode<S>> =
-	M extends CollectionMode<S> ? { source: S; mode: M; params: CollectionParams<S, M> } : never
+	M extends CollectionMode<S>
+		? { source: S & { [K in ReadKey<M>]: Read<S, M> }; mode: M; params: CollectionParams<S, M> }
+		: never
 
 type RuntimeMutation = {
 	mutation: UseMutationOptions<unknown, unknown, unknown>
@@ -104,11 +106,12 @@ export function useCollectionMutation<V, D, E, O>(
 ) {
 	const client = useQueryClient()
 	const filters = resolveInvalidation(inherited, source.invalidate)
+	const options = client.defaultMutationOptions(source.mutation)
 	return useMutation({
-		...source.mutation,
+		...options,
 		onSuccess: async (...args) => {
 			try {
-				await source.mutation.onSuccess?.(...args)
+				await options.onSuccess?.(...args)
 			} finally {
 				for (const filter of filters) {
 					try {

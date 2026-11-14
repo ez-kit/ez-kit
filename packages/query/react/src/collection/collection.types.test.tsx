@@ -196,3 +196,96 @@ function EntityFixture() {
 	return null
 }
 void EntityFixture
+
+function ConditionalCapabilitiesFixture(canDelete: boolean, canLoadMore: boolean) {
+	const optional = createCollectionSource({
+		key: ['optional'],
+		invalidate: false,
+		getAll: source.getAll,
+		...(canDelete ? { delete: { prepareArgs: (id: string) => id, fetcher: (id: string) => Promise.resolve(id) } } : {}),
+		...(canLoadMore ? { getInfinite: infinite.getInfinite } : {}),
+	})
+	const result = useCollectionQuery({ source: optional, mode: 'pages', params: { offset: 0, team: 'one' } })
+	// @ts-expect-error permissions can omit deletion
+	result.delete.mutate('1')
+	result.delete?.mutate('1')
+	// @ts-expect-error a conditional read must be narrowed before selecting its mode
+	useCollectionQuery({ source: optional, mode: 'infinite', params: { topic: 'news' } })
+	// @ts-expect-error optional query helper must also be checked
+	optional.queries.infinite({ topic: 'news' })
+
+	const optionalFactory = convention({
+		key: ['optional-convention'],
+		getAll: (_args: { offset: number }) => Promise.resolve({ rows: [{ id: '1' }] }),
+		...(canDelete ? { delete: { prepareArgs: (id: string) => id, fetcher: (id: string) => Promise.resolve(id) } } : {}),
+	})
+	const fromFactory = useCollectionQuery({ source: optionalFactory, mode: 'pages', params: { page: 0 } })
+	// @ts-expect-error the factory must preserve optional capabilities too
+	fromFactory.delete.mutate('1')
+	fromFactory.delete?.mutate('1')
+}
+void ConditionalCapabilitiesFixture
+
+function InvalidIdentityFixture() {
+	const read = {
+		prepareArgs: () => ({}),
+		fetcher: (_args: Record<string, never>) => Promise.resolve([1]),
+		getItems: (rows: number[]) => rows,
+	}
+	// @ts-expect-error generated reads require a base key
+	createCollectionSource({ getAll: read })
+	// @ts-expect-error native reads require an invalidation policy
+	createCollectionSource({ getAll: source.getAll })
+	createCollectionSource({ getAll: source.getAll, invalidate: false })
+	const emptyConvention = createCollectionSourceFactory({})
+	// @ts-expect-error a bare fetcher cannot inherit a missing list convention
+	emptyConvention({ key: ['incomplete'], getAll: (_args: unknown) => Promise.resolve([1]) })
+	emptyConvention({
+		key: ['incomplete'],
+		// @ts-expect-error projections alone do not provide preparation
+		getAll: { fetcher: (_args: unknown) => Promise.resolve([1]), getItems: (_data: unknown) => [1] },
+	})
+	// A complete read remains legal even without shared defaults.
+	const complete = emptyConvention({
+		key: ['complete'],
+		getAll: {
+			prepareArgs: (params: { offset: number }) => params.offset,
+			fetcher: (offset: number) => Promise.resolve([{ id: offset }]),
+			getItems: (data) => data,
+		},
+	})
+	expectTypeOf(complete.getAll.query).parameter(0).toEqualTypeOf<{ offset: number }>()
+	expectTypeOf(complete.getAll.getItems).returns.toEqualTypeOf<readonly { id: number }[]>()
+	const standaloneInfinite = emptyConvention({
+		key: ['standalone-infinite'],
+		getInfinite: {
+			prepareArgs: (params: { search: string }) => params,
+			preparePageArgs: ({ args, pageParam }) => ({ ...args, cursor: pageParam }),
+			initialPageParam: 0,
+			fetcher: (args: { search: string; cursor: number }) => Promise.resolve([{ id: args.search }]),
+			getItems: (rows) => rows,
+			getNextPageParam: () => undefined,
+		},
+	})
+	expectTypeOf(standaloneInfinite.getInfinite.query).parameter(0).toEqualTypeOf<{ search: string }>()
+	expectTypeOf(standaloneInfinite.getInfinite.getItems).returns.toEqualTypeOf<readonly { id: string }[]>()
+	const fetchPage = () => Promise.resolve([1])
+	// @ts-expect-error a bare infinite fetcher needs an inherited infinite convention
+	emptyConvention({ key: ['incomplete-feed'], getInfinite: fetchPage })
+}
+void InvalidIdentityFixture
+
+const asyncReadSource = createCollectionSource({
+	key: ['async-transport'],
+	getAll: {
+		prepareArgs: (params: { offset: number }) => params,
+		fetcher: async (params: { offset: number }, { signal }) => {
+			await Promise.resolve()
+			signal.throwIfAborted()
+			return { items: [{ id: params.offset, name: 'Ada' }], total: 1 }
+		},
+		getItems: (response) => response.items,
+		getTotal: (response) => response.total,
+	},
+})
+expectTypeOf(asyncReadSource.getAll.getItems).returns.toEqualTypeOf<readonly { id: number; name: string }[]>()

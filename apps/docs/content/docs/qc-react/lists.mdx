@@ -170,3 +170,8 @@ Use the same QueryClient to share cached responses between views. A source creat
 with `createGridSourceFactory` already accepts grid contexts and needs no adapter.
 For native options, infinite-only sources, invalidation overrides and full type
 contracts, see [Collections](/docs/query-react/collection).
+
+For a collection supporting both page and infinite reads, both projections must supply the
+fields expected by the grid. If one endpoint returns a smaller DTO, normalize it in `getItems`
+or use separate grids; the adapter rejects an incompatible infinite row type. Conditional
+mutation capabilities retain their optional types through this adapter.

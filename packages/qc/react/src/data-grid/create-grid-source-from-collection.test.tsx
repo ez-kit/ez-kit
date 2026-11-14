@@ -98,3 +98,52 @@ function makeHarness() {
 		),
 	}
 }
+
+function CheckedRowsFixture(canDelete: boolean) {
+	const mixed = createCollectionSource({
+		key: ['mixed'],
+		invalidate: false,
+		getAll: source.getAll,
+		getInfinite: {
+			prepareArgs: () => ({}),
+			preparePageArgs: () => ({}),
+			initialPageParam: 0,
+			fetcher: () => Promise.resolve([{ sku: 42 }]),
+			getNextPageParam: () => undefined,
+			getItems: (rows) => rows,
+		},
+	})
+	// @ts-expect-error infinite rows cannot satisfy the grid's list row contract
+	createGridSourceFromCollection(mixed, { params: () => ({ team: 'one', offset: 0 }), infiniteParams: () => undefined })
+	const compatible = createCollectionSource({
+		key: ['compatible'],
+		invalidate: false,
+		getAll: source.getAll,
+		getInfinite: {
+			prepareArgs: () => ({}),
+			preparePageArgs: () => ({}),
+			initialPageParam: 0,
+			fetcher: () => Promise.resolve([{ id: 42, name: 'Ada', extra: true }]),
+			getNextPageParam: () => undefined,
+			getItems: (rows) => rows,
+		},
+	})
+	createGridSourceFromCollection(compatible, {
+		params: () => ({ team: 'one', offset: 0 }),
+		infiniteParams: () => undefined,
+	})
+	const optional = createCollectionSource({
+		key: ['optional-grid'],
+		invalidate: false,
+		getAll: source.getAll,
+		...(canDelete ? { delete: { prepareArgs: (id: number) => id, fetcher: (id: number) => Promise.resolve(id) } } : {}),
+	})
+	const optionalGrid = createGridSourceFromCollection(optional, {
+		params: () => ({ team: 'one', offset: 0 }),
+		delete: ({ row }) => row.id,
+	})
+	// @ts-expect-error the grid adapter must preserve conditional mutations too
+	optionalGrid.delete.prepareArgs({ rowId: '1', row: { id: 42, name: 'Ada' } })
+	optionalGrid.delete?.prepareArgs({ rowId: '1', row: { id: 42, name: 'Ada' } })
+}
+void CheckedRowsFixture

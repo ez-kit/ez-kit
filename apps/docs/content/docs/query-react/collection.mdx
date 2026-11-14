@@ -128,3 +128,18 @@ in the base key when switching between tenant-specific sources: a mutation alrea
 one tenant keeps that scope when the hook switches to a differently keyed source. Explicit mutation
 keys override this default. Native mutation descriptors preserve supplied keys and TanStack's normal
 observer behavior; changing callbacks under the same key does not create an isolated operation scope.
+
+## Conditional capabilities and required configuration
+
+When a permission or feature flag conditionally adds a mutation, the corresponding result
+remains optional: check `users.delete` before calling it, or use `users.delete?.mutate(input)`.
+Likewise, narrow a conditionally present read before selecting its mode. A configured read
+can still use `enabled: false` to pause requests without removing the capability.
+
+Generated reads require `key`; native reads require explicit `invalidate` (including `false`).
+A shared factory can omit a read convention, but the entity operation must then supply all
+of that read's preparation and projection fields. Incomplete definitions are type errors.
+
+Mutation `onSuccess` inherits global or keyed QueryClient defaults when the source does not
+provide its own callback. A local callback replaces the inherited one, following TanStack's
+precedence; automatic invalidation follows the effective callback.

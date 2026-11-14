@@ -315,3 +315,17 @@ it('inherits bare infinite fetchers and replaces native options at the operation
 	expect(expanded.queries.infinite?.(criteria)).toMatchObject({ initialPageParam: 5, retry: 0 })
 	expect(expanded.queries.infinite?.(criteria).staleTime).toBeUndefined()
 })
+
+it('preserves an explicit mutation key instead of the factory default', () => {
+	const make = createGridSourceFactory({ list: { prepareArgs: () => ({}), getRows: (rows: Entity[]) => rows } })
+	const source = make({
+		key: ['users', 'team-a'],
+		getAll: () => Promise.resolve([] as Entity[]),
+		update: {
+			prepareArgs: ({ rowId }) => rowId,
+			fetcher: (id: string) => Promise.resolve(id),
+			options: { mutationKey: ['custom', 'update'] },
+		},
+	})
+	expect(source.update?.mutation.mutationKey).toEqual(['custom', 'update'])
+})

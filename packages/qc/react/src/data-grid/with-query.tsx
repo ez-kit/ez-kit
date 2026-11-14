@@ -43,6 +43,11 @@ import type {
 } from '@tanstack/react-query'
 import type { ReactElement } from 'react'
 
+function requireCollectionRead<S, K extends keyof S>(source: S, key: K): S & { [P in K]-?: NonNullable<S[P]> } {
+	if (!source[key]) throw new Error(`Collection source does not support ${String(key)} reads`)
+	return source as S & { [P in K]-?: NonNullable<S[P]> }
+}
+
 /** Sources retain their concrete options types; the connection only needs their row contract. */
 export type GridDataSource<TRow extends object> = {
 	getAll?: {
@@ -327,10 +332,10 @@ export function withQuery<
 			[source],
 		)
 		// The runtime source crosses one opaque response boundary; modes are checked below.
-		const collection = useCollectionQuery(
+		const collection = useCollectionQuery<typeof collectionSource, 'pages' | 'infinite'>(
 			infiniteMode
 				? {
-						source: collectionSource,
+						source: requireCollectionRead(collectionSource, 'getInfinite'),
 						mode: 'infinite',
 						params: {
 							sorting: params.sorting,
@@ -339,7 +344,7 @@ export function withQuery<
 							pageSize: params.pagination.pageSize,
 						},
 					}
-				: { source: collectionSource, mode: 'pages', params },
+				: { source: requireCollectionRead(collectionSource, 'getAll'), mode: 'pages', params },
 		)
 
 		useCommitEffect(() => {

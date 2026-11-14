@@ -10,18 +10,28 @@ import type {
 import type { GridDataSource } from './with-query'
 import type { CollectionShape, CollectionParams, CollectionMutation } from '@ez-kit/query-react/collection'
 
-type Item<S> = S extends { getAll: { getItems: (value: never) => readonly (infer I extends object)[] } }
-	? I
-	: S extends { getInfinite: { getItems: (value: never) => readonly (infer I extends object)[] } }
-		? I
+type ReadItem<S, K extends keyof S> =
+	NonNullable<S[K]> extends { getItems: (value: never) => readonly (infer I extends object)[] } ? I : never
+type Item<S> = 'getAll' extends keyof S
+	? ReadItem<S, 'getAll'>
+	: 'getInfinite' extends keyof S
+		? ReadItem<S, 'getInfinite'>
 		: never
+type CompatibleRows<S> = 'getAll' extends keyof S
+	? 'getInfinite' extends keyof S
+		? [ReadItem<S, 'getInfinite'>] extends [ReadItem<S, 'getAll'>]
+			? unknown
+			: never
+		: unknown
+	: unknown
 type Contexts<I extends object> = {
 	create: GridCreateContext<I>
 	update: GridUpdateContext<I>
 	delete: GridDeleteContext<I>
 	deleteMany: GridDeleteManyContext<I>
 }
-type Input<S, K extends keyof S> = S[K] extends CollectionMutation<infer V, infer _D, infer _E, infer _O> ? V : never
+type Input<S, K extends keyof S> =
+	NonNullable<S[K]> extends CollectionMutation<infer V, infer _D, infer _E, infer _O> ? V : never
 type Operations<S> = Extract<keyof S, keyof Contexts<object>>
 type RequiredMappings<S> = {
 	[K in Operations<S> as Contexts<Item<S>>[K] extends Input<S, K> ? never : K]: (
@@ -42,15 +52,20 @@ export type CollectionGridMapping<S> = ('getAll' extends keyof S
 	RequiredMappings<S> &
 	OptionalMappings<S> & { transformError?: (error: unknown) => unknown }
 type AdaptedOperations<S> = {
-	[K in Operations<S>]: S[K] extends CollectionMutation<infer V, infer D, infer E, infer O>
-		? GridMutationSource<Contexts<Item<S>>[K], V, D, E, O>
+	[K in keyof S as K extends Operations<S> ? K : never]: NonNullable<S[K]> extends CollectionMutation<
+		infer V,
+		infer D,
+		infer E,
+		infer O
+	>
+		? GridMutationSource<Contexts<Item<S>>[Extract<K, keyof Contexts<Item<S>>>], V, D, E, O>
 		: never
 }
 
 /** Map table state and action contexts without changing collection cache identity. */
 export function createGridSourceFromCollection<S extends CollectionShape>(
 	source: S,
-	mapping: CollectionGridMapping<S>,
+	mapping: CollectionGridMapping<S> & CompatibleRows<NoInfer<S>>,
 ): GridDataSource<Item<S>> & AdaptedOperations<S> & Pick<S, 'invalidation'> {
 	const read = source as unknown as {
 		getAll?: {

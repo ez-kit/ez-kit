@@ -34,3 +34,20 @@ Runtime/type fixtures cover arbitrary params, independent mutation inputs/result
 The docs production build was excluded from build/size because Google Fonts downloads are blocked in this environment. This is the existing user-accepted limitation, not a passing production-build result. Browser checks used Next dev with fallback fonts. Docs lint, typecheck, unit tests and the selected browser scenarios passed.
 
 `openspec validate query-collection --strict` and `git diff --check` passed. All 21 tracked implementation tasks are complete.
+
+## Contract follow-up — 2026-11-14
+
+Corrected five contract gaps: grid fetcher mutation identity across tenant changes,
+QueryClient success callback defaults, optional capabilities, complete source/factory
+configuration, and compatible row projections at the grid adapter boundary.
+
+- `pnpm verify:affected`: 24 tasks passed.
+- Sequential library build, full lint, full typecheck, full tests and library size checks passed using the same commands and docs-production exclusion recorded above.
+- Current React: query-react 80 tests, qc-react 89 tests, docs 313 tests passed.
+- `pnpm --filter @ez-kit/query-react test:react18`: 80 passed.
+- `pnpm --filter @ez-kit/qc-react test:react18`: 83 passed, six existing HeroUI skips.
+- Mutation regressions exercise source changes during success, error and retry, explicit key overrides, global/keyed/local success callback precedence and awaited callbacks before invalidation.
+- Type regressions reject unsafe conditional-operation access, unsupported conditional reads, missing keys/invalidation/preparation, and incompatible list/infinite rows. Positive fixtures retain async fetcher/signal inference and complete per-entity reads without shared defaults.
+- Sizes: query gate 450 B / 550 B; collection 1.37 kB / 1.6 kB; qc-react 2.76 kB / 3 kB.
+
+No new browser run was needed for this contract-only follow-up; the preceding browser evidence applies to the unchanged user flows. Per-consumer observer overrides and shape-changing shared-factory select remain outside this follow-up.

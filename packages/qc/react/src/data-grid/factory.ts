@@ -40,6 +40,8 @@ type MutationInput<TInput, TDefaultArgs, TArgs, TResult, TError, TContext> =
 function createMutationSource<TInput, TDefaultArgs, TArgs, TResult, TError, TContext>(
 	input: MutationInput<TInput, TDefaultArgs, TArgs, TResult, TError, TContext> | undefined,
 	defaults: MutationDefaults<TInput, TDefaultArgs> | undefined,
+	key: QueryKey,
+	name: string,
 ): GridMutationSource<TInput, TArgs, TResult, TError, TContext> | undefined {
 	if (input === undefined) return undefined
 	const operation: {
@@ -55,7 +57,7 @@ function createMutationSource<TInput, TDefaultArgs, TArgs, TResult, TError, TCon
 	if (!prepareArgs) throw new Error('A grid mutation requires prepareArgs on the operation or API factory')
 	const transformError = operation.transformError ?? defaults?.transformError
 	return {
-		mutation: { ...operation.options, mutationFn: operation.fetcher },
+		mutation: { mutationKey: [...key, name], ...operation.options, mutationFn: operation.fetcher },
 		prepareArgs,
 		...(operation.invalidate === undefined ? {} : { invalidate: operation.invalidate }),
 		...(transformError === undefined ? {} : { transformError }),
@@ -179,10 +181,10 @@ export function createGridSourceFactory<
 				initialPageParam: combined.initialPageParam,
 			})
 		}
-		const create = createMutationSource(config.create, defaults.mutations?.create)
-		const update = createMutationSource(config.update, defaults.mutations?.update)
-		const remove = createMutationSource(config.delete, defaults.mutations?.delete)
-		const deleteMany = createMutationSource(config.deleteMany, defaults.mutations?.deleteMany)
+		const create = createMutationSource(config.create, defaults.mutations?.create, config.key, 'create')
+		const update = createMutationSource(config.update, defaults.mutations?.update, config.key, 'update')
+		const remove = createMutationSource(config.delete, defaults.mutations?.delete, config.key, 'delete')
+		const deleteMany = createMutationSource(config.deleteMany, defaults.mutations?.deleteMany, config.key, 'deleteMany')
 		const transformError = config.transformError ?? defaults.transformError
 		return {
 			getAll,
