@@ -8,6 +8,16 @@ pagination, applied filters and sorting; Query owns server data and the cache.
 The base grid has no Query dependency. Form connectors and SWR/RTK Query adapters
 are outside this release.
 
+## Try it with sample data
+
+This is a working grid backed by an isolated in-memory API. No backend or account
+is needed. Create a user, edit a row, or select several rows to delete them together.
+Search, sort and switch between pages and infinite loading. Writes take 350 ms;
+successful mutations automatically refresh the list. Reload the example to restore
+the sample data. Use the kit tabs to try shadcn or HeroUI; the source is below the preview.
+
+<DataGridDocsExample exampleId='query-source' />
+
 ## Install
 
 ```sh
@@ -77,11 +87,9 @@ A supplied table is already connected and is not bound a second time. Do not pas
 
 ## Pages and infinite reads
 
-This example uses the connected hook and an in-memory API with the same contract
-as a remote endpoint. Change search, sort, page or mode: the table remains the
-owner of query parameters. Both kit tabs execute the same example.
-
-<DataGridDocsExample exampleId='query-source' />
+The [interactive example above](#try-it-with-sample-data) uses the connected hook
+and an in-memory API with the same contract as a remote endpoint. Change search,
+sort, page or mode: the table remains the owner of query parameters.
 
 For infinite mode, the factory's `prepareArgs` receives collection criteria and
 `pageSize`. `preparePageArgs({ args, pageParam })` adds the current cursor to the
