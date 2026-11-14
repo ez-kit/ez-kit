@@ -1264,5 +1264,21 @@
 		"groupLabel": "Pagination",
 		"sourceFile": "components/query-source.tsx",
 		"exportName": "QuerySourceExample"
+	},
+	{
+		"id": "query-pages",
+		"label": "Query: numbered pages",
+		"group": "pagination",
+		"groupLabel": "Pagination",
+		"sourceFile": "components/query-pagination.tsx",
+		"exportName": "QueryPagesExample"
+	},
+	{
+		"id": "query-infinite",
+		"label": "Query: infinite loading",
+		"group": "pagination",
+		"groupLabel": "Pagination",
+		"sourceFile": "components/query-pagination.tsx",
+		"exportName": "QueryInfiniteExample"
 	}
 ]

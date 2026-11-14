@@ -3,5 +3,5 @@
 	"description": "Query connectors for React UI",
 	"icon": "Cable",
 	"root": true,
-	"pages": ["index", "api"]
+	"pages": ["index", "pagination", "infinite", "lists", "api"]
 }

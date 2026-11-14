@@ -1,0 +1,87 @@
+'use client'
+
+import { createDataGrid } from '@ez-kit/data-grid-react'
+import { allDataGridFeatures } from '@ez-kit/data-grid-react/features/all'
+import { createGridSourceFactory, createInfiniteSource, withQuery } from '@ez-kit/qc-react/data-grid'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { useState } from 'react'
+
+import { allComponents, cellTypes } from 'shared/GridKit'
+
+const defaultKit = withQuery(createDataGrid({ components: allComponents, cellTypes, features: allDataGridFeatures }))
+type User = { id: string; name: string }
+type Criteria = { search: string; limit: number }
+type Page = { items: User[]; total: number; nextCursor: number | null }
+const users = ['Ada', 'Barbara', 'Carol', 'Dorothy', 'Evelyn', 'Frances', 'Grace', 'Hedy', 'Ida'].map((name) => ({
+	id: name,
+	name,
+}))
+
+async function fetchUsers(args: Criteria & { offset: number }, { signal }: { signal: AbortSignal }): Promise<Page> {
+	await new Promise<void>((resolve) => setTimeout(resolve, 400))
+	signal.throwIfAborted()
+	const matches = users.filter((user) => user.name.toLowerCase().includes(args.search.toLowerCase()))
+	const end = args.offset + args.limit
+	return {
+		items: matches.slice(args.offset, end),
+		total: matches.length,
+		nextCursor: end < matches.length ? end : null,
+	}
+}
+const pagedSource = createGridSourceFactory({
+	list: {
+		prepareArgs: ({ pagination, globalFilter }) => ({
+			offset: pagination.pageIndex * pagination.pageSize,
+			limit: pagination.pageSize,
+			search: typeof globalFilter === 'string' ? globalFilter : '',
+		}),
+		getRows: (page: Page) => page.items,
+		getRowCount: (page) => page.total,
+	},
+})({ key: ['paged-users-demo'], getAll: fetchUsers })
+
+const infiniteSource = {
+	getInfinite: createInfiniteSource({
+		key: ['infinite-users-demo'],
+		fetcher: fetchUsers,
+		prepareArgs: ({ pageSize, globalFilter }) => ({
+			limit: pageSize,
+			search: typeof globalFilter === 'string' ? globalFilter : '',
+		}),
+		preparePageArgs: ({ args, pageParam }: { args: Criteria; pageParam: number }) => ({ ...args, offset: pageParam }),
+		initialPageParam: 0,
+		getRows: (page: Page) => page.items,
+		getNextPageParam: (page) => page.nextCursor,
+	}),
+}
+
+function Example({ kit, mode }: { kit: typeof defaultKit; mode: 'pages' | 'infinite' }) {
+	const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }))
+	return (
+		<QueryClientProvider client={client}>
+			<kit.DataGrid
+				dataSource={mode === 'pages' ? pagedSource : infiniteSource}
+				columns={[{ accessorKey: 'name', header: 'Name', cell: { type: 'text' } }]}
+				getRowId={(user) => user.id}
+				globalFiltering
+				pagination={{ mode, pageSize: 3, trigger: 'manual' }}
+			/>
+		</QueryClientProvider>
+	)
+}
+export function QueryPagesExample({ kit = defaultKit }: { kit?: typeof defaultKit } = {}) {
+	return (
+		<Example
+			kit={kit}
+			mode='pages'
+		/>
+	)
+}
+export function QueryInfiniteExample({ kit = defaultKit }: { kit?: typeof defaultKit } = {}) {
+	return (
+		<Example
+			kit={kit}
+			mode='infinite'
+		/>
+	)
+}

@@ -38,3 +38,11 @@ export async function loadQueryModalExample() {
 	const { QueryModalExample } = await import('./components/editing/query-modal')
 	return { QueryModalExample: withQueryExampleKit(QueryModalExample) }
 }
+
+export async function loadQueryPaginationExamples() {
+	const { QueryPagesExample, QueryInfiniteExample } = await import('./components/query-pagination')
+	return {
+		QueryPagesExample: withQueryExampleKit(QueryPagesExample),
+		QueryInfiniteExample: withQueryExampleKit(QueryInfiniteExample),
+	}
+}

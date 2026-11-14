@@ -1,0 +1,172 @@
+---
+title: Lists and CRUD
+description: Build an ordinary list with typed collection queries and all four mutations, then reuse its source in a grid.
+---
+
+A collection does not need a table. Use `@ez-kit/query-react/collection` for a card
+list, ItemGroup or another custom view. It executes requests and exposes native
+Query results; your component owns search, pagination, selection and edit forms.
+`qc-react` is only needed when you connect that source to a DataGrid.
+
+## Try the complete CRUD list
+
+This example uses shadcn ItemGroup and a private in-memory API. Create a user,
+change a name and Save, delete a row, or select several users and Delete selected.
+Every request takes 250 ms. Data resets on remount; no external service is called.
+Try an empty name to see a mutation error. The source panel includes the entire
+fake API, collection definition, provider and list component.
+
+<LivePreview
+	path='query-react/collection-list'
+	title='Ordinary list: create, read, update, delete and deleteMany'
+/>
+
+New users are appended to the dataset, so use Next to find a newly created user
+on the last page. Search is applied to the server dataset. Changing search resets
+the page in the same state update. Deleting the last row on the last page moves
+the example back only after the refreshed total confirms that page is out of range.
+
+## Define the business source
+
+Import `createCollectionSource` and `useCollectionQuery` from
+`@ez-kit/query-react/collection`. Unlike a grid source, mutation inputs here are
+business objects you choose; there is no `row`, `rowId` or `Partial<Row>` contract.
+The following configuration shows the operation boundaries; the runnable example
+above supplies all five fetchers with a fake implementation.
+
+```tsx
+const source = createCollectionSource({
+	key: ['users'],
+	getAll: {
+		prepareArgs: (params: { search: string; offset: number; limit: number }) => params,
+		fetcher: fetchUsers,
+		getItems: (response) => response.items,
+		getTotal: (response) => response.total,
+	},
+	create: {
+		prepareArgs: (input: { name: string }) => ({ name: input.name.trim() }),
+		fetcher: createUser,
+	},
+	update: {
+		prepareArgs: (input: { id: string; name: string }) => ({
+			id: input.id,
+			body: { name: input.name.trim() },
+		}),
+		fetcher: updateUser,
+	},
+	delete: {
+		prepareArgs: (input: { id: string }) => input.id,
+		fetcher: deleteUser,
+	},
+	deleteMany: {
+		prepareArgs: (input: { ids: string[] }) => input.ids,
+		fetcher: deleteUsers,
+	},
+})
+```
+
+Each fetcher accepts the result of its `prepareArgs`. The example's update fetcher
+therefore receives `{ id, body }`, while delete receives a string ID. HTTP placement
+belongs to your client, including [Orval-generated fetchers](/docs/qc-react#generated-fetchers).
+A shared `createCollectionSourceFactory` can define these conventions once per project.
+
+## Read with controlled pagination
+
+Inside a component under `QueryClientProvider`:
+
+```tsx
+const [params, setParams] = useState({ search: '', offset: 0, limit: 2 })
+const users = useCollectionQuery({ source, mode: 'pages', params })
+
+function search(value: string) {
+	setParams((current) => ({ ...current, search: value, offset: 0 }))
+}
+function nextPage() {
+	setParams((current) => ({ ...current, offset: current.offset + current.limit }))
+}
+```
+
+Render `users.items`; use `users.total` to decide whether Next is available.
+`users.query` is the native result: show initial loading, keep existing content
+visible during background refresh, and render errors with a retry action.
+The hook never changes `params`. Unlike the grid connector, an ordinary list must
+implement its own page-reset and out-of-range policy; the live example includes both.
+
+## Execute each mutation
+
+```tsx
+users.create.mutate({ name: 'Ada' })
+users.update.mutate({ id: '42', name: 'Ada Lovelace' })
+users.delete.mutate({ id: '42' })
+users.deleteMany.mutate({ ids: ['42', '43'] })
+```
+
+These are native TanStack mutation objects. Disable relevant actions with
+`isPending`, display `error`, and use `reset()` when dismissing an error or beginning
+a new editing session. Only operations present on the source exist on the result.
+`deleteMany` requires a real bulk fetcher; it never falls back to individual deletes.
+
+For sequential work, await `mutateAsync` and handle rejection:
+
+```tsx
+async function save(input: { id: string; name: string }) {
+	try {
+		await users.update.mutateAsync(input)
+		closeEditor()
+	} catch {
+		// Keep the editor open; render users.update.error beside the form.
+	}
+}
+```
+
+`closeEditor` is application UI logic. Successful mutations invalidate the source's
+list and infinite families automatically. Closing the editor does not wait for the
+background list refresh. Avoid also calling `refetch()` after every successful write.
+
+Place shared lifecycle behavior in mutation `options`. `onMutate` runs before
+`prepareArgs`; callbacks receive the original mutation input, not the prepared DTO.
+Preparation errors become mutation errors. Keep preparation pure because enabled
+retries execute it again. Form schemas and field-error presentation belong to the UI.
+
+## Reuse the same source in DataGrid
+
+`adaptCollectionToGrid` translates table state and action contexts into the inputs
+above. It preserves the source's query keys and mutation definitions:
+
+```tsx
+const dataSource = adaptCollectionToGrid(source, {
+  params: ({ pagination, globalFilter }) => ({
+    search: typeof globalFilter === 'string' ? globalFilter : '',
+    offset: pagination.pageIndex * pagination.pageSize,
+    limit: pagination.pageSize,
+  }),
+  create: ({ values }) => ({ name: values.name ?? '' }),
+  update: ({ row, values }) => {
+    if (!row) throw new Error('User is no longer available')
+    return { id: row.id, name: values.name ?? row.name }
+  },
+  delete: ({ row }) => ({ id: row.id }),
+  deleteMany: ({ rows }) => ({ ids: rows.map((row) => row.id) }),
+})
+// DataGrid comes from withQuery(yourGridBundle).
+<DataGrid
+  dataSource={dataSource}
+  columns={columns}
+  getRowId={(user) => user.id}
+  globalFiltering
+  pagination={{ pageSize: 2 }}
+  creating={{ mode: 'modal' }}
+  editing={{ mode: 'modal' }}
+  selection
+  deleting={{ bulk: true }}
+/>
+```
+
+The adapter's `update` produces `{ id, name }`; the collection's `prepareArgs` then
+produces `{ id, body }` for the fetcher. They serve different boundaries. If several
+entities share the same grid mapping, wrap the adapter in your application factory.
+
+Use the same QueryClient to share cached responses between views. A source created
+with `createGridSourceFactory` already accepts grid contexts and needs no adapter.
+For native options, infinite-only sources, invalidation overrides and full type
+contracts, see [Collections](/docs/query-react/collection).

@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 
 test('ordinary collection supports paging, atomic search reset and CRUD actions', async ({ page }) => {
-	await page.goto('/docs/query-react/collection')
+	await page.goto('/docs/qc-react/lists')
 	const example = page.getByRole('region', { name: 'Collection users' })
 	await expect(example.getByLabel('Name for Ada', { exact: true })).toBeVisible()
 	await example.getByRole('button', { name: 'Next', exact: true }).click()

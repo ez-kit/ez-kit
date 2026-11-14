@@ -8,6 +8,12 @@ pagination, applied filters and sorting; Query owns server data and the cache.
 The base grid has no Query dependency. Form connectors and SWR/RTK Query adapters
 are outside this release.
 
+## Choose a scenario
+
+- [Page pagination](/docs/qc-react/pagination): a live numbered-page grid, request mapping, totals and search resets.
+- [Infinite loading](/docs/qc-react/infinite): a separate accumulating grid, cursor mapping and loading triggers.
+- [Lists and CRUD](/docs/qc-react/lists): an ordinary ItemGroup with all four mutations, controlled state and reuse in DataGrid.
+
 ## Try it with sample data
 
 This is a working grid backed by an isolated in-memory API. No backend or account

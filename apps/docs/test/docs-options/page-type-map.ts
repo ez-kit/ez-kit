@@ -83,6 +83,9 @@ export const DELIBERATELY_UNMAPPED: readonly UnmappedPage[] = [
 /** In-scope documentation pages, relative to `apps/docs/`. */
 export const DocPage = {
 	QcIndex: 'content/docs/qc-react/index.mdx',
+	QcPagination: 'content/docs/qc-react/pagination.mdx',
+	QcInfinite: 'content/docs/qc-react/infinite.mdx',
+	QcLists: 'content/docs/qc-react/lists.mdx',
 	QcApi: 'content/docs/qc-react/api.mdx',
 	AdvancedReact: 'content/docs/data-grid/advanced/react.mdx',
 	AdvancedCore: 'content/docs/data-grid/advanced/core.mdx',
@@ -1893,6 +1896,9 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{ page: DocPage.QueryInfinite, optionTables: [], nonOptionTables: [] },
 	{ page: DocPage.QueryMutation, optionTables: [], nonOptionTables: [] },
 	{ page: DocPage.QueryMutationWorkflows, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.QcPagination, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.QcInfinite, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.QcLists, optionTables: [], nonOptionTables: [] },
 	{ page: DocPage.QueryCollection, optionTables: [], nonOptionTables: [] },
 	{ page: DocPage.QuerySsrPrefetch, optionTables: [], nonOptionTables: [] },
 	{
