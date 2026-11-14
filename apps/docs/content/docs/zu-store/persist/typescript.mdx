@@ -80,8 +80,6 @@ const filtersStore = createContextStore<StoreApi<Filters>>(() =>
 
 ## Validating what comes back
 
-Values arriving from a URL or from storage are untrusted input, and a parser is where that is checked. `zodParam(schema)` turns a Zod schema into one — see [Parsers](./parsers):
-
-```ts
-import { zodParam } from '@ez-kit/zu-store/persist/validators/zod'
-```
+Values arriving from URL/storage are untrusted. A parser decodes the string; `schema.validate`
+checks the current structure **after** any version migration. Use `validate: value => schema.parse(value)`
+with Zod, and select `paramNumber()` for a number or `paramJson()` for an object. See [Parsers](./parsers).

@@ -30,7 +30,10 @@ const fields: FieldsBuilder<ListState> = (field) => [
 ]
 
 const listStore = createContextStore<ListState>(() =>
-	pipe(proxy<ListState>({ q: '', density: 'comfortable' }), withPersist({ fields })),
+	pipe(
+		proxy<ListState>({ q: '', density: 'comfortable' }),
+		withPersist({ fields, restore: { externalChanges: 'apply' } }),
+	),
 )
 
 // Seed the URL with a shared link (?q=boots). Storage starts empty — first-present-wins means the

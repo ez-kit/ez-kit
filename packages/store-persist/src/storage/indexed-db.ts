@@ -1,37 +1,19 @@
-import { type MigrationConfig, packBlob, runMigration, STORAGE_VERSION } from './blob'
-import { createWriteQueue } from './write-queue'
+import { packBlob, runMigration, STORAGE_VERSION } from './blob'
+import { patchKeyed, removeKeyedScope } from './patch'
 
+import type { MigrationConfig } from './blob'
 import type { AmbientAdapter } from '../provider'
 import type { Keyed, SourcePort } from '../types'
 
-/** Source id for the IndexedDB engine, shared by the adapter and the `persistIndexedDb` wrapper. */
 export const INDEXED_DB_SOURCE = 'indexedDB'
-
-const DEFAULT_DB_NAME = 'ez-kit'
-const DEFAULT_STORE_NAME = 'persist'
-/** Default record key under which a store's blob is written when none is configured. */
 export const DEFAULT_IDB_KEY = 'state'
-
-/** Options for the IndexedDB adapter (key + schema versioning + injectable factory). */
 export type IndexedDbAdapterOptions = MigrationConfig & {
-	/** Database name. Defaults to `ez-kit`. */
 	dbName?: string
-	/** Object store name. Defaults to `persist`. */
 	storeName?: string
-	/** Record key under which this store's blob is written. Defaults to {@link DEFAULT_IDB_KEY}. */
 	storageKey?: string
-	/** IndexedDB factory. Defaults to the global `indexedDB`; injectable for tests. */
 	factory?: IDBFactory
 }
 
-function resolveFactory(injected?: IDBFactory): IDBFactory | null {
-	if (injected) {
-		return injected
-	}
-	return typeof indexedDB === 'undefined' ? null : indexedDB
-}
-
-/** Promisify an `IDBRequest`. */
 function request<T>(req: IDBRequest<T>): Promise<T> {
 	return new Promise((resolve, reject) => {
 		req.onsuccess = () => {
@@ -43,105 +25,97 @@ function request<T>(req: IDBRequest<T>): Promise<T> {
 	})
 }
 
-/** Resolve once an `IDBTransaction` commits (or reject if it errors/aborts). */
-function txComplete(tx: IDBTransaction): Promise<void> {
+function complete(tx: IDBTransaction): Promise<void> {
 	return new Promise((resolve, reject) => {
 		tx.oncomplete = () => {
 			resolve()
 		}
-		tx.onerror = () => {
+		tx.onerror = tx.onabort = () => {
 			reject(tx.error ?? new Error('IndexedDB transaction failed'))
 		}
-		tx.onabort = () => {
-			reject(tx.error ?? new Error('IndexedDB transaction aborted'))
-		}
 	})
 }
 
-function openDb(factory: IDBFactory, dbName: string, storeName: string): Promise<IDBDatabase> {
-	return new Promise((resolve, reject) => {
-		const open = factory.open(dbName, 1)
-		open.onupgradeneeded = () => {
-			const db = open.result
-			if (!db.objectStoreNames.contains(storeName)) {
-				db.createObjectStore(storeName)
-			}
-		}
-		open.onsuccess = () => {
-			resolve(open.result)
-		}
-		open.onerror = () => {
-			reject(open.error ?? new Error('IndexedDB open failed'))
-		}
-	})
-}
+const factoryIds = new WeakMap<IDBFactory, number>()
+let nextFactoryId = 0
 
-/**
- * Build an async {@link SourcePort} over IndexedDB. `get()`/`set()` return `Promise`. Writes go through a
- * serialized {@link createWriteQueue | write queue} (last-write-wins; superseded queued writes are
- * dropped). Because async sources resolve after synchronous ones, a late IDB hydration fills only the
- * fields still at their default (the engine's first-present-wins rule). Inert on the server (no factory).
- */
 export function createIndexedDbPort(options: IndexedDbAdapterOptions = {}): SourcePort {
-	const dbName = options.dbName ?? DEFAULT_DB_NAME
-	const storeName = options.storeName ?? DEFAULT_STORE_NAME
+	const dbName = options.dbName ?? 'ez-kit'
+	const storeName = options.storeName ?? 'persist'
 	const storageKey = options.storageKey ?? DEFAULT_IDB_KEY
-	const currentVersion = options.version ?? STORAGE_VERSION
-	const migration: MigrationConfig = { version: currentVersion }
-	if (options.migrate !== undefined) {
-		migration.migrate = options.migrate
+	const version = options.version ?? STORAGE_VERSION
+	const factory = options.factory ?? (typeof indexedDB === 'undefined' ? null : indexedDB)
+	if (factory && !factoryIds.has(factory)) factoryIds.set(factory, ++nextFactoryId)
+	let pending: Promise<IDBDatabase> | null = null
+	function database(): Promise<IDBDatabase> {
+		if (!factory) return Promise.reject(new Error('IndexedDB is unavailable'))
+		pending ??= new Promise<IDBDatabase>((resolve, reject) => {
+			const open = factory.open(dbName, 1)
+			open.onupgradeneeded = () => {
+				if (!open.result.objectStoreNames.contains(storeName)) open.result.createObjectStore(storeName)
+			}
+			open.onsuccess = () => {
+				resolve(open.result)
+			}
+			open.onerror = () => {
+				reject(open.error ?? new Error('IndexedDB open failed'))
+			}
+		}).catch((error: unknown) => {
+			pending = null
+			throw error
+		})
+		return pending
 	}
-
-	let dbPromise: Promise<IDBDatabase> | null = null
-	function database(factory: IDBFactory): Promise<IDBDatabase> {
-		return (dbPromise ??= openDb(factory, dbName, storeName))
-	}
-
-	async function write(desired: Keyed): Promise<void> {
-		const factory = resolveFactory(options.factory)
-		if (!factory) {
-			return
-		}
-		const db = await database(factory)
+	async function mutate(transform: (current: Keyed) => Keyed): Promise<void> {
+		if (!factory) return
+		const db = await database()
 		const tx = db.transaction(storeName, 'readwrite')
-		const store = tx.objectStore(storeName)
-		if (desired.size === 0) {
-			store.delete(storageKey)
-		} else {
-			store.put(packBlob(desired, currentVersion), storageKey)
-		}
-		await txComplete(tx)
-	}
-
-	const queue = createWriteQueue<Keyed>(write)
-
-	return {
-		async get(): Promise<Keyed> {
-			const factory = resolveFactory(options.factory)
-			if (!factory) {
-				return new Map()
-			}
+		const done = complete(tx)
+		void done.catch(() => undefined)
+		try {
+			const store = tx.objectStore(storeName)
+			const stored = await request<unknown>(store.get(storageKey))
+			const next = transform(runMigration(stored, options).keyed)
+			if (next.size) store.put(packBlob(next, version), storageKey)
+			else store.delete(storageKey)
+			await done
+		} catch (error) {
 			try {
-				const db = await database(factory)
-				const tx = db.transaction(storeName, 'readonly')
-				const stored = await request<unknown>(tx.objectStore(storeName).get(storageKey))
-				const { keyed, rewrite } = runMigration(stored, migration)
-				if (rewrite) {
-					await queue.enqueue(keyed)
-				}
-				return keyed
+				tx.abort()
 			} catch {
-				return new Map()
+				/* The failed transaction may already be closed. */
 			}
+			throw error
+		}
+	}
+	return {
+		capabilities: { recordVersions: true },
+		identity: `indexedDB:${factory ? String(factoryIds.get(factory)) : 'server'}:${JSON.stringify([dbName, storeName, storageKey])}`,
+		async get(context): Promise<Keyed> {
+			if (!factory) return new Map()
+			const db = await database()
+			const tx = db.transaction(storeName, 'readonly')
+			const stored = await request<unknown>(tx.objectStore(storeName).get(storageKey))
+			const { keyed, rewrite } = runMigration(stored, options)
+			if (rewrite) {
+				if (context) context.stageContainerRewrite?.(keyed)
+				else await mutate(() => keyed)
+			}
+			return keyed
 		},
-
-		set(desired: Keyed): Promise<void> {
-			return queue.enqueue(desired)
+		set(desired, context) {
+			return mutate((current) =>
+				(context.meta as { containerRewrite?: unknown } | null)?.containerRewrite === true
+					? desired
+					: patchKeyed(current, desired, context),
+			)
+		},
+		removeScope(path) {
+			return mutate((current) => removeKeyedScope(current, path))
 		},
 	}
 }
 
-/** Ambient adapter persisting a store to IndexedDB (async; client-only; inert on the server). */
 export function indexedDbAdapter(options: IndexedDbAdapterOptions = {}): AmbientAdapter {
 	return { source: INDEXED_DB_SOURCE, port: createIndexedDbPort(options) }
 }

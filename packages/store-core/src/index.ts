@@ -1,5 +1,11 @@
-export { serializeStoreId, deserializeStoreId } from './store-id'
-export type { StoreId } from './store-id'
+export {
+	serializeStoreId,
+	deserializeStoreId,
+	serializePersistAddress,
+	deserializePersistAddress,
+	isWithinScope,
+} from './store-id'
+export type { StoreId, PersistAddress } from './store-id'
 
 export { getChangedControlledEntries, pickControlledKeys, shallowEqual } from './controlled'
 export type { ControlledConfig, ControlledFieldConfig } from './controlled'

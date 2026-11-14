@@ -1,11 +1,14 @@
+import { serializePersistAddress } from '@ez-kit/store-core'
 import { IDBFactory } from 'fake-indexeddb'
 import { describe, expect, it } from 'vitest'
+
+import { encodeRecord, FutureVersionError } from '../record'
 
 import { createIndexedDbPort } from './indexed-db'
 
 import type { CommitCtx, Keyed } from '../types'
 
-const ctx: CommitCtx = { fields: [], diff: { set: [], removed: [] }, meta: {} }
+const ctx: CommitCtx = { fields: [], diff: { set: ['q', 'page'], removed: [] }, meta: {} }
 const keyed = (entries: [string, string][]): Keyed => new Map(entries)
 
 /** A fresh, isolated IndexedDB-backed port (its own in-memory database). */
@@ -14,6 +17,42 @@ function freshPort(storageKey = 'state') {
 }
 
 describe('@ez-kit/store-persist createIndexedDbPort', () => {
+	it('atomically patches independent records, guards future versions and deletes full scopes', async () => {
+		const port = freshPort()
+		const key = (path: string[], id: string) =>
+			serializePersistAddress({ store: { path, name: 'panel', id }, field: ['width'] })
+		const active = key(['devices'], 'active')
+		const closed = key(['devices'], 'never-mounted')
+		const sibling = key(['devices-other'], 'active')
+		const values = new Map([
+			[active, encodeRecord('900', 9)],
+			[closed, encodeRecord('400')],
+			[sibling, encodeRecord('500')],
+			['legacy', 'keep'],
+		])
+		await port.set(values, { ...ctx, diff: { set: [...values.keys()], removed: [] } })
+		await expect(
+			port.set(new Map([[active, encodeRecord('320')]]), {
+				...ctx,
+				diff: { set: [active], removed: [] },
+				maxVersions: new Map([[active, 0]]),
+			}),
+		).rejects.toBeInstanceOf(FutureVersionError)
+		expect((await port.get()).get(active)).toBe(encodeRecord('900', 9))
+		await port.set(new Map(), {
+			...ctx,
+			diff: { set: [], removed: [active] },
+			maxVersions: new Map([[active, 0]]),
+			explicitReset: true,
+		})
+		await port.removeScope?.(['devices'])
+		expect(await port.get()).toEqual(
+			new Map([
+				[sibling, encodeRecord('500')],
+				['legacy', 'keep'],
+			]),
+		)
+	})
 	it('round-trips values through IndexedDB', async () => {
 		const port = freshPort()
 		await port.set(
@@ -39,7 +78,7 @@ describe('@ez-kit/store-persist createIndexedDbPort', () => {
 	it('removes the record when the desired map is empty', async () => {
 		const port = freshPort()
 		await port.set(keyed([['q', 'shoes']]), ctx)
-		await port.set(new Map(), ctx)
+		await port.set(new Map(), { ...ctx, diff: { set: [], removed: ['q', 'page'] } })
 
 		expect(await port.get()).toEqual(new Map())
 	})

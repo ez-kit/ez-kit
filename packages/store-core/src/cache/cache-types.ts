@@ -26,6 +26,7 @@ export type InstanceMeta = {
 	cleanups: readonly PluginCleanup[]
 	/** Guards against running cleanups twice (e.g. concurrent clear + eviction). */
 	cleared: boolean
+	activate?: () => void
 }
 
 /**

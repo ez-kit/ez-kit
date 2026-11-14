@@ -1,0 +1,68 @@
+# Tasks
+
+## 1. Addressing and source registration
+
+- [x] 1.1 Add PersistAddress and canonical StoreId-based encoding in store-core; verify round trips, special characters and segment-prefix cases from store-persist-addressing.
+- [x] 1.2 Resolve source/defaultSource and address at setup while retaining withPersist declarations until connection; check typed fields without source, unknown names and missing defaultSource.
+- [x] 1.3 Normalize maps/arrays, merge nested registries and publish identical engines through context/service; verify aliases, duplicates, shadowing and parent survival after child unmount.
+- [x] 1.4 Isolate render-scoped hooks in internal components and publish only a ready registry; verify reordered map keys preserve hooks and avoid repeated hydration.
+- [x] 1.5 Connect cached StoreId and explicit context Provider address in both bindings; verify devices/users isolation, address changes, independent singleton collisions and idempotent reconnect.
+- [x] 1.6 Retain birth registry/source and diagnose live replacement or cache reuse under another registry; verify remount/account changes and document Provider/cache lifetimes.
+
+## 2. Partial ports, queue and errors
+
+- [x] 2.1 Extend ReadCtx/CommitCtx with addresses and SourcePort capabilities while retaining Keyed and sync ports; add compile-time fixtures for ambient/render-scoped custom adapters through both bindings.
+- [x] 2.2 Convert Web Storage/IndexedDB to diff patches preserving unknown/legacy/unmounted keys; verify whole-blob regressions and independent A/B edits.
+- [x] 2.3 Move mutation ordering into the engine, separate desired/acknowledged revisions and coalesce patches by address; test A/B/C, independent addresses, delayed acknowledgements and rejected-write retries.
+- [x] 2.4 Add Promise flush with a revision fence and guard scheduled callbacks after disposal; verify new actions do not expand the wait and disposed microtasks do not write.
+- [x] 2.5 Route sync throws, async rejections and encode errors through the common reporter with address/addresses/scope; verify quota, IndexedDB read/backend failures and retained dirty/memory state.
+- [x] 2.6 Adapt URL physical-key projection through read context, preserving push/replace and foreign parameters; test q=boots, Back/Forward and physical-key collision diagnostics.
+- [x] 2.7 Update custom-adapter docs for partial commits, mutation acknowledgement and cross-tab/backend concurrency boundaries; typecheck examples and match capabilities to runtime checks.
+
+## 3. Independent schemas and migrations
+
+- [x] 3.1 Add schema version/minVersion/migrate/validate to accessor/decorator fronts; verify integer validation, omitted version as zero and validate output inference in Zustand/Valtio.
+- [x] 3.2 Implement tagged envelopes and metadata/decode/migrate/validate/apply; test an old shape rejected by current validation before migration, and normalization rewrites.
+- [x] 3.3 Invalidate individual old records without migrate, below-minimum versions and damaged data; verify bad details do not affect workspace and callbacks perform no I/O.
+- [x] 3.4 Protect future versions during reads and adapter commit guards, including writes after timeout before the read completes; test blocked write/clearOnDefault and explicit reset permission.
+- [x] 3.5 Separate container migration computation from staged generation-aware rewrite; preserve runMigration results and prevent stale container writes over neighboring user edits.
+- [x] 3.6 Remove zodParam, validator subpaths, build entries and budgets in all three packages; update fixtures/docs to parser + schema.validate and verify build/typecheck without a runtime Zod dependency.
+
+## 4. Automatic restoration and observability
+
+- [x] 4.1 Prepare off-band tracking before the first client status and start one initial read per source binding; verify no duplicate snapshot/connect get and no consumer useEffect.
+- [x] 4.2 Add generation/token/revision guards, editedSinceBirth and system-write origins; verify late apply after disconnect, user edits and return to default.
+- [x] 4.3 Add timeout/abort/results and dirty-only flush; use fake timers to verify defaults are not written, user writes persist after timeout, and late resolve/reject/rewrite is ignored.
+- [x] 4.4 Add handle getStatus/subscribe/restore and aggregate/per-source usePersistStatus; verify stable snapshots, first-frame pending, per-record diagnostics and absence from history/serialization.
+- [x] 4.5 Correct useHydrated while retaining SSR URL seeding without ambient I/O; test async pending, terminal error/timeout, server/client consistency and mixed sync/async sources.
+- [x] 4.6 Pin cache-hit, explicit retry and StrictMode lifecycle; test terminal timeout on remount, a new read after GC, obsolete instance responses and joining an existing restore deadline.
+- [x] 4.7 Implement externalChanges without bypassing operation guards and update restore/cross-tab docs; verify ambient ignore by default, explicit apply and unchanged URL navigation.
+
+## 5. Record and scope reset
+
+- [x] 5.1 Capture independent defaults once after Provider initialization and before hydration; verify nested object/Date reset, repeated reset and retained store identity.
+- [x] 5.2 Add handle reset for all/selected source-binding fields; verify untouched fields, explicit future-version reset, deletion errors and flush retry.
+- [x] 5.3 Implement complete removeScope in Web Storage/IndexedDB and provider-scoped resetScope with capability preflight; test active/retained/evicted/never-mounted records and no partial reset with unsupported URL.
+- [x] 5.4 Queue reset as a barrier and apply scope generations to new connections; test read/reset, sent/queued write/reset/write, repeated reset and mounting during deletion.
+- [x] 5.5 Add independent source outcomes and pending deletion after failure; test browser success/server failure without false rollback, retained memory defaults and blocked stale restoration.
+- [x] 5.6 Document reset API, backend removeScope/conditional mutations and controlled integration; ensure page reset includes closed panels and never substitutes cache.clear for reset.
+
+## 6. Binding integration and consumer migration
+
+- [x] 6.1 Align zu-store/va-store exports, StoreProvider forwarding and typed wrappers with the engine; verify public entry builds, explicit source handles and compatible runWithMeta shorthand.
+- [x] 6.2 Add mixed Zustand/Valtio integration sharing one source and checks for existing context/cache/URL consumers; run package suites to verify one writer and isolated manager-specific writes.
+- [x] 6.3 Add a small docs example with localStorage, deferred backend, automatic restore gate, timeout and scope reset; browser-test loading -> timeout -> resize -> late response and the saved final width.
+- [x] 6.4 Prepare migration guide/READMEs covering no mode, new addresses, removed storage prefix/absolute and zodParam, initial/external lifecycle, legacy keys/new storageKey; verify docs option/type guards and runnable snippets.
+- [x] 6.5 Add minor changesets for affected packages with BREAKING, the explicit user exception and old caret-range warnings; verify independent versions, new binding dependency floors and no fixed/linked groups.
+
+## 7. Integration acceptance and durable decisions
+
+- [x] 7.1 Write ADRs for Durable decisions and the limited semver exception, linking short AGENTS.md rules; follow the decisions README and leave ADR 0015/0017 unchanged.
+- [x] 7.2 Map all five specs to regression/integration tests and explicit adapter guarantees; ensure no uncovered requirements or distributed atomicity promises.
+- [x] 7.3 Run affected verification, then the full sequential build/lint/typecheck/test/size gate from AGENTS.md; record results and separately confirm docs guards, URL routing adapters and both bindings.
+- [x] 7.4 Run OpenSpec strict validation and verify separate old/new storageKey migration/rollback; confirm legacy namespaces remain untouched and runtime has no mode/legacy engine.
+
+## Workflow follow-up
+
+- After implementation and review, archive this change using the standard OpenSpec workflow. Archiving is not an implementation task and does not automatically release packages.
+- Publish through the existing develop release flow after verifying the agreed minor exception. This planning change does not publish anything.

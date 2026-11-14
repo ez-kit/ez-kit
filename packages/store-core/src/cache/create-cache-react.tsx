@@ -11,6 +11,7 @@ import {
 	type ReactNode,
 } from 'react'
 
+import { capabilitiesOf } from '../capability'
 import { PACKAGE_TAG } from '../package-tag'
 import { useServices } from '../react'
 import { serializeStoreId } from '../store-id'
@@ -265,9 +266,20 @@ export function createCacheReact<TInstance extends object>(
 			// Lazy: resolve the instance once per fresh mount. On the server there is no shared cache —
 			// build an ephemeral instance per render and skip plugin/observer wiring.
 			const [instance] = useState<TInstance>(() => {
-				if (typeof window === 'undefined') return factory({ defaultValue })
+				if (typeof window === 'undefined') {
+					const ephemeral = factory({ defaultValue })
+					for (const plugin of capabilitiesOf(ephemeral))
+						plugin.seedRender?.(ephemeral, { services, id: storeId, isServer: true })
+					return ephemeral
+				}
 				const context: PluginContext = { services, id: storeId, isServer: false }
-				return cache.getOrCreate(storeId, () => factory({ defaultValue }), { gcTime, context })
+				const instance = cache.getOrCreate(storeId, () => factory({ defaultValue }), {
+					gcTime,
+					context,
+					deferSetup: true,
+				})
+				for (const plugin of capabilitiesOf(instance)) plugin.seedRender?.(instance, context)
+				return instance
 			})
 
 			useEffect(() => {

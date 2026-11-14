@@ -1,6 +1,6 @@
 import { type ReactElement, type ReactNode } from 'react'
 
-import { PersistProvider, type PersistAdapter } from '../persist'
+import { PersistProvider, type PersistAdapters, type PersistErrorContext } from '../persist'
 
 import type { StoreCache } from '../store-cache'
 
@@ -20,7 +20,8 @@ import type { StoreCache } from '../store-cache'
  */
 export type StoreProviderProps = {
 	/** Source adapters to mount (e.g. `[reactRouterAdapter, localStorageAdapter()]`). One engine per source. */
-	persist?: PersistAdapter[]
+	persist?: PersistAdapters
+	defaultSource?: string
 	/** A cache instance (from `createStoreCache()`) whose `Provider` keeps cached stores alive across mounts. */
 	cache?: StoreCache
 	/**
@@ -30,21 +31,28 @@ export type StoreProviderProps = {
 	 * Synchronous sources (URL, Web Storage) never reach it. Unset, an async rejection is swallowed and
 	 * the store stays the source of truth.
 	 */
-	onPersistError?: (error: unknown, context: { source: string }) => void
+	onPersistError?: (error: unknown, context: PersistErrorContext) => void
 	children: ReactNode
 }
 
-export function StoreProvider({ persist, cache, onPersistError, children }: StoreProviderProps): ReactElement {
+export function StoreProvider({
+	persist,
+	cache,
+	defaultSource,
+	onPersistError,
+	children,
+}: StoreProviderProps): ReactElement {
 	// Innermost: the cache Provider (when supplied) sits below the persist engines so cached, persisted
 	// stores resolve the engines service from above when their plugins run.
 	const withCache = cache ? <cache.Provider>{children}</cache.Provider> : <>{children}</>
 
-	if (persist && persist.length > 0) {
+	if (persist) {
 		// Spread conditionally: under `exactOptionalPropertyTypes` an absent handler must be an absent
 		// prop, not an explicit `undefined`.
 		return (
 			<PersistProvider
 				adapters={persist}
+				{...(defaultSource !== undefined ? { defaultSource } : {})}
 				{...(onPersistError ? { onError: onPersistError } : {})}
 			>
 				{withCache}

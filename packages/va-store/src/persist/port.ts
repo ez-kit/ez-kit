@@ -16,5 +16,5 @@ export const valtioPort: StorePort = {
 			writePath(store, path, value)
 		}
 	},
-	subscribe: (store, onChange) => subscribe(store, onChange),
+	subscribe: (store, onChange) => subscribe(store, onChange, true),
 }

@@ -1,5 +1,6 @@
 'use client'
 
+import { patchKeyed, removeKeyedScope } from '@ez-kit/zu-store/persist/storage'
 import { useSyncExternalStore } from 'react'
 
 import { Badge } from '@/components/ui/badge'
@@ -42,6 +43,7 @@ export function createMemoryStorageAdapter(source: string): MemoryStorageAdapter
 	}
 
 	const port: SourcePort = {
+		capabilities: { recordVersions: true },
 		get(): Keyed {
 			const keyed: Keyed = new Map()
 			if (blob !== EMPTY_BLOB) {
@@ -52,8 +54,20 @@ export function createMemoryStorageAdapter(source: string): MemoryStorageAdapter
 			}
 			return keyed
 		},
-		set(desired: Keyed, _ctx: CommitCtx): void {
-			blob = desired.size === 0 ? EMPTY_BLOB : JSON.stringify(Object.fromEntries(desired))
+		set(desired: Keyed, ctx: CommitCtx): void {
+			const current = blob
+				? new Map(Object.entries(JSON.parse(blob) as Record<string, string>))
+				: new Map<string, string>()
+			const next = patchKeyed(current, desired, ctx)
+			blob = next.size === 0 ? EMPTY_BLOB : JSON.stringify(Object.fromEntries(next))
+			emit()
+		},
+		removeScope(path): void {
+			const current = blob
+				? new Map(Object.entries(JSON.parse(blob) as Record<string, string>))
+				: new Map<string, string>()
+			const next = removeKeyedScope(current, path)
+			blob = next.size ? JSON.stringify(Object.fromEntries(next)) : EMPTY_BLOB
 			emit()
 		},
 		// No external writer in an isolated demo, so nothing ever fires. A real cross-tab adapter

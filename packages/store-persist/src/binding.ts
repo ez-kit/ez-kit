@@ -1,10 +1,18 @@
-import { parentOf, readPath } from '@ez-kit/store-core'
+import { parentOf, readPath, serializePersistAddress } from '@ez-kit/store-core'
 
 import { fieldKey } from './key-naming'
 import { validateBinding } from './validate'
 
-import type { FieldDescriptor, Keyed, PersistOptions } from './types'
-import type { PathWrite, StorePort } from '@ez-kit/store-core'
+import type {
+	FieldDescriptor,
+	Keyed,
+	PersistOptions,
+	PersistRecordStatus,
+	PersistStatus,
+	RestoreOptions,
+	RestoreResult,
+} from './types'
+import type { PathWrite, StoreId, StorePort } from '@ez-kit/store-core'
 
 /** Whether values flow in as first-mount hydration or as a runtime external change. */
 export enum ApplyMode {
@@ -17,6 +25,74 @@ export enum ApplyMode {
 /** Minimal engine capability a per-source control handle needs (avoids an import cycle). */
 export type MetaRunner = {
 	runWithMeta(metaPatch: unknown, mutate: () => void): void
+	restore?(binding: PersistBinding, options?: RestoreOptions): Promise<RestoreResult>
+	flush?(binding?: PersistBinding): Promise<void>
+	reset?(binding: PersistBinding, fields?: readonly (readonly string[])[]): Promise<void>
+}
+
+export type RecordState = {
+	revision: number
+	dirty: boolean
+	edited: boolean
+	blocked: boolean
+	observed: string | null
+	forceDelete: boolean
+	acknowledged: number
+	resetPending: boolean
+	outcome: PersistRecordStatus['outcome']
+	error: unknown
+}
+
+/** Shared across source bindings: applying one source is not a user edit in another. */
+export const systemWrites = new WeakSet()
+
+export function cloneDefault(value: unknown): unknown {
+	if (value instanceof Date) return new Date(value.getTime())
+	if (Array.isArray(value)) return value.map(cloneDefault)
+	if (value !== null && typeof value === 'object') {
+		return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, cloneDefault(item)]))
+	}
+	return value
+}
+
+export function writeBinding(binding: PersistBinding, writes: PathWrite[]): void {
+	systemWrites.add(binding.store)
+	try {
+		binding.port.write(binding.store, writes)
+	} finally {
+		systemWrites.delete(binding.store)
+	}
+}
+
+export function updateBindingStatus(binding: PersistBinding, patch: Partial<PersistStatus> = {}): void {
+	const records = [...binding.records.values()]
+	const dirty = records.some((record) => record.dirty)
+	const blocked = records.some((record) => record.blocked)
+	const detail = [...binding.records].map(([field, record], index): PersistRecordStatus => {
+		const previous = binding.status.records?.[index]
+		const outcome = record.blocked ? 'future-version' : record.outcome
+		if (previous?.outcome === outcome && previous.error === record.error && previous.address === field.address)
+			return previous
+		return { field: field.path, ...(field.address ? { address: field.address } : {}), outcome, error: record.error }
+	})
+	const sameRecords =
+		detail.length === binding.status.records?.length &&
+		detail.every((record, index) => binding.status.records?.[index] === record)
+	const next: PersistStatus = {
+		...binding.status,
+		dirty,
+		writeBlocked: blocked ? 'future-version' : null,
+		records: sameRecords ? (binding.status.records ?? []) : detail,
+		...patch,
+	}
+	if (
+		Object.keys(next).every((key) =>
+			Object.is(next[key as keyof PersistStatus], binding.status[key as keyof PersistStatus]),
+		)
+	)
+		return
+	binding.status = next
+	for (const listener of binding.listeners) listener()
 }
 
 /** A connected store: the store handle, its port, and everything the engine needs to sync it to one source. */
@@ -44,13 +120,27 @@ export type PersistBinding = {
 	 * by the per-source handle (`$url`/`$persist`) to route `runWithMeta` overrides (Phase 2).
 	 */
 	controller: MetaRunner | null
+	records: Map<FieldDescriptor, RecordState>
+	status: PersistStatus
+	listeners: Set<() => void>
+	restoreOptions: RestoreOptions
+	started: boolean
+	seeded: boolean
+	seedError: unknown
+	seedReports: (() => void)[]
+	defaultsCaptured: boolean
+	restorePromise: Promise<RestoreResult> | null
+	cancelRestore: (() => void) | null
+	generation: number
 }
 
-function fieldEquals(field: FieldDescriptor, a: unknown, b: unknown): boolean {
-	return field.parser.equals ? field.parser.equals(a, b) : Object.is(a, b)
+export function fieldEquals(field: FieldDescriptor, a: unknown, b: unknown): boolean {
+	return field.parser.equals
+		? field.parser.equals(a, b)
+		: Object.is(a, b) || stringifyField(field, a) === stringifyField(field, b)
 }
 
-function stringifyField(field: FieldDescriptor, value: unknown): string | null {
+export function stringifyField(field: FieldDescriptor, value: unknown): string | null {
 	return field.parser.stringify ? field.parser.stringify(value) : String(value)
 }
 
@@ -71,9 +161,23 @@ export function createBinding(
 
 	const keyOf = new Map<FieldDescriptor, string>()
 	const defaults = new Map<FieldDescriptor, unknown>()
+	const records = new Map<FieldDescriptor, RecordState>()
 	for (const field of fields) {
 		keyOf.set(field, fieldKey(field))
-		defaults.set(field, readPath(state, field.path))
+		const value = readPath(state, field.path)
+		defaults.set(field, cloneDefault(value))
+		records.set(field, {
+			revision: 0,
+			acknowledged: 0,
+			dirty: false,
+			edited: false,
+			blocked: false,
+			observed: stringifyField(field, value),
+			forceDelete: false,
+			resetPending: false,
+			outcome: 'default',
+			error: null,
+		})
 	}
 
 	return {
@@ -85,6 +189,32 @@ export function createBinding(
 		clearOnDefault: options.clearOnDefault ?? true,
 		throttleMs: options.throttleMs ?? 0,
 		controller: null,
+		records,
+		status: { restore: 'pending', write: 'idle', dirty: false, writeBlocked: null, error: null },
+		listeners: new Set(),
+		restoreOptions: options.restore ?? {},
+		started: false,
+		seeded: false,
+		seedError: null,
+		seedReports: [],
+		defaultsCaptured: false,
+		restorePromise: null,
+		cancelRestore: null,
+		generation: 0,
+	}
+}
+
+export function addressBinding(binding: PersistBinding, store: StoreId): void {
+	const seen = new Set<string>()
+	for (const field of binding.fields) {
+		const path = field.key === undefined ? field.path : [...field.path.slice(0, -1), field.key]
+		const address = { store, field: path }
+		const key = serializePersistAddress(address)
+		if (seen.has(key)) throw new Error(`[ez-kit/store-persist] Duplicate persisted field address: ${key}`)
+		seen.add(key)
+		if (binding.keyOf.get(field) === key) continue
+		field.address = address
+		binding.keyOf.set(field, key)
 	}
 }
 
@@ -94,9 +224,14 @@ export function createBinding(
  * binding connects, if construction happened earlier than that.
  */
 export function captureDefaults(binding: PersistBinding): void {
+	if (binding.defaultsCaptured) return
+	binding.defaultsCaptured = true
 	const state = binding.port.getState(binding.store)
 	for (const field of binding.fields) {
-		binding.defaults.set(field, readPath(state, field.path))
+		const value = readPath(state, field.path)
+		binding.defaults.set(field, cloneDefault(value))
+		const record = binding.records.get(field)
+		if (record) record.observed = stringifyField(field, value)
 	}
 }
 

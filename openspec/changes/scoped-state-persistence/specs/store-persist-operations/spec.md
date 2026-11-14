@@ -1,0 +1,156 @@
+# Spec Delta
+
+## Purpose
+
+Defines persistence and reset under concurrent I/O so the latest user action is retained, errors do not stop the UI and reset covers the entire scope.
+
+## ADDED Requirements
+
+### Requirement: Writes acknowledge actions in order
+
+Mutations of one source MUST execute serially. Pending writes for one address may coalesce to the latest value, but MUST NOT lose other addresses or cross a reset barrier. Memory MUST update without waiting for I/O.
+
+#### Scenario: Three rapid edits
+
+- **WHEN** A has been sent, B is pending, and the user sets C at the same address
+- **THEN** C is saved after A; B may be skipped, but A cannot finish over C
+
+#### Scenario: Edits to different records
+
+- **WHEN** the user changes B and C during write A
+- **THEN** the final persisted state contains the current values of all three addresses
+
+### Requirement: Write errors retain dirty state
+
+An unacknowledged edit MUST remain dirty after write failure. The error MUST NOT permanently stop later operations. Flush MUST allow retrying current dirty values without restoring superseded values.
+
+#### Scenario: Retrying the current value
+
+- **WHEN** writing A failed, memory already contains B, and flush is called
+- **THEN** B is retried and the UI does not roll back to A or default
+
+### Requirement: Flush waits for acknowledgement
+
+Handle.flush MUST return a Promise acknowledging all applicable changes up to its call, or an error/block. A superseding write MUST satisfy the old value wait only after the newer value is acknowledged. Future actions MUST NOT make the wait unbounded.
+
+#### Scenario: Waiting for durability
+
+- **WHEN** flush is called with a write in progress
+- **THEN** its Promise does not succeed before the corresponding persistence acknowledgement
+
+#### Scenario: Continuous new edits
+
+- **WHEN** the user keeps changing other values after flush
+- **THEN** flush may finish after its captured revision is acknowledged without waiting for all future actions
+
+### Requirement: Reset restores the original default
+
+Record reset MUST immediately restore the persisted field original value and delete its saved override while retaining active store identity. Defaults MUST be captured before restoration and independent of later object mutations. Other fields MUST remain unchanged.
+
+#### Scenario: Resetting one field
+
+- **WHEN** layout is reset while view in the same store has a user value
+- **THEN** layout returns to its initial default, its override is deleted, and view is retained
+
+#### Scenario: Default was a mutable object
+
+- **WHEN** nested layout properties changed after initialization and reset is requested
+- **THEN** the original nested values restore rather than the mutated reference
+
+### Requirement: Scope reset is complete and capability-aware
+
+ResetScope MUST reset active and retained stores and delete all saved descendant records in the selected scope, including evicted and never-mounted components. It MUST explicitly report unsupported full deletion rather than claiming mounted-only reset succeeded.
+
+#### Scenario: Panel is currently closed
+
+- **WHEN** a scope contains active A, retained B and saved evicted C
+- **THEN** memory A/B returns to defaults and overrides A/B/C are deleted
+
+#### Scenario: Adapter cannot delete a full scope
+
+- **WHEN** resetScope targets a source lacking the required capability
+- **THEN** the operation reports unsupported before partially resetting selected sources
+
+### Requirement: Reset is isolated by source
+
+ResetScope MUST accept explicit sources or default to all visible sources. Scope and addresses MUST resolve through the current registry. Multiple-source results MUST report each success/error and MUST NOT promise distributed atomicity.
+
+#### Scenario: Resetting browser only
+
+- **WHEN** resetScope selects browser while server also holds settings for that scope
+- **THEN** server remains unchanged
+
+#### Scenario: One of two sources fails
+
+- **WHEN** browser deletion succeeds while server rejects deletion
+- **THEN** the result reports both outcomes without claiming complete success or browser rollback
+
+### Requirement: Reset excludes old reads and writes
+
+After reset, old read responses and migration rewrites MUST NOT restore the record. Pending old writes for selected addresses MUST be cancelled; an already-sent mutation MUST precede deletion. New edits MUST persist after deletion.
+
+#### Scenario: Reset during a read
+
+- **WHEN** a read starts before reset and completes after it
+- **THEN** the response neither changes memory nor initiates a rewrite
+
+#### Scenario: Reset during a write
+
+- **WHEN** A is sent, B is pending, then reset and a new edit C occur
+- **THEN** B is not sent; deletion follows A, then C is saved
+
+#### Scenario: Mount during resetScope
+
+- **WHEN** a new store within the scope connects before deletion is acknowledged
+- **THEN** it does not restore data being deleted by resetScope
+
+#### Scenario: Repeated reset
+
+- **WHEN** a second reset follows a new edit waiting behind the first reset
+- **THEN** the second reset cancels that pending edit and leaves deletion as the final action
+
+### Requirement: Reset errors retain pending deletion
+
+On deletion failure memory MUST remain at default and the operation MUST report an error. Unfinished reset MUST remain observable and retryable through flush/reset; stale data MUST NOT reapply to the current instance while deletion awaits retry.
+
+#### Scenario: Backend rejects deletion
+
+- **WHEN** reset restored memory defaults but server deletion failed
+- **THEN** the handle reports the error, retains deletion intent and allows retry
+
+### Requirement: Errors carry context
+
+Common onError MUST receive source, operation and one address, batch addresses or scope. Sync throws and async rejections MUST be handled identically. I/O/schema failure MUST NOT destroy available memory state; status and subscriptions MUST expose failure without unhandled rejection.
+
+#### Scenario: Synchronous quota error
+
+- **WHEN** localStorage.setItem throws
+- **THEN** the callback receives write, source and affected addresses while state stays usable
+
+#### Scenario: Async read rejection
+
+- **WHEN** the backend rejects a read
+- **THEN** restore reaches error, the callback includes read and addresses, and memory stays default
+
+#### Scenario: Scope deletion error
+
+- **WHEN** the adapter rejects removeScope
+- **THEN** the callback includes removeScope and the scope path
+
+### Requirement: Adapter reliability boundaries are explicit
+
+Adapters MUST settle mutation Promises after actual acknowledgement. An uncertain network outcome MUST NOT be treated as proven cancellation. When a server may commit after a client error, adapters MUST use server revisions/conditional operations for reset guarantees; documentation MUST distinguish these from local queue ordering.
+
+#### Scenario: Lost server response
+
+- **WHEN** a request may have committed but the client receives a network error
+- **THEN** documentation and status do not claim proven absence of the server write
+
+### Requirement: Controlled components may omit built-in persistence
+
+Consumer components MUST be able to omit built-in persistence in controlled mode and keep state at application level. The engine MUST NOT contain resize/loader UI logic or dashboard-specific props.
+
+#### Scenario: Controlled panel
+
+- **WHEN** a dashboard receives controlled layout from the application without attaching internal persistence
+- **THEN** the engine creates no hidden read/write for that panel

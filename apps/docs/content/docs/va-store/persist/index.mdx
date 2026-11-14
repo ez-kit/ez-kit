@@ -3,13 +3,13 @@ title: Persist
 description: One engine binds a Valtio store to any external substrate — the URL, localStorage, sessionStorage, IndexedDB, or your own — through a tiny source-agnostic port.
 ---
 
-Mirror a Valtio store into an external substrate and back, in both directions. Mutating the store writes the substrate; an external change (a deep link, Back/forward, another tab, a restored value) writes the store. The proxy stays **synchronous and snappy** — the substrate is a throttled, rehydratable projection of it.
+Mirror a Valtio store into an external substrate and back, in both directions. Mutating the store writes the substrate; restoration or URL navigation writes the store. Ambient external changes require an explicit apply policy. The proxy stays **synchronous and snappy** — the substrate is a throttled, rehydratable projection of it.
 
 ```bash
 pnpm add @ez-kit/va-store valtio
 ```
 
-Router, storage, and validator integrations are optional peers — install only what you use (`react-router`, `next`, `zod`).
+Router integrations are optional peers (`react-router`, `next`). Zod can be an application dependency used by schema.validate.
 
 ## One engine, many sources
 
@@ -54,3 +54,35 @@ Both produce the same path-based descriptors and feed the same engine, so source
 | [Fields](./persist/fields)                             | The accessor API for plain proxies.                                     |
 | [Parsers](./persist/parsers)                           | Typed codecs, auto-resolution, Zod, custom parsers.                     |
 | [TypeScript](./persist/typescript)                     | Decorator build setup.                                                  |
+
+## Scoped state, restore and reset
+
+Register adapters by name and choose a default source. Cached store addresses automatically include
+scope, group name, instance id and field; no hand-built persistence prefix is needed.
+
+```tsx
+<StoreProvider
+	persist={{ browser: browserAdapter, server: serverAdapter }}
+	defaultSource='browser'
+	cache={cache}
+>
+	<cache.Scope path={['devices']}>
+		<panel.Provider id='workspace'>{children}</panel.Provider>
+	</cache.Scope>
+</StoreProvider>
+```
+
+Use schema.version/migrate/validate for independently versioned values. Restoration starts automatically;
+configure restore.timeoutMs and read usePersistStatus for a loader. Timeout does not save defaults and
+late reads do not change an active layout. useHydrated means all initial sources stopped waiting,
+including timeout/error, rather than claiming every read succeeded.
+
+Use persistHandle(store, source).reset() to restore initialization defaults and delete overrides.
+Use `usePersistence().resetScope({ path: ['devices'], sources: ['browser', 'server'] })` for the whole
+page, including descendants and saved states without mounted components. Await flush() for confirmed
+writes. Failed I/O keeps memory usable and exposes status/error; reset is distinct from cache eviction.
+
+Source registration is stable for a Provider lifetime. Remount its cache too on account/backend changes.
+This release deliberately makes breaking changes in a minor: new storage addresses/patch semantics,
+removed zodParam subpath, automatic restore/status and explicit ambient external-change policy.
+Keep a lockfile or pin old bindings until the application is ready; prefer a new storageKey for rollout.

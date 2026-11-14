@@ -109,11 +109,16 @@ export function createInstanceCache(options: CacheConfig = {}): InstanceCache {
 	function getOrCreate<T extends object>(id: StoreId, create: () => T, opts: CreateOptions): T {
 		const key = serializeStoreId(id)
 		const existing = metaByKey.get(key)
-		if (existing) return existing.instance as T
+		if (existing) {
+			for (const plugin of capabilitiesOf(existing.instance)) plugin.validateContext?.(existing.instance, opts.context)
+			return existing.instance as T
+		}
 
 		const instance = create()
-		const cleanups: PluginCleanup[] = capabilitiesOf(instance).map((plugin) => plugin.setup(instance, opts.context))
-		metaByKey.set(key, {
+		const plugins = capabilitiesOf(instance)
+		for (const plugin of plugins) plugin.validateContext?.(instance, opts.context)
+		const cleanups: PluginCleanup[] = []
+		const meta: InstanceMeta = {
 			instance,
 			storeId: id,
 			observerCount: 0,
@@ -121,13 +126,22 @@ export function createInstanceCache(options: CacheConfig = {}): InstanceCache {
 			evictionTimer: undefined,
 			cleanups,
 			cleared: false,
-		})
+		}
+		const activate = (): void => {
+			for (const plugin of plugins) cleanups.push(plugin.setup(instance, opts.context))
+		}
+		if (opts.deferSetup) meta.activate = activate
+		else activate()
+		metaByKey.set(key, meta)
 		return instance
 	}
 
 	function addObserver(id: StoreId): void {
 		const meta = metaByKey.get(serializeStoreId(id))
 		if (!meta) return
+		const activate = meta.activate
+		delete meta.activate
+		activate?.()
 		meta.observerCount += 1
 		if (meta.evictionTimer) {
 			clearTimeout(meta.evictionTimer)

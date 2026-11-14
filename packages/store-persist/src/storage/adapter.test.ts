@@ -1,4 +1,7 @@
+import { serializePersistAddress } from '@ez-kit/store-core'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { encodeRecord } from '../record'
 
 import { createStoragePort } from './adapter'
 
@@ -34,7 +37,7 @@ class FakeStorage {
 }
 
 const KEY = 'store'
-const ctx: CommitCtx = { fields: [], diff: { set: [], removed: [] }, meta: {} }
+const ctx: CommitCtx = { fields: [], diff: { set: ['q', 'page'], removed: [] }, meta: {} }
 
 function keyed(entries: [string, string][]): Keyed {
 	return new Map(entries)
@@ -46,6 +49,30 @@ function blob(raw: string | null): { v?: number; s?: Record<string, string> } {
 }
 
 describe('@ez-kit/store-persist createStoragePort', () => {
+	it('keeps the old namespace intact during a new-key rollout and scope reset', () => {
+		const storage = new FakeStorage()
+		storage.setItem('old-layouts', JSON.stringify({ v: 0, s: { width: '700' } }))
+		const old = storage.raw('old-layouts')
+		const port = createStoragePort(() => storage as unknown as Storage, 'new-layouts')
+		const key = serializePersistAddress({
+			store: { path: ['devices'], name: 'panel', id: 'workspace' },
+			field: ['width'],
+		})
+		expect(port.get()).toEqual(new Map())
+		port.set(
+			new Map([
+				[key, encodeRecord('500')],
+				['legacy', 'keep'],
+			]),
+			{ fields: [], meta: {}, diff: { set: [key, 'legacy'], removed: [] } },
+		)
+		port.removeScope?.(['devices'])
+		expect(port.get()).toEqual(new Map([['legacy', 'keep']]))
+		expect(storage.raw('old-layouts')).toBe(old)
+		expect(createStoragePort(() => storage as unknown as Storage, 'old-layouts').get()).toEqual(
+			new Map([['width', '700']]),
+		)
+	})
 	let storage: FakeStorage
 
 	beforeEach(() => {
@@ -86,7 +113,7 @@ describe('@ez-kit/store-persist createStoragePort', () => {
 	it('removes the key when the desired map is empty', () => {
 		const port = createStoragePort(() => storage as unknown as Storage, KEY)
 		port.set(keyed([['q', 'shoes']]), ctx)
-		port.set(new Map(), ctx)
+		port.set(new Map(), { ...ctx, diff: { set: [], removed: ['q', 'page'] } })
 
 		expect(storage.raw(KEY)).toBeNull()
 		expect(port.get()).toEqual(new Map())
@@ -114,30 +141,22 @@ describe('@ez-kit/store-persist createStoragePort', () => {
 		expect(port.get()).toEqual(new Map())
 	})
 
-	it('warns once and does not throw when a write exceeds quota', () => {
-		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+	it('exposes quota failures to the engine reporter', () => {
 		storage.throwOnSet = true
 		const port = createStoragePort(() => storage as unknown as Storage, KEY)
-
 		expect(() => {
 			port.set(keyed([['q', 'shoes']]), ctx)
-		}).not.toThrow()
-		expect(() => {
-			port.set(keyed([['q', 'boots']]), ctx)
-		}).not.toThrow()
-		expect(warn).toHaveBeenCalledTimes(1)
+		}).toThrow('quota exceeded')
 	})
 
-	it('treats a throwing storage area as disabled (no throw, empty read)', () => {
-		vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+	it('exposes blocked-area failures instead of treating them as missing data', () => {
 		const port = createStoragePort(() => {
 			throw new Error('SecurityError: storage blocked')
 		}, KEY)
-
-		expect(port.get()).toEqual(new Map())
+		expect(() => port.get()).toThrow('SecurityError')
 		expect(() => {
 			port.set(keyed([['q', 'x']]), ctx)
-		}).not.toThrow()
+		}).toThrow('SecurityError')
 	})
 })
 

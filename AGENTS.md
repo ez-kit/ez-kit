@@ -316,6 +316,21 @@ turbo/
 
 ### Persistence is one engine behind two ports
 
+Persistence uses one engine per registered source, with manager-specific StorePort on each binding.
+Records use canonical `(StoreId, field)` addresses, independent schema versions and partial commits.
+Initial restore belongs to the instance lifecycle; off-band status, revision fences and reset barriers
+prevent stale reads or acknowledgements from replacing newer intentions. Source registries are stable
+for the lifetime of their instances. Full scope deletion requires persistent enumeration by the adapter.
+There is one public contract, without a mode switch or a parallel legacy engine.
+Rationale: [ADR 0028](openspec/decisions/0028-scoped-state-persistence.md).
+
+The user explicitly authorized a one-time breaking minor release for scoped-state-persistence,
+including removal of zodParam/validator subpaths, scoped storage addressing and the changed ambient
+external-change default. Each affected store package receives its own minor changeset with BREAKING
+notes. Package versions remain independent; no fixed/linked release group is introduced. The ordinary
+major-release rule remains in force for other breaking changes.
+Rationale: [ADR 0029](openspec/decisions/0029-scoped-persistence-minor-exception.md).
+
 `@ez-kit/store-persist` holds the whole persist stack — engine, bindings, codecs, URL/storage/IndexedDB
 adapters, provider — and knows nothing about Valtio or Zustand. It reaches a store only through
 `StorePort` (`@ez-kit/store-core`): `getState` / `write(store, writes)` / `subscribe`. The Valtio port

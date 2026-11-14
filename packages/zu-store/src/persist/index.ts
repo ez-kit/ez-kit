@@ -53,17 +53,20 @@ export function persist<TStore extends StoreApi<object>>(
 }
 
 // --- Substrate half: re-exported from the shared core, unchanged ---
-export { PERSIST_ENGINES, type PersistEngines, useHydrated } from '@ez-kit/store-persist'
+export { PERSIST_ENGINES, type PersistEngines, useHydrated, usePersistStatus } from '@ez-kit/store-persist'
 export type { PersistPluginOptions } from '@ez-kit/store-persist'
 export {
 	type AmbientAdapter,
 	type EngineMap,
 	type PersistAdapter,
+	type PersistAdapters,
+	type NamedPersistAdapter,
 	type PersistMount,
 	PersistProvider,
 	type PersistProviderProps,
 	type RenderScopedAdapter,
 	usePersistEngines,
+	usePersistence,
 } from '@ez-kit/store-persist'
 
 // --- Per-source control handles: typed accessors ($url / $persist) ---
@@ -105,3 +108,19 @@ export type {
 	SourcePort,
 	SyncSourcePort,
 } from '@ez-kit/store-persist'
+
+export type {
+	PersistSchema,
+	PersistRecordStatus,
+	PersistStatus,
+	RestoreOptions,
+	RestoreResult,
+	RestoreState,
+	ReadCtx,
+	PersistErrorContext,
+	PersistOperation,
+} from '@ez-kit/store-persist'
+export { serializePersistAddress, deserializePersistAddress, isWithinScope } from '@ez-kit/store-core'
+export type { PersistAddress, StoreId } from '@ez-kit/store-core'
+
+export { FutureVersionError, encodeRecord, decodeRecord } from '@ez-kit/store-persist'

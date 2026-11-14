@@ -6,13 +6,13 @@ import type { FieldDescriptor } from './types'
  * proxy field may yield several specs (one per source it is annotated for).
  */
 export type PersistSpec = {
-	source: string
+	source: string | undefined
 	descriptor: FieldDescriptor
 }
 
 /** Group specs by source id, preserving declaration order within each source. */
-export function groupBySource(specs: PersistSpec[]): Map<string, FieldDescriptor[]> {
-	const bySource = new Map<string, FieldDescriptor[]>()
+export function groupBySource(specs: PersistSpec[]): Map<string | undefined, FieldDescriptor[]> {
+	const bySource = new Map<string | undefined, FieldDescriptor[]>()
 	for (const { source, descriptor } of specs) {
 		const existing = bySource.get(source)
 		if (existing) {

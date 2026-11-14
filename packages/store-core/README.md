@@ -21,11 +21,15 @@ The root entry is deliberately free of React, so it stays importable from a serv
 
 ## What each part is for
 
+**Persistence addresses** — `PersistAddress` adds a field path to `StoreId`. `serializePersistAddress` / `deserializePersistAddress` encode a canonical owned record; `isWithinScope` compares path segments, so `devices` never includes `devices-other`.
+
 **Store ids** — `StoreId` (`{ path, name, id }`) plus `serializeStoreId` / `deserializeStoreId`. One address shared by a singleton store and a cached one, so a plugin can key per-store state without knowing which it is talking to.
 
 **Service registry** — `serviceKey`, `createServiceRegistry`, `extendServiceRegistry`, and the React pair `ServicesProvider` / `useServices`. App-level capabilities are published once near the root and resolved by plugins further down. `extendServiceRegistry` layers a scope onto the inherited one rather than replacing it, so nested providers keep everything an ancestor published.
 
 **Plugin contract** — `StorePlugin`, `PluginContext`, `PluginCleanup`. A plugin's `setup(instance, ctx)` runs when the store's Provider mounts and its returned cleanup on unmount; `ctx` carries the resolved services, the store's id, and whether it is running on the server.
+
+**Render seeding and cache setup** — a plugin may provide pure synchronous `seedRender` for request-scoped seeding, and `validateContext` to reject changed birth services on cache hits. Neither performs ambient I/O during render. React cache setup waits for observer attachment after commit; imperative cache creation keeps immediate setup by default (`deferSetup` is an internal lifecycle option).
 
 **Enhancer pipeline** — `pipe(base, ...enhancers)` and the `StoreEnhancer<In, Out>` type every `with*` wrapper returns: the wrappers are curried, so `pipe` applies them left to right in attachment order and each one's options are typed against the state accumulated so far.
 

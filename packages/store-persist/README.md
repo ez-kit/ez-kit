@@ -8,8 +8,8 @@ and an equality guard that breaks the write → read → write loop.
 surface with its own store port already bound, so an app writes one import path:
 
 ```ts
-import { withPersist, paramString, StoreProvider } from '@ez-kit/va-store' // Valtio
-import { withPersist, paramString, StoreProvider } from '@ez-kit/zu-store' // Zustand
+import { withPersist, paramString } from '@ez-kit/va-store/persist' // Valtio
+import { withPersist, paramString } from '@ez-kit/zu-store/persist' // Zustand
 ```
 
 See the [va-store persist docs](https://ez-kit-docs.vercel.app/docs/va-store/persist) for the full
@@ -18,10 +18,13 @@ API — fields, codecs, adapters, migrations, `useHydrated`, the `$url` / `$pers
 **Stability.** It is published because both bindings depend on it at runtime — it will appear in your
 lock file whether or not you import it. Its API is **public, not internal**: each binding re-exports
 every subpath verbatim, so a change here is a change to `@ez-kit/zu-store` and `@ez-kit/va-store`'s
-own surface. The four store packages are therefore versioned together and release together, and this
-package's exports — `./internals` included — are frozen on the same terms as theirs. Import it
-directly only when writing a binding for another store manager or a custom source adapter;
-everything else goes through a binding.
+own surface. The four store packages version independently; the binding's dependency ranges define compatibility.
+`./internals` is an assembly surface without a consumer semver promise and is not re-exported by bindings.
+Applications and custom source adapters use their binding's public persist entries.
+
+The scoped persistence release is an explicitly approved **breaking minor** exception. It removes
+`zodParam`, adds automatic restoration/status and makes addresses and patch semantics standard,
+without a mode switch. See [MIGRATION.md](./MIGRATION.md) for upgrade, pinning and rollback guidance.
 
 ## What this package is for
 
@@ -72,7 +75,6 @@ resolution — are on the `@ez-kit/store-persist/internals` subpath.
 | `./storage`                        | `localStorage` / `sessionStorage` / IndexedDB adapters and field fronts |
 | `./url`                            | the URL source: driver contract, `persistUrl` / `urlField`              |
 | `./url/react-router`, `./url/next` | router adapters (peer-gated)                                            |
-| `./validators/zod`                 | Zod-validated parsers                                                   |
 | `./testing`                        | `createFakePersistAdapter` — an in-memory substrate for tests           |
 
 ## License

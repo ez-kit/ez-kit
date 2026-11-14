@@ -1,3 +1,7 @@
+import { serializePersistAddress } from '@ez-kit/store-core'
+
+import { fieldKey } from '../key-naming'
+
 import type { CommitCtx, Keyed, MetaMerge, SyncSourcePort } from '../types'
 
 /** Source id for the URL engine, shared by the adapter, the `persistUrl` decorator, and the provider. */
@@ -64,15 +68,34 @@ function urlToKeyed(params: URLSearchParams): Keyed {
  */
 export function createUrlPort(driver: UrlDriver): SyncSourcePort {
 	return {
-		get: () => urlToKeyed(driver.read()),
+		capabilities: { recordVersions: false },
+		keyForField: fieldKey,
+		get(context) {
+			const params = urlToKeyed(driver.read())
+			if (!context) return params
+			const values: Keyed = new Map()
+			for (const field of context.fields) {
+				const value = params.get(fieldKey(field))
+				if (value !== undefined)
+					values.set(field.address ? serializePersistAddress(field.address) : fieldKey(field), value)
+			}
+			return values
+		},
 
 		set(desired: Keyed, ctx: CommitCtx): void {
 			const params = new URLSearchParams(driver.read())
-			for (const [key, value] of desired) {
-				params.set(key, value)
+			const physical = new Map(
+				ctx.fields.map((field) => [
+					field.address ? serializePersistAddress(field.address) : fieldKey(field),
+					fieldKey(field),
+				]),
+			)
+			for (const key of ctx.diff.set) {
+				const value = desired.get(key)
+				if (value !== undefined) params.set(physical.get(key) ?? key, value)
 			}
 			for (const key of ctx.diff.removed) {
-				params.delete(key)
+				params.delete(physical.get(key) ?? key)
 			}
 			driver.commit(params, historyOf(ctx.meta))
 		},

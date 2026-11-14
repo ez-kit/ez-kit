@@ -5,7 +5,7 @@ import { readBlob, runMigration } from './blob'
 
 import type { CommitCtx, Keyed } from '../types'
 
-const ctx: CommitCtx = { fields: [], diff: { set: [], removed: [] }, meta: {} }
+const ctx: CommitCtx = { fields: [], diff: { set: ['q', 'page'], removed: [] }, meta: {} }
 const keyed = (entries: [string, string][]): Keyed => new Map(entries)
 
 /** Minimal in-memory Storage stand-in. */

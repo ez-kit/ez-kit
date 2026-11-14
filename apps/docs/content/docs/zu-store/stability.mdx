@@ -26,13 +26,13 @@ transitive dependency is not importable under pnpm's default isolated `node_modu
 
 ## What semver covers
 
-| Import path                                                                          | Covered | For                                              |
-| ------------------------------------------------------------------------------------ | ------- | ------------------------------------------------ |
-| `@ez-kit/zu-store`, `@ez-kit/va-store`                                               | yes     | everyday use — the store factory, cache, history |
-| `.../history`, `.../persist`, `.../persist/storage`, `.../persist/url`               | yes     | the feature subpaths                             |
-| `.../persist/url/next`, `.../persist/url/react-router`, `.../persist/validators/zod` | yes     | the optional-peer adapters                       |
-| `.../persist/testing`                                                                | yes     | the fake adapter, for your own tests             |
-| `@ez-kit/store-core`, `@ez-kit/store-persist` (except `/internals`)                  | yes     | the shared foundation both bindings are built on |
+| Import path                                                            | Covered | For                                              |
+| ---------------------------------------------------------------------- | ------- | ------------------------------------------------ |
+| `@ez-kit/zu-store`, `@ez-kit/va-store`                                 | yes     | everyday use — the store factory, cache, history |
+| `.../history`, `.../persist`, `.../persist/storage`, `.../persist/url` | yes     | the feature subpaths                             |
+| `.../persist/url/next`, `.../persist/url/react-router`                 | yes     | the optional-peer adapters                       |
+| `.../persist/testing`                                                  | yes     | the fake adapter, for your own tests             |
+| `@ez-kit/store-core`, `@ez-kit/store-persist` (except `/internals`)    | yes     | the shared foundation both bindings are built on |
 
 Writing a **custom source adapter** — a cookie, a REST endpoint, a WebSocket, a test double — is on
 that list: it is a `SourcePort` (`get` / `set` / optional `subscribe` over `Keyed`), and every type it

@@ -18,7 +18,7 @@
  */
 
 // --- persist plugin + app-level engines service ---
-export { bindPersist, persist, type PersistPluginOptions, useHydrated } from './plugin'
+export { bindPersist, persist, type PersistPluginOptions, useHydrated, usePersistStatus } from './plugin'
 export { PERSIST_ENGINES, type PersistEngines } from './service'
 export { applyPersist } from './with-persist'
 
@@ -27,11 +27,14 @@ export {
 	type AmbientAdapter,
 	type EngineMap,
 	type PersistAdapter,
+	type PersistAdapters,
+	type NamedPersistAdapter,
 	type PersistMount,
 	PersistProvider,
 	type PersistProviderProps,
 	type RenderScopedAdapter,
 	usePersistEngines,
+	usePersistence,
 } from './provider'
 
 // --- Per-source control handles: typed accessors ($url / $persist) ---
@@ -68,3 +71,16 @@ export type {
 	SourcePort,
 	SyncSourcePort,
 } from './types'
+
+export type {
+	PersistSchema,
+	PersistRecordStatus,
+	PersistStatus,
+	RestoreOptions,
+	RestoreResult,
+	RestoreState,
+	ReadCtx,
+	PersistErrorContext,
+	PersistOperation,
+} from './types'
+export { FutureVersionError, encodeRecord, decodeRecord } from './record'

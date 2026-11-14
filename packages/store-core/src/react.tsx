@@ -52,6 +52,7 @@ const IS_SERVER = typeof window === 'undefined'
  * have history already listening when persist pushes its hydrated value in.
  */
 export function useCapabilities(store: object, services: ServiceRegistry, id: StoreId): void {
+	for (const plugin of capabilitiesOf(store)) plugin.seedRender?.(store, { services, id, isServer: IS_SERVER })
 	useEffect(() => {
 		const plugins = capabilitiesOf(store)
 		if (plugins.length === 0) return

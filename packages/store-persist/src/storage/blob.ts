@@ -45,7 +45,7 @@ export function readBlob(stored: unknown): { version: number; keyed: Keyed } {
 	const keyed: Keyed = new Map()
 	if (isStringRecord(blob?.s)) {
 		for (const [key, value] of Object.entries(blob.s)) {
-			keyed.set(key, value)
+			if (typeof value === 'string') keyed.set(key, value)
 		}
 	}
 	return { version, keyed }

@@ -1,7 +1,7 @@
 import { resolveParser } from './codecs/auto'
 
 import type { PersistSpec } from './spec'
-import type { FieldDescriptor, Parser } from './types'
+import type { FieldDescriptor, Parser, PersistSchema } from './types'
 
 /** Private key for the per-class field list stored inside `Symbol.metadata`. */
 const FIELDS = Symbol('ez-kit.persistFields')
@@ -11,18 +11,19 @@ const metadataKey: symbol = (Symbol as { metadata?: symbol }).metadata ?? Symbol
 
 type FieldMeta = {
 	name: string
-	source: string
+	source: string | undefined
 	key?: string
 	absolute?: boolean
 	prefix?: string
 	parser?: Parser<unknown>
 	meta?: unknown
+	schema?: PersistSchema
 }
 
 /** Options for the base `persistField` decorator. Source-specific wrappers pack their args into `meta`. */
 export type PersistFieldOptions<V, M = unknown> = {
 	/** Which source engine this field syncs to (e.g. `'url'`, `'localStorage'`). */
-	source: string
+	source?: string
 	/** Override the leaf segment of the substrate key (relative) — defaults to the property name. */
 	key?: string
 	/** Pin to an exact top-level key, ignoring ancestor segments (granular packing only). */
@@ -33,6 +34,7 @@ export type PersistFieldOptions<V, M = unknown> = {
 	parser?: Parser<V>
 	/** Opaque per-field metadata forwarded to the adapter (e.g. `{ history }` for URL). */
 	meta?: M
+	schema?: PersistSchema<V>
 }
 
 type MetadataObject = Record<PropertyKey, unknown>
@@ -73,6 +75,7 @@ export function persistField<V, M = unknown>(options: PersistFieldOptions<V, M>)
 		if (options.meta !== undefined) {
 			meta.meta = options.meta
 		}
+		if (options.schema !== undefined) meta.schema = options.schema
 		ownFields(context.metadata as MetadataObject).push(meta)
 	}
 }
@@ -91,7 +94,7 @@ function collectFields(metadata: MetadataObject): FieldMeta[] {
 	while (current !== null) {
 		if (Object.prototype.hasOwnProperty.call(current, FIELDS)) {
 			for (const meta of (current as MetadataObject)[FIELDS] as FieldMeta[]) {
-				const identity = `${meta.name}::${meta.source}`
+				const identity = `${meta.name}::${meta.source ?? ''}`
 				if (!seen.has(identity)) {
 					seen.add(identity)
 					all.push(meta)
@@ -130,6 +133,7 @@ function specFor(path: string[], meta: FieldMeta, value: unknown): PersistSpec {
 	if (meta.meta !== undefined) {
 		descriptor.meta = meta.meta
 	}
+	if (meta.schema !== undefined) descriptor.schema = meta.schema
 	return { source: meta.source, descriptor }
 }
 

@@ -214,7 +214,10 @@ describe('StoreProvider — single writer for one source', () => {
 		)
 
 		await waitFor(() => {
-			expect(onPersistError).toHaveBeenCalledWith(boom, { source: 'remote' })
+			expect(onPersistError).toHaveBeenCalledWith(
+				boom,
+				expect.objectContaining({ source: 'remote', operation: 'read' }),
+			)
 		})
 	})
 })

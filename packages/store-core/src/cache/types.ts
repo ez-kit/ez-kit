@@ -29,6 +29,8 @@ export type StoreCacheOptions = {
 export type CreateOptions = {
 	gcTime: number
 	context: PluginContext
+	/** React owns activation after commit; pure imperative caches keep immediate setup. */
+	deferSetup?: boolean
 }
 
 export type CachedStoreOptions = {

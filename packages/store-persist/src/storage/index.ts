@@ -31,3 +31,5 @@ export {
 	type IndexedDbAdapterOptions,
 } from './indexed-db'
 export { createWriteQueue, type WriteQueue } from './write-queue'
+
+export { patchKeyed, removeKeyedScope } from './patch'
