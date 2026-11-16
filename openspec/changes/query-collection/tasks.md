@@ -57,3 +57,11 @@
 - [x] Reject raw-response projection mismatches and potentially absent selectors with selected-only projections.
 - [x] Reject primitive rows in every configured grid read before checking ordinary/infinite compatibility.
 - [x] Add runtime and type regressions and document the corrected contracts.
+
+## Source transition and compatibility follow-up
+
+- [x] Reject stale automatic grid actions before dispatch after asynchronous validation.
+- [x] Scope next-page deduplication to the effective query identity.
+- [x] Isolate inactive observers from application defaults while preserving the active cache.
+- [x] Tighten native projection inference and inherited total getter inputs.
+- [x] Declare and check the exact minimum supported TanStack Query version in a consumer fixture.

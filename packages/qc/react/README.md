@@ -358,3 +358,10 @@ Conditionally available mutations remain optional after adaptation.
 `createGridSourceFromCollection` requires object items in every configured read before checking
 list/infinite row compatibility. Collections of primitives remain usable as ordinary lists, but
 must project their items into objects before adaptation to a grid.
+
+Requires `@tanstack/react-query >=5.105.3 <6`. Automatic actions compare their captured effective
+mutation key with the connected operation before dispatch. A save whose owner changed during async
+validation rejects without calling either source's fetcher; an explicitly cancelled edit stays
+cancelled. Changes under the same ownership key retain native behavior. Infinite load-more work
+is deduplicated by the effective query hash, so another selection can load while an old request
+remains pending.

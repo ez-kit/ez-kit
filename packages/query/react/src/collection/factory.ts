@@ -47,6 +47,28 @@ type SelectionProjections<Enabled, K extends PropertyKey> = K extends keyof Enab
 		: unknown
 	: unknown
 
+// A conditional selector can leave the raw getter installed at runtime. Do not
+// widen that getter's public input unless the entity supplies a compatible one.
+type InheritedTotalInput<Defaults> = Defaults extends { list?: infer L }
+	? NonNullable<L> extends { getTotal?: infer G }
+		? NonNullable<G> extends (data: infer D) => unknown
+			? D
+			: never
+		: never
+	: never
+
+type SafeInheritedTotal<Enabled, Defaults, S> = [InheritedTotalInput<Defaults>] extends [never]
+	? unknown
+	: [S] extends [InheritedTotalInput<Defaults>]
+		? unknown
+		: {
+				[K in keyof Enabled as K extends 'getAll' ? K : never]: NonNullable<Enabled[K]> extends {
+					options: { select: unknown }
+				}
+					? unknown
+					: { getTotal: unknown }
+			}
+
 type Presence = {
 	getAll?: unknown
 	getInfinite?: unknown
@@ -190,7 +212,8 @@ export function createCollectionSourceFactory<
 				'getInfinite',
 				NoInfer<Defaults extends { infinite: unknown } ? ID : InfiniteData>,
 				NoInfer<InfiniteSelected>
-			>,
+			> &
+			SafeInheritedTotal<NoInfer<Enabled>, Defaults, NoInfer<ListSelected>>,
 	) {
 		function mergeOperation(value: unknown, fallback: unknown) {
 			if (value === undefined) return undefined

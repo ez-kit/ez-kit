@@ -12,12 +12,12 @@ export type ReadTransport = { signal: AbortSignal }
 export type CollectionFetcher<A, D> = (args: A, transport: ReadTransport) => Promise<D>
 export type CollectionRead<P, D, S, I, E = DefaultError, K extends QueryKey = QueryKey> = {
 	query: (params: P) => UseQueryOptions<D, E, S, K>
-	getItems: (data: S) => readonly I[]
-	getTotal?: (data: S) => number | undefined
+	getItems: (data: NoInfer<S>) => readonly I[]
+	getTotal?: (data: NoInfer<S>) => number | undefined
 }
 export type CollectionInfiniteRead<P, D, S, I, C, E = DefaultError, K extends QueryKey = QueryKey> = {
 	query: (params: P) => UseInfiniteQueryOptions<D, E, InfiniteData<S>, K, C>
-	getItems: (page: S) => readonly I[]
+	getItems: (page: NoInfer<S>) => readonly I[]
 }
 export type CollectionMutation<V, D, E = DefaultError, O = unknown> = {
 	mutation: UseMutationOptions<D, E, V, O>

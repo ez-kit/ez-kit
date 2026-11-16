@@ -269,3 +269,28 @@ responses are not assignable to the selected input, require a selector that is p
 branch. Shared conventions still infer their raw envelope from their projection declarations.
 Extract grid item types without constraining inference to object first, reject non-object reads,
 and only then compare the ordinary/infinite row types.
+
+## Third audit: source transitions and public compatibility
+
+Automatic grid actions capture the effective mutation key before an asynchronous form pipeline can
+suspend. Immediately before preparation/dispatch, compare it with the current operation owner and
+reject stale actions. Publish the action bridge after TanStack's passive observer-option updates,
+so its recorded owner does not get ahead of the actual observer. Explicit cancellation and present
+same-key native changes retain their existing behavior; the connector does not automatically close
+forms when a source changes.
+
+Deduplicate next-page work in a map keyed by the effective query hash, including client-provided
+hash functions. Resolve infinite options once and pass the same options into collection execution.
+Old completions delete only their own pending entry.
+
+An empty client resolves neutral defaults for the two internal disabled observers. It never stores
+or executes queries; both observers stay on the application client, including when modes change.
+Using the public defaultQueryOptions result avoids inheriting incompatible global initial data,
+placeholder data, selectors or callbacks without changing active read defaults.
+
+Native projection inputs use NoInfer so plain options determine the selected shape. A potentially
+inherited total getter must accept the whole selected type; otherwise require an explicit override.
+This applies even when the shared getter is conditionally configured. The minimum TanStack peer is
+5.105.3, verified by a private workspace consumer with an exact pinned dependency, forced module
+resolution and skipLibCheck:false. Normal typecheck runs include this fixture and assert that both
+published peer ranges match the pinned minimum.

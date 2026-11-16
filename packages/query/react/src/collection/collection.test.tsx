@@ -516,3 +516,72 @@ describe('collection observer overrides and factory selection', () => {
 		client.clear()
 	})
 })
+
+it.each(['initialData', 'placeholderData'] as const)(
+	'isolates inactive infinite observers from global %s',
+	async (option) => {
+		const client = new QueryClient({ defaultOptions: { queries: { [option]: [1], staleTime: Infinity } } })
+		const wrapper = ({ children }: { children: ReactNode }) => (
+			<QueryClientProvider client={client}>{children}</QueryClientProvider>
+		)
+		const source = createCollectionSource({
+			key: ['global-defaults'],
+			getAll: {
+				prepareArgs: () => undefined,
+				fetcher: () => Promise.resolve([2]),
+				getItems: (items: number[]) => items,
+			},
+		})
+		const hook = renderHook(() => useCollectionQuery({ source, mode: 'pages', params: undefined }), { wrapper })
+		expect(hook.result.current.items).toEqual([1])
+		if (option === 'placeholderData')
+			await waitFor(() => {
+				expect(hook.result.current.items).toEqual([2])
+			})
+		expect(client.getQueryData(['ez-kit', 'inactive-collection-infinite'])).toBeUndefined()
+		hook.unmount()
+		client.clear()
+	},
+)
+
+it('preserves active defaults and cache ownership when changing read modes', async () => {
+	const { client, wrapper } = harness()
+	const defaultSelect = vi.fn((data: unknown) => {
+		if (!Array.isArray(data)) throw new Error('Only active list data is supported')
+		return data.map((item: unknown) => Number(item))
+	})
+	client.setDefaultOptions({ queries: { initialData: [7], select: defaultSelect } })
+	const source = createCollectionSource({
+		key: ['mode-defaults'],
+		getAll: {
+			prepareArgs: () => undefined,
+			fetcher: () => Promise.resolve([1]),
+			getItems: (items: number[]) => items,
+		},
+		getInfinite: {
+			prepareArgs: () => undefined,
+			preparePageArgs: () => undefined,
+			initialPageParam: 0,
+			getNextPageParam: () => undefined,
+			fetcher: () => Promise.resolve([2]),
+			getItems: (page) => page,
+			options: { initialData: { pages: [[2]], pageParams: [0] }, select: (data) => data },
+		},
+	})
+	const hook = renderHook(
+		({ mode }: { mode: 'pages' | 'infinite' }) => useCollectionQuery({ source, mode, params: undefined }),
+		{ wrapper, initialProps: { mode: 'pages' } },
+	)
+	expect(hook.result.current.items).toEqual([7])
+	hook.rerender({ mode: 'infinite' })
+	await waitFor(() => {
+		expect(hook.result.current.items).toEqual([2])
+	})
+	expect(client.getQueryData(source.queries.infinite(undefined).queryKey)).toEqual({ pages: [[2]], pageParams: [0] })
+	hook.rerender({ mode: 'pages' })
+	await waitFor(() => {
+		expect(hook.result.current.items).toEqual([1])
+	})
+	hook.unmount()
+	client.clear()
+})

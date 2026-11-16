@@ -236,3 +236,10 @@ operation hides it from the result while preserving the last connected operation
 Without selection, projections receive raw API data; an optionally absent selector cannot promise
 a selected-only input type. If selection is conditional, the projection must handle every possible
 shape. These contracts also apply to infinite pages.
+
+Requires `@tanstack/react-query >=5.105.3 <6`. A pinned minimum-version consumer checks the built
+public declarations and their interoperability with native hooks, with library checking enabled.
+Inactive internal read observers use neutral defaults; active reads keep the application's native
+QueryClient defaults. Native read projections infer their inputs from query options, not from the
+projection annotation. When conditional selection broadens a shared factory's data type, override
+an inherited raw-only `getTotal` with a compatible getter (or `() => undefined`).

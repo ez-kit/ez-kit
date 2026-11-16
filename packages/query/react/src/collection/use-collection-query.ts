@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { QueryClient, useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef } from 'react'
 
 import { resolveInvalidation } from './invalidation'
@@ -123,18 +123,31 @@ type RuntimeSource = {
 	invalidation: readonly InvalidateQueryFilters[]
 }
 const EMPTY: readonly never[] = []
-const INACTIVE_LIST = {
+// Resolve internal options against neutral defaults. The observers still use the
+// application's client, so mode switches keep the real cache and subscriptions.
+const internalDefaults = /* @__PURE__ */ new QueryClient()
+const INACTIVE_LIST = /* @__PURE__ */ internalDefaults.defaultQueryOptions<unknown, unknown>({
 	queryKey: ['ez-kit', 'inactive-collection-list'],
 	queryFn: () => Promise.resolve(null),
 	enabled: false,
-} as const
-const INACTIVE_INFINITE = {
+	gcTime: 0,
+})
+const { persister: _persister, ...inactiveInfiniteDefaults } = /* @__PURE__ */ internalDefaults.defaultQueryOptions<
+	unknown,
+	unknown,
+	InfiniteData<unknown>,
+	InfiniteData<unknown>
+>({
 	queryKey: ['ez-kit', 'inactive-collection-infinite'],
+	enabled: false,
+	gcTime: 0,
+})
+const INACTIVE_INFINITE = {
+	...inactiveInfiniteDefaults,
 	queryFn: () => Promise.resolve(null),
 	initialPageParam: null,
 	getNextPageParam: () => undefined,
-	enabled: false,
-} as const
+}
 
 /** The native variables and lifecycle contract is retained, including after observer unmount. */
 export function useCollectionMutation<V, D, E, O>(

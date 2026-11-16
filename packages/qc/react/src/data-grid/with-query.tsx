@@ -1,6 +1,6 @@
 import { useDataGridSelector } from '@ez-kit/data-grid-react'
 import { useCollectionQuery } from '@ez-kit/query-react/collection'
-import { hashKey, replaceEqualDeep } from '@tanstack/react-query'
+import { hashKey, replaceEqualDeep, useQueryClient } from '@tanstack/react-query'
 import { createElement, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import type { GridMutationSource } from './mutation-source'
@@ -167,11 +167,13 @@ export function withQuery<
 		config: Omit<UseDataGridConfig<GridFeatures, object>, 'data'> & { dataSource: GridDataSource<object> },
 	) {
 		const { dataSource, ...gridConfig } = config
+		const client = useQueryClient()
 		// Query options and their projections cross this boundary together. Their response
 		// type is opaque to the connector; only the projection consumes the selected value.
 		const source = dataSource as unknown as RuntimeSource<object>
-		const mutations = useRef<Record<string, { mutateAsync: (input: unknown) => Promise<unknown> }>>({})
+		const mutations = useRef<Record<string, { mutateAsync: (input: unknown) => Promise<unknown>; owner: string }>>({})
 		function action(name: 'create' | 'update' | 'delete' | 'deleteMany') {
+			const owner = hashKey(client.defaultMutationOptions(source[name]?.mutation ?? {}).mutationKey ?? [])
 			return {
 				execute: async (input: never) => {
 					const operation = source[name]
@@ -179,6 +181,7 @@ export function withQuery<
 					try {
 						const mutation = mutations.current[name]
 						if (!mutation) throw new Error(`Missing grid ${name} mutation`)
+						if (mutation.owner !== owner) throw new Error(`Grid ${name} source changed before dispatch`)
 						await mutation.mutateAsync(operation.prepareArgs(input))
 					} catch (error) {
 						throw (operation.transformError ?? source.transformError)?.(error) ?? error
@@ -197,7 +200,7 @@ export function withQuery<
 			hasNextPage: false,
 			loading: { isPending: true, isFetching: false, isError: false, error: null },
 		})
-		const nextPageRequest = useRef<Promise<void> | null>(null)
+		const nextPageRequest = useRef(new Map<string, Promise<void>>())
 		const nextPageRef = useRef<() => Promise<void>>(async () => {})
 		const loadMore = useMemo(() => () => nextPageRef.current(), [])
 		let draft = false
@@ -309,6 +312,15 @@ export function withQuery<
 			previousCriteria.current = criteria
 			if (reset && axes.pagination.pageIndex !== 0) table.setPageIndex(0)
 		}, [criteria, reset, axes.pagination.pageIndex, table])
+		const infiniteOptions = infiniteMode
+			? source.getInfinite?.query({
+					sorting: params.sorting,
+					columnFilters: params.columnFilters,
+					globalFilter: params.globalFilter,
+					pageSize: params.pagination.pageSize,
+				})
+			: undefined
+		const infiniteIdentity = infiniteOptions ? client.defaultQueryOptions(infiniteOptions).queryHash : undefined
 		const collectionSource = useMemo(
 			() => ({
 				...(source.getAll
@@ -321,7 +333,12 @@ export function withQuery<
 						}
 					: {}),
 				...(source.getInfinite
-					? { getInfinite: { query: source.getInfinite.query, getItems: source.getInfinite.getRows } }
+					? {
+							getInfinite: {
+								query: infiniteOptions ? () => infiniteOptions : source.getInfinite.query,
+								getItems: source.getInfinite.getRows,
+							},
+						}
 					: {}),
 				...(source.create ? { create: source.create } : {}),
 				...(source.update ? { update: source.update } : {}),
@@ -329,7 +346,7 @@ export function withQuery<
 				...(source.deleteMany ? { deleteMany: source.deleteMany } : {}),
 				invalidation: source.invalidation ?? EMPTY,
 			}),
-			[source],
+			[source, infiniteOptions],
 		)
 		// The runtime source crosses one opaque response boundary; modes are checked below.
 		const collection = useCollectionQuery<typeof collectionSource, 'pages' | 'infinite'>(
@@ -347,13 +364,18 @@ export function withQuery<
 				: { source: requireCollectionRead(collectionSource, 'getAll'), mode: 'pages', params },
 		)
 
-		useCommitEffect(() => {
-			mutations.current = {
-				...(collection.create ? { create: collection.create } : {}),
-				...(collection.update ? { update: collection.update } : {}),
-				...(collection.delete ? { delete: collection.delete } : {}),
-				...(collection.deleteMany ? { deleteMany: collection.deleteMany } : {}),
+		// Publish after TanStack updates observer options in its passive effects.
+		useEffect(() => {
+			const current: typeof mutations.current = {}
+			for (const name of ['create', 'update', 'delete', 'deleteMany'] as const) {
+				const mutation = collection[name]
+				if (mutation)
+					current[name] = {
+						mutateAsync: mutation.mutateAsync,
+						owner: hashKey(client.defaultMutationOptions(source[name]?.mutation ?? {}).mutationKey ?? []),
+					}
 			}
+			mutations.current = current
 		})
 		const current = collection.query
 		const list = current as UseQueryResult<unknown, unknown>
@@ -378,17 +400,20 @@ export function withQuery<
 		const { hasNextPage, isFetching, fetchNextPage } = pages
 		useCommitEffect(() => {
 			nextPageRef.current = async () => {
-				if (nextPageRequest.current) return nextPageRequest.current
+				if (!infiniteIdentity) return
+				const previous = nextPageRequest.current.get(infiniteIdentity)
+				if (previous) return previous
 				if (!hasNextPage || isFetching) return
 				const pending = fetchNextPage({ throwOnError: true }).then(() => undefined)
-				nextPageRequest.current = pending
+				nextPageRequest.current.set(infiniteIdentity, pending)
 				try {
 					await pending
 				} finally {
-					if (nextPageRequest.current === pending) nextPageRequest.current = null
+					if (nextPageRequest.current.get(infiniteIdentity) === pending)
+						nextPageRequest.current.delete(infiniteIdentity)
 				}
 			}
-		}, [hasNextPage, isFetching, fetchNextPage])
+		}, [infiniteIdentity, hasNextPage, isFetching, fetchNextPage])
 		useEffect(() => {
 			if (infiniteMode || !list.isSuccess || list.isFetching || list.isPlaceholderData || rowCount === undefined) return
 			const last = Math.max(0, Math.ceil(rowCount / params.pagination.pageSize) - 1)

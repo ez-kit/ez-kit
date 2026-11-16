@@ -108,3 +108,35 @@ Verification passed:
 Docs production build remains excluded under the accepted Google Fonts restriction. Browser
 scenarios were not rerun for these lifecycle/type fixes; targeted runtime tests exercise the
 confirmed failure paths, and prior browser evidence remains historical.
+
+## Source transitions and compatibility audit fixes — 2026-11-16
+
+Closed all six confirmed third-audit defects:
+
+- Reject a save validated under a different mutation owner before dispatch; preserve same-key
+  observer semantics and explicit editing cancellation.
+- Deduplicate infinite page requests by the effective query hash, allowing a new selection to
+  load while an old request remains pending.
+- Isolate inactive internal observers from application query defaults without replacing the
+  application's QueryClient.
+- Infer native projection inputs from query options, not from projection callback annotations.
+- Require a compatible total getter when conditional selection widens the shared getter's input,
+  including optional shared getters.
+- Set both peer floors to TanStack Query 5.105.3 and add an exact-version consumer fixture against
+  built public declarations with skipLibCheck disabled. It covers native queries, collection
+  sources, grid integration, and the Query, InfiniteQuery and Mutation components.
+
+Verification passed:
+
+- Sequential library build (16 tasks), full lint (33), typecheck (33), test (32), and size (32).
+- Query React: 92 tests; qc-react: 93; docs: 313.
+- React 18: Query React 92 passed; qc-react 87 passed with six existing HeroUI skips.
+- Exact minimum-version consumer lint and typecheck, including public component declarations.
+- Strict OpenSpec validation and git diff whitespace checks.
+- Sizes: query gate 450 B / 550 B; collection 1.71 kB / 2 kB; qc-react 2.91 kB / 3.4 kB.
+  Budgets retain approximately 15% headroom after about 50 B and 150 B of respective growth.
+
+Docs production build remains excluded under the accepted Google Fonts restriction. Browser
+scenarios were not rerun for this follow-up; targeted runtime tests cover source changes during
+validation, independent infinite page requests, and global-default isolation. Previous browser
+evidence remains historical.

@@ -41,6 +41,11 @@ reads. Native read invalidation remains explicit. When an optional operation dis
 its last committed descriptor and invalidation scope for already dispatched work; substituting a
 placeholder would rewrite pending callbacks and retries, including for keyless native mutations.
 
+Automatic grid actions check their captured effective mutation key again before preparation and
+dispatch, so asynchronous validation cannot route an old action through a new owner. A mismatch
+rejects the stale action; applications may explicitly cancel forms when switching scope. The grid's
+next-page deduplication is scoped to effective query identity, including client hash functions.
+
 A pending TanStack mutation can receive updated observer options when the key stays unchanged.
 Generated mutation keys separate different base-key ownership scopes such as tenants. Explicit
 keys remain application-owned; we do not promise frozen callbacks for arbitrary same-key edits.

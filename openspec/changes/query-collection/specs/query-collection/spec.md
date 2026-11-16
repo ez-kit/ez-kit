@@ -221,3 +221,49 @@ Fetcher projections SHALL accept raw response data when no selector is configure
 
 - **WHEN** a source combines native query options with a generated fetcher mutation
 - **THEN** its base key is required for mutation ownership, and native read invalidation remains explicitly configured
+
+### Requirement: Pre-dispatch grid ownership
+
+An automatic grid action SHALL reject before dispatch if its captured effective mutation key differs from the currently connected operation. Ownership checks SHALL run before preparing or executing the request. Explicit cancellation SHALL retain existing form-session behavior; same-key changes SHALL retain native observer semantics.
+
+#### Scenario: Source changes during validation
+
+- **WHEN** an edit begins validating under source A and the grid switches to a different ownership key B
+- **THEN** finishing validation calls neither A's nor B's fetcher and rejects the stale action
+
+### Requirement: Query-scoped infinite deduplication
+
+Concurrent next-page work SHALL be deduplicated by effective query hash. A pending request for a previous selection SHALL NOT block the current selection, even if the previous query remains in flight without cancellation.
+
+#### Scenario: Old page remains pending
+
+- **WHEN** A's next page is pending and a filter change loads B's first page
+- **THEN** B can load its next page before A settles
+
+### Requirement: Internal observers preserve application defaults safely
+
+Inactive internal observers SHALL use neutral defaults without changing their application QueryClient ownership. Active reads SHALL retain application defaults and native cache identity across mode changes.
+
+#### Scenario: Ordinary global initial data
+
+- **WHEN** a page-only collection runs with array initialData configured globally
+- **THEN** its active read uses that data and the inactive infinite observer does not interpret it as InfiniteData
+
+### Requirement: Public projection and peer compatibility
+
+Native projections SHALL infer input from returned query options. Inherited total getters SHALL NOT advertise broader inputs than they support. Published declarations SHALL interoperate with native hooks at the declared minimum TanStack Query version.
+
+#### Scenario: Native raw envelope
+
+- **WHEN** plain native options return an envelope without selection
+- **THEN** an array-only projection is rejected by the type checker
+
+#### Scenario: Conditionally inherited raw total
+
+- **WHEN** conditional selection broadens selected data beyond an inherited total getter's accepted input
+- **THEN** a compatible total override is required unless selection is guaranteed to discard the inherited getter
+
+#### Scenario: Minimum peer consumer
+
+- **WHEN** a consumer uses the exact declared minimum TanStack Query version
+- **THEN** built collection and grid declarations compile and interoperate with native ordinary/infinite hooks with library checking enabled

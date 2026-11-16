@@ -116,3 +116,15 @@ page structure. Raw API responses remain in the cache.
 Reuse `source.queries.list(params)` with `prefetchQuery` or `useQuery`, and
 `source.queries.infinite(params)` when an infinite source is supplied. Consumers
 share the same cache entries; the grid adds no second server-data store.
+
+## Source changes during asynchronous work
+
+Automatic mutations use their effective mutation key as the ownership boundary. Use distinct
+keys for distinct tenants or API scopes. If ownership changes while a save is still validating,
+the old save rejects before dispatch; it cannot combine old preparation with the new fetcher.
+You can explicitly cancel the edit when switching scope to close the form without a save error.
+Already dispatched mutations retain their existing lifecycle rules.
+
+Infinite load-more deduplication is scoped to the effective query hash. A previous selection's
+pending request does not block the next selection from fetching another page, including native
+requests that do not consume an AbortSignal.

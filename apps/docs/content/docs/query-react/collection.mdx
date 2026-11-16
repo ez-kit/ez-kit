@@ -246,3 +246,15 @@ does not infer their query keys.
 When a conditional mutation disappears, it is omitted from the hook result. Already dispatched
 work retains the last connected operation's retry function, lifecycle callbacks and invalidation.
 Reconfiguring an available native operation still follows TanStack's key/observer behavior.
+
+### Native projections and inherited totals
+
+Native reads also infer the input of `getItems` and `getTotal` from their query options. Both plain
+options objects and TanStack's `queryOptions` / `infiniteQueryOptions` helpers are supported.
+
+If conditional selection broadens the input type, an inherited raw-only `getTotal` needs a
+compatible replacement. Handle both forms or use `getTotal: () => undefined` when no total is needed.
+A definitely present selector continues to discard inherited projections as described above.
+
+The packages require TanStack Query **5.105.3 or later within v5**. Public declaration checks run
+against that exact minimum version as well as the workspace's development dependencies.

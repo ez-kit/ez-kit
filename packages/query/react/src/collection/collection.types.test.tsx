@@ -478,8 +478,95 @@ function SelectionSafetyFixture(flag: boolean) {
 			fetcher: () => Promise.resolve({ items: [1], total: 1 }),
 			options: safeOptions,
 			getItems: (data) => (Array.isArray(data) ? data : data.items.map(String)),
+			getTotal: (data) => (Array.isArray(data) ? undefined : data.total),
 		},
 	})
 	expectTypeOf(safe.getAll.getItems).returns.toEqualTypeOf<readonly string[]>()
 }
 void SelectionSafetyFixture
+
+function NativeProjectionSafetyFixture() {
+	const options = { queryKey: ['native-raw'], queryFn: () => Promise.resolve({ items: [1] }) }
+	createCollectionSource({
+		invalidate: false,
+		getAll: {
+			query: () => options,
+			// @ts-expect-error native raw options determine the projection input
+			getItems: (items: string[]) => items.map((item) => item.toUpperCase()),
+		},
+	})
+	createCollectionSource({
+		invalidate: false,
+		getInfinite: {
+			query: () => ({ ...options, initialPageParam: 0, getNextPageParam: () => undefined }),
+			// @ts-expect-error native infinite options determine the page projection input
+			getItems: (items: string[]) => items,
+		},
+	})
+	const valid = createCollectionSource({
+		invalidate: false,
+		getAll: {
+			query: () => options,
+			getItems: (data) => data.items,
+		},
+	})
+	expectTypeOf(valid.getAll.getItems).parameter(0).toEqualTypeOf<{ items: number[] }>()
+	const selected = createCollectionSource({
+		invalidate: false,
+		getAll: {
+			query: () => ({ ...options, select: (data) => data.items.map(String) }),
+			getItems: (data) => data,
+		},
+	})
+	expectTypeOf(selected.getAll.getItems).returns.toEqualTypeOf<readonly string[]>()
+}
+void NativeProjectionSafetyFixture
+
+function InheritedTotalSafetyFixture(flag: boolean) {
+	const make = createCollectionSourceFactory({
+		list: {
+			prepareArgs: () => undefined,
+			getItems: (data: { items: string[]; meta: { total: number } }) => data.items,
+			getTotal: (data) => data.meta.total,
+		},
+	})
+	const read = {
+		fetcher: () => Promise.resolve({ items: ['one'], meta: { total: 1 } }),
+		options: flag
+			? {
+					select: (data: {
+						items: string[]
+						meta: { total: number }
+					}): { items: string[]; meta: { total: number } } | string[] => data.items,
+				}
+			: {},
+		getItems: (data: { items: string[]; meta: { total: number } } | string[]) =>
+			Array.isArray(data) ? data : data.items,
+	}
+	make({
+		key: ['unsafe-total'],
+		// @ts-expect-error inherited raw-only total cannot accept the expanded selected union
+		getAll: read,
+	})
+	const maybeTotal = createCollectionSourceFactory({
+		list: {
+			prepareArgs: () => undefined,
+			getItems: (data: { items: string[]; meta: { total: number } }) => data.items,
+			...(flag ? { getTotal: (data: { items: string[]; meta: { total: number } }) => data.meta.total } : {}),
+		},
+	})
+	maybeTotal({
+		key: ['optional-unsafe-total'],
+		// @ts-expect-error a possibly inherited getter must also accept the selected input
+		getAll: read,
+	})
+	const safe = make({
+		key: ['safe-total'],
+		getAll: {
+			...read,
+			getTotal: (data) => (Array.isArray(data) ? undefined : data.meta.total),
+		},
+	})
+	safe.getAll.getTotal?.(['one'])
+}
+void InheritedTotalSafetyFixture

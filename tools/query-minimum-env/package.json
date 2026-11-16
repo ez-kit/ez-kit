@@ -1,0 +1,20 @@
+{
+	"name": "@ez-kit/query-minimum-env",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"description": "Consumer type checks against the exact minimum supported TanStack Query version.",
+	"license": "MIT",
+	"scripts": {
+		"typecheck": "node check-version.ts && tsc --project tsconfig.json",
+		"lint": "eslint . --max-warnings=0"
+	},
+	"devDependencies": {
+		"@ez-kit/query-react": "workspace:*",
+		"@ez-kit/qc-react": "workspace:*",
+		"@ez-kit/data-grid-react": "workspace:*",
+		"@tanstack/react-query": "5.105.3",
+		"@types/react": "^19.3.0",
+		"react": "^19.3.1"
+	}
+}
