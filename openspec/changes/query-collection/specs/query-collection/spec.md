@@ -193,3 +193,31 @@ Entity overrides in a shared factory SHALL infer selected list data and selected
 
 - **WHEN** select transforms pages within the InfiniteData envelope
 - **THEN** getItems projects each selected page while getNextPageParam receives raw pages
+
+### Requirement: Pending operations survive capability removal
+
+Removing an optional operation SHALL omit it from the collection result while preserving the last connected operation's pending lifecycle, retries and invalidation scope, including native operations without an explicit mutation key.
+
+#### Scenario: Operation removed during retry
+
+- **WHEN** an update is pending and the source changes to one without update
+- **THEN** a retry invokes the original operation and completion retains its callbacks and invalidation scope
+
+### Requirement: Selection and grid row safety
+
+Fetcher projections SHALL accept raw response data when no selector is configured. A potentially absent selector SHALL NOT promise a selected-only projection input. The grid adapter SHALL reject primitive items in any configured read before checking list/infinite compatibility.
+
+#### Scenario: Conditional shape-changing selector
+
+- **WHEN** an operation supplies an optional selector that changes an envelope into an array
+- **THEN** a projection accepting only the selected array is rejected by the type checker
+
+#### Scenario: Primitive infinite items
+
+- **WHEN** ordinary reads return object rows but infinite reads return strings
+- **THEN** adapting the collection to a grid is rejected by the type checker
+
+#### Scenario: Native read and generated write
+
+- **WHEN** a source combines native query options with a generated fetcher mutation
+- **THEN** its base key is required for mutation ownership, and native read invalidation remains explicitly configured

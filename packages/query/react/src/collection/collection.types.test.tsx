@@ -396,3 +396,90 @@ const selectedStandaloneSource = createCollectionSourceFactory({})({
 	},
 })
 expectTypeOf(selectedStandaloneSource.getAll.getItems).returns.toEqualTypeOf<readonly string[]>()
+
+function SelectionSafetyFixture(flag: boolean) {
+	createCollectionSource({
+		key: ['invalid-projection'],
+		getAll: {
+			prepareArgs: (page: number) => page,
+			fetcher: () => Promise.resolve({ items: [1] }),
+			// @ts-expect-error without select, a projection receives the raw envelope
+			getItems: (items: string[]) => items.map((item) => item.toUpperCase()),
+		},
+	})
+	const options = flag ? { select: (data: { items: number[]; total: number }) => data.items.map(String) } : {}
+	const conditionalRead = {
+		prepareArgs: () => undefined,
+		fetcher: () => Promise.resolve({ items: [1], total: 1 }),
+		options,
+		getItems: (names: string[]) => names.map((name) => name.toUpperCase()),
+	}
+	selectConvention({
+		key: ['conditional-selector'],
+		// @ts-expect-error a changed selected shape requires select in every branch
+		getAll: conditionalRead,
+	})
+	createCollectionSource({
+		key: ['conditional-direct-selector'],
+		// @ts-expect-error the standalone source has the same guaranteed-selector contract
+		getAll: conditionalRead,
+	})
+	const infiniteOptions = flag
+		? {
+				select: (data: { pages: { items: number[]; next: number | null }[]; pageParams: unknown[] }) => ({
+					...data,
+					pages: data.pages.map((page) => page.items.map(String)),
+				}),
+			}
+		: {}
+	const conditionalInfiniteRead = {
+		fetcher: () => Promise.resolve({ items: [1], next: null }),
+		options: infiniteOptions,
+		getItems: (names: string[]) => names.map((name) => name.toUpperCase()),
+	}
+	selectConvention({
+		key: ['conditional-infinite-selector'],
+		// @ts-expect-error selected infinite pages also require a guaranteed selector
+		getInfinite: conditionalInfiniteRead,
+	})
+	createCollectionSource({
+		key: ['conditional-direct-infinite-selector'],
+		// @ts-expect-error standalone infinite pages also require a guaranteed selector
+		getInfinite: {
+			...conditionalInfiniteRead,
+			prepareArgs: () => undefined,
+			preparePageArgs: () => undefined,
+			initialPageParam: 0,
+			getNextPageParam: () => undefined,
+		},
+	})
+	createCollectionSource({
+		key: ['invalid-infinite-projection'],
+		getInfinite: {
+			prepareArgs: () => undefined,
+			preparePageArgs: () => undefined,
+			fetcher: () => Promise.resolve({ items: [1] }),
+			initialPageParam: 0,
+			getNextPageParam: () => undefined,
+			// @ts-expect-error raw infinite page is an envelope without select
+			getItems: (items: string[]) => items,
+		},
+	})
+	// Conditional selection is safe when the projection accepts either possible shape.
+	const safeOptions = flag
+		? {
+				select: (data: { items: number[]; total: number }): { items: number[]; total: number } | string[] =>
+					data.items.map(String),
+			}
+		: {}
+	const safe = selectConvention({
+		key: ['safe-conditional-selector'],
+		getAll: {
+			fetcher: () => Promise.resolve({ items: [1], total: 1 }),
+			options: safeOptions,
+			getItems: (data) => (Array.isArray(data) ? data : data.items.map(String)),
+		},
+	})
+	expectTypeOf(safe.getAll.getItems).returns.toEqualTypeOf<readonly string[]>()
+}
+void SelectionSafetyFixture

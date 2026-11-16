@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 
 import { resolveInvalidation } from './invalidation'
 
@@ -163,6 +163,20 @@ export function useCollectionMutation<V, D, E, O>(
 }
 const MISSING = { mutation: { mutationFn: () => Promise.reject(new Error('Collection operation is not configured')) } }
 
+// Keep the last committed operation while its capability is absent. Replacing its
+// options with a placeholder would rewrite an in-flight mutation's callbacks/retry.
+function useOptionalCollectionMutation(
+	source: RuntimeMutation | undefined,
+	inherited: readonly InvalidateQueryFilters[],
+) {
+	const retained = useRef({ source: source ?? MISSING, inherited })
+	useEffect(() => {
+		if (source) retained.current = { source, inherited }
+	}, [source, inherited])
+	const active = source ? { source, inherited } : retained.current
+	return useCollectionMutation(active.source, active.inherited)
+}
+
 /** Execute externally owned parameters without introducing a second cache or state store. */
 export function useCollectionQuery<S extends CollectionShape, M extends CollectionMode<S>>(
 	config: CollectionQueryConfig<S, M>,
@@ -178,10 +192,10 @@ export function useCollectionQuery<S extends CollectionShape, M extends Collecti
 			? { ...source.getInfinite.query(params), ...overrides }
 			: INACTIVE_INFINITE,
 	)
-	const create = useCollectionMutation(source.create ?? MISSING, source.invalidation)
-	const update = useCollectionMutation(source.update ?? MISSING, source.invalidation)
-	const remove = useCollectionMutation(source.delete ?? MISSING, source.invalidation)
-	const deleteMany = useCollectionMutation(source.deleteMany ?? MISSING, source.invalidation)
+	const create = useOptionalCollectionMutation(source.create, source.invalidation)
+	const update = useOptionalCollectionMutation(source.update, source.invalidation)
+	const remove = useOptionalCollectionMutation(source.delete, source.invalidation)
+	const deleteMany = useOptionalCollectionMutation(source.deleteMany, source.invalidation)
 	const read = mode === 'pages' ? source.getAll : source.getInfinite
 	const data = mode === 'pages' ? list.data : pages.data
 	const items = useMemo(() => {

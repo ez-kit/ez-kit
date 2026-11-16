@@ -1,6 +1,6 @@
 import { createCollectionSource } from './source'
 
-import type { ConfiguredOperations, ConfiguredQueries } from './contracts'
+import type { ConfiguredOperations, ConfiguredQueries, RequiredSelection } from './contracts'
 import type { InvalidationPolicy } from './invalidation'
 import type {
 	CollectionFetcher,
@@ -79,8 +79,16 @@ export function createCollectionSourceFactory<
 	DeleteManyA = never,
 >(
 	defaults: Defaults & {
-		list?: Omit<ListFetcher<P, A, D, D, I, DefaultError>, 'fetcher' | 'prepareArgs'> & { prepareArgs: (params: P) => A }
-		infinite?: Omit<InfiniteFetcher<IP, IA, B, ID, ID, II, C, DefaultError>, 'fetcher' | 'preparePageArgs'> & {
+		list?: Omit<ListFetcher<P, A, D, D, I, DefaultError>, 'fetcher' | 'prepareArgs' | 'getItems' | 'getTotal'> & {
+			prepareArgs: (params: P) => A
+			getItems: (data: D) => readonly I[]
+			getTotal?: (data: D) => number | undefined
+		}
+		infinite?: Omit<
+			InfiniteFetcher<IP, IA, B, ID, ID, II, C, DefaultError>,
+			'fetcher' | 'preparePageArgs' | 'getItems'
+		> & {
+			getItems: (page: ID) => readonly II[]
 			preparePageArgs: (context: { args: B; pageParam: C }) => IA
 		}
 		mutations?: {
@@ -170,7 +178,19 @@ export function createCollectionSourceFactory<
 			>
 		} & ({ getAll: unknown } | { getInfinite: unknown }) &
 			SelectionProjections<NoInfer<Enabled>, 'getAll'> &
-			SelectionProjections<NoInfer<Enabled>, 'getInfinite'>,
+			SelectionProjections<NoInfer<Enabled>, 'getInfinite'> &
+			RequiredSelection<
+				NoInfer<Enabled>,
+				'getAll',
+				NoInfer<Defaults extends { list: unknown } ? D : ListData>,
+				NoInfer<ListSelected>
+			> &
+			RequiredSelection<
+				NoInfer<Enabled>,
+				'getInfinite',
+				NoInfer<Defaults extends { infinite: unknown } ? ID : InfiniteData>,
+				NoInfer<InfiniteSelected>
+			>,
 	) {
 		function mergeOperation(value: unknown, fallback: unknown) {
 			if (value === undefined) return undefined

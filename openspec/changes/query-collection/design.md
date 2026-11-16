@@ -255,3 +255,17 @@ is optional and receives selected data. NoInfer on projection inputs prevents a 
 inventing an unrelated selected shape without select. Entity options still replace shared options.
 The shared convention continues to describe the raw API envelope; selection belongs to entity
 operations. Raw cache storage and cursor callbacks preserve TanStack behavior.
+
+## Audit follow-up: ownership and projection contracts
+
+Require base identity whenever any fetcher operation is generated, while keeping generated-read
+invalidation separate from generated-mutation ownership. For a temporarily absent mutation, retain
+the last committed descriptor and invalidation rules instead of replacing pending observer options
+with a placeholder. This preserves native keyless mutations too; changing a present operation still
+uses TanStack's normal key/observer rules.
+
+Projection inputs cannot infer a different selected shape from their annotation alone. When raw
+responses are not assignable to the selected input, require a selector that is present in every
+branch. Shared conventions still infer their raw envelope from their projection declarations.
+Extract grid item types without constraining inference to object first, reject non-object reads,
+and only then compare the ordinary/infinite row types.

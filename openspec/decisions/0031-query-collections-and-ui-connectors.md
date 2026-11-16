@@ -36,6 +36,11 @@ Ready-made native options retain their variables, keys and callbacks. Existing g
 preparation before dispatch, preserving prepared-variable callbacks; compatibility lives in qc-react
 rather than duplicating Query execution. Form error adaptation does not alter native errors.
 
+A base key is required for every generated fetcher operation, including writes alongside native
+reads. Native read invalidation remains explicit. When an optional operation disappears, retain
+its last committed descriptor and invalidation scope for already dispatched work; substituting a
+placeholder would rewrite pending callbacks and retries, including for keyless native mutations.
+
 A pending TanStack mutation can receive updated observer options when the key stays unchanged.
 Generated mutation keys separate different base-key ownership scopes such as tenants. Explicit
 keys remain application-owned; we do not promise frozen callbacks for arbitrary same-key edits.

@@ -230,3 +230,9 @@ Shared-factory entity operations may use shape-changing `options.select`; `getIt
 the selected response (or selected infinite page) and must be supplied explicitly. Inherited
 `getTotal` is discarded for that operation; supply a compatible one to retain a total. Raw cache
 responses and `getNextPageParam` remain unchanged. Operation options still replace shared options.
+
+Generated mutations require a base source key even alongside native reads. Removing a conditional
+operation hides it from the result while preserving the last connected operation for pending work.
+Without selection, projections receive raw API data; an optionally absent selector cannot promise
+a selected-only input type. If selection is conditional, the projection must handle every possible
+shape. These contracts also apply to infinite pages.

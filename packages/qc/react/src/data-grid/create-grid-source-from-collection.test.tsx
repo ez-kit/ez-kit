@@ -147,3 +147,36 @@ function CheckedRowsFixture(canDelete: boolean) {
 	optionalGrid.delete?.prepareArgs({ rowId: '1', row: { id: 42, name: 'Ada' } })
 }
 void CheckedRowsFixture
+
+function PrimitiveRowsFixture() {
+	const getInfinite = {
+		prepareArgs: () => undefined,
+		preparePageArgs: () => undefined,
+		initialPageParam: 0,
+		getNextPageParam: () => undefined,
+		fetcher: () => Promise.resolve(['Ada']),
+		getItems: (rows: string[]) => rows,
+	}
+	const mixed = createCollectionSource({
+		key: ['primitive-infinite'],
+		invalidate: false,
+		getAll: source.getAll,
+		getInfinite,
+	})
+	// @ts-expect-error primitive infinite items cannot masquerade as compatible object rows through never
+	createGridSourceFromCollection(mixed, { params: () => ({ team: 'one', offset: 0 }), infiniteParams: () => undefined })
+	const primitiveInfinite = createCollectionSource({ key: ['primitive-only-infinite'], getInfinite })
+	// @ts-expect-error every configured grid read must return objects
+	createGridSourceFromCollection(primitiveInfinite, { infiniteParams: () => undefined })
+	const primitiveList = createCollectionSource({
+		key: ['primitive-only-list'],
+		getAll: {
+			prepareArgs: () => undefined,
+			fetcher: () => Promise.resolve(['Ada']),
+			getItems: (rows) => rows,
+		},
+	})
+	// @ts-expect-error primitive list items cannot form a GridDataSource<never>
+	createGridSourceFromCollection(primitiveList, { params: () => undefined })
+}
+void PrimitiveRowsFixture

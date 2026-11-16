@@ -78,3 +78,33 @@ Validation:
 Docs production build remains excluded under the accepted Google Fonts restriction. Browser
 scenarios were not rerun for this hook/type follow-up; previous browser evidence remains historical.
 The added documentation is covered by docs lint, typecheck and tests.
+
+## Ownership and projection audit fixes — 2026-11-16
+
+Closed the five defects confirmed by the second architecture/runtime/type audit:
+
+- Generated writes alongside native reads require a base key in both types and runtime checks.
+  A scoped retry test verifies that A's failed write retries A, never B, and invokes A's callbacks
+  and explicitly configured native invalidation.
+- Temporarily absent operations retain their last committed descriptor and invalidation rules.
+  Success and retry tests cover generated operations and native operations without mutation keys.
+- Standalone fetcher projections cannot infer a selected shape from their own annotations.
+- Standalone and shared-factory reads require a guaranteed selector if raw data cannot satisfy the
+  projection input. Negative fixtures cover conditional selectors for ordinary and infinite reads;
+  a positive fixture accepts a projection handling an explicit raw/selected union.
+- Grid adaptation checks object items before comparing row compatibility. Negative fixtures cover
+  primitive-only lists/infinite sources and mixed object-list/primitive-infinite sources.
+
+Verification passed:
+
+- Affected lint/typecheck/test gate: 24/24 tasks.
+- Sequential final library build, full lint, typecheck, test and library size gates.
+- Query React: 89 tests; qc-react: 89; docs: 313.
+- React 18: Query React 89 passed; qc-react 83 passed with six existing HeroUI skips.
+- Strict OpenSpec validation and git diff whitespace checks.
+- Sizes: query gate 450 B / 550 B; collection 1.66 kB / 1.9 kB; qc-react 2.76 kB / 3 kB.
+  The collection budget retains approximately 15% headroom after about 100 B of runtime growth.
+
+Docs production build remains excluded under the accepted Google Fonts restriction. Browser
+scenarios were not rerun for these lifecycle/type fixes; targeted runtime tests exercise the
+confirmed failure paths, and prior browser evidence remains historical.

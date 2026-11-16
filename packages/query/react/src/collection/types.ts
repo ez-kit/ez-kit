@@ -26,8 +26,8 @@ export type CollectionMutation<V, D, E = DefaultError, O = unknown> = {
 export type ListFetcher<P, A, D, S, I, E> = {
 	prepareArgs: (params: P) => NoInfer<A>
 	fetcher: CollectionFetcher<A, D>
-	getItems: (data: S) => readonly I[]
-	getTotal?: (data: S) => number | undefined
+	getItems: (data: NoInfer<S>) => readonly I[]
+	getTotal?: (data: NoInfer<S>) => number | undefined
 	options?: Omit<UseQueryOptions<D, E, S>, 'queryKey' | 'queryFn'>
 }
 export type InfiniteFetcher<P, A, B, D, S, I, C, E> = {
@@ -36,7 +36,7 @@ export type InfiniteFetcher<P, A, B, D, S, I, C, E> = {
 	fetcher: CollectionFetcher<A, D>
 	initialPageParam: C
 	getNextPageParam: (lastPage: D, allPages: D[], lastPageParam: C, allPageParams: C[]) => C | null | undefined
-	getItems: (page: S) => readonly I[]
+	getItems: (page: NoInfer<S>) => readonly I[]
 	options?: Omit<
 		UseInfiniteQueryOptions<D, E, InfiniteData<S>, QueryKey, C>,
 		'queryKey' | 'queryFn' | 'initialPageParam' | 'getNextPageParam'

@@ -218,3 +218,31 @@ getInfinite: {
 
 Keep the `pages` / `pageParams` structure. `getNextPageParam` still receives original API pages;
 `getItems` receives selected pages. Prefetching and cache access continue to use the raw response.
+
+## Safe selection and changing capabilities
+
+Without `select`, `getItems` and `getTotal` receive the raw API response. A projection annotation
+cannot change that response type. If a selector changes the response shape, it must be present
+whenever the projection expects that shape. This applies to both standalone sources and shared
+factories, including infinite pages.
+
+```tsx
+// Keep the selector present; branch inside it so the output shape stays consistent.
+options: {
+  select: response => compact
+    ? response.items.map(user => user.name)
+    : response.items.map(user => `${user.name} (${user.id})`),
+},
+getItems: names => names,
+```
+
+A conditional selector can also return an explicit union of raw and selected data, provided the
+projection handles both shapes. An optional selector cannot promise that only selected data arrives.
+
+Every generated fetcher operation requires a source `key`, including mutations alongside native
+reads. Native reads still require their own explicit invalidation policy; supplying a base key
+does not infer their query keys.
+
+When a conditional mutation disappears, it is omitted from the hook result. Already dispatched
+work retains the last connected operation's retry function, lifecycle callbacks and invalidation.
+Reconfiguring an available native operation still follows TanStack's key/observer behavior.

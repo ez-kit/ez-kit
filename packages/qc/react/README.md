@@ -354,3 +354,7 @@ When adapting a source with both reads, infinite items must satisfy the ordinary
 type. Normalize different endpoint projections with their `getItems` functions before
 calling `createGridSourceFromCollection`; the adapter does not invent missing row fields.
 Conditionally available mutations remain optional after adaptation.
+
+`createGridSourceFromCollection` requires object items in every configured read before checking
+list/infinite row compatibility. Collections of primitives remain usable as ordinary lists, but
+must project their items into objects before adaptation to a grid.

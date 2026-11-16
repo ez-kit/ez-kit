@@ -1,6 +1,6 @@
 import { listInvalidation, resolveInvalidation } from './invalidation'
 
-import type { ConfiguredOperations, ConfiguredQueries, SourceIdentity } from './contracts'
+import type { ConfiguredOperations, ConfiguredQueries, RequiredSelection, SourceIdentity } from './contracts'
 import type { InvalidationPolicy } from './invalidation'
 import type {
 	CollectionRead,
@@ -135,12 +135,17 @@ export function createCollectionSource<
 			| MutationFetcher<DeleteManyV, DeleteManyA, DeleteManyD, DeleteManyE, DeleteManyO>
 			| CollectionMutation<DeleteManyV, DeleteManyD, DeleteManyE, DeleteManyO>
 	} & SourceIdentity<NoInfer<Enabled>> &
+		RequiredSelection<NoInfer<Enabled>, 'getAll', NoInfer<D>, NoInfer<S>> &
+		RequiredSelection<NoInfer<Enabled>, 'getInfinite', NoInfer<ID>, NoInfer<IS>> &
 		({ getAll: unknown } | { getInfinite: unknown }),
 ) {
 	const hasGenerated =
 		(config.getAll !== undefined && !('query' in config.getAll)) ||
 		(config.getInfinite !== undefined && !('query' in config.getInfinite))
-	if (hasGenerated && !config.key) throw new Error('Fetcher sources require a collection key')
+	const hasGeneratedMutation = [config.create, config.update, config.delete, config.deleteMany].some(
+		(operation) => operation !== undefined && !('mutation' in operation),
+	)
+	if ((hasGenerated || hasGeneratedMutation) && !config.key) throw new Error('Fetcher sources require a collection key')
 	const hasNative =
 		(config.getAll !== undefined && 'query' in config.getAll) ||
 		(config.getInfinite !== undefined && 'query' in config.getInfinite)

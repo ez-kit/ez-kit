@@ -11,12 +11,18 @@ import type { GridDataSource } from './with-query'
 import type { CollectionShape, CollectionParams, CollectionMutation } from '@ez-kit/query-react/collection'
 
 type ReadItem<S, K extends keyof S> =
-	NonNullable<S[K]> extends { getItems: (value: never) => readonly (infer I extends object)[] } ? I : never
-type Item<S> = 'getAll' extends keyof S
+	NonNullable<S[K]> extends { getItems: (value: never) => readonly (infer I)[] } ? I : never
+type RawItem<S> = 'getAll' extends keyof S
 	? ReadItem<S, 'getAll'>
 	: 'getInfinite' extends keyof S
 		? ReadItem<S, 'getInfinite'>
 		: never
+type Item<S> = Extract<RawItem<S>, object>
+type ValidRows<S> = {
+	[K in Extract<keyof S, 'getAll' | 'getInfinite'>]: [ReadItem<S, K>] extends [object] ? never : K
+}[Extract<keyof S, 'getAll' | 'getInfinite'>] extends never
+	? unknown
+	: never
 type CompatibleRows<S> = 'getAll' extends keyof S
 	? 'getInfinite' extends keyof S
 		? [ReadItem<S, 'getInfinite'>] extends [ReadItem<S, 'getAll'>]
@@ -65,7 +71,7 @@ type AdaptedOperations<S> = {
 /** Map table state and action contexts without changing collection cache identity. */
 export function createGridSourceFromCollection<S extends CollectionShape>(
 	source: S,
-	mapping: CollectionGridMapping<S> & CompatibleRows<NoInfer<S>>,
+	mapping: CollectionGridMapping<S> & ValidRows<NoInfer<S>> & CompatibleRows<NoInfer<S>>,
 ): GridDataSource<Item<S>> & AdaptedOperations<S> & Pick<S, 'invalidation'> {
 	const read = source as unknown as {
 		getAll?: {
