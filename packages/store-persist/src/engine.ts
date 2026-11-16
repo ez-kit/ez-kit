@@ -12,7 +12,7 @@ import type {
 	MetaMerge,
 	PersistErrorContext,
 	ReadCtx,
-	RestoreOptions,
+	RestoreCallOptions,
 	RestoreResult,
 	SourcePort,
 } from './types'
@@ -27,7 +27,7 @@ export type PersistEngine = {
 	runWithMeta(metaPatch: unknown, mutate: () => void): void
 	flushNow(): void
 	flush(binding?: PersistBinding): Promise<void>
-	restore(binding: PersistBinding, options?: RestoreOptions): Promise<RestoreResult>
+	restore(binding: PersistBinding, options?: RestoreCallOptions): Promise<RestoreResult>
 	reset(binding: PersistBinding, fields?: readonly (readonly string[])[]): Promise<void>
 	resetScope(path: readonly string[]): Promise<void>
 	readonly supportsScopeReset: boolean
@@ -96,6 +96,7 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 	const deadlines = new Map<PersistBinding, number>()
 	let nextOperationId = 0
 	const subscriptions = new Map<PersistBinding, () => void>()
+	const connections = new WeakMap<PersistBinding, number>()
 	const owners = new Map<string, PersistBinding>()
 	const physicalOwners = new Map<string, { binding: PersistBinding; key: string }>()
 	const queued = new Map<RecordState, Entry>()
@@ -192,8 +193,10 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 			![...binding.records.values()].some((record) => record.dirty) &&
 			!pending &&
 			failure === undefined
-		)
+		) {
 			detached.delete(binding)
+			binding.controller = null
+		}
 	}
 
 	function settleFences(error?: unknown, entries: Iterable<Entry> = []): void {
@@ -597,11 +600,13 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 		const writes: PathWrite[] = []
 		for (const [field, record] of binding.records) {
 			const key = bindingKey(binding, field)
-			if (record.revision !== expected.get(record) || (!external && record.edited) || record.resetPending) continue
+			if (record.revision !== expected.get(record) || record.resetPending) continue
 			let operation: PersistErrorContext['operation'] = 'decode'
 			try {
 				const raw = keyed.get(key)
 				if (raw === undefined) {
+					record.blocked = false
+					record.error = null
 					if (external) {
 						supersedeWithExternal(binding, field, record)
 						record.outcome = 'default'
@@ -609,6 +614,7 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 					}
 					continue
 				}
+				if (!external && record.edited) continue
 				const stored = versioned ? decodeRecord(raw) : { version: 0, value: raw }
 				const current = field.schema?.version ?? 0
 				if (stored.version > current) {
@@ -681,11 +687,38 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 		}
 	}
 
-	function restore(binding: PersistBinding, supplied: RestoreOptions = {}): Promise<RestoreResult> {
+	type ExternalSnapshot = { connection: number; generation: number; records: Map<RecordState, number> }
+	function captureExternal(): Map<PersistBinding, ExternalSnapshot> {
+		return new Map(
+			[...bindings].map((binding) => [
+				binding,
+				{
+					connection: connections.get(binding) ?? 0,
+					generation: binding.generation,
+					records: new Map([...binding.records.values()].map((record) => [record, record.revision])),
+				},
+			]),
+		)
+	}
+	function externalCurrent(binding: PersistBinding, snapshot: ExternalSnapshot): boolean {
+		return (
+			bindings.has(binding) &&
+			connections.get(binding) === snapshot.connection &&
+			binding.generation === snapshot.generation &&
+			(binding.restoreOptions.externalChanges ?? options.externalChanges ?? 'apply') !== 'ignore' &&
+			!barriers.some((barrier) => isWithinScope(binding.fields[0]?.address?.store.path ?? [], barrier.path))
+		)
+	}
+	function applyExternal(values: Keyed, captured: Map<PersistBinding, ExternalSnapshot>): void {
+		for (const [binding, snapshot] of captured)
+			if (externalCurrent(binding, snapshot)) processRead(binding, values, true, snapshot.records)
+	}
+
+	function restore(binding: PersistBinding, supplied: RestoreCallOptions = {}): Promise<RestoreResult> {
 		if (binding.status.restore === 'pending' && binding.restorePromise) return binding.restorePromise
 		if (disposed || !bindings.has(binding)) return Promise.resolve({ status: 'idle' })
-		const timeout = supplied.timeoutMs ?? binding.restoreOptions.timeoutMs
-		if (timeout !== undefined && (!Number.isFinite(timeout) || timeout < 0))
+		const timeout = supplied.timeoutMs === undefined ? binding.restoreOptions.timeoutMs : supplied.timeoutMs
+		if (timeout !== undefined && timeout !== null && (!Number.isFinite(timeout) || timeout < 0))
 			throw new Error('[ez-kit/store-persist] Invalid restore timeoutMs')
 		binding.cancelRestore?.()
 		const initial = !binding.started
@@ -770,7 +803,7 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 				),
 			)
 			if (result instanceof Promise) {
-				if (timeout !== undefined)
+				if (timeout !== undefined && timeout !== null)
 					deadline = setTimeout(() => {
 						if (valid()) {
 							controller.abort()
@@ -859,6 +892,8 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 			if (disposed)
 				throw new Error('[ez-kit/store-persist] Cannot connect to disposed engine; recreate the cache entry')
 			if (bindings.has(binding)) return () => undefined
+			const acquisitions: { key: string; physical: string | undefined }[] = []
+			const proposedPhysical = new Map<string, string>()
 			for (const field of binding.fields) {
 				validateSchema(field.schema)
 				if ((field.schema?.version ?? 0) > 0 && !versioned)
@@ -873,21 +908,56 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 					const existing = physicalOwners.get(physical)
 					if (existing && existing.key !== key)
 						throw new Error(`[ez-kit/store-persist] Physical key collision: ${physical}`)
-					physicalOwners.set(physical, { binding, key })
+					const proposed = proposedPhysical.get(physical)
+					if (proposed !== undefined && proposed !== key)
+						throw new Error(`[ez-kit/store-persist] Physical key collision: ${physical}`)
+					proposedPhysical.set(physical, key)
 				}
-				owners.set(key, binding)
+				acquisitions.push({ key, physical })
 			}
+			const wasDetached = detached.has(binding)
+			const previousController = binding.controller
+			const previousOwners = new Map(acquisitions.map(({ key }) => [key, owners.get(key)]))
+			const previousPhysical = new Map(
+				acquisitions.flatMap(({ physical }) =>
+					physical === undefined ? [] : [[physical, physicalOwners.get(physical)] as const],
+				),
+			)
+			for (const { key, physical } of acquisitions) {
+				owners.set(key, binding)
+				if (physical !== undefined) physicalOwners.set(physical, { binding, key })
+			}
+			connections.set(binding, (connections.get(binding) ?? 0) + 1)
 			bindings.add(binding)
 			detached.delete(binding)
 			binding.controller = api
-			subscriptions.set(
-				binding,
-				binding.port.subscribe(binding.store, () => {
-					observe(binding)
-				}),
-			)
-			if (!binding.started || binding.status.restore === 'idle') void restore(binding)
-			if ([...operations].some((job) => applies(job, binding))) refresh(binding)
+			try {
+				subscriptions.set(
+					binding,
+					binding.port.subscribe(binding.store, () => {
+						observe(binding)
+					}),
+				)
+				if (!binding.started || binding.status.restore === 'idle') void restore(binding)
+				if ([...operations].some((job) => applies(job, binding))) refresh(binding)
+			} catch (error) {
+				binding.cancelRestore?.()
+				subscriptions.get(binding)?.()
+				subscriptions.delete(binding)
+				bindings.delete(binding)
+				if (wasDetached) detached.add(binding)
+				binding.controller = previousController
+				connections.set(binding, (connections.get(binding) ?? 0) + 1)
+				for (const [key, previous] of previousOwners) {
+					if (previous) owners.set(key, previous)
+					else owners.delete(key)
+				}
+				for (const [key, previous] of previousPhysical) {
+					if (previous) physicalOwners.set(key, previous)
+					else physicalOwners.delete(key)
+				}
+				throw error
+			}
 			return () => {
 				deadlines.delete(binding)
 				collect(binding)
@@ -900,7 +970,8 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 				subscriptions.get(binding)?.()
 				subscriptions.delete(binding)
 				bindings.delete(binding)
-				binding.controller = null
+				if (!detached.has(binding)) binding.controller = null
+				connections.set(binding, (connections.get(binding) ?? 0) + 1)
 				for (const field of binding.fields)
 					if (owners.get(bindingKey(binding, field)) === binding) owners.delete(bindingKey(binding, field))
 				for (const [physical, owner] of physicalOwners) if (owner.binding === binding) physicalOwners.delete(physical)
@@ -913,46 +984,33 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 			return port.get(readContext([...bindings].flatMap((binding) => binding.fields)))
 		},
 		pull(external) {
-			if (disposed) return
-			for (const binding of bindings) {
-				if (
-					(binding.restoreOptions.externalChanges ?? options.externalChanges ?? 'apply') === 'ignore' ||
-					barriers.some((barrier) => isWithinScope(binding.fields[0]?.address?.store.path ?? [], barrier.path))
-				)
-					continue
-				processRead(
-					binding,
-					external,
-					true,
-					new Map([...binding.records.values()].map((record) => [record, record.revision])),
-				)
-			}
+			if (!disposed) applyExternal(external, captureExternal())
 		},
 		pullSource() {
+			if (disposed) return
 			const generation = ++externalGeneration
-			const epoch = revision
+			const captured = captureExternal()
+			const valid = (): boolean => !disposed && generation === externalGeneration
+			const fail = (error: unknown): void => {
+				if (!valid()) return
+				const fields = [...captured].flatMap(([binding, snapshot]) =>
+					externalCurrent(binding, snapshot)
+						? [...binding.records]
+								.filter(([, record]) => record.revision === snapshot.records.get(record))
+								.map(([field]) => field)
+						: [],
+				)
+				if (fields.length) report(error, 'read', fields)
+			}
 			try {
 				const result = api.snapshot()
 				if (result instanceof Promise)
-					void result.then(
-						(values) => {
-							if (!disposed && generation === externalGeneration && epoch === revision) api.pull(values)
-						},
-						(error: unknown) => {
-							report(
-								error,
-								'read',
-								[...bindings].flatMap((binding) => binding.fields),
-							)
-						},
-					)
-				else api.pull(result)
+					void result.then((values) => {
+						if (valid()) applyExternal(values, captured)
+					}, fail)
+				else if (valid()) applyExternal(result, captured)
 			} catch (error) {
-				report(
-					error,
-					'read',
-					[...bindings].flatMap((binding) => binding.fields),
-				)
+				fail(error)
 			}
 		},
 		runWithMeta(meta, mutate) {
@@ -1020,6 +1078,7 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 		},
 		restore,
 		reset(binding, fields) {
+			if (disposed) return Promise.reject(new Error('[ez-kit/store-persist] Engine disposed'))
 			for (const path of fields ?? [])
 				if (!binding.fields.some((field) => JSON.stringify(path) === JSON.stringify(field.path)))
 					return Promise.reject(new Error(`[ez-kit/store-persist] Unknown reset field: ${JSON.stringify(path)}`))
@@ -1031,6 +1090,7 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 			return enqueue(new Map(entries.map((entry) => [entry.key, entry])), {}).promise
 		},
 		resetScope(path) {
+			if (disposed) return Promise.reject(new Error('[ez-kit/store-persist] Engine disposed'))
 			if (!port.removeScope)
 				return Promise.reject(new Error('[ez-kit/store-persist] Source does not support full scope deletion'))
 			// A new full delete also retries failed subtrees covered by this scope.
@@ -1046,7 +1106,6 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 				}
 			}
 			revision++
-			externalGeneration++
 			const barrier: Barrier = { path: [...path], pending: true, failed: false, entries: new Map() }
 			barriers.push(barrier)
 			const entries: Entry[] = []

@@ -324,6 +324,12 @@ for the lifetime of their instances. Full scope deletion requires persistent enu
 There is one public contract, without a mode switch or a parallel legacy engine.
 Rationale: [ADR 0028](openspec/decisions/0028-scoped-state-persistence.md).
 
+Compatible cold React owners of one cached address share a weak render candidate before descendant
+mount effects. Compatibility requires the same defaultValue reference and service registry; conflicting cold initialization is diagnosed at commit. Only committed observers establish
+retained cache/plugin ownership. Render-scoped navigation changes initialization context separately
+from the stable persistence engine registry, so abandoned URL seeds cannot own the next location.
+Rationale: [ADR 0030](openspec/decisions/0030-cached-render-candidate-ownership.md).
+
 The user explicitly authorized a one-time breaking minor release for scoped-state-persistence,
 including removal of zodParam/validator subpaths, scoped storage addressing and the changed ambient
 external-change default. Each affected store package receives its own minor changeset with BREAKING

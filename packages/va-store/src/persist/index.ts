@@ -129,6 +129,8 @@ export type {
 	PersistStatus,
 	PersistRestoreOptions,
 	RestoreOptions,
+	RestoreCallOptions,
+	PersistWriteOptions,
 	RestoreResult,
 	RestoreState,
 	ReadCtx,

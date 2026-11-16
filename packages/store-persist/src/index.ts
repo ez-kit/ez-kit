@@ -83,6 +83,7 @@ export type {
 	MetaMerge,
 	Parser,
 	PersistOptions,
+	PersistWriteOptions,
 	SourcePort,
 	SyncSourcePort,
 } from './types'
@@ -93,6 +94,7 @@ export type {
 	PersistStatus,
 	PersistRestoreOptions,
 	RestoreOptions,
+	RestoreCallOptions,
 	RestoreResult,
 	RestoreState,
 	ReadCtx,

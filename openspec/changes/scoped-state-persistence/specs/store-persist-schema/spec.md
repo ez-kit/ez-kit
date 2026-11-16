@@ -159,3 +159,13 @@ Public field helpers MUST accept an unknown-output decoder with a validator retu
 
 - **WHEN** localStorageField or urlField combines paramJson with schema.validate returning Layout
 - **THEN** the Layout field declaration typechecks without casts, and an incompatible validator remains rejected
+
+### Requirement: Authoritative absence releases obsolete future protection
+
+An authoritative current read proving that a previously future-version record is absent MUST release
+its obsolete in-memory write block. Normal adapter-side version guards MUST still protect later races.
+
+#### Scenario: Another client removes a future-version record
+
+- **WHEN** an allowed external read confirms deletion of a previously blocked future-version value
+- **THEN** memory returns to default and later ordinary edits can persist without an explicit reset

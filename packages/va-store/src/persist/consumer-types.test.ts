@@ -8,6 +8,8 @@ import { localStorageField, persistLocalStorage } from './storage'
 
 import { paramJson, persistHandle, urlHandle, withPersist } from './index'
 
+import type { PersistOptions, PersistWriteOptions, RestoreCallOptions } from './index'
+
 const json = paramJson<unknown>()
 const schema = { validate: (value: unknown) => z.object({ width: z.coerce.number() }).parse(value) }
 
@@ -20,10 +22,18 @@ function consumerTypes() {
 			getState: () => 'active',
 		}),
 		withPersist({
+			throttleMs: 100,
+			clearOnDefault: true,
+			write: { sources: { browser: { throttleMs: 0, clearOnDefault: false } } },
+			restore: { timeoutMs: 20, sources: { browser: { timeoutMs: null, externalChanges: 'apply' } } },
 			fields: (field) => [field((s) => s.layout, localStorageField({ source: 'browser', parser: json, schema }))],
 		}),
 	)
 	void persistHandle(store, 'browser').reset({ fields: [['layout'], ['items', '0', 'width'], ['optional', 'width']] })
+	void persistHandle(store, 'browser').restore({ timeoutMs: null })
+	void store.$persist.restore({ timeoutMs: 30 })
+	// @ts-expect-error External changes are a lifecycle policy, not an option for one restore call.
+	void store.$persist.restore({ externalChanges: 'apply' })
 	void store.$persist.reset({ fields: [['layout', 'width']] })
 	void urlHandle(store).reset({ fields: [['layout']] })
 	// @ts-expect-error A business method named getState is not persisted state.
@@ -46,3 +56,10 @@ describe('public Valtio persistence types', () => {
 		})
 	})
 })
+
+// Public policy types remain available through each binding's own import path.
+function policyTypes(write: PersistWriteOptions, restore: RestoreCallOptions) {
+	const options: PersistOptions = { write: { sources: { browser: write } }, restore }
+	return options
+}
+void policyTypes

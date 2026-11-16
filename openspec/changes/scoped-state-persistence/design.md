@@ -224,8 +224,8 @@ Actual reading starts from connection lifecycle, not consumer code. SSR performs
 URL stays synchronously seedable. Optional pure synchronous `StorePlugin.seedRender` runs during
 server/client render; observers and ambient reads stay in setup after commit. React cache defers
 setup until addObserver, while imperative cache retains immediate setup by default.
-The library imposes no timeoutMs default; a dashboard chooses roughly 2000 ms. A timeout must be
-finite and nonnegative; 0 ends async waiting immediately.
+The library imposes no timeoutMs default; a dashboard chooses roughly 2000 ms. A numeric timeout must be
+finite and nonnegative; 0 ends async waiting immediately. Explicit null disables a shared deadline.
 
 One initial source-binding operation uses one read. The instance retains its Promise/results.
 StrictMode reconnect may join the same still-current instance operation, but disconnected
@@ -423,3 +423,44 @@ A pending restore keeps its original deadline; terminal explicit retries use the
 default unless their own timeout is supplied. Unknown override names are configuration errors before
 I/O, while registered sources unused by a particular store are allowed. Cache hits retain their
 committed instance lifecycle and effective policy.
+
+## Second audit refinements approved on 2026-11-16
+
+The user approved all reproduced second-audit correctness fixes, source-specific write policies and
+explicit unlimited restoration. IndexedDB cross-tab notifications remain under discussion; its
+optional subscribe capability is not added in this change.
+
+- Capture defaults and assign addresses for all source bindings before any render seed or setup read.
+  Source setup rolls back successful connections on later failure. Engine connection preflights all
+  addresses/capabilities before acquiring ownership.
+- Detached handles must await/retry retained dirty writes or reject disconnected access, never report
+  false durability. Disposed reset and resetScope reject promptly. Authoritative absence releases stale
+  future-version protection while adapter checks still guard subsequent races.
+- External async reads capture binding generations and per-record revisions. Editing one record must
+  not discard an unrelated clean record; obsolete responses must not cross reset/disconnect boundaries.
+- Cached concurrent owners must use the same committed instance before descendant mount effects.
+  Render-only candidates must still leave no retained reservation, ambient read or subscription.
+- URL query commits preserve the current fragment. Navigation identity distinguishes own acknowledgements
+  from external PUSH/REPLACE as well as POP, including externally chosen pending targets.
+- Existing root throttleMs and clearOnDefault remain shared write defaults. Optional write.sources maps
+  effective aliases to PersistWriteOptions overrides. Unknown aliases fail before any source I/O;
+  unused registered sources remain valid. No new source fan-out, mode or fallback is introduced.
+- RestoreOptions.timeoutMs accepts null as explicit unlimited waiting, including source overrides and
+  explicit retries. Undefined inherits. A pending join cannot change its existing deadline.
+  RestoreCallOptions contains only timeoutMs; externalChanges remains a lifecycle/source policy rather
+  than an accepted-but-ignored option on handle.restore.
+
+### Compatible cold cache ownership
+
+Cold same-address React owners share only candidates with identical defaultValue reference and
+ServiceRegistry identity. Omitted defaults use a stable empty seed. Candidate
+references are weak and finalization removes abandoned index metadata; only commit establishes
+retained cache/plugin ownership. Conflicting cold initialization is invalid and diagnosed at commit,
+without a promise that React suppresses all effects after a commit-phase error. Existing committed
+instances continue to win ordinary cache hits.
+
+Render-scoped navigation changes a separate initialization service stamp, not the stable
+PersistEngines identity. This excludes abandoned old-URL candidates from new initialization without
+another source read or ambient render I/O. React Router ownership uses its documented navigation
+state; the reserved metadata key is documented. Next lacks a public navigation ownership token, so
+same-path external navigation identical to an outstanding own target remains explicitly ambiguous.

@@ -26,9 +26,13 @@ export type PersistSchema<T = unknown> = {
 }
 
 export type RestoreOptions = {
-	timeoutMs?: number
+	/** Undefined inherits the shared timeout; null explicitly waits without a deadline. */
+	timeoutMs?: number | null
 	externalChanges?: 'apply' | 'ignore'
 }
+
+/** Options for one explicit restore call; external changes remain a source lifecycle policy. */
+export type RestoreCallOptions = Pick<RestoreOptions, 'timeoutMs'>
 
 /** Shared restore defaults with overrides keyed by the effective registered source name. */
 export type PersistRestoreOptions = RestoreOptions & {
@@ -193,10 +197,15 @@ export type SyncSourcePort = {
 export type MetaMerge = (prev: unknown, next: unknown) => unknown
 
 /** Global persist options shared by every source. */
-export type PersistOptions = {
+export type PersistWriteOptions = {
 	/** Throttle window (ms) for commits. Proxy reads stay instant. Defaults to `0`. */
 	throttleMs?: number
 	/** Omit a key when its value equals the field default. Defaults to `true`. */
 	clearOnDefault?: boolean
+}
+
+/** Shared defaults with write and restore overrides keyed by effective registered source aliases. */
+export type PersistOptions = PersistWriteOptions & {
+	write?: { sources?: Readonly<Record<string, PersistWriteOptions>> }
 	restore?: PersistRestoreOptions
 }

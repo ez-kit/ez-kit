@@ -67,7 +67,7 @@
 		},
 		{
 			"path": "dist/cache/index.js",
-			"limit": "2650 B"
+			"limit": "2900 B"
 		},
 		{
 			"path": "dist/history/index.js",

@@ -104,3 +104,13 @@ operations, including staged container rewrites; source errors retain independen
 Custom adapters that stage container migration implement optional `rewriteContainer(values)`;
 public mutation metadata never authorizes whole-container replacement. Built-in IndexedDB adapters
 provision multiple object stores within one database and cooperate with versionchange upgrades.
+
+Existing throttleMs/clearOnDefault are shared write defaults. Override individual sources with
+`write: { sources: { draftsApi: { throttleMs: 500, clearOnDefault: false } } }`; missing members
+inherit, and unknown source aliases fail before I/O. Set `restore.sources.draftsApi.timeoutMs` to
+null for unlimited waiting despite a finite shared timeout. `handle.restore` uses timeout-only
+RestoreCallOptions; externalChanges remains in the lifecycle RestoreOptions.
+
+All bindings capture defaults before any source restores. Retained handles cannot acknowledge
+unsaved detached work; disposed reset operations reject promptly. The IndexedDB adapter has no
+automatic cross-tab notifications: use explicit restore to read a foreign write.

@@ -23,6 +23,9 @@ type StoreHandle = {
 
 // State paths are checked for plain proxies and complete structural store handles.
 function consumerTypes(proxy: State & PersistHandles<State>, store: StoreHandle) {
+	void persistHandle(proxy).restore({ timeoutMs: null })
+	// @ts-expect-error Per-call restoration does not silently accept lifecycle policies.
+	void persistHandle(proxy).restore({ externalChanges: 'apply' })
 	void persistHandle(proxy).reset({ fields: [['layout'], ['layout', 'width'], ['columns'], ['date']] })
 	void persistHandle(store).reset({ fields: [['visible'], ['items', '0', 'width'], ['optional', 'width']] })
 	void proxy.$persist.reset({ fields: [['layout', 'width']] })

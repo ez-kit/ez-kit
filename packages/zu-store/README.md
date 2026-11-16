@@ -216,3 +216,8 @@ Persistence restore options accept a source map for independent policies while r
 `restore: { timeoutMs: 2000, sources: { draftsApi: { timeoutMs: 10000 } } }`. Source-specific helpers
 accept aliases such as `source: 'browser'`; explicit handles/reset paths diagnose unknown selections.
 Each binding owns its throttle window, while one acknowledged queue still serializes each source.
+
+Write defaults remain throttleMs/clearOnDefault; write.sources overrides them per effective source
+alias. Use restore.sources[alias].timeoutMs = null to disable an inherited deadline. Explicit
+handle.restore accepts RestoreCallOptions (timeoutMs only); configure externalChanges on the
+source lifecycle. IndexedDB cross-tab updates still require explicit restore.

@@ -2,6 +2,7 @@ import {
 	createContext,
 	useContext,
 	useEffect,
+	useInsertionEffect,
 	useMemo,
 	useRef,
 	useState,
@@ -26,6 +27,7 @@ import type { StoreId } from '../store-id'
 const IS_DEV = process.env.NODE_ENV !== 'production'
 const EMPTY_SCOPE: readonly string[] = []
 const EMPTY_RECORDS: readonly CacheRecord[] = []
+const EMPTY_DEFAULTS = Object.freeze({})
 
 /** Default `useFromCache` placeholder, for managers whose read hook accepts any object. */
 const EMPTY_FALLBACK: object = {}
@@ -237,6 +239,24 @@ export function createCacheReact<TInstance extends object>(
 		const StoreContext = createContext<TInstance | null>(null)
 		const MISSING_GROUP_PROVIDER = `${PACKAGE_TAG} Missing <${name}.Provider>`
 
+		type RenderCandidate = {
+			instance: TInstance
+			defaultValue: TDefaultValue
+			services: PluginContext['services']
+		}
+		type CandidateReferences = Map<string, Set<WeakRef<RenderCandidate>>>
+		const candidatesByCache = new WeakMap<InstanceCache, CandidateReferences>()
+		const committingByCache = new WeakMap<InstanceCache, Map<string, { instance: TInstance; owners: number }>>()
+		const abandonedCandidates = new FinalizationRegistry<{
+			candidates: CandidateReferences
+			key: string
+			reference: WeakRef<RenderCandidate>
+		}>(({ candidates, key, reference }) => {
+			const entries = candidates.get(key)
+			entries?.delete(reference)
+			if (entries?.size === 0) candidates.delete(key)
+		})
+
 		function useGroupInstance(): TInstance {
 			const instance = useContext(StoreContext)
 			if (!instance) throw new Error(MISSING_GROUP_PROVIDER)
@@ -265,31 +285,76 @@ export function createCacheReact<TInstance extends object>(
 
 			// Lazy: resolve the instance once per fresh mount. On the server there is no shared cache —
 			// build an ephemeral instance per render and skip plugin/observer wiring.
-			const [candidate] = useState<TInstance>(() => {
+			const key = serializeStoreId(storeId)
+			const [candidate] = useState<RenderCandidate>(() => {
 				if (typeof window === 'undefined') {
 					const ephemeral = factory({ defaultValue })
 					for (const plugin of capabilitiesOf(ephemeral))
 						plugin.seedRender?.(ephemeral, { services, id: storeId, isServer: true })
-					return ephemeral
+					return { instance: ephemeral, defaultValue, services }
+				}
+				let candidates = candidatesByCache.get(cache)
+				if (!candidates) {
+					candidates = new Map()
+					candidatesByCache.set(cache, candidates)
+				}
+				let references = candidates.get(key)
+				if (!references) {
+					references = new Set()
+					candidates.set(key, references)
+				}
+				let shared: RenderCandidate | undefined
+				for (const reference of references) {
+					const value = reference.deref()
+					if (!value) references.delete(reference)
+					else if (value.defaultValue === defaultValue && value.services === services) shared = value
 				}
 				const context: PluginContext = { services, id: storeId, isServer: false }
-				const instance = cache.getOrCreate(storeId, () => factory({ defaultValue }), {
+				const instance = cache.getOrCreate(storeId, () => shared?.instance ?? factory({ defaultValue }), {
 					gcTime,
 					context,
 					deferSetup: true,
 				})
 				for (const plugin of capabilitiesOf(instance)) plugin.seedRender?.(instance, context)
-				return instance
+				const candidate = shared?.instance === instance ? shared : { instance, defaultValue, services }
+				if (shared?.instance !== instance) {
+					const reference = new WeakRef(candidate)
+					references.add(reference)
+					abandonedCandidates.register(candidate, { candidates, key, reference }, candidate)
+				}
+				return candidate
 			})
 			// A concurrent sibling may commit this address before our candidate does. Subscribe to
 			// committed membership so every owner converges on the same canonical instance.
 			const instance = useSyncExternalStore(
 				cache.subscribe,
-				() => (cache.getInstance(storeId) as TInstance | undefined) ?? candidate,
-				() => candidate,
+				() => (cache.getInstance(storeId) as TInstance | undefined) ?? candidate.instance,
+				() => candidate.instance,
 			)
 			const context: PluginContext = { services, id: storeId, isServer: typeof window === 'undefined' }
 			for (const plugin of capabilitiesOf(instance)) plugin.validateContext?.(instance, context)
+
+			// Compatible cold owners already share their render candidate. This commit-only check
+			// diagnoses conflicting initialization without setup, subscriptions or React notifications.
+			useInsertionEffect(() => {
+				let committing = committingByCache.get(cache)
+				if (!committing) {
+					committing = new Map()
+					committingByCache.set(cache, committing)
+				}
+				const existing = committing.get(key)
+				if (existing && existing.instance !== instance)
+					throw new Error(`${PACKAGE_TAG} Concurrent <${name}.Provider> owners must share defaultValue and services`)
+				const owner = existing ?? { instance, owners: 0 }
+				owner.owners += 1
+				committing.set(key, owner)
+				candidatesByCache.get(cache)?.delete(key)
+				abandonedCandidates.unregister(candidate)
+				return () => {
+					owner.owners -= 1
+					if (owner.owners === 0 && committing.get(key) === owner) committing.delete(key)
+				}
+			}, [cache, candidate, instance, key])
 
 			useEffect(() => {
 				const observed = cache.addObserver(storeId, { instance, gcTime, context })
@@ -309,7 +374,7 @@ export function createCacheReact<TInstance extends object>(
 			const services = useServices()
 			const resolvedPath = resolvePath(inheritedScope, path)
 			const resolvedGcTime = resolveGcTime(alwaysCache, gcTime, groupGcTime, cacheGcTime)
-			const seedDefaultValue: TDefaultValue = providedDefaults ?? ({} as TDefaultValue)
+			const seedDefaultValue: TDefaultValue = providedDefaults ?? (EMPTY_DEFAULTS as TDefaultValue)
 			const storeId: StoreId = { path: resolvedPath, name, id }
 			const remountKey = serializeStoreId(storeId)
 			return (

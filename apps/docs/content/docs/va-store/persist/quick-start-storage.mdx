@@ -62,7 +62,7 @@ function PrefControls() {
 }
 ```
 
-`useHydrated()` is a per-store aggregate: it flips to `true` once **every** mounted source has applied its first read. For a URL-only store it is effectively immediate; for async sources (IndexedDB) it waits for the resolve.
+`useHydrated()` is a per-store aggregate: it becomes `true` when every initial source finishes with ready, error or timeout. It reports the end of waiting, not successful restoration. Use `usePersistStatus()` to distinguish those outcomes. Async sources such as IndexedDB keep it false while pending.
 
 ## Where to go next
 

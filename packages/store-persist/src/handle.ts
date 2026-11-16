@@ -2,7 +2,7 @@ import { PACKAGE_TAG } from './package-tag'
 import { URL_SOURCE } from './url/adapter'
 
 import type { PersistBinding } from './binding'
-import type { PersistStatus, RestoreOptions, RestoreResult } from './types'
+import type { PersistStatus, RestoreCallOptions, RestoreResult } from './types'
 import type { UrlMeta } from './url/adapter'
 
 export const URL_HANDLE = '$url'
@@ -50,7 +50,7 @@ export type PersistHandle<TState = object> = {
 	runWithMeta(meta: unknown, mutate: () => void): void
 	getStatus(): PersistStatus
 	subscribe(listener: () => void): () => void
-	restore(options?: RestoreOptions): Promise<RestoreResult>
+	restore(options?: RestoreCallOptions): Promise<RestoreResult>
 	flush(): Promise<void>
 	reset(options?: { fields?: readonly PersistFieldPath<TState>[] }): Promise<void>
 }
@@ -119,7 +119,10 @@ function handleFor(store: object, selector: Selector): PersistHandle {
 		},
 		flush() {
 			const binding = entry()?.binding
-			return binding?.controller?.flush?.(binding) ?? Promise.resolve()
+			const controller = binding?.controller
+			if (controller?.flush && binding) return controller.flush(binding)
+			if (binding) return Promise.reject(new Error(`${PACKAGE_TAG} Cannot flush disconnected persistence`))
+			return Promise.resolve()
 		},
 		reset(options) {
 			const binding = entry()?.binding

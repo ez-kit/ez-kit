@@ -9,6 +9,7 @@ import type {
 	PersistOptions,
 	PersistRecordStatus,
 	PersistStatus,
+	RestoreCallOptions,
 	RestoreOptions,
 	RestoreResult,
 } from './types'
@@ -25,7 +26,7 @@ export enum ApplyMode {
 /** Minimal engine capability a per-source control handle needs (avoids an import cycle). */
 export type MetaRunner = {
 	runWithMeta(metaPatch: unknown, mutate: () => void): void
-	restore?(binding: PersistBinding, options?: RestoreOptions): Promise<RestoreResult>
+	restore?(binding: PersistBinding, options?: RestoreCallOptions): Promise<RestoreResult>
 	flush?(binding?: PersistBinding): Promise<void>
 	reset?(binding: PersistBinding, fields?: readonly (readonly string[])[]): Promise<void>
 }

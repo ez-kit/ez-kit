@@ -215,3 +215,31 @@ namespace edits are not automatically converted backwards.
 Controlled dashboard components do not attach their own persist. The application can persist its
 controlled state explicitly. Loader/fallback rendering, panel resize and component props remain
 consumer responsibilities.
+
+## Second-audit source policies and durability
+
+Root throttleMs/clearOnDefault remain shared defaults. Optional write.sources overrides either
+member by effective source alias, so one store can update URL immediately and throttle remote
+writes for 500 ms. Unknown override aliases fail before any source reads, while unused registered
+sources remain valid. This changes scheduling, not source selection or fan-out.
+
+Set timeoutMs to null to disable an inherited deadline for a source or explicit terminal retry.
+Omitted timeoutMs inherits and a pending restore still joins its original deadline. Explicit
+handle.restore accepts the new timeout-only RestoreCallOptions; externalChanges is configured on
+withPersist restore or restore.sources, not through an accepted-but-ignored retry argument.
+
+Defaults for all source bindings are captured before any source seeds/restores. Failed multi-source
+connection rolls back successful connections. Retained handles never report flush durability just
+because their view disconnected, and reset calls on disposed engines reject promptly. An external
+async read applies still-current records independently; unrelated edits do not discard the entire
+snapshot. Authoritative absence clears obsolete future-version protection without removing normal
+adapter version checks against later races.
+
+Built-in IndexedDB still requires explicit handle.restore to observe another tab's writes. Its
+externalChanges policy does not itself supply a notification transport; automatic cross-tab
+notifications are outside the agreed scope.
+
+For simultaneous cold cached Providers at one address, reuse the same defaultValue object and
+services registry. Conflicting initializers are diagnosed at commit rather than silently losing
+one owner's mount-effect changes. Different gcTime props remain supported: first committed
+activation sets the entry lifetime. Warm cache hits still reuse their committed instance.

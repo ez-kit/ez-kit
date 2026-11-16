@@ -173,3 +173,72 @@ Multiple URL patches MUST preserve previous unacknowledged edits while the route
 
 - **WHEN** q becomes boots then page becomes 2 before the first navigation reaches the rendered router snapshot
 - **THEN** the final URL retains both q=boots and page=2 with foreign parameters preserved
+
+### Requirement: Source defaults precede every restore or seed
+
+All participating source bindings MUST capture original defaults before any source seeds or restores
+the store. An earlier URL seed MUST NOT become a later source's default or change first-present-wins.
+
+#### Scenario: URL and browser storage declare one shared field
+
+- **WHEN** URL seeds boots, the original default is empty, and browser storage contains coat
+- **THEN** URL boots retains precedence and browser-source reset restores the original empty default
+
+### Requirement: External read authority is record-specific
+
+Async external reads MUST capture connection/generation and record revision validity at read start.
+A local edit to one record MUST NOT discard another clean record's update. Reset/disconnect/disposal
+and newer external reads MUST still invalidate obsolete responses or error reports.
+
+#### Scenario: A changes while an external B value loads
+
+- **WHEN** A is edited during an async external snapshot containing a new value for untouched B
+- **THEN** A remains locally edited while B accepts its still-current external update
+
+### Requirement: Unlimited waiting is an explicit override
+
+TimeoutMs MUST accept null to disable an inherited deadline. Undefined MUST inherit, numeric values
+MUST remain finite and nonnegative, and joining a pending restore MUST preserve its original deadline.
+Per-call RestoreCallOptions MUST contain timeoutMs only; externalChanges remains a lifecycle policy.
+
+#### Scenario: Draft loading disables the shared two-second deadline
+
+- **WHEN** shared timeoutMs is 2000 and draftsApi overrides timeoutMs to null
+- **THEN** draftsApi remains pending beyond two seconds and can apply its current eventual response
+
+#### Scenario: An explicit retry disables its source deadline
+
+- **WHEN** a terminal source operation is retried with timeoutMs null
+- **THEN** that new operation has no finite timeout while pending joins remain unchanged
+
+#### Scenario: Retry options attempt to change external policy
+
+- **WHEN** consumer code passes externalChanges to handle.restore
+- **THEN** public types reject the unsupported per-call option instead of silently ignoring it
+
+### Requirement: Concurrent cached owners preserve mount-time identity
+
+Compatible committed owners of the same cached address MUST receive the canonical store before
+mount effects can retain or mutate a discarded candidate. This MUST NOT allow abandoned renders to
+establish retained defaults, service context or ambient I/O.
+
+#### Scenario: Two cold owners initialize the same cached store
+
+- **WHEN** same-address owners apply increments one and ten from their initial child mount effects
+- **THEN** both effects target the canonical store and its final count is eleven
+
+### Requirement: URL navigation ownership includes external writes
+
+Routing adapters MUST distinguish external PUSH/REPLACE navigation from their own pending commits
+where their public router APIs expose ownership. External navigation to an older pending target MUST
+cancel newer optimistic intent rather than resurrect it. Query-only writes MUST preserve fragments.
+
+#### Scenario: Application navigation selects an older pending query
+
+- **WHEN** React Router has pending older/newer commits and application navigation selects older
+- **THEN** reads and subsequent unrelated patches reflect the external older location
+
+#### Scenario: Query changes while an anchor exists
+
+- **WHEN** a persisted query field changes on a URL ending in hash details
+- **THEN** the existing fragment remains in both Next and React Router query-only commits

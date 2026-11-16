@@ -76,3 +76,15 @@ urlHandle(store).runWithMeta({ history: UrlHistory.Push }, () => {
 ## SSR
 
 A `createContextStore` store wrapped in `withPersist` is request-scoped: each `Provider` mount creates its own store, so concurrent requests never share state. The URL source seeds **synchronously** in render, so server HTML reflects the incoming query string and the first client render matches it — no flash, no hydration mismatch. (Storage sources defer to mount; see the [storage deep dive](./deep-dive-storage).)
+
+## Navigation acknowledgement boundaries
+
+Query-only writes preserve the existing URL fragment as well as unrelated query parameters.
+React Router distinguishes its own commits from application PUSH/REPLACE and POP navigation using
+the reserved `@ez-kit/store-persist:url-navigation` field in navigation state. Application object-state
+fields are retained; the reserved field is not an application state key.
+
+Next's documented router hooks expose pathname/search snapshots but no navigation ownership token.
+POP and pathname changes explicitly invalidate pending intent. An external same-path navigation
+whose query exactly matches an outstanding own target can be indistinguishable from its acknowledgement;
+the adapter does not patch router internals or the global history API to infer a missing signal.

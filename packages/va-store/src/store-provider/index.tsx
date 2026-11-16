@@ -21,11 +21,11 @@ export type StoreProviderProps = {
 	/** A cache instance (from `createStoreCache()`) whose `Provider` keeps cached stores alive across mounts. */
 	cache?: StoreCache
 	/**
-	 * Forwarded to the persist layer's `onError`: an I/O failure from an **async** source — a rejected
-	 * `get()` or `set()` on its `SourcePort` — with the `source` id that produced it. Named for the
+	 * Forwarded to the persist layer's `onError`: read/write/schema failures include the source,
+	 * operation and affected address or scope. Named for the
 	 * layer because this provider mounts two; `PersistProvider` takes the same handler as `onError`.
-	 * Synchronous sources (URL, Web Storage) never reach it. Unset, an async rejection is swallowed and
-	 * the store stays the source of truth.
+	 * Synchronous throws and async rejections are reported with operation/address context. Automatic
+	 * failures are handled even when unset; awaited flush/reset still reject and memory stays usable.
 	 */
 	onPersistError?: (error: unknown, context: PersistErrorContext) => void
 	children: ReactNode

@@ -28,3 +28,12 @@ instances only on commit. Source-specific restore overrides, alias-aware typed h
 control selectors cover multiple backend policies. Custom staged container migrations use the separate
 optional rewriteContainer operation; opaque application metadata cannot authorize replacement.
 IndexedDB supports provisioning multiple object stores in an existing database.
+
+Harden multi-source defaults and connection rollback, detached flush durability, per-record external
+read validity, disposed reset handling and router fragment/navigation ownership. Add source-specific
+write overrides and explicit null restore deadlines; split timeout-only RestoreCallOptions from
+lifecycle RestoreOptions. IndexedDB cross-tab refresh remains explicit.
+
+Simultaneous cold cached Providers for one address share initialization only when defaultValue
+reference and services match; conflicting initializers now receive a commit-time diagnostic.
+Different gcTime props remain supported and the first committed observer owns birth configuration.

@@ -76,7 +76,7 @@
 	"size-limit": [
 		{
 			"path": "dist/index.js",
-			"limit": "11950 B",
+			"limit": "12450 B",
 			"ignore": [
 				"@ez-kit/store-core"
 			]
@@ -97,14 +97,14 @@
 		},
 		{
 			"path": "dist/url/react-router.js",
-			"limit": "1175 B",
+			"limit": "1400 B",
 			"ignore": [
 				"@ez-kit/store-core"
 			]
 		},
 		{
 			"path": "dist/url/next.js",
-			"limit": "1125 B",
+			"limit": "1250 B",
 			"ignore": [
 				"@ez-kit/store-core"
 			]
@@ -118,7 +118,7 @@
 		},
 		{
 			"path": "dist/internals.js",
-			"limit": "10150 B",
+			"limit": "10600 B",
 			"ignore": [
 				"@ez-kit/store-core"
 			]

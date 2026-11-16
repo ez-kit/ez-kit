@@ -151,3 +151,19 @@ Storage/URL accessor helpers and decorators MUST accept explicit source aliases 
 
 - **WHEN** local storage is registered as browser and a storage helper selects source browser
 - **THEN** its fields resolve through browser without requiring a hand-written replacement descriptor
+
+### Requirement: Failed connection does not retain ownership or writers
+
+Engine connection MUST preflight all addressed fields/capabilities before acquiring ownership.
+Multi-source plugin setup MUST roll back earlier successful connections when a later source fails.
+Failed setup MUST leave no phantom address owner or store subscription capable of ghost writes.
+
+#### Scenario: A later field collides during connection
+
+- **WHEN** a new binding's first field is free but its second field collides
+- **THEN** failure leaves the first address available for a subsequent valid binding
+
+#### Scenario: A later source rejects setup
+
+- **WHEN** source A connected but source B fails setup
+- **THEN** changing the failed store cannot continue writing through A's orphaned subscription

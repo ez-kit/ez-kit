@@ -205,3 +205,40 @@ Opaque application commit metadata MUST NOT change a patch into whole-container 
 
 - **WHEN** runWithMeta supplies containerRewrite true during a normal field edit
 - **THEN** untouched records remain and ordinary future-version guards still apply
+
+### Requirement: Detached flush retains durability semantics
+
+A control handle MUST NOT report successful flush merely because its binding disconnected while
+unacknowledged writes remain. It MUST wait/retry applicable retained work or reject unavailable access.
+Disposed reset/resetScope calls MUST reject promptly without changing memory or leaving pending jobs.
+
+#### Scenario: An offline save outlives the view
+
+- **WHEN** a view edits a field, disconnects, and its retained write fails before handle.flush
+- **THEN** flush does not report success without an acknowledgement of the applicable edit
+
+#### Scenario: Scope reset is called from a stale callback
+
+- **WHEN** a retained persistence service is used after its engine was disposed
+- **THEN** resetScope reports rejection rather than a Promise that never settles
+
+### Requirement: Source write overrides inherit shared defaults
+
+Write.sources MUST override throttleMs/clearOnDefault per effective source alias within one
+withPersist declaration. Root options remain shared defaults. Resolution MUST precede source I/O,
+reject unknown aliases and preserve caller configuration. Registered unused aliases remain valid.
+
+#### Scenario: URL is immediate while remote draft writes are throttled
+
+- **WHEN** one store uses root throttleMs zero and its remote source overrides throttleMs to 500
+- **THEN** URL changes are not held for the remote window and remote edits coalesce independently
+
+#### Scenario: One source keeps explicit default values
+
+- **WHEN** root clearOnDefault is true and a source overrides it to false
+- **THEN** that source persists an edited default value while other sources retain ordinary removal
+
+#### Scenario: A write override alias is unknown
+
+- **WHEN** write.sources names a source absent from the effective registry
+- **THEN** setup fails before reading any source or partially applying state

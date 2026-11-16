@@ -73,6 +73,16 @@
 - [x] 8.7 Add source-keyed initial timeout/external-change overrides with inherited shared defaults, and update helpers, decorators, custom-adapter, cache, flush/reset and migration docs plus the scenario evidence matrix.
 - [x] 8.8 Run focused regressions and affected verification, then the full sequential gate and browser flow; repeat strict OpenSpec validation, record limits, and update PR 299 with the fixes.
 
+## 9. Second audit fixes approved on 2026-11-16
+
+- [x] 9.1 Preserve detached flush durability, clear obsolete future-version blocks on authoritative absence, guard async external reads per record, make engine connection atomic, and reject resets after disposal; add regressions.
+- [x] 9.2 Capture every source binding default before any source seeds/restores, and roll back successful source connections if later setup fails; test shared fields and ghost writers.
+- [x] 9.3 Establish canonical same-address cached identity before descendant mount effects without retaining abandoned renders or performing ambient render I/O; test concurrent owners, Suspense, StrictMode and GC.
+- [x] 9.4 Preserve URL fragments and distinguish external PUSH/REPLACE from pending own acknowledgements in routing adapters; retain intermediate acknowledgements and Back/Forward regressions.
+- [x] 9.5 Add write.sources alias overrides for throttleMs/clearOnDefault, timeoutMs null for unlimited waiting, and timeout-only RestoreCallOptions through public bindings; validate before I/O and test effective aliases, inheritance and public consumer types.
+- [x] 9.6 Update docs, READMEs, migration notes, changeset and scenario evidence for the second audit; explicitly leave IndexedDB cross-tab notifications outside this implementation pending discussion.
+- [x] 9.7 Run affected and full sequential verification, browser flow and strict OpenSpec checks; record outcomes and update PR 299.
+
 ## Workflow follow-up
 
 - After implementation and review, archive this change using the standard OpenSpec workflow. Archiving is not an implementation task and does not automatically release packages.

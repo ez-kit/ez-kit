@@ -29,7 +29,7 @@ The root entry is deliberately free of React, so it stays importable from a serv
 
 **Plugin contract** — `StorePlugin`, `PluginContext`, `PluginCleanup`. A plugin's `setup(instance, ctx)` runs when the store's Provider mounts and its returned cleanup on unmount; `ctx` carries the resolved services, the store's id, and whether it is running on the server.
 
-**Render seeding and cache setup** — a plugin may provide pure synchronous `seedRender` for request-scoped seeding, and `validateContext` to reject changed birth services on cache hits. Neither performs ambient I/O during render. React cache setup waits for observer attachment after commit. A deferred render miss returns an uncached owner-local candidate; `addObserver(id, { instance, gcTime, context })` adopts that candidate or the canonical committed instance using committed services. An abandoned candidate never enters retained cache metadata. Imperative cache creation keeps immediate setup by default.
+**Render seeding and cache setup** — a plugin may provide pure synchronous `seedRender` for request-scoped seeding, and `validateContext` to reject changed birth services on cache hits. Neither performs ambient I/O during render. React cache setup waits for observer attachment after commit. A deferred render miss returns an uncached provisional candidate; the React wrapper weakly shares compatible candidates before descendant effects. `addObserver(id, { instance, gcTime, context })` adopts that candidate or the canonical committed instance using committed services. An abandoned candidate never enters retained cache metadata. Imperative cache creation keeps immediate setup by default.
 
 **Enhancer pipeline** — `pipe(base, ...enhancers)` and the `StoreEnhancer<In, Out>` type every `with*` wrapper returns: the wrappers are curried, so `pipe` applies them left to right in attachment order and each one's options are typed against the state accumulated so far.
 
@@ -40,3 +40,9 @@ The root entry is deliberately free of React, so it stays importable from a serv
 **Instance cache** — `createInstanceCache` plus `createCacheReact`, which turns it into a React surface (`Provider`, `Scope`, `useCache`, `useCacheKeys`, `createCachedStore`) given a single manager-specific injection: `useRead(instance, selector)`. Zustand passes `useStore`, Valtio passes `useSnapshot`; everything else — keying by `(path, id)`, scope inheritance, GC timing, cross-tree reads — is shared. That is why both packages expose the same cache API without duplicating it. `CachedStoreOptions` (`{ name, gcTime? }`) carries no `plugins` field — a capability for a cached store is attached the same way as an uncached one, inside the `factory` passed to `createCachedStore`.
 
 → [Full docs](https://ez-kit-docs.vercel.app/docs)
+
+Compatible cold React owners of the same cached address share a weak render candidate before child
+mount effects. Use the same defaultValue reference and services for simultaneous
+cold owners; conflicting initialization is diagnosed at commit. Weak candidates acquire no retained
+cache lifetime or plugin setup before commit, and changed initialization cannot adopt abandoned
+old defaults/context. Omitted defaults use a stable empty seed.

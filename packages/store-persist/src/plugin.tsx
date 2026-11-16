@@ -10,7 +10,7 @@ import { groupBySource } from './spec'
 import type { FieldsBuilder } from './accessor'
 import type { SourceBinding } from './handle'
 import type { PersistEngines } from './service'
-import type { PersistOptions, PersistRestoreOptions, PersistStatus } from './types'
+import type { PersistOptions, PersistStatus } from './types'
 import type { PluginContext, StorePlugin, StorePort } from '@ez-kit/store-core'
 
 export type PersistPluginOptions<T extends object = object> = PersistOptions & { fields?: FieldsBuilder<T> }
@@ -48,9 +48,15 @@ function resolveSources(
 	entries: SourceBinding[],
 	registry: PersistEngines,
 	context: PluginContext,
-	restore: PersistRestoreOptions = {},
+	options: PersistOptions = {},
 ) {
-	const { sources, ...defaults } = restore
+	const { sources, ...defaults } = options.restore ?? {}
+	const writeSources = options.write?.sources
+	for (const source of Object.keys(writeSources ?? {}))
+		if (!registry.safeGet(source))
+			throw new Error(
+				`[ez-kit/store-persist] Unknown write source "${source}"; available: ${registry.sources().join(', ')}`,
+			)
 	for (const source of Object.keys(sources ?? {}))
 		if (!registry.safeGet(source))
 			throw new Error(
@@ -86,7 +92,17 @@ function resolveSources(
 		})
 	}
 	const connections = [...merged.values()]
-	for (const { entry, source } of connections) entry.binding.restoreOptions = { ...defaults, ...sources?.[source] }
+	for (const { entry, source } of connections) {
+		const override = sources?.[source]
+		const timeoutMs = override?.timeoutMs === undefined ? defaults.timeoutMs : override.timeoutMs
+		const externalChanges = override?.externalChanges ?? defaults.externalChanges
+		entry.binding.restoreOptions = {
+			...(timeoutMs === undefined ? {} : { timeoutMs }),
+			...(externalChanges === undefined ? {} : { externalChanges }),
+		}
+		entry.binding.throttleMs = writeSources?.[source]?.throttleMs ?? options.throttleMs ?? 0
+		entry.binding.clearOnDefault = writeSources?.[source]?.clearOnDefault ?? options.clearOnDefault ?? true
+	}
 	entries.splice(0, entries.length, ...connections.map((connection) => connection.entry))
 	return connections
 }
@@ -105,15 +121,22 @@ export function persist<TStore extends object, TState extends object = object>(
 			const entries = bindPersist(store, port, options)
 			const disconnects: (() => void)[] = []
 			// Resolve everything before connecting anything: bad config cannot produce partial I/O.
-			const connections = resolveSources(entries, registry, context, options.restore)
-			registryByStore.set(store, registry)
-			for (const { entry, source, engine } of connections) {
-				entry.source = source
+			const connections = resolveSources(entries, registry, context, options)
+			// Every source sees the same pristine state, including fields shared with a sync source.
+			for (const { entry } of connections) {
 				captureDefaults(entry.binding)
 				addressBinding(entry.binding, context.id)
-				if (context.isServer) engine.seed(entry.binding)
-				else disconnects.push(engine.connect(entry.binding))
 			}
+			try {
+				for (const { entry, engine } of connections) {
+					if (context.isServer) engine.seed(entry.binding)
+					else disconnects.push(engine.connect(entry.binding))
+				}
+			} catch (error) {
+				for (const disconnect of disconnects.reverse()) disconnect()
+				throw error
+			}
+			registryByStore.set(store, registry)
 			if (entries.length === 0) for (const aggregate of aggregates.get(store)?.values() ?? []) aggregate.notify()
 			return () => {
 				for (const disconnect of disconnects.reverse()) disconnect()
@@ -122,16 +145,12 @@ export function persist<TStore extends object, TState extends object = object>(
 	}
 	plugin.seedRender = (store, context) => {
 		const registry = validateRegistry(store, context)
-		for (const { entry, engine } of resolveSources(
-			bindPersist(store, port, options),
-			registry,
-			context,
-			options.restore,
-		)) {
+		const connections = resolveSources(bindPersist(store, port, options), registry, context, options)
+		for (const { entry } of connections) {
 			captureDefaults(entry.binding)
 			addressBinding(entry.binding, context.id)
-			engine.seed(entry.binding)
 		}
+		for (const { entry, engine } of connections) engine.seed(entry.binding)
 	}
 	return plugin
 }

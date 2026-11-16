@@ -1,4 +1,4 @@
-import { extendServiceRegistry } from '@ez-kit/store-core'
+import { extendServiceRegistry, serviceKey } from '@ez-kit/store-core'
 import { ServicesProvider, useServices } from '@ez-kit/store-core/react'
 import { createContext, useContext, useEffect, useMemo, useRef, type ReactElement, type ReactNode } from 'react'
 
@@ -23,6 +23,8 @@ export type PersistMount = { engine: PersistEngine; seedSync: boolean; identity?
 export type EngineMap = ReadonlyMap<string, PersistMount>
 
 const EnginesContext = createContext<EngineMap | null>(null)
+// Pure navigation context for uncommitted cache candidates; engine lifetime stays unchanged.
+const RENDER_SEED_CONTEXT = serviceKey<string>('store-persist.render-seed-context')
 const physicalOwners = new Map<string, PersistMount>()
 export function usePersistEngines(): EngineMap | null {
 	return useContext(EnginesContext)
@@ -44,6 +46,7 @@ type ChainProps = {
 	index: number
 	mounts: EngineMap
 	defaultSource: string | null
+	seedContext: string
 	report: (error: unknown, context: PersistErrorContext) => void
 	children: ReactNode
 }
@@ -69,8 +72,9 @@ function isRenderScoped(
 function Publish({
 	mounts,
 	defaultSource,
+	seedContext,
 	children,
-}: Pick<ChainProps, 'mounts' | 'defaultSource' | 'children'>): ReactElement {
+}: Pick<ChainProps, 'mounts' | 'defaultSource' | 'seedContext' | 'children'>): ReactElement {
 	const inherited = useServices()
 	const persistence = useMemo(() => {
 		const engines = new Map([...mounts].map(([name, mount]) => [name, mount.engine]))
@@ -79,8 +83,11 @@ function Publish({
 		return createPersistEngines(engines, defaultSource)
 	}, [mounts, defaultSource])
 	const registry = useMemo(() => {
-		return extendServiceRegistry(inherited, [[PERSIST_ENGINES, persistence]])
-	}, [inherited, persistence])
+		return extendServiceRegistry(inherited, [
+			[PERSIST_ENGINES, persistence],
+			[RENDER_SEED_CONTEXT, seedContext],
+		])
+	}, [inherited, persistence, seedContext])
 	return (
 		<EnginesContext.Provider value={mounts}>
 			<ServicesProvider registry={registry}>{children}</ServicesProvider>
@@ -96,6 +103,7 @@ function Chain(props: ChainProps): ReactElement {
 			<Publish
 				mounts={props.mounts}
 				defaultSource={props.defaultSource}
+				seedContext={props.seedContext}
 			>
 				{props.children}
 			</Publish>
@@ -197,6 +205,7 @@ function Mount({
 		<Chain
 			{...props}
 			mounts={mounts}
+			seedContext={ambient ? props.seedContext : JSON.stringify([props.seedContext, entry.name, changeKey])}
 			index={props.index + 1}
 		/>
 	)
@@ -244,6 +253,7 @@ export function PersistProvider({ adapters, defaultSource, onError, children }: 
 			index={0}
 			mounts={inheritedMounts}
 			defaultSource={defaultSource ?? inheritedDefault}
+			seedContext=''
 			report={report}
 		>
 			{children}

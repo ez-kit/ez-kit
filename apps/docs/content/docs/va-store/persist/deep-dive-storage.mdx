@@ -63,6 +63,39 @@ the effective names used by sources overrides. Overrides merge with shared defau
 settings retain existing behavior. Unknown override names fail before reading. Calling a handle's
 restore while it is pending joins that source's existing deadline rather than extending it.
 
+Use `timeoutMs: null` to wait without a deadline for a particular source even when the shared
+configuration is finite. For example, `sources: { draftsApi: { timeoutMs: null } }` overrides a
+shared 2000 ms timeout. Omitting a property inherits its shared value; zero ends async waiting
+immediately. A terminal retry accepts `handle.restore({ timeoutMs: null })`. The per-call
+`RestoreCallOptions` contains only timeoutMs; externalChanges is a lifecycle policy configured
+under withPersist restore rather than a policy change hidden in a retry call.
+
+## Write policy per source
+
+Existing throttleMs and clearOnDefault are shared write defaults. Override either by source alias:
+
+```ts
+withPersist({
+	throttleMs: 0,
+	clearOnDefault: true,
+	write: {
+		sources: {
+			draftsApi: { throttleMs: 500, clearOnDefault: false },
+		},
+	},
+	fields: (field) => [
+		field((state) => state.q, { source: 'url' }),
+		field((state) => state.draft, { source: 'draftsApi' }),
+	],
+})
+```
+
+Here URL edits use the ordinary zero-delay schedule, while draftsApi batches its own edits for
+500 ms and saves an explicit default value. Missing override members inherit the shared values.
+Unknown write.sources aliases fail before any source is read; registered unused names are allowed.
+These settings do not copy one field to another source. Flush explicitly collects the selected
+binding immediately and still waits for acknowledgement.
+
 ## Independent schema versions
 
 ```ts
@@ -125,12 +158,19 @@ writes are dropped, and later user edits follow deletion. Flush waits for its re
 on failed/blocked persistence. Dirty state and current memory survive errors. Flush also waits for applicable container rewrites
 and namespace deletions captured at its call. Repeated reset Promises do not acknowledge deletion
 until the relevant delete succeeds; a failed scope blocks that scope rather than unrelated records.
+A retained handle cannot report successful durability merely because its view disconnected. A call
+to reset/resetScope after engine disposal rejects instead of waiting forever. Defaults for every
+source are captured before any URL seed or ambient restoration, so a shared field's reset does not
+adopt another source's restored value.
 
 ## External changes and errors
 
 Ambient external changes are ignored by default. Set restore.externalChanges to apply explicitly for
 cross-tab UI synchronization. The adapter reports only external storage events, never its own writes.
-URL Back/Forward remains reactive independently of this storage policy.
+URL Back/Forward remains reactive independently of this storage policy. An async external read
+protects edited records independently, so editing one panel does not discard another clean panel's
+update. An authoritative deletion releases an obsolete future-version block; normal adapter-side
+version guards still protect a later concurrent write.
 
 Sync storage failures and async IndexedDB/backend rejections reach onError/onPersistError with source,
 operation and address/addresses or scope. They do not stop the interface. Read failure is distinct from
@@ -145,6 +185,11 @@ dbName: missing object stores are provisioned through schema upgrades without de
 stores. Owned connections close/reopen on versionchange. Other tabs can block an upgrade; close
 competing connections and retry. Adapter version/migrate still versions the stored container, not
 the IndexedDB database schema.
+
+The built-in IndexedDB adapter currently has no cross-tab change notifications. Another tab's
+write does not trigger a read merely because externalChanges is apply; call that source's
+`handle.restore()` explicitly. Web Storage events and custom adapters with subscribe have their
+own external notification paths. Automatic IndexedDB notifications are not part of this change.
 
 For a backend, implement full removeScope and conditional version checks. A mutation Promise must mean
 acknowledgment. A lost response does not prove cancellation; server revisions/generations are needed
