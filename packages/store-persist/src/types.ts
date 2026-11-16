@@ -156,6 +156,8 @@ export type CommitCtx = {
 export type SourcePort = {
 	/** Read the substrate as a {@link Keyed}. Synchronous for URL/storage, async for IndexedDB. */
 	get: (context?: ReadCtx) => Keyed | Promise<Keyed>
+	/** Pure synchronous render seeding; separate from the committed operational snapshot. No ambient I/O. */
+	getRenderSnapshot?: (context?: ReadCtx) => Keyed
 	/** Commit the desired {@link Keyed} to the substrate, given the {@link CommitCtx}. */
 	set: (desired: Keyed, ctx: CommitCtx) => void | Promise<void>
 	/** A staged container migration, kept separate from opaque application mutation metadata. */
@@ -174,12 +176,19 @@ export type SourcePort = {
 	keyForField?: (field: FieldDescriptor) => string
 }
 
+/** Synchronous reads for render-scoped sources; mutation acknowledgement may be asynchronous. */
+export type SyncReadSourcePort = Omit<SourcePort, 'get'> & {
+	get: (context?: ReadCtx) => Keyed
+}
+
 /**
  * A synchronous {@link SourcePort} (URL, localStorage/sessionStorage) whose `get`/`set` return
  * immediately. Assignable to {@link SourcePort}; lets callers consume `get()` as a plain `Keyed`.
  */
 export type SyncSourcePort = {
 	get: (context?: ReadCtx) => Keyed
+	/** Pure synchronous render seeding; never performs ambient I/O. */
+	getRenderSnapshot?: (context?: ReadCtx) => Keyed
 	set: (desired: Keyed, ctx: CommitCtx) => void
 	rewriteContainer?: (values: Keyed) => void
 	subscribe?: (onChange: () => void) => () => void

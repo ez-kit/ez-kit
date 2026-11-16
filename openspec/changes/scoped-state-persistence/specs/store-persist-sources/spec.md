@@ -167,3 +167,30 @@ Failed setup MUST leave no phantom address owner or store subscription capable o
 
 - **WHEN** source A connected but source B fails setup
 - **THEN** changing the failed store cannot continue writing through A's orphaned subscription
+
+### Requirement: Async port contracts are valid across realms
+
+Valid Promise results from another realm MUST retain read and write acknowledgement semantics.
+The engine MUST safely assimilate asynchronous results while preserving genuine synchronous port
+behavior. Async values MUST NOT be mistaken for damaged record maps.
+
+#### Scenario: An iframe port returns an unfinished write Promise
+
+- **WHEN** set returns a real Promise created in a different realm
+- **THEN** flush remains pending until its acknowledgement or rejection
+
+#### Scenario: An iframe port returns an unfinished read Promise
+
+- **WHEN** get returns a real Promise created in a different realm
+- **THEN** restore waits without invalidating/deleting records because of the Promise's realm
+
+### Requirement: Render-scoped ports can separate seed reads and acknowledged writes
+
+A source MAY expose optional pure synchronous getRenderSnapshot for render seeding. Missing capability
+retains the existing synchronous get fallback. Render-scoped ports MUST read synchronously, but MAY
+acknowledge writes asynchronously; strict synchronous get/set ports remain supported.
+
+#### Scenario: A new route has a render snapshot while the old route remains active
+
+- **WHEN** a render-scoped adapter presents a new pure snapshot before route commit
+- **THEN** seeding uses that snapshot while operational get/set remains bound to committed location

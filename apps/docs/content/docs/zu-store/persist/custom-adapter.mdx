@@ -17,7 +17,8 @@ The engine speaks exactly one language: `Keyed = Map<string, string>` — a logi
 import type { CommitCtx, Keyed, ReadCtx } from '@ez-kit/zu-store/persist'
 
 type SourcePort = {
-	get(context?: ReadCtx): Keyed | Promise<Keyed> // addressed read; context includes AbortSignal
+	get(context?: ReadCtx): Keyed | Promise<Keyed> // committed addressed read; includes AbortSignal
+	getRenderSnapshot?(context?: ReadCtx): Keyed // optional pure synchronous render seed
 	set(desired: Keyed, ctx: CommitCtx): void | Promise<void> // apply only ctx.diff keys
 	rewriteContainer?(values: Keyed): void | Promise<void> // only for a staged container migration
 	subscribe?(onChange: () => void): () => void // external changes only
@@ -88,7 +89,8 @@ When the substrate is only reachable through hooks (a router), ship a `usePort()
 
 ```tsx
 import { createUrlPort, URL_SOURCE, UrlHistory, urlMetaMerge } from '@ez-kit/zu-store/persist/url'
-import type { RenderScopedAdapter, SyncSourcePort } from '@ez-kit/zu-store/persist'
+import { useInsertionEffect, useRef } from 'react'
+import type { RenderScopedAdapter, SyncReadSourcePort } from '@ez-kit/zu-store/persist'
 
 const myRouterAdapter: RenderScopedAdapter = {
 	source: URL_SOURCE,
@@ -96,12 +98,17 @@ const myRouterAdapter: RenderScopedAdapter = {
 	defaultMeta: { history: UrlHistory.Replace },
 	usePort() {
 		const router = useMyRouter()
-		const routerRef = useRef(router)
-		routerRef.current = router
-		const portRef = useRef<SyncSourcePort | null>(null)
+		const renderRef = useRef(router)
+		renderRef.current = router // render seed only
+		const committedRef = useRef(router)
+		useInsertionEffect(() => {
+			committedRef.current = router
+		}, [router])
+		const portRef = useRef<SyncReadSourcePort | null>(null)
 		portRef.current ??= createUrlPort({
-			read: () => new URLSearchParams(routerRef.current.search),
-			commit: (next, history) => routerRef.current.navigate(`?${next}`, { replace: history === UrlHistory.Replace }),
+			read: () => new URLSearchParams(committedRef.current.search),
+			readRender: () => new URLSearchParams(renderRef.current.search),
+			commit: (next, history) => committedRef.current.navigate(`?${next}`, { replace: history === UrlHistory.Replace }),
 		})
 		return { port: portRef.current, changeKey: router.search }
 	},
@@ -113,6 +120,17 @@ A custom UrlDriver can additionally provide subscribe(onNavigate), notifying onl
 navigation after read() exposes that location. This distinguishes Back/Forward to an old or identical
 query from acknowledgement of your own pending navigation; do not echo your own commits through it.
 The built-in Next and React Router drivers provide this integration.
+
+getRenderSnapshot/readRender is a pure snapshot for current-render seeding; it does not mutate the
+pending navigation journal. Operational get/read and commit use only the committed location, so a
+suspended route cannot redirect writes from the still-active screen. Without the optional capability,
+render seeding keeps the previous synchronous get fallback.
+
+SyncSourcePort guarantees both synchronous reads and writes. SyncReadSourcePort guarantees a
+synchronous get while permitting acknowledged asynchronous writes, and is accepted by render-scoped
+adapters. A UrlDriver.commit Promise must settle after navigation completion or cancellation, not
+merely after calling navigate. Rejected commits remove their pending patch and remain observable.
+Valid Promises from another realm (for example an iframe) retain ordinary asynchronous semantics.
 
 Keep the port instance and registration stable across renders. A map can be reordered without changing hook order; replacing an adapter requires remounting the provider and its cached instances.
 

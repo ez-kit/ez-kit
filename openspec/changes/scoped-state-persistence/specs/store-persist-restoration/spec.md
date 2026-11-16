@@ -242,3 +242,36 @@ cancel newer optimistic intent rather than resurrect it. Query-only writes MUST 
 
 - **WHEN** a persisted query field changes on a URL ending in hash details
 - **THEN** the existing fragment remains in both Next and React Router query-only commits
+
+### Requirement: Edits after default capture precede connection restoration
+
+Application changes between pure default capture and connection MUST become tracked dirty intent
+before restoration changes observed baselines. Source seed/system writes MUST NOT be misclassified
+as user edits in another source, and failed preparation MUST leave no orphan writer.
+
+#### Scenario: A child mount effect initializes persisted state
+
+- **WHEN** render captured width 320 and a child layout or passive effect sets 500 before plugin connection
+- **THEN** restoration cannot overwrite 500 and flush saves it through either manager binding
+
+### Requirement: Operational URL locations belong to committed renders
+
+Pure render snapshots MUST remain available for synchronous SSR/client seeding separately from live
+operational port state. A suspended or abandoned router render MUST NOT change existing port reads
+or the destination of commits on the still-active screen.
+
+#### Scenario: Navigation suspends before a new route commits
+
+- **WHEN** the committed location is old and a transition renders new but suspends
+- **THEN** existing port reads/writes still use old while new render candidates can seed from their own pure snapshot
+
+### Requirement: Cancelled routing commits release optimistic intent
+
+Where router cancellation is observable, a blocked/cancelled commit MUST remove its affected pending
+journal entry/token and reconcile authoritative location. Async routing acknowledgement MUST reflect
+completion or rejection rather than the mere return of a navigation function.
+
+#### Scenario: A data-router blocker cancels a persisted query change
+
+- **WHEN** a query write is blocked and the application resets the blocker
+- **THEN** port reads reflect the unchanged URL and later unrelated edits cannot resurrect the cancelled query

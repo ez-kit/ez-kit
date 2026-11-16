@@ -122,3 +122,13 @@ Built-in IndexedDB adapters MUST provision a missing configured object store in 
 
 - **WHEN** adapters select the same dbName and different storeName values
 - **THEN** both can persist independently and provisioning the second store preserves the first
+
+### Requirement: Typed reset paths include numeric dictionaries
+
+Public state-path types MUST stringify numeric dictionary/literal keys consistently with runtime
+field extraction, while retaining persisted-source membership validation and rejecting invalid paths.
+
+#### Scenario: A numeric width dictionary persists one entry
+
+- **WHEN** widths is Record number to number and widths at key twelve is declared persisted
+- **THEN** reset fields widths/twelve typechecks with string segment 12 through both bindings

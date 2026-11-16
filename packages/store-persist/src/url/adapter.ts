@@ -2,7 +2,7 @@ import { serializePersistAddress } from '@ez-kit/store-core'
 
 import { fieldKey } from '../key-naming'
 
-import type { CommitCtx, Keyed, MetaMerge, SyncSourcePort } from '../types'
+import type { CommitCtx, Keyed, MetaMerge, ReadCtx, SyncReadSourcePort, SyncSourcePort } from '../types'
 
 /** Source id for the URL engine, shared by the adapter, the `persistUrl` decorator, and the provider. */
 export const URL_SOURCE = 'url'
@@ -26,8 +26,10 @@ export type UrlMeta = {
 export type UrlDriver = {
 	/** Read the current location's search params. */
 	read(): URLSearchParams
+	/** Pure snapshot for the current render, before its operational location commits. */
+	readRender?(): URLSearchParams
 	/** Commit a fully-merged params object, choosing push vs replace navigation. */
-	commit(next: URLSearchParams, history: UrlHistory): void
+	commit(next: URLSearchParams, history: UrlHistory): void | Promise<void>
 	/** Notify explicit external navigation (for example Back/Forward), after read reflects it.
 	 * This disambiguates a POP to an old pending target from an acknowledgement of our own commit. */
 	subscribe?: (onNavigate: () => void) => () => void
@@ -64,7 +66,9 @@ function urlToKeyed(params: URLSearchParams): Keyed {
 }
 
 /** Project canonical record keys to readable query keys while retaining pending navigation edits. */
-export function createUrlPort(driver: UrlDriver): SyncSourcePort {
+export function createUrlPort<Driver extends UrlDriver>(
+	driver: Driver,
+): Extract<ReturnType<Driver['commit']>, PromiseLike<unknown>> extends never ? SyncSourcePort : SyncReadSourcePort {
 	type Navigation = { signature: string; patch: Map<string, string | null> }
 	let observed: string | null = null
 	const pending: Navigation[] = []
@@ -98,21 +102,23 @@ export function createUrlPort(driver: UrlDriver): SyncSourcePort {
 		for (const navigation of pending) applyPatch(actual, navigation.patch)
 		return actual
 	}
-	return {
+	function project(params: URLSearchParams, context?: ReadCtx): Keyed {
+		const keyed = urlToKeyed(params)
+		if (!context) return keyed
+		const values: Keyed = new Map()
+		for (const field of context.fields) {
+			const value = keyed.get(fieldKey(field))
+			if (value !== undefined)
+				values.set(field.address ? serializePersistAddress(field.address) : fieldKey(field), value)
+		}
+		return values
+	}
+	const port: SyncReadSourcePort = {
 		capabilities: { recordVersions: false },
 		keyForField: fieldKey,
-		get(context) {
-			const params = urlToKeyed(read())
-			if (!context) return params
-			const values: Keyed = new Map()
-			for (const field of context.fields) {
-				const value = params.get(fieldKey(field))
-				if (value !== undefined)
-					values.set(field.address ? serializePersistAddress(field.address) : fieldKey(field), value)
-			}
-			return values
-		},
-		set(desired: Keyed, ctx: CommitCtx): void {
+		get: (context) => project(read(), context),
+		getRenderSnapshot: (context) => project(driver.readRender?.() ?? driver.read(), context),
+		set(desired: Keyed, ctx: CommitCtx): void | Promise<void> {
 			const params = read()
 			const physical = new Map(
 				ctx.fields.map((field) => [
@@ -129,12 +135,16 @@ export function createUrlPort(driver: UrlDriver): SyncSourcePort {
 			applyPatch(params, patch)
 			const navigation: Navigation = { signature: signature(params), patch }
 			pending.push(navigation)
-			try {
-				driver.commit(params, historyOf(ctx.meta))
-			} catch (error) {
+			const fail = (error: unknown): never => {
 				const index = pending.indexOf(navigation)
 				if (index >= 0) pending.splice(index, 1)
 				throw error
+			}
+			try {
+				const result = driver.commit(params, historyOf(ctx.meta))
+				if (result !== undefined) return Promise.resolve(result).catch(fail)
+			} catch (error) {
+				fail(error)
 			}
 		},
 		...(driver.subscribe
@@ -151,4 +161,5 @@ export function createUrlPort(driver: UrlDriver): SyncSourcePort {
 				}
 			: {}),
 	}
+	return port
 }

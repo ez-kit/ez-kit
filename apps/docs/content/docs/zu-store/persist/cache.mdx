@@ -103,3 +103,8 @@ old URL seed cannot pin defaults for the newly committed location.
 
 The first committed observer still establishes gcTime for the cache entry; later observers do not
 change its birth configuration. Different gcTime props alone do not make raw initialization conflict.
+
+Cached capability cleanups run in reverse setup order. A failing cleanup does not skip remaining
+callbacks or leave cache membership behind. Manual remove/clear reports AggregateError after release
+(clear finishes all matching entries); GC reports the aggregate through its timer error path after
+eviction. A cleanup that creates a replacement cannot have that replacement removed by old teardown.

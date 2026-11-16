@@ -83,6 +83,15 @@
 - [x] 9.6 Update docs, READMEs, migration notes, changeset and scenario evidence for the second audit; explicitly leave IndexedDB cross-tab notifications outside this implementation pending discussion.
 - [x] 9.7 Run affected and full sequential verification, browser flow and strict OpenSpec checks; record outcomes and update PR 299.
 
+## 10. Third audit fixes approved on 2026-11-16
+
+- [x] 10.1 Guard address ownership across detached retries/new instances, settle superseded flush fences, reconcile edits between captured defaults and connect, and support cross-realm asynchronous ports without changing sync semantics; add engine regressions.
+- [x] 10.2 Separate pure URL render seeding from committed operational navigation refs in Next and React Router, and reconcile blocked/cancelled navigations without stale optimistic state; test concurrent Suspense and real router cancellation.
+- [x] 10.3 Compose array item semantic equality, preserve empty string items and custom-separator round trips, reject non-finite numeric input, and support numeric dictionary reset paths through both public bindings; add codec, runtime and consumer type regressions.
+- [x] 10.4 Run cached plugin cleanups in reverse order, isolate cleanup failures, and remove membership/metadata despite teardown errors; verify clear/remove/GC and observable failures.
+- [x] 10.5 Add public integration evidence for mount-effect edits, cross-manager semantic codecs and URL render/commit lifecycle; update docs, migration notes, changeset and scenario trace with final contracts.
+- [x] 10.6 Run affected verification, full sequential build/lint/typecheck/test/size and browser checks; repeat strict OpenSpec validation and update PR 299 with results.
+
 ## Workflow follow-up
 
 - After implementation and review, archive this change using the standard OpenSpec workflow. Archiving is not an implementation task and does not automatically release packages.

@@ -120,6 +120,7 @@ export function persist<TStore extends object, TState extends object = object>(
 			const registry = validateRegistry(store, context)
 			const entries = bindPersist(store, port, options)
 			const disconnects: (() => void)[] = []
+			const preparations: (() => void)[] = []
 			// Resolve everything before connecting anything: bad config cannot produce partial I/O.
 			const connections = resolveSources(entries, registry, context, options)
 			// Every source sees the same pristine state, including fields shared with a sync source.
@@ -128,6 +129,8 @@ export function persist<TStore extends object, TState extends object = object>(
 				addressBinding(entry.binding, context.id)
 			}
 			try {
+				if (!context.isServer)
+					for (const { entry, engine } of connections) preparations.push(engine.prepare(entry.binding))
 				for (const { entry, engine } of connections) {
 					if (context.isServer) engine.seed(entry.binding)
 					else disconnects.push(engine.connect(entry.binding))
@@ -135,6 +138,8 @@ export function persist<TStore extends object, TState extends object = object>(
 			} catch (error) {
 				for (const disconnect of disconnects.reverse()) disconnect()
 				throw error
+			} finally {
+				for (const release of preparations) release()
 			}
 			registryByStore.set(store, registry)
 			if (entries.length === 0) for (const aggregate of aggregates.get(store)?.values() ?? []) aggregate.notify()
@@ -151,6 +156,7 @@ export function persist<TStore extends object, TState extends object = object>(
 			addressBinding(entry.binding, context.id)
 		}
 		for (const { entry, engine } of connections) engine.seed(entry.binding)
+		for (const { entry, engine } of connections) engine.seedBaseline(entry.binding)
 	}
 	return plugin
 }

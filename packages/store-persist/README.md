@@ -114,3 +114,10 @@ RestoreCallOptions; externalChanges remains in the lifecycle RestoreOptions.
 All bindings capture defaults before any source restores. Retained handles cannot acknowledge
 unsaved detached work; disposed reset operations reject promptly. The IndexedDB adapter has no
 automatic cross-tab notifications: use explicit restore to read a foreign write.
+
+Render-scoped ports may implement pure getRenderSnapshot independently of committed get/set;
+SyncReadSourcePort supports synchronous reads with asynchronous write acknowledgement, while
+SyncSourcePort remains fully synchronous. Retired address generations cannot replay old unsent
+writes over new owners, and edits before connection retain dirty intent. Cross-realm Promises
+preserve the same ACK semantics. Array codecs compose semantic item equality and frame otherwise
+lossy delimiter/empty-item cases while retaining legacy decoding; numeric input must be finite.

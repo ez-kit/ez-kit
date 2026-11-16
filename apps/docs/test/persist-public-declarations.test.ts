@@ -12,7 +12,8 @@ const consumerSource = `
 import { paramJson as zuJson } from '@ez-kit/zu-store/persist'
 import { paramJson as vaJson } from '@ez-kit/va-store/persist'
 import { localStorageField, persistLocalStorage } from '@ez-kit/zu-store/persist/storage'
-import { urlField } from '@ez-kit/va-store/persist/url'
+import { urlField, createUrlPort } from '@ez-kit/va-store/persist/url'
+export type { SyncReadSourcePort, SyncSourcePort } from '@ez-kit/va-store/persist'
 export type { FieldValueOptions, ValidatedAccessorFieldOptions, ValidatedValueOptions, PersistFieldDecorator, RestoreCallOptions, PersistWriteOptions } from '@ez-kit/zu-store/persist'
 export type { FieldValueOptions as VaValues, ValidatedAccessorFieldOptions as VaAccessor, ValidatedValueOptions as VaValidated, PersistFieldDecorator as VaDecorator, RestoreCallOptions as VaRestoreCallOptions, PersistWriteOptions as VaPersistWriteOptions } from '@ez-kit/va-store/persist'
 export type { FieldValueOptions as StorageValues, ValidatedAccessorFieldOptions as StorageAccessor, ValidatedValueOptions as StorageValidated, PersistFieldDecorator as StorageDecorator } from '@ez-kit/zu-store/persist/storage'
@@ -21,6 +22,8 @@ const schema = { validate: (value: unknown) => ({ width: Number(value) }) }
 export const browser = localStorageField({ source: 'browser', parser: zuJson<unknown>(), schema })
 export const linked = urlField({ source: 'router', parser: vaJson<unknown>(), schema })
 export const decorate = persistLocalStorage({ source: 'browser', parser: zuJson<unknown>(), schema })
+export const syncUrl = createUrlPort({ read: () => new URLSearchParams(), commit: () => undefined })
+export const asyncUrl = createUrlPort({ read: () => new URLSearchParams(), readRender: () => new URLSearchParams(), commit: async () => undefined })
 `
 
 function diagnostics(program: ts.Program, emitted: ts.EmitResult): string {

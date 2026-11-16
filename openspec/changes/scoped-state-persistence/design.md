@@ -464,3 +464,27 @@ PersistEngines identity. This excludes abandoned old-URL candidates from new ini
 another source read or ambient render I/O. React Router ownership uses its documented navigation
 state; the reserved metadata key is documented. Next lacks a public navigation ownership token, so
 same-path external navigation identical to an outstanding own target remains explicitly ambiguous.
+
+## Third audit refinements approved on 2026-11-16
+
+The user approved the third audit's reproduced engine, URL, codec/type and cache-cleanup fixes.
+The existing single-engine design, source policy options, compatible cold initialization contract,
+explicit IndexedDB refresh choice and one-time release exception remain in force.
+
+- Address ownership includes retained detached write intent. A new instance at an address must not
+  coexist with replayable obsolete unsent writes; already-sent mutations remain ordered. Ownership
+  supersession must explicitly transfer/cancel durability targets rather than acknowledge unpersisted
+  intent or strand a flush. Default capture precedes connection, and intervening application edits
+  must be observed before restoration can replace the comparison baseline.
+- Promise handling recognizes valid cross-realm asynchronous values and assimilates them safely,
+  while plain synchronous reads/writes remain synchronous. A foreign Promise is not record damage.
+- URL sources distinguish pure render seed snapshots from committed operational reads/commits.
+  Suspended/abandoned routing renders cannot redirect existing live-port operations. Cancelled or
+  blocked routing commits must reconcile optimistic entries and settle their acknowledgement rather
+  than leave cancelled intent pending forever. Preserve SSR, foreign params, fragments and ownership.
+- Array equality composes the item codec's semantic equality. Array transport must distinguish an
+  empty item from an empty array and preserve supported custom separators; retain legacy decoding
+  when unambiguous. Non-finite numeric input rejects. Typed reset paths stringify numeric dictionary
+  keys consistently with runtime field extraction and source-specific path validation.
+- Cached plugins dispose in reverse setup order. Every cleanup runs despite other failures; cache
+  metadata/membership is removed in all paths and cleanup errors remain observable after release.

@@ -117,6 +117,7 @@ export type {
 	PersistOptions,
 	SourcePort,
 	SyncSourcePort,
+	SyncReadSourcePort,
 } from '@ez-kit/store-persist'
 
 export type {

@@ -88,3 +88,15 @@ Next's documented router hooks expose pathname/search snapshots but no navigatio
 POP and pathname changes explicitly invalidate pending intent. An external same-path navigation
 whose query exactly matches an outstanding own target can be indistinguishable from its acknowledgement;
 the adapter does not patch router internals or the global history API to infer a missing signal.
+
+Pure render-seed snapshots and committed operational locations are separate. A transition that
+suspends can seed a new render without changing the active port's read/commit destination. Data-router
+navigation commits also track cancellation: resetting a blocker must not leave cancelled optimistic
+query values behind. The React Router integration observes its exported data-router context read-only
+for completion/blocker state, with runtime feature checks; ordinary BrowserRouter operation remains
+available without a data router. It does not patch router or global history methods.
+
+Data-router observation reads the explicitly exported `UNSAFE_DataRouterContext` and
+`UNSAFE_DataRouterStateContext` integration points. Their names indicate upstream instability;
+capability checks reject unsupported data-router state instead of silently confirming a write.
+The optional lookup preserves basic operation on older peers where those exports are absent.

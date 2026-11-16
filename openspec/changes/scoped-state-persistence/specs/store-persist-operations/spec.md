@@ -242,3 +242,36 @@ reject unknown aliases and preserve caller configuration. Registered unused alia
 
 - **WHEN** write.sources names a source absent from the effective registry
 - **THEN** setup fails before reading any source or partially applying state
+
+### Requirement: Detached retries respect address ownership generations
+
+A detached old instance's unsent writes MUST NOT overwrite a newer owner's acknowledged intent at
+the same address. Superseded durability waiters MUST settle explicitly without false acknowledgement
+or indefinite waiting. Already-sent writes and destructive reset barriers MUST retain source ordering;
+unrelated old records MUST remain retryable.
+
+#### Scenario: An old offline value follows a newer acknowledged owner
+
+- **WHEN** old width 500 failed before commit, the instance disconnected, and a new owner saved 700
+- **THEN** source flush cannot replay 500 over 700
+
+#### Scenario: Two generations have dirty intent for one address
+
+- **WHEN** source flush sees old detached and new active revisions at the same logical key
+- **THEN** the new intent remains authoritative and every captured waiter settles with acknowledgement or explicit supersession
+
+### Requirement: Cached teardown releases all resources before reporting errors
+
+Cached plugin cleanup MUST run in reverse setup order. One failure MUST NOT skip other cleanups,
+retain membership/metadata or prevent clear from releasing other matching entries. Errors MUST remain
+observable after release; reentrant replacement MUST NOT be removed by an older cleanup.
+
+#### Scenario: A dependent subscription outlives its transport setup
+
+- **WHEN** transport then subscription capabilities are set up and the cache entry is released
+- **THEN** subscription cleanup runs before transport cleanup
+
+#### Scenario: A cleanup throws during prefix clear or garbage collection
+
+- **WHEN** one cleanup fails while multiple callbacks or matching entries remain
+- **THEN** all release steps finish and the failure is reported only after eviction

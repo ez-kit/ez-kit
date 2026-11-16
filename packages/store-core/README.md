@@ -46,3 +46,8 @@ mount effects. Use the same defaultValue reference and services for simultaneous
 cold owners; conflicting initialization is diagnosed at commit. Weak candidates acquire no retained
 cache lifetime or plugin setup before commit, and changed initialization cannot adopt abandoned
 old defaults/context. Omitted defaults use a stable empty seed.
+
+Cached teardown runs every cleanup in reverse order and always releases metadata/membership.
+Manual remove/clear aggregates failures after all selected resources release; GC reports the
+aggregate through its timer after eviction. Reentrant replacement remains intact. Failed setup
+rolls back successful capabilities before reporting the setup/rollback failures.

@@ -22,17 +22,17 @@ export type PersistFieldPath<T, Depth extends readonly unknown[] = []> = Depth['
 			: keyof T extends never
 				? readonly string[]
 				: {
-						[K in Exclude<Extract<keyof T, string>, typeof URL_HANDLE | typeof PERSIST_HANDLE>]: NonNullable<
+						[K in Exclude<Extract<keyof T, string | number>, typeof URL_HANDLE | typeof PERSIST_HANDLE>]: NonNullable<
 							T[K]
 						> extends (...args: never[]) => unknown
 							? never
-							: | readonly [K]
+							: | readonly [`${K}`]
 								| (NonNullable<T[K]> extends Date
 										? never
 										: NonNullable<T[K]> extends object
-											? readonly [K, ...PersistFieldPath<NonNullable<T[K]>, [...Depth, unknown]>]
+											? readonly [`${K}`, ...PersistFieldPath<NonNullable<T[K]>, [...Depth, unknown]>]
 											: never)
-					}[Exclude<Extract<keyof T, string>, typeof URL_HANDLE | typeof PERSIST_HANDLE>]
+					}[Exclude<Extract<keyof T, string | number>, typeof URL_HANDLE | typeof PERSIST_HANDLE>]
 
 // A business method named getState does not make a proxy a store handle.
 // Recognize the complete structural surface without importing a state manager here.

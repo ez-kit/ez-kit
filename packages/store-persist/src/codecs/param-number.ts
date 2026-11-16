@@ -11,8 +11,8 @@ export function paramNumber(): Codec<number> {
 				throw new Error(`${PACKAGE_TAG} paramNumber: empty value`)
 			}
 			const parsed = Number(raw)
-			if (Number.isNaN(parsed)) {
-				throw new Error(`${PACKAGE_TAG} paramNumber: "${raw}" is not a number`)
+			if (!Number.isFinite(parsed)) {
+				throw new Error(`${PACKAGE_TAG} paramNumber: "${raw}" is not a finite number`)
 			}
 			return parsed
 		},

@@ -7,12 +7,12 @@ import { createPersistEngines, PERSIST_ENGINES } from './service'
 
 import type { PersistEngine } from './engine'
 import type { PersistEngines } from './service'
-import type { MetaMerge, PersistErrorContext, SourcePort, SyncSourcePort } from './types'
+import type { MetaMerge, PersistErrorContext, SourcePort, SyncReadSourcePort } from './types'
 
 type AdapterOptions = { mergeMeta?: MetaMerge; defaultMeta?: unknown }
 export type RenderScopedAdapter = AdapterOptions & {
 	source: string
-	usePort(): { port: SyncSourcePort; changeKey: string }
+	usePort(): { port: SyncReadSourcePort; changeKey: string }
 }
 export type AmbientAdapter = AdapterOptions & { source: string; port: SourcePort }
 export type PersistAdapter = RenderScopedAdapter | AmbientAdapter

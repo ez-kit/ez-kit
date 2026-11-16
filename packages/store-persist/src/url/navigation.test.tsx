@@ -55,8 +55,8 @@ describe('URL driver navigation ownership', () => {
 	it('keeps successive Next patches while search params lag and accepts intermediate acknowledgements', async () => {
 		const view = renderHook(() => nextAdapter.usePort())
 		const port = view.result.current.port
-		port.set(new Map([['q', 'boots']]), context('q'))
-		port.set(new Map([['page', '2']]), context('page'))
+		void port.set(new Map([['q', 'boots']]), context('q'))
+		void port.set(new Map([['page', '2']]), context('page'))
 		expect(navigation.urls).toEqual(['/?utm_source=mail&q=boots', '/?utm_source=mail&q=boots&page=2'])
 		await act(async () => {
 			navigation.search = 'utm_source=mail&q=boots'
@@ -64,7 +64,7 @@ describe('URL driver navigation ownership', () => {
 			await Promise.resolve()
 		})
 		expect(port.get().get('page')).toBe('2')
-		port.set(new Map([['sort', 'asc']]), context('sort'))
+		void port.set(new Map([['sort', 'asc']]), context('sort'))
 		expect(navigation.urls.at(-1)).toBe('/?utm_source=mail&q=boots&page=2&sort=asc')
 	})
 
@@ -75,8 +75,8 @@ describe('URL driver navigation ownership', () => {
 		const unsubscribe = port.subscribe?.(() => {
 			observed = port.get()
 		})
-		port.set(new Map([['q', 'older']]), context('q'))
-		port.set(new Map([['q', 'newer']]), context('q'))
+		void port.set(new Map([['q', 'older']]), context('q'))
+		void port.set(new Map([['q', 'newer']]), context('q'))
 		window.history.replaceState(null, '', '/?utm_source=mail&q=older')
 		window.dispatchEvent(new PopStateEvent('popstate'))
 		expect(observed?.get('q')).toBe('older')
@@ -89,14 +89,14 @@ describe('URL driver navigation ownership', () => {
 		const view = renderHook(() => nextAdapter.usePort())
 		const port = view.result.current.port
 		const unsubscribe = port.subscribe?.(() => undefined)
-		port.set(new Map([['q', 'older']]), context('q'))
-		port.set(new Map([['q', 'newer']]), context('q'))
+		void port.set(new Map([['q', 'older']]), context('q'))
+		void port.set(new Map([['q', 'newer']]), context('q'))
 		expect(navigation.urls.at(-1)).toBe('/?utm_source=mail&q=newer#details')
 		navigation.pathname = '/other'
 		navigation.search = 'utm_source=mail&q=older'
 		view.rerender()
 		expect(port.get().get('q')).toBe('older')
-		port.set(new Map([['page', '2']]), context('page'))
+		void port.set(new Map([['page', '2']]), context('page'))
 		expect(navigation.urls.at(-1)).toBe('/other?utm_source=mail&q=older&page=2#details')
 		unsubscribe?.()
 	})
@@ -120,13 +120,13 @@ describe('URL driver navigation ownership', () => {
 		const onNavigate = vi.fn()
 		const unsubscribe = port.subscribe?.(onNavigate)
 		act(() => {
-			port.set(new Map([['q', 'older']]), context('q'))
+			void port.set(new Map([['q', 'older']]), context('q'))
 		})
 		expect(view.result.current.location.hash).toBe('#details')
 		expect(view.result.current.location.state).toMatchObject({ selected: 'tab' })
 		expect(port.get().get('q')).toBe('older')
 		act(() => {
-			port.set(new Map([['q', 'newer']]), context('q'))
+			void port.set(new Map([['q', 'newer']]), context('q'))
 		})
 		expect(port.get().get('q')).toBe('newer')
 		expect(port.get().get('foreign')).toBe('keep')
@@ -153,8 +153,8 @@ describe('URL driver navigation ownership', () => {
 			const onNavigate = vi.fn()
 			const unsubscribe = port.subscribe?.(onNavigate)
 			await act(async () => {
-				port.set(new Map([['q', 'older']]), context('q'))
-				port.set(new Map([['q', 'newer']]), context('q'))
+				void port.set(new Map([['q', 'older']]), context('q'))
+				void port.set(new Map([['q', 'newer']]), context('q'))
 				await view.result.current.navigate(`${pathname}?foreign=keep&q=older#details`, { replace })
 			})
 			expect(view.result.current.location.pathname).toBe(pathname)
@@ -162,7 +162,7 @@ describe('URL driver navigation ownership', () => {
 			expect(port.get().get('q')).toBe('older')
 			expect(onNavigate).toHaveBeenCalledTimes(1)
 			act(() => {
-				port.set(new Map([['page', '2']]), context('page'))
+				void port.set(new Map([['page', '2']]), context('page'))
 			})
 			expect(view.result.current.location.search).toBe('?foreign=keep&q=older&page=2')
 			expect(view.result.current.location.hash).toBe('#details')

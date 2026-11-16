@@ -373,6 +373,7 @@ describe('acknowledged source operations', () => {
 		})
 		const port = createUrlPort({ read: () => search, commit })
 		const read = vi.spyOn(port, 'get')
+		const renderRead = vi.spyOn(port, 'getRenderSnapshot')
 		const engine = createPersistEngine(port, { ssrSafe: true })
 		const target = bind(observable({ width: 320 }))
 		engine.seed(target)
@@ -381,7 +382,8 @@ describe('acknowledged source operations', () => {
 		// SSR and an abandoned render stop here. Only committed connection may send maintenance.
 		engine.connect(target)
 		await tick()
-		expect(read).toHaveBeenCalledTimes(1)
+		expect(read).not.toHaveBeenCalled()
+		expect(renderRead).toHaveBeenCalledTimes(1)
 		expect(commit).toHaveBeenCalledTimes(1)
 		expect(search.toString()).toBe(query === 'width=bad' ? '' : 'width=1')
 		engine.dispose()

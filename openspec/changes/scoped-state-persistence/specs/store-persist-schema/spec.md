@@ -169,3 +169,24 @@ its obsolete in-memory write block. Normal adapter-side version guards MUST stil
 
 - **WHEN** an allowed external read confirms deletion of a previously blocked future-version value
 - **THEN** memory returns to default and later ordinary edits can persist without an explicit reset
+
+### Requirement: Built-in codecs preserve semantic equality and round trips
+
+Array equality MUST compose item codec equality, including Date and nested/object values. Supported
+array values MUST survive stringify/parse without empty-item or delimiter collisions. Legacy values
+MUST remain readable where unambiguous. Number parsing MUST reject non-finite values and overflow.
+
+#### Scenario: A pristine Date array has a persisted value
+
+- **WHEN** defaults contain cloned Date instances and another date array is saved
+- **THEN** restore applies the saved timestamps and returning to default timestamps clears its override
+
+#### Scenario: An array contains one empty string or an unsafe legacy delimiter
+
+- **WHEN** values include one empty string or a custom separator collides with encoded item content
+- **THEN** new serialization distinguishes the values and round-trips every item
+
+#### Scenario: An external number is infinite
+
+- **WHEN** a stored numeric value is Infinity, negative Infinity or finite-syntax overflow
+- **THEN** parsing reports invalid input rather than applying non-finite state

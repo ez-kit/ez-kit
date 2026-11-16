@@ -11,6 +11,8 @@ type State = {
 	items: { width: number }[]
 	optional?: { width: number }
 	date: Date
+	widths: Record<number, { width: number }>
+	slots: { 12: { width: number }; 13(): void }
 	setWidth(width: number): void
 }
 
@@ -28,8 +30,22 @@ function consumerTypes(proxy: State & PersistHandles<State>, store: StoreHandle)
 	void persistHandle(proxy).restore({ externalChanges: 'apply' })
 	void persistHandle(proxy).reset({ fields: [['layout'], ['layout', 'width'], ['columns'], ['date']] })
 	void persistHandle(store).reset({ fields: [['visible'], ['items', '0', 'width'], ['optional', 'width']] })
-	void proxy.$persist.reset({ fields: [['layout', 'width']] })
+	void proxy.$persist.reset({
+		fields: [
+			['layout', 'width'],
+			['widths', '12', 'width'],
+			['slots', '12', 'width'],
+		],
+	})
 	void urlHandle(store, 'router').reset({ fields: [['visible'], ['items', '0', 'width'], ['optional', 'width']] })
+	// @ts-expect-error Numeric dictionary values retain nested key checks.
+	void persistHandle(proxy).reset({ fields: [['widths', '12', 'height']] })
+	// @ts-expect-error Numeric dictionary indices cannot become arbitrary string keys.
+	void persistHandle(proxy).reset({ fields: [['widths', 'missing', 'width']] })
+	// @ts-expect-error Fixed numeric-key objects do not accept unknown indices.
+	void persistHandle(proxy).reset({ fields: [['slots', '14']] })
+	// @ts-expect-error Numeric-key methods are excluded as well.
+	void persistHandle(proxy).reset({ fields: [['slots', '13']] })
 	// @ts-expect-error Unknown root fields are rejected.
 	void persistHandle(proxy).reset({ fields: [['layuot']] })
 	// @ts-expect-error Unknown nested fields are rejected.

@@ -61,19 +61,39 @@ export function createInstanceCache(options: CacheConfig = {}): InstanceCache {
 		}
 	}
 
-	function runCleanups(meta: InstanceMeta): void {
-		if (meta.cleared) return
+	function runCleanups(meta: InstanceMeta): unknown[] {
+		const errors: unknown[] = []
+		if (meta.cleared) return errors
 		meta.cleared = true
-		for (const cleanup of meta.cleanups) {
-			if (cleanup) cleanup()
+		for (let index = meta.cleanups.length - 1; index >= 0; index -= 1) {
+			try {
+				meta.cleanups[index]?.()
+			} catch (error) {
+				errors.push(error)
+			}
 		}
+		return errors
 	}
 
-	function dropEntry(key: string, meta: InstanceMeta): void {
+	function throwCleanupErrors(errors: unknown[]): void {
+		if (errors.length > 0) throw new AggregateError(errors, 'Cached store cleanup failed')
+	}
+
+	function dropEntry(key: string, meta: InstanceMeta): unknown[] {
 		if (meta.evictionTimer) clearTimeout(meta.evictionTimer)
-		runCleanups(meta)
-		metaByKey.delete(key)
-		setMembership(meta.storeId, undefined)
+		meta.evictionTimer = undefined
+		const errors = runCleanups(meta)
+		// A cleanup may remove this entry recursively and create a replacement. Releasing the
+		// obsolete lifetime must never delete that newer entry or its membership.
+		if (metaByKey.get(key) === meta) {
+			metaByKey.delete(key)
+			try {
+				setMembership(meta.storeId, undefined)
+			} catch (error) {
+				errors.push(error)
+			}
+		}
+		return errors
 	}
 
 	/**
@@ -88,7 +108,7 @@ export function createInstanceCache(options: CacheConfig = {}): InstanceCache {
 		if (!meta) return
 		meta.evictionTimer = undefined
 		if (meta.observerCount > 0) return
-		dropEntry(key, meta)
+		throwCleanupErrors(dropEntry(key, meta))
 	}
 
 	function scheduleEviction(storeId: StoreId): void {
@@ -130,7 +150,14 @@ export function createInstanceCache(options: CacheConfig = {}): InstanceCache {
 			cleanups,
 			cleared: false,
 		}
-		for (const plugin of plugins) cleanups.push(plugin.setup(instance, opts.context))
+		try {
+			for (const plugin of plugins) cleanups.push(plugin.setup(instance, opts.context))
+		} catch (error) {
+			const cleanupErrors = runCleanups(meta)
+			if (cleanupErrors.length > 0)
+				throw new AggregateError([error, ...cleanupErrors], 'Cached store setup and rollback failed')
+			throw error
+		}
 		metaByKey.set(key, meta)
 		return instance
 	}
@@ -169,15 +196,17 @@ export function createInstanceCache(options: CacheConfig = {}): InstanceCache {
 	}
 
 	function clear(prefix?: readonly string[]): void {
+		const errors: unknown[] = []
 		for (const [key, meta] of [...metaByKey]) {
-			if (!prefix || startsWithPrefix(meta.storeId.path, prefix)) dropEntry(key, meta)
+			if (!prefix || startsWithPrefix(meta.storeId.path, prefix)) errors.push(...dropEntry(key, meta))
 		}
+		throwCleanupErrors(errors)
 	}
 
 	function remove(id: StoreId): void {
 		const key = serializeStoreId(id)
 		const meta = metaByKey.get(key)
-		if (meta) dropEntry(key, meta)
+		if (meta) throwCleanupErrors(dropEntry(key, meta))
 	}
 
 	return {

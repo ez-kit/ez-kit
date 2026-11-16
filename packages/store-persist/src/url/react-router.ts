@@ -1,20 +1,22 @@
 'use client'
 
-import { useEffect, useId, useLayoutEffect, useRef } from 'react'
+import { useContext, useEffect, useId, useInsertionEffect, useLayoutEffect, useRef } from 'react'
 import { NavigationType, useLocation, useNavigate, useNavigationType } from 'react-router'
 
 import { createUrlPort, URL_SOURCE, UrlHistory, urlMetaMerge } from './adapter'
+import {
+	acknowledgeNavigation,
+	DataRouterContext,
+	DataRouterStateContext,
+	NAVIGATION_OWNER,
+	navigationOwner,
+	observableRouter,
+} from './react-router-navigation'
 
 import type { RenderScopedAdapter } from '../provider'
-import type { SyncSourcePort } from '../types'
+import type { SyncReadSourcePort } from '../types'
 
 const useNavigationEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
-const NAVIGATION_OWNER = '@ez-kit/store-persist:url-navigation'
-
-function navigationOwner(state: unknown): unknown {
-	return state !== null && typeof state === 'object' && NAVIGATION_OWNER in state ? state[NAVIGATION_OWNER] : undefined
-}
-
 /** Render-scoped URL adapter for react-router v6/v7 (BrowserRouter / data routers). */
 export const reactRouterAdapter: RenderScopedAdapter = {
 	source: URL_SOURCE,
@@ -24,6 +26,7 @@ export const reactRouterAdapter: RenderScopedAdapter = {
 	usePort() {
 		const location = useLocation()
 		const navigate = useNavigate()
+		const dataRouter = observableRouter(useContext(DataRouterContext), useContext(DataRouterStateContext))
 		const navigationType = useNavigationType()
 		const owner = useId()
 		const sequence = useRef(0)
@@ -42,14 +45,26 @@ export const reactRouterAdapter: RenderScopedAdapter = {
 			ownNavigations.current.length = 0
 			for (const listener of [...listeners.current]) listener()
 		}, [location.key, location.state, navigationType])
-		const locationRef = useRef(location)
-		locationRef.current = location
-		const navigateRef = useRef(navigate)
-		navigateRef.current = navigate
+		const snapshot = { location, navigate, dataRouter }
+		const renderSnapshot = useRef(snapshot)
+		renderSnapshot.current = snapshot
+		const committed = useRef(snapshot)
+		const commitListeners = useRef(new Set<(mounted: boolean) => void>())
+		useInsertionEffect(() => {
+			committed.current = snapshot
+			for (const listener of [...commitListeners.current]) listener(true)
+		})
+		useInsertionEffect(
+			() => () => {
+				for (const listener of [...commitListeners.current]) listener(false)
+			},
+			[],
+		)
 
-		const portRef = useRef<SyncSourcePort | null>(null)
+		const portRef = useRef<SyncReadSourcePort | null>(null)
 		portRef.current ??= createUrlPort({
-			read: () => new URLSearchParams(locationRef.current.search),
+			read: () => new URLSearchParams(committed.current.location.search),
+			readRender: () => new URLSearchParams(renderSnapshot.current.location.search),
 			subscribe: (onNavigate) => {
 				listeners.current.add(onNavigate)
 				return () => {
@@ -59,26 +74,38 @@ export const reactRouterAdapter: RenderScopedAdapter = {
 			commit: (next, history) => {
 				const token = `${owner}:${String(++sequence.current)}`
 				ownNavigations.current.push(token)
-				const current = locationRef.current
+				const current = committed.current
 				const query = next.toString()
-				const state: unknown = current.state
-				try {
-					// Keep application object state while tagging our own navigation. URL equality alone
-					// cannot distinguish an external link to an earlier pending target from its ACK.
-					void navigateRef.current(
-						{ pathname: current.pathname, search: query ? `?${query}` : '', hash: current.hash },
-						{
-							replace: history === UrlHistory.Replace,
-							state: {
-								...(state !== null && typeof state === 'object' ? state : {}),
-								[NAVIGATION_OWNER]: token,
-							},
-						},
-					)
-				} catch (error) {
+				const state: unknown = current.location.state
+				const target = {
+					pathname: current.location.pathname,
+					search: query ? `?${query}` : '',
+					hash: current.location.hash,
+				}
+				const options = {
+					replace: history === UrlHistory.Replace,
+					state: { ...(state !== null && typeof state === 'object' ? state : {}), [NAVIGATION_OWNER]: token },
+				}
+				const fail = (error: unknown): never => {
 					const index = ownNavigations.current.indexOf(token)
 					if (index >= 0) ownNavigations.current.splice(index, 1)
 					throw error
+				}
+				try {
+					if (current.dataRouter)
+						return acknowledgeNavigation(current.dataRouter, target, options, token, {
+							get: () => committed.current.location,
+							subscribe: (listener) => {
+								commitListeners.current.add(listener)
+								return () => {
+									commitListeners.current.delete(listener)
+								}
+							},
+						}).catch(fail)
+					const result = current.navigate(target, options)
+					if (result !== undefined) return Promise.resolve(result).catch(fail)
+				} catch (error) {
+					fail(error)
 				}
 			},
 		})

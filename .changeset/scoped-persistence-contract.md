@@ -37,3 +37,9 @@ lifecycle RestoreOptions. IndexedDB cross-tab refresh remains explicit.
 Simultaneous cold cached Providers for one address share initialization only when defaultValue
 reference and services match; conflicting initializers now receive a commit-time diagnostic.
 Different gcTime props remain supported and the first committed observer owns birth configuration.
+
+Guard detached address generations and preconnection edits, preserve cross-realm Promise ACKs,
+and separate pure router render snapshots from committed navigation. Handle cancelled data-router
+commits without stale optimistic state. Compose array item equality, preserve empty/custom-delimiter
+round trips with exceptional tagged frames, reject non-finite numeric input, and type numeric reset
+paths. Cached teardown now reverses callbacks and releases all resources before aggregating errors.

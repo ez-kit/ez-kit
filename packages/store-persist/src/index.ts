@@ -86,6 +86,7 @@ export type {
 	PersistWriteOptions,
 	SourcePort,
 	SyncSourcePort,
+	SyncReadSourcePort,
 } from './types'
 
 export type {

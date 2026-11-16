@@ -1,7 +1,7 @@
 'use client'
 
 import { usePathname, useRouter, useSearchParams as useNextSearchParams } from 'next/navigation'
-import { useEffect, useLayoutEffect, useRef } from 'react'
+import { useEffect, useInsertionEffect, useLayoutEffect, useRef } from 'react'
 
 import { createUrlPort, URL_SOURCE, UrlHistory, urlMetaMerge } from './adapter'
 
@@ -25,12 +25,14 @@ export const nextAdapter: RenderScopedAdapter = {
 		const pathname = usePathname()
 
 		const search = params.toString()
-		const searchRef = useRef(search)
-		searchRef.current = search
-		const routerRef = useRef(router)
-		routerRef.current = router
-		const pathnameRef = useRef(pathname)
-		pathnameRef.current = pathname
+		const snapshot = { search, router, pathname }
+		const renderSnapshot = useRef(snapshot)
+		renderSnapshot.current = snapshot
+		const committed = useRef(snapshot)
+		// Publish operational refs before descendant layout effects, never during an abandoned render.
+		useInsertionEffect(() => {
+			committed.current = snapshot
+		})
 
 		const listeners = useRef(new Set<() => void>())
 		const previousPathname = useRef(pathname)
@@ -42,12 +44,16 @@ export const nextAdapter: RenderScopedAdapter = {
 
 		const portRef = useRef<SyncSourcePort | null>(null)
 		portRef.current ??= createUrlPort({
-			read: () => new URLSearchParams(searchRef.current),
+			read: () => new URLSearchParams(committed.current.search),
+			readRender: () => new URLSearchParams(renderSnapshot.current.search),
 			subscribe: (onNavigate) => {
 				listeners.current.add(onNavigate)
 				const onPopState = (): void => {
-					searchRef.current = window.location.search.slice(1)
-					pathnameRef.current = window.location.pathname
+					committed.current = {
+						...committed.current,
+						search: window.location.search.slice(1),
+						pathname: window.location.pathname,
+					}
 					onNavigate()
 				}
 				window.addEventListener('popstate', onPopState)
@@ -59,11 +65,11 @@ export const nextAdapter: RenderScopedAdapter = {
 			commit: (next, history) => {
 				const query = next.toString()
 				const hash = typeof window === 'undefined' ? '' : window.location.hash
-				const url = `${pathnameRef.current}${query ? `?${query}` : ''}${hash}`
+				const url = `${committed.current.pathname}${query ? `?${query}` : ''}${hash}`
 				if (history === UrlHistory.Push) {
-					routerRef.current.push(url)
+					committed.current.router.push(url)
 				} else {
-					routerRef.current.replace(url)
+					committed.current.router.replace(url)
 				}
 			},
 		})

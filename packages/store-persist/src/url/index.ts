@@ -1,5 +1,5 @@
 /**
- * URL source for the persist core. Framework-agnostic: builds a {@link SyncSourcePort} over a
+ * URL source for the persist core. Framework-agnostic: builds a synchronously readable source port over a
  * {@link UrlDriver} (read/commit `URLSearchParams`) and provides the `persistUrl`/`urlField` fronts.
  *
  * The render-scoped router adapters that produce a driver from router hooks ship as peer-gated

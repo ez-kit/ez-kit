@@ -243,3 +243,31 @@ For simultaneous cold cached Providers at one address, reuse the same defaultVal
 services registry. Conflicting initializers are diagnosed at commit rather than silently losing
 one owner's mount-effect changes. Different gcTime props remain supported: first committed
 activation sets the entry lifetime. Warm cache hits still reuse their committed instance.
+
+## Third-audit contracts
+
+Optional SourcePort.getRenderSnapshot provides pure synchronous SSR/client seeding separately from
+committed operational get/set. Custom ports without it retain the synchronous get fallback.
+RenderScopedAdapter now accepts SyncReadSourcePort (sync get with possibly async acknowledged set);
+SyncSourcePort remains the strict synchronous read/write contract. UrlDriver adds optional readRender
+and permits a Promise from commit. Plain synchronous drivers retain synchronous behavior and typing.
+
+Do not update an active router port's operational location from an uncommitted render. Built-in
+adapters publish committed refs separately; React Router data-router completion/blocker observation
+uses a read-only exported data context with runtime feature detection rather than patched methods.
+Cancelled writes must reconcile authoritative location and report their outcome.
+
+Retired detached intent cannot overwrite a newer address owner. Old superseded waiters settle
+explicitly, while already-sent mutations and reset barriers remain ordered. Edits between render
+baseline capture and connection are preserved, including child mount effects. Cross-realm Promise
+results retain acknowledgement semantics instead of being treated as synchronous data.
+
+Array equality now follows item codecs. Ordinary delimited arrays retain their representation;
+exceptional empty-item/delimiter cases use a parser-owned tagged JSON frame. Existing unambiguous
+legacy values remain readable, but an older decoder cannot read new framed writes. Keep the old
+storage namespace for rollback. Numeric parsers reject Infinity and overflow. Typed reset paths
+include stringified numeric dictionary/literal keys.
+
+Cached plugin cleanup runs in reverse order and releases every callback/entry despite failures.
+Manual remove/clear throws AggregateError after release; GC surfaces its aggregate through the
+existing timer error path. Failed activation rolls successful setup back before reporting errors.

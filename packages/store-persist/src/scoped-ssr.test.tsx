@@ -16,6 +16,7 @@ describe('scoped persistence SSR', () => {
 		const commit = vi.fn()
 		const url = createUrlPort({ read: () => new URLSearchParams('q=boots'), commit })
 		const read = vi.spyOn(url, 'get')
+		const renderRead = vi.spyOn(url, 'getRenderSnapshot')
 		const ambient = { get: vi.fn(() => new Map<string, string>()), set: vi.fn() }
 		const adapters = { url: { usePort: () => ({ port: url, changeKey: 'q=boots' }) }, server: { port: ambient } }
 		function View() {
@@ -46,7 +47,8 @@ describe('scoped persistence SSR', () => {
 				),
 			).toContain('boots')
 		}
-		expect(read).toHaveBeenCalledTimes(2)
+		expect(read).not.toHaveBeenCalled()
+		expect(renderRead).toHaveBeenCalledTimes(2)
 		expect(ambient.get).not.toHaveBeenCalled()
 		expect(ambient.set).not.toHaveBeenCalled()
 		expect(commit).not.toHaveBeenCalled()

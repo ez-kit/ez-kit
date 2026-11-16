@@ -1,8 +1,10 @@
 import { isWithinScope, readPath, serializePersistAddress } from '@ez-kit/store-core'
 
+import { isPromiseLike } from './async-value'
 import { cloneDefault, fieldEquals, stringifyField, systemWrites, updateBindingStatus, writeBinding } from './binding'
 import { fieldKey } from './key-naming'
 import { decodeRecord, encodeRecord, FutureVersionError, validateSchema } from './record'
+import { SourceMutationCancelledError } from './source-errors'
 
 import type { PersistBinding, RecordState } from './binding'
 import type {
@@ -19,6 +21,8 @@ import type {
 import type { PathWrite, PersistAddress } from '@ez-kit/store-core'
 
 export type PersistEngine = {
+	prepare(binding: PersistBinding): () => void
+	seedBaseline(binding: PersistBinding): void
 	connect(binding: PersistBinding): () => void
 	seed(binding: PersistBinding): void
 	snapshot(): Keyed | Promise<Keyed>
@@ -93,6 +97,10 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 	const detached = new Set<PersistBinding>()
 	const operations = new Set<Job>()
 	const writeErrors = new WeakMap<PersistBinding, unknown>()
+	const retired = new WeakMap<RecordState, Error>()
+	const recordKeys = new WeakMap<RecordState, string>()
+	const prepared = new WeakSet<PersistBinding>()
+	const seededBaselines = new WeakSet<PersistBinding>()
 	const deadlines = new Map<PersistBinding, number>()
 	let nextOperationId = 0
 	const subscriptions = new Map<PersistBinding, () => void>()
@@ -163,7 +171,9 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 		if (job.kind === 'container-rewrite') return true
 		return (
 			job.owner === binding ||
-			[...job.entries.values()].some((entry) => entry.binding === binding) ||
+			[...job.entries.values()].some(
+				(entry) => entry.binding === binding || [...binding.keyOf.values()].includes(entry.key),
+			) ||
 			(job.barrier !== undefined && isWithinScope(binding.fields[0]?.address?.store.path ?? [], job.barrier.path))
 		)
 	}
@@ -181,7 +191,15 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 	function refresh(binding: PersistBinding, error?: unknown): void {
 		if (error !== undefined) writeErrors.set(binding, error)
 		const related = [...operations].filter((job) => applies(job, binding))
-		const failure = related.find((job) => job.state === 'failed')?.error ?? writeErrors.get(binding)
+		const superseded = supersessionError(binding)
+		if (
+			superseded &&
+			!bindings.has(binding) &&
+			![...binding.records.values()].some((record) => record.dirty || record.resetPending) &&
+			!related.some((job) => job.state === 'pending')
+		)
+			writeErrors.delete(binding)
+		const failure = related.find((job) => job.state === 'failed')?.error ?? writeErrors.get(binding) ?? superseded
 		const blocked = [...binding.records.values()].some((record) => record.blocked)
 		const pending = related.some((job) => job.state === 'pending') || deadlines.has(binding)
 		updateBindingStatus(binding, {
@@ -192,7 +210,7 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 			!bindings.has(binding) &&
 			![...binding.records.values()].some((record) => record.dirty) &&
 			!pending &&
-			failure === undefined
+			(failure === undefined || failure === superseded)
 		) {
 			detached.delete(binding)
 			binding.controller = null
@@ -200,12 +218,17 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 	}
 
 	function settleFences(error?: unknown, entries: Iterable<Entry> = []): void {
-		const failed = new Map([...entries].map((entry) => [entry.record, entry.reset ? Infinity : entry.revision]))
+		const failedEntries = [...entries]
+		const failed = new Map(failedEntries.map((entry) => [entry.record, entry.reset ? Infinity : entry.revision]))
+		const failedKeys = new Set(failedEntries.filter((entry) => entry.reset).map((entry) => entry.key))
 		for (const fence of fences) {
 			const operationError = [...fence.operations].find((job) => job.state === 'failed')
 			if (
 				operationError ||
-				(error !== undefined && [...fence.targets].some(([record, target]) => (failed.get(record) ?? -1) >= target))
+				(error !== undefined &&
+					[...fence.targets].some(
+						([record, target]) => (failed.get(record) ?? -1) >= target || failedKeys.has(recordKeys.get(record) ?? ''),
+					))
 			) {
 				fences.delete(fence)
 				fence.reject(operationError?.error ?? error)
@@ -225,7 +248,7 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 				(barrier) =>
 					(barrier.pending || barrier.failed) && isWithinScope(entry.field.address?.store.path ?? [], barrier.path),
 			) ||
-			(!entry.reset && pendingResets.has(entry.record))
+			(!entry.reset && [...pendingResets.values()].some((reset) => reset.key === entry.key))
 		)
 	}
 
@@ -291,12 +314,27 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 						entry.record.dirty = false
 						entry.record.forceDelete = false
 					}
-				} else if (error instanceof FutureVersionError && error.keys.includes(entry.key)) entry.record.blocked = true
+				} else if (error instanceof SourceMutationCancelledError && entry.record.revision === entry.revision) {
+					entry.record.dirty = false
+					entry.record.forceDelete = false
+					if (pendingResets.get(entry.record) === entry) pendingResets.delete(entry.record)
+					entry.record.resetPending = pendingResets.has(entry.record)
+				} else if (error instanceof FutureVersionError && !retired.has(entry.record) && error.keys.includes(entry.key))
+					entry.record.blocked = true
 			}
 			if (job.barrier) {
 				job.barrier.pending = false
 				job.barrier.failed = error !== undefined
 				if (error === undefined) {
+					for (const [record, entry] of pendingResets) {
+						if (!retired.has(record) || !isWithinScope(entry.field.address?.store.path ?? [], job.barrier.path))
+							continue
+						pendingResets.delete(record)
+						record.acknowledged = Math.max(record.acknowledged, entry.revision)
+						record.resetPending = false
+						record.forceDelete = false
+						affected.add(entry.binding)
+					}
 					const index = barriers.indexOf(job.barrier)
 					if (index >= 0) barriers.splice(index, 1)
 				}
@@ -323,6 +361,12 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 					job.barrier?.path,
 				)
 				job.reject(error)
+			}
+			if (error instanceof SourceMutationCancelledError) {
+				const captured = captureExternal()
+				for (const [binding, snapshot] of captured)
+					for (const record of binding.records.values()) if (record.dirty) snapshot.records.delete(record)
+				pullExternal(captured)
 			}
 			drain()
 			if (error === undefined || error instanceof FutureVersionError) for (const binding of affected) schedule(binding)
@@ -352,8 +396,8 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 					),
 					contextFor(job),
 				)
-			if (result instanceof Promise)
-				void result.then(
+			if (isPromiseLike(result))
+				void Promise.resolve(result).then(
 					() => {
 						finish()
 					},
@@ -423,7 +467,7 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 			[...pendingResets.values()]
 				.filter(
 					(entry) =>
-						(!target || entry.binding === target) &&
+						(!target || entry.binding === target || [...target.keyOf.values()].includes(entry.key)) &&
 						(!ready || ready.has(entry.binding)) &&
 						!barriers.some((barrier) => barrier.entries.get(entry.key) === entry) &&
 						running?.entries.get(entry.key) !== entry &&
@@ -436,6 +480,7 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 		for (const binding of target ? [target] : (ready ?? allBindings()))
 			for (const [field, record] of binding.records) {
 				if (
+					retired.has(record) ||
 					!record.dirty ||
 					(record.blocked && !record.resetPending) ||
 					queued.get(record)?.revision === record.revision
@@ -537,6 +582,7 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 
 	function observe(binding: PersistBinding): void {
 		for (const [field, record] of binding.records) {
+			if (retired.has(record)) continue
 			try {
 				const encoded = stringifyField(field, readPath(binding.port.getState(binding.store), field.path))
 				if (encoded === record.observed) continue
@@ -600,7 +646,13 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 		const writes: PathWrite[] = []
 		for (const [field, record] of binding.records) {
 			const key = bindingKey(binding, field)
-			if (record.revision !== expected.get(record) || record.resetPending) continue
+			if (
+				retired.has(record) ||
+				record.revision !== expected.get(record) ||
+				record.resetPending ||
+				[...pendingResets.values()].some((reset) => reset.key === key)
+			)
+				continue
 			let operation: PersistErrorContext['operation'] = 'decode'
 			try {
 				const raw = keyed.get(key)
@@ -632,13 +684,19 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 				if (stored.version < current && field.schema?.migrate) {
 					operation = 'migrate'
 					value = field.schema.migrate(value, stored.version)
-					if (value instanceof Promise) throw new Error('Migrate must be synchronous')
+					if (isPromiseLike(value)) {
+						void Promise.resolve(value).catch(() => undefined)
+						throw new Error('Migrate must be synchronous')
+					}
 				}
 				if (field.schema?.validate) {
 					operation = 'validate'
 					value = field.schema.validate(value)
 				}
-				if (value instanceof Promise) throw new Error('[ez-kit/store-persist] Schema callbacks must be synchronous')
+				if (isPromiseLike(value)) {
+					void Promise.resolve(value).catch(() => undefined)
+					throw new Error('[ez-kit/store-persist] Schema callbacks must be synchronous')
+				}
 				if (external) supersedeWithExternal(binding, field, record)
 				if (record.forceDelete) {
 					record.forceDelete = false
@@ -714,7 +772,36 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 			if (externalCurrent(binding, snapshot)) processRead(binding, values, true, snapshot.records)
 	}
 
+	function pullExternal(captured = captureExternal()): void {
+		if (disposed) return
+		const generation = ++externalGeneration
+		const valid = (): boolean => !disposed && generation === externalGeneration
+		const fail = (error: unknown): void => {
+			if (!valid()) return
+			const fields = [...captured].flatMap(([binding, snapshot]) =>
+				externalCurrent(binding, snapshot)
+					? [...binding.records]
+							.filter(([, record]) => record.revision === snapshot.records.get(record))
+							.map(([field]) => field)
+					: [],
+			)
+			if (fields.length) report(error, 'read', fields)
+		}
+		try {
+			const result = api.snapshot()
+			if (isPromiseLike(result))
+				void Promise.resolve(result).then((values) => {
+					if (valid()) applyExternal(values, captured)
+				}, fail)
+			else if (valid()) applyExternal(result, captured)
+		} catch (error) {
+			fail(error)
+		}
+	}
+
 	function restore(binding: PersistBinding, supplied: RestoreCallOptions = {}): Promise<RestoreResult> {
+		const superseded = supersessionError(binding)
+		if (superseded) return Promise.resolve({ status: 'error', error: superseded })
 		if (binding.status.restore === 'pending' && binding.restorePromise) return binding.restorePromise
 		if (disposed || !bindings.has(binding)) return Promise.resolve({ status: 'idle' })
 		const timeout = supplied.timeoutMs === undefined ? binding.restoreOptions.timeoutMs : supplied.timeoutMs
@@ -802,7 +889,7 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 					controller.signal,
 				),
 			)
-			if (result instanceof Promise) {
+			if (isPromiseLike(result)) {
 				if (timeout !== undefined && timeout !== null)
 					deadline = setTimeout(() => {
 						if (valid()) {
@@ -810,7 +897,7 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 							finish('timeout')
 						}
 					}, timeout)
-				void result.then(apply, fail)
+				void Promise.resolve(result).then(apply, fail)
 			} else apply(result)
 		} catch (error) {
 			fail(error)
@@ -823,7 +910,7 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 		const entries: Entry[] = []
 		for (const field of selected) {
 			const record = binding.records.get(field)
-			if (!record) continue
+			if (!record || retired.has(record)) continue
 			const key = bindingKey(binding, field)
 			record.revision++
 			revision++
@@ -857,7 +944,115 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 		return entries
 	}
 
+	function supersessionError(binding: PersistBinding): Error | undefined {
+		for (const record of binding.records.values()) {
+			const error = retired.get(record)
+			if (error) return error
+		}
+		return undefined
+	}
+
+	function retireAtAddress(key: string, successor: PersistBinding): void {
+		for (const previous of detached) {
+			if (previous === successor) continue
+			for (const [field, record] of previous.records) {
+				if (bindingKey(previous, field) !== key || retired.has(record)) continue
+				const error = new Error(`[ez-kit/store-persist] Persistence ownership superseded: ${key}`)
+				retired.set(record, error)
+				record.error = error
+				record.dirty = false
+				record.blocked = false
+				pendingMetas.delete(record)
+				queued.delete(record)
+				for (const job of [...jobs]) {
+					const entry = job.entries.get(key)
+					if (job.kind !== 'patch' || entry?.record !== record) continue
+					job.entries.delete(key)
+					if (!job.entries.size) {
+						job.state = 'failed'
+						job.error = error
+						operations.delete(job)
+						jobs.splice(jobs.indexOf(job), 1)
+						job.reject(error)
+					}
+				}
+				for (const fence of fences) {
+					const target = fence.targets.get(record)
+					if (target === undefined) continue
+					const sent = running?.entries.get(key)
+					const deletion = pendingResets.get(record)
+					if ((sent?.record === record && sent.revision >= target) || (deletion && deletion.revision >= target))
+						continue
+					fences.delete(fence)
+					fence.reject(error)
+				}
+			}
+			if (![...previous.records.values()].some((record) => record.dirty || record.resetPending))
+				writeErrors.delete(previous)
+			refresh(previous)
+		}
+	}
+
+	function observeBaseline(binding: PersistBinding): void {
+		for (const [field, record] of binding.records) {
+			try {
+				record.observed = stringifyField(field, readPath(binding.port.getState(binding.store), field.path))
+			} catch {
+				/* The next observed write reports codec failures. */
+			}
+		}
+	}
+
+	function preflight(binding: PersistBinding) {
+		if (disposed) throw new Error('[ez-kit/store-persist] Engine disposed')
+		const superseded = supersessionError(binding)
+		if (superseded) throw superseded
+		const timeout = binding.restoreOptions.timeoutMs
+		if (timeout !== undefined && timeout !== null && (!Number.isFinite(timeout) || timeout < 0))
+			throw new Error('[ez-kit/store-persist] Invalid restore timeoutMs')
+		const acquisitions: { key: string; physical: string | undefined }[] = []
+		const proposedPhysical = new Map<string, string>()
+		for (const field of binding.fields) {
+			validateSchema(field.schema)
+			if ((field.schema?.version ?? 0) > 0 && !versioned)
+				throw new Error('[ez-kit/store-persist] Source does not support record versions')
+			if (versioned && (field.prefix !== undefined || field.absolute))
+				throw new Error('[ez-kit/store-persist] Storage prefix/absolute were replaced by StoreId scope')
+			const key = bindingKey(binding, field)
+			const owner = owners.get(key)
+			if (owner && owner.store !== binding.store) throw new Error(`[ez-kit/store-persist] Address collision: ${key}`)
+			const physical = port.keyForField?.(field)
+			if (physical !== undefined) {
+				const existing = physicalOwners.get(physical)
+				if (existing && existing.key !== key)
+					throw new Error(`[ez-kit/store-persist] Physical key collision: ${physical}`)
+				const proposed = proposedPhysical.get(physical)
+				if (proposed !== undefined && proposed !== key)
+					throw new Error(`[ez-kit/store-persist] Physical key collision: ${physical}`)
+				proposedPhysical.set(physical, key)
+			}
+			acquisitions.push({ key, physical })
+		}
+		return acquisitions
+	}
+
 	const api: PersistEngine = {
+		prepare(binding) {
+			preflight(binding)
+			if (!prepared.has(binding)) {
+				observe(binding)
+				prepared.add(binding)
+			}
+			return () => {
+				prepared.delete(binding)
+			}
+		},
+		seedBaseline(binding) {
+			if (!seededBaselines.has(binding) && !binding.started) {
+				observeBaseline(binding)
+				seededBaselines.add(binding)
+			}
+		},
 		seed(binding) {
 			if (!options.ssrSafe || binding.seeded) return
 			for (const field of binding.fields) {
@@ -868,9 +1063,10 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 			binding.seeded = true
 			deferredReports = binding.seedReports
 			try {
-				const values = port.get(readContext(binding.fields))
-				if (values instanceof Promise) {
-					void values.catch(() => undefined)
+				const context = readContext(binding.fields)
+				const values = port.getRenderSnapshot ? port.getRenderSnapshot(context) : port.get(context)
+				if (isPromiseLike(values)) {
+					void Promise.resolve(values).catch(() => undefined)
 					throw new Error('[ez-kit/store-persist] Render-scoped source must be synchronous')
 				}
 				processRead(
@@ -892,29 +1088,7 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 			if (disposed)
 				throw new Error('[ez-kit/store-persist] Cannot connect to disposed engine; recreate the cache entry')
 			if (bindings.has(binding)) return () => undefined
-			const acquisitions: { key: string; physical: string | undefined }[] = []
-			const proposedPhysical = new Map<string, string>()
-			for (const field of binding.fields) {
-				validateSchema(field.schema)
-				if ((field.schema?.version ?? 0) > 0 && !versioned)
-					throw new Error('[ez-kit/store-persist] Source does not support record versions')
-				if (versioned && (field.prefix !== undefined || field.absolute))
-					throw new Error('[ez-kit/store-persist] Storage prefix/absolute were replaced by StoreId scope')
-				const key = bindingKey(binding, field)
-				const owner = owners.get(key)
-				if (owner && owner.store !== binding.store) throw new Error(`[ez-kit/store-persist] Address collision: ${key}`)
-				const physical = port.keyForField?.(field)
-				if (physical !== undefined) {
-					const existing = physicalOwners.get(physical)
-					if (existing && existing.key !== key)
-						throw new Error(`[ez-kit/store-persist] Physical key collision: ${physical}`)
-					const proposed = proposedPhysical.get(physical)
-					if (proposed !== undefined && proposed !== key)
-						throw new Error(`[ez-kit/store-persist] Physical key collision: ${physical}`)
-					proposedPhysical.set(physical, key)
-				}
-				acquisitions.push({ key, physical })
-			}
+			const acquisitions = preflight(binding)
 			const wasDetached = detached.has(binding)
 			const previousController = binding.controller
 			const previousOwners = new Map(acquisitions.map(({ key }) => [key, owners.get(key)]))
@@ -924,6 +1098,8 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 				),
 			)
 			for (const { key, physical } of acquisitions) {
+				const record = [...binding.records].find(([field]) => bindingKey(binding, field) === key)?.[1]
+				if (record) recordKeys.set(record, key)
 				owners.set(key, binding)
 				if (physical !== undefined) physicalOwners.set(physical, { binding, key })
 			}
@@ -932,14 +1108,19 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 			detached.delete(binding)
 			binding.controller = api
 			try {
+				if (prepared.has(binding)) observeBaseline(binding)
+				else observe(binding)
+				prepared.delete(binding)
 				subscriptions.set(
 					binding,
 					binding.port.subscribe(binding.store, () => {
 						observe(binding)
 					}),
 				)
+				for (const { key } of acquisitions) retireAtAddress(key, binding)
 				if (!binding.started || binding.status.restore === 'idle') void restore(binding)
 				if ([...operations].some((job) => applies(job, binding))) refresh(binding)
+				schedule(binding)
 			} catch (error) {
 				binding.cancelRestore?.()
 				subscriptions.get(binding)?.()
@@ -987,31 +1168,7 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 			if (!disposed) applyExternal(external, captureExternal())
 		},
 		pullSource() {
-			if (disposed) return
-			const generation = ++externalGeneration
-			const captured = captureExternal()
-			const valid = (): boolean => !disposed && generation === externalGeneration
-			const fail = (error: unknown): void => {
-				if (!valid()) return
-				const fields = [...captured].flatMap(([binding, snapshot]) =>
-					externalCurrent(binding, snapshot)
-						? [...binding.records]
-								.filter(([, record]) => record.revision === snapshot.records.get(record))
-								.map(([field]) => field)
-						: [],
-				)
-				if (fields.length) report(error, 'read', fields)
-			}
-			try {
-				const result = api.snapshot()
-				if (result instanceof Promise)
-					void result.then((values) => {
-						if (valid()) applyExternal(values, captured)
-					}, fail)
-				else if (valid()) applyExternal(result, captured)
-			} catch (error) {
-				fail(error)
-			}
+			pullExternal()
 		},
 		runWithMeta(meta, mutate) {
 			const previous = activeMeta
@@ -1027,8 +1184,11 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 		},
 		flush(binding) {
 			if (disposed) return Promise.reject(new Error('[ez-kit/store-persist] Engine disposed'))
-			if (binding) deadlines.delete(binding)
-			else deadlines.clear()
+			if (binding) {
+				const superseded = supersessionError(binding)
+				if (superseded) return Promise.reject(superseded)
+				deadlines.delete(binding)
+			} else deadlines.clear()
 			planSchedule()
 			const retries: Promise<void>[] = []
 			for (const job of [...operations]) {
@@ -1052,6 +1212,7 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 			const blocked: string[] = []
 			for (const item of binding ? [binding] : allBindings())
 				for (const [field, record] of item.records) {
+					if (retired.has(record)) continue
 					if (record.dirty) targets.set(record, record.revision)
 					if (record.blocked && !record.resetPending) blocked.push(bindingKey(item, field))
 				}
@@ -1059,16 +1220,15 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 				collect(binding)
 				return Promise.reject(new FutureVersionError(blocked))
 			}
-			const captured = new Set(
-				[...operations].filter(
-					(job) =>
-						(job.kind === 'container-rewrite' || job.kind === 'scope-reset') && (!binding || applies(job, binding)),
-				),
-			)
+			const capturesOperation = (job: Job): boolean =>
+				(job.kind !== 'patch' || [...job.entries.values()].some((entry) => retired.has(entry.record))) &&
+				(!binding || applies(job, binding))
+			const captured = new Set([...operations].filter(capturesOperation))
 			const fencePromise = new Promise<void>((resolve, reject) => {
 				const fence: Fence = { targets, operations: captured, resolve, reject }
 				fences.add(fence)
 				const failure = collect(binding)
+				for (const job of operations) if (capturesOperation(job)) fence.operations.add(job)
 				if (failure !== undefined) {
 					fences.delete(fence)
 					reject(failure instanceof Error ? failure : new Error('Cannot encode persistent value', { cause: failure }))
@@ -1086,6 +1246,10 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 				(field) => !fields || fields.some((path) => JSON.stringify(path) === JSON.stringify(field.path)),
 			)
 			if (selected.length === 0) return Promise.resolve()
+			const superseded = selected
+				.map((field) => binding.records.get(field))
+				.flatMap((record) => (record && retired.get(record) ? [retired.get(record)] : []))[0]
+			if (superseded) return Promise.reject(superseded)
 			const entries = resetMemory(binding, selected)
 			return enqueue(new Map(entries.map((entry) => [entry.key, entry])), {}).promise
 		},

@@ -195,3 +195,14 @@ For a backend, implement full removeScope and conditional version checks. A muta
 acknowledgment. A lost response does not prove cancellation; server revisions/generations are needed
 if an old request can commit after a network error. The client queue is not a distributed lock or a
 cross-device synchronization protocol.
+
+## Address ownership and early edits
+
+Closing an instance can retain unsaved work, but a later owner of the same address cannot be
+overwritten by an obsolete unsent retry. Superseded old waiters report the handoff explicitly rather
+than claiming a save or hanging; already-sent operations and reset barriers retain source order.
+Unrelated retained addresses remain retryable.
+
+Edits made after default capture but before connection, including child layout/passive mount effects,
+become tracked dirty intent. Source render seeds and restoration remain system writes; one source's
+seed must not become another source's user edit or new default.
