@@ -170,3 +170,26 @@ Fetcher sources SHALL default mutation keys to the base key plus the operation n
 
 - **WHEN** an operation supplies its own mutationKey
 - **THEN** the collection preserves it rather than replacing it with a generated key
+
+### Requirement: Consumer query behavior
+
+The collection hook SHALL accept typed per-consumer loading and refetch options for either read mode. Supplied options SHALL override source defaults only on the active read. Cache keys, query functions, selection and infinite cursor configuration SHALL remain source-owned, including for untyped runtime callers.
+
+#### Scenario: Conditional loading
+
+- **WHEN** a consumer changes queryOptions.enabled from false to true
+- **THEN** the active read fetches using the source's identity and projections without enabling the inactive mode
+
+### Requirement: Shared factory selection
+
+Entity overrides in a shared factory SHALL infer selected list data and selected infinite pages independently of raw API responses. An operation supplying select SHALL supply getItems explicitly. Its inherited getTotal SHALL be discarded unless the operation supplies a compatible replacement. Infinite pagination SHALL continue to use raw response pages.
+
+#### Scenario: Selecting names
+
+- **WHEN** an entity selects string arrays from object response envelopes
+- **THEN** getItems receives string arrays, cached responses remain envelopes and an inherited envelope total projection is not invoked
+
+#### Scenario: Selected infinite pages
+
+- **WHEN** select transforms pages within the InfiniteData envelope
+- **THEN** getItems projects each selected page while getNextPageParam receives raw pages

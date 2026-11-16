@@ -143,3 +143,78 @@ of that read's preparation and projection fields. Incomplete definitions are typ
 Mutation `onSuccess` inherits global or keyed QueryClient defaults when the source does not
 provide its own callback. A local callback replaces the inherited one, following TanStack's
 precedence; automatic invalidation follows the effective callback.
+
+## Per-component query options
+
+Keep shared defaults in the source and override loading behavior at the hook call:
+
+```tsx
+const users = useCollectionQuery({
+	source: usersSource,
+	mode: 'pages',
+	params,
+	queryOptions: {
+		enabled: isOpen,
+		staleTime: 30_000,
+		refetchOnWindowFocus: false,
+	},
+})
+```
+
+The same option works in `mode: 'infinite'`. Supplied properties override source options;
+other source settings remain unchanged. Supported options are `enabled`, `staleTime`, `gcTime`,
+`retry`, `retryDelay`, `retryOnMount`, `refetchInterval`, `refetchIntervalInBackground`,
+`refetchOnMount`, `refetchOnWindowFocus`, `refetchOnReconnect`, `networkMode`, `throwOnError`
+and `notifyOnChangeProps`. Native callbacks retain the source's response and error types.
+
+The source still owns `queryKey`, `queryFn`, `select`, initial data and infinite cursor handling.
+They cannot be overridden here. These settings apply only to the active read, not to mutations.
+Disabling an observer retains TanStack's normal behavior: cached data remains available and
+manual `query.refetch()` can still fetch.
+
+## Selecting another shape in a shared factory
+
+An entity can change the selected response shape without changing the cached response or
+repeating the request convention:
+
+```tsx
+const makeUsersSource = createCollectionSourceFactory({
+	list: {
+		prepareArgs: (params: { offset: number; limit: number }) => ({ query: params }),
+		getItems: (response: { items: User[]; total: number }) => response.items,
+		getTotal: (response) => response.total,
+	},
+})
+
+const namesSource = makeUsersSource({
+	key: ['user-names'],
+	getAll: {
+		fetcher: fetchUsers,
+		options: { select: (response) => response.items.map((user) => user.name) },
+		getItems: (names) => names, // string[], inferred from select
+	},
+})
+```
+
+Providing `select` requires an explicit `getItems` for the new shape. The inherited `getTotal`
+is discarded; supply a new one if the selected data still contains a total. Without it, the
+collection total is `undefined`. The operation's entire `options` object replaces shared
+options, as with other factory overrides.
+
+For infinite reads, select the native `InfiniteData` envelope and project each selected page:
+
+```tsx
+getInfinite: {
+  fetcher: fetchUsersPage,
+  options: {
+    select: data => ({
+      ...data,
+      pages: data.pages.map(page => page.items.map(user => user.name)),
+    }),
+  },
+  getItems: names => names, // selected page: string[]
+}
+```
+
+Keep the `pages` / `pageParams` structure. `getNextPageParam` still receives original API pages;
+`getItems` receives selected pages. Prefetching and cache access continue to use the raw response.

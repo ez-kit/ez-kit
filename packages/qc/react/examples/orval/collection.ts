@@ -9,6 +9,8 @@ import type { User, UserValues } from './generated/users'
 type Params = { offset: number; limit: number; search: string }
 
 // Application convention: independent of table state and reusable for any entity.
+// Explicit specialization binds the response envelope for every entity operation.
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
 function makeCollection<Row>() {
 	return createCollectionSourceFactory({
 		list: {

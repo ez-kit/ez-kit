@@ -13,6 +13,17 @@ import type {
 } from './types'
 import type { DefaultError, InvalidateQueryFilters, QueryKey } from '@tanstack/react-query'
 
+type SelectedListFetcher<P, A, D, S, I> = Omit<ListFetcher<P, A, D, S, I, DefaultError>, 'getItems' | 'getTotal'> & {
+	getItems: (data: NoInfer<S>) => readonly I[]
+	getTotal?: (data: NoInfer<S>) => number | undefined
+}
+type SelectedInfiniteFetcher<P, A, B, D, S, I, C> = Omit<
+	InfiniteFetcher<P, A, B, D, S, I, C, DefaultError>,
+	'getItems'
+> & {
+	getItems: (page: NoInfer<S>) => readonly I[]
+}
+
 type Operation<V, A> = { prepareArgs: (input: V) => A }
 type CanInherit<V, DV, DA, A> = [DV] extends [never]
 	? false
@@ -27,6 +38,15 @@ type MutationOverride<V, DV, DA, A, D, E, O> =
 			(CanInherit<V, DV, DA, A> extends true
 				? { prepareArgs?: (input: V) => NoInfer<A> }
 				: { prepareArgs: (input: V) => NoInfer<A> }))
+type SelectionKey<O> = O extends unknown ? Extract<keyof O, 'select'> : never
+type SelectionProjections<Enabled, K extends PropertyKey> = K extends keyof Enabled
+	? NonNullable<Enabled[K]> extends { options?: infer O }
+		? 'select' extends SelectionKey<NonNullable<O>>
+			? { [Key in keyof Enabled as Key extends K ? Key : never]: { getItems: (data: never) => readonly unknown[] } }
+			: unknown
+		: unknown
+	: unknown
+
 type Presence = {
 	getAll?: unknown
 	getInfinite?: unknown
@@ -76,12 +96,14 @@ export function createCollectionSourceFactory<
 		ListParams = void,
 		ListArgs = unknown,
 		ListData = unknown,
-		ListItem = unknown,
+		ListItem = I,
+		ListSelected = Defaults extends { list: unknown } ? D : ListData,
 		InfiniteParams = void,
 		InfiniteArgs = unknown,
 		InfiniteCriteria = unknown,
 		InfiniteData = unknown,
-		InfiniteItem = unknown,
+		InfiniteItem = II,
+		InfiniteSelected = Defaults extends { infinite: unknown } ? ID : InfiniteData,
 		Cursor = unknown,
 		CreateInput = CreateV,
 		CreateArgs = CreateA,
@@ -110,27 +132,29 @@ export function createCollectionSourceFactory<
 			getAll?: Defaults extends { list: unknown }
 				? | CollectionFetcher<A, D>
 					| ({ fetcher: CollectionFetcher<A, D> } & Partial<
-							Omit<ListFetcher<P, A, D, D, I, DefaultError>, 'fetcher' | 'prepareArgs'> & {
+							Omit<SelectedListFetcher<P, A, D, ListSelected, ListItem>, 'fetcher' | 'prepareArgs'> & {
 								prepareArgs: (params: P) => A
 							}
 					  >)
-				: ListFetcher<ListParams, ListArgs, ListData, ListData, ListItem, DefaultError>
+				: SelectedListFetcher<ListParams, ListArgs, ListData, ListSelected, ListItem>
 			getInfinite?: Defaults extends { infinite: unknown }
 				? | CollectionFetcher<IA, ID>
 					| ({ fetcher: CollectionFetcher<IA, ID> } & Partial<
-							Omit<InfiniteFetcher<IP, IA, B, ID, ID, II, C, DefaultError>, 'fetcher' | 'preparePageArgs'> & {
+							Omit<
+								SelectedInfiniteFetcher<IP, IA, B, ID, InfiniteSelected, InfiniteItem, C>,
+								'fetcher' | 'preparePageArgs'
+							> & {
 								preparePageArgs: (context: { args: B; pageParam: C }) => IA
 							}
 					  >)
-				: InfiniteFetcher<
+				: SelectedInfiniteFetcher<
 						InfiniteParams,
 						InfiniteArgs,
 						InfiniteCriteria,
 						InfiniteData,
-						InfiniteData,
+						InfiniteSelected,
 						InfiniteItem,
-						Cursor,
-						DefaultError
+						Cursor
 					>
 			create?: MutationOverride<CreateInput, CreateV, CreateA, CreateArgs, CreateD, CreateE, CreateO>
 			update?: MutationOverride<UpdateInput, UpdateV, UpdateA, UpdateArgs, UpdateD, UpdateE, UpdateO>
@@ -144,12 +168,19 @@ export function createCollectionSourceFactory<
 				DeleteManyE,
 				DeleteManyO
 			>
-		} & ({ getAll: unknown } | { getInfinite: unknown }),
+		} & ({ getAll: unknown } | { getInfinite: unknown }) &
+			SelectionProjections<NoInfer<Enabled>, 'getAll'> &
+			SelectionProjections<NoInfer<Enabled>, 'getInfinite'>,
 	) {
 		function mergeOperation(value: unknown, fallback: unknown) {
 			if (value === undefined) return undefined
 			const operation = (typeof value === 'function' ? { fetcher: value } : value) as Record<string, unknown>
-			return { ...(fallback as Record<string, unknown> | undefined), ...operation }
+			const inherited = { ...(fallback as Record<string, unknown> | undefined) }
+			if (typeof (operation.options as { select?: unknown } | undefined)?.select === 'function') {
+				delete inherited.getItems
+				delete inherited.getTotal
+			}
+			return { ...inherited, ...operation }
 		}
 		const getAll = mergeOperation(config.getAll, defaults.list)
 		const getInfinite = mergeOperation(config.getInfinite, defaults.infinite)
@@ -185,11 +216,11 @@ export function createCollectionSourceFactory<
 		const source = createCollectionSource(combined as unknown as Parameters<typeof createCollectionSource>[0])
 		type Operations = {
 			getAll: Defaults extends { list: unknown }
-				? CollectionRead<P, D, D, I>
-				: CollectionRead<ListParams, ListData, ListData, ListItem>
+				? CollectionRead<P, D, ListSelected, ListItem>
+				: CollectionRead<ListParams, ListData, ListSelected, ListItem>
 			getInfinite: Defaults extends { infinite: unknown }
-				? CollectionInfiniteRead<IP, ID, ID, II, C>
-				: CollectionInfiniteRead<InfiniteParams, InfiniteData, InfiniteData, InfiniteItem, Cursor>
+				? CollectionInfiniteRead<IP, ID, InfiniteSelected, InfiniteItem, C>
+				: CollectionInfiniteRead<InfiniteParams, InfiniteData, InfiniteSelected, InfiniteItem, Cursor>
 			create: CollectionMutation<CreateInput, CreateD, CreateE, CreateO>
 			update: CollectionMutation<UpdateInput, UpdateD, UpdateE, UpdateO>
 			delete: CollectionMutation<DeleteInput, DeleteD, DeleteE, DeleteO>

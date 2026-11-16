@@ -60,9 +60,46 @@ export type CollectionResult<S, M extends CollectionMode<S>> =
 				query: QueryResult<Read<S, M>, M>
 			} & MutationResults<S>
 		: never
+const OBSERVER_OPTIONS = [
+	'enabled',
+	'staleTime',
+	'gcTime',
+	'retry',
+	'retryDelay',
+	'retryOnMount',
+	'refetchInterval',
+	'refetchIntervalInBackground',
+	'refetchOnMount',
+	'refetchOnWindowFocus',
+	'refetchOnReconnect',
+	'networkMode',
+	'throwOnError',
+	'notifyOnChangeProps',
+] as const
+export type CollectionQueryOptions<S, M extends CollectionMode<S>> =
+	Read<S, M> extends { query: (params: never) => infer O }
+		? Pick<O, Extract<(typeof OBSERVER_OPTIONS)[number], keyof O>>
+		: never
+
+// Whitelist at runtime too: untyped callers cannot replace cache identity or projections.
+function observerOptions(options: unknown) {
+	const result: Record<string, unknown> = {}
+	if (options && typeof options === 'object') {
+		for (const key of OBSERVER_OPTIONS) {
+			if (Object.prototype.hasOwnProperty.call(options, key)) result[key] = (options as Record<string, unknown>)[key]
+		}
+	}
+	return result
+}
+
 export type CollectionQueryConfig<S, M extends CollectionMode<S>> =
 	M extends CollectionMode<S>
-		? { source: S & { [K in ReadKey<M>]: Read<S, M> }; mode: M; params: CollectionParams<S, M> }
+		? {
+				source: S & { [K in ReadKey<M>]: Read<S, M> }
+				mode: M
+				params: CollectionParams<S, M>
+				queryOptions?: CollectionQueryOptions<S, M>
+			}
 		: never
 
 type RuntimeMutation = {
@@ -132,9 +169,14 @@ export function useCollectionQuery<S extends CollectionShape, M extends Collecti
 ): CollectionResult<S, M> {
 	const { mode, params } = config
 	const source = config.source as unknown as RuntimeSource
-	const list = useQuery(mode === 'pages' && source.getAll ? source.getAll.query(params) : INACTIVE_LIST)
+	const overrides = observerOptions(config.queryOptions)
+	const list = useQuery(
+		mode === 'pages' && source.getAll ? { ...source.getAll.query(params), ...overrides } : INACTIVE_LIST,
+	)
 	const pages = useInfiniteQuery(
-		mode === 'infinite' && source.getInfinite ? source.getInfinite.query(params) : INACTIVE_INFINITE,
+		mode === 'infinite' && source.getInfinite
+			? { ...source.getInfinite.query(params), ...overrides }
+			: INACTIVE_INFINITE,
 	)
 	const create = useCollectionMutation(source.create ?? MISSING, source.invalidation)
 	const update = useCollectionMutation(source.update ?? MISSING, source.invalidation)

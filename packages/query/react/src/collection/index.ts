@@ -10,5 +10,6 @@ export type {
 	CollectionMode,
 	CollectionResult,
 	CollectionQueryConfig,
+	CollectionQueryOptions,
 } from './use-collection-query'
 export { createCollectionSourceFactory } from './factory'

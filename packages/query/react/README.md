@@ -220,3 +220,13 @@ Conditionally configured mutations stay optional in the returned type. Check an 
 operation before using it; narrow an optional read descriptor before selecting that mode.
 Mutation callbacks inherit QueryClient global and keyed defaults with native override
 precedence. Automatic invalidation runs after the effective success callback settles.
+
+`useCollectionQuery({ source, mode, params, queryOptions })` accepts per-consumer loading and
+refetch settings such as `enabled`, `staleTime` and `refetchOnWindowFocus`. Only supplied settings
+override the source. Cache identity, `select` and infinite cursor handling remain source-owned;
+query callbacks keep native response/error types. Both read modes support these overrides.
+
+Shared-factory entity operations may use shape-changing `options.select`; `getItems` then infers
+the selected response (or selected infinite page) and must be supplied explicitly. Inherited
+`getTotal` is discarded for that operation; supply a compatible one to retain a total. Raw cache
+responses and `getNextPageParam` remain unchanged. Operation options still replace shared options.

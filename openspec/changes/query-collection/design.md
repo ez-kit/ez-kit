@@ -240,3 +240,18 @@ Adapter contexts preserve missing-row typing; no unsafe non-null assertion is in
 6. Record D1–D4 and D6–D7 in durable ADRs. Explicitly supersede only generic ownership claims in ADRs 0028/0029; preserve table/cache/modal contracts and ADRs 0022/0027/0030. Reconcile the unarchived qc-react-data-grid capability at archive time without overwriting its preserved requirements.
 
 Rollback before release can restore the old grid runtime while removing the new collection entry and its dependency. After publication, follow normal versioned release policy rather than silently removing public exports.
+
+## Consumer overrides and entity selections
+
+`useCollectionQuery` accepts `queryOptions` derived from the active source's native read options.
+A shared runtime/type whitelist permits enabled, staleTime, gcTime, retry/retryDelay/retryOnMount,
+refetchInterval/refetchIntervalInBackground, refetchOnMount/refetchOnWindowFocus/refetchOnReconnect,
+networkMode, throwOnError and notifyOnChangeProps. Only the active observer receives overrides.
+Source-owned cache identity, selection, initial data and cursor settings cannot be replaced.
+
+The shared factory independently infers each entity's selected list response or infinite page.
+Selection overrides require explicit getItems and drop inherited total projections. A new getTotal
+is optional and receives selected data. NoInfer on projection inputs prevents a projection from
+inventing an unrelated selected shape without select. Entity options still replace shared options.
+The shared convention continues to describe the raw API envelope; selection belongs to entity
+operations. Raw cache storage and cursor callbacks preserve TanStack behavior.

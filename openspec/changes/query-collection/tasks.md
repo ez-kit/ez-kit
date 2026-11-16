@@ -43,3 +43,9 @@
 
 - Review and archive only after implementation and validation. Reconcile the completed qc-react-data-grid change before or alongside archive so its connector capability is retained and not overwritten by the new collection capability.
 - Verify final main specs describe both the generic collection contract and preserved grid/form behavior.
+
+## Flexibility follow-up
+
+- [x] Add typed per-consumer loading/refetch queryOptions with runtime protection of source-owned fields.
+- [x] Infer shape-changing entity selections in shared factories for both list responses and infinite pages, with explicit projections and safe total handling.
+- [x] Document both APIs and verify runtime behavior, negative type cases, downstream consumers and React 18 compatibility.

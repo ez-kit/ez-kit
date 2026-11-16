@@ -51,3 +51,30 @@ configuration, and compatible row projections at the grid adapter boundary.
 - Sizes: query gate 450 B / 550 B; collection 1.37 kB / 1.6 kB; qc-react 2.76 kB / 3 kB.
 
 No new browser run was needed for this contract-only follow-up; the preceding browser evidence applies to the unchanged user flows. Per-consumer observer overrides and shape-changing shared-factory select remain outside this follow-up.
+
+## Observer options and shared selections — 2026-11-16
+
+Implemented the two flexibility follow-ups deferred by the previous audit fix:
+
+- Per-consumer loading/refetch settings override only the active read's source defaults. Runtime
+  whitelisting rejects replacement of cache identity and selection even from untyped callers.
+- Entity operations in the shared factory infer selected list data and infinite pages independently
+  of raw responses. Explicit getItems is required when select is supplied, inherited getTotal is
+  dropped, and projection annotations cannot invent a selected shape without select.
+
+Validation:
+
+- Affected gate: 24/24 tasks passed before the final negative-type cases and documentation links.
+- Final sequential library build, full lint, typecheck, test and library size gates passed.
+- Query React: 83 tests; qc-react: 89; docs: 313. New cases cover both observer modes, source
+  option precedence, protected identity, raw cache responses and next-page fetching after select.
+- React 18: Query React 83 passed; qc-react 83 passed with six existing HeroUI skips.
+- Type fixtures cover selected item inference, callback response/error types, forbidden hook
+  overrides, missing projections (including conditional selections), and incompatible projection inputs.
+- Collection entry is 1.56 kB minified/Brotli (previously 1.37 kB). Its budget is 1.8 kB to retain
+  approximately 15% headroom under repository policy. Query gate remains 450 B; qc-react remains 2.76 kB.
+- Strict OpenSpec validation passed. No generated Orval transport changed.
+
+Docs production build remains excluded under the accepted Google Fonts restriction. Browser
+scenarios were not rerun for this hook/type follow-up; previous browser evidence remains historical.
+The added documentation is covered by docs lint, typecheck and tests.

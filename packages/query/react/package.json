@@ -57,7 +57,7 @@
 		},
 		{
 			"path": "dist/collection.js",
-			"limit": "1.6 kB"
+			"limit": "1.8 kB"
 		}
 	],
 	"devDependencies": {

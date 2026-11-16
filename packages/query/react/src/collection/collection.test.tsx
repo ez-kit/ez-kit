@@ -405,3 +405,114 @@ it('executes complete reads supplied without shared factory conventions', async 
 	unmount()
 	client.clear()
 })
+
+describe('collection observer overrides and factory selection', () => {
+	it.each(['pages', 'infinite'] as const)('controls %s loading without changing source identity', async (mode) => {
+		const { client, wrapper } = harness()
+		const fetcher = vi.fn(() => Promise.resolve({ items: [1], total: 1 }))
+		const source = createCollectionSource({
+			key: ['local-options'],
+			getAll: { ...getAll, fetcher, options: { enabled: false, staleTime: Infinity } },
+			getInfinite: {
+				prepareArgs: (params: { offset: number }) => params,
+				preparePageArgs: ({ args }) => args,
+				fetcher,
+				initialPageParam: 0,
+				getNextPageParam: () => undefined,
+				getItems: (page) => page.items,
+				options: { enabled: false, staleTime: Infinity },
+			},
+		})
+		const { result, rerender, unmount } = renderHook(
+			({ enabled }) =>
+				useCollectionQuery({
+					source,
+					mode,
+					params: { offset: 0 },
+					queryOptions: {
+						enabled,
+						staleTime: 1234,
+						// Runtime JavaScript callers must not bypass source ownership either.
+						...{ queryKey: ['wrong'], queryFn: () => Promise.resolve([]), select: () => [] },
+					},
+				}),
+			{ wrapper, initialProps: { enabled: false } },
+		)
+		expect(result.current.query.fetchStatus).toBe('idle')
+		expect(fetcher).not.toHaveBeenCalled()
+		rerender({ enabled: true })
+		await waitFor(() => {
+			expect(result.current.items).toEqual([1])
+		})
+		expect(fetcher).toHaveBeenCalledTimes(1)
+		expect(client.getQueryState(['wrong'])).toBeUndefined()
+		expect(source.queries.list({ offset: 0 }).enabled).toBe(false)
+		const active = client
+			.getQueryCache()
+			.find({ queryKey: ['local-options', mode === 'pages' ? 'list' : 'infinite'], exact: false })
+		expect(active?.options).toMatchObject({ staleTime: 1234 })
+		unmount()
+		client.clear()
+	})
+	it('selects factory responses and infinite pages while retaining raw cache and safe projections', async () => {
+		const { client, wrapper } = harness()
+		const getTotal = vi.fn((data: { items: number[]; total: number }) => data.total)
+		const makeSource = createCollectionSourceFactory({
+			list: {
+				prepareArgs: (offset: number) => ({ offset }),
+				getItems: (data: { items: number[]; total: number }) => data.items,
+				getTotal,
+			},
+			infinite: {
+				prepareArgs: (search: string) => ({ search }),
+				preparePageArgs: ({ args, pageParam }: { args: { search: string }; pageParam: number }) => ({
+					...args,
+					cursor: pageParam,
+				}),
+				initialPageParam: 0,
+				getNextPageParam: (page: { items: number[]; next: number | null }) => page.next,
+				getItems: (page) => page.items,
+			},
+		})
+		const source = makeSource({
+			key: ['selected-factory'],
+			getAll: {
+				fetcher: () => Promise.resolve({ items: [1], total: 1 }),
+				options: { select: (data) => data.items.map(String) },
+				getItems: (items) => items,
+			},
+			getInfinite: {
+				fetcher: ({ cursor }) => Promise.resolve({ items: [cursor], next: cursor < 1 ? cursor + 1 : null }),
+				options: { select: (data) => ({ ...data, pages: data.pages.map((page) => page.items.map(String)) }) },
+				getItems: (page) => page,
+			},
+		})
+		const list = renderHook(() => useCollectionQuery({ source, mode: 'pages', params: 0 }), { wrapper })
+		const infinite = renderHook(() => useCollectionQuery({ source, mode: 'infinite', params: '' }), { wrapper })
+		await waitFor(() => {
+			expect(list.result.current.items).toEqual(['1'])
+		})
+		expect(list.result.current.total).toBeUndefined()
+		expect(getTotal).not.toHaveBeenCalled()
+		await waitFor(() => {
+			expect(infinite.result.current.items).toEqual(['0'])
+		})
+		await act(async () => {
+			await infinite.result.current.query.fetchNextPage()
+		})
+		await waitFor(() => {
+			expect(infinite.result.current.items).toEqual(['0', '1'])
+		})
+		expect(client.getQueryData(source.queries.list(0).queryKey)).toEqual({ items: [1], total: 1 })
+		expect(client.getQueryData(source.queries.infinite('').queryKey)).toEqual({
+			pages: [
+				{ items: [0], next: 1 },
+				{ items: [1], next: null },
+			],
+			pageParams: [0, 1],
+		})
+		list.unmount()
+		infinite.unmount()
+		client.clear()
+	})
+})

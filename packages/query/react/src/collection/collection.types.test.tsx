@@ -172,6 +172,8 @@ function NativeFixture() {
 }
 void NativeFixture
 
+// Explicit entity specialization is part of the supported application-factory API.
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
 function entityConvention<Row>() {
 	return createCollectionSourceFactory({
 		list: {
@@ -289,3 +291,108 @@ const asyncReadSource = createCollectionSource({
 	},
 })
 expectTypeOf(asyncReadSource.getAll.getItems).returns.toEqualTypeOf<readonly { id: number; name: string }[]>()
+
+function ObserverOptionsFixture() {
+	const result = useCollectionQuery({
+		source: asyncReadSource,
+		mode: 'pages',
+		params: { offset: 0 },
+		queryOptions: {
+			enabled: (query) => query.state.data?.total !== 0,
+			staleTime: 30000,
+			retry: (_count, error) => error.message !== 'stop',
+		},
+	})
+	expectTypeOf(result.items).toEqualTypeOf<readonly { id: number; name: string }[]>()
+	useCollectionQuery({
+		source: asyncReadSource,
+		mode: 'pages',
+		params: { offset: 0 },
+		queryOptions: {
+			// @ts-expect-error cache identity belongs to the source
+			queryKey: ['other'],
+		},
+	})
+	useCollectionQuery({
+		source: asyncReadSource,
+		mode: 'pages',
+		params: { offset: 0 },
+		queryOptions: {
+			// @ts-expect-error selection belongs to source projections
+			select: () => [],
+		},
+	})
+}
+void ObserverOptionsFixture
+
+const selectConvention = createCollectionSourceFactory({
+	list: {
+		prepareArgs: (offset: number) => ({ offset }),
+		getItems: (data: { items: number[]; total: number }) => data.items,
+		getTotal: (data) => data.total,
+	},
+	infinite: {
+		prepareArgs: (search: string) => ({ search }),
+		preparePageArgs: ({ args, pageParam }: { args: { search: string }; pageParam: number }) => ({
+			...args,
+			cursor: pageParam,
+		}),
+		initialPageParam: 0,
+		getNextPageParam: (page: { items: number[]; next: number | null }) => page.next,
+		getItems: (page) => page.items,
+	},
+})
+const selectedConventionSource = selectConvention({
+	key: ['selected-convention'],
+	getAll: {
+		fetcher: () => Promise.resolve({ items: [1], total: 1 }),
+		options: { select: (data) => data.items.map(String) },
+		getItems: (data) => data,
+	},
+	getInfinite: {
+		fetcher: () => Promise.resolve({ items: [1], next: null }),
+		options: { select: (data) => ({ ...data, pages: data.pages.map((page) => page.items.map(String)) }) },
+		getItems: (page) => page,
+	},
+})
+expectTypeOf(selectedConventionSource.getAll.getItems).parameter(0).toEqualTypeOf<string[]>()
+expectTypeOf(selectedConventionSource.getAll.getItems).returns.toEqualTypeOf<readonly string[]>()
+expectTypeOf(selectedConventionSource.getInfinite.getItems).parameter(0).toEqualTypeOf<string[]>()
+expectTypeOf(selectedConventionSource.getInfinite.getItems).returns.toEqualTypeOf<readonly string[]>()
+function InvalidSelectionFixture(selectNames: boolean) {
+	const options = selectNames
+		? { select: (data: { items: number[]; total: number }) => data.items }
+		: { staleTime: 1000 }
+	selectConvention({
+		key: ['conditional-selection'],
+		// @ts-expect-error a potentially selected shape needs its own projection too
+		getAll: { fetcher: () => Promise.resolve({ items: [1], total: 1 }), options },
+	})
+
+	selectConvention({
+		key: ['wrong-projection'],
+		// @ts-expect-error a projection cannot change the selected input shape without select
+		getAll: {
+			fetcher: () => Promise.resolve({ items: [1], total: 1 }),
+			getItems: (items: string[]) => items,
+		},
+	})
+
+	selectConvention({
+		key: ['missing-projection'],
+		// @ts-expect-error selecting another shape requires a new projection
+		getAll: { fetcher: () => Promise.resolve({ items: [1], total: 1 }), options: { select: (data) => data.items } },
+	})
+}
+void InvalidSelectionFixture
+
+const selectedStandaloneSource = createCollectionSourceFactory({})({
+	key: ['standalone-selected'],
+	getAll: {
+		prepareArgs: (id: number) => id,
+		fetcher: (id: number) => Promise.resolve({ items: [id] }),
+		options: { select: (data) => data.items.map(String) },
+		getItems: (items) => items,
+	},
+})
+expectTypeOf(selectedStandaloneSource.getAll.getItems).returns.toEqualTypeOf<readonly string[]>()
