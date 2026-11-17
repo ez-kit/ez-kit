@@ -224,12 +224,12 @@ Fetcher projections SHALL accept raw response data when no selector is configure
 
 ### Requirement: Pre-dispatch grid ownership
 
-An automatic grid action SHALL reject before dispatch if its captured effective mutation key differs from the currently connected operation. Ownership checks SHALL run before preparing or executing the request. Explicit cancellation SHALL retain existing form-session behavior; same-key changes SHALL retain native observer semantics.
+If an automatic grid action reaches dispatch with a captured effective mutation key different from the currently connected operation, it SHALL reject before preparing or executing the request. Ownership changes during validation SHALL instead cancel the validation quietly. Ownership checks SHALL run before preparing or executing the request. Explicit cancellation SHALL retain existing form-session behavior; same-key changes SHALL retain native observer semantics.
 
 #### Scenario: Source changes during validation
 
 - **WHEN** an edit begins validating under source A and the grid switches to a different ownership key B
-- **THEN** finishing validation calls neither A's nor B's fetcher and rejects the stale action
+- **THEN** the commit resolves as cancelled, calls neither A's nor B's fetcher, and ignores late validation results while preserving the open form and values
 
 ### Requirement: Query-scoped infinite deduplication
 
@@ -267,3 +267,22 @@ Native projections SHALL infer input from returned query options. Inherited tota
 
 - **WHEN** a consumer uses the exact declared minimum TanStack Query version
 - **THEN** built collection and grid declarations compile and interoperate with native ordinary/infinite hooks with library checking enabled
+
+### Requirement: Connected grid observer policy
+
+Connected DataGrid and useDataGrid SHALL accept queryOptions with the same restricted observer-policy contract as useCollectionQuery. Consumer options SHALL override source options for ordinary and infinite reads without replacing identity, fetchers, projections or cursor configuration.
+
+#### Scenario: Enable a consumer after selecting a team
+
+- **GIVEN** a source whose read is disabled
+- **WHEN** the connected grid sets queryOptions.enabled to true
+- **THEN** the source's fetcher executes with its original query key and projection
+
+### Requirement: Validation-only cancellation
+
+Creating and editing SHALL support cancelValidation without closing the form or interrupting an already dispatched save. Ownership changes in a connected grid SHALL invoke this cancellation for the corresponding form. Cancelled validation SHALL never publish late errors or dispatch a mutation.
+
+#### Scenario: New attempt after an ownership change
+
+- **WHEN** a validation is cancelled and a new attempt starts before the old validator settles
+- **THEN** the old result cannot alter the new attempt's state, errors or save

@@ -121,10 +121,41 @@ share the same cache entries; the grid adds no second server-data store.
 
 Automatic mutations use their effective mutation key as the ownership boundary. Use distinct
 keys for distinct tenants or API scopes. If ownership changes while a save is still validating,
-the old save rejects before dispatch; it cannot combine old preparation with the new fetcher.
-You can explicitly cancel the edit when switching scope to close the form without a save error.
+pending validation is cancelled silently: a commit resolves with `{ ok: false, reason: 'cancelled' }`.
+The form stays open with its values and returns to idle. Late validation results or exceptions
+cannot show errors or dispatch a save. Validators receive an aborted signal; results are ignored
+even if they do not consume it. Same-key source updates retain native behavior.
+You can explicitly call `table.editing.cancel()` or `table.creating.cancel()` to close the form.
+For project-owned context changes, `cancelValidation()` on either form API cancels only validation.
 Already dispatched mutations retain their existing lifecycle rules.
 
 Infinite load-more deduplication is scoped to the effective query hash. A previous selection's
 pending request does not block the next selection from fetching another page, including native
 requests that do not consume an AbortSignal.
+
+## Per-grid query options
+
+Both the connected `DataGrid` and `useDataGrid` accept `queryOptions` for ordinary and infinite
+reads. These options override the source's observer policy for this instance:
+
+```tsx
+const table = connected.useDataGrid({
+	dataSource: usersSource,
+	columns,
+	queryOptions: {
+		enabled: Boolean(teamId),
+		staleTime: 30_000,
+		refetchOnWindowFocus: false,
+	},
+})
+```
+
+The contract matches `useCollectionQuery`: enabled, stale/gc timing, retry, refetch,
+network mode, error throwing and notification settings. Query callbacks see opaque response data
+at the grid boundary; keep response-dependent policies on the typed source when needed.
+`queryKey`, `queryFn`, `select`, initial/placeholder data and infinite cursor options remain
+source-owned. Unsupported overrides are ignored at runtime too. A controlled `<DataGrid table={table} />`
+does not start another query; configure options when creating its table.
+
+External pagination resets remain project-owned: call `table.setPageIndex(0)` alongside the
+external filter or team change. There is no automatic external `resetKey` policy.

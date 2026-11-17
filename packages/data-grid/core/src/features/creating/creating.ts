@@ -4,6 +4,7 @@ import { assignTableInstanceData, readOwnSlice, writeOwnSlice } from '../../feat
 import { abortChecks, checkValues, commitClosed, commitInFlight, runCommit, trackCommit } from '../form'
 import {
 	abortFormWork,
+	abortValidation,
 	beginFieldValidation,
 	beginFormWork,
 	isAbortError,
@@ -142,6 +143,8 @@ export type CreatingConfig<TData> = FeatureToggle & {
 export type CreatingApi<TData = unknown> = {
 	start: () => void
 	cancel: () => void
+	/** Cancel pending validation, retaining values and any dispatched save. */
+	cancelValidation: () => void
 	/**
 	 * Validate and save. With `values`, those replace the form's values first — the path a form
 	 * of one's own takes. Resolves to a {@link CommitResult}; a second call while one is in
@@ -429,6 +432,12 @@ function createCreatingApi(table: CreatingTable): CreatingApi<RowData> {
 				formError: null,
 				commitStatus: CommitStatus.Idle,
 			})
+		},
+
+		cancelValidation: () => {
+			const status = readCreating(table).commitStatus
+			abortValidation(abortBox(table), status)
+			if (status === CommitStatus.Validating) writeCreating(table, { commitStatus: CommitStatus.Idle })
 		},
 
 		cancel: () => {

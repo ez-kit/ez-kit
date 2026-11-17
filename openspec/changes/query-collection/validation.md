@@ -140,3 +140,31 @@ Docs production build remains excluded under the accepted Google Fonts restricti
 scenarios were not rerun for this follow-up; targeted runtime tests cover source changes during
 validation, independent infinite page requests, and global-default isolation. Previous browser
 evidence remains historical.
+
+## Consumer query policy and quiet validation cancellation — 2026-11-17
+
+Connected grids and hooks now forward restricted queryOptions through the existing collection
+observer whitelist for ordinary and infinite reads. Runtime tests override disabled source policy,
+check staleTime, and attempt to replace the key, fetcher and projection from untyped input.
+Type fixtures cover hook/JSX options, safe callback contextual typing, prohibited identity/selection
+overrides and rejection of options on an already-controlled table.
+
+Creating/editing cancelValidation preserves form values and open state, cancels form/field/check
+validation, and leaves dispatched saves alone. Both connected form modes cancel pending validation
+on ownership changes, while same-key updates retain native behavior. Fourteen core regression cases
+cover valid/invalid/throwing late validators, a new attempt before old work settles, standalone
+checks, and pending saves. Six connector scope cases cover changed, unchanged and explicitly
+cancelled ownership for both form modes. A pre-dispatch ownership guard remains in place.
+
+Verification passed:
+
+- Sequential library build (16 tasks), full lint (33), typecheck (33), test (32), and size (32).
+- Data-grid core: 1,091 tests; shared React grid: 1,827; qc-react: 98; docs: 313.
+- qc-react on React 18: 92 passed with six existing HeroUI skips.
+- Public declaration consumers, strict OpenSpec validation and git diff whitespace checks.
+- Connector size: 3.01 kB / 3.4 kB; existing budgets remain sufficient.
+
+External page resets remain project-owned; no resetKey or automatic modal dismissal was added.
+Docs production build remains excluded under the accepted Google Fonts restriction. Browser suites
+were not rerun for this follow-up; targeted core/hook tests exercise cancellation and consumer
+policy, and previous browser evidence remains historical.

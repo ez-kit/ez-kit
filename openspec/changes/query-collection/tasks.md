@@ -65,3 +65,10 @@
 - [x] Isolate inactive observers from application defaults while preserving the active cache.
 - [x] Tighten native projection inference and inherited total getter inputs.
 - [x] Declare and check the exact minimum supported TanStack Query version in a consumer fixture.
+
+## Consumer policy follow-up
+
+- [x] Expose restricted queryOptions on connected grids and hooks for both read modes.
+- [x] Cancel stale validation without closing forms or interrupting dispatched writes.
+- [x] Document explicit external page resets and validation cancellation.
+- [x] Verify observer overrides, validation races, public types and repository gates.

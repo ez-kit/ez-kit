@@ -6,6 +6,7 @@ import { assignTableInstanceData, readOwnSlice, writeOwnSlice } from '../../feat
 import { abortChecks, checkValues, commitClosed, commitInFlight, runCommit, trackCommit } from '../form'
 import {
 	abortFormWork,
+	abortValidation,
 	beginFieldValidation,
 	beginFormWork,
 	isAbortError,
@@ -111,6 +112,8 @@ export type EditingApi<TData = unknown> = {
 	start: (rowId: string) => void
 	startCell: (rowId: string, columnId: string) => void
 	cancel: () => void
+	/** Cancel pending validation, retaining values and any dispatched save. */
+	cancelValidation: () => void
 	/**
 	 * Validate and save the row. With `values`, those replace the form's values first — the path
 	 * a form of one's own takes. Resolves to a {@link CommitResult}; a second call while one is
@@ -421,6 +424,12 @@ function createEditingApi(table: EditingTable): EditingApi<RowData> {
 				formError: null,
 				commitStatus: CommitStatus.Idle,
 			})
+		},
+
+		cancelValidation: () => {
+			const status = readEditing(table).commitStatus
+			abortValidation(abortBox(table), status)
+			if (status === CommitStatus.Validating) writeEditing(table, { commitStatus: CommitStatus.Idle })
 		},
 
 		cancel: () => {

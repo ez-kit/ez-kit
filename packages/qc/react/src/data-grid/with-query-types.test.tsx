@@ -29,7 +29,21 @@ function Consumer() {
 			{ accessorKey: 'name', cell: { type: 'badge', config: { color: 'red' } }, editing: { config: { mask: 'AA' } } },
 		],
 		context: { tenant: 'two' },
+		queryOptions: { enabled: true, staleTime: 30_000, refetchOnWindowFocus: (query) => query.state.data === undefined },
 	})
+	connected.useDataGrid({
+		dataSource: source,
+		columns: [],
+		// @ts-expect-error Cache identity belongs to the source.
+		queryOptions: { queryKey: ['replacement'] },
+	})
+	connected.useDataGrid({
+		dataSource: source,
+		columns: [],
+		// @ts-expect-error Projection belongs to the source.
+		queryOptions: { select: () => [] },
+	})
+
 	expectTypeOf(table.options.data[0]).toEqualTypeOf<User | undefined>()
 	connected.useDataGrid({
 		dataSource: source,
@@ -80,12 +94,18 @@ function Consumer() {
 				table={table}
 				dataSource={source}
 			/>
+			{/* @ts-expect-error Configure the query on the hook owning the supplied table. */}
+			<connected.DataGrid
+				table={table}
+				queryOptions={{ enabled: false }}
+			/>
 			<connected.DataGrid table={table}>
 				<connected.DataGrid.Table />
 			</connected.DataGrid>
 			<connected.DataGrid
 				dataSource={source}
 				columns={[{ accessorKey: 'name', cell: { type: 'badge', config: { color: 'red' } } }]}
+				queryOptions={{ enabled: true, staleTime: 30_000 }}
 			/>
 			<connected.DataGrid
 				dataSource={source}

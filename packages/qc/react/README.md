@@ -361,7 +361,15 @@ must project their items into objects before adaptation to a grid.
 
 Requires `@tanstack/react-query >=5.105.3 <6`. Automatic actions compare their captured effective
 mutation key with the connected operation before dispatch. A save whose owner changed during async
-validation rejects without calling either source's fetcher; an explicitly cancelled edit stays
-cancelled. Changes under the same ownership key retain native behavior. Infinite load-more work
+validation is cancelled silently without calling either source's fetcher. The form and its values
+remain open, and late validation errors are ignored. `editing.cancelValidation()` and
+`creating.cancelValidation()` also support project-owned context changes without closing forms.
+An explicitly cancelled edit stays cancelled. Changes under the same ownership key retain native behavior. Infinite load-more work
 is deduplicated by the effective query hash, so another selection can load while an old request
 remains pending.
+
+Connected `DataGrid` and `useDataGrid` accept `queryOptions`, using the collection observer-policy
+contract for both read modes. For example, `queryOptions: { enabled: Boolean(teamId), staleTime:
+30_000, refetchOnWindowFocus: false }` overrides source policy for that consumer. Identity,
+fetchers, selection and cursor configuration remain source-owned and cannot be replaced through
+this prop. External page resets remain explicit table operations.

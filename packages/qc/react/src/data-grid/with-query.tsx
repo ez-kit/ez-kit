@@ -1,5 +1,5 @@
 import { useDataGridSelector } from '@ez-kit/data-grid-react'
-import { useCollectionQuery } from '@ez-kit/query-react/collection'
+import { useCollectionQuery, type CollectionQueryOptions } from '@ez-kit/query-react/collection'
 import { hashKey, replaceEqualDeep, useQueryClient } from '@tanstack/react-query'
 import { createElement, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
@@ -61,6 +61,21 @@ export type GridDataSource<TRow extends object> = {
 	}
 }
 
+type PageQueryOptions = CollectionQueryOptions<{ getAll: { query: () => UseQueryOptions<unknown, unknown> } }, 'pages'>
+type InfiniteQueryOptions = CollectionQueryOptions<
+	{ getInfinite: { query: () => UseInfiniteQueryOptions<unknown, unknown, InfiniteData<unknown>> } },
+	'infinite'
+>
+type OptionCallback<T> = Extract<T, (...args: never[]) => unknown>
+type CommonOption<T> = [OptionCallback<T>] extends [never]
+	? T
+	: Exclude<T, OptionCallback<T>> | ((...args: Parameters<OptionCallback<T>>) => ReturnType<OptionCallback<T>>)
+
+/** Consumer observer policy for either mode; callback data stays source-owned and opaque. */
+export type GridQueryOptions = {
+	[K in keyof PageQueryOptions]: CommonOption<PageQueryOptions[K] | InfiniteQueryOptions[K]>
+}
+
 type Context<C extends object | undefined> = C extends object ? Partial<C> : GridContextRecord
 type Features<F extends TableFeatures | undefined> = F extends TableFeatures ? F : TableFeatures
 type Extra = Record<never, never>
@@ -88,6 +103,7 @@ export type QueryGridConfig<
 								Partial<Pick<BulkDeletingConfig<NoInfer<R>>, 'onDelete'>>)
 				})
 	dataSource: GridDataSource<R>
+	queryOptions?: GridQueryOptions
 	data?: never
 }
 
@@ -102,7 +118,7 @@ type ConnectionBundle<
 	) => DataTable<CF, R>
 	DataGrid: (<R extends object, CF extends TableFeatures = Features<F>, E extends CellTypeRegistry = Extra>(
 		props:
-			| (DataGridControlledProps<CF, R> & { dataSource?: never })
+			| (DataGridControlledProps<CF, R> & { dataSource?: never; queryOptions?: never })
 			| (DataGridSharedProps &
 					QueryGridConfig<CF, R, C, Context<X>, CC, E> &
 					(F extends TableFeatures ? unknown : { features: CF }) & { table?: never }),
@@ -164,9 +180,12 @@ export function withQuery<
 	) => DataTable<GridFeatures, object>
 	const BaseGrid = bundle.DataGrid as unknown as (props: DataGridControlledProps<GridFeatures, object>) => ReactElement
 	function useConnectedGrid(
-		config: Omit<UseDataGridConfig<GridFeatures, object>, 'data'> & { dataSource: GridDataSource<object> },
+		config: Omit<UseDataGridConfig<GridFeatures, object>, 'data'> & {
+			dataSource: GridDataSource<object>
+			queryOptions?: GridQueryOptions
+		},
 	) {
-		const { dataSource, ...gridConfig } = config
+		const { dataSource, queryOptions, ...gridConfig } = config
 		const client = useQueryClient()
 		// Query options and their projections cross this boundary together. Their response
 		// type is opaque to the connector; only the projection consumes the selected value.
@@ -282,6 +301,17 @@ export function withQuery<
 				state: { ...merged.state, loading: projection.loading },
 			}
 		})
+		const createOwner = hashKey(client.defaultMutationOptions(source.create?.mutation ?? {}).mutationKey ?? [])
+		const updateOwner = hashKey(client.defaultMutationOptions(source.update?.mutation ?? {}).mutationKey ?? [])
+		const owners = useRef({ createOwner, updateOwner })
+		useCommitEffect(() => {
+			// A scope switch abandons validation, not the form or an already dispatched write.
+			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+			if (owners.current.createOwner !== createOwner) table.creating?.cancelValidation()
+			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+			if (owners.current.updateOwner !== updateOwner) table.editing?.cancelValidation()
+			owners.current = { createOwner, updateOwner }
+		}, [createOwner, updateOwner, table])
 		const infiniteMode = table.grid.pagination.infinite !== undefined
 		const axes = useDataGridSelector(
 			table,
@@ -354,6 +384,7 @@ export function withQuery<
 				? {
 						source: requireCollectionRead(collectionSource, 'getInfinite'),
 						mode: 'infinite',
+						...(queryOptions ? { queryOptions } : {}),
 						params: {
 							sorting: params.sorting,
 							columnFilters: params.columnFilters,
@@ -361,7 +392,12 @@ export function withQuery<
 							pageSize: params.pagination.pageSize,
 						},
 					}
-				: { source: requireCollectionRead(collectionSource, 'getAll'), mode: 'pages', params },
+				: {
+						source: requireCollectionRead(collectionSource, 'getAll'),
+						mode: 'pages',
+						params,
+						...(queryOptions ? { queryOptions } : {}),
+					},
 		)
 
 		// Publish after TanStack updates observer options in its passive effects.
@@ -434,6 +470,7 @@ export function withQuery<
 	function ConnectedGrid(
 		props: Omit<UseDataGridConfig<GridFeatures, object>, 'data'> & {
 			dataSource: GridDataSource<object>
+			queryOptions?: GridQueryOptions
 		} & DataGridSharedProps,
 	) {
 		const table = useConnectedGrid(props)
@@ -444,6 +481,7 @@ export function withQuery<
 			| DataGridControlledProps<GridFeatures, object>
 			| (Omit<UseDataGridConfig<GridFeatures, object>, 'data'> & {
 					dataSource: GridDataSource<object>
+					queryOptions?: GridQueryOptions
 			  } & DataGridSharedProps),
 	) {
 		return 'table' in props ? createElement(BaseGrid, props) : createElement(ConnectedGrid, props)

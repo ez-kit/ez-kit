@@ -294,3 +294,16 @@ This applies even when the shared getter is conditionally configured. The minimu
 5.105.3, verified by a private workspace consumer with an exact pinned dependency, forced module
 resolution and skipLibCheck:false. Normal typecheck runs include this fixture and assert that both
 published peer ranges match the pinned minimum.
+
+## Consumer policy and validation-only cancellation
+
+Forward grid queryOptions through the collection's existing observer whitelist, retaining source
+ownership of query identity and projection. The opaque grid boundary exposes unknown query data;
+response-dependent callback policies can stay on typed sources. No external resetKey is added.
+
+Creating/editing cancelValidation aborts field/check work and a validating form controller, clears
+the old pending commit, and restores idle without resetting values or closing the form. It never
+aborts a Saving controller. The connector compares committed effective create/update ownership
+keys in a layout effect and cancels the corresponding validation on change. Existing signal checks
+ignore non-cooperating validators and isolate subsequent attempts. The pre-dispatch owner guard
+remains as defense against stale imperative callbacks. Same-key native semantics remain unchanged.

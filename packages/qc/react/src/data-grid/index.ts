@@ -13,7 +13,7 @@ export type {
 } from './types'
 
 export { withQuery } from './with-query'
-export type { GridDataSource, QueryGridConfig } from './with-query'
+export type { GridDataSource, GridQueryOptions, QueryGridConfig } from './with-query'
 
 export { createListSource } from './list-source'
 export { createInfiniteSource } from './infinite-source'

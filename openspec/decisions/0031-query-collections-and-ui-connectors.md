@@ -43,7 +43,10 @@ placeholder would rewrite pending callbacks and retries, including for keyless n
 
 Automatic grid actions check their captured effective mutation key again before preparation and
 dispatch, so asynchronous validation cannot route an old action through a new owner. A mismatch
-rejects the stale action; applications may explicitly cancel forms when switching scope. The grid's
+rejects the stale action as a final guard. On an ownership change the connector first cancels
+pending validation through the neutral form API, preserving values and the open session. Late
+validation results are ignored and cancelled commits settle quietly; dispatched saves are unaffected.
+Applications may explicitly cancel forms when switching scope. The grid's
 next-page deduplication is scoped to effective query identity, including client hash functions.
 
 A pending TanStack mutation can receive updated observer options when the key stays unchanged.
@@ -60,3 +63,7 @@ executor requirements from ADR 0030. Query gate contracts in ADRs 0022/0027 rema
 Guards: query-react collection runtime/type tests and registered-error project; qc-react adapter,
 source, pagination, mutation and modal suites; docs query-collection browser scenario and both kit
 query-source/query-modal browser suites. The Orval collection recipe checks shared request identity.
+
+Connected grids expose the collection's restricted observer-policy overrides as `queryOptions`.
+Source identity, projection and infinite cursor contracts cannot be overridden by a consumer.
+External parameter/page-reset state stays application-owned.
