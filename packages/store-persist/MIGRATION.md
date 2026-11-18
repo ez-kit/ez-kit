@@ -271,3 +271,17 @@ include stringified numeric dictionary/literal keys.
 Cached plugin cleanup runs in reverse order and releases every callback/entry despite failures.
 Manual remove/clear throws AggregateError after release; GC surfaces its aggregate through the
 existing timer error path. Failed activation rolls successful setup back before reporting errors.
+
+JSON comparisons now follow serialization (including Date/toJSON and own special keys) rather than
+object enumeration. This corrects dropped edits and default detection; existing JSON payloads remain
+readable. Decorator names and source aliases may contain `::` without collisions.
+
+Unmounting the outer cache Provider ends every contained store lifetime even with infinite GC.
+Keep that container mounted if cached state must survive removal of an entry Provider. A fresh
+container under a retained PersistProvider can restore the same addresses without collision.
+Ordinary context stores now share cached setup rollback and failure-isolated reverse cleanup.
+
+Back/Forward cancellation removes only an unsent external corrective write after the adapter proves
+the original mutation was cancelled. Newer user edits are retained. Custom adapters must report
+SourceMutationCancelledError only for a mutation known not to have committed; uncertain failures
+still require corrective writes.

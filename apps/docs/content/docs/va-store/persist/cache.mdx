@@ -105,3 +105,8 @@ Cached capability cleanups run in reverse setup order. A failing cleanup does no
 callbacks or leave cache membership behind. Manual remove/clear reports AggregateError after release
 (clear finishes all matching entries); GC reports the aggregate through its timer error path after
 eviction. A cleanup that creates a replacement cannot have that replacement removed by old teardown.
+
+The outer cache Provider owns all entries. Unmounting it releases persistence connections even
+with `gcTime: Infinity`; mount a fresh container to restore those addresses again. Keep the outer
+container mounted to retain entries when only an entry Provider disappears. StrictMode reconnects
+preserve the container.

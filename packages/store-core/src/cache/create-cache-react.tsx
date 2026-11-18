@@ -175,6 +175,15 @@ export function createCacheReact<TInstance extends object>(
 		const cacheRef = useRef<InstanceCache | null>(null)
 		cacheRef.current ??= createInstanceCache({ defaultGcTime: cacheGcTime })
 		const cache = cacheRef.current
+		const ended = useRef(false)
+		// Insertion effects identify a genuine container removal without replaying during
+		// StrictMode's synthetic effect disconnect. Cleanup/I/O stays in the passive phase.
+		useInsertionEffect(
+			() => () => {
+				ended.current = true
+			},
+			[],
+		)
 
 		useEffect(() => {
 			// Imperative access (getFromCache/remove) is client-only; the cache never becomes "active" on the server.
@@ -185,6 +194,7 @@ export function createCacheReact<TInstance extends object>(
 			activeCache.current = cache
 			return () => {
 				if (activeCache.current === cache) activeCache.current = null
+				if (ended.current) cache.clear()
 			}
 		}, [cache])
 

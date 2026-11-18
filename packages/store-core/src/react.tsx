@@ -3,9 +3,10 @@
 import { createContext, useContext, useEffect, type ReactElement, type ReactNode } from 'react'
 
 import { capabilitiesOf } from './capability'
+import { collectCapabilityCleanupErrors, setupCapabilities, throwCapabilityCleanupErrors } from './capability-lifecycle'
 import { createServiceRegistry, type ServiceRegistry } from './service'
 
-import type { PluginCleanup, PluginContext } from './plugin'
+import type { PluginContext } from './plugin'
 import type { StoreId } from './store-id'
 
 /** Shared empty registry — used as the default when no `ServicesProvider` is mounted above a consumer. */
@@ -57,11 +58,9 @@ export function useCapabilities(store: object, services: ServiceRegistry, id: St
 		const plugins = capabilitiesOf(store)
 		if (plugins.length === 0) return
 		const context: PluginContext = { services, id, isServer: IS_SERVER }
-		const cleanups: PluginCleanup[] = plugins.map((plugin) => plugin.setup(store, context))
+		const cleanups = setupCapabilities(store, plugins, context)
 		return () => {
-			for (const cleanup of [...cleanups].reverse()) {
-				if (cleanup) cleanup()
-			}
+			throwCapabilityCleanupErrors(collectCapabilityCleanupErrors(cleanups))
 		}
 		// `id` is a per-factory constant, stable by construction.
 		// eslint-disable-next-line react-hooks/exhaustive-deps

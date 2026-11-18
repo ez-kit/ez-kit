@@ -121,3 +121,12 @@ SyncSourcePort remains fully synchronous. Retired address generations cannot rep
 writes over new owners, and edits before connection retain dirty intent. Cross-realm Promises
 preserve the same ACK semantics. Array codecs compose semantic item equality and frame otherwise
 lossy delimiter/empty-item cases while retaining legacy decoding; numeric input must be finite.
+
+JSON equality follows JSON serialization, including Date/toJSON values, nested containers and own
+special keys such as `__proto__`. A validator may return Date values: edits are saved and returning
+to the serialized default clears the override. Decorator field/source pairs use structural identity;
+property names and aliases containing `::` remain independent, including inherited overrides.
+
+A proven cancelled URL mutation drops only its unsent external correction, avoiding a Back/Forward
+write-back and repeated loader execution. Newer user edits remain pending; uncertain writes still
+retain the correction needed if the original mutation committed.

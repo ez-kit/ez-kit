@@ -110,3 +110,7 @@ Data-router observation reads the explicitly exported `UNSAFE_DataRouterContext`
 `UNSAFE_DataRouterStateContext` integration points. Their names indicate upstream instability;
 capability checks reject unsupported data-router state instead of silently confirming a write.
 The optional lookup preserves basic operation on older peers where those exports are absent.
+
+When Back/Forward proves an in-flight own navigation was cancelled, persistence discards its
+obsolete external correction without issuing an extra navigation or loader run. A newer user edit
+remains pending. An uncertain write failure still retains the corrective write.

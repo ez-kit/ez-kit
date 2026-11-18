@@ -119,6 +119,7 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 	let timer: ReturnType<typeof setTimeout> | undefined
 	let activeMeta: unknown = null
 	const pendingMetas = new Map<RecordState, unknown>()
+	const externalCorrections = new WeakMap<RecordState, { job: Job; revision: number }>()
 	let revision = 0
 	let externalGeneration = 0
 	const versioned = port.capabilities?.recordVersions === true
@@ -314,13 +315,17 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 						entry.record.dirty = false
 						entry.record.forceDelete = false
 					}
-				} else if (error instanceof SourceMutationCancelledError && entry.record.revision === entry.revision) {
+				} else if (
+					error instanceof SourceMutationCancelledError &&
+					(entry.record.revision === entry.revision || cancelExternalCorrection(job, entry, error))
+				) {
 					entry.record.dirty = false
 					entry.record.forceDelete = false
 					if (pendingResets.get(entry.record) === entry) pendingResets.delete(entry.record)
 					entry.record.resetPending = pendingResets.has(entry.record)
 				} else if (error instanceof FutureVersionError && !retired.has(entry.record) && error.keys.includes(entry.key))
 					entry.record.blocked = true
+				if (externalCorrections.get(entry.record)?.job === job) externalCorrections.delete(entry.record)
 			}
 			if (job.barrier) {
 				job.barrier.pending = false
@@ -588,6 +593,7 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 				if (encoded === record.observed) continue
 				record.observed = encoded
 				if (systemWrites.has(binding.store)) continue
+				externalCorrections.delete(record)
 				if (activeMeta !== null)
 					pendingMetas.set(record, (options.mergeMeta ?? defaultMerge)(pendingMetas.get(record), activeMeta))
 				record.revision++
@@ -598,6 +604,7 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 				record.outcome = 'edited'
 				record.error = null
 			} catch (error) {
+				externalCorrections.delete(record)
 				if (activeMeta !== null)
 					pendingMetas.set(record, (options.mergeMeta ?? defaultMerge)(pendingMetas.get(record), activeMeta))
 				record.revision++
@@ -610,6 +617,27 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 		}
 		updateBindingStatus(binding)
 		if (!systemWrites.has(binding.store)) schedule(binding)
+	}
+
+	function cancelExternalCorrection(job: Job, entry: Entry, error: SourceMutationCancelledError): boolean {
+		const correction = externalCorrections.get(entry.record)
+		if (correction?.job !== job || correction.revision !== entry.record.revision) return false
+		externalCorrections.delete(entry.record)
+		for (const pending of jobs)
+			if (pending.kind === 'patch' && pending.entries.get(entry.key)?.record === entry.record)
+				pending.entries.delete(entry.key)
+		queued.delete(entry.record)
+		pendingMetas.delete(entry.record)
+		// The source proved that the original write did not commit. Its corrective write is no
+		// longer necessary; waiters for that unsent revision receive cancellation, not a false ACK.
+		for (const fence of fences) {
+			const target = fence.targets.get(entry.record)
+			if (target !== undefined && target <= correction.revision) {
+				fences.delete(fence)
+				fence.reject(error)
+			}
+		}
+		return true
 	}
 
 	function supersedeWithExternal(binding: PersistBinding, field: FieldDescriptor, record: RecordState): void {
@@ -633,8 +661,10 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 		revision++
 		record.forceDelete = false
 		record.error = null
-		// A genuinely sent async write cannot be cancelled; serialize a corrective value behind it.
+		// A sent async write may still commit; retain a correction until its outcome is known.
 		record.dirty = inFlight?.record === record
+		if (record.dirty && running) externalCorrections.set(record, { job: running, revision: record.revision })
+		else externalCorrections.delete(record)
 	}
 
 	function processRead(

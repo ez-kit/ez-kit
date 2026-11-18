@@ -108,3 +108,7 @@ const visibility: Parser<'shown' | 'hidden'> = {
 ```
 
 A non-canonical parser (one whose `stringify` output isn't stable) can loop — supply `equals`, or lean on `paramJson()`, which uses stable key ordering for you.
+
+`paramJson` compares serialized values, including Date/toJSON results, nested containers and own
+special keys. A `schema.validate` function can return a Date: changing its timestamp saves the new
+JSON value; returning to the serialized default removes the override.

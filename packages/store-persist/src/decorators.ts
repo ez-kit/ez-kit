@@ -100,7 +100,7 @@ function collectFields(metadata: MetadataObject): FieldMeta[] {
 	while (current !== null) {
 		if (Object.prototype.hasOwnProperty.call(current, FIELDS)) {
 			for (const meta of (current as MetadataObject)[FIELDS] as FieldMeta[]) {
-				const identity = `${meta.name}::${meta.source ?? ''}`
+				const identity = JSON.stringify([meta.name, meta.source ?? ''])
 				if (!seen.has(identity)) {
 					seen.add(identity)
 					all.push(meta)

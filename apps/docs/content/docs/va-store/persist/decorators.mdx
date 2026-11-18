@@ -117,3 +117,6 @@ The bound proxy carries per-source handles (`$url`, `$persist`) for source-speci
 ## Build setup
 
 Decorators need **Stage 3 decorators** + `Symbol.metadata` in your toolchain. If you can't enable them, the [accessor API](./fields) is equivalent and needs no transpilation. Full configuration is on the [TypeScript](./typescript) page.
+
+Field names and source aliases are independent strings, including names containing `::`.
+Inherited declarations keep their normal subclass override behavior.

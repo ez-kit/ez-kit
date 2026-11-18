@@ -275,3 +275,36 @@ observable after release; reentrant replacement MUST NOT be removed by an older 
 
 - **WHEN** one cleanup fails while multiple callbacks or matching entries remain
 - **THEN** all release steps finish and the failure is reported only after eviction
+
+### Requirement: Capability lifecycle guarantees match across store ownership paths
+
+Cached and noncached stores MUST use consistent transactional setup, reverse rollback and
+failure-isolated teardown. A later setup failure MUST release earlier acquired capabilities.
+Cleanup failures MUST NOT skip other resources; original and rollback errors MUST remain observable.
+
+#### Scenario: A later ordinary context-store plugin fails setup
+
+- **WHEN** one plugin subscribed successfully and a later plugin throws
+- **THEN** earlier setup is unwound rather than leaking a subscription from the failed mount
+
+#### Scenario: Ordinary context-store cleanup fails
+
+- **WHEN** one returned cleanup throws during unmount
+- **THEN** every remaining cleanup still runs in reverse order before aggregate failure is reported
+
+### Requirement: Proven cancellation removes unnecessary external correction only
+
+Corrective intent created to protect an external value from an in-flight command MUST be distinct
+from newer user edits. If cancellation proves the old command did not commit, its now-unnecessary
+correction MUST NOT cause an echo write. Real newer user revisions, metadata, resets and fences MUST
+retain their own outcomes; generic failures and accepted old writes MUST preserve needed corrections.
+
+#### Scenario: Back cancels an unfinished URL write
+
+- **WHEN** Back commits an older location while an own URL write is awaiting its loader
+- **THEN** cancellation does not issue an extra replace, rerun the loader or alter the Back entry
+
+#### Scenario: The user edits again after external navigation
+
+- **WHEN** a newer user revision exists when cancellation settles
+- **THEN** only the obsolete external correction is released and the newer edit can still save

@@ -1,11 +1,15 @@
 import { capabilitiesOf } from '../capability'
+import {
+	collectCapabilityCleanupErrors,
+	setupCapabilities,
+	throwCapabilityCleanupErrors,
+} from '../capability-lifecycle'
 import { serializeStoreId } from '../store-id'
 
 import { createMembershipView, startsWithPrefix, toRecords, updateMembership } from './cache-utils'
 
 import type { InstanceMeta, MembershipView } from './cache-types'
 import type { CacheRecord, CreateOptions, ObserveOptions } from './types'
-import type { PluginCleanup } from '../plugin'
 import type { StoreId } from '../store-id'
 
 export const DEFAULT_GC_TIME = 5 * 60 * 1000
@@ -62,21 +66,9 @@ export function createInstanceCache(options: CacheConfig = {}): InstanceCache {
 	}
 
 	function runCleanups(meta: InstanceMeta): unknown[] {
-		const errors: unknown[] = []
-		if (meta.cleared) return errors
+		if (meta.cleared) return []
 		meta.cleared = true
-		for (let index = meta.cleanups.length - 1; index >= 0; index -= 1) {
-			try {
-				meta.cleanups[index]?.()
-			} catch (error) {
-				errors.push(error)
-			}
-		}
-		return errors
-	}
-
-	function throwCleanupErrors(errors: unknown[]): void {
-		if (errors.length > 0) throw new AggregateError(errors, 'Cached store cleanup failed')
+		return collectCapabilityCleanupErrors(meta.cleanups)
 	}
 
 	function dropEntry(key: string, meta: InstanceMeta): unknown[] {
@@ -108,7 +100,7 @@ export function createInstanceCache(options: CacheConfig = {}): InstanceCache {
 		if (!meta) return
 		meta.evictionTimer = undefined
 		if (meta.observerCount > 0) return
-		throwCleanupErrors(dropEntry(key, meta))
+		throwCapabilityCleanupErrors(dropEntry(key, meta))
 	}
 
 	function scheduleEviction(storeId: StoreId): void {
@@ -140,7 +132,7 @@ export function createInstanceCache(options: CacheConfig = {}): InstanceCache {
 		// Render candidates belong to their React owner until it commits. Publishing them here
 		// would retain abandoned Suspense defaults and services without an observer or GC deadline.
 		if (opts.deferSetup) return instance
-		const cleanups: PluginCleanup[] = []
+		const cleanups = setupCapabilities(instance, plugins, opts.context)
 		const meta: InstanceMeta = {
 			instance,
 			storeId: id,
@@ -149,14 +141,6 @@ export function createInstanceCache(options: CacheConfig = {}): InstanceCache {
 			evictionTimer: undefined,
 			cleanups,
 			cleared: false,
-		}
-		try {
-			for (const plugin of plugins) cleanups.push(plugin.setup(instance, opts.context))
-		} catch (error) {
-			const cleanupErrors = runCleanups(meta)
-			if (cleanupErrors.length > 0)
-				throw new AggregateError([error, ...cleanupErrors], 'Cached store setup and rollback failed')
-			throw error
 		}
 		metaByKey.set(key, meta)
 		return instance
@@ -200,13 +184,13 @@ export function createInstanceCache(options: CacheConfig = {}): InstanceCache {
 		for (const [key, meta] of [...metaByKey]) {
 			if (!prefix || startsWithPrefix(meta.storeId.path, prefix)) errors.push(...dropEntry(key, meta))
 		}
-		throwCleanupErrors(errors)
+		throwCapabilityCleanupErrors(errors)
 	}
 
 	function remove(id: StoreId): void {
 		const key = serializeStoreId(id)
 		const meta = metaByKey.get(key)
-		if (meta) throwCleanupErrors(dropEntry(key, meta))
+		if (meta) throwCapabilityCleanupErrors(dropEntry(key, meta))
 	}
 
 	return {

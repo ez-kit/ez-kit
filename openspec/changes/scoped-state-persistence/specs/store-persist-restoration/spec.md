@@ -275,3 +275,24 @@ completion or rejection rather than the mere return of a navigation function.
 
 - **WHEN** a query write is blocked and the application resets the blocker
 - **THEN** port reads reflect the unchanged URL and later unrelated edits cannot resurrect the cancelled query
+
+### Requirement: The owning cache container bounds retained entry lifetimes
+
+A genuine outer cache Provider termination MUST release all owned entries and plugin connections,
+including infinite-gcTime entries. Individual store Provider keepalive and StrictMode synthetic
+cleanup/reconnect MUST retain their existing behavior. Independent containers MUST remain isolated.
+
+#### Scenario: A cache container is recreated beneath an unchanged source registry
+
+- **WHEN** the outer cache Provider disappears and a fresh one later mounts the same store address
+- **THEN** the unreachable old cache cannot retain a conflicting source owner and the new store restores normally
+
+#### Scenario: StrictMode replays effects without ending the cache container
+
+- **WHEN** React performs synthetic effect cleanup and setup on a committed cache Provider
+- **THEN** retained store identity and once-only plugin activation remain intact
+
+#### Scenario: One of several containers ends
+
+- **WHEN** one independent cache Provider unmounts while another remains committed
+- **THEN** only entries belonging to the terminated container are released

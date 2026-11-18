@@ -190,3 +190,24 @@ MUST remain readable where unambiguous. Number parsing MUST reject non-finite va
 
 - **WHEN** a stored numeric value is Infinity, negative Infinity or finite-syntax overflow
 - **THEN** parsing reports invalid input rather than applying non-finite state
+
+### Requirement: JSON equality preserves serialized value semantics
+
+JSON codec equality MUST honor native serialization including Date/toJSON before recursive
+canonical ordering. Own special keys MUST remain data. A changed validated value MUST NOT be
+mistaken for its default because canonicalization discarded serializable content.
+
+#### Scenario: Validation converts serialized dates into current Date values
+
+- **WHEN** a JSON decoder plus validator restores a Date then the application changes its timestamp
+- **THEN** flush saves the changed timestamp and only the original default timestamp clears the override
+
+#### Scenario: JSON data has an own prototype-named key
+
+- **WHEN** two valid JSON objects differ in their own **proto** value
+- **THEN** equality distinguishes them without changing their prototypes or dropping the key
+
+#### Scenario: Nested objects occur inside arrays
+
+- **WHEN** JSON containers differ only in property insertion order at arbitrary array/object depth
+- **THEN** canonical equality treats their serialized values consistently

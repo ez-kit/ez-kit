@@ -51,3 +51,10 @@ Cached teardown runs every cleanup in reverse order and always releases metadata
 Manual remove/clear aggregates failures after all selected resources release; GC reports the
 aggregate through its timer after eviction. Reentrant replacement remains intact. Failed setup
 rolls back successful capabilities before reporting the setup/rollback failures.
+
+The outer cache `Provider` owns the lifetime of every entry. Removing that container releases all
+entries and capabilities even with `gcTime: Infinity`; entry-level keepalive applies only while the
+container remains mounted. StrictMode's synthetic effect reconnect preserves the container.
+Cached and ordinary context stores share transactional capability setup and reverse teardown:
+a setup failure rolls back acquired capabilities, every cleanup runs despite failures, and combined
+setup/rollback failures retain the original error in an AggregateError.

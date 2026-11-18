@@ -194,3 +194,18 @@ acknowledge writes asynchronously; strict synchronous get/set ports remain suppo
 
 - **WHEN** a render-scoped adapter presents a new pure snapshot before route commit
 - **THEN** seeding uses that snapshot while operational get/set remains bound to committed location
+
+### Requirement: Decorator field and source identities are structural
+
+Decorator discovery MUST identify each field/source tuple without delimiter collisions while
+retaining inherited override order and effective source aliases.
+
+#### Scenario: Property and alias contain the internal-looking delimiter
+
+- **WHEN** one field is a::b from source c and another is a from source b::c
+- **THEN** both declared fields are independently discovered, persisted and reset
+
+#### Scenario: A subclass overrides a delimiter-containing tuple
+
+- **WHEN** a subclass redeclares exactly one inherited field/source pair
+- **THEN** only that exact tuple is replaced and unrelated tuples remain available

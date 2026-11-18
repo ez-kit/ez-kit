@@ -92,6 +92,16 @@
 - [x] 10.5 Add public integration evidence for mount-effect edits, cross-manager semantic codecs and URL render/commit lifecycle; update docs, migration notes, changeset and scenario trace with final contracts.
 - [x] 10.6 Run affected verification, full sequential build/lint/typecheck/test/size and browser checks; repeat strict OpenSpec validation and update PR 299 with results.
 
+## 11. Fourth audit fixes approved on 2026-11-18
+
+- [x] 11.1 Make canonical JSON equality follow serialization semantics, including toJSON/Date, recursive array/object ordering and safe own special keys; verify validated Date edits and JSON field resets.
+- [x] 11.2 Dispose all cache-owned entries when the outer cache Provider lifetime ends, preserving StrictMode synthetic reconnect, entry keepalive and independent cache containers; verify remount beneath a retained persistence registry.
+- [x] 11.3 Share capability setup/rollback/reverse-teardown guarantees across cached and noncached stores; run all cleanups despite failures and preserve setup/rollback errors with permanent regressions.
+- [x] 11.4 Distinguish external corrective revisions from newer user edits when an in-flight URL navigation is proven cancelled; prevent Back write-back and settle fences without dropping newer intent.
+- [x] 11.5 Encode decorated field/source identity structurally without delimiter collisions; preserve subclass overrides, aliases and both binding fronts.
+- [x] 11.6 Add public integration evidence and update documentation, migration notes, changeset and scenario trace for the fourth audit contracts.
+- [x] 11.7 Run affected checks and full sequential build/lint/typecheck/test/size plus browser verification, repeat strict OpenSpec validation and update PR 299.
+
 ## Workflow follow-up
 
 - After implementation and review, archive this change using the standard OpenSpec workflow. Archiving is not an implementation task and does not automatically release packages.

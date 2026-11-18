@@ -43,3 +43,8 @@ and separate pure router render snapshots from committed navigation. Handle canc
 commits without stale optimistic state. Compose array item equality, preserve empty/custom-delimiter
 round trips with exceptional tagged frames, reject non-finite numeric input, and type numeric reset
 paths. Cached teardown now reverses callbacks and releases all resources before aggregating errors.
+
+Follow actual JSON serialization for equality, preserve special keys and decorator tuple identity,
+and release all entries when their owning cache container unmounts. Share transactional setup and
+failure-isolated reverse cleanup across cached and ordinary stores. Proven URL cancellation discards
+only obsolete external corrections, preserving newer edits and avoiding Back/Forward loader echoes.

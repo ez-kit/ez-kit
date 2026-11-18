@@ -488,3 +488,22 @@ explicit IndexedDB refresh choice and one-time release exception remain in force
   keys consistently with runtime field extraction and source-specific path validation.
 - Cached plugins dispose in reverse setup order. Every cleanup runs despite other failures; cache
   metadata/membership is removed in all paths and cleanup errors remain observable after release.
+
+## Fourth audit refinements approved on 2026-11-18
+
+The user approved all five reproduced fourth-audit findings. These refinements preserve the accepted
+single-engine architecture, source policies, compatible cold ownership and explicit IndexedDB refresh.
+
+- JSON equality follows actual JSON serialization (including toJSON) before deterministic recursive
+  ordering. Safe object construction preserves own special keys. Changed validated Dates and JSON
+  objects must never compare equal merely because their serializable data was discarded.
+- The outer cache container has its own committed lifetime, distinct from individual store entry
+  keepalive/GC. Genuine container disposal releases every entry and plugin, even at infinite gcTime;
+  StrictMode's synthetic disconnect/reconnect must not destroy retained state or duplicate setup.
+- A shared capability lifecycle runner gives cached and noncached stores the same setup rollback,
+  reverse cleanup and error aggregation guarantees. Cleanup failures do not skip remaining resources.
+- External corrective intent is distinct from newer user intent. Proven cancellation of an old URL
+  command releases an unnecessary correction instead of echoing Back, while real newer user edits
+  and durability waiters retain their own outcomes.
+- Decorator identities encode the field/source tuple structurally. Arbitrary valid property strings
+  and source aliases cannot collide through delimiter concatenation; subclass override order stays.

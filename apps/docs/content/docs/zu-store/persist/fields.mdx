@@ -124,3 +124,6 @@ Typed reset paths also support numeric dictionary and numeric literal keys. For
 `widths: Record<number, number>`, a declared field such as `state.widths[12]` resets with
 `fields: [['widths', '12']]`; paths use string segments just like runtime property extraction.
 Only fields persisted by the selected source may reset.
+
+Field names and source aliases are independent strings, including names containing `::`.
+Inherited declarations keep their normal subclass override behavior.
