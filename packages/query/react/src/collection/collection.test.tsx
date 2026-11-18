@@ -585,3 +585,33 @@ it('preserves active defaults and cache ownership when changing read modes', asy
 	hook.unmount()
 	client.clear()
 })
+
+it('overrides literal policy on a plain structural native source', async () => {
+	const { client, wrapper } = harness()
+	const fetcher = vi.fn(() => Promise.resolve([1]))
+	const source = {
+		invalidation: [],
+		getAll: {
+			query: () => ({ queryKey: ['plain-policy'], queryFn: fetcher, enabled: false as const }),
+			getItems: (items: number[]) => items,
+		},
+	}
+	const { result, rerender, unmount } = renderHook(
+		({ enabled }) =>
+			useCollectionQuery({
+				source,
+				mode: 'pages',
+				params: undefined,
+				queryOptions: { enabled, staleTime: Infinity },
+			}),
+		{ wrapper, initialProps: { enabled: false } },
+	)
+	expect(fetcher).not.toHaveBeenCalled()
+	rerender({ enabled: true })
+	await waitFor(() => {
+		expect(result.current.items).toEqual([1])
+	})
+	expect(fetcher).toHaveBeenCalledTimes(1)
+	unmount()
+	client.clear()
+})

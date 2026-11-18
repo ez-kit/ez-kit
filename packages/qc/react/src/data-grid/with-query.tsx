@@ -143,7 +143,13 @@ type RuntimeSource<R extends object> = {
 		getRows: (page: unknown) => readonly R[]
 	}
 }
-type Projection<R> = { data: R[]; loading: LoadingState; rowCount: number | undefined; hasNextPage: boolean }
+type Projection<R> = {
+	data: R[]
+	loading: LoadingState
+	rowCount: number | undefined
+	hasNextPage: boolean
+	loadMoreKey?: string | undefined
+}
 const useCommitEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 const EMPTY: never[] = []
 function enabled(value: unknown): boolean {
@@ -158,6 +164,7 @@ function sameProjection<R>(a: Projection<R>, b: Projection<R>) {
 		a.data === b.data &&
 		a.rowCount === b.rowCount &&
 		a.hasNextPage === b.hasNextPage &&
+		a.loadMoreKey === b.loadMoreKey &&
 		a.loading.isPending === b.loading.isPending &&
 		a.loading.isFetching === b.loading.isFetching &&
 		a.loading.isError === b.loading.isError &&
@@ -190,11 +197,16 @@ export function withQuery<
 		// Query options and their projections cross this boundary together. Their response
 		// type is opaque to the connector; only the projection consumes the selected value.
 		const source = dataSource as unknown as RuntimeSource<object>
+		// Child effects can submit before our passive effect publishes the observers.
+		// Wait for this committed render's publication without dispatching to an old owner.
+		const publication = { ready: false, waiters: [] as (() => void)[] }
 		const mutations = useRef<Record<string, { mutateAsync: (input: unknown) => Promise<unknown>; owner: string }>>({})
 		function action(name: 'create' | 'update' | 'delete' | 'deleteMany') {
 			const owner = hashKey(client.defaultMutationOptions(source[name]?.mutation ?? {}).mutationKey ?? [])
 			return {
-				execute: async (input: never) => {
+				execute: async (input: never, signal?: AbortSignal) => {
+					if (!publication.ready) await new Promise<void>((resolve) => publication.waiters.push(resolve))
+					if (signal?.aborted) return
 					const operation = source[name]
 					if (!operation) throw new Error(`Missing grid ${name} executor`)
 					try {
@@ -208,8 +220,12 @@ export function withQuery<
 				},
 			}
 		}
-		const create = action('create') as { execute: (input: GridCreateContext<object>) => Promise<void> }
-		const update = action('update') as { execute: (input: GridUpdateContext<object>) => Promise<void> }
+		const create = action('create') as {
+			execute: (input: GridCreateContext<object>, signal?: AbortSignal) => Promise<void>
+		}
+		const update = action('update') as {
+			execute: (input: GridUpdateContext<object>, signal?: AbortSignal) => Promise<void>
+		}
 		const remove = action('delete') as { execute: (input: GridDeleteContext<object>) => Promise<void> }
 		const removeMany = action('deleteMany') as { execute: (input: GridDeleteManyContext<object>) => Promise<void> }
 
@@ -247,13 +263,20 @@ export function withQuery<
 				...merged,
 
 				...(enabled(merged.creating)
-					? { creating: { ...creating, onSave: creating.onSave ?? (({ values }) => create.execute({ values })) } }
+					? {
+							creating: {
+								...creating,
+								onSave: creating.onSave ?? (({ values, signal }) => create.execute({ values }, signal)),
+							},
+						}
 					: {}),
 				...(enabled(merged.editing)
 					? {
 							editing: {
 								...editing,
-								onSave: editing.onSave ?? (({ rowId, row, values }) => update.execute({ rowId, row, values })),
+								onSave:
+									editing.onSave ??
+									(({ rowId, row, values, signal }) => update.execute({ rowId, row, values }, signal)),
 							},
 						}
 					: {}),
@@ -282,6 +305,7 @@ export function withQuery<
 					...(projection.rowCount === undefined ? { pageCount: -1 } : { rowCount: projection.rowCount }),
 					hasNextPage: projection.hasNextPage,
 					onLoadMore: loadMore,
+					loadMoreKey: projection.loadMoreKey,
 				},
 				sorting: {
 					...(typeof merged.sorting === 'object' ? merged.sorting : {}),
@@ -412,17 +436,22 @@ export function withQuery<
 					}
 			}
 			mutations.current = current
+			publication.ready = true
+			for (const resolve of publication.waiters) resolve()
+			publication.waiters.length = 0
 		})
 		const current = collection.query
 		const list = current as UseQueryResult<unknown, unknown>
 		const pages = current as UseInfiniteQueryResult<InfiniteData<unknown>, unknown>
 		const data = collection.items as object[]
-		const rowCount = !infiniteMode && !list.isPlaceholderData ? collection.total : undefined
+		const authoritativeTotal = list.isFetchedAfterMount || (list.isEnabled && !list.isStale)
+		const rowCount = !infiniteMode && !list.isPlaceholderData && authoritativeTotal ? collection.total : undefined
 
 		const next = {
 			data: replaceEqualDeep(projection.data, data),
 			rowCount,
 			hasNextPage: infiniteMode && pages.hasNextPage,
+			loadMoreKey: infiniteIdentity,
 			loading: {
 				isPending: current.isPending,
 				isFetching: current.isFetching && !(infiniteMode && pages.isFetchingNextPage),
@@ -451,13 +480,27 @@ export function withQuery<
 			}
 		}, [infiniteIdentity, hasNextPage, isFetching, fetchNextPage])
 		useEffect(() => {
-			if (infiniteMode || !list.isSuccess || list.isFetching || list.isPlaceholderData || rowCount === undefined) return
+			if (
+				infiniteMode ||
+				!list.isEnabled ||
+				!list.isSuccess ||
+				list.fetchStatus !== 'idle' ||
+				list.isPlaceholderData ||
+				rowCount === undefined
+			)
+				return
+			// A stale cache hit with refetch disabled is not an authoritative total.
+			// A completed response remains authoritative even with staleTime: 0.
+			if (!list.isFetchedAfterMount && list.isStale) return
 			const last = Math.max(0, Math.ceil(rowCount / params.pagination.pageSize) - 1)
 			if (params.pagination.pageIndex > last) table.setPageIndex(last)
 		}, [
 			infiniteMode,
 			list.isSuccess,
-			list.isFetching,
+			list.isEnabled,
+			list.fetchStatus,
+			list.isFetchedAfterMount,
+			list.isStale,
 			list.isPlaceholderData,
 			rowCount,
 			params.pagination.pageIndex,

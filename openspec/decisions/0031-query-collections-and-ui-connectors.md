@@ -67,3 +67,18 @@ query-source/query-modal browser suites. The Orval collection recipe checks shar
 Connected grids expose the collection's restricted observer-policy overrides as `queryOptions`.
 Source identity, projection and infinite cursor contracts cannot be overridden by a consumer.
 External parameter/page-reset state stays application-owned.
+
+Infinite loader state also follows collection ownership. The neutral React grid accepts a
+loadMoreKey; its normalized per-scope token coordinates all loader instances and ignores stale
+promise settlements. The Query connector supplies its effective query hash. This token owns
+transient loader UI only, not pagination parameters or cached responses.
+
+A stale initial cache total cannot trigger either connector correction or the base grid's shrink
+clamp. Fresh enabled cache data and successful current-observer responses are authoritative;
+staleTime zero does not disqualify a just-completed response. Automatic mutation callbacks invoked
+before passive publication wait for the committed observers, then recheck owner and pre-dispatch
+form cancellation. Native options remain the execution authority.
+
+Read projection invariants apply equally to collection and direct grid helpers. A shared consumer
+conformance fixture covers both public entries. Structural collection observer overrides derive
+from full native option types, not only the fields present in a literal descriptor.

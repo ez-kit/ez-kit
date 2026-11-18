@@ -25,7 +25,7 @@ export type GridInfiniteSource<
 	query: (
 		params: GridInfiniteParams,
 	) => UseInfiniteQueryOptions<TPage, TError, InfiniteData<TSelectedPage>, TKey, TPageParam>
-	getRows: (page: TSelectedPage) => readonly TRow[]
+	getRows: (page: NoInfer<TSelectedPage>) => readonly TRow[]
 }
 
 export type GridSourceOperations<

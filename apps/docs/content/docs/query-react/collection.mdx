@@ -258,3 +258,9 @@ A definitely present selector continues to discard inherited projections as desc
 
 The packages require TanStack Query **5.105.3 or later within v5**. Public declaration checks run
 against that exact minimum version as well as the workspace's development dependencies.
+
+Plain native descriptors passed directly to `useCollectionQuery` have the same consumer option
+types as sources built by the helpers. An omitted option remains available for local overrides,
+and a source's literal `enabled: false` can be overridden with `queryOptions: { enabled: true }`.
+Callback options infer the native query's data type. The runtime whitelist still prevents
+consumers from replacing source-owned keys, fetchers or selection.

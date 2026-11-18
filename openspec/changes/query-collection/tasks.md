@@ -72,3 +72,12 @@
 - [x] Cancel stale validation without closing forms or interrupting dispatched writes.
 - [x] Document explicit external page resets and validation cancellation.
 - [x] Verify observer overrides, validation races, public types and repository gates.
+
+## Fourth audit follow-up
+
+- [x] Isolate actual infinite loader state and late completions by collection scope.
+- [x] Guard stale cache totals before both page-correction paths.
+- [x] Enforce projection safety across standalone and native grid helpers.
+- [x] Support early effect actions with safe publication and cancellation.
+- [x] Derive complete observer options for structural collection sources.
+- [x] Complete regression, compatibility and repository validation.

@@ -1,5 +1,5 @@
 import { LoadMoreDirection } from '@ez-kit/data-grid-core'
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 
 import { DATA_GRID_DEFAULTS } from '../defaults'
 
@@ -57,6 +57,14 @@ export function useInfiniteScroll(): InfiniteController {
 	// moved per render would turn "load when the last row nears the end" into "re-check on every
 	// render of the grid", and would re-attach a scroll listener and a `ResizeObserver` each time.
 	const config = readConfig(table)
+	const activateScope = useCallback(() => {
+		const scope = readConfig(table)?.requestScope
+		if (scope && !scope.initialized) {
+			scope.initialized = true
+			table.setInfiniteStatus({ isFetchingNextPage: false, isFetchingPreviousPage: false, error: null })
+		}
+	}, [table])
+	useEffect(activateScope, [activateScope, config?.requestScope])
 	// `<LoadMoreFooter />` mounts unconditionally inside `<Tbody>`, and `VirtualBody` reaches this
 	// hook by a second route, so these two run on **every** grid — including one that configures
 	// no infinite scroll at all. Optional-chained so `infiniteFeature` is not required to render
@@ -72,6 +80,9 @@ export function useInfiniteScroll(): InfiniteController {
 			// hasNextPage value are used.
 			const cfg = readConfig(table)
 			if (!cfg?.onLoadMore) return
+			activateScope()
+			const scope = cfg.requestScope
+			const isCurrent = () => readConfig(table)?.requestScope === scope
 
 			// Guard: nothing more to load in this direction, or a fetch is already in flight.
 			const infinite = table.store.state.infinite
@@ -90,18 +101,18 @@ export function useInfiniteScroll(): InfiniteController {
 			try {
 				result = cfg.onLoadMore({ direction })
 			} catch (err: unknown) {
-				table.setInfiniteStatus({ [fetchingKey]: false, error: { direction, error: err } })
+				if (isCurrent()) table.setInfiniteStatus({ [fetchingKey]: false, error: { direction, error: err } })
 				return
 			}
 			Promise.resolve(result)
 				.then(() => {
-					table.setInfiniteStatus({ [fetchingKey]: false })
+					if (isCurrent()) table.setInfiniteStatus({ [fetchingKey]: false })
 				})
 				.catch((err: unknown) => {
-					table.setInfiniteStatus({ [fetchingKey]: false, error: { direction, error: err } })
+					if (isCurrent()) table.setInfiniteStatus({ [fetchingKey]: false, error: { direction, error: err } })
 				})
 		},
-		[table],
+		[table, activateScope],
 	)
 
 	const retry = useCallback(() => {

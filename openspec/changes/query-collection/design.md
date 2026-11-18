@@ -307,3 +307,28 @@ aborts a Saving controller. The connector compares committed effective create/up
 keys in a layout effect and cancels the corresponding validation on change. Existing signal checks
 ignore non-cooperating validators and isolate subsequent attempts. The pre-dispatch owner guard
 remains as defense against stale imperative callbacks. Same-key native semantics remain unchanged.
+
+## Fourth audit: complete UI lifecycle and read-contract parity
+
+Pass the effective infinite query identity through the neutral React pagination loadMoreKey.
+useDataGrid normalizes it to a scope token stable across ordinary renders and replaced on key or
+paging-mode changes. All loader hooks share that token's initialization. Activation clears old
+pending/error UI once; promise success/error writes require the current scope token. The existing
+query-key deduplication still owns transport promises. This fixes the real loader path instead of
+only direct calls to onLoadMore.
+
+Suppress stale initial cache totals before publishing rowCount to the base grid; otherwise its
+independent shrink clamp could move the page even when connector correction is guarded. Accept
+current-observer successful data or fresh enabled cache data; require idle, enabled successful
+reads for connector correction. isFetchedAfterMount allows staleTime-zero responses to correct.
+
+A render-local publication barrier lets automatic actions called by layout/child effects wait for
+TanStack's passive observer update. Publication drains waiters after replacing the bridge. Before
+transport preparation, check the captured owner against the current observer and any form signal.
+Signals gate queued dispatch only and never abort already dispatched connector mutations.
+
+Native grid projection inputs use NoInfer. Fetcher helpers retain selected-shape inference while
+requiring a guaranteed selector whenever raw data cannot satisfy that shape; row counts cannot
+widen the selected input. A shared public-entry conformance suite covers both read stacks. Reconstruct the native observer-options model before
+picking allowed collection overrides, preserving options absent from structural descriptors and
+widening literal policy values to their legal native types.

@@ -76,10 +76,19 @@ const OBSERVER_OPTIONS = [
 	'throwOnError',
 	'notifyOnChangeProps',
 ] as const
-export type CollectionQueryOptions<S, M extends CollectionMode<S>> =
-	Read<S, M> extends { query: (params: never) => infer O }
-		? Pick<O, Extract<(typeof OBSERVER_OPTIONS)[number], keyof O>>
-		: never
+type NativeObserverOptions<R, M> = R extends { query: (params: never) => infer O }
+	? M extends 'pages'
+		? O extends UseQueryOptions<infer D, infer E, infer S, infer K>
+			? UseQueryOptions<D, E, S, K>
+			: never
+		: O extends UseInfiniteQueryOptions<infer D, infer E, infer S, infer K, infer C>
+			? UseInfiniteQueryOptions<D, E, S, K, C>
+			: never
+	: never
+export type CollectionQueryOptions<S, M extends CollectionMode<S>> = Pick<
+	NativeObserverOptions<Read<S, M>, M>,
+	Extract<(typeof OBSERVER_OPTIONS)[number], keyof NativeObserverOptions<Read<S, M>, M>>
+>
 
 // Whitelist at runtime too: untyped callers cannot replace cache identity or projections.
 function observerOptions(options: unknown) {

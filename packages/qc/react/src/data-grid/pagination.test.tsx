@@ -283,3 +283,32 @@ it('accepts a response with an omitted total without keeping the previous count'
 	unmount()
 	client.clear()
 })
+
+it.each([false, true])('preserves stale cached page while refetch is disabled (enabled=%s)', (enabled) => {
+	const { client, wrapper } = harness()
+	const pending = deferred<Page>()
+	const fetcher = vi.fn((_params: GridQueryParams) => pending.promise)
+	const source = makeSource({ key: ['stale-total'], getAll: fetcher })
+	const restored = {
+		pagination: { pageIndex: 3, pageSize: 10 },
+		sorting: [],
+		columnFilters: [],
+		globalFilter: undefined,
+	}
+	client.setQueryData(source.queries.list(restored).queryKey, { items: [], total: 0 })
+	const { result, unmount } = renderHook(
+		() =>
+			kit.useDataGrid({
+				dataSource: source,
+				columns,
+				pagination: true,
+				queryOptions: { refetchOnMount: false, enabled },
+				initialState: { pagination: restored.pagination },
+			}),
+		{ wrapper },
+	)
+	expect(result.current.store.state.pagination.pageIndex).toBe(3)
+	expect(fetcher).not.toHaveBeenCalled()
+	unmount()
+	client.clear()
+})

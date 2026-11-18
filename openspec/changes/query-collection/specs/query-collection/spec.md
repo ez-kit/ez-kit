@@ -286,3 +286,40 @@ Creating and editing SHALL support cancelValidation without closing the form or 
 
 - **WHEN** a validation is cancelled and a new attempt starts before the old validator settles
 - **THEN** the old result cannot alter the new attempt's state, errors or save
+
+### Requirement: Infinite loader ownership
+
+Connected infinite grids SHALL isolate loader pending/error state by effective query identity as well as deduplicate transport requests by identity. Old promise settlements SHALL NOT change the current collection's loader state.
+
+#### Scenario: Slow prior collection
+
+- **WHEN** A's next-page request remains pending and collection B becomes active
+- **THEN** the real loader can request B's next page and a late A error cannot appear for B
+
+### Requirement: Authoritative page totals
+
+Stale initial cache totals SHALL NOT trigger connector page correction or the base grid's shrink clamp. Successful current-observer responses SHALL remain usable for correction with staleTime zero.
+
+#### Scenario: Restored page with refetch disabled
+
+- **GIVEN** a restored page and stale cached total zero
+- **WHEN** refetchOnMount is false
+- **THEN** the restored page remains selected until an authoritative response supports correction
+
+### Requirement: Early imperative actions
+
+Automatic grid actions invoked from layout or child effects SHALL wait for observer publication before dispatching and SHALL retain ownership and pre-dispatch cancellation checks.
+
+#### Scenario: Child effect starts creation
+
+- **WHEN** a child effect commits creation before the connector's passive publication
+- **THEN** the configured mutation executes after publication without a missing-executor error
+
+### Requirement: Public read contract parity
+
+Direct grid helpers SHALL reject projection inputs incompatible with raw responses unless selection guarantees the projected shape. Structural collection sources SHALL expose the full allowed native observer policy independent of omitted or literal source option fields.
+
+#### Scenario: Literal disabled source
+
+- **WHEN** a structural native source returns enabled false as a literal
+- **THEN** a consumer may override enabled with true, while invalid enabled values and source-owned options are rejected by types

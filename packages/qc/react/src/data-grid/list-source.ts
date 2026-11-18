@@ -6,8 +6,8 @@ import type { DefaultError, QueryKey, UseQueryOptions } from '@tanstack/react-qu
 /** Native options retain their keys and their selected result type. */
 export type GridListSource<TResponse, TError, TSelected, TRow extends object, TKey extends QueryKey> = {
 	query: (params: GridQueryParams) => UseQueryOptions<TResponse, TError, TSelected, TKey>
-	getRows: (data: TSelected) => readonly TRow[]
-	getRowCount?: (data: TSelected) => number | undefined
+	getRows: (data: NoInfer<TSelected>) => readonly TRow[]
+	getRowCount?: (data: NoInfer<TSelected>) => number | undefined
 }
 
 export type GridListFetcherOptions<TArgs, TResponse, TSelected, TRow extends object, TError> = {
@@ -15,13 +15,14 @@ export type GridListFetcherOptions<TArgs, TResponse, TSelected, TRow extends obj
 	fetcher: GridFetcher<TArgs, TResponse>
 	prepareArgs: (params: GridQueryParams) => NoInfer<TArgs>
 	getRows: (data: TSelected) => readonly TRow[]
-	getRowCount?: (data: TSelected) => number | undefined
+	getRowCount?: (data: NoInfer<TSelected>) => number | undefined
 	options?: Omit<UseQueryOptions<TResponse, TError, TSelected>, 'queryKey' | 'queryFn'>
 }
 
 /** Normalize a fetcher while keeping its response in the native query cache. */
 export function createListSource<TArgs, TResponse, TRow extends object, TSelected = TResponse, TError = DefaultError>(
-	config: GridListFetcherOptions<TArgs, TResponse, TSelected, TRow, TError>,
+	config: GridListFetcherOptions<TArgs, TResponse, TSelected, TRow, TError> &
+		([NoInfer<TResponse>] extends [NoInfer<TSelected>] ? unknown : { options: { select: (data: never) => unknown } }),
 ) {
 	return {
 		query: (params: GridQueryParams) => {

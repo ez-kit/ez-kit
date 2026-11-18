@@ -243,3 +243,7 @@ Inactive internal read observers use neutral defaults; active reads keep the app
 QueryClient defaults. Native read projections infer their inputs from query options, not from the
 projection annotation. When conditional selection broadens a shared factory's data type, override
 an inherited raw-only `getTotal` with a compatible getter (or `() => undefined`).
+
+Collection observer overrides are derived from the complete native option model, including for
+plain structural sources. Literal source policy does not restrict legal consumer overrides, and
+omitted callback options retain contextual query-data types.

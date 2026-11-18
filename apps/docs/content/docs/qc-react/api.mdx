@@ -159,3 +159,25 @@ does not start another query; configure options when creating its table.
 
 External pagination resets remain project-owned: call `table.setPageIndex(0)` alongside the
 external filter or team change. There is no automatic external `resetKey` policy.
+
+## Read and loader safety
+
+Standalone `createListSource`, `createInfiniteSource` and native `createGridDataSource` infer
+projection inputs from the fetcher or query options. A shape-changing projection requires a
+matching `select`; a conditional selector must also allow the raw shape when absent. Row-count
+getters follow the same selected-data contract.
+
+Infinite grids scope both request deduplication and the loader's pending/error state to the
+current query. A slow previous selection cannot block the current selection or publish an old
+error into it. The connector supplies `pagination.loadMoreKey` automatically. Base-grid consumers
+with their own loader can supply a stable key when the collection changes; this only abandons old
+loader state, and does not reset page, selection or form state.
+
+Stale cached totals cannot correct a restored page when refetch is disabled. Totals become
+authoritative after a successful response for the current observer, or when an enabled observer
+reads fresh cache data. A completed response can correct the page even with `staleTime: 0`.
+
+Automatic form actions can be invoked from consumer layout effects or child effects. They wait
+for the committed mutation observers to be ready before checking ownership and dispatching.
+Closing a form before dispatch cancels the queued action; closing it after dispatch retains the
+existing background-mutation behavior.

@@ -39,7 +39,10 @@ export function createInfiniteSource<
 	TRow extends object,
 	TSelectedPage = TPage,
 	TError = DefaultError,
->(config: GridInfiniteFetcherOptions<TArgs, TCollection, TPage, TPageParam, TSelectedPage, TRow, TError>) {
+>(
+	config: GridInfiniteFetcherOptions<TArgs, TCollection, TPage, TPageParam, TSelectedPage, TRow, TError> &
+		([NoInfer<TPage>] extends [NoInfer<TSelectedPage>] ? unknown : { options: { select: (data: never) => unknown } }),
+) {
 	return {
 		query: (params: GridInfiniteParams) => {
 			const args = config.prepareArgs(params)

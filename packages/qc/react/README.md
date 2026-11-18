@@ -373,3 +373,15 @@ contract for both read modes. For example, `queryOptions: { enabled: Boolean(tea
 30_000, refetchOnWindowFocus: false }` overrides source policy for that consumer. Identity,
 fetchers, selection and cursor configuration remain source-owned and cannot be replaced through
 this prop. External page resets remain explicit table operations.
+
+Loader status follows the effective infinite query identity. The connector supplies the base
+grid's `pagination.loadMoreKey`, preventing an old request from blocking a new collection or
+writing its error into it. Stale cached totals remain unknown for page correction until an
+authoritative response is available, including when refetchOnMount is disabled.
+
+Automatic mutations are available to consumer layout/child effects: dispatch waits for observer
+publication and rechecks ownership. A queued form action respects cancellation before dispatch;
+already dispatched writes keep their existing lifecycle.
+
+Standalone grid read helpers and native grid sources enforce the collection layer's projection
+rules: getters cannot invent a selected shape, and shape-changing selectors must be guaranteed.

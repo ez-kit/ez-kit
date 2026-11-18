@@ -168,3 +168,36 @@ External page resets remain project-owned; no resetKey or automatic modal dismis
 Docs production build remains excluded under the accepted Google Fonts restriction. Browser suites
 were not rerun for this follow-up; targeted core/hook tests exercise cancellation and consumer
 policy, and previous browser evidence remains historical.
+
+## Fourth audit fixes — 2026-11-18
+
+Closed the five reproduced defects:
+
+- Mounted connected-grid tests drive useInfiniteScroll, not only raw onLoadMore. A's pending
+  request cannot block B; late A success/error cannot clear B's pending status or publish an error.
+  The neutral React loader shares a per-loadMoreKey scope across detection sites.
+- Stale cached totals with refetchOnMount false and either enabled value preserve the restored
+  page. Untrusted totals are withheld from the base grid's independent shrink clamp too. Existing
+  fresh-response, placeholder and staleTime-zero correction scenarios continue to pass.
+- A shared consumer conformance fixture rejects fabricated selected shapes in collection,
+  standalone grid list/infinite and native grid helpers; it also checks conditional selectors and
+  row-count input compatibility while retaining valid selection inference.
+- Layout-effect and child-effect commits execute after observer publication. Cancellation before
+  queued dispatch calls no fetcher, while existing dispatched-mutation/session tests still pass.
+- Plain structural collection sources accept complete native observer options: literal disabled
+  policy can be overridden, callback data remains typed, and invalid/source-owned overrides fail
+  type checks. A runtime test enables a literal-disabled source through consumer policy.
+
+Verification passed:
+
+- Sequential library build (16 tasks), full lint (33), typecheck (33), test (32), and size (32).
+- Shared React grid: 1,827 tests; Query React: 94; qc-react: 107; docs: 313.
+- React 18: shared grid 1,827; Query React 94; qc-react 101 passed with six existing HeroUI skips.
+- Public declarations/minimum-version consumer, strict OpenSpec validation and whitespace checks.
+- Sizes: shared React grid main entry 38.5 kB / 43.5 kB; collection 1.71 kB / 2 kB;
+  qc-react 3.18 kB / 3.4 kB. Existing budgets pass without increases.
+
+No validateValues cancellation-result or shared read-error generic contract was changed; those
+remain separate API discussions. Docs production build remains excluded under the accepted Google
+Fonts restriction. Browser suites were not rerun for this follow-up; mounted real loader and
+form-hook regressions cover the confirmed UI paths. Previous browser evidence remains historical.
