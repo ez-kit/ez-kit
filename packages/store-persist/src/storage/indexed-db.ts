@@ -151,8 +151,7 @@ export function createIndexedDbPort(options: IndexedDbAdapterOptions = {}): Sour
 				const store = tx.objectStore(storeName)
 				const stored = await request<unknown>(store.get(storageKey))
 				const next = transform(runMigration(stored, options).keyed)
-				if (next.size) store.put(packBlob(next, version), storageKey)
-				else store.delete(storageKey)
+				write(store, next)
 				await done
 			} catch (error) {
 				try {
@@ -164,6 +163,10 @@ export function createIndexedDbPort(options: IndexedDbAdapterOptions = {}): Sour
 			}
 		})
 	}
+	function write(store: IDBObjectStore, values: Keyed): void {
+		if (values.size) store.put(packBlob(values, version), storageKey)
+		else store.delete(storageKey)
+	}
 	return {
 		capabilities: { recordVersions: true },
 		identity: `indexedDB:${factory ? String(factoryIds.get(factory)) : 'server'}:${JSON.stringify([dbName, storeName, storageKey])}`,
@@ -172,20 +175,20 @@ export function createIndexedDbPort(options: IndexedDbAdapterOptions = {}): Sour
 				unavailable()
 				return new Map()
 			}
-			const stored = await manager.run(storeName, async (db) => {
-				const tx = db.transaction(storeName, 'readonly')
+			// Direct reads own their migration write. Keep the snapshot and rewrite in the same
+			// transaction so a concurrent set cannot commit between them.
+			return manager.run(storeName, async (db) => {
+				const tx = db.transaction(storeName, !context && options.migrate ? 'readwrite' : 'readonly')
 				const done = complete(tx)
 				void done.catch(() => undefined)
-				const value = await request<unknown>(tx.objectStore(storeName).get(storageKey))
+				const store = tx.objectStore(storeName)
+				const stored = await request<unknown>(store.get(storageKey))
+				const { keyed, rewrite } = runMigration(stored, options)
+				if (rewrite && !context) write(store, keyed)
 				await done
-				return value
+				if (rewrite) context?.stageContainerRewrite?.(keyed)
+				return keyed
 			})
-			const { keyed, rewrite } = runMigration(stored, options)
-			if (rewrite) {
-				if (context) context.stageContainerRewrite?.(keyed)
-				else await mutate(() => keyed)
-			}
-			return keyed
 		},
 		set(desired, context) {
 			return mutate((current) => patchKeyed(current, desired, context))

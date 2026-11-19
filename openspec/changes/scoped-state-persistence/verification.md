@@ -1,6 +1,6 @@
 # Verification and scenario trace
 
-All 83 requirements and 176 scenarios are covered by the trace below. Each scenario is linked to regression/integration evidence or an explicit adapter/application contract. Paths are repository-relative; brace notation denotes both bindings. Short `src/...` references in a store-persist row refer to that package. No test claims distributed atomicity.
+All 83 requirements and 182 scenarios are covered by the trace below. Each scenario is linked to regression/integration evidence or an explicit adapter/application contract. Paths are repository-relative; brace notation denotes both bindings. Short `src/...` references in a store-persist row refer to that package. No test claims distributed atomicity.
 
 ## addressing
 
@@ -167,6 +167,17 @@ uncertain outcome; it does not authorize dropping retry/corrective intent.
 | Cache disposal during setup rolls back acquired resources     | `packages/store-core/src/cache/teardown.test.ts` checks cleanup and the absence of published membership.                                                  |
 | Invalid Date defaults allow restoration                       | `packages/store-persist/src/scoped-lifecycle.test.ts` covers scalar and array dates, restore and default clearing.                                        |
 
+## Seventh audit trace (2026-11-19)
+
+| Scenario                                                    | Regression evidence                                                                                                                        |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| A direct IndexedDB migration overlaps an acknowledged patch | `packages/store-persist/src/storage/container-rewrite-race.test.ts` checks the final stored value.                                         |
+| A partial reset triggers an independent subscriber edit     | `apps/docs/test/persist-reset-subscription.test.tsx` exercises reset and flush through Zustand's public binding.                           |
+| Undefined JSON and explicit JSON null are distinct          | `packages/store-persist/src/codecs/param-json-omission.test.ts` exercises both versioned and unversioned writes.                           |
+| A query write follows native Back under a Next.js base path | `packages/store-persist/src/url/next-base-path.test.tsx` verifies the href against the browser route before the new hook snapshot commits. |
+| Cache setup recursively creates the same address            | `packages/store-core/src/cache/teardown.test.ts` verifies rollback and reuse of the address.                                               |
+| A restore error survives a successful write                 | `packages/store-persist/src/scoped-lifecycle.test.ts` checks the retained error and independent write status.                              |
+
 ## Release and rollback
 
 The Changesets release planner resolves independent minors: store-core 1.3.0, store-persist 1.1.0, zu-store 1.3.0 and va-store 1.4.0. The private docs dependency update is a patch. `workspace:^` expands to the new dependency version when published; new bindings therefore require core ^1.3.0 and persist ^1.1.0. An isolated package-manifest fixture was packed with pnpm for both bindings and its tarball manifests confirmed these exact floors; the workspace manifests were not versioned or published. Existing published caret ranges remain an explicitly accepted risk (ADR 0029). No fixed/linked group is configured.
@@ -184,14 +195,14 @@ Verified on 2026-11-19 with Node 22.23.4 and pnpm 10.34.9.
 | Offline `pnpm build --env-mode=loose`             | 16/16 tasks passed, including production compilation and static prerender of docs. Used Next's `NEXT_FONT_GOOGLE_MOCKED_RESPONSES` test hook with temporary CSS-only responses for the existing Inter/Figtree URLs; no product source or font configuration changed. Real font download/appearance is not verified by this build. |
 | `pnpm lint --env-mode=loose --concurrency=2`      | 30/30 tasks passed.                                                                                                                                                                                                                                                                                                               |
 | `pnpm typecheck --env-mode=loose --concurrency=2` | 30/30 tasks passed, including docs/runnable snippets and custom adapter consumer types.                                                                                                                                                                                                                                           |
-| `pnpm test --env-mode=loose --concurrency=2`      | 30/30 tasks passed; **5409 tests** across 16 packages/apps.                                                                                                                                                                                                                                                                       |
-| `pnpm size --env-mode=loose --concurrency=2`      | 32/32 tasks passed; the fourth through sixth audits stayed within existing budgets (earlier changed entry points retained approximately 15% headroom); dependency builds used the same temporary font responses.                                                                                                                  |
+| `pnpm test --env-mode=loose --concurrency=2`      | 30/30 tasks passed; **5416 tests** across 16 packages/apps.                                                                                                                                                                                                                                                                       |
+| `pnpm size --env-mode=loose --concurrency=2`      | 32/32 tasks passed; the fourth through seventh audits stayed within existing budgets (earlier changed entry points retained approximately 15% headroom); dependency builds used the same temporary font responses.                                                                                                                |
 | Playwright Chromium                               | Actual `/docs/zu-store/persist` flow passed: pending → timeout without saving defaults → resize to 500 → acknowledge write → deliver obsolete 720 response → width/storage remain 500 → reload restores browser width → scope reset returns both panels to 320. No page errors.                                                   |
 | OpenSpec strict validation                        | `openspec validate scoped-state-persistence --strict` passed.                                                                                                                                                                                                                                                                     |
 | Rollout/rollback and release metadata             | Separate old/new storageKey test passed; `pnpm pack` manifest fixtures verified both new binding dependency floors. No versions were changed or published.                                                                                                                                                                        |
 
-Relevant final package counts: store-core 137, store-persist 356, zu-store 205, va-store 167, docs 352.
-The six audits added 54, 41, 67, 39, 54 and 7 tests respectively, for 262 additional regressions over the original 5147-test baseline.
+Relevant final package counts: store-core 138, store-persist 361, zu-store 205, va-store 167, docs 353.
+The seven audits added 54, 41, 67, 39, 54, 7 and 7 tests respectively, for 269 additional regressions over the original 5147-test baseline.
 The full gate includes existing Next/React Router URL navigation tests in both bindings, the mixed
 Zustand/Valtio writer test, docs option/type guards and tree-shaking checks. The temporary offline
 font fixture was confined to `/tmp`; the ordinary network-backed docs build remains subject to the
@@ -206,14 +217,14 @@ existing budgets; no new dependency exclusion was added to hide growth.
 | -------------------------- | -------------: | -----------: |
 | store-core root            |           1323 |         1550 |
 | store-core React           |            577 |          600 |
-| store-core cache           |           2854 |         3050 |
-| store-persist root         |          12122 |        13500 |
-| store-persist storage      |           2388 |         2700 |
+| store-core cache           |           2895 |         3050 |
+| store-persist root         |          12281 |        13500 |
+| store-persist storage      |           2403 |         2700 |
 | store-persist URL          |           1083 |         1250 |
 | store-persist React Router |           2324 |         2375 |
-| store-persist Next         |           1182 |         1375 |
+| store-persist Next         |           1195 |         1375 |
 | store-persist testing      |            919 |         1075 |
-| store-persist internals    |          10499 |        11650 |
+| store-persist internals    |          10652 |        11650 |
 | zu-store persist           |            515 |          575 |
 | va-store root              |           2328 |         2700 |
 | va-store persist           |            504 |          575 |

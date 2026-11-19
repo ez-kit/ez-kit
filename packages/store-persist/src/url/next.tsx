@@ -25,7 +25,7 @@ export const nextAdapter: RenderScopedAdapter = {
 		const pathname = usePathname()
 
 		const search = params.toString()
-		const snapshot = { search, router, pathname }
+		const snapshot = { search, router, pathname, fromPop: false }
 		const renderSnapshot = useRef(snapshot)
 		renderSnapshot.current = snapshot
 		const committed = useRef(snapshot)
@@ -52,7 +52,7 @@ export const nextAdapter: RenderScopedAdapter = {
 					committed.current = {
 						...committed.current,
 						search: window.location.search.slice(1),
-						pathname: window.location.pathname,
+						fromPop: true,
 					}
 					onNavigate()
 				}
@@ -65,7 +65,11 @@ export const nextAdapter: RenderScopedAdapter = {
 			commit: (next, history) => {
 				const query = next.toString()
 				const hash = typeof window === 'undefined' ? '' : window.location.hash
-				const url = `${committed.current.pathname}${query ? `?${query}` : ''}${hash}`
+				// The browser's POP destination already includes basePath. A query-relative href
+				// addresses that destination while Next catches up with its committed pathname.
+				const url = committed.current.fromPop
+					? `?${query}${hash}`
+					: `${committed.current.pathname}${query ? `?${query}` : ''}${hash}`
 				if (history === UrlHistory.Push) {
 					committed.current.router.push(url)
 				} else {

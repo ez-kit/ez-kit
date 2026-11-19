@@ -240,3 +240,25 @@ it('rolls back setup when a capability disposes the cache before publication', (
 	expect(cache.getInstance(id)).toBeUndefined()
 	expect(cache.keys()).toEqual([])
 })
+
+it('rejects recursive creation, rolls back earlier setup and releases the reservation', () => {
+	const cache = createInstanceCache()
+	const options = { gcTime: Infinity, context: { id, services: createServiceRegistry(), isServer: false } }
+	const cleanup = vi.fn()
+	const nestedFactory = vi.fn(() => ({}))
+	const store = {}
+	attachCapability(store, { name: 'resource', setup: () => cleanup })
+	attachCapability(store, {
+		name: 'recursive',
+		setup() {
+			cache.getOrCreate(id, nestedFactory, options)
+		},
+	})
+	expect(() => cache.getOrCreate(id, () => store, options)).toThrow('same store cache entry recursively')
+	expect(cleanup).toHaveBeenCalledOnce()
+	expect(nestedFactory).not.toHaveBeenCalled()
+	expect(cache.keys()).toEqual([])
+	const replacement = {}
+	expect(cache.getOrCreate(id, () => replacement, options)).toBe(replacement)
+	cache.dispose()
+})

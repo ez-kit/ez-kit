@@ -152,6 +152,11 @@ Existing adapter version/migrate MUST remain a separate layer with their previou
 - **WHEN** one restore migrates or invalidates a record while another has an older container snapshot
 - **THEN** the older full rewrite cannot undo the acknowledged record update or deletion
 
+#### Scenario: A direct IndexedDB migration read overlaps a patch
+
+- **WHEN** a caller reads a container without restore context while another operation patches the same port
+- **THEN** the direct migration and its write are atomic and preserve the acknowledged patch
+
 ### Requirement: New valid reads supersede stale invalidation intent
 
 A successful current restore MUST cancel obsolete pending invalidation/deletion from an earlier read before it can erase the newly validated value. This MUST retain the priority of user edits, explicit reset barriers and future-version guards.
@@ -226,6 +231,11 @@ mistaken for its default because canonicalization discarded serializable content
 
 - **WHEN** JSON containers differ only in property insertion order at arbitrary array/object depth
 - **THEN** canonical equality treats their serialized values consistently
+
+#### Scenario: An optional JSON field is cleared
+
+- **WHEN** an optional JSON value becomes undefined with clearOnDefault disabled
+- **THEN** the stored override is deleted and explicit JSON null remains representable
 
 ### Requirement: Default snapshots preserve supported data serialization
 

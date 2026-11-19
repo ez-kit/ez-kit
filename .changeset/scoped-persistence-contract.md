@@ -59,3 +59,7 @@ source adapters through both bindings.
 Prevent stale container rewrites from reverting record migrations or deletions. Keep migrated
 values local to their source when multiple sources share a field. Roll back entry setup when its
 cache is disposed during creation, and restore valid dates over omitted invalid Date defaults.
+
+Make direct IndexedDB migration reads atomic and retain application subscription edits during
+reset. Omit undefined JSON values, preserve the Next.js base path after Back, prevent recursive
+cache creation at the same address, and retain restore failures across independent writes.

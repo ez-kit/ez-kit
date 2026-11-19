@@ -120,6 +120,16 @@
 - [x] 13.4 Restore valid dates over omitted invalid Date defaults, including arrays.
 - [x] 13.5 Verify the four regressions, validate the specification and update PR 299.
 
+## 14. Seventh audit fixes approved on 2026-11-19
+
+- [x] 14.1 Make direct IndexedDB migration reads atomic with concurrent writes.
+- [x] 14.2 Preserve application subscription edits during a partial reset.
+- [x] 14.3 Omit optional JSON values without an encoding and preserve explicit JSON null.
+- [x] 14.4 Preserve the Next.js base path when writing after Back.
+- [x] 14.5 Reject recursive cache creation by address and roll back acquired capabilities.
+- [x] 14.6 Preserve the restore failure reason across unrelated writes.
+- [x] 14.7 Validate regressions, documentation, package checks and PR 299.
+
 ## Workflow follow-up
 
 - After implementation and review, archive this change using the standard OpenSpec workflow. Archiving is not an implementation task and does not automatically release packages.

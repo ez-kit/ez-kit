@@ -147,3 +147,9 @@ observation fails explicitly; an uncertain delayed publication is not reported a
 Concurrent restores cannot use stale full container snapshots to undo record updates or deletions.
 When another source supplies a shared field's visible value, a migration still writes the current
 source's own migrated value. An omitted invalid Date default permits restoration of a valid Date.
+
+Direct IndexedDB reads apply any container migration atomically with writes to the same storage
+area. Partial reset retains edits to separate fields made by synchronous application subscribers.
+The JSON codec omits undefined values and keeps explicit JSON null. Next.js query saves after Back
+follow the restored browser route, including its base path. A write can succeed while an older
+restore failure remains visible in status.

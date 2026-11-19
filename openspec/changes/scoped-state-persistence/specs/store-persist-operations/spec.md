@@ -109,6 +109,11 @@ After reset, old read responses and migration rewrites MUST NOT restore the reco
 - **WHEN** a second reset follows a new edit waiting behind the first reset
 - **THEN** the second reset cancels that pending edit and leaves deletion as the final action
 
+#### Scenario: An application subscription edits a neighboring field during reset
+
+- **WHEN** resetting one field triggers a synchronous application edit to a separate persisted field
+- **THEN** the edit is queued and a successful flush acknowledges it
+
 ### Requirement: Reset errors retain pending deletion
 
 On deletion failure memory MUST remain at default and the operation MUST report an error. Unfinished reset MUST remain observable and retryable through flush/reset; stale data MUST NOT reapply to the current instance while deletion awaits retry.
@@ -276,6 +281,11 @@ observable after release; reentrant replacement MUST NOT be removed by an older 
 
 - **WHEN** one cleanup fails while multiple callbacks or matching entries remain
 - **THEN** all release steps finish and the failure is reported only after eviction
+
+#### Scenario: Capability setup recursively creates the same address
+
+- **WHEN** setup attempts to create an entry at its own reserved address
+- **THEN** the recursive creation fails, acquired capabilities roll back and the address can be reused
 
 ### Requirement: Capability lifecycle guarantees match across store ownership paths
 

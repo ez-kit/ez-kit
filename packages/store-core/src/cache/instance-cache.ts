@@ -52,6 +52,7 @@ export function createInstanceCache(options: CacheConfig = {}): InstanceCache {
 	const { defaultGcTime: _defaultGcTime = DEFAULT_GC_TIME } = options
 	let disposed = false
 	const metaByKey = new Map<string, InstanceMeta>()
+	const creating = new Set<string>()
 	const membership: MembershipView = createMembershipView()
 	// Cached keys snapshot for useSyncExternalStore: recomputed only when membership changes.
 	let keysSnapshot: readonly CacheRecord[] = toRecords(membership.getSnapshot().values())
@@ -134,32 +135,38 @@ export function createInstanceCache(options: CacheConfig = {}): InstanceCache {
 			return existing.instance as T
 		}
 
-		const instance = create()
-		const plugins = capabilitiesOf(instance)
-		for (const plugin of plugins) plugin.validateContext?.(instance, opts.context)
-		assertOpen()
-		// Render candidates belong to their React owner until it commits. Publishing them here
-		// would retain abandoned Suspense defaults and services without an observer or GC deadline.
-		if (opts.deferSetup) return instance
-		const cleanups = setupCapabilities(instance, plugins, opts.context)
-		if (disposed) {
-			const error = disposedError()
-			const failures = collectCapabilityCleanupErrors(cleanups)
-			if (failures.length) throw new AggregateError([error, ...failures], 'Store cache creation and rollback failed')
-			throw error
+		if (creating.has(key)) throw new Error(`Cannot create the same store cache entry recursively: ${key}`)
+		creating.add(key)
+		try {
+			const instance = create()
+			const plugins = capabilitiesOf(instance)
+			for (const plugin of plugins) plugin.validateContext?.(instance, opts.context)
+			assertOpen()
+			// Render candidates belong to their React owner until it commits. Publishing them here
+			// would retain abandoned Suspense defaults and services without an observer or GC deadline.
+			if (opts.deferSetup) return instance
+			const cleanups = setupCapabilities(instance, plugins, opts.context)
+			if (disposed) {
+				const error = disposedError()
+				const failures = collectCapabilityCleanupErrors(cleanups)
+				if (failures.length) throw new AggregateError([error, ...failures], 'Store cache creation and rollback failed')
+				throw error
+			}
+			const meta: InstanceMeta = {
+				instance,
+				storeId: id,
+				observerCount: 0,
+				gcTime: opts.gcTime,
+				evictOnIdle: false,
+				evictionTimer: undefined,
+				cleanups,
+				cleared: false,
+			}
+			metaByKey.set(key, meta)
+			return instance
+		} finally {
+			creating.delete(key)
 		}
-		const meta: InstanceMeta = {
-			instance,
-			storeId: id,
-			observerCount: 0,
-			gcTime: opts.gcTime,
-			evictOnIdle: false,
-			evictionTimer: undefined,
-			cleanups,
-			cleared: false,
-		}
-		metaByKey.set(key, meta)
-		return instance
 	}
 
 	function disposedError(): Error {

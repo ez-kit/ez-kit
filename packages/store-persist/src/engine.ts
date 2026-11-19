@@ -1,7 +1,15 @@
 import { isWithinScope, readPath, serializePersistAddress } from '@ez-kit/store-core'
 
 import { isPromiseLike } from './async-value'
-import { cloneDefault, fieldEquals, stringifyField, systemWrites, updateBindingStatus, writeBinding } from './binding'
+import {
+	cloneDefault,
+	fieldEquals,
+	isSystemWrite,
+	stringifyField,
+	systemWrites,
+	updateBindingStatus,
+	writeBinding,
+} from './binding'
 import { fieldKey } from './key-naming'
 import { decodeRecord, encodeRecord, FutureVersionError, validateSchema } from './record'
 import { SourceMutationCancelledError } from './source-errors'
@@ -97,6 +105,7 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 	const detached = new Set<PersistBinding>()
 	const operations = new Set<Job>()
 	const writeErrors = new WeakMap<PersistBinding, unknown>()
+	const restoreErrors = new WeakMap<PersistBinding, unknown>()
 	const retired = new WeakMap<RecordState, Error>()
 	const recordKeys = new WeakMap<RecordState, string>()
 	const prepared = new WeakSet<PersistBinding>()
@@ -207,7 +216,7 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 		const pending = related.some((job) => job.state === 'pending') || deadlines.has(binding)
 		updateBindingStatus(binding, {
 			write: blocked ? 'blocked' : failure !== undefined ? 'error' : pending ? 'pending' : 'idle',
-			error: failure ?? null,
+			error: failure ?? restoreErrors.get(binding) ?? null,
 		})
 		if (
 			!bindings.has(binding) &&
@@ -598,13 +607,17 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 	}
 
 	function observe(binding: PersistBinding): void {
+		const writes = systemWrites.get(binding.store)
+		let edited = false
 		for (const [field, record] of binding.records) {
 			if (retired.has(record)) continue
 			try {
 				const encoded = stringifyField(field, readPath(binding.port.getState(binding.store), field.path))
 				if (encoded === record.observed) continue
+				const system = writes && isSystemWrite(writes, field, encoded)
 				record.observed = encoded
-				if (systemWrites.has(binding.store)) continue
+				if (system) continue
+				edited = true
 				externalCorrections.delete(record)
 				if (activeMeta !== null)
 					pendingMetas.set(record, (options.mergeMeta ?? defaultMerge)(pendingMetas.get(record), activeMeta))
@@ -616,6 +629,7 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 				record.outcome = 'edited'
 				record.error = null
 			} catch (error) {
+				edited = true
 				externalCorrections.delete(record)
 				if (activeMeta !== null)
 					pendingMetas.set(record, (options.mergeMeta ?? defaultMerge)(pendingMetas.get(record), activeMeta))
@@ -628,7 +642,7 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 			}
 		}
 		updateBindingStatus(binding)
-		if (!systemWrites.has(binding.store)) schedule(binding)
+		if (edited || !writes) schedule(binding)
 	}
 
 	function cancelExternalCorrection(job: Job, entry: Entry, error: SourceMutationCancelledError): boolean {
@@ -879,6 +893,8 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 			closed = true
 			if (deadline) clearTimeout(deadline)
 			binding.cancelRestore = null
+			if (status === 'error') restoreErrors.set(binding, error)
+			else restoreErrors.delete(binding)
 			updateBindingStatus(binding, {
 				restore: status,
 				error: error ?? (binding.status.write === 'error' ? binding.status.error : null),
@@ -893,7 +909,8 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 			controller.abort()
 			finish('idle')
 		}
-		updateBindingStatus(binding, { restore: 'pending', error: null })
+		restoreErrors.delete(binding)
+		updateBindingStatus(binding, { restore: 'pending', error: writeErrors.get(binding) ?? null })
 		if (initial && binding.seeded) {
 			for (const notify of binding.seedReports.splice(0)) notify()
 			if (binding.seedError !== null) {
@@ -990,7 +1007,8 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 		writeBinding(binding, writes)
 		if (selected.length === binding.fields.length) {
 			binding.cancelRestore?.()
-			updateBindingStatus(binding, { restore: 'ready' })
+			restoreErrors.delete(binding)
+			updateBindingStatus(binding, { restore: 'ready', error: writeErrors.get(binding) ?? null })
 		}
 		return entries
 	}

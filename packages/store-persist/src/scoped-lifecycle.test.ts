@@ -692,3 +692,27 @@ it.each([false, true])('restores a valid date over an invalid Date default (arra
 		engine.dispose()
 	}
 })
+
+it('retains the restore failure while a subsequent independent write succeeds', async () => {
+	const state = observable({ width: 0 })
+	const error = new Error('read denied')
+	const binding = createBinding(state, objectPort, [{ path: ['width'], parser: paramNumber() }], {})
+	captureDefaults(binding)
+	addressBinding(binding, { path: [], name: 'panel', id: 'one' })
+	const engine = createPersistEngine({
+		get: () => {
+			throw error
+		},
+		set: vi.fn(),
+	})
+	const disconnect = engine.connect(binding)
+	try {
+		expect(binding.status).toMatchObject({ restore: 'error', error })
+		state.width = 1
+		await engine.flush(binding)
+		expect(binding.status).toMatchObject({ restore: 'error', write: 'idle', error })
+	} finally {
+		disconnect()
+		engine.dispose()
+	}
+})

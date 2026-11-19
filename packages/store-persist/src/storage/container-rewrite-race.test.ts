@@ -60,3 +60,15 @@ it.each(['invalidated', 'migrated'])(
 		}
 	},
 )
+
+it('keeps an acknowledged patch overlapping direct migration read', async () => {
+	const context = { fields: [], diff: { set: ['width'], removed: [] }, meta: null }
+	const factory = new IDBFactory()
+	const old = createIndexedDbPort({ factory })
+	await old.set(new Map([['width', '300']]), context)
+	const current = createIndexedDbPort({ factory, version: 1, migrate: (values) => values })
+	const read = current.get()
+	const write = current.set(new Map([['width', '500']]), context)
+	await Promise.all([read, write])
+	expect((await current.get()).get('width')).toBe('500')
+})

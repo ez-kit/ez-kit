@@ -1,4 +1,4 @@
-import { parentOf, readPath, serializePersistAddress } from '@ez-kit/store-core'
+import { isWithinScope, parentOf, readPath, serializePersistAddress } from '@ez-kit/store-core'
 
 import { fieldKey } from './key-naming'
 import { validateBinding } from './validate'
@@ -45,7 +45,26 @@ export type RecordState = {
 }
 
 /** Shared across source bindings: applying one source is not a user edit in another. */
-export const systemWrites = new WeakSet()
+export const systemWrites = new WeakMap<object, readonly PathWrite[]>()
+
+export function isSystemWrite(writes: readonly PathWrite[], field: FieldDescriptor, encoded: string | null): boolean {
+	for (let index = writes.length - 1; index >= 0; index--) {
+		const write = writes[index]
+		if (!write) continue
+		if (isWithinScope(field.path, write.path)) {
+			const suffix = field.path.slice(write.path.length)
+			const value = suffix.length
+				? write.value !== null && typeof write.value === 'object'
+					? readPath(write.value, suffix)
+					: undefined
+				: write.value
+			return stringifyField(field, value) === encoded
+		}
+		// Composite fields can observe intermediate values while a manager applies a batch.
+		if (isWithinScope(write.path, field.path)) return true
+	}
+	return false
+}
 
 /** Snapshot data without enumerating away serializer methods, accessors or nested data prototypes. */
 export function cloneDefault(value: unknown, seen = new WeakMap<object, object>()): unknown {
@@ -67,11 +86,13 @@ export function cloneDefault(value: unknown, seen = new WeakMap<object, object>(
 }
 
 export function writeBinding(binding: PersistBinding, writes: PathWrite[]): void {
-	systemWrites.add(binding.store)
+	const previous = systemWrites.get(binding.store)
+	systemWrites.set(binding.store, previous ? [...previous, ...writes] : writes)
 	try {
 		binding.port.write(binding.store, writes)
 	} finally {
-		systemWrites.delete(binding.store)
+		if (previous) systemWrites.set(binding.store, previous)
+		else systemWrites.delete(binding.store)
 	}
 }
 

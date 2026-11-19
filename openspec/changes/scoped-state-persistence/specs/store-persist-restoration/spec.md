@@ -34,6 +34,11 @@ Handles and subscriptions MUST expose restore idle/pending/ready/error/timeout a
 - **WHEN** a consumer awaits the current restore operation
 - **THEN** its Promise settles with a typed result after read processing, timeout or error
 
+#### Scenario: A write succeeds after a restore failure
+
+- **WHEN** a restore reports an error and an independent write succeeds
+- **THEN** status retains the reason for the restore failure until a new restore or full reset
+
 ### Requirement: Timeout ends apply authority
 
 At timeout the system MUST finish restoration with timeout status and retain defaults for still-clean records. A later read result MUST NOT change memory, dirty state, baseline or errors of a newer operation, or initiate rewrite/delete. This guarantee MUST NOT depend on successful request cancellation.
@@ -242,6 +247,11 @@ cancel newer optimistic intent rather than resurrect it. Query-only writes MUST 
 
 - **WHEN** a persisted query field changes on a URL ending in hash details
 - **THEN** the existing fragment remains in both Next and React Router query-only commits
+
+#### Scenario: A Next.js query write follows native Back under a base path
+
+- **WHEN** a query is written after popstate and before Next publishes the committed route
+- **THEN** it updates the restored page without duplicating its base path
 
 ### Requirement: Edits after default capture precede connection restoration
 
