@@ -98,7 +98,7 @@ it('shares the generated collection request with its grid adapter', async () => 
 		const options = usersCollection.queries.list({ offset: 20, limit: 10, search: 'Ada' })
 		await client.fetchQuery(options)
 		expect(
-			collectionGridSource.getAll?.query({
+			collectionGridSource.getAll.query({
 				pagination: { pageIndex: 2, pageSize: 10 },
 				globalFilter: 'Ada',
 				sorting: [],

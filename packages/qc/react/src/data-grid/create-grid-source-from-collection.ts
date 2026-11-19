@@ -7,8 +7,12 @@ import type {
 	GridDeleteContext,
 	GridDeleteManyContext,
 } from './types'
-import type { GridDataSource } from './with-query'
-import type { CollectionShape, CollectionParams, CollectionMutation } from '@ez-kit/query-react/collection'
+import type {
+	CollectionShape,
+	CollectionParams,
+	CollectionMutation,
+	CollectionReadCompatibility,
+} from '@ez-kit/query-react/collection'
 
 type ReadItem<S, K extends keyof S> =
 	NonNullable<S[K]> extends { getItems: (value: never) => readonly (infer I)[] } ? I : never
@@ -68,11 +72,25 @@ type AdaptedOperations<S> = {
 		: never
 }
 
+type AdaptedReads<S> = {
+	[K in keyof S as K extends 'getAll' | 'getInfinite' ? K : never]: NonNullable<S[K]> extends {
+		query: (...args: never[]) => infer Options
+		getItems: infer GetItems
+	}
+		? {
+				query: (params: K extends 'getAll' ? GridQueryParams : GridInfiniteParams) => Options
+				getRows: GetItems
+			} & {
+				[Total in keyof NonNullable<S[K]> as Total extends 'getTotal' ? 'getRowCount' : never]: NonNullable<S[K]>[Total]
+			}
+		: never
+}
+
 /** Map table state and action contexts without changing collection cache identity. */
 export function createGridSourceFromCollection<S extends CollectionShape>(
-	source: S,
+	source: S & CollectionReadCompatibility<NoInfer<S>>,
 	mapping: CollectionGridMapping<S> & ValidRows<NoInfer<S>> & CompatibleRows<NoInfer<S>>,
-): GridDataSource<Item<S>> & AdaptedOperations<S> & Pick<S, 'invalidation'> {
+): AdaptedReads<S> & AdaptedOperations<S> & Pick<S, 'invalidation'> {
 	const read = source as unknown as {
 		getAll?: {
 			query: (params: unknown) => unknown
@@ -89,7 +107,7 @@ export function createGridSourceFromCollection<S extends CollectionShape>(
 		}
 	const operations: Record<string, unknown> = {}
 	for (const name of ['create', 'update', 'delete', 'deleteMany'] as const) {
-		const operation = source[name]
+		const operation = (source as S)[name]
 		if (operation) operations[name] = { ...operation, prepareArgs: map[name] ?? ((value: unknown) => value) }
 	}
 	if (read.getAll && !map.params) throw new Error('Collection grid mapping requires params')
@@ -115,5 +133,5 @@ export function createGridSourceFromCollection<S extends CollectionShape>(
 			: {}),
 		invalidation: source.invalidation,
 		...(map.transformError ? { transformError: map.transformError } : {}),
-	} as GridDataSource<Item<S>> & AdaptedOperations<S> & Pick<S, 'invalidation'>
+	} as unknown as AdaptedReads<S> & AdaptedOperations<S> & Pick<S, 'invalidation'>
 }

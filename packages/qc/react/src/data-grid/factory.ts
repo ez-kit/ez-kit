@@ -77,37 +77,46 @@ export function createGridSourceFactory<
 	TUpdate = never,
 	TDelete = never,
 	TDeleteMany = never,
->(defaults: {
-	list: {
-		prepareArgs: (params: GridQueryParams) => TArgs
-		getRows: (response: TResponse) => readonly TRow[]
-		getRowCount?: (response: TResponse) => number | undefined
-		options?: NonNullable<GridListFetcherOptions<TArgs, TResponse, TResponse, TRow, DefaultError>['options']>
-	}
-	infinite?: {
-		prepareArgs: (params: GridInfiniteParams) => TCollection
-		preparePageArgs: (context: { args: TCollection; pageParam: TPageParam }) => TInfiniteArgs
-		initialPageParam: TPageParam
-		getNextPageParam: (
-			lastPage: TPage,
-			allPages: TPage[],
-			lastPageParam: TPageParam,
-			allPageParams: TPageParam[],
-		) => TPageParam | null | undefined
-		getRows: (page: TPage) => readonly TRow[]
-		options?: NonNullable<
-			GridInfiniteFetcherOptions<TInfiniteArgs, TCollection, TPage, TPageParam, TPage, TRow, DefaultError>['options']
-		>
-	}
+	Defaults extends { list?: unknown; infinite?: unknown } = { list?: unknown; infinite?: unknown },
+>(
+	defaults: Defaults & {
+		list: {
+			prepareArgs: (params: GridQueryParams) => TArgs
+			getRows: (response: TResponse) => readonly TRow[]
+			getRowCount?: (response: TResponse) => number | undefined
+			options?: NonNullable<GridListFetcherOptions<TArgs, TResponse, TResponse, TRow, DefaultError>['options']>
+		}
+		infinite?: {
+			prepareArgs: (params: GridInfiniteParams) => TCollection
+			preparePageArgs: (context: { args: TCollection; pageParam: TPageParam }) => TInfiniteArgs
+			initialPageParam: TPageParam
+			getNextPageParam: (
+				lastPage: TPage,
+				allPages: TPage[],
+				lastPageParam: TPageParam,
+				allPageParams: TPageParam[],
+			) => TPageParam | null | undefined
+			getRows: (page: TPage) => readonly TRow[]
+			options?: NonNullable<
+				GridInfiniteFetcherOptions<TInfiniteArgs, TCollection, TPage, TPageParam, TPage, TRow, DefaultError>['options']
+			>
+		}
 
-	mutations?: {
-		create?: MutationDefaults<GridCreateContext<TRow>, TCreate>
-		update?: MutationDefaults<GridUpdateContext<TRow>, TUpdate>
-		delete?: MutationDefaults<GridDeleteContext<TRow>, TDelete>
-		deleteMany?: MutationDefaults<GridDeleteManyContext<TRow>, TDeleteMany>
-	}
-	transformError?: (error: unknown) => unknown
-}) {
+		mutations?: {
+			create?: MutationDefaults<GridCreateContext<TRow>, TCreate>
+			update?: MutationDefaults<GridUpdateContext<TRow>, TUpdate>
+			delete?: MutationDefaults<GridDeleteContext<TRow>, TDelete>
+			deleteMany?: MutationDefaults<GridDeleteManyContext<TRow>, TDeleteMany>
+		}
+		transformError?: (error: unknown) => unknown
+	},
+) {
+	type InfiniteInput = Omit<
+		GridInfiniteFetcherOptions<TInfiniteArgs, TCollection, TPage, TPageParam, TPage, TRow, DefaultError>,
+		'key'
+	>
+	type InfiniteOverrides = Pick<InfiniteInput, 'fetcher'> & Partial<Omit<InfiniteInput, 'fetcher'>>
+
 	return function createSource<
 		TCreateArgs = TCreate,
 		TUpdateArgs = TUpdate,
@@ -132,14 +141,7 @@ export function createGridSourceFactory<
 			| ({ fetcher: GridFetcher<TArgs, TResponse> } & Partial<
 					Omit<GridListFetcherOptions<TArgs, TResponse, TResponse, TRow, DefaultError>, 'key' | 'fetcher'>
 			  >)
-		getInfinite?:
-			| GridFetcher<TInfiniteArgs, TPage>
-			| ({ fetcher: GridFetcher<TInfiniteArgs, TPage> } & Partial<
-					Omit<
-						GridInfiniteFetcherOptions<TInfiniteArgs, TCollection, TPage, TPageParam, TPage, TRow, DefaultError>,
-						'key' | 'fetcher'
-					>
-			  >)
+		getInfinite?: Defaults extends { infinite: unknown } ? InfiniteInput['fetcher'] | InfiniteOverrides : InfiniteInput
 		create?: MutationInput<GridCreateContext<TRow>, TCreate, TCreateArgs, TCreateResult, TCreateError, TCreateContext>
 		update?: MutationInput<GridUpdateContext<TRow>, TUpdate, TUpdateArgs, TUpdateResult, TUpdateError, TUpdateContext>
 		delete?: MutationInput<GridDeleteContext<TRow>, TDelete, TDeleteArgs, TDeleteResult, TDeleteError, TDeleteContext>
@@ -158,7 +160,8 @@ export function createGridSourceFactory<
 		const getAll = createListSource({ ...defaults.list, ...listInput, key: config.key })
 		let getInfinite
 		if (config.getInfinite !== undefined) {
-			const input = typeof config.getInfinite === 'function' ? { fetcher: config.getInfinite } : config.getInfinite
+			const input: InfiniteOverrides =
+				typeof config.getInfinite === 'function' ? { fetcher: config.getInfinite } : config.getInfinite
 			const combined = { ...defaults.infinite, ...input }
 			if (
 				!combined.prepareArgs ||

@@ -152,7 +152,7 @@ export function validateBulkDeletingConfig<TData>(config: DeletingConfig<TData> 
  * `TableState`, `pendingDeleteRowId` and `pendingBulkDelete`, so subscribing to "is a delete
  * awaiting confirmation" meant knowing two names, neither of which was the feature's.
  *
- * Both fields are transient: the feature hard-resets them at construction, which is why
+ * The fields are transient: the feature hard-resets them at construction, which is why
  * `deleting` is one of the slices {@link InitialTableState} forbids seeding.
  */
 export type DeletingState = {
@@ -160,6 +160,8 @@ export type DeletingState = {
 	pendingRowId: string | null
 	/** True while a bulk (selection-bar) delete is staged awaiting confirmation. */
 	pendingBulk: boolean
+	/** The latest delete failure, cleared on the next attempt or cancellation. */
+	failure?: { error: unknown } | undefined
 }
 
 /**
@@ -170,7 +172,7 @@ export type DeletingState = {
  * / `cancel` spelled the same on both.
  */
 export type BulkDeletingApi = {
-	/** Delete the given rows — the bulk handler, or `onDelete` per row when there is none. */
+	/** Delete the loaded rows in one call to the bulk handler. */
 	delete: (rowIds: string[]) => Promise<void>
 	/** Delete the current selection, staging a confirmation first when one is configured. */
 	request: () => void
@@ -400,13 +402,28 @@ function deselect(table: AnyTable, rowIds: string[]): void {
 	)
 }
 
+async function runDelete(
+	table: DeletingTable,
+	execute: (signal: AbortSignal) => void | Promise<void>,
+	onSuccess?: () => void,
+): Promise<void> {
+	const { signal } = resetController(table)
+	if (readDeleting(table).failure) writeDeleting(table, { failure: undefined })
+	try {
+		await execute(signal)
+		if (!signal.aborted) onSuccess?.()
+	} catch (error) {
+		if (!signal.aborted) writeDeleting(table, { failure: { error } })
+		throw error
+	}
+}
+
 async function deleteRow(table: DeletingTable, rowId: string): Promise<void> {
 	const config = deletingOption(table)
 	if (!config) return
 	const row = table.getRowModel().rows.find((r) => r.id === rowId)
 	if (!row) return
-	const c = resetController(table)
-	await config.onDelete({ rowId, row, signal: c.signal })
+	await runDelete(table, (signal) => config.onDelete({ rowId, row, signal }))
 }
 
 async function deleteRows(table: DeletingTable, rowIds: string[]): Promise<void> {
@@ -418,10 +435,14 @@ async function deleteRows(table: DeletingTable, rowIds: string[]): Promise<void>
 		.map((id) => table.getRowModel().rows.find((r) => r.id === id))
 		.filter((r): r is Row<TableFeatures, RowData> => r !== undefined)
 	if (rows.length === 0) return
-	const c = resetController(table)
 	const ids = rows.map((r) => r.id)
-	await bulk.onDelete({ rowIds: ids, rows, signal: c.signal })
-	deselect(table, ids)
+	await runDelete(
+		table,
+		(signal) => bulk.onDelete({ rowIds: ids, rows, signal }),
+		() => {
+			deselect(table, ids)
+		},
+	)
 }
 
 /** The one table member this feature installs — a namespace object, not a method. */
@@ -435,7 +456,7 @@ function createDeletingApi(table: DeletingTable): DeletingApi {
 			if (isFeatureEnabled(config.confirmation)) {
 				writeDeleting(table, { pendingRowId: rowId })
 			} else {
-				void deleteRow(table, rowId)
+				void deleteRow(table, rowId).catch(() => undefined)
 			}
 		},
 
@@ -448,7 +469,7 @@ function createDeletingApi(table: DeletingTable): DeletingApi {
 
 		cancel: () => {
 			teardownController(table)
-			writeDeleting(table, { pendingRowId: null })
+			writeDeleting(table, { pendingRowId: null, ...(readDeleting(table).failure ? { failure: undefined } : {}) })
 		},
 
 		bulk: {
@@ -462,7 +483,7 @@ function createDeletingApi(table: DeletingTable): DeletingApi {
 					writeDeleting(table, { pendingBulk: true })
 					return
 				}
-				void deleteRows(table, selectedRowIds(table))
+				void deleteRows(table, selectedRowIds(table)).catch(() => undefined)
 			},
 
 			confirm: async () => {
@@ -474,7 +495,7 @@ function createDeletingApi(table: DeletingTable): DeletingApi {
 
 			cancel: () => {
 				teardownController(table)
-				writeDeleting(table, { pendingBulk: false })
+				writeDeleting(table, { pendingBulk: false, ...(readDeleting(table).failure ? { failure: undefined } : {}) })
 			},
 		},
 

@@ -121,3 +121,54 @@ it('child passive effect before bridge publication', async () => {
 	h.unmount()
 	client.clear()
 })
+
+it.each(['single', 'bulk'] as const)('skips %s deletion cancelled before observer publication', async (mode) => {
+	const connected = withQuery(createDataGrid({ components: allComponents, features: allDataGridFeatures }))
+	const client = new QueryClient()
+	const wrapper = ({ children }: PropsWithChildren) => (
+		<QueryClientProvider client={client}>{children}</QueryClientProvider>
+	)
+	const fetcher = vi.fn((_ids: string[]) => Promise.resolve())
+	const rows = [{ id: '1' }]
+	const source = createGridSourceFactory({
+		list: { prepareArgs: () => undefined, getRows: (values: typeof rows) => values },
+	})({
+		key: ['early-delete'],
+		getAll: { fetcher: () => Promise.resolve(rows), options: { initialData: rows } },
+		delete: { prepareArgs: ({ rowId }) => [rowId], fetcher },
+		deleteMany: { prepareArgs: ({ rowIds }) => rowIds, fetcher },
+	})
+	const settled = vi.fn()
+	const h = renderHook(
+		({ run }) => {
+			const table = connected.useDataGrid({
+				dataSource: source,
+				columns: [{ accessorKey: 'id' }],
+				deleting: { bulk: true },
+				getRowId: (row) => row.id,
+			})
+			useLayoutEffect(() => {
+				if (!run) return
+				if (mode === 'single') {
+					void table.deleting.delete('1').then(settled)
+					table.deleting.cancel()
+				} else {
+					void table.deleting.bulk.delete(['1']).then(settled)
+					table.deleting.bulk.cancel()
+				}
+			}, [run, table])
+			return table
+		},
+		{ wrapper, initialProps: { run: false } },
+	)
+	await waitFor(() => {
+		expect(h.result.current.getRowModel().rows).toHaveLength(1)
+	})
+	h.rerender({ run: true })
+	await waitFor(() => {
+		expect(settled).toHaveBeenCalledTimes(1)
+	})
+	expect(fetcher).not.toHaveBeenCalled()
+	h.unmount()
+	client.clear()
+})

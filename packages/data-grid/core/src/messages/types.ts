@@ -462,6 +462,8 @@ export type GridMessages = {
 	 * the shell that renders them does not know which flow opened it.
 	 */
 	form: {
+		/** Save was blocked because the form belongs to a previous data source. */
+		sourceChanged: string
 		/** Commit button. */
 		save: string
 		/** Dismiss button. */
@@ -469,6 +471,8 @@ export type GridMessages = {
 	}
 	/** The delete confirmation. */
 	deleting: {
+		/** A delete action failed. */
+		error: string
 		/** Confirm button. */
 		confirm: string
 		/** Dismiss button. */

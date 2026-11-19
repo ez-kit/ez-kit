@@ -544,3 +544,30 @@ describe('<ActionBar> — the render function', () => {
 		expect(screen.queryByTestId('action-bar')).toBeNull()
 	})
 })
+
+it.each([false, true])('renders a deletion error and allows retry (confirmation=%s)', async (confirmation) => {
+	const user = userEvent.setup()
+	let attempts = 0
+	const onDelete = () => {
+		attempts += 1
+		return attempts === 1 ? Promise.reject(new Error('HTTP 409')) : Promise.resolve()
+	}
+	const { table } = renderGrid({
+		selection: true,
+		deleting: { onDelete: () => undefined, bulk: { onDelete, confirmation } },
+	})
+	table.setRowSelection({ '1': true })
+	const remove = async () => {
+		await user.click(within(await screen.findByTestId('action-bar')).getByRole('button', { name: 'Delete' }))
+		if (confirmation) {
+			const dialog = await screen.findByRole('dialog')
+			await user.click(within(dialog).getByRole('button', { name: /confirm/i }))
+		}
+	}
+	await remove()
+	expect(await screen.findByRole('alert')).toHaveTextContent(/could not delete/i)
+	expect(table.store.state.rowSelection).toEqual({ '1': true })
+	await remove()
+	expect(screen.queryByRole('alert')).toBeNull()
+	expect(attempts).toBe(2)
+})

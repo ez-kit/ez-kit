@@ -1,6 +1,6 @@
 import { createDataGrid } from '@ez-kit/data-grid-react'
 import { allDataGridFeatures } from '@ez-kit/data-grid-react/features/all'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { keepPreviousData, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { it, expect, vi } from 'vitest'
 
@@ -101,3 +101,128 @@ for (const mode of ['editing', 'creating'] as const) {
 		},
 	)
 }
+
+it('protects row actions and an idle draft across a source change, including placeholder rows', async () => {
+	const client = new QueryClient({ defaultOptions: { queries: { placeholderData: keepPreviousData } } })
+	const wrapper = ({ children }: { children: ReactNode }) => (
+		<QueryClientProvider client={client}>{children}</QueryClientProvider>
+	)
+	let resolveB!: (rows: Row[]) => void
+	const pendingB = new Promise<Row[]>((resolve) => {
+		resolveB = resolve
+	})
+	const update = vi.fn((name: string | undefined) => Promise.resolve(name))
+	const remove = vi.fn((id: string) => Promise.resolve(id))
+	const make = (owner: string, getAll: () => Promise<Row[]>) =>
+		factory({
+			key: ['tenant', owner],
+			getAll,
+			update: { prepareArgs: ({ values }) => values.name, fetcher: update },
+			delete: { prepareArgs: ({ row }) => row.id, fetcher: remove },
+		})
+	const A = make('A', () => Promise.resolve([{ id: '1', name: 'A' }]))
+	const B = make('B', () => pendingB)
+	const h = renderHook(
+		({ source }) =>
+			connected.useDataGrid({
+				dataSource: source,
+				columns: [{ accessorKey: 'name' }],
+				getRowId: (row) => row.id,
+				editing: true,
+				deleting: { confirmation: true },
+			}),
+		{ wrapper, initialProps: { source: A } },
+	)
+	const table = h.result.current
+	await waitFor(() => {
+		expect(table.getRowModel().rows[0]?.original.name).toBe('A')
+	})
+	act(() => {
+		table.editing.start('1')
+		table.editing.setValue('name', 'A draft')
+		table.deleting.request('1')
+	})
+	h.rerender({ source: B })
+	expect(table.getRowModel().rows).toHaveLength(0)
+	expect(table.deleting.getState().pendingRowId).toBeNull()
+	await act(async () => {
+		await table.deleting.delete('1')
+		resolveB([{ id: '1', name: 'B' }])
+	})
+	await waitFor(() => {
+		expect(table.getRowModel().rows[0]?.original.name).toBe('B')
+	})
+	await act(async () => {
+		await table.deleting.confirm()
+		await expect(table.editing.commit()).resolves.toMatchObject({ ok: false, reason: 'rejected' })
+	})
+	expect(remove).not.toHaveBeenCalled()
+	expect(update).not.toHaveBeenCalled()
+	expect(table.editing.getState().values.name).toBe('A draft')
+	await act(async () => {
+		table.editing.start('1')
+		await expect(table.editing.commit()).resolves.toEqual({ ok: true })
+	})
+	expect(update.mock.calls[0]?.[0]).toBe('B')
+	h.unmount()
+	client.clear()
+})
+
+it('keeps the new selection when an already dispatched bulk delete finishes for the old source', async () => {
+	const client = new QueryClient()
+	const wrapper = ({ children }: { children: ReactNode }) => (
+		<QueryClientProvider client={client}>{children}</QueryClientProvider>
+	)
+	let resolve!: () => void
+	const pending = new Promise<void>((done) => {
+		resolve = done
+	})
+	const removeMany = vi.fn((_ids: string[]) => pending)
+	const make = (owner: string) =>
+		factory({
+			key: ['bulk-scope', owner],
+			getAll: () => Promise.resolve([{ id: '1', name: owner }]),
+			delete: { prepareArgs: ({ rowId }) => rowId, fetcher: (_id: string) => Promise.resolve() },
+			deleteMany: { prepareArgs: ({ rowIds }) => rowIds, fetcher: removeMany },
+		})
+	const A = make('A')
+	const B = make('B')
+	const h = renderHook(
+		({ source }) =>
+			connected.useDataGrid({
+				dataSource: source,
+				columns: [{ accessorKey: 'name' }],
+				getRowId: (row) => row.id,
+				selection: true,
+				deleting: { bulk: true },
+			}),
+		{ wrapper, initialProps: { source: A } },
+	)
+	const table = h.result.current
+	await waitFor(() => {
+		expect(table.getRowModel().rows[0]?.original.name).toBe('A')
+	})
+	let completion!: Promise<void>
+	act(() => {
+		table.setRowSelection({ '1': true })
+		completion = table.deleting.bulk.delete(['1'])
+	})
+	await waitFor(() => {
+		expect(removeMany).toHaveBeenCalledTimes(1)
+	})
+	h.rerender({ source: B })
+	await waitFor(() => {
+		expect(table.getRowModel().rows[0]?.original.name).toBe('B')
+	})
+	expect(table.store.state.rowSelection).toEqual({})
+	act(() => {
+		table.setRowSelection({ '1': true })
+	})
+	await act(async () => {
+		resolve()
+		await completion
+	})
+	expect(table.store.state.rowSelection).toEqual({ '1': true })
+	h.unmount()
+	client.clear()
+})

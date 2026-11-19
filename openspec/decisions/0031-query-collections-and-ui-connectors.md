@@ -82,3 +82,11 @@ form cancellation. Native options remain the execution authority.
 Read projection invariants apply equally to collection and direct grid helpers. A shared consumer
 conformance fixture covers both public entries. Structural collection observer overrides derive
 from full native option types, not only the fields present in a literal descriptor.
+
+Effective write ownership also scopes unsubmitted form drafts, delete confirmations and selection.
+On a change, keep recoverable form values and reject automatic saves from the former owner until
+the form is reopened. Hide placeholder rows from the previous owner, clear pending delete intents,
+and abandon old UI effects while dispatched mutations complete. The base grid handles action errors
+and uses its delete signal to scope selection updates. The connector observes all query result
+changes and honors disabled infinite reads at the loader boundary. Structural read descriptors
+are checked against their selected projections at the public connection points.

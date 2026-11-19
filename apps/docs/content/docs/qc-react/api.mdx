@@ -125,13 +125,20 @@ pending validation is cancelled silently: a commit resolves with `{ ok: false, r
 The form stays open with its values and returns to idle. Late validation results or exceptions
 cannot show errors or dispatch a save. Validators receive an aborted signal; results are ignored
 even if they do not consume it. Same-key source updates retain native behavior.
-You can explicitly call `table.editing.cancel()` or `table.creating.cancel()` to close the form.
+A draft opened under the previous owner stays visible, but automatic Save returns a form error
+until the form is reopened. Row actions cannot use placeholder rows carried over from the previous
+owner. Changing ownership clears staged delete confirmations and row selection. A dispatched bulk
+delete can still update its cache, and its completion leaves the new owner's selection alone.
+Explicit mutation keys must include the write scope when the application changes it.
 External checks through `validateValues(values)` or `FormModalProps.validate(values)` resolve
 with `{ status: 'cancelled' }` on that transition, even when the form stays open. Handle that
 status separately from `valid`; see [external form checks](/docs/data-grid/editing/creating#checking-an-external-form).
 
 For project-owned context changes, `cancelValidation()` on either form API cancels only validation.
-Already dispatched mutations retain their existing lifecycle rules.
+Already dispatched mutations retain their existing lifecycle rules. Cancelling deletion before
+dispatch skips the request. Built-in delete actions display an error if deletion fails. Retry by
+invoking Delete again. Imperative `delete()` and `confirm()` reject on failure, and the cause is
+available in `table.deleting.getState().failure`.
 
 Infinite load-more deduplication is scoped to the effective query hash. A previous selection's
 pending request does not block the next selection from fetching another page, including native
@@ -154,8 +161,10 @@ const table = connected.useDataGrid({
 })
 ```
 
-The contract matches `useCollectionQuery`: enabled, stale/gc timing, retry, refetch,
-network mode, error throwing and notification settings. Query callbacks see opaque response data
+The grid accepts enabled, stale/gc timing, retry, refetch, network mode and error throwing.
+A disabled infinite grid does not request more pages even when cached data has another page.
+The grid observes all result changes so its loading, error and pagination UI can update.
+Plain `useCollectionQuery` consumers can still choose `notifyOnChangeProps`. Query callbacks see opaque response data
 at the grid boundary; keep response-dependent policies on the typed source when needed.
 `queryKey`, `queryFn`, `select`, initial/placeholder data and infinite cursor options remain
 source-owned. Unsupported overrides are ignored at runtime too. A controlled `<DataGrid table={table} />`
@@ -169,7 +178,11 @@ external filter or team change. There is no automatic external `resetKey` policy
 Standalone `createListSource`, `createInfiniteSource` and native `createGridDataSource` infer
 projection inputs from the fetcher or query options. A shape-changing projection requires a
 matching `select`; a conditional selector must also allow the raw shape when absent. Row-count
-getters follow the same selected-data contract.
+getters follow the same selected-data contract. Structural sources get the same check at hookup.
+Use `satisfies GridDataSource<Row>` if you want to check the source's shape while preserving its
+specific response types. An explicit pagination mode needs the corresponding read.
+A bare infinite fetcher can inherit cursor options from the grid factory. Supply the full infinite
+descriptor when the factory has no infinite defaults.
 
 Infinite grids scope both request deduplication and the loader's pending/error state to the
 current query. A slow previous selection cannot block the current selection or publish an old

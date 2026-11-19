@@ -88,3 +88,11 @@
 - [x] Cover cancellation, late completion and the React modal bridge.
 - [x] Document schema compatibility and external form migration.
 - [x] Validate repository gates and React 18 compatibility.
+
+## Fifth audit follow-up
+
+- [x] Guard stale edit/create drafts, delete intents, placeholder rows and bulk selection completion across write scopes.
+- [x] Respect deletion cancellation before dispatch and surface built-in delete failures.
+- [x] Respect disabled infinite reads and keep grid read status observable.
+- [x] Validate structural query projections and cursor defaults on public inputs.
+- [x] Complete repository and compatibility verification.

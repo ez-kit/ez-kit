@@ -68,3 +68,59 @@ it.each(['pages', 'infinite'] as const)(
 		client.clear()
 	},
 )
+
+it('cannot load another cached page while disabled', async () => {
+	const client = new QueryClient()
+	const wrapper = ({ children }: PropsWithChildren) => (
+		<QueryClientProvider client={client}>{children}</QueryClientProvider>
+	)
+	const rows = [{ id: '1' }]
+	const queryKey = ['disabled-load-more']
+	client.setQueryData(queryKey, { pages: [rows], pageParams: [0] })
+	const queryFn = vi.fn(() => Promise.resolve(rows))
+	const source = {
+		getInfinite: {
+			query: () => ({ queryKey, queryFn, initialPageParam: 0, getNextPageParam: () => 1 }),
+			getRows: (page: typeof rows) => page,
+		},
+	}
+	const h = renderHook(
+		() =>
+			connected.useDataGrid({
+				dataSource: source,
+				columns: [{ accessorKey: 'id' }],
+				pagination: { mode: 'infinite' },
+				queryOptions: { enabled: false },
+			}),
+		{ wrapper },
+	)
+	const infinite = h.result.current.grid.pagination.infinite
+	expect(infinite?.hasNextPage).toBe(false)
+	await infinite?.onLoadMore?.({ direction: 'forward' })
+	expect(queryFn).not.toHaveBeenCalled()
+	h.unmount()
+	client.clear()
+})
+
+it('publishes loading and errors even when native notification policy only watches data', async () => {
+	const client = new QueryClient({ defaultOptions: { queries: { retry: false, notifyOnChangeProps: ['data'] } } })
+	const wrapper = ({ children }: PropsWithChildren) => (
+		<QueryClientProvider client={client}>{children}</QueryClientProvider>
+	)
+	type Row = { id: string }
+	const error = new Error('Failed without data')
+	const source = {
+		getAll: {
+			query: () => ({ queryKey: ['notify'], queryFn: () => Promise.reject<Row[]>(error) }),
+			getRows: (data: Row[]) => data,
+		},
+	}
+	const h = renderHook(() => connected.useDataGrid({ dataSource: source, columns: [{ accessorKey: 'id' }] }), {
+		wrapper,
+	})
+	await waitFor(() => {
+		expect(h.result.current.store.state.loading.error).toBe(error)
+	})
+	h.unmount()
+	client.clear()
+})

@@ -222,3 +222,24 @@ Documentation includes the external-form status branching recipe and migration g
 changeset records the breaking check result. Shared read-error generics remain a separate discussion.
 Docs production build remains excluded under the accepted Google Fonts restriction. Browser suites
 were not rerun for this follow-up; the new React modal tests exercise the forwarding contract.
+
+## Fifth audit fixes — 2026-11-19
+
+Mounted tests cover tenant transitions with reused row IDs, stale drafts, staged confirmation
+and placeholder rows, and a successful old bulk mutation with new-tenant selection. Layout-effect
+tests cancel single and bulk deletes before dispatch. React tests cover both immediate and confirmed
+delete failure and retry. Query policy tests exercise cached disabled infinite data and inherited
+notification restrictions. Consumer fixtures check structural projections in the hook, JSX and the
+collection adapter, explicit pagination mode and infinite factory defaults.
+
+Verification passed:
+
+- Sequential library builds (16 tasks), lint (33), typecheck (33), test (32) and size (32).
+- Data-grid core: 1,115 tests; shared React grid: 1,831; Query React: 94; qc-react: 114; docs: 313.
+- React 18: shared grid 1,831 passed and qc-react 108 passed with six existing HeroUI skips.
+- Minimum TanStack Query consumer fixture, strict OpenSpec and whitespace checks.
+- Shared React grid main entry: 38.54 kB / 43.5 kB. Connector own code grew from 3.18 kB to
+  3.43 kB. The 3.9 kB limit restores the repository's approximately 15% budget headroom.
+
+Docs production build remains excluded locally under the accepted Google Fonts restriction.
+Bulk selection across unloaded pages and a public manual refetch remain separate design topics.

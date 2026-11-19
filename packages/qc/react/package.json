@@ -48,7 +48,7 @@
 	"size-limit": [
 		{
 			"path": "dist/data-grid.js",
-			"limit": "3.4 kB",
+			"limit": "3.9 kB",
 			"ignore": [
 				"@ez-kit/query-react"
 			]

@@ -259,6 +259,10 @@ A definitely present selector continues to discard inherited projections as desc
 The packages require TanStack Query **5.105.3 or later within v5**. Public declaration checks run
 against that exact minimum version as well as the workspace's development dependencies.
 
+A plain source keeps the relationship between its native query options and `getItems` or
+`getTotal`. The projection must accept the data produced by the query, including any `select`.
+Infinite projections consume one page of the selected infinite data.
+
 Plain native descriptors passed directly to `useCollectionQuery` have the same consumer option
 types as sources built by the helpers. An omitted option remains available for local overrides,
 and a source's literal `enabled: false` can be overridden with `queryOptions: { enabled: true }`.

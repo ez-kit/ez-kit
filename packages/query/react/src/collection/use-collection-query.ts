@@ -7,6 +7,7 @@ import type { InvalidationPolicy } from './invalidation'
 import type { CollectionMutation } from './types'
 import type {
 	InfiniteData,
+	QueryKey,
 	InvalidateQueryFilters,
 	UseInfiniteQueryOptions,
 	UseInfiniteQueryResult,
@@ -44,6 +45,57 @@ type QueryResult<R, M> = R extends { query: (params: never) => infer O }
 			? UseInfiniteQueryResult<D, E>
 			: never
 	: never
+type ResultOf<Fn> = Fn extends (...args: never[]) => infer Value ? Value : never
+
+type ReadData<Options, Mode> = Options extends unknown
+	? 'select' extends keyof Options
+		? Mode extends 'infinite'
+			? ResultOf<Options['select']> extends InfiniteData<infer Page>
+				? Page
+				: never
+			: ResultOf<Options['select']>
+		: Options extends { queryFn?: infer Fn }
+			? Awaited<ResultOf<Fn>>
+			: unknown
+	: never
+
+type InfiniteReadOptions = {
+	initialPageParam: unknown
+	getNextPageParam: (...args: never[]) => unknown
+	select?: ((...args: never[]) => InfiniteData<unknown>) | undefined
+}
+
+/** @internal Verify a structural read before erasing the options and projection together. */
+export type ReadProjectionCompatibility<
+	R,
+	M,
+	Items extends PropertyKey,
+	Total extends PropertyKey = never,
+> = R extends { query: (...args: never[]) => infer Options }
+	? [Options] extends [{ queryKey: QueryKey }]
+		? [QueryResult<R, M>] extends [never]
+			? never
+			: M extends 'infinite'
+				? [Options] extends [InfiniteReadOptions]
+					? ProjectionCompatibility<R, ReadData<Options, M>, Items | Total>
+					: never
+				: ProjectionCompatibility<R, ReadData<Options, M>, Items | Total>
+		: never
+	: never
+
+type ProjectionCompatibility<R, D, Keys extends PropertyKey> = {
+	[K in keyof R as K extends Keys ? K : never]: NonNullable<R[K]> extends (data: D) => unknown ? unknown : never
+}
+/** @internal Structural read checks shared with UI connectors. */
+export type CollectionReadCompatibility<S> = {
+	[K in keyof S as K extends 'getAll' | 'getInfinite' ? K : never]: ReadProjectionCompatibility<
+		NonNullable<S[K]>,
+		K extends 'getAll' ? 'pages' : 'infinite',
+		'getItems',
+		'getTotal'
+	>
+}
+
 type MutationResults<S> = {
 	[K in keyof S as K extends 'create' | 'update' | 'delete' | 'deleteMany' ? K : never]: NonNullable<
 		S[K]
@@ -104,7 +156,7 @@ function observerOptions(options: unknown) {
 export type CollectionQueryConfig<S, M extends CollectionMode<S>> =
 	M extends CollectionMode<S>
 		? {
-				source: S & { [K in ReadKey<M>]: Read<S, M> }
+				source: S & { [K in ReadKey<M>]: Read<S, M> } & CollectionReadCompatibility<NoInfer<S>>
 				mode: M
 				params: CollectionParams<S, M>
 				queryOptions?: CollectionQueryOptions<S, M>

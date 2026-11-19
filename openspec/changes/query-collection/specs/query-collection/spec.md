@@ -340,3 +340,30 @@ promptly without waiting for the validator. Schema validator contracts SHALL rem
 - **WHEN** a check is requested for a closed form
 - **THEN** it returns cancelled without invoking the validator
 - **AND** an open form with no validator returns valid
+
+### Requirement: Connected writes stay within their owner
+
+A connected grid SHALL prevent an unsubmitted action from writing to a different effective
+mutation owner. It SHALL cancel staged delete intents and protect the new selection from late
+completion when ownership changes. It SHALL allow already dispatched mutations to complete their
+native lifecycle.
+
+#### Scenario: Reused row IDs across tenants
+
+- **WHEN** a user opens an edit or delete confirmation in tenant A and switches to tenant B
+- **THEN** the old draft cannot save into B, the delete intent is cancelled, and placeholder rows from A cannot drive B's writes
+
+#### Scenario: Cancellation before publication
+
+- **WHEN** an automatic deletion is cancelled before its observer dispatches the mutation
+- **THEN** the deletion fetcher is not called
+
+### Requirement: Connected reads keep grid status coherent
+
+The grid SHALL observe query status changes required by its UI and SHALL skip automatic and
+manual infinite loading when its read is disabled.
+
+#### Scenario: Disabled read with cached pages
+
+- **WHEN** the active infinite observer is disabled and cached data has a next page
+- **THEN** the grid does not request the next page

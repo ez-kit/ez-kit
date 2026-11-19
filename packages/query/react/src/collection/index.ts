@@ -5,6 +5,8 @@ export { listInvalidation, resolveInvalidation } from './invalidation'
 export { useCollectionQuery, useCollectionMutation } from './use-collection-query'
 export type {
 	CollectionShape,
+	CollectionReadCompatibility,
+	ReadProjectionCompatibility,
 	CollectionParams,
 	CollectionItems,
 	CollectionMode,

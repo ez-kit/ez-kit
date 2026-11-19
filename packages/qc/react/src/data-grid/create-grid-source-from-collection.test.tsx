@@ -44,7 +44,7 @@ describe('collection grid mapping', () => {
 			columnFilters: [],
 			globalFilter: undefined,
 		}
-		expect(adapted.getAll?.query(params)).toMatchObject({ queryKey: ['users', 'list', { team: 'one', offset: 20 }] })
+		expect(adapted.getAll.query(params)).toMatchObject({ queryKey: ['users', 'list', { team: 'one', offset: 20 }] })
 		expect(adapted.invalidation).toBe(source.invalidation)
 	})
 	it('maps original entities rather than using grid row IDs as API IDs', () => {
