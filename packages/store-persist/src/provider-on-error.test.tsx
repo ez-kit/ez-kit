@@ -57,7 +57,10 @@ describe('@ez-kit/store-persist PersistProvider onError', () => {
 		)
 
 		await waitFor(() => {
-			expect(onError).toHaveBeenCalledWith(boom, { source: 'remote' })
+			expect(onError).toHaveBeenCalledWith(
+				boom,
+				expect.objectContaining({ source: 'remote', address: { store: STORE_ID, field: ['q'] } }),
+			)
 		})
 	})
 
@@ -80,7 +83,10 @@ describe('@ez-kit/store-persist PersistProvider onError', () => {
 		store.q = 'shoes'
 
 		await waitFor(() => {
-			expect(onError).toHaveBeenCalledWith(boom, { source: 'remote' })
+			expect(onError).toHaveBeenCalledWith(
+				boom,
+				expect.objectContaining({ source: 'remote', address: { store: STORE_ID, field: ['q'] } }),
+			)
 		})
 	})
 
@@ -113,7 +119,10 @@ describe('@ez-kit/store-persist PersistProvider onError', () => {
 		store.q = 'shoes'
 
 		await waitFor(() => {
-			expect(second).toHaveBeenCalledWith(boom, { source: 'remote' })
+			expect(second).toHaveBeenCalledWith(
+				boom,
+				expect.objectContaining({ source: 'remote', address: { store: STORE_ID, field: ['q'] } }),
+			)
 		})
 		expect(first).not.toHaveBeenCalled()
 	})

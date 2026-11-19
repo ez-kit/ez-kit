@@ -137,6 +137,7 @@ export function withHistory<T extends object, TSlice extends object = T>(
 		// a cheap "did anything actually change since we last looked" test. `omitHistoryKey` always allocates
 		// a fresh object (the key is always present), so comparing its output would never be reference-equal.
 		let lastSnapshot = snapshot(target) as T
+		let renderBaseline = false
 		let pendingOps: HistoryOp[] = []
 		let flushScheduled = false
 
@@ -212,8 +213,16 @@ export function withHistory<T extends object, TSlice extends object = T>(
 		 */
 		attachCapability(target, {
 			name: HISTORY_CAPABILITY_NAME,
+			seedRender(_instance, ctx) {
+				// Establish initialization before a later capability seeds the request URL.
+				// No observer is attached here; setup must retain that hydration as a step.
+				if (!ctx.isServer && !renderBaseline) {
+					lastSnapshot = snapshot(target) as T
+					renderBaseline = true
+				}
+			},
 			setup(_instance, ctx) {
-				if (!ctx.isServer) lastSnapshot = snapshot(target) as T
+				if (!ctx.isServer && !renderBaseline) lastSnapshot = snapshot(target) as T
 				return undefined
 			},
 		})

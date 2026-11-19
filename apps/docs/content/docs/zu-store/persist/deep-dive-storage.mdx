@@ -1,73 +1,208 @@
 ---
 title: Deep dive — storage
-description: The blob format, useHydrated() against flash/CLS, schema versioning and migrations, cross-tab sync, and graceful degradation.
+description: Scoped records, independent schemas, automatic restoration, timeout, confirmed writes and full scope reset.
 ---
 
-The storage sources (`localStorage`, `sessionStorage`, IndexedDB) persist a store under a single key. They're ambient — no React context required to read or write — and inert on the server.
+Storage adapters are ambient and do no I/O during server rendering. They share one engine queue with
+custom sources, while the application keeps synchronous state in memory.
 
-## The blob format
+## Addressed records
 
-A store's fields are packed into one JSON blob under one key:
+The existing container still has a version v and a map s, but its keys now encode StoreId plus field.
+Each value is a tagged envelope containing that record's version and parser-encoded payload. Scope
+comes from the cache; another panel or page has a different logical address.
 
-```jsonc
-// localStorage["ez-kit"]
-{ "v": 0, "s": { "theme": "dark", "fontScale": "1.25" } }
-```
+Normal writes patch only changed keys. Closed components, unrelated records and legacy keys survive.
+Returning a changed field to default removes its override when clearOnDefault is enabled. The default
+physical storageKey remains ez-kit; choose a separate key for an incompatible application rollout.
 
-- `v` is the schema **version** (see below). `s` maps each field's substrate key to its already-stringified value.
-- Per-field values inside `s` still flow through the same codecs as the URL, so Date/BigInt/array round-trips hold.
-- The default key is `ez-kit`. Set your own with `storageKey`: `localStorageAdapter({ storageKey: 'my-app' })`.
-- A field returned to its default is omitted; when the blob empties, the key is removed.
-
-## `useHydrated()` — flash and CLS
-
-Storage can't be read synchronously in render without breaking SSR (server has no storage), so a stored non-default value appears one tick after mount. The default _silent fill_ is fine when the gap is invisible. When it isn't — a theme that would flash, a layout that would shift, analytics that shouldn't fire on defaults — gate on `useHydrated()`:
+## Automatic restore and waiting
 
 ```tsx
-import { useHydrated } from '@ez-kit/zu-store/persist'
+import { useHydrated, usePersistStatus } from '@ez-kit/zu-store/persist'
 
-const hydrated = useHydrated(prefsStore.useStore()) // pass the store handle
-if (!hydrated) return <Skeleton /> // or: defer the side-effect until `hydrated`
+withPersist({ restore: { timeoutMs: 2000 }, fields })
+
+const store = prefsStore.useStore()
+const status = usePersistStatus(store)
+if (status.restore === 'pending') return <Skeleton />
 ```
 
-It is `false` on the server and the first client render (the standard "mounted" trick, which avoids a hydration mismatch), then flips to `true` once every source's first read has applied. It's a per-store aggregate — for a store mixing storage and async IndexedDB, it waits for both.
+No consumer effect is required to start restoration. The timeout is configurable and omitted by
+default. A timeout leaves defaults for untouched records, never saves them, and closes that read's
+right to apply. User changes can still be saved; a late result cannot alter memory or trigger migration.
+A cache-hit preserves the existing state/status. An evicted instance starts a new operation.
 
-## Schema versioning & migrations
+useHydrated is false on the server and while initial sources wait. It becomes true when all initial
+sources finish ready/error/timeout; inspect status for their actual outcomes and write errors.
+Explicit handle.restore joins pending or starts a fresh retry after a terminal result, preserving edits.
 
-A durable substrate outlives your code, so storage adapters version the blob and migrate forward on read — entirely inside the adapter (the core and the URL source have no notion of schema version):
+## Restore policy per source
 
-```tsx
-localStorageAdapter({
-	version: 2,
-	migrate: (stored, fromVersion) => {
-		// `stored` is the old Keyed (Map<string,string>); return the new Keyed.
-		const next = new Map(stored)
-		if (fromVersion < 1) next.set('theme', next.get('mode') ?? 'light')
-		if (fromVersion < 2) next.delete('legacyFlag')
-		return next
+A store can use independent sources for settings and drafts while keeping shared defaults:
+
+```ts
+withPersist({
+	restore: {
+		timeoutMs: 2000,
+		externalChanges: 'ignore',
+		sources: {
+			draftsApi: { timeoutMs: 10000, externalChanges: 'apply' },
+		},
+	},
+	fields: (field) => [
+		field((state) => state.layout, { source: 'settingsApi' }),
+		field((state) => state.draft, { source: 'draftsApi' }),
+	],
+})
+```
+
+Both names must be registered. settingsApi inherits two seconds/ignore, while draftsApi waits ten
+seconds and accepts external updates. These can be two endpoints of the same server. Map keys are
+the effective names used by sources overrides. Overrides merge with shared defaults; omitted
+settings retain existing behavior. Unknown override names fail before reading. Calling a handle's
+restore while it is pending joins that source's existing deadline rather than extending it.
+
+Use `timeoutMs: null` to wait without a deadline for a particular source even when the shared
+configuration is finite. For example, `sources: { draftsApi: { timeoutMs: null } }` overrides a
+shared 2000 ms timeout. Omitting a property inherits its shared value; zero ends async waiting
+immediately. A terminal retry accepts `handle.restore({ timeoutMs: null })`. The per-call
+`RestoreCallOptions` contains only timeoutMs; externalChanges is a lifecycle policy configured
+under withPersist restore rather than a policy change hidden in a retry call.
+
+## Write policy per source
+
+Existing throttleMs and clearOnDefault are shared write defaults. Override either by source alias:
+
+```ts
+withPersist({
+	throttleMs: 0,
+	clearOnDefault: true,
+	write: {
+		sources: {
+			draftsApi: { throttleMs: 500, clearOnDefault: false },
+		},
+	},
+	fields: (field) => [
+		field((state) => state.q, { source: 'url' }),
+		field((state) => state.draft, { source: 'draftsApi' }),
+	],
+})
+```
+
+Here URL edits use the ordinary zero-delay schedule, while draftsApi batches its own edits for
+500 ms and saves an explicit default value. Missing override members inherit the shared values.
+Unknown write.sources aliases fail before any source is read; registered unused names are allowed.
+These settings do not copy one field to another source. Flush explicitly collects the selected
+binding immediately and still waits for acknowledgement.
+
+## Independent schema versions
+
+```ts
+field((state) => state.layout, {
+	source: 'localStorage',
+	parser: paramJson(),
+	schema: {
+		version: 2,
+		minVersion: 1,
+		migrate: upgradeLayout,
+		validate: (value) => layoutSchema.parse(value),
 	},
 })
 ```
 
-On `get()`, if the stored `v` is older than the configured `version`, the adapter runs `migrate` and **rewrites** the blob at the current version. Edge cases are handled for you:
+The order is metadata check, decode, migrate if needed, validate, apply. The callbacks are synchronous
+and perform no I/O. Validate returns the current typed value or throws. Zod belongs here, not in the
+parser; the old zodParam integration was removed. Missing versions mean 0. Unsupported old or invalid
+records are individually deleted. Future versions stay untouched and block normal writes/deletes,
+including a write made before a timed-out read returned. Explicit reset can delete a future record.
 
-- A **thrown** `migrate` discards the stored data and hydrates defaults (the bad blob is still replaced) — never throws into render.
-- A missing or non-numeric `v` is treated as `v0`.
-- Data already at (or newer than) the current version passes through untouched.
+## Container migrations
 
-## Cross-tab sync
+Adapter version/migrate still describes the whole packed container, independently of schema.version:
 
-`localStorage` writes in one tab fire a `storage` event in **other** tabs (never the writer), which the adapter subscribes to and turns into a `pull`. Edits propagate tab-to-tab automatically. The `pull` re-baselines the binding before re-flushing, so an A→B→A echo terminates. (Two stores bound to the _same_ key within _one_ tab is unsupported.)
-
-## Graceful degradation
-
-Every read and write is guarded. Quota-exceeded, Safari private mode, a sandboxed iframe, or disabled storage warn **at most once** and never throw — the store keeps working, just without persistence. A corrupt blob falls back to defaults and clears the bad key so it can't poison future reads.
-
-## IndexedDB
-
-For larger or structured data, `indexedDbAdapter()` is the async sibling — same front (`indexedDbField()`), same blob/version/migrate semantics. Its writes are serialized (last-write-wins; superseded queued writes are dropped) and, being async, it always resolves last — so first-present-wins guarantees it never clobbers a value the URL already set.
-
-```tsx
-import { indexedDbAdapter } from '@ez-kit/zu-store/persist/storage'
-;<StoreProvider persist={[indexedDbAdapter({ dbName: 'my-app', storeName: 'state' })]}>…</StoreProvider>
+```ts
+localStorageAdapter({
+	storageKey: 'prefs-v2',
+	version: 1,
+	migrate: (stored) => new Map(stored),
+})
 ```
+
+Existing transformation rules remain: old without migrate passes through, a thrown migration falls
+back to an empty container, missing/non-numeric container version is 0, and current/newer containers
+pass through. A rewrite requested by engine get is staged into the same queue and guarded against
+obsolete reads, rather than writing from a late get callback. Per-record minVersion does not change
+these container rules. Legacy ownership is not inferred; transfer requires known address mappings.
+
+## Reset and durability
+
+```ts
+const handle = persistHandle(prefsStore.useStore(), 'localStorage')
+await handle.reset({ fields: [['layout']] })
+await handle.flush()
+
+const persistence = usePersistence()
+const outcomes = await persistence.resetScope({ path: ['devices'], sources: ['localStorage'] })
+```
+
+Reset keeps the instance, restores its original defaults and deletes overrides. Scope reset includes
+nested areas and persisted entries of closed/evicted components. Adapter capability preflight rejects
+unsupported full deletion before partial work. Outcomes distinguish source failures; memory stays reset
+if deletion fails and the pending deletion can be retried. Cache clear/remove remains eviction.
+
+Writes and deletes are serialized per source. Each binding keeps its own throttle window, so an idle
+slow panel does not delay a fast form sharing the source. Already-observed edits remain queued when
+a context view disconnects. A sent old write precedes reset deletion, queued old
+writes are dropped, and later user edits follow deletion. Flush waits for its revision fence and rejects
+on failed/blocked persistence. Dirty state and current memory survive errors. Flush also waits for applicable container rewrites
+and namespace deletions captured at its call. Repeated reset Promises do not acknowledge deletion
+until the relevant delete succeeds; a failed scope blocks that scope rather than unrelated records.
+A retained handle cannot report successful durability merely because its view disconnected. A call
+to reset/resetScope after engine disposal rejects instead of waiting forever. Defaults for every
+source are captured before any URL seed or ambient restoration, so a shared field's reset does not
+adopt another source's restored value.
+
+## External changes and errors
+
+Ambient external changes are ignored by default. Set restore.externalChanges to apply explicitly for
+cross-tab UI synchronization. The adapter reports only external storage events, never its own writes.
+URL Back/Forward remains reactive independently of this storage policy. An async external read
+protects edited records independently, so editing one panel does not discard another clean panel's
+update. An authoritative deletion releases an obsolete future-version block; normal adapter-side
+version guards still protect a later concurrent write.
+
+Sync storage failures and async IndexedDB/backend rejections reach onError/onPersistError with source,
+operation and address/addresses or scope. They do not stop the interface. Read failure is distinct from
+missing data. Built-in adapters no longer hide quota failures behind a one-time console warning.
+
+## IndexedDB and backend limits
+
+indexedDbAdapter has the same addressed values, schemas and lifecycle. Patches and version checks use
+one transaction; removeScope inspects the whole persistent namespace. All source mutations are ordered
+by the engine, not an IndexedDB-only last-value queue. Multiple storeName values can share one
+dbName: missing object stores are provisioned through schema upgrades without deleting existing
+stores. Owned connections close/reopen on versionchange. Other tabs can block an upgrade; close
+competing connections and retry. Adapter version/migrate still versions the stored container, not
+the IndexedDB database schema.
+
+The built-in IndexedDB adapter currently has no cross-tab change notifications. Another tab's
+write does not trigger a read merely because externalChanges is apply; call that source's
+`handle.restore()` explicitly. Web Storage events and custom adapters with subscribe have their
+own external notification paths. Automatic IndexedDB notifications are not part of this change.
+
+For a backend, implement full removeScope and conditional version checks. A mutation Promise must mean
+acknowledgment. A lost response does not prove cancellation; server revisions/generations are needed
+if an old request can commit after a network error. The client queue is not a distributed lock or a
+cross-device synchronization protocol.
+
+## Address ownership and early edits
+
+Closing an instance can retain unsaved work, but a later owner of the same address cannot be
+overwritten by an obsolete unsent retry. Superseded old waiters report the handoff explicitly rather
+than claiming a save or hanging; already-sent operations and reset barriers retain source order.
+Unrelated retained addresses remain retryable.
+
+Edits made after default capture but before connection, including child layout/passive mount effects,
+become tracked dirty intent. Source render seeds and restoration remain system writes; one source's
+seed must not become another source's user edit or new default.

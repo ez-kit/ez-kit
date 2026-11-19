@@ -13,7 +13,66 @@
  * value. Parsers run inside the engine, so an adapter only ever sees strings it can pack however
  * its substrate requires (URL params, a JSON blob, IndexedDB records, …).
  */
+import type { PersistAddress } from '@ez-kit/store-core'
+
 export type Keyed = Map<string, string>
+
+/** Schema ownership stays with the consumer; both callbacks are synchronous and perform no I/O. */
+export type PersistSchema<T = unknown> = {
+	version?: number
+	minVersion?: number
+	migrate?(value: unknown, fromVersion: number): unknown
+	validate?(value: unknown): T
+}
+
+export type RestoreOptions = {
+	/** Undefined inherits the shared timeout; null explicitly waits without a deadline. */
+	timeoutMs?: number | null
+	externalChanges?: 'apply' | 'ignore'
+}
+
+/** Options for one explicit restore call; external changes remain a source lifecycle policy. */
+export type RestoreCallOptions = Pick<RestoreOptions, 'timeoutMs'>
+
+/** Shared restore defaults with overrides keyed by the effective registered source name. */
+export type PersistRestoreOptions = RestoreOptions & {
+	sources?: Readonly<Record<string, RestoreOptions>>
+}
+
+export type RestoreState = 'idle' | 'pending' | 'ready' | 'error' | 'timeout'
+export type PersistRecordStatus = {
+	field: readonly string[]
+	address?: PersistAddress
+	outcome: 'default' | 'restored' | 'migrated' | 'invalidated' | 'future-version' | 'edited'
+	error: unknown
+}
+export type PersistStatus = {
+	restore: RestoreState
+	write: 'idle' | 'pending' | 'error' | 'blocked'
+	dirty: boolean
+	writeBlocked: 'future-version' | null
+	error: unknown
+	records?: readonly PersistRecordStatus[]
+}
+
+export type RestoreResult = { status: RestoreState; error?: unknown; records?: readonly PersistRecordStatus[] }
+export type PersistOperation =
+	'read' | 'write' | 'remove' | 'removeScope' | 'decode' | 'encode' | 'migrate' | 'validate'
+export type PersistErrorContext = {
+	source: string
+	operation: PersistOperation
+	address?: PersistAddress
+	addresses?: readonly PersistAddress[]
+	scope?: readonly string[]
+}
+
+export type ReadCtx = {
+	fields: FieldDescriptor[]
+	addresses: ReadonlyMap<string, PersistAddress>
+	signal?: AbortSignal
+	/** Stage a container migration; the engine decides whether this read still owns a rewrite. */
+	stageContainerRewrite?: (values: Keyed) => void
+}
 
 /**
  * Per-field parser: converts one typed store value to/from its string form.
@@ -54,6 +113,9 @@ export type FieldDescriptor = {
 	prefix?: string
 	/** Opaque per-field metadata, forwarded to the adapter unread by the engine. */
 	meta?: unknown
+	schema?: PersistSchema
+	/** Canonical logical identity, assigned when the binding connects. */
+	address?: PersistAddress
 }
 
 /**
@@ -79,6 +141,11 @@ export type CommitCtx = {
 	diff: KeyedDiff
 	/** Per-commit metadata accumulated for this flush. Opaque to the engine. */
 	meta: unknown
+	addresses?: ReadonlyMap<string, PersistAddress>
+	/** Storage must guard writes AND implicit deletes against a newer on-disk schema. */
+	maxVersions?: ReadonlyMap<string, number>
+	/** Only an explicit reset is allowed to delete a future-version record. */
+	explicitReset?: boolean
 }
 
 /**
@@ -88,14 +155,30 @@ export type CommitCtx = {
  */
 export type SourcePort = {
 	/** Read the substrate as a {@link Keyed}. Synchronous for URL/storage, async for IndexedDB. */
-	get(): Keyed | Promise<Keyed>
+	get: (context?: ReadCtx) => Keyed | Promise<Keyed>
+	/** Pure synchronous render seeding; separate from the committed operational snapshot. No ambient I/O. */
+	getRenderSnapshot?: (context?: ReadCtx) => Keyed
 	/** Commit the desired {@link Keyed} to the substrate, given the {@link CommitCtx}. */
-	set(desired: Keyed, ctx: CommitCtx): void | Promise<void>
+	set: (desired: Keyed, ctx: CommitCtx) => void | Promise<void>
+	/** A staged container migration, kept separate from opaque application mutation metadata. */
+	rewriteContainer?: (values: Keyed) => void | Promise<void>
 	/**
 	 * Subscribe to external changes (e.g. cross-tab `storage` events). Ambient sources only.
 	 * The provider — not the engine — wires this to `pull`, so eventing stays per-source.
 	 */
-	subscribe?(onChange: () => void): () => void
+	subscribe?: (onChange: () => void) => () => void
+	capabilities?: { recordVersions: boolean }
+	/** Stable identity of a physical dataset, for built-in single-writer checks. */
+	identity?: string
+	/** Full persistent subtree deletion, including records with no live binding. */
+	removeScope?: (path: readonly string[]) => void | Promise<void>
+	/** Optional physical projection used to detect collisions (URL query keys). */
+	keyForField?: (field: FieldDescriptor) => string
+}
+
+/** Synchronous reads for render-scoped sources; mutation acknowledgement may be asynchronous. */
+export type SyncReadSourcePort = Omit<SourcePort, 'get'> & {
+	get: (context?: ReadCtx) => Keyed
 }
 
 /**
@@ -103,9 +186,16 @@ export type SourcePort = {
  * immediately. Assignable to {@link SourcePort}; lets callers consume `get()` as a plain `Keyed`.
  */
 export type SyncSourcePort = {
-	get(): Keyed
-	set(desired: Keyed, ctx: CommitCtx): void
-	subscribe?(onChange: () => void): () => void
+	get: (context?: ReadCtx) => Keyed
+	/** Pure synchronous render seeding; never performs ambient I/O. */
+	getRenderSnapshot?: (context?: ReadCtx) => Keyed
+	set: (desired: Keyed, ctx: CommitCtx) => void
+	rewriteContainer?: (values: Keyed) => void
+	subscribe?: (onChange: () => void) => () => void
+	capabilities?: { recordVersions: boolean }
+	identity?: string
+	removeScope?: (path: readonly string[]) => void
+	keyForField?: (field: FieldDescriptor) => string
 }
 
 /**
@@ -116,9 +206,15 @@ export type SyncSourcePort = {
 export type MetaMerge = (prev: unknown, next: unknown) => unknown
 
 /** Global persist options shared by every source. */
-export type PersistOptions = {
+export type PersistWriteOptions = {
 	/** Throttle window (ms) for commits. Proxy reads stay instant. Defaults to `0`. */
 	throttleMs?: number
 	/** Omit a key when its value equals the field default. Defaults to `true`. */
 	clearOnDefault?: boolean
+}
+
+/** Shared defaults with write and restore overrides keyed by effective registered source aliases. */
+export type PersistOptions = PersistWriteOptions & {
+	write?: { sources?: Readonly<Record<string, PersistWriteOptions>> }
+	restore?: PersistRestoreOptions
 }

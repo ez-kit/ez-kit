@@ -96,6 +96,7 @@ describe('createInstanceCache', () => {
 
 		cache.getOrCreate(id, create, { gcTime: GC_TIME, context: ctxFor(id) })
 		cache.addObserver(id)
+		cache.removeObserver(id)
 		cache.clear()
 
 		expect(cleanup).toHaveBeenCalledTimes(1)
@@ -190,6 +191,7 @@ describe('createInstanceCache', () => {
 		)
 		cache.addObserver(orgId)
 
+		cache.removeObserver(usersId)
 		cache.clear(['users'])
 
 		expect(cleanupUsers).toHaveBeenCalledTimes(1)

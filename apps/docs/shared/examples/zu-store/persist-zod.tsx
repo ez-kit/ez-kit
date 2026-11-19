@@ -1,9 +1,8 @@
 'use client'
 
 import { createContextStore, pipe, StoreProvider } from '@ez-kit/zu-store'
-import { type FieldsBuilder, withPersist } from '@ez-kit/zu-store/persist'
+import { type FieldsBuilder, withPersist, paramNumber } from '@ez-kit/zu-store/persist'
 import { urlField } from '@ez-kit/zu-store/persist/url'
-import { zodParam } from '@ez-kit/zu-store/persist/validators/zod'
 import { StarIcon } from 'lucide-react'
 import { z } from 'zod'
 import { createStore } from 'zustand/vanilla'
@@ -21,7 +20,10 @@ type RatingState = {
 const ratingSchema = z.coerce.number().int().min(1).max(5)
 
 const fields: FieldsBuilder<RatingState> = (field) => [
-	field((state) => state.rating, urlField({ parser: zodParam(ratingSchema) })),
+	field(
+		(state) => state.rating,
+		urlField({ parser: paramNumber(), schema: { validate: (value) => ratingSchema.parse(value) } }),
+	),
 ]
 
 const ratingStore = createContextStore(() =>

@@ -40,10 +40,10 @@ export { valtioPort } from './port'
  */
 export function withPersist<T extends object>(
 	options: PersistPluginOptions<NoInfer<T>> = {},
-): StoreEnhancer<T, T & PersistHandles> {
+): StoreEnhancer<T, T & PersistHandles<T>> {
 	return (target: T) => {
 		applyPersist(target, valtioPort, options)
-		return target as T & PersistHandles
+		return target as T & PersistHandles<T>
 	}
 }
 
@@ -57,22 +57,26 @@ export function persist<T extends object = object>(options: PersistPluginOptions
 }
 
 // --- Substrate half: re-exported from the shared core, unchanged ---
-export { PERSIST_ENGINES, type PersistEngines, useHydrated } from '@ez-kit/store-persist'
+export { PERSIST_ENGINES, type PersistEngines, useHydrated, usePersistStatus } from '@ez-kit/store-persist'
 export type { PersistPluginOptions } from '@ez-kit/store-persist'
 export {
 	type AmbientAdapter,
 	type EngineMap,
 	type PersistAdapter,
+	type PersistAdapters,
+	type NamedPersistAdapter,
 	type PersistMount,
 	PersistProvider,
 	type PersistProviderProps,
 	type RenderScopedAdapter,
 	usePersistEngines,
+	usePersistence,
 } from '@ez-kit/store-persist'
 
 // --- Per-source control handles: typed accessors ($url / $persist) ---
 export {
 	persistHandle,
+	type PersistFieldPath,
 	type PersistHandle,
 	type PersistHandles,
 	type UrlHandle,
@@ -80,8 +84,16 @@ export {
 } from '@ez-kit/store-persist'
 
 // --- Decorator + accessor fronts (field declaration) ---
-export { persistField, type PersistFieldOptions } from '@ez-kit/store-persist'
-export type { AccessorFieldOptions, FieldBuilder, FieldSpec, FieldsBuilder } from '@ez-kit/store-persist'
+export { persistField, type PersistFieldDecorator, type PersistFieldOptions } from '@ez-kit/store-persist'
+export type {
+	AccessorFieldOptions,
+	FieldBuilder,
+	FieldSpec,
+	FieldsBuilder,
+	FieldValueOptions,
+	ValidatedAccessorFieldOptions,
+	ValidatedValueOptions,
+} from '@ez-kit/store-persist'
 
 // --- Codecs ---
 export type { AnyCodec, Codec } from '@ez-kit/store-persist'
@@ -109,4 +121,25 @@ export type {
 	PersistOptions,
 	SourcePort,
 	SyncSourcePort,
+	SyncReadSourcePort,
 } from '@ez-kit/store-persist'
+
+export type {
+	PersistSchema,
+	PersistRecordStatus,
+	PersistStatus,
+	PersistRestoreOptions,
+	RestoreOptions,
+	RestoreCallOptions,
+	PersistWriteOptions,
+	RestoreResult,
+	RestoreState,
+	ReadCtx,
+	PersistErrorContext,
+	PersistOperation,
+} from '@ez-kit/store-persist'
+export { serializePersistAddress, deserializePersistAddress, isWithinScope } from '@ez-kit/store-core'
+export type { PersistAddress, StoreId } from '@ez-kit/store-core'
+
+export { FutureVersionError, encodeRecord, decodeRecord } from '@ez-kit/store-persist'
+export { SourceMutationCancelledError } from '@ez-kit/store-persist'

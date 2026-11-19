@@ -459,3 +459,8 @@ A store group is **bound to the cache that created it**. A group from the top-le
 - **Imperative access needs a mounted `CacheProvider`.** With multiple `CacheProvider`s, the active one is ambiguous — prefer `useCache()` inside the tree.
 - **Group names must be unique within a cache.** Two groups sharing a name under the same `CacheProvider` collide on one keyspace. The library emits a `console.warn` in development if `createCachedStore` is called twice with the same name on the same cache — usually a sign of `createCachedStore` being invoked inside a render.
 - **Don't mount two `<CacheProvider>` for the same cache.** Imperative access via `getFromCache`/`remove` targets the most recently activated cache and is ambiguous when both are mounted. The library emits a `console.warn` in development to make the collision visible at the moment it happens.
+
+Manual `remove` and `clear` preserve entries that still have mounted Providers. Their identity and
+capabilities remain active, so an open panel can continue saving. Requested removal happens after
+the last Provider leaves, overriding GC and infinite keepalive. Idle entries are removed immediately.
+Use persistence `reset` or `resetScope` when the intention is to reset state or delete saved data.

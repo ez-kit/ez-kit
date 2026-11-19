@@ -12,22 +12,41 @@ export function createWriteQueue<T>(write: (value: T) => Promise<void>): WriteQu
 	// `pending` holds the latest value awaiting a write, or `null` when nothing is queued. A newer
 	// `enqueue` overwrites it, which is exactly how superseded values get dropped.
 	let pending: { value: T } | null = null
-	let draining: Promise<void> | null = null
+	type Drain = { promise: Promise<void>; resolve(): void; reject(error: unknown): void }
+	let draining: Drain | null = null
 
-	async function drain(): Promise<void> {
-		while (pending !== null) {
-			const next = pending.value
+	async function drain(owner: Drain): Promise<void> {
+		try {
+			while (pending !== null) {
+				const next = pending.value
+				pending = null
+				await write(next)
+			}
+		} catch (error) {
 			pending = null
-			await write(next)
+			draining = null
+			owner.reject(error)
+			return
 		}
+		// Release ownership in the same turn that observes an empty queue. A later enqueue
+		// must start a new drain, even before this owner's Promise reactions have run.
+		draining = null
+		owner.resolve()
 	}
 
 	function enqueue(value: T): Promise<void> {
 		pending = { value }
-		draining ??= drain().finally(() => {
-			draining = null
+		if (draining) return draining.promise
+		let resolve!: () => void
+		let reject!: (error: unknown) => void
+		const promise = new Promise<void>((yes, no) => {
+			resolve = yes
+			reject = no
 		})
-		return draining
+		const owner = { promise, resolve, reject }
+		draining = owner
+		void drain(owner)
+		return promise
 	}
 
 	return { enqueue }

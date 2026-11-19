@@ -29,6 +29,15 @@ export type StoreCacheOptions = {
 export type CreateOptions = {
 	gcTime: number
 	context: PluginContext
+	/** Return an uncached render candidate; addObserver adopts it after commit. */
+	deferSetup?: boolean
+}
+
+/** Candidate and committed context supplied when a React owner first attaches. */
+export type ObserveOptions = {
+	instance: object
+	gcTime: number
+	context: PluginContext
 }
 
 export type CachedStoreOptions = {

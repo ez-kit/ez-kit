@@ -86,3 +86,35 @@ urlHandle(store).runWithMeta({ history: UrlHistory.Push }, () => {
 ## SSR
 
 A `createContextStore` store wrapped in `withPersist` is request-scoped: each `Provider` mount creates its own proxy, so concurrent requests never share state. The URL source seeds **synchronously** in render, so server HTML reflects the incoming query string and the first client render matches it — no flash, no hydration mismatch. (Storage sources defer to mount; see the [storage deep dive](./deep-dive-storage).)
+
+## Navigation acknowledgement boundaries
+
+Query-only writes preserve the existing URL fragment as well as unrelated query parameters.
+React Router distinguishes its own commits from application PUSH/REPLACE and POP navigation using
+generated location keys. Application `location.state` is preserved without adding metadata, including
+strings, arrays, null and object values.
+
+Next's documented router hooks expose pathname/search snapshots but no navigation ownership token.
+POP and pathname changes explicitly invalidate pending intent. An external same-path navigation
+whose query exactly matches an outstanding own target can be indistinguishable from its acknowledgement;
+the adapter does not patch router internals or the global history API to infer a missing signal.
+
+Pure render-seed snapshots and committed operational locations are separate. A transition that
+suspends can seed a new render without changing the active port's read/commit destination. Data-router
+navigation commits also track cancellation: resetting a blocker must not leave cancelled optimistic
+query values behind. The React Router integration observes its exported data-router context read-only
+for completion/blocker state, with runtime feature checks; ordinary BrowserRouter operation remains
+available without a data router. It does not patch router or global history methods.
+
+Data-router observation reads the explicitly exported `UNSAFE_DataRouterContext` and
+`UNSAFE_DataRouterStateContext` integration points. Their names indicate upstream instability;
+capability checks reject unsupported data-router state instead of silently confirming a write.
+Basic routers use the read-only, feature-detected `UNSAFE_NavigationContext` navigator location.
+The optional lookup preserves basic operation on older peers where data-router exports are absent.
+A data-router dispatch must publish its generated key synchronously, including blocker continuation.
+Unsupported identity observation fails explicitly rather than guessing from query equality; a delayed
+publication has an uncertain outcome and is not reported as proven cancellation.
+
+When Back/Forward proves an in-flight own navigation was cancelled, persistence discards its
+obsolete external correction without issuing an extra navigation or loader run. A newer user edit
+remains pending. An uncertain write failure still retains the corrective write.

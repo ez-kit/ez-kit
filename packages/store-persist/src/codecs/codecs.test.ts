@@ -31,6 +31,20 @@ describe('@ez-kit/store-persist param parsers', () => {
 			expect(parser.parse('5')).toBe(5)
 		})
 
+		it.each(['Infinity', '-Infinity', '+Infinity', '1e999', '-1e999', 'NaN'])(
+			'rejects non-finite input %s before it can enter state',
+			(raw) => {
+				expect(() => paramNumber().parse(raw)).toThrow()
+			},
+		)
+
+		it('retains finite boundary values', () => {
+			const codec = paramNumber()
+			for (const value of [0, Number.MAX_VALUE, -Number.MAX_VALUE, Number.MIN_VALUE, -Number.MIN_VALUE]) {
+				expect(codec.parse(codec.stringify(value) ?? '')).toBe(value)
+			}
+		})
+
 		it('omits non-finite numbers', () => {
 			const parser = paramNumber()
 			expect(parser.stringify(Number.NaN)).toBeNull()

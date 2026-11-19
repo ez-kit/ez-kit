@@ -5,16 +5,16 @@ description: The typed codecs that convert each field to and from its string for
 
 A parser converts one typed leaf to/from a string. The substrate (URL, storage blob, IndexedDB record) only ever stores strings, so the **same** parsers round-trip a value through every source. Reads never throw into render — invalid input falls back to the field's default.
 
-| Parser              | Type      | Notes                              |
-| ------------------- | --------- | ---------------------------------- |
-| `paramString()`     | `string`  | identity                           |
-| `paramNumber()`     | `number`  | finite numbers; non-finite omitted |
-| `paramBoolean()`    | `boolean` | also reads `1`/`0`                 |
-| `paramBigInt()`     | `bigint`  | decimal string                     |
-| `paramDate()`       | `Date`    | ISO string                         |
-| `paramEnum(values)` | `T`       | rejects values outside the set     |
-| `paramArray(item)`  | `T[]`     | delimited list of an inner parser  |
-| `paramJson()`       | `T`       | JSON value (plain objects/arrays)  |
+| Parser              | Type      | Notes                                            |
+| ------------------- | --------- | ------------------------------------------------ |
+| `paramString()`     | `string`  | identity                                         |
+| `paramNumber()`     | `number`  | finite numbers; invalid/non-finite input rejects |
+| `paramBoolean()`    | `boolean` | also reads `1`/`0`                               |
+| `paramBigInt()`     | `bigint`  | decimal string                                   |
+| `paramDate()`       | `Date`    | ISO string                                       |
+| `paramEnum(values)` | `T`       | rejects values outside the set                   |
+| `paramArray(item)`  | `T[]`     | delimited list of an inner parser                |
+| `paramJson()`       | `T`       | JSON value (plain objects/arrays)                |
 
 ```ts
 import { paramArray, paramEnum, paramString } from '@ez-kit/va-store/persist'
@@ -22,6 +22,14 @@ import { paramArray, paramEnum, paramString } from '@ez-kit/va-store/persist'
 const sort = paramEnum(['asc', 'desc'] as const)
 const tags = paramArray(paramString())
 ```
+
+Array equality composes the item codec's equals, so Date arrays and nested/object codecs restore
+and clear their defaults by value. Ordinary delimited arrays keep their existing readable encoding.
+Exceptional values such as a singleton empty string, or separators that collide with URI escapes,
+use a tagged JSON frame of item strings. The frame is parser-owned, not a record version manifest;
+legacy unambiguous delimited values remain readable. Empty arrays still omit the key, and a legacy
+raw empty string still decodes to an empty array. New framed writes require the updated decoder;
+retain the old namespace when planning rollback.
 
 All codecs live on the core `@ez-kit/va-store/persist` entry — they're source-agnostic. Each satisfies a round-trip contract (`parse(stringify(v))` deep-equals `v`), which lets the engine break the proxy⇄substrate loop by comparing serialized forms.
 
@@ -59,7 +67,8 @@ Anything else — `null`, `undefined`, a plain object, `Set`/`Map`, an empty arr
 
 ## Zod validation
 
-`zodParam(schema)` turns any Zod schema into a parser — parsing **is** validation, and a failed parse gracefully falls back to the default.
+Decode first, migrate older versions if needed, then validate the current shape through
+`schema.validate`. Zod is an application dependency; persist does not import it.
 
 <LivePreview
 	path='va-store/persist-zod'
@@ -67,13 +76,19 @@ Anything else — `null`, `undefined`, a plain object, `Set`/`Map`, an empty arr
 />
 
 ```ts
-import { zodParam } from '@ez-kit/va-store/persist/validators/zod'
+import { paramNumber } from '@ez-kit/va-store/persist'
 import { z } from 'zod'
 
-const rating = zodParam(z.coerce.number().int().min(1).max(5))
+const ratingSchema = z.number().int().min(1).max(5)
+field((state) => state.rating, {
+	source: 'url',
+	parser: paramNumber(),
+	schema: { validate: (value) => ratingSchema.parse(value) },
+})
 ```
 
-`zod` is an optional peer — import `zodParam` from the dedicated subpath only if you use it.
+For versioned objects use `paramJson()` and place version, migrate and validate together in schema.
+A future version is left untouched; a bad current value invalidates only its record.
 
 ## Custom parsers
 
@@ -82,11 +97,23 @@ A parser is a small object: `parse(string) → value`, `stringify(value) → str
 ```ts
 import type { Parser } from '@ez-kit/va-store/persist'
 
-const csv: Parser<string[]> = {
-	parse: (raw) => (raw ? raw.split(',') : []),
-	stringify: (value) => (value.length ? value.join(',') : null),
-	equals: (a, b) => a.length === b.length && a.every((x, i) => x === b[i]),
+const visibility: Parser<'shown' | 'hidden'> = {
+	parse(raw) {
+		if (raw === '1' || raw === 'shown') return 'shown'
+		if (raw === '0' || raw === 'hidden') return 'hidden'
+		throw new Error('Invalid visibility')
+	},
+	stringify: (value) => (value === 'shown' ? '1' : '0'),
 }
 ```
 
 A non-canonical parser (one whose `stringify` output isn't stable) can loop — supply `equals`, or lean on `paramJson()`, which uses stable key ordering for you.
+
+`paramJson` compares serialized values, including Date/toJSON results, nested containers and own
+special keys. A `schema.validate` function can return a Date: changing its timestamp saves the new
+JSON value; returning to the serialized default removes the override.
+
+Default snapshots preserve non-enumerable `toJSON`, ordinary nested data prototypes and Date
+behavior. Incoming-data validation is not run on application defaults. Objects whose private or
+internal slots cannot be cloned faithfully fail before source I/O; declare their ordinary data
+fields separately instead.

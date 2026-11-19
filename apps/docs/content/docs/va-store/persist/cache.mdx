@@ -75,3 +75,42 @@ function FiltersPanel() {
 When a cached, dual-source store is first created, the same [first-present-wins on cold start](./combined#first-present-wins-on-cold-start) rule applies — a shared `?q=` link beats a restored storage value. On a cache-remount the proxy already carries its hydrated state, so no source re-seeds; the kept-alive value wins, exactly as keep-alive intends.
 
 That does **not** mean a cached store is cut off from its source while nothing renders it. The plugin's lifetime is the cache entry's, not the `Provider`'s, so the binding stays live between mounts: an external change — the back button, another tab — lands on the cached proxy even with no `Provider` mounted, and the returning screen renders it. What never happens on the way back is a re-seed that would discard local, unpersisted state.
+
+## Concurrent rendering and service updates
+
+Only committed observers establish retained instance ownership. A cached Provider whose render is
+abandoned or suspended without commit does not pin its defaults or service context for a later owner.
+Legitimate observers of the same address converge on the committed instance. Ambient reads still
+start after commit; server rendering only permits pure request URL seeding.
+
+Changing unrelated services (for example locale) does not change the persistence registry when its
+source engines/defaultSource are unchanged. Replacing an actual registered port still requires a
+Provider/cache remount, including a new port returned from an otherwise stable usePort hook.
+
+Simultaneous cold Providers for one address must use the same defaultValue object and service registry. Omitted defaultValue uses a stable shared empty seed. Compatible owners share
+one raw instance before child mount effects, so mount-only initialization cannot target a discarded
+store. Conflicting cold initialization is invalid and receives a commit-time diagnostic; React does
+not guarantee that throwing during commit suppresses every descendant effect. Reuse a stable seed
+object when multiple cold owners intentionally share one address.
+
+Uncommitted candidates are shared through weak references only; they are not retained cache entries.
+Different initialization/services create a fresh candidate. Render-scoped navigation changes refresh
+the initialization context while keeping the persistence engine registry stable, so an abandoned
+old URL seed cannot pin defaults for the newly committed location.
+
+The first committed observer still establishes gcTime for the cache entry; later observers do not
+change its birth configuration. Different gcTime props alone do not make raw initialization conflict.
+
+Cached capability cleanups run in reverse setup order. A failing cleanup does not skip remaining
+callbacks or leave cache membership behind. Manual remove/clear reports AggregateError after release
+(clear finishes all matching entries); GC reports the aggregate through its timer error path after
+eviction. A cleanup that creates a replacement cannot have that replacement removed by old teardown.
+
+The outer cache Provider owns all entries. Unmounting it releases persistence connections even
+with `gcTime: Infinity`; mount a fresh container to restore those addresses again. Keep the outer
+container mounted to retain entries when only an entry Provider disappears. StrictMode reconnects
+preserve the container.
+
+Removing or clearing an entry while its Provider remains mounted keeps persistence active until
+the last owner leaves. Explicit removal then overrides normal keepalive. To reset an open panel's
+state and saved values, use its persistence handle's reset operation.

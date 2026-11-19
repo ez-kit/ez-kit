@@ -41,7 +41,7 @@ const listStore = createContextStore(() =>
 				set({ density })
 			},
 		})),
-		withPersist({ fields }),
+		withPersist({ fields, restore: { externalChanges: 'apply' } }),
 	),
 )
 

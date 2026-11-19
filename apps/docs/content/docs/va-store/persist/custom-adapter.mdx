@@ -12,12 +12,16 @@ The engine speaks exactly one language: `Keyed = Map<string, string>` — a logi
 ## The port
 
 ```ts
-import type { CommitCtx, Keyed, SourcePort } from '@ez-kit/va-store/persist'
+import type { CommitCtx, Keyed, ReadCtx } from '@ez-kit/va-store/persist'
 
 type SourcePort = {
-	get(): Keyed | Promise<Keyed> // read the substrate (async allowed — IndexedDB)
-	set(desired: Keyed, ctx: CommitCtx): void | Promise<void> // commit the store's keys
-	subscribe?(onChange: () => void): () => void // external changes (ambient only)
+	get(context?: ReadCtx): Keyed | Promise<Keyed> // committed addressed read; includes AbortSignal
+	getRenderSnapshot?(context?: ReadCtx): Keyed // optional pure synchronous render seed
+	set(desired: Keyed, ctx: CommitCtx): void | Promise<void> // apply only ctx.diff keys
+	rewriteContainer?(values: Keyed): void | Promise<void> // only for a staged container migration
+	subscribe?(onChange: () => void): () => void // external changes only
+	capabilities?: { recordVersions: boolean }
+	removeScope?(path: readonly string[]): void | Promise<void> // full persisted subtree
 }
 ```
 
@@ -35,21 +39,33 @@ There are two adapter families, unified only at the port:
 
 ### Ambient adapters
 
-Ship an object with `source` and a ready `port`. This complete in-memory adapter (one JSON blob) is what the storage demos use:
+Ship a ready `port`; a provider map supplies its source name. A source property remains required for array registration. This complete in-memory adapter (one JSON blob) is what the storage demos use:
 
 ```tsx
 import type { AmbientAdapter, CommitCtx, Keyed, SourcePort } from '@ez-kit/va-store/persist'
+import { patchKeyed, removeKeyedScope } from '@ez-kit/va-store/persist/storage'
 
 function createMemoryStorageAdapter(source: string): AmbientAdapter {
 	let blob = ''
 	const port: SourcePort = {
+		capabilities: { recordVersions: true },
 		get(): Keyed {
 			const keyed: Keyed = new Map()
 			if (blob) for (const [k, v] of Object.entries(JSON.parse(blob) as Record<string, string>)) keyed.set(k, v)
 			return keyed
 		},
-		set(desired: Keyed, _ctx: CommitCtx): void {
-			blob = desired.size === 0 ? '' : JSON.stringify(Object.fromEntries(desired))
+		set(desired: Keyed, ctx: CommitCtx): void {
+			const current = blob
+				? new Map(Object.entries(JSON.parse(blob) as Record<string, string>))
+				: new Map<string, string>()
+			const next = patchKeyed(current, desired, ctx)
+			blob = next.size ? JSON.stringify(Object.fromEntries(next)) : ''
+		},
+		removeScope(path): void {
+			const current = blob
+				? new Map(Object.entries(JSON.parse(blob) as Record<string, string>))
+				: new Map<string, string>()
+			blob = JSON.stringify(Object.fromEntries(removeKeyedScope(current, path)))
 		},
 		// Report only EXTERNAL changes; never notify your own writes or they echo back as a pull.
 		subscribe: () => () => undefined,
@@ -71,7 +87,8 @@ When the substrate is only reachable through hooks (a router), ship a `usePort()
 
 ```tsx
 import { createUrlPort, URL_SOURCE, UrlHistory, urlMetaMerge } from '@ez-kit/va-store/persist/url'
-import type { RenderScopedAdapter, SyncSourcePort } from '@ez-kit/va-store/persist'
+import { useInsertionEffect, useRef } from 'react'
+import type { RenderScopedAdapter, SyncReadSourcePort } from '@ez-kit/va-store/persist'
 
 const myRouterAdapter: RenderScopedAdapter = {
 	source: URL_SOURCE,
@@ -79,10 +96,17 @@ const myRouterAdapter: RenderScopedAdapter = {
 	defaultMeta: { history: UrlHistory.Replace },
 	usePort() {
 		const router = useMyRouter()
-		const portRef = useRef<SyncSourcePort | null>(null)
+		const renderRef = useRef(router)
+		renderRef.current = router // render seed only
+		const committedRef = useRef(router)
+		useInsertionEffect(() => {
+			committedRef.current = router
+		}, [router])
+		const portRef = useRef<SyncReadSourcePort | null>(null)
 		portRef.current ??= createUrlPort({
-			read: () => new URLSearchParams(router.search),
-			commit: (next, history) => router.navigate(`?${next}`, { replace: history === UrlHistory.Replace }),
+			read: () => new URLSearchParams(committedRef.current.search),
+			readRender: () => new URLSearchParams(renderRef.current.search),
+			commit: (next, history) => committedRef.current.navigate(`?${next}`, { replace: history === UrlHistory.Replace }),
 		})
 		return { port: portRef.current, changeKey: router.search }
 	},
@@ -93,7 +117,9 @@ Keep the port instance stable across renders (a `ref`); the provider reads `adap
 
 ## When the substrate fails
 
-A synchronous source cannot fail into the engine: the URL port never throws, and the built-in storage adapter absorbs a quota or private-mode error behind a single `console.warn`. An **async** port can — a REST call 500s, an IndexedDB transaction aborts — and a rejected `get()` or `set()` reaches your app through the persist layer's error handler, tagged with the `source` that produced it:
+Sync throws and async rejections reach the common error handler. Built-in Web Storage quota/private-mode
+failures and IndexedDB read errors are observable, with source, operation and address/addresses or scope.
+The store stays usable in memory; failed writes remain dirty and can be retried with handle.flush().
 
 ```tsx
 <StoreProvider
@@ -108,11 +134,33 @@ A synchronous source cannot fail into the engine: the URL port never throws, and
 
 Mounting `PersistProvider` directly, the same handler is its `onError` prop; on `StoreProvider` it carries the layer's name because that provider mounts two. The handler is read at call time, so a fresh closure each render costs nothing — it does not re-create the engines.
 
-Leave it unset and a rejection is swallowed, exactly as before: persistence is best-effort and the store stays the source of truth. An adapter that can recover on its own — a retry, a write queue — should still do that internally rather than push every transient failure at the application.
+Automatic operations handle rejections even without a callback. Awaited flush/reset still reject so
+callers can distinguish memory changes from confirmed persistence. The engine owns the source queue;
+adapters resolve writes only after their backend acknowledges them.
+
+If get calls ReadCtx.stageContainerRewrite, also implement rewriteContainer. The engine queues this
+dedicated operation and includes its acknowledgement in flush. It never signals whole-container
+replacement through public meta: arbitrary application metadata must not bypass partial commits or
+future-version guards. A plain adapter that does no container migration does not need this method.
+
+Full scope reset requires removeScope over the persistent namespace, including unmounted records.
+A mounted-store loop is insufficient. Version-capable adapters guard ctx.maxVersions before changing
+existing records; explicitReset permits a future-version deletion. A backend must make that check
+conditional/atomic when other clients may write concurrently. Client serialization alone does not
+prevent an old remote request from committing after a lost network response.
 
 ## Checklist
 
 - `get()` returns the substrate as `Keyed`; unknown/foreign keys you don't own should be preserved on `set`.
-- `set()` honors `ctx.diff.removed` to delete keys, and is best-effort (never throw into render); an async `set()` may reject, which surfaces as `onPersistError` rather than an unhandled rejection.
+- `set()` applies only ctx.diff.set/removed and preserves every unrelated key. Errors propagate to the engine reporter; they do not replace current memory with defaults.
 - `subscribe` reports **external** changes only — the writing context must not notify itself.
 - Async (`Promise`) returns are fine; they keep that source's engine independent of the synchronous ones.
+
+Import `SourceMutationCancelledError` from your binding's `/persist` entry to report a mutation
+proven not to have committed. The engine rejects its save and reconciles authoritative source state,
+while preserving newer user edits. Use an ordinary Error for an uncertain transport/server outcome;
+reporting proven cancellation in that case could discard required retry or correction work.
+
+The public `/persist/storage` `createWriteQueue` helper keeps the latest pending value, serializes
+writes and acknowledges a batch only after it drains. A failure rejects every waiter in that batch
+and discards unsent values; a later explicit enqueue starts a fresh attempt.

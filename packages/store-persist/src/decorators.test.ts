@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { paramNumber } from './codecs'
 import { discoverPersistFields, persistField } from './decorators'
+import { persistLocalStorage } from './storage/decorator'
 import { UrlHistory } from './url/adapter'
 import { persistUrl } from './url/decorator'
 
@@ -76,5 +77,45 @@ describe('@ez-kit/store-persist decorators', () => {
 		const urlForQ = specs.filter((s) => s.source === 'url' && s.descriptor.path[0] === 'q')
 		expect(urlForQ).toHaveLength(1)
 		expect(urlForQ[0]?.descriptor.key).toBe('child')
+	})
+
+	it('keeps delimiter-containing property/source tuples distinct through source-specific fronts', () => {
+		class Store {
+			@persistLocalStorage({ source: 'c' }) ['a::b'] = 1
+			@persistUrl({ source: 'b::c' }) a = 2
+		}
+		const specs = discoverPersistFields(new Store())
+		expect(specs.map(({ source, descriptor }) => [source, descriptor.path])).toEqual([
+			['c', ['a::b']],
+			['b::c', ['a']],
+		])
+		expect(specs.map(({ descriptor }) => descriptor.parser.parse('3'))).toEqual([3, 3])
+	})
+
+	it('preserves subclass overrides without hiding a different colliding tuple', () => {
+		class Base {
+			@persistField({ source: 'c', key: 'first-base' }) ['a::b'] = 1
+			@persistField({ source: 'b::c', key: 'second-base' }) a = 2
+		}
+		class Child extends Base {
+			@persistField({ source: 'b::c', key: 'second-child' }) a = 3
+		}
+		const specs = discoverPersistFields(new Child())
+		expect(specs).toHaveLength(2)
+		expect(specs.find(({ source }) => source === 'c')?.descriptor.key).toBe('first-base')
+		expect(specs.find(({ source }) => source === 'b::c')?.descriptor.key).toBe('second-child')
+	})
+
+	it('keeps quotes, slashes and empty-default source normalization stable', () => {
+		class Store {
+			@persistField({ key: 'default' })
+			@persistField({ source: '', key: 'explicit-empty' })
+			['"\\::'] = 1;
+			@persistField({ source: '"\\::' }) ['other::field'] = 2
+		}
+		const specs = discoverPersistFields(new Store())
+		expect(specs).toHaveLength(2)
+		expect(specs.find(({ source }) => source === '"\\::')?.descriptor.path).toEqual(['other::field'])
+		expect(specs.filter(({ descriptor }) => descriptor.path[0] === '"\\::')).toHaveLength(1)
 	})
 })

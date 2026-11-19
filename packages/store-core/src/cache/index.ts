@@ -25,4 +25,5 @@ export type {
 	StoreCacheOptions,
 	CachedStoreOptions,
 	CreateOptions,
+	ObserveOptions,
 } from './types'

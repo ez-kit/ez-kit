@@ -16,6 +16,8 @@ export type InstanceMeta = {
 	storeId: StoreId
 	observerCount: number
 	gcTime: number
+	/** Explicit removal waits for the last committed observer, then ignores the GC delay. */
+	evictOnIdle: boolean
 	/**
 	 * Pending eviction timer, live only while the entry is unobserved. It is the sole authority on
 	 * the deadline — there is deliberately no wall-clock idle stamp to cross-check it against, since

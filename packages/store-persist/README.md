@@ -1,15 +1,15 @@
 # @ez-kit/store-persist
 
 The persist engine behind [`@ez-kit/va-store`](../va-store) and [`@ez-kit/zu-store`](../zu-store):
-URL, `localStorage` / `sessionStorage` and IndexedDB as state, with one coalesced commit per flush
-and an equality guard that breaks the write → read → write loop.
+URL, `localStorage` / `sessionStorage` and IndexedDB as state, with scoped records, automatic
+restoration, acknowledged mutation ordering and guards against write → read → write loops.
 
 **You normally do not install this package directly.** Each binding package re-exports the whole
 surface with its own store port already bound, so an app writes one import path:
 
 ```ts
-import { withPersist, paramString, StoreProvider } from '@ez-kit/va-store' // Valtio
-import { withPersist, paramString, StoreProvider } from '@ez-kit/zu-store' // Zustand
+import { withPersist, paramString } from '@ez-kit/va-store/persist' // Valtio
+import { withPersist, paramString } from '@ez-kit/zu-store/persist' // Zustand
 ```
 
 See the [va-store persist docs](https://ez-kit-docs.vercel.app/docs/va-store/persist) for the full
@@ -18,10 +18,13 @@ API — fields, codecs, adapters, migrations, `useHydrated`, the `$url` / `$pers
 **Stability.** It is published because both bindings depend on it at runtime — it will appear in your
 lock file whether or not you import it. Its API is **public, not internal**: each binding re-exports
 every subpath verbatim, so a change here is a change to `@ez-kit/zu-store` and `@ez-kit/va-store`'s
-own surface. The four store packages are therefore versioned together and release together, and this
-package's exports — `./internals` included — are frozen on the same terms as theirs. Import it
-directly only when writing a binding for another store manager or a custom source adapter;
-everything else goes through a binding.
+own surface. The four store packages version independently; the binding's dependency ranges define compatibility.
+`./internals` is an assembly surface without a consumer semver promise and is not re-exported by bindings.
+Applications and custom source adapters use their binding's public persist entries.
+
+The scoped persistence release is an explicitly approved **breaking minor** exception. It removes
+`zodParam`, adds automatic restoration/status and makes addresses and patch semantics standard,
+without a mode switch. See [MIGRATION.md](./MIGRATION.md) for upgrade, pinning and rollback guidance.
 
 ## What this package is for
 
@@ -72,9 +75,81 @@ resolution — are on the `@ez-kit/store-persist/internals` subpath.
 | `./storage`                        | `localStorage` / `sessionStorage` / IndexedDB adapters and field fronts |
 | `./url`                            | the URL source: driver contract, `persistUrl` / `urlField`              |
 | `./url/react-router`, `./url/next` | router adapters (peer-gated)                                            |
-| `./validators/zod`                 | Zod-validated parsers                                                   |
 | `./testing`                        | `createFakePersistAdapter` — an in-memory substrate for tests           |
 
 ## License
 
 MIT
+
+## Source policy and control
+
+Shared restoration options can be overridden by effective source name:
+
+```ts
+withPersist({
+	restore: {
+		timeoutMs: 2000,
+		sources: { draftsApi: { timeoutMs: 10000, externalChanges: 'apply' } },
+	},
+	fields,
+})
+```
+
+Each source starts automatically with its effective policy; joining a pending restore keeps its
+existing deadline. Field helpers/decorators accept source aliases and preserve unknown decoder plus
+typed-validator composition. Explicit handle names and reset paths are validated before mutation.
+Bindings keep independent throttle windows. Flush acknowledges applicable record and namespace
+operations, including staged container rewrites; source errors retain independent scope boundaries.
+
+Custom adapters that stage container migration implement optional `rewriteContainer(values)`;
+public mutation metadata never authorizes whole-container replacement. Built-in IndexedDB adapters
+provision multiple object stores within one database and cooperate with versionchange upgrades.
+
+Existing throttleMs/clearOnDefault are shared write defaults. Override individual sources with
+`write: { sources: { draftsApi: { throttleMs: 500, clearOnDefault: false } } }`; missing members
+inherit, and unknown source aliases fail before I/O. Set `restore.sources.draftsApi.timeoutMs` to
+null for unlimited waiting despite a finite shared timeout. `handle.restore` uses timeout-only
+RestoreCallOptions; externalChanges remains in the lifecycle RestoreOptions.
+
+All bindings capture defaults before any source restores. Retained handles cannot acknowledge
+unsaved detached work; disposed reset operations reject promptly. The IndexedDB adapter has no
+automatic cross-tab notifications: use explicit restore to read a foreign write.
+
+Render-scoped ports may implement pure getRenderSnapshot independently of committed get/set;
+SyncReadSourcePort supports synchronous reads with asynchronous write acknowledgement, while
+SyncSourcePort remains fully synchronous. Retired address generations cannot replay old unsent
+writes over new owners, and edits before connection retain dirty intent. Cross-realm Promises
+preserve the same ACK semantics. Array codecs compose semantic item equality and frame otherwise
+lossy delimiter/empty-item cases while retaining legacy decoding; numeric input must be finite.
+
+JSON equality follows JSON serialization, including Date/toJSON values, nested containers and own
+special keys such as `__proto__`. A validator may return Date values: edits are saved and returning
+to the serialized default clears the override. Decorator field/source pairs use structural identity;
+property names and aliases containing `::` remain independent, including inherited overrides.
+
+A proven cancelled URL mutation drops only its unsent external correction, avoiding a Back/Forward
+write-back and repeated loader execution. Newer user edits remain pending; uncertain writes still
+retain the correction needed if the original mutation committed.
+
+Default snapshots preserve ordinary data descriptors, non-enumerable toJSON, nested data prototypes
+and Date behavior without invoking schema validation on application defaults. Opaque private/internal
+slots cannot be reconstructed generically; an unfaithful serialized snapshot fails before source I/O.
+
+Custom adapters can import SourceMutationCancelledError from either binding's persist entry. Throw it
+only when a mutation is proven not to have committed; a generic failure retains retryable intent.
+The public createWriteQueue helper serializes reentrant and acknowledgement-boundary enqueues;
+a failed batch rejects all its waiters and discards unsent values before a later explicit retry.
+
+React Router query writes preserve arbitrary location.state, including primitives, arrays and null.
+Own operations use observed location keys, separately from user state. Unsupported router identity
+observation fails explicitly; an uncertain delayed publication is not reported as proven cancellation.
+
+Concurrent restores cannot use stale full container snapshots to undo record updates or deletions.
+When another source supplies a shared field's visible value, a migration still writes the current
+source's own migrated value. An omitted invalid Date default permits restoration of a valid Date.
+
+Direct IndexedDB reads apply any container migration atomically with writes to the same storage
+area. Partial reset retains edits to separate fields made by synchronous application subscribers.
+The JSON codec omits undefined values and keeps explicit JSON null. Next.js query saves after Back
+follow the restored browser route, including its base path. A write can succeed while an older
+restore failure remains visible in status.

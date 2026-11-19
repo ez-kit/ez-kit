@@ -53,10 +53,6 @@
 			"types": "./dist/url/next.d.ts",
 			"import": "./dist/url/next.js"
 		},
-		"./validators/zod": {
-			"types": "./dist/validators/zod.d.ts",
-			"import": "./dist/validators/zod.js"
-		},
 		"./testing": {
 			"types": "./dist/testing/index.d.ts",
 			"import": "./dist/testing/index.js"
@@ -80,56 +76,49 @@
 	"size-limit": [
 		{
 			"path": "dist/index.js",
-			"limit": "5250 B",
+			"limit": "13500 B",
 			"ignore": [
 				"@ez-kit/store-core"
 			]
 		},
 		{
 			"path": "dist/storage/index.js",
-			"limit": "1750 B",
+			"limit": "2700 B",
 			"ignore": [
 				"@ez-kit/store-core"
 			]
 		},
 		{
 			"path": "dist/url/index.js",
-			"limit": "620 B",
+			"limit": "1250 B",
 			"ignore": [
 				"@ez-kit/store-core"
 			]
 		},
 		{
 			"path": "dist/url/react-router.js",
-			"limit": "590 B",
+			"limit": "2375 B",
 			"ignore": [
 				"@ez-kit/store-core"
 			]
 		},
 		{
 			"path": "dist/url/next.js",
-			"limit": "650 B",
-			"ignore": [
-				"@ez-kit/store-core"
-			]
-		},
-		{
-			"path": "dist/validators/zod.js",
-			"limit": "250 B",
+			"limit": "1375 B",
 			"ignore": [
 				"@ez-kit/store-core"
 			]
 		},
 		{
 			"path": "dist/testing/index.js",
-			"limit": "600 B",
+			"limit": "1075 B",
 			"ignore": [
 				"@ez-kit/store-core"
 			]
 		},
 		{
 			"path": "dist/internals.js",
-			"limit": "4 KB",
+			"limit": "11650 B",
 			"ignore": [
 				"@ez-kit/store-core"
 			]
@@ -148,17 +137,13 @@
 	"peerDependencies": {
 		"next": ">=14.0.0",
 		"react": ">=18.0.0",
-		"react-router": ">=6.0.0",
-		"zod": ">=3.0.0"
+		"react-router": ">=6.0.0"
 	},
 	"peerDependenciesMeta": {
 		"next": {
 			"optional": true
 		},
 		"react-router": {
-			"optional": true
-		},
-		"zod": {
 			"optional": true
 		}
 	},

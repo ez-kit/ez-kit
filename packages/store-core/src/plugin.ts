@@ -22,4 +22,8 @@ export type PluginContext = {
 export type StorePlugin<T = unknown> = {
 	name: string
 	setup(instance: T, ctx: PluginContext): PluginCleanup
+	/** Validate birth-scoped services on a cache hit without repeating setup. */
+	validateContext?(instance: T, ctx: PluginContext): void
+	/** Optional pure synchronous render seed (SSR-safe). Setup/observer wiring stays client-only. */
+	seedRender?(instance: T, ctx: PluginContext): void
 }

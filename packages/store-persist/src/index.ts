@@ -18,7 +18,7 @@
  */
 
 // --- persist plugin + app-level engines service ---
-export { bindPersist, persist, type PersistPluginOptions, useHydrated } from './plugin'
+export { bindPersist, persist, type PersistPluginOptions, useHydrated, usePersistStatus } from './plugin'
 export { PERSIST_ENGINES, type PersistEngines } from './service'
 export { applyPersist } from './with-persist'
 
@@ -27,19 +27,37 @@ export {
 	type AmbientAdapter,
 	type EngineMap,
 	type PersistAdapter,
+	type PersistAdapters,
+	type NamedPersistAdapter,
 	type PersistMount,
 	PersistProvider,
 	type PersistProviderProps,
 	type RenderScopedAdapter,
 	usePersistEngines,
+	usePersistence,
 } from './provider'
 
 // --- Per-source control handles: typed accessors ($url / $persist) ---
-export { persistHandle, type PersistHandle, type PersistHandles, type UrlHandle, urlHandle } from './handle'
+export {
+	persistHandle,
+	type PersistFieldPath,
+	type PersistHandle,
+	type PersistHandles,
+	type UrlHandle,
+	urlHandle,
+} from './handle'
 
 // --- Decorator + accessor fronts (field declaration) ---
-export { persistField, type PersistFieldOptions } from './decorators'
-export { type AccessorFieldOptions, type FieldBuilder, type FieldSpec, type FieldsBuilder } from './accessor'
+export { persistField, type PersistFieldDecorator, type PersistFieldOptions } from './decorators'
+export {
+	type AccessorFieldOptions,
+	type FieldBuilder,
+	type FieldSpec,
+	type FieldsBuilder,
+	type FieldValueOptions,
+	type ValidatedAccessorFieldOptions,
+	type ValidatedValueOptions,
+} from './accessor'
 
 // --- Codecs ---
 export { type AnyCodec, type Codec } from './codecs/codec'
@@ -65,6 +83,24 @@ export type {
 	MetaMerge,
 	Parser,
 	PersistOptions,
+	PersistWriteOptions,
 	SourcePort,
 	SyncSourcePort,
+	SyncReadSourcePort,
 } from './types'
+
+export type {
+	PersistSchema,
+	PersistRecordStatus,
+	PersistStatus,
+	PersistRestoreOptions,
+	RestoreOptions,
+	RestoreCallOptions,
+	RestoreResult,
+	RestoreState,
+	ReadCtx,
+	PersistErrorContext,
+	PersistOperation,
+} from './types'
+export { FutureVersionError, encodeRecord, decodeRecord } from './record'
+export { SourceMutationCancelledError } from './source-errors'

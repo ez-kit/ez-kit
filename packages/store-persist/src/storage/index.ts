@@ -31,3 +31,9 @@ export {
 	type IndexedDbAdapterOptions,
 } from './indexed-db'
 export { createWriteQueue, type WriteQueue } from './write-queue'
+
+export { patchKeyed, removeKeyedScope } from './patch'
+
+// Named public types keep inferred helper/decorator declarations portable for consumers.
+export type { FieldValueOptions, ValidatedAccessorFieldOptions, ValidatedValueOptions } from '../accessor'
+export type { PersistFieldDecorator } from '../decorators'

@@ -3,12 +3,12 @@ import { readPath } from '@ez-kit/store-core'
 import { resolveParser } from './codecs/auto'
 
 import type { PersistSpec } from './spec'
-import type { FieldDescriptor, Parser } from './types'
+import type { FieldDescriptor, Parser, PersistSchema } from './types'
 
 /** Per-field options for the accessor front — mirrors the base decorator's options. */
-export type AccessorFieldOptions<V, M = unknown> = {
+export type AccessorOptions<M> = {
 	/** Which source engine this field syncs to (e.g. `'url'`, `'localStorage'`). */
-	source: string
+	source?: string
 	/** Override the leaf segment of the substrate key (relative) — defaults to the last path segment. */
 	key?: string
 	/** Pin to an exact top-level key, ignoring ancestor segments (granular packing only). */
@@ -16,10 +16,18 @@ export type AccessorFieldOptions<V, M = unknown> = {
 	/** Prefix prepended to the substrate key (e.g. a per-store namespace). */
 	prefix?: string
 	/** Explicit parser. Omit to auto-resolve from the field's runtime value at bind time. */
-	parser?: Parser<V>
 	/** Opaque per-field metadata forwarded to the adapter. */
 	meta?: M
 }
+
+/** An unknown transport decoder becomes typed only through its required validator. */
+export type ValidatedValueOptions<V> = {
+	parser?: Parser<unknown>
+	schema: PersistSchema<V> & { validate(value: unknown): V }
+}
+export type FieldValueOptions<V> = { parser?: Parser<V>; schema?: PersistSchema<V> } | ValidatedValueOptions<V>
+export type AccessorFieldOptions<V, M = unknown> = AccessorOptions<M> & FieldValueOptions<V>
+export type ValidatedAccessorFieldOptions<V, M = unknown> = AccessorOptions<M> & ValidatedValueOptions<V>
 
 /** A field declaration produced by the builder: a path plus its options. */
 export type FieldSpec = {
@@ -28,7 +36,7 @@ export type FieldSpec = {
 }
 
 /** Declares a persisted field from a property-access selector; the parser type follows the leaf. */
-export type FieldBuilder<T> = <S>(select: (state: T) => S, options: AccessorFieldOptions<S>) => FieldSpec
+export type FieldBuilder<T> = <S>(select: (state: T) => S, options: AccessorFieldOptions<NoInfer<S>>) => FieldSpec
 
 /** Builds the field list for a store, given a type-aware `field` declarer. */
 export type FieldsBuilder<T> = (field: FieldBuilder<T>) => FieldSpec[]
@@ -71,6 +79,7 @@ function toSpec(store: object, spec: FieldSpec): PersistSpec {
 	if (options.meta !== undefined) {
 		descriptor.meta = options.meta
 	}
+	if (options.schema !== undefined) descriptor.schema = options.schema
 	return { source: options.source, descriptor }
 }
 

@@ -1,163 +1,94 @@
-import { PACKAGE_TAG } from '../package-tag'
+import { packBlob, runMigration, STORAGE_VERSION } from './blob'
+import { patchKeyed, removeKeyedScope } from './patch'
 
-import { type MigrationConfig, packBlob, runMigration, STORAGE_VERSION } from './blob'
-
+import type { MigrationConfig } from './blob'
 import type { AmbientAdapter } from '../provider'
-import type { Keyed, SyncSourcePort } from '../types'
+import type { CommitCtx, Keyed, ReadCtx, SyncSourcePort } from '../types'
 
-/** Source id for the localStorage engine, shared by the adapter and the `persistLocalStorage` wrapper. */
 export const LOCAL_STORAGE_SOURCE = 'localStorage'
-/** Source id for the sessionStorage engine. */
 export const SESSION_STORAGE_SOURCE = 'sessionStorage'
-
-/** Default storage key under which a store's blob is written when none is configured. */
 export const DEFAULT_STORAGE_KEY = 'ez-kit'
+export type StorageMeta = { storageKey?: string }
+export type StorageAdapterOptions = MigrationConfig & { storageKey?: string }
 
-/** Per-field storage metadata, packed into `FieldDescriptor.meta` by the storage wrappers. */
-export type StorageMeta = {
-	/** Preferred blob key for this field's store (informational; the adapter owns the authoritative key). */
-	storageKey?: string
-}
-
-/** Read the storage area, treating any access error (private mode, sandboxed iframe, SSR) as absent. */
-function safeArea(area: () => Storage | null): Storage | null {
-	try {
-		return area()
-	} catch {
-		return null
-	}
-}
-
-/**
- * Build a {@link SourcePort} over a Web Storage area, packing the binding's {@link Keyed} into a single
- * JSON blob (`{ v, s }`) under one key. Every read/write is guarded: unavailable storage and quota
- * errors warn at most once and never throw, and a corrupt blob falls back to defaults (clearing the key).
- * On the server (no area) `get()` returns an empty map and `set()` is a no-op.
- */
+/** Synchronous failures propagate to the engine's shared reporter instead of becoming empty reads. */
 export function createStoragePort(
 	area: () => Storage | null,
 	storageKey: string,
 	migration: MigrationConfig = {},
 ): SyncSourcePort {
-	const currentVersion = migration.version ?? STORAGE_VERSION
-	let warned = false
-	const warnOnce = (error: unknown): void => {
-		if (!warned) {
-			warned = true
-			// Documented behavior: storage failures degrade silently after one diagnostic.
-			console.warn(`${PACKAGE_TAG} storage unavailable, continuing without persistence`, error)
-		}
+	const version = migration.version ?? STORAGE_VERSION
+	function write(storage: Storage, values: Keyed): void {
+		if (values.size) storage.setItem(storageKey, JSON.stringify(packBlob(values, version)))
+		else storage.removeItem(storageKey)
 	}
-
-	/** Persist the keyed values under the current version, removing the key when empty. Best-effort. */
-	const writeKeyed = (storage: Storage, keyed: Keyed): void => {
+	function read(storage: Storage): { keyed: Keyed; rewrite: boolean } {
+		const raw = storage.getItem(storageKey)
+		if (raw === null) return { keyed: new Map(), rewrite: false }
+		let value: unknown
 		try {
-			if (keyed.size === 0) {
-				storage.removeItem(storageKey)
-			} else {
-				storage.setItem(storageKey, JSON.stringify(packBlob(keyed, currentVersion)))
-			}
-		} catch (error) {
-			warnOnce(error)
+			value = JSON.parse(raw)
+		} catch {
+			return { keyed: new Map(), rewrite: true }
 		}
+		return runMigration(value, migration)
 	}
-
 	return {
-		get(): Keyed {
-			const storage = safeArea(area)
-			if (!storage) {
-				return new Map()
+		capabilities: { recordVersions: true },
+		get(context?: ReadCtx): Keyed {
+			const storage = area()
+			if (!storage) return new Map()
+			const { keyed, rewrite } = read(storage)
+			if (rewrite) {
+				if (context) context.stageContainerRewrite?.(keyed)
+				else write(storage, keyed)
 			}
-			let raw: string | null
-			try {
-				raw = storage.getItem(storageKey)
-			} catch (error) {
-				warnOnce(error)
-				return new Map()
-			}
-			if (raw === null) {
-				return new Map()
-			}
-			try {
-				const { keyed, rewrite } = runMigration(JSON.parse(raw), migration)
-				if (rewrite) {
-					writeKeyed(storage, keyed)
-				}
-				return keyed
-			} catch {
-				// Corrupt blob → defaults; clear the bad key so it can't poison future reads.
-				try {
-					storage.removeItem(storageKey)
-				} catch {
-					// Ignore: removal is best-effort cleanup.
-				}
-				return new Map()
-			}
+			return keyed
 		},
-
-		set(desired: Keyed): void {
-			const storage = safeArea(area)
-			if (!storage) {
-				return
-			}
-			writeKeyed(storage, desired)
+		set(desired: Keyed, context: CommitCtx): void {
+			const storage = area()
+			if (!storage) return
+			write(storage, patchKeyed(read(storage).keyed, desired, context))
 		},
-
-		subscribe(onChange: () => void): () => void {
-			if (typeof window === 'undefined') {
-				return () => undefined
+		rewriteContainer(values): void {
+			const storage = area()
+			if (storage) write(storage, values)
+		},
+		removeScope(path): void {
+			const storage = area()
+			if (storage) write(storage, removeKeyedScope(read(storage).keyed, path))
+		},
+		subscribe(onChange) {
+			if (typeof window === 'undefined') return () => undefined
+			const listener = (event: StorageEvent): void => {
+				if ((event.key === null || event.key === storageKey) && event.storageArea === area()) onChange()
 			}
-			const handler = (event: StorageEvent): void => {
-				// `storage` fires only in OTHER tabs, never the writer — so this can't echo back to itself.
-				// A `null` key means `clear()`; otherwise react only to our own key and storage area.
-				if (event.storageArea !== safeArea(area)) {
-					return
-				}
-				if (event.key !== null && event.key !== storageKey) {
-					return
-				}
-				onChange()
-			}
-			window.addEventListener('storage', handler)
+			window.addEventListener('storage', listener)
 			return () => {
-				window.removeEventListener('storage', handler)
+				window.removeEventListener('storage', listener)
 			}
 		},
 	}
 }
 
-const localStorageArea = (): Storage | null => (typeof window === 'undefined' ? null : window.localStorage)
-const sessionStorageArea = (): Storage | null => (typeof window === 'undefined' ? null : window.sessionStorage)
-
-/** Options shared by the storage adapter factories (key + schema versioning). */
-export type StorageAdapterOptions = MigrationConfig & {
-	/** Blob key under which this store's values are written. Defaults to {@link DEFAULT_STORAGE_KEY}. */
-	storageKey?: string
-}
-
-function migrationOf(options: StorageAdapterOptions): MigrationConfig {
-	const config: MigrationConfig = {}
-	if (options.version !== undefined) {
-		config.version = options.version
-	}
-	if (options.migrate !== undefined) {
-		config.migrate = options.migrate
-	}
-	return config
-}
-
-/** Ambient adapter persisting a store to `localStorage` (client-only; inert on the server). */
 export function localStorageAdapter(options: StorageAdapterOptions = {}): AmbientAdapter {
-	return {
-		source: LOCAL_STORAGE_SOURCE,
-		port: createStoragePort(localStorageArea, options.storageKey ?? DEFAULT_STORAGE_KEY, migrationOf(options)),
-	}
+	const storageKey = options.storageKey ?? DEFAULT_STORAGE_KEY
+	const port = createStoragePort(
+		() => (typeof window === 'undefined' ? null : window.localStorage),
+		storageKey,
+		options,
+	)
+	port.identity = `localStorage:${storageKey}`
+	return { source: LOCAL_STORAGE_SOURCE, port }
 }
 
-/** Ambient adapter persisting a store to `sessionStorage` (client-only; inert on the server). */
 export function sessionStorageAdapter(options: StorageAdapterOptions = {}): AmbientAdapter {
-	return {
-		source: SESSION_STORAGE_SOURCE,
-		port: createStoragePort(sessionStorageArea, options.storageKey ?? DEFAULT_STORAGE_KEY, migrationOf(options)),
-	}
+	const storageKey = options.storageKey ?? DEFAULT_STORAGE_KEY
+	const port = createStoragePort(
+		() => (typeof window === 'undefined' ? null : window.sessionStorage),
+		storageKey,
+		options,
+	)
+	port.identity = `sessionStorage:${storageKey}`
+	return { source: SESSION_STORAGE_SOURCE, port }
 }

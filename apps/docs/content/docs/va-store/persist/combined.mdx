@@ -62,6 +62,8 @@ createContextStore(() =>
 
 ## First-present-wins on cold start
 
+For ambient updates at runtime, this example explicitly enables `restore.externalChanges: 'apply'`; ambient sources otherwise ignore external updates.
+
 When several sources can fill the same field, the rule is **first-present-wins on cold start, last-arrival-wins at runtime**:
 
 - **Cold start** — a source writes an incoming value into a field only if that field still holds its default. The URL connects first (synchronous, in render) and sets `q`; storage then fills only the fields the URL left at default. A shared `?q=boots` link is **never** clobbered by a stale localStorage value — even an async IndexedDB value that resolves later can't win.

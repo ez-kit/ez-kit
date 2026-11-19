@@ -1,4 +1,4 @@
-import { getChangedControlledEntries, pickControlledKeys } from '@ez-kit/store-core'
+import { getChangedControlledEntries, pickControlledKeys, serializeStoreId } from '@ez-kit/store-core'
 import { useCapabilities, useServices } from '@ez-kit/store-core/react'
 import { createContext, type PropsWithChildren, type ReactElement, useContext, useLayoutEffect, useRef } from 'react'
 import { snapshot, subscribe as subscribeValtio, useSnapshot as useValtioSnapshot, type Snapshot } from 'valtio'
@@ -45,6 +45,7 @@ type ProviderProps<TDefaultValue, TState extends object> = (undefined extends TD
 	: { defaultValue: TDefaultValue }) & {
 	value?: Partial<TState>
 	onValueChange?: (value: Partial<TState>) => void
+	address?: StoreId
 }
 
 type StoreProps<TState extends object> = {
@@ -128,6 +129,15 @@ export function createContextStore<TState extends object, TDefaultValue = undefi
 	const storeId: StoreId = { path: EMPTY_PATH, name, id: SINGLETON_ID }
 
 	function Provider(props: PropsWithChildren<ProviderProps<TDefaultValue, TState>>): ReactElement {
+		return (
+			<ProviderInner
+				key={serializeStoreId(props.address ?? storeId)}
+				{...props}
+			/>
+		)
+	}
+
+	function ProviderInner(props: PropsWithChildren<ProviderProps<TDefaultValue, TState>>): ReactElement {
 		const { children, defaultValue, value, onValueChange } = props as PropsWithChildren<{
 			defaultValue: TDefaultValue
 			value?: Partial<TState>
@@ -161,7 +171,7 @@ export function createContextStore<TState extends object, TDefaultValue = undefi
 			}
 		}
 
-		useCapabilities(store, services, storeId)
+		useCapabilities(store, services, props.address ?? storeId)
 
 		useLayoutEffect(() => {
 			const isInitialSync = !hasSyncedInitialRef.current
