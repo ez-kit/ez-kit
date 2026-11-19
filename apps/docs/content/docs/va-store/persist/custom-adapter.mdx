@@ -155,3 +155,12 @@ prevent an old remote request from committing after a lost network response.
 - `set()` applies only ctx.diff.set/removed and preserves every unrelated key. Errors propagate to the engine reporter; they do not replace current memory with defaults.
 - `subscribe` reports **external** changes only — the writing context must not notify itself.
 - Async (`Promise`) returns are fine; they keep that source's engine independent of the synchronous ones.
+
+Import `SourceMutationCancelledError` from your binding's `/persist` entry to report a mutation
+proven not to have committed. The engine rejects its save and reconciles authoritative source state,
+while preserving newer user edits. Use an ordinary Error for an uncertain transport/server outcome;
+reporting proven cancellation in that case could discard required retry or correction work.
+
+The public `/persist/storage` `createWriteQueue` helper keeps the latest pending value, serializes
+writes and acknowledges a batch only after it drains. A failure rejects every waiter in that batch
+and discards unsent values; a later explicit enqueue starts a fresh attempt.

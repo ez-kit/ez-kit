@@ -5,7 +5,7 @@ import { paramJson, persistHandle, PersistProvider, withPersist as zuPersist } f
 import { patchKeyed } from '@ez-kit/zu-store/persist/storage'
 import { act, render } from '@testing-library/react'
 import { proxy } from 'valtio'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { createStore } from 'zustand/vanilla'
 
 import type { CommitCtx, Keyed, ReadCtx } from '@ez-kit/zu-store/persist'
@@ -38,6 +38,7 @@ function fixture<T extends object>(manager: 'zustand' | 'valtio', initial: T, va
 				current.setState({ value })
 			},
 			flush: () => persistHandle(current, 'api').flush(),
+			reset: () => persistHandle(current, 'api').reset(),
 		}
 	}
 	const panel = vaContext(
@@ -66,6 +67,7 @@ function fixture<T extends object>(manager: 'zustand' | 'valtio', initial: T, va
 			current.value = value
 		},
 		flush: () => persistHandle(current, 'api').flush(),
+		reset: () => persistHandle(current, 'api').reset(),
 	}
 }
 function source(initial: object) {
@@ -79,7 +81,7 @@ function source(initial: object) {
 			saved = patchKeyed(saved, desired, context)
 		},
 	}
-	return { port, values: () => [...saved.values()] }
+	return { port, values: () => [...saved.values()], saved: () => saved }
 }
 function jsonObject(text: string): Record<string, unknown> {
 	return JSON.parse(text) as Record<string, unknown>
@@ -131,4 +133,77 @@ describe('JSON equality through public persistence bindings', () => {
 			expect(backend.values()).toEqual([])
 		},
 	)
+})
+
+function amount(n: number) {
+	const value = { n }
+	Object.defineProperty(value, 'toJSON', {
+		value(this: { n: number }) {
+			return this.n
+		},
+	})
+	return value
+}
+class NestedAmount {
+	constructor(public cents: number) {}
+	toJSON() {
+		return this.cents
+	}
+}
+
+describe('custom serialized defaults through public bindings', () => {
+	for (const manager of ['zustand', 'valtio'] as const) {
+		it(`${manager} preserves non-enumerable toJSON for restore, clear and reset`, async () => {
+			const validate = vi.fn((raw: unknown) => amount(Number(raw)))
+			const backend = source(amount(1))
+			const target = fixture(manager, amount(0), validate)
+			const view = render(
+				<PersistProvider adapters={{ api: { port: backend.port } }}>{target.content}</PersistProvider>,
+			)
+			expect(target.get().n).toBe(1)
+			expect(validate).toHaveBeenCalledTimes(1)
+			await act(async () => {
+				target.set(amount(2))
+				await target.flush()
+			})
+			expect([...backend.saved().values()]).toEqual(['2'])
+			await act(async () => {
+				target.set(amount(0))
+				await target.flush()
+			})
+			expect(backend.saved().size).toBe(0)
+			await act(async () => {
+				target.set(amount(3))
+				await target.flush()
+				await target.reset()
+			})
+			expect(target.get().n).toBe(0)
+			expect(backend.saved().size).toBe(0)
+			expect(validate).toHaveBeenCalledTimes(1)
+			view.unmount()
+		})
+		it(`${manager} preserves a nested data serializer without sharing reset data`, async () => {
+			const initial = { amount: new NestedAmount(0) }
+			const backend = source({ amount: new NestedAmount(1) })
+			const target = fixture(manager, initial, (raw) => ({
+				amount: new NestedAmount((raw as { amount: number }).amount),
+			}))
+			const view = render(
+				<PersistProvider adapters={{ api: { port: backend.port } }}>{target.content}</PersistProvider>,
+			)
+			expect(target.get().amount.cents).toBe(1)
+			await act(async () => {
+				target.set({ amount: new NestedAmount(2) })
+				await target.flush()
+			})
+			expect([...backend.saved().values()]).toEqual(['{"amount":2}'])
+			await act(async () => {
+				await target.reset()
+			})
+			expect(target.get().amount).not.toBe(initial.amount)
+			expect(target.get().amount.toJSON()).toBe(0)
+			expect(backend.saved().size).toBe(0)
+			view.unmount()
+		})
+	}
 })

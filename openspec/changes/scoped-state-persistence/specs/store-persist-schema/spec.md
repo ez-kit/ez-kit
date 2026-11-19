@@ -211,3 +211,25 @@ mistaken for its default because canonicalization discarded serializable content
 
 - **WHEN** JSON containers differ only in property insertion order at arbitrary array/object depth
 - **THEN** canonical equality treats their serialized values consistently
+
+### Requirement: Default snapshots preserve supported data serialization
+
+Default snapshots MUST preserve supported ordinary data descriptors, toJSON behavior and nested data
+prototypes without newly invoking schema validation on application defaults. Snapshot serialization
+MUST remain faithful to the original supported default for restoration, reset and clearOnDefault.
+Unsupported opaque state MUST fail before source I/O rather than causing destructive invalidation.
+
+#### Scenario: A plain default declares non-enumerable toJSON
+
+- **WHEN** parser and validator round-trip that value and storage contains a different valid value
+- **THEN** the original default remains eligible for restoration and edited values can be cleared or reset
+
+#### Scenario: A plain default contains a nested data serializer
+
+- **WHEN** a nested ordinary data prototype supplies toJSON
+- **THEN** its snapshot retains the same serialization and independent reset data
+
+#### Scenario: The application default does not pass the incoming-data validator
+
+- **WHEN** the instance captures an intentionally empty application default
+- **THEN** capture does not newly invoke validation or reject that default for an incoming-data rule

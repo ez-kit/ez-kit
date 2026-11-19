@@ -48,3 +48,10 @@ Follow actual JSON serialization for equality, preserve special keys and decorat
 and release all entries when their owning cache container unmounts. Share transactional setup and
 failure-isolated reverse cleanup across cached and ordinary stores. Proven URL cancellation discards
 only obsolete external corrections, preserving newer edits and avoiding Back/Forward loader echoes.
+
+Keep mounted cache entries and capabilities working after explicit remove/clear until the final
+observer leaves, with separate forced container disposal. Make public write queue acknowledgement
+boundaries atomic. Preserve arbitrary React Router history state using read-only location-key
+observation and explicit unsupported-identity diagnostics. Preserve serializable default data
+snapshots without invoking validators, and publicly export proven no-commit cancellation to custom
+source adapters through both bindings.

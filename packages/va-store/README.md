@@ -222,3 +222,10 @@ Write defaults remain throttleMs/clearOnDefault; write.sources overrides them pe
 alias. Use restore.sources[alias].timeoutMs = null to disable an inherited deadline. Explicit
 handle.restore accepts RestoreCallOptions (timeoutMs only); configure externalChanges on the
 source lifecycle. IndexedDB cross-tab updates still require explicit restore.
+
+Explicit cache remove/clear keeps mounted instances and persistence active until their last Provider
+leaves, then overrides keepalive. Container unmount forcibly releases every entry. Default snapshots
+preserve supported data serializers without running incoming-data validation; unsupported opaque
+serialization fails before I/O. React Router preserves arbitrary location.state using read-only
+location-key observation with explicit synchronous-publication requirements. Custom sources can
+import SourceMutationCancelledError from this package's persist entry to report proven non-commit.

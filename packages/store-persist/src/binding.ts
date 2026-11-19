@@ -47,13 +47,23 @@ export type RecordState = {
 /** Shared across source bindings: applying one source is not a user edit in another. */
 export const systemWrites = new WeakSet()
 
-export function cloneDefault(value: unknown): unknown {
-	if (value instanceof Date) return new Date(value.getTime())
-	if (Array.isArray(value)) return value.map(cloneDefault)
-	if (value !== null && typeof value === 'object') {
-		return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, cloneDefault(item)]))
+/** Snapshot data without enumerating away serializer methods, accessors or nested data prototypes. */
+export function cloneDefault(value: unknown, seen = new WeakMap<object, object>()): unknown {
+	if (value === null || typeof value !== 'object') return value
+	const previous = seen.get(value)
+	if (previous) return previous
+	const prototype = Object.getPrototypeOf(value) as object | null
+	const copy: object =
+		value instanceof Date ? new Date(value.getTime()) : Array.isArray(value) ? [] : (Object.create(prototype) as object)
+	Object.setPrototypeOf(copy, prototype)
+	seen.set(value, copy)
+	for (const key of Reflect.ownKeys(value)) {
+		const descriptor = Object.getOwnPropertyDescriptor(value, key)
+		if (!descriptor) continue
+		if ('value' in descriptor) descriptor.value = cloneDefault(descriptor.value, seen)
+		Object.defineProperty(copy, key, descriptor)
 	}
-	return value
+	return copy
 }
 
 export function writeBinding(binding: PersistBinding, writes: PathWrite[]): void {
@@ -145,6 +155,21 @@ export function stringifyField(field: FieldDescriptor, value: unknown): string |
 	return field.parser.stringify ? field.parser.stringify(value) : String(value)
 }
 
+function snapshotDefault(field: FieldDescriptor, value: unknown, encoded: string | null): unknown {
+	const snapshot = cloneDefault(value)
+	let error: unknown
+	try {
+		if (stringifyField(field, snapshot) === encoded) return snapshot
+	} catch (failure) {
+		error = failure
+	}
+	throw new Error(
+		`[ez-kit/store-persist] Cannot snapshot default for "${field.path.join('.')}"; ` +
+			'use plain data or serializers based on snapshottable own data',
+		{ cause: error },
+	)
+}
+
 /**
  * Build a binding from a store, its port, the resolved field descriptors and the global options. The
  * pristine defaults are seeded here, so a binding is usable the moment it exists; a caller that
@@ -166,14 +191,15 @@ export function createBinding(
 	for (const field of fields) {
 		keyOf.set(field, fieldKey(field))
 		const value = readPath(state, field.path)
-		defaults.set(field, cloneDefault(value))
+		const encoded = stringifyField(field, value)
+		defaults.set(field, snapshotDefault(field, value, encoded))
 		records.set(field, {
 			revision: 0,
 			acknowledged: 0,
 			dirty: false,
 			edited: false,
 			blocked: false,
-			observed: stringifyField(field, value),
+			observed: encoded,
 			forceDelete: false,
 			resetPending: false,
 			outcome: 'default',
@@ -226,14 +252,18 @@ export function addressBinding(binding: PersistBinding, store: StoreId): void {
  */
 export function captureDefaults(binding: PersistBinding): void {
 	if (binding.defaultsCaptured) return
-	binding.defaultsCaptured = true
 	const state = binding.port.getState(binding.store)
-	for (const field of binding.fields) {
+	const snapshots = binding.fields.map((field) => {
 		const value = readPath(state, field.path)
-		binding.defaults.set(field, cloneDefault(value))
+		const encoded = stringifyField(field, value)
+		return { field, encoded, snapshot: snapshotDefault(field, value, encoded) }
+	})
+	for (const { field, encoded, snapshot } of snapshots) {
+		binding.defaults.set(field, snapshot)
 		const record = binding.records.get(field)
-		if (record) record.observed = stringifyField(field, value)
+		if (record) record.observed = encoded
 	}
+	binding.defaultsCaptured = true
 }
 
 /**

@@ -330,6 +330,19 @@ retained cache/plugin ownership. Render-scoped navigation changes initialization
 from the stable persistence engine registry, so abandoned URL seeds cannot own the next location.
 Rationale: [ADR 0030](openspec/decisions/0030-cached-render-candidate-ownership.md).
 
+Manual cache remove/clear retains entries with committed observers and marks them for eviction when
+the last observer leaves. That intent overrides normal keepalive and survives synthetic reconnects.
+The outer cache Provider owns the whole container lifetime: its termination forcibly disposes every
+entry and prevents new entries from being created in the disposed container.
+Rationale: [ADR 0031](openspec/decisions/0031-active-cache-eviction.md).
+
+React Router query persistence preserves arbitrary application location.state and tracks own writes
+through generated location keys observed read-only. Basic routers require an observable navigator
+location; data-router dispatch, including blocker continuation, must synchronously publish its key.
+Unsupported identity observation fails explicitly; uncertain delayed publication is not classified
+as proven cancellation. No router or global history methods are patched.
+Rationale: [ADR 0032](openspec/decisions/0032-router-state-and-navigation-identity.md).
+
 The user explicitly authorized a one-time breaking minor release for scoped-state-persistence,
 including removal of zodParam/validator subpaths, scoped storage addressing and the changed ambient
 external-change default. Each affected store package receives its own minor changeset with BREAKING

@@ -1,6 +1,6 @@
 'use client'
 
-import { useContext, useEffect, useId, useInsertionEffect, useLayoutEffect, useRef } from 'react'
+import { useContext, useEffect, useInsertionEffect, useLayoutEffect, useRef } from 'react'
 import { NavigationType, useLocation, useNavigate, useNavigationType } from 'react-router'
 
 import { createUrlPort, URL_SOURCE, UrlHistory, urlMetaMerge } from './adapter'
@@ -8,8 +8,8 @@ import {
 	acknowledgeNavigation,
 	DataRouterContext,
 	DataRouterStateContext,
-	NAVIGATION_OWNER,
-	navigationOwner,
+	historyNavigator,
+	NavigationContext,
 	observableRouter,
 } from './react-router-navigation'
 
@@ -28,16 +28,14 @@ export const reactRouterAdapter: RenderScopedAdapter = {
 		const navigate = useNavigate()
 		const dataRouter = observableRouter(useContext(DataRouterContext), useContext(DataRouterStateContext))
 		const navigationType = useNavigationType()
-		const owner = useId()
-		const sequence = useRef(0)
+		const navigator = historyNavigator(useContext(NavigationContext))
 		const ownNavigations = useRef<string[]>([])
 		const listeners = useRef(new Set<() => void>())
 		const previousLocation = useRef(location.key)
 		useNavigationEffect(() => {
 			if (previousLocation.current === location.key) return
 			previousLocation.current = location.key
-			const token = navigationOwner(location.state)
-			const acknowledged = typeof token === 'string' ? ownNavigations.current.indexOf(token) : -1
+			const acknowledged = ownNavigations.current.indexOf(location.key)
 			if (navigationType !== NavigationType.Pop && acknowledged >= 0) {
 				ownNavigations.current.splice(0, acknowledged + 1)
 				return
@@ -45,7 +43,7 @@ export const reactRouterAdapter: RenderScopedAdapter = {
 			ownNavigations.current.length = 0
 			for (const listener of [...listeners.current]) listener()
 		}, [location.key, location.state, navigationType])
-		const snapshot = { location, navigate, dataRouter }
+		const snapshot = { location, navigate, dataRouter, navigator }
 		const renderSnapshot = useRef(snapshot)
 		renderSnapshot.current = snapshot
 		const committed = useRef(snapshot)
@@ -72,8 +70,11 @@ export const reactRouterAdapter: RenderScopedAdapter = {
 				}
 			},
 			commit: (next, history) => {
-				const token = `${owner}:${String(++sequence.current)}`
-				ownNavigations.current.push(token)
+				const ownedKeys = new Set<string>()
+				const own = (key: string): void => {
+					ownedKeys.add(key)
+					ownNavigations.current.push(key)
+				}
 				const current = committed.current
 				const query = next.toString()
 				const state: unknown = current.location.state
@@ -84,16 +85,15 @@ export const reactRouterAdapter: RenderScopedAdapter = {
 				}
 				const options = {
 					replace: history === UrlHistory.Replace,
-					state: { ...(state !== null && typeof state === 'object' ? state : {}), [NAVIGATION_OWNER]: token },
+					state,
 				}
 				const fail = (error: unknown): never => {
-					const index = ownNavigations.current.indexOf(token)
-					if (index >= 0) ownNavigations.current.splice(index, 1)
+					ownNavigations.current = ownNavigations.current.filter((key) => !ownedKeys.has(key))
 					throw error
 				}
 				try {
 					if (current.dataRouter)
-						return acknowledgeNavigation(current.dataRouter, target, options, token, {
+						return acknowledgeNavigation(current.dataRouter, target, options, own, {
 							get: () => committed.current.location,
 							subscribe: (listener) => {
 								commitListeners.current.add(listener)
@@ -102,7 +102,16 @@ export const reactRouterAdapter: RenderScopedAdapter = {
 								}
 							},
 						}).catch(fail)
+					if (!current.navigator)
+						throw new Error(
+							'[ez-kit/store-persist] React Router navigation identity requires an observable navigator location',
+						)
+					const previous = current.navigator.location.key
 					const result = current.navigate(target, options)
+					const key = current.navigator.location.key
+					if (key === previous)
+						throw new Error('[ez-kit/store-persist] React Router navigation did not publish a location key')
+					own(key)
 					if (result !== undefined) return Promise.resolve(result).catch(fail)
 				} catch (error) {
 					fail(error)

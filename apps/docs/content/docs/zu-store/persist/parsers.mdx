@@ -112,3 +112,8 @@ A non-canonical parser (one whose `stringify` output isn't stable) can loop — 
 `paramJson` compares serialized values, including Date/toJSON results, nested containers and own
 special keys. A `schema.validate` function can return a Date: changing its timestamp saves the new
 JSON value; returning to the serialized default removes the override.
+
+Default snapshots preserve non-enumerable `toJSON`, ordinary nested data prototypes and Date
+behavior. Incoming-data validation is not run on application defaults. Objects whose private or
+internal slots cannot be cloned faithfully fail before source I/O; declare their ordinary data
+fields separately instead.

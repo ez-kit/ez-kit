@@ -209,3 +209,24 @@ retaining inherited override order and effective source aliases.
 
 - **WHEN** a subclass redeclares exactly one inherited field/source pair
 - **THEN** only that exact tuple is replaced and unrelated tuples remain available
+
+### Requirement: Custom adapters can report proven no-commit cancellation publicly
+
+Both binding fronts MUST publicly export the same cancellation signal recognized by the engine.
+Adapter authors MUST use it only when a mutation is proven not to have committed. Generic and
+uncertain failures MUST retain normal retry/correction behavior.
+
+#### Scenario: A custom source cancels a mutation before commit
+
+- **WHEN** it rejects with the cancellation class imported through either public binding front
+- **THEN** the engine settles its captured save, reconciles authoritative source state and drops obsolete correction
+
+#### Scenario: A custom source saves a later user edit
+
+- **WHEN** a proven cancellation has settled and another edit is made
+- **THEN** the new intent can be written and acknowledged normally
+
+#### Scenario: A downstream library exposes the cancellation signal
+
+- **WHEN** declarations are emitted and consumed using only public binding imports
+- **THEN** the error type is portable and refers to no private module path

@@ -110,3 +110,7 @@ The outer cache Provider owns all entries. Unmounting it releases persistence co
 with `gcTime: Infinity`; mount a fresh container to restore those addresses again. Keep the outer
 container mounted to retain entries when only an entry Provider disappears. StrictMode reconnects
 preserve the container.
+
+Removing or clearing an entry while its Provider remains mounted keeps persistence active until
+the last owner leaves. Explicit removal then overrides normal keepalive. To reset an open panel's
+state and saved values, use its persistence handle's reset operation.

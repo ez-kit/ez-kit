@@ -58,3 +58,8 @@ container remains mounted. StrictMode's synthetic effect reconnect preserves the
 Cached and ordinary context stores share transactional capability setup and reverse teardown:
 a setup failure rolls back acquired capabilities, every cleanup runs despite failures, and combined
 setup/rollback failures retain the original error in an AggregateError.
+
+Manual remove/clear immediately releases idle entries. Mounted entries instead keep their identity
+and capabilities until their last observer leaves, then explicit removal overrides the GC delay and
+infinite keepalive. A synthetic reconnect preserves this removal intent. Container termination uses
+forced disposal and rejects attempts to create entries in that disposed container.

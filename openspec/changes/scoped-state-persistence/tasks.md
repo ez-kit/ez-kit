@@ -102,6 +102,16 @@
 - [x] 11.6 Add public integration evidence and update documentation, migration notes, changeset and scenario trace for the fourth audit contracts.
 - [x] 11.7 Run affected checks and full sequential build/lint/typecheck/test/size plus browser verification, repeat strict OpenSpec validation and update PR 299.
 
+## 12. Fifth audit fixes approved on 2026-11-19
+
+- [x] 12.1 Keep capabilities active when mounted cache entries are removed or cleared, define deferred eviction after the last observer and force disposal at container end; cover multiple owners, StrictMode and persistence through both bindings.
+- [x] 12.2 Make public createWriteQueue drain ownership atomic at acknowledgement boundaries, preserve last-write-wins and reject failed batches without acknowledging unsent values; add boundary and reentrant regressions.
+- [x] 12.3 Preserve arbitrary React Router location.state without mutating router/history methods, retaining own navigation identity, blocked/cancelled acknowledgement and Back/Forward behavior; add primitive/array/object and concurrent navigation regressions.
+- [x] 12.4 Preserve default snapshot serialization semantics for toJSON and nested values without newly validating application defaults; verify restoration, reset and clearing through codec/schema round trips.
+- [x] 12.5 Export proven mutation cancellation through both public binding fronts and verify custom adapter acknowledgement/reconciliation with consumer declarations and runtime integrations.
+- [x] 12.6 Update specifications, migration guide, READMEs, both docs fronts, changeset and scenario trace for the fifth audit contracts.
+- [x] 12.7 Run affected checks, full sequential build/lint/typecheck/test/size, browser and strict OpenSpec checks; record final results and update PR 299.
+
 ## Workflow follow-up
 
 - After implementation and review, archive this change using the standard OpenSpec workflow. Archiving is not an implementation task and does not automatically release packages.

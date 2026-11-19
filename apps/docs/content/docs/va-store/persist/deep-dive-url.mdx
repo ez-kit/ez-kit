@@ -91,8 +91,8 @@ A `createContextStore` store wrapped in `withPersist` is request-scoped: each `P
 
 Query-only writes preserve the existing URL fragment as well as unrelated query parameters.
 React Router distinguishes its own commits from application PUSH/REPLACE and POP navigation using
-the reserved `@ez-kit/store-persist:url-navigation` field in navigation state. Application object-state
-fields are retained; the reserved field is not an application state key.
+generated location keys. Application `location.state` is preserved without adding metadata, including
+strings, arrays, null and object values.
 
 Next's documented router hooks expose pathname/search snapshots but no navigation ownership token.
 POP and pathname changes explicitly invalidate pending intent. An external same-path navigation
@@ -109,7 +109,11 @@ available without a data router. It does not patch router or global history meth
 Data-router observation reads the explicitly exported `UNSAFE_DataRouterContext` and
 `UNSAFE_DataRouterStateContext` integration points. Their names indicate upstream instability;
 capability checks reject unsupported data-router state instead of silently confirming a write.
-The optional lookup preserves basic operation on older peers where those exports are absent.
+Basic routers use the read-only, feature-detected `UNSAFE_NavigationContext` navigator location.
+The optional lookup preserves basic operation on older peers where data-router exports are absent.
+A data-router dispatch must publish its generated key synchronously, including blocker continuation.
+Unsupported identity observation fails explicitly rather than guessing from query equality; a delayed
+publication has an uncertain outcome and is not reported as proven cancellation.
 
 When Back/Forward proves an in-flight own navigation was cancelled, persistence discards its
 obsolete external correction without issuing an extra navigation or loader run. A newer user edit

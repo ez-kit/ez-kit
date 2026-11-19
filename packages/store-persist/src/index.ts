@@ -103,3 +103,4 @@ export type {
 	PersistOperation,
 } from './types'
 export { FutureVersionError, encodeRecord, decodeRecord } from './record'
+export { SourceMutationCancelledError } from './source-errors'

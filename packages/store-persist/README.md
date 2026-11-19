@@ -130,3 +130,16 @@ property names and aliases containing `::` remain independent, including inherit
 A proven cancelled URL mutation drops only its unsent external correction, avoiding a Back/Forward
 write-back and repeated loader execution. Newer user edits remain pending; uncertain writes still
 retain the correction needed if the original mutation committed.
+
+Default snapshots preserve ordinary data descriptors, non-enumerable toJSON, nested data prototypes
+and Date behavior without invoking schema validation on application defaults. Opaque private/internal
+slots cannot be reconstructed generically; an unfaithful serialized snapshot fails before source I/O.
+
+Custom adapters can import SourceMutationCancelledError from either binding's persist entry. Throw it
+only when a mutation is proven not to have committed; a generic failure retains retryable intent.
+The public createWriteQueue helper serializes reentrant and acknowledgement-boundary enqueues;
+a failed batch rejects all its waiters and discards unsent values before a later explicit retry.
+
+React Router query writes preserve arbitrary location.state, including primitives, arrays and null.
+Own operations use observed location keys, separately from user state. Unsupported router identity
+observation fails explicitly; an uncertain delayed publication is not reported as proven cancellation.

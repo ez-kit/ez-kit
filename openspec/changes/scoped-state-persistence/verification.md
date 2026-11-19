@@ -1,6 +1,6 @@
 # Verification and scenario trace
 
-All 78 requirements and 155 scenarios are covered by the trace below. Each scenario is linked to regression/integration evidence or an explicit adapter/application contract. Paths are repository-relative; brace notation denotes both bindings. Short `src/...` references in a store-persist row refer to that package. No test claims distributed atomicity.
+All 83 requirements and 172 scenarios are covered by the trace below. Each scenario is linked to regression/integration evidence or an explicit adapter/application contract. Paths are repository-relative; brace notation denotes both bindings. Short `src/...` references in a store-persist row refer to that package. No test claims distributed atomicity.
 
 ## addressing
 
@@ -143,6 +143,21 @@ explicit IndexedDB refresh choice and local-versus-distributed mutation limits r
 
 Short persistence paths refer to `packages/store-persist/src/`; public paths refer to `apps/docs/test/`.
 
+## Fifth audit trace (2026-11-19)
+
+| Contract                                                                   | Regression evidence                                                                                                                                                                                                                                           |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Active eviction retains working capabilities and forces container disposal | `packages/store-core/src/cache/active-eviction.test.tsx`; public `apps/docs/test/persist-cache-owner.test.tsx` covers remove/clear, StrictMode, continued flush and fresh restore for both managers.                                                          |
+| Public queue ACK boundary, reentrant enqueue and failure isolation         | `packages/store-persist/src/storage/write-queue.test.ts` covers the late microtask window, serialized reentrant writes, batch rejection and synchronous failures. Built-in adapters do not use this helper.                                                   |
+| Arbitrary router state and independent own keys                            | `packages/store-persist/src/url/react-router-state.test.tsx` exercises basic/data/browser routers, state values, foreign identical queries, blockers and uncertain delayed publication. Existing Back/Forward and render ownership suites remain in the gate. |
+| Default snapshot semantics and fail-fast unsupported data                  | `packages/store-persist/src/default-snapshots.test.ts`; public `apps/docs/test/persist-json-values.test.tsx` exercises non-enumerable toJSON and nested data serializers through restore, save, default clear and reset without new validation calls.         |
+| Portable public cancellation and custom adapter reconciliation             | `apps/docs/test/persist-public-cancellation.test.tsx`; `persist-public-declarations.test.ts` emits and consumes errors from both binding fronts without private imports.                                                                                      |
+
+Cache ownership and router identity are recorded in ADRs 0031/0032. The migration guide and both
+documentation fronts describe those contracts and the supported default data boundary. Opaque private/internal slots
+that cannot preserve serialization are rejected before source I/O. Delayed router publication is an
+uncertain outcome; it does not authorize dropping retry/corrective intent.
+
 ## Release and rollback
 
 The Changesets release planner resolves independent minors: store-core 1.3.0, store-persist 1.1.0, zu-store 1.3.0 and va-store 1.4.0. The private docs dependency update is a patch. `workspace:^` expands to the new dependency version when published; new bindings therefore require core ^1.3.0 and persist ^1.1.0. An isolated package-manifest fixture was packed with pnpm for both bindings and its tarball manifests confirmed these exact floors; the workspace manifests were not versioned or published. Existing published caret ranges remain an explicitly accepted risk (ADR 0029). No fixed/linked group is configured.
@@ -151,7 +166,7 @@ The old/new storageKey regression proves the old blob survives new writes and sc
 
 ## Validation results
 
-Verified on 2026-11-18 with Node 22.23.4 and pnpm 10.34.9.
+Verified on 2026-11-19 with Node 22.23.4 and pnpm 10.34.9.
 
 | Check                                             | Result                                                                                                                                                                                                                                                                                                                            |
 | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -160,14 +175,14 @@ Verified on 2026-11-18 with Node 22.23.4 and pnpm 10.34.9.
 | Offline `pnpm build --env-mode=loose`             | 16/16 tasks passed, including production compilation and static prerender of docs. Used Next's `NEXT_FONT_GOOGLE_MOCKED_RESPONSES` test hook with temporary CSS-only responses for the existing Inter/Figtree URLs; no product source or font configuration changed. Real font download/appearance is not verified by this build. |
 | `pnpm lint --env-mode=loose --concurrency=2`      | 30/30 tasks passed.                                                                                                                                                                                                                                                                                                               |
 | `pnpm typecheck --env-mode=loose --concurrency=2` | 30/30 tasks passed, including docs/runnable snippets and custom adapter consumer types.                                                                                                                                                                                                                                           |
-| `pnpm test --env-mode=loose --concurrency=2`      | 30/30 tasks passed; **5348 tests** across 16 packages/apps.                                                                                                                                                                                                                                                                       |
-| `pnpm size --env-mode=loose --concurrency=2`      | 32/32 tasks passed; the fourth audit stayed within existing budgets (earlier changed entry points retained approximately 15% headroom); dependency builds used the same temporary font responses.                                                                                                                                 |
+| `pnpm test --env-mode=loose --concurrency=2`      | 30/30 tasks passed; **5402 tests** across 16 packages/apps.                                                                                                                                                                                                                                                                       |
+| `pnpm size --env-mode=loose --concurrency=2`      | 32/32 tasks passed; the fourth and fifth audits stayed within existing budgets (earlier changed entry points retained approximately 15% headroom); dependency builds used the same temporary font responses.                                                                                                                      |
 | Playwright Chromium                               | Actual `/docs/zu-store/persist` flow passed: pending → timeout without saving defaults → resize to 500 → acknowledge write → deliver obsolete 720 response → width/storage remain 500 → reload restores browser width → scope reset returns both panels to 320. No page errors.                                                   |
 | OpenSpec strict validation                        | `openspec validate scoped-state-persistence --strict` passed.                                                                                                                                                                                                                                                                     |
 | Rollout/rollback and release metadata             | Separate old/new storageKey test passed; `pnpm pack` manifest fixtures verified both new binding dependency floors. No versions were changed or published.                                                                                                                                                                        |
 
-Relevant final package counts: store-core 129, store-persist 319, zu-store 205, va-store 167, docs 336.
-The four audits added 54, 41, 67 and 39 tests respectively: 201 additional regressions over the original 5147-test baseline.
+Relevant final package counts: store-core 136, store-persist 352, zu-store 205, va-store 167, docs 350.
+The five audits added 54, 41, 67, 39 and 54 tests respectively: 255 additional regressions over the original 5147-test baseline.
 The full gate includes existing Next/React Router URL navigation tests in both bindings, the mixed
 Zustand/Valtio writer test, docs option/type guards and tree-shaking checks. The temporary offline
 font fixture was confined to `/tmp`; the ordinary network-backed docs build remains subject to the
@@ -182,14 +197,14 @@ existing budgets; no new dependency exclusion was added to hide growth.
 | -------------------------- | -------------: | -----------: |
 | store-core root            |           1323 |         1550 |
 | store-core React           |            577 |          600 |
-| store-core cache           |           2696 |         3050 |
-| store-persist root         |          11851 |        13500 |
-| store-persist storage      |           2337 |         2700 |
+| store-core cache           |           2802 |         3050 |
+| store-persist root         |          12018 |        13500 |
+| store-persist storage      |           2388 |         2700 |
 | store-persist URL          |           1083 |         1250 |
-| store-persist React Router |           2055 |         2375 |
+| store-persist React Router |           2324 |         2375 |
 | store-persist Next         |           1182 |         1375 |
 | store-persist testing      |            919 |         1075 |
-| store-persist internals    |          10232 |        11650 |
-| zu-store persist           |            489 |          575 |
+| store-persist internals    |          10392 |        11650 |
+| zu-store persist           |            515 |          575 |
 | va-store root              |           2328 |         2700 |
-| va-store persist           |            482 |          575 |
+| va-store persist           |            504 |          575 |

@@ -507,3 +507,22 @@ single-engine architecture, source policies, compatible cold ownership and expli
   and durability waiters retain their own outcomes.
 - Decorator identities encode the field/source tuple structurally. Arbitrary valid property strings
   and source aliases cannot collide through delimiter concatenation; subclass override order stays.
+
+## Fifth audit refinements approved on 2026-11-19
+
+Explicit remove/clear requests keep active cache entries and capabilities usable until their last
+observer leaves; the request then overrides keepalive. Ending the outer cache container forcibly
+releases every entry. Public write queues release drain ownership atomically with observing an
+empty queue, so late enqueues cannot borrow a completed acknowledgement.
+
+React Router navigation ownership must be tracked independently from application location.state;
+query commits preserve arbitrary state and retain cancellation/blocker and committed-render guards.
+Default snapshots must preserve supported serialization behavior without invoking validation on
+application defaults. Proven no-commit cancellation is a public adapter outcome through both binding
+fronts; generic errors retain uncertain-write recovery semantics.
+
+Active cache eviction is recorded in ADR 0031. React Router ownership uses generated keys observed
+read-only, separately from arbitrary user state, as recorded in ADR 0032. Data-router synchronous key
+publication is an integration precondition; unsupported delayed publication reports an uncertain
+outcome instead of dropping retry intent. Default snapshots retain supported data descriptors and
+serialization, with fail-fast guards for opaque slots rather than destructive read invalidation.

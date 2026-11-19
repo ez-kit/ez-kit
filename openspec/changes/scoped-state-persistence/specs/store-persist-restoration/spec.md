@@ -296,3 +296,26 @@ cleanup/reconnect MUST retain their existing behavior. Independent containers MU
 
 - **WHEN** one independent cache Provider unmounts while another remains committed
 - **THEN** only entries belonging to the terminated container are released
+
+### Requirement: Router query updates preserve arbitrary application location state
+
+React Router adapters MUST preserve the value and shape of application location.state during
+query-only writes. Own navigation identity MUST use a separate observation channel and MUST retain
+cancellation, blocker and committed-render guards without patching router or history methods.
+Unsupported identity observation MUST fail explicitly rather than silently treating a foreign
+navigation with an identical query as an own acknowledgement.
+
+#### Scenario: Application history state is a primitive or array
+
+- **WHEN** a query field is saved while location.state is a string, null or array
+- **THEN** the application still observes the same value and shape after acknowledgement
+
+#### Scenario: A foreign navigation targets the same query
+
+- **WHEN** an external navigation independently targets the outstanding own query
+- **THEN** its distinct navigation identity is retained rather than inferred from query equality alone
+
+#### Scenario: Own navigation is blocked or its screen suspends
+
+- **WHEN** navigation has not been accepted or its operational render has not committed
+- **THEN** the write cannot be acknowledged just because the requested query matches

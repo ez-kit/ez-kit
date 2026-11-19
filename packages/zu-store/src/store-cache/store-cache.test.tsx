@@ -757,7 +757,7 @@ describe('createStoreCache — imperative & reactive access', () => {
 		expect(screen.getByTestId('badge')).toHaveTextContent('none')
 	})
 
-	it('remove deletes a single entry and clear(prefix) removes a subtree across groups', () => {
+	it('remove and clear(prefix) retain active owners then evict their entries on departure', async () => {
 		const cache = createStoreCache()
 		const users = cache.createCachedStore(tableFactory, { name: 'imp-users' })
 		const orders = cache.createCachedStore(tableFactory, { name: 'imp-orders' })
@@ -775,33 +775,48 @@ describe('createStoreCache — imperative & reactive access', () => {
 			)
 		}
 
-		render(
-			<cache.Provider>
-				<cache.Scope path={['page-1']}>
-					<users.Provider id='main'>
-						<span />
-					</users.Provider>
-					<orders.Provider id='main'>
-						<span />
-					</orders.Provider>
-				</cache.Scope>
-				<cache.Scope path={['page-2']}>
-					<users.Provider id='main'>
-						<span />
-					</users.Provider>
-				</cache.Scope>
-				<ClearPage1 />
-			</cache.Provider>,
-		)
+		function App({ showPage1 }: { showPage1: boolean }) {
+			return (
+				<cache.Provider>
+					{showPage1 ? (
+						<cache.Scope path={['page-1']}>
+							<users.Provider id='main'>
+								<span />
+							</users.Provider>
+							<orders.Provider id='main'>
+								<span />
+							</orders.Provider>
+						</cache.Scope>
+					) : null}
+					<cache.Scope path={['page-2']}>
+						<users.Provider id='main'>
+							<span />
+						</users.Provider>
+					</cache.Scope>
+					<ClearPage1 />
+				</cache.Provider>
+			)
+		}
+		const { rerender } = render(<App showPage1 />)
+		const originalUsers = users.getFromCache({ path: ['page-1'], id: 'main' })
+		const originalOrders = orders.getFromCache({ path: ['page-1'], id: 'main' })
 
 		act(() => {
 			users.remove({ path: ['page-1'], id: 'main' })
 		})
-		expect(users.getFromCache({ path: ['page-1'], id: 'main' })).toBeUndefined()
+		expect(users.getFromCache({ path: ['page-1'], id: 'main' })).toBe(originalUsers)
 		expect(orders.getFromCache({ path: ['page-1'], id: 'main' })).toBeDefined()
 		expect(users.getFromCache({ path: ['page-2'], id: 'main' })).toBeDefined()
 
 		fireEvent.click(screen.getByRole('button', { name: 'clear-page-1' }))
+		expect(orders.getFromCache({ path: ['page-1'], id: 'main' })).toBe(originalOrders)
+		expect(users.getFromCache({ path: ['page-2'], id: 'main' })).toBeDefined()
+
+		rerender(<App showPage1={false} />)
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 0))
+		})
+		expect(users.getFromCache({ path: ['page-1'], id: 'main' })).toBeUndefined()
 		expect(orders.getFromCache({ path: ['page-1'], id: 'main' })).toBeUndefined()
 		expect(users.getFromCache({ path: ['page-2'], id: 'main' })).toBeDefined()
 	})
@@ -931,7 +946,7 @@ describe('createStoreCache — Store slot', () => {
 })
 
 describe('createStoreCache — reactive inspection (useCacheKeys + toTree)', () => {
-	it('useCacheKeys re-renders on membership change (add and explicit removal)', () => {
+	it('useCacheKeys retains active membership until explicitly removed owners leave', async () => {
 		const cache = createStoreCache()
 		const table = cache.createCachedStore(tableFactory, { name: 'react-1' })
 
@@ -973,9 +988,13 @@ describe('createStoreCache — reactive inspection (useCacheKeys + toTree)', () 
 		rerender(<App show />)
 		expect(screen.getByTestId('count')).toHaveTextContent('1')
 
-		// Note: an unmounted entry remains in the cache until eviction or explicit removal — that is the
-		// whole point of keep-alive. Membership changes when something actually removes the entry.
+		// Clearing preserves active owners and membership until the last Provider leaves.
 		fireEvent.click(screen.getByRole('button', { name: 'clear' }))
+		expect(screen.getByTestId('count')).toHaveTextContent('1')
+		rerender(<App show={false} />)
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 0))
+		})
 		expect(screen.getByTestId('count')).toHaveTextContent('0')
 	})
 

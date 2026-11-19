@@ -111,7 +111,7 @@ export type CachedStoreGroup<TInstance extends object, TDefaultValue extends obj
 	getFromCache: (target: CacheAddress) => TInstance | undefined
 	/** Reactive, passive cross-tree read at `(path, id)`. Snapshot is `undefined` when no live entry. */
 	useFromCache: <TSelected>(target: CacheAddress, selector: (snap: unknown) => TSelected) => TSelected
-	/** Remove this group's entry at `(path, id)` immediately. */
+	/** Remove an idle entry immediately, or release it after its last Provider leaves. */
 	remove: (target: CacheAddress) => void
 }
 
@@ -194,7 +194,7 @@ export function createCacheReact<TInstance extends object>(
 			activeCache.current = cache
 			return () => {
 				if (activeCache.current === cache) activeCache.current = null
-				if (ended.current) cache.clear()
+				if (ended.current) cache.dispose()
 			}
 		}, [cache])
 

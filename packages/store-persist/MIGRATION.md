@@ -285,3 +285,23 @@ Back/Forward cancellation removes only an unsent external corrective write after
 the original mutation was cancelled. Newer user edits are retained. Custom adapters must report
 SourceMutationCancelledError only for a mutation known not to have committed; uncertain failures
 still require corrective writes.
+
+Manual cache remove/clear now defers active entries until the last observer leaves, preserving
+working persistence and raw identity for mounted UI. Idle entries are still released immediately;
+explicit eviction overrides keepalive after the final departure. Use handle.reset/resetScope to reset
+state or delete saved data. Ending the outer cache container always forces complete disposal.
+
+Default snapshots retain ordinary data descriptors, non-enumerable toJSON, nested data prototypes
+and Date serialization. Capturing defaults does not run incoming-data validators. Opaque private or
+internal slots cannot be copied generically: an unfaithful snapshot is rejected before source I/O.
+
+SourceMutationCancelledError is now public through both binding persist entries. It means the source
+knows a mutation did not commit; network errors with an uncertain server outcome must remain generic.
+The public createWriteQueue helper no longer acknowledges late enqueues through a completed drain;
+a failed batch rejects all waiters, discards unsent values and permits an explicit retry.
+
+React Router no longer adds an ownership token to application location.state. It preserves arbitrary
+state using generated location keys observed through read-only exported integration contexts. Basic
+routers require an observable navigator location; data-router dispatch must publish its key
+synchronously, including blocker continuation. Unsupported identity observation fails explicitly.
+Delayed publication after dispatch is uncertain and retains retry/correction behavior.

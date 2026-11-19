@@ -138,3 +138,4 @@ export { serializePersistAddress, deserializePersistAddress, isWithinScope } fro
 export type { PersistAddress, StoreId } from '@ez-kit/store-core'
 
 export { FutureVersionError, encodeRecord, decodeRecord } from '@ez-kit/store-persist'
+export { SourceMutationCancelledError } from '@ez-kit/store-persist'

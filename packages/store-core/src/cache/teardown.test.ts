@@ -29,6 +29,7 @@ function add(cache: InstanceCache, id: StoreId, cleanups: PluginCleanup[], gcTim
 		context: { services: createServiceRegistry(), id, isServer: false },
 	})
 	cache.addObserver(id)
+	cache.removeObserver(id)
 	return instance
 }
 

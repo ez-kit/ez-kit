@@ -263,7 +263,8 @@ unrelated old records MUST remain retryable.
 ### Requirement: Cached teardown releases all resources before reporting errors
 
 Cached plugin cleanup MUST run in reverse setup order. One failure MUST NOT skip other cleanups,
-retain membership/metadata or prevent clear from releasing other matching entries. Errors MUST remain
+retain released membership/metadata or prevent clear from releasing other matching idle entries.
+Active entries follow the deferred eviction contract until their last observer leaves. Errors MUST remain
 observable after release; reentrant replacement MUST NOT be removed by an older cleanup.
 
 #### Scenario: A dependent subscription outlives its transport setup
@@ -308,3 +309,57 @@ retain their own outcomes; generic failures and accepted old writes MUST preserv
 
 - **WHEN** a newer user revision exists when cancellation settles
 - **THEN** only the obsolete external correction is released and the newer edit can still save
+
+### Requirement: Explicit eviction preserves committed active cache owners
+
+Manual remove/clear MUST retain active entries and capabilities until their last observer leaves.
+The removal intent MUST override normal keepalive at that point, survive a synthetic reconnect,
+and apply only to matching entries. Ending the owning cache container MUST forcibly release all
+entries and prevent resurrection through its disposed cache.
+
+#### Scenario: An open persisted panel is removed from its cache
+
+- **WHEN** remove is requested and the panel remains mounted while its state changes
+- **THEN** its identity and persistence remain active and flush acknowledges the new value
+
+#### Scenario: The final observer leaves after explicit clear
+
+- **WHEN** a matching entry had infinite keepalive and its final observer disconnects
+- **THEN** the explicit removal takes effect without waiting for ordinary garbage collection
+
+#### Scenario: A synthetic reconnect follows explicit removal
+
+- **WHEN** StrictMode reconnects an active entry after removal was requested
+- **THEN** capabilities remain usable and the removal request still applies when the final owner really leaves
+
+#### Scenario: A disposed container is accessed during cleanup
+
+- **WHEN** cleanup tries to create another entry in the terminating cache
+- **THEN** creation fails rather than retaining new resources in an unreachable container
+
+### Requirement: Public write queues acknowledge only completed drain work
+
+The public latest-value write queue MUST release drain ownership atomically with observing no more
+pending values. Enqueues at an acknowledgement boundary MUST start or join work that will actually
+send their latest value. Reentrant enqueue MUST not start parallel writes. A failed batch MUST reject
+its waiters, discard its unsent values and permit a later explicit retry.
+
+#### Scenario: Enqueue occurs after the last write completes before Promise reactions
+
+- **WHEN** a new value arrives in the microtask gap after the previous drain sees an empty queue
+- **THEN** the new value is written and its Promise cannot resolve from the old drain alone
+
+#### Scenario: A writer enqueues another value synchronously
+
+- **WHEN** the writer submits a successor during its own invocation
+- **THEN** the successor remains serialized behind that writer without starting another drain
+
+#### Scenario: A write fails with another value pending
+
+- **WHEN** the in-flight write rejects
+- **THEN** every waiter in that batch rejects and no unsent successor is falsely acknowledged
+
+#### Scenario: A writer throws before returning its Promise
+
+- **WHEN** a transport fails synchronously
+- **THEN** enqueue returns a rejected Promise and a later enqueue can start normally

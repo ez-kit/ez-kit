@@ -27,10 +27,12 @@ export type InstanceCache = {
 	removeObserver: (id: StoreId, instance?: object) => void
 	/** Flat coordinates of live entries, optionally filtered to a path subtree. Non-reactive snapshot. */
 	keys: (prefix?: readonly string[]) => CacheRecord[]
-	/** Remove every entry, or — with `prefix` — every entry under that path subtree. Runs cleanups. */
+	/** Remove idle entries immediately; active entries release when their last observer leaves. */
 	clear: (prefix?: readonly string[]) => void
-	/** Remove a single entry by exact id, running its cleanups. No-op when absent. */
+	/** Remove one entry now if idle, or after its last observer leaves. No-op when absent. */
 	remove: (id: StoreId) => void
+	/** End the owning container lifetime and release every entry, including active observers. */
+	dispose: () => void
 	/** Subscribe to membership changes (entries added/removed). For the React layer. */
 	subscribe: (listener: () => void) => () => void
 	/**
@@ -48,6 +50,7 @@ export function createInstanceCache(options: CacheConfig = {}): InstanceCache {
 	// Reserved default: entries always supply an explicit `gcTime` via `CreateOptions` today, so the
 	// cache-level default is accepted (parity with the React-layer config) but not yet consulted.
 	const { defaultGcTime: _defaultGcTime = DEFAULT_GC_TIME } = options
+	let disposed = false
 	const metaByKey = new Map<string, InstanceMeta>()
 	const membership: MembershipView = createMembershipView()
 	// Cached keys snapshot for useSyncExternalStore: recomputed only when membership changes.
@@ -111,14 +114,18 @@ export function createInstanceCache(options: CacheConfig = {}): InstanceCache {
 			clearTimeout(meta.evictionTimer)
 			meta.evictionTimer = undefined
 		}
-		if (meta.gcTime === Infinity) return
+		if (!meta.evictOnIdle && meta.gcTime === Infinity) return
 		// Per-entry timer: a fired deadline must never sweep siblings whose own gcTime is not up yet.
-		meta.evictionTimer = setTimeout(() => {
-			evictIfIdle(key)
-		}, meta.gcTime)
+		meta.evictionTimer = setTimeout(
+			() => {
+				evictIfIdle(key)
+			},
+			meta.evictOnIdle ? 0 : meta.gcTime,
+		)
 	}
 
 	function getOrCreate<T extends object>(id: StoreId, create: () => T, opts: CreateOptions): T {
+		if (disposed) throw new Error('Cannot create an entry in a disposed store cache')
 		const key = serializeStoreId(id)
 		const existing = metaByKey.get(key)
 		if (existing) {
@@ -138,6 +145,7 @@ export function createInstanceCache(options: CacheConfig = {}): InstanceCache {
 			storeId: id,
 			observerCount: 0,
 			gcTime: opts.gcTime,
+			evictOnIdle: false,
 			evictionTimer: undefined,
 			cleanups,
 			cleared: false,
@@ -179,10 +187,18 @@ export function createInstanceCache(options: CacheConfig = {}): InstanceCache {
 		return toRecords(membership.getSnapshot().values(), prefix)
 	}
 
+	function removeEntry(key: string, meta: InstanceMeta): unknown[] {
+		if (meta.observerCount > 0) {
+			meta.evictOnIdle = true
+			return []
+		}
+		return dropEntry(key, meta)
+	}
+
 	function clear(prefix?: readonly string[]): void {
 		const errors: unknown[] = []
 		for (const [key, meta] of [...metaByKey]) {
-			if (!prefix || startsWithPrefix(meta.storeId.path, prefix)) errors.push(...dropEntry(key, meta))
+			if (!prefix || startsWithPrefix(meta.storeId.path, prefix)) errors.push(...removeEntry(key, meta))
 		}
 		throwCapabilityCleanupErrors(errors)
 	}
@@ -190,7 +206,15 @@ export function createInstanceCache(options: CacheConfig = {}): InstanceCache {
 	function remove(id: StoreId): void {
 		const key = serializeStoreId(id)
 		const meta = metaByKey.get(key)
-		if (meta) throwCapabilityCleanupErrors(dropEntry(key, meta))
+		if (meta) throwCapabilityCleanupErrors(removeEntry(key, meta))
+	}
+
+	function dispose(): void {
+		if (disposed) return
+		disposed = true
+		const errors: unknown[] = []
+		for (const [key, meta] of [...metaByKey]) errors.push(...dropEntry(key, meta))
+		throwCapabilityCleanupErrors(errors)
 	}
 
 	return {
@@ -201,6 +225,7 @@ export function createInstanceCache(options: CacheConfig = {}): InstanceCache {
 		keys,
 		clear,
 		remove,
+		dispose,
 		subscribe: membership.subscribe,
 		getKeysSnapshot: () => keysSnapshot,
 	}

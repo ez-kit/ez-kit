@@ -62,12 +62,12 @@ Returns the controller of the nearest `CacheProvider`. Both members are **non-re
 const { keys, clear } = useCache()
 ```
 
-| Member  | Type                                            | Description                                                                                  |
-| ------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `keys`  | `(prefix?: readonly string[]) => CacheRecord[]` | Flat snapshot of live entries, optionally filtered to those whose path starts with `prefix`. |
-| `clear` | `(prefix?: readonly string[]) => void`          | Evicts every entry under `prefix` (all groups). No argument clears the whole cache.          |
+| Member  | Type                                            | Description                                                                                                                                     |
+| ------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `keys`  | `(prefix?: readonly string[]) => CacheRecord[]` | Flat snapshot of live entries, optionally filtered to those whose path starts with `prefix`.                                                    |
+| `clear` | `(prefix?: readonly string[]) => void`          | Requests eviction under `prefix` (all groups), retaining active entries until their final Provider leaves. No argument targets the whole cache. |
 
-`clear` overrides `alwaysCache`. Members are closures, so destructuring is safe.
+`clear` overrides `alwaysCache` once the last active Provider leaves; idle entries are evicted immediately. Members are closures, so destructuring is safe.
 
 ## `useCacheKeys(prefix?)`
 
@@ -132,7 +132,7 @@ Call it once at module top-level. Calling it twice with the same `name` on one c
 | `Store`                                                         | Write-only render-prop slot: the raw handle, no subscription — mirrors `createContextStore`'s. |
 | `getFromCache({ path?, id })`                                   | Imperative get-if-alive → `StoreApi` or `undefined`.                                           |
 | `useFromCache({ path?, id }, selector)`                         | Reactive, passive cross-tree read.                                                             |
-| `remove({ path?, id })`                                         | Drop one entry immediately.                                                                    |
+| `remove({ path?, id })`                                         | Remove an idle entry now; defer active entries until their final Provider leaves.              |
 
 ## `Provider`
 
@@ -239,7 +239,7 @@ The selected value is compared shallowly, so a selector that builds an object is
 
 ## `remove(target)`
 
-Drops one entry immediately, overriding `alwaysCache`. Takes the same absolute `CacheAddress` as `getFromCache`. For a whole subtree across groups, use `useCache().clear(prefix)`.
+Drops an idle entry immediately. For a mounted entry, records an eviction request that takes effect after its last Provider leaves, overriding `alwaysCache` and the normal GC delay. Takes the same absolute `CacheAddress` as `getFromCache`. For a whole subtree across groups, use `useCache().clear(prefix)`.
 
 ## `createStoreCache(options?)`
 
