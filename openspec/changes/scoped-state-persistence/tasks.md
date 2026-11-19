@@ -112,6 +112,14 @@
 - [x] 12.6 Update specifications, migration guide, READMEs, both docs fronts, changeset and scenario trace for the fifth audit contracts.
 - [x] 12.7 Run affected checks, full sequential build/lint/typecheck/test/size, browser and strict OpenSpec checks; record final results and update PR 299.
 
+## 13. Sixth audit fixes approved on 2026-11-19
+
+- [x] 13.1 Invalidate stale container rewrites across source mutations, including acknowledged record migration and invalidation.
+- [x] 13.2 Preserve source-local migration payloads when another source supplies the visible value.
+- [x] 13.3 Roll back capabilities if a cache is disposed during entry creation before publication.
+- [x] 13.4 Restore valid dates over omitted invalid Date defaults, including arrays.
+- [x] 13.5 Verify the four regressions, validate the specification and update PR 299.
+
 ## Workflow follow-up
 
 - After implementation and review, archive this change using the standard OpenSpec workflow. Archiving is not an implementation task and does not automatically release packages.

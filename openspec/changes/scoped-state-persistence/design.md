@@ -526,3 +526,11 @@ read-only, separately from arbitrary user state, as recorded in ADR 0032. Data-r
 publication is an integration precondition; unsupported delayed publication reports an uncertain
 outcome instead of dropping retry intent. Default snapshots retain supported data descriptors and
 serialization, with fail-fast guards for opaque slots rather than destructive read invalidation.
+
+## Sixth audit refinements
+
+Full container rewrites validate both local intent and source mutation freshness. A rewrite staged
+by an earlier restore cannot undo acknowledged record migration or invalidation. When a shared
+field already displays another source's value, the current source retains its own migration payload
+for the applicable revision. Cache disposal during entry creation rolls back acquired capabilities
+before publication. Invalid Date defaults remain equivalent to their omitted snapshots.

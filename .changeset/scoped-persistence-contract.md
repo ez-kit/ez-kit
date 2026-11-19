@@ -55,3 +55,7 @@ boundaries atomic. Preserve arbitrary React Router history state using read-only
 observation and explicit unsupported-identity diagnostics. Preserve serializable default data
 snapshots without invoking validators, and publicly export proven no-commit cancellation to custom
 source adapters through both bindings.
+
+Prevent stale container rewrites from reverting record migrations or deletions. Keep migrated
+values local to their source when multiple sources share a field. Roll back entry setup when its
+cache is disposed during creation, and restore valid dates over omitted invalid Date defaults.

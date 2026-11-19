@@ -2,7 +2,7 @@ import { serializePersistAddress } from '@ez-kit/store-core'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { addressBinding, captureDefaults, createBinding } from './binding'
-import { paramJson, paramNumber } from './codecs'
+import { paramArray, paramDate, paramJson, paramNumber } from './codecs'
 import { createPersistEngine } from './engine'
 import { decodeRecord, encodeRecord } from './record'
 import { patchKeyed, removeKeyedScope } from './storage/patch'
@@ -669,4 +669,26 @@ describe('scoped writes and reset barriers', () => {
 		expect(state.width).toBe(320)
 		engine.dispose()
 	})
+})
+
+it.each([false, true])('restores a valid date over an invalid Date default (array=%s)', async (array) => {
+	const date = new Date(1000)
+	const invalid = new Date(NaN)
+	const state = observable({ createdAt: array ? [invalid] : invalid })
+	const parser = array ? paramArray(paramDate()) : paramDate()
+	const raw = array ? paramArray(paramDate()).stringify([date]) : paramDate().stringify(date)
+	if (raw === null) throw new Error('Missing encoded date')
+	const backend = memory(new Map([[key('createdAt'), encodeRecord(raw)]]))
+	const engine = createPersistEngine(backend.port)
+	const target = binding(state, [{ path: ['createdAt'], parser }])
+	const disconnect = engine.connect(target)
+	try {
+		expect(state.createdAt).toEqual(array ? [date] : date)
+		state.createdAt = array ? [invalid] : invalid
+		await engine.flush(target)
+		expect(backend.values.has(key('createdAt'))).toBe(false)
+	} finally {
+		disconnect()
+		engine.dispose()
+	}
 })

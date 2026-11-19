@@ -217,3 +217,26 @@ describe('cached plugin teardown', () => {
 		expect(cache.keys()).toEqual([])
 	})
 })
+
+it('rolls back setup when a capability disposes the cache before publication', () => {
+	const cache = createInstanceCache()
+	const store = {}
+	const cleanup = vi.fn()
+	attachCapability(store, {
+		name: 'dispose-owner',
+		setup() {
+			cache.dispose()
+			return cleanup
+		},
+	})
+	expect(() =>
+		cache.getOrCreate(id, () => store, {
+			gcTime: Infinity,
+			context: { id, services: createServiceRegistry(), isServer: false },
+		}),
+	).toThrow('disposed store cache')
+	expect(cleanup).toHaveBeenCalledOnce()
+	expect(cache.addObserver(id)).toBeUndefined()
+	expect(cache.getInstance(id)).toBeUndefined()
+	expect(cache.keys()).toEqual([])
+})

@@ -120,7 +120,9 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 	let activeMeta: unknown = null
 	const pendingMetas = new Map<RecordState, unknown>()
 	const externalCorrections = new WeakMap<RecordState, { job: Job; revision: number }>()
+	const restorePayloads = new WeakMap<RecordState, { revision: number; payload: string | null }>()
 	let revision = 0
+	let sourceMutationGeneration = 0
 	let externalGeneration = 0
 	const versioned = port.capabilities?.recordVersions === true
 	let deferredReports: (() => void)[] | null = null
@@ -294,7 +296,11 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 		const job = jobs.splice(index, 1)[0]
 		if (!job) return
 		running = job
+		let sent = false
 		const finish = (error?: unknown): void => {
+			// A full snapshot taken before this mutation settled cannot safely replace the source.
+			// Failed container rewrites keep their retry authority until another mutation settles.
+			if (sent && (error === undefined || !job.rewrite)) sourceMutationGeneration++
 			if (running === job) running = null
 			job.state = error === undefined ? 'acknowledged' : 'failed'
 			job.error = error
@@ -388,6 +394,7 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 				drain()
 				return
 			}
+			sent = !!job.barrier || !!job.rewrite || job.entries.size > 0
 			if (job.barrier) result = port.removeScope?.(job.barrier.path)
 			else if (job.rewrite) {
 				if (!port.rewriteContainer) throw new Error('[ez-kit/store-persist] Source does not support container rewrites')
@@ -492,11 +499,16 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 				)
 					continue
 				try {
-					const value = readPath(binding.port.getState(binding.store), field.path)
-					const payload =
-						record.forceDelete || (binding.clearOnDefault && fieldEquals(field, value, binding.defaults.get(field)))
-							? null
-							: stringifyField(field, value)
+					const restored = restorePayloads.get(record)
+					let payload: string | null = null
+					if (!record.forceDelete) {
+						if (restored?.revision === record.revision) payload = restored.payload
+						else {
+							const value = readPath(binding.port.getState(binding.store), field.path)
+							if (!binding.clearOnDefault || !fieldEquals(field, value, binding.defaults.get(field)))
+								payload = stringifyField(field, value)
+						}
+					}
 					const key = bindingKey(binding, field)
 					let meta: unknown = options.defaultMeta ?? {}
 					for (const job of jobs) {
@@ -737,14 +749,24 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 				}
 				record.blocked = false
 				const present = readPath(binding.port.getState(binding.store), field.path)
-				if (external || fieldEquals(field, present, binding.defaults.get(field))) {
+				const applyValue = external || fieldEquals(field, present, binding.defaults.get(field))
+				const serialized = stringifyField(field, value)
+				const rewrite = stored.version < current || serialized !== stored.value
+				if (applyValue) {
 					writes.push({ path: field.path, value })
 					record.outcome = stored.version < current ? 'migrated' : 'restored'
 					record.error = null
 				}
-				if (stored.version < current || stringifyField(field, value) !== stored.value) {
+				if (rewrite) {
 					record.revision++
 					record.dirty = true
+					// Another source won the shared field. Rewrite this source's own value.
+					if (!applyValue)
+						restorePayloads.set(record, {
+							revision: record.revision,
+							payload:
+								binding.clearOnDefault && fieldEquals(field, value, binding.defaults.get(field)) ? null : serialized,
+						})
 				}
 			} catch (error) {
 				report(error, operation, [field])
@@ -843,6 +865,7 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 		const generation = ++binding.generation
 		const expected = new Map([...binding.records.values()].map((record) => [record, record.revision]))
 		const epoch = revision
+		const sourceEpoch = sourceMutationGeneration
 		const controller = new AbortController()
 		let closed = false
 		let deadline: ReturnType<typeof setTimeout> | undefined
@@ -889,18 +912,16 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 		}
 		let rewrite: Keyed | undefined
 		const valid = (): boolean => !closed && !disposed && bindings.has(binding) && binding.generation === generation
+		const rewriteIsCurrent = (): boolean =>
+			!disposed &&
+			bindings.has(binding) &&
+			binding.generation === generation &&
+			epoch === revision &&
+			sourceEpoch === sourceMutationGeneration
 		const apply = (keyed: Keyed): void => {
 			if (!valid()) return
 			processRead(binding, keyed, false, expected)
-			if (rewrite && epoch === revision)
-				enqueue(
-					new Map(),
-					{},
-					undefined,
-					rewrite,
-					() => !disposed && bindings.has(binding) && binding.generation === generation && epoch === revision,
-					binding,
-				)
+			if (rewrite && rewriteIsCurrent()) enqueue(new Map(), {}, undefined, rewrite, rewriteIsCurrent, binding)
 			finish('ready')
 		}
 		const fail = (error: unknown): void => {

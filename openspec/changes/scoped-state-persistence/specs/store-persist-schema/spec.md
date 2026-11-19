@@ -67,6 +67,11 @@ Migrate MUST be a synchronous transformation of value and fromVersion without it
 - **WHEN** the user changes the value after migration but before its rewrite is sent
 - **THEN** saving the migrated result does not overwrite the user edit
 
+#### Scenario: Another source already supplies the visible field value
+
+- **WHEN** a second source migrates or normalizes its record without replacing the visible value
+- **THEN** its rewrite uses its own migrated result and a newer user edit still takes precedence
+
 ### Requirement: Unsupported old records are invalidated
 
 If a version is older than current without migrate, or below minVersion, the system MUST retain the original default and delete only that record override. MinVersion MUST be checked before migrate. A late read MUST NOT reset user-edited state.
@@ -142,6 +147,11 @@ Existing adapter version/migrate MUST remain a separate layer with their previou
 - **WHEN** container migrate throws an exception
 - **THEN** the previous container fallback result is preserved rather than replaced by new per-record rules
 
+#### Scenario: Concurrent restores stage full container migrations
+
+- **WHEN** one restore migrates or invalidates a record while another has an older container snapshot
+- **THEN** the older full rewrite cannot undo the acknowledged record update or deletion
+
 ### Requirement: New valid reads supersede stale invalidation intent
 
 A successful current restore MUST cancel obsolete pending invalidation/deletion from an earlier read before it can erase the newly validated value. This MUST retain the priority of user edits, explicit reset barriers and future-version guards.
@@ -190,6 +200,11 @@ MUST remain readable where unambiguous. Number parsing MUST reject non-finite va
 
 - **WHEN** a stored numeric value is Infinity, negative Infinity or finite-syntax overflow
 - **THEN** parsing reports invalid input rather than applying non-finite state
+
+#### Scenario: The date default is omitted
+
+- **WHEN** a Date default is invalid and a valid saved date exists
+- **THEN** the untouched default permits restoration, including for arrays of dates
 
 ### Requirement: JSON equality preserves serialized value semantics
 

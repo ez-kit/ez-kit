@@ -337,6 +337,11 @@ entries and prevent resurrection through its disposed cache.
 - **WHEN** cleanup tries to create another entry in the terminating cache
 - **THEN** creation fails rather than retaining new resources in an unreachable container
 
+#### Scenario: Capability setup terminates its owning cache
+
+- **WHEN** a setup callback disposes the container before the new entry is published
+- **THEN** creation fails, acquired capabilities are released and no observer can publish the discarded instance
+
 ### Requirement: Public write queues acknowledge only completed drain work
 
 The public latest-value write queue MUST release drain ownership atomically with observing no more

@@ -125,21 +125,29 @@ export function createInstanceCache(options: CacheConfig = {}): InstanceCache {
 	}
 
 	function getOrCreate<T extends object>(id: StoreId, create: () => T, opts: CreateOptions): T {
-		if (disposed) throw new Error('Cannot create an entry in a disposed store cache')
+		assertOpen()
 		const key = serializeStoreId(id)
 		const existing = metaByKey.get(key)
 		if (existing) {
 			for (const plugin of capabilitiesOf(existing.instance)) plugin.validateContext?.(existing.instance, opts.context)
+			assertOpen()
 			return existing.instance as T
 		}
 
 		const instance = create()
 		const plugins = capabilitiesOf(instance)
 		for (const plugin of plugins) plugin.validateContext?.(instance, opts.context)
+		assertOpen()
 		// Render candidates belong to their React owner until it commits. Publishing them here
 		// would retain abandoned Suspense defaults and services without an observer or GC deadline.
 		if (opts.deferSetup) return instance
 		const cleanups = setupCapabilities(instance, plugins, opts.context)
+		if (disposed) {
+			const error = disposedError()
+			const failures = collectCapabilityCleanupErrors(cleanups)
+			if (failures.length) throw new AggregateError([error, ...failures], 'Store cache creation and rollback failed')
+			throw error
+		}
 		const meta: InstanceMeta = {
 			instance,
 			storeId: id,
@@ -152,6 +160,14 @@ export function createInstanceCache(options: CacheConfig = {}): InstanceCache {
 		}
 		metaByKey.set(key, meta)
 		return instance
+	}
+
+	function disposedError(): Error {
+		return new Error('Cannot create an entry in a disposed store cache')
+	}
+
+	function assertOpen(): void {
+		if (disposed) throw disposedError()
 	}
 
 	function addObserver(id: StoreId, options?: ObserveOptions): object | undefined {

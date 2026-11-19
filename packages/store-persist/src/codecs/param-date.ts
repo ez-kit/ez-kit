@@ -16,6 +16,6 @@ export function paramDate(): Codec<Date> {
 			}
 			return date
 		},
-		equals: (a, b) => a.getTime() === b.getTime(),
+		equals: (a, b) => Object.is(a.getTime(), b.getTime()),
 	}
 }
