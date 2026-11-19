@@ -323,3 +323,20 @@ Direct grid helpers SHALL reject projection inputs incompatible with raw respons
 
 - **WHEN** a structural native source returns enabled false as a literal
 - **THEN** a consumer may override enabled with true, while invalid enabled values and source-owned options are rejected by types
+
+### Requirement: External form checks distinguish cancellation
+
+Read-only editing and creating checks and the modal validation bridge SHALL return an explicit
+valid, invalid, or cancelled outcome without writing form state. Cancellation SHALL settle
+promptly without waiting for the validator. Schema validator contracts SHALL remain unchanged.
+
+#### Scenario: Scope changes during an external form check
+
+- **WHEN** pending validation is cancelled while the form stays open
+- **THEN** the check resolves as cancelled and a late validator result cannot become success
+
+#### Scenario: Closed form versus missing validator
+
+- **WHEN** a check is requested for a closed form
+- **THEN** it returns cancelled without invoking the validator
+- **AND** an open form with no validator returns valid

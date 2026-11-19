@@ -172,8 +172,9 @@ table.editing.getState() // { rowId, cellId, values, initialValues, errors, form
 ```
 
 `commit({ values })` saves values collected elsewhere instead of the ones in the grid's state, and
-`validateValues(values)` runs the validator without writing anything — the two halves a form of
-your own needs. A rejected save resolves as `{ ok: false }` rather than throwing; only an error the
+`validateValues(values)` checks without writing anything and returns `{ status: 'valid' }`,
+`{ status: 'invalid', errors, formError }`, or `{ status: 'cancelled' }`. Cancellation never
+counts as validation success. A rejected save resolves as `{ ok: false }` rather than throwing; only an error the
 grid cannot interpret rejects the promise. See
 [a form of your own](/docs/data-grid/editing/creating#a-form-of-your-own).
 

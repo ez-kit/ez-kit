@@ -81,3 +81,10 @@
 - [x] Support early effect actions with safe publication and cancellation.
 - [x] Derive complete observer options for structural collection sources.
 - [x] Complete regression, compatibility and repository validation.
+
+## Explicit validation outcome follow-up
+
+- [x] Return distinct valid, invalid and cancelled read-only check results.
+- [x] Cover cancellation, late completion and the React modal bridge.
+- [x] Document schema compatibility and external form migration.
+- [x] Validate repository gates and React 18 compatibility.

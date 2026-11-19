@@ -126,6 +126,10 @@ The form stays open with its values and returns to idle. Late validation results
 cannot show errors or dispatch a save. Validators receive an aborted signal; results are ignored
 even if they do not consume it. Same-key source updates retain native behavior.
 You can explicitly call `table.editing.cancel()` or `table.creating.cancel()` to close the form.
+External checks through `validateValues(values)` or `FormModalProps.validate(values)` resolve
+with `{ status: 'cancelled' }` on that transition, even when the form stays open. Handle that
+status separately from `valid`; see [external form checks](/docs/data-grid/editing/creating#checking-an-external-form).
+
 For project-owned context changes, `cancelValidation()` on either form API cancels only validation.
 Already dispatched mutations retain their existing lifecycle rules.
 

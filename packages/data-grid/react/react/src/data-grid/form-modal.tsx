@@ -6,7 +6,7 @@ import { useGridComponents } from '../components-context'
 import { AutoForm, AutoFormField, editedRowOf, formFieldIds } from './auto-form'
 import { useDataGridTable } from './table-context'
 
-import type { CommitResult, ValidationErrors, ValidationResult } from '@ez-kit/data-grid-core'
+import type { CommitResult, ValidationErrors, ValidationCheckResult } from '@ez-kit/data-grid-core'
 
 /** The slice fields the host reads — common to `creating` and `editing`. */
 type FormModalState = {
@@ -49,7 +49,7 @@ export function FormModalHost({ mode, title, state, rowId }: FormModalHostProps)
 		else table.editing.cancel()
 	}, [table, isCreating])
 	const validate = useCallback(
-		(values: Record<string, unknown>): Promise<ValidationResult> =>
+		(values: Record<string, unknown>): Promise<ValidationCheckResult> =>
 			isCreating ? table.creating.validateValues(values) : table.editing.validateValues(values),
 		[table, isCreating],
 	)

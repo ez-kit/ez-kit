@@ -65,6 +65,12 @@ export type CommitOptions = {
 	values?: Record<string, unknown>
 }
 
+/** Outcome of a read-only form check; cancellation is never validation success. */
+export type ValidationCheckResult =
+	| { readonly status: 'valid' }
+	| { readonly status: 'invalid'; readonly errors: ValidationErrors; readonly formError: string | null }
+	| { readonly status: 'cancelled' }
+
 /** The four slice fields the pipeline writes — common to `creating` and `editing`. */
 type CommitSlicePatch = {
 	errors?: ValidationErrors
@@ -83,8 +89,8 @@ export type FormWorkBox = {
 	field?: AbortController | undefined
 	/**
 	 * `validateValues` — a check that writes nothing. Shared by every such check while the form is
-	 * open and aborted only when it closes, so a blur check in a form of one's own never cancels a
-	 * save, and a save never cancels the check.
+	 * open, until closure or cancelValidation. A blur check never cancels a save, and a save
+	 * never cancels the check.
 	 */
 	check?: AbortController | undefined
 	/** The commit in flight, handed back to a second `commit` call instead of starting another. */
@@ -221,30 +227,32 @@ export function trackCommit(box: FormWorkBox, commit: Promise<CommitResult>): Pr
 }
 
 /**
- * Run the validator over `values` without touching the slice — `validateValues`.
- *
- * Resolves `null` when no form is open, or when the form closed while the check ran: there is no
- * longer a form to report to. A caller that must tell that apart from "valid" checks whether the
- * form is still open.
+ * Check external values without writing form state. Closed or cancelled checks are explicit,
+ * including cancellation while the form remains open. Unexpected validator errors still reject.
  */
 export async function checkValues(
 	box: FormWorkBox,
 	isOpen: boolean,
 	validate: ValidateConfig<never> | undefined,
 	values: Record<string, unknown>,
-): Promise<ValidationResult> {
-	if (!validate || !isOpen) return null
+): Promise<ValidationCheckResult> {
+	if (!isOpen) return { status: 'cancelled' }
+	if (!validate) return { status: 'valid' }
 	const controller = (box.check ??= new AbortController())
 	try {
-		const result = await runValidator(validate, values, { signal: controller.signal })
-		return controller.signal.aborted ? null : result
+		const result = await untilSettledOrAborted(
+			runValidator(validate, values, { signal: controller.signal }),
+			controller.signal,
+		)
+		if (result === ABORTED || controller.signal.aborted) return { status: 'cancelled' }
+		return result === null ? { status: 'valid' } : { status: 'invalid', ...wholeForm(result) }
 	} catch (e) {
-		if (controller.signal.aborted) return null
+		if (controller.signal.aborted) return { status: 'cancelled' }
 		throw e
 	}
 }
 
-/** End every `validateValues` check — the form closed. */
+/** End every outstanding external check on closure or validation-only cancellation. */
 export function abortChecks(box: FormWorkBox): void {
 	box.check?.abort()
 	box.check = undefined

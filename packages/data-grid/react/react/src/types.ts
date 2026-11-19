@@ -18,7 +18,7 @@ import type {
 	FilterItem,
 	PendingCount,
 	ValidationErrors,
-	ValidationResult,
+	ValidationCheckResult,
 } from '@ez-kit/data-grid-core'
 import type { Row, TableFeatures } from '@tanstack/table-core'
 import type {
@@ -898,10 +898,11 @@ export type FormModalProps = {
 	 */
 	submit: (values?: Record<string, unknown>) => Promise<CommitResult>
 	/**
-	 * The grid's validator as a pure function: checks `values` and writes nothing to the grid's
-	 * state. Resolves `null` when valid, or when no `validate` is configured.
+	 * Check external values without writing grid state. Returns valid, invalid with errors/formError,
+	 * or cancelled when the form closes or validation is abandoned. An open form without a
+	 * validator is valid. Unexpected validator errors reject the promise.
 	 */
-	validate: (values: Record<string, unknown>) => Promise<ValidationResult>
+	validate: (values: Record<string, unknown>) => Promise<ValidationCheckResult>
 	/**
 	 * `submit()` for a Save button — saves the grid's state and resolves to nothing. Like
 	 * `submit`, it rejects on an error the grid cannot interpret (anything but a

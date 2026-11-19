@@ -183,9 +183,44 @@ generated form as `children` — it receives the whole form contract:
   `reason` — `'rejected'` with the `errors` and `formError` the form now shows, `'cancelled'` when
   the form was closed mid-save, `'busy'` while the grid's own `validate()` runs, `'closed'` when no
   form is open. A second call while a save is in flight gets the first one's outcome;
-- `validate(values)` — the grid's validator as a pure function, for a check on blur; it writes
-  nothing to the grid's state. `null` means valid, or that the form has closed;
+- `validate(values)` — a read-only check, for example on blur. It returns an explicit
+  `ValidationCheckResult`: `valid`, `invalid` with `errors` and `formError`, or `cancelled`.
+  It writes nothing to the grid's state;
 - `errors` — field errors from the last failed save.
+
+### Checking an external form
+
+Handle cancellation separately from success when integrating your own form state:
+
+```tsx
+async function check(values: Record<string, unknown>) {
+	const result = await props.validate(values)
+	if (result.status === 'cancelled') return
+	if (result.status === 'invalid') {
+		setErrors(result.errors)
+		setFormError(result.formError)
+		return
+	}
+	setErrors({})
+	setFormError(null)
+}
+```
+
+Here `props` is `FormModalProps`, and the setters belong to your external form.
+The same result comes from `table.editing.validateValues(values)` and
+`table.creating.validateValues(values)`. A closed form returns `cancelled`; an open form
+without a validator returns `valid`. Closing, restarting or calling `cancelValidation()`
+settles pending checks as `cancelled` immediately, even if the validator ignores its signal.
+Late results cannot become success. An unexpected error from an active validator still rejects.
+
+Checks do not implement latest-only ordering. If your external form starts concurrent checks,
+it owns that ordering. A completed `valid` result does not protect additional asynchronous work
+started afterward. Use `submit(values)` for the grid's combined validation and save lifecycle.
+
+Migration: replace checks for `result === null` with `result.status === 'valid'` and handle
+`cancelled` explicitly. Your configured schema or `validate` callback still returns errors or
+`null`; only the public read-only check result changes. The state-writing `validate()` method
+on `table.editing` and `table.creating` also keeps its existing contract.
 
 ### Pending saves and dismissal
 

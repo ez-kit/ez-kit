@@ -160,3 +160,13 @@ Full guide: [Filter fields](https://ez-kit-docs.vercel.app/docs/data-grid/filter
 ## License
 
 MIT
+
+### Read-only form validation
+
+`table.editing.validateValues(values)` and `table.creating.validateValues(values)` return
+`ValidationCheckResult`: `{ status: 'valid' }`, `{ status: 'invalid', errors, formError }`,
+or `{ status: 'cancelled' }`. `FormModalProps.validate(values)` exposes the same result in React.
+Replace earlier `result === null` checks with an explicit status branch. Closing, restarting,
+or cancelling validation promptly settles pending checks as `cancelled`, without writing form
+state; an open form with no validator is `valid`. Schema validators still return errors or `null`.
+Concurrent checks are not latest-only; active unexpected errors still reject.

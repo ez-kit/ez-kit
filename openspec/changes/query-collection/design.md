@@ -332,3 +332,11 @@ requiring a guaranteed selector whenever raw data cannot satisfy that shape; row
 widen the selected input. A shared public-entry conformance suite covers both read stacks. Reconstruct the native observer-options model before
 picking allowed collection overrides, preserving options absent from structural descriptors and
 widening literal policy values to their legal native types.
+
+## Explicit external validation results
+
+Read-only grid form checks return `ValidationCheckResult` (`valid`, `invalid`, `cancelled`).
+This includes modal slot validation and cancellation caused by collection scope changes while
+forms remain open. Cancelled checks settle before uncooperative validators; errors are normalized
+only for invalid results. Schema and state-writing validation contracts remain unchanged.
+This is a breaking return-type change, documented with an external form migration recipe.

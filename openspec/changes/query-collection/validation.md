@@ -201,3 +201,24 @@ No validateValues cancellation-result or shared read-error generic contract was 
 remain separate API discussions. Docs production build remains excluded under the accepted Google
 Fonts restriction. Browser suites were not rerun for this follow-up; mounted real loader and
 form-hook regressions cover the confirmed UI paths. Previous browser evidence remains historical.
+
+## Explicit validation results — 2026-11-19
+
+Resolved the read-only validation-result contract with `ValidationCheckResult`: valid, invalid
+(with normalized errors/formError), or cancelled. Core editing/creating and the React modal bridge
+share it. Schema validators and state-writing validate() retain their existing return types.
+Cancellation settles immediately even when the validator ignores its signal; late resolutions and
+rejections cannot affect a reopened form. Concurrent external checks remain application-ordered.
+
+Verification passed:
+
+- Affected checks: 35 tasks; sequential final library build, lint, typecheck, test and size gates.
+- Core: 1,115 tests (24 new check regressions); shared React grid: 1,829 (two new modal regressions).
+- qc-react: 107; Query React: 94; docs: 313. Public declaration/minimum-version checks passed.
+- Shared React grid on React 18: 1,829 tests passed.
+- Strict OpenSpec validation and whitespace checks passed; no size budget increases.
+
+Documentation includes the external-form status branching recipe and migration guidance; a minor
+changeset records the breaking check result. Shared read-error generics remain a separate discussion.
+Docs production build remains excluded under the accepted Google Fonts restriction. Browser suites
+were not rerun for this follow-up; the new React modal tests exercise the forwarding contract.

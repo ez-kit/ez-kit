@@ -41,3 +41,13 @@ Guards: `packages/qc/react/src/data-grid/modal-session.test.tsx`,
 `modal-kits.test.tsx`, `mutation-source.test.tsx`,
 `packages/data-grid/core/src/features/deleting/deleting.test.ts`, and
 `apps/docs/e2e/packages/data-grid/editing/query-modal.spec.ts` in both kits.
+
+## Explicit read-only validation outcomes (2026-11-19)
+
+`validateValues` and the React modal's `validate(values)` return `ValidationCheckResult`,
+a discriminated union of `valid`, `invalid` (normalized errors and formError), and `cancelled`.
+A cancelled or closed check must never look valid to external form integrations. Cancellation
+settles promptly even if the validator ignores its signal. Schema validators and state-writing
+`validate()` keep their errors-or-null contracts. Checks remain read-only, preserve active
+unexpected exceptions, and do not implement latest-only concurrency or guard later async work.
+Guards: core `form/validation-check.test.ts` and React `data-grid/form-modal.test.tsx`.

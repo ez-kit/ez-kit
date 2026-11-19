@@ -16,7 +16,7 @@ import { CommitStatus, runValidator, ValidateOn } from '../validation'
 import type { FormColumnMeta, ResolvedColumnFormConfig } from '../../column/resolve-form-config'
 import type { AnyTable } from '../../feature-state'
 import type { FeatureToggle } from '../../utils/feature-flag'
-import type { CommitOptions, CommitResult, FormWorkBox } from '../form'
+import type { CommitOptions, CommitResult, FormWorkBox, ValidationCheckResult } from '../form'
 import type { ValidateConfig, ValidateContext, ValidationErrors, ValidationResult } from '../validation'
 import type { RowData, Table, TableFeature, TableFeatures } from '@tanstack/table-core'
 
@@ -161,15 +161,14 @@ export type CreatingApi<TData = unknown> = {
 	 */
 	validate: () => Promise<ValidationResult>
 	/**
-	 * Run the configured validator over `values` and return its result, writing nothing — no
-	 * values, no errors, no status. Cancelled only by the form closing, never by a save, so a form
-	 * of one's own can check a field on blur freely.
-	 *
-	 * `null` means valid **or** that there is nothing to validate for: no validator configured, no
-	 * form open, or the form closed while the check ran. Checks are not ordered against each other,
-	 * so a form that runs several at once keeps the latest one's result itself.
+	 * Check external values without writing values, errors or status to the grid.
+	 * Returns valid (including an open form without a validator), invalid with normalized
+	 * errors/formError, or cancelled when closed or abandoned by cancelValidation/start/reset.
+	 * Cancellation settles promptly even if the validator ignores its signal.
+	 * Concurrent checks are not ordered: external forms own latest-result handling.
+	 * A valid result describes this check only; additional async work needs its own lifetime guard.
 	 */
-	validateValues: (values: Record<string, unknown>) => Promise<ValidationResult>
+	validateValues: (values: Record<string, unknown>) => Promise<ValidationCheckResult>
 	/** Internal — called by FieldState.onBlur in the react adapter. */
 	validateField: (columnId: string) => Promise<void>
 	getState: () => CreatingState
