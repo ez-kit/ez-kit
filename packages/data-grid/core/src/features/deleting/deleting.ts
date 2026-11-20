@@ -160,6 +160,8 @@ export type DeletingState = {
 	pendingRowId: string | null
 	/** True while a bulk (selection-bar) delete is staged awaiting confirmation. */
 	pendingBulk: boolean
+	/** Rows with a delete request in flight. */
+	pendingIds?: readonly string[] | undefined
 	/** The latest delete failure, cleared on the next attempt or cancellation. */
 	failure?: { error: unknown } | undefined
 }
@@ -205,17 +207,14 @@ export type DeletingApi = {
 	getState: () => DeletingState
 }
 
-/**
- * The single in-flight `AbortController` for a table, held in a box rather than directly.
- *
- * `initTableInstanceData` installs the member once; every swap after that mutates
- * `box.controller`, so nothing ever reassigns the property that was installed. That is what lets
- * `resetTableInstanceData` clear the controller without needing the whole `Table_FeatureMap` entry
- * back in hand, and what keeps `table.deleting`'s closure and the reset hook looking at one box.
- */
-// `| undefined` explicitly: under `exactOptionalPropertyTypes` a bare `controller?:` could not be
-// cleared by assignment, and clearing it is what `cancel` and `resetTableInstanceData` both do.
-export type DeletingAbortBox = { controller?: AbortController | undefined }
+type DeleteKind = 'single' | 'bulk'
+type DeleteWork = {
+	kind: DeleteKind
+	ids: readonly string[]
+	controller: AbortController
+	completion: Promise<void>
+}
+export type DeletingAbortBox = { active: Set<DeleteWork> }
 
 declare module '@tanstack/table-core' {
 	// Declaration merging needs interfaces; these are the shapes upstream declares as such.
@@ -341,20 +340,19 @@ function writeDeleting(table: AnyTable, patch: Partial<DeletingState>): void {
 	writeOwnSlice(table, 'deleting', (prev) => ({ ...prev, ...patch }))
 }
 
-/** Abort whatever is in flight and install a fresh controller in the box. */
-function resetController(table: AnyTable): AbortController {
-	const box = abortBox(table)
-	box.controller?.abort()
-	const c = new AbortController()
-	box.controller = c
-	return c
+function publishPending(table: AnyTable): void {
+	const ids = [...abortBox(table).active].flatMap((work) => work.ids)
+	if (ids.length || readDeleting(table).pendingIds) writeDeleting(table, { pendingIds: ids.length ? ids : undefined })
 }
 
-/** Abort whatever is in flight and leave the box empty. What `cancel` and the reset hook share. */
-function teardownController(table: AnyTable): void {
-	const box = abortBox(table)
-	box.controller?.abort()
-	box.controller = undefined
+function cancelDeletes(table: AnyTable, kind?: DeleteKind): void {
+	const { active } = abortBox(table)
+	for (const work of active) {
+		if (kind === undefined || work.kind === kind) {
+			active.delete(work)
+			work.controller.abort()
+		}
+	}
 }
 
 /** Ids of the currently selected rows, in the order TanStack holds them. */
@@ -402,20 +400,45 @@ function deselect(table: AnyTable, rowIds: string[]): void {
 	)
 }
 
-async function runDelete(
+function runDelete(
 	table: DeletingTable,
+	kind: DeleteKind,
+	ids: readonly string[],
 	execute: (signal: AbortSignal) => void | Promise<void>,
 	onSuccess?: () => void,
 ): Promise<void> {
-	const { signal } = resetController(table)
-	if (readDeleting(table).failure) writeDeleting(table, { failure: undefined })
-	try {
-		await execute(signal)
-		if (!signal.aborted) onSuccess?.()
-	} catch (error) {
-		if (!signal.aborted) writeDeleting(table, { failure: { error } })
-		throw error
+	const { active } = abortBox(table)
+	for (const work of active) {
+		if (!ids.some((id) => work.ids.includes(id))) continue
+		if (ids.every((id) => work.ids.includes(id))) return work.completion
+		return Promise.reject(new Error('Some selected rows are already being deleted.'))
 	}
+	let resolve!: () => void
+	let reject!: (error: unknown) => void
+	const completion = new Promise<void>((yes, no) => {
+		resolve = yes
+		reject = no
+	})
+	const controller = new AbortController()
+	const work = { kind, ids, controller, completion }
+	active.add(work)
+	const { signal } = controller
+	if (readDeleting(table).failure) writeDeleting(table, { failure: undefined })
+	publishPending(table)
+	async function run() {
+		try {
+			if (!signal.aborted) await execute(signal)
+			if (!signal.aborted) onSuccess?.()
+			resolve()
+		} catch (error) {
+			if (!signal.aborted) writeDeleting(table, { failure: { error } })
+			reject(error)
+		} finally {
+			if (active.delete(work)) publishPending(table)
+		}
+	}
+	void run()
+	return completion
 }
 
 async function deleteRow(table: DeletingTable, rowId: string): Promise<void> {
@@ -423,7 +446,7 @@ async function deleteRow(table: DeletingTable, rowId: string): Promise<void> {
 	if (!config) return
 	const row = table.getRowModel().rows.find((r) => r.id === rowId)
 	if (!row) return
-	await runDelete(table, (signal) => config.onDelete({ rowId, row, signal }))
+	await runDelete(table, 'single', [rowId], (signal) => config.onDelete({ rowId, row, signal }))
 }
 
 async function deleteRows(table: DeletingTable, rowIds: string[]): Promise<void> {
@@ -438,6 +461,8 @@ async function deleteRows(table: DeletingTable, rowIds: string[]): Promise<void>
 	const ids = rows.map((r) => r.id)
 	await runDelete(
 		table,
+		'bulk',
+		ids,
 		(signal) => bulk.onDelete({ rowIds: ids, rows, signal }),
 		() => {
 			deselect(table, ids)
@@ -451,6 +476,7 @@ function createDeletingApi(table: DeletingTable): DeletingApi {
 		delete: (rowId) => deleteRow(table, rowId),
 
 		request: (rowId) => {
+			if (readDeleting(table).pendingIds?.includes(rowId)) return
 			const config = deletingOption(table)
 			if (!config) return
 			if (isFeatureEnabled(config.confirmation)) {
@@ -468,7 +494,8 @@ function createDeletingApi(table: DeletingTable): DeletingApi {
 		},
 
 		cancel: () => {
-			teardownController(table)
+			cancelDeletes(table, 'single')
+			publishPending(table)
 			writeDeleting(table, { pendingRowId: null, ...(readDeleting(table).failure ? { failure: undefined } : {}) })
 		},
 
@@ -479,11 +506,13 @@ function createDeletingApi(table: DeletingTable): DeletingApi {
 				const config = deletingOption(table)
 				const bulk = getBulkDeletingConfig(config)
 				if (!bulk) return
+				const ids = selectedRowIds(table)
+				if (readDeleting(table).pendingIds?.some((id) => ids.includes(id))) return
 				if (isFeatureEnabled(bulk.confirmation)) {
 					writeDeleting(table, { pendingBulk: true })
 					return
 				}
-				void deleteRows(table, selectedRowIds(table)).catch(() => undefined)
+				void deleteRows(table, ids).catch(() => undefined)
 			},
 
 			confirm: async () => {
@@ -494,7 +523,8 @@ function createDeletingApi(table: DeletingTable): DeletingApi {
 			},
 
 			cancel: () => {
-				teardownController(table)
+				cancelDeletes(table, 'bulk')
+				publishPending(table)
 				writeDeleting(table, { pendingBulk: false, ...(readDeleting(table).failure ? { failure: undefined } : {}) })
 			},
 		},
@@ -543,7 +573,7 @@ export const deletingFeature: TableFeature = {
 			// internal type. The real `Row` wins because it keeps one vocabulary between this file
 			// and the public context types, and because the widening is confined to this one line.
 			deleting: createDeletingApi(table as unknown as DeletingTable),
-			_deletingAbort: {},
+			_deletingAbort: { active: new Set() },
 		})
 	},
 
@@ -557,6 +587,6 @@ export const deletingFeature: TableFeature = {
 	//
 	// Behaviour v8 did not have — the controller lived in a closure with no reset hook to reach it.
 	resetTableInstanceData: (table) => {
-		teardownController(table)
+		cancelDeletes(table)
 	},
 }

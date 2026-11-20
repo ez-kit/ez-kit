@@ -96,3 +96,11 @@
 - [x] Respect disabled infinite reads and keep grid read status observable.
 - [x] Validate structural query projections and cursor defaults on public inputs.
 - [x] Complete repository and compatibility verification.
+
+## Sixth audit follow-up
+
+- [x] Require stable connected write IDs and reject cross-scope placeholder data before selection.
+- [x] Add explicit dataset scope and generated cache identity overrides.
+- [x] Keep controlled page resets pending and coalesce in-flight delete targets.
+- [x] Align structural selector safety, explicit row types and factory read capabilities.
+- [x] Verify the repository and React 18 compatibility.

@@ -90,3 +90,14 @@ and abandon old UI effects while dispatched mutations complete. The base grid ha
 and uses its delete signal to scope selection updates. The connector observes all query result
 changes and honors disabled infinite reads at the loader boundary. Structural read descriptors
 are checked against their selected projections at the public connection points.
+
+Connected write targets require stable record IDs across server pages. An explicit scopeKey can
+keep one dataset's interactions across capability changes; the connector still verifies a queued
+operation's mutation key. Reject previous-scope placeholder candidates before TanStack selects
+them, since the new source may project a different shape. A controlled criteria reset stays at
+page zero until the configured page state acknowledges it.
+
+Generated reads keep their family prefix and normalize the key part separately from transport via
+prepareKey. Plain serializable args remain the default. Read helpers require a guaranteed selector
+when the projection cannot consume the raw data. Delete operations reserve their targets before
+calling handlers, so duplicate clicks coalesce and independent requests keep their own outcome.

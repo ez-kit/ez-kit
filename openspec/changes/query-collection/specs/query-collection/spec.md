@@ -367,3 +367,24 @@ manual infinite loading when its read is disabled.
 
 - **WHEN** the active infinite observer is disabled and cached data has a next page
 - **THEN** the grid does not request the next page
+
+### Requirement: Query identity and connected action targets remain stable
+
+Connected edit and delete actions SHALL use stable record identifiers across server pages.
+A change of dataset scope SHALL prevent old placeholders from reaching the new read projection.
+Generated query families SHALL support an explicit cache key part independent of request arguments.
+
+#### Scenario: Transport arguments are not JSON objects
+
+- **WHEN** a generated read uses URLSearchParams as its fetcher input
+- **THEN** it can supply a key part with prepareKey and cache distinct criteria independently
+
+#### Scenario: A controlled page reset is acknowledged later
+
+- **WHEN** applied criteria change while the parent still holds the old page index
+- **THEN** the connector keeps querying page zero until the parent acknowledges the reset
+
+#### Scenario: Duplicate target while deletion is pending
+
+- **WHEN** the same row is submitted for deletion again while its operation is pending
+- **THEN** the grid does not dispatch another deletion for that target

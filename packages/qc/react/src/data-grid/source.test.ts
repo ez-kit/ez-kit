@@ -15,14 +15,13 @@ const params: GridQueryParams = {
 type User = { id: string; name: string }
 
 it('retains native keys, selected rows and explicit invalidation scope', async () => {
-	const source = createGridDataSource({
+	const source = createGridDataSource<{ items: User[]; count: number }, User, User[]>({
 		getAll: {
-			query: () =>
-				queryOptions({
-					queryKey: ['external-users'],
-					queryFn: () => Promise.resolve({ items: [{ id: '1', name: 'Ada' }], count: 1 }),
-					select: (response) => response.items,
-				}),
+			query: () => ({
+				queryKey: ['external-users'],
+				queryFn: () => Promise.resolve({ items: [{ id: '1', name: 'Ada' }], count: 1 }),
+				select: (response) => response.items,
+			}),
 			getRows: (rows: User[]) => rows,
 			getRowCount: (rows) => rows.length,
 		},

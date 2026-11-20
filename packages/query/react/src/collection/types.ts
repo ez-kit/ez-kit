@@ -10,13 +10,18 @@ import type {
 
 export type ReadTransport = { signal: AbortSignal }
 export type CollectionFetcher<A, D> = (args: A, transport: ReadTransport) => Promise<D>
+/** @internal Shape-changing reads need a selector in every branch. */
+export type ReadSelection<Raw, Selected> = [Raw] extends [Selected] ? unknown : { select: (data: Raw) => Selected }
+
 export type CollectionRead<P, D, S, I, E = DefaultError, K extends QueryKey = QueryKey> = {
-	query: (params: P) => UseQueryOptions<D, E, S, K>
+	query: (params: P) => UseQueryOptions<D, E, S, K> & ReadSelection<D, S>
 	getItems: (data: NoInfer<S>) => readonly I[]
 	getTotal?: (data: NoInfer<S>) => number | undefined
 }
 export type CollectionInfiniteRead<P, D, S, I, C, E = DefaultError, K extends QueryKey = QueryKey> = {
-	query: (params: P) => UseInfiniteQueryOptions<D, E, InfiniteData<S>, K, C>
+	query: (
+		params: P,
+	) => UseInfiniteQueryOptions<D, E, InfiniteData<S>, K, C> & ReadSelection<InfiniteData<D>, InfiniteData<S>>
 	getItems: (page: NoInfer<S>) => readonly I[]
 }
 export type CollectionMutation<V, D, E = DefaultError, O = unknown> = {
@@ -25,6 +30,8 @@ export type CollectionMutation<V, D, E = DefaultError, O = unknown> = {
 }
 export type ListFetcher<P, A, D, S, I, E> = {
 	prepareArgs: (params: P) => NoInfer<A>
+	/** Prepare the cache key part separately from the fetcher input. */
+	prepareKey?: (args: NoInfer<A>, params: P) => unknown
 	fetcher: CollectionFetcher<A, D>
 	getItems: (data: NoInfer<S>) => readonly I[]
 	getTotal?: (data: NoInfer<S>) => number | undefined
@@ -32,6 +39,7 @@ export type ListFetcher<P, A, D, S, I, E> = {
 }
 export type InfiniteFetcher<P, A, B, D, S, I, C, E> = {
 	prepareArgs: (params: P) => B
+	prepareKey?: (args: NoInfer<B>, params: P) => unknown
 	preparePageArgs: (context: { args: B; pageParam: C }) => NoInfer<A>
 	fetcher: CollectionFetcher<A, D>
 	initialPageParam: C

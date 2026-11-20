@@ -175,6 +175,7 @@ type ActionsCellIdleProps<TRow extends object = ErasedRow> = {
 	row: Row<GridFeatures, TRow>
 	hasEditing: boolean
 	hasDeleting: boolean
+	deleteDisabled?: boolean
 	onEdit: () => void
 	onDelete: () => void
 	/**
@@ -1103,6 +1104,8 @@ export type ActionBarSelectionSection = {
 	 * control must then not be rendered.
 	 */
 	onDelete?: () => void
+	/** True when a selected row is already being deleted. */
+	deleteDisabled?: boolean
 	/**
 	 * Custom action entries from `selection.bar.actions`, already resolved against the current
 	 * selection and namespaced. Rendered as buttons beside the built-in Delete, with the same

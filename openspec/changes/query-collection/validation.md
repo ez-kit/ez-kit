@@ -243,3 +243,21 @@ Verification passed:
 
 Docs production build remains excluded locally under the accepted Google Fonts restriction.
 Bulk selection across unloaded pages and a public manual refetch remain separate design topics.
+
+## Sixth audit fixes — 2026-11-20
+
+The regression suite covers stable server record IDs, cross-scope placeholder suppression before
+projection, controlled reset acknowledgement, same-scope capability changes, cache key collisions
+with URLSearchParams, independent delete targets, and the disabled bulk button. Consumer fixtures
+check optional selectors, explicit row generics and list-only factory access.
+
+Verification passed:
+
+- Sequential library builds (16 tasks), lint (33), typecheck (33), test (32) and size (32).
+- Data-grid core: 1,116 tests; shared React grid: 1,832; Query React: 95; qc-react: 118; docs: 313.
+- React 18: shared grid 1,832; Query React 95; qc-react 112 passed with six existing HeroUI skips.
+- Minimum TanStack Query consumer fixture, strict OpenSpec and whitespace checks.
+- Query collection: 1.90 kB / 2 kB; qc-react: 3.80 kB / 3.9 kB. Core's features entry measures
+  6.61 kB. Its 7.6 kB limit restores the repository's approximately 15% budget headroom.
+
+Docs production build remains excluded locally under the accepted Google Fonts restriction.

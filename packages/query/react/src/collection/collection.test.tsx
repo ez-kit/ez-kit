@@ -615,3 +615,25 @@ it('overrides literal policy on a plain structural native source', async () => {
 	unmount()
 	client.clear()
 })
+
+it('separates cache identity from transport objects', async () => {
+	const client = new QueryClient()
+	const prepareArgs = (status: string) => new URLSearchParams({ status })
+	const fetcher = (args: URLSearchParams) => Promise.resolve([args.get('status')])
+	const getItems = (rows: (string | null)[]) => rows
+	const unsafe = createCollectionSource({ key: ['users'], getAll: { prepareArgs, fetcher, getItems } })
+	expect(() => unsafe.queries.list('active')).toThrow(/prepareKey/)
+	const source = createCollectionSource({
+		key: ['users'],
+		getAll: {
+			prepareArgs,
+			fetcher,
+			getItems,
+			prepareKey: (args) => args.get('status'),
+			options: { staleTime: Infinity },
+		},
+	})
+	await expect(client.query(source.queries.list('active'))).resolves.toEqual(['active'])
+	await expect(client.query(source.queries.list('disabled'))).resolves.toEqual(['disabled'])
+	client.clear()
+})

@@ -312,3 +312,36 @@ it.each([false, true])('preserves stale cached page while refetch is disabled (e
 	unmount()
 	client.clear()
 })
+
+it('keeps querying page zero while the controlled page reset is pending', async () => {
+	const { client, wrapper } = harness()
+	const fetcher = vi.fn((params: GridQueryParams) =>
+		Promise.resolve({ items: [{ id: '1', name: String(params.globalFilter) }], total: 100 }),
+	)
+	const source = makeSource({ key: ['pending-controlled-reset'], getAll: fetcher })
+	const onChange = vi.fn()
+	const h = renderHook(
+		({ search, page }) =>
+			kit.useDataGrid({
+				dataSource: source,
+				columns,
+				pagination: { onChange },
+				globalFiltering: true,
+				state: { pagination: { pageIndex: page, pageSize: 10 }, globalFilter: search },
+			}),
+		{ wrapper, initialProps: { search: '', page: 2 } },
+	)
+	await waitFor(() => {
+		expect(fetcher).toHaveBeenCalledTimes(1)
+	})
+	h.rerender({ search: 'new', page: 2 })
+	await waitFor(() => {
+		expect(h.result.current.getRowModel().rows[0]?.original.name).toBe('new')
+	})
+	expect(onChange).toHaveBeenCalledTimes(1)
+	expect(fetcher.mock.calls.map(([args]) => args.pagination.pageIndex)).toEqual([2, 0])
+	h.rerender({ search: 'new', page: 0 })
+	expect(fetcher.mock.calls.map(([args]) => args.pagination.pageIndex)).toEqual([2, 0])
+	h.unmount()
+	client.clear()
+})

@@ -81,7 +81,7 @@ export function ActionsCell(props: ActionsCellProps) {
 		)
 	}
 
-	const { hasEditing, hasDeleting, onEdit, onDelete, actions } = props
+	const { hasEditing, hasDeleting, deleteDisabled, onEdit, onDelete, actions } = props
 
 	return (
 		<>
@@ -100,6 +100,7 @@ export function ActionsCell(props: ActionsCellProps) {
 					variant='destructive'
 					size='icon'
 					aria-label={messages.delete}
+					disabled={deleteDisabled ?? false}
 					onClick={onDelete}
 				>
 					<Trash2 />

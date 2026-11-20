@@ -1,6 +1,8 @@
+import { collectionCacheArgs } from '@ez-kit/query-react/collection'
 import { infiniteQueryOptions } from '@tanstack/react-query'
 
 import type { GridFetcher, GridInfiniteParams } from './types'
+import type { ReadSelection } from '@ez-kit/query-react/collection'
 import type { DefaultError, InfiniteData, QueryKey, UseInfiniteQueryOptions } from '@tanstack/react-query'
 
 export type GridInfiniteFetcherOptions<
@@ -15,6 +17,7 @@ export type GridInfiniteFetcherOptions<
 	key: QueryKey
 	fetcher: GridFetcher<TArgs, TPage>
 	prepareArgs: (params: GridInfiniteParams) => TCollection
+	prepareKey?: (args: NoInfer<TCollection>, params: GridInfiniteParams) => unknown
 	preparePageArgs: (context: { args: TCollection; pageParam: TPageParam }) => NoInfer<TArgs>
 	initialPageParam: TPageParam
 	getNextPageParam: (
@@ -46,9 +49,19 @@ export function createInfiniteSource<
 	return {
 		query: (params: GridInfiniteParams) => {
 			const args = config.prepareArgs(params)
-			return infiniteQueryOptions<TPage, TError, InfiniteData<TSelectedPage, TPageParam>, QueryKey, TPageParam>({
+			const options = infiniteQueryOptions<
+				TPage,
+				TError,
+				InfiniteData<TSelectedPage, TPageParam>,
+				QueryKey,
+				TPageParam
+			>({
 				...config.options,
-				queryKey: [...config.key, 'infinite', args],
+				queryKey: [
+					...config.key,
+					'infinite',
+					collectionCacheArgs(config.prepareKey ? config.prepareKey(args, params) : args),
+				],
 				initialPageParam: config.initialPageParam,
 				getNextPageParam: config.getNextPageParam,
 				// QueryFunctionContext uses unknown for its conditional page parameter.
@@ -56,6 +69,7 @@ export function createInfiniteSource<
 				queryFn: ({ pageParam, signal }) =>
 					config.fetcher(config.preparePageArgs({ args, pageParam: pageParam as TPageParam }), { signal }),
 			})
+			return options as typeof options & ReadSelection<InfiniteData<TPage>, InfiniteData<TSelectedPage>>
 		},
 		getRows: config.getRows,
 	}

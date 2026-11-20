@@ -4,7 +4,9 @@ import { useCollectionQuery } from '@ez-kit/query-react/collection'
 import { queryOptions } from '@tanstack/react-query'
 import { expectTypeOf, it } from 'vitest'
 
-import { createGridSourceFactory, createGridSourceFromCollection, withQuery } from './index'
+import { createGridDataSource, createGridSourceFactory, createGridSourceFromCollection, withQuery } from './index'
+
+import type { GridDataSource } from './index'
 
 type User = { id: string }
 const read = () => queryOptions({ queryKey: ['users'], queryFn: () => Promise.resolve({ users: [{ id: '1' }] }) })
@@ -17,6 +19,8 @@ function useSources() {
 	const source = { getAll: { query: read, getRows: project } }
 	const table = connected.useDataGrid({ columns, dataSource: source })
 	expectTypeOf(table.getRowModel().rows[0]?.original).toEqualTypeOf<User | undefined>()
+	const typed: GridDataSource<User> = source
+	connected.useDataGrid<User>({ columns, dataSource: typed })
 	// @ts-expect-error an empty source cannot read
 	connected.useDataGrid({ columns, dataSource: {} })
 	// @ts-expect-error a query descriptor must return TanStack options
@@ -51,6 +55,24 @@ function useSources() {
 	return { child, badChild }
 }
 
+function useConditionalSelection(select?: (raw: { users: User[] }) => User[]) {
+	const query = () => ({ ...read(), ...(select ? { select } : {}) })
+	// @ts-expect-error the absence of select leaves the original response
+	connected.useDataGrid({ columns: [], dataSource: { getAll: { query, getRows: (rows: User[]) => rows } } })
+	createGridDataSource<{ users: User[] }, User, User[]>({
+		invalidate: false,
+		// @ts-expect-error a selected generic does not convert the response by itself
+		getAll: { query: read, getRows: (rows) => rows },
+	})
+}
+
+function useListFactory() {
+	const make = createGridSourceFactory({ list: { prepareArgs: () => undefined, getRows: (rows: User[]) => rows } })
+	const dataSource = make({ key: ['users'], getAll: () => Promise.resolve<User[]>([]) })
+	// @ts-expect-error a list-only factory result has no infinite read
+	connected.useDataGrid({ columns: [], dataSource, pagination: { mode: 'infinite' } })
+}
+
 function createSources() {
 	const fetcher = () => Promise.resolve<User[]>([])
 	const make = createGridSourceFactory({ list: { prepareArgs: () => undefined, getRows: (data: User[]) => data } })
@@ -73,4 +95,6 @@ function createSources() {
 it('checks structural sources and cursor defaults at the public entry points', () => {
 	expectTypeOf(useSources).toBeFunction()
 	expectTypeOf(createSources).toBeFunction()
+	expectTypeOf(useConditionalSelection).toBeFunction()
+	expectTypeOf(useListFactory).toBeFunction()
 })

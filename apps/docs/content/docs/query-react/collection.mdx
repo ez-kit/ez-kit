@@ -111,6 +111,16 @@ The hook projects loaded pages into `items`; call `query.fetchNextPage()` and ob
 on next-page failure. `total` is undefined for infinite reads; custom metadata remains in native page
 data. The hook adds no scroll observer. A source supporting both modes can switch without remounting.
 
+Generated query keys use the result of `prepareArgs` by default. Supply `prepareKey(args, params)`
+on a list or infinite read when the transport uses objects such as `URLSearchParams` or `Headers`.
+The key part must use plain serializable values. A custom key still includes the source key and read
+mode, so the existing invalidation family remains intact. The fetcher receives the original args.
+
+```ts
+prepareArgs: ({ status }) => new URLSearchParams({ status }),
+prepareKey: (args) => args.get('status'),
+```
+
 ## Reuse conventions and connect a grid
 
 `createCollectionSourceFactory` defines shared `list`, `infinite` and `mutations` defaults. Supply

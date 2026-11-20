@@ -82,12 +82,14 @@ export function createGridSourceFactory<
 	defaults: Defaults & {
 		list: {
 			prepareArgs: (params: GridQueryParams) => TArgs
+			prepareKey?: (args: NoInfer<TArgs>, params: GridQueryParams) => unknown
 			getRows: (response: TResponse) => readonly TRow[]
 			getRowCount?: (response: TResponse) => number | undefined
 			options?: NonNullable<GridListFetcherOptions<TArgs, TResponse, TResponse, TRow, DefaultError>['options']>
 		}
 		infinite?: {
 			prepareArgs: (params: GridInfiniteParams) => TCollection
+			prepareKey?: (args: NoInfer<TCollection>, params: GridInfiniteParams) => unknown
 			preparePageArgs: (context: { args: TCollection; pageParam: TPageParam }) => TInfiniteArgs
 			initialPageParam: TPageParam
 			getNextPageParam: (
@@ -134,28 +136,33 @@ export function createGridSourceFactory<
 		TDeleteContext = unknown,
 		TDeleteManyError = DefaultError,
 		TDeleteManyContext = unknown,
-	>(config: {
-		key: QueryKey
-		getAll:
-			| GridFetcher<TArgs, TResponse>
-			| ({ fetcher: GridFetcher<TArgs, TResponse> } & Partial<
-					Omit<GridListFetcherOptions<TArgs, TResponse, TResponse, TRow, DefaultError>, 'key' | 'fetcher'>
-			  >)
-		getInfinite?: Defaults extends { infinite: unknown } ? InfiniteInput['fetcher'] | InfiniteOverrides : InfiniteInput
-		create?: MutationInput<GridCreateContext<TRow>, TCreate, TCreateArgs, TCreateResult, TCreateError, TCreateContext>
-		update?: MutationInput<GridUpdateContext<TRow>, TUpdate, TUpdateArgs, TUpdateResult, TUpdateError, TUpdateContext>
-		delete?: MutationInput<GridDeleteContext<TRow>, TDelete, TDeleteArgs, TDeleteResult, TDeleteError, TDeleteContext>
-		deleteMany?: MutationInput<
-			GridDeleteManyContext<TRow>,
-			TDeleteMany,
-			TDeleteManyArgs,
-			TDeleteManyResult,
-			TDeleteManyError,
-			TDeleteManyContext
-		>
-		invalidate?: InvalidationPolicy
-		transformError?: (error: unknown) => unknown
-	}) {
+		Capabilities extends { getAll?: unknown; getInfinite?: unknown } = { getAll?: unknown; getInfinite?: unknown },
+	>(
+		config: Capabilities & {
+			key: QueryKey
+			getAll:
+				| GridFetcher<TArgs, TResponse>
+				| ({ fetcher: GridFetcher<TArgs, TResponse> } & Partial<
+						Omit<GridListFetcherOptions<TArgs, TResponse, TResponse, TRow, DefaultError>, 'key' | 'fetcher'>
+				  >)
+			getInfinite?: Defaults extends { infinite: unknown }
+				? InfiniteInput['fetcher'] | InfiniteOverrides
+				: InfiniteInput
+			create?: MutationInput<GridCreateContext<TRow>, TCreate, TCreateArgs, TCreateResult, TCreateError, TCreateContext>
+			update?: MutationInput<GridUpdateContext<TRow>, TUpdate, TUpdateArgs, TUpdateResult, TUpdateError, TUpdateContext>
+			delete?: MutationInput<GridDeleteContext<TRow>, TDelete, TDeleteArgs, TDeleteResult, TDeleteError, TDeleteContext>
+			deleteMany?: MutationInput<
+				GridDeleteManyContext<TRow>,
+				TDeleteMany,
+				TDeleteManyArgs,
+				TDeleteManyResult,
+				TDeleteManyError,
+				TDeleteManyContext
+			>
+			invalidate?: InvalidationPolicy
+			transformError?: (error: unknown) => unknown
+		},
+	) {
 		const listInput = typeof config.getAll === 'function' ? { fetcher: config.getAll } : config.getAll
 		const getAll = createListSource({ ...defaults.list, ...listInput, key: config.key })
 		let getInfinite
@@ -189,7 +196,7 @@ export function createGridSourceFactory<
 		const remove = createMutationSource(config.delete, defaults.mutations?.delete, config.key, 'delete')
 		const deleteMany = createMutationSource(config.deleteMany, defaults.mutations?.deleteMany, config.key, 'deleteMany')
 		const transformError = config.transformError ?? defaults.transformError
-		return {
+		const result = {
 			getAll,
 			...(getInfinite === undefined ? {} : { getInfinite }),
 			...(create === undefined ? {} : { create }),
@@ -200,5 +207,7 @@ export function createGridSourceFactory<
 			invalidation: sourceInvalidation(config.key, config.invalidate),
 			queries: { list: getAll.query, ...(getInfinite === undefined ? {} : { infinite: getInfinite.query }) },
 		}
+		return result as Omit<typeof result, 'getInfinite'> &
+			('getInfinite' extends keyof Capabilities ? Pick<typeof result, 'getInfinite'> : { getInfinite?: never })
 	}
 }

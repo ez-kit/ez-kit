@@ -40,6 +40,7 @@ import type {
 } from '@ez-kit/data-grid-react'
 import type {
 	InfiniteData,
+	QueryKey,
 	InvalidateQueryFilters,
 	UseInfiniteQueryOptions,
 	UseQueryOptions,
@@ -54,17 +55,20 @@ function requireCollectionRead<S, K extends keyof S>(source: S, key: K): S & { [
 }
 
 /** Sources retain their concrete options types; the connection only needs their row contract. */
-export type GridDataSource<TRow extends object> = {
+type GridReads<TRow extends object> = {
 	getAll?: {
-		query: (params: GridQueryParams) => unknown
+		query: (params: GridQueryParams) => { queryKey: QueryKey }
 		getRows: (data: never) => readonly TRow[]
 		getRowCount?: (data: never) => number | undefined
 	}
 	getInfinite?: {
-		query: (params: GridInfiniteParams) => unknown
+		query: (params: GridInfiniteParams) => { queryKey: QueryKey }
 		getRows: (data: never) => readonly TRow[]
 	}
 }
+
+export type GridDataSource<TRow extends object> = GridReads<TRow> &
+	(Required<Pick<GridReads<TRow>, 'getAll'>> | Required<Pick<GridReads<TRow>, 'getInfinite'>>)
 
 type GridSourceCompatibility<S> = {
 	[K in keyof S as K extends 'getAll' | 'getInfinite' ? K : never]: ReadProjectionCompatibility<
@@ -75,9 +79,15 @@ type GridSourceCompatibility<S> = {
 	>
 }
 type ReadableGridSource<S, Mode> = S &
-	GridSourceCompatibility<NoInfer<S>> &
+	([GridDataSource<never>] extends [S] ? unknown : GridSourceCompatibility<NoInfer<S>>) &
 	(S extends { getAll: unknown } | { getInfinite: unknown } ? unknown : never) &
-	([Mode] extends ['infinite'] ? ('getInfinite' extends keyof S ? unknown : never) : unknown) &
+	([Mode] extends ['infinite']
+		? S extends { getInfinite?: infer I }
+			? [I] extends [never]
+				? never
+				: unknown
+			: never
+		: unknown) &
 	([Mode] extends ['pages'] ? ('getAll' extends keyof S ? unknown : never) : unknown)
 
 type SourceCheck<S, Mode extends PaginationMode> = {
@@ -130,6 +140,7 @@ export type QueryGridConfig<
 								Partial<Pick<BulkDeletingConfig<NoInfer<R>>, 'onDelete'>>)
 				})
 	dataSource: GridDataSource<R> & S
+	scopeKey?: QueryKey
 	queryOptions?: GridQueryOptions
 	data?: never
 }
@@ -159,7 +170,7 @@ type ConnectionBundle<
 		Mode extends PaginationMode = PaginationMode,
 	>(
 		props:
-			| (DataGridControlledProps<CF, R> & { dataSource?: never; queryOptions?: never })
+			| (DataGridControlledProps<CF, R> & { dataSource?: never; queryOptions?: never; scopeKey?: never })
 			| (DataGridSharedProps &
 					QueryGridConfig<CF, R, C, Context<X>, CC, E, S> &
 					SourceCheck<S, Mode> &
@@ -210,6 +221,12 @@ function enabled(value: unknown): boolean {
 		!(typeof value === 'object' && value !== null && 'enabled' in value && value.enabled === false)
 	)
 }
+function stableRowId(row: object): string {
+	const id = (row as { id?: unknown }).id
+	if ((typeof id === 'string' && id !== '') || (typeof id === 'number' && Number.isFinite(id))) return String(id)
+	throw new Error('Connected editing and deletion require a stable row id. Supply getRowId for rows without an id.')
+}
+
 function sameProjection<R>(a: Projection<R>, b: Projection<R>) {
 	return (
 		a.scope === b.scope &&
@@ -241,10 +258,11 @@ export function withQuery<
 	function useConnectedGrid(
 		config: Omit<UseDataGridConfig<GridFeatures, object>, 'data'> & {
 			dataSource: GridDataSource<object>
+			scopeKey?: QueryKey
 			queryOptions?: GridQueryOptions
 		},
 	) {
-		const { dataSource, queryOptions, ...gridConfig } = config
+		const { dataSource, queryOptions, scopeKey, ...gridConfig } = config
 		const client = useQueryClient()
 		// Query options and their projections cross this boundary together. Their response
 		// type is opaque to the connector; only the projection consumes the selected value.
@@ -252,44 +270,71 @@ export function withQuery<
 		// Child effects can submit before our passive effect publishes the observers.
 		// Wait for this committed render's publication without dispatching to an old owner.
 		const publication = { ready: false, waiters: [] as (() => void)[] }
-		const mutations = useRef<Partial<Record<keyof ActionInputs<object>, (input: unknown) => Promise<unknown>>>>({})
+		const mutations = useRef<
+			Partial<
+				Record<
+					keyof ActionInputs<object>,
+					{
+						key: string
+						run: (input: unknown) => Promise<unknown>
+					}
+				>
+			>
+		>({})
 		const mutationKeys = OPERATIONS.map(
 			(name) => client.defaultMutationOptions(source[name]?.mutation ?? {}).mutationKey ?? [],
 		)
-		const createOwner = hashKey(mutationKeys[0] ?? [])
-		const scope = hashKey(mutationKeys)
+		const scope = hashKey(scopeKey ?? mutationKeys)
+		const createOwner = scopeKey === undefined ? hashKey(mutationKeys[0] ?? []) : scope
+		const operationKey = (name: keyof ActionInputs<object>) => hashKey(mutationKeys[OPERATIONS.indexOf(name)] ?? [])
 		const owners = useRef({ createOwner, scope })
 		const lastReadScope = useRef<string | undefined>(undefined)
 		const abandonedForms = useRef<{
 			create?: Readonly<Record<string, unknown>> | undefined
 			update?: Readonly<Record<string, unknown>> | undefined
 		}>({})
+		function currentOwner(name: keyof ActionInputs<object>): string {
+			return name === 'create' ? owners.current.createOwner : owners.current.scope
+		}
+		function expectedOwner(name: keyof ActionInputs<object>): string {
+			return name === 'create' ? createOwner : scope
+		}
+		function canWrite(name: keyof ActionInputs<object>, startedInScope: boolean): boolean {
+			const form = name === 'create' ? table.creating : name === 'update' ? table.editing : undefined
+			if (
+				startedInScope &&
+				currentOwner(name) === expectedOwner(name) &&
+				(name === 'create' || projection.scope === scope) &&
+				(!form || abandonedForms.current[name as 'create' | 'update'] !== form.getState().initialValues)
+			)
+				return true
+			if (form) throw new ValidationError({ formError: table.grid.messages.form.sourceChanged })
+			return false
+		}
+		function guardCustom<T>(
+			name: keyof ActionInputs<object>,
+			handler: ((context: T) => void | Promise<void>) | undefined,
+		) {
+			if (scopeKey === undefined || !handler) return handler
+			return (context: T) => {
+				if (canWrite(name, true)) return handler(context)
+			}
+		}
 		async function execute<K extends keyof ActionInputs<object>>(
 			name: K,
 			input: ActionInputs<object>[K],
 			signal: AbortSignal,
 		) {
-			const form = name === 'create' ? table.creating : name === 'update' ? table.editing : undefined
-			const expectedOwner = name === 'create' ? createOwner : scope
-			const currentOwner = () => (name === 'create' ? owners.current.createOwner : owners.current.scope)
-			const startedInScope = currentOwner() === expectedOwner
+			const startedInScope = currentOwner(name) === expectedOwner(name)
 			if (!publication.ready) await new Promise<void>((resolve) => publication.waiters.push(resolve))
-			if (signal.aborted) return
-			if (
-				!startedInScope ||
-				currentOwner() !== expectedOwner ||
-				(name !== 'create' && projection.scope !== scope) ||
-				(form && abandonedForms.current[name as 'create' | 'update'] === form.getState().initialValues)
-			) {
-				if (form) throw new ValidationError({ formError: table.grid.messages.form.sourceChanged })
-				return
-			}
+			if (signal.aborted || !canWrite(name, startedInScope)) return
 			const operation = source[name] as
 				GridMutationSource<ActionInputs<object>[K], unknown, unknown, unknown> | undefined
 			const mutate = mutations.current[name]
 			if (!operation || !mutate) throw new Error(`Missing grid ${name} executor`)
 			try {
-				await mutate(operation.prepareArgs(input))
+				if (mutate.key !== operationKey(name)) throw new Error(`Grid ${name} scope changed before dispatch`)
+				await mutate.run(operation.prepareArgs(input))
 			} catch (error) {
 				throw (operation.transformError ?? source.transformError)?.(error) ?? error
 			}
@@ -305,6 +350,8 @@ export function withQuery<
 		const nextPageRef = useRef<() => Promise<void>>(async () => {})
 		const loadMore = useMemo(() => () => nextPageRef.current(), [])
 		let draft = false
+		const identity = { needsRowId: false }
+		let controlledPageIndex: number | undefined
 		const rows = projection.scope === scope ? projection.data : EMPTY
 		const table = useBoundGrid({ ...gridConfig, data: rows }, (merged) => {
 			const {
@@ -313,6 +360,8 @@ export function withQuery<
 				...pagination
 			} = typeof merged.pagination === 'object' ? merged.pagination : {}
 			draft = enabled(merged.draft)
+			identity.needsRowId = !merged.getRowId && (enabled(merged.editing) || enabled(merged.deleting))
+			controlledPageIndex = merged.state?.pagination?.pageIndex
 			const creating: Partial<CreatingConfig<object>> = typeof merged.creating === 'object' ? merged.creating : {}
 			const editing: Partial<EditingConfig<object>> = typeof merged.editing === 'object' ? merged.editing : {}
 			const deleting: Partial<DeletingConfig<object>> = typeof merged.deleting === 'object' ? merged.deleting : {}
@@ -328,12 +377,15 @@ export function withQuery<
 
 			return {
 				...merged,
+				...((enabled(merged.editing) || enabled(merged.deleting)) && !merged.getRowId ? { getRowId: stableRowId } : {}),
 
 				...(enabled(merged.creating)
 					? {
 							creating: {
 								...creating,
-								onSave: creating.onSave ?? (({ values, signal }) => execute('create', { values }, signal)),
+								onSave:
+									guardCustom('create', creating.onSave) ??
+									(({ values, signal }) => execute('create', { values }, signal)),
 							},
 						}
 					: {}),
@@ -342,7 +394,7 @@ export function withQuery<
 							editing: {
 								...editing,
 								onSave:
-									editing.onSave ??
+									guardCustom('update', editing.onSave) ??
 									(({ rowId, row, values, signal }) => execute('update', { rowId, row, values }, signal)),
 							},
 						}
@@ -352,14 +404,14 @@ export function withQuery<
 							deleting: {
 								...deleting,
 								onDelete:
-									deleting.onDelete ??
+									guardCustom('delete', deleting.onDelete) ??
 									(({ rowId, row, signal }) => execute('delete', { rowId, row: row.original }, signal)),
 								...(enabled(deleting.bulk)
 									? {
 											bulk: {
 												...bulk,
 												onDelete:
-													bulk.onDelete ??
+													guardCustom('deleteMany', bulk.onDelete) ??
 													(({ rowIds, rows, signal }) =>
 														execute('deleteMany', { rowIds, rows: rows.map((row) => row.original) }, signal)),
 											},
@@ -447,26 +499,32 @@ export function withQuery<
 		)
 		const criteria = hashKey([axes.sorting, axes.columnFilters, axes.globalFilter])
 		const previousCriteria = useRef(criteria)
-		const reset = previousCriteria.current !== criteria
+		const reset = table.grid.pagination.enabled && previousCriteria.current !== criteria
 		const params = { ...axes, pagination: reset ? { ...axes.pagination, pageIndex: 0 } : axes.pagination }
+		const observedPageIndex = controlledPageIndex ?? axes.pagination.pageIndex
 		useEffect(() => {
-			previousCriteria.current = criteria
-			if (reset && axes.pagination.pageIndex !== 0) table.setPageIndex(0)
-		}, [criteria, reset, axes.pagination.pageIndex, table])
+			if (!reset || observedPageIndex === 0) previousCriteria.current = criteria
+			else table.setPageIndex(0)
+		}, [criteria, reset, observedPageIndex, table])
 		const infiniteParams = {
 			sorting: params.sorting,
 			columnFilters: params.columnFilters,
 			globalFilter: params.globalFilter,
 			pageSize: params.pagination.pageSize,
 		}
+		const suppressPlaceholder = lastReadScope.current !== undefined && lastReadScope.current !== scope
 		const infiniteOptions = infiniteMode ? source.getInfinite?.query(infiniteParams) : undefined
+		const listOptions = !infiniteMode && suppressPlaceholder ? source.getAll?.query(params) : undefined
 		const infiniteIdentity = infiniteOptions ? client.defaultQueryOptions(infiniteOptions).queryHash : undefined
-		const collectionSource = useMemo(
-			() => ({
+		const collectionSource = useMemo(() => {
+			const activeList = listOptions && { ...listOptions, placeholderData: undefined }
+			const activeInfinite =
+				infiniteOptions && suppressPlaceholder ? { ...infiniteOptions, placeholderData: undefined } : infiniteOptions
+			return {
 				...(source.getAll
 					? {
 							getAll: {
-								query: source.getAll.query,
+								query: activeList ? () => activeList : source.getAll.query,
 								getItems: source.getAll.getRows,
 								...(source.getAll.getRowCount ? { getTotal: source.getAll.getRowCount } : {}),
 							},
@@ -475,7 +533,7 @@ export function withQuery<
 				...(source.getInfinite
 					? {
 							getInfinite: {
-								query: infiniteOptions ? () => infiniteOptions : source.getInfinite.query,
+								query: activeInfinite ? () => activeInfinite : source.getInfinite.query,
 								getItems: source.getInfinite.getRows,
 							},
 						}
@@ -485,9 +543,8 @@ export function withQuery<
 				...(source.delete ? { delete: source.delete } : {}),
 				...(source.deleteMany ? { deleteMany: source.deleteMany } : {}),
 				invalidation: source.invalidation ?? EMPTY,
-			}),
-			[source, infiniteOptions],
-		)
+			}
+		}, [source, infiniteOptions, listOptions, suppressPlaceholder])
 		const observerPolicy = { ...queryOptions, notifyOnChangeProps: 'all' as const }
 		// The runtime source crosses one opaque response boundary; modes are checked below.
 		const collection = useCollectionQuery<typeof collectionSource, 'pages' | 'infinite'>(
@@ -511,7 +568,7 @@ export function withQuery<
 			const current: typeof mutations.current = {}
 			for (const name of OPERATIONS) {
 				const mutation = collection[name]
-				if (mutation) current[name] = mutation.mutateAsync
+				if (mutation) current[name] = { key: operationKey(name), run: mutation.mutateAsync }
 			}
 			mutations.current = current
 			publication.ready = true
@@ -527,6 +584,8 @@ export function withQuery<
 			if (current.data !== undefined && !placeholderFromOtherScope) lastReadScope.current = scope
 		}, [current.data, placeholderFromOtherScope, scope])
 		const data = placeholderFromOtherScope ? EMPTY : (collection.items as object[])
+		// Check before publishing records to TanStack Table so a rejected identity cannot poison its row model.
+		if (identity.needsRowId) for (const row of data) stableRowId(row)
 		const readScope = placeholderFromOtherScope ? undefined : scope
 		const authoritativeTotal = list.isFetchedAfterMount || (list.isEnabled && !list.isStale)
 		const rowCount = !infiniteMode && !list.isPlaceholderData && authoritativeTotal ? collection.total : undefined
@@ -598,6 +657,7 @@ export function withQuery<
 	function ConnectedGrid(
 		props: Omit<UseDataGridConfig<GridFeatures, object>, 'data'> & {
 			dataSource: GridDataSource<object>
+			scopeKey?: QueryKey
 			queryOptions?: GridQueryOptions
 		} & DataGridSharedProps,
 	) {
@@ -609,6 +669,7 @@ export function withQuery<
 			| DataGridControlledProps<GridFeatures, object>
 			| (Omit<UseDataGridConfig<GridFeatures, object>, 'data'> & {
 					dataSource: GridDataSource<object>
+					scopeKey?: QueryKey
 					queryOptions?: GridQueryOptions
 			  } & DataGridSharedProps),
 	) {

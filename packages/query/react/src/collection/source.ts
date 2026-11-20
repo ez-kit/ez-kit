@@ -1,3 +1,4 @@
+import { collectionCacheArgs } from './cache-args'
 import { listInvalidation, resolveInvalidation } from './invalidation'
 
 import type { ConfiguredOperations, ConfiguredQueries, RequiredSelection, SourceIdentity } from './contracts'
@@ -17,13 +18,13 @@ function normalizeListSource<P, A, D, S, I, E, K extends QueryKey>(
 	key: QueryKey,
 ): CollectionRead<P, D, S, I, E, K> {
 	if ('query' in value) return value
-	const generated: CollectionRead<P, D, S, I, E> = {
-		query: (params) => {
+	const generated = {
+		query: (params: P) => {
 			const args = value.prepareArgs(params)
 			return {
 				...value.options,
-				queryKey: [...key, 'list', args],
-				queryFn: ({ signal }) => value.fetcher(args, { signal }),
+				queryKey: [...key, 'list', collectionCacheArgs(value.prepareKey ? value.prepareKey(args, params) : args)],
+				queryFn: ({ signal }: { signal: AbortSignal }) => value.fetcher(args, { signal }),
 			}
 		},
 		getItems: value.getItems,
@@ -37,16 +38,16 @@ function normalizeInfiniteSource<P, A, B, D, S, I, C, E, IK extends QueryKey>(
 	key: QueryKey,
 ): CollectionInfiniteRead<P, D, S, I, C, E, IK> {
 	if ('query' in value) return value
-	const generated: CollectionInfiniteRead<P, D, S, I, C, E> = {
-		query: (params) => {
+	const generated = {
+		query: (params: P) => {
 			const args = value.prepareArgs(params)
 			return {
 				...value.options,
-				queryKey: [...key, 'infinite', args],
+				queryKey: [...key, 'infinite', collectionCacheArgs(value.prepareKey ? value.prepareKey(args, params) : args)],
 				initialPageParam: value.initialPageParam,
 				getNextPageParam: value.getNextPageParam,
-				queryFn: ({ signal, pageParam }) =>
-					value.fetcher(value.preparePageArgs({ args, pageParam: pageParam as C }), { signal }),
+				queryFn: ({ signal, pageParam }: { signal: AbortSignal; pageParam: C }) =>
+					value.fetcher(value.preparePageArgs({ args, pageParam }), { signal }),
 			}
 		},
 		getItems: value.getItems,

@@ -47,16 +47,17 @@ type QueryResult<R, M> = R extends { query: (params: never) => infer O }
 	: never
 type ResultOf<Fn> = Fn extends (...args: never[]) => infer Value ? Value : never
 
+type RawData<Options> = Options extends { queryFn?: infer Fn } ? Awaited<ResultOf<Fn>> : unknown
+type SelectedPage<Value, Mode> = Mode extends 'infinite'
+	? Value extends InfiniteData<infer Page>
+		? Page
+		: never
+	: Value
 type ReadData<Options, Mode> = Options extends unknown
 	? 'select' extends keyof Options
-		? Mode extends 'infinite'
-			? ResultOf<Options['select']> extends InfiniteData<infer Page>
-				? Page
-				: never
-			: ResultOf<Options['select']>
-		: Options extends { queryFn?: infer Fn }
-			? Awaited<ResultOf<Fn>>
-			: unknown
+		? | (Options extends { select: (...args: never[]) => unknown } ? never : RawData<Options>)
+			| SelectedPage<ResultOf<Options['select']>, Mode>
+		: RawData<Options>
 	: never
 
 type InfiniteReadOptions = {

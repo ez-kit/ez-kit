@@ -10,6 +10,7 @@ import type {
 	GridInfiniteParams,
 	GridUpdateContext,
 } from './types'
+import type { ReadSelection } from '@ez-kit/query-react/collection'
 import type { DefaultError, InfiniteData, QueryKey, UseInfiniteQueryOptions } from '@tanstack/react-query'
 
 // Native infiniteQueryOptions leaves stored pageParams unknown; TPageParam still
@@ -24,7 +25,8 @@ export type GridInfiniteSource<
 > = {
 	query: (
 		params: GridInfiniteParams,
-	) => UseInfiniteQueryOptions<TPage, TError, InfiniteData<TSelectedPage>, TKey, TPageParam>
+	) => UseInfiniteQueryOptions<TPage, TError, InfiniteData<TSelectedPage>, TKey, TPageParam> &
+		ReadSelection<InfiniteData<TPage>, InfiniteData<TSelectedPage>>
 	getRows: (page: NoInfer<TSelectedPage>) => readonly TRow[]
 }
 
@@ -67,27 +69,28 @@ export function createGridDataSource<
 	TKey extends QueryKey = QueryKey,
 	TInfiniteKey extends QueryKey = QueryKey,
 	TSelectedPage = TPage,
+	Capabilities extends { getAll?: unknown; getInfinite?: unknown } = { getAll?: unknown; getInfinite?: unknown },
 >(
-	config: {
+	config: Capabilities & {
 		getAll: GridListSource<TResponse, TError, TSelected, TRow, TKey>
 		getInfinite?: GridInfiniteSource<TPage, TPageParam, NoInfer<TRow>, TError, TInfiniteKey, TSelectedPage>
 		invalidate: InvalidationPolicy
 		transformError?: (error: unknown) => unknown
 	} & GridSourceOperations<
-		NoInfer<TRow>,
-		TCreate,
-		TUpdate,
-		TDelete,
-		TDeleteMany,
-		TCreateResult,
-		TUpdateResult,
-		TDeleteResult,
-		TDeleteManyResult,
-		TError,
-		TContext
-	>,
+			NoInfer<TRow>,
+			TCreate,
+			TUpdate,
+			TDelete,
+			TDeleteMany,
+			TCreateResult,
+			TUpdateResult,
+			TDeleteResult,
+			TDeleteManyResult,
+			TError,
+			TContext
+		>,
 ) {
-	return {
+	const result = {
 		...config,
 		queries: {
 			list: config.getAll.query,
@@ -95,6 +98,8 @@ export function createGridDataSource<
 		},
 		invalidation: resolveInvalidation([], config.invalidate),
 	}
+	return result as Omit<typeof result, 'getInfinite'> &
+		('getInfinite' extends keyof Capabilities ? Pick<typeof result, 'getInfinite'> : { getInfinite?: never })
 }
 
 /** Internal source construction for generated key families. */

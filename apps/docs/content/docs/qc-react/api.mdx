@@ -119,6 +119,17 @@ share the same cache entries; the grid adds no second server-data store.
 
 ## Source changes during asynchronous work
 
+An optional `scopeKey` identifies the dataset that owns the current forms, selection and
+confirmations. For example, pass `scopeKey: ['users', teamId]` to both inline grids and
+`useDataGrid`. Permission changes and paging can then keep the same scope, while a team
+switch abandons old actions. With an explicit scope, custom save and delete handlers also
+get this UI protection. Each automatic operation still checks its own mutation key before dispatch.
+Without an explicit scope, the connector derives ownership from the effective mutation keys.
+
+Connected editing and deletion require a stable record ID. The default reads a string or
+number from `row.id`; provide `getRowId` when the API uses another field such as `uuid`.
+An ID needs to be unique across pages in the current scope.
+
 Automatic mutations use their effective mutation key as the ownership boundary. Use distinct
 keys for distinct tenants or API scopes. If ownership changes while a save is still validating,
 pending validation is cancelled silently: a commit resolves with `{ ok: false, reason: 'cancelled' }`.
@@ -137,7 +148,9 @@ status separately from `valid`; see [external form checks](/docs/data-grid/editi
 For project-owned context changes, `cancelValidation()` on either form API cancels only validation.
 Already dispatched mutations retain their existing lifecycle rules. Cancelling deletion before
 dispatch skips the request. Built-in delete actions display an error if deletion fails. Retry by
-invoking Delete again. Imperative `delete()` and `confirm()` reject on failure, and the cause is
+invoking Delete again. In-flight targets are available in `table.deleting.getState().pendingIds`.
+Repeated requests for the same target reuse the existing operation. Independent targets can run
+concurrently. Imperative `delete()` and `confirm()` reject on failure, and the cause is
 available in `table.deleting.getState().failure`.
 
 Infinite load-more deduplication is scoped to the effective query hash. A previous selection's
@@ -170,7 +183,8 @@ at the grid boundary; keep response-dependent policies on the typed source when 
 source-owned. Unsupported overrides are ignored at runtime too. A controlled `<DataGrid table={table} />`
 does not start another query; configure options when creating its table.
 
-External pagination resets remain project-owned: call `table.setPageIndex(0)` alongside the
+When applied grid criteria change, the connector requests page zero and keeps using it until
+controlled pagination acknowledges the reset. External pagination resets remain project-owned: call `table.setPageIndex(0)` alongside the
 external filter or team change. There is no automatic external `resetKey` policy.
 
 ## Read and loader safety
@@ -180,7 +194,11 @@ projection inputs from the fetcher or query options. A shape-changing projection
 matching `select`; a conditional selector must also allow the raw shape when absent. Row-count
 getters follow the same selected-data contract. Structural sources get the same check at hookup.
 Use `satisfies GridDataSource<Row>` if you want to check the source's shape while preserving its
-specific response types. An explicit pagination mode needs the corresponding read.
+specific response types, or annotate it as `GridDataSource<Row>` when you only need the
+row contract and already checked the query/projection pair at construction. An explicit
+pagination mode needs the corresponding read. For a native shape-changing read, return a
+descriptor with a required `select`. If you use TanStack's `queryOptions` helper, put the
+selector on the returned object so TypeScript can see that it is required.
 A bare infinite fetcher can inherit cursor options from the grid factory. Supply the full infinite
 descriptor when the factory has no infinite defaults.
 

@@ -226,3 +226,120 @@ it('keeps the new selection when an already dispatched bulk delete finishes for 
 	h.unmount()
 	client.clear()
 })
+
+it('suppresses previous placeholder data before the next source projects it', async () => {
+	const client = new QueryClient({ defaultOptions: { queries: { placeholderData: keepPreviousData } } })
+	const wrapper = ({ children }: { children: ReactNode }) => (
+		<QueryClientProvider client={client}>{children}</QueryClientProvider>
+	)
+	let resolveB!: (rows: Row[]) => void
+	const waiting = new Promise<Row[]>((resolve) => {
+		resolveB = resolve
+	})
+	const A = {
+		getAll: {
+			query: () => ({ queryKey: ['a'], queryFn: () => Promise.resolve({ users: [{ id: '1', name: 'A' }] }) }),
+			getRows: (data: { users: Row[] }) => data.users,
+		},
+	}
+	const project = vi.fn((rows: Row[]) => rows.map((row) => row))
+	const B = { getAll: { query: () => ({ queryKey: ['b'], queryFn: () => waiting }), getRows: project } }
+	const h = renderHook(
+		({ tenant }) => connected.useDataGrid({ dataSource: tenant === 'a' ? A : B, columns: [], scopeKey: [tenant] }),
+		{ wrapper, initialProps: { tenant: 'a' } },
+	)
+	await waitFor(() => {
+		expect(h.result.current.getRowModel().rows).toHaveLength(1)
+	})
+	h.rerender({ tenant: 'b' })
+	expect(project).not.toHaveBeenCalled()
+	expect(h.result.current.getRowModel().rows).toHaveLength(0)
+	await act(async () => {
+		resolveB([{ id: '1', name: 'B' }])
+		await waiting
+	})
+	await waitFor(() => {
+		expect(h.result.current.getRowModel().rows[0]?.original.name).toBe('B')
+	})
+	h.unmount()
+	client.clear()
+})
+
+it('keeps same-tenant form and selection when an unrelated mutation appears', async () => {
+	const client = new QueryClient()
+	const wrapper = ({ children }: { children: ReactNode }) => (
+		<QueryClientProvider client={client}>{children}</QueryClientProvider>
+	)
+	const save = vi.fn((_name: string | undefined) => Promise.resolve())
+	const source = factory({
+		key: ['same-owner'],
+		getAll: () => Promise.resolve([{ id: '1', name: 'A' }]),
+		update: { prepareArgs: ({ values }) => values.name, fetcher: save },
+	})
+	const next = {
+		...source,
+		delete: { mutation: { mutationKey: ['same-owner', 'delete'] }, prepareArgs: () => undefined },
+	}
+	const h = renderHook(
+		({ canDelete }) =>
+			connected.useDataGrid({
+				dataSource: canDelete ? next : source,
+				columns: [],
+				scopeKey: ['same-owner'],
+				editing: true,
+				selection: true,
+			}),
+		{ wrapper, initialProps: { canDelete: false } },
+	)
+	const table = h.result.current
+	await waitFor(() => {
+		expect(table.getRowModel().rows).toHaveLength(1)
+	})
+	act(() => {
+		table.editing.start('1')
+		table.editing.setValue('name', 'Draft')
+		table.setRowSelection({ '1': true })
+	})
+	h.rerender({ canDelete: true })
+	expect(table.store.state.rowSelection).toEqual({ '1': true })
+	await act(async () => {
+		await expect(table.editing.commit()).resolves.toEqual({ ok: true })
+	})
+	expect(save.mock.calls[0]?.[0]).toBe('Draft')
+	h.unmount()
+	client.clear()
+})
+
+it('requires stable IDs when editing server rows', () => {
+	const client = new QueryClient()
+	const wrapper = ({ children }: { children: ReactNode }) => (
+		<QueryClientProvider client={client}>{children}</QueryClientProvider>
+	)
+	const data = [{ uuid: 'user-1', name: 'A' }]
+	const source = {
+		getAll: {
+			query: () => ({ queryKey: ['users-by-uuid'], queryFn: () => Promise.resolve(data), initialData: data }),
+			getRows: (rows: typeof data) => rows,
+		},
+	}
+	const save = vi.fn()
+	const mount = (identify: boolean) =>
+		renderHook(
+			() =>
+				connected.useDataGrid<(typeof data)[number]>({
+					dataSource: source,
+					columns: [],
+					editing: { onSave: save },
+					pagination: true,
+					...(identify ? { getRowId: (row) => row.uuid } : {}),
+				}),
+			{ wrapper },
+		)
+	expect(() => {
+		mount(false)
+	}).toThrow(/Supply getRowId/)
+	const h = mount(true)
+	expect(h.result.current.getRowModel().rows[0]?.id).toBe('user-1')
+	h.unmount()
+	client.clear()
+})

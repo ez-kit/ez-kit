@@ -106,7 +106,7 @@ describe('deletingFeature — feature composition', () => {
 
 		expect(typeof table.deleting.confirm).toBe('function')
 		expect(typeof table.deleting.bulk.confirm).toBe('function')
-		expect(table._deletingAbort).toEqual({})
+		expect(table._deletingAbort.active.size).toBe(0)
 
 		// `getState()` is not a private mirror: it resolves to the same slice the atom holds.
 		table.deleting.request('1')
@@ -156,7 +156,7 @@ describe('deletingFeature — feature composition', () => {
 
 		// 2 — instance data: only the hook could have done this.
 		expect(observedAbort).toBe(true)
-		expect(table._deletingAbort.controller).toBeUndefined()
+		expect(table._deletingAbort.active.size).toBe(0)
 	})
 
 	it('each table gets its own idle slice, and every write replaces it rather than mutating it', () => {
@@ -599,4 +599,30 @@ describe('explicit bulk execution', () => {
 		expect(onDelete).not.toHaveBeenCalled()
 		expect(table.atoms.rowSelection.get()).toEqual({ '1': true, '2': true })
 	})
+})
+
+it('coalesces duplicate deletes and preserves independent bulk completion', async () => {
+	let finish!: () => void
+	const pending = new Promise<void>((resolve) => {
+		finish = resolve
+	})
+	const bulkDelete = vi.fn(() => pending)
+	const onDelete = vi.fn()
+	const table = createTable({
+		features: DELETING_SEL,
+		data: DATA,
+		columns: COLUMNS,
+		deleting: { onDelete, bulk: { onDelete: bulkDelete } },
+	})
+	table.setRowSelection({ '1': true })
+	const first = table.deleting.bulk.delete(['1'])
+	const duplicate = table.deleting.bulk.delete(['1'])
+	expect(table.deleting.getState().pendingIds).toEqual(['1'])
+	await table.deleting.delete('2')
+	expect(onDelete).toHaveBeenCalledOnce()
+	expect(bulkDelete).toHaveBeenCalledOnce()
+	finish()
+	await Promise.all([first, duplicate])
+	expect(table.store.state.rowSelection).toEqual({})
+	expect(table.deleting.getState().pendingIds).toBeUndefined()
 })
