@@ -326,7 +326,7 @@ function TestActionsCell(props: ActionsCellProps) {
 			/>
 		)
 	}
-	const { row, hasEditing, hasDeleting, onEdit, onDelete, actions } = props
+	const { row, hasEditing, hasDeleting, deleteDisabled, onEdit, onDelete, actions } = props
 	return (
 		<>
 			{hasEditing && (
@@ -341,6 +341,7 @@ function TestActionsCell(props: ActionsCellProps) {
 			{hasDeleting && (
 				<button
 					type='button'
+					disabled={deleteDisabled}
 					onClick={onDelete}
 					data-row-id={row.id}
 				>
@@ -719,6 +720,7 @@ function TestActionBar({ open, variant, selection, draft }: ActionBarProps) {
 					{selection.onDelete && (
 						<button
 							type='button'
+							disabled={selection.deleteDisabled}
 							onClick={selection.onDelete}
 						>
 							Delete

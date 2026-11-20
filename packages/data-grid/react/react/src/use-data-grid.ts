@@ -10,7 +10,7 @@ import {
 } from '@ez-kit/data-grid-core'
 import { useTable } from '@tanstack/react-table'
 import { table_publishExternalState } from '@tanstack/table-core/static-functions'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { useDndBundleAdapter } from './data-grid/dnd'
 import { wireFilterInputCommands } from './data-grid/filter-input-commands'
@@ -231,6 +231,8 @@ function normalizeVirtualization(
  * stays out of range until the consumer mirrors the callback.
  */
 export type ReactPaginationConfig = PaginationConfig & {
+	/** Infinite loader scope. Changing this key abandons old loading/error UI without resetting pages. */
+	loadMoreKey?: unknown
 	/**
 	 * Page-based mode only. Render a link per page beside prev/next, windowed by `siblings` /
 	 * `boundaries`. Default `true`. Purely presentational — paging behaviour is identical
@@ -316,6 +318,8 @@ export type ReactPaginationConfig = PaginationConfig & {
  * detection tuning — `state.infinite` stays 100% grid-owned.
  */
 export type NormalizedInfiniteConfig = {
+	/** Shared by detection sites; a new scope ignores old asynchronous completions. */
+	requestScope: { initialized: boolean }
 	trigger: LoadMoreTrigger
 	threshold: { rows?: number; px?: number }
 	hasNextPage: boolean
@@ -325,11 +329,13 @@ export type NormalizedInfiniteConfig = {
 
 function normalizeInfinite(
 	pagination: boolean | ReactPaginationConfig | undefined,
+	requestScope: NormalizedInfiniteConfig['requestScope'],
 ): NormalizedInfiniteConfig | undefined {
 	const cfg = featureConfig(pagination)
 	if (cfg?.mode !== PaginationMode.Infinite) return undefined
 	const threshold = cfg.threshold ?? { rows: DATA_GRID_DEFAULTS.pagination.threshold.rows }
 	return {
+		requestScope,
 		trigger: cfg.trigger ?? DATA_GRID_DEFAULTS.pagination.trigger,
 		threshold,
 		hasNextPage: cfg.hasNextPage ?? false,
@@ -864,6 +870,11 @@ function isControlledEcho(
 	return true
 }
 
+/** A framework-neutral connection can augment the fully merged instance configuration. */
+export type DataGridConfigTransform<TFeatures extends TableFeatures, TRow extends object> = (
+	config: UseDataGridConfig<TFeatures, TRow>,
+) => UseDataGridConfig<TFeatures, TRow>
+
 /**
  * React hook that constructs the grid's `DataTable` once and returns it on every render.
  *
@@ -907,6 +918,7 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 	instanceConfig: UseDataGridConfig<TFeatures, TRow>,
 	factoryDefaults?: DataGridDefaultOptions<TFeatures, TRow>,
 	bundleDnd?: DndAdapter | null,
+	transformConfig?: DataGridConfigTransform<TFeatures, TRow>,
 ): DataTable<TFeatures, TRow> {
 	const providerDefaults = useDataGridOptions<TFeatures, TRow>()
 	const contextDnd = useDndBundleAdapter()
@@ -914,7 +926,12 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 	// The uncontrolled `<DataGrid data columns />` runs this hook itself, so the kit factory has
 	// no argument to bind its defaults to — the bound `DataGrid` publishes them as context instead.
 	const contextFactoryDefaults = useGridFactoryDefaults<TFeatures, TRow>()
-	const config = mergeGridOptionLayers(factoryDefaults ?? contextFactoryDefaults, providerDefaults, instanceConfig)
+	const mergedConfig = mergeGridOptionLayers(
+		factoryDefaults ?? contextFactoryDefaults,
+		providerDefaults,
+		instanceConfig,
+	)
+	const config = transformConfig?.(mergedConfig) ?? mergedConfig
 	const creating = enabledByHandler(config.creating, 'creating', 'onSave')
 	const editing = enabledByHandler(config.editing, 'editing', 'onSave')
 	const deleting = enabledByHandler(config.deleting, 'deleting', 'onDelete')
@@ -981,6 +998,7 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 	const corePagination: boolean | PaginationConfig | undefined =
 		typeof rawPagination === 'object'
 			? (({
+					loadMoreKey: _loadMoreKey,
 					trigger: _trigger,
 					threshold: _threshold,
 					links: _links,
@@ -992,7 +1010,11 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 					...rest
 				}) => rest)(rawPagination)
 			: rawPagination
-	const normalizedInfinite = normalizeInfinite(rawPagination)
+	const infiniteKey = featureConfig(rawPagination)?.loadMoreKey
+	const infiniteMode = featureConfig(rawPagination)?.mode === PaginationMode.Infinite
+	// eslint-disable-next-line react-hooks/exhaustive-deps -- scope identity must change with the collection or paging mode
+	const requestScope = useMemo(() => ({ initialized: false }), [infiniteKey, infiniteMode])
+	const normalizedInfinite = normalizeInfinite(rawPagination, requestScope)
 
 	// Page-based only: the selector drives `pageSize`, which infinite mode does not page by.
 	const paginationCfg = featureConfig(rawPagination)

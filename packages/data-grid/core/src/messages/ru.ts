@@ -214,10 +214,12 @@ export const messages: GridMessages = {
 		trigger: '+ Добавить',
 	},
 	form: {
+		sourceChanged: 'Источник данных изменился. Откройте форму заново, чтобы сохранить изменения.',
 		save: 'Сохранить',
 		cancel: 'Отмена',
 	},
 	deleting: {
+		error: 'Не удалось удалить данные. Попробуйте ещё раз.',
 		confirm: 'Удалить',
 		cancel: 'Отмена',
 		title: 'Вы уверены?',

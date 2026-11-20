@@ -38,13 +38,9 @@ Select some rows to see the bulk prompt, or use a row's Delete action for the pe
 
 ## Bulk delete
 
-`bulk` is the scalar-or-object shape the rest of the grid uses.
-
-```tsx
-// One word. With no handler of its own, bulk delete loops `onDelete` over the selection —
-// which is exactly what a client-side store wants.
-deleting: { onDelete, bulk: true }
-```
+Bulk deletion requires its own `onDelete` handler. Omit `bulk` or pass `false` to disable it.
+The base grid rejects `bulk: true` and configurations without a bulk executor; it never
+falls back to the single-row handler.
 
 ```tsx
 // One call for the whole set — the shape a "delete these ids" endpoint wants.
@@ -54,6 +50,28 @@ deleting: { onDelete, bulk: { onDelete: ({ rowIds }) => api.removeMany(rowIds) }
 The Delete button appears in the [action bar](/docs/data-grid/selection/action-bar) as soon as
 `bulk` resolves to on and row selection is enabled. The deleted ids leave the selection once the
 handler resolves, so the bar never counts rows that no longer exist.
+
+## Migrating an intentional per-row loop
+
+Move the loop into the bulk handler if the API has no batch endpoint:
+
+```tsx
+deleting: {
+  onDelete,
+  bulk: {
+    onDelete: async ({ rows, signal }) => {
+      for (const row of rows) {
+        await onDelete({ rowId: row.id, row, signal })
+      }
+    },
+  },
+}
+```
+
+The grid clears the resolved selection only when the whole handler resolves. It does not
+interpret per-row statuses in a response or provide automatic partial-success handling.
+With `withQuery`, `deleting: { bulk: true }` remains a shorthand when the source provides
+`deleteMany`: the connector installs the required handler before the grid is configured.
 
 ## The prompt
 
@@ -95,11 +113,10 @@ Here are three important patterns to know when the delete handler fails:
 
 <DataGridDocsExample exampleId='deleting-rollback' />
 
-**The bulk loop stops at the first rejection.** With `bulk: true` there is no single-call handler,
-so the grid calls `onDelete` once per selected row, sequentially, awaiting each one. A rejection
-ends the run: the rows after the failing one are never called at all. That is deliberate — a
-partial delete you can see beats a half-applied set from a parallel run — but it means the
-selection can end up spanning deleted and untouched rows.
+**An explicit loop stops at the first rejection.** The example's bulk handler calls the API
+sequentially and awaits each call. The grid invokes that handler once; it does not create a loop.
+If a later call fails, earlier deletions may already have succeeded. The application owns
+reconciliation of those partial results and the remaining selection.
 
 **Resolving is what clears the selection.** The deleted ids leave `state.rowSelection` after the
 handler resolves, and only then. Reject and the whole selection stays, which is what lets the user
@@ -120,20 +137,20 @@ If you need to show pending or error feedback, render it separately beside the g
 
 ### `deleting`
 
-| `deleting` key | Type                                                | Description                                                            |
-| -------------- | --------------------------------------------------- | ---------------------------------------------------------------------- |
-| `onDelete`     | `({ rowId, row, signal }) => void \| Promise<void>` | Required. Delete one row.                                              |
-| `confirmation` | `boolean \| { title?, description? }`               | Prompt before deleting one row. `description` receives that row.       |
-| `bulk`         | `boolean \| BulkDeletingConfig`                     | Delete the selection. `true` loops `onDelete`; an object adds its own. |
-| `enabled`      | `boolean`                                           | Explicit off-switch for a config that came from a defaults layer.      |
+| `deleting` key | Type                                                | Description                                                       |
+| -------------- | --------------------------------------------------- | ----------------------------------------------------------------- |
+| `onDelete`     | `({ rowId, row, signal }) => void \| Promise<void>` | Required. Delete one row.                                         |
+| `confirmation` | `boolean \| { title?, description? }`               | Prompt before deleting one row. `description` receives that row.  |
+| `bulk`         | `false \| BulkDeletingConfig`                       | Delete the selection with a required bulk executor.               |
+| `enabled`      | `boolean`                                           | Explicit off-switch for a config that came from a defaults layer. |
 
 ### `deleting.bulk`
 
-| `deleting.bulk` key | Type                                                  | Description                                                            |
-| ------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------- |
-| `onDelete`          | `({ rowIds, rows, signal }) => void \| Promise<void>` | One call for the whole set. Falls back to `deleting.onDelete` per row. |
-| `confirmation`      | `boolean \| { title?, description? }`                 | Prompt before deleting. `description` receives the selected rows.      |
-| `enabled`           | `boolean`                                             | Explicit off-switch.                                                   |
+| `deleting.bulk` key | Type                                                  | Description                                                       |
+| ------------------- | ----------------------------------------------------- | ----------------------------------------------------------------- |
+| `onDelete`          | `({ rowIds, rows, signal }) => void \| Promise<void>` | Required. One call for the whole set; no single-delete fallback.  |
+| `confirmation`      | `boolean \| { title?, description? }`                 | Prompt before deleting. `description` receives the selected rows. |
+| `enabled`           | `boolean`                                             | Explicit off-switch.                                              |
 
 ## Notes
 

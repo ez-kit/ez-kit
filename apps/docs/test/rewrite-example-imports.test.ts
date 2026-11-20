@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+
 import { describe, expect, it } from 'vitest'
 
 import { rewriteExampleImports } from '../components/rewrite-example-imports'
@@ -61,3 +64,16 @@ describe('rewriteExampleImports', () => {
 		)
 	})
 })
+
+for (const file of ['query-source.tsx', 'editing/query-modal.tsx']) {
+	it(`rewrites the connected grid example ${file} without runtime kit-switching scaffolding`, () => {
+		const source = readFileSync(resolve(__dirname, '../shared/data-grid/examples/components', file), 'utf8')
+		for (const kit of ['shadcn', 'heroui'] as const) {
+			const code = rewriteExampleImports(source, kit)
+			expect(code).toContain(`from '@ez-kit/data-grid-${kit}'`)
+			expect(code).not.toContain('shared/GridKit')
+			expect(code).not.toContain('HeroExample')
+			expect(code).not.toContain('useDataGridType')
+		}
+	})
+}

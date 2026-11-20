@@ -65,7 +65,7 @@ const [state, setState] = useState<Partial<TableState<GridFeatures>>>({
 	expanding={{ component: EmployeeDetail }}
 	editing={{ mode: 'row', onSave }}
 	creating={{ mode: 'modal', onSave }}
-	deleting={{ onDelete, bulk: true }}
+	deleting={{ onDelete, bulk: { onDelete: onDeleteMany } }}
 />
 ```
 

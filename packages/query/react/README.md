@@ -146,3 +146,104 @@ screen while another page loads or fails. Use a distinct cache key from a regula
 ## Documentation
 
 https://ez-kit-docs.vercel.app/docs/query-react
+
+## Collection queries
+
+Import `createCollectionSource`, `createCollectionSourceFactory` and `useCollectionQuery` from
+`@ez-kit/query-react/collection` for ordinary CRUD lists or UI connectors. This entry has no
+DataGrid dependency and uses the existing `QueryClientProvider`.
+
+```tsx
+const source = createCollectionSource({
+	key: ['users'],
+	getAll: {
+		prepareArgs: (params: { search: string; offset: number; limit: number }) => params,
+		fetcher: fetchUsers,
+		getItems: (response) => response.items,
+		getTotal: (response) => response.total,
+	},
+	update: {
+		prepareArgs: (input: { id: string; name: string }) => ({
+			path: { id: input.id },
+			body: { name: input.name },
+		}),
+		fetcher: updateUser,
+	},
+})
+const users = useCollectionQuery({ source, mode: 'pages', params })
+await users.update.mutateAsync({ id: '42', name: 'Alice' })
+```
+
+Parameters are arbitrary and externally owned. Changing filters and resetting pagination should
+be one state update in the owning component/store. The hook never changes params. It returns
+`items`, optional `total`, the native active `query`, and native results for configured `create`,
+`update`, `delete` and `deleteMany` operations. There is no `execute`, no implicit bulk loop and no
+automatic optimistic update. Each operation has independent input, DTO, result and error types.
+
+Fetcher mutation preparation runs inside `mutationFn`: lifecycle callbacks receive the original
+input, `onMutate` runs first, and preparation failures/retries use the native mutation lifecycle.
+Keep preparation pure because retry repeats it. `mutateAsync` returns the fetcher's result;
+handle its rejection in application event handlers. Native option descriptors preserve their
+original variables: reads use `query`/`getItems`/`getTotal`, mutations use `mutation`.
+
+Sources require at least one read. Infinite-only sources define `getInfinite`, with collection
+`prepareArgs`, `preparePageArgs({ args, pageParam })`, `initialPageParam`, `getNextPageParam` and
+`getItems`. Use `mode: 'infinite'` and native `query.fetchNextPage()`/pagination flags. Loaded pages
+project into items without replacing cache data; infinite total is undefined. Read fetchers
+receive `{ signal }` separately from business arguments.
+
+Generated sources key ordinary and infinite reads separately and invalidate both families on
+successful mutations. Refresh is not awaited; user lifecycle promises are. `invalidate` supports
+`false`, `additional` or `replace` at source and operation levels. Native keys are not rewritten;
+native sources require explicit invalidation scope. The source's `queries.list` and
+`queries.infinite` expose options for native prefetch/read consumers. Include tenant and other
+response-affecting inputs in the base key or prepared arguments.
+
+`createCollectionSourceFactory` shares list/infinite preparation and projections and mutation
+preparation across entity sources. Bare fetchers inherit defaults; expanded descriptors override
+them. Supplied options replace the options object. Explicit entity specialization in an
+application factory is supported when generic inference needs it.
+
+See the docs Collections page for a complete ItemGroup CRUD example and the qc-react connector
+for adapting the same source to a DataGrid.
+
+Fetcher mutations default `mutationKey` to `[...baseKey, operationName]`. Include tenant ownership
+in the base key when switching between tenant-specific sources: a mutation already dispatched for
+one tenant keeps that scope when the hook switches to a differently keyed source. Explicit mutation
+keys override this default. Native mutation descriptors preserve supplied keys and TanStack's normal
+observer behavior; changing callbacks under the same key does not create an isolated operation scope.
+
+Collection configuration is checked before execution: generated reads require a base key,
+native reads require an explicit invalidation policy, and a factory operation must supply
+required preparation/projection fields when no shared read convention provides them.
+Conditionally configured mutations stay optional in the returned type. Check an optional
+operation before using it; narrow an optional read descriptor before selecting that mode.
+Mutation callbacks inherit QueryClient global and keyed defaults with native override
+precedence. Automatic invalidation runs after the effective success callback settles.
+
+`useCollectionQuery({ source, mode, params, queryOptions })` accepts per-consumer loading and
+refetch settings such as `enabled`, `staleTime` and `refetchOnWindowFocus`. Only supplied settings
+override the source. Cache identity, `select` and infinite cursor handling remain source-owned;
+query callbacks keep native response/error types. Both read modes support these overrides.
+
+Shared-factory entity operations may use shape-changing `options.select`; `getItems` then infers
+the selected response (or selected infinite page) and must be supplied explicitly. Inherited
+`getTotal` is discarded for that operation; supply a compatible one to retain a total. Raw cache
+responses and `getNextPageParam` remain unchanged. Operation options still replace shared options.
+
+Generated mutations require a base source key even alongside native reads. Removing a conditional
+operation hides it from the result while preserving the last connected operation for pending work.
+Without selection, projections receive raw API data; an optionally absent selector cannot promise
+a selected-only input type. If selection is conditional, the projection must handle every possible
+shape. These contracts also apply to infinite pages.
+
+Requires `@tanstack/react-query >=5.105.3 <6`. A pinned minimum-version consumer checks the built
+public declarations and their interoperability with native hooks, with library checking enabled.
+Inactive internal read observers use neutral defaults; active reads keep the application's native
+QueryClient defaults. Native read projections infer their inputs from query options, not from the
+projection annotation. When conditional selection broadens a shared factory's data type, override
+an inherited raw-only `getTotal` with a compatible getter (or `() => undefined`).
+
+Collection observer overrides are derived from the complete native option model, including for
+plain structural sources. Literal source policy does not restrict legal consumer overrides, and
+omitted callback options retain contextual query-data types.

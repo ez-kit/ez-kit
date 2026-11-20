@@ -1,0 +1,83 @@
+---
+title: Page pagination
+description: Connect a numbered-page grid to an offset API, including search and automatic page resets.
+---
+
+Use ordinary pagination when each request returns one page and the API can report
+the total number of matching records. This example has nine fake users and three
+rows per page. Click Next, then search for Grace: the grid returns to the first page.
+
+<DataGridDocsExample exampleId='query-pages' />
+
+The preview works without a backend. Its fetcher waits 400 ms, filters an immutable
+array and returns a page. Expand the source below the preview for the complete component.
+Both kit tabs use the same request contract.
+
+## Translate table state into request arguments
+
+The example uses `createGridSourceFactory` because its source is specific to a grid.
+The grid already owns pagination and search state; no additional useState is needed.
+
+```tsx
+const makeSource = createGridSourceFactory({
+	list: {
+		prepareArgs: ({ pagination, globalFilter }) => ({
+			offset: pagination.pageIndex * pagination.pageSize,
+			limit: pagination.pageSize,
+			search: typeof globalFilter === 'string' ? globalFilter : '',
+		}),
+		getRows: (page: { items: User[]; total: number }) => page.items,
+		getRowCount: (page) => page.total,
+	},
+})
+const source = makeSource({
+	key: ['users'],
+	getAll: fetchUsers,
+})
+```
+
+`fetchUsers(args, { signal })` returns `{ items, total }`. For example, page index 2
+with page size 10 becomes `{ offset: 20, limit: 10, search: '' }`. `prepareArgs`
+creates the fetcher's argument object. Your HTTP client or generated fetcher decides
+whether those fields go in the URL or request body.
+
+For an API using page numbers, return `{ page: pagination.pageIndex + 1, pageSize }`
+instead. Define this convention once and reuse the factory for other entities.
+
+## Mount the connected grid
+
+Create `DataGrid` with `withQuery(yourGridBundle)` as shown in the
+[connection guide](/docs/qc-react#connect-a-bundle), then mount it inside your
+existing `QueryClientProvider`:
+
+```tsx
+<DataGrid
+	dataSource={source}
+	columns={columns}
+	getRowId={(user) => user.id}
+	globalFiltering
+	pagination={{ mode: 'pages', pageSize: 10 }}
+/>
+```
+
+A new page produces a different query key. Returning to a previous page can reuse
+its cache; normal Query stale/refetch settings still apply. Applied search, filters
+or sorting reset the page to zero. Map every enabled server-processing axis into
+`prepareArgs`; this example enables search and leaves sorting and column filters disabled.
+
+## Totals, errors and deletion
+
+`getRowCount` returns the total number of matching records, not the length of the
+current page. It lets the grid show the page count and disable Next at the end.
+If your API has no total, omit that projection; the connector cannot infer a last page.
+
+The grid receives pending, background-fetch and error states from Query. A failing
+fetcher must reject; an HTTP client returning an error response as ordinary data will
+not trigger Query's error state. Forward the provided signal to `fetch` or Orval.
+
+After a successful mutation, the source invalidates its read families. If deleting
+the last row makes the current page invalid, a fresh successful total moves the grid
+to the last valid page. Placeholder data and unknown totals do not cause that correction.
+
+For accumulating pages, see [Infinite loading](/docs/qc-react/infinite). For a list
+without a table, see [Lists and CRUD](/docs/qc-react/lists).

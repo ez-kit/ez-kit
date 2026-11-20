@@ -41,6 +41,7 @@ export enum TypeModule {
 	VaStorePersist = '@ez-kit/va-store/persist',
 	/** `@ez-kit/query-react` — the TanStack Query gate; owns the `<Query>` and `<QueryProvider>` props. */
 	QueryReact = '@ez-kit/query-react',
+	QcReact = '@ez-kit/qc-react/data-grid',
 }
 
 /** A named exported type, plus the type arguments it needs to be instantiated. */

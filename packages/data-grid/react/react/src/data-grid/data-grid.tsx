@@ -186,6 +186,13 @@ function hasConfirmDialog<TRow extends object>(table: Table<GridFeatures, TRow>)
 	return isFeatureEnabled(table.options.deleting?.confirmation) || bulkConfirmationOptions(table) !== undefined
 }
 
+function DeleteError() {
+	const table = useDataGridTable()
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional deleting feature
+	const failure = useDataGridState((state) => state.deleting?.failure)
+	return failure ? <div role='alert'>{table.grid.messages.deleting.error}</div> : null
+}
+
 function ConfirmDialogRenderer() {
 	const table = useDataGridTable()
 	const { ConfirmDialog } = useGridComponents().deleting
@@ -248,7 +255,7 @@ function ConfirmDialogRenderer() {
 				description={description}
 				onConfirm={() => {
 					hasConfirmed.current = true
-					void table.deleting.bulk.confirm()
+					void table.deleting.bulk.confirm().catch(() => undefined)
 				}}
 				onCancel={() => {
 					if (hasConfirmed.current) {
@@ -276,7 +283,7 @@ function ConfirmDialogRenderer() {
 			description={description}
 			onConfirm={() => {
 				hasConfirmed.current = true
-				void table.deleting.confirm()
+				void table.deleting.confirm().catch(() => undefined)
 			}}
 			onCancel={() => {
 				if (hasConfirmed.current) {
@@ -698,6 +705,7 @@ function DataGridControlled<TFeatures extends TableFeatures, TRow extends object
 												<GridBody>{children}</GridBody>
 												{writeOptions.creating?.mode === CreatingMode.Modal && <CreatingModal />}
 												{writeOptions.editing?.mode === EditingMode.Modal && <EditingModal />}
+												<DeleteError />
 												<ConfirmDialogRenderer />
 											</GridRoot>
 										</ItemsSourceProvider>

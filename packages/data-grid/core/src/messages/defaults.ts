@@ -207,10 +207,12 @@ export const defaultMessages: GridMessages = {
 		trigger: '+ Add',
 	},
 	form: {
+		sourceChanged: 'The data source changed. Reopen the form to save.',
 		save: 'Save',
 		cancel: 'Cancel',
 	},
 	deleting: {
+		error: 'Could not delete the selected data. Try again.',
 		confirm: 'Delete',
 		cancel: 'Cancel',
 		title: 'Are you sure?',

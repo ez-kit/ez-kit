@@ -186,6 +186,7 @@ function SelectionSection({ selection, inline }: { selection: ActionBarSelection
 			<Button
 				size='sm'
 				variant='danger'
+				isDisabled={selection.deleteDisabled ?? false}
 				onPress={handler}
 			>
 				<Trash2 size={16} />
@@ -195,6 +196,7 @@ function SelectionSection({ selection, inline }: { selection: ActionBarSelection
 			<ActionBarItem
 				variant='danger'
 				onSelect={keepBarOpen}
+				isDisabled={selection.deleteDisabled ?? false}
 				onPress={handler}
 			>
 				<Trash2 size={16} />

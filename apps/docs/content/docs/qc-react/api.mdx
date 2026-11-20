@@ -1,0 +1,218 @@
+---
+title: API
+description: Source helpers, prepared arguments and invalidation policy.
+---
+
+All exports below come from `@ez-kit/qc-react/data-grid`.
+
+## Exports
+
+| Export                    | Purpose                                                           |
+| ------------------------- | ----------------------------------------------------------------- |
+| `withQuery`               | Extend a grid bundle with connected DataGrid and useDataGrid.     |
+| `createGridSourceFactory` | Define shared API conventions, then bind per-entity operations.   |
+| `createListSource`        | Normalize a fetcher with its own request/selected response types. |
+| `createInfiniteSource`    | Normalize a cursor fetcher and collection key.                    |
+| `createGridDataSource`    | Combine native option factories or normalized sources.            |
+
+## Applied parameters
+
+`GridQueryParams` is read from the table, not from a parallel component state.
+
+| Option          | Meaning                                                        |
+| --------------- | -------------------------------------------------------------- |
+| `pagination`    | Applied page index and page size.                              |
+| `sorting`       | Applied ordered sort rules.                                    |
+| `columnFilters` | Applied column filters.                                        |
+| `globalFilter`  | Applied search value; narrow its unknown type in your adapter. |
+
+`GridInfiniteParams` replaces pagination with `pageSize`. The next cursor belongs
+to Query's page parameter, not the table's page index.
+
+## List fetcher options
+
+`GridListFetcherOptions` is accepted by `createListSource`.
+
+| Option        | Meaning                                                                 |
+| ------------- | ----------------------------------------------------------------------- |
+| `key`         | Base cache family.                                                      |
+| `fetcher`     | Async function receiving business args and a separate signal transport. |
+| `prepareArgs` | Synchronously translate applied table parameters to fetcher args.       |
+| `getRows`     | Extract readonly rows from the selected response.                       |
+| `getRowCount` | Optional authoritative total; undefined means unknown.                  |
+| `options`     | Native Query options except generated query key and function.           |
+
+## Infinite fetcher options
+
+`GridInfiniteFetcherOptions` is accepted by `createInfiniteSource`.
+
+| Option             | Meaning                                                                 |
+| ------------------ | ----------------------------------------------------------------------- |
+| `key`              | Base cache family.                                                      |
+| `fetcher`          | Fetch one page with prepared args and signal.                           |
+| `prepareArgs`      | Prepare collection criteria for the key.                                |
+| `preparePageArgs`  | Add the current page parameter to the request args.                     |
+| `initialPageParam` | Native initial cursor/page parameter.                                   |
+| `getNextPageParam` | Native callback returning the next cursor or null/undefined to stop.    |
+| `getRows`          | Extract rows from each selected page.                                   |
+| `options`          | Native options except generated key, function and pagination callbacks. |
+
+## Factory overrides
+
+The factory defines `list`, optional `infinite`, optional mutation preparation
+and `transformError`. Its returned constructor accepts `key`, `getAll`, optional
+`getInfinite`, `create`, `update`, `delete`, `deleteMany`, `invalidate` and
+`transformError`. A bare fetcher inherits conventions. An expanded operation
+replaces only supplied properties; its `options` replaces the whole defaults
+object. Callbacks are not deep-merged.
+
+Shared read overrides keep the convention's request/response types. For an
+exceptional endpoint DTO or selected response shape, use `createListSource` or
+`createInfiniteSource` and combine them with `createGridDataSource`. An explicit
+row generic on an application factory such as `makeSource<User>()` is supported.
+
+## Invalidation policy
+
+`InvalidationPolicy` is `false` or one of the following mutually exclusive forms:
+
+| Option       | Meaning                                                       |
+| ------------ | ------------------------------------------------------------- |
+| `additional` | Independent native filters appended to the resolved defaults. |
+| `replace`    | Independent native filters replacing the resolved policy.     |
+
+Omission retains defaults. See [cache and invalidation](/docs/qc-react#cache-and-invalidation)
+for operation/source precedence and non-blocking refresh behavior.
+
+## Native sources
+
+```ts
+import { createGridDataSource } from '@ez-kit/qc-react/data-grid'
+import { queryOptions } from '@tanstack/react-query'
+
+type User = { id: string; name: string }
+const source = createGridDataSource({
+	getAll: {
+		query: ({ pagination }) =>
+			queryOptions({
+				queryKey: ['existing-users', pagination],
+				queryFn: async ({ signal }): Promise<User[]> => {
+					const response = await fetch(`/users?page=${pagination.pageIndex}`, { signal })
+					if (!response.ok) throw new Error('Could not load users')
+					return response.json()
+				},
+			}),
+		getRows: (users) => users,
+	},
+	invalidate: { replace: [{ queryKey: ['existing-users'] }] },
+})
+```
+
+Native operations provide `mutation` options and `prepareArgs`, with optional
+operation `invalidate` and `transformError`. Native query keys are preserved;
+an explicit source invalidation policy is required, even if it is `false`.
+Selected result types are retained; infinite selection must preserve the typed
+page structure. Raw API responses remain in the cache.
+
+Reuse `source.queries.list(params)` with `prefetchQuery` or `useQuery`, and
+`source.queries.infinite(params)` when an infinite source is supplied. Consumers
+share the same cache entries; the grid adds no second server-data store.
+
+## Source changes during asynchronous work
+
+An optional `scopeKey` identifies the dataset that owns the current forms, selection and
+confirmations. For example, pass `scopeKey: ['users', teamId]` to both inline grids and
+`useDataGrid`. Permission changes and paging can then keep the same scope, while a team
+switch abandons old actions. With an explicit scope, custom save and delete handlers also
+get this UI protection. Each automatic operation still checks its own mutation key before dispatch.
+Without an explicit scope, the connector derives ownership from the effective mutation keys.
+
+Connected editing and deletion require a stable record ID. The default reads a string or
+number from `row.id`; provide `getRowId` when the API uses another field such as `uuid`.
+An ID needs to be unique across pages in the current scope.
+
+Automatic mutations use their effective mutation key as the ownership boundary. Use distinct
+keys for distinct tenants or API scopes. If ownership changes while a save is still validating,
+pending validation is cancelled silently: a commit resolves with `{ ok: false, reason: 'cancelled' }`.
+The form stays open with its values and returns to idle. Late validation results or exceptions
+cannot show errors or dispatch a save. Validators receive an aborted signal; results are ignored
+even if they do not consume it. Same-key source updates retain native behavior.
+A draft opened under the previous owner stays visible, but automatic Save returns a form error
+until the form is reopened. Row actions cannot use placeholder rows carried over from the previous
+owner. Changing ownership clears staged delete confirmations and row selection. A dispatched bulk
+delete can still update its cache, and its completion leaves the new owner's selection alone.
+Explicit mutation keys must include the write scope when the application changes it.
+External checks through `validateValues(values)` or `FormModalProps.validate(values)` resolve
+with `{ status: 'cancelled' }` on that transition, even when the form stays open. Handle that
+status separately from `valid`; see [external form checks](/docs/data-grid/editing/creating#checking-an-external-form).
+
+For project-owned context changes, `cancelValidation()` on either form API cancels only validation.
+Already dispatched mutations retain their existing lifecycle rules. Cancelling deletion before
+dispatch skips the request. Built-in delete actions display an error if deletion fails. Retry by
+invoking Delete again. In-flight targets are available in `table.deleting.getState().pendingIds`.
+Repeated requests for the same target reuse the existing operation. Independent targets can run
+concurrently. Imperative `delete()` and `confirm()` reject on failure, and the cause is
+available in `table.deleting.getState().failure`.
+
+Infinite load-more deduplication is scoped to the effective query hash. A previous selection's
+pending request does not block the next selection from fetching another page, including native
+requests that do not consume an AbortSignal.
+
+## Per-grid query options
+
+Both the connected `DataGrid` and `useDataGrid` accept `queryOptions` for ordinary and infinite
+reads. These options override the source's observer policy for this instance:
+
+```tsx
+const table = connected.useDataGrid({
+	dataSource: usersSource,
+	columns,
+	queryOptions: {
+		enabled: Boolean(teamId),
+		staleTime: 30_000,
+		refetchOnWindowFocus: false,
+	},
+})
+```
+
+The grid accepts enabled, stale/gc timing, retry, refetch, network mode and error throwing.
+A disabled infinite grid does not request more pages even when cached data has another page.
+The grid observes all result changes so its loading, error and pagination UI can update.
+Plain `useCollectionQuery` consumers can still choose `notifyOnChangeProps`. Query callbacks see opaque response data
+at the grid boundary; keep response-dependent policies on the typed source when needed.
+`queryKey`, `queryFn`, `select`, initial/placeholder data and infinite cursor options remain
+source-owned. Unsupported overrides are ignored at runtime too. A controlled `<DataGrid table={table} />`
+does not start another query; configure options when creating its table.
+
+When applied grid criteria change, the connector requests page zero and keeps using it until
+controlled pagination acknowledges the reset. External pagination resets remain project-owned: call `table.setPageIndex(0)` alongside the
+external filter or team change. There is no automatic external `resetKey` policy.
+
+## Read and loader safety
+
+Standalone `createListSource`, `createInfiniteSource` and native `createGridDataSource` infer
+projection inputs from the fetcher or query options. A shape-changing projection requires a
+matching `select`; a conditional selector must also allow the raw shape when absent. Row-count
+getters follow the same selected-data contract. Structural sources get the same check at hookup.
+Use `satisfies GridDataSource<Row>` if you want to check the source's shape while preserving its
+specific response types, or annotate it as `GridDataSource<Row>` when you only need the
+row contract and already checked the query/projection pair at construction. An explicit
+pagination mode needs the corresponding read. For a native shape-changing read, return a
+descriptor with a required `select`. If you use TanStack's `queryOptions` helper, put the
+selector on the returned object so TypeScript can see that it is required.
+A bare infinite fetcher can inherit cursor options from the grid factory. Supply the full infinite
+descriptor when the factory has no infinite defaults.
+
+Infinite grids scope both request deduplication and the loader's pending/error state to the
+current query. A slow previous selection cannot block the current selection or publish an old
+error into it. The connector supplies `pagination.loadMoreKey` automatically. Base-grid consumers
+with their own loader can supply a stable key when the collection changes; this only abandons old
+loader state, and does not reset page, selection or form state.
+
+Stale cached totals cannot correct a restored page when refetch is disabled. Totals become
+authoritative after a successful response for the current observer, or when an enabled observer
+reads fresh cache data. A completed response can correct the page even with `staleTime: 0`.
+
+Automatic form actions can be invoked from consumer layout effects or child effects. They wait
+for the committed mutation observers to be ready before checking ownership and dispatching.
+Closing a form before dispatch cancels the queued action; closing it after dispatch retains the
+existing background-mutation behavior.

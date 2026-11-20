@@ -902,15 +902,19 @@ describe('creatingFeature — validateValues', () => {
 		table.creating.start()
 		const before = creatingOf(table)
 
-		await expect(table.creating.validateValues({ email: 'x' })).resolves.toEqual({ errors: { email: ['invalid'] } })
+		await expect(table.creating.validateValues({ email: 'x' })).resolves.toEqual({
+			status: 'invalid',
+			errors: { email: ['invalid'] },
+			formError: null,
+		})
 		expect(creatingOf(table)).toBe(before)
 	})
 
-	it('resolves null when no validator is configured', async () => {
+	it('resolves valid when no validator is configured', async () => {
 		const table = createTable({ features: CREATING, data: DATA, columns: COLUMNS, creating: { onSave: noop } })
 		table.creating.start()
 
-		await expect(table.creating.validateValues({ email: 'x' })).resolves.toBeNull()
+		await expect(table.creating.validateValues({ email: 'x' })).resolves.toEqual({ status: 'valid' })
 	})
 
 	it('does not cancel a commit in flight, and a commit does not cancel it', async () => {

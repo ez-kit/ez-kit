@@ -116,6 +116,40 @@ and move on.
 
 `@ez-kit/va-store` offers standalone `useSelector(proxy, selector, options?)` and the same hook bound to context and cached stores. Selectors read readonly snapshots and compare results with `Object.is`, overridable through `isEqual`. `Subscribe` accepts `selector` and `isEqual`, passing `(selected, rawProxy)` to children; without a selector it retains Valtio's automatic property tracking. `Store` and `useStore` remain subscription-free write surfaces. Rationale: [ADR 0025](openspec/decisions/0025-valtio-result-selectors.md).
 
+### UI-independent query collections
+
+Collection sources, API-convention factories and `useCollectionQuery` live in
+`@ez-kit/query-react/collection`, with arbitrary externally owned params and native query/mutation
+results. No second cache or parameter store, grid dependency or public execute method. New fetcher
+mutation preparation runs inside mutationFn: callbacks receive original input, and retry repeats
+preparation. Generated mutation keys use the base key plus operation; explicit/native keys retain
+TanStack semantics. Grid state mapping, resets/correction, form errors and prepared-variable
+compatibility remain in qc-react. Rationale: [ADR 0031](openspec/decisions/0031-query-collections-and-ui-connectors.md).
+
+### Query connectors, cache ownership and mutation sessions
+
+Query integration lives in `@ez-kit/qc-react/data-grid`, with React and TanStack
+Query peers and the shared grid peer required for this entry. The base grid stays
+library-neutral and the connector imports no visual kit. `withQuery(bundle)`
+preserves the bundle's types and compound surface, supporting either inline
+`dataSource` or connected `useDataGrid` plus a supplied table. Native options are
+the execution contract; fetcher factories and standalone read helpers normalize
+to it. Operations supply capabilities; grid features still need explicit enablement. Rationale: [ADR 0031](openspec/decisions/0031-query-collections-and-ui-connectors.md), preserving [ADR 0028](openspec/decisions/0028-query-connector-boundary.md).
+
+Connected grids read applied pagination/filter/sort state from table selectors and
+use manual server processing. Factory keys are base/list/prepared-args or
+base/infinite/collection-args; infinite cursors and transport signals do not enter
+collection identity. Native sources preserve their keys and require explicit
+invalidation scope. Successful automatic mutations invalidate both list families
+without awaiting refetch, preserving native lifecycle semantics. Rationale: [ADR 0031](openspec/decisions/0031-query-collections-and-ui-connectors.md), preserving [ADR 0029](openspec/decisions/0029-query-grid-state-and-cache.md).
+
+Pending form validation/submission disables Save and Cancel; permitted modal
+dismissal abandons the form session without aborting an already-dispatched
+connector mutation. Late results cannot update another session. Native lifecycle
+callbacks see original errors, while transformError maps only the grid-facing
+error. Bulk deletion requires one explicit executor, with no single-delete
+fallback or inferred partial-success protocol. Rationale: [ADR 0030](openspec/decisions/0030-grid-mutation-sessions-and-bulk.md).
+
 ## Branching & Release Flow
 
 - `develop` is the default integration branch — all feature branches fork from and merge into `develop`.

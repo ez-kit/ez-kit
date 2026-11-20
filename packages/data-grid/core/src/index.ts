@@ -297,7 +297,7 @@ export type { LoadingState } from './features/loading'
 
 // Form commit API
 export { CommitFailure } from './features/form'
-export type { CommitOptions, CommitResult } from './features/form'
+export type { CommitOptions, CommitResult, ValidationCheckResult } from './features/form'
 
 // Validation API
 export { CommitStatus, ValidateOn, ValidationError, isValidationError, schemaResolver } from './features/validation'

@@ -5,9 +5,9 @@ import { describe, expect, it, vi } from 'vitest'
 import { createColumns } from '../../column/create-columns'
 import { createTable, createTableOptions } from '../../create-table'
 
-import { deletingFeature } from './deleting'
+import { deletingFeature, getBulkDeletingConfig, validateBulkDeletingConfig } from './deleting'
 
-import type { DeletingState } from './deleting'
+import type { DeletingConfig, DeletingState } from './deleting'
 import type { ExternalAtoms, RowSelectionState, TableFeatures, TableOptions } from '@tanstack/table-core'
 
 type Row = {
@@ -106,7 +106,7 @@ describe('deletingFeature — feature composition', () => {
 
 		expect(typeof table.deleting.confirm).toBe('function')
 		expect(typeof table.deleting.bulk.confirm).toBe('function')
-		expect(table._deletingAbort).toEqual({})
+		expect(table._deletingAbort.active.size).toBe(0)
 
 		// `getState()` is not a private mirror: it resolves to the same slice the atom holds.
 		table.deleting.request('1')
@@ -156,7 +156,7 @@ describe('deletingFeature — feature composition', () => {
 
 		// 2 — instance data: only the hook could have done this.
 		expect(observedAbort).toBe(true)
-		expect(table._deletingAbort.controller).toBeUndefined()
+		expect(table._deletingAbort.active.size).toBe(0)
 	})
 
 	it('each table gets its own idle slice, and every write replaces it rather than mutating it', () => {
@@ -220,16 +220,15 @@ describe('deletingFeature — the post-bulk deselect writes a slice it does not 
 		const table = constructWithExternalAtoms(
 			DELETING_SEL,
 			{ rowSelection: external },
-			{ deleting: { onDelete, bulk: true } },
+			{ deleting: { onDelete: vi.fn(), bulk: { onDelete } } },
 		)
 
 		table.deleting.bulk.request()
 		await Promise.resolve()
 
-		// `bulk: true` carries no single-call handler, so the per-row one runs once per selected
-		// row — which makes the count itself the assertion: two, and row 2 was never selected.
+		// Only truthy selected IDs reach the single bulk invocation.
 		expect(onDelete).toHaveBeenCalledTimes(1)
-		expect(onDelete.mock.calls[0]?.[0]).toMatchObject({ rowId: '1' })
+		expect(onDelete.mock.calls[0]?.[0]).toMatchObject({ rowIds: ['1'] })
 	})
 
 	it('a bulk delete on a table with no rowSelectionFeature does not throw', async () => {
@@ -239,7 +238,7 @@ describe('deletingFeature — the post-bulk deselect writes a slice it does not 
 			features: DELETING,
 			data: DATA,
 			columns: COLUMNS,
-			deleting: { onDelete: vi.fn(), bulk: true },
+			deleting: { onDelete: vi.fn(), bulk: { onDelete: vi.fn() } },
 		})
 
 		await expect(table.deleting.bulk.delete(['1'])).resolves.toBeUndefined()
@@ -395,7 +394,7 @@ describe('deletingFeature — confirmation flow', () => {
 			data: DATA,
 			columns: COLUMNS,
 			selection: true,
-			deleting: { onDelete: vi.fn(), confirmation: true, bulk: { confirmation: true } },
+			deleting: { onDelete: vi.fn(), confirmation: true, bulk: { onDelete: vi.fn(), confirmation: true } },
 		})
 		expect(table.deleting.getState()).toEqual({ pendingRowId: null, pendingBulk: false })
 
@@ -425,7 +424,7 @@ describe('deletingFeature — confirmation flow', () => {
 			data: DATA,
 			columns: COLUMNS,
 			selection: true,
-			deleting: { onDelete: vi.fn(), bulk: { confirmation: true } },
+			deleting: { onDelete: vi.fn(), bulk: { onDelete: vi.fn(), confirmation: true } },
 		})
 		table.setRowSelection({ '1': true })
 		table.deleting.bulk.request()
@@ -439,12 +438,12 @@ describe('deletingFeature — confirmation flow', () => {
 			data: DATA,
 			columns: COLUMNS,
 			selection: true,
-			deleting: { onDelete, bulk: true },
+			deleting: { onDelete: vi.fn(), bulk: { onDelete } },
 		})
 		table.setRowSelection({ '1': true, '2': true })
 		table.deleting.bulk.request()
 		await vi.waitFor(() => {
-			expect(onDelete).toHaveBeenCalledTimes(2)
+			expect(onDelete).toHaveBeenCalledTimes(1)
 		})
 		expect(deletingOf(table).pendingBulk).toBe(false)
 	})
@@ -529,4 +528,101 @@ describe('deletingFeature — confirmation flow', () => {
 		table.deleting.cancel()
 		expect(captured?.aborted).toBe(true)
 	})
+})
+
+describe('explicit bulk execution', () => {
+	it('validates frozen settings without changing them or calling an executor', () => {
+		const onDelete = vi.fn()
+		const bulk = Object.freeze({ onDelete })
+		const deleting = Object.freeze({ onDelete, bulk })
+		const config = Object.freeze({ features: DELETING_SEL, data: DATA, columns: COLUMNS, deleting })
+		expect(() => {
+			validateBulkDeletingConfig(deleting)
+		}).not.toThrow()
+		expect(getBulkDeletingConfig(deleting)).toBe(bulk)
+		expect(() => createTableOptions(config)).not.toThrow()
+		expect(config.deleting).toBe(deleting)
+		expect(deleting.bulk).toBe(bulk)
+		expect(onDelete).not.toHaveBeenCalled()
+	})
+	it('rejects missing executors before running any single deletion', () => {
+		const onDelete = vi.fn()
+		const invalid: DeletingConfig<Row> = {
+			onDelete,
+			// @ts-expect-error Bare bulk enablement cannot supply an executor in the base grid.
+			bulk: true,
+		}
+		expect(() => createTable({ features: DELETING_SEL, data: DATA, columns: COLUMNS, deleting: invalid })).toThrow(
+			'deleting.bulk.onDelete',
+		)
+		expect(onDelete).not.toHaveBeenCalled()
+	})
+	it('checks dynamic options at both request and direct execution', async () => {
+		const onDelete = vi.fn()
+		const table = createTable({
+			features: DELETING_SEL,
+			data: DATA,
+			columns: COLUMNS,
+			selection: true,
+			deleting: { onDelete, bulk: { onDelete: vi.fn() } },
+		})
+		table.setRowSelection({ '1': true })
+		const invalid: DeletingConfig<Row> = {
+			onDelete,
+			// @ts-expect-error A confirmation is not an executor.
+			bulk: { confirmation: true },
+		}
+		table.setOptions((prev) => ({ ...prev, deleting: invalid }))
+		expect(() => {
+			table.deleting.bulk.request()
+		}).toThrow('deleting.bulk.onDelete')
+		await expect(table.deleting.bulk.delete(['1'])).rejects.toThrow('deleting.bulk.onDelete')
+		expect(onDelete).not.toHaveBeenCalled()
+		expect(table.atoms.rowSelection.get()).toEqual({ '1': true })
+	})
+	it('preserves selection on rejection without attempting single deletion', async () => {
+		const onDelete = vi.fn()
+		const bulk = vi.fn(() => Promise.reject(new Error('server refused')))
+		const table = createTable({
+			features: DELETING_SEL,
+			data: DATA,
+			columns: COLUMNS,
+			selection: true,
+			deleting: { onDelete, bulk: { onDelete: bulk, confirmation: true } },
+		})
+		table.setRowSelection({ '1': true, '2': true })
+		table.deleting.bulk.request()
+		expect(bulk).not.toHaveBeenCalled()
+		await expect(table.deleting.bulk.confirm()).rejects.toThrow('server refused')
+		expect(bulk).toHaveBeenCalledTimes(1)
+		expect(bulk.mock.calls[0]).toBeDefined()
+		expect(onDelete).not.toHaveBeenCalled()
+		expect(table.atoms.rowSelection.get()).toEqual({ '1': true, '2': true })
+	})
+})
+
+it('coalesces duplicate deletes and preserves independent bulk completion', async () => {
+	let finish!: () => void
+	const pending = new Promise<void>((resolve) => {
+		finish = resolve
+	})
+	const bulkDelete = vi.fn(() => pending)
+	const onDelete = vi.fn()
+	const table = createTable({
+		features: DELETING_SEL,
+		data: DATA,
+		columns: COLUMNS,
+		deleting: { onDelete, bulk: { onDelete: bulkDelete } },
+	})
+	table.setRowSelection({ '1': true })
+	const first = table.deleting.bulk.delete(['1'])
+	const duplicate = table.deleting.bulk.delete(['1'])
+	expect(table.deleting.getState().pendingIds).toEqual(['1'])
+	await table.deleting.delete('2')
+	expect(onDelete).toHaveBeenCalledOnce()
+	expect(bulkDelete).toHaveBeenCalledOnce()
+	finish()
+	await Promise.all([first, duplicate])
+	expect(table.store.state.rowSelection).toEqual({})
+	expect(table.deleting.getState().pendingIds).toBeUndefined()
 })

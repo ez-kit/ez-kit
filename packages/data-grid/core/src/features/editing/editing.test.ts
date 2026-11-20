@@ -783,15 +783,19 @@ describe('editingFeature — validateValues', () => {
 		table.editing.start('1')
 		const before = editingOf(table)
 
-		await expect(table.editing.validateValues({ name: 'A' })).resolves.toEqual({ errors: { name: ['too short'] } })
+		await expect(table.editing.validateValues({ name: 'A' })).resolves.toEqual({
+			status: 'invalid',
+			errors: { name: ['too short'] },
+			formError: null,
+		})
 		expect(editingOf(table)).toBe(before)
 	})
 
-	it('resolves null when no validator is configured', async () => {
+	it('resolves valid when no validator is configured', async () => {
 		const table = createTable({ features: EDITING, data: DATA, columns: COLUMNS, editing: { onSave: noopSave } })
 		table.editing.start('1')
 
-		await expect(table.editing.validateValues({ name: 'A' })).resolves.toBeNull()
+		await expect(table.editing.validateValues({ name: 'A' })).resolves.toEqual({ status: 'valid' })
 	})
 
 	it('is cancelled by closing the form', async () => {
@@ -946,7 +950,7 @@ describe('editingFeature — commit and validate() do not cancel each other', ()
 		expect(validate).toHaveBeenCalledTimes(1)
 	})
 
-	it('validateValues resolves null without running when no form is open', async () => {
+	it('validateValues resolves cancelled without running when no form is open', async () => {
 		const validate = vi.fn().mockReturnValue({ errors: { name: ['x'] } })
 		const table = createTable({
 			features: EDITING,
@@ -955,7 +959,7 @@ describe('editingFeature — commit and validate() do not cancel each other', ()
 			editing: { validate, onSave: noopSave },
 		})
 
-		await expect(table.editing.validateValues({ name: '' })).resolves.toBeNull()
+		await expect(table.editing.validateValues({ name: '' })).resolves.toEqual({ status: 'cancelled' })
 		expect(validate).not.toHaveBeenCalled()
 	})
 })

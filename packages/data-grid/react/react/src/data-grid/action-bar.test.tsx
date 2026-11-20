@@ -1,5 +1,5 @@
 import { createTable, createColumns } from '@ez-kit/data-grid-core'
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -543,4 +543,55 @@ describe('<ActionBar> — the render function', () => {
 		expect(screen.getByTestId('plain-children')).toBeInTheDocument()
 		expect(screen.queryByTestId('action-bar')).toBeNull()
 	})
+})
+
+it.each([false, true])('renders a deletion error and allows retry (confirmation=%s)', async (confirmation) => {
+	const user = userEvent.setup()
+	let attempts = 0
+	const onDelete = () => {
+		attempts += 1
+		return attempts === 1 ? Promise.reject(new Error('HTTP 409')) : Promise.resolve()
+	}
+	const { table } = renderGrid({
+		selection: true,
+		deleting: { onDelete: () => undefined, bulk: { onDelete, confirmation } },
+	})
+	table.setRowSelection({ '1': true })
+	const remove = async () => {
+		await user.click(within(await screen.findByTestId('action-bar')).getByRole('button', { name: 'Delete' }))
+		if (confirmation) {
+			const dialog = await screen.findByRole('dialog')
+			await user.click(within(dialog).getByRole('button', { name: /confirm/i }))
+		}
+	}
+	await remove()
+	expect(await screen.findByRole('alert')).toHaveTextContent(/could not delete/i)
+	expect(table.store.state.rowSelection).toEqual({ '1': true })
+	await remove()
+	expect(screen.queryByRole('alert')).toBeNull()
+	expect(attempts).toBe(2)
+})
+
+it('disables deleting the selection while its rows are being deleted', async () => {
+	const user = userEvent.setup()
+	let finish!: () => void
+	const pending = new Promise<void>((resolve) => {
+		finish = resolve
+	})
+	const onDelete = vi.fn(() => pending)
+	const { table } = renderGrid({
+		selection: true,
+		deleting: { onDelete: () => undefined, bulk: { onDelete } },
+	})
+	table.setRowSelection({ '1': true })
+	const button = within(await screen.findByTestId('action-bar')).getByRole('button', { name: 'Delete' })
+	await user.click(button)
+	expect(button).toBeDisabled()
+	await user.click(button)
+	expect(onDelete).toHaveBeenCalledOnce()
+	await act(async () => {
+		finish()
+		await pending
+	})
+	expect(table.store.state.rowSelection).toEqual({})
 })

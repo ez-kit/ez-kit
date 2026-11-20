@@ -1,0 +1,12 @@
+{
+	"extends": "../../../tsconfig.base.json",
+	"compilerOptions": {
+		"rootDir": ".",
+		"allowJs": true,
+		"types": ["node", "vitest/globals", "@testing-library/jest-dom/vitest"],
+		"paths": {
+			"@/*": ["./src/*"]
+		}
+	},
+	"include": ["src", "test", "examples"]
+}

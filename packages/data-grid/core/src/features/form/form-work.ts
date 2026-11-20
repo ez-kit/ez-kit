@@ -56,6 +56,18 @@ export function abortFormWork(box: FormWorkBox): void {
 	box.commit = undefined
 }
 
+/** Abandon checks without closing the form or interrupting a dispatched save. */
+export function abortValidation(box: FormWorkBox, status: CommitStatus): void {
+	box.field?.abort()
+	box.field = undefined
+	abortChecks(box)
+	if (status === CommitStatus.Validating) {
+		box.form?.abort()
+		box.form = undefined
+		box.commit = undefined
+	}
+}
+
 type FieldValidationRun = {
 	signal: AbortSignal
 	columnId: string
