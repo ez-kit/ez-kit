@@ -5,6 +5,7 @@ import { addressBinding, captureDefaults, createBinding } from './binding'
 import { paramNumber } from './codecs'
 import { createPersistEngine } from './engine'
 import { decodeRecord, encodeRecord } from './record'
+import { SourceMutationCancelledError } from './source-errors'
 import { patchKeyed, removeKeyedScope } from './storage/patch'
 import { objectPort, observable } from './test-kit'
 import { createUrlPort, UrlHistory } from './url/adapter'
@@ -435,7 +436,7 @@ describe('acknowledged source operations', () => {
 			state.width = 500
 		})
 		await tick()
-		const waiting = engine.flush(target)
+		const waiting = expect(engine.flush(target)).rejects.toBeInstanceOf(SourceMutationCancelledError)
 		engine.pull(
 			new Map([
 				[key('first'), '400'],

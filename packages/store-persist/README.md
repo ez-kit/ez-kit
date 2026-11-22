@@ -153,3 +153,7 @@ area. Partial reset retains edits to separate fields made by synchronous applica
 The JSON codec omits undefined values and keeps explicit JSON null. Next.js query saves after Back
 follow the restored browser route, including its base path. A write can succeed while an older
 restore failure remains visible in status.
+
+Use `flushPersist(store)` for a save action across all sources attached to the mounted store.
+It returns a settled result per effective source alias, including URL when configured. Inspect the
+results before leaving the page. The existing handle flush remains scoped to its selected source.

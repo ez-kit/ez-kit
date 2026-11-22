@@ -86,6 +86,11 @@ Restoration MUST NOT replace a record edited by the user since instance creation
 - **WHEN** the user changed A but not B, and a read returns both
 - **THEN** A retains the user value while B may restore
 
+#### Scenario: An error reporter repairs application state
+
+- **WHEN** a decode error triggers onError and the caller edits that or another persisted field
+- **THEN** the edit is not overwritten by a prepared restore assignment or removed by stale invalidation
+
 ### Requirement: Lifecycle belongs to the instance
 
 A cache hit MUST retain terminal status and state without another initial read. After eviction a new instance MUST start a new restoration. Disconnect, dispose and reset MUST prevent applying responses from the previous lifecycle; resubscription MUST be idempotent.

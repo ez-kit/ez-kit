@@ -39,6 +39,7 @@ export {
 
 // --- Per-source control handles: typed accessors ($url / $persist) ---
 export {
+	flushPersist,
 	persistHandle,
 	type PersistFieldPath,
 	type PersistHandle,

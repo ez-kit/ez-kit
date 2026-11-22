@@ -63,3 +63,7 @@ cache is disposed during creation, and restore valid dates over omitted invalid 
 Make direct IndexedDB migration reads atomic and retain application subscription edits during
 reset. Omit undefined JSON values, preserve the Next.js base path after Back, prevent recursive
 cache creation at the same address, and retain restore failures across independent writes.
+
+Expose store-scoped flushPersist with per-source outcomes. Reject cancelled unsent flushes,
+preserve reentrant application edits through restore and reset, isolate status subscriber failures,
+and preserve sparse array edits when clearing default values.

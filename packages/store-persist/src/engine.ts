@@ -679,9 +679,14 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 			if (
 				target !== undefined &&
 				target <= previousRevision &&
+				record.acknowledged < target &&
 				!(inFlight?.record === record && inFlight.revision >= target)
-			)
-				fence.targets.delete(record)
+			) {
+				fences.delete(fence)
+				fence.reject(
+					new SourceMutationCancelledError('[ez-kit/store-persist] External update superseded an unsent write'),
+				)
+			}
 		}
 		record.revision++
 		revision++
@@ -700,6 +705,15 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 		expected: Map<RecordState, number>,
 	): void {
 		const writes: PathWrite[] = []
+		const reports: (() => void)[] = []
+		function stageWrite(field: FieldDescriptor, record: RecordState, value: unknown): void {
+			const expectedRevision = record.revision
+			writes.push({
+				path: field.path,
+				value,
+				shouldApply: () => !disposed && !retired.has(record) && record.revision === expectedRevision,
+			})
+		}
 		for (const [field, record] of binding.records) {
 			const key = bindingKey(binding, field)
 			if (
@@ -718,7 +732,7 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 					if (external) {
 						supersedeWithExternal(binding, field, record)
 						record.outcome = 'default'
-						writes.push({ path: field.path, value: cloneDefault(binding.defaults.get(field)) })
+						stageWrite(field, record, cloneDefault(binding.defaults.get(field)))
 					}
 					continue
 				}
@@ -767,7 +781,6 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 				const serialized = stringifyField(field, value)
 				const rewrite = stored.version < current || serialized !== stored.value
 				if (applyValue) {
-					writes.push({ path: field.path, value })
 					record.outcome = stored.version < current ? 'migrated' : 'restored'
 					record.error = null
 				}
@@ -782,13 +795,16 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 								binding.clearOnDefault && fieldEquals(field, value, binding.defaults.get(field)) ? null : serialized,
 						})
 				}
+				if (applyValue) stageWrite(field, record, value)
 			} catch (error) {
-				report(error, operation, [field])
 				record.revision++
 				record.dirty = true
 				record.forceDelete = true
 				record.outcome = 'invalidated'
 				record.error = error
+				reports.push(() => {
+					report(error, operation, [field])
+				})
 			}
 		}
 		if (writes.length) writeBinding(binding, writes)
@@ -809,6 +825,7 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 			drain()
 			settleFences()
 		}
+		for (const notify of reports) notify()
 	}
 
 	type ExternalSnapshot = { connection: number; generation: number; records: Map<RecordState, number> }
@@ -989,7 +1006,6 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 			record.error = null
 			for (const job of jobs) if (job.kind === 'patch') job.entries.delete(key)
 			queued.delete(record)
-			writes.push({ path: field.path, value: cloneDefault(binding.defaults.get(field)) })
 			pendingMetas.delete(record)
 			const entry: Entry = {
 				binding,
@@ -1002,6 +1018,11 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 				meta: activeMeta ?? options.defaultMeta ?? {},
 			}
 			pendingResets.set(record, entry)
+			writes.push({
+				path: field.path,
+				value: cloneDefault(binding.defaults.get(field)),
+				shouldApply: () => !disposed && !retired.has(record) && record.revision === entry.revision,
+			})
 			entries.push(entry)
 		}
 		writeBinding(binding, writes)

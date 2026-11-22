@@ -43,6 +43,16 @@ Handle.flush MUST return a Promise acknowledging all applicable changes up to it
 - **WHEN** the user keeps changing other values after flush
 - **THEN** flush may finish after its captured revision is acknowledged without waiting for all future actions
 
+#### Scenario: An external value supersedes an unsent write
+
+- **WHEN** an external update removes queued intent that a flush captured and no sent write can acknowledge it
+- **THEN** the flush rejects with a cancellation and the accepted external value is applied
+
+#### Scenario: A component saves all sources for one store
+
+- **WHEN** a component calls flushPersist on a store with browser and server bindings
+- **THEN** it waits for both sources and returns the outcome by effective alias without flushing other stores
+
 ### Requirement: Reset restores the original default
 
 Record reset MUST immediately restore the persisted field original value and delete its saved override while retaining active store identity. Defaults MUST be captured before restoration and independent of later object mutations. Other fields MUST remain unchanged.
@@ -113,6 +123,11 @@ After reset, old read responses and migration rewrites MUST NOT restore the reco
 
 - **WHEN** resetting one field triggers a synchronous application edit to a separate persisted field
 - **THEN** the edit is queued and a successful flush acknowledges it
+
+#### Scenario: A synchronous Valtio subscription edits a later field in the same reset
+
+- **WHEN** a reset assignment invokes an application subscription that edits a field still waiting to be reset
+- **THEN** the later reset assignment preserves the newer edit while its persistent deletion stays ordered before the new write
 
 ### Requirement: Reset errors retain pending deletion
 
@@ -378,3 +393,12 @@ its waiters, discard its unsent values and permit a later explicit retry.
 
 - **WHEN** a transport fails synchronously
 - **THEN** enqueue returns a rejected Promise and a later enqueue can start normally
+
+### Requirement: Status subscribers cannot stall persistence operations
+
+An exception in an application status subscriber MUST NOT prevent queue progression or notification of other subscribers.
+
+#### Scenario: A subscriber throws when reset becomes pending
+
+- **WHEN** a status subscriber throws during enqueue
+- **THEN** reset and subsequent flush still settle and other subscribers still receive updates

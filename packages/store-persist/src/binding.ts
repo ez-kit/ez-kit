@@ -124,7 +124,18 @@ export function updateBindingStatus(binding: PersistBinding, patch: Partial<Pers
 	)
 		return
 	binding.status = next
-	for (const listener of binding.listeners) listener()
+	notifyStatusListeners(binding.listeners)
+}
+
+export function notifyStatusListeners(listeners: ReadonlySet<() => void>): void {
+	for (const listener of listeners) {
+		try {
+			listener()
+		} catch (error) {
+			// A status observer cannot veto queue progression or other observers.
+			console.error('[ez-kit/store-persist] Status subscriber failed', error)
+		}
+	}
 }
 
 /** A connected store: the store handle, its port, and everything the engine needs to sync it to one source. */

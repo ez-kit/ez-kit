@@ -1,6 +1,6 @@
 # Verification and scenario trace
 
-All 83 requirements and 182 scenarios are covered by the trace below. Each scenario is linked to regression/integration evidence or an explicit adapter/application contract. Paths are repository-relative; brace notation denotes both bindings. Short `src/...` references in a store-persist row refer to that package. No test claims distributed atomicity.
+All 84 requirements and 188 scenarios are covered by the trace below. Each scenario is linked to regression/integration evidence or an explicit adapter/application contract. Paths are repository-relative; brace notation denotes both bindings. Short `src/...` references in a store-persist row refer to that package. No test claims distributed atomicity.
 
 ## addressing
 
@@ -178,6 +178,17 @@ uncertain outcome; it does not authorize dropping retry/corrective intent.
 | Cache setup recursively creates the same address            | `packages/store-core/src/cache/teardown.test.ts` verifies rollback and reuse of the address.                                               |
 | A restore error survives a successful write                 | `packages/store-persist/src/scoped-lifecycle.test.ts` checks the retained error and independent write status.                              |
 
+## Eighth audit trace (2026-11-22)
+
+| Scenario                                            | Regression evidence                                                                                                                 |
+| --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| External state supersedes an unsent flush target    | `packages/store-persist/src/engine-operations.test.ts` asserts cancellation and checks that no discarded patch is sent.             |
+| Restore diagnostics allow application repairs       | `packages/store-persist/src/reentrant-restore.test.ts` verifies both a different-field edit and repair of the invalid field.        |
+| Valtio preserves a newer edit during a full reset   | `apps/docs/test/persist-sequential-reset.test.tsx` exercises a synchronous subscriber and reads the durable result.                 |
+| Status callbacks cannot stall reset                 | `packages/store-persist/src/engine-audit-lifecycle.test.ts` checks continued notification and acknowledgement.                      |
+| Sparse edits are stored                             | `packages/store-persist/src/sparse-array-persistence.test.ts` inspects the actual encoded override.                                 |
+| A component saves all sources attached to one store | `apps/docs/test/persist-flush-sources.test.tsx` waits for a slower sibling source, reports the rejection and excludes other stores. |
+
 ## Release and rollback
 
 The Changesets release planner resolves independent minors: store-core 1.3.0, store-persist 1.1.0, zu-store 1.3.0 and va-store 1.4.0. The private docs dependency update is a patch. `workspace:^` expands to the new dependency version when published; new bindings therefore require core ^1.3.0 and persist ^1.1.0. An isolated package-manifest fixture was packed with pnpm for both bindings and its tarball manifests confirmed these exact floors; the workspace manifests were not versioned or published. Existing published caret ranges remain an explicitly accepted risk (ADR 0029). No fixed/linked group is configured.
@@ -186,7 +197,7 @@ The old/new storageKey regression proves the old blob survives new writes and sc
 
 ## Validation results
 
-Verified on 2026-11-19 with Node 22.23.4 and pnpm 10.34.9.
+Verified on 2026-11-22 with Node 22.23.4 and pnpm 10.34.9.
 
 | Check                                             | Result                                                                                                                                                                                                                                                                                                                            |
 | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -195,14 +206,14 @@ Verified on 2026-11-19 with Node 22.23.4 and pnpm 10.34.9.
 | Offline `pnpm build --env-mode=loose`             | 16/16 tasks passed, including production compilation and static prerender of docs. Used Next's `NEXT_FONT_GOOGLE_MOCKED_RESPONSES` test hook with temporary CSS-only responses for the existing Inter/Figtree URLs; no product source or font configuration changed. Real font download/appearance is not verified by this build. |
 | `pnpm lint --env-mode=loose --concurrency=2`      | 30/30 tasks passed.                                                                                                                                                                                                                                                                                                               |
 | `pnpm typecheck --env-mode=loose --concurrency=2` | 30/30 tasks passed, including docs/runnable snippets and custom adapter consumer types.                                                                                                                                                                                                                                           |
-| `pnpm test --env-mode=loose --concurrency=2`      | 30/30 tasks passed; **5416 tests** across 16 packages/apps.                                                                                                                                                                                                                                                                       |
-| `pnpm size --env-mode=loose --concurrency=2`      | 32/32 tasks passed; the fourth through seventh audits stayed within existing budgets (earlier changed entry points retained approximately 15% headroom); dependency builds used the same temporary font responses.                                                                                                                |
+| `pnpm test --env-mode=loose --concurrency=2`      | 30/30 tasks passed; **5422 tests** across 16 packages/apps.                                                                                                                                                                                                                                                                       |
+| `pnpm size --env-mode=loose --concurrency=2`      | 32/32 tasks passed; the fourth through eighth audits stayed within existing budgets (earlier changed entry points retained approximately 15% headroom); dependency builds used the same temporary font responses.                                                                                                                 |
 | Playwright Chromium                               | Actual `/docs/zu-store/persist` flow passed: pending → timeout without saving defaults → resize to 500 → acknowledge write → deliver obsolete 720 response → width/storage remain 500 → reload restores browser width → scope reset returns both panels to 320. No page errors.                                                   |
 | OpenSpec strict validation                        | `openspec validate scoped-state-persistence --strict` passed.                                                                                                                                                                                                                                                                     |
 | Rollout/rollback and release metadata             | Separate old/new storageKey test passed; `pnpm pack` manifest fixtures verified both new binding dependency floors. No versions were changed or published.                                                                                                                                                                        |
 
-Relevant final package counts: store-core 138, store-persist 361, zu-store 205, va-store 167, docs 353.
-The seven audits added 54, 41, 67, 39, 54, 7 and 7 tests respectively, for 269 additional regressions over the original 5147-test baseline.
+Relevant final package counts: store-core 138, store-persist 365, zu-store 205, va-store 167, docs 355.
+The eight audits added 54, 41, 67, 39, 54, 7, 7 and 6 tests respectively, for 275 additional regressions over the original 5147-test baseline.
 The full gate includes existing Next/React Router URL navigation tests in both bindings, the mixed
 Zustand/Valtio writer test, docs option/type guards and tree-shaking checks. The temporary offline
 font fixture was confined to `/tmp`; the ordinary network-backed docs build remains subject to the
@@ -218,13 +229,13 @@ existing budgets; no new dependency exclusion was added to hide growth.
 | store-core root            |           1323 |         1550 |
 | store-core React           |            577 |          600 |
 | store-core cache           |           2895 |         3050 |
-| store-persist root         |          12281 |        13500 |
+| store-persist root         |          12531 |        13500 |
 | store-persist storage      |           2403 |         2700 |
 | store-persist URL          |           1083 |         1250 |
 | store-persist React Router |           2324 |         2375 |
 | store-persist Next         |           1195 |         1375 |
 | store-persist testing      |            919 |         1075 |
-| store-persist internals    |          10652 |        11650 |
-| zu-store persist           |            515 |          575 |
+| store-persist internals    |          10800 |        11650 |
+| zu-store persist           |            554 |          575 |
 | va-store root              |           2328 |         2700 |
-| va-store persist           |            504 |          575 |
+| va-store persist           |            533 |          575 |

@@ -5,6 +5,7 @@ import { paramNumber } from './codecs'
 import { createPersistEngine } from './engine'
 import { attachHandles, persistHandle } from './handle'
 import { encodeRecord } from './record'
+import { patchKeyed } from './storage/patch'
 import { objectPort, observable } from './test-kit'
 
 import type { PersistBinding } from './binding'
@@ -338,4 +339,37 @@ describe('second-audit operation lifetime regressions', () => {
 			expect(() => instance.restore(binding, { timeoutMs })).toThrow('Invalid restore timeoutMs')
 		expect(get).toHaveBeenCalledOnce()
 	})
+})
+
+it('completes reset and flush even when an application status subscriber throws', async () => {
+	const state = observable({ width: 0 })
+	const binding = bind(state)
+	const key = keyOf(binding)
+	let saved = new Map([[key, '10']])
+	const instance = engine({
+		get: () => saved,
+		set: (desired, context) => {
+			saved = patchKeyed(saved, desired, context)
+		},
+	})
+	attachHandles(state, [{ source: 'remote', binding }])
+	instance.connect(binding)
+	const handle = persistHandle(state, 'remote')
+	const report = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+	const stop = handle.subscribe(() => {
+		if (handle.getStatus().write === 'pending') throw new Error('listener failed')
+	})
+	const next = vi.fn()
+	const stopNext = handle.subscribe(next)
+	try {
+		await handle.reset()
+		await handle.flush()
+		expect(saved.has(key)).toBe(false)
+		expect(next).toHaveBeenCalled()
+		expect(report).toHaveBeenCalledWith(expect.stringContaining('Status subscriber failed'), expect.any(Error))
+	} finally {
+		stop()
+		stopNext()
+		report.mockRestore()
+	}
 })

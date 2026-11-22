@@ -19,8 +19,8 @@ export const zustandPort: StorePort<StoreApi<object>> = {
 	write: (store, writes) => {
 		const current = store.getState()
 		let next = current
-		for (const { path, value } of writes) {
-			next = setPath(next, path, value)
+		for (const { path, value, shouldApply } of writes) {
+			if (!shouldApply || shouldApply()) next = setPath(next, path, value)
 		}
 		// `setPath` returns the same object when nothing actually changed; don't notify for a no-op.
 		if (next === current) return

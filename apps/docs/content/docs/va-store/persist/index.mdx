@@ -86,3 +86,14 @@ Source registration is stable for a Provider lifetime. Remount its cache too on 
 This release deliberately makes breaking changes in a minor: new storage addresses/patch semantics,
 removed zodParam subpath, automatic restore/status and explicit ambient external-change policy.
 Keep a lockfile or pin old bindings until the application is ready; prefer a new storageKey for rollout.
+
+For a **Save and close** action across sources, import `flushPersist` from this package's
+`/persist` entry and pass the mounted store. It waits for every source attached to that store,
+including URL when configured, and returns a settled result by effective alias.
+
+```ts
+const results = await flushPersist(store)
+if (Object.values(results).every((result) => result.status === 'fulfilled')) close()
+```
+
+Use `persistHandle(store, source).flush()` for an individual source.

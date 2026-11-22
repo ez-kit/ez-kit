@@ -49,12 +49,12 @@ export function paramArray<T>(item: Codec<T>, options: ParamArrayOptions = {}): 
 				return null
 			}
 			const parts: string[] = []
-			for (const entry of value) {
+			value.forEach((entry) => {
 				const encoded = item.stringify(entry)
 				if (encoded !== null) {
 					parts.push(encoded)
 				}
-			}
+			})
 			if (parts.length === 0) return null
 			try {
 				const sepEncoded = percentEncode(separator)
@@ -70,7 +70,9 @@ export function paramArray<T>(item: Codec<T>, options: ParamArrayOptions = {}): 
 		parse: (raw) => parseItems(raw).map((part) => item.parse(part)),
 		equals: (a, b) =>
 			a.length === b.length &&
+			b.every((_, index) => index in a) &&
 			a.every((value, index) => {
+				if (!(index in b)) return false
 				const other = b[index] as T
 				return item.equals
 					? item.equals(value, other)

@@ -161,6 +161,25 @@ function requireHandle(store: object, selector: Selector): PersistHandle {
 	return handleFor(store, selector)
 }
 
+/** Wait for every persistence source attached to this store, including URL when present. */
+export async function flushPersist(store: object): Promise<Record<string, PromiseSettledResult<void>>> {
+	const entries = entriesByStore.get(store)
+	if (!entries) throw new Error(`${PACKAGE_TAG} Store does not use withPersist`)
+	const sources = entries.map(({ source }) => source)
+	if (sources.includes('')) throw new Error(`${PACKAGE_TAG} Cannot flush before persistence sources are resolved`)
+	const results = await Promise.all(
+		sources.map(async (source): Promise<[string, PromiseSettledResult<void>]> => {
+			try {
+				await handleFor(store, source).flush()
+				return [source, { status: 'fulfilled', value: undefined }]
+			} catch (reason) {
+				return [source, { status: 'rejected', reason }]
+			}
+		}),
+	)
+	return Object.fromEntries(results)
+}
+
 export function urlHandle<T extends object>(store: T, source?: string): UrlHandle<PersistState<T>> {
 	return requireHandle(store, source ?? DEFAULT_URL)
 }

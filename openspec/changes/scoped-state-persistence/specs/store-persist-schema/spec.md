@@ -211,6 +211,11 @@ MUST remain readable where unambiguous. Number parsing MUST reject non-finite va
 - **WHEN** a Date default is invalid and a valid saved date exists
 - **THEN** the untouched default permits restoration, including for arrays of dates
 
+#### Scenario: A sparse array differs from its dense default
+
+- **WHEN** a position is removed without shifting the rest of the array
+- **THEN** a sparse edit cannot compare equal to a different dense default and cause a false deletion
+
 ### Requirement: JSON equality preserves serialized value semantics
 
 JSON codec equality MUST honor native serialization including Date/toJSON before recursive

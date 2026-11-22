@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react'
 
 import { resolveFieldSpecs } from './accessor'
-import { addressBinding, captureDefaults, createBinding } from './binding'
+import { addressBinding, captureDefaults, createBinding, notifyStatusListeners } from './binding'
 import { discoverPersistFields } from './decorators'
 import { attachHandles } from './handle'
 import { PERSIST_ENGINES } from './service'
@@ -88,7 +88,7 @@ function resolveSources(
 		for (const [field, record] of other.records) target.records.set(field, record)
 		// Preserve any subscriptions made before a hand-wired setup; their cleanup still owns its Set.
 		target.listeners.add(() => {
-			for (const listener of other.listeners) listener()
+			notifyStatusListeners(other.listeners)
 		})
 	}
 	const connections = [...merged.values()]
@@ -226,7 +226,7 @@ function aggregateFor(store: object, source?: string): Aggregate {
 	}
 	const notify = (): void => {
 		compute()
-		for (const listener of listeners) listener()
+		notifyStatusListeners(listeners)
 	}
 	const aggregate: Aggregate = {
 		getSnapshot: compute,

@@ -130,6 +130,15 @@
 - [x] 14.6 Preserve the restore failure reason across unrelated writes.
 - [x] 14.7 Validate regressions, documentation, package checks and PR 299.
 
+## 15. Eighth audit follow-up
+
+- [x] 15.1 Reject flush fences for unsent writes superseded by external updates.
+- [x] 15.2 Preserve reentrant application edits during restore diagnostics and sequential Valtio reset.
+- [x] 15.3 Isolate failing status subscribers from persistence operations.
+- [x] 15.4 Honor sparse array edits when comparing with defaults.
+- [x] 15.5 Export a store-scoped flush across sources with per-source results.
+- [x] 15.6 Validate regression coverage, package checks and PR 299.
+
 ## Workflow follow-up
 
 - After implementation and review, archive this change using the standard OpenSpec workflow. Archiving is not an implementation task and does not automatically release packages.
