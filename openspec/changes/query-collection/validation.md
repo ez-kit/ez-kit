@@ -261,3 +261,22 @@ Verification passed:
   6.61 kB. Its 7.6 kB limit restores the repository's approximately 15% budget headroom.
 
 Docs production build remains excluded locally under the accepted Google Fonts restriction.
+
+## Committed write context — 2026-11-22
+
+Connected write operations read committed options and row targets and can abandon a wait for the
+matching observer on cancellation or supersession. Regression tests save a visible A row while a
+transition to B suspends, and block selection-based deletion until a controlled tenant transition
+acknowledges the reset. A core test dismisses another confirmation while a delete is pending and
+verifies the original target still coalesces repeat requests.
+
+Verification passed:
+
+- Sequential library builds (16 tasks), lint (33), typecheck (33), test (32) and size (32).
+- Data-grid core: 1,117 tests; shared React grid: 1,832; qc-react: 120; docs: 313.
+- React 18: shared grid 1,832; qc-react 114 passed with six existing HeroUI skips.
+- Minimum TanStack Query consumer fixture, strict OpenSpec and whitespace checks.
+- qc-react: 4.03 kB / 4.6 kB; data-grid core features/all: 6.02 kB / 6.9 kB. The budgets
+  restore the repository's approximately 15% headroom for the entries that exceeded the prior limits.
+
+Docs production build remains excluded locally under the accepted Google Fonts restriction.

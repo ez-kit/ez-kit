@@ -140,7 +140,9 @@ A draft opened under the previous owner stays visible, but automatic Save return
 until the form is reopened. Row actions cannot use placeholder rows carried over from the previous
 owner. Changing ownership clears staged delete confirmations and row selection. A dispatched bulk
 delete can still update its cache, and its completion leaves the new owner's selection alone.
-Explicit mutation keys must include the write scope when the application changes it.
+With controlled `state.rowSelection`, selection-based bulk actions are unavailable after a scope
+change until the parent publishes an empty selection. A later selection belongs to the new
+scope. Explicit mutation keys must include the write scope when the application changes it.
 External checks through `validateValues(values)` or `FormModalProps.validate(values)` resolve
 with `{ status: 'cancelled' }` on that transition, even when the form stays open. Handle that
 status separately from `valid`; see [external form checks](/docs/data-grid/editing/creating#checking-an-external-form).
@@ -150,7 +152,9 @@ Already dispatched mutations retain their existing lifecycle rules. Cancelling d
 dispatch skips the request. Built-in delete actions display an error if deletion fails. Retry by
 invoking Delete again. In-flight targets are available in `table.deleting.getState().pendingIds`.
 Repeated requests for the same target reuse the existing operation. Independent targets can run
-concurrently. Imperative `delete()` and `confirm()` reject on failure, and the cause is
+concurrently. Closing a confirmation dismisses only that prompt. Imperative `cancel()` signals
+active operations, and dispatched targets stay reserved within their scope until they settle.
+Imperative `delete()` and `confirm()` reject on failure, and the cause is
 available in `table.deleting.getState().failure`.
 
 Infinite load-more deduplication is scoped to the effective query hash. A previous selection's
@@ -212,7 +216,8 @@ Stale cached totals cannot correct a restored page when refetch is disabled. Tot
 authoritative after a successful response for the current observer, or when an enabled observer
 reads fresh cache data. A completed response can correct the page even with `staleTime: 0`.
 
-Automatic form actions can be invoked from consumer layout effects or child effects. They wait
+Connected actions use the options and row targets from the last committed render. A suspended
+transition leaves the currently visible grid's actions usable. Automatic form actions can be invoked from consumer layout effects or child effects. They wait
 for the committed mutation observers to be ready before checking ownership and dispatching.
 Closing a form before dispatch cancels the queued action; closing it after dispatch retains the
 existing background-mutation behavior.

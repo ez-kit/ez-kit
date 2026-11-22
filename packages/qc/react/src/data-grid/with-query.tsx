@@ -1,11 +1,11 @@
-import { useDataGridSelector, ValidationError } from '@ez-kit/data-grid-react'
+import { publishGridWriteContext, useDataGridSelector, ValidationError } from '@ez-kit/data-grid-react'
 import {
 	useCollectionQuery,
 	type CollectionQueryOptions,
 	type ReadProjectionCompatibility,
 } from '@ez-kit/query-react/collection'
 import { hashKey, replaceEqualDeep, useQueryClient } from '@tanstack/react-query'
-import { createElement, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { createElement, useEffect, useInsertionEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import type { GridMutationSource } from './mutation-source'
 import type {
@@ -214,6 +214,23 @@ type Projection<R> = {
 }
 const useCommitEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 const EMPTY: never[] = []
+function waitForPublication(ready: AbortSignal, superseded: AbortSignal, signal: AbortSignal): Promise<void> {
+	return new Promise((resolve) => {
+		function finish() {
+			ready.removeEventListener('abort', finish)
+			superseded.removeEventListener('abort', finish)
+			signal.removeEventListener('abort', finish)
+			resolve()
+		}
+		if (ready.aborted || superseded.aborted || signal.aborted) finish()
+		else {
+			ready.addEventListener('abort', finish, { once: true })
+			superseded.addEventListener('abort', finish, { once: true })
+			signal.addEventListener('abort', finish, { once: true })
+		}
+	})
+}
+
 function enabled(value: unknown): boolean {
 	return (
 		value !== undefined &&
@@ -267,9 +284,10 @@ export function withQuery<
 		// Query options and their projections cross this boundary together. Their response
 		// type is opaque to the connector; only the projection consumes the selected value.
 		const source = dataSource as unknown as RuntimeSource<object>
-		// Child effects can submit before our passive effect publishes the observers.
-		// Wait for this committed render's publication without dispatching to an old owner.
-		const publication = { ready: false, waiters: [] as (() => void)[] }
+		// Child layout effects can run before TanStack installs the observer options.
+		const ready = new AbortController()
+		const isPublished = () => ready.signal.aborted
+		const superseded = new AbortController()
 		const mutations = useRef<
 			Partial<
 				Record<
@@ -326,7 +344,12 @@ export function withQuery<
 			signal: AbortSignal,
 		) {
 			const startedInScope = currentOwner(name) === expectedOwner(name)
-			if (!publication.ready) await new Promise<void>((resolve) => publication.waiters.push(resolve))
+			if (!isPublished()) {
+				await waitForPublication(ready.signal, superseded.signal, signal)
+				if (!isPublished() && !signal.aborted) {
+					throw new ValidationError({ formError: table.grid.messages.form.sourceChanged })
+				}
+			}
 			if (signal.aborted || !canWrite(name, startedInScope)) return
 			const operation = source[name] as
 				GridMutationSource<ActionInputs<object>[K], unknown, unknown, unknown> | undefined
@@ -352,6 +375,7 @@ export function withQuery<
 		let draft = false
 		const identity = { needsRowId: false }
 		let controlledPageIndex: number | undefined
+		let controlledSelection: Readonly<Record<string, boolean>> | undefined
 		const rows = projection.scope === scope ? projection.data : EMPTY
 		const table = useBoundGrid({ ...gridConfig, data: rows }, (merged) => {
 			const {
@@ -362,6 +386,7 @@ export function withQuery<
 			draft = enabled(merged.draft)
 			identity.needsRowId = !merged.getRowId && (enabled(merged.editing) || enabled(merged.deleting))
 			controlledPageIndex = merged.state?.pagination?.pageIndex
+			controlledSelection = merged.state?.rowSelection
 			const creating: Partial<CreatingConfig<object>> = typeof merged.creating === 'object' ? merged.creating : {}
 			const editing: Partial<EditingConfig<object>> = typeof merged.editing === 'object' ? merged.editing : {}
 			const deleting: Partial<DeletingConfig<object>> = typeof merged.deleting === 'object' ? merged.deleting : {}
@@ -445,6 +470,27 @@ export function withQuery<
 					enabled: enabled(merged.globalFiltering),
 				},
 				state: { ...merged.state, loading: projection.loading },
+			}
+		})
+		const awaitingSelection = useRef(false)
+		useInsertionEffect(() => {
+			// Publish before descendant layout effects, while speculative renders leave the
+			// visible table's actions and write targets on the previous committed context.
+			const hasControlledSelection =
+				controlledSelection !== undefined && Object.values(controlledSelection).some(Boolean)
+			if (!hasControlledSelection) awaitingSelection.current = false
+			else if (owners.current.scope !== scope) awaitingSelection.current = true
+			const options = table.options
+			const unpublish = publishGridWriteContext(table, {
+				options,
+				scope,
+				selectionReady: !awaitingSelection.current,
+				rows: options.deleting || options.editing ? table.getRowModel().rows : EMPTY,
+				rowsById: options.editing ? table.getCoreRowModel().rowsById : {},
+			})
+			return () => {
+				superseded.abort()
+				unpublish()
 			}
 		})
 		useCommitEffect(() => {
@@ -571,9 +617,7 @@ export function withQuery<
 				if (mutation) current[name] = { key: operationKey(name), run: mutation.mutateAsync }
 			}
 			mutations.current = current
-			publication.ready = true
-			for (const resolve of publication.waiters) resolve()
-			publication.waiters.length = 0
+			ready.abort()
 		})
 		const current = collection.query
 		const list = current as UseQueryResult<unknown, unknown>

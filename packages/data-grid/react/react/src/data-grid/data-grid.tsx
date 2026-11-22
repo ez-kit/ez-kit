@@ -262,7 +262,7 @@ function ConfirmDialogRenderer() {
 						hasConfirmed.current = false
 						return
 					}
-					table.deleting.bulk.cancel()
+					table.deleting.bulk.dismiss()
 				}}
 			/>
 		)
@@ -290,7 +290,7 @@ function ConfirmDialogRenderer() {
 					hasConfirmed.current = false
 					return
 				}
-				table.deleting.cancel()
+				table.deleting.dismiss()
 			}}
 		/>
 	)

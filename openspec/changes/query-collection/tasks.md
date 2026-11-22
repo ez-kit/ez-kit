@@ -104,3 +104,10 @@
 - [x] Keep controlled page resets pending and coalesce in-flight delete targets.
 - [x] Align structural selector safety, explicit row types and factory read capabilities.
 - [x] Verify the repository and React 18 compatibility.
+
+## Committed write context follow-up
+
+- [x] Isolate write options and rows from suspended renders.
+- [x] Guard controlled selection until scope reset is acknowledged.
+- [x] Separate confirmation dismissal from cancellation of active deletes.
+- [x] Verify the repository and React 18 compatibility.

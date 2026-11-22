@@ -6,6 +6,7 @@ import {
 	writeOwnSlice,
 } from '../../feature-state'
 import { featureConfig, isFeatureEnabled } from '../../utils/feature-flag'
+import { gridWriteContext } from '../../write-context'
 
 import type { AnyTable } from '../../feature-state'
 import type { FeatureToggle } from '../../utils/feature-flag'
@@ -180,6 +181,8 @@ export type BulkDeletingApi = {
 	request: () => void
 	/** Run the staged bulk delete. */
 	confirm: () => Promise<void>
+	/** Close the staged confirmation. */
+	dismiss: () => void
 	/** Drop the staged bulk delete without running it. */
 	cancel: () => void
 }
@@ -199,6 +202,8 @@ export type DeletingApi = {
 	request: (rowId: string) => void
 	/** Run the staged per-row delete. */
 	confirm: () => Promise<void>
+	/** Close the staged confirmation. */
+	dismiss: () => void
 	/** Drop the staged per-row delete without running it. */
 	cancel: () => void
 	/** Deleting the current selection in one gesture. */
@@ -210,6 +215,7 @@ export type DeletingApi = {
 type DeleteKind = 'single' | 'bulk'
 type DeleteWork = {
 	kind: DeleteKind
+	scope: string | undefined
 	ids: readonly string[]
 	controller: AbortController
 	completion: Promise<void>
@@ -312,7 +318,7 @@ type DeletingTable = AnyTable & {
  * code, not of the shadowing those blocks did.
  */
 const deletingOption = (table: { readonly options: object }): DeletingConfig<RowData> | undefined =>
-	(table.options as { deleting?: DeletingConfig<RowData> }).deleting
+	((gridWriteContext(table)?.options ?? table.options) as { deleting?: DeletingConfig<RowData> }).deleting
 
 /**
  * The table's abort box, read off a table whose `TFeatures` is unresolved.
@@ -341,7 +347,8 @@ function writeDeleting(table: AnyTable, patch: Partial<DeletingState>): void {
 }
 
 function publishPending(table: AnyTable): void {
-	const ids = [...abortBox(table).active].flatMap((work) => work.ids)
+	const scope = gridWriteContext(table)?.scope
+	const ids = [...abortBox(table).active].filter((work) => work.scope === scope).flatMap((work) => work.ids)
 	if (ids.length || readDeleting(table).pendingIds) writeDeleting(table, { pendingIds: ids.length ? ids : undefined })
 }
 
@@ -349,7 +356,7 @@ function cancelDeletes(table: AnyTable, kind?: DeleteKind): void {
 	const { active } = abortBox(table)
 	for (const work of active) {
 		if (kind === undefined || work.kind === kind) {
-			active.delete(work)
+			if (kind === undefined) active.delete(work)
 			work.controller.abort()
 		}
 	}
@@ -408,7 +415,9 @@ function runDelete(
 	onSuccess?: () => void,
 ): Promise<void> {
 	const { active } = abortBox(table)
+	const scope = gridWriteContext(table)?.scope
 	for (const work of active) {
+		if (work.scope !== scope) continue
 		if (!ids.some((id) => work.ids.includes(id))) continue
 		if (ids.every((id) => work.ids.includes(id))) return work.completion
 		return Promise.reject(new Error('Some selected rows are already being deleted.'))
@@ -420,7 +429,7 @@ function runDelete(
 		reject = no
 	})
 	const controller = new AbortController()
-	const work = { kind, ids, controller, completion }
+	const work = { kind, scope, ids, controller, completion }
 	active.add(work)
 	const { signal } = controller
 	if (readDeleting(table).failure) writeDeleting(table, { failure: undefined })
@@ -444,7 +453,7 @@ function runDelete(
 async function deleteRow(table: DeletingTable, rowId: string): Promise<void> {
 	const config = deletingOption(table)
 	if (!config) return
-	const row = table.getRowModel().rows.find((r) => r.id === rowId)
+	const row = (gridWriteContext(table)?.rows ?? table.getRowModel().rows).find((r) => r.id === rowId)
 	if (!row) return
 	await runDelete(table, 'single', [rowId], (signal) => config.onDelete({ rowId, row, signal }))
 }
@@ -455,7 +464,7 @@ async function deleteRows(table: DeletingTable, rowIds: string[]): Promise<void>
 	const bulk = getBulkDeletingConfig(config)
 	if (!bulk) return
 	const rows = rowIds
-		.map((id) => table.getRowModel().rows.find((r) => r.id === id))
+		.map((id) => (gridWriteContext(table)?.rows ?? table.getRowModel().rows).find((r) => r.id === id))
 		.filter((r): r is Row<TableFeatures, RowData> => r !== undefined)
 	if (rows.length === 0) return
 	const ids = rows.map((r) => r.id)
@@ -493,6 +502,10 @@ function createDeletingApi(table: DeletingTable): DeletingApi {
 			await deleteRow(table, pendingRowId)
 		},
 
+		dismiss: () => {
+			writeDeleting(table, { pendingRowId: null })
+		},
+
 		cancel: () => {
 			cancelDeletes(table, 'single')
 			publishPending(table)
@@ -503,6 +516,7 @@ function createDeletingApi(table: DeletingTable): DeletingApi {
 			delete: (rowIds) => deleteRows(table, rowIds),
 
 			request: () => {
+				if (gridWriteContext(table)?.selectionReady === false) return
 				const config = deletingOption(table)
 				const bulk = getBulkDeletingConfig(config)
 				if (!bulk) return
@@ -516,10 +530,14 @@ function createDeletingApi(table: DeletingTable): DeletingApi {
 			},
 
 			confirm: async () => {
-				if (!readDeleting(table).pendingBulk) return
+				if (!readDeleting(table).pendingBulk || gridWriteContext(table)?.selectionReady === false) return
 				const ids = selectedRowIds(table)
 				writeDeleting(table, { pendingBulk: false })
 				await deleteRows(table, ids)
+			},
+
+			dismiss: () => {
+				writeDeleting(table, { pendingBulk: false })
 			},
 
 			cancel: () => {

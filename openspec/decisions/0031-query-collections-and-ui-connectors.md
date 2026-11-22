@@ -101,3 +101,11 @@ Generated reads keep their family prefix and normalize the key part separately f
 prepareKey. Plain serializable args remain the default. Read helpers require a guaranteed selector
 when the projection cannot consume the raw data. Delete operations reserve their targets before
 calling handlers, so duplicate clicks coalesce and independent requests keep their own outcome.
+
+Publish a connected grid's write context at commit, before descendant layout effects. Core forms
+and deletion resolve handlers and row targets against that context. This protects actions on a
+visible grid from speculative writes to the TanStack table instance during a suspended render.
+Waiting for the matching mutation observer ends when the operation aborts or the context is
+superseded. After a scope change, selection-derived writes stay blocked until controlled
+selection acknowledges the reset. Dismissing a delete prompt leaves active work alone. A target
+reservation lasts until the operation settles and is scoped to its original dataset.

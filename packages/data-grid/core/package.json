@@ -77,7 +77,7 @@
 		{
 			"name": "features/all",
 			"path": "dist/features/all.js",
-			"limit": "6 KB",
+			"limit": "6.9 KB",
 			"ignore": [
 				"@tanstack/table-core"
 			]

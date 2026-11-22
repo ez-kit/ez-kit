@@ -388,3 +388,24 @@ Generated query families SHALL support an explicit cache key part independent of
 
 - **WHEN** the same row is submitted for deletion again while its operation is pending
 - **THEN** the grid does not dispatch another deletion for that target
+
+### Requirement: Grid write actions use committed ownership
+
+The connected grid SHALL resolve write handlers and targets from the committed view.
+A change of scope SHALL block selection-derived deletion until controlled selection clears.
+Dismissing a confirmation SHALL leave existing delete requests and their reservations intact.
+
+#### Scenario: A suspended transition is discarded
+
+- **WHEN** a render for scope B suspends while scope A is still shown
+- **THEN** a save from the visible form uses A's committed row and mutation
+
+#### Scenario: The selection reset is deferred
+
+- **WHEN** scope B is shown while the parent has yet to clear scope A's controlled selection
+- **THEN** selection-based bulk deletion does not execute in B
+
+#### Scenario: Another delete is already running
+
+- **WHEN** the user dismisses the confirmation for B while A is being deleted
+- **THEN** A remains pending and a repeat request cannot dispatch a second delete

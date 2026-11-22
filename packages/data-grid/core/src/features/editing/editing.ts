@@ -3,6 +3,7 @@ import { assignPrototypeAPIs } from '@tanstack/table-core'
 import { ColumnFormMode, resolveColumnFormConfig } from '../../column/resolve-form-config'
 import { DEFAULT_VALIDATE_DEBOUNCE_MS } from '../../defaults'
 import { assignTableInstanceData, readOwnSlice, writeOwnSlice } from '../../feature-state'
+import { gridWriteContext } from '../../write-context'
 import { abortChecks, checkValues, commitClosed, commitInFlight, runCommit, trackCommit } from '../form'
 import {
 	abortFormWork,
@@ -276,7 +277,7 @@ type EditingRowInstance = { id: string; table: AnyTable }
  * code, not of the shadowing those blocks did.
  */
 const editingOption = (table: { readonly options: object }): EditingConfig<RowData> | undefined =>
-	(table.options as { editing?: EditingConfig<RowData> }).editing
+	((gridWriteContext(table)?.options ?? table.options) as { editing?: EditingConfig<RowData> }).editing
 
 /**
  * The table's abort box, read off a table whose `TFeatures` is unresolved.
@@ -366,7 +367,7 @@ function scheduleChangeValidation(table: EditingTable, columnId: string): void {
  * to `onSave` as if the user had edited it; `row` in the save context is where it is read from now.
  */
 function snapshotRow(table: EditingTable, rowId: string): Record<string, unknown> {
-	const row = table.getRowModel().rows.find((r) => r.id === rowId)
+	const row = (gridWriteContext(table)?.rows ?? table.getRowModel().rows).find((r) => r.id === rowId)
 	const initial: Record<string, unknown> = {}
 	if (!row) return initial
 	for (const col of table.getAllColumns()) {
@@ -380,7 +381,7 @@ function snapshotRow(table: EditingTable, rowId: string): Record<string, unknown
 
 /** The edited row's original, looked up in the core row model so filtering and paging never hide it. */
 function originalOf(table: EditingTable, rowId: string): RowData | undefined {
-	return table.getCoreRowModel().rowsById[rowId]?.original as RowData | undefined
+	return (gridWriteContext(table)?.rowsById ?? table.getCoreRowModel().rowsById)[rowId]?.original as RowData | undefined
 }
 
 /** A save went through: end the open form's checks and write the closed, empty form back. */
@@ -412,7 +413,7 @@ function createEditingApi(table: EditingTable): EditingApi<RowData> {
 			// makes the programmatic path agree rather than quietly opening an input.
 			if (table.getColumn(columnId)?.columnDef.meta?.editing === false) return
 			abortFormWork(abortBox(table))
-			const row = table.getRowModel().rows.find((r) => r.id === rowId)
+			const row = (gridWriteContext(table)?.rows ?? table.getRowModel().rows).find((r) => r.id === rowId)
 			const seed = { [columnId]: row?.getValue(columnId) }
 			writeEditing(table, {
 				rowId,

@@ -626,3 +626,32 @@ it('coalesces duplicate deletes and preserves independent bulk completion', asyn
 	expect(table.store.state.rowSelection).toEqual({})
 	expect(table.deleting.getState().pendingIds).toBeUndefined()
 })
+
+it('dismisses another confirmation without interrupting or unlocking an in-flight target', async () => {
+	let complete!: () => void
+	const pending = new Promise<void>((resolve) => {
+		complete = resolve
+	})
+	const onDelete = vi.fn(({ signal }: { signal: AbortSignal }) => {
+		expect(signal.aborted).toBe(false)
+		return pending
+	})
+	const table = createTable({
+		features: DELETING,
+		data: DATA,
+		columns: COLUMNS,
+		deleting: { onDelete, confirmation: true },
+	})
+	table.deleting.request('1')
+	const first = table.deleting.confirm()
+	table.deleting.request('2')
+	table.deleting.dismiss()
+	expect(deletingOf(table).pendingRowId).toBeNull()
+	expect(deletingOf(table).pendingIds).toEqual(['1'])
+	expect(onDelete.mock.calls[0]?.[0].signal.aborted).toBe(false)
+	const duplicate = table.deleting.delete('1')
+	expect(onDelete).toHaveBeenCalledOnce()
+	complete()
+	await Promise.all([first, duplicate])
+	expect(deletingOf(table).pendingIds).toBeUndefined()
+})

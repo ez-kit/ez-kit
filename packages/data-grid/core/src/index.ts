@@ -356,3 +356,5 @@ export type {
 	RowVirtualizationConfig,
 	VirtualizationConfig,
 } from './types'
+
+export { publishGridWriteContext } from './write-context'

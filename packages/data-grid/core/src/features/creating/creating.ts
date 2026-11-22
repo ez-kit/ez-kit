@@ -1,6 +1,7 @@
 import { ColumnFormMode, resolveColumnFormConfig } from '../../column/resolve-form-config'
 import { DEFAULT_VALIDATE_DEBOUNCE_MS } from '../../defaults'
 import { assignTableInstanceData, readOwnSlice, writeOwnSlice } from '../../feature-state'
+import { gridWriteContext } from '../../write-context'
 import { abortChecks, checkValues, commitClosed, commitInFlight, runCommit, trackCommit } from '../form'
 import {
 	abortFormWork,
@@ -284,7 +285,7 @@ type CreatingTable = AnyTable & {
  * code, not of the shadowing those blocks did.
  */
 const creatingOption = (table: { readonly options: object }): CreatingConfig<RowData> | undefined =>
-	(table.options as { creating?: CreatingConfig<RowData> }).creating
+	((gridWriteContext(table)?.options ?? table.options) as { creating?: CreatingConfig<RowData> }).creating
 
 /**
  * The table's abort box, read off a table whose `TFeatures` is unresolved.
