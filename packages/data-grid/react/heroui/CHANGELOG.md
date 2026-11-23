@@ -1,5 +1,36 @@
 # @ez-kit/data-grid-heroui
 
+## 0.16.0
+
+### Minor Changes
+
+- e467391: BREAKING: bulk deletion requires `deleting.bulk.onDelete`. The grid no longer falls back to calling single-row `onDelete` in a sequence. `bulk: true` is no longer accepted by the base-grid type; invalid dynamic configurations report the missing executor. Confirmation and success deselection remain unchanged; rejection preserves selection.
+
+  Provide a batch handler, or move an intentional sequential loop into `bulk.onDelete`. Applications own reconciliation of partial successes; the grid does not interpret per-row statuses. Connected `withQuery` grids may still use `bulk: true` when the source supplies `deleteMany`, because the connector installs the executor.
+
+### Patch Changes
+
+- fc46ace: Require stable row IDs for connected edit and delete actions. Keep controlled page resets pending,
+  suppress cross-scope placeholder data before projection, and allow explicit dataset scope keys.
+  Coalesce pending deletion targets without cancelling independent deletes.
+
+  Use prepareKey to separate generated cache identity from non-serializable transport arguments.
+  Shape-changing native descriptors require an explicit selector, and structural projections must
+  accept raw data when their selector is optional.
+
+- e467391: Disable Cancel alongside Save while a modal validates or saves, and add a close control that remains available during pending work. Dismissal abandons the form session; an already-dispatched Query connector mutation continues and cannot overwrite a newer form. The same pending controls are provided by the shadcn registry adapter.
+- Updated dependencies [a214b41]
+- Updated dependencies [e467391]
+- Updated dependencies [95728f9]
+- Updated dependencies [13fa65e]
+- Updated dependencies [fc46ace]
+- Updated dependencies [bc50d51]
+- Updated dependencies [e467391]
+- Updated dependencies [9ef8578]
+- Updated dependencies [4cda640]
+  - @ez-kit/data-grid-core@0.17.0
+  - @ez-kit/data-grid-react@0.20.0
+
 ## 0.15.0
 
 ### Minor Changes

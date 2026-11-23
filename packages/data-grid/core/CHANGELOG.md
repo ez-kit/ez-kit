@@ -1,5 +1,46 @@
 # @ez-kit/data-grid-core
 
+## 0.17.0
+
+### Minor Changes
+
+- a214b41: Use committed options and rows for connected grid writes during concurrent rendering. Block
+  bulk actions from stale controlled selection after a scope change. Dismiss delete confirmations
+  without cancelling active deletes, and retain same-scope target reservations until settlement.
+- e467391: BREAKING: bulk deletion requires `deleting.bulk.onDelete`. The grid no longer falls back to calling single-row `onDelete` in a sequence. `bulk: true` is no longer accepted by the base-grid type; invalid dynamic configurations report the missing executor. Confirmation and success deselection remain unchanged; rejection preserves selection.
+
+  Provide a batch handler, or move an intentional sequential loop into `bulk.onDelete`. Applications own reconciliation of partial successes; the grid does not interpret per-row statuses. Connected `withQuery` grids may still use `bulk: true` when the source supplies `deleteMany`, because the connector installs the executor.
+
+- 95728f9: Return explicit valid, invalid, or cancelled results from editing/creating validateValues and
+  FormModalProps.validate. This breaks the previous errors-or-null check result: branch on status
+  instead. Cancellation now settles promptly even when a validator ignores its signal. Schema
+  validators and state-writing validate() retain their existing contracts.
+- fc46ace: Require stable row IDs for connected edit and delete actions. Keep controlled page resets pending,
+  suppress cross-scope placeholder data before projection, and allow explicit dataset scope keys.
+  Coalesce pending deletion targets without cancelling independent deletes.
+
+  Use prepareKey to separate generated cache identity from non-serializable transport arguments.
+  Shape-changing native descriptors require an explicit selector, and structural projections must
+  accept raw data when their selector is optional.
+
+- 4cda640: Scope connected form drafts, delete confirmations and bulk selection updates to their write owner.
+  Prevent pre-dispatch deletion after cancellation and show failures from built-in delete actions
+  while preserving imperative rejection. Keep disabled infinite reads from loading more pages.
+
+  Connected grids own query notifications. Remove `notifyOnChangeProps` from grid `queryOptions`
+  if previously set. Structural reads must provide compatible query options and projections, and
+  a grid factory can only inherit cursor settings when it has infinite defaults.
+
+### Patch Changes
+
+- 13fa65e: Expose per-grid query observer options and silently cancel validation when mutation ownership changes.
+  Add creating/editing cancelValidation to retain form values while abandoning pending checks without
+  interrupting dispatched saves.
+- bc50d51: Keep connected write actions on the visible grid's columns and callbacks during Suspense, and use
+  the current visible tree rows for deletion. Hide selection actions until the controlled selection
+  resets after a scope change. Guard native placeholder data before projection, preserve placeholders
+  supplied by the new read, and validate every option branch and explicitly configured pagination mode.
+
 ## 0.16.1
 
 ### Patch Changes

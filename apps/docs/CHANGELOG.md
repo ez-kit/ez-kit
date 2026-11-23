@@ -1,5 +1,33 @@
 # @ez-kit/docs
 
+## 0.3.4
+
+### Patch Changes
+
+- Updated dependencies [4d4b2bd]
+- Updated dependencies [948d2ef]
+- Updated dependencies [0b68f10]
+- Updated dependencies [a214b41]
+- Updated dependencies [eb9f79e]
+- Updated dependencies [e467391]
+- Updated dependencies [95728f9]
+- Updated dependencies [13fa65e]
+- Updated dependencies [fc46ace]
+- Updated dependencies [bc50d51]
+- Updated dependencies [e467391]
+- Updated dependencies [e467391]
+- Updated dependencies [9ef8578]
+- Updated dependencies [e5192bf]
+- Updated dependencies [4cda640]
+- Updated dependencies [80b6f61]
+- Updated dependencies [6a80f60]
+  - @ez-kit/query-react@0.3.0
+  - @ez-kit/qc-react@0.2.0
+  - @ez-kit/data-grid-core@0.17.0
+  - @ez-kit/data-grid-react@0.20.0
+  - @ez-kit/data-grid-heroui@0.16.0
+  - @ez-kit/data-grid-shadcn@0.2.0
+
 ## 0.3.3
 
 ### Patch Changes
