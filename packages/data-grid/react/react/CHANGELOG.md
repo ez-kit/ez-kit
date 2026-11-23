@@ -1,5 +1,67 @@
 # @ez-kit/data-grid-react
 
+## 0.20.0
+
+### Minor Changes
+
+- e467391: BREAKING: bulk deletion requires `deleting.bulk.onDelete`. The grid no longer falls back to calling single-row `onDelete` in a sequence. `bulk: true` is no longer accepted by the base-grid type; invalid dynamic configurations report the missing executor. Confirmation and success deselection remain unchanged; rejection preserves selection.
+
+  Provide a batch handler, or move an intentional sequential loop into `bulk.onDelete`. Applications own reconciliation of partial successes; the grid does not interpret per-row statuses. Connected `withQuery` grids may still use `bulk: true` when the source supplies `deleteMany`, because the connector installs the executor.
+
+- 95728f9: Return explicit valid, invalid, or cancelled results from editing/creating validateValues and
+  FormModalProps.validate. This breaks the previous errors-or-null check result: branch on status
+  instead. Cancellation now settles promptly even when a validator ignores its signal. Schema
+  validators and state-writing validate() retain their existing contracts.
+- fc46ace: Require stable row IDs for connected edit and delete actions. Keep controlled page resets pending,
+  suppress cross-scope placeholder data before projection, and allow explicit dataset scope keys.
+  Coalesce pending deletion targets without cancelling independent deletes.
+
+  Use prepareKey to separate generated cache identity from non-serializable transport arguments.
+  Shape-changing native descriptors require an explicit selector, and structural projections must
+  accept raw data when their selector is optional.
+
+- e467391: Add `withQuery` at `@ez-kit/qc-react/data-grid` to connect existing grid bundles to typed TanStack Query sources. Support component and explicit-table usage, applied filters, server pagination, infinite collections, and explicitly enabled source mutations. Keep native query keys and lifecycle behavior, with non-blocking list invalidation after successful built-in mutations.
+
+  Add an optional configuration transform to the grid's bound hook after factory, provider and instance defaults merge. The connector uses this neutral bridge to publish data and loading through the existing grid configuration; the base grid does not depend on Query. The connector requires the grid release containing this bridge.
+
+  Keep successful persistence independent of background invalidation failures, including synchronous errors in application-provided query predicates. Continue processing the remaining cache filters and preserve awaited native mutation lifecycle callbacks and original errors.
+
+  Accept native `infiniteQueryOptions` descriptors whose stored page parameters are unknown without weakening the typed cursor callbacks.
+
+  Expose typed `createListSource` and `createInfiniteSource` helpers for endpoints outside a shared API convention. Allow unknown totals via `getRowCount` returning `undefined`, and wait for background refetch before correcting a restored page from cached totals.
+
+  Expose `createGridDataSource` for adapting existing native TanStack options while preserving their keys and explicit invalidation scope.
+
+- 4cda640: Scope connected form drafts, delete confirmations and bulk selection updates to their write owner.
+  Prevent pre-dispatch deletion after cancellation and show failures from built-in delete actions
+  while preserving imperative rejection. Keep disabled infinite reads from loading more pages.
+
+  Connected grids own query notifications. Remove `notifyOnChangeProps` from grid `queryOptions`
+  if previously set. Structural reads must provide compatible query options and projections, and
+  a grid factory can only inherit cursor settings when it has infinite defaults.
+
+### Patch Changes
+
+- a214b41: Use committed options and rows for connected grid writes during concurrent rendering. Block
+  bulk actions from stale controlled selection after a scope change. Dismiss delete confirmations
+  without cancelling active deletes, and retain same-scope target reservations until settlement.
+- bc50d51: Keep connected write actions on the visible grid's columns and callbacks during Suspense, and use
+  the current visible tree rows for deletion. Hide selection actions until the controlled selection
+  resets after a scope change. Guard native placeholder data before projection, preserve placeholders
+  supplied by the new read, and validate every option branch and explicitly configured pagination mode.
+- 9ef8578: Scope infinite loader state to the active collection, ignore stale cached totals during page correction,
+  and support automatic mutations invoked from early consumer effects. Add a neutral loadMoreKey for
+  base-grid loaders. Enforce safe projections in direct grid helpers and preserve complete observer
+  option types for structural collection sources.
+- Updated dependencies [a214b41]
+- Updated dependencies [e467391]
+- Updated dependencies [95728f9]
+- Updated dependencies [13fa65e]
+- Updated dependencies [fc46ace]
+- Updated dependencies [bc50d51]
+- Updated dependencies [4cda640]
+  - @ez-kit/data-grid-core@0.17.0
+
 ## 0.19.0
 
 ### Minor Changes
