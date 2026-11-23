@@ -126,7 +126,7 @@ prepareKey: (args) => args.get('status'),
 
 ## Reuse conventions and connect a grid
 
-`createCollectionSourceFactory` defines shared `list`, `infinite` and `mutations` defaults. Supply
+The [ordinary-list factory example](/docs/qc-react/reuse#reuse-a-factory-in-ordinary-lists) shows two endpoints sharing an offset convention. `createCollectionSourceFactory` defines shared `list`, `infinite` and `mutations` defaults. Supply
 entity fetchers to the returned factory; expanded operations override supplied properties. An
 operation's `options` replaces the options object rather than deep-merging callbacks. An application
 factory can specialize an entity type once when a generic response envelope needs it.

@@ -59,6 +59,8 @@ to Query's page parameter, not the table's page index.
 
 ## Factory overrides
 
+`createGridSourceFactory` receives table state and row-action contexts. For application-owned inputs, see [the collection factory example](/docs/qc-react/reuse#reuse-a-factory-in-ordinary-lists).
+
 The factory defines `list`, optional `infinite`, optional mutation preparation
 and `transformError`. Its returned constructor accepts `key`, `getAll`, optional
 `getInfinite`, `create`, `update`, `delete`, `deleteMany`, `invalidate` and

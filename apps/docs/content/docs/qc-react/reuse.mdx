@@ -66,9 +66,45 @@ Edit a name in the grid and save. The ordinary list below shows the new name aft
 
 <DataGridDocsExample exampleId='query-shared-source' />
 
-## Share a factory across resources
+## Choose a factory for your inputs
 
-Extract the mapping once when different endpoints use the same request and response shape. For example, both the users and teams endpoints can take `offset` and `limit` and return named rows inside `{ items, total }`.
+Both factories let you share an API convention across resources. Choose based on where read and mutation inputs come from.
+
+- `createCollectionSourceFactory` takes application parameters and business inputs. Use it with `useCollectionQuery` in any list. If a grid also displays those resources, adapt the resulting collection with `createGridSourceFromCollection`.
+- `createGridSourceFactory` takes DataGrid's pagination, filtering and sorting state and its row-action contexts. Use it when the source will receive these inputs directly from a connected grid.
+
+### Reuse a factory in ordinary lists
+
+Suppose both the users and teams endpoints take `offset` and `limit` and return `{ items, total }`. Define the argument and response mapping once and give each resource a base key and a fetcher.
+
+```ts
+import { createCollectionSourceFactory, useCollectionQuery } from '@ez-kit/query-react/collection'
+
+type ListParams = { offset: number; limit: number }
+type NamedRow = { id: string; name: string }
+type Page = { items: NamedRow[]; total: number }
+
+const makeCollection = createCollectionSourceFactory({
+	list: {
+		prepareArgs: (params: ListParams) => params,
+		getItems: (page: Page) => page.items,
+		getTotal: (page) => page.total,
+	},
+})
+
+const usersSource = makeCollection({ key: ['users'], getAll: fetchUsers })
+const teamsSource = makeCollection({ key: ['teams'], getAll: fetchTeams })
+
+function useTeamList(params: ListParams) {
+	return useCollectionQuery({ source: teamsSource, mode: 'pages', params })
+}
+```
+
+Here `fetchUsers` and `fetchTeams` both accept `ListParams` and return `Promise<Page>`. The lists share the mapping and each has its own cache keys. You can also share infinite read or mutation conventions. See the [collection factory reference](/docs/query-react/collection#reuse-conventions-and-connect-a-grid).
+
+### Reuse a factory in connected grids
+
+For the same endpoints, a grid factory can receive the table's pagination state directly and translate it into the API's offsets.
 
 ```ts
 import { createGridSourceFactory } from '@ez-kit/qc-react/data-grid'
@@ -97,6 +133,6 @@ const teams = makeSource({
 })
 ```
 
-The resources have separate cache keys and reuse the same grid-to-API mapping. Override a read setting when one endpoint needs different behavior. Use `createCollectionSourceFactory` from [Query collections](/docs/query-react/collection) for the equivalent convention across standalone lists.
+The resources have separate cache keys and reuse the same grid-to-API mapping. Override a read setting when one endpoint needs different behavior.
 
 If you already have OpenAPI, the [Orval recipe](/docs/qc-react/orval) shows how to generate the fetchers and plug them into this pattern.
