@@ -8,7 +8,6 @@ export default defineConfig({
 		'url/index': 'src/url/index.ts',
 		'url/react-router': 'src/url/react-router.ts',
 		'url/next': 'src/url/next.tsx',
-		'validators/zod': 'src/validators/zod.ts',
 		'testing/index': 'src/testing/index.ts',
 	},
 	format: ['esm'],

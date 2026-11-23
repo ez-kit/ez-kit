@@ -1,121 +1,189 @@
 import { PACKAGE_TAG } from './package-tag'
-import { URL_SOURCE, type UrlMeta } from './url/adapter'
+import { URL_SOURCE } from './url/adapter'
 
 import type { PersistBinding } from './binding'
+import type { PersistStatus, RestoreCallOptions, RestoreResult } from './types'
+import type { UrlMeta } from './url/adapter'
 
-/** Store property exposing the URL control handle. */
 export const URL_HANDLE = '$url'
-/** Store property exposing the storage (persist) control handle. */
 export const PERSIST_HANDLE = '$persist'
-
-/**
- * Per-source control handle attached to a bound store (`$url`, `$persist`). It routes meta-tagged
- * mutations (e.g. URL push/replace) through the connected engine. When no provider is mounted (server
- * render, or before connect) it is inert: the mutation still runs, but without engine meta.
- */
-export type PersistHandle = {
-	/**
-	 * The source this handle controls (e.g. `'url'`, `'localStorage'`), or `null` when the store
-	 * declares no field for this handle's slot — the slot exists so the type is true, but there is
-	 * nothing behind it and the handle stays permanently inert.
-	 */
-	source: string | null
-	/** Run a mutation whose resulting commit carries `meta` (no-op meta when disconnected). */
-	runWithMeta(meta: unknown, mutate: () => void): void
-}
-
-function createHandle(source: string | null, binding: PersistBinding | undefined): PersistHandle {
-	return {
-		source,
-		runWithMeta(meta, mutate) {
-			const controller = binding?.controller
-			if (controller) {
-				controller.runWithMeta(meta, mutate)
-			} else {
-				// Inert on the server / before connect: apply the mutation without engine meta.
-				mutate()
-			}
-		},
-	}
-}
-
-/** A binding tagged with its source — the shape the store factory tracks per proxy. */
 export type SourceBinding = { source: string; binding: PersistBinding }
 
-/** The pair of control handles every bound proxy carries — the type {@link withPersist} widens by. */
-export type PersistHandles = {
-	[URL_HANDLE]: UrlHandle
-	[PERSIST_HANDLE]: PersistHandle
-}
+/** Possible state paths; runtime validation additionally checks that the selected source persists them. */
+export type PersistFieldPath<T, Depth extends readonly unknown[] = []> = Depth['length'] extends 8
+	? readonly string[]
+	: T extends readonly (infer Item)[]
+		? | readonly [`${number}`]
+			| (NonNullable<Item> extends object
+					? readonly [`${number}`, ...PersistFieldPath<NonNullable<Item>, [...Depth, unknown]>]
+					: never)
+		: string extends keyof T
+			? readonly string[]
+			: keyof T extends never
+				? readonly string[]
+				: {
+						[K in Exclude<Extract<keyof T, string | number>, typeof URL_HANDLE | typeof PERSIST_HANDLE>]: NonNullable<
+							T[K]
+						> extends (...args: never[]) => unknown
+							? never
+							: | readonly [`${K}`]
+								| (NonNullable<T[K]> extends Date
+										? never
+										: NonNullable<T[K]> extends object
+											? readonly [`${K}`, ...PersistFieldPath<NonNullable<T[K]>, [...Depth, unknown]>]
+											: never)
+					}[Exclude<Extract<keyof T, string | number>, typeof URL_HANDLE | typeof PERSIST_HANDLE>]
 
-function defineHandle(store: object, name: string, source: string | null, binding: PersistBinding | undefined): void {
-	if (Object.prototype.hasOwnProperty.call(store, name)) {
-		return
-	}
-	Object.defineProperty(store, name, {
-		value: createHandle(source, binding),
-		enumerable: false,
-		configurable: true,
-		writable: false,
-	})
+// A business method named getState does not make a proxy a store handle.
+// Recognize the complete structural surface without importing a state manager here.
+type PersistState<T> = T extends {
+	getState(): infer State
+	getInitialState(): unknown
+	setState: (...args: never[]) => unknown
+	subscribe: (...args: never[]) => unknown
 }
+	? State
+	: T
 
-/**
- * Attach BOTH control handles to a bound store, non-enumerably. Non-enumerable so they never leak
- * into snapshots, serialization, or a `withHistory` recorded state (whose restore would then try to
- * assign a non-writable property).
- *
- * Both slots are attached even when the store declares fields for only one of them, because
- * `withPersist` widens its return type by {@link PersistHandles} unconditionally — a slot the
- * runtime skipped would make that type a lie. The unbacked slot's handle carries `source: null` and
- * is inert: `runWithMeta` runs the mutation without engine meta, exactly as a bound-but-unconnected
- * handle does. A proxy bound to several storage sources exposes the first one as `$persist`.
- */
-export function attachHandles(store: object, bindings: SourceBinding[]): void {
-	const url = bindings.find(({ source }) => source === URL_SOURCE)
-	const storage = bindings.find(({ source }) => source !== URL_SOURCE)
-	defineHandle(store, URL_HANDLE, url?.source ?? null, url?.binding)
-	defineHandle(store, PERSIST_HANDLE, storage?.source ?? null, storage?.binding)
+export type PersistHandle<TState = object> = {
+	readonly source: string | null
+	runWithMeta(meta: unknown, mutate: () => void): void
+	getStatus(): PersistStatus
+	subscribe(listener: () => void): () => void
+	restore(options?: RestoreCallOptions): Promise<RestoreResult>
+	flush(): Promise<void>
+	reset(options?: { fields?: readonly PersistFieldPath<TState>[] }): Promise<void>
 }
-
-/** The URL control handle, with {@link UrlMeta}-typed commit meta (`{ history: UrlHistory.Push }`). */
-export type UrlHandle = Omit<PersistHandle, 'runWithMeta'> & {
-	/** Run a mutation whose URL commit uses `meta` (e.g. force a `push` instead of the default `replace`). */
+export type UrlHandle<TState = object> = Omit<PersistHandle<TState>, 'runWithMeta'> & {
 	runWithMeta(meta: UrlMeta, mutate: () => void): void
 }
+export type PersistHandles<TState = object> = {
+	[URL_HANDLE]: UrlHandle<TState>
+	[PERSIST_HANDLE]: PersistHandle<TState>
+}
 
-/**
- * Read a per-source control handle off a bound store WITHOUT casts. Handles are attached as
- * non-enumerable properties by a binding package's `withPersist`; this resolver looks one up by name
- * and throws a named error when it is absent — which now means only that the store never went
- * through `withPersist` at all, since both slots are attached whatever the store declares.
- */
-function requireHandle(store: object, name: string): PersistHandle {
-	const handle = (store as Record<string, PersistHandle | undefined>)[name]
-	if (!handle) {
-		throw new Error(
-			`${PACKAGE_TAG} no "${name}" handle on this store. Ensure the store uses the persist() plugin with a ` +
-				`${name === URL_HANDLE ? 'URL' : 'storage'} field, and resolve the handle after the store is created.`,
-		)
+// Public source names must never double as private shorthand selectors.
+const DEFAULT_URL = Symbol('default URL handle')
+const DEFAULT_PERSIST = Symbol('default persistence handle')
+type Selector = string | typeof DEFAULT_URL | typeof DEFAULT_PERSIST
+const entriesByStore = new WeakMap<object, SourceBinding[]>()
+const handlesByStore = new WeakMap<object, Map<Selector, PersistHandle>>()
+const INERT_STATUS: PersistStatus = { restore: 'idle', write: 'idle', dirty: false, writeBlocked: null, error: null }
+
+function unknownSource(source: string, entries: readonly SourceBinding[]): Error {
+	const names = entries.map((entry) => entry.source).filter(Boolean)
+	return new Error(`${PACKAGE_TAG} Unknown persistence source "${source}"; available: ${names.join(', ') || '(none)'}`)
+}
+
+function selectEntry(store: object, selector: Selector): SourceBinding | undefined {
+	const entries = entriesByStore.get(store) ?? []
+	if (selector === DEFAULT_PERSIST) return entries.find((item) => item.source !== URL_SOURCE)
+	if (selector === DEFAULT_URL) return entries.find((item) => item.source === URL_SOURCE)
+	const found = entries.find((item) => item.source === selector)
+	if (!found) throw unknownSource(selector, entries)
+	return found
+}
+
+function handleFor(store: object, selector: Selector): PersistHandle {
+	let handles = handlesByStore.get(store)
+	if (!handles) {
+		handles = new Map()
+		handlesByStore.set(store, handles)
 	}
+	const existing = handles.get(selector)
+	if (existing) return existing
+	const entry = (): SourceBinding | undefined => selectEntry(store, selector)
+	const handle: PersistHandle = {
+		get source() {
+			const source = entry()?.source
+			return source === '' ? null : (source ?? null)
+		},
+		runWithMeta(meta, mutate) {
+			const controller = entry()?.binding.controller
+			if (controller) controller.runWithMeta(meta, mutate)
+			else mutate()
+		},
+		getStatus() {
+			return entry()?.binding.status ?? INERT_STATUS
+		},
+		subscribe(listener) {
+			const binding = entry()?.binding
+			binding?.listeners.add(listener)
+			return () => {
+				binding?.listeners.delete(listener)
+			}
+		},
+		restore(options) {
+			const binding = entry()?.binding
+			return binding?.controller?.restore?.(binding, options) ?? Promise.resolve({ status: 'idle' })
+		},
+		flush() {
+			const binding = entry()?.binding
+			const controller = binding?.controller
+			if (controller?.flush && binding) return controller.flush(binding)
+			if (binding) return Promise.reject(new Error(`${PACKAGE_TAG} Cannot flush disconnected persistence`))
+			return Promise.resolve()
+		},
+		reset(options) {
+			const binding = entry()?.binding
+			return (
+				binding?.controller?.reset?.(binding, options?.fields) ??
+				Promise.reject(new Error(`${PACKAGE_TAG} Cannot reset disconnected persistence`))
+			)
+		},
+	}
+	handles.set(selector, handle)
 	return handle
 }
 
-/**
- * Typed accessor for the URL control handle (`$url`). Use it to drive history mode imperatively:
- * `urlHandle(store).runWithMeta({ history: UrlHistory.Push }, () => { store.step = 'profile' })`.
- * Replaces the `(store as Record<string, unknown>)[URL_HANDLE]` double-cast.
- */
-export function urlHandle(store: object): UrlHandle {
-	// The underlying `runWithMeta` accepts `unknown`, so a PersistHandle structurally satisfies the
-	// narrower UrlHandle (UrlMeta) — no assertion needed.
-	return requireHandle(store, URL_HANDLE)
+export function attachHandles(store: object, bindings: SourceBinding[]): void {
+	entriesByStore.set(store, bindings)
+	for (const [slot, selector] of [
+		[URL_HANDLE, DEFAULT_URL],
+		[PERSIST_HANDLE, DEFAULT_PERSIST],
+	] as const) {
+		if (!Object.prototype.hasOwnProperty.call(store, slot))
+			Object.defineProperty(store, slot, {
+				value: handleFor(store, selector),
+				enumerable: false,
+				configurable: true,
+				writable: false,
+			})
+	}
 }
 
-/**
- * Typed accessor for the storage control handle (`$persist`), shared by all storage sources
- * (localStorage / sessionStorage / IndexedDB) bound to the proxy.
- */
-export function persistHandle(store: object): PersistHandle {
-	return requireHandle(store, PERSIST_HANDLE)
+function requireHandle(store: object, selector: Selector): PersistHandle {
+	if (!entriesByStore.has(store)) {
+		const label = selector === DEFAULT_URL ? URL_HANDLE : selector === DEFAULT_PERSIST ? PERSIST_HANDLE : selector
+		throw new Error(`${PACKAGE_TAG} no "${label}" handle; ensure the store uses withPersist`)
+	}
+	if (typeof selector === 'string') selectEntry(store, selector)
+	return handleFor(store, selector)
+}
+
+/** Wait for every persistence source attached to this store, including URL when present. */
+export async function flushPersist(store: object): Promise<Record<string, PromiseSettledResult<void>>> {
+	const entries = entriesByStore.get(store)
+	if (!entries) throw new Error(`${PACKAGE_TAG} Store does not use withPersist`)
+	const sources = entries.map(({ source }) => source)
+	if (sources.includes('')) throw new Error(`${PACKAGE_TAG} Cannot flush before persistence sources are resolved`)
+	const results = await Promise.all(
+		sources.map(async (source): Promise<[string, PromiseSettledResult<void>]> => {
+			try {
+				await handleFor(store, source).flush()
+				return [source, { status: 'fulfilled', value: undefined }]
+			} catch (reason) {
+				return [source, { status: 'rejected', reason }]
+			}
+		}),
+	)
+	return Object.fromEntries(results)
+}
+
+export function urlHandle<T extends object>(store: T, source?: string): UrlHandle<PersistState<T>> {
+	return requireHandle(store, source ?? DEFAULT_URL)
+}
+// The runtime handle is state-erased; its source-specific reset validates every requested path.
+export function persistHandle<T extends object>(store: T, source?: string): PersistHandle<PersistState<T>> {
+	return requireHandle(store, source ?? DEFAULT_PERSIST) as unknown as PersistHandle<PersistState<T>>
 }

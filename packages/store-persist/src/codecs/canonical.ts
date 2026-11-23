@@ -1,18 +1,22 @@
 type Nested = Record<string, unknown>
 
-/** Stable, recursively key-sorted JSON so equality comparison is insensitive to key insertion order. */
-export function canonicalStringify(value: unknown): string {
-	return JSON.stringify(sortKeys(value))
+/** Canonicalize serialized JSON, preserving toJSON semantics and ignoring object key insertion order. */
+export function canonicalStringify(value: unknown): string | undefined {
+	const serialized = JSON.stringify(value) as string | undefined
+	if (serialized === undefined) return undefined
+	return JSON.stringify(sortKeys(JSON.parse(serialized) as unknown))
 }
 
 function sortKeys(value: unknown): unknown {
-	if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+	if (Array.isArray(value)) return value.map(sortKeys)
+	if (value === null || typeof value !== 'object') {
 		return value
 	}
 	const source = value as Nested
-	const ordered: Nested = {}
-	for (const key of Object.keys(source).sort()) {
-		ordered[key] = sortKeys(source[key])
-	}
-	return ordered
+	// fromEntries defines own data properties, including __proto__, instead of invoking setters.
+	return Object.fromEntries(
+		Object.keys(source)
+			.sort()
+			.map((key) => [key, sortKeys(source[key])]),
+	)
 }

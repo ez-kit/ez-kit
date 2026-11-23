@@ -3,8 +3,10 @@
 	"description": "Sync a Zustand store to the URL, storage, or any substrate",
 	"pages": [
 		"index",
-		"quick-start-url",
 		"quick-start-storage",
+		"quick-start-url",
+		"working-with-fields",
+		"operations",
 		"combined",
 		"cache",
 		"deep-dive-url",

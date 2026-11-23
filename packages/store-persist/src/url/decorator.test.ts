@@ -7,6 +7,14 @@ import { URL_SOURCE, UrlHistory } from './adapter'
 import { persistUrl, urlField } from './decorator'
 
 describe('@ez-kit/store-persist URL decorator', () => {
+	it('forwards independent validation through decorator and accessor helpers', () => {
+		const schema = { validate: (value: unknown) => Number(value) }
+		class Store {
+			@persistUrl({ schema }) page = 1
+		}
+		expect(discoverPersistFields(new Store())[0]?.descriptor.schema).toBe(schema)
+		expect(urlField({ schema }).schema).toBe(schema)
+	})
 	it('defaults to the URL source with empty meta and no key overrides', () => {
 		class Store {
 			@persistUrl() q = ''

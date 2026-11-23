@@ -13,6 +13,8 @@ export type PathWrite = {
 	/** Ordered property segments from the state root to the leaf. */
 	path: readonly string[]
 	value: unknown
+	/** Recheck immediately before applying this leaf if earlier writes can notify subscribers. */
+	shouldApply?: () => boolean
 }
 
 export type StorePort<TStore extends object = object> = {

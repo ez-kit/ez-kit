@@ -1,58 +1,88 @@
 ---
-title: Persist
-description: One engine binds a Zustand store to any external substrate — the URL, localStorage, sessionStorage, IndexedDB, or your own — through a tiny source-agnostic port.
+title: Persist user guide
+description: Connect one store, save preferences and restore them after reloading.
 ---
 
-Mirror a Zustand store into an external substrate and back, in both directions. A `set()` writes the substrate; an external change (a deep link, Back/forward, another tab, a restored value) writes the store. The store stays **synchronous and snappy** — the substrate is a throttled, rehydratable projection of it.
+## Save your first preferences
 
 ```bash
 pnpm add @ez-kit/zu-store zustand
 ```
 
-Router, storage, and validator integrations are optional peers — install only what you use (`react-router`, `next`, `zod`).
+```tsx
+'use client'
 
-## One engine, many sources
+import { createContextStore, pipe, StoreProvider } from '@ez-kit/zu-store'
+import { withPersist } from '@ez-kit/zu-store/persist'
+import { localStorageAdapter } from '@ez-kit/zu-store/persist/storage'
+import { createStore } from 'zustand/vanilla'
 
-The core never imports React, `URLSearchParams`, or a storage API. Its only interchange language is `Keyed = Map<string, string>` — a logical key mapped to an already-stringified value. A **source adapter** teaches the engine how to read and write one substrate through a small port (`get` / `set` / `subscribe`). Everything else — typed codecs, key naming, throttling, loop-breaking, hydration — is shared.
+type Preferences = { theme: 'light' | 'dark'; fontScale: number }
 
-| Source                        | Import                             | Sync?  |
-| ----------------------------- | ---------------------------------- | ------ |
-| URL search params             | `@ez-kit/zu-store/persist/url`     | sync   |
-| localStorage / sessionStorage | `@ez-kit/zu-store/persist/storage` | sync   |
-| IndexedDB                     | `@ez-kit/zu-store/persist/storage` | async  |
-| your own                      | a `SourcePort` you write           | either |
+const sources = { browser: localStorageAdapter({ storageKey: 'my-app-preferences' }) }
 
-Because each source is just an adapter, a single field can sync to **two** substrates at once (a shared `?q=` in the URL _and_ a cached copy in storage), and async sources (IndexedDB) never stall the synchronous URL.
+const prefs = createContextStore(
+	() =>
+		pipe(
+			createStore<Preferences>()(() => ({ theme: 'light', fontScale: 1 })),
+			withPersist({
+				fields: (field) => [field((state) => state.theme, {}), field((state) => state.fontScale, {})],
+			}),
+		),
+	{ name: 'preferences' },
+)
 
-## How it works
+function ThemeButton() {
+	const store = prefs.useStore()
+	const theme = prefs.useSelector((state) => state.theme)
+	return (
+		<button
+			type='button'
+			onClick={() => {
+				store.setState({ theme: theme === 'light' ? 'dark' : 'light' })
+			}}
+		>
+			Theme: {theme}
+		</button>
+	)
+}
 
-The store is the **source of truth**; the substrate is a **mirror**. When you write to the store, the change is synced to the substrate. When the substrate changes externally (a deep link, browser back button, another tab), the change is synced back to the store — and only the components that read a changed field re-render.
+export default function PreferencesPage() {
+	return (
+		<StoreProvider
+			persist={sources}
+			defaultSource='browser'
+		>
+			<prefs.Provider>
+				<ThemeButton />
+			</prefs.Provider>
+		</StoreProvider>
+	)
+}
+```
 
-## Declaring fields
+Change **Theme** and **Font scale**, then reload this page. Both values restore automatically
+from browser storage. Use the example’s file tabs to see the provider, store and controls in separate files.
 
-You bring your own store and declare which fields sync, with the [accessor front](./persist/fields): `field((state) => state.q, urlField())`. The selectors are typed against the store's **state**, not its handle — `withPersist` reads `ExtractState` off the store `pipe` hands it.
+<LivePreview
+	path='zu-store/persist-storage'
+	title='Save preferences in localStorage'
+/>
 
-<Callout type='info'>
-	The decorator front (`@persistUrl()` on a class property) is deliberately Valtio-only: it is the "class inside
-	`proxy()`" idiom, and Zustand state is a plain object rebuilt on every write. The accessor front is the same engine
-	and the same descriptors — see [va-store → decorators](../va-store/persist/decorators) if you are comparing the two
-	packages.
-</Callout>
+The provider registers a source named `browser`. The store selects the fields to save.
+An empty field configuration uses `defaultSource`. A stable store name and storage key let
+a new instance find the same saved values after reload.
 
-## The same engine as va-store
+## Continue the guide
 
-Both packages re-export `@ez-kit/store-persist` with their own store port bound, so codecs, adapters, key naming, migrations, `useHydrated` and the `$url` / `$persist` handles behave identically. Only two things are Zustand-specific: how a write happens (`set()`, a new state object) and how the capability is attached (`pipe(store, withPersist())` on the handle).
+1. [Choose a source](./quick-start-storage.mdx) for the same store using sessionStorage, URL or IndexedDB.
+2. [Persist nested state](./working-with-fields.mdx) with a codec, validation and migration.
+3. [Save, reset and retry](./operations.mdx) with a simulated slow source.
+4. [Use multiple sources](./combined.mdx) on one store, then [add multiple stores and scope](./cache.mdx).
 
-## On this topic
+For reference, see [fields](./fields.mdx), [parsers](./parsers.mdx), [storage policies](./deep-dive-storage.mdx),
+[router integration](./deep-dive-url.mdx) and [custom adapters](./custom-adapter.mdx).
 
-| Page                                                   | What it covers                                                          |
-| ------------------------------------------------------ | ----------------------------------------------------------------------- |
-| [Quick start — URL](./persist/quick-start-url)         | The shortest URL-synced store.                                          |
-| [Quick start — storage](./persist/quick-start-storage) | The same store, persisted to localStorage.                              |
-| [Combined](./persist/combined)                         | URL + storage on one store; first-present-wins; per-source handles.     |
-| [Cached stores](./persist/cache)                       | One store that is both cached and persisted, under one `StoreProvider`. |
-| [Deep dive — URL](./persist/deep-dive-url)             | History push/replace, key naming, router adapters, SSR.                 |
-| [Deep dive — storage](./persist/deep-dive-storage)     | Blob packing, `useHydrated()`, schema versioning, cross-tab.            |
-| [Custom adapter](./persist/custom-adapter)             | Write your own `SourcePort`.                                            |
-| [Fields](./persist/fields)                             | The accessor API, key placement, per-field options.                     |
-| [Parsers](./persist/parsers)                           | Typed codecs, auto-resolution, Zod, custom parsers.                     |
+If you are upgrading from the previous persistence API, check the
+[scoped storage migration guide](https://github.com/ez-kit/ez-kit/blob/develop/packages/store-persist/MIGRATION.md)
+for storage addresses, parser changes and rollout options.

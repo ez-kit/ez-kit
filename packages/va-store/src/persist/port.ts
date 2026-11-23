@@ -12,9 +12,9 @@ import type { StorePort } from '@ez-kit/store-core'
 export const valtioPort: StorePort = {
 	getState: (store) => store,
 	write: (store, writes) => {
-		for (const { path, value } of writes) {
-			writePath(store, path, value)
+		for (const { path, value, shouldApply } of writes) {
+			if (!shouldApply || shouldApply()) writePath(store, path, value)
 		}
 	},
-	subscribe: (store, onChange) => subscribe(store, onChange),
+	subscribe: (store, onChange) => subscribe(store, onChange, true),
 }

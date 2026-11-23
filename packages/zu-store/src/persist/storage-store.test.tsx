@@ -12,7 +12,7 @@ import { StoreProvider } from '../store-provider'
 import { DEFAULT_STORAGE_KEY, localStorageAdapter, sessionStorageAdapter } from './storage'
 import { createFakePersistAdapter } from './testing'
 
-import { paramString, useHydrated, withPersist } from './index'
+import { paramString, useHydrated, withPersist, deserializePersistAddress } from './index'
 
 import type { FieldsBuilder } from './index'
 import type { StoreApi } from 'zustand/vanilla'
@@ -30,7 +30,13 @@ function blobOf(area: Storage): Record<string, string> {
 		return {}
 	}
 	const parsed = JSON.parse(raw) as { s?: Record<string, string> }
-	return parsed.s ?? {}
+	return Object.fromEntries(
+		Object.entries(parsed.s ?? {}).map(([key, raw]) => {
+			const address = deserializePersistAddress(key)
+			const envelope = JSON.parse(raw) as { value: string }
+			return [address?.field.join('.') ?? key, envelope.value]
+		}),
+	)
 }
 
 /** A non-cached persist store: plain Zustand handle, capabilities attached through `pipe`. */

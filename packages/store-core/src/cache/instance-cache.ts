@@ -1,11 +1,15 @@
 import { capabilitiesOf } from '../capability'
+import {
+	collectCapabilityCleanupErrors,
+	setupCapabilities,
+	throwCapabilityCleanupErrors,
+} from '../capability-lifecycle'
 import { serializeStoreId } from '../store-id'
 
 import { createMembershipView, startsWithPrefix, toRecords, updateMembership } from './cache-utils'
 
 import type { InstanceMeta, MembershipView } from './cache-types'
-import type { CacheRecord, CreateOptions } from './types'
-import type { PluginCleanup } from '../plugin'
+import type { CacheRecord, CreateOptions, ObserveOptions } from './types'
 import type { StoreId } from '../store-id'
 
 export const DEFAULT_GC_TIME = 5 * 60 * 1000
@@ -18,15 +22,17 @@ export type InstanceCache = {
 	/** Miss: create + run plugin setups; hit: return the existing instance with NO re-run. */
 	getOrCreate: <T extends object>(id: StoreId, create: () => T, opts: CreateOptions) => T
 	/** Register a mounted observer; keeps the entry alive and cancels any pending eviction. */
-	addObserver: (id: StoreId) => void
+	addObserver: (id: StoreId, options?: ObserveOptions) => object | undefined
 	/** Unregister an observer; when the last one leaves, schedule eviction after the entry's `gcTime`. */
-	removeObserver: (id: StoreId) => void
+	removeObserver: (id: StoreId, instance?: object) => void
 	/** Flat coordinates of live entries, optionally filtered to a path subtree. Non-reactive snapshot. */
 	keys: (prefix?: readonly string[]) => CacheRecord[]
-	/** Remove every entry, or — with `prefix` — every entry under that path subtree. Runs cleanups. */
+	/** Remove idle entries immediately; active entries release when their last observer leaves. */
 	clear: (prefix?: readonly string[]) => void
-	/** Remove a single entry by exact id, running its cleanups. No-op when absent. */
+	/** Remove one entry now if idle, or after its last observer leaves. No-op when absent. */
 	remove: (id: StoreId) => void
+	/** End the owning container lifetime and release every entry, including active observers. */
+	dispose: () => void
 	/** Subscribe to membership changes (entries added/removed). For the React layer. */
 	subscribe: (listener: () => void) => () => void
 	/**
@@ -44,7 +50,9 @@ export function createInstanceCache(options: CacheConfig = {}): InstanceCache {
 	// Reserved default: entries always supply an explicit `gcTime` via `CreateOptions` today, so the
 	// cache-level default is accepted (parity with the React-layer config) but not yet consulted.
 	const { defaultGcTime: _defaultGcTime = DEFAULT_GC_TIME } = options
+	let disposed = false
 	const metaByKey = new Map<string, InstanceMeta>()
+	const creating = new Set<string>()
 	const membership: MembershipView = createMembershipView()
 	// Cached keys snapshot for useSyncExternalStore: recomputed only when membership changes.
 	let keysSnapshot: readonly CacheRecord[] = toRecords(membership.getSnapshot().values())
@@ -61,19 +69,27 @@ export function createInstanceCache(options: CacheConfig = {}): InstanceCache {
 		}
 	}
 
-	function runCleanups(meta: InstanceMeta): void {
-		if (meta.cleared) return
+	function runCleanups(meta: InstanceMeta): unknown[] {
+		if (meta.cleared) return []
 		meta.cleared = true
-		for (const cleanup of meta.cleanups) {
-			if (cleanup) cleanup()
-		}
+		return collectCapabilityCleanupErrors(meta.cleanups)
 	}
 
-	function dropEntry(key: string, meta: InstanceMeta): void {
+	function dropEntry(key: string, meta: InstanceMeta): unknown[] {
 		if (meta.evictionTimer) clearTimeout(meta.evictionTimer)
-		runCleanups(meta)
-		metaByKey.delete(key)
-		setMembership(meta.storeId, undefined)
+		meta.evictionTimer = undefined
+		const errors = runCleanups(meta)
+		// A cleanup may remove this entry recursively and create a replacement. Releasing the
+		// obsolete lifetime must never delete that newer entry or its membership.
+		if (metaByKey.get(key) === meta) {
+			metaByKey.delete(key)
+			try {
+				setMembership(meta.storeId, undefined)
+			} catch (error) {
+				errors.push(error)
+			}
+		}
+		return errors
 	}
 
 	/**
@@ -88,7 +104,7 @@ export function createInstanceCache(options: CacheConfig = {}): InstanceCache {
 		if (!meta) return
 		meta.evictionTimer = undefined
 		if (meta.observerCount > 0) return
-		dropEntry(key, meta)
+		throwCapabilityCleanupErrors(dropEntry(key, meta))
 	}
 
 	function scheduleEviction(storeId: StoreId): void {
@@ -99,33 +115,70 @@ export function createInstanceCache(options: CacheConfig = {}): InstanceCache {
 			clearTimeout(meta.evictionTimer)
 			meta.evictionTimer = undefined
 		}
-		if (meta.gcTime === Infinity) return
+		if (!meta.evictOnIdle && meta.gcTime === Infinity) return
 		// Per-entry timer: a fired deadline must never sweep siblings whose own gcTime is not up yet.
-		meta.evictionTimer = setTimeout(() => {
-			evictIfIdle(key)
-		}, meta.gcTime)
+		meta.evictionTimer = setTimeout(
+			() => {
+				evictIfIdle(key)
+			},
+			meta.evictOnIdle ? 0 : meta.gcTime,
+		)
 	}
 
 	function getOrCreate<T extends object>(id: StoreId, create: () => T, opts: CreateOptions): T {
+		assertOpen()
 		const key = serializeStoreId(id)
 		const existing = metaByKey.get(key)
-		if (existing) return existing.instance as T
+		if (existing) {
+			for (const plugin of capabilitiesOf(existing.instance)) plugin.validateContext?.(existing.instance, opts.context)
+			assertOpen()
+			return existing.instance as T
+		}
 
-		const instance = create()
-		const cleanups: PluginCleanup[] = capabilitiesOf(instance).map((plugin) => plugin.setup(instance, opts.context))
-		metaByKey.set(key, {
-			instance,
-			storeId: id,
-			observerCount: 0,
-			gcTime: opts.gcTime,
-			evictionTimer: undefined,
-			cleanups,
-			cleared: false,
-		})
-		return instance
+		if (creating.has(key)) throw new Error(`Cannot create the same store cache entry recursively: ${key}`)
+		creating.add(key)
+		try {
+			const instance = create()
+			const plugins = capabilitiesOf(instance)
+			for (const plugin of plugins) plugin.validateContext?.(instance, opts.context)
+			assertOpen()
+			// Render candidates belong to their React owner until it commits. Publishing them here
+			// would retain abandoned Suspense defaults and services without an observer or GC deadline.
+			if (opts.deferSetup) return instance
+			const cleanups = setupCapabilities(instance, plugins, opts.context)
+			if (disposed) {
+				const error = disposedError()
+				const failures = collectCapabilityCleanupErrors(cleanups)
+				if (failures.length) throw new AggregateError([error, ...failures], 'Store cache creation and rollback failed')
+				throw error
+			}
+			const meta: InstanceMeta = {
+				instance,
+				storeId: id,
+				observerCount: 0,
+				gcTime: opts.gcTime,
+				evictOnIdle: false,
+				evictionTimer: undefined,
+				cleanups,
+				cleared: false,
+			}
+			metaByKey.set(key, meta)
+			return instance
+		} finally {
+			creating.delete(key)
+		}
 	}
 
-	function addObserver(id: StoreId): void {
+	function disposedError(): Error {
+		return new Error('Cannot create an entry in a disposed store cache')
+	}
+
+	function assertOpen(): void {
+		if (disposed) throw disposedError()
+	}
+
+	function addObserver(id: StoreId, options?: ObserveOptions): object | undefined {
+		if (options) getOrCreate(id, () => options.instance, { gcTime: options.gcTime, context: options.context })
 		const meta = metaByKey.get(serializeStoreId(id))
 		if (!meta) return
 		meta.observerCount += 1
@@ -134,11 +187,12 @@ export function createInstanceCache(options: CacheConfig = {}): InstanceCache {
 			meta.evictionTimer = undefined
 		}
 		setMembership(id, meta.instance)
+		return meta.instance
 	}
 
-	function removeObserver(id: StoreId): void {
+	function removeObserver(id: StoreId, instance?: object): void {
 		const meta = metaByKey.get(serializeStoreId(id))
-		if (!meta) return
+		if (!meta || (instance !== undefined && meta.instance !== instance)) return
 		meta.observerCount = Math.max(0, meta.observerCount - 1)
 		if (meta.observerCount === 0) {
 			scheduleEviction(id)
@@ -156,16 +210,34 @@ export function createInstanceCache(options: CacheConfig = {}): InstanceCache {
 		return toRecords(membership.getSnapshot().values(), prefix)
 	}
 
-	function clear(prefix?: readonly string[]): void {
-		for (const [key, meta] of [...metaByKey]) {
-			if (!prefix || startsWithPrefix(meta.storeId.path, prefix)) dropEntry(key, meta)
+	function removeEntry(key: string, meta: InstanceMeta): unknown[] {
+		if (meta.observerCount > 0) {
+			meta.evictOnIdle = true
+			return []
 		}
+		return dropEntry(key, meta)
+	}
+
+	function clear(prefix?: readonly string[]): void {
+		const errors: unknown[] = []
+		for (const [key, meta] of [...metaByKey]) {
+			if (!prefix || startsWithPrefix(meta.storeId.path, prefix)) errors.push(...removeEntry(key, meta))
+		}
+		throwCapabilityCleanupErrors(errors)
 	}
 
 	function remove(id: StoreId): void {
 		const key = serializeStoreId(id)
 		const meta = metaByKey.get(key)
-		if (meta) dropEntry(key, meta)
+		if (meta) throwCapabilityCleanupErrors(removeEntry(key, meta))
+	}
+
+	function dispose(): void {
+		if (disposed) return
+		disposed = true
+		const errors: unknown[] = []
+		for (const [key, meta] of [...metaByKey]) errors.push(...dropEntry(key, meta))
+		throwCapabilityCleanupErrors(errors)
 	}
 
 	return {
@@ -176,6 +248,7 @@ export function createInstanceCache(options: CacheConfig = {}): InstanceCache {
 		keys,
 		clear,
 		remove,
+		dispose,
 		subscribe: membership.subscribe,
 		getKeysSnapshot: () => keysSnapshot,
 	}

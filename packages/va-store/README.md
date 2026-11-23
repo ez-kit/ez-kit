@@ -186,6 +186,46 @@ Subpaths (optional peers, install only what you use):
 | `@ez-kit/va-store/persist/storage`          | — (zero-dep core) |
 | `@ez-kit/va-store/persist/url/react-router` | `react-router`    |
 | `@ez-kit/va-store/persist/url/next`         | `next`            |
-| `@ez-kit/va-store/persist/validators/zod`   | `zod`             |
 
 → [Full docs](https://ez-kit-docs.vercel.app/docs/va-store/persist)
+
+### Scoped persistence and source lifetime
+
+`StoreProvider` also accepts a map: `persist={{ browser: browserAdapter, server: serverAdapter }}`
+with `defaultSource='browser'`. A map key names its source; fields can omit source to use the default.
+Nested providers inherit sources and can override a name locally. Registration alone never enables
+fallback or writes to every source.
+
+Memoize adapters or declare them at module scope. Recreating the map with the same adapters is fine;
+changing a name, port, adapter kind or defaultSource requires remounting the provider. A retained
+cache entry keeps its birth registry: remount its cache too when changing accounts or backends.
+
+Cached stores automatically persist under their existing `path + name + id`, plus the persisted
+field. Ordinary context providers accept `address={{ path: ['devices'], name: 'panel', id: 'workspace' }}`.
+Changing address recreates that instance. Different live instances cannot share one source address.
+
+Restoration starts automatically. Configure `restore: { timeoutMs: 2000 }` on `withPersist` and read
+`usePersistStatus(store)` for a loading gate. Timeout never saves defaults; late replies are ignored.
+A cache-hit retains its state/status without another initial read. `persistHandle(store, source)`
+provides `restore`, `flush`, `reset`, `getStatus` and `subscribe`; `usePersistence().resetScope` removes
+an entire scope, including unmounted records. URL adapters do not offer full persistent scope deletion.
+
+This release intentionally includes breaking changes in a minor. See the
+[migration guide](../store-persist/MIGRATION.md) before upgrading persisted applications.
+
+Persistence restore options accept a source map for independent policies while retaining shared defaults:
+`restore: { timeoutMs: 2000, sources: { draftsApi: { timeoutMs: 10000 } } }`. Source-specific helpers
+accept aliases such as `source: 'browser'`; explicit handles/reset paths diagnose unknown selections.
+Each binding owns its throttle window, while one acknowledged queue still serializes each source.
+
+Write defaults remain throttleMs/clearOnDefault; write.sources overrides them per effective source
+alias. Use restore.sources[alias].timeoutMs = null to disable an inherited deadline. Explicit
+handle.restore accepts RestoreCallOptions (timeoutMs only); configure externalChanges on the
+source lifecycle. IndexedDB cross-tab updates still require explicit restore.
+
+Explicit cache remove/clear keeps mounted instances and persistence active until their last Provider
+leaves, then overrides keepalive. Container unmount forcibly releases every entry. Default snapshots
+preserve supported data serializers without running incoming-data validation; unsupported opaque
+serialization fails before I/O. React Router preserves arbitrary location.state using read-only
+location-key observation with explicit synchronous-publication requirements. Custom sources can
+import SourceMutationCancelledError from this package's persist entry to report proven non-commit.

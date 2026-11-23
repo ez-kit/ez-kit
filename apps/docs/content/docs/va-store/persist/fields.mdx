@@ -78,3 +78,32 @@ pipe(
 ```
 
 First-present-wins governs cold start — see [Combined](./combined#first-present-wins-on-cold-start).
+
+## Source aliases and validated JSON
+
+A helper can target the effective name from an adapter map, independently of its built-in source name:
+
+```ts
+field(
+	(state) => state.layout,
+	localStorageField({
+		source: 'browser',
+		parser: paramJson(),
+		schema: { validate: (value) => layoutSchema.parse(value) },
+	}),
+)
+```
+
+The decoder may return unknown; the validator returns the typed current layout. The storage, session,
+IndexedDB and URL helpers preserve this distinction. Omitting source on a helper retains its existing
+built-in name; omitting source on a plain field uses defaultSource. Prefix/absolute are URL projection
+options; storage addresses are always scoped by StoreId.
+
+Explicit control handles select exactly the named source, including names such as $persist. Unknown
+names are errors. Reset fields refer to persisted state paths, not physical query names or storage keys;
+unknown paths fail before any field resets. Typed handles infer object/array paths when state is known.
+
+Typed reset paths also support numeric dictionary and numeric literal keys. For
+`widths: Record<number, number>`, a declared field such as `state.widths[12]` resets with
+`fields: [['widths', '12']]`; paths use string segments just like runtime property extraction.
+Only fields persisted by the selected source may reset.

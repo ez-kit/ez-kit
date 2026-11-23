@@ -1,70 +1,55 @@
 ---
-title: Quick start — storage
-description: Persist the same store to localStorage. One concept changes — the source — plus useHydrated() to avoid a flash.
+title: Choose a source
+description: Use one store with localStorage, sessionStorage, URL or IndexedDB.
 ---
 
-Storage works exactly like the URL — same store shape, same fronts. Only the **source** changes: a field declares `@persistLocalStorage()` instead of `@persistUrl()`, and you mount `localStorageAdapter()` instead of a router adapter.
+## localStorage for preferences
+
+```ts
+import { localStorageAdapter } from '@ez-kit/va-store/persist/storage'
+
+const sources = { browser: localStorageAdapter({ storageKey: 'my-preferences' }) }
+```
+
+Pass `sources` to `<StoreProvider persist={sources} defaultSource='browser'>` as in the
+[first example](./index.mdx). Reload the page to restore the same preferences on this browser.
+
+## sessionStorage for a tab session
+
+```ts
+import { sessionStorageAdapter } from '@ez-kit/va-store/persist/storage'
+
+const sources = { browser: sessionStorageAdapter({ storageKey: 'my-draft' }) }
+```
+
+The store and its field declarations stay the same. Change either setting, then reload this
+tab. Session storage is scoped to the tab session, so it is a good fit for a short form draft.
 
 <LivePreview
-	path='va-store/persist-storage'
-	title='localStorage-persisted preferences'
+	path='va-store/persist-session'
+	title='Save preferences for this tab session'
 />
 
-<Callout type='warn'>
-	The demo uses the accessor API and an isolated in-memory store, so it neither reads nor writes your real
-	`localStorage`. The blob read-out shows the exact JSON the real adapter would persist.
-</Callout>
+## URL for state you can share
 
-## The three pieces
+Use URL for searchable filters, sort order and pagination. The [URL quick start](./quick-start-url)
+shows the router adapter, query keys and a working search example.
 
-```tsx
-import { createContextStore, pipe } from '@ez-kit/va-store'
-import { PersistProvider, withPersist } from '@ez-kit/va-store/persist'
-import { localStorageAdapter, persistLocalStorage } from '@ez-kit/va-store/persist/storage'
-import { proxy } from 'valtio'
+## IndexedDB for async browser storage
 
-class Prefs {
-	@persistLocalStorage() theme = 'light'
-	@persistLocalStorage() fontScale = 1
-}
+```ts
+import { indexedDbAdapter } from '@ez-kit/va-store/persist/storage'
 
-const prefsStore = createContextStore(() => pipe(proxy(new Prefs()), withPersist()))
-
-function Page() {
-	return (
-		<PersistProvider adapters={[localStorageAdapter()]}>
-			<prefsStore.Provider>
-				<PrefControls />
-			</prefsStore.Provider>
-		</PersistProvider>
-	)
-}
+const sources = { browser: indexedDbAdapter({ dbName: 'my-app' }) }
 ```
 
-Storage adapters are **client-only** and inert on the server (`get()` is empty, `set()` is a no-op), so they never break SSR. Swap `localStorageAdapter` for `sessionStorageAdapter` to scope persistence to the tab session.
+Again, the store uses the same two fields. Change a setting, wait for it to save, then reload.
+Restoration starts automatically after mount. Use `usePersistStatus(store, 'browser')` to show
+whether the read is pending, ready, timed out or failed.
 
-## The one new concept: hydration
+<LivePreview
+	path='va-store/persist-indexed-db'
+	title='Restore preferences asynchronously from IndexedDB'
+/>
 
-Reading storage synchronously during render would mismatch server HTML (the server has no `localStorage`), so a stored-but-non-default value can't appear in the very first paint — the proxy shows defaults, and the real value arrives a tick later. For the common case this _silent fill_ needs no code.
-
-When the flash matters (layout shift, firing analytics on default values), gate on `useHydrated()`:
-
-```tsx
-import { useHydrated } from '@ez-kit/va-store/persist'
-
-function PrefControls() {
-	const store = prefsStore.useStore()
-	const snap = prefsStore.useSnapshot()
-	const hydrated = useHydrated(store) // false on server + first client render, then true
-
-	if (!hydrated) return <Skeleton />
-	return <Theme value={snap.theme} />
-}
-```
-
-`useHydrated()` is a per-store aggregate: it flips to `true` once **every** mounted source has applied its first read. For a URL-only store it is effectively immediate; for async sources (IndexedDB) it waits for the resolve.
-
-## Where to go next
-
-- Combine this with the URL on one store: [Combined](./combined).
-- Blob shape, schema `version`/`migrate`, and cross-tab sync: [storage deep dive](./deep-dive-storage).
+For a server endpoint, see [save, reset and retry](./operations) and the [custom adapter contract](./custom-adapter).

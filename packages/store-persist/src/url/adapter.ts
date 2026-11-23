@@ -1,4 +1,8 @@
-import type { CommitCtx, Keyed, MetaMerge, SyncSourcePort } from '../types'
+import { serializePersistAddress } from '@ez-kit/store-core'
+
+import { fieldKey } from '../key-naming'
+
+import type { CommitCtx, Keyed, MetaMerge, ReadCtx, SyncReadSourcePort, SyncSourcePort } from '../types'
 
 /** Source id for the URL engine, shared by the adapter, the `persistUrl` decorator, and the provider. */
 export const URL_SOURCE = 'url'
@@ -22,8 +26,13 @@ export type UrlMeta = {
 export type UrlDriver = {
 	/** Read the current location's search params. */
 	read(): URLSearchParams
+	/** Pure snapshot for the current render, before its operational location commits. */
+	readRender?(): URLSearchParams
 	/** Commit a fully-merged params object, choosing push vs replace navigation. */
-	commit(next: URLSearchParams, history: UrlHistory): void
+	commit(next: URLSearchParams, history: UrlHistory): void | Promise<void>
+	/** Notify explicit external navigation (for example Back/Forward), after read reflects it.
+	 * This disambiguates a POP to an old pending target from an acknowledgement of our own commit. */
+	subscribe?: (onNavigate: () => void) => () => void
 }
 
 const DEFAULT_HISTORY = UrlHistory.Replace
@@ -56,25 +65,101 @@ function urlToKeyed(params: URLSearchParams): Keyed {
 	return keyed
 }
 
-/**
- * Build a {@link SourcePort} over a {@link UrlDriver}. Stateless: because key naming (incl. `prefix`)
- * lives on the descriptor, the engine's {@link Keyed} keys already equal the URL substrate keys, so
- * the port maps verbatim — `get()` reads every param, `set()` merges the desired keys and deletes the
- * removed ones, preserving foreign params. The engine ignores keys that match no connected field.
- */
-export function createUrlPort(driver: UrlDriver): SyncSourcePort {
-	return {
-		get: () => urlToKeyed(driver.read()),
-
-		set(desired: Keyed, ctx: CommitCtx): void {
-			const params = new URLSearchParams(driver.read())
-			for (const [key, value] of desired) {
-				params.set(key, value)
-			}
-			for (const key of ctx.diff.removed) {
-				params.delete(key)
-			}
-			driver.commit(params, historyOf(ctx.meta))
-		},
+/** Project canonical record keys to readable query keys while retaining pending navigation edits. */
+export function createUrlPort<Driver extends UrlDriver>(
+	driver: Driver,
+): Extract<ReturnType<Driver['commit']>, PromiseLike<unknown>> extends never ? SyncSourcePort : SyncReadSourcePort {
+	type Navigation = { signature: string; patch: Map<string, string | null> }
+	let observed: string | null = null
+	const pending: Navigation[] = []
+	function signature(params: URLSearchParams): string {
+		const sorted = new URLSearchParams(params)
+		sorted.sort()
+		return sorted.toString()
 	}
+	function applyPatch(params: URLSearchParams, patch: ReadonlyMap<string, string | null>): void {
+		for (const [key, value] of patch) {
+			if (value === null) params.delete(key)
+			else params.set(key, value)
+		}
+	}
+	function read(): URLSearchParams {
+		const actual = new URLSearchParams(driver.read())
+		const nextObserved = signature(actual)
+		if (observed !== null && nextObserved !== observed) {
+			// An intermediate own acknowledgement must not erase edits submitted after it.
+			let acknowledged = -1
+			for (let index = pending.length - 1; index >= 0; index--) {
+				if (pending[index]?.signature === nextObserved) {
+					acknowledged = index
+					break
+				}
+			}
+			if (acknowledged < 0) pending.length = 0
+			else pending.splice(0, acknowledged + 1)
+		}
+		observed = nextObserved
+		for (const navigation of pending) applyPatch(actual, navigation.patch)
+		return actual
+	}
+	function project(params: URLSearchParams, context?: ReadCtx): Keyed {
+		const keyed = urlToKeyed(params)
+		if (!context) return keyed
+		const values: Keyed = new Map()
+		for (const field of context.fields) {
+			const value = keyed.get(fieldKey(field))
+			if (value !== undefined)
+				values.set(field.address ? serializePersistAddress(field.address) : fieldKey(field), value)
+		}
+		return values
+	}
+	const port: SyncReadSourcePort = {
+		capabilities: { recordVersions: false },
+		keyForField: fieldKey,
+		get: (context) => project(read(), context),
+		getRenderSnapshot: (context) => project(driver.readRender?.() ?? driver.read(), context),
+		set(desired: Keyed, ctx: CommitCtx): void | Promise<void> {
+			const params = read()
+			const physical = new Map(
+				ctx.fields.map((field) => [
+					field.address ? serializePersistAddress(field.address) : fieldKey(field),
+					fieldKey(field),
+				]),
+			)
+			const patch = new Map<string, string | null>()
+			for (const key of ctx.diff.set) {
+				const value = desired.get(key)
+				if (value !== undefined) patch.set(physical.get(key) ?? key, value)
+			}
+			for (const key of ctx.diff.removed) patch.set(physical.get(key) ?? key, null)
+			applyPatch(params, patch)
+			const navigation: Navigation = { signature: signature(params), patch }
+			pending.push(navigation)
+			const fail = (error: unknown): never => {
+				const index = pending.indexOf(navigation)
+				if (index >= 0) pending.splice(index, 1)
+				throw error
+			}
+			try {
+				const result = driver.commit(params, historyOf(ctx.meta))
+				if (result !== undefined) return Promise.resolve(result).catch(fail)
+			} catch (error) {
+				fail(error)
+			}
+		},
+		...(driver.subscribe
+			? {
+					subscribe(onChange: () => void): () => void {
+						return (
+							driver.subscribe?.(() => {
+								pending.length = 0
+								observed = null
+								onChange()
+							}) ?? (() => undefined)
+						)
+					},
+				}
+			: {}),
+	}
+	return port
 }

@@ -1,0 +1,39 @@
+---
+title: Save, reset and retry
+description: Wait for writes and handle restore timeouts and failures in a single store.
+---
+
+```ts
+import { persistHandle } from '@ez-kit/va-store/persist'
+
+const handle = persistHandle(store, 'server')
+
+await handle.flush() // wait for pending writes
+await handle.reset({ fields: [['width']] }) // restore the default and delete the override
+const result = await handle.restore({ timeoutMs: 1500 })
+```
+
+These are separate actions. Call `flush()` before closing or navigating if the UI needs to
+know that pending writes were acknowledged. Catch write and reset errors so the user can retry.
+Call `restore()` to retry a failed or timed-out read. It returns a result with a status and keeps
+newer edits. Initial restore already runs when the store mounts.
+
+<LivePreview
+	path='va-store/persist-operations'
+	title='Try a slow restore or a failed save'
+/>
+
+The example simulates a server and uses browser storage so you can reload and check the saved result.
+
+- Increase the width and save it. Reload to restore the saved width.
+- Enable **Reject writes**, increase the width and click **Save**. The in-memory width stays visible.
+  Turn rejection off and save again to retry.
+- After a reload, click **Run slow restore**, then increase the width while the read is pending.
+  The read times out and its late response cannot overwrite the edit.
+- Click **Reset** to return the width to its initial value and delete the saved override.
+
+For a full reset of the selected source, call `handle.reset()` without a field list. Undoing an
+app action belongs to the [history API](../history). To discard unsaved edits and reload the last
+saved value, define that behavior in the application. A persistence reset deletes the override.
+
+Next, [combine sources](./combined) on this same store.

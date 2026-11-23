@@ -165,7 +165,7 @@ describe('@ez-kit/store-persist persist() plugin', () => {
 		})
 	})
 
-	it('degrades to an inert binding, with a warning, when no engine serves the source', () => {
+	it('rejects an unknown source before connecting', () => {
 		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
 		const store = makeStore()
 		applyPersist(store, objectPort, { fields: filterFields })
@@ -190,9 +190,9 @@ describe('@ez-kit/store-persist persist() plugin', () => {
 					<Mount store={store} />
 				</ServicesProvider>,
 			),
-		).not.toThrow()
+		).toThrow(/Unknown source/)
 
-		expect(warn).toHaveBeenCalledWith(expect.stringContaining('no engine mounted for source "url"'))
+		expect(warn).not.toHaveBeenCalled()
 		warn.mockRestore()
 	})
 
