@@ -15,7 +15,7 @@ type Page = { items: User[]; total?: number; next?: string }
 
 export const usersSource = createDataGridSource({
 	key: ['users'],
-	collection: {
+	read: {
 		fetcher: async (args: Request, { signal }): Promise<Page> => {
 			const { mode, ...criteria } = args
 			return mode === 'pages'

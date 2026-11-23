@@ -16,7 +16,7 @@ import { createDataGridSource } from '@ez-kit/qc-react/data-grid'
 
 const dataSource = createDataGridSource({
 	key: ['users'],
-	collection: {
+	read: {
 		fetcher: fetchUsers,
 		prepareArgs: ({ params, pageIndex, pageSize }) => ({
 			offset: pageIndex * pageSize,
@@ -62,7 +62,7 @@ A cursor is the value the API gives you to request the next portion. This exampl
 ```tsx
 const dataSource = createDataGridSource({
 	key: ['users'],
-	collection: {
+	read: {
 		fetcher: fetchUsers,
 		prepareArgs: (input) => ({
 			offset: input.mode === 'infinite' ? input.pageParam : input.pageIndex * input.pageSize,
@@ -107,7 +107,7 @@ Click Load more to go from three to six to nine rows. Search for Grace to start 
 
 ## Switch modes in the same grid
 
-Use the same source when the mode changes at runtime. A source with `collection.infinite` supports both modes, and the grid selects the right branch of `prepareArgs`.
+Use the same source when the mode changes at runtime. A source with `read.infinite` supports both modes, and the grid selects the right branch of `prepareArgs`.
 
 ```tsx
 <DataGrid

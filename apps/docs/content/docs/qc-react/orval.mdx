@@ -122,7 +122,7 @@ The list endpoint uses offsets and the feed endpoint uses a cursor. The collecti
 ```ts
 const usersSource = createDataGridSource({
 	key: ['users'],
-	collection: {
+	read: {
 		fetcher: fetchUsers, // dispatches to getUsers or getUsersFeed and forwards the signal
 		prepareArgs: (input) => {
 			const search = typeof input.params.globalFilter === 'string' ? input.params.globalFilter : ''

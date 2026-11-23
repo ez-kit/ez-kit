@@ -13,7 +13,7 @@ description: Connected grid source options, native reads and observer policy.
 
 ## Applied parameters
 
-`collection.prepareArgs(input)` receives applied `input.params.sorting`, `input.params.columnFilters` and `input.params.globalFilter`. Pending draft criteria take effect when applied. The input also includes `pageSize` and the mode-specific `pageIndex` or `pageParam`.
+`read.prepareArgs(input)` receives applied `input.params.sorting`, `input.params.columnFilters` and `input.params.globalFilter`. Pending draft criteria take effect when applied. The input also includes `pageSize` and the mode-specific `pageIndex` or `pageParam`.
 
 | Field           | Meaning                       |
 | --------------- | ----------------------------- |
@@ -21,9 +21,9 @@ description: Connected grid source options, native reads and observer policy.
 | `columnFilters` | Applied column filter values. |
 | `globalFilter`  | Applied global filter.        |
 
-## Collection configuration
+## Read configuration
 
-`collection.fetcher` receives the result of `prepareArgs` and the transport's AbortSignal. `getItems` extracts the rows, and `getTotal` supplies the total in pages mode. Include `infinite.initialPageParam` and `infinite.getNextPageParam` to support infinite mode. Pass source observer options under `collection.options` for pages and `collection.infinite.options` for infinite.
+`read.fetcher` receives the result of `prepareArgs` and the transport's AbortSignal. `getItems` extracts the rows, and `getTotal` supplies the total in pages mode. Include `infinite.initialPageParam` and `infinite.getNextPageParam` to support infinite mode. Pass source observer options under `read.options` for pages and `read.infinite.options` for infinite.
 
 ## Invalidation policy
 
@@ -46,7 +46,7 @@ import { createCollectionSource, type CollectionPageInput } from '@ez-kit/query-
 
 const source = createCollectionSource({
 	invalidate: { additional: [{ queryKey: ['existing-users'] }] },
-	collection: {
+	read: {
 		pages: {
 			query: (input: CollectionPageInput<GridCollectionParams>) => usersQueries.page(input.pageIndex, input.pageSize),
 			getItems: (page: UsersResponse) => page.items,
@@ -56,7 +56,7 @@ const source = createCollectionSource({
 })
 ```
 
-Native `collection.infinite` accepts an infinite options factory and its page projection. Its options provide the initial cursor, next cursor callback and original query key. Each projection receives that mode's selected shape.
+Native `read.infinite` accepts an infinite options factory and its page projection. Its options provide the initial cursor, next cursor callback and original query key. Each projection receives that mode's selected shape.
 
 ## Source changes during asynchronous work
 
@@ -68,7 +68,8 @@ Connected `DataGrid` and `useDataGrid` accept `queryOptions` for the active obse
 
 ## Migrate a source to the collection API
 
-- Move generated reads into the shared `collection` block. Use `input.mode` in `prepareArgs` to switch between the ordinary page index and the infinite cursor. Move initial and next cursor settings into `collection.infinite`.
+- Rename the source and factory config field from `collection` to `read`. Use `source.read.pages.query(input)` or `source.read.infinite.query(input)` to access built options for prefetching.
+- Move generated reads into the shared `read` block. Use `input.mode` in `prepareArgs` to switch between the ordinary page index and the infinite cursor. Move initial and next cursor settings into `read.infinite`.
 - Create a grid-aware source with `createDataGridSource` and pass it directly as `dataSource`. For a standalone list, pass the source and a controlled `pagination` object to `useCollectionQuery`.
 - Move existing TanStack query functions into native mode descriptors to preserve externally owned keys, selectors and options. Provide an explicit invalidation policy for those keys.
 - Generated grid mutation callbacks now receive the original grid action context. The fetcher receives the prepared arguments.

@@ -77,13 +77,13 @@ type GridReads<TRow extends object> = {
 }
 
 export type GridDataSource<TRow extends object> = {
-	collection: GridReads<TRow> & (Required<Pick<GridReads<TRow>, 'pages'>> | Required<Pick<GridReads<TRow>, 'infinite'>>)
+	read: GridReads<TRow> & (Required<Pick<GridReads<TRow>, 'pages'>> | Required<Pick<GridReads<TRow>, 'infinite'>>)
 	invalidation: readonly InvalidateQueryFilters[]
 }
 
-type GridSourceCompatibility<S> = S extends { collection: infer Reads }
+type GridSourceCompatibility<S> = S extends { read: infer Reads }
 	? {
-			collection: {
+			read: {
 				[K in keyof Reads]: ReadProjectionCompatibility<NonNullable<Reads[K]>, K, 'getItems', 'getTotal'>
 			}
 		}
@@ -109,7 +109,7 @@ type ReadableGridSource<S extends GridDataSource<object>, Mode> = S &
 	GridWriteCompatibility<NoInfer<S>> &
 	([Mode] extends [never]
 		? unknown
-		: [S] extends [{ collection: Record<Extract<Mode, PropertyKey>, unknown> }]
+		: [S] extends [{ read: Record<Extract<Mode, PropertyKey>, unknown> }]
 			? unknown
 			: never)
 
@@ -118,7 +118,7 @@ type SourceCheck<S extends GridDataSource<object>, Mode extends PaginationMode> 
 	pagination?: boolean | { mode?: Mode }
 }
 
-type PolicySource<R> = { collection: R; invalidation: readonly InvalidateQueryFilters[] }
+type PolicySource<R> = { read: R; invalidation: readonly InvalidateQueryFilters[] }
 type PageQueryOptions = CollectionQueryOptions<
 	PolicySource<{ pages: { query: () => UseQueryOptions<unknown, unknown>; getItems: () => [] } }>,
 	'pages'
@@ -176,9 +176,7 @@ export type QueryGridConfig<
 
 type GridReadRow<R> = R extends { getItems: (data: never) => readonly (infer Row)[] } ? Row : never
 type GridRow<S extends GridDataSource<object>> =
-	S extends GridDataSource<object>
-		? GridReadRow<S['collection'][Extract<keyof S['collection'], 'pages' | 'infinite'>]>
-		: never
+	S extends GridDataSource<object> ? GridReadRow<S['read'][Extract<keyof S['read'], 'pages' | 'infinite'>]> : never
 
 type ConnectionBundle<
 	C extends CellTypeRegistry,
@@ -228,7 +226,7 @@ type RuntimeSource<R extends object> = {
 } & {
 	invalidation: readonly InvalidateQueryFilters[]
 	transformError?: (error: unknown) => unknown
-	collection: {
+	read: {
 		pages?: {
 			query: (input: CollectionPageInput<GridCollectionParams>) => UseQueryOptions<unknown, unknown>
 			getItems: (data: unknown) => readonly R[]
@@ -607,7 +605,7 @@ export function withQuery<
 		const pagination = infiniteMode
 			? { mode: 'infinite' as const, pageSize: params.pagination.pageSize }
 			: { mode: 'pages' as const, ...params.pagination }
-		const read = source.collection[pagination.mode]
+		const read = source.read[pagination.mode]
 		if (!read) throw new Error(`Grid source does not support ${pagination.mode} reads`)
 		const readQuery = read.query
 		const getRows = read.getItems
@@ -615,32 +613,30 @@ export function withQuery<
 			lastRead.current !== undefined &&
 			(lastRead.current.scope !== scope || lastRead.current.query !== readQuery || lastRead.current.getRows !== getRows)
 		const infiniteOptions =
-			pagination.mode === 'infinite'
-				? source.collection.infinite?.query({ ...pagination, params: criteria })
-				: undefined
+			pagination.mode === 'infinite' ? source.read.infinite?.query({ ...pagination, params: criteria }) : undefined
 		const listOptions =
 			pagination.mode === 'pages' && suppressPlaceholder
-				? source.collection.pages?.query({ ...pagination, params: criteria })
+				? source.read.pages?.query({ ...pagination, params: criteria })
 				: undefined
 		const infiniteIdentity = infiniteOptions ? client.defaultQueryOptions(infiniteOptions).queryHash : undefined
 		const collectionSource = {
 			...source,
-			collection: {
-				...(source.collection.pages
+			read: {
+				...(source.read.pages
 					? {
 							pages: {
-								...source.collection.pages,
-								query: listOptions ? () => withoutPreviousData(listOptions) : source.collection.pages.query,
+								...source.read.pages,
+								query: listOptions ? () => withoutPreviousData(listOptions) : source.read.pages.query,
 							},
 						}
 					: {}),
-				...(source.collection.infinite
+				...(source.read.infinite
 					? {
 							infinite: {
-								...source.collection.infinite,
+								...source.read.infinite,
 								query: infiniteOptions
 									? () => (suppressPlaceholder ? withoutPreviousData(infiniteOptions) : infiniteOptions)
-									: source.collection.infinite.query,
+									: source.read.infinite.query,
 							},
 						}
 					: {}),

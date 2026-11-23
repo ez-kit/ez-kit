@@ -75,7 +75,7 @@ export const infinite = (
 
 const collectionSource = createCollectionSource({
 	key: ['registered-collection'],
-	collection: {
+	read: {
 		prepareArgs: () => undefined,
 		fetcher: () => Promise.resolve(['one']),
 		getItems: (items) => items,

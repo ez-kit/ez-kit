@@ -58,7 +58,7 @@ export function createCollectionSourceFactory<
 	BV = void,
 	BA = never,
 >(defaults: {
-	collection: R & Defaults<P, A, D, I, C, E>
+	read: R & Defaults<P, A, D, I, C, E>
 	create?: OperationDefaults<CV, CA>
 	update?: OperationDefaults<UV, UA>
 	delete?: OperationDefaults<DV, DA>
@@ -90,7 +90,7 @@ export function createCollectionSourceFactory<
 	>(
 		config: M & {
 			key: QueryKey
-			collection: Overrides & { fetcher: CollectionFetcherConfig<P, A, D, I, C, E>['fetcher'] } & Partial<
+			read: Overrides & { fetcher: CollectionFetcherConfig<P, A, D, I, C, E>['fetcher'] } & Partial<
 					Defaults<P, A, D, I, C, E>
 				>
 			create?: OperationOverride<NCV, NCA, CD, CE, CO, CA>
@@ -134,7 +134,7 @@ export function createCollectionSourceFactory<
 		const source = normalizeCollectionSource({
 			...config,
 			...operations,
-			collection: { ...defaults.collection, ...config.collection },
+			read: { ...defaults.read, ...config.read },
 		} as unknown as Parameters<typeof normalizeCollectionSource>[0])
 		return source as GeneratedCollectionSource<
 			M,

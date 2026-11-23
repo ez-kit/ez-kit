@@ -121,7 +121,7 @@
 
 ## Unified source API
 
-- [x] Use a shared collection block with one prepareArgs and optional infinite cursor settings.
+- [x] Use a shared `read` block with one prepareArgs and optional infinite cursor settings.
 - [x] Accept controlled pagination in useCollectionQuery with arbitrary application criteria.
 - [x] Bind DataGrid criteria and action types through createDataGridSource and consume the source directly.
 - [x] Migrate the onboarding guides, live examples and compiled Orval integration.

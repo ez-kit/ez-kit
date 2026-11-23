@@ -66,11 +66,11 @@ export function useCollectionQuery<S extends CollectionShape, M extends Collecti
 	config: CollectionQueryConfig<S, M>,
 ): CollectionResult<S, M> {
 	const source = config.source as unknown as Omit<RuntimeSource, 'collection'> & {
-		getAll?: RuntimeSource['collection']['pages']
-		getInfinite?: RuntimeSource['collection']['infinite']
+		getAll?: RuntimeSource['read']['pages']
+		getInfinite?: RuntimeSource['read']['infinite']
 	}
 	return useCollectionObservers(
-		{ ...source, collection: { pages: source.getAll, infinite: source.getInfinite } },
+		{ ...source, read: { pages: source.getAll, infinite: source.getInfinite } },
 		config.mode,
 		config.params,
 		config.queryOptions,

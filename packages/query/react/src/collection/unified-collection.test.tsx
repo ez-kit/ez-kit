@@ -13,7 +13,7 @@ type Request = Params & { offset: number; limit: number }
 type Page = { items: Row[]; nextOffset: number | null; total: number }
 
 const makeSource = createCollectionSourceFactory({
-	collection: {
+	read: {
 		prepareArgs: (input: CollectionReadInput<Params, number>): Request => ({
 			...input.params,
 			limit: input.pageSize,
@@ -40,7 +40,7 @@ it('stores ordinary and accumulated pages independently and refreshes both with 
 	)
 	const source = makeSource({
 		key: ['unified'],
-		collection: { fetcher },
+		read: { fetcher },
 		delete: {
 			fetcher: (id: number) => {
 				rows = rows.filter((row) => row.id !== id)
@@ -87,7 +87,7 @@ it('stores ordinary and accumulated pages independently and refreshes both with 
 
 const cursorSource = createCollectionSource({
 	key: ['cursor'],
-	collection: {
+	read: {
 		prepareArgs: (input) => {
 			if (input.mode === 'infinite') expectTypeOf(input.pageParam).toEqualTypeOf<string>()
 			return input.mode === 'infinite' ? input.pageParam : ''
@@ -100,7 +100,7 @@ const cursorSource = createCollectionSource({
 
 const pagesSource = createCollectionSource({
 	key: ['pages'],
-	collection: {
+	read: {
 		prepareArgs: () => undefined,
 		fetcher: () => Promise.resolve([{ id: 1 }]),
 		getItems: (rows) => rows,
@@ -119,7 +119,7 @@ it('checks cursor and mode types at the public entry point', () => {
 it('uses the keys and selected data from native descriptors', async () => {
 	const source = createCollectionSource({
 		invalidate: false,
-		collection: {
+		read: {
 			pages: {
 				query: () => ({
 					queryKey: ['native-collection'],

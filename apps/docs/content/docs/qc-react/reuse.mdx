@@ -60,7 +60,7 @@ type Criteria = { search: string }
 type Page = { items: { id: string; name: string }[]; total: number }
 
 const makeSource = createCollectionSourceFactory({
-	collection: {
+	read: {
 		prepareArgs: ({ params, pageIndex, pageSize }: CollectionReadInput<Criteria>) => ({
 			...params,
 			offset: pageIndex * pageSize,
@@ -71,10 +71,10 @@ const makeSource = createCollectionSourceFactory({
 	},
 })
 
-const usersSource = makeSource({ key: ['users'], collection: { fetcher: fetchUsers } })
-const teamsSource = makeSource({ key: ['teams'], collection: { fetcher: fetchTeams } })
+const usersSource = makeSource({ key: ['users'], read: { fetcher: fetchUsers } })
+const teamsSource = makeSource({ key: ['teams'], read: { fetcher: fetchTeams } })
 ```
 
-Both fetchers accept `{ search, offset, limit }` and return `Promise<Page>`. The factory can also supply infinite cursor rules and mutation preparation. Add each resource's operations alongside its `collection` property.
+Both fetchers accept `{ search, offset, limit }` and return `Promise<Page>`. The factory can also supply infinite cursor rules and mutation preparation. Add each resource's operations alongside its `read` property.
 
 See [Query collections](/docs/query-react/collection#reuse-conventions-and-connect-a-grid) for the hook and native options. The [Orval recipe](/docs/qc-react/orval) shows how to use generated fetchers.

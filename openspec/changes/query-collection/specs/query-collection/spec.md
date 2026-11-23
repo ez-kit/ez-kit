@@ -29,7 +29,7 @@ Read parameters SHALL be inferred from the source and SHALL allow arbitrary appl
 
 ### Requirement: Read capabilities and mode typing
 
-A generated source SHALL describe reads in one collection block. Infinite cursor settings SHALL enable the infinite mode in addition to ordinary reads. Requested modes SHALL be checked against source capabilities. Native sources MAY provide either or both modes.
+A generated source SHALL describe reads in one `read` block. Infinite cursor settings SHALL enable the infinite mode in addition to ordinary reads. Requested modes SHALL be checked against source capabilities. Native sources MAY provide either or both modes.
 
 #### Scenario: Native infinite-only source
 

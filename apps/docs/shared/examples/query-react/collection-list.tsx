@@ -22,7 +22,7 @@ function createDemo() {
 	}
 	const source = createCollectionSource({
 		key: ['collection-demo'],
-		collection: {
+		read: {
 			prepareArgs: ({ params, pageIndex, pageSize }: CollectionReadInput<Criteria>) => ({
 				...params,
 				offset: pageIndex * pageSize,

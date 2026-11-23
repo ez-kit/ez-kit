@@ -15,7 +15,7 @@ type ReadShape = {
 	getTotal?: (data: never) => number | undefined
 }
 export type CollectionShape = {
-	collection: { pages?: ReadShape; infinite?: ReadShape }
+	read: { pages?: ReadShape; infinite?: ReadShape }
 	invalidation: RuntimeSource['invalidation']
 	create?: { mutation: unknown }
 	update?: { mutation: unknown }
@@ -28,11 +28,9 @@ type ReadCompatibility<R> = {
 }
 
 type Mode = CollectionPagination['mode']
-type Read<S extends CollectionShape, M extends Mode> = M extends keyof S['collection']
-	? NonNullable<S['collection'][M]>
-	: never
+type Read<S extends CollectionShape, M extends Mode> = M extends keyof S['read'] ? NonNullable<S['read'][M]> : never
 export type CollectionMode<S extends CollectionShape> = {
-	[K in Mode]: S['collection'] extends Record<K, unknown> ? K : never
+	[K in Mode]: S['read'] extends Record<K, unknown> ? K : never
 }[Mode]
 export type CollectionItems<S extends CollectionShape, M extends Mode> =
 	Read<S, M> extends { getItems: (data: never) => readonly (infer I)[] } ? I : never
@@ -57,7 +55,7 @@ export type CollectionResult<S extends CollectionShape, M extends Mode> = M exte
 type ParamsArg<P> = undefined extends P ? { params?: P } : { params: P }
 
 export type CollectionQueryConfig<S extends CollectionShape, M extends Mode> = {
-	source: S & { collection: NoInfer<ReadCompatibility<S['collection']> & Record<M, unknown>> }
+	source: S & { read: NoInfer<ReadCompatibility<S['read']> & Record<M, unknown>> }
 	pagination: CollectionPagination & { mode: M }
 	queryOptions?: NoInfer<CollectionQueryOptions<S, M>>
 } & ParamsArg<NoInfer<CollectionParams<S, M>>>

@@ -13,7 +13,7 @@ For shared-factory projections, see [selecting another shape](/docs/query-react/
 ## 1. Define the business source
 
 Import `createCollectionSource` and `useCollectionQuery` from
-`@ez-kit/query-react/collection`. Start with `collection`. It accepts your list parameters,
+`@ez-kit/query-react/collection`. Start with `read`. It accepts your list parameters,
 calls the fetcher and extracts the items and total from the response.
 
 ```ts
@@ -23,7 +23,7 @@ type Criteria = { search: string }
 
 const readConfig = {
 	key: ['users'],
-	collection: {
+	read: {
 		prepareArgs: ({ params, pageIndex, pageSize }: CollectionReadInput<Criteria>) => ({
 			...params,
 			offset: pageIndex * pageSize,

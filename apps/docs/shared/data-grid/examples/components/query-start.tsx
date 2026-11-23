@@ -22,7 +22,7 @@ async function fetchUsers(_: undefined, { signal }: { signal: AbortSignal }): Pr
 
 const dataSource = createDataGridSource({
 	key: ['users'],
-	collection: {
+	read: {
 		fetcher: fetchUsers,
 		prepareArgs: () => undefined,
 		getItems: (response) => response.items,

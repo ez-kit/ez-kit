@@ -118,7 +118,7 @@ when select is optional. Grid row types are inferred from the concrete source.
 
 ## Unified collection source amendment
 
-Generated sources bind a single collection fetcher and projection with optional infinite settings.
+Generated sources bind a single fetcher and projection in the `read` block, with optional infinite settings.
 The consumer supplies controlled pagination separately from arbitrary criteria. A discriminated
 preparation input carries pageIndex in pages mode and pageParam in infinite mode. Generated keys
 use base key, mode and controlled criteria, with pageIndex included for ordinary pages. A custom

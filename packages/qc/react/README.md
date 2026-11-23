@@ -7,7 +7,7 @@ import { createDataGridSource, withQuery } from '@ez-kit/qc-react/data-grid'
 
 const source = createDataGridSource({
 	key: ['users'],
-	collection: {
+	read: {
 		fetcher: fetchUsers,
 		prepareArgs: ({ pageIndex, pageSize }) => ({ offset: pageIndex * pageSize, limit: pageSize }),
 		getItems: (page) => page.items,

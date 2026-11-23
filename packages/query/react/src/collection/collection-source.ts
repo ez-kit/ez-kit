@@ -74,7 +74,7 @@ type GeneratedReads<P, D, I, C, E, R> = {
 	: { infinite?: never })
 
 export type CollectionSourceResult<M, R, Ops> = ConfiguredOperations<M, Ops> & {
-	collection: R
+	read: R
 	invalidation: ReturnType<typeof resolveInvalidation>
 	transformError?: (error: unknown) => unknown
 }
@@ -128,7 +128,7 @@ type RuntimeConfig = {
 	key?: QueryKey
 	invalidate?: InvalidationPolicy
 	transformError?: (error: unknown) => unknown
-	collection: CollectionFetcherConfig<unknown, unknown, unknown, unknown, unknown, unknown> | NativeConfig
+	read: CollectionFetcherConfig<unknown, unknown, unknown, unknown, unknown, unknown> | NativeConfig
 } & Partial<Record<(typeof mutationNames)[number], RuntimeOperation>>
 
 export function createCollectionSource<
@@ -163,7 +163,7 @@ export function createCollectionSource<
 >(
 	config: M & {
 		key: QueryKey
-		collection: R & CollectionFetcherConfig<P, A, D, I, C, E>
+		read: R & CollectionFetcherConfig<P, A, D, I, C, E>
 	} & SourceOperations<CV, CA, CD, CE, CO, UV, UA, UD, UE, UO, DV, DA, DD, DE, DO, BV, BA, BD, BE, BO>,
 ): GeneratedCollectionSource<M, R, P, D, I, C, E, CV, CD, CE, CO, UV, UD, UE, UO, DV, DD, DE, DO, BV, BD, BE, BO>
 
@@ -206,7 +206,7 @@ export function createCollectionSource<
 	config: M & {
 		key?: QueryKey
 		invalidate: InvalidationPolicy
-		collection: R & NativeReads<P, D, S, I, E, K, ID, IS, II, IE, IK, C> & ({ pages: unknown } | { infinite: unknown })
+		read: R & NativeReads<P, D, S, I, E, K, ID, IS, II, IE, IK, C> & ({ pages: unknown } | { infinite: unknown })
 	} & SourceOperations<CV, CA, CD, CE, CO, UV, UA, UD, UE, UO, DV, DA, DD, DE, DO, BV, BA, BD, BE, BO> &
 		([Extract<M[keyof M], { fetcher: unknown }>] extends [never] ? unknown : { key: QueryKey }),
 ): CollectionSourceResult<
@@ -225,13 +225,13 @@ export function createCollectionSource(config: unknown): unknown {
 }
 
 export function normalizeCollectionSource(config: RuntimeConfig): unknown {
-	const { key, collection, invalidate, transformError, ...operations } = config
-	const generated = typeof collection.fetcher === 'function'
+	const { key, read, invalidate, transformError, ...operations } = config
+	const generated = typeof read.fetcher === 'function'
 	if (generated && key === undefined) throw new Error('Fetcher sources require a collection key')
 	if (!generated && invalidate === undefined) throw new Error('Native sources require an explicit invalidation policy')
 
 	const normalized = {
-		collection: generated ? normalizeRead(collection, key ?? []) : collection,
+		read: generated ? normalizeRead(read, key ?? []) : read,
 		invalidation: resolveInvalidation(generated ? collectionInvalidation(key ?? []) : [], invalidate),
 		...(transformError === undefined ? {} : { transformError }),
 	}

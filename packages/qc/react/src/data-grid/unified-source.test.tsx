@@ -21,7 +21,7 @@ it('connects a single source to both views and passes grid action inputs into co
 	})
 	const source = createDataGridSource({
 		key: ['shared-grid'],
-		collection: {
+		read: {
 			prepareArgs: (input) => ({ search: String(input.params.globalFilter ?? '') }),
 			fetcher,
 			getItems: (items) => items,

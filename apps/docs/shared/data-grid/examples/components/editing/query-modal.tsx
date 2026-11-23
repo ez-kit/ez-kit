@@ -30,7 +30,7 @@ function createDemoApi() {
 	let failRefresh = false
 	const source = createDataGridSource({
 		key: ['modal-users'],
-		collection: {
+		read: {
 			prepareArgs: () => undefined,
 			fetcher: async () => {
 				if (saved) {

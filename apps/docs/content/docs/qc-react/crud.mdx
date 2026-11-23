@@ -7,7 +7,7 @@ Start with the [connected grid](/docs/qc-react). This guide adds create, edit, s
 
 ## 1. Keep the list read and add mutations
 
-Use `createDataGridSource` with the `collection` read from the [pagination guide](/docs/qc-react/pagination). Add operations next to it. Each constructor takes one resource key and supplies the grid's action types to mutation preparation.
+Use `createDataGridSource` with the `read` block from the [pagination guide](/docs/qc-react/pagination). Add operations next to it. Each constructor takes one resource key and supplies the grid's action types to mutation preparation.
 
 ```ts
 import { createDataGridSource } from '@ez-kit/qc-react/data-grid'
@@ -20,7 +20,7 @@ function requiredName(name: string | undefined) {
 
 const dataSource = createDataGridSource({
 	key: ['users'],
-	collection: {
+	read: {
 		fetcher: fetchUsers,
 		prepareArgs: ({ pageIndex, pageSize }) => ({ offset: pageIndex * pageSize, limit: pageSize }),
 		getItems: (page) => page.items,

@@ -13,7 +13,7 @@ it('sends prepared grid criteria as query parameters and forwards Query cancella
 	const client = new QueryClient()
 	try {
 		await client.fetchQuery(
-			usersSource.collection.pages.query({
+			usersSource.read.pages.query({
 				mode: 'pages',
 				pageIndex: 2,
 				pageSize: 20,
@@ -44,7 +44,7 @@ it('sends the next cursor while keeping both pages in one collection cache', asy
 		.mockResolvedValueOnce(new Response(JSON.stringify({ items: [{ id: '2', name: 'Grace' }] })))
 	vi.stubGlobal('fetch', fetcher)
 	const client = new QueryClient()
-	const query = usersSource.collection.infinite.query
+	const query = usersSource.read.infinite.query
 	const observer = new InfiniteQueryObserver(
 		client,
 		query({ mode: 'infinite', pageSize: 20, params: { sorting: [], columnFilters: [], globalFilter: '' } }),

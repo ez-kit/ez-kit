@@ -7,7 +7,7 @@ import { createDataGridSource, withQuery } from './index'
 type User = { id: string; name: string }
 const source = createDataGridSource({
 	key: ['users'],
-	collection: {
+	read: {
 		prepareArgs: () => undefined,
 		fetcher: () => Promise.resolve([] as User[]),
 		getItems: (rows) => rows,

@@ -20,7 +20,7 @@ function createUsersSource() {
 	let users: User[] = ['Ada', 'Barbara', 'Grace'].map((name) => ({ id: name, name }))
 	return createDataGridSource({
 		key: ['users'],
-		collection: {
+		read: {
 			prepareArgs: ({ pageIndex, pageSize }) => ({ offset: pageIndex * pageSize, limit: pageSize }),
 			fetcher: ({ offset, limit }: { offset: number; limit: number }) =>
 				Promise.resolve({ items: users.slice(offset, offset + limit), total: users.length }),

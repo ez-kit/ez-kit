@@ -343,7 +343,7 @@ This is a breaking return-type change, documented with an external form migratio
 
 ## Unified source follow-up
 
-The generated source now uses one collection block. Its prepareArgs receives the controlled
+The generated source now uses one `read` block. Its prepareArgs receives the controlled
 criteria and a discriminated position, with pageIndex for ordinary reads and pageParam for
 infinite reads. The default key hashes the criteria and applicable controlled pagination fields.
 Native mode descriptors retain their own options and key families.

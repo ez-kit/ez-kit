@@ -45,7 +45,7 @@ type CreateDataGridSource = <
 >(
 	config: M & {
 		key: QueryKey
-		collection: R & CollectionFetcherConfig<GridCollectionParams, A, D, Row, C, E>
+		read: R & CollectionFetcherConfig<GridCollectionParams, A, D, Row, C, E>
 		create?: CollectionOperation<GridCreateContext<NoInfer<Row>>, CA, CD, CE, CO>
 		update?: CollectionOperation<GridUpdateContext<NoInfer<Row>>, UA, UD, UE, UO>
 		delete?: CollectionOperation<GridDeleteContext<NoInfer<Row>>, DA, DD, DE, DO>

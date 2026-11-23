@@ -36,7 +36,7 @@ function createDemoSource() {
 	}
 	return createDataGridSource({
 		key: ['query-example-users'],
-		collection: {
+		read: {
 			fetcher: fetchUsers,
 			prepareArgs: (input) => ({
 				offset: input.mode === 'infinite' ? input.pageParam : input.pageIndex * input.pageSize,

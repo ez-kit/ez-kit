@@ -7,7 +7,7 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 
 const source = createDataGridSource({
 	key: ['minimum'],
-	collection: {
+	read: {
 		prepareArgs: (input) => (input.mode === 'infinite' ? input.pageParam : input.pageIndex * input.pageSize),
 		fetcher: (offset: number) => Promise.resolve({ items: [{ id: offset }], total: 10, next: offset + 1 }),
 		getItems: (data) => data.items,
@@ -19,8 +19,8 @@ const source = createDataGridSource({
 const grid = withQuery(createDataGrid({ components: {}, features: allDataGridFeatures }))
 const params = { sorting: [], columnFilters: [], globalFilter: undefined }
 const pagination = { mode: 'pages', pageIndex: 0, pageSize: 1 } as const
-const pages = source.collection.pages.query({ ...pagination, params })
-const infinite = source.collection.infinite.query({ mode: 'infinite', pageSize: 1, params })
+const pages = source.read.pages.query({ ...pagination, params })
+const infinite = source.read.infinite.query({ mode: 'infinite', pageSize: 1, params })
 
 // This fixture consumes built declarations with native hooks at the minimum peer version.
 export function useMinimumConsumer() {

@@ -37,7 +37,7 @@ type Reads<S extends Fixture> = {
 			}
 		: never
 }
-type Unified<S extends Fixture> = { collection: Reads<S>; invalidation: readonly InvalidateQueryFilters[] }
+type Unified<S extends Fixture> = { read: Reads<S>; invalidation: readonly InvalidateQueryFilters[] }
 const fixtures = new WeakMap<object, unknown>()
 
 /** Run existing connector regressions with their native keys and server responses. */
@@ -48,7 +48,7 @@ export function fixtureSource<S extends Fixture>(source: S): Unified<S> {
 	const migrated = {
 		invalidation: invalidation ?? [],
 		transformError,
-		collection: {
+		read: {
 			...(getAll
 				? {
 						pages: {

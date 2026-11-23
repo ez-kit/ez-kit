@@ -30,7 +30,7 @@ async function fetchUsers(args: Criteria & { offset: number }, { signal }: { sig
 }
 const source = createDataGridSource({
 	key: ['pagination-users-demo'],
-	collection: {
+	read: {
 		fetcher: fetchUsers,
 		prepareArgs: (input) => ({
 			offset: input.mode === 'infinite' ? input.pageParam : input.pageIndex * input.pageSize,

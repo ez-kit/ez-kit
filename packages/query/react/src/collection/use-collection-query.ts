@@ -141,7 +141,7 @@ type RuntimeMutation = {
 	invalidate?: InvalidationPolicy
 }
 export type RuntimeSource = {
-	collection: {
+	read: {
 		pages?:
 			| {
 					query: (params: unknown) => UseQueryOptions<unknown, unknown>
@@ -236,7 +236,7 @@ export function useCollectionObservers(
 	params: unknown,
 	queryOptions: unknown,
 ) {
-	const reads = source.collection
+	const reads = source.read
 	const overrides = observerOptions(queryOptions)
 	const list = useQuery(
 		mode === 'pages' && reads.pages ? { ...reads.pages.query(params), ...overrides } : INACTIVE_LIST,
