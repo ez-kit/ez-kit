@@ -188,7 +188,12 @@ source-owned. Unsupported overrides are ignored at runtime too. A controlled `<D
 does not start another query; configure options when creating its table.
 
 When applied grid criteria change, the connector requests page zero and keeps using it until
-controlled pagination acknowledges the reset. External pagination resets remain project-owned: call `table.setPageIndex(0)` alongside the
+controlled pagination acknowledges the reset. The connector compares applied sorting, column
+filters and global filter individually with `Object.is`. Keep object and array references
+stable while their values are unchanged. A new reference counts as a change, even if it holds
+the same values. For example, memoize object-valued controlled filters instead of rebuilding
+them inline. Draft filtering counts when applied, and page navigation itself does not reset
+the page. External pagination resets remain project-owned: call `table.setPageIndex(0)` alongside the
 external filter or team change. There is no automatic external `resetKey` policy.
 
 ## Read and loader safety
@@ -198,8 +203,9 @@ projection inputs from the fetcher or query options. A shape-changing projection
 matching `select`; a conditional selector must also allow the raw shape when absent. Row-count
 getters follow the same selected-data contract. Structural sources get the same check at hookup.
 Use `satisfies GridDataSource<Row>` if you want to check the source's shape while preserving its
-specific response types, or annotate it as `GridDataSource<Row>` when you only need the
-row contract and already checked the query/projection pair at construction. An explicit
+specific response types. Declare the row type at the source and let the grid infer it from
+`dataSource`. Supplying only `useDataGrid<Row>` erases the source response and capabilities
+needed for these checks. An explicit
 pagination mode needs the corresponding read. For a native shape-changing read, return a
 descriptor with a required `select`. If you use TanStack's `queryOptions` helper, put the
 selector on the returned object so TypeScript can see that it is required.

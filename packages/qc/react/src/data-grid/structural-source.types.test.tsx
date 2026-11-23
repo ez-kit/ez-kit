@@ -19,8 +19,10 @@ function useSources() {
 	const source = { getAll: { query: read, getRows: project } }
 	const table = connected.useDataGrid({ columns, dataSource: source })
 	expectTypeOf(table.getRowModel().rows[0]?.original).toEqualTypeOf<User | undefined>()
-	const typed: GridDataSource<User> = source
-	connected.useDataGrid<User>({ columns, dataSource: typed })
+	const typed = source satisfies GridDataSource<User>
+	connected.useDataGrid({ columns, dataSource: typed })
+	// @ts-expect-error passing only User would erase the source response and capabilities
+	connected.useDataGrid<User>({ columns, dataSource: { getAll: { query: read, getRows: wrong } } })
 	// @ts-expect-error an empty source cannot read
 	connected.useDataGrid({ columns, dataSource: {} })
 	// @ts-expect-error a query descriptor must return TanStack options

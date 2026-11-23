@@ -79,7 +79,7 @@ type GridSourceCompatibility<S> = {
 	>
 }
 type ReadableGridSource<S, Mode> = S &
-	([GridDataSource<never>] extends [S] ? unknown : GridSourceCompatibility<NoInfer<S>>) &
+	GridSourceCompatibility<NoInfer<S>> &
 	(S extends { getAll: unknown } | { getInfinite: unknown } ? unknown : never) &
 	([Mode] extends ['infinite']
 		? S extends { getInfinite?: infer I }
@@ -242,6 +242,15 @@ function stableRowId(row: object): string {
 	const id = (row as { id?: unknown }).id
 	if ((typeof id === 'string' && id !== '') || (typeof id === 'number' && Number.isFinite(id))) return String(id)
 	throw new Error('Connected editing and deletion require a stable row id. Supply getRowId for rows without an id.')
+}
+
+type Criteria = Omit<GridQueryParams, 'pagination'>
+function sameCriteria(a: Criteria, b: Criteria): boolean {
+	return (
+		Object.is(a.sorting, b.sorting) &&
+		Object.is(a.columnFilters, b.columnFilters) &&
+		Object.is(a.globalFilter, b.globalFilter)
+	)
 }
 
 function sameProjection<R>(a: Projection<R>, b: Projection<R>) {
@@ -538,14 +547,13 @@ export function withQuery<
 				compare: (a, b) =>
 					a.pagination.pageIndex === b.pagination.pageIndex &&
 					a.pagination.pageSize === b.pagination.pageSize &&
-					a.sorting === b.sorting &&
-					a.columnFilters === b.columnFilters &&
-					a.globalFilter === b.globalFilter,
+					sameCriteria(a, b),
 			},
 		)
-		const criteria = hashKey([axes.sorting, axes.columnFilters, axes.globalFilter])
+		const { sorting, columnFilters, globalFilter } = axes
+		const criteria = useMemo(() => ({ sorting, columnFilters, globalFilter }), [sorting, columnFilters, globalFilter])
 		const previousCriteria = useRef(criteria)
-		const reset = table.grid.pagination.enabled && previousCriteria.current !== criteria
+		const reset = table.grid.pagination.enabled && !sameCriteria(previousCriteria.current, criteria)
 		const params = { ...axes, pagination: reset ? { ...axes.pagination, pageIndex: 0 } : axes.pagination }
 		const observedPageIndex = controlledPageIndex ?? axes.pagination.pageIndex
 		useEffect(() => {

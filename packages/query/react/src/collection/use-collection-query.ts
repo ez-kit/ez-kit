@@ -38,31 +38,44 @@ export type CollectionParams<S, M> = Read<S, M> extends { query: (params: infer 
 export type CollectionItems<S, M> = Read<S, M> extends { getItems: (data: never) => readonly (infer I)[] } ? I : never
 type QueryResult<R, M> = R extends { query: (params: never) => infer O }
 	? M extends 'pages'
-		? O extends UseQueryOptions<infer _D, infer E, infer D, infer _K>
-			? UseQueryResult<D, E>
+		? O extends UseQueryOptions<infer _Raw, infer E, infer _Selected, infer _K>
+			? UseQueryResult<ReadData<O, M>, E>
 			: never
-		: O extends UseInfiniteQueryOptions<infer _D, infer E, infer D, infer _K, infer _C>
-			? UseInfiniteQueryResult<D, E>
+		: O extends UseInfiniteQueryOptions<infer _Raw, infer E, infer _Selected, infer _K, infer _C>
+			? UseInfiniteQueryResult<ReadData<O, M>, E>
 			: never
 	: never
 type ResultOf<Fn> = Fn extends (...args: never[]) => infer Value ? Value : never
+type ResolveSeed<T> = T extends () => infer Value ? Value : T
+type SeedData<O> = O extends { initialData?: infer Seed } ? Exclude<ResolveSeed<Seed>, undefined> : never
+type FetchData<O> = O extends { queryFn?: infer Fn } ? Awaited<ResultOf<Fn>> : never
 
-type RawData<Options> = Options extends { queryFn?: infer Fn } ? Awaited<ResultOf<Fn>> : unknown
-type SelectedPage<Value, Mode> = Mode extends 'infinite'
-	? Value extends InfiniteData<infer Page>
+type RawData<O, M> = [FetchData<O>] extends [never]
+	? [SeedData<O>] extends [never]
+		? M extends 'infinite'
+			? InfiniteData<unknown>
+			: unknown
+		: SeedData<O>
+	: M extends 'infinite'
+		? InfiniteData<FetchData<O>>
+		: FetchData<O>
+
+type ReadData<O, M> = O extends unknown
+	? O extends { select: (...args: never[]) => infer Selected }
+		? Selected
+		: RawData<O, M> | ('select' extends keyof O ? ResultOf<O['select']> : never)
+	: never
+
+type ProjectedData<O, M> = M extends 'infinite'
+	? ReadData<O, M> extends InfiniteData<infer Page>
 		? Page
 		: never
-	: Value
-type ReadData<Options, Mode> = Options extends unknown
-	? 'select' extends keyof Options
-		? | (Options extends { select: (...args: never[]) => unknown } ? never : RawData<Options>)
-			| SelectedPage<ResultOf<Options['select']>, Mode>
-		: RawData<Options>
-	: never
+	: ReadData<O, M>
 
 type InfiniteReadOptions = {
 	initialPageParam: unknown
 	getNextPageParam: (...args: never[]) => unknown
+	initialData?: InfiniteData<unknown> | (() => InfiniteData<unknown> | undefined) | undefined
 	select?: ((...args: never[]) => InfiniteData<unknown>) | undefined
 }
 
@@ -76,13 +89,17 @@ export type ReadProjectionCompatibility<
 	? [Options] extends [{ queryKey: QueryKey }]
 		? [QueryResult<R, M>] extends [never]
 			? never
-			: M extends 'infinite'
-				? [Options] extends [InfiniteReadOptions]
-					? ProjectionCompatibility<R, ReadData<Options, M>, Items | Total>
-					: never
-				: ProjectionCompatibility<R, ReadData<Options, M>, Items | Total>
+			: [InvalidInitialData<Options, M>] extends [never]
+				? M extends 'infinite'
+					? [Options] extends [InfiniteReadOptions]
+						? ProjectionCompatibility<R, ProjectedData<Options, M>, Items | Total>
+						: never
+					: ProjectionCompatibility<R, ProjectedData<Options, M>, Items | Total>
+				: never
 		: never
 	: never
+
+type InvalidInitialData<O, M> = O extends unknown ? ([SeedData<O>] extends [RawData<O, M>] ? never : O) : never
 
 type ProjectionCompatibility<R, D, Keys extends PropertyKey> = {
 	[K in keyof R as K extends Keys ? K : never]: NonNullable<R[K]> extends (data: D) => unknown ? unknown : never

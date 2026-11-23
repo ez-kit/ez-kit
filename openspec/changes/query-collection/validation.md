@@ -280,3 +280,20 @@ Verification passed:
   restore the repository's approximately 15% headroom for the entries that exceeded the prior limits.
 
 Docs production build remains excluded locally under the accepted Google Fonts restriction.
+
+## Applied criteria and read contracts — 2026-11-23
+
+Mounted coverage exercises URLSearchParams criteria changes, stable references across navigation,
+and a delayed controlled reset. Compile checks cover rejected initial data, cache-only seeds,
+optional selector branches and concrete grid source inference. Generated key semantics remain
+TanStack-owned and the prepareKey escape hatch is documented.
+
+Verification passed:
+
+- Library build (16 tasks), lint (33), typecheck (33), test (32) and size (32).
+- Query React: 96 tests; qc-react: 121; shared React grid: 1,832; docs: 313.
+- React 18: shared grid 1,832; qc-react 115 passed with six existing HeroUI skips.
+- Minimum TanStack Query consumer fixture, strict OpenSpec and whitespace checks.
+- Query collection 1.90 kB / 2 kB and qc-react 4.06 kB / 4.6 kB.
+
+Docs production build remains excluded locally under the accepted Google Fonts restriction.

@@ -109,3 +109,9 @@ Waiting for the matching mutation observer ends when the operation aborts or the
 superseded. After a scope change, selection-derived writes stay blocked until controlled
 selection acknowledges the reset. Dismissing a delete prompt leaves active work alone. A target
 reservation lasts until the operation settles and is scoped to its original dataset.
+
+Page-reset detection compares the applied criteria by Object.is, independently of the query
+cache key. Keep object and array references stable until the criteria change. Generated keys
+continue to use TanStack hashing, with prepareKey available for API-specific distinctions.
+Structural reads validate initialData against the raw response and expose both result shapes
+when select is optional. Grid row types are inferred from the concrete source.

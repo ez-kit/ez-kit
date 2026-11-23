@@ -326,12 +326,12 @@ it('requires stable IDs when editing server rows', () => {
 	const mount = (identify: boolean) =>
 		renderHook(
 			() =>
-				connected.useDataGrid<(typeof data)[number]>({
+				connected.useDataGrid({
 					dataSource: source,
 					columns: [],
 					editing: { onSave: save },
 					pagination: true,
-					...(identify ? { getRowId: (row) => row.uuid } : {}),
+					...(identify ? { getRowId: (row: (typeof data)[number]) => row.uuid } : {}),
 				}),
 			{ wrapper },
 		)

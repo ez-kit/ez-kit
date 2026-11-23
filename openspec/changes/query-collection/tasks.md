@@ -111,3 +111,10 @@
 - [x] Guard controlled selection until scope reset is acknowledged.
 - [x] Separate confirmation dismissal from cancellation of active deletes.
 - [x] Verify the repository and React 18 compatibility.
+
+## Applied criteria and read contracts
+
+- [x] Compare applied grid criteria by reference or primitive value.
+- [x] Align structural result types and projections with raw initial data and optional selectors.
+- [x] Preserve source checks and document the default key hashing and prepareKey override.
+- [x] Verify the repository and React 18 compatibility for this follow-up.

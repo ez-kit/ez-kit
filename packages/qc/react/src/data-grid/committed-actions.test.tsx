@@ -7,6 +7,7 @@ import { expect, it, vi } from 'vitest'
 
 import { createGridSourceFactory, withQuery } from './index'
 
+import type { DataTable } from '@ez-kit/data-grid-react'
 import type { PropsWithChildren } from 'react'
 
 type User = { id: string; name: string }
@@ -56,7 +57,7 @@ it('saves the visible row with the last committed source while another render su
 			</Suspense>
 		</Wrapper>,
 	)
-	const table = capture.mock.calls[0]?.[0] as ReturnType<typeof connected.useDataGrid<User>>
+	const table = capture.mock.calls[0]?.[0] as DataTable<typeof allDataGridFeatures, User>
 	await waitFor(() => {
 		expect(table.getRowModel().rows[0]?.original.name).toBe('A')
 	})

@@ -570,3 +570,34 @@ function InheritedTotalSafetyFixture(flag: boolean) {
 	safe.getAll.getTotal?.(['one'])
 }
 void InheritedTotalSafetyFixture
+
+function useReadBranches(select?: (raw: { items: number[] }) => string[]) {
+	const getAll = {
+		query: () => ({
+			queryKey: ['optional-select'],
+			queryFn: () => Promise.resolve({ items: [1] }),
+			...(select ? { select } : {}),
+		}),
+		getItems: (data: { items: number[] } | string[]) => (Array.isArray(data) ? data : data.items),
+	}
+	const selected = useCollectionQuery({ source: { getAll, invalidation: [] }, mode: 'pages', params: undefined })
+	expectTypeOf(selected.query.data).toEqualTypeOf<{ items: number[] } | string[] | undefined>()
+
+	const seeded = {
+		query: () => ({ queryKey: ['cache-only'], initialData: () => ({ items: [1] }), enabled: false }),
+		getItems: (data: { items: number[] }) => data.items,
+	}
+	const cached = useCollectionQuery({ source: { getAll: seeded, invalidation: [] }, mode: 'pages', params: undefined })
+	expectTypeOf(cached.query.data).toEqualTypeOf<{ items: number[] } | undefined>()
+
+	const bad = {
+		...getAll,
+		query: () => ({ ...getAll.query(), initialData: ['wrong'] }),
+	}
+	// @ts-expect-error initialData holds the raw cache value even when a selector is supplied
+	useCollectionQuery({ source: { getAll: bad, invalidation: [] }, mode: 'pages', params: undefined })
+}
+
+it('uses the same read branches for native projection inputs and the public query result', () => {
+	expectTypeOf(useReadBranches).toBeFunction()
+})

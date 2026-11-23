@@ -409,3 +409,20 @@ Dismissing a confirmation SHALL leave existing delete requests and their reserva
 
 - **WHEN** the user dismisses the confirmation for B while A is being deleted
 - **THEN** A remains pending and a repeat request cannot dispatch a second delete
+
+### Requirement: Applied criteria and read data remain distinct contracts
+
+Paged grids SHALL compare each applied sorting, column-filter and global-filter value using
+Object.is, independently of pagination and generated cache identity. Structural readers SHALL
+check initialData against the raw query data and expose the raw branch when select is optional.
+
+#### Scenario: The applied filter has a new object reference
+
+- **WHEN** a paged grid receives a new applied filter object
+- **THEN** it requests page zero while the reset is acknowledged
+- **AND** changing only the page with stable criteria retains that page
+
+#### Scenario: A selector may be absent
+
+- **WHEN** a structural reader's select is optional
+- **THEN** its query data type and projection account for both the raw and selected responses

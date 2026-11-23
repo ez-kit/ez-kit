@@ -114,7 +114,10 @@ data. The hook adds no scroll observer. A source supporting both modes can switc
 Generated query keys use the result of `prepareArgs` by default. Supply `prepareKey(args, params)`
 on a list or infinite read when the transport uses objects such as `URLSearchParams` or `Headers`.
 The key part must use plain serializable values. A custom key still includes the source key and read
-mode, so the existing invalidation family remains intact. The fetcher receives the original args.
+mode, so the existing invalidation family remains intact. The fetcher receives the original args. TanStack applies its usual hashing rules. If your API distinguishes `null` from
+`undefined`, or if an infinite read can start at different cursors, encode that distinction in
+`prepareKey`. The default generated key contains the prepared arguments and does not include
+`initialPageParam`.
 
 ```ts
 prepareArgs: ({ status }) => new URLSearchParams({ status }),
@@ -271,7 +274,9 @@ against that exact minimum version as well as the workspace's development depend
 
 A plain source keeps the relationship between its native query options and `getItems` or
 `getTotal`. The projection must accept the data produced by the query, including any `select`.
-Infinite projections consume one page of the selected infinite data.
+Infinite projections consume one page of the selected infinite data. When present, `initialData` must match the raw cache response.
+If a selector is optional, both the projection and `query.data` account for the resulting
+raw and selected forms.
 
 Plain native descriptors passed directly to `useCollectionQuery` have the same consumer option
 types as sources built by the helpers. An omitted option remains available for local overrides,

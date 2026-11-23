@@ -345,3 +345,52 @@ it('keeps querying page zero while the controlled page reset is pending', async 
 	h.unmount()
 	client.clear()
 })
+
+it('resets paged reads when an applied filter reference changes and preserves navigation with a stable reference', async () => {
+	const { client, wrapper } = harness()
+	const fetcher = vi.fn((args: { search: string; page: number }) =>
+		Promise.resolve({ items: [{ id: '1', name: args.search }], total: 100 }),
+	)
+	const source = createGridSourceFactory({
+		list: {
+			prepareArgs: ({ pagination, globalFilter }) => ({
+				page: pagination.pageIndex,
+				search: globalFilter instanceof URLSearchParams ? (globalFilter.get('q') ?? '') : '',
+			}),
+			getRows: (data: Page) => data.items,
+			getRowCount: (data) => data.total,
+		},
+	})({ key: ['filter-reference'], getAll: fetcher })
+	const onChange = vi.fn()
+	const foo = new URLSearchParams('q=foo')
+	const bar = new URLSearchParams('q=bar')
+	const h = renderHook(
+		({ filter, page }) =>
+			kit.useDataGrid({
+				columns,
+				dataSource: source,
+				pagination: { onChange },
+				globalFiltering: true,
+				state: { pagination: { pageIndex: page, pageSize: 10 }, globalFilter: filter },
+			}),
+		{ wrapper, initialProps: { filter: foo, page: 2 } },
+	)
+	await waitFor(() => {
+		expect(fetcher).toHaveBeenLastCalledWith({ page: 2, search: 'foo' }, expect.anything())
+	})
+	h.rerender({ filter: bar, page: 2 })
+	await waitFor(() => {
+		expect(fetcher).toHaveBeenLastCalledWith({ page: 0, search: 'bar' }, expect.anything())
+	})
+	expect(onChange).toHaveBeenCalledTimes(1)
+	h.rerender({ filter: bar, page: 0 })
+	h.rerender({ filter: bar, page: 1 })
+	await waitFor(() => {
+		expect(fetcher).toHaveBeenLastCalledWith({ page: 1, search: 'bar' }, expect.anything())
+	})
+	expect(onChange).toHaveBeenCalledTimes(1)
+	h.rerender({ filter: new URLSearchParams('q=bar'), page: 1 })
+	expect(onChange).toHaveBeenCalledTimes(2)
+	h.unmount()
+	client.clear()
+})
