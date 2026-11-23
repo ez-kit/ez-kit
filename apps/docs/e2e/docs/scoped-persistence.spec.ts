@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test'
 test('automatic restore times out, preserves resize after late response and resets the scope', async ({ page }) => {
 	const errors: string[] = []
 	page.on('pageerror', (error) => errors.push(error.message))
-	await page.goto('/docs/zu-store/persist')
+	await page.goto('/docs/zu-store/persist/cache')
 	const server = page.getByRole('region', { name: 'Server layout' })
 	await expect(server.getByRole('status')).toContainText('pending')
 	await expect(server.getByRole('status')).toContainText('timeout', { timeout: 6000 })

@@ -201,6 +201,8 @@ export const DocPage = {
 	ZuPersistDeepDiveUrl: 'content/docs/zu-store/persist/deep-dive-url.mdx',
 	ZuPersistFields: 'content/docs/zu-store/persist/fields.mdx',
 	ZuPersistIndex: 'content/docs/zu-store/persist/index.mdx',
+	ZuPersistOperations: 'content/docs/zu-store/persist/operations.mdx',
+	ZuPersistWorkingWithFields: 'content/docs/zu-store/persist/working-with-fields.mdx',
 	ZuPersistParsers: 'content/docs/zu-store/persist/parsers.mdx',
 	ZuPersistQuickStartStorage: 'content/docs/zu-store/persist/quick-start-storage.mdx',
 	ZuPersistQuickStartUrl: 'content/docs/zu-store/persist/quick-start-url.mdx',
@@ -226,6 +228,8 @@ export const DocPage = {
 	VaPersistDeepDiveUrl: 'content/docs/va-store/persist/deep-dive-url.mdx',
 	VaPersistFields: 'content/docs/va-store/persist/fields.mdx',
 	VaPersistIndex: 'content/docs/va-store/persist/index.mdx',
+	VaPersistOperations: 'content/docs/va-store/persist/operations.mdx',
+	VaPersistWorkingWithFields: 'content/docs/va-store/persist/working-with-fields.mdx',
 	VaPersistParsers: 'content/docs/va-store/persist/parsers.mdx',
 	VaPersistQuickStartStorage: 'content/docs/va-store/persist/quick-start-storage.mdx',
 	VaPersistQuickStartUrl: 'content/docs/va-store/persist/quick-start-url.mdx',
@@ -1651,17 +1655,9 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		optionTables: [{ heading: 'Key placement', roots: [STORE_TYPE.ZuAccessorFieldOptions], expectedCount: 3 }],
 		nonOptionTables: [],
 	},
-	{
-		page: DocPage.ZuPersistIndex,
-		optionTables: [],
-		nonOptionTables: [
-			{
-				heading: 'One engine, many sources',
-				reason: 'Lists the shipped sources in prose; the first column names no key.',
-			},
-			{ heading: 'On this topic', reason: 'Table of contents: page links.' },
-		],
-	},
+	{ page: DocPage.ZuPersistIndex, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.ZuPersistOperations, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.ZuPersistWorkingWithFields, optionTables: [], nonOptionTables: [] },
 	{
 		page: DocPage.ZuPersistParsers,
 		optionTables: [],
@@ -1811,18 +1807,9 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		nonOptionTables: [],
 	},
 	{ page: DocPage.VaPersistFields, optionTables: [], nonOptionTables: [] },
-	{
-		page: DocPage.VaPersistIndex,
-		optionTables: [],
-		nonOptionTables: [
-			{
-				heading: 'One engine, many sources',
-				reason: 'Lists the shipped sources in prose; the first column names no key.',
-			},
-			{ heading: 'Two ways to declare fields', reason: 'Names the decorator and accessor call forms, not keys.' },
-			{ heading: 'On this topic', reason: 'Table of contents: page links.' },
-		],
-	},
+	{ page: DocPage.VaPersistIndex, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.VaPersistOperations, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.VaPersistWorkingWithFields, optionTables: [], nonOptionTables: [] },
 	{
 		page: DocPage.VaPersistParsers,
 		optionTables: [],

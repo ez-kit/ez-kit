@@ -114,3 +114,9 @@ preserve the container.
 Removing or clearing an entry while its Provider remains mounted keeps persistence active until
 the last owner leaves. Explicit removal then overrides normal keepalive. To reset an open panel's
 state and saved values, use its persistence handle's reset operation.
+
+## Reset a whole screen
+
+Use `usePersistence().resetScope(...)` when the reset button belongs to a screen with several stores. The
+[scoped layout demo](/docs/zu-store/persist/cache#reset-a-whole-screen) shows two panels that
+share a page scope. The same scope and reset APIs are available in Valtio.

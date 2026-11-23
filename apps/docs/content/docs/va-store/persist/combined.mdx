@@ -1,81 +1,126 @@
 ---
-title: Combined
+title: Multiple sources
 description: Sync one store to the URL and storage at once. Shared state deep-links; device preferences restore — and a shared link is never clobbered by a stale cache.
 ---
 
-A field is bound to a source, not a store — so one proxy can mix sources freely. Put **shareable** state (`q`, filters) in the URL and **device-local** state (density, theme) in storage. Mount both adapters; each field picks where it goes.
-
-<LivePreview
-	path='va-store/persist-combined'
-	title='URL + localStorage on one store'
-/>
+## Route each field to its source
 
 ```tsx
-import { createContextStore, pipe } from '@ez-kit/va-store'
-import { PersistProvider, withPersist } from '@ez-kit/va-store/persist'
-import { localStorageAdapter, persistLocalStorage } from '@ez-kit/va-store/persist/storage'
-import { persistUrl } from '@ez-kit/va-store/persist/url'
+import { createContextStore, pipe, StoreProvider } from '@ez-kit/va-store'
+import { withPersist } from '@ez-kit/va-store/persist'
+import { localStorageAdapter, localStorageField } from '@ez-kit/va-store/persist/storage'
+import { urlField } from '@ez-kit/va-store/persist/url'
 import { reactRouterAdapter } from '@ez-kit/va-store/persist/url/react-router'
+import { BrowserRouter } from 'react-router'
+import { proxy } from 'valtio'
 
-class ListState {
-	@persistUrl() q = '' // shared — deep-links, survives Back/forward
-	@persistLocalStorage() density = 'comfortable' // device preference — restored, not shared
-}
+type ListState = { q: string; density: 'comfortable' | 'compact' }
 
-const listStore = createContextStore(() => pipe(proxy(new ListState()), withPersist()))
+const list = createContextStore(
+	() =>
+		pipe(
+			proxy<ListState>({ q: '', density: 'comfortable' }),
+			withPersist({
+				fields: (field) => [
+					field((state) => state.q, urlField()),
+					field((state) => state.density, localStorageField()),
+				],
+			}),
+		),
+	{ name: 'list' },
+)
 
 function Page() {
 	return (
-		<PersistProvider adapters={[reactRouterAdapter, localStorageAdapter()]}>
-			<listStore.Provider>…</listStore.Provider>
-		</PersistProvider>
+		<BrowserRouter>
+			<StoreProvider persist={[reactRouterAdapter, localStorageAdapter()]}>
+				<list.Provider>
+					<ListControls />
+				</list.Provider>
+			</StoreProvider>
+		</BrowserRouter>
 	)
 }
 ```
 
-One engine is created per source — they never coordinate writes (each flushes its own substrate), and an async source (IndexedDB) can't stall the synchronous URL.
+<LivePreview
+	path='va-store/persist-combined'
+	title='Save one store to URL and localStorage'
+/>
 
-## Dual-binding one field
+Change the search and density, then click **Save both sources**. The example shows one result
+per source. Density uses real localStorage. The demo query stays isolated from this documentation
+page's URL.
 
-Bind the _same_ field to two sources to keep a shareable value **and** a local fallback — a URL param when present, restored from storage otherwise:
+## Bind one field to two sources
 
-```tsx
-class State {
-	@persistUrl()
-	@persistLocalStorage()
-	q = ''
-}
+```ts
+withPersist({
+	fields: (field) => [field((state) => state.q, urlField()), field((state) => state.q, localStorageField())],
+})
 ```
 
-With the accessor API, list the field once per source via `withPersist`'s `fields` option:
+Use this when a shared URL should supply the search if it has one, and the browser should supply
+a preference if the link does not. Both fields refer to the same property of the same store.
 
-```tsx
-createContextStore(() =>
-	pipe(
-		proxy({ q: '' }),
-		withPersist({
-			fields: (field) => [field((s) => s.q, urlField()), field((s) => s.q, localStorageField())],
-		}),
-	),
-)
+## Check what happens after reload
+
+For the URL + localStorage example above, open a URL with `?q=boots` and set density to
+compact. Reload the page. Query state comes from the URL and density comes from browser storage.
+
+For the dual-bound search field, start with a saved browser search. Open a link with a different,
+non-default query to seed that value from the URL. Then open the same page without a query and
+check that the saved browser search supplies the value. Changing the search writes to both
+sources. Each source has its own acknowledgement and error result.
+
+In the live demo, reload this page to check density. Use the real router integration in your app
+to check that a copied query URL restores the search too.
+
+## Save and close across sources
+
+```ts
+import { flushPersist, persistHandle } from '@ez-kit/va-store/persist'
+
+const results = await flushPersist(store)
+if (Object.values(results).every((result) => result.status === 'fulfilled')) close()
+
+// When only one source matters to this action:
+await persistHandle(store, 'localStorage').flush()
 ```
 
-## First-present-wins on cold start
+`flushPersist(store)` waits for every source attached to this store, including URL if configured.
+The result uses the effective source names, such as the aliases in your provider map.
+For a subset, call the named handles and await their results with `Promise.allSettled()`.
 
-For ambient updates at runtime, this example explicitly enables `restore.externalChanges: 'apply'`; ambient sources otherwise ignore external updates.
+## Reload, explicit restore and external changes
 
-When several sources can fill the same field, the rule is **first-present-wins on cold start, last-arrival-wins at runtime**:
+- **Reload (F5)** creates a new store and runs automatic restore for each source.
+- **Retry one source** with `await persistHandle(store, 'localStorage').restore()`. It preserves the
+  priority of local edits on the current store.
+- **Apply external updates** with `restore.externalChanges: 'apply'` for sources that publish
+  notifications. Ambient sources ignore these updates by default. IndexedDB has no automatic
+  cross-tab notification, so use explicit restore to reread it.
 
-- **Cold start** — a source writes an incoming value into a field only if that field still holds its default. The URL connects first (synchronous, in render) and sets `q`; storage then fills only the fields the URL left at default. A shared `?q=boots` link is **never** clobbered by a stale localStorage value — even an async IndexedDB value that resolves later can't win.
-- **Runtime** — after mount, whatever change arrives last wins (a fresh navigation, an edit, another tab).
+To combine browser storage and a server, register them as aliases and assign each field:
 
-This makes "an explicit shared link beats a restored cache" automatic, with no precedence config. The only lever for sync-vs-sync ordering is adapter order in the `adapters` array; it's rarely needed.
+```tsx
+<StoreProvider persist={{ browser: localStorageAdapter(), server: settingsAdapter }}>
+	<settings.Provider>{children}</settings.Provider>
+</StoreProvider>
+```
 
-<Callout type='info'>
-	A consumer who genuinely wants storage to override the URL on load can't, by design — the rule favors shareable links.
-	That trade-off is intentional.
-</Callout>
+```ts
+withPersist({
+	restore: { sources: { browser: { timeoutMs: null }, server: { timeoutMs: 1500 } } },
+	write: { sources: { server: { throttleMs: 300 } } },
+	fields: (field) => [
+		field((state) => state.density, { source: 'browser' }),
+		field((state) => state.layout, { source: 'server' }),
+	],
+})
+```
 
-## Per-source handles
-
-Each bound source attaches a non-enumerable control handle to the proxy — `$url` and `$persist` — for source-specific imperative control (e.g. forcing a URL `push`). A dual-bound proxy exposes both without collision. They're covered in the [URL deep dive](./deep-dive-url#imperative-control-via-url).
+The browser read has no restore timeout. The server read gets 1.5 seconds and its writes
+are throttled independently. `settingsAdapter` implements your backend. Start with the [simulated server](./operations)
+or follow the [custom adapter guide](./custom-adapter). If the settings page contains several
+store instances, continue to [cache and scope](./cache).

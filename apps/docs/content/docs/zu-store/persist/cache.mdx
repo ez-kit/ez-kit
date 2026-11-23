@@ -117,3 +117,31 @@ preserve the container.
 Removing or clearing an entry while its Provider remains mounted keeps persistence active until
 the last owner leaves. Explicit removal then overrides normal keepalive. To reset an open panel's
 state and saved values, use its persistence handle's reset operation.
+
+## Reset a whole screen
+
+```tsx
+import { usePersistence } from '@ez-kit/zu-store/persist'
+
+function ResetLayoutButton() {
+	const persistence = usePersistence()
+	return (
+		<button
+			type='button'
+			onClick={() => void persistence.resetScope({ path: ['scoped-demo'], sources: ['browser', 'server'] })}
+		>
+			Reset page layout
+		</button>
+	)
+}
+```
+
+Place the button inside the provider that registers both sources. In this example the browser and server panels share a page scope. The reset button returns both widths
+to their defaults and removes their saved overrides. A slow server read can time out independently
+of the browser panel. Check the [outcomes](./deep-dive-storage#reset-and-durability)
+before reporting reset success in your app.
+
+<LivePreview
+	path='zu-store/scoped-persistence'
+	title='Restore and reset two stores in one scope'
+/>

@@ -1,0 +1,53 @@
+---
+title: Persist nested state
+description: Select multiple fields and evolve a saved layout with validation and migration.
+---
+
+## Save individual fields
+
+```ts
+withPersist({
+	fields: (field) => [field((state) => state.density, {}), field((state) => state.layout.pageSize, {})],
+})
+```
+
+Both fields use the provider's default source. A change to page size updates that record.
+Anything omitted from `fields` stays in memory.
+
+## Save a nested value with a schema
+
+```ts
+import { paramJson } from '@ez-kit/va-store/persist'
+import { z } from 'zod'
+
+const columnLayout = z.object({
+	order: z.array(z.string()),
+	hidden: z.array(z.string()),
+})
+
+withPersist({
+	fields: (field) => [
+		field((state) => state.layout.columns, {
+			parser: paramJson<unknown>(),
+			schema: {
+				version: 2,
+				migrate(value, fromVersion) {
+					if (fromVersion === 1) return { order: z.array(z.string()).parse(value), hidden: [] }
+					return value
+				},
+				validate: (value) => columnLayout.parse(value),
+			},
+		}),
+	],
+})
+```
+
+In v1 the stored value was `['name', 'price']`. In v2 it becomes
+`{ order: ['name', 'price'], hidden: [] }`. On restore, the codec decodes the JSON,
+the migration upgrades v1, and the validator checks the result before it enters the store.
+Use this versioned schema with a source that supports record versions, such as localStorage
+or IndexedDB.
+
+Keep unrelated fields as separate declarations if they have different defaults, reset actions
+or schema versions. See [the live validation example](./parsers#zod-validation) and
+[storage migrations](./deep-dive-storage#independent-schema-versions).
