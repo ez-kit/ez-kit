@@ -70,3 +70,31 @@ To mirror state into your own store, pass `onStateChange` — it receives the re
 ## License
 
 MIT
+
+## Explicit bulk deletion
+
+`deleting.bulk` accepts `false` or a configuration with a required `onDelete` handler.
+The grid calls it once with the resolved selected rows and IDs. It clears their selection
+only after success; rejection keeps selection. There is no automatic per-row fallback.
+
+```ts
+deleting: {
+  onDelete: ({ row }) => api.remove(row.original.id),
+  bulk: {
+    onDelete: ({ rows }) => api.removeMany(rows.map(row => row.original.id)),
+  },
+}
+```
+
+To keep a sequential API workflow, write the loop inside `bulk.onDelete`. The application
+owns partial-success reconciliation; the grid does not interpret response envelopes.
+
+### Read-only form validation
+
+`table.editing.validateValues(values)` and `table.creating.validateValues(values)` return
+`ValidationCheckResult`: `{ status: 'valid' }`, `{ status: 'invalid', errors, formError }`,
+or `{ status: 'cancelled' }`. `FormModalProps.validate(values)` exposes the same result in React.
+Replace earlier `result === null` checks with an explicit status branch. Closing, restarting,
+or cancelling validation promptly settles pending checks as `cancelled`, without writing form
+state; an open form with no validator is `valid`. Schema validators still return errors or `null`.
+Concurrent checks are not latest-only; active unexpected errors still reject.

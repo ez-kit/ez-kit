@@ -1,0 +1,126 @@
+---
+title: Connect a DataGrid
+description: Connect a DataGrid to your API with TanStack Query and try the complete example.
+---
+
+Start with a table that reads users from an API. You will set up the Query provider, describe the response and pass the resulting source to your grid.
+
+## 1. Install the connector
+
+In a project with DataGrid and a UI kit already installed, add the connector and TanStack Query:
+
+```sh
+pnpm add @ez-kit/qc-react @tanstack/react-query
+```
+
+For a new grid, follow the [DataGrid installation guide](/docs/data-grid) to set up shadcn or HeroUI. The connector requires `@ez-kit/data-grid-react` 0.20 or newer, TanStack Query 5.105.3 or newer within v5, and React 18 or newer. Use the React version supported by your kit.
+
+## 2. Add the Query provider
+
+If the application already has a `QueryClientProvider`, render the grid inside it. Otherwise, add a provider at the application root so views can share the same cache.
+
+```tsx title="query-provider.tsx"
+'use client'
+
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { type PropsWithChildren, useState } from 'react'
+
+export function QueryProvider({ children }: PropsWithChildren) {
+	const [client] = useState(() => new QueryClient())
+	return <QueryClientProvider client={client}>{children}</QueryClientProvider>
+}
+```
+
+## 3. Describe the read
+
+In this example, `GET /api/users` returns `{ items, total }`. Pass the fetcher to `createDataGridSource`, then tell the grid which part of the response contains the rows. `prepareArgs` returns `undefined` because this first endpoint takes no arguments.
+
+```ts title="users-source.ts"
+import { createDataGridSource } from '@ez-kit/qc-react/data-grid'
+
+export type User = { id: string; name: string }
+type UsersResponse = { items: User[]; total: number }
+
+async function fetchUsers(_: undefined, { signal }: { signal: AbortSignal }): Promise<UsersResponse> {
+	const response = await fetch('/api/users', { signal })
+	if (!response.ok) throw new Error('Could not load users')
+	return response.json()
+}
+
+export const dataSource = createDataGridSource({
+	key: ['users'],
+	read: {
+		fetcher: fetchUsers,
+		prepareArgs: () => undefined,
+		getItems: (response) => response.items,
+	},
+})
+```
+
+`['users']` is the base key for this resource. For a paginated API, you will add request parameters and read the total in the [next guide](/docs/qc-react/pagination).
+
+## 4. Render the connected grid
+
+<span id='connect-a-bundle' />
+
+Create the connected bundle once with `withQuery`. Then render its `DataGrid` under your provider and pass `dataSource` and `columns`. Use your existing bundle or create one with the components from your kit.
+
+```tsx title="users-grid.tsx"
+'use client'
+
+import { createDataGrid } from '@ez-kit/data-grid-react'
+import { allDataGridFeatures } from '@ez-kit/data-grid-react/features/all'
+import { allComponents, cellTypes } from '@ez-kit/data-grid-shadcn'
+import { withQuery } from '@ez-kit/qc-react/data-grid'
+
+import { dataSource, type User } from './users-source'
+
+const gridBundle = createDataGrid({ components: allComponents, cellTypes, features: allDataGridFeatures })
+const { DataGrid } = withQuery(gridBundle)
+const columns = gridBundle.createColumns<User>([{ accessorKey: 'name', header: 'Name' }])
+
+export function UsersGrid() {
+	return (
+		<DataGrid
+			columns={columns}
+			dataSource={dataSource}
+			getRowId={(user) => user.id}
+			pagination={false}
+		/>
+	)
+}
+```
+
+Mount `<UsersGrid />` inside `<QueryProvider>` on the users screen.
+
+```tsx title="users-page.tsx"
+import { QueryProvider } from './query-provider'
+import { UsersGrid } from './users-grid'
+
+export function UsersPage() {
+	return (
+		<QueryProvider>
+			<UsersGrid />
+		</QueryProvider>
+	)
+}
+```
+
+If the root already wraps the screen in a provider, render `<UsersGrid />` there. TanStack Query runs the request and the grid renders the rows and the query's loading state.
+
+## Where to go next
+
+- <span id='pages-and-infinite-reads' /> [Add numbered pages or infinite scrolling](/docs/qc-react/pagination).
+- <span id='cache-and-invalidation' /> <span id='mutations-and-handlers' /> <span id='pending-forms' /> [Add grid CRUD
+  and see how invalidation works](/docs/qc-react/crud).
+- <span id='share-a-collection-with-an-ordinary-list' /> [Build a standalone CRUD list](/docs/qc-react/lists) or [reuse
+  its source in a grid](/docs/qc-react/reuse).
+- <span id='generated-fetchers' /> <span id='4-connect-one-entity' /> [Use Orval-generated
+  fetchers](/docs/qc-react/orval).
+- [Find a behavior or option](/docs/qc-react/patterns) in the guide or the [API reference](/docs/qc-react/api).
+
+## Try the complete setup
+
+The preview uses the same source shape and an in-memory API. Switch between shadcn and HeroUI, or expand the source to see the complete runnable example with the provider, fetcher and grid in one file.
+
+<DataGridDocsExample exampleId='query-start' />

@@ -216,6 +216,8 @@ export function ActionsCell({ row }: ActionsCellProps) {
 	// absent, so it is only reached once `s.editing` is known to be there.
 	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
 	const isPending = useDataGridState((s) => s.editing?.rowId === row.id && s.editing.commitStatus !== CommitStatus.Idle)
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional deleting feature
+	const deleteDisabled = useDataGridState((state) => state.deleting?.pendingIds?.includes(row.id) ?? false)
 	// Core's move predicate scans the ordered model. Cache each row's answers across
 	// unrelated store writes instead of repeating that scan on every editing keystroke.
 	const selectCapabilities = useMemo(() => createCapabilitiesSelector(table, row), [table, row])
@@ -317,6 +319,7 @@ export function ActionsCell({ row }: ActionsCellProps) {
 				label: messages.delete,
 				icon: ICONS[RowActionId.Delete],
 				destructive: true,
+				disabled: deleteDisabled,
 				onAction: () => {
 					table.deleting.request(row.id)
 				},
@@ -366,6 +369,7 @@ export function ActionsCell({ row }: ActionsCellProps) {
 				row={row}
 				hasEditing={hasEditing}
 				hasDeleting={hasDeleting}
+				deleteDisabled={deleteDisabled}
 				actions={inlineItems}
 				onEdit={() => {
 					table.editing.start(row.id)

@@ -1,0 +1,75 @@
+---
+title: API
+description: Connected grid source options, native reads and observer policy.
+---
+
+## Exports
+
+| Export                 | Purpose                                                                         |
+| ---------------------- | ------------------------------------------------------------------------------- |
+| `withQuery`            | Connect a DataGrid bundle and expose its component and hook.                    |
+| `createDataGridSource` | Build a collection source with typed grid criteria and actions.                 |
+| `GridCollectionParams` | The applied sorting, column filters and global filter passed as `input.params`. |
+
+## Applied parameters
+
+`read.prepareArgs(input)` receives applied `input.params.sorting`, `input.params.columnFilters` and `input.params.globalFilter`. Pending draft criteria take effect when applied. The input also includes `pageSize` and the mode-specific `pageIndex` or `pageParam`.
+
+| Field           | Meaning                       |
+| --------------- | ----------------------------- |
+| `sorting`       | Applied sorting descriptors.  |
+| `columnFilters` | Applied column filter values. |
+| `globalFilter`  | Applied global filter.        |
+
+## Read configuration
+
+`read.fetcher` receives the result of `prepareArgs` and the transport's AbortSignal. `getItems` extracts the rows, and `getTotal` supplies the total in pages mode. Include `infinite.initialPageParam` and `infinite.getNextPageParam` to support infinite mode. Pass source observer options under `read.options` for pages and `read.infinite.options` for infinite.
+
+## Invalidation policy
+
+`false` disables the policy. Omission keeps the generated families or an operation's inherited policy.
+
+| Option       | Meaning                                          |
+| ------------ | ------------------------------------------------ |
+| `additional` | Append native filters to the resolved defaults.  |
+| `replace`    | Replace the resolved policy with native filters. |
+
+See the [CRUD guide](/docs/qc-react/crud#3-follow-the-refresh-after-a-save) for refresh timing and explicit action handlers.
+
+## Native sources
+
+Use `createCollectionSource` with native mode descriptors to preserve keys, selectors and options owned by your application. When connecting a grid, type the request input with `GridCollectionParams`.
+
+```ts
+import type { GridCollectionParams } from '@ez-kit/qc-react/data-grid'
+import { createCollectionSource, type CollectionPageInput } from '@ez-kit/query-react/collection'
+
+const source = createCollectionSource({
+	invalidate: { additional: [{ queryKey: ['existing-users'] }] },
+	read: {
+		pages: {
+			query: (input: CollectionPageInput<GridCollectionParams>) => usersQueries.page(input.pageIndex, input.pageSize),
+			getItems: (page: UsersResponse) => page.items,
+			getTotal: (page: UsersResponse) => page.total,
+		},
+	},
+})
+```
+
+Native `read.infinite` accepts an infinite options factory and its page projection. Its options provide the initial cursor, next cursor callback and original query key. Each projection receives that mode's selected shape.
+
+## Source changes during asynchronous work
+
+Use a stable record ID through `getRowId` when records lack a string or numeric `id`. Set `scopeKey` when switching ownership, for example `['users', teamId]`. This makes selection and pending form work follow the owning data set. Native mutations with scope-specific side effects should also use scope-specific mutation keys.
+
+## Per-grid query options
+
+Connected `DataGrid` and `useDataGrid` accept `queryOptions` for the active observer. For example, pass `{ enabled: Boolean(teamId), staleTime: 30_000 }`. The source controls query identity, fetch, projection and cursor settings. Applied filters and sorting use reference equality for objects and arrays. Keep their references stable until criteria change.
+
+## Migrate a source to the collection API
+
+- Rename the source and factory config field from `collection` to `read`. Use `source.read.pages.query(input)` or `source.read.infinite.query(input)` to access built options for prefetching.
+- Move generated reads into the shared `read` block. Use `input.mode` in `prepareArgs` to switch between the ordinary page index and the infinite cursor. Move initial and next cursor settings into `read.infinite`.
+- Create a grid-aware source with `createDataGridSource` and pass it directly as `dataSource`. For a standalone list, pass the source and a controlled `pagination` object to `useCollectionQuery`.
+- Move existing TanStack query functions into native mode descriptors to preserve externally owned keys, selectors and options. Provide an explicit invalidation policy for those keys.
+- Generated grid mutation callbacks now receive the original grid action context. The fetcher receives the prepared arguments.

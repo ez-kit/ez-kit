@@ -1,0 +1,174 @@
+---
+title: Build an ordinary list
+description: Build an ordinary list with typed collection queries and all four mutations, then reuse its source in a grid.
+---
+
+Use `@ez-kit/query-react/collection` for a card list, ItemGroup or another custom view. The hook runs requests and exposes TanStack Query results. Your component owns search, pagination, selection and edit forms.
+
+For several resources that use the same API convention, start with the [ordinary-list factory example](/docs/qc-react/reuse#reuse-a-factory-in-ordinary-lists).
+
+For per-component loading settings, see [query options](/docs/query-react/collection#per-component-query-options).
+For shared-factory projections, see [selecting another shape](/docs/query-react/collection#cache-and-native-options).
+
+## 1. Define the business source
+
+Import `createCollectionSource` and `useCollectionQuery` from
+`@ez-kit/query-react/collection`. Start with `read`. It accepts your list parameters,
+calls the fetcher and extracts the items and total from the response.
+
+```ts
+import { createCollectionSource, type CollectionReadInput } from '@ez-kit/query-react/collection'
+
+type Criteria = { search: string }
+
+const readConfig = {
+	key: ['users'],
+	read: {
+		prepareArgs: ({ params, pageIndex, pageSize }: CollectionReadInput<Criteria>) => ({
+			...params,
+			offset: pageIndex * pageSize,
+			limit: pageSize,
+		}),
+		fetcher: fetchUsers,
+		getItems: (response: UsersResponse) => response.items,
+		getTotal: (response: UsersResponse) => response.total,
+	},
+}
+
+const source = createCollectionSource(readConfig)
+```
+
+## 2. Render the list and control its page
+
+Use the [Query provider from the setup guide](/docs/qc-react#2-add-the-query-provider). In the list component, keep search and offsets in state and pass them to the hook.
+
+```tsx
+const [searchValue, setSearchValue] = useState('')
+const [pageIndex, setPageIndex] = useState(0)
+const pageSize = 2
+const users = useCollectionQuery({
+	source,
+	params: { search: searchValue },
+	pagination: { mode: 'pages', pageIndex, pageSize },
+})
+
+function search(value: string) {
+	setSearchValue(value)
+	setPageIndex(0)
+}
+function nextPage() {
+	setPageIndex((current) => current + 1)
+}
+```
+
+Render `users.items` and use `users.total` to decide when Next is available.
+
+```tsx
+<>
+	<input
+		aria-label='Search users'
+		value={searchValue}
+		onChange={(event) => search(event.target.value)}
+	/>
+	{users.query.isPending && <p role='status'>Loading users…</p>}
+	{users.query.isError && <p role='alert'>{users.query.error.message}</p>}
+	<ul>
+		{users.items.map((user) => (
+			<li key={user.id}>{user.name}</li>
+		))}
+	</ul>
+	<button
+		disabled={users.total === undefined || (pageIndex + 1) * pageSize >= users.total}
+		onClick={nextPage}
+	>
+		Next
+	</button>
+</>
+```
+
+A normal list owns its page-reset and out-of-range policy. The search handler above resets the page in the same event. The live example also moves back a page if a fresh total shows that deletion left the current page out of range.
+
+## 3. Connect the CRUD actions
+
+When the read works, expand the source with mutations. Choose inputs that match your list's UI.
+For example, update accepts `{ id, name }`, and bulk delete accepts `{ ids }`.
+
+```ts
+const source = createCollectionSource({
+	...readConfig,
+	create: {
+		prepareArgs: (input: { name: string }) => ({ name: input.name.trim() }),
+		fetcher: createUser,
+	},
+	update: {
+		prepareArgs: (input: { id: string; name: string }) => ({ ...input, name: input.name.trim() }),
+		fetcher: updateUser,
+	},
+	delete: {
+		prepareArgs: (input: { id: string }) => input.id,
+		fetcher: deleteUser,
+	},
+	deleteMany: {
+		prepareArgs: (input: { ids: string[] }) => input.ids,
+		fetcher: deleteUsers,
+	},
+})
+```
+
+The hook now exposes each configured mutation. Call it from the corresponding control.
+
+```tsx
+users.create.mutate({ name: 'Ada' })
+users.update.mutate({ id: '42', name: 'Ada Lovelace' })
+users.delete.mutate({ id: '42' })
+users.deleteMany.mutate({ ids: ['42', '43'] })
+```
+
+These are native TanStack mutation objects. Disable relevant actions with
+`isPending`, display `error`, and use `reset()` when dismissing an error or beginning
+a new editing session. Only operations present on the source exist on the result.
+`deleteMany` requires a real bulk fetcher; it never falls back to individual deletes.
+
+For sequential work, await `mutateAsync` and handle rejection:
+
+```tsx
+async function save(input: { id: string; name: string }) {
+	try {
+		await users.update.mutateAsync(input)
+		closeEditor()
+	} catch {
+		// Keep the editor open; render users.update.error beside the form.
+	}
+}
+```
+
+`closeEditor` is application UI logic. Successful mutations invalidate the source's
+list and infinite families automatically. Closing the editor does not wait for the
+background list refresh. Avoid also calling `refetch()` after every successful write.
+
+Place shared lifecycle behavior in mutation `options`. `onMutate` runs before
+`prepareArgs`; callbacks receive the original mutation input, not the prepared DTO.
+Preparation errors become mutation errors. Keep preparation pure because enabled
+retries execute it again. Form schemas and field-error presentation belong to the UI.
+
+## Try the complete CRUD list
+
+This example uses shadcn ItemGroup and a private in-memory API. Create a user,
+change a name and Save, delete a row, or select several users and Delete selected.
+Every request takes 250 ms. Data resets on remount; no external service is called.
+Try an empty name to see a mutation error. The source panel includes the entire
+fake API, collection definition, provider and list component.
+
+<LivePreview
+	path='query-react/collection-list'
+	title='Ordinary list: create, read, update, delete and deleteMany'
+/>
+
+New users are appended to the dataset, so use Next to find a newly created user
+on the last page. Search is applied to the server dataset. Changing search resets
+the page in the same state update. Deleting the last row on the last page moves
+the example back only after the refreshed total confirms that page is out of range.
+
+<span id='reuse-the-same-source-in-datagrid' />
+
+[Reuse this collection in a DataGrid](/docs/qc-react/reuse).

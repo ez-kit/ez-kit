@@ -1,0 +1,14 @@
+---
+title: Infinite loading
+description: Load more rows from a cursor or an offset.
+---
+
+Follow [Infinite scrolling](/docs/qc-react/pagination#infinite-scrolling) to configure the shared read and choose automatic scrolling or a Load more button.
+
+<DataGridDocsExample exampleId='query-infinite' />
+
+## Refreshes and failures
+
+A search change starts a new collection. A successful mutation invalidates the resource's page and infinite families, and TanStack Query refreshes the active result. While a later page is pending or fails, the rows already loaded remain visible.
+
+For a custom list, call `useCollectionQuery` with `pagination: { mode: 'infinite', pageSize: 20 }` and wire a button to `query.fetchNextPage()`. Disable it when `!query.hasNextPage || query.isFetchingNextPage`. A later-page failure is available as `query.isFetchNextPageError`. See [Build an ordinary list](/docs/qc-react/lists).

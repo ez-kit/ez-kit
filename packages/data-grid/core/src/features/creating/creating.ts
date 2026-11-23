@@ -1,9 +1,11 @@
 import { ColumnFormMode, resolveColumnFormConfig } from '../../column/resolve-form-config'
 import { DEFAULT_VALIDATE_DEBOUNCE_MS } from '../../defaults'
 import { assignTableInstanceData, readOwnSlice, writeOwnSlice } from '../../feature-state'
+import { gridWriteContext } from '../../write-context'
 import { abortChecks, checkValues, commitClosed, commitInFlight, runCommit, trackCommit } from '../form'
 import {
 	abortFormWork,
+	abortValidation,
 	beginFieldValidation,
 	beginFormWork,
 	isAbortError,
@@ -15,7 +17,7 @@ import { CommitStatus, runValidator, ValidateOn } from '../validation'
 import type { FormColumnMeta, ResolvedColumnFormConfig } from '../../column/resolve-form-config'
 import type { AnyTable } from '../../feature-state'
 import type { FeatureToggle } from '../../utils/feature-flag'
-import type { CommitOptions, CommitResult, FormWorkBox } from '../form'
+import type { CommitOptions, CommitResult, FormWorkBox, ValidationCheckResult } from '../form'
 import type { ValidateConfig, ValidateContext, ValidationErrors, ValidationResult } from '../validation'
 import type { RowData, Table, TableFeature, TableFeatures } from '@tanstack/table-core'
 
@@ -142,6 +144,8 @@ export type CreatingConfig<TData> = FeatureToggle & {
 export type CreatingApi<TData = unknown> = {
 	start: () => void
 	cancel: () => void
+	/** Cancel pending validation, retaining values and any dispatched save. */
+	cancelValidation: () => void
 	/**
 	 * Validate and save. With `values`, those replace the form's values first — the path a form
 	 * of one's own takes. Resolves to a {@link CommitResult}; a second call while one is in
@@ -158,15 +162,14 @@ export type CreatingApi<TData = unknown> = {
 	 */
 	validate: () => Promise<ValidationResult>
 	/**
-	 * Run the configured validator over `values` and return its result, writing nothing — no
-	 * values, no errors, no status. Cancelled only by the form closing, never by a save, so a form
-	 * of one's own can check a field on blur freely.
-	 *
-	 * `null` means valid **or** that there is nothing to validate for: no validator configured, no
-	 * form open, or the form closed while the check ran. Checks are not ordered against each other,
-	 * so a form that runs several at once keeps the latest one's result itself.
+	 * Check external values without writing values, errors or status to the grid.
+	 * Returns valid (including an open form without a validator), invalid with normalized
+	 * errors/formError, or cancelled when closed or abandoned by cancelValidation/start/reset.
+	 * Cancellation settles promptly even if the validator ignores its signal.
+	 * Concurrent checks are not ordered: external forms own latest-result handling.
+	 * A valid result describes this check only; additional async work needs its own lifetime guard.
 	 */
-	validateValues: (values: Record<string, unknown>) => Promise<ValidationResult>
+	validateValues: (values: Record<string, unknown>) => Promise<ValidationCheckResult>
 	/** Internal — called by FieldState.onBlur in the react adapter. */
 	validateField: (columnId: string) => Promise<void>
 	getState: () => CreatingState
@@ -282,7 +285,7 @@ type CreatingTable = AnyTable & {
  * code, not of the shadowing those blocks did.
  */
 const creatingOption = (table: { readonly options: object }): CreatingConfig<RowData> | undefined =>
-	(table.options as { creating?: CreatingConfig<RowData> }).creating
+	((gridWriteContext(table)?.options ?? table.options) as { creating?: CreatingConfig<RowData> }).creating
 
 /**
  * The table's abort box, read off a table whose `TFeatures` is unresolved.
@@ -312,7 +315,7 @@ function writeCreating(table: AnyTable, patch: Partial<CreatingState>): void {
 }
 
 function columnMeta(table: CreatingTable, columnId: string): CreatingColumnMeta | undefined {
-	return table.getAllColumns().find((c) => c.id === columnId)?.columnDef.meta
+	return (gridWriteContext(table)?.columns ?? table.getAllColumns()).find((c) => c.id === columnId)?.columnDef.meta
 }
 
 /**
@@ -388,7 +391,7 @@ function resolveDefaultValues(table: CreatingTable): Record<string, unknown> {
 	const asContextTable = table as unknown as CreateDefaultValueContext<RowData>['table']
 
 	const fromColumns: Record<string, unknown> = {}
-	for (const col of table.getAllColumns()) {
+	for (const col of gridWriteContext(table)?.columns ?? table.getAllColumns()) {
 		const meta = col.columnDef.meta
 		if (!col.id || meta?.isSystemColumn) continue
 		const creating = meta?.creating
@@ -429,6 +432,12 @@ function createCreatingApi(table: CreatingTable): CreatingApi<RowData> {
 				formError: null,
 				commitStatus: CommitStatus.Idle,
 			})
+		},
+
+		cancelValidation: () => {
+			const status = readCreating(table).commitStatus
+			abortValidation(abortBox(table), status)
+			if (status === CommitStatus.Validating) writeCreating(table, { commitStatus: CommitStatus.Idle })
 		},
 
 		cancel: () => {

@@ -1,0 +1,167 @@
+---
+title: Generated fetchers with Orval
+description: Generate typed fetchers from OpenAPI and plug them into an existing grid source.
+---
+
+## From OpenAPI to DataGrid
+
+The complete flow is **OpenAPI → Orval fetchers → API convention → entity source →
+connected grid**. Orval generates HTTP functions and DTOs; qc-react supplies the
+Query hooks, cache keys and grid connection. Generated React hooks are unnecessary.
+
+### 1. Describe the API
+
+For example, `openapi.yaml` describes offset pagination and a single-user update:
+
+```yaml title="openapi.yaml"
+openapi: 3.0.3
+info: { title: Users, version: 1.0.0 }
+paths:
+  /users:
+    get:
+      operationId: getUsers
+      parameters:
+        - { name: offset, in: query, required: true, schema: { type: integer } }
+        - { name: limit, in: query, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: Users page
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UsersPage' }
+  /users/{id}:
+    patch:
+      operationId: updateUser
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UserValues' }
+      responses:
+        '200':
+          description: Updated user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+components:
+  schemas:
+    User:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string }
+        name: { type: string }
+    UserValues:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+    UsersPage:
+      type: object
+      required: [items, total]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/User' } }
+        total: { type: integer }
+```
+
+The schema decides HTTP placement: offset/limit go in the query string, id in the
+path, and UserValues in the PATCH body. `prepareArgs` does not make that decision.
+
+### 2. Generate fetchers, without hooks
+
+```ts title="orval.config.ts"
+export default {
+	users: {
+		input: './openapi.yaml',
+		output: {
+			target: './generated/users.ts',
+			client: 'fetch',
+			mode: 'single',
+			override: {
+				fetch: { includeHttpResponseReturnType: false },
+				mutator: { path: './transport.ts', name: 'apiFetch' },
+			},
+		},
+	},
+}
+```
+
+One project-wide transport makes non-success responses reject, so Query can report
+errors. Add your API origin or authentication here when required:
+
+```ts title="transport.ts"
+export async function apiFetch<T>(url: string, options: RequestInit): Promise<T> {
+	const response = await fetch(url, options)
+	if (!response.ok) throw new Error(`HTTP ${response.status}`)
+	if (response.status === 204) return undefined as T
+	return response.json() as Promise<T>
+}
+```
+
+```sh
+npm exec --yes --package=orval@8.47.0 -- orval --config orval.config.ts
+```
+
+Orval emits functions with these signatures (this is a summary of generated
+output, not code to implement manually):
+
+```ts
+getUsers(params: GetUsersParams, options?: RequestInit): Promise<UsersPage>
+updateUser(id: string, values: UserValues, options?: RequestInit): Promise<User>
+```
+
+It also generates User, UserValues, UsersPage and GetUsersParams. The transport's
+generic type describes the server contract; it is not runtime response validation.
+
+### 3. Bind generated fetchers to a grid collection
+
+The list endpoint uses offsets and the feed endpoint uses a cursor. The collection prepares the request for the selected mode and calls the corresponding generated function. Both responses expose `items`.
+
+```ts
+const usersSource = createDataGridSource({
+	key: ['users'],
+	read: {
+		fetcher: fetchUsers, // dispatches to getUsers or getUsersFeed and forwards the signal
+		prepareArgs: (input) => {
+			const search = typeof input.params.globalFilter === 'string' ? input.params.globalFilter : ''
+			return input.mode === 'infinite'
+				? { mode: input.mode, search, limit: input.pageSize, cursor: input.pageParam }
+				: { mode: input.mode, search, limit: input.pageSize, offset: input.pageIndex * input.pageSize }
+		},
+		getItems: (page) => page.items,
+		getTotal: (page) => page.total,
+		infinite: {
+			initialPageParam: undefined as string | undefined,
+			getNextPageParam: (page) => page.next,
+		},
+	},
+	update: {
+		prepareArgs: ({ row, values }) => {
+			if (!row) throw new Error('User is no longer available')
+			if (!values.name?.trim()) throw new Error('Name is required')
+			return { id: row.id, body: { name: values.name } }
+		},
+		fetcher: ({ id, body }: { id: string; body: { name: string } }) => updateUser(id, body),
+	},
+})
+```
+
+The generated `updateUser` function places the ID in the path and serializes the body. The checked example in `packages/qc/react/examples/orval/source.ts` includes the complete fetcher, sorting, create, delete and bulk delete.
+
+### 4. Mount the connected grid
+
+```tsx
+const { DataGrid } = withQuery(gridBundle)
+
+<DataGrid
+	columns={columns}
+	dataSource={usersSource}
+	globalFiltering
+	editing={{ mode: 'modal' }}
+	pagination={{ mode: 'pages', pageSize: 20 }}
+/>
+```
+
+Use the same source for infinite pagination or with `useCollectionQuery` and compatible criteria. To keep existing TanStack query factories, use [the native source contract](/docs/qc-react/api#native-sources).

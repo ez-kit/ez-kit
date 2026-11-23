@@ -125,18 +125,25 @@ export function ActionBar({ children, start, end }: DataGridActionBarProps = {})
 	const table = useDataGridTable()
 	const hasCustomActions = table.grid.selection.bar?.actions !== undefined || typeof children === 'function'
 	const model = useDataGridState(
-		(state) => ({
-			callbackState: hasCustomActions ? state : null,
-			selectedRows:
+		(state) => {
+			const selectedRows =
 				table.grid.selection.bar !== undefined && table.options.enableRowSelection
 					? buildSelectionBarArgs(table).selectedRows
-					: [],
-			dirty: table.options.draft === true && table.draft.isDirty(),
-			pendingCount: table.options.draft === true ? table.draft.getPendingCount() : undefined,
-		}),
+					: []
+			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional deleting feature
+			const pendingDeleteIds = state.deleting?.pendingIds
+			return {
+				callbackState: hasCustomActions ? state : null,
+				selectedRows,
+				deleteDisabled: selectedRows.some((row) => pendingDeleteIds?.includes(row.id)),
+				dirty: table.options.draft === true && table.draft.isDirty(),
+				pendingCount: table.options.draft === true ? table.draft.getPendingCount() : undefined,
+			}
+		},
 		{
 			compare: (a, b) =>
 				a.callbackState === b.callbackState &&
+				a.deleteDisabled === b.deleteDisabled &&
 				a.dirty === b.dirty &&
 				shallow(a.pendingCount, b.pendingCount) &&
 				shallow(a.selectedRows, b.selectedRows),
@@ -144,7 +151,7 @@ export function ActionBar({ children, start, end }: DataGridActionBarProps = {})
 	)
 	const { ActionBar: ActionBarComponent } = useGridComponents().core
 
-	const selection = buildSelectionSection(table, start, end, model.selectedRows)
+	const selection = buildSelectionSection(table, start, end, model.selectedRows, model.deleteDisabled)
 	const draft = buildDraftSection(table, model.dirty, model.pendingCount)
 	const variant = resolveActionBarVariant(table)
 	// A `selection` section with `count: 0` is normal while a floating bar animates out, so
@@ -182,6 +189,7 @@ function buildSelectionSection(
 	start: ReactNode,
 	end: ReactNode,
 	selectedRows: SelectionBarCallbackArgs['selectedRows'],
+	deleteDisabled: boolean,
 ): (ActionBarSelectionSection & SelectionBarCallbackArgs) | undefined {
 	const config = table.grid.selection.bar
 	if (config === undefined || !table.options.enableRowSelection) return undefined
@@ -214,7 +222,7 @@ function buildSelectionSection(
 		count: selectedRows.length,
 		selectedRows,
 		onClear,
-		...(onDelete !== undefined ? { onDelete } : {}),
+		...(onDelete !== undefined ? { onDelete, deleteDisabled } : {}),
 		...(actions !== undefined ? { actions } : {}),
 		...(start !== undefined ? { start } : {}),
 		...(end !== undefined ? { end } : {}),

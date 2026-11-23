@@ -1,0 +1,71 @@
+---
+title: Behavior and troubleshooting
+description: Diagnose query keys, page resets, row IDs, source changes and request status in a connected grid.
+---
+
+## The grid did not send my filter or sort
+
+The grid supplies the applied values as `input.params`, with the position on `input`. Map the criteria you enable into `prepareArgs`.
+
+```ts
+prepareArgs: ({ params: { sorting, globalFilter }, pageIndex, pageSize }) => ({
+	search: typeof globalFilter === 'string' ? globalFilter : '',
+	sort: sorting[0]?.id,
+	direction: sorting[0]?.desc ? 'desc' : 'asc',
+	offset: pageIndex * pageSize,
+	limit: pageSize,
+})
+```
+
+Draft criteria take effect when the user chooses Apply. Applied changes reset the grid to page zero. If you control filters or sorting from outside the grid, keep object and array references stable until the criteria change.
+
+## Different requests share a cache entry
+
+A query key identifies the data. When inputs change the result, include them in the key. Generated keys use the resource key, mode and controlled criteria, so the transport argument can be a `URLSearchParams` or another custom value. If your criteria contain a custom class, convert it to a stable key part with `prepareKey`.
+
+A changed fetcher reference leaves the key intact. If the same read functions serve different account or team data, include the dataset identifier in the query key and supply a matching `scopeKey` to the grid when the view's ownership changes. That lets the grid reset selection and guard unfinished actions across the transition.
+
+## Selection or editing uses the wrong row
+
+Use a stable record identifier across pages. The connector can use a record's string or numeric `id`. Supply `getRowId` for a different field or a composite identifier.
+
+```tsx
+<DataGrid
+	dataSource={dataSource}
+	columns={columns}
+	getRowId={(row) => row.userId}
+/>
+```
+
+## The request is disabled or loading indefinitely
+
+Check that the grid is under the expected `QueryClientProvider`, the source contains the read for the current pagination mode, and the observer is enabled. Per-grid policy can wait for an account or team before the request starts.
+
+```tsx
+<DataGrid
+	dataSource={dataSource}
+	columns={columns}
+	queryOptions={{ enabled: Boolean(teamId), staleTime: 30_000 }}
+/>
+```
+
+Forward the provided abort signal to your HTTP client. With `fetch`, check `response.ok` and throw on HTTP failure so Query can display the error and apply its retry policy.
+
+## I already have native query options
+
+Use the [native source contract](/docs/qc-react/api#native-sources) to keep application-owned query keys and options. Each mode can provide a native query factory and projection. If those options apply a selector, use its result in `getItems`.
+
+## I need the table object
+
+The first guide renders from `dataSource` directly. For imperative table methods or a custom composition, use the connected hook and render its table.
+
+```tsx
+const { DataGrid, useDataGrid } = withQuery(gridBundle)
+
+function Users() {
+	const table = useDataGrid({ dataSource, columns, pagination: { mode: 'pages', pageSize: 20 } })
+	return <DataGrid table={table} />
+}
+```
+
+See the [API reference](/docs/qc-react/api) for the full options and source contracts.

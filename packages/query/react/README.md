@@ -146,3 +146,12 @@ screen while another page loads or fails. Use a distinct cache key from a regula
 ## Documentation
 
 https://ez-kit-docs.vercel.app/docs/query-react
+
+## Collection queries
+
+Import `createCollectionSource`, `createCollectionSourceFactory` and `useCollectionQuery` from
+`@ez-kit/query-react/collection`. Configure a `read` read and optional CRUD operations
+under one resource key. Call `useCollectionQuery({ source, params, pagination })` to own criteria
+and pagination from the view. The shared fetcher receives the result of
+`prepareArgs`, including the current page position. See the
+[collection guide](https://ez-kit-docs.vercel.app/docs/query-react/collection).

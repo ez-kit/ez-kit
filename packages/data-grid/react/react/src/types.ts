@@ -18,7 +18,7 @@ import type {
 	FilterItem,
 	PendingCount,
 	ValidationErrors,
-	ValidationResult,
+	ValidationCheckResult,
 } from '@ez-kit/data-grid-core'
 import type { Row, TableFeatures } from '@tanstack/table-core'
 import type {
@@ -175,6 +175,7 @@ type ActionsCellIdleProps<TRow extends object = ErasedRow> = {
 	row: Row<GridFeatures, TRow>
 	hasEditing: boolean
 	hasDeleting: boolean
+	deleteDisabled?: boolean
 	onEdit: () => void
 	onDelete: () => void
 	/**
@@ -898,10 +899,11 @@ export type FormModalProps = {
 	 */
 	submit: (values?: Record<string, unknown>) => Promise<CommitResult>
 	/**
-	 * The grid's validator as a pure function: checks `values` and writes nothing to the grid's
-	 * state. Resolves `null` when valid, or when no `validate` is configured.
+	 * Check external values without writing grid state. Returns valid, invalid with errors/formError,
+	 * or cancelled when the form closes or validation is abandoned. An open form without a
+	 * validator is valid. Unexpected validator errors reject the promise.
 	 */
-	validate: (values: Record<string, unknown>) => Promise<ValidationResult>
+	validate: (values: Record<string, unknown>) => Promise<ValidationCheckResult>
 	/**
 	 * `submit()` for a Save button — saves the grid's state and resolves to nothing. Like
 	 * `submit`, it rejects on an error the grid cannot interpret (anything but a
@@ -1102,6 +1104,8 @@ export type ActionBarSelectionSection = {
 	 * control must then not be rendered.
 	 */
 	onDelete?: () => void
+	/** True when a selected row is already being deleted. */
+	deleteDisabled?: boolean
 	/**
 	 * Custom action entries from `selection.bar.actions`, already resolved against the current
 	 * selection and namespaced. Rendered as buttons beside the built-in Delete, with the same

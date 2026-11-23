@@ -155,6 +155,7 @@ function SelectionSection({ selection }: { selection: ActionBarSelectionSection 
 				<Button
 					variant='destructive'
 					size='sm'
+					disabled={selection.deleteDisabled}
 					onClick={selection.onDelete}
 				>
 					{messages.selection.delete}

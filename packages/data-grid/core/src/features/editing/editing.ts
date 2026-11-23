@@ -3,9 +3,11 @@ import { assignPrototypeAPIs } from '@tanstack/table-core'
 import { ColumnFormMode, resolveColumnFormConfig } from '../../column/resolve-form-config'
 import { DEFAULT_VALIDATE_DEBOUNCE_MS } from '../../defaults'
 import { assignTableInstanceData, readOwnSlice, writeOwnSlice } from '../../feature-state'
+import { gridActionRows, gridWriteContext, hasPendingGridOptions } from '../../write-context'
 import { abortChecks, checkValues, commitClosed, commitInFlight, runCommit, trackCommit } from '../form'
 import {
 	abortFormWork,
+	abortValidation,
 	beginFieldValidation,
 	beginFormWork,
 	isAbortError,
@@ -17,7 +19,7 @@ import { CommitStatus, runValidator, ValidateOn } from '../validation'
 import type { ColumnEditingConfig } from '../../column/types'
 import type { AnyTable } from '../../feature-state'
 import type { FeatureToggle } from '../../utils/feature-flag'
-import type { CommitOptions, CommitResult, FormWorkBox } from '../form'
+import type { CommitOptions, CommitResult, FormWorkBox, ValidationCheckResult } from '../form'
 import type { ValidateConfig, ValidateContext, ValidationErrors, ValidationResult } from '../validation'
 import type { RowData, TableFeature, TableFeatures } from '@tanstack/table-core'
 
@@ -111,6 +113,8 @@ export type EditingApi<TData = unknown> = {
 	start: (rowId: string) => void
 	startCell: (rowId: string, columnId: string) => void
 	cancel: () => void
+	/** Cancel pending validation, retaining values and any dispatched save. */
+	cancelValidation: () => void
 	/**
 	 * Validate and save the row. With `values`, those replace the form's values first — the path
 	 * a form of one's own takes. Resolves to a {@link CommitResult}; a second call while one is
@@ -129,15 +133,14 @@ export type EditingApi<TData = unknown> = {
 	 */
 	validate: () => Promise<ValidationResult>
 	/**
-	 * Run the configured validator over `values` and return its result, writing nothing — no
-	 * values, no errors, no status. Cancelled only by the form closing, never by a save, so a form
-	 * of one's own can check a field on blur freely.
-	 *
-	 * `null` means valid **or** that there is nothing to validate for: no validator configured, no
-	 * form open, or the form closed while the check ran. Checks are not ordered against each other,
-	 * so a form that runs several at once keeps the latest one's result itself.
+	 * Check external values without writing values, errors or status to the grid.
+	 * Returns valid (including an open form without a validator), invalid with normalized
+	 * errors/formError, or cancelled when closed or abandoned by cancelValidation/start/reset.
+	 * Cancellation settles promptly even if the validator ignores its signal.
+	 * Concurrent checks are not ordered: external forms own latest-result handling.
+	 * A valid result describes this check only; additional async work needs its own lifetime guard.
 	 */
-	validateValues: (values: Record<string, unknown>) => Promise<ValidationResult>
+	validateValues: (values: Record<string, unknown>) => Promise<ValidationCheckResult>
 	/** Internal — called by FieldState.onBlur in the react adapter. */
 	validateField: (columnId: string) => Promise<void>
 	getState: () => EditingState
@@ -244,7 +247,7 @@ type EditingColumn = {
 }
 
 /** The row shape `snapshotRow` and `startCell` read. Structural for the same reason. */
-type EditingRow = { id: string; getValue: (columnId: string) => unknown }
+type EditingRow = { id: string; original: RowData; index: number; getValue: (columnId: string) => unknown }
 
 /**
  * A table, as this feature's free functions see it.
@@ -274,7 +277,7 @@ type EditingRowInstance = { id: string; table: AnyTable }
  * code, not of the shadowing those blocks did.
  */
 const editingOption = (table: { readonly options: object }): EditingConfig<RowData> | undefined =>
-	(table.options as { editing?: EditingConfig<RowData> }).editing
+	((gridWriteContext(table)?.options ?? table.options) as { editing?: EditingConfig<RowData> }).editing
 
 /**
  * The table's abort box, read off a table whose `TFeatures` is unresolved.
@@ -310,7 +313,8 @@ function writeEditing(table: AnyTable, patch: Partial<EditingState>): void {
 
 /** The column's own editing config, or `undefined` when it disabled editing entirely. */
 function resolveColumnEditing(table: EditingTable, columnId: string): ColumnEditingConfig | undefined {
-	const fromColumn = table.getAllColumns().find((c) => c.id === columnId)?.columnDef.meta?.editing
+	const fromColumn = (gridWriteContext(table)?.columns ?? table.getAllColumns()).find((c) => c.id === columnId)
+		?.columnDef.meta?.editing
 	return fromColumn === false ? undefined : fromColumn
 }
 
@@ -364,21 +368,36 @@ function scheduleChangeValidation(table: EditingTable, columnId: string): void {
  * to `onSave` as if the user had edited it; `row` in the save context is where it is read from now.
  */
 function snapshotRow(table: EditingTable, rowId: string): Record<string, unknown> {
-	const row = table.getRowModel().rows.find((r) => r.id === rowId)
+	const row = gridActionRows(table).find((r) => r.id === rowId)
 	const initial: Record<string, unknown> = {}
 	if (!row) return initial
-	for (const col of table.getAllColumns()) {
+	for (const col of gridWriteContext(table)?.columns ?? table.getAllColumns()) {
 		const meta = col.columnDef.meta
 		if (!col.id || meta?.isSystemColumn === true) continue
 		if (resolveColumnFormConfig(meta, ColumnFormMode.Editing) === false) continue
-		initial[col.id] = row.getValue(col.id)
+		initial[col.id] = editValue(table, row, col.id)
 	}
 	return initial
 }
 
+function editingColumn(table: EditingTable, columnId: string) {
+	const context = gridWriteContext(table)
+	return context ? context.flatColumns.find((column) => column.id === columnId) : table.getColumn(columnId)
+}
+
+function editValue(table: EditingTable, row: EditingRow, columnId: string): unknown {
+	// Row.getValue resolves its accessor through the table's mutable options.
+	const context = gridWriteContext(table)
+	if (context && hasPendingGridOptions(table.options, context)) {
+		const column = context.flatColumns.find((candidate) => candidate.id === columnId)
+		return column?.accessorFn?.(row.original, row.index)
+	}
+	return row.getValue(columnId)
+}
+
 /** The edited row's original, looked up in the core row model so filtering and paging never hide it. */
 function originalOf(table: EditingTable, rowId: string): RowData | undefined {
-	return table.getCoreRowModel().rowsById[rowId]?.original as RowData | undefined
+	return (gridWriteContext(table)?.rowsById ?? table.getCoreRowModel().rowsById)[rowId]?.original as RowData | undefined
 }
 
 /** A save went through: end the open form's checks and write the closed, empty form back. */
@@ -408,10 +427,11 @@ function createEditingApi(table: EditingTable): EditingApi<RowData> {
 			// A column that opted out with `editing: false` is not editable in any mode.
 			// The React layer already renders no double-click affordance for it; this
 			// makes the programmatic path agree rather than quietly opening an input.
-			if (table.getColumn(columnId)?.columnDef.meta?.editing === false) return
+			const column = editingColumn(table, columnId)
+			if (column?.columnDef.meta?.editing === false) return
 			abortFormWork(abortBox(table))
-			const row = table.getRowModel().rows.find((r) => r.id === rowId)
-			const seed = { [columnId]: row?.getValue(columnId) }
+			const row = gridActionRows(table).find((r) => r.id === rowId)
+			const seed = { [columnId]: row && editValue(table, row, columnId) }
 			writeEditing(table, {
 				rowId,
 				cellId: `${rowId}_${columnId}`,
@@ -421,6 +441,12 @@ function createEditingApi(table: EditingTable): EditingApi<RowData> {
 				formError: null,
 				commitStatus: CommitStatus.Idle,
 			})
+		},
+
+		cancelValidation: () => {
+			const status = readEditing(table).commitStatus
+			abortValidation(abortBox(table), status)
+			if (status === CommitStatus.Validating) writeEditing(table, { commitStatus: CommitStatus.Idle })
 		},
 
 		cancel: () => {

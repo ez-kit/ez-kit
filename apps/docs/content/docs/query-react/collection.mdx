@@ -1,0 +1,81 @@
+---
+title: Collections
+description: Read and mutate a collection with application-owned criteria and pagination.
+---
+
+Use `@ez-kit/query-react/collection` to connect a list to TanStack Query. A collection source defines the resource key, one read and optional writes. Each view owns its criteria and chooses the pagination mode.
+
+## A complete CRUD list
+
+<LivePreview
+	path='query-react/collection-list'
+	title='Ordinary list CRUD'
+/>
+
+The [step-by-step list guide](/docs/qc-react/lists) builds this example from the first read.
+
+## Create a collection
+
+```ts
+import { createCollectionSource, type CollectionReadInput } from '@ez-kit/query-react/collection'
+
+type Criteria = { search: string }
+
+const usersSource = createCollectionSource({
+	key: ['users'],
+	read: {
+		fetcher: fetchUsers,
+		prepareArgs: (input: CollectionReadInput<Criteria, number>) => ({
+			...input.params,
+			limit: input.pageSize,
+			offset: input.mode === 'infinite' ? input.pageParam : input.pageIndex * input.pageSize,
+		}),
+		getItems: (page) => page.items,
+		getTotal: (page) => page.total,
+		infinite: {
+			initialPageParam: 0,
+			getNextPageParam: (page) => page.nextOffset,
+		},
+	},
+	delete: {
+		fetcher: deleteUser,
+		prepareArgs: ({ id }: { id: string }) => id,
+	},
+})
+```
+
+Use application-specific criteria such as search, team ID or status. The fetcher receives the prepared request and a separate signal. The ordinary and infinite modes share a fetcher and projection. A resource with only ordinary reads can omit `infinite`.
+
+## Observe a page
+
+```ts
+const users = useCollectionQuery({
+	source: usersSource,
+	params: { search },
+	pagination: { mode: 'pages', pageIndex, pageSize: 20 },
+})
+```
+
+Render `items`, read `total` and use the native `query` for status. The caller owns page changes and resets. In infinite mode pass `pagination: { mode: 'infinite', pageSize: 20 }`, then use `query.fetchNextPage()` to request more.
+
+## Mutations
+
+Configured operations expose native TanStack Query mutation results, including `mutate`, `mutateAsync`, pending state and errors. `prepareArgs` runs inside the mutation function. Lifecycle callbacks receive the original input.
+
+On success the default policy invalidates both read families under the base key. Use `invalidate.additional` for further filters, `replace` to select the entire policy, or `false` to disable it. Active observers refresh in the background.
+
+## Cache and native options
+
+Generated keys use the resource key, mode, controlled criteria and pagination. The pages key includes its page index. Infinite pages share one key and the current cursor arrives in `prepareArgs` on each request. Use `read.prepareKey` for a custom cache-key part. Include external request scope such as a tenant in the base key or criteria.
+
+Use a native `read.pages` or `read.infinite` descriptor with `query` and `getItems` to preserve existing keys and selectors. Supply an explicit invalidation policy for native sources.
+
+## Per-component query options
+
+Pass observer settings such as `queryOptions: { enabled, staleTime: 30_000, refetchOnWindowFocus: false }` at the hook call. The source supplies the query key, fetcher, projection and cursor settings.
+
+## Reuse conventions and connect a grid
+
+Use `createCollectionSourceFactory` to share `read` defaults and operation preparation between resources. See the [factory example](/docs/qc-react/reuse#reuse-a-factory-in-ordinary-lists).
+
+`createDataGridSource` uses the same collection model with the grid's applied criteria and action contexts. Pass its source directly to `withQuery`'s connected DataGrid, or observe it with this hook by supplying compatible inputs.

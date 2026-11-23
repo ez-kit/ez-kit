@@ -128,7 +128,12 @@ export function ControlledStateFullExample() {
 					onDelete: ({ rowId }: { rowId: string }) => {
 						setData((rows) => rows.filter((row) => getRowId(row) !== rowId))
 					},
-					bulk: true,
+					bulk: {
+						onDelete: ({ rowIds }: { rowIds: string[] }) => {
+							const ids = new Set(rowIds)
+							setData((rows) => rows.filter((row) => !ids.has(getRowId(row))))
+						},
+					},
 				}}
 			/>
 

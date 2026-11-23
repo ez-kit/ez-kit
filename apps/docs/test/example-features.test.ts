@@ -56,6 +56,8 @@ const BOUND_SET_EXAMPLES = [
 	'shared/data-grid/examples/components/base/selection.tsx',
 	'shared/data-grid/examples/components/base/sorting.tsx',
 	'shared/data-grid/examples/components/base/sticky.tsx',
+	// withQuery preserves allDataGridFeatures bound by createDataGrid.
+	'shared/data-grid/examples/components/query-source.tsx',
 ]
 
 describe('data-grid example feature sets', () => {

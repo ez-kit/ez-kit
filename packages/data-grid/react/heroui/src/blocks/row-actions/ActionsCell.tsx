@@ -80,7 +80,7 @@ export function ActionsCell(props: ActionsCellProps) {
 		)
 	}
 
-	const { hasEditing, hasDeleting, onEdit, onDelete, actions } = props
+	const { hasEditing, hasDeleting, deleteDisabled, onEdit, onDelete, actions } = props
 
 	return (
 		<>
@@ -101,6 +101,7 @@ export function ActionsCell(props: ActionsCellProps) {
 					size='sm'
 					isIconOnly
 					aria-label={messages.delete}
+					isDisabled={deleteDisabled ?? false}
 					onPress={onDelete}
 				>
 					<Trash2 className='size-4' />

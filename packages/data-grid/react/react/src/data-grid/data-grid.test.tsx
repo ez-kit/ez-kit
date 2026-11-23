@@ -550,16 +550,18 @@ describe('<DataGrid> bulk delete confirmation', () => {
 		expect(document.querySelector('dialog')).toBeNull()
 	})
 
-	it('falls back to the per-row handler, once per selected row, when bulk names none', async () => {
+	it('invokes the explicit bulk handler once without calling single deletion', async () => {
 		const user = userEvent.setup()
 		const onDelete = vi.fn()
-		const table = makeTable({ selection: true, deleting: { onDelete, bulk: true } })
+		const bulkDelete = vi.fn()
+		const table = makeTable({ selection: true, deleting: { onDelete, bulk: { onDelete: bulkDelete } } })
 		table.grid.selection.bar = { variant: ActionBarVariant.Floating }
 		table.setRowSelection({ '1': true, '2': true })
 		renderWithComponents(<DataGrid table={table} />)
 
 		await user.click(bulkDeleteButton())
-		expect(onDelete).toHaveBeenCalledTimes(2)
+		expect(bulkDelete).toHaveBeenCalledTimes(1)
+		expect(onDelete).not.toHaveBeenCalled()
 	})
 
 	it('opens the ConfirmDialog and defers the delete when confirmation is set', async () => {

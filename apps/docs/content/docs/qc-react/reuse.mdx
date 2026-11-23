@@ -1,0 +1,80 @@
+---
+title: Reuse sources and factories
+description: Use the same collection in a connected grid and an ordinary list, or share conventions between resources.
+---
+
+Create a source once for a resource. Use a factory to share API conventions across resources with the same request and response contract.
+
+## Share one collection between a list and a grid
+
+`createDataGridSource` supplies the types for table criteria and actions. Its result is a collection source. An ordinary list can use it directly by passing the same types of criteria and pagination.
+
+```tsx
+function UsersList() {
+	const users = useCollectionQuery({
+		source: usersSource,
+		params: { globalFilter: undefined, columnFilters: [], sorting: [] },
+		pagination: { mode: 'pages', pageIndex: 0, pageSize: 3 },
+	})
+	return (
+		<ul>
+			{users.items.map((user) => (
+				<li key={user.id}>{user.name}</li>
+			))}
+		</ul>
+	)
+}
+
+function UsersGrid() {
+	return (
+		<DataGrid
+			dataSource={usersSource}
+			columns={columns}
+			pagination={{ pageSize: 3 }}
+			editing
+		/>
+	)
+}
+```
+
+Render both views under the same `QueryClientProvider`. Matching criteria, pagination and resource keys use the same cache entry. A successful write invalidates the resource's page and infinite families.
+
+### Try a shared cache
+
+Edit a name in the grid. The ordinary list below shows the new name after the successful mutation refreshes the shared query.
+
+<DataGridDocsExample exampleId='query-shared-source' />
+
+<span id='choose-a-factory-for-your-inputs' />
+
+## Share a factory between resources
+
+Use `createCollectionSourceFactory` from `@ez-kit/query-react/collection` when the same transport and response conventions apply to several resources. Declare the application criteria or use `GridCollectionParams` to share grid criteria.
+
+### Reuse a factory in ordinary lists
+
+```ts
+import { createCollectionSourceFactory, type CollectionReadInput } from '@ez-kit/query-react/collection'
+
+type Criteria = { search: string }
+type Page = { items: { id: string; name: string }[]; total: number }
+
+const makeSource = createCollectionSourceFactory({
+	read: {
+		prepareArgs: ({ params, pageIndex, pageSize }: CollectionReadInput<Criteria>) => ({
+			...params,
+			offset: pageIndex * pageSize,
+			limit: pageSize,
+		}),
+		getItems: (page: Page) => page.items,
+		getTotal: (page) => page.total,
+	},
+})
+
+const usersSource = makeSource({ key: ['users'], read: { fetcher: fetchUsers } })
+const teamsSource = makeSource({ key: ['teams'], read: { fetcher: fetchTeams } })
+```
+
+Both fetchers accept `{ search, offset, limit }` and return `Promise<Page>`. The factory can also supply infinite cursor rules and mutation preparation. Add each resource's operations alongside its `read` property.
+
+See [Query collections](/docs/query-react/collection#reuse-conventions-and-connect-a-grid) for the hook and native options. The [Orval recipe](/docs/qc-react/orval) shows how to use generated fetchers.

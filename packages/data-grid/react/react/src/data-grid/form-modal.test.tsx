@@ -8,7 +8,7 @@ import { DataGrid } from './data-grid'
 import { useDataGridTable } from './table-context'
 
 import type { FormModalProps } from '../types'
-import type { CommitResult } from '@ez-kit/data-grid-core'
+import type { CommitResult, ValidationResult } from '@ez-kit/data-grid-core'
 import type { ReactNode } from 'react'
 
 type User = { id: number; name: string; email: string; createdAt: string; version: number }
@@ -41,7 +41,7 @@ function Opener({ edit, rowId = '7' }: { edit?: boolean; rowId?: string }) {
 function renderModal(options: {
 	feature: 'creating' | 'editing'
 	onSave: (ctx: unknown) => void | Promise<void>
-	validate?: (values: Record<string, unknown>) => { errors?: Record<string, string[]>; formError?: string } | null
+	validate?: (values: Record<string, unknown>) => ValidationResult | Promise<ValidationResult>
 	render: (props: FormModalProps) => ReactNode
 }) {
 	const isEditing = options.feature === 'editing'
@@ -183,9 +183,36 @@ describe('a FormModal of one’s own — the whole form', () => {
 
 		const result = await captured.current?.validate({ email: 'x' })
 
-		expect(result).toEqual({ errors: { email: ['invalid'] } })
+		expect(result).toEqual({ status: 'invalid', errors: { email: ['invalid'] }, formError: null })
 		expect(captured.current?.errors).toEqual({})
 	})
+
+	it.each(['creating', 'editing'] as const)(
+		'%s: closing cancels an external check before its validator settles',
+		async (feature) => {
+			let resolve!: (result: ValidationResult) => void
+			const pending = new Promise<ValidationResult>((done) => {
+				resolve = done
+			})
+			const captured: Captured = { current: undefined }
+			const onSave = vi.fn()
+			renderModal({ feature, onSave, validate: () => pending, render: capture(captured) })
+			open()
+			const check = captured.current?.validate({ name: 'Old' })
+			act(() => {
+				captured.current?.onCancel()
+			})
+			await expect(check).resolves.toEqual({ status: 'cancelled' })
+			open()
+			await act(async () => {
+				resolve({ errors: { name: ['Stale'] } })
+				await pending
+			})
+			expect(captured.current?.errors).toEqual({})
+			expect(screen.getByText('custom form')).toBeTruthy()
+			expect(onSave).not.toHaveBeenCalled()
+		},
+	)
 
 	it('passes no row when creating, and the original row when editing', () => {
 		const creating: Captured = { current: undefined }

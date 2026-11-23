@@ -9,6 +9,7 @@ import type { DataGridDocsExampleFlavor } from './kit-example'
  * Display-only: the rendered example still executes the real docs-module import.
  */
 const DOCS_MODULE_PACKAGES: Record<string, Record<DataGridDocsExampleFlavor, string>> = {
+	'shared/GridKit': { shadcn: '@ez-kit/data-grid-shadcn', heroui: '@ez-kit/data-grid-heroui' },
 	'shared/DataGrid': {
 		shadcn: '@ez-kit/data-grid-shadcn',
 		heroui: '@ez-kit/data-grid-heroui',

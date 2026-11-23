@@ -1,0 +1,15 @@
+{
+	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		"noEmit": true,
+		"skipLibCheck": false,
+		"types": ["node"],
+		"paths": {
+			"@tanstack/react-query": ["./node_modules/@tanstack/react-query"],
+			"@ez-kit/query-react": ["../../packages/query/react/dist/index.d.ts"],
+			"@ez-kit/query-react/collection": ["../../packages/query/react/dist/collection.d.ts"],
+			"@ez-kit/qc-react/data-grid": ["../../packages/qc/react/dist/data-grid.d.ts"]
+		}
+	},
+	"include": ["consumer.tsx", "check-version.ts"]
+}

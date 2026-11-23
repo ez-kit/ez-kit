@@ -2,6 +2,7 @@ import { queryOptions } from '@tanstack/react-query'
 import { expectTypeOf } from 'vitest'
 
 import { InfiniteQuery, Mutation, Query, QueryProvider } from '../../src'
+import { createCollectionSource, useCollectionQuery } from '../../src/collection'
 
 import type { InfiniteData, UseInfiniteQueryResult, UseMutationResult, UseQueryResult } from '@tanstack/react-query'
 
@@ -71,3 +72,26 @@ export const infinite = (
 		{() => null}
 	</InfiniteQuery>
 )
+
+const collectionSource = createCollectionSource({
+	key: ['registered-collection'],
+	read: {
+		prepareArgs: () => undefined,
+		fetcher: () => Promise.resolve(['one']),
+		getItems: (items) => items,
+	},
+	update: {
+		prepareArgs: (input: string) => input,
+		fetcher: (input: string) => Promise.resolve(input),
+	},
+})
+export function RegisteredCollection() {
+	const collection = useCollectionQuery({
+		source: collectionSource,
+		pagination: { mode: 'pages', pageIndex: 0, pageSize: 1 },
+		params: undefined,
+	})
+	expectTypeOf(collection.query.error).toEqualTypeOf<ApiError | null>()
+	expectTypeOf(collection.update.error).toEqualTypeOf<ApiError | null>()
+	return null
+}

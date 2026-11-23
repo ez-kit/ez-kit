@@ -1,0 +1,120 @@
+---
+title: Paginate a DataGrid
+description: Connect numbered pages or infinite scrolling to an API with two interactive examples.
+---
+
+Start with the [connected grid](/docs/qc-react). Choose numbered pages when readers need to move between pages and see the total. Choose infinite loading when readers should keep the rows already loaded and request the next portion.
+
+## Numbered pages
+
+### 1. Translate the page into API arguments
+
+Update the list read. DataGrid supplies a zero-based `pageIndex` and the current `pageSize`. The example API accepts `offset`, `limit` and `search`, and returns `{ items, total }`.
+
+```tsx
+import { createDataGridSource } from '@ez-kit/qc-react/data-grid'
+
+const dataSource = createDataGridSource({
+	key: ['users'],
+	read: {
+		fetcher: fetchUsers,
+		prepareArgs: ({ params, pageIndex, pageSize }) => ({
+			offset: pageIndex * pageSize,
+			limit: pageSize,
+			search: typeof params.globalFilter === 'string' ? params.globalFilter : '',
+		}),
+		getItems: (page) => page.items,
+		getTotal: (page) => page.total,
+	},
+})
+```
+
+For page index 2 and size 10, the offset is 20. For an API with one-based page numbers, use `page: pagination.pageIndex + 1`. The fetcher receives the prepared object and puts its fields where the API expects them.
+
+`getTotal` gives the grid the total number of matching rows across all pages. If the API omits the total, leave out the getter. A fresh total can also move the grid to the last valid page after deletion.
+
+### 2. Enable pages in the grid
+
+```tsx
+<DataGrid
+	dataSource={dataSource}
+	columns={columns}
+	getRowId={(user) => user.id}
+	globalFiltering
+	pagination={{ mode: 'pages', pageSize: 3 }}
+/>
+```
+
+The grid owns the current page and resets it to the first page when applied search, filters or sorting change. Map every server-side criterion you enable into `prepareArgs`. TanStack Query caches each distinct set of arguments, so returning to an earlier page can reuse its cached result.
+
+### Try numbered pages
+
+Click Next, then search for Grace. Search applies to the whole data set and the grid returns to the first page.
+
+<DataGridDocsExample exampleId='query-pages' />
+
+## Infinite scrolling
+
+### 1. Describe the first and next requests
+
+A cursor is the value the API gives you to request the next portion. This example uses a numeric offset as a cursor and receives `{ items, nextCursor }`. An API can also return an opaque string.
+
+```tsx
+const dataSource = createDataGridSource({
+	key: ['users'],
+	read: {
+		fetcher: fetchUsers,
+		prepareArgs: (input) => ({
+			offset: input.mode === 'infinite' ? input.pageParam : input.pageIndex * input.pageSize,
+			limit: input.pageSize,
+			search: typeof input.params.globalFilter === 'string' ? input.params.globalFilter : '',
+		}),
+		getItems: (page) => page.items,
+		getTotal: (page) => page.total,
+		infinite: {
+			initialPageParam: 0,
+			getNextPageParam: (page) => page.nextCursor,
+		},
+	},
+})
+```
+
+- `prepareArgs` prepares one request. For an opaque string cursor, use its type in `initialPageParam` and return `cursor: input.pageParam` in the infinite branch.
+- `initialPageParam` supplies the first cursor. `getNextPageParam` returns the next value or `null` or `undefined` at the end of the collection.
+- The generated infinite key includes applied criteria and page size. All cursor values share that cache entry.
+
+### 2. Choose a loading trigger
+
+```tsx
+<DataGrid
+	dataSource={dataSource}
+	columns={columns}
+	getRowId={(user) => user.id}
+	globalFiltering
+	pagination={{ mode: 'infinite', pageSize: 3, trigger: 'manual' }}
+/>
+```
+
+The manual trigger shows a Load more button. To load on scroll, omit `trigger` and give the grid a scroll area, for example with `layout={{ maxHeight: '24rem' }}`. Both triggers use the same cursor mapping.
+
+TanStack Query stores the pages together and the grid renders them as one list. A later-page failure keeps the rows already loaded visible and lets the user retry that page.
+
+### Try infinite loading
+
+Click Load more to go from three to six to nine rows. Search for Grace to start again with a new set of pages.
+
+<DataGridDocsExample exampleId='query-infinite' />
+
+## Switch modes in the same grid
+
+Use the same source when the mode changes at runtime. A source with `read.infinite` supports both modes, and the grid selects the right branch of `prepareArgs`.
+
+```tsx
+<DataGrid
+	dataSource={dataSource}
+	columns={columns}
+	pagination={{ mode, pageSize: 3 }}
+/>
+```
+
+Next, [add write operations and see when the pages refresh](/docs/qc-react/crud).

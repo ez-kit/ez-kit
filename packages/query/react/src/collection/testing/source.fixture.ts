@@ -1,0 +1,177 @@
+import { collectionCacheArgs } from '../cache-args'
+import { resolveInvalidation } from '../invalidation'
+
+import type { InfiniteFetcher, ListFetcher } from './read-types.fixture'
+import type { ConfiguredOperations, ConfiguredQueries, RequiredSelection, SourceIdentity } from '../contracts'
+import type { InvalidationPolicy } from '../invalidation'
+import type { CollectionRead, CollectionInfiniteRead, CollectionMutation, MutationFetcher } from '../types'
+import type { DefaultError, QueryKey } from '@tanstack/react-query'
+
+function normalizeListSource<P, A, D, S, I, E, K extends QueryKey>(
+	value: ListFetcher<P, A, D, S, I, E> | CollectionRead<P, D, S, I, E, K>,
+	key: QueryKey,
+): CollectionRead<P, D, S, I, E, K> {
+	if ('query' in value) return value
+	const generated = {
+		query: (params: P) => {
+			const args = value.prepareArgs(params)
+			return {
+				...value.options,
+				queryKey: [...key, 'list', collectionCacheArgs(value.prepareKey ? value.prepareKey(args, params) : args)],
+				queryFn: ({ signal }: { signal: AbortSignal }) => value.fetcher(args, { signal }),
+			}
+		},
+		getItems: value.getItems,
+		...(value.getTotal === undefined ? {} : { getTotal: value.getTotal }),
+	}
+	return generated as unknown as CollectionRead<P, D, S, I, E, K>
+}
+
+function normalizeInfiniteSource<P, A, B, D, S, I, C, E, IK extends QueryKey>(
+	value: InfiniteFetcher<P, A, B, D, S, I, C, E> | CollectionInfiniteRead<P, D, S, I, C, E, IK>,
+	key: QueryKey,
+): CollectionInfiniteRead<P, D, S, I, C, E, IK> {
+	if ('query' in value) return value
+	const generated = {
+		query: (params: P) => {
+			const args = value.prepareArgs(params)
+			return {
+				...value.options,
+				queryKey: [...key, 'infinite', collectionCacheArgs(value.prepareKey ? value.prepareKey(args, params) : args)],
+				initialPageParam: value.initialPageParam,
+				getNextPageParam: value.getNextPageParam,
+				queryFn: ({ signal, pageParam }: { signal: AbortSignal; pageParam: C }) =>
+					value.fetcher(value.preparePageArgs({ args, pageParam }), { signal }),
+			}
+		},
+		getItems: value.getItems,
+	}
+	return generated as unknown as CollectionInfiniteRead<P, D, S, I, C, E, IK>
+}
+
+function normalizeMutationSource<V, A, D, E, O>(
+	value: MutationFetcher<V, A, D, E, O> | CollectionMutation<V, D, E, O>,
+	key: QueryKey,
+	name: string,
+): CollectionMutation<V, D, E, O> {
+	if ('mutation' in value) return value
+	return {
+		mutation: {
+			mutationKey: [...key, name],
+			...value.options,
+			mutationFn: (input) => value.fetcher(value.prepareArgs(input)),
+		},
+		...(value.invalidate === undefined ? {} : { invalidate: value.invalidate }),
+	}
+}
+type SourceCapabilities = {
+	getAll?: unknown
+	getInfinite?: unknown
+	create?: unknown
+	update?: unknown
+	delete?: unknown
+	deleteMany?: unknown
+}
+
+export function createCollectionSource<
+	Enabled extends SourceCapabilities,
+	P = void,
+	A = unknown,
+	D = unknown,
+	I = unknown,
+	S = D,
+	E = DefaultError,
+	K extends QueryKey = QueryKey,
+	IP = void,
+	IA = unknown,
+	B = unknown,
+	ID = unknown,
+	IS = ID,
+	II = I,
+	C = unknown,
+	IE = DefaultError,
+	IK extends QueryKey = QueryKey,
+	CreateV = void,
+	CreateA = unknown,
+	CreateD = unknown,
+	CreateE = DefaultError,
+	CreateO = unknown,
+	UpdateV = void,
+	UpdateA = unknown,
+	UpdateD = unknown,
+	UpdateE = DefaultError,
+	UpdateO = unknown,
+	DeleteV = void,
+	DeleteA = unknown,
+	DeleteD = unknown,
+	DeleteE = DefaultError,
+	DeleteO = unknown,
+	DeleteManyV = void,
+	DeleteManyA = unknown,
+	DeleteManyD = unknown,
+	DeleteManyE = DefaultError,
+	DeleteManyO = unknown,
+>(
+	config: Enabled & {
+		key?: QueryKey
+		invalidate?: InvalidationPolicy
+		getAll?: ListFetcher<P, A, D, S, I, E> | CollectionRead<P, D, S, I, E, K>
+		getInfinite?: InfiniteFetcher<IP, IA, B, ID, IS, II, C, IE> | CollectionInfiniteRead<IP, ID, IS, II, C, IE, IK>
+		create?:
+			| MutationFetcher<CreateV, CreateA, CreateD, CreateE, CreateO>
+			| CollectionMutation<CreateV, CreateD, CreateE, CreateO>
+		update?:
+			| MutationFetcher<UpdateV, UpdateA, UpdateD, UpdateE, UpdateO>
+			| CollectionMutation<UpdateV, UpdateD, UpdateE, UpdateO>
+		delete?:
+			| MutationFetcher<DeleteV, DeleteA, DeleteD, DeleteE, DeleteO>
+			| CollectionMutation<DeleteV, DeleteD, DeleteE, DeleteO>
+		deleteMany?:
+			| MutationFetcher<DeleteManyV, DeleteManyA, DeleteManyD, DeleteManyE, DeleteManyO>
+			| CollectionMutation<DeleteManyV, DeleteManyD, DeleteManyE, DeleteManyO>
+	} & SourceIdentity<NoInfer<Enabled>> &
+		RequiredSelection<NoInfer<Enabled>, 'getAll', NoInfer<D>, NoInfer<S>> &
+		RequiredSelection<NoInfer<Enabled>, 'getInfinite', NoInfer<ID>, NoInfer<IS>> &
+		({ getAll: unknown } | { getInfinite: unknown }),
+) {
+	const hasGenerated =
+		(config.getAll !== undefined && !('query' in config.getAll)) ||
+		(config.getInfinite !== undefined && !('query' in config.getInfinite))
+	const hasGeneratedMutation = [config.create, config.update, config.delete, config.deleteMany].some(
+		(operation) => operation !== undefined && !('mutation' in operation),
+	)
+	if ((hasGenerated || hasGeneratedMutation) && !config.key) throw new Error('Fetcher sources require a collection key')
+	const hasNative =
+		(config.getAll !== undefined && 'query' in config.getAll) ||
+		(config.getInfinite !== undefined && 'query' in config.getInfinite)
+	if (hasNative && config.invalidate === undefined)
+		throw new Error('Native sources require an explicit invalidation policy')
+	const key = config.key ?? []
+	const getAll = config.getAll ? normalizeListSource(config.getAll, key) : undefined
+	const getInfinite = config.getInfinite ? normalizeInfiniteSource(config.getInfinite, key) : undefined
+	const result = {
+		...(getAll ? { getAll } : {}),
+		...(getInfinite ? { getInfinite } : {}),
+		invalidation: resolveInvalidation(
+			hasGenerated ? [{ queryKey: [...key, 'list'] }, { queryKey: [...key, 'infinite'] }] : [],
+			config.invalidate,
+		),
+		queries: { ...(getAll ? { list: getAll.query } : {}), ...(getInfinite ? { infinite: getInfinite.query } : {}) },
+		...(config.create ? { create: normalizeMutationSource(config.create, key, 'create') } : {}),
+		...(config.update ? { update: normalizeMutationSource(config.update, key, 'update') } : {}),
+		...(config.delete ? { delete: normalizeMutationSource(config.delete, key, 'delete') } : {}),
+		...(config.deleteMany ? { deleteMany: normalizeMutationSource(config.deleteMany, key, 'deleteMany') } : {}),
+	}
+	type Operations = {
+		getAll: CollectionRead<P, D, S, I, E, K>
+		getInfinite: CollectionInfiniteRead<IP, ID, IS, II, C, IE, IK>
+		create: CollectionMutation<CreateV, CreateD, CreateE, CreateO>
+		update: CollectionMutation<UpdateV, UpdateD, UpdateE, UpdateO>
+		delete: CollectionMutation<DeleteV, DeleteD, DeleteE, DeleteO>
+		deleteMany: CollectionMutation<DeleteManyV, DeleteManyD, DeleteManyE, DeleteManyO>
+	}
+	return result as unknown as ConfiguredOperations<Enabled, Operations> & {
+		invalidation: typeof result.invalidation
+		queries: ConfiguredQueries<Enabled, Operations>
+	}
+}

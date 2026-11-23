@@ -6,6 +6,7 @@ import {
 	writeOwnSlice,
 } from '../../feature-state'
 import { featureConfig, isFeatureEnabled } from '../../utils/feature-flag'
+import { gridActionRows, gridWriteContext } from '../../write-context'
 
 import type { AnyTable } from '../../feature-state'
 import type { FeatureToggle } from '../../utils/feature-flag'
@@ -98,17 +99,8 @@ export type BulkDeletingContext<TData> = {
  * confirmation copy under a presentational option.
  */
 export type BulkDeletingConfig<TData> = FeatureToggle & {
-	/**
-	 * One call for the whole selection — the shape a server API for "delete these ids" wants.
-	 *
-	 * Omit it and the grid falls back to {@link DeletingConfig.onDelete}, once per selected row,
-	 * which is what a client-side store needs and means `bulk: true` is the whole config for it.
-	 *
-	 * Either way the deleted ids leave `state.rowSelection` once the handler resolves — a bar
-	 * counting rows that no longer exist is never what anyone wanted, and clearing it by hand
-	 * from every handler was the previous shape's parting gift.
-	 */
-	onDelete?: (ctx: BulkDeletingContext<TData>) => void | Promise<void>
+	/** One call for the resolved selection. Success clears its IDs; rejection preserves them. */
+	onDelete: (ctx: BulkDeletingContext<TData>) => void | Promise<void>
 	/**
 	 * Prompt before deleting. `true` uses count-aware default copy;
 	 * {@link BulkConfirmationConfig} overrides it. Independent of
@@ -125,13 +117,32 @@ export type DeletingConfig<TData> = FeatureToggle & {
 	confirmation?: boolean | ConfirmationConfig<TData>
 	/**
 	 * Delete the current selection in one gesture. `false` / omitted — no bulk affordance;
-	 * `true` — enabled, looping {@link DeletingConfig.onDelete} over the selected rows;
-	 * {@link BulkDeletingConfig} — a single handler for the whole set, its own prompt, or both.
+	 * {@link BulkDeletingConfig} requires a handler for the whole set, with optional confirmation.
+	 * There is no fallback to the single-row handler.
 	 *
 	 * The selection bar renders the Delete button iff this resolves to on and row selection is
 	 * enabled — there is nothing to bulk-delete without a selection.
 	 */
-	bulk?: boolean | BulkDeletingConfig<TData>
+	bulk?: false | BulkDeletingConfig<TData>
+}
+
+/** Read enabled bulk settings, rejecting a missing executor without changing the config. */
+export function getBulkDeletingConfig<TData>(
+	config: DeletingConfig<TData> | undefined,
+): BulkDeletingConfig<TData> | undefined {
+	if (!config || !isFeatureEnabled(config.bulk)) return undefined
+	const bulk = featureConfig(config.bulk)
+	if (typeof bulk?.onDelete !== 'function') {
+		throw new Error(
+			'[data-grid] Bulk deletion requires deleting.bulk.onDelete; single-row onDelete is not a bulk executor.',
+		)
+	}
+	return bulk
+}
+
+/** Reject invalid bulk configuration early, without changing the supplied settings. */
+export function validateBulkDeletingConfig<TData>(config: DeletingConfig<TData> | undefined): void {
+	getBulkDeletingConfig(config)
 }
 
 /**
@@ -142,7 +153,7 @@ export type DeletingConfig<TData> = FeatureToggle & {
  * `TableState`, `pendingDeleteRowId` and `pendingBulkDelete`, so subscribing to "is a delete
  * awaiting confirmation" meant knowing two names, neither of which was the feature's.
  *
- * Both fields are transient: the feature hard-resets them at construction, which is why
+ * The fields are transient: the feature hard-resets them at construction, which is why
  * `deleting` is one of the slices {@link InitialTableState} forbids seeding.
  */
 export type DeletingState = {
@@ -150,6 +161,10 @@ export type DeletingState = {
 	pendingRowId: string | null
 	/** True while a bulk (selection-bar) delete is staged awaiting confirmation. */
 	pendingBulk: boolean
+	/** Rows with a delete request in flight. */
+	pendingIds?: readonly string[] | undefined
+	/** The latest delete failure, cleared on the next attempt or cancellation. */
+	failure?: { error: unknown } | undefined
 }
 
 /**
@@ -160,12 +175,14 @@ export type DeletingState = {
  * / `cancel` spelled the same on both.
  */
 export type BulkDeletingApi = {
-	/** Delete the given rows — the bulk handler, or `onDelete` per row when there is none. */
+	/** Delete the loaded rows in one call to the bulk handler. */
 	delete: (rowIds: string[]) => Promise<void>
 	/** Delete the current selection, staging a confirmation first when one is configured. */
 	request: () => void
 	/** Run the staged bulk delete. */
 	confirm: () => Promise<void>
+	/** Close the staged confirmation. */
+	dismiss: () => void
 	/** Drop the staged bulk delete without running it. */
 	cancel: () => void
 }
@@ -185,6 +202,8 @@ export type DeletingApi = {
 	request: (rowId: string) => void
 	/** Run the staged per-row delete. */
 	confirm: () => Promise<void>
+	/** Close the staged confirmation. */
+	dismiss: () => void
 	/** Drop the staged per-row delete without running it. */
 	cancel: () => void
 	/** Deleting the current selection in one gesture. */
@@ -193,17 +212,15 @@ export type DeletingApi = {
 	getState: () => DeletingState
 }
 
-/**
- * The single in-flight `AbortController` for a table, held in a box rather than directly.
- *
- * `initTableInstanceData` installs the member once; every swap after that mutates
- * `box.controller`, so nothing ever reassigns the property that was installed. That is what lets
- * `resetTableInstanceData` clear the controller without needing the whole `Table_FeatureMap` entry
- * back in hand, and what keeps `table.deleting`'s closure and the reset hook looking at one box.
- */
-// `| undefined` explicitly: under `exactOptionalPropertyTypes` a bare `controller?:` could not be
-// cleared by assignment, and clearing it is what `cancel` and `resetTableInstanceData` both do.
-export type DeletingAbortBox = { controller?: AbortController | undefined }
+type DeleteKind = 'single' | 'bulk'
+type DeleteWork = {
+	kind: DeleteKind
+	scope: string | undefined
+	ids: readonly string[]
+	controller: AbortController
+	completion: Promise<void>
+}
+export type DeletingAbortBox = { active: Set<DeleteWork> }
 
 declare module '@tanstack/table-core' {
 	// Declaration merging needs interfaces; these are the shapes upstream declares as such.
@@ -301,7 +318,7 @@ type DeletingTable = AnyTable & {
  * code, not of the shadowing those blocks did.
  */
 const deletingOption = (table: { readonly options: object }): DeletingConfig<RowData> | undefined =>
-	(table.options as { deleting?: DeletingConfig<RowData> }).deleting
+	((gridWriteContext(table)?.options ?? table.options) as { deleting?: DeletingConfig<RowData> }).deleting
 
 /**
  * The table's abort box, read off a table whose `TFeatures` is unresolved.
@@ -329,20 +346,20 @@ function writeDeleting(table: AnyTable, patch: Partial<DeletingState>): void {
 	writeOwnSlice(table, 'deleting', (prev) => ({ ...prev, ...patch }))
 }
 
-/** Abort whatever is in flight and install a fresh controller in the box. */
-function resetController(table: AnyTable): AbortController {
-	const box = abortBox(table)
-	box.controller?.abort()
-	const c = new AbortController()
-	box.controller = c
-	return c
+function publishPending(table: AnyTable): void {
+	const scope = gridWriteContext(table)?.scope
+	const ids = [...abortBox(table).active].filter((work) => work.scope === scope).flatMap((work) => work.ids)
+	if (ids.length || readDeleting(table).pendingIds) writeDeleting(table, { pendingIds: ids.length ? ids : undefined })
 }
 
-/** Abort whatever is in flight and leave the box empty. What `cancel` and the reset hook share. */
-function teardownController(table: AnyTable): void {
-	const box = abortBox(table)
-	box.controller?.abort()
-	box.controller = undefined
+function cancelDeletes(table: AnyTable, kind?: DeleteKind): void {
+	const { active } = abortBox(table)
+	for (const work of active) {
+		if (kind === undefined || work.kind === kind) {
+			if (kind === undefined) active.delete(work)
+			work.controller.abort()
+		}
+	}
 }
 
 /** Ids of the currently selected rows, in the order TanStack holds them. */
@@ -385,45 +402,82 @@ function selectedRowIds(table: AnyTable): string[] {
 function deselect(table: AnyTable, rowIds: string[]): void {
 	if (rowIds.length === 0) return
 	const removed = new Set(rowIds)
-	writeForeignSlice(
-		table,
-		'rowSelection',
-		(prev: RowSelectionState): RowSelectionState =>
-			Object.fromEntries(Object.entries(prev).filter(([id]) => !removed.has(id))),
+	writeForeignSlice(table, 'rowSelection', (prev: RowSelectionState): RowSelectionState =>
+		Object.fromEntries(Object.entries(prev).filter(([id]) => !removed.has(id))),
 	)
+}
+
+function runDelete(
+	table: DeletingTable,
+	kind: DeleteKind,
+	ids: readonly string[],
+	execute: (signal: AbortSignal) => void | Promise<void>,
+	onSuccess?: () => void,
+): Promise<void> {
+	const { active } = abortBox(table)
+	const scope = gridWriteContext(table)?.scope
+	for (const work of active) {
+		if (work.scope !== scope) continue
+		if (!ids.some((id) => work.ids.includes(id))) continue
+		if (ids.every((id) => work.ids.includes(id))) return work.completion
+		return Promise.reject(new Error('Some selected rows are already being deleted.'))
+	}
+	let resolve!: () => void
+	let reject!: (error: unknown) => void
+	const completion = new Promise<void>((yes, no) => {
+		resolve = yes
+		reject = no
+	})
+	const controller = new AbortController()
+	const work = { kind, scope, ids, controller, completion }
+	active.add(work)
+	const { signal } = controller
+	if (readDeleting(table).failure) writeDeleting(table, { failure: undefined })
+	publishPending(table)
+	async function run() {
+		try {
+			if (!signal.aborted) await execute(signal)
+			if (!signal.aborted) onSuccess?.()
+			resolve()
+		} catch (error) {
+			if (!signal.aborted) writeDeleting(table, { failure: { error } })
+			reject(error)
+		} finally {
+			if (active.delete(work)) publishPending(table)
+		}
+	}
+	void run()
+	return completion
 }
 
 async function deleteRow(table: DeletingTable, rowId: string): Promise<void> {
 	const config = deletingOption(table)
 	if (!config) return
-	const row = table.getRowModel().rows.find((r) => r.id === rowId)
+	const row = gridActionRows(table).find((r) => r.id === rowId)
 	if (!row) return
-	const c = resetController(table)
-	await config.onDelete({ rowId, row, signal: c.signal })
+	await runDelete(table, 'single', [rowId], (signal) => config.onDelete({ rowId, row, signal }))
 }
 
 async function deleteRows(table: DeletingTable, rowIds: string[]): Promise<void> {
 	const config = deletingOption(table)
 	if (!config) return
-	const bulk = featureConfig(config.bulk)
+	const bulk = getBulkDeletingConfig(config)
+	if (!bulk) return
+	const visibleRows = gridActionRows(table)
 	const rows = rowIds
-		.map((id) => table.getRowModel().rows.find((r) => r.id === id))
+		.map((id) => visibleRows.find((r) => r.id === id))
 		.filter((r): r is Row<TableFeatures, RowData> => r !== undefined)
 	if (rows.length === 0) return
-	const c = resetController(table)
 	const ids = rows.map((r) => r.id)
-	if (bulk?.onDelete) {
-		await bulk.onDelete({ rowIds: ids, rows, signal: c.signal })
-		deselect(table, ids)
-		return
-	}
-	// No single-call handler: the per-row one, once per row. Sequential rather than
-	// `Promise.all` so a store that mutates an array per call sees each write land, and
-	// so a failure stops the run instead of leaving a partial set half-applied.
-	for (const row of rows) {
-		await config.onDelete({ rowId: row.id, row, signal: c.signal })
-	}
-	deselect(table, ids)
+	await runDelete(
+		table,
+		'bulk',
+		ids,
+		(signal) => bulk.onDelete({ rowIds: ids, rows, signal }),
+		() => {
+			deselect(table, ids)
+		},
+	)
 }
 
 /** The one table member this feature installs — a namespace object, not a method. */
@@ -432,12 +486,13 @@ function createDeletingApi(table: DeletingTable): DeletingApi {
 		delete: (rowId) => deleteRow(table, rowId),
 
 		request: (rowId) => {
+			if (readDeleting(table).pendingIds?.includes(rowId)) return
 			const config = deletingOption(table)
 			if (!config) return
 			if (isFeatureEnabled(config.confirmation)) {
 				writeDeleting(table, { pendingRowId: rowId })
 			} else {
-				void deleteRow(table, rowId)
+				void deleteRow(table, rowId).catch(() => undefined)
 			}
 		},
 
@@ -448,34 +503,48 @@ function createDeletingApi(table: DeletingTable): DeletingApi {
 			await deleteRow(table, pendingRowId)
 		},
 
-		cancel: () => {
-			teardownController(table)
+		dismiss: () => {
 			writeDeleting(table, { pendingRowId: null })
+		},
+
+		cancel: () => {
+			cancelDeletes(table, 'single')
+			publishPending(table)
+			writeDeleting(table, { pendingRowId: null, ...(readDeleting(table).failure ? { failure: undefined } : {}) })
 		},
 
 		bulk: {
 			delete: (rowIds) => deleteRows(table, rowIds),
 
 			request: () => {
+				if (gridWriteContext(table)?.selectionReady === false) return
 				const config = deletingOption(table)
-				if (!config || !isFeatureEnabled(config.bulk)) return
-				if (isFeatureEnabled(featureConfig(config.bulk)?.confirmation)) {
+				const bulk = getBulkDeletingConfig(config)
+				if (!bulk) return
+				const ids = selectedRowIds(table)
+				if (readDeleting(table).pendingIds?.some((id) => ids.includes(id))) return
+				if (isFeatureEnabled(bulk.confirmation)) {
 					writeDeleting(table, { pendingBulk: true })
 					return
 				}
-				void deleteRows(table, selectedRowIds(table))
+				void deleteRows(table, ids).catch(() => undefined)
 			},
 
 			confirm: async () => {
-				if (!readDeleting(table).pendingBulk) return
+				if (!readDeleting(table).pendingBulk || gridWriteContext(table)?.selectionReady === false) return
 				const ids = selectedRowIds(table)
 				writeDeleting(table, { pendingBulk: false })
 				await deleteRows(table, ids)
 			},
 
-			cancel: () => {
-				teardownController(table)
+			dismiss: () => {
 				writeDeleting(table, { pendingBulk: false })
+			},
+
+			cancel: () => {
+				cancelDeletes(table, 'bulk')
+				publishPending(table)
+				writeDeleting(table, { pendingBulk: false, ...(readDeleting(table).failure ? { failure: undefined } : {}) })
 			},
 		},
 
@@ -523,7 +592,7 @@ export const deletingFeature: TableFeature = {
 			// internal type. The real `Row` wins because it keeps one vocabulary between this file
 			// and the public context types, and because the widening is confined to this one line.
 			deleting: createDeletingApi(table as unknown as DeletingTable),
-			_deletingAbort: {},
+			_deletingAbort: { active: new Set() },
 		})
 	},
 
@@ -537,6 +606,6 @@ export const deletingFeature: TableFeature = {
 	//
 	// Behaviour v8 did not have — the controller lived in a closure with no reset hook to reach it.
 	resetTableInstanceData: (table) => {
-		teardownController(table)
+		cancelDeletes(table)
 	},
 }
