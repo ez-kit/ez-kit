@@ -75,9 +75,9 @@ export const infinite = (
 
 const collectionSource = createCollectionSource({
 	key: ['registered-collection'],
-	getAll: {
-		prepareArgs: (params: { offset: number }) => params,
-		fetcher: (_args: { offset: number }) => Promise.resolve(['one']),
+	collection: {
+		prepareArgs: () => undefined,
+		fetcher: () => Promise.resolve(['one']),
 		getItems: (items) => items,
 	},
 	update: {
@@ -86,7 +86,11 @@ const collectionSource = createCollectionSource({
 	},
 })
 export function RegisteredCollection() {
-	const collection = useCollectionQuery({ source: collectionSource, mode: 'pages', params: { offset: 0 } })
+	const collection = useCollectionQuery({
+		source: collectionSource,
+		pagination: { mode: 'pages', pageIndex: 0, pageSize: 1 },
+		params: undefined,
+	})
 	expectTypeOf(collection.query.error).toEqualTypeOf<ApiError | null>()
 	expectTypeOf(collection.update.error).toEqualTypeOf<ApiError | null>()
 	return null

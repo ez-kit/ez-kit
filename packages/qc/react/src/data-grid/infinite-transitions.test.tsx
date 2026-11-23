@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { it, expect, vi } from 'vitest'
 
+import { fixtureSource } from './testing/grid-source.fixture'
 import { withQuery } from './with-query'
 
 import type { GridInfiniteParams } from './types'
@@ -38,7 +39,7 @@ it('new criteria can load while previous native next page remains pending', asyn
 	const h = renderHook(
 		() =>
 			connected.useDataGrid({
-				dataSource: source,
+				dataSource: fixtureSource(source),
 				columns: [{ accessorKey: 'id' }],
 				pagination: { mode: 'infinite' },
 				globalFiltering: true,

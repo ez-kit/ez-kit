@@ -2,8 +2,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
-import { createGridSourceFactory } from './factory'
-import { useGridMutation } from './mutation-source'
+import { createGridSourceFactory } from './testing/factory.fixture'
+import { useGridMutation } from './testing/mutation-source.fixture'
 
 import type { ReactNode } from 'react'
 

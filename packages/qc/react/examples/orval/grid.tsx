@@ -9,7 +9,6 @@ import { useState } from 'react'
 
 import { withQuery } from '../../src/data-grid'
 
-import { usersCollection, collectionGridSource } from './collection'
 import { usersSource } from './source'
 
 const { DataGrid, useDataGrid } = withQuery(
@@ -54,9 +53,9 @@ export function Example({ entry = 'component' }: { entry?: 'component' | 'hook' 
 // Both examples run beneath the application's QueryClientProvider.
 export function CollectionListEntry() {
 	const users = useCollectionQuery({
-		source: usersCollection,
-		mode: 'pages',
-		params: { offset: 0, limit: 20, search: '' },
+		source: usersSource,
+		pagination: { mode: 'pages', pageIndex: 0, pageSize: 20 },
+		params: { sorting: [], columnFilters: [], globalFilter: '' },
 	})
 	return (
 		<ul>
@@ -69,7 +68,7 @@ export function CollectionListEntry() {
 export function CollectionGridEntry() {
 	return (
 		<DataGrid
-			dataSource={collectionGridSource}
+			dataSource={usersSource}
 			columns={columns}
 			editing
 			creating

@@ -1,11 +1,11 @@
-import { createInfiniteSource } from './infinite-source'
-import { createListSource } from './list-source'
-import { sourceInvalidation } from './source'
+import { createInfiniteSource } from './infinite-source.fixture'
+import { createListSource } from './list-source.fixture'
+import { sourceInvalidation } from './source.fixture'
 
-import type { GridInfiniteFetcherOptions } from './infinite-source'
-import type { InvalidationPolicy } from './invalidation'
-import type { GridListFetcherOptions } from './list-source'
-import type { GridMutationSource } from './mutation-source'
+import type { GridInfiniteFetcherOptions } from './infinite-source.fixture'
+import type { InvalidationPolicy } from '../invalidation'
+import type { GridListFetcherOptions } from './list-source.fixture'
+import type { GridMutationSource } from './mutation-source.fixture'
 import type {
 	GridCreateContext,
 	GridDeleteContext,
@@ -14,7 +14,7 @@ import type {
 	GridQueryParams,
 	GridInfiniteParams,
 	GridUpdateContext,
-} from './types'
+} from '../types'
 import type { DefaultError, QueryKey, UseMutationOptions } from '@tanstack/react-query'
 
 type MutationDefaults<TInput, TArgs> = {

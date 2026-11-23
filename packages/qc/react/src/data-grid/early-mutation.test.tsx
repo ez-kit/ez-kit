@@ -6,7 +6,10 @@ import { renderHook, render, waitFor } from '@testing-library/react'
 import { useLayoutEffect, useEffect, useRef } from 'react'
 import { expect, it, vi } from 'vitest'
 
-import { withQuery, createGridSourceFactory } from './index'
+import { createGridSourceFactory } from './testing/factory.fixture'
+import { fixtureSource } from './testing/grid-source.fixture'
+
+import { withQuery } from './index'
 
 import type { PropsWithChildren } from 'react'
 
@@ -27,7 +30,11 @@ it.each([false, true])('create from a consumer layout effect (cancel before disp
 	const outcomes: unknown[] = []
 	const h = renderHook(
 		() => {
-			const table = connected.useDataGrid({ dataSource: source, columns: [{ accessorKey: 'id' }], creating: true })
+			const table = connected.useDataGrid({
+				dataSource: fixtureSource(source),
+				columns: [{ accessorKey: 'id' }],
+				creating: true,
+			})
 			useLayoutEffect(() => {
 				table.creating.start()
 				void table.creating.commit({ values: { id: 'new' } }).then(
@@ -98,7 +105,11 @@ it('child passive effect before bridge publication', async () => {
 		return null
 	}
 	function Parent() {
-		const table = connected.useDataGrid({ dataSource: source, columns: [{ accessorKey: 'id' }], creating: true })
+		const table = connected.useDataGrid({
+			dataSource: fixtureSource(source),
+			columns: [{ accessorKey: 'id' }],
+			creating: true,
+		})
 		return (
 			<Child
 				save={() => {
@@ -142,7 +153,7 @@ it.each(['single', 'bulk'] as const)('skips %s deletion cancelled before observe
 	const h = renderHook(
 		({ run }) => {
 			const table = connected.useDataGrid({
-				dataSource: source,
+				dataSource: fixtureSource(source),
 				columns: [{ accessorKey: 'id' }],
 				deleting: { bulk: true },
 				getRowId: (row) => row.id,

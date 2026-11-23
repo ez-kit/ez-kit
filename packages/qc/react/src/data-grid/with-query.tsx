@@ -2,18 +2,21 @@ import { publishGridWriteContext, useDataGridSelector, ValidationError } from '@
 import {
 	useCollectionQuery,
 	type CollectionQueryOptions,
+	type CollectionQueryConfig,
+	type CollectionPageInput,
+	type CollectionInfiniteInput,
+	type CollectionMutation,
 	type ReadProjectionCompatibility,
 } from '@ez-kit/query-react/collection'
 import { hashKey, replaceEqualDeep, useQueryClient } from '@tanstack/react-query'
 import { createElement, useEffect, useInsertionEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
-import type { GridMutationSource } from './mutation-source'
+import type { GridCollectionParams } from './data-grid-source'
 import type {
 	GridCreateContext,
 	GridUpdateContext,
 	GridDeleteContext,
 	GridDeleteManyContext,
-	GridInfiniteParams,
 	GridQueryParams,
 } from './types'
 import type {
@@ -60,49 +63,70 @@ function withoutPreviousData<T extends { placeholderData?: unknown }>(options: T
 	}
 }
 
-function requireCollectionRead<S, K extends keyof S>(source: S, key: K): S & { [P in K]-?: NonNullable<S[P]> } {
-	if (!source[key]) throw new Error(`Collection source does not support ${String(key)} reads`)
-	return source as S & { [P in K]-?: NonNullable<S[P]> }
-}
-
-/** Sources retain their concrete options types; the connection only needs their row contract. */
+/** Sources retain native option types; the connector needs only the row and criteria contracts. */
 type GridReads<TRow extends object> = {
-	getAll?: {
-		query: (params: GridQueryParams) => { queryKey: QueryKey }
-		getRows: (data: never) => readonly TRow[]
-		getRowCount?: (data: never) => number | undefined
+	pages?: {
+		query: (input: CollectionPageInput<GridCollectionParams>) => { queryKey: QueryKey }
+		getItems: (data: never) => readonly TRow[]
+		getTotal?: (data: never) => number | undefined
 	}
-	getInfinite?: {
-		query: (params: GridInfiniteParams) => { queryKey: QueryKey }
-		getRows: (data: never) => readonly TRow[]
+	infinite?: {
+		query: (input: CollectionInfiniteInput<GridCollectionParams>) => { queryKey: QueryKey }
+		getItems: (data: never) => readonly TRow[]
 	}
 }
 
-export type GridDataSource<TRow extends object> = GridReads<TRow> &
-	(Required<Pick<GridReads<TRow>, 'getAll'>> | Required<Pick<GridReads<TRow>, 'getInfinite'>>)
+export type GridDataSource<TRow extends object> = {
+	collection: GridReads<TRow> & (Required<Pick<GridReads<TRow>, 'pages'>> | Required<Pick<GridReads<TRow>, 'infinite'>>)
+	invalidation: readonly InvalidateQueryFilters[]
+}
 
-type GridSourceCompatibility<S> = {
-	[K in keyof S as K extends 'getAll' | 'getInfinite' ? K : never]: ReadProjectionCompatibility<
-		NonNullable<S[K]>,
-		K extends 'getAll' ? 'pages' : 'infinite',
-		'getRows',
-		'getRowCount'
+type GridSourceCompatibility<S> = S extends { collection: infer Reads }
+	? {
+			collection: {
+				[K in keyof Reads]: ReadProjectionCompatibility<NonNullable<Reads[K]>, K, 'getItems', 'getTotal'>
+			}
+		}
+	: never
+
+type GridWriteCompatibility<S extends GridDataSource<object>> = {
+	[K in keyof S as K extends keyof ActionInputs<object> ? K : never]: NonNullable<S[K]> extends CollectionMutation<
+		infer V,
+		infer _D,
+		infer _E,
+		infer _O
 	>
+		? K extends keyof ActionInputs<GridRow<S>>
+			? ActionInputs<GridRow<S>>[K] extends V
+				? unknown
+				: never
+			: never
+		: never
 }
-type ReadableGridSource<S, Mode> = S &
-	GridSourceCompatibility<NoInfer<S>> &
-	(S extends { getAll: unknown } | { getInfinite: unknown } ? unknown : never) &
-	('infinite' extends Mode ? ([S] extends [{ getInfinite: unknown }] ? unknown : never) : unknown) &
-	('pages' extends Mode ? ([S] extends [{ getAll: unknown }] ? unknown : never) : unknown)
 
-type SourceCheck<S, Mode extends PaginationMode> = {
+type ReadableGridSource<S extends GridDataSource<object>, Mode> = S &
+	GridSourceCompatibility<NoInfer<S>> &
+	GridWriteCompatibility<NoInfer<S>> &
+	([Mode] extends [never]
+		? unknown
+		: [S] extends [{ collection: Record<Extract<Mode, PropertyKey>, unknown> }]
+			? unknown
+			: never)
+
+type SourceCheck<S extends GridDataSource<object>, Mode extends PaginationMode> = {
 	dataSource: ReadableGridSource<NoInfer<S>, NoInfer<Mode>>
 	pagination?: boolean | { mode?: Mode }
 }
 
-type PageQueryOptions = CollectionQueryOptions<{ getAll: { query: () => UseQueryOptions<unknown, unknown> } }, 'pages'>
+type PolicySource<R> = { collection: R; invalidation: readonly InvalidateQueryFilters[] }
+type PageQueryOptions = CollectionQueryOptions<
+	PolicySource<{ pages: { query: () => UseQueryOptions<unknown, unknown>; getItems: () => [] } }>,
+	'pages'
+>
 type InfiniteQueryOptions = CollectionQueryOptions<
-	{ getInfinite: { query: () => UseInfiniteQueryOptions<unknown, unknown, InfiniteData<unknown>> } },
+	PolicySource<{
+		infinite: { query: () => UseInfiniteQueryOptions<unknown, unknown, InfiniteData<unknown>>; getItems: () => [] }
+	}>,
 	'infinite'
 >
 type OptionCallback<T> = Extract<T, (...args: never[]) => unknown>
@@ -127,7 +151,7 @@ export type QueryGridConfig<
 	ContextType extends object,
 	ColumnConfig extends ColumnConfigShape,
 	E extends CellTypeRegistry = Extra,
-	S extends GridDataSource<R> = GridDataSource<R>,
+	S extends GridDataSource<object> = GridDataSource<R>,
 > = Omit<
 	BoundUseDataGridConfig<F, NoInfer<R>, ContextType, C, E, ColumnConfig>,
 	'data' | 'creating' | 'editing' | 'deleting'
@@ -144,11 +168,17 @@ export type QueryGridConfig<
 						| (Omit<BulkDeletingConfig<NoInfer<R>>, 'onDelete'> &
 								Partial<Pick<BulkDeletingConfig<NoInfer<R>>, 'onDelete'>>)
 				})
-	dataSource: GridDataSource<R> & S
+	dataSource: S
 	scopeKey?: QueryKey
 	queryOptions?: GridQueryOptions
 	data?: never
 }
+
+type GridReadRow<R> = R extends { getItems: (data: never) => readonly (infer Row)[] } ? Row : never
+type GridRow<S extends GridDataSource<object>> =
+	S extends GridDataSource<object>
+		? GridReadRow<S['collection'][Extract<keyof S['collection'], 'pages' | 'infinite'>]>
+		: never
 
 type ConnectionBundle<
 	C extends CellTypeRegistry,
@@ -157,30 +187,29 @@ type ConnectionBundle<
 	CC extends ColumnConfigShape,
 > = Omit<DataGridBundle<C, F, X, CC>, 'DataGrid' | 'useDataGrid'> & {
 	useDataGrid: <
-		R extends object,
+		S extends GridDataSource<object>,
 		CF extends TableFeatures = Features<F>,
 		E extends CellTypeRegistry = Extra,
-		S extends GridDataSource<R> = GridDataSource<R>,
 		Mode extends PaginationMode = never,
 	>(
-		config: QueryGridConfig<CF, R, C, Context<X>, CC, E, S> &
+		config: QueryGridConfig<CF, GridRow<NoInfer<S>>, C, Context<X>, CC, E, S> &
 			SourceCheck<S, Mode> &
 			(F extends TableFeatures ? unknown : { features: CF }),
-	) => DataTable<CF, R>
-	DataGrid: (<
-		R extends object,
-		CF extends TableFeatures = Features<F>,
-		E extends CellTypeRegistry = Extra,
-		S extends GridDataSource<R> = GridDataSource<R>,
-		Mode extends PaginationMode = never,
-	>(
-		props:
-			| (DataGridControlledProps<CF, R> & { dataSource?: never; queryOptions?: never; scopeKey?: never })
-			| (DataGridSharedProps &
-					QueryGridConfig<CF, R, C, Context<X>, CC, E, S> &
-					SourceCheck<S, Mode> &
-					(F extends TableFeatures ? unknown : { features: CF }) & { table?: never }),
+	) => DataTable<CF, GridRow<S>>
+	DataGrid: (<R extends object, CF extends TableFeatures = Features<F>>(
+		props: DataGridControlledProps<CF, R> & { dataSource?: never; queryOptions?: never; scopeKey?: never },
 	) => ReactElement) &
+		(<
+			S extends GridDataSource<object>,
+			CF extends TableFeatures = Features<F>,
+			E extends CellTypeRegistry = Extra,
+			Mode extends PaginationMode = never,
+		>(
+			props: DataGridSharedProps &
+				QueryGridConfig<CF, GridRow<NoInfer<S>>, C, Context<X>, CC, E, S> &
+				SourceCheck<S, Mode> &
+				(F extends TableFeatures ? unknown : { features: CF }) & { table?: never },
+		) => ReactElement) &
 		DataGridStatics
 }
 
@@ -193,20 +222,24 @@ type ActionInputs<R extends object> = {
 }
 
 type RuntimeSource<R extends object> = {
-	create?: GridMutationSource<GridCreateContext<R>, unknown, unknown, unknown>
-	update?: GridMutationSource<GridUpdateContext<R>, unknown, unknown, unknown>
-	delete?: GridMutationSource<GridDeleteContext<R>, unknown, unknown, unknown>
-	deleteMany?: GridMutationSource<GridDeleteManyContext<R>, unknown, unknown, unknown>
-	invalidation?: readonly InvalidateQueryFilters[]
-	transformError?: (error: unknown) => unknown
-	getAll?: {
-		query: (params: GridQueryParams) => UseQueryOptions<unknown, unknown>
-		getRows: (data: unknown) => readonly R[]
-		getRowCount?: (data: unknown) => number | undefined
+	[Name in keyof ActionInputs<R>]?: CollectionMutation<ActionInputs<R>[Name], unknown, unknown> & {
+		transformError?: (error: unknown) => unknown
 	}
-	getInfinite?: {
-		query: (params: GridInfiniteParams) => UseInfiniteQueryOptions<unknown, unknown, InfiniteData<unknown>>
-		getRows: (page: unknown) => readonly R[]
+} & {
+	invalidation: readonly InvalidateQueryFilters[]
+	transformError?: (error: unknown) => unknown
+	collection: {
+		pages?: {
+			query: (input: CollectionPageInput<GridCollectionParams>) => UseQueryOptions<unknown, unknown>
+			getItems: (data: unknown) => readonly R[]
+			getTotal?: (data: unknown) => number | undefined
+		}
+		infinite?: {
+			query: (
+				input: CollectionInfiniteInput<GridCollectionParams>,
+			) => UseInfiniteQueryOptions<unknown, unknown, InfiniteData<unknown>>
+			getItems: (data: unknown) => readonly R[]
+		}
 	}
 }
 type Projection<R> = {
@@ -365,13 +398,12 @@ export function withQuery<
 				}
 			}
 			if (signal.aborted || !canWrite(name, startedInScope)) return
-			const operation = source[name] as
-				GridMutationSource<ActionInputs<object>[K], unknown, unknown, unknown> | undefined
+			const operation = source[name]
 			const mutate = mutations.current[name]
 			if (!operation || !mutate) throw new Error(`Missing grid ${name} executor`)
 			try {
 				if (mutate.key !== operationKey(name)) throw new Error(`Grid ${name} scope changed before dispatch`)
-				await mutate.run(operation.prepareArgs(input))
+				await mutate.run(input)
 			} catch (error) {
 				throw (operation.transformError ?? source.transformError)?.(error) ?? error
 			}
@@ -572,74 +604,68 @@ export function withQuery<
 			if (!reset || observedPageIndex === 0) previousCriteria.current = criteria
 			else table.setPageIndex(0)
 		}, [criteria, reset, observedPageIndex, table])
-		const infiniteParams = {
-			sorting: params.sorting,
-			columnFilters: params.columnFilters,
-			globalFilter: params.globalFilter,
-			pageSize: params.pagination.pageSize,
-		}
-		const read = infiniteMode ? source.getInfinite : source.getAll
-		const readQuery = read?.query
-		const getRows = read?.getRows
+		const pagination = infiniteMode
+			? { mode: 'infinite' as const, pageSize: params.pagination.pageSize }
+			: { mode: 'pages' as const, ...params.pagination }
+		const read = source.collection[pagination.mode]
+		if (!read) throw new Error(`Grid source does not support ${pagination.mode} reads`)
+		const readQuery = read.query
+		const getRows = read.getItems
 		const suppressPlaceholder =
 			lastRead.current !== undefined &&
 			(lastRead.current.scope !== scope || lastRead.current.query !== readQuery || lastRead.current.getRows !== getRows)
-		const infiniteOptions = infiniteMode ? source.getInfinite?.query(infiniteParams) : undefined
-		const listOptions = !infiniteMode && suppressPlaceholder ? source.getAll?.query(params) : undefined
+		const infiniteOptions =
+			pagination.mode === 'infinite'
+				? source.collection.infinite?.query({ ...pagination, params: criteria })
+				: undefined
+		const listOptions =
+			pagination.mode === 'pages' && suppressPlaceholder
+				? source.collection.pages?.query({ ...pagination, params: criteria })
+				: undefined
 		const infiniteIdentity = infiniteOptions ? client.defaultQueryOptions(infiniteOptions).queryHash : undefined
-		const collectionSource = useMemo(() => {
-			const activeList = listOptions && withoutPreviousData(listOptions)
-			const activeInfinite =
-				infiniteOptions && suppressPlaceholder ? withoutPreviousData(infiniteOptions) : infiniteOptions
-			return {
-				...(source.getAll
+		const collectionSource = {
+			...source,
+			collection: {
+				...(source.collection.pages
 					? {
-							getAll: {
-								query: activeList ? () => activeList : source.getAll.query,
-								getItems: source.getAll.getRows,
-								...(source.getAll.getRowCount ? { getTotal: source.getAll.getRowCount } : {}),
+							pages: {
+								...source.collection.pages,
+								query: listOptions ? () => withoutPreviousData(listOptions) : source.collection.pages.query,
 							},
 						}
 					: {}),
-				...(source.getInfinite
+				...(source.collection.infinite
 					? {
-							getInfinite: {
-								query: activeInfinite ? () => activeInfinite : source.getInfinite.query,
-								getItems: source.getInfinite.getRows,
+							infinite: {
+								...source.collection.infinite,
+								query: infiniteOptions
+									? () => (suppressPlaceholder ? withoutPreviousData(infiniteOptions) : infiniteOptions)
+									: source.collection.infinite.query,
 							},
 						}
 					: {}),
-				...(source.create ? { create: source.create } : {}),
-				...(source.update ? { update: source.update } : {}),
-				...(source.delete ? { delete: source.delete } : {}),
-				...(source.deleteMany ? { deleteMany: source.deleteMany } : {}),
-				invalidation: source.invalidation ?? EMPTY,
-			}
-		}, [source, infiniteOptions, listOptions, suppressPlaceholder])
-		const observerPolicy = { ...queryOptions, notifyOnChangeProps: 'all' as const }
-		// The runtime source crosses one opaque response boundary; modes are checked below.
-		const collection = useCollectionQuery<typeof collectionSource, 'pages' | 'infinite'>(
-			infiniteMode
-				? {
-						source: requireCollectionRead(collectionSource, 'getInfinite'),
-						mode: 'infinite',
-						queryOptions: observerPolicy,
-						params: infiniteParams,
-					}
-				: {
-						source: requireCollectionRead(collectionSource, 'getAll'),
-						mode: 'pages',
-						params,
-						queryOptions: observerPolicy,
-					},
-		)
+			},
+		}
+		// The public boundary has checked both capability and projection. The active
+		// descriptor is checked above and retains its native options here.
+		const collection = useCollectionQuery({
+			source: collectionSource,
+			pagination,
+			params: criteria,
+			queryOptions: { ...queryOptions, notifyOnChangeProps: 'all' },
+		} as unknown as CollectionQueryConfig<typeof collectionSource, 'pages' | 'infinite'>)
 
 		// Publish after TanStack updates observer options in its passive effects.
 		useEffect(() => {
 			const current: typeof mutations.current = {}
 			for (const name of OPERATIONS) {
 				const mutation = collection[name]
-				if (mutation) current[name] = { key: operationKey(name), run: mutation.mutateAsync }
+				if (mutation)
+					current[name] = {
+						key: operationKey(name),
+						// execute() pairs the operation name with its typed action input.
+						run: mutation.mutateAsync as (input: unknown) => Promise<unknown>,
+					}
 			}
 			mutations.current = current
 			ready.abort()
@@ -718,7 +744,6 @@ export function withQuery<
 			params.pagination.pageSize,
 			table,
 		])
-		if (infiniteMode && !source.getInfinite) throw new Error('An infinite grid requires dataSource.getInfinite')
 		return table
 	}
 	function ConnectedGrid(

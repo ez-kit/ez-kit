@@ -4,7 +4,10 @@ import { keepPreviousData, QueryClient, QueryClientProvider } from '@tanstack/re
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { it, expect, vi } from 'vitest'
 
-import { withQuery, createGridSourceFactory } from './index'
+import { createGridSourceFactory } from './testing/factory.fixture'
+import { fixtureSource } from './testing/grid-source.fixture'
+
+import { withQuery } from './index'
 
 import type { ReactNode } from 'react'
 
@@ -45,7 +48,7 @@ for (const mode of ['editing', 'creating'] as const) {
 			const h = renderHook(
 				({ source }) =>
 					connected.useDataGrid({
-						dataSource: source,
+						dataSource: fixtureSource(source),
 						columns: [{ accessorKey: 'name' }],
 						getRowId: (row) => row.id,
 						editing: { validate },
@@ -125,7 +128,7 @@ it('protects row actions and an idle draft across a source change, including pla
 	const h = renderHook(
 		({ source }) =>
 			connected.useDataGrid({
-				dataSource: source,
+				dataSource: fixtureSource(source),
 				columns: [{ accessorKey: 'name' }],
 				getRowId: (row) => row.id,
 				editing: true,
@@ -190,7 +193,7 @@ it('keeps the new selection when an already dispatched bulk delete finishes for 
 	const h = renderHook(
 		({ source }) =>
 			connected.useDataGrid({
-				dataSource: source,
+				dataSource: fixtureSource(source),
 				columns: [{ accessorKey: 'name' }],
 				getRowId: (row) => row.id,
 				selection: true,
@@ -245,7 +248,8 @@ it('suppresses previous placeholder data before the next source projects it', as
 	const project = vi.fn((rows: Row[]) => rows.map((row) => row))
 	const B = { getAll: { query: () => ({ queryKey: ['b'], queryFn: () => waiting }), getRows: project } }
 	const h = renderHook(
-		({ tenant }) => connected.useDataGrid({ dataSource: tenant === 'a' ? A : B, columns: [], scopeKey: [tenant] }),
+		({ tenant }) =>
+			connected.useDataGrid({ dataSource: fixtureSource(tenant === 'a' ? A : B), columns: [], scopeKey: [tenant] }),
 		{ wrapper, initialProps: { tenant: 'a' } },
 	)
 	await waitFor(() => {
@@ -283,7 +287,7 @@ it('keeps same-tenant form and selection when an unrelated mutation appears', as
 	const h = renderHook(
 		({ canDelete }) =>
 			connected.useDataGrid({
-				dataSource: canDelete ? next : source,
+				dataSource: fixtureSource(canDelete ? next : source),
 				columns: [],
 				scopeKey: ['same-owner'],
 				editing: true,
@@ -327,7 +331,7 @@ it('requires stable IDs when editing server rows', () => {
 		renderHook(
 			() =>
 				connected.useDataGrid({
-					dataSource: source,
+					dataSource: fixtureSource(source),
 					columns: [],
 					editing: { onSave: save },
 					pagination: true,
@@ -375,10 +379,13 @@ it.each(['none', 'static', 'callback'] as const)(
 			},
 		}
 		client.setQueryData(['readonly', 'old'], { users: oldRows })
-		const h = renderHook(({ next }) => connected.useDataGrid({ columns: [], dataSource: next ? B : A }), {
-			wrapper,
-			initialProps: { next: false },
-		})
+		const h = renderHook(
+			({ next }) => connected.useDataGrid({ columns: [], dataSource: fixtureSource(next ? B : A) }),
+			{
+				wrapper,
+				initialProps: { next: false },
+			},
+		)
 		const items = () => h.result.current.getRowModel().rows.map((row) => row.original)
 		expect(items()).toEqual(oldRows)
 		h.rerender({ next: true })

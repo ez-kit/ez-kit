@@ -2,12 +2,16 @@ import { createDataGrid, defineCellType, defineColumnConfig } from '@ez-kit/data
 import { allDataGridFeatures } from '@ez-kit/data-grid-react/features/all'
 import { expect, expectTypeOf, it } from 'vitest'
 
-import { createGridSourceFactory, withQuery } from './index'
+import { createDataGridSource, withQuery } from './index'
 
 type User = { id: string; name: string }
-const source = createGridSourceFactory({ list: { prepareArgs: () => ({}), getRows: (rows: User[]) => rows } })({
+const source = createDataGridSource({
 	key: ['users'],
-	getAll: () => Promise.resolve([] as User[]),
+	collection: {
+		prepareArgs: () => undefined,
+		fetcher: () => Promise.resolve([] as User[]),
+		getItems: (rows) => rows,
+	},
 })
 const cells = { badge: defineCellType<{ color: string }>()({ view: () => null }) }
 const connected = withQuery(
@@ -107,10 +111,10 @@ function Consumer() {
 				columns={[{ accessorKey: 'name', cell: { type: 'badge', config: { color: 'red' } } }]}
 				queryOptions={{ enabled: true, staleTime: 30_000 }}
 			/>
+			{/* @ts-expect-error Wrong context values are rejected on JSX too. */}
 			<connected.DataGrid
 				dataSource={source}
 				columns={[]}
-				// @ts-expect-error Wrong context values are rejected on JSX too.
 				context={{ canEdit: 'yes' }}
 			/>
 		</>
@@ -118,4 +122,13 @@ function Consumer() {
 }
 it('checks public connection types without executing compile-only fixtures', () => {
 	expect(Consumer).toBeTypeOf('function')
+})
+
+function useOnlyPages() {
+	// @ts-expect-error The source must configure its infinite cursor contract first.
+	connected.useDataGrid({ dataSource: source, columns: [], pagination: { mode: 'infinite' } })
+}
+
+it('requires the infinite capability on the concrete source', () => {
+	expect(useOnlyPages).toBeTypeOf('function')
 })

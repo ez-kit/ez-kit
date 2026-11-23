@@ -2,7 +2,7 @@
 
 import { createDataGrid, useDataGridState } from '@ez-kit/data-grid-react'
 import { allDataGridFeatures } from '@ez-kit/data-grid-react/features/all'
-import { createGridSourceFactory, withQuery } from '@ez-kit/qc-react/data-grid'
+import { createDataGridSource, withQuery } from '@ez-kit/qc-react/data-grid'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useState } from 'react'
 
@@ -10,9 +10,6 @@ import { allComponents, cellTypes } from 'shared/GridKit'
 
 const defaultKit = withQuery(createDataGrid({ components: allComponents, cellTypes, features: allDataGridFeatures }))
 type User = { id: string; name: string }
-const makeSource = createGridSourceFactory({
-	list: { prepareArgs: (params) => params, getRows: (rows: User[]) => rows },
-})
 const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 function Status() {
 	const loading = useDataGridState((state) => state.loading)
@@ -31,14 +28,18 @@ function createDemoApi() {
 	let rows: User[] = [{ id: '1', name: 'Ada' }]
 	let saved = false
 	let failRefresh = false
-	const source = makeSource({
+	const source = createDataGridSource({
 		key: ['modal-users'],
-		getAll: async () => {
-			if (saved) {
-				await delay(4000)
-				if (failRefresh) throw new Error('Refresh failed')
-			}
-			return [...rows]
+		collection: {
+			prepareArgs: () => undefined,
+			fetcher: async () => {
+				if (saved) {
+					await delay(4000)
+					if (failRefresh) throw new Error('Refresh failed')
+				}
+				return [...rows]
+			},
+			getItems: (response) => response,
 		},
 		update: {
 			prepareArgs: ({ row, values }) => ({ id: row?.id, name: String(values.name) }),

@@ -1,7 +1,7 @@
 import { InfiniteQueryObserver, QueryClient, QueryObserver } from '@tanstack/react-query'
 import { expect, expectTypeOf, it } from 'vitest'
 
-import { createGridSourceFactory } from './index'
+import { createGridSourceFactory } from './testing/factory.fixture'
 
 import type { GridQueryParams } from './types'
 

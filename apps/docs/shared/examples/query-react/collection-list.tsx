@@ -1,6 +1,6 @@
 'use client'
 
-import { createCollectionSource, useCollectionQuery } from '@ez-kit/query-react/collection'
+import { createCollectionSource, useCollectionQuery, type CollectionReadInput } from '@ez-kit/query-react/collection'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useState } from 'react'
 
@@ -9,7 +9,8 @@ import { Input } from '@/components/ui/input'
 import { Item, ItemGroup } from '@/components/ui/item'
 
 type User = { id: string; name: string }
-type Params = { search: string; offset: number; limit: number }
+type Criteria = { search: string }
+type Request = Criteria & { offset: number; limit: number }
 
 function createDemo() {
 	let users: User[] = ['Ada', 'Grace', 'Linus', 'Margaret', 'Ken'].map((name, index) => ({ id: String(index), name }))
@@ -21,9 +22,13 @@ function createDemo() {
 	}
 	const source = createCollectionSource({
 		key: ['collection-demo'],
-		getAll: {
-			prepareArgs: (params: Params) => params,
-			fetcher: async (params: Params, { signal }) => {
+		collection: {
+			prepareArgs: ({ params, pageIndex, pageSize }: CollectionReadInput<Criteria>) => ({
+				...params,
+				offset: pageIndex * pageSize,
+				limit: pageSize,
+			}),
+			fetcher: async (params: Request, { signal }) => {
 				await delay()
 				signal.throwIfAborted()
 				const matches = users.filter((user) => user.name.toLowerCase().includes(params.search.toLowerCase()))
@@ -71,9 +76,13 @@ function createDemo() {
 }
 
 function CollectionList({ source }: { source: ReturnType<typeof createDemo>['source'] }) {
-	const [params, setParams] = useState<Params>({ search: '', offset: 0, limit: 2 })
+	const [params, setParams] = useState({ search: '', offset: 0, limit: 2 })
 	const [selected, setSelected] = useState<string[]>([])
-	const users = useCollectionQuery({ source, params, mode: 'pages' })
+	const users = useCollectionQuery({
+		source,
+		params: { search: params.search },
+		pagination: { mode: 'pages', pageIndex: params.offset / params.limit, pageSize: params.limit },
+	})
 	const pending =
 		users.create.isPending || users.update.isPending || users.delete.isPending || users.deleteMany.isPending
 	const error =

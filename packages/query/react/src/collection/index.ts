@@ -1,18 +1,28 @@
 export { collectionCacheArgs } from './cache-args'
-export { createCollectionSource } from './source'
+export { createCollectionSourceFactory } from './collection-factory'
+export { createCollectionSource } from './collection-source'
+export type {
+	CollectionFetcherConfig,
+	CollectionOperation,
+	CollectionPagination,
+	CollectionPageInput,
+	CollectionInfiniteInput,
+	CollectionReadInput,
+	GeneratedCollectionSource,
+	MutationCapabilities,
+} from './collection-source'
 export type { CollectionRead, CollectionInfiniteRead, CollectionMutation, ReadSelection, ReadTransport } from './types'
 export type { InvalidationPolicy } from './invalidation'
-export { listInvalidation, resolveInvalidation } from './invalidation'
-export { useCollectionQuery, useCollectionMutation } from './use-collection-query'
+export { collectionInvalidation, resolveInvalidation } from './invalidation'
+export { useCollectionMutation } from './use-collection-query'
+export type { ReadProjectionCompatibility } from './use-collection-query'
+export { useCollectionQuery } from './use-source-query'
 export type {
 	CollectionShape,
-	CollectionReadCompatibility,
-	ReadProjectionCompatibility,
 	CollectionParams,
 	CollectionItems,
 	CollectionMode,
 	CollectionResult,
 	CollectionQueryConfig,
 	CollectionQueryOptions,
-} from './use-collection-query'
-export { createCollectionSourceFactory } from './factory'
+} from './use-source-query'

@@ -1,285 +1,81 @@
 ---
 title: Collections
-description: Typed server collections and CRUD operations for ordinary lists and data-grid connectors.
+description: Read and mutate a collection with application-owned criteria and pagination.
 ---
 
-`useCollectionQuery` executes a collection source under your existing `QueryClientProvider`.
-It does not own list state or render UI. Import it from `@ez-kit/query-react/collection`.
-
-For a guided walkthrough of reading, all four mutations and grid adaptation, see
-[Lists and CRUD](/docs/qc-react/lists). The API contracts are described below.
+Use `@ez-kit/query-react/collection` to connect a list to TanStack Query. A collection source defines the resource key, one read and optional writes. Each view owns its criteria and chooses the pagination mode.
 
 ## A complete CRUD list
 
 <LivePreview
 	path='query-react/collection-list'
-	title='One collection source, ordinary shadcn items'
+	title='Ordinary list CRUD'
 />
 
-Search and pagination belong to this component. Changing search resets offset in the same state
-update, so no request uses the new search with the previous offset. After deletion, the component
-corrects an out-of-range offset only after receiving a fresh successful total.
+The [step-by-step list guide](/docs/qc-react/lists) builds this example from the first read.
 
-## Sources and arbitrary parameters
+## Create a collection
 
-```tsx
-import { createCollectionSource, useCollectionQuery } from '@ez-kit/query-react/collection'
+```ts
+import { createCollectionSource, type CollectionReadInput } from '@ez-kit/query-react/collection'
 
-const source = createCollectionSource({
+type Criteria = { search: string }
+
+const usersSource = createCollectionSource({
 	key: ['users'],
-	getAll: {
-		prepareArgs: (params: { teamId: string; offset: number; limit: number }) => ({
-			path: { teamId: params.teamId },
-			query: { offset: params.offset, limit: params.limit },
-		}),
+	collection: {
 		fetcher: fetchUsers,
-		getItems: (response) => response.items,
-		getTotal: (response) => response.total,
+		prepareArgs: (input: CollectionReadInput<Criteria, number>) => ({
+			...input.params,
+			limit: input.pageSize,
+			offset: input.mode === 'infinite' ? input.pageParam : input.pageIndex * input.pageSize,
+		}),
+		getItems: (page) => page.items,
+		getTotal: (page) => page.total,
+		infinite: {
+			initialPageParam: 0,
+			getNextPageParam: (page) => page.nextOffset,
+		},
 	},
-})
-const users = useCollectionQuery({
-	source,
-	mode: 'pages',
-	params: { teamId, offset: 0, limit: 20 },
+	delete: {
+		fetcher: deleteUser,
+		prepareArgs: ({ id }: { id: string }) => id,
+	},
 })
 ```
 
-`params` is inferred from the source. It can use your own filter, sort and pagination shape.
-The hook forwards it without modifying it. Include every response-affecting input, including
-tenant identity, in prepared arguments or the base key. Fetchers receive a separate `{ signal }`
-transport argument; generated clients remain responsible for URL, query and body placement.
+Use application-specific criteria such as search, team ID or status. The fetcher receives the prepared request and a separate signal. The ordinary and infinite modes share a fetcher and projection. A resource with only ordinary reads can omit `infinite`.
 
-`items` is the projected collection and `total` is optional. `query` is the native active query
-result, including loading, disabled, placeholder, refetch and error states. Projections consume
-selected observer data; they do not replace the original cached response.
+## Observe a page
+
+```ts
+const users = useCollectionQuery({
+	source: usersSource,
+	params: { search },
+	pagination: { mode: 'pages', pageIndex, pageSize: 20 },
+})
+```
+
+Render `items`, read `total` and use the native `query` for status. The caller owns page changes and resets. In infinite mode pass `pagination: { mode: 'infinite', pageSize: 20 }`, then use `query.fetchNextPage()` to request more.
 
 ## Mutations
 
-```tsx
-update: {
-  prepareArgs: (input: { id: string; name: string }) => ({
-    path: { id: input.id }, body: { name: input.name },
-  }),
-  fetcher: updateUser,
-  options: {
-    onSuccess: (saved, input) => console.log(saved.id, input.id),
-  },
-}
-// In a consumer:
-await users.update.mutateAsync({ id: '42', name: 'Alice' })
-```
+Configured operations expose native TanStack Query mutation results, including `mutate`, `mutateAsync`, pending state and errors. `prepareArgs` runs inside the mutation function. Lifecycle callbacks receive the original input.
 
-Only configured `create`, `update`, `delete` and `deleteMany` operations are available. Each is a
-native mutation result: use `mutate`, `mutateAsync`, `isPending`, `error`, `data`, `variables` and
-`reset`. There is no `execute` method. Each operation has its own input, fetcher argument, result,
-error and optimistic-context types. The error default respects TanStack's registered default error.
+On success the default policy invalidates both read families under the base key. Use `invalidate.additional` for further filters, `replace` to select the entire policy, or `false` to disable it. Active observers refresh in the background.
 
-Preparation runs inside `mutationFn`, after `onMutate`. Lifecycle callbacks receive the original
-input. Preparation failures enter the native error lifecycle, and enabled retries repeat preparation.
-Keep preparation pure; put stable operation IDs in the input rather than generating them on retry.
-Handle `mutateAsync` rejections in event handlers. Bulk deletion requires an explicit fetcher;
-the hook does not loop over single deletion or infer partial success.
+## Cache and native options
 
-## Invalidation and native options
+Generated keys use the resource key, mode, controlled criteria and pagination. The pages key includes its page index. Infinite pages share one key and the current cursor arrives in `prepareArgs` on each request. Use `collection.prepareKey` for a custom cache-key part. Include external request scope such as a tenant in the base key or criteria.
 
-Generated keys use separate `list` and `infinite` families beneath the base key. Successful
-mutations invalidate both families without waiting for background refresh. Slow or failed refreshes
-do not turn successful persistence into failed persistence. User lifecycle promises are still awaited.
-
-Use `invalidate: false`, `{ additional: [{ queryKey: ['users-count'] }] }`, or
-`{ replace: [...] }` at source or operation level. Operation policies override or extend source rules.
-Each additional filter selects a separate family; one queryKey array remains one composite key.
-
-Native read descriptors provide `query(params)`, `getItems` and optional `getTotal`; native mutation
-descriptors provide `mutation` options. These preserve external keys and variable types. Supply an
-explicit invalidation policy for native sources. Fetcher and native mutation descriptors are distinct:
-a native mutation already defines its input and does not take another `prepareArgs`.
-
-Automatic invalidation is attached at hook scope and survives observer unmount. Per-call callbacks
-retain TanStack's observer-dependent lifetime. Mutation errors are not converted into form errors here;
-a UI connector can adapt them at its own boundary.
-
-## Infinite-only collections
-
-A source can define only `getInfinite`; `getAll` is not required. Use `mode: 'infinite'` and the
-parameters inferred for that operation. `prepareArgs` creates collection arguments, while
-`preparePageArgs({ args, pageParam })` creates each request. `initialPageParam` and `getNextPageParam`
-retain native cursor types. Cursors do not change collection identity.
-
-The hook projects loaded pages into `items`; call `query.fetchNextPage()` and observe
-`query.hasNextPage`, `query.isFetchingNextPage` and `query.isFetchNextPageError`. Existing items remain
-on next-page failure. `total` is undefined for infinite reads; custom metadata remains in native page
-data. The hook adds no scroll observer. A source supporting both modes can switch without remounting.
-
-Generated query keys use the result of `prepareArgs` by default. Supply `prepareKey(args, params)`
-on a list or infinite read when the transport uses objects such as `URLSearchParams` or `Headers`.
-The key part must use plain serializable values. A custom key still includes the source key and read
-mode, so the existing invalidation family remains intact. The fetcher receives the original args. TanStack applies its usual hashing rules. If your API distinguishes `null` from
-`undefined`, or if an infinite read can start at different cursors, encode that distinction in
-`prepareKey`. The default generated key contains the prepared arguments and does not include
-`initialPageParam`.
-
-```ts
-prepareArgs: ({ status }) => new URLSearchParams({ status }),
-prepareKey: (args) => args.get('status'),
-```
-
-## Reuse conventions and connect a grid
-
-The [ordinary-list factory example](/docs/qc-react/reuse#reuse-a-factory-in-ordinary-lists) shows two endpoints sharing an offset convention. `createCollectionSourceFactory` defines shared `list`, `infinite` and `mutations` defaults. Supply
-entity fetchers to the returned factory; expanded operations override supplied properties. An
-operation's `options` replaces the options object rather than deep-merging callbacks. An application
-factory can specialize an entity type once when a generic response envelope needs it.
-
-Use `createGridSourceFromCollection` from `@ez-kit/qc-react/data-grid` to map table parameters and action
-contexts to a collection source. `withQuery(bundle)` then consumes that dataSource. The collection
-has no grid dependency; tables still own applied filters, page resets and form sessions.
-See [the connector guide](/docs/qc-react) for grid integration.
-
-Fetcher mutations default `mutationKey` to `[...baseKey, operationName]`. Include tenant ownership
-in the base key when switching between tenant-specific sources: a mutation already dispatched for
-one tenant keeps that scope when the hook switches to a differently keyed source. Explicit mutation
-keys override this default. Native mutation descriptors preserve supplied keys and TanStack's normal
-observer behavior; changing callbacks under the same key does not create an isolated operation scope.
-
-## Conditional capabilities and required configuration
-
-When a permission or feature flag conditionally adds a mutation, the corresponding result
-remains optional: check `users.delete` before calling it, or use `users.delete?.mutate(input)`.
-Likewise, narrow a conditionally present read before selecting its mode. A configured read
-can still use `enabled: false` to pause requests without removing the capability.
-
-Generated reads require `key`; native reads require explicit `invalidate` (including `false`).
-A shared factory can omit a read convention, but the entity operation must then supply all
-of that read's preparation and projection fields. Incomplete definitions are type errors.
-
-Mutation `onSuccess` inherits global or keyed QueryClient defaults when the source does not
-provide its own callback. A local callback replaces the inherited one, following TanStack's
-precedence; automatic invalidation follows the effective callback.
+Use a native `collection.pages` or `collection.infinite` descriptor with `query` and `getItems` to preserve existing keys and selectors. Supply an explicit invalidation policy for native sources.
 
 ## Per-component query options
 
-Keep shared defaults in the source and override loading behavior at the hook call:
+Pass observer settings such as `queryOptions: { enabled, staleTime: 30_000, refetchOnWindowFocus: false }` at the hook call. The source supplies the query key, fetcher, projection and cursor settings.
 
-```tsx
-const users = useCollectionQuery({
-	source: usersSource,
-	mode: 'pages',
-	params,
-	queryOptions: {
-		enabled: isOpen,
-		staleTime: 30_000,
-		refetchOnWindowFocus: false,
-	},
-})
-```
+## Reuse conventions and connect a grid
 
-The same option works in `mode: 'infinite'`. Supplied properties override source options;
-other source settings remain unchanged. Supported options are `enabled`, `staleTime`, `gcTime`,
-`retry`, `retryDelay`, `retryOnMount`, `refetchInterval`, `refetchIntervalInBackground`,
-`refetchOnMount`, `refetchOnWindowFocus`, `refetchOnReconnect`, `networkMode`, `throwOnError`
-and `notifyOnChangeProps`. Native callbacks retain the source's response and error types.
+Use `createCollectionSourceFactory` to share `collection` defaults and operation preparation between resources. See the [factory example](/docs/qc-react/reuse#reuse-a-factory-in-ordinary-lists).
 
-The source still owns `queryKey`, `queryFn`, `select`, initial data and infinite cursor handling.
-They cannot be overridden here. These settings apply only to the active read, not to mutations.
-Disabling an observer retains TanStack's normal behavior: cached data remains available and
-manual `query.refetch()` can still fetch.
-
-## Selecting another shape in a shared factory
-
-An entity can change the selected response shape without changing the cached response or
-repeating the request convention:
-
-```tsx
-const makeUsersSource = createCollectionSourceFactory({
-	list: {
-		prepareArgs: (params: { offset: number; limit: number }) => ({ query: params }),
-		getItems: (response: { items: User[]; total: number }) => response.items,
-		getTotal: (response) => response.total,
-	},
-})
-
-const namesSource = makeUsersSource({
-	key: ['user-names'],
-	getAll: {
-		fetcher: fetchUsers,
-		options: { select: (response) => response.items.map((user) => user.name) },
-		getItems: (names) => names, // string[], inferred from select
-	},
-})
-```
-
-Providing `select` requires an explicit `getItems` for the new shape. The inherited `getTotal`
-is discarded; supply a new one if the selected data still contains a total. Without it, the
-collection total is `undefined`. The operation's entire `options` object replaces shared
-options, as with other factory overrides.
-
-For infinite reads, select the native `InfiniteData` envelope and project each selected page:
-
-```tsx
-getInfinite: {
-  fetcher: fetchUsersPage,
-  options: {
-    select: data => ({
-      ...data,
-      pages: data.pages.map(page => page.items.map(user => user.name)),
-    }),
-  },
-  getItems: names => names, // selected page: string[]
-}
-```
-
-Keep the `pages` / `pageParams` structure. `getNextPageParam` still receives original API pages;
-`getItems` receives selected pages. Prefetching and cache access continue to use the raw response.
-
-## Safe selection and changing capabilities
-
-Without `select`, `getItems` and `getTotal` receive the raw API response. A projection annotation
-cannot change that response type. If a selector changes the response shape, it must be present
-whenever the projection expects that shape. This applies to both standalone sources and shared
-factories, including infinite pages.
-
-```tsx
-// Keep the selector present; branch inside it so the output shape stays consistent.
-options: {
-  select: response => compact
-    ? response.items.map(user => user.name)
-    : response.items.map(user => `${user.name} (${user.id})`),
-},
-getItems: names => names,
-```
-
-A conditional selector can also return an explicit union of raw and selected data, provided the
-projection handles both shapes. An optional selector cannot promise that only selected data arrives.
-
-Every generated fetcher operation requires a source `key`, including mutations alongside native
-reads. Native reads still require their own explicit invalidation policy; supplying a base key
-does not infer their query keys.
-
-When a conditional mutation disappears, it is omitted from the hook result. Already dispatched
-work retains the last connected operation's retry function, lifecycle callbacks and invalidation.
-Reconfiguring an available native operation still follows TanStack's key/observer behavior.
-
-### Native projections and inherited totals
-
-Native reads also infer the input of `getItems` and `getTotal` from their query options. Both plain
-options objects and TanStack's `queryOptions` / `infiniteQueryOptions` helpers are supported.
-
-If conditional selection broadens the input type, an inherited raw-only `getTotal` needs a
-compatible replacement. Handle both forms or use `getTotal: () => undefined` when no total is needed.
-A definitely present selector continues to discard inherited projections as described above.
-
-The packages require TanStack Query **5.105.3 or later within v5**. Public declaration checks run
-against that exact minimum version as well as the workspace's development dependencies.
-
-A plain source keeps the relationship between its native query options and `getItems` or
-`getTotal`. The projection must accept the data produced by the query, including any `select`.
-Infinite projections consume one page of the selected infinite data. When present, `initialData` must match the raw cache response.
-If a selector is optional, both the projection and `query.data` account for the resulting
-raw and selected forms.
-
-Plain native descriptors passed directly to `useCollectionQuery` have the same consumer option
-types as sources built by the helpers. An omitted option remains available for local overrides,
-and a source's literal `enabled: false` can be overridden with `queryOptions: { enabled: true }`.
-Callback options infer the native query's data type. The runtime whitelist still prevents
-consumers from replacing source-owned keys, fetchers or selection.
+`createDataGridSource` uses the same collection model with the grid's applied criteria and action contexts. Pass its source directly to `withQuery`'s connected DataGrid, or observe it with this hook by supplying compatible inputs.

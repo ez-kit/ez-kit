@@ -1,6 +1,6 @@
 import { expectTypeOf, it } from 'vitest'
 
-import { useCollectionQuery } from './use-collection-query'
+import { useCollectionQuery } from './testing/use-collection-query.fixture'
 
 const source = {
 	invalidation: [],

@@ -1,6 +1,6 @@
 import { useCollectionMutation } from '@ez-kit/query-react/collection'
 
-import type { InvalidationPolicy } from './invalidation'
+import type { InvalidationPolicy } from '../invalidation'
 import type { DefaultError, InvalidateQueryFilters, UseMutationOptions } from '@tanstack/react-query'
 
 export type GridMutationSource<TInput, TVariables, TResult, TError = DefaultError, TOptimistic = unknown> = {

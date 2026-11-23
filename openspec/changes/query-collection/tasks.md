@@ -118,3 +118,10 @@
 - [x] Align structural result types and projections with raw initial data and optional selectors.
 - [x] Preserve source checks and document the default key hashing and prepareKey override.
 - [x] Verify the repository and React 18 compatibility for this follow-up.
+
+## Unified source API
+
+- [x] Use a shared collection block with one prepareArgs and optional infinite cursor settings.
+- [x] Accept controlled pagination in useCollectionQuery with arbitrary application criteria.
+- [x] Bind DataGrid criteria and action types through createDataGridSource and consume the source directly.
+- [x] Migrate the onboarding guides, live examples and compiled Orval integration.

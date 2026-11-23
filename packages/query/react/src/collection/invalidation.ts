@@ -17,7 +17,7 @@ export function resolveInvalidation(
 	return [...inherited, ...policy.additional]
 }
 
-/** Factory-owned list families deliberately exclude detail and unrelated resource queries. */
-export function listInvalidation(key: QueryKey): readonly InvalidateQueryFilters[] {
-	return [{ queryKey: [...key, 'list'] }, { queryKey: [...key, 'infinite'] }]
+/** Cache families of a unified collection. */
+export function collectionInvalidation(key: QueryKey): readonly InvalidateQueryFilters[] {
+	return [{ queryKey: [...key, 'pages'] }, { queryKey: [...key, 'infinite'] }]
 }

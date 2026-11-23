@@ -4,7 +4,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { renderHook, waitFor } from '@testing-library/react'
 import { expect, it, vi } from 'vitest'
 
-import { createGridDataSource, withQuery } from './index'
+import { fixtureSource } from './testing/grid-source.fixture'
+import { createGridDataSource } from './testing/source.fixture'
+
+import { withQuery } from './index'
 
 import type { PropsWithChildren } from 'react'
 
@@ -44,7 +47,7 @@ it.each(['pages', 'infinite'] as const)(
 		const { result, rerender, unmount } = renderHook(
 			({ enabled }) =>
 				connected.useDataGrid({
-					dataSource: source,
+					dataSource: fixtureSource(source),
 					columns: [{ accessorKey: 'name' }],
 					pagination: mode === 'infinite' ? { mode: 'infinite' } : true,
 					queryOptions: { ...hostile, enabled, staleTime: Infinity, retry: false },
@@ -87,7 +90,7 @@ it('cannot load another cached page while disabled', async () => {
 	const h = renderHook(
 		() =>
 			connected.useDataGrid({
-				dataSource: source,
+				dataSource: fixtureSource(source),
 				columns: [{ accessorKey: 'id' }],
 				pagination: { mode: 'infinite' },
 				queryOptions: { enabled: false },
@@ -115,9 +118,12 @@ it('publishes loading and errors even when native notification policy only watch
 			getRows: (data: Row[]) => data,
 		},
 	}
-	const h = renderHook(() => connected.useDataGrid({ dataSource: source, columns: [{ accessorKey: 'id' }] }), {
-		wrapper,
-	})
+	const h = renderHook(
+		() => connected.useDataGrid({ dataSource: fixtureSource(source), columns: [{ accessorKey: 'id' }] }),
+		{
+			wrapper,
+		},
+	)
 	await waitFor(() => {
 		expect(h.result.current.store.state.loading.error).toBe(error)
 	})

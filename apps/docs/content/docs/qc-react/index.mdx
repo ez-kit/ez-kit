@@ -33,10 +33,10 @@ export function QueryProvider({ children }: PropsWithChildren) {
 
 ## 3. Describe the read
 
-In this example, `GET /api/users` returns `{ items, total }`. Pass the fetcher to `createListSource`, then tell the grid which part of the response contains the rows. `prepareArgs` returns `undefined` because this first endpoint takes no arguments.
+In this example, `GET /api/users` returns `{ items, total }`. Pass the fetcher to `createDataGridSource`, then tell the grid which part of the response contains the rows. `prepareArgs` returns `undefined` because this first endpoint takes no arguments.
 
 ```ts title="users-source.ts"
-import { createListSource } from '@ez-kit/qc-react/data-grid'
+import { createDataGridSource } from '@ez-kit/qc-react/data-grid'
 
 export type User = { id: string; name: string }
 type UsersResponse = { items: User[]; total: number }
@@ -47,14 +47,14 @@ async function fetchUsers(_: undefined, { signal }: { signal: AbortSignal }): Pr
 	return response.json()
 }
 
-export const dataSource = {
-	getAll: createListSource({
-		key: ['users'],
+export const dataSource = createDataGridSource({
+	key: ['users'],
+	collection: {
 		fetcher: fetchUsers,
 		prepareArgs: () => undefined,
-		getRows: (response) => response.items,
-	}),
-}
+		getItems: (response) => response.items,
+	},
+})
 ```
 
 `['users']` is the base key for this resource. For a paginated API, you will add request parameters and read the total in the [next guide](/docs/qc-react/pagination).

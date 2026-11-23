@@ -115,175 +115,53 @@ updateUser(id: string, values: UserValues, options?: RequestInit): Promise<User>
 It also generates User, UserValues, UsersPage and GetUsersParams. The transport's
 generic type describes the server contract; it is not runtime response validation.
 
-### 3. Define the API convention once
+### 3. Bind generated fetchers to a grid collection
 
-```ts title="convention.ts"
-import { createGridSourceFactory } from '@ez-kit/qc-react/data-grid'
+The list endpoint uses offsets and the feed endpoint uses a cursor. The collection prepares the request for the selected mode and calls the corresponding generated function. Both responses expose `items`.
 
-type Page<Row> = { items: Row[]; total: number }
-
-export function makeSource<Row extends { id: string }>() {
-	return createGridSourceFactory({
-		list: {
-			prepareArgs: ({ pagination }) => ({
-				offset: pagination.pageIndex * pagination.pageSize,
-				limit: pagination.pageSize,
-			}),
-			getRows: (page: Page<Row>) => page.items,
-			getRowCount: (page) => page.total,
-		},
-		mutations: {
-			update: {
-				prepareArgs: ({ row, values }) => {
-					if (!row) throw new Error('The edited row is no longer available')
-					return { id: row.id, body: values }
-				},
-			},
-		},
-	})
-}
-```
-
-Reuse this convention for endpoints with the same pagination and response envelope.
-An API supporting search, sorting or column filters adds their serialization here;
-those grid features are left disabled in this minimal recipe.
-
-### 4. Connect one entity
-
-```ts title="users-source.ts"
-import { makeSource } from './convention'
-import { getUsers, updateUser } from './generated/users'
-import type { User, UserValues } from './generated/users'
-
-function prepareValues(values: Partial<User>): UserValues {
-	if (!values.name?.trim()) throw new Error('Name is required')
-	return { name: values.name }
-}
-
-export const usersSource = makeSource<User>()({
+```ts
+const usersSource = createDataGridSource({
 	key: ['users'],
-	getAll: (args, { signal }) => getUsers(args, { signal }),
-	update: ({ id, body }: { id: string; body: Partial<User> }) => updateUser(id, prepareValues(body)),
+	collection: {
+		fetcher: fetchUsers, // dispatches to getUsers or getUsersFeed and forwards the signal
+		prepareArgs: (input) => {
+			const search = typeof input.params.globalFilter === 'string' ? input.params.globalFilter : ''
+			return input.mode === 'infinite'
+				? { mode: input.mode, search, limit: input.pageSize, cursor: input.pageParam }
+				: { mode: input.mode, search, limit: input.pageSize, offset: input.pageIndex * input.pageSize }
+		},
+		getItems: (page) => page.items,
+		getTotal: (page) => page.total,
+		infinite: {
+			initialPageParam: undefined as string | undefined,
+			getNextPageParam: (page) => page.next,
+		},
+	},
+	update: {
+		prepareArgs: ({ row, values }) => {
+			if (!row) throw new Error('User is no longer available')
+			if (!values.name?.trim()) throw new Error('Name is required')
+			return { id: row.id, body: { name: values.name } }
+		},
+		fetcher: ({ id, body }: { id: string; body: { name: string } }) => updateUser(id, body),
+	},
 })
 ```
 
-The read wrapper forwards Query's signal separately from business arguments.
-The shared factory owns this project's update convention: require the original
-row, take its API id, and pass the edited values as body. Entity sources inherit
-that preparation, so they do not repeat the row check or ID mapping. This is a
-project policy, not a mandatory connector check: a different convention can use
-rowId directly when it is the API ID.
+The generated `updateUser` function places the ID in the path and serializes the body. The checked example in `packages/qc/react/examples/orval/source.ts` includes the complete fetcher, sorting, create, delete and bulk delete.
 
-The entity wrapper adapts to Orval's positional signature. Its `prepareValues` still
-turns `Partial<User>` into the required `UserValues` DTO explicitly; this example does
-not introduce a schema or pretend that form validation narrows the callback type.
-The generated update function places id/body in HTTP.
-The source generates list keys and invalidates its list families after success;
-there is no separate generated-query cache to synchronize.
-
-#### Alternative: prepare the DTO with a schema
-
-If your project already uses a schema library, replace the handwritten
-`prepareValues` with a schema parse. For example, with Zod installed in the
-application, this is an alternative to the `users-source.ts` above:
-
-```ts title="users-source.schema.ts"
-import { z } from 'zod'
-import { makeSource } from './convention'
-import { getUsers, updateUser } from './generated/users'
-import type { User } from './generated/users'
-
-export const updateUserSchema = z.object({
-	name: z.string().trim().min(1, 'Name is required'),
-})
-
-export const usersSource = makeSource<User>()({
-	key: ['users'],
-	getAll: (args, { signal }) => getUsers(args, { signal }),
-	update: ({ id, body }: { id: string; body: Partial<User> }) => updateUser(id, updateUserSchema.parse(body)),
-})
-```
-
-The shared factory still checks the original row and supplies the ID. The schema
-checks the values and returns `{ name: string }`, which satisfies the generated
-update DTO without a type assertion. Its trimmed value is the one sent to the API.
-If parsing fails, `updateUser` is not called and the mutation rejects.
-
-This uses the existing fetcher API; it adds no `schema` option to qc-react and
-requires no schema-library dependency in the connector. You can reuse
-`updateUserSchema` in the form, but that does not change the callback's
-`Partial<User>` type: the parse here still runs, so validation may execute twice.
-For asynchronous schema checks or transforms, use `await schema.parseAsync(body)`
-in an async fetcher instead.
-
-A Zod error is not automatically converted into field errors. Use the existing
-operation/source `transformError` to map it to the grid's `ValidationError` if you
-want field-level feedback; native mutation `onError` still receives the original
-error. This alternative does not introduce automatic propagation of validated
-form types into the source.
-
-### 5. Mount the grid
-
-```tsx title="users-grid.tsx"
-'use client'
-
-import { createDataGrid } from '@ez-kit/data-grid-react'
-import { allDataGridFeatures } from '@ez-kit/data-grid-react/features/all'
-import { allComponents, cellTypes } from '@ez-kit/data-grid-shadcn'
-import { withQuery } from '@ez-kit/qc-react/data-grid'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useState } from 'react'
-import { usersSource } from './users-source'
-
-const { DataGrid, useDataGrid } = withQuery(
-	createDataGrid({ components: allComponents, cellTypes, features: allDataGridFeatures }),
-)
-const columns = [{ accessorKey: 'name' as const, header: 'Name', cell: { type: 'text' as const } }]
-
-export function UsersGrid() {
-	const [client] = useState(() => new QueryClient())
-	return (
-		<QueryClientProvider client={client}>
-			<DataGrid
-				dataSource={usersSource}
-				columns={columns}
-				getRowId={(user) => user.id}
-				pagination={{ pageSize: 20 }}
-				editing={true}
-			/>
-		</QueryClientProvider>
-	)
-}
-```
-
-Use your application's existing QueryClientProvider if it already has one. For
-HeroUI, replace the kit import with `@ez-kit/data-grid-heroui`; include your kit's
-normal styles. Editing stays explicit even though the source has update capability.
-
-If you need the table instance, under the same provider use the connected hook:
+### 4. Mount the connected grid
 
 ```tsx
-function UsersTable() {
-	const table = useDataGrid({
-		dataSource: usersSource,
-		columns,
-		getRowId: (user) => user.id,
-		pagination: { pageSize: 20 },
-		editing: true,
-	})
-	return <DataGrid table={table} />
-}
+const { DataGrid } = withQuery(gridBundle)
+
+<DataGrid
+	columns={columns}
+	dataSource={usersSource}
+	globalFiltering
+	editing={{ mode: 'modal' }}
+	pagination={{ mode: 'pages', pageSize: 20 }}
+/>
 ```
 
-For an infinite endpoint, the same generated-fetcher wrapper applies:
-`getInfinite: (args, { signal }) => getUsersFeed(args, { signal })`. Add the
-factory's collection `prepareArgs`, cursor `preparePageArgs`, page projection and
-`getNextPageParam`, then enable `pagination: { mode: 'infinite' }`.
-
-The checked repository example at `packages/qc/react/examples/orval` also includes
-infinite reads, create, single deletion and bulk deletion. Run
-`pnpm --filter @ez-kit/qc-react example:check` to regenerate and compare its client.
-Orval is a generation tool, not a runtime dependency of qc-react.
-
-Already have native `queryOptions` / `infiniteQueryOptions`? Use
-[the native source contract](/docs/qc-react/api#native-sources) and keep your keys.
+Use the same source for infinite pagination or with `useCollectionQuery` and compatible criteria. To keep existing TanStack query factories, use [the native source contract](/docs/qc-react/api#native-sources).

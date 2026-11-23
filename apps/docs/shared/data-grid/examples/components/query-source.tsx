@@ -2,7 +2,7 @@
 
 import { createDataGrid } from '@ez-kit/data-grid-react'
 import { allDataGridFeatures } from '@ez-kit/data-grid-react/features/all'
-import { createGridSourceFactory, withQuery } from '@ez-kit/qc-react/data-grid'
+import { createDataGridSource, withQuery } from '@ez-kit/qc-react/data-grid'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useState } from 'react'
 
@@ -34,34 +34,24 @@ function createDemoSource() {
 			next: args.offset + args.limit < rows.length ? args.offset + args.limit : null,
 		}
 	}
-	return createGridSourceFactory({
-		list: {
-			prepareArgs: ({ pagination, globalFilter, sorting }) => ({
-				offset: pagination.pageIndex * pagination.pageSize,
-				limit: pagination.pageSize,
-				search: typeof globalFilter === 'string' ? globalFilter : '',
-				sorted: sorting.length > 0,
-				descending: sorting[0]?.desc ?? false,
-			}),
-			getRows: (page: Page) => page.items,
-			getRowCount: (page) => page.total,
-		},
-		infinite: {
-			prepareArgs: ({ pageSize, globalFilter, sorting }) => ({
-				limit: pageSize,
-				search: typeof globalFilter === 'string' ? globalFilter : '',
-				sorted: sorting.length > 0,
-				descending: sorting[0]?.desc ?? false,
-			}),
-			preparePageArgs: ({ args, pageParam }: { args: Criteria; pageParam: number }) => ({ ...args, offset: pageParam }),
-			initialPageParam: 0,
-			getRows: (page: Page) => page.items,
-			getNextPageParam: (page) => page.next,
-		},
-	})({
+	return createDataGridSource({
 		key: ['query-example-users'],
-		getAll: fetchUsers,
-		getInfinite: fetchUsers,
+		collection: {
+			fetcher: fetchUsers,
+			prepareArgs: (input) => ({
+				offset: input.mode === 'infinite' ? input.pageParam : input.pageIndex * input.pageSize,
+				limit: input.pageSize,
+				search: typeof input.params.globalFilter === 'string' ? input.params.globalFilter : '',
+				sorted: input.params.sorting.length > 0,
+				descending: input.params.sorting[0]?.desc ?? false,
+			}),
+			getItems: (page) => page.items,
+			getTotal: (page) => page.total,
+			infinite: {
+				initialPageParam: 0,
+				getNextPageParam: (page) => page.next,
+			},
+		},
 		create: {
 			prepareArgs: ({ values }) => prepareName(values.name),
 			fetcher: async (name: string) => {

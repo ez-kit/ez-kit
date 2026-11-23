@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, render, waitFor } from '@testing-library/react'
 import { expect, it, vi } from 'vitest'
 
+import { fixtureSource } from './testing/grid-source.fixture'
+
 import { withQuery } from './index'
 
 it.each(['success', 'error'] as const)(
@@ -49,7 +51,7 @@ it.each(['success', 'error'] as const)(
 		function Parent({ scope }: { scope: string }) {
 			return (
 				<connected.DataGrid
-					dataSource={source(scope)}
+					dataSource={fixtureSource(source(scope))}
 					columns={[{ accessorKey: 'id' }]}
 					pagination={{ mode: 'infinite', trigger: 'manual' }}
 				>

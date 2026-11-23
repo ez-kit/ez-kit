@@ -1,26 +1,26 @@
 import { QueryClient } from '@tanstack/react-query'
 import { describe, expect, it } from 'vitest'
 
-import { listInvalidation, resolveInvalidation } from './invalidation'
+import { collectionInvalidation, resolveInvalidation } from './invalidation'
 
 describe('invalidation policy', () => {
 	it('invalidates both list families without touching detail or other resources', async () => {
 		const client = new QueryClient()
 		const keys = [
-			['users', 'list', { page: 0 }],
-			['users', 'list', { page: 1 }],
+			['users', 'pages', { page: 0 }],
+			['users', 'pages', { page: 1 }],
 			['users', 'infinite', { search: 'Ada' }],
 			['users', 'detail', '1'],
-			['orders', 'list'],
+			['orders', 'pages'],
 		]
 		for (const key of keys) client.setQueryData(key, [])
-		await Promise.all(listInvalidation(['users']).map((filter) => client.invalidateQueries(filter)))
+		await Promise.all(collectionInvalidation(['users']).map((filter) => client.invalidateQueries(filter)))
 		expect(keys.map((key) => client.getQueryState(key)?.isInvalidated)).toEqual([true, true, true, false, false])
 		client.clear()
 	})
 
 	it('composes source and operation additions, while replace and false override', () => {
-		const defaults = listInvalidation(['users'])
+		const defaults = collectionInvalidation(['users'])
 		const source = resolveInvalidation(defaults, { additional: [{ queryKey: ['count'] }] })
 		const operation = resolveInvalidation(source, { additional: [{ queryKey: ['audit'] }] })
 		expect(operation).toHaveLength(4)

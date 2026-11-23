@@ -5,7 +5,10 @@ import { act, render, renderHook, screen, waitFor } from '@testing-library/react
 import { startTransition, Suspense, useEffect, useState } from 'react'
 import { expect, it, vi } from 'vitest'
 
-import { createGridSourceFactory, withQuery } from './index'
+import { createGridSourceFactory } from './testing/factory.fixture'
+import { fixtureSource } from './testing/grid-source.fixture'
+
+import { withQuery } from './index'
 
 import type { DataTable } from '@ez-kit/data-grid-react'
 import type { PropsWithChildren } from 'react'
@@ -38,7 +41,11 @@ it('saves the visible row with the last committed source while another render su
 	const attempted = vi.fn()
 	function Host() {
 		const [tenant, setTenant] = useState('A')
-		const table = connected.useDataGrid({ dataSource: tenant === 'A' ? A : B, columns: [], editing: tenant === 'A' })
+		const table = connected.useDataGrid({
+			dataSource: fixtureSource(tenant === 'A' ? A : B),
+			columns: [],
+			editing: tenant === 'A',
+		})
 		useEffect(() => {
 			switchTenant = setTenant
 			capture(table)
@@ -96,7 +103,7 @@ it('rejects selection-based deletion until the new scope acknowledges the contro
 	const h = renderHook(
 		({ tenant, selected }) =>
 			connected.useDataGrid({
-				dataSource: tenant === 'A' ? A : B,
+				dataSource: fixtureSource(tenant === 'A' ? A : B),
 				scopeKey: [tenant],
 				columns: [],
 				state: { rowSelection: selected ? { '1': true } : {} },
@@ -150,7 +157,7 @@ it('uses the visible columns and state callback when another source suspends', a
 	function Host() {
 		const [tenant, setTenant] = useState('A')
 		const view = connected.useDataGrid({
-			dataSource: tenant === 'A' ? A : B,
+			dataSource: fixtureSource(tenant === 'A' ? A : B),
 			columns: [{ id: 'name', accessorFn: (row) => `${tenant}:${row.name}`, creating: { defaultValue: tenant } }],
 			editing: { onSave: () => Promise.resolve() },
 			creating: true,
@@ -226,7 +233,7 @@ it('deletes a child expanded without rerendering the connected hook', async () =
 		() => {
 			rendered()
 			return connected.useDataGrid({
-				dataSource: source,
+				dataSource: fixtureSource(source),
 				columns: [],
 				deleting: true,
 				expanding: { mode: 'tree', getSubRows: (row) => row.children },

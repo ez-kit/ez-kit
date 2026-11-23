@@ -12,26 +12,26 @@ Start with the [connected grid](/docs/qc-react). Choose numbered pages when read
 Update the list read. DataGrid supplies a zero-based `pageIndex` and the current `pageSize`. The example API accepts `offset`, `limit` and `search`, and returns `{ items, total }`.
 
 ```tsx
-import { createListSource } from '@ez-kit/qc-react/data-grid'
+import { createDataGridSource } from '@ez-kit/qc-react/data-grid'
 
-const getAll = createListSource({
+const dataSource = createDataGridSource({
 	key: ['users'],
-	fetcher: fetchUsers,
-	prepareArgs: ({ pagination, globalFilter }) => ({
-		offset: pagination.pageIndex * pagination.pageSize,
-		limit: pagination.pageSize,
-		search: typeof globalFilter === 'string' ? globalFilter : '',
-	}),
-	getRows: (page) => page.items,
-	getRowCount: (page) => page.total,
+	collection: {
+		fetcher: fetchUsers,
+		prepareArgs: ({ params, pageIndex, pageSize }) => ({
+			offset: pageIndex * pageSize,
+			limit: pageSize,
+			search: typeof params.globalFilter === 'string' ? params.globalFilter : '',
+		}),
+		getItems: (page) => page.items,
+		getTotal: (page) => page.total,
+	},
 })
-
-const dataSource = { getAll }
 ```
 
 For page index 2 and size 10, the offset is 20. For an API with one-based page numbers, use `page: pagination.pageIndex + 1`. The fetcher receives the prepared object and puts its fields where the API expects them.
 
-`getRowCount` gives the grid the total number of matching rows across all pages. If the API omits the total, leave out the getter. A fresh total can also move the grid to the last valid page after deletion.
+`getTotal` gives the grid the total number of matching rows across all pages. If the API omits the total, leave out the getter. A fresh total can also move the grid to the last valid page after deletion.
 
 ### 2. Enable pages in the grid
 
@@ -60,32 +60,28 @@ Click Next, then search for Grace. Search applies to the whole data set and the 
 A cursor is the value the API gives you to request the next portion. This example uses a numeric offset as a cursor and receives `{ items, nextCursor }`. An API can also return an opaque string.
 
 ```tsx
-import { createInfiniteSource } from '@ez-kit/qc-react/data-grid'
-
-type Criteria = { search: string; limit: number }
-
-const getInfinite = createInfiniteSource({
+const dataSource = createDataGridSource({
 	key: ['users'],
-	fetcher: fetchUsers,
-	prepareArgs: ({ pageSize, globalFilter }) => ({
-		limit: pageSize,
-		search: typeof globalFilter === 'string' ? globalFilter : '',
-	}),
-	preparePageArgs: ({ args, pageParam }: { args: Criteria; pageParam: number }) => ({
-		...args,
-		offset: pageParam,
-	}),
-	initialPageParam: 0,
-	getRows: (page) => page.items,
-	getNextPageParam: (page) => page.nextCursor,
+	collection: {
+		fetcher: fetchUsers,
+		prepareArgs: (input) => ({
+			offset: input.mode === 'infinite' ? input.pageParam : input.pageIndex * input.pageSize,
+			limit: input.pageSize,
+			search: typeof input.params.globalFilter === 'string' ? input.params.globalFilter : '',
+		}),
+		getItems: (page) => page.items,
+		getTotal: (page) => page.total,
+		infinite: {
+			initialPageParam: 0,
+			getNextPageParam: (page) => page.nextCursor,
+		},
+	},
 })
-
-const dataSource = { getInfinite }
 ```
 
-- `prepareArgs` describes the whole collection. The search and page size belong here because changing either starts a new cached collection.
-- `preparePageArgs` adds the current cursor to one request. For an API that expects a string field called `cursor`, return `{ ...args, cursor: pageParam }`.
-- `initialPageParam` is the first cursor. `getNextPageParam` reads the next cursor from the response and returns `null` or `undefined` at the end.
+- `prepareArgs` prepares one request. For an opaque string cursor, use its type in `initialPageParam` and return `cursor: input.pageParam` in the infinite branch.
+- `initialPageParam` supplies the first cursor. `getNextPageParam` returns the next value or `null` or `undefined` at the end of the collection.
+- The generated infinite key includes applied criteria and page size. All cursor values share that cache entry.
 
 ### 2. Choose a loading trigger
 
@@ -111,12 +107,9 @@ Click Load more to go from three to six to nine rows. Search for Grace to start 
 
 ## Switch modes in the same grid
 
-Give the source both descriptors when the mode can change at runtime. The source panel in the previews above shows both reads together.
+Use the same source when the mode changes at runtime. A source with `collection.infinite` supports both modes, and the grid selects the right branch of `prepareArgs`.
 
 ```tsx
-const dataSource = { getAll, getInfinite }
-
-// mode comes from the view's 'pages' | 'infinite' preference.
 <DataGrid
 	dataSource={dataSource}
 	columns={columns}

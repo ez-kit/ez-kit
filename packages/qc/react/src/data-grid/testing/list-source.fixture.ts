@@ -1,7 +1,7 @@
 import { collectionCacheArgs } from '@ez-kit/query-react/collection'
 import { queryOptions } from '@tanstack/react-query'
 
-import type { GridFetcher, GridQueryParams } from './types'
+import type { GridFetcher, GridQueryParams } from '../types'
 import type { ReadSelection } from '@ez-kit/query-react/collection'
 import type { DefaultError, QueryKey, UseQueryOptions } from '@tanstack/react-query'
 

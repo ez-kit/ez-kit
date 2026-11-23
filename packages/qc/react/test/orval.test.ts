@@ -13,11 +13,11 @@ it('sends prepared grid criteria as query parameters and forwards Query cancella
 	const client = new QueryClient()
 	try {
 		await client.fetchQuery(
-			usersSource.queries.list({
-				pagination: { pageIndex: 2, pageSize: 20 },
-				sorting: [{ id: 'name', desc: true }],
-				columnFilters: [],
-				globalFilter: 'Ada & Grace',
+			usersSource.collection.pages.query({
+				mode: 'pages',
+				pageIndex: 2,
+				pageSize: 20,
+				params: { sorting: [{ id: 'name', desc: true }], columnFilters: [], globalFilter: 'Ada & Grace' },
 			}),
 		)
 		const call = fetcher.mock.calls[0]
@@ -44,11 +44,10 @@ it('sends the next cursor while keeping both pages in one collection cache', asy
 		.mockResolvedValueOnce(new Response(JSON.stringify({ items: [{ id: '2', name: 'Grace' }] })))
 	vi.stubGlobal('fetch', fetcher)
 	const client = new QueryClient()
-	const query = usersSource.queries.infinite
-	if (!query) throw new Error('Missing infinite source')
+	const query = usersSource.collection.infinite.query
 	const observer = new InfiniteQueryObserver(
 		client,
-		query({ pageSize: 20, sorting: [], columnFilters: [], globalFilter: '' }),
+		query({ mode: 'infinite', pageSize: 20, params: { sorting: [], columnFilters: [], globalFilter: '' } }),
 	)
 	try {
 		await observer.refetch()
@@ -87,27 +86,4 @@ it('rejects HTTP failures and preserves JSON or text payloads for error mapping'
 	)
 	await expect(createUser({ name: 'Ada' })).rejects.toMatchObject({ status: 422, payload: { name: 'Already exists' } })
 	await expect(deleteUser('1')).rejects.toEqual(new ApiError(503, 'Unavailable'))
-})
-
-it('shares the generated collection request with its grid adapter', async () => {
-	const { usersCollection, collectionGridSource } = await import('../examples/orval/collection')
-	const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ items: [], total: 0 })))
-	vi.stubGlobal('fetch', fetcher)
-	const client = new QueryClient()
-	try {
-		const options = usersCollection.queries.list({ offset: 20, limit: 10, search: 'Ada' })
-		await client.fetchQuery(options)
-		expect(
-			collectionGridSource.getAll.query({
-				pagination: { pageIndex: 2, pageSize: 10 },
-				globalFilter: 'Ada',
-				sorting: [],
-				columnFilters: [],
-			}),
-		).toMatchObject({ queryKey: options.queryKey })
-		const url = new URL(String(fetcher.mock.calls[0]?.[0]), 'https://example.test')
-		expect(Object.fromEntries(url.searchParams)).toEqual({ offset: '20', limit: '10', search: 'Ada' })
-	} finally {
-		client.clear()
-	}
 })

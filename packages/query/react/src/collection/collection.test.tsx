@@ -4,9 +4,9 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { deferred } from '../test-kit'
 
-import { createCollectionSourceFactory } from './factory'
-import { createCollectionSource } from './source'
-import { useCollectionQuery } from './use-collection-query'
+import { createCollectionSourceFactory } from './testing/factory.fixture'
+import { createCollectionSource } from './testing/source.fixture'
+import { useCollectionQuery } from './testing/use-collection-query.fixture'
 
 import type { ReactNode } from 'react'
 

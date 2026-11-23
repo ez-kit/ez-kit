@@ -1856,30 +1856,8 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		optionTables: [
 			{
 				heading: 'Applied parameters',
-				roots: [{ module: TypeModule.QcReact, name: 'GridQueryParams' }],
-				expectedCount: 4,
-			},
-			{
-				heading: 'List fetcher options',
-				roots: [
-					{
-						module: TypeModule.QcReact,
-						name: 'GridListFetcherOptions',
-						typeArgs: '<unknown, unknown, unknown, object, Error>',
-					},
-				],
-				expectedCount: 6,
-			},
-			{
-				heading: 'Infinite fetcher options',
-				roots: [
-					{
-						module: TypeModule.QcReact,
-						name: 'GridInfiniteFetcherOptions',
-						typeArgs: '<unknown, unknown, unknown, unknown, unknown, object, Error>',
-					},
-				],
-				expectedCount: 8,
+				roots: [{ module: TypeModule.QcReact, name: 'GridCollectionParams' }],
+				expectedCount: 3,
 			},
 			{
 				heading: 'Invalidation policy',

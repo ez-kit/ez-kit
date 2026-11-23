@@ -1,16 +1,15 @@
-import { createCollectionSource } from './source'
+import { createCollectionSource } from './source.fixture'
 
-import type { ConfiguredOperations, ConfiguredQueries, RequiredSelection } from './contracts'
-import type { InvalidationPolicy } from './invalidation'
+import type { InfiniteFetcher, ListFetcher } from './read-types.fixture'
+import type { ConfiguredOperations, ConfiguredQueries, RequiredSelection } from '../contracts'
+import type { InvalidationPolicy } from '../invalidation'
 import type {
 	CollectionFetcher,
 	CollectionRead,
 	CollectionInfiniteRead,
 	CollectionMutation,
-	ListFetcher,
-	InfiniteFetcher,
 	MutationFetcher,
-} from './types'
+} from '../types'
 import type { DefaultError, InvalidateQueryFilters, QueryKey } from '@tanstack/react-query'
 
 type SelectedListFetcher<P, A, D, S, I> = Omit<ListFetcher<P, A, D, S, I, DefaultError>, 'getItems' | 'getTotal'> & {

@@ -2,7 +2,7 @@
 import { InfiniteQueryObserver, QueryClient } from '@tanstack/react-query'
 import { describe, expect, expectTypeOf, it, vi } from 'vitest'
 
-import { createInfiniteSource } from './infinite-source'
+import { createInfiniteSource } from './testing/infinite-source.fixture'
 
 import type { GridInfiniteParams } from './types'
 

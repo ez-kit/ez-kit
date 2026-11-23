@@ -4,7 +4,10 @@ import { keepPreviousData, QueryClient, QueryClientProvider } from '@tanstack/re
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { expect, it, vi } from 'vitest'
 
-import { createGridSourceFactory, withQuery } from './index'
+import { createGridSourceFactory } from './testing/factory.fixture'
+import { fixtureSource } from './testing/grid-source.fixture'
+
+import { withQuery } from './index'
 
 import type { GridQueryParams } from './index'
 import type { PropsWithChildren } from 'react'
@@ -54,7 +57,7 @@ it('deleting the last row refetches the old page then corrects to the final exis
 	const { result, unmount } = renderHook(
 		() =>
 			kit.useDataGrid({
-				dataSource: source,
+				dataSource: fixtureSource(source),
 				columns,
 				getRowId: (row) => row.id,
 				pagination: true,
@@ -86,7 +89,7 @@ it('corrects an empty collection to page zero once', async () => {
 	const { result, unmount } = renderHook(
 		() =>
 			kit.useDataGrid({
-				dataSource: source,
+				dataSource: fixtureSource(source),
 				columns,
 				pagination: true,
 				initialState: { pagination: { pageIndex: 3, pageSize: 10 } },
@@ -115,7 +118,7 @@ it('keeps an unknown-total empty page and replaces a previous known total on sou
 	const { result, rerender, unmount } = renderHook(
 		({ useUnknown }: { useUnknown: boolean }) =>
 			kit.useDataGrid({
-				dataSource: useUnknown ? unknown : known,
+				dataSource: fixtureSource(useUnknown ? unknown : known),
 				columns,
 				pagination: true,
 				initialState: { pagination: { pageIndex: 3, pageSize: 10 } },
@@ -146,9 +149,12 @@ it('does not clamp navigation using previous-page placeholder totals', async () 
 		key: ['previous-page'],
 		getAll: { fetcher, options: { placeholderData: keepPreviousData } },
 	})
-	const { result, unmount } = renderHook(() => kit.useDataGrid({ dataSource: source, columns, pagination: true }), {
-		wrapper,
-	})
+	const { result, unmount } = renderHook(
+		() => kit.useDataGrid({ dataSource: fixtureSource(source), columns, pagination: true }),
+		{
+			wrapper,
+		},
+	)
 	await waitFor(() => {
 		expect(result.current.getRowModel().rows).toHaveLength(1)
 	})
@@ -183,7 +189,7 @@ it('leaves server-filtered, sorted and paged rows in their returned order', asyn
 	const { result, unmount } = renderHook(
 		() =>
 			kit.useDataGrid({
-				dataSource: source,
+				dataSource: fixtureSource(source),
 				columns,
 				pagination: true,
 				sorting: true,
@@ -225,7 +231,7 @@ it('waits for refetch before correcting a restored page from stale cached totals
 	const { result, unmount } = renderHook(
 		() =>
 			kit.useDataGrid({
-				dataSource: source,
+				dataSource: fixtureSource(source),
 				columns,
 				pagination: true,
 				initialState: { pagination: restored.pagination },
@@ -263,7 +269,7 @@ it('accepts a response with an omitted total without keeping the previous count'
 	const { result, unmount } = renderHook(
 		() =>
 			kit.useDataGrid({
-				dataSource: source,
+				dataSource: fixtureSource(source),
 				columns,
 				pagination: true,
 				initialState: { pagination: { pageIndex: 3, pageSize: 10 } },
@@ -299,7 +305,7 @@ it.each([false, true])('preserves stale cached page while refetch is disabled (e
 	const { result, unmount } = renderHook(
 		() =>
 			kit.useDataGrid({
-				dataSource: source,
+				dataSource: fixtureSource(source),
 				columns,
 				pagination: true,
 				queryOptions: { refetchOnMount: false, enabled },
@@ -323,7 +329,7 @@ it('keeps querying page zero while the controlled page reset is pending', async 
 	const h = renderHook(
 		({ search, page }) =>
 			kit.useDataGrid({
-				dataSource: source,
+				dataSource: fixtureSource(source),
 				columns,
 				pagination: { onChange },
 				globalFiltering: true,
@@ -368,7 +374,7 @@ it('resets paged reads when an applied filter reference changes and preserves na
 		({ filter, page }) =>
 			kit.useDataGrid({
 				columns,
-				dataSource: source,
+				dataSource: fixtureSource(source),
 				pagination: { onChange },
 				globalFiltering: true,
 				state: { pagination: { pageIndex: page, pageSize: 10 }, globalFilter: filter },

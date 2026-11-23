@@ -2,7 +2,7 @@
 import { QueryClient } from '@tanstack/react-query'
 import { describe, expect, expectTypeOf, it, vi } from 'vitest'
 
-import { createListSource } from './list-source'
+import { createListSource } from './testing/list-source.fixture'
 
 import type { GridQueryParams } from './types'
 

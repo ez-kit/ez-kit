@@ -2,7 +2,7 @@
 
 import { createDataGrid } from '@ez-kit/data-grid-react'
 import { allDataGridFeatures } from '@ez-kit/data-grid-react/features/all'
-import { createInfiniteSource, createListSource, withQuery } from '@ez-kit/qc-react/data-grid'
+import { createDataGridSource, withQuery } from '@ez-kit/qc-react/data-grid'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useState } from 'react'
 
@@ -28,31 +28,23 @@ async function fetchUsers(args: Criteria & { offset: number }, { signal }: { sig
 		nextCursor: end < matches.length ? end : null,
 	}
 }
-const source = {
-	getAll: createListSource({
-		key: ['paged-users-demo'],
+const source = createDataGridSource({
+	key: ['pagination-users-demo'],
+	collection: {
 		fetcher: fetchUsers,
-		prepareArgs: ({ pagination, globalFilter }) => ({
-			offset: pagination.pageIndex * pagination.pageSize,
-			limit: pagination.pageSize,
-			search: typeof globalFilter === 'string' ? globalFilter : '',
+		prepareArgs: (input) => ({
+			offset: input.mode === 'infinite' ? input.pageParam : input.pageIndex * input.pageSize,
+			limit: input.pageSize,
+			search: typeof input.params.globalFilter === 'string' ? input.params.globalFilter : '',
 		}),
-		getRows: (page: Page) => page.items,
-		getRowCount: (page) => page.total,
-	}),
-	getInfinite: createInfiniteSource({
-		key: ['infinite-users-demo'],
-		fetcher: fetchUsers,
-		prepareArgs: ({ pageSize, globalFilter }) => ({
-			limit: pageSize,
-			search: typeof globalFilter === 'string' ? globalFilter : '',
-		}),
-		preparePageArgs: ({ args, pageParam }: { args: Criteria; pageParam: number }) => ({ ...args, offset: pageParam }),
-		initialPageParam: 0,
-		getRows: (page: Page) => page.items,
-		getNextPageParam: (page) => page.nextCursor,
-	}),
-}
+		getItems: (page) => page.items,
+		getTotal: (page) => page.total,
+		infinite: {
+			initialPageParam: 0,
+			getNextPageParam: (page) => page.nextCursor,
+		},
+	},
+})
 
 function Example({ kit, mode }: { kit: typeof defaultKit; mode: 'pages' | 'infinite' }) {
 	const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }))

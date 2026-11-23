@@ -17,26 +17,7 @@ import type {
 	UseQueryResult,
 } from '@tanstack/react-query'
 
-export type CollectionShape = {
-	getAll?: {
-		query: (params: never) => unknown
-		getItems: (data: never) => readonly unknown[]
-		getTotal?: (data: never) => number | undefined
-	}
-	getInfinite?: { query: (params: never) => unknown; getItems: (data: never) => readonly unknown[] }
-	create?: { mutation: unknown }
-	update?: { mutation: unknown }
-	delete?: { mutation: unknown }
-	deleteMany?: { mutation: unknown }
-	invalidation: readonly InvalidateQueryFilters[]
-}
-export type CollectionMode<S> =
-	('getAll' extends keyof S ? 'pages' : never) | ('getInfinite' extends keyof S ? 'infinite' : never)
-type ReadKey<M> = M extends 'pages' ? 'getAll' : 'getInfinite'
-type Read<S, M> = ReadKey<M> extends keyof S ? NonNullable<S[ReadKey<M>]> : never
-export type CollectionParams<S, M> = Read<S, M> extends { query: (params: infer P) => unknown } ? P : never
-export type CollectionItems<S, M> = Read<S, M> extends { getItems: (data: never) => readonly (infer I)[] } ? I : never
-type QueryResult<R, M> = R extends { query: (params: never) => infer O }
+export type QueryResult<R, M> = R extends { query: (params: never) => infer O }
 	? M extends 'pages'
 		? O extends UseQueryOptions<infer _Raw, infer E, infer _Selected, infer _K>
 			? UseQueryResult<ReadData<O, M>, E>
@@ -108,32 +89,13 @@ type InvalidReadOptions<O, M> = O extends unknown
 type ProjectionCompatibility<R, D, Keys extends PropertyKey> = {
 	[K in keyof R as K extends Keys ? K : never]: NonNullable<R[K]> extends (data: D) => unknown ? unknown : never
 }
-/** @internal Structural read checks shared with UI connectors. */
-export type CollectionReadCompatibility<S> = {
-	[K in keyof S as K extends 'getAll' | 'getInfinite' ? K : never]: ReadProjectionCompatibility<
-		NonNullable<S[K]>,
-		K extends 'getAll' ? 'pages' : 'infinite',
-		'getItems',
-		'getTotal'
-	>
-}
-
-type MutationResults<S> = {
+export type MutationResults<S> = {
 	[K in keyof S as K extends 'create' | 'update' | 'delete' | 'deleteMany' ? K : never]: NonNullable<
 		S[K]
 	> extends CollectionMutation<infer V, infer D, infer E, infer O>
 		? UseMutationResult<D, E, V, O>
 		: never
 }
-export type CollectionResult<S, M extends CollectionMode<S>> =
-	M extends CollectionMode<S>
-		? {
-				mode: M
-				items: readonly CollectionItems<S, M>[]
-				total: number | undefined
-				query: QueryResult<Read<S, M>, M>
-			} & MutationResults<S>
-		: never
 const OBSERVER_OPTIONS = [
 	'enabled',
 	'staleTime',
@@ -159,11 +121,10 @@ type NativeObserverOptions<R, M> = R extends { query: (params: never) => infer O
 			? UseInfiniteQueryOptions<D, E, S, K, C>
 			: never
 	: never
-export type CollectionQueryOptions<S, M extends CollectionMode<S>> = Pick<
-	NativeObserverOptions<Read<S, M>, M>,
-	Extract<(typeof OBSERVER_OPTIONS)[number], keyof NativeObserverOptions<Read<S, M>, M>>
+export type ReadObserverOptions<R, M> = Pick<
+	NativeObserverOptions<R, M>,
+	Extract<(typeof OBSERVER_OPTIONS)[number], keyof NativeObserverOptions<R, M>>
 >
-
 // Whitelist at runtime too: untyped callers cannot replace cache identity or projections.
 function observerOptions(options: unknown) {
 	const result: Record<string, unknown> = {}
@@ -175,29 +136,25 @@ function observerOptions(options: unknown) {
 	return result
 }
 
-export type CollectionQueryConfig<S, M extends CollectionMode<S>> =
-	M extends CollectionMode<S>
-		? {
-				source: S & { [K in ReadKey<M>]: Read<S, M> } & CollectionReadCompatibility<NoInfer<S>>
-				mode: M
-				params: CollectionParams<S, M>
-				queryOptions?: CollectionQueryOptions<S, M>
-			}
-		: never
-
 type RuntimeMutation = {
 	mutation: UseMutationOptions<unknown, unknown, unknown>
 	invalidate?: InvalidationPolicy
 }
-type RuntimeSource = {
-	getAll?: {
-		query: (params: unknown) => UseQueryOptions<unknown, unknown>
-		getItems: (data: unknown) => readonly unknown[]
-		getTotal?: (data: unknown) => number | undefined
-	}
-	getInfinite?: {
-		query: (params: unknown) => UseInfiniteQueryOptions<unknown, unknown, InfiniteData<unknown>>
-		getItems: (data: unknown) => readonly unknown[]
+export type RuntimeSource = {
+	collection: {
+		pages?:
+			| {
+					query: (params: unknown) => UseQueryOptions<unknown, unknown>
+					getItems: (data: unknown) => readonly unknown[]
+					getTotal?: (data: unknown) => number | undefined
+			  }
+			| undefined
+		infinite?:
+			| {
+					query: (params: unknown) => UseInfiniteQueryOptions<unknown, unknown, InfiniteData<unknown>>
+					getItems: (data: unknown) => readonly unknown[]
+			  }
+			| undefined
 	}
 	create?: RuntimeMutation
 	update?: RuntimeMutation
@@ -273,26 +230,25 @@ function useOptionalCollectionMutation(
 	return useCollectionMutation(active.source, active.inherited)
 }
 
-/** Execute externally owned parameters without introducing a second cache or state store. */
-export function useCollectionQuery<S extends CollectionShape, M extends CollectionMode<S>>(
-	config: CollectionQueryConfig<S, M>,
-): CollectionResult<S, M> {
-	const { mode, params } = config
-	const source = config.source as unknown as RuntimeSource
-	const overrides = observerOptions(config.queryOptions)
+export function useCollectionObservers(
+	source: RuntimeSource,
+	mode: 'pages' | 'infinite',
+	params: unknown,
+	queryOptions: unknown,
+) {
+	const reads = source.collection
+	const overrides = observerOptions(queryOptions)
 	const list = useQuery(
-		mode === 'pages' && source.getAll ? { ...source.getAll.query(params), ...overrides } : INACTIVE_LIST,
+		mode === 'pages' && reads.pages ? { ...reads.pages.query(params), ...overrides } : INACTIVE_LIST,
 	)
 	const pages = useInfiniteQuery(
-		mode === 'infinite' && source.getInfinite
-			? { ...source.getInfinite.query(params), ...overrides }
-			: INACTIVE_INFINITE,
+		mode === 'infinite' && reads.infinite ? { ...reads.infinite.query(params), ...overrides } : INACTIVE_INFINITE,
 	)
 	const create = useOptionalCollectionMutation(source.create, source.invalidation)
 	const update = useOptionalCollectionMutation(source.update, source.invalidation)
 	const remove = useOptionalCollectionMutation(source.delete, source.invalidation)
 	const deleteMany = useOptionalCollectionMutation(source.deleteMany, source.invalidation)
-	const read = mode === 'pages' ? source.getAll : source.getInfinite
+	const read = mode === 'pages' ? reads.pages : reads.infinite
 	const data = mode === 'pages' ? list.data : pages.data
 	const getItems = read?.getItems
 	const items = useMemo(() => {
@@ -304,11 +260,11 @@ export function useCollectionQuery<S extends CollectionShape, M extends Collecti
 	return {
 		mode,
 		items,
-		total: mode === 'pages' && list.data !== undefined ? source.getAll?.getTotal?.(list.data) : undefined,
+		total: mode === 'pages' && list.data !== undefined ? reads.pages?.getTotal?.(list.data) : undefined,
 		query: mode === 'pages' ? list : pages,
 		...(source.create ? { create } : {}),
 		...(source.update ? { update } : {}),
 		...(source.delete ? { delete: remove } : {}),
 		...(source.deleteMany ? { deleteMany } : {}),
-	} as unknown as CollectionResult<S, M>
+	}
 }

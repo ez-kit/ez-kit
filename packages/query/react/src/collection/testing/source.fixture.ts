@@ -1,16 +1,10 @@
-import { collectionCacheArgs } from './cache-args'
-import { listInvalidation, resolveInvalidation } from './invalidation'
+import { collectionCacheArgs } from '../cache-args'
+import { resolveInvalidation } from '../invalidation'
 
-import type { ConfiguredOperations, ConfiguredQueries, RequiredSelection, SourceIdentity } from './contracts'
-import type { InvalidationPolicy } from './invalidation'
-import type {
-	CollectionRead,
-	CollectionInfiniteRead,
-	CollectionMutation,
-	ListFetcher,
-	InfiniteFetcher,
-	MutationFetcher,
-} from './types'
+import type { InfiniteFetcher, ListFetcher } from './read-types.fixture'
+import type { ConfiguredOperations, ConfiguredQueries, RequiredSelection, SourceIdentity } from '../contracts'
+import type { InvalidationPolicy } from '../invalidation'
+import type { CollectionRead, CollectionInfiniteRead, CollectionMutation, MutationFetcher } from '../types'
 import type { DefaultError, QueryKey } from '@tanstack/react-query'
 
 function normalizeListSource<P, A, D, S, I, E, K extends QueryKey>(
@@ -158,7 +152,10 @@ export function createCollectionSource<
 	const result = {
 		...(getAll ? { getAll } : {}),
 		...(getInfinite ? { getInfinite } : {}),
-		invalidation: resolveInvalidation(hasGenerated ? listInvalidation(key) : [], config.invalidate),
+		invalidation: resolveInvalidation(
+			hasGenerated ? [{ queryKey: [...key, 'list'] }, { queryKey: [...key, 'infinite'] }] : [],
+			config.invalidate,
+		),
 		queries: { ...(getAll ? { list: getAll.query } : {}), ...(getInfinite ? { infinite: getInfinite.query } : {}) },
 		...(config.create ? { create: normalizeMutationSource(config.create, key, 'create') } : {}),
 		...(config.update ? { update: normalizeMutationSource(config.update, key, 'update') } : {}),

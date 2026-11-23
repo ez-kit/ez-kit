@@ -4,7 +4,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { expect, it, vi } from 'vitest'
 
-import { createGridSourceFactory, withQuery } from './index'
+import { createGridSourceFactory } from './testing/factory.fixture'
+import { fixtureSource } from './testing/grid-source.fixture'
+
+import { withQuery } from './index'
 
 import type { PropsWithChildren } from 'react'
 
@@ -51,7 +54,7 @@ for (const mode of ['editing', 'creating'] as const) {
 				const { result, unmount } = renderHook(
 					() =>
 						kit.useDataGrid({
-							dataSource: source,
+							dataSource: fixtureSource(source),
 							columns: [{ accessorKey: 'name' }],
 							getRowId: (row) => row.id,
 							editing: { mode: 'modal' },
@@ -133,7 +136,7 @@ for (const mode of ['editing', 'creating'] as const) {
 		const { result, unmount } = renderHook(
 			() =>
 				kit.useDataGrid({
-					dataSource: source,
+					dataSource: fixtureSource(source),
 					columns: [{ accessorKey: 'name' }],
 					getRowId: (row) => row.id,
 					editing: { mode: 'modal' },

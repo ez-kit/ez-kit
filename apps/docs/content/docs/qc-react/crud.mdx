@@ -7,21 +7,10 @@ Start with the [connected grid](/docs/qc-react). This guide adds create, edit, s
 
 ## 1. Keep the list read and add mutations
 
-`createGridSourceFactory` groups your reads and writes under a resource key. Move the list mapping from the [pagination guide](/docs/qc-react/pagination) into the factory, then attach the fetchers.
+Use `createDataGridSource` with the `collection` read from the [pagination guide](/docs/qc-react/pagination). Add operations next to it. Each constructor takes one resource key and supplies the grid's action types to mutation preparation.
 
 ```ts
-import { createGridSourceFactory } from '@ez-kit/qc-react/data-grid'
-
-const makeSource = createGridSourceFactory({
-	list: {
-		prepareArgs: ({ pagination }) => ({
-			offset: pagination.pageIndex * pagination.pageSize,
-			limit: pagination.pageSize,
-		}),
-		getRows: (page: { items: User[]; total: number }) => page.items,
-		getRowCount: (page) => page.total,
-	},
-})
+import { createDataGridSource } from '@ez-kit/qc-react/data-grid'
 
 function requiredName(name: string | undefined) {
 	const value = name?.trim()
@@ -29,9 +18,14 @@ function requiredName(name: string | undefined) {
 	return value
 }
 
-const dataSource = makeSource({
+const dataSource = createDataGridSource({
 	key: ['users'],
-	getAll: fetchUsers,
+	collection: {
+		fetcher: fetchUsers,
+		prepareArgs: ({ pageIndex, pageSize }) => ({ offset: pageIndex * pageSize, limit: pageSize }),
+		getItems: (page) => page.items,
+		getTotal: (page) => page.total,
+	},
 	create: {
 		prepareArgs: ({ values }) => ({ name: requiredName(values.name) }),
 		fetcher: createUser,
@@ -83,10 +77,10 @@ Use `editing: true` for default editing behavior. Here the modal config enables 
 ## 3. Follow the refresh after a save
 
 1. The user saves a row. The grid prepares the arguments and runs the configured mutation.
-2. On success, the connector uses the factory's invalidation policy to invalidate the resource's list and infinite query families. Matching active queries refetch in the background, and matching inactive queries become stale under TanStack Query's default policy.
+2. On success, the connector uses the source's invalidation policy to invalidate the resource's list and infinite query families. Matching active queries refetch in the background, and matching inactive queries become stale under TanStack Query's default policy.
 3. Save completes and the form closes while the list can still be refreshing. A failed write stays in the form, and a failed refresh is reported by the grid's query state.
 
-With `key: ['users']`, the default invalidation covers keys starting with `['users', 'list']` and `['users', 'infinite']`. This covers every cached set of pages or filters for the resource. Use a scoped key such as `['users', teamId]` when each team owns a separate data set.
+With `key: ['users']`, the default invalidation covers keys starting with `['users', 'pages']` and `['users', 'infinite']`. This covers every cached set of pages or filters for the resource. Use a scoped key such as `['users', teamId]` when each team owns a separate data set.
 
 To refresh related views too, add independent filters to the source's `invalidate.additional`:
 

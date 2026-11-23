@@ -19,21 +19,21 @@ Read parameters SHALL be inferred from the source and SHALL allow arbitrary appl
 
 #### Scenario: Custom transport convention
 
-- **WHEN** a source accepts teamId, offset, limit and search
-- **THEN** the hook accepts that shape without requiring table filter or pagination types and rejects incompatible parameter types
+- **WHEN** a source accepts teamId and search
+- **THEN** the hook accepts that criteria shape alongside controlled pagination and rejects incompatible criteria types
 
 #### Scenario: Atomic filter change
 
-- **WHEN** an application updates search and offset together
-- **THEN** the new request uses that complete parameter snapshot without an intermediate old-offset request
+- **WHEN** an application updates search and its page position together
+- **THEN** the new request uses the complete snapshot with the new page position
 
 ### Requirement: Read capabilities and mode typing
 
-A source SHALL provide ordinary reads, infinite reads, or both. Requested modes and their parameter types SHALL be checked against source capabilities. Mode-specific native result types SHALL remain accessible.
+A generated source SHALL describe reads in one collection block. Infinite cursor settings SHALL enable the infinite mode in addition to ordinary reads. Requested modes SHALL be checked against source capabilities. Native sources MAY provide either or both modes.
 
-#### Scenario: Infinite-only source
+#### Scenario: Native infinite-only source
 
-- **WHEN** a source defines only infinite reads
+- **WHEN** a native source defines only infinite reads
 - **THEN** infinite execution is valid and ordinary execution is a type error
 
 #### Scenario: Missing reads
@@ -80,12 +80,12 @@ Changing between supported read modes SHALL preserve valid React hook ordering a
 
 ### Requirement: Key identity and reusable options
 
-Fetcher sources SHALL derive distinct ordinary and infinite key families from the base key and prepared collection arguments. Cursor and transport signal SHALL not enter infinite collection identity. Native sources SHALL preserve external keys and require explicit invalidation scope. Sources SHALL expose options for native consumers.
+Fetcher sources SHALL derive distinct ordinary and infinite key families from the base key, mode and controlled criteria. Ordinary identity includes the page index. Infinite identity includes the page size and criteria. Preparation receives the cursor for each infinite fetch. Native sources SHALL preserve external keys and require explicit invalidation scope. Sources SHALL expose options for native consumers.
 
 #### Scenario: Prefetch and tenant isolation
 
 - **WHEN** a caller prefetches source options and mounts the same collection
-- **THEN** both share a cache entry, while different prepared tenant arguments select a different entry
+- **THEN** both share a cache entry, while different tenant criteria select a different entry
 
 ### Requirement: Native typed mutation results
 
@@ -129,14 +129,14 @@ Factory mutations SHALL invalidate generated list families by default with sourc
 - **WHEN** persistence succeeds but an automatic refetch rejects
 - **THEN** persistence remains successful and the read exposes the refresh error
 
-### Requirement: Existing source compatibility
+### Requirement: Native option compatibility
 
-Existing grid sources and supplied native options SHALL retain callback variable types, original errors, key identity and preparation behavior through explicit adapters. New collection-factory input semantics SHALL not silently replace existing prepared-variable semantics.
+Native descriptors SHALL preserve existing query keys, native selectors, cursor callbacks and mutation lifecycle options. Applications SHALL supply an invalidation policy for externally owned keys.
 
-#### Scenario: Existing native mutation
+#### Scenario: Existing native query
 
-- **WHEN** a grid source prepares a string ID for a supplied native mutation
-- **THEN** its existing lifecycle callbacks still receive the string ID
+- **WHEN** a source supplies a native query with a selected response
+- **THEN** the native key is used and items are projected from selected data
 
 ### Requirement: Grid connection over collection execution
 
@@ -144,8 +144,8 @@ The connector SHALL adapt applied table parameters and action contexts to collec
 
 #### Scenario: Shared business source
 
-- **WHEN** a collection source is adapted to a grid and used directly by an ordinary list with equivalent request arguments
-- **THEN** both use the same query keys and mutation contract without requiring grid contexts in the business source
+- **WHEN** a DataGrid source is used by a connected grid and directly by an ordinary list with equivalent criteria and pagination
+- **THEN** both use the same query keys and mutation contract
 
 #### Scenario: Explicit save and safe page correction
 
@@ -180,19 +180,14 @@ The collection hook SHALL accept typed per-consumer loading and refetch options 
 - **WHEN** a consumer changes queryOptions.enabled from false to true
 - **THEN** the active read fetches using the source's identity and projections without enabling the inactive mode
 
-### Requirement: Shared factory selection
+### Requirement: Shared collection factory
 
-Entity overrides in a shared factory SHALL infer selected list data and selected infinite pages independently of raw API responses. An operation supplying select SHALL supply getItems explicitly. Its inherited getTotal SHALL be discarded unless the operation supplies a compatible replacement. Infinite pagination SHALL continue to use raw response pages.
+A factory SHALL reuse criteria preparation, projections and cursor settings for compatible resource fetchers. It SHALL accept per-resource operation configurations and preserve their input and result types.
 
-#### Scenario: Selecting names
+#### Scenario: Shared offset convention
 
-- **WHEN** an entity selects string arrays from object response envelopes
-- **THEN** getItems receives string arrays, cached responses remain envelopes and an inherited envelope total projection is not invoked
-
-#### Scenario: Selected infinite pages
-
-- **WHEN** select transforms pages within the InfiniteData envelope
-- **THEN** getItems projects each selected page while getNextPageParam receives raw pages
+- **WHEN** a factory prepares offset-based requests for two resources
+- **THEN** each resource supplies its own base key and fetcher while inheriting the preparation and cursor rules
 
 ### Requirement: Pending operations survive capability removal
 
@@ -205,7 +200,7 @@ Removing an optional operation SHALL omit it from the collection result while pr
 
 ### Requirement: Selection and grid row safety
 
-Fetcher projections SHALL accept raw response data when no selector is configured. A potentially absent selector SHALL NOT promise a selected-only projection input. The grid adapter SHALL reject primitive items in any configured read before checking list/infinite compatibility.
+Fetcher projections SHALL accept raw response data when no selector is configured. A potentially absent selector SHALL NOT promise a selected-only projection input. The connected grid SHALL reject primitive items in any configured read before checking list/infinite compatibility.
 
 #### Scenario: Conditional shape-changing selector
 
@@ -215,7 +210,7 @@ Fetcher projections SHALL accept raw response data when no selector is configure
 #### Scenario: Primitive infinite items
 
 - **WHEN** ordinary reads return object rows but infinite reads return strings
-- **THEN** adapting the collection to a grid is rejected by the type checker
+- **THEN** connecting the collection to a grid is rejected by the type checker
 
 #### Scenario: Native read and generated write
 
@@ -464,3 +459,17 @@ An explicit pagination mode SHALL require a corresponding read in every source v
 
 - **WHEN** an explicit mode is supplied and a corresponding read can be absent
 - **THEN** the type checker rejects that source configuration
+
+### Requirement: Unified fetcher inputs
+
+Collection preparation SHALL receive controlled criteria, page size and a mode-specific position. A connected grid SHALL supply applied table criteria and row-action inputs to the shared collection layer. The grid SHALL accept a typed source directly.
+
+#### Scenario: One offset fetcher serves both modes
+
+- **WHEN** a page view requests page two and an infinite view requests its next offset
+- **THEN** both requests run the same preparation and fetcher, and their responses use separate mode caches
+
+#### Scenario: The cursor has an API-specific type
+
+- **WHEN** an infinite configuration supplies a string initial cursor
+- **THEN** preparation receives a string pageParam, and the next-page callback is checked against that cursor type

@@ -1,6 +1,8 @@
 import { expectTypeOf, it } from 'vitest'
 
-import { createListSource, createInfiniteSource, createGridDataSource } from './index'
+import { createInfiniteSource } from './testing/infinite-source.fixture'
+import { createListSource } from './testing/list-source.fixture'
+import { createGridDataSource } from './testing/source.fixture'
 
 it('specializes a shared generic projection from the entity fetcher', () => {
 	const getRows = <T extends object>(response: { items: T[] }) => response.items
@@ -14,7 +16,7 @@ it('specializes a shared generic projection from the entity fetcher', () => {
 })
 
 it('preserves an explicitly typed API convention in the public factory', async () => {
-	const { createGridSourceFactory } = await import('./factory')
+	const { createGridSourceFactory } = await import('./testing/factory.fixture')
 	type User = { id: string; name: string }
 	const make = createGridSourceFactory({
 		list: {

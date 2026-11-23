@@ -4,7 +4,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { expect, expectTypeOf, it, vi } from 'vitest'
 
-import { createGridSourceFactory, withQuery } from './index'
+import { createGridSourceFactory } from './testing/factory.fixture'
+import { fixtureSource } from './testing/grid-source.fixture'
+
+import { withQuery } from './index'
 
 import type { GridQueryParams } from './index'
 import type { PropsWithChildren } from 'react'
@@ -46,7 +49,7 @@ it('connects applied table parameters and keeps the table stable', async () => {
 	const { result, unmount } = renderHook(
 		() =>
 			connected.useDataGrid({
-				dataSource: source,
+				dataSource: fixtureSource(source),
 				columns,
 				pagination: { pageSize: 10 },
 				globalFiltering: true,
@@ -92,7 +95,7 @@ it('does not fetch unapplied draft filters', async () => {
 	const { result, unmount } = renderHook(
 		() =>
 			connected.useDataGrid({
-				dataSource: source,
+				dataSource: fixtureSource(source),
 				columns,
 				draft: true,
 				globalFiltering: true,
@@ -147,7 +150,7 @@ it('switches between pages and infinite without replacing the table or fetching 
 	})({ key: ['switch'], getAll: listFetcher, getInfinite: pageFetcher })
 	const { result, rerender, unmount } = renderHook(
 		({ mode }: { mode: 'pages' | 'infinite' }) =>
-			connected.useDataGrid({ dataSource: source, columns, pagination: { mode, pageSize: 10 } }),
+			connected.useDataGrid({ dataSource: fixtureSource(source), columns, pagination: { mode, pageSize: 10 } }),
 		{ wrapper, initialProps: { mode: 'pages' } },
 	)
 	const table = result.current
@@ -187,7 +190,7 @@ it('corrects a first successful out-of-range total', async () => {
 	const { result, unmount } = renderHook(
 		() =>
 			connected.useDataGrid({
-				dataSource: source,
+				dataSource: fixtureSource(source),
 				columns,
 				pagination: { pageSize: 10 },
 				initialState: { pagination: { pageIndex: 4, pageSize: 10 } },
@@ -228,7 +231,7 @@ it('executes source mutations only when enabled and lets explicit handlers repla
 	const { result, rerender, unmount } = renderHook(
 		({ editing }: { editing: false | true | { onSave: typeof handler } }) =>
 			connected.useDataGrid({
-				dataSource: source,
+				dataSource: fixtureSource(source),
 				columns,
 				getRowId: () => 'table-1',
 				editing,
@@ -290,7 +293,7 @@ it('does not clamp a restored page using placeholder totals', async () => {
 	const { result, unmount } = renderHook(
 		() =>
 			connected.useDataGrid({
-				dataSource: source,
+				dataSource: fixtureSource(source),
 				columns,
 				pagination: true,
 				initialState: { pagination: { pageIndex: 3, pageSize: 10 } },
@@ -314,7 +317,7 @@ it('reports missing executors instead of silently enabling an unusable action', 
 	const { client, wrapper } = harness()
 	const source = makeSource({ key: ['missing'], getAll: () => Promise.resolve({ items: [], total: 0 }) })
 	expect(() =>
-		renderHook(() => connected.useDataGrid({ dataSource: source, columns, editing: true }), { wrapper }),
+		renderHook(() => connected.useDataGrid({ dataSource: fixtureSource(source), columns, editing: true }), { wrapper }),
 	).toThrow('editing requires dataSource.update or editing.onSave')
 	client.clear()
 })
@@ -331,7 +334,13 @@ it('wires create and single delete with original entity arguments', async () => 
 	})
 	const { result, unmount } = renderHook(
 		() =>
-			connected.useDataGrid({ dataSource: source, columns, creating: true, deleting: true, getRowId: () => 'table-1' }),
+			connected.useDataGrid({
+				dataSource: fixtureSource(source),
+				columns,
+				creating: true,
+				deleting: true,
+				getRowId: () => 'table-1',
+			}),
 		{ wrapper },
 	)
 	await waitFor(() => {
@@ -382,7 +391,12 @@ it('deduplicates concurrent next-page requests and preserves rows across failure
 	})({ key: ['next-page'], getAll: () => Promise.resolve([] as User[]), getInfinite: pageFetcher })
 	const { result, unmount } = renderHook(
 		() =>
-			connected.useDataGrid({ dataSource: source, columns, pagination: { mode: 'infinite' }, globalFiltering: true }),
+			connected.useDataGrid({
+				dataSource: fixtureSource(source),
+				columns,
+				pagination: { mode: 'infinite' },
+				globalFiltering: true,
+			}),
 		{ wrapper },
 	)
 	await waitFor(() => {
@@ -432,7 +446,9 @@ it('reuses prefetched public options when the grid mounts', async () => {
 			globalFilter: undefined,
 		}),
 	)
-	const { result, unmount } = renderHook(() => connected.useDataGrid({ dataSource: source, columns }), { wrapper })
+	const { result, unmount } = renderHook(() => connected.useDataGrid({ dataSource: fixtureSource(source), columns }), {
+		wrapper,
+	})
 	await waitFor(() => {
 		expect(result.current.getRowModel().rows).toHaveLength(1)
 	})

@@ -115,3 +115,18 @@ cache key. Keep object and array references stable until the criteria change. Ge
 continue to use TanStack hashing, with prepareKey available for API-specific distinctions.
 Structural reads validate initialData against the raw response and expose both result shapes
 when select is optional. Grid row types are inferred from the concrete source.
+
+## Unified collection source amendment
+
+Generated sources bind a single collection fetcher and projection with optional infinite settings.
+The consumer supplies controlled pagination separately from arbitrary criteria. A discriminated
+preparation input carries pageIndex in pages mode and pageParam in infinite mode. Generated keys
+use base key, mode and controlled criteria, with pageIndex included for ordinary pages. A custom
+prepareKey can replace the serializable key part.
+
+The DataGrid constructor specializes the same source with applied grid criteria and action inputs.
+Connected grids take it directly and dispatch the action input to the shared mutation observer.
+Native option descriptors continue to use their own keys, projections and lifecycle. The former
+source-conversion adapter, separate fetcher-read constructors and two-stage page preparation have
+been retired from the public API. This amendment supersedes the earlier source compatibility and
+prepared-argument identity choices in this record.

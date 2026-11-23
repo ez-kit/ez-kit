@@ -1,89 +1,14 @@
 ---
 title: Infinite loading
-description: Load and accumulate cursor pages with a connected grid and a fake API.
+description: Load more rows from a cursor or an offset.
 ---
 
-Infinite mode accumulates loaded pages instead of replacing the visible page.
-Click Load more to grow the list from three to six to nine users. Search for Grace
-to start a new collection. The infinite read uses `getInfinite`. See the [combined pagination guide](/docs/qc-react/pagination) for both modes side by side.
+Follow [Infinite scrolling](/docs/qc-react/pagination#infinite-scrolling) to configure the shared read and choose automatic scrolling or a Load more button.
 
 <DataGridDocsExample exampleId='query-infinite' />
 
-The fake API waits 400 ms and returns `{ items, nextCursor }` (plus optional metadata).
-The manual Load more button makes each request easy to inspect. Both kits run the same source.
-
-## Separate collection arguments from the cursor
-
-`createInfiniteSource` from `@ez-kit/qc-react/data-grid` builds one infinite read
-descriptor. Put it under `getInfinite` to make a read-only grid source.
-
-```tsx
-type Criteria = { search: string; limit: number }
-type Page = { items: User[]; nextCursor: number | null }
-
-const source = {
-	getInfinite: createInfiniteSource({
-		key: ['users'],
-		fetcher: fetchUsers,
-		prepareArgs: ({ pageSize, globalFilter }) => ({
-			limit: pageSize,
-			search: typeof globalFilter === 'string' ? globalFilter : '',
-		}),
-		preparePageArgs: ({ args, pageParam }: { args: Criteria; pageParam: number }) => ({
-			...args,
-			offset: pageParam,
-		}),
-		initialPageParam: 0,
-		getRows: (page: Page) => page.items,
-		getNextPageParam: (page) => page.nextCursor,
-	}),
-}
-```
-
-`prepareArgs` describes the collection: search and page size. `preparePageArgs`
-adds the current page's cursor to the fetcher argument. Here the API uses a numeric
-offset; for an opaque cursor API, use its string cursor type and return
-`{ ...args, cursor: pageParam }` instead.
-
-The first request uses `initialPageParam`. Each later request uses the value returned
-by `getNextPageParam`; returning `null` or `undefined` means there are no more pages.
-The cursor is not part of the collection query key: all its pages belong to one
-infinite cache entry. Changing search creates another collection.
-
-## Mount and choose a loading trigger
-
-Inside the application's `QueryClientProvider`, use a bundle connected with `withQuery`:
-
-```tsx
-<DataGrid
-	dataSource={source}
-	columns={columns}
-	getRowId={(user) => user.id}
-	globalFiltering
-	pagination={{ mode: 'infinite', pageSize: 3, trigger: 'manual' }}
-/>
-```
-
-Query stores the pages and the connector projects them into rows. Do not call
-`appendData` yourself. The grid owns the loading trigger; Query owns whether another
-page is available and whether it is already loading.
-
-For automatic scrolling, omit `trigger: 'manual'` to use the default automatic trigger.
-Keep the same source: the cursor and API mapping do not change. Give the grid a
-bounded scroll area using your normal grid layout configuration.
-
 ## Refreshes and failures
 
-Changing applied criteria resets the grid's paging position and selects the matching
-collection key. Successful create/update/delete operations invalidate the collection;
-Query refreshes its cached pages under native infinite-query semantics.
+A search change starts a new collection. A successful mutation invalidates the resource's page and infinite families, and TanStack Query refreshes the active result. While a later page is pending or fails, the rows already loaded remain visible.
 
-If a later page fails, previously loaded rows remain available. Do not replace them
-with an empty array while loading or on a next-page error. Infinite collections do
-not get an invented total: `useCollectionQuery` exposes `total` as undefined in this mode.
-
-For a custom list, use `useCollectionQuery({ source, mode: 'infinite', params })`, render
-`items`, and wire a button to `query.fetchNextPage()`. Disable it when
-`!query.hasNextPage || query.isFetchingNextPage`; show `query.isFetchNextPageError`
-and allow retry. The hook does not install a scroll observer. See
-[Lists and CRUD](/docs/qc-react/lists) for the UI-independent source and mutation contract.
+For a custom list, call `useCollectionQuery` with `pagination: { mode: 'infinite', pageSize: 20 }` and wire a button to `query.fetchNextPage()`. Disable it when `!query.hasNextPage || query.isFetchingNextPage`. A later-page failure is available as `query.isFetchNextPageError`. See [Build an ordinary list](/docs/qc-react/lists).

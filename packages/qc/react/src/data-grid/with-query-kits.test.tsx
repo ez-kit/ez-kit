@@ -6,7 +6,10 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { version } from 'react'
 import { expect, it, vi } from 'vitest'
 
-import { createGridSourceFactory, withQuery } from './index'
+import { createGridSourceFactory } from './testing/factory.fixture'
+import { fixtureSource } from './testing/grid-source.fixture'
+
+import { withQuery } from './index'
 
 type User = { id: string; name: string }
 const sourceFactory = createGridSourceFactory({
@@ -41,7 +44,7 @@ for (const name of ['shadcn', 'heroui'] as const) {
 			const ui = render(
 				<QueryClientProvider client={client}>
 					<kit.DataGrid
-						dataSource={source}
+						dataSource={fixtureSource(source)}
 						columns={columns}
 					>
 						{retained}
@@ -62,7 +65,7 @@ for (const name of ['shadcn', 'heroui'] as const) {
 			expect(fetcher).toHaveBeenCalledTimes(1)
 			ui.unmount()
 			function Explicit() {
-				const table = kit.useDataGrid({ dataSource: source, columns })
+				const table = kit.useDataGrid({ dataSource: fixtureSource(source), columns })
 				return <kit.DataGrid table={table}>{retained}</kit.DataGrid>
 			}
 			const explicit = render(
@@ -106,7 +109,7 @@ for (const name of ['shadcn', 'heroui'] as const) {
 			const ui = render(
 				<QueryClientProvider client={client}>
 					<kit.DataGrid
-						dataSource={source}
+						dataSource={fixtureSource(source)}
 						columns={[{ accessorKey: 'name' }]}
 						getRowId={(row) => `table-${row.id}`}
 						selection
@@ -147,7 +150,7 @@ it('applies provider defaults before connection and leaves disabled UI features 
 		<QueryClientProvider client={client}>
 			<DataGridOptionsProvider defaults={{ globalFiltering: true, pagination: { pageSize: 7 } }}>
 				<kit.DataGrid
-					dataSource={source}
+					dataSource={fixtureSource(source)}
 					columns={columns}
 					sorting={false}
 				>
@@ -197,7 +200,7 @@ it('publishes fetching and errors to retained children without discarding existi
 	const ui = render(
 		<QueryClientProvider client={client}>
 			<kit.DataGrid
-				dataSource={source}
+				dataSource={fixtureSource(source)}
 				columns={[{ accessorKey: 'name' }]}
 			>
 				{retained}
@@ -229,7 +232,7 @@ it('keeps the built-in global search debounce', async () => {
 	const ui = render(
 		<QueryClientProvider client={client}>
 			<kit.DataGrid
-				dataSource={source}
+				dataSource={fixtureSource(source)}
 				columns={[{ accessorKey: 'name' }]}
 				globalFiltering={{ debounce: 50 }}
 			>
@@ -288,7 +291,7 @@ it.each([false, true])('hides custom actions until the controlled selection rese
 		<QueryClientProvider client={client}>
 			<Grid
 				columns={columns}
-				dataSource={sources[owner]}
+				dataSource={fixtureSource(sources[owner])}
 				scopeKey={[owner]}
 				getRowId={(row) => row.id}
 				state={{ rowSelection }}

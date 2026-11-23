@@ -2,8 +2,9 @@
 import { QueryClient, QueryObserver } from '@tanstack/react-query'
 import { expect, it, vi } from 'vitest'
 
-import { createGridSourceFactory } from './factory'
-import { listInvalidation, resolveInvalidation } from './invalidation'
+import { resolveInvalidation } from './invalidation'
+import { createGridSourceFactory } from './testing/factory.fixture'
+import { listInvalidation } from './testing/source.fixture'
 
 import type { GridQueryParams } from './types'
 

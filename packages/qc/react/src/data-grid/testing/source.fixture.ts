@@ -1,15 +1,15 @@
-import { listInvalidation, resolveInvalidation } from './invalidation'
+import { resolveInvalidation } from '../invalidation'
 
-import type { InvalidationPolicy } from './invalidation'
-import type { GridListSource } from './list-source'
-import type { GridMutationSource } from './mutation-source'
+import type { InvalidationPolicy } from '../invalidation'
+import type { GridListSource } from './list-source.fixture'
+import type { GridMutationSource } from './mutation-source.fixture'
 import type {
 	GridCreateContext,
 	GridDeleteContext,
 	GridDeleteManyContext,
 	GridInfiniteParams,
 	GridUpdateContext,
-} from './types'
+} from '../types'
 import type { ReadSelection } from '@ez-kit/query-react/collection'
 import type { DefaultError, InfiniteData, QueryKey, UseInfiniteQueryOptions } from '@tanstack/react-query'
 
@@ -104,6 +104,10 @@ export function createGridDataSource<
 			: 'getInfinite' extends keyof Capabilities
 				? Pick<typeof result, 'getInfinite'>
 				: { getInfinite?: never })
+}
+
+export function listInvalidation(key: QueryKey) {
+	return [{ queryKey: [...key, 'list'] }, { queryKey: [...key, 'infinite'] }]
 }
 
 /** Internal source construction for generated key families. */

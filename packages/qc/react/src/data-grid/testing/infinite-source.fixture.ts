@@ -1,7 +1,7 @@
 import { collectionCacheArgs } from '@ez-kit/query-react/collection'
 import { infiniteQueryOptions } from '@tanstack/react-query'
 
-import type { GridFetcher, GridInfiniteParams } from './types'
+import type { GridFetcher, GridInfiniteParams } from '../types'
 import type { ReadSelection } from '@ez-kit/query-react/collection'
 import type { DefaultError, InfiniteData, QueryKey, UseInfiniteQueryOptions } from '@tanstack/react-query'
 

@@ -340,3 +340,15 @@ This includes modal slot validation and cancellation caused by collection scope 
 forms remain open. Cancelled checks settle before uncooperative validators; errors are normalized
 only for invalid results. Schema and state-writing validation contracts remain unchanged.
 This is a breaking return-type change, documented with an external form migration recipe.
+
+## Unified source follow-up
+
+The generated source now uses one collection block. Its prepareArgs receives the controlled
+criteria and a discriminated position, with pageIndex for ordinary reads and pageParam for
+infinite reads. The default key hashes the criteria and applicable controlled pagination fields.
+Native mode descriptors retain their own options and key families.
+
+createDataGridSource is a type-specialized entry to createCollectionSource. The connector
+passes applied table criteria and grid actions into the shared source, so consumers can reuse
+that source directly in a list with compatible inputs. This replaces the older grid source
+transformation and separate fetcher read APIs described above.

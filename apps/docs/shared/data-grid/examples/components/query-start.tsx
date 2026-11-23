@@ -2,7 +2,7 @@
 
 import { createDataGrid } from '@ez-kit/data-grid-react'
 import { allDataGridFeatures } from '@ez-kit/data-grid-react/features/all'
-import { createListSource, withQuery } from '@ez-kit/qc-react/data-grid'
+import { createDataGridSource, withQuery } from '@ez-kit/qc-react/data-grid'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useState } from 'react'
 
@@ -20,14 +20,14 @@ async function fetchUsers(_: undefined, { signal }: { signal: AbortSignal }): Pr
 	return { items: users, total: users.length }
 }
 
-const dataSource = {
-	getAll: createListSource({
-		key: ['users'],
+const dataSource = createDataGridSource({
+	key: ['users'],
+	collection: {
 		fetcher: fetchUsers,
 		prepareArgs: () => undefined,
-		getRows: (response) => response.items,
-	}),
-}
+		getItems: (response) => response.items,
+	},
+})
 
 const gridBundle = createDataGrid({ components: allComponents, cellTypes, features: allDataGridFeatures })
 const defaultKit = withQuery(gridBundle)

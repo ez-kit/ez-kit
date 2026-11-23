@@ -6,7 +6,10 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { version } from 'react'
 import { expect, it, vi } from 'vitest'
 
-import { createGridSourceFactory, withQuery } from './index'
+import { createGridSourceFactory } from './testing/factory.fixture'
+import { fixtureSource } from './testing/grid-source.fixture'
+
+import { withQuery } from './index'
 
 type User = { id: string; name: string }
 const factory = createGridSourceFactory({ list: { prepareArgs: (params) => params, getRows: (rows: User[]) => rows } })
@@ -60,7 +63,7 @@ for (const name of ['shadcn', 'heroui'] as const) {
 					const source = factory({ key: [name, mode, dismissal], getAll, update: operation, create: operation })
 					function App() {
 						const table = kit.useDataGrid({
-							dataSource: source,
+							dataSource: fixtureSource(source),
 							columns: [{ accessorKey: 'name', header: 'Name', cell: { type: 'text' } }],
 							getRowId: (row) => row.id,
 							editing: { mode: 'modal', validate },

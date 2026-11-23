@@ -1,9 +1,9 @@
 import { queryOptions, mutationOptions } from '@tanstack/react-query'
 import { expectTypeOf, it } from 'vitest'
 
-import { createCollectionSourceFactory } from './factory'
-import { createCollectionSource } from './source'
-import { useCollectionQuery } from './use-collection-query'
+import { createCollectionSourceFactory } from './testing/factory.fixture'
+import { createCollectionSource } from './testing/source.fixture'
+import { useCollectionQuery } from './testing/use-collection-query.fixture'
 
 const source = createCollectionSource({
 	key: ['users'],
