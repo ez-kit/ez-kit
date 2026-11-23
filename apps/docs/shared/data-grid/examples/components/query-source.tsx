@@ -112,7 +112,10 @@ function ConnectedExample({ kit }: { kit: typeof defaultKit }) {
 		selection: true,
 		creating: { mode: 'modal' },
 		editing: { mode: 'modal' },
-		deleting: { bulk: true },
+		deleting: {
+			confirmation: { title: 'Delete this user?' },
+			bulk: { confirmation: { title: 'Delete selected users?' } },
+		},
 	})
 	return (
 		<>

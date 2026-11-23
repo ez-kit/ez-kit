@@ -1,83 +1,127 @@
 ---
-title: Page pagination
-description: Connect a numbered-page grid to an offset API, including search and automatic page resets.
+title: Paginate a DataGrid
+description: Connect numbered pages or infinite scrolling to an API with two interactive examples.
 ---
 
-Use ordinary pagination when each request returns one page and the API can report
-the total number of matching records. This example has nine fake users and three
-rows per page. Click Next, then search for Grace: the grid returns to the first page.
+Start with the [connected grid](/docs/qc-react). Choose numbered pages when readers need to move between pages and see the total. Choose infinite loading when readers should keep the rows already loaded and request the next portion.
 
-<DataGridDocsExample exampleId='query-pages' />
+## Numbered pages
 
-The preview works without a backend. Its fetcher waits 400 ms, filters an immutable
-array and returns a page. Expand the source below the preview for the complete component.
-Both kit tabs use the same request contract.
+### 1. Translate the page into API arguments
 
-## Translate table state into request arguments
-
-The example uses `createGridSourceFactory` because its source is specific to a grid.
-The grid already owns pagination and search state; no additional useState is needed.
+Update the list read. DataGrid supplies a zero-based `pageIndex` and the current `pageSize`. The example API accepts `offset`, `limit` and `search`, and returns `{ items, total }`.
 
 ```tsx
-const makeSource = createGridSourceFactory({
-	list: {
-		prepareArgs: ({ pagination, globalFilter }) => ({
-			offset: pagination.pageIndex * pagination.pageSize,
-			limit: pagination.pageSize,
-			search: typeof globalFilter === 'string' ? globalFilter : '',
-		}),
-		getRows: (page: { items: User[]; total: number }) => page.items,
-		getRowCount: (page) => page.total,
-	},
-})
-const source = makeSource({
+import { createListSource } from '@ez-kit/qc-react/data-grid'
+
+const getAll = createListSource({
 	key: ['users'],
-	getAll: fetchUsers,
+	fetcher: fetchUsers,
+	prepareArgs: ({ pagination, globalFilter }) => ({
+		offset: pagination.pageIndex * pagination.pageSize,
+		limit: pagination.pageSize,
+		search: typeof globalFilter === 'string' ? globalFilter : '',
+	}),
+	getRows: (page) => page.items,
+	getRowCount: (page) => page.total,
 })
+
+const dataSource = { getAll }
 ```
 
-`fetchUsers(args, { signal })` returns `{ items, total }`. For example, page index 2
-with page size 10 becomes `{ offset: 20, limit: 10, search: '' }`. `prepareArgs`
-creates the fetcher's argument object. Your HTTP client or generated fetcher decides
-whether those fields go in the URL or request body.
+For page index 2 and size 10, the offset is 20. For an API with one-based page numbers, use `page: pagination.pageIndex + 1`. The fetcher receives the prepared object and puts its fields where the API expects them.
 
-For an API using page numbers, return `{ page: pagination.pageIndex + 1, pageSize }`
-instead. Define this convention once and reuse the factory for other entities.
+`getRowCount` gives the grid the total number of matching rows across all pages. If the API omits the total, leave out the getter. A fresh total can also move the grid to the last valid page after deletion.
 
-## Mount the connected grid
-
-Create `DataGrid` with `withQuery(yourGridBundle)` as shown in the
-[connection guide](/docs/qc-react#connect-a-bundle), then mount it inside your
-existing `QueryClientProvider`:
+### 2. Enable pages in the grid
 
 ```tsx
 <DataGrid
-	dataSource={source}
+	dataSource={dataSource}
 	columns={columns}
 	getRowId={(user) => user.id}
 	globalFiltering
-	pagination={{ mode: 'pages', pageSize: 10 }}
+	pagination={{ mode: 'pages', pageSize: 3 }}
 />
 ```
 
-A new page produces a different query key. Returning to a previous page can reuse
-its cache; normal Query stale/refetch settings still apply. Applied search, filters
-or sorting reset the page to zero. Map every enabled server-processing axis into
-`prepareArgs`; this example enables search and leaves sorting and column filters disabled.
+The grid owns the current page and resets it to the first page when applied search, filters or sorting change. Map every server-side criterion you enable into `prepareArgs`. TanStack Query caches each distinct set of arguments, so returning to an earlier page can reuse its cached result.
 
-## Totals, errors and deletion
+### Try numbered pages
 
-`getRowCount` returns the total number of matching records, not the length of the
-current page. It lets the grid show the page count and disable Next at the end.
-If your API has no total, omit that projection; the connector cannot infer a last page.
+Click Next, then search for Grace. Search applies to the whole data set and the grid returns to the first page.
 
-The grid receives pending, background-fetch and error states from Query. A failing
-fetcher must reject; an HTTP client returning an error response as ordinary data will
-not trigger Query's error state. Forward the provided signal to `fetch` or Orval.
+<DataGridDocsExample exampleId='query-pages' />
 
-After a successful mutation, the source invalidates its read families. If deleting
-the last row makes the current page invalid, a fresh successful total moves the grid
-to the last valid page. Placeholder data and unknown totals do not cause that correction.
+## Infinite scrolling
 
-For accumulating pages, see [Infinite loading](/docs/qc-react/infinite). For a list
-without a table, see [Lists and CRUD](/docs/qc-react/lists).
+### 1. Describe the first and next requests
+
+A cursor is the value the API gives you to request the next portion. This example uses a numeric offset as a cursor and receives `{ items, nextCursor }`. An API can also return an opaque string.
+
+```tsx
+import { createInfiniteSource } from '@ez-kit/qc-react/data-grid'
+
+type Criteria = { search: string; limit: number }
+
+const getInfinite = createInfiniteSource({
+	key: ['users'],
+	fetcher: fetchUsers,
+	prepareArgs: ({ pageSize, globalFilter }) => ({
+		limit: pageSize,
+		search: typeof globalFilter === 'string' ? globalFilter : '',
+	}),
+	preparePageArgs: ({ args, pageParam }: { args: Criteria; pageParam: number }) => ({
+		...args,
+		offset: pageParam,
+	}),
+	initialPageParam: 0,
+	getRows: (page) => page.items,
+	getNextPageParam: (page) => page.nextCursor,
+})
+
+const dataSource = { getInfinite }
+```
+
+- `prepareArgs` describes the whole collection. The search and page size belong here because changing either starts a new cached collection.
+- `preparePageArgs` adds the current cursor to one request. For an API that expects a string field called `cursor`, return `{ ...args, cursor: pageParam }`.
+- `initialPageParam` is the first cursor. `getNextPageParam` reads the next cursor from the response and returns `null` or `undefined` at the end.
+
+### 2. Choose a loading trigger
+
+```tsx
+<DataGrid
+	dataSource={dataSource}
+	columns={columns}
+	getRowId={(user) => user.id}
+	globalFiltering
+	pagination={{ mode: 'infinite', pageSize: 3, trigger: 'manual' }}
+/>
+```
+
+The manual trigger shows a Load more button. To load on scroll, omit `trigger` and give the grid a scroll area, for example with `layout={{ maxHeight: '24rem' }}`. Both triggers use the same cursor mapping.
+
+TanStack Query stores the pages together and the grid renders them as one list. A later-page failure keeps the rows already loaded visible and lets the user retry that page.
+
+### Try infinite loading
+
+Click Load more to go from three to six to nine rows. Search for Grace to start again with a new set of pages.
+
+<DataGridDocsExample exampleId='query-infinite' />
+
+## Switch modes in the same grid
+
+Give the source both descriptors when the mode can change at runtime. The source panel in the previews above shows both reads together.
+
+```tsx
+const dataSource = { getAll, getInfinite }
+
+// mode comes from the view's 'pages' | 'infinite' preference.
+<DataGrid
+	dataSource={dataSource}
+	columns={columns}
+	pagination={{ mode, pageSize: 3 }}
+/>
+```
+
+Next, [add write operations and see when the pages refresh](/docs/qc-react/crud).

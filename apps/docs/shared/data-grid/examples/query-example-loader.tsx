@@ -46,3 +46,13 @@ export async function loadQueryPaginationExamples() {
 		QueryInfiniteExample: withQueryExampleKit(QueryInfiniteExample),
 	}
 }
+
+export async function loadQueryStartExamples() {
+	const { QueryStartExample } = await import('./components/query-start')
+	return { QueryStartExample: withQueryExampleKit(QueryStartExample) }
+}
+
+export async function loadQuerySharedSourceExamples() {
+	const { QuerySharedSourceExample } = await import('./components/query-shared-source')
+	return { QuerySharedSourceExample: withQueryExampleKit(QuerySharedSourceExample) }
+}

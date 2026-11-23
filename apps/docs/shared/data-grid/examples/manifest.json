@@ -1280,5 +1280,21 @@
 		"groupLabel": "Pagination",
 		"sourceFile": "components/query-pagination.tsx",
 		"exportName": "QueryInfiniteExample"
+	},
+	{
+		"id": "query-start",
+		"label": "Connect a DataGrid",
+		"group": "pagination",
+		"groupLabel": "Pagination",
+		"sourceFile": "components/query-start.tsx",
+		"exportName": "QueryStartExample"
+	},
+	{
+		"id": "query-shared-source",
+		"label": "Share a collection between a grid and a list",
+		"group": "pagination",
+		"groupLabel": "Pagination",
+		"sourceFile": "components/query-shared-source.tsx",
+		"exportName": "QuerySharedSourceExample"
 	}
 ]

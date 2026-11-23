@@ -6,6 +6,10 @@
 import type { ComponentType } from 'react'
 
 export const exampleModules: Record<string, () => Promise<Record<string, ComponentType>>> = {
+	'components/query-start.tsx': () =>
+		import('./query-example-loader').then((module) => module.loadQueryStartExamples()),
+	'components/query-shared-source.tsx': () =>
+		import('./query-example-loader').then((module) => module.loadQuerySharedSourceExamples()),
 	'components/query-pagination.tsx': () =>
 		import('./query-example-loader').then((module) => module.loadQueryPaginationExamples()),
 	'components/query-source.tsx': () =>

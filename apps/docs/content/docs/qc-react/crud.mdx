@@ -1,0 +1,120 @@
+---
+title: Create, edit and delete in a DataGrid
+description: Connect grid CRUD actions to your API and follow the resulting cache invalidation.
+---
+
+Start with the [connected grid](/docs/qc-react). This guide adds create, edit, single delete and bulk delete. Each operation has a fetcher and a `prepareArgs` callback that turns the grid's input into the argument your API expects.
+
+## 1. Keep the list read and add mutations
+
+`createGridSourceFactory` groups your reads and writes under a resource key. Move the list mapping from the [pagination guide](/docs/qc-react/pagination) into the factory, then attach the fetchers.
+
+```ts
+import { createGridSourceFactory } from '@ez-kit/qc-react/data-grid'
+
+const makeSource = createGridSourceFactory({
+	list: {
+		prepareArgs: ({ pagination }) => ({
+			offset: pagination.pageIndex * pagination.pageSize,
+			limit: pagination.pageSize,
+		}),
+		getRows: (page: { items: User[]; total: number }) => page.items,
+		getRowCount: (page) => page.total,
+	},
+})
+
+function requiredName(name: string | undefined) {
+	const value = name?.trim()
+	if (!value) throw new Error('Name is required')
+	return value
+}
+
+const dataSource = makeSource({
+	key: ['users'],
+	getAll: fetchUsers,
+	create: {
+		prepareArgs: ({ values }) => ({ name: requiredName(values.name) }),
+		fetcher: createUser,
+	},
+	update: {
+		prepareArgs: ({ row, values }) => {
+			if (!row) throw new Error('User is no longer available')
+			return { id: row.id, body: { name: requiredName(values.name) } }
+		},
+		fetcher: updateUser,
+	},
+	delete: {
+		prepareArgs: ({ row }) => row.id,
+		fetcher: deleteUser,
+	},
+	deleteMany: {
+		prepareArgs: ({ rows }) => rows.map((row) => row.id),
+		fetcher: deleteUsers,
+	},
+})
+```
+
+Create gets the draft `values`. Update also gets the original `row` when it is available and the grid's `rowId`. Delete gets the original row, so you can use the API identifier on the record. Bulk delete gets the selected records that the grid can resolve for the action and calls `deleteUsers` once with their IDs. If your API reports partial success, decide in your application how to display those results and refresh affected data.
+
+`prepareArgs` returns the whole request argument. For example, `updateUser` might put `id` in the URL and JSON-encode `body`. The [Orval recipe](/docs/qc-react/orval) shows that mapping with generated fetchers.
+
+## 2. Enable the actions
+
+The source supplies the operations. Enable their UI features on the grid.
+
+```tsx
+<DataGrid
+	columns={columns}
+	dataSource={dataSource}
+	getRowId={(user) => user.id}
+	pagination={{ mode: 'pages', pageSize: 3 }}
+	creating={{ mode: 'modal' }}
+	editing={{ mode: 'modal' }}
+	selection
+	deleting={{
+		confirmation: { title: 'Delete this user?' },
+		bulk: { confirmation: { title: 'Delete selected users?' } },
+	}}
+/>
+```
+
+Use `editing: true` for default editing behavior. Here the modal config enables editing and chooses its presentation. Bulk deletion needs an explicit `deleteMany` fetcher or `deleting.bulk.onDelete` handler.
+
+## 3. Follow the refresh after a save
+
+1. The user saves a row. The grid prepares the arguments and runs the configured mutation.
+2. On success, the connector uses the factory's invalidation policy to invalidate the resource's list and infinite query families. Matching active queries refetch in the background, and matching inactive queries become stale under TanStack Query's default policy.
+3. Save completes and the form closes while the list can still be refreshing. A failed write stays in the form, and a failed refresh is reported by the grid's query state.
+
+With `key: ['users']`, the default invalidation covers keys starting with `['users', 'list']` and `['users', 'infinite']`. This covers every cached set of pages or filters for the resource. Use a scoped key such as `['users', teamId]` when each team owns a separate data set.
+
+To refresh related views too, add independent filters to the source's `invalidate.additional`:
+
+```ts
+invalidate: {
+	additional: [
+		{ queryKey: ['users-count'] },
+		{ queryKey: ['dashboard', 'summary'] },
+	],
+}
+```
+
+Each object is one TanStack Query filter. `['dashboard', 'summary']` is one hierarchical key. Put `invalidate` on an operation if only that operation needs the extra refresh. An operation's `additional` extends the source policy, and its `replace` or `false` replaces that policy. The [invalidation reference](/docs/qc-react/api#invalidation-policy) covers `replace`, `false` and native filter options.
+
+### Add a callback or take over the action
+
+Use mutation `options.onSuccess` for lifecycle work such as a toast. `onMutate`, `onError` and `onSettled` use the native TanStack Query lifecycle. A grid handler such as `editing.onSave` takes over the entire write, including responsibility for refreshing the cache.
+
+## Try all four operations
+
+Edit a name, create a user, confirm the deletion of one row, then select several and delete them together. Try a blank name to see an error, or edit in infinite mode to watch the loaded rows refresh. The fake API delays writes so the pending state is visible. Expand the source for the full grid, source and fake API.
+
+<DataGridDocsExample exampleId='query-source' />
+
+## Try closing a pending form
+
+Save and Cancel are disabled while validation or submission runs. Use the close control to dismiss the modal where the kit allows it. A dispatched mutation can finish and refresh the list in the background.
+
+<DataGridDocsExample exampleId='query-modal' />
+
+For the same operations in a custom UI, follow [Build an ordinary list](/docs/qc-react/lists).

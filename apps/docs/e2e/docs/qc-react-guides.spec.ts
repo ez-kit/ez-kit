@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test'
 for (const kit of ['shadcn', 'heroui']) {
 	for (const mode of ['pagination', 'infinite']) {
 		test(`${kit}: ${mode} guide has an independent interactive example`, async ({ page }) => {
-			await page.goto(`/docs/qc-react/${mode}?kit=${kit}`)
+			await page.goto(`/docs/qc-react/pagination?kit=${kit}`)
 			const id = mode === 'pagination' ? 'query-pages' : 'query-infinite'
 			const frame = page.getByTitle(`${kit} example: ${id}`, { exact: true })
 			// Hydration replaces the Suspense fallback iframe with the live preview.

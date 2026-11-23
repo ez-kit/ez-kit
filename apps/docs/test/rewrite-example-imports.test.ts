@@ -65,7 +65,7 @@ describe('rewriteExampleImports', () => {
 	})
 })
 
-for (const file of ['query-source.tsx', 'editing/query-modal.tsx']) {
+for (const file of ['query-start.tsx', 'query-shared-source.tsx', 'query-source.tsx', 'editing/query-modal.tsx']) {
 	it(`rewrites the connected grid example ${file} without runtime kit-switching scaffolding`, () => {
 		const source = readFileSync(resolve(__dirname, '../shared/data-grid/examples/components', file), 'utf8')
 		for (const kit of ['shadcn', 'heroui'] as const) {

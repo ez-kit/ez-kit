@@ -2,7 +2,7 @@
 
 import { createDataGrid } from '@ez-kit/data-grid-react'
 import { allDataGridFeatures } from '@ez-kit/data-grid-react/features/all'
-import { createGridSourceFactory, createInfiniteSource, withQuery } from '@ez-kit/qc-react/data-grid'
+import { createInfiniteSource, createListSource, withQuery } from '@ez-kit/qc-react/data-grid'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useState } from 'react'
 
@@ -28,8 +28,10 @@ async function fetchUsers(args: Criteria & { offset: number }, { signal }: { sig
 		nextCursor: end < matches.length ? end : null,
 	}
 }
-const pagedSource = createGridSourceFactory({
-	list: {
+const source = {
+	getAll: createListSource({
+		key: ['paged-users-demo'],
+		fetcher: fetchUsers,
 		prepareArgs: ({ pagination, globalFilter }) => ({
 			offset: pagination.pageIndex * pagination.pageSize,
 			limit: pagination.pageSize,
@@ -37,11 +39,7 @@ const pagedSource = createGridSourceFactory({
 		}),
 		getRows: (page: Page) => page.items,
 		getRowCount: (page) => page.total,
-	},
-})({ key: ['paged-users-demo'], getAll: fetchUsers })
-
-const source = {
-	...pagedSource,
+	}),
 	getInfinite: createInfiniteSource({
 		key: ['infinite-users-demo'],
 		fetcher: fetchUsers,
