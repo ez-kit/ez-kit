@@ -129,3 +129,125 @@ it('rejects selection-based deletion until the new scope acknowledges the contro
 	h.unmount()
 	client.clear()
 })
+
+it('uses the visible columns and state callback when another source suspends', async () => {
+	const { client, wrapper: Wrapper } = harness()
+	const create = vi.fn((_args: { tenant: string; name: string | undefined }) => Promise.resolve())
+	const source = (tenant: string) =>
+		make({
+			key: ['committed-columns', tenant],
+			getAll: () => Promise.resolve([{ id: '1', name: tenant }]),
+			create: { prepareArgs: ({ values }) => ({ tenant, name: values.name }), fetcher: create },
+		})
+	const A = source('A')
+	const B = source('B')
+	const onA = vi.fn()
+	const onB = vi.fn()
+	const attempted = vi.fn()
+	const suspend = new Promise<never>(() => undefined)
+	let switchTenant!: (tenant: string) => void
+	let table!: DataTable<typeof allDataGridFeatures, User>
+	function Host() {
+		const [tenant, setTenant] = useState('A')
+		const view = connected.useDataGrid({
+			dataSource: tenant === 'A' ? A : B,
+			columns: [{ id: 'name', accessorFn: (row) => `${tenant}:${row.name}`, creating: { defaultValue: tenant } }],
+			editing: { onSave: () => Promise.resolve() },
+			creating: true,
+			onStateChange: tenant === 'A' ? onA : onB,
+		})
+		useEffect(() => {
+			switchTenant = setTenant
+			table = view
+		}, [view])
+		if (tenant === 'B') {
+			attempted()
+			// eslint-disable-next-line @typescript-eslint/only-throw-error -- React Suspense consumes the pending promise
+			throw suspend
+		}
+		return <span>Visible A</span>
+	}
+	const h = render(
+		<Wrapper>
+			<Suspense fallback={null}>
+				<Host />
+			</Suspense>
+		</Wrapper>,
+	)
+	await waitFor(() => {
+		expect(table.getRowModel().rows[0]?.original.name).toBe('A')
+	})
+	act(() => {
+		startTransition(() => {
+			switchTenant('B')
+		})
+	})
+	await waitFor(() => {
+		expect(attempted).toHaveBeenCalled()
+	})
+	expect(screen.getByText('Visible A')).toBeTruthy()
+	act(() => {
+		table.editing.startCell('1', 'name')
+	})
+	expect(table.editing.getState().values).toEqual({ name: 'A:A' })
+	act(() => {
+		table.editing.cancel()
+	})
+	onA.mockClear()
+	onB.mockClear()
+	act(() => {
+		table.creating.start()
+	})
+	expect(table.creating.getState().values).toEqual({ name: 'A' })
+	expect(onA.mock.calls[0]?.[0]).toMatchObject({ creating: { isOpen: true } })
+	expect(onB).not.toHaveBeenCalled()
+	await act(async () => {
+		await expect(table.creating.commit()).resolves.toEqual({ ok: true })
+	})
+	expect(create.mock.calls[0]?.[0]).toEqual({ tenant: 'A', name: 'A' })
+	h.unmount()
+	client.clear()
+})
+
+it('deletes a child expanded without rerendering the connected hook', async () => {
+	const { client, wrapper } = harness()
+	type TreeRow = User & { children?: TreeRow[] }
+	const rows: TreeRow[] = [{ id: 'parent', name: 'Parent', children: [{ id: 'child', name: 'Child' }] }]
+	const remove = vi.fn((_id: string) => Promise.resolve())
+	const source = createGridSourceFactory({
+		list: { prepareArgs: () => undefined, getRows: (data: TreeRow[]) => data },
+	})({
+		key: ['committed-tree'],
+		getAll: () => Promise.resolve(rows),
+		delete: { prepareArgs: ({ rowId }) => rowId, fetcher: remove },
+	})
+	const rendered = vi.fn()
+	const h = renderHook(
+		() => {
+			rendered()
+			return connected.useDataGrid({
+				dataSource: source,
+				columns: [],
+				deleting: true,
+				expanding: { mode: 'tree', getSubRows: (row) => row.children },
+			})
+		},
+		{ wrapper },
+	)
+	const table = h.result.current
+	await waitFor(() => {
+		expect(table.getRowModel().rows.map((row) => row.id)).toEqual(['parent'])
+	})
+	rendered.mockClear()
+	act(() => {
+		table.getRow('parent').toggleExpanded()
+	})
+	expect(table.getRowModel().rows.map((row) => row.id)).toEqual(['parent', 'child'])
+	expect(rendered).not.toHaveBeenCalled()
+	await act(async () => {
+		await table.deleting.delete('child')
+	})
+	expect(remove.mock.calls[0]?.[0]).toBe('child')
+	h.unmount()
+	client.clear()
+})

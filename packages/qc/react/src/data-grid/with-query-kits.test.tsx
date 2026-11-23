@@ -255,3 +255,68 @@ it('keeps the built-in global search debounce', async () => {
 	ui.unmount()
 	client.clear()
 })
+
+it.each([false, true])('hides custom actions until the controlled selection resets (cached=%s)', async (cached) => {
+	const client = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity } } })
+	const archive = vi.fn()
+	const presented = vi.fn()
+	const sources = {
+		A: sourceFactory({ key: ['selection-owner', 'A'], getAll: () => Promise.resolve([{ id: '1', name: 'A' }]) }),
+		B: sourceFactory({ key: ['selection-owner', 'B'], getAll: () => Promise.resolve([{ id: '1', name: 'B' }]) }),
+	}
+	const Grid = kits.shadcn.DataGrid
+	const selection = {
+		onChange: vi.fn(),
+		bar: {
+			actions: ({ selectedRows }: { selectedRows: { original: User }[] }) => {
+				const names = selectedRows.map((row) => row.original.name)
+				presented(names)
+				return [
+					{
+						id: 'archive',
+						label: 'Archive selection',
+						onAction: () => {
+							archive(names)
+						},
+					},
+				]
+			},
+		},
+	}
+	const columns = kits.shadcn.createColumns<User>([{ accessorKey: 'name' }])
+	const tree = (owner: 'A' | 'B', rowSelection: Record<string, true>) => (
+		<QueryClientProvider client={client}>
+			<Grid
+				columns={columns}
+				dataSource={sources[owner]}
+				scopeKey={[owner]}
+				getRowId={(row) => row.id}
+				state={{ rowSelection }}
+				selection={selection}
+			/>
+		</QueryClientProvider>
+	)
+	const selected = { '1': true } as const
+	const h = render(tree('A', selected))
+	await screen.findByRole('button', { name: 'Archive selection' })
+	if (cached) {
+		const { queryKey } = sources.B.queries.list({
+			pagination: { pageIndex: 0, pageSize: 20 },
+			sorting: [],
+			columnFilters: [],
+			globalFilter: undefined,
+		})
+		client.setQueryData(queryKey, [{ id: '1', name: 'B' }])
+	}
+	presented.mockClear()
+	h.rerender(tree('B', selected))
+	await screen.findByText('B')
+	expect(screen.queryByRole('button', { name: 'Archive selection' })).toBeNull()
+	expect(presented).not.toHaveBeenCalledWith(['B'])
+	h.rerender(tree('B', {}))
+	h.rerender(tree('B', selected))
+	fireEvent.click(await screen.findByRole('button', { name: 'Archive selection' }))
+	expect(archive).toHaveBeenCalledWith(['B'])
+	h.unmount()
+	client.clear()
+})

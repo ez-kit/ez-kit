@@ -3,7 +3,7 @@ import { assignPrototypeAPIs } from '@tanstack/table-core'
 import { ColumnFormMode, resolveColumnFormConfig } from '../../column/resolve-form-config'
 import { DEFAULT_VALIDATE_DEBOUNCE_MS } from '../../defaults'
 import { assignTableInstanceData, readOwnSlice, writeOwnSlice } from '../../feature-state'
-import { gridWriteContext } from '../../write-context'
+import { gridActionRows, gridWriteContext, hasPendingGridOptions } from '../../write-context'
 import { abortChecks, checkValues, commitClosed, commitInFlight, runCommit, trackCommit } from '../form'
 import {
 	abortFormWork,
@@ -247,7 +247,7 @@ type EditingColumn = {
 }
 
 /** The row shape `snapshotRow` and `startCell` read. Structural for the same reason. */
-type EditingRow = { id: string; getValue: (columnId: string) => unknown }
+type EditingRow = { id: string; original: RowData; index: number; getValue: (columnId: string) => unknown }
 
 /**
  * A table, as this feature's free functions see it.
@@ -313,7 +313,8 @@ function writeEditing(table: AnyTable, patch: Partial<EditingState>): void {
 
 /** The column's own editing config, or `undefined` when it disabled editing entirely. */
 function resolveColumnEditing(table: EditingTable, columnId: string): ColumnEditingConfig | undefined {
-	const fromColumn = table.getAllColumns().find((c) => c.id === columnId)?.columnDef.meta?.editing
+	const fromColumn = (gridWriteContext(table)?.columns ?? table.getAllColumns()).find((c) => c.id === columnId)
+		?.columnDef.meta?.editing
 	return fromColumn === false ? undefined : fromColumn
 }
 
@@ -367,16 +368,31 @@ function scheduleChangeValidation(table: EditingTable, columnId: string): void {
  * to `onSave` as if the user had edited it; `row` in the save context is where it is read from now.
  */
 function snapshotRow(table: EditingTable, rowId: string): Record<string, unknown> {
-	const row = (gridWriteContext(table)?.rows ?? table.getRowModel().rows).find((r) => r.id === rowId)
+	const row = gridActionRows(table).find((r) => r.id === rowId)
 	const initial: Record<string, unknown> = {}
 	if (!row) return initial
-	for (const col of table.getAllColumns()) {
+	for (const col of gridWriteContext(table)?.columns ?? table.getAllColumns()) {
 		const meta = col.columnDef.meta
 		if (!col.id || meta?.isSystemColumn === true) continue
 		if (resolveColumnFormConfig(meta, ColumnFormMode.Editing) === false) continue
-		initial[col.id] = row.getValue(col.id)
+		initial[col.id] = editValue(table, row, col.id)
 	}
 	return initial
+}
+
+function editingColumn(table: EditingTable, columnId: string) {
+	const context = gridWriteContext(table)
+	return context ? context.flatColumns.find((column) => column.id === columnId) : table.getColumn(columnId)
+}
+
+function editValue(table: EditingTable, row: EditingRow, columnId: string): unknown {
+	// Row.getValue resolves its accessor through the table's mutable options.
+	const context = gridWriteContext(table)
+	if (context && hasPendingGridOptions(table.options, context)) {
+		const column = context.flatColumns.find((candidate) => candidate.id === columnId)
+		return column?.accessorFn?.(row.original, row.index)
+	}
+	return row.getValue(columnId)
 }
 
 /** The edited row's original, looked up in the core row model so filtering and paging never hide it. */
@@ -411,10 +427,11 @@ function createEditingApi(table: EditingTable): EditingApi<RowData> {
 			// A column that opted out with `editing: false` is not editable in any mode.
 			// The React layer already renders no double-click affordance for it; this
 			// makes the programmatic path agree rather than quietly opening an input.
-			if (table.getColumn(columnId)?.columnDef.meta?.editing === false) return
+			const column = editingColumn(table, columnId)
+			if (column?.columnDef.meta?.editing === false) return
 			abortFormWork(abortBox(table))
-			const row = (gridWriteContext(table)?.rows ?? table.getRowModel().rows).find((r) => r.id === rowId)
-			const seed = { [columnId]: row?.getValue(columnId) }
+			const row = gridActionRows(table).find((r) => r.id === rowId)
+			const seed = { [columnId]: row && editValue(table, row, columnId) }
 			writeEditing(table, {
 				rowId,
 				cellId: `${rowId}_${columnId}`,

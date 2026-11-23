@@ -99,7 +99,11 @@ export function createGridDataSource<
 		invalidation: resolveInvalidation([], config.invalidate),
 	}
 	return result as Omit<typeof result, 'getInfinite'> &
-		('getInfinite' extends keyof Capabilities ? Pick<typeof result, 'getInfinite'> : { getInfinite?: never })
+		(Capabilities extends { getInfinite: unknown }
+			? Required<Pick<typeof result, 'getInfinite'>>
+			: 'getInfinite' extends keyof Capabilities
+				? Pick<typeof result, 'getInfinite'>
+				: { getInfinite?: never })
 }
 
 /** Internal source construction for generated key families. */

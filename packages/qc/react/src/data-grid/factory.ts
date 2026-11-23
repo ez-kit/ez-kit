@@ -208,6 +208,10 @@ export function createGridSourceFactory<
 			queries: { list: getAll.query, ...(getInfinite === undefined ? {} : { infinite: getInfinite.query }) },
 		}
 		return result as Omit<typeof result, 'getInfinite'> &
-			('getInfinite' extends keyof Capabilities ? Pick<typeof result, 'getInfinite'> : { getInfinite?: never })
+			(Capabilities extends { getInfinite: unknown }
+				? Required<Pick<typeof result, 'getInfinite'>>
+				: 'getInfinite' extends keyof Capabilities
+					? Pick<typeof result, 'getInfinite'>
+					: { getInfinite?: never })
 	}
 }

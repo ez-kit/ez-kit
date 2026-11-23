@@ -6,7 +6,7 @@ import {
 	writeOwnSlice,
 } from '../../feature-state'
 import { featureConfig, isFeatureEnabled } from '../../utils/feature-flag'
-import { gridWriteContext } from '../../write-context'
+import { gridActionRows, gridWriteContext } from '../../write-context'
 
 import type { AnyTable } from '../../feature-state'
 import type { FeatureToggle } from '../../utils/feature-flag'
@@ -453,7 +453,7 @@ function runDelete(
 async function deleteRow(table: DeletingTable, rowId: string): Promise<void> {
 	const config = deletingOption(table)
 	if (!config) return
-	const row = (gridWriteContext(table)?.rows ?? table.getRowModel().rows).find((r) => r.id === rowId)
+	const row = gridActionRows(table).find((r) => r.id === rowId)
 	if (!row) return
 	await runDelete(table, 'single', [rowId], (signal) => config.onDelete({ rowId, row, signal }))
 }
@@ -463,8 +463,9 @@ async function deleteRows(table: DeletingTable, rowIds: string[]): Promise<void>
 	if (!config) return
 	const bulk = getBulkDeletingConfig(config)
 	if (!bulk) return
+	const visibleRows = gridActionRows(table)
 	const rows = rowIds
-		.map((id) => (gridWriteContext(table)?.rows ?? table.getRowModel().rows).find((r) => r.id === id))
+		.map((id) => visibleRows.find((r) => r.id === id))
 		.filter((r): r is Row<TableFeatures, RowData> => r !== undefined)
 	if (rows.length === 0) return
 	const ids = rows.map((r) => r.id)

@@ -385,3 +385,12 @@ already dispatched writes keep their existing lifecycle.
 
 Standalone grid read helpers and native grid sources enforce the collection layer's projection
 rules: getters cannot invent a selected shape, and shape-changing selectors must be guaranteed.
+
+Keep a read's `query` and `getRows` function references stable to use previous-data placeholders
+between pages. When the scope or either function changes, the connector prevents the old response
+from reaching the new read. A placeholder supplied by the new read is still available, and its
+callback starts with undefined previous data and query. When the same read functions serve several
+datasets, use `scopeKey` to separate their view and selection state.
+
+An explicit `pagination.mode` requires the corresponding source read. If a mode can be either
+`'pages'` or `'infinite'`, the source must provide both reads.

@@ -49,6 +49,17 @@ import type {
 } from '@tanstack/react-query'
 import type { ReactElement } from 'react'
 
+function withoutPreviousData<T extends { placeholderData?: unknown }>(options: T): T {
+	const { placeholderData } = options
+	return {
+		...options,
+		placeholderData:
+			typeof placeholderData === 'function'
+				? () => (placeholderData as (data: undefined, query: undefined) => unknown)(undefined, undefined)
+				: placeholderData,
+	}
+}
+
 function requireCollectionRead<S, K extends keyof S>(source: S, key: K): S & { [P in K]-?: NonNullable<S[P]> } {
 	if (!source[key]) throw new Error(`Collection source does not support ${String(key)} reads`)
 	return source as S & { [P in K]-?: NonNullable<S[P]> }
@@ -81,14 +92,8 @@ type GridSourceCompatibility<S> = {
 type ReadableGridSource<S, Mode> = S &
 	GridSourceCompatibility<NoInfer<S>> &
 	(S extends { getAll: unknown } | { getInfinite: unknown } ? unknown : never) &
-	([Mode] extends ['infinite']
-		? S extends { getInfinite?: infer I }
-			? [I] extends [never]
-				? never
-				: unknown
-			: never
-		: unknown) &
-	([Mode] extends ['pages'] ? ('getAll' extends keyof S ? unknown : never) : unknown)
+	('infinite' extends Mode ? ([S] extends [{ getInfinite: unknown }] ? unknown : never) : unknown) &
+	('pages' extends Mode ? ([S] extends [{ getAll: unknown }] ? unknown : never) : unknown)
 
 type SourceCheck<S, Mode extends PaginationMode> = {
 	dataSource: ReadableGridSource<NoInfer<S>, NoInfer<Mode>>
@@ -156,7 +161,7 @@ type ConnectionBundle<
 		CF extends TableFeatures = Features<F>,
 		E extends CellTypeRegistry = Extra,
 		S extends GridDataSource<R> = GridDataSource<R>,
-		Mode extends PaginationMode = PaginationMode,
+		Mode extends PaginationMode = never,
 	>(
 		config: QueryGridConfig<CF, R, C, Context<X>, CC, E, S> &
 			SourceCheck<S, Mode> &
@@ -167,7 +172,7 @@ type ConnectionBundle<
 		CF extends TableFeatures = Features<F>,
 		E extends CellTypeRegistry = Extra,
 		S extends GridDataSource<R> = GridDataSource<R>,
-		Mode extends PaginationMode = PaginationMode,
+		Mode extends PaginationMode = never,
 	>(
 		props:
 			| (DataGridControlledProps<CF, R> & { dataSource?: never; queryOptions?: never; scopeKey?: never })
@@ -315,7 +320,7 @@ export function withQuery<
 		const createOwner = scopeKey === undefined ? hashKey(mutationKeys[0] ?? []) : scope
 		const operationKey = (name: keyof ActionInputs<object>) => hashKey(mutationKeys[OPERATIONS.indexOf(name)] ?? [])
 		const owners = useRef({ createOwner, scope })
-		const lastReadScope = useRef<string | undefined>(undefined)
+		const lastRead = useRef<{ scope: string; query: unknown; getRows: unknown } | undefined>(undefined)
 		const abandonedForms = useRef<{
 			create?: Readonly<Record<string, unknown>> | undefined
 			update?: Readonly<Record<string, unknown>> | undefined
@@ -384,7 +389,8 @@ export function withQuery<
 		let draft = false
 		const identity = { needsRowId: false }
 		let controlledPageIndex: number | undefined
-		let controlledSelection: Readonly<Record<string, boolean>> | undefined
+		const awaitingSelection = useRef(false)
+		let selectionReady = true
 		const rows = projection.scope === scope ? projection.data : EMPTY
 		const table = useBoundGrid({ ...gridConfig, data: rows }, (merged) => {
 			const {
@@ -395,7 +401,12 @@ export function withQuery<
 			draft = enabled(merged.draft)
 			identity.needsRowId = !merged.getRowId && (enabled(merged.editing) || enabled(merged.deleting))
 			controlledPageIndex = merged.state?.pagination?.pageIndex
-			controlledSelection = merged.state?.rowSelection
+			const controlledSelection = merged.state?.rowSelection
+			selectionReady = !(
+				(owners.current.scope !== scope || awaitingSelection.current) &&
+				controlledSelection &&
+				Object.keys(controlledSelection).length
+			)
 			const creating: Partial<CreatingConfig<object>> = typeof merged.creating === 'object' ? merged.creating : {}
 			const editing: Partial<EditingConfig<object>> = typeof merged.editing === 'object' ? merged.editing : {}
 			const deleting: Partial<DeletingConfig<object>> = typeof merged.deleting === 'object' ? merged.deleting : {}
@@ -411,6 +422,9 @@ export function withQuery<
 
 			return {
 				...merged,
+				...(!selectionReady && enabled(merged.selection)
+					? { selection: { ...(typeof merged.selection === 'object' ? merged.selection : {}), bar: false } }
+					: {}),
 				...((enabled(merged.editing) || enabled(merged.deleting)) && !merged.getRowId ? { getRowId: stableRowId } : {}),
 
 				...(enabled(merged.creating)
@@ -481,19 +495,17 @@ export function withQuery<
 				state: { ...merged.state, loading: projection.loading },
 			}
 		})
-		const awaitingSelection = useRef(false)
 		useInsertionEffect(() => {
 			// Publish before descendant layout effects, while speculative renders leave the
 			// visible table's actions and write targets on the previous committed context.
-			const hasControlledSelection =
-				controlledSelection !== undefined && Object.values(controlledSelection).some(Boolean)
-			if (!hasControlledSelection) awaitingSelection.current = false
-			else if (owners.current.scope !== scope) awaitingSelection.current = true
+			awaitingSelection.current = !selectionReady
 			const options = table.options
 			const unpublish = publishGridWriteContext(table, {
 				options,
+				columns: options.creating || options.editing ? table.getAllColumns() : EMPTY,
+				flatColumns: options.editing ? table.getAllFlatColumns() : EMPTY,
 				scope,
-				selectionReady: !awaitingSelection.current,
+				selectionReady,
 				rows: options.deleting || options.editing ? table.getRowModel().rows : EMPTY,
 				rowsById: options.editing ? table.getCoreRowModel().rowsById : {},
 			})
@@ -566,14 +578,19 @@ export function withQuery<
 			globalFilter: params.globalFilter,
 			pageSize: params.pagination.pageSize,
 		}
-		const suppressPlaceholder = lastReadScope.current !== undefined && lastReadScope.current !== scope
+		const read = infiniteMode ? source.getInfinite : source.getAll
+		const readQuery = read?.query
+		const getRows = read?.getRows
+		const suppressPlaceholder =
+			lastRead.current !== undefined &&
+			(lastRead.current.scope !== scope || lastRead.current.query !== readQuery || lastRead.current.getRows !== getRows)
 		const infiniteOptions = infiniteMode ? source.getInfinite?.query(infiniteParams) : undefined
 		const listOptions = !infiniteMode && suppressPlaceholder ? source.getAll?.query(params) : undefined
 		const infiniteIdentity = infiniteOptions ? client.defaultQueryOptions(infiniteOptions).queryHash : undefined
 		const collectionSource = useMemo(() => {
-			const activeList = listOptions && { ...listOptions, placeholderData: undefined }
+			const activeList = listOptions && withoutPreviousData(listOptions)
 			const activeInfinite =
-				infiniteOptions && suppressPlaceholder ? { ...infiniteOptions, placeholderData: undefined } : infiniteOptions
+				infiniteOptions && suppressPlaceholder ? withoutPreviousData(infiniteOptions) : infiniteOptions
 			return {
 				...(source.getAll
 					? {
@@ -630,26 +647,24 @@ export function withQuery<
 		const current = collection.query
 		const list = current as UseQueryResult<unknown, unknown>
 		const pages = current as UseInfiniteQueryResult<InfiniteData<unknown>, unknown>
-		const placeholderFromOtherScope =
-			current.isPlaceholderData && lastReadScope.current !== undefined && lastReadScope.current !== scope
 		useCommitEffect(() => {
-			if (current.data !== undefined && !placeholderFromOtherScope) lastReadScope.current = scope
-		}, [current.data, placeholderFromOtherScope, scope])
-		const data = placeholderFromOtherScope ? EMPTY : (collection.items as object[])
+			if (current.data !== undefined && !current.isPlaceholderData)
+				lastRead.current = { scope, query: readQuery, getRows }
+		}, [current.data, current.isPlaceholderData, scope, readQuery, getRows])
+		const data = collection.items as object[]
 		// Check before publishing records to TanStack Table so a rejected identity cannot poison its row model.
 		if (identity.needsRowId) for (const row of data) stableRowId(row)
-		const readScope = placeholderFromOtherScope ? undefined : scope
 		const authoritativeTotal = list.isFetchedAfterMount || (list.isEnabled && !list.isStale)
 		const rowCount = !infiniteMode && !list.isPlaceholderData && authoritativeTotal ? collection.total : undefined
 
 		const next = {
-			scope: readScope,
+			scope,
 			data: replaceEqualDeep(projection.data, data),
 			rowCount,
-			hasNextPage: infiniteMode && pages.isEnabled && !placeholderFromOtherScope && pages.hasNextPage,
+			hasNextPage: infiniteMode && pages.isEnabled && pages.hasNextPage,
 			loadMoreKey: infiniteIdentity,
 			loading: {
-				isPending: current.isPending || (placeholderFromOtherScope && current.isFetching),
+				isPending: current.isPending,
 				isFetching: current.isFetching && !(infiniteMode && pages.isFetchingNextPage),
 				isError: current.isError && !(infiniteMode && pages.isFetchNextPageError),
 				error: infiniteMode && pages.isFetchNextPageError ? null : current.error,
@@ -661,7 +676,7 @@ export function withQuery<
 		const { hasNextPage, isEnabled, isFetching, fetchNextPage } = pages
 		useCommitEffect(() => {
 			nextPageRef.current = async () => {
-				if (!infiniteIdentity || !isEnabled || placeholderFromOtherScope) return
+				if (!infiniteIdentity || !isEnabled) return
 				const previous = nextPageRequest.current.get(infiniteIdentity)
 				if (previous) return previous
 				if (!hasNextPage || isFetching) return
@@ -674,7 +689,7 @@ export function withQuery<
 						nextPageRequest.current.delete(infiniteIdentity)
 				}
 			}
-		}, [infiniteIdentity, hasNextPage, isEnabled, isFetching, fetchNextPage, placeholderFromOtherScope])
+		}, [infiniteIdentity, hasNextPage, isEnabled, isFetching, fetchNextPage])
 		useEffect(() => {
 			if (
 				infiniteMode ||

@@ -40,7 +40,8 @@ const pagedSource = createGridSourceFactory({
 	},
 })({ key: ['paged-users-demo'], getAll: fetchUsers })
 
-const infiniteSource = {
+const source = {
+	...pagedSource,
 	getInfinite: createInfiniteSource({
 		key: ['infinite-users-demo'],
 		fetcher: fetchUsers,
@@ -60,7 +61,7 @@ function Example({ kit, mode }: { kit: typeof defaultKit; mode: 'pages' | 'infin
 	return (
 		<QueryClientProvider client={client}>
 			<kit.DataGrid
-				dataSource={mode === 'pages' ? pagedSource : infiniteSource}
+				dataSource={source}
 				columns={[{ accessorKey: 'name', header: 'Name', cell: { type: 'text' } }]}
 				getRowId={(user) => user.id}
 				globalFiltering

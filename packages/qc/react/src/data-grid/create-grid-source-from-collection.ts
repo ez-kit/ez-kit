@@ -72,18 +72,17 @@ type AdaptedOperations<S> = {
 		: never
 }
 
+type AdaptedRead<R, P> = R extends { query: (...args: never[]) => infer Options; getItems: infer GetItems }
+	? { query: (params: P) => Options; getRows: GetItems } & {
+			[K in keyof R as K extends 'getTotal' ? 'getRowCount' : never]: R[K]
+		}
+	: never
+
 type AdaptedReads<S> = {
-	[K in keyof S as K extends 'getAll' | 'getInfinite' ? K : never]: NonNullable<S[K]> extends {
-		query: (...args: never[]) => infer Options
-		getItems: infer GetItems
-	}
-		? {
-				query: (params: K extends 'getAll' ? GridQueryParams : GridInfiniteParams) => Options
-				getRows: GetItems
-			} & {
-				[Total in keyof NonNullable<S[K]> as Total extends 'getTotal' ? 'getRowCount' : never]: NonNullable<S[K]>[Total]
-			}
-		: never
+	[K in keyof S as K extends 'getAll' | 'getInfinite' ? K : never]: AdaptedRead<
+		NonNullable<S[K]>,
+		K extends 'getAll' ? GridQueryParams : GridInfiniteParams
+	>
 }
 
 /** Map table state and action contexts without changing collection cache identity. */

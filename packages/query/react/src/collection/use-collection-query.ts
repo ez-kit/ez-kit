@@ -87,19 +87,23 @@ export type ReadProjectionCompatibility<
 	Total extends PropertyKey = never,
 > = R extends { query: (...args: never[]) => infer Options }
 	? [Options] extends [{ queryKey: QueryKey }]
-		? [QueryResult<R, M>] extends [never]
-			? never
-			: [InvalidInitialData<Options, M>] extends [never]
-				? M extends 'infinite'
-					? [Options] extends [InfiniteReadOptions]
-						? ProjectionCompatibility<R, ProjectedData<Options, M>, Items | Total>
-						: never
-					: ProjectionCompatibility<R, ProjectedData<Options, M>, Items | Total>
-				: never
+		? [InvalidReadOptions<Options, M>] extends [never]
+			? M extends 'infinite'
+				? [Options] extends [InfiniteReadOptions]
+					? ProjectionCompatibility<R, ProjectedData<Options, M>, Items | Total>
+					: never
+				: ProjectionCompatibility<R, ProjectedData<Options, M>, Items | Total>
+			: never
 		: never
 	: never
 
-type InvalidInitialData<O, M> = O extends unknown ? ([SeedData<O>] extends [RawData<O, M>] ? never : O) : never
+type InvalidReadOptions<O, M> = O extends unknown
+	? [QueryResult<{ query: () => O }, M>] extends [never]
+		? O
+		: [SeedData<O>] extends [RawData<O, M>]
+			? never
+			: O
+	: never
 
 type ProjectionCompatibility<R, D, Keys extends PropertyKey> = {
 	[K in keyof R as K extends Keys ? K : never]: NonNullable<R[K]> extends (data: D) => unknown ? unknown : never
@@ -290,11 +294,12 @@ export function useCollectionQuery<S extends CollectionShape, M extends Collecti
 	const deleteMany = useOptionalCollectionMutation(source.deleteMany, source.invalidation)
 	const read = mode === 'pages' ? source.getAll : source.getInfinite
 	const data = mode === 'pages' ? list.data : pages.data
+	const getItems = read?.getItems
 	const items = useMemo(() => {
-		if (!read || data === undefined) return EMPTY
-		if (mode === 'pages') return read.getItems(data)
-		return (data as InfiniteData<unknown>).pages.flatMap((page) => read.getItems(page))
-	}, [mode, read, data])
+		if (!getItems || data === undefined) return EMPTY
+		if (mode === 'pages') return getItems(data)
+		return (data as InfiniteData<unknown>).pages.flatMap((page) => getItems(page))
+	}, [mode, getItems, data])
 	if (!read) throw new Error(`Collection source does not support ${mode} reads`)
 	return {
 		mode,

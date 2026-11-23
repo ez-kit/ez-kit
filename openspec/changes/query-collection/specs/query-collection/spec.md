@@ -426,3 +426,41 @@ check initialData against the raw query data and expose the raw branch when sele
 
 - **WHEN** a structural reader's select is optional
 - **THEN** its query data type and projection account for both the raw and selected responses
+
+### Requirement: Connected actions and reads respect their current inputs
+
+Connected form actions SHALL resolve defaults, accessors and notifications from the committed grid.
+Deletion SHALL resolve rows from the live visible model when the committed options are active.
+Selection action bars SHALL hide stale controlled selection until the scope reset is acknowledged.
+
+#### Scenario: A descendant suspends after a source change
+
+- **WHEN** the visible grid starts a form while a render with different columns and callbacks is suspended
+- **THEN** the form seeds values and sends state notifications using the visible grid's inputs
+
+#### Scenario: A newly visible tree row is deleted
+
+- **WHEN** expanding a branch reveals a child without rerendering the connector
+- **THEN** deletion resolves the child from the visible row model
+
+#### Scenario: A parent holds stale controlled selection
+
+- **WHEN** a scope change reuses row IDs and the parent has yet to acknowledge the selection reset
+- **THEN** the action bar does not expose those rows to selection actions
+
+### Requirement: Connected read compatibility across source changes
+
+The connector SHALL keep previous responses within the same read contract and SHALL allow a new
+read to supply its own placeholder. Structural option unions SHALL be valid in every branch.
+An explicit pagination mode SHALL require a corresponding read in every source variant.
+
+#### Scenario: A read-only grid switches response shape
+
+- **WHEN** a new read changes its query factory or projection while keepPreviousData is enabled
+- **THEN** the previous response cannot reach the new selector or projection, and the new read can
+  supply its own placeholder
+
+#### Scenario: The configured mode and read vary
+
+- **WHEN** an explicit mode is supplied and a corresponding read can be absent
+- **THEN** the type checker rejects that source configuration

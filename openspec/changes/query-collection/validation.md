@@ -297,3 +297,13 @@ Verification passed:
 - Query collection 1.90 kB / 2 kB and qc-react 4.06 kB / 4.6 kB.
 
 Docs production build remains excluded locally under the accepted Google Fonts restriction.
+
+## Committed columns and read compatibility — 2026-11-23
+
+Mounted regressions exercise create defaults, edit accessors and state callbacks while a new source
+suspends, plus deletion after expanding a tree without rerendering the connector. The shadcn action
+bar suppresses custom actions during an unacknowledged selection reset with both cached and
+uncached data. Read-only fixtures cover inherited previous-data defaults and source-owned static
+and callback placeholders. Type fixtures reject invalid option union branches and optional reads
+for explicit pagination modes. They also check that collection adaptation preserves correlated
+queries and item projections.

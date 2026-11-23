@@ -315,7 +315,7 @@ function writeCreating(table: AnyTable, patch: Partial<CreatingState>): void {
 }
 
 function columnMeta(table: CreatingTable, columnId: string): CreatingColumnMeta | undefined {
-	return table.getAllColumns().find((c) => c.id === columnId)?.columnDef.meta
+	return (gridWriteContext(table)?.columns ?? table.getAllColumns()).find((c) => c.id === columnId)?.columnDef.meta
 }
 
 /**
@@ -391,7 +391,7 @@ function resolveDefaultValues(table: CreatingTable): Record<string, unknown> {
 	const asContextTable = table as unknown as CreateDefaultValueContext<RowData>['table']
 
 	const fromColumns: Record<string, unknown> = {}
-	for (const col of table.getAllColumns()) {
+	for (const col of gridWriteContext(table)?.columns ?? table.getAllColumns()) {
 		const meta = col.columnDef.meta
 		if (!col.id || meta?.isSystemColumn) continue
 		const creating = meta?.creating

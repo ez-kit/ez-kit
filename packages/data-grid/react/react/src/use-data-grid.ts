@@ -10,7 +10,7 @@ import {
 } from '@ez-kit/data-grid-core'
 import { useTable } from '@tanstack/react-table'
 import { table_publishExternalState } from '@tanstack/table-core/static-functions'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useInsertionEffect, useMemo, useRef, useState } from 'react'
 
 import { useDndBundleAdapter } from './data-grid/dnd'
 import { wireFilterInputCommands } from './data-grid/filter-input-commands'
@@ -1107,13 +1107,12 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 	// Stable refs so the store subscription and the publish effect always see the latest props
 	// without having to be torn down and rebuilt when one of them changes identity.
 	const onStateChangeRef = useRef(onStateChange)
-	onStateChangeRef.current = onStateChange
 	// Holds the controlled `state` with `state.loading` completed — what both publishes write and
 	// what the echo filter compares against, so the filter recognises the value the store actually
 	// holds. Normalized against its own previous value, which is what keeps `loading`'s identity
 	// across renders that pass an equal object; see `normalizeControlledState`.
 	const controlledStateRef = useRef<Record<string, unknown> | undefined>(undefined)
-	controlledStateRef.current = normalizeControlledState(controlledStateRef.current, state)
+	const normalizedControlledState = normalizeControlledState(controlledStateRef.current, state)
 	if (IS_DEV) {
 		// Read off the prop rather than the ref: normalizing has already dropped the foreign keys
 		// this warning is about. Erased for the reason the ref is — no slice name is provable here.
@@ -1221,11 +1220,16 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 	// this render's resolved columns, and before both publishes so each writes the corrected value
 	// and the echo filter compares against it.
 	const columnSliceCacheRef = useRef<ColumnSliceCache>({})
-	controlledStateRef.current = enforceControlledColumns(
+	const nextControlledState = enforceControlledColumns(
 		columnSliceCacheRef.current,
-		controlledStateRef.current,
+		normalizedControlledState,
 		coreGrid.columnState,
 	)
+
+	useInsertionEffect(() => {
+		onStateChangeRef.current = onStateChange
+		controlledStateRef.current = nextControlledState
+	}, [onStateChange, nextControlledState])
 
 	// A key the resolver **stops** writing must still be written, as `undefined`. `useTable`
 	// merges `{ ...prev, ...tableOptions }`, so an omitted key keeps the value the previous render
@@ -1302,7 +1306,7 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 		//
 		// Ordered before the subscription deliberately, so the seed is not reported to the
 		// consumer as a change and the emitter's baseline is the state they already hold.
-		if (controlledStateRef.current !== undefined) publishControlledState(table, controlledStateRef.current)
+		if (nextControlledState !== undefined) publishControlledState(table, nextControlledState)
 
 		// `config.onStateChange` — the consumer's whole-state callback. One subscription, read
 		// through `onStateChangeRef` so a changed prop is picked up without resubscribing.
@@ -1357,8 +1361,8 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 	// component". It lands before paint, which is why `useTable` publishes its own controlled
 	// state from a layout effect too.
 	useSafeLayoutEffect(() => {
-		if (controlledStateRef.current === undefined) return
-		publishControlledState(table, controlledStateRef.current)
+		if (nextControlledState === undefined) return
+		publishControlledState(table, nextControlledState)
 	})
 
 	// ── publish the grid context ─────────────────────────────────────────────

@@ -100,3 +100,50 @@ it('checks structural sources and cursor defaults at the public entry points', (
 	expectTypeOf(useConditionalSelection).toBeFunction()
 	expectTypeOf(useListFactory).toBeFunction()
 })
+
+function useConditionalSources(flag: boolean, mode: 'pages' | 'infinite') {
+	const fetcher = () => Promise.resolve({ users: [] as User[] })
+	const good = { queryKey: ['valid'], queryFn: fetcher, select: project }
+	const bad = { queryKey: ['invalid'], queryFn: fetcher, select: wrong }
+	const query = () => (flag ? good : bad)
+	const items = (rows: User[]) => rows
+	const invalidation: [] = []
+	const getAll = { query: read, getRows: project }
+	const getInfinite = {
+		query: () => ({ queryKey: ['infinite'], queryFn: fetcher, initialPageParam: 0, getNextPageParam: () => undefined }),
+		getRows: project,
+	}
+	const invalid = { invalidation, getAll: { query, getItems: items } }
+	// @ts-expect-error every branch of the option union must accept its raw response
+	useCollectionQuery({ source: invalid, mode: 'pages', params: undefined })
+	// @ts-expect-error a valid branch cannot cover the invalid branch
+	connected.useDataGrid({ columns: [], dataSource: { getAll: { query, getRows: items } } })
+	const maybeInfinite = { getAll, ...(flag ? { getInfinite } : {}) }
+	const maybePages = { getInfinite, ...(flag ? { getAll } : {}) }
+	connected.useDataGrid({ columns: [], dataSource: maybeInfinite })
+	// @ts-expect-error explicit infinite mode requires a guaranteed infinite read
+	connected.useDataGrid({ columns: [], dataSource: maybeInfinite, pagination: { mode: 'infinite' } })
+	// @ts-expect-error explicit pages mode requires a guaranteed page read
+	connected.useDataGrid({ columns: [], dataSource: maybePages, pagination: { mode: 'pages' } })
+	// @ts-expect-error a dynamic mode requires both reads
+	connected.useDataGrid({ columns: [], dataSource: { getAll }, pagination: { mode } })
+	connected.useDataGrid({ columns: [], dataSource: { getAll, getInfinite }, pagination: { mode } })
+
+	const collection = {
+		invalidation,
+		getAll: flag
+			? { query: read, getItems: project }
+			: {
+					query: () => ({ queryKey: ['items'], queryFn: () => Promise.resolve({ items: [] as User[] }) }),
+					getItems: wrong,
+				},
+	}
+	connected.useDataGrid({
+		columns: [],
+		dataSource: createGridSourceFromCollection(collection, { params: () => undefined }),
+	})
+}
+
+it('checks all read variants while preserving correlated collection descriptors', () => {
+	expectTypeOf(useConditionalSources).toBeFunction()
+})

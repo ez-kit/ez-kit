@@ -343,3 +343,48 @@ it('requires stable IDs when editing server rows', () => {
 	h.unmount()
 	client.clear()
 })
+
+it.each(['none', 'static', 'callback'] as const)(
+	'isolates a read-only source from old placeholders while preserving its own %s placeholder',
+	(kind) => {
+		const client = new QueryClient({
+			defaultOptions: { queries: { placeholderData: keepPreviousData, staleTime: Infinity } },
+		})
+		const wrapper = ({ children }: { children: ReactNode }) => (
+			<QueryClientProvider client={client}>{children}</QueryClientProvider>
+		)
+		const oldRows = [{ id: '1', name: 'Old' }]
+		const preview = [{ id: '2', name: 'Preview' }]
+		const placeholder = vi.fn((_previous: Row[] | undefined) => preview)
+		const select = vi.fn((rows: Row[]) => rows.map((row) => row))
+		const A = {
+			getAll: {
+				query: () => ({ queryKey: ['readonly', 'old'], queryFn: () => Promise.resolve({ users: oldRows }) }),
+				getRows: (data: { users: Row[] }) => data.users,
+			},
+		}
+		const B = {
+			getAll: {
+				query: () => ({
+					queryKey: ['readonly', 'new'],
+					queryFn: () => new Promise<Row[]>(() => undefined),
+					select,
+					...(kind === 'none' ? {} : { placeholderData: kind === 'static' ? preview : placeholder }),
+				}),
+				getRows: (rows: Row[]) => rows,
+			},
+		}
+		client.setQueryData(['readonly', 'old'], { users: oldRows })
+		const h = renderHook(({ next }) => connected.useDataGrid({ columns: [], dataSource: next ? B : A }), {
+			wrapper,
+			initialProps: { next: false },
+		})
+		const items = () => h.result.current.getRowModel().rows.map((row) => row.original)
+		expect(items()).toEqual(oldRows)
+		h.rerender({ next: true })
+		expect(items()).toEqual(kind === 'none' ? [] : preview)
+		if (kind === 'callback') expect(placeholder).toHaveBeenCalledWith(undefined, undefined)
+		h.unmount()
+		client.clear()
+	},
+)
